@@ -19,5 +19,5 @@ jobs:
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Build and deploy
         env:
-          GITHUB_TOKEN: ${{ secrets.DOCUMENTER_KEY }} # For authentication with GitHub Actions token
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
         run: julia --project=docs/ docs/make.jl
