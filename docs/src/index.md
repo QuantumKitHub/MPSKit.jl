@@ -8,37 +8,113 @@ Topics of research on tensor networks within the realm of this track include:
 - MPS routines (MPS diagonalization, Schmidt Decomposition, MPS left and right multiplication, ...)
 - The study of several useful models (nearest neighbour interactions, MPO's, long range interactions, ...)
 
-## Contents
+## Basics
 
-```@contents
-```
-## Statement of Intent
+### TensorMap
+mpskit works on "TensorMap" objects defined in TensorKit.jl (a different package). These abstract objects can represent not only plain arrays but also symmetric tensors. A TensorMap is a linear map from its domain to its codomain.
 
-Quantum mechanics is one of the biggest breakthroughs in the history of physics as, for instance, the successful applications of the theory to the hydrogen atom showed. Currently, almost a century later, physicists are still struggling to fully understand the implications of quantum mechanics. Especially in systems with many degrees of freedom where the complexity escalates quickly.
-In recent years, it was realized that quantum entanglement can be exploited to create an efficient ansatz for the ground and  low energy states of a many-body system. These ansatz are known as ‘tensor network states’.
-
-Tensor network states allow for a more efficient use of time and computational resources since one no longer has to look for the correct answer in the entire space of possible states, restricting to the physical subspace of tensor network states is sufficient. The local structure of these states also provide ways to get a deeper understanding of generic emergent phenomena in quantum many-body systems and their connection to entanglement.
-
-Hence, tensor network techniques are finding their way in an increasing number of fields in physics, ranging from condensed matter theory to quantum gravity. In the [UGent quantum group](http://mathphy.ugent.be/wp/quantum/) of Prof. Verstraete and Prof. Haegeman we are at the forefront of many of these applications, with an expertise in both the theoretical and numerical aspects. With this code base we aim to create a flexible, well-optimized and inclusive tool to support and stimulate rapid expansion of this expertise.
-
-## Getting Started
-
-For those who want to dive in immediately, the examples folder is a good starting point. Those who want read up first can use this documentation file.
-
-## Functions
-
-```@autodocs
-Modules = [MPSKit]
-Private = false
-Order   = [:module, :type, :function]
+Initializing a TensorMap can be done using
+```julia
+TensorMap(initializer,eltype,codomain,domain);
+TensorMap(inputdat,codomain,domain);
 ```
 
-### Index
-This is the index.
-
-```@index
+As an example, the following creates a random map from ℂ^10 to ℂ^10 (which is equivalent to a random matrix)
+```julia
+TensorMap(rand,ComplexF64,ℂ^10,ℂ^10);
+dat = rand(ComplexF64,10,10); TensorMap(dat,ℂ^10,ℂ^10);
+```
+Similarly, the following creates a symmetric tensor
+```julia
+TensorMap(rand,ComplexF64,ℂ[U₁](0=>1)*ℂ[U₁](1//2=>3),ℂ[U₁](1//2=>1,-1//2=>2))
 ```
 
-## Supporting and Credit
+TensorKit defines a number of operations on TensorMap objects
+```julia
+a = TensorMap(rand,ComplexF64,ℂ^10,ℂ^10);
+3*a; a+a; a*a; a*adjoint(a); a-a; dot(a,a); norm(a);
+```
 
-If you have any questions, bug reports, feature requests, etc., please submit an issue on github. If you would like to contribute to the moral of the coding team, please [send us food](http://www.greenway.be/). The software in this stack was developed as part of academic research of the [UGent Quantum Group](http://mathphy.ugent.be/wp/quantum/) of Prof. Verstraete and Prof. Haegeman.
+but the primary workhorse is the @tensor macro
+```julia
+a = TensorMap(rand,ComplexF64,ℂ^10,ℂ^10);
+b = TensorMap(rand,ComplexF64,ℂ^10,ℂ^10);
+@tensor c[-1;-2]:=a[-1,1]*b[1,-2];
+```
+creates a new TensorMap c equal to a*b.
+
+## states
+### Uniform Mps
+
+An mps tensor is defined as a TensorMap from the bond dimension space (D) to bond dimension space x physical space (D x d). A uniform mps representing ... ABABAB... can be created using
+```julia
+A = TensorMap(rand,ComplexF64,ℂ^10*ℂ^2,ℂ^10);
+B = TensorMap(rand,ComplexF64,ℂ^10*ℂ^2,ℂ^10);
+MpsCenterGauged([A,B]);
+```
+
+This MpsCenterGauged structure has the fields AL,AR,AC,CR where AL[i]CR[i]=CR[i-1]AR[i]=AC[i] and AL/AR is left/right unitary.
+
+### FiniteMps
+
+A finite mps is an array of mps tensors starting with bond dimension 1 and ending with bond dimension 1
+```julia
+A = TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^2);
+B = TensorMap(rand,ComplexF64,ℂ^2*ℂ^2,ℂ^2);
+C = TensorMap(rand,ComplexF64,ℂ^2*ℂ^2,ℂ^1);
+FiniteMps([A,B,C]);
+```
+
+### MpsComoving
+
+When doing local quenches in a uniform state, we only need to time evolve a "window" of tensors. MpsComoving(state_left,window,state_right) creates such a set of states, and can be passed to find_groundstate() or timestep(). Another possible use is to study the effect of impurities.
+
+## Operators
+### MpoHamiltonian
+
+MpoHamiltonian is a hamiltonian in the mpo representation. As an example, this creates the spin 1 heisenberg :
+```julia
+(sx,sy,sz,id) = nonsym_spintensors(1)
+
+@tensor tham[-1 -2;-3 -4]:=sx[-1,-3]*sx[-2,-4]+sy[-1,-3]*sy[-2,-4]+sz[-1,-3]*sz[-2,-4]
+ham = MpoHamiltonian(tham)
+```
+
+This code is already included in the juliatrack, just call
+```julia
+nonsym_xxz_ham();
+```
+### periodic mpo
+
+PeriodicMpo is a periodic nxm array of matrix product operators, intended to be used for classical statmech problems.
+
+## Algorithms
+### find groundstate
+
+To find the groundstate of a given state (be it a uniform mps or a finite mps), just call
+```julia
+find_groundstate(state,hamiltonian,algorithm);
+```
+
+where algorithm can be Vumps(),Dmrg(),.... As an example, the following code finds the groundstate of spin-1 heisenberg:
+```julia
+ham = nonsym_xxz_ham();
+st = MpsCenterGauged([TensorMap(rand,ComplexF64,ComplexSpace(10)*ComplexSpace(3),ComplexSpace(10))]);
+find_groundstate(st,ham,Vumps());
+```
+
+### timestep
+
+
+```julia
+timestep(state,hamiltonian,dt,algorithm);
+```
+
+evolves state forward in time by dt. Algorithm can be either Tdvp() or Tdvp2().
+
+
+## Tips & tricks
+
+- More information can be found in the documentation, provided someone writes it first.
+- There is an examples folder
+- Julia inference is taxed a lot; so use jupyter notebooks instead of re-running a script everytime
