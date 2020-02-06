@@ -119,6 +119,18 @@ function Base.getindex(x::MpoHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T
         return TensorMap(zeros,eltype(T),x.domspaces[a][b]*x.pspaces[a],x.imspaces[a][c]'*x.pspaces[a])::T
     end
 end
+
+function Base.setindex!(x::MpoHamiltonian{S,T,E},v::T,a::Int,b::Int,c::Int)  where {S,T,E}
+    (ii,scal) = isid(v);
+
+    if ii && b==c
+        x.scalars[a][b] = scal
+    else
+        x.Os[a][b,c] = v;
+    end
+
+    return x
+end
 Base.eltype(x::MpoHamiltonian) = typeof(x[1,1,1])
 
 keys(x::MpoHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))

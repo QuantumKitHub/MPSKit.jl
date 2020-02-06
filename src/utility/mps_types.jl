@@ -25,6 +25,7 @@ Base.similar(arr::Periodic) = Periodic(similar(arr.data))
 Base.convert(::Type{Periodic{A,N}},B::Periodic{C,N}) where {A,C,N} = Periodic(convert(Array{A,N},B.data))
 Base.repeat(arr::Periodic,i::Integer...) = Periodic(repeat(arr.data,i...))
 Base.checkbounds(arr::Periodic,I...) = true;
+Base.vcat(dat::Vararg{T,N}) where T<:Periodic where N = Periodic(vcat(v.data for v in dat))
 #Base.circshift(arr::Periodic,shift=1) = Periodic(circshift(arr.data,shift))
 function Base.circshift!(dest,orig,shiftamt)
     circshift!(dest.data,orig.data,shiftamt);

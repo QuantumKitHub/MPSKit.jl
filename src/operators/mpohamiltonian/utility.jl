@@ -140,7 +140,13 @@ function Base.:*(a::MpoHamiltonian{S,T,E},b::MpoHamiltonian{S,T,E}) where {S,T,E
 
     return MpoHamiltonian(Periodic(nSs),Periodic(nOs),ndomspaces,a.pspaces)
 end
-Base.repeat(x::MpoHamiltonian,n::Int) = MpoHamiltonian(repeat(x.scalars,n),repeat(x.Os,n),repeat(x.domspaces,n),repeat(x.pspaces,n))
+
+#without the copy, we get side effects when repeating + setindex
+Base.repeat(x::MpoHamiltonian,n::Int) = MpoHamiltonian(
+                                            Periodic(copy.(repeat(x.scalars,n))),
+                                            Periodic(copy.(repeat(x.Os,n))),
+                                            repeat(x.domspaces,n),
+                                            repeat(x.pspaces,n))
 
 #transpo = false => inplace conjugate
 #transpo = true => flip physical legs

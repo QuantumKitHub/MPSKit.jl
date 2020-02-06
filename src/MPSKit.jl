@@ -14,6 +14,7 @@ module MPSKit
     export mps_apply_transfer_left,mps_apply_transfer_right
     export leftorth,rightorth,leftorth!,rightorth!,poison!
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
+    export hamcat
 
     #useful utility functions?
     export spinmatrices,exp_decomp,add_util_leg,full,nonsym_spintensors
