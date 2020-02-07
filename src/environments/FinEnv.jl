@@ -1,8 +1,8 @@
 """
-    AutoCache keeps track of the environments for FiniteMps / MpsComoving / FiniteMpo
+    FinEnv keeps track of the environments for FiniteMps / MpsComoving / FiniteMpo
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
 """
-struct AutoCache{B <: Operator,C <: MpsType,D <: TensorMap} <: Cache
+struct FinEnv{B <: Operator,C <: MpsType,D <: TensorMap} <: Cache
     ldependencies::Array{D,1} #the data we used to calculate leftenvs/rightenvs
     rdependencies::Array{D,1}
 
@@ -23,7 +23,7 @@ function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}
         push!(rightenvs,mps_apply_transfer_right(rightenvs[end],opp,length(state)-i+1,state[length(state)-i+1]))
     end
 
-    return AutoCache([state[i] for i in 1:length(state)],[state[i] for i in 1:length(state)],opp,leftenvs,reverse(rightenvs))
+    return FinEnv([state[i] for i in 1:length(state)],[state[i] for i in 1:length(state)],opp,leftenvs,reverse(rightenvs))
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
@@ -104,13 +104,13 @@ function params(state::FiniteMpo,ham::ComAct)
 end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies
-function poison!(ca::AutoCache,ind)
+function poison!(ca::FinEnv,ind)
     ca.ldependencies[ind] = similar(ca.ldependencies[ind])
     ca.rdependencies[ind] = similar(ca.rdependencies[ind])
 end
 
 #rightenv[ind] will be contracteable with the tensor on site [ind]
-function rightenv(ca::AutoCache,ind,state)
+function rightenv(ca::FinEnv,ind,state)
     a = findfirst(i -> !(state[i] === ca.rdependencies[i]), length(state):-1:1)
     a = a == nothing ? nothing : length(state)-a+1
 
@@ -125,7 +125,7 @@ function rightenv(ca::AutoCache,ind,state)
     return ca.rightenvs[ind+1]
 end
 
-function leftenv(ca::AutoCache,ind,state)
+function leftenv(ca::FinEnv,ind,state)
     a = findfirst(i -> !(state[i] === ca.ldependencies[i]), 1:length(state))
 
     if a != nothing && a < ind

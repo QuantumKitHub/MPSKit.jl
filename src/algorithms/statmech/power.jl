@@ -1,3 +1,6 @@
+"""
+    PowerMethod way of finding the leading boundary mps
+"""
 @with_kw struct PowerMethod{TruncT<:Algorithm} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge

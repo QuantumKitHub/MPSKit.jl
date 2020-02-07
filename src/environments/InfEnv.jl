@@ -21,7 +21,7 @@ function leftenv(pars::InfEnv,pos::Int,state::MpsCenterGauged)
     end
     pars.lw[pos,:]
 end
-function leftenv(pars::InfEnv,row::Int,col::Int,state::MpsMultiline)
+function leftenv(pars::InfEnv,row::Int,col::Int,state::Union{MpsCenterGauged,MpsMultiline})
     if !(state===pars.dependency)
         pars.dependency = state
         recalculate!(pars);
@@ -29,14 +29,14 @@ function leftenv(pars::InfEnv,row::Int,col::Int,state::MpsMultiline)
     pars.lw[row,col]
 end
 
-function rightenv(pars::InfEnv,pos::Int,mps::MpsCenterGauged)
+function rightenv(pars::InfEnv,pos::Int,state::MpsCenterGauged)
     if !(state===pars.dependency)
         pars.dependency = state
         recalculate!(pars);
     end
     pars.rw[pos,:]
 end
-function rightenv(pars::InfEnv,row::Int,col::Int,mps::MpsCenterGauged)
+function rightenv(pars::InfEnv,row::Int,col::Int,state::Union{MpsCenterGauged,MpsMultiline})
     if !(state===pars.dependency)
         pars.dependency = state
         recalculate!(pars);
@@ -64,9 +64,7 @@ function params(state::MpsCenterGauged,opp::MpoHamiltonian;tol::Float64=Defaults
 end
 
 function params(state::MpsCenterGauged,opp::PeriodicMpo,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter)
-    ndat = params(convert(MpsMultiline,state),opp,prevl,prevr,tol=tol,maxiter=maxiter);
-
-    InfEnv(opp,state,tol,maxiter,ndat.lw,ndat.rw)
+    params(convert(MpsMultiline,state),opp,prevl,prevr,tol=tol,maxiter=maxiter);
 end
 
 function params(state::MpsMultiline{T},mpo::PeriodicMpo,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter) where T
@@ -138,7 +136,7 @@ function calclw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=nothing;tol::Floa
     end
 
     #initialize the fixpoints array
-    fixpoints = zero.(initguess);
+    fixpoints = Periodic(zero.(initguess));
     fixpoints[1,1]+=leftstart
 
     (len>1) && left_cyclethrough(1,fixpoints,ham,st)
@@ -191,7 +189,7 @@ function calcrw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=nothing;tol::Floa
     @tensor rightstart[-1 -2;-3]:=r_RR(st)[-1,-3]*conj(rightutil[-2])
 
     #initialize the fixpoints array
-    initguess = Periodic{typeof(leftstart),2}(len,ham.odim)
+    initguess = Periodic{typeof(rightstart),2}(len,ham.odim)
     if prevca == nothing
         for (i,j) in Iterators.product(1:len,1:ham.odim)
             initguess[i,j]=TensorMap(zeros,eltype(st),space(st.AR[i],3)'*space(ham[i,1,j],3)',space(st.AR[i],3)')
@@ -200,7 +198,7 @@ function calcrw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=nothing;tol::Floa
         initguess = oftype(initguess,prevca);
     end
 
-    fixpoints = zero.(initguess);
+    fixpoints = Periodic(zero.(initguess));
     fixpoints[end,end]+=rightstart
 
     (len>1) && right_cyclethrough(ham.odim,fixpoints,ham,st) #populate other sites
