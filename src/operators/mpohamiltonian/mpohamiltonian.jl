@@ -132,6 +132,8 @@ function Base.setindex!(x::MpoHamiltonian{S,T,E},v::T,a::Int,b::Int,c::Int)  whe
     return x
 end
 Base.eltype(x::MpoHamiltonian) = typeof(x[1,1,1])
+Base.size(x::MpoHamiltonian) = (x.period,x.odim,x.odim)
+Base.size(x::MpoHamiltonian,i) = size(x)[i]
 
 keys(x::MpoHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))
 keys(x::MpoHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),Iterators.product(1:x.odim,1:x.odim))
@@ -145,9 +147,13 @@ function isid(x::MpoType)
     id = TensorMap(I,eltype(x),space(x,1)*space(x,2),space(x,3)'*space(x,4)')
     scal = dot(id,x)/dot(id,id)
     diff = x-scal*id
-    return norm(diff)<1e-12,scal
+    return norm(diff)<1e-14,scal
 end
-isid(ham::MpoHamiltonian,i::Int) = reduce((a,b) -> a && isscal(ham,b,i) && abs(ham.scalars[b][i]-1)<1e-12,1:ham.period,init=true)
+
+"
+checks if ham[:,i,i] = 1 for every i
+"
+isid(ham::MpoHamiltonian,i::Int) = reduce((a,b) -> a && isscal(ham,b,i) && abs(ham.scalars[b][i]-1)<1e-14,1:ham.period,init=true)
 
 "
 to be valid in the thermodynamic limit, these hamiltonians need to have a peculiar structure
@@ -218,9 +224,4 @@ function fillmissing(x::Array{T,3}) where T<:Union{Missing,M} where M<:MpoType{S
     return nx
 end
 
-include("caches/simplecache.jl")
-include("caches/autocache.jl")
-
 include("utility.jl")
-include("actions.jl")
-include("mpohamexcitations.jl")

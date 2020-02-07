@@ -1,31 +1,29 @@
-#=
-    when queried for an environment
-    will check if it's data is still correct and if not recalculate
-    used in finitemps - mpscomoving code (only makes sense for finite chains)
-=#
-struct AutoCache{B <: MpoHamiltonian,C <: MpsType} <: Cache
-    ldependencies::Array{C,1} #the data we used to calculate leftenvs/rightenvs
-    rdependencies::Array{C,1}
+"""
+    AutoCache keeps track of the environments for FiniteMps / MpsComoving / FiniteMpo
+    It automatically checks if the queried environment is still correctly cached and if not - recalculates
+"""
+struct AutoCache{B <: Operator,C <: MpsType,D <: TensorMap} <: Cache
+    ldependencies::Array{D,1} #the data we used to calculate leftenvs/rightenvs
+    rdependencies::Array{D,1}
 
-    ham::B #the hamiltonian used
+    opp::B #the operator
 
-    #todo : make this type stable
     leftenvs::Array{Array{C,1},1}
     rightenvs::Array{Array{C,1},1}
 end
 
 #the constructor used for any state (finitemps or mpscomoving)
 #we really should be doing this lazily
-function params(state,ham::MpoHamiltonian,leftstart::Array{C,1},rightstart::Array{C,1}) where C<:MpsType
+function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}) where C<:MpsType
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 
     for i in 1:length(state)
-        push!(leftenvs,mps_apply_transfer_left(leftenvs[end],ham,i,state[i]))
-        push!(rightenvs,mps_apply_transfer_right(rightenvs[end],ham,length(state)-i+1,state[length(state)-i+1]))
+        push!(leftenvs,mps_apply_transfer_left(leftenvs[end],opp,i,state[i]))
+        push!(rightenvs,mps_apply_transfer_right(rightenvs[end],opp,length(state)-i+1,state[length(state)-i+1]))
     end
 
-    return AutoCache([state[i] for i in 1:length(state)],[state[i] for i in 1:length(state)],ham,leftenvs,reverse(rightenvs))
+    return AutoCache([state[i] for i in 1:length(state)],[state[i] for i in 1:length(state)],opp,leftenvs,reverse(rightenvs))
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
@@ -58,6 +56,53 @@ end
 #extract the correct leftstart/rightstart for mpscomoving
 params(state::MpsComoving,ham::MpoHamiltonian;lpars=params(state.left_gs,ham),rpars=params(state.right_gs,ham)) = params(state,ham,leftenv(lpars,1,state.left_gs),rightenv(rpars,length(state),state.right_gs))
 
+function params(state::FiniteMpo,ham::ComAct)
+    lll = l_LL(state);rrr = r_RR(state)
+
+    @tensor sillyel[-1 -2;-3]:=lll[-1,-3]*Tensor(I,ham.above.domspaces[1][1]')[-2]
+    rightstart = Array{typeof(sillyel),1}(undef,ham.odim);
+    leftstart = Array{typeof(sillyel),1}(undef,ham.odim);
+
+    for i in 1:ham.odim
+        util_left = Tensor(I,ham.domspaces[1][i]')
+        util_right = Tensor(I,ham.imspaces[length(state)][i]')
+
+        if isbelow(ham,i)
+            @tensor ctl[-1 -2; -3]:= lll[-1,-3]*util_left[-2]
+            @tensor ctr[-1 -2; -3]:= rrr[-1,-3]*util_right[-2]
+
+            if i != 1
+                ctl = zero(ctl)
+            end
+
+            if i != ham.below.odim
+                ctr = zero(ctr)
+            end
+
+            leftstart[i] = ctl
+            rightstart[i] = ctr
+        else
+            ci = i-ham.below.odim
+
+            @tensor ctl[-1 -2; -3 ]:= lll[-1,-2]*util_left[-3]
+            @tensor ctr[-1 -2; -3 ]:= rrr[-2,-3]*util_right[-1]
+
+            if ci != 1
+                ctl = zero(ctl)
+            end
+
+            if ci != ham.above.odim
+                ctr = zero(ctr)
+            end
+
+            leftstart[i] = ctl
+            rightstart[i] = ctr
+        end
+    end
+
+    return params(state,ham,leftstart,rightstart)
+end
+
 #notify the cache that we updated in-place, so it should invalidate the dependencies
 function poison!(ca::AutoCache,ind)
     ca.ldependencies[ind] = similar(ca.ldependencies[ind])
@@ -72,7 +117,7 @@ function rightenv(ca::AutoCache,ind,state)
     if a != nothing && a > ind
         #we need to recalculate
         for j = a:-1:ind+1
-            ca.rightenvs[j] = mps_apply_transfer_right(ca.rightenvs[j+1],ca.ham,j,state[j])
+            ca.rightenvs[j] = mps_apply_transfer_right(ca.rightenvs[j+1],ca.opp,j,state[j])
             ca.rdependencies[j] = state[j]
         end
     end
@@ -86,7 +131,7 @@ function leftenv(ca::AutoCache,ind,state)
     if a != nothing && a < ind
         #we need to recalculate
         for j = a:ind-1
-            ca.leftenvs[j+1] = mps_apply_transfer_left(ca.leftenvs[j],ca.ham,j,state[j])
+            ca.leftenvs[j+1] = mps_apply_transfer_left(ca.leftenvs[j],ca.opp,j,state[j])
             ca.ldependencies[j] = state[j]
         end
     end

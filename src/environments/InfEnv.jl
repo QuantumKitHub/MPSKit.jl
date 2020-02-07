@@ -1,35 +1,123 @@
-#=
-    A simple cache object. Does not do anything fancy, simply store the relevant left and right environments
-    Used for MpsCenterGauged, where the initialization happens by solving a linear problem
-    Also used in the idmrg algorithms
-=#
-struct SimpleCache{H<:MpoHamiltonian,V} <:Cache
-    ham :: H
-    lw :: Array{V,2}
-    rw :: Array{V,2}
+"""
+    This object manages the environments for an MpsCenterGauged / MpsMultiline
+    If the state changes, it recalculates the entire environment
+"""
+mutable struct InfEnv{H<:Operator,V,S} <:Cache
+    opp :: H
+
+    dependency :: S
+    tol :: Float64
+    maxiter :: Int
+
+    lw :: Periodic{V,2}
+    rw :: Periodic{V,2}
 end
 
 
-leftenv(pars::SimpleCache,pos,mps) = pars.lw[mod1(pos,pars.ham.period)::Int,:]
-rightenv(pars::SimpleCache,pos,mps) = pars.rw[mod1(pos,pars.ham.period)::Int,:]
-function setleftenv!(pars::SimpleCache,pos,mps,lw)
-    for i in 1:length(lw)
-        pars.lw[mod1(pos,pars.ham.period)::Int,i] = lw[i]
+function leftenv(pars::InfEnv,pos::Int,state::MpsCenterGauged)
+    if !(state===pars.dependency)
+        pars.dependency = state
+        recalculate!(pars);
     end
+    pars.lw[pos,:]
 end
-
-function setrightenv!(pars::SimpleCache,pos,mps,rw)
-    for i in 1:length(rw)
-        pars.rw[mod1(pos,pars.ham.period)::Int,i] = rw[i]
+function leftenv(pars::InfEnv,row::Int,col::Int,state::MpsMultiline)
+    if !(state===pars.dependency)
+        pars.dependency = state
+        recalculate!(pars);
     end
+    pars.lw[row,col]
 end
 
-function params(state::MpsCenterGauged,ham::MpoHamiltonian,prevpars=nothing;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
-    lw=calclw(state,ham,(prevpars==nothing) ? nothing : prevpars.lw,tol=tol,maxiter=maxiter)
-    rw=calcrw(state,ham,(prevpars==nothing) ? nothing : prevpars.rw,tol=tol,maxiter=maxiter)
-    return SimpleCache(ham,lw,rw)
+function rightenv(pars::InfEnv,pos::Int,mps::MpsCenterGauged)
+    if !(state===pars.dependency)
+        pars.dependency = state
+        recalculate!(pars);
+    end
+    pars.rw[pos,:]
+end
+function rightenv(pars::InfEnv,row::Int,col::Int,mps::MpsCenterGauged)
+    if !(state===pars.dependency)
+        pars.dependency = state
+        recalculate!(pars);
+    end
+    pars.rw[row,col]
 end
 
+
+function recalculate!(pars::InfEnv{H}) where H<:MpoHamiltonian
+    pars.lw = calclw(pars.dependency,pars.opp,pars.lw,tol = pars.tol,maxiter = pars.maxiter)
+    pars.rw = calcrw(pars.dependency,pars.opp,pars.rw,tol = pars.tol,maxiter = pars.maxiter)
+end
+
+function recalculate!(pars::InfEnv{H}) where H<:PeriodicMpo
+    ndat = params(pars.dependency,pars.opp,pars.lw,pars.rw,tol=pars.tol,maxiter=pars.maxiter);
+
+    pars.lw = ndat.lw
+    pars.rw = ndat.rw
+end
+
+function params(state::MpsCenterGauged,opp::MpoHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
+    lw = calclw(state,opp, nothing,tol=tol,maxiter=maxiter)
+    rw = calcrw(state,opp, nothing,tol=tol,maxiter=maxiter)
+    return InfEnv(opp,state,tol,maxiter,lw,rw)
+end
+
+function params(state::MpsCenterGauged,opp::PeriodicMpo,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter)
+    ndat = params(convert(MpsMultiline,state),opp,prevl,prevr,tol=tol,maxiter=maxiter);
+
+    InfEnv(opp,state,tol,maxiter,ndat.lw,ndat.rw)
+end
+
+function params(state::MpsMultiline{T},mpo::PeriodicMpo,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter) where T
+    (numrows,numcols) = size(state)
+    @assert size(state) == size(mpo)
+
+    lefties = Periodic{T,2}(numrows,numcols);
+    righties = Periodic{T,2}(numrows,numcols);
+
+    for cr = 1:numrows
+
+        L0::T = TensorMap(rand,eltype(T),space(state.AL[cr,1],1)*space(mpo.opp[cr,1],1)',space(state.AL[cr,1],1))
+        if prevl != nothing
+            L0 = prevl[cr,1]
+        end
+
+        R0::T=TensorMap(rand,eltype(T),space(state.AR[cr,1],1)*space(mpo.opp[cr,1],1),space(state.AR[cr,1],1))
+        if prevr != nothing
+            R0 = prevr[cr,end]
+        end
+
+        alg=Arnoldi(tol = tol,maxiter=maxiter)
+
+        (vals,Ls,convhist) = eigsolve(x-> mps_apply_transfer_left(x,mpo.opp[cr,:],state.AL[cr,1:end],state.AL[cr+1,1:end]),L0,1,:LM,alg)
+        convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
+        (_,Rs,convhist) = eigsolve(x-> mps_apply_transfer_right(x,mpo.opp[cr,:],state.AR[cr,1:end],state.AR[cr+1,1:end]),R0,1,:LM,alg)
+        convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
+
+
+        lefties[cr,1] = Ls[1]
+        for loc in 2:numcols
+            lefties[cr,loc] = mps_apply_transfer_left(lefties[cr,loc-1],mpo.opp[cr,loc-1],state.AL[cr,loc-1],state.AL[cr+1,loc-1])
+        end
+
+        renormfact = @tensor Ls[1][1,2,3]*state.CR[cr,0][3,4]*Rs[1][4,2,5]*conj(state.CR[cr+1,0][1,5])
+
+        righties[cr,end] = Rs[1]/sqrt(renormfact);
+        lefties[cr,1] /=sqrt(renormfact);
+
+        for loc in numcols-1:-1:1
+            righties[cr,loc] = mps_apply_transfer_right(righties[cr,loc+1],mpo.opp[cr,loc+1],state.AR[cr,loc+1],state.AR[cr+1,loc+1])
+
+            renormfact = @tensor lefties[cr,loc+1][1,2,3]*state.CR[cr,loc][3,4]*righties[cr,loc][4,2,5]*conj(state.CR[cr+1,loc][1,5])
+            righties[cr,loc]/=sqrt(renormfact)
+            lefties[cr,loc+1]/=sqrt(renormfact)
+        end
+
+    end
+
+    return InfEnv(mpo,state,tol,maxiter,lefties,righties)
+end
 function calclw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=nothing;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
     len=length(st);alg=GMRES(tol=tol,maxiter=maxiter)
     @assert sanitycheck(ham)
@@ -39,7 +127,7 @@ function calclw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=nothing;tol::Floa
     leftutil=Tensor(I,eltype(st),space(ham[1,1,1],1))
     @tensor leftstart[-1 -2;-3]:=l_LL(st)[-1,-3]*conj(leftutil[-2])
 
-    initguess = Array{typeof(leftstart)}(undef,len,ham.odim)
+    initguess = Periodic{typeof(leftstart),2}(len,ham.odim)
 
     if prevca == nothing
         for (i,j) in Iterators.product(1:len,1:ham.odim)
@@ -103,7 +191,7 @@ function calcrw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=nothing;tol::Floa
     @tensor rightstart[-1 -2;-3]:=r_RR(st)[-1,-3]*conj(rightutil[-2])
 
     #initialize the fixpoints array
-    initguess=Array{typeof(rightstart)}(undef,len,ham.odim)
+    initguess = Periodic{typeof(leftstart),2}(len,ham.odim)
     if prevca == nothing
         for (i,j) in Iterators.product(1:len,1:ham.odim)
             initguess[i,j]=TensorMap(zeros,eltype(st),space(st.AR[i],3)'*space(ham[i,1,j],3)',space(st.AR[i],3)')

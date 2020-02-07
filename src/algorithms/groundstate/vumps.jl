@@ -49,8 +49,6 @@ function find_groundstate(state::MpsCenterGauged, H::Hamiltonian,alg::Vumps,pars
 
 
         state = MpsCenterGauged(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter)
-        pars = params(state,H,pars)
-
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && println("vumps @iteration $(iter) galerkin = $(galerkin)")
 

@@ -1,6 +1,12 @@
 #implements 'effecient' code for the commutator acting on an mpo
 #code is a bit ugly, and can be speed up
 
+"""
+    ComAct(ham1,ham2)
+
+    Acts on an mpo with mpo hamiltonian 'ham1' from below + 'ham2' from above.
+    Can therefore represent the (anti) commutator
+"""
 struct ComAct{T1<:MpoHamiltonian,T2<:MpoHamiltonian} <: Hamiltonian
     below::T1
     above::T2
@@ -36,67 +42,6 @@ function Base.getindex(a::ComAct,pos,i,j)
         @assert false
         #return TensorMap(zeros,eltype(a.above[1,1,1]),a.domspaces[pos][i]*a.pspaces[pos],a.imspaces[pos][j]'*a.pspaces[pos])
     end
-end
-
-include("fmcache.jl")
-
-function ac_prime(x::MpoType,pos,mpo,cache::FiniteMpoCache)
-    ham=cache.opp
-
-    toret=zero(x)
-    for (i,j) in keys(ham,pos)
-        opp = ham[pos,i,j]
-
-        if isbelow(ham,i)
-            #for vub project
-            #@tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mpo)[i][-1,8,7]*x[7,1,2,-4]*opp[8,-2,3,1]*rightenv(cache,pos,mpo)[j][2,3,-3]
-            @tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mpo)[i][-1,8,7]*x[7,2,1,-4]*opp[8,-2,3,2]*rightenv(cache,pos,mpo)[j][1,3,-3]
-        else
-            #@tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mpo)[i][-1,7,6]*x[7,-2,2,4]*opp[6,4,5,-4]*rightenv(cache,pos,mpo)[j][5,2,-3]
-            @tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mpo)[i][-1,7,6]*x[7,-2,2,4]*opp[6,4,5,-4]*rightenv(cache,pos,mpo)[j][5,2,-3]
-        end
-    end
-
-    return toret
-end
-
-function ac2_prime(x,pos,mpo,cache::FiniteMpoCache)
-    ham=cache.opp
-
-    toret=zero(x)
-    for (i,j) in keys(ham,pos)
-        for (k,l) in keys(ham,pos+1)
-            if j!=k
-                continue
-            end
-            opp1 = ham[pos,i,j]
-            opp2 = ham[pos+1,k,l]
-
-            if isbelow(ham,i)
-                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,2,1]*x[1,3,5,7,-5,-6]*opp1[2,-2,4,3]*opp2[4,-3,6,5]*rightenv(cache,pos+1,mpo)[l][7,6,-4]
-            else
-                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,1,2]*x[1,-2,-3,7,5,3]*opp1[2,3,4,-6]*opp2[4,5,6,-5]*rightenv(cache,pos+1,mpo)[l][6,7,-4]
-            end
-        end
-    end
-
-    return toret
-end
-
-#C to the right of pos
-function c_prime(x::MpsVecType,pos,mpo,cache::FiniteMpoCache)
-    toret=zero(x)
-    ham=cache.opp
-
-    for i in 1:ham.odim
-        if isbelow(ham,i)
-            @tensor toret[-1,-2]+=leftenv(cache,pos+1,mpo)[i][-1,2,1]*x[1,3]*rightenv(cache,pos,mpo)[i][3,2,-2]
-        else
-            @tensor toret[-1,-2]+=leftenv(cache,pos+1,mpo)[i][-1,1,2]*x[1,3]*rightenv(cache,pos,mpo)[i][2,3,-2]
-        end
-    end
-
-    return toret
 end
 
 #specialized mpohamiltonian transfer function (not yet typestable)

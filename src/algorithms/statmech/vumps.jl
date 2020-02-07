@@ -8,9 +8,9 @@
 # - it's very litle duplicate code, but together it'd be a bit more convoluted (primarily because of the indexing way)
 
 "
-    leading_boundary(state,ham,alg,pars=params(state,ham))
+    leading_boundary(state,opp,alg,pars=params(state,ham))
 
-    approximate the leading eigenvector for ham
+    approximate the leading eigenvector for opp
 "
 function leading_boundary(state::MpsCenterGauged,H,alg,pars=params(state,H))
     (st,pr,de) = leading_boundary(convert(MpsMultiline,state),H,alg,pars)
@@ -51,8 +51,6 @@ function leading_boundary(state::MpsMultiline, H,alg::Vumps,pars=params(state,H)
         end
 
         state = MpsMultiline(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter)
-        pars = params(state,H,pars)
-
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && println("vumps @iteration $(iter) galerkin = $(galerkin)")
 

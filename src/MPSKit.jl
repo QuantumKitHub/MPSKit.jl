@@ -62,13 +62,23 @@ module MPSKit
 
     abstract type Operator end
     abstract type Hamiltonian <: Operator end
+
+    include("operators/mpohamiltonian/mpohamiltonian.jl") #the mpohamiltonian objects
+    include("operators/umpo.jl")
+    include("operators/commutator.jl")
+
     abstract type Cache end #cache "manages" environments
 
-    include("operators/umpo.jl")
-    include("operators/mpohamiltonian/mpohamiltonian.jl") #the mpohamiltonian objects
-    include("operators/commutator/commutator.jl")
+    include("environments/FinEnv.jl")
+    include("environments/InfEnv.jl")
+    include("environments/simpleenv.jl")
 
     abstract type Algorithm end
+
+    include("algorithms/actions.jl")
+    include("algorithms/quasiparticleexcitation.jl")
+    include("algorithms/toolbox.jl") #maybe move to utility, or move some utility functions to toolbox?
+    include("algorithms/ortho.jl")
 
     include("algorithms/changebonds/bondmanage.jl")
     include("algorithms/changebonds/optimalexpand.jl")
@@ -78,15 +88,13 @@ module MPSKit
     include("algorithms/changebonds/svdcut.jl")
     include("algorithms/changebonds/union.jl")
 
-    include("algorithms/quasiparticleexcitation.jl")
-    include("algorithms/toolbox.jl") #maybe move to utility, or move some utility functions to toolbox?
-    include("algorithms/ortho.jl")
     include("algorithms/timestep/tdvp.jl")
 
     include("algorithms/groundstate/vumps.jl")
     include("algorithms/groundstate/idmrg.jl")
     include("algorithms/groundstate/dmrg.jl")
     #include("algorithms/groundstate/optimhook.jl")
+
     include("algorithms/propagator/corvector.jl")
 
     include("algorithms/statmech/vumps.jl")

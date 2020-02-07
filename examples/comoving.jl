@@ -11,7 +11,7 @@ let
     #Finding the groundstate
     (ts,pars,_)=find_groundstate(ts,th,Vumps(maxiter=400));
 
-    len=20;deltat=0.05;totaltime=20.0
+    len=20;deltat=0.05;totaltime=3.0
 
     #apply a single spinflip at the middle site
     mpco=MpsComoving(ts,[ts.AC[1];ts.AR[2:len]],ts)
@@ -29,5 +29,5 @@ let
     end
 
     szdat=real.(reduce((a,b)->[a b],szdat))
-    writedlm("spinflip_evolution.csv",szdat)
+    #writedlm("spinflip_evolution.csv",szdat)
 end

@@ -49,9 +49,7 @@ function find_groundstate(state::MpsCenterGauged,H::MpoHamiltonian,alg::OptimKit
 
         nstate = MpsCenterGauged(Periodic(als),Periodic(ars),Periodic(cs),Periodic(nacs));
 
-        npars = params(nstate,opars.ham,opars);
-
-        return (nstate,npars),ac_d
+        return (nstate,pars),ac_d
     end
 
     inner(x, v1, v2) = sum([real(dot(x1,x2)) for (x1,x2) in zip(v1,v2)])
