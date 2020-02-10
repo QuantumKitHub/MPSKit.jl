@@ -31,7 +31,9 @@ function SimpleManager(maxDs::Array{Int,1},A::Algorithm = OptimalExpand())
 end
 
 
-
+"
+    Manage (grow or shrink) the bond dimsions of state using manager 'alg'
+"
 function managebonds(state,H,alg::SimpleManager,pars=params(state,H))
     if alg.criterium(state)
         return state,pars

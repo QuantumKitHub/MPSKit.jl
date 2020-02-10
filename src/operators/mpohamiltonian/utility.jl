@@ -5,7 +5,7 @@
 =#
 
 #addition / substraction
-function Base.:+(a::MpoHamiltonian,e::Array{T,1}) where T
+function Base.:+(a::MpoHamiltonian,e::AbstractArray{T,1}) where T
     @assert length(e)==a.period
     nOs=copy(a.Os)
 
@@ -17,7 +17,7 @@ function Base.:+(a::MpoHamiltonian,e::Array{T,1}) where T
 end
 Base.:-(e::Array{T,1},a::MpoHamiltonian) where T = -1.0*a+e
 Base.:+(e::Array{T,1},a::MpoHamiltonian) where T = a+e
-Base.:-(a::MpoHamiltonian,e::Array{T,1}) where T = a+(-e)
+Base.:-(a::MpoHamiltonian,e::AbstractArray{T,1}) where T = a+(-e)
 function Base.:+(a::MpoHamiltonian{S,T,E},b::MpoHamiltonian{S,T,E}) where {S,T,E}
     @assert a.period == b.period
     @assert sanitycheck(a)

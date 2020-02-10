@@ -32,8 +32,8 @@ function ac_prime(x::MpoType,pos::Int,mpo::FiniteMpo,cache)
 
     return toret
 end
-function ac_prime(x::MpsType, row::Int,col::Int,mps::Union{MpsCenterGauged,MpsMultiline}, pars::InfEnv{O}) where O <: PeriodicMpo
-    @tensor toret[-1 -2;-3]:=leftenv(pars,row,col,mps)[-1,2,1]*x[1,3,4]*(pars.opp[row,col])[2,-2,5,3]*rightenv(pars,row,col,mps)[4,5,-3]
+function ac_prime(x::MpsType, row::Int,col::Int,mps::Union{MpsCenterGauged,MpsMultiline}, pars::PerMpoInfEnv)
+    @tensor toret[-1 -2;-3]:=leftenv(pars,row,mps)[col][-1,2,1]*x[1,3,4]*(pars.opp[row,col])[2,-2,5,3]*rightenv(pars,row,mps)[col][4,5,-3]
 end
 
 """
@@ -68,17 +68,29 @@ function ac2_prime(x::TensorMap,pos::Int,mpo::FiniteMpo,cache)
             opp2 = ham[pos+1,k,l]
 
             if isbelow(ham,i)
-                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,2,1]*x[1,3,5,7,-5,-6]*opp1[2,-2,4,3]*opp2[4,-3,6,5]*rightenv(cache,pos+1,mpo)[l][7,6,-4]
+                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,2,1]*
+                                                    x[1,3,5,7,-5,-6]*
+                                                    opp1[2,-2,4,3]*
+                                                    opp2[4,-3,6,5]*
+                                                    rightenv(cache,pos+1,mpo)[l][7,6,-4]
             else
-                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,1,2]*x[1,-2,-3,7,5,3]*opp1[2,3,4,-6]*opp2[4,5,6,-5]*rightenv(cache,pos+1,mpo)[l][6,7,-4]
+                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,1,2]*
+                                                    x[1,-2,-3,7,5,3]*
+                                                    opp1[2,3,4,-6]*
+                                                    opp2[4,5,6,-5]*
+                                                    rightenv(cache,pos+1,mpo)[l][6,7,-4]
             end
         end
     end
 
     return toret
 end
-function ac2_prime(x::MpoType, row::Int,col::Int,mps::Union{MpsCenterGauged,MpsMultiline}, pars::InfEnv{O}) where O <: PeriodicMpo
-    @tensor toret[-1 -2;-3 -4]:=leftenv(pars,row,col,mps)[-1,2,1]*x[1,3,4,5]*(pars.opp[row,col])[2,-2,6,3]*(pars.opp[row,col+1])[6,-3,7,4]*rightenv(pars,row,col+1,mps)[5,7,-4]
+function ac2_prime(x::MpoType, row::Int,col::Int,mps::Union{MpsCenterGauged,MpsMultiline}, pars::PerMpoInfEnv)
+    @tensor toret[-1 -2;-3 -4]:=leftenv(pars,row,mps)[col][-1,2,1]*
+                                x[1,3,4,5]*
+                                pars.opp[row,col][2,-2,6,3]*
+                                pars.opp[row,col+1][6,-3,7,4]*
+                                rightenv(pars,row,mps)[mod1(col+1,end)][5,7,-4]
 end
 
 """
@@ -108,8 +120,8 @@ function c_prime(x::MpsVecType,pos::Int,mpo::FiniteMpo,cache)
 
     return toret
 end
-function c_prime(x::TensorMap, row::Int,col::Int, mps::Union{MpsCenterGauged,MpsMultiline}, pars::InfEnv{O}) where O<: PeriodicMpo
-    @tensor toret[-1;-2]:=leftenv(pars,row,col+1,mps)[-1,3,1]*x[1,2]*rightenv(pars,row,col,mps)[2,3,-2]
+function c_prime(x::TensorMap, row::Int,col::Int, mps::Union{MpsCenterGauged,MpsMultiline}, pars::PerMpoInfEnv)
+    @tensor toret[-1;-2] := leftenv(pars,row,mps)[mod1(col+1,end)][-1,3,1]*x[1,2]*rightenv(pars,row,mps)[col][2,3,-2]
 end
 
 
@@ -151,13 +163,13 @@ end
 
 function expectation_value(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=params(st,ham))
     #calculate energy density
-    len=length(st);
-    ens=zeros(eltype(st.AR[1]),len)
+    len = length(st);
+    ens = Periodic(zeros(eltype(st.AR[1]),len));
     for i=1:len
-        util=Tensor(I,space(prevca.lw[mod1(i+1,len),ham.odim],2))
+        util = Tensor(I,space(prevca.lw[i+1,ham.odim],2))
         for j=ham.odim:-1:1
-            apl =mps_apply_transfer_left(prevca.lw[i,j],ham[i,j,ham.odim],st.AL[i],st.AL[i]);
-            ens[mod1(i+1,len)]+=@tensor apl[1,2,3]*r_LL(st,i)[3,1]*conj(util[2])
+            apl = mps_apply_transfer_left(leftenv(prevca,i,st)[j],ham[i,j,ham.odim],st.AL[i],st.AL[i]);
+            ens[i+1] += @tensor apl[1,2,3]*r_LL(st,i)[3,1]*conj(util[2])
         end
     end
     return ens

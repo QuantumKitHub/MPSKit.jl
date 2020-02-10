@@ -2,6 +2,10 @@
     an excitation tensor has 4 legs (1,2),(3,4)
     the first and the last are virtual, the second is physical, the third is the utility leg
 =#
+
+"
+    quasiparticle_excitation calculates the energy of the first excited state at momentum 'moment'
+"
 function quasiparticle_excitation(hamiltonian::Hamiltonian, moment::Float64, mpsleft::MpsCenterGauged, paramsleft, mpsright::MpsCenterGauged=mpsleft, paramsright=paramsleft; excitation_space=oneunit(space(mpsleft.AL[1],1)), trivial=true, num=1 ,X_initial=nothing, toler = 1e-10,krylovdim=30)
     #check whether the provided mps is sensible
     @assert length(mpsleft) == length(mpsright)
@@ -63,17 +67,20 @@ function effective_excitation_hamiltonian(trivial::Bool, ham::MpoHamiltonian, Bs
     @assert length(mpsright) == len
     @assert ham.period == len
     @assert eltype(mpsleft)==eltype(mpsright)
-    #build lBs(c)
-    lBs=[TensorMap(zeros,eltype(mpsleft),space(paramsleft.lw[1,k],1)*space(paramsleft.lw[1,k],2),space(Bs[1],3)'*space(paramsright.lw[1,k],3)') for k in 1:ham.odim]
-    lBsc=[]
 
-    for pos=1:len
-        lBs=mps_apply_transfer_left(lBs,ham,pos,mpsright.AR[pos],mpsleft.AL[pos])*exp(-1im*p)
-        lBs+=mps_apply_transfer_left(paramsleft.lw[pos,:],ham,pos,Bs[pos],mpsleft.AL[pos])*exp(-1im*p)
+    #build lBs(c)
+    lBs = [ TensorMap(zeros,eltype(mpsleft),
+                    space(paramsleft.lw[1,k],1)*space(paramsleft.lw[1,k],2),
+                    space(Bs[1],3)'*space(paramsright.lw[1,k],3)') for k in 1:ham.odim]
+    lBsc = []
+
+    for pos = 1:len
+        lBs = mps_apply_transfer_left(lBs,ham,pos,mpsright.AR[pos],mpsleft.AL[pos])*exp(-1im*p)
+        lBs += mps_apply_transfer_left(leftenv(paramsleft,pos,mpsleft),ham,pos,Bs[pos],mpsleft.AL[pos])*exp(-1im*p)
 
         if trivial
             for i in ids[2:end-1]
-                @tensor lBs[i][-1,-2,-3,-4]-=lBs[i][1,-2,-3,2]*r_RL(mpsleft,pos)[2,1]*l_RL(mpsleft,pos)[-1,-4]
+                @tensor lBs[i][-1,-2,-3,-4] -= lBs[i][1,-2,-3,2]*r_RL(mpsleft,pos)[2,1]*l_RL(mpsleft,pos)[-1,-4]
             end
         end
 
@@ -81,16 +88,18 @@ function effective_excitation_hamiltonian(trivial::Bool, ham::MpoHamiltonian, Bs
     end
 
     #build rBs(c)
-    rBs=[TensorMap(zeros,eltype(mpsleft),space(paramsleft.rw[end,k],1)*space(Bs[1],3),space(paramsright.rw[end,k],2)'*space(paramsright.rw[end,k],3)') for k in 1:ham.odim]
-    rBsc=[]
+    rBs = [ TensorMap(zeros,eltype(mpsleft),
+                    space(paramsleft.rw[end,k],1)*space(Bs[1],3),
+                    space(paramsright.rw[end,k],2)'*space(paramsright.rw[end,k],3)') for k in 1:ham.odim]
+    rBsc = []
 
     for pos=len:-1:1
-        rBs=mps_apply_transfer_right(rBs,ham,pos,mpsleft.AL[pos],mpsright.AR[pos])*exp(1im*p)
-        rBs+=mps_apply_transfer_right(paramsright.rw[pos,:],ham,pos,Bs[pos],mpsright.AR[pos])*exp(1im*p)
+        rBs = mps_apply_transfer_right(rBs,ham,pos,mpsleft.AL[pos],mpsright.AR[pos])*exp(1im*p)
+        rBs += mps_apply_transfer_right(rightenv(paramsright,pos,mpsright),ham,pos,Bs[pos],mpsright.AR[pos])*exp(1im*p)
 
         if trivial
             for i in ids[2:end-1]
-                @tensor rBs[i][-1,-2,-3,-4]-=rBs[i][1,-2,-3,2]*l_LR(mpsleft,pos)[2,1]*r_LR(mpsleft,pos)[-1,-4]
+                @tensor rBs[i][-1,-2,-3,-4] -= rBs[i][1,-2,-3,2]*l_LR(mpsleft,pos)[2,1]*r_LR(mpsleft,pos)[-1,-4]
             end
         end
 
@@ -102,47 +111,66 @@ function effective_excitation_hamiltonian(trivial::Bool, ham::MpoHamiltonian, Bs
 
     # B in same unit cell as B'
     # this is the only point where we have to take renorm into account (a constant shift in the hamiltonian will only affect the terms where both Bs are at the same position)
-    for i=1:len
+    for i = 1:len
         for (j,k) in keys(ham,i)
-            @tensor toret[i][-1,-2,-3,-4]+=paramsleft.lw[i,j][-1,1,2]*Bs[i][2,3,-3,4]*ham[i,j,k][1,-2,5,3]*paramsright.rw[i,k][4,5,-4]
+            @tensor toret[i][-1,-2,-3,-4] +=    leftenv(paramsleft,i,mpsleft)[j][-1,1,2]*
+                                                Bs[i][2,3,-3,4]*
+                                                ham[i,j,k][1,-2,5,3]*
+                                                rightenv(paramsright,i,mpsright)[k][4,5,-4]
 
             if (renorm) # <B|H|B>-<H>
-                en=@tensor conj(mpsleft.AC[i][11,12,13])*paramsleft.lw[i,j][11,1,2]*mpsleft.AC[i][2,3,4]*ham[i,j,k][1,12,5,3]*paramsleft.rw[i,k][4,5,13]
-                toret[i]-=Bs[i]*en
+                en = @tensor    conj(mpsleft.AC[i][11,12,13])*
+                                leftenv(paramsleft,i,mpsleft)[j][11,1,2]*
+                                mpsleft.AC[i][2,3,4]*
+                                ham[i,j,k][1,12,5,3]*
+                                rightenv(paramsleft,i,mpsleft)[k][4,5,13]
+                toret[i] -= Bs[i]*en
             end
             if i>1
-                @tensor toret[i][-1,-2,-3,-4]+=lBsc[i-1][j][-1,1,-3,2]*mpsright.AR[i][2,3,4]*ham[i,j,k][1,-2,5,3]*paramsright.rw[i,k][4,5,-4]
+                @tensor toret[i][-1,-2,-3,-4] +=    lBsc[i-1][j][-1,1,-3,2]*
+                                                    mpsright.AR[i][2,3,4]*
+                                                    ham[i,j,k][1,-2,5,3]*
+                                                    rightenv(paramsright,i,mpsright)[k][4,5,-4]
             end
             if i<len
-                @tensor toret[i][-1,-2,-3,-4]+=paramsleft.lw[i,j][-1,1,2]*mpsleft.AL[i][2,3,4]*ham[i,j,k][1,-2,5,3]*rBsc[i+1][k][4,-3,5,-4]
+                @tensor toret[i][-1,-2,-3,-4] +=    leftenv(paramsleft,i,mpsleft)[j][-1,1,2]*
+                                                    mpsleft.AL[i][2,3,4]*
+                                                    ham[i,j,k][1,-2,5,3]*
+                                                    rBsc[i+1][k][4,-3,5,-4]
             end
         end
 
     end
 
     #B left to B'; outside the unit cell
-    lBsE=left_excitation_transfer_system(lBs,ham,mpsleft,mpsright,trivial,ids,p)
+    lBsE = left_excitation_transfer_system(lBs,ham,mpsleft,mpsright,trivial,ids,p)
 
     for i=1:len
         for (j,k) in keys(ham,i)
-            @tensor toret[i][-1,-2,-3,-4]+=lBsE[j][-1,1,-3,2]*mpsright.AR[i][2,3,4]*ham[i,j,k][1,-2,5,3]*paramsright.rw[i,k][4,5,-4]
+            @tensor toret[i][-1,-2,-3,-4] +=    lBsE[j][-1,1,-3,2]*
+                                                mpsright.AR[i][2,3,4]*
+                                                ham[i,j,k][1,-2,5,3]*
+                                                rightenv(paramsright,i,mpsright)[k][4,5,-4]
         end
 
-        lBsE=mps_apply_transfer_left(lBsE,ham,i,mpsright.AR[i],mpsleft.AL[i])*exp(-1im*p)
+        lBsE = mps_apply_transfer_left(lBsE,ham,i,mpsright.AR[i],mpsleft.AL[i])*exp(-1im*p)
 
         if trivial
             for k in ids[2:end-1]
-                @tensor lBsE[k][-1,-2,-3,-4]-=lBsE[k][1,-2,-3,2]*r_RL(mpsleft,i)[2,1]*l_RL(mpsleft,i)[-1,-4]
+                @tensor lBsE[k][-1,-2,-3,-4] -= lBsE[k][1,-2,-3,2]*r_RL(mpsleft,i)[2,1]*l_RL(mpsleft,i)[-1,-4]
             end
         end
     end
 
     #B right to B'; outside the unit cell
-    rBsE=right_excitation_transfer_system(rBs,ham,mpsleft,mpsright,trivial,ids,p)
+    rBsE = right_excitation_transfer_system(rBs,ham,mpsleft,mpsright,trivial,ids,p)
 
     for i=len:-1:1
         for (j,k) in keys(ham,i)
-            @tensor toret[i][-1,-2,-3,-4]+=paramsleft.lw[i,j][-1,1,2]*mpsleft.AL[i][2,3,4]*ham[i,j,k][1,-2,5,3]*rBsE[k][4,-3,5,-4]
+            @tensor toret[i][-1,-2,-3,-4] +=    leftenv(paramsleft,i,mpsleft)[j][-1,1,2]*
+                                                mpsleft.AL[i][2,3,4]*
+                                                ham[i,j,k][1,-2,5,3]*
+                                                rBsE[k][4,-3,5,-4]
         end
 
         rBsE=mps_apply_transfer_right(rBsE,ham,i,mpsleft.AL[i],mpsright.AR[i])*exp(1im*p)

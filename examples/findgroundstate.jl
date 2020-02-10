@@ -1,6 +1,6 @@
 using MPSKit,TensorKit,Test
 
-let
+#let
     #defining the hamiltonian
     th = nonsym_ising_ham(lambda = 4.0);
     szt = TensorMap([1 0;0 -1],ℂ^2,ℂ^2)
@@ -32,4 +32,4 @@ let
 
     #szval_infinite=@tensor ts.AC[1][1,2,3]*szt[4,2]*conj(ts.AC[1][1,4,3])
     #@test szval_infinite ≈ 0 atol=1e-12
-end
+#end

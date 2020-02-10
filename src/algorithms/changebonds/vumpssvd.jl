@@ -48,8 +48,8 @@ function changebonds_n(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,p
         nC2=vecs[1]
 
         #find the updated two site AL
-        QAC2,_ = TensorKit.leftorth(nAC2,(1,2,3,),(4,), alg=TensorKit.Polar())
-        QC2 ,_ = TensorKit.leftorth(nC2 ,(1,),(2,)    , alg=TensorKit.Polar())
+        QAC2,_ = leftorth(nAC2,(1,2,3,),(4,), alg=TensorKit.Polar())
+        QC2 ,_ = leftorth(nC2 ,(1,),(2,)    , alg=TensorKit.Polar())
 
         #new AL2, reusing the memory alocated for nac2
         @tensor nAC2[-1,-2,-3,-4] = QAC2[-1,-2,-3,1]*conj(QC2[-4,1])

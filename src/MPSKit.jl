@@ -70,7 +70,9 @@ module MPSKit
     abstract type Cache end #cache "manages" environments
 
     include("environments/FinEnv.jl")
-    include("environments/InfEnv.jl")
+    include("environments/abstractinfenv.jl")
+    include("environments/permpoinfenv.jl")
+    include("environments/mpohaminfenv.jl")
     include("environments/simpleenv.jl")
 
     abstract type Algorithm end

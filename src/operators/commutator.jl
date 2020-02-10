@@ -1,12 +1,12 @@
 #implements 'effecient' code for the commutator acting on an mpo
 #code is a bit ugly, and can be speed up
 
-"""
+"
     ComAct(ham1,ham2)
 
     Acts on an mpo with mpo hamiltonian 'ham1' from below + 'ham2' from above.
     Can therefore represent the (anti) commutator
-"""
+"
 struct ComAct{T1<:MpoHamiltonian,T2<:MpoHamiltonian} <: Hamiltonian
     below::T1
     above::T2

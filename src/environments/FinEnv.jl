@@ -1,7 +1,7 @@
-"""
+"
     FinEnv keeps track of the environments for FiniteMps / MpsComoving / FiniteMpo
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
-"""
+"
 struct FinEnv{B <: Operator,C <: MpsType,D <: TensorMap} <: Cache
     ldependencies::Array{D,1} #the data we used to calculate leftenvs/rightenvs
     rdependencies::Array{D,1}
@@ -54,7 +54,9 @@ function params(state::FiniteMps,ham::MpoHamiltonian)
 end
 
 #extract the correct leftstart/rightstart for mpscomoving
-params(state::MpsComoving,ham::MpoHamiltonian;lpars=params(state.left_gs,ham),rpars=params(state.right_gs,ham)) = params(state,ham,leftenv(lpars,1,state.left_gs),rightenv(rpars,length(state),state.right_gs))
+function params(state::MpsComoving,ham::MpoHamiltonian;lpars=params(state.left_gs,ham),rpars=params(state.right_gs,ham))
+    params(state,ham,leftenv(lpars,1,state.left_gs),rightenv(rpars,length(state),state.right_gs))
+end
 
 function params(state::FiniteMpo,ham::ComAct)
     lll = l_LL(state);rrr = r_RR(state)

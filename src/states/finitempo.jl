@@ -1,7 +1,7 @@
 "
-    FiniteMps(data::Array)
+    FiniteMpo(data::Array)
 
-    finite one dimensional mps
+    finite one dimensional mpo
     algorithms usually assume a right-orthormalized input
 "
 struct FiniteMpo{T<:MpoType} <: AbstractArray{T,1}

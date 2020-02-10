@@ -17,7 +17,7 @@ function leading_boundary(state::MpsCenterGauged,H,alg,pars=params(state,H))
     return convert(MpsCenterGauged,st),pr,de
 end
 
-function leading_boundary(state::MpsMultiline, H,alg::Vumps,pars=params(state,H))
+function leading_boundary(state::MpsMultiline, H,alg::Vumps,pars = params(state,H))
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
@@ -26,9 +26,9 @@ function leading_boundary(state::MpsMultiline, H,alg::Vumps,pars=params(state,H)
     lee = galerkin
 
     while true
-        eigalg=Arnoldi(tol=alg.tol_galerkin/10)
+        eigalg = Arnoldi(tol=alg.tol_galerkin/10)
 
-        @threads for col in 1:size(state,2)
+        for col in 1:size(state,2)
 
             (e,vac,ch)=let state=state,pars=pars,eigalg=eigalg
                 eigsolve(RecursiveVec(state.AC[:,col]), 1, :LM, eigalg) do x
@@ -51,7 +51,7 @@ function leading_boundary(state::MpsMultiline, H,alg::Vumps,pars=params(state,H)
         end
 
         state = MpsMultiline(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter)
-        galerkin   = calc_galerkin(state, pars)
+        galerkin = calc_galerkin(state, pars)
         alg.verbose && println("vumps @iteration $(iter) galerkin = $(galerkin)")
 
         #dynamical bonds

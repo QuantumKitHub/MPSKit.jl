@@ -1,4 +1,6 @@
-"onesite dmrg"
+"
+    onesite dmrg
+"
 @with_kw struct Dmrg <: Algorithm
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter

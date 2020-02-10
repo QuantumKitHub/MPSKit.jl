@@ -1,7 +1,6 @@
-#only implemented for mpscentergauged/multiline ...
-#either we change the supertype Hamiltonian to something else, that also fits; or we don't make this type inherit from Hamiltonian
-#untested...
-
+"
+    Represents a periodic (in 2 directions) statmech mpo
+"
 struct PeriodicMpo{O<:MpoType} <: Operator
     opp::Periodic{O,2}
 end

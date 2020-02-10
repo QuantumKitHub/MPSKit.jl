@@ -18,9 +18,11 @@ PeriodicMpo
 
 ## Environments
 ```@docs
-InfEnv
-FinEnv
-SimpleEnv
+MPSKit.AbstractInfEnv
+MPSKit.PerMpoInfEnv
+MPSKit.MpoHamInfEnv
+MPSKit.FinEnv
+MPSKit.SimpleEnv
 ```
 
 ## Generic actions

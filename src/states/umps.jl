@@ -19,6 +19,7 @@ Base.eltype(arr::MpsCenterGauged) = eltype(arr.AL[1])
 Base.copy(m::MpsCenterGauged) = MpsCenterGauged(copy(m.AL),copy(m.AR),copy(m.CR),copy(m.AC));
 #Base.circshift(st::MpsCenterGauged,shift::Int) = MpsCenterGauged(circshift(st.AL,shift),circshift(st.AR,shift),circshift(st.CR,shift),circshift(st.AC,shift))
 Base.repeat(m::MpsCenterGauged,i::Int) = MpsCenterGauged(repeat(m.AL,i),repeat(m.AR,i),repeat(m.CR,i),repeat(m.AC,i));
+Base.similar(st::MpsCenterGauged) = MpsCenterGauged(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
 
 MpsCenterGauged(pspaces::M,Dspaces=[oneunit(sp) for sp in pspaces];tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter,eltype=Defaults.eltype) where M<: AbstractArray= MpsCenterGauged([TensorMap(rand,eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)],tol=tol,maxiter=maxiter)
 

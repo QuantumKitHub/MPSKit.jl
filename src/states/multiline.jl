@@ -17,6 +17,7 @@ Base.size(arr::MpsMultiline,i) = size(arr.AL,i)
 Base.length(arr::MpsMultiline) = size(arr,1)
 Base.eltype(arr::MpsMultiline) = eltype(arr.AL[1])
 Base.lastindex(arr::MpsMultiline,i) = lastindex(arr.AL,i);
+Base.similar(st::MpsMultiline) = MpsMultiline(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
 
 function Base.convert(::Type{MpsMultiline},st::MpsCenterGauged)
     AL=Periodic(permutedims(st.AL.data));

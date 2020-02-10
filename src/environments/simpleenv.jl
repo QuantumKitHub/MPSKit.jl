@@ -1,15 +1,15 @@
-"""
+"
     SimpleEnv does nothing fancy to ensure the correctness of the environments it returns.
     Supports setleftenv! and setrightenv!
     Only used internally (in idmrg); no public constructor is provided
-"""
+"
 struct SimpleEnv{H<:Operator,V} <:Cache
     opp :: H
     lw :: Periodic{V,2}
     rw :: Periodic{V,2}
 end
 
-function SimpleEnv(state,pars::InfEnv)
+function SimpleEnv(state,pars::AbstractInfEnv)
     lw = similar(pars.lw)
     rw = similar(pars.rw)
     for i = 1:length(state)
