@@ -87,7 +87,7 @@ function LinearAlgebra.dot(v1::FiniteMps,v2::FiniteMps)
 
     @tensor start[-1;-2]:=v2[1][1,2,-2]*conj(v1[1][1,2,-1])
     for i in 2:length(v1)-1
-        start=mps_apply_transfer_left(start,v2[i],v1[i])
+        start=transfer_left(start,v2[i],v1[i])
     end
 
     @tensor start[1,2]*v2[end][2,3,4]*conj(v1[end][1,3,4])

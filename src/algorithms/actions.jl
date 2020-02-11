@@ -168,7 +168,7 @@ function expectation_value(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=params
     for i=1:len
         util = Tensor(ones,space(prevca.lw[i+1,ham.odim],2))
         for j=ham.odim:-1:1
-            apl = mps_apply_transfer_left(leftenv(prevca,i,st)[j],ham[i,j,ham.odim],st.AL[i],st.AL[i]);
+            apl = transfer_left(leftenv(prevca,i,st)[j],ham[i,j,ham.odim],st.AL[i],st.AL[i]);
             ens[i+1] += @tensor apl[1,2,3]*r_LL(st,i)[3,1]*conj(util[2])
         end
     end
@@ -182,7 +182,7 @@ function expectation_value(st::MpsCenterGauged,ham::MpoHamiltonian,size::Int,pre
     start=[@tensor x[-1 -2;-3]:=y[1,-2,3]*st.CR[0][3,-3]*conj(st.CR[0][1,-1]) for y in start]
 
     for i in 1:size
-        start=mps_apply_transfer_left(start,ham,i,st.AR[i],st.AR[i])
+        start=transfer_left(start,ham,i,st.AR[i],st.AR[i])
     end
 
     tot=0.0+0im

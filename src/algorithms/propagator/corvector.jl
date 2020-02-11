@@ -49,8 +49,8 @@ function dynamicaldmrg(A::Union{MpsComoving,FiniteMps},z,ham::MpoHamiltonian;ini
     push!(mixedlenvs,isomorphism(space(A[1],1),space(A[1],1)))
     push!(mixedrenvs,isomorphism(space(A[len],3)',space(A[len],3)'))
     for i in 1:length(A)
-        push!(mixedlenvs,mps_apply_transfer_left(mixedlenvs[end],A[i],init[i]))
-        push!(mixedrenvs,mps_apply_transfer_right(mixedrenvs[end],A[len-i+1],init[len-i+1]))
+        push!(mixedlenvs,transfer_left(mixedlenvs[end],A[i],init[i]))
+        push!(mixedrenvs,transfer_right(mixedrenvs[end],A[len-i+1],init[len-i+1]))
     end
     mixedrenvs=reverse(mixedrenvs)
 
@@ -83,7 +83,7 @@ function dynamicaldmrg(A::Union{MpsComoving,FiniteMps},z,ham::MpoHamiltonian;ini
             @tensor A[i+1][-1 -2;-3]:=ac[-1,1]*A[i+1][1,-2,-3]
             @tensor init[i+1][-1 -2;-3]:=ic[-1,1]*init[i+1][1,-2,-3]
 
-            mixedlenvs[i+1]=mps_apply_transfer_left(mixedlenvs[i],A[i],init[i])
+            mixedlenvs[i+1]=transfer_left(mixedlenvs[i],A[i],init[i])
         end
 
         for i in length(A):-1:2
@@ -111,7 +111,7 @@ function dynamicaldmrg(A::Union{MpsComoving,FiniteMps},z,ham::MpoHamiltonian;ini
             init[i-1] = init[i-1]*ic
 
 
-            mixedrenvs[i]=mps_apply_transfer_right(mixedrenvs[i+1],A[i],init[i])
+            mixedrenvs[i]=transfer_right(mixedrenvs[i+1],A[i],init[i])
         end
 
         verbose && println("ddmrg sweep delta : $(delta)")
@@ -121,7 +121,7 @@ function dynamicaldmrg(A::Union{MpsComoving,FiniteMps},z,ham::MpoHamiltonian;ini
     a = a';
     cb = leftenv(pars1,1,A);
     for i in 1:length(A)
-        cb = mps_apply_transfer_left(cb,ham,i,init[i],A[i]);
+        cb = transfer_left(cb,ham,i,init[i],A[i]);
     end
 
     b = 0*a

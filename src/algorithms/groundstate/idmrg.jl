@@ -30,7 +30,7 @@ function find_groundstate(st::MpsCenterGauged, ham::Hamiltonian,alg::Idmrg1,opar
             (curu[i],curc)=TensorKit.leftorth!(vecs[1])
 
             #partially update pars
-            setleftenv!(pars,i+1,st,mps_apply_transfer_left(leftenv(pars,i,st),ham,i,curu[i]))
+            setleftenv!(pars,i+1,st,transfer_left(leftenv(pars,i,st),ham,i,curu[i]))
         end
 
         for i in length(st):-1:1
@@ -45,7 +45,7 @@ function find_groundstate(st::MpsCenterGauged, ham::Hamiltonian,alg::Idmrg1,opar
             curu[i] = permute(temp,(1,2),(3,))
 
             #partially update pars
-            setrightenv!(pars,i-1,st,mps_apply_transfer_right(rightenv(pars,i,st),ham,i,curu[i]))
+            setrightenv!(pars,i-1,st,transfer_right(rightenv(pars,i,st),ham,i,curu[i]))
         end
 
         err = norm(curc-prevc)

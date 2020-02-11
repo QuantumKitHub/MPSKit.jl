@@ -101,7 +101,7 @@ end
 function LinearAlgebra.dot(a::MpsCenterGauged,b::MpsCenterGauged)
     init = TensorMap(rand,ComplexF64,space(a.AL[1],1),space(b.AL[1],1))
     num = lcm(length(a),length(b))
-    (vals,vecs,convhist) = eigsolve(x->mps_apply_transfer_left(x,b.AL[1:num],a.AL[1:num]),init,1,:LM,Arnoldi())
+    (vals,vecs,convhist) = eigsolve(x->transfer_left(x,b.AL[1:num],a.AL[1:num]),init,1,:LM,Arnoldi())
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]
 end

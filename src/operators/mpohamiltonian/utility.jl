@@ -167,33 +167,33 @@ end
 TensorKit.fuse(f::T) where T<: VectorSpace = f
 
 #the usual mpoham transfer
-mps_apply_transfer_left(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MpsType = mps_apply_transfer_left(V,vec,ham,pos,A,Ab)
-mps_apply_transfer_right(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MpsType = mps_apply_transfer_right(V,vec,ham,pos,A,Ab)
+transfer_left(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MpsType = transfer_left(V,vec,ham,pos,A,Ab)
+transfer_right(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MpsType = transfer_right(V,vec,ham,pos,A,Ab)
 
 #A is an excitation tensor; with an excitation leg
-mps_apply_transfer_left(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::M,Ab::V=A) where V<:MpsType where M <:MpoType = mps_apply_transfer_left(M,vec,ham,pos,A,Ab)
-mps_apply_transfer_right(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::M,Ab::V=A) where V<:MpsType where M <:MpoType = mps_apply_transfer_right(M,vec,ham,pos,A,Ab)
+transfer_left(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::M,Ab::V=A) where V<:MpsType where M <:MpoType = transfer_left(M,vec,ham,pos,A,Ab)
+transfer_right(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::M,Ab::V=A) where V<:MpsType where M <:MpoType = transfer_right(M,vec,ham,pos,A,Ab)
 
 #v has an extra excitation leg
-mps_apply_transfer_left(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::M,Ab::M=A) where V<:MpoType where M <:MpsType = mps_apply_transfer_left(V,vec,ham,pos,A,Ab)
-mps_apply_transfer_right(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::M,Ab::M=A) where V<:MpoType where M <:MpsType = mps_apply_transfer_right(V,vec,ham,pos,A,Ab)
+transfer_left(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::M,Ab::M=A) where V<:MpoType where M <:MpsType = transfer_left(V,vec,ham,pos,A,Ab)
+transfer_right(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::M,Ab::M=A) where V<:MpoType where M <:MpsType = transfer_right(V,vec,ham,pos,A,Ab)
 
-function mps_apply_transfer_left(RetType,vec,ham::MpoHamiltonian,pos,A,Ab=A)
+function transfer_left(RetType,vec,ham::MpoHamiltonian,pos,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
     for (j,k) in keys(ham,pos)
         if assigned[k]
             if j==k && isscal(ham,pos,j)
-                toreturn[k]+=ham.scalars[pos][j]*mps_apply_transfer_left(vec[j],[A],[Ab])
+                toreturn[k]+=ham.scalars[pos][j]*transfer_left(vec[j],[A],[Ab])
             else
-                toreturn[k]+=mps_apply_transfer_left(vec[j],ham[pos,j,k],A,Ab)
+                toreturn[k]+=transfer_left(vec[j],ham[pos,j,k],A,Ab)
             end
         else
             if j==k && isscal(ham,pos,j)
-                toreturn[k]=ham.scalars[pos][j]*mps_apply_transfer_left(vec[j],[A],[Ab])
+                toreturn[k]=ham.scalars[pos][j]*transfer_left(vec[j],[A],[Ab])
             else
-                toreturn[k]=mps_apply_transfer_left(vec[j],ham[pos,j,k],A,Ab)
+                toreturn[k]=transfer_left(vec[j],ham[pos,j,k],A,Ab)
             end
             assigned[k]=true
         end
@@ -204,29 +204,29 @@ function mps_apply_transfer_left(RetType,vec,ham::MpoHamiltonian,pos,A,Ab=A)
         if !assigned[k]
             #prefereably this never happens, because it's a wasted step
             #it's also avoideable with a little bit more code
-            toreturn[k]=mps_apply_transfer_left(vec[1],ham[pos,1,k],A,Ab)
+            toreturn[k]=transfer_left(vec[1],ham[pos,1,k],A,Ab)
         end
     end
 
     return toreturn
 end
-function mps_apply_transfer_right(RetType,vec,ham::MpoHamiltonian,pos,A,Ab=A)
+function transfer_right(RetType,vec,ham::MpoHamiltonian,pos,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
     for (j,k) in keys(ham,pos)
         if assigned[j]
             if j==k && isscal(ham,pos,j)
-                toreturn[j]+=ham.scalars[pos][j]*mps_apply_transfer_right(vec[k],[A],[Ab])
+                toreturn[j]+=ham.scalars[pos][j]*transfer_right(vec[k],[A],[Ab])
             else
-                toreturn[j]+=mps_apply_transfer_right(vec[k],ham[pos,j,k],A,Ab)
+                toreturn[j]+=transfer_right(vec[k],ham[pos,j,k],A,Ab)
             end
 
         else
             if j==k && isscal(ham,pos,j)
-                toreturn[j]=ham.scalars[pos][j]*mps_apply_transfer_right(vec[k],[A],[Ab])
+                toreturn[j]=ham.scalars[pos][j]*transfer_right(vec[k],[A],[Ab])
             else
-                toreturn[j]=mps_apply_transfer_right(vec[k],ham[pos,j,k],A,Ab)
+                toreturn[j]=transfer_right(vec[k],ham[pos,j,k],A,Ab)
             end
             assigned[j]=true
         end
@@ -234,7 +234,7 @@ function mps_apply_transfer_right(RetType,vec,ham::MpoHamiltonian,pos,A,Ab=A)
 
     for j in 1:ham.odim
         if !assigned[j]
-            toreturn[j]=mps_apply_transfer_right(vec[1],ham[pos,j,1],A,Ab)
+            toreturn[j]=transfer_right(vec[1],ham[pos,j,1],A,Ab)
         end
     end
 

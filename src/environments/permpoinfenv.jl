@@ -45,15 +45,15 @@ function params(state::MpsMultiline{T},mpo::PeriodicMpo,prevl = nothing,prevr = 
 
         alg=Arnoldi(tol = tol,maxiter=maxiter)
 
-        (vals,Ls,convhist) = eigsolve(x-> mps_apply_transfer_left(x,mpo.opp[cr,:],state.AL[cr,1:end],state.AL[cr+1,1:end]),L0,1,:LM,alg)
+        (vals,Ls,convhist) = eigsolve(x-> transfer_left(x,mpo.opp[cr,:],state.AL[cr,1:end],state.AL[cr+1,1:end]),L0,1,:LM,alg)
         convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-        (_,Rs,convhist) = eigsolve(x-> mps_apply_transfer_right(x,mpo.opp[cr,:],state.AR[cr,1:end],state.AR[cr+1,1:end]),R0,1,:LM,alg)
+        (_,Rs,convhist) = eigsolve(x-> transfer_right(x,mpo.opp[cr,:],state.AR[cr,1:end],state.AR[cr+1,1:end]),R0,1,:LM,alg)
         convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
 
 
         lefties[cr,1] = Ls[1]
         for loc in 2:numcols
-            lefties[cr,loc] = mps_apply_transfer_left(lefties[cr,loc-1],mpo.opp[cr,loc-1],state.AL[cr,loc-1],state.AL[cr+1,loc-1])
+            lefties[cr,loc] = transfer_left(lefties[cr,loc-1],mpo.opp[cr,loc-1],state.AL[cr,loc-1],state.AL[cr+1,loc-1])
         end
 
         renormfact = @tensor Ls[1][1,2,3]*state.CR[cr,0][3,4]*Rs[1][4,2,5]*conj(state.CR[cr+1,0][1,5])
@@ -62,7 +62,7 @@ function params(state::MpsMultiline{T},mpo::PeriodicMpo,prevl = nothing,prevr = 
         lefties[cr,1] /=sqrt(renormfact);
 
         for loc in numcols-1:-1:1
-            righties[cr,loc] = mps_apply_transfer_right(righties[cr,loc+1],mpo.opp[cr,loc+1],state.AR[cr,loc+1],state.AR[cr+1,loc+1])
+            righties[cr,loc] = transfer_right(righties[cr,loc+1],mpo.opp[cr,loc+1],state.AR[cr,loc+1],state.AR[cr+1,loc+1])
 
             renormfact = @tensor lefties[cr,loc+1][1,2,3]*state.CR[cr,loc][3,4]*righties[cr,loc][4,2,5]*conj(state.CR[cr+1,loc][1,5])
             righties[cr,loc]/=sqrt(renormfact)

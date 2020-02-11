@@ -56,7 +56,7 @@ function TensorKit.leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, max
             #Projection of the current guess onto its largest self consistent eigenvector + isolation of the unitary part
 
             outp = eigsolve(Cs[end], 1, :LM,alg) do x
-                    mps_apply_transfer_left(x,A,Al)
+                    transfer_left(x,A,Al)
                 end
 
             Cs[end] = TensorKit.leftorth!(outp[2][1],alg=TensorKit.Polar())[2]
@@ -100,7 +100,7 @@ function TensorKit.rightorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, ma
             #Projection of the current guess onto its largest self consistent eigenvector + isolation of the unitary part
 
             outp = eigsolve(Cs[end], 1, :LM,alg) do x
-                mps_apply_transfer_right(x,A,Ar)
+                transfer_right(x,A,Ar)
             end
             Cs[end] = TensorKit.rightorth!(outp[2][1],alg=TensorKit.Polar())[1]
         end

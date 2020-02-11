@@ -59,7 +59,7 @@ function calclw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca;tol::Float64=Defa
             @tensor tosvec[-1 -2;-3]:=fixpoints[1,i][-1,-2,-3]-fixpoints[1,i][1,-2,2]*r_LL(st)[2,1]*l_LL(st)[-1,-3]
 
             (fixpoints[1,i],convhist)=linsolve(tosvec,prevca[1,i],alg) do x
-                x-mps_apply_transfer_left(x,st.AL[1:len],st.AL[1:len],rvec=r_LL(st),lvec=l_LL(st))
+                x-transfer_left(x,st.AL[1:len],st.AL[1:len],rvec=r_LL(st),lvec=l_LL(st))
             end
             convhist.converged==0 && @info "calclw failed to converge $(convhist.normres)"
 
@@ -72,7 +72,7 @@ function calclw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca;tol::Float64=Defa
         else #do the obvious thing
             if reduce((a,b)->a&&b, [contains(ham,x,i,i) for x in 1:len])
                 (fixpoints[1,i],convhist)=linsolve(fixpoints[1,i],prevca[1,i],alg) do x
-                    x-mps_apply_transfer_left(x,[ham[j,i,i] for j in 1:len],st.AL[1:len],st.AL[1:len])
+                    x-transfer_left(x,[ham[j,i,i] for j in 1:len],st.AL[1:len],st.AL[1:len])
                 end
                 convhist.converged==0 && @info "calclw failed to converge $(convhist.normres)"
 
@@ -112,7 +112,7 @@ function calcrw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca;tol::Float64=Defa
             @tensor tosvec[-1 -2;-3]:=fixpoints[end,i][-1,-2,-3]-fixpoints[end,i][1,-2,2]*l_RR(st)[2,1]*r_RR(st)[-1,-3]
 
             (fixpoints[end,i],convhist)=linsolve(tosvec,prevca[end,i],alg) do x
-                x-mps_apply_transfer_right(x,st.AR[1:len],st.AR[1:len],lvec=l_RR(st),rvec=r_RR(st))
+                x-transfer_right(x,st.AR[1:len],st.AR[1:len],lvec=l_RR(st),rvec=r_RR(st))
             end
 
             convhist.converged==0 && @info "calcrw failed to converge $(convhist.normres)"
@@ -125,7 +125,7 @@ function calcrw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca;tol::Float64=Defa
             if reduce((a,b)->a&&b, [contains(ham,x,i,i) for x in 1:len])
 
                 (fixpoints[end,i],convhist)=linsolve(fixpoints[end,i],prevca[end,i],alg) do x
-                    x-mps_apply_transfer_right(x,[ham[j,i,i] for j in 1:len],st.AR[1:len],st.AR[1:len])
+                    x-transfer_right(x,[ham[j,i,i] for j in 1:len],st.AR[1:len],st.AR[1:len])
                 end
                 convhist.converged==0 && @info "calcrw failed to converge $(convhist.normres)"
 
@@ -145,9 +145,9 @@ function left_cyclethrough(index::Int,fp,ham,st) #see code for explanation
         for j=index:-1:1
             if contains(ham,i,j,index)
                 if j==index && isscal(ham,i,index)
-                    fp[i+1,index] += mps_apply_transfer_left(fp[i,j],st.AL[i],st.AL[i])*ham.scalars[i][index]
+                    fp[i+1,index] += transfer_left(fp[i,j],st.AL[i],st.AL[i])*ham.scalars[i][index]
                 else
-                    fp[i+1,index] += mps_apply_transfer_left(fp[i,j],ham[i,j,index],st.AL[i],st.AL[i])
+                    fp[i+1,index] += transfer_left(fp[i,j],ham[i,j,index],st.AL[i],st.AL[i])
                 end
             end
         end
@@ -160,9 +160,9 @@ function right_cyclethrough(index,fp,ham,st) #see code for explanation
         for j=index:ham.odim
             if contains(ham,i,index,j)
                 if j==index && isscal(ham,i,index)
-                    fp[i-1,index] += mps_apply_transfer_right(fp[i,j], st.AR[i], st.AR[i]) * ham.scalars[i][index]
+                    fp[i-1,index] += transfer_right(fp[i,j], st.AR[i], st.AR[i]) * ham.scalars[i][index]
                 else
-                    fp[i-1,index] += mps_apply_transfer_right(fp[i,j], ham[i,index,j], st.AR[i], st.AR[i])
+                    fp[i-1,index] += transfer_right(fp[i,j], ham[i,index,j], st.AR[i], st.AR[i])
                 end
             end
         end

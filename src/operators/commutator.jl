@@ -47,7 +47,7 @@ end
 #specialized mpohamiltonian transfer function (not yet typestable)
 #¢an be cleaned up quite easily but I'm lazy
 #also not yet optimal
-function mps_apply_transfer_left(vec,ham::ComAct,pos,A,Ab=A)
+function transfer_left(vec,ham::ComAct,pos,A,Ab=A)
     toreturn = similar(vec)
     assigned=[false for i in vec]
 
@@ -83,7 +83,7 @@ function mps_apply_transfer_left(vec,ham::ComAct,pos,A,Ab=A)
 
     return toreturn
 end
-function mps_apply_transfer_right(vec,ham::ComAct,pos,A,Ab=A)
+function transfer_right(vec,ham::ComAct,pos,A,Ab=A)
     toreturn = similar(vec)
     assigned=[false for i in vec]
 
