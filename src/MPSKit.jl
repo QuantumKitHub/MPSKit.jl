@@ -78,7 +78,6 @@ module MPSKit
     abstract type Algorithm end
 
     include("algorithms/actions.jl")
-    include("algorithms/quasiparticleexcitation.jl")
     include("algorithms/toolbox.jl") #maybe move to utility, or move some utility functions to toolbox?
     include("algorithms/ortho.jl")
 
@@ -98,6 +97,8 @@ module MPSKit
     #include("algorithms/groundstate/optimhook.jl")
 
     include("algorithms/propagator/corvector.jl")
+
+    include("algorithms/excitation/quasiparticleexcitation.jl")
 
     include("algorithms/statmech/vumps.jl")
     include("algorithms/statmech/power.jl")
