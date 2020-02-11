@@ -17,33 +17,31 @@ using MPSKit,TensorKit,LinearAlgebra,Test
 end
 
 @testset "Operators" begin
-    @testset "mpoham" begin
-        @testset "mpoham $(i)" for (i,(th,Dspaces)) in enumerate([
-                                                    (nonsym_ising_ham(),[ℂ^1]),
-                                                    (nonsym_xxz_ham(),[ℂ^1]),
-                                                    (u1_xxz_ham(),[ℂ[U₁](1//2=>1)]),
-                                                    (repeat(su2_xxx_ham(),2),[ℂ[SU₂](0=>1),ℂ[SU₂](1//2=>1)])
-                                                    ])
+    @testset "mpoham $(i)" for (i,(th,Dspaces)) in enumerate([
+                                                (nonsym_ising_ham(),[ℂ^1]),
+                                                (nonsym_xxz_ham(),[ℂ^1]),
+                                                (u1_xxz_ham(),[ℂ[U₁](1//2=>1)]),
+                                                (repeat(su2_xxx_ham(),2),[ℂ[SU₂](0=>1),ℂ[SU₂](1//2=>1)])
+                                                ])
 
-            ts = MpsCenterGauged(th.pspaces,Dspaces); # generate a product state
+        ts = MpsCenterGauged(th.pspaces,Dspaces); # generate a product state
 
-            (ts,_) = changebonds(ts,th,OptimalExpand()) # optimal expand a la vumps paper
-            ndim = dim(space(ts.AC[1],1))
-            (ts,_) = changebonds(ts,th,VumpsSvdCut()) # idmrg2 step to expand the bond dimension
-            @test dim(space(ts.AC[1],1)) > ndim;
+        (ts,_) = changebonds(ts,th,OptimalExpand()) # optimal expand a la vumps paper
+        ndim = dim(space(ts.AC[1],1))
+        (ts,_) = changebonds(ts,th,VumpsSvdCut()) # idmrg2 step to expand the bond dimension
+        @test dim(space(ts.AC[1],1)) > ndim;
 
-            e1 = expectation_value(ts,th);
+        e1 = expectation_value(ts,th);
 
-            e2 = expectation_value(ts,2*th); #multiplication with a constant
-            @test 2*e1≈e2;
+        e2 = expectation_value(ts,2*th); #multiplication with a constant
+        @test 2*e1≈e2;
 
-            e2 = expectation_value(ts,0.5*th+th); #addition
-            @test 1.5*e1≈e2;
+        e2 = expectation_value(ts,0.5*th+th); #addition
+        @test 1.5*e1≈e2;
 
-            th -= expectation_value(ts,th);
-            v = expectation_value(ts,th*th);
-            @test real(v[1])>=0;
-        end
+        th -= expectation_value(ts,th);
+        v = expectation_value(ts,th*th);
+        @test real(v[1])>=0;
     end
 end
 
@@ -66,7 +64,7 @@ end
         @test real(expectation_value(ts,th*th)[1]) < 1e-2 #is the ground state variance relatively low?
 
         #finite mps
-        ts = FiniteMps(th.pspaces[1:10]);
+        ts = FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
         (ts,pars,_) = #=@inferred=# find_groundstate(ts,th,Dmrg2(verbose=false));
         (ts,pars,_) = #=@inferred=# find_groundstate(ts,th,Dmrg(verbose=false));
         @inferred expectation_value(ts,th)

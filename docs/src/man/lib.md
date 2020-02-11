@@ -52,6 +52,10 @@ Tdvp2
 ```@docs
 changebonds
 managebonds
+```
+
+## Various
+```@docs
 dynamicaldmrg
 quasiparticle_excitation
 ```
