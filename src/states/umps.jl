@@ -21,16 +21,18 @@ Base.copy(m::MpsCenterGauged) = MpsCenterGauged(copy(m.AL),copy(m.AR),copy(m.CR)
 Base.repeat(m::MpsCenterGauged,i::Int) = MpsCenterGauged(repeat(m.AL,i),repeat(m.AR,i),repeat(m.CR,i),repeat(m.AC,i));
 Base.similar(st::MpsCenterGauged) = MpsCenterGauged(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
 
-MpsCenterGauged(pspaces::M,Dspaces=[oneunit(sp) for sp in pspaces];tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter,eltype=Defaults.eltype) where M<: AbstractArray= MpsCenterGauged([TensorMap(rand,eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)],tol=tol,maxiter=maxiter)
+function MpsCenterGauged(pspaces::M,Dspaces::N;tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter,eltype=Defaults.eltype) where M<: AbstractArray{S,1} where N<: AbstractArray{S,1} where S
+    MpsCenterGauged([TensorMap(rand,eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)],tol=tol,maxiter=maxiter)
+end
 
 #allow users to pass in simple arrays
 MpsCenterGauged(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T<:GenMpsType =  MpsCenterGauged(Periodic(A),tol=tol,maxiter=maxiter,cguess=cguess)
 function MpsCenterGauged(A::Periodic{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T<:GenMpsType
     #perform the left gauge fixing, remember only Al
-    ALs, _, deltal = leftorth(A[1:end]; tol = tol, maxiter = maxiter, cguess = cguess)
+    ALs, ncguesses, deltal = leftorth(A[1:end]; tol = tol, maxiter = maxiter, cguess = cguess)
 
     #perform the right gauge fixing from which we obtain the center matrix
-    ARs, Cs, deltar  = rightorth(ALs ; tol = tol, maxiter = maxiter, cguess = cguess)
+    ARs, Cs, deltar  = rightorth(ALs ; tol = tol, maxiter = maxiter, cguess = ncguesses[end])
 
     ACs=similar(ARs)
     for loc = 1:size(A,1)

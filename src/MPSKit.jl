@@ -1,6 +1,3 @@
-#__precompile__() #tensorkit doesn't allow for precompilation?
-
-
 module MPSKit
     using LinearAlgebra,TensorKit,KrylovKit,Parameters, Base.Threads
 
@@ -23,6 +20,7 @@ module MPSKit
     export Hamiltonian,Operator,Cache
     export MpoHamiltonian,contains,PeriodicMpo,ComAct
     export ac_prime,c_prime,params,ac2_prime,expectation_value,effective_excitation_hamiltonian
+    export leftenv,rightenv
 
     #algos
     export find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2

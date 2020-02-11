@@ -73,7 +73,9 @@ function TensorKit.leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, max
         end
 
         #update delta
-        delta = norm(cold-Cs[len],Inf)
+        if domain(cold) == domain(Cs[len]) && codomain(cold) == codomain(Cs[len])
+            delta = norm(cold-Cs[len],Inf)
+        end
 
         iteration += 1
     end

@@ -18,20 +18,18 @@ end
 
 @testset "Operators" begin
     @testset "mpoham" begin
-        @testset "$(name)" for name in [:nonsym_ising_ham,:nonsym_xxz_ham,#=:su2_xxx_ham,=#:u1_xxz_ham]
+        @testset "mpoham $(i)" for (i,(th,Dspaces)) in enumerate([
+                                                    (nonsym_ising_ham(),[ℂ^1]),
+                                                    (nonsym_xxz_ham(),[ℂ^1]),
+                                                    (u1_xxz_ham(),[ℂ[U₁](1//2=>1)]),
+                                                    (repeat(su2_xxx_ham(),2),[ℂ[SU₂](0=>1),ℂ[SU₂](1//2=>1)])
+                                                    ])
 
-            th = @eval $(name)()
-            ts = MpsCenterGauged(th.pspaces); # generate a product state
-
-            @test dim(space(ts.AC[1],1)) == 1;
+            ts = MpsCenterGauged(th.pspaces,Dspaces); # generate a product state
 
             (ts,_) = changebonds(ts,th,OptimalExpand()) # optimal expand a la vumps paper
-
             ndim = dim(space(ts.AC[1],1))
-            @test ndim > 1;
-
             (ts,_) = changebonds(ts,th,VumpsSvdCut()) # idmrg2 step to expand the bond dimension
-
             @test dim(space(ts.AC[1],1)) > ndim;
 
             e1 = expectation_value(ts,th);

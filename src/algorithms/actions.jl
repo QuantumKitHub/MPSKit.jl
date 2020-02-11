@@ -33,7 +33,7 @@ function ac_prime(x::MpoType,pos::Int,mpo::FiniteMpo,cache)
     return toret
 end
 function ac_prime(x::MpsType, row::Int,col::Int,mps::Union{MpsCenterGauged,MpsMultiline}, pars::PerMpoInfEnv)
-    @tensor toret[-1 -2;-3]:=leftenv(pars,row,mps)[col][-1,2,1]*x[1,3,4]*(pars.opp[row,col])[2,-2,5,3]*rightenv(pars,row,mps)[col][4,5,-3]
+    @tensor toret[-1 -2;-3]:=leftenv(pars,row,col,mps)[-1,2,1]*x[1,3,4]*(pars.opp[row,col])[2,-2,5,3]*rightenv(pars,row,col,mps)[4,5,-3]
 end
 
 """
@@ -86,11 +86,11 @@ function ac2_prime(x::TensorMap,pos::Int,mpo::FiniteMpo,cache)
     return toret
 end
 function ac2_prime(x::MpoType, row::Int,col::Int,mps::Union{MpsCenterGauged,MpsMultiline}, pars::PerMpoInfEnv)
-    @tensor toret[-1 -2;-3 -4]:=leftenv(pars,row,mps)[col][-1,2,1]*
+    @tensor toret[-1 -2;-3 -4]:=leftenv(pars,row,col,mps)[-1,2,1]*
                                 x[1,3,4,5]*
                                 pars.opp[row,col][2,-2,6,3]*
                                 pars.opp[row,col+1][6,-3,7,4]*
-                                rightenv(pars,row,mps)[mod1(col+1,end)][5,7,-4]
+                                rightenv(pars,row,col+1,mps)[5,7,-4]
 end
 
 """
@@ -121,7 +121,7 @@ function c_prime(x::MpsVecType,pos::Int,mpo::FiniteMpo,cache)
     return toret
 end
 function c_prime(x::TensorMap, row::Int,col::Int, mps::Union{MpsCenterGauged,MpsMultiline}, pars::PerMpoInfEnv)
-    @tensor toret[-1;-2] := leftenv(pars,row,mps)[mod1(col+1,end)][-1,3,1]*x[1,2]*rightenv(pars,row,mps)[col][2,3,-2]
+    @tensor toret[-1;-2] := leftenv(pars,row,col+1,mps)[-1,3,1]*x[1,2]*rightenv(pars,row,col,mps)[2,3,-2]
 end
 
 
@@ -197,10 +197,10 @@ expectation_value(st::MpsCenterGauged,opp::PeriodicMpo,ca=params(st,opp)) = expe
 function expectation_value(st::MpsMultiline,opp::PeriodicMpo,ca=params(st,opp))
     retval = Periodic{eltype(st.AC[1,1]),2}(size(st,1),size(st,2));
     for (i,j) in Iterators.product(1:size(st,1),1:size(st,2))
-        retval[i,j] = @tensor   leftenv(ca,i,st)[j][1,2,3]*
+        retval[i,j] = @tensor   leftenv(ca,i,j,st)[1,2,3]*
                                 opp[i,j][2,4,5,6]*
                                 st.AC[i,j][3,6,7]*
-                                rightenv(ca,i,st)[j][7,5,8]*
+                                rightenv(ca,i,j,st)[7,5,8]*
                                 conj(st.AC[i,j][1,4,8])
     end
     return retval

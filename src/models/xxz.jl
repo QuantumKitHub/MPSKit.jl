@@ -26,7 +26,7 @@ function su2_xxx_ham(;spin = 1//2)
     Sl1 = TensorMap(ones, Defaults.eltype, ℂ[SU₂](0=>1)*ph , ℂ[SU₂](1=>1)*ph)
     Sr1 = TensorMap(ones, Defaults.eltype, ℂ[SU₂](1=>1)*ph , ℂ[SU₂](0=>1)*ph)
 
-    return MpoHamiltonian([Sl1,Sr1])
+    return MpoHamiltonian([Sl1,Sr1]);
 end
 
 function u1_xxz_ham(;spin = 1,delta = 1,zfield = 0.0)

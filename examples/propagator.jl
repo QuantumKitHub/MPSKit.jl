@@ -2,7 +2,7 @@ using MPSKit,TensorKit,Test
 
 #let
     ham = nonsym_ising_ham(lambda=4.0);
-    gs = FiniteMps([ℂ^2 for i in 1:10]);
+    gs = FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
     (gs,pars,_) = find_groundstate(gs,ham,Dmrg2(trscheme=truncdim(10)));
 
     #we are in the groundstate

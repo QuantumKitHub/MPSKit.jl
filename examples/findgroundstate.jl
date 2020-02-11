@@ -6,14 +6,14 @@ using MPSKit,TensorKit,Test
     szt = TensorMap([1 0;0 -1],ℂ^2,ℂ^2)
 
     #finite mps (dmrg)
-    ts = FiniteMps(fill(ℂ^2,10));
+    ts = FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
     (ts,pars,_)=find_groundstate(ts,th,Dmrg(manager=SimpleManager(12)));
 
     szval_finite= sum(expectation_value(ts,szt))/length(ts)
     @test szval_finite ≈ 0 atol=1e-12
 
     #twosite dmrg
-    ts = FiniteMps(fill(ℂ^2,10));
+    ts = FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
     (ts,pars,_)=find_groundstate(ts,th,Dmrg2(trscheme = truncdim(15)));
 
     szval_finite= sum(expectation_value(ts,szt))/length(ts)

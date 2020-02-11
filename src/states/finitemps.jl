@@ -19,9 +19,6 @@ end
 
 FiniteMps{T}(init,len) where T = FiniteMps(Array{T,1}(init,len))
 
-#creates a product state when given an array of spaces
-FiniteMps(arr::AbstractArray{T,1},eltype=Defaults.eltype) where T<: EuclideanSpace = FiniteMps([TensorMap(rand,eltype,oneunit(sp)*sp,oneunit(sp)) for sp in arr])
-
 Base.length(arr::FiniteMps) = length(arr.data)
 Base.size(arr::FiniteMps) = size(arr.data)
 Base.getindex(arr::FiniteMps,I::Int) = arr.data[I]
