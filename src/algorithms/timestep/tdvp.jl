@@ -72,7 +72,7 @@ function timestep(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian, timestep:
 
         #in this case we need to split newAcenter in a left gauge fixed part (that will remain at spot i) and a center that will move to the next site
         (newcenter,ar) = TensorKit.rightorth(state[i],(1,),(2,3,),alg=TensorKit.RQpos())
-        permuteind!(state[i],ar,(1,2),(3,));poison!(pars,i);
+        permute!(state[i],ar,(1,2),(3,));poison!(pars,i);
 
         (oldcenter,convhist) = let pars = pars, state = state
             exponentiate(x->c_prime(x,i-1,state,pars),1im*timestep/2,newcenter,Lanczos(tol=alg.tolgauge))
@@ -95,7 +95,7 @@ function timestep(state::FiniteMpo, H::ComAct, timestep::Number,alg::Tdvp,pars=p
         end
 
         (newal,newcenter) = TensorKit.leftorth(state[i],(1,2,4),(3,),alg=TensorKit.QRpos())
-        permuteind!(state[i],newal,(1,2),(4,3));poison!(pars,i);
+        permute!(state[i],newal,(1,2),(4,3));poison!(pars,i);
 
         (oldcenter,convhist) =  let pars=pars, state = state
             exponentiate(x->c_prime(x,i,state,pars),1im*timestep/2,newcenter,Lanczos(tol=alg.tolgauge))
@@ -116,7 +116,7 @@ function timestep(state::FiniteMpo, H::ComAct, timestep::Number,alg::Tdvp,pars=p
 
         (newcenter,ar) = TensorKit.rightorth(state[i],(1,),(2,3,4),alg=TensorKit.RQpos())
 
-        permuteind!(state[i],ar,(1,2),(3,4));poison!(pars,i);
+        permute!(state[i],ar,(1,2),(3,4));poison!(pars,i);
 
         (oldcenter,convhist) =  let pars=pars, state = state
             exponentiate(x->c_prime(x,i-1,state,pars),1im*timestep/2,newcenter,Lanczos(tol=alg.tolgauge))
@@ -151,7 +151,7 @@ function timestep(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian, timestep:
 
         (nac2,convhist) = exponentiate(x->ac2_prime(x,i,state,pars),-1im*timestep/2,ac2,Lanczos())
 
-        (nal,nc,nar)=svd(nac2,trunc=alg.trscheme)
+        (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme)
         @tensor nac[-1 -2;-3]:=nc[-1,1]*nar[1,-2,-3]
 
         state[i]=nal
@@ -170,11 +170,11 @@ function timestep(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian, timestep:
 
         (nac2,convhist) = exponentiate(x->ac2_prime(x,i-1,state,pars),-1im*timestep/2,ac2,Lanczos())
 
-        (nal,nc,nar)=svd(nac2,trunc=alg.trscheme)
+        (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme)
         @tensor nac[-1 -2;-3]:=nal[-1,-2,1]*nc[1,-3]
 
         state[i-1]=nac
-        state[i]=permuteind(nar,(1,2),(3,))
+        state[i]=permute(nar,(1,2),(3,))
 
         if(i!=2)
             (state[i-1],convhist) = exponentiate(x->ac_prime(x,i-1,state,pars),1im*timestep/2,nac,Lanczos())
@@ -192,10 +192,10 @@ function timestep(state::FiniteMpo, H::ComAct, timestep::Number,alg::Tdvp2,pars=
 
         (nac2,convhist) = exponentiate(x->ac2_prime(x,i,state,pars),-1im*timestep/2,ac2,Lanczos())
 
-        (nal,nc,nar)=svd(permuteind(nac2,(1,2,6),(3,4,5)),trunc=alg.trscheme)
+        (nal,nc,nar) = tsvd(permute(nac2,(1,2,6),(3,4,5)),trunc=alg.trscheme)
         @tensor nac[-1 -2;-3 -4]:=nc[-1,1]*nar[1,-2,-3,-4]
 
-        state[i]=permuteind(nal,(1,2),(4,3))
+        state[i]=permute(nal,(1,2),(4,3))
         state[i+1]=nac
 
         if(i!=(length(state)-1))
@@ -211,12 +211,12 @@ function timestep(state::FiniteMpo, H::ComAct, timestep::Number,alg::Tdvp2,pars=
 
         (nac2,convhist) = exponentiate(x->ac2_prime(x,i-1,state,pars),-1im*timestep/2,ac2,Lanczos())
 
-        (nal,nc,nar)=svd(permuteind(nac2,(1,2,6),(3,4,5)),trunc=alg.trscheme)
+        (nal,nc,nar) = tsvd(permute(nac2,(1,2,6),(3,4,5)),trunc=alg.trscheme)
 
         @tensor nac[-1 -2;-3 -4]:=nal[-1,-2,-4,1]*nc[1,-3]
 
         state[i-1]=nac
-        state[i]=permuteind(nar,(1,2),(3,4))
+        state[i]=permute(nar,(1,2),(3,4))
 
         if(i!=2)
             (state[i-1],convhist) = exponentiate(x->ac_prime(x,i-1,state,pars),1im*timestep/2,nac,Lanczos())

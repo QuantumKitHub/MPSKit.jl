@@ -12,34 +12,28 @@ function changebonds_1(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,p
     #the unitcell==1 case is unique, because there you have a sef-consistency condition
 
     #expand the one site to two sites
-    (nstate,_)=MpsCenterGauged(repeat(state.AL,2))
-    nH=repeat(H,2)
+    nstate = MpsCenterGauged(repeat(state.AL,2))
+    nH = repeat(H,2)
 
-    nstate,npars=changebonds(nstate,nH,alg)
+    nstate,npars = changebonds(nstate,nH,alg)
 
-    A1 = nstate.AL[1]
-    A2 = nstate.AL[2]
-    D1 = dim(space(A1,1))
-    p  = dim(space(A1,2))
-    D2 = dim(space(A1,3))
+    A1 = nstate.AL[1]; A2 = nstate.AL[2]
+    D1 = space(A1,1); D2 = space(A2,1)
 
-    AL = A1
     #collapse back to 1 site
-    if D2 > D1
-        @tensor AL[-1 -2;-3] := leftorth(A1, (1, 2),(3,), truncdim(D1))[-1,-2,-3]
-    elseif D1 > D2
-        @tensor AL[-1 -2;-3] := leftorth(A2, (1, 2),(3,), truncdim(D2))[-1,-2,-3]
+    if dim(D2) != dim(D1)
+        (nstate,nH) = changebonds(nstate,nH,SvdCut(trschemes = [truncdim(min(dim(D1),dim(D2)))]))
     end
 
-    nstate=MpsCenterGauged([AL];tol=alg.tol_gauge)
-    pars = params(H,nstate)
+    nstate = MpsCenterGauged([nstate.AL[1]];tol=alg.tol_gauge)
+    pars = params(nstate,H)
     return nstate, pars
 end
 
 function changebonds_n(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H))
     meps=0.0
     for loc in 1:length(state)
-        @tensor AC2[-1 -2 -3;-4] := state.AC[loc][-1,-2,1]*state.AR[loc+1][1,-3,-4]
+        @tensor AC2[-1 -2;-3 -4] := state.AC[loc][-1,-2,1]*state.AR[loc+1][1,-3,-4]
 
         (vals,vecs,_) = eigsolve(x->ac2_prime(x,loc,state,pars),AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=true )
         nAC2=vecs[1]
@@ -54,16 +48,16 @@ function changebonds_n(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,p
         #new AL2, reusing the memory alocated for nac2
         @tensor nAC2[-1,-2,-3,-4] = QAC2[-1,-2,-3,1]*conj(QC2[-4,1])
 
-        (AL1,S,V,eps) = svd(nAC2, (1,2), (3,4), trunc=alg.trscheme)
+        (AL1,S,V,eps) = tsvd(nAC2, (1,2), (3,4), trunc=alg.trscheme)
         AL2=S*V
         meps=max(eps,meps)
 
         #make a new state using the updated A's
         allAls = copy(state.AL)
-        allAls[loc]   = AL1
-        allAls[loc+1] = AL2
+        allAls[loc]   = permute(AL1,(1,2),(3,))
+        allAls[loc+1] = permute(AL2,(1,2),(3,))
 
-        state,_ = MpsCenterGauged(allAls; tol = alg.tol_gauge)
+        state = MpsCenterGauged(allAls; tol = alg.tol_gauge)
         pars = params(state,H)
     end
 

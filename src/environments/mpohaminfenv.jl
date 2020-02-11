@@ -40,7 +40,7 @@ function calclw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca;tol::Float64=Defa
     @assert len == ham.period;
 
     #the start element
-    leftutil = Tensor(I,eltype(st),space(ham[1,1,1],1))
+    leftutil = Tensor(ones,eltype(st),space(ham[1,1,1],1))
     @tensor leftstart[-1 -2;-3]:=l_LL(st)[-1,-3]*conj(leftutil[-2])
 
     #initialize the fixpoints array
@@ -93,7 +93,7 @@ function calcrw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca;tol::Float64=Defa
     @assert len == ham.period;
 
     #the start element
-    rightutil=Tensor(I,eltype(st),space(ham[len,1,1],3))
+    rightutil=Tensor(ones,eltype(st),space(ham[len,1,1],3))
     @tensor rightstart[-1 -2;-3]:=r_RR(st)[-1,-3]*conj(rightutil[-2])
 
     #initialize the fixpoints array

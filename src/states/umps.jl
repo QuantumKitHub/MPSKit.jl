@@ -24,8 +24,8 @@ Base.similar(st::MpsCenterGauged) = MpsCenterGauged(similar(st.AL),similar(st.AR
 MpsCenterGauged(pspaces::M,Dspaces=[oneunit(sp) for sp in pspaces];tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter,eltype=Defaults.eltype) where M<: AbstractArray= MpsCenterGauged([TensorMap(rand,eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)],tol=tol,maxiter=maxiter)
 
 #allow users to pass in simple arrays
-MpsCenterGauged(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(I, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T<:GenMpsType =  MpsCenterGauged(Periodic(A),tol=tol,maxiter=maxiter,cguess=cguess)
-function MpsCenterGauged(A::Periodic{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(I, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T<:GenMpsType
+MpsCenterGauged(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T<:GenMpsType =  MpsCenterGauged(Periodic(A),tol=tol,maxiter=maxiter,cguess=cguess)
+function MpsCenterGauged(A::Periodic{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T<:GenMpsType
     #perform the left gauge fixing, remember only Al
     ALs, _, deltal = leftorth(A[1:end]; tol = tol, maxiter = maxiter, cguess = cguess)
 
@@ -62,13 +62,13 @@ l_LR(state::MpsCenterGauged,loc::Int=1) = state.CR[loc-1]'
     l_LL(state,location)
     Left dominant eigenvector of the AL-AL transfermatrix
 "
-l_LL(state::MpsCenterGauged{A},loc::Int=1) where A= TensorMap(I,eltype(A), space(state.AL[loc],1),space(state.AL[loc],1))
+l_LL(state::MpsCenterGauged{A},loc::Int=1) where A= isomorphism(Matrix{eltype(A)}, space(state.AL[loc],1),space(state.AL[loc],1))
 
 "
     r_RR(state,location)
     Right dominant eigenvector of the AR-AR transfermatrix
 "
-r_RR(state::MpsCenterGauged{A},loc::Int=length(state)) where A= TensorMap(I,eltype(A),domain(state.AR[loc]),domain(state.AR[loc]))
+r_RR(state::MpsCenterGauged{A},loc::Int=length(state)) where A= isomorphism(Matrix{eltype(A)},domain(state.AR[loc]),domain(state.AR[loc]))
 
 "
     r_RL(state,location)

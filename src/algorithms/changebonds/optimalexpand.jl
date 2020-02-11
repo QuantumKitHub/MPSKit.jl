@@ -14,18 +14,18 @@ function changebonds(state::MpsCenterGauged, H::Hamiltonian,alg::OptimalExpand,p
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         @tensor intermediate[-1;-2]:=conj(NL[1,2,-1])*AC2[1,2,3,4]*conj(NR[-2,3,4])
-        (U,S,V) = svd(intermediate,trunc=alg.trscheme,alg=TensorKit.SVD())
+        (U,S,V) = tsvd(intermediate,trunc=alg.trscheme,alg=TensorKit.SVD())
 
         #expand AL
         @tensor al_re[-1 -2;-3]:=NL[-1,-2,1]*U[1,-3]
         state.AL[i]=TensorKit.catdomain(state.AL[i],al_re)
 
         al_le=TensorMap(zeros,space(U,2)',space(state.AL[i+1],2)'*space(state.AL[i+1],3)')
-        state.AL[i+1]=permuteind(TensorKit.catcodomain(permuteind(state.AL[i+1],(1,),(2,3)),al_le),(1,2,),(3,))
+        state.AL[i+1]=permute(TensorKit.catcodomain(permute(state.AL[i+1],(1,),(2,3)),al_le),(1,2,),(3,))
 
         #expand AR
         @tensor ar_re[-1;-2 -3]:=V[-1,1]*NR[1,-2,-3]
-        state.AR[i+1]=permuteind(TensorKit.catcodomain(permuteind(state.AR[i+1],(1,),(2,3)),ar_re),(1,2),(3,))
+        state.AR[i+1]=permute(TensorKit.catcodomain(permute(state.AR[i+1],(1,),(2,3)),ar_re),(1,2),(3,))
         ar_le=TensorMap(zeros,space(state.AR[i],1)*space(state.AR[i],2),space(U,2)')
         state.AR[i]=TensorKit.catdomain(state.AR[i],ar_le)
 
@@ -62,10 +62,10 @@ function changebonds(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian,alg::Op
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         @tensor intermediate[-1;-2]:=conj(NL[1,2,-1])*AC2[1,2,3,4]*conj(NR[-2,3,4])
-        (U,S,V) = svd(intermediate,trunc=alg.trscheme,alg=TensorKit.SVD())
+        (U,S,V) = tsvd(intermediate,trunc=alg.trscheme,alg=TensorKit.SVD())
 
         @tensor ar_re[-1;-2 -3]:=V[-1,1]*NR[1,-2,-3]
-        state[i+1]=permuteind(TensorKit.catcodomain(permuteind(state[i+1],(1,),(2,3)),ar_re),(1,2),(3,))
+        state[i+1]=permute(TensorKit.catcodomain(permute(state[i+1],(1,),(2,3)),ar_re),(1,2),(3,))
         ar_le=TensorMap(zeros,space(state[i],1)*space(state[i],2),space(V,1))
         state[i]=TensorKit.catdomain(state[i],ar_le)
 

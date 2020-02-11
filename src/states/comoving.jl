@@ -40,7 +40,7 @@ function expectation_value(state::Union{MpsComoving,FiniteMps},opp::TensorMap;le
 
         if i!=1
             (c,ar)=TensorKit.rightorth(state[i],(1,),(2,3))
-            state[i]=permuteind(ar,(1,2),(3,))
+            state[i]=permute(ar,(1,2),(3,))
             state[i-1]=state[i-1]*c
         end
     end

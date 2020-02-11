@@ -86,17 +86,17 @@ end
 function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2}
     numind=N1+N2
     if(numind==4)
-        return [permuteind(inpmpo,(1,2),(4,3))]
+        return [permute(inpmpo,(1,2),(4,3))]
     end
 
     leftind=(1,2,Int(numind/2+1))
     otherind=tuplejoin(ntuple(x->x+2,Val{Int((N1+N2)/2)-2}()),ntuple(x->x+Int(numind/2+1),Val{Int((N1+N2)/2)-1}()))
 
-    (U,S,V)=svd(inpmpo,leftind,otherind)
+    (U,S,V) = tsvd(inpmpo,leftind,otherind)
 
     T=U*S
 
-    T=permuteind(T,(1,2),(4,3))
+    T=permute(T,(1,2),(4,3))
 
 
     return [T;decompose_localmpo(V)]
@@ -118,7 +118,7 @@ end
 function add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
     #ntuple(x->x,Val{3+4}())
 
-    util=Tensor(I,eltype(tensor),oneunit(space(tensor,1)))
-    tensor1=util*permuteind(tensor,(),ntuple(x->x,Val{N1+N2}()))
-    return permuteind(tensor1,ntuple(x->x,Val{N1+N2+1}()),())*util'
+    util=Tensor(ones,eltype(tensor),oneunit(space(tensor,1)))
+    tensor1=util*permute(tensor,(),ntuple(x->x,Val{N1+N2}()))
+    return permute(tensor1,ntuple(x->x,Val{N1+N2+1}()),())*util'
 end

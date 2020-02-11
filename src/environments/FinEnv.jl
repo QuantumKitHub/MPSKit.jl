@@ -32,8 +32,8 @@ function params(state::FiniteMps,ham::MpoHamiltonian)
     rightstart = Array{eltype(state),1}();leftstart = Array{eltype(state),1}()
 
     for i in 1:ham.odim
-        util_left = Tensor(I,ham.domspaces[1][i]')
-        util_right = Tensor(I,ham.imspaces[length(state)][i]')
+        util_left = Tensor(ones,ham.domspaces[1][i]')
+        util_right = Tensor(ones,ham.imspaces[length(state)][i]')
 
         @tensor ctl[-1 -2; -3]:= lll[-1,-3]*util_left[-2]
         @tensor ctr[-1 -2; -3]:= rrr[-1,-3]*util_right[-2]
@@ -61,13 +61,13 @@ end
 function params(state::FiniteMpo,ham::ComAct)
     lll = l_LL(state);rrr = r_RR(state)
 
-    @tensor sillyel[-1 -2;-3]:=lll[-1,-3]*Tensor(I,ham.above.domspaces[1][1]')[-2]
+    @tensor sillyel[-1 -2;-3]:=lll[-1,-3]*Tensor(ones,ham.above.domspaces[1][1]')[-2]
     rightstart = Array{typeof(sillyel),1}(undef,ham.odim);
     leftstart = Array{typeof(sillyel),1}(undef,ham.odim);
 
     for i in 1:ham.odim
-        util_left = Tensor(I,ham.domspaces[1][i]')
-        util_right = Tensor(I,ham.imspaces[length(state)][i]')
+        util_left = Tensor(ones,ham.domspaces[1][i]')
+        util_right = Tensor(ones,ham.imspaces[length(state)][i]')
 
         if isbelow(ham,i)
             @tensor ctl[-1 -2; -3]:= lll[-1,-3]*util_left[-2]

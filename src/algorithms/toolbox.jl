@@ -1,5 +1,5 @@
 "calculates the entropy of a given state"
-entropy(state::MpsCenterGauged) = [sum([-j^2*2*log(j) for j in diag(convert(Array,svd(state.CR[i])[2]))]) for i in 1:length(state)]
+entropy(state::MpsCenterGauged) = [sum([-j^2*2*log(j) for j in diag(convert(Array,tsvd(state.CR[i])[2]))]) for i in 1:length(state)]
 
 "
 given a thermal state, you can map it to an mps by fusing the physical legs together
@@ -14,7 +14,7 @@ function splitham(ham::MpoHamiltonian)
 
     for i in 1:ham.period
         for (k,l) in keys(ham,i)
-            idt=TensorMap(LinearAlgebra.I,ham.pspaces[i],ham.pspaces[i])
+            idt = isomorphism(ham.pspaces[i],ham.pspaces[i])
 
             @tensor temp[-1 -2 -3;-4 -5 -6]:=ham[i,k,l][-1,-2,-4,-5]*idt[-6,-3]
             hamid[i,k,l]=TensorMap(temp.data,space(temp,1)*pspaces[i],space(temp,4)'*pspaces[i])
@@ -28,14 +28,14 @@ function splitham(ham::MpoHamiltonian)
 end
 
 function mpo2mps(mpo)
-    mpo=permuteind(mpo,(2,4),(1,3))
+    mpo=permute(mpo,(2,4),(1,3))
     mpo=TensorMap(mpo.data,fuse(codomain(mpo)),domain(mpo))
-    mpo=permuteind(mpo,(2,1),(3,));
+    mpo=permute(mpo,(2,1),(3,));
     return mpo
 end
 
 function mps2mpo(mps,ospace)
-    mps=permuteind(mps,(1,2),(3,))
+    mps=permute(mps,(1,2),(3,))
     mpo=TensorMap(mps.data,space(mps,1)*ospace*ospace',space(mps,3)')
-    return permuteind(mpo,(1,2,),(4,3))
+    return permute(mpo,(1,2,),(4,3))
 end

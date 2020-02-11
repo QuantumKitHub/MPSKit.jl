@@ -13,7 +13,7 @@ using MPSKit,TensorKit,Test
     @test szval_finite ≈ 0 atol=1e-12
 
     #twosite dmrg
-    ts=MPSKit.generatefmps(10,2,10);
+    ts = FiniteMps(fill(ℂ^2,10));
     (ts,pars,_)=find_groundstate(ts,th,Dmrg2(trscheme = truncdim(15)));
 
     szval_finite= sum(expectation_value(ts,szt))/length(ts)

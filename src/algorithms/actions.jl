@@ -166,7 +166,7 @@ function expectation_value(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=params
     len = length(st);
     ens = Periodic(zeros(eltype(st.AR[1]),len));
     for i=1:len
-        util = Tensor(I,space(prevca.lw[i+1,ham.odim],2))
+        util = Tensor(ones,space(prevca.lw[i+1,ham.odim],2))
         for j=ham.odim:-1:1
             apl = mps_apply_transfer_left(leftenv(prevca,i,st)[j],ham[i,j,ham.odim],st.AL[i],st.AL[i]);
             ens[i+1] += @tensor apl[1,2,3]*r_LL(st,i)[3,1]*conj(util[2])
@@ -191,4 +191,17 @@ function expectation_value(st::MpsCenterGauged,ham::MpoHamiltonian,size::Int,pre
     end
 
     return tot
+end
+
+expectation_value(st::MpsCenterGauged,opp::PeriodicMpo,ca=params(st,opp)) = expectation_value(convert(MpsMultiline,st),opp,ca);
+function expectation_value(st::MpsMultiline,opp::PeriodicMpo,ca=params(st,opp))
+    retval = Periodic{eltype(st.AC[1,1]),2}(size(st,1),size(st,2));
+    for (i,j) in Iterators.product(1:size(st,1),1:size(st,2))
+        retval[i,j] = @tensor   leftenv(ca,i,st)[j][1,2,3]*
+                                opp[i,j][2,4,5,6]*
+                                st.AC[i,j][3,6,7]*
+                                rightenv(ca,i,st)[j][7,5,8]*
+                                conj(st.AC[i,j][1,4,8])
+    end
+    return retval
 end

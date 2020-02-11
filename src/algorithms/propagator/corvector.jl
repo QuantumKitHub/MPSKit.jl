@@ -46,8 +46,8 @@ function dynamicaldmrg(A::Union{MpsComoving,FiniteMps},z,ham::MpoHamiltonian;ini
     #environments for <init | A>
     mixedlenvs=[]
     mixedrenvs=[]
-    push!(mixedlenvs,TensorMap(LinearAlgebra.I,space(A[1],1),space(A[1],1)))
-    push!(mixedrenvs,TensorMap(LinearAlgebra.I,space(A[len],3)',space(A[len],3)'))
+    push!(mixedlenvs,isomorphism(space(A[1],1),space(A[1],1)))
+    push!(mixedrenvs,isomorphism(space(A[len],3)',space(A[len],3)'))
     for i in 1:length(A)
         push!(mixedlenvs,mps_apply_transfer_left(mixedlenvs[end],A[i],init[i]))
         push!(mixedrenvs,mps_apply_transfer_right(mixedrenvs[end],A[len-i+1],init[len-i+1]))
@@ -104,8 +104,8 @@ function dynamicaldmrg(A::Union{MpsComoving,FiniteMps},z,ham::MpoHamiltonian;ini
             (ac,ta) = rightorth(A[i],(1,),(2,3))
             (ic,ti) = rightorth(init[i],(1,),(2,3))
 
-            A[i] = permuteind(ta,(1,2),(3,))
-            init[i] = permuteind(ti,(1,2),(3,))
+            A[i] = permute(ta,(1,2),(3,))
+            init[i] = permute(ti,(1,2),(3,))
 
             A[i-1] = A[i-1]*ac
             init[i-1] = init[i-1]*ic

@@ -128,9 +128,9 @@ function Base.:*(a::MpoHamiltonian{S,T,E},b::MpoHamiltonian{S,T,E}) where {S,T,E
                 else
                     @tensor newopp[-1 -2;-3 -4 -5 -6]:=a[pos,i,j][-1,1,-4,-6]*b[pos,k,l][-2,-3,-5,1]
                     newopp=TensorMap(newopp.data,ndomspaces[pos][indmap(i,k)],domain(newopp))
-                    newopp=permuteind(newopp,(1,2,5),(3,4))
+                    newopp=permute(newopp,(1,2,5),(3,4))
                     newopp=TensorMap(newopp.data,codomain(newopp),ndomspaces[pos+1][indmap(j,l)])
-                    newopp=permuteind(newopp,(1,2),(4,3))
+                    newopp=permute(newopp,(1,2),(4,3))
 
                     nOs[pos][indmap(i,k),indmap(j,l)]=newopp
                 end
@@ -156,7 +156,7 @@ function Base.conj(a::MpoHamiltonian;transpo=false)
     for (i,j,k) in keys(a)
         b[i,j,k] = @tensor temp[-1 -2;-3 -4]:=conj(a[i,j,k][-1,-2,-3,-4])
         if transpo
-            b[i,j,k]=permuteind(b[i,j,k],(1,4),(3,2))
+            b[i,j,k]=permute(b[i,j,k],(1,4),(3,2))
         end
     end
 
@@ -275,9 +275,9 @@ function full(th :: MpoHamiltonian) #completely and utterly untested
                 #embed the curent block in the total domain - image space
                 @tensor cblock[-1 -2 -3;-4 -5 -6 -7 -8] := th[i,j,k][-2,-4,-6,-8]*frontback[-1,-3,-7,-5]
                 cblock = TensorMap(cblock.data,fuse(codomain(cblock)),domain(cblock))
-                cblock = permuteind(cblock,(1,2,6),(3,4,5))
+                cblock = permute(cblock,(1,2,6),(3,4,5))
                 cblock = TensorMap(cblock.data,codomain(cblock),fuse(domain(cblock)))
-                cblock = permuteind(cblock,(1,2),(4,3))
+                cblock = permute(cblock,(1,2),(4,3))
 
                 #embed it in the matrix space
                 embedder = TensorMap(matrspace,matrspace) do dims
@@ -293,9 +293,9 @@ function full(th :: MpoHamiltonian) #completely and utterly untested
 
                 @tensor cblock[-1 -2;-3 -4 -5 -6] := embedder[-1,-5]*cblock[-2,-3,-4,-6]
                 cblock = TensorMap(cblock.data,fuse(codomain(cblock)),domain(cblock))
-                cblock = permuteind(cblock,(1,2,5),(3,4))
+                cblock = permute(cblock,(1,2,5),(3,4))
                 cblock = TensorMap(cblock.data,codomain(cblock),fuse(domain(cblock)))
-                cblock = permuteind(cblock,(1,2),(4,3))
+                cblock = permute(cblock,(1,2),(4,3))
 
                 curO += cblock
             end

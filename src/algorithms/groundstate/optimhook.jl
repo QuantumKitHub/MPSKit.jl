@@ -24,7 +24,7 @@ function find_groundstate(state::MpsCenterGauged,H::MpoHamiltonian,alg::OptimKit
         #invert cs
         ics = Periodic([inv(c) for c in state.CR])
         pals = [nacs[i]*ics[i] for i in 1:length(state)]
-        pars = [permuteind(ics[i-1]*permuteind(nacs[i],(1,),(2,3)),(1,2),(3,)) for i in 1:length(state)]
+        pars = [permute(ics[i-1]*permute(nacs[i],(1,),(2,3)),(1,2),(3,)) for i in 1:length(state)]
 
         #leftorth rightorth to victory
         (als,cls) = leftorth(pals);

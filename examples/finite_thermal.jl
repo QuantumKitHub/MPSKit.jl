@@ -2,7 +2,7 @@ using MPSKit,TensorKit,Test,LinearAlgebra
 
 let
     #the infinite temperature density matrix
-    inftemp=TensorMap(LinearAlgebra.I,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2)
+    inftemp = complex(isomorphism(ℂ^1*ℂ^2,ℂ^1*ℂ^2))
 
     #the operator used to evolve is the anticommutator
     ham = ComAct(nonsym_ising_ham(),false)

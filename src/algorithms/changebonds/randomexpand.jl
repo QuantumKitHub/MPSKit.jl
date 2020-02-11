@@ -30,13 +30,13 @@ function changebonds(state::Union{FiniteMps{T},MpsComoving{T}},alg::RandExpand) 
 
         ar_re = reduce(TensorKit.catcodomain,Vi)
 
-        state[i+1]=permuteind(TensorKit.catcodomain(permuteind(state[i+1],(1,),ntuple(x->x+1,Val{N}())),ar_re),ntuple(x->x,Val{N}()),(N+1,))
+        state[i+1]=permute(TensorKit.catcodomain(permute(state[i+1],(1,),ntuple(x->x+1,Val{N}())),ar_re),ntuple(x->x,Val{N}()),(N+1,))
 
         ar_le=TensorMap(zeros,codomain(state[i]),space(ar_re,1))
         state[i]=TensorKit.catdomain(state[i],ar_le)
 
         (state[i],C)=TensorKit.leftorth!(state[i])
-        state[i+1] = permuteind(C*permuteind(state[i+1],(1,),ntuple(x->x+1,Val{N}())),ntuple(x->x,Val{N}()),(N+1,))
+        state[i+1] = permute(C*permute(state[i+1],(1,),ntuple(x->x+1,Val{N}())),ntuple(x->x,Val{N}()),(N+1,))
         #@tensor state[i+1][-1 -2;-3] := C[-1,1]*state[i+1][1,-2,-3]
     end
 

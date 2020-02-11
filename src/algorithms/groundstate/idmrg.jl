@@ -42,7 +42,7 @@ function find_groundstate(st::MpsCenterGauged, ham::Hamiltonian,alg::Idmrg1,opar
             end
 
             (curc,temp)=TensorKit.rightorth(vecs[1],(1,),(2,3,))
-            curu[i] = permuteind(temp,(1,2),(3,))
+            curu[i] = permute(temp,(1,2),(3,))
 
             #partially update pars
             setrightenv!(pars,i-1,st,mps_apply_transfer_right(rightenv(pars,i,st),ham,i,curu[i]))

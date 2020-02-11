@@ -1,7 +1,7 @@
 function nonsym_xxz_ham(;spin = 1,delta = 1,zfield = 0.0)
     (sx,sy,sz,id) = nonsym_spintensors(spin)
 
-    idc=TensorMap(I,eltype(sx),oneunit(space(id,1)),oneunit(space(id,1)))
+    idc=isomorphism(Matrix{eltype(sx)},oneunit(space(id,1)),oneunit(space(id,1)))
 
     @tensor sxe[-1 -2;-3 -4]:=sx[-2,-4]*idc[-1,-3]
     @tensor sye[-1 -2;-3 -4]:=sy[-2,-4]*idc[-1,-3]

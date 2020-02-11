@@ -85,7 +85,7 @@ function MpoHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MpoTy
 end
 
 #allow passing in 2leg mpos
-MpoHamiltonian(x::Array{T,3}) where T<:MpsVecType = MpoHamiltonian(map(t->permuteind(add_util_leg(t),(1,2),(4,3)),x))
+MpoHamiltonian(x::Array{T,3}) where T<:MpsVecType = MpoHamiltonian(map(t->permute(add_util_leg(t),(1,2),(4,3)),x))
 
 #allow passing in regular tensormaps
 MpoHamiltonian(t::TensorMap) = MpoHamiltonian(decompose_localmpo(add_util_leg(t)));
@@ -112,7 +112,7 @@ end
 #utility functions for finite mpo
 function Base.getindex(x::MpoHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E}
     if b == c && !ismissing(x.scalars[a][b])
-        return x.scalars[a][b]*TensorMap(I,eltype(T),x.domspaces[a][b]*x.pspaces[a],x.imspaces[a][c]'*x.pspaces[a])::T
+        return x.scalars[a][b]*isomorphism(Matrix{eltype(T)},x.domspaces[a][b]*x.pspaces[a],x.imspaces[a][c]'*x.pspaces[a])::T
     elseif !ismissing(x.Os[a][b,c])
         return x.Os[a][b,c]::T
     else
@@ -144,7 +144,7 @@ isscal(x::MpoHamiltonian,a::Int,b::Int) = !ismissing(x.scalars[a][b])
 checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
 "
 function isid(x::MpoType)
-    id = TensorMap(I,eltype(x),space(x,1)*space(x,2),space(x,3)'*space(x,4)')
+    id = isomorphism(Matrix{eltype(x)},space(x,1)*space(x,2),space(x,3)'*space(x,4)')
     scal = dot(id,x)/dot(id,id)
     diff = x-scal*id
     return norm(diff)<1e-14,scal
