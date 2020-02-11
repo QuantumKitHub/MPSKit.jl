@@ -8,9 +8,9 @@ version = "0.5.0"
 
 [[Adapt]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "82dab828020b872fa9efd3abec1152b075bc7cbf"
+git-tree-sha1 = "c88cfc7f9c1f9f8633cddf0b56e86302b70f64c5"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "1.0.0"
+version = "1.0.1"
 
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -34,9 +34,9 @@ version = "2.1.0"
 
 [[CUDAdrv]]
 deps = ["CEnum", "CUDAapi", "Printf"]
-git-tree-sha1 = "1fce616fa0806c67c133eb1d2f68f0f1a7504665"
+git-tree-sha1 = "5660775f2a3214420add960e1ff2baf46d5297cd"
 uuid = "c5f51814-7f29-56b8-a69c-e4d8f6be1fde"
-version = "5.0.1"
+version = "5.1.0"
 
 [[CUDAnative]]
 deps = ["Adapt", "CEnum", "CUDAapi", "CUDAdrv", "DataStructures", "InteractiveUtils", "LLVM", "Libdl", "Printf", "TimerOutputs"]
@@ -104,9 +104,9 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[MacroTools]]
 deps = ["DataStructures", "Markdown", "Random"]
-git-tree-sha1 = "e2fc7a55bb2224e203bbd8b59f72b91323233458"
+git-tree-sha1 = "07ee65e03e28ca88bc9a338a3726ae0c3efaa94b"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.3"
+version = "0.5.4"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -150,10 +150,10 @@ uuid = "308eb6b3-cc68-5ff3-9e97-c3c4da4fa681"
 version = "0.1.0"
 
 [[Requires]]
-deps = ["Test"]
-git-tree-sha1 = "f6fbf4ba64d295e146e49e021207993b6b48c7d1"
+deps = ["UUIDs"]
+git-tree-sha1 = "d37400976e98018ee840e0ca4f9d20baa231dc6b"
 uuid = "ae029012-a4dd-5104-9daa-d747884805df"
-version = "0.5.2"
+version = "1.0.1"
 
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -180,17 +180,15 @@ version = "0.3.3"
 
 [[TensorKit]]
 deps = ["HalfIntegers", "LRUCache", "LinearAlgebra", "Strided", "TensorOperations", "TupleTools", "WignerSymbols"]
-git-tree-sha1 = "4ac26949f893009731d15921d18aeacb74b6d897"
-repo-rev = "master"
-repo-url = "TensorKit.jl"
+git-tree-sha1 = "3fc29c5393c6391bcfcd26866c83515e0ea191c6"
 uuid = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
-version = "0.1.0"
+version = "0.2.0"
 
 [[TensorOperations]]
 deps = ["CuArrays", "LRUCache", "LinearAlgebra", "Requires", "Strided", "TupleTools"]
-git-tree-sha1 = "234b0234213085a29030ef885a50b89dbf731321"
+git-tree-sha1 = "bafd5918b8e30e1209d376a7e741b432961611cb"
 uuid = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
-version = "2.1.1"
+version = "2.1.2"
 
 [[Test]]
 deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
@@ -206,6 +204,10 @@ version = "0.5.3"
 git-tree-sha1 = "62a7a6cd5a608ff71cecfdb612e67a0897836069"
 uuid = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 version = "1.2.0"
+
+[[UUIDs]]
+deps = ["Random", "SHA"]
+uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [[Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
