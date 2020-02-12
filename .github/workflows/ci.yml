@@ -26,10 +26,9 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
-        with:
-            codecov: true
+      - uses: julia-actions/julia-uploadcodecov@latest
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} # For authentication with SSH deploy key
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   docs:
     name: Documentation
