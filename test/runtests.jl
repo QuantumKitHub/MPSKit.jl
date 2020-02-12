@@ -1,18 +1,44 @@
 using MPSKit,TensorKit,LinearAlgebra,Test
 
 @testset "States" begin
-    @testset "MpsCenterGauged" begin
-        @testset "($D,$d,$elt)" for (D,d,elt) in [(ComplexSpace(10),ComplexSpace(2),ComplexF64),(ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)]
-            tol = Float64(eps(real(elt))*100);
+    @testset "MpsCenterGauged ($D,$d,$elt)" for (D,d,elt) in [(ComplexSpace(10),ComplexSpace(2),ComplexF64),(ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)]
+        tol = Float64(eps(real(elt))*100);
 
-            #=@inferred=# leftorth([TensorMap(rand,elt,D*d,D)],tol=tol);
-            #=@inferred=# rightorth([TensorMap(rand,elt,D*d,D)],tol=tol);
+        #=@inferred=# leftorth([TensorMap(rand,elt,D*d,D)],tol=tol);
+        #=@inferred=# rightorth([TensorMap(rand,elt,D*d,D)],tol=tol);
 
-            ts = #=@inferred=# MpsCenterGauged([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
+        ts = #=@inferred=# MpsCenterGauged([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
 
-            @tensor difference[-1,-2,-3] := ts.AL[1][-1,-2,1]*ts.CR[1][1,-3]-ts.CR[0][-1,1]*ts.AR[1][1,-2,-3];
-            @test norm(difference,Inf)<tol;
+        @tensor difference[-1,-2,-3] := ts.AL[1][-1,-2,1]*ts.CR[1][1,-3]-ts.CR[0][-1,1]*ts.AR[1][1,-2,-3];
+        @test norm(difference,Inf)<tol;
+    end
+
+    @testset "FiniteMps ($D,$d,$elt)" for (D,d,elt) in [(ComplexSpace(10),ComplexSpace(2),ComplexF64),(ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)]
+        data = [TensorMap(rand,elt,oneunit(D)*d,D)]
+        for i in 1:3
+            push!(data,TensorMap(rand,elt,D*d,D))
         end
+        push!(data,TensorMap(rand,elt,D*d,oneunit(D)));
+
+        ts = FiniteMps(data);
+
+        ovl = dot(ts,ts);
+        ts = rightorth(ts,renorm=false);
+        @test ovl ≈ norm(ts[1])^2
+
+        data2 = [TensorMap(rand,elt,oneunit(D)*d,D)]
+        for i in 1:3
+            push!(data2,TensorMap(rand,elt,D*d,D))
+        end
+        push!(data2,TensorMap(rand,elt,D*d,oneunit(D)));
+
+        ts2 = FiniteMps(data2);
+
+        ovl2 = dot(ts,ts2);
+
+        ts3 = ts+ts2;
+
+        @test ovl2+ovl ≈ dot(ts,ts3)
     end
 end
 
@@ -78,6 +104,7 @@ end
 end
 
 @testset "Algorithms" begin
+
     @testset "find_groundstate" begin
         #defining the hamiltonian
         (sx,sy,sz,id) = nonsym_spintensors(1//2)
@@ -102,7 +129,7 @@ end
         #=@inferred=# expectation_value(ts,th)
     end
 
-    @testset "leading_boundary" begin
+    @testset "leading_boundary $(alg)" for alg in [Vumps(tol_galerkin=1e-10,verbose=false),PowerMethod(tol_galerkin=1e-10,verbose=false,maxiter=1000)]
         mpo = #=@inferred=# nonsym_ising_mpo();
         state = MpsCenterGauged([ℂ^2],[ℂ^10]);
         (state,pars,_) = leading_boundary(state,mpo,Vumps(tol_galerkin=1e-10,verbose=false));
@@ -116,5 +143,27 @@ end
         (ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
         (energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,pars);
         @test energies[1] ≈ 0.41047925 atol=1e-4
+    end
+
+    @testset "dynamicaldmrg" begin
+        ham = nonsym_ising_ham(lambda=4.0);
+        gs = FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
+        (gs,pars,_) = find_groundstate(gs,ham,Dmrg2(verbose=false,trscheme=truncdim(10)));
+
+        #we are in the groundstate
+        #we expect to find a single isolated pole around the gs energy
+        polepos = real(sum(expectation_value(gs,ham,pars)));
+
+        vals = (-0.5:0.05:0.5).+polepos
+        eta = 0.3im;
+
+        predicted = [1/(v+eta-polepos) for v in vals];
+
+        data = similar(predicted);
+        for (i,v) in enumerate(vals)
+            (data[i],_) = dynamicaldmrg(gs,v+eta,ham,verbose=false)
+        end
+
+        @test norm(data-predicted) ≈ 0 atol=1e-8
     end
 end
