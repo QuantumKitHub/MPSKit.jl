@@ -69,37 +69,22 @@ function params(state::FiniteMpo,ham::ComAct)
         util_left = Tensor(ones,ham.domspaces[1][i]')
         util_right = Tensor(ones,ham.imspaces[length(state)][i]')
 
-        if isbelow(ham,i)
-            @tensor ctl[-1 -2; -3]:= lll[-1,-3]*util_left[-2]
-            @tensor ctr[-1 -2; -3]:= rrr[-1,-3]*util_right[-2]
+        isbelow = i > ham.below.odim;
+        ci = isbelow ? i-ham.below.odim : i;
 
-            if i != 1
-                ctl = zero(ctl)
-            end
 
-            if i != ham.below.odim
-                ctr = zero(ctr)
-            end
+        @tensor ctl[-1 -2; -3]:= lll[-1,-3]*util_left[-2]
+        @tensor ctr[-1 -2; -3]:= rrr[-1,-3]*util_right[-2]
 
-            leftstart[i] = ctl
-            rightstart[i] = ctr
-        else
-            ci = i-ham.below.odim
-
-            @tensor ctl[-1 -2; -3 ]:= lll[-1,-2]*util_left[-3]
-            @tensor ctr[-1 -2; -3 ]:= rrr[-2,-3]*util_right[-1]
-
-            if ci != 1
-                ctl = zero(ctl)
-            end
-
-            if ci != ham.above.odim
-                ctr = zero(ctr)
-            end
-
-            leftstart[i] = ctl
-            rightstart[i] = ctr
+        if ci != 1
+            ctl = zero(ctl)
         end
+
+        if (isbelow && ci!= ham.below.odim) || (!isbelow && ci != ham.above.odim)
+            ctr = zero(ctr)
+        end
+        leftstart[i] = ctl
+        rightstart[i] = ctr
     end
 
     return params(state,ham,leftstart,rightstart)

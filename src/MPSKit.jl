@@ -18,7 +18,7 @@ module MPSKit
 
     #hamiltonian things
     export Hamiltonian,Operator,Cache
-    export MpoHamiltonian,contains,PeriodicMpo,ComAct
+    export MpoHamiltonian,contains,PeriodicMpo,ComAct,commutator,anticommutator
     export ac_prime,c_prime,params,ac2_prime,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 

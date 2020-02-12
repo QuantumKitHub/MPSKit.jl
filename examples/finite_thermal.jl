@@ -5,7 +5,7 @@ let
     inftemp = complex(isomorphism(ℂ^1*ℂ^2,ℂ^1*ℂ^2))
 
     #the operator used to evolve is the anticommutator
-    ham = ComAct(nonsym_ising_ham(),false)
+    ham = anticommutator(nonsym_ising_ham())
 
     ts = FiniteMpo([copy(inftemp) for i in 1:10])
     ts = rightorth(ts)

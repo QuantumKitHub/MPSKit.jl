@@ -144,7 +144,15 @@ isscal(x::MpoHamiltonian,a::Int,b::Int) = !ismissing(x.scalars[a][b])
 checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
 "
 function isid(x::MpoType)
-    id = isomorphism(Matrix{eltype(x)},space(x,1)*space(x,2),space(x,3)'*space(x,4)')
+    cod = space(x,1)*space(x,2);
+    dom = space(x,3)'*space(x,4)';
+
+    #would like to have an 'isisomorphic'
+    for c in union(blocksectors(cod), blocksectors(dom))
+        blockdim(cod, c) == blockdim(dom, c) || return false,0.0;
+    end
+
+    id = isomorphism(Matrix{eltype(x)},cod,dom)
     scal = dot(id,x)/dot(id,id)
     diff = x-scal*id
     return norm(diff)<1e-14,scal

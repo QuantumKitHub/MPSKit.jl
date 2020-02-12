@@ -17,9 +17,9 @@ using MPSKit,TensorKit,LinearAlgebra,Test
 end
 
 @testset "Operators" begin
+
     @testset "mpoham $(i)" for (i,(th,Dspaces)) in enumerate([
                                                 (nonsym_ising_ham(),[ℂ^1]),
-                                                (nonsym_xxz_ham(),[ℂ^1]),
                                                 (u1_xxz_ham(),[ℂ[U₁](1//2=>1)]),
                                                 (repeat(su2_xxx_ham(),2),[ℂ[SU₂](0=>1),ℂ[SU₂](1//2=>1)])
                                                 ])
@@ -43,6 +43,38 @@ end
         v = expectation_value(ts,th*th);
         @test real(v[1])>=0;
     end
+
+    @testset "comact $(i)" for (i,th) in enumerate([
+                                                nonsym_ising_ham(),
+                                                u1_xxz_ham(),
+                                                su2_xxx_ham()
+                                                ])
+
+        len = 20;
+
+        ts = FiniteMpo([TensorMap(rand,ComplexF64,
+                    oneunit(th.pspaces[1]) * th.pspaces[j],
+                    oneunit(th.pspaces[1]) * th.pspaces[j])
+                    for j in 1:len]);
+
+        (ts,_) = changebonds(ts,commutator(th),RandExpand());
+        (ts,_) = changebonds(ts,anticommutator(th),OptimalExpand());
+
+        e1 = expectation_value(ts,anticommutator(th));
+        e2 = expectation_value(ts,2*anticommutator(th));
+
+        @test 2*e1≈e2;
+
+        e3 = expectation_value(ts,anticommutator(th)+commutator(th));
+        e4 = expectation_value(ts,anticommutator(th)-commutator(th));
+
+        @test e3+e4≈e2;
+
+        diff = [rand() for i in th.pspaces];
+        e5 = expectation_value(ts,anticommutator(th)-diff);
+        @test sum([e1[j]-diff[mod1(j,end)] for j in 1:len])≈sum(e5);
+    end
+
 end
 
 @testset "Algorithms" begin

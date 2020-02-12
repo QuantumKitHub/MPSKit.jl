@@ -21,12 +21,15 @@ function ac_prime(x::MpoType,pos::Int,mpo::FiniteMpo,cache)
         opp = ham[pos,i,j]
 
         if isbelow(ham,i)
-            #for vub project
-            #@tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mpo)[i][-1,8,7]*x[7,1,2,-4]*opp[8,-2,3,1]*rightenv(cache,pos,mpo)[j][2,3,-3]
-            @tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mpo)[i][-1,8,7]*x[7,2,1,-4]*opp[8,-2,3,2]*rightenv(cache,pos,mpo)[j][1,3,-3]
+            @tensor toret[-1,-2,-3,-4] +=   leftenv(cache,pos,mpo)[i][-1,8,7]*
+                                            x[7,2,1,-4]*
+                                            opp[8,-2,3,2]*
+                                            rightenv(cache,pos,mpo)[j][1,3,-3]
         else
-            #@tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mpo)[i][-1,7,6]*x[7,-2,2,4]*opp[6,4,5,-4]*rightenv(cache,pos,mpo)[j][5,2,-3]
-            @tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mpo)[i][-1,7,6]*x[7,-2,2,4]*opp[6,4,5,-4]*rightenv(cache,pos,mpo)[j][5,2,-3]
+            @tensor toret[-1,-2,-3,-4] +=   leftenv(cache,pos,mpo)[i][-1,6,7]*
+                                            x[7,-2,2,4]*
+                                            opp[6,4,5,-4]*
+                                            rightenv(cache,pos,mpo)[j][2,5,-3]
         end
     end
 
@@ -74,11 +77,11 @@ function ac2_prime(x::TensorMap,pos::Int,mpo::FiniteMpo,cache)
                                                     opp2[4,-3,6,5]*
                                                     rightenv(cache,pos+1,mpo)[l][7,6,-4]
             else
-                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,1,2]*
+                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,2,1]*
                                                     x[1,-2,-3,7,5,3]*
                                                     opp1[2,3,4,-6]*
                                                     opp2[4,5,6,-5]*
-                                                    rightenv(cache,pos+1,mpo)[l][6,7,-4]
+                                                    rightenv(cache,pos+1,mpo)[l][7,6,-4]
             end
         end
     end
@@ -114,7 +117,7 @@ function c_prime(x::MpsVecType,pos::Int,mpo::FiniteMpo,cache)
         if isbelow(ham,i)
             @tensor toret[-1,-2]+=leftenv(cache,pos+1,mpo)[i][-1,2,1]*x[1,3]*rightenv(cache,pos,mpo)[i][3,2,-2]
         else
-            @tensor toret[-1,-2]+=leftenv(cache,pos+1,mpo)[i][-1,1,2]*x[1,3]*rightenv(cache,pos,mpo)[i][2,3,-2]
+            @tensor toret[-1,-2]+=leftenv(cache,pos+1,mpo)[i][-1,2,1]*x[1,3]*rightenv(cache,pos,mpo)[i][3,2,-2]
         end
     end
 
@@ -204,4 +207,42 @@ function expectation_value(st::MpsMultiline,opp::PeriodicMpo,ca=params(st,opp))
                                 conj(st.AC[i,j][1,4,8])
     end
     return retval
+end
+
+function expectation_value(state::FiniteMpo,ham::ComAct,cache=params(state,ham))
+    ens=zeros(eltype(state[1]),length(state))
+    for i=1:length(state)
+        for (j,k) in keys(ham,i)
+
+            c_odim = isbelow(ham,j) ? ham.below.odim : ham.above.odim;
+            cj = isbelow(ham,j) ? j : j-ham.below.odim;
+            ck = isbelow(ham,k) ? k : k-ham.below.odim;
+
+            if !((cj == 1 && ck!= 1) || (ck == c_odim && cj!=c_odim))
+                continue
+            end
+
+            if isbelow(ham,j)
+                cur = @tensor   leftenv(cache,i,state)[j][-1,8,7]*
+                                state[i][7,2,1,-4]*
+                                ham[i,j,k][8,-2,3,2]*
+                                rightenv(cache,i,state)[k][1,3,-3]*
+                                conj(state[i][-1,-2,-3,-4])
+            else
+                cur = @tensor   leftenv(cache,i,state)[j][-1,6,7]*
+                                state[i][7,-2,2,4]*
+                                ham[i,j,k][6,4,5,-4]*
+                                rightenv(cache,i,state)[k][2,5,-3]*
+                                conj(state[i][-1,-2,-3,-4])
+            end
+
+            if !(cj==1 && ck == c_odim)
+                cur/=2
+            end
+
+            ens[i]+=cur
+        end
+    end
+
+    return ens
 end
