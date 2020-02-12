@@ -5,10 +5,10 @@ using MPSKit,TensorKit,LinearAlgebra,Test
         @testset "($D,$d,$elt)" for (D,d,elt) in [(ComplexSpace(10),ComplexSpace(2),ComplexF64),(ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)]
             tol = Float64(eps(real(elt))*100);
 
-            @inferred leftorth([TensorMap(rand,elt,D*d,D)],tol=tol);
-            @inferred rightorth([TensorMap(rand,elt,D*d,D)],tol=tol);
+            #=@inferred=# leftorth([TensorMap(rand,elt,D*d,D)],tol=tol);
+            #=@inferred=# rightorth([TensorMap(rand,elt,D*d,D)],tol=tol);
 
-            ts = @inferred MpsCenterGauged([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
+            ts = #=@inferred=# MpsCenterGauged([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
 
             @tensor difference[-1,-2,-3] := ts.AL[1][-1,-2,1]*ts.CR[1][1,-3]-ts.CR[0][-1,1]*ts.AR[1][1,-2,-3];
             @test norm(difference,Inf)<tol;
@@ -82,8 +82,8 @@ end
         #defining the hamiltonian
         (sx,sy,sz,id) = nonsym_spintensors(1//2)
         @tensor ham[-1 -2;-3 -4]:=(-1.5*sz)[-1,-3]*sz[-2,-4]+id[-1,-3]*sx[-2,-4]
-        th = @inferred MpoHamiltonian(ham)
-        ts = @inferred MpsCenterGauged([TensorMap(rand,ComplexF64,ℂ^50*ℂ^2,ℂ^50)]);
+        th = #=@inferred=# MpoHamiltonian(ham)
+        ts = #=@inferred=# MpsCenterGauged([TensorMap(rand,ComplexF64,ℂ^50*ℂ^2,ℂ^50)]);
 
         #vumps type inferrence got broken by @threads, so worth it?
         (ts,pars,delta) =  #=@inferred=# find_groundstate(ts,th,Vumps(tol_galerkin=1e-8,verbose=false))
@@ -92,18 +92,18 @@ end
 
         th=th-expectation_value(ts,th)
 
-        @inferred expectation_value(ts,th*th)
+        #=@inferred=# expectation_value(ts,th*th)
         @test real(expectation_value(ts,th*th)[1]) < 1e-2 #is the ground state variance relatively low?
 
         #finite mps
         ts = FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
         (ts,pars,_) = #=@inferred=# find_groundstate(ts,th,Dmrg2(verbose=false));
         (ts,pars,_) = #=@inferred=# find_groundstate(ts,th,Dmrg(verbose=false));
-        @inferred expectation_value(ts,th)
+        #=@inferred=# expectation_value(ts,th)
     end
 
     @testset "leading_boundary" begin
-        mpo = @inferred nonsym_ising_mpo();
+        mpo = #=@inferred=# nonsym_ising_mpo();
         state = MpsCenterGauged([ℂ^2],[ℂ^10]);
         (state,pars,_) = leading_boundary(state,mpo,Vumps(tol_galerkin=1e-10,verbose=false));
 
