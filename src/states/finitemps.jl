@@ -15,8 +15,6 @@ struct FiniteMps{T<:GenMpsType} <: AbstractArray{T,1}
     end
 end
 
-FiniteMps{T}(init,len) where T = FiniteMps(Array{T,1}(init,len))
-
 Base.length(arr::FiniteMps) = length(arr.data)
 Base.size(arr::FiniteMps) = size(arr.data)
 Base.getindex(arr::FiniteMps,I::Int) = arr.data[I]

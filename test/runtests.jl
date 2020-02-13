@@ -40,6 +40,30 @@ using MPSKit,TensorKit,LinearAlgebra,Test
 
         @test ovl2+ovl ≈ dot(ts,ts3)
     end
+
+    @testset "MpsComoving" begin
+        ham = nonsym_ising_ham(lambda=4.0);
+        (gs,_,_) = find_groundstate(MpsCenterGauged([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
+
+        window = MpsComoving(gs,[gs.AC[1];[gs.AR[i] for i in 2:10]],gs);
+
+        e1 = expectation_value(window,ham);
+
+        (window,pars,_) = find_groundstate(window,ham,Dmrg(verbose=false));
+
+        e2 = expectation_value(window,ham);
+
+        @test e1[1] ≈ e2[1]
+        @test e1[2] ≈ e2[2]
+
+        (window,pars) = timestep(window,ham,0.1,Tdvp2(),pars)
+        (window,pars) = timestep(window,ham,0.1,Tdvp(),pars)
+
+        e3 = expectation_value(window,ham);
+
+        @test e1[1] ≈ e3[1]
+        @test e1[2] ≈ e3[2]
+    end
 end
 
 @testset "Operators" begin
@@ -105,37 +129,35 @@ end
 
 @testset "Algorithms" begin
 
-    @testset "find_groundstate" begin
-        #defining the hamiltonian
-        (sx,sy,sz,id) = nonsym_spintensors(1//2)
-        @tensor ham[-1 -2;-3 -4]:=(-1.5*sz)[-1,-3]*sz[-2,-4]+id[-1,-3]*sx[-2,-4]
-        th = #=@inferred=# MpoHamiltonian(ham)
-        ts = #=@inferred=# MpsCenterGauged([TensorMap(rand,ComplexF64,ℂ^50*ℂ^2,ℂ^50)]);
+    @testset "find_groundstate $(ind)" for (ind,(state,alg,ham)) in enumerate([
+                        (MpsCenterGauged([ℂ^2],[ℂ^10]),Vumps(tol_galerkin=1e-8,verbose=false),nonsym_ising_ham(lambda=2.0)),
+                        (MpsCenterGauged([ℂ^2],[ℂ^10]),Idmrg1(tol_galerkin=1e-8,maxiter=400,verbose=false),nonsym_ising_ham(lambda=2.0)),
+                        (FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10)),Dmrg2(verbose=false),nonsym_ising_ham(lambda=2.0)),
+                        (FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10)),Dmrg(manager=SimpleManager(10),verbose=false),nonsym_ising_ham(lambda=2.0))
+                        ])
 
         #vumps type inferrence got broken by @threads, so worth it?
-        (ts,pars,delta) =  #=@inferred=# find_groundstate(ts,th,Vumps(tol_galerkin=1e-8,verbose=false))
+        (ts,pars,delta) =  #=@inferred=# find_groundstate(state,ham,alg)
 
-        @test sum(delta)<1e-8 #we're in trouble when vumps even fails for ising
+        @test sum(delta) < 1e-6
 
-        th=th-expectation_value(ts,th)
+        evals = expectation_value(ts,ham);
+        th = repeat(ham,length(evals))-evals
 
-        #=@inferred=# expectation_value(ts,th*th)
-        @test real(expectation_value(ts,th*th)[1]) < 1e-2 #is the ground state variance relatively low?
-
-        #finite mps
-        ts = FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
-        (ts,pars,_) = #=@inferred=# find_groundstate(ts,th,Dmrg2(verbose=false));
-        (ts,pars,_) = #=@inferred=# find_groundstate(ts,th,Dmrg(verbose=false));
-        #=@inferred=# expectation_value(ts,th)
+        @test real(sum(expectation_value(ts,th*th))) < 1e-2 #is the ground state variance relatively low?
     end
 
-    @testset "leading_boundary $(alg)" for alg in [Vumps(tol_galerkin=1e-10,verbose=false),PowerMethod(tol_galerkin=1e-10,verbose=false,maxiter=1000)]
+    @testset "leading_boundary $(ind)" for (ind,alg) in enumerate([
+                        Vumps(tol_galerkin=1e-10,verbose=false),
+                        PowerMethod(tol_galerkin=1e-10,verbose=false,maxiter=1000)])
+
         mpo = #=@inferred=# nonsym_ising_mpo();
         state = MpsCenterGauged([ℂ^2],[ℂ^10]);
-        (state,pars,_) = leading_boundary(state,mpo,Vumps(tol_galerkin=1e-10,verbose=false));
+        (state,pars,_) = leading_boundary(state,mpo,alg);
 
         @test expectation_value(state,mpo,pars)[1,1] ≈ 2.5337 atol=1e-3
     end
+
 
     @testset "quasiparticle_excitation" begin
         th = nonsym_xxz_ham()
@@ -147,23 +169,23 @@ end
 
     @testset "dynamicaldmrg" begin
         ham = nonsym_ising_ham(lambda=4.0);
-        gs = FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
-        (gs,pars,_) = find_groundstate(gs,ham,Dmrg2(verbose=false,trscheme=truncdim(10)));
+        (gs,_,_) = find_groundstate(MpsCenterGauged([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
 
-        #we are in the groundstate
-        #we expect to find a single isolated pole around the gs energy
-        polepos = real(sum(expectation_value(gs,ham,pars)));
+        window = MpsComoving(gs,[gs.AC[1];[gs.AR[i] for i in 2:10]],gs);
 
-        vals = (-0.5:0.05:0.5).+polepos
+        polepos = expectation_value(gs,ham,10)
+
+        vals = (-0.5:0.2:0.5).+polepos
         eta = 0.3im;
 
         predicted = [1/(v+eta-polepos) for v in vals];
 
         data = similar(predicted);
         for (i,v) in enumerate(vals)
-            (data[i],_) = dynamicaldmrg(gs,v+eta,ham,verbose=false)
+            (data[i],_) = dynamicaldmrg(window,v+eta,ham,verbose=false)
         end
 
-        @test norm(data-predicted) ≈ 0 atol=1e-8
+        @test data ≈ predicted atol=1e-8
     end
+
 end
