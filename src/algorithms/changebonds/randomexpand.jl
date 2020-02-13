@@ -42,12 +42,12 @@ function changebonds(state::Union{FiniteMps{T},MpsComoving{T}},alg::RandExpand) 
 
     state = rightorth(state,renorm=false)
 end
-function changebonds(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian,alg::RandExpand,pars=nothing)
+function changebonds(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian,alg::RandExpand,pars=params(state,H))
     newstate = changebonds(state,alg);
-    return newstate, (pars == nothing ? pars : params(newstate,H));
+    return newstate, pars;
 end
 
-function changebonds(state::T, H::ComAct,alg,pars=nothing) where T <: FiniteMpo
+function changebonds(state::T, H::ComAct,alg,pars=params(state,H)) where T <: FiniteMpo
     @info "$(typeof(alg)) not implemented for finite mpo; using slow fallback"
 
     mstate = rightorth!(FiniteMps(mpo2mps.(state)));
@@ -57,5 +57,5 @@ function changebonds(state::T, H::ComAct,alg,pars=nothing) where T <: FiniteMpo
     (nmstate,_) = changebonds(mstate,nH,alg);
 
     nstate = rightorth!(FiniteMpo([mps2mpo(j,space(s,2)) for (j,s) in zip(nmstate,state)])::T)
-    return nstate,params(nstate,H)
+    return nstate,params(nstate,H,tol=pars.tol,maxiter=pars.maxiter)
 end

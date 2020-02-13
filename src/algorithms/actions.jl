@@ -134,10 +134,9 @@ end
 function expectation_value(state::MpsComoving,ham::MpoHamiltonian,pars=params(state,ham))
     vals = expectation_value_fimpl(state,ham,pars);
 
-    #difference between total energy of the window and the onsite energy = the contribution due to inside <=> outside interactions
-    tot = sum(vals);
+    tot = 0.0+0im;
     for i in 1:ham.odim
-        tot-=@tensor leftenv(pars,length(state)+1,state)[i][1,2,3]*rightenv(pars,length(state),state)[i][3,2,1]
+        tot+=@tensor leftenv(pars,length(state)+1,state)[i][1,2,3]*rightenv(pars,length(state),state)[i][3,2,1]
     end
 
     return vals,tot

@@ -90,7 +90,7 @@ r_LR(state::MpsCenterGauged,loc::Int=length(state)) = state.CR[loc]
 "
 r_LL(state::MpsCenterGauged,loc::Int=length(state))= @tensor toret[-1;-2]:=state.CR[loc][-1,1]*conj(state.CR[loc][-2,1])
 
-function expectation_value(st::MpsCenterGauged,opp::TensorMap)
+function expectation_value(st::MpsCenterGauged,opp::MpsVecType)
     dat=[]
     for i in 1:length(st)
         val=@tensor st.AC[i][1,2,3]*opp[4,2]*conj(st.AC[i][1,4,3])

@@ -58,7 +58,7 @@ function Base.:+(a::MpoHamiltonian{S,T,E},b::MpoHamiltonian{S,T,E}) where {S,T,E
 
             #upper Bs
             if(i==1 && j>1)
-                if(j==b.odim && isassigned(nOs[pos],1,nodim))
+                if(j==b.odim && !ismissing(nOs[pos][1,nodim]))
                     nOs[pos][1,nodim]+=b.Os[pos][i,j]
                 else
                     nOs[pos][1,a.odim+j-2]=b.Os[pos][i,j]

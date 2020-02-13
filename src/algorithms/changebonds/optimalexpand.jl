@@ -1,4 +1,6 @@
-"expands the given mps using the algorithm given in the vumps paper"
+"
+    expands the given mps using the algorithm given in the vumps paper
+"
 @with_kw struct OptimalExpand<:Algorithm
     trscheme::TruncationScheme = truncdim(1)
 end
@@ -39,7 +41,6 @@ function changebonds(state::MpsCenterGauged, H::Hamiltonian,alg::OptimalExpand,p
         state.AC[i+1]=state.AL[i+1]*state.CR[i+1]
 
         #we should update the params "properly", and not in this wasteful way (params don't change after all)
-        pars=params(state,H)
     end
     return state,pars
 end

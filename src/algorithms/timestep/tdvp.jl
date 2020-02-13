@@ -35,7 +35,7 @@ function timestep(state::MpsCenterGauged, H::Hamiltonian, timestep::Number,alg::
         newAs[loc]     = Aleft
     end
 
-    return MpsCenterGauged(newAs; tol = alg.tolgauge, maxiter = alg.maxiter)
+    return MpsCenterGauged(newAs; tol = alg.tolgauge, maxiter = alg.maxiter),parameters
 end
 
 #assumes right orthonormalization, will partly overwrite things in state

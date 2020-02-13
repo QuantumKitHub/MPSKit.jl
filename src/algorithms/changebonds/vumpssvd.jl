@@ -8,7 +8,7 @@
     trscheme = notrunc()
 end
 
-function changebonds_1(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,pars=nothing) #would be more efficient if we also repeated pars
+function changebonds_1(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H)) #would be more efficient if we also repeated pars
     #the unitcell==1 case is unique, because there you have a sef-consistency condition
 
     #expand the one site to two sites
@@ -26,7 +26,6 @@ function changebonds_1(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,p
     end
 
     nstate = MpsCenterGauged([nstate.AL[1]];tol=alg.tol_gauge)
-    pars = params(nstate,H)
     return nstate, pars
 end
 
@@ -35,10 +34,10 @@ function changebonds_n(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,p
     for loc in 1:length(state)
         @tensor AC2[-1 -2;-3 -4] := state.AC[loc][-1,-2,1]*state.AR[loc+1][1,-3,-4]
 
-        (vals,vecs,_) = eigsolve(x->ac2_prime(x,loc,state,pars),AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=true )
+        (vals,vecs,_) = eigsolve(x->ac2_prime(x,loc,state,pars),AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
         nAC2=vecs[1]
 
-        (vals,vecs,_)  = eigsolve(x->c_prime(x,loc+1,state,pars),state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=true )
+        (vals,vecs,_)  = eigsolve(x->c_prime(x,loc+1,state,pars),state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
         nC2=vecs[1]
 
         #find the updated two site AL
@@ -58,7 +57,6 @@ function changebonds_n(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,p
         allAls[loc+1] = permute(AL2,(1,2),(3,))
 
         state = MpsCenterGauged(allAls; tol = alg.tol_gauge)
-        pars = params(state,H)
     end
 
     return state, pars

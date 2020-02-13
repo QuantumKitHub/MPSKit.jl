@@ -12,8 +12,7 @@ mutable struct MpoHamInfEnv{H<:MpoHamiltonian,V,S<:MpsCenterGauged} <:AbstractIn
     rw :: Periodic{V,2}
 end
 
-#randomly initialize pars
-function params(st::MpsCenterGauged,ham::MpoHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
+function gen_lw_rw(st::MpsCenterGauged,ham::MpoHamiltonian)
     lw = Periodic{typeof(st.AL[1]),2}(length(st),ham.odim)
     rw = Periodic{typeof(st.AL[1]),2}(length(st),ham.odim)
 
@@ -22,12 +21,24 @@ function params(st::MpsCenterGauged,ham::MpoHamiltonian;tol::Float64=Defaults.to
         rw[i,j] = TensorMap(rand,eltype(st),space(st.AR[i],3)'*space(ham[i,1,j],3)',space(st.AR[i],3)')
     end
 
+    return (lw,rw)
+end
+
+#randomly initialize pars
+function params(st::MpsCenterGauged,ham::MpoHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
+    (lw,rw) = gen_lw_rw(st,ham);
     return MpoHamInfEnv(ham,similar(st),tol,maxiter,lw,rw)
 end
 
 
 function recalculate!(pars::MpoHamInfEnv, nstate)
     pars.dependency = nstate;
+    sameDspace = reduce((prev,i) -> prev && space(pars.lw[i,1],3) == space(nstate.CR[i],1)',1:length(nstate),init=true);
+
+    if !sameDspace
+        (pars.lw,pars.rw) = gen_lw_rw(nstate,pars.opp)
+    end
+    
     pars.lw = calclw(pars.dependency,pars.opp,pars.lw,tol = pars.tol,maxiter = pars.maxiter)
     pars.rw = calcrw(pars.dependency,pars.opp,pars.rw,tol = pars.tol,maxiter = pars.maxiter)
 end

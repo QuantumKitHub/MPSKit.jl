@@ -23,7 +23,7 @@ end
 
 function changebonds(state::MpsCenterGauged,H,alg::SvdCut,pars=params(state,H))
     state = changebonds(state,alg);
-    return state,params(state,H);
+    return state,pars;
 end
 
 function changebonds(state::MpsCenterGauged,alg::SvdCut)

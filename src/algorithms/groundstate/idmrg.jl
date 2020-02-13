@@ -56,5 +56,5 @@ function find_groundstate(st::MpsCenterGauged, ham::Hamiltonian,alg::Idmrg1,opar
     end
 
     nst = MpsCenterGauged(curu,tol=alg.tol_gauge);
-    return nst,params(nst,ham),err;
+    return nst,params(nst,ham,tol=opars.tol,maxiter=opars.maxiter),err;
 end
