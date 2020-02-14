@@ -18,7 +18,7 @@ function leading_boundary(state::MpsMultiline, H,alg::PowerMethod,pars=params(st
     lee = galerkin
 
     while true
-        @threads for col in 1:size(state,2)
+        for col in 1:size(state,2)
 
             vac = circshift([ac_prime(ac,row,col,state,pars) for (row,ac) in enumerate(state.AC[:,col])],1)
             vc  = circshift([c_prime(c,row,col,state,pars) for (row,c) in enumerate(state.CR[:,col])],1)

@@ -137,6 +137,13 @@ Base.size(x::MpoHamiltonian,i) = size(x)[i]
 
 keys(x::MpoHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))
 keys(x::MpoHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),Iterators.product(1:x.odim,1:x.odim))
+
+opkeys(x::MpoHamiltonian) = Iterators.filter(a-> !(a[2] == a[3] && isscal(x,a[1],a[2])),keys(x));
+opkeys(x::MpoHamiltonian,i::Int) = Iterators.filter(a-> !(a[1] == a[2] && isscal(x,i,a[2])),keys(x,i));
+
+scalkeys(x::MpoHamiltonian) = Iterators.filter(a-> (a[2] == a[3] && isscal(x,a[1],a[2])),keys(x));
+scalkeys(x::MpoHamiltonian,i::Int) = Iterators.filter(a-> (a[1] == a[2] && isscal(x,i,a[2])),keys(x,i));
+
 contains(x::MpoHamiltonian,a::Int,b::Int,c::Int) = !ismissing(x.Os[a][b,c]) || (b==c && !ismissing(x.scalars[a][b]))
 isscal(x::MpoHamiltonian,a::Int,b::Int) = !ismissing(x.scalars[a][b])
 

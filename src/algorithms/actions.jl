@@ -7,8 +7,12 @@ function ac_prime(x::MpsType,pos::Int,mps::Union{FiniteMps,MpsCenterGauged,MpsCo
     ham=cache.opp
 
     toret=zero(x)
-    for (i,j) in keys(ham,pos)
+    for (i,j) in opkeys(ham,pos)
         @tensor toret[-1,-2,-3]+=leftenv(cache,pos,mps)[i][-1,5,4]*x[4,2,1]*ham[pos,i,j][5,-2,3,2]*rightenv(cache,pos,mps)[j][1,3,-3]
+    end
+    for (i,j) in scalkeys(ham,pos)
+        scal = ham.scalars[pos][i];
+        @tensor toret[-1,-2,-3]+=leftenv(cache,pos,mps)[i][-1,5,4]*(scal*x)[4,-2,1]*rightenv(cache,pos,mps)[i][1,5,-3]
     end
 
     return toret
@@ -50,6 +54,7 @@ function ac2_prime(x::MpoType,pos::Int,mps::Union{FiniteMps,MpsCenterGauged,MpsC
     for (i,j) in keys(ham,pos)
         for k in 1:ham.odim
             if contains(ham,pos+1,j,k)
+                #can be sped up for scalar fields
                 @tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mps)[i][-1,7,6]*x[6,5,3,1]*ham[pos,i,j][7,-2,4,5]*ham[pos+1,j,k][4,-3,2,3]*rightenv(cache,pos+1,mps)[k][1,2,-4]
             end
         end

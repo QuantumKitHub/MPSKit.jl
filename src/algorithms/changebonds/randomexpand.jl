@@ -57,5 +57,5 @@ function changebonds(state::T, H::ComAct,alg,pars=params(state,H)) where T <: Fi
     (nmstate,_) = changebonds(mstate,nH,alg);
 
     nstate = rightorth!(FiniteMpo([mps2mpo(j,space(s,2)) for (j,s) in zip(nmstate,state)])::T)
-    return nstate,params(nstate,H,tol=pars.tol,maxiter=pars.maxiter)
+    return nstate,params(nstate,H)
 end

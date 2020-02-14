@@ -25,7 +25,7 @@ function find_groundstate(state::MpsCenterGauged, H::Hamiltonian,alg::Vumps,pars
     while true
         eigalg=Arnoldi(tol=galerkin/(4*sqrt(iter)))
 
-        @threads for loc in 1:size(state,1)
+        for loc in 1:size(state,1)
 
 
             (e,vac,ch)=let state=state,pars=pars,eigalg=eigalg

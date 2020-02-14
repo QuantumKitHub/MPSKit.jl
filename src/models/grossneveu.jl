@@ -16,20 +16,20 @@ function su2u1_grossneveu(;g2SPT=0,g2AFM=0)
     Cplus = TensorMap(ones, ComplexF64, bigonleg*ph, bigonleg*ph)
     blocks(Cplus)[SU₂(1//2)×U₁(0)]  = [0 im*0.5 -im*0.5; -0.5 0 0; 0.5 0 0]
     blocks(Cplus)[SU₂(0)×U₁(-1)]     = [0 0.5*sqrt(2); im*0.5*sqrt(2) 0]
-    blocks(Cplus)[SU₂(1)×U₁(-1)]     = 0*ones(1,1)
+    blocks(Cplus)[SU₂(1)×U₁(-1)]     = zeros(1,1)
     blocks(Cplus)[SU₂(0)×U₁(1)]     = [0 0.5*sqrt(2); im*0.5*sqrt(2) 0]
-    blocks(Cplus)[SU₂(1)×U₁(1)]     = 0*ones(1,1)
-    blocks(Cplus)[SU₂(1//2)×U₁(-2)] = 0*ones(1,1)
-    blocks(Cplus)[SU₂(1//2)×U₁(2)]  = 0*ones(1,1)
+    blocks(Cplus)[SU₂(1)×U₁(1)]     = zeros(1,1)
+    blocks(Cplus)[SU₂(1//2)×U₁(-2)] = zeros(1,1)
+    blocks(Cplus)[SU₂(1//2)×U₁(2)]  = zeros(1,1)
 
     Cmin = TensorMap(ones, ComplexF64, bigonleg*ph, bigonleg*ph)
     blocks(Cmin)[SU₂(1//2)×U₁(0)]  = conj([0 im*0.5 -im*0.5; -0.5 0 0; 0.5 0 0])
     blocks(Cmin)[SU₂(0)×U₁(-1)]     = conj([0 0.5*sqrt(2); im*0.5*sqrt(2) 0])
-    blocks(Cmin)[SU₂(1)×U₁(-1)]     = 0*ones(1,1)
+    blocks(Cmin)[SU₂(1)×U₁(-1)]     = zeros(1,1)
     blocks(Cmin)[SU₂(0)×U₁(1)]     = conj([0 0.5*sqrt(2); im*0.5*sqrt(2) 0])
-    blocks(Cmin)[SU₂(1)×U₁(1)]     = 0*ones(1,1)
-    blocks(Cmin)[SU₂(1//2)×U₁(-2)] = 0*ones(1,1)
-    blocks(Cmin)[SU₂(1//2)×U₁(2)]  = 0*ones(1,1)
+    blocks(Cmin)[SU₂(1)×U₁(1)]     = zeros(1,1)
+    blocks(Cmin)[SU₂(1//2)×U₁(-2)] = zeros(1,1)
+    blocks(Cmin)[SU₂(1//2)×U₁(2)]  = zeros(1,1)
 
     f1 = isomorphism(fuse(unit, unit), unit*unit)
     f2 = isomorphism(bigonleg*bigonleg, fuse(bigonleg, bigonleg))
@@ -42,7 +42,7 @@ function su2u1_grossneveu(;g2SPT=0,g2AFM=0)
 
     #and now with the extra O(4) breaking part ie the O operator
     O_op = TensorMap(zeros, ComplexF64, unit*ph, unit*ph)
-    blocks(O_op)[SU₂(1//2)×U₁(0)] = -0*ones(1,1)
+    blocks(O_op)[SU₂(1//2)×U₁(0)] = -zeros(1,1)
     blocks(O_op)[SU₂(0)×U₁(-1)]    =  -1*ones(1,1)
     blocks(O_op)[SU₂(0)×U₁(1)]    =  1*ones(1,1)
 
