@@ -14,9 +14,9 @@ function SimpleManager(maxDs::Array{Int,1},A::Algorithm = OptimalExpand())
         bigenough = true;
 
         for i = 1:length(state)
-            if isa(state,FiniteMps) # should find a better way
+            if isa(state,FiniteMPS) # should find a better way
                 ct = state[i];
-            elseif isa(state,MpsCenterGauged)
+            elseif isa(state,InfiniteMPS)
                 ct = state.AR[i];
             else
                 @assert false

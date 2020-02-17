@@ -2,25 +2,25 @@
 
 ## States
 ```@docs
-FiniteMps
-FiniteMpo
-MpsCenterGauged
-MpsComoving
-MpsMultiline
+FiniteMPS
+FiniteMPO
+MPSCenterGauged
+MPSComoving
+MPSMultiline
 ```
 
 ## Operators
 ```@docs
-MpoHamiltonian
+MPOHamiltonian
 ComAct
-PeriodicMpo
+PeriodicMPO
 ```
 
 ## Environments
 ```@docs
 MPSKit.AbstractInfEnv
-MPSKit.PerMpoInfEnv
-MPSKit.MpoHamInfEnv
+MPSKit.PerMPOInfEnv
+MPSKit.MPOHamInfEnv
 MPSKit.FinEnv
 MPSKit.SimpleEnv
 ```

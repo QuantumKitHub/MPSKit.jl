@@ -1,7 +1,7 @@
 "
-    This object manages the periodic mpo environments for an MpsMultiline
+    This object manages the periodic mpo environments for an MPSMultiline
 "
-mutable struct PerMpoInfEnv{H<:PeriodicMpo,V,S<:MpsMultiline} <: AbstractInfEnv
+mutable struct PerMPOInfEnv{H<:PeriodicMPO,V,S<:MPSMultiline} <: AbstractInfEnv
     opp :: H
 
     dependency :: S
@@ -12,7 +12,7 @@ mutable struct PerMpoInfEnv{H<:PeriodicMpo,V,S<:MpsMultiline} <: AbstractInfEnv
     rw :: Periodic{V,2}
 end
 
-function recalculate!(pars::PerMpoInfEnv,nstate)
+function recalculate!(pars::PerMPOInfEnv,nstate)
     ndat = params(nstate,pars.opp,pars.lw,pars.rw,tol=pars.tol,maxiter=pars.maxiter);
 
     pars.lw = ndat.lw
@@ -20,11 +20,11 @@ function recalculate!(pars::PerMpoInfEnv,nstate)
     pars.dependency = ndat.dependency;
 end
 
-function params(state::MpsCenterGauged,opp::PeriodicMpo,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter)
-    params(convert(MpsMultiline,state),opp,prevl,prevr,tol=tol,maxiter=maxiter);
+function params(state::InfiniteMPS,opp::PeriodicMPO,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter)
+    params(convert(MPSMultiline,state),opp,prevl,prevr,tol=tol,maxiter=maxiter);
 end
 
-function params(state::MpsMultiline{T},mpo::PeriodicMpo,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter) where T
+function params(state::MPSMultiline{T},mpo::PeriodicMPO,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter) where T
     (numrows,numcols) = size(state)
     @assert size(state) == size(mpo)
 
@@ -71,5 +71,5 @@ function params(state::MpsMultiline{T},mpo::PeriodicMpo,prevl = nothing,prevr = 
 
     end
 
-    return PerMpoInfEnv(mpo,state,tol,maxiter,lefties,righties)
+    return PerMPOInfEnv(mpo,state,tol,maxiter,lefties,righties)
 end

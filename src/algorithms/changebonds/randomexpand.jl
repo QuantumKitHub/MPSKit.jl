@@ -3,8 +3,8 @@
     numvecs::Int = 1
 end
 
-#implemented for GenMpsType (wanted to use it in peps code)
-function changebonds(state::Union{FiniteMps{T},MpsComoving{T}},alg::RandExpand) where T<:GenMpsType{Sp,N} where {Sp,N}
+#implemented for GenMPSType (wanted to use it in peps code)
+function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::RandExpand) where T<:GenMPSType{Sp,N} where {Sp,N}
     lmax = zeros(length(state)+1)
     lmax[1] = dim(space(state[1],1))
     for i in 1:length(state)
@@ -42,20 +42,20 @@ function changebonds(state::Union{FiniteMps{T},MpsComoving{T}},alg::RandExpand) 
 
     state = rightorth(state,renorm=false)
 end
-function changebonds(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian,alg::RandExpand,pars=params(state,H))
+function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::RandExpand,pars=params(state,H))
     newstate = changebonds(state,alg);
     return newstate, pars;
 end
 
-function changebonds(state::T, H::ComAct,alg,pars=params(state,H)) where T <: FiniteMpo
+function changebonds(state::T, H::ComAct,alg,pars=params(state,H)) where T <: FiniteMPO
     @info "$(typeof(alg)) not implemented for finite mpo; using slow fallback"
 
-    mstate = rightorth!(FiniteMps(mpo2mps.(state)));
+    mstate = rightorth!(FiniteMPS(mpo2mps.(state)));
     (a,_) = splitham(H.below);
     (_,b) = splitham(H.above);
     nH = a+b
     (nmstate,_) = changebonds(mstate,nH,alg);
 
-    nstate = rightorth!(FiniteMpo([mps2mpo(j,space(s,2)) for (j,s) in zip(nmstate,state)])::T)
+    nstate = rightorth!(FiniteMPO([mps2mpo(j,space(s,2)) for (j,s) in zip(nmstate,state)])::T)
     return nstate,params(nstate,H)
 end

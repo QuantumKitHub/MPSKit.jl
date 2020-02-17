@@ -9,7 +9,7 @@ onesite infinite dmrg
 end
 
 
-function find_groundstate(st::MpsCenterGauged, ham::Hamiltonian,alg::Idmrg1,opars=params(st,ham))
+function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,opars=params(st,ham))
     pars = SimpleEnv(st,opars);
 
     curu = [st.AR[i] for i in 1:length(st)];
@@ -55,6 +55,6 @@ function find_groundstate(st::MpsCenterGauged, ham::Hamiltonian,alg::Idmrg1,opar
         alg.verbose && println("idmrg iter $(topit) err $(err)")
     end
 
-    nst = MpsCenterGauged(curu,tol=alg.tol_gauge);
+    nst = InfiniteMPS(curu,tol=alg.tol_gauge);
     return nst,params(nst,ham,tol=opars.tol,maxiter=opars.maxiter),err;
 end

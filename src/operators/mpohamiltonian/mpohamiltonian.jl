@@ -31,11 +31,11 @@
     I didn't want to use union{T,E} because identity is impossible away from diagonal
 =#
 "
-    MpoHamiltonian
+    MPOHamiltonian
 
     represents a general periodic quantum hamiltonian
 "
-struct MpoHamiltonian{S,T<:MpoType,E<:Number}<:Hamiltonian
+struct MPOHamiltonian{S,T<:MPOType,E<:Number}<:Hamiltonian
     scalars::Periodic{Array{Union{Missing,E},1},1}
     Os::Periodic{Array{Union{Missing,T},2},1}
 
@@ -43,7 +43,7 @@ struct MpoHamiltonian{S,T<:MpoType,E<:Number}<:Hamiltonian
     pspaces::Periodic{S,1}
 end
 
-function Base.getproperty(h::MpoHamiltonian,f::Symbol)
+function Base.getproperty(h::MPOHamiltonian,f::Symbol)
     if f==:odim
         return length(h.domspaces[1])::Int
     elseif f==:period
@@ -56,7 +56,7 @@ function Base.getproperty(h::MpoHamiltonian,f::Symbol)
 end
 
 #dense representation of mpohamiltonian -> the actual mpohamiltonian
-function MpoHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MpoType
+function MPOHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MPOType
     x = fillmissing(ox);
 
     len = size(x,1);E = eltype(M);
@@ -81,17 +81,17 @@ function MpoHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MpoTy
     pspaces=[space(x[i,1,1],2) for i in 1:len]
     domspaces=[[space(y,1) for y in x[i,:,1]] for i in 1:len]
 
-    return MpoHamiltonian(Periodic(tSs),Periodic(tOs),Periodic(domspaces),Periodic(pspaces))
+    return MPOHamiltonian(Periodic(tSs),Periodic(tOs),Periodic(domspaces),Periodic(pspaces))
 end
 
 #allow passing in 2leg mpos
-MpoHamiltonian(x::Array{T,3}) where T<:MpsVecType = MpoHamiltonian(map(t->permute(add_util_leg(t),(1,2),(4,3)),x))
+MPOHamiltonian(x::Array{T,3}) where T<:MPSVecType = MPOHamiltonian(map(t->permute(add_util_leg(t),(1,2),(4,3)),x))
 
 #allow passing in regular tensormaps
-MpoHamiltonian(t::TensorMap) = MpoHamiltonian(decompose_localmpo(add_util_leg(t)));
+MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)));
 
 #a very simple utility constructor; given our "localmpo", constructs a mpohamiltonian
-function MpoHamiltonian(x::Array{T,1}) where T<:MpoType
+function MPOHamiltonian(x::Array{T,1}) where T<:MPOType
     domspaces=[space(y,1) for y in x]
     push!(domspaces,space(x[end],3)')
 
@@ -106,11 +106,11 @@ function MpoHamiltonian(x::Array{T,1}) where T<:MpoType
     nSs[1] = 1
     nSs[end] = 1
 
-    return MpoHamiltonian(Periodic([nSs]),Periodic([nOs]),Periodic([domspaces]),Periodic(pspaces))
+    return MPOHamiltonian(Periodic([nSs]),Periodic([nOs]),Periodic([domspaces]),Periodic(pspaces))
 end
 
 #utility functions for finite mpo
-function Base.getindex(x::MpoHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E}
+function Base.getindex(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E}
     if b == c && !ismissing(x.scalars[a][b])
         return x.scalars[a][b]*isomorphism(Matrix{eltype(T)},x.domspaces[a][b]*x.pspaces[a],x.imspaces[a][c]'*x.pspaces[a])::T
     elseif !ismissing(x.Os[a][b,c])
@@ -120,7 +120,7 @@ function Base.getindex(x::MpoHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T
     end
 end
 
-function Base.setindex!(x::MpoHamiltonian{S,T,E},v::T,a::Int,b::Int,c::Int)  where {S,T,E}
+function Base.setindex!(x::MPOHamiltonian{S,T,E},v::T,a::Int,b::Int,c::Int)  where {S,T,E}
     (ii,scal) = isid(v);
 
     if ii && b==c
@@ -131,26 +131,26 @@ function Base.setindex!(x::MpoHamiltonian{S,T,E},v::T,a::Int,b::Int,c::Int)  whe
 
     return x
 end
-Base.eltype(x::MpoHamiltonian) = typeof(x[1,1,1])
-Base.size(x::MpoHamiltonian) = (x.period,x.odim,x.odim)
-Base.size(x::MpoHamiltonian,i) = size(x)[i]
+Base.eltype(x::MPOHamiltonian) = typeof(x[1,1,1])
+Base.size(x::MPOHamiltonian) = (x.period,x.odim,x.odim)
+Base.size(x::MPOHamiltonian,i) = size(x)[i]
 
-keys(x::MpoHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))
-keys(x::MpoHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),Iterators.product(1:x.odim,1:x.odim))
+keys(x::MPOHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))
+keys(x::MPOHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),Iterators.product(1:x.odim,1:x.odim))
 
-opkeys(x::MpoHamiltonian) = Iterators.filter(a-> !(a[2] == a[3] && isscal(x,a[1],a[2])),keys(x));
-opkeys(x::MpoHamiltonian,i::Int) = Iterators.filter(a-> !(a[1] == a[2] && isscal(x,i,a[2])),keys(x,i));
+opkeys(x::MPOHamiltonian) = Iterators.filter(a-> !(a[2] == a[3] && isscal(x,a[1],a[2])),keys(x));
+opkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> !(a[1] == a[2] && isscal(x,i,a[2])),keys(x,i));
 
-scalkeys(x::MpoHamiltonian) = Iterators.filter(a-> (a[2] == a[3] && isscal(x,a[1],a[2])),keys(x));
-scalkeys(x::MpoHamiltonian,i::Int) = Iterators.filter(a-> (a[1] == a[2] && isscal(x,i,a[2])),keys(x,i));
+scalkeys(x::MPOHamiltonian) = Iterators.filter(a-> (a[2] == a[3] && isscal(x,a[1],a[2])),keys(x));
+scalkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> (a[1] == a[2] && isscal(x,i,a[2])),keys(x,i));
 
-contains(x::MpoHamiltonian,a::Int,b::Int,c::Int) = !ismissing(x.Os[a][b,c]) || (b==c && !ismissing(x.scalars[a][b]))
-isscal(x::MpoHamiltonian,a::Int,b::Int) = !ismissing(x.scalars[a][b])
+contains(x::MPOHamiltonian,a::Int,b::Int,c::Int) = !ismissing(x.Os[a][b,c]) || (b==c && !ismissing(x.scalars[a][b]))
+isscal(x::MPOHamiltonian,a::Int,b::Int) = !ismissing(x.scalars[a][b])
 
 "
 checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
 "
-function isid(x::MpoType)
+function isid(x::MPOType)
     cod = space(x,1)*space(x,2);
     dom = space(x,3)'*space(x,4)';
 
@@ -168,12 +168,12 @@ end
 "
 checks if ham[:,i,i] = 1 for every i
 "
-isid(ham::MpoHamiltonian,i::Int) = reduce((a,b) -> a && isscal(ham,b,i) && abs(ham.scalars[b][i]-1)<1e-14,1:ham.period,init=true)
+isid(ham::MPOHamiltonian,i::Int) = reduce((a,b) -> a && isscal(ham,b,i) && abs(ham.scalars[b][i]-1)<1e-14,1:ham.period,init=true)
 
 "
 to be valid in the thermodynamic limit, these hamiltonians need to have a peculiar structure
 "
-function sanitycheck(ham::MpoHamiltonian)
+function sanitycheck(ham::MPOHamiltonian)
     for i in 1:ham.period
 
         @assert isid(ham[i,1,1])[1]
@@ -192,7 +192,7 @@ function sanitycheck(ham::MpoHamiltonian)
 end
 
 #when there are missing values in an input mpo, we will fill them in with 0s
-function fillmissing(x::Array{T,3}) where T<:Union{Missing,M} where M<:MpoType{Sp} where Sp
+function fillmissing(x::Array{T,3}) where T<:Union{Missing,M} where M<:MPOType{Sp} where Sp
     @assert size(x,2) == size(x,3);
 
     #fill in Domspaces and pspaces

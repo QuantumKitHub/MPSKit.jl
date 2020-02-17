@@ -1,5 +1,5 @@
 #use algorithms from optimkit to find the groundstate
-function find_groundstate(state::MpsCenterGauged,H::MpoHamiltonian,alg::OptimKit.OptimizationAlgorithm,pars=params(state,H))
+function find_groundstate(state::InfiniteMPS,H::MPOHamiltonian,alg::OptimKit.OptimizationAlgorithm,pars=params(state,H))
     function objfun(x)
         (state,pars) = x;
 
@@ -47,7 +47,7 @@ function find_groundstate(state::MpsCenterGauged,H::MpoHamiltonian,alg::OptimKit
             @tensor ac_d[i][-1 -2;-3]:=cls[mod1(i-1,end)][-1,1]*(ac_d[i]/lambda)[1,-2,2]*crs[i][2,-3]
         end
 
-        nstate = MpsCenterGauged(Periodic(als),Periodic(ars),Periodic(cs),Periodic(nacs));
+        nstate = InfiniteMPS(Periodic(als),Periodic(ars),Periodic(cs),Periodic(nacs));
 
         return (nstate,pars),ac_d
     end

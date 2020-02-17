@@ -7,7 +7,7 @@ let
     #the operator used to evolve is the anticommutator
     ham = anticommutator(nonsym_ising_ham())
 
-    ts = FiniteMpo([copy(inftemp) for i in 1:10])
+    ts = FiniteMPO([copy(inftemp) for i in 1:10])
     ts = rightorth(ts)
 
     ca = params(ts,ham);

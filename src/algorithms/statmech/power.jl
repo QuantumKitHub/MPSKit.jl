@@ -9,7 +9,7 @@
     verbose::Bool = Defaults.verbose
 end
 
-function leading_boundary(state::MpsMultiline, H,alg::PowerMethod,pars=params(state,H))
+function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(state,H))
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
@@ -31,7 +31,7 @@ function leading_boundary(state::MpsMultiline, H,alg::PowerMethod,pars=params(st
 
         end
 
-        state = MpsMultiline(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter)
+        state = MPSMultiline(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter)
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && println("powermethod @iteration $(iter) galerkin = $(galerkin)")
 

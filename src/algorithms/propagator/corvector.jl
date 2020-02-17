@@ -1,5 +1,5 @@
 #https://www.youtube.com/watch?v=DFdDNOnGjWc
-function squaredenvs(state::Union{MpsComoving,FiniteMps},ham::MpoHamiltonian,pars=params(state,ham))
+function squaredenvs(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,pars=params(state,ham))
     nham=ham*conj(ham,transpo=true)
 
     #to construct the squared caches we will first initialize params
@@ -34,7 +34,7 @@ end
 "
 https://arxiv.org/pdf/cond-mat/0203500.pdf
 "
-function dynamicaldmrg(A::Union{MpsComoving,FiniteMps},z,ham::MpoHamiltonian;init=copy(A),solvtol=Defaults.tol,tol=solvtol*length(A)*2,maxiter=Defaults.maxiter,verbose=Defaults.verbose)
+function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;init=copy(A),solvtol=Defaults.tol,tol=solvtol*length(A)*2,maxiter=Defaults.maxiter,verbose=Defaults.verbose)
     len=length(A)
 
     A=rightorth(A);init=rightorth(init)

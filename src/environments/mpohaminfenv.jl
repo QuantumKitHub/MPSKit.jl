@@ -1,7 +1,7 @@
 "
-    This object manages the hamiltonian environments for an MpsCenterGauged
+    This object manages the hamiltonian environments for an InfiniteMPS
 "
-mutable struct MpoHamInfEnv{H<:MpoHamiltonian,V,S<:MpsCenterGauged} <:AbstractInfEnv
+mutable struct MPOHamInfEnv{H<:MPOHamiltonian,V,S<:InfiniteMPS} <:AbstractInfEnv
     opp :: H
 
     dependency :: S
@@ -12,7 +12,7 @@ mutable struct MpoHamInfEnv{H<:MpoHamiltonian,V,S<:MpsCenterGauged} <:AbstractIn
     rw :: Periodic{V,2}
 end
 
-function gen_lw_rw(st::MpsCenterGauged,ham::MpoHamiltonian)
+function gen_lw_rw(st::InfiniteMPS,ham::MPOHamiltonian)
     lw = Periodic{typeof(st.AL[1]),2}(length(st),ham.odim)
     rw = Periodic{typeof(st.AL[1]),2}(length(st),ham.odim)
 
@@ -25,13 +25,13 @@ function gen_lw_rw(st::MpsCenterGauged,ham::MpoHamiltonian)
 end
 
 #randomly initialize pars
-function params(st::MpsCenterGauged,ham::MpoHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
+function params(st::InfiniteMPS,ham::MPOHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
     (lw,rw) = gen_lw_rw(st,ham);
-    return MpoHamInfEnv(ham,similar(st),tol,maxiter,lw,rw)
+    return MPOHamInfEnv(ham,similar(st),tol,maxiter,lw,rw)
 end
 
 
-function recalculate!(pars::MpoHamInfEnv, nstate)
+function recalculate!(pars::MPOHamInfEnv, nstate)
     pars.dependency = nstate;
     sameDspace = reduce((prev,i) -> prev && space(pars.lw[i,1],3) == space(nstate.CR[i],1)',1:length(nstate),init=true);
 
@@ -44,7 +44,7 @@ function recalculate!(pars::MpoHamInfEnv, nstate)
 end
 
 
-function calclw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
+function calclw(st::InfiniteMPS,ham::MPOHamiltonian,prevca;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
     len=length(st);alg=GMRES(tol=tol,maxiter=maxiter)
 
     @assert sanitycheck(ham)
@@ -97,7 +97,7 @@ function calclw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca;tol::Float64=Defa
     return fixpoints
 end
 
-function calcrw(st::MpsCenterGauged,ham::MpoHamiltonian,prevca;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
+function calcrw(st::InfiniteMPS,ham::MPOHamiltonian,prevca;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
     alg=GMRES(tol=tol,maxiter=maxiter);len=length(st)
 
     @assert sanitycheck(ham)

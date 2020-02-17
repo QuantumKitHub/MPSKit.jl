@@ -8,11 +8,11 @@
     trscheme = notrunc()
 end
 
-function changebonds_1(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H)) #would be more efficient if we also repeated pars
+function changebonds_1(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H)) #would be more efficient if we also repeated pars
     #the unitcell==1 case is unique, because there you have a sef-consistency condition
 
     #expand the one site to two sites
-    nstate = MpsCenterGauged(repeat(state.AL,2))
+    nstate = InfiniteMPS(repeat(state.AL,2))
     nH = repeat(H,2)
 
     nstate,npars = changebonds(nstate,nH,alg)
@@ -25,11 +25,11 @@ function changebonds_1(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,p
         (nstate,nH) = changebonds(nstate,nH,SvdCut(trschemes = [truncdim(min(dim(D1),dim(D2)))]))
     end
 
-    nstate = MpsCenterGauged([nstate.AL[1]];tol=alg.tol_gauge)
+    nstate = InfiniteMPS([nstate.AL[1]];tol=alg.tol_gauge)
     return nstate, pars
 end
 
-function changebonds_n(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H))
+function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H))
     meps=0.0
     for loc in 1:length(state)
         @tensor AC2[-1 -2;-3 -4] := state.AC[loc][-1,-2,1]*state.AR[loc+1][1,-3,-4]
@@ -56,10 +56,10 @@ function changebonds_n(state::MpsCenterGauged, H::Hamiltonian,alg::VumpsSvdCut,p
         allAls[loc]   = permute(AL1,(1,2),(3,))
         allAls[loc+1] = permute(AL2,(1,2),(3,))
 
-        state = MpsCenterGauged(allAls; tol = alg.tol_gauge)
+        state = InfiniteMPS(allAls; tol = alg.tol_gauge)
     end
 
     return state, pars
 end
 
-changebonds(state::MpsCenterGauged,H,alg::VumpsSvdCut,pars=params(state,H)) = (length(state) == 1) ? changebonds_1(state,H,alg,pars) : changebonds_n(state,H,alg,pars);
+changebonds(state::InfiniteMPS,H,alg::VumpsSvdCut,pars=params(state,H)) = (length(state) == 1) ? changebonds_1(state,H,alg,pars) : changebonds_n(state,H,alg,pars);

@@ -9,7 +9,7 @@ include("heff.jl")
 "
     quasiparticle_excitation calculates the energy of the first excited state at momentum 'moment'
 "
-function quasiparticle_excitation(hamiltonian::Hamiltonian, moment::Float64, mpsleft::MpsCenterGauged, paramsleft, mpsright::MpsCenterGauged=mpsleft, paramsright=paramsleft; excitation_space=oneunit(space(mpsleft.AL[1],1)), trivial=true, num=1 ,X_initial=nothing, toler = 1e-10,krylovdim=30)
+function quasiparticle_excitation(hamiltonian::Hamiltonian, moment::Float64, mpsleft::InfiniteMPS, paramsleft, mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft; excitation_space=oneunit(space(mpsleft.AL[1],1)), trivial=true, num=1 ,X_initial=nothing, toler = 1e-10,krylovdim=30)
     #check whether the provided mps is sensible
     @assert length(mpsleft) == length(mpsright)
 
@@ -43,7 +43,7 @@ function quasiparticle_excitation(hamiltonian::Hamiltonian, moment::Float64, mps
     return Es,Bs, Xs
 end
 
-function quasiparticle_excitation(hamiltonian::Hamiltonian, momenta::AbstractVector, mpsleft::MpsCenterGauged, paramsleft, mpsright::MpsCenterGauged=mpsleft, paramsright=paramsleft; excitation_space=oneunit(space(mpsleft.AL[1],1)), trivial=true, num=1 ,X_initial=nothing,verbose=Defaults.verbose,krylovdim=30)
+function quasiparticle_excitation(hamiltonian::Hamiltonian, momenta::AbstractVector, mpsleft::InfiniteMPS, paramsleft, mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft; excitation_space=oneunit(space(mpsleft.AL[1],1)), trivial=true, num=1 ,X_initial=nothing,verbose=Defaults.verbose,krylovdim=30)
     Ep = Vector(undef,length(momenta))
     Bp = Vector(undef,length(momenta))
     Xp = Vector(undef,length(momenta))

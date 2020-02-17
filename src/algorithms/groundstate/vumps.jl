@@ -14,7 +14,7 @@ end
 
     find the groundstate for ham using algorithm alg
 "
-function find_groundstate(state::MpsCenterGauged, H::Hamiltonian,alg::Vumps,pars=params(state,H))
+function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=params(state,H))
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
@@ -48,7 +48,7 @@ function find_groundstate(state::MpsCenterGauged, H::Hamiltonian,alg::Vumps,pars
         end
 
 
-        state = MpsCenterGauged(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter)
+        state = InfiniteMPS(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter)
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && println("vumps @iteration $(iter) galerkin = $(galerkin)")
 
@@ -68,4 +68,4 @@ function find_groundstate(state::MpsCenterGauged, H::Hamiltonian,alg::Vumps,pars
 end
 
 "calculates the galerkin error"
-calc_galerkin(state::MpsCenterGauged, pars) = maximum([norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc, state, pars)) for loc in 1:length(state)])
+calc_galerkin(state::InfiniteMPS, pars) = maximum([norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc, state, pars)) for loc in 1:length(state)])

@@ -41,24 +41,24 @@ Using these TensorMap building blocks we can create states; representing physica
 A = TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^2);
 B = TensorMap(rand,ComplexF64,ℂ^2*ℂ^2,ℂ^2);
 C = TensorMap(rand,ComplexF64,ℂ^2*ℂ^2,ℂ^1);
-FiniteMps([A,B,C]);
+FiniteMPS([A,B,C]);
 ```
 
 Infinite matrix product states are also supported. A uniform mps representing ... ABABAB... can be created using
 ```julia
 A = TensorMap(rand,ComplexF64,ℂ^10*ℂ^2,ℂ^10);
 B = TensorMap(rand,ComplexF64,ℂ^10*ℂ^2,ℂ^10);
-MpsCenterGauged([A,B]);
+MPSCenterGauged([A,B]);
 ```
 
 ## Operators
 
-We can act with operators on these states. A number of operators are defined, but the most commonly used one is the MpoHamiltonian. This object represents a regular 1d quantum hamiltonian and can act both on finite and infinite states. As an example, this creates the spin 1 heisenberg :
+We can act with operators on these states. A number of operators are defined, but the most commonly used one is the MPOHamiltonian. This object represents a regular 1d quantum hamiltonian and can act both on finite and infinite states. As an example, this creates the spin 1 heisenberg :
 ```julia
 (sx,sy,sz,id) = nonsym_spintensors(1)
 
 @tensor tham[-1 -2;-3 -4]:=sx[-1,-3]*sx[-2,-4]+sy[-1,-3]*sy[-2,-4]+sz[-1,-3]*sz[-2,-4]
-ham = MpoHamiltonian(tham)
+ham = MPOHamiltonian(tham)
 ```
 
 This code is already included in the juliatrack, just call

@@ -6,7 +6,7 @@ let
     (sxt,syt,szt) = nonsym_spintensors(1//2);
 
     #Center gauging a random mps
-    ts=MpsCenterGauged([ℂ^2],[ℂ^12]);
+    ts=InfiniteMPS([ℂ^2],[ℂ^12]);
 
     #Finding the groundstate
     (ts,pars,_)=find_groundstate(ts,th,Vumps(maxiter=400));
@@ -14,7 +14,7 @@ let
     len=20;deltat=0.05;totaltime=3.0
 
     #apply a single spinflip at the middle site
-    mpco=MpsComoving(ts,[ts.AC[1];ts.AR[2:len]],ts)
+    mpco=MPSComoving(ts,[ts.AC[1];ts.AR[2:len]],ts)
     @tensor mpco.middle[Int(round(len/2))][-1 -2;-3]:=ts.AR[Int(round(len/2))][-1,1,-3]*sxt[-2,1]
     mpco = rightorth(mpco)
 

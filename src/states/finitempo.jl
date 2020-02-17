@@ -1,29 +1,29 @@
 "
-    FiniteMpo(data::Array)
+    FiniteMPO(data::Array)
 
     finite one dimensional mpo
     algorithms usually assume a right-orthormalized input
 "
-struct FiniteMpo{T<:MpoType} <: AbstractArray{T,1}
+struct FiniteMPO{T<:MPOType} <: AbstractArray{T,1}
     data::Array{T,1}
 end
 
-FiniteMpo{T}(init,len) where T = FiniteMpo(Array{T,1}(init,len))
-Base.length(arr::FiniteMpo) = length(arr.data)
-Base.size(arr::FiniteMpo) = size(arr.data)
-Base.getindex(arr::FiniteMpo,I::Int) = arr.data[I]
-Base.setindex!(arr::FiniteMpo{T},v::T,I::Int) where T = setindex!(arr.data,v,I)
-Base.eltype(arr::FiniteMpo{T}) where T = T
-Base.iterate(arr::FiniteMpo,state=1) = Base.iterate(arr.data,state)
-Base.lastindex(arr::FiniteMpo) = lastindex(arr.data)
-Base.lastindex(arr::FiniteMpo,d) = lastindex(arr.data,d)
-Base.copy(arr::FiniteMpo) = FiniteMpo(copy(arr.data));
-Base.deepcopy(arr::FiniteMpo) = FiniteMpo(deepcopy(arr.data));
-Base.similar(arr::FiniteMpo) = FiniteMpo(similar(arr.data))
-r_RR(state::FiniteMpo{T}) where T = isomorphism(Matrix{eltype(T)},space(state[end],3)',space(state[end],3)')
-l_LL(state::FiniteMpo{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
+FiniteMPO{T}(init,len) where T = FiniteMPO(Array{T,1}(init,len))
+Base.length(arr::FiniteMPO) = length(arr.data)
+Base.size(arr::FiniteMPO) = size(arr.data)
+Base.getindex(arr::FiniteMPO,I::Int) = arr.data[I]
+Base.setindex!(arr::FiniteMPO{T},v::T,I::Int) where T = setindex!(arr.data,v,I)
+Base.eltype(arr::FiniteMPO{T}) where T = T
+Base.iterate(arr::FiniteMPO,state=1) = Base.iterate(arr.data,state)
+Base.lastindex(arr::FiniteMPO) = lastindex(arr.data)
+Base.lastindex(arr::FiniteMPO,d) = lastindex(arr.data,d)
+Base.copy(arr::FiniteMPO) = FiniteMPO(copy(arr.data));
+Base.deepcopy(arr::FiniteMPO) = FiniteMPO(deepcopy(arr.data));
+Base.similar(arr::FiniteMPO) = FiniteMPO(similar(arr.data))
+r_RR(state::FiniteMPO{T}) where T = isomorphism(Matrix{eltype(T)},space(state[end],3)',space(state[end],3)')
+l_LL(state::FiniteMPO{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
 
-function expectation_value(ts::FiniteMpo,opp::TensorMap)
+function expectation_value(ts::FiniteMPO,opp::TensorMap)
     leftenvs = [Tensor(ones,ComplexF64,space(ts[1],1)')];
     rightenvs = [Tensor(ones,ComplexF64,space(ts[length(ts)],3)')];
 

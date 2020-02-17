@@ -5,7 +5,7 @@
     trscheme::TruncationScheme = truncdim(1)
 end
 
-function changebonds(state::MpsCenterGauged, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
+function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
     for i in 1:length(state)
         @tensor ACAR[-1 -2;-3 -4]:=state.AC[i][-1,-2,1]*state.AR[i+1][1,-3,-4]
         AC2 = ac2_prime(ACAR,i,state,pars)
@@ -45,7 +45,7 @@ function changebonds(state::MpsCenterGauged, H::Hamiltonian,alg::OptimalExpand,p
     return state,pars
 end
 
-function changebonds(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
+function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
     #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
     #didn't use the paper because generically it'd be annoying to implement (again having to fuse and stuff)
 

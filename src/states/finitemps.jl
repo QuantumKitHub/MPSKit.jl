@@ -1,13 +1,13 @@
 "
-    FiniteMps(data::Array)
+    FiniteMPS(data::Array)
 
     finite one dimensional mps
     algorithms usually assume a right-orthormalized input
 "
-struct FiniteMps{T<:GenMpsType} <: AbstractArray{T,1}
+struct FiniteMPS{T<:GenMPSType} <: AbstractArray{T,1}
     data::Array{T,1}
 
-    function FiniteMps(data::Array{T,1}) where T<:GenMpsType
+    function FiniteMPS(data::Array{T,1}) where T<:GenMPSType
         ou = oneunit(space(data[1],1));
         @assert space(data[1],1) == ou
         @assert space(data[end],length(codomain(data[end]))+length(domain(data[end]))) == ou'
@@ -15,24 +15,24 @@ struct FiniteMps{T<:GenMpsType} <: AbstractArray{T,1}
     end
 end
 
-Base.length(arr::FiniteMps) = length(arr.data)
-Base.size(arr::FiniteMps) = size(arr.data)
-Base.getindex(arr::FiniteMps,I::Int) = arr.data[I]
-Base.setindex!(arr::FiniteMps{T},v::T,I::Int) where T = setindex!(arr.data,v,I) #should add oneunit checks ...
-Base.eltype(arr::FiniteMps{T}) where T = T
-Base.iterate(arr::FiniteMps,state=1) = Base.iterate(arr.data,state)
-Base.lastindex(arr::FiniteMps) = lastindex(arr.data)
-Base.lastindex(arr::FiniteMps,d) = lastindex(arr.data,d)
-Base.copy(arr::FiniteMps) where T= FiniteMps(copy(arr.data));
-Base.deepcopy(arr::FiniteMps) where T = FiniteMps(deepcopy(arr.data));
-Base.similar(arr::FiniteMps) = FiniteMps(similar.(arr))
-r_RR(state::FiniteMps{T}) where T = isomorphism(Matrix{eltype(T)},domain(state[end]),domain(state[end]))
-l_LL(state::FiniteMps{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
+Base.length(arr::FiniteMPS) = length(arr.data)
+Base.size(arr::FiniteMPS) = size(arr.data)
+Base.getindex(arr::FiniteMPS,I::Int) = arr.data[I]
+Base.setindex!(arr::FiniteMPS{T},v::T,I::Int) where T = setindex!(arr.data,v,I) #should add oneunit checks ...
+Base.eltype(arr::FiniteMPS{T}) where T = T
+Base.iterate(arr::FiniteMPS,state=1) = Base.iterate(arr.data,state)
+Base.lastindex(arr::FiniteMPS) = lastindex(arr.data)
+Base.lastindex(arr::FiniteMPS,d) = lastindex(arr.data,d)
+Base.copy(arr::FiniteMPS) where T= FiniteMPS(copy(arr.data));
+Base.deepcopy(arr::FiniteMPS) where T = FiniteMPS(deepcopy(arr.data));
+Base.similar(arr::FiniteMPS) = FiniteMPS(similar.(arr))
+r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state[end]),domain(state[end]))
+l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
 
 "
     take the sum of 2 finite mpses
 "
-function Base.:+(v1::FiniteMps{T},v2::FiniteMps{T}) where T #untested and quite horrible code, but not sure how to make it nice
+function Base.:+(v1::FiniteMPS{T},v2::FiniteMPS{T}) where T #untested and quite horrible code, but not sure how to make it nice
     @assert length(v1)==length(v2)
 
     ou = oneunit(space(v1[1],1));
@@ -68,7 +68,7 @@ function Base.:+(v1::FiniteMps{T},v2::FiniteMps{T}) where T #untested and quite 
 end
 
 
-function LinearAlgebra.dot(v1::FiniteMps,v2::FiniteMps)
+function LinearAlgebra.dot(v1::FiniteMPS,v2::FiniteMPS)
     @assert length(v1)==length(v2)
 
     @tensor start[-1;-2]:=v2[1][1,2,-2]*conj(v1[1][1,2,-1])

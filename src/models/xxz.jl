@@ -14,7 +14,7 @@ function nonsym_xxz_ham(;spin = 1,delta = 1,zfield = 0.0)
                 0*ide 0*ide 0*ide 0*ide sye;
                 0*ide 0*ide 0*ide 0*ide sze;
                 0*ide 0*ide 0*ide 0*ide ide]
-    th=MpoHamiltonian(mpo)
+    th=MPOHamiltonian(mpo)
 
     return th
 end
@@ -26,7 +26,7 @@ function su2_xxx_ham(;spin = 1//2)
     Sl1 = TensorMap(ones, Defaults.eltype, ℂ[SU₂](0=>1)*ph , ℂ[SU₂](1=>1)*ph)
     Sr1 = TensorMap(ones, Defaults.eltype, ℂ[SU₂](1=>1)*ph , ℂ[SU₂](0=>1)*ph)
 
-    return MpoHamiltonian([Sl1,Sr1]);
+    return MPOHamiltonian([Sl1,Sr1]);
 end
 
 function u1_xxz_ham(;spin = 1,delta = 1,zfield = 0.0)
@@ -44,5 +44,5 @@ function u1_xxz_ham(;spin = 1,delta = 1,zfield = 0.0)
         end
     end
 
-    return MpoHamiltonian(decompose_localmpo(add_util_leg(symham)))
+    return MPOHamiltonian(decompose_localmpo(add_util_leg(symham)))
 end

@@ -8,7 +8,7 @@
     manager::Algorithm = SimpleManager();
 end
 
-function find_groundstate(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
+function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter::Int64 = 0; delta::Float64 = 2*tol
 
@@ -74,7 +74,7 @@ end
     verbose = Defaults.verbose
 end
 
-function find_groundstate(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
+function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
 
     tol=alg.tol;maxiter=alg.maxiter
     iter::Int64 = 0; delta::Float64 = 2*tol

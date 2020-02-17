@@ -1,12 +1,12 @@
 "calculates the entropy of a given state"
-entropy(state::MpsCenterGauged) = [sum([-j^2*2*log(j) for j in diag(convert(Array,tsvd(state.CR[i])[2]))]) for i in 1:length(state)]
+entropy(state::InfiniteMPS) = [sum([-j^2*2*log(j) for j in diag(convert(Array,tsvd(state.CR[i])[2]))]) for i in 1:length(state)]
 
 "
 given a thermal state, you can map it to an mps by fusing the physical legs together
 to prepare a gibbs ensemble, you need to evolve this state with H working on both legs
 here we return the 'superhamiltonian' (H*id,id*H)
 "
-function splitham(ham::MpoHamiltonian)
+function splitham(ham::MPOHamiltonian)
     pspaces=[fuse(p*p') for p in ham.pspaces]
 
     idham=Array{Union{Missing,eltype(ham.Os[1])},3}(missing,ham.period,ham.odim,ham.odim)
@@ -24,7 +24,7 @@ function splitham(ham::MpoHamiltonian)
         end
     end
 
-    return MpoHamiltonian(hamid),MpoHamiltonian(idham)
+    return MPOHamiltonian(hamid),MPOHamiltonian(idham)
 end
 
 function mpo2mps(mpo)

@@ -5,7 +5,7 @@
 =#
 
 #addition / substraction
-function Base.:+(a::MpoHamiltonian,e::AbstractArray{T,1}) where T
+function Base.:+(a::MPOHamiltonian,e::AbstractArray{T,1}) where T
     @assert length(e)==a.period
     nOs=copy(a.Os)
 
@@ -13,12 +13,12 @@ function Base.:+(a::MpoHamiltonian,e::AbstractArray{T,1}) where T
         @tensor nOs[c][1,a.odim][-1 -2;-3 -4]:=a[c,1,a.odim][-1,-2,-3,-4]+(e[c]*one(a[c,1,a.odim]))[-1,-2,-3,-4]
     end
 
-    return MpoHamiltonian(a.scalars,nOs,a.domspaces,a.pspaces)
+    return MPOHamiltonian(a.scalars,nOs,a.domspaces,a.pspaces)
 end
-Base.:-(e::Array{T,1},a::MpoHamiltonian) where T = -1.0*a+e
-Base.:+(e::Array{T,1},a::MpoHamiltonian) where T = a+e
-Base.:-(a::MpoHamiltonian,e::AbstractArray{T,1}) where T = a+(-e)
-function Base.:+(a::MpoHamiltonian{S,T,E},b::MpoHamiltonian{S,T,E}) where {S,T,E}
+Base.:-(e::Array{T,1},a::MPOHamiltonian) where T = -1.0*a+e
+Base.:+(e::Array{T,1},a::MPOHamiltonian) where T = a+e
+Base.:-(a::MPOHamiltonian,e::AbstractArray{T,1}) where T = a+(-e)
+function Base.:+(a::MPOHamiltonian{S,T,E},b::MPOHamiltonian{S,T,E}) where {S,T,E}
     @assert a.period == b.period
     @assert sanitycheck(a)
     @assert sanitycheck(b)
@@ -77,13 +77,13 @@ function Base.:+(a::MpoHamiltonian{S,T,E},b::MpoHamiltonian{S,T,E}) where {S,T,E
     end
 
 
-    return MpoHamiltonian(Periodic(nSs),Periodic(nOs),ndomspaces,a.pspaces)
+    return MPOHamiltonian(Periodic(nSs),Periodic(nOs),ndomspaces,a.pspaces)
 end
-Base.:-(a::MpoHamiltonian,b::MpoHamiltonian) = a+(-1.0*b)
+Base.:-(a::MPOHamiltonian,b::MPOHamiltonian) = a+(-1.0*b)
 
 #multiplication
-Base.:*(b::Number,a::MpoHamiltonian)=a*b
-function Base.:*(a::MpoHamiltonian,b::Number)
+Base.:*(b::Number,a::MPOHamiltonian)=a*b
+function Base.:*(a::MPOHamiltonian,b::Number)
     nOs=deepcopy(a.Os)
 
     for i=1:a.period
@@ -94,13 +94,13 @@ function Base.:*(a::MpoHamiltonian,b::Number)
         end
     end
 
-    return MpoHamiltonian(a.scalars,nOs,a.domspaces,a.pspaces)
+    return MPOHamiltonian(a.scalars,nOs,a.domspaces,a.pspaces)
 end
 
 #this is the index-map used in the ham x ham multiplication function (also needed somewhere else)
 #i think julia has a build in for this, but it got renamed somewhere (linearindices?)
-multmap(a::MpoHamiltonian,b::MpoHamiltonian) = (i,j)->(i-1)*b.odim+j
-function Base.:*(a::MpoHamiltonian{S,T,E},b::MpoHamiltonian{S,T,E}) where {S,T,E}
+multmap(a::MPOHamiltonian,b::MPOHamiltonian) = (i,j)->(i-1)*b.odim+j
+function Base.:*(a::MPOHamiltonian{S,T,E},b::MPOHamiltonian{S,T,E}) where {S,T,E}
     nodim=a.odim*b.odim
 
     indmap=multmap(a,b)
@@ -138,11 +138,11 @@ function Base.:*(a::MpoHamiltonian{S,T,E},b::MpoHamiltonian{S,T,E}) where {S,T,E
         end
     end
 
-    return MpoHamiltonian(Periodic(nSs),Periodic(nOs),ndomspaces,a.pspaces)
+    return MPOHamiltonian(Periodic(nSs),Periodic(nOs),ndomspaces,a.pspaces)
 end
 
 #without the copy, we get side effects when repeating + setindex
-Base.repeat(x::MpoHamiltonian,n::Int) = MpoHamiltonian(
+Base.repeat(x::MPOHamiltonian,n::Int) = MPOHamiltonian(
                                             Periodic(copy.(repeat(x.scalars,n))),
                                             Periodic(copy.(repeat(x.Os,n))),
                                             repeat(x.domspaces,n),
@@ -150,7 +150,7 @@ Base.repeat(x::MpoHamiltonian,n::Int) = MpoHamiltonian(
 
 #transpo = false => inplace conjugate
 #transpo = true => flip physical legs
-function Base.conj(a::MpoHamiltonian;transpo=false)
+function Base.conj(a::MPOHamiltonian;transpo=false)
     b = Array{Union{Missing,eltype(a)},3}(missing,a.period,a.odim,a.odim)
 
     for (i,j,k) in keys(a)
@@ -160,14 +160,14 @@ function Base.conj(a::MpoHamiltonian;transpo=false)
         end
     end
 
-    MpoHamiltonian(b)
+    MPOHamiltonian(b)
 end
 
 #needed this; perhaps move to tensorkit?
 TensorKit.fuse(f::T) where T<: VectorSpace = f
 
 #the usual mpoham transfer
-function transfer_left(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MpsType
+function transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSType
     toreturn = Array{V,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
@@ -199,7 +199,7 @@ function transfer_left(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::V,Ab::V=A
 
     return toreturn
 end
-function transfer_right(vec::Array{V,1},ham::MpoHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MpsType
+function transfer_right(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSType
     toreturn = Array{V,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
@@ -232,7 +232,7 @@ end
 
 #=
 "turn the mpo hamiltonian into a full mpo"
-function full(th :: MpoHamiltonian) #completely and utterly untested
+function full(th :: MPOHamiltonian) #completely and utterly untested
     Os=[]
 
     #if you want to put this mpoham on a finite lattice, you want it to end with a trivial leg

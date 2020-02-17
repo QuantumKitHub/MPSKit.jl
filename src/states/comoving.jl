@@ -1,33 +1,33 @@
 "
-    MpsComoving(leftstate,window,rightstate)
+    MPSComoving(leftstate,window,rightstate)
 
     muteable window of tensors on top of an infinite chain
 "
-struct MpsComoving{Mtype<:GenMpsType,Vtype<:MpsVecType}
-    left_gs::MpsCenterGauged{Mtype,Vtype}
+struct MPSComoving{Mtype<:GenMPSType,Vtype<:MPSVecType}
+    left_gs::InfiniteMPS{Mtype,Vtype}
     middle::Array{Mtype,1}
-    right_gs::MpsCenterGauged{Mtype,Vtype}
+    right_gs::InfiniteMPS{Mtype,Vtype}
 end
 
-Base.length(state::MpsComoving)=length(state.middle)
-Base.getindex(state::MpsComoving,I...)=getindex(state.middle,I...)
-Base.setindex!(state::MpsComoving,v,i)=setindex!(state.middle,v,i)
-Base.copy(state::MpsComoving)=MpsComoving(state.left_gs,copy(state.middle),state.right_gs)
-Base.deepcopy(state::MpsComoving)=MpsComoving(state.left_gs,deepcopy(state.middle),state.right_gs)
-Base.lastindex(st::MpsComoving) = Base.length(st);
+Base.length(state::MPSComoving)=length(state.middle)
+Base.getindex(state::MPSComoving,I...)=getindex(state.middle,I...)
+Base.setindex!(state::MPSComoving,v,i)=setindex!(state.middle,v,i)
+Base.copy(state::MPSComoving)=MPSComoving(state.left_gs,copy(state.middle),state.right_gs)
+Base.deepcopy(state::MPSComoving)=MPSComoving(state.left_gs,deepcopy(state.middle),state.right_gs)
+Base.lastindex(st::MPSComoving) = Base.length(st);
 
-r_RR(state::MpsComoving)=r_RR(state.right_gs,length(state))
-l_LL(state::MpsComoving)=l_LL(state.left_gs,1)
+r_RR(state::MPSComoving)=r_RR(state.right_gs,length(state))
+l_LL(state::MPSComoving)=l_LL(state.left_gs,1)
 
 #we need the ability to copy the data from one mpscomoving into another mpscomoving
-function Base.copyto!(st1::MpsComoving,st2::MpsComoving)
+function Base.copyto!(st1::MPSComoving,st2::MPSComoving)
     for i in 1:length(st1)
         st1[i]=st2[i]
     end
     return st1
 end
 
-function expectation_value(state::Union{MpsComoving,FiniteMps},opp::TensorMap;leftorthed=false)
+function expectation_value(state::Union{MPSComoving,FiniteMPS},opp::TensorMap;leftorthed=false)
     if(!leftorthed)
         state=leftorth(state)
     end

@@ -7,13 +7,13 @@
     Acts on an mpo with mpo hamiltonian 'ham1' from below + 'ham2' from above.
     Can therefore represent the (anti) commutator.
 "
-struct ComAct{T1<:MpoHamiltonian,T2<:MpoHamiltonian} <: Hamiltonian
+struct ComAct{T1<:MPOHamiltonian,T2<:MPOHamiltonian} <: Hamiltonian
     below::T1
     above::T2
 end
 
-commutator(H::MpoHamiltonian) = ComAct(H,-1*H)
-anticommutator(H::MpoHamiltonian) = ComAct(H,H)
+commutator(H::MPOHamiltonian) = ComAct(H,-1*H)
+anticommutator(H::MPOHamiltonian) = ComAct(H,H)
 
 function Base.getproperty(h::ComAct,f::Symbol)
     if f==:odim

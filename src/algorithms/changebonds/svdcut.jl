@@ -5,7 +5,7 @@
     trschemes = [notrunc()]
 end
 
-function changebonds(state::Union{FiniteMps{T},MpsComoving{T}},alg::SvdCut) where T<: GenMpsType{Sp,N} where {Sp,N} # made it work for GenMpsType
+function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) where T<: GenMPSType{Sp,N} where {Sp,N} # made it work for GenMPSType
     state = leftorth(state,renorm=false)
 
     for i in length(state)-1:-1:1
@@ -21,12 +21,12 @@ function changebonds(state::Union{FiniteMps{T},MpsComoving{T}},alg::SvdCut) wher
     return state
 end
 
-function changebonds(state::MpsCenterGauged,H,alg::SvdCut,pars=params(state,H))
+function changebonds(state::InfiniteMPS,H,alg::SvdCut,pars=params(state,H))
     state = changebonds(state,alg);
     return state,pars;
 end
 
-function changebonds(state::MpsCenterGauged,alg::SvdCut)
+function changebonds(state::InfiniteMPS,alg::SvdCut)
     nAL = copy(state.AL); #not actually left orthonormalized
 
     for i in 1:length(state)
@@ -35,5 +35,5 @@ function changebonds(state::MpsCenterGauged,alg::SvdCut)
         @tensor nAL[i+1][-1 -2;-3]:=conj(U[1,-1])*nAL[i+1][1,-2,-3]
     end
 
-    return MpsCenterGauged(nAL)
+    return InfiniteMPS(nAL)
 end

@@ -1,8 +1,8 @@
 "
-    FinEnv keeps track of the environments for FiniteMps / MpsComoving / FiniteMpo
+    FinEnv keeps track of the environments for FiniteMPS / MPSComoving / FiniteMPO
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
 "
-struct FinEnv{B <: Operator,C <: MpsType,D <: TensorMap} <: Cache
+struct FinEnv{B <: Operator,C <: MPSType,D <: TensorMap} <: Cache
     ldependencies::Array{D,1} #the data we used to calculate leftenvs/rightenvs
     rdependencies::Array{D,1}
 
@@ -14,7 +14,7 @@ end
 
 #the constructor used for any state (finitemps or mpscomoving)
 #we really should be doing this lazily
-function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}) where C<:MpsType
+function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}) where C<:MPSType
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 
@@ -27,7 +27,7 @@ function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
-function params(state::FiniteMps,ham::MpoHamiltonian)
+function params(state::FiniteMPS,ham::MPOHamiltonian)
     lll = l_LL(state);rrr = r_RR(state)
     rightstart = Array{eltype(state),1}();leftstart = Array{eltype(state),1}()
 
@@ -54,11 +54,11 @@ function params(state::FiniteMps,ham::MpoHamiltonian)
 end
 
 #extract the correct leftstart/rightstart for mpscomoving
-function params(state::MpsComoving,ham::MpoHamiltonian;lpars=params(state.left_gs,ham),rpars=params(state.right_gs,ham))
+function params(state::MPSComoving,ham::MPOHamiltonian;lpars=params(state.left_gs,ham),rpars=params(state.right_gs,ham))
     params(state,ham,leftenv(lpars,1,state.left_gs),rightenv(rpars,length(state),state.right_gs))
 end
 
-function params(state::FiniteMpo,ham::ComAct)
+function params(state::FiniteMPO,ham::ComAct)
     lll = l_LL(state);rrr = r_RR(state)
 
     @tensor sillyel[-1 -2;-3]:=lll[-1,-3]*Tensor(ones,ham.above.domspaces[1][1]')[-2]

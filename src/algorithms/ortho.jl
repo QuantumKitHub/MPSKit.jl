@@ -1,9 +1,9 @@
 #orthonormalization procedures; should clean this up
 
-TensorKit.rightorth(state::Union{FiniteMps,MpsComoving,FiniteMpo};renorm=true) = rightorth!(deepcopy(state),renorm = renorm)
-TensorKit.leftorth(state::Union{FiniteMps,MpsComoving,FiniteMpo};renorm=true) = leftorth!(deepcopy(state),renorm = renorm)
+TensorKit.rightorth(state::Union{FiniteMPS,MPSComoving,FiniteMPO};renorm=true) = rightorth!(deepcopy(state),renorm = renorm)
+TensorKit.leftorth(state::Union{FiniteMPS,MPSComoving,FiniteMPO};renorm=true) = leftorth!(deepcopy(state),renorm = renorm)
 
-function TensorKit.rightorth!(state::Union{FiniteMps{T},MpsComoving{T}};renorm=true) where T <: GenMpsType{S,N} where {S,N}
+function TensorKit.rightorth!(state::Union{FiniteMPS{T},MPSComoving{T}};renorm=true) where T <: GenMPSType{S,N} where {S,N}
     for i=length(state):-1:2
         (newc,newar)=TensorKit.rightorth(state[i],(1,),ntuple(x->x+1,Val{N}()))
         state[i] = permute(newar,ntuple(x->x,Val{N}()),(N+1,)) #this line used to be permute!(state[i],newar) but rightorth can sometimes drop vectors?
@@ -17,7 +17,7 @@ function TensorKit.rightorth!(state::Union{FiniteMps{T},MpsComoving{T}};renorm=t
     return state
 end
 
-function TensorKit.rightorth!(state::Union{FiniteMpo};renorm=true)
+function TensorKit.rightorth!(state::Union{FiniteMPO};renorm=true)
     for i=length(state):-1:2
         (newc,newar)=TensorKit.rightorth(state[i],(1,),(2,3,4))
         state[i]=permute(newar,(1,2),(3,4)) #this line used to be permute!(state[i],newar) but rightorth can sometimes drop vectors
@@ -29,7 +29,7 @@ function TensorKit.rightorth!(state::Union{FiniteMpo};renorm=true)
    return state
 end
 
-function TensorKit.leftorth!(state::Union{FiniteMps{T},MpsComoving{T}};renorm=true) where T <: GenMpsType{S,N} where {S,N}
+function TensorKit.leftorth!(state::Union{FiniteMPS{T},MPSComoving{T}};renorm=true) where T <: GenMPSType{S,N} where {S,N}
     for i=1:length(state)-1
         (state[i],c)=TensorKit.leftorth!(state[i])
         state[i+1]=permute(c*permute(state[i+1],(1,),ntuple(x->x+1,Val{N}())),ntuple(x->x,Val{N}()),(N+1,))
@@ -40,7 +40,7 @@ function TensorKit.leftorth!(state::Union{FiniteMps{T},MpsComoving{T}};renorm=tr
     return state
 end
 
-function TensorKit.leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess= TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenMpsType{S,N1} where {S,N1}
+function TensorKit.leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess= TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenMPSType{S,N1} where {S,N1}
     iteration=1;delta::Float64 = 2*tol; len = length(A)
 
     cnew = TensorKit.leftorth(cguess, alg=TensorKit.QRpos())[2]
@@ -86,7 +86,7 @@ function TensorKit.leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, max
 end
 
 
-function TensorKit.rightorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenMpsType{S,N1} where {S,N1}
+function TensorKit.rightorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenMPSType{S,N1} where {S,N1}
     iteration=1; delta::Float64 = 2*tol; len = length(A)
 
     cnew = TensorKit.rightorth(cguess, alg=TensorKit.RQpos())[1]

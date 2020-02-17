@@ -1,7 +1,7 @@
 using MPSKit,TensorKit,LinearAlgebra,Test
 
 @testset "States" begin
-    @testset "MpsCenterGauged ($D,$d,$elt)" for (D,d,elt) in [
+    @testset "InfiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
             (ComplexSpace(10),ComplexSpace(2),ComplexF64),
             (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)
             ]
@@ -10,13 +10,13 @@ using MPSKit,TensorKit,LinearAlgebra,Test
         #=@inferred=# leftorth([TensorMap(rand,elt,D*d,D)],tol=tol);
         #=@inferred=# rightorth([TensorMap(rand,elt,D*d,D)],tol=tol);
 
-        ts = #=@inferred=# MpsCenterGauged([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
+        ts = #=@inferred=# InfiniteMPS([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
 
         @tensor difference[-1,-2,-3] := ts.AL[1][-1,-2,1]*ts.CR[1][1,-3]-ts.CR[0][-1,1]*ts.AR[1][1,-2,-3];
         @test norm(difference,Inf)<tol;
     end
 
-    @testset "FiniteMps ($D,$d,$elt)" for (D,d,elt) in [
+    @testset "FiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
             (ComplexSpace(10),ComplexSpace(2),ComplexF64),
             (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)
             ]
@@ -27,7 +27,7 @@ using MPSKit,TensorKit,LinearAlgebra,Test
         end
         push!(data,TensorMap(rand,elt,D*d,oneunit(D)));
 
-        ts = FiniteMps(data);
+        ts = FiniteMPS(data);
 
         ovl = dot(ts,ts);
         ts = rightorth(ts,renorm=false);
@@ -39,7 +39,7 @@ using MPSKit,TensorKit,LinearAlgebra,Test
         end
         push!(data2,TensorMap(rand,elt,D*d,oneunit(D)));
 
-        ts2 = FiniteMps(data2);
+        ts2 = FiniteMPS(data2);
 
         ovl2 = dot(ts,ts2);
 
@@ -48,11 +48,11 @@ using MPSKit,TensorKit,LinearAlgebra,Test
         @test ovl2+ovl ≈ dot(ts,ts3)
     end
 
-    @testset "MpsComoving" begin
+    @testset "MPSComoving" begin
         ham = nonsym_ising_ham(lambda=4.0);
-        (gs,_,_) = find_groundstate(MpsCenterGauged([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
+        (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
 
-        window = MpsComoving(gs,[gs.AC[1];[gs.AR[i] for i in 2:10]],gs);
+        window = MPSComoving(gs,[gs.AC[1];[gs.AR[i] for i in 2:10]],gs);
 
         e1 = expectation_value(window,ham);
 
@@ -81,7 +81,7 @@ end
             (repeat(su2_xxx_ham(),2),[ℂ[SU₂](0=>1),ℂ[SU₂](1//2=>1)])
             ])
 
-        ts = MpsCenterGauged(th.pspaces,Dspaces); # generate a product state
+        ts = InfiniteMPS(th.pspaces,Dspaces); # generate a product state
 
         (ts,_) = changebonds(ts,th,OptimalExpand()) # optimal expand a la vumps paper
         ndim = dim(space(ts.AC[1],1))
@@ -109,7 +109,7 @@ end
 
         len = 20;
 
-        ts = FiniteMpo([TensorMap(rand,ComplexF64,
+        ts = FiniteMPO([TensorMap(rand,ComplexF64,
                     oneunit(th.pspaces[1]) * th.pspaces[j],
                     oneunit(th.pspaces[1]) * th.pspaces[j])
                     for j in 1:len]);
@@ -136,10 +136,10 @@ end
 
 @testset "Algorithms" begin
     @testset "find_groundstate $(ind)" for (ind,(state,alg,ham)) in enumerate([
-            (MpsCenterGauged([ℂ^2],[ℂ^10]),Vumps(tol_galerkin=1e-8,verbose=false),nonsym_ising_ham(lambda=2.0)),
-            (MpsCenterGauged([ℂ^2],[ℂ^10]),Idmrg1(tol_galerkin=1e-8,maxiter=400,verbose=false),nonsym_ising_ham(lambda=2.0)),
-            (FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10)),Dmrg2(verbose=false),nonsym_ising_ham(lambda=2.0)),
-            (FiniteMps(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10)),Dmrg(manager=SimpleManager(10),verbose=false),nonsym_ising_ham(lambda=2.0))
+            (InfiniteMPS([ℂ^2],[ℂ^10]),Vumps(tol_galerkin=1e-8,verbose=false),nonsym_ising_ham(lambda=2.0)),
+            (InfiniteMPS([ℂ^2],[ℂ^10]),Idmrg1(tol_galerkin=1e-8,maxiter=400,verbose=false),nonsym_ising_ham(lambda=2.0)),
+            (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10)),Dmrg2(verbose=false),nonsym_ising_ham(lambda=2.0)),
+            (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10)),Dmrg(manager=SimpleManager(10),verbose=false),nonsym_ising_ham(lambda=2.0))
             ])
 
         #vumps type inferrence got broken by @threads, so worth it?
@@ -154,16 +154,16 @@ end
     end
 
     @testset "timestep $(ind)" for (ind,(state,alg,opp)) in enumerate([
-        (FiniteMpo(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),5)),Tdvp(),commutator(nonsym_xxz_ham(spin=1//2))),
-        (FiniteMpo(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),7)),Tdvp2(),anticommutator(nonsym_xxz_ham(spin=1//2))),
-        (MpsCenterGauged([ℂ^3,ℂ^3],[ℂ^50,ℂ^50]),Tdvp(),repeat(nonsym_xxz_ham(spin=1),2))
+        (FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),5)),Tdvp(),commutator(nonsym_xxz_ham(spin=1//2))),
+        (FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),7)),Tdvp2(),anticommutator(nonsym_xxz_ham(spin=1//2))),
+        (InfiniteMPS([ℂ^3,ℂ^3],[ℂ^50,ℂ^50]),Tdvp(),repeat(nonsym_xxz_ham(spin=1),2))
         ])
 
         edens = expectation_value(state,opp);
 
-        (state,_) = timestep(state,opp,rand(),alg)
+        (state,_) = timestep(state,opp,rand()/10,alg)
 
-        @test sum(expectation_value(state,opp)) ≈ sum(edens) atol = 1e-3
+        @test sum(expectation_value(state,opp)) ≈ sum(edens) atol = 1e-2
     end
 
     @testset "leading_boundary $(ind)" for (ind,alg) in enumerate([
@@ -171,7 +171,7 @@ end
             PowerMethod(tol_galerkin=1e-10,verbose=false,maxiter=1000)])
 
         mpo = #=@inferred=# nonsym_ising_mpo();
-        state = MpsCenterGauged([ℂ^2],[ℂ^10]);
+        state = InfiniteMPS([ℂ^2],[ℂ^10]);
         (state,pars,_) = leading_boundary(state,mpo,alg);
 
         @test expectation_value(state,mpo,pars)[1,1] ≈ 2.5337 atol=1e-3
@@ -180,7 +180,7 @@ end
 
     @testset "quasiparticle_excitation" begin
         th = nonsym_xxz_ham()
-        ts = MpsCenterGauged([ℂ^3],[ℂ^48]);
+        ts = InfiniteMPS([ℂ^3],[ℂ^48]);
         (ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
         (energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,pars);
         @test energies[1] ≈ 0.41047925 atol=1e-4
@@ -188,8 +188,8 @@ end
 
     @testset "dynamicaldmrg" begin
         ham = nonsym_ising_ham(lambda=4.0);
-        (gs,_,_) = find_groundstate(MpsCenterGauged([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
-        window = MpsComoving(gs,[gs.AC[1];[gs.AR[i] for i in 2:10]],gs);
+        (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
+        window = MPSComoving(gs,[gs.AC[1];[gs.AR[i] for i in 2:10]],gs);
 
         szd = TensorMap([1 0;0 -1],ℂ^2,ℂ^2);
         @test expectation_value(gs,szd)[1] ≈ expectation_value(window,szd)[1] atol=1e-10

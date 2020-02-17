@@ -7,7 +7,7 @@ module MPSKit
     #export HagerZhangLineSearch
 
     #bells and whistles for mpses
-    export MpsCenterGauged,FiniteMps,FiniteMpo,MpsComoving,Periodic,MpsMultiline
+    export InfiniteMPS,FiniteMPS,FiniteMPO,MPSComoving,Periodic,MPSMultiline
     export transfer_left,transfer_right
     export leftorth,rightorth,leftorth!,rightorth!,poison!
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
@@ -18,7 +18,7 @@ module MPSKit
 
     #hamiltonian things
     export Hamiltonian,Operator,Cache
-    export MpoHamiltonian,contains,PeriodicMpo,ComAct,commutator,anticommutator
+    export MPOHamiltonian,contains,PeriodicMPO,ComAct,commutator,anticommutator
     export ac_prime,c_prime,params,ac2_prime,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 

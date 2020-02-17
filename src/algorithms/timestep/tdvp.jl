@@ -10,7 +10,7 @@ end
 
     evolves state forward by dt using algorithm alg
 """
-function timestep(state::MpsCenterGauged, H::Hamiltonian, timestep::Number,alg::Tdvp,parameters::Cache=params(state,H))
+function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,parameters::Cache=params(state,H))
 
     newAs=similar(state.AL)
 
@@ -35,11 +35,11 @@ function timestep(state::MpsCenterGauged, H::Hamiltonian, timestep::Number,alg::
         newAs[loc]     = Aleft
     end
 
-    return MpsCenterGauged(newAs; tol = alg.tolgauge, maxiter = alg.maxiter),parameters
+    return InfiniteMPS(newAs; tol = alg.tolgauge, maxiter = alg.maxiter),parameters
 end
 
 #assumes right orthonormalization, will partly overwrite things in state
-function timestep(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp,pars=params(state,H))
+function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp,pars=params(state,H))
     #left to right
     for i in 1:(length(state)-1)
 
@@ -87,7 +87,7 @@ function timestep(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian, timestep:
     return state,pars
 end
 
-function timestep(state::FiniteMpo, H::ComAct, timestep::Number,alg::Tdvp,pars=params(state,H))
+function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp,pars=params(state,H))
     #left to right
     for i in 1:(length(state)-1)
         (state[i],convhist)=  let pars=pars, state = state
@@ -140,7 +140,7 @@ end
 end
 
 #twosite tdvp for finite mps
-function timestep(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp2,pars=params(state,H);rightorthed=false)
+function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp2,pars=params(state,H);rightorthed=false)
     if(!rightorthed)
         state = rightorth!(state)
     end
@@ -184,7 +184,7 @@ function timestep(state::Union{FiniteMps,MpsComoving}, H::Hamiltonian, timestep:
     return state,pars
 end
 
-function timestep(state::FiniteMpo, H::ComAct, timestep::Number,alg::Tdvp2,pars=params(state,H))
+function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp2,pars=params(state,H))
 
     #left to right
     for i in 1:(length(state)-1)

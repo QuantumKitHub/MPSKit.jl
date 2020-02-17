@@ -3,7 +3,7 @@
 """
     One-site derivative
 """
-function ac_prime(x::MpsType,pos::Int,mps::Union{FiniteMps,MpsCenterGauged,MpsComoving},cache)
+function ac_prime(x::MPSType,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
     ham=cache.opp
 
     toret=zero(x)
@@ -17,7 +17,7 @@ function ac_prime(x::MpsType,pos::Int,mps::Union{FiniteMps,MpsCenterGauged,MpsCo
 
     return toret
 end
-function ac_prime(x::MpoType,pos::Int,mpo::FiniteMpo,cache)
+function ac_prime(x::MPOType,pos::Int,mpo::FiniteMPO,cache)
     ham=cache.opp
 
     toret=zero(x)
@@ -39,14 +39,14 @@ function ac_prime(x::MpoType,pos::Int,mpo::FiniteMpo,cache)
 
     return toret
 end
-function ac_prime(x::MpsType, row::Int,col::Int,mps::Union{MpsCenterGauged,MpsMultiline}, pars::PerMpoInfEnv)
+function ac_prime(x::MPSType, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, pars::PerMPOInfEnv)
     @tensor toret[-1 -2;-3]:=leftenv(pars,row,col,mps)[-1,2,1]*x[1,3,4]*(pars.opp[row,col])[2,-2,5,3]*rightenv(pars,row,col,mps)[4,5,-3]
 end
 
 """
     Two-site derivative
 """
-function ac2_prime(x::MpoType,pos::Int,mps::Union{FiniteMps,MpsCenterGauged,MpsComoving},cache)
+function ac2_prime(x::MPOType,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
     ham=cache.opp
 
     toret=zero(x)
@@ -63,7 +63,7 @@ function ac2_prime(x::MpoType,pos::Int,mps::Union{FiniteMps,MpsCenterGauged,MpsC
 
     return toret
 end
-function ac2_prime(x::TensorMap,pos::Int,mpo::FiniteMpo,cache)
+function ac2_prime(x::TensorMap,pos::Int,mpo::FiniteMPO,cache)
     ham=cache.opp
 
     toret=zero(x)
@@ -93,7 +93,7 @@ function ac2_prime(x::TensorMap,pos::Int,mpo::FiniteMpo,cache)
 
     return toret
 end
-function ac2_prime(x::MpoType, row::Int,col::Int,mps::Union{MpsCenterGauged,MpsMultiline}, pars::PerMpoInfEnv)
+function ac2_prime(x::MPOType, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, pars::PerMPOInfEnv)
     @tensor toret[-1 -2;-3 -4]:=leftenv(pars,row,col,mps)[-1,2,1]*
                                 x[1,3,4,5]*
                                 pars.opp[row,col][2,-2,6,3]*
@@ -104,7 +104,7 @@ end
 """
     Zero-site derivative (the C matrix to the right of pos)
 """
-function c_prime(x::MpsVecType,pos::Int,mps::Union{FiniteMps,MpsCenterGauged,MpsComoving},cache)
+function c_prime(x::MPSVecType,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
     toret=zero(x)
     ham=cache.opp
 
@@ -114,7 +114,7 @@ function c_prime(x::MpsVecType,pos::Int,mps::Union{FiniteMps,MpsCenterGauged,Mps
 
     return toret
 end
-function c_prime(x::MpsVecType,pos::Int,mpo::FiniteMpo,cache)
+function c_prime(x::MPSVecType,pos::Int,mpo::FiniteMPO,cache)
     toret=zero(x)
     ham=cache.opp
 
@@ -128,7 +128,7 @@ function c_prime(x::MpsVecType,pos::Int,mpo::FiniteMpo,cache)
 
     return toret
 end
-function c_prime(x::TensorMap, row::Int,col::Int, mps::Union{MpsCenterGauged,MpsMultiline}, pars::PerMpoInfEnv)
+function c_prime(x::TensorMap, row::Int,col::Int, mps::Union{InfiniteMPS,MPSMultiline}, pars::PerMPOInfEnv)
     @tensor toret[-1;-2] := leftenv(pars,row,col+1,mps)[-1,3,1]*x[1,2]*rightenv(pars,row,col,mps)[2,3,-2]
 end
 
@@ -136,7 +136,7 @@ end
 """
     calculates the expectation value for the given operator/hamiltonian
 """
-function expectation_value(state::MpsComoving,ham::MpoHamiltonian,pars=params(state,ham))
+function expectation_value(state::MPSComoving,ham::MPOHamiltonian,pars=params(state,ham))
     vals = expectation_value_fimpl(state,ham,pars);
 
     tot = 0.0+0im;
@@ -146,8 +146,8 @@ function expectation_value(state::MpsComoving,ham::MpoHamiltonian,pars=params(st
 
     return vals,tot
 end
-expectation_value(state::FiniteMps,ham::MpoHamiltonian,pars=params(state,ham)) = expectation_value_fimpl(state,ham,pars);
-function expectation_value_fimpl(state::Union{MpsComoving,FiniteMps},ham::MpoHamiltonian,pars)
+expectation_value(state::FiniteMPS,ham::MPOHamiltonian,pars=params(state,ham)) = expectation_value_fimpl(state,ham,pars);
+function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,pars)
     ens=zeros(eltype(state[1]),length(state))
     for i=1:length(state)
         for (j,k) in keys(ham,i)
@@ -168,7 +168,7 @@ function expectation_value_fimpl(state::Union{MpsComoving,FiniteMps},ham::MpoHam
     return ens
 end
 
-function expectation_value(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=params(st,ham))
+function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,prevca=params(st,ham))
     #calculate energy density
     len = length(st);
     ens = Periodic(zeros(eltype(st.AR[1]),len));
@@ -183,7 +183,7 @@ function expectation_value(st::MpsCenterGauged,ham::MpoHamiltonian,prevca=params
 end
 
 #the mpo hamiltonian over n sites has energy f+n*edens, which is what we calculate here. f can then be found as this - n*edens
-function expectation_value(st::MpsCenterGauged,ham::MpoHamiltonian,size::Int,prevca=params(st,ham))
+function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=params(st,ham))
     len=length(st)
     start=leftenv(prevca,1,st)
     start=[@tensor x[-1 -2;-3]:=y[1,-2,3]*st.CR[0][3,-3]*conj(st.CR[0][1,-1]) for y in start]
@@ -200,8 +200,8 @@ function expectation_value(st::MpsCenterGauged,ham::MpoHamiltonian,size::Int,pre
     return tot
 end
 
-expectation_value(st::MpsCenterGauged,opp::PeriodicMpo,ca=params(st,opp)) = expectation_value(convert(MpsMultiline,st),opp,ca);
-function expectation_value(st::MpsMultiline,opp::PeriodicMpo,ca=params(st,opp))
+expectation_value(st::InfiniteMPS,opp::PeriodicMPO,ca=params(st,opp)) = expectation_value(convert(MPSMultiline,st),opp,ca);
+function expectation_value(st::MPSMultiline,opp::PeriodicMPO,ca=params(st,opp))
     retval = Periodic{eltype(st.AC[1,1]),2}(size(st,1),size(st,2));
     for (i,j) in Iterators.product(1:size(st,1),1:size(st,2))
         retval[i,j] = @tensor   leftenv(ca,i,j,st)[1,2,3]*
@@ -213,7 +213,7 @@ function expectation_value(st::MpsMultiline,opp::PeriodicMpo,ca=params(st,opp))
     return retval
 end
 
-function expectation_value(state::FiniteMpo,ham::ComAct,cache=params(state,ham))
+function expectation_value(state::FiniteMPO,ham::ComAct,cache=params(state,ham))
     ens=zeros(eltype(state[1]),length(state))
     for i=1:length(state)
         for (j,k) in keys(ham,i)

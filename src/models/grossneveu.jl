@@ -48,15 +48,15 @@ function su2u1_grossneveu(;g2SPT=0,g2AFM=0)
 
 
     #=
-    BlockHamiltonian([ SimpleLocalMpo([LK , Cplus, RK]) ,
-            SimpleLocalMpo([-0.25*g2SPT^2*Ldiffsq, Cdiffsq, Rdiffsq]) ,
-            SimpleLocalMpo([-0.5*g2AFM^2*O_op^2]),
-            SimpleLocalMpo([+0.5*g2AFM^2*O_op, O_op])   ])
+    BlockHamiltonian([ SimpleLocalMPO([LK , Cplus, RK]) ,
+            SimpleLocalMPO([-0.25*g2SPT^2*Ldiffsq, Cdiffsq, Rdiffsq]) ,
+            SimpleLocalMPO([-0.5*g2AFM^2*O_op^2]),
+            SimpleLocalMPO([+0.5*g2AFM^2*O_op, O_op])   ])
     =#
 
-    MpoHamiltonian([LK, Cplus, RK]) +
-    MpoHamiltonian([-0.25*g2SPT^2*Ldiffsq, Cdiffsq, Rdiffsq]) +
-    MpoHamiltonian([-0.5*g2AFM^2*O_op*O_op]) +
-    MpoHamiltonian([+0.5*g2AFM^2*O_op, O_op])
+    MPOHamiltonian([LK, Cplus, RK]) +
+    MPOHamiltonian([-0.25*g2SPT^2*Ldiffsq, Cdiffsq, Rdiffsq]) +
+    MPOHamiltonian([-0.5*g2AFM^2*O_op*O_op]) +
+    MPOHamiltonian([+0.5*g2AFM^2*O_op, O_op])
 
 end
