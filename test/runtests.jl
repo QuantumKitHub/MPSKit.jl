@@ -12,8 +12,44 @@ using MPSKit,TensorKit,LinearAlgebra,Test
 
         ts = #=@inferred=# InfiniteMPS([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
 
-        @tensor difference[-1,-2,-3] := ts.AL[1][-1,-2,1]*ts.CR[1][1,-3]-ts.CR[0][-1,1]*ts.AR[1][1,-2,-3];
-        @test norm(difference,Inf)<tol;
+        for i in 1:length(ts)
+            @tensor difference[-1,-2,-3] := ts.AL[i][-1,-2,1]*ts.CR[i][1,-3]-ts.CR[i-1][-1,1]*ts.AR[i][1,-2,-3];
+            @test norm(difference,Inf) < tol;
+
+            @test transfer_left(l_LL(ts,i),ts.AL[i],ts.AL[i]) ≈ l_LL(ts,i+1)
+            @test transfer_left(l_LR(ts,i),ts.AL[i],ts.AR[i]) ≈ l_LR(ts,i+1)
+            @test transfer_left(l_RL(ts,i),ts.AR[i],ts.AL[i]) ≈ l_RL(ts,i+1)
+            @test transfer_left(l_RR(ts,i),ts.AR[i],ts.AR[i]) ≈ l_RR(ts,i+1)
+
+            @test transfer_right(r_LL(ts,i),ts.AL[i],ts.AL[i]) ≈ r_LL(ts,i+1)
+            @test transfer_right(r_LR(ts,i),ts.AL[i],ts.AR[i]) ≈ r_LR(ts,i+1)
+            @test transfer_right(r_RL(ts,i),ts.AR[i],ts.AL[i]) ≈ r_RL(ts,i+1)
+            @test transfer_right(r_RR(ts,i),ts.AR[i],ts.AR[i]) ≈ r_RR(ts,i+1)
+        end
+    end
+
+    @testset "MPSMultiline ($D,$d,$elt)" for (D,d,elt) in [
+            (ComplexSpace(10),ComplexSpace(2),ComplexF64),
+            (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)
+            ]
+
+        tol = Float64(eps(real(elt))*100);
+        ts = MPSMultiline([TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D);TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D)],tol = tol);
+
+        for (i,j) in Iterators.product(size(ts,1),size(ts,2))
+            @tensor difference[-1,-2,-3] := ts.AL[i,j][-1,-2,1]*ts.CR[i,j][1,-3]-ts.CR[i,j-1][-1,1]*ts.AR[i,j][1,-2,-3];
+            @test norm(difference,Inf) < tol;
+
+            @test transfer_left(l_LL(ts,i,j),ts.AL[i,j],ts.AL[i,j]) ≈ l_LL(ts,i,j+1)
+            @test transfer_left(l_LR(ts,i,j),ts.AL[i,j],ts.AR[i,j]) ≈ l_LR(ts,i,j+1)
+            @test transfer_left(l_RL(ts,i,j),ts.AR[i,j],ts.AL[i,j]) ≈ l_RL(ts,i,j+1)
+            @test transfer_left(l_RR(ts,i,j),ts.AR[i,j],ts.AR[i,j]) ≈ l_RR(ts,i,j+1)
+
+            @test transfer_right(r_LL(ts,i,j),ts.AL[i,j],ts.AL[i,j]) ≈ r_LL(ts,i,j+1)
+            @test transfer_right(r_LR(ts,i,j),ts.AL[i,j],ts.AR[i,j]) ≈ r_LR(ts,i,j+1)
+            @test transfer_right(r_RL(ts,i,j),ts.AR[i,j],ts.AL[i,j]) ≈ r_RL(ts,i,j+1)
+            @test transfer_right(r_RR(ts,i,j),ts.AR[i,j],ts.AR[i,j]) ≈ r_RR(ts,i,j+1)
+        end
     end
 
     @testset "FiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
@@ -46,6 +82,16 @@ using MPSKit,TensorKit,LinearAlgebra,Test
         ts3 = ts+ts2;
 
         @test ovl2+ovl ≈ dot(ts,ts3)
+    end
+
+    @testset "FiniteMPO $sp" for sp in [1//2,8//2]
+        (sx,sy,sz,id) = nonsym_spintensors(sp);
+        ps = space(sx,1);
+
+        bb = isomorphism(Matrix{ComplexF64},oneunit(ps)*ps,oneunit(ps)*ps);
+        state = FiniteMPO([bb for i in 1:10]);
+
+        @test sum(expectation_value(state,sz)) ≈ 0 atol = 1e-3
     end
 
     @testset "MPSComoving" begin
@@ -104,7 +150,8 @@ end
     @testset "comact $(i)" for (i,th) in enumerate([
             nonsym_ising_ham(),
             u1_xxz_ham(),
-            su2_xxx_ham()
+            su2_xxx_ham(),
+            su2u1_grossneveu()
             ])
 
         len = 20;
@@ -167,8 +214,8 @@ end
     end
 
     @testset "leading_boundary $(ind)" for (ind,alg) in enumerate([
-            Vumps(tol_galerkin=1e-10,verbose=false),
-            PowerMethod(tol_galerkin=1e-10,verbose=false,maxiter=1000)])
+            Vumps(tol_galerkin=1e-5,verbose=false),
+            PowerMethod(tol_galerkin=1e-5,verbose=false,maxiter=1000)])
 
         mpo = #=@inferred=# nonsym_ising_mpo();
         state = InfiniteMPS([ℂ^2],[ℂ^10]);
@@ -210,4 +257,16 @@ end
         @test data ≈ predicted atol=1e-8
     end
 
+    @testset "utility" begin
+        tofit = x->x^-3;
+        fitdist = 100;
+        numexp = 10;
+
+        (prefs,exps) = exp_decomp(tofit,fitdist = fitdist,numexp = numexp);
+
+        exact = map(tofit,1:fitdist);
+        aprox = map(x->sum([e^x*l for (e,l) in zip(exps,prefs)]),1:fitdist);
+
+        @test exact ≈ aprox atol=1e-2
+    end
 end

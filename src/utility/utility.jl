@@ -101,7 +101,7 @@ function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2
 
     return [T;decompose_localmpo(V)]
 end
-
+#=
 function ham_to_nonsym_mpo_prodtrick(t::Tuple,v::Val{N}) where N
     if length(t)==N/2
         return ProductSpace{ComplexSpace,0}()
@@ -114,7 +114,7 @@ function ham_to_nonsym_mpo(ham::Array{ComplexF64,N}) where N
     hamt=TensorMap(complex.(ham),totspace,totspace)
     return decompose_localmpo(add_util_leg(hamt))
 end
-
+=#
 function add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
     #ntuple(x->x,Val{3+4}())
 
