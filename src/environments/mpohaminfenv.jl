@@ -8,13 +8,13 @@ mutable struct MPOHamInfEnv{H<:MPOHamiltonian,V,S<:InfiniteMPS} <:AbstractInfEnv
     tol :: Float64
     maxiter :: Int
 
-    lw :: Periodic{V,2}
-    rw :: Periodic{V,2}
+    lw :: PeriodicArray{V,2}
+    rw :: PeriodicArray{V,2}
 end
 
 function gen_lw_rw(st::InfiniteMPS,ham::MPOHamiltonian)
-    lw = Periodic{typeof(st.AL[1]),2}(length(st),ham.odim)
-    rw = Periodic{typeof(st.AL[1]),2}(length(st),ham.odim)
+    lw = PeriodicArray{typeof(st.AL[1]),2}(undef,length(st),ham.odim)
+    rw = PeriodicArray{typeof(st.AL[1]),2}(undef,length(st),ham.odim)
 
     for (i,j) in Iterators.product(1:length(st),1:ham.odim)
         lw[i,j] = TensorMap(rand,eltype(st),space(st.AL[i],1)*space(ham[i,j,1],1)',space(st.AL[i],1))
@@ -55,7 +55,7 @@ function calclw(st::InfiniteMPS,ham::MPOHamiltonian,prevca;tol::Float64=Defaults
     @tensor leftstart[-1 -2;-3]:=l_LL(st)[-1,-3]*conj(leftutil[-2])
 
     #initialize the fixpoints array
-    fixpoints = Periodic(zero.(prevca));
+    fixpoints = PeriodicArray(zero.(prevca));
     fixpoints[1,1] += leftstart
 
     (len>1) && left_cyclethrough(1,fixpoints,ham,st)
@@ -108,7 +108,7 @@ function calcrw(st::InfiniteMPS,ham::MPOHamiltonian,prevca;tol::Float64=Defaults
     @tensor rightstart[-1 -2;-3]:=r_RR(st)[-1,-3]*conj(rightutil[-2])
 
     #initialize the fixpoints array
-    fixpoints = Periodic(zero.(prevca));
+    fixpoints = PeriodicArray(zero.(prevca));
     fixpoints[end,end]+=rightstart
 
     (len>1) && right_cyclethrough(ham.odim,fixpoints,ham,st) #populate other sites

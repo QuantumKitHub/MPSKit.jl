@@ -6,10 +6,10 @@
     2d extension of InfiniteMPS
 "
 struct MPSMultiline{A<:GenMPSType,B<:MPSVecType}
-    AL::Periodic{A,2}
-    AR::Periodic{A,2}
-    CR::Periodic{B,2}
-    AC::Periodic{A,2}
+    AL::PeriodicArray{A,2}
+    AR::PeriodicArray{A,2}
+    CR::PeriodicArray{B,2}
+    AC::PeriodicArray{A,2}
 end
 
 Base.size(arr::MPSMultiline) = size(arr.AL)
@@ -20,29 +20,29 @@ Base.lastindex(arr::MPSMultiline,i) = lastindex(arr.AL,i);
 Base.similar(st::MPSMultiline) = MPSMultiline(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
 
 function Base.convert(::Type{MPSMultiline},st::InfiniteMPS)
-    AL=Periodic(permutedims(st.AL.data));
-    AR=Periodic(permutedims(st.AR.data));
-    CR=Periodic(permutedims(st.CR.data));
-    AC=Periodic(permutedims(st.AC.data));
+    AL=PeriodicArray(permutedims(st.AL.data));
+    AR=PeriodicArray(permutedims(st.AR.data));
+    CR=PeriodicArray(permutedims(st.CR.data));
+    AC=PeriodicArray(permutedims(st.AC.data));
     MPSMultiline(AL,AR,CR,AC);
 end
 
 function Base.convert(::Type{InfiniteMPS},st::MPSMultiline{A,B}) where {A,B}
     @assert size(st,1) == 1 #otherwise - how would we convert?
-    AL=Periodic(st.AL.data[:]);
-    AR=Periodic(st.AR.data[:]);
-    CR=Periodic(st.CR.data[:]);
-    AC=Periodic(st.AC.data[:]);
+    AL=PeriodicArray(st.AL.data[:]);
+    AR=PeriodicArray(st.AR.data[:]);
+    CR=PeriodicArray(st.CR.data[:]);
+    AC=PeriodicArray(st.AC.data[:]);
     InfiniteMPS(AL,AR,CR,AC);
 end
 #allow users to pass in simple arrays
 MPSMultiline(A::Array;tol = Defaults.tolgauge,maxiter = Defaults.maxiter,cguess = [TensorMap(rand, eltype(A[1]), domain(A[i,end]) ← space(A[i,1],1)) for i in 1:size(A,1)]) =
-    MPSMultiline(Periodic(A),tol=tol,maxiter=maxiter,cguess=Periodic(cguess))
+    MPSMultiline(PeriodicArray(A),tol=tol,maxiter=maxiter,cguess=PeriodicArray(cguess))
 
-function MPSMultiline(A::Periodic;tol = Defaults.tolgauge,maxiter = Defaults.maxiter,cguess =  Periodic([TensorMap(rand, eltype(A[1]), domain(A[i,end]) ← space(A[i,1],1)) for i in 1:size(A,1)]))
+function MPSMultiline(A::PeriodicArray;tol = Defaults.tolgauge,maxiter = Defaults.maxiter,cguess =  PeriodicArray([TensorMap(rand, eltype(A[1]), domain(A[i,end]) ← space(A[i,1],1)) for i in 1:size(A,1)]))
 
     ACs = similar(A);ALs = similar(A); ARs = similar(A);
-    Cs = Periodic{typeof(cguess[1]),2}(size(A,1),size(A,2));
+    Cs = PeriodicArray{typeof(cguess[1]),2}(undef,size(A,1),size(A,2));
 
     for row in 1:size(A,1)
         tal,_,deltal= uniform_leftorth(A[row,:]; tol = tol, maxiter = maxiter, cguess = cguess[row])

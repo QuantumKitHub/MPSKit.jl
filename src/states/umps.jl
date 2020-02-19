@@ -7,10 +7,10 @@
     st.AR[i] is right unitary
 "
 struct InfiniteMPS{A<:GenMPSType,B<:MPSVecType}
-    AL::Periodic{A,1}
-    AR::Periodic{A,1}
-    CR::Periodic{B,1}
-    AC::Periodic{A,1}
+    AL::PeriodicArray{A,1}
+    AR::PeriodicArray{A,1}
+    CR::PeriodicArray{B,1}
+    AC::PeriodicArray{A,1}
 end
 
 Base.size(arr::InfiniteMPS,i) = size(arr.AL,i)
@@ -45,7 +45,7 @@ function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, ma
         ACs[loc] = ALs[loc]*Cs[loc]
     end
 
-    return InfiniteMPS(Periodic(ALs),Periodic(ARs),Periodic(Cs),Periodic(ACs))
+    return InfiniteMPS(PeriodicArray(ALs),PeriodicArray(ARs),PeriodicArray(Cs),PeriodicArray(ACs))
 end
 
 "

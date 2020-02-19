@@ -5,8 +5,8 @@
 "
 struct SimpleEnv{H<:Operator,V} <:Cache
     opp :: H
-    lw :: Periodic{V,2}
-    rw :: Periodic{V,2}
+    lw :: PeriodicArray{V,2}
+    rw :: PeriodicArray{V,2}
 end
 
 function SimpleEnv(state,pars::AbstractInfEnv)

@@ -36,11 +36,11 @@
     represents a general periodic quantum hamiltonian
 "
 struct MPOHamiltonian{S,T<:MPOType,E<:Number}<:Hamiltonian
-    scalars::Periodic{Array{Union{Missing,E},1},1}
-    Os::Periodic{Array{Union{Missing,T},2},1}
+    scalars::PeriodicArray{Array{Union{Missing,E},1},1}
+    Os::PeriodicArray{Array{Union{Missing,T},2},1}
 
-    domspaces::Periodic{Array{S,1},1}
-    pspaces::Periodic{S,1}
+    domspaces::PeriodicArray{Array{S,1},1}
+    pspaces::PeriodicArray{S,1}
 end
 
 function Base.getproperty(h::MPOHamiltonian,f::Symbol)
@@ -49,7 +49,7 @@ function Base.getproperty(h::MPOHamiltonian,f::Symbol)
     elseif f==:period
         return size(h.pspaces,1)
     elseif f==:imspaces
-        return circshift(Periodic([adjoint.(d) for d in h.domspaces.data]),-1)
+        return circshift(PeriodicArray([adjoint.(d) for d in h.domspaces.data]),-1)
     else
         return getfield(h,f)
     end
@@ -81,7 +81,7 @@ function MPOHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MPOTy
     pspaces=[space(x[i,1,1],2) for i in 1:len]
     domspaces=[[space(y,1) for y in x[i,:,1]] for i in 1:len]
 
-    return MPOHamiltonian(Periodic(tSs),Periodic(tOs),Periodic(domspaces),Periodic(pspaces))
+    return MPOHamiltonian(PeriodicArray(tSs),PeriodicArray(tOs),PeriodicArray(domspaces),PeriodicArray(pspaces))
 end
 
 #allow passing in 2leg mpos
@@ -106,7 +106,7 @@ function MPOHamiltonian(x::Array{T,1}) where T<:MPOType
     nSs[1] = 1
     nSs[end] = 1
 
-    return MPOHamiltonian(Periodic([nSs]),Periodic([nOs]),Periodic([domspaces]),Periodic(pspaces))
+    return MPOHamiltonian(PeriodicArray([nSs]),PeriodicArray([nOs]),PeriodicArray([domspaces]),PeriodicArray(pspaces))
 end
 
 #utility functions for finite mpo

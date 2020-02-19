@@ -8,7 +8,7 @@ module MPSKit
     export enable_benchmarks, disable_benchmarks, print_timer,reset_timer!
 
     #bells and whistles for mpses
-    export InfiniteMPS,FiniteMPS,FiniteMPO,MPSComoving,Periodic,MPSMultiline
+    export InfiniteMPS,FiniteMPS,FiniteMPO,MPSComoving,PeriodicArray,MPSMultiline
     export transfer_left,transfer_right
     export leftorth,rightorth,leftorth!,rightorth!,poison!,uniform_leftorth,uniform_rightorth
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
@@ -49,6 +49,7 @@ module MPSKit
     include("customerrors.jl")
     include("benchmarks.jl")
 
+    include("utility/periodicarray.jl")
     include("utility/mps_types.jl")
     include("utility/utility.jl") #random utility functions
     include("utility/apply_transfer.jl") #apply transfer matrices
