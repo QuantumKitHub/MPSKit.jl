@@ -88,7 +88,9 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
 
         for pos=1:(length(state)-1)
             @tensor ac2[-1 -2; -3 -4]:=state[pos][-1,-2,1]*state[pos+1][1,-3,-4]
-            (eigvals,vecs) =  eigsolve(x->ac2_prime(x,pos,state,parameters),ac2,1,:SR,ealg)
+            (eigvals,vecs) =  let state=state,parameters=parameters
+                eigsolve(x->ac2_prime(x,pos,state,parameters),ac2,1,:SR,ealg)
+            end
             newA2center = vecs[1]
 
             (al,c,ar) = tsvd(newA2center,trunc=alg.trscheme)
@@ -104,7 +106,9 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
 
         for pos=length(state):-1:2
             @tensor ac2[-1 -2; -3 -4]:=state[pos-1][-1,-2,1]*state[pos][1,-3,-4]
-            (eigvals,vecs) =  eigsolve(x->ac2_prime(x,pos-1,state,parameters),ac2,1,:SR,ealg)
+            (eigvals,vecs) =  let state=state,parameters=parameters
+                eigsolve(x->ac2_prime(x,pos-1,state,parameters),ac2,1,:SR,ealg)
+            end
             newA2center = vecs[1]
 
             (al,c,ar) = tsvd(newA2center,trunc=alg.trscheme)

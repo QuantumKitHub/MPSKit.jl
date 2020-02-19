@@ -25,8 +25,8 @@ function changebonds_1(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=
         (nstate,nH) = changebonds(nstate,nH,SvdCut(trschemes = [truncdim(min(dim(D1),dim(D2)))]))
     end
 
-    nstate = InfiniteMPS([nstate.AL[1]];tol=alg.tol_gauge)
-    return nstate, pars
+    collapsed = InfiniteMPS([nstate.AL[1]];tol=alg.tol_gauge)
+    return collapsed, pars
 end
 
 function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H))
@@ -34,10 +34,14 @@ function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=
     for loc in 1:length(state)
         @tensor AC2[-1 -2;-3 -4] := state.AC[loc][-1,-2,1]*state.AR[loc+1][1,-3,-4]
 
-        (vals,vecs,_) = eigsolve(x->ac2_prime(x,loc,state,pars),AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
+        (vals,vecs,_) = let state=state,pars=pars
+            eigsolve(x->ac2_prime(x,loc,state,pars),AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
+        end
         nAC2=vecs[1]
 
-        (vals,vecs,_)  = eigsolve(x->c_prime(x,loc+1,state,pars),state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
+        (vals,vecs,_)  = let state=state,pars=pars
+            eigsolve(x->c_prime(x,loc+1,state,pars),state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
+        end
         nC2=vecs[1]
 
         #find the updated two site AL

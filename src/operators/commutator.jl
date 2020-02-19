@@ -55,8 +55,8 @@ function Base.getindex(a::ComAct,pos::Int,i::Int,j::Int)
     end
 end
 
-function transfer_left(vec,ham::ComAct,pos,A,Ab=A)
-    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,3)'*ham.imspaces[pos][i],space(A,3)') for i in 1:ham.odim]
+function transfer_left(vec::T,ham::ComAct,pos,A,Ab=A) where T
+    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,3)'*ham.imspaces[pos][i],space(A,3)') for i in 1:ham.odim]::T
 
     for (i,j) in keys(ham,pos)
         opp = ham[pos,i,j]
@@ -69,8 +69,8 @@ function transfer_left(vec,ham::ComAct,pos,A,Ab=A)
 
     return toreturn
 end
-function transfer_right(vec,ham::ComAct,pos,A,Ab=A)
-    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,1)*ham.domspaces[pos][i],space(A,1)) for i in 1:ham.odim]
+function transfer_right(vec::T,ham::ComAct,pos,A,Ab=A) where T
+    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,1)*ham.domspaces[pos][i],space(A,1)) for i in 1:ham.odim]::T
 
     for (i,j) in keys(ham,pos)
         opp = ham[pos,i,j]

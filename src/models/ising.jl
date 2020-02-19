@@ -10,13 +10,15 @@ end
 
 function nonsym_ising_mpo(;beta = log(1+sqrt(2))/2)
     t = [exp(beta) exp(-beta); exp(-beta) exp(beta)];
-    r = eigen(t);t = r.vectors*sqrt(Diagonal(r.values))*r.vectors;
+
+    r = eigen(t);
+    nt = r.vectors*sqrt(Diagonal(r.values))*r.vectors;
 
     O = zeros(2,2,2,2);
     O[1,1,1,1]=1; O[2,2,2,2]=1;
 
-    @tensor toret[-1 -2;-3 -4] := O[1,2,3,4]*t[-1,1]*t[-2,2]*t[-3,3]*t[-4,4];
+    @tensor toret[-1 -2;-3 -4] := O[1,2,3,4]*nt[-1,1]*nt[-2,2]*nt[-3,3]*nt[-4,4];
 
-    torett = TensorMap(convert(Array{Defaults.eltype,4},toret),ComplexSpace(2)*ComplexSpace(2),ComplexSpace(2)*ComplexSpace(2));
+    torett = TensorMap(complex(toret),ComplexSpace(2)*ComplexSpace(2),ComplexSpace(2)*ComplexSpace(2));
     return PeriodicMPO(torett);
 end

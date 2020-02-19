@@ -3,33 +3,34 @@ Decomposes fun into a sum of exponentials
 (coeff,exponents)=exp_decomp(fun;fitdist,numexp);
 "
 function exp_decomp(fun;fitdist::Int=1000,numexp::Int=15)
-    N=fitdist
-    n=numexp
+    N = fitdist;
+    n = numexp;
 
-  @assert N>n
-  F=Matrix(undef,N-n+1,n)
-  Y=Matrix(undef,N,1)
-  for row=1:N-n+1
-    for col=1:n
-      F[row,col]=row+col-1;
-      Y[row+col-1]=row-1+col;
+    @assert N>n
+    F = Matrix{Int64}(undef,N-n+1,n)
+    Y = Vector{Int64}(undef,N)
+    for row=1:N-n+1
+        for col=1:n
+          F[row,col]=row+col-1;
+          Y[row+col-1]=row-1+col;
+        end
     end
-  end
-  F=fun.(F)
-  Y=fun.(Y)
-  (U,V)=qr(F);
-  U1=U[1:N-n,1:n];
-  U2=U[2:N-n+1,1:n];
-  lambda=eigvals(pinv(U1)*U2);
+    Fa = fun.(F)
+    Ya = fun.(Y)
 
-  W=Matrix{eltype(lambda)}(undef,N,n);
-  for row=1:N
-    for col=1:n
-      W[row,col]=(lambda[col])^float(row);
+    (U,V) = qr(Fa);
+    U1 = U[1:N-n,1:n];
+    U2 = U[2:N-n+1,1:n];
+    lambda = eigvals(pinv(U1)*U2);
+
+    W = Matrix{eltype(lambda)}(undef,N,n);
+    for row=1:N
+        for col=1:n
+          W[row,col]=(lambda[col])^float(row);
+        end
     end
-  end
-  x=W\Y[1:N];
-  return x,lambda
+    x = W\Ya;
+    return x,lambda
 end
 
 

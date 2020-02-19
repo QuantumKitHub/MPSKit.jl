@@ -18,14 +18,19 @@ function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(st
     lee = galerkin
 
     while true
+
         for col in 1:size(state,2)
 
-            vac = circshift([ac_prime(ac,row,col,state,pars) for (row,ac) in enumerate(state.AC[:,col])],1)
-            vc  = circshift([c_prime(c,row,col,state,pars) for (row,c) in enumerate(state.CR[:,col])],1)
+            vac = let state=state,pars=pars
+                circshift([ac_prime(ac,row,col,state,pars) for (row,ac) in enumerate(state.AC[:,col])],1)
+            end
+            vc  = let state=state,pars=pars
+                circshift([c_prime(c,row,col,state,pars) for (row,c) in enumerate(state.CR[:,col])],1)
+            end
 
             for row in 1:size(state,1)
-                QAc,_ = TensorKit.leftorth!(vac[row], alg=TensorKit.Polar())
-                Qc,_  = TensorKit.leftorth!(vc[row], alg=TensorKit.Polar())
+                QAc,_ = leftorth!(vac[row], alg=TensorKit.Polar())
+                Qc,_  = leftorth!(vc[row], alg=TensorKit.Polar())
                 newAs[row,col] = QAc*adjoint(Qc)
             end
 

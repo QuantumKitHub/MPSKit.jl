@@ -149,7 +149,9 @@ function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep:
     for i in 1:(length(state)-1)
         @tensor ac2[-1 -2;-3 -4]:=state[i][-1,-2,1]*state[i+1][1,-3,-4]
 
-        (nac2,convhist) = exponentiate(x->ac2_prime(x,i,state,pars),-1im*timestep/2,ac2,Lanczos())
+        (nac2,convhist) = let state=state,pars=pars
+            exponentiate(x->ac2_prime(x,i,state,pars),-1im*timestep/2,ac2,Lanczos())
+        end
 
         (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme)
         @tensor nac[-1 -2;-3]:=nc[-1,1]*nar[1,-2,-3]
@@ -158,7 +160,9 @@ function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep:
         state[i+1]=nac
 
         if(i!=(length(state)-1))
-            (state[i+1],convhist) = exponentiate(x->ac_prime(x,i+1,state,pars),1im*timestep/2,nac,Lanczos())
+            (state[i+1],convhist) = let state=state,pars=pars
+                exponentiate(x->ac_prime(x,i+1,state,pars),1im*timestep/2,nac,Lanczos())
+            end
         end
 
     end
@@ -168,7 +172,9 @@ function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep:
     for i in length(state):-1:2
         @tensor ac2[-1 -2;-3 -4]:=state[i-1][-1,-2,1]*state[i][1,-3,-4]
 
-        (nac2,convhist) = exponentiate(x->ac2_prime(x,i-1,state,pars),-1im*timestep/2,ac2,Lanczos())
+        (nac2,convhist) = let state=state,pars=pars
+            exponentiate(x->ac2_prime(x,i-1,state,pars),-1im*timestep/2,ac2,Lanczos())
+        end
 
         (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme)
         @tensor nac[-1 -2;-3]:=nal[-1,-2,1]*nc[1,-3]
@@ -177,7 +183,9 @@ function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep:
         state[i]=permute(nar,(1,2),(3,))
 
         if(i!=2)
-            (state[i-1],convhist) = exponentiate(x->ac_prime(x,i-1,state,pars),1im*timestep/2,nac,Lanczos())
+            (state[i-1],convhist) = let state=state,pars=pars
+                exponentiate(x->ac_prime(x,i-1,state,pars),1im*timestep/2,nac,Lanczos())
+            end
         end
     end
 
@@ -190,7 +198,9 @@ function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp2,pars=
     for i in 1:(length(state)-1)
         @tensor ac2[-1 -2 -3;-4 -5 -6]:=state[i][-1,-2,1,-6]*state[i+1][1,-3,-4,-5]
 
-        (nac2,convhist) = exponentiate(x->ac2_prime(x,i,state,pars),-1im*timestep/2,ac2,Lanczos())
+        (nac2,convhist) = let state=state,pars=pars
+            exponentiate(x->ac2_prime(x,i,state,pars),-1im*timestep/2,ac2,Lanczos())
+        end
 
         (nal,nc,nar) = tsvd(permute(nac2,(1,2,6),(3,4,5)),trunc=alg.trscheme)
         @tensor nac[-1 -2;-3 -4]:=nc[-1,1]*nar[1,-2,-3,-4]
@@ -199,7 +209,9 @@ function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp2,pars=
         state[i+1]=nac
 
         if(i!=(length(state)-1))
-            (state[i+1],convhist) = exponentiate(x->ac_prime(x,i+1,state,pars),1im*timestep/2,nac,Lanczos())
+            (state[i+1],convhist) = let state=state,pars=pars
+                exponentiate(x->ac_prime(x,i+1,state,pars),1im*timestep/2,nac,Lanczos())
+            end
         end
 
     end
@@ -209,7 +221,9 @@ function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp2,pars=
     for i in length(state):-1:2
         @tensor ac2[-1 -2 -3;-4 -5 -6]:=state[i-1][-1,-2,1,-6]*state[i][1,-3,-4,-5]
 
-        (nac2,convhist) = exponentiate(x->ac2_prime(x,i-1,state,pars),-1im*timestep/2,ac2,Lanczos())
+        (nac2,convhist) = let state=state,pars=pars
+            exponentiate(x->ac2_prime(x,i-1,state,pars),-1im*timestep/2,ac2,Lanczos())
+        end
 
         (nal,nc,nar) = tsvd(permute(nac2,(1,2,6),(3,4,5)),trunc=alg.trscheme)
 
@@ -219,7 +233,9 @@ function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp2,pars=
         state[i]=permute(nar,(1,2),(3,4))
 
         if(i!=2)
-            (state[i-1],convhist) = exponentiate(x->ac_prime(x,i-1,state,pars),1im*timestep/2,nac,Lanczos())
+            (state[i-1],convhist) = let state=state,pars=pars
+                exponentiate(x->ac_prime(x,i-1,state,pars),1im*timestep/2,nac,Lanczos())
+            end
         end
     end
 

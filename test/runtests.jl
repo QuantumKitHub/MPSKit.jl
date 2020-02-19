@@ -7,10 +7,10 @@ using MPSKit,TensorKit,LinearAlgebra,Test
             ]
         tol = Float64(eps(real(elt))*100);
 
-        #=@inferred=# leftorth([TensorMap(rand,elt,D*d,D)],tol=tol);
-        #=@inferred=# rightorth([TensorMap(rand,elt,D*d,D)],tol=tol);
+        @inferred leftorth([TensorMap(rand,elt,D*d,D)],tol=tol);
+        @inferred rightorth([TensorMap(rand,elt,D*d,D)],tol=tol);
 
-        ts = #=@inferred=# InfiniteMPS([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
+        ts = @inferred InfiniteMPS([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
 
         for i in 1:length(ts)
             @tensor difference[-1,-2,-3] := ts.AL[i][-1,-2,1]*ts.CR[i][1,-3]-ts.CR[i-1][-1,1]*ts.AR[i][1,-2,-3];
@@ -34,7 +34,7 @@ using MPSKit,TensorKit,LinearAlgebra,Test
             ]
 
         tol = Float64(eps(real(elt))*100);
-        ts = MPSMultiline([TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D);TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D)],tol = tol);
+        ts = @inferred MPSMultiline([TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D);TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D)],tol = tol);
 
         for (i,j) in Iterators.product(size(ts,1),size(ts,2))
             @tensor difference[-1,-2,-3] := ts.AL[i,j][-1,-2,1]*ts.CR[i,j][1,-3]-ts.CR[i,j-1][-1,1]*ts.AR[i,j][1,-2,-3];
@@ -63,10 +63,10 @@ using MPSKit,TensorKit,LinearAlgebra,Test
         end
         push!(data,TensorMap(rand,elt,D*d,oneunit(D)));
 
-        ts = FiniteMPS(data);
+        ts = @inferred FiniteMPS(data);
 
-        ovl = dot(ts,ts);
-        ts = rightorth(ts,renorm=false);
+        ovl = @inferred dot(ts,ts);
+        ts = @inferred rightorth(ts,renorm=false);
         @test ovl ≈ norm(ts[1])^2
 
         data2 = [TensorMap(rand,elt,oneunit(D)*d,D)]
@@ -79,7 +79,7 @@ using MPSKit,TensorKit,LinearAlgebra,Test
 
         ovl2 = dot(ts,ts2);
 
-        ts3 = ts+ts2;
+        ts3 = @inferred ts+ts2;
 
         @test ovl2+ovl ≈ dot(ts,ts3)
     end
@@ -89,28 +89,30 @@ using MPSKit,TensorKit,LinearAlgebra,Test
         ps = space(sx,1);
 
         bb = isomorphism(Matrix{ComplexF64},oneunit(ps)*ps,oneunit(ps)*ps);
-        state = FiniteMPO([bb for i in 1:10]);
+        state = @inferred FiniteMPO(fill(bb,10));
 
         @test sum(expectation_value(state,sz)) ≈ 0 atol = 1e-3
     end
 
     @testset "MPSComoving" begin
-        ham = nonsym_ising_ham(lambda=4.0);
+        ham = @inferred nonsym_ising_ham(lambda=4.0);
         (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
 
-        window = MPSComoving(gs,[gs.AC[1];[gs.AR[i] for i in 2:10]],gs);
+        dat = fill(gs.AC[1],10)
+        dat[2:10] = [gs.AR[i] for i in 2:10][:]
+        window = @inferred MPSComoving(gs,dat,gs);
 
-        e1 = expectation_value(window,ham);
+        e1 = @inferred expectation_value(window,ham);
 
-        (window,pars,_) = find_groundstate(window,ham,Dmrg(verbose=false));
+        (window,pars,_) = @inferred find_groundstate(window,ham,Dmrg(verbose=false));
 
-        e2 = expectation_value(window,ham);
+        e2 = @inferred expectation_value(window,ham);
 
         @test e1[1] ≈ e2[1]
         @test e1[2] ≈ e2[2]
 
-        (window,pars) = timestep(window,ham,0.1,Tdvp2(),pars)
-        (window,pars) = timestep(window,ham,0.1,Tdvp(),pars)
+        (window,pars) = @inferred timestep(window,ham,0.1,Tdvp2(),pars)
+        (window,pars) = @inferred timestep(window,ham,0.1,Tdvp(),pars)
 
         e3 = expectation_value(window,ham);
 
@@ -129,9 +131,9 @@ end
 
         ts = InfiniteMPS(th.pspaces,Dspaces); # generate a product state
 
-        (ts,_) = changebonds(ts,th,OptimalExpand()) # optimal expand a la vumps paper
+        (ts,_) = @inferred changebonds(ts,th,OptimalExpand()) # optimal expand a la vumps paper
         ndim = dim(space(ts.AC[1],1))
-        (ts,_) = changebonds(ts,th,VumpsSvdCut()) # idmrg2 step to expand the bond dimension
+        (ts,_) = @inferred changebonds(ts,th,VumpsSvdCut()) # idmrg2 step to expand the bond dimension
         @test dim(space(ts.AC[1],1)) > ndim;
 
         e1 = expectation_value(ts,th);
@@ -156,10 +158,7 @@ end
 
         len = 20;
 
-        ts = FiniteMPO([TensorMap(rand,ComplexF64,
-                    oneunit(th.pspaces[1]) * th.pspaces[j],
-                    oneunit(th.pspaces[1]) * th.pspaces[j])
-                    for j in 1:len]);
+        ts = @inferred FiniteMPO(repeat(infinite_temperature(th),len));
 
         (ts,_) = changebonds(ts,commutator(th),RandExpand());
         (ts,_) = changebonds(ts,anticommutator(th),OptimalExpand());
@@ -176,12 +175,13 @@ end
 
         diff = [rand() for i in th.pspaces];
         e5 = expectation_value(ts,anticommutator(th)-diff);
-        @test sum([e1[j]-diff[mod1(j,end)] for j in 1:len])≈sum(e5);
+        @test sum([e1[j]-diff[mod1(j,end)] for j in 1:length(ts)])≈sum(e5);
     end
 
 end
 
 @testset "Algorithms" begin
+
     @testset "find_groundstate $(ind)" for (ind,(state,alg,ham)) in enumerate([
             (InfiniteMPS([ℂ^2],[ℂ^10]),Vumps(tol_galerkin=1e-8,verbose=false),nonsym_ising_ham(lambda=2.0)),
             (InfiniteMPS([ℂ^2],[ℂ^10]),Idmrg1(tol_galerkin=1e-8,maxiter=400,verbose=false),nonsym_ising_ham(lambda=2.0)),
@@ -190,7 +190,7 @@ end
             ])
 
         #vumps type inferrence got broken by @threads, so worth it?
-        (ts,pars,delta) =  #=@inferred=# find_groundstate(state,ham,alg)
+        (ts,pars,delta) =  @inferred find_groundstate(state,ham,alg)
 
         @test sum(delta) < 1e-6
 
@@ -208,7 +208,7 @@ end
 
         edens = expectation_value(state,opp);
 
-        (state,_) = timestep(state,opp,rand()/10,alg)
+        (state,_) = @inferred timestep(state,opp,rand()/10,alg)
 
         @test sum(expectation_value(state,opp)) ≈ sum(edens) atol = 1e-2
     end
@@ -217,19 +217,18 @@ end
             Vumps(tol_galerkin=1e-5,verbose=false),
             PowerMethod(tol_galerkin=1e-5,verbose=false,maxiter=1000)])
 
-        mpo = #=@inferred=# nonsym_ising_mpo();
+        mpo = nonsym_ising_mpo();
         state = InfiniteMPS([ℂ^2],[ℂ^10]);
-        (state,pars,_) = leading_boundary(state,mpo,alg);
+        (state,pars,_) = @inferred leading_boundary(state,mpo,alg);
 
         @test expectation_value(state,mpo,pars)[1,1] ≈ 2.5337 atol=1e-3
     end
-
 
     @testset "quasiparticle_excitation" begin
         th = nonsym_xxz_ham()
         ts = InfiniteMPS([ℂ^3],[ℂ^48]);
         (ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
-        (energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,pars);
+        (energies,Bs) = @inferred quasiparticle_excitation(th,Float64(pi),ts,pars);
         @test energies[1] ≈ 0.41047925 atol=1e-4
     end
 
@@ -269,4 +268,5 @@ end
 
         @test exact ≈ aprox atol=1e-2
     end
+
 end

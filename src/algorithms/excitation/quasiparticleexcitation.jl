@@ -22,8 +22,8 @@ function quasiparticle_excitation(hamiltonian::Hamiltonian, moment::Float64, mps
     end
 
     #the function that maps x->B and then places this in the excitation hamiltonian
-    function eigEx(x)
-        x=[x.vecs...]
+    function eigEx(rec)
+        x = rec.vecs
 
         B = [ln*cx for (ln,cx) in zip(LeftNullSpace,x)]
 
@@ -31,14 +31,14 @@ function quasiparticle_excitation(hamiltonian::Hamiltonian, moment::Float64, mps
 
         out = [adjoint(ln)*cB for (ln,cB) in zip(LeftNullSpace,Bseff)]
 
-        return RecursiveVec(out...)
+        return RecursiveVec(out)
     end
-    Es,Vs,convhist = eigsolve(eigEx, RecursiveVec(X_initial...), num, :SR, tol=toler,krylovdim=krylovdim)
+    Es,Vs,convhist = eigsolve(eigEx, RecursiveVec(X_initial), num, :SR, tol=toler,krylovdim=krylovdim)
     convhist.converged<num && @info "quasiparticle didn't converge k=$(moment) $(convhist.normres)"
 
     #we dont want to return a RecursiveVec to the user so upack it
-    Xs=[[v.vecs...] for v in Vs]
-    Bs=[[ln*cx for (ln,cx) in zip(LeftNullSpace,x)] for x in Xs]
+    Xs = [v.vecs for v in Vs]
+    Bs = [[ln*cx for (ln,cx) in zip(LeftNullSpace,x)] for x in Xs]
 
     return Es,Bs, Xs
 end

@@ -1,12 +1,12 @@
 using MPSKit,TensorKit,Test,LinearAlgebra
 
 let
-    #the infinite temperature density matrix
-    inftemp = complex(isomorphism(ℂ^1*ℂ^2,ℂ^1*ℂ^2))
-
     #the operator used to evolve is the anticommutator
     ham = anticommutator(nonsym_ising_ham())
 
+    #the infinite temperature density matrix
+    inftemp = infinite_temperature(ham)
+    
     ts = FiniteMPO([copy(inftemp) for i in 1:10])
     ts = rightorth(ts)
 

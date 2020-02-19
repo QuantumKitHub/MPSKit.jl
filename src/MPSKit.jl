@@ -27,7 +27,7 @@ module MPSKit
     export leading_boundary, PowerMethod
     export quasiparticle_excitation
     export timestep,Tdvp,Tdvp2
-    export splitham,mpo2mps,mps2mpo
+    export splitham,mpo2mps,mps2mpo,infinite_temperature
     export changebonds,VumpsSvdCut,DoNothing,OptimalExpand,RandExpand,SvdCut,UnionTrunc
     export managebonds,SimpleManager
     export entropy

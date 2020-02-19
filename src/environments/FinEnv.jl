@@ -61,7 +61,9 @@ end
 function params(state::FiniteMPO,ham::ComAct)
     lll = l_LL(state);rrr = r_RR(state)
 
-    @tensor sillyel[-1 -2;-3]:=lll[-1,-3]*Tensor(ones,ham.above.domspaces[1][1]')[-2]
+    #lll is not typestable (due to tensorkit)
+    #@tensor sillyel[-1 -2;-3]:=lll[-1,-3]*Tensor(ones,eltype(lll),ham.above.domspaces[1][1]')[-2]
+    sillyel = TensorMap(zeros,eltype(state[1]),oneunit(space(state[1],1))*oneunit(space(state[1],1)),oneunit(space(state[1],1)));
     rightstart = Array{typeof(sillyel),1}(undef,ham.odim);
     leftstart = Array{typeof(sillyel),1}(undef,ham.odim);
 

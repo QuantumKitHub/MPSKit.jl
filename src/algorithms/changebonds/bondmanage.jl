@@ -34,10 +34,10 @@ end
 "
     Manage (grow or shrink) the bond dimsions of state using manager 'alg'
 "
-function managebonds(state,H,alg::SimpleManager,pars=params(state,H))
+function managebonds(state::S,H,alg::SimpleManager,pars::P=params(state,H)) where {S,P}
     if alg.criterium(state)
-        return state,pars
+        return (state,pars) :: Tuple{S,P}
     else
-        return changebonds(state,H,alg.change,pars)
+        return changebonds(state,H,alg.change,pars) :: Tuple{S,P}
     end
 end
