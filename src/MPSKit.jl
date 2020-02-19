@@ -46,7 +46,6 @@ module MPSKit
         const verbose = true
     end
 
-    include("customerrors.jl")
     include("benchmarks.jl")
 
     include("utility/periodicarray.jl")
