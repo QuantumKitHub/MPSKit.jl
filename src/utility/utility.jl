@@ -78,11 +78,6 @@ function nonsym_spintensors(s)
     return Sx,Sy,Sz,one(Sx)
 end
 
-
-@inline tuplejoin(x) = x
-@inline tuplejoin(x, y) = (x..., y...)
-@inline tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
-
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
 function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2}
     numind=N1+N2
@@ -91,7 +86,7 @@ function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2
     end
 
     leftind=(1,2,Int(numind/2+1))
-    otherind=tuplejoin(ntuple(x->x+2,Val{Int((N1+N2)/2)-2}()),ntuple(x->x+Int(numind/2+1),Val{Int((N1+N2)/2)-1}()))
+    otherind=(ntuple(x->x+2,Val{Int((N1+N2)/2)-2}())..., ntuple(x->x+Int(numind/2+1),Val{Int((N1+N2)/2)-1}())...)
 
     (U,S,V) = tsvd(inpmpo,leftind,otherind)
 
