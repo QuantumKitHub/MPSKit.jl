@@ -21,18 +21,25 @@ Base.copy(m::InfiniteMPS) = InfiniteMPS(copy(m.AL),copy(m.AR),copy(m.CR),copy(m.
 Base.repeat(m::InfiniteMPS,i::Int) = InfiniteMPS(repeat(m.AL,i),repeat(m.AR,i),repeat(m.CR,i),repeat(m.AC,i));
 Base.similar(st::InfiniteMPS) = InfiniteMPS(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
 
-function InfiniteMPS(pspaces::M,Dspaces::N;tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter,eltype=Defaults.eltype) where M<: AbstractArray{S,1} where N<: AbstractArray{S,1} where S
-    InfiniteMPS([TensorMap(rand,eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)],tol=tol,maxiter=maxiter)
+function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};eltype=Defaults.eltype,kwargs...) where S
+    InfiniteMPS([TensorMap(rand,eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)];kwargs...)
 end
 
 #allow users to pass in simple arrays
-InfiniteMPS(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T<:GenMPSType =  InfiniteMPS(Periodic(A),tol=tol,maxiter=maxiter,cguess=cguess)
-function InfiniteMPS(A::Periodic{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T<:GenMPSType
+InfiniteMPS(A::AbstractArray{T,1}; kwargs...) where T<:GenMPSType =  InfiniteMPS(Periodic(A);kwargs...)
+function InfiniteMPS(A::Periodic{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1)),leftgauged = false) where T<:GenMPSType
     #perform the left gauge fixing, remember only Al
-    ALs, ncguesses, deltal = leftorth(A[1:end]; tol = tol, maxiter = maxiter, cguess = cguess)
+    if leftgauged
+        ALs = A[1:end];
+        deltal = 0;
+        ncguess = cguess;
+    else
+        ALs, ncguesses, deltal = leftorth(A[1:end]; tol = tol, maxiter = maxiter, cguess = cguess)
+        ncguess = ncguesses[end];
+    end
 
     #perform the right gauge fixing from which we obtain the center matrix
-    ARs, Cs, deltar  = rightorth(ALs ; tol = tol, maxiter = maxiter, cguess = ncguesses[end])
+    ARs, Cs, deltar  = rightorth(ALs ; tol = tol, maxiter = maxiter, cguess = ncguess)
 
     ACs=similar(ARs)
     for loc = 1:size(A,1)

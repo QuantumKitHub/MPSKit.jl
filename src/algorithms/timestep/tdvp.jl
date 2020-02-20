@@ -35,7 +35,7 @@ function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp
         newAs[loc]     = Aleft
     end
 
-    return InfiniteMPS(newAs; tol = alg.tolgauge, maxiter = alg.maxiter),parameters
+    return InfiniteMPS(newAs; tol = alg.tolgauge, maxiter = alg.maxiter,leftgauged = true,cguess=state.CR[end]),parameters
 end
 
 #assumes right orthonormalization, will partly overwrite things in state
