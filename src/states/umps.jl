@@ -26,8 +26,7 @@ function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};elt
 end
 
 #allow users to pass in simple arrays
-InfiniteMPS(A::AbstractArray{T,1}; kwargs...) where T<:GenMPSType =  InfiniteMPS(Periodic(A);kwargs...)
-function InfiniteMPS(A::Periodic{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1)),leftgauged = false) where T<:GenMPSType
+function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1)),leftgauged = false) where T<:GenMPSType
     #perform the left gauge fixing, remember only Al
     if leftgauged
         ALs = A[1:end];

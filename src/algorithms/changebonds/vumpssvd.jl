@@ -22,7 +22,7 @@ function changebonds_1(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=
 
     #collapse back to 1 site
     if dim(D2) != dim(D1)
-        (nstate,nH) = changebonds(nstate,nH,SvdCut(trschemes = [truncdim(min(dim(D1),dim(D2)))]))
+        (nstate,npars) = changebonds(nstate,nH,SvdCut(trschemes = [truncdim(min(dim(D1),dim(D2)))]),npars)
     end
 
     collapsed = InfiniteMPS([nstate.AL[1]];tol=alg.tol_gauge)
