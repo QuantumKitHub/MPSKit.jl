@@ -8,20 +8,22 @@ if not, it will use algorithm manager.change to change the bonds
     change::A = DoNothing();
 end
 
-SimpleManager(maxD::Int,A::Algorithm = OptimalExpand()) = SimpleManager([maxD],A);
-function SimpleManager(maxDs::Array{Int,1},A::Algorithm = OptimalExpand())
+function SimpleManager(maxD::Int,A::Algorithm = OptimalExpand())
     function critfun(state)
         bigenough = true;
 
+        if isa(state,FiniteMPS) || isa(state,MPSComoving) || isa(state,FiniteMPO)
+            upperbound = max_Ds(state);
+        end
+
         for i = 1:length(state)
-            if isa(state,FiniteMPS) # should find a better way
-                ct = state[i];
-            elseif isa(state,InfiniteMPS)
-                ct = state.AR[i];
+            if isa(state,InfiniteMPS)
+                bigenough = bigenough && (dim(space(state.AR[i],3))>=maxD)
+            elseif isa(state,FiniteMPS) || isa(state,MPSComoving) || isa(state,FiniteMPO)
+                bigenough = bigenough && (dim(space(state[i],3))>=maxD || upperbound[i+1] == dim(space(state[i],3)))
             else
                 @assert false
             end
-            bigenough = bigenough && (dim(space(ct,3))>=maxDs[mod1(i,end)])
         end
 
         return bigenough

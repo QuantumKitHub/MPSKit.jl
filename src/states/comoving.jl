@@ -47,3 +47,16 @@ function expectation_value(state::Union{MPSComoving,FiniteMPS},opp::TensorMap;le
 
     return reverse(dat)
 end
+
+function max_Ds(f::MPSComoving{G}) where G<:GenMPSType{S,N} where {S,N}
+    Ds = [dim(space(left_gs.AL[1],1)) for v in 1:length(f)+1];
+    for i in 1:length(f)
+        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}())))
+    end
+
+    Ds[end] = dim(space(right_gs.AL[1],1));
+    for i in length(f):-1:1
+        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}()))))
+    end
+    Ds
+end

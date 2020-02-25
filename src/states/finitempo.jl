@@ -46,3 +46,16 @@ function expectation_value(ts::FiniteMPO,opp::TensorMap)
 
     tor
 end
+
+function max_Ds(f::FiniteMPO)
+    Ds = [1 for v in 1:length(f)+1];
+    for i in 1:length(f)
+        Ds[i+1] = Ds[i]*prod(dim(space(f[i],2))*dim(space(f[i],4)))
+    end
+
+    Ds[end] = 1;
+    for i in length(f):-1:1
+        Ds[i] = min(Ds[i],Ds[i+1]*prod(dim(space(f[i],2))*dim(space(f[i],4))))
+    end
+    Ds
+end
