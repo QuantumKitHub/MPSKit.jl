@@ -2,12 +2,11 @@ using MPSKit,TensorKit,Test,LinearAlgebra
 
 let
     #the operator used to evolve is the anticommutator
-    ham = anticommutator(nonsym_ising_ham())
+    th = nonsym_ising_ham()
+    ham = anticommutator(th)
+    inftemp = infinite_temperature(th)
 
-    #the infinite temperature density matrix
-    inftemp = infinite_temperature(ham)
-    
-    ts = FiniteMPO([copy(inftemp) for i in 1:10])
+    ts = FiniteMPO(repeat(inftemp,10))
     ts = rightorth(ts)
 
     ca = params(ts,ham);
@@ -18,6 +17,8 @@ let
     sxdat=Float64[];
 
     for beta in betas
+        (ts,ca) = managebonds(ts,ham,SimpleManager(10),ca);
+
         ts[1]/=norm(ts[1]) # by normalizing, we are fixing tr(exp(-beta*H)*exp(-beta*H))=1
 
         push!(sxdat,sum(real(expectation_value(ts,sx)))/length(ts)) # calculate the average magnetization at exp(-2*beta*H)

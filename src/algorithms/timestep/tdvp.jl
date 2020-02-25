@@ -10,7 +10,7 @@ end
 
     evolves state forward by dt using algorithm alg
 """
-function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,parameters::Cache=params(state,H))
+@bm function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,parameters::Cache=params(state,H))
 
     newAs=similar(state.AL)
 
@@ -39,7 +39,7 @@ function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp
 end
 
 #assumes right orthonormalization, will partly overwrite things in state
-function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp,pars=params(state,H))
+@bm function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp,pars=params(state,H))
     #left to right
     for i in 1:(length(state)-1)
 
@@ -87,7 +87,7 @@ function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep:
     return state,pars
 end
 
-function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp,pars=params(state,H))
+@bm function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp,pars=params(state,H))
     #left to right
     for i in 1:(length(state)-1)
         (state[i],convhist)=  let pars=pars, state = state
@@ -140,7 +140,7 @@ end
 end
 
 #twosite tdvp for finite mps
-function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp2,pars=params(state,H);rightorthed=false)
+@bm function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp2,pars=params(state,H);rightorthed=false)
     if(!rightorthed)
         state = rightorth!(state)
     end
@@ -192,7 +192,7 @@ function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep:
     return state,pars
 end
 
-function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp2,pars=params(state,H))
+@bm function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp2,pars=params(state,H))
 
     #left to right
     for i in 1:(length(state)-1)

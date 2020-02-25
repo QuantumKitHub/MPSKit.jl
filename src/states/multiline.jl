@@ -45,8 +45,8 @@ function MPSMultiline(A::Periodic;tol = Defaults.tolgauge,maxiter = Defaults.max
     Cs = Periodic{typeof(cguess[1]),2}(size(A,1),size(A,2));
 
     for row in 1:size(A,1)
-        tal,_,deltal= leftorth(A[row,:]; tol = tol, maxiter = maxiter, cguess = cguess[row])
-        tar,tc,deltar = rightorth(tal; tol = tol, maxiter = maxiter, cguess = cguess[row])
+        tal,_,deltal= uniform_leftorth(A[row,:]; tol = tol, maxiter = maxiter, cguess = cguess[row])
+        tar,tc,deltar = uniform_rightorth(tal; tol = tol, maxiter = maxiter, cguess = cguess[row])
 
         ALs[row,:] = tal[:];
         ARs[row,:] = tar[:];

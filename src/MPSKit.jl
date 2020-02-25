@@ -1,15 +1,16 @@
 module MPSKit
-    using LinearAlgebra,TensorKit,KrylovKit,Parameters, Base.Threads
+    using LinearAlgebra,TensorKit,KrylovKit,Parameters, Base.Threads, TimerOutputs
 
     #reexport optimkit things
     #export GradientDescent, ConjugateGradient, LBFGS
     #export FletcherReeves, HestenesStiefel, PolakRibierePolyak, HagerZhang, DaiYuan
     #export HagerZhangLineSearch
+    export enable_benchmarks, disable_benchmarks, print_timer,reset_timer!
 
     #bells and whistles for mpses
     export InfiniteMPS,FiniteMPS,FiniteMPO,MPSComoving,Periodic,MPSMultiline
     export transfer_left,transfer_right
-    export leftorth,rightorth,leftorth!,rightorth!,poison!
+    export leftorth,rightorth,leftorth!,rightorth!,poison!,uniform_leftorth,uniform_rightorth
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
     export hamcat
 
@@ -46,6 +47,7 @@ module MPSKit
     end
 
     include("customerrors.jl")
+    include("benchmarks.jl")
 
     include("utility/mps_types.jl")
     include("utility/utility.jl") #random utility functions

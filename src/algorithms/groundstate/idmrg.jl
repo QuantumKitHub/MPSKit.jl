@@ -9,7 +9,7 @@ onesite infinite dmrg
 end
 
 
-function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,opars=params(st,ham))
+@bm function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,opars=params(st,ham))
     pars = SimpleEnv(st,opars);
 
     curu = [st.AR[i] for i in 1:length(st)];

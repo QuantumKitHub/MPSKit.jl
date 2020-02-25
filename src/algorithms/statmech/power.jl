@@ -9,7 +9,7 @@
     verbose::Bool = Defaults.verbose
 end
 
-function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(state,H))
+@bm function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(state,H))
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 

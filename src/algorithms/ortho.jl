@@ -40,8 +40,8 @@ function TensorKit.leftorth!(state::Union{FiniteMPS{T},MPSComoving{T}};renorm=tr
     return state
 end
 
-function TensorKit.leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess= TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenMPSType{S,N1} where {S,N1}
-    iteration=1;delta::Float64 = 2*tol; len = length(A)
+@bm function uniform_leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess= TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenMPSType{S,N1} where {S,N1}
+    iteration=1;delta = 2*tol; len = length(A)
 
     cnew = TensorKit.leftorth(cguess, alg=TensorKit.QRpos())[2]
     cnew/=norm(cnew)
@@ -86,8 +86,8 @@ function TensorKit.leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, max
 end
 
 
-function TensorKit.rightorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenMPSType{S,N1} where {S,N1}
-    iteration=1; delta::Float64 = 2*tol; len = length(A)
+@bm function uniform_rightorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenMPSType{S,N1} where {S,N1}
+    iteration=1; delta = 2*tol; len = length(A)
 
     cnew = TensorKit.rightorth(cguess, alg=TensorKit.RQpos())[1]
     cnew/=norm(cnew)

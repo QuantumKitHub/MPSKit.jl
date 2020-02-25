@@ -1,5 +1,6 @@
 #use algorithms from optimkit to find the groundstate
-function find_groundstate(state::InfiniteMPS,H::MPOHamiltonian,alg::OptimKit.OptimizationAlgorithm,pars=params(state,H))
+#=
+@bm function find_groundstate(state::InfiniteMPS,H::MPOHamiltonian,alg::OptimKit.OptimizationAlgorithm,pars=params(state,H))
     function objfun(x)
         (state,pars) = x;
 
@@ -63,3 +64,4 @@ function find_groundstate(state::InfiniteMPS,H::MPOHamiltonian,alg::OptimKit.Opt
 
     #(alphas,fs,dfs1,dfs2)=optimtest(objfun, (state,pars), objfun((state,pars))[2]; alpha= 0:0.001:0.1,retract = retract, inner = inner)
 end
+=#

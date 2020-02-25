@@ -33,12 +33,12 @@ function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, ma
         deltal = 0;
         ncguess = cguess;
     else
-        ALs, ncguesses, deltal = leftorth(A[1:end]; tol = tol, maxiter = maxiter, cguess = cguess)
+        ALs, ncguesses, deltal = uniform_leftorth(A[1:end]; tol = tol, maxiter = maxiter, cguess = cguess)
         ncguess = ncguesses[end];
     end
 
     #perform the right gauge fixing from which we obtain the center matrix
-    ARs, Cs, deltar  = rightorth(ALs ; tol = tol, maxiter = maxiter, cguess = ncguess)
+    ARs, Cs, deltar  = uniform_rightorth(ALs ; tol = tol, maxiter = maxiter, cguess = ncguess)
 
     ACs=similar(ARs)
     for loc = 1:size(A,1)
@@ -96,7 +96,7 @@ r_LR(state::InfiniteMPS,loc::Int=length(state)) = state.CR[loc]
 "
 r_LL(state::InfiniteMPS,loc::Int=length(state))= @tensor toret[-1;-2]:=state.CR[loc][-1,1]*conj(state.CR[loc][-2,1])
 
-function expectation_value(st::InfiniteMPS,opp::MPSVecType)
+@bm function expectation_value(st::InfiniteMPS,opp::MPSVecType)
     dat=[]
     for i in 1:length(st)
         val=@tensor st.AC[i][1,2,3]*opp[4,2]*conj(st.AC[i][1,4,3])

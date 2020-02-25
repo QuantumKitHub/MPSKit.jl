@@ -8,11 +8,9 @@
     manager::Algorithm = SimpleManager();
 end
 
-function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
+@bm function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
     tol=alg.tol;maxiter=alg.maxiter
-    iter::Int64 = 0; delta::Float64 = 2*tol
-
-    state = rightorth!(state)
+    iter = 0; delta = 2*tol
 
     while iter < maxiter && delta > tol
         delta=0.0
@@ -39,7 +37,6 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
         end
 
         for pos=length(state):-1:2
-
             (eigvals,vecs) =  let state = state,parameters = parameters
                 eigsolve(state[pos],1,:SR,Lanczos()) do x
                     ac_prime(x,pos,state,parameters)
@@ -74,12 +71,10 @@ end
     verbose = Defaults.verbose
 end
 
-function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
+@bm function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
 
     tol=alg.tol;maxiter=alg.maxiter
-    iter::Int64 = 0; delta::Float64 = 2*tol
-
-    state = rightorth!(state)
+    iter = 0; delta = 2*tol
 
     while iter < maxiter && delta > tol
         delta=0.0

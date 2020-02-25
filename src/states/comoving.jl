@@ -27,7 +27,7 @@ function Base.copyto!(st1::MPSComoving,st2::MPSComoving)
     return st1
 end
 
-function expectation_value(state::Union{MPSComoving,FiniteMPS},opp::TensorMap;leftorthed=false)
+@bm function expectation_value(state::Union{MPSComoving,FiniteMPS},opp::TensorMap;leftorthed=false)
     if(!leftorthed)
         state=leftorth(state)
     end

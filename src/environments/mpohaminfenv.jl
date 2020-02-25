@@ -31,14 +31,14 @@ function params(st::InfiniteMPS,ham::MPOHamiltonian;tol::Float64=Defaults.tol,ma
 end
 
 
-function recalculate!(pars::MPOHamInfEnv, nstate)
+@bm function recalculate!(pars::MPOHamInfEnv, nstate)
     pars.dependency = nstate;
     sameDspace = reduce((prev,i) -> prev && space(pars.lw[i,1],3) == space(nstate.CR[i],1)',1:length(nstate),init=true);
 
     if !sameDspace
         (pars.lw,pars.rw) = gen_lw_rw(nstate,pars.opp)
     end
-    
+
     pars.lw = calclw(pars.dependency,pars.opp,pars.lw,tol = pars.tol,maxiter = pars.maxiter)
     pars.rw = calcrw(pars.dependency,pars.opp,pars.rw,tol = pars.tol,maxiter = pars.maxiter)
 end

@@ -23,7 +23,7 @@ Base.similar(arr::FiniteMPO) = FiniteMPO(similar(arr.data))
 r_RR(state::FiniteMPO{T}) where T = isomorphism(Matrix{eltype(T)},space(state[end],3)',space(state[end],3)')
 l_LL(state::FiniteMPO{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
 
-function expectation_value(ts::FiniteMPO,opp::TensorMap)
+@bm function expectation_value(ts::FiniteMPO,opp::TensorMap)
     leftenvs = [Tensor(ones,ComplexF64,space(ts[1],1)')];
     rightenvs = [Tensor(ones,ComplexF64,space(ts[length(ts)],3)')];
 
