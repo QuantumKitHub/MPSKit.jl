@@ -206,20 +206,26 @@ function fillmissing(x::Array{T,3}) where T<:Union{Missing,M} where M<:MPOType{S
 
             if ismissing(pspaces[i])
                 pspaces[i] = p;
-            else
-                @assert pspaces[i] == p
+            elseif pspaces[i] != p
+                println("physical space for $((i,j,k)) incompatible")
+                println("$(pspaces[i]) ≠ $(p)")
+                @assert false
             end
 
             if ismissing(Domspaces[i,j])
                 Domspaces[i,j] = dom
-            else
-                @assert Domspaces[i,j] == dom
+            elseif Domspaces[i,j] != dom
+                println("Domspace for $((i,j,k)) incompatible")
+                println("$(Domspaces[i,j]) ≠ $(dom)")
+                @assert false
             end
 
             if ismissing(Domspaces[mod1(i+1,end),k])
                 Domspaces[mod1(i+1,end),k] = im'
-            else
-                @assert Domspaces[mod1(i+1,end),k] == im'
+            elseif Domspaces[mod1(i+1,end),k] != im'
+                println("Imspace for $((i,j,k)) incompatible")
+                println("$(Domspaces[mod1(i+1,end),k]) ≠ $(im')")
+                @assert false
             end
         end
     end
