@@ -7,32 +7,32 @@ exci_transfer_left(v,A,B,C,D) = transfer_left(v,A,B,C,D)
 exci_transfer_right(v,A,B,C,D) = transfer_right(v,A,B,C,D)
 
 #transfer, but the upper A is an excited tensor
-exci_transfer_left(v::MPSVecType, A::MPOType, Ab::MPSType) = @tensor t[-1 -2;-3] := v[1,2]*A[2,3,-2,-3]*conj(Ab[1,3,-1])
-exci_transfer_right(v::MPSVecType, A::MPOType, Ab::MPSType) = @tensor t[-1 -2;-3] := A[-1,3,-2,1]*v[1,2]*conj(Ab[-3,3,2])
+exci_transfer_left(v::MPSBondTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3] := v[1,2]*A[2,3,-2,-3]*conj(Ab[1,3,-1])
+exci_transfer_right(v::MPSBondTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3] := A[-1,3,-2,1]*v[1,2]*conj(Ab[-3,3,2])
 
 #transfer, but there is both a utility leg and an mpo leg that is passed through
-exci_transfer_left(v::MPOType, A::MPSType, Ab::MPSType=A) = @tensor v[-1 -2;-3 -4] := v[1,-2,-3,2]*A[2,3,-4]*conj(Ab[1,3,-1])
-exci_transfer_right(v::MPOType, A::MPSType, Ab::MPSType=A) = @tensor v[-1 -2;-3 -4] := A[-1,3,1]*v[1,-2,-3,2]*conj(Ab[-4,3,2])
+exci_transfer_left(v::MPOTensor, A::MPSTensor, Ab::MPSTensor=A) = @tensor v[-1 -2;-3 -4] := v[1,-2,-3,2]*A[2,3,-4]*conj(Ab[1,3,-1])
+exci_transfer_right(v::MPOTensor, A::MPSTensor, Ab::MPSTensor=A) = @tensor v[-1 -2;-3 -4] := A[-1,3,1]*v[1,-2,-3,2]*conj(Ab[-4,3,2])
 
 #transfer, but the upper A is an excited tensor and there is an mpo leg being passed through
-exci_transfer_left(v::MPSType, A::MPOType, Ab::MPSType) = @tensor t[-1 -2;-3 -4] := v[1,-2,2]*A[2,3,-3,-4]*conj(Ab[1,3,-1])
-exci_transfer_right(v::MPSType, A::MPOType, Ab::MPSType) = @tensor t[-1 -2;-3 -4] := A[-1,3,-2,1]*v[1,-3,2]*conj(Ab[-4,3,2])
+exci_transfer_left(v::MPSTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := v[1,-2,2]*A[2,3,-3,-4]*conj(Ab[1,3,-1])
+exci_transfer_right(v::MPSTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := A[-1,3,-2,1]*v[1,-3,2]*conj(Ab[-4,3,2])
 
 #mpo transfer, but with A an excitation-tensor
-exci_transfer_left(v::MPSType,O::MPOType,A::MPOType,Ab::MPSType) = @tensor t[-1 -2;-3 -4] := v[4,5,1]*A[1,3,-3,-4]*O[5,2,-2,3]*conj(Ab[4,2,-1])
-exci_transfer_right(v::MPSType,O::MPOType,A::MPOType,Ab::MPSType) = @tensor t[-1 -2;-3 -4] := A[-1,1,-2,5]*O[-3,3,4,1]*conj(Ab[-4,3,2])*v[5,4,2]
+exci_transfer_left(v::MPSTensor,O::MPOTensor,A::MPOTensor,Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := v[4,5,1]*A[1,3,-3,-4]*O[5,2,-2,3]*conj(Ab[4,2,-1])
+exci_transfer_right(v::MPSTensor,O::MPOTensor,A::MPOTensor,Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := A[-1,1,-2,5]*O[-3,3,4,1]*conj(Ab[-4,3,2])*v[5,4,2]
 
 #mpo transfer, with an excitation leg
-exci_transfer_left(v::MPOType,O::MPOType,A::MPSType,Ab::MPSType=A) = @tensor v[-1 -2;-3 -4] := v[4,5,-3,1]*A[1,3,-4]*O[5,2,-2,3]*conj(Ab[4,2,-1])
-exci_transfer_right(v::MPOType,O::MPOType,A::MPSType,Ab::MPSType=A) = @tensor v[-1 -2;-3 -4] := A[-1,1,5]*O[-3,3,4,1]*conj(Ab[-4,3,2])*v[5,-2,4,2]
+exci_transfer_left(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) = @tensor v[-1 -2;-3 -4] := v[4,5,-3,1]*A[1,3,-4]*O[5,2,-2,3]*conj(Ab[4,2,-1])
+exci_transfer_right(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) = @tensor v[-1 -2;-3 -4] := A[-1,1,5]*O[-3,3,4,1]*conj(Ab[-4,3,2])*v[5,-2,4,2]
 
 #A is an excitation tensor; with an excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::M,Ab::V=A) where V<:MPSType where M <:MPOType = exci_transfer_left(M,vec,ham,pos,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::M,Ab::V=A) where V<:MPSType where M <:MPOType = exci_transfer_right(M,vec,ham,pos,A,Ab)
+exci_transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor = exci_transfer_left(M,vec,ham,pos,A,Ab)
+exci_transfer_right(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor = exci_transfer_right(M,vec,ham,pos,A,Ab)
 
 #v has an extra excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::M,Ab::M=A) where V<:MPOType where M <:MPSType = exci_transfer_left(V,vec,ham,pos,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::M,Ab::M=A) where V<:MPOType where M <:MPSType = exci_transfer_right(V,vec,ham,pos,A,Ab)
+exci_transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor = exci_transfer_left(V,vec,ham,pos,A,Ab)
+exci_transfer_right(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor = exci_transfer_right(V,vec,ham,pos,A,Ab)
 
 function exci_transfer_left(RetType,vec,ham::MPOHamiltonian,pos,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));

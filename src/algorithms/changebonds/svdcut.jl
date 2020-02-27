@@ -5,7 +5,7 @@
     trschemes = [notrunc()]
 end
 
-function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) where T<: GenMPSType{Sp,N} where {Sp,N} # made it work for GenMPSType
+function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) where T<: GenericMPSTensor{Sp,N} where {Sp,N} # made it work for GenericMPSTensor
     state = leftorth(state,renorm=false)
 
     for i in length(state)-1:-1:1

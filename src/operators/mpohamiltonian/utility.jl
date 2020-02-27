@@ -167,7 +167,7 @@ end
 TensorKit.fuse(f::T) where T<: VectorSpace = f
 
 #the usual mpoham transfer
-function transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSType
+function transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSTensor
     toreturn = Array{V,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
@@ -199,7 +199,7 @@ function transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A
 
     return toreturn
 end
-function transfer_right(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSType
+function transfer_right(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSTensor
     toreturn = Array{V,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 

@@ -4,10 +4,10 @@
     finite one dimensional mps
     algorithms usually assume a right-orthormalized input
 "
-struct FiniteMPS{T<:GenMPSType} <: AbstractArray{T,1}
+struct FiniteMPS{T<:GenericMPSTensor} <: AbstractArray{T,1}
     data::Array{T,1}
 
-    function FiniteMPS(data::Array{T,1}) where T<:GenMPSType
+    function FiniteMPS(data::Array{T,1}) where T<:GenericMPSTensor
         ou = oneunit(space(data[1],1));
         @assert space(data[1],1) == ou
         @assert space(data[end],length(codomain(data[end]))+length(domain(data[end]))) == ou'

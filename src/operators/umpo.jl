@@ -1,7 +1,7 @@
 "
     Represents a periodic (in 2 directions) statmech mpo
 "
-struct PeriodicMPO{O<:MPOType} <: Operator
+struct PeriodicMPO{O<:MPOTensor} <: Operator
     opp::PeriodicArray{O,2}
 end
 

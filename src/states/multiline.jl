@@ -5,7 +5,7 @@
 "
     2d extension of InfiniteMPS
 "
-struct MPSMultiline{A<:GenMPSType,B<:MPSVecType}
+struct MPSMultiline{A<:GenericMPSTensor,B<:MPSBondTensor}
     AL::PeriodicArray{A,2}
     AR::PeriodicArray{A,2}
     CR::PeriodicArray{B,2}

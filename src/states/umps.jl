@@ -6,7 +6,7 @@
     st.AL[i] is left unitary
     st.AR[i] is right unitary
 "
-struct InfiniteMPS{A<:GenMPSType,B<:MPSVecType}
+struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor}
     AL::PeriodicArray{A,1}
     AR::PeriodicArray{A,1}
     CR::PeriodicArray{B,1}
@@ -26,7 +26,7 @@ function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};elt
 end
 
 #allow users to pass in simple arrays
-function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1)),leftgauged = false) where T<:GenMPSType
+function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1)),leftgauged = false) where T<:GenericMPSTensor
     #perform the left gauge fixing, remember only Al
     if leftgauged
         ALs = A[1:end];
@@ -96,7 +96,7 @@ r_LR(state::InfiniteMPS,loc::Int=length(state)) = state.CR[loc]
 "
 r_LL(state::InfiniteMPS,loc::Int=length(state))= @tensor toret[-1;-2]:=state.CR[loc][-1,1]*conj(state.CR[loc][-2,1])
 
-@bm function expectation_value(st::InfiniteMPS,opp::MPSVecType)
+@bm function expectation_value(st::InfiniteMPS,opp::MPSBondTensor)
     dat=[]
     for i in 1:length(st)
         val=@tensor st.AC[i][1,2,3]*opp[4,2]*conj(st.AC[i][1,4,3])

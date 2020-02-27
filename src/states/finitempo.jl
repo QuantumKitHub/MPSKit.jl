@@ -4,7 +4,7 @@
     finite one dimensional mpo
     algorithms usually assume a right-orthormalized input
 "
-struct FiniteMPO{T<:MPOType} <: AbstractArray{T,1}
+struct FiniteMPO{T<:MPOTensor} <: AbstractArray{T,1}
     data::Array{T,1}
 end
 
