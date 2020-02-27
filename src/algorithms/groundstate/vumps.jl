@@ -52,15 +52,15 @@ end
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && println("vumps @iteration $(iter) galerkin = $(galerkin)")
 
+        if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
+            iter>=alg.maxiter && println("vumps didn't converge $(galerkin)")
+            return state, pars, galerkin
+        end
+
         #dynamical bonds
         if galerkin < lee
             lee = galerkin
             state, pars = managebonds(state,H,alg.manager,pars)
-        end
-
-        if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
-            iter>=alg.maxiter && println("vumps didn't converge $(galerkin)")
-            return state, pars, galerkin
         end
 
         iter += 1

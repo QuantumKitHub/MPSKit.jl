@@ -41,6 +41,7 @@ function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=
         state.AC[i+1]=state.AL[i+1]*state.CR[i+1]
 
         #we should update the params "properly", and not in this wasteful way (params don't change after all)
+        poison!(pars);
     end
     return state,pars
 end

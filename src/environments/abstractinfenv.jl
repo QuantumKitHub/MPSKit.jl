@@ -23,3 +23,7 @@ function rightenv(pars::AbstractInfEnv,row::Int,col::Int,state)
     !(state===pars.dependency) && recalculate!(pars,state);
     pars.rw[row,col]
 end
+
+function poison!(pars::AbstractInfEnv)
+    pars.dependency = similar(pars.dependency);
+end

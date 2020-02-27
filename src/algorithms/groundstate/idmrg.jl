@@ -23,11 +23,13 @@ end
         for i in 1:length(st)
             @tensor curu[i][-1 -2;-3] := curc[-1,1]*curu[i][1,-2,-3]
 
-            (eigvals,vecs) =eigsolve(curu[i],1,:SR,Lanczos()) do x
-                ac_prime(x,i,st,pars)
+            (eigvals,vecs) = let st=st,pars=pars
+                eigsolve(curu[i],1,:SR,Lanczos()) do x
+                    ac_prime(x,i,st,pars)
+                end
             end
 
-            (curu[i],curc)=TensorKit.leftorth!(vecs[1])
+            (curu[i],curc)=leftorth!(vecs[1])
 
             #partially update pars
             setleftenv!(pars,i+1,st,transfer_left(leftenv(pars,i,st),ham,i,curu[i]))
@@ -37,11 +39,13 @@ end
 
             @tensor curu[i][-1 -2;-3] := curu[i][-1,-2,1]*curc[1,-3]
 
-            (eigvals,vecs) =eigsolve(curu[i],1,:SR,Lanczos()) do x
-                ac_prime(x,i,st,pars)
+            (eigvals,vecs) = let st=st,pars=pars
+                eigsolve(curu[i],1,:SR,Lanczos()) do x
+                    ac_prime(x,i,st,pars)
+                end
             end
 
-            (curc,temp)=TensorKit.rightorth(vecs[1],(1,),(2,3,))
+            (curc,temp)=rightorth(vecs[1],(1,),(2,3,))
             curu[i] = permute(temp,(1,2),(3,))
 
             #partially update pars
