@@ -1,6 +1,9 @@
 #transfer
-transfer_left(v::MPSBondTensor,A::M,Ab::M=A)  where M <: GenericMPSTensor{S,N1} where {S,N1} = adjoint(Ab)*permute(v*permute(A,(1,),ntuple(x->x+1,Val{N1}())),ntuple(x->x,Val{N1}()),(N1+1,))
-transfer_right(v::MPSBondTensor, A::M, Ab::M=A) where M <: GenericMPSTensor{S,N1} where {S,N1} = permute(A*v,(1,),ntuple(x->x+1,Val{N1}()))*adjoint(permute(Ab,(1,),ntuple(x->x+1,Val{N1}())))
+transfer_left(v::MPSBondTensor, A::GenericMPSTensor, Ab::GenericMPSTensor=A) =
+    _permute_as(_permute_front(Ab)' * _permute_front(_permute_front(v)*_permute_tail(A)), v)
+transfer_right(v::MPSBondTensor, A::GenericMPSTensor, Ab::GenericMPSTensor=A) =
+    _permute_as(_permute_tail(_permute_front(A)*_permute_front(v)) * _permute_tail(Ab)', v)
+
 
 #transfer for 2 mpo tensors
 transfer_left(v::MPSBondTensor,A::MPOTensor,B::MPOTensor) = @tensor t[-1;-2] := v[1,2]*A[2,3,-2,4]*conj(B[1,3,-1,4])
