@@ -6,10 +6,9 @@
 "
 struct FiniteMPS{A<:GenericMPSTensor} <: AbstractMPS
     tensors::Vector{A}
-    normalizations::Vector{MPSNormalization.MPSNormalizationFlag}
+    centerpos::UnitRange{Int} # range of tensors which are not left or right normalized
     function FiniteMPS{A}(tensors::Vector{A},
-                            normalizations::Vector{MPSNormalization.MPSNormalizationFlag}
-                            ) where {A<:GenericMPSTensor}
+                            centerpos::UnitRange{Int}) where {A<:GenericMPSTensor}
         _firstspace(tensors[1]) == oneunit(_firstspace(tensors[1])) ||
             throw(SectorMismatch("Leftmost virtual index of MPS should be trivial."))
         N = length(tensors)
@@ -19,13 +18,12 @@ struct FiniteMPS{A<:GenericMPSTensor} <: AbstractMPS
         end
         dim(_lastspace(tensors[N])) == 1 ||
             throw(SectorMismatch("Rightmost virtual index should be one-dimensional."))
-        return new{A}(tensors, normalizations)
+        return new{A}(tensors, centerpos)
     end
 end
 FiniteMPS(tensors::Vector{A},
-            normalizations::Vector{MPSNormalization.MPSNormalizationFlag} =
-                fill(MPSNormalization.unnormalized, length(tensors))
-            ) where {A<:GenericMPSTensor} = FiniteMPS{A}(tensors, normalizations)
+            centerpos::UnitRange{Int} = 1:length(tensors)) where {A<:GenericMPSTensor} =
+    FiniteMPS{A}(tensors, centerpos)
 
 function FiniteMPS(f, P::ProductSpace, args...; kwargs...)
     return FiniteMPS(f, collect(P), args...; kwargs...)
@@ -58,9 +56,9 @@ function FiniteMPS(f,
 
     tensors = [TensorMap(f, virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
     if f == randisometry
-        return FiniteMPS(tensors, fill(MPSNormalization.left, N))
+        return FiniteMPS(tensors, N:N)
     else
-        return FiniteMPS(tensors, fill(MPSNormalization.unnormalized, N))
+        return FiniteMPS(tensors, 1:N)
     end
 end
 

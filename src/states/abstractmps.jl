@@ -1,7 +1,4 @@
-module MPSNormalization
-    @enum MPSNormalizationFlag unnormalized left center right
-end
-
+# Interesting MPS TensorMap types
 const MPOTensor{S} = AbstractTensorMap{S,2,2} where {S<:EuclideanSpace}
 const MPSBondTensor{S} = AbstractTensorMap{S,1,1} where {S<:EuclideanSpace}
 const GenericMPSTensor{S,N} = AbstractTensorMap{S,N,1} where {S<:EuclideanSpace,N} #some functions are also defined for "general mps tensors" (used in peps code)
