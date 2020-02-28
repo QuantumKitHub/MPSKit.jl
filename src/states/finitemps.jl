@@ -134,32 +134,13 @@ function Base.:+(v1::FiniteMPS{T},v2::FiniteMPS{T}) where T #untested and quite 
     return tot
 end
 
+function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
+    length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
 
-function LinearAlgebra.dot(v1::FiniteMPS,v2::FiniteMPS)
-    @assert length(v1)==length(v2)
-
-    @tensor start[-1;-2]:=v2[1][1,2,-2]*conj(v1[1][1,2,-1])
-    for i in 2:length(v1)-1
-        start=transfer_left(start,v2[i],v1[i])
+    ρL = _permute_front(psi1[1])' * _permute_front(psi2[1])
+    for k in 2:length(psi1)
+        ρL = transfer_left(ρL, psi2[k], psi1[k])
     end
-
-    @tensor start[1,2]*v2[end][2,3,4]*conj(v1[end][1,3,4])
+    return tr(ρL)
 end
-
-"
-    A FiniteMPS/MPO starts and ends with a bond dimension 1 leg
-    It's bond dimension also can't grow faster then pspaces (resp. pspaces^2)
-    This function calculates the maximal achievable bond dimension
-"
-function max_Ds(f::FiniteMPS{G}) where G<:GenMPSType{S,N} where {S,N}
-    Ds = [1 for v in 1:length(f)+1];
-    for i in 1:length(f)
-        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}())))
-    end
-
-    Ds[end] = 1;
-    for i in length(f):-1:1
-        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}()))))
-    end
-    Ds
-end
+TensorKit.norm(psi::FiniteMPS) = sqrt(real(dot(psi,psi)))
