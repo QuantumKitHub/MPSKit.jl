@@ -94,42 +94,45 @@ virtualspace(psi::FiniteMPS, n::Integer) =
 r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state[end]),domain(state[end]))
 l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
 
-"
-    take the sum of 2 finite mpses
-"
-function Base.:+(v1::FiniteMPS{T},v2::FiniteMPS{T}) where T #untested and quite horrible code, but not sure how to make it nice
-    @assert length(v1)==length(v2)
+function Base.:+(psi1::FiniteMPS, psi2::FiniteMPS)
+    length(psi1) == length(psi2) || throw(DimensionMismatch())
 
-    ou = oneunit(space(v1[1],1));
-
-    m1 = TensorMap(rand,eltype(T),ou,ou⊕ou);
-    (_,m1) = rightorth(m1);
-    m2 = rightnull(m1);
-
-    pm1 = m1+m2;
-
-    tot = similar(v1);
-
-    for i = 1:length(v1)
-        nm1 = TensorMap(rand,eltype(T),space(v1[i],3)',space(v1[i],3)⊕space(v2[i],3));
-        (_,nm1) = rightorth(nm1);
-        nm2 = rightnull(nm1);
-
-        @tensor t[-1 -2;-3] := conj(m1[1,-1])*v1[i][1,-2,2]*nm1[2,-3]
-        @tensor t[-1 -2;-3] += conj(m2[1,-1])*v2[i][1,-2,2]*nm2[2,-3]
-
-        tot[i] = t;
-
-        m1 = nm1;
-        m2 = nm2;
+    N = length(psi1)
+    for k = 1:N
+        space(psi1, k) == space(psi2, k) ||
+            throw(SpaceMismatch("Non-matching physical space on site $k."))
     end
+    virtualspace(psi1, 0) == virtualspace(psi2, 0) ||
+        throw(SpaceMismatch("Non-matching left virtual space."))
+    virtualspace(psi1, N) == virtualspace(psi2, N) ||
+        throw(SpaceMismatch("Non-matching right virtual space."))
 
-    pm2 = m1+m2;
-
-    @tensor tot[1][-1 -2;-3] := pm1[-1,1]*tot[1][1,-2,-3]
-    @tensor tot[end][-1 -2;-3] := tot[end][-1,-2,1]*conj(pm2[-3,1])
-
-    return tot
+    k = 1 # firstindex(psi1)
+    t1 = psi1[k]
+    t2 = psi2[k]
+    V1 = domain(t1)[1]
+    V2 = domain(t2)[1]
+    w1 = isometry(storagetype(psi1[1]), V1 ⊕ V2, V1)
+    w2 = leftnull(w1)
+    @assert domain(w2) == ⊗(V2)
+    t = t1*w1' + t2*w2'
+    tensors = similar(psi1.tensors, typeof(t))
+    tensors[1] = t
+    for k = 2:N-1
+        t1 = _permute_front(w1*_permute_tail(psi1[k]))
+        t2 = _permute_front(w2*_permute_tail(psi2[k]))
+        V1 = domain(t1)[1]
+        V2 = domain(t2)[1]
+        w1 = isometry(storagetype(psi1[1]), V1 ⊕ V2, V1)
+        w2 = leftnull(w1)
+        @assert domain(w2) == ⊗(V2)
+        tensors[k] = t1*w1' + t2*w2'
+    end
+    k = N
+    t1 = _permute_front(w1*_permute_tail(psi1[k]))
+    t2 = _permute_front(w2*_permute_tail(psi2[k]))
+    tensors[k] = t1 + t2
+    return FiniteMPS(tensors)
 end
 
 function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
