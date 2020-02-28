@@ -83,6 +83,16 @@ Base.IteratorEltype(::Type{<:FiniteMPS}) = Base.HasEltype()
 Base.eltype(::Type{FiniteMPS{A}}) where {A<:GenericMPSTensor} = A
 Base.similar(psi::FiniteMPS) = FiniteMPS(similar.(psi.tensors))
 
+TensorKit.space(psi::FiniteMPS{<:MPSTensor}, n::Integer) = space(psi[n], 2)
+function TensorKit.space(psi::FiniteMPS{<:GenericMPSTensor}, n::Integer)
+    t = psi[n]
+    S = spacetype(t)
+    return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
+end
+
+virtualspace(psi::FiniteMPS, n::Integer) =
+    n < length(psi) ? _firstspace(psi[n+1]) : dual(_lastspace(psi[n]))
+
 r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state[end]),domain(state[end]))
 l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
 
