@@ -4,28 +4,48 @@
     finite one dimensional mps
     algorithms usually assume a right-orthormalized input
 "
-struct FiniteMPS{T<:GenericMPSTensor} <: AbstractArray{T,1}
-    data::Array{T,1}
-
-    function FiniteMPS(data::Array{T,1}) where T<:GenericMPSTensor
-        ou = oneunit(space(data[1],1));
-        @assert space(data[1],1) == ou
-        @assert space(data[end],length(codomain(data[end]))+length(domain(data[end]))) == ou'
-        new{T}(data)
+struct FiniteMPS{A<:GenericMPSTensor} <: AbstractMPS
+    tensors::Vector{A}
+    normalizations::Vector{MPSNormalization.MPSNormalizationFlag}
+    function FiniteMPS{A}(tensors::Vector{A},
+                            normalizations::Vector{MPSNormalization.MPSNormalizationFlag}
+                            ) where {A<:GenericMPSTensor}
+        _firstspace(tensors[1]) == oneunit(_firstspace(tensors[1])) ||
+            throw(SectorMismatch("Leftmost virtual index of MPS should be trivial."))
+        N = length(tensors)
+        for n = 1:N-1
+            dual(_lastspace(tensors[n])) == _firstspace(tensors[n+1]) ||
+                throw(SectorMismatch("Non-matching virtual index on bond $n."))
+        end
+        dim(_lastspace(tensors[N])) == 1 ||
+            throw(SectorMismatch("Rightmost virtual index should be one-dimensional."))
+        return new{A}(tensors, normalizations)
     end
 end
+FiniteMPS(tensors::Vector{A},
+            normalizations::Vector{MPSNormalization.MPSNormalizationFlag} =
+                fill(MPSNormalization.unnormalized, length(tensors))
+            ) where {A<:GenericMPSTensor} = FiniteMPS{A}(tensors, normalizations)
 
-Base.length(arr::FiniteMPS) = length(arr.data)
-Base.size(arr::FiniteMPS) = size(arr.data)
-Base.getindex(arr::FiniteMPS,I::Int) = arr.data[I]
-Base.setindex!(arr::FiniteMPS{T},v::T,I::Int) where T = setindex!(arr.data,v,I) #should add oneunit checks ...
-Base.eltype(arr::FiniteMPS{T}) where T = T
-Base.iterate(arr::FiniteMPS,state=1) = Base.iterate(arr.data,state)
-Base.lastindex(arr::FiniteMPS) = lastindex(arr.data)
-Base.lastindex(arr::FiniteMPS,d) = lastindex(arr.data,d)
-Base.copy(arr::FiniteMPS) where T= FiniteMPS(copy(arr.data));
-Base.deepcopy(arr::FiniteMPS) where T = FiniteMPS(deepcopy(arr.data));
-Base.similar(arr::FiniteMPS) = FiniteMPS(similar.(arr))
+Base.copy(psi::FiniteMPS) = FiniteMPS(map(copy, psi.tensors), copy(psi.normalizations))
+
+Base.@propagate_inbounds Base.getindex(psi::FiniteMPS, args...) =
+    getindex(psi.tensors, args...)
+Base.@propagate_inbounds Base.setindex!(psi::FiniteMPS, args...) =
+    setindex!(psi.tensors, args...)
+
+Base.length(psi::FiniteMPS) = length(psi.tensors)
+Base.size(psi::FiniteMPS, i...) = size(psi.tensors, i...)
+Base.firstindex(psi::FiniteMPS, i...) = firstindex(psi.tensors, i...)
+Base.lastindex(psi::FiniteMPS, i...) = lastindex(psi.tensors, i...)
+
+Base.iterate(psi::FiniteMPS, i...) = iterate(psi.tensors, i...)
+Base.IteratorSize(::Type{<:FiniteMPS}) = Base.HasShape{1}()
+Base.IteratorEltype(::Type{<:FiniteMPS}) = Base.HasEltype()
+
+Base.eltype(::Type{FiniteMPS{A}}) where {A<:GenericMPSTensor} = A
+Base.similar(psi::FiniteMPS) = FiniteMPS(similar.(psi.tensors))
+
 r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state[end]),domain(state[end]))
 l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
 
