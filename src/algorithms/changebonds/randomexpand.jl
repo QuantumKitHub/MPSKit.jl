@@ -40,7 +40,7 @@ function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::RandExpand) 
         #@tensor state[i+1][-1 -2;-3] := C[-1,1]*state[i+1][1,-2,-3]
     end
 
-    state = rightorth(state,renorm=false)
+    state = rightorth(state; normalize=false)
 end
 function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::RandExpand,pars=params(state,H))
     newstate = changebonds(state,alg);

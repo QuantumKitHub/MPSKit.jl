@@ -66,7 +66,7 @@ using MPSKit,TensorKit,LinearAlgebra,Test
         ts = #=@inferred=# FiniteMPS(data);
 
         ovl = #=@inferred=# dot(ts,ts);
-        ts = #=@inferred=# rightorth(ts,renorm=false);
+        ts = #=@inferred=# rightorth(ts,normalize=false);
         @test ovl ≈ norm(ts[1])^2
 
         data2 = [TensorMap(rand,elt,oneunit(D)*d,D)]
