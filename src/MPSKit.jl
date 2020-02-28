@@ -49,11 +49,11 @@ module MPSKit
     include("benchmarks.jl")
 
     include("utility/periodicarray.jl")
-    include("utility/mps_types.jl")
     include("utility/utility.jl") #random utility functions
-    include("utility/apply_transfer.jl") #apply transfer matrices
 
     #maybe we should introduce an abstract state type
+    include("states/abstractmps.jl")
+    include("states/transfer.jl") # mps transfer matrices
     include("states/umps.jl")
     include("states/multiline.jl")
     include("states/finitemps.jl")
