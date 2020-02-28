@@ -62,7 +62,7 @@ function FiniteMPS(f,
     end
 end
 
-Base.copy(psi::FiniteMPS) = FiniteMPS(map(copy, psi.tensors), copy(psi.normalizations))
+Base.copy(psi::FiniteMPS) = FiniteMPS(map(copy, psi.tensors), psi.centerpos)
 
 Base.@propagate_inbounds Base.getindex(psi::FiniteMPS, args...) =
     getindex(psi.tensors, args...)
@@ -135,6 +135,26 @@ function Base.:+(psi1::FiniteMPS, psi2::FiniteMPS)
     return FiniteMPS(tensors)
 end
 
+function Base.:*(psi::FiniteMPS, a::Number)
+    psi′ = FiniteMPS(psi.tensors .* one(a) , psi.centerpos)
+    return rmul!(psi′, a)
+end
+
+function Base.:*(a::Number, psi::FiniteMPS)
+    psi′ = FiniteMPS(one(a) .* psi.tensors, psi.centerpos)
+    return lmul!(a, psi′)
+end
+
+function TensorKit.lmul!(a::Number, psi::FiniteMPS)
+    lmul!(a, psi.tensors[first(psi.centerpos)])
+    return psi
+end
+
+function TensorKit.rmul!(psi::FiniteMPS, a::Number)
+    rmul!(psi.tensors[first(psi.centerpos)], a)
+    return psi
+end
+
 function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
     length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
 
@@ -144,4 +164,8 @@ function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
     end
     return tr(ρL)
 end
+
 TensorKit.norm(psi::FiniteMPS) = sqrt(real(dot(psi,psi)))
+
+TensorKit.normalize!(psi::FiniteMPS) = rmul!(psi, 1/norm(psi))
+TensorKit.normalize(psi::FiniteMPS) = normalize!(copy(psi))
