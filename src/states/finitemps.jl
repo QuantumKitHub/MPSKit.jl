@@ -27,6 +27,43 @@ FiniteMPS(tensors::Vector{A},
                 fill(MPSNormalization.unnormalized, length(tensors))
             ) where {A<:GenericMPSTensor} = FiniteMPS{A}(tensors, normalizations)
 
+function FiniteMPS(f, P::ProductSpace, args...; kwargs...)
+    return FiniteMPS(f, collect(P), args...; kwargs...)
+end
+
+function FiniteMPS(f, N::Int, V::VectorSpace, args...; kwargs...)
+    return FiniteMPS(f, fill(V, N), args...; kwargs...)
+end
+
+function FiniteMPS(f, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;
+                    left::S = oneunit(maxvirtspace),
+                    right::S = oneunit(maxvirtspace)) where {S<:ElementarySpace}
+    N = length(physspaces)
+    virtspaces = Vector{S}(undef, N+1)
+    virtspaces[1] = left
+    for k = 2:N
+        virtspaces[k] = min(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
+    end
+    virtspaces[N+1] = right
+    for k = N:-1:2
+        virtspaces[k] = min(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
+    end
+    return FiniteMPS(f, physspaces, virtspaces)
+end
+function FiniteMPS(f,
+                    physspaces::Vector{<:Union{S,CompositeSpace{S}}},
+                    virtspaces::Vector{S}) where {S<:ElementarySpace}
+    N = length(physspaces)
+    length(virtspaces) == N+1 || throw(DimensionMismatch())
+
+    tensors = [TensorMap(f, virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
+    if f == randisometry
+        return FiniteMPS(tensors, fill(MPSNormalization.left, N))
+    else
+        return FiniteMPS(tensors, fill(MPSNormalization.unnormalized, N))
+    end
+end
+
 Base.copy(psi::FiniteMPS) = FiniteMPS(map(copy, psi.tensors), copy(psi.normalizations))
 
 Base.@propagate_inbounds Base.getindex(psi::FiniteMPS, args...) =
