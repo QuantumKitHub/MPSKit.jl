@@ -41,8 +41,8 @@ end
         ]
     tol = Float64(eps(real(elt))*100);
 
-    #=@inferred=# leftorth([TensorMap(rand,elt,D*d,D)],tol=tol);
-    #=@inferred=# rightorth([TensorMap(rand,elt,D*d,D)],tol=tol);
+    #=@inferred=# uniform_leftorth([TensorMap(rand,elt,D*d,D)],tol=tol);
+    #=@inferred=# uniform_rightorth([TensorMap(rand,elt,D*d,D)],tol=tol);
 
     ts = #=@inferred=# InfiniteMPS([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
 

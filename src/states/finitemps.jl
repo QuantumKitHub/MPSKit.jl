@@ -217,3 +217,22 @@ end
 
 TensorKit.normalize!(psi::FiniteMPS) = rmul!(psi, 1/norm(psi))
 TensorKit.normalize(psi::FiniteMPS) = normalize!(copy(psi))
+
+
+"
+    A FiniteMPS/MPO starts and ends with a bond dimension 1 leg
+    It's bond dimension also can't grow faster then pspaces (resp. pspaces^2)
+    This function calculates the maximal achievable bond dimension
+"
+function max_Ds(f::FiniteMPS{G}) where G<:GenericMPSTensor{S,N} where {S,N}
+    Ds = [1 for v in 1:length(f)+1];
+    for i in 1:length(f)
+        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}())))
+    end
+
+    Ds[end] = 1;
+    for i in length(f):-1:1
+        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}()))))
+    end
+    Ds
+end
