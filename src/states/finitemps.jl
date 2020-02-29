@@ -4,7 +4,7 @@
     finite one dimensional mps
     algorithms usually assume a right-orthormalized input
 "
-struct FiniteMPS{A<:GenericMPSTensor} <: AbstractMPS
+mutable struct FiniteMPS{A<:GenericMPSTensor} <: AbstractMPS
     tensors::Vector{A}
     centerpos::UnitRange{Int} # range of tensors which are not left or right normalized
     function FiniteMPS{A}(tensors::Vector{A},
@@ -94,6 +94,42 @@ virtualspace(psi::FiniteMPS, n::Integer) =
 r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state[end]),domain(state[end]))
 l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
 
+# Gauging left and right
+"""
+    function leftorth!(psi::FiniteMPS, n = length(psi); normalize = true, alg = QRpos())
+
+Bring all MPS tensors of `psi` to the left of site `n` into left orthonormal form, using
+the orthogonal factorization algorithm `alg`
+"""
+function TensorKit.leftorth!(psi::FiniteMPS, n::Integer = length(psi);
+                    alg::OrthogonalFactorizationAlgorithm = QRpos(),
+                    normalize::Bool = true)
+    @assert 1 <= n <= length(psi)
+    while first(psi.centerpos) < n
+        k = first(psi.centerpos)
+        AL, C = leftorth!(psi[k]; alg = alg)
+        psi[k] = AL
+        psi[k+1] = _permute_front(C*_permute_tail(psi[k+1]))
+        psi.centerpos = k+1:max(k+1,last(psi.centerpos))
+    end
+    return normalize ? normalize!(psi) : psi
+end
+function TensorKit.rightorth!(psi::FiniteMPS, n::Integer = 1;
+                    alg::OrthogonalFactorizationAlgorithm = LQpos(),
+                    normalize::Bool = true)
+    @assert 1 <= n <= length(psi)
+    while last(psi.centerpos) > n
+        k = last(psi.centerpos)
+        C, AR = rightorth!(_permute_tail(psi[k]); alg = alg)
+        psi[k] = _permute_front(AR)
+        psi[k-1] = psi[k-1]*C
+        psi.centerpos = min(first(psi.centerpos), k-1):k-1
+    end
+    return normalize ? normalize!(psi) : psi
+end
+
+# Linear algebra methods
+#------------------------
 function Base.:+(psi1::FiniteMPS, psi2::FiniteMPS)
     length(psi1) == length(psi2) || throw(DimensionMismatch())
 
@@ -165,7 +201,19 @@ function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
     return tr(ρL)
 end
 
-TensorKit.norm(psi::FiniteMPS) = sqrt(real(dot(psi,psi)))
+function TensorKit.norm(psi::FiniteMPS)
+    k = first(psi.centerpos)
+    if k == last(psi.centerpos)
+        return norm(psi[k])
+    else
+        _, C = leftorth(psi[k])
+        k += 1
+        while k <= last(psi.centerpos)
+            _, C = leftorth!(_permute_front(C * _permute_tail(psi[k])))
+        end
+        return norm(C)
+    end
+end
 
 TensorKit.normalize!(psi::FiniteMPS) = rmul!(psi, 1/norm(psi))
 TensorKit.normalize(psi::FiniteMPS) = normalize!(copy(psi))
