@@ -143,10 +143,10 @@ end
     for i in 1:ham.odim
         tot+=@tensor leftenv(pars,length(state)+1,state)[i][1,2,3]*rightenv(pars,length(state),state)[i][3,2,1]
     end
-
-    return vals,tot
+    n = @tensor leftenv(pars,1,state)[1][1,2,3]*rightenv(pars,0,state)[end][3,2,1]
+    return vals,tot/n;
 end
-@bm expectation_value(state::FiniteMPS,ham::MPOHamiltonian,pars=params(state,ham)) = expectation_value_fimpl(state,ham,pars);
+@bm expectation_value(state::FiniteMPS,ham::MPOHamiltonian,pars=params(state,ham)) = expectation_value_fimpl(state,ham,pars)
 function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,pars)
     ens=zeros(eltype(state[1]),length(state))
     for i=1:length(state)
@@ -165,7 +165,8 @@ function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHam
         end
     end
 
-    return ens
+    n = @tensor leftenv(pars,1,state)[1][1,2,3]*rightenv(pars,0,state)[end][3,2,1]
+    return ens./n;
 end
 
 @bm function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,prevca=params(st,ham))
