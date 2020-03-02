@@ -23,7 +23,7 @@
         nacs = [state.AC[i]+α*ac_d[i] for i in 1:length(state)]
 
         #invert cs
-        ics = Periodic([inv(c) for c in state.CR])
+        ics = PeriodicArray([inv(c) for c in state.CR])
         pals = [nacs[i]*ics[i] for i in 1:length(state)]
         pars = [permute(ics[i-1]*permute(nacs[i],(1,),(2,3)),(1,2),(3,)) for i in 1:length(state)]
 
@@ -48,7 +48,7 @@
             @tensor ac_d[i][-1 -2;-3]:=cls[mod1(i-1,end)][-1,1]*(ac_d[i]/lambda)[1,-2,2]*crs[i][2,-3]
         end
 
-        nstate = InfiniteMPS(Periodic(als),Periodic(ars),Periodic(cs),Periodic(nacs));
+        nstate = InfiniteMPS(PeriodicArray(als),PeriodicArray(ars),PeriodicArray(cs),PeriodicArray(nacs));
 
         return (nstate,pars),ac_d
     end

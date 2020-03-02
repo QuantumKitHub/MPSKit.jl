@@ -3,8 +3,8 @@
     numvecs::Int = 1
 end
 
-#implemented for GenMPSType (wanted to use it in peps code)
-function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::RandExpand) where T<:GenMPSType{Sp,N} where {Sp,N}
+#implemented for GenericMPSTensor (wanted to use it in peps code)
+function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::RandExpand) where T<:GenericMPSTensor{Sp,N} where {Sp,N}
     lmax = zeros(length(state)+1)
     lmax[1] = dim(space(state[1],1))
     for i in 1:length(state)
@@ -40,7 +40,7 @@ function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::RandExpand) 
         #@tensor state[i+1][-1 -2;-3] := C[-1,1]*state[i+1][1,-2,-3]
     end
 
-    state = rightorth(state,renorm=false)
+    state = rightorth(state; normalize=false)
 end
 function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::RandExpand,pars=params(state,H))
     newstate = changebonds(state,alg);

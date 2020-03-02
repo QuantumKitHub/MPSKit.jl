@@ -19,9 +19,9 @@ function Base.getproperty(h::ComAct,f::Symbol)
     if f==:odim
         return (h.below.odim+h.above.odim)::Int
     elseif f==:domspaces
-        return Periodic([[h.below.domspaces[i];h.above.domspaces[i]] for i in 1:h.period])
+        return PeriodicArray([[h.below.domspaces[i];h.above.domspaces[i]] for i in 1:h.period])
     elseif f==:imspaces
-        return Periodic([[h.below.imspaces[i];h.above.imspaces[i]] for i in 1:h.period])
+        return PeriodicArray([[h.below.imspaces[i];h.above.imspaces[i]] for i in 1:h.period])
     elseif f==:period
         @assert h.above.period == h.below.period
         return h.below.period::Int

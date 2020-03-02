@@ -35,12 +35,12 @@
 
     represents a general periodic quantum hamiltonian
 "
-struct MPOHamiltonian{S,T<:MPOType,E<:Number}<:Hamiltonian
-    scalars::Periodic{Array{Union{Missing,E},1},1}
-    Os::Periodic{Array{Union{Missing,T},2},1}
+struct MPOHamiltonian{S,T<:MPOTensor,E<:Number}<:Hamiltonian
+    scalars::PeriodicArray{Array{Union{Missing,E},1},1}
+    Os::PeriodicArray{Array{Union{Missing,T},2},1}
 
-    domspaces::Periodic{Array{S,1},1}
-    pspaces::Periodic{S,1}
+    domspaces::PeriodicArray{Array{S,1},1}
+    pspaces::PeriodicArray{S,1}
 end
 
 function Base.getproperty(h::MPOHamiltonian,f::Symbol)
@@ -49,14 +49,14 @@ function Base.getproperty(h::MPOHamiltonian,f::Symbol)
     elseif f==:period
         return size(h.pspaces,1)
     elseif f==:imspaces
-        return circshift(Periodic([adjoint.(d) for d in h.domspaces.data]),-1)
+        return circshift(PeriodicArray([adjoint.(d) for d in h.domspaces.data]),-1)
     else
         return getfield(h,f)
     end
 end
 
 #dense representation of mpohamiltonian -> the actual mpohamiltonian
-function MPOHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MPOType
+function MPOHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MPOTensor
     x = fillmissing(ox);
 
     len = size(x,1);E = eltype(M);
@@ -81,17 +81,17 @@ function MPOHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MPOTy
     pspaces=[space(x[i,1,1],2) for i in 1:len]
     domspaces=[[space(y,1) for y in x[i,:,1]] for i in 1:len]
 
-    return MPOHamiltonian(Periodic(tSs),Periodic(tOs),Periodic(domspaces),Periodic(pspaces))
+    return MPOHamiltonian(PeriodicArray(tSs),PeriodicArray(tOs),PeriodicArray(domspaces),PeriodicArray(pspaces))
 end
 
 #allow passing in 2leg mpos
-MPOHamiltonian(x::Array{T,3}) where T<:MPSVecType = MPOHamiltonian(map(t->permute(add_util_leg(t),(1,2),(4,3)),x))
+MPOHamiltonian(x::Array{T,3}) where T<:MPSBondTensor = MPOHamiltonian(map(t->permute(add_util_leg(t),(1,2),(4,3)),x))
 
 #allow passing in regular tensormaps
 MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)));
 
 #a very simple utility constructor; given our "localmpo", constructs a mpohamiltonian
-function MPOHamiltonian(x::Array{T,1}) where T<:MPOType
+function MPOHamiltonian(x::Array{T,1}) where T<:MPOTensor
     domspaces=[space(y,1) for y in x]
     push!(domspaces,space(x[end],3)')
 
@@ -106,7 +106,7 @@ function MPOHamiltonian(x::Array{T,1}) where T<:MPOType
     nSs[1] = 1
     nSs[end] = 1
 
-    return MPOHamiltonian(Periodic([nSs]),Periodic([nOs]),Periodic([domspaces]),Periodic(pspaces))
+    return MPOHamiltonian(PeriodicArray([nSs]),PeriodicArray([nOs]),PeriodicArray([domspaces]),PeriodicArray(pspaces))
 end
 
 #utility functions for finite mpo
@@ -150,7 +150,7 @@ isscal(x::MPOHamiltonian,a::Int,b::Int) = !ismissing(x.scalars[a][b])
 "
 checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
 "
-function isid(x::MPOType)
+function isid(x::MPOTensor)
     cod = space(x,1)*space(x,2);
     dom = space(x,3)'*space(x,4)';
 
@@ -192,7 +192,7 @@ function sanitycheck(ham::MPOHamiltonian)
 end
 
 #when there are missing values in an input mpo, we will fill them in with 0s
-function fillmissing(x::Array{T,3}) where T<:Union{Missing,M} where M<:MPOType{Sp} where Sp
+function fillmissing(x::Array{T,3}) where T<:Union{Missing,M} where M<:MPOTensor{Sp} where Sp
     @assert size(x,2) == size(x,3);
 
     #fill in Domspaces and pspaces

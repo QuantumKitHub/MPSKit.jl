@@ -2,7 +2,7 @@
     FinEnv keeps track of the environments for FiniteMPS / MPSComoving / FiniteMPO
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
 "
-struct FinEnv{B <: Operator,C <: MPSType,D <: TensorMap} <: Cache
+struct FinEnv{B <: Operator,C <: MPSTensor,D <: TensorMap} <: Cache
     ldependencies::Array{D,1} #the data we used to calculate leftenvs/rightenvs
     rdependencies::Array{D,1}
 
@@ -14,7 +14,7 @@ end
 
 #the constructor used for any state (finitemps or mpscomoving)
 #we really should be doing this lazily
-function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}) where C<:MPSType
+function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}) where C<:MPSTensor
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 

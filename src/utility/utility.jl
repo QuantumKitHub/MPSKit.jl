@@ -1,3 +1,32 @@
+function _permute_front(t::AbstractTensorMap) # make TensorMap{S,N₁+N₂-1,1}
+    I = TensorKit.allind(t) # = (1:N₁+N₂...,)
+    if BraidingStyle(sectortype(t)) isa SymmetricBraiding
+        permute(t, Base.front(I), (I[end],))
+    else
+        levels = I
+        braid(t, levels, Base.front(I), (I[end],))
+    end
+end
+function _permute_tail(t::AbstractTensorMap) # make TensorMap{S,1,N₁+N₂-1}
+    I = TensorKit.allind(t) # = (1:N₁+N₂...,)
+    if BraidingStyle(sectortype(t)) isa SymmetricBraiding
+        permute(t, (I[1],), Base.tail(I))
+    else
+        levels = I
+        braid(t, levels, (I[1],), Base.tail(I))
+    end
+end
+function _permute_as(t1::AbstractTensorMap, t2::AbstractTensorMap)
+    if BraidingStyle(sectortype(t1)) isa SymmetricBraiding
+        permute(t1, TensorKit.codomainind(t2), TensorKit.domainind(t2))
+    else
+        levels = allind(t1)
+        braid(t1, TensorKit.codomainind(t2), TensorKit.domainind(t2))
+    end
+end
+_firstspace(t::AbstractTensorMap) = space(t, 1)
+_lastspace(t::AbstractTensorMap) = space(t, numind(t))
+
 "
 Decomposes fun into a sum of exponentials
 (coeff,exponents)=exp_decomp(fun;fitdist,numexp);
@@ -78,11 +107,6 @@ function nonsym_spintensors(s)
     return Sx,Sy,Sz,one(Sx)
 end
 
-
-@inline tuplejoin(x) = x
-@inline tuplejoin(x, y) = (x..., y...)
-@inline tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
-
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
 function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2}
     numind=N1+N2
@@ -91,7 +115,7 @@ function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2
     end
 
     leftind=(1,2,Int(numind/2+1))
-    otherind=tuplejoin(ntuple(x->x+2,Val{Int((N1+N2)/2)-2}()),ntuple(x->x+Int(numind/2+1),Val{Int((N1+N2)/2)-1}()))
+    otherind=(ntuple(x->x+2,Val{Int((N1+N2)/2)-2}())..., ntuple(x->x+Int(numind/2+1),Val{Int((N1+N2)/2)-1}())...)
 
     (U,S,V) = tsvd(inpmpo,leftind,otherind)
 

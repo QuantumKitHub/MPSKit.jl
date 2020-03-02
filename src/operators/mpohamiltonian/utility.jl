@@ -77,7 +77,7 @@ function Base.:+(a::MPOHamiltonian{S,T,E},b::MPOHamiltonian{S,T,E}) where {S,T,E
     end
 
 
-    return MPOHamiltonian(Periodic(nSs),Periodic(nOs),ndomspaces,a.pspaces)
+    return MPOHamiltonian(PeriodicArray(nSs),PeriodicArray(nOs),ndomspaces,a.pspaces)
 end
 Base.:-(a::MPOHamiltonian,b::MPOHamiltonian) = a+(-1.0*b)
 
@@ -138,13 +138,13 @@ function Base.:*(b::MPOHamiltonian{S,T,E},a::MPOHamiltonian{S,T,E}) where {S,T,E
         end
     end
 
-    return MPOHamiltonian(Periodic(nSs),Periodic(nOs),ndomspaces,a.pspaces)
+    return MPOHamiltonian(PeriodicArray(nSs),PeriodicArray(nOs),ndomspaces,a.pspaces)
 end
 
 #without the copy, we get side effects when repeating + setindex
 Base.repeat(x::MPOHamiltonian,n::Int) = MPOHamiltonian(
-                                            Periodic(copy.(repeat(x.scalars,n))),
-                                            Periodic(copy.(repeat(x.Os,n))),
+                                            PeriodicArray(copy.(repeat(x.scalars,n))),
+                                            PeriodicArray(copy.(repeat(x.Os,n))),
                                             repeat(x.domspaces,n),
                                             repeat(x.pspaces,n))
 
@@ -167,7 +167,7 @@ end
 TensorKit.fuse(f::T) where T<: VectorSpace = f
 
 #the usual mpoham transfer
-function transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSType
+function transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSTensor
     toreturn = Array{V,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
@@ -199,7 +199,7 @@ function transfer_left(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A
 
     return toreturn
 end
-function transfer_right(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSType
+function transfer_right(vec::Array{V,1},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSTensor
     toreturn = Array{V,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
@@ -312,6 +312,6 @@ function full(th :: MPOHamiltonian) #completely and utterly untested
         push!(stoppers,rightstop)
 
     end
-    Periodic(Os),Periodic(starters),Periodic(circshift(stoppers,-1))
+    PeriodicArray(Os),PeriodicArray(starters),PeriodicArray(circshift(stoppers,-1))
 end
 =#

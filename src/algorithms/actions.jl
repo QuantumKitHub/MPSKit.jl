@@ -3,7 +3,7 @@
 """
     One-site derivative
 """
-@bm function ac_prime(x::MPSType,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
+@bm function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
     ham=cache.opp
 
     toret=zero(x)
@@ -17,7 +17,7 @@
 
     return toret
 end
-@bm function ac_prime(x::MPOType,pos::Int,mpo::FiniteMPO,cache)
+@bm function ac_prime(x::MPOTensor,pos::Int,mpo::FiniteMPO,cache)
     ham=cache.opp
 
     toret=zero(x)
@@ -39,14 +39,14 @@ end
 
     return toret
 end
-@bm function ac_prime(x::MPSType, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, pars::PerMPOInfEnv)
+@bm function ac_prime(x::MPSTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, pars::PerMPOInfEnv)
     @tensor toret[-1 -2;-3]:=leftenv(pars,row,col,mps)[-1,2,1]*x[1,3,4]*(pars.opp[row,col])[2,-2,5,3]*rightenv(pars,row,col,mps)[4,5,-3]
 end
 
 """
     Two-site derivative
 """
-@bm function ac2_prime(x::MPOType,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
+@bm function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
     ham=cache.opp
 
     toret=zero(x)
@@ -93,7 +93,7 @@ end
 
     return toret
 end
-@bm function ac2_prime(x::MPOType, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, pars::PerMPOInfEnv)
+@bm function ac2_prime(x::MPOTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, pars::PerMPOInfEnv)
     @tensor toret[-1 -2;-3 -4]:=leftenv(pars,row,col,mps)[-1,2,1]*
                                 x[1,3,4,5]*
                                 pars.opp[row,col][2,-2,6,3]*
@@ -104,7 +104,7 @@ end
 """
     Zero-site derivative (the C matrix to the right of pos)
 """
-@bm function c_prime(x::MPSVecType,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
+@bm function c_prime(x::MPSBondTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
     toret=zero(x)
     ham=cache.opp
 
@@ -114,7 +114,7 @@ end
 
     return toret
 end
-@bm function c_prime(x::MPSVecType,pos::Int,mpo::FiniteMPO,cache)
+@bm function c_prime(x::MPSBondTensor,pos::Int,mpo::FiniteMPO,cache)
     toret=zero(x)
     ham=cache.opp
 
@@ -172,7 +172,7 @@ end
 @bm function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,prevca=params(st,ham))
     #calculate energy density
     len = length(st);
-    ens = Periodic(zeros(eltype(st.AR[1]),len));
+    ens = PeriodicArray(zeros(eltype(st.AR[1]),len));
     for i=1:len
         util = Tensor(ones,space(prevca.lw[i+1,ham.odim],2))
         for j=ham.odim:-1:1
@@ -203,7 +203,7 @@ end
 
 expectation_value(st::InfiniteMPS,opp::PeriodicMPO,ca=params(st,opp)) = expectation_value(convert(MPSMultiline,st),opp,ca);
 @bm function expectation_value(st::MPSMultiline,opp::PeriodicMPO,ca=params(st,opp))
-    retval = Periodic{eltype(st.AC[1,1]),2}(size(st,1),size(st,2));
+    retval = PeriodicArray{eltype(st.AC[1,1]),2}(undef,size(st,1),size(st,2));
     for (i,j) in Iterators.product(1:size(st,1),1:size(st,2))
         retval[i,j] = @tensor   leftenv(ca,i,j,st)[1,2,3]*
                                 opp[i,j][2,4,5,6]*

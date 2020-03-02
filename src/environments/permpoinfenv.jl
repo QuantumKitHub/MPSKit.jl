@@ -8,8 +8,8 @@ mutable struct PerMPOInfEnv{H<:PeriodicMPO,V,S<:MPSMultiline} <: AbstractInfEnv
     tol :: Float64
     maxiter :: Int
 
-    lw :: Periodic{V,2}
-    rw :: Periodic{V,2}
+    lw :: PeriodicArray{V,2}
+    rw :: PeriodicArray{V,2}
 end
 
 @bm function recalculate!(pars::PerMPOInfEnv,nstate)
@@ -28,8 +28,8 @@ function params(state::MPSMultiline{T},mpo::PeriodicMPO,prevl = nothing,prevr = 
     (numrows,numcols) = size(state)
     @assert size(state) == size(mpo)
 
-    lefties = Periodic{T,2}(numrows,numcols);
-    righties = Periodic{T,2}(numrows,numcols);
+    lefties = PeriodicArray{T,2}(undef,numrows,numcols);
+    righties = PeriodicArray{T,2}(undef,numrows,numcols);
 
     for cr = 1:numrows
 

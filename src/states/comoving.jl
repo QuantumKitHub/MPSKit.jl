@@ -3,7 +3,7 @@
 
     muteable window of tensors on top of an infinite chain
 "
-struct MPSComoving{Mtype<:GenMPSType,Vtype<:MPSVecType}
+struct MPSComoving{Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor}
     left_gs::InfiniteMPS{Mtype,Vtype}
     middle::Array{Mtype,1}
     right_gs::InfiniteMPS{Mtype,Vtype}
@@ -48,7 +48,7 @@ end
     return reverse(dat)
 end
 
-function max_Ds(f::MPSComoving{G}) where G<:GenMPSType{S,N} where {S,N}
+function max_Ds(f::MPSComoving{G}) where G<:GenericMPSTensor{S,N} where {S,N}
     Ds = [dim(space(left_gs.AL[1],1)) for v in 1:length(f)+1];
     for i in 1:length(f)
         Ds[i+1] = Ds[i]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}())))
