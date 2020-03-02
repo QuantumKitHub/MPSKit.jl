@@ -54,7 +54,7 @@ module MPSKit
     #maybe we should introduce an abstract state type
     include("states/abstractmps.jl")
     include("states/transfer.jl") # mps transfer matrices
-    include("states/umps.jl")
+    include("states/infinitemps.jl")
     include("states/multiline.jl")
     include("states/finitemps.jl")
     include("states/finitempo.jl")
