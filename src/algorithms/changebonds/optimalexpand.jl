@@ -54,6 +54,8 @@ function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Op
     #but "optimal vectors" at site i+1
     #so during optimization of site i, you have access to these optimal vectors :)
 
+    state = rightorth(state);
+
     for i in 1:(length(state)-1)
         @tensor ACAR[-1 -2;-3 -4]:=state[i][-1,-2,1]*state[i+1][1,-3,-4]
         AC2=ac2_prime(ACAR,i,state,pars)

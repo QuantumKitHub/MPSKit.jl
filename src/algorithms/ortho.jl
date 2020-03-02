@@ -1,21 +1,7 @@
 #orthonormalization procedures; should clean this up
 
-TensorKit.rightorth(state::Union{MPSComoving,FiniteMPO};normalize=true) = rightorth!(deepcopy(state),normalize = normalize)
-TensorKit.leftorth(state::Union{MPSComoving,FiniteMPO};normalize=true) = leftorth!(deepcopy(state),normalize = normalize)
-
-function TensorKit.rightorth!(state::MPSComoving{T}; normalize=true) where T <: GenericMPSTensor{S,N} where {S,N}
-    for i=length(state):-1:2
-        (newc,newar)=TensorKit.rightorth(state[i],(1,),ntuple(x->x+1,Val{N}()))
-        state[i] = permute(newar,ntuple(x->x,Val{N}()),(N+1,)) #this line used to be permute!(state[i],newar) but rightorth can sometimes drop vectors?
-        state[i-1]=state[i-1]*newc
-    end
-
-    if normalize
-        state[1]/=norm(state[1])
-    end
-
-    return state
-end
+TensorKit.rightorth(state::Union{FiniteMPO};normalize=true) = rightorth!(deepcopy(state),normalize = normalize)
+TensorKit.leftorth(state::Union{FiniteMPO};normalize=true) = leftorth!(deepcopy(state),normalize = normalize)
 
 function TensorKit.rightorth!(state::Union{FiniteMPO};normalize=true)
     for i=length(state):-1:2
@@ -27,17 +13,6 @@ function TensorKit.rightorth!(state::Union{FiniteMPO};normalize=true)
         state[1]/=norm(state[1])
     end
    return state
-end
-
-function TensorKit.leftorth!(state::MPSComoving{T};normalize=true) where T <: GenericMPSTensor{S,N} where {S,N}
-    for i=1:length(state)-1
-        (state[i],c)=TensorKit.leftorth!(state[i])
-        state[i+1]=permute(c*permute(state[i+1],(1,),ntuple(x->x+1,Val{N}())),ntuple(x->x,Val{N}()),(N+1,))
-    end
-    if normalize
-        state[length(state)]/=norm(state[length(state)])
-    end
-    return state
 end
 
 @bm function uniform_leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess= TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenericMPSTensor{S,N1} where {S,N1}
