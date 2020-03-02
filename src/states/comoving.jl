@@ -9,7 +9,7 @@ mutable struct MPSComoving{Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor}
     right_gs::InfiniteMPS{Mtype,Vtype}
     centerpos::UnitRange{Int} # range of tensors which are not left or right normalized
 
-    function MPSComoving{Mtype,Vtype}(left::InfiniteMPS{Mtype,Vtype},middle::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype},centerpos::UnitRange{Int}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor}
+    function MPSComoving(left::InfiniteMPS{Mtype,Vtype},middle::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype},centerpos::UnitRange{Int}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor}
         return new{Mtype,Vtype}(left, middle, right, centerpos)
     end
 end
@@ -117,3 +117,56 @@ function TensorKit.rightorth!(psi::MPSComoving, n::Integer = 1;
     end
     return normalize ? normalize!(psi) : psi
 end
+
+
+function Base.:*(psi::MPSComoving, a::Number)
+    psi′ = MPSComoving(psi.left,psi.middle .* one(a) ,psi.right, psi.centerpos)
+    return rmul!(psi′, a)
+end
+
+function Base.:*(a::Number, psi::MPSComoving)
+    psi′ = MPSComoving(psi.left,one(a) .* psi.middle, psi.right,psi.centerpos)
+    return lmul!(a, psi′)
+end
+
+function TensorKit.lmul!(a::Number, psi::MPSComoving)
+    lmul!(a, psi.middle[first(psi.centerpos)])
+    return psi
+end
+
+function TensorKit.rmul!(psi::MPSComoving, a::Number)
+    rmul!(psi.middle[first(psi.centerpos)], a)
+    return psi
+end
+
+#=
+    in principle we can take dots between psi1;psi2 when left or right mps differs
+=#
+function TensorKit.dot(psi1::MPSComoving, psi2::MPSComoving)
+    length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
+    psi1.left == psi2.left || throw(ArgumentError("left InfiniteMPS is different"))
+    psi1.right == psi2.right || throw(ArgumentError("right InfiniteMPS is different"))
+
+    ρL = _permute_front(psi1[1])' * _permute_front(psi2[1])
+    for k in 2:length(psi1)
+        ρL = transfer_left(ρL, psi2[k], psi1[k])
+    end
+    return tr(ρL)
+end
+
+function TensorKit.norm(psi::MPSComoving)
+    k = first(psi.centerpos)
+    if k == last(psi.centerpos)
+        return norm(psi[k])
+    else
+        _, C = leftorth(psi[k])
+        k += 1
+        while k <= last(psi.centerpos)
+            _, C = leftorth!(_permute_front(C * _permute_tail(psi[k])))
+        end
+        return norm(C)
+    end
+end
+
+TensorKit.normalize!(psi::MPSComoving) = rmul!(psi, 1/norm(psi))
+TensorKit.normalize(psi::MPSComoving) = normalize!(copy(psi))

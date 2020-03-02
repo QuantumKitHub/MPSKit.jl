@@ -29,7 +29,7 @@ end
             delta = max(delta,norm(ov))
 
             state[pos] = vecs[1]
-            state = leftorth(state,pos+1);
+            state = leftorth!(state,pos+1);
         end
 
         for pos=length(state):-1:2
@@ -43,7 +43,7 @@ end
             delta=max(delta,norm(ov))
 
             state[pos] = vecs[1]
-            state = rightorth(state,pos-1)
+            state = rightorth!(state,pos-1)
         end
 
         alg.verbose && @show (iter,delta)
@@ -93,7 +93,6 @@ end
         end
 
         for pos=length(state):-1:2
-            state = rightorth(state,pos)
             @tensor ac2[-1 -2; -3 -4]:=state[pos-1][-1,-2,1]*state[pos][1,-3,-4]
             (eigvals,vecs) =  let state=state,parameters=parameters
                 eigsolve(x->ac2_prime(x,pos-1,state,parameters),ac2,1,:SR,ealg)
@@ -116,5 +115,5 @@ end
         iter += 1
     end
 
-    return rightorth(state),parameters,delta
+    return rightorth!(state),parameters,delta
 end
