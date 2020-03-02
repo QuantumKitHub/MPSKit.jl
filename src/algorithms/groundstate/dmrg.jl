@@ -25,15 +25,11 @@ end
                 end
             end
 
-            newAcenter=vecs[1]
+            @tensor ov[-1,-2,-3]:=vecs[1][-1,-2,-3]-state[pos][-1,-2,-3]*vecs[1][1,2,3]*conj(state[pos][1,2,3])
+            delta = max(delta,norm(ov))
 
-            @tensor ov[-1,-2,-3]:=newAcenter[-1,-2,-3]-state[pos][-1,-2,-3]*newAcenter[1,2,3]*conj(state[pos][1,2,3])
-            newdelta=norm(ov)
-            delta=max(delta,abs(newdelta))
-
-
-            (state[pos],newc)=TensorKit.leftorth!(newAcenter)
-            @tensor state[pos+1][-1 -2;-3]:=newc[-1,1]*state[pos+1][1,-2,-3]
+            state[pos] = vecs[1]
+            state = leftorth(state,pos+1);
         end
 
         for pos=length(state):-1:2
@@ -42,16 +38,12 @@ end
                     ac_prime(x,pos,state,parameters)
                 end
             end
-            newAcenter=vecs[1]
 
-            @tensor ov[-1,-2,-3]:=newAcenter[-1,-2,-3]-state[pos][-1,-2,-3]*newAcenter[1,2,3]*conj(state[pos][1,2,3])
-            newdelta=norm(ov)
-            delta=max(delta,abs(newdelta))
+            @tensor ov[-1,-2,-3]:=vecs[1][-1,-2,-3]-state[pos][-1,-2,-3]*vecs[1][1,2,3]*conj(state[pos][1,2,3])
+            delta=max(delta,norm(ov))
 
-
-            (newc,newar)=TensorKit.rightorth(newAcenter,(1,),(2,3,))
-            state[pos]=permute(newar,(1,2),(3,))
-            @tensor state[pos-1][-1 -2;-3]:=state[pos-1][-1,-2,1]*newc[1,-3]
+            state[pos] = vecs[1]
+            state = rightorth(state,pos-1)
         end
 
         alg.verbose && @show (iter,delta)
@@ -97,9 +89,11 @@ end
             delta = max(delta,abs(newdelta))
             state[pos] = al
             @tensor state[pos+1][-1 -2 ; -3]:=c[-1,1]*ar[1,-2,-3]
+
         end
 
         for pos=length(state):-1:2
+            state = rightorth(state,pos)
             @tensor ac2[-1 -2; -3 -4]:=state[pos-1][-1,-2,1]*state[pos][1,-3,-4]
             (eigvals,vecs) =  let state=state,parameters=parameters
                 eigsolve(x->ac2_prime(x,pos-1,state,parameters),ac2,1,:SR,ealg)
@@ -122,5 +116,5 @@ end
         iter += 1
     end
 
-    return state,parameters,delta
+    return rightorth(state),parameters,delta
 end
