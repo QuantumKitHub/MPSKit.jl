@@ -3,7 +3,7 @@
 
     muteable window of tensors on top of an infinite chain
 "
-mutable struct MPSComoving{Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor}
+mutable struct MPSComoving{Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} <: AbstractMPS
     left_gs::InfiniteMPS{Mtype,Vtype}
     middle::Array{Mtype,1}
     right_gs::InfiniteMPS{Mtype,Vtype}
