@@ -163,6 +163,7 @@ function TensorKit.norm(psi::MPSComoving)
         k += 1
         while k <= last(psi.centerpos)
             _, C = leftorth!(_permute_front(C * _permute_tail(psi[k])))
+            k += 1
         end
         return norm(C)
     end

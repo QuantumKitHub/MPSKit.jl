@@ -40,7 +40,7 @@ end
 
 #assumes right orthonormalization, will partly overwrite things in state
 @bm function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp,pars=params(state,H))
-    state = rightorth(state,normalize=false)
+    state = rightorth!(state,normalize=false)
 
     #left to right
     for i in 1:(length(state)-1)
@@ -143,7 +143,7 @@ end
 
 #twosite tdvp for finite mps
 @bm function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp2,pars=params(state,H);rightorthed=false)
-    state = rightorth(state,normalize=false)
+    state = rightorth!(state,normalize=false)
 
     #left to right
     for i in 1:(length(state)-1)
