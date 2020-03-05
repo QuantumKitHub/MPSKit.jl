@@ -15,21 +15,19 @@ end
     newAs=similar(state.AL)
 
     for loc in 1:length(state)
-        newAcenter = let st=state,pr=parameters
+        (newAcenter,convhist) = let st=state,pr=parameters
             (newAcenter,convhist) = exponentiate(x->ac_prime(x,loc,st,pr) ,-1im*timestep,st.AC[loc],Lanczos(tol=alg.tol))
-            convhist.converged==0 && @info "time evolving ac($loc) failed $(convhist.normres)"
-            newAcenter
         end
+        convhist.converged==0 && @info "time evolving ac($loc) failed $(convhist.normres)"
 
-        newCenter = let st=state,pr=parameters
+        (newCenter,convhist) = let st=state,pr=parameters
             (newCenter,convhist) = exponentiate(x->c_prime(x,loc, st,pr) , -1im*timestep,st.CR[loc],Lanczos(tol=alg.tol))
-            convhist.converged==0 && @info "time evolving c($loc) failed $(convhist.normres)"
-            newCenter
         end
-
+        convhist.converged==0 && @info "time evolving c($loc) failed $(convhist.normres)"
+        
         #find Al that best fits these new Acenter and centers
-        QAc,_ = TensorKit.leftorth!(newAcenter,alg=TensorKit.Polar())
-        Qc,_ = TensorKit.leftorth!(newCenter,alg=TensorKit.Polar())
+        QAc,_ = leftorth!(newAcenter,alg=TensorKit.Polar())
+        Qc,_ = leftorth!(newCenter,alg=TensorKit.Polar())
         @tensor Aleft[-1 -2;-3]:=QAc[-1,-2,1]*conj(Qc[-3,1])
 
         newAs[loc]     = Aleft
@@ -50,7 +48,7 @@ end
         end
 
         #move to the right
-        (state[i],newcenter) = TensorKit.leftorth!(state[i],alg=TensorKit.QRpos());poison!(pars,i);
+        (state[i],newcenter) = leftorth!(state[i],alg=TensorKit.QRpos());poison!(pars,i);
 
         (oldcenter,convhist) = let pars = pars,state = state
             exponentiate(x->c_prime(x,i,state,pars),1im*timestep/2,newcenter,Lanczos(tol=alg.tolgauge))
@@ -73,7 +71,7 @@ end
         end
 
         #in this case we need to split newAcenter in a left gauge fixed part (that will remain at spot i) and a center that will move to the next site
-        (newcenter,ar) = TensorKit.rightorth(state[i],(1,),(2,3,),alg=TensorKit.RQpos())
+        (newcenter,ar) = rightorth!(state[i],(1,),(2,3,),alg=TensorKit.RQpos())
         permute!(state[i],ar,(1,2),(3,));poison!(pars,i);
 
         (oldcenter,convhist) = let pars = pars, state = state
@@ -90,13 +88,15 @@ end
 end
 
 @bm function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp,pars=params(state,H))
+    state = rightorth!(state,normalize=false)
+
     #left to right
     for i in 1:(length(state)-1)
         (state[i],convhist)=  let pars=pars, state = state
             exponentiate(x->ac_prime(x,i,state,pars),-1im*timestep/2,state[i],Lanczos(tol=alg.tolgauge))
         end
 
-        (newal,newcenter) = TensorKit.leftorth(state[i],(1,2,4),(3,),alg=TensorKit.QRpos())
+        (newal,newcenter) = leftorth!(state[i],(1,2,4),(3,),alg=TensorKit.QRpos())
         permute!(state[i],newal,(1,2),(4,3));poison!(pars,i);
 
         (oldcenter,convhist) =  let pars=pars, state = state
@@ -116,7 +116,7 @@ end
             exponentiate(x->ac_prime(x,i,state,pars),-1im*timestep/2,state[i],Lanczos(tol=alg.tolgauge))
         end
 
-        (newcenter,ar) = TensorKit.rightorth(state[i],(1,),(2,3,4),alg=TensorKit.RQpos())
+        (newcenter,ar) = rightorth!(state[i],(1,),(2,3,4),alg=TensorKit.RQpos())
 
         permute!(state[i],ar,(1,2),(3,4));poison!(pars,i);
 

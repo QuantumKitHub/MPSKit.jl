@@ -24,9 +24,7 @@ end
                     ac_prime(x,pos,state,parameters)
                 end
             end
-
-            @tensor ov[-1,-2,-3]:=vecs[1][-1,-2,-3]-state[pos][-1,-2,-3]*vecs[1][1,2,3]*conj(state[pos][1,2,3])
-            delta = max(delta,norm(ov))
+            delta = max(delta,1-abs(dot(state[pos],vecs[1])))
 
             state[pos] = vecs[1]
             state = leftorth!(state,pos+1);
@@ -39,8 +37,7 @@ end
                 end
             end
 
-            @tensor ov[-1,-2,-3]:=vecs[1][-1,-2,-3]-state[pos][-1,-2,-3]*vecs[1][1,2,3]*conj(state[pos][1,2,3])
-            delta=max(delta,norm(ov))
+            delta = max(delta,1-abs(dot(state[pos],vecs[1])))
 
             state[pos] = vecs[1]
             state = rightorth!(state,pos-1)
