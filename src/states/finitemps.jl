@@ -64,6 +64,20 @@ end
 
 Base.copy(psi::FiniteMPS) = FiniteMPS(map(copy, psi.tensors), psi.centerpos)
 
+function Base.getproperty(psi::FiniteMPS,prop::Symbol)
+    if prop == :AL
+        return ALView(psi)
+    elseif prop == :AR
+        return ARView(psi)
+    elseif prop == :AC
+        return ACView(psi)
+    elseif prop == :CR
+        return CRView(psi)
+    else
+        return getfield(psi,prop)
+    end
+end
+
 Base.@propagate_inbounds Base.getindex(psi::FiniteMPS, args...) =
     getindex(psi.tensors, args...)
 Base.@propagate_inbounds Base.setindex!(psi::FiniteMPS, args...) =

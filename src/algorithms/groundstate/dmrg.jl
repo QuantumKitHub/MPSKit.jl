@@ -20,27 +20,25 @@ end
 
         for pos=1:(length(state)-1)
             (eigvals,vecs) =  let state = state,parameters = parameters
-                eigsolve(state[pos],1,:SR,Lanczos()) do x
+                eigsolve(state.AC[pos],1,:SR,Lanczos()) do x
                     ac_prime(x,pos,state,parameters)
                 end
             end
-            delta = max(delta,1-abs(dot(state[pos],vecs[1])))
+            delta = max(delta,1-abs(dot(state.AC[pos],vecs[1])))
 
-            state[pos] = vecs[1]
-            state = leftorth!(state,pos+1);
+            state.AC[pos] = vecs[1]
         end
 
         for pos=length(state):-1:2
             (eigvals,vecs) =  let state = state,parameters = parameters
-                eigsolve(state[pos],1,:SR,Lanczos()) do x
+                eigsolve(state.AC[pos],1,:SR,Lanczos()) do x
                     ac_prime(x,pos,state,parameters)
                 end
             end
 
-            delta = max(delta,1-abs(dot(state[pos],vecs[1])))
+            delta = max(delta,1-abs(dot(state.AC[pos],vecs[1])))
 
-            state[pos] = vecs[1]
-            state = rightorth!(state,pos-1)
+            state.AC[pos] = vecs[1]
         end
 
         alg.verbose && @show (iter,delta)

@@ -54,29 +54,23 @@ function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Op
     #but "optimal vectors" at site i+1
     #so during optimization of site i, you have access to these optimal vectors :)
 
-    state = rightorth(state);
-
     for i in 1:(length(state)-1)
-        @tensor ACAR[-1 -2;-3 -4]:=state[i][-1,-2,1]*state[i+1][1,-3,-4]
-        AC2=ac2_prime(ACAR,i,state,pars)
+        @tensor ACAR[-1 -2;-3 -4]:=state.AC[i][-1,-2,1]*state.AR[i+1][1,-3,-4]
+        AC2 = ac2_prime(ACAR,i,state,pars)
 
         #Calculate nullspaces for left and right
-        NL = leftnull(state[i],(1,2),(3,))
-        NR = rightnull(state[i+1],(1,),(2,3))
+        NL = leftnull(state.AC[i],(1,2),(3,))
+        NR = rightnull(state.AR[i+1],(1,),(2,3))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         @tensor intermediate[-1;-2]:=conj(NL[1,2,-1])*AC2[1,2,3,4]*conj(NR[-2,3,4])
         (U,S,V) = tsvd(intermediate,trunc=alg.trscheme,alg=TensorKit.SVD())
 
         @tensor ar_re[-1;-2 -3]:=V[-1,1]*NR[1,-2,-3]
-        state[i+1]=permute(TensorKit.catcodomain(permute(state[i+1],(1,),(2,3)),ar_re),(1,2),(3,))
+        state.AR[i+1]=permute(TensorKit.catcodomain(permute(state[i+1],(1,),(2,3)),ar_re),(1,2),(3,))
         ar_le=TensorMap(zeros,space(state[i],1)*space(state[i],2),space(V,1))
-        state[i]=TensorKit.catdomain(state[i],ar_le)
-
-        (state[i],C)=TensorKit.leftorth(state[i],(1,2),(3,))
-        @tensor state[i+1][-1 -2;-3] := C[-1,1]*state[i+1][1,-2,-3]
+        state.AC[i]=TensorKit.catdomain(state[i],ar_le)
     end
 
-    state = rightorth(state)
     return state,pars
 end
