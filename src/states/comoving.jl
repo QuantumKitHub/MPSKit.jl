@@ -5,7 +5,7 @@
 "
 mutable struct MPSComoving{Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} <: AbstractMPS
     left_gs::InfiniteMPS{Mtype,Vtype}
-    middle::Array{Mtype,1}
+    tensors::Array{Mtype,1}
     right_gs::InfiniteMPS{Mtype,Vtype}
     centerpos::UnitRange{Int} # range of tensors which are not left or right normalized
 
@@ -19,11 +19,12 @@ MPSComoving(left::InfiniteMPS{Mtype,Vtype},middle::Array{Mtype,1},right::Infinit
 Base.copy(state::MPSComoving) = MPSComoving(state.left_gs,map(copy, state.middle),state.right_gs,state.centerpos)
 
 #maybe we should allow getindex outside of middle?
+#=
 Base.@propagate_inbounds Base.getindex(psi::MPSComoving, args...) =
     getindex(psi.middle, args...)
 Base.@propagate_inbounds Base.setindex!(psi::MPSComoving, args...) =
     setindex!(psi.middle, args...)
-
+=#
 Base.length(state::MPSComoving)=length(state.middle)
 Base.size(psi::MPSComoving, i...) = size(psi.middle, i...)
 Base.firstindex(psi::MPSComoving, i...) = firstindex(psi.middle, i...)

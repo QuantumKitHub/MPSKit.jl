@@ -77,12 +77,12 @@ function Base.getproperty(psi::FiniteMPS,prop::Symbol)
         return getfield(psi,prop)
     end
 end
-
+#=
 Base.@propagate_inbounds Base.getindex(psi::FiniteMPS, args...) =
     getindex(psi.tensors, args...)
 Base.@propagate_inbounds Base.setindex!(psi::FiniteMPS, args...) =
     setindex!(psi.tensors, args...)
-
+=#
 Base.length(psi::FiniteMPS) = length(psi.tensors)
 Base.size(psi::FiniteMPS, i...) = size(psi.tensors, i...)
 Base.firstindex(psi::FiniteMPS, i...) = firstindex(psi.tensors, i...)

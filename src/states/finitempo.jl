@@ -76,12 +76,12 @@ function FiniteMPO(f,
 end
 
 Base.copy(psi::FiniteMPO) = FiniteMPO(map(copy, psi.tensors), psi.centerpos)
-
+#=
 Base.@propagate_inbounds Base.getindex(psi::FiniteMPO, args...) =
     getindex(psi.tensors, args...)
 Base.@propagate_inbounds Base.setindex!(psi::FiniteMPO, args...) =
     setindex!(psi.tensors, args...)
-
+=#
 Base.length(psi::FiniteMPO) = length(psi.tensors)
 Base.size(psi::FiniteMPO, i...) = size(psi.tensors, i...)
 Base.firstindex(psi::FiniteMPO, i...) = firstindex(psi.tensors, i...)
