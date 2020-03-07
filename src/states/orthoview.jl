@@ -116,3 +116,10 @@ function Base.setindex!(v::CRView,vec,i::Int)
     v.parent.tensors[i] = AL*vec
     v.parent.centerpos = i:i
 end
+
+Base.firstindex(psi::Union{AView,ACView,ALView,ARView,CRView}, i...) = firstindex(psi.parent.tensors, i...)
+Base.lastindex(psi::Union{AView,ACView,ALView,ARView,CRView}, i...) = lastindex(psi.parent.tensors, i...)
+
+Base.iterate(psi::Union{AView,ACView,ALView,ARView,CRView}, i...) = iterate(psi.parent.tensors, i...)
+Base.IteratorSize(::Type{<:Union{AView,ACView,ALView,ARView,CRView}}) = Base.HasShape{1}()
+Base.IteratorEltype(::Type{<:Union{AView,ACView,ALView,ARView,CRView}}) = Base.HasEltype()
