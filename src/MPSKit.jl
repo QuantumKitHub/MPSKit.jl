@@ -52,8 +52,8 @@ module MPSKit
     include("utility/utility.jl") #random utility functions
 
     #maybe we should introduce an abstract state type
-    include("states/orthoview.jl")
     include("states/abstractmps.jl")
+    include("states/orthoview.jl")
     include("states/transfer.jl") # mps transfer matrices
     include("states/infinitemps.jl")
     include("states/multiline.jl")

@@ -75,6 +75,23 @@ function FiniteMPO(f,
     end
 end
 
+function Base.getproperty(psi::FiniteMPO,prop::Symbol)
+    if prop == :AL
+        return ALView(psi)
+    elseif prop == :AR
+        return ARView(psi)
+    elseif prop == :AC
+        return ACView(psi)
+    elseif prop == :CR
+        return CRView(psi)
+    elseif prop == :A
+        return AView(psi)
+    else
+        return getfield(psi,prop)
+    end
+end
+
+
 Base.copy(psi::FiniteMPO) = FiniteMPO(map(copy, psi.tensors), psi.centerpos)
 #=
 Base.@propagate_inbounds Base.getindex(psi::FiniteMPO, args...) =
@@ -84,23 +101,24 @@ Base.@propagate_inbounds Base.setindex!(psi::FiniteMPO, args...) =
 =#
 Base.length(psi::FiniteMPO) = length(psi.tensors)
 Base.size(psi::FiniteMPO, i...) = size(psi.tensors, i...)
+#=
 Base.firstindex(psi::FiniteMPO, i...) = firstindex(psi.tensors, i...)
 Base.lastindex(psi::FiniteMPO, i...) = lastindex(psi.tensors, i...)
 
 Base.iterate(psi::FiniteMPO, i...) = iterate(psi.tensors, i...)
 Base.IteratorSize(::Type{<:FiniteMPO}) = Base.HasShape{1}()
 Base.IteratorEltype(::Type{<:FiniteMPO}) = Base.HasEltype()
-
+=#
 Base.eltype(::Type{FiniteMPO{A}}) where {A<:MPOTensor} = A
 Base.similar(psi::FiniteMPO) = FiniteMPO(similar.(psi.tensors))
 
-TensorKit.space(psi::FiniteMPO, n::Integer) = space(psi[n], 2)
+TensorKit.space(psi::FiniteMPO, n::Integer) = space(psi.A[n], 2)
 
 virtualspace(psi::FiniteMPO, n::Integer) =
-    n < length(psi) ? space(psi[n+1],1) : dual(space(psi[n],3))
+    n < length(psi) ? space(psi.A[n+1],1) : dual(space(psi.A[n],3))
 
-r_RR(state::FiniteMPO{T}) where T = isomorphism(Matrix{eltype(T)},space(state[end],3)',space(state[end],3)')
-l_LL(state::FiniteMPO{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
+r_RR(state::FiniteMPO{T}) where T = isomorphism(Matrix{eltype(T)},space(state.A[end],3)',space(state.A[end],3)')
+l_LL(state::FiniteMPO{T}) where T = isomorphism(Matrix{eltype(T)},space(state.A[1],1),space(state.A[1],1))
 
 @bm function expectation_value(ts::FiniteMPO,opp::TensorMap)
     #todo : clean this up
@@ -154,10 +172,10 @@ function TensorKit.leftorth!(psi::FiniteMPO, n::Integer = length(psi);
     @assert 1 <= n <= length(psi)
     while first(psi.centerpos) < n
         k = first(psi.centerpos)
-        (AL,C) = leftorth!(permute(psi[k],(1,2,4),(3,));alg=alg)
+        (AL,C) = leftorth!(permute(psi.tensors[k],(1,2,4),(3,));alg=alg)
 
-        psi[k] = permute(AL,(1,2),(4,3))
-        @tensor psi[k+1][-1 -2;-3 -4] := C[-1,1]*psi[k+1][1,-2,-3,-4]
+        psi.tensors[k] = permute(AL,(1,2),(4,3))
+        @tensor psi.tensors[k+1][-1 -2;-3 -4] := C[-1,1]*psi.tensors[k+1][1,-2,-3,-4]
 
         psi.centerpos = k+1:max(k+1,last(psi.centerpos))
     end
@@ -169,9 +187,9 @@ function TensorKit.rightorth!(psi::FiniteMPO, n::Integer = 1;
     @assert 1 <= n <= length(psi)
     while last(psi.centerpos) > n
         k = last(psi.centerpos)
-        C, AR = rightorth!(permute(psi[k],(1,),(2,3,4)); alg = alg)
-        psi[k] = permute(AR,(1,2),(3,4))
-        @tensor psi[k-1][-1 -2;-3 -4] := psi[k-1][-1,-2,1,-4]*C[1,-3]
+        C, AR = rightorth!(permute(psi.tensors[k],(1,),(2,3,4)); alg = alg)
+        psi.tensors[k] = permute(AR,(1,2),(3,4))
+        @tensor psi.tensors[k-1][-1 -2;-3 -4] := psi.tensors[k-1][-1,-2,1,-4]*C[1,-3]
         psi.centerpos = min(first(psi.centerpos), k-1):k-1
     end
     return normalize ? normalize!(psi) : psi
@@ -201,9 +219,9 @@ end
 function TensorKit.dot(psi1::FiniteMPO, psi2::FiniteMPO)
     length(psi1) == length(psi2) || throw(ArgumentError("MPO with different length"))
 
-    @tensor ρL[-1;-2] := psi2[1][1,2,-2,3]*conj(psi1[1][1,2,-1,3])
+    @tensor ρL[-1;-2] := psi2.A[1][1,2,-2,3]*conj(psi1.A[1][1,2,-1,3])
     for k in 2:length(psi1)
-        ρL = transfer_left(ρL, psi2[k], psi1[k])
+        ρL = transfer_left(ρL, psi2.A[k], psi1.A[k])
     end
     return tr(ρL)
 end
@@ -216,12 +234,12 @@ function TensorKit.norm(psi::FiniteMPO)
 
     k = first(psi.centerpos)
     if k == last(psi.centerpos)
-        return norm(psi[k])
+        return norm(psi.A[k])
     else
-        _, C = leftorth!(permute(psi[k],(1,2,4),(3,)))
+        _, C = leftorth!(permute(psi.A[k],(1,2,4),(3,)))
         k += 1
         while k <= last(psi.centerpos)
-            _, C = leftorth!(permute(C * _permute_tail(psi[k]),(1,2,4),(3,)))
+            _, C = leftorth!(permute(C * _permute_tail(psi.A[k]),(1,2,4),(3,)))
             k += 1
         end
         return norm(C)

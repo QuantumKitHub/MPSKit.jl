@@ -9,40 +9,59 @@ mutable struct MPSComoving{Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} <: Abst
     right_gs::InfiniteMPS{Mtype,Vtype}
     centerpos::UnitRange{Int} # range of tensors which are not left or right normalized
 
-    function MPSComoving(left::InfiniteMPS{Mtype,Vtype},middle::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype},centerpos::UnitRange{Int}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor}
-        return new{Mtype,Vtype}(left, middle, right, centerpos)
+    function MPSComoving(left::InfiniteMPS{Mtype,Vtype},tensors::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype},centerpos::UnitRange{Int}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor}
+        return new{Mtype,Vtype}(left, tensors, right, centerpos)
     end
 end
 
-MPSComoving(left::InfiniteMPS{Mtype,Vtype},middle::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = MPSComoving(left,middle,right,1:length(middle))
+MPSComoving(left::InfiniteMPS{Mtype,Vtype},tensors::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = MPSComoving(left,tensors,right,1:length(tensors))
 
-Base.copy(state::MPSComoving) = MPSComoving(state.left_gs,map(copy, state.middle),state.right_gs,state.centerpos)
+Base.copy(state::MPSComoving) = MPSComoving(state.left_gs,map(copy, state.tensors),state.right_gs,state.centerpos)
 
-#maybe we should allow getindex outside of middle?
+#maybe we should allow getindex outside of tensors?
 #=
 Base.@propagate_inbounds Base.getindex(psi::MPSComoving, args...) =
-    getindex(psi.middle, args...)
+    getindex(psi.tensors, args...)
 Base.@propagate_inbounds Base.setindex!(psi::MPSComoving, args...) =
-    setindex!(psi.middle, args...)
+    setindex!(psi.tensors, args...)
 =#
-Base.length(state::MPSComoving)=length(state.middle)
-Base.size(psi::MPSComoving, i...) = size(psi.middle, i...)
-Base.firstindex(psi::MPSComoving, i...) = firstindex(psi.middle, i...)
-Base.lastindex(psi::MPSComoving, i...) = lastindex(psi.middle, i...)
-Base.iterate(psi::MPSComoving, i...) = iterate(psi.middle, i...)
+Base.length(state::MPSComoving)=length(state.tensors)
+Base.size(psi::MPSComoving, i...) = size(psi.tensors, i...)
+#=
+Base.firstindex(psi::MPSComoving, i...) = firstindex(psi.tensors, i...)
+Base.lastindex(psi::MPSComoving, i...) = lastindex(psi.tensors, i...)
+Base.iterate(psi::MPSComoving, i...) = iterate(psi.tensors, i...)
 
 Base.IteratorSize(::Type{<:MPSComoving}) = Base.HasShape{1}()
 Base.IteratorEltype(::Type{<:MPSComoving}) = Base.HasEltype()
+=#
 Base.eltype(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 Base.similar(psi::MPSComoving) = MPSComoving(psi.left_gs,similar.(psi.tensors),psi.right_gs)
 
-TensorKit.space(psi::MPSComoving{<:MPSTensor}, n::Integer) = space(psi[n], 2)
+TensorKit.space(psi::MPSComoving{<:MPSTensor}, n::Integer) = space(psi.A[n], 2)
 virtualspace(psi::MPSComoving, n::Integer) =
-    n < length(psi) ? _firstspace(psi[n+1]) : dual(_lastspace(psi[n]))
+    n < length(psi) ? _firstspace(psi.A[n+1]) : dual(_lastspace(psi.A[n]))
 
 
 r_RR(state::MPSComoving)=r_RR(state.right_gs,length(state))
 l_LL(state::MPSComoving)=l_LL(state.left_gs,1)
+
+function Base.getproperty(psi::MPSComoving,prop::Symbol)
+    if prop == :AL
+        return ALView(psi)
+    elseif prop == :AR
+        return ARView(psi)
+    elseif prop == :AC
+        return ACView(psi)
+    elseif prop == :CR
+        return CRView(psi)
+    elseif prop == :A
+        return AView(psi)
+    else
+        return getfield(psi,prop)
+    end
+end
+
 
 #we need the ability to copy the data from one mpscomoving into another mpscomoving
 function Base.copyto!(st1::MPSComoving,st2::MPSComoving)
@@ -98,9 +117,9 @@ function TensorKit.leftorth!(psi::MPSComoving, n::Integer = length(psi);
     @assert 1 <= n <= length(psi)
     while first(psi.centerpos) < n
         k = first(psi.centerpos)
-        AL, C = leftorth!(psi[k]; alg = alg)
-        psi[k] = AL
-        psi[k+1] = _permute_front(C*_permute_tail(psi[k+1]))
+        AL, C = leftorth!(psi.tensors[k]; alg = alg)
+        psi.tensors[k] = AL
+        psi.tensors[k+1] = _permute_front(C*_permute_tail(psi.tensors[k+1]))
         psi.centerpos = k+1:max(k+1,last(psi.centerpos))
     end
     return normalize ? normalize!(psi) : psi
@@ -111,9 +130,9 @@ function TensorKit.rightorth!(psi::MPSComoving, n::Integer = 1;
     @assert 1 <= n <= length(psi)
     while last(psi.centerpos) > n
         k = last(psi.centerpos)
-        C, AR = rightorth!(_permute_tail(psi[k]); alg = alg)
-        psi[k] = _permute_front(AR)
-        psi[k-1] = psi[k-1]*C
+        C, AR = rightorth!(_permute_tail(psi.tensors[k]); alg = alg)
+        psi.tensors[k] = _permute_front(AR)
+        psi.tensors[k-1] = psi.tensors[k-1]*C
         psi.centerpos = min(first(psi.centerpos), k-1):k-1
     end
     return normalize ? normalize!(psi) : psi
@@ -121,22 +140,22 @@ end
 
 
 function Base.:*(psi::MPSComoving, a::Number)
-    psi′ = MPSComoving(psi.left,psi.middle .* one(a) ,psi.right, psi.centerpos)
+    psi′ = MPSComoving(psi.left,psi.tensors .* one(a) ,psi.right, psi.centerpos)
     return rmul!(psi′, a)
 end
 
 function Base.:*(a::Number, psi::MPSComoving)
-    psi′ = MPSComoving(psi.left,one(a) .* psi.middle, psi.right,psi.centerpos)
+    psi′ = MPSComoving(psi.left,one(a) .* psi.tensors, psi.right,psi.centerpos)
     return lmul!(a, psi′)
 end
 
 function TensorKit.lmul!(a::Number, psi::MPSComoving)
-    lmul!(a, psi.middle[first(psi.centerpos)])
+    lmul!(a, psi.tensors[first(psi.centerpos)])
     return psi
 end
 
 function TensorKit.rmul!(psi::MPSComoving, a::Number)
-    rmul!(psi.middle[first(psi.centerpos)], a)
+    rmul!(psi.tensors[first(psi.centerpos)], a)
     return psi
 end
 
@@ -148,9 +167,9 @@ function TensorKit.dot(psi1::MPSComoving, psi2::MPSComoving)
     psi1.left == psi2.left || throw(ArgumentError("left InfiniteMPS is different"))
     psi1.right == psi2.right || throw(ArgumentError("right InfiniteMPS is different"))
 
-    ρL = _permute_front(psi1[1])' * _permute_front(psi2[1])
+    ρL = _permute_front(psi1.A[1])' * _permute_front(psi2.A[1])
     for k in 2:length(psi1)
-        ρL = transfer_left(ρL, psi2[k], psi1[k])
+        ρL = transfer_left(ρL, psi2.A[k], psi1.A[k])
     end
     return tr(ρL)
 end
@@ -158,12 +177,12 @@ end
 function TensorKit.norm(psi::MPSComoving)
     k = first(psi.centerpos)
     if k == last(psi.centerpos)
-        return norm(psi[k])
+        return norm(psi.A[k])
     else
-        _, C = leftorth(psi[k])
+        _, C = leftorth(psi.A[k])
         k += 1
         while k <= last(psi.centerpos)
-            _, C = leftorth!(_permute_front(C * _permute_tail(psi[k])))
+            _, C = leftorth!(_permute_front(C * _permute_tail(psi.A[k])))
             k += 1
         end
         return norm(C)
