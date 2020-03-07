@@ -1,73 +1,73 @@
 struct ACView{S}
-    target::S
+    parent::S
 end
 
 function Base.getindex(v::ACView,i::Int)
-    leftorth!(v.target,i,normalize=false)
-    rightorth!(v.target,i,normalize=false)
+    leftorth!(v.parent,i,normalize=false)
+    rightorth!(v.parent,i,normalize=false)
 
-    return v.target[i]
+    return v.parent[i]
 end
 
 function Base.setindex!(v::ACView,vec,i::Int)
-    leftorth!(v.target,i,normalize=false)
-    rightorth!(v.target,i,normalize=false)
+    leftorth!(v.parent,i,normalize=false)
+    rightorth!(v.parent,i,normalize=false)
 
-    v.target[i] = vec
+    v.parent[i] = vec
 end
 
 struct ALView{S}
-    target::S
+    parent::S
 end
 
 function Base.getindex(v::ALView,i::Int)
-    i == length(v.target) && throw(ArgumentError("out of bounds"))
-    leftorth!(v.target,i+1,normalize = false);
+    i == length(v.parent) && throw(ArgumentError("out of bounds"))
+    leftorth!(v.parent,i+1,normalize = false);
 
-    v.target[i]
+    v.parent[i]
 end
 
 function Base.setindex!(v::ALView,vec,i::Int)
-    i == length(v.target) && throw(ArgumentError("out of bounds"))
-    leftorth!(v.target,i+1,normalize = false);
+    i == length(v.parent) && throw(ArgumentError("out of bounds"))
+    leftorth!(v.parent,i+1,normalize = false);
 
-    v.target[i] = vec
+    v.parent[i] = vec
 end
 
 struct ARView{S}
-    target::S
+    parent::S
 end
 
 function Base.getindex(v::ARView,i::Int)
     i == 1 && throw(ArgumentError("out of bounds"))
-    rightorth!(v.target,i-1,normalize = false);
+    rightorth!(v.parent,i-1,normalize = false);
 
-    v.target[i]
+    v.parent[i]
 end
 
 function Base.setindex!(v::ARView,vec,i::Int)
     i == 1 && throw(ArgumentError("out of bounds"))
-    rightorth!(v.target,i-1,normalize = false);
+    rightorth!(v.parent,i-1,normalize = false);
 
-    v.target[i] = vec
+    v.parent[i] = vec
 end
 
 
 struct CRView{S}
-    target::S
+    parent::S
 end
 
 function Base.getindex(v::CRView,i::Int)
-    leftorth!(v.target,i,normalize=false)
-    rightorth!(v.target,i,normalize=false)
-    (AL,C) = leftorth(v.target[i]);
+    leftorth!(v.parent,i,normalize=false)
+    rightorth!(v.parent,i,normalize=false)
+    (AL,C) = leftorth(v.parent[i]);
     C
 end
 
 function Base.setindex!(v::CRView,vec,i::Int)
-    leftorth!(v.target,i,normalize=false)
-    rightorth!(v.target,i,normalize=false)
-    (AL,C) = leftorth(v.target[i]);
+    leftorth!(v.parent,i,normalize=false)
+    rightorth!(v.parent,i,normalize=false)
+    (AL,C) = leftorth(v.parent[i]);
 
-    v.target[i] = AL*vec
+    v.parent[i] = AL*vec
 end
