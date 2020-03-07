@@ -37,20 +37,21 @@ https://arxiv.org/pdf/cond-mat/0203500.pdf
 @bm function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;init=copy(A),solvtol=Defaults.tol,tol=solvtol*length(A)*2,maxiter=Defaults.maxiter,verbose=Defaults.verbose)
     len=length(A)
 
-    A=rightorth(A);init=rightorth(init)
+    #A=rightorth(A);init=rightorth(init)
     w=real(z);eta=imag(z)
 
     pars1=params(init,ham)
     (ham2,pars2)=squaredenvs(init,ham,pars1)
 
     #environments for <init | A>
-    mixedlenvs=[]
-    mixedrenvs=[]
-    push!(mixedlenvs,isomorphism(space(A[1],1),space(A[1],1)))
-    push!(mixedrenvs,isomorphism(space(A[len],3)',space(A[len],3)'))
+    mixedlenvs=[complex(isomorphism(space(A.AL[1],1),space(A.AL[1],1)))]
     for i in 1:length(A)
-        push!(mixedlenvs,transfer_left(mixedlenvs[end],A[i],init[i]))
-        push!(mixedrenvs,transfer_right(mixedrenvs[end],A[len-i+1],init[len-i+1]))
+        push!(mixedlenvs,transfer_left(mixedlenvs[end],A.AL[i],init.AL[i]))
+    end
+
+    mixedrenvs=[complex(isomorphism(space(A.AR[len],3)',space(A.AR[len],3)'))]
+    for i in 1:length(A)
+        push!(mixedrenvs,transfer_right(mixedrenvs[end],A.AR[len-i+1],init.AR[len-i+1]))
     end
     mixedrenvs=reverse(mixedrenvs)
 
@@ -64,69 +65,51 @@ https://arxiv.org/pdf/cond-mat/0203500.pdf
         for i in 1:(length(A)-1)
 
             #the alternative is using gradient descent, which is at least sure to converge...
-            @tensor tos[-1 -2;-3]:=mixedlenvs[i][-1,1]*A[i][1,-2,2]*mixedrenvs[i+1][2,-3]
+            @tensor tos[-1 -2;-3]:=mixedlenvs[i][-1,1]*A.AC[i][1,-2,2]*mixedrenvs[i+1][2,-3]
 
-            (res,convhist)=linsolve(-eta*tos,init[i],GMRES(tol=solvtol)) do x
+            (res,convhist)=linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
                 y=(eta*eta+w*w)*x
                 y-=2*w*ac_prime(x,i,init,pars1)
                 y+=ac_prime(x,i,init,pars2)
             end
-            delta=max(delta,norm(res-init[i]))
-            init[i]=res
+            delta=max(delta,norm(res-init.AC[i]))
+            init.AC[i]=res
 
             convhist.converged == 0 && @info "r($(i)) failed to converge $(convhist.normres)"
 
-            #move A/init center; update mixed envs
-            (A[i],ac) = leftorth(A[i])
-            (init[i],ic) = leftorth(init[i])
-
-            @tensor A[i+1][-1 -2;-3]:=ac[-1,1]*A[i+1][1,-2,-3]
-            @tensor init[i+1][-1 -2;-3]:=ic[-1,1]*init[i+1][1,-2,-3]
-
-            mixedlenvs[i+1]=transfer_left(mixedlenvs[i],A[i],init[i])
+            mixedlenvs[i+1]=transfer_left(mixedlenvs[i],A.AL[i],init.AL[i])
         end
 
         for i in length(A):-1:2
-            @tensor tos[-1 -2;-3]:=mixedlenvs[i][-1,1]*A[i][1,-2,2]*mixedrenvs[i+1][2,-3]
+            @tensor tos[-1 -2;-3]:=mixedlenvs[i][-1,1]*A.AC[i][1,-2,2]*mixedrenvs[i+1][2,-3]
 
-            (res,convhist)=linsolve(-eta*tos,init[i],GMRES(tol=solvtol)) do x
+            (res,convhist)=linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
                 y=(eta*eta+w*w)*x
                 y-=2*w*ac_prime(x,i,init,pars1)
                 y+=ac_prime(x,i,init,pars2)
             end
 
-            delta=max(delta,norm(res-init[i]))
-            init[i]=res
+            delta=max(delta,norm(res-init.AC[i]))
+            init.AC[i]=res
 
             convhist.converged == 0 && @info "l($(i)) failed to converge $(convhist.normres)"
 
-            #move A/init center; update mixed envs
-            (ac,ta) = rightorth(A[i],(1,),(2,3))
-            (ic,ti) = rightorth(init[i],(1,),(2,3))
-
-            A[i] = permute(ta,(1,2),(3,))
-            init[i] = permute(ti,(1,2),(3,))
-
-            A[i-1] = A[i-1]*ac
-            init[i-1] = init[i-1]*ic
-
-
-            mixedrenvs[i]=transfer_right(mixedrenvs[i+1],A[i],init[i])
+            mixedrenvs[i]=transfer_right(mixedrenvs[i+1],A.AR[i],init.AR[i])
         end
 
         verbose && println("ddmrg sweep delta : $(delta)")
     end
 
-    a = @tensor mixedlenvs[1][1,2]*A[1][2,3,4]*mixedrenvs[2][4,5]*conj(init[1][1,3,5])
+    a = @tensor mixedlenvs[1][1,2]*A.AC[1][2,3,4]*mixedrenvs[2][4,5]*conj(init.AC[1][1,3,5])
     a = a';
     cb = leftenv(pars1,1,A);
     for i in 1:length(A)
-        cb = transfer_left(cb,ham,i,init[i],A[i]);
+        cb = transfer_left(cb,ham,i,init.AL[i],A.AL[i]);
     end
 
     b = 0*a
     for i in 1:length(cb)
-        b+=@tensor cb[i][1,2,3]*rightenv(pars1,length(A),A)[i][3,2,1];
+        b+=@tensor cb[i][1,2,3]*A.CR[len][3,4]*rightenv(pars1,length(A),A)[i][4,2,5]*conj(init.CR[len][1,5]);
     end
 
     v = b/eta-w/eta*a+1im*a

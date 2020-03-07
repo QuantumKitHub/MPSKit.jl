@@ -34,7 +34,7 @@ println("------------------------------------")
 
     @test ovl2+ovl ≈ dot(ts,ts3)
 end
-#=
+
 @testset "InfiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
         (ComplexSpace(10),ComplexSpace(2),ComplexF64),
         (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)
@@ -85,7 +85,7 @@ end
         @test transfer_right(r_RR(ts,i,j),ts.AR[i,j],ts.AR[i,j]) ≈ r_RR(ts,i,j+1)
     end
 end
-
+#=
 @testset "FiniteMPO $sp" for sp in [1//2,8//2]
     (sx,sy,sz,id) = nonsym_spintensors(sp);
     ps = space(sx,1);
@@ -96,6 +96,7 @@ end
     @test sum(expectation_value(state,sz)) ≈ 0 atol = 1e-3
 end
 =#
+
 @testset "MPSComoving" begin
     ham = nonsym_ising_ham(lambda=4.0);
     (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
@@ -119,7 +120,6 @@ end
     @test e1[1] ≈ e3[1]
     @test e1[2] ≈ e3[2]
 end
-#=
 
 println("------------------------------------")
 println("|     Operators                    |")
@@ -149,7 +149,7 @@ println("------------------------------------")
     v = expectation_value(ts,th*th);
     @test real(v[1])>=0;
 end
-
+#=
 @testset "comact $(i)" for (i,th) in enumerate([
         nonsym_ising_ham(),
         u1_xxz_ham(),
@@ -181,7 +181,7 @@ end
     e5 = expectation_value(ts,anticommutator(th)-diff);
     @test sum([e1[j]-diff[mod1(j,end)] for j in 1:len])≈sum(e5);
 end
-
+=#
 println("------------------------------------")
 println("|     Algorithms                   |")
 println("------------------------------------")
@@ -205,9 +205,9 @@ println("------------------------------------")
 end
 
 @testset "timestep $(ind)" for (ind,(state,alg,opp)) in enumerate([
-    (FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),5)),Tdvp(),commutator(nonsym_xxz_ham(spin=1//2))),
+    #=(FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),5)),Tdvp(),commutator(nonsym_xxz_ham(spin=1//2))),
     (FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),7)),Tdvp2(),anticommutator(nonsym_xxz_ham(spin=1//2))),
-    (InfiniteMPS([ℂ^3,ℂ^3],[ℂ^50,ℂ^50]),Tdvp(),repeat(nonsym_xxz_ham(spin=1),2))
+    =#(InfiniteMPS([ℂ^3,ℂ^3],[ℂ^50,ℂ^50]),Tdvp(),repeat(nonsym_xxz_ham(spin=1),2))
     ])
 
     edens = expectation_value(state,opp);
@@ -273,4 +273,3 @@ end
 
     @test exact ≈ aprox atol=1e-2
 end
-=#

@@ -5,42 +5,22 @@ end
 
 #implemented for GenericMPSTensor (wanted to use it in peps code)
 function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::RandExpand) where T<:GenericMPSTensor{Sp,N} where {Sp,N}
-    lmax = zeros(length(state)+1)
-    lmax[1] = dim(space(state[1],1))
-    for i in 1:length(state)
-        lmax[i+1]=dim(codomain(state[i]))*lmax[i]
-    end
-
-    rmax = ones(length(state)+1)
-    rmax[end] = dim(space(state[length(state)],N+1))
-    for i in length(state):-1:1
-        rmax[i]=prod([dim(space(state[i],j)) for j in 2:N+1])*rmax[i+1]
-    end
-
-    minc = [minimum(z) for z in zip(lmax,rmax)][2:end]
-
+    minc = max_Ds(state)
 
     for i in 1:(length(state)-1)
-        ninc = min(minc[i]-dim(space(state[i+1],N+1)),alg.numvecs) #the amount increased is the minimum of what is asked, and what is physically possible
-        if ninc < 1
-            continue
-        end
+        ninc = min(minc[i+1]-dim(space(state[i+1],N+1)),alg.numvecs) #the amount increased is the minimum of what is asked, and what is physically possible
+        ninc < 1 && continue
 
-        Vi=[TensorMap(rand,eltype(state[i+1]),oneunit(space(state[i+1],1)),prod([space(state[i+1],d)' for d in 2:N+1])) for j in 1:ninc]
-
+        Vi=[TensorMap(rand,eltype(eltype(state)),oneunit(space(state.A[i+1],1)),prod([space(state.A[i+1],d)' for d in 2:N+1])) for j in 1:ninc]
         ar_re = reduce(TensorKit.catcodomain,Vi)
 
-        state[i+1]=permute(TensorKit.catcodomain(permute(state[i+1],(1,),ntuple(x->x+1,Val{N}())),ar_re),ntuple(x->x,Val{N}()),(N+1,))
+        state.AR[i+1] = _permute_front(TensorKit.catcodomain(_permute_tail(state.AR[i+1]),ar_re))
 
-        ar_le=TensorMap(zeros,codomain(state[i]),space(ar_re,1))
-        state[i]=TensorKit.catdomain(state[i],ar_le)
-
-        (state[i],C)=TensorKit.leftorth!(state[i])
-        state[i+1] = permute(C*permute(state[i+1],(1,),ntuple(x->x+1,Val{N}())),ntuple(x->x,Val{N}()),(N+1,))
-        #@tensor state[i+1][-1 -2;-3] := C[-1,1]*state[i+1][1,-2,-3]
+        ar_le = TensorMap(zeros,codomain(state.AC[i]),space(ar_re,1))
+        state.AC[i] = TensorKit.catdomain(state.AC[i],ar_le)
     end
 
-    state = rightorth(state; normalize=false)
+    return state
 end
 function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::RandExpand,pars=params(state,H))
     newstate = changebonds(state,alg);

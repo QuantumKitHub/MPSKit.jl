@@ -20,7 +20,7 @@ function SimpleManager(maxD::Int,A::Algorithm = OptimalExpand())
             if isa(state,InfiniteMPS)
                 bigenough = bigenough && (dim(space(state.AR[i],3))>=maxD)
             elseif isa(state,FiniteMPS) || isa(state,MPSComoving) || isa(state,FiniteMPO)
-                bigenough = bigenough && (dim(space(state[i],3))>=maxD || upperbound[i+1] == dim(space(state[i],3)))
+                bigenough = bigenough && (dim(space(state.A[i],3))>=maxD || upperbound[i+1] == dim(space(state.A[i],3)))
             else
                 @assert false
             end

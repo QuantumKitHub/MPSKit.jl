@@ -101,10 +101,10 @@ end
 
 #rightenv[ind] will be contracteable with the tensor on site [ind]
 function rightenv(ca::FinEnv,ind,state)
-    a = findfirst(i -> !(state.AR[i] === ca.rdependencies[i]), length(state):-1:1)
+    a = findfirst(i -> !(state.AR[i] === ca.rdependencies[i]), length(state):-1:(ind+1))
     a = a == nothing ? nothing : length(state)-a+1
 
-    if a != nothing && a > ind
+    if a != nothing
         #we need to recalculate
         for j = a:-1:ind+1
             ca.rightenvs[j] = transfer_right(ca.rightenvs[j+1],ca.opp,j,state.AR[j])
@@ -116,9 +116,9 @@ function rightenv(ca::FinEnv,ind,state)
 end
 
 function leftenv(ca::FinEnv,ind,state)
-    a = findfirst(i -> !(state.AL[i] === ca.ldependencies[i]), 1:length(state))
+    a = findfirst(i -> !(state.AL[i] === ca.ldependencies[i]), 1:(ind-1))
 
-    if a != nothing && a < ind
+    if a != nothing
         #we need to recalculate
         for j = a:ind-1
             ca.leftenvs[j+1] = transfer_left(ca.leftenvs[j],ca.opp,j,state.AL[j])

@@ -245,12 +245,12 @@ TensorKit.normalize(psi::FiniteMPS) = normalize!(copy(psi))
 function max_Ds(f::FiniteMPS{G}) where G<:GenericMPSTensor{S,N} where {S,N}
     Ds = [1 for v in 1:length(f)+1];
     for i in 1:length(f)
-        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}())))
+        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}())))
     end
 
     Ds[end] = 1;
     for i in length(f):-1:1
-        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}()))))
+        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}()))))
     end
     Ds
 end

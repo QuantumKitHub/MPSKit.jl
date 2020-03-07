@@ -141,14 +141,23 @@ end
 
     tot = 0.0+0im;
     for i in 1:ham.odim
-        tot+=@tensor leftenv(pars,length(state)+1,state)[i][1,2,3]*rightenv(pars,length(state),state)[i][3,2,1]
+        for j in 1:ham.odim
+
+            temp = @tensor  leftenv(pars,length(state),state)[i][1,2,3]*
+                            state.AC[end][3,4,5]*
+                            rightenv(pars,length(state),state)[j][5,6,7]*
+                            ham[length(state),i,j][2,8,6,4]*
+                            conj(state.AC[end][1,8,7])
+
+            tot += temp/norm(state.AC[end]);
+        end
     end
-    n = @tensor leftenv(pars,1,state)[1][1,2,3]*rightenv(pars,0,state)[end][3,2,1]
-    return vals,tot/n;
+
+    return vals,tot;
 end
 @bm expectation_value(state::FiniteMPS,ham::MPOHamiltonian,pars=params(state,ham)) = expectation_value_fimpl(state,ham,pars)
 function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,pars)
-    ens=zeros(eltype(state[1]),length(state))
+    ens=zeros(eltype(eltype(state)),length(state))
     for i=1:length(state)
         for (j,k) in keys(ham,i)
 
@@ -156,7 +165,7 @@ function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHam
                 continue
             end
 
-            cur = @tensor leftenv(pars,i,state)[j][1,2,3]*state[i][3,7,5]*rightenv(pars,i,state)[k][5,8,6]*conj(state[i][1,4,6])*ham[i,j,k][2,4,8,7]
+            cur = @tensor leftenv(pars,i,state)[j][1,2,3]*state.AC[i][3,7,5]*rightenv(pars,i,state)[k][5,8,6]*conj(state.AC[i][1,4,6])*ham[i,j,k][2,4,8,7]
             if !(j==1 && k == ham.odim)
                 cur/=2
             end
@@ -165,7 +174,7 @@ function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHam
         end
     end
 
-    n = @tensor leftenv(pars,1,state)[1][1,2,3]*rightenv(pars,0,state)[end][3,2,1]
+    n = norm(state.AC[end])
     return ens./n;
 end
 
@@ -229,16 +238,16 @@ end
 
             if isbelow(ham,j)
                 cur = @tensor   leftenv(cache,i,state)[j][-1,8,7]*
-                                state[i][7,2,1,-4]*
+                                state.AC[i][7,2,1,-4]*
                                 ham[i,j,k][8,-2,3,2]*
                                 rightenv(cache,i,state)[k][1,3,-3]*
-                                conj(state[i][-1,-2,-3,-4])
+                                conj(state.AC[i][-1,-2,-3,-4])
             else
                 cur = @tensor   leftenv(cache,i,state)[j][-1,6,7]*
-                                state[i][7,-2,2,4]*
+                                state.AC[i][7,-2,2,4]*
                                 ham[i,j,k][6,4,5,-4]*
                                 rightenv(cache,i,state)[k][2,5,-3]*
-                                conj(state[i][-1,-2,-3,-4])
+                                conj(state.AC[i][-1,-2,-3,-4])
             end
 
             if !(cj==1 && ck == c_odim)

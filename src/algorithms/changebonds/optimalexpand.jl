@@ -67,9 +67,9 @@ function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Op
         (U,S,V) = tsvd(intermediate,trunc=alg.trscheme,alg=TensorKit.SVD())
 
         @tensor ar_re[-1;-2 -3]:=V[-1,1]*NR[1,-2,-3]
-        state.AR[i+1]=permute(TensorKit.catcodomain(permute(state[i+1],(1,),(2,3)),ar_re),(1,2),(3,))
-        ar_le=TensorMap(zeros,space(state[i],1)*space(state[i],2),space(V,1))
-        state.AC[i]=TensorKit.catdomain(state[i],ar_le)
+        state.AR[i+1]=permute(TensorKit.catcodomain(permute(state.AR[i+1],(1,),(2,3)),ar_re),(1,2),(3,))
+        ar_le=TensorMap(zeros,space(state.A[i],1)*space(state.A[i],2),space(V,1))
+        state.AC[i]=TensorKit.catdomain(state.AC[i],ar_le)
     end
 
     return state,pars

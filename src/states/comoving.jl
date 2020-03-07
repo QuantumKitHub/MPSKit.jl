@@ -71,36 +71,26 @@ function Base.copyto!(st1::MPSComoving,st2::MPSComoving)
     return st1
 end
 
-@bm function expectation_value(state::Union{MPSComoving,FiniteMPS},opp::TensorMap;leftorthed=false)
-    if(!leftorthed)
-        state=leftorth(state)
-    end
+@bm function expectation_value(state::Union{MPSComoving,FiniteMPS},opp::TensorMap)
+    dat=[];
 
-    dat=[]
-
-    for i in length(state):-1:1
-        d=@tensor state[i][1,2,3]*opp[4,2]*conj(state[i][1,4,3])
+    for i in 1:length(state)
+        d = @tensor state.AC[i][1,2,3]*opp[4,2]*conj(state.AC[i][1,4,3])
         push!(dat,d)
-
-        if i!=1
-            (c,ar)=TensorKit.rightorth(state[i],(1,),(2,3))
-            state[i]=permute(ar,(1,2),(3,))
-            state[i-1]=state[i-1]*c
-        end
     end
 
-    return reverse(dat)
+    return dat
 end
 
 function max_Ds(f::MPSComoving{G}) where G<:GenericMPSTensor{S,N} where {S,N}
     Ds = [dim(space(left_gs.AL[1],1)) for v in 1:length(f)+1];
     for i in 1:length(f)
-        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}())))
+        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}())))
     end
 
     Ds[end] = dim(space(right_gs.AL[1],1));
     for i in length(f):-1:1
-        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}()))))
+        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}()))))
     end
     Ds
 end
