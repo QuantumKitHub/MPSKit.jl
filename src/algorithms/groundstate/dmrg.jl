@@ -55,7 +55,7 @@ end
 
         ealg = Lanczos()
 
-        for pos=[1:(length(state)-1);length(state):-1:2]
+        for pos=[1:(length(state)-1);length(state)-2:-1:1]
             @tensor ac2[-1 -2; -3 -4]:=state.AC[pos][-1,-2,1]*state.AR[pos+1][1,-3,-4]
             (eigvals,vecs) =  let state=state,parameters=parameters
                 eigsolve(x->ac2_prime(x,pos,state,parameters),ac2,1,:SR,ealg)
