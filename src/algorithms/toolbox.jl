@@ -31,7 +31,7 @@ function splitham(ham::MPOHamiltonian)
     return MPOHamiltonian(hamid),MPOHamiltonian(idham)
 end
 
-mpo2mps(mpo::FiniteMPO) = FiniteMPS(mpo2mps.(mpo))
+mpo2mps(mpo::FiniteMPO) = FiniteMPS(mpo2mps.(mpo.A))
 function mpo2mps(mpo::TensorMap)
     mpo = permute(mpo,(2,4),(1,3))
     mpo = TensorMap(mpo.data,fuse(codomain(mpo)),domain(mpo))
@@ -39,7 +39,7 @@ function mpo2mps(mpo::TensorMap)
     return mpo
 end
 
-mps2mpo(mps::FiniteMPS,ospace::AbstractArray) = FiniteMPO([mps2mpo(mps[i],ospace[i]) for i in 1:length(mps)])
+mps2mpo(mps::FiniteMPS,ospace::AbstractArray) = FiniteMPO([mps2mpo(mps.A[i],ospace[i]) for i in 1:length(mps)])
 function mps2mpo(mps::TensorMap,ospace::VectorSpace)
     mps=permute(mps,(1,2),(3,))
     mpo=TensorMap(mps.data,space(mps,1)*ospace*ospace',space(mps,3)')

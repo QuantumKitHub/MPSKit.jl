@@ -36,7 +36,7 @@ end
     return InfiniteMPS(newAs; tol = alg.tolgauge, maxiter = alg.maxiter,leftgauged = true,cguess=state.CR[end]),parameters
 end
 
-@bm function timestep(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, timestep::Number,alg::Tdvp,pars=params(state,H))
+@bm function timestep(state::Union{FiniteMPS,MPSComoving,FiniteMPO}, H::Operator, timestep::Number,alg::Tdvp,pars=params(state,H))
     #left to right
     for i in 1:(length(state)-1)
         (state.AC[i],convhist)=let pars = pars,state = state
@@ -68,51 +68,6 @@ end
         exponentiate(x->ac_prime(x,1,state,pars),-1im*timestep/2,state.AC[1],Lanczos(tol=alg.tolgauge))
     end
 
-    return state,pars
-end
-
-@bm function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp,pars=params(state,H))
-    @assert false
-    #left to right
-    for i in 1:(length(state)-1)
-        (state[i],convhist)=  let pars=pars, state = state
-            exponentiate(x->ac_prime(x,i,state,pars),-1im*timestep/2,state[i],Lanczos(tol=alg.tolgauge))
-        end
-
-        (newal,newcenter) = leftorth!(state[i],(1,2,4),(3,),alg=TensorKit.QRpos())
-        permute!(state[i],newal,(1,2),(4,3));poison!(pars,i);
-
-        (oldcenter,convhist) =  let pars=pars, state = state
-            exponentiate(x->c_prime(x,i,state,pars),1im*timestep/2,newcenter,Lanczos(tol=alg.tolgauge))
-        end
-
-        @tensor state[i+1][-1 -2;-3 -4]:=oldcenter[-1,1]*state[i+1][1,-2,-3,-4]
-    end
-
-    (state[end],convhist)= let pars=pars, state = state
-        exponentiate(x->ac_prime(x,length(state),state,pars),-1im*timestep/2,state[end],Lanczos(tol=alg.tolgauge))
-    end
-
-    #right to left
-    for i in length(state):-1:2
-        (state[i],convhist)= let pars=pars, state = state
-            exponentiate(x->ac_prime(x,i,state,pars),-1im*timestep/2,state[i],Lanczos(tol=alg.tolgauge))
-        end
-
-        (newcenter,ar) = rightorth!(state[i],(1,),(2,3,4),alg=TensorKit.RQpos())
-
-        permute!(state[i],ar,(1,2),(3,4));poison!(pars,i);
-
-        (oldcenter,convhist) =  let pars=pars, state = state
-            exponentiate(x->c_prime(x,i-1,state,pars),1im*timestep/2,newcenter,Lanczos(tol=alg.tolgauge))
-        end
-
-        @tensor state[i-1][-1 -2;-3 -4]:=state[i-1][-1,-2,1,-4]*oldcenter[1,-3]
-    end
-
-    (state[1],convhist)= let pars=pars, state = state
-        exponentiate(x->ac_prime(x,1,state,pars),-1im*timestep/2,state[1],Lanczos(tol=alg.tolgauge))
-    end
     return state,pars
 end
 
@@ -172,25 +127,23 @@ end
 end
 
 @bm function timestep(state::FiniteMPO, H::ComAct, timestep::Number,alg::Tdvp2,pars=params(state,H))
-    @assert false
 
     #left to right
     for i in 1:(length(state)-1)
-        @tensor ac2[-1 -2 -3;-4 -5 -6]:=state[i][-1,-2,1,-6]*state[i+1][1,-3,-4,-5]
+        @tensor ac2[-1 -2 -3;-4 -5 -6]:=state.AC[i][-1,-2,1,-6]*state.AR[i+1][1,-3,-4,-5]
 
         (nac2,convhist) = let state=state,pars=pars
             exponentiate(x->ac2_prime(x,i,state,pars),-1im*timestep/2,ac2,Lanczos())
         end
 
         (nal,nc,nar) = tsvd(permute(nac2,(1,2,6),(3,4,5)),trunc=alg.trscheme)
-        @tensor nac[-1 -2;-3 -4]:=nc[-1,1]*nar[1,-2,-3,-4]
 
-        state[i]=permute(nal,(1,2),(4,3))
-        state[i+1]=nac
+        state.AC[i] = (permute(nal,(1,2),(4,3)),nc)
+        state.AR[i+1] = permute(nar,(1,2),(3,4))
 
         if(i!=(length(state)-1))
-            (state[i+1],convhist) = let state=state,pars=pars
-                exponentiate(x->ac_prime(x,i+1,state,pars),1im*timestep/2,nac,Lanczos())
+            (state.AC[i+1],convhist) = let state=state,pars=pars
+                exponentiate(x->ac_prime(x,i+1,state,pars),1im*timestep/2,state.AC[i+1],Lanczos())
             end
         end
 
@@ -199,7 +152,7 @@ end
     #right to left
 
     for i in length(state):-1:2
-        @tensor ac2[-1 -2 -3;-4 -5 -6]:=state[i-1][-1,-2,1,-6]*state[i][1,-3,-4,-5]
+        @tensor ac2[-1 -2 -3;-4 -5 -6]:=state.AC[i-1][-1,-2,1,-6]*state.AR[i][1,-3,-4,-5]
 
         (nac2,convhist) = let state=state,pars=pars
             exponentiate(x->ac2_prime(x,i-1,state,pars),-1im*timestep/2,ac2,Lanczos())
@@ -207,14 +160,13 @@ end
 
         (nal,nc,nar) = tsvd(permute(nac2,(1,2,6),(3,4,5)),trunc=alg.trscheme)
 
-        @tensor nac[-1 -2;-3 -4]:=nal[-1,-2,-4,1]*nc[1,-3]
 
-        state[i-1]=nac
-        state[i]=permute(nar,(1,2),(3,4))
+        state.AC[i-1] = (permute(nal,(1,2),(4,3)),nc)
+        state.AR[i] = permute(nar,(1,2),(3,4))
 
         if(i!=2)
-            (state[i-1],convhist) = let state=state,pars=pars
-                exponentiate(x->ac_prime(x,i-1,state,pars),1im*timestep/2,nac,Lanczos())
+            (state.AC[i-1],convhist) = let state=state,pars=pars
+                exponentiate(x->ac_prime(x,i-1,state,pars),1im*timestep/2,state.AC[i-1],Lanczos())
             end
         end
     end

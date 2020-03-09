@@ -122,28 +122,26 @@ l_LL(state::FiniteMPO{T}) where T = isomorphism(Matrix{eltype(T)},space(state.A[
 
 @bm function expectation_value(ts::FiniteMPO,opp::TensorMap)
     #todo : clean this up
-    leftenvs = [Tensor(ones,ComplexF64,space(ts[1],1)')];
-    rightenvs = [Tensor(ones,ComplexF64,space(ts[length(ts)],3)')];
+    leftenvs = [Tensor(ones,ComplexF64,space(ts.A[1],1)')];
+    rightenvs = [Tensor(ones,ComplexF64,space(ts.A[length(ts)],3)')];
 
     for i in 1:length(ts)
-        #we can't trace :(
-        lefttracer = isomorphism(space(ts[i],2)',space(ts[i],2)')
-        @tensor curl[-1] := leftenvs[end][1]*ts[i][1,2,-1,3]*lefttracer[2,3]
+        @tensor curl[-1] := leftenvs[end][1]*ts.A[i][1,2,-1,2]
         push!(leftenvs,curl);
+    end
 
-        righttracer = isomorphism(space(ts[length(ts)-i+1],2)',space(ts[length(ts)-i+1],2)')
-        @tensor curr[-1] := rightenvs[end][1]*ts[length(ts)-i+1][-1,2,1,3]*righttracer[2,3]
+    for i in length(ts):-1:1
+        @tensor curr[-1] := rightenvs[end][1]*ts.A[i][-1,2,1,2]
         push!(rightenvs,curr);
     end
 
     tor = []
     for i in 1:length(ts)
-        cur = @tensor leftenvs[i][1]*ts[i][1,2,3,4]*rightenvs[end-i][3]*opp[4,2]
+        cur = @tensor leftenvs[i][1]*ts.A[i][1,2,3,4]*rightenvs[end-i][3]*opp[4,2]
         push!(tor,cur)
     end
 
     trace = tr(ts);
-
     tor./trace
 end
 
@@ -250,9 +248,9 @@ TensorKit.normalize!(psi::FiniteMPO) = rmul!(psi, 1/norm(psi))
 TensorKit.normalize(psi::FiniteMPO) = normalize!(copy(psi))
 
 function LinearAlgebra.tr(psi::FiniteMPO)
-    @tensor v[-1;-2] := psi[1][-1,1,-2,1]
+    @tensor v[-1;-2] := psi.A[1][-1,1,-2,1]
     for k in 2:length(psi)
-        @tensor v[-1;-2] := v[-1,1]*psi[k][1,2,-2,2]
+        @tensor v[-1;-2] := v[-1,1]*psi.A[k][1,2,-2,2]
     end
     return tr(v)
 end

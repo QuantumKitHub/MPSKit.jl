@@ -29,7 +29,7 @@ module MPSKit
     export quasiparticle_excitation
     export timestep,Tdvp,Tdvp2
     export splitham,mpo2mps,mps2mpo,infinite_temperature
-    export changebonds,VumpsSvdCut,DoNothing,OptimalExpand,RandExpand,SvdCut,UnionTrunc
+    export changebonds,VumpsSvdCut,DoNothing,OptimalExpand,SvdCut,UnionTrunc
     export managebonds,SimpleManager
     export entropy
     export dynamicaldmrg
@@ -53,13 +53,13 @@ module MPSKit
 
     #maybe we should introduce an abstract state type
     include("states/abstractmps.jl")
-    include("states/orthoview.jl")
     include("states/transfer.jl") # mps transfer matrices
     include("states/infinitemps.jl")
     include("states/multiline.jl")
     include("states/finitemps.jl")
     include("states/finitempo.jl")
     include("states/comoving.jl")
+    include("states/orthoview.jl")
 
     abstract type Operator end
     abstract type Hamiltonian <: Operator end
@@ -86,7 +86,7 @@ module MPSKit
     include("algorithms/changebonds/optimalexpand.jl")
     include("algorithms/changebonds/donothing.jl")
     include("algorithms/changebonds/vumpssvd.jl")
-    include("algorithms/changebonds/randomexpand.jl")
+    include("algorithms/changebonds/fallback.jl")
     include("algorithms/changebonds/svdcut.jl")
     include("algorithms/changebonds/union.jl")
 

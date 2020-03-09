@@ -85,7 +85,7 @@ end
         @test transfer_right(r_RR(ts,i,j),ts.AR[i,j],ts.AR[i,j]) ≈ r_RR(ts,i,j+1)
     end
 end
-#=
+
 @testset "FiniteMPO $sp" for sp in [1//2,8//2]
     (sx,sy,sz,id) = nonsym_spintensors(sp);
     ps = space(sx,1);
@@ -95,7 +95,6 @@ end
 
     @test sum(expectation_value(state,sz)) ≈ 0 atol = 1e-3
 end
-=#
 
 @testset "MPSComoving" begin
     ham = nonsym_ising_ham(lambda=4.0);
@@ -149,7 +148,7 @@ println("------------------------------------")
     v = expectation_value(ts,th*th);
     @test real(v[1])>=0;
 end
-#=
+
 @testset "comact $(i)" for (i,th) in enumerate([
         nonsym_ising_ham(),
         u1_xxz_ham(),
@@ -164,7 +163,6 @@ end
                 oneunit(th.pspaces[1]) * th.pspaces[j])
                 for j in 1:len]);
 
-    (ts,_) = changebonds(ts,commutator(th),RandExpand());
     (ts,_) = changebonds(ts,anticommutator(th),OptimalExpand());
 
     e1 = expectation_value(ts,anticommutator(th));
@@ -172,16 +170,23 @@ end
 
     @test 2*e1≈e2;
 
-    e3 = expectation_value(ts,anticommutator(th)+commutator(th));
-    e4 = expectation_value(ts,anticommutator(th)-commutator(th));
+    mp_ts = mpo2mps(ts);
+    (idham,hamid) = splitham(th);
 
-    @test e3+e4≈e2;
+    e3 = expectation_value(mp_ts,hamid)+expectation_value(mp_ts,idham)
+
+    @test e1 ≈ e3
+
+    e4 = expectation_value(ts,anticommutator(th)+commutator(th));
+    e5 = expectation_value(ts,anticommutator(th)-commutator(th));
+
+    @test e4+e5≈e2;
 
     diff = [rand() for i in th.pspaces];
-    e5 = expectation_value(ts,anticommutator(th)-diff);
-    @test sum([e1[j]-diff[mod1(j,end)] for j in 1:len])≈sum(e5);
+    e6 = expectation_value(ts,anticommutator(th)-diff);
+    @test sum([e1[j]-diff[mod1(j,end)] for j in 1:len])≈sum(e6);
 end
-=#
+
 println("------------------------------------")
 println("|     Algorithms                   |")
 println("------------------------------------")
@@ -205,9 +210,9 @@ println("------------------------------------")
 end
 
 @testset "timestep $(ind)" for (ind,(state,alg,opp)) in enumerate([
-    #=(FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),5)),Tdvp(),commutator(nonsym_xxz_ham(spin=1//2))),
+    (FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),5)),Tdvp(),commutator(nonsym_xxz_ham(spin=1//2))),
     (FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),7)),Tdvp2(),anticommutator(nonsym_xxz_ham(spin=1//2))),
-    =#(InfiniteMPS([ℂ^3,ℂ^3],[ℂ^50,ℂ^50]),Tdvp(),repeat(nonsym_xxz_ham(spin=1),2))
+    (InfiniteMPS([ℂ^3,ℂ^3],[ℂ^50,ℂ^50]),Tdvp(),repeat(nonsym_xxz_ham(spin=1),2))
     ])
 
     edens = expectation_value(state,opp);

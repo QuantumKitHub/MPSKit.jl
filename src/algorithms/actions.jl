@@ -143,17 +143,16 @@ end
     for i in 1:ham.odim
         for j in 1:ham.odim
 
-            temp = @tensor  leftenv(pars,length(state),state)[i][1,2,3]*
+            tot+= @tensor  leftenv(pars,length(state),state)[i][1,2,3]*
                             state.AC[end][3,4,5]*
                             rightenv(pars,length(state),state)[j][5,6,7]*
                             ham[length(state),i,j][2,8,6,4]*
                             conj(state.AC[end][1,8,7])
 
-            tot += temp/norm(state.AC[end]);
         end
     end
 
-    return vals,tot;
+    return vals,tot/(norm(state.AC[end])^2);
 end
 @bm expectation_value(state::FiniteMPS,ham::MPOHamiltonian,pars=params(state,ham)) = expectation_value_fimpl(state,ham,pars)
 function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,pars)
@@ -174,7 +173,7 @@ function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHam
         end
     end
 
-    n = norm(state.AC[end])
+    n = norm(state.AC[end])^2
     return ens./n;
 end
 
@@ -224,7 +223,7 @@ expectation_value(st::InfiniteMPS,opp::PeriodicMPO,ca=params(st,opp)) = expectat
 end
 
 @bm function expectation_value(state::FiniteMPO,ham::ComAct,cache=params(state,ham))
-    ens=zeros(eltype(state[1]),length(state))
+    ens=zeros(eltype(eltype(state)),length(state))
     for i=1:length(state)
         for (j,k) in keys(ham,i)
 
@@ -257,6 +256,6 @@ end
             ens[i]+=cur
         end
     end
-
-    return ens
+    n = norm(state.AC[end])^2
+    return ens./n
 end
