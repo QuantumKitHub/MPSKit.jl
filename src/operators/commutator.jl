@@ -56,14 +56,14 @@ function Base.getindex(a::ComAct,pos::Int,i::Int,j::Int)
 end
 
 function transfer_left(vec::T,ham::ComAct,pos,A,Ab=A) where T
-    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,3)'*ham.imspaces[pos][i],space(A,3)') for i in 1:ham.odim]::T
+    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,4)'*ham.imspaces[pos][i],space(A,4)') for i in 1:ham.odim]::T
 
     for (i,j) in keys(ham,pos)
         opp = ham[pos,i,j]
         if isbelow(ham,i)
-            @tensor toreturn[j][-1 -2;-3] += vec[i][1,3,4]*A[4,5,-3,6]*opp[3,2,-2,5]*conj(Ab[1,2,-1,6])
+            @tensor toreturn[j][-1 -2;-3] += vec[i][1,3,4]*A[4,5,6,-3]*opp[3,2,-2,5]*conj(Ab[1,2,6,-1])
         else
-            @tensor toreturn[j][-1 -2;-3] += vec[i][6,2,1]*A[1,5,-3,3]*opp[2,3,-2,4]*conj(Ab[6,5,-1,4])
+            @tensor toreturn[j][-1 -2;-3] += vec[i][6,2,1]*A[1,5,3,-3]*opp[2,3,-2,4]*conj(Ab[6,5,4,-1])
         end
     end
 
@@ -75,9 +75,9 @@ function transfer_right(vec::T,ham::ComAct,pos,A,Ab=A) where T
     for (i,j) in keys(ham,pos)
         opp = ham[pos,i,j]
         if isbelow(ham,i)
-            @tensor toreturn[i][-1 -2;-3] += vec[j][4,3,1]*A[-1,5,4,6]*opp[-2,2,3,5]*conj(Ab[-3,2,1,6])
+            @tensor toreturn[i][-1 -2;-3] += vec[j][4,3,1]*A[-1,5,6,4]*opp[-2,2,3,5]*conj(Ab[-3,2,6,1])
         else
-            @tensor toreturn[i][-1 -2;-3] += vec[j][1,2,6]*A[-1,5,1,3]*opp[-2,3,2,4]*conj(Ab[-3,5,6,4])
+            @tensor toreturn[i][-1 -2;-3] += vec[j][1,2,6]*A[-1,5,3,1]*opp[-2,3,2,4]*conj(Ab[-3,5,4,6])
         end
     end
 

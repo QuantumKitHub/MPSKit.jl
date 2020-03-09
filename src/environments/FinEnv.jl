@@ -1,5 +1,5 @@
 "
-    FinEnv keeps track of the environments for FiniteMPS / MPSComoving / FiniteMPO
+    FinEnv keeps track of the environments for FiniteMPS / MPSComoving
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
 "
 struct FinEnv{B <: Operator,C <: MPSTensor,D <: TensorMap} <: Cache
@@ -19,11 +19,12 @@ function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}
     rightenvs = [rightstart]
 
     for i in 1:length(state)
-        push!(leftenvs,transfer_left(leftenvs[end],opp,i,state[i]))
-        push!(rightenvs,transfer_right(rightenvs[end],opp,length(state)-i+1,state[length(state)-i+1]))
+        push!(leftenvs,similar.(leftstart))#transfer_left(leftenvs[end],opp,i,state[i]))
+        push!(rightenvs,similar.(rightstart))#transfer_right(rightenvs[end],opp,length(state)-i+1,state[length(state)-i+1]))
     end
 
-    return FinEnv([state[i] for i in 1:length(state)],[state[i] for i in 1:length(state)],opp,leftenvs,reverse(rightenvs))
+    return FinEnv([similar(state.A[i]) for i in 1:length(state)],
+                [similar(state.A[i]) for i in 1:length(state)],opp,leftenvs,reverse(rightenvs))
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
@@ -58,12 +59,10 @@ function params(state::MPSComoving,ham::MPOHamiltonian;lpars=params(state.left_g
     params(state,ham,leftenv(lpars,1,state.left_gs),rightenv(rpars,length(state),state.right_gs))
 end
 
-function params(state::FiniteMPO,ham::ComAct)
+function params(state::FiniteMPS,ham::ComAct)
     lll = l_LL(state);rrr = r_RR(state)
 
-    #lll is not typestable (due to tensorkit)
-    #@tensor sillyel[-1 -2;-3]:=lll[-1,-3]*Tensor(ones,eltype(lll),ham.above.domspaces[1][1]')[-2]
-    sillyel = TensorMap(zeros,eltype(state[1]),oneunit(space(state[1],1))*oneunit(space(state[1],1)),oneunit(space(state[1],1)));
+    sillyel = TensorMap(zeros,eltype(eltype(state)),oneunit(space(state.A[1],1))*oneunit(space(state.A[1],1)),oneunit(space(state.A[1],1)));
     rightstart = Array{typeof(sillyel),1}(undef,ham.odim);
     leftstart = Array{typeof(sillyel),1}(undef,ham.odim);
 
@@ -100,14 +99,14 @@ end
 
 #rightenv[ind] will be contracteable with the tensor on site [ind]
 function rightenv(ca::FinEnv,ind,state)
-    a = findfirst(i -> !(state[i] === ca.rdependencies[i]), length(state):-1:1)
+    a = findfirst(i -> !(state.AR[i] === ca.rdependencies[i]), length(state):-1:(ind+1))
     a = a == nothing ? nothing : length(state)-a+1
 
-    if a != nothing && a > ind
+    if a != nothing
         #we need to recalculate
         for j = a:-1:ind+1
-            ca.rightenvs[j] = transfer_right(ca.rightenvs[j+1],ca.opp,j,state[j])
-            ca.rdependencies[j] = state[j]
+            ca.rightenvs[j] = transfer_right(ca.rightenvs[j+1],ca.opp,j,state.AR[j])
+            ca.rdependencies[j] = state.AR[j]
         end
     end
 
@@ -115,13 +114,13 @@ function rightenv(ca::FinEnv,ind,state)
 end
 
 function leftenv(ca::FinEnv,ind,state)
-    a = findfirst(i -> !(state[i] === ca.ldependencies[i]), 1:length(state))
+    a = findfirst(i -> !(state.AL[i] === ca.ldependencies[i]), 1:(ind-1))
 
-    if a != nothing && a < ind
+    if a != nothing
         #we need to recalculate
         for j = a:ind-1
-            ca.leftenvs[j+1] = transfer_left(ca.leftenvs[j],ca.opp,j,state[j])
-            ca.ldependencies[j] = state[j]
+            ca.leftenvs[j+1] = transfer_left(ca.leftenvs[j],ca.opp,j,state.AL[j])
+            ca.ldependencies[j] = state.AL[j]
         end
     end
 

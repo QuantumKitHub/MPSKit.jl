@@ -23,7 +23,7 @@ let
     szdat=[expectation_value(mpco,szt)]
 
     for i in 1:(totaltime/deltat)
-        mpco = changebonds(mpco,RandExpand(numvecs=1)&SvdCut(trschemes=[truncdim(20)])) # grow the bond dimension by 1, and truncate at bond dimension 20
+        mpco = changebonds(mpco,OptimalExpand()&SvdCut(trschemes=[truncdim(20)])) # grow the bond dimension by 1, and truncate at bond dimension 20
         (mpco,pars) = timestep(mpco,th,deltat,Tdvp(),pars)
         push!(szdat,expectation_value(mpco,szt))
     end

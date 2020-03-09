@@ -31,19 +31,4 @@ function splitham(ham::MPOHamiltonian)
     return MPOHamiltonian(hamid),MPOHamiltonian(idham)
 end
 
-mpo2mps(mpo::FiniteMPO) = FiniteMPS(mpo2mps.(mpo))
-function mpo2mps(mpo::TensorMap)
-    mpo = permute(mpo,(2,4),(1,3))
-    mpo = TensorMap(mpo.data,fuse(codomain(mpo)),domain(mpo))
-    mpo = permute(mpo,(2,1),(3,));
-    return mpo
-end
-
-mps2mpo(mps::FiniteMPS,ospace::AbstractArray) = FiniteMPO([mps2mpo(mps[i],ospace[i]) for i in 1:length(mps)])
-function mps2mpo(mps::TensorMap,ospace::VectorSpace)
-    mps=permute(mps,(1,2),(3,))
-    mpo=TensorMap(mps.data,space(mps,1)*ospace*ospace',space(mps,3)')
-    return permute(mpo,(1,2,),(4,3))
-end
-
-infinite_temperature(ham::MPOHamiltonian) = [isomorphism(Matrix{eltype(ham[1,1,1])},oneunit(sp)*sp,oneunit(sp)*sp) for sp in ham.pspaces]
+infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(Matrix{eltype(ham[1,1,1])},oneunit(sp)*sp,oneunit(sp)*sp),(1,2,4),(3,)) for sp in ham.pspaces]

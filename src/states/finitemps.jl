@@ -64,35 +64,52 @@ end
 
 Base.copy(psi::FiniteMPS) = FiniteMPS(map(copy, psi.tensors), psi.centerpos)
 
+function Base.getproperty(psi::FiniteMPS,prop::Symbol)
+    if prop == :AL
+        return ALView(psi)
+    elseif prop == :AR
+        return ARView(psi)
+    elseif prop == :AC
+        return ACView(psi)
+    elseif prop == :CR
+        return CRView(psi)
+    elseif prop == :A
+        return AView(psi)
+    else
+        return getfield(psi,prop)
+    end
+end
+#=
 Base.@propagate_inbounds Base.getindex(psi::FiniteMPS, args...) =
     getindex(psi.tensors, args...)
 Base.@propagate_inbounds Base.setindex!(psi::FiniteMPS, args...) =
     setindex!(psi.tensors, args...)
-
+=#
 Base.length(psi::FiniteMPS) = length(psi.tensors)
 Base.size(psi::FiniteMPS, i...) = size(psi.tensors, i...)
+#=
 Base.firstindex(psi::FiniteMPS, i...) = firstindex(psi.tensors, i...)
 Base.lastindex(psi::FiniteMPS, i...) = lastindex(psi.tensors, i...)
 
 Base.iterate(psi::FiniteMPS, i...) = iterate(psi.tensors, i...)
 Base.IteratorSize(::Type{<:FiniteMPS}) = Base.HasShape{1}()
 Base.IteratorEltype(::Type{<:FiniteMPS}) = Base.HasEltype()
-
+=#
 Base.eltype(::Type{FiniteMPS{A}}) where {A<:GenericMPSTensor} = A
 Base.similar(psi::FiniteMPS) = FiniteMPS(similar.(psi.tensors))
 
-TensorKit.space(psi::FiniteMPS{<:MPSTensor}, n::Integer) = space(psi[n], 2)
+TensorKit.space(psi::FiniteMPS{<:MPSTensor}, n::Integer) = space(psi.A[n], 2)
 function TensorKit.space(psi::FiniteMPS{<:GenericMPSTensor}, n::Integer)
-    t = psi[n]
+    t = psi.A[n]
     S = spacetype(t)
     return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
 end
 
 virtualspace(psi::FiniteMPS, n::Integer) =
-    n < length(psi) ? _firstspace(psi[n+1]) : dual(_lastspace(psi[n]))
+    n < length(psi) ? _firstspace(psi.A[n+1]) : dual(_lastspace(psi.A[n]))
 
-r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state[end]),domain(state[end]))
-l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state[1],1),space(state[1],1))
+r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.A[end]),domain(state.A[end]))
+l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.A[1],1),space(state.A[1],1))
 
 # Gauging left and right
 """
@@ -107,9 +124,9 @@ function TensorKit.leftorth!(psi::FiniteMPS, n::Integer = length(psi);
     @assert 1 <= n <= length(psi)
     while first(psi.centerpos) < n
         k = first(psi.centerpos)
-        AL, C = leftorth!(psi[k]; alg = alg)
-        psi[k] = AL
-        psi[k+1] = _permute_front(C*_permute_tail(psi[k+1]))
+        AL, C = leftorth!(psi.tensors[k]; alg = alg)
+        psi.tensors[k] = AL
+        psi.tensors[k+1] = _permute_front(C*_permute_tail(psi.tensors[k+1]))
         psi.centerpos = k+1:max(k+1,last(psi.centerpos))
     end
     return normalize ? normalize!(psi) : psi
@@ -120,9 +137,9 @@ function TensorKit.rightorth!(psi::FiniteMPS, n::Integer = 1;
     @assert 1 <= n <= length(psi)
     while last(psi.centerpos) > n
         k = last(psi.centerpos)
-        C, AR = rightorth!(_permute_tail(psi[k]); alg = alg)
-        psi[k] = _permute_front(AR)
-        psi[k-1] = psi[k-1]*C
+        C, AR = rightorth!(_permute_tail(psi.tensors[k]); alg = alg)
+        psi.tensors[k] = _permute_front(AR)
+        psi.tensors[k-1] = psi.tensors[k-1]*C
         psi.centerpos = min(first(psi.centerpos), k-1):k-1
     end
     return normalize ? normalize!(psi) : psi
@@ -144,29 +161,29 @@ function Base.:+(psi1::FiniteMPS, psi2::FiniteMPS)
         throw(SpaceMismatch("Non-matching right virtual space."))
 
     k = 1 # firstindex(psi1)
-    t1 = psi1[k]
-    t2 = psi2[k]
+    t1 = psi1.A[k]
+    t2 = psi2.A[k]
     V1 = domain(t1)[1]
     V2 = domain(t2)[1]
-    w1 = isometry(storagetype(psi1[1]), V1 ⊕ V2, V1)
+    w1 = isometry(storagetype(psi1.A[1]), V1 ⊕ V2, V1)
     w2 = leftnull(w1)
     @assert domain(w2) == ⊗(V2)
     t = t1*w1' + t2*w2'
     tensors = similar(psi1.tensors, typeof(t))
     tensors[1] = t
     for k = 2:N-1
-        t1 = _permute_front(w1*_permute_tail(psi1[k]))
-        t2 = _permute_front(w2*_permute_tail(psi2[k]))
+        t1 = _permute_front(w1*_permute_tail(psi1.A[k]))
+        t2 = _permute_front(w2*_permute_tail(psi2.A[k]))
         V1 = domain(t1)[1]
         V2 = domain(t2)[1]
-        w1 = isometry(storagetype(psi1[1]), V1 ⊕ V2, V1)
+        w1 = isometry(storagetype(psi1.A[1]), V1 ⊕ V2, V1)
         w2 = leftnull(w1)
         @assert domain(w2) == ⊗(V2)
         tensors[k] = t1*w1' + t2*w2'
     end
     k = N
-    t1 = _permute_front(w1*_permute_tail(psi1[k]))
-    t2 = _permute_front(w2*_permute_tail(psi2[k]))
+    t1 = _permute_front(w1*_permute_tail(psi1.A[k]))
+    t2 = _permute_front(w2*_permute_tail(psi2.A[k]))
     tensors[k] = t1 + t2
     return FiniteMPS(tensors)
 end
@@ -194,9 +211,9 @@ end
 function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
     length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
 
-    ρL = _permute_front(psi1[1])' * _permute_front(psi2[1])
+    ρL = _permute_front(psi1.A[1])' * _permute_front(psi2.A[1])
     for k in 2:length(psi1)
-        ρL = transfer_left(ρL, psi2[k], psi1[k])
+        ρL = transfer_left(ρL, psi2.A[k], psi1.A[k])
     end
     return tr(ρL)
 end
@@ -204,12 +221,12 @@ end
 function TensorKit.norm(psi::FiniteMPS)
     k = first(psi.centerpos)
     if k == last(psi.centerpos)
-        return norm(psi[k])
+        return norm(psi.A[k])
     else
-        _, C = leftorth(psi[k])
+        _, C = leftorth(psi.A[k])
         k += 1
         while k <= last(psi.centerpos)
-            _, C = leftorth!(_permute_front(C * _permute_tail(psi[k])))
+            _, C = leftorth!(_permute_front(C * _permute_tail(psi.A[k])))
             k += 1
         end
         return norm(C)
@@ -228,12 +245,12 @@ TensorKit.normalize(psi::FiniteMPS) = normalize!(copy(psi))
 function max_Ds(f::FiniteMPS{G}) where G<:GenericMPSTensor{S,N} where {S,N}
     Ds = [1 for v in 1:length(f)+1];
     for i in 1:length(f)
-        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}())))
+        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}())))
     end
 
     Ds[end] = 1;
     for i in length(f):-1:1
-        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f[i],x)),ntuple(x->x+1,Val{N-1}()))))
+        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}()))))
     end
     Ds
 end
