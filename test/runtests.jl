@@ -5,7 +5,7 @@ println("|     States                       |")
 println("------------------------------------")
 @testset "FiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
         (ComplexSpace(10),ComplexSpace(2),ComplexF64),
-        (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)
+        (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1)*ℂ[SU₂](0=>1),ComplexF32)
         ]
 
     data = [TensorMap(rand,elt,oneunit(D)*d,D)]
@@ -86,16 +86,6 @@ end
     end
 end
 
-@testset "FiniteMPO $sp" for sp in [1//2,8//2]
-    (sx,sy,sz,id) = nonsym_spintensors(sp);
-    ps = space(sx,1);
-
-    bb = isomorphism(Matrix{ComplexF64},oneunit(ps)*ps,oneunit(ps)*ps);
-    state = FiniteMPO([bb for i in 1:10]);
-
-    @test sum(expectation_value(state,sz)) ≈ 0 atol = 1e-3
-end
-
 @testset "MPSComoving" begin
     ham = nonsym_ising_ham(lambda=4.0);
     (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
@@ -158,10 +148,9 @@ end
 
     len = 20;
 
-    ts = FiniteMPO([TensorMap(rand,ComplexF64,
-                oneunit(th.pspaces[1]) * th.pspaces[j],
-                oneunit(th.pspaces[1]) * th.pspaces[j])
-                for j in 1:len]);
+    inftemp = repeat(infinite_temperature(th),len);
+    ndat = collect(map(x-> TensorMap(rand,ComplexF64,codomain(x),domain(x)),inftemp));
+    ts = FiniteMPS(ndat);
 
     (ts,_) = changebonds(ts,anticommutator(th),OptimalExpand());
 
@@ -170,21 +159,14 @@ end
 
     @test 2*e1≈e2;
 
-    mp_ts = mpo2mps(ts);
-    (idham,hamid) = splitham(th);
+    e3 = expectation_value(ts,anticommutator(th)+commutator(th));
+    e4 = expectation_value(ts,anticommutator(th)-commutator(th));
 
-    e3 = expectation_value(mp_ts,hamid)+expectation_value(mp_ts,idham)
-
-    @test e1 ≈ e3
-
-    e4 = expectation_value(ts,anticommutator(th)+commutator(th));
-    e5 = expectation_value(ts,anticommutator(th)-commutator(th));
-
-    @test e4+e5≈e2;
+    @test e3+e4≈e2;
 
     diff = [rand() for i in th.pspaces];
-    e6 = expectation_value(ts,anticommutator(th)-diff);
-    @test sum([e1[j]-diff[mod1(j,end)] for j in 1:len])≈sum(e6);
+    e5 = expectation_value(ts,anticommutator(th)-diff);
+    @test sum([e1[j]-diff[mod1(j,end)] for j in 1:len])≈sum(e5);
 end
 
 println("------------------------------------")
@@ -210,8 +192,8 @@ println("------------------------------------")
 end
 
 @testset "timestep $(ind)" for (ind,(state,alg,opp)) in enumerate([
-    (FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),5)),Tdvp(),commutator(nonsym_xxz_ham(spin=1//2))),
-    (FiniteMPO(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1*ℂ^2),7)),Tdvp2(),anticommutator(nonsym_xxz_ham(spin=1//2))),
+    (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2*adjoint(ℂ^2),ℂ^1),5)),Tdvp(),commutator(nonsym_xxz_ham(spin=1//2))),
+    (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2*adjoint(ℂ^2),ℂ^1),7)),Tdvp2(),anticommutator(nonsym_xxz_ham(spin=1//2))),
     (InfiniteMPS([ℂ^3,ℂ^3],[ℂ^50,ℂ^50]),Tdvp(),repeat(nonsym_xxz_ham(spin=1),2))
     ])
 

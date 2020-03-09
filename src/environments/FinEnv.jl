@@ -1,5 +1,5 @@
 "
-    FinEnv keeps track of the environments for FiniteMPS / MPSComoving / FiniteMPO
+    FinEnv keeps track of the environments for FiniteMPS / MPSComoving
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
 "
 struct FinEnv{B <: Operator,C <: MPSTensor,D <: TensorMap} <: Cache
@@ -59,7 +59,7 @@ function params(state::MPSComoving,ham::MPOHamiltonian;lpars=params(state.left_g
     params(state,ham,leftenv(lpars,1,state.left_gs),rightenv(rpars,length(state),state.right_gs))
 end
 
-function params(state::FiniteMPO,ham::ComAct)
+function params(state::FiniteMPS,ham::ComAct)
     lll = l_LL(state);rrr = r_RR(state)
 
     sillyel = TensorMap(zeros,eltype(eltype(state)),oneunit(space(state.A[1],1))*oneunit(space(state.A[1],1)),oneunit(space(state.A[1],1)));

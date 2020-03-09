@@ -12,14 +12,14 @@ function SimpleManager(maxD::Int,A::Algorithm = OptimalExpand())
     function critfun(state)
         bigenough = true;
 
-        if isa(state,FiniteMPS) || isa(state,MPSComoving) || isa(state,FiniteMPO)
+        if isa(state,FiniteMPS) || isa(state,MPSComoving)
             upperbound = max_Ds(state);
         end
 
         for i = 1:length(state)
             if isa(state,InfiniteMPS)
                 bigenough = bigenough && (dim(space(state.AR[i],3))>=maxD)
-            elseif isa(state,FiniteMPS) || isa(state,MPSComoving) || isa(state,FiniteMPO)
+            elseif isa(state,FiniteMPS) || isa(state,MPSComoving)
                 bigenough = bigenough && (dim(space(state.A[i],3))>=maxD || upperbound[i+1] == dim(space(state.A[i],3)))
             else
                 @assert false

@@ -12,12 +12,13 @@
     end
     for (i,j) in scalkeys(ham,pos)
         scal = ham.scalars[pos][i];
-        @tensor toret[-1,-2,-3]+=leftenv(cache,pos,mps)[i][-1,5,4]*(scal*x)[4,-2,1]*rightenv(cache,pos,mps)[i][1,5,-3]
+        @tensor toret[-1,-2,-3]+=leftenv(cache,pos,mps)[i][-1,5,4]*(scal*x)[4,-2,1]*rightenv(cache,pos,mps)[j][1,5,-3]
     end
 
     return toret
 end
-@bm function ac_prime(x::MPOTensor,pos::Int,mpo::FiniteMPO,cache)
+
+@bm function ac_prime(x::GenericMPSTensor{S,3},pos::Int,mpo,cache) where S
     ham=cache.opp
 
     toret=zero(x)
@@ -26,14 +27,14 @@ end
 
         if isbelow(ham,i)
             @tensor toret[-1,-2,-3,-4] +=   leftenv(cache,pos,mpo)[i][-1,8,7]*
-                                            x[7,2,1,-4]*
+                                            x[7,2,-3,1]*
                                             opp[8,-2,3,2]*
-                                            rightenv(cache,pos,mpo)[j][1,3,-3]
+                                            rightenv(cache,pos,mpo)[j][1,3,-4]
         else
             @tensor toret[-1,-2,-3,-4] +=   leftenv(cache,pos,mpo)[i][-1,6,7]*
-                                            x[7,-2,2,4]*
-                                            opp[6,4,5,-4]*
-                                            rightenv(cache,pos,mpo)[j][2,5,-3]
+                                            x[7,-2,4,2]*
+                                            opp[6,4,5,-3]*
+                                            rightenv(cache,pos,mpo)[j][2,5,-4]
         end
     end
 
@@ -63,7 +64,7 @@ end
 
     return toret
 end
-@bm function ac2_prime(x::TensorMap,pos::Int,mpo::FiniteMPO,cache)
+@bm function ac2_prime(x::AbstractTensorMap,pos::Int,mpo,cache::FinEnv{<:ComAct})
     ham=cache.opp
 
     toret=zero(x)
@@ -77,16 +78,16 @@ end
 
             if isbelow(ham,i)
                 @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,2,1]*
-                                                    x[1,3,5,7,-5,-6]*
+                                                    x[1,3,-3,5,-5,7]*
                                                     opp1[2,-2,4,3]*
-                                                    opp2[4,-3,6,5]*
-                                                    rightenv(cache,pos+1,mpo)[l][7,6,-4]
+                                                    opp2[4,-4,6,5]*
+                                                    rightenv(cache,pos+1,mpo)[l][7,6,-6]
             else
                 @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,2,1]*
-                                                    x[1,-2,-3,7,5,3]*
-                                                    opp1[2,3,4,-6]*
+                                                    x[1,-2,3,-4,5,7]*
+                                                    opp1[2,3,4,-3]*
                                                     opp2[4,5,6,-5]*
-                                                    rightenv(cache,pos+1,mpo)[l][7,6,-4]
+                                                    rightenv(cache,pos+1,mpo)[l][7,6,-6]
             end
         end
     end
@@ -110,20 +111,6 @@ end
 
     for i in 1:ham.odim
         @tensor toret[-1,-2]+=leftenv(cache,pos+1,mps)[i][-1,2,1]*x[1,3]*rightenv(cache,pos,mps)[i][3,2,-2]
-    end
-
-    return toret
-end
-@bm function c_prime(x::MPSBondTensor,pos::Int,mpo::FiniteMPO,cache)
-    toret=zero(x)
-    ham=cache.opp
-
-    for i in 1:ham.odim
-        if isbelow(ham,i)
-            @tensor toret[-1,-2]+=leftenv(cache,pos+1,mpo)[i][-1,2,1]*x[1,3]*rightenv(cache,pos,mpo)[i][3,2,-2]
-        else
-            @tensor toret[-1,-2]+=leftenv(cache,pos+1,mpo)[i][-1,2,1]*x[1,3]*rightenv(cache,pos,mpo)[i][3,2,-2]
-        end
     end
 
     return toret
@@ -222,7 +209,7 @@ expectation_value(st::InfiniteMPS,opp::PeriodicMPO,ca=params(st,opp)) = expectat
     return retval
 end
 
-@bm function expectation_value(state::FiniteMPO,ham::ComAct,cache=params(state,ham))
+@bm function expectation_value(state::FiniteMPS,ham::ComAct,cache=params(state,ham))
     ens=zeros(eltype(eltype(state)),length(state))
     for i=1:length(state)
         for (j,k) in keys(ham,i)
@@ -237,15 +224,15 @@ end
 
             if isbelow(ham,j)
                 cur = @tensor   leftenv(cache,i,state)[j][-1,8,7]*
-                                state.AC[i][7,2,1,-4]*
+                                state.AC[i][7,2,-3,1]*
                                 ham[i,j,k][8,-2,3,2]*
-                                rightenv(cache,i,state)[k][1,3,-3]*
+                                rightenv(cache,i,state)[k][1,3,-4]*
                                 conj(state.AC[i][-1,-2,-3,-4])
             else
                 cur = @tensor   leftenv(cache,i,state)[j][-1,6,7]*
-                                state.AC[i][7,-2,2,4]*
-                                ham[i,j,k][6,4,5,-4]*
-                                rightenv(cache,i,state)[k][2,5,-3]*
+                                state.AC[i][7,-2,4,2]*
+                                ham[i,j,k][6,4,5,-3]*
+                                rightenv(cache,i,state)[k][2,5,-4]*
                                 conj(state.AC[i][-1,-2,-3,-4])
             end
 
