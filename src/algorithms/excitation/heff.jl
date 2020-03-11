@@ -3,12 +3,9 @@
     toret = zero.(Bs)
     len = length(mpsleft);
 
-    #precached version if isid
-    pisid = [isid(ham,i) for i in 1:ham.odim]
-    ids = collect(map(x->x[1],Iterators.filter(x->x[2],enumerate(pisid))))
+    ids = collect(Iterators.filter(x->isid(ham,x),2:ham.odim-1));
 
     #validity checks
-    @assert pisid[1] && pisid[end]
     @assert length(Bs) == len
     @assert length(mpsright) == len
     @assert ham.period == len
@@ -21,11 +18,11 @@
     lBsc = []
 
     for pos = 1:len
-        lBs = exci_transfer_left(lBs,ham,pos,mpsright.AR[pos],mpsleft.AL[pos])*exp(-1im*p)
-        lBs += exci_transfer_left(leftenv(paramsleft,pos,mpsleft),ham,pos,Bs[pos],mpsleft.AL[pos])*exp(-1im*p)
+        lBs = exci_transfer_left(lBs,ham,pos,mpsright.AR[pos],mpsleft.AL[pos])*exp(conj(1im*p))
+        lBs += exci_transfer_left(leftenv(paramsleft,pos,mpsleft),ham,pos,Bs[pos],mpsleft.AL[pos])*exp(conj(1im*p))
 
         if trivial
-            for i in ids[2:end-1]
+            for i in ids
                 @tensor lBs[i][-1,-2,-3,-4] -= lBs[i][1,-2,-3,2]*r_RL(mpsleft,pos)[2,1]*l_RL(mpsleft,pos)[-1,-4]
             end
         end
@@ -44,7 +41,7 @@
         rBs += exci_transfer_right(rightenv(paramsright,pos,mpsright),ham,pos,Bs[pos],mpsright.AR[pos])*exp(1im*p)
 
         if trivial
-            for i in ids[2:end-1]
+            for i in ids
                 @tensor rBs[i][-1,-2,-3,-4] -= rBs[i][1,-2,-3,2]*l_LR(mpsleft,pos)[2,1]*r_LR(mpsleft,pos)[-1,-4]
             end
         end
@@ -89,7 +86,7 @@
     end
 
     #B left to B'; outside the unit cell
-    lBsE = left_excitation_transfer_system(lBs,ham,mpsleft,mpsright,trivial,ids,p)
+    lBsE = left_excitation_transfer_system(lBs,ham,mpsleft,mpsright,trivial,p)
 
     for i=1:len
         for (j,k) in keys(ham,i)
@@ -99,17 +96,17 @@
                                                 rightenv(paramsright,i,mpsright)[k][4,5,-4]
         end
 
-        lBsE = exci_transfer_left(lBsE,ham,i,mpsright.AR[i],mpsleft.AL[i])*exp(-1im*p)
+        lBsE = exci_transfer_left(lBsE,ham,i,mpsright.AR[i],mpsleft.AL[i])*exp(conj(1im*p))
 
         if trivial
-            for k in ids[2:end-1]
+            for k in ids
                 @tensor lBsE[k][-1,-2,-3,-4] -= lBsE[k][1,-2,-3,2]*r_RL(mpsleft,i)[2,1]*l_RL(mpsleft,i)[-1,-4]
             end
         end
     end
 
     #B right to B'; outside the unit cell
-    rBsE = right_excitation_transfer_system(rBs,ham,mpsleft,mpsright,trivial,ids,p)
+    rBsE = right_excitation_transfer_system(rBs,ham,mpsleft,mpsright,trivial,p)
 
     for i=len:-1:1
         for (j,k) in keys(ham,i)
@@ -122,7 +119,7 @@
         rBsE=exci_transfer_right(rBsE,ham,i,mpsleft.AL[i],mpsright.AR[i])*exp(1im*p)
 
         if trivial
-            for k in ids[2:end-1]
+            for k in ids
                 @tensor rBsE[k][-1,-2,-3,-4]-=rBsE[k][1,-2,-3,2]*l_LR(mpsleft,i)[2,1]*r_LR(mpsleft,i)[-1,-4]
             end
         end

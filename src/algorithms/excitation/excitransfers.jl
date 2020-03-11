@@ -117,9 +117,10 @@ lBsE=lBsEr.vecs
 but this can be made faster; using the fact that the hamiltonion is upper-triangular, which is what we do here
 =#
 
-@bm function left_excitation_transfer_system(lBs,ham,mpsleft::InfiniteMPS,mpsright::InfiniteMPS,trivial,ids,p)
+@bm function left_excitation_transfer_system(lBs,ham,mpsleft::InfiniteMPS,mpsright::InfiniteMPS,trivial,p)
     len = ham.period
     found=zero.(lBs)
+    ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
 
     for i in 1:ham.odim
 
@@ -127,7 +128,7 @@ but this can be made faster; using the fact that the hamiltonion is upper-triang
         #this operation can be sped up by at least a factor 2;  found mostly consists of zeros
         start = found
         for k in 1:len
-            start = exci_transfer_left(start,ham,k,mpsright.AR[k],mpsleft.AL[k])*exp(-1im*p)
+            start = exci_transfer_left(start,ham,k,mpsright.AR[k],mpsleft.AL[k])*exp(conj(1im*p))
 
             if trivial
                 for l in ids[2:end-1]
@@ -140,7 +141,7 @@ but this can be made faster; using the fact that the hamiltonion is upper-triang
         #otherwise it's easy and we already know found[i]
         if reduce((a,b)->contains(ham,b,i,i),1:len,init=true)
             (found[i],convhist)=linsolve(lBs[i]+start[i],lBs[i]+start[i],GMRES()) do y
-                x=reduce((a,b)->exci_transfer_left(a,ham[b,i,i],mpsright.AR[b],mpsleft.AL[b])*exp(-1im*p),1:len,init=y)
+                x=reduce((a,b)->exci_transfer_left(a,ham[b,i,i],mpsright.AR[b],mpsleft.AL[b])*exp(conj(1im*p)),1:len,init=y)
 
                 if trivial && i in ids
                     @tensor x[-1,-2,-3,-4]-=x[1,-2,-3,2]*r_RL(mpsleft)[2,1]*l_RL(mpsleft)[-1,-4]
@@ -158,10 +159,10 @@ but this can be made faster; using the fact that the hamiltonion is upper-triang
     return found
 end
 
-@bm function right_excitation_transfer_system(rBs,ham,mpsleft,mpsright::InfiniteMPS,trivial,ids,p)
+@bm function right_excitation_transfer_system(rBs,ham,mpsleft,mpsright::InfiniteMPS,trivial,p)
     len = ham.period
     found=zero.(rBs)
-
+    ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
     for i in ham.odim:-1:1
 
         start = found
