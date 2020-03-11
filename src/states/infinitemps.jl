@@ -107,10 +107,10 @@ r_LL(state::InfiniteMPS,loc::Int=length(state))= @tensor toret[-1;-2]:=state.CR[
     return dat
 end
 
-function LinearAlgebra.dot(a::InfiniteMPS,b::InfiniteMPS)
+function LinearAlgebra.dot(a::InfiniteMPS,b::InfiniteMPS;krylovdim = 30)
     init = TensorMap(rand,ComplexF64,space(a.AL[1],1),space(b.AL[1],1))
     num = lcm(length(a),length(b))
-    (vals,vecs,convhist) = eigsolve(x->transfer_left(x,b.AL[1:num],a.AL[1:num]),init,1,:LM,Arnoldi())
+    (vals,vecs,convhist) = eigsolve(x->transfer_left(x,b.AL[1:num],a.AL[1:num]),init,1,:LM,Arnoldi(krylovdim=krylovdim))
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]
 end
