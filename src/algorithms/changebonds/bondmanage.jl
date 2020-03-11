@@ -8,30 +8,8 @@ if not, it will use algorithm manager.change to change the bonds
     change::A = DoNothing();
 end
 
-function SimpleManager(maxD::Int,A::Algorithm = OptimalExpand())
-    function critfun(state)
-        bigenough = true;
 
-        if isa(state,FiniteMPS) || isa(state,MPSComoving)
-            upperbound = max_Ds(state);
-        end
-
-        for i = 1:length(state)
-            if isa(state,InfiniteMPS)
-                bigenough = bigenough && (dim(space(state.AR[i],3))>=maxD)
-            elseif isa(state,FiniteMPS) || isa(state,MPSComoving)
-                bigenough = bigenough && (dim(space(state.A[i],3))>=maxD || upperbound[i+1] == dim(space(state.A[i],3)))
-            else
-                @assert false
-            end
-        end
-
-        return bigenough
-    end
-
-    return SimpleManager(critfun,A)
-end
-
+SimpleManager(maxD::Int,A::Algorithm = OptimalExpand()) = SimpleManager(x->simple_criterium(x,maxD),A)
 
 "
     Manage (grow or shrink) the bond dimsions of state using manager 'alg'
@@ -42,4 +20,33 @@ end
     else
         return changebonds(state,H,alg.change,pars) :: Tuple{S,P}
     end
+end
+
+function simple_criterium(state::Union{FiniteMPS,MPSComoving},maxD)
+    bigenough = true;
+
+    upperbound = max_Ds(state);
+
+    for i = 1:length(state)
+        bigenough = bigenough && (dim(virtualspace(state,i))>=maxD || upperbound[i+1] == dim(virtualspace(state,i)))
+    end
+    return bigenough
+end
+
+function simple_criterium(state::InfiniteMPS,maxD)
+    bigenough = true;
+
+    for i = 1:length(state)
+        bigenough = bigenough && dim(virtualspace(state,i))>=maxD
+    end
+    return bigenough
+end
+
+function simple_criterium(state::MPSMultiline,maxD)
+    bigenough = true;
+
+    for (i,j) in Iterators.product(1:size(state,1),1:size(state,2))
+        bigenough = bigenough && dim(virtualspace(state,i,j))>=maxD
+    end
+    return bigenough
 end

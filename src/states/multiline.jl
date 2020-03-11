@@ -18,7 +18,7 @@ Base.length(arr::MPSMultiline) = size(arr,1)
 Base.eltype(arr::MPSMultiline) = eltype(arr.AL[1])
 Base.lastindex(arr::MPSMultiline,i) = lastindex(arr.AL,i);
 Base.similar(st::MPSMultiline) = MPSMultiline(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
-
+virtualspace(psi::MPSMultiline, a::Integer,b::Integer) = _firstspace(psi.AL[a,b])
 function Base.convert(::Type{MPSMultiline},st::InfiniteMPS)
     AL=PeriodicArray(permutedims(st.AL.data));
     AR=PeriodicArray(permutedims(st.AR.data));

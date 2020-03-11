@@ -79,22 +79,9 @@ function Base.getproperty(psi::FiniteMPS,prop::Symbol)
         return getfield(psi,prop)
     end
 end
-#=
-Base.@propagate_inbounds Base.getindex(psi::FiniteMPS, args...) =
-    getindex(psi.tensors, args...)
-Base.@propagate_inbounds Base.setindex!(psi::FiniteMPS, args...) =
-    setindex!(psi.tensors, args...)
-=#
+
 Base.length(psi::FiniteMPS) = length(psi.tensors)
 Base.size(psi::FiniteMPS, i...) = size(psi.tensors, i...)
-#=
-Base.firstindex(psi::FiniteMPS, i...) = firstindex(psi.tensors, i...)
-Base.lastindex(psi::FiniteMPS, i...) = lastindex(psi.tensors, i...)
-
-Base.iterate(psi::FiniteMPS, i...) = iterate(psi.tensors, i...)
-Base.IteratorSize(::Type{<:FiniteMPS}) = Base.HasShape{1}()
-Base.IteratorEltype(::Type{<:FiniteMPS}) = Base.HasEltype()
-=#
 Base.eltype(::Type{FiniteMPS{A}}) where {A<:GenericMPSTensor} = A
 Base.similar(psi::FiniteMPS) = FiniteMPS(similar.(psi.tensors))
 

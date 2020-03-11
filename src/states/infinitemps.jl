@@ -17,9 +17,10 @@ Base.size(arr::InfiniteMPS,i) = size(arr.AL,i)
 Base.length(arr::InfiniteMPS) = size(arr,1)
 Base.eltype(arr::InfiniteMPS) = eltype(arr.AL[1])
 Base.copy(m::InfiniteMPS) = InfiniteMPS(copy(m.AL),copy(m.AR),copy(m.CR),copy(m.AC));
-#Base.circshift(st::InfiniteMPS,shift::Int) = InfiniteMPS(circshift(st.AL,shift),circshift(st.AR,shift),circshift(st.CR,shift),circshift(st.AC,shift))
 Base.repeat(m::InfiniteMPS,i::Int) = InfiniteMPS(repeat(m.AL,i),repeat(m.AR,i),repeat(m.CR,i),repeat(m.AC,i));
 Base.similar(st::InfiniteMPS) = InfiniteMPS(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
+
+virtualspace(psi::InfiniteMPS, n::Integer) = _firstspace(psi.AL[n+1])
 
 function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};eltype=Defaults.eltype,kwargs...) where S
     InfiniteMPS([TensorMap(rand,eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)];kwargs...)

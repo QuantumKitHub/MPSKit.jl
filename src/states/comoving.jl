@@ -17,24 +17,8 @@ end
 MPSComoving(left::InfiniteMPS{Mtype,Vtype},tensors::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = MPSComoving(left,tensors,right,1:length(tensors))
 
 Base.copy(state::MPSComoving) = MPSComoving(state.left_gs,map(copy, state.tensors),state.right_gs,state.centerpos)
-
-#maybe we should allow getindex outside of tensors?
-#=
-Base.@propagate_inbounds Base.getindex(psi::MPSComoving, args...) =
-    getindex(psi.tensors, args...)
-Base.@propagate_inbounds Base.setindex!(psi::MPSComoving, args...) =
-    setindex!(psi.tensors, args...)
-=#
 Base.length(state::MPSComoving)=length(state.tensors)
 Base.size(psi::MPSComoving, i...) = size(psi.tensors, i...)
-#=
-Base.firstindex(psi::MPSComoving, i...) = firstindex(psi.tensors, i...)
-Base.lastindex(psi::MPSComoving, i...) = lastindex(psi.tensors, i...)
-Base.iterate(psi::MPSComoving, i...) = iterate(psi.tensors, i...)
-
-Base.IteratorSize(::Type{<:MPSComoving}) = Base.HasShape{1}()
-Base.IteratorEltype(::Type{<:MPSComoving}) = Base.HasEltype()
-=#
 Base.eltype(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 Base.similar(psi::MPSComoving) = MPSComoving(psi.left_gs,similar.(psi.tensors),psi.right_gs)
 
