@@ -1,11 +1,10 @@
-"
-    st = InfiniteMPS(a::Array)
+"""
+    struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor}
 
-    Type definition of a uniform center gauged mps.
-    st.AL[i]*st.CR[i] == st.CR[i-1]*st.AR[i] == st.AC[i]
-    st.AL[i] is left unitary
-    st.AR[i] is right unitary
-"
+Represents an infinite matrix product state
+The state is stored in the centergauge where
+    state.AL[i]*state.CR[i] = state.AC[i] = state.CR[i-1]*state.AR[i]
+"""
 struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor}
     AL::PeriodicArray{A,1}
     AR::PeriodicArray{A,1}

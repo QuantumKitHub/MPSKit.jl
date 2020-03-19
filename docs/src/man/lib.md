@@ -4,7 +4,7 @@
 ```@docs
 FiniteMPS
 FiniteMPO
-MPSCenterGauged
+InfiniteMPS
 MPSComoving
 MPSMultiline
 ```
@@ -30,6 +30,7 @@ MPSKit.SimpleEnv
 c_prime
 ac_prime
 ac2_prime
+expectation_value
 ```
 
 ## Groundstate algorithms

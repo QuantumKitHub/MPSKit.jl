@@ -1,9 +1,8 @@
-"
-    FiniteMPS(data::Array)
+"""
+    mutable struct FiniteMPS{A<:GenericMPSTensor} <: AbstractMPS
 
-    finite one dimensional mps
-    algorithms usually assume a right-orthormalized input
-"
+Represents a finite matrix product state
+"""
 mutable struct FiniteMPS{A<:GenericMPSTensor} <: AbstractMPS
     tensors::Vector{A}
     centerpos::UnitRange{Int} # range of tensors which are not left or right normalized

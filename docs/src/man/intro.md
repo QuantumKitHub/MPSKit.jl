@@ -1,7 +1,7 @@
 # Basics
 
 ## TensorMap
-MPSKit works on "TensorMap" objects defined in (TensorKit.jl)[https://github.com/Jutho/TensorKit.jl]. These abstract objects can represent not only plain arrays but also symmetric tensors. A TensorMap is a linear map from its domain to its codomain.
+MPSKit works on "TensorMap" objects defined in TensorKit.jl. These abstract objects can represent not only plain arrays but also symmetric tensors. A TensorMap is a linear map from its domain to its codomain.
 
 Initializing a TensorMap can be done using
 ```julia
@@ -48,7 +48,7 @@ Infinite matrix product states are also supported. A uniform mps representing ..
 ```julia
 A = TensorMap(rand,ComplexF64,ℂ^10*ℂ^2,ℂ^10);
 B = TensorMap(rand,ComplexF64,ℂ^10*ℂ^2,ℂ^10);
-MPSCenterGauged([A,B]);
+InfiniteMPS([A,B]);
 ```
 
 ## Operators
@@ -84,7 +84,6 @@ We can often reuse certain environments in the algorithms, these things are stor
 ```julia
 params(state,opperator)
 ```
-
 
 ## Tips & tricks
 

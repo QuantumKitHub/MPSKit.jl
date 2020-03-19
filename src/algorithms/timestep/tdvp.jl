@@ -6,9 +6,9 @@
 end
 
 """
-    (newstate,newpars) = timestep(state,hamiltonian,dt,alg,pars = params(state,hamiltonian))
+    function timestep(psi, operator, dt, alg,parameters = params(psi,operator))
 
-    evolves state forward by dt using algorithm alg
+time evolves psi by timestep dt using algorithm alg
 """
 @bm function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,parameters::Cache=params(state,H))
 

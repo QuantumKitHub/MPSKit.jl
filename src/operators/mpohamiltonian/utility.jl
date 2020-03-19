@@ -37,7 +37,6 @@ function Base.:+(a::MPOHamiltonian{S,T,E},b::MPOHamiltonian{S,T,E}) where {S,T,E
         ndomspace[a.odim:a.odim+b.odim-2]=b.domspaces[pos][2:b.odim]
         ndomspaces[pos]=ndomspace
 
-
         for (i,j) in keys(a,pos)
             #A block
             if(i<a.odim && j<a.odim)
@@ -58,8 +57,8 @@ function Base.:+(a::MPOHamiltonian{S,T,E},b::MPOHamiltonian{S,T,E}) where {S,T,E
 
             #upper Bs
             if(i==1 && j>1)
-                if(j==b.odim && !ismissing(nOs[pos][1,nodim]))
-                    nOs[pos][1,nodim]+=b.Os[pos][i,j]
+                if !ismissing(nOs[pos][1,a.odim+j-2])
+                    nOs[pos][1,a.odim+j-2]+=b.Os[pos][i,j]
                 else
                     nOs[pos][1,a.odim+j-2]=b.Os[pos][i,j]
                 end
