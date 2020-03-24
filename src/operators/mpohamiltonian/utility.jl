@@ -98,7 +98,7 @@ end
 
 #this is the index-map used in the ham x ham multiplication function (also needed somewhere else)
 #i think julia has a build in for this, but it got renamed somewhere (linearindices?)
-multmap(a::MPOHamiltonian,b::MPOHamiltonian) = (i,j)->(i-1)*a.odim+j
+multmap(a::MPOHamiltonian,b::MPOHamiltonian) = (i,j)->(i-1)*b.odim+j
 function Base.:*(b::MPOHamiltonian{S,T,E},a::MPOHamiltonian{S,T,E}) where {S,T,E}
     nodim=a.odim*b.odim
 

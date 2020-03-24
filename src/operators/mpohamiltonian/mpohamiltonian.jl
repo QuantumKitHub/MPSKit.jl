@@ -85,7 +85,9 @@ function MPOHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MPOTe
 end
 
 #allow passing in 2leg mpos
-MPOHamiltonian(x::Array{T,3}) where T<:MPSBondTensor = MPOHamiltonian(map(t->permute(add_util_leg(t),(1,2),(4,3)),x))
+function MPOHamiltonian(x::Array{T,3}) where T<:Union{Missing,<:MPSBondTensor}
+    MPOHamiltonian(map(t-> ismissing(t) ? t : permute(add_util_leg(t),(1,2),(4,3)),x))
+end
 
 #allow passing in regular tensormaps
 MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)));
