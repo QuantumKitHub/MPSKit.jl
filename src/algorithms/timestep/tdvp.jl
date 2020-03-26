@@ -33,7 +33,7 @@ time evolves psi by timestep dt using algorithm alg
         newAs[loc]     = Aleft
     end
 
-    return InfiniteMPS(newAs; tol = alg.tolgauge, maxiter = alg.maxiter,leftgauged = true,cguess=state.CR[end]),parameters
+    return InfiniteMPS(newAs; tol = alg.tolgauge, maxiter = alg.maxiter,leftgauged = true),parameters
 end
 
 @bm function timestep(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp,pars=params(state,H))

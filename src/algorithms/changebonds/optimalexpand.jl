@@ -5,51 +5,46 @@
     trscheme::TruncationScheme = truncdim(1)
 end
 
-function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
-    for i in 1:length(state)
-        ACAR = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
-        AC2 = ac2_prime(ACAR,i,state,pars)
 
-        if norm(AC2) == 0 #we cannot really optimally expand
-            @info "AC2 == 0; using rand"
-            AC2 = TensorMap(rand,eltype(AC2),codomain(AC2),domain(AC2))
-        end
+function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
+    #determine optimal expansion spaces around bond i
+    exps = map(1:length(state)) do i
+        ACAR = MPSKit._permute_front(state.AC[i])*MPSKit._permute_tail(state.AR[i+1])
+        AC2 = ac2_prime(ACAR,i,state,pars)
 
         #Calculate nullspaces for AL and AR
         NL = leftnull(state.AL[i])
-        NR = rightnull(_permute_tail(state.AR[i+1]))
+        NR = rightnull(MPSKit._permute_tail(state.AR[i+1]))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         intermediate = adjoint(NL)*AC2*adjoint(NR)
-
         (U,S,V) = tsvd(intermediate,trunc=alg.trscheme,alg=TensorKit.SVD())
 
-        #expand AL
-        al_re = NL*U
-        state.AL[i] = TensorKit.catdomain(state.AL[i],al_re)
+        (NL*U,V*NR)
+    end
 
-        al_le = TensorMap(zeros,space(U,2)',domain(_permute_tail(state.AL[i+1])))
-        state.AL[i+1] = _permute_front(TensorKit.catcodomain(_permute_tail(state.AL[i+1]),al_le))
+    pexp = MPSKit.PeriodicArray(collect(exps));
 
-        #expand AR
-        ar_re = V*NR
-        state.AR[i+1] = _permute_front(TensorKit.catcodomain(_permute_tail(state.AR[i+1]),ar_re))
+    #do the actual expansion
+    for i in 1:length(state)
+        al = MPSKit._permute_tail(TensorKit.catdomain(state.AL[i],pexp[i][1]))
+        lz = TensorMap(zeros,space(pexp[i-1][1],3)',domain(al))
+        state.AL[i] = MPSKit._permute_front(TensorKit.catcodomain(al,lz))
 
-        ar_le = TensorMap(zeros,codomain(state.AR[i]),space(U,2)')
-        state.AR[i] = TensorKit.catdomain(state.AR[i],ar_le)
+        ar = MPSKit._permute_front(TensorKit.catcodomain(MPSKit._permute_tail(state.AR[i+1]),pexp[i][2]))
+        rz = TensorMap(zeros,codomain(ar),space(pexp[i+1][2],1))
+        state.AR[i+1] = TensorKit.catdomain(ar,rz)
 
-        #fix C
-        le = TensorMap(zeros,space(U,2)',space(state.CR[i],1))
-        state.CR[i] = TensorKit.catcodomain(state.CR[i],le)
-        re = TensorMap(zeros,space(state.CR[i],1),space(U,2)')
-        state.CR[i] = TensorKit.catdomain(state.CR[i],re)
+        l = TensorMap(zeros,codomain(state.CR[i]),space(pexp[i][2],1))
+        state.CR[i] = TensorKit.catdomain(state.CR[i],l)
+        r = TensorMap(zeros,space(pexp[i][1],3)',domain(state.CR[i]))
+        state.CR[i] = TensorKit.catcodomain(state.CR[i],r)
 
         state.AC[i] = state.AL[i]*state.CR[i]
-        state.AC[i+1] = state.AL[i+1]*state.CR[i+1]
-
-        #we should update the params "properly", and not in this wasteful way (params don't change after all)
-        poison!(pars);
     end
+
+    poison!(pars)
+
     return state,pars
 end
 
