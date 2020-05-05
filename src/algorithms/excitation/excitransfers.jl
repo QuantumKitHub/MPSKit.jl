@@ -117,7 +117,7 @@ lBsE=lBsEr.vecs
 but this can be made faster; using the fact that the hamiltonion is upper-triangular, which is what we do here
 =#
 
-@bm function left_excitation_transfer_system(lBs,ham,mpsleft::InfiniteMPS,mpsright::InfiniteMPS,trivial,p)
+function left_excitation_transfer_system(lBs,ham,mpsleft::InfiniteMPS,mpsright::InfiniteMPS,trivial,p)
     len = ham.period
     found=zero.(lBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
@@ -159,7 +159,7 @@ but this can be made faster; using the fact that the hamiltonion is upper-triang
     return found
 end
 
-@bm function right_excitation_transfer_system(rBs,ham,mpsleft,mpsright::InfiniteMPS,trivial,p)
+function right_excitation_transfer_system(rBs,ham,mpsleft,mpsright::InfiniteMPS,trivial,p)
     len = ham.period
     found=zero.(rBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));

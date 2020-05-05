@@ -1,33 +1,65 @@
 """
-    mutable struct FiniteMPS{A<:GenericMPSTensor} <: AbstractMPS
+    mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
 
 Represents a finite matrix product state
 """
-mutable struct FiniteMPS{A<:GenericMPSTensor} <: AbstractMPS
-    tensors::Vector{A}
-    centerpos::UnitRange{Int} # range of tensors which are not left or right normalized
-    function FiniteMPS{A}(tensors::Vector{A},
-                            centerpos::UnitRange{Int}) where {A<:GenericMPSTensor}
-        _firstspace(tensors[1]) == oneunit(_firstspace(tensors[1])) ||
+mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
+    site_tensors::Vector{A}
+    bond_tensors::Vector{Union{Missing,B}} #contains CL
+
+    #gaugedpos[1] = last left gauged tensor
+    #gaugedpos[2] = last right gauged tensor
+    gaugedpos::Tuple{Int,Int}
+
+    function FiniteMPS{A,B}(site_tensors::Vector{A},bond_tensors::Vector{Union{Missing,B}},
+                            gaugedpos::Tuple{Int,Int}) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+
+        # checking the site tensor spaces
+        _firstspace(site_tensors[1]) == oneunit(_firstspace(site_tensors[1])) ||
             throw(SectorMismatch("Leftmost virtual index of MPS should be trivial."))
-        N = length(tensors)
+
+        N = length(site_tensors)
         for n = 1:N-1
-            dual(_lastspace(tensors[n])) == _firstspace(tensors[n+1]) ||
+            dual(_lastspace(site_tensors[n])) == _firstspace(site_tensors[n+1]) ||
                 throw(SectorMismatch("Non-matching virtual index on bond $n."))
         end
-        dim(_lastspace(tensors[N])) == 1 ||
+        dim(_lastspace(site_tensors[N])) == 1 ||
             throw(SectorMismatch("Rightmost virtual index should be one-dimensional."))
-        return new{A}(tensors, centerpos)
+
+        # checking the bond tensor spaces
+        length(bond_tensors) == N+1 ||
+            throw(DimensionMismatch("bond_tensors incorrect length"))
+
+        for n = 1:N
+            ismissing(bond_tensors[n]) ||
+                dual(_lastspace(bond_tensors[n])) == _firstspace(space_tensors[n]) ||
+                throw(SectorMismatch("bond tensor doesn't fit on space tensor"))
+
+            ismissing(bond_tensors[n+1]) ||
+                dual(_firstspace(bond_tensors[n+1])) == _lastspace(space_tensors[n]) ||
+                throw(SectorMismatch("bond tensor doesn't fit on space tensor"))
+        end
+
+        return new{A,B}(site_tensors, bond_tensors, gaugedpos)
     end
 end
-FiniteMPS(tensors::Vector{A},
-            centerpos::UnitRange{Int} = 1:length(tensors)) where {A<:GenericMPSTensor} =
-    FiniteMPS{A}(tensors, centerpos)
 
+#this should not be necessary ...
+bond_type(t::GenericMPSTensor) = typeof(TensorMap(rand,eltype(t),space(t,1),space(t,1)))
+
+# allow construction with only site_tensors missing
+function FiniteMPS(site_tensors::Vector{A},
+            bond_tensors::Vector{Union{Missing,B}} = Vector{Union{Missing,bond_type(site_tensors[1])}}(missing,length(site_tensors)+1),
+            gaugedpos::Tuple{Int,Int} = (0,length(site_tensors)+1)) where {A<:GenericMPSTensor, B <: MPSBondTensor}
+    FiniteMPS{A,B}(site_tensors, bond_tensors, gaugedpos)
+end
+
+# allow construction with one large tensorkit space
 function FiniteMPS(f, P::ProductSpace, args...; kwargs...)
     return FiniteMPS(f, collect(P), args...; kwargs...)
 end
 
+# allow construction given only a physical space and length
 function FiniteMPS(f, N::Int, V::VectorSpace, args...; kwargs...)
     return FiniteMPS(f, fill(V, N), args...; kwargs...)
 end
@@ -54,14 +86,11 @@ function FiniteMPS(f,
     length(virtspaces) == N+1 || throw(DimensionMismatch())
 
     tensors = [TensorMap(f, virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
-    if f == randisometry
-        return FiniteMPS(tensors, N:N)
-    else
-        return FiniteMPS(tensors, 1:N)
-    end
+
+    return FiniteMPS(tensors)
 end
 
-Base.copy(psi::FiniteMPS) = FiniteMPS(map(copy, psi.tensors), psi.centerpos)
+Base.copy(psi::FiniteMPS) = FiniteMPS(deepcopy(psi.site_tensors), deepcopy(psi.bond_tensors), psi.gaugedpos)
 
 function Base.getproperty(psi::FiniteMPS,prop::Symbol)
     if prop == :AL
@@ -72,67 +101,93 @@ function Base.getproperty(psi::FiniteMPS,prop::Symbol)
         return ACView(psi)
     elseif prop == :CR
         return CRView(psi)
-    elseif prop == :A
-        return AView(psi)
     else
         return getfield(psi,prop)
     end
 end
 
-Base.length(psi::FiniteMPS) = length(psi.tensors)
-Base.size(psi::FiniteMPS, i...) = size(psi.tensors, i...)
-Base.eltype(::Type{FiniteMPS{A}}) where {A<:GenericMPSTensor} = A
-Base.similar(psi::FiniteMPS) = FiniteMPS(similar.(psi.tensors))
+Base.length(psi::FiniteMPS) = length(psi.site_tensors)
+Base.size(psi::FiniteMPS, i...) = size(psi.site_tensors, i...)
 
-TensorKit.space(psi::FiniteMPS{<:MPSTensor}, n::Integer) = space(psi.A[n], 2)
+#conflicted if this is actually true
+Base.eltype(st::FiniteMPS{A}) where {A<:GenericMPSTensor} = A
+Base.eltype(::Type{FiniteMPS{A}}) where {A<:GenericMPSTensor} = A
+
+Base.similar(psi::FiniteMPS) = FiniteMPS(similar.(psi.site_tensors),similar.(psi.bond_tensors))
+
+TensorKit.space(psi::FiniteMPS{<:MPSTensor}, n::Integer) = space(psi.site_tensors[n], 2)
 function TensorKit.space(psi::FiniteMPS{<:GenericMPSTensor}, n::Integer)
-    t = psi.A[n]
+    t = psi.site_tensors[n]
     S = spacetype(t)
     return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
 end
 
 virtualspace(psi::FiniteMPS, n::Integer) =
-    n < length(psi) ? _firstspace(psi.A[n+1]) : dual(_lastspace(psi.A[n]))
+    n < length(psi) ? _firstspace(psi.site_tensors[n+1]) : dual(_lastspace(psi.site_tensors[n]))
 
-r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.A[end]),domain(state.A[end]))
-l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.A[1],1),space(state.A[1],1))
+r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.site_tensors[end]),domain(state.site_tensors[end]))
+l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.site_tensors[1],1),space(state.site_tensors[1],1))
 
 # Gauging left and right
 """
     function leftorth!(psi::FiniteMPS, n = length(psi); normalize = true, alg = QRpos())
 
-Bring all MPS tensors of `psi` to the left of site `n` into left orthonormal form, using
+Bring all MPS tensors of `psi` up to and including site `n` into left orthonormal form, using
 the orthogonal factorization algorithm `alg`
 """
 function TensorKit.leftorth!(psi::FiniteMPS, n::Integer = length(psi);
-                    alg::OrthogonalFactorizationAlgorithm = QRpos(),
+                    alg::OrthogonalFactorizationAlgorithm = Polar(),
                     normalize::Bool = true)
     @assert 1 <= n <= length(psi)
-    while first(psi.centerpos) < n
-        k = first(psi.centerpos)
-        AL, C = leftorth!(psi.tensors[k]; alg = alg)
-        psi.tensors[k] = AL
-        psi.tensors[k+1] = _permute_front(C*_permute_tail(psi.tensors[k+1]))
-        psi.centerpos = k+1:max(k+1,last(psi.centerpos))
+
+    while first(psi.gaugedpos) < n
+        k = first(psi.gaugedpos) + 1
+
+        if !ismissing(psi.bond_tensors[k])
+            C = psi.bond_tensors[k];
+            psi.bond_tensors[k] = missing;
+            psi.site_tensors[k] = _permute_front(C*_permute_tail(psi.site_tensors[k+1]))
+        end
+
+        psi.site_tensors[k], psi.bond_tensors[k+1] = leftorth!(psi.site_tensors[k]; alg = alg)
+
+        psi.gaugedpos = (k,last(psi.gaugedpos))
     end
     return normalize ? normalize!(psi) : psi
 end
 function TensorKit.rightorth!(psi::FiniteMPS, n::Integer = 1;
-                    alg::OrthogonalFactorizationAlgorithm = LQpos(),
+                    alg::OrthogonalFactorizationAlgorithm = Polar(),
                     normalize::Bool = true)
     @assert 1 <= n <= length(psi)
-    while last(psi.centerpos) > n
-        k = last(psi.centerpos)
-        C, AR = rightorth!(_permute_tail(psi.tensors[k]); alg = alg)
-        psi.tensors[k] = _permute_front(AR)
-        psi.tensors[k-1] = psi.tensors[k-1]*C
-        psi.centerpos = min(first(psi.centerpos), k-1):k-1
+    while last(psi.gaugedpos) > n
+        k = last(psi.gaugedpos) - 1
+
+        if !ismissing(psi.bond_tensors[k+1])
+            C = psi.bond_tensors[k+1];
+            psi.bond_tensors[k+1] = missing;
+            psi.site_tensors[k] = psi.site_tensors[k]*C
+        end
+
+        C, AR = rightorth!(_permute_tail(psi.site_tensors[k]); alg = alg)
+
+        psi.site_tensors[k] = _permute_front(AR)
+        psi.bond_tensors[k] = C;
+
+        psi.gaugedpos = (first(psi.gaugedpos), k)
     end
+
     return normalize ? normalize!(psi) : psi
 end
 
 # Linear algebra methods
 #------------------------
+#=
+
+This code is close to working, but the resulting finitemps is non injective
+We need injectivity to make sure that psi.AL is uniquely defined
+We need psi.AL to be uniquely defined to make sure that the caches work
+Therefore, perhaps this shouldn't be included?
+
 function Base.:+(psi1::FiniteMPS, psi2::FiniteMPS)
     length(psi1) == length(psi2) || throw(DimensionMismatch())
 
@@ -173,49 +228,66 @@ function Base.:+(psi1::FiniteMPS, psi2::FiniteMPS)
     tensors[k] = t1 + t2
     return FiniteMPS(tensors)
 end
+=#
 
 function Base.:*(psi::FiniteMPS, a::Number)
-    psi′ = FiniteMPS(psi.tensors .* one(a) , psi.centerpos)
+    psi′ = FiniteMPS(psi.site_tensors .* one(a) , psi.bond_tensors .* one(a), psi.gaugedpos)
     return rmul!(psi′, a)
 end
 
 function Base.:*(a::Number, psi::FiniteMPS)
-    psi′ = FiniteMPS(one(a) .* psi.tensors, psi.centerpos)
+    psi′ = FiniteMPS(one(a) .* psi.site_tensors, psi.bond_tensors .* one(a), psi.gaugedpos)
     return lmul!(a, psi′)
 end
 
 function TensorKit.lmul!(a::Number, psi::FiniteMPS)
-    lmul!(a, psi.tensors[first(psi.centerpos)])
+    if first(psi.gaugedpos) + 1 == last(psi.gaugedpos)
+        #every tensor is either left or right gauged => the bond tensor is centergauged
+        @assert !ismissing(psi.bond_tensors[first(psi.gaugedpos)+1])
+
+        lmul!(a, psi.bond_tensors[first(psi.gaugedpos)+1])
+    else
+        lmul!(a, psi.site_tensors[first(psi.gaugedpos)+1])
+    end
+
     return psi
 end
 
-function TensorKit.rmul!(psi::FiniteMPS, a::Number)
-    rmul!(psi.tensors[first(psi.centerpos)], a)
+function TensorKit.rmul!(a::Number, psi::FiniteMPS)
+    if first(psi.gaugedpos) + 1 == last(psi.gaugedpos)
+        #every tensor is either left or right gauged => the bond tensor is centergauged
+        @assert !ismissing(psi.bond_tensors[first(psi.gaugedpos)+1])
+
+        rmul!(a, psi.bond_tensors[first(psi.gaugedpos)+1])
+    else
+        rmul!(a, psi.site_tensors[first(psi.gaugedpos)+1])
+    end
+
     return psi
 end
 
 function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
+    #todo : rewrite this without having to gauge
     length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
 
-    ρL = _permute_front(psi1.A[1])' * _permute_front(psi2.A[1])
-    for k in 2:length(psi1)
-        ρL = transfer_left(ρL, psi2.A[k], psi1.A[k])
-    end
-    return tr(ρL)
+    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]))
 end
 
 function TensorKit.norm(psi::FiniteMPS)
-    k = first(psi.centerpos)
-    if k == last(psi.centerpos)
-        return norm(psi.A[k])
+    #todo : rewrite this without having to gauge
+
+    if first(psi.gaugedpos) == length(psi)
+        #everything is left gauged
+        #the bond tensor should be center gauged
+        @assert !ismissing(psi.bond_tensors[first(psi.gaugedpos)+1])
+        return norm(psi.bond_tensors[first(psi.gaugedpos)+1])
+    elseif last(psi.gaugedpos) == 1
+        #everything is right gauged
+        #the bond tensor should be center gauged
+        @assert !ismissing(psi.bond_tensors[1])
+        return norm(psi.bond_tensors[1])
     else
-        _, C = leftorth(psi.A[k])
-        k += 1
-        while k <= last(psi.centerpos)
-            _, C = leftorth!(_permute_front(C * _permute_tail(psi.A[k])))
-            k += 1
-        end
-        return norm(C)
+        return norm(psi.AC[first(psi.gaugedpos)+1])
     end
 end
 
@@ -225,18 +297,18 @@ TensorKit.normalize(psi::FiniteMPS) = normalize!(copy(psi))
 
 "
     A FiniteMPS/MPO starts and ends with a bond dimension 1 leg
-    It's bond dimension also can't grow faster then pspaces (resp. pspaces^2)
+    Its bond dimension also can't grow faster then pspaces (resp. pspaces^2)
     This function calculates the maximal achievable bond dimension
 "
 function max_Ds(f::FiniteMPS{G}) where G<:GenericMPSTensor{S,N} where {S,N}
     Ds = [1 for v in 1:length(f)+1];
     for i in 1:length(f)
-        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}())))
+        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f.site_tensors[i],x)),ntuple(x->x+1,Val{N-1}())))
     end
 
     Ds[end] = 1;
     for i in length(f):-1:1
-        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}()))))
+        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f.site_tensors[i],x)),ntuple(x->x+1,Val{N-1}()))))
     end
     Ds
 end

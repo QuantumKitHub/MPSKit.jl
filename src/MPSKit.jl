@@ -1,11 +1,10 @@
 module MPSKit
-    using LinearAlgebra,TensorKit,KrylovKit,Parameters, Base.Threads, TimerOutputs
+    using LinearAlgebra,TensorKit,KrylovKit,Parameters, Base.Threads
 
     #reexport optimkit things
     #export GradientDescent, ConjugateGradient, LBFGS
     #export FletcherReeves, HestenesStiefel, PolakRibierePolyak, HagerZhang, DaiYuan
     #export HagerZhangLineSearch
-    export enable_benchmarks, disable_benchmarks, print_timer,reset_timer!
 
     #bells and whistles for mpses
     export InfiniteMPS,FiniteMPS,MPSComoving,PeriodicArray,MPSMultiline
@@ -46,8 +45,6 @@ module MPSKit
         const verbose = true
     end
 
-    include("benchmarks.jl")
-
     include("utility/periodicarray.jl")
     include("utility/utility.jl") #random utility functions
 
@@ -77,7 +74,8 @@ module MPSKit
 
     abstract type Algorithm end
 
-    include("algorithms/actions.jl")
+    include("algorithms/derivatives.jl")
+    include("algorithms/expval.jl")
     include("algorithms/toolbox.jl") #maybe move to utility, or move some utility functions to toolbox?
     include("algorithms/ortho.jl")
 
@@ -93,7 +91,6 @@ module MPSKit
     include("algorithms/groundstate/vumps.jl")
     include("algorithms/groundstate/idmrg.jl")
     include("algorithms/groundstate/dmrg.jl")
-    #include("algorithms/groundstate/optimhook.jl")
 
     include("algorithms/propagator/corvector.jl")
 

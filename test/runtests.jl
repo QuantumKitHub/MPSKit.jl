@@ -18,8 +18,9 @@ println("------------------------------------")
 
     ovl = dot(ts,ts);
     ts = rightorth(ts,normalize=false);
-    @test ovl ≈ norm(ts.A[1])^2
+    @test ovl ≈ norm(ts.AC[1])^2
 
+    #=
     data2 = [TensorMap(rand,elt,oneunit(D)*d,D)]
     for i in 1:3
         push!(data2,TensorMap(rand,elt,D*d,D))
@@ -30,9 +31,10 @@ println("------------------------------------")
 
     ovl2 = dot(ts,ts2);
 
-    ts3 = ts+ts2;
+    ts3 = ts+ts2; # probably removing FiniteMPS + FiniteMPS
 
     @test ovl2+ovl ≈ dot(ts,ts3)
+    =#
 end
 
 @testset "InfiniteMPS ($D,$d,$elt)" for (D,d,elt) in [

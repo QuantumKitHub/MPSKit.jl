@@ -5,26 +5,34 @@
 "
 mutable struct MPSComoving{Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} <: AbstractMPS
     left_gs::InfiniteMPS{Mtype,Vtype}
-    tensors::Array{Mtype,1}
-    right_gs::InfiniteMPS{Mtype,Vtype}
-    centerpos::UnitRange{Int} # range of tensors which are not left or right normalized
 
-    function MPSComoving(left::InfiniteMPS{Mtype,Vtype},tensors::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype},centerpos::UnitRange{Int}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor}
-        return new{Mtype,Vtype}(left, tensors, right, centerpos)
+    site_tensors::Vector{Mtype}
+    bond_tensors::Vector{Union{Missing,Vtype}}
+
+    right_gs::InfiniteMPS{Mtype,Vtype}
+
+    gaugedpos::Tuple{Int,Int} # range of tensors which are not left or right normalized
+
+    function MPSComoving{Mtype,Vtype}(left::InfiniteMPS{Mtype,Vtype},site_tensors::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype},bond_tensors::Vector{Union{Missing,Vtype}},gaugedpos::Tuple{Int,Int}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor}
+        #todo:insert checks
+        return new{Mtype,Vtype}(left, site_tensors, bond_tensors, right, gaugedpos)
     end
 end
 
-MPSComoving(left::InfiniteMPS{Mtype,Vtype},tensors::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = MPSComoving(left,tensors,right,1:length(tensors))
+#allow construction with only site_tensors
+MPSComoving(left::InfiniteMPS{Mtype,Vtype},site_tensors::Array{Mtype,1},right::InfiniteMPS{Mtype,Vtype},
+            bond_tensors::Vector{Union{Missing,Vtype}} = Vector{Union{Missing,Vtype}}(missing,length(site_tensors)+1),
+            gaugedpos::Tuple{Int,Int} = (0,length(site_tensors)+1)) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = MPSComoving{Mtype,Vtype}(left,site_tensors,right,bond_tensors,gaugedpos)
 
-Base.copy(state::MPSComoving) = MPSComoving(state.left_gs,map(copy, state.tensors),state.right_gs,state.centerpos)
-Base.length(state::MPSComoving)=length(state.tensors)
-Base.size(psi::MPSComoving, i...) = size(psi.tensors, i...)
+Base.copy(state::MPSComoving) = MPSComoving(state.left_gs,deepcopy(state.site_tensors),state.right_gs,deepcopy(state.bond_tensors),state.gaugedpos)
+Base.length(state::MPSComoving) = length(state.site_tensors)
+Base.size(psi::MPSComoving, i...) = size(psi.site_tensors, i...)
 Base.eltype(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
-Base.similar(psi::MPSComoving) = MPSComoving(psi.left_gs,similar.(psi.tensors),psi.right_gs)
+Base.similar(psi::MPSComoving) = MPSComoving(psi.left_gs,similar.(psi.site_tensors),psi.right_gs)
 
-TensorKit.space(psi::MPSComoving{<:MPSTensor}, n::Integer) = space(psi.A[n], 2)
+TensorKit.space(psi::MPSComoving{<:MPSTensor}, n::Integer) = space(psi.site_tensors[n], 2)
 virtualspace(psi::MPSComoving, n::Integer) =
-    n < length(psi) ? _firstspace(psi.A[n+1]) : dual(_lastspace(psi.A[n]))
+    n < length(psi) ? _firstspace(psi.site_tensors[n+1]) : dual(_lastspace(psi.site_tensors[n]))
 
 
 r_RR(state::MPSComoving)=r_RR(state.right_gs,length(state))
@@ -39,42 +47,21 @@ function Base.getproperty(psi::MPSComoving,prop::Symbol)
         return ACView(psi)
     elseif prop == :CR
         return CRView(psi)
-    elseif prop == :A
-        return AView(psi)
     else
         return getfield(psi,prop)
     end
 end
 
 
-#we need the ability to copy the data from one mpscomoving into another mpscomoving
-function Base.copyto!(st1::MPSComoving,st2::MPSComoving)
-    for i in 1:length(st1)
-        st1[i]=st2[i]
-    end
-    return st1
-end
-
-@bm function expectation_value(state::Union{MPSComoving,FiniteMPS},opp::TensorMap)
-    dat=[];
-
-    for i in 1:length(state)
-        d = @tensor state.AC[i][1,2,3]*opp[4,2]*conj(state.AC[i][1,4,3])
-        push!(dat,d)
-    end
-
-    return dat
-end
-
 function max_Ds(f::MPSComoving{G}) where G<:GenericMPSTensor{S,N} where {S,N}
-    Ds = [dim(space(left_gs.AL[1],1)) for v in 1:length(f)+1];
+    Ds = [dim(space(f.left_gs.AL[1],1)) for v in 1:length(f)+1];
     for i in 1:length(f)
-        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}())))
+        Ds[i+1] = Ds[i]*prod(map(x->dim(space(f.site_tensors[i],x)),ntuple(x->x+1,Val{N-1}())))
     end
 
-    Ds[end] = dim(space(right_gs.AL[1],1));
+    Ds[end] = dim(space(f.right_gs.AL[1],1));
     for i in length(f):-1:1
-        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f.A[i],x)),ntuple(x->x+1,Val{N-1}()))))
+        Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f.site_tensors[i],x)),ntuple(x->x+1,Val{N-1}()))))
     end
     Ds
 end
@@ -82,84 +69,115 @@ end
 """
     function leftorth!(psi::MPSComoving, n = length(psi); normalize = true, alg = QRpos())
 
-Bring all MPS tensors of `psi` to the left of site `n` into left orthonormal form, using
+Bring all MPS tensors of `psi` up to and including site `n` into left orthonormal form, using
 the orthogonal factorization algorithm `alg`
 """
 function TensorKit.leftorth!(psi::MPSComoving, n::Integer = length(psi);
-                    alg::OrthogonalFactorizationAlgorithm = QRpos(),
+                    alg::OrthogonalFactorizationAlgorithm = Polar(),
                     normalize::Bool = true)
     @assert 1 <= n <= length(psi)
-    while first(psi.centerpos) < n
-        k = first(psi.centerpos)
-        AL, C = leftorth!(psi.tensors[k]; alg = alg)
-        psi.tensors[k] = AL
-        psi.tensors[k+1] = _permute_front(C*_permute_tail(psi.tensors[k+1]))
-        psi.centerpos = k+1:max(k+1,last(psi.centerpos))
+
+    while first(psi.gaugedpos) < n
+        k = first(psi.gaugedpos) + 1
+
+        if !ismissing(psi.bond_tensors[k])
+            C = psi.bond_tensors[k];
+            psi.bond_tensors[k] = missing;
+            psi.site_tensors[k] = _permute_front(C*_permute_tail(psi.site_tensors[k+1]))
+        end
+
+        psi.site_tensors[k], psi.bond_tensors[k+1] = leftorth!(psi.site_tensors[k]; alg = alg)
+
+        psi.gaugedpos = (k,last(psi.gaugedpos))
     end
     return normalize ? normalize!(psi) : psi
 end
 function TensorKit.rightorth!(psi::MPSComoving, n::Integer = 1;
-                    alg::OrthogonalFactorizationAlgorithm = LQpos(),
+                    alg::OrthogonalFactorizationAlgorithm = Polar(),
                     normalize::Bool = true)
     @assert 1 <= n <= length(psi)
-    while last(psi.centerpos) > n
-        k = last(psi.centerpos)
-        C, AR = rightorth!(_permute_tail(psi.tensors[k]); alg = alg)
-        psi.tensors[k] = _permute_front(AR)
-        psi.tensors[k-1] = psi.tensors[k-1]*C
-        psi.centerpos = min(first(psi.centerpos), k-1):k-1
+
+    while last(psi.gaugedpos) > n
+        k = last(psi.gaugedpos) - 1
+
+        if !ismissing(psi.bond_tensors[k+1])
+            C = psi.bond_tensors[k+1];
+            psi.bond_tensors[k+1] = missing;
+            psi.site_tensors[k] = psi.site_tensors[k]*C
+        end
+
+        C, AR = rightorth!(_permute_tail(psi.site_tensors[k]); alg = alg)
+
+        psi.site_tensors[k] = _permute_front(AR)
+        psi.bond_tensors[k] = C;
+
+        psi.gaugedpos = (first(psi.gaugedpos), k)
     end
+
     return normalize ? normalize!(psi) : psi
 end
 
 
 function Base.:*(psi::MPSComoving, a::Number)
-    psi′ = MPSComoving(psi.left,psi.tensors .* one(a) ,psi.right, psi.centerpos)
+    psi′ = MPSComoving(psi.left,psi.site_tensors .* one(a) ,psi.right, psi.bond_tensors.*one(a),psi.centerpos)
     return rmul!(psi′, a)
 end
 
 function Base.:*(a::Number, psi::MPSComoving)
-    psi′ = MPSComoving(psi.left,one(a) .* psi.tensors, psi.right,psi.centerpos)
+    psi′ = MPSComoving(psi.left,one(a) .* psi.site_tensors, psi.right,psi.bond_tensors.*one(a),psi.centerpos)
     return lmul!(a, psi′)
 end
 
 function TensorKit.lmul!(a::Number, psi::MPSComoving)
-    lmul!(a, psi.tensors[first(psi.centerpos)])
+    if first(psi.gaugedpos) + 1 == last(psi.gaugedpos)
+        #every tensor is either left or right gauged => the bond tensor is centergauged
+        @assert !ismissing(psi.bond_tensors[first(psi.gaugedpos)+1])
+
+        lmul!(a, psi.bond_tensors[first(psi.gaugedpos)+1])
+    else
+        lmul!(a, psi.site_tensors[first(psi.gaugedpos)+1])
+    end
+
     return psi
 end
 
-function TensorKit.rmul!(psi::MPSComoving, a::Number)
-    rmul!(psi.tensors[first(psi.centerpos)], a)
+function TensorKit.rmul!(a::Number, psi::MPSComoving)
+    if first(psi.gaugedpos) + 1 == last(psi.gaugedpos)
+        #every tensor is either left or right gauged => the bond tensor is centergauged
+        @assert !ismissing(psi.bond_tensors[first(psi.gaugedpos)+1])
+
+        rmul!(a, psi.bond_tensors[first(psi.gaugedpos)+1])
+    else
+        rmul!(a, psi.site_tensors[first(psi.gaugedpos)+1])
+    end
+
     return psi
 end
 
-#=
-    in principle we can take dots between psi1;psi2 when left or right mps differs
-=#
+
 function TensorKit.dot(psi1::MPSComoving, psi2::MPSComoving)
     length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
     psi1.left == psi2.left || throw(ArgumentError("left InfiniteMPS is different"))
     psi1.right == psi2.right || throw(ArgumentError("right InfiniteMPS is different"))
 
-    ρL = _permute_front(psi1.A[1])' * _permute_front(psi2.A[1])
-    for k in 2:length(psi1)
-        ρL = transfer_left(ρL, psi2.A[k], psi1.A[k])
-    end
-    return tr(ρL)
+    #todo: rewrite this such that it doesn't change gauges
+    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]))
 end
 
 function TensorKit.norm(psi::MPSComoving)
-    k = first(psi.centerpos)
-    if k == last(psi.centerpos)
-        return norm(psi.A[k])
+    #todo : rewrite this without having to gauge
+    if first(psi.gaugedpos) == length(psi)
+        #everything is left gauged
+        #the bond tensor should be center gauged
+        @assert !ismissing(psi.bond_tensors[first(psi.gaugedpos)+1])
+        return norm(psi.bond_tensors[first(psi.gaugedpos)+1])
+    elseif last(psi.gaugedpos) == 1
+        #everything is right gauged
+        #the bond tensor should be center gauged
+        @assert !ismissing(psi.bond_tensors[1])
+        return norm(psi.bond_tensors[1])
     else
-        _, C = leftorth(psi.A[k])
-        k += 1
-        while k <= last(psi.centerpos)
-            _, C = leftorth!(_permute_front(C * _permute_tail(psi.A[k])))
-            k += 1
-        end
-        return norm(C)
+        return norm(psi.AC[first(psi.gaugedpos)+1])
     end
 end
 

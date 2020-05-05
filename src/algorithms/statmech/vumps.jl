@@ -17,7 +17,7 @@ function leading_boundary(state::InfiniteMPS,H,alg,pars=params(state,H))
     return convert(InfiniteMPS,st),pr,de
 end
 
-@bm function leading_boundary(state::MPSMultiline, H,alg::Vumps,pars = params(state,H))
+function leading_boundary(state::MPSMultiline, H,alg::Vumps,pars = params(state,H))
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 

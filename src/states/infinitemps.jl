@@ -96,16 +96,6 @@ r_LR(state::InfiniteMPS,loc::Int=length(state)) = state.CR[loc]
 "
 r_LL(state::InfiniteMPS,loc::Int=length(state))= @tensor toret[-1;-2]:=state.CR[loc][-1,1]*conj(state.CR[loc][-2,1])
 
-@bm function expectation_value(st::InfiniteMPS,opp::MPSBondTensor)
-    dat=[]
-    for i in 1:length(st)
-        val=@tensor st.AC[i][1,2,3]*opp[4,2]*conj(st.AC[i][1,4,3])
-        push!(dat,val)
-    end
-
-    return dat
-end
-
 function LinearAlgebra.dot(a::InfiniteMPS,b::InfiniteMPS;krylovdim = 30)
     init = TensorMap(rand,ComplexF64,space(a.AL[1],1),space(b.AL[1],1))
     num = lcm(length(a),length(b))

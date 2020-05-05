@@ -23,8 +23,7 @@ function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}
         push!(rightenvs,similar.(rightstart))#transfer_right(rightenvs[end],opp,length(state)-i+1,state[length(state)-i+1]))
     end
 
-    return FinEnv([similar(state.A[i]) for i in 1:length(state)],
-                [similar(state.A[i]) for i in 1:length(state)],opp,leftenvs,reverse(rightenvs))
+    return FinEnv(similar.(state.site_tensors),similar.(state.site_tensors),opp,leftenvs,reverse(rightenvs))
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
@@ -62,7 +61,8 @@ end
 function params(state::FiniteMPS,ham::ComAct)
     lll = l_LL(state);rrr = r_RR(state)
 
-    sillyel = TensorMap(zeros,eltype(eltype(state)),oneunit(space(state.A[1],1))*oneunit(space(state.A[1],1)),oneunit(space(state.A[1],1)));
+
+    sillyel = TensorMap(zeros,eltype(eltype(state)),oneunit(virtualspace(state,1))*oneunit(virtualspace(state,1)),oneunit(virtualspace(state,1)));
     rightstart = Array{typeof(sillyel),1}(undef,ham.odim);
     leftstart = Array{typeof(sillyel),1}(undef,ham.odim);
 

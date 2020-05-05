@@ -8,7 +8,7 @@
     manager::Algorithm = SimpleManager();
 end
 
-@bm function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
+function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta = 2*tol
 
@@ -46,7 +46,7 @@ end
     verbose = Defaults.verbose
 end
 
-@bm function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
+function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta = 2*tol
 
@@ -68,7 +68,7 @@ end
             @tensor ov[-1,-2,-3,-4]:=al[-1,-2,1]*c[1,2]*ar[2,-3,-4]-al[1,2,3]*c[3,4]*ar[4,5,6]*conj(state.AC[pos][1,2,7])*conj(state.AR[pos+1][7,5,6])*state.AC[pos][-1,-2,9]*state.AR[pos+1][9,-3,-4]
             delta = max(delta,norm(ov))
 
-            state.AC[pos] = (al,c)
+            state.AC[pos] = (al,complex(c))
             state.AR[pos+1] = _permute_front(ar);
         end
 

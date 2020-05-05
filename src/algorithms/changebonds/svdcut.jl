@@ -6,8 +6,6 @@
 end
 
 function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) where T<: GenericMPSTensor{Sp,N} where {Sp,N} # made it work for GenericMPSTensor
-    state = leftorth(state; normalize=false)
-
     for i in length(state)-1:-1:1
         a = state.AC[i]
         b = _permute_tail(state.AR[i+1]);
@@ -21,11 +19,6 @@ function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) wher
     return state
 end
 
-function changebonds(state::InfiniteMPS,H,alg::SvdCut,pars=params(state,H))
-    state = changebonds(state,alg);
-    return state,pars;
-end
-
 function changebonds(state::InfiniteMPS,alg::SvdCut)
     nAL = copy(state.AL); #not actually left orthonormalized
 
@@ -36,4 +29,9 @@ function changebonds(state::InfiniteMPS,alg::SvdCut)
     end
 
     return InfiniteMPS(nAL)
+end
+
+function changebonds(state,H,alg::SvdCut,pars=params(state,H))
+    state = changebonds(state,alg);
+    return state,pars;
 end

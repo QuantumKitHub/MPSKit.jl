@@ -1,69 +1,15 @@
-struct AView{S}
-    parent::S
-end
-
-Base.getindex(v::AView,i::Int) = v.parent.tensors[i]
-
-struct ACView{S}
-    parent::S
-end
-
-function Base.getindex(v::ACView,i::Int)
-    leftorth!(v.parent,i,normalize=false)
-    rightorth!(v.parent,i,normalize=false)
-
-    return v.parent.tensors[i]
-end
-
-function Base.setindex!(v::ACView,vec::GenericMPSTensor,i::Int)
-    leftorth!(v.parent,i,normalize=false)
-    rightorth!(v.parent,i,normalize=false)
-
-    v.parent.tensors[i] = vec;
-    v.parent.centerpos = i:i;
-end
-
-function Base.setindex!(v::ACView,vec::Tuple{<:GenericMPSTensor,<:GenericMPSTensor},i::Int)
-    leftorth!(v.parent,i,normalize=false)
-    rightorth!(v.parent,i,normalize=false)
-
-    (a,b) = vec
-    if isa(a,MPSBondTensor) #c/ar
-        v.parent.tensors[i] = _permute_front(a*_permute_tail(b))
-    else #al/c
-        @assert isa(b,MPSBondTensor)
-
-        v.parent.tensors[i] = a*b;
-    end
-
-    v.parent.centerpos = i:i;
-end
-
 struct ALView{S}
     parent::S
 end
 
 function Base.getindex(v::ALView,i::Int)
-    if i == length(v.parent)
-        leftorth!(v.parent,i,normalize = false);
-        (AL,C) = leftorth(v.parent.tensors[i])
-        return AL;
-    else
-        leftorth!(v.parent,i+1,normalize = false);
-        return v.parent.tensors[i]
-    end
+    leftorth!(v.parent,i,normalize = false);
+    return v.parent.site_tensors[i]
 end
 
 function Base.setindex!(v::ALView,vec,i::Int)
-    if i == length(v.parent)
-        leftorth!(v.parent,i,normalize = false);
-        (AL,C) = leftorth(v.parent.tensors[i])
-        v.parent.tensors[i] = vec*C;
-    else
-        leftorth!(v.parent,i+1,normalize = false);
-
-        v.parent.tensors[i] = vec
-    end
+    leftorth!(v.parent,i,normalize = false);
+    v.parent.site_tensors[i] = vec;
 end
 
 struct ARView{S}
@@ -71,26 +17,13 @@ struct ARView{S}
 end
 
 function Base.getindex(v::ARView,i::Int)
-    if i == 1
-        rightorth!(v.parent,i,normalize=false);
-        (C,AR) = rightorth(_permute_tail(v.parent.tensors[1]));
-        return _permute_front(AR);
-    else
-        rightorth!(v.parent,i-1,normalize = false);
-        return v.parent.tensors[i]
-    end
+    rightorth!(v.parent,i,normalize = false);
+    return v.parent.site_tensors[i]
 end
 
 function Base.setindex!(v::ARView,vec,i::Int)
-    if i == 1
-        rightorth!(v.parent,i,normalize=false);
-        (C,AR) = rightorth(_permute_tail(v.parent.tensors[1]));
-
-        v.parent.tensors[i] = _permute_front(C*_permute_tail(vec))
-    else
-        rightorth!(v.parent,i-1,normalize = false);
-        v.parent.tensors[i] = vec
-    end
+    rightorth!(v.parent,i,normalize = false);
+    v.parent.site_tensors[i] = vec;
 end
 
 struct CRView{S}
@@ -98,30 +31,84 @@ struct CRView{S}
 end
 
 function Base.getindex(v::CRView,i::Int)
-    leftorth!(v.parent,i,normalize=false)
-    rightorth!(v.parent,i,normalize=false)
-
-    (AL,C) = leftorth(v.parent.tensors[i]);
-
-    C
+    i != 0 && leftorth!(v.parent,i,normalize=false)
+    i != length(v.parent) && rightorth!(v.parent,i+1,normalize=false)
+    return v.parent.bond_tensors[i+1]
 end
 
 function Base.setindex!(v::CRView,vec,i::Int)
-    leftorth!(v.parent,i,normalize=false)
-    rightorth!(v.parent,i,normalize=false)
-
-    (AL,C) = leftorth(v.parent.tensors[i]);
-
-    v.parent.tensors[i] = AL*vec
-    v.parent.centerpos = i:i
+    i != 0 && leftorth!(v.parent,i,normalize=false)
+    i != length(v.parent) && rightorth!(v.parent,i+1,normalize=false)
+    v.parent.bond_tensors[i+1] = vec
 end
 
-Base.firstindex(psi::Union{AView,ACView,ALView,ARView,CRView}, i...) = firstindex(psi.parent.tensors, i...)
-Base.lastindex(psi::Union{AView,ACView,ALView,ARView,CRView}, i...) = lastindex(psi.parent.tensors, i...)
 
-Base.iterate(psi::Union{AView,ACView,ALView,ARView,CRView}, i...) = iterate(psi.parent.tensors, i...)
-Base.IteratorSize(::Type{<:Union{AView,ACView,ALView,ARView,CRView}}) = Base.HasShape{1}()
-Base.IteratorEltype(::Type{<:Union{AView,ACView,ALView,ARView,CRView}}) = Base.HasEltype()
+struct ACView{S}
+    parent::S
+end
 
-Base.length(psi::Union{AView,ACView,ALView,ARView,CRView}) = length(psi.parent);
-Base.size(psi::Union{AView,ACView,ALView,ARView,CRView},args...) = size(psi.parent,args...);
+function Base.getindex(v::ACView,i::Int)
+    i != 1 && leftorth!(v.parent,i-1,normalize=false)
+    i != length(v.parent) && rightorth!(v.parent,i+1,normalize=false)
+
+    if !ismissing(v.parent.bond_tensors[i])
+        v.parent.site_tensors[i] = _permute_front(v.parent.bond_tensors[i]*_permute_tail(v.parent.site_tensors[i]))
+        v.parent.bond_tensors[i] = missing;
+    end
+
+    if !ismissing(v.parent.bond_tensors[i+1])
+        v.parent.site_tensors[i] = v.parent.site_tensors[i]*v.parent.bond_tensors[i+1]
+        v.parent.bond_tensors[i+1] = missing;
+    end
+    v.parent.gaugedpos = (i-1,i+1);
+
+    return v.parent.site_tensors[i]
+end
+
+function Base.setindex!(v::ACView,vec::GenericMPSTensor,i::Int)
+    i != 1 && leftorth!(v.parent,i-1,normalize=false)
+    i != length(v.parent) && rightorth!(v.parent,i+1,normalize=false)
+
+    v.parent.bond_tensors[i] = missing;
+    v.parent.bond_tensors[i+1] = missing;
+
+    v.parent.site_tensors[i] = vec;
+
+    v.parent.gaugedpos = (i-1,i+1);
+end
+
+# AL * C or C * AR. Note that C has to be a positive semidefinite matrix
+function Base.setindex!(v::ACView,vec::Tuple{<:GenericMPSTensor,<:GenericMPSTensor},i::Int)
+    i != 1 && leftorth!(v.parent,i-1,normalize=false)
+    i != length(v.parent) && rightorth!(v.parent,i+1,normalize=false)
+
+    v.parent.bond_tensors[i] = missing;
+    v.parent.bond_tensors[i+1] = missing;
+
+    (a,b) = vec
+    if isa(a,MPSBondTensor) #c/ar
+        v.parent.bond_tensors[i] = a;
+        v.parent.site_tensors[i] = b;
+        v.parent.gaugedpos = (i-1,i);
+    else #al/c
+        @assert isa(b,MPSBondTensor)
+
+        v.parent.site_tensors[i] = a;
+        v.parent.bond_tensors[i+1] = b;
+        v.parent.gaugedpos = (i,i+1);
+    end
+
+end
+
+Base.firstindex(psi::Union{ACView,ALView,ARView}, i...) = firstindex(psi.parent.site_tensors, i...)
+Base.lastindex(psi::Union{ACView,ALView,ARView}, i...) = lastindex(psi.parent.site_tensors, i...)
+Base.length(psi::Union{ACView,ALView,ARView}) = length(psi.parent);
+Base.size(psi::Union{ACView,ALView,ARView},args...) = size(psi.parent,args...);
+
+Base.firstindex(psi::Union{CRView}, i...) = firstindex(psi.parent.bond_tensors, i...)
+Base.lastindex(psi::Union{CRView}, i...) = lastindex(psi.parent.bond_tensors, i...)
+Base.length(psi::Union{CRView}) = length(psi.parent.bond_tensors);
+Base.size(psi::Union{CRView},args...) = size(psi.parent.bond_tensors,args...);
+
+Base.IteratorSize(::Type{<:Union{ACView,ALView,ARView,CRView}}) = Base.HasShape{1}()
+Base.IteratorEltype(::Type{<:Union{ACView,ALView,ARView,CRView}}) = Base.HasEltype()

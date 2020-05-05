@@ -7,7 +7,7 @@
 #addition / substraction
 function Base.:+(a::MPOHamiltonian,e::AbstractArray{T,1}) where T
     @assert length(e)==a.period
-    nOs=copy(a.Os)
+    nOs = deepcopy(a.Os)
 
     for c=1:a.period
         @tensor nOs[c][1,a.odim][-1 -2;-3 -4]:=a[c,1,a.odim][-1,-2,-3,-4]+(e[c]*one(a[c,1,a.odim]))[-1,-2,-3,-4]

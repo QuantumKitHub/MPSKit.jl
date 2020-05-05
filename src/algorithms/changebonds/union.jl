@@ -13,7 +13,7 @@ function changebonds(state,alg::UnionTrunc)
     return state
 end
 
-function changebonds(state,H,alg::UnionTrunc,pars = nothing)
+function changebonds(state,H,alg::UnionTrunc,pars = params(state,H))
     (state,pars) = changebonds(state,H,alg.alg1,pars)
     (state,pars) = changebonds(state,H,alg.alg2,pars)
     return (state,pars)

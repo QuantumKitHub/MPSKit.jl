@@ -31,7 +31,7 @@ function params(st::InfiniteMPS,ham::MPOHamiltonian;tol::Float64=Defaults.tol,ma
 end
 
 
-@bm function recalculate!(pars::MPOHamInfEnv, nstate)
+function recalculate!(pars::MPOHamInfEnv, nstate)
     pars.dependency = nstate;
     sameDspace = reduce((prev,i) -> prev && space(pars.lw[i,1],3) == space(nstate.CR[i],1)',1:length(nstate),init=true);
 

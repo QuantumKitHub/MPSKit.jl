@@ -12,7 +12,7 @@ mutable struct PerMPOInfEnv{H<:PeriodicMPO,V,S<:MPSMultiline} <: AbstractInfEnv
     rw :: PeriodicArray{V,2}
 end
 
-@bm function recalculate!(pars::PerMPOInfEnv,nstate)
+function recalculate!(pars::PerMPOInfEnv,nstate)
     ndat = params(nstate,pars.opp,pars.lw,pars.rw,tol=pars.tol,maxiter=pars.maxiter);
 
     pars.lw = ndat.lw

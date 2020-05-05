@@ -15,14 +15,14 @@ let
 
     #apply a single spinflip at the middle site
     mpco = MPSComoving(ts,copy.([ts.AC[1];ts.AR[2:len]]),ts)
-    @tensor mpco.middle[Int(round(len/2))][-1 -2;-3]:=ts.AR[Int(round(len/2))][-1,1,-3]*sxt[-2,1]
+    @tensor mpco.AC[Int(round(len/2))][-1 -2;-3]:=ts.AC[Int(round(len/2))][-1,1,-3]*sxt[-2,1]
 
     pars = params(mpco,th)
 
     szdat=[expectation_value(mpco,szt)]
 
     for i in 1:(totaltime/deltat)
-        mpco = changebonds(mpco,OptimalExpand()&SvdCut(trschemes=[truncdim(20)])) # grow the bond dimension by 1, and truncate at bond dimension 20
+        (mpco,pars) = changebonds(mpco,th,OptimalExpand()&SvdCut(trschemes=[truncdim(20)])) # grow the bond dimension by 1, and truncate at bond dimension 20
         (mpco,pars) = timestep(mpco,th,deltat,Tdvp(),pars)
         push!(szdat,expectation_value(mpco,szt))
     end
