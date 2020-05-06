@@ -112,3 +112,4 @@ Base.size(psi::Union{CRView},args...) = size(psi.parent.bond_tensors,args...);
 
 Base.IteratorSize(::Type{<:Union{ACView,ALView,ARView,CRView}}) = Base.HasShape{1}()
 Base.IteratorEltype(::Type{<:Union{ACView,ALView,ARView,CRView}}) = Base.HasEltype()
+Base.iterate(view::Union{ACView,ALView,ARView,CRView},istate = 1) = istate > length(view) ? nothing : (view[istate],istate+1)

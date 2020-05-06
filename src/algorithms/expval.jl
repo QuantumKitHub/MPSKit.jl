@@ -1,25 +1,10 @@
-function expectation_value(state::Union{MPSComoving,FiniteMPS},opp::TensorMap)
-    dat=[];
-
-    for i in 1:length(state)
-        d = @tensor state.AC[i][1,2,3]*opp[4,2]*conj(state.AC[i][1,4,3])
-        push!(dat,d)
+#works for general tensors
+expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opp::AbstractTensorMap) = expectation_value(state,fill(opp,length(state)))
+function expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opps::AbstractArray{<:AbstractTensorMap})
+    map(zip(state.AC,opps)) do (t,opp)
+        tr(t'*permute(opp*permute(t,TensorKit.allind(t)[2:end-1],(1,TensorKit.numind(t))),(TensorKit.numind(t)-1,TensorKit.allind(t)[1:end-2]...),(TensorKit.numind(t),)))
     end
-
-    return dat
 end
-
-
-function expectation_value(st::InfiniteMPS,opp::MPSBondTensor)
-    dat=[]
-    for i in 1:length(st)
-        val=@tensor st.AC[i][1,2,3]*opp[4,2]*conj(st.AC[i][1,4,3])
-        push!(dat,val)
-    end
-
-    return dat
-end
-
 
 """
     calculates the expectation value for the given operator/hamiltonian
