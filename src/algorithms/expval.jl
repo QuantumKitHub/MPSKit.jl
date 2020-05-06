@@ -1,6 +1,9 @@
 #works for general tensors
 expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opp::AbstractTensorMap) = expectation_value(state,fill(opp,length(state)))
 function expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opps::AbstractArray{<:AbstractTensorMap})
+    #todo : gauge gets moved all over the place for finite and comoving states
+    #this will invalidate possible caches
+    #we should probably not be moving the gauge
     map(zip(state.AC,opps)) do (t,opp)
         tr(t'*permute(opp*permute(t,TensorKit.allind(t)[2:end-1],(1,TensorKit.numind(t))),(TensorKit.numind(t)-1,TensorKit.allind(t)[1:end-2]...),(TensorKit.numind(t),)))
     end

@@ -8,33 +8,22 @@ println("------------------------------------")
         (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1)*ℂ[SU₂](0=>1),ComplexF32)
         ]
 
-    data = [TensorMap(rand,elt,oneunit(D)*d,D)]
-    for i in 1:3
-        push!(data,TensorMap(rand,elt,D*d,D))
-    end
-    push!(data,TensorMap(rand,elt,D*d,oneunit(D)));
-
-    ts = FiniteMPS(data);
+    ts = FiniteMPS(rand,elt,rand(1:10),d,D);
 
     ovl = dot(ts,ts);
-    ts = rightorth(ts,normalize=false);
     @test ovl ≈ norm(ts.AC[1])^2
 
-    #=
-    data2 = [TensorMap(rand,elt,oneunit(D)*d,D)]
-    for i in 1:3
-        push!(data2,TensorMap(rand,elt,D*d,D))
+    for i in 1:length(ts)
+        @test ts.AC[i] ≈ ts.AL[i]*ts.CR[i]
+        @test ts.AC[i] ≈ MPSKit._permute_front(ts.CR[i-1]*MPSKit._permute_tail(ts.AR[i]))
     end
-    push!(data2,TensorMap(rand,elt,D*d,oneunit(D)));
 
-    ts2 = FiniteMPS(data2);
+    @test elt == eltype(eltype(ts))
 
-    ovl2 = dot(ts,ts2);
-
-    ts3 = ts+ts2; # probably removing FiniteMPS + FiniteMPS
-
-    @test ovl2+ovl ≈ dot(ts,ts3)
-    =#
+    ts = ts*3
+    @test ovl*9 ≈ norm(ts)^2
+    ts = 3*ts
+    @test ovl*9*9 ≈ norm(ts)^2
 end
 
 @testset "InfiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
@@ -93,6 +82,18 @@ end
     (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
 
     window = MPSComoving(gs,copy.([gs.AC[1];[gs.AR[i] for i in 2:10]]),gs);
+
+    for i in 1:length(window)
+        @test window.AC[i] ≈ window.AL[i]*window.CR[i]
+        @test window.AC[i] ≈ MPSKit._permute_front(window.CR[i-1]*MPSKit._permute_tail(window.AR[i]))
+    end
+
+    @test norm(window) ≈ 1
+    window = window*3
+    @test 9 ≈ norm(window)^2
+    window = 3*window
+    @test 9*9 ≈ norm(window)^2
+    rightorth!(window,normalize=true)
 
     e1 = expectation_value(window,ham);
 

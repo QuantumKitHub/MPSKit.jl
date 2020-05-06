@@ -32,13 +32,15 @@ mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
 
         for n = 1:N
             ismissing(bond_tensors[n]) ||
-                dual(_lastspace(bond_tensors[n])) == _firstspace(space_tensors[n]) ||
+                dual(_lastspace(bond_tensors[n])) == _firstspace(site_tensors[n]) ||
                 throw(SectorMismatch("bond tensor doesn't fit on space tensor"))
 
             ismissing(bond_tensors[n+1]) ||
-                dual(_firstspace(bond_tensors[n+1])) == _lastspace(space_tensors[n]) ||
+                dual(_firstspace(bond_tensors[n+1])) == _lastspace(site_tensors[n]) ||
                 throw(SectorMismatch("bond tensor doesn't fit on space tensor"))
         end
+
+        #todo : check injectivity
 
         return new{A,B}(site_tensors, bond_tensors, gaugedpos)
     end
@@ -55,16 +57,16 @@ function FiniteMPS(site_tensors::Vector{A},
 end
 
 # allow construction with one large tensorkit space
-function FiniteMPS(f, P::ProductSpace, args...; kwargs...)
-    return FiniteMPS(f, collect(P), args...; kwargs...)
+function FiniteMPS(f, elt,P::ProductSpace, args...; kwargs...)
+    return FiniteMPS(f, elt, collect(P), args...; kwargs...)
 end
 
 # allow construction given only a physical space and length
-function FiniteMPS(f, N::Int, V::VectorSpace, args...; kwargs...)
-    return FiniteMPS(f, fill(V, N), args...; kwargs...)
+function FiniteMPS(f,elt, N::Int, V::VectorSpace, args...; kwargs...)
+    return FiniteMPS(f, elt,fill(V, N), args...; kwargs...)
 end
 
-function FiniteMPS(f, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;
+function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;
                     left::S = oneunit(maxvirtspace),
                     right::S = oneunit(maxvirtspace)) where {S<:ElementarySpace}
     N = length(physspaces)
@@ -77,15 +79,15 @@ function FiniteMPS(f, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirts
     for k = N:-1:2
         virtspaces[k] = min(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
     end
-    return FiniteMPS(f, physspaces, virtspaces)
+    return FiniteMPS(f, elt,physspaces, virtspaces)
 end
-function FiniteMPS(f,
+function FiniteMPS(f,elt,
                     physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                     virtspaces::Vector{S}) where {S<:ElementarySpace}
     N = length(physspaces)
     length(virtspaces) == N+1 || throw(DimensionMismatch())
 
-    tensors = [TensorMap(f, virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
+    tensors = [TensorMap(f, elt,virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
 
     return FiniteMPS(tensors)
 end
@@ -149,7 +151,7 @@ function TensorKit.leftorth!(psi::FiniteMPS, n::Integer = length(psi);
             psi.site_tensors[k] = _permute_front(C*_permute_tail(psi.site_tensors[k]))
         end
 
-        psi.site_tensors[k], psi.bond_tensors[k+1] = leftorth!(psi.site_tensors[k]; alg = alg)
+        psi.site_tensors[k], psi.bond_tensors[k+1] = leftorth(psi.site_tensors[k]; alg = alg)
 
         psi.gaugedpos = (k,last(psi.gaugedpos))
     end
@@ -168,7 +170,7 @@ function TensorKit.rightorth!(psi::FiniteMPS, n::Integer = 1;
             psi.site_tensors[k] = psi.site_tensors[k]*C
         end
 
-        C, AR = rightorth!(_permute_tail(psi.site_tensors[k]); alg = alg)
+        C, AR = rightorth(_permute_tail(psi.site_tensors[k]); alg = alg)
 
         psi.site_tensors[k] = _permute_front(AR)
         psi.bond_tensors[k] = C;
@@ -231,12 +233,18 @@ end
 =#
 
 function Base.:*(psi::FiniteMPS, a::Number)
-    psi′ = FiniteMPS(psi.site_tensors .* one(a) , psi.bond_tensors .* one(a), psi.gaugedpos)
+    nsite_tensors = psi.site_tensors .* one(a)
+    nbond_tensors = convert(Vector{Union{Missing,bond_type(nsite_tensors[1])}}, psi.bond_tensors .* one(a))
+
+    psi′ = FiniteMPS(nsite_tensors,nbond_tensors, psi.gaugedpos)
     return rmul!(psi′, a)
 end
 
 function Base.:*(a::Number, psi::FiniteMPS)
-    psi′ = FiniteMPS(one(a) .* psi.site_tensors, psi.bond_tensors .* one(a), psi.gaugedpos)
+    nsite_tensors = psi.site_tensors .* one(a)
+    nbond_tensors = convert(Vector{Union{Missing,bond_type(nsite_tensors[1])}}, psi.bond_tensors .* one(a))
+
+    psi′ = FiniteMPS(nsite_tensors,nbond_tensors, psi.gaugedpos)
     return lmul!(a, psi′)
 end
 
@@ -253,14 +261,14 @@ function TensorKit.lmul!(a::Number, psi::FiniteMPS)
     return psi
 end
 
-function TensorKit.rmul!(a::Number, psi::FiniteMPS)
+function TensorKit.rmul!(psi::FiniteMPS,a::Number)
     if first(psi.gaugedpos) + 1 == last(psi.gaugedpos)
         #every tensor is either left or right gauged => the bond tensor is centergauged
         @assert !ismissing(psi.bond_tensors[first(psi.gaugedpos)+1])
 
-        rmul!(a, psi.bond_tensors[first(psi.gaugedpos)+1])
+        rmul!(psi.bond_tensors[first(psi.gaugedpos)+1],a)
     else
-        rmul!(a, psi.site_tensors[first(psi.gaugedpos)+1])
+        rmul!(psi.site_tensors[first(psi.gaugedpos)+1],a)
     end
 
     return psi

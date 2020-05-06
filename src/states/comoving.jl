@@ -86,7 +86,7 @@ function TensorKit.leftorth!(psi::MPSComoving, n::Integer = length(psi);
             psi.site_tensors[k] = _permute_front(C*_permute_tail(psi.site_tensors[k]))
         end
 
-        psi.site_tensors[k], psi.bond_tensors[k+1] = leftorth!(psi.site_tensors[k]; alg = alg)
+        psi.site_tensors[k], psi.bond_tensors[k+1] = leftorth(psi.site_tensors[k]; alg = alg)
 
         psi.gaugedpos = (k,last(psi.gaugedpos))
     end
@@ -106,7 +106,7 @@ function TensorKit.rightorth!(psi::MPSComoving, n::Integer = 1;
             psi.site_tensors[k] = psi.site_tensors[k]*C
         end
 
-        C, AR = rightorth!(_permute_tail(psi.site_tensors[k]); alg = alg)
+        C, AR = rightorth(_permute_tail(psi.site_tensors[k]); alg = alg)
 
         psi.site_tensors[k] = _permute_front(AR)
         psi.bond_tensors[k] = C;
@@ -119,12 +119,18 @@ end
 
 
 function Base.:*(psi::MPSComoving, a::Number)
-    psi′ = MPSComoving(psi.left,psi.site_tensors .* one(a) ,psi.right, psi.bond_tensors.*one(a),psi.centerpos)
+    nsite_tensors = psi.site_tensors .* one(a)
+    nbond_tensors = convert(Vector{Union{Missing,bond_type(nsite_tensors[1])}}, psi.bond_tensors .* one(a))
+
+    psi′ = MPSComoving(psi.left_gs,nsite_tensors ,psi.right_gs, nbond_tensors,psi.gaugedpos)
     return rmul!(psi′, a)
 end
 
 function Base.:*(a::Number, psi::MPSComoving)
-    psi′ = MPSComoving(psi.left,one(a) .* psi.site_tensors, psi.right,psi.bond_tensors.*one(a),psi.centerpos)
+    nsite_tensors = psi.site_tensors .* one(a)
+    nbond_tensors = convert(Vector{Union{Missing,bond_type(nsite_tensors[1])}}, psi.bond_tensors .* one(a))
+
+    psi′ = MPSComoving(psi.left_gs,nsite_tensors ,psi.right_gs, nbond_tensors,psi.gaugedpos)
     return lmul!(a, psi′)
 end
 
@@ -141,14 +147,14 @@ function TensorKit.lmul!(a::Number, psi::MPSComoving)
     return psi
 end
 
-function TensorKit.rmul!(a::Number, psi::MPSComoving)
+function TensorKit.rmul!(psi::MPSComoving,a::Number)
     if first(psi.gaugedpos) + 1 == last(psi.gaugedpos)
         #every tensor is either left or right gauged => the bond tensor is centergauged
         @assert !ismissing(psi.bond_tensors[first(psi.gaugedpos)+1])
 
-        rmul!(a, psi.bond_tensors[first(psi.gaugedpos)+1])
+        rmul!(psi.bond_tensors[first(psi.gaugedpos)+1],a)
     else
-        rmul!(a, psi.site_tensors[first(psi.gaugedpos)+1])
+        rmul!(psi.site_tensors[first(psi.gaugedpos)+1],a)
     end
 
     return psi
