@@ -83,7 +83,7 @@ function TensorKit.leftorth!(psi::MPSComoving, n::Integer = length(psi);
         if !ismissing(psi.bond_tensors[k])
             C = psi.bond_tensors[k];
             psi.bond_tensors[k] = missing;
-            psi.site_tensors[k] = _permute_front(C*_permute_tail(psi.site_tensors[k+1]))
+            psi.site_tensors[k] = _permute_front(C*_permute_tail(psi.site_tensors[k]))
         end
 
         psi.site_tensors[k], psi.bond_tensors[k+1] = leftorth!(psi.site_tensors[k]; alg = alg)

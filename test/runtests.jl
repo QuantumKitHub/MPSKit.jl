@@ -226,10 +226,11 @@ end
     @test energies[1] ≈ 0.41047925 atol=1e-4
 end
 
+
 @testset "dynamicaldmrg" begin
     ham = nonsym_ising_ham(lambda=4.0);
     (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
-    window = MPSComoving(gs,[gs.AC[1];[gs.AR[i] for i in 2:10]],gs);
+    window = MPSComoving(gs,copy.([gs.AC[1];[gs.AR[i] for i in 2:10]]),gs);
 
     szd = TensorMap([1 0;0 -1],ℂ^2,ℂ^2);
     @test expectation_value(gs,szd)[1] ≈ expectation_value(window,szd)[1] atol=1e-10

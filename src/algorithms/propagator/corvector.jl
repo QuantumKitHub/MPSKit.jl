@@ -72,12 +72,13 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
                 y-=2*w*ac_prime(x,i,init,pars1)
                 y+=ac_prime(x,i,init,pars2)
             end
-            delta=max(delta,norm(res-init.AC[i]))
-            init.AC[i]=res
+
+            delta = max(delta,norm(res-init.AC[i]))
+            init.AC[i] = res
 
             convhist.converged == 0 && @info "r($(i)) failed to converge $(convhist.normres)"
 
-            mixedlenvs[i+1]=transfer_left(mixedlenvs[i],A.AL[i],init.AL[i])
+            mixedlenvs[i+1] = transfer_left(mixedlenvs[i],A.AL[i],init.AL[i])
         end
 
         for i in length(A):-1:2
@@ -89,12 +90,12 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
                 y+=ac_prime(x,i,init,pars2)
             end
 
-            delta=max(delta,norm(res-init.AC[i]))
-            init.AC[i]=res
+            delta = max(delta,norm(res-init.AC[i]))
+            init.AC[i] = res
 
             convhist.converged == 0 && @info "l($(i)) failed to converge $(convhist.normres)"
 
-            mixedrenvs[i]=transfer_right(mixedrenvs[i+1],A.AR[i],init.AR[i])
+            mixedrenvs[i] = transfer_right(mixedrenvs[i+1],A.AR[i],init.AR[i])
         end
 
         verbose && println("ddmrg sweep delta : $(delta)")
