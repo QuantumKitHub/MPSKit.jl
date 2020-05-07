@@ -1,4 +1,57 @@
-#https://www.youtube.com/watch?v=DFdDNOnGjWc
+"
+https://arxiv.org/pdf/cond-mat/0203500.pdf
+"
+function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;init=copy(A),solvtol=Defaults.tol,tol=solvtol*length(A)*2,maxiter=Defaults.maxiter,verbose=Defaults.verbose)
+    w=real(z);eta=imag(z)
+
+    pars1 = params(init,ham) #environments for h
+    (ham2,pars2) = squaredenvs(init,ham,pars1) #environments for h^2
+    mixedenvs = params(A,init); #environments for <init | A>
+
+    delta=2*tol
+
+    numit = 0
+    while delta>tol && numit<maxiter
+        numit+=1
+        delta=0
+
+        for i in [1:(length(A)-1);length(A):-1:2]
+
+            #the alternative is using gradient descent, which is at least sure to converge...
+            @tensor tos[-1 -2;-3]:=leftenv(mixedenvs,i,init)[-1,1]*A.AC[i][1,-2,2]*rightenv(mixedenvs,i,init)[2,-3]
+
+            (res,convhist)=linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
+                y=(eta*eta+w*w)*x
+                y-=2*w*ac_prime(x,i,init,pars1)
+                y+=ac_prime(x,i,init,pars2)
+            end
+
+            delta = max(delta,norm(res-init.AC[i]))
+            init.AC[i] = res
+
+            convhist.converged == 0 && @info "($(i)) failed to converge $(convhist.normres)"
+        end
+
+        verbose && println("ddmrg sweep delta : $(delta)")
+    end
+
+    a = @tensor leftenv(mixedenvs,1,init)[-1,1]*A.AC[1][1,-2,2]*rightenv(mixedenvs,1,init)[2,-3]*conj(init.AC[1][-1,-2,-3])
+    a = a';
+
+    cb = leftenv(pars1,1,A);
+    for i in 1:length(A)
+        cb = transfer_left(cb,ham,i,init.AL[i],A.AL[i]);
+    end
+
+    b = 0*a
+    for i in 1:length(cb)
+        b+=@tensor cb[i][1,2,3]*A.CR[end][3,4]*rightenv(pars1,length(A),A)[i][4,2,5]*conj(init.CR[end][1,5]);
+    end
+
+    v = b/eta-w/eta*a+1im*a
+    return v,init
+end
+
 function squaredenvs(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,pars=params(state,ham))
     nham=conj(ham,transpo=true)*ham
 
@@ -29,90 +82,4 @@ function squaredenvs(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,par
     end
 
     return nham,ncocache
-end
-
-"
-https://arxiv.org/pdf/cond-mat/0203500.pdf
-"
-function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;init=copy(A),solvtol=Defaults.tol,tol=solvtol*length(A)*2,maxiter=Defaults.maxiter,verbose=Defaults.verbose)
-    len=length(A)
-
-    #A=rightorth(A);init=rightorth(init)
-    w=real(z);eta=imag(z)
-
-    pars1=params(init,ham)
-    (ham2,pars2)=squaredenvs(init,ham,pars1)
-
-    #environments for <init | A>
-    mixedlenvs=[complex(isomorphism(space(A.AL[1],1),space(A.AL[1],1)))]
-    for i in 1:length(A)
-        push!(mixedlenvs,transfer_left(mixedlenvs[end],A.AL[i],init.AL[i]))
-    end
-
-    mixedrenvs=[complex(isomorphism(space(A.AR[len],3)',space(A.AR[len],3)'))]
-    for i in 1:length(A)
-        push!(mixedrenvs,transfer_right(mixedrenvs[end],A.AR[len-i+1],init.AR[len-i+1]))
-    end
-    mixedrenvs=reverse(mixedrenvs)
-
-    delta=2*tol
-
-    numit = 0
-    while delta>tol && numit<maxiter
-        numit+=1
-        delta=0
-
-        for i in 1:(length(A)-1)
-
-            #the alternative is using gradient descent, which is at least sure to converge...
-            @tensor tos[-1 -2;-3]:=mixedlenvs[i][-1,1]*A.AC[i][1,-2,2]*mixedrenvs[i+1][2,-3]
-
-            (res,convhist)=linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
-                y=(eta*eta+w*w)*x
-                y-=2*w*ac_prime(x,i,init,pars1)
-                y+=ac_prime(x,i,init,pars2)
-            end
-
-            delta = max(delta,norm(res-init.AC[i]))
-            init.AC[i] = res
-
-            convhist.converged == 0 && @info "r($(i)) failed to converge $(convhist.normres)"
-
-            mixedlenvs[i+1] = transfer_left(mixedlenvs[i],A.AL[i],init.AL[i])
-        end
-
-        for i in length(A):-1:2
-            @tensor tos[-1 -2;-3]:=mixedlenvs[i][-1,1]*A.AC[i][1,-2,2]*mixedrenvs[i+1][2,-3]
-
-            (res,convhist)=linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
-                y=(eta*eta+w*w)*x
-                y-=2*w*ac_prime(x,i,init,pars1)
-                y+=ac_prime(x,i,init,pars2)
-            end
-
-            delta = max(delta,norm(res-init.AC[i]))
-            init.AC[i] = res
-
-            convhist.converged == 0 && @info "l($(i)) failed to converge $(convhist.normres)"
-
-            mixedrenvs[i] = transfer_right(mixedrenvs[i+1],A.AR[i],init.AR[i])
-        end
-
-        verbose && println("ddmrg sweep delta : $(delta)")
-    end
-
-    a = @tensor mixedlenvs[1][1,2]*A.AC[1][2,3,4]*mixedrenvs[2][4,5]*conj(init.AC[1][1,3,5])
-    a = a';
-    cb = leftenv(pars1,1,A);
-    for i in 1:length(A)
-        cb = transfer_left(cb,ham,i,init.AL[i],A.AL[i]);
-    end
-
-    b = 0*a
-    for i in 1:length(cb)
-        b+=@tensor cb[i][1,2,3]*A.CR[len][3,4]*rightenv(pars1,length(A),A)[i][4,2,5]*conj(init.CR[len][1,5]);
-    end
-
-    v = b/eta-w/eta*a+1im*a
-    return v,init
 end

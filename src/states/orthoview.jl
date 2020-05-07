@@ -106,7 +106,7 @@ Base.length(psi::Union{ACView,ALView,ARView}) = length(psi.parent);
 Base.size(psi::Union{ACView,ALView,ARView},args...) = size(psi.parent,args...);
 
 Base.firstindex(psi::Union{CRView}, i...) = firstindex(psi.parent.bond_tensors, i...)
-Base.lastindex(psi::Union{CRView}, i...) = lastindex(psi.parent.bond_tensors, i...)
+Base.lastindex(psi::Union{CRView}, i...) = lastindex(psi.parent.site_tensors, i...)
 Base.length(psi::Union{CRView}) = length(psi.parent.bond_tensors);
 Base.size(psi::Union{CRView},args...) = size(psi.parent.bond_tensors,args...);
 
