@@ -3,7 +3,6 @@
 ## States
 ```@docs
 FiniteMPS
-FiniteMPO
 InfiniteMPS
 MPSComoving
 MPSMultiline
@@ -23,6 +22,7 @@ MPSKit.PerMPOInfEnv
 MPSKit.MPOHamInfEnv
 MPSKit.FinEnv
 MPSKit.SimpleEnv
+MPSKit.OvlEnv
 ```
 
 ## Generic actions

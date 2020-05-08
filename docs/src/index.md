@@ -8,8 +8,15 @@ Topics of research on tensor networks within the realm of this track include:
 - MPS routines (MPS diagonalization, Schmidt Decomposition, MPS left and right multiplication, ...)
 - The study of several useful models (nearest neighbour interactions, MPO's, long range interactions, ...)
 
-## Table of contents
+## User manual
 ```@contents
-Pages = ["man/intro.md","man/lib.md"]
+Pages = ["man/intro.md","man/states.md","man/operators.md","man/algorithms.md"]
 Depth = 3
+```
+
+
+## Library outline
+```@contents
+Pages = ["lib/lib.md"]
+Depth = 1
 ```
