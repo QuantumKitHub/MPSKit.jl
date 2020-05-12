@@ -1,9 +1,9 @@
 struct PeriodicArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
 end
-PeriodicArray{T}(::UndefInitializer, args...) where T =
-    PeriodicArray(Array{T}(undef, args...))
-PeriodicArray{T,N}(::UndefInitializer, args...) where {T,N} =
+PeriodicArray{T}(initializer, args...) where T =
+    PeriodicArray(Array{T}(initializer, args...))
+PeriodicArray{T,N}(initializer, args...) where {T,N} =
     PeriodicArray(Array{T,N}(undef, args...))
 
 Base.size(a::PeriodicArray) = size(a.data)
@@ -28,3 +28,5 @@ Base.convert(::Type{PeriodicArray{T,N}}, a::PeriodicArray) where {T,N} =
     PeriodicArray(convert(Array{T,N}, a.data))
 
 Base.checkbounds(a::PeriodicArray, I...) = true
+
+Base.circshift(t::PeriodicArray{T,N},tup::Tuple{Vararg{Integer,N}}) where{T,N}= PeriodicArray{T,N}(circshift(t.data,tup))

@@ -11,7 +11,7 @@ function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComo
         @tensor toret[-1,-2,-3]+=leftenv(cache,pos,mps)[i][-1,5,4]*x[4,2,1]*ham[pos,i,j][5,-2,3,2]*rightenv(cache,pos,mps)[j][1,3,-3]
     end
     for (i,j) in scalkeys(ham,pos)
-        scal = ham.scalars[pos][i];
+        scal = ham.Os[pos,i,j];
         @tensor toret[-1,-2,-3]+=leftenv(cache,pos,mps)[i][-1,5,4]*(scal*x)[4,-2,1]*rightenv(cache,pos,mps)[j][1,5,-3]
     end
 

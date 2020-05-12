@@ -40,14 +40,14 @@ function exci_transfer_left(RetType,vec,ham::MPOHamiltonian,pos,A,Ab=A)
 
     for (j,k) in keys(ham,pos)
         if assigned[k]
-            if j==k && isscal(ham,pos,j)
-                toreturn[k]+=ham.scalars[pos][j]*exci_transfer_left(vec[j],A,Ab)
+            if isscal(ham,pos,j,k)
+                toreturn[k]+=ham.Os[pos,j,k]*exci_transfer_left(vec[j],A,Ab)
             else
                 toreturn[k]+=exci_transfer_left(vec[j],ham[pos,j,k],A,Ab)
             end
         else
-            if j==k && isscal(ham,pos,j)
-                toreturn[k]=ham.scalars[pos][j]*exci_transfer_left(vec[j],A,Ab)
+            if isscal(ham,pos,j,k)
+                toreturn[k]=ham.Os[pos,j,k]*exci_transfer_left(vec[j],A,Ab)
             else
                 toreturn[k]=exci_transfer_left(vec[j],ham[pos,j,k],A,Ab)
             end
@@ -72,15 +72,15 @@ function exci_transfer_right(RetType,vec,ham::MPOHamiltonian,pos,A,Ab=A)
 
     for (j,k) in keys(ham,pos)
         if assigned[j]
-            if j==k && isscal(ham,pos,j)
-                toreturn[j]+=ham.scalars[pos][j]*exci_transfer_right(vec[k],A,Ab)
+            if isscal(ham,pos,j,k)
+                toreturn[j]+=ham.Os[pos,j,k]*exci_transfer_right(vec[k],A,Ab)
             else
                 toreturn[j]+=exci_transfer_right(vec[k],ham[pos,j,k],A,Ab)
             end
 
         else
-            if j==k && isscal(ham,pos,j)
-                toreturn[j]=ham.scalars[pos][j]*exci_transfer_right(vec[k],A,Ab)
+            if isscal(ham,pos,j,k)
+                toreturn[j]=ham.Os[pos,j,k]*exci_transfer_right(vec[k],A,Ab)
             else
                 toreturn[j]=exci_transfer_right(vec[k],ham[pos,j,k],A,Ab)
             end

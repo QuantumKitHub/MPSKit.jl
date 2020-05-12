@@ -1,34 +1,25 @@
 #=
-    An mpo hamiltonian h is
-        - a sparse collection of dense mpo's
-        - often contains the identity on te diagonal (maybe up to a constant)
+    Os can be either
+        - a nonzero scalar
+        - a tensormap
+        - zero
 
-    when we query h[i,j,k], the following logic is followed
-        j == k?
-            h.scalars[i,j] assigned?
-                identity * h.scalars[i,j]
-            elseif h.Os[i,j,k] assigned?
-                h.Os[i,j,k]
-            else
-                zeros
-        else
-            h.Os[i,j,k] assigned?
-                h.Os[i,j,k]
-            else
-                zeros
+    if it is a scalar; implicitly we have the identity operator at that site - so we can optimize the contraction
+    if it is zero then there is nothing to optimize, the result is zero anyway
+    if it's a tensormap, then we do the contraction
 
+    In a later stage we can perhaps support nonzero scalar -> scalar*isometry - though the usecases for that seem very limited
 
-    we make the distinction between non-idenity fields and identity field for two reasons
-        - speed (can optimize contractions)
-        - requires vastly different approaches when doing thermodynamic limit (rescaling)
+    The principles are that you can write code without knowing anything about the sparse structure, and it should just work (potentially a bit slower)
 
-    both h.scalars and h.Os are periodic, allowing us to represent both place dependent and periodic hamiltonians
+    Unhappy about this design because :
+        - the constructor is a mess
+        - need to know about the internals to use efficiently
+        - it's annoying to initialize
 
-    h.domspaces and h.pspaces are needed when h.Os[i,j,k] is unassigned, to know what kind of zero-mpo we need to return
-
-    the convention is that we start left with [1,0,0,0,...,0]; right [0,0,....,0,1]
-
-    I didn't want to use union{T,E} because identity is impossible away from diagonal
+    An alternative is to store 2 fields;
+        - the dense blocks (so store the zero opperators)
+        - an informative (isscal,value)
 =#
 "
     MPOHamiltonian
@@ -36,99 +27,133 @@
     represents a general periodic quantum hamiltonian
 "
 struct MPOHamiltonian{S,T<:MPOTensor,E<:Number}<:Hamiltonian
-    scalars::PeriodicArray{Array{Union{Missing,E},1},1}
-    Os::PeriodicArray{Array{Union{Missing,T},2},1}
+    Os::PeriodicArray{Union{E,T},3}
 
-    domspaces::PeriodicArray{Array{S,1},1}
+    domspaces::PeriodicArray{S,2}
     pspaces::PeriodicArray{S,1}
 end
 
 function Base.getproperty(h::MPOHamiltonian,f::Symbol)
     if f==:odim
-        return length(h.domspaces[1])::Int
+        return size(h.domspaces,2)
     elseif f==:period
         return size(h.pspaces,1)
     elseif f==:imspaces
-        return circshift(PeriodicArray([adjoint.(d) for d in h.domspaces.data]),-1)
+        return PeriodicArray(circshift(adjoint.(h.domspaces),(-1,0)))
     else
         return getfield(h,f)
     end
 end
 
-#dense representation of mpohamiltonian -> the actual mpohamiltonian
-function MPOHamiltonian(ox::Array{T,3}) where T<:Union{Missing,M} where M<:MPOTensor
-    x = fillmissing(ox);
+#allow passing in 2leg tensors
+MPOHamiltonian(x::M) where M <: AbstractArray{T,3} where T<: Union{<:MPSBondTensor,E} where E =
+    MPOHamiltonian(map(t-> isa(t,MPSBondTensor) ? permute(add_util_leg(t),(1,2),(4,3)) : t,x))
 
-    len = size(x,1);E = eltype(M);
-    @assert size(x,2)==size(x,3)
+#allow passing in only tensors
+MPOHamiltonian(x::M) where M <: AbstractArray{T,3} where T <: MPOTensor =
+    MPOHamiltonian(Array{Union{eltype(T),T}}(x[:,:,:]))
 
-    #Os and scalars
-    tOs = Matrix{Union{Missing,T}}[Matrix{Union{Missing,M}}(missing,size(x,2),size(x,3)) for i in 1:len]
-    tSs = Vector{Union{Missing,E}}[Vector{Union{Missing,E}}(missing,size(x,2)) for i in 1:len]
+#default constructor
+function MPOHamiltonian(x::T) where T <:AbstractArray{Union{oE,M},3} where M<:MPOTensor{Sp} where {Sp,oE<:Number}
+    E = eltype(M)#there is a bug in julia at the moment, this is a 'workaround'
+    #https://github.com/JuliaLang/julia/issues/35853
 
-    for (i,j,k) in Iterators.product(1:size(x,1),1:size(x,2),1:size(x,3))
-        if norm(x[i,j,k])>1e-12
-            ii,sc = isid(x[i,j,k]) #is identity; if so scalar = sc
-            if ii && j==k
-                tSs[i][j] = sc
+    (period,numrows,numcols) = size(x);
+
+    E == eltype(M) || throw(ArgumentError("scalar type should match mpo eltype $E ≠ $(eltype(M))"))
+    numrows == numcols || throw(ArgumentError("mpos have to be square"))
+
+    domspaces = PeriodicArray{Union{Missing,Sp}}(missing,period,numrows);
+    pspaces = PeriodicArray{Union{Missing,Sp}}(missing,period)
+
+    for (i,j,k) in Iterators.product(1:period,1:numrows,1:numcols)
+        if x[i,j,k] isa MPOTensor
+            #asign spaces when possible
+            dom = space(x[i,j,k],1);im = space(x[i,j,k],3);p = space(x[i,j,k],2)
+
+            ismissing(pspaces[i]) && (pspaces[i] = p);
+            pspaces[i] != p && throw(ArgumentError("physical space for $((i,j,k)) incompatible : $(pspaces[i]) ≠ $(p)"))
+
+            ismissing(domspaces[i,j]) && (domspaces[i,j] = dom)
+            domspaces[i,j] != dom && throw(ArgumentError("Domspace for $((i,j,k)) incompatible : $(domspaces[i,j]) ≠ $(dom)"))
+
+            ismissing(domspaces[i+1,k]) && (domspaces[i+1,k] = im')
+            domspaces[i+1,k] != im' && throw(ArgumentError("Imspace for $((i,j,k)) incompatible : $(domspaces[i+1,k]) ≠ $(im')"))
+
+            #if it's zero -> store zero
+            #if it's the identity -> store identity
+            if x[i,j,k] ≈ zero(x[i,j,k])
+                x[i,j,k] = zero(E) #the element is zero/missing
             else
-                tOs[i][j,k] = x[i,j,k]
-            end
+                ii,sc = isid(x[i,j,k])
 
+                if ii #the tensor is actually proportional to the identity operator -> store this knowledge
+                    x[i,j,k] = sc
+                end
+            end
         end
     end
 
-    pspaces=[space(x[i,1,1],2) for i in 1:len]
-    domspaces=[[space(y,1) for y in x[i,:,1]] for i in 1:len]
+    sum(ismissing.(pspaces)) == 0 || throw(ArgumentError("Not all physical spaces were assigned"))
+    f_domspaces = map(x-> ismissing(x) ? oneunit(Sp) : x,domspaces) #missing domspaces => oneunit ; should also not happen
 
-    return MPOHamiltonian(PeriodicArray(tSs),PeriodicArray(tOs),PeriodicArray(domspaces),PeriodicArray(pspaces))
+    ndomspaces = PeriodicArray{Sp}(f_domspaces)
+    npspaces = PeriodicArray{Sp}(pspaces)
+
+    return MPOHamiltonian{Sp,M,E}(PeriodicArray(x[:,:,:]),ndomspaces,npspaces)
 end
 
-#allow passing in 2leg mpos
-function MPOHamiltonian(x::Array{T,3}) where T<:Union{Missing,<:MPSBondTensor}
-    MPOHamiltonian(map(t-> ismissing(t) ? t : permute(add_util_leg(t),(1,2),(4,3)),x))
-end
 
 #allow passing in regular tensormaps
 MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)));
 
 #a very simple utility constructor; given our "localmpo", constructs a mpohamiltonian
-function MPOHamiltonian(x::Array{T,1}) where T<:MPOTensor
-    domspaces=[space(y,1) for y in x]
+function MPOHamiltonian(x::Array{T,1}) where T<:MPOTensor{Sp} where Sp
+    domspaces = Sp[space(y,1) for y in x]
     push!(domspaces,space(x[end],3)')
 
     pspaces=[space(x[1],2)]
 
-    nOs=Array{Union{Missing,T},2}(missing,length(x)+1,length(x)+1)
+    nOs = PeriodicArray{Union{eltype(T),T}}(fill(zero(eltype(T)),1,length(x)+1,length(x)+1))
+
     for (i,t) in enumerate(x)
-        nOs[i,i+1]=t
+        nOs[1,i,i+1]=t
     end
 
-    nSs = Array{Union{Missing,eltype(T)},1}(missing,length(x)+1)
-    nSs[1] = 1
-    nSs[end] = 1
+    nOs[1,1,1] = one(eltype(T));
+    nOs[1,end,end] = one(eltype(T));
 
-    return MPOHamiltonian(PeriodicArray([nSs]),PeriodicArray([nOs]),PeriodicArray([domspaces]),PeriodicArray(pspaces))
+    ndomspace = PeriodicArray{Sp,2}(undef,1,length(x)+1);
+    ndomspace[1,:] = domspaces[:]
+
+    return MPOHamiltonian{Sp,T,eltype(T)}(nOs,ndomspace,PeriodicArray(pspaces))
 end
 
 #utility functions for finite mpo
 function Base.getindex(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E}
-    if b == c && !ismissing(x.scalars[a][b])
-        return x.scalars[a][b]*isomorphism(Matrix{eltype(T)},x.domspaces[a][b]*x.pspaces[a],x.imspaces[a][c]'*x.pspaces[a])::T
-    elseif !ismissing(x.Os[a][b,c])
-        return x.Os[a][b,c]::T
+    b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
+    if x.Os[a,b,c] isa E
+        if x.Os[a,b,c] == zero(E)
+            return TensorMap(zeros,E,x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])::T
+        else
+            return x.Os[a,b,c]*isomorphism(Matrix{E},x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])::T
+        end
     else
-        return TensorMap(zeros,eltype(T),x.domspaces[a][b]*x.pspaces[a],x.imspaces[a][c]'*x.pspaces[a])::T
+        return x.Os[a,b,c]::T
     end
 end
 
 function Base.setindex!(x::MPOHamiltonian{S,T,E},v::T,a::Int,b::Int,c::Int)  where {S,T,E}
+    b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
+
     (ii,scal) = isid(v);
 
-    if ii && b==c
-        x.scalars[a][b] = scal
+    if ii
+        x.Os[a,b,c] = scal
+    elseif v ≈ zero(v)
+        x.Os[a,b,c] = zero(E)
     else
-        x.Os[a][b,c] = v;
+        x.Os[a,b,c] = v;
     end
 
     return x
@@ -140,37 +165,19 @@ Base.size(x::MPOHamiltonian,i) = size(x)[i]
 keys(x::MPOHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))
 keys(x::MPOHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),Iterators.product(1:x.odim,1:x.odim))
 
-opkeys(x::MPOHamiltonian) = Iterators.filter(a-> !(a[2] == a[3] && isscal(x,a[1],a[2])),keys(x));
-opkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> !(a[1] == a[2] && isscal(x,i,a[2])),keys(x,i));
+opkeys(x::MPOHamiltonian) = Iterators.filter(a-> !isscal(x,a[1],a[2],a[3]),keys(x));
+opkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> !isscal(x,i,a[1],a[2]),keys(x,i));
 
-scalkeys(x::MPOHamiltonian) = Iterators.filter(a-> (a[2] == a[3] && isscal(x,a[1],a[2])),keys(x));
-scalkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> (a[1] == a[2] && isscal(x,i,a[2])),keys(x,i));
+scalkeys(x::MPOHamiltonian) = Iterators.filter(a-> isscal(x,a[1],a[2],a[3]),keys(x));
+scalkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> isscal(x,i,a[1],a[2]),keys(x,i));
 
-contains(x::MPOHamiltonian,a::Int,b::Int,c::Int) = !ismissing(x.Os[a][b,c]) || (b==c && !ismissing(x.scalars[a][b]))
-isscal(x::MPOHamiltonian,a::Int,b::Int) = !ismissing(x.scalars[a][b])
-
-"
-checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
-"
-function isid(x::MPOTensor)
-    cod = space(x,1)*space(x,2);
-    dom = space(x,3)'*space(x,4)';
-
-    #would like to have an 'isisomorphic'
-    for c in union(blocksectors(cod), blocksectors(dom))
-        blockdim(cod, c) == blockdim(dom, c) || return false,0.0;
-    end
-
-    id = isomorphism(Matrix{eltype(x)},cod,dom)
-    scal = dot(id,x)/dot(id,id)
-    diff = x-scal*id
-    return norm(diff)<1e-14,scal
-end
+contains(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = !(x.Os[a,b,c] == zero(E))
+isscal(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = x.Os[a,b,c] isa E && contains(x,a,b,c)
 
 "
 checks if ham[:,i,i] = 1 for every i
 "
-isid(ham::MPOHamiltonian,i::Int) = reduce((a,b) -> a && isscal(ham,b,i) && abs(ham.scalars[b][i]-1)<1e-14,1:ham.period,init=true)
+isid(ham::MPOHamiltonian{S,T,E},i::Int) where {S,T,E}= reduce((a,b) -> a && isscal(ham,b,i,i) && abs(ham.Os[b,i,i]-one(E))<1e-14,1:ham.period,init=true)
 
 "
 to be valid in the thermodynamic limit, these hamiltonians need to have a peculiar structure
@@ -193,58 +200,25 @@ function sanitycheck(ham::MPOHamiltonian)
     return true
 end
 
-#when there are missing values in an input mpo, we will fill them in with 0s
-function fillmissing(x::Array{T,3}) where T<:Union{Missing,M} where M<:MPOTensor{Sp} where Sp
-    @assert size(x,2) == size(x,3);
+"
+checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
+"
+function isid(x::MPOTensor)
+    cod = space(x,1)*space(x,2);
+    dom = space(x,3)'*space(x,4)';
 
-    #fill in Domspaces and pspaces
-    Domspaces = Array{Union{Missing,Sp},2}(missing,size(x,1),size(x,2))
-    pspaces = Array{Union{Missing,Sp},1}(missing,size(x,1))
-    for (i,j,k) in Iterators.product(1:size(x,1),1:size(x,2),1:size(x,3))
-        if !ismissing(x[i,j,k])
-            dom = space(x[i,j,k],1)
-            im = space(x[i,j,k],3)
-            p = space(x[i,j,k],2)
-
-            if ismissing(pspaces[i])
-                pspaces[i] = p;
-            elseif pspaces[i] != p
-                println("physical space for $((i,j,k)) incompatible")
-                println("$(pspaces[i]) ≠ $(p)")
-                @assert false
-            end
-
-            if ismissing(Domspaces[i,j])
-                Domspaces[i,j] = dom
-            elseif Domspaces[i,j] != dom
-                println("Domspace for $((i,j,k)) incompatible")
-                println("$(Domspaces[i,j]) ≠ $(dom)")
-                @assert false
-            end
-
-            if ismissing(Domspaces[mod1(i+1,end),k])
-                Domspaces[mod1(i+1,end),k] = im'
-            elseif Domspaces[mod1(i+1,end),k] != im'
-                println("Imspace for $((i,j,k)) incompatible")
-                println("$(Domspaces[mod1(i+1,end),k]) ≠ $(im')")
-                @assert false
-            end
-        end
+    #would like to have an 'isisomorphic'
+    for c in union(blocksectors(cod), blocksectors(dom))
+        blockdim(cod, c) == blockdim(dom, c) || return false,0.0;
     end
 
-    #otherwise x[n,:,:] is empty somewhere
-    @assert sum(ismissing.(pspaces))==0
-    Domspaces = map(x-> ismissing(x) ? oneunit(Sp) : x,Domspaces) #missing domspaces => oneunit
+    id = isomorphism(Matrix{eltype(x)},cod,dom)
+    scal = dot(id,x)/dot(id,id)
+    diff = x-scal*id
 
-    nx = Array{T,3}(undef,size(x,1),size(x,2),size(x,3)) # the filled in version of x
-    for (i,j,k) in Iterators.product(1:size(x,1),1:size(x,2),1:size(x,3))
-        if ismissing(x[i,j,k])
-            nx[i,j,k] = TensorMap(zeros,eltype(M),Domspaces[i,j]*pspaces[i],Domspaces[mod1(i+1,end),k]*pspaces[i])
-        else
-            nx[i,j,k] = x[i,j,k]
-        end
-    end
-    return nx
+    scal = (scal ≈ 0.0) ? 0.0 : scal #shouldn't be necessary (and I don't think it is)
+
+    return norm(diff)<1e-14,scal
 end
 
 include("utility.jl")

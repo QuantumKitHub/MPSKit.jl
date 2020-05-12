@@ -155,8 +155,8 @@ function left_cyclethrough(index::Int,fp,ham,st) #see code for explanation
 
         for j=index:-1:1
             if contains(ham,i,j,index)
-                if j==index && isscal(ham,i,index)
-                    fp[i+1,index] += transfer_left(fp[i,j],st.AL[i],st.AL[i])*ham.scalars[i][index]
+                if isscal(ham,i,j,index)
+                    fp[i+1,index] += transfer_left(fp[i,j],st.AL[i],st.AL[i])*ham.Os[i,j,index]
                 else
                     fp[i+1,index] += transfer_left(fp[i,j],ham[i,j,index],st.AL[i],st.AL[i])
                 end
@@ -170,8 +170,8 @@ function right_cyclethrough(index,fp,ham,st) #see code for explanation
         fp[i-1,index] *= 0;
         for j=index:ham.odim
             if contains(ham,i,index,j)
-                if j==index && isscal(ham,i,index)
-                    fp[i-1,index] += transfer_right(fp[i,j], st.AR[i], st.AR[i]) * ham.scalars[i][index]
+                if j==index && isscal(ham,i,index,j)
+                    fp[i-1,index] += transfer_right(fp[i,j], st.AR[i], st.AR[i]) * ham.Os[i,index,j]
                 else
                     fp[i-1,index] += transfer_right(fp[i,j], ham[i,index,j], st.AR[i], st.AR[i])
                 end

@@ -32,8 +32,8 @@ function params(state::FiniteMPS,ham::MPOHamiltonian)
     rightstart = Array{eltype(state),1}();leftstart = Array{eltype(state),1}()
 
     for i in 1:ham.odim
-        util_left = Tensor(ones,ham.domspaces[1][i]')
-        util_right = Tensor(ones,ham.imspaces[length(state)][i]')
+        util_left = Tensor(ones,ham.domspaces[1,i]')
+        util_right = Tensor(ones,ham.imspaces[length(state),i]')
 
         @tensor ctl[-1 -2; -3]:= lll[-1,-3]*util_left[-2]
         @tensor ctr[-1 -2; -3]:= rrr[-1,-3]*util_right[-2]
@@ -67,8 +67,8 @@ function params(state::FiniteMPS,ham::ComAct)
     leftstart = Array{typeof(sillyel),1}(undef,ham.odim);
 
     for i in 1:ham.odim
-        util_left = Tensor(ones,ham.domspaces[1][i]')
-        util_right = Tensor(ones,ham.imspaces[length(state)][i]')
+        util_left = Tensor(ones,ham.domspaces[1,i]')
+        util_right = Tensor(ones,ham.imspaces[length(state),i]')
 
         isbelow = i > ham.below.odim;
         ci = isbelow ? i-ham.below.odim : i;

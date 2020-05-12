@@ -19,9 +19,9 @@ function Base.getproperty(h::ComAct,f::Symbol)
     if f==:odim
         return (h.below.odim+h.above.odim)::Int
     elseif f==:domspaces
-        return PeriodicArray([[h.below.domspaces[i];h.above.domspaces[i]] for i in 1:h.period])
+        return PeriodicArray(vcat(h.below.domspaces[:,:],h.above.domspaces[:,:]))
     elseif f==:imspaces
-        return PeriodicArray([[h.below.imspaces[i];h.above.imspaces[i]] for i in 1:h.period])
+        return PeriodicArray(vcat(h.below.imspaces[:,:],h.above.imspaces[:,:]))
     elseif f==:period
         @assert h.above.period == h.below.period
         return h.below.period::Int
@@ -56,7 +56,7 @@ function Base.getindex(a::ComAct,pos::Int,i::Int,j::Int)
 end
 
 function transfer_left(vec::T,ham::ComAct,pos,A,Ab=A) where T
-    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,4)'*ham.imspaces[pos][i],space(A,4)') for i in 1:ham.odim]::T
+    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,4)'*ham.imspaces[pos,i],space(A,4)') for i in 1:ham.odim]::T
 
     for (i,j) in keys(ham,pos)
         opp = ham[pos,i,j]
@@ -70,7 +70,7 @@ function transfer_left(vec::T,ham::ComAct,pos,A,Ab=A) where T
     return toreturn
 end
 function transfer_right(vec::T,ham::ComAct,pos,A,Ab=A) where T
-    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,1)*ham.domspaces[pos][i],space(A,1)) for i in 1:ham.odim]::T
+    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,1)*ham.domspaces[pos,i],space(A,1)) for i in 1:ham.odim]::T
 
     for (i,j) in keys(ham,pos)
         opp = ham[pos,i,j]
