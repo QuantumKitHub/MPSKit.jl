@@ -30,3 +30,4 @@ Base.convert(::Type{PeriodicArray{T,N}}, a::PeriodicArray) where {T,N} =
 Base.checkbounds(a::PeriodicArray, I...) = true
 
 Base.circshift(t::PeriodicArray{T,N},tup::Tuple{Vararg{Integer,N}}) where{T,N}= PeriodicArray{T,N}(circshift(t.data,tup))
+Base.repeat(t::PeriodicArray,args::Vararg{Integer,N} where N) = PeriodicArray(repeat(t.data,args...))

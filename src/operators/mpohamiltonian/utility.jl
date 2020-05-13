@@ -148,8 +148,9 @@ function Base.:*(b::MPOHamiltonian{S,T,E},a::MPOHamiltonian{S,T,E}) where {S,T,E
 end
 
 #without the copy, we get side effects when repeating + setindex
-Base.repeat(x::MPOHamiltonian{S,T,E},n::Int) where {S,T,E} = MPOHamiltonian{S,T,E}(
-                                            PeriodicArray(repeat(x.Os,n,1,1)),
+Base.repeat(x::MPOHamiltonian{S,T,E},n::Int) where {S,T,E} = 
+    MPOHamiltonian{S,T,E}(
+                                            repeat(x.Os,n,1,1),
                                             repeat(x.domspaces,n,1),
                                             repeat(x.pspaces,n))
 
