@@ -1,6 +1,6 @@
 module MPSKit
     using TensorKit,KrylovKit,Parameters, Base.Threads
-
+    using LinearAlgebra:diag,Diagonal;
     #reexport optimkit things
     #export GradientDescent, ConjugateGradient, LBFGS
     #export FletcherReeves, HestenesStiefel, PolakRibierePolyak, HagerZhang, DaiYuan
