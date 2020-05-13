@@ -73,11 +73,11 @@ function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, max
     virtspaces = Vector{S}(undef, N+1)
     virtspaces[1] = left
     for k = 2:N
-        virtspaces[k] = min(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
+        virtspaces[k] = infinum(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
     end
     virtspaces[N+1] = right
     for k = N:-1:2
-        virtspaces[k] = min(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
+        virtspaces[k] = infinum(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
     end
     return FiniteMPS(f, elt,physspaces, virtspaces)
 end
