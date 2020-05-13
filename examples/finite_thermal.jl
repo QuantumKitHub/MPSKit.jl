@@ -1,4 +1,4 @@
-using MPSKit,TensorKit,Test,LinearAlgebra
+using MPSKit,TensorKit,Test
 
 let
     #the operator used to evolve is the anticommutator

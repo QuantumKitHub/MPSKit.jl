@@ -28,42 +28,6 @@ _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
 "
-Decomposes fun into a sum of exponentials
-(coeff,exponents)=exp_decomp(fun;fitdist,numexp);
-"
-function exp_decomp(fun;fitdist::Int=1000,numexp::Int=15)
-    N = fitdist;
-    n = numexp;
-
-    @assert N>n
-    F = Matrix{Int64}(undef,N-n+1,n)
-    Y = Vector{Int64}(undef,N)
-    for row=1:N-n+1
-        for col=1:n
-          F[row,col]=row+col-1;
-          Y[row+col-1]=row-1+col;
-        end
-    end
-    Fa = fun.(F)
-    Ya = fun.(Y)
-
-    (U,V) = qr(Fa);
-    U1 = U[1:N-n,1:n];
-    U2 = U[2:N-n+1,1:n];
-    lambda = eigvals(pinv(U1)*U2);
-
-    W = Matrix{eltype(lambda)}(undef,N,n);
-    for row=1:N
-        for col=1:n
-          W[row,col]=(lambda[col])^float(row);
-        end
-    end
-    x = W\Ya;
-    return x,lambda
-end
-
-
-"
     Returns spin operators Sx,Sy,Sz,Id for spin s
 "
 function spinmatrices(s::Union{Rational{Int},Int})

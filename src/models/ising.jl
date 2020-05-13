@@ -12,7 +12,13 @@ function nonsym_ising_mpo(;beta = log(1+sqrt(2))/2)
     t = [exp(beta) exp(-beta); exp(-beta) exp(beta)];
 
     r = eigen(t);
-    nt = r.vectors*sqrt(Diagonal(r.values))*r.vectors;
+
+    #nt = r.vectors*sqrt(Diagonal(r.values))*r.vectors;
+    dm = zeros(ComplexF64,length(r.values),length(r.values));
+    for (i,v) in enumerate(r.values)
+        dm[i,i]=v
+    end
+    nt = r.vectors*sqrt(dm)*r.vectors
 
     O = zeros(2,2,2,2);
     O[1,1,1,1]=1; O[2,2,2,2]=1;

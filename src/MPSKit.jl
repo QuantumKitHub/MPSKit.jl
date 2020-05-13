@@ -1,5 +1,5 @@
 module MPSKit
-    using LinearAlgebra,TensorKit,KrylovKit,Parameters, Base.Threads
+    using TensorKit,KrylovKit,Parameters, Base.Threads
 
     #reexport optimkit things
     #export GradientDescent, ConjugateGradient, LBFGS
@@ -14,7 +14,7 @@ module MPSKit
     export hamcat
 
     #useful utility functions?
-    export spinmatrices,exp_decomp,add_util_leg,full,nonsym_spintensors
+    export spinmatrices,add_util_leg,full,nonsym_spintensors
 
     #hamiltonian things
     export Hamiltonian,Operator,Cache

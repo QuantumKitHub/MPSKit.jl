@@ -25,7 +25,7 @@ function u1_xxz_ham(;spin = 1,delta = 1,zfield = 0.0)
     (sxd,syd,szd,idd) = spinmatrices(spin);
     @tensor ham[-1 -2;-3 -4]:=sxd[-1,-3]*sxd[-2,-4]+syd[-1,-3]*syd[-2,-4]+(delta*szd)[-1,-3]*szd[-2,-4]+zfield*0.5*szd[-1,-3]*idd[-2,-4]+zfield*0.5*idd[-1,-3]*szd[-2,-4]
 
-    indu1map = [U₁(v) for v in real.(diag(szd))];
+    indu1map = [U₁(v) for v in -spin:1:spin];
     pspace = U1Space((v=>1 for v in indu1map));
 
     symham = TensorMap(zeros,eltype(ham),pspace*pspace,pspace*pspace)
