@@ -9,8 +9,8 @@ here we return the 'superhamiltonian' (H*id,id*H)
 function splitham(ham::MPOHamiltonian)
     fusers = [isomorphism(fuse(p*p'),p*p') for p in ham.pspaces]
 
-    idham = Array{Union{Missing,eltype(ham.Os[1])},3}(missing,ham.period,ham.odim,ham.odim)
-    hamid = Array{Union{Missing,eltype(ham.Os[1])},3}(missing,ham.period,ham.odim,ham.odim)
+    idham = Array{Union{Missing,typeof(ham[1,1,1])},3}(missing,ham.period,ham.odim,ham.odim)
+    hamid = Array{Union{Missing,typeof(ham[1,1,1])},3}(missing,ham.period,ham.odim,ham.odim)
 
     for i in 1:ham.period
         for (k,l) in keys(ham,i)
