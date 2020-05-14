@@ -35,13 +35,12 @@ function Base.convert(::Type{InfiniteMPS},st::MPSMultiline{A,B}) where {A,B}
     AC=PeriodicArray(st.AC.data[:]);
     InfiniteMPS(AL,AR,CR,AC);
 end
-#allow users to pass in simple arrays
-MPSMultiline(A::Array;tol = Defaults.tolgauge,maxiter = Defaults.maxiter,cguess = [TensorMap(rand, eltype(A[1]), domain(A[i,end]) ← space(A[i,1],1)) for i in 1:size(A,1)]) =
-    MPSMultiline(PeriodicArray(A),tol=tol,maxiter=maxiter,cguess=PeriodicArray(cguess))
 
-function MPSMultiline(A::PeriodicArray;tol = Defaults.tolgauge,maxiter = Defaults.maxiter,cguess =  PeriodicArray([TensorMap(rand, eltype(A[1]), domain(A[i,end]) ← space(A[i,1],1)) for i in 1:size(A,1)]))
+function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = Defaults.maxiter,cguess =  PeriodicArray([TensorMap(rand, eltype(A[1]), domain(A[i,end]) ← space(A[i,1],1)) for i in 1:size(A,1)])) where T <: GenericMPSTensor
 
-    ACs = similar(A);ALs = similar(A); ARs = similar(A);
+    ACs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));
+    ALs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));
+    ARs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));;
     Cs = PeriodicArray{typeof(cguess[1]),2}(undef,size(A,1),size(A,2));
 
     for row in 1:size(A,1)
