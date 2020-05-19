@@ -1,11 +1,11 @@
 """
 see https://arxiv.org/abs/1701.07035
 """
-@with_kw struct Vumps{TruncT<:Algorithm} <: Algorithm
+@with_kw struct Vumps <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
-    manager::TruncT = SimpleManager()
+    finalize::Function = (iter,state,ham,pars) -> (state,pars);
     verbose::Bool = Defaults.verbose
 end
 
@@ -19,8 +19,6 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
     iter       = 1
 
     newAs = similar(state.AL)
-
-    lee = galerkin;
 
     while true
         eigalg=Arnoldi(tol=galerkin/(4*sqrt(iter)))
@@ -50,18 +48,14 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
 
         state = InfiniteMPS(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter,cguess = state.CR[end],leftgauged=true)
         galerkin   = calc_galerkin(state, pars)
-        alg.verbose && println("vumps @iteration $(iter) galerkin = $(galerkin)")
+        alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
         if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
             iter>=alg.maxiter && println("vumps didn't converge $(galerkin)")
             return state, pars, galerkin
         end
 
-        #dynamical bonds
-        if galerkin < lee
-            lee = galerkin
-            state, pars = managebonds(state,H,alg.manager,pars)
-        end
+        (state,pars) = alg.finalize(iter,state,H,pars);
 
         iter += 1
     end

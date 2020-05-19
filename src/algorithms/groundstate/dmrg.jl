@@ -5,7 +5,7 @@
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
     verbose::Bool = Defaults.verbose
-    manager::Algorithm = SimpleManager();
+    finalize::Function = (iter,state,ham,pars) -> (state,pars);
 end
 
 function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
@@ -15,8 +15,8 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
     while iter < maxiter && delta > tol
         delta=0.0
 
-        #dynamical bond expansion
-        state, parameters = managebonds(state,H,alg.manager,parameters)
+        #finalize
+        (state,pars) = alg.finalize(iter,state,H,pars);
 
         for pos = [1:(length(state)-1);length(state):-1:2]
             (eigvals,vecs) =  let state = state,parameters = parameters
@@ -31,7 +31,7 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
 
         alg.verbose && @show (iter,delta)
         flush(stdout)
-        #finalize
+
         iter += 1
     end
 

@@ -1,11 +1,11 @@
 """
     PowerMethod way of finding the leading boundary mps
 """
-@with_kw struct PowerMethod{TruncT<:Algorithm} <: Algorithm
+@with_kw struct PowerMethod <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
-    truncalg::TruncT = SimpleManager()
+    finalize::Function = (iter,state,ham,pars) -> (state,pars);
     verbose::Bool = Defaults.verbose
 end
 
@@ -14,8 +14,6 @@ function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(st
     iter       = 1
 
     newAs = similar(state.AL)
-
-    lee = galerkin
 
     while true
 
@@ -45,11 +43,7 @@ function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(st
             return state, pars, galerkin
         end
 
-        #dynamical bonds
-        if galerkin < lee
-            lee = galerkin
-            state, pars = managebonds(state,H,alg.truncalg,pars)
-        end
+        (state,pars) = alg.finalize(iter,state,H,pars);
 
         iter += 1
     end

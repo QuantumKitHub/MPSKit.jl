@@ -29,7 +29,6 @@ module MPSKit
     export timestep,Tdvp,Tdvp2
     export splitham,mpo2mps,mps2mpo,infinite_temperature
     export changebonds,VumpsSvdCut,DoNothing,OptimalExpand,SvdCut,UnionTrunc
-    export managebonds,SimpleManager
     export entropy
     export dynamicaldmrg
 
@@ -80,7 +79,6 @@ module MPSKit
     include("algorithms/toolbox.jl") #maybe move to utility, or move some utility functions to toolbox?
     include("algorithms/ortho.jl")
 
-    include("algorithms/changebonds/bondmanage.jl")
     include("algorithms/changebonds/optimalexpand.jl")
     include("algorithms/changebonds/donothing.jl")
     include("algorithms/changebonds/vumpssvd.jl")

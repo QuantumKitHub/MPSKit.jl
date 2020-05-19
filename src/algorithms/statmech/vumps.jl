@@ -23,8 +23,6 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,pars = params(state,
 
     newAs = similar(state.AL)
 
-    lee = galerkin
-
     while true
         eigalg = Arnoldi(tol=alg.tol_galerkin/10)
 
@@ -59,11 +57,7 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,pars = params(state,
             return state, pars, galerkin
         end
 
-        #dynamical bonds
-        if galerkin < lee
-            lee = galerkin
-            state, pars = managebonds(state,H,alg.manager,pars)
-        end
+        (state,pars) = alg.finalize(iter,state,H,pars);
 
         iter += 1
     end

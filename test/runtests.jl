@@ -179,8 +179,8 @@ println("------------------------------------")
 @testset "find_groundstate $(ind)" for (ind,(state,alg,ham)) in enumerate([
         (InfiniteMPS([ℂ^2],[ℂ^10]),Vumps(tol_galerkin=1e-8,verbose=false),nonsym_ising_ham(lambda=2.0)),
         (InfiniteMPS([ℂ^2],[ℂ^10]),Idmrg1(tol_galerkin=1e-8,maxiter=400,verbose=false),nonsym_ising_ham(lambda=2.0)),
-        (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10)),Dmrg2(verbose=false),nonsym_ising_ham(lambda=2.0)),
-        (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10)),Dmrg(manager=SimpleManager(10),verbose=false),nonsym_ising_ham(lambda=2.0))
+        (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),Dmrg2(verbose=false),nonsym_ising_ham(lambda=2.0)),
+        (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),Dmrg(verbose=false),nonsym_ising_ham(lambda=2.0))
         ])
 
     #vumps type inferrence got broken by @threads, so worth it?
