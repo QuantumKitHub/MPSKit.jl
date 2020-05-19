@@ -1,4 +1,4 @@
-using MPSKit,TensorKit,LinearAlgebra,Test
+using MPSKit,TensorKit,Test
 
 println("------------------------------------")
 println("|     States                       |")
@@ -250,17 +250,4 @@ end
     end
 
     @test data ≈ predicted atol=1e-8
-end
-
-@testset "utility" begin
-    tofit = x->x^-3;
-    fitdist = 100;
-    numexp = 10;
-
-    (prefs,exps) = exp_decomp(tofit,fitdist = fitdist,numexp = numexp);
-
-    exact = map(tofit,1:fitdist);
-    aprox = map(x->sum([e^x*l for (e,l) in zip(exps,prefs)]),1:fitdist);
-
-    @test exact ≈ aprox atol=1e-2
 end

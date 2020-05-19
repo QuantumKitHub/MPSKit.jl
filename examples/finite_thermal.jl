@@ -1,4 +1,4 @@
-using MPSKit,TensorKit,Test,LinearAlgebra
+using MPSKit,TensorKit,Test
 
 
 function bondmanage(state,ham,pars)

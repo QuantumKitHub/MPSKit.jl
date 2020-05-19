@@ -45,19 +45,34 @@ function Base.getproperty(h::MPOHamiltonian,f::Symbol)
     end
 end
 
-#allow passing in 2leg tensors
-MPOHamiltonian(x::M) where M <: AbstractArray{T,3} where T<: Union{<:MPSBondTensor,E} where E =
-    MPOHamiltonian(map(t-> isa(t,MPSBondTensor) ? permute(add_util_leg(t),(1,2),(4,3)) : t,x))
+#=
+allow passing in
+        - non strictly typed matrices
+        - missing fields
+        - 2leg tensors
+        - only mpo tensors
+=#
+function MPOHamiltonian(x::AbstractArray{T,3}) where T
+    # turn 2leg tensors into 4leg mpos
+    x = map(t-> t isa MPSBondTensor ? permute(add_util_leg(t),(1,2),(4,3)) : t,x);
 
-#allow passing in only tensors
-MPOHamiltonian(x::M) where M <: AbstractArray{T,3} where T <: MPOTensor =
-    MPOHamiltonian(Array{Union{eltype(T),T}}(x[:,:,:]))
+    # at this point x should contain at least one mpo type
+    mpos = typeof.(Iterators.filter(t-> t isa MPOTensor,x[:]));
+    isempty(mpos) && throw(ArgumentError("should have at least one mpo element"))
+
+    (M,_) = iterate(mpos);
+    E = eltype(M);
+
+    #maybe we can relax this requirement using promote_type
+    reduce((a,b) -> a && (b==M),mpos,init=true) || throw(ArgumentError("all mpo's should be of the same type"))
+
+    #we make sure that all numbers are of the correct type, and if no number/mpotensor is found we assume it to be missing -> 0
+    sanitized = map(t-> t isa MPOTensor ? t : (t isa Number ? promote_type(t,E) : zero(E)),x);
+    MPOHamiltonian(Array{Union{E,M},3}(sanitized))
+end
 
 #default constructor
-function MPOHamiltonian(x::T) where T <:AbstractArray{Union{oE,M},3} where M<:MPOTensor{Sp} where {Sp,oE<:Number}
-    E = eltype(M)#there is a bug in julia at the moment, this is a 'workaround'
-    #https://github.com/JuliaLang/julia/issues/35853
-
+function MPOHamiltonian(x::AbstractArray{Union{E,M},3})  where {Sp,M<:MPOTensor{Sp},E<:Number}
     (period,numrows,numcols) = size(x);
 
     E == eltype(M) || throw(ArgumentError("scalar type should match mpo eltype $E ≠ $(eltype(M))"))

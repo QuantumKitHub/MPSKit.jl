@@ -28,42 +28,6 @@ _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
 "
-Decomposes fun into a sum of exponentials
-(coeff,exponents)=exp_decomp(fun;fitdist,numexp);
-"
-function exp_decomp(fun;fitdist::Int=1000,numexp::Int=15)
-    N = fitdist;
-    n = numexp;
-
-    @assert N>n
-    F = Matrix{Int64}(undef,N-n+1,n)
-    Y = Vector{Int64}(undef,N)
-    for row=1:N-n+1
-        for col=1:n
-          F[row,col]=row+col-1;
-          Y[row+col-1]=row-1+col;
-        end
-    end
-    Fa = fun.(F)
-    Ya = fun.(Y)
-
-    (U,V) = qr(Fa);
-    U1 = U[1:N-n,1:n];
-    U2 = U[2:N-n+1,1:n];
-    lambda = eigvals(pinv(U1)*U2);
-
-    W = Matrix{eltype(lambda)}(undef,N,n);
-    for row=1:N
-        for col=1:n
-          W[row,col]=(lambda[col])^float(row);
-        end
-    end
-    x = W\Ya;
-    return x,lambda
-end
-
-
-"
     Returns spin operators Sx,Sy,Sz,Id for spin s
 "
 function spinmatrices(s::Union{Rational{Int},Int})
@@ -126,20 +90,7 @@ function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2
 
     return [T;decompose_localmpo(V)]
 end
-#=
-function ham_to_nonsym_mpo_prodtrick(t::Tuple,v::Val{N}) where N
-    if length(t)==N/2
-        return ProductSpace{ComplexSpace,0}()
-    else
-        return ComplexSpace(t[1])*ham_to_nonsym_mpo_prodtrick(Base.tail(t),v)
-    end
-end
-function ham_to_nonsym_mpo(ham::Array{ComplexF64,N}) where N
-    totspace = ham_to_nonsym_mpo_prodtrick(size(ham),Val{N}())
-    hamt=TensorMap(complex.(ham),totspace,totspace)
-    return decompose_localmpo(add_util_leg(hamt))
-end
-=#
+
 function add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
     #ntuple(x->x,Val{3+4}())
 
