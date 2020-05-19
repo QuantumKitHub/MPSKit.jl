@@ -16,7 +16,7 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
         delta=0.0
 
         #finalize
-        (state,pars) = alg.finalize(iter,state,H,pars);
+        (state,parameters) = alg.finalize(iter,state,H,parameters);
 
         for pos = [1:(length(state)-1);length(state):-1:2]
             (eigvals,vecs) =  let state = state,parameters = parameters
