@@ -47,7 +47,7 @@ end
 function uniform_rightorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1))) where T <: GenericMPSTensor{S,N1} where {S,N1}
     iteration=1; delta = 2*tol; len = length(A)
 
-    (cnew,_) = rightorth!(cguess, alg=TensorKit.RQpos())
+    (cnew,_) = rightorth(cguess, alg=TensorKit.RQpos())
     normalize!(cnew)
 
     Ar = similar.(A)
