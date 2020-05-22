@@ -10,8 +10,11 @@ mutable struct PerMPOInfEnv{H<:PeriodicMPO,V,S<:MPSMultiline} <: AbstractInfEnv
 
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}
+
+    lock :: ReentrantLock
 end
 
+#this is really lazy
 function recalculate!(pars::PerMPOInfEnv,nstate)
     ndat = params(nstate,pars.opp,pars.lw,pars.rw,tol=pars.tol,maxiter=pars.maxiter);
 
@@ -71,5 +74,5 @@ function params(state::MPSMultiline{T},mpo::PeriodicMPO,prevl = nothing,prevr = 
 
     end
 
-    return PerMPOInfEnv(mpo,state,tol,maxiter,lefties,righties)
+    return PerMPOInfEnv(mpo,state,tol,maxiter,lefties,righties,ReentrantLock())
 end

@@ -10,6 +10,8 @@ mutable struct MPOHamInfEnv{H<:MPOHamiltonian,V,S<:InfiniteMPS} <:AbstractInfEnv
 
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}
+
+    lock :: ReentrantLock
 end
 
 function gen_lw_rw(st::InfiniteMPS,ham::MPOHamiltonian)
@@ -27,20 +29,23 @@ end
 #randomly initialize pars
 function params(st::InfiniteMPS,ham::MPOHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
     (lw,rw) = gen_lw_rw(st,ham);
-    return MPOHamInfEnv(ham,similar(st),tol,maxiter,lw,rw)
+    return MPOHamInfEnv(ham,similar(st),tol,maxiter,lw,rw,ReentrantLock())
 end
 
 
 function recalculate!(pars::MPOHamInfEnv, nstate)
-    pars.dependency = nstate;
     sameDspace = reduce((prev,i) -> prev && space(pars.lw[i,1],3) == space(nstate.CR[i],1)',1:length(nstate),init=true);
 
     if !sameDspace
         (pars.lw,pars.rw) = gen_lw_rw(nstate,pars.opp)
     end
 
-    pars.lw = calclw(pars.dependency,pars.opp,pars.lw,tol = pars.tol,maxiter = pars.maxiter)
-    pars.rw = calcrw(pars.dependency,pars.opp,pars.rw,tol = pars.tol,maxiter = pars.maxiter)
+    leftjob = @Threads.spawn calclw(nstate,pars.opp,pars.lw,tol = pars.tol,maxiter = pars.maxiter)
+    rightjob = @Threads.spawn calcrw(nstate,pars.opp,pars.rw,tol = pars.tol,maxiter = pars.maxiter)
+    pars.lw = fetch(leftjob)
+    pars.rw = fetch(rightjob)
+
+    pars.dependency = nstate;
 end
 
 

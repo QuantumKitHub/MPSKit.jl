@@ -23,7 +23,7 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
     while true
         eigalg=Arnoldi(tol=galerkin/(4*sqrt(iter)))
 
-        for loc in 1:size(state,1)
+        @threads for loc in 1:size(state,1)
 
 
             (e,vac,ch)=let state=state,pars=pars,eigalg=eigalg

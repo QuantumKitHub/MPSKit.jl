@@ -26,17 +26,25 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,pars = params(state,
     while true
         eigalg = Arnoldi(tol=alg.tol_galerkin/10)
 
-        for col in 1:size(state,2)
+        @threads for col in 1:size(state,2)
 
             (e,vac,ch)=let state=state,pars=pars,eigalg=eigalg
                 eigsolve(RecursiveVec(state.AC[:,col]), 1, :LM, eigalg) do x
-                    RecursiveVec(circshift([ac_prime(x[row], row,col, state, pars) for row in 1:length(x)],1))
+                    tasks = map(1:length(x)) do row
+                        @Threads.spawn ac_prime(x[row], row,col, state, pars)
+                    end
+
+                    RecursiveVec(circshift(fetch.(tasks),1))
                 end
             end
 
             (e,vc,ch) = let state=state,pars=pars,eigalg=eigalg
                 eigsolve(RecursiveVec(state.CR[:,col]), 1, :LM, eigalg) do x
-                    RecursiveVec(circshift([c_prime(x[row], row,col, state, pars) for row in 1:length(x)],1))
+                    tasks = map(1:length(x)) do row
+                        @Threads.spawn c_prime(x[row], row,col, state, pars)
+                    end
+
+                    RecursiveVec(circshift(fetch.(tasks),1))
                 end
             end
 
