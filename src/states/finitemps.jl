@@ -138,11 +138,7 @@ Bring all MPS tensors of `psi` up to and including site `n` into left orthonorma
 the orthogonal factorization algorithm `alg`
 """
 function TensorKit.leftorth!(psi::FiniteMPS, n::Integer = length(psi);
-<<<<<<< HEAD
                     alg::OrthogonalFactorizationAlgorithm = QRpos(),
-=======
-                    alg::OrthogonalFactorizationAlgorithm = QRPos(),
->>>>>>> df837eca94f9b6f5bb3b61d48b4620dc4f32c3e0
                     normalize::Bool = true)
     @assert 1 <= n <= length(psi)
 
@@ -162,11 +158,7 @@ function TensorKit.leftorth!(psi::FiniteMPS, n::Integer = length(psi);
     return normalize ? normalize!(psi) : psi
 end
 function TensorKit.rightorth!(psi::FiniteMPS, n::Integer = 1;
-<<<<<<< HEAD
                     alg::OrthogonalFactorizationAlgorithm = RQpos(),
-=======
-                    alg::OrthogonalFactorizationAlgorithm = RQPos(),
->>>>>>> df837eca94f9b6f5bb3b61d48b4620dc4f32c3e0
                     normalize::Bool = true)
     @assert 1 <= n <= length(psi)
     while last(psi.gaugedpos) > n

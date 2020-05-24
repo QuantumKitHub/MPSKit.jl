@@ -17,11 +17,7 @@ function uniform_leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxit
                     transfer_left(x,A,Al)
                 end
 
-<<<<<<< HEAD
             Cs[end] = leftorth!(outp[2][1],alg=TensorKit.QRpos())[2]
-=======
-            Cs[end] = leftorth!(outp[2][1],alg=TensorKit.QRPos())[2]
->>>>>>> df837eca94f9b6f5bb3b61d48b4620dc4f32c3e0
         end
 
         cold = Cs[len]
@@ -30,11 +26,7 @@ function uniform_leftorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxit
             prev= mod1(loc-1,len)
 
             Al[loc] = permute(Cs[prev]*permute(A[loc],(1,),ntuple(x->x+1,Val{N1}())),ntuple(x->x,Val{N1}()),(N1+1,))
-<<<<<<< HEAD
             Al[loc], Cs[loc] = leftorth!(Al[loc], alg=TensorKit.QRpos())
-=======
-            Al[loc], Cs[loc] = leftorth!(Al[loc], alg=TensorKit.QRPos())
->>>>>>> df837eca94f9b6f5bb3b61d48b4620dc4f32c3e0
             Cs[loc]/=norm(Cs[loc])
         end
 
@@ -69,11 +61,7 @@ function uniform_rightorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxi
             outp = eigsolve(Cs[end], 1, :LM,alg) do x
                 transfer_right(x,A,Ar)
             end
-<<<<<<< HEAD
             Cs[end] = rightorth!(outp[2][1],alg=TensorKit.RQpos())[1]
-=======
-            Cs[end] = rightorth!(outp[2][1],alg=TensorKit.RQPos())[1]
->>>>>>> df837eca94f9b6f5bb3b61d48b4620dc4f32c3e0
         end
 
         cold = Cs[end]
@@ -84,11 +72,7 @@ function uniform_rightorth(A::Array{T,1}; tol::Float64 = Defaults.tolgauge, maxi
             Ar[loc] = A[loc]*Cs[loc]
 
             temp = permute(Ar[loc],(1,),ntuple(x->x+1,Val{N1}()));
-<<<<<<< HEAD
             Cs[prev], temp = rightorth!(temp, alg=TensorKit.RQpos())
-=======
-            Cs[prev], temp = rightorth!(temp, alg=TensorKit.RQPos())
->>>>>>> df837eca94f9b6f5bb3b61d48b4620dc4f32c3e0
             Ar[loc] = permute(temp,ntuple(x->x,Val{N1}()),(N1+1,))
             Cs[prev]/=norm(Cs[prev])
         end
