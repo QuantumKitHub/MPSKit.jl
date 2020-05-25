@@ -26,8 +26,8 @@ function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp
         convhist.converged==0 && @info "time evolving c($loc) failed $(convhist.normres)"
 
         #find Al that best fits these new Acenter and centers
-        QAc,_ = leftorth!(newAcenter,alg=TensorKit.Polar())
-        Qc,_ = leftorth!(newCenter,alg=TensorKit.Polar())
+        QAc,_ = leftorth!(newAcenter,alg=TensorKit.QRpos())
+        Qc,_ = leftorth!(newCenter,alg=TensorKit.QRpos())
         @tensor Aleft[-1 -2;-3]:=QAc[-1,-2,1]*conj(Qc[-3,1])
 
         newAs[loc]     = Aleft

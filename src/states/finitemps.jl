@@ -158,7 +158,7 @@ function TensorKit.leftorth!(psi::FiniteMPS, n::Integer = length(psi);
     return normalize ? normalize!(psi) : psi
 end
 function TensorKit.rightorth!(psi::FiniteMPS, n::Integer = 1;
-                    alg::OrthogonalFactorizationAlgorithm = RQpos(),
+                    alg::OrthogonalFactorizationAlgorithm = LQpos(),
                     normalize::Bool = true)
     @assert 1 <= n <= length(psi)
     while last(psi.gaugedpos) > n

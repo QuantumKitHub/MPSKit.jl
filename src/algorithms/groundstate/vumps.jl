@@ -38,8 +38,8 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
                 end
             end
 
-            QAc,_ = TensorKit.leftorth!(vac[1], alg=TensorKit.Polar())
-            Qc,_  = TensorKit.leftorth!(vc[1], alg=TensorKit.Polar())
+            QAc,_ = TensorKit.leftorth!(vac[1], alg=QRpos())
+            Qc,_  = TensorKit.leftorth!(vc[1], alg=QRpos())
 
             newAs[loc]     = QAc*adjoint(Qc)
 

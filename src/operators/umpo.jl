@@ -6,7 +6,7 @@ struct PeriodicMPO{O<:MPOTensor} <: Operator
 end
 
 PeriodicMPO(t::AbstractTensorMap) = PeriodicMPO(fill(t,1,1));
-PeriodicMPO(t::Array{T,2}) where T<:TensorMap = PeriodicMPO(PeriodicArray(t));
+PeriodicMPO(t::AbstractArray{T,2}) where T<:MPOTensor = PeriodicMPO(PeriodicArray(t));
 
 Base.getindex(o::PeriodicMPO,i,j) = o.opp[i,j]
 Base.size(o::PeriodicMPO,i) = size(o.opp,i);
