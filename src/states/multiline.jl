@@ -49,7 +49,7 @@ function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = De
         if !leftgauged
             tal,_,deltal= uniform_leftorth(PeriodicArray(A[row,:]); tol = tol, maxiter = maxiter)
         else
-            tal = A[row,:];
+            tal = PeriodicArray(A[row,:]);
         end
         tar,tc,deltar = uniform_rightorth(tal; tol = tol, maxiter = maxiter)
 
