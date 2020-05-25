@@ -36,7 +36,7 @@ function Base.convert(::Type{InfiniteMPS},st::MPSMultiline{A,B}) where {A,B}
     InfiniteMPS(AL,AR,CR,AC);
 end
 
-function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = Defaults.maxiter) where T <: GenericMPSTensor
+function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = Defaults.maxiter,leftgauged=false) where T <: GenericMPSTensor
 
     ACs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));
     ALs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));
@@ -46,7 +46,11 @@ function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = De
     Cs = PeriodicArray{ctype,2}(undef,size(A,1),size(A,2));
 
     for row in 1:size(A,1)
-        tal,_,deltal= uniform_leftorth(PeriodicArray(A[row,:]); tol = tol, maxiter = maxiter)
+        if !leftgauged
+            tal,_,deltal= uniform_leftorth(PeriodicArray(A[row,:]); tol = tol, maxiter = maxiter)
+        else
+            tal = A[row,:];
+        end
         tar,tc,deltar = uniform_rightorth(tal; tol = tol, maxiter = maxiter)
 
         ALs[row,:] = tal[:];
