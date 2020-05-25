@@ -26,26 +26,26 @@ function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};elt
 end
 
 #allow users to pass in simple arrays
-function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter, cguess = TensorMap(rand, eltype(A[1]), domain(A[end]) ← space(A[1],1)),leftgauged = false) where T<:GenericMPSTensor
+function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter,
+    cguess = PeriodicArray([isomorphism(Matrix{eltype(A[i])},space(A[i],1),space(A[i],1)) for i in 1:length(A)]),leftgauged = false) where T<:GenericMPSTensor
+    pA = PeriodicArray(A[:])
     #perform the left gauge fixing, remember only Al
     if leftgauged
-        ALs = A[1:end];
+        ALs = pA;
         deltal = 0;
-        ncguess = cguess;
     else
-        ALs, ncguesses, deltal = uniform_leftorth(A[1:end]; tol = tol, maxiter = maxiter, cguess = cguess)
-        ncguess = ncguesses[end];
+        ALs, cguess, deltal = uniform_leftorth(pA; tol = tol, maxiter = maxiter, cguess = cguess)
     end
 
     #perform the right gauge fixing from which we obtain the center matrix
-    ARs, Cs, deltar  = uniform_rightorth(ALs ; tol = tol, maxiter = maxiter, cguess = ncguess)
-
+    ARs, Cs, deltar  = uniform_rightorth(ALs ; tol = tol, maxiter = maxiter, cguess = cguess)
+    CRs = circshift(Cs,-1);
     ACs=similar(ARs)
     for loc = 1:size(A,1)
-        ACs[loc] = ALs[loc]*Cs[loc]
+        ACs[loc] = ALs[loc]*CRs[loc]
     end
 
-    return InfiniteMPS(PeriodicArray(ALs),PeriodicArray(ARs),PeriodicArray(Cs),PeriodicArray(ACs))
+    return InfiniteMPS(ALs,ARs,CRs,ACs)
 end
 
 "

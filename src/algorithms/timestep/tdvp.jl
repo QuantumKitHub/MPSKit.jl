@@ -12,7 +12,7 @@ time evolves psi by timestep dt using algorithm alg
 """
 function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,parameters::Cache=params(state,H))
 
-    newAs=similar(state.AL)
+    newAs = similar(state.AL)
 
     for loc in 1:length(state)
         (newAcenter,convhist) = let st=state,pr=parameters

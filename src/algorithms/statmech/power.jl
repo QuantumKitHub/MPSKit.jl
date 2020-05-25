@@ -34,7 +34,7 @@ function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(st
 
         end
 
-        state = MPSMultiline(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter)
+        state = MPSMultiline(newAs; leftgauged=true,tol = alg.tol_gauge, maxiter = alg.maxiter)
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && println("powermethod @iteration $(iter) galerkin = $(galerkin)")
 

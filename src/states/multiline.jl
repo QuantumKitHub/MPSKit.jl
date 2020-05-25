@@ -36,20 +36,22 @@ function Base.convert(::Type{InfiniteMPS},st::MPSMultiline{A,B}) where {A,B}
     InfiniteMPS(AL,AR,CR,AC);
 end
 
-function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = Defaults.maxiter,cguess =  PeriodicArray([TensorMap(rand, eltype(A[1]), domain(A[i,end]) ← space(A[i,1],1)) for i in 1:size(A,1)])) where T <: GenericMPSTensor
+function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = Defaults.maxiter) where T <: GenericMPSTensor
 
     ACs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));
     ALs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));
     ARs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));;
-    Cs = PeriodicArray{typeof(cguess[1]),2}(undef,size(A,1),size(A,2));
+
+    ctype = typeof(TensorMap(rand,eltype(A[1,1]),space(A[1,1],1),space(A[1,1],1)))
+    Cs = PeriodicArray{ctype,2}(undef,size(A,1),size(A,2));
 
     for row in 1:size(A,1)
-        tal,_,deltal= uniform_leftorth(A[row,:]; tol = tol, maxiter = maxiter, cguess = cguess[row])
-        tar,tc,deltar = uniform_rightorth(tal; tol = tol, maxiter = maxiter, cguess = cguess[row])
+        tal,_,deltal= uniform_leftorth(PeriodicArray(A[row,:]); tol = tol, maxiter = maxiter)
+        tar,tc,deltar = uniform_rightorth(tal; tol = tol, maxiter = maxiter)
 
         ALs[row,:] = tal[:];
         ARs[row,:] = tar[:];
-        Cs[row,:] = tc[:];
+        Cs[row,:] = circshift(tc[:],-1);
 
         for loc = 1:length(tal)
             ACs[row,loc] = ALs[row,loc]*Cs[row,loc]
