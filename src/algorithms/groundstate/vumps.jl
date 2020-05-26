@@ -18,37 +18,36 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
-    newAs = similar(state.AL)
-
     while true
-        eigalg=Arnoldi(tol=galerkin/(4*sqrt(iter)))
+        eigalg = Arnoldi(tol=galerkin/(4*sqrt(iter)))
 
-        @threads for loc in 1:size(state,1)
+        jobs = map(1:length(state)) do loc
 
-
-            (e,vac,ch)=let state=state,pars=pars,eigalg=eigalg
-                eigsolve(state.AC[loc], 1, :SR, eigalg) do x
-                    ac_prime(x, loc, state, pars)
-                end
+            acjob = @Threads.spawn eigsolve(state.AC[loc], 1, :SR, eigalg) do x
+                ac_prime(x, loc, state, pars)
             end
 
-            (e,vc,ch) = let state=state,pars=pars,eigalg=eigalg
-                eigsolve(state.CR[loc], 1, :SR, eigalg) do x
-                    c_prime(x, loc, state, pars)
-                end
+            cjob = @Threads.spawn eigsolve(state.CR[loc], 1, :SR, eigalg) do x
+                c_prime(x, loc, state, pars)
             end
+
+            (acjob,cjob)
+        end
+
+        newAs = map(jobs) do job
+            (e,vac,ch) = fetch(job[1])
+            (e,vc,ch) = fetch(job[2])
 
             QAc,_ = TensorKit.leftorth!(vac[1], alg=QRpos())
             Qc,_  = TensorKit.leftorth!(vc[1], alg=QRpos())
 
-            newAs[loc]     = QAc*adjoint(Qc)
-
+            QAc*adjoint(Qc)
         end
 
 
         state = InfiniteMPS(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter,leftgauged=true)
         galerkin   = calc_galerkin(state, pars)
-        alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
+        alg.verbose && @show "vumps @iteration $(iter) galerkin = $(galerkin)"
 
         if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
             iter>=alg.maxiter && println("vumps didn't converge $(galerkin)")
