@@ -6,11 +6,11 @@
 end
 
 """
-    function timestep(psi, operator, dt, alg,parameters = params(psi,operator))
+    function timestep(psi, operator, dt, alg,pars = params(psi,operator))
 
 time evolves psi by timestep dt using algorithm alg
 """
-function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,parameters::Cache=params(state,H))
+function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,pars::Cache=params(state,H))
 
     newAs = similar(state.AL)
 
@@ -36,7 +36,7 @@ function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp
         newAs[loc]     = Aleft
     end
 
-    return InfiniteMPS(newAs; tol = alg.tolgauge, maxiter = alg.maxiter,leftgauged = true),parameters
+    return InfiniteMPS(newAs; tol = alg.tolgauge, maxiter = alg.maxiter,leftgauged = true),pars
 end
 
 function timestep(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp,pars=params(state,H))

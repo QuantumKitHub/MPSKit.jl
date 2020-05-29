@@ -5,7 +5,7 @@ function finalize(iter,state,ham,pars)
     final_bonddim = 12;
 
     upperbound = max_Ds(state);
-    shouldincrease = reduce((a,b) -> a && dim(virtualspace(state,i))>=final_bonddim || upperbound[i+1] == dim(virtualspace(state,i)),1:length(state),init=true);
+    shouldincrease = reduce((a,i) -> a && dim(virtualspace(state,i))>=final_bonddim || upperbound[i+1] == dim(virtualspace(state,i)),1:length(state),init=true);
 
     if (shouldincrease)
         (state,pars) = changebonds(state, ham, OptimalExpand(),pars);

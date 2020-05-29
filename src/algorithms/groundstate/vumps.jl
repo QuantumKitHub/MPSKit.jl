@@ -46,7 +46,7 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
 
         state = InfiniteMPS(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter,leftgauged=true)
         galerkin   = calc_galerkin(state, pars)
-        alg.verbose && @show "vumps @iteration $(iter) galerkin = $(galerkin)"
+        alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
         if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
             iter>=alg.maxiter && println("vumps didn't converge $(galerkin)")
