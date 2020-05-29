@@ -45,20 +45,22 @@ function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = De
     ctype = typeof(TensorMap(rand,eltype(A[1,1]),space(A[1,1],1),space(A[1,1],1)))
     Cs = PeriodicArray{ctype,2}(undef,size(A,1),size(A,2));
 
-    for row in 1:size(A,1)
-        if !leftgauged
-            tal,_,deltal= uniform_leftorth(PeriodicArray(A[row,:]); tol = tol, maxiter = maxiter)
-        else
-            tal = PeriodicArray(A[row,:]);
-        end
-        tar,tc,deltar = uniform_rightorth(tal; tol = tol, maxiter = maxiter)
+    @sync for row in 1:size(A,1)
+        @Threads.spawn begin
+            if !leftgauged
+                tal,_,deltal= uniform_leftorth(PeriodicArray(A[row,:]); tol = tol, maxiter = maxiter)
+            else
+                tal = PeriodicArray(A[row,:]);
+            end
+            tar,tc,deltar = uniform_rightorth(tal; tol = tol, maxiter = maxiter)
 
-        ALs[row,:] = tal[:];
-        ARs[row,:] = tar[:];
-        Cs[row,:] = circshift(tc[:],-1);
+            ALs[row,:] = tal[:];
+            ARs[row,:] = tar[:];
+            Cs[row,:] = circshift(tc[:],-1);
 
-        for loc = 1:length(tal)
-            ACs[row,loc] = ALs[row,loc]*Cs[row,loc]
+            for loc = 1:length(tal)
+                ACs[row,loc] = ALs[row,loc]*Cs[row,loc]
+            end
         end
     end
 

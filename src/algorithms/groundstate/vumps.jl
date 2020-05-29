@@ -21,22 +21,21 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
     while true
         eigalg = Arnoldi(tol=galerkin/(4*sqrt(iter)))
 
-        jobs = map(1:length(state)) do loc
-
-            acjob = @Threads.spawn eigsolve(state.AC[loc], 1, :SR, eigalg) do x
+        acjobs = map(enumerate(state.AC)) do (loc,ac)
+            @Threads.spawn eigsolve(ac, 1, :SR, eigalg) do x
                 ac_prime(x, loc, state, pars)
             end
-
-            cjob = @Threads.spawn eigsolve(state.CR[loc], 1, :SR, eigalg) do x
-                c_prime(x, loc, state, pars)
-            end
-
-            (acjob,cjob)
         end
 
-        newAs = map(jobs) do job
-            (e,vac,ch) = fetch(job[1])
-            (e,vc,ch) = fetch(job[2])
+        cjobs = map(enumerate(state.CR)) do (loc,cr)
+            @Threads.spawn eigsolve(cr, 1, :SR, eigalg) do x
+                c_prime(x, loc, state, pars)
+            end
+        end
+
+        newAs = map(zip(acjobs,cjobs)) do (acj,cj)
+            (e,vac,ch) = fetch(acj)
+            (e,vc,ch) = fetch(cj)
 
             QAc,_ = TensorKit.leftorth!(vac[1], alg=QRpos())
             Qc,_  = TensorKit.leftorth!(vc[1], alg=QRpos())
