@@ -87,8 +87,7 @@ function TensorKit.leftorth!(psi::MPSComoving, n::Integer = length(psi);
         end
 
         psi.site_tensors[k], psi.bond_tensors[k+1] = leftorth(psi.site_tensors[k]; alg = alg)
-
-        psi.gaugedpos = (k,last(psi.gaugedpos))
+        psi.gaugedpos = (k,max(k+1,last(psi.gaugedpos)))
     end
     return normalize ? normalize!(psi) : psi
 end
@@ -111,7 +110,7 @@ function TensorKit.rightorth!(psi::MPSComoving, n::Integer = 1;
         psi.site_tensors[k] = _permute_front(AR)
         psi.bond_tensors[k] = C;
 
-        psi.gaugedpos = (first(psi.gaugedpos), k)
+        psi.gaugedpos = (min(k-1,first(psi.gaugedpos)), k)
     end
 
     return normalize ? normalize!(psi) : psi
