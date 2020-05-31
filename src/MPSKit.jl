@@ -29,7 +29,7 @@ module MPSKit
     export quasiparticle_excitation
     export timestep,Tdvp,Tdvp2
     export splitham,mpo2mps,mps2mpo,infinite_temperature
-    export changebonds,VumpsSvdCut,DoNothing,OptimalExpand,SvdCut,UnionTrunc
+    export changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
     export entropy
     export dynamicaldmrg
 
@@ -81,7 +81,6 @@ module MPSKit
     include("algorithms/ortho.jl")
 
     include("algorithms/changebonds/optimalexpand.jl")
-    include("algorithms/changebonds/donothing.jl")
     include("algorithms/changebonds/vumpssvd.jl")
     include("algorithms/changebonds/svdcut.jl")
     include("algorithms/changebonds/union.jl")
