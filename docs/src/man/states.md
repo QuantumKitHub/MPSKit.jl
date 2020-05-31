@@ -1,8 +1,9 @@
 # [States](@id um_states)
 
+
 ## FiniteMPS
 
-A finite mps can be created by passing in a vector of tensormaps:
+A [`FiniteMPS`](@ref) can be created by passing in a vector of tensormaps:
 
 ```julia
 data = fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10);

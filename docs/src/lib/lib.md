@@ -1,6 +1,6 @@
 # Library documentation
 
-## States
+## [States](@id lib_states)
 ```@docs
 FiniteMPS
 InfiniteMPS
@@ -33,30 +33,39 @@ ac2_prime
 expectation_value
 ```
 
-## Groundstate algorithms
+## Algorithms
 ```@docs
 find_groundstate
+timestep
+leading_boundary
+dynamicaldmrg
+quasiparticle_excitation
+changebonds
+```
+
+### [Groundstate algorithms](@id lib_gs_alg)
+```@docs
 Vumps
 Idmrg1
 Dmrg
 Dmrg2
 ```
 
-## Time evolution
+### [Time evolution algorithms](@id lib_time_alg)
 ```@docs
-timestep
 Tdvp
 Tdvp2
 ```
 
-## Bond dimension code
+### [Leading boundary algorithms](@id lib_bound_alg)
 ```@docs
-changebonds
-managebonds
+Vumps
+PowerMethod
 ```
 
-## Various
+### [Bond change algorithms](@id lib_bc_alg)
 ```@docs
-dynamicaldmrg
-quasiparticle_excitation
+OptimalExpand
+VumpsSvdCut
+SvdCut
 ```

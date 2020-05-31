@@ -7,7 +7,7 @@ makedocs(modules=[MPSKit],
             pages = [
                 "Home" => "index.md",
                 "Manual" => ["man/intro.md", "man/states.md", "man/operators.md",
-                                "man/algorithms.md"],
+                                "man/algorithms.md","man/environments.md"],
                 "Library" => ["lib/lib.md"],
             ])
 
