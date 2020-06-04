@@ -92,7 +92,7 @@ function TensorKit.leftorth!(psi::MPSComoving, n::Integer = length(psi);
     return normalize ? normalize!(psi) : psi
 end
 function TensorKit.rightorth!(psi::MPSComoving, n::Integer = 1;
-                    alg::OrthogonalFactorizationAlgorithm = LQpos(),
+                    alg::OrthogonalFactorizationAlgorithm = RQpos(),
                     normalize::Bool = true)
     @assert 1 <= n <= length(psi)
 

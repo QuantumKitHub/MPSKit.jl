@@ -8,7 +8,7 @@ println("------------------------------------")
         (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1)*ℂ[SU₂](0=>1),ComplexF32)
         ]
 
-    ts = FiniteMPS(rand,elt,rand(1:10),d,D);
+    ts = FiniteMPS(rand,elt,rand(3:20),d,D);
 
     ovl = dot(ts,ts);
     @test ovl ≈ norm(ts.AC[1])^2
@@ -17,6 +17,16 @@ println("------------------------------------")
         @test ts.AC[i] ≈ ts.AL[i]*ts.CR[i]
         @test ts.AC[i] ≈ MPSKit._permute_front(ts.CR[i-1]*MPSKit._permute_tail(ts.AR[i]))
     end
+
+    #these checks ensure that the default chosen orthonormalization is consistent
+    ind1 = rand(1:(length(ts)-1))
+    ind2 = ind1+1;
+    al1 = ts.AL[ind2];
+    ar1 = ts.AR[ind1];
+    al2 = ts.AL[ind2];
+    ar2 = ts.AR[ind1];
+    @test al1 ≈ al2
+    @test ar1 ≈ ar2
 
     @test elt == eltype(eltype(ts))
 
@@ -84,6 +94,16 @@ end
         @test window.AC[i] ≈ window.AL[i]*window.CR[i]
         @test window.AC[i] ≈ MPSKit._permute_front(window.CR[i-1]*MPSKit._permute_tail(window.AR[i]))
     end
+
+    #these checks ensure that the default chosen orthonormalization is consistent
+    ind1 = rand(1:(length(window)-1))
+    ind2 = ind1+1;
+    al1 = window.AL[ind2];
+    ar1 = window.AR[ind1];
+    al2 = window.AL[ind2];
+    ar2 = window.AR[ind1];
+    @test al1 ≈ al2
+    @test ar1 ≈ ar2
 
     @test norm(window) ≈ 1
     window = window*3
