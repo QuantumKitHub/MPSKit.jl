@@ -49,6 +49,7 @@ Vumps
 Idmrg1
 Dmrg
 Dmrg2
+GradientGrassmann
 ```
 
 ### [Time evolution algorithms](@id lib_time_alg)

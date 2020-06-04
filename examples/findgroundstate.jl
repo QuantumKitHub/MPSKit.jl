@@ -39,9 +39,9 @@ ts=InfiniteMPS([ℂ^2],[ℂ^50]);
 szval_infinite=@tensor ts.AC[1][1,2,3]*szt[4,2]*conj(ts.AC[1][1,4,3])
 @test szval_infinite ≈ 0 atol=1e-12
 
-#optimkit algorithms (experimental)
-#ts=InfiniteMPS([ℂ^2],[ℂ^5]);
-#(ts,pars,_)=find_groundstate(ts,th,LBFGS(maxiter=100,verbosity=3));
+# gradient optimisation using the Grassmann manifold structure
+ts = InfiniteMPS([ℂ^2], [ℂ^5]);
+(ts, pars, _) = find_groundstate(ts, th, GradientGrassmann(maxiter=400));
 
-#szval_infinite=@tensor ts.AC[1][1,2,3]*szt[4,2]*conj(ts.AC[1][1,4,3])
-#@test szval_infinite ≈ 0 atol=1e-12
+szval_infinite = @tensor ts.AC[1][1,2,3]*szt[4,2]*conj(ts.AC[1][1,4,3])
+@test szval_infinite ≈ 0 atol=1e-12
