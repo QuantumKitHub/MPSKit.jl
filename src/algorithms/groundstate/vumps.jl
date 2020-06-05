@@ -18,6 +18,8 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
+    (state,pars) = alg.finalize(iter,state,H,pars);
+
     while true
         eigalg = Arnoldi(tol=galerkin/(4*sqrt(iter)))
 
