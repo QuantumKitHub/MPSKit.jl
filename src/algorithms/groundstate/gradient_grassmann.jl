@@ -2,8 +2,8 @@
 GradientGrassmann is an optimisation methdod that keeps the MPS in left-canonical form, and
 treats the tensors as points on Grassmann manifolds. It then applies one of the well-known
 gradient optimisation methods, e.g. conjugate gradient, to the MPS, making use of the
-Riemannian manifold structure. A so called preconditioner is used, so that effectively the
-metric used on the manifold is that given by the Hilbert space inner product.
+Riemannian manifold structure. A preconditioner is used, so that effectively the metric used
+on the manifold is that given by the Hilbert space inner product.
 
 The arguments to the constructor are
 method::Union{OptimKit.OptimizationAlgorithm, Nothing} = nothing
@@ -142,7 +142,7 @@ to zero) and square root of machine epsilon. The inverse is done using an SVD.
 function reginv(m, delta=zero(eltype(m)))
     delta = max(delta, sqrt(eps(real(float(one(eltype(m)))))))
     U, S, Vdg = tsvd(m)
-    Sinv = inv(real(sqrt(S^2 + delta^2*id(domain(S)))))
+    Sinv = inv(real(sqrt(S^2 + delta^2*one(S))))
     minv = Vdg' * Sinv * U'
     return minv
 end
