@@ -1,39 +1,53 @@
 """
 GradientGrassmann is an optimisation methdod that keeps the MPS in left-canonical form, and
-treats the tensors as points on Grassmann manifolds. It then applies one of the well-known
+treats the tensors as points on Grassmann manifolds. It then applies one of the standard
 gradient optimisation methods, e.g. conjugate gradient, to the MPS, making use of the
 Riemannian manifold structure. A preconditioner is used, so that effectively the metric used
 on the manifold is that given by the Hilbert space inner product.
 
 The arguments to the constructor are
-method::Union{OptimKit.OptimizationAlgorithm, Nothing} = nothing
-    The gradient optimisation method to be used, e.g. an instance of
-    `OptimKit.ConjugateGradient` or `OptimKit.LBFGS` that the user has already created.
-    Optionally, and by default, `nothing`, see below.
+method = OptimKit.ConjugateGradient
+    The gradient optimisation method to be used. Should either be an instance or a subtype
+    of `OptimKit.OptimizationAlgorithm`. If it's an instance, this `method` is simply used
+    to do the optimisation. If it's a subtype, then an instance is constructed as
+    `method(; maxiter=maxiter, verbosity=verbosity, gradtol=tol)`
 
-finalize!::Function = OptimKit._finalize!
+finalize! = OptimKit._finalize!
     A function that gets called once each iteration. See OptimKit for details.
 
-methodtype = ConjugateGradient
-tol::Float64 = Defaults.tol
-maxiter::Int = Defaults.maxiter
-verbosity::Int = 2
-    If a `method` is not provided (it's `nothing`), then one of `methodtype` is created as
-    `method = methodtype(; maxiter=maxiter, verbosity=verbosity, gradtol=tol)`.
+tol = Defaults.tol
+maxiter = Defaults.maxiter
+verbosity = 2
+    Arguments passed to the `method` constructor. If `method` is an instance of
+    `OptimKit.OptimizationAlgorithm`, these argument are ignored.
 
 In other words, by default conjugate gradient is used. One can easily set `tol`, `maxiter`
-and `verbosity` for it, or switch to LBFGS or gradient descent using `methodtype`. If more
-control is wanted, over things like specifics of the linesearch, CG flavor or the m
-parameter of LBFGS, then the user should create the `OptimKit.OptimizationAlgorithm` object
-manually and pass it as `method`.
+and `verbosity` for it, or switch to LBFGS or gradient descent by setting `method`. If more
+control is wanted over things like specifics of the linesearch, CG flavor or the `m`
+parameter of LBFGS, then the user should create the `OptimKit.OptimizationAlgorithm`
+instance manually and pass it as `method`.
 """
-@with_kw struct GradientGrassmann <: Algorithm
-    method::Union{OptimKit.OptimizationAlgorithm, Nothing} = nothing
-    finalize!::Function = OptimKit._finalize!
-    methodtype = ConjugateGradient
-    tol::Float64 = Defaults.tol
-    maxiter::Int = Defaults.maxiter
-    verbosity::Int = 2
+struct GradientGrassmann <: Algorithm
+    method::OptimKit.OptimizationAlgorithm
+    finalize!::Function
+
+    function GradientGrassmann(; method = ConjugateGradient,
+                               finalize! = OptimKit._finalize!,
+                               tol = Defaults.tol,
+                               maxiter = Defaults.maxiter,
+                               verbosity = 2)
+        if isa(method, OptimKit.OptimizationAlgorithm)
+            # We were given an optimisation method, just use it.
+            m = method
+        elseif method <: OptimKit.OptimizationAlgorithm
+            # We were given an optimisation method type, construct an instance of it.
+            m = method(; maxiter=maxiter, verbosity=verbosity, gradtol=tol)
+        else
+            msg = "method should be either an instance or a subtype of OptimKit.OptimizationAlgorithm."
+            throw(ArgumentError(msg))
+        end
+        return new(m, finalize!)
+    end
 end
 
 function find_groundstate(state::InfiniteMPS, H::Hamiltonian, alg::GradientGrassmann,
