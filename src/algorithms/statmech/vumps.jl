@@ -58,7 +58,7 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,pars = params(state,
 
         end
 
-        state = MPSMultiline(newAs; leftgauged=true,tol = alg.tol_gauge, maxiter = alg.maxiter)
+        state = MPSMultiline(newAs; leftgauged=true,tol = alg.tol_gauge, maxiter = alg.orthmaxiter)
         galerkin = calc_galerkin(state, pars)
         alg.verbose && println("vumps @iteration $(iter) galerkin = $(galerkin)")
 
