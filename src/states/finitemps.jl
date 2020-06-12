@@ -48,7 +48,7 @@ end
 
 #this should not be necessary ...
 bond_type(t::GenericMPSTensor) = typeof(TensorMap(rand,eltype(t),space(t,1),space(t,1)))
-
+bond_type(::Type{FiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
 # allow construction with only site_tensors missing
 function FiniteMPS(site_tensors::Vector{A},
             bond_tensors::Vector{Union{Missing,B}} = Vector{Union{Missing,bond_type(site_tensors[1])}}(missing,length(site_tensors)+1),

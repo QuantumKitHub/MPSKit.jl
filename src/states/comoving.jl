@@ -28,6 +28,7 @@ Base.copy(state::MPSComoving) = MPSComoving(state.left_gs,deepcopy(state.site_te
 Base.length(state::MPSComoving) = length(state.site_tensors)
 Base.size(psi::MPSComoving, i...) = size(psi.site_tensors, i...)
 Base.eltype(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
+bond_type(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
 Base.similar(psi::MPSComoving) = MPSComoving(psi.left_gs,similar.(psi.site_tensors),psi.right_gs)
 
 TensorKit.space(psi::MPSComoving{<:MPSTensor}, n::Integer) = space(psi.site_tensors[n], 2)
