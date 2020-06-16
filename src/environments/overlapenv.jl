@@ -21,7 +21,8 @@ function params(above::S,below::S,leftstart::C,rightstart::C) where S <: Union{<
         push!(rightenvs,similar(rightstart))
     end
 
-    return OvlEnv{S,C,eltype(below)}(above,similar.(below.site_tensors),similar.(below.site_tensors),leftenvs,reverse(rightenvs))
+    t = below.AC[1];
+    return OvlEnv{S,C,eltype(below)}(above,fill(t,length(below)),fill(t,length(below)),leftenvs,reverse(rightenvs))
 end
 
 function params(above::S,below::S) where S <:FiniteMPS

@@ -19,16 +19,6 @@ println("------------------------------------")
         @test ts.AC[i] ≈ MPSKit._permute_front(ts.CR[i-1]*MPSKit._permute_tail(ts.AR[i]))
     end
 
-    #these checks ensure that the default chosen orthonormalization is consistent
-    ind1 = rand(1:(length(ts)-1))
-    ind2 = ind1+1;
-    al1 = ts.AL[ind2];
-    ar1 = ts.AR[ind1];
-    al2 = ts.AL[ind2];
-    ar2 = ts.AR[ind1];
-    @test al1 ≈ al2
-    @test ar1 ≈ ar2
-
     @test elt == eltype(eltype(ts))
 
     ts = ts*3
@@ -96,22 +86,12 @@ end
         @test window.AC[i] ≈ MPSKit._permute_front(window.CR[i-1]*MPSKit._permute_tail(window.AR[i]))
     end
 
-    #these checks ensure that the default chosen orthonormalization is consistent
-    ind1 = rand(1:(length(window)-1))
-    ind2 = ind1+1;
-    al1 = window.AL[ind2];
-    ar1 = window.AR[ind1];
-    al2 = window.AL[ind2];
-    ar2 = window.AR[ind1];
-    @test al1 ≈ al2
-    @test ar1 ≈ ar2
-
     @test norm(window) ≈ 1
     window = window*3
     @test 9 ≈ norm(window)^2
     window = 3*window
     @test 9*9 ≈ norm(window)^2
-    rightorth!(window,normalize=true)
+    normalize!(window)
 
     e1 = expectation_value(window,ham);
 

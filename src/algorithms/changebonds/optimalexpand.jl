@@ -117,8 +117,11 @@ function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Op
         ar_re = V*NR;
         ar_le = TensorMap(zeros,codomain(state.AC[i]),space(V,1))
 
-        state.AR[i+1] = _permute_front(TensorKit.catcodomain(_permute_tail(state.AR[i+1]),ar_re))
-        state.AC[i] = TensorKit.catdomain(state.AC[i],ar_le)
+        (nal,nc) = leftorth(TensorKit.catdomain(state.AC[i],ar_le),alg=QRpos())
+        nar = _permute_front(TensorKit.catcodomain(_permute_tail(state.AR[i+1]),ar_re));
+        
+        state.AC[i] = (nal,nc)
+        state.AC[i+1] = (nc,nar)
     end
 
     return state,pars
