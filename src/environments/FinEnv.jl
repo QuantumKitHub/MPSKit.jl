@@ -22,8 +22,8 @@ function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}
         push!(leftenvs,similar.(leftstart))#transfer_left(leftenvs[end],opp,i,state[i]))
         push!(rightenvs,similar.(rightstart))#transfer_right(rightenvs[end],opp,length(state)-i+1,state[length(state)-i+1]))
     end
-
-    return FinEnv(similar.(state.site_tensors),similar.(state.site_tensors),opp,leftenvs,reverse(rightenvs))
+    t = state.AC[1];
+    return FinEnv(fill(t,length(state)),fill(t,length(state)),opp,leftenvs,reverse(rightenvs))
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps

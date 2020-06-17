@@ -1,5 +1,6 @@
 module MPSKit
     using TensorKit,KrylovKit,Parameters, Base.Threads
+    using OptimKit
     using LinearAlgebra:diag,Diagonal;
     #reexport optimkit things
     #export GradientDescent, ConjugateGradient, LBFGS
@@ -24,7 +25,7 @@ module MPSKit
     export leftenv,rightenv
 
     #algos
-    export find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2
+    export find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2, GradientGrassmann
     export leading_boundary, PowerMethod
     export quasiparticle_excitation
     export timestep,Tdvp,Tdvp2
@@ -90,6 +91,7 @@ module MPSKit
     include("algorithms/groundstate/vumps.jl")
     include("algorithms/groundstate/idmrg.jl")
     include("algorithms/groundstate/dmrg.jl")
+    include("algorithms/groundstate/gradient_grassmann.jl")
 
     include("algorithms/propagator/corvector.jl")
 

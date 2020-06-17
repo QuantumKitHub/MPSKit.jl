@@ -69,7 +69,7 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
             delta = max(delta,norm(ov))
 
             state.AC[pos] = (al,complex(c))
-            state.AR[pos+1] = _permute_front(ar);
+            state.AC[pos+1] = (complex(c),_permute_front(ar))
         end
 
         alg.verbose && @show (iter,delta)

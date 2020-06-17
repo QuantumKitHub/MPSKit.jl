@@ -95,7 +95,7 @@ function timestep(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Nu
         (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme)
 
         state.AC[i] = (nal,complex(nc))
-        state.AR[i+1] = _permute_front(nar)
+        state.AC[i+1] = (complex(nc),_permute_front(nar))
 
         if(i!=(length(state)-1))
             (state.AC[i+1],convhist) = let state=state,pars=pars
@@ -116,7 +116,7 @@ function timestep(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Nu
 
         (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme)
 
-        state.AL[i-1] = nal;
+        state.AC[i-1] = (nal,complex(nc))
         state.AC[i] = (complex(nc),_permute_front(nar));
 
         if(i!=2)

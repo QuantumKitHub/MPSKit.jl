@@ -12,8 +12,8 @@ function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) wher
 
         (U,S,V) = tsvd(a*b,trunc=alg.trschemes[mod1(i,end)],alg=TensorKit.SVD());
 
-        state.AC[i] = U*S;
-        state.AR[i+1] = _permute_front(V)
+        state.AC[i] = (U,complex(S));
+        state.AC[i+1] = (complex(S),V);
     end
 
     return state

@@ -5,6 +5,7 @@ see https://arxiv.org/abs/1701.07035
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
+    orthmaxiter::Int = Defaults.maxiter
     finalize::Function = (iter,state,ham,pars) -> (state,pars);
     verbose::Bool = Defaults.verbose
 end
@@ -46,7 +47,7 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
         end
 
 
-        state = InfiniteMPS(newAs; tol = alg.tol_gauge, maxiter = alg.maxiter,leftgauged=true)
+        state = InfiniteMPS(newAs; tol = alg.tol_gauge, maxiter = alg.orthmaxiter,leftgauged=true)
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
