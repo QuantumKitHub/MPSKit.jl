@@ -44,16 +44,15 @@ function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=
         end
         nC2=vecs[1]
 
-        #find the updated two site AL
-        QAC2,_ = leftorth(nAC2,(1,2,3,),(4,), alg=TensorKit.Polar())
-        QC2 ,_ = leftorth(nC2 ,(1,),(2,)    , alg=TensorKit.Polar())
-
-        #new AL2, reusing the memory alocated for nac2
-        @tensor nAC2[-1,-2,-3,-4] = QAC2[-1,-2,-3,1]*conj(QC2[-4,1])
-
+        #svd ac2, get new AL1 and S,V ---> AC
         (AL1,S,V,eps) = tsvd(nAC2, (1,2), (3,4), trunc=alg.trscheme)
-        AL2=S*V
+        @tensor AC[-1,-2,-3]:=S[-1,1]*V[1,-2,-3]
         meps=max(eps,meps)
+
+        #find AL2 from AC and C as in vumps paper
+        QAC,_ = leftorth( AC,(1,2,),(3,), alg=TensorKit.Polar())
+        QC ,_ = leftorth(nC2 ,(1,),(2,) , alg=TensorKit.Polar())
+        @tensor AL2[-1,-2,-3] := QAC[-1,-2,1]*conj(QC[-3,1])
 
         #make a new state using the updated A's
         allAls = copy(state.AL)
