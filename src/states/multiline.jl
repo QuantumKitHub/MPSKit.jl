@@ -20,20 +20,36 @@ Base.lastindex(arr::MPSMultiline,i) = lastindex(arr.AL,i);
 Base.similar(st::MPSMultiline) = MPSMultiline(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
 virtualspace(psi::MPSMultiline, a::Integer,b::Integer) = _firstspace(psi.AL[a,b])
 function Base.convert(::Type{MPSMultiline},st::InfiniteMPS)
-    AL=PeriodicArray(permutedims(st.AL.data));
-    AR=PeriodicArray(permutedims(st.AR.data));
-    CR=PeriodicArray(permutedims(st.CR.data));
-    AC=PeriodicArray(permutedims(st.AC.data));
-    MPSMultiline(AL,AR,CR,AC);
+    convert(MPSMultiline,[st]);
+end
+function Base.convert(::Type{MPSMultiline},v::AbstractVector{T}) where T<:InfiniteMPS{A,B} where {A,B}
+    ALs = PeriodicArray{A}(undef,length(v),length(v[1]));
+    ARs = PeriodicArray{A}(undef,length(v),length(v[1]));
+    CRs = PeriodicArray{B}(undef,length(v),length(v[1]));
+    ACs = PeriodicArray{A}(undef,length(v),length(v[1]));
+
+    for (i,row) in enumerate(v)
+        ALs[i,:] = row.AL[:];
+        ARs[i,:] = row.AR[:];
+        CRs[i,:] = row.CR[:];
+        ACs[i,:] = row.AC[:];
+    end
+
+    MPSMultiline(ALs,ARs,CRs,ACs);
 end
 
 function Base.convert(::Type{InfiniteMPS},st::MPSMultiline{A,B}) where {A,B}
     @assert size(st,1) == 1 #otherwise - how would we convert?
-    AL=PeriodicArray(st.AL.data[:]);
-    AR=PeriodicArray(st.AR.data[:]);
-    CR=PeriodicArray(st.CR.data[:]);
-    AC=PeriodicArray(st.AC.data[:]);
-    InfiniteMPS(AL,AR,CR,AC);
+    convert(Vector,st)[1]
+end
+
+function Base.convert(::Type{Vector},st::MPSMultiline{A,B}) where {A,B}
+    map(1:size(st,1)) do row
+        InfiniteMPS{A,B}(   PeriodicArray(st.AL[row,:]),
+                            PeriodicArray(st.AR[row,:]),
+                            PeriodicArray(st.CR[row,:]),
+                            PeriodicArray(st.AC[row,:]));
+    end
 end
 
 function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = Defaults.maxiter,leftgauged=false) where T <: GenericMPSTensor
