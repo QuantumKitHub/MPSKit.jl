@@ -6,7 +6,7 @@ see https://arxiv.org/abs/1701.07035
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
     orthmaxiter::Int = Defaults.maxiter
-    finalize::Function = (iter,state,ham,pars) -> (state,pars);
+    finalize::Function = (iter,state,ham,pars) -> (state,pars, true);
     verbose::Bool = Defaults.verbose
 end
 
@@ -17,10 +17,9 @@ end
 "
 function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=params(state,H))
     galerkin  = 1+alg.tol_galerkin
-    iter       = 1
+    iter      = 1
 
-    (state,pars) = alg.finalize(iter,state,H,pars);
-
+    external_conv = false
     while true
         eigalg = Arnoldi(tol=galerkin/(4*sqrt(iter)))
 
@@ -51,12 +50,12 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
-        if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
+        if (galerkin <= alg.tol_galerkin && external_conv ) || iter>=alg.maxiter
             iter>=alg.maxiter && println("vumps didn't converge $(galerkin)")
             return state, pars, galerkin
         end
 
-        (state,pars) = alg.finalize(iter,state,H,pars);
+        (state,pars, external_conv) = alg.finalize(iter,state,H,pars);
 
         iter += 1
     end
