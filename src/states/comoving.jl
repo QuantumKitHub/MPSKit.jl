@@ -45,6 +45,48 @@ end
 
 #todo : add constructor given an infinitemps + length
 
+# allow construction with one large tensorkit space
+function MPSComoving(f, elt,P::ProductSpace, args...; kwargs...)
+    return MPSComoving(f, elt, collect(P), args...; kwargs...)
+end
+
+# allow construction given only a physical space and length
+function MPSComoving(f,elt, N::Int, V::VectorSpace, args...; kwargs...)
+    return MPSComoving(f, elt,fill(V, N), args...; kwargs...)
+end
+
+function MPSComoving(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S,
+                    leftgs::M,
+                    rightgs::M) where {S<:ElementarySpace,M<:InfiniteMPS}
+
+    left = virtualspace(leftgs,0);
+    right = virtualspace(rightgs,length(physspaces));
+
+    N = length(physspaces)
+    virtspaces = Vector{S}(undef, N+1)
+    virtspaces[1] = left
+    for k = 2:N
+        virtspaces[k] = infinum(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
+    end
+    virtspaces[N+1] = right
+    for k = N:-1:2
+        virtspaces[k] = infinum(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
+    end
+    return MPSComoving(f, elt,physspaces, virtspaces,leftgs,rightgs)
+end
+function MPSComoving(f,elt,
+                    physspaces::Vector{<:Union{S,CompositeSpace{S}}},
+                    virtspaces::Vector{S},
+                    leftgs::M,
+                    rightgs::M) where {S<:ElementarySpace,M<:InfiniteMPS}
+    N = length(physspaces)
+    length(virtspaces) == N+1 || throw(DimensionMismatch())
+
+    tensors = [TensorMap(f, elt,virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
+
+    return MPSComoving(leftgs,tensors,rightgs)
+end
+
 Base.copy(state::MPSComoving{A,B}) where {A,B} = MPSComoving{A,B}(state.left_gs,copy(state.ALs),copy(state.ARs),copy(state.ACs),copy(state.CLs),state.right_gs);
 
 Base.length(state::MPSComoving) = length(state.ALs)
