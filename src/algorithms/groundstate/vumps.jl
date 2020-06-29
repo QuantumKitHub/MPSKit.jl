@@ -24,6 +24,9 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
         eigalg = Arnoldi(tol=galerkin/(4*sqrt(iter)))
 
         acjobs = map(enumerate(state.AC)) do (loc,ac)
+            # @maarten, als ik julia start met 1 thread heb ik geen memory leak. Kan het zijn dat dit de oorzaak is ?
+            # threads blijven mss openstaan ofzo met meer en meer ram
+	    # delete dit maar als dit zever is ;)
             @Threads.spawn eigsolve(ac, 1, :SR, eigalg) do x
                 ac_prime(x, loc, state, pars)
             end
@@ -50,12 +53,11 @@ function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,pars=par
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
+        (state,pars, external_conv) = alg.finalize(iter,state,H,pars);
         if (galerkin <= alg.tol_galerkin && external_conv ) || iter>=alg.maxiter
             iter>=alg.maxiter && println("vumps didn't converge $(galerkin)")
             return state, pars, galerkin
         end
-
-        (state,pars, external_conv) = alg.finalize(iter,state,H,pars);
 
         iter += 1
     end
