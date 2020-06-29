@@ -74,8 +74,10 @@ function calclw(st::InfiniteMPS,ham::MPOHamiltonian,prevca;tol::Float64=Defaults
             #summon cthulu
             @tensor tosvec[-1 -2;-3]:=fixpoints[1,i][-1,-2,-3]-fixpoints[1,i][1,-2,2]*r_LL(st)[2,1]*l_LL(st)[-1,-3]
 
-            (fixpoints[1,i],convhist)=linsolve(tosvec,prevca[1,i],alg) do x
-                x-transfer_left(x,st.AL[1:len],st.AL[1:len],rvec=r_LL(st),lvec=l_LL(st))
+            (fixpoints[1,i],convhist)=let st=st
+                linsolve(tosvec,prevca[1,i],alg) do x
+                    x-transfer_left(x,st.AL[1:len],st.AL[1:len],rvec=r_LL(st),lvec=l_LL(st))
+                end
             end
             convhist.converged==0 && @info "calclw failed to converge $(convhist.normres)"
 
@@ -87,8 +89,10 @@ function calclw(st::InfiniteMPS,ham::MPOHamiltonian,prevca;tol::Float64=Defaults
 
         else #do the obvious thing
             if reduce((a,b)->a&&b, [contains(ham,x,i,i) for x in 1:len])
-                (fixpoints[1,i],convhist)=linsolve(fixpoints[1,i],prevca[1,i],alg) do x
-                    x-transfer_left(x,[ham[j,i,i] for j in 1:len],st.AL[1:len],st.AL[1:len])
+                (fixpoints[1,i],convhist)=let ham=ham,st=st
+                    linsolve(fixpoints[1,i],prevca[1,i],alg) do x
+                        x-transfer_left(x,[ham[j,i,i] for j in 1:len],st.AL[1:len],st.AL[1:len])
+                    end
                 end
                 convhist.converged==0 && @info "calclw failed to converge $(convhist.normres)"
 
@@ -127,8 +131,10 @@ function calcrw(st::InfiniteMPS,ham::MPOHamiltonian,prevca;tol::Float64=Defaults
             #summon cthulu
             @tensor tosvec[-1 -2;-3]:=fixpoints[end,i][-1,-2,-3]-fixpoints[end,i][1,-2,2]*l_RR(st)[2,1]*r_RR(st)[-1,-3]
 
-            (fixpoints[end,i],convhist)=linsolve(tosvec,prevca[end,i],alg) do x
-                x-transfer_right(x,st.AR[1:len],st.AR[1:len],lvec=l_RR(st),rvec=r_RR(st))
+            (fixpoints[end,i],convhist)=let st=st
+                linsolve(tosvec,prevca[end,i],alg) do x
+                    x-transfer_right(x,st.AR[1:len],st.AR[1:len],lvec=l_RR(st),rvec=r_RR(st))
+                end
             end
 
             convhist.converged==0 && @info "calcrw failed to converge $(convhist.normres)"
@@ -140,8 +146,10 @@ function calcrw(st::InfiniteMPS,ham::MPOHamiltonian,prevca;tol::Float64=Defaults
         else #do the obvious thing
             if reduce((a,b)->a&&b, [contains(ham,x,i,i) for x in 1:len])
 
-                (fixpoints[end,i],convhist)=linsolve(fixpoints[end,i],prevca[end,i],alg) do x
-                    x-transfer_right(x,[ham[j,i,i] for j in 1:len],st.AR[1:len],st.AR[1:len])
+                (fixpoints[end,i],convhist)=let st=st,ham=ham
+                    linsolve(fixpoints[end,i],prevca[end,i],alg) do x
+                        x-transfer_right(x,[ham[j,i,i] for j in 1:len],st.AR[1:len],st.AR[1:len])
+                    end
                 end
                 convhist.converged==0 && @info "calcrw failed to converge $(convhist.normres)"
 
