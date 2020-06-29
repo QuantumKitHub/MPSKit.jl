@@ -251,3 +251,29 @@ end
 
     @test data ≈ predicted atol=1e-8
 end
+
+@testset "fidelity susceptibility" begin
+    lambs = [1.05,2.0,4.0]
+
+    for l in lambs
+
+        (X,Y,Z) = nonsym_spintensors(1//2).*2;
+
+        @tensor ZZ_data[-1 -2;-3 -4] := Z[-1 -3]*Z[-2 -4]
+        @tensor X_data[-1;-2] := X[-1 -2]
+
+        ZZham = MPOHamiltonian(ZZ_data);
+        Xham = MPOHamiltonian(X_data);
+
+        th = ZZham + l*Xham;
+
+        ts = InfiniteMPS([ℂ^2],[ℂ^20]);
+        (ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=1000,verbose=false));
+
+        num_sus = fidelity_susceptibility(ts,th,[Xham],pars,maxiter=10);
+        ana_sus = abs.(1/(16*l^2*(l^2-1)));
+
+        @test ana_sus ≈ num_sus[1,1] atol=1e-2
+    end
+
+end

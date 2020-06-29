@@ -33,6 +33,7 @@ module MPSKit
     export changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
     export entropy
     export dynamicaldmrg
+    export fidelity_susceptibility
 
     #models
     export nonsym_xxz_ham,nonsym_ising_ham,su2_xxx_ham,nonsym_ising_mpo,u1_xxz_ham,su2u1_grossneveu
@@ -99,6 +100,8 @@ module MPSKit
 
     include("algorithms/statmech/vumps.jl")
     include("algorithms/statmech/power.jl")
+
+    include("algorithms/fidelity_susceptibility.jl")
 
     include("models/xxz.jl")
     include("models/ising.jl")
