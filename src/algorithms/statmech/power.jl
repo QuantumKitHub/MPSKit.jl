@@ -6,7 +6,7 @@
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
     orthmaxiter::Int = Defaults.maxiter
-    finalize::Function = (iter,state,ham,pars) -> (state,pars,sc);
+    finalize::Function = (iter,state,ham,pars) -> (state,pars,true);
     verbose::Bool = Defaults.verbose
 end
 
