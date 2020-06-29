@@ -5,7 +5,7 @@
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
     verbose::Bool = Defaults.verbose
-    finalize::Function = (iter,state,ham,pars) -> (state,pars);
+    finalize::Function = (iter,state,ham,pars) -> (state,pars,true);
 end
 
 function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
@@ -14,9 +14,6 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
 
     while iter < maxiter && delta > tol
         delta=0.0
-
-        #finalize
-        (state,parameters) = alg.finalize(iter,state,H,parameters);
 
         for pos = [1:(length(state)-1);length(state):-1:2]
             (eigvals,vecs) =  let state = state,parameters = parameters
@@ -33,6 +30,10 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
         flush(stdout)
 
         iter += 1
+
+        #finalize
+        (state,parameters,sc) = alg.finalize(iter,state,H,parameters);
+        delta = sc ? delta : 2*tol; # if finalize decides we shouldn't converge, then don't
     end
 
     return state,parameters,delta

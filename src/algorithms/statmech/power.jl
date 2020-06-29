@@ -6,7 +6,7 @@
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
     orthmaxiter::Int = Defaults.maxiter
-    finalize::Function = (iter,state,ham,pars) -> (state,pars);
+    finalize::Function = (iter,state,ham,pars) -> (state,pars,sc);
     verbose::Bool = Defaults.verbose
 end
 
@@ -39,12 +39,14 @@ function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(st
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && println("powermethod @iteration $(iter) galerkin = $(galerkin)")
 
-        if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
+        (state,pars,sc) = alg.finalize(iter,state,H,pars);
+
+        if (galerkin <= alg.tol_galerkin && sc) || iter>=alg.maxiter
             iter>=alg.maxiter && println("powermethod didn't converge $(galerkin)")
             return state, pars, galerkin
         end
 
-        (state,pars) = alg.finalize(iter,state,H,pars);
+
 
         iter += 1
     end
