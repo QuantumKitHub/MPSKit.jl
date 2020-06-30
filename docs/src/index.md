@@ -14,6 +14,12 @@ Pages = ["man/intro.md","man/states.md","man/operators.md","man/algorithms.md"]
 Depth = 3
 ```
 
+## Tutorials
+```@contents
+Pages = ["tut/xxz_groundstate.md"]
+Depth = 1
+```
+
 
 ## Library outline
 ```@contents
