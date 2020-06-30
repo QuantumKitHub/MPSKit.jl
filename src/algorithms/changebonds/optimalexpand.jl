@@ -55,8 +55,8 @@ function MPSKit.changebonds(state::MPSMultiline, H,alg::OptimalExpand,pars=param
     =#
     #determine optimal expansion spaces around bond i
     exps = map(Iterators.product(1:size(state,1),1:size(state,2))) do (i,j)
-        ACAR = _permute_front(state.AC[i,j])*_permute_tail(state.AR[i,j+1])
-        AC2 = ac2_prime(ACAR,i,j,state,pars)
+        ACAR = _permute_front(state.AC[i-1,j])*_permute_tail(state.AR[i-1,j+1])
+        AC2 = ac2_prime(ACAR,i-1,j,state,pars)
 
         #Calculate nullspaces for AL and AR
         NL = leftnull(state.AL[i,j])
@@ -119,7 +119,7 @@ function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Op
 
         (nal,nc) = leftorth(TensorKit.catdomain(state.AC[i],ar_le),alg=QRpos())
         nar = _permute_front(TensorKit.catcodomain(_permute_tail(state.AR[i+1]),ar_re));
-        
+
         state.AC[i] = (nal,nc)
         state.AC[i+1] = (nc,nar)
     end
