@@ -1,12 +1,12 @@
 """
     PowerMethod way of finding the leading boundary mps
 """
-@with_kw struct PowerMethod <: Algorithm
+@with_kw struct PowerMethod{F} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
     orthmaxiter::Int = Defaults.maxiter
-    finalize::Function = (iter,state,ham,pars) -> (state,pars,true);
+    finalize::F = Defaults._finalize
     verbose::Bool = Defaults.verbose
 end
 

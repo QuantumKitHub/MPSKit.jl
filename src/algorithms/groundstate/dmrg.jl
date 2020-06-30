@@ -1,11 +1,11 @@
 "
     onesite dmrg
 "
-@with_kw struct Dmrg <: Algorithm
+@with_kw struct Dmrg{F} <: Algorithm
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
     verbose::Bool = Defaults.verbose
-    finalize::Function = (iter,state,ham,pars) -> (state,pars,true);
+    finalize::F = Defaults._finalize
 end
 
 function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
