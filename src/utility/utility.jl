@@ -71,6 +71,21 @@ function nonsym_spintensors(s)
     return Sx,Sy,Sz,one(Sx)
 end
 
+"""
+bosonic creation anihilation operators with a cutoff
+cutoff = maximal number of bosons at one location
+"""
+function nonsym_bosonictensors(cutoff::Int)
+    creadat = zeros(Defaults.eltype,cutoff+1,cutoff+1);
+
+    for i in 1:cutoff
+        creadat[i+1,i] = sqrt(i);
+    end
+
+    a⁺ = TensorMap(creadat,ℂ^(cutoff+1),ℂ^(cutoff+1));
+    a⁻ = TensorMap(creadat',ℂ^(cutoff+1),ℂ^(cutoff+1));
+    return (a⁺,a⁻)
+end
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
 function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2}
     numind=N1+N2

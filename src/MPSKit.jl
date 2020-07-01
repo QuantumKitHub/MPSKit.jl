@@ -15,7 +15,7 @@ module MPSKit
     export hamcat
 
     #useful utility functions?
-    export spinmatrices,add_util_leg,full,nonsym_spintensors
+    export spinmatrices,add_util_leg,full,nonsym_spintensors,nonsym_bosonictensors
     export max_Ds,virtualspace
 
     #hamiltonian things
