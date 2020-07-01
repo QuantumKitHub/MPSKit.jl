@@ -1,4 +1,4 @@
-# Dynamical quantum phase transition in ising
+# DQPT in ising
 
 In this tutorial we will try to reproduce the results from [this paper](https://arxiv.org/pdf/1206.2505.pdf). The needed packages are
 
@@ -6,11 +6,11 @@ In this tutorial we will try to reproduce the results from [this paper](https://
 using MPSKit,TensorKit,ProgressMeter
 ```
 
-Dynamical quantum phase transitions are signatures of equilibrium phase transitions in a dynamical quantity - the loschmidth echo. This quantity is given by ``L(t) = \frac{-2}{N} ln(| < \psi(t) | \psi(0) > |) `` where N is the system size. One typically starts from a groundstate and then quenches the hamiltonian to a different point. Non analycities in the loschmidth echo are called 'dynamical quantum phase transitions'.
+Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the loschmidth echo. This quantity is given by ``L(t) = \frac{-2}{N} ln(| < \psi(t) | \psi(0) > |) `` where N is the system size. One typically starts from a groundstate and then quenches the hamiltonian to a different point. Non analycities in the loschmidth echo are called 'dynamical quantum phase transitions'.
 
 In the mentioned paper they work with ``H(g) = - \sum^{N-1}_{i=1} \sigma^z_i \sigma^z_{i+1} + g \sum_{i=1}^N \sigma^x_i`` and show that divergences occur when quenching across the critical point (g₀→g₁) for ``t^*_n = t^*(n+\frac{1}{2})`` with ``t^* = \pi/e(g_1,k^*)``, ``cos(k^*) = (1+g_0 g_1) / (g_0 + g_1)``, `` e(g,k) = \sqrt{(g-cos k)^2 + sin^2 k}``.
 
-The outline of the tutorial is as follows. We will pick g₀ = 0.5, g₁ = 2.0, perform the time evolution at different system sizes and compare with the thermodynamic limit. For those g we expect the divergences to occur at ``t_n = 2.35 (n + 1/2)``.
+The outline of the tutorial is as follows. We will pick g₀ = 0.5, g₁ = 2.0, perform the time evolution at different system sizes and compare with the thermodynamic limit. For those g we expect non-analicities to occur at ``t_n ≈ 2.35 (n + 1/2)``.
 
 First we construct the hamiltonian in mpo form:
 ```julia
@@ -55,13 +55,6 @@ dt = 0.01;
 ```
 
 "pars" is a kind of cache object that keeps track of all environments in ψ. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
-
-for N = 10:10:40
-   datN = finite_sim(N);
-   plot!(pl,datN[1],datN[2],label="N=$(N)");
-   display(pl)
-end
-
 
 Putting it all together, we get
 ```julia
