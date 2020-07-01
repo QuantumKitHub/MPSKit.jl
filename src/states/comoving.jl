@@ -87,6 +87,21 @@ function MPSComoving(f,elt,
     return MPSComoving(leftgs,tensors,rightgs)
 end
 
+#take a window from an infinite mps, and use that as state
+function MPSComoving(state::InfiniteMPS{A,B},len::Int) where {A,B}
+    CLs = Vector{Union{Missing,B}}(missing,len+1)
+    ALs = Vector{Union{Missing,A}}(missing,len)
+    ARs = Vector{Union{Missing,A}}(missing,len)
+    ACs = Vector{Union{Missing,A}}(missing,len)
+
+    ALs.= state.AL[1:len];
+    ARs.= state.AR[1:len];
+    ACs.= state.AC[1:len];
+    CLs.= state.CR[0:len];
+
+    MPSComoving{A,B}(state,ALs,ARs,ACs,CLs,state)
+end
+
 Base.copy(state::MPSComoving{A,B}) where {A,B} = MPSComoving{A,B}(state.left_gs,copy(state.ALs),copy(state.ARs),copy(state.ACs),copy(state.CLs),state.right_gs);
 
 Base.length(state::MPSComoving) = length(state.ALs)
