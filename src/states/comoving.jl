@@ -171,7 +171,8 @@ function TensorKit.dot(psi1::MPSComoving, psi2::MPSComoving)
     psi1.left == psi2.left || throw(ArgumentError("left InfiniteMPS is different"))
     psi1.right == psi2.right || throw(ArgumentError("right InfiniteMPS is different"))
 
-    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]))
+    ρr = transfer_right(r_RR(psi2),psi2.AR[2:end],psi1.AR[2:end]);
+    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]) * ρr)
 end
 
 TensorKit.norm(psi::MPSComoving) = norm(psi.AC[1])
