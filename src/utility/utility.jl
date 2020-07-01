@@ -83,7 +83,7 @@ function nonsym_bosonictensors(cutoff::Int)
     end
 
     a⁺ = TensorMap(creadat,ℂ^(cutoff+1),ℂ^(cutoff+1));
-    a⁻ = TensorMap(creadat',ℂ^(cutoff+1),ℂ^(cutoff+1));
+    a⁻ = TensorMap(collect(creadat'),ℂ^(cutoff+1),ℂ^(cutoff+1));
     return (a⁺,a⁻)
 end
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
