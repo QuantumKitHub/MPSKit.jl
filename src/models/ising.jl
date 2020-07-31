@@ -2,8 +2,14 @@ function nonsym_ising_ham(;J = -1,spin = 1//2,lambda = 0.5,longit=0.0)
     (sx,sy,sz)=nonsym_spintensors(spin);
     id = one(sx);
 
-    @tensor ham[-1 -2;-3 -4]:=(J*sz)[-1,-3]*sz[-2,-4]+(0.5*lambda*id)[-1,-3]*sx[-2,-4]+(0.5*lambda*sx)[-1,-3]*id[-2,-4]+(0.5*longit*id)[-1,-3]*sz[-2,-4]+(0.5*longit*sz)[-1,-3]*id[-2,-4]
-    ham = MPOHamiltonian(ham);
+    hamdat = Array{Union{Missing,typeof(sx)},3}(missing,1,3,3)
+    hamdat[1,1,1] = id;
+    hamdat[1,end,end] = id;
+    hamdat[1,1,2] = J*sz;
+    hamdat[1,2,end] = sz;
+    hamdat[1,1,end] = lambda*sx+longit*sz;
+    
+    ham = MPOHamiltonian(hamdat);
 
     return ham
 end
