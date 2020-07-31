@@ -1,8 +1,7 @@
 #=
-Not implemented for finite mps, for that we'd have to implement the effective excitation hamiltonian
-Maybe we should, it's not much work and it'd be interesting to see what kind of excitations we get
+I don't know if I should rescale by system size / unit cell
 =#
-function fidelity_susceptibility(state::InfiniteMPS,H₀::T,Vs::AbstractVector{T},hpars = params(state,H₀);maxiter=Defaults.maxiter,tol=Defaults.tol) where T<:MPOHamiltonian
+function fidelity_susceptibility(state::Union{FiniteMPS,InfiniteMPS},H₀::T,Vs::AbstractVector{T},hpars = params(state,H₀);maxiter=Defaults.maxiter,tol=Defaults.tol) where T<:MPOHamiltonian
     VL = [adjoint(rightnull(adjoint(v))) for v in state.AL]
 
     tangent_vecs = map(Vs) do V
@@ -16,7 +15,7 @@ function fidelity_susceptibility(state::InfiniteMPS,H₀::T,Vs::AbstractVector{T
 
         (vec,convhist) = linsolve(RecursiveVec(Tos),RecursiveVec(Tos),GMRES(maxiter=maxiter,tol=tol)) do x
             B = [ln*cx for (ln,cx) in zip(VL,x.vecs)]
-            Bseff = effective_excitation_hamiltonian(true, H₀, B, 0.0, state, hpars,state,hpars)
+            Bseff = effective_excitation_hamiltonian(H₀, B, state, hpars)
             out = [adjoint(ln)*cB for (ln,cB) in zip(VL,Bseff)]
             RecursiveVec(out)
         end
