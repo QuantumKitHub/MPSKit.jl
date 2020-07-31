@@ -218,15 +218,32 @@ end
     @test expectation_value(state,mpo,pars)[1,1] ≈ 2.5337 atol=1e-3
 end
 
-
 @testset "quasiparticle_excitation" begin
-    th = nonsym_xxz_ham()
-    ts = InfiniteMPS([ℂ^3],[ℂ^48]);
-    (ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
-    (energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,pars);
-    @test energies[1] ≈ 0.41047925 atol=1e-4
-end
+    @testset "infinite" begin
+        th = nonsym_xxz_ham()
+        ts = InfiniteMPS([ℂ^3],[ℂ^48]);
+        (ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
+        (energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,pars);
+        @test energies[1] ≈ 0.41047925 atol=1e-4
+    end
 
+    @testset "finite" begin
+        th = nonsym_ising_ham()
+        ts = InfiniteMPS([ℂ^2],[ℂ^12]);
+        (ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
+        (energies,Bs) = quasiparticle_excitation(th,0.0,ts,pars);
+        inf_en = energies[1];
+
+        fin_en = map([30,20,10]) do len
+            ts = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^12)
+            (ts,pars,_) = find_groundstate(ts,th,Dmrg(verbose=false));
+            (energies,Bs) = quasiparticle_excitation(th,ts,pars);
+            energies[1]
+        end
+
+        @test issorted(abs.(fin_en.-inf_en))
+    end
+end
 
 @testset "dynamicaldmrg" begin
     ham = nonsym_ising_ham(lambda=4.0);
@@ -270,10 +287,19 @@ end
         ts = InfiniteMPS([ℂ^2],[ℂ^20]);
         (ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=1000,verbose=false));
 
+        #test if the infinite fid sus approximates the analytical one
         num_sus = fidelity_susceptibility(ts,th,[Xham],pars,maxiter=10);
         ana_sus = abs.(1/(16*l^2*(l^2-1)));
-
         @test ana_sus ≈ num_sus[1,1] atol=1e-2
+
+        #test if the finite fid sus approximates the analytical one with increasing system size
+        fin_en = map([30,20,10]) do len
+            ts = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^20)
+            (ts,pars,_) = find_groundstate(ts,th,Dmrg(verbose=false));
+            num_sus = fidelity_susceptibility(ts,th,[Xham],pars,maxiter=10);
+            num_sus[1,1]/len
+        end
+        @test issorted(abs.(fin_en.-ana_sus))
     end
 
 end
