@@ -1,4 +1,7 @@
-function effective_excitation_hamiltonian(trivial::Bool, ham::MPOHamiltonian, Bs, p::Float64, mpsleft::InfiniteMPS, paramsleft, mpsright::InfiniteMPS, paramsright; renorm=true)
+effective_excitation_hamiltonian(ham::MPOHamiltonian,Bs,mpsleft::InfiniteMPS,paramsleft, mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft; kwargs...) =
+    effective_excitation_hamiltonian(true,ham,Bs,0.0,mpsleft,paramsleft,mpsright,paramsright;kwargs...)
+    
+function effective_excitation_hamiltonian(trivial::Bool, ham::MPOHamiltonian, Bs, p::Float64, mpsleft::InfiniteMPS, paramsleft, mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft; renorm=true)
     #does not "know" that B is left gauged, so it's possible to speed this up further
     toret = zero.(Bs)
     len = length(mpsleft);
