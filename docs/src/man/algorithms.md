@@ -33,3 +33,26 @@ will evolve 'state' forwards in time by 0.3 seconds. Here we use a 2 site update
 ## dynamicaldmrg
 
 Dynamical dmrg has been described in other papers and is a way to find the propagator. The basic idea is that to calculate ``G(z) = < V | (H-z)^{-1} | V > `` , one can variationally find ``(H-z) |W > = | V > `` and then the propagator simply equals ``G(z) = < V | W >``.
+
+## quasiparticle excitations
+
+We export code that implements the quasiparticle excitation ansatz (ref) for finite and infinite systems.
+For example, the following calculates the haldane gap for spin-1 heisenberg.
+
+```julia
+th = nonsym_xxz_ham()
+ts = InfiniteMPS([ℂ^3],[ℂ^48]);
+(ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
+(energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,pars);
+@test energies[1] ≈ 0.41047925 atol=1e-4
+```
+
+For infinite systems you have to specify the momentum of your particle. In contrast, momentum is not a well defined quantum number and you therefore do not have to specify it when finding excitations on top of a finite mps.
+
+## fidelity susceptibility
+
+The fidelity susceptibility measures how much the groundstate changes when tuning a parameter in your hamiltonian. Divergences occur at phase transitions, making it a valuable measure when no order parameter is known.
+
+```julia
+suscept = fidelity_susceptibility(groundstate,H_0,perturbing_Hams::AbstractVector)
+```
