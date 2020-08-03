@@ -180,7 +180,8 @@ println("------------------------------------")
         (InfiniteMPS([ℂ^2],[ℂ^10]), GradientGrassmann(method=LBFGS(6; gradtol=1e-8, verbosity=0)), nonsym_ising_ham(lambda=2.0)),
         (InfiniteMPS([ℂ^2],[ℂ^10]),Idmrg1(tol_galerkin=1e-8,maxiter=400,verbose=false),nonsym_ising_ham(lambda=2.0)),
         (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),Dmrg2(verbose=false),nonsym_ising_ham(lambda=2.0)),
-        (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),Dmrg(verbose=false),nonsym_ising_ham(lambda=2.0))
+        (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),Dmrg(verbose=false),nonsym_ising_ham(lambda=2.0)),
+        (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),GradientGrassmann(verbosity=0),nonsym_ising_ham(lambda=2.0))
         ])
 
     #vumps type inferrence got broken by @threads, so worth it?

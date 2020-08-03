@@ -50,20 +50,17 @@ struct GradientGrassmann <: Algorithm
     end
 end
 
-function find_groundstate(state::InfiniteMPS, H::Hamiltonian, alg::GradientGrassmann,
+function find_groundstate(state, H::Hamiltonian, alg::GradientGrassmann,
                           pars=params(state, H))
-    method = alg.method
-    method === nothing && (method = alg.methodtype(; maxiter=alg.maxiter,
-                                                       verbosity=alg.verbosity,
-                                                       gradtol=alg.tol))
-    res = optimize(GrassmannInfiniteMPS.fg, (state, pars), method;
-                   transport! = GrassmannInfiniteMPS.transport!,
-                   retract = GrassmannInfiniteMPS.retract,
-                   inner = GrassmannInfiniteMPS.inner,
-                   scale! = GrassmannInfiniteMPS.scale!,
-                   add! = GrassmannInfiniteMPS.add!,
+
+    res = optimize(GrassmannMPS.fg, (state, pars), alg.method;
+                   transport! = GrassmannMPS.transport!,
+                   retract = GrassmannMPS.retract,
+                   inner = GrassmannMPS.inner,
+                   scale! = GrassmannMPS.scale!,
+                   add! = GrassmannMPS.add!,
                    finalize! = alg.finalize!,
-                   precondition = GrassmannInfiniteMPS.precondition,
+                   precondition = GrassmannMPS.precondition,
                    isometrictransport = true)
     (x, fx, gx, numfg, normgradhistory) = res
     (state, pars) = x
@@ -79,9 +76,9 @@ of points on Grassmann manifolds, and performing things like retractions and tra
 on these Grassmann manifolds.
 
 The module exports nothing, and all references to it should be qualified, e.g.
-`GrassmannInfiniteMPS.fg`.
+`GrassmannMPS.fg`.
 """
-module GrassmannInfiniteMPS
+module GrassmannMPS
 
 using ..MPSKit
 using TensorKit
@@ -96,7 +93,7 @@ function fg(x)
     # The partial derivative with respect to AL, al_d, is the partial derivative with
     # respect to AC times CR'.
     ac_d = [ac_prime(state.AC[v], v, state, pars) for v in 1:length(state)]
-    al_d = [d*c' for (d, c) in zip(ac_d, state.CR)]
+    al_d = [d*c' for (d, c) in zip(ac_d, state.CR[1:end])]
     g = [Grassmann.project(d, a) for (d, a) in zip(al_d, state.AL)]
     f = real(sum(expectation_value(state, pars.opp, pars)))
     return f, g
@@ -105,7 +102,7 @@ end
 """
 Retract a left-canonical infinite MPS along Grassmann tangent `g` by distance `alpha`.
 """
-function retract(x, g, alpha)
+function retract(x::Tuple{<:InfiniteMPS,<:Cache}, g, alpha)
     (state, pars) = x
     yal = similar(state.AL)  # The end-point
     h = similar(g)  # The tangent at the end-point
@@ -114,6 +111,21 @@ function retract(x, g, alpha)
     end
     y = (InfiniteMPS(yal, leftgauged=true), pars)
     return y, h
+end
+
+"""
+Retract a left-canonical finite MPS along Grassmann tangent `g` by distance `alpha`.
+"""
+function retract(x::Tuple{<:FiniteMPS,<:Cache}, g, alpha)
+    (state, pars) = x
+    y = copy(state)  # The end-point
+    h = similar(g)  # The tangent at the end-point
+    for i in 1:length(g)
+        (yal, h[i]) = Grassmann.retract(state.AL[i], g[i], alpha)
+        y.AC[i] = (yal,state.CR[i])
+    end
+    normalize!(y)
+    return (y,pars), h
 end
 
 """
@@ -148,20 +160,6 @@ Add two tangents vectors, scaling the latter by `alpha`.
 add!(g1, g2, alpha) = g1 + g2 .* alpha
 
 """
-Take the L2 Tikhonov regularised inverse of a matrix `m`.
-
-The regularisation parameter is the larger of `delta` (the optional argument that defaults
-to zero) and square root of machine epsilon. The inverse is done using an SVD.
-"""
-function reginv(m, delta=zero(eltype(m)))
-    delta = max(delta, sqrt(eps(real(float(one(eltype(m)))))))
-    U, S, Vdg = tsvd(m)
-    Sinv = inv(real(sqrt(S^2 + delta^2*one(S))))
-    minv = Vdg' * Sinv * U'
-    return minv
-end
-
-"""
 Precondition a given Grassmann tangent `g` at state `x` by the Hilbert space inner product.
 
 This requires inverting the right MPS transfer matrix. This is done using `reginv`, with a
@@ -169,11 +167,12 @@ regularisation parameter that is the norm of the tangent `g`.
 """
 function precondition(x, g)
     (state, pars) = x
-    delta = min(real(one(eltype(state))), sqrt(inner(x, g, g)))
-    crinvs = [reginv(cr, delta) for cr in state.CR]
+    #hacky workaround - what is eltype(state)?
+    delta = min(real(one(eltype(state.AL[1]))), sqrt(inner(x, g, g)))
+    crinvs = [MPSKit.reginv(cr, delta) for cr in state.CR[1:end]]
     g_prec = [Grassmann.project(d[]*(crinv'*crinv), a)
               for (d, crinv, a) in zip(g, crinvs, state.AL)]
     return g_prec
 end
 
-end  # module GrassmannInfiniteMPS
+end  # module GrassmannMPS

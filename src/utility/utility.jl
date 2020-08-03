@@ -113,3 +113,17 @@ function add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
     tensor1=util*permute(tensor,(),ntuple(x->x,Val{N1+N2}()))
     return permute(tensor1,ntuple(x->x,Val{N1+N2+1}()),())*util'
 end
+
+"""
+Take the L2 Tikhonov regularised inverse of a matrix `m`.
+
+The regularisation parameter is the larger of `delta` (the optional argument that defaults
+to zero) and square root of machine epsilon. The inverse is done using an SVD.
+"""
+function reginv(m, delta=zero(eltype(m)))
+    delta = max(delta, sqrt(eps(real(float(one(eltype(m)))))))
+    U, S, Vdg = tsvd(m)
+    Sinv = inv(real(sqrt(S^2 + delta^2*one(S))))
+    minv = Vdg' * Sinv * U'
+    return minv
+end
