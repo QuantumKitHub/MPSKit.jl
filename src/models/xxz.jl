@@ -15,8 +15,8 @@ function su2_xxx_ham(;spin = 1//2)
     #only checked for spin = 1 and spin = 2...
     ph = ℂ[SU₂](spin=>1)
 
-    Sl1 = TensorMap(ones, Defaults.eltype, ℂ[SU₂](0=>1)*ph , ℂ[SU₂](1=>1)*ph)
-    Sr1 = TensorMap(ones, Defaults.eltype, ℂ[SU₂](1=>1)*ph , ℂ[SU₂](0=>1)*ph)
+    Sl1 = TensorMap(ones, Defaults.eltype, ℂ[SU₂](0=>1)*ph , ℂ[SU₂](1=>1)*ph)*sqrt(spin^2+spin)
+    Sr1 = TensorMap(ones, Defaults.eltype, ℂ[SU₂](1=>1)*ph , ℂ[SU₂](0=>1)*ph)*sqrt(spin^2+spin)
 
     return MPOHamiltonian([Sl1,Sr1]);
 end

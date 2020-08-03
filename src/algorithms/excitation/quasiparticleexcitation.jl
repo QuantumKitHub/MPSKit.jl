@@ -46,16 +46,21 @@ function quasiparticle_excitation(hamiltonian::Hamiltonian, moment::Float64, mps
 end
 
 function quasiparticle_excitation(hamiltonian::Hamiltonian, momenta::AbstractVector, mpsleft::InfiniteMPS, paramsleft, mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft;
-    kwargs...)
+    num=1,verbose=Defaults.verbose,kwargs...)
 
-    Ep = Vector(undef,length(momenta))
-    Bp = Vector(undef,length(momenta))
-    Xp = Vector(undef,length(momenta))
-
-    @threads for i in 1:length(momenta)
-        verbose && println("Finding excitations for p = $(momenta[i])")
-        Ep[i],Bp[i], Xp[i] = quasiparticle_excitation(hamiltonian, momenta[i], mpsleft, paramsleft, mpsright, paramsright; kwargs...)
+    tasks = map(enumerate(momenta)) do (i,p)
+        @Threads.spawn begin
+            verbose && println("Finding excitations for p = $(p)")
+            quasiparticle_excitation(hamiltonian, p, mpsleft, paramsleft, mpsright, paramsright; num=num,kwargs...)
+        end
     end
+
+    fetched = fetch.(tasks);
+
+    Ep = reduce(hcat,map(x->x[1][1:num],fetched));
+    Bp = reduce(hcat,map(x->x[2][1:num],fetched));
+    Xp = reduce(hcat,map(x->x[3][1:num],fetched));
+
     return Ep,Bp,Xp
 end
 

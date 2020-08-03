@@ -8,7 +8,7 @@ makedocs(modules=[MPSKit],
                 "Home" => "index.md",
                 "Manual" => ["man/intro.md", "man/states.md", "man/operators.md",
                                 "man/algorithms.md","man/environments.md"],
-                "Tutorials" => ["tut/xxz_groundstate.md","tut/timeev.md"],
+                "Tutorials" => ["tut/xxz_groundstate.md","tut/timeev.md","tut/haldane.md"],
                 "Library" => ["lib/lib.md"],
             ])
 

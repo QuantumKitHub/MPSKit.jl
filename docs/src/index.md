@@ -16,7 +16,7 @@ Depth = 3
 
 ## Tutorials
 ```@contents
-Pages = ["tut/xxz_groundstate.md","tut/timeev.md"]
+Pages = ["tut/xxz_groundstate.md","tut/timeev.md","tut/haldane.md"]
 Depth = 1
 ```
 

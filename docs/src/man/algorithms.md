@@ -36,7 +36,7 @@ Dynamical dmrg has been described in other papers and is a way to find the propa
 
 ## quasiparticle excitations
 
-We export code that implements the quasiparticle excitation ansatz (ref) for finite and infinite systems.
+We export code that implements the [quasiparticle excitation ansatz](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.111.080401) for finite and infinite systems.
 For example, the following calculates the haldane gap for spin-1 heisenberg.
 
 ```julia
