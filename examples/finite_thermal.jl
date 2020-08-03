@@ -15,7 +15,7 @@ function bondmanage(state,ham,pars)
 end
 
 
-function main()
+let
     #the operator used to evolve is the anticommutator
     th = nonsym_ising_ham()
 
@@ -32,5 +32,3 @@ function main()
     end
 
 end
-
-main();
