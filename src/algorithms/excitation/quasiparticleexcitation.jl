@@ -9,10 +9,10 @@ include("heff_finite.jl")
 "
     quasiparticle_excitation calculates the energy of the first excited state at momentum 'moment'
 "
-function quasiparticle_excitation(hamiltonian::Hamiltonian, moment::Float64, mpsleft::InfiniteMPS, paramsleft=params(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft;
+function quasiparticle_excitation(hamiltonian::Hamiltonian, momentum::Float64, mpsleft::InfiniteMPS, paramsleft=params(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft;
     excitation_space=oneunit(space(mpsleft.AL[1],1)), num=1 , toler = 1e-10,krylovdim=30)
 
-    V_initial = rand_quasiparticle(moment,mpsleft,mpsright;excitation_space);
+    V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space,momentum);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, paramsleft, paramsright)

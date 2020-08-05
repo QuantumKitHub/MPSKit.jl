@@ -33,7 +33,7 @@ struct InfiniteQP{S<:InfiniteMPS,T1,T2}
     momentum::Float64
 end
 
-function rand_quasiparticle(momentum::Float64,left_gs::InfiniteMPS,right_gs=left_gs;excitation_space=oneunit(space(left_gs.AL[1]),1))
+function rand_quasiparticle(left_gs::InfiniteMPS,right_gs=left_gs;excitation_space = oneunit(space(left_gs.AL[1],1)),momentum=0.0)
     #find the left null spaces for the TNS
     VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
     Xs = [TensorMap(rand,eltype(left_gs.AL[1]),space(VLs[loc],3)',excitation_space'*space(right_gs.AR[ loc+1],1)) for loc in 1:length(left_gs)]
@@ -42,6 +42,14 @@ function rand_quasiparticle(momentum::Float64,left_gs::InfiniteMPS,right_gs=left
 end
 
 const QP = Union{InfiniteQP,FiniteQP};
+
+Base.copy(a::QP) = copyto!(similar(a),a)
+function Base.copyto!(a::QP,b::QP)
+    for (i,j) in zip(a.Xs,b.Xs)
+        copyto!(i,j)
+    end
+    a
+end
 function Base.getproperty(v::QP,s::Symbol)
     if s == :trivial
         return v.left_gs === v.right_gs
@@ -50,6 +58,10 @@ function Base.getproperty(v::QP,s::Symbol)
     end
 end
 
+function Base.:-(v::QP,w::QP)
+    t = similar(v)
+    t.Xs[:] = (v.Xs-w.Xs)[:]
+end
 LinearAlgebra.dot(v::QP, w::QP) = sum(dot.(v.Xs, w.Xs))
 LinearAlgebra.norm(v::QP) = norm(norm.(v.Xs))
 Base.length(v::QP) = length(v.Xs)

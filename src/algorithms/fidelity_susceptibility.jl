@@ -2,22 +2,21 @@
 I don't know if I should rescale by system size / unit cell
 =#
 function fidelity_susceptibility(state::Union{FiniteMPS,InfiniteMPS},H₀::T,Vs::AbstractVector{T},hpars = params(state,H₀);maxiter=Defaults.maxiter,tol=Defaults.tol) where T<:MPOHamiltonian
-    VL = [adjoint(rightnull(adjoint(v))) for v in state.AL]
+    init_v = rand_quasiparticle(state,excitation_space = oneunit(space(state.AC[1],1)));
 
     tangent_vecs = map(Vs) do V
         vpars = params(state,V)
 
-        Tos = map(enumerate(zip(VL,state.AC))) do (i,(vl,ac))
-            temp = adjoint(vl)*ac_prime(ac,i,state,vpars);
-            help = complex(Tensor(ones,oneunit(space(temp,1))))
-            @tensor tor[-1;-2 -3]:= temp[-1,-3]*help[-2]
+        Tos = similar(init_v)
+        for (i,ac) in enumerate(state.AC)
+            temp = ac_prime(ac,i,state,vpars);
+            help = Tensor(ones,oneunit(space(state.AC[1],1)))
+            @tensor tor[-1 -2;-3 -4]:= temp[-1,-2,-4]*help[-3]
+            Tos[i] = tor
         end
 
-        (vec,convhist) = linsolve(RecursiveVec(Tos),RecursiveVec(Tos),GMRES(maxiter=maxiter,tol=tol)) do x
-            B = [ln*cx for (ln,cx) in zip(VL,x.vecs)]
-            Bseff = effective_excitation_hamiltonian(H₀, B, state, hpars)
-            out = [adjoint(ln)*cB for (ln,cB) in zip(VL,Bseff)]
-            RecursiveVec(out)
+        (vec,convhist) = linsolve(Tos,Tos,GMRES(maxiter=maxiter,tol=tol)) do x
+            effective_excitation_hamiltonian(H₀, x, hpars)
         end
         convhist.converged == 0 && @info "failed to converge $(convhist.normres)"
 
