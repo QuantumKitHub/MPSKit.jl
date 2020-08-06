@@ -147,12 +147,12 @@ function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
 
     #step 2 : embed all Ls/Bs/Rs in the same space
     superspaces = map(zip(Ls,Rs)) do (L,R)
-        space(L,1)⊕space(R,1)
+        supremum(space(L,1),space(R,1))
     end
-    push!(superspaces,_lastspace(Ls[end])'⊕_lastspace(Rs[end])')
+    push!(superspaces,supremum(_lastspace(Ls[end])',_lastspace(Rs[end])'))
     for i in 1:(length(v)+1)
         Lf = isometry(superspaces[i],i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i-1])')
-        Rf = leftnull(Lf)
+        Rf = isometry(superspaces[i],i <= length(v) ? _firstspace(Rs[i]) : _lastspace(Rs[i-1])')
 
         if i <= length(v)
             @tensor Ls[i][-1 -2;-3] := Lf[-1,1]*Ls[i][1,-2,-3]
