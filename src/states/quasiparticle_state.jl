@@ -150,13 +150,15 @@ function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
         space(L,1)⊕space(R,1)
     end
     push!(superspaces,_lastspace(Ls[end])'⊕_lastspace(Rs[end])')
-    for i in 1:length(v)
-        Lf = isometry(superspaces[i],space(Ls[i],1))
+    for i in 1:(length(v)+1)
+        Lf = isometry(superspaces[i],i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i-1])')
         Rf = leftnull(Lf)
 
-        @tensor Ls[i][-1 -2;-3] := Lf[-1,1]*Ls[i][1,-2,-3]
-        @tensor Rs[i][-1 -2;-3] := Rf[-1,1]*Rs[i][1,-2,-3]
-        @tensor Bs[i][-1 -2;-3] := Lf[-1,1]*Bs[i][1,-2,-3]
+        if i <= length(v)
+            @tensor Ls[i][-1 -2;-3] := Lf[-1,1]*Ls[i][1,-2,-3]
+            @tensor Rs[i][-1 -2;-3] := Rf[-1,1]*Rs[i][1,-2,-3]
+            @tensor Bs[i][-1 -2;-3] := Lf[-1,1]*Bs[i][1,-2,-3]
+        end
 
         if i>1
             @tensor Ls[i-1][-1 -2;-3] := Ls[i-1][-1 -2;1]*conj(Lf[-3,1])
