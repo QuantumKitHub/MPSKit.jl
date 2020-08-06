@@ -78,7 +78,7 @@ function effective_excitation_hamiltonian(ham::MPOHamiltonian, exci::InfiniteQP,
     end
 
     #B left to B'; outside the unit cell
-    lBsE = left_excitation_transfer_system(lBs,ham,exci.left_gs,exci.right_gs,exci.trivial,exci.momentum)
+    lBsE = left_excitation_transfer_system(lBs,ham,exci)
 
     for i=1:length(exci)
         for (j,k) in keys(ham,i)
@@ -97,7 +97,7 @@ function effective_excitation_hamiltonian(ham::MPOHamiltonian, exci::InfiniteQP,
     end
 
     #B right to B'; outside the unit cell
-    rBsE = right_excitation_transfer_system(rBs,ham,exci.left_gs,exci.right_gs,exci.trivial,exci.momentum)
+    rBsE = right_excitation_transfer_system(rBs,ham,exci)
 
     for i=length(exci):-1:1
         for (j,k) in keys(ham,i)
