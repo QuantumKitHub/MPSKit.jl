@@ -73,6 +73,7 @@ module MPSKit
     include("environments/mpohaminfenv.jl")
     include("environments/simpleenv.jl")
     include("environments/overlapenv.jl")
+    include("environments/qpenv.jl")
 
     abstract type Algorithm end
 

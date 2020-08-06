@@ -15,7 +15,7 @@ function quasiparticle_excitation(hamiltonian::Hamiltonian, momentum::Float64, m
     V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space,momentum);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
-    eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, paramsleft, paramsright)
+    eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, params(V,hamiltonian,paramsleft, paramsright))
     Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=toler,krylovdim=krylovdim)
     convhist.converged<num && @warn "quasiparticle didn't converge k=$(moment) $(convhist.normres)"
 
@@ -29,7 +29,7 @@ function quasiparticle_excitation(hamiltonian::Hamiltonian, mpsleft::FiniteMPS, 
     V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
-    eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, paramsleft, paramsright)
+    eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, params(V,hamiltonian,paramsleft, paramsright))
     Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=toler,krylovdim=krylovdim)
     convhist.converged<num && @warn "quasiparticle didn't converge $(convhist.normres)"
 

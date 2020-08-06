@@ -1,5 +1,4 @@
-using MPSKit,TensorKit,Test
-using OptimKit
+using MPSKit,TensorKit,Test,OptimKit
 
 println("------------------------------------")
 println("|     States                       |")
