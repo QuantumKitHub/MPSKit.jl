@@ -43,6 +43,7 @@ end
 
 const QP = Union{InfiniteQP,FiniteQP};
 
+utilleg(v::QP) = space(v.Xs[1],2)
 Base.copy(a::QP) = copyto!(similar(a),a)
 function Base.copyto!(a::QP,b::QP)
     for (i,j) in zip(a.Xs,b.Xs)
@@ -109,4 +110,72 @@ Base.getindex(v::QP,i::Int) = v.VLs[i]*v.Xs[i];
 function Base.setindex!(v::QP,B,i::Int)
     v.Xs[i] = v.VLs[i]'*B
     v
+end
+
+
+function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
+    #very slow and clunky, but shouldn't be performance critical anyway
+
+    function simplefuse(temp)
+        frontmap = isomorphism(fuse(space(temp,1)*space(temp,2)),space(temp,1)*space(temp,2))
+        backmap = isomorphism(space(temp,5)'*space(temp,4)',fuse(space(temp,5)'*space(temp,4)'))
+
+        @tensor tempp[-1 -2;-3] := frontmap[-1,1,2]*temp[1,2,-2,3,4]*backmap[4,3,-3]
+    end
+
+
+    utl = utilleg(v); ou = oneunit(utl); utsp = ou ⊕ ou;
+    upper = isometry(utsp,ou); lower = leftnull(upper);
+    upper_I = upper*upper'; lower_I = lower*lower'; uplow_I = upper*lower';
+
+    Ls = v.left_gs.AL[1:end];
+    Rs = v.right_gs.AR[1:end];
+
+    #step 0 : fuse the utility leg of B with the first leg of B
+    Bs = map(1:length(v)) do i
+        t = v[i]
+        frontmap = isomorphism(fuse(utl*space(t,1)),utl*space(t,1));
+        @tensor tt[-1 -2;-3]:=t[1,-2,2,-3]*frontmap[-1,2,1]
+    end
+
+    #step 1 : pass utl through Ls
+    passer = isomorphism(utl,utl);
+    Ls = map(Ls) do L
+        @tensor temp[-1 -2 -3 -4;-5]:=L[-2,-3,-4]*passer[-1,-5]
+        simplefuse(temp)
+    end
+
+    #step 2 : embed all Ls/Bs/Rs in the same space
+    superspaces = map(zip(Ls,Rs)) do (L,R)
+        space(L,1)⊕space(R,1)
+    end
+    push!(superspaces,_lastspace(Ls[end])'⊕_lastspace(Rs[end])')
+    for i in 1:length(v)
+        Lf = isometry(superspaces[i],space(Ls[i],1))
+        Rf = leftnull(Lf)
+
+        @tensor Ls[i][-1 -2;-3] := Lf[-1,1]*Ls[i][1,-2,-3]
+        @tensor Rs[i][-1 -2;-3] := Rf[-1,1]*Rs[i][1,-2,-3]
+        @tensor Bs[i][-1 -2;-3] := Lf[-1,1]*Bs[i][1,-2,-3]
+
+        if i>1
+            @tensor Ls[i-1][-1 -2;-3] := Ls[i-1][-1 -2;1]*conj(Lf[-3,1])
+            @tensor Rs[i-1][-1 -2;-3] := Rs[i-1][-1 -2;1]*conj(Rf[-3,1])
+            @tensor Bs[i-1][-1 -2;-3] := Bs[i-1][-1 -2;1]*conj(Rf[-3,1])
+        end
+    end
+
+    #step 3 : fuse the correct *_I with the correct tensor (and enforce boundary conditions)
+    for i in 1:length(v)
+        @tensor temp[-1 -2 -3 -4; -5] := Ls[i][-2,-3,-4]*upper_I[-1,-5]
+        Ls[i] = simplefuse(temp) * (i<length(v));
+
+        @tensor temp[-1 -2 -3 -4; -5] := Rs[i][-2,-3,-4]*lower_I[-1,-5]
+        Rs[i] = simplefuse(temp) * (i>1);
+
+        @tensor temp[-1 -2 -3 -4; -5] := Bs[i][-2,-3,-4]*uplow_I[-1,-5]
+        Bs[i] = simplefuse(temp);
+    end
+
+    return FiniteMPS(Ls+Rs+Bs)
 end
