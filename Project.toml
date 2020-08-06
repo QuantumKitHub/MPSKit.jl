@@ -13,9 +13,9 @@ TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-KrylovKit = "0.4,0.5,0.6,1"
+KrylovKit = "0.4"
 Parameters = "0.12,1"
 julia = "1.4"
-TensorKit = "0.5,0.6,1"
-TensorKitManifolds = "0.3,0.4,1"
-OptimKit = "0.1,0.2,1"
+TensorKit = "0.5.0"
+TensorKitManifolds = "0.3.0"
+OptimKit = "0.1.0"
