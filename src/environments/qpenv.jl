@@ -21,7 +21,7 @@ struct FiniteQPEnv{A,B} <: Cache
     rpars::B
 end
 
-function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(qp.left_gs,ham),rpars=exci.trivial ? lpars : params(qp.right_gs,ham))
+function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,ham),rpars=exci.trivial ? lpars : params(exci.right_gs,ham))
     ids = collect(Iterators.filter(x->isid(ham,x),2:ham.odim-1));
 
     #build lBs(c)
@@ -66,7 +66,7 @@ function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(qp.left_gs,ham
     return InfiniteQPEnv(lBsc,rBsc,lBsE,rBsE,lpars,rpars)
 end
 
-function params(exci::FiniteQP,ham::MPOHamiltonian,lpars=params(qp.left_gs,ham),rpars=exci.trivial ? lpars : params(qp.right_gs,ham))
+function params(exci::FiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,ham),rpars=exci.trivial ? lpars : params(exci.right_gs,ham))
     #construct lBsE
     lBs = [ TensorMap(zeros,eltype(exci),
                     space(leftenv(lpars,1,exci.left_gs)[k],1)*space(leftenv(lpars,1,exci.left_gs)[k],2),

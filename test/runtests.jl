@@ -78,7 +78,18 @@ end
     ham = nonsym_ising_ham(lambda=4.0);
     (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
 
-    window = MPSComoving(gs,copy.([gs.AC[1];[gs.AR[i] for i in 2:10]]),gs);
+    #constructor 1 - give it a plain array of tensors
+    window_1 = MPSComoving(gs,copy.([gs.AC[1];[gs.AR[i] for i in 2:10]]),gs);
+
+    #constructor 2 - used to take a "slice" from an infinite mps
+    window_2 = MPSComoving(gs,10);
+
+    # we should logically have that window_1 approximates window_2
+    @test dot(window_1,window_2) ≈ 1 atol=1e-8
+
+    #constructor 3 - random initial tensors
+    window = MPSComoving(rand,ComplexF64,10,ℂ^2,ℂ^10,gs,gs)
+    normalize!(window);
 
     for i in 1:length(window)
         @test window.AC[i] ≈ window.AL[i]*window.CR[i]
@@ -98,16 +109,60 @@ end
 
     e2 = expectation_value(window,ham);
 
-    @test e1[1] ≈ e2[1]
-    @test e1[2] ≈ e2[2]
+    @test real(e2[2]) ≤ real(e1[2])
 
     (window,pars) = timestep(window,ham,0.1,Tdvp2(),pars)
     (window,pars) = timestep(window,ham,0.1,Tdvp(),pars)
 
     e3 = expectation_value(window,ham);
 
-    @test e1[1] ≈ e3[1]
-    @test e1[2] ≈ e3[2]
+    @test e2[1] ≈ e3[1]
+    @test e2[2] ≈ e3[2]
+end
+
+@testset "Quasiparticle state" begin
+    @testset "Finite" for (th,D,d) in [
+        (nonsym_ising_ham(),ComplexSpace(10),ComplexSpace(2)),
+        (su2_xxx_ham(spin=1),ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](1=>1))
+        ]
+
+
+        ts = FiniteMPS(rand,ComplexF64,rand(3:20),d,D);
+        normalize!(ts);
+
+        #rand_quasiparticle is a private non-exported function
+        qst1 = MPSKit.rand_quasiparticle(ts);
+        qst2 = MPSKit.rand_quasiparticle(ts);
+
+        @test norm(axpy!(1,qst1,copy(qst2))) ≤ norm(qst1) + norm(qst2)
+        @test norm(qst1)*3 ≈ norm(qst1*3)
+
+        normalize!(qst1);
+
+        qst1_f = convert(FiniteMPS,qst1);
+        qst2_f = convert(FiniteMPS,qst2);
+
+        @test dot(qst1_f,qst2_f) ≈ dot(qst1,qst2) atol=1e-5
+        @test norm(qst1_f) ≈ norm(qst1) atol=1e-5
+        @test sum(expectation_value(qst1_f,th)-expectation_value(ts,th)) ≈ dot(qst1,effective_excitation_hamiltonian(th,qst1)) atol=1e-5
+    end
+
+    @testset "Infinite" for (th,D,d) in [
+        (nonsym_ising_ham(),ComplexSpace(10),ComplexSpace(2)),
+        (su2_xxx_ham(spin=1),ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](1=>1))
+        ]
+
+        period = rand(1:4);
+        ts = InfiniteMPS(fill(d,period),fill(D,period));
+
+        #rand_quasiparticle is a private non-exported function
+        qst1 = MPSKit.rand_quasiparticle(ts);
+        qst2 = MPSKit.rand_quasiparticle(ts);
+
+        @test norm(axpy!(1,qst1,copy(qst2))) ≤ norm(qst1) + norm(qst2)
+        @test norm(qst1)*3 ≈ norm(qst1*3)
+    end
+
 end
 
 println("------------------------------------")

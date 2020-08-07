@@ -14,7 +14,7 @@ struct FiniteQP{S<:FiniteMPS,T1,T2}
 
 end
 
-function rand_quasiparticle(left_gs::FiniteMPS,right_gs=left_gs;excitation_space=oneunit(space(left_gs.AL[1]),1))
+function rand_quasiparticle(left_gs::FiniteMPS,right_gs=left_gs;excitation_space=oneunit(virtualspace(left_gs,1)))
     #find the left null spaces for the TNS
     VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
     Xs = [TensorMap(rand,eltype(left_gs.AL[1]),space(VLs[loc],3)',excitation_space'*space(right_gs.AR[ loc],3)') for loc in 1:length(left_gs)]
@@ -65,6 +65,7 @@ function Base.:-(v::QP,w::QP)
 end
 LinearAlgebra.dot(v::QP, w::QP) = sum(dot.(v.Xs, w.Xs))
 LinearAlgebra.norm(v::QP) = norm(norm.(v.Xs))
+LinearAlgebra.normalize!(w::QP) = rmul!(w,1/norm(w));
 Base.length(v::QP) = length(v.Xs)
 Base.eltype(v::QP) = eltype(eltype(v.Xs)) # - again debateable, need scaltype
 Base.similar(v::InfiniteQP,t=eltype(v)) = InfiniteQP(v.left_gs,v.right_gs,v.VLs,map(e->similar(e,t),v.Xs),v.momentum)
@@ -116,16 +117,17 @@ end
 function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
     #very slow and clunky, but shouldn't be performance critical anyway
 
+    elt = eltype(v)
     function simplefuse(temp)
-        frontmap = isomorphism(fuse(space(temp,1)*space(temp,2)),space(temp,1)*space(temp,2))
-        backmap = isomorphism(space(temp,5)'*space(temp,4)',fuse(space(temp,5)'*space(temp,4)'))
+        frontmap = isomorphism(Matrix{elt},fuse(space(temp,1)*space(temp,2)),space(temp,1)*space(temp,2))
+        backmap = isomorphism(Matrix{elt},space(temp,5)'*space(temp,4)',fuse(space(temp,5)'*space(temp,4)'))
 
         @tensor tempp[-1 -2;-3] := frontmap[-1,1,2]*temp[1,2,-2,3,4]*backmap[4,3,-3]
     end
 
 
     utl = utilleg(v); ou = oneunit(utl); utsp = ou ⊕ ou;
-    upper = isometry(utsp,ou); lower = leftnull(upper);
+    upper = isometry(Matrix{elt},utsp,ou); lower = leftnull(upper);
     upper_I = upper*upper'; lower_I = lower*lower'; uplow_I = upper*lower';
 
     Ls = v.left_gs.AL[1:end];
@@ -134,12 +136,12 @@ function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
     #step 0 : fuse the utility leg of B with the first leg of B
     Bs = map(1:length(v)) do i
         t = v[i]
-        frontmap = isomorphism(fuse(utl*space(t,1)),utl*space(t,1));
+        frontmap = isomorphism(Matrix{elt},fuse(utl*space(t,1)),utl*space(t,1));
         @tensor tt[-1 -2;-3]:=t[1,-2,2,-3]*frontmap[-1,2,1]
     end
 
     #step 1 : pass utl through Ls
-    passer = isomorphism(utl,utl);
+    passer = isomorphism(Matrix{elt},utl,utl);
     Ls = map(Ls) do L
         @tensor temp[-1 -2 -3 -4;-5]:=L[-2,-3,-4]*passer[-1,-5]
         simplefuse(temp)
@@ -151,8 +153,8 @@ function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
     end
     push!(superspaces,supremum(_lastspace(Ls[end])',_lastspace(Rs[end])'))
     for i in 1:(length(v)+1)
-        Lf = isometry(superspaces[i],i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i-1])')
-        Rf = isometry(superspaces[i],i <= length(v) ? _firstspace(Rs[i]) : _lastspace(Rs[i-1])')
+        Lf = isometry(Matrix{elt},superspaces[i],i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i-1])')
+        Rf = isometry(Matrix{elt},superspaces[i],i <= length(v) ? _firstspace(Rs[i]) : _lastspace(Rs[i-1])')
 
         if i <= length(v)
             @tensor Ls[i][-1 -2;-3] := Lf[-1,1]*Ls[i][1,-2,-3]

@@ -168,8 +168,8 @@ end
 
 function TensorKit.dot(psi1::MPSComoving, psi2::MPSComoving)
     length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
-    psi1.left == psi2.left || throw(ArgumentError("left InfiniteMPS is different"))
-    psi1.right == psi2.right || throw(ArgumentError("right InfiniteMPS is different"))
+    psi1.left_gs == psi2.left_gs || throw(ArgumentError("left InfiniteMPS is different"))
+    psi1.right_gs == psi2.right_gs || throw(ArgumentError("right InfiniteMPS is different"))
 
     ρr = transfer_right(r_RR(psi2),psi2.AR[2:end],psi1.AR[2:end]);
     return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]) * ρr)
