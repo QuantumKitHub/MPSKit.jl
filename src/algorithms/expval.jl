@@ -135,3 +135,5 @@ function expectation_value(state::FiniteMPS,ham::ComAct,cache=params(state,ham))
     n = norm(state.AC[end])^2
     return ens./n
 end
+
+expectation_value(state::FiniteQP,opp) = expectation_value(convert(FiniteMPS,state),opp)

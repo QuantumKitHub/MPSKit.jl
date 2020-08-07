@@ -3,7 +3,7 @@
 In this tutorial we will calculate the haldane gap (the energy gap in spin 1 heisenberg) in 2 different ways. To follow the tutorial you need the following packages.
 
 ```julia
-using MPSKit,TensorKit
+using MPSKit,TensorKit,Plots
 ```
 
 We will enforce the su(2) symmetry, our hamiltonian will therefore be
@@ -29,12 +29,20 @@ The typical way to find excited states is to minmize the energy while adding an 
 In steven white's original DMRG paper it was remarked that the S=1 excitations correspond to edge states, and that one should define the haldane gap as the difference in energy between the S=2 and S=1 states. This can be done as follows.
 
 ```julia
-(En_1,_) = quasiparticle_excitation(ham,gs,pars,excitation_space = ℂ[SU₂](1=>1))
-(En_2,_) = quasiparticle_excitation(ham,gs,pars,excitation_space = ℂ[SU₂](2=>1))
-En_2[1]-En_1[1]
+(En_1,st_1) = quasiparticle_excitation(ham,gs,pars,excitation_space = ℂ[SU₂](1=>1))
+(En_2,st_2) = quasiparticle_excitation(ham,gs,pars,excitation_space = ℂ[SU₂](2=>1))
+finite_haldane_gap = En_2[1]-En_1[1]
 ```
 
-We can now extrapolate this value for different len, and approximately find the haldane gap.
+We can go even further and doublecheck the claim that S=1 is an edge excitation, by plotting the energy density.
+```julia
+pl = plot(xaxis="position",yaxis="energy density")
+plot!(pl,real.(expectation_value(st_1[1],ham)-expectation_value(gs,ham)),label = "S=1")
+plot!(pl,real.(expectation_value(st_2[1],ham)-expectation_value(gs,ham)),label = "S=2")
+```
+![](haldane_edge.png)
+
+Extrapolating for different len gives an approximate haldane gap.
 
 ![](haldane_finite.png)
 

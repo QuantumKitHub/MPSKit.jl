@@ -51,8 +51,8 @@ mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
             ismissing(CLs[i])  || _lastspace(CLs[i]) == dual(D1) || throw(SectorMismatch("CL doesn't fit"))
             ismissing(CLs[i+1]) || _firstspace(CLs[i+1]) == dual(D2) || throw(SectorMismatch("CL doesn't fit"))
 
-            i != 1 || D1 == oneunit(D1) || throw(ArgumentError("finite mps should start with a trivial leg"))
-            i != length(ACs) || dual(D2) == oneunit(dual(D2)) || throw(ArgumentError("finite mps should end with a trivial leg"))
+            #i != 1 || D1 == oneunit(D1) || throw(ArgumentError("finite mps should start with a trivial leg"))
+            #i != length(ACs) || dual(D2) == oneunit(dual(D2)) || throw(ArgumentError("finite mps should end with a trivial leg"))
         end
 
         return new{A,B}(ALs,ARs,ACs,CLs);

@@ -1,11 +1,8 @@
 module MPSKit
-    using TensorKit,KrylovKit,Parameters, Base.Threads
-    using OptimKit
+    using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit
+
     using LinearAlgebra:diag,Diagonal;
-    #reexport optimkit things
-    #export GradientDescent, ConjugateGradient, LBFGS
-    #export FletcherReeves, HestenesStiefel, PolakRibierePolyak, HagerZhang, DaiYuan
-    #export HagerZhangLineSearch
+    import LinearAlgebra
 
     #bells and whistles for mpses
     export InfiniteMPS,FiniteMPS,MPSComoving,PeriodicArray,MPSMultiline
@@ -59,6 +56,7 @@ module MPSKit
     include("states/finitemps.jl")
     include("states/comoving.jl")
     include("states/orthoview.jl")
+    include("states/quasiparticle_state.jl")
 
     abstract type Operator end
     abstract type Hamiltonian <: Operator end
@@ -75,6 +73,7 @@ module MPSKit
     include("environments/mpohaminfenv.jl")
     include("environments/simpleenv.jl")
     include("environments/overlapenv.jl")
+    include("environments/qpenv.jl")
 
     abstract type Algorithm end
 
