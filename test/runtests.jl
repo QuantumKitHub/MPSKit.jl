@@ -127,7 +127,7 @@ end
         ]
 
 
-        ts = FiniteMPS(rand,ComplexF64,rand(3:20),d,D);
+        ts = FiniteMPS(rand,ComplexF64,rand(4:20),d,D);
         normalize!(ts);
 
         #rand_quasiparticle is a private non-exported function
@@ -269,7 +269,10 @@ end
     mpo = #=@inferred=# nonsym_ising_mpo();
     state = InfiniteMPS([ℂ^2],[ℂ^10]);
     (state,pars,_) = leading_boundary(state,mpo,alg);
+    (state,pars) = changebonds(state,mpo,OptimalExpand(trscheme=truncdim(3)),pars)
+    (state,pars,_) = leading_boundary(state,mpo,alg);
 
+    @test dim(space(state.AL[1,1],1)) == 13
     @test expectation_value(state,mpo,pars)[1,1] ≈ 2.5337 atol=1e-3
 end
 

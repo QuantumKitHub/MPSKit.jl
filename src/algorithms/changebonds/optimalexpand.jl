@@ -48,6 +48,10 @@ function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=
     return state,pars
 end
 
+function MPSKit.changebonds(state::InfiniteMPS,H::PeriodicMPO,alg,pars=params(state,H))
+    (nmstate,pars) = changebonds(convert(MPSMultiline,state),H,alg,pars);
+    return convert(InfiniteMPS,nmstate),pars
+end
 
 function MPSKit.changebonds(state::MPSMultiline, H,alg::OptimalExpand,pars=params(state,H))
     #=
