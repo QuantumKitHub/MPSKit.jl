@@ -40,11 +40,12 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
 end
 
 "twosite dmrg"
-@with_kw struct Dmrg2 <: Algorithm
+@with_kw struct Dmrg2{F} <: Algorithm
     tol = Defaults.tol;
     maxiter = Defaults.maxiter;
     trscheme = truncerr(1e-6);
     verbose = Defaults.verbose
+    finalize::F = Defaults._finalize
 end
 
 function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
@@ -76,6 +77,8 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
         alg.verbose && @show (iter,delta)
         flush(stdout)
         #finalize
+        (state,parameters,sc) = alg.finalize(iter,state,H,parameters);
+        delta = sc ? delta : 2*tol
         iter += 1
     end
 
