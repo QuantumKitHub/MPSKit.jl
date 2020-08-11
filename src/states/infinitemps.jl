@@ -48,6 +48,12 @@ function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, ma
     return InfiniteMPS(ALs,ARs,CRs,ACs)
 end
 
+function TensorKit.normalize!(st::InfiniteMPS)
+    normalize!.(st.CR)
+    normalize!.(st.AC)
+    st
+end
+
 "
     l_RR(state,location)
     Left dominant eigenvector of the AR-AR transfermatrix

@@ -52,7 +52,7 @@ end
 
 function find_groundstate(state, H::Hamiltonian, alg::GradientGrassmann,
                           pars=params(state, H))
-
+    normalize!(state)
     res = optimize(GrassmannMPS.fg, (state, pars), alg.method;
                    transport! = GrassmannMPS.transport!,
                    retract = GrassmannMPS.retract,
