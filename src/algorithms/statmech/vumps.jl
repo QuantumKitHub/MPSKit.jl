@@ -73,5 +73,3 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,pars = params(state,
         iter += 1
     end
 end
-
-calc_galerkin(state::MPSMultiline, pars) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col, state, pars)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])

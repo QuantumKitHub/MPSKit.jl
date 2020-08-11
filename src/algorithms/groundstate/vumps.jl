@@ -62,6 +62,3 @@ function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,par
         iter += 1
     end
 end
-
-"calculates the galerkin error"
-calc_galerkin(state::InfiniteMPS, pars) = maximum([norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc, state, pars)) for loc in 1:length(state)])
