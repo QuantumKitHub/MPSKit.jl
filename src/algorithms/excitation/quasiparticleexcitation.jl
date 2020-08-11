@@ -11,7 +11,7 @@ include("excitransfers.jl")
 function quasiparticle_excitation(hamiltonian::Hamiltonian, momentum::Float64, mpsleft::InfiniteMPS, paramsleft=params(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft;
     excitation_space=oneunit(space(mpsleft.AL[1],1)), num=1 , toler = 1e-10,krylovdim=30)
 
-    V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space,momentum);
+    V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space=excitation_space,momentum=momentum);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, params(V,hamiltonian,paramsleft, paramsright))
@@ -25,7 +25,7 @@ end
 function quasiparticle_excitation(hamiltonian::Hamiltonian, mpsleft::FiniteMPS, paramsleft=params(mpsleft,hamiltonian), mpsright::FiniteMPS=mpsleft, paramsright=paramsleft;
     excitation_space=oneunit(space(mpsleft.AL[1],1)),num=1, toler = 1e-10,krylovdim=30)
 
-    V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space);
+    V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space=excitation_space);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, params(V,hamiltonian,paramsleft, paramsright))
