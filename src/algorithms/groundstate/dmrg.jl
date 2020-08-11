@@ -21,7 +21,7 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
                     ac_prime(x,pos,state,parameters)
                 end
             end
-            delta = max(delta,1-abs(dot(state.AC[pos],vecs[1])))
+            delta = max(delta,calc_galerkin(state,pos,parameters))
 
             state.AC[pos] = vecs[1]
         end
