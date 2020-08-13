@@ -121,7 +121,7 @@ The regularisation parameter is the larger of `delta` (the optional argument tha
 to zero) and square root of machine epsilon. The inverse is done using an SVD.
 """
 function reginv(m, delta=zero(eltype(m)))
-    delta = max(delta, sqrt(eps(real(float(one(eltype(m)))))))
+    delta = max(abs(delta), sqrt(eps(real(float(one(eltype(m)))))))
     U, S, Vdg = tsvd(m)
     Sinv = inv(real(sqrt(S^2 + delta^2*one(S))))
     minv = Vdg' * Sinv * U'

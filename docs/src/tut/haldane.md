@@ -48,18 +48,25 @@ Extrapolating for different len gives an approximate haldane gap.
 
 ## Thermodynamic limit
 
-A much nicer way of obtaining the haldane gap is by working directly in the thermodynamic limit.
+A much nicer way of obtaining the haldane gap is by working directly in the thermodynamic limit. We must be careful in selecting the symmetry sectors, the only correct choice is to work with half-integer charges (this is an SPT phase).
 
 ```julia
+virtual_space = ℂ[SU₂](1//2=>20,3//2=>20,5//2=>10,7//2=>10,9//2=>5); # this is bond dimension 300!
 initial_state = InfiniteMPS([physical_space],[virtual_space]);
 (gs,pars,delta) = find_groundstate(initial_state,ham,Vumps());
 ```
 
-The haldane gap in the thermodynamic limit is the energy of the S=1 excitation at momentum pi.
+One difference with the finite size case is that we not only can - but also have to - specify a momentum label. We can scan for k = 0 to pi by calling:
 
 ```julia
-(Energies,_) = quasiparticle_excitation(ham,Float64(pi),gs,pars,excitation_space=ℂ[SU₂](1=>1))
-Energies[1]
+kspace = 0:0.1:pi
+(Energies,_) = quasiparticle_excitation(ham,kspace,gs,pars,excitation_space=ℂ[SU₂](1=>1));
 ```
+![](haldane_dispersion.png)
 
-Which prints out 0.4104791728966182, in agreement with known results.
+The minimima sits at k = pi, with corresponding value
+
+```julia
+(En,_) = quasiparticle_excitation(ham,Float64(pi),gs,pars,excitation_space=ℂ[SU₂](1=>1));
+@assert En[1]  ≈ 0.41047925 atol=1e-4
+```

@@ -109,3 +109,5 @@ function TensorKit.dot(a::InfiniteMPS,b::InfiniteMPS;krylovdim = 30)
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]
 end
+
+Base.circshift(st::InfiniteMPS,n) = InfiniteMPS(circshift(st.AL,n),circshift(st.AR,n),circshift(st.CR,n),circshift(st.AC,n))
