@@ -42,7 +42,7 @@ function quasiparticle_excitation(hamiltonian::Hamiltonian, momenta::AbstractVec
     tasks = map(enumerate(momenta)) do (i,p)
         @Threads.spawn begin
             (E,V) = quasiparticle_excitation(hamiltonian, p, mpsleft, paramsleft, mpsright, paramsright; num=num,kwargs...)
-            verbose && println("Found excitations for p = $(p)")
+            verbose && @info "Found excitations for p = $(p)"
             (E,V)
         end
     end

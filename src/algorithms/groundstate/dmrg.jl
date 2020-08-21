@@ -26,7 +26,7 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
             state.AC[pos] = vecs[1]
         end
 
-        alg.verbose && @show (iter,delta)
+        alg.verbose && @info "Iteraton $(iter) error $(delta)"
         flush(stdout)
 
         iter += 1
@@ -74,7 +74,7 @@ function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,al
             state.AC[pos+1] = (complex(c),_permute_front(ar))
         end
 
-        alg.verbose && @show (iter,delta)
+        alg.verbose && @info "Iteraton $(iter) error $(delta)"
         flush(stdout)
         #finalize
         (state,parameters,sc) = alg.finalize(iter,state,H,parameters);

@@ -32,7 +32,7 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
             convhist.converged == 0 && @info "($(i)) failed to converge $(convhist.normres)"
         end
 
-        verbose && println("ddmrg sweep delta : $(delta)")
+        verbose && @info "ddmrg sweep delta : $(delta)"
     end
 
     a = @tensor leftenv(mixedenvs,1,init)[-1,1]*A.AC[1][1,-2,2]*rightenv(mixedenvs,1,init)[2,-3]*conj(init.AC[1][-1,-2,-3])

@@ -56,7 +56,7 @@ function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,opars=pa
         prevc = curc;
         err<alg.tol_galerkin && break;
 
-        alg.verbose && println("idmrg iter $(topit) err $(err)")
+        alg.verbose && @info "idmrg iter $(topit) err $(err)"
     end
 
     nst = InfiniteMPS(curu,tol=alg.tol_gauge);

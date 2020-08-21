@@ -60,11 +60,11 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,pars = params(state,
 
         state = MPSMultiline(newAs; leftgauged=true,tol = alg.tol_gauge, maxiter = alg.orthmaxiter)
         galerkin = calc_galerkin(state, pars)
-        alg.verbose && println("vumps @iteration $(iter) galerkin = $(galerkin)")
+        alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
         (state,pars,sc) = alg.finalize(iter,state,H,pars);
         if (galerkin <= alg.tol_galerkin && sc) || iter>=alg.maxiter
-            iter>=alg.maxiter && println("vumps didn't converge $(galerkin)")
+            iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
             return state, pars, galerkin
         end
 
