@@ -83,7 +83,9 @@ function uniform_rightorth(A::PeriodicArray{T,1}; tol::Float64 = Defaults.tolgau
         end
 
         #update counters and delta
-        delta = norm(cold-Cs[1])
+        if domain(cold) == domain(Cs[1]) && codomain(cold) == codomain(Cs[1])
+            delta = norm(cold-Cs[1])
+        end
 
         #are we done ?
         iteration += 1
