@@ -50,9 +50,11 @@ function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=
         meps=max(eps,meps)
 
         #find AL2 from AC and C as in vumps paper
-        QAC,_ = leftorth( AC,(1,2,),(3,), alg=TensorKit.Polar())
-        QC ,_ = leftorth(nC2 ,(1,),(2,) , alg=TensorKit.Polar())
-        @tensor AL2[-1,-2,-3] := QAC[-1,-2,1]*conj(QC[-3,1])
+        QAC,temp = leftorth( AC,(1,2,),(3,), alg=TensorKit.QRpos())
+        QC ,_ = leftorth(nC2 ,(1,),(2,) , alg=TensorKit.QRpos())
+        dom_map = isometry(domain(QC),domain(QAC))
+
+        @tensor AL2[-1,-2,-3] := QAC[-1,-2,1]*conj(dom_map[2,1])*conj(QC[-3,2])
 
         #make a new state using the updated A's
         allAls = copy(state.AL)
