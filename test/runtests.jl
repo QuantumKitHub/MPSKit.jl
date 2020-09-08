@@ -5,7 +5,7 @@ println("|     States                       |")
 println("------------------------------------")
 @testset "FiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
         (ComplexSpace(10),ComplexSpace(2),ComplexF64),
-        (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1)*ℂ[SU₂](0=>1),ComplexF32)
+        (Rep[SU₂](1=>1,0=>3),Rep[SU₂](0=>1)*Rep[SU₂](0=>1),ComplexF32)
         ]
 
     ts = FiniteMPS(rand,elt,rand(3:20),d,D);
@@ -28,7 +28,7 @@ end
 
 @testset "InfiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
         (ComplexSpace(10),ComplexSpace(2),ComplexF64),
-        (ℂ[U₁](1=>3),ℂ[U₁](0=>1),ComplexF64)
+        (Rep[U₁](1=>3),Rep[U₁](0=>1),ComplexF64)
         ]
     tol = Float64(eps(real(elt))*100);
 
@@ -52,7 +52,7 @@ end
 
 @testset "MPSMultiline ($D,$d,$elt)" for (D,d,elt) in [
         (ComplexSpace(10),ComplexSpace(2),ComplexF64),
-        (ℂ[U₁](1=>3),ℂ[U₁](0=>1),ComplexF32)
+        (Rep[U₁](1=>3),Rep[U₁](0=>1),ComplexF32)
         ]
 
     tol = Float64(eps(real(elt))*100);
@@ -123,7 +123,7 @@ end
 @testset "Quasiparticle state" begin
     @testset "Finite" for (th,D,d) in [
         (nonsym_ising_ham(),ComplexSpace(10),ComplexSpace(2)),
-        (su2_xxx_ham(spin=1),ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](1=>1))
+        (su2_xxx_ham(spin=1),Rep[SU₂](1=>1,0=>3),Rep[SU₂](1=>1))
         ]
 
 
@@ -149,7 +149,7 @@ end
 
     @testset "Infinite" for (th,D,d) in [
         (nonsym_ising_ham(),ComplexSpace(10),ComplexSpace(2)),
-        (su2_xxx_ham(spin=1),ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](1=>1))
+        (su2_xxx_ham(spin=1),Rep[SU₂](1=>1,0=>3),Rep[SU₂](1=>1))
         ]
 
         period = rand(1:4);
@@ -170,8 +170,8 @@ println("|     Operators                    |")
 println("------------------------------------")
 @testset "mpoham $(i)" for (i,(th,Dspaces)) in enumerate([
         (nonsym_ising_ham(),[ℂ^1]),
-        (u1_xxz_ham(),[ℂ[U₁](1//2=>1)]),
-        (repeat(su2_xxx_ham(),2),[ℂ[SU₂](0=>1),ℂ[SU₂](1//2=>1)])
+        (u1_xxz_ham(),[Rep[U₁](1//2=>1)]),
+        (repeat(su2_xxx_ham(),2),[Rep[SU₂](0=>1),Rep[SU₂](1//2=>1)])
         ])
 
     ts = InfiniteMPS(th.pspaces,Dspaces); # generate a product state

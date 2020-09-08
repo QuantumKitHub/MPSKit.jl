@@ -74,10 +74,10 @@ function squaredenvs(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,par
     for i in 1:ham.odim
         for j in 1:ham.odim
             @tensor temp[-1 -2 -3;-4]:=leftenv(pars,1,state)[j][1,-3,-4]*conj(leftenv(pars,1,state)[i][1,-2,-1])
-            copyto!(nleft[indmap(i,j)].data,temp.data)
+            copy!(nleft[indmap(i,j)].data,temp.data)
 
             @tensor temp[-1 -2 -3;-4]:=rightenv(pars,length(state),state)[j][-1,-2,1]*conj(rightenv(pars,length(state),state)[i][-4,-3,1])
-            copyto!(nright[indmap(i,j)].data,temp.data)
+            copy!(nright[indmap(i,j)].data,temp.data)
         end
     end
 

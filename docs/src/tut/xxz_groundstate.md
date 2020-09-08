@@ -87,15 +87,15 @@ The xxz hamiltonian is su(2) symmetric and we can exploit this to greatly speed 
 It is cumbersome to construct symmetric hamiltonians, but luckily su(2) symmetric xxz is already implemented:
 ```julia
 ham = repeat(su2_xxx_ham(spin=1//2),2);
-@assert ham.pspaces[1] == ℂ[SU₂](1//2 => 1)
+@assert ham.pspaces[1] == Rep[SU₂](1//2 => 1)
 ```
 Our initial state should also be su(2) symmetric. It now becomes apparant why we have to use a 2 site periodic state. The physical space carries a half-integer charge and the first tensor maps the first virtual space ⊗ the physical space to the second virtual space. Half integer virtual charges will therefore map only to integer charges, and vice versa. The staggering happens on the virtual level!
 
 An alternative constructor for the initial state is
 ```julia
-D1 = ℂ[SU₂](1//2 => 10,3//2=>5,5//2=>2);
-D2 = ℂ[SU₂](0=>15,1=>10,2=>5);
-state = InfiniteMPS([ℂ[SU₂](1//2 => 1),ℂ[SU₂](1//2 => 1)],[D1,D2])
+D1 = Rep[SU₂](1//2 => 10,3//2=>5,5//2=>2);
+D2 = Rep[SU₂](0=>15,1=>10,2=>5);
+state = InfiniteMPS([Rep[SU₂](1//2 => 1),Rep[SU₂](1//2 => 1)],[D1,D2])
 ```
 
 Even though the bond dimension is higher then in the non symmetric example:

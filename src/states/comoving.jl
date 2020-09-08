@@ -66,11 +66,11 @@ function MPSComoving(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, m
     virtspaces = Vector{S}(undef, N+1)
     virtspaces[1] = left
     for k = 2:N
-        virtspaces[k] = infinum(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
+        virtspaces[k] = infimum(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
     end
     virtspaces[N+1] = right
     for k = N:-1:2
-        virtspaces[k] = infinum(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
+        virtspaces[k] = infimum(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
     end
     return MPSComoving(f, elt,physspaces, virtspaces,leftgs,rightgs)
 end

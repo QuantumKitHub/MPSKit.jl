@@ -17,8 +17,8 @@ ham = su2_xxx_ham(spin=1);
 The first step is always the same, we want to find the groundstate of our system.
 ```julia
 len = 10;
-physical_space = ℂ[SU₂](1=>1);
-virtual_space = ℂ[SU₂](0=>20,1=>20,2=>10,3=>10,4=>5);
+physical_space = Rep[SU₂](1=>1);
+virtual_space = Rep[SU₂](0=>20,1=>20,2=>10,3=>10,4=>5);
 
 initial_state = FiniteMPS(rand,ComplexF64,len,physical_space,virtual_space);
 (gs,pars,delta) = find_groundstate(initial_state,ham,Dmrg());
@@ -29,8 +29,8 @@ The typical way to find excited states is to minmize the energy while adding an 
 In steven white's original DMRG paper it was remarked that the S=1 excitations correspond to edge states, and that one should define the haldane gap as the difference in energy between the S=2 and S=1 states. This can be done as follows.
 
 ```julia
-(En_1,st_1) = quasiparticle_excitation(ham,gs,pars,excitation_space = ℂ[SU₂](1=>1))
-(En_2,st_2) = quasiparticle_excitation(ham,gs,pars,excitation_space = ℂ[SU₂](2=>1))
+(En_1,st_1) = quasiparticle_excitation(ham,gs,pars,excitation_space = Rep[SU₂](1=>1))
+(En_2,st_2) = quasiparticle_excitation(ham,gs,pars,excitation_space = Rep[SU₂](2=>1))
 finite_haldane_gap = En_2[1]-En_1[1]
 ```
 
@@ -51,7 +51,7 @@ Extrapolating for different len gives an approximate haldane gap.
 A much nicer way of obtaining the haldane gap is by working directly in the thermodynamic limit. We must be careful in selecting the symmetry sectors, the only correct choice is to work with half-integer charges (this is an SPT phase).
 
 ```julia
-virtual_space = ℂ[SU₂](1//2=>20,3//2=>20,5//2=>10,7//2=>10,9//2=>5); # this is bond dimension 300!
+virtual_space = Rep[SU₂](1//2=>20,3//2=>20,5//2=>10,7//2=>10,9//2=>5); # this is bond dimension 300!
 initial_state = InfiniteMPS([physical_space],[virtual_space]);
 (gs,pars,delta) = find_groundstate(initial_state,ham,Vumps());
 ```
@@ -60,13 +60,13 @@ One difference with the finite size case is that we not only can - but also have
 
 ```julia
 kspace = 0:0.1:pi
-(Energies,_) = quasiparticle_excitation(ham,kspace,gs,pars,excitation_space=ℂ[SU₂](1=>1));
+(Energies,_) = quasiparticle_excitation(ham,kspace,gs,pars,excitation_space=Rep[SU₂](1=>1));
 ```
 ![](haldane_dispersion.png)
 
 The minimima sits at k = pi, with corresponding value
 
 ```julia
-(En,_) = quasiparticle_excitation(ham,Float64(pi),gs,pars,excitation_space=ℂ[SU₂](1=>1));
+(En,_) = quasiparticle_excitation(ham,Float64(pi),gs,pars,excitation_space=Rep[SU₂](1=>1));
 @assert En[1]  ≈ 0.41047925 atol=1e-4
 ```
