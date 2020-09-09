@@ -1,4 +1,4 @@
-function correlation_length(state::InfiniteMPS; otherstate=state, tol = 1e-8, exi_space = ComplexSpace(1), tol_angle = 0.1, triv=true)
+function correlation_length(state::InfiniteMPS; otherstate=state, tol = 1e-8, exi_space = ComplexSpace(1), tol_angle = 0.1, triv=true, max_sinvals = 20)
     ALs1 = state.AL
     ALs2 = otherstate.AL
 
