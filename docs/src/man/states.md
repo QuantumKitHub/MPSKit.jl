@@ -53,14 +53,14 @@ norm(state) == norm(state.AC[3])
 
 ## MPSComoving
 
-MPSComoving is a bit of a mix between an infinite mps and a finite mps. It represents a window of mutable tensors embedde in an infinite mps.
+MPSComoving is a bit of a mix between an infinite mps and a finite mps. It represents a window of mutable tensors embedded in an infinite mps.
 
 It can be created using:
 ```julia
 mpco = MPSComoving(left_infinite_mps,window_of_tensors,right_infinite_mps)
 ```
 
-Algorithms will then act on this window of tensors, while leaving the left and right infinite mps'es invariant.
+Algorithms will then act on this window of tensors, while leaving the left and right infinite mps's invariant.
 
 This state can be used to study impurities or local quenches.
 

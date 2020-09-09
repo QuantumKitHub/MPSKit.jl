@@ -71,6 +71,21 @@ function nonsym_spintensors(s)
     return Sx,Sy,Sz,one(Sx)
 end
 
+"""
+bosonic creation anihilation operators with a cutoff
+cutoff = maximal number of bosons at one location
+"""
+function nonsym_bosonictensors(cutoff::Int)
+    creadat = zeros(Defaults.eltype,cutoff+1,cutoff+1);
+
+    for i in 1:cutoff
+        creadat[i+1,i] = sqrt(i);
+    end
+
+    a⁺ = TensorMap(creadat,ℂ^(cutoff+1),ℂ^(cutoff+1));
+    a⁻ = TensorMap(collect(creadat'),ℂ^(cutoff+1),ℂ^(cutoff+1));
+    return (a⁺,a⁻)
+end
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
 function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2}
     numind=N1+N2
@@ -97,4 +112,18 @@ function add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
     util=Tensor(ones,eltype(tensor),oneunit(space(tensor,1)))
     tensor1=util*permute(tensor,(),ntuple(x->x,Val{N1+N2}()))
     return permute(tensor1,ntuple(x->x,Val{N1+N2+1}()),())*util'
+end
+
+"""
+Take the L2 Tikhonov regularised inverse of a matrix `m`.
+
+The regularisation parameter is the larger of `delta` (the optional argument that defaults
+to zero) and square root of machine epsilon. The inverse is done using an SVD.
+"""
+function reginv(m, delta=zero(eltype(m)))
+    delta = max(abs(delta), sqrt(eps(real(float(one(eltype(m)))))))
+    U, S, Vdg = tsvd(m)
+    Sinv = inv(real(sqrt(S^2 + delta^2*one(S))))
+    minv = Vdg' * Sinv * U'
+    return minv
 end

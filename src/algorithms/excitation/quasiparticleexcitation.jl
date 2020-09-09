@@ -4,53 +4,99 @@
 =#
 
 include("excitransfers.jl")
-include("heff.jl")
 
 "
     quasiparticle_excitation calculates the energy of the first excited state at momentum 'moment'
 "
-function quasiparticle_excitation(hamiltonian::Hamiltonian, moment::Float64, mpsleft::InfiniteMPS, paramsleft, mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft; excitation_space=oneunit(space(mpsleft.AL[1],1)), trivial=true, num=1 ,X_initial=nothing, toler = 1e-10,krylovdim=30)
-    #check whether the provided mps is sensible
-    @assert length(mpsleft) == length(mpsright)
+function quasiparticle_excitation(hamiltonian::Hamiltonian, momentum::Float64, mpsleft::InfiniteMPS, paramsleft=params(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft;
+    excitation_space=oneunit(space(mpsleft.AL[1],1)), num=1 , toler = 1e-10,krylovdim=30)
 
-    #find the left null spaces for the TNS
-    LeftNullSpace = [adjoint(rightnull(adjoint(v))) for v in mpsleft.AL]
-
-    #we need an initial array of Xs, one for every site in unit cell which the user may of may not have provided by the user
-    if X_initial == nothing
-        X_initial=[TensorMap(rand,eltype(mpsleft),space(LeftNullSpace[loc],3)',excitation_space'*space(mpsright.AR[ loc+1],1)) for loc in 1:length(mpsleft)]
-    end
+    V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space=excitation_space,momentum=momentum);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
-    function eigEx(rec)
-        x = rec.vecs
+    eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, params(V,hamiltonian,paramsleft, paramsright))
+    Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=toler,krylovdim=krylovdim)
+    convhist.converged<num && @warn "quasiparticle didn't converge k=$(moment) $(convhist.normres)"
 
-        B = [ln*cx for (ln,cx) in zip(LeftNullSpace,x)]
-
-        Bseff = effective_excitation_hamiltonian(trivial, hamiltonian, B, moment, mpsleft, paramsleft, mpsright, paramsright)
-
-        out = [adjoint(ln)*cB for (ln,cB) in zip(LeftNullSpace,Bseff)]
-
-        return RecursiveVec(out)
-    end
-    Es,Vs,convhist = eigsolve(eigEx, RecursiveVec(X_initial), num, :SR, tol=toler,krylovdim=krylovdim)
-    convhist.converged<num && @info "quasiparticle didn't converge k=$(moment) $(convhist.normres)"
-
-    #we dont want to return a RecursiveVec to the user so upack it
-    Xs = [v.vecs for v in Vs]
-    Bs = [[ln*cx for (ln,cx) in zip(LeftNullSpace,x)] for x in Xs]
-
-    return Es,Bs, Xs
+    return Es,Vs
 end
 
-function quasiparticle_excitation(hamiltonian::Hamiltonian, momenta::AbstractVector, mpsleft::InfiniteMPS, paramsleft, mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft; excitation_space=oneunit(space(mpsleft.AL[1],1)), trivial=true, num=1 ,X_initial=nothing,verbose=Defaults.verbose,krylovdim=30)
-    Ep = Vector(undef,length(momenta))
-    Bp = Vector(undef,length(momenta))
-    Xp = Vector(undef,length(momenta))
+#pretty much identical to the infinite mps code, except for the lack of momentum label
+function quasiparticle_excitation(hamiltonian::Hamiltonian, mpsleft::FiniteMPS, paramsleft=params(mpsleft,hamiltonian), mpsright::FiniteMPS=mpsleft, paramsright=paramsleft;
+    excitation_space=oneunit(space(mpsleft.AL[1],1)),num=1, toler = 1e-10,krylovdim=30)
 
-    @threads for i in 1:length(momenta)
-        verbose && println("Finding excitations for p = $(momenta[i])")
-        Ep[i],Bp[i], Xp[i] = quasiparticle_excitation(hamiltonian, momenta[i], mpsleft, paramsleft, mpsright, paramsright, excitation_space=excitation_space, trivial=trivial, num=num ,X_initial= X_initial,krylovdim = krylovdim)
+    V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space=excitation_space);
+
+    #the function that maps x->B and then places this in the excitation hamiltonian
+    eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, params(V,hamiltonian,paramsleft, paramsright))
+    Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=toler,krylovdim=krylovdim)
+    convhist.converged<num && @warn "quasiparticle didn't converge $(convhist.normres)"
+
+    return Es,Vs
+end
+
+#give it a vector of momentum points
+function quasiparticle_excitation(hamiltonian::Hamiltonian, momenta::AbstractVector, mpsleft::InfiniteMPS, paramsleft=params(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft;
+    num=1,verbose=Defaults.verbose,kwargs...)
+
+    tasks = map(enumerate(momenta)) do (i,p)
+        @Threads.spawn begin
+            (E,V) = quasiparticle_excitation(hamiltonian, p, mpsleft, paramsleft, mpsright, paramsright; num=num,kwargs...)
+            verbose && @info "Found excitations for p = $(p)"
+            (E,V)
+        end
     end
-    return Ep,Bp,Xp
+
+    fetched = fetch.(tasks);
+
+    Ep = permutedims(reduce(hcat,map(x->x[1][1:num],fetched)));
+    Bp = permutedims(reduce(hcat,map(x->x[2][1:num],fetched)));
+
+    return Ep,Bp
+end
+
+function effective_excitation_hamiltonian(ham::MPOHamiltonian, exci::QP,pars=params(exci,ham))
+    odim = ham.odim;
+
+    Bs = [exci[i] for i in 1:length(exci)];
+    toret = zero.(Bs);
+
+    #do necessary contractions
+    for i = 1:length(exci)
+        for (j,k) in keys(ham,i)
+            @tensor toret[i][-1,-2,-3,-4] +=    leftenv(pars.lpars,i,exci.left_gs)[j][-1,1,2]*
+                                                Bs[i][2,3,-3,4]*
+                                                ham[i,j,k][1,-2,5,3]*
+                                                rightenv(pars.rpars,i,exci.right_gs)[k][4,5,-4]
+
+            # <B|H|B>-<H>
+            en = @tensor    conj(exci.left_gs.AC[i][11,12,13])*
+                            leftenv(pars.lpars,i,exci.left_gs)[j][11,1,2]*
+                            exci.left_gs.AC[i][2,3,4]*
+                            ham[i,j,k][1,12,5,3]*
+                            rightenv(pars.lpars,i,exci.left_gs)[k][4,5,13]
+
+            toret[i] -= Bs[i]*en
+            if i>1 || exci isa InfiniteQP
+                @tensor toret[i][-1,-2,-3,-4] +=    pars.lBs[mod1(i-1,end)][j][-1,1,-3,2]*
+                                                    exci.right_gs.AR[i][2,3,4]*
+                                                    ham[i,j,k][1,-2,5,3]*
+                                                    rightenv(pars.rpars,i,exci.right_gs)[k][4,5,-4]
+            end
+            if i<length(exci.left_gs) || exci isa InfiniteQP
+                @tensor toret[i][-1,-2,-3,-4] +=    leftenv(pars.lpars,i,exci.left_gs)[j][-1,1,2]*
+                                                    exci.left_gs.AL[i][2,3,4]*
+                                                    ham[i,j,k][1,-2,5,3]*
+                                                    pars.rBs[mod1(i+1,end)][k][4,-3,5,-4]
+            end
+        end
+
+    end
+
+    toret_vec = similar(exci);
+    for i in 1:length(exci)
+        toret_vec[i] = toret[i]
+    end
+    return toret_vec
+
 end

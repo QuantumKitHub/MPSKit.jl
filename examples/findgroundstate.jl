@@ -11,7 +11,7 @@ function finalize(iter,state,ham,pars)
         (state,pars) = changebonds(state, ham, OptimalExpand(),pars);
     end
 
-    return (state,pars)
+    return (state,pars,true)
 end
 
 #defining the hamiltonian

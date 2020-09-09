@@ -19,7 +19,7 @@ dat = rand(ComplexF64,10,10); TensorMap(dat,ℂ^10,ℂ^10);
 ```
 Similarly, the following creates a symmetric tensor
 ```julia
-TensorMap(rand,ComplexF64,ℂ[U₁](0=>1)*ℂ[U₁](1//2=>3),ℂ[U₁](1//2=>1,-1//2=>2))
+TensorMap(rand,ComplexF64,Rep[U₁](0=>1)*Rep[U₁](1//2=>3),Rep[U₁](1//2=>1,-1//2=>2))
 ```
 
 TensorKit defines a number of operations on TensorMap objects

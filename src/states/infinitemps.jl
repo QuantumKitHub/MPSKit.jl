@@ -48,6 +48,12 @@ function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, ma
     return InfiniteMPS(ALs,ARs,CRs,ACs)
 end
 
+function TensorKit.normalize!(st::InfiniteMPS)
+    normalize!.(st.CR)
+    normalize!.(st.AC)
+    st
+end
+
 "
     l_RR(state,location)
     Left dominant eigenvector of the AR-AR transfermatrix
@@ -103,3 +109,5 @@ function TensorKit.dot(a::InfiniteMPS,b::InfiniteMPS;krylovdim = 30)
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]
 end
+
+Base.circshift(st::InfiniteMPS,n) = InfiniteMPS(circshift(st.AL,n),circshift(st.AR,n),circshift(st.CR,n),circshift(st.AC,n))

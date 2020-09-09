@@ -15,9 +15,11 @@ function uniform_leftorth(A::PeriodicArray{T,1}; tol::Float64 = Defaults.tolgaug
             alg=Arnoldi(krylovdim = 30, tol = max(delta*delta,tol/10),maxiter=maxiter)
             #Projection of the current guess onto its largest self consistent eigenvector + isolation of the unitary part
 
-            outp = eigsolve(Cs[1], 1, :LM,alg) do x
+            outp = let A=A,Al=Al
+                eigsolve(Cs[1], 1, :LM,alg) do x
                     transfer_left(x,A,Al)
                 end
+            end
 
             Cs[1] = leftorth!(outp[2][1],alg=TensorKit.QRpos())[2]
         end
@@ -60,8 +62,10 @@ function uniform_rightorth(A::PeriodicArray{T,1}; tol::Float64 = Defaults.tolgau
             alg=Arnoldi(krylovdim = 30, tol = max(delta*delta,tol/10),maxiter=maxiter)
             #Projection of the current guess onto its largest self consistent eigenvector + isolation of the unitary part
 
-            outp = eigsolve(Cs[1], 1, :LM,alg) do x
-                transfer_right(x,A,Ar)
+            outp = let A=A,Ar=Ar
+                eigsolve(Cs[1], 1, :LM,alg) do x
+                    transfer_right(x,A,Ar)
+                end
             end
             Cs[1] = rightorth!(outp[2][1],alg=TensorKit.LQpos())[1]
         end
@@ -79,7 +83,9 @@ function uniform_rightorth(A::PeriodicArray{T,1}; tol::Float64 = Defaults.tolgau
         end
 
         #update counters and delta
-        delta = norm(cold-Cs[1])
+        if domain(cold) == domain(Cs[1]) && codomain(cold) == codomain(Cs[1])
+            delta = norm(cold-Cs[1])
+        end
 
         #are we done ?
         iteration += 1

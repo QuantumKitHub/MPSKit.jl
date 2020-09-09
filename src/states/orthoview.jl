@@ -28,7 +28,7 @@ end
 function Base.getindex(v::CRView{S},i::Int)::bond_type(S) where S
     if ismissing(v.parent.CLs[i+1])
         if i == 0 || !ismissing(v.parent.ALs[i])
-            (v.parent.CLs[i+1],temp) = rightorth(_permute_tail(v.parent.AC[i+1]),alg=RQpos())
+            (v.parent.CLs[i+1],temp) = rightorth(_permute_tail(v.parent.AC[i+1]),alg=LQpos())
             v.parent.ARs[i+1] = _permute_front(temp);
         else
             (v.parent.ALs[i],v.parent.CLs[i+1]) = leftorth(v.parent.AC[i],alg=QRpos())
@@ -40,7 +40,7 @@ end
 function Base.setindex!(v::CRView,vec,i::Int)
     if ismissing(v.parent.CLs[i+1])
         if !ismissing(v.parent.ALs[i])
-            (v.parent.CLs[i+1],temp) = rightorth(_permute_tail(v.parent.AC[i+1]),alg=RQpos())
+            (v.parent.CLs[i+1],temp) = rightorth(_permute_tail(v.parent.AC[i+1]),alg=LQpos())
             v.parent.ARs[i+1] = _permute_front(temp);
         else
             (v.parent.ALs[i],v.parent.CLs[i+1]) = leftorth(v.parent.AC[i],alg=QRpos())
@@ -122,6 +122,6 @@ Base.size(psi::Union{CRView},args...) = size(psi.parent.CLs,args...);
 
 Base.IteratorSize(::Type{<:Union{ACView,ALView,ARView,CRView}}) = Base.HasShape{1}()
 Base.IteratorEltype(::Type{<:Union{ACView,ALView,ARView,CRView}}) = Base.HasEltype()
-Base.iterate(view::Union{ACView,ALView,ARView,CRView},istate = 1) = istate > length(view) ? nothing : (view[istate],istate+1)
+Base.iterate(view::Union{ACView,ALView,ARView,CRView},istate = firstindex(view)) = istate > lastindex(view) ? nothing : (view[istate],istate+1)
 
 Base.getindex(psi::Union{ACView,ALView,ARView,CRView},r::AbstractRange{Int64}) = [psi[ri] for ri in r]

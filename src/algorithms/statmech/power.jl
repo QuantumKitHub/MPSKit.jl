@@ -1,12 +1,12 @@
 """
     PowerMethod way of finding the leading boundary mps
 """
-@with_kw struct PowerMethod <: Algorithm
+@with_kw struct PowerMethod{F} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
     orthmaxiter::Int = Defaults.maxiter
-    finalize::Function = (iter,state,ham,pars) -> (state,pars);
+    finalize::F = Defaults._finalize
     verbose::Bool = Defaults.verbose
 end
 
@@ -37,14 +37,16 @@ function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(st
 
         state = MPSMultiline(newAs; leftgauged=true,tol = alg.tol_gauge, maxiter = alg.orthmaxiter)
         galerkin   = calc_galerkin(state, pars)
-        alg.verbose && println("powermethod @iteration $(iter) galerkin = $(galerkin)")
+        alg.verbose && @info "powermethod @iteration $(iter) galerkin = $(galerkin)"
 
-        if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
-            iter>=alg.maxiter && println("powermethod didn't converge $(galerkin)")
+        (state,pars,sc) = alg.finalize(iter,state,H,pars);
+
+        if (galerkin <= alg.tol_galerkin && sc) || iter>=alg.maxiter
+            iter>=alg.maxiter && @warn "powermethod didn't converge $(galerkin)"
             return state, pars, galerkin
         end
 
-        (state,pars) = alg.finalize(iter,state,H,pars);
+
 
         iter += 1
     end

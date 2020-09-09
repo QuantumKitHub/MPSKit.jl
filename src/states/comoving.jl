@@ -45,6 +45,63 @@ end
 
 #todo : add constructor given an infinitemps + length
 
+# allow construction with one large tensorkit space
+function MPSComoving(f, elt,P::ProductSpace, args...; kwargs...)
+    return MPSComoving(f, elt, collect(P), args...; kwargs...)
+end
+
+# allow construction given only a physical space and length
+function MPSComoving(f,elt, N::Int, V::VectorSpace, args...; kwargs...)
+    return MPSComoving(f, elt,fill(V, N), args...; kwargs...)
+end
+
+function MPSComoving(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S,
+                    leftgs::M,
+                    rightgs::M) where {S<:ElementarySpace,M<:InfiniteMPS}
+
+    left = virtualspace(leftgs,0);
+    right = virtualspace(rightgs,length(physspaces));
+
+    N = length(physspaces)
+    virtspaces = Vector{S}(undef, N+1)
+    virtspaces[1] = left
+    for k = 2:N
+        virtspaces[k] = infimum(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
+    end
+    virtspaces[N+1] = right
+    for k = N:-1:2
+        virtspaces[k] = infimum(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
+    end
+    return MPSComoving(f, elt,physspaces, virtspaces,leftgs,rightgs)
+end
+function MPSComoving(f,elt,
+                    physspaces::Vector{<:Union{S,CompositeSpace{S}}},
+                    virtspaces::Vector{S},
+                    leftgs::M,
+                    rightgs::M) where {S<:ElementarySpace,M<:InfiniteMPS}
+    N = length(physspaces)
+    length(virtspaces) == N+1 || throw(DimensionMismatch())
+
+    tensors = [TensorMap(f, elt,virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
+
+    return MPSComoving(leftgs,tensors,rightgs)
+end
+
+#take a window from an infinite mps, and use that as state
+function MPSComoving(state::InfiniteMPS{A,B},len::Int) where {A,B}
+    CLs = Vector{Union{Missing,B}}(missing,len+1)
+    ALs = Vector{Union{Missing,A}}(missing,len)
+    ARs = Vector{Union{Missing,A}}(missing,len)
+    ACs = Vector{Union{Missing,A}}(missing,len)
+
+    ALs.= state.AL[1:len];
+    ARs.= state.AR[1:len];
+    ACs.= state.AC[1:len];
+    CLs.= state.CR[0:len];
+
+    MPSComoving{A,B}(state,ALs,ARs,ACs,CLs,state)
+end
+
 Base.copy(state::MPSComoving{A,B}) where {A,B} = MPSComoving{A,B}(state.left_gs,copy(state.ALs),copy(state.ARs),copy(state.ACs),copy(state.CLs),state.right_gs);
 
 Base.length(state::MPSComoving) = length(state.ALs)
@@ -111,10 +168,11 @@ end
 
 function TensorKit.dot(psi1::MPSComoving, psi2::MPSComoving)
     length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
-    psi1.left == psi2.left || throw(ArgumentError("left InfiniteMPS is different"))
-    psi1.right == psi2.right || throw(ArgumentError("right InfiniteMPS is different"))
+    psi1.left_gs == psi2.left_gs || throw(ArgumentError("left InfiniteMPS is different"))
+    psi1.right_gs == psi2.right_gs || throw(ArgumentError("right InfiniteMPS is different"))
 
-    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]))
+    ρr = transfer_right(r_RR(psi2),psi2.AR[2:end],psi1.AR[2:end]);
+    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]) * ρr)
 end
 
 TensorKit.norm(psi::MPSComoving) = norm(psi.AC[1])

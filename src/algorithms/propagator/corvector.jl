@@ -32,7 +32,7 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
             convhist.converged == 0 && @info "($(i)) failed to converge $(convhist.normres)"
         end
 
-        verbose && println("ddmrg sweep delta : $(delta)")
+        verbose && @info "ddmrg sweep delta : $(delta)"
     end
 
     a = @tensor leftenv(mixedenvs,1,init)[-1,1]*A.AC[1][1,-2,2]*rightenv(mixedenvs,1,init)[2,-3]*conj(init.AC[1][-1,-2,-3])
@@ -74,10 +74,10 @@ function squaredenvs(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,par
     for i in 1:ham.odim
         for j in 1:ham.odim
             @tensor temp[-1 -2 -3;-4]:=leftenv(pars,1,state)[j][1,-3,-4]*conj(leftenv(pars,1,state)[i][1,-2,-1])
-            copyto!(nleft[indmap(i,j)].data,temp.data)
+            copy!(nleft[indmap(i,j)].data,temp.data)
 
             @tensor temp[-1 -2 -3;-4]:=rightenv(pars,length(state),state)[j][-1,-2,1]*conj(rightenv(pars,length(state),state)[i][-4,-3,1])
-            copyto!(nright[indmap(i,j)].data,temp.data)
+            copy!(nright[indmap(i,j)].data,temp.data)
         end
     end
 

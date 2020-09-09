@@ -97,29 +97,9 @@ function exci_transfer_right(RetType,vec,ham::MPOHamiltonian,pos,A,Ab=A)
     return toreturn
 end
 
-#=
-original code :
-(lBsEr,convhist)=linsolve(RecursiveVec(lBs...),RecursiveVec(lBs...),GMRES()) do y
-    x=collect(y.vecs)
-    tor=reduce((a,b)->transfer_left(a,ham,b,mpsright.AR[b],mpsleft.AL[b])*exp(-1im*p),1:len,init=x)
-
-    if(trivial)
-        for i in ids
-            @tensor tor[i][-1,-2,-3,-4]-=tor[i][1,-2,2,-4]*r_RL(mpsleft)[2,1]*l_RL(mpsleft)[-1,-3]
-        end
-    end
-
-    tor=x-tor
-    return  RecursiveVec(tor...)
-end
-lBsE=lBsEr.vecs
-
-but this can be made faster; using the fact that the hamiltonion is upper-triangular, which is what we do here
-=#
-
-function left_excitation_transfer_system(lBs,ham,mpsleft::InfiniteMPS,mpsright::InfiniteMPS,trivial,p)
+function left_excitation_transfer_system(lBs,ham,exci::InfiniteQP)
     len = ham.period
-    found=zero.(lBs)
+    found = zero.(lBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
 
     for i in 1:ham.odim
@@ -128,12 +108,10 @@ function left_excitation_transfer_system(lBs,ham,mpsleft::InfiniteMPS,mpsright::
         #this operation can be sped up by at least a factor 2;  found mostly consists of zeros
         start = found
         for k in 1:len
-            start = exci_transfer_left(start,ham,k,mpsright.AR[k],mpsleft.AL[k])*exp(conj(1im*p))
+            start = exci_transfer_left(start,ham,k,exci.right_gs.AR[k],exci.left_gs.AL[k])*exp(conj(1im*exci.momentum))
 
-            if trivial
-                for l in ids[2:end-1]
-                    @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*r_RL(mpsright,k)[2,1]*l_RL(mpsright,k)[-1,-4]
-                end
+            exci.trivial && for l in ids[2:end-1]
+                @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*r_RL(exci.right_gs,k)[2,1]*l_RL(exci.right_gs,k)[-1,-4]
             end
         end
 
@@ -141,17 +119,18 @@ function left_excitation_transfer_system(lBs,ham,mpsleft::InfiniteMPS,mpsright::
         #otherwise it's easy and we already know found[i]
         if reduce((a,b)->contains(ham,b,i,i),1:len,init=true)
             (found[i],convhist)=linsolve(lBs[i]+start[i],lBs[i]+start[i],GMRES()) do y
-                x=reduce((a,b)->exci_transfer_left(a,ham[b,i,i],mpsright.AR[b],mpsleft.AL[b])*exp(conj(1im*p)),1:len,init=y)
+                x=reduce(1:len,init=y) do a,b
+                    exci_transfer_left(a,ham[b,i,i],exci.right_gs.AR[b],exci.left_gs.AL[b])*exp(conj(1im*exci.momentum))
+                end
 
-                if trivial && i in ids
-                    @tensor x[-1,-2,-3,-4]-=x[1,-2,-3,2]*r_RL(mpsleft)[2,1]*l_RL(mpsleft)[-1,-4]
+                if exci.trivial && i in ids
+                    @tensor x[-1,-2,-3,-4]-=x[1,-2,-3,2]*r_RL(exci.left_gs)[2,1]*l_RL(exci.left_gs)[-1,-4]
                 end
 
                 return y-x
             end
-            if convhist.converged<1
-                @info "left $(i) excitation inversion failed normres $(convhist.normres)"
-            end
+            convhist.converged<1 && @info "left $(i) excitation inversion failed normres $(convhist.normres)"
+
         else
             found[i]=lBs[i]+start[i]
         end
@@ -159,36 +138,36 @@ function left_excitation_transfer_system(lBs,ham,mpsleft::InfiniteMPS,mpsright::
     return found
 end
 
-function right_excitation_transfer_system(rBs,ham,mpsleft,mpsright::InfiniteMPS,trivial,p)
+function right_excitation_transfer_system(rBs,ham,exci::InfiniteQP)
     len = ham.period
-    found=zero.(rBs)
+    found = zero.(rBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
     for i in ham.odim:-1:1
 
         start = found
         for k in len:-1:1
-            start = exci_transfer_right(start,ham,k,mpsleft.AL[k],mpsright.AR[k])*exp(1im*p)
+            start = exci_transfer_right(start,ham,k,exci.left_gs.AL[k],exci.right_gs.AR[k])*exp(1im*exci.momentum)
 
-            if trivial
-                for l in ids[2:end-1]
-                    @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*l_LR(mpsright,k)[2,1]*r_LR(mpsright,k)[-1,-4]
-                end
+            exci.trivial && for l in ids[2:end-1]
+                @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*l_LR(exci.right_gs,k)[2,1]*r_LR(exci.right_gs,k)[-1,-4]
             end
+
         end
 
         if reduce((a,b)->contains(ham,b,i,i),1:len,init=true)
             (found[i],convhist)=linsolve(rBs[i]+start[i],rBs[i]+start[i],GMRES()) do y
-                x=reduce((a,b)->exci_transfer_right(a,ham[b,i,i],mpsleft.AL[b],mpsright.AR[b])*exp(1im*p),len:-1:1,init=y)
+                x=reduce(len:-1:1,init=y) do a,b
+                    exci_transfer_right(a,ham[b,i,i],exci.left_gs.AL[b],exci.right_gs.AR[b])*exp(1im*exci.momentum)
+                end
 
-                if trivial && i in ids
-                    @tensor x[-1,-2,-3,-4]-=x[1,-2,-3,2]*l_LR(mpsright)[2,1]*r_LR(mpsright)[-1,-4]
+                if exci.trivial && i in ids
+                    @tensor x[-1,-2,-3,-4]-=x[1,-2,-3,2]*l_LR(exci.right_gs)[2,1]*r_LR(exci.right_gs)[-1,-4]
                 end
 
                 return y-x
             end
-            if convhist.converged<1
-                @info "right $(i) excitation inversion failed normres $(convhist.normres)"
-            end
+            convhist.converged<1 && @info "right $(i) excitation inversion failed normres $(convhist.normres)"
+
         else
             found[i]=rBs[i]+start[i]
         end

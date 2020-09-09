@@ -1,6 +1,6 @@
 using MPSKit,TensorKit,Test
 
-#let
+let
     ham = nonsym_ising_ham(lambda=4.0);
     gs = FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
     (gs,pars,_) = find_groundstate(gs,ham,Dmrg2(trscheme=truncdim(10)));
@@ -14,11 +14,10 @@ using MPSKit,TensorKit,Test
 
     predicted = [1/(v+eta-polepos) for v in vals];
 
-    data = similar(predicted);
-    for (i,v) in enumerate(vals)
-	global data
-        (data[i],_) = dynamicaldmrg(gs,v+eta,ham,verbose=false)
+    data = map(vals) do v
+        (v,_) = dynamicaldmrg(gs,v+eta,ham,verbose=false)
+        v
     end
 
     @test norm(data-predicted) ≈ 0 atol=1e-8
-#end
+end

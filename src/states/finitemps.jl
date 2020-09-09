@@ -51,8 +51,8 @@ mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
             ismissing(CLs[i])  || _lastspace(CLs[i]) == dual(D1) || throw(SectorMismatch("CL doesn't fit"))
             ismissing(CLs[i+1]) || _firstspace(CLs[i+1]) == dual(D2) || throw(SectorMismatch("CL doesn't fit"))
 
-            i != 1 || D1 == oneunit(D1) || throw(ArgumentError("finite mps should start with a trivial leg"))
-            i != length(ACs) || dual(D2) == oneunit(dual(D2)) || throw(ArgumentError("finite mps should end with a trivial leg"))
+            #i != 1 || D1 == oneunit(D1) || throw(ArgumentError("finite mps should start with a trivial leg"))
+            #i != length(ACs) || dual(D2) == oneunit(dual(D2)) || throw(ArgumentError("finite mps should end with a trivial leg"))
         end
 
         return new{A,B}(ALs,ARs,ACs,CLs);
@@ -76,11 +76,11 @@ function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, max
     virtspaces = Vector{S}(undef, N+1)
     virtspaces[1] = left
     for k = 2:N
-        virtspaces[k] = infinum(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
+        virtspaces[k] = infimum(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
     end
     virtspaces[N+1] = right
     for k = N:-1:2
-        virtspaces[k] = infinum(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
+        virtspaces[k] = infimum(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
     end
     return FiniteMPS(f, elt,physspaces, virtspaces)
 end
@@ -185,8 +185,8 @@ end
 function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
     #todo : rewrite this without having to gauge
     length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
-
-    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]))
+    ρr = transfer_right(r_RR(psi2),psi2.AR[2:end],psi1.AR[2:end]);
+    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]) * ρr)
 end
 
 #todo : rewrite this without having to gauge

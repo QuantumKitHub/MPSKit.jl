@@ -1,11 +1,8 @@
 module MPSKit
-    using TensorKit,KrylovKit,Parameters, Base.Threads
-    using OptimKit
+    using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit
+
     using LinearAlgebra:diag,Diagonal;
-    #reexport optimkit things
-    #export GradientDescent, ConjugateGradient, LBFGS
-    #export FletcherReeves, HestenesStiefel, PolakRibierePolyak, HagerZhang, DaiYuan
-    #export HagerZhangLineSearch
+    import LinearAlgebra
 
     #bells and whistles for mpses
     export InfiniteMPS,FiniteMPS,MPSComoving,PeriodicArray,MPSMultiline
@@ -15,7 +12,7 @@ module MPSKit
     export hamcat
 
     #useful utility functions?
-    export spinmatrices,add_util_leg,full,nonsym_spintensors
+    export spinmatrices,add_util_leg,full,nonsym_spintensors,nonsym_bosonictensors
     export max_Ds,virtualspace
 
     #hamiltonian things
@@ -33,6 +30,7 @@ module MPSKit
     export changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
     export entropy
     export dynamicaldmrg
+    export fidelity_susceptibility
 
     #models
     export nonsym_xxz_ham,nonsym_ising_ham,su2_xxx_ham,nonsym_ising_mpo,u1_xxz_ham,su2u1_grossneveu
@@ -44,6 +42,7 @@ module MPSKit
         const tolgauge = 1e-14
         const tol = 1e-12
         const verbose = true
+        _finalize(iter,state,opp,pars) = (state,pars,true);
     end
 
     include("utility/periodicarray.jl")
@@ -57,6 +56,7 @@ module MPSKit
     include("states/finitemps.jl")
     include("states/comoving.jl")
     include("states/orthoview.jl")
+    include("states/quasiparticle_state.jl")
 
     abstract type Operator end
     abstract type Hamiltonian <: Operator end
@@ -73,6 +73,7 @@ module MPSKit
     include("environments/mpohaminfenv.jl")
     include("environments/simpleenv.jl")
     include("environments/overlapenv.jl")
+    include("environments/qpenv.jl")
 
     abstract type Algorithm end
 
@@ -99,6 +100,8 @@ module MPSKit
 
     include("algorithms/statmech/vumps.jl")
     include("algorithms/statmech/power.jl")
+
+    include("algorithms/fidelity_susceptibility.jl")
 
     include("models/xxz.jl")
     include("models/ising.jl")

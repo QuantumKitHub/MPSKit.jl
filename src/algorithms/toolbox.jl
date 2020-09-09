@@ -32,3 +32,8 @@ function splitham(ham::MPOHamiltonian)
 end
 
 infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(Matrix{eltype(ham[1,1,1])},oneunit(sp)*sp,oneunit(sp)*sp),(1,2,4),(3,)) for sp in ham.pspaces]
+
+calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,pars) = norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc, state, pars))
+"calculates the galerkin error"
+calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, pars) = maximum([calc_galerkin(state,loc,pars) for loc in 1:length(state)])
+calc_galerkin(state::MPSMultiline, pars) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col, state, pars)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
