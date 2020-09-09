@@ -5,7 +5,7 @@ function correlation_length(state::InfiniteMPS; otherstate=state, tol = 1e-8, ex
    #the first eigenvalue tells us what angle to search at for the leading nontrivial eigenvalue
     init = TensorMap(rand, ComplexF64, space(ALs2[1],1)*exi_space,space(ALs1[1],1))
 
-    eigenvals, _ = eigsolve(init, 20, :LM, tol=tol) do x
+    eigenvals, _ = eigsolve(init, max_sinvals, :LM, tol=tol) do x
 		return transfer_left(x, ALs1, ALs2)
     end
 
