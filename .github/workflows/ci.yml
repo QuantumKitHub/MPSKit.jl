@@ -11,7 +11,7 @@ jobs:
       matrix:
         version:
           - '1.4'
-          - '1.5'
+          - '1' # automatically expands to the latest stable release of Julia
           - 'nightly'
         os:
           - ubuntu-latest
