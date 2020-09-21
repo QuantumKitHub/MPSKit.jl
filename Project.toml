@@ -11,11 +11,11 @@ TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
 
 
 [compat]
-KrylovKit = "0.4, 0.5"
-OptimKit = "0.1, 0.2, 0.3"
+KrylovKit = "0.4 - 0.5"
+OptimKit = "0.1 - 0.3"
 Parameters = "0.12"
 TensorKit = "0.7"
-TensorKitManifolds = "0.3, 0.4, 0.5"
+TensorKitManifolds = "0.3 - 0.5"
 MPSKitModels = "0.1.1"
 julia = "1.4"
 
