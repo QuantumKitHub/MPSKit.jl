@@ -1,4 +1,4 @@
-using MPSKit,TensorKit
+using MPSKit,MPSKitModels,TensorKit
 
 mpo = nonsym_ising_mpo();
 state = InfiniteMPS([ℂ^2],[ℂ^10]);

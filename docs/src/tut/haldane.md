@@ -3,7 +3,7 @@
 In this tutorial we will calculate the haldane gap (the energy gap in spin 1 heisenberg) in 2 different ways. To follow the tutorial you need the following packages.
 
 ```julia
-using MPSKit,TensorKit,Plots
+using MPSKit,MPSKitModels,TensorKit,Plots
 ```
 
 We will enforce the su(2) symmetry, our hamiltonian will therefore be

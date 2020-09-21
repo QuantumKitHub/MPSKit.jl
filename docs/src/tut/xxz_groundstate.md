@@ -3,7 +3,7 @@
 In this file we will give step by step instructions to analyze the spin 1/2 xxz model.
 The necessary packages to follow this tutorial are :
 ```julia
-using MPSKit,TensorKit,Plots,LinearAlgebra
+using MPSKit,MPSKitModels,TensorKit,Plots,LinearAlgebra
 ```
 
 ## Failure

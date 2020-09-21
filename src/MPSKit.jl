@@ -1,5 +1,5 @@
 module MPSKit
-    using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit
+    using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit,MPSKitModels
 
     using LinearAlgebra:diag,Diagonal;
     import LinearAlgebra
@@ -31,9 +31,6 @@ module MPSKit
     export entropy
     export dynamicaldmrg
     export fidelity_susceptibility
-
-    #models
-    export nonsym_xxz_ham,nonsym_ising_ham,su2_xxx_ham,nonsym_ising_mpo,u1_xxz_ham,su2u1_grossneveu
 
     #default settings
     module Defaults
@@ -102,8 +99,4 @@ module MPSKit
     include("algorithms/statmech/power.jl")
 
     include("algorithms/fidelity_susceptibility.jl")
-
-    include("models/xxz.jl")
-    include("models/ising.jl")
-    include("models/grossneveu.jl")
 end

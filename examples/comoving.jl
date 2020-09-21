@@ -1,4 +1,4 @@
-using MPSKit,TensorKit,Plots
+using MPSKit,MPSKitModels,TensorKit,Plots
 
 let
     #defining the hamiltonian

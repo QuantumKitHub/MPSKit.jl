@@ -1,4 +1,4 @@
-using MPSKit,TensorKit,Test
+using MPSKit,MPSKitModels,TensorKit,Test
 
 let
     ham = nonsym_ising_ham(lambda=4.0);

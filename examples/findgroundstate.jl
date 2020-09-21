@@ -1,4 +1,4 @@
-using MPSKit,TensorKit,Test
+using MPSKit,MPSKitModels,TensorKit,Test
 
 #we pass this function to dmrg, it gets executed once per iteration
 function finalize(iter,state,ham,pars)

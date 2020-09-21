@@ -1,4 +1,4 @@
-using MPSKit,TensorKit,Test
+using MPSKit,MPSKitModels,TensorKit,Test
 
 
 function bondmanage(state,ham,pars)

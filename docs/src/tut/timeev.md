@@ -3,7 +3,7 @@
 In this tutorial we will try to reproduce the results from [this paper](https://arxiv.org/pdf/1206.2505.pdf). The needed packages are
 
 ```julia
-using MPSKit,TensorKit,ProgressMeter
+using MPSKit,MPSKitModels,TensorKit,ProgressMeter
 ```
 
 Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the loschmidth echo. This quantity is given by ``L(t) = \frac{-2}{N} ln(| < \psi(t) | \psi(0) > |) `` where N is the system size. One typically starts from a groundstate and then quenches the hamiltonian to a different point. Non analycities in the loschmidth echo are called 'dynamical quantum phase transitions'.
