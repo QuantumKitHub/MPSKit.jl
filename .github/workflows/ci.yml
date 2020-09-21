@@ -8,7 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.version == 'nightly' }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         version:
           - '1.4'
