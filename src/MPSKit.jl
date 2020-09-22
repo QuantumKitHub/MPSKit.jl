@@ -1,5 +1,5 @@
 module MPSKit
-    using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit,MPSKitModels
+    using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit
 
     using LinearAlgebra:diag,Diagonal;
     import LinearAlgebra
