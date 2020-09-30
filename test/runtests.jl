@@ -361,3 +361,16 @@ end
     end
 
 end
+
+@testset "correlation length" begin
+    lambdas = 6:-2:2;
+
+    corrlengths = map(lambdas) do lambda
+        st = InfiniteMPS([ℂ^2],[ℂ^10]);
+        th = nonsym_ising_ham(lambda=lambda);
+        (st,_) = find_groundstate(st,th,Vumps(verbose=false))
+        correlation_length(st)[1]
+    end
+
+    @test issorted(corrlengths);
+end
