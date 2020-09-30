@@ -363,14 +363,15 @@ end
 end
 
 @testset "correlation length" begin
-    lambdas = 6:-2:2;
 
-    corrlengths = map(lambdas) do lambda
-        st = InfiniteMPS([ℂ^2],[ℂ^10]);
-        th = nonsym_ising_ham(lambda=lambda);
-        (st,_) = find_groundstate(st,th,Vumps(verbose=false))
-        correlation_length(st)[1]
-    end
+    st = InfiniteMPS([ℂ^2],[ℂ^10]);
+    th = nonsym_ising_ham();
+    (st,_) = find_groundstate(st,th,Vumps(verbose=false))
+    len_crit = correlation_length(st)[1]
 
-    @test issorted(corrlengths);
+    th = nonsym_ising_ham(lambda=4);
+    (st,_) = find_groundstate(st,th,Vumps(verbose=false))
+    len_gapped = correlation_length(st)[1]
+
+    @test len_crit > len_gapped;
 end
