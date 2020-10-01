@@ -52,27 +52,33 @@ allow passing in
         - 2leg tensors
         - only mpo tensors
 =#
-function MPOHamiltonian(x::AbstractArray{T,3}) where T
-    # turn 2leg tensors into 4leg mpos
-    x = map(t-> t isa MPSBondTensor ? permute(add_util_leg(t),(1,2),(4,3)) : t,x);
 
-    # at this point x should contain at least one mpo type
-    mpos = typeof.(Iterators.filter(t-> t isa MPOTensor,x[:]));
-    isempty(mpos) && throw(ArgumentError("should have at least one mpo element"))
+# bit of a helper - accept non strict typed data
+MPOHamiltonian(x::AbstractArray{Any,3}) = MPOHamiltonian(union_split(x));
+#another helper - artificially create a union and reuse next constructor
+MPOHamiltonian(x::AbstractArray{T,3}) where T<: TensorMap = MPOHamiltonian(convert(AbstractArray{Union{T,eltype(T)},3},x));
+function MPOHamiltonian(x::AbstractArray{T,3}) where T<:Union{A} where A
+    (Sp,M,E) = _parsetypes(union_types(T));
 
-    (M,_) = iterate(mpos);
-    E = eltype(M);
+    nx = similar(x,Union{E,M});
 
-    #maybe we can relax this requirement using promote_type
-    reduce((a,b) -> a && (b==M),mpos,init=true) || throw(ArgumentError("all mpo's should be of the same type"))
+    for (i,t) in enumerate(x)
+        if t isa MPSBondTensor
+            nx[i] = permute(add_util_leg(t),(1,2),(4,3))
+        elseif ismissing(t)
+            nx[i] = zero(E)
+        elseif t isa Number
+            nx[i] = convert(E,t);
+        else
+            nx[i] = t;
+        end
+    end
 
-    #we make sure that all numbers are of the correct type, and if no number/mpotensor is found we assume it to be missing -> 0
-    sanitized = map(t-> t isa MPOTensor ? t : (t isa Number ? promote_type(t,E) : zero(E)),x);
-    MPOHamiltonian(Array{Union{E,M},3}(sanitized))
+    MPOHamiltonian{Sp,M,E}(nx);
 end
 
 #default constructor
-function MPOHamiltonian(x::AbstractArray{Union{E,M},3})  where {Sp,M<:MPOTensor{Sp},E<:Number}
+function MPOHamiltonian{Sp,M,E}(x::AbstractArray{Union{E,M},3}) where {Sp,M<:MPOTensor{Sp},E<:Number}
     (period,numrows,numcols) = size(x);
 
     E == eltype(M) || throw(ArgumentError("scalar type should match mpo eltype $E ≠ $(eltype(M))"))
@@ -118,7 +124,6 @@ function MPOHamiltonian(x::AbstractArray{Union{E,M},3})  where {Sp,M<:MPOTensor{
     return MPOHamiltonian{Sp,M,E}(PeriodicArray(x[:,:,:]),ndomspaces,npspaces)
 end
 
-
 #allow passing in regular tensormaps
 MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)));
 
@@ -142,6 +147,20 @@ function MPOHamiltonian(x::Array{T,1}) where T<:MPOTensor{Sp} where Sp
     ndomspace[1,:] = domspaces[:]
 
     return MPOHamiltonian{Sp,T,eltype(T)}(nOs,ndomspace,PeriodicArray(pspaces))
+end
+
+function _parsetypes(d::Tuple)
+    a = Base.first(d);
+    b = Base.tail(d);
+
+    if a <: MPOTensor
+        return spacetype(a),a,eltype(a);
+    elseif a <: MPSBondTensor
+        return spacetype(a),tensormaptype(spacetype(a),2,2,eltype(a)),eltype(a)
+    else
+        @assert !isempty(b)
+        return _parsetypes(b);
+    end
 end
 
 #utility functions for finite mpo

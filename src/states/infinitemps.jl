@@ -21,8 +21,8 @@ Base.similar(st::InfiniteMPS) = InfiniteMPS(similar(st.AL),similar(st.AR),simila
 
 virtualspace(psi::InfiniteMPS, n::Integer) = _firstspace(psi.AL[n+1])
 
-function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};eltype=Defaults.eltype,kwargs...) where S
-    InfiniteMPS([TensorMap(rand,eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)];kwargs...)
+function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};kwargs...) where S
+    InfiniteMPS([TensorMap(rand,Defaults.eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)];kwargs...)
 end
 
 #allow users to pass in simple arrays
