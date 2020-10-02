@@ -127,3 +127,11 @@ function reginv(m, delta=zero(eltype(m)))
     minv = Vdg' * Sinv * U'
     return minv
 end
+
+function union_split(a::AbstractArray)
+    T = reduce((a,b)->Union{a,b},typeof.(a))
+    nA = similar(a,T);
+    copy!(nA,a)
+end
+union_types(x::Union) = (x.a, union_types(x.b)...)
+union_types(x::Type) = (x,)
