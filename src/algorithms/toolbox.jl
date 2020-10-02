@@ -37,3 +37,11 @@ calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,pars) = norm(l
 "calculates the galerkin error"
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, pars) = maximum([calc_galerkin(state,loc,pars) for loc in 1:length(state)])
 calc_galerkin(state::MPSMultiline, pars) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col, state, pars)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
+
+
+"
+allows exact two point functions of operators instead of eigenvalues of TM which gives the leading order infinte range behavior.
+"
+function twopoint()
+	throw("WIP BEN BEZIG AAN IETS VOOR DAAN")
+end
