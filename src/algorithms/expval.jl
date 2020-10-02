@@ -8,6 +8,22 @@ function expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opps:
         tr(t'*permute(opp*permute(t,TensorKit.allind(t)[2:end-1],(1,TensorKit.numind(t))),(TensorKit.numind(t)-1,TensorKit.allind(t)[1:end-2]...),(TensorKit.numind(t),)))
     end
 end
+"""
+calculates the expectation value of op = op1*op2*op3*... (ie an N site operator) starting at site at
+"""
+function expectation_value(state::InfiniteMPS,op::AbstractArray{<:AbstractTensorMap}, at::Int)
+    if length(op) == 1
+        return (@tensor state.AC[at][1,2,5]*op[1][3,4,3,2]*conj(state.AC[at][1,4,5]))
+    else
+        @tensor tmp[-1, -2, -3, -4] := state.AC[at+0][1,2,-4]*op[1][-1,3,-3,2]*conj(state.AC[at+0][1,3,-2])
+        for index in 2:length(op)
+            @tensor tmp[-1, -2, -3, -4] := tmp[-1,1,2,4]*state.AR[at+index-1][4,5,-4]*op[index][2,3,-3,5]*conj(state.AR[at+index-1][1,3,-2])
+        end
+        return( @tensor tmp[1,2,1,2] )
+    end
+end
+
+
 
 """
     calculates the expectation value for the given operator/hamiltonian

@@ -375,3 +375,16 @@ end
 
     @test len_crit > len_gapped;
 end
+
+
+@testset "expectation value" begin
+    st = InfiniteMPS([ℂ^2],[ℂ^10]);
+    th = nonsym_ising_ham(lambda=4);
+    (st,_) = find_groundstate(st,th,Vumps(verbose=false))
+
+    sz =TensorMap([1 0;0 -1],ℂ^1*ℂ^2,ℂ^1*ℂ^2)
+
+    @test isapprox(expectation_value(st, [sz    ], 1) , 0 ,atol = 1e-2)
+    @test isapprox(expectation_value(st, [sz, sz], 1) , 0.06262279144530396 ,atol = 1e-2)
+    @test isapprox(expectation_value(st, [sz, sz], 2) , 0.06262279144530396 ,atol = 1e-2)
+end
