@@ -50,8 +50,8 @@ struct GradientGrassmann <: Algorithm
     end
 end
 
-function find_groundstate(state, H::Hamiltonian, alg::GradientGrassmann,
-                          pars=params(state, H))
+function find_groundstate(state::S, H::HT, alg::GradientGrassmann,
+                          pars::P=params(state, H))::Tuple{S,P,Float64} where {S,HT<:Hamiltonian,P}
     normalize!(state)
     res = optimize(GrassmannMPS.fg, (state, pars), alg.method;
                    transport! = GrassmannMPS.transport!,

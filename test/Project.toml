@@ -3,8 +3,10 @@ MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
 OptimKit = "77e91f04-9b3b-57a6-a776-40b61faaebe0"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 
 [compat]
+MPSKitModels = "0.1 - 1"
 OptimKit = "0.1 - 1"
 TensorKit = "0.7 - 1"
-MPSKitModels = "0.1 - 1"
+TestExtras = "0.1 - 1"

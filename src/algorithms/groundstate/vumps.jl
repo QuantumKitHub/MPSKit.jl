@@ -15,7 +15,7 @@ end
 
     find the groundstate for ham using algorithm alg
 "
-function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,pars::P=params(state,H)) where {A,B,P}
+function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,pars::P=params(state,H))::Tuple{InfiniteMPS{A,B},P,Float64} where {A,B,P}
     galerkin::Float64  = 1+alg.tol_galerkin
     iter      = 1
 

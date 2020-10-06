@@ -10,7 +10,7 @@ end
 
 function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
     tol=alg.tol;maxiter=alg.maxiter
-    iter = 0; delta = 2*tol
+    iter = 0; delta::Float64 = 2*tol
 
     while iter < maxiter && delta > tol
         delta=0.0
@@ -50,7 +50,7 @@ end
 
 function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
     tol=alg.tol;maxiter=alg.maxiter
-    iter = 0; delta = 2*tol
+    iter = 0; delta::Float64 = 2*tol
 
     while iter < maxiter && delta > tol
         delta=0.0
