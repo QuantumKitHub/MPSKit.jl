@@ -29,8 +29,8 @@ The typical way to find excited states is to minmize the energy while adding an 
 In steven white's original DMRG paper it was remarked that the S=1 excitations correspond to edge states, and that one should define the haldane gap as the difference in energy between the S=2 and S=1 states. This can be done as follows.
 
 ```julia
-(En_1,st_1) = quasiparticle_excitation(ham,gs,pars,excitation_space = Rep[SU₂](1=>1))
-(En_2,st_2) = quasiparticle_excitation(ham,gs,pars,excitation_space = Rep[SU₂](2=>1))
+(En_1,st_1) = quasiparticle_excitation(ham,gs,pars,sector = SU₂(1))
+(En_2,st_2) = quasiparticle_excitation(ham,gs,pars,sector = SU₂(2))
 finite_haldane_gap = En_2[1]-En_1[1]
 ```
 
@@ -60,13 +60,13 @@ One difference with the finite size case is that we not only can - but also have
 
 ```julia
 kspace = 0:0.1:pi
-(Energies,_) = quasiparticle_excitation(ham,kspace,gs,pars,excitation_space=Rep[SU₂](1=>1));
+(Energies,_) = quasiparticle_excitation(ham,kspace,gs,pars,sector=SU₂(1));
 ```
 ![](haldane_dispersion.png)
 
 The minimima sits at k = pi, with corresponding value
 
 ```julia
-(En,_) = quasiparticle_excitation(ham,Float64(pi),gs,pars,excitation_space=Rep[SU₂](1=>1));
+(En,_) = quasiparticle_excitation(ham,Float64(pi),gs,pars,sector=SU₂(1));
 @assert En[1]  ≈ 0.41047925 atol=1e-4
 ```

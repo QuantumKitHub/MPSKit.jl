@@ -9,9 +9,9 @@ include("excitransfers.jl")
     quasiparticle_excitation calculates the energy of the first excited state at momentum 'moment'
 "
 function quasiparticle_excitation(hamiltonian::Hamiltonian, momentum::Float64, mpsleft::InfiniteMPS, paramsleft=params(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, paramsright=paramsleft;
-    excitation_space=oneunit(space(mpsleft.AL[1],1)), num=1 , toler = 1e-10,krylovdim=30)
+    sector = first(sectors(oneunit(virtualspace(mpsleft,1)))), num=1 , toler = 1e-10,krylovdim=30)
 
-    V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space=excitation_space,momentum=momentum);
+    V_initial = rand_quasiparticle(mpsleft,mpsright;sector=sector,momentum=momentum);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, params(V,hamiltonian,paramsleft, paramsright))
@@ -23,9 +23,9 @@ end
 
 #pretty much identical to the infinite mps code, except for the lack of momentum label
 function quasiparticle_excitation(hamiltonian::Hamiltonian, mpsleft::FiniteMPS, paramsleft=params(mpsleft,hamiltonian), mpsright::FiniteMPS=mpsleft, paramsright=paramsleft;
-    excitation_space=oneunit(space(mpsleft.AL[1],1)),num=1, toler = 1e-10,krylovdim=30)
+    sector = first(sectors(oneunit(virtualspace(mpsleft,1)))),num=1, toler = 1e-10,krylovdim=30)
 
-    V_initial = rand_quasiparticle(mpsleft,mpsright;excitation_space=excitation_space);
+    V_initial = rand_quasiparticle(mpsleft,mpsright;sector=sector);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, params(V,hamiltonian,paramsleft, paramsright))
