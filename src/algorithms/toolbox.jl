@@ -41,7 +41,7 @@ calc_galerkin(state::MPSMultiline, pars) = maximum([norm(leftnull(state.AC[row+1
 "
 Calculates the (partial) transfer spectrum
 "
-function transfer_spectrum(above::InfiniteMPS;below=above,tol=Defaults.tol,num_vals = 20,sector=first(sectors(virtualspace(above,1))))
+function transfer_spectrum(above::InfiniteMPS;below=above,tol=Defaults.tol,num_vals = 20,sector=first(sectors(oneunit(virtualspace(above,1)))))
     init = TensorMap(rand, eltype(above), virtualspace(below,0)*ℂ[sector => 1],virtualspace(above,0))
 
     num_vals = min(dim(virtualspace(above,0)*virtualspace(below,0)),num_vals); # we can ask at most this many values
