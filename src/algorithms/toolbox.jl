@@ -1,5 +1,5 @@
 "calculates the entropy of a given state"
-entropy(state::InfiniteMPS) = [sum([-j^2*2*log(j) for j in diag(convert(Array,tsvd(state.CR[i])[2]))]) for i in 1:length(state)]
+entropy(state::InfiniteMPS) = [sum([-j^2*2*log(j) for j in entanglement_spectrum(state,i)]) for i in 1:length(state)]
 
 "
 given a thermal state, you can map it to an mps by fusing the physical legs together
@@ -38,6 +38,29 @@ calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,pars) = norm(l
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, pars) = maximum([calc_galerkin(state,loc,pars) for loc in 1:length(state)])
 calc_galerkin(state::MPSMultiline, pars) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col, state, pars)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
 
+"
+Calculates the (partial) transfer spectrum
+"
+function transfer_spectrum(above::InfiniteMPS;below=above,tol=Defaults.tol,num_vals = 20,sector=first(sectors(virtualspace(above,1))))
+    init = TensorMap(rand, eltype(above), virtualspace(below,0)*ℂ[sector => 1],virtualspace(above,0))
+
+    num_vals = min(dim(virtualspace(above,0)*virtualspace(below,0)),num_vals); # we can ask at most this many values
+
+    eigenvals, eigenvecs,convhist = eigsolve(x->transfer_left(x, above.AL, below.AL) , init, num_vals, :LM, tol=tol)
+    convhist.converged < num_vals && @warn "correlation length failed to converge $(convhist.normres)"
+
+    return eigenvals
+end
+
+"
+Returns the (full) entanglement spectrum at site I
+"
+function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,MPSComoving},site::Int=0)
+    @assert site<=length(st)
+
+    (U,S,V) = tsvd(st.CR[site]);
+    diag(convert(Array,S))
+end
 
 "
 allows exact two point functions of operators instead of eigenvalues of TM which gives the leading order infinte range behavior.

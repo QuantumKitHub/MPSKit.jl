@@ -1,28 +1,26 @@
-function correlation_length(state::InfiniteMPS; otherstate=state, tol = 1e-8, sector = one(sectortype(virtualspace(state,1))), tol_angle = 0.1, max_sinvals = 20)
+function correlation_length(above::InfiniteMPS; tol_angle=0.1,below=above,kwargs...)
+    #get the transfer spectrum
+    spectrum = transfer_spectrum(above;below=above,kwargs...);
 
-   #the first eigenvalue tells us what angle to search at for the leading nontrivial eigenvalue
-    init = TensorMap(rand, eltype(state), virtualspace(otherstate,0)*ℂ[sector => 1],virtualspace(state,0))
+    correlation_length(spectrum,above;tol_angle=tol_angle,below=below,kwargs...)
+end
 
-    #this is potentially still wrong. The idea is that we can at most ask D evals, with D the dimension of the transfer matrix
-    numvals = min(dim(virtualspace(state,0)*virtualspace(state,0)),max_sinvals);
+function correlation_length(spectrum,above::InfiniteMPS; tol_angle=0.1,below=above,kwargs...)
+    #we also define a correlation length between different states
+    (above === below) && (spectrum = spectrum[2:end])
 
-    eigenvals, eigenvecs,convhist = eigsolve(init, numvals, :LM, tol=tol) do x
-		return transfer_left(x, state.AL, otherstate.AL)
-    end
-    convhist.converged < numvals && @warn "correlation length failed to converge $(convhist.normres)"
+    best_angle = mod1(angle(spectrum[1]), 2*pi)
+    ind_at_angle = findall(x->x<tol_angle || abs(x-2*pi)<tol_angle, mod1.(angle.(spectrum).-best_angle, 2*pi))
+    spectrum_at_angle = spectrum[ind_at_angle]
 
-    (state === otherstate) && (eigenvals = eigenvals[2:end])
+    lambdas = -log.(abs.(spectrum_at_angle));
 
-    best_angle = mod1(angle(eigenvals[1]), 2*pi)
-    ind_at_angle = findall(x->x<tol_angle || abs(x-2*pi)<tol_angle, mod1.(angle.(eigenvals).-best_angle, 2*pi))
-    eigenvals_at_angle = eigenvals[ind_at_angle]
+    corlength = 1/first(lambdas);
 
-    lambda2 = -log(abs(eigenvals_at_angle[1]))
-
-    lambda3 = Inf;
-	if length(eigenvals_at_angle) > 1
-        lambda3 = -log(abs(eigenvals_at_angle[2]))
+    gap = Inf;
+    if length(lambdas) > 2
+        gap = lambdas[2]-lambdas[1]
     end
 
-    return 1/lambda2, lambda3-lambda2, best_angle,eigenvals
+    return corlength, gap, best_angle
 end

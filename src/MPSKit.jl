@@ -26,7 +26,7 @@ module MPSKit
     export leading_boundary, PowerMethod
     export quasiparticle_excitation, correlation_length
     export timestep,Tdvp,Tdvp2
-    export splitham,mpo2mps,mps2mpo,infinite_temperature
+    export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum
     export changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
     export entropy
     export dynamicaldmrg

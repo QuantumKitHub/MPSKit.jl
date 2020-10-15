@@ -407,18 +407,22 @@ end
 
 end
 
-@timedtestset "correlation length" begin
+#stub tests
+@timedtestset "correlation length / entropy" begin
 
     st = InfiniteMPS([ℂ^2],[ℂ^10]);
     th = nonsym_ising_ham();
     (st,_) = find_groundstate(st,th,Vumps(verbose=false))
     len_crit = correlation_length(st)[1]
+    entrop_crit = entropy(st);
 
     th = nonsym_ising_ham(lambda=4);
     (st,_) = find_groundstate(st,th,Vumps(verbose=false))
     len_gapped = correlation_length(st)[1]
+    entrop_gapped = entropy(st);
 
     @test len_crit > len_gapped;
+    @test entrop_crit > entrop_gapped;
 end
 
 @timedtestset "expectation value" begin
