@@ -18,7 +18,7 @@ Base.eltype(arr::InfiniteMPS) = eltype(arr.AL[1])
 Base.copy(m::InfiniteMPS) = InfiniteMPS(copy(m.AL),copy(m.AR),copy(m.CR),copy(m.AC));
 Base.repeat(m::InfiniteMPS,i::Int) = InfiniteMPS(repeat(m.AL,i),repeat(m.AR,i),repeat(m.CR,i),repeat(m.AC,i));
 Base.similar(st::InfiniteMPS) = InfiniteMPS(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
-
+TensorKit.norm(st::InfiniteMPS) = norm(st.AC[1]);
 virtualspace(psi::InfiniteMPS, n::Integer) = _firstspace(psi.AL[n+1])
 
 function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};kwargs...) where S
