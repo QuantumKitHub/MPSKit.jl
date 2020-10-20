@@ -6,9 +6,9 @@
 end
 
 
-function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
+function changebonds!(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
     #determine optimal expansion spaces around bond i
-    exps = map(1:length(state)) do i
+    pexp = PeriodicArray(map(1:length(state)) do i
         ACAR = MPSKit._permute_front(state.AC[i])*MPSKit._permute_tail(state.AR[i+1])
         AC2 = ac2_prime(ACAR,i,state,pars)
 
@@ -21,9 +21,7 @@ function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=
         (U,S,V) = tsvd(intermediate,trunc=alg.trscheme,alg=TensorKit.SVD())
 
         (NL*U,V*NR)
-    end
-
-    pexp = MPSKit.PeriodicArray(collect(exps));
+    end)
 
     #do the actual expansion
     for i in 1:length(state)
@@ -48,17 +46,25 @@ function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=
     return state,pars
 end
 
-function MPSKit.changebonds(state::InfiniteMPS,H::PeriodicMPO,alg,pars=params(state,H))
+function changebonds!(state::InfiniteMPS,H::PeriodicMPO,alg,pars=params(state,H))
     (nmstate,pars) = changebonds(convert(MPSMultiline,state),H,alg,pars);
-    return convert(InfiniteMPS,nmstate),pars
+
+    for i in 1:length(state)
+        state.AL[i] = nmstate.AL[i]
+        state.AR[i] = nmstate.AR[i]
+        state.AC[i] = nmstate.AC[i]
+        state.CR[i] = nmstate.CR[i]
+    end
+
+    return state,pars
 end
 
-function MPSKit.changebonds(state::MPSMultiline, H,alg::OptimalExpand,pars=params(state,H))
+function changebonds!(state::MPSMultiline, H,alg::OptimalExpand,pars=params(state,H))
     #=
         todo : merge this with the MPSCentergauged implementation
     =#
     #determine optimal expansion spaces around bond i
-    exps = map(Iterators.product(1:size(state,1),1:size(state,2))) do (i,j)
+    pexp = PeriodicArray(map(Iterators.product(1:size(state,1),1:size(state,2))) do (i,j)
         ACAR = _permute_front(state.AC[i-1,j])*_permute_tail(state.AR[i-1,j+1])
         AC2 = ac2_prime(ACAR,i-1,j,state,pars)
 
@@ -71,9 +77,7 @@ function MPSKit.changebonds(state::MPSMultiline, H,alg::OptimalExpand,pars=param
         (U,S,V) = tsvd(intermediate,trunc=alg.trscheme,alg=TensorKit.SVD())
 
         (NL*U,V*NR)
-    end
-
-    pexp = PeriodicArray(collect(exps));
+    end)
 
     #do the actual expansion
     for (i,j) in Iterators.product(1:size(state,1),1:size(state,2))
@@ -98,7 +102,8 @@ function MPSKit.changebonds(state::MPSMultiline, H,alg::OptimalExpand,pars=param
 
     return state,pars
 end
-function changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
+
+function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
     #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
     #didn't use the paper because generically it'd be annoying to implement (again having to fuse and stuff)
 

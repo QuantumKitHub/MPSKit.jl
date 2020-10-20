@@ -8,28 +8,29 @@
     trscheme = notrunc()
 end
 
-function changebonds_1(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H)) #would be more efficient if we also repeated pars
+function changebonds_1!(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H)) #would be more efficient if we also repeated pars
     #the unitcell==1 case is unique, because there you have a sef-consistency condition
 
     #expand the one site to two sites
     nstate = InfiniteMPS(repeat(state.AL,2))
     nH = repeat(H,2)
 
-    nstate,npars = changebonds(nstate,nH,alg)
+    nstate,npars = changebonds!(nstate,nH,alg)
 
     A1 = nstate.AL[1]; A2 = nstate.AL[2]
     D1 = space(A1,1); D2 = space(A2,1)
 
     #collapse back to 1 site
-    if dim(D2) != dim(D1)
-        (nstate,npars) = changebonds(nstate,nH,SvdCut(trschemes = [truncdim(min(dim(D1),dim(D2)))]),npars)
+    if D2 != D1
+        (nstate,npars) = changebonds(nstate,nH,SvdCut(trscheme = truncdim(min(dim(D1),dim(D2)))),npars)
     end
 
-    collapsed = InfiniteMPS([nstate.AL[1]];tol=alg.tol_gauge)
-    return collapsed, pars
+    copy!(state,InfiniteMPS([nstate.AL[1]];tol=alg.tol_gauge))
+    poison!(pars);
+    return state, pars
 end
 
-function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H))
+function changebonds_n!(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H))
     meps=0.0
     for loc in 1:length(state)
         @tensor AC2[-1 -2;-3 -4] := state.AC[loc][-1,-2,1]*state.AR[loc+1][1,-3,-4]
@@ -57,14 +58,20 @@ function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=
         @tensor AL2[-1,-2,-3] := QAC[-1,-2,1]*conj(dom_map[2,1])*conj(QC[-3,2])
 
         #make a new state using the updated A's
-        allAls = copy(state.AL)
-        allAls[loc]   = permute(AL1,(1,2),(3,))
-        allAls[loc+1] = permute(AL2,(1,2),(3,))
+        state.AL[loc]   = permute(AL1,(1,2),(3,))
+        state.AL[loc+1] = permute(AL2,(1,2),(3,))
 
-        state = InfiniteMPS(allAls; tol = alg.tol_gauge)
+        copy!(state,InfiniteMPS(state.AL; tol = alg.tol_gauge))
+        poison!(pars);
     end
 
     return state, pars
 end
 
-changebonds(state::InfiniteMPS,H,alg::VumpsSvdCut,pars=params(state,H)) = (length(state) == 1) ? changebonds_1(state,H,alg,pars) : changebonds_n(state,H,alg,pars);
+function changebonds!(state::InfiniteMPS,H,alg::VumpsSvdCut,pars=params(state,H))
+    if (length(state) == 1)
+        return changebonds_1!(state,H,alg,pars)
+    else
+        return changebonds_n!(state,H,alg,pars);
+    end
+end
