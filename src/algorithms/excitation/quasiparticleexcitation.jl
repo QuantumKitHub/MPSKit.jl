@@ -16,7 +16,7 @@ function quasiparticle_excitation(hamiltonian::Hamiltonian, momentum::Float64, m
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, params(V,hamiltonian,paramsleft, paramsright))
     Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=toler,krylovdim=krylovdim)
-    convhist.converged<num && @warn "quasiparticle didn't converge k=$(moment) $(convhist.normres)"
+    convhist.converged<num && @warn "quasiparticle didn't converge k=$(momentum) $(convhist.normres)"
 
     return Es,Vs
 end
