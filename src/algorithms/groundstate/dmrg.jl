@@ -8,7 +8,8 @@
     finalize::F = Defaults._finalize
 end
 
-function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
+find_groundstate(state,H,alg::Dmrg,pars...) = find_groundstate!(copy(state),H,alg,pars...)
+function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = params(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta::Float64 = 2*tol
 
@@ -48,7 +49,8 @@ end
     finalize::F = Defaults._finalize
 end
 
-function find_groundstate(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
+find_groundstate(state,H,alg::Dmrg2,pars...) = find_groundstate!(copy(state),H,alg,pars...)
+function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = params(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta::Float64 = 2*tol
 
