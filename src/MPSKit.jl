@@ -26,7 +26,7 @@ module MPSKit
     export leading_boundary, PowerMethod
     export quasiparticle_excitation, correlation_length
     export timestep,Tdvp,Tdvp2
-    export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum
+    export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
     export changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
     export entropy
     export dynamicaldmrg
@@ -76,7 +76,7 @@ module MPSKit
 
     include("algorithms/derivatives.jl")
     include("algorithms/expval.jl")
-    include("algorithms/toolbox.jl") #maybe move to utility, or move some utility functions to toolbox?
+    include("algorithms/toolbox.jl")
     include("algorithms/ortho.jl")
 
     include("algorithms/changebonds/optimalexpand.jl")
@@ -94,7 +94,6 @@ module MPSKit
     include("algorithms/propagator/corvector.jl")
 
     include("algorithms/excitation/quasiparticleexcitation.jl")
-    include("algorithms/excitation/TM_excitations.jl")
 
     include("algorithms/statmech/vumps.jl")
     include("algorithms/statmech/power.jl")

@@ -68,3 +68,61 @@ allows exact two point functions of operators instead of eigenvalues of TM which
 function twopoint()
 	throw("WIP BEN BEZIG AAN IETS VOOR DAAN")
 end
+
+
+function correlation_length(above::InfiniteMPS; tol_angle=0.1,below=above,kwargs...)
+    #get the transfer spectrum
+    spectrum = transfer_spectrum(above;below=above,kwargs...);
+
+    correlation_length(spectrum,above;tol_angle=tol_angle,below=below,kwargs...)
+end
+
+function correlation_length(spectrum,above::InfiniteMPS; tol_angle=0.1,below=above,kwargs...)
+    #we also define a correlation length between different states
+    (above === below) && (spectrum = spectrum[2:end])
+
+    best_angle = mod1(angle(spectrum[1]), 2*pi)
+    ind_at_angle = findall(x->x<tol_angle || abs(x-2*pi)<tol_angle, mod1.(angle.(spectrum).-best_angle, 2*pi))
+    spectrum_at_angle = spectrum[ind_at_angle]
+
+    lambdas = -log.(abs.(spectrum_at_angle));
+
+    corlength = 1/first(lambdas);
+
+    gap = Inf;
+    if length(lambdas) > 2
+        gap = lambdas[2]-lambdas[1]
+    end
+
+    return corlength, gap, best_angle
+end
+
+
+function variance(state::InfiniteMPS,ham::MPOHamiltonian,pars = params(state,ham))
+    rescaled_ham = ham-expectation_value(state,ham,pars);
+    sum(expectation_value(state,rescaled_ham*rescaled_ham))
+end
+
+function variance(state::FiniteMPS,ham::MPOHamiltonian,pars = params(state,ham))
+    ham2 = ham*ham;
+    sum(expectation_value(state,ham2)) - sum(expectation_value(state,ham,pars))^2
+end
+
+function variance(state::MPSComoving,ham::MPOHamiltonian,pars = params(state,ham))
+    #tricky to define
+    (ham2,npars) = squaredenvs(state,ham,pars);
+    expectation_value(state,ham2,npars)[2] - expectation_value(state,ham,pars)[2]^2
+end
+
+variance(state::FiniteQP,ham::MPOHamiltonian,args...) = variance(convert(FiniteMPS,state),ham);
+
+function variance(state::InfiniteQP,ham::MPOHamiltonian,pars=params(state,ham))
+    # I remember there being an issue here @gertian?
+    state.trivial || throw(ArgumentError("variance of domain wall excitations is not implemented"));
+
+    rescaled_ham = ham - expectation_value(state.left_gs,ham);
+    fixed = expectation_value(state.left_gs,rescaled_ham,0)    #+;
+    ham2 = rescaled_ham*rescaled_ham-2*fixed*rescaled_ham
+
+    dot(state,effective_excitation_hamiltonian(ham2,state))-dot(state,effective_excitation_hamiltonian(ham,state,pars))^2
+end

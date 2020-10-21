@@ -25,7 +25,7 @@ function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,h
         lB_cur += exci_transfer_left(leftenv(lpars,pos,exci.left_gs),ham,pos,exci[pos],exci.left_gs.AL[pos])*exp(conj(1im*exci.momentum))
 
         exci.trivial && for i in ids
-            @tensor lB_cur[i][-1,-2,-3,-4] -= lB_cur[i][1,-2,-3,2]*r_RL(exci.left_gs,pos)[2,1]*l_RL(exci.left_gs,pos)[-1,-4]
+            @tensor lB_cur[i][-1,-2,-3,-4] -= lB_cur[i][1,-2,-3,2]*r_RL(exci.left_gs,pos)[2,1]*l_RL(exci.left_gs,pos+1)[-1,-4]
         end
 
 
@@ -43,7 +43,7 @@ function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,h
         rB_cur += exci_transfer_right(rightenv(rpars,pos,exci.right_gs),ham,pos,exci[pos],exci.right_gs.AR[pos])*exp(1im*exci.momentum)
 
         exci.trivial && for i in ids
-            @tensor rB_cur[i][-1,-2,-3,-4] -= rB_cur[i][1,-2,-3,2]*l_LR(exci.left_gs,pos)[2,1]*r_LR(exci.left_gs,pos)[-1,-4]
+            @tensor rB_cur[i][-1,-2,-3,-4] -= rB_cur[i][1,-2,-3,2]*l_LR(exci.left_gs,pos)[2,1]*r_LR(exci.left_gs,pos-1)[-1,-4]
         end
 
         push!(rBs,rB_cur)
@@ -59,7 +59,7 @@ function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,h
         lBE = exci_transfer_left(lBE,ham,i,exci.right_gs.AR[i],exci.left_gs.AL[i])*exp(conj(1im*exci.momentum))
 
         exci.trivial && for k in ids
-            @tensor lBE[k][-1,-2,-3,-4] -= lBE[k][1,-2,-3,2]*r_RL(exci.left_gs,i)[2,1]*l_RL(exci.left_gs,i)[-1,-4]
+            @tensor lBE[k][-1,-2,-3,-4] -= lBE[k][1,-2,-3,2]*r_RL(exci.left_gs,i)[2,1]*l_RL(exci.left_gs,i+1)[-1,-4]
         end
 
         lBs[i] += lBE;
@@ -71,7 +71,7 @@ function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,h
         rBE = exci_transfer_right(rBE,ham,i,exci.left_gs.AL[i],exci.right_gs.AR[i])*exp(1im*exci.momentum)
 
         exci.trivial && for k in ids
-            @tensor rBE[k][-1,-2,-3,-4]-=rBE[k][1,-2,-3,2]*l_LR(exci.left_gs,i)[2,1]*r_LR(exci.left_gs,i)[-1,-4]
+            @tensor rBE[k][-1,-2,-3,-4]-=rBE[k][1,-2,-3,2]*l_LR(exci.left_gs,i)[2,1]*r_LR(exci.left_gs,i-1)[-1,-4]
         end
 
         rBs[i] += rBE

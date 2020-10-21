@@ -111,7 +111,7 @@ function left_excitation_transfer_system(lBs,ham,exci::InfiniteQP)
             start = exci_transfer_left(start,ham,k,exci.right_gs.AR[k],exci.left_gs.AL[k])*exp(conj(1im*exci.momentum))
 
             exci.trivial && for l in ids[2:end-1]
-                @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*r_RL(exci.right_gs,k)[2,1]*l_RL(exci.right_gs,k)[-1,-4]
+                @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*r_RL(exci.right_gs,k)[2,1]*l_RL(exci.right_gs,k+1)[-1,-4]
             end
         end
 
@@ -149,7 +149,7 @@ function right_excitation_transfer_system(rBs,ham,exci::InfiniteQP)
             start = exci_transfer_right(start,ham,k,exci.left_gs.AL[k],exci.right_gs.AR[k])*exp(1im*exci.momentum)
 
             exci.trivial && for l in ids[2:end-1]
-                @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*l_LR(exci.right_gs,k)[2,1]*r_LR(exci.right_gs,k)[-1,-4]
+                @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*l_LR(exci.right_gs,k)[2,1]*r_LR(exci.right_gs,k-1)[-1,-4]
             end
 
         end
