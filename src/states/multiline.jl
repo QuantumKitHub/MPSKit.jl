@@ -39,6 +39,15 @@ function Base.convert(::Type{MPSMultiline},v::AbstractVector{T}) where T<:Infini
     MPSMultiline(ALs,ARs,CRs,ACs);
 end
 
+Base.copy(m::MPSMultiline) = MPSMultiline(copy(m.AL),copy(m.AR),copy(m.CR),copy(m.AC));
+function Base.copy!(dest::Union{MPSMultiline,InfiniteMPS},src::Union{MPSMultiline,InfiniteMPS})
+    copy!(dest.AL,src.AL);
+    copy!(dest.AR,src.AR);
+    copy!(dest.CR,src.CR);
+    copy!(dest.AC,src.AC);
+end
+
+
 function Base.convert(::Type{InfiniteMPS},st::MPSMultiline{A,B}) where {A,B}
     @assert size(st,1) == 1 #otherwise - how would we convert?
     convert(Vector,st)[1]

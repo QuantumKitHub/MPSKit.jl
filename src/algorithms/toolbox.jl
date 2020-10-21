@@ -100,18 +100,18 @@ end
 
 function variance(state::InfiniteMPS,ham::MPOHamiltonian,pars = params(state,ham))
     rescaled_ham = ham-expectation_value(state,ham,pars);
-    sum(expectation_value(state,rescaled_ham*rescaled_ham))
+    real(sum(expectation_value(state,rescaled_ham*rescaled_ham)))
 end
 
 function variance(state::FiniteMPS,ham::MPOHamiltonian,pars = params(state,ham))
     ham2 = ham*ham;
-    sum(expectation_value(state,ham2)) - sum(expectation_value(state,ham,pars))^2
+    real(sum(expectation_value(state,ham2)) - sum(expectation_value(state,ham,pars))^2)
 end
 
 function variance(state::MPSComoving,ham::MPOHamiltonian,pars = params(state,ham))
     #tricky to define
     (ham2,npars) = squaredenvs(state,ham,pars);
-    expectation_value(state,ham2,npars)[2] - expectation_value(state,ham,pars)[2]^2
+    real(expectation_value(state,ham2,npars)[2] - expectation_value(state,ham,pars)[2]^2)
 end
 
 variance(state::FiniteQP,ham::MPOHamiltonian,args...) = variance(convert(FiniteMPS,state),ham);
@@ -124,5 +124,5 @@ function variance(state::InfiniteQP,ham::MPOHamiltonian,pars=params(state,ham))
     fixed = expectation_value(state.left_gs,rescaled_ham,0)    #+;
     ham2 = rescaled_ham*rescaled_ham-2*fixed*rescaled_ham
 
-    dot(state,effective_excitation_hamiltonian(ham2,state))-dot(state,effective_excitation_hamiltonian(ham,state,pars))^2
+    real(dot(state,effective_excitation_hamiltonian(ham2,state))-dot(state,effective_excitation_hamiltonian(ham,state,pars))^2)
 end

@@ -143,10 +143,13 @@ end
 
     e1 = @constinferred expectation_value(window,ham);
 
+    v1 = variance(window,ham)
     (window,pars,_) = @constinferred find_groundstate(window,ham,Dmrg(verbose=false));
+    v2 = variance(window,ham)
 
     e2 = @constinferred expectation_value(window,ham);
 
+    @test v2<v1
     @test real(e2[2]) ≤ real(e1[2])
 
     (window,pars) = @constinferred timestep(window,ham,0.1,Tdvp2(),pars)
@@ -284,8 +287,11 @@ println("------------------------------------")
         (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),GradientGrassmann(verbosity=0),nonsym_ising_ham(lambda=2.0))
         ])
 
+    v1 = variance(state,ham);
     (ts,pars,delta) =  @constinferred find_groundstate(state,ham,alg)
+    v2 = variance(ts,ham);
 
+    @test v1 > v2
     @test sum(delta) < 1e-6
 
     evals = @constinferred expectation_value(ts,ham);
@@ -328,6 +334,7 @@ end
         (ts,pars,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
         (energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,pars);
         @test energies[1] ≈ 0.41047925 atol=1e-4
+        @test variance(Bs[1],th) < 1e-8
     end
 
     @timedtestset "finite" begin
@@ -341,6 +348,7 @@ end
             ts = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^12)
             (ts,pars,_) = find_groundstate(ts,th,Dmrg(verbose=false));
             (energies,Bs) = quasiparticle_excitation(th,ts,pars);
+            @test variance(Bs[1],th)<1e-8
             energies[1]
         end
 

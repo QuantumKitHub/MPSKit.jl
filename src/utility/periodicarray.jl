@@ -20,6 +20,10 @@ Base.similar(a::PeriodicArray, T::Type, dims::Union{Integer, AbstractUnitRange}.
     PeriodicArray(similar(a.data, T, dims...))
 
 Base.copy(a::PeriodicArray) = PeriodicArray(copy(a.data))
+function Base.copy!(dst::PeriodicArray,src::PeriodicArray)
+    copy!(dst.data,src.data);
+    dst
+end
 # not necessary but maybe more efficient
 
 Base.convert(::Type{PeriodicArray{T}}, a::PeriodicArray) where {T} =
