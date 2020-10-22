@@ -164,16 +164,16 @@ function _parsetypes(d::Tuple)
 end
 
 #utility functions for finite mpo
-function Base.getindex(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E}
+function Base.getindex(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int)::T where {S,T,E}
     b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
     if x.Os[a,b,c] isa E
         if x.Os[a,b,c] == zero(E)
-            return TensorMap(zeros,E,x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])::T
+            return TensorMap(zeros,E,x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])
         else
-            return x.Os[a,b,c]*isomorphism(Matrix{E},x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])::T
+            return x.Os[a,b,c]*isomorphism(Matrix{E},x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])
         end
     else
-        return x.Os[a,b,c]::T
+        return x.Os[a,b,c]
     end
 end
 
