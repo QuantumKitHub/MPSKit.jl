@@ -162,7 +162,7 @@ TensorKit.fuse(f::T) where T<: VectorSpace = f
 
 #the usual mpoham transfer
 function transfer_left(vec::Vector{V},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSTensor
-    toreturn = [TensorMap(zeros,eltype(A),space(Ab,4)'*ham.imspaces[pos,i],space(A,4)') for i in 1:ham.odim]::Vector{V}
+    toreturn = [TensorMap(zeros,eltype(A),_lastspace(Ab)'*ham.imspaces[pos,i],_lastspace(A)') for i in 1:ham.odim]::Vector{V}
 
     for (j,k) in keys(ham,pos)
         if isscal(ham,pos,j,k)
@@ -175,7 +175,7 @@ function transfer_left(vec::Vector{V},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A)
     return toreturn
 end
 function transfer_right(vec::Vector{V},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSTensor
-    toreturn = [TensorMap(zeros,eltype(vec[1]),space(A,1)*ham.domspaces[pos,i],space(Ab,1)) for i in 1:ham.odim]::Vector{V}
+    toreturn = [TensorMap(zeros,eltype(A),_firstspace(A)*ham.domspaces[pos,i],_firstspace(Ab)) for i in 1:ham.odim]::Vector{V}
 
     for (j,k) in keys(ham,pos)
         if isscal(ham,pos,j,k)

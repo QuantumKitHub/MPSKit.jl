@@ -121,8 +121,12 @@ function variance(state::InfiniteQP,ham::MPOHamiltonian,pars=params(state,ham))
     state.trivial || throw(ArgumentError("variance of domain wall excitations is not implemented"));
 
     rescaled_ham = ham - expectation_value(state.left_gs,ham);
-    fixed = expectation_value(state.left_gs,rescaled_ham,0)    #+;
-    ham2 = rescaled_ham*rescaled_ham-2*fixed*rescaled_ham
 
-    real(dot(state,effective_excitation_hamiltonian(ham2,state))-dot(state,effective_excitation_hamiltonian(ham,state,pars))^2)
+    #I don't remember where the formula came from
+    E_ex = dot(state,effective_excitation_hamiltonian(ham,state,pars));
+    E_f = expectation_value(state.left_gs,rescaled_ham,0);
+
+    ham2 = rescaled_ham*rescaled_ham
+
+    real(dot(state,effective_excitation_hamiltonian(ham2,state))-2*(E_f+E_ex)*E_ex+E_ex^2)
 end

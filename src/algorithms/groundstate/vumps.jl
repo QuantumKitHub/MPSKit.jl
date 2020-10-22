@@ -19,31 +19,36 @@ function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,par
     galerkin::Float64  = 1+alg.tol_galerkin
     iter      = 1
 
+    temp_ACs = similar(state.AC);
+    temp_Cs = similar(state.CR);
+
     while true
         eigalg = Arnoldi(tol=galerkin/(4*sqrt(iter)))
 
-        acjobs = map(enumerate(state.AC)) do (loc,ac)
-            @Threads.spawn let state=state,pars=pars
-                eigsolve(ac, 1, :SR, eigalg) do x
-                    ac_prime(x, loc, state, pars)
+        @sync for (loc,(ac,c)) in enumerate(zip(state.AC,state.CR))
+            @Threads.spawn begin
+                (acvals,acvecs) = let state=state,pars=pars
+                    eigsolve(ac, 1, :SR, eigalg) do x
+                        ac_prime(x, loc, state, pars)
+                    end
                 end
+                temp_ACs[loc] = acvecs[1];
             end
+
+            @Threads.spawn begin
+                (crvals,crvecs) = let state=state,pars=pars
+                    eigsolve(c, 1, :SR, eigalg) do x
+                        c_prime(x, loc, state, pars)
+                    end
+                end
+                temp_Cs[loc] = crvecs[1];
+            end
+
         end
 
-        cjobs = map(enumerate(state.CR)) do (loc,cr)
-            @Threads.spawn let state=state,pars=pars
-                eigsolve(cr, 1, :SR, eigalg) do x
-                    c_prime(x, loc, state, pars)
-                end
-            end
-        end
-
-        newAs::Vector{A} = map(zip(acjobs,cjobs)) do (acj,cj)
-            (e,vac,ch) = fetch(acj)
-            (e,vc,ch) = fetch(cj)
-
-            QAc,_ = TensorKit.leftorth!(vac[1]::A, alg=QRpos())
-            Qc,_  = TensorKit.leftorth!(vc[1]::B, alg=QRpos())
+        newAs::Vector{A} = map(zip(temp_ACs,temp_Cs)) do (ac,c)
+            QAc,_ = TensorKit.leftorth!(ac::A, alg=QRpos())
+            Qc,_  = TensorKit.leftorth!(c::B, alg=QRpos())
 
             QAc*adjoint(Qc)
         end

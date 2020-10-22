@@ -239,7 +239,7 @@ println("------------------------------------")
     th -= expectation_value(ts,th);
     th2 = @constinferred Base.:*(th,th);
     v = expectation_value(ts,th2);
-    @test real(v[1])>=0;
+    @test real(sum(v))>=0;
 end
 
 @timedtestset "comact $(i)" for (i,th) in enumerate([
