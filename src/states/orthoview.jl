@@ -8,6 +8,7 @@ struct ALView{S}
 end
 
 function Base.getindex(v::ALView{S},i::Int)::eltype(S) where S
+    (v.parent isa MPSComoving && i <= length(v.parent) ) || throw(ArgumentError("out of bounds"))
     ismissing(v.parent.ALs[i]) && v.parent.CR[i] # by getting CL[i+1], we are garantueeing that AL[i] exists
     return v.parent.ALs[i]
 end
@@ -17,6 +18,7 @@ struct ARView{S}
 end
 
 function Base.getindex(v::ARView{S},i::Int)::eltype(S) where S
+    (v.parent isa MPSComoving && i >=1 ) || throw(ArgumentError("out of bounds"))
     ismissing(v.parent.ARs[i]) && v.parent.CR[i-1] # by getting CL[i], we are garantueeing that AR[i] exists
     return v.parent.ARs[i]
 end
@@ -25,6 +27,7 @@ struct CRView{S}
     parent::S
 end
 
+#no MPSComoving boundscheck needed, because they re-use AL/AR/AC getset
 function Base.getindex(v::CRView{S},i::Int)::bond_type(S) where S
     if ismissing(v.parent.CLs[i+1])
         if i == 0 || !ismissing(v.parent.ALs[i])
@@ -61,6 +64,7 @@ struct ACView{S}
 end
 
 function Base.getindex(v::ACView{S},i::Int)::eltype(S) where S
+    (v.parent isa MPSComoving && i >= 1 && i <= length(v.parent)) || throw(ArgumentError("out of bounds"))
     if ismissing(v.parent.ACs[i]) && !ismissing(v.parent.ARs[i])
         c = v.parent.CR[i-1];
         ar = v.parent.ARs[i];
