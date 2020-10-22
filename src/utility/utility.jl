@@ -87,7 +87,7 @@ function nonsym_bosonictensors(cutoff::Int)
     return (a⁺,a⁻)
 end
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
-function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2}
+function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2},trunc = truncbelow(Defaults.tol)) where {PS,N1,N2}
     numind=N1+N2
     if(numind==4)
         return [permute(inpmpo,(1,2),(4,3))]
@@ -96,14 +96,8 @@ function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2}) where {PS,N1,N2
     leftind=(1,2,Int(numind/2+1))
     otherind=(ntuple(x->x+2,Val{Int((N1+N2)/2)-2}())..., ntuple(x->x+Int(numind/2+1),Val{Int((N1+N2)/2)-1}())...)
 
-    (U,S,V) = tsvd(inpmpo,leftind,otherind)
-
-    T=U*S
-
-    T=permute(T,(1,2),(4,3))
-
-
-    return [T;decompose_localmpo(V)]
+    (U,S,V) = tsvd(inpmpo,leftind,otherind,trunc = trunc)
+    return [permute(U,(1,2),(4,3));decompose_localmpo(S*V)]
 end
 
 function add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
