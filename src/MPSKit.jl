@@ -22,15 +22,17 @@ module MPSKit
     export leftenv,rightenv
 
     #algos
-    export find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2, GradientGrassmann
-    export leading_boundary, PowerMethod
+    export find_groundstate!, find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2, GradientGrassmann
+    export leading_boundary!, leading_boundary, PowerMethod
     export quasiparticle_excitation, correlation_length
-    export timestep,Tdvp,Tdvp2
+    export timestep!,timestep,Tdvp,Tdvp2
     export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
-    export changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
+    export changebonds!,changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
     export entropy
     export dynamicaldmrg
     export fidelity_susceptibility
+
+    @deprecate params(args...) environments(args...)
 
     #default settings
     module Defaults

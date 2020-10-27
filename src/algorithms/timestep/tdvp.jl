@@ -47,7 +47,7 @@ function timestep!(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdv
     state,envs
 end
 
-function timestep(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp,envs=environments(state,H))
+function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp,envs=environments(state,H))
     #left to right
     for i in 1:(length(state)-1)
         (state.AC[i],convhist)=let envs = envs,state = state
@@ -91,7 +91,7 @@ end
 end
 
 #twosite tdvp for finite mps
-function timestep(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp2,envs=environments(state,H);rightorthed=false)
+function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp2,envs=environments(state,H);rightorthed=false)
     #left to right
     for i in 1:(length(state)-1)
         ac2 = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
@@ -136,3 +136,6 @@ function timestep(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Nu
 
     return state,envs
 end
+
+#copying version
+timestep(state::Union{FiniteMPS,MPSComoving},H,timestep,alg::Union{Tdvp,Tdvp2},envs=environments(state,H)) = timestep!(copy(state),H,timestep,alg,envs)

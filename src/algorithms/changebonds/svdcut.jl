@@ -31,7 +31,7 @@ end
 
 function changebonds!(state,H,alg::SvdCut,envs=environments(state,H))
     changebonds!(state,alg);
-    recalculate!(envs,state);
+    envs isa AbstractInfEnv && recalculate!(envs,state);
 
     return state,envs;
 end
