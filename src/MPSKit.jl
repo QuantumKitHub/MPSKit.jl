@@ -54,6 +54,7 @@ module MPSKit
     include("states/comoving.jl")
     include("states/orthoview.jl")
     include("states/quasiparticle_state.jl")
+    include("states/ortho.jl")
 
     abstract type Operator end
     abstract type Hamiltonian <: Operator end
@@ -77,7 +78,6 @@ module MPSKit
     include("algorithms/derivatives.jl")
     include("algorithms/expval.jl")
     include("algorithms/toolbox.jl")
-    include("algorithms/ortho.jl")
 
     include("algorithms/changebonds/optimalexpand.jl")
     include("algorithms/changebonds/vumpssvd.jl")
