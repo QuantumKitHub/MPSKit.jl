@@ -26,26 +26,45 @@ function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};kwa
 end
 
 #allow users to pass in simple arrays
-function InfiniteMPS(A::AbstractArray{T,1}; tol::Float64 = Defaults.tolgauge, maxiter::Int64 = Defaults.maxiter,
-    cguess = PeriodicArray([isomorphism(Matrix{eltype(A[i])},space(A[i],1),space(A[i],1)) for i in 1:length(A)]),leftgauged = false) where T<:GenericMPSTensor
-    pA = PeriodicArray(A[:])
-    #perform the left gauge fixing, remember only Al
-    if leftgauged
-        ALs = pA;
-        deltal = 0;
-    else
-        ALs, cguess, deltal = uniform_leftorth(pA; tol = tol, maxiter = maxiter, cguess = cguess)
+function InfiniteMPS(A::AbstractArray{T,1}; kwargs...) where T<:GenericMPSTensor
+
+    #we make a copy, and are therfore garantueeing no side effects for the user
+    AR = PeriodicArray(A[:]);
+
+    #initial guess for CR
+    CR = PeriodicArray([isomorphism(Matrix{eltype(AR[i])},space(AR[i+1],1),space(AR[i+1],1)) for i in 1:length(A)]);
+
+    AL = similar(AR);
+
+    uniform_leftorth!(AL,CR,AR;kwargs...);
+    uniform_rightorth!(AR,CR,AL;kwargs...);
+
+    AC = similar(AR)
+    for loc = 1:length(A)
+        AC[loc] = AL[loc]*CR[loc]
     end
 
-    #perform the right gauge fixing from which we obtain the center matrix
-    ARs, Cs, deltar  = uniform_rightorth(ALs ; tol = tol, maxiter = maxiter, cguess = cguess)
-    CRs = circshift(Cs,-1);
-    ACs=similar(ARs)
-    for loc = 1:size(A,1)
-        ACs[loc] = ALs[loc]*CRs[loc]
+    CRtype = tensormaptype(spacetype(T),1,1,eltype(T));
+    return InfiniteMPS{T,CRtype}(AL,AR,CR,AC)
+end
+
+function reorth!(dst::InfiniteMPS;from=:AL,kwargs...)
+    @assert from == :AL
+
+    #dst.AL changed, dst.CR may no longer fit
+    if !reduce(&,map(x->_lastspace(x[1]) == _lastspace(x[2]),zip(dst.CR,dst.AL)))
+        for i in 1:length(dst)
+            dst.CR[i] = isomorphism(Matrix{eltype(dst.AL[i])},_lastspace(dst.AL[i])',_lastspace(dst.AL[i])')
+        end
     end
 
-    return InfiniteMPS(ALs,ARs,CRs,ACs)
+    uniform_rightorth!(dst.AR,dst.CR,dst.AL;kwargs...);
+
+    for loc in 1:length(dst)
+        dst.AC[loc] = dst.AL[loc]*dst.CR[loc]
+    end
+
+    dst
 end
 
 function TensorKit.normalize!(st::InfiniteMPS)

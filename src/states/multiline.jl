@@ -62,36 +62,53 @@ function Base.convert(::Type{Vector},st::MPSMultiline{A,B}) where {A,B}
     end
 end
 
-function MPSMultiline(A::AbstractArray{T,2};tol = Defaults.tolgauge,maxiter = Defaults.maxiter,leftgauged=false) where T <: GenericMPSTensor
+#allow users to pass in simple arrays
+function MPSMultiline(A::AbstractArray{T,2}; kwargs...) where T<:GenericMPSTensor
 
-    ACs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));
-    ALs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));
-    ARs = PeriodicArray{T,2}(undef,size(A,1),size(A,2));;
+    #we make a copy, and are therfore garantueeing no side effects for the user
+    AR = PeriodicArray(A[:,:]);
 
-    ctype = typeof(TensorMap(rand,eltype(A[1,1]),space(A[1,1],1),space(A[1,1],1)))
-    Cs = PeriodicArray{ctype,2}(undef,size(A,1),size(A,2));
+    #initial guess for CR
+    CR = PeriodicArray([isomorphism(Matrix{eltype(A[1])},_lastspace(v)',_lastspace(v)') for v in A]);
+    AL = similar(AR);
+    AC = similar(AR);
 
     @sync for row in 1:size(A,1)
         @Threads.spawn begin
-            if !leftgauged
-                tal,_,deltal= uniform_leftorth(PeriodicArray(A[row,:]); tol = tol, maxiter = maxiter)
-            else
-                tal = PeriodicArray(A[row,:]);
-            end
-            tar,tc,deltar = uniform_rightorth(tal; tol = tol, maxiter = maxiter)
+            uniform_leftorth!(view(AL,row,:),view(CR,row,:),view(AR,row,:);kwargs...);
+            uniform_rightorth!(view(AR,row,:),view(CR,row,:),view(AL,row,:);kwargs...);
 
-            ALs[row,:] = tal[:];
-            ARs[row,:] = tar[:];
-            Cs[row,:] = circshift(tc[:],-1);
-
-            for loc = 1:length(tal)
-                ACs[row,loc] = ALs[row,loc]*Cs[row,loc]
+            for col in 1:size(A,2)
+                AC[row,col] = AL[row,col] * CR[row,col]
             end
         end
     end
 
-    return MPSMultiline(ALs,ARs,Cs,ACs)
+    MPSMultiline(AL,AR,CR,AC);
 end
+
+function reorth!(dst::MPSMultiline;from=:AL,kwargs...)
+    @assert from == :AL
+    @sync for row in 1:size(dst,1)
+        @Threads.spawn begin
+            #dst.AL changed, dst.CR may no longer fit
+            if !reduce(&,map(x->_lastspace(x[1]) == _lastspace(x[2]),zip(view(dst.CR,row,:),view(dst.AL,row,:))))
+                for i in 1:length(dst)
+                    dst.CR[row,i] = isomorphism(Matrix{eltype(dst.AL[row,i])},_lastspace(dst.AL[row,i])',_lastspace(dst.AL[row,i])')
+                end
+            end
+
+            uniform_rightorth!(view(dst.AR,row,:),view(dst.CR,row,:),view(dst.AL,row,:);kwargs...);
+
+            for col in 1:size(dst,2)
+                dst.AC[row,col] = dst.AL[row,col]*dst.CR[row,col]
+            end
+        end
+    end
+
+    dst
+end
+
 
 l_RR(state::MPSMultiline,row,loc::Int=1) = @tensor toret[-1;-2]:=state.CR[row,loc-1][1,-2]*conj(state.CR[row,loc-1][1,-1])
 l_RL(state::MPSMultiline,row,loc::Int=1) = state.CR[row,loc-1]
