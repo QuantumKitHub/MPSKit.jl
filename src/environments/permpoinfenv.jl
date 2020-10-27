@@ -1,3 +1,4 @@
+#todo : this is a bit of a third-rate citizen, should be cleaned up
 "
     This object manages the periodic mpo environments for an MPSMultiline
 "
@@ -10,8 +11,6 @@ mutable struct PerMPOInfEnv{H<:PeriodicMPO,V,S<:MPSMultiline} <: AbstractInfEnv
 
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}
-
-    lock :: ReentrantLock
 end
 
 #this is really lazy
@@ -21,6 +20,8 @@ function recalculate!(pars::PerMPOInfEnv,nstate)
     pars.lw = ndat.lw
     pars.rw = ndat.rw
     pars.dependency = ndat.dependency;
+
+    pars
 end
 
 function params(state::InfiniteMPS,opp::PeriodicMPO,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter)
