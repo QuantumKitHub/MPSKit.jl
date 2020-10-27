@@ -10,7 +10,7 @@
 
     In a later stage we can perhaps support nonzero scalar -> scalar*isometry - though the usecases for that seem very limited
 
-    The principles are that you can write code without knowing anything about the sparse structure, and it should just work (potentially a bit slower)
+    The principles are that you can write code without knowing anything about the senvse structure, and it should just work (potentially a bit slower)
 
     Unhappy about this design because :
         - the constructor is a mess
@@ -58,7 +58,7 @@ MPOHamiltonian(x::AbstractArray{Any,3}) = MPOHamiltonian(union_split(x));
 #another helper - artificially create a union and reuse next constructor
 MPOHamiltonian(x::AbstractArray{T,3}) where T<: TensorMap = MPOHamiltonian(convert(AbstractArray{Union{T,eltype(T)},3},x));
 function MPOHamiltonian(x::AbstractArray{T,3}) where T<:Union{A} where A
-    (Sp,M,E) = _parsetypes(union_types(T));
+    (Sp,M,E) = _envsetypes(union_types(T));
 
     nx = similar(x,Union{E,M});
 
@@ -149,7 +149,7 @@ function MPOHamiltonian(x::Array{T,1}) where T<:MPOTensor{Sp} where Sp
     return MPOHamiltonian{Sp,T,eltype(T)}(nOs,ndomspace,PeriodicArray(pspaces))
 end
 
-function _parsetypes(d::Tuple)
+function _envsetypes(d::Tuple)
     a = Base.first(d);
     b = Base.tail(d);
 
@@ -159,7 +159,7 @@ function _parsetypes(d::Tuple)
         return spacetype(a),tensormaptype(spacetype(a),2,2,eltype(a)),eltype(a)
     else
         @assert !isempty(b)
-        return _parsetypes(b);
+        return _envsetypes(b);
     end
 end
 

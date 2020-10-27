@@ -1,12 +1,12 @@
 #in-place fallback
-function changebonds(state::Union{InfiniteMPS,MPSMultiline},opperator,algorithm,pars::AbstractInfEnv = params(state,opperator))
-    npars = deepcopy(pars);
-    nstate = npars.dependency;
+function changebonds(state::Union{InfiniteMPS,MPSMultiline},opperator,algorithm,envs::AbstractInfEnv = environments(state,opperator))
+    nenvs = deepcopy(envs);
+    nstate = nenvs.dependency;
 
-    changebonds!(nstate,opperator,algorithm,npars)
+    changebonds!(nstate,opperator,algorithm,nenvs)
 end
-function changebonds(state::Union{FiniteMPS,MPSComoving},opperator,algorithm,pars::Union{OvlEnv,FinEnv} = params(state,opperator))
-    changebonds!(copy(state),opperator,algorithm,pars)
+function changebonds(state::Union{FiniteMPS,MPSComoving},opperator,algorithm,envs::Union{OvlEnv,FinEnv} = environments(state,opperator))
+    changebonds!(copy(state),opperator,algorithm,envs)
 end
 changebonds(state,algorithm) = changebonds!(deepcopy(state),algorithm)
 
@@ -24,10 +24,10 @@ function changebonds!(state,alg::UnionTrunc)
     return state
 end
 
-function changebonds!(state,H,alg::UnionTrunc,pars=params(state,H))
-    changebonds!(state,H,alg.alg1,pars)
-    changebonds!(state,H,alg.alg2,pars)
-    return (state,pars)
+function changebonds!(state,H,alg::UnionTrunc,envs=environments(state,H))
+    changebonds!(state,H,alg.alg1,envs)
+    changebonds!(state,H,alg.alg2,envs)
+    return (state,envs)
 end
 
 Base.:&(alg1::Algorithm,alg2::Algorithm) = UnionTrunc(alg1,alg2)

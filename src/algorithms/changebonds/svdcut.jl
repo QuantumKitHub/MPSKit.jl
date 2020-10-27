@@ -29,9 +29,9 @@ function changebonds!(state::InfiniteMPS,alg::SvdCut)
     reorth!(state)
 end
 
-function changebonds!(state,H,alg::SvdCut,pars=params(state,H))
+function changebonds!(state,H,alg::SvdCut,envs=environments(state,H))
     changebonds!(state,alg);
-    recalculate!(pars,state);
+    recalculate!(envs,state);
 
-    return state,pars;
+    return state,envs;
 end

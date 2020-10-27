@@ -18,7 +18,7 @@ module MPSKit
     #hamiltonian things
     export Hamiltonian,Operator,Cache
     export MPOHamiltonian,contains,PeriodicMPO,ComAct,commutator,anticommutator
-    export ac_prime,c_prime,params,ac2_prime,expectation_value,effective_excitation_hamiltonian
+    export ac_prime,c_prime,environments,ac2_prime,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 
     #algos
@@ -39,7 +39,7 @@ module MPSKit
         const tolgauge = 1e-14
         const tol = 1e-12
         const verbose = true
-        _finalize(iter,state,opp,pars) = (state,pars,true);
+        _finalize(iter,state,opp,envs) = (state,envs,true);
     end
 
     include("utility/periodicarray.jl")

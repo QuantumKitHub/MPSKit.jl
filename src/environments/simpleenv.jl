@@ -9,27 +9,27 @@ struct SimpleEnv{H<:Operator,V} <:Cache
     rw :: PeriodicArray{V,2}
 end
 
-function SimpleEnv(state,pars::AbstractInfEnv)
-    lw = similar(pars.lw)
-    rw = similar(pars.rw)
+function SimpleEnv(state,envs::AbstractInfEnv)
+    lw = similar(envs.lw)
+    rw = similar(envs.rw)
     for i = 1:length(state)
-        lw[i,:] = leftenv(pars,i,state)
-        rw[i,:] = rightenv(pars,i,state)
+        lw[i,:] = leftenv(envs,i,state)
+        rw[i,:] = rightenv(envs,i,state)
     end
 
-    return SimpleEnv(pars.opp,lw,rw)
+    return SimpleEnv(envs.opp,lw,rw)
 end
 
-leftenv(pars::SimpleEnv,pos::Int,state) = pars.lw[pos,:];
-function setleftenv!(pars::SimpleEnv,pos,mps,lw)
+leftenv(envs::SimpleEnv,pos::Int,state) = envs.lw[pos,:];
+function setleftenv!(envs::SimpleEnv,pos,mps,lw)
     for i in 1:length(lw)
-        pars.lw[pos,i] = lw[i]
+        envs.lw[pos,i] = lw[i]
     end
 end
 
-rightenv(pars::SimpleEnv,pos::Int,state) = pars.rw[pos,:];
-function setrightenv!(pars::SimpleEnv,pos,mps,rw)
+rightenv(envs::SimpleEnv,pos::Int,state) = envs.rw[pos,:];
+function setrightenv!(envs::SimpleEnv,pos,mps,rw)
     for i in 1:length(rw)
-        pars.rw[pos,i] = rw[i]
+        envs.rw[pos,i] = rw[i]
     end
 end

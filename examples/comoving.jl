@@ -9,7 +9,7 @@ let
     ts = InfiniteMPS([ℂ^2],[ℂ^12]);
 
     #Finding the groundstate
-    (ts,pars,_)=find_groundstate(ts,th,Vumps(maxiter=400));
+    (ts,envs,_)=find_groundstate(ts,th,Vumps(maxiter=400));
 
     len=20;deltat=0.05;totaltime=3.0
 
@@ -18,13 +18,13 @@ let
     @tensor mpco.AC[Int(round(len/2))][-1 -2;-3]:=mpco.AC[Int(round(len/2))][-1,1,-3]*sxt[-2,1]
     normalize!(mpco);
 
-    pars = params(mpco,th)
+    envs = environments(mpco,th)
 
     szdat = [expectation_value(mpco,szt)]
 
     for i in 1:(totaltime/deltat)
-        (mpco,pars) = changebonds(mpco,th,OptimalExpand()&SvdCut(trschemes=[truncdim(20)])) # grow the bond dimension by 1, and truncate at bond dimension 20
-        (mpco,pars) = timestep(mpco,th,deltat,Tdvp(),pars)
+        (mpco,envs) = changebonds(mpco,th,OptimalExpand()&SvdCut(trschemes=[truncdim(20)])) # grow the bond dimension by 1, and truncate at bond dimension 20
+        (mpco,envs) = timestep(mpco,th,deltat,Tdvp(),envs)
         push!(szdat,expectation_value(mpco,szt))
     end
 

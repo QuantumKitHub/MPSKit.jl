@@ -10,7 +10,7 @@
     verbose::Bool = Defaults.verbose
 end
 
-function leading_boundary!(state::MPSMultiline, H,alg::PowerMethod,pars=params(state,H))
+function leading_boundary!(state::MPSMultiline, H,alg::PowerMethod,envs=environments(state,H))
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
@@ -21,14 +21,14 @@ function leading_boundary!(state::MPSMultiline, H,alg::PowerMethod,pars=params(s
 
         @sync for col in 1:size(state,2)
             @Threads.spawn begin
-                temp_ACs[:,col] = let state=state,pars=pars
-                    circshift([ac_prime(ac,row,col,state,pars) for (row,ac) in enumerate(state.AC[:,col])],1)
+                temp_ACs[:,col] = let state=state,envs=envs
+                    circshift([ac_prime(ac,row,col,state,envs) for (row,ac) in enumerate(state.AC[:,col])],1)
                 end
             end
 
             @Threads.spawn begin
-                temp_Cs[:,col]  = let state=state,pars=pars
-                    circshift([c_prime(c,row,col,state,pars) for (row,c) in enumerate(state.CR[:,col])],1)
+                temp_Cs[:,col]  = let state=state,envs=envs
+                    circshift([c_prime(c,row,col,state,envs) for (row,c) in enumerate(state.CR[:,col])],1)
                 end
             end
         end
@@ -40,16 +40,16 @@ function leading_boundary!(state::MPSMultiline, H,alg::PowerMethod,pars=params(s
         end
 
         reorth!(state; tol = alg.tol_gauge, maxiter = alg.orthmaxiter);
-        recalculate!(pars,state);
+        recalculate!(envs,state);
 
-        galerkin   = calc_galerkin(state, pars)
+        galerkin   = calc_galerkin(state, envs)
         alg.verbose && @info "powermethod @iteration $(iter) galerkin = $(galerkin)"
 
-        (state,pars,sc) = alg.finalize(iter,state,H,pars);
+        (state,envs,sc) = alg.finalize(iter,state,H,envs);
 
         if (galerkin <= alg.tol_galerkin && sc) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "powermethod didn't converge $(galerkin)"
-            return state, pars, galerkin
+            return state, envs, galerkin
         end
 
 

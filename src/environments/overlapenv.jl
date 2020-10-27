@@ -12,7 +12,7 @@ struct OvlEnv{S,C<:MPSBondTensor,D <: GenericMPSTensor} <: Cache
     rightenvs::Vector{C}
 end
 
-function params(above::S,below::S,leftstart::C,rightstart::C) where S <: Union{<:FiniteMPS,<:MPSComoving} where C <: GenericMPSTensor
+function environments(above::S,below::S,leftstart::C,rightstart::C) where S <: Union{<:FiniteMPS,<:MPSComoving} where C <: GenericMPSTensor
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 
@@ -25,14 +25,14 @@ function params(above::S,below::S,leftstart::C,rightstart::C) where S <: Union{<
     return OvlEnv{S,C,eltype(below)}(above,fill(t,length(below)),fill(t,length(below)),leftenvs,reverse(rightenvs))
 end
 
-function params(above::S,below::S) where S <:FiniteMPS
-    params(above,below,l_LL(above),r_RR(above))
+function environments(above::S,below::S) where S <:FiniteMPS
+    environments(above,below,l_LL(above),r_RR(above))
 end
-function params(above::S,below::S) where S <:MPSComoving
+function environments(above::S,below::S) where S <:MPSComoving
     above.left_gs == below.left_gs || throw(ArgumentError("left gs differs"))
     above.right_gs == below.right_gs || throw(ArgumentError("right gs differs"))
 
-    params(above,below,l_LL(above),r_RR(above))
+    environments(above,below,l_LL(above),r_RR(above))
 end
 #notify the cache that we updated in-place, so it should invalidate the dependencies
 function poison!(ca::OvlEnv,ind)

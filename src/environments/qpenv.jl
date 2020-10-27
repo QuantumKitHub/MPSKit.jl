@@ -7,11 +7,11 @@ struct QPEnv{A,B} <: Cache
     lBs::Array{A,1}
     rBs::Array{A,1}
 
-    lpars::B
-    rpars::B
+    lenvs::B
+    renvs::B
 end
 
-function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,ham),rpars=exci.trivial ? lpars : params(exci.right_gs,ham))
+function environments(exci::InfiniteQP,ham::MPOHamiltonian,lenvs=environments(exci.left_gs,ham),renvs=exci.trivial ? lenvs : environments(exci.right_gs,ham))
     ids = collect(Iterators.filter(x->isid(ham,x),2:ham.odim-1));
 
     #build lBs(c)
@@ -22,7 +22,7 @@ function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,h
 
     for pos = 1:length(exci)
         lB_cur = exci_transfer_left(lB_cur,ham,pos,exci.right_gs.AR[pos],exci.left_gs.AL[pos])*exp(conj(1im*exci.momentum))
-        lB_cur += exci_transfer_left(leftenv(lpars,pos,exci.left_gs),ham,pos,exci[pos],exci.left_gs.AL[pos])*exp(conj(1im*exci.momentum))
+        lB_cur += exci_transfer_left(leftenv(lenvs,pos,exci.left_gs),ham,pos,exci[pos],exci.left_gs.AL[pos])*exp(conj(1im*exci.momentum))
 
         exci.trivial && for i in ids
             @tensor lB_cur[i][-1,-2,-3,-4] -= lB_cur[i][1,-2,-3,2]*r_RL(exci.left_gs,pos)[2,1]*l_RL(exci.left_gs,pos+1)[-1,-4]
@@ -40,7 +40,7 @@ function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,h
 
     for pos=length(exci):-1:1
         rB_cur = exci_transfer_right(rB_cur,ham,pos,exci.left_gs.AL[pos],exci.right_gs.AR[pos])*exp(1im*exci.momentum)
-        rB_cur += exci_transfer_right(rightenv(rpars,pos,exci.right_gs),ham,pos,exci[pos],exci.right_gs.AR[pos])*exp(1im*exci.momentum)
+        rB_cur += exci_transfer_right(rightenv(renvs,pos,exci.right_gs),ham,pos,exci[pos],exci.right_gs.AR[pos])*exp(1im*exci.momentum)
 
         exci.trivial && for i in ids
             @tensor rB_cur[i][-1,-2,-3,-4] -= rB_cur[i][1,-2,-3,2]*l_LR(exci.left_gs,pos)[2,1]*r_LR(exci.left_gs,pos-1)[-1,-4]
@@ -77,10 +77,10 @@ function params(exci::InfiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,h
         rBs[i] += rBE
     end
 
-    return QPEnv(lBs,rBs,lpars,rpars)
+    return QPEnv(lBs,rBs,lenvs,renvs)
 end
 
-function params(exci::FiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,ham),rpars=exci.trivial ? lpars : params(exci.right_gs,ham))
+function environments(exci::FiniteQP,ham::MPOHamiltonian,lenvs=environments(exci.left_gs,ham),renvs=exci.trivial ? lenvs : environments(exci.right_gs,ham))
     #construct lBE
     lB_cur = [ TensorMap(zeros,eltype(exci),
                     virtualspace(exci.left_gs,0)*ham.domspaces[1,k]',
@@ -88,7 +88,7 @@ function params(exci::FiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,ham
     lBs = typeof(lB_cur)[]
     for pos = 1:length(exci)
         lB_cur = exci_transfer_left(lB_cur,ham,pos,exci.right_gs.AR[pos],exci.left_gs.AL[pos])
-        lB_cur += exci_transfer_left(leftenv(lpars,pos,exci.left_gs),ham,pos,exci[pos],exci.left_gs.AL[pos])
+        lB_cur += exci_transfer_left(leftenv(lenvs,pos,exci.left_gs),ham,pos,exci[pos],exci.left_gs.AL[pos])
         push!(lBs,lB_cur)
     end
 
@@ -99,10 +99,10 @@ function params(exci::FiniteQP,ham::MPOHamiltonian,lpars=params(exci.left_gs,ham
     rBs = typeof(rB_cur)[]
     for pos=length(exci):-1:1
         rB_cur = exci_transfer_right(rB_cur,ham,pos,exci.left_gs.AL[pos],exci.right_gs.AR[pos])
-        rB_cur += exci_transfer_right(rightenv(rpars,pos,exci.right_gs),ham,pos,exci[pos],exci.right_gs.AR[pos])
+        rB_cur += exci_transfer_right(rightenv(renvs,pos,exci.right_gs),ham,pos,exci[pos],exci.right_gs.AR[pos])
         push!(rBs,rB_cur)
     end
     rBs=reverse(rBs)
 
-    return QPEnv(lBs,rBs,lpars,rpars)
+    return QPEnv(lBs,rBs,lenvs,renvs)
 end

@@ -14,24 +14,24 @@ mutable struct PerMPOInfEnv{H<:PeriodicMPO,V,S<:MPSMultiline} <: AbstractInfEnv
 end
 
 #this is really lazy
-function recalculate!(pars::PerMPOInfEnv,nstate)
-    sameDspace = reduce((prev,i) -> prev && _lastspace(pars.lw[i...]) == _firstspace(nstate.CR[i...])',
+function recalculate!(envs::PerMPOInfEnv,nstate)
+    sameDspace = reduce((prev,i) -> prev && _lastspace(envs.lw[i...]) == _firstspace(nstate.CR[i...])',
         Iterators.product(1:size(nstate,1),1:size(nstate,2)),init=true);
 
-    ndat = params(nstate,pars.opp,sameDspace ? pars.lw : nothing,sameDspace ? pars.rw : nothing,tol=pars.tol,maxiter=pars.maxiter);
+    ndat = environments(nstate,envs.opp,sameDspace ? envs.lw : nothing,sameDspace ? envs.rw : nothing,tol=envs.tol,maxiter=envs.maxiter);
 
-    pars.lw = ndat.lw
-    pars.rw = ndat.rw
-    pars.dependency = ndat.dependency;
+    envs.lw = ndat.lw
+    envs.rw = ndat.rw
+    envs.dependency = ndat.dependency;
 
-    pars
+    envs
 end
 
-function params(state::InfiniteMPS,opp::PeriodicMPO,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter)
-    params(convert(MPSMultiline,state),opp,prevl,prevr,tol=tol,maxiter=maxiter);
+function environments(state::InfiniteMPS,opp::PeriodicMPO,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter)
+    environments(convert(MPSMultiline,state),opp,prevl,prevr,tol=tol,maxiter=maxiter);
 end
 
-function params(state::MPSMultiline{T},mpo::PeriodicMPO,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter) where T
+function environments(state::MPSMultiline{T},mpo::PeriodicMPO,prevl = nothing,prevr = nothing;tol = Defaults.tol,maxiter=Defaults.maxiter) where T
     (numrows,numcols) = size(state)
     @assert size(state) == size(mpo)
 

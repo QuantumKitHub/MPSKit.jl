@@ -8,22 +8,22 @@
 # - it's very litle duplicate code, but together it'd be a bit more convoluted (primarily because of the indexing way)
 
 "
-    leading_boundary(state,opp,alg,pars=params(state,ham))
+    leading_boundary(state,opp,alg,envs=environments(state,ham))
 
     approximate the leading eigenvector for opp
 "
-function leading_boundary(state::InfiniteMPS,H,alg,pars=params(state,H))
-    (st,pr,de) = leading_boundary(convert(MPSMultiline,state),H,alg,pars)
+function leading_boundary(state::InfiniteMPS,H,alg,envs=environments(state,H))
+    (st,pr,de) = leading_boundary(convert(MPSMultiline,state),H,alg,envs)
     return convert(InfiniteMPS,st),pr,de
 end
 
-function leading_boundary(state::MPSMultiline,H,alg,pars = params(state,H))
-    npars = deepcopy(pars);
-    nstate = npars.dependency;
-    leading_boundary!(nstate,H,alg,npars);
+function leading_boundary(state::MPSMultiline,H,alg,envs = environments(state,H))
+    nenvs = deepcopy(envs);
+    nstate = nenvs.dependency;
+    leading_boundary!(nstate,H,alg,nenvs);
 end
 
-function leading_boundary!(state::MPSMultiline, H,alg::Vumps,pars = params(state,H))
+function leading_boundary!(state::MPSMultiline, H,alg::Vumps,envs = environments(state,H))
 
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
@@ -42,7 +42,7 @@ function leading_boundary!(state::MPSMultiline, H,alg::Vumps,pars = params(state
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = ac_prime(x[i],i,col,state,pars);
+                        @Threads.spawn y[mod1(i+1,end)] = ac_prime(x[i],i,col,state,envs);
                     end
 
                     RecursiveVec(y)
@@ -56,7 +56,7 @@ function leading_boundary!(state::MPSMultiline, H,alg::Vumps,pars = params(state
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = c_prime(x[i],i,col,state,pars);
+                        @Threads.spawn y[mod1(i+1,end)] = c_prime(x[i],i,col,state,envs);
                     end
 
                     RecursiveVec(y)
@@ -72,15 +72,15 @@ function leading_boundary!(state::MPSMultiline, H,alg::Vumps,pars = params(state
         end
 
         reorth!(state; tol = alg.tol_gauge, maxiter = alg.orthmaxiter);
-        recalculate!(pars,state);
+        recalculate!(envs,state);
 
-        galerkin = calc_galerkin(state, pars)
+        galerkin = calc_galerkin(state, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
-        (state,pars,sc) = alg.finalize(iter,state,H,pars);
+        (state,envs,sc) = alg.finalize(iter,state,H,envs);
         if (galerkin <= alg.tol_galerkin && sc) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
-            return state, pars, galerkin
+            return state, envs, galerkin
         end
 
 

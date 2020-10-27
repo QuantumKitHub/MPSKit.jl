@@ -51,9 +51,9 @@ struct GradientGrassmann <: Algorithm
 end
 
 function find_groundstate(state::S, H::HT, alg::GradientGrassmann,
-                          pars::P=params(state, H))::Tuple{S,P,Float64} where {S,HT<:Hamiltonian,P}
+                          envs::P=environments(state, H))::Tuple{S,P,Float64} where {S,HT<:Hamiltonian,P}
     normalize!(state)
-    res = optimize(GrassmannMPS.fg, (state, pars), alg.method;
+    res = optimize(GrassmannMPS.fg, (state, envs), alg.method;
                    transport! = GrassmannMPS.transport!,
                    retract = GrassmannMPS.retract,
                    inner = GrassmannMPS.inner,
@@ -63,8 +63,8 @@ function find_groundstate(state::S, H::HT, alg::GradientGrassmann,
                    precondition = GrassmannMPS.precondition,
                    isometrictransport = true)
     (x, fx, gx, numfg, normgradhistory) = res
-    (state, pars) = x
-    return state, pars, normgradhistory[end]
+    (state, envs) = x
+    return state, envs, normgradhistory[end]
 end
 
 
@@ -89,13 +89,13 @@ Compute the expectation value, and its gradient with respect to the tensors in t
 cell as tangent vectors on Grassmann manifolds.
 """
 function fg(x)
-    (state, pars) = x
+    (state, envs) = x
     # The partial derivative with respect to AL, al_d, is the partial derivative with
     # respect to AC times CR'.
-    ac_d = [ac_prime(state.AC[v], v, state, pars) for v in 1:length(state)]
+    ac_d = [ac_prime(state.AC[v], v, state, envs) for v in 1:length(state)]
     al_d = [d*c' for (d, c) in zip(ac_d, state.CR[1:end])]
     g = [Grassmann.project(d, a) for (d, a) in zip(al_d, state.AL)]
-    f = real(sum(expectation_value(state, pars.opp, pars)))
+    f = real(sum(expectation_value(state, envs.opp, envs)))
     return f, g
 end
 
@@ -103,26 +103,26 @@ end
 Retract a left-canonical infinite MPS along Grassmann tangent `g` by distance `alpha`.
 """
 function retract(x::Tuple{<:InfiniteMPS,<:Cache}, g, alpha)
-    (state, pars) = x
+    (state, envs) = x
 
-    npars = deepcopy(pars);
-    nstate = npars.dependency; # The end-point
+    nenvs = deepcopy(envs);
+    nstate = nenvs.dependency; # The end-point
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
         (nstate.AL[i], h[i]) = Grassmann.retract(state.AL[i], g[i], alpha)
     end
 
     reorth!(nstate)
-    recalculate!(npars,nstate)
-    
-    return (nstate,npars), h
+    recalculate!(nenvs,nstate)
+
+    return (nstate,nenvs), h
 end
 
 """
 Retract a left-canonical finite MPS along Grassmann tangent `g` by distance `alpha`.
 """
 function retract(x::Tuple{<:FiniteMPS,<:Cache}, g, alpha)
-    (state, pars) = x
+    (state, envs) = x
     y = copy(state)  # The end-point
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
@@ -130,7 +130,7 @@ function retract(x::Tuple{<:FiniteMPS,<:Cache}, g, alpha)
         y.AC[i] = (yal,state.CR[i])
     end
     normalize!(y)
-    return (y,pars), h
+    return (y,envs), h
 end
 
 """
@@ -138,7 +138,7 @@ Transport a tangent vector `h` along the retraction from `x` in direction `g` by
 `alpha`. `xp` is the end-point of the retraction.
 """
 function transport!(h, x, g, alpha, xp)
-    (state, pars) = x
+    (state, envs) = x
     for i in 1:length(state)
         h[i] = Grassmann.transport!(h[i], state.AL[i], g[i], alpha, xp[1].AL[i])
     end
@@ -149,7 +149,7 @@ end
 Euclidean inner product between two Grassmann tangents of an infinite MPS.
 """
 function inner(x, g1, g2)
-    (state, pars) = x
+    (state, envs) = x
     tot = sum(Grassmann.inner(a, d1, d2) for (a, d1, d2) in zip(state.AL, g1, g2))
     return 2*real(tot)
 end
@@ -171,7 +171,7 @@ This requires inverting the right MPS transfer matrix. This is done using `regin
 regularisation parameter that is the norm of the tangent `g`.
 """
 function precondition(x, g)
-    (state, pars) = x
+    (state, envs) = x
     #hacky workaround - what is eltype(state)?
     delta = min(real(one(eltype(state.AL[1]))), sqrt(inner(x, g, g)))
     crinvs = [MPSKit.reginv(cr, delta) for cr in state.CR[1:end]]

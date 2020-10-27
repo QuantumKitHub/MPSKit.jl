@@ -4,7 +4,7 @@
 "
 abstract type AbstractInfEnv <: Cache end;
 
-leftenv(pars::AbstractInfEnv,pos::Int,state) = pars.lw[pos,:]
-rightenv(pars::AbstractInfEnv,pos::Int,state) = pars.rw[pos,:]
-leftenv(pars::AbstractInfEnv,row::Int,col::Int,state) = pars.lw[row,col]
-rightenv(pars::AbstractInfEnv,row::Int,col::Int,state) = pars.rw[row,col]
+leftenv(envs::AbstractInfEnv,pos::Int,state) = envs.lw[pos,:]
+rightenv(envs::AbstractInfEnv,pos::Int,state) = envs.rw[pos,:]
+leftenv(envs::AbstractInfEnv,row::Int,col::Int,state) = envs.lw[row,col]
+rightenv(envs::AbstractInfEnv,row::Int,col::Int,state) = envs.rw[row,col]

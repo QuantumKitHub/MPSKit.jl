@@ -8,41 +8,41 @@
     trscheme = notrunc()
 end
 
-function changebonds_1!(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H)) #would be more efficient if we also repeated pars
+function changebonds_1!(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,envs=environments(state,H)) #would be more efficient if we also repeated envs
     #the unitcell==1 case is unique, because there you have a sef-consistency condition
 
     #expand the one site to two sites
     nstate = InfiniteMPS(repeat(state.AL,2))
     nH = repeat(H,2)
 
-    nstate,npars = changebonds!(nstate,nH,alg)
+    nstate,nenvs = changebonds!(nstate,nH,alg)
 
     A1 = nstate.AL[1]; A2 = nstate.AL[2]
     D1 = space(A1,1); D2 = space(A2,1)
 
     #collapse back to 1 site
     if D2 != D1
-        (nstate,npars) = changebonds(nstate,nH,SvdCut(trscheme = truncdim(min(dim(D1),dim(D2)))),npars)
+        (nstate,nenvs) = changebonds(nstate,nH,SvdCut(trscheme = truncdim(min(dim(D1),dim(D2)))),nenvs)
     end
 
     state.AL[1] = nstate.AL[1]
     reorth!(state; tol = alg.tol_gauge)
-    recalculate!(pars,state);
-    return state, pars
+    recalculate!(envs,state);
+    return state, envs
 end
 
-function changebonds_n!(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars=params(state,H))
+function changebonds_n!(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,envs=environments(state,H))
     meps=0.0
     for loc in 1:length(state)
         @tensor AC2[-1 -2;-3 -4] := state.AC[loc][-1,-2,1]*state.AR[loc+1][1,-3,-4]
 
-        (vals,vecs,_) = let state=state,pars=pars
-            eigsolve(x->ac2_prime(x,loc,state,pars),AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
+        (vals,vecs,_) = let state=state,envs=envs
+            eigsolve(x->ac2_prime(x,loc,state,envs),AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
         end
         nAC2=vecs[1]
 
-        (vals,vecs,_)  = let state=state,pars=pars
-            eigsolve(x->c_prime(x,loc+1,state,pars),state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
+        (vals,vecs,_)  = let state=state,envs=envs
+            eigsolve(x->c_prime(x,loc+1,state,envs),state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
         end
         nC2=vecs[1]
 
@@ -63,16 +63,16 @@ function changebonds_n!(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars
         state.AL[loc+1] = _permute_front(AL2);
 
         reorth!(state; tol = alg.tol_gauge);
-        recalculate!(pars,state);
+        recalculate!(envs,state);
     end
 
-    return state, pars
+    return state, envs
 end
 
-function changebonds!(state::InfiniteMPS,H,alg::VumpsSvdCut,pars=params(state,H))
+function changebonds!(state::InfiniteMPS,H,alg::VumpsSvdCut,envs=environments(state,H))
     if (length(state) == 1)
-        return changebonds_1!(state,H,alg,pars)
+        return changebonds_1!(state,H,alg,envs)
     else
-        return changebonds_n!(state,H,alg,pars);
+        return changebonds_n!(state,H,alg,envs);
     end
 end

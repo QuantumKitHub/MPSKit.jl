@@ -6,11 +6,11 @@
 end
 
 
-function changebonds!(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
+function changebonds!(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,envs=environments(state,H))
     #determine optimal expansion spaces around bond i
     pexp = PeriodicArray(map(1:length(state)) do i
         ACAR = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
-        AC2 = ac2_prime(ACAR,i,state,pars)
+        AC2 = ac2_prime(ACAR,i,state,envs)
 
         #Calculate nullspaces for AL and AR
         NL = leftnull(state.AL[i])
@@ -41,13 +41,13 @@ function changebonds!(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,pars
         state.AC[i] = state.AL[i]*state.CR[i]
     end
 
-    recalculate!(pars,state)
+    recalculate!(envs,state)
 
-    return state,pars
+    return state,envs
 end
 
-function changebonds!(state::InfiniteMPS,H::PeriodicMPO,alg,pars=params(state,H))
-    (nmstate,pars) = changebonds(convert(MPSMultiline,state),H,alg,pars);
+function changebonds!(state::InfiniteMPS,H::PeriodicMPO,alg,envs=environments(state,H))
+    (nmstate,envs) = changebonds(convert(MPSMultiline,state),H,alg,envs);
 
     for i in 1:length(state)
         state.AL[i] = nmstate.AL[i]
@@ -55,18 +55,18 @@ function changebonds!(state::InfiniteMPS,H::PeriodicMPO,alg,pars=params(state,H)
         state.AC[i] = nmstate.AC[i]
         state.CR[i] = nmstate.CR[i]
     end
-    recalculate!(pars,state);
-    return state,pars
+    recalculate!(envs,state);
+    return state,envs
 end
 
-function changebonds!(state::MPSMultiline, H,alg::OptimalExpand,pars=params(state,H))
+function changebonds!(state::MPSMultiline, H,alg::OptimalExpand,envs=environments(state,H))
     #=
         todo : merge this with the MPSCentergauged implementation
     =#
     #determine optimal expansion spaces around bond i
     pexp = PeriodicArray(map(Iterators.product(1:size(state,1),1:size(state,2))) do (i,j)
         ACAR = _permute_front(state.AC[i-1,j])*_permute_tail(state.AR[i-1,j+1])
-        AC2 = ac2_prime(ACAR,i-1,j,state,pars)
+        AC2 = ac2_prime(ACAR,i-1,j,state,envs)
 
         #Calculate nullspaces for AL and AR
         NL = leftnull(state.AL[i,j])
@@ -98,12 +98,12 @@ function changebonds!(state::MPSMultiline, H,alg::OptimalExpand,pars=params(stat
         state.AC[i,j] = state.AL[i,j]*state.CR[i,j]
     end
 
-    recalculate!(pars,state)
+    recalculate!(envs,state)
 
-    return state,pars
+    return state,envs
 end
 
-function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::OptimalExpand,pars=params(state,H))
+function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::OptimalExpand,envs=environments(state,H))
     #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
     #didn't use the paper because generically it'd be annoying to implement (again having to fuse and stuff)
 
@@ -113,7 +113,7 @@ function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::O
 
     for i in 1:(length(state)-1)
         ACAR = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
-        AC2 = ac2_prime(ACAR,i,state,pars)
+        AC2 = ac2_prime(ACAR,i,state,envs)
 
         #Calculate nullspaces for left and right
         NL = leftnull(state.AC[i])
@@ -133,5 +133,5 @@ function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::O
         state.AC[i+1] = (nc,nar)
     end
 
-    return state,pars
+    return state,envs
 end

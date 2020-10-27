@@ -51,10 +51,10 @@ we will initially use a 2site tdvp scheme to increase the bond dimension while t
 ψₜ = copy(ψ₀);
 dt = 0.01;
 
-(ψₜ,pars) = timestep(ψₜ,ising_ham(2),dt,Tdvp2(trscheme=truncdim(20)));
+(ψₜ,envs) = timestep(ψₜ,ising_ham(2),dt,Tdvp2(trscheme=truncdim(20)));
 ```
 
-"pars" is a kind of cache object that keeps track of all environments in ψ. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
+"envs" is a kind of cache object that keeps track of all environments in ψ. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
 
 Putting it all together, we get
 ```julia
@@ -64,14 +64,14 @@ function finite_sim(len; dt = 0.05, finaltime = 5.0)
 
     post_quench_ham = ising_ham(2);
     ψₜ = copy(ψ₀);
-    pars = params(ψₜ,post_quench_ham);
+    envs = environments(ψₜ,post_quench_ham);
 
     echos = [echo(ψₜ,ψ₀)];
     times = collect(0:dt:finaltime);
 
     @showprogress for t = times[2:end]
         alg = t > 3*dt ? Tdvp() : Tdvp2(trscheme = truncdim(50))
-        (ψₜ,pars) = timestep(ψₜ,post_quench_ham,dt,alg,pars);
+        (ψₜ,envs) = timestep(ψₜ,post_quench_ham,dt,alg,envs);
         push!(echos,echo(ψₜ,ψ₀))
     end
 
@@ -106,17 +106,17 @@ echo(ψ₀::InfiniteMPS,ψₜ::InfiniteMPS) = -2*log(abs(dot(ψ₀,ψₜ)))
 This time we cannot use a 2site scheme to grow the bond dimension, as this isn't implemented (yet). Instead, we have to make use of the changebonds machinery. Multiple algorithms are available, but we will only focus on OptimalEpand(). Growing the bond dimension by 5 can be done by calling:
 ```julia
 ψₜ = copy(ψ₀);
-(ψₜ,pars) = changebonds(ψₜ,ising_ham(2),OptimalExpand(trscheme=truncdim(5)));
+(ψₜ,envs) = changebonds(ψₜ,ising_ham(2),OptimalExpand(trscheme=truncdim(5)));
 ```
 
 a single timestep is easy
 ```julia
 dt = 0.01;
 
-(ψₜ,pars) = timestep(ψₜ,ising_ham(2),dt,Tdvp(),pars);
+(ψₜ,envs) = timestep(ψₜ,ising_ham(2),dt,Tdvp(),envs);
 ```
 
-With performance in mind we should once again try to re-use these "pars" cache objects. The final code is
+With performance in mind we should once again try to re-use these "envs" cache objects. The final code is
 
 ```julia
 function infinite_sim(dt = 0.05, finaltime = 5.0)
@@ -125,16 +125,16 @@ function infinite_sim(dt = 0.05, finaltime = 5.0)
 
     post_quench_ham = ising_ham(2);
     ψₜ = copy(ψ₀);
-    pars = params(ψₜ,post_quench_ham);
+    envs = environments(ψₜ,post_quench_ham);
 
     echos = [echo(ψₜ,ψ₀)];
     times = collect(0:dt:finaltime);
 
     @showprogress for t = times[2:end]
         if t < 50*dt # if t is sufficiently small, we increase the bond dimension
-            (ψₜ,pars) = changebonds(ψₜ,post_quench_ham,OptimalExpand(trscheme=truncdim(1)),pars)
+            (ψₜ,envs) = changebonds(ψₜ,post_quench_ham,OptimalExpand(trscheme=truncdim(1)),envs)
         end
-        (ψₜ,pars) = timestep(ψₜ,post_quench_ham,dt,Tdvp(),pars);
+        (ψₜ,envs) = timestep(ψₜ,post_quench_ham,dt,Tdvp(),envs);
         push!(echos,echo(ψₜ,ψ₀))
     end
 

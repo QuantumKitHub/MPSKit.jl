@@ -1,17 +1,17 @@
 using MPSKit,MPSKitModels,TensorKit,Test
 
 
-function bondmanage(state,ham,pars)
+function bondmanage(state,ham,envs)
     final_bonddim = 12;
 
     upperbound = max_Ds(state);
     shouldincrease = reduce((a,i) -> a && dim(virtualspace(state,i))>=final_bonddim || upperbound[i+1] == dim(virtualspace(state,i)),1:length(state),init=true);
 
     if (shouldincrease)
-        (state,pars) = changebonds(state, ham, OptimalExpand(),pars);
+        (state,envs) = changebonds(state, ham, OptimalExpand(),envs);
     end
 
-    return (state,pars)
+    return (state,envs)
 end
 
 
@@ -22,7 +22,7 @@ let
     ham = anticommutator(th)
 
     ts = FiniteMPS(repeat(infinite_temperature(th),10))
-    ca = params(ts,ham);
+    ca = environments(ts,ham);
 
     betastep=0.1;endbeta=2;betas=collect(0:betastep:endbeta);
 

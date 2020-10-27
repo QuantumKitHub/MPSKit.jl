@@ -26,29 +26,29 @@ function gen_lw_rw(st::InfiniteMPS{A,B},ham::MPOHamiltonian) where {A,B}
     return (lw,rw)
 end
 
-#randomly initialize pars
-function params(st::InfiniteMPS,ham::MPOHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
+#randomly initialize envs
+function environments(st::InfiniteMPS,ham::MPOHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
     (lw,rw) = gen_lw_rw(st,ham);
-    pars = MPOHamInfEnv(ham,similar(st),tol,maxiter,lw,rw)
-    recalculate!(pars,st);
+    envs = MPOHamInfEnv(ham,similar(st),tol,maxiter,lw,rw)
+    recalculate!(envs,st);
 end
 
 
-function recalculate!(pars::MPOHamInfEnv, nstate)
-    sameDspace = reduce((prev,i) -> prev && _lastspace(pars.lw[i,1]) == _firstspace(nstate.CR[i])',1:length(nstate),init=true);
+function recalculate!(envs::MPOHamInfEnv, nstate)
+    sameDspace = reduce((prev,i) -> prev && _lastspace(envs.lw[i,1]) == _firstspace(nstate.CR[i])',1:length(nstate),init=true);
 
     if !sameDspace
-        (pars.lw,pars.rw) = gen_lw_rw(nstate,pars.opp)
+        (envs.lw,envs.rw) = gen_lw_rw(nstate,envs.opp)
     end
 
     @sync begin
-        @Threads.spawn calclw!(pars.lw,nstate,pars.opp,tol = pars.tol,maxiter = pars.maxiter)
-        @Threads.spawn calcrw!(pars.rw,nstate,pars.opp,tol = pars.tol,maxiter = pars.maxiter)
+        @Threads.spawn calclw!(envs.lw,nstate,envs.opp,tol = envs.tol,maxiter = envs.maxiter)
+        @Threads.spawn calcrw!(envs.rw,nstate,envs.opp,tol = envs.tol,maxiter = envs.maxiter)
     end
 
-    pars.dependency = nstate;
+    envs.dependency = nstate;
 
-    pars
+    envs
 end
 
 

@@ -14,7 +14,7 @@ end
 
 #the constructor used for any state (finitemps or mpscomoving)
 #we really should be doing this lazily
-function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}) where C<:MPSTensor
+function environments(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}) where C<:MPSTensor
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 
@@ -27,7 +27,7 @@ function params(state,opp::Operator,leftstart::Array{C,1},rightstart::Array{C,1}
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
-function params(state::FiniteMPS,ham::MPOHamiltonian)
+function environments(state::FiniteMPS,ham::MPOHamiltonian)
     lll = l_LL(state);rrr = r_RR(state)
     rightstart = Array{eltype(state),1}();leftstart = Array{eltype(state),1}()
 
@@ -50,15 +50,15 @@ function params(state::FiniteMPS,ham::MPOHamiltonian)
         push!(rightstart,ctr)
     end
 
-    return params(state,ham,leftstart,rightstart)
+    return environments(state,ham,leftstart,rightstart)
 end
 
 #extract the correct leftstart/rightstart for mpscomoving
-function params(state::MPSComoving,ham::MPOHamiltonian;lpars=params(state.left_gs,ham),rpars=params(state.right_gs,ham))
-    params(state,ham,leftenv(lpars,1,state.left_gs),rightenv(rpars,length(state),state.right_gs))
+function environments(state::MPSComoving,ham::MPOHamiltonian;lenvs=environments(state.left_gs,ham),renvs=environments(state.right_gs,ham))
+    environments(state,ham,leftenv(lenvs,1,state.left_gs),rightenv(renvs,length(state),state.right_gs))
 end
 
-function params(state::FiniteMPS,ham::ComAct)
+function environments(state::FiniteMPS,ham::ComAct)
     lll = l_LL(state);rrr = r_RR(state)
 
 
@@ -88,7 +88,7 @@ function params(state::FiniteMPS,ham::ComAct)
         rightstart[i] = ctr
     end
 
-    return params(state,ham,leftstart,rightstart)
+    return environments(state,ham,leftstart,rightstart)
 end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies

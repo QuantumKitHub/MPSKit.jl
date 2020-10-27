@@ -33,10 +33,10 @@ end
 
 infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(Matrix{eltype(ham[1,1,1])},oneunit(sp)*sp,oneunit(sp)*sp),(1,2,4),(3,)) for sp in ham.pspaces]
 
-calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,pars) = norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc, state, pars))
+calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs) = norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc, state, envs))
 "calculates the galerkin error"
-calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, pars) = maximum([calc_galerkin(state,loc,pars) for loc in 1:length(state)])
-calc_galerkin(state::MPSMultiline, pars) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col, state, pars)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
+calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs) = maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
+calc_galerkin(state::MPSMultiline, envs) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col, state, envs)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
 
 "
 Calculates the (partial) transfer spectrum
@@ -98,32 +98,32 @@ function correlation_length(spectrum,above::InfiniteMPS; tol_angle=0.1,below=abo
 end
 
 
-function variance(state::InfiniteMPS,ham::MPOHamiltonian,pars = params(state,ham))
-    rescaled_ham = ham-expectation_value(state,ham,pars);
+function variance(state::InfiniteMPS,ham::MPOHamiltonian,envs = environments(state,ham))
+    rescaled_ham = ham-expectation_value(state,ham,envs);
     real(sum(expectation_value(state,rescaled_ham*rescaled_ham)))
 end
 
-function variance(state::FiniteMPS,ham::MPOHamiltonian,pars = params(state,ham))
+function variance(state::FiniteMPS,ham::MPOHamiltonian,envs = environments(state,ham))
     ham2 = ham*ham;
-    real(sum(expectation_value(state,ham2)) - sum(expectation_value(state,ham,pars))^2)
+    real(sum(expectation_value(state,ham2)) - sum(expectation_value(state,ham,envs))^2)
 end
 
-function variance(state::MPSComoving,ham::MPOHamiltonian,pars = params(state,ham))
+function variance(state::MPSComoving,ham::MPOHamiltonian,envs = environments(state,ham))
     #tricky to define
-    (ham2,npars) = squaredenvs(state,ham,pars);
-    real(expectation_value(state,ham2,npars)[2] - expectation_value(state,ham,pars)[2]^2)
+    (ham2,nenvs) = squaredenvs(state,ham,envs);
+    real(expectation_value(state,ham2,nenvs)[2] - expectation_value(state,ham,envs)[2]^2)
 end
 
 variance(state::FiniteQP,ham::MPOHamiltonian,args...) = variance(convert(FiniteMPS,state),ham);
 
-function variance(state::InfiniteQP,ham::MPOHamiltonian,pars=params(state,ham))
+function variance(state::InfiniteQP,ham::MPOHamiltonian,envs=environments(state,ham))
     # I remember there being an issue here @gertian?
     state.trivial || throw(ArgumentError("variance of domain wall excitations is not implemented"));
 
     rescaled_ham = ham - expectation_value(state.left_gs,ham);
 
     #I don't remember where the formula came from
-    E_ex = dot(state,effective_excitation_hamiltonian(ham,state,pars));
+    E_ex = dot(state,effective_excitation_hamiltonian(ham,state,envs));
     E_f = expectation_value(state.left_gs,rescaled_ham,0);
 
     ham2 = rescaled_ham*rescaled_ham
