@@ -5,7 +5,7 @@
 ```julia
 state = FiniteMPS(rand,ComplexF64,20,ℂ^2,ℂ^10);
 operator = nonsym_ising_ham();
-(groundstate,environments,delta) = find_groundstate(state,operator,Dmrg())
+(groundstate,environments,delta) = find_groundstate!(state,operator,Dmrg())
 ```
 
 will use dmrg to minimize the energy. Sometimes it can be useful to do more extensive logging or to perform dynamical bond dimension expansion. That's why the Dmrg() constructor allows you to specify a finalize function
@@ -15,7 +15,7 @@ function finalize(iter,state,ham,envs)
     return state,envs;
 end
 
-Dmrg(finalize=my_finalize)
+Dmrg(finalize! = my_finalize)
 ```
 
 Similar functionality is provided (or soon to be implemented) in other groundstate algorithms. Other algorithms are provided and can be found in the [library documentation](@ref lib_gs_alg).
@@ -25,7 +25,7 @@ Similar functionality is provided (or soon to be implemented) in other groundsta
 ```julia
 state = FiniteMPS(rand,ComplexF64,20,ℂ^2,ℂ^10);
 operator = nonsym_ising_ham();
-(newstate,environments) = timestep(state,operator,0.3,Tdvp2(trscheme=truncdim(20)))
+(newstate,environments) = timestep!(state,operator,0.3,Tdvp2(trscheme=truncdim(20)))
 ```
 
 will evolve 'state' forwards in time by 0.3 seconds. Here we use a 2 site update scheme, which will truncate the 2site tensor back down, truncating at bond dimension 20. An overview of all time evolution algorithms is in the [library documentation](@ref lib_time_alg).
@@ -42,7 +42,7 @@ For example, the following calculates the haldane gap for spin-1 heisenberg.
 ```julia
 th = nonsym_xxz_ham()
 ts = InfiniteMPS([ℂ^3],[ℂ^48]);
-(ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
+(ts,envs,_) = find_groundstate!(ts,th,Vumps(maxiter=400,verbose=false));
 (energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,envs);
 @test energies[1] ≈ 0.41047925 atol=1e-4
 ```

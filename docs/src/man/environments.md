@@ -52,10 +52,9 @@ cache.tol=1e-8;
 recalculate!(cache,state)
 ```
 
-Similar to finite environments, when queried with a different state:
+Unlike their finite counterparts, recalculating is not done automatically. To get the environment for a different state one has to recalculate explicitly!
 ```julia
 different_state = InfiniteMPS([ℂ^2],[ℂ^10]);
+recalculate!(cache,different_state)
 leftenv(cache,3,different_state)
 ```
-
-the cache will simply check if the states match up and if not, recalculate! behind the scenes.
