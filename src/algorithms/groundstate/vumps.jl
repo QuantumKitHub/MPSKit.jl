@@ -6,7 +6,7 @@ see https://arxiv.org/abs/1701.07035
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
     orthmaxiter::Int = Defaults.maxiter
-    finalize::F = Defaults._finalize
+    finalize!::F = Defaults._finalize!
     verbose::Bool = Defaults.verbose
 end
 
@@ -66,7 +66,7 @@ function find_groundstate!(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,en
         galerkin   = calc_galerkin(state, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
-        (state,envs, external_conv) = alg.finalize(iter,state,H,envs) :: Tuple{InfiniteMPS{A,B},P,Bool};
+        (state,envs, external_conv) = alg.finalize!(iter,state,H,envs) :: Tuple{InfiniteMPS{A,B},P,Bool};
         if (galerkin <= alg.tol_galerkin && external_conv ) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
             return state, envs, galerkin
