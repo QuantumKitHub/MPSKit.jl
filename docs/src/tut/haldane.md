@@ -21,7 +21,7 @@ physical_space = Rep[SU₂](1=>1);
 virtual_space = Rep[SU₂](0=>20,1=>20,2=>10,3=>10,4=>5);
 
 initial_state = FiniteMPS(rand,ComplexF64,len,physical_space,virtual_space);
-(gs,envs,delta) = find_groundstate(initial_state,ham,Dmrg());
+(gs,envs,delta) = find_groundstate!(initial_state,ham,Dmrg());
 ```
 
 The typical way to find excited states is to minmize the energy while adding an error term ``lambda | gs > < gs | ``. Here we will instead use the [quasiparticle ansatz](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.111.080401).
@@ -53,7 +53,7 @@ A much nicer way of obtaining the haldane gap is by working directly in the ther
 ```julia
 virtual_space = Rep[SU₂](1//2=>20,3//2=>20,5//2=>10,7//2=>10,9//2=>5); # this is bond dimension 300!
 initial_state = InfiniteMPS([physical_space],[virtual_space]);
-(gs,envs,delta) = find_groundstate(initial_state,ham,Vumps());
+(gs,envs,delta) = find_groundstate!(initial_state,ham,Vumps());
 ```
 
 One difference with the finite size case is that we not only can - but also have to - specify a momentum label. We can scan for k = 0 to pi by calling:

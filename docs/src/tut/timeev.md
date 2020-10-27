@@ -37,7 +37,7 @@ init = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^10);
 
 Find the pre-quench groundstate
 ```julia
-(ψ₀,_) = find_groundstate(init,ising_ham(0.5),Dmrg());
+(ψ₀,_) = find_groundstate!(init,ising_ham(0.5),Dmrg());
 ```
 
 We can define a help function that measures the loschmith echo
@@ -48,10 +48,10 @@ echo(ψ₀::FiniteMPS,ψₜ::FiniteMPS) = -2*log(abs(dot(ψ₀,ψₜ)))/length(�
 
 we will initially use a 2site tdvp scheme to increase the bond dimension while time evolving, and later on switch to a faster one-site scheme. A single timestep can be done using
 ```julia
-ψₜ = copy(ψ₀);
+ψₜ = deepcopy(ψ₀);
 dt = 0.01;
 
-(ψₜ,envs) = timestep(ψₜ,ising_ham(2),dt,Tdvp2(trscheme=truncdim(20)));
+(ψₜ,envs) = timestep!(ψₜ,ising_ham(2),dt,Tdvp2(trscheme=truncdim(20)));
 ```
 
 "envs" is a kind of cache object that keeps track of all environments in ψ. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
@@ -60,10 +60,10 @@ Putting it all together, we get
 ```julia
 function finite_sim(len; dt = 0.05, finaltime = 5.0)
     ψ₀ = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^10);
-    (ψ₀,_) = find_groundstate(ψ₀,ising_ham(0.5),Dmrg());
+    (ψ₀,_) = find_groundstate!(ψ₀,ising_ham(0.5),Dmrg());
 
     post_quench_ham = ising_ham(2);
-    ψₜ = copy(ψ₀);
+    ψₜ = deepcopy(ψ₀);
     envs = environments(ψₜ,post_quench_ham);
 
     echos = [echo(ψₜ,ψ₀)];
@@ -71,7 +71,7 @@ function finite_sim(len; dt = 0.05, finaltime = 5.0)
 
     @showprogress for t = times[2:end]
         alg = t > 3*dt ? Tdvp() : Tdvp2(trscheme = truncdim(50))
-        (ψₜ,envs) = timestep(ψₜ,post_quench_ham,dt,alg,envs);
+        (ψₜ,envs) = timestep!(ψₜ,post_quench_ham,dt,alg,envs);
         push!(echos,echo(ψₜ,ψ₀))
     end
 
@@ -89,7 +89,7 @@ init = InfiniteMPS([ℂ^2],[ℂ^10]);
 
 and find the pre-quench groundstate
 ```julia
-(ψ₀,_) = find_groundstate(init,ising_ham(0.5),Vumps());
+(ψ₀,_) = find_groundstate!(init,ising_ham(0.5),Vumps());
 ```
 
 The dot product of two infinite matrix product states scales as  ``\alpha ^N`` where α is the dominant eigenvalue of the transfer matrix. It is this α that is returned when calling
@@ -105,15 +105,15 @@ echo(ψ₀::InfiniteMPS,ψₜ::InfiniteMPS) = -2*log(abs(dot(ψ₀,ψₜ)))
 
 This time we cannot use a 2site scheme to grow the bond dimension, as this isn't implemented (yet). Instead, we have to make use of the changebonds machinery. Multiple algorithms are available, but we will only focus on OptimalEpand(). Growing the bond dimension by 5 can be done by calling:
 ```julia
-ψₜ = copy(ψ₀);
-(ψₜ,envs) = changebonds(ψₜ,ising_ham(2),OptimalExpand(trscheme=truncdim(5)));
+ψₜ = deepcopy(ψ₀);
+(ψₜ,envs) = changebonds!(ψₜ,ising_ham(2),OptimalExpand(trscheme=truncdim(5)));
 ```
 
 a single timestep is easy
 ```julia
 dt = 0.01;
 
-(ψₜ,envs) = timestep(ψₜ,ising_ham(2),dt,Tdvp(),envs);
+(ψₜ,envs) = timestep!(ψₜ,ising_ham(2),dt,Tdvp(),envs);
 ```
 
 With performance in mind we should once again try to re-use these "envs" cache objects. The final code is
@@ -121,10 +121,10 @@ With performance in mind we should once again try to re-use these "envs" cache o
 ```julia
 function infinite_sim(dt = 0.05, finaltime = 5.0)
     ψ₀ = InfiniteMPS([ℂ^2],[ℂ^10]);
-    (ψ₀,_) = find_groundstate(ψ₀,ising_ham(0.5),Vumps());
+    (ψ₀,_) = find_groundstate!(ψ₀,ising_ham(0.5),Vumps());
 
     post_quench_ham = ising_ham(2);
-    ψₜ = copy(ψ₀);
+    ψₜ = deepcopy(ψ₀);
     envs = environments(ψₜ,post_quench_ham);
 
     echos = [echo(ψₜ,ψ₀)];
@@ -132,9 +132,9 @@ function infinite_sim(dt = 0.05, finaltime = 5.0)
 
     @showprogress for t = times[2:end]
         if t < 50*dt # if t is sufficiently small, we increase the bond dimension
-            (ψₜ,envs) = changebonds(ψₜ,post_quench_ham,OptimalExpand(trscheme=truncdim(1)),envs)
+            (ψₜ,envs) = changebonds!(ψₜ,post_quench_ham,OptimalExpand(trscheme=truncdim(1)),envs)
         end
-        (ψₜ,envs) = timestep(ψₜ,post_quench_ham,dt,Tdvp(),envs);
+        (ψₜ,envs) = timestep!(ψₜ,post_quench_ham,dt,Tdvp(),envs);
         push!(echos,echo(ψₜ,ψ₀))
     end
 
