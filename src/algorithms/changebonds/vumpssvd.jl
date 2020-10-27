@@ -25,8 +25,9 @@ function changebonds_1!(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars
         (nstate,npars) = changebonds(nstate,nH,SvdCut(trscheme = truncdim(min(dim(D1),dim(D2)))),npars)
     end
 
-    copy!(state,InfiniteMPS([nstate.AL[1]];tol=alg.tol_gauge))
-    poison!(pars);
+    state.AL[1] = nstate.AL[1]
+    reorth!(state; tol = alg.tol_gauge)
+    recalculate!(pars,state);
     return state, pars
 end
 
@@ -58,11 +59,11 @@ function changebonds_n!(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,pars
         @tensor AL2[-1,-2,-3] := QAC[-1,-2,1]*conj(dom_map[2,1])*conj(QC[-3,2])
 
         #make a new state using the updated A's
-        state.AL[loc]   = permute(AL1,(1,2),(3,))
-        state.AL[loc+1] = permute(AL2,(1,2),(3,))
+        state.AL[loc]   = _permute_front(AL1);
+        state.AL[loc+1] = _permute_front(AL2);
 
-        copy!(state,InfiniteMPS(state.AL; tol = alg.tol_gauge))
-        poison!(pars);
+        reorth!(state; tol = alg.tol_gauge);
+        recalculate!(pars,state);
     end
 
     return state, pars

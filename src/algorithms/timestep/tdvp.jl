@@ -10,33 +10,41 @@ end
 
 time evolves psi by timestep dt using algorithm alg
 """
-function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,pars::Cache=params(state,H))
+function timestep(state::InfiniteMPS,H,timestep,alg::Tdvp,pars = params(state,H))
+    cpars = deepcopy(pars);
+    cstate = cpars.dependency;
 
-    newAs = similar(state.AL)
+    timestep!(cstate,H,timestep,alg,cpars)
+end
+function timestep!(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,pars::Cache=params(state,H))
 
-    acjobs = map(enumerate(state.AC)) do (loc,ac)
-        @Threads.spawn exponentiate(x->ac_prime(x,loc,state,pars) ,-1im*timestep,ac,Lanczos(tol=alg.tol))
-    end
-    cjobs = map(enumerate(state.CR)) do (loc,c)
-        @Threads.spawn exponentiate(x->c_prime(x,loc,state,pars) ,-1im*timestep,c,Lanczos(tol=alg.tol))
+    temp_ACs = similar(state.AC);
+    temp_CRs = similar(state.CR);
+
+    @sync for (loc,(ac,c)) in enumerate(zip(state.AC,state.CR))
+        @Threads.spawn begin
+            (temp_ACs[loc],convhist) = exponentiate(x->ac_prime(x,loc,state,pars) ,-1im*timestep,ac,Lanczos(tol=alg.tol))
+            convhist.converged==0 && @info "time evolving ac($loc) failed $(convhist.normres)"
+        end
+
+        @Threads.spawn begin
+            (temp_CRs[loc],convhist) = exponentiate(x->c_prime(x,loc,state,pars) ,-1im*timestep,c,Lanczos(tol=alg.tol))
+            convhist.converged==0 && @info "time evolving a($loc) failed $(convhist.normres)"
+        end
     end
 
     for loc in 1:length(state)
-        (newAcenter,convhist) = fetch(acjobs[loc])
-        convhist.converged==0 && @info "time evolving ac($loc) failed $(convhist.normres)"
-
-        (newCenter,convhist) = fetch(cjobs[loc])
-        convhist.converged==0 && @info "time evolving c($loc) failed $(convhist.normres)"
 
         #find Al that best fits these new Acenter and centers
-        QAc,_ = leftorth!(newAcenter,alg=TensorKit.QRpos())
-        Qc,_ = leftorth!(newCenter,alg=TensorKit.QRpos())
-        @tensor Aleft[-1 -2;-3]:=QAc[-1,-2,1]*conj(Qc[-3,1])
-
-        newAs[loc]     = Aleft
+        QAc,_ = leftorth!(temp_ACs[loc],alg=TensorKit.QRpos())
+        Qc,_ = leftorth!(temp_CRs[loc],alg=TensorKit.QRpos())
+        @tensor state.AL[loc][-1 -2;-3]=QAc[-1,-2,1]*conj(Qc[-3,1])
     end
 
-    return InfiniteMPS(newAs; tol = alg.tolgauge, maxiter = alg.maxiter,leftgauged = true),pars
+    reorth!(state; tol = alg.tolgauge, maxiter = alg.maxiter)
+    recalculate!(pars,state);
+
+    state,pars
 end
 
 function timestep(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp,pars=params(state,H))

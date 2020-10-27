@@ -26,12 +26,12 @@ function changebonds!(state::InfiniteMPS,alg::SvdCut)
         @tensor state.AL[i+1][-1 -2;-3]:=conj(U[1,-1])*state.AL[i+1][1,-2,-3]
     end
 
-    return copy!(state,InfiniteMPS(state.AL))
+    reorth!(state)
 end
 
 function changebonds!(state,H,alg::SvdCut,pars=params(state,H))
     changebonds!(state,alg);
-    poison!(pars);
+    recalculate!(pars,state);
 
     return state,pars;
 end

@@ -1,6 +1,14 @@
 #in-place fallback
-changebonds(state,opperator,algorithm,args...) = changebonds!(copy(state),opperator,algorithm,args...)
-changebonds(state,algorithm) = changebonds!(copy(state),algorithm)
+function changebonds(state::Union{InfiniteMPS,MPSMultiline},opperator,algorithm,pars::AbstractInfEnv = params(state,opperator))
+    npars = deepcopy(pars);
+    nstate = npars.dependency;
+
+    changebonds!(nstate,opperator,algorithm,npars)
+end
+function changebonds(state::Union{FiniteMPS,MPSComoving},opperator,algorithm,pars::Union{OvlEnv,FinEnv} = params(state,opperator))
+    changebonds!(copy(state),opperator,algorithm,pars)
+end
+changebonds(state,algorithm) = changebonds!(deepcopy(state),algorithm)
 
 "
     Take the union of 2 truncation algorithms using &
@@ -16,7 +24,7 @@ function changebonds!(state,alg::UnionTrunc)
     return state
 end
 
-function changebonds!(state,H,alg::UnionTrunc,pars = params(state,H))
+function changebonds!(state,H,alg::UnionTrunc,pars=params(state,H))
     changebonds!(state,H,alg.alg1,pars)
     changebonds!(state,H,alg.alg2,pars)
     return (state,pars)

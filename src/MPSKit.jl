@@ -13,7 +13,7 @@ module MPSKit
 
     #useful utility functions?
     export spinmatrices,add_util_leg,full,nonsym_spintensors,nonsym_bosonictensors
-    export max_Ds,virtualspace
+    export max_Ds,virtualspace, reorth!, recalculate!
 
     #hamiltonian things
     export Hamiltonian,Operator,Cache

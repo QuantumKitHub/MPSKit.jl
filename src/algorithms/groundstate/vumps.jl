@@ -15,7 +15,14 @@ end
 
     find the groundstate for ham using algorithm alg
 "
-function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,pars::P=params(state,H))::Tuple{InfiniteMPS{A,B},P,Float64} where {A,B,P}
+function find_groundstate(state,H,alg::Vumps,pars = params(state,H))
+    npars = deepcopy(pars);
+    nstate = npars.dependency;
+
+    find_groundstate!(nstate,H,alg,npars);
+end
+
+function find_groundstate!(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,pars::P=params(state,H))::Tuple{InfiniteMPS{A,B},P,Float64} where {A,B,P}
     galerkin::Float64  = 1+alg.tol_galerkin
     iter      = 1
 
@@ -46,15 +53,16 @@ function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,par
 
         end
 
-        newAs::Vector{A} = map(zip(temp_ACs,temp_Cs)) do (ac,c)
-            QAc,_ = TensorKit.leftorth!(ac::A, alg=QRpos())
-            Qc,_  = TensorKit.leftorth!(c::B, alg=QRpos())
+        for (i,(ac,c)) in enumerate(zip(temp_ACs,temp_Cs))
+            QAc,_ = TensorKit.leftorth!(ac, alg=QRpos())
+            Qc,_  = TensorKit.leftorth!(c, alg=QRpos())
 
-            QAc*adjoint(Qc)
+            state.AL[i] = QAc*adjoint(Qc)
         end
 
+        reorth!(state; tol = alg.tol_gauge, maxiter = alg.orthmaxiter);
+        recalculate!(pars,state);
 
-        state = InfiniteMPS(newAs; tol = alg.tol_gauge, maxiter = alg.orthmaxiter,leftgauged=true)::InfiniteMPS{A,B}
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 

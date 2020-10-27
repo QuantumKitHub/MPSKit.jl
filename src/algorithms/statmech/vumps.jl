@@ -17,48 +17,63 @@ function leading_boundary(state::InfiniteMPS,H,alg,pars=params(state,H))
     return convert(InfiniteMPS,st),pr,de
 end
 
-function leading_boundary(state::MPSMultiline, H,alg::Vumps,pars = params(state,H))
+function leading_boundary(state::MPSMultiline,H,alg,pars = params(state,H))
+    npars = deepcopy(pars);
+    nstate = npars.dependency;
+    leading_boundary!(nstate,H,alg,npars);
+end
+
+function leading_boundary!(state::MPSMultiline, H,alg::Vumps,pars = params(state,H))
+
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
-    newAs = similar(state.AL)
+    temp_ACs = similar(state.AC);
+    temp_Cs = similar(state.CR);
 
     while true
+
         eigalg = Arnoldi(tol=alg.tol_galerkin/10)
 
-        acjobs = map(1:size(state,2)) do col
-            @Threads.spawn eigsolve(RecursiveVec(state.AC[:,col]), 1, :LM, eigalg) do x
-                tasks = map(1:length(x)) do row
-                    @Threads.spawn ac_prime(x[row], row,col, state, pars)
+        @sync for col in 1:size(state,2)
+
+            @Threads.spawn begin
+                (vals_ac,vecs_ac) = eigsolve(RecursiveVec(state.AC[:,col]), 1, :LM, eigalg) do x
+                    y = similar(x.vecs);
+
+                    @sync for i in 1:length(x)
+                        @Threads.spawn y[mod1(i-1,end)] = ac_prime(x[i],i,col,state,pars);
+                    end
+
+                    RecursiveVec(y)
                 end
 
-                RecursiveVec(circshift(fetch.(tasks),1))
+                temp_ACs[:,col] = vecs_ac[1][:]
             end
-        end
 
-        cjobs = map(1:size(state,2)) do col
-            @Threads.spawn eigsolve(RecursiveVec(state.CR[:,col]), 1, :LM, eigalg) do x
-                tasks = map(1:length(x)) do row
-                    @Threads.spawn c_prime(x[row], row,col, state, pars)
+            @Threads.spawn begin
+                (vals_c,vecs_c) = eigsolve(RecursiveVec(state.CR[:,col]), 1, :LM, eigalg) do x
+                    y = similar(x.vecs);
+
+                    @sync for i in 1:length(x)
+                        @Threads.spawn y[mod1(i-1,end)] = c_prime(x[i],i,col,state,pars);
+                    end
+
+                    RecursiveVec(y)
                 end
-
-                RecursiveVec(circshift(fetch.(tasks),1))
+                temp_Cs[:,col] = vecs_c[1][:]
             end
         end
 
-        for col in 1:size(state,2)
-            (e,vac,ch) = fetch(acjobs[col])
-            (e,vc,ch) = fetch(cjobs[col])
-
-            for row in 1:size(state,1)
-                QAc,_ = TensorKit.leftorth!(vac[1][row], alg=TensorKit.QRpos())
-                Qc,_  = TensorKit.leftorth!(vc[1][row], alg=TensorKit.QRpos())
-                newAs[row,col] = QAc*adjoint(Qc)
-            end
-
+        for row in 1:size(state,1),col in 1:size(state,2)
+            QAc,_ = leftorth!(temp_ACs[row,col], alg=TensorKit.QRpos())
+            Qc,_  = leftorth!(temp_Cs[row,col], alg=TensorKit.QRpos())
+            state.AL[row,col] = QAc*adjoint(Qc)
         end
 
-        state = MPSMultiline(newAs; leftgauged=true,tol = alg.tol_gauge, maxiter = alg.orthmaxiter)
+        reorth!(state; tol = alg.tol_gauge, maxiter = alg.orthmaxiter);
+        recalculate!(pars,state);
+
         galerkin = calc_galerkin(state, pars)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 

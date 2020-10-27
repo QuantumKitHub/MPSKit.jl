@@ -10,32 +10,38 @@
     verbose::Bool = Defaults.verbose
 end
 
-function leading_boundary(state::MPSMultiline, H,alg::PowerMethod,pars=params(state,H))
+function leading_boundary!(state::MPSMultiline, H,alg::PowerMethod,pars=params(state,H))
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
-    newAs = similar(state.AL)
+    temp_ACs = similar(state.AC);
+    temp_Cs = similar(state.CR);
 
     while true
 
-        @threads for col in 1:size(state,2)
-
-            vac = let state=state,pars=pars
-                circshift([ac_prime(ac,row,col,state,pars) for (row,ac) in enumerate(state.AC[:,col])],1)
-            end
-            vc  = let state=state,pars=pars
-                circshift([c_prime(c,row,col,state,pars) for (row,c) in enumerate(state.CR[:,col])],1)
+        @sync for col in 1:size(state,2)
+            @Threads.spawn begin
+                temp_ACs[:,col] = let state=state,pars=pars
+                    circshift([ac_prime(ac,row,col,state,pars) for (row,ac) in enumerate(state.AC[:,col])],1)
+                end
             end
 
-            for row in 1:size(state,1)
-                QAc,_ = leftorth!(vac[row], alg=TensorKit.Polar())
-                Qc,_  = leftorth!(vc[row], alg=TensorKit.Polar())
-                newAs[row,col] = QAc*adjoint(Qc)
+            @Threads.spawn begin
+                temp_Cs  = let state=state,pars=pars
+                    circshift([c_prime(c,row,col,state,pars) for (row,c) in enumerate(state.CR[:,col])],1)
+                end
             end
-
         end
 
-        state = MPSMultiline(newAs; leftgauged=true,tol = alg.tol_gauge, maxiter = alg.orthmaxiter)
+        for row in 1:size(state,1),col in 1:size(state,2)
+            QAc,_ = leftorth!(temp_ACs[row,col], alg=TensorKit.QRpos())
+            Qc,_  = leftorth!(temp_Cs[row,col], alg=TensorKit.QRpos())
+            state.AL[row,col] = QAc*adjoint(Qc)
+        end
+
+        reorth!(state; tol = alg.tol_gauge, maxiter = alg.orthmaxiter);
+        recalculate!(pars,state);
+
         galerkin   = calc_galerkin(state, pars)
         alg.verbose && @info "powermethod @iteration $(iter) galerkin = $(galerkin)"
 
