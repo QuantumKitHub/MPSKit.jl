@@ -15,7 +15,10 @@ end
 
 #this is really lazy
 function recalculate!(pars::PerMPOInfEnv,nstate)
-    ndat = params(nstate,pars.opp,pars.lw,pars.rw,tol=pars.tol,maxiter=pars.maxiter);
+    sameDspace = reduce((prev,i) -> prev && _lastspace(pars.lw[i...]) == _firstspace(nstate.CR[i...])',
+        Iterators.product(1:size(nstate,1),1:size(nstate,2)),init=true);
+
+    ndat = params(nstate,pars.opp,sameDspace ? pars.lw : nothing,sameDspace ? pars.rw : nothing,tol=pars.tol,maxiter=pars.maxiter);
 
     pars.lw = ndat.lw
     pars.rw = ndat.rw
@@ -49,9 +52,9 @@ function params(state::MPSMultiline{T},mpo::PeriodicMPO,prevl = nothing,prevr = 
 
         alg=Arnoldi(tol = tol,maxiter=maxiter)
 
-        (vals,Ls,convhist) = eigsolve(x-> transfer_left(x,mpo.opp[cr,:],state.AL[cr,1:end],state.AL[cr+1,1:end]),L0,1,:LM,alg)
+        (vals,Ls,convhist) = eigsolve(x-> transfer_left(x,mpo.opp[cr,:],state.AL[cr,:],state.AL[cr+1,:]),L0,1,:LM,alg)
         convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-        (_,Rs,convhist) = eigsolve(x-> transfer_right(x,mpo.opp[cr,:],state.AR[cr,1:end],state.AR[cr+1,1:end]),R0,1,:LM,alg)
+        (_,Rs,convhist) = eigsolve(x-> transfer_right(x,mpo.opp[cr,:],state.AR[cr,:],state.AR[cr+1,:]),R0,1,:LM,alg)
         convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
 
 
@@ -75,5 +78,5 @@ function params(state::MPSMultiline{T},mpo::PeriodicMPO,prevl = nothing,prevr = 
 
     end
 
-    return PerMPOInfEnv(mpo,state,tol,maxiter,lefties,righties,ReentrantLock())
+    return PerMPOInfEnv(mpo,state,tol,maxiter,lefties,righties)
 end

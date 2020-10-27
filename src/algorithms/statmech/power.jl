@@ -27,7 +27,7 @@ function leading_boundary!(state::MPSMultiline, H,alg::PowerMethod,pars=params(s
             end
 
             @Threads.spawn begin
-                temp_Cs  = let state=state,pars=pars
+                temp_Cs[:,col]  = let state=state,pars=pars
                     circshift([c_prime(c,row,col,state,pars) for (row,c) in enumerate(state.CR[:,col])],1)
                 end
             end

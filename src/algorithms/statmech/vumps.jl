@@ -42,7 +42,7 @@ function leading_boundary!(state::MPSMultiline, H,alg::Vumps,pars = params(state
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i-1,end)] = ac_prime(x[i],i,col,state,pars);
+                        @Threads.spawn y[mod1(i+1,end)] = ac_prime(x[i],i,col,state,pars);
                     end
 
                     RecursiveVec(y)
@@ -56,7 +56,7 @@ function leading_boundary!(state::MPSMultiline, H,alg::Vumps,pars = params(state
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i-1,end)] = c_prime(x[i],i,col,state,pars);
+                        @Threads.spawn y[mod1(i+1,end)] = c_prime(x[i],i,col,state,pars);
                     end
 
                     RecursiveVec(y)
