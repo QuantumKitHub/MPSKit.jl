@@ -39,7 +39,7 @@ function uniform_leftorth!(AL,CR, A; tol = Defaults.tolgauge, maxiter = Defaults
         iteration += 1
     end
 
-    delta>tol && @info "leftorth failed to converge $(delta)"
+    delta>tol && @warn "leftorth failed to converge $(delta)"
 
     AL,CR
 end
@@ -84,7 +84,7 @@ function uniform_rightorth!(AR,CR,A; tol = Defaults.tolgauge, maxiter = Defaults
         iteration += 1
   end
 
-  delta>tol && @info "rightorth failed to converge $(delta)"
+  delta>tol && @warn "rightorth failed to converge $(delta)"
 
   return AR, CR
 end
