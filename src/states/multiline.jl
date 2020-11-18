@@ -40,11 +40,11 @@ function Base.convert(::Type{MPSMultiline},v::AbstractVector{T}) where T<:Infini
 end
 
 Base.copy(m::MPSMultiline) = MPSMultiline(copy(m.AL),copy(m.AR),copy(m.CR),copy(m.AC));
-function Base.copy!(dest::Union{MPSMultiline,InfiniteMPS},src::Union{MPSMultiline,InfiniteMPS})
-    copy!(dest.AL,src.AL);
-    copy!(dest.AR,src.AR);
-    copy!(dest.CR,src.CR);
-    copy!(dest.AC,src.AC);
+function Base.copyto!(dest::Union{MPSMultiline,InfiniteMPS},src::Union{MPSMultiline,InfiniteMPS})
+    copyto!(dest.AL,src.AL);
+    copyto!(dest.AR,src.AR);
+    copyto!(dest.CR,src.CR);
+    copyto!(dest.AC,src.AC);
 end
 
 
