@@ -25,12 +25,13 @@ module MPSKit
     export find_groundstate!, find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2, GradientGrassmann
     export leading_boundary!, leading_boundary, PowerMethod
     export quasiparticle_excitation, correlation_length
-    export timestep!,timestep,Tdvp,Tdvp2
+    export timestep!,timestep,Tdvp,Tdvp2,make_time_mpo,WI,WII
     export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
     export changebonds!,changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
     export entropy
     export dynamicaldmrg
     export fidelity_susceptibility
+    export approximate!
 
     @deprecate params(args...) environments(args...)
 
@@ -87,6 +88,7 @@ module MPSKit
     include("algorithms/changebonds/changebonds.jl")
 
     include("algorithms/timestep/tdvp.jl")
+    include("algorithms/timestep/timeevmpo.jl")
 
     include("algorithms/groundstate/vumps.jl")
     include("algorithms/groundstate/idmrg.jl")
@@ -101,4 +103,6 @@ module MPSKit
     include("algorithms/statmech/power.jl")
 
     include("algorithms/fidelity_susceptibility.jl")
+
+    include("algorithms/approximate/vomps.jl")
 end

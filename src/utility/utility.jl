@@ -129,3 +129,19 @@ function union_split(a::AbstractArray)
 end
 union_types(x::Union) = (x.a, union_types(x.b)...)
 union_types(x::Type) = (x,)
+
+function _embedders(spaces)
+    totalspace = reduce(⊕,spaces);
+
+    maps = [isometry(totalspace,first(spaces))];
+    restmap = leftnull(first(maps));
+
+    for sp in spaces[2:end]
+        cm = isometry(domain(restmap),sp);
+
+        push!(maps,restmap*cm);
+        restmap = restmap*leftnull(cm);
+    end
+
+    maps
+end
