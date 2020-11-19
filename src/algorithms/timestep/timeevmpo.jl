@@ -1,10 +1,11 @@
 #https://arxiv.org/pdf/1901.05824.pdf
-#still need to add some tolerance - maxiter fields
 
 struct WI <: Algorithm
 end
 
-struct WII <: Algorithm
+@with_kw struct WII <: Algorithm
+    tol::Float64 = Defaults.tol
+    maxiter::Int = Defaults.maxiter
 end
 
 function make_time_mpo(ham::MPOHamiltonian{S,T},dt,alg::WI) where {S,T}
@@ -40,7 +41,7 @@ function make_time_mpo(ham::MPOHamiltonian{S,T},dt,alg::WII) where {S,T}
 
         init = [one(ham[i,1,ham.odim]),zero(ham[i,1,k]),zero(ham[i,j,ham.odim]),zero(ham[i,j,k])]
 
-        (y,convhist) = exponentiate(1.0,RecursiveVec(init),Lanczos()) do x
+        (y,convhist) = exponentiate(1.0,RecursiveVec(init),Lanczos(tol = alg.tol,maxiter = alg.maxiter)) do x
             out = similar(x.vecs);
 
             @tensor out[1][-1 -2;-3 -4] := δ*x[1][-1,1,-3,-4]*ham[i,1,ham.odim][2,-2,2,1]
@@ -59,7 +60,7 @@ function make_time_mpo(ham::MPOHamiltonian{S,T},dt,alg::WII) where {S,T}
             RecursiveVec(out)
         end
         convhist.converged == 0 && @warn "failed to exponentiate $(convhist.normres)"
-        
+
         WA[i,j-1,k-1] = y[4];
         WB[i,j-1] = y[3];
         WC[i,k-1] = y[2];
