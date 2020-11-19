@@ -40,7 +40,7 @@ function ac_prime(x::GenericMPSTensor{S,3},pos::Int,mpo,cache) where S
 
     return toret
 end
-function ac_prime(x::MPSTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv)
+function ac_prime(x::MPSTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::Union{MixPerMPOInfEnv,PerMPOInfEnv})
     @tensor toret[-1 -2;-3]:=leftenv(envs,row,col,mps)[-1,2,1]*x[1,3,4]*(envs.opp[row,col])[2,-2,5,3]*rightenv(envs,row,col,mps)[4,5,-3]
 end
 
@@ -94,7 +94,7 @@ function ac2_prime(x::AbstractTensorMap,pos::Int,mpo,cache::FinEnv{<:ComAct})
 
     return toret
 end
-function ac2_prime(x::MPOTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv)
+function ac2_prime(x::MPOTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::Union{MixPerMPOInfEnv,PerMPOInfEnv})
     @tensor toret[-1 -2;-3 -4]:=leftenv(envs,row,col,mps)[-1,2,1]*
                                 x[1,3,4,5]*
                                 envs.opp[row,col][2,-2,6,3]*
@@ -115,6 +115,6 @@ function c_prime(x::MPSBondTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSC
 
     return toret
 end
-function c_prime(x::TensorMap, row::Int,col::Int, mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv)
+function c_prime(x::TensorMap, row::Int,col::Int, mps::Union{InfiniteMPS,MPSMultiline}, envs::Union{MixPerMPOInfEnv,PerMPOInfEnv})
     @tensor toret[-1;-2] := leftenv(envs,row,col+1,mps)[-1,3,1]*x[1,2]*rightenv(envs,row,col,mps)[2,3,-2]
 end

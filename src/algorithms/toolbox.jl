@@ -36,7 +36,8 @@ infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(Matrix{eltype(h
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs) = norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc, state, envs))
 "calculates the galerkin error"
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs) = maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
-calc_galerkin(state::MPSMultiline, envs) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col, state, envs)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
+calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col, state, envs)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
+calc_galerkin(state::MPSMultiline, envs::MixPerMPOInfEnv) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(envs.above.AC[row,col], row,col, state, envs)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
 
 "
 Calculates the (partial) transfer spectrum

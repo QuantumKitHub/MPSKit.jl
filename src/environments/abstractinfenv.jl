@@ -1,6 +1,5 @@
 "
     Abstract environment for an infinite state
-    distinct from finite, because we have to recalculate everything when the state changes
 "
 abstract type AbstractInfEnv <: Cache end;
 

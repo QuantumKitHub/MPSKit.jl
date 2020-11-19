@@ -31,7 +31,7 @@ module MPSKit
     export entropy
     export dynamicaldmrg
     export fidelity_susceptibility
-    export approximate!
+    export approximate!,approximate
 
     @deprecate params(args...) environments(args...)
 
