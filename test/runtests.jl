@@ -446,3 +446,19 @@ end
     @test isapprox(expectation_value(st, [sz_mpo,sz_mpo], 1) , expectation_value(st,szsz,1) ,atol = 1e-2)
     @test isapprox(expectation_value(st, [sz_mpo,sz_mpo], 2) , expectation_value(st,szsz,1) ,atol = 1e-2)
 end
+
+@timedtestset "approximate" begin
+    st = InfiniteMPS([ℂ^2],[ℂ^10]);
+    th = nonsym_ising_ham(lambda=4);
+
+    dt = 1e-3;
+    W1 = make_time_mpo(th,dt,WI());
+    W2 = make_time_mpo(th,dt,WII());
+
+    (st1,_) = approximate(st,(st,W1),PowerMethod(verbose=false));
+    (st2,_) = approximate(st,(st,W2),PowerMethod(verbose=false));
+    (st3,_) = timestep(st,th,dt,Tdvp());
+
+    @test abs(dot(st1,st3)) ≈ 1.0 atol = dt
+    @test abs(dot(st2,st3)) ≈ 1.0 atol = dt
+end
