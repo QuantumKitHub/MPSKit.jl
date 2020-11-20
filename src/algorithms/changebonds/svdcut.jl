@@ -19,11 +19,15 @@ function changebonds!(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) whe
     return state
 end
 
-function changebonds!(state::InfiniteMPS,alg::SvdCut)
-    for i in 1:length(state)
-        (U,S,V) = tsvd(state.CR[i],trunc=alg.trscheme,alg=TensorKit.SVD());
-        @tensor state.AL[i][-1 -2;-3]:=state.AL[i][-1,-2,1]*U[1,-3]
-        @tensor state.AL[i+1][-1 -2;-3]:=conj(U[1,-1])*state.AL[i+1][1,-2,-3]
+changebonds!(state::PeriodicMPO,alg::SvdCut) = copyto!(state,changebonds!(convert(MPSMultiline,state),alg))
+changebonds!(state::InfiniteMPS,alg::SvdCut) = copyto!(state,changebonds!(convert(MPSMultiline,state),alg))
+function changebonds!(state::MPSMultiline,alg::SvdCut)
+    for i in 1:size(state,1),
+        j in 1:size(state,2)
+
+        (U,S,V) = tsvd(state.CR[i,j],trunc=alg.trscheme,alg=TensorKit.SVD());
+        state.AL[i,j] = state.AL[i,j]*U
+        state.AL[i,j+1] = _permute_front(U'*_permute_tail(state.AL[i,j+1]))
     end
 
     reorth!(state)

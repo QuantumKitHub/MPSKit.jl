@@ -273,6 +273,17 @@ end
     @test sum([e1[j]-diff[mod1(j,end)] for j in 1:len])≈sum(e5);
 end
 
+@timedtestset "PeriodicMPO"  for ham in (nonsym_ising_ham(),su2_xxx_ham(spin=1))
+    physical_space = ham.pspaces[1];
+    ou = oneunit(physical_space);
+
+    ts = InfiniteMPS([physical_space],[fuse(ou*physical_space)]);
+
+    W = make_time_mpo(ham,1im*0.5,WII());
+
+    @test abs(dot((ts*W)*W,ts*(W*W)))≈1.0 atol=1e-10
+end
+
 println("------------------------------------")
 println("|     Algorithms                   |")
 println("------------------------------------")
@@ -455,10 +466,16 @@ end
     W1 = make_time_mpo(th,dt,WI());
     W2 = make_time_mpo(th,dt,WII());
 
+
     (st1,_) = approximate(st,(st,W1),PowerMethod(verbose=false));
     (st2,_) = approximate(st,(st,W2),PowerMethod(verbose=false));
     (st3,_) = timestep(st,th,dt,Tdvp());
+    st4 = changebonds(st*W1,SvdCut(trscheme=truncdim(10)))
 
     @test abs(dot(st1,st3)) ≈ 1.0 atol = dt
     @test abs(dot(st2,st3)) ≈ 1.0 atol = dt
+    @test abs(dot(st4,st3)) ≈ 1.0 atol = dt
+
+    nW1 = changebonds(W1,SvdCut(trscheme=truncerr(dt))); #this should be a trivial mpo now
+    @test dim(space(nW1.opp[1,1],1)) == 1
 end

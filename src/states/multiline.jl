@@ -45,6 +45,7 @@ function Base.copyto!(dest::Union{MPSMultiline,InfiniteMPS},src::Union{MPSMultil
     copyto!(dest.AR,src.AR);
     copyto!(dest.CR,src.CR);
     copyto!(dest.AC,src.AC);
+    dest
 end
 
 
