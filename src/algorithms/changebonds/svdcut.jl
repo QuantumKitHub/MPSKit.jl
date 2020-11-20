@@ -25,7 +25,7 @@ function changebonds!(state::MPSMultiline,alg::SvdCut)
     for i in 1:size(state,1),
         j in 1:size(state,2)
 
-        (U,S,V) = tsvd(state.CR[i,j],trunc=alg.trscheme,alg=TensorKit.SVD());
+        (U,state.CR[i,j],V) = tsvd(state.CR[i,j],trunc=alg.trscheme,alg=TensorKit.SVD());
         state.AL[i,j] = state.AL[i,j]*U
         state.AL[i,j+1] = _permute_front(U'*_permute_tail(state.AL[i,j+1]))
     end
