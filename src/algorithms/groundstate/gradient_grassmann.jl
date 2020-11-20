@@ -53,7 +53,7 @@ end
 function find_groundstate(state::S, H::HT, alg::GradientGrassmann,
                           envs::P=environments(state, H))::Tuple{S,P,Float64} where {S,HT<:Hamiltonian,P}
 
-    dim(state.CR[end]) == 1 || @warn "This is not fully supported - split the mps up in a sum of mps's and optimize seperately"
+    (isa(state,FiniteMPS) && dim(state.CR[end]) == 1) || @warn "This is not fully supported - split the mps up in a sum of mps's and optimize seperately"
     normalize!(state)
     res = optimize(GrassmannMPS.fg, (state, envs), alg.method;
                    transport! = GrassmannMPS.transport!,
