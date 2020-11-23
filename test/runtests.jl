@@ -242,37 +242,6 @@ println("------------------------------------")
     @test real(sum(v))>=0;
 end
 
-@timedtestset "comact $(i)" for (i,th) in enumerate([
-        nonsym_ising_ham(),
-        u1_xxz_ham(),
-        su2_xxx_ham(),
-        su2u1_grossneveu()
-        ])
-
-    len = 20;
-
-    inftemp = @constinferred repeat(infinite_temperature(th),len);
-    ndat = collect(map(x-> TensorMap(rand,ComplexF64,codomain(x),domain(x)),inftemp));
-    ts = FiniteMPS(ndat);
-
-    (ts,_) = @constinferred changebonds(ts,anticommutator(th),OptimalExpand());
-
-    e1 = @constinferred expectation_value(ts,anticommutator(th));
-    e2 = expectation_value(ts,2*anticommutator(th));
-
-    @test 2*e1≈e2;
-
-    @constinferred Base.:+(anticommutator(th),commutator(th))
-    e3 = expectation_value(ts,anticommutator(th)+commutator(th));
-    e4 = expectation_value(ts,anticommutator(th)-commutator(th));
-
-    @test e3+e4≈e2;
-
-    diff = [rand() for i in th.pspaces];
-    e5 = expectation_value(ts,anticommutator(th)-diff);
-    @test sum([e1[j]-diff[mod1(j,end)] for j in 1:len])≈sum(e5);
-end
-
 @timedtestset "PeriodicMPO"  for ham in (nonsym_ising_ham(),su2_xxx_ham(spin=1))
     physical_space = ham.pspaces[1];
     ou = oneunit(physical_space);
@@ -312,8 +281,8 @@ println("------------------------------------")
 end
 
 @timedtestset "timestep $(ind)" for (ind,(state,alg,opp)) in enumerate([
-    (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2*adjoint(ℂ^2),ℂ^1),5)),Tdvp(),commutator(nonsym_xxz_ham(spin=1//2))),
-    (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2*adjoint(ℂ^2),ℂ^1),7)),Tdvp2(),anticommutator(nonsym_xxz_ham(spin=1//2))),
+    (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),5)),Tdvp(),nonsym_xxz_ham(spin=1//2)),
+    (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),7)),Tdvp2(),nonsym_xxz_ham(spin=1//2)),
     (InfiniteMPS([ℂ^3,ℂ^3],[ℂ^50,ℂ^50]),Tdvp(),repeat(nonsym_xxz_ham(spin=1),2))
     ])
 

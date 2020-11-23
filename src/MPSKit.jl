@@ -9,7 +9,6 @@ module MPSKit
     export transfer_left,transfer_right
     export leftorth,rightorth,leftorth!,rightorth!,poison!,uniform_leftorth,uniform_rightorth
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
-    export hamcat
 
     #useful utility functions?
     export spinmatrices,add_util_leg,full,nonsym_spintensors,nonsym_bosonictensors
@@ -17,7 +16,7 @@ module MPSKit
 
     #hamiltonian things
     export Hamiltonian,Operator,Cache
-    export MPOHamiltonian,contains,PeriodicMPO,ComAct,commutator,anticommutator
+    export MPOHamiltonian,contains,PeriodicMPO
     export ac_prime,c_prime,environments,ac2_prime,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 
@@ -64,7 +63,6 @@ module MPSKit
 
     include("operators/mpohamiltonian/mpohamiltonian.jl") #the mpohamiltonian objects
     include("operators/umpo.jl")
-    include("operators/commutator.jl")
 
     abstract type Cache end #cache "manages" environments
 

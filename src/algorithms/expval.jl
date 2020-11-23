@@ -120,42 +120,4 @@ function expectation_value(st::MPSMultiline,opp::PeriodicMPO,ca=environments(st,
     return retval
 end
 
-function expectation_value(state::FiniteMPS,ham::ComAct,cache=environments(state,ham))
-    ens=zeros(eltype(eltype(state)),length(state))
-    for i=1:length(state)
-        for (j,k) in keys(ham,i)
-
-            c_odim = isbelow(ham,j) ? ham.below.odim : ham.above.odim;
-            cj = isbelow(ham,j) ? j : j-ham.below.odim;
-            ck = isbelow(ham,k) ? k : k-ham.below.odim;
-
-            if !((cj == 1 && ck!= 1) || (ck == c_odim && cj!=c_odim))
-                continue
-            end
-
-            if isbelow(ham,j)
-                cur = @tensor   leftenv(cache,i,state)[j][-1,8,7]*
-                                state.AC[i][7,2,-3,1]*
-                                ham[i,j,k][8,-2,3,2]*
-                                rightenv(cache,i,state)[k][1,3,-4]*
-                                conj(state.AC[i][-1,-2,-3,-4])
-            else
-                cur = @tensor   leftenv(cache,i,state)[j][-1,6,7]*
-                                state.AC[i][7,-2,4,2]*
-                                ham[i,j,k][6,4,5,-3]*
-                                rightenv(cache,i,state)[k][2,5,-4]*
-                                conj(state.AC[i][-1,-2,-3,-4])
-            end
-
-            if !(cj==1 && ck == c_odim)
-                cur/=2
-            end
-
-            ens[i]+=cur
-        end
-    end
-    n = norm(state.AC[end])^2
-    return ens./n
-end
-
 expectation_value(state::FiniteQP,opp) = expectation_value(convert(FiniteMPS,state),opp)

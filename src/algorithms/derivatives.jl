@@ -18,28 +18,6 @@ function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComo
     return toret
 end
 
-function ac_prime(x::GenericMPSTensor{S,3},pos::Int,mpo,cache) where S
-    ham=cache.opp
-
-    toret=zero(x)
-    for (i,j) in keys(ham,pos)
-        opp = ham[pos,i,j]
-
-        if isbelow(ham,i)
-            @tensor toret[-1,-2,-3,-4] +=   leftenv(cache,pos,mpo)[i][-1,8,7]*
-                                            x[7,2,-3,1]*
-                                            opp[8,-2,3,2]*
-                                            rightenv(cache,pos,mpo)[j][1,3,-4]
-        else
-            @tensor toret[-1,-2,-3,-4] +=   leftenv(cache,pos,mpo)[i][-1,6,7]*
-                                            x[7,-2,4,2]*
-                                            opp[6,4,5,-3]*
-                                            rightenv(cache,pos,mpo)[j][2,5,-4]
-        end
-    end
-
-    return toret
-end
 function ac_prime(x::MPSTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::Union{MixPerMPOInfEnv,PerMPOInfEnv})
     @tensor toret[-1 -2;-3]:=leftenv(envs,row,col,mps)[-1,2,1]*x[1,3,4]*(envs.opp[row,col])[2,-2,5,3]*rightenv(envs,row,col,mps)[4,5,-3]
 end
@@ -60,36 +38,6 @@ function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSCom
             end
         end
 
-    end
-
-    return toret
-end
-function ac2_prime(x::AbstractTensorMap,pos::Int,mpo,cache::FinEnv{<:ComAct})
-    ham=cache.opp
-
-    toret=zero(x)
-    for (i,j) in keys(ham,pos)
-        for (k,l) in keys(ham,pos+1)
-            if j!=k
-                continue
-            end
-            opp1 = ham[pos,i,j]
-            opp2 = ham[pos+1,k,l]
-
-            if isbelow(ham,i)
-                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,2,1]*
-                                                    x[1,3,-3,5,-5,7]*
-                                                    opp1[2,-2,4,3]*
-                                                    opp2[4,-4,6,5]*
-                                                    rightenv(cache,pos+1,mpo)[l][7,6,-6]
-            else
-                @tensor toret[-1,-2,-3,-4,-5,-6] += leftenv(cache,pos,mpo)[i][-1,2,1]*
-                                                    x[1,-2,3,-4,5,7]*
-                                                    opp1[2,3,4,-3]*
-                                                    opp2[4,5,6,-5]*
-                                                    rightenv(cache,pos+1,mpo)[l][7,6,-6]
-            end
-        end
     end
 
     return toret

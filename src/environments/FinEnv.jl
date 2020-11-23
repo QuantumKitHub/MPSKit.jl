@@ -58,39 +58,6 @@ function environments(state::MPSComoving,ham::MPOHamiltonian;lenvs=environments(
     environments(state,ham,leftenv(lenvs,1,state.left_gs),rightenv(renvs,length(state),state.right_gs))
 end
 
-function environments(state::FiniteMPS,ham::ComAct)
-    lll = l_LL(state);rrr = r_RR(state)
-
-
-    sillyel = TensorMap(zeros,eltype(eltype(state)),oneunit(virtualspace(state,1))*oneunit(virtualspace(state,1)),oneunit(virtualspace(state,1)));
-    rightstart = Array{typeof(sillyel),1}(undef,ham.odim);
-    leftstart = Array{typeof(sillyel),1}(undef,ham.odim);
-
-    for i in 1:ham.odim
-        util_left = Tensor(ones,ham.domspaces[1,i]')
-        util_right = Tensor(ones,ham.imspaces[length(state),i]')
-
-        isbelow = i > ham.below.odim;
-        ci = isbelow ? i-ham.below.odim : i;
-
-
-        @tensor ctl[-1 -2; -3]:= lll[-1,-3]*util_left[-2]
-        @tensor ctr[-1 -2; -3]:= rrr[-1,-3]*util_right[-2]
-
-        if ci != 1
-            ctl = zero(ctl)
-        end
-
-        if (isbelow && ci!= ham.below.odim) || (!isbelow && ci != ham.above.odim)
-            ctr = zero(ctr)
-        end
-        leftstart[i] = ctl
-        rightstart[i] = ctr
-    end
-
-    return environments(state,ham,leftstart,rightstart)
-end
-
 #notify the cache that we updated in-place, so it should invalidate the dependencies
 function poison!(ca::FinEnv,ind)
     ca.ldependencies[ind] = similar(ca.ldependencies[ind])
