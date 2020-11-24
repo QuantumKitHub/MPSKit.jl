@@ -28,7 +28,7 @@ state = InfiniteMPS([random_data]);
 
 The groundstate can then be found by calling find_groundstate.
 ```julia
-(groundstate,cache,delta) = find_groundstate!(state,ham,Vumps());
+(groundstate,cache,delta) = find_groundstate(state,ham,Vumps());
 ```
 
 As you can see, vumps strugles to converge. On it's own, that is already quite curious.
@@ -77,7 +77,7 @@ ham = repeat(ham,2);
 
 Running vumps
 ```julia
-(groundstate,cache,delta) = find_groundstate!(state,ham,Vumps(maxiter=100,tol_galerkin=1e-12));
+(groundstate,cache,delta) = find_groundstate(state,ham,Vumps(maxiter=100,tol_galerkin=1e-12));
 ```
 we get convergence, but it takes an enormous amount of iterations. The reason behind this becomes more obvious at higher bond dimensions
 
@@ -85,7 +85,7 @@ we get convergence, but it takes an enormous amount of iterations. The reason be
 A = TensorMap(rand,ComplexF64,ℂ^100*ℂ^2,ℂ^100);
 B = TensorMap(rand,ComplexF64,ℂ^100*ℂ^2,ℂ^100);
 state = InfiniteMPS([A,B]);
-(groundstate,cache,delta) = find_groundstate!(state,ham,Vumps(maxiter=100,tol_galerkin=1e-12));
+(groundstate,cache,delta) = find_groundstate(state,ham,Vumps(maxiter=100,tol_galerkin=1e-12));
 
 spectrum = entanglement_spectrum(groundstate);(groundstate);
 plot(abs.(spectrum),seriestype=:scatter,legend=false,yscale=:log10)
@@ -124,5 +124,5 @@ Even though the bond dimension is higher then in the non symmetric example:
 
 Vumps converges much much faster
 ```julia
-(groundstate,cache,delta) = find_groundstate!(state,ham,Vumps(maxiter=400,tol_galerkin=1e-12));
+(groundstate,cache,delta) = find_groundstate(state,ham,Vumps(maxiter=400,tol_galerkin=1e-12));
 ```

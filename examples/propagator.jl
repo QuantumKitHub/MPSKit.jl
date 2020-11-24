@@ -3,7 +3,7 @@ using MPSKit,MPSKitModels,TensorKit,Test
 let
     ham = nonsym_ising_ham(lambda=4.0);
     gs = FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
-    (gs,envs,_) = find_groundstate!(gs,ham,Dmrg2(trscheme=truncdim(10)));
+    (gs,envs,_) = find_groundstate(gs,ham,Dmrg2(trscheme=truncdim(10)));
 
     #we are in the groundstate
     #we expect to find a single isolated pole around the gs energy

@@ -36,16 +36,3 @@ Can be created using
 ```julia
 PeriodicMPO(t::AbstractArray{T,2}) where T<:MPOTensor
 ```
-
-## ComAct
-
-We can deal with thermal density matrices by mapping them back to a state with hilbert space p*p'.
-Time evolution is then done using the (anti)commutator of the original hamiltonian.
-ComAct represents this object and can be created by calling
-
-```julia
-anticommutator(ham)
-commutator(ham)
-```
-
-Only finite density matrices are supported at the moment. If you want to do finite temperature stuff in the thermodynamic limit, then you should manually fuse p*p' and construct the the commutator in this space.
