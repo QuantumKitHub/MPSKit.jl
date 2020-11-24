@@ -48,23 +48,17 @@ function InfiniteMPS(A::AbstractArray{T,1}; kwargs...) where T<:GenericMPSTensor
     return InfiniteMPS{T,CRtype}(AL,AR,CR,AC)
 end
 
-function reorth!(dst::InfiniteMPS;from=:AL,kwargs...)
-    @assert from == :AL
+function InfiniteMPS(A::AbstractArray{T,1},cinit::B;kwargs...) where {T<:GenericMPSTensor, B<:MPSBondTensor}
+    CR = PeriodicArray(fill(copy(cinit),length(A)));
+    AL = PeriodicArray(A[:])
+    AR = similar(AL);
+    uniform_rightorth!(AR,CR,AL;kwargs...);
 
-    #dst.AL changed, dst.CR may no longer fit
-    if !reduce(&,map(x->_lastspace(x[1]) == _lastspace(x[2]),zip(dst.CR,dst.AL)))
-        for i in 1:length(dst)
-            dst.CR[i] = isomorphism(Matrix{eltype(dst.AL[i])},_lastspace(dst.AL[i])',_lastspace(dst.AL[i])')
-        end
+    AC = similar(AR)
+    for loc = 1:length(A)
+        AC[loc] = AL[loc]*CR[loc]
     end
-
-    uniform_rightorth!(dst.AR,dst.CR,dst.AL;kwargs...);
-
-    for loc in 1:length(dst)
-        dst.AC[loc] = dst.AL[loc]*dst.CR[loc]
-    end
-
-    dst
+    return InfiniteMPS{T,B}(AL,AR,CR,AC)
 end
 
 function TensorKit.normalize!(st::InfiniteMPS)

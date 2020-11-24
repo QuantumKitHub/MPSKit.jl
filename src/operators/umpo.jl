@@ -13,9 +13,9 @@ Base.size(o::PeriodicMPO,i) = size(o.opp,i);
 Base.size(o::PeriodicMPO) = size(o.opp);
 
 #naively apply the mpo to the mps
-Base.:*(st::InfiniteMPS,mpo::PeriodicMPO) = convert(InfiniteMPS,convert(MPSMultiline,st)*mpo)
+Base.:*(mpo::PeriodicMPO,st::InfiniteMPS) = convert(InfiniteMPS,mpo*convert(MPSMultiline,st))
 
-function Base.:*(st::MPSMultiline{T},mpo::PeriodicMPO) where T<:MPSTensor #need 3leg tensors for this to make sense
+function Base.:*(mpo::PeriodicMPO,st::MPSMultiline{T}) where T<:MPSTensor #need 3leg tensors for this to make sense
     size(st) == size(mpo) || throw(ArgumentError("dimension mismatch"))
 
     fusers = PeriodicArray(map(zip(st.AL,mpo.opp)) do (al,mp)
@@ -39,11 +39,11 @@ function Base.:*(mpo1::PeriodicMPO,mpo2::PeriodicMPO)
         isometry(fuse(_firstspace(mp1),_firstspace(mp2)),_firstspace(mp1)*_firstspace(mp2))
     end)
 
-    apl = copy(mpo1.opp)
+    apl = copy(mpo2.opp)
 
     for i in 1:size(mpo1,1),
         j in 1:size(mpo1,2)
-        @tensor apl[i,j][-1 -2;-3 -4] := apl[i,j][1,2,3,-4]*mpo2.opp[i,j][4,-2,5,2]*fusers[i,j][-1,1,4]*conj(fusers[i,j+1][-3,3,5])
+        @tensor apl[i,j][-1 -2;-3 -4] := apl[i,j][1,2,3,-4]*mpo1.opp[i,j][4,-2,5,2]*fusers[i,j][-1,1,4]*conj(fusers[i,j+1][-3,3,5])
     end
 
     PeriodicMPO(apl)

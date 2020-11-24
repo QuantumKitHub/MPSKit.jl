@@ -2,7 +2,7 @@
 solves AL * C = C * A in-place
 "
 function uniform_leftorth!(AL,CR, A; tol = Defaults.tolgauge, maxiter = Defaults.maxiter)
-    (_,CR[end]) = leftorth!(CR[end], alg = TensorKit.QRpos());
+    #(_,CR[end]) = leftorth!(CR[end], alg = TensorKit.QRpos());
     normalize!(CR[end]);
 
     iteration = 1;
@@ -48,7 +48,7 @@ end
 solves C * AR = C * A in-place
 "
 function uniform_rightorth!(AR,CR,A; tol = Defaults.tolgauge, maxiter = Defaults.maxiter)
-    (CR[end],_) = rightorth!(CR[end], alg = TensorKit.LQpos());
+    #(CR[end],_) = rightorth!(CR[end], alg = TensorKit.LQpos());
     normalize!(CR[end])
 
     iteration = 1;

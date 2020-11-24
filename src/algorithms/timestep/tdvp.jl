@@ -10,13 +10,7 @@ end
 
 time evolves psi by timestep dt using algorithm alg
 """
-function timestep(state::InfiniteMPS,H,timestep,alg::Tdvp,envs = environments(state,H))
-    cenvs = deepcopy(envs);
-    cstate = cenvs.dependency;
-
-    timestep!(cstate,H,timestep,alg,cenvs)
-end
-function timestep!(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,envs::Cache=environments(state,H))
+function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,envs::Cache=environments(state,H))
 
     temp_ACs = similar(state.AC);
     temp_CRs = similar(state.CR);
@@ -38,13 +32,12 @@ function timestep!(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdv
         #find Al that best fits these new Acenter and centers
         QAc,_ = leftorth!(temp_ACs[loc],alg=TensorKit.QRpos())
         Qc,_ = leftorth!(temp_CRs[loc],alg=TensorKit.QRpos())
-        @tensor state.AL[loc][-1 -2;-3]=QAc[-1,-2,1]*conj(Qc[-3,1])
+        @tensor temp_ACs[loc][-1 -2;-3]=QAc[-1,-2,1]*conj(Qc[-3,1])
     end
 
-    reorth!(state; tol = alg.tolgauge, maxiter = alg.maxiter)
-    recalculate!(envs,state);
-
-    state,envs
+    nstate = InfiniteMPS(temp_ACs,state.CR[end]; tol = alg.tolgauge, maxiter = alg.maxiter)
+    recalculate!(envs,nstate)
+    nstate,envs
 end
 
 function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp,envs=environments(state,H))

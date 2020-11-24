@@ -22,7 +22,7 @@ module MPSKit
 
     #algos
     export find_groundstate!, find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2, GradientGrassmann
-    export leading_boundary!, leading_boundary, PowerMethod
+    export leading_boundary
     export quasiparticle_excitation, correlation_length
     export timestep!,timestep,Tdvp,Tdvp2,make_time_mpo,WI,WII
     export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
@@ -30,7 +30,7 @@ module MPSKit
     export entropy
     export dynamicaldmrg
     export fidelity_susceptibility
-    export approximate!,approximate
+    export approximate!,approximate, Vomps
 
     @deprecate params(args...) environments(args...)
 
@@ -41,7 +41,7 @@ module MPSKit
         const tolgauge = 1e-14
         const tol = 1e-12
         const verbose = true
-        _finalize!(iter,state,opp,envs) = (state,envs,true);
+        _finalize(iter,state,opp,envs) = (state,envs,true);
     end
 
     include("utility/periodicarray.jl")
@@ -98,7 +98,6 @@ module MPSKit
     include("algorithms/excitation/quasiparticleexcitation.jl")
 
     include("algorithms/statmech/vumps.jl")
-    include("algorithms/statmech/power.jl")
 
     include("algorithms/fidelity_susceptibility.jl")
 

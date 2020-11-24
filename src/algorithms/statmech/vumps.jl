@@ -17,13 +17,7 @@ function leading_boundary(state::InfiniteMPS,H,alg,envs=environments(state,H))
     return convert(InfiniteMPS,st),pr,de
 end
 
-function leading_boundary(state::MPSMultiline,H,alg,envs = environments(state,H))
-    nenvs = deepcopy(envs);
-    nstate = nenvs.dependency;
-    leading_boundary!(nstate,H,alg,nenvs);
-end
-
-function leading_boundary!(state::MPSMultiline, H,alg::Vumps,envs = environments(state,H))
+function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(state,H))
 
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
@@ -68,16 +62,16 @@ function leading_boundary!(state::MPSMultiline, H,alg::Vumps,envs = environments
         for row in 1:size(state,1),col in 1:size(state,2)
             QAc,_ = leftorth!(temp_ACs[row,col], alg=TensorKit.QRpos())
             Qc,_  = leftorth!(temp_Cs[row,col], alg=TensorKit.QRpos())
-            state.AL[row,col] = QAc*adjoint(Qc)
+            temp_ACs[row,col] = QAc*adjoint(Qc)
         end
 
-        reorth!(state; tol = alg.tol_gauge, maxiter = alg.orthmaxiter);
+        state = MPSMultiline(temp_ACs,state.CR[:,end]; tol = alg.tol_gauge, maxiter = alg.orthmaxiter)
         recalculate!(envs,state);
 
         galerkin = calc_galerkin(state, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
-        (state,envs,sc) = alg.finalize!(iter,state,H,envs);
+        (state,envs,sc) = alg.finalize(iter,state,H,envs);
         if (galerkin <= alg.tol_galerkin && sc) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
             return state, envs, galerkin

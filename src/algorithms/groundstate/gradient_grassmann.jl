@@ -107,15 +107,14 @@ Retract a left-canonical infinite MPS along Grassmann tangent `g` by distance `a
 function retract(x::Tuple{<:InfiniteMPS,<:Cache}, g, alpha)
     (state, envs) = x
 
-    nenvs = deepcopy(envs);
-    nstate = nenvs.dependency; # The end-point
+    nal = similar(state.AL);
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
-        (nstate.AL[i], h[i]) = Grassmann.retract(state.AL[i], g[i], alpha)
+        (nal[i], h[i]) = Grassmann.retract(state.AL[i], g[i], alpha)
     end
 
-    reorth!(nstate)
-    recalculate!(nenvs,nstate)
+    nstate = InfiniteMPS(nal,state.CR[end]);
+    nenvs = envs;
 
     return (nstate,nenvs), h
 end

@@ -5,7 +5,7 @@
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
     verbose::Bool = Defaults.verbose
-    finalize!::F = Defaults._finalize!
+    finalize::F = Defaults._finalize
 end
 
 find_groundstate(state,H,alg::Dmrg,envs...) = find_groundstate!(copy(state),H,alg,envs...)
@@ -33,7 +33,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
         iter += 1
 
         #finalize
-        (state,parameters,sc) = alg.finalize!(iter,state,H,parameters);
+        (state,parameters,sc) = alg.finalize(iter,state,H,parameters);
         delta = sc ? delta : 2*tol; # if finalize decides we shouldn't converge, then don't
     end
 
@@ -46,7 +46,7 @@ end
     maxiter = Defaults.maxiter;
     trscheme = truncerr(1e-6);
     verbose = Defaults.verbose
-    finalize!::F = Defaults._finalize!
+    finalize::F = Defaults._finalize
 end
 
 find_groundstate(state,H,alg::Dmrg2,envs...) = find_groundstate!(copy(state),H,alg,envs...)
@@ -79,7 +79,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
         alg.verbose && @info "Iteraton $(iter) error $(delta)"
         flush(stdout)
         #finalize
-        (state,parameters,sc) = alg.finalize!(iter,state,H,parameters);
+        (state,parameters,sc) = alg.finalize(iter,state,H,parameters);
         delta = sc ? delta : 2*tol
         iter += 1
     end

@@ -88,28 +88,25 @@ function MPSMultiline(A::AbstractArray{T,2}; kwargs...) where T<:GenericMPSTenso
     MPSMultiline(AL,AR,CR,AC);
 end
 
-function reorth!(dst::MPSMultiline;from=:AL,kwargs...)
-    @assert from == :AL
-    @sync for row in 1:size(dst,1)
+function MPSMultiline(A::AbstractArray{T,2},C::AbstractArray{B,1}; kwargs...) where {T<:GenericMPSTensor,B<:MPSBondTensor}
+
+    AL = PeriodicArray(A[:,:]);
+    CR = PeriodicArray(repeat(C,1,size(A,2)));
+    AR = similar(AL);
+    AC = similar(AR);
+
+    @sync for row in 1:size(A,1)
         @Threads.spawn begin
-            #dst.AL changed, dst.CR may no longer fit
-            if !reduce(&,map(x->_lastspace(x[1]) == _lastspace(x[2]),zip(view(dst.CR,row,:),view(dst.AL,row,:))))
-                for i in 1:length(dst)
-                    dst.CR[row,i] = isomorphism(Matrix{eltype(dst.AL[row,i])},_lastspace(dst.AL[row,i])',_lastspace(dst.AL[row,i])')
-                end
-            end
+            uniform_rightorth!(view(AR,row,:),view(CR,row,:),view(AL,row,:);kwargs...);
 
-            uniform_rightorth!(view(dst.AR,row,:),view(dst.CR,row,:),view(dst.AL,row,:);kwargs...);
-
-            for col in 1:size(dst,2)
-                dst.AC[row,col] = dst.AL[row,col]*dst.CR[row,col]
+            for col in 1:size(A,2)
+                AC[row,col] = AL[row,col] * CR[row,col]
             end
         end
     end
 
-    dst
+    MPSMultiline{T,B}(AL,AR,CR,AC);
 end
-
 
 l_RR(state::MPSMultiline,row,loc::Int=1) = @tensor toret[-1;-2]:=state.CR[row,loc-1][1,-2]*conj(state.CR[row,loc-1][1,-1])
 l_RL(state::MPSMultiline,row,loc::Int=1) = state.CR[row,loc-1]

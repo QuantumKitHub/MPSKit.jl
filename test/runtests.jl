@@ -250,7 +250,7 @@ end
 
     W = make_time_mpo(ham,1im*0.5,WII());
 
-    @test abs(dot((ts*W)*W,ts*(W*W)))≈1.0 atol=1e-10
+    @test abs(dot(W*(W*ts),(W*W)*ts))≈1.0 atol=1e-10
 end
 
 println("------------------------------------")
@@ -294,8 +294,7 @@ end
 end
 
 @timedtestset "leading_boundary $(ind)" for (ind,alg) in enumerate([
-        Vumps(tol_galerkin=1e-5,verbose=false),
-        PowerMethod(tol_galerkin=1e-5,verbose=false,maxiter=1000)])
+        Vumps(tol_galerkin=1e-5,verbose=false)])
 
     mpo = nonsym_ising_mpo();
     state = InfiniteMPS([ℂ^2],[ℂ^10]);
@@ -436,10 +435,10 @@ end
     W2 = make_time_mpo(th,dt,WII());
 
 
-    (st1,_) = approximate(st,(st,W1),PowerMethod(verbose=false));
-    (st2,_) = approximate(st,(st,W2),PowerMethod(verbose=false));
+    (st1,_) = approximate(st,(W1,st),Vomps(verbose=false));
+    (st2,_) = approximate(st,(W2,st),Vomps(verbose=false));
     (st3,_) = timestep(st,th,dt,Tdvp());
-    st4 = changebonds(st*W1,SvdCut(trscheme=truncdim(10)))
+    st4 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
 
     @test abs(dot(st1,st3)) ≈ 1.0 atol = dt
     @test abs(dot(st2,st3)) ≈ 1.0 atol = dt
