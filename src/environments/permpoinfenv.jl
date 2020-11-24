@@ -11,6 +11,8 @@ mutable struct PerMPOInfEnv{H<:PeriodicMPO,V,S<:MPSMultiline} <: AbstractInfEnv
 
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}
+
+    lock :: ReentrantLock
 end
 
 function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline{T}) where T
@@ -32,20 +34,22 @@ environments(state::InfiniteMPS,opp::PeriodicMPO;kwargs...) = environments(conve
 function environments(state::MPSMultiline{T},mpo::PeriodicMPO;tol = Defaults.tol,maxiter=Defaults.maxiter) where T
     (lw,rw) = mixed_fixpoints(state,mpo,state;tol = tol, maxiter = maxiter)
 
-    PerMPOInfEnv(mpo,state,tol,maxiter,lw,rw)
+    PerMPOInfEnv(mpo,state,tol,maxiter,lw,rw,ReentrantLock())
 end
 
 mutable struct MixPerMPOInfEnv{H<:PeriodicMPO,V,S<:MPSMultiline} <: AbstractInfEnv
     opp :: H
 
     above :: S
-    below :: S
+    dependency :: S
 
     tol :: Float64
     maxiter :: Int
 
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}
+
+    lock :: ReentrantLock
 end
 
 function recalculate!(envs::MixPerMPOInfEnv,nstate::MPSMultiline{T}) where T
@@ -58,20 +62,20 @@ function recalculate!(envs::MixPerMPOInfEnv,nstate::MPSMultiline{T}) where T
     end
 
     (envs.lw,envs.rw) = mixed_fixpoints(envs.above,envs.opp,nstate,init,tol = envs.tol, maxiter = envs.maxiter);
-    envs.below = nstate;
+    envs.dependency = nstate;
 
     envs
 end
 
-function environments(below::InfiniteMPS,toapprox::Tuple{<:InfiniteMPS,<:PeriodicMPO};kwargs...)
-    (above,opp) = toapprox
-    environments(convert(MPSMultiline,below),(convert(MPSMultiline,above),opp);kwargs...);
+function environments(below::InfiniteMPS,toapprox::Tuple{<:PeriodicMPO,<:InfiniteMPS};kwargs...)
+    (opp,above) = toapprox
+    environments(convert(MPSMultiline,below),(opp,convert(MPSMultiline,above));kwargs...);
 end
-function environments(below::MPSMultiline{T},toapprox::Tuple{<:MPSMultiline,<:PeriodicMPO};tol = Defaults.tol,maxiter=Defaults.maxiter) where T
-    (above,mpo) = toapprox;
+function environments(below::MPSMultiline{T},toapprox::Tuple{<:PeriodicMPO,<:MPSMultiline};tol = Defaults.tol,maxiter=Defaults.maxiter) where T
+    (mpo,above) = toapprox;
     (lw,rw) = mixed_fixpoints(above,mpo,below;tol = tol, maxiter = maxiter)
 
-    MixPerMPOInfEnv(mpo,above,below,tol,maxiter,lw,rw)
+    MixPerMPOInfEnv(mpo,above,below,tol,maxiter,lw,rw,ReentrantLock())
 end
 
 # --- utility functions ---

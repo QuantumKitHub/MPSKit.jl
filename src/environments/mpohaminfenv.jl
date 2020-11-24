@@ -10,6 +10,8 @@ mutable struct MPOHamInfEnv{H<:MPOHamiltonian,V,S<:InfiniteMPS} <:AbstractInfEnv
 
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}
+
+    lock :: ReentrantLock
 end
 
 Base.copy(p::MPOHamInfEnv) = MPOHamInfEnv(p.opp,p.dependency,p.tol,p.maxiter,copy(p.lw),copy(p.rw));
@@ -18,7 +20,7 @@ function gen_lw_rw(st::InfiniteMPS{A,B},ham::MPOHamiltonian) where {A,B}
     lw = PeriodicArray{A,2}(undef,length(st),ham.odim)
     rw = PeriodicArray{A,2}(undef,length(st),ham.odim)
 
-    for (i,j) in Iterators.product(1:length(st),1:ham.odim)
+    for i = 1:length(st), j = 1:ham.odim
         lw[i,j] = TensorMap(rand,eltype(st),space(st.AL[i],1)*space(ham[i,j,1],1)',space(st.AL[i],1))
         rw[i,j] = TensorMap(rand,eltype(st),space(st.AR[i],3)'*space(ham[i,1,j],3)',space(st.AR[i],3)')
     end
@@ -29,7 +31,7 @@ end
 #randomly initialize envs
 function environments(st::InfiniteMPS,ham::MPOHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
     (lw,rw) = gen_lw_rw(st,ham);
-    envs = MPOHamInfEnv(ham,similar(st),tol,maxiter,lw,rw)
+    envs = MPOHamInfEnv(ham,similar(st),tol,maxiter,lw,rw,ReentrantLock())
     recalculate!(envs,st);
 end
 
