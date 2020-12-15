@@ -131,3 +131,112 @@ function variance(state::InfiniteQP,ham::MPOHamiltonian,envs=environments(state,
 
     real(dot(state,effective_excitation_hamiltonian(ham2,state))-2*(E_f+E_ex)*E_ex+E_ex^2)
 end
+
+"""
+You can impose periodic boundary conditions on an mpo-hamiltonian (for a given size)
+That creates a new mpo-hamiltonian with larger bond dimension
+The interaction never wraps around multiple times
+"""
+function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.period) where {S,T,E}
+    MPSKit.sanitycheck(ham) || throw(ArgumentError("invalid ham"))
+    mod(len,ham.period) == 0 || throw(ArgumentError("$(len) is not a multiple of unitcell"))
+
+    fusers = map(Iterators.product(ham.domspaces[:],ham.domspaces[:],ham.domspaces[:])) do (v1,v2,v3)
+        isomorphism(fuse(v1'*v2*v3),v1'*v2*v3)
+    end
+
+    #a -> what virtual space did I "lend" in the beginning?
+    #b -> what progress have I made in the lower layer?
+    #c -> what progress have I made in the upper layer?
+    χ = ham.odim;
+    χ´ = Int((χ-1)*χ*(χ+1)/2+1);
+
+    function indmap(a,b,c)
+        Int((χ-a)*(χ-a+1)/2+(c-1)*χ*(χ+1)/2+(b-a)+1)
+    end
+
+
+    #do the bulk
+    bulk = PeriodicArray(convert(Array{Union{T,E},3},fill(zero(E),ham.period,χ´,χ´)));
+
+
+
+    for loc in 1:ham.period,
+        (j,k) in MPSKit.keys(ham,loc)
+
+        #apply (j,k) above
+        l = ham.odim
+        for i in 2:ham.odim
+
+            k <= i && i<=l || continue
+
+            f1 = fusers[i,l,j]
+            f2 = fusers[i,l,k]
+            @tensor bulk[loc,indmap(i,l,j),indmap(i,l,k)][-1 -2;-3 -4]:=ham[loc,j,k][1,-2,2,-4]*f1[-1,3,4,1]*conj(f2[-3,3,4,2])
+        end
+
+
+        #apply (j,k) below
+        i = 1
+        for l in 2:(ham.odim-1)
+
+            l > 1 && l >= i && l<=j || continue
+
+            f1 = fusers[l,j,i];
+            f2 = fusers[l,k,i];
+
+            @tensor bulk[loc,indmap(l,j,i),indmap(l,k,i)][-1 -2;-3 -4]:=ham[loc,j,k][1,-2,2,-4]*f1[-1,3,1,4]*conj(f2[-3,3,2,4])
+        end
+    end
+
+
+    # make the starter
+    starter = convert(Array{Union{T,E},2},fill(zero(E),χ´,χ´));
+    for (j,k) in MPSKit.keys(ham,1)
+
+        #apply (j,k) above
+        if j == 1
+            f1 = fusers[end,end,1];
+            f2 = fusers[end,end,k];
+
+            @tensor starter[1,indmap(ham.odim,ham.odim,k)][-1 -2;-3 -4]:=
+            ham[1,j,k][1,-2,2,-4]*f1[-1,3,4,1]*conj(f2[-3,3,4,2])
+        end
+
+        #apply (j,k) below
+        if j > 1 && j < ham.odim
+
+            f1 = fusers[j,j,1];
+            f2 = fusers[j,k,1];
+
+            @tensor starter[1,indmap(j,k,1)][-1 -2;-3 -4]:=ham[1,j,k][1,-2,2,-4]*conj(f2[-3,1,2,-1])
+        end
+    end
+    starter[1,1] = one(E);
+    starter[end,end] = one(E);
+
+    # make the ender
+    ender = convert(Array{Union{T,E},2},fill(zero(E),χ´,χ´));
+    for (j,k) in MPSKit.keys(ham,ham.period)
+
+        if k > 1
+            f1 = fusers[k,ham.odim,j]
+            @tensor ender[indmap(k,ham.odim,j),end][-1 -2;-3 -4]:=ham[ham.period,j,k][1,-2,2,-4]*f1[-1,2,-3,1]
+        end
+    end
+    ender[1,1] = one(E);
+    ender[end,end] = one(E);
+
+    # fill in the entire ham
+    nos = convert(Array{Union{T,E},3},fill(zero(E),len,χ´,χ´))
+    nos[1,:,:] = starter[:,:];
+    nos[end,:,:] = ender[:,:];
+
+    for i in 2:len-1
+        nos[i,:,:] = bulk[i,:,:];
+    end
+
+
+
+    return MPOHamiltonian(nos)
+end
