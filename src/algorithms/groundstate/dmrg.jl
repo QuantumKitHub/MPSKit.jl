@@ -66,7 +66,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
             end
             newA2center = vecs[1]
 
-            (al,c,ar) = tsvd(newA2center,trunc=alg.trscheme)
+            (al,c,ar) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
 
             #yeah, we need a different convergence criterium
             @tensor ov[-1,-2,-3,-4]:=al[-1,-2,1]*c[1,2]*ar[2,-3,-4]-al[1,2,3]*c[3,4]*ar[4,5,6]*conj(state.AC[pos][1,2,7])*conj(state.AR[pos+1][7,5,6])*state.AC[pos][-1,-2,9]*state.AR[pos+1][9,-3,-4]

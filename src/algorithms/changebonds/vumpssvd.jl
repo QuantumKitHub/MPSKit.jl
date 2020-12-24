@@ -46,7 +46,7 @@ function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,envs=
         nC2=vecs[1]
 
         #svd ac2, get new AL1 and S,V ---> AC
-        (AL1,S,V,eps) = tsvd(nAC2, (1,2), (3,4), trunc=alg.trscheme)
+        (AL1,S,V,eps) = tsvd(nAC2, (1,2), (3,4), trunc=alg.trscheme, alg=TensorKit.SVD())
         @tensor AC[-1,-2,-3]:=S[-1,1]*V[1,-2,-3]
         meps=max(eps,meps)
 
