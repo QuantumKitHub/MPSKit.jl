@@ -93,7 +93,7 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::N
             exponentiate(x->ac2_prime(x,i,state,envs),-1im*timestep/2,ac2,Lanczos())
         end
 
-        (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme)
+        (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme, alg=TensorKit.SVD())
 
         state.AC[i] = (nal,complex(nc))
         state.AC[i+1] = (complex(nc),_permute_front(nar))
@@ -115,7 +115,7 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::N
             exponentiate(x->ac2_prime(x,i-1,state,envs),-1im*timestep/2,ac2,Lanczos())
         end
 
-        (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme)
+        (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme,alg=TensorKit.SVD())
 
         state.AC[i-1] = (nal,complex(nc))
         state.AC[i] = (complex(nc),_permute_front(nar));
