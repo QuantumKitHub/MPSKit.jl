@@ -87,35 +87,64 @@ function MPOHamiltonian{Sp,M,E}(x::AbstractArray{Union{E,M},3}) where {Sp,M<:MPO
     domspaces = PeriodicArray{Union{Missing,Sp}}(missing,period,numrows);
     pspaces = PeriodicArray{Union{Missing,Sp}}(missing,period)
 
-    for (i,j,k) in Iterators.product(1:period,1:numrows,1:numcols)
-        if x[i,j,k] isa MPOTensor
-            #asign spaces when possible
-            dom = space(x[i,j,k],1);im = space(x[i,j,k],3);p = space(x[i,j,k],2)
+    isused = fill(false,period,numrows,numcols);
+    isstopped = false
+    while !isstopped
+        isstopped = true;
 
-            ismissing(pspaces[i]) && (pspaces[i] = p);
-            pspaces[i] != p && throw(ArgumentError("physical space for $((i,j,k)) incompatible : $(pspaces[i]) ≠ $(p)"))
+        for i = 1:period, j in 1:numrows, k in 1:numcols
+            isused[i,j,k] && continue;
 
-            ismissing(domspaces[i,j]) && (domspaces[i,j] = dom)
-            domspaces[i,j] != dom && throw(ArgumentError("Domspace for $((i,j,k)) incompatible : $(domspaces[i,j]) ≠ $(dom)"))
+            if x[i,j,k] isa MPOTensor
+                isused[i,j,k] = true;
+                isstopped = false;
 
-            ismissing(domspaces[i+1,k]) && (domspaces[i+1,k] = im')
-            domspaces[i+1,k] != im' && throw(ArgumentError("Imspace for $((i,j,k)) incompatible : $(domspaces[i+1,k]) ≠ $(im')"))
+                #asign spaces when possible
+                dom = space(x[i,j,k],1);im = space(x[i,j,k],3);p = space(x[i,j,k],2)
 
-            #if it's zero -> store zero
-            #if it's the identity -> store identity
-            if x[i,j,k] ≈ zero(x[i,j,k])
-                x[i,j,k] = zero(E) #the element is zero/missing
-            else
-                ii,sc = isid(x[i,j,k])
+                ismissing(pspaces[i]) && (pspaces[i] = p);
+                pspaces[i] != p && throw(ArgumentError("physical space for $((i,j,k)) incompatible : $(pspaces[i]) ≠ $(p)"))
 
-                if ii #the tensor is actually proportional to the identity operator -> store this knowledge
-                    x[i,j,k] = sc
+                ismissing(domspaces[i,j]) && (domspaces[i,j] = dom)
+                domspaces[i,j] != dom && throw(ArgumentError("Domspace for $((i,j,k)) incompatible : $(domspaces[i,j]) ≠ $(dom)"))
+
+                ismissing(domspaces[i+1,k]) && (domspaces[i+1,k] = im')
+                domspaces[i+1,k] != im' && throw(ArgumentError("Imspace for $((i,j,k)) incompatible : $(domspaces[i+1,k]) ≠ $(im')"))
+
+                #if it's zero -> store zero
+                #if it's the identity -> store identity
+                if x[i,j,k] ≈ zero(x[i,j,k])
+                    x[i,j,k] = zero(E) #the element is zero/missing
+                else
+                    ii,sc = isid(x[i,j,k])
+
+                    if ii #the tensor is actually proportional to the identity operator -> store this knowledge
+                        x[i,j,k] = sc
+                    end
                 end
+            elseif x[i,j,k] != zero(E)
+                if !ismissing(domspaces[i,j])
+                    isused[i,j,k] = true;
+                    isstopped = false;
+
+                    ismissing(domspaces[i+1,k]) && (domspaces[i+1,k] = domspaces[i,j])
+                    domspaces[i+1,k] != domspaces[i,j] && throw(ArgumentError("Identity incompatible at $((i,j,k)) : $(domspaces[i+1,k]) ≠ $(domspaces[i,j])"))
+                elseif !ismissing(domspaces[i+1,k])
+                    isused[i,j,k] = true;
+                    isstopped = false;
+                    
+                    ismissing(domspaces[i,j]) && (domspaces[i,j] = domspaces[i+1,k])
+                    domspaces[i+1,k] != domspaces[i,j] && throw(ArgumentError("Identity incompatible at $((i,j,k)) : $(domspaces[i+1,k]) ≠ $(domspaces[i,j])"))
+                end
+
+            else
+                isused[i,j,k] = true;
             end
         end
     end
 
     sum(ismissing.(pspaces)) == 0 || throw(ArgumentError("Not all physical spaces were assigned"))
+    sum(ismissing.(domspaces)) == 0 || @warn "faied to deduce all domspaces"
     f_domspaces = map(x-> ismissing(x) ? oneunit(Sp) : x,domspaces) #missing domspaces => oneunit ; should also not happen
 
     ndomspaces = PeriodicArray{Sp}(f_domspaces)
