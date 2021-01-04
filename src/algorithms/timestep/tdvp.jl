@@ -109,7 +109,7 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::N
     #right to left
 
     for i in length(state):-1:2
-        ac2 = _permute_front(state.AC[i-1])*_permute_tail(state.AR[i])
+        ac2 = _permute_front(state.AL[i-1])*_permute_tail(state.AC[i])
 
         (nac2,convhist) = let state=state,envs=envs
             exponentiate(x->ac2_prime(x,i-1,state,envs),-1im*timestep/2,ac2,Lanczos())

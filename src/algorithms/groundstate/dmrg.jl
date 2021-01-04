@@ -59,24 +59,35 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
 
         ealg = Lanczos()
 
-        for pos=[1:(length(state)-1);length(state)-2:-1:1]
+        #left to right sweep
+        for pos= 1:(length(state)-1)
             @tensor ac2[-1 -2; -3 -4]:=state.AC[pos][-1,-2,1]*state.AR[pos+1][1,-3,-4]
             (eigvals,vecs) =  let state=state,parameters=parameters
                 eigsolve(x->ac2_prime(x,pos,state,parameters),ac2,1,:SR,ealg)
             end
             newA2center = vecs[1]
 
-            (al,c,ar) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
-
-            #yeah, we need a different convergence criterium
-            @tensor ov[-1,-2,-3,-4]:=al[-1,-2,1]*c[1,2]*ar[2,-3,-4]-al[1,2,3]*c[3,4]*ar[4,5,6]*conj(state.AC[pos][1,2,7])*conj(state.AR[pos+1][7,5,6])*state.AC[pos][-1,-2,9]*state.AR[pos+1][9,-3,-4]
-            delta = max(delta,norm(ov))
-
+            (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
+            delta += ϵ;
             state.AC[pos] = (al,complex(c))
             state.AC[pos+1] = (complex(c),_permute_front(ar))
         end
 
-        alg.verbose && @info "Iteraton $(iter) error $(delta)"
+
+        for pos = length(state)-2:-1:1
+            @tensor ac2[-1 -2; -3 -4]:=state.AL[pos][-1,-2,1]*state.AC[pos+1][1,-3,-4]
+            (eigvals,vecs) =  let state=state,parameters=parameters
+                eigsolve(x->ac2_prime(x,pos,state,parameters),ac2,1,:SR,ealg)
+            end
+            newA2center = vecs[1]
+
+            (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
+            delta += ϵ;
+            state.AC[pos+1] = (complex(c),_permute_front(ar))
+            state.AC[pos] = (al,complex(c))
+        end
+
+        alg.verbose && @info "Iteraton $(iter) truncation error $(delta)"
         flush(stdout)
         #finalize
         (state,parameters,sc) = alg.finalize(iter,state,H,parameters);

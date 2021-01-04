@@ -65,6 +65,7 @@ end
 
 function Base.getindex(v::ACView{S},i::Int)::eltype(S) where S
     !(v.parent isa MPSComoving) || (i >= 1 && i <= length(v.parent)) || throw(ArgumentError("out of bounds"))
+    
     if ismissing(v.parent.ACs[i]) && !ismissing(v.parent.ARs[i])
         c = v.parent.CR[i-1];
         ar = v.parent.ARs[i];
