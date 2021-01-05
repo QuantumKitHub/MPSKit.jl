@@ -68,7 +68,9 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
             newA2center = vecs[1]
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
-            delta += ϵ;
+            v = @tensor ac2[1,2,3,4]*conj(al[1,2,5])*conj(c[5,6])*conj(ar[6,3,4])
+            delta = max(delta,abs(1-abs(v)));
+
             state.AC[pos] = (al,complex(c))
             state.AC[pos+1] = (complex(c),_permute_front(ar))
         end
@@ -82,12 +84,14 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
             newA2center = vecs[1]
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
-            delta += ϵ;
+            v = @tensor ac2[1,2,3,4]*conj(al[1,2,5])*conj(c[5,6])*conj(ar[6,3,4])
+            delta = max(delta,abs(1-abs(v)));
+
             state.AC[pos+1] = (complex(c),_permute_front(ar))
             state.AC[pos] = (al,complex(c))
         end
 
-        alg.verbose && @info "Iteraton $(iter) truncation error $(delta)"
+        alg.verbose && @info "Iteraton $(iter) error $(delta)"
         flush(stdout)
         #finalize
         (state,parameters,sc) = alg.finalize(iter,state,H,parameters);
