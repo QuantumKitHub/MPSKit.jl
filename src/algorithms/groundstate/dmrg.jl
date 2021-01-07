@@ -68,8 +68,9 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
             newA2center = vecs[1]
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
+            normalize!(c);
             v = @tensor ac2[1,2,3,4]*conj(al[1,2,5])*conj(c[5,6])*conj(ar[6,3,4])
-            delta = max(delta,abs(1-abs(v)));
+            delta = max(delta,abs(1-real(v)));
 
             state.AC[pos] = (al,complex(c))
             state.AC[pos+1] = (complex(c),_permute_front(ar))
@@ -84,8 +85,9 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
             newA2center = vecs[1]
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
+            normalize!(c);
             v = @tensor ac2[1,2,3,4]*conj(al[1,2,5])*conj(c[5,6])*conj(ar[6,3,4])
-            delta = max(delta,abs(1-abs(v)));
+            delta = max(delta,abs(1-real(v)));
 
             state.AC[pos+1] = (complex(c),_permute_front(ar))
             state.AC[pos] = (al,complex(c))
