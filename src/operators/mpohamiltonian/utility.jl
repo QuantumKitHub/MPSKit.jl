@@ -6,8 +6,7 @@
 
 #addition / substraction
 function Base.:+(a::MPOHamiltonian{S,T,E},e::AbstractArray{V,1}) where {S,T,E,V}
-
-    @assert length(e) == a.period
+    length(e) == a.period || throw(ArgumentError("periodicity should match $(a.period) ≠ $(length(e))"))
 
     nOs = copy(a.Os) # we don't want our addition to change different copies of the original hamiltonian
 
@@ -26,7 +25,7 @@ Base.:+(e::Array{T,1},a::MPOHamiltonian) where T = a + e
 Base.:-(a::MPOHamiltonian,e::AbstractArray{T,1}) where T = a + (-e)
 
 function Base.:+(a::MPOHamiltonian{S,T,E},b::MPOHamiltonian{S,T,E}) where {S,T,E}
-    @assert a.period == b.period
+    a.period == b.period || throw(ArgumentError("periodicity should match $(a.period) ≠ $(b.period)"))
     @assert sanitycheck(a)
     @assert sanitycheck(b)
 
