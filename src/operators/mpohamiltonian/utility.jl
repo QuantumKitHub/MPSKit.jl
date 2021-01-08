@@ -98,19 +98,16 @@ function Base.:*(a::MPOHamiltonian{S,T,E},b::Number) where {S,T,E}
     return MPOHamiltonian{S,T,E}(nOs,a.domspaces,a.pspaces)
 end
 
-#this is the index-map used in the ham x ham multiplication function (also needed somewhere else)
-#i think julia has a build in for this, but it got renamed somewhere (linearindices?)
-multmap(a::MPOHamiltonian,b::MPOHamiltonian) = (i,j)->(i-1)*b.odim+j
 function Base.:*(b::MPOHamiltonian{S,T,E},a::MPOHamiltonian{S,T,E}) where {S,T,E}
-    nodim=a.odim*b.odim
+    nodim = a.odim*b.odim
 
-    indmap=multmap(a,b)
+    indmap = LinearIndices((a,b))
 
     nOs = PeriodicArray{Union{E,T},3}(fill(zero(E),a.period,nodim,nodim))
 
     ndomspaces = PeriodicArray{S,2}(undef,a.period,nodim)
     for pos = 1:a.period,i in 1:a.odim, j = 1:b.odim
-        ndomspaces[pos,indmap(i,j)]=fuse(a.domspaces[pos,i]*b.domspaces[pos,j])
+        ndomspaces[pos,indmap[i,j]]=fuse(a.domspaces[pos,i]*b.domspaces[pos,j])
     end
 
     for pos = 1:a.period,
@@ -118,16 +115,16 @@ function Base.:*(b::MPOHamiltonian{S,T,E},a::MPOHamiltonian{S,T,E}) where {S,T,E
         (k,l) in keys(b,pos)
 
         if isscal(a,pos,i,j) && isscal(b,pos,k,l)
-            nOs[pos,indmap(i,k),indmap(j,l)] = a.Os[pos,i,j]*b.Os[pos,k,l]
+            nOs[pos,indmap[i,k],indmap[j,l]] = a.Os[pos,i,j]*b.Os[pos,k,l]
         else
 
             @tensor newopp_1[-1 -2;-3 -4 -5 -6]:=a[pos,i,j][-1,1,-4,-6]*b[pos,k,l][-2,-3,-5,1]
-            newopp_2 = TensorMap(newopp_1.data,ndomspaces[pos,indmap(i,k)],domain(newopp_1))
+            newopp_2 = TensorMap(newopp_1.data,ndomspaces[pos,indmap[i,k]],domain(newopp_1))
             newopp_3 = permute(newopp_2,(1,2,5),(3,4))
-            newopp_4 = TensorMap(newopp_3.data,codomain(newopp_3),ndomspaces[pos+1,indmap(j,l)])
+            newopp_4 = TensorMap(newopp_3.data,codomain(newopp_3),ndomspaces[pos+1,indmap[j,l]])
             newopp_5 = permute(newopp_4,(1,2),(4,3))
 
-            nOs[pos,indmap(i,k),indmap(j,l)]=newopp_5
+            nOs[pos,indmap[i,k],indmap[j,l]]=newopp_5
         end
     end
 

@@ -66,7 +66,7 @@ function squaredenvs(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,env
     end
 
     #impose the correct boundary conditions (important for comoving mps, should do nothing for finite mps)
-    indmap=multmap(conj(ham,transpo=true),ham)
+    indmap = LinearIndices((ham.odim,ham.odim));
 
     nleft=leftenv(ncocache,1,state)
     nright=rightenv(ncocache,length(state),state)
@@ -74,10 +74,10 @@ function squaredenvs(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,env
     for i in 1:ham.odim
         for j in 1:ham.odim
             @tensor temp[-1 -2 -3;-4]:=leftenv(envs,1,state)[j][1,-3,-4]*conj(leftenv(envs,1,state)[i][1,-2,-1])
-            copy!(nleft[indmap(i,j)].data,temp.data)
+            copy!(nleft[indmap[i,j]].data,temp.data)
 
             @tensor temp[-1 -2 -3;-4]:=rightenv(envs,length(state),state)[j][-1,-2,1]*conj(rightenv(envs,length(state),state)[i][-4,-3,1])
-            copy!(nright[indmap(i,j)].data,temp.data)
+            copy!(nright[indmap[i,j]].data,temp.data)
         end
     end
 
