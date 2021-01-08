@@ -31,6 +31,7 @@ module MPSKit
     export dynamicaldmrg
     export fidelity_susceptibility
     export approximate!,approximate, Vomps
+    export periodic_boundary_conditions
 
     @deprecate params(args...) environments(args...)
 

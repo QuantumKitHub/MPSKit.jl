@@ -447,3 +447,27 @@ end
     nW1 = changebonds(W1,SvdCut(trscheme=truncerr(dt))); #this should be a trivial mpo now
     @test dim(space(nW1.opp[1,1],1)) == 1
 end
+
+@timedtestset "periodic boundary conditions" begin
+    len = 10;
+
+    #impose periodic boundary conditions on the hamiltonian (cirkel size 10)
+    th = nonsym_ising_ham();
+    th = periodic_boundary_conditions(th,len);
+
+    ts = FiniteMPS(len,ℂ^2,ℂ^10);
+
+    (gs,envs) = find_groundstate(ts,th,Dmrg(verbose=false));
+
+    #translation mpo:
+    @tensor bulk[-1 -2;-3 -4] := isomorphism(ℂ^2,ℂ^2)[-2,-3]*isomorphism(ℂ^2,ℂ^2)[-1,-4];
+    translation = periodic_boundary_conditions(PeriodicMPO(bulk),len);
+
+    #the groundstate should be translation invariant:
+    ut = Tensor(ones,ℂ^1);
+    @tensor leftstart[-1 -2;-3] := l_LL(gs)[-1,-3]*conj(ut[-2]);
+    v = transfer_left(leftstart,translation[1,:],[gs.AC[1];gs.AR[2:end]],[gs.AC[1];gs.AR[2:end]])
+    expval = @tensor v[1,2,3]*r_RR(gs)[3,1]*ut[2]
+
+    @test expval ≈ 1 atol=1e-5
+end
