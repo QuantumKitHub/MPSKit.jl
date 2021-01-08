@@ -60,15 +60,18 @@ mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
 end
 
 # allow construction with one large tensorkit space
+FiniteMPS(P::ProductSpace,args...;kwargs...) = FiniteMPS(rand,Defaults.eltype,P,args...;kwargs...);
 function FiniteMPS(f, elt,P::ProductSpace, args...; kwargs...)
     return FiniteMPS(f, elt, collect(P), args...; kwargs...)
 end
 
 # allow construction given only a physical space and length
+FiniteMPS(N::Int,V::VectorSpace, args...;kwargs...)  = FiniteMPS(rand,Defaults.eltype,N,V,args...;kwargs...);
 function FiniteMPS(f,elt, N::Int, V::VectorSpace, args...; kwargs...)
     return FiniteMPS(f, elt,fill(V, N), args...; kwargs...)
 end
 
+FiniteMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;kwargs...)  where {S<:ElementarySpace}= FiniteMPS(rand,Defaults.eltype,physspaces,maxvirtspace;kwargs...);
 function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;
                     left::S = oneunit(maxvirtspace),
                     right::S = oneunit(maxvirtspace)) where {S<:ElementarySpace}
