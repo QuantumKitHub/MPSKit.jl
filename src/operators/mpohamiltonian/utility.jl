@@ -101,7 +101,7 @@ end
 function Base.:*(b::MPOHamiltonian{S,T,E},a::MPOHamiltonian{S,T,E}) where {S,T,E}
     nodim = a.odim*b.odim
 
-    indmap = LinearIndices((a,b))
+    indmap = LinearIndices((a.odim,b.odim))
 
     nOs = PeriodicArray{Union{E,T},3}(fill(zero(E),a.period,nodim,nodim))
 
