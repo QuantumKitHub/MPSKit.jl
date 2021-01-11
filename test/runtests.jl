@@ -333,7 +333,7 @@ end
 
             #find energy with normal dmrg
             (energies_dm,_) = excitations(th,FiniteExcited(gsalg=Dmrg(verbose=false)),ts,envs);
-            @test energies_dm[1] ≈ energies_QP[1]
+            @test energies_dm[1] ≈ energies_QP[1] atol=1e-4
 
             energies_QP[1]
         end
