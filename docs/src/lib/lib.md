@@ -39,8 +39,8 @@ find_groundstate
 timestep
 leading_boundary
 dynamicaldmrg
-quasiparticle_excitation
 changebonds
+excitations
 ```
 
 ### [Groundstate algorithms](@id lib_gs_alg)
@@ -69,4 +69,10 @@ PowerMethod
 OptimalExpand
 VumpsSvdCut
 SvdCut
+```
+
+### [Excitations]
+```@docs
+QuasiparticleAnsatz
+FiniteExcited
 ```

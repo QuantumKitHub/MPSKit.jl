@@ -23,7 +23,7 @@ module MPSKit
     #algos
     export find_groundstate!, find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2, GradientGrassmann
     export leading_boundary
-    export quasiparticle_excitation, correlation_length
+    export correlation_length,excitations,FiniteExcited,QuasiparticleAnsatz
     export timestep!,timestep,Tdvp,Tdvp2,make_time_mpo,WI,WII
     export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
     export changebonds!,changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
@@ -97,6 +97,7 @@ module MPSKit
     include("algorithms/propagator/corvector.jl")
 
     include("algorithms/excitation/quasiparticleexcitation.jl")
+    include("algorithms/excitation/dmrgexcitation.jl")
 
     include("algorithms/statmech/vumps.jl")
 

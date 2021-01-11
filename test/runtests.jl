@@ -311,7 +311,7 @@ end
         th = nonsym_xxz_ham()
         ts = InfiniteMPS([ℂ^3],[ℂ^48]);
         (ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
-        (energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,envs);
+        (energies,Bs) = excitations(th,QuasiparticleAnsatz(),Float64(pi),ts,envs);
         @test energies[1] ≈ 0.41047925 atol=1e-4
         @test variance(Bs[1],th) < 1e-8
     end
@@ -320,15 +320,22 @@ end
         th = nonsym_ising_ham()
         ts = InfiniteMPS([ℂ^2],[ℂ^12]);
         (ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
-        (energies,Bs) = quasiparticle_excitation(th,0.0,ts,envs);
+        (energies,Bs) = excitations(th,QuasiparticleAnsatz(),0.0,ts,envs);
         inf_en = energies[1];
 
         fin_en = map([30,20,10]) do len
             ts = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^12)
             (ts,envs,_) = find_groundstate(ts,th,Dmrg(verbose=false));
-            (energies,Bs) = quasiparticle_excitation(th,ts,envs);
+
+            #find energy with quasiparticle ansatz
+            (energies_QP,Bs) = excitations(th,QuasiparticleAnsatz(),ts,envs);
             @test variance(Bs[1],th)<1e-8
-            energies[1]
+
+            #find energy with normal dmrg
+            (energies_dm,_) = excitations(th,FiniteExcited(gsalg=Dmrg(verbose=false)),ts,envs);
+            @test energies_dm[1] ≈ energies_QP[1]
+
+            energies_QP[1]
         end
 
         @test issorted(abs.(fin_en.-inf_en))

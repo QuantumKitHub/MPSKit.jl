@@ -34,7 +34,9 @@ will evolve 'state' forwards in time by 0.3 seconds. Here we use a 2 site update
 
 Dynamical dmrg has been described in other papers and is a way to find the propagator. The basic idea is that to calculate ``G(z) = < V | (H-z)^{-1} | V > `` , one can variationally find ``(H-z) |W > = | V > `` and then the propagator simply equals ``G(z) = < V | W >``.
 
-## quasiparticle excitations
+## excitations
+
+### Quasiparticle ansatz
 
 We export code that implements the [quasiparticle excitation ansatz](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.111.080401) for finite and infinite systems.
 For example, the following calculates the haldane gap for spin-1 heisenberg.
@@ -43,11 +45,23 @@ For example, the following calculates the haldane gap for spin-1 heisenberg.
 th = nonsym_xxz_ham()
 ts = InfiniteMPS([ℂ^3],[ℂ^48]);
 (ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
-(energies,Bs) = quasiparticle_excitation(th,Float64(pi),ts,envs);
+(energies,Bs) = excitations(th,QuasiparticleAnsatz(),Float64(pi),ts,envs);
 @test energies[1] ≈ 0.41047925 atol=1e-4
 ```
 
 For infinite systems you have to specify the momentum of your particle. In contrast, momentum is not a well defined quantum number and you therefore do not have to specify it when finding excitations on top of a finite mps.
+
+### Finite excitations
+
+For finite systems we can also do something else - find the groundstate of the hamiltonian + ``weight \sum_i | psi_i > < psi_i ``. This is also supported by calling
+
+```julia
+th = nonsym_ising_ham()
+ts = FiniteMPS(10,ℂ^2,ℂ^12);
+(ts,envs,_) = find_groundstate(ts,th,Dmrg(verbose=false));
+(energies,Bs) = excitations(th,FiniteExcited(),ts,envs);
+```
+
 
 ## fidelity susceptibility
 

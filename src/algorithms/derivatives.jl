@@ -3,7 +3,7 @@
 """
     One-site derivative
 """
-function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
+function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,SimpleEnv})
     ham=cache.opp
 
     toret=zero(x)
@@ -25,7 +25,7 @@ end
 """
     Two-site derivative
 """
-function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
+function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,SimpleEnv})
     ham=cache.opp
 
     toret=zero(x)

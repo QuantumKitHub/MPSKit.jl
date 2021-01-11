@@ -2,46 +2,51 @@
     an excitation tensor has 4 legs (1,2),(3,4)
     the first and the last are virtual, the second is physical, the third is the utility leg
 =#
+@with_kw struct QuasiparticleAnsatz <: Algorithm
+    toler::Float64 = 1e-10;
+    krylovdim::Int = 30;
+end
+
 
 include("excitransfers.jl")
 
 "
     quasiparticle_excitation calculates the energy of the first excited state at momentum 'moment'
 "
-function quasiparticle_excitation(hamiltonian::Hamiltonian, momentum::Float64, mpsleft::InfiniteMPS, environmentsleft=environments(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, environmentsright=environmentsleft;
-    sector = first(sectors(oneunit(virtualspace(mpsleft,1)))), num=1 , toler = 1e-10,krylovdim=30)
+function excitations(hamiltonian::Hamiltonian, alg::QuasiparticleAnsatz, momentum::Float64, mpsleft::InfiniteMPS, environmentsleft=environments(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, environmentsright=environmentsleft;
+    sector = first(sectors(oneunit(virtualspace(mpsleft,1)))), num=1)
 
     V_initial = rand_quasiparticle(mpsleft,mpsright;sector=sector,momentum=momentum);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, environments(V,hamiltonian,environmentsleft, environmentsright))
-    Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=toler,krylovdim=krylovdim)
+    Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=alg.toler,krylovdim=alg.krylovdim)
     convhist.converged<num && @warn "quasiparticle didn't converge k=$(momentum) $(convhist.normres)"
 
     return Es,Vs
 end
 
 #pretty much identical to the infinite mps code, except for the lack of momentum label
-function quasiparticle_excitation(hamiltonian::Hamiltonian, mpsleft::FiniteMPS, environmentsleft=environments(mpsleft,hamiltonian), mpsright::FiniteMPS=mpsleft, environmentsright=environmentsleft;
-    sector = first(sectors(oneunit(virtualspace(mpsleft,1)))),num=1, toler = 1e-10,krylovdim=30)
+function excitations(hamiltonian::Hamiltonian, alg::QuasiparticleAnsatz, mpsleft::FiniteMPS, environmentsleft=environments(mpsleft,hamiltonian), mpsright::FiniteMPS=mpsleft, environmentsright=environmentsleft;
+    sector = first(sectors(oneunit(virtualspace(mpsleft,1)))),num=1)
 
     V_initial = rand_quasiparticle(mpsleft,mpsright;sector=sector);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, environments(V,hamiltonian,environmentsleft, environmentsright))
-    Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=toler,krylovdim=krylovdim)
+    Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=alg.toler,krylovdim=alg.krylovdim)
     convhist.converged<num && @warn "quasiparticle didn't converge $(convhist.normres)"
 
     return Es,Vs
 end
 
 #give it a vector of momentum points
-function quasiparticle_excitation(hamiltonian::Hamiltonian, momenta::AbstractVector, mpsleft::InfiniteMPS, environmentsleft=environments(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, environmentsright=environmentsleft;
+function excitations(hamiltonian::Hamiltonian, alg::QuasiparticleAnsatz, momenta::AbstractVector, mpsleft::InfiniteMPS, environmentsleft=environments(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, environmentsright=environmentsleft;
     num=1,verbose=Defaults.verbose,kwargs...)
 
     tasks = map(enumerate(momenta)) do (i,p)
         @Threads.spawn begin
-            (E,V) = quasiparticle_excitation(hamiltonian, p, mpsleft, environmentsleft, mpsright, environmentsright; num=num,kwargs...)
+            (E,V) = excitations(hamiltonian,alg, p, mpsleft, environmentsleft, mpsright, environmentsright; num=num,kwargs...)
             verbose && @info "Found excitations for p = $(p)"
             (E,V)
         end
