@@ -4,23 +4,24 @@
 end
 
 
-
-function excitations(hamiltonian::Hamiltonian, alg::FiniteExcited,gs::FiniteMPS,envs = environments(gs,hamiltonian);init = FiniteMPS([copy(gs.AC[i]) for i in 1:length(gs)]),num = 1)
-    #iteratively call alg.gsalg
-    found = [gs];
-    energies = [sum(expectation_value(gs,hamiltonian))];
-
-    for i in 1:num
-        envs = environments(init,hamiltonian,alg.weight,found);
-
-        (ne,_) = find_groundstate(init,hamiltonian,alg.gsalg,envs);
-
-        push!(found,ne);
-        push!(energies,sum(expectation_value(ne,hamiltonian)));
+function excitations(hamiltonian::Hamiltonian,alg::FiniteExcited,states::Vector{T};init = FiniteMPS([copy(gs.AC[i]) for i in 1:length(gs)]),num = 1) where T <:FiniteMPS
+    if num == 0
+        return (eltype(eltype(T))[],T[])
     end
 
-    return energies[2:end].-energies[1],found[2:end];
+    envs = environments(init,hamiltonian,alg.weight,states);
+    (ne,_) = find_groundstate(init,hamiltonian,alg.gsalg,envs);
+
+    push!(states,ne);
+
+    (ens,excis) = excitations(hamiltonian,alg,states;init = init,num = num-1);
+
+    push!(ens,sum(expectation_value(ne,hamiltonian)))
+    push!(excis,ne);
+
+    return ens,excis
 end
+excitations(hamiltonian::Hamiltonian, alg::FiniteExcited,gs::FiniteMPS;kwargs...) = excitations(hamiltonian,alg,[gs];kwargs...)
 
 #some simple environments
 
