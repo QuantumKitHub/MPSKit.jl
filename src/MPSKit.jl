@@ -32,6 +32,7 @@ module MPSKit
     export fidelity_susceptibility
     export approximate!,approximate, Vomps
     export periodic_boundary_conditions
+    export exact_diagonalization
 
     @deprecate params(args...) environments(args...)
 
@@ -104,4 +105,6 @@ module MPSKit
     include("algorithms/fidelity_susceptibility.jl")
 
     include("algorithms/approximate/vomps.jl")
+
+    include("algorithms/ED.jl")
 end
