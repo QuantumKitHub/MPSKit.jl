@@ -4,7 +4,7 @@
 end
 
 
-function excitations(hamiltonian::Hamiltonian,alg::FiniteExcited,states::Vector{T};init = FiniteMPS([copy(gs.AC[i]) for i in 1:length(gs)]),num = 1) where T <:FiniteMPS
+function excitations(hamiltonian::MPOHamiltonian,alg::FiniteExcited,states::Vector{T};init = FiniteMPS([copy(first(states).AC[i]) for i in 1:length(first(gs))]),num = 1) where T <:FiniteMPS
     if num == 0
         return (eltype(eltype(T))[],T[])
     end
