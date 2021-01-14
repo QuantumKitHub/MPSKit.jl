@@ -2,6 +2,8 @@
 
 ## MPOHamiltonian
 
+### usage
+
 We represent all quantum hamiltonians in their mpo form. As an example, the following bit of code constructs the ising hamiltonian.
 
 ```julia
@@ -27,6 +29,30 @@ The conversion to mpo tensors was done automagically behind the scenes!
 
 MPOHamiltonian are always assumed to be periodic in the first index (position).
 In this way, we can both represent periodic infinite hamiltonians and place dependent finite hamiltonians.
+
+### implementation details
+
+The mpohamiltonian has 3 fields:
+
+```julia
+Os::PeriodicArray{Union{E,T},3}
+domspaces::PeriodicArray{S,2}
+pspaces::PeriodicArray{S,1}
+
+Where T<:MPOTensor, E<:Number
+```
+
+When indexing the hamiltonian at index [i,j,k], the code looks up the corresponding field in Os[i,j,k]. Either that element is a tensormap, in which case it gets returned. If it equals zero(E), then we return a tensormap
+```julia
+domspaces[i,j]*pspaces[i] ← domspaces[i+1,k]*pspaces[i]
+```
+wither norm zero. If the element is a nonzero number, then implicitly we have the identity operator there (multiplied by that element). Of course in that case,
+```julia
+domspaces[i,j] == domspaces[i+1,k]
+```
+Otherwise the identity operator can't be uniquely defined.
+
+The overarching idea is that the user never has to worry about these inner fields, and can act as if the mpohamiltonian is a 3 dimensional array of tensormaps, while we optimize behind the scenes for the special cases where the operator is zero or the identity.
 
 ## PeriodicMPO
 

@@ -61,3 +61,4 @@ And use this to find the groundstate
 
 - There is an examples folder
 - Julia inference is taxed a lot; so use (jupyter notebooks / Revise ) instead of re-running a script everytime
+- There are predefined hamiltonians in [MPSKitModels.jl](https://github.com/maartenvd/MPSKitModels.jl)

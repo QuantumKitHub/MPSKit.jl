@@ -51,7 +51,7 @@ we will initially use a 2site tdvp scheme to increase the bond dimension while t
 ψₜ = deepcopy(ψ₀);
 dt = 0.01;
 
-(ψₜ,envs) = timestep!(ψₜ,ising_ham(2),dt,Tdvp2(trscheme=truncdim(20)));
+(ψₜ,envs) = timestep(ψₜ,ising_ham(2),dt,Tdvp2(trscheme=truncdim(20)));
 ```
 
 "envs" is a kind of cache object that keeps track of all environments in ψ. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
@@ -71,7 +71,7 @@ function finite_sim(len; dt = 0.05, finaltime = 5.0)
 
     @showprogress for t = times[2:end]
         alg = t > 3*dt ? Tdvp() : Tdvp2(trscheme = truncdim(50))
-        (ψₜ,envs) = timestep!(ψₜ,post_quench_ham,dt,alg,envs);
+        (ψₜ,envs) = timestep(ψₜ,post_quench_ham,dt,alg,envs);
         push!(echos,echo(ψₜ,ψ₀))
     end
 
