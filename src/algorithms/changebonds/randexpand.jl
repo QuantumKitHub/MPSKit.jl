@@ -1,17 +1,16 @@
 "
-    expands the given mps using the algorithm given in the vumps paper
+expands the bond dimension by adding random unitary vectors
 "
-@with_kw struct OptimalExpand<:Algorithm
+@with_kw struct RandExpand<:Algorithm
     trscheme::TruncationScheme = truncdim(1)
 end
 
 
-function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,envs=environments(state,H))
+function changebonds(state::InfiniteMPS,alg::RandExpand)
     #determine optimal expansion spaces around bond i
     pexp = PeriodicArray(map(1:length(state)) do i
         ACAR = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
-        AC2 = ac2_prime(ACAR,i,state,envs)
-
+        AC2 = TensorMap(rand,eltype(ACAR),codomain(ACAR),domain(ACAR));
 
 
         #Calculate nullspaces for AL and AR
@@ -45,15 +44,10 @@ function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,envs=
         newstate.AC[i] = newstate.AL[i]*newstate.CR[i]
     end
 
-    return newstate,envs
+    return newstate
 end
 
-function changebonds(state::InfiniteMPS,H::PeriodicMPO,alg,envs=environments(state,H))
-    (nmstate,envs) = changebonds(convert(MPSMultiline,state),H,alg,envs);
-    return (convert(InfiniteMPS,nmstate),envs)
-end
-
-function changebonds(state::MPSMultiline, H,alg::OptimalExpand,envs=environments(state,H))
+function changebonds(state::MPSMultiline,alg::RandExpand)
     #=
         todo : merge this with the MPSCentergauged implementation
     =#
@@ -61,7 +55,8 @@ function changebonds(state::MPSMultiline, H,alg::OptimalExpand,envs=environments
     pexp = PeriodicArray(map(Iterators.product(1:size(state,1),1:size(state,2))) do (i,j)
 
         ACAR = _permute_front(state.AC[i-1,j])*_permute_tail(state.AR[i-1,j+1])
-        AC2 = ac2_prime(ACAR,i-1,j,state,envs)
+        AC2 = TensorMap(rand,eltype(ACAR),codomain(ACAR),domain(ACAR));
+
 
         #Calculate nullspaces for AL and AR
         NL = leftnull(state.AL[i,j])
@@ -95,20 +90,14 @@ function changebonds(state::MPSMultiline, H,alg::OptimalExpand,envs=environments
         newstate.AC[i,j] = newstate.AL[i,j]*newstate.CR[i,j]
     end
 
-    return newstate,envs
+    return newstate
 end
 
-changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, alg::OptimalExpand,envs=environments(state,H)) = changebonds!(copy(state),H,alg,envs)
-function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::OptimalExpand,envs=environments(state,H))
-    #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
-
-    #the idea is that we always want to expand the state in such a way that there are zeros at site i
-    #but "optimal vectors" at site i+1
-    #so during optimization of site i, you have access to these optimal vectors :)
-
+changebonds(state::Union{FiniteMPS,MPSComoving}, alg::RandExpand) = changebonds!(copy(state),alg)
+function changebonds!(state::Union{FiniteMPS,MPSComoving},alg::RandExpand)
     for i in 1:(length(state)-1)
         ACAR = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
-        AC2 = ac2_prime(ACAR,i,state,envs)
+        AC2 = TensorMap(rand,eltype(ACAR),codomain(ACAR),domain(ACAR));
 
         #Calculate nullspaces for left and right
         NL = leftnull(state.AC[i])
@@ -128,5 +117,5 @@ function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::O
         state.AC[i+1] = (nc,nar)
     end
 
-    (state,envs)
+    state
 end

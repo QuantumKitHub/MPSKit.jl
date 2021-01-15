@@ -26,7 +26,7 @@ module MPSKit
     export correlation_length,excitations,FiniteExcited,QuasiparticleAnsatz
     export timestep!,timestep,Tdvp,Tdvp2,make_time_mpo,WI,WII
     export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
-    export changebonds!,changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc
+    export changebonds!,changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
     export entropy
     export dynamicaldmrg
     export fidelity_susceptibility
@@ -86,6 +86,7 @@ module MPSKit
     include("algorithms/changebonds/vumpssvd.jl")
     include("algorithms/changebonds/svdcut.jl")
     include("algorithms/changebonds/changebonds.jl")
+    include("algorithms/changebonds/randexpand.jl")
 
     include("algorithms/timestep/tdvp.jl")
     include("algorithms/timestep/timeevmpo.jl")

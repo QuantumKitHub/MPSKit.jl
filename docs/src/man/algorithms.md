@@ -120,6 +120,10 @@ ts = FiniteMPS(10,ℂ^2,ℂ^12);
 changebonds(ts,OptimalExpand(trscheme = truncdim(1))) # expand the bond dimension by 1
 ```
 
+### random expand
+
+This algorithm is almost identical to optimal expand, except we don't try to do anything 'clever'. The unitary blocks that get added are chosen at random.
+
 ### svd cut
 
 It is possible to truncate a state using the svd decomposition, this is implemented in svdcut.
