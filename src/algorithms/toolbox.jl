@@ -63,14 +63,6 @@ function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,MPSComoving},site
     diag(convert(Array,S))
 end
 
-"
-allows exact two point functions of operators instead of eigenvalues of TM which gives the leading order infinte range behavior.
-"
-function twopoint()
-	throw("WIP BEN BEZIG AAN IETS VOOR DAAN")
-end
-
-
 function correlation_length(above::InfiniteMPS; tol_angle=0.1,below=above,kwargs...)
     #get the transfer spectrum
     spectrum = transfer_spectrum(above;below=above,kwargs...);
