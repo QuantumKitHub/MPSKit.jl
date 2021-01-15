@@ -1,7 +1,7 @@
 """
 Use krylovkit to perform exact diagonalization
 """
-function exact_diagonalization(opp::MPOHamiltonian,len::Int = opp.period,num::Int = 1,which::Symbol=:LM,alg::KrylovKit.KrylovAlgorithm = Arnoldi())
+function exact_diagonalization(opp::MPOHamiltonian;len::Int = opp.period,num::Int = 1,which::Symbol=:LM,alg::KrylovKit.KrylovAlgorithm = Arnoldi())
     pspaces = [opp.pspaces[i] for i in 1:len];
 
     #construct the largest possible finite mps of that length

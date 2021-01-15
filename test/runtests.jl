@@ -578,6 +578,6 @@ end
 
     @test expval ≈ 1 atol=1e-5
 
-    (energies,values) = exact_diagonalization(th);
+    (energies,values) = exact_diagonalization(th,which=:SR);
     @test energies[1] ≈ sum(expectation_value(gs,th)) atol=1e-5
 end
