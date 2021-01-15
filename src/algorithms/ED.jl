@@ -5,7 +5,7 @@ function exact_diagonalization(opp::MPOHamiltonian,len::Int = opp.period,num::In
     pspaces = [opp.pspaces[i] for i in 1:len];
 
     #construct the largest possible finite mps of that length
-    state = FiniteMPS(rand,eltype(eltype(opp)),pspaces,fuse(pspaces))
+    state = FiniteMPS(rand,eltype(eltype(opp)),pspaces,fuse(prod(pspaces)))
     envs = environments(state,opp);
 
     #optimize the middle site. Because there is no truncation, this single site captures the entire possible hilbert space
@@ -17,8 +17,8 @@ function exact_diagonalization(opp::MPOHamiltonian,len::Int = opp.period,num::In
     state_vecs = map(vecs) do v
         cs = copy(state);
         cs.AC[middle_site] = v;
-        vs
+        cs
     end
-    
+
     return vals,state_vecs,convhist
 end
