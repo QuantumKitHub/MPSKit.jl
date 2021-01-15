@@ -372,10 +372,7 @@ end
 end
 
 @timedtestset "changebonds $((pspace,Dspace))" for (pspace,Dspace) in [(ℂ^4,ℂ^10),
-        (Rep[SU₂](1=>1),Rep[SU₂](1//2=>10,3//2=>5,5//2=>1))]
-
-
-    #throws. I can fix it, but it depends on decisions in tensorkit
+        (Rep[SU₂](1=>1),Rep[SU₂](0=>10,1=>5,2=>1))]
     #=
     @timedtestset "mpo" begin
         #random nn interaction
@@ -385,7 +382,7 @@ end
         mpo1 = periodic_boundary_conditions(make_time_mpo(MPOHamiltonian(nn),0.1,WII()),10);
         mpo2 = changebonds(mpo1,SvdCut(trscheme = truncdim(5)));
 
-        @test dim(space(mpo2[1,5],1)) < space(mpo1[1,5],1)
+        @test dim(space(mpo2[1,5],1)) < dim(space(mpo1[1,5],1))
     end
     =#
 
@@ -422,9 +419,8 @@ end
         (state_oe,_) = changebonds(state,MPOHamiltonian(nn),OptimalExpand(trscheme = truncdim(dim(Dspace)*dim(Dspace))));
         @test dot(state,state_oe) ≈ 1 atol=1e-8
 
-        #throws. I can fix it, but it depends on decisions in tensorkit
-        #state_tr = changebonds(state_oe,SvdCut(trscheme = truncdim(dim(Dspace))));
-        #@test dim(virtualspace(state_tr,5)) < dim(virtualspace(state_oe,5))
+        state_tr = changebonds(state_oe,SvdCut(trscheme = truncdim(dim(Dspace))));
+        @test dim(virtualspace(state_tr,5)) < dim(virtualspace(state_oe,5))
     end
 
     @timedtestset "MPSMultiline" begin
