@@ -5,7 +5,8 @@
     trscheme = notrunc()
 end
 
-function changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) where T
+changebonds(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) where T = changebonds!(copy(state),alg);
+function changebonds!(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) where T
     newstate = copy(state);
 
     for i in length(state)-1:-1:1

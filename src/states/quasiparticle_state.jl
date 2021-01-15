@@ -184,5 +184,5 @@ function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
         Bs[i] = simplefuse(temp);
     end
 
-    return FiniteMPS(Ls+Rs+Bs)
+    return FiniteMPS(Ls+Rs+Bs,normalize=false)
 end

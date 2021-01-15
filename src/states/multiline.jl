@@ -117,3 +117,5 @@ r_RR(state::MPSMultiline{A},row,loc::Int=length(state)) where A= isomorphism(Mat
 r_RL(state::MPSMultiline,row,loc::Int=length(state)) = state.CR[row,loc]'
 r_LR(state::MPSMultiline,row,loc::Int=length(state)) = state.CR[row,loc]
 r_LL(state::MPSMultiline,row,loc::Int=length(state))= @tensor toret[-1;-2]:=state.CR[row,loc][-1,1]*conj(state.CR[row,loc][-2,1])
+
+TensorKit.dot(a::MPSMultiline,b::MPSMultiline;kwargs...) = sum(dot.(convert(Vector,a),convert(Vector,b);kwargs...))

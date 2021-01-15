@@ -213,33 +213,62 @@ end
 println("------------------------------------")
 println("|     Operators                    |")
 println("------------------------------------")
-@timedtestset "mpoham $(i)" for (i,(th,Dspaces)) in enumerate([
-        (nonsym_ising_ham(),[ℂ^1]),
-        (u1_xxz_ham(),[Rep[U₁](1//2=>1)]),
-        (repeat(su2_xxx_ham(),2),[Rep[SU₂](0=>1),Rep[SU₂](1//2=>1)])
-        ])
 
-    ts = @constinferred InfiniteMPS(th.pspaces,Dspaces); # generate a product state
+@timedtestset "mpoham $((pspace,Dspace))" for (pspace,Dspace) in [(ℂ^4,ℂ^10),
+        (Rep[U₁](0=>2),Rep[U₁]((0=>20))),
+        (Rep[SU₂](1=>1),Rep[SU₂](1//2=>10,3//2=>5,5//2=>1))]
 
-    (ts,_) = @constinferred changebonds(ts,th,OptimalExpand()) # optimal expand a la vumps paper
-    ndim = dim(space(ts.AC[1],1))
-    (ts,_) = @constinferred changebonds(ts,th,VumpsSvdCut()) # idmrg2 step to expand the bond dimension
-    @test dim(space(ts.AC[1],1)) > ndim;
+    #generate a 1-2-3 body interaction
+    n = TensorMap(rand,ComplexF64,pspace,pspace); n+= n';
+    nn = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace); nn+=nn';
+    nnn = TensorMap(rand,ComplexF64,pspace*pspace*pspace,pspace*pspace*pspace); nnn+=nnn';
 
-    e1 = @constinferred expectation_value(ts,th);
+    #can you pass in a proper mpo?
+    identity = complex(isomorphism(oneunit(pspace)*pspace,oneunit(pspace)*pspace));
+    mpoified = MPSKit.decompose_localmpo(MPSKit.add_util_leg(nnn));
+    d3 = Array{Union{Missing,typeof(identity)},3}(missing,1,4,4);
+    d3[1,1,1] = identity;
+    d3[1,end,end] = identity;
+    d3[1,1,2] = mpoified[1];
+    d3[1,2,3] = mpoified[2];
+    d3[1,3,4] = mpoified[3];
+    h1 = @constinferred MPOHamiltonian(d3);
 
-    t_th = @constinferred Base.:*(2,th)
-    e2 = expectation_value(ts,t_th); #multiplication with a constant
-    @test 2*e1≈e2;
+    #¢an you pass in the actual hamiltonian?
+    h2 = @constinferred MPOHamiltonian(nn);
 
-    t_th = @constinferred Base.:+(0.5*th,th)
-    e2 = expectation_value(ts,t_th); #addition
-    @test 1.5*e1≈e2;
+    #can you generate a hamiltonian using only onsite interactions?
+    d1 = Array{Any,3}(missing,2,3,3);
+    d1[1,1,1] = 1; d1[1,end,end] = 1;
+    d1[1,1,2] = n; d1[1,2,end] = n;
+    d1[2,1,1] = 1; d1[2,end,end] = 1;
+    d1[2,1,2] = n; d1[2,2,end] = n;
+    h3 = MPOHamiltonian(d1);
 
-    th -= expectation_value(ts,th);
-    th2 = @constinferred Base.:*(th,th);
-    v = expectation_value(ts,th2);
-    @test real(sum(v))>=0;
+    #make a teststate to measure expectation values for
+    ts1 = InfiniteMPS([pspace],[Dspace]);
+    ts2 = InfiniteMPS([pspace,pspace],[Dspace,Dspace]);
+
+    e1 = expectation_value(ts1,h1);
+    e2 = expectation_value(ts1,h2);
+
+    h1 = 2*h1-[1];
+    @test e1[1]*2-1 ≈ expectation_value(ts1,h1)[1] atol=1e-10
+
+    h1 = h1 + h2;
+
+    @test e1[1]*2+e2[1]-1 ≈ expectation_value(ts1,h1)[1] atol=1e-10
+
+    h1 = repeat(h1,2);
+
+    e1 = expectation_value(ts2,h1);
+    e3 = expectation_value(ts2,h3);
+
+    @test e1+e3 ≈ expectation_value(ts2,h1+h3) atol=1e-10
+
+    h4 = h1+h3;
+    h4 = h4*h4;
+    @test real(sum(expectation_value(ts2,h4)))>=0;
 end
 
 @timedtestset "PeriodicMPO"  for ham in (nonsym_ising_ham(),su2_xxx_ham(spin=1))
@@ -332,13 +361,88 @@ end
             @test variance(Bs[1],th)<1e-8
 
             #find energy with normal dmrg
-            (energies_dm,_) = excitations(th,FiniteExcited(gsalg=Dmrg(verbose=false)),ts,envs);
-            @test energies_dm[1] ≈ energies_QP[1] atol=1e-4
+            (energies_dm,_) = excitations(th,FiniteExcited(gsalg=Dmrg(verbose=false)),ts);
+            @test energies_dm[1] ≈ energies_QP[1]+sum(expectation_value(ts,th,envs)) atol=1e-4
 
             energies_QP[1]
         end
 
         @test issorted(abs.(fin_en.-inf_en))
+    end
+end
+
+@timedtestset "changebonds $((pspace,Dspace))" for (pspace,Dspace) in [(ℂ^4,ℂ^10),
+        (Rep[SU₂](1=>1),Rep[SU₂](1//2=>10,3//2=>5,5//2=>1))]
+
+
+    #throws. I can fix it, but it depends on decisions in tensorkit
+    #=
+    @timedtestset "mpo" begin
+        #random nn interaction
+        nn = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace);
+        nn += nn';
+
+        mpo1 = periodic_boundary_conditions(make_time_mpo(MPOHamiltonian(nn),0.1,WII()),10);
+        mpo2 = changebonds(mpo1,SvdCut(trscheme = truncdim(5)));
+
+        @test dim(space(mpo2[1,5],1)) < space(mpo1[1,5],1)
+    end
+    =#
+
+    @timedtestset "infinite mps" begin
+        #random nn interaction
+        nn = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace);
+        nn += nn';
+
+        state = InfiniteMPS([pspace,pspace],[Dspace,Dspace]);
+
+        state_re = changebonds(state,RandExpand(trscheme = truncdim(dim(Dspace)*dim(Dspace))));
+        @test dot(state,state_re) ≈ 1 atol=1e-8
+
+        (state_oe,_) = changebonds(state,MPOHamiltonian(nn),OptimalExpand(trscheme = truncdim(dim(Dspace)*dim(Dspace))));
+        @test dot(state,state_oe) ≈ 1 atol=1e-8
+
+        (state_vs,_) = changebonds(state,MPOHamiltonian(nn),VumpsSvdCut(trscheme=notrunc()));
+        @test dim(virtualspace(state,1)) < dim(virtualspace(state_vs,1))
+
+        state_vs_tr = changebonds(state_vs,SvdCut(trscheme = truncdim(dim(Dspace))));
+        @test dim(virtualspace(state_vs_tr,1)) < dim(virtualspace(state_vs,1))
+    end
+
+    @timedtestset "finite mps" begin
+        #random nn interaction
+        nn = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace);
+        nn += nn';
+
+        state = FiniteMPS(10,pspace,Dspace);
+
+        state_re = changebonds(state,RandExpand(trscheme = truncdim(dim(Dspace)*dim(Dspace))));
+        @test dot(state,state_re) ≈ 1 atol=1e-8
+
+        (state_oe,_) = changebonds(state,MPOHamiltonian(nn),OptimalExpand(trscheme = truncdim(dim(Dspace)*dim(Dspace))));
+        @test dot(state,state_oe) ≈ 1 atol=1e-8
+
+        #throws. I can fix it, but it depends on decisions in tensorkit
+        #state_tr = changebonds(state_oe,SvdCut(trscheme = truncdim(dim(Dspace))));
+        #@test dim(virtualspace(state_tr,5)) < dim(virtualspace(state_oe,5))
+    end
+
+    @timedtestset "MPSMultiline" begin
+        o = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace);
+        mpo = PeriodicMPO(o);
+
+        t = TensorMap(rand,ComplexF64,Dspace*pspace,Dspace);
+        state = MPSMultiline(fill(t,1,1));
+
+        state_re = changebonds(state,RandExpand(trscheme = truncdim(dim(Dspace)*dim(Dspace))));
+        @test dot(state,state_re) ≈ 1 atol=1e-8
+
+        (state_oe,_) = changebonds(state,mpo,OptimalExpand(trscheme = truncdim(dim(Dspace)*dim(Dspace))));
+        @test dot(state,state_oe) ≈ 1 atol=1e-8
+
+        state_tr = changebonds(state_oe,SvdCut(trscheme = truncdim(dim(Dspace))));
+        @test dim(virtualspace(state_tr,1,1)) < dim(virtualspace(state_oe,1,1))
+
     end
 end
 
@@ -477,4 +581,7 @@ end
     expval = @tensor v[1,2,3]*r_RR(gs)[3,1]*ut[2]
 
     @test expval ≈ 1 atol=1e-5
+
+    (energies,values) = exact_diagonalization(th);
+    @test energies[1] ≈ sum(expectation_value(gs,th)) atol=1e-5
 end
