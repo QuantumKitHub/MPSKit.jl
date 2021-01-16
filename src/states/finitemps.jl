@@ -74,7 +74,7 @@ end
 FiniteMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;kwargs...)  where {S<:ElementarySpace}= FiniteMPS(rand,Defaults.eltype,physspaces,maxvirtspace;kwargs...);
 function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;
                     left::S = oneunit(maxvirtspace),
-                    right::S = oneunit(maxvirtspace)) where {S<:ElementarySpace}
+                    right::S = oneunit(maxvirtspace),kwargs...) where {S<:ElementarySpace}
     N = length(physspaces)
     virtspaces = Vector{S}(undef, N+1)
     virtspaces[1] = left
@@ -85,22 +85,22 @@ function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, max
     for k = N:-1:2
         virtspaces[k] = infimum(virtspaces[k], fuse(virtspaces[k+1], flip(fuse(physspaces[k]))))
     end
-    return FiniteMPS(f, elt,physspaces, virtspaces)
+    return FiniteMPS(f, elt,physspaces, virtspaces;kwargs...)
 end
 function FiniteMPS(f,elt,
                     physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                    virtspaces::Vector{S}) where {S<:ElementarySpace}
+                    virtspaces::Vector{S};normalize=true) where {S<:ElementarySpace}
     N = length(physspaces)
     length(virtspaces) == N+1 || throw(DimensionMismatch())
 
     tensors = [TensorMap(f, elt,virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
 
-    return FiniteMPS(tensors)
+    return FiniteMPS(tensors,normalize=normalize)
 end
 
 
 # allow construction with a simple array of tensors
-function FiniteMPS(site_tensors::Vector{A};normalize=true) where {A<:GenericMPSTensor}
+function FiniteMPS(site_tensors::Vector{A};normalize=false) where {A<:GenericMPSTensor}
     for i in 1:length(site_tensors)-1
         (site_tensors[i],C) = leftorth!(site_tensors[i],alg=QRpos());
         normalize && normalize!(C);
