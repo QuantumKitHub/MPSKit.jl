@@ -372,8 +372,8 @@ end
 end
 
 @timedtestset "changebonds $((pspace,Dspace))" for (pspace,Dspace) in [(ℂ^4,ℂ^10),
-        (Rep[SU₂](1=>1),Rep[SU₂](0=>10,1=>5,2=>1))]
-    #=
+        (Rep[SU₂](1=>1),Rep[SU₂](1//2=>10,3//2=>5,5//2=>1))]
+
     @timedtestset "mpo" begin
         #random nn interaction
         nn = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace);
@@ -384,7 +384,7 @@ end
 
         @test dim(space(mpo2[1,5],1)) < dim(space(mpo1[1,5],1))
     end
-    =#
+
 
     @timedtestset "infinite mps" begin
         #random nn interaction
