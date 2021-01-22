@@ -2,7 +2,7 @@
 #can reuse a lot of environments
 #(we asume psi2 remains invariant)
 
-struct OvlEnv{S,C<:MPSBondTensor,D <: GenericMPSTensor} <: Cache
+struct OvlEnv{S,C<:AbstractTensorMap,D <: GenericMPSTensor} <: Cache
     above :: S
 
     ldependencies::Vector{D} #the data we used to calculate leftenvs/rightenvs
