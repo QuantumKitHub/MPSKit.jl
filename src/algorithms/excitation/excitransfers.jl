@@ -10,10 +10,6 @@ exci_transfer_right(v,A,B,C,D) = transfer_right(v,A,B,C,D)
 exci_transfer_left(v::MPSBondTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3] := v[1,2]*A[2,3,-2,-3]*conj(Ab[1,3,-1])
 exci_transfer_right(v::MPSBondTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3] := A[-1,3,-2,1]*v[1,2]*conj(Ab[-3,3,2])
 
-#transfer, but there is both a utility leg and an mpo leg that is passed through
-exci_transfer_left(v::MPOTensor, A::MPSTensor, Ab::MPSTensor=A) = @tensor v[-1 -2;-3 -4] := v[1,-2,-3,2]*A[2,3,-4]*conj(Ab[1,3,-1])
-exci_transfer_right(v::MPOTensor, A::MPSTensor, Ab::MPSTensor=A) = @tensor v[-1 -2;-3 -4] := A[-1,3,1]*v[1,-2,-3,2]*conj(Ab[-4,3,2])
-
 #transfer, but the upper A is an excited tensor and there is an mpo leg being passed through
 exci_transfer_left(v::MPSTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := v[1,-2,2]*A[2,3,-3,-4]*conj(Ab[1,3,-1])
 exci_transfer_right(v::MPSTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := A[-1,3,-2,1]*v[1,-3,2]*conj(Ab[-4,3,2])
