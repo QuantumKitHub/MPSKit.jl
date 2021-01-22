@@ -46,23 +46,22 @@ function environments(state,ham,weight,projectout::Vector)
     FinExEnv(weight,overlaps,hamenv)
 end
 
-
 function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,MPSComoving},cache::FinExEnv)
     y = ac_prime(x,pos,mps,cache.hamenv)
 
     for i in cache.overlaps
-        @tensor v[-1 -2;-3 -4] := leftenv(i,pos,mps)[1,-1,-2,2]*i.above.AC[pos][2,3,4]*rightenv(i,pos,mps)[4,-3,-4,5]*conj(x[1,3,5])
-        @tensor y[-1 -2;-3] += cache.weight*conj(v[1,2,3,4])*leftenv(i,pos,mps)[-1,1,2,5]*i.above.AC[pos][5,-2,6]*rightenv(i,pos,mps)[6,3,4,-3]
+        @tensor v[-1 -2;-3 -4] := leftenv(i,pos,mps)[4,-1,-2,5]*i.above.AC[pos][5,2,1]*rightenv(i,pos,mps)[1,-3,-4,3]*conj(x[4,2,3])
+        @tensor y[-1 -2;-3] += conj(v[1,2,5,6])*(cache.weight*leftenv(i,pos,mps))[-1,1,2,4]*i.above.AC[pos][4,-2,3]*rightenv(i,pos,mps)[3,5,6,-3]
     end
 
     y
 end
-function ac2_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,MPSComoving},cache::FinExEnv)
+function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,MPSComoving},cache::FinExEnv)
     y = ac2_prime(x,pos,mps,cache.hamenv)
 
     for i in cache.overlaps
-        @tensor v[-1 -2;-3 -4] := leftenv(i,pos,mps)[1,-1,-2,2]*i.above.AC[pos][2,3,4]*i.above.AR[pos+1][4,5,6]*rightenv(i,pos+1,mps)[6,-3,-4,7]*conj(x[1,3,5,7])
-        @tensor y[-1 -2;-3 -4] += cache.weight*conj(v[1,2,3,4])*leftenv(i,pos,mps)[-1,1,2,5]*i.above.AC[pos][5,-2,6]*i.above.AR[pos+1][6,-3,7]*rightenv(i,pos+1,mps)[7,3,4,-4]
+        @tensor v[-1 -2;-3 -4] := leftenv(i,pos,mps)[6,-1,-2,7]*i.above.AC[pos][7,4,5]*i.above.AR[pos+1][5,2,1]*rightenv(i,pos+1,mps)[1,-3,-4,3]*conj(x[6,4,2,3])
+        @tensor y[-1 -2;-3 -4] += conj(v[2,3,5,6])*(cache.weight*leftenv(i,pos,mps))[-1,2,3,4]*i.above.AC[pos][4,-2,7]*i.above.AR[pos+1][7,-3,1]*rightenv(i,pos+1,mps)[1,5,6,-4]
     end
 
     y

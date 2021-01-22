@@ -32,8 +32,18 @@ function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSCom
 
     for (i,j) in keys(ham,pos)
         for k in 1:ham.odim
-            if contains(ham,pos+1,j,k)
-                #can be sped up for scalar fields
+            contains(ham,pos+1,j,k) || continue
+
+            if isscal(ham,pos,i,j) && isscal(ham,pos+1,j,k)
+                scal = ham.Os[pos,i,j]*ham.Os[pos+1,j,k]
+                @tensor toret[-1,-2,-3,-4] += (scal*leftenv(cache,pos,mps)[i])[-1,7,6]*x[6,-2,-3,1]*rightenv(cache,pos+1,mps)[k][1,7,-4]
+            elseif isscal(ham,pos,i,j)
+                scal = ham.Os[pos,i,j]
+                @tensor toret[-1,-2,-3,-4]+=(scal*leftenv(cache,pos,mps)[i])[-1,7,6]*x[6,-2,3,1]*ham[pos+1,j,k][7,-3,2,3]*rightenv(cache,pos+1,mps)[k][1,2,-4]
+            elseif isscal(ham,pos+1,j,k)
+                scal = ham.Os[pos+1,j,k]
+                @tensor toret[-1,-2,-3,-4]+=(scal*leftenv(cache,pos,mps)[i])[-1,7,6]*x[6,5,-3,1]*ham[pos,i,j][7,-2,2,5]*rightenv(cache,pos+1,mps)[k][1,2,-4]
+            else
                 @tensor toret[-1,-2,-3,-4]+=leftenv(cache,pos,mps)[i][-1,7,6]*x[6,5,3,1]*ham[pos,i,j][7,-2,4,5]*ham[pos+1,j,k][4,-3,2,3]*rightenv(cache,pos+1,mps)[k][1,2,-4]
             end
         end
