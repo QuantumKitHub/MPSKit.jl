@@ -8,8 +8,3 @@ const MPSTensor{S} = GenericMPSTensor{S,2} where {S<:EuclideanSpace} #the usual 
 abstract type AbstractMPS end
 
 Base.eltype(psi::AbstractMPS) = eltype(typeof(psi))
-
-TensorKit.leftorth(psi::AbstractMPS, args...; kwargs...) =
-    leftorth!(copy(psi), args...; kwargs...)
-TensorKit.rightorth(psi::AbstractMPS, args...; kwargs...) =
-    rightorth!(copy(psi), args...; kwargs...)
