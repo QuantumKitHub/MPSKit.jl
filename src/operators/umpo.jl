@@ -36,7 +36,7 @@ end
 function Base.:*(mpo1::PeriodicMPO,mpo2::PeriodicMPO)
     size(mpo1) == size(mpo2) || throw(ArgumentError("dimension mismatch"))
 
-    fusers = PeriodicArray(map(zip(mpo1.opp,mpo2.opp)) do (mp1,mp2)
+    fusers = PeriodicArray(map(zip(mpo2.opp,mpo1.opp)) do (mp1,mp2)
         isometry(fuse(_firstspace(mp1),_firstspace(mp2)),_firstspace(mp1)*_firstspace(mp2))
     end)
 
@@ -44,7 +44,7 @@ function Base.:*(mpo1::PeriodicMPO,mpo2::PeriodicMPO)
 
     for i in 1:size(mpo1,1),
         j in 1:size(mpo1,2)
-        @tensor apl[i,j][-1 -2;-3 -4] := apl[i,j][1,2,3,-4]*mpo1.opp[i,j][4,-2,5,2]*fusers[i,j][-1,1,4]*conj(fusers[i,j+1][-3,3,5])
+        @tensor apl[i,j][-1 -2;-3 -4] := apl[i,j][1,2,3,-4]*mpo1[i,j][4,-2,5,2]*fusers[i,j][-1,1,4]*conj(fusers[i,j+1][-3,3,5])
     end
 
     PeriodicMPO(apl)

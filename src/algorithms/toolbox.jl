@@ -242,7 +242,7 @@ function periodic_boundary_conditions(mpo::PeriodicMPO{O},len = size(mpo,2)) whe
     output = PeriodicArray{O,2}(undef,size(mpo,1),len);
 
     for i in 1:size(mpo,1)
-        sp = space(mpo[i,1],1);
+        sp = space(mpo[i,1],1)';
         utleg = Tensor(ones,oneunit(sp));
 
         #do the bulk
@@ -254,12 +254,12 @@ function periodic_boundary_conditions(mpo::PeriodicMPO{O},len = size(mpo,2)) whe
         end
 
         #do the left
-        f2 = isomorphism(fuse(sp*sp')',sp*sp')
-        @tensor output[i,1][-1 -2;-3 -4] := mpo[i,1][1,-2,2,-4]*f2[-3,1,2]*utleg[-1]
-
+        f2 = isomorphism(fuse(sp*space(mpo[i,1],3)'),sp*space(mpo[i,1],3)')
+        @tensor output[i,1][-1 -2;-3 -4] := mpo[i,1][1,-2,2,-4]*conj(f2[-3,1,2])*utleg[-1]
 
         #do the right
-        @tensor output[i,end][-1 -2;-3 -4] := mpo[i,len][1,-2,2,-4]*conj(f2[-1,2,1])*conj(utleg[-3])
+        f2 = isomorphism(fuse(sp*space(mpo[i,len],1)),sp*space(mpo[i,len],1))
+        @tensor output[i,end][-1 -2;-3 -4] := mpo[i,len][1,-2,2,-4]*f2[-1,2,1]*conj(utleg[-3])
     end
 
     PeriodicMPO(output)
