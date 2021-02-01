@@ -14,7 +14,7 @@ end
 
 Base.size(arr::InfiniteMPS,i) = size(arr.AL,i)
 Base.length(arr::InfiniteMPS) = size(arr,1)
-Base.eltype(arr::InfiniteMPS) = eltype(arr.AL[1])
+Base.eltype(arr::InfiniteMPS) = eltype(arr.AL)
 Base.copy(m::InfiniteMPS) = InfiniteMPS(copy(m.AL),copy(m.AR),copy(m.CR),copy(m.AC));
 Base.repeat(m::InfiniteMPS,i::Int) = InfiniteMPS(repeat(m.AL,i),repeat(m.AR,i),repeat(m.CR,i),repeat(m.AC,i));
 Base.similar(st::InfiniteMPS) = InfiniteMPS(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))

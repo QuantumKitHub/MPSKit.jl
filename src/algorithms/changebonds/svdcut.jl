@@ -19,18 +19,20 @@ function changebonds!(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) whe
     return state
 end
 
-changebonds(state::PeriodicMPO,alg::SvdCut) = convert(PeriodicMPO,changebonds(convert(MPSMultiline,state),alg))
-changebonds(state::InfiniteMPS,alg::SvdCut) = convert(InfiniteMPS,changebonds(convert(MPSMultiline,state),alg))
-function changebonds(state::MPSMultiline,alg::SvdCut)
+changebonds(state::InfiniteMPO,alg::SvdCut) = convert(InfiniteMPO,changebonds(convert(InfiniteMPS,state),alg));
+changebonds(state::MPOMultiline,alg::SvdCut) = convert(MPOMultiline,changebonds(convert(MPSMultiline,state),alg))
+changebonds(state::MPSMultiline,alg::SvdCut) = Multiline(map(x->changebonds(x,alg),state.data))
+function changebonds(state::InfiniteMPS,alg::SvdCut)
     copied = copy(state.AL);
-    for i in 1:size(state,1),
-        j in 1:size(state,2)
 
-        (U,state.CR[i,j],V) = tsvd(state.CR[i,j],trunc=alg.trscheme,alg=TensorKit.SVD());
-        copied[i,j] = copied[i,j]*U
-        copied[i,j+1] = _permute_front(U'*_permute_tail(copied[i,j+1]))
+    for i in 1:length(state)
+
+        (U,state.CR[i],V) = tsvd(state.CR[i],trunc=alg.trscheme,alg=TensorKit.SVD());
+        copied[i] = copied[i]*U
+        copied[i+1] = _permute_front(U'*_permute_tail(copied[i+1]))
     end
-    MPSMultiline(copied)
+
+    InfiniteMPS(copied);
 end
 
 changebonds(state,H,alg::SvdCut,envs=environments(state,H)) = (changebonds(state,alg),envs)

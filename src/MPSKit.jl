@@ -16,7 +16,7 @@ module MPSKit
 
     #hamiltonian things
     export Hamiltonian,Operator,Cache
-    export MPOHamiltonian,contains,PeriodicMPO
+    export MPOHamiltonian,contains,InfiniteMPO,MPOMultiline
     export ac_prime,c_prime,environments,ac2_prime,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 
@@ -108,4 +108,6 @@ module MPSKit
     include("algorithms/approximate/vomps.jl")
 
     include("algorithms/ED.jl")
+
+    Base.@deprecate PeriodicMPO InfiniteMPO
 end

@@ -43,7 +43,7 @@ calc_galerkin(state::MPSMultiline, envs::MixPerMPOInfEnv) = maximum([norm(leftnu
 Calculates the (partial) transfer spectrum
 "
 function transfer_spectrum(above::InfiniteMPS;below=above,tol=Defaults.tol,num_vals = 20,sector=first(sectors(oneunit(virtualspace(above,1)))))
-    init = TensorMap(rand, eltype(above), virtualspace(below,0)*ℂ[sector => 1],virtualspace(above,0))
+    init = TensorMap(rand, eltype(eltype(above)), virtualspace(below,0)*ℂ[sector => 1],virtualspace(above,0))
 
     num_vals = min(dim(virtualspace(above,0)*virtualspace(below,0)),num_vals); # we can ask at most this many values
 
@@ -236,31 +236,30 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 end
 
 #impose periodic boundary conditions on a normal mpo
-function periodic_boundary_conditions(mpo::PeriodicMPO{O},len = size(mpo,2)) where O
-    mod(len,size(mpo,2)) == 0 || throw(ArgumentError("len not a multiple of unitcell"))
+function periodic_boundary_conditions(mpo::InfiniteMPO{O},len = length(mpo)) where O
+    mod(len,length(mpo)) == 0 || throw(ArgumentError("len not a multiple of unitcell"))
 
-    output = PeriodicArray{O,2}(undef,size(mpo,1),len);
+    output = PeriodicArray{O,1}(undef,len);
 
-    for i in 1:size(mpo,1)
-        sp = space(mpo[i,1],1)';
-        utleg = Tensor(ones,oneunit(sp));
 
-        #do the bulk
-        for j in 2:len-1
-            f1 = isomorphism(fuse(sp*space(mpo[i,j],1)),sp*space(mpo[i,j],1))
-            f2 = isomorphism(fuse(sp*space(mpo[i,j],3)'),sp*space(mpo[i,j],3)')
+    sp = space(mpo[1],1)';
+    utleg = Tensor(ones,oneunit(sp));
 
-            @tensor output[i,j][-1 -2;-3 -4] := mpo[i,j][1,-2,2,-4]*f1[-1,3,1]*conj(f2[-3,3,2])
-        end
+    #do the bulk
+    for j in 2:len-1
+        f1 = isomorphism(fuse(sp*space(mpo[j],1)),sp*space(mpo[j],1))
+        f2 = isomorphism(fuse(sp*space(mpo[j],3)'),sp*space(mpo[j],3)')
 
-        #do the left
-        f2 = isomorphism(fuse(sp*space(mpo[i,1],3)'),sp*space(mpo[i,1],3)')
-        @tensor output[i,1][-1 -2;-3 -4] := mpo[i,1][1,-2,2,-4]*conj(f2[-3,1,2])*utleg[-1]
-
-        #do the right
-        f2 = isomorphism(fuse(sp*space(mpo[i,len],1)),sp*space(mpo[i,len],1))
-        @tensor output[i,end][-1 -2;-3 -4] := mpo[i,len][1,-2,2,-4]*f2[-1,2,1]*conj(utleg[-3])
+        @tensor output[j][-1 -2;-3 -4] := mpo[j][1,-2,2,-4]*f1[-1,3,1]*conj(f2[-3,3,2])
     end
 
-    PeriodicMPO(output)
+    #do the left
+    f2 = isomorphism(fuse(sp*space(mpo[1],3)'),sp*space(mpo[1],3)')
+    @tensor output[1][-1 -2;-3 -4] := mpo[1][1,-2,2,-4]*conj(f2[-3,1,2])*utleg[-1]
+
+    #do the right
+    f2 = isomorphism(fuse(sp*space(mpo[len],1)),sp*space(mpo[len],1))
+    @tensor output[end][-1 -2;-3 -4] := mpo[len][1,-2,2,-4]*f2[-1,2,1]*conj(utleg[-3])
+
+    InfiniteMPO(output)
 end

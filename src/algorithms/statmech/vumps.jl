@@ -22,8 +22,8 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
-    temp_ACs = similar(state.AC);
-    temp_Cs = similar(state.CR);
+    temp_ACs = map(x->x,state.AC);
+    temp_Cs = map(x->x,state.CR);
 
     while true
 

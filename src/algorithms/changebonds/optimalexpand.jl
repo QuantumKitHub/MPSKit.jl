@@ -48,8 +48,8 @@ function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,envs=
     return newstate,envs
 end
 
-function changebonds(state::InfiniteMPS,H::PeriodicMPO,alg,envs=environments(state,H))
-    (nmstate,envs) = changebonds(convert(MPSMultiline,state),H,alg,envs);
+function changebonds(state::InfiniteMPS,H::InfiniteMPO,alg,envs=environments(state,H))
+    (nmstate,envs) = changebonds(convert(MPSMultiline,state),convert(MPOMultiline,H),alg,envs);
     return (convert(InfiniteMPS,nmstate),envs)
 end
 

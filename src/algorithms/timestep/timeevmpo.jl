@@ -87,20 +87,17 @@ end
 function _makedense(ham)
     @assert length(size(ham)) == 3
 
-    dense = PeriodicArray{eltype(ham),2}(undef,1,size(ham,1));
-
     domspaces = map(1:size(ham,1)) do loc
         [space(h,1) for h in ham[loc,:,1]]
     end
 
     embeds = PeriodicArray(_embedders.(domspaces));
 
-    data = map(1:size(ham,1)) do loc
+    data = PeriodicArray(map(1:size(ham,1)) do loc
         reduce(+,map(Iterators.product(1:size(ham,2),1:size(ham,3))) do (i,j)
             @tensor temp[-1 -2;-3 -4]:=embeds[loc][i][-1,1]*ham[loc,i,j][1,-2,2,-4]*conj(embeds[loc+1][j][-3,2])
         end)
-    end
+    end)
 
-    dense[1,:] = data
-    PeriodicMPO(dense)
+    InfiniteMPO(data)
 end

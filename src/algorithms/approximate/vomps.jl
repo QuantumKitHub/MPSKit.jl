@@ -7,22 +7,22 @@
     verbose::Bool = Defaults.verbose
 end
 
-function approximate(state::InfiniteMPS, toapprox::Tuple{<:PeriodicMPO,<:InfiniteMPS}, alg::Vomps, envs = environments(state,toapprox))
+function approximate(state::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS}, alg::Vomps, envs = environments(state,toapprox))
     #PeriodicMPO's always act on MPSMultiline's. I therefore convert the imps to multilines, approximate and convert back
-    (multi,envs) = approximate(convert(MPSMultiline,state),(envs.opp,envs.above),alg,envs)
+    (multi,envs) = approximate(convert(MPSMultiline,state),(convert(MPOMultiline,envs.opp),convert(MPSMultiline,envs.above)),alg,envs)
     state = convert(InfiniteMPS,multi)
     return (state,envs)
 end
 
 
-function approximate(state::MPSMultiline, toapprox::Tuple{<:PeriodicMPO,<:MPSMultiline}, alg::Vomps, envs = environments(state,toapprox))
+function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::Vomps, envs = environments(state,toapprox))
     (mpo,above) = toapprox;
 
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
-    temp_ACs = similar(state.AC);
-    temp_Cs = similar(state.CR);
+    temp_ACs = map(x->x,state.AC);
+    temp_Cs = map(x->x,state.CR);
 
     while true
 

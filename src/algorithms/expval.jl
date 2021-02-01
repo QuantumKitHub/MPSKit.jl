@@ -107,8 +107,8 @@ function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=
     return tot
 end
 
-expectation_value(st::InfiniteMPS,opp::PeriodicMPO,ca=environments(st,opp)) = expectation_value(convert(MPSMultiline,st),opp,ca);
-function expectation_value(st::MPSMultiline,opp::PeriodicMPO,ca=environments(st,opp))
+expectation_value(st::InfiniteMPS,opp::InfiniteMPO,ca=environments(st,opp)) = expectation_value(convert(MPSMultiline,st),convert(MPOMultiline,opp),ca);
+function expectation_value(st::MPSMultiline,opp::MPOMultiline,ca=environments(st,opp))
     retval = PeriodicArray{eltype(st.AC[1,1]),2}(undef,size(st,1),size(st,2));
     for (i,j) in Iterators.product(1:size(st,1),1:size(st,2))
         retval[i,j] = @tensor   leftenv(ca,i,j,st)[1,2,3]*

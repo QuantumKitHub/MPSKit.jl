@@ -1,121 +1,63 @@
-#this thing is useful for statmech and peps
-#in principle we could let InfiniteMPS subtype from this thing
-#but then we'd have to assert that numrows == 1 everywhere where it doesn't make sense ...
-
 "
-    2d extension of InfiniteMPS
+It is possible to have matrix product (operators / states) that are also periodic in the vertical direction
+For examples, as fix points of statmech problems
+These should be represented as respectively MultiLine{<:InfiniteMPO} / Multiline{<:InfiniteMPS}
 "
-struct MPSMultiline{A<:GenericMPSTensor,B<:MPSBondTensor}
-    AL::PeriodicArray{A,2}
-    AR::PeriodicArray{A,2}
-    CR::PeriodicArray{B,2}
-    AC::PeriodicArray{A,2}
+struct Multiline{T}
+    data::PeriodicArray{T,1}
 end
 
-Base.size(arr::MPSMultiline) = size(arr.AL)
-Base.size(arr::MPSMultiline,i) = size(arr.AL,i)
-Base.length(arr::MPSMultiline) = size(arr,1)
-Base.eltype(arr::MPSMultiline) = eltype(arr.AL[1])
-Base.lastindex(arr::MPSMultiline,i) = lastindex(arr.AL,i);
-Base.similar(st::MPSMultiline) = MPSMultiline(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
-TensorKit.norm(st::MPSMultiline) = norm(st.AC[1]);
-virtualspace(psi::MPSMultiline, a::Integer,b::Integer) = _firstspace(psi.AL[a,b])
-function Base.convert(::Type{MPSMultiline},st::InfiniteMPS)
-    convert(MPSMultiline,[st]);
-end
-function Base.convert(::Type{MPSMultiline},v::AbstractVector{T}) where T<:InfiniteMPS{A,B} where {A,B}
-    ALs = PeriodicArray{A}(undef,length(v),length(v[1]));
-    ARs = PeriodicArray{A}(undef,length(v),length(v[1]));
-    CRs = PeriodicArray{B}(undef,length(v),length(v[1]));
-    ACs = PeriodicArray{A}(undef,length(v),length(v[1]));
+Base.length(t::Multiline) = prod(size(t));
+Base.size(t::Multiline) = (length(t.data),length(t.data[1]));
+Base.size(t::Multiline,i) = size(t)[i];
+Base.getindex(t::Multiline,i) = t.data[i];
+Base.copy(t::Multiline) = Multiline(map(copy,t.data));
+Multiline(t::AbstractArray) = Multiline(PeriodicArray(t));
 
-    for (i,row) in enumerate(v)
-        ALs[i,:] = row.AL[:];
-        ARs[i,:] = row.AR[:];
-        CRs[i,:] = row.CR[:];
-        ACs[i,:] = row.AC[:];
-    end
+#--- implementation of MPSMultiline
+const MPSMultiline = Multiline{<:InfiniteMPS}
 
-    MPSMultiline(ALs,ARs,CRs,ACs);
+function MPSMultiline(pspaces::AbstractArray{S,2},Dspaces::AbstractArray{S,2};kwargs...) where S
+    MPSMultiline(map(zip(circshift(Dspaces,(0,-1)),pspaces,Dspaces)) do (D1,p,D2)
+        TensorMap(rand,Defaults.eltype,D1*p,D2)
+    end; kwargs...)
 end
 
-Base.copy(m::MPSMultiline) = MPSMultiline(copy(m.AL),copy(m.AR),copy(m.CR),copy(m.AC));
-function Base.copyto!(dest::Union{MPSMultiline,InfiniteMPS},src::Union{MPSMultiline,InfiniteMPS})
-    copyto!(dest.AL,src.AL);
-    copyto!(dest.AR,src.AR);
-    copyto!(dest.CR,src.CR);
-    copyto!(dest.AC,src.AC);
-    dest
+function MPSMultiline(data::AbstractArray{T,2};kwargs...) where T<:GenericMPSTensor
+    Multiline(PeriodicArray(map(1:size(data,1)) do row
+        InfiniteMPS(data[row,:];kwargs...)
+    end))
 end
-
-
-function Base.convert(::Type{InfiniteMPS},st::MPSMultiline{A,B}) where {A,B}
-    @assert size(st,1) == 1 #otherwise - how would we convert?
-    convert(Vector,st)[1]
+function MPSMultiline(data::AbstractArray{T,2},Cinit::AbstractArray{O,1};kwargs...) where {T<:GenericMPSTensor,O<:MPSBondTensor}
+    Multiline(PeriodicArray(map(1:size(data,1)) do row
+        InfiniteMPS(data[row,:],Cinit[row];kwargs...);
+    end))
 end
-
-function Base.convert(::Type{Vector},st::MPSMultiline{A,B}) where {A,B}
-    map(1:size(st,1)) do row
-        InfiniteMPS{A,B}(   PeriodicArray(st.AL[row,:]),
-                            PeriodicArray(st.AR[row,:]),
-                            PeriodicArray(st.CR[row,:]),
-                            PeriodicArray(st.AC[row,:]));
+function Base.getproperty(psi::MPSMultiline,prop::Symbol)
+    if prop == :AL
+        return ALView(psi)
+    elseif prop == :AR
+        return ARView(psi)
+    elseif prop == :AC
+        return ACView(psi)
+    elseif prop == :CR
+        return CRView(psi)
+    else
+        return getfield(psi,prop)
     end
 end
 
-#allow users to pass in simple arrays
-function MPSMultiline(A::AbstractArray{T,2}; kwargs...) where T<:GenericMPSTensor
-
-    #we make a copy, and are therfore garantueeing no side effects for the user
-    AR = PeriodicArray(A[:,:]);
-
-    #initial guess for CR
-    CR = PeriodicArray([isomorphism(Matrix{eltype(A[1])},_lastspace(v)',_lastspace(v)') for v in A]);
-    AL = similar(AR);
-    AC = similar(AR);
-
-    @sync for row in 1:size(A,1)
-        @Threads.spawn begin
-            uniform_leftorth!(view(AL,row,:),view(CR,row,:),view(AR,row,:);kwargs...);
-            uniform_rightorth!(view(AR,row,:),view(CR,row,:),view(AL,row,:);kwargs...);
-
-            for col in 1:size(A,2)
-                AC[row,col] = AL[row,col] * CR[row,col]
-            end
-        end
-    end
-
-    MPSMultiline(AL,AR,CR,AC);
+for f in (:l_RR, :l_RL, :l_LL, :l_LR)
+    @eval $f(t::MPSMultiline,i,j = 1) = $f(t[i],j)
 end
 
-function MPSMultiline(A::AbstractArray{T,2},C::AbstractArray{B,1}; kwargs...) where {T<:GenericMPSTensor,B<:MPSBondTensor}
-
-    AL = PeriodicArray(A[:,:]);
-    CR = PeriodicArray(repeat(C,1,size(A,2)));
-    AR = similar(AL);
-    AC = similar(AR);
-
-    @sync for row in 1:size(A,1)
-        @Threads.spawn begin
-            uniform_rightorth!(view(AR,row,:),view(CR,row,:),view(AL,row,:);kwargs...);
-
-            for col in 1:size(A,2)
-                AC[row,col] = AL[row,col] * CR[row,col]
-            end
-        end
-    end
-
-    MPSMultiline{T,B}(AL,AR,CR,AC);
+for f in (:r_RR, :r_RL, :r_LR,:r_LL)
+    @eval $f(t::MPSMultiline,i,j = size(t,2)) = $f(t[i],j)
 end
 
-l_RR(state::MPSMultiline,row,loc::Int=1) = @tensor toret[-1;-2]:=state.CR[row,loc-1][1,-2]*conj(state.CR[row,loc-1][1,-1])
-l_RL(state::MPSMultiline,row,loc::Int=1) = state.CR[row,loc-1]
-l_LR(state::MPSMultiline,row,loc::Int=1) = state.CR[row,loc-1]'
-l_LL(state::MPSMultiline{A},row,loc::Int=1) where A= isomorphism(Matrix{eltype(A)}, space(state.AL[row,loc],1),space(state.AL[row,loc],1))
+TensorKit.dot(a::MPSMultiline,b::MPSMultiline;kwargs...) = sum(dot.(a.data,b.data;kwargs...))
 
-r_RR(state::MPSMultiline{A},row,loc::Int=length(state)) where A= isomorphism(Matrix{eltype(A)},domain(state.AR[row,loc]),domain(state.AR[row,loc]))
-r_RL(state::MPSMultiline,row,loc::Int=length(state)) = state.CR[row,loc]'
-r_LR(state::MPSMultiline,row,loc::Int=length(state)) = state.CR[row,loc]
-r_LL(state::MPSMultiline,row,loc::Int=length(state))= @tensor toret[-1;-2]:=state.CR[row,loc][-1,1]*conj(state.CR[row,loc][-2,1])
-
-TensorKit.dot(a::MPSMultiline,b::MPSMultiline;kwargs...) = sum(dot.(convert(Vector,a),convert(Vector,b);kwargs...))
+Base.convert(::Type{MPSMultiline},st::InfiniteMPS) = Multiline([st]);
+Base.convert(::Type{InfiniteMPS},st::MPSMultiline) = st[1];
+Base.eltype(t::MPSMultiline) = eltype(t[1]);
+virtualspace(t::MPSMultiline,i::Int,j::Int) = virtualspace(t[i],j);

@@ -271,7 +271,7 @@ println("------------------------------------")
     @test real(sum(expectation_value(ts2,h4)))>=0;
 end
 
-@timedtestset "PeriodicMPO"  for ham in (nonsym_ising_ham(),su2_xxx_ham(spin=1))
+@timedtestset "InfiniteMPO"  for ham in (nonsym_ising_ham(),su2_xxx_ham(spin=1))
     physical_space = ham.pspaces[1];
     ou = oneunit(physical_space);
 
@@ -382,7 +382,7 @@ end
         mpo1 = periodic_boundary_conditions(make_time_mpo(MPOHamiltonian(nn),0.1,WII()),10);
         mpo2 = changebonds(mpo1,SvdCut(trscheme = truncdim(5)));
 
-        @test dim(space(mpo2[1,5],1)) < dim(space(mpo1[1,5],1))
+        @test dim(space(mpo2[5],1)) < dim(space(mpo1[5],1))
     end
 
 
@@ -425,7 +425,7 @@ end
 
     @timedtestset "MPSMultiline" begin
         o = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace);
-        mpo = PeriodicMPO(o);
+        mpo = MPOMultiline(o);
 
         t = TensorMap(rand,ComplexF64,Dspace*pspace,Dspace);
         state = MPSMultiline(fill(t,1,1));
@@ -568,12 +568,12 @@ end
 
     #translation mpo:
     @tensor bulk[-1 -2;-3 -4] := isomorphism(ℂ^2,ℂ^2)[-2,-3]*isomorphism(ℂ^2,ℂ^2)[-1,-4];
-    translation = periodic_boundary_conditions(PeriodicMPO(bulk),len);
+    translation = periodic_boundary_conditions(InfiniteMPO(bulk),len);
 
     #the groundstate should be translation invariant:
     ut = Tensor(ones,ℂ^1);
     @tensor leftstart[-1 -2;-3] := l_LL(gs)[-1,-3]*conj(ut[-2]);
-    v = transfer_left(leftstart,translation[1,:],[gs.AC[1];gs.AR[2:end]],[gs.AC[1];gs.AR[2:end]])
+    v = transfer_left(leftstart,translation[:],[gs.AC[1];gs.AR[2:end]],[gs.AC[1];gs.AR[2:end]])
     expval = @tensor v[1,2,3]*r_RR(gs)[3,1]*ut[2]
 
     @test expval ≈ 1 atol=1e-5

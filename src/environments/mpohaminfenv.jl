@@ -21,8 +21,8 @@ function gen_lw_rw(st::InfiniteMPS{A,B},ham::MPOHamiltonian) where {A,B}
     rw = PeriodicArray{A,2}(undef,length(st),ham.odim)
 
     for i = 1:length(st), j = 1:ham.odim
-        lw[i,j] = TensorMap(rand,eltype(st),space(st.AL[i],1)*space(ham[i,j,1],1)',space(st.AL[i],1))
-        rw[i,j] = TensorMap(rand,eltype(st),space(st.AR[i],3)'*space(ham[i,1,j],3)',space(st.AR[i],3)')
+        lw[i,j] = TensorMap(rand,eltype(eltype(st)),space(st.AL[i],1)*space(ham[i,j,1],1)',space(st.AL[i],1))
+        rw[i,j] = TensorMap(rand,eltype(eltype(st)),space(st.AR[i],3)'*space(ham[i,1,j],3)',space(st.AR[i],3)')
     end
 
     return (lw,rw)
@@ -59,7 +59,7 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.t
     alg = GMRES(tol=tol,maxiter=maxiter)
 
     #the start element
-    leftutil = Tensor(ones,eltype(st),space(ham[1,1,1],1))
+    leftutil = Tensor(ones,eltype(eltype(st)),space(ham[1,1,1],1))
     @tensor fixpoints[1,1][-1 -2;-3] = l_LL(st)[-1,-3]*conj(leftutil[-2])
     (len>1) && left_cyclethrough!(1,fixpoints,ham,st)
 
@@ -111,7 +111,7 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.t
     alg = GMRES(tol=tol,maxiter=maxiter);
 
     #the start element
-    rightutil = Tensor(ones,eltype(st),space(ham[len,1,1],3))
+    rightutil = Tensor(ones,eltype(eltype(st)),space(ham[len,1,1],3))
     @tensor fixpoints[end,end][-1 -2;-3] = r_RR(st)[-1,-3]*conj(rightutil[-2])
 
     (len>1) && right_cyclethrough!(ham.odim,fixpoints,ham,st) #populate other sites
