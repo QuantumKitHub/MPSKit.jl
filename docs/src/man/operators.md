@@ -54,11 +54,11 @@ Otherwise the identity operator can't be uniquely defined.
 
 The overarching idea is that the user never has to worry about these inner fields, and can act as if the mpohamiltonian is a 3 dimensional array of tensormaps, while we optimize behind the scenes for the special cases where the operator is zero or the identity.
 
-## PeriodicMPO
+## InfiniteMPO
 
-This operator is used for statistical physics problems. It is simply a 2 dimensional periodic array of mpo tensors.
+This operator is used for statistical physics problems. It is simply a periodic array of mpo tensors.
 
 Can be created using
 ```julia
-PeriodicMPO(t::AbstractArray{T,2}) where T<:MPOTensor
+InfiniteMPO(t::AbstractArray{T,1}) where T<:MPOTensor
 ```

@@ -10,7 +10,7 @@ InfiniteMPO(t::AbstractArray{T,1}) where T<:MPOTensor = InfiniteMPO(PeriodicArra
 Base.length(t::InfiniteMPO) = length(t.opp);
 Base.getindex(t::InfiniteMPO,i) = getindex(t.opp,i);
 Base.eltype(t::InfiniteMPO{O}) where O = O;
-
+Base.iterate(t::InfiniteMPO,itstate = 1) = iterate(t.opp,itstate);
 
 function Base.convert(::Type{InfiniteMPS},mpo::InfiniteMPO)
     InfiniteMPS(map(mpo.opp) do t
@@ -21,6 +21,32 @@ end
 function Base.convert(::Type{InfiniteMPO},mps::InfiniteMPS)
     InfiniteMPO(map(mps.AL) do t
         permute(t,(1,2),(4,3))
+    end)
+end
+
+#naively apply the mpo to the mps
+function Base.:*(mpo::InfiniteMPO,st::InfiniteMPS)
+    length(st) == length(mpo) || throw(ArgumentError("dimension mismatch"))
+
+    fusers = PeriodicArray(map(zip(st.AL,mpo)) do (al,mp)
+        isometry(fuse(_firstspace(al),_firstspace(mp)),_firstspace(al)*_firstspace(mp))
+    end)
+
+    InfiniteMPS(map(1:length(st)) do i
+        @tensor t[-1 -2;-3] := st.AL[i][1,2,3]*mpo[i][4,-2,5,2]*fusers[i][-1,1,4]*conj(fusers[i+1][-3,3,5])
+    end)
+end
+
+function Base.:*(mpo1::InfiniteMPO,mpo2::InfiniteMPO)
+    length(mpo1) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
+
+    fusers = PeriodicArray(map(zip(mpo2,mpo1)) do (mp1,mp2)
+        isometry(fuse(_firstspace(mp1),_firstspace(mp2)),_firstspace(mp1)*_firstspace(mp2))
+    end)
+
+
+    InfiniteMPO(map(1:length(mpo1)) do i
+        @tensor t[-1 -2;-3 -4] := mpo2[i][1,2,3,-4]*mpo1[i][4,-2,5,2]*fusers[i][-1,1,4]*conj(fusers[i+1][-3,3,5])
     end)
 end
 
@@ -44,33 +70,12 @@ Base.getindex(t::MPOMultiline,i,j) = t[i][j];
 Base.convert(::Type{MPOMultiline},t::InfiniteMPO) = Multiline([t]);
 Base.convert(::Type{InfiniteMPO},t::MPOMultiline) = t[1];
 
-#naively apply the mpo to the mps
-Base.:*(mpo::InfiniteMPO,st::InfiniteMPS) = convert(InfiniteMPS,convert(MPOMultiline,mpo)*convert(MPSMultiline,st))
-
 function Base.:*(mpo::MPOMultiline,st::MPSMultiline)
-    size(st) == size(mpo) || throw(ArgumentError("dimension mismatch"))
-
-    fusers = PeriodicArray(map(zip(st.AL,mpo)) do (al,mp)
-        isometry(fuse(_firstspace(al),_firstspace(mp)),_firstspace(al)*_firstspace(mp))
-    end)
-
-    apl = map(Iterators.product(1:size(st,1),1:size(st,2))) do (i,j)
-        @tensor t[-1 -2;-3] := st.AL[i,j][1,2,3]*mpo[i,j][4,-2,5,2]*fusers[i,j][-1,1,4]*conj(fusers[i,j+1][-3,3,5])
-    end
-
-    MPSMultiline(apl);
+    size(mpo) == size(st) || throw(ArgumentError("dimension mismatch"))
+    Multiline(map(*,zip(mpo,st)))
 end
 
-Base.:*(mpo1::InfiniteMPO,mpo2::InfiniteMPO) = convert(InfiniteMPO,convert(MPOMultiline,mpo1)*convert(MPOMultiline,mpo2))
 function Base.:*(mpo1::MPOMultiline,mpo2::MPOMultiline)
     size(mpo1) == size(mpo2) || throw(ArgumentError("dimension mismatch"))
-
-    fusers = PeriodicArray(map(zip(mpo2,mpo1)) do (mp1,mp2)
-        isometry(fuse(_firstspace(mp1),_firstspace(mp2)),_firstspace(mp1)*_firstspace(mp2))
-    end)
-
-
-    MPOMultiline(map(Iterators.product(1:size(mpo1,1),1:size(mpo1,2))) do (i,j)
-        @tensor t[-1 -2;-3 -4] := mpo2[i,j][1,2,3,-4]*mpo1[i,j][4,-2,5,2]*fusers[i,j][-1,1,4]*conj(fusers[i,j+1][-3,3,5])
-    end)
+    Multiline(map(*,zip(mpo1,mpo2)));
 end

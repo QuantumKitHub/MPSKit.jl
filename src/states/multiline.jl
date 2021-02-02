@@ -14,6 +14,11 @@ Base.getindex(t::Multiline,i) = t.data[i];
 Base.copy(t::Multiline) = Multiline(map(copy,t.data));
 Multiline(t::AbstractArray) = Multiline(PeriodicArray(t));
 
+Base.convert(::Vector,t::Multiline) = t.data.data;
+Base.convert(::PeriodicArray,t::Multiline) = t.data;
+
+Base.convert(::Multiline,v::AbstractArray) = Multiline(v);
+
 #--- implementation of MPSMultiline
 const MPSMultiline = Multiline{<:InfiniteMPS}
 

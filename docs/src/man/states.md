@@ -91,7 +91,7 @@ Algorithms will then act on this window of tensors, while leaving the left and r
 
 Behind the scenes it uses the same orthoview logic as finitemps.
 
-## MPSMultiline
+## Multiline
 
 Statistical physics partition functions can be represented by an infinite tensor network which then needs to be contracted.
 This is done by finding approximate fixpoint infinite matrix product states.
@@ -110,9 +110,20 @@ MPSMultiline is also used extensively in as of yet unreleased peps code.
 You can access properties by calling
 ```julia
 state.AL[row,collumn]
+state.AC[row,collumn]
+state.AR[row,collumn]
+state.CR[row,collumn]
 ```
 
-it can be converted to a vector of infinite mps's:
+Behind the scenes, we have a type called Multiline, defined as:
+
 ```julia
-convert(Vector,state)
+struct Multiline{T}
+    data::PeriodicArray{T,1}
+end
 ```
+
+MPSMultiline/MPOMultiline are then defined as
+```julia
+const MPSMultiline = Multiline{<:InfiniteMPS}
+const MPOMultiline = Multiline{<:InfiniteMPO}
