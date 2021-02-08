@@ -155,6 +155,7 @@ function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
         supremum(space(L,1),space(R,1))
     end
     push!(superspaces,supremum(_lastspace(Ls[end])',_lastspace(Rs[end])'))
+
     for i in 1:(length(v)+1)
         Lf = isometry(Matrix{elt},superspaces[i],i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i-1])')
         Rf = isometry(Matrix{elt},superspaces[i],i <= length(v) ? _firstspace(Rs[i]) : _lastspace(Rs[i-1])')
@@ -173,14 +174,29 @@ function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
     end
 
     #step 3 : fuse the correct *_I with the correct tensor (and enforce boundary conditions)
+    function doboundary(temp,pos)
+        if pos == 1
+            @tensor temp[-1 -2 -3 -4;-5] := temp[1,-2,-3,-4,-5]*conj(upper[1,-1])
+        end
+
+        if pos == length(v)
+            @tensor temp[-1 -2 -3 -4;-5] := temp[-1 -2 -3 -4 1]*lower[1,-5]
+        end
+
+        temp
+    end
+
     for i in 1:length(v)
         @tensor temp[-1 -2 -3 -4; -5] := Ls[i][-2,-3,-4]*upper_I[-1,-5]
+        temp = doboundary(temp,i);
         Ls[i] = simplefuse(temp) * (i<length(v));
 
         @tensor temp[-1 -2 -3 -4; -5] := Rs[i][-2,-3,-4]*lower_I[-1,-5]
+        temp = doboundary(temp,i);
         Rs[i] = simplefuse(temp) * (i>1);
 
         @tensor temp[-1 -2 -3 -4; -5] := Bs[i][-2,-3,-4]*uplow_I[-1,-5]
+        temp = doboundary(temp,i);
         Bs[i] = simplefuse(temp);
     end
 
