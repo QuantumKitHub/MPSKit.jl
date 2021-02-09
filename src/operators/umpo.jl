@@ -40,7 +40,7 @@ end
 function Base.:*(mpo1::InfiniteMPO,mpo2::InfiniteMPO)
     length(mpo1) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
 
-    fusers = PeriodicArray(map(zip(mpo2,mpo1)) do (mp1,mp2)
+    fusers = PeriodicArray(map(zip(mpo2.opp,mpo1.opp)) do (mp1,mp2)
         isometry(fuse(_firstspace(mp1),_firstspace(mp2)),_firstspace(mp1)*_firstspace(mp2))
     end)
 
