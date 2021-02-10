@@ -36,6 +36,23 @@ function Base.:*(mpo::InfiniteMPO,st::InfiniteMPS)
         @tensor t[-1 -2;-3] := st.AL[i][1,2,3]*mpo[i][4,-2,5,2]*fusers[i][-1,1,4]*conj(fusers[i+1][-3,3,5])
     end)
 end
+function Base.:*(mpo::InfiniteMPO,st::FiniteMPS)
+    mod(length(mpo),length(st)) == 0 || throw(ArgumentError("dimension mismatch"))
+
+    tensors = [st.AC[1];st.AR[2:end]];
+    mpot = mpo[1:length(st)];
+
+    fusers = PeriodicArray(map(zip(tensors,mpot)) do (al,mp)
+        isometry(fuse(_firstspace(al),_firstspace(mp)),_firstspace(al)*_firstspace(mp))
+    end)
+
+    (_firstspace(mpot[1]) == oneunit(_firstspace(mpot[1])) && space(mpot[end],3)' == _firstspace(mpot[1])) ||
+        @warn "mpo does not start/end with a trivial leg"
+
+    FiniteMPS(map(1:length(st)) do i
+        @tensor t[-1 -2;-3] := tensors[i][1,2,3]*mpot[i][4,-2,5,2]*fusers[i][-1,1,4]*conj(fusers[i+1][-3,3,5])
+    end)
+end
 
 function Base.:*(mpo1::InfiniteMPO,mpo2::InfiniteMPO)
     length(mpo1) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
