@@ -85,7 +85,6 @@ module MPSKit
     include("algorithms/changebonds/optimalexpand.jl")
     include("algorithms/changebonds/vumpssvd.jl")
     include("algorithms/changebonds/svdcut.jl")
-    include("algorithms/changebonds/changebonds.jl")
     include("algorithms/changebonds/randexpand.jl")
 
     include("algorithms/timestep/tdvp.jl")
@@ -108,6 +107,8 @@ module MPSKit
     include("algorithms/approximate/vomps.jl")
 
     include("algorithms/ED.jl")
+
+    include("algorithms/unionalg.jl")
 
     Base.@deprecate PeriodicMPO InfiniteMPO
 end
