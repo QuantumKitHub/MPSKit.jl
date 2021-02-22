@@ -55,7 +55,7 @@ end
 
 #extract the correct leftstart/rightstart for mpscomoving
 function environments(state::MPSComoving,ham::MPOHamiltonian;lenvs=environments(state.left_gs,ham),renvs=environments(state.right_gs,ham))
-    environments(state,ham,leftenv(lenvs,1,state.left_gs),rightenv(renvs,length(state),state.right_gs))
+    environments(state,ham,copy.(leftenv(lenvs,1,state.left_gs)),copy.(rightenv(renvs,length(state),state.right_gs)))
 end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies
