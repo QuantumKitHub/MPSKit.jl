@@ -8,6 +8,8 @@ end
 InfiniteMPO(t::AbstractTensorMap) = InfiniteMPO(fill(t,1));
 InfiniteMPO(t::AbstractArray{T,1}) where T<:MPOTensor = InfiniteMPO(PeriodicArray(t));
 Base.length(t::InfiniteMPO) = length(t.opp);
+Base.size(t::InfiniteMPO) = (length(t),)
+
 Base.getindex(t::InfiniteMPO,i) = getindex(t.opp,i);
 Base.eltype(t::InfiniteMPO{O}) where O = O;
 Base.iterate(t::InfiniteMPO,itstate = 1) = iterate(t.opp,itstate);
@@ -71,6 +73,7 @@ end
 #---
 const MPOMultiline = Multiline{<:InfiniteMPO}
 
+Base.CartesianIndices(t::Union{InfiniteMPO,MPOMultiline}) = CartesianIndices(size(t))
 Base.eltype(t::MPOMultiline) = eltype(t[1]);
 
 MPOMultiline(t::AbstractTensorMap) = MPOMultiline(fill(t,1,1));

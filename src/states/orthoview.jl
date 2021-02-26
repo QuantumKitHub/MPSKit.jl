@@ -163,3 +163,5 @@ Base.getindex(psi::Union{ACView,ALView,ARView,CRView},i::Colon,j::Colon) = psi[1
 Base.getindex(psi::Union{ACView,ALView,ARView,CRView},i::AbstractRange{Int64},j::Int) = [psi[ri,j] for ri in i];
 Base.getindex(psi::Union{ACView,ALView,ARView,CRView},i::Int,j::AbstractRange{Int64}) = [psi[i,rj] for rj in j];
 Base.getindex(psi::Union{ACView,ALView,ARView,CRView},i::AbstractRange{Int64},j::AbstractRange{Int64}) = map((ri,rj)->psi[ri,rj],Iterators.product(i,j));
+
+Base.CartesianIndices(view::Union{ACView,ALView,ARView}) = CartesianIndices(size(view));
