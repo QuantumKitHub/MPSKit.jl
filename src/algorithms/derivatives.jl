@@ -1,5 +1,10 @@
 # Given a state and it's environments, we can act on it
 
+#allow calling them with CartesianIndices
+ac_prime(x,pos::CartesianIndex,mps,envs) = ac_prime(x,Tuple(pos)...,mps,envs)
+ac2_prime(x,pos::CartesianIndex,mps,envs) = ac2_prime(x,Tuple(pos)...,mps,envs)
+c_prime(x,pos::CartesianIndex,mps,envs) = c_prime(x,Tuple(pos)...,mps,envs)
+
 """
     One-site derivative
 """

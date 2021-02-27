@@ -323,13 +323,14 @@ end
 end
 
 @timedtestset "leading_boundary $(ind)" for (ind,alg) in enumerate([
-        Vumps(tol_galerkin=1e-5,verbose=false)])
+        Vumps(tol_galerkin=1e-5,verbose=false);
+        GradientGrassmann(verbosity=0)])
 
     mpo = nonsym_ising_mpo();
     state = InfiniteMPS([ℂ^2],[ℂ^10]);
-    (state,envs,_) = leading_boundary(state,mpo,alg);
+    (state,envs) = leading_boundary(state,mpo,alg);
     (state,envs) = @constinferred changebonds(state,mpo,OptimalExpand(trscheme=truncdim(3)),envs)
-    (state,envs,_) = leading_boundary(state,mpo,alg);
+    (state,envs) = leading_boundary(state,mpo,alg);
 
     @test dim(space(state.AL[1,1],1)) == 13
     @test expectation_value(state,mpo,envs)[1,1] ≈ 2.5337 atol=1e-3

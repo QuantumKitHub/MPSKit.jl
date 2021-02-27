@@ -127,7 +127,7 @@ Base.getindex(v::ACView{<:MPSMultiline},i::Int,j::Int) = v.parent[i].AC[j]
 Base.setindex!(v::ACView{<:MPSMultiline},vec,i::Int,j::Int) = setindex!(v.parent[i].AC,vec,j);
 
 #linear indexing for MPSMultiline
-function Base.getindex(v::Union{ACView{S},ALView{S},ARView{S},CRView{S}},i) where S<:MPSMultiline
+function Base.getindex(v::Union{ACView{S},ALView{S},ARView{S},CRView{S}},i::Int) where S<:MPSMultiline
     inds = CartesianIndices(size(v))[i];
     v[inds[1],inds[2]]
 end
@@ -165,3 +165,7 @@ Base.getindex(psi::Union{ACView,ALView,ARView,CRView},i::Int,j::AbstractRange{In
 Base.getindex(psi::Union{ACView,ALView,ARView,CRView},i::AbstractRange{Int64},j::AbstractRange{Int64}) = map((ri,rj)->psi[ri,rj],Iterators.product(i,j));
 
 Base.CartesianIndices(view::Union{ACView,ALView,ARView}) = CartesianIndices(size(view));
+
+#allow calling with cartesian index
+Base.getindex(view::Union{ACView,ALView,ARView,CRView},i::CartesianIndex) = view[Tuple(i)...];
+Base.setindex!(view::Union{ACView,ALView,ARView,CRView},v,i::CartesianIndex) = setindex!(view,v,Tuple(i)...);

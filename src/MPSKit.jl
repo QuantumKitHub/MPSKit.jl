@@ -81,6 +81,7 @@ module MPSKit
     include("algorithms/derivatives.jl")
     include("algorithms/expval.jl")
     include("algorithms/toolbox.jl")
+    include("algorithms/grassmann.jl")
 
     include("algorithms/changebonds/optimalexpand.jl")
     include("algorithms/changebonds/vumpssvd.jl")
@@ -101,6 +102,7 @@ module MPSKit
     include("algorithms/excitation/dmrgexcitation.jl")
 
     include("algorithms/statmech/vumps.jl")
+    include("algorithms/statmech/gradient_grassmann.jl")
 
     include("algorithms/fidelity_susceptibility.jl")
 
