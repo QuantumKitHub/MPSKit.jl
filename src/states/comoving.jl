@@ -24,7 +24,7 @@ mutable struct MPSComoving{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
 end
 
 #allow construction with an array of tensors
-function MPSComoving(left::InfiniteMPS{A,B},site_tensors::Array{A},right::InfiniteMPS{A,B}) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+function MPSComoving!(left::InfiniteMPS{A,B},site_tensors::Array{A},right::InfiniteMPS{A,B}) where {A<:GenericMPSTensor,B<:MPSBondTensor}
     for i in 1:length(site_tensors)-1
         (site_tensors[i],C) = leftorth!(site_tensors[i],alg=QRpos());
         site_tensors[i+1] = _permute_front(C*_permute_tail(site_tensors[i+1]))
@@ -42,7 +42,7 @@ function MPSComoving(left::InfiniteMPS{A,B},site_tensors::Array{A},right::Infini
 
     MPSComoving{A,B}(left,ALs,ARs,ACs,CLs,right)
 end
-
+function MPSComoving(left::InfiniteMPS{A,B},site_tensors::Array{A},right::InfiniteMPS{A,B}) where {A<:GenericMPSTensor,B<:MPSBondTensor} = MPSComoving(deepcopy(left),deepcopy(site_tensors),deepcopy(right))
 #todo : add constructor given an infinitemps + length
 
 # allow construction with one large tensorkit space
