@@ -23,13 +23,11 @@ function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,oenvs=en
         for i in 1:length(st)
             @tensor curu[i][-1 -2;-3] := curc[-1,1]*curu[i][1,-2,-3]
 
-            (eigvals,vecs) = let st=st,envs=envs
-                eigsolve(curu[i],1,:SR,Lanczos()) do x
-                    ac_prime(x,i,st,envs)
-                end
+            (eigvals,vecs) = eigsolve(curu[i],1,:SR,Lanczos()) do x
+                ac_prime(x,i,st,envs)
             end
 
-            (curu[i],curc)=leftorth!(vecs[1])
+            (curu[i],curc) = leftorth!(vecs[1])
 
             #partially update envs
             setleftenv!(envs,i+1,st,transfer_left(leftenv(envs,i,st),ham,i,curu[i]))
@@ -39,13 +37,12 @@ function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,oenvs=en
 
             @tensor curu[i][-1 -2;-3] := curu[i][-1,-2,1]*curc[1,-3]
 
-            (eigvals,vecs) = let st=st,envs=envs
-                eigsolve(curu[i],1,:SR,Lanczos()) do x
-                    ac_prime(x,i,st,envs)
-                end
+            (eigvals,vecs) = eigsolve(curu[i],1,:SR,Lanczos()) do x
+                ac_prime(x,i,st,envs)
             end
 
-            (curc,temp)=rightorth(vecs[1],(1,),(2,3,))
+
+            (curc,temp) = rightorth(vecs[1],(1,),(2,3,))
             curu[i] = permute(temp,(1,2),(3,))
 
             #partially update envs
