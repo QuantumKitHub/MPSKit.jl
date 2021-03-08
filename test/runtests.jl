@@ -171,8 +171,8 @@ end
         normalize!(ts);
 
         #rand_quasiparticle is a private non-exported function
-        qst1 = @constinferred MPSKit.rand_quasiparticle(ts);
-        qst2 = @constinferred MPSKit.rand_quasiparticle(ts);
+        qst1 = @constinferred MPSKit.LeftGaugedQP(rand,ts);
+        qst2 = @constinferred MPSKit.LeftGaugedQP(rand,ts);
 
         @test norm(axpy!(1,qst1,copy(qst2))) ≤ norm(qst1) + norm(qst2)
         @test norm(qst1)*3 ≈ norm(qst1*3)
@@ -201,8 +201,8 @@ end
         ts = @constinferred InfiniteMPS(fill(d,period),fill(D,period));
 
         #rand_quasiparticle is a private non-exported function
-        qst1 = @constinferred MPSKit.rand_quasiparticle(ts);
-        qst2 = @constinferred MPSKit.rand_quasiparticle(ts);
+        qst1 = @constinferred MPSKit.LeftGaugedQP(rand,ts);
+        qst2 = @constinferred MPSKit.LeftGaugedQP(rand,ts);
 
         @test norm(axpy!(1,qst1,copy(qst2))) ≤ norm(qst1) + norm(qst2)
         @test norm(qst1)*3 ≈ norm(qst1*3)

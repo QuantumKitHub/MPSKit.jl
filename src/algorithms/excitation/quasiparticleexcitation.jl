@@ -16,7 +16,7 @@ include("excitransfers.jl")
 function excitations(hamiltonian::Hamiltonian, alg::QuasiparticleAnsatz, momentum::Float64, mpsleft::InfiniteMPS, environmentsleft=environments(mpsleft,hamiltonian), mpsright::InfiniteMPS=mpsleft, environmentsright=environmentsleft;
     sector = first(sectors(oneunit(virtualspace(mpsleft,1)))), num=1)
 
-    V_initial = rand_quasiparticle(mpsleft,mpsright;sector=sector,momentum=momentum);
+    V_initial = LeftGaugedQP(rand,mpsleft,mpsright;sector=sector,momentum=momentum);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, environments(V,hamiltonian,environmentsleft, environmentsright))
@@ -30,7 +30,7 @@ end
 function excitations(hamiltonian::Hamiltonian, alg::QuasiparticleAnsatz, mpsleft::FiniteMPS, environmentsleft=environments(mpsleft,hamiltonian), mpsright::FiniteMPS=mpsleft, environmentsright=environmentsleft;
     sector = first(sectors(oneunit(virtualspace(mpsleft,1)))),num=1)
 
-    V_initial = rand_quasiparticle(mpsleft,mpsright;sector=sector);
+    V_initial = LeftGaugedQP(rand,mpsleft,mpsright;sector=sector);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
     eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, environments(V,hamiltonian,environmentsleft, environmentsright))

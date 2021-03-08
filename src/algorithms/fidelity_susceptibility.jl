@@ -2,7 +2,7 @@
 I don't know if I should rescale by system size / unit cell
 =#
 function fidelity_susceptibility(state::Union{FiniteMPS,InfiniteMPS},H₀::T,Vs::AbstractVector{T},henvs = environments(state,H₀);maxiter=Defaults.maxiter,tol=Defaults.tol) where T<:MPOHamiltonian
-    init_v = rand_quasiparticle(state);
+    init_v = LeftGaugedQP(rand,state);
 
     tangent_vecs = map(Vs) do V
         venvs = environments(state,V)

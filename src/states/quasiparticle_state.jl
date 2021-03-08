@@ -4,26 +4,7 @@ I think it makes sense to see these things as an actual state instead of return 
 This will allow us to plot energy density (finite qp) and measure observeables.
 =#
 
-struct FiniteQP{S<:Union{MPSComoving,FiniteMPS},T1,T2}
-    # !(left_gs === right_gs) => domain wall excitation
-    left_gs::S
-    right_gs::S
-
-    VLs::Vector{T1} # AL' VL = 0 (and VL*X = B)
-    Xs::Vector{T2} # contains variational parameters
-
-end
-
-function rand_quasiparticle(left_gs::Union{MPSComoving,FiniteMPS},right_gs=left_gs;sector=first(sectors(oneunit(virtualspace(left_gs,1)))))
-    #find the left null spaces for the TNS
-    excitation_space = ℂ[sector=>1];
-    VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
-    Xs = [TensorMap(rand,eltype(left_gs.AL[1]),space(VLs[loc],3)',excitation_space'*space(right_gs.AR[ loc],3)') for loc in 1:length(left_gs)]
-
-    FiniteQP(left_gs,right_gs,VLs,Xs)
-end
-
-struct InfiniteQP{S<:InfiniteMPS,T1,T2}
+struct LeftGaugedQP{S,T1,T2}
     # !(left_gs === right_gs) => domain wall excitation
     left_gs::S
     right_gs::S
@@ -34,21 +15,98 @@ struct InfiniteQP{S<:InfiniteMPS,T1,T2}
     momentum::Float64
 end
 
-function rand_quasiparticle(left_gs::InfiniteMPS,right_gs=left_gs;sector = first(sectors(oneunit(virtualspace(left_gs,1)))),momentum=0.0)
+struct RightGaugedQP{S,T1,T2}
+    # !(left_gs === right_gs) => domain wall excitation
+    left_gs::S
+    right_gs::S
+
+    Xs::Vector{T2}
+    VRs::Vector{T1}
+
+    momentum::Float64
+end
+
+#constructors
+function LeftGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(oneunit(virtualspace(left_gs,1)))),momentum=0.0)
     #find the left null spaces for the TNS
     excitation_space = ℂ[sector=>1];
     VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
-    Xs = [TensorMap(rand,eltype(left_gs.AL[1]),space(VLs[loc],3)',excitation_space'*space(right_gs.AR[ loc+1],1)) for loc in 1:length(left_gs)]
-
-    InfiniteQP(left_gs,right_gs,VLs,Xs,momentum)
+    Xs = [TensorMap(datfun,eltype(left_gs.AL[1]),space(VLs[loc],3)',excitation_space'*virtualspace(right_gs,loc)) for loc in 1:length(left_gs)]
+    left_gs isa InfiniteMPS || momentum == zero(momentum) || @warn "momentum is ignored for finite quasiparticles"
+    LeftGaugedQP(left_gs,right_gs,VLs,Xs,momentum)
+end
+function RightGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(oneunit(virtualspace(left_gs,1)))),momentum=0.0)
+    #find the left null spaces for the TNS
+    excitation_space = ℂ[sector=>1];
+    VRs = [adjoint(leftnull(adjoint(v))) for v in _permute_tail.(left_gs.AR)]
+    Xs = [TensorMap(datfun,eltype(left_gs.AL[1]),virtualspace(right_gs,loc-1)',excitation_space'*space(VRs[loc],1)) for loc in 1:length(left_gs)]
+    left_gs isa InfiniteMPS || momentum == zero(momentum) || @warn "momentum is ignored for finite quasiparticles"
+    RightGaugedQP(left_gs,right_gs,Xs,VRs,momentum)
 end
 
-const QP = Union{InfiniteQP,FiniteQP};
+#gauge dependent code
+Base.similar(v::LeftGaugedQP,t=eltype(v)) = LeftGaugedQP(v.left_gs,v.right_gs,v.VLs,map(e->similar(e,t),v.Xs),v.momentum)
+Base.similar(v::RightGaugedQP,t=eltype(v)) = RightGaugedQP(v.left_gs,v.right_gs,map(e->similar(e,t),v.Xs),v.VRs,v.momentum)
+
+Base.getindex(v::LeftGaugedQP,i::Int) = v.VLs[i]*v.Xs[i];
+Base.getindex(v::RightGaugedQP,i::Int) = @tensor t[-1 -2;-3 -4] := v.Xs[i][-1,-3,1]*v.VRs[i][1,-2,-4];
+
+function Base.setindex!(v::LeftGaugedQP,B,i::Int)
+    v.Xs[i] = v.VLs[i]'*B
+    v
+end
+function Base.setindex!(v::RightGaugedQP,B,i::Int)
+    @tensor v.Xs[i][-1; -2 -3]:=B[-1,1,-2,2]*conj(v.VRs[i][-3,1,2])
+    v
+end
+
+#conversion between gauges (partially implemented)
+function Base.convert(::Type{RightGaugedQP},input::LeftGaugedQP{S}) where S<:InfiniteMPS
+    rg = RightGaugedQP(zeros,input.left_gs,input.right_gs,sector = first(sectors(utilleg(input))), momentum = input.momentum);
+    len = length(input);
+
+    #construct environments
+    rBs = [@tensor t[-1 -2;-3] := input[len][-1,2,-2,3]*conj(input.right_gs.AR[len][-3,2,3])*exp(1im*input.momentum)]
+    for i in len-1:-1:1
+        t = exci_transfer_right(lBs,input.left_gs.AL[i],input.right_gs.AR[i]);
+        @tensor t[-1 -2;-3] += input[i][-1,2,-2,3]*conj(input.right_gs.AR[i][-3,2,3])
+        push!(rBs,exp(1im*momentum)*t);
+    end
+    rBs = reverse(rBs);
+
+    (rBE,convhist) = linsolve(rBs[1],rBs[1],GMRES()) do x
+        x-transfer_right(x,input.left_gs.AL,input.right_gs.AR)*exp(1im*input.momentum*len)
+    end
+    convhist.converged == 0 && @warn "failed to converge $(convhist.normres)" #if so then I should probably subtract fixpoints
+
+    rBs[1] = rBE;
+    for i in len:-1:2
+        rBE = transfer_right(rBE,input.left_gs.AL[i],input.right_gs.AR[i])*exp(1im*input.momentum);
+        rBs[i] += rBE;
+    end
+
+    #final contraction is now easy
+    for i in 1:len
+        @tensor T[-1 -2;-3 -4] := input.left_gs.AL[i][-1,-2,1]*rBE[1,-3,-4]
+        @tensor T[-1 -2;-3 -4] += input[i][-1 -2;-3 -4]
+        rg[i] = T
+    end
+
+    rg
+end
+function Base.convert(::Type{LeftGaugedQP},input::RightGaugedQP{S}) where S<:InfiniteMPS
+    throw(ArgumentError("not yet implemented"))
+end
+
+# gauge independent code
+const QP{S,T1,T2} = Union{LeftGaugedQP{S,T1,T2},RightGaugedQP{S,T1,T2}} where {S,T1,T2};
+const FiniteQP{S,T1,T2} = QP{S,T1,T2} where {S<:FiniteMPS}
+const InfiniteQP{S,T1,T2} = QP{S,T1,T2} where {S<:InfiniteMPS}
 
 utilleg(v::QP) = space(v.Xs[1],2)
 Base.copy(a::QP) = copy!(similar(a),a)
 Base.copyto!(a::QP,b::QP) = copy!(a,b);
-function Base.copy!(a::QP,b::QP)
+function Base.copy!(a::T,b::T) where T<:QP
     for (i,j) in zip(a.Xs,b.Xs)
         copy!(i,j)
     end
@@ -62,25 +120,24 @@ function Base.getproperty(v::QP,s::Symbol)
     end
 end
 
-function Base.:-(v::QP,w::QP)
+function Base.:-(v::T,w::T) where T<:QP
     t = similar(v)
     t.Xs[:] = (v.Xs-w.Xs)[:]
 end
-LinearAlgebra.dot(v::QP, w::QP) = sum(dot.(v.Xs, w.Xs))
+LinearAlgebra.dot(v::T, w::T)  where T<:QP = sum(dot.(v.Xs, w.Xs))
 LinearAlgebra.norm(v::QP) = norm(norm.(v.Xs))
 LinearAlgebra.normalize!(w::QP) = rmul!(w,1/norm(w));
 Base.length(v::QP) = length(v.Xs)
 Base.eltype(v::QP) = eltype(eltype(v.Xs)) # - again debateable, need scaltype
-Base.similar(v::InfiniteQP,t=eltype(v)) = InfiniteQP(v.left_gs,v.right_gs,v.VLs,map(e->similar(e,t),v.Xs),v.momentum)
-Base.similar(v::FiniteQP,t=eltype(v)) = FiniteQP(v.left_gs,v.right_gs,v.VLs,map(e->similar(e,t),v.Xs))
-function LinearAlgebra.mul!(w::QP, a, v::QP)
+
+function LinearAlgebra.mul!(w::T, a, v::T)  where T<:QP
     @inbounds for (i,j) in zip(w.Xs,v.Xs)
         LinearAlgebra.mul!(i, a, j)
     end
     return w
 end
 
-function LinearAlgebra.mul!(w::QP, v::QP, a)
+function LinearAlgebra.mul!(w::T, v::T, a)  where T<:QP
     @inbounds for (i,j) in zip(w.Xs,v.Xs)
         LinearAlgebra.mul!(i, j, a)
     end
@@ -93,13 +150,13 @@ function LinearAlgebra.rmul!(v::QP, a)
     return v
 end
 
-function LinearAlgebra.axpy!(a, v::QP, w::QP)
+function LinearAlgebra.axpy!(a, v::T, w::T)  where T<:QP
     @inbounds for (i,j) in zip(w.Xs,v.Xs)
         LinearAlgebra.axpy!(a, j, i)
     end
     return w
 end
-function LinearAlgebra.axpby!(a, v::QP, b, w::QP)
+function LinearAlgebra.axpby!(a, v::T, b, w::T)  where T<:QP
     @inbounds for (i,j) in zip(w.Xs,v.Xs)
         LinearAlgebra.axpby!(a, j, b, i)
     end
@@ -110,14 +167,8 @@ Base.:*(v::QP, a) = mul!(similar(v),a,v)
 Base.:*(a, v::QP) = mul!(similar(v),a,v)
 
 Base.zero(v::QP) = v*0;
-Base.getindex(v::QP,i::Int) = v.VLs[i]*v.Xs[i];
-function Base.setindex!(v::QP,B,i::Int)
-    v.Xs[i] = v.VLs[i]'*B
-    v
-end
 
-
-function Base.convert(::Type{<:FiniteMPS},v::FiniteQP)
+function Base.convert(::Type{<:FiniteMPS},v::QP{S}) where S <: FiniteMPS
     #very slow and clunky, but shouldn't be performance critical anyway
 
     elt = eltype(v)

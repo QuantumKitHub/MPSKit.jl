@@ -93,7 +93,7 @@ function exci_transfer_right(RetType,vec,ham::MPOHamiltonian,pos,A,Ab=A)
     return toreturn
 end
 
-function left_excitation_transfer_system(lBs,ham,exci::InfiniteQP)
+function left_excitation_transfer_system(lBs,ham,exci::InfiniteQP;mom=exci.momentum)
     len = ham.period
     found = zero.(lBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
@@ -104,7 +104,7 @@ function left_excitation_transfer_system(lBs,ham,exci::InfiniteQP)
         #this operation can be sped up by at least a factor 2;  found mostly consists of zeros
         start = found
         for k in 1:len
-            start = exci_transfer_left(start,ham,k,exci.right_gs.AR[k],exci.left_gs.AL[k])*exp(conj(1im*exci.momentum))
+            start = exci_transfer_left(start,ham,k,exci.right_gs.AR[k],exci.left_gs.AL[k])*exp(conj(1im*mom))
 
             exci.trivial && for l in ids[2:end-1]
                 @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*r_RL(exci.right_gs,k)[2,1]*l_RL(exci.right_gs,k+1)[-1,-4]
@@ -116,7 +116,7 @@ function left_excitation_transfer_system(lBs,ham,exci::InfiniteQP)
         if reduce((a,b)->contains(ham,b,i,i),1:len,init=true)
             (found[i],convhist)=linsolve(lBs[i]+start[i],lBs[i]+start[i],GMRES()) do y
                 x=reduce(1:len,init=y) do a,b
-                    exci_transfer_left(a,ham[b,i,i],exci.right_gs.AR[b],exci.left_gs.AL[b])*exp(conj(1im*exci.momentum))
+                    exci_transfer_left(a,ham[b,i,i],exci.right_gs.AR[b],exci.left_gs.AL[b])*exp(conj(1im*mom))
                 end
 
                 if exci.trivial && i in ids
@@ -134,7 +134,7 @@ function left_excitation_transfer_system(lBs,ham,exci::InfiniteQP)
     return found
 end
 
-function right_excitation_transfer_system(rBs,ham,exci::InfiniteQP)
+function right_excitation_transfer_system(rBs,ham,exci::InfiniteQP;mom=exci.momentum)
     len = ham.period
     found = zero.(rBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
@@ -142,7 +142,7 @@ function right_excitation_transfer_system(rBs,ham,exci::InfiniteQP)
 
         start = found
         for k in len:-1:1
-            start = exci_transfer_right(start,ham,k,exci.left_gs.AL[k],exci.right_gs.AR[k])*exp(1im*exci.momentum)
+            start = exci_transfer_right(start,ham,k,exci.left_gs.AL[k],exci.right_gs.AR[k])*exp(1im*mom)
 
             exci.trivial && for l in ids[2:end-1]
                 @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*l_LR(exci.right_gs,k)[2,1]*r_LR(exci.right_gs,k-1)[-1,-4]
@@ -153,7 +153,7 @@ function right_excitation_transfer_system(rBs,ham,exci::InfiniteQP)
         if reduce((a,b)->contains(ham,b,i,i),1:len,init=true)
             (found[i],convhist)=linsolve(rBs[i]+start[i],rBs[i]+start[i],GMRES()) do y
                 x=reduce(len:-1:1,init=y) do a,b
-                    exci_transfer_right(a,ham[b,i,i],exci.left_gs.AL[b],exci.right_gs.AR[b])*exp(1im*exci.momentum)
+                    exci_transfer_right(a,ham[b,i,i],exci.left_gs.AL[b],exci.right_gs.AR[b])*exp(1im*mom)
                 end
 
                 if exci.trivial && i in ids
