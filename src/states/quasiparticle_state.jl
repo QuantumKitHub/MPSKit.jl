@@ -123,6 +123,12 @@ end
 function Base.:-(v::T,w::T) where T<:QP
     t = similar(v)
     t.Xs[:] = (v.Xs-w.Xs)[:]
+    t
+end
+function Base.:+(v::T,w::T) where T<:QP
+    t = similar(v)
+    t.Xs[:] = (v.Xs+w.Xs)[:]
+    t
 end
 LinearAlgebra.dot(v::T, w::T)  where T<:QP = sum(dot.(v.Xs, w.Xs))
 LinearAlgebra.norm(v::QP) = norm(norm.(v.Xs))
