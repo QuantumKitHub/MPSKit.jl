@@ -10,52 +10,40 @@ end
 
 
 function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,oenvs=environments(st,ham))
-    envs = SimpleEnv(st,oenvs);
+    state = FiniteMPS([st.AC[1];st.AR[2:end]]);
+    envs = environments(state,ham,leftenv(oenvs,1,st),rightenv(oenvs,length(st),st));
 
-    curu = [st.AR[i] for i in 1:length(st)];
-    prevc = st.CR[0];
-
-    err = 0.0;
+    delta = 0.0;
 
     for topit in 1:alg.maxiter
-        curc = copy(prevc);
+        prevc = state.CR[0];
 
-        for i in 1:length(st)
-            @tensor curu[i][-1 -2;-3] := curc[-1,1]*curu[i][1,-2,-3]
-
-            (eigvals,vecs) = eigsolve(curu[i],1,:SR,Lanczos()) do x
-                ac_prime(x,i,st,envs)
+        for pos = 1:length(state)
+            (eigvals,vecs) = eigsolve(state.AC[pos],1,:SR,Lanczos()) do x
+                ac_prime(x,pos,state,envs)
             end
-
-            (curu[i],curc) = leftorth!(vecs[1])
-
-            #partially update envs
-            setleftenv!(envs,i+1,st,transfer_left(leftenv(envs,i,st),ham,i,curu[i]))
+            state.AC[pos] = vecs[1]
         end
 
-        for i in length(st):-1:1
+        envs.leftenvs[1][:] = leftenv(envs,length(state)+1,state);
 
-            @tensor curu[i][-1 -2;-3] := curu[i][-1,-2,1]*curc[1,-3]
+        for pos = length(state):-1:1
 
-            (eigvals,vecs) = eigsolve(curu[i],1,:SR,Lanczos()) do x
-                ac_prime(x,i,st,envs)
+            (eigvals,vecs) = eigsolve(state.AC[pos],1,:SR,Lanczos()) do x
+                ac_prime(x,pos,state,envs)
             end
-
-
-            (curc,temp) = rightorth(vecs[1],(1,),(2,3,))
-            curu[i] = permute(temp,(1,2),(3,))
-
-            #partially update envs
-            setrightenv!(envs,i-1,st,transfer_right(rightenv(envs,i,st),ham,i,curu[i]))
+            state.AC[pos] = vecs[1]
         end
 
-        err = norm(curc-prevc)
-        prevc = curc;
-        err<alg.tol_galerkin && break;
+        #update the environment:
+        envs.rightenvs[end][:] = rightenv(envs,0,state);
 
-        alg.verbose && @info "idmrg iter $(topit) err $(err)"
+        delta = norm(prevc-state.CR[0]);
+        delta<alg.tol_galerkin && break;
+        alg.verbose && @info "idmrg iter $(topit) err $(delta)"
     end
 
-    nst = InfiniteMPS(curu,tol=alg.tol_gauge);
-    return nst,environments(nst,ham,tol=oenvs.tol,maxiter=oenvs.maxiter),err;
+    st = InfiniteMPS(state.AL[1:end],state.CR[end],tol=alg.tol_gauge);
+    oenvs = environments(st,ham,tol=oenvs.tol,maxiter=oenvs.maxiter)
+    return st,oenvs,delta;
 end

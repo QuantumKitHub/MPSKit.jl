@@ -72,7 +72,6 @@ module MPSKit
     include("environments/abstractinfenv.jl")
     include("environments/permpoinfenv.jl")
     include("environments/mpohaminfenv.jl")
-    include("environments/simpleenv.jl")
     include("environments/overlapenv.jl")
     include("environments/qpenv.jl")
 
