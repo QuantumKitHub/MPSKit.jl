@@ -68,16 +68,20 @@ function Base.convert(::Type{RightGaugedQP},input::LeftGaugedQP{S}) where S<:Inf
     #construct environments
     rBs = [@tensor t[-1 -2;-3] := input[len][-1,2,-2,3]*conj(input.right_gs.AR[len][-3,2,3])*exp(1im*input.momentum)]
     for i in len-1:-1:1
-        t = exci_transfer_right(lBs,input.left_gs.AL[i],input.right_gs.AR[i]);
+        t = exci_transfer_right(rBs[end],input.left_gs.AL[i],input.right_gs.AR[i]);
         @tensor t[-1 -2;-3] += input[i][-1,2,-2,3]*conj(input.right_gs.AR[i][-3,2,3])
         push!(rBs,exp(1im*momentum)*t);
     end
     rBs = reverse(rBs);
 
     (rBE,convhist) = linsolve(rBs[1],rBs[1],GMRES()) do x
-        x-transfer_right(x,input.left_gs.AL,input.right_gs.AR)*exp(1im*input.momentum*len)
+        y = transfer_right(x,input.left_gs.AL,input.right_gs.AR)*exp(1im*input.momentum*len)
+        if input.trivial
+            @tensor y[-1 -2;-3]-=y[1,-2,2]*l_LR(input.right_gs)[2,1]*r_LR(input.right_gs)[-1,-3]
+        end
+        x-y
     end
-    convhist.converged == 0 && @warn "failed to converge $(convhist.normres)" #if so then I should probably subtract fixpoints
+    convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
 
     rBs[1] = rBE;
     for i in len:-1:2
@@ -87,7 +91,7 @@ function Base.convert(::Type{RightGaugedQP},input::LeftGaugedQP{S}) where S<:Inf
 
     #final contraction is now easy
     for i in 1:len
-        @tensor T[-1 -2;-3 -4] := input.left_gs.AL[i][-1,-2,1]*rBE[1,-3,-4]
+        @tensor T[-1 -2;-3 -4] := input.left_gs.AL[i][-1,-2,1]*rBs[mod1(i+1,end)][1,-3,-4]
         @tensor T[-1 -2;-3 -4] += input[i][-1 -2;-3 -4]
         rg[i] = T
     end
@@ -95,7 +99,39 @@ function Base.convert(::Type{RightGaugedQP},input::LeftGaugedQP{S}) where S<:Inf
     rg
 end
 function Base.convert(::Type{LeftGaugedQP},input::RightGaugedQP{S}) where S<:InfiniteMPS
-    throw(ArgumentError("not yet implemented"))
+    lg = LeftGaugedQP(zeros,input.left_gs,input.right_gs,sector = first(sectors(utilleg(input))), momentum = input.momentum);
+    len = length(input);
+
+    lBs = [@tensor t[-1 -2;-3] := input[1][1,2,-2,-3]*conj(input.left_gs.AL[1][1,2,-1])*exp(-1im*input.momentum)];
+    for i in 2:len
+        t = exci_transfer_left(lBs[end],input.right_gs.AR[i],input.left_gs.AL[i]);
+        @tensor t[-1 -2;-3] += input[i][1,2,-2,-3]*conj(input.left_gs.AL[i][1,2,-1])
+        push!(lBs,t*exp(-1im*input.momentum));
+    end
+
+    (lBE,convhist) = linsolve(lBs[end],lBs[end],GMRES()) do x
+        y = transfer_left(x,input.right_gs.AR,input.left_gs.AL)*exp(-1im*input.momentum*len)
+        if input.trivial
+            @tensor y[-1 -2;-3] -= y[1,-2,2]*r_RL(input.right_gs)[2,1]*l_RL(input.right_gs)[-1,-3]
+        end
+        x-y
+    end
+    convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
+
+    lBs[end] = lBE;
+    for i in 1:len-1
+        lBE = transfer_left(lBE,input.right_gs.AR[i],input.left_gs.AL[i])*exp(-1im*input.momentum)
+        lBs[i]+=lBE;
+    end
+
+
+    for i in 1:len
+        @tensor T[-1 -2;-3 -4] := lBs[mod1(i-1,len)][-1,-3,1]*input.right_gs.AR[i][1,-2,-4]
+        @tensor T[-1 -2;-3 -4] += input[i][-1 -2;-3 -4]
+        lg[i] = T
+    end
+
+    lg
 end
 
 # gauge independent code
