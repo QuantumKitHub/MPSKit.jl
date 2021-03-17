@@ -206,6 +206,8 @@ end
 
         @test norm(axpy!(1,qst1,copy(qst2))) ≤ norm(qst1) + norm(qst2)
         @test norm(qst1)*3 ≈ norm(qst1*3)
+
+        @test dot(qst1,convert(MPSKit.LeftGaugedQP,convert(MPSKit.RightGaugedQP,qst1))) ≈ dot(qst1,qst1) atol=1e-10
     end
 
 end
@@ -291,6 +293,7 @@ println("------------------------------------")
         (InfiniteMPS([ℂ^2],[ℂ^10]), GradientGrassmann(tol=1e-8, verbosity=0), nonsym_ising_ham(lambda=2.0)),
         (InfiniteMPS([ℂ^2],[ℂ^10]), GradientGrassmann(method=LBFGS(6; gradtol=1e-8, verbosity=0)), nonsym_ising_ham(lambda=2.0)),
         (InfiniteMPS([ℂ^2],[ℂ^10]),Idmrg1(tol_galerkin=1e-8,maxiter=400,verbose=false),nonsym_ising_ham(lambda=2.0)),
+        (InfiniteMPS([ℂ^2,ℂ^2],[ℂ^10,ℂ^10]),Idmrg2(trscheme = truncdim(12),tol_galerkin=1e-8,maxiter=400,verbose=false),repeat(nonsym_ising_ham(lambda=2.0),2)),
         (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),Dmrg2(verbose=false,trscheme=truncdim(10)),nonsym_ising_ham(lambda=2.0)),
         (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),Dmrg(verbose=false),nonsym_ising_ham(lambda=2.0)),
         (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),GradientGrassmann(verbosity=0),nonsym_ising_ham(lambda=2.0))

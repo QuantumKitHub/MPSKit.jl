@@ -70,7 +70,7 @@ function Base.convert(::Type{RightGaugedQP},input::LeftGaugedQP{S}) where S<:Inf
     for i in len-1:-1:1
         t = exci_transfer_right(rBs[end],input.left_gs.AL[i],input.right_gs.AR[i]);
         @tensor t[-1 -2;-3] += input[i][-1,2,-2,3]*conj(input.right_gs.AR[i][-3,2,3])
-        push!(rBs,exp(1im*momentum)*t);
+        push!(rBs,exp(1im*input.momentum)*t);
     end
     rBs = reverse(rBs);
 
