@@ -132,7 +132,7 @@ function MPOHamiltonian{Sp,M,E}(x::AbstractArray{Union{E,M},3}) where {Sp,M<:MPO
                 elseif !ismissing(domspaces[i+1,k])
                     isused[i,j,k] = true;
                     isstopped = false;
-                    
+
                     ismissing(domspaces[i,j]) && (domspaces[i,j] = domspaces[i+1,k])
                     domspaces[i+1,k] != domspaces[i,j] && throw(ArgumentError("Identity incompatible at $((i,j,k)) : $(domspaces[i+1,k]) ≠ $(domspaces[i,j])"))
                 end
@@ -225,8 +225,8 @@ Base.eltype(x::MPOHamiltonian) = typeof(x[1,1,1])
 Base.size(x::MPOHamiltonian) = (x.period,x.odim,x.odim)
 Base.size(x::MPOHamiltonian,i) = size(x)[i]
 
-keys(x::MPOHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))
-keys(x::MPOHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),Iterators.product(1:x.odim,1:x.odim))
+Base.keys(x::MPOHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))
+Base.keys(x::MPOHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),Iterators.product(1:x.odim,1:x.odim))
 
 opkeys(x::MPOHamiltonian) = Iterators.filter(a-> !isscal(x,a[1],a[2],a[3]),keys(x));
 opkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> !isscal(x,i,a[1],a[2]),keys(x,i));
@@ -234,7 +234,7 @@ opkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> !isscal(x,i,a[1],a[2]),k
 scalkeys(x::MPOHamiltonian) = Iterators.filter(a-> isscal(x,a[1],a[2],a[3]),keys(x));
 scalkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> isscal(x,i,a[1],a[2]),keys(x,i));
 
-contains(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = !(x.Os[a,b,c] == zero(E))
+Base.contains(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = !(x.Os[a,b,c] == zero(E))
 isscal(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = x.Os[a,b,c] isa E && contains(x,a,b,c)
 
 "

@@ -130,7 +130,7 @@ That creates a new mpo-hamiltonian with larger bond dimension
 The interaction never wraps around multiple times
 """
 function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.period) where {S,T,E}
-    MPSKit.sanitycheck(ham) || throw(ArgumentError("invalid ham"))
+    sanitycheck(ham) || throw(ArgumentError("invalid ham"))
     mod(len,ham.period) == 0 || throw(ArgumentError("$(len) is not a multiple of unitcell"))
 
     fusers = PeriodicArray(map(1:len) do loc
@@ -156,7 +156,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 
 
     for loc in 1:ham.period,
-        (j,k) in MPSKit.keys(ham,loc)
+        (j,k) in keys(ham,loc)
 
         #apply (j,k) above
         l = ham.odim
@@ -186,7 +186,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 
     # make the starter
     starter = convert(Array{Union{T,E},2},fill(zero(E),χ´,χ´));
-    for (j,k) in MPSKit.keys(ham,1)
+    for (j,k) in keys(ham,1)
 
         #apply (j,k) above
         if j == 1
@@ -211,7 +211,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 
     # make the ender
     ender = convert(Array{Union{T,E},2},fill(zero(E),χ´,χ´));
-    for (j,k) in MPSKit.keys(ham,ham.period)
+    for (j,k) in keys(ham,ham.period)
 
         if k > 1
             f1 = fusers[end][k,ham.odim,j]
