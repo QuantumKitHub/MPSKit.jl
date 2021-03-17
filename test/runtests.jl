@@ -305,11 +305,7 @@ println("------------------------------------")
 
     @test v1 > v2
     @test sum(delta) < 1e-6
-
-    evals = @constinferred expectation_value(ts,ham);
-    th = repeat(ham,length(evals))-evals
-
-    @test real(sum(expectation_value(ts,th*th))) < 1e-2 #is the ground state variance relatively low?
+    @test v2 < 1e-2 #is the ground state variance relatively low?
 end
 
 @timedtestset "timestep $(ind)" for (ind,(state,alg,opp)) in enumerate([
