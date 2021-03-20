@@ -9,47 +9,56 @@ onesite infinite dmrg
 end
 
 
-function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,oenvs=environments(st,ham))
-    state = FiniteMPS([st.AC[1];st.AR[2:end]]);
-    envs = idmrgenv(state,ham,leftenv(oenvs,1,st),rightenv(oenvs,length(st),st));
+function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,oenvs=environments(ost,ham))
+    st = copy(ost);
+    envs = IDMRGEnv(ost,oenvs);
+
     delta::Float64 = 2*alg.tol_galerkin;
 
     for topit in 1:alg.maxiter
         delta = 0.0;
 
-        for pos = 1:length(state)
-            (eigvals,vecs) = eigsolve(state.AC[pos],1,:SR,Lanczos()) do x
-                ac_prime(x,pos,state,envs)
-            end
-            state.AC[pos] = vecs[1]
+        curc = st.CR[0];
 
+        for pos = 1:length(st)
+            (eigvals,vecs) = eigsolve(st.AC[pos],1,:SR,Arnoldi()) do x
+                ac_prime(x,pos,st,envs)
+            end
+
+            st.AC[pos] = vecs[1]
+            (st.AL[pos],st.CR[pos]) = leftorth(vecs[1]);
+
+            setleftenv!(envs,pos+1,transfer_left(leftenv(envs,pos),ham,pos,st.AL[pos],st.AL[pos]));
         end
 
-        curc = state.CR[end];
-
-        newleft = transfer_left(leftenv(envs,length(state),state),ham,length(state),state.AL[end],state.AL[end]);
-        growleft!(envs,newleft);
-
-        for pos = length(state):-1:1
-
-            (eigvals,vecs) = eigsolve(state.AC[pos],1,:SR,Lanczos()) do x
-                ac_prime(x,pos,state,envs)
-            end
-            state.AC[pos] = vecs[1]
+        for pos in 1:length(st)-1
+            setleftenv!(envs,pos+1,transfer_left(leftenv(envs,pos),ham,pos,st.AL[pos],st.AL[pos]));
         end
 
-        #update the environment:
-        newright = transfer_right(rightenv(envs,1,state),ham,1,state.AR[1],state.AR[1]);
-        growright!(envs,newright);
+        for pos = length(st):-1:1
 
-        delta = norm(curc-state.CR[0]);
+            (eigvals,vecs) = eigsolve(st.AC[pos],1,:SR,Arnoldi()) do x
+                ac_prime(x,pos,st,envs)
+            end
+            st.AC[pos] = vecs[1]
+            (st.CR[pos-1],temp) = rightorth(_permute_tail(vecs[1]));
+            st.AR[pos] = _permute_front(temp);
+
+            setrightenv!(envs,pos-1,transfer_right(rightenv(envs,pos),ham,pos,st.AR[pos],st.AR[pos]));
+        end
+
+        for pos = length(st):-1:2
+            setrightenv!(envs,pos-1,transfer_right(rightenv(envs,pos),ham,pos,st.AR[pos],st.AR[pos]));
+        end
+
+        delta = norm(curc-st.CR[0]);
         delta<alg.tol_galerkin && break;
         alg.verbose && @info "idmrg iter $(topit) err $(delta)"
     end
 
-    st = InfiniteMPS(state.AL[1:end],state.CR[end],tol=alg.tol_gauge);
-    oenvs = environments(st,ham,tol=oenvs.tol,maxiter=oenvs.maxiter)
-    return st,oenvs,delta;
+    nst = InfiniteMPS(st.AR[1:end],tol=alg.tol_gauge);
+    nenvs = environments(nst,ham,tol=oenvs.tol,maxiter=oenvs.maxiter)
+    return nst,nenvs,delta;
 end
 
 """
@@ -63,81 +72,99 @@ twosite infinite dmrg
     trscheme = truncerr(1e-6);
 end
 
-function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg2,oenvs=environments(st,ham))
-    length(st) < 2 && throw(ArgumentError("unit cell should be >= 2"))
+function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg2,oenvs=environments(ost,ham))
+    length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
 
-    state = FiniteMPS([st.AC[1];st.AR[2:end]]);
-    envs = idmrgenv(state,ham,leftenv(oenvs,1,st),rightenv(oenvs,length(st),st));
+    st = copy(ost);
+    envs = IDMRGEnv(ost,oenvs);
 
-    delta = 0.0;
+    delta::Float64 = 2*alg.tol_galerkin;
 
     for topit in 1:alg.maxiter
         delta = 0.0;
 
+        curc = st.CR[0];
+
         #sweep from left to right
-        for pos = 1:length(state)-1
-            ac2 = state.AC[pos]*_permute_tail(state.AR[pos+1]);
-            (eigvals,vecs) = eigsolve(ac2,1,:SR,Lanczos()) do x
-                ac2_prime(x,pos,state,envs)
+        for pos = 1:length(st)-1
+            ac2 = st.AC[pos]*_permute_tail(st.AR[pos+1]);
+
+            (eigvals,vecs) = eigsolve(ac2,1,:SR,Arnoldi()) do x
+                ac2_prime(x,pos,st,envs)
             end
 
             (al,c,ar,ϵ) = tsvd(vecs[1],trunc=alg.trscheme,alg=TensorKit.SVD())
             normalize!(c);
 
-            state.AC[pos] = (al,complex(c))
-            state.AC[pos+1] = (complex(c),_permute_front(ar))
+            st.AL[pos] = al
+            st.CR[pos] = complex(c);
+            st.AR[pos+1] = _permute_front(ar);
+            st.AC[pos+1] = _permute_front(c*ar);
+
+            setleftenv!(envs,pos+1,transfer_left(leftenv(envs,pos),ham,pos,st.AL[pos],st.AL[pos]));
+            setrightenv!(envs,pos,transfer_right(rightenv(envs,pos+1),ham,pos+1,st.AR[pos+1],st.AR[pos+1]))
         end
 
         #update the edge
-        @tensor ac2[-1 -2;-3 -4] := state.AL[end][-1,-2,1]*state.AL[1][1,-3,2]*state.CR[1][2,-4];
-        (eigvals,vecs) = eigsolve(ac2,1,:SR,Lanczos()) do x
-            ac2_prime(x,length(state),state,envs)
+        @tensor ac2[-1 -2;-3 -4] := st.AC[end][-1,-2,1]*inv(st.CR[0])[1,2]*st.AL[1][2,-3,3]*st.CR[1][3,-4]
+        (eigvals,vecs) = eigsolve(ac2,1,:SR,Arnoldi()) do x
+            ac2_prime(x,length(st),st,envs)
         end
-
         (al,c,ar,ϵ) = tsvd(vecs[1],trunc=alg.trscheme,alg=TensorKit.SVD())
         normalize!(c);
 
-        #grow the environments
-        newleft = transfer_left(leftenv(envs,length(state),state),ham,length(state),al,al);
-        newright = transfer_right(rightenv(envs,1,state),ham,1,_permute_front(ar),_permute_front(ar));
-        growleft!(envs,newleft);
-        growright!(envs,newright);
-        state.AC[end] = (al,complex(c));
-        state.ALs[1] = _permute_front(c*ar)*inv(state.CR[1]);
+
+        st.AC[end] = al*c;
+        st.AL[end] = al;
+        st.CR[end] = complex(c);
+        st.AR[1] = _permute_front(ar);
+        st.AC[1] = _permute_front(c*ar);
+        st.AL[1] = leftorth(_permute_front(c*ar)*inv(st.CR[1]))[1];
 
         curc = complex(c);
 
-        #sweep from right to left
-        for pos = length(state)-1:-1:1
+        #update environments
+        setleftenv!(envs,1,transfer_left(leftenv(envs,0),ham,0,st.AL[0],st.AL[0]));
+        setrightenv!(envs,0,transfer_right(rightenv(envs,1),ham,1,st.AR[1],st.AR[1]));
 
-            ac2 = state.AC[pos]*_permute_tail(state.AR[pos+1]);
-            (eigvals,vecs) = eigsolve(ac2,1,:SR,Lanczos()) do x
-                ac2_prime(x,pos,state,envs)
+
+        #sweep from right to left
+        for pos = length(st)-1:-1:1
+            ac2 = st.AL[pos]*_permute_tail(st.AC[pos+1]);
+
+            (eigvals,vecs) = eigsolve(ac2,1,:SR,Arnoldi()) do x
+                ac2_prime(x,pos,st,envs)
             end
 
             (al,c,ar,ϵ) = tsvd(vecs[1],trunc=alg.trscheme,alg=TensorKit.SVD())
             normalize!(c);
 
-            state.AC[pos] = (al,complex(c))
-            state.AC[pos+1] = (complex(c),_permute_front(ar))
+            st.AL[pos] = al
+            st.AC[pos] = al*c
+            st.CR[pos] = complex(c);
+            st.AR[pos+1] = _permute_front(ar);
+            st.AC[pos+1] = _permute_front(c*ar);
+
+            setrightenv!(envs,pos,transfer_right(rightenv(envs,pos+1),ham,pos+1,st.AR[pos+1],st.AR[pos+1]))
+            setleftenv!(envs,pos+1,transfer_left(leftenv(envs,pos),ham,pos,st.AL[pos],st.AL[pos]));
         end
 
         #update the edge
-        @tensor ac2[-1 -2;-3 -4] := state.CR[end-1][-1,1]*state.AR[end][1,-2,2]*state.AR[1][2,-3,-4]
-        (eigvals,vecs) = eigsolve(ac2,1,:SR,Lanczos()) do x
-            ac2_prime(x,length(state),state,envs)
+        @tensor ac2[-1 -2;-3 -4] :=  st.CR[end-1][-1,1]*st.AR[end][1,-2,2]*inv(st.CR[end])[2,3]*st.AC[1][3,-3,-4]
+        (eigvals,vecs) = eigsolve(ac2,1,:SR,Arnoldi()) do x
+            ac2_prime(x,length(st),st,envs)
         end
-
         (al,c,ar,ϵ) = tsvd(vecs[1],trunc=alg.trscheme,alg=TensorKit.SVD())
         normalize!(c);
 
-        #grow the environments
-        newleft = transfer_left(leftenv(envs,length(state),state),ham,length(state),al,al);
-        newright = transfer_right(rightenv(envs,1,state),ham,1,_permute_front(ar),_permute_front(ar));
-        growleft!(envs,newleft);
-        growright!(envs,newright);
-        state.AC[1] = (complex(c),_permute_front(ar))
-        state.ARs[end] = _permute_front(inv(state.CR[end-1])*_permute_tail(al*c))
+        st.AR[end] = _permute_front(inv(st.CR[end-1])*_permute_tail(al*c))
+        st.AL[end] = al;
+        st.CR[end] = complex(c);
+        st.AR[1] = _permute_front(ar);
+        st.AC[1] = _permute_front(c*ar);
+
+        setleftenv!(envs,1,transfer_left(leftenv(envs,0),ham,0,st.AL[0],st.AL[0]));
+        setrightenv!(envs,0,transfer_right(rightenv(envs,1),ham,1,st.AR[1],st.AR[1]));
 
         #update error
         d1 = Diagonal(convert(Array,curc));
@@ -145,11 +172,13 @@ function find_groundstate(st::InfiniteMPS, ham::Hamiltonian,alg::Idmrg2,oenvs=en
         minl = min(length(d1),length(d2));
         delta = norm(d1[1:minl]-d2[1:minl])
 
-        delta<alg.tol_galerkin && break;
         alg.verbose && @info "idmrg iter $(topit) err $(delta)"
+
+        delta<alg.tol_galerkin && break;
+
     end
 
-    st = InfiniteMPS(state.AL[1:end],state.CR[end],tol=alg.tol_gauge);
-    oenvs = environments(st,ham,tol=oenvs.tol,maxiter=oenvs.maxiter)
-    return st,oenvs,delta;
+    nst = InfiniteMPS(st.AR[1:end],tol=alg.tol_gauge);
+    nenvs = environments(nst,ham,tol=oenvs.tol,maxiter=oenvs.maxiter)
+    return nst,nenvs,delta;
 end

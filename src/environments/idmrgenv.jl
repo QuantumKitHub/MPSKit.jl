@@ -1,38 +1,25 @@
 #=
 Idmrg environments are only to be used internally.
-They're environments of a finite state, but follow periodic boundary conditions
-and we need to be able to update the edges
+They have to be updated manually, without any kind of checks
 =#
 
-struct IdmrgEnv{E<:FinEnv}
-    finenv::E
+struct IDMRGEnv{H<:MPOHamiltonian,V<:MPSTensor}
+    opp :: H
+    lw :: PeriodicArray{V,2}
+    rw :: PeriodicArray{V,2}
 end
 
-function Base.getproperty(ca::IdmrgEnv,s::Symbol)
-    if s == :opp
-        return ca.finenv.opp;
-    else
-        return getfield(ca,s);
-    end
+function IDMRGEnv(state::InfiniteMPS,env::MPOHamInfEnv)
+    state === env.dependency || recalculate!(env,state);
+    IDMRGEnv(env.opp,deepcopy(env.lw),deepcopy(env.rw));
 end
 
-
-#    envs = environments(state,ham,leftenv(oenvs,1,st),rightenv(oenvs,length(st),st));
-function idmrgenv(state::FiniteMPS,ham,leftstart,rightstart)
-    finenv = environments(state,ham,leftstart,rightstart)
-    IdmrgEnv(finenv)
+leftenv(envs::IDMRGEnv,pos::Int,state=nothing) = envs.lw[pos,:];
+function setleftenv!(envs::IDMRGEnv,pos,lw)
+    envs.lw[pos,:] = lw[:]
 end
 
-function growleft!(env::IdmrgEnv,newleft)
-    env.finenv.leftenvs[1][:] = newleft
-    env.finenv.ldependencies[:] = similar.(env.finenv.ldependencies)
+rightenv(envs::IDMRGEnv,pos::Int,state=nothing) = envs.rw[pos,:];
+function setrightenv!(envs::IDMRGEnv,pos,rw)
+    envs.rw[pos,:] = rw[:]
 end
-
-function growright!(env::IdmrgEnv,newright)
-    env.finenv.rightenvs[end][:] = newright
-    env.finenv.rdependencies[:] = similar.(env.finenv.rdependencies)
-end
-
-
-leftenv(ca::IdmrgEnv,ind,state) = leftenv(ca.finenv,mod1(ind,length(state)),state)
-rightenv(ca::IdmrgEnv,ind,state) = rightenv(ca.finenv,mod1(ind,length(state)),state)

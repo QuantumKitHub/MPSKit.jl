@@ -8,7 +8,7 @@ c_prime(x,pos::CartesianIndex,mps,envs) = c_prime(x,Tuple(pos)...,mps,envs)
 """
     One-site derivative
 """
-function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IdmrgEnv})
+function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IDMRGEnv})
     ham=cache.opp
 
     toret=zero(x)
@@ -30,7 +30,7 @@ end
 """
     Two-site derivative
 """
-function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IdmrgEnv})
+function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IDMRGEnv})
     ham=cache.opp
 
     toret=zero(x)
@@ -68,7 +68,7 @@ end
 """
     Zero-site derivative (the C matrix to the right of pos)
 """
-function c_prime(x::MPSBondTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving,IdmrgEnv},cache)
+function c_prime(x::MPSBondTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
     toret=zero(x)
     ham=cache.opp
 
