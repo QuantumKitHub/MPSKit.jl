@@ -1,9 +1,10 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
 authors = ["Maarten Van Damme", "Jutho Haegeman", "Gertian Roose", "Markus Hauru"]
-version = "0.4.0"
+version = "0.5.0"
 
 [deps]
+FastClosures = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OptimKit = "77e91f04-9b3b-57a6-a776-40b61faaebe0"
@@ -18,3 +19,4 @@ Parameters = "0.12.1"
 TensorKit = "0.9.0"
 TensorKitManifolds = "0.5,0.6"
 julia = "1.4 - 1.7"
+FastClosures = "0.3"

@@ -192,6 +192,9 @@ function _envsetypes(d::Tuple)
     end
 end
 
+Base.getindex(x::MPOHamiltonian,a::AbstractVector{Int}) = MPOHamiltonian(PeriodicArray(x.Os[a,:,:]),PeriodicArray(x.domspaces[a,:]),PeriodicArray(x.pspaces[a]))
+Base.getindex(x::MPOHamiltonian,a::Int) = x[a:a];
+
 #utility functions for finite mpo
 function Base.getindex(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int)::T where {S,T,E}
     b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))

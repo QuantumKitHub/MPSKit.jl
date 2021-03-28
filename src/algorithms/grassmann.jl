@@ -25,7 +25,7 @@ function fg(x::Tuple{T,<:Cache}) where T <: Union{<:InfiniteMPS,FiniteMPS}
     ac_d = [ac_prime(state.AC[v], v, state, envs) for v in 1:length(state)]
     al_d = [d*c' for (d, c) in zip(ac_d, state.CR[1:end])]
     g = [Grassmann.project(d, a) for (d, a) in zip(al_d, state.AL)]
-    f = real(sum(expectation_value(state, envs.opp, envs)))
+    f = real(sum(expectation_value(state, envs)))
     return f, g
 end
 
@@ -38,7 +38,7 @@ function fg(x::Tuple{<:MPSMultiline,<:Cache})
     al_d = [d*c' for (d, c) in zip(ac_d, state.CR)]
     g = [Grassmann.project(d, a) for (d, a) in zip(al_d, state.AL)]
 
-    f = expectation_value(state, envs.opp, envs)
+    f = expectation_value(state, envs)
     fi = imag.(f); fr = real.(f);
 
     sum(fi) > MPSKit.Defaults.tol && @warn "mpo is not hermitian $(fi)"

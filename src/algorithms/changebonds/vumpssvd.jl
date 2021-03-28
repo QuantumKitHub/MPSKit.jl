@@ -35,15 +35,11 @@ function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,envs=
     for loc in 1:length(state)
         @tensor AC2[-1 -2;-3 -4] := state.AC[loc][-1,-2,1]*state.AR[loc+1][1,-3,-4]
 
-        (vals,vecs,_) = let state=state,envs=envs
-            eigsolve(x->ac2_prime(x,loc,state,envs),AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
-        end
-        nAC2=vecs[1]
+        (vals,vecs,_) = eigsolve(@closure(x->ac2_prime(x,loc,state,envs)),AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
+        nAC2 = vecs[1]
 
-        (vals,vecs,_)  = let state=state,envs=envs
-            eigsolve(x->c_prime(x,loc+1,state,envs),state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
-        end
-        nC2=vecs[1]
+        (vals,vecs,_)  = eigsolve(@closure(x->c_prime(x,loc+1,state,envs)),state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
+        nC2 = vecs[1]
 
         #svd ac2, get new AL1 and S,V ---> AC
         (AL1,S,V,eps) = tsvd(nAC2, (1,2), (3,4), trunc=alg.trscheme, alg=TensorKit.SVD())

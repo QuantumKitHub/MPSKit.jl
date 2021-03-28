@@ -20,7 +20,7 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
             #the alternative is using gradient descent, which is at least sure to converge...
             @tensor tos[-1 -2;-3]:=leftenv(mixedenvs,i,init)[-1,1]*A.AC[i][1,-2,2]*rightenv(mixedenvs,i,init)[2,-3]
 
-            (res,convhist)=linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
+            (res,convhist) = @closure linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
                 y=(eta*eta+w*w)*x
                 y-=2*w*ac_prime(x,i,init,envs1)
                 y+=ac_prime(x,i,init,envs2)
@@ -40,7 +40,7 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
 
     cb = leftenv(envs1,1,A);
     for i in 1:length(A)
-        cb = transfer_left(cb,ham,i,init.AL[i],A.AL[i]);
+        cb = transfer_left(cb,ham[i],init.AL[i],A.AL[i]);
     end
 
     b = 0*a

@@ -9,7 +9,7 @@
 end
 
 find_groundstate(state,H,alg::Dmrg,envs...) = find_groundstate!(copy(state),H,alg,envs...)
-function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,parameters = environments(state,H))
+function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg,envs = environments(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta::Float64 = 2*tol
 
@@ -17,12 +17,10 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
         delta=0.0
 
         for pos = [1:(length(state)-1);length(state):-1:2]
-            (eigvals,vecs) =  let state = state,parameters = parameters
-                eigsolve(state.AC[pos],1,:SR,Lanczos()) do x
-                    ac_prime(x,pos,state,parameters)
-                end
+            (eigvals,vecs) = @closure eigsolve(state.AC[pos],1,:SR,Lanczos()) do x
+                ac_prime(x,pos,state,envs)
             end
-            delta = max(delta,calc_galerkin(state,pos,parameters))
+            delta = max(delta,calc_galerkin(state,pos,envs))
 
             state.AC[pos] = vecs[1]
         end
@@ -33,11 +31,11 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
         iter += 1
 
         #finalize
-        (state,parameters,sc) = alg.finalize(iter,state,H,parameters);
+        (state,envs,sc) = alg.finalize(iter,state,H,envs);
         delta = sc ? delta : 2*tol; # if finalize decides we shouldn't converge, then don't
     end
 
-    return state,parameters,delta
+    return state,envs,delta
 end
 
 "twosite dmrg"
@@ -50,7 +48,7 @@ end
 end
 
 find_groundstate(state,H,alg::Dmrg2,envs...) = find_groundstate!(copy(state),H,alg,envs...)
-function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,parameters = environments(state,H))
+function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::Dmrg2,envs = environments(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta::Float64 = 2*tol
 
@@ -62,8 +60,8 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
         #left to right sweep
         for pos= 1:(length(state)-1)
             @tensor ac2[-1 -2; -3 -4]:=state.AC[pos][-1,-2,1]*state.AR[pos+1][1,-3,-4]
-            (eigvals,vecs) =  let state=state,parameters=parameters
-                eigsolve(x->ac2_prime(x,pos,state,parameters),ac2,1,:SR,ealg)
+            (eigvals,vecs) = @closure eigsolve(ac2,1,:SR,ealg) do x
+                ac2_prime(x,pos,state,envs)
             end
             newA2center = vecs[1]
 
@@ -79,8 +77,8 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
 
         for pos = length(state)-2:-1:1
             @tensor ac2[-1 -2; -3 -4]:=state.AL[pos][-1,-2,1]*state.AC[pos+1][1,-3,-4]
-            (eigvals,vecs) =  let state=state,parameters=parameters
-                eigsolve(x->ac2_prime(x,pos,state,parameters),ac2,1,:SR,ealg)
+            (eigvals,vecs) = @closure eigsolve(ac2,1,:SR,ealg) do x
+                ac2_prime(x,pos,state,envs)
             end
             newA2center = vecs[1]
 
@@ -96,10 +94,10 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
         alg.verbose && @info "Iteraton $(iter) error $(delta)"
         flush(stdout)
         #finalize
-        (state,parameters,sc) = alg.finalize(iter,state,H,parameters);
+        (state,envs,sc) = alg.finalize(iter,state,H,envs);
         delta = sc ? delta : 2*tol
         iter += 1
     end
 
-    return state,parameters,delta
+    return state,envs,delta
 end

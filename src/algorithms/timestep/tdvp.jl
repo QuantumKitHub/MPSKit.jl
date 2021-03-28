@@ -17,12 +17,12 @@ function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp
 
     @sync for (loc,(ac,c)) in enumerate(zip(state.AC,state.CR))
         @Threads.spawn begin
-            (temp_ACs[loc],convhist) = exponentiate(x->ac_prime(x,loc,state,envs) ,-1im*timestep,ac,Lanczos(tol=alg.tol))
+            (temp_ACs[loc],convhist) = exponentiate(@closure(x->ac_prime(x,loc,state,envs)) ,-1im*timestep,ac,Lanczos(tol=alg.tol))
             convhist.converged==0 && @info "time evolving ac($loc) failed $(convhist.normres)"
         end
 
         @Threads.spawn begin
-            (temp_CRs[loc],convhist) = exponentiate(x->c_prime(x,loc,state,envs) ,-1im*timestep,c,Lanczos(tol=alg.tol))
+            (temp_CRs[loc],convhist) = exponentiate(@closure(x->c_prime(x,loc,state,envs)) ,-1im*timestep,c,Lanczos(tol=alg.tol))
             convhist.converged==0 && @info "time evolving a($loc) failed $(convhist.normres)"
         end
     end
@@ -43,34 +43,20 @@ end
 function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp,envs=environments(state,H))
     #left to right
     for i in 1:(length(state)-1)
-        (state.AC[i],convhist)=let envs = envs,state = state
-            exponentiate(x->ac_prime(x,i,state,envs),-1im*timestep/2,state.AC[i],Lanczos(tol=alg.tolgauge))
-        end
+        (state.AC[i],convhist) = exponentiate(@closure(x->ac_prime(x,i,state,envs)),-1im*timestep/2,state.AC[i],Lanczos(tol=alg.tolgauge))
+        (state.CR[i],convhist) = exponentiate(@closure(x->c_prime(x,i,state,envs)),1im*timestep/2,state.CR[i],Lanczos(tol=alg.tolgauge))
 
-        (state.CR[i],convhist) = let envs = envs,state = state
-            exponentiate(x->c_prime(x,i,state,envs),1im*timestep/2,state.CR[i],Lanczos(tol=alg.tolgauge))
-        end
     end
 
-
-    (state.AC[end],convhist)=let envs = envs,state = state
-        exponentiate(x->ac_prime(x,length(state),state,envs),-1im*timestep/2,state.AC[end],Lanczos(tol=alg.tolgauge))
-    end
+    (state.AC[end],convhist) = exponentiate(@closure(x->ac_prime(x,length(state),state,envs)),-1im*timestep/2,state.AC[end],Lanczos(tol=alg.tolgauge))
 
     #right to left
     for i in length(state):-1:2
-        (state.AC[i],convhist)= let envs=envs, state = state
-            exponentiate(x->ac_prime(x,i,state,envs),-1im*timestep/2,state.AC[i],Lanczos(tol=alg.tolgauge))
-        end
-
-        (state.CR[i-1],convhist) = let envs = envs, state = state
-            exponentiate(x->c_prime(x,i-1,state,envs),1im*timestep/2,state.CR[i-1],Lanczos(tol=alg.tolgauge))
-        end
+        (state.AC[i],convhist) = exponentiate(@closure(x->ac_prime(x,i,state,envs)),-1im*timestep/2,state.AC[i],Lanczos(tol=alg.tolgauge))
+        (state.CR[i-1],convhist) = exponentiate(@closure(x->c_prime(x,i-1,state,envs)),1im*timestep/2,state.CR[i-1],Lanczos(tol=alg.tolgauge))
     end
 
-    (state.AC[1],convhist) = let envs=envs, state = state
-        exponentiate(x->ac_prime(x,1,state,envs),-1im*timestep/2,state.AC[1],Lanczos(tol=alg.tolgauge))
-    end
+    (state.AC[1],convhist) = exponentiate(@closure(x->ac_prime(x,1,state,envs)),-1im*timestep/2,state.AC[1],Lanczos(tol=alg.tolgauge))
 
     return state,envs
 end
@@ -89,19 +75,14 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::N
     for i in 1:(length(state)-1)
         ac2 = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
 
-        (nac2,convhist) = let state=state,envs=envs
-            exponentiate(x->ac2_prime(x,i,state,envs),-1im*timestep/2,ac2,Lanczos())
-        end
-
+        (nac2,convhist) = exponentiate(@closure(x->ac2_prime(x,i,state,envs)),-1im*timestep/2,ac2,Lanczos())
         (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme, alg=TensorKit.SVD())
 
         state.AC[i] = (nal,complex(nc))
         state.AC[i+1] = (complex(nc),_permute_front(nar))
 
         if(i!=(length(state)-1))
-            (state.AC[i+1],convhist) = let state=state,envs=envs
-                exponentiate(x->ac_prime(x,i+1,state,envs),1im*timestep/2,state.AC[i+1],Lanczos())
-            end
+            (state.AC[i+1],convhist) = exponentiate(@closure(x->ac_prime(x,i+1,state,envs)),1im*timestep/2,state.AC[i+1],Lanczos())
         end
 
     end
@@ -111,19 +92,14 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::N
     for i in length(state):-1:2
         ac2 = _permute_front(state.AL[i-1])*_permute_tail(state.AC[i])
 
-        (nac2,convhist) = let state=state,envs=envs
-            exponentiate(x->ac2_prime(x,i-1,state,envs),-1im*timestep/2,ac2,Lanczos())
-        end
-
+        (nac2,convhist) = exponentiate(@closure(x->ac2_prime(x,i-1,state,envs)),-1im*timestep/2,ac2,Lanczos())
         (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme,alg=TensorKit.SVD())
 
         state.AC[i-1] = (nal,complex(nc))
         state.AC[i] = (complex(nc),_permute_front(nar));
 
         if(i!=2)
-            (state.AC[i-1],convhist) = let state=state,envs=envs
-                exponentiate(x->ac_prime(x,i-1,state,envs),1im*timestep/2,state.AC[i-1],Lanczos())
-            end
+            (state.AC[i-1],convhist) = exponentiate(@closure(x->ac_prime(x,i-1,state,envs)),1im*timestep/2,state.AC[i-1],Lanczos())
         end
     end
 

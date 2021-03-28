@@ -104,9 +104,9 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
     for cr = 1:numrows
         (L0,R0) = init[cr]
 
-        (_,Ls,convhist) = eigsolve(x-> transfer_left(x,mpo[cr,:],above.AL[cr,:],below.AL[cr+1,:]),L0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
+        (_,Ls,convhist) = eigsolve(@closure(x-> transfer_left(x,mpo[cr,:],above.AL[cr,:],below.AL[cr+1,:])),L0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
         convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-        (_,Rs,convhist) = eigsolve(x-> transfer_right(x,mpo[cr,:],above.AR[cr,:],below.AR[cr+1,:]),R0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
+        (_,Rs,convhist) = eigsolve(@closure(x-> transfer_right(x,mpo[cr,:],above.AR[cr,:],below.AR[cr+1,:])),R0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
         convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
 
 

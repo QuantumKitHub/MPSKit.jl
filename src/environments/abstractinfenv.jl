@@ -23,6 +23,10 @@ function rightenv(envs::AbstractInfEnv,row::Int,col::Int,state)
     envs.rw[row,col]
 end
 
+
+leftenv(envs,pos::CartesianIndex,state) = leftenv(envs,Tuple(pos)...,state)
+rightenv(envs,pos::CartesianIndex,state) = rightenv(envs,Tuple(pos)...,state)
+
 function check_recalculate!(envs,state)
     if !(envs.dependency === state)
         #acquire the lock

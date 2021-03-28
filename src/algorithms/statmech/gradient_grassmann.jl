@@ -4,8 +4,7 @@ function leading_boundary(state::InfiniteMPS, H::InfiniteMPO, alg::GradientGrass
     return (state,envs,err)
 end
 
-function leading_boundary(state::MPSMultiline, H::MPOMultiline, alg::GradientGrassmann,envs=environments(state, H))
-
+function leading_boundary(state::MPSMultiline, H, alg::GradientGrassmann,envs=environments(state, H))
     res = optimize(GrassmannMPS.fg, (state, envs), alg.method;
                    transport! = GrassmannMPS.transport!,
                    retract = GrassmannMPS.retract,

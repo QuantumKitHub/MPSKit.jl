@@ -28,20 +28,17 @@ function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,env
 
         @sync for (loc,(ac,c)) in enumerate(zip(state.AC,state.CR))
             @Threads.spawn begin
-                (acvals,acvecs) = let state=state,envs=envs
-                    eigsolve(ac, 1, :SR, eigalg) do x
-                        ac_prime(x, loc, state, envs)
-                    end
+                (acvals,acvecs) = @closure eigsolve(ac, 1, :SR, eigalg) do x
+                    ac_prime(x, loc,state,envs)
                 end
                 temp_ACs[loc] = acvecs[1];
             end
 
             @Threads.spawn begin
-                (crvals,crvecs) = let state=state,envs=envs
-                    eigsolve(c, 1, :SR, eigalg) do x
-                        c_prime(x, loc, state, envs)
-                    end
+                (crvals,crvecs) = @closure eigsolve(c, 1, :SR, eigalg) do x
+                    c_prime(x, loc,state,envs)
                 end
+
                 temp_Cs[loc] = crvecs[1];
             end
 

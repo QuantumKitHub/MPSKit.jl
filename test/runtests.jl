@@ -144,7 +144,7 @@ end
     e1 = @constinferred expectation_value(window,ham);
 
     v1 = variance(window,ham)
-    (window,envs,_) = @constinferred find_groundstate(window,ham,Dmrg(verbose=false));
+    (window,envs,_) = find_groundstate(window,ham,Dmrg(verbose=false));
     v2 = variance(window,ham)
 
     e2 = @constinferred expectation_value(window,ham);
@@ -332,7 +332,7 @@ end
     (state,envs) = leading_boundary(state,mpo,alg);
 
     @test dim(space(state.AL[1,1],1)) == 13
-    @test expectation_value(state,mpo,envs)[1,1] ≈ 2.5337 atol=1e-3
+    @test expectation_value(state,envs)[1,1] ≈ 2.5337 atol=1e-3
 end
 
 @timedtestset "quasiparticle_excitation" begin

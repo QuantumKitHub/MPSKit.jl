@@ -13,7 +13,7 @@
     approximate the leading eigenvector for opp
 "
 function leading_boundary(state::InfiniteMPS,H,alg,envs=environments(state,H))
-    (st,pr,de) = leading_boundary(convert(MPSMultiline,state),H,alg,envs)
+    (st,pr,de) = leading_boundary(convert(MPSMultiline,state),Multiline([H]),alg,envs)
     return convert(InfiniteMPS,st),pr,de
 end
 
@@ -36,7 +36,7 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = ac_prime(x[i],i,col,state,envs);
+                        @Threads.spawn y[mod1(i+1,end)] = ac_prime(x[i],i,col,state,envs)
                     end
 
                     RecursiveVec(y)
@@ -50,7 +50,7 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = c_prime(x[i],i,col,state,envs);
+                        @Threads.spawn y[mod1(i+1,end)] = c_prime(x[i],i,col,state,envs)
                     end
 
                     RecursiveVec(y)

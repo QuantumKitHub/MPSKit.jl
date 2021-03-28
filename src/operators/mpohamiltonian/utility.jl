@@ -157,27 +157,29 @@ end
 TensorKit.fuse(f::T) where T<: VectorSpace = f
 
 #the usual mpoham transfer
-function transfer_left(vec::Vector{V},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSTensor
-    toreturn = [TensorMap(zeros,eltype(A),_lastspace(Ab)'*ham.imspaces[pos,i],_lastspace(A)') for i in 1:ham.odim]::Vector{V}
+function transfer_left(vec::Vector{V},ham::MPOHamiltonian,A::V,Ab::V=A) where V<:MPSTensor
+    size(ham,1) == 1 || throw(ArgumentError("ham.period > 1"))
+    toreturn = [TensorMap(zeros,eltype(A),_lastspace(Ab)'*ham.imspaces[1,i],_lastspace(A)') for i in 1:ham.odim]::Vector{V}
 
-    for (j,k) in keys(ham,pos)
-        if isscal(ham,pos,j,k)
-            toreturn[k]+=ham.Os[pos,j,k]*transfer_left(vec[j],A,Ab)
+    for (j,k) in keys(ham,1)
+        if isscal(ham,1,j,k)
+            toreturn[k]+=ham.Os[1,j,k]*transfer_left(vec[j],A,Ab)
         else
-            toreturn[k]+=transfer_left(vec[j],ham[pos,j,k],A,Ab)
+            toreturn[k]+=transfer_left(vec[j],ham[1,j,k],A,Ab)
         end
     end
 
     return toreturn
 end
-function transfer_right(vec::Vector{V},ham::MPOHamiltonian,pos::Int,A::V,Ab::V=A) where V<:MPSTensor
-    toreturn = [TensorMap(zeros,eltype(A),_firstspace(A)*ham.domspaces[pos,i],_firstspace(Ab)) for i in 1:ham.odim]::Vector{V}
+function transfer_right(vec::Vector{V},ham::MPOHamiltonian,A::V,Ab::V=A) where V<:MPSTensor
+    size(ham,1) == 1 || throw(ArgumentError("ham.period > 1"))
+    toreturn = [TensorMap(zeros,eltype(A),_firstspace(A)*ham.domspaces[1,i],_firstspace(Ab)) for i in 1:ham.odim]::Vector{V}
 
-    for (j,k) in keys(ham,pos)
-        if isscal(ham,pos,j,k)
-            toreturn[j]+=ham.Os[pos,j,k]*transfer_right(vec[k],A,Ab)
+    for (j,k) in keys(ham,1)
+        if isscal(ham,1,j,k)
+            toreturn[j]+=ham.Os[1,j,k]*transfer_right(vec[k],A,Ab)
         else
-            toreturn[j]+=transfer_right(vec[k],ham[pos,j,k],A,Ab)
+            toreturn[j]+=transfer_right(vec[k],ham[1,j,k],A,Ab)
         end
     end
 

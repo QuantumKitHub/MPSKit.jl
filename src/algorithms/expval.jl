@@ -34,8 +34,12 @@ end
 """
     calculates the expectation value for the given operator/hamiltonian
 """
-function expectation_value(state::MPSComoving,ham::MPOHamiltonian,envs=environments(state,ham))
-    vals = expectation_value_fimpl(state,ham,envs);
+expectation_value(state,ham::MPOHamiltonian,envs=environments(state,ham)) = expectation_value(state,envs);
+
+function expectation_value(state::MPSComoving,envs::FinEnv)
+    ham = envs.opp;
+
+    vals = expectation_value_fimpl(state,envs);
 
     tot = 0.0+0im;
     for i in 1:ham.odim
@@ -52,8 +56,11 @@ function expectation_value(state::MPSComoving,ham::MPOHamiltonian,envs=environme
 
     return vals,tot/(norm(state.AC[end])^2);
 end
-expectation_value(state::FiniteMPS,ham::MPOHamiltonian,envs=environments(state,ham)) = expectation_value_fimpl(state,ham,envs)
-function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,envs)
+
+expectation_value(state::FiniteMPS,envs::FinEnv) = expectation_value_fimpl(state,envs)
+function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},envs::FinEnv)
+    ham = envs.opp;
+
     ens=zeros(eltype(eltype(state)),length(state))
     for i=1:length(state)
         for (j,k) in keys(ham,i)
@@ -75,7 +82,8 @@ function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},ham::MPOHam
     return ens./n;
 end
 
-function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,prevca=environments(st,ham))
+function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
+    ham = prevca.opp;
     #calculate energy density
     len = length(st);
     ens = PeriodicArray(zeros(eltype(st.AR[1]),len));
@@ -90,13 +98,16 @@ function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,prevca=environmen
 end
 
 #the mpo hamiltonian over n sites has energy f+n*edens, which is what we calculate here. f can then be found as this - n*edens
-function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=environments(st,ham))
+expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=environments(st,ham)) = expectation_value(st,prevca,size);
+function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,size::Int)
+    ham = prevca.opp;
+
     len=length(st)
     start=leftenv(prevca,1,st)
     start=[@tensor x[-1 -2;-3]:=y[1,-2,3]*st.CR[0][3,-3]*conj(st.CR[0][1,-1]) for y in start]
 
     for i in 1:size
-        start=transfer_left(start,ham,i,st.AR[i],st.AR[i])
+        start=transfer_left(start,ham[i],st.AR[i],st.AR[i])
     end
 
     tot=0.0+0im
@@ -107,15 +118,16 @@ function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=
     return tot
 end
 
-expectation_value(st::InfiniteMPS,opp::InfiniteMPO,ca=environments(st,opp)) = expectation_value(convert(MPSMultiline,st),convert(MPOMultiline,opp),ca);
-function expectation_value(st::MPSMultiline,opp::MPOMultiline,ca=environments(st,opp))
+expectation_value(st::InfiniteMPS,ca::PerMPOInfEnv) = expectation_value(convert(MPSMultiline,st),ca);
+function expectation_value(st::MPSMultiline,ca::PerMPOInfEnv)
+    opp = ca.opp;
     retval = PeriodicArray{eltype(st.AC[1,1]),2}(undef,size(st,1),size(st,2));
     for (i,j) in Iterators.product(1:size(st,1),1:size(st,2))
         retval[i,j] = @tensor   leftenv(ca,i,j,st)[1,2,3]*
                                 opp[i,j][2,4,5,6]*
                                 st.AC[i,j][3,6,7]*
                                 rightenv(ca,i,j,st)[7,5,8]*
-                                conj(st.AC[i,j][1,4,8])
+                                conj(st.AC[i+1,j][1,4,8])
     end
     return retval
 end
