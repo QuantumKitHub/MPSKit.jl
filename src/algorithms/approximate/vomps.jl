@@ -27,8 +27,8 @@ function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMu
     while true
 
         @sync for col in 1:size(state,2)
-            @Threads.spawn temp_ACs[:,col] = circshift([ac_prime(ac,row,col,state,envs) for (row,ac) in enumerate(above.AC[:,col])],1)
-            @Threads.spawn temp_Cs[:,col]  = circshift([c_prime(c,row,col,state,envs) for (row,c) in enumerate(above.CR[:,col])],1)
+            @Threads.spawn temp_ACs[:,col] = circshift([ac_proj(row,col,state,envs) for row in 1:size(state,1)],1)
+            @Threads.spawn temp_Cs[:,col]  = circshift([c_proj(row,col,state,envs) for row in 1:size(state,1)],1)
         end
 
         for row in 1:size(state,1),col in 1:size(state,2)

@@ -535,25 +535,40 @@ end
 end
 
 @timedtestset "approximate" begin
-    st = InfiniteMPS([ℂ^2],[ℂ^10]);
-    th = nonsym_ising_ham(lambda=4);
+    @timedtestset "mpo * infinite ≈ infinite" begin
+        st = InfiniteMPS([ℂ^2],[ℂ^10]);
+        th = nonsym_ising_ham(lambda=4);
 
-    dt = 1e-3;
-    W1 = make_time_mpo(th,dt,WI());
-    W2 = make_time_mpo(th,dt,WII());
+        dt = 1e-3;
+        W1 = make_time_mpo(th,dt,WI());
+        W2 = make_time_mpo(th,dt,WII());
 
 
-    (st1,_) = approximate(st,(W1,st),Vomps(verbose=false));
-    (st2,_) = approximate(st,(W2,st),Vomps(verbose=false));
-    (st3,_) = timestep(st,th,dt,Tdvp());
-    st4 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
+        (st1,_) = approximate(st,(W1,st),Vomps(verbose=false));
+        (st2,_) = approximate(st,(W2,st),Vomps(verbose=false));
+        (st3,_) = timestep(st,th,dt,Tdvp());
+        st4 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
 
-    @test abs(dot(st1,st3)) ≈ 1.0 atol = dt
-    @test abs(dot(st2,st3)) ≈ 1.0 atol = dt
-    @test abs(dot(st4,st3)) ≈ 1.0 atol = dt
+        @test abs(dot(st1,st3)) ≈ 1.0 atol = dt
+        @test abs(dot(st2,st3)) ≈ 1.0 atol = dt
+        @test abs(dot(st4,st3)) ≈ 1.0 atol = dt
 
-    nW1 = changebonds(W1,SvdCut(trscheme=truncerr(dt))); #this should be a trivial mpo now
-    @test dim(space(nW1.opp[1,1],1)) == 1
+        nW1 = changebonds(W1,SvdCut(trscheme=truncerr(dt))); #this should be a trivial mpo now
+        @test dim(space(nW1.opp[1,1],1)) == 1
+    end
+
+    @timedtestset "finitemps1 ≈ finitemps2" for alg in [Dmrg(verbose=false),Dmrg2(verbose=false,trscheme=truncdim(10))]
+        a = FiniteMPS(10,ℂ^2,ℂ^10);
+        b = FiniteMPS(10,ℂ^2,ℂ^20);
+
+        before = abs(dot(a,b));
+
+        a = first(approximate(a,b,alg));
+
+        after = abs(dot(a,b));
+
+        @test before < after
+    end
 end
 
 @timedtestset "periodic boundary conditions" begin

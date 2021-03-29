@@ -6,7 +6,7 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
 
     envs1 = environments(init,ham) #environments for h
     (ham2,envs2) = squaredenvs(init,ham,envs1) #environments for h^2
-    mixedenvs = environments(A,init); #environments for <init | A>
+    mixedenvs = environments(init,A); #environments for <init | A>
 
     delta=2*tol
 

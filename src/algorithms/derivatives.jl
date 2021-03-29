@@ -95,3 +95,33 @@ end
 ac_prime(x,pos::CartesianIndex,mps,envs) = ac_prime(x,Tuple(pos)...,mps,envs)
 ac2_prime(x,pos::CartesianIndex,mps,envs) = ac2_prime(x,Tuple(pos)...,mps,envs)
 c_prime(x,pos::CartesianIndex,mps,envs) = c_prime(x,Tuple(pos)...,mps,envs)
+
+#downproject for approximate
+function c_proj(pos,below,envs::OvlEnv)
+    le = leftenv(envs,pos+1,below)
+    re = rightenv(envs,pos,below)
+
+    @tensor toret[-1;-2] := le[-1,1]*envs.above.CR[pos][1,2]*re[2,-2]
+end
+function c_proj(row,col,below,envs::MixPerMPOInfEnv)
+    c_prime(envs.above.CR[row,col],leftenv(envs,row,col+1,below),rightenv(envs,row,col,below))
+end
+function ac_proj(pos,below,envs::OvlEnv)
+    le = leftenv(envs,pos,below)
+    re = rightenv(envs,pos,below)
+
+    @tensor toret[-1 -2;-3] := le[-1,1]*envs.above.AC[pos][1,-2,2]*re[2,-3]
+end
+function ac_proj(row,col,below,envs::MixPerMPOInfEnv)
+    ac_prime(envs.above.AC[row,col],envs.opp[row,col],leftenv(envs,row,col,below),rightenv(envs,row,col,below))
+end
+function ac2_proj(pos,below,envs::OvlEnv)
+    le = leftenv(envs,pos,below)
+    re = rightenv(envs,pos+1,below)
+
+    @tensor toret[-1 -2;-3 -4] := le[-1,1]*envs.above.AC[pos][1,-2,2]*envs.above.AR[pos+1][2,-3,3]*re[3,-4]
+end
+function ac2_proj(row,col,below,envs::MixPerMPOInfEnv)
+    @tensor ac2[-1 -2;-3 -4] := envs.above.AC[row,col][-1,-2,1]*envs.above.AR[row,col+1][1,-3,-4]
+    ac2_prime(ac2,leftenv(envs,row,col+1,below),rightenv(envs,row,col+1,below))
+end

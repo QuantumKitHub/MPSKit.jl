@@ -107,6 +107,7 @@ module MPSKit
     include("algorithms/fidelity_susceptibility.jl")
 
     include("algorithms/approximate/vomps.jl")
+    include("algorithms/approximate/fvomps.jl")
 
     include("algorithms/ED.jl")
 

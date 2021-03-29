@@ -40,7 +40,7 @@ function environments(state,ham,weight,projectout::Vector)
     overlaps  = map(projectout) do st
         @tensor leftstart[-1 -2 -3;-4] := l_LL(st)[-3,-4]*l_LL(state)[-1,-2]
         @tensor rightstart[-1 -2 -3;-4] := r_RR(st)[-1,-2]*r_RR(state)[-3,-4]
-        environments(st,state,leftstart,rightstart)
+        environments(state,st,leftstart,rightstart)
     end
 
     FinExEnv(weight,overlaps,hamenv)
