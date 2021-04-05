@@ -113,13 +113,12 @@ function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg2,oenvs=e
         (al,c,ar,ϵ) = tsvd(vecs[1],trunc=alg.trscheme,alg=TensorKit.SVD())
         normalize!(c);
 
-
         st.AC[end] = al*c;
         st.AL[end] = al;
         st.CR[end] = complex(c);
         st.AR[1] = _permute_front(ar);
         st.AC[1] = _permute_front(c*ar);
-        st.AL[1] = leftorth(_permute_front(c*ar)*inv(st.CR[1]))[1];
+        st.AL[1] = _permute_front(c*ar)*inv(st.CR[1]);
 
         curc = complex(c);
 

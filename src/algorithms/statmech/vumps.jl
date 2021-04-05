@@ -71,8 +71,8 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(
         galerkin = calc_galerkin(state, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
-        (state,envs,sc) = alg.finalize(iter,state,H,envs);
-        if (galerkin <= alg.tol_galerkin && sc) || iter>=alg.maxiter
+        (state,envs) = alg.finalize(iter,state,H,envs);
+        if (galerkin <= alg.tol_galerkin) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
             return state, envs, galerkin
         end

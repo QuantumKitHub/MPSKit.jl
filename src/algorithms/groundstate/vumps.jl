@@ -57,8 +57,8 @@ function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,env
         galerkin   = calc_galerkin(state, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
-        (state,envs, external_conv) = alg.finalize(iter,state,H,envs) :: Tuple{InfiniteMPS{A,B},P,Bool};
-        if (galerkin <= alg.tol_galerkin && external_conv ) || iter>=alg.maxiter
+        (state,envs) = alg.finalize(iter,state,H,envs) :: Tuple{InfiniteMPS{A,B},P};
+        if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
             return state, envs, galerkin
         end
