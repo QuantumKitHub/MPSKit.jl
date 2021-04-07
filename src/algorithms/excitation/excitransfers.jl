@@ -97,7 +97,7 @@ function exci_transfer_right(RetType,vec,ham::MPOHamiltonian,A,Ab=A)
     return toreturn
 end
 
-function left_excitation_transfer_system(lBs,ham,exci::InfiniteQP;mom=exci.momentum)
+function left_excitation_transfer_system(lBs,ham,exci;mom=exci.momentum)
     len = ham.period
     found = zero.(lBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
@@ -138,7 +138,7 @@ function left_excitation_transfer_system(lBs,ham,exci::InfiniteQP;mom=exci.momen
     return found
 end
 
-function right_excitation_transfer_system(rBs,ham,exci::InfiniteQP;mom=exci.momentum)
+function right_excitation_transfer_system(rBs,ham,exci;mom=exci.momentum)
     len = ham.period
     found = zero.(rBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
