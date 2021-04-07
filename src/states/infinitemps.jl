@@ -21,6 +21,13 @@ Base.similar(st::InfiniteMPS) = InfiniteMPS(similar(st.AL),similar(st.AR),simila
 TensorKit.norm(st::InfiniteMPS) = norm(st.AC[1]);
 virtualspace(psi::InfiniteMPS, n::Integer) = _firstspace(psi.AL[n+1])
 
+TensorKit.space(psi::InfiniteMPS{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)
+function TensorKit.space(psi::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
+    t = psi.AC[n]
+    S = spacetype(t)
+    return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
+end
+
 function InfiniteMPS(pspaces::AbstractArray{S,1},Dspaces::AbstractArray{S,1};kwargs...) where S
     InfiniteMPS([TensorMap(rand,Defaults.eltype,Dspaces[mod1(i-1,length(Dspaces))]*pspaces[i],Dspaces[i]) for i in 1:length(pspaces)];kwargs...)
 end
