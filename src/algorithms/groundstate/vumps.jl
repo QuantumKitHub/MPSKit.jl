@@ -20,8 +20,8 @@ function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,env
     galerkin::Float64  = 1+alg.tol_galerkin
     iter      = 1
 
-    temp_ACs = similar(state.AC);
-    temp_Cs = similar(state.CR);
+    temp_ACs = similar.(state.AC);
+    temp_Cs = similar.(state.CR);
 
     while true
         eigalg = Arnoldi(tol=galerkin/(4*sqrt(iter)))

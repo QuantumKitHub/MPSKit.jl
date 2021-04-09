@@ -21,8 +21,8 @@ function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMu
     galerkin  = 1+alg.tol_galerkin
     iter       = 1
 
-    temp_ACs = map(x->x,state.AC);
-    temp_Cs = map(x->x,state.CR);
+    temp_ACs = similar.(state.AC);
+    temp_Cs = similar.(state.CR);
 
     while true
 
