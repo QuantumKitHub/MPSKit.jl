@@ -85,7 +85,7 @@ function effective_excitation_hamiltonian(ham::MPOHamiltonian, exci::QP,envs=env
 
             T -= Bs[i]*en
             if i>1 || exci isa InfiniteQP
-                @tensor T[-1,-2,-3,-4] +=    envs.lBs[mod1(i-1,end)][j][-1,1,-3,2]*
+                @tensor T[-1,-2,-3,-4] +=    envs.lBs[i-1][j][-1,1,-3,2]*
                                                     exci.right_gs.AR[i][2,3,4]*
                                                     ham[i,j,k][1,-2,5,3]*
                                                     rightenv(envs.renvs,i,exci.right_gs)[k][4,5,-4]
@@ -94,7 +94,7 @@ function effective_excitation_hamiltonian(ham::MPOHamiltonian, exci::QP,envs=env
                 @tensor T[-1,-2,-3,-4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1,1,2]*
                                                     exci.left_gs.AL[i][2,3,4]*
                                                     ham[i,j,k][1,-2,5,3]*
-                                                    envs.rBs[mod1(i+1,end)][k][4,-3,5,-4]
+                                                    envs.rBs[i+1][k][4,-3,5,-4]
             end
         end
 

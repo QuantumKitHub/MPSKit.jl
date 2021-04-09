@@ -4,8 +4,8 @@ seperates out this bit of logic from effective_excitation_hamiltonian (now more 
 can also - potentially - partially reuse this in other algorithms
 =#
 struct QPEnv{A,B} <: Cache
-    lBs::Array{A,1}
-    rBs::Array{A,1}
+    lBs::PeriodicArray{A,1}
+    rBs::PeriodicArray{A,1}
 
     lenvs::B
     renvs::B
@@ -77,7 +77,7 @@ function environments(exci::InfiniteQP,ham::MPOHamiltonian,lenvs=environments(ex
         rBs[i] += rBE
     end
 
-    return QPEnv(lBs,rBs,lenvs,renvs)
+    return QPEnv(PeriodicArray(lBs),PeriodicArray(rBs),lenvs,renvs)
 end
 
 function environments(exci::FiniteQP,ham::MPOHamiltonian,lenvs=environments(exci.left_gs,ham),renvs=exci.trivial ? lenvs : environments(exci.right_gs,ham))
@@ -104,5 +104,5 @@ function environments(exci::FiniteQP,ham::MPOHamiltonian,lenvs=environments(exci
     end
     rBs=reverse(rBs)
 
-    return QPEnv(lBs,rBs,lenvs,renvs)
+    return QPEnv(PeriodicArray(lBs),PeriodicArray(rBs),lenvs,renvs)
 end
