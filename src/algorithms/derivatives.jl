@@ -3,15 +3,13 @@
 """
     One-site derivative
 """
-function ac_prime(x::MPSTensor,ham::MPOHamiltonian,leftenv,rightenv)
-    ham.period == 1 || throw(ArgumentError("period mismatch (try ham[pos])"))
-
+function ac_prime(x::MPSTensor,ham::MPOHamSlice,leftenv,rightenv)
     toret = zero(x)
-    for (i,j) in opkeys(ham,1)
-        @tensor toret[-1,-2,-3]+=leftenv[i][-1,5,4]*x[4,2,1]*ham[1,i,j][5,-2,3,2]*rightenv[j][1,3,-3]
+    for (i,j) in opkeys(ham)
+        @tensor toret[-1,-2,-3]+=leftenv[i][-1,5,4]*x[4,2,1]*ham[i,j][5,-2,3,2]*rightenv[j][1,3,-3]
     end
-    for (i,j) in scalkeys(ham,1)
-        scal = ham.Os[1,i,j];
+    for (i,j) in scalkeys(ham)
+        scal = ham.Os[i,j];
         @tensor toret[-1,-2,-3]+=leftenv[i][-1,5,4]*(scal*x)[4,-2,1]*rightenv[j][1,5,-3]
     end
 
@@ -25,26 +23,24 @@ end
 """
     Two-site derivative
 """
-function ac2_prime(x::MPOTensor,ham::MPOHamiltonian,leftenv,rightenv)
-    ham.period == 2 || throw(ArgumentError("period mismatch (try ham[pos])"))
-
+function ac2_prime(x::MPOTensor,h1::MPOHamSlice,h2::MPOHamSlice,leftenv,rightenv)
     toret=zero(x)
 
-    for (i,j) in keys(ham,1)
-        for k in 1:ham.odim
-            contains(ham,2,j,k) || continue
+    for (i,j) in keys(h1)
+        for k in 1:h1.odim
+            contains(h2,j,k) || continue
 
-            if isscal(ham,1,i,j) && isscal(ham,2,j,k)
-                scal = ham.Os[1,i,j]*ham.Os[2,j,k]
+            if isscal(h1,i,j) && isscal(h2,j,k)
+                scal = h1.Os[i,j]*h2.Os[j,k]
                 @tensor toret[-1,-2,-3,-4] += (scal*leftenv[i])[-1,7,6]*x[6,-2,-3,1]*rightenv[k][1,7,-4]
-            elseif isscal(ham,1,i,j)
-                scal = ham.Os[1,i,j]
-                @tensor toret[-1,-2,-3,-4]+=(scal*leftenv[i])[-1,7,6]*x[6,-2,3,1]*ham[2,j,k][7,-3,2,3]*rightenv[k][1,2,-4]
-            elseif isscal(ham,2,j,k)
-                scal = ham.Os[2,j,k]
-                @tensor toret[-1,-2,-3,-4]+=(scal*leftenv[i])[-1,7,6]*x[6,5,-3,1]*ham[1,i,j][7,-2,2,5]*rightenv[k][1,2,-4]
+            elseif isscal(h1,i,j)
+                scal = h1.Os[i,j]
+                @tensor toret[-1,-2,-3,-4]+=(scal*leftenv[i])[-1,7,6]*x[6,-2,3,1]*h2[j,k][7,-3,2,3]*rightenv[k][1,2,-4]
+            elseif isscal(h2,j,k)
+                scal = h2.Os[j,k]
+                @tensor toret[-1,-2,-3,-4]+=(scal*leftenv[i])[-1,7,6]*x[6,5,-3,1]*h1[i,j][7,-2,2,5]*rightenv[k][1,2,-4]
             else
-                @tensor toret[-1,-2,-3,-4]+=leftenv[i][-1,7,6]*x[6,5,3,1]*ham[1,i,j][7,-2,4,5]*ham[2,j,k][4,-3,2,3]*rightenv[k][1,2,-4]
+                @tensor toret[-1,-2,-3,-4]+=leftenv[i][-1,7,6]*x[6,5,3,1]*h1[i,j][7,-2,4,5]*h2[j,k][4,-3,2,3]*rightenv[k][1,2,-4]
             end
         end
 
@@ -52,9 +48,8 @@ function ac2_prime(x::MPOTensor,ham::MPOHamiltonian,leftenv,rightenv)
 
     return toret
 end
-function ac2_prime(x::MPOTensor,opps::AbstractVector{<:MPOTensor},leftenv,rightenv)
-    length(opps) == 2 || throw(ArgumentError("length(opps) = $(length(opps)) != 2"));
-    @tensor toret[-1 -2;-3 -4]:=leftenv[-1,2,1]*x[1,3,4,5]*opps[1][2,-2,6,3]*opps[2][6,-3,7,4]*rightenv[5,7,-4]
+function ac2_prime(x::MPOTensor,opp1::MPOTensor,opp2::MPOTensor,leftenv,rightenv)
+    @tensor toret[-1 -2;-3 -4]:=leftenv[-1,2,1]*x[1,3,4,5]*opp1[2,-2,6,3]*opp2[6,-3,7,4]*rightenv[5,7,-4]
 end
 
 
@@ -79,10 +74,10 @@ function ac_prime(x::MPSTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMult
     ac_prime(x,envs.opp[row,col],leftenv(envs,row,col,mps),rightenv(envs,row,col,mps));
 end
 function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IDMRGEnv})
-    ac2_prime(x,cache.opp[pos:pos+1],leftenv(cache,pos,mps),rightenv(cache,pos+1,mps));
+    ac2_prime(x,cache.opp[pos],cache.opp[pos+1],leftenv(cache,pos,mps),rightenv(cache,pos+1,mps));
 end
 function ac2_prime(x::MPOTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::Union{MixPerMPOInfEnv,PerMPOInfEnv})
-    ac2_prime(x,envs.opp[row,col:col+1],leftenv(envs,row,col,mps),rightenv(envs,row,col+1,mps))
+    ac2_prime(x,envs.opp[row,col],envs.opp[row,col+1],leftenv(envs,row,col,mps),rightenv(envs,row,col+1,mps))
 end
 function c_prime(x::MPSBondTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
     c_prime(x,leftenv(cache,pos+1,mps),rightenv(cache,pos,mps))

@@ -48,15 +48,15 @@ end
 Base.similar(v::LeftGaugedQP,t=eltype(v)) = LeftGaugedQP(v.left_gs,v.right_gs,v.VLs,map(e->similar(e,t),v.Xs),v.momentum)
 Base.similar(v::RightGaugedQP,t=eltype(v)) = RightGaugedQP(v.left_gs,v.right_gs,map(e->similar(e,t),v.Xs),v.VRs,v.momentum)
 
-Base.getindex(v::LeftGaugedQP,i::Int) = v.VLs[i]*v.Xs[i];
-Base.getindex(v::RightGaugedQP,i::Int) = @tensor t[-1 -2;-3 -4] := v.Xs[i][-1,-3,1]*v.VRs[i][1,-2,-4];
+Base.getindex(v::LeftGaugedQP,i::Int) = v.VLs[mod1(i,end)]*v.Xs[mod1(i,end)];
+Base.getindex(v::RightGaugedQP,i::Int) = @tensor t[-1 -2;-3 -4] := v.Xs[mod1(i,end)][-1,-3,1]*v.VRs[mod1(i,end)][1,-2,-4];
 
 function Base.setindex!(v::LeftGaugedQP,B,i::Int)
-    v.Xs[i] = v.VLs[i]'*B
+    v.Xs[mod1(i,end)] = v.VLs[mod1(i,end)]'*B
     v
 end
 function Base.setindex!(v::RightGaugedQP,B,i::Int)
-    @tensor v.Xs[i][-1; -2 -3]:=B[-1,1,-2,2]*conj(v.VRs[i][-3,1,2])
+    @tensor v.Xs[mod1(i,end)][-1; -2 -3]:=B[-1,1,-2,2]*conj(v.VRs[mod1(i,end)][-3,1,2])
     v
 end
 

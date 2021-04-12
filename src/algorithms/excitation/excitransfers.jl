@@ -23,31 +23,29 @@ exci_transfer_left(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) = @te
 exci_transfer_right(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) = @tensor v[-1 -2;-3 -4] := A[-1,1,5]*O[-3,3,4,1]*conj(Ab[-4,3,2])*v[5,-2,4,2]
 
 #A is an excitation tensor; with an excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamiltonian,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor = exci_transfer_left(M,vec,ham,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamiltonian,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor = exci_transfer_right(M,vec,ham,A,Ab)
+exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor = exci_transfer_left(M,vec,ham,A,Ab)
+exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor = exci_transfer_right(M,vec,ham,A,Ab)
 
 #v has an extra excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamiltonian,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor = exci_transfer_left(V,vec,ham,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamiltonian,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor = exci_transfer_right(V,vec,ham,A,Ab)
+exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor = exci_transfer_left(V,vec,ham,A,Ab)
+exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor = exci_transfer_right(V,vec,ham,A,Ab)
 
-function exci_transfer_left(RetType,vec,ham::MPOHamiltonian,A,Ab=A)
-    ham.period == 1 || throw(ArgumentError("period mismatch"))
-
+function exci_transfer_left(RetType,vec,ham::MPOHamSlice,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
-    for (j,k) in keys(ham,1)
+    for (j,k) in keys(ham)
         if assigned[k]
-            if isscal(ham,1,j,k)
-                toreturn[k]+=ham.Os[1,j,k]*exci_transfer_left(vec[j],A,Ab)
+            if isscal(ham,j,k)
+                toreturn[k]+=ham.Os[j,k]*exci_transfer_left(vec[j],A,Ab)
             else
-                toreturn[k]+=exci_transfer_left(vec[j],ham[1,j,k],A,Ab)
+                toreturn[k]+=exci_transfer_left(vec[j],ham[j,k],A,Ab)
             end
         else
-            if isscal(ham,1,j,k)
-                toreturn[k]=ham.Os[1,j,k]*exci_transfer_left(vec[j],A,Ab)
+            if isscal(ham,j,k)
+                toreturn[k]=ham.Os[j,k]*exci_transfer_left(vec[j],A,Ab)
             else
-                toreturn[k]=exci_transfer_left(vec[j],ham[1,j,k],A,Ab)
+                toreturn[k]=exci_transfer_left(vec[j],ham[j,k],A,Ab)
             end
             assigned[k]=true
         end
@@ -58,31 +56,29 @@ function exci_transfer_left(RetType,vec,ham::MPOHamiltonian,A,Ab=A)
         if !assigned[k]
             #prefereably this never happens, because it's a wasted step
             #it's also avoideable with a little bit more code
-            toreturn[k]=exci_transfer_left(vec[1],ham[1,1,k],A,Ab)
+            toreturn[k]=exci_transfer_left(vec[1],ham[1,k],A,Ab)
         end
     end
 
     return toreturn
 end
-function exci_transfer_right(RetType,vec,ham::MPOHamiltonian,A,Ab=A)
-    ham.period == 1 || throw(ArgumentError("period mismatch"))
-
+function exci_transfer_right(RetType,vec,ham::MPOHamSlice,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
-    for (j,k) in keys(ham,1)
+    for (j,k) in keys(ham)
         if assigned[j]
-            if isscal(ham,1,j,k)
-                toreturn[j]+=ham.Os[1,j,k]*exci_transfer_right(vec[k],A,Ab)
+            if isscal(ham,j,k)
+                toreturn[j]+=ham.Os[j,k]*exci_transfer_right(vec[k],A,Ab)
             else
-                toreturn[j]+=exci_transfer_right(vec[k],ham[1,j,k],A,Ab)
+                toreturn[j]+=exci_transfer_right(vec[k],ham[j,k],A,Ab)
             end
 
         else
-            if isscal(ham,1,j,k)
-                toreturn[j]=ham.Os[1,j,k]*exci_transfer_right(vec[k],A,Ab)
+            if isscal(ham,j,k)
+                toreturn[j]=ham.Os[j,k]*exci_transfer_right(vec[k],A,Ab)
             else
-                toreturn[j]=exci_transfer_right(vec[k],ham[1,j,k],A,Ab)
+                toreturn[j]=exci_transfer_right(vec[k],ham[j,k],A,Ab)
             end
             assigned[j]=true
         end
@@ -90,7 +86,7 @@ function exci_transfer_right(RetType,vec,ham::MPOHamiltonian,A,Ab=A)
 
     for j in 1:ham.odim
         if !assigned[j]
-            toreturn[j]=exci_transfer_right(vec[1],ham[1,j,1],A,Ab)
+            toreturn[j]=exci_transfer_right(vec[1],ham[j,1],A,Ab)
         end
     end
 
