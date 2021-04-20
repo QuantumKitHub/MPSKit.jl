@@ -21,7 +21,7 @@ function _permute_as(t1::AbstractTensorMap, t2::AbstractTensorMap)
         permute(t1, TensorKit.codomainind(t2), TensorKit.domainind(t2))
     else
         levels = allind(t1)
-        braid(t1, TensorKit.codomainind(t2), TensorKit.domainind(t2))
+        braid(t1, levels, TensorKit.codomainind(t2), TensorKit.domainind(t2))
     end
 end
 _firstspace(t::AbstractTensorMap) = space(t, 1)
