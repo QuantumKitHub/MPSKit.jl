@@ -10,15 +10,11 @@ println("------------------------------------")
 
     ts = FiniteMPS(rand,elt,rand(3:20),d,D);
 
-    ovl = @constinferred dot(ts,ts);
+    ovl = dot(ts,ts);
 
     @test ovl ≈ norm(ts.AC[1])^2
 
     for i in 1:length(ts)
-        @constinferred getindex(ts.AC,i)
-        @constinferred getindex(ts.AR,i)
-        @constinferred getindex(ts.AL,i)
-
         @test ts.AC[i] ≈ ts.AL[i]*ts.CR[i]
         @test ts.AC[i] ≈ MPSKit._permute_front(ts.CR[i-1]*MPSKit._permute_tail(ts.AR[i]))
     end
@@ -37,23 +33,9 @@ end
         ]
     tol = Float64(eps(real(elt))*100);
 
-    #constinferred fails here - didn't debug yet
-    ts = @inferred InfiniteMPS([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
+    ts = InfiniteMPS([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
 
     for i in 1:length(ts)
-        @constinferred getindex(ts.AC,i)
-        @constinferred getindex(ts.AR,i)
-        @constinferred getindex(ts.AL,i)
-
-        @constinferred l_LL(ts,i)
-        @constinferred l_LR(ts,i)
-        @constinferred l_RL(ts,i)
-        @constinferred l_RR(ts,i)
-        @constinferred r_LL(ts,i)
-        @constinferred r_LR(ts,i)
-        @constinferred r_RL(ts,i)
-        @constinferred r_RR(ts,i)
-
         @tensor difference[-1,-2,-3] := ts.AL[i][-1,-2,1]*ts.CR[i][1,-3]-ts.CR[i-1][-1,1]*ts.AR[i][1,-2,-3];
         @test norm(difference,Inf) < tol*10;
 
@@ -75,22 +57,9 @@ end
         ]
 
     tol = Float64(eps(real(elt))*100);
-    ts = @inferred MPSMultiline([TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D);TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D)],tol = tol);
+    ts = MPSMultiline([TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D);TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D)],tol = tol);
 
     for i = 1:size(ts,1), j = 1:size(ts,2)
-        @constinferred getindex(ts.AC,i,j)
-        @constinferred getindex(ts.AR,i,j)
-        @constinferred getindex(ts.AL,i,j)
-
-        @constinferred l_LL(ts,i,j)
-        @constinferred l_LR(ts,i,j)
-        @constinferred l_RL(ts,i,j)
-        @constinferred l_RR(ts,i,j)
-        @constinferred r_LR(ts,i,j)
-        @constinferred r_LL(ts,i,j)
-        @constinferred r_RL(ts,i,j)
-        @constinferred r_RR(ts,i,j)
-
         @tensor difference[-1,-2,-3] := ts.AL[i,j][-1,-2,1]*ts.CR[i,j][1,-3]-ts.CR[i,j-1][-1,1]*ts.AR[i,j][1,-2,-3];
         @test norm(difference,Inf) < tol*10;
 
@@ -109,16 +78,16 @@ end
 
 @timedtestset "MPSComoving" begin
     ham = nonsym_ising_ham(lambda=4.0);
-    (gs,_,_) = @constinferred find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
+    (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
 
     #constructor 1 - give it a plain array of tensors
-    window_1 = @constinferred MPSComoving(gs,copy.([gs.AC[1];[gs.AR[i] for i in 2:10]]),gs);
+    window_1 = MPSComoving(gs,copy.([gs.AC[1];[gs.AR[i] for i in 2:10]]),gs);
 
     #constructor 2 - used to take a "slice" from an infinite mps
-    window_2 = @constinferred MPSComoving(gs,10);
+    window_2 = MPSComoving(gs,10);
 
     # we should logically have that window_1 approximates window_2
-    ovl = @constinferred dot(window_1,window_2)
+    ovl = dot(window_1,window_2)
     @test ovl ≈ 1 atol=1e-8
 
     #constructor 3 - random initial tensors
@@ -126,10 +95,6 @@ end
     normalize!(window);
 
     for i in 1:length(window)
-        @constinferred getindex(window.AC,i)
-        @constinferred getindex(window.AR,i)
-        @constinferred getindex(window.AL,i)
-
         @test window.AC[i] ≈ window.AL[i]*window.CR[i]
         @test window.AC[i] ≈ MPSKit._permute_front(window.CR[i-1]*MPSKit._permute_tail(window.AR[i]))
     end
@@ -141,21 +106,21 @@ end
     @test 9*9 ≈ norm(window)^2
     normalize!(window)
 
-    e1 = @constinferred expectation_value(window,ham);
+    e1 = expectation_value(window,ham);
 
     v1 = variance(window,ham)
     (window,envs,_) = find_groundstate(window,ham,Dmrg(verbose=false));
     v2 = variance(window,ham)
 
-    e2 = @constinferred expectation_value(window,ham);
+    e2 = expectation_value(window,ham);
 
     @test v2<v1
     @test real(e2[2]) ≤ real(e1[2])
 
-    (window,envs) = @constinferred timestep(window,ham,0.1,Tdvp2(),envs)
-    (window,envs) = @constinferred timestep(window,ham,0.1,Tdvp(),envs)
+    (window,envs) = timestep(window,ham,0.1,Tdvp2(),envs)
+    (window,envs) = timestep(window,ham,0.1,Tdvp(),envs)
 
-    e3 = @constinferred expectation_value(window,ham);
+    e3 = expectation_value(window,ham);
 
     @test e2[1] ≈ e3[1]
     @test e2[2] ≈ e3[2]
@@ -171,8 +136,8 @@ end
         normalize!(ts);
 
         #rand_quasiparticle is a private non-exported function
-        qst1 = @constinferred MPSKit.LeftGaugedQP(rand,ts);
-        qst2 = @constinferred MPSKit.LeftGaugedQP(rand,ts);
+        qst1 = MPSKit.LeftGaugedQP(rand,ts);
+        qst2 = MPSKit.LeftGaugedQP(rand,ts);
 
         @test norm(axpy!(1,qst1,copy(qst2))) ≤ norm(qst1) + norm(qst2)
         @test norm(qst1)*3 ≈ norm(qst1*3)
@@ -182,13 +147,13 @@ end
         qst1_f = convert(FiniteMPS,qst1);
         qst2_f = convert(FiniteMPS,qst2);
 
-        ovl_f = @constinferred dot(qst1_f,qst2_f)
-        ovl_q = @constinferred dot(qst1,qst2)
+        ovl_f = dot(qst1_f,qst2_f)
+        ovl_q = dot(qst1,qst2)
         @test ovl_f ≈ ovl_q atol=1e-5
         @test norm(qst1_f) ≈ norm(qst1) atol=1e-5
 
-        ev_f = @constinferred sum(expectation_value(qst1_f,th)-expectation_value(ts,th))
-        ev_q = @constinferred dot(qst1,effective_excitation_hamiltonian(th,qst1));
+        ev_f = sum(expectation_value(qst1_f,th)-expectation_value(ts,th))
+        ev_q = dot(qst1,effective_excitation_hamiltonian(th,qst1));
         @test ev_f ≈ ev_q atol=1e-5
     end
 
@@ -198,11 +163,11 @@ end
         ]
 
         period = rand(1:4);
-        ts = @constinferred InfiniteMPS(fill(d,period),fill(D,period));
+        ts = InfiniteMPS(fill(d,period),fill(D,period));
 
         #rand_quasiparticle is a private non-exported function
-        qst1 = @constinferred MPSKit.LeftGaugedQP(rand,ts);
-        qst2 = @constinferred MPSKit.LeftGaugedQP(rand,ts);
+        qst1 = MPSKit.LeftGaugedQP(rand,ts);
+        qst2 = MPSKit.LeftGaugedQP(rand,ts);
 
         @test norm(axpy!(1,qst1,copy(qst2))) ≤ norm(qst1) + norm(qst2)
         @test norm(qst1)*3 ≈ norm(qst1*3)
@@ -234,10 +199,10 @@ println("------------------------------------")
     d3[1,1,2] = mpoified[1];
     d3[1,2,3] = mpoified[2];
     d3[1,3,4] = mpoified[3];
-    h1 = @constinferred MPOHamiltonian(d3);
+    h1 = MPOHamiltonian(d3);
 
     #¢an you pass in the actual hamiltonian?
-    h2 = @constinferred MPOHamiltonian(nn);
+    h2 = MPOHamiltonian(nn);
 
     #can you generate a hamiltonian using only onsite interactions?
     d1 = Array{Any,3}(missing,2,3,3);
@@ -300,7 +265,7 @@ println("------------------------------------")
         ])
 
     v1 = variance(state,ham);
-    (ts,envs,delta) =  @constinferred find_groundstate(state,ham,alg)
+    (ts,envs,delta) =  find_groundstate(state,ham,alg)
     v2 = variance(ts,ham);
 
     @test v1 > v2
@@ -316,7 +281,7 @@ end
 
     edens = expectation_value(state,opp);
 
-    (state,_) = @constinferred timestep(state,opp,rand()/10,alg)
+    (state,_) = timestep(state,opp,rand()/10,alg)
 
     @test sum(expectation_value(state,opp)) ≈ sum(edens) atol = 1e-2
 end
@@ -328,7 +293,7 @@ end
     mpo = nonsym_ising_mpo();
     state = InfiniteMPS([ℂ^2],[ℂ^10]);
     (state,envs) = leading_boundary(state,mpo,alg);
-    (state,envs) = @constinferred changebonds(state,mpo,OptimalExpand(trscheme=truncdim(3)),envs)
+    (state,envs) = changebonds(state,mpo,OptimalExpand(trscheme=truncdim(3)),envs)
     (state,envs) = leading_boundary(state,mpo,alg);
 
     @test dim(space(state.AL[1,1],1)) == 13
@@ -374,7 +339,6 @@ end
 @timedtestset "changebonds $((pspace,Dspace))" for (pspace,Dspace) in [(ℂ^4,ℂ^10),
         (Rep[SU₂](1=>1),Rep[SU₂](0=>10,1=>5,2=>1))]
 
-    #=
     @timedtestset "mpo" begin
         #random nn interaction
         nn = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace);
@@ -385,7 +349,6 @@ end
 
         @test dim(space(mpo2[5],1)) < dim(space(mpo1[5],1))
     end
-    =#
 
     @timedtestset "infinite mps" begin
         #random nn interaction
