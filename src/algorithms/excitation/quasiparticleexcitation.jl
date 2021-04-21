@@ -19,7 +19,7 @@ function excitations(hamiltonian::Hamiltonian, alg::QuasiparticleAnsatz, momentu
     V_initial = LeftGaugedQP(rand,mpsleft,mpsright;sector=sector,momentum=momentum);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
-    eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, environments(V,hamiltonian,environmentsleft, environmentsright))
+    eigEx = @closure(V->effective_excitation_hamiltonian(hamiltonian, V, environments(V,hamiltonian,environmentsleft, environmentsright)))
     Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=alg.toler,krylovdim=alg.krylovdim)
     convhist.converged<num && @warn "quasiparticle didn't converge k=$(momentum) $(convhist.normres)"
 
@@ -33,7 +33,7 @@ function excitations(hamiltonian::Hamiltonian, alg::QuasiparticleAnsatz, mpsleft
     V_initial = LeftGaugedQP(rand,mpsleft,mpsright;sector=sector);
 
     #the function that maps x->B and then places this in the excitation hamiltonian
-    eigEx(V) = effective_excitation_hamiltonian(hamiltonian, V, environments(V,hamiltonian,environmentsleft, environmentsright))
+    eigEx = @closure(V->effective_excitation_hamiltonian(hamiltonian, V, environments(V,hamiltonian,environmentsleft, environmentsright)))
     Es,Vs,convhist = eigsolve(eigEx, V_initial, num, :SR, tol=alg.toler,krylovdim=alg.krylovdim)
     convhist.converged<num && @warn "quasiparticle didn't converge $(convhist.normres)"
 

@@ -50,8 +50,8 @@ function environments(exci::InfiniteQP,ham::MPOHamiltonian,lenvs=environments(ex
     end
     rBs = reverse(rBs)
 
-    lBE = left_excitation_transfer_system(lB_cur,ham,exci)
-    rBE = right_excitation_transfer_system(rB_cur,ham,exci)
+    lBE::typeof(rB_cur) = left_excitation_transfer_system(lB_cur,ham,exci)
+    rBE::typeof(rB_cur) = right_excitation_transfer_system(rB_cur,ham,exci)
 
     lBs[end] = lBE;
 

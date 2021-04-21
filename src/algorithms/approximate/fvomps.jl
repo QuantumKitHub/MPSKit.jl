@@ -13,7 +13,7 @@ function approximate!(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::Dmr
     while iter < maxiter && delta > tol
         delta = 0.0
 
-        (init,envs) = alg.finalize(iter,init,squash,envs);
+        (init,envs) = alg.finalize(iter,init,squash,envs)::Tuple{typeof(init),typeof(envs)};
 
         for pos=[1:(length(init)-1);length(init)-2:-1:1]
             ac2 = init.AC[pos]*_permute_tail(init.AR[pos+1]);
@@ -48,9 +48,9 @@ function approximate!(init::Union{MPSComoving,FiniteMPS}, squash::Vector,alg::Dm
 
     while iter < maxiter && delta > tol
         delta=0.0
-        
+
         #finalize
-        (init,envs) = alg.finalize(iter,init,squash,envs);
+        (init,envs) = alg.finalize(iter,init,squash,envs)::Tuple{typeof(init),typeof(envs)};
 
         for pos = [1:(length(init)-1);length(init):-1:2]
             newac = sum(map(zip(squash,envs)) do (sq,pr)

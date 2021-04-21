@@ -102,31 +102,31 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
     righties = PeriodicArray{T,2}(undef,numrows,numcols);
 
     @sync for cr = 1:numrows
-        @Threads.spawn let init=init,above=above,below=below,mpo=mpo
-            (L0,R0) = init[cr]
+        @Threads.spawn begin
+            (L0,R0) = $init[cr]
 
-            (_,Ls,convhist) = eigsolve(@closure(x-> transfer_left(x,mpo[cr,:],above.AL[cr,:],below.AL[cr+1,:])),L0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
+            (_,Ls,convhist) = eigsolve(x-> transfer_left(x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:]),L0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
             convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-            (_,Rs,convhist) = eigsolve(@closure(x-> transfer_right(x,mpo[cr,:],above.AR[cr,:],below.AR[cr+1,:])),R0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
+            (_,Rs,convhist) = eigsolve(x-> transfer_right(x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:]),R0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
             convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
 
 
-            lefties[cr,1] = Ls[1]
+            $lefties[cr,1] = Ls[1]
             for loc in 2:numcols
-                lefties[cr,loc] = transfer_left(lefties[cr,loc-1],mpo[cr,loc-1],above.AL[cr,loc-1],below.AL[cr+1,loc-1])
+                $lefties[cr,loc] = transfer_left($lefties[cr,loc-1],$mpo[cr,loc-1],$above.AL[cr,loc-1],$below.AL[cr+1,loc-1])
             end
 
-            renormfact = @tensor Ls[1][1,2,3]*above.CR[cr,0][3,4]*Rs[1][4,2,5]*conj(below.CR[cr+1,0][1,5])
+            renormfact::eltype(T) = @tensor Ls[1][1,2,3]*above.CR[cr,0][3,4]*Rs[1][4,2,5]*conj(below.CR[cr+1,0][1,5])
 
-            righties[cr,end] = Rs[1]/sqrt(renormfact);
-            lefties[cr,1] /=sqrt(renormfact);
+            $righties[cr,end] = Rs[1]/sqrt(renormfact);
+            $lefties[cr,1] /=sqrt(renormfact);
 
             for loc in numcols-1:-1:1
-                righties[cr,loc] = transfer_right(righties[cr,loc+1],mpo[cr,loc+1],above.AR[cr,loc+1],below.AR[cr+1,loc+1])
+                $righties[cr,loc] = transfer_right($righties[cr,loc+1],$mpo[cr,loc+1],$above.AR[cr,loc+1],$below.AR[cr+1,loc+1])
 
                 renormfact = @tensor lefties[cr,loc+1][1,2,3]*above.CR[cr,loc][3,4]*righties[cr,loc][4,2,5]*conj(below.CR[cr+1,loc][1,5])
-                righties[cr,loc]/=sqrt(renormfact)
-                lefties[cr,loc+1]/=sqrt(renormfact)
+                $righties[cr,loc]/=sqrt(renormfact)
+                $lefties[cr,loc+1]/=sqrt(renormfact)
             end
         end
     end

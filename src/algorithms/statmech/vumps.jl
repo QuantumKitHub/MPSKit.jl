@@ -32,30 +32,30 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(
         @sync for col in 1:size(state,2)
 
             @Threads.spawn begin
-                (vals_ac,vecs_ac) = eigsolve(RecursiveVec(state.AC[:,col]), 1, :LM, eigalg) do x
+                (vals_ac,vecs_ac) = eigsolve(RecursiveVec($state.AC[:,col]), 1, :LM, eigalg) do x
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = ac_prime(x[i],i,col,state,envs)
+                        @Threads.spawn y[mod1(i+1,end)] = ac_prime(x[i],i,$col,$state,$envs)
                     end
 
                     RecursiveVec(y)
                 end
 
-                temp_ACs[:,col] = vecs_ac[1][:]
+                $temp_ACs[:,col] = vecs_ac[1][:]
             end
 
             @Threads.spawn begin
-                (vals_c,vecs_c) = eigsolve(RecursiveVec(state.CR[:,col]), 1, :LM, eigalg) do x
+                (vals_c,vecs_c) = eigsolve(RecursiveVec($state.CR[:,col]), 1, :LM, eigalg) do x
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = c_prime(x[i],i,col,state,envs)
+                        @Threads.spawn y[mod1(i+1,end)] = c_prime(x[i],i,$col,$state,$envs)
                     end
 
                     RecursiveVec(y)
                 end
-                temp_Cs[:,col] = vecs_c[1][:]
+                $temp_Cs[:,col] = vecs_c[1][:]
             end
         end
 
@@ -71,7 +71,7 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(
         galerkin = calc_galerkin(state, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
-        (state,envs) = alg.finalize(iter,state,H,envs);
+        (state,envs) = alg.finalize(iter,state,H,envs) :: Tuple{typeof(state),typeof(envs)};
         if (galerkin <= alg.tol_galerkin) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
             return state, envs, galerkin

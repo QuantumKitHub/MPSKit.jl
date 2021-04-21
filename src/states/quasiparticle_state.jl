@@ -74,7 +74,7 @@ function Base.convert(::Type{RightGaugedQP},input::LeftGaugedQP{S}) where S<:Inf
     end
     rBs = reverse(rBs);
 
-    (rBE,convhist) = linsolve(rBs[1],rBs[1],GMRES()) do x
+    (rBE,convhist) = @closure linsolve(rBs[1],rBs[1],GMRES()) do x
         y = transfer_right(x,input.left_gs.AL,input.right_gs.AR)*exp(1im*input.momentum*len)
         if input.trivial
             @tensor y[-1 -2;-3]-=y[1,-2,2]*l_LR(input.right_gs)[2,1]*r_LR(input.right_gs)[-1,-3]
@@ -109,7 +109,7 @@ function Base.convert(::Type{LeftGaugedQP},input::RightGaugedQP{S}) where S<:Inf
         push!(lBs,t*exp(-1im*input.momentum));
     end
 
-    (lBE,convhist) = linsolve(lBs[end],lBs[end],GMRES()) do x
+    (lBE,convhist) = @closure linsolve(lBs[end],lBs[end],GMRES()) do x
         y = transfer_left(x,input.right_gs.AR,input.left_gs.AL)*exp(-1im*input.momentum*len)
         if input.trivial
             @tensor y[-1 -2;-3] -= y[1,-2,2]*r_RL(input.right_gs)[2,1]*l_RL(input.right_gs)[-1,-3]
@@ -214,13 +214,6 @@ function Base.convert(::Type{<:FiniteMPS},v::QP{S}) where S <: FiniteMPS
     #very slow and clunky, but shouldn't be performance critical anyway
 
     elt = eltype(v)
-    function simplefuse(temp)
-        frontmap = isomorphism(Matrix{elt},fuse(space(temp,1)*space(temp,2)),space(temp,1)*space(temp,2))
-        backmap = isomorphism(Matrix{elt},space(temp,5)'*space(temp,4)',fuse(space(temp,5)'*space(temp,4)'))
-
-        @tensor tempp[-1 -2;-3] := frontmap[-1,1,2]*temp[1,2,-2,3,4]*backmap[4,3,-3]
-    end
-
 
     utl = utilleg(v); ou = oneunit(utl); utsp = ou ⊕ ou;
     upper = isometry(Matrix{elt},utsp,ou); lower = leftnull(upper);
@@ -230,17 +223,24 @@ function Base.convert(::Type{<:FiniteMPS},v::QP{S}) where S <: FiniteMPS
     Rs = v.right_gs.AR[1:end];
 
     #step 0 : fuse the utility leg of B with the first leg of B
-    Bs = map(1:length(v)) do i
-        t = v[i]
-        frontmap = isomorphism(Matrix{elt},fuse(utl*space(t,1)),utl*space(t,1));
+    orig_Bs = map(i->v[i],1:length(v))
+    Bs = @closure map(orig_Bs) do t
+        frontmap = isomorphism(storagetype(t),fuse(utl*_firstspace(t)),utl*_firstspace(t));
         @tensor tt[-1 -2;-3]:=t[1,-2,2,-3]*frontmap[-1,2,1]
+    end
+
+    function simplefuse(temp)
+        frontmap = isomorphism(storagetype(temp),fuse(space(temp,1)*space(temp,2)),space(temp,1)*space(temp,2))
+        backmap = isomorphism(storagetype(temp),space(temp,5)'*space(temp,4)',fuse(space(temp,5)'*space(temp,4)'))
+
+        @tensor tempp[-1 -2;-3] := frontmap[-1,1,2]*temp[1,2,-2,3,4]*backmap[4,3,-3]
     end
 
     #step 1 : pass utl through Ls
     passer = isomorphism(Matrix{elt},utl,utl);
-    Ls = map(Ls) do L
+    for (i,L) in enumerate(Ls)
         @tensor temp[-1 -2 -3 -4;-5]:=L[-2,-3,-4]*passer[-1,-5]
-        simplefuse(temp)
+        Ls[i] = simplefuse(temp)
     end
 
     #step 2 : embed all Ls/Bs/Rs in the same space
@@ -267,16 +267,16 @@ function Base.convert(::Type{<:FiniteMPS},v::QP{S}) where S <: FiniteMPS
     end
 
     #step 3 : fuse the correct *_I with the correct tensor (and enforce boundary conditions)
-    function doboundary(temp,pos)
+    function doboundary(temp1,pos)
         if pos == 1
-            @tensor temp[-1 -2 -3 -4;-5] := temp[1,-2,-3,-4,-5]*conj(upper[1,-1])
+            @tensor temp2[-1 -2 -3 -4;-5] := temp1[1,-2,-3,-4,-5]*conj(upper[1,-1])
+        elseif pos == length(v)
+            @tensor temp2[-1 -2 -3 -4;-5] := temp1[-1 -2 -3 -4 1]*lower[1,-5]
+        else
+            temp2 = temp1;
         end
 
-        if pos == length(v)
-            @tensor temp[-1 -2 -3 -4;-5] := temp[-1 -2 -3 -4 1]*lower[1,-5]
-        end
-
-        temp
+        temp2
     end
 
     for i in 1:length(v)

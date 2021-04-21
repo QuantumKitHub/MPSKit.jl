@@ -16,7 +16,7 @@ end
     find the groundstate for ham using algorithm alg
 "
 
-function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,envs::P=environments(state,H))::Tuple{InfiniteMPS{A,B},P,Float64} where {A,B,P}
+function find_groundstate(state::InfiniteMPS, H::Hamiltonian,alg::Vumps,envs=environments(state,H))
     galerkin::Float64  = 1+alg.tol_galerkin
     iter      = 1
 
@@ -28,20 +28,19 @@ function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,env
 
         @sync for (loc,(ac,c)) in enumerate(zip(state.AC,state.CR))
             @Threads.spawn begin
-                (acvals,acvecs) = @closure eigsolve(ac, 1, :SR, eigalg) do x
-                    ac_prime(x, loc,state,envs)
+                (acvals,acvecs) = eigsolve($ac, 1, :SR, eigalg) do x
+                    ac_prime(x, $loc,$state,$envs)
                 end
-                temp_ACs[loc] = acvecs[1];
+                $temp_ACs[loc] = acvecs[1];
             end
 
             @Threads.spawn begin
-                (crvals,crvecs) = @closure eigsolve(c, 1, :SR, eigalg) do x
-                    c_prime(x, loc,state,envs)
+                (crvals,crvecs) = eigsolve($c, 1, :SR, eigalg) do x
+                    c_prime(x, $loc,$state,$envs)
                 end
 
-                temp_Cs[loc] = crvecs[1];
+                $temp_Cs[loc] = crvecs[1];
             end
-
         end
 
         for (i,(ac,c)) in enumerate(zip(temp_ACs,temp_Cs))
@@ -57,7 +56,7 @@ function find_groundstate(state::InfiniteMPS{A,B}, H::Hamiltonian,alg::Vumps,env
         galerkin   = calc_galerkin(state, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
-        (state,envs) = alg.finalize(iter,state,H,envs) :: Tuple{InfiniteMPS{A,B},P};
+        (state,envs) = alg.finalize(iter,state,H,envs) :: Tuple{typeof(state),typeof(envs)};
         if galerkin <= alg.tol_galerkin || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
             return state, envs, galerkin

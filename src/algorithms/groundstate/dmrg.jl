@@ -31,7 +31,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
         iter += 1
 
         #finalize
-        (state,envs) = alg.finalize(iter,state,H,envs);
+        (state,envs) = alg.finalize(iter,state,H,envs)::Tuple{typeof(state),typeof(envs)};
     end
 
     return state,envs,delta
@@ -93,7 +93,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
         alg.verbose && @info "Iteraton $(iter) error $(delta)"
         flush(stdout)
         #finalize
-        (state,envs) = alg.finalize(iter,state,H,envs);
+        (state,envs) = alg.finalize(iter,state,H,envs)::Tuple{typeof(state),typeof(envs)};
         iter += 1
     end
 

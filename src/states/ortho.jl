@@ -14,10 +14,8 @@ function uniform_leftorth!(AL,CR, A; tol = Defaults.tolgauge, maxiter = Defaults
 
             alg = Arnoldi(krylovdim = 30, tol = max(delta*delta,tol/10),maxiter=maxiter)
 
-            (vals,vecs) = let A = A,AL = AL
-                eigsolve(CR[end], 1, :LM,alg) do x
-                    transfer_left(x,A,AL)
-                end
+            (vals,vecs) = @closure eigsolve(CR[end], 1, :LM,alg) do x
+                transfer_left(x,A,AL)
             end
 
             (_,CR[end]) = leftorth!(vecs[1],alg=TensorKit.QRpos())
@@ -59,10 +57,8 @@ function uniform_rightorth!(AR,CR,A; tol = Defaults.tolgauge, maxiter = Defaults
             alg = Arnoldi(krylovdim = 30, tol = max(delta*delta,tol/10),maxiter=maxiter)
             #Projection of the current guess onto its largest self consistent eigenvector + isolation of the unitary part
 
-            (vals,vecs) = let A = A, AR = AR
-                eigsolve(CR[end], 1, :LM,alg) do x
-                    transfer_right(x,A,AR)
-                end
+            (vals,vecs) = @closure eigsolve(CR[end], 1, :LM,alg) do x
+                transfer_right(x,A,AR)
             end
             (CR[end],_) = rightorth!(vecs[1],alg=TensorKit.LQpos())
         end

@@ -17,12 +17,12 @@ function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp
 
     @sync for (loc,(ac,c)) in enumerate(zip(state.AC,state.CR))
         @Threads.spawn begin
-            (temp_ACs[loc],convhist) = exponentiate(@closure(x->ac_prime(x,loc,state,envs)) ,-1im*timestep,ac,Lanczos(tol=alg.tol))
+            ($temp_ACs[loc],convhist) = exponentiate(x->ac_prime(x,$loc,$state,$envs) ,-1im*$timestep,$ac,Lanczos(tol=alg.tol))
             convhist.converged==0 && @info "time evolving ac($loc) failed $(convhist.normres)"
         end
 
         @Threads.spawn begin
-            (temp_CRs[loc],convhist) = exponentiate(@closure(x->c_prime(x,loc,state,envs)) ,-1im*timestep,c,Lanczos(tol=alg.tol))
+            ($temp_CRs[loc],convhist) = exponentiate(x->c_prime(x,$loc,$state,$envs) ,-1im*$timestep,$c,Lanczos(tol=alg.tol))
             convhist.converged==0 && @info "time evolving a($loc) failed $(convhist.normres)"
         end
     end
@@ -88,7 +88,6 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::N
     end
 
     #right to left
-
     for i in length(state):-1:2
         ac2 = _permute_front(state.AL[i-1])*_permute_tail(state.AC[i])
 

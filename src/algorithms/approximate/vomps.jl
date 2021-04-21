@@ -27,8 +27,8 @@ function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMu
     while true
 
         @sync for col in 1:size(state,2)
-            @Threads.spawn temp_ACs[:,col] = circshift([ac_proj(row,col,state,envs) for row in 1:size(state,1)],1)
-            @Threads.spawn temp_Cs[:,col]  = circshift([c_proj(row,col,state,envs) for row in 1:size(state,1)],1)
+            @Threads.spawn $temp_ACs[:,col] = circshift([ac_proj(row,$col,$state,$envs) for row in 1:size($state,1)],1)
+            @Threads.spawn $temp_Cs[:,col]  = circshift([c_proj(row,$col,$state,$envs) for row in 1:size($state,1)],1)
         end
 
         for row in 1:size(state,1),col in 1:size(state,2)
@@ -43,7 +43,7 @@ function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMu
         galerkin   = calc_galerkin(state, envs)
         alg.verbose && @info "vomps @iteration $(iter) galerkin = $(galerkin)"
 
-        (state,envs) = alg.finalize(iter,state,toapprox,envs);
+        (state,envs) = alg.finalize(iter,state,toapprox,envs) :: Tuple{typeof(state),typeof(envs)};
 
         if (galerkin <= alg.tol_galerkin) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vomps didn't converge $(galerkin)"
