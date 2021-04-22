@@ -24,7 +24,7 @@ function uniform_leftorth!(AL,CR, A; tol = Defaults.tolgauge, maxiter = Defaults
         cold = CR[end]
 
         for loc in 1:length(AL)
-            AL[loc] = _permute_front(CR[mod1(loc-1,end)]*_permute_tail(A[loc]))
+            AL[loc] = _transpose_front(CR[mod1(loc-1,end)]*_transpose_tail(A[loc]))
             AL[loc], CR[loc] = leftorth!(AL[loc], alg = QRpos())
             normalize!(CR[loc])
         end
@@ -67,8 +67,8 @@ function uniform_rightorth!(AR,CR,A; tol = Defaults.tolgauge, maxiter = Defaults
         for loc in length(AR):-1:1
             AR[loc] = A[loc]*CR[loc]
 
-            CR[mod1(loc-1,end)], temp = rightorth!(_permute_tail(AR[loc]), alg=LQpos())
-            AR[loc] = _permute_front(temp)
+            CR[mod1(loc-1,end)], temp = rightorth!(_transpose_tail(AR[loc]), alg=LQpos())
+            AR[loc] = _transpose_front(temp)
             normalize!(CR[mod1(loc-1,end)])
         end
 

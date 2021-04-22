@@ -1,8 +1,8 @@
 #transfer
 transfer_left(v::MPSBondTensor, A::GenericMPSTensor, Ab::GenericMPSTensor=A) =
-    _permute_as(_permute_front(Ab)' * _permute_front(_permute_front(v)*_permute_tail(A)), v)
+    _transpose_as(_transpose_front(Ab)' * _transpose_front(_transpose_front(v)*_transpose_tail(A)), v)
 transfer_right(v::MPSBondTensor, A::GenericMPSTensor, Ab::GenericMPSTensor=A) =
-    _permute_as(_permute_tail(_permute_front(A)*_permute_front(v)) * _permute_tail(Ab)', v)
+    _transpose_as(_transpose_tail(_transpose_front(A)*_transpose_front(v)) * _transpose_tail(Ab)', v)
 
 
 #transfer for 2 mpo tensors

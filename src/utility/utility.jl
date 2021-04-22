@@ -24,6 +24,25 @@ function _permute_as(t1::AbstractTensorMap, t2::AbstractTensorMap)
         braid(t1, levels, TensorKit.codomainind(t2), TensorKit.domainind(t2))
     end
 end
+function _transpose_front(t::AbstractTensorMap) # make TensorMap{S,N₁+N₂-1,1}
+    I1 = TensorKit.codomainind(t)
+    I2 = TensorKit.domainind(t)
+    transpose(t, (I1..., reverse(Base.tail(I2))...), (I2[1],))
+end
+function _transpose_tail(t::AbstractTensorMap) # make TensorMap{S,1,N₁+N₂-1}
+    I1 = TensorKit.codomainind(t)
+    I2 = TensorKit.domainind(t)
+    transpose(t, (I1[1],), (I2..., reverse(Base.tail(I1))...))
+end
+function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
+    I1 = (TensorKit.codomainind(t1)...,reverse(TensorKit.domainind(t1))...);
+
+    A = ntuple(x->I1[x],N1);
+    B = ntuple(x->I1[x+N1],N2);
+
+    transpose(t1, A,B)
+end
+
 _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
