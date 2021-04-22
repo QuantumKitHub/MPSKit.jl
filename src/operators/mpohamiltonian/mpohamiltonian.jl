@@ -221,6 +221,8 @@ function Base.setindex!(x::MPOHamiltonian{S,T,E},v::T,a::Int,b::Int,c::Int)  whe
 
     return x
 end
+Base.getindex(x::MPOHamiltonian,a::Colon,b::Int,c::Int) = [x[i,b,c] for i in 1:x.period];
+
 Base.eltype(x::MPOHamiltonian) = typeof(x[1,1,1])
 Base.size(x::MPOHamiltonian) = (x.period,x.odim,x.odim)
 Base.size(x::MPOHamiltonian,i) = size(x)[i]

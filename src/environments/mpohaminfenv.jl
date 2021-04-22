@@ -91,7 +91,7 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.t
             if reduce((a,b)->a&&b, [contains(ham,x,i,i) for x in 1:len])
 
                 (fixpoints[1,i],convhist) = @closure linsolve(fixpoints[1,i],prev,alg) do x
-                    x-transfer_left(x,[ham[j,i,i] for j in 1:len],st.AL,st.AL)
+                    x-transfer_left(x,ham[:,i,i],st.AL,st.AL)
                 end
 
                 convhist.converged==0 && @info "calclw failed to converge $(convhist.normres)"
@@ -142,7 +142,7 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.t
             if reduce((a,b)->a&&b, [contains(ham,x,i,i) for x in 1:len])
 
                 (fixpoints[end,i],convhist) = @closure linsolve(fixpoints[end,i],prev,alg) do x
-                    x-transfer_right(x,[ham[j,i,i] for j in 1:len],st.AR,st.AR)
+                    x-transfer_right(x,ham[:,i,i],st.AR,st.AR)
                 end
                 convhist.converged==0 && @info "calcrw failed to converge $(convhist.normres)"
 
