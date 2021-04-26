@@ -9,6 +9,11 @@ end
 
 function Base.getindex(v::ALView{S},i::Int)::eltype(S) where S <: Union{FiniteMPS,MPSComoving}
     !(v.parent isa MPSComoving) || i <= length(v.parent) || throw(ArgumentError("out of bounds"))
+
+    if i<1 && v.parent isa MPSComoving
+        return v.parent.left_gs.AL[i]
+    end
+
     ismissing(v.parent.ALs[i]) && v.parent.CR[i] # by getting CL[i+1], we are garantueeing that AL[i] exists
     return v.parent.ALs[i]
 end
@@ -22,6 +27,9 @@ end
 
 function Base.getindex(v::ARView{S},i::Int)::eltype(S) where S <: Union{FiniteMPS,MPSComoving}
     !(v.parent isa MPSComoving) || i >=1 || throw(ArgumentError("out of bounds"))
+    if i>length(v.parent.ARs) && v.parent isa MPSComoving
+        return v.parent.right_gs.AR[i]
+    end
     ismissing(v.parent.ARs[i]) && v.parent.CR[i-1] # by getting CL[i], we are garantueeing that AR[i] exists
     return v.parent.ARs[i]
 end
