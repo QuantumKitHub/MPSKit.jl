@@ -4,7 +4,7 @@ end
 PeriodicArray{T}(initializer, args...) where T =
     PeriodicArray(Array{T}(initializer, args...))
 PeriodicArray{T,N}(initializer, args...) where {T,N} =
-    PeriodicArray(Array{T,N}(undef, args...))
+    PeriodicArray(Array{T,N}(initializer, args...))
 
 Base.size(a::PeriodicArray) = size(a.data)
 Base.size(a::PeriodicArray,i) = size(a.data,i)
