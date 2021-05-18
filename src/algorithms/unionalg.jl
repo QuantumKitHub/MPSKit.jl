@@ -20,7 +20,7 @@ function changebonds(state,H,alg::UnionAlg,envs=environments(state,H))
     return (state,envs)
 end
 
-function find_groundstate(state,opperator,alg::UnionAlg,envs=environments(state,H))
-    (state,envs) = find_groundstate(state,opperator,alg.alg1,envs);
-    (state,envs,delta) = find_groundstate(state,opperator,alg.alg2,envs);
+function find_groundstate(state,H,alg::UnionAlg,envs=environments(state,H))
+    (state,envs) = find_groundstate(state,H,alg.alg1,envs);
+    (state,envs,delta) = find_groundstate(state,H,alg.alg2,envs);
 end
