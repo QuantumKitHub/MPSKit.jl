@@ -32,7 +32,7 @@ function changebonds(state::InfiniteMPS,alg::SvdCut)
         copied[i+1] = _permute_front(U'*_permute_tail(copied[i+1]))
     end
 
-    InfiniteMPS(copied);
+    InfiniteMPS(copied,state.CR[end]);
 end
 
 changebonds(state,H,alg::SvdCut,envs=environments(state,H)) = (changebonds(state,alg),envs)
