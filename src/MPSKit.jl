@@ -11,8 +11,7 @@ module MPSKit
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
 
     #useful utility functions?
-    export spinmatrices,add_util_leg,full,nonsym_spintensors,nonsym_bosonictensors
-    export max_Ds,virtualspace, reorth!, recalculate!
+    export add_util_leg,max_Ds,virtualspace, recalculate!
 
     #hamiltonian things
     export Hamiltonian,Operator,Cache
@@ -25,7 +24,7 @@ module MPSKit
     export leading_boundary
     export correlation_length,excitations,FiniteExcited,QuasiparticleAnsatz
     export timestep!,timestep,Tdvp,Tdvp2,make_time_mpo,WI,WII
-    export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
+    export splitham,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
     export changebonds!,changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
     export entropy
     export dynamicaldmrg
