@@ -1,6 +1,6 @@
 module MPSKit
     using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit, FastClosures
-
+    using RecipesBase
     using LinearAlgebra:diag,Diagonal;
     import LinearAlgebra
 
@@ -23,7 +23,8 @@ module MPSKit
     #algos
     export find_groundstate!, find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2, GradientGrassmann
     export leading_boundary
-    export correlation_length,excitations,FiniteExcited,QuasiparticleAnsatz
+    export excitations,FiniteExcited,QuasiparticleAnsatz
+    export marek_gap, correlation_length
     export timestep!,timestep,Tdvp,Tdvp2,make_time_mpo,WI,WII
     export splitham,mpo2mps,mps2mpo,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
     export changebonds!,changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
@@ -48,6 +49,8 @@ module MPSKit
 
     include("utility/periodicarray.jl")
     include("utility/utility.jl") #random utility functions
+    export entanglementplot, transferplot
+    include("utility/plotting.jl")
 
     #maybe we should introduce an abstract state type
     include("states/abstractmps.jl")

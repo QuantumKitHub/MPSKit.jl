@@ -44,8 +44,9 @@ Calculates the (partial) transfer spectrum
 "
 function transfer_spectrum(above::InfiniteMPS;below=above,tol=Defaults.tol,num_vals = 20,sector=first(sectors(oneunit(virtualspace(above,1)))))
     init = TensorMap(rand, eltype(eltype(above)), virtualspace(below,0)*ℂ[sector => 1],virtualspace(above,0))
-
-    num_vals = min(dim(virtualspace(above,0)*virtualspace(below,0)),num_vals); # we can ask at most this many values
+    
+    transferspace = fuse(virtualspace(above,0)*virtualspace(below,0))
+    num_vals = min(dim(transferspace, sector), num_vals); # we can ask at most this many values
 
     eigenvals, eigenvecs,convhist = eigsolve(x->transfer_left(x, above.AL, below.AL) , init, num_vals, :LM, tol=tol)
     convhist.converged < num_vals && @warn "correlation length failed to converge $(convhist.normres)"
@@ -59,35 +60,69 @@ Returns the (full) entanglement spectrum at site I
 function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,MPSComoving},site::Int=0)
     @assert site<=length(st)
 
-    (U,S,V) = tsvd(st.CR[site]);
+    (_,S,_) = tsvd(st.CR[site]);
     diag(convert(Array,S))
 end
 
-function correlation_length(above::InfiniteMPS; tol_angle=0.1,below=above,kwargs...)
-    #get the transfer spectrum
-    spectrum = transfer_spectrum(above;below=above,kwargs...);
-
-    correlation_length(spectrum,above;tol_angle=tol_angle,below=below,kwargs...)
+"""
+Find the closest fractions of π, differing at most ```tol_angle```
+"""
+function approx_angles(spectrum; tol_angle=0.1)
+    angles = angle.(spectrum) ./ π                          # ∈ ]-1, 1]
+    angles_approx = rationalize.(angles, tol=tol_angle)     # ∈ [-1, 1]
+    
+    # Remove the effects of the branchcut.
+    angles_approx[findall(angles_approx .== -1)] .= 1       # ∈ ]-1, 1]
+    
+    return angles_approx .* π                               # ∈ ]-π, π]
 end
 
-function correlation_length(spectrum,above::InfiniteMPS; tol_angle=0.1,below=above,kwargs...)
-    #we also define a correlation length between different states
-    (above === below) && (spectrum = spectrum[2:end])
 
-    best_angle = mod1(angle(spectrum[1]), 2*pi)
-    ind_at_angle = findall(x->x<tol_angle || abs(x-2*pi)<tol_angle, mod1.(angle.(spectrum).-best_angle, 2*pi))
-    spectrum_at_angle = spectrum[ind_at_angle]
+"""
+Given an InfiniteMPS, compute the gap ```ϵ``` for the asymptotics of the transfer matrix, as well as the Marek gap ```δ``` as a scaling measure of the bond dimension.
+"""
+function marek_gap(above::InfiniteMPS; tol_angle=0.1, kwargs...)
+    spectrum = transfer_spectrum(above; kwargs...)
+    return marek_gap(spectrum; tol_angle)
+end
 
+function marek_gap(spectrum; tol_angle=0.1)
+    # Remove 1s from the spectrum
+    inds = findall(abs.(spectrum) .< 1 - 1e-12)
+    length(spectrum) - length(inds) < 2 || @warn "Non-injective mps?"
+    
+    spectrum = spectrum[inds]
+    
+    angles = approx_angles(spectrum; tol_angle=tol_angle)
+    θ = first(angles)
+    
+    spectrum_at_angle = spectrum[findall(angles .== θ)]
+    
+    
     lambdas = -log.(abs.(spectrum_at_angle));
+    
+    ϵ = first(lambdas);
 
-    corlength = 1/first(lambdas);
-
-    gap = Inf;
+    δ = Inf;
     if length(lambdas) > 2
-        gap = lambdas[2]-lambdas[1]
+        δ = lambdas[2]-lambdas[1]
     end
 
-    return corlength, gap, best_angle
+    return ϵ, δ, θ
+    
+end
+
+"""
+Compute the correlation length of a given InfiniteMPS.
+"""
+function correlation_length(above::InfiniteMPS; kwargs...)
+    ϵ, = marek_gap(above; kwargs...)
+    return 1/ϵ
+end
+
+function correlation_length(spectrum; kwargs...)
+    ϵ, = marek_gap(spectrum; kwargs...)
+    return 1/ϵ
 end
 
 
