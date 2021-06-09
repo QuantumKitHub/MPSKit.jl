@@ -74,13 +74,6 @@ function make_time_mpo(ham::MPOHamiltonian{S,T},dt,alg::WII) where {S,T}
     W2[:,1,2:end] = WC
     W2[:,1,1] = WD
 
-    for i in 1:ham.odim-1,
-        j in 1:ham.odim-1,
-        k in 1:ham.odim-1
-
-        @assert space(W2[1,i,j],3) == space(W2[1,j,k],1)'
-    end
-
     _makedense(W2)
 end
 
@@ -98,6 +91,17 @@ function _makedense(ham)
             @tensor temp[-1 -2;-3 -4]:=embeds[loc][i][-1,1]*ham[loc,i,j][1,-2,2,-4]*conj(embeds[loc+1][j][-3,2])
         end)
     end)
+
+    #there are often 0-blocks, which we can just filter out
+    for i in 1:length(data)
+        (U,S,V) = tsvd(data[i],(1,2,4),(3,),trunc=truncbelow(Defaults.tolgauge));
+        data[i] = permute(U,(1,2,),(4,3))
+        @tensor data[i+1][-1 -2;-3 -4] := S[-1,1]*V[1,2]*data[i+1][2,-2,-3,-4]
+
+        (U,S,V) = tsvd(data[i],(1,),(2,3,4),trunc=truncbelow(Defaults.tolgauge));
+        data[i] = permute(V,(1,2),(3,4));
+        @tensor data[i-1][-1 -2;-3 -4] := data[i-1][-1,-2,1,-4]*U[1,2]*S[2,-3]
+    end
 
     InfiniteMPO(data)
 end

@@ -12,7 +12,7 @@ Base.size(t::InfiniteMPO) = (length(t),)
 
 Base.getindex(t::InfiniteMPO,i) = getindex(t.opp,i);
 Base.eltype(t::InfiniteMPO{O}) where O = O;
-Base.iterate(t::InfiniteMPO,itstate = 1) = iterate(t.opp,itstate);
+Base.iterate(t::InfiniteMPO,i = 1) = (i > length(t.opp)) ? nothing : (t[i],i+1);
 
 function Base.convert(::Type{InfiniteMPS},mpo::InfiniteMPO)
     InfiniteMPS(map(mpo.opp) do t

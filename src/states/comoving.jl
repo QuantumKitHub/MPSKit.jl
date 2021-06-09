@@ -25,13 +25,13 @@ end
 
 #allow construction with an array of tensors
 function MPSComoving(left::InfiniteMPS{A,B},site_tensors::Array{A},right::InfiniteMPS{A,B}) where {A<:GenericMPSTensor,B<:MPSBondTensor}
-    site_tensors = copy.(site_tensors)
+    site_tensors = copy(site_tensors)
     for i in 1:length(site_tensors)-1
-        (site_tensors[i],C) = leftorth!(site_tensors[i],alg=QRpos());
+        (site_tensors[i],C) = leftorth(site_tensors[i],alg=QRpos());
         site_tensors[i+1] = _permute_front(C*_permute_tail(site_tensors[i+1]))
     end
 
-    (site_tensors[end],C) = leftorth!(site_tensors[end],alg=QRpos());
+    (site_tensors[end],C) = leftorth(site_tensors[end],alg=QRpos());
 
     CLs = Vector{Union{Missing,B}}(missing,length(site_tensors)+1)
     ALs = Vector{Union{Missing,A}}(missing,length(site_tensors))

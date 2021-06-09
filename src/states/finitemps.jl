@@ -102,12 +102,12 @@ end
 # allow construction with a simple array of tensors
 function FiniteMPS(site_tensors::Vector{A};normalize=false) where {A<:GenericMPSTensor}
     for i in 1:length(site_tensors)-1
-        (site_tensors[i],C) = leftorth!(site_tensors[i],alg=QRpos());
+        (site_tensors[i],C) = leftorth(site_tensors[i],alg=QRpos());
         normalize && normalize!(C);
         site_tensors[i+1] = _permute_front(C*_permute_tail(site_tensors[i+1]))
     end
 
-    (site_tensors[end],C) = leftorth!(site_tensors[end],alg=QRpos());
+    (site_tensors[end],C) = leftorth(site_tensors[end],alg=QRpos());
     normalize && normalize!(C);
     B = typeof(C);
 

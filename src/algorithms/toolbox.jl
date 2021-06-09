@@ -226,7 +226,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
         #apply (j,k) above
         if j == 1
             f1 = fusers[1][end,end,1];
-            f2 = fusers[1][end,end,k];
+            f2 = fusers[2][end,end,k];
 
             @tensor starter[1,indmap(ham.odim,ham.odim,k)][-1 -2;-3 -4]:=
             ham[1,j,k][1,-2,2,-4]*f1[-1,3,4,1]*conj(f2[-3,3,4,2])
@@ -236,7 +236,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
         if j > 1 && j < ham.odim
 
             f1 = fusers[1][j,j,1];
-            f2 = fusers[1][j,k,1];
+            f2 = fusers[2][j,k,1];
 
             @tensor starter[1,indmap(j,k,1)][-1 -2;-3 -4]:=ham[1,j,k][1,-2,2,-4]*conj(f2[-3,1,2,-1])
         end
