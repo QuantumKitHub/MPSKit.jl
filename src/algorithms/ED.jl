@@ -2,7 +2,7 @@
 Use krylovkit to perform exact diagonalization
 """
 function exact_diagonalization(opp::MPOHamiltonian;sector = first(sectors(oneunit(opp.pspaces[1]))),len::Int = opp.period,num::Int = 1,which::Symbol=:SR,alg::KrylovKit.KrylovAlgorithm = Lanczos())
-    left = ℂ[sector=>1];
+    left = ℂ[typeof(sector)](sector => 1);
     right = oneunit(left);
 
     middle_site = Int(round(len/2));
