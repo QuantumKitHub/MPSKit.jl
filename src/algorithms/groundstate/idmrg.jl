@@ -57,7 +57,7 @@ function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,oenvs=e
     end
 
     nst = InfiniteMPS(st.AR[1:end],tol=alg.tol_gauge);
-    nenvs = environments(nst,ham,tol=oenvs.tol,maxiter=oenvs.maxiter)
+    nenvs = environments(nst, ham, solver=oenvs.solver)
     return nst,nenvs,delta;
 end
 
@@ -178,6 +178,6 @@ function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg2,oenvs=e
     end
 
     nst = InfiniteMPS(st.AR[1:end],tol=alg.tol_gauge);
-    nenvs = environments(nst,ham,tol=oenvs.tol,maxiter=oenvs.maxiter)
+    nenvs = environments(nst, ham, solver=oenvs.solver)
     return nst,nenvs,delta;
 end

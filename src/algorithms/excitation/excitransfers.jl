@@ -93,7 +93,7 @@ function exci_transfer_right(RetType,vec,ham::MPOHamSlice,A,Ab=A)
     return toreturn
 end
 
-function left_excitation_transfer_system(lBs,ham,exci;mom=exci.momentum)
+function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solver=Defaults.solver)
     len = ham.period
     found = zero.(lBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
@@ -114,7 +114,7 @@ function left_excitation_transfer_system(lBs,ham,exci;mom=exci.momentum)
         #either the element ham_ii exists; in which case we have to solve a linear system
         #otherwise it's easy and we already know found[i]
         if reduce((a,b)->a&&contains(ham,b,i,i),1:len,init=true)
-            (found[i],convhist) = linsolve(lBs[i]+start[i],lBs[i]+start[i],GMRES()) do y
+            (found[i],convhist) = linsolve(lBs[i]+start[i],lBs[i]+start[i],solver) do y
                 x = @closure reduce(1:len,init=y) do a,b
                     exci_transfer_left(a,ham[b,i,i],exci.right_gs.AR[b],exci.left_gs.AL[b])*exp(conj(1im*mom))
                 end
@@ -134,7 +134,7 @@ function left_excitation_transfer_system(lBs,ham,exci;mom=exci.momentum)
     return found
 end
 
-function right_excitation_transfer_system(rBs,ham,exci;mom=exci.momentum)
+function right_excitation_transfer_system(rBs, ham, exci; mom=exci.momentum, solver=Defaults.solver)
     len = ham.period
     found = zero.(rBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
@@ -151,7 +151,7 @@ function right_excitation_transfer_system(rBs,ham,exci;mom=exci.momentum)
         end
 
         if reduce((a,b)->a&&contains(ham,b,i,i),1:len,init=true)
-            (found[i],convhist) = linsolve(rBs[i]+start[i],rBs[i]+start[i],GMRES()) do y
+            (found[i],convhist) = linsolve(rBs[i]+start[i],rBs[i]+start[i],solver) do y
                 x = @closure reduce(len:-1:1,init=y) do a,b
                     exci_transfer_right(a,ham[b,i,i],exci.left_gs.AL[b],exci.right_gs.AR[b])*exp(1im*mom)
                 end

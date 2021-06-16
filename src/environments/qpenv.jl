@@ -6,12 +6,28 @@ can also - potentially - partially reuse this in other algorithms
 struct QPEnv{A,B} <: Cache
     lBs::PeriodicArray{A,1}
     rBs::PeriodicArray{A,1}
-
+    
     lenvs::B
     renvs::B
 end
 
-function environments(exci::InfiniteQP,ham::MPOHamiltonian,lenvs=environments(exci.left_gs,ham),renvs=exci.trivial ? lenvs : environments(exci.right_gs,ham))
+function environments(exci::InfiniteQP, H::MPOHamiltonian; solver=Defaults.solver)
+    # Explicitly define optional arguments as these depend on solver,
+    # which needs to come after these arguments.
+    lenvs = environments(exci.left_gs, H; solver=solver)
+
+    return environments(exci, H, lenvs; solver=solver)
+end
+
+function environments(exci::InfiniteQP, H::MPOHamiltonian, lenvs; solver=Defaults.solver)
+    # Explicitly define optional arguments as these depend on solver,
+    # which needs to come after these arguments.
+    renvs = exci.trivial ? lenvs : environments(exci.right_gs, H; solver=solver)
+    
+    return environments(exci, H, lenvs, renvs; solver=solver)
+end
+
+function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver=Defaults.solver)
     ids = collect(Iterators.filter(x->isid(ham,x),2:ham.odim-1));
 
     #build lBs(c)
@@ -50,8 +66,8 @@ function environments(exci::InfiniteQP,ham::MPOHamiltonian,lenvs=environments(ex
     end
     rBs = reverse(rBs)
 
-    lBE::typeof(rB_cur) = left_excitation_transfer_system(lB_cur,ham,exci)
-    rBE::typeof(rB_cur) = right_excitation_transfer_system(rB_cur,ham,exci)
+    lBE::typeof(rB_cur) = left_excitation_transfer_system(lB_cur,ham,exci,solver=solver)
+    rBE::typeof(rB_cur) = right_excitation_transfer_system(rB_cur,ham,exci, solver=solver)
 
     lBs[end] = lBE;
 

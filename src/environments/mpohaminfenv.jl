@@ -1,12 +1,11 @@
 "
     This object manages the hamiltonian environments for an InfiniteMPS
 "
-mutable struct MPOHamInfEnv{H<:MPOHamiltonian,V,S<:InfiniteMPS} <:AbstractInfEnv
+mutable struct MPOHamInfEnv{H<:MPOHamiltonian,V,S<:InfiniteMPS,A} <:AbstractInfEnv
     opp :: H
 
     dependency :: S
-    tol :: Float64
-    maxiter :: Int
+    solver :: A
 
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}
@@ -14,7 +13,7 @@ mutable struct MPOHamInfEnv{H<:MPOHamiltonian,V,S<:InfiniteMPS} <:AbstractInfEnv
     lock :: ReentrantLock
 end
 
-Base.copy(p::MPOHamInfEnv) = MPOHamInfEnv(p.opp,p.dependency,p.tol,p.maxiter,copy(p.lw),copy(p.rw));
+Base.copy(p::MPOHamInfEnv) = MPOHamInfEnv(p.opp,p.dependency,p.solver,copy(p.lw),copy(p.rw));
 
 function gen_lw_rw(st::InfiniteMPS{A,B},ham::MPOHamiltonian) where {A,B}
     lw = PeriodicArray{A,2}(undef,length(st),ham.odim)
@@ -29,9 +28,9 @@ function gen_lw_rw(st::InfiniteMPS{A,B},ham::MPOHamiltonian) where {A,B}
 end
 
 #randomly initialize envs
-function environments(st::InfiniteMPS,ham::MPOHamiltonian;tol::Float64=Defaults.tol,maxiter::Int=Defaults.maxiter)
+function environments(st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.solver)
     (lw,rw) = gen_lw_rw(st,ham);
-    envs = MPOHamInfEnv(ham,similar(st),tol,maxiter,lw,rw,ReentrantLock())
+    envs = MPOHamInfEnv(ham,similar(st),solver,lw,rw,ReentrantLock())
     recalculate!(envs,st);
 end
 
@@ -44,8 +43,8 @@ function recalculate!(envs::MPOHamInfEnv, nstate)
     end
 
     @sync begin
-        @Threads.spawn calclw!(envs.lw,nstate,envs.opp,tol = envs.tol,maxiter = envs.maxiter)
-        @Threads.spawn calcrw!(envs.rw,nstate,envs.opp,tol = envs.tol,maxiter = envs.maxiter)
+        @Threads.spawn calclw!(envs.lw,nstate,envs.opp; solver=envs.solver)
+        @Threads.spawn calcrw!(envs.rw,nstate,envs.opp; solver=envs.solver)
     end
 
     envs.dependency = nstate;
@@ -54,9 +53,9 @@ function recalculate!(envs::MPOHamInfEnv, nstate)
 end
 
 
-function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.tol, maxiter = Defaults.maxiter)
+function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.solver)
     len = length(st);
-    alg = GMRES(tol=tol,maxiter=maxiter)
+
 
     #the start element
     leftutil = Tensor(ones,eltype(eltype(st)),space(ham[1,1,1],1))
@@ -74,7 +73,7 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.t
             #subtract fixpoints
             @tensor tosvec[-1 -2;-3] := fixpoints[1,i][-1,-2,-3]-fixpoints[1,i][1,-2,2]*r_LL(st)[2,1]*l_LL(st)[-1,-3]
 
-            (fixpoints[1,i],convhist) = @closure linsolve(tosvec,prev,alg) do x
+            (fixpoints[1,i],convhist) = @closure linsolve(tosvec,prev,solver) do x
                 x-transfer_left(x,st.AL,st.AL,rvec=r_LL(st),lvec=l_LL(st))
             end
 
@@ -90,7 +89,7 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.t
         else
             if reduce((a,b)->a&&b, [contains(ham,x,i,i) for x in 1:len])
 
-                (fixpoints[1,i],convhist) = @closure linsolve(fixpoints[1,i],prev,alg) do x
+                (fixpoints[1,i],convhist) = @closure linsolve(fixpoints[1,i],prev,solver) do x
                     x-transfer_left(x,ham[:,i,i],st.AL,st.AL)
                 end
 
@@ -106,9 +105,8 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.t
     return fixpoints
 end
 
-function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.tol, maxiter = Defaults.maxiter)
+function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.solver)
     len = length(st)
-    alg = GMRES(tol=tol,maxiter=maxiter);
 
     #the start element
     rightutil = Tensor(ones,eltype(eltype(st)),space(ham[len,1,1],3))
@@ -127,7 +125,7 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.t
             #subtract fixpoints
             @tensor tosvec[-1 -2;-3]:=fixpoints[end,i][-1,-2,-3]-fixpoints[end,i][1,-2,2]*l_RR(st)[2,1]*r_RR(st)[-1,-3]
 
-            (fixpoints[end,i],convhist) = @closure linsolve(tosvec,prev,alg) do x
+            (fixpoints[end,i],convhist) = @closure linsolve(tosvec,prev,solver) do x
                 x-transfer_right(x,st.AR,st.AR,lvec=l_RR(st),rvec=r_RR(st))
             end
             convhist.converged==0 && @info "calcrw failed to converge $(convhist.normres)"
@@ -141,7 +139,7 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; tol = Defaults.t
         else
             if reduce((a,b)->a&&b, [contains(ham,x,i,i) for x in 1:len])
 
-                (fixpoints[end,i],convhist) = @closure linsolve(fixpoints[end,i],prev,alg) do x
+                (fixpoints[end,i],convhist) = @closure linsolve(fixpoints[end,i],prev,solver) do x
                     x-transfer_right(x,ham[:,i,i],st.AR,st.AR)
                 end
                 convhist.converged==0 && @info "calcrw failed to converge $(convhist.normres)"
