@@ -144,7 +144,7 @@ function MPOHamiltonian{Sp,M,E}(x::AbstractArray{Union{E,M},3}) where {Sp,M<:MPO
     end
 
     sum(ismissing.(pspaces)) == 0 || throw(ArgumentError("Not all physical spaces were assigned"))
-    sum(ismissing.(domspaces)) == 0 || @warn "faied to deduce all domspaces"
+    sum(ismissing.(domspaces)) == 0 || @warn "failed to deduce all domspaces"
     f_domspaces = map(x-> ismissing(x) ? oneunit(Sp) : x,domspaces) #missing domspaces => oneunit ; should also not happen
 
     ndomspaces = PeriodicArray{Sp}(f_domspaces)
