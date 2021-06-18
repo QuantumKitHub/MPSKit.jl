@@ -86,11 +86,11 @@ function excitations(
     H::Hamiltonian, alg::QuasiparticleAnsatz, momenta::AbstractVector,
     lmps::InfiniteMPS, lenvs=environments(lmps, H),
     rmps::InfiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
-    verbose=Defaults.verbose, kwargs...
+    verbose=Defaults.verbose, num=1, solver=Defaults.solver, sector=first(sectors(oneunit(virtualspace(lmps, 1))))
 )
     tasks = map(momenta) do p
         @Threads.spawn begin
-            (E, V) = excitations(H, alg, p, lmps, lenvs, rmps, renvs; kwargs...)
+            (E, V) = excitations(H, alg, p, lmps, lenvs, rmps, renvs; num=num, solver=solver, sector=sector)
             verbose && @info "Found excitations for p = $(p)"
             (E, V)
         end
