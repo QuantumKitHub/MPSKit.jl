@@ -6,7 +6,7 @@ can also - potentially - partially reuse this in other algorithms
 struct QPEnv{A,B} <: Cache
     lBs::PeriodicArray{A,1}
     rBs::PeriodicArray{A,1}
-    
+
     lenvs::B
     renvs::B
 end
@@ -23,7 +23,7 @@ function environments(exci::InfiniteQP, H::MPOHamiltonian, lenvs; solver=Default
     # Explicitly define optional arguments as these depend on solver,
     # which needs to come after these arguments.
     renvs = exci.trivial ? lenvs : environments(exci.right_gs, H; solver=solver)
-    
+
     return environments(exci, H, lenvs, renvs; solver=solver)
 end
 
@@ -33,7 +33,7 @@ function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver
     #build lBs(c)
     lB_cur = [ TensorMap(zeros,eltype(exci),
                     virtualspace(exci.left_gs,0)*ham.domspaces[1,k]',
-                    space(exci[1],3)'*virtualspace(exci.left_gs,0)) for k in 1:ham.odim]
+                    space(exci[1],3)'*virtualspace(exci.right_gs,0)) for k in 1:ham.odim]
     lBs = typeof(lB_cur)[]
 
     for pos = 1:length(exci)
@@ -50,7 +50,7 @@ function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver
 
     #build rBs(c)
     rB_cur = [ TensorMap(zeros,eltype(exci),
-                    virtualspace(exci.right_gs,length(exci))*space(exci[1],3),
+                    virtualspace(exci.left_gs,length(exci))*space(exci[1],3),
                     ham.imspaces[length(exci),k]*virtualspace(exci.right_gs,length(exci))) for k in 1:ham.odim]
     rBs = typeof(rB_cur)[]
 
