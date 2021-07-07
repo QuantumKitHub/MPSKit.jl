@@ -1,9 +1,9 @@
 # Analyzing the xxz model
 
-In this file we will give step by step instructions to analyze the spin 1/2 xxz model.
+In this file we will give step by step instructions on how to analyze the spin 1/2 xxz model.
 The necessary packages to follow this tutorial are :
 ```julia
-using MPSKit,MPSKitModels,TensorKit,Plots
+using MPSKit, MPSKitModels, TensorKit, Plots
 ```
 
 ## Failure
@@ -39,27 +39,12 @@ Maybe we can do better using another algorithm, such as gradient descent.
 Convergence is quite slow and even fails after sufficiently many iterations. To understand why, we can look at the transfer matrix spectrum.
 
 ```julia
-    spectrum = transfer_spectrum(groundstate);
-    plot(spectrum,seriestype=:scatter,legend=false);
+    transferplot(groundstate,groundstate)
 ```
 
 ![](xxz_transfer_spectrum.png)
 
-We can clearly see multiple eigenvalues close to the unit circle. Our state is close to being non-injective, and represents the sum of multiple injective states. This is numerically very problematic, but also indicates that we used an incorrect ansatz to approximate the groundstate. A closer look at the spectrum reveals a double degeneracy of the leading eigenvalue :
-
-```julia
-    @show abs.(spectrum)[1:5]
-
-    5-element Array{Float64,1}:
-     1.0000000000000178
-     0.9998529451569024
-     0.9809868986275074
-     0.9809868986275053
-     0.9809764849211271
-
-```
-
-We should therefore retry with a 2site unit cell.
+We can clearly see multiple eigenvalues close to the unit circle. Our state is close to being non-injective, and represents the sum of multiple injective states. This is numerically very problematic, but also indicates that we used an incorrect ansatz to approximate the groundstate. We should retry with a larger unit cell.
 
 ## Success
 
@@ -82,13 +67,9 @@ Running vumps
 we get convergence, but it takes an enormous amount of iterations. The reason behind this becomes more obvious at higher bond dimensions
 
 ```julia
-A = TensorMap(rand,ComplexF64,ℂ^100*ℂ^2,ℂ^100);
-B = TensorMap(rand,ComplexF64,ℂ^100*ℂ^2,ℂ^100);
-state = InfiniteMPS([A,B]);
-(groundstate,cache,delta) = find_groundstate(state,ham,Vumps(maxiter=100,tol_galerkin=1e-12));
+(groundstate,cache,delta) = find_groundstate(state,ham,Idmrg2(trscheme=truncdim(100),maxiter=100,tol_galerkin=1e-12));
 
-spectrum = entanglement_spectrum(groundstate);(groundstate);
-plot(abs.(spectrum),seriestype=:scatter,legend=false,yscale=:log10)
+entanglementplot(groundstate)
 ```
 
 ![](xxz_entanglement_spectrum.png)
