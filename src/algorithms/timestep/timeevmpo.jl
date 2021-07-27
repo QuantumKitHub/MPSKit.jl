@@ -41,7 +41,7 @@ function make_time_mpo(ham::MPOHamiltonian{S,T},dt,alg::WII) where {S,T}
 
         init = [one(ham[i,1,ham.odim]),zero(ham[i,1,k]),zero(ham[i,j,ham.odim]),zero(ham[i,j,k])]
 
-        (y,convhist) = exponentiate(1.0,RecursiveVec(init),Lanczos(tol = alg.tol,maxiter = alg.maxiter)) do x
+        (y,convhist) = exponentiate(1.0,RecursiveVec(init),Arnoldi(tol = alg.tol,maxiter = alg.maxiter)) do x
             out = similar(x.vecs);
 
             @tensor out[1][-1 -2;-3 -4] := δ*x[1][-1,1,-3,-4]*ham[i,1,ham.odim][2,-2,2,1]
