@@ -1,5 +1,5 @@
 "calculates the entropy of a given state"
-entropy(state::InfiniteMPS) = [sum([-j^2*2*log(j) for j in entanglement_spectrum(state,i)]) for i in 1:length(state)]
+entropy(state::InfiniteMPS) = [-tr(c*log(c)) for c in state.CR]
 
 "
 given a thermal state, you can map it to an mps by fusing the physical legs together
@@ -70,10 +70,10 @@ Find the closest fractions of π, differing at most ```tol_angle```
 function approx_angles(spectrum; tol_angle=0.1)
     angles = angle.(spectrum) ./ π                          # ∈ ]-1, 1]
     angles_approx = rationalize.(angles, tol=tol_angle)     # ∈ [-1, 1]
-    
+
     # Remove the effects of the branchcut.
     angles_approx[findall(angles_approx .== -1)] .= 1       # ∈ ]-1, 1]
-    
+
     return angles_approx .* π                               # ∈ ]-π, π]
 end
 
@@ -90,17 +90,17 @@ function marek_gap(spectrum; tol_angle=0.1)
     # Remove 1s from the spectrum
     inds = findall(abs.(spectrum) .< 1 - 1e-12)
     length(spectrum) - length(inds) < 2 || @warn "Non-injective mps?"
-    
+
     spectrum = spectrum[inds]
-    
+
     angles = approx_angles(spectrum; tol_angle=tol_angle)
     θ = first(angles)
-    
+
     spectrum_at_angle = spectrum[findall(angles .== θ)]
-    
-    
+
+
     lambdas = -log.(abs.(spectrum_at_angle));
-    
+
     ϵ = first(lambdas);
 
     δ = Inf;
@@ -109,7 +109,7 @@ function marek_gap(spectrum; tol_angle=0.1)
     end
 
     return ϵ, δ, θ
-    
+
 end
 
 """

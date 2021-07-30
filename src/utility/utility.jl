@@ -50,20 +50,23 @@ _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N1,N2},trunc = truncbelow(Defaults.tol)) where {PS,N1,N2}
     numind=N1+N2
     if(numind==4)
-        return [permute(inpmpo,(1,2),(4,3))]
+        return [transpose(inpmpo,(1,2),(3,4))]
     end
 
     leftind=(1,2,Int(numind/2+1))
-    otherind=(ntuple(x->x+2,Val{Int((N1+N2)/2)-2}())..., ntuple(x->x+Int(numind/2+1),Val{Int((N1+N2)/2)-1}())...)
+    rightind=(ntuple(x->x+2,Val{Int((N1+N2)/2)-2}())..., ntuple(x->x+Int(numind/2+1),Val{Int((N1+N2)/2)-1}())...)
 
-    (U,S,V) = tsvd(inpmpo,leftind,otherind,trunc = trunc)
-    return [permute(U,(1,2),(4,3));decompose_localmpo(S*V)]
+    (U,S,V) = tsvd(inpmpo,leftind,rightind,trunc = trunc)
+    return [transpose(U,(1,2),(3,4));decompose_localmpo(S*V)]
 end
 
 function add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
-    util=Tensor(ones,eltype(tensor),oneunit(space(tensor,1)))
-    tensor1=util*permute(tensor,(),ntuple(x->x,Val{N1+N2}()))
-    return permute(tensor1,ntuple(x->x,Val{N1+N2+1}()),())*util'
+    ou = oneunit(_firstspace(tensor));
+
+    util_front = isomorphism(storagetype(tensor),ou*codomain(tensor),codomain(tensor));
+    util_back = isomorphism(storagetype(tensor),domain(tensor),domain(tensor)*ou);
+
+    return util_front*tensor*util_back
 end
 
 """
@@ -102,4 +105,24 @@ function _embedders(spaces)
     end
 
     maps
+end
+
+
+macro plansor(ex::Expr)
+    return esc(plansor_parser(ex))
+end
+
+function plansor_parser(ex)
+    t = first(TO.gettensorobjects(ex));
+
+    default = TO.defaultparser(ex);
+    planar = TensorKit.planar_parser(ex);
+
+    quote
+        if BraidingStyle(sectortype($t)) isa Bosonic
+            $(default)
+        else
+            $(planar)
+        end
+    end
 end
