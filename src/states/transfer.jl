@@ -16,9 +16,21 @@ transfer_left(v::AbstractTensorMap{S,N1,N2},A::GenericMPSTensor{S,N},Ab::Generic
 transfer_right(v::AbstractTensorMap{S,N1,N2},A::GenericMPSTensor{S,N},Ab::GenericMPSTensor{S,N}=A) where {S,N1,N2,N} =
     _permute_as(permute(A*_permute_tail(v),tuple(1,ntuple(x->N+x,N1+N2-2)...),tuple(ntuple(x->x+1,N-1)...,N1+N2+N-1))*_permute_tail(Ab)',v)
 
+#planar variant of the other transfer_left - it is only possible to do this contraction planarly when N1 == 1
+function transfer_left(v::AbstractTensorMap{S,1,N2},A::GenericMPSTensor{S,N},Ab::GenericMPSTensor{S,N}=A) where {S,N2,N}
+    t_v = transpose(v,reverse(ntuple(x->x,N2)),(N2+1,));
+    t_A = _transpose_tail(A);
+    adjoint(Ab)*transpose(t_v*t_A,(N2,reverse(ntuple(x->x+N2+1,N-1))...),(reverse(ntuple(x->x,N2-1))...,N2+1))
+end
+function transfer_right(v::AbstractTensorMap{S,1,N2},A::GenericMPSTensor{S,N},Ab::GenericMPSTensor{S,N}=A) where {S,N2,N}
+    t_AV = transpose(A*v,(reverse(ntuple(x->N+x,N2-1))...,1),(N+N2,reverse(ntuple(x->x+1,N-1))...));
+    t_Ab = _transpose_front(adjoint(Ab));
+    transpose(t_AV*t_Ab,(N2,),(reverse(ntuple(x->x,N2-1))...,N2+1))
+end
+
 #mpo transfer
-transfer_left(v::MPSTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor) = @tensor v[-1 -2;-3] := v[4,2,1]*A[1,3,-3]*O[2,5,-2,3]*conj(Ab[4,5,-1])
-transfer_right(v::MPSTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor) = @tensor v[-1 -2;-3] := A[-1,4,5]*O[-2,2,3,4]*conj(Ab[-3,2,1])*v[5,3,1]
+transfer_left(v::MPSTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor) = @plansor v[-1 -2;-3] := v[4 2;1]*A[1 3;-3]*O[2 5;3 -2]*conj(Ab[4 5;-1])
+transfer_right(v::MPSTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor) = @plansor v[-1 -2;-3] := A[-1 4;5]*O[-2 2;4 3]*conj(Ab[-3 2;1])*v[5 3;1]
 
 #utility, allowing transfering with arrays
 function transfer_left(v,A::AbstractArray,Ab::AbstractArray=A;rvec=nothing,lvec=nothing)

@@ -113,7 +113,11 @@ macro plansor(ex::Expr)
 end
 
 function plansor_parser(ex)
-    t = first(TO.gettensorobjects(ex));
+    if ex.head in (:(=), :(+=), :(-=), :(:=), :(≔))
+        t = first(TO.getinputtensorobjects(ex));
+    else
+        t = first(TO.gettensorobjects(ex));
+    end
 
     default = TO.defaultparser(ex);
     planar = TensorKit.planar_parser(ex);

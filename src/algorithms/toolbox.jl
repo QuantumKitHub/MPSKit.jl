@@ -43,8 +43,8 @@ calc_galerkin(state::MPSMultiline, envs::MixPerMPOInfEnv)::Float64 = maximum([no
 Calculates the (partial) transfer spectrum
 "
 function transfer_spectrum(above::InfiniteMPS;below=above,tol=Defaults.tol,num_vals = 20,sector=first(sectors(oneunit(virtualspace(above,1)))))
-    init = TensorMap(rand, eltype(eltype(above)), virtualspace(below,0)*ℂ[typeof(sector)](sector => 1),virtualspace(above,0))
-    
+    init = TensorMap(rand, eltype(eltype(above)), virtualspace(below,0),ℂ[typeof(sector)](sector => 1)'*virtualspace(above,0))
+
     transferspace = fuse(virtualspace(above,0)*virtualspace(below,0))
     num_vals = min(dim(transferspace, sector), num_vals); # we can ask at most this many values
 
