@@ -130,3 +130,16 @@ function plansor_parser(ex)
         end
     end
 end
+
+function _can_unambiguously_braid(sp::VectorSpace)
+    s = sectortype(sp);
+
+    #either the braidingstyle is bosonic
+    BraidingStyle(s) isa Bosonic && return true
+
+    #or there is only one irrep ocurring - the trivial one
+    for sect in sectors(sp)
+        sect == one(sect) || return false
+    end
+    return true
+end

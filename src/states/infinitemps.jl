@@ -78,7 +78,7 @@ end
     l_RR(state,location)
     Left dominant eigenvector of the AR-AR transfermatrix
 "
-l_RR(state::InfiniteMPS,loc::Int=1) = @tensor toret[-1;-2]:=state.CR[loc-1][1,-2]*conj(state.CR[loc-1][1,-1])
+l_RR(state::InfiniteMPS,loc::Int=1) = adjoint(state.CR[loc-1])*state.CR[loc-1]
 
 "
     l_RL(state,location)
@@ -120,7 +120,7 @@ r_LR(state::InfiniteMPS,loc::Int=length(state)) = state.CR[loc]
     r_LL(state,location)
     Right dominant eigenvector of the AL-AL transfermatrix
 "
-r_LL(state::InfiniteMPS,loc::Int=length(state))= @tensor toret[-1;-2]:=state.CR[loc][-1,1]*conj(state.CR[loc][-2,1])
+r_LL(state::InfiniteMPS,loc::Int=length(state))= state.CR[loc]*adjoint(state.CR[loc])
 
 function TensorKit.dot(a::InfiniteMPS,b::InfiniteMPS;krylovdim = 30)
     init = TensorMap(rand,ComplexF64,space(a.AL[1],1),space(b.AL[1],1))

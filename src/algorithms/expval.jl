@@ -91,7 +91,7 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
         util = Tensor(ones,space(prevca.lw[i+1,ham.odim],2))
         for j=ham.odim:-1:1
             apl = transfer_left(leftenv(prevca,i,st)[j],ham[i,j,ham.odim],st.AL[i],st.AL[i]);
-            ens[i] += @tensor apl[1,2,3]*r_LL(st,i)[3,1]*conj(util[2])
+            ens[i] += @plansor apl[1 2;3]*r_LL(st,i)[3;1]*conj(util[2])
         end
     end
     return ens

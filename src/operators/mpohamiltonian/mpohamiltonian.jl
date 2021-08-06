@@ -64,7 +64,7 @@ function MPOHamiltonian(x::AbstractArray{T,3}) where T<:Union{A} where A
 
     for (i,t) in enumerate(x)
         if t isa MPSBondTensor
-            nx[i] = permute(add_util_leg(t),(1,2),(4,3))
+            nx[i] = add_util_leg(t)
         elseif ismissing(t)
             nx[i] = zero(E)
         elseif t isa Number
@@ -100,7 +100,7 @@ function MPOHamiltonian{Sp,M,E}(x::AbstractArray{Union{E,M},3}) where {Sp,M<:MPO
                 isstopped = false;
 
                 #asign spaces when possible
-                dom = space(x[i,j,k],1);im = space(x[i,j,k],3);p = space(x[i,j,k],2)
+                dom = _firstspace(x[i,j,k]);im = _lastspace(x[i,j,k]);p = space(x[i,j,k],2)
 
                 ismissing(pspaces[i]) && (pspaces[i] = p);
                 pspaces[i] != p && throw(ArgumentError("physical space for $((i,j,k)) incompatible : $(pspaces[i]) ≠ $(p)"))
@@ -158,10 +158,10 @@ MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)
 
 #a very simple utility constructor; given our "localmpo", constructs a mpohamiltonian
 function MPOHamiltonian(x::Array{T,1}) where T<:MPOTensor{Sp} where Sp
-    domspaces = Sp[space(y,1) for y in x]
-    push!(domspaces,space(x[end],3)')
+    domspaces = Sp[_firstspace(y) for y in x]
+    push!(domspaces,_lastspace(x[end])')
 
-    pspaces=[space(x[1],2)]
+    pspaces = [space(x[1],2)]
 
     nOs = PeriodicArray{Union{eltype(T),T}}(fill(zero(eltype(T)),1,length(x)+1,length(x)+1))
 
@@ -197,9 +197,9 @@ function Base.getindex(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int)::T where {
     b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
     if x.Os[a,b,c] isa E
         if x.Os[a,b,c] == zero(E)
-            return TensorMap(zeros,E,x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])
+            return TensorMap(zeros,E,x.domspaces[a,b]*x.pspaces[a],x.pspaces[a]*x.imspaces[a,c]')
         else
-            return x.Os[a,b,c]*isomorphism(Matrix{E},x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])
+            return x.Os[a,b,c]*isomorphism(Matrix{E},x.domspaces[a,b]*x.pspaces[a],x.pspaces[a]*x.imspaces[a,c]')
         end
     else
         return x.Os[a,b,c]

@@ -10,7 +10,7 @@ function ac_prime(x::MPSTensor,ham::MPOHamSlice,leftenv,rightenv)
     end
     for (i,j) in scalkeys(ham)
         scal = ham.Os[i,j];
-        @tensor toret[-1 -2;-3]+=leftenv[i][-1 5;4]*(scal*x)[4 -2;1]*rightenv[j][1 5;-3]
+        @plansor toret[-1 -2;-3]+=leftenv[i][-1 5;4]*(scal*x)[4 6;1]*τ[6 5;7 -2]*rightenv[j][1 7;-3]
     end
 
     return toret

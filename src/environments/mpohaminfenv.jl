@@ -20,8 +20,8 @@ function gen_lw_rw(st::InfiniteMPS{A,B},ham::MPOHamiltonian) where {A,B}
     rw = PeriodicArray{A,2}(undef,length(st),ham.odim)
 
     for i = 1:length(st), j = 1:ham.odim
-        lw[i,j] = TensorMap(rand,eltype(eltype(st)),space(st.AL[i],1)*space(ham[i,j,1],1)',space(st.AL[i],1))
-        rw[i,j] = TensorMap(rand,eltype(eltype(st)),space(st.AR[i],3)'*space(ham[i,1,j],3)',space(st.AR[i],3)')
+        lw[i,j] = TensorMap(rand,eltype(eltype(st)),space(st.AL[i],1)*_firstspace(ham[i,j,1])',space(st.AL[i],1))
+        rw[i,j] = TensorMap(rand,eltype(eltype(st)),space(st.AR[i],3)'*_lastspace(ham[i,1,j])',space(st.AR[i],3)')
     end
 
     return (lw,rw)
@@ -58,10 +58,9 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
 
 
     #the start element
-    leftutil = Tensor(ones,eltype(eltype(st)),space(ham[1,1,1],1))
-    @tensor fixpoints[1,1][-1 -2;-3] = l_LL(st)[-1,-3]*conj(leftutil[-2])
+    leftutil = Tensor(ones,eltype(eltype(st)),_firstspace(ham[1,1,1]))
+    @plansor fixpoints[1,1][-1 -2;-3] = l_LL(st)[-1;-3]*conj(leftutil[-2])
     (len>1) && left_cyclethrough!(1,fixpoints,ham,st)
-
     for i = 2:ham.odim
         prev = copy(fixpoints[1,i]);
 
@@ -71,7 +70,7 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
         if(isid(ham,i)) #identity matrices; do the hacky renormalization
 
             #subtract fixpoints
-            @tensor tosvec[-1 -2;-3] := fixpoints[1,i][-1,-2,-3]-fixpoints[1,i][1,-2,2]*r_LL(st)[2,1]*l_LL(st)[-1,-3]
+            @plansor tosvec[-1 -2;-3] := fixpoints[1,i][-1 -2;-3]-fixpoints[1,i][1 -2;2]*r_LL(st)[2;1]*l_LL(st)[-1;-3]
 
             (fixpoints[1,i],convhist) = @closure linsolve(tosvec,prev,solver) do x
                 x-transfer_left(x,st.AL,st.AL,rvec=r_LL(st),lvec=l_LL(st))
@@ -83,7 +82,7 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
 
             #go through the unitcell, again subtracting fixpoints
             for potato in 1:len
-                @tensor fixpoints[potato,i][-1 -2;-3]-=fixpoints[potato,i][1,-2,2]*r_LL(st,potato-1)[2,1]*l_LL(st,potato)[-1,-3]
+                @plansor fixpoints[potato,i][-1 -2;-3]-=fixpoints[potato,i][1 -2;2]*r_LL(st,potato-1)[2;1]*l_LL(st,potato)[-1;-3]
             end
 
         else
@@ -109,9 +108,8 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
     len = length(st)
 
     #the start element
-    rightutil = Tensor(ones,eltype(eltype(st)),space(ham[len,1,1],3))
-    @tensor fixpoints[end,end][-1 -2;-3] = r_RR(st)[-1,-3]*conj(rightutil[-2])
-
+    rightutil = Tensor(ones,eltype(eltype(st)),_lastspace(ham[len,1,1]))
+    @plansor fixpoints[end,end][-1 -2;-3] = r_RR(st)[-1;-3]*conj(rightutil[-2])
     (len>1) && right_cyclethrough!(ham.odim,fixpoints,ham,st) #populate other sites
 
     for i = (ham.odim-1):-1:1
@@ -123,7 +121,7 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
         if(isid(ham,i)) #identity matrices; do the hacky renormalization
 
             #subtract fixpoints
-            @tensor tosvec[-1 -2;-3]:=fixpoints[end,i][-1,-2,-3]-fixpoints[end,i][1,-2,2]*l_RR(st)[2,1]*r_RR(st)[-1,-3]
+            @plansor tosvec[-1 -2;-3]:=fixpoints[end,i][-1 -2;-3]-fixpoints[end,i][1 -2;2]*l_RR(st)[2;1]*r_RR(st)[-1;-3]
 
             (fixpoints[end,i],convhist) = @closure linsolve(tosvec,prev,solver) do x
                 x-transfer_right(x,st.AR,st.AR,lvec=l_RR(st),rvec=r_RR(st))
@@ -134,7 +132,7 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
 
             #go through the unitcell, again subtracting fixpoints
             for potatoe in 1:len
-                @tensor fixpoints[potatoe,i][-1 -2;-3]-=fixpoints[potatoe,i][1,-2,2]*l_RR(st,potatoe+1)[2,1]*r_RR(st,potatoe)[-1,-3]
+                @plansor fixpoints[potatoe,i][-1 -2;-3]-=fixpoints[potatoe,i][1 -2;2]*l_RR(st,potatoe+1)[2;1]*r_RR(st,potatoe)[-1;-3]
             end
         else
             if reduce((a,b)->a&&b, [contains(ham,x,i,i) for x in 1:len])
