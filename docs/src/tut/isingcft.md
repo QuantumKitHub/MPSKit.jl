@@ -44,7 +44,7 @@ Given a state, we would like to assign a momentum label. A natural way to do thi
 
 ```julia
 id = complex(isomorphism(ℂ^2,ℂ^2));
-@tensor O[-1 -2;-3 -4] := id[-1,-4]*id[-2,-3]
+@tensor O[-1 -2;-3 -4] := id[-1,-3]*id[-2,-4]
 mpo = InfiniteMPO(O);
 ```
 

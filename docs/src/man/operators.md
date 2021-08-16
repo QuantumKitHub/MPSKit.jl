@@ -24,7 +24,7 @@ It is for this reason that we use 4 leg mpo tensors in this hamiltonian object. 
 ham[1,1,1]
 ```
 
-Will print out a tensormap mapping (virtual space x physical space) to (virtual space x physical space).
+Will print out a tensormap mapping (virtual space x physical space) to (physical space x virtual space).
 The conversion to mpo tensors was done automagically behind the scenes!
 
 MPOHamiltonian are always assumed to be periodic in the first index (position).
@@ -44,7 +44,7 @@ Where T<:MPOTensor, E<:Number
 
 When indexing the hamiltonian at index [i,j,k], the code looks up the corresponding field in Os[i,j,k]. Either that element is a tensormap, in which case it gets returned. If it equals zero(E), then we return a tensormap
 ```julia
-domspaces[i,j]*pspaces[i] ← domspaces[i+1,k]*pspaces[i]
+domspaces[i,j]*pspaces[i] ← pspaces[i]*domspaces[i+1,k]
 ```
 wither norm zero. If the element is a nonzero number, then implicitly we have the identity operator there (multiplied by that element). Of course in that case,
 ```julia
