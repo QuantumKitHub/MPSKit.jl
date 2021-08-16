@@ -31,10 +31,6 @@ function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,oenvs=e
             setleftenv!(envs,pos+1,transfer_left(leftenv(envs,pos),ham[pos],st.AL[pos],st.AL[pos]));
         end
 
-        for pos in 1:length(st)-1
-            setleftenv!(envs,pos+1,transfer_left(leftenv(envs,pos),ham[pos],st.AL[pos],st.AL[pos]));
-        end
-
         for pos = length(st):-1:1
 
             (eigvals,vecs) = @closure eigsolve(st.AC[pos],1,:SR,Arnoldi()) do x
@@ -44,10 +40,6 @@ function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,oenvs=e
             (st.CR[pos-1],temp) = rightorth(_transpose_tail(vecs[1]));
             st.AR[pos] = _transpose_front(temp);
 
-            setrightenv!(envs,pos-1,transfer_right(rightenv(envs,pos),ham[pos],st.AR[pos],st.AR[pos]));
-        end
-
-        for pos = length(st):-1:2
             setrightenv!(envs,pos-1,transfer_right(rightenv(envs,pos),ham[pos],st.AR[pos],st.AR[pos]));
         end
 
@@ -176,7 +168,7 @@ function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg2,oenvs=e
 
     end
 
-    nst = InfiniteMPS(st.AR[1:end],tol=alg.tol_gauge);
+    nst = InfiniteMPS(st.AL[1:end],tol=alg.tol_gauge);
     nenvs = environments(nst, ham, solver=oenvs.solver)
     return nst,nenvs,delta;
 end

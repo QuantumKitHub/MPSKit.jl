@@ -7,7 +7,7 @@
     verbose::Bool = Defaults.verbose
 end
 
-function approximate(state::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS}, alg::Vomps, envs = environments(state,toapprox))
+function approximate(state::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS}, alg, envs = environments(state,toapprox))
     #PeriodicMPO's always act on MPSMultiline's. I therefore convert the imps to multilines, approximate and convert back
     (multi,envs) = approximate(convert(MPSMultiline,state),(convert(MPOMultiline,envs.opp),convert(MPSMultiline,envs.above)),alg,envs)
     state = convert(InfiniteMPS,multi)

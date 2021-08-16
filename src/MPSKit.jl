@@ -116,6 +116,7 @@ module MPSKit
 
     include("algorithms/approximate/vomps.jl")
     include("algorithms/approximate/fvomps.jl")
+    include("algorithms/approximate/idmrg.jl")
 
     include("algorithms/ED.jl")
 

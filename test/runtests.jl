@@ -503,8 +503,8 @@ end
 
 @timedtestset "approximate" begin
     @timedtestset "mpo * infinite ≈ infinite" begin
-        st = InfiniteMPS([𝔹^2],[𝔹^10]);
-        th = force_planar(nonsym_ising_ham(lambda=4));
+        st = InfiniteMPS([𝔹^2,𝔹^2],[𝔹^10,𝔹^10]);
+        th = force_planar(repeat(nonsym_ising_ham(lambda=4),2));
 
         dt = 1e-3;
         W1 = make_time_mpo(th,dt,WI());
@@ -513,12 +513,16 @@ end
 
         (st1,_) = approximate(st,(W1,st),Vomps(verbose=false));
         (st2,_) = approximate(st,(W2,st),Vomps(verbose=false));
-        (st3,_) = timestep(st,th,dt,Tdvp());
-        st4 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
+        (st3,_) = approximate(st,(W1,st),Idmrg1(verbose=false));
+        (st4,_) = approximate(st,(W2,st),Idmrg2(trscheme=truncdim(20),verbose=false));
+        (st5,_) = timestep(st,th,dt,Tdvp());
+        st6 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
 
-        @test abs(dot(st1,st3)) ≈ 1.0 atol = dt
-        @test abs(dot(st2,st3)) ≈ 1.0 atol = dt
-        @test abs(dot(st4,st3)) ≈ 1.0 atol = dt
+        @test abs(dot(st1,st5)) ≈ 1.0 atol = dt
+        @test abs(dot(st2,st5)) ≈ 1.0 atol = dt
+        @test abs(dot(st3,st5)) ≈ 1.0 atol = dt
+        @test abs(dot(st4,st5)) ≈ 1.0 atol = dt
+        @test abs(dot(st6,st5)) ≈ 1.0 atol = dt
 
         nW1 = changebonds(W1,SvdCut(trscheme=truncerr(dt))); #this should be a trivial mpo now
         @test dim(space(nW1.opp[1,1],1)) == 1
