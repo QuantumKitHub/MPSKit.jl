@@ -1,5 +1,6 @@
 module MPSKit
-    using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit, FastClosures
+    using TensorKit,KrylovKit,Parameters, OptimKit, FastClosures
+    using Base.Iterators, Base.Threads
     using RecipesBase
 
     import TensorOperations as TO;

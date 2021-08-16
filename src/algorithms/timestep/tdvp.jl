@@ -32,7 +32,7 @@ function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp
         #find Al that best fits these new Acenter and centers
         QAc,_ = leftorth!(temp_ACs[loc],alg=TensorKit.QRpos())
         Qc,_ = leftorth!(temp_CRs[loc],alg=TensorKit.QRpos())
-        @tensor temp_ACs[loc][-1 -2;-3]=QAc[-1,-2,1]*conj(Qc[-3,1])
+        @plansor temp_ACs[loc][-1 -2;-3] = QAc[-1 -2;1]*conj(Qc[-3;1])
     end
 
     nstate = InfiniteMPS(temp_ACs,state.CR[end]; tol = alg.tolgauge, maxiter = alg.maxiter)
@@ -73,13 +73,13 @@ end
 function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp2,envs=environments(state,H);rightorthed=false)
     #left to right
     for i in 1:(length(state)-1)
-        ac2 = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
+        ac2 = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
 
         (nac2,convhist) = exponentiate(@closure(x->ac2_prime(x,i,state,envs)),-1im*timestep/2,ac2,Lanczos())
         (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme, alg=TensorKit.SVD())
 
         state.AC[i] = (nal,complex(nc))
-        state.AC[i+1] = (complex(nc),_permute_front(nar))
+        state.AC[i+1] = (complex(nc),_transpose_front(nar))
 
         if(i!=(length(state)-1))
             (state.AC[i+1],convhist) = exponentiate(@closure(x->ac_prime(x,i+1,state,envs)),1im*timestep/2,state.AC[i+1],Lanczos())
@@ -89,13 +89,13 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::N
 
     #right to left
     for i in length(state):-1:2
-        ac2 = _permute_front(state.AL[i-1])*_permute_tail(state.AC[i])
+        ac2 = _transpose_front(state.AL[i-1])*_transpose_tail(state.AC[i])
 
         (nac2,convhist) = exponentiate(@closure(x->ac2_prime(x,i-1,state,envs)),-1im*timestep/2,ac2,Lanczos())
         (nal,nc,nar) = tsvd(nac2,trunc=alg.trscheme,alg=TensorKit.SVD())
 
         state.AC[i-1] = (nal,complex(nc))
-        state.AC[i] = (complex(nc),_permute_front(nar));
+        state.AC[i] = (complex(nc),_transpose_front(nar));
 
         if(i!=2)
             (state.AC[i-1],convhist) = exponentiate(@closure(x->ac_prime(x,i-1,state,envs)),1im*timestep/2,state.AC[i-1],Lanczos())

@@ -1,43 +1,17 @@
 "calculates the entropy of a given state"
 entropy(state::InfiniteMPS) = [-tr(c*log(c)) for c in state.CR]
 
-"
-given a thermal state, you can map it to an mps by fusing the physical legs together
-to prepare a gibbs ensemble, you need to evolve this state with H working on both legs
-here we return the 'superhamiltonian' (H*id,id*H)
-"
-function splitham(ham::MPOHamiltonian)
-    fusers = [isomorphism(fuse(p*p'),p*p') for p in ham.pspaces]
-
-    idham = Array{Union{Missing,typeof(ham[1,1,1])},3}(missing,ham.period,ham.odim,ham.odim)
-    hamid = Array{Union{Missing,typeof(ham[1,1,1])},3}(missing,ham.period,ham.odim,ham.odim)
-
-    for i in 1:ham.period
-        for (k,l) in keys(ham,i)
-            idt = isomorphism(ham.pspaces[i],ham.pspaces[i])
-
-            @tensor hamid[i,k,l][-1 -2; -3 -4] :=   ham[i,k,l][-1,12,-3,15]*
-                                                    idt[16,13]*
-                                                    fusers[i][-2,12,13]*
-                                                    conj(fusers[i][-4,15,16])
-
-            @tensor idham[i,k,l][-1 -2; -3 -4] :=   ham[i,k,l][-1,13,-3,16]*
-                                                    idt[12,15]*
-                                                    fusers[i][-2,12,16]*
-                                                    conj(fusers[i][-4,15,13])
-        end
-    end
-
-    return MPOHamiltonian(hamid),MPOHamiltonian(idham)
-end
-
 infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(Matrix{eltype(ham[1,1,1])},oneunit(sp)*sp,oneunit(sp)*sp),(1,2,4),(3,)) for sp in ham.pspaces]
 
 "calculates the galerkin error"
-calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64 = norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc,state,envs))
-calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs)::Float64 = maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
-calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64 = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col,state,envs)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
-calc_galerkin(state::MPSMultiline, envs::MixPerMPOInfEnv)::Float64 = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(envs.above.AC[row,col], row,col,state,envs)) for (row,col) in Iterators.product(1:size(state,1),1:size(state,2))][:])
+calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64 =
+    norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc,state,envs))
+calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs)::Float64 =
+    maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
+calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64 =
+    maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col,state,envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
+calc_galerkin(state::MPSMultiline, envs::MixPerMPOInfEnv)::Float64 =
+    maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(envs.above.AC[row,col], row,col,state,envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
 
 "
 Calculates the (partial) transfer spectrum
@@ -169,26 +143,21 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
     mod(len,ham.period) == 0 || throw(ArgumentError("$(len) is not a multiple of unitcell"))
 
     fusers = PeriodicArray(map(1:len) do loc
-        map(Iterators.product(ham.domspaces[len+1,:],ham.domspaces[loc,:],ham.domspaces[loc,:])) do (v1,v2,v3)
-            isomorphism(fuse(v1'*v2*v3),v1'*v2*v3)
+        map(Iterators.product(ham.domspaces[loc,:],ham.domspaces[len+1,:],ham.domspaces[loc,:])) do (v1,v2,v3)
+            isomorphism(fuse(v1*v2'*v3),v1*v2'*v3)
         end
     end)
 
-    #a -> what virtual space did I "lend" in the beginning?
-    #b -> what progress have I made in the lower layer?
-    #c -> what progress have I made in the upper layer?
+    #a -> what progress have I made in the upper layer?
+    #b -> what virtual space did I "lend" in the beginning?
+    #c -> what progress have I made in the lower layer?
     χ = ham.odim;
     χ´ = Int((χ-1)*χ*(χ+1)/2+1);
 
-    function indmap(a,b,c)
-        Int((χ-a)*(χ-a+1)/2+(c-1)*χ*(χ+1)/2+(b-a)+1)
-    end
-
+    indmap(a,b,c) = Int((χ-b)*(χ-b+1)/2+(a-1)*χ*(χ+1)/2+(c-b)+1)
 
     #do the bulk
     bulk = PeriodicArray(convert(Array{Union{T,E},3},fill(zero(E),ham.period,χ´,χ´)));
-
-
 
     for loc in 1:ham.period,
         (j,k) in keys(ham,loc)
@@ -199,9 +168,12 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 
             k <= i && i<=l || continue
 
-            f1 = fusers[loc][i,l,j]
-            f2 = fusers[loc+1][i,l,k]
-            @tensor bulk[loc,indmap(i,l,j),indmap(i,l,k)][-1 -2;-3 -4]:=ham[loc,j,k][1,-2,2,-4]*f1[-1,3,4,1]*conj(f2[-3,3,4,2])
+            f1 = fusers[loc][j,i,l]
+            f2 = fusers[loc+1][k,i,l]
+
+            @plansor bulk[loc,indmap(j,i,l),indmap(k,i,l)][-1 -2;-3 -4]:=
+                ham[loc,j,k][1 2;-3 6]*f1[-1;1 3 5]*conj(f2[-4;6 7 8])*τ[2 3;7 4]*τ[4 5;8 -2]
+
         end
 
 
@@ -211,10 +183,11 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 
             l > 1 && l >= i && l<=j || continue
 
-            f1 = fusers[loc][l,j,i];
-            f2 = fusers[loc+1][l,k,i];
+            f1 = fusers[loc][i,l,j];
+            f2 = fusers[loc+1][i,l,k];
 
-            @tensor bulk[loc,indmap(l,j,i),indmap(l,k,i)][-1 -2;-3 -4]:=ham[loc,j,k][1,-2,2,-4]*f1[-1,3,1,4]*conj(f2[-3,3,2,4])
+            @plansor bulk[loc,indmap(i,l,j),indmap(i,l,k)][-1 -2;-3 -4] :=
+                ham[loc,j,k][1 -2;3 6]*f1[-1;4 2 1]*conj(f2[-4;8 7 6])*τ[5 2;7 3]*τ[-3 4;8 5]
         end
     end
 
@@ -225,21 +198,24 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 
         #apply (j,k) above
         if j == 1
-            f1 = fusers[1][end,end,1];
-            f2 = fusers[2][end,end,k];
+            f1 = fusers[1][1,end,end];
+            f2 = fusers[2][k,end,end];
 
-            @tensor starter[1,indmap(ham.odim,ham.odim,k)][-1 -2;-3 -4]:=
-            ham[1,j,k][1,-2,2,-4]*f1[-1,3,4,1]*conj(f2[-3,3,4,2])
+            @plansor starter[1,indmap(k,ham.odim,ham.odim)][-1 -2;-3 -4]:=
+                ham[1,j,k][1 2;-3 6]*f1[-1;1 3 5]*conj(f2[-4;6 7 8])*τ[2 3;7 4]*τ[4 5;8 -2]
         end
 
         #apply (j,k) below
         if j > 1 && j < ham.odim
+            f1 = fusers[1][1,j,j];
+            f2 = fusers[2][1,j,k];
 
-            f1 = fusers[1][j,j,1];
-            f2 = fusers[2][j,k,1];
+            @plansor starter[1,indmap(1,j,k)][-1 -2;-3 -4]:=
+                ham[1,j,k][4 -2;3 1]*conj(f2[-4;6 2 1])*τ[5 4;2 3]*τ[-3 -1;6 5]
 
-            @tensor starter[1,indmap(j,k,1)][-1 -2;-3 -4]:=ham[1,j,k][1,-2,2,-4]*conj(f2[-3,1,2,-1])
         end
+
+
     end
     starter[1,1] = one(E);
     starter[end,end] = one(E);
@@ -249,8 +225,9 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
     for (j,k) in keys(ham,ham.period)
 
         if k > 1
-            f1 = fusers[end][k,ham.odim,j]
-            @tensor ender[indmap(k,ham.odim,j),end][-1 -2;-3 -4]:=ham[ham.period,j,k][1,-2,2,-4]*f1[-1,2,-3,1]
+            f1 = fusers[end][j,k,ham.odim]
+            @plansor ender[indmap(j,k,ham.odim),end][-1 -2;-3 -4]:=
+                f1[-1;1 2 6]*ham[ham.period,j,k][1 3;-3 4]*τ[3 2;4 5]*τ[5 6;-4 -2]
         end
     end
     ender[1,1] = one(E);
@@ -265,8 +242,6 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
         nos[i,:,:] = bulk[i,:,:];
     end
 
-
-
     return MPOHamiltonian(nos)
 end
 
@@ -277,24 +252,24 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},len = length(mpo)) whe
     output = PeriodicArray{O,1}(undef,len);
 
 
-    sp = space(mpo[1],1)';
+    sp = _firstspace(mpo[1])';
     utleg = Tensor(ones,oneunit(sp));
 
     #do the bulk
     for j in 2:len-1
-        f1 = isomorphism(fuse(sp*space(mpo[j],1)),sp*space(mpo[j],1))
-        f2 = isomorphism(fuse(sp*space(mpo[j],3)'),sp*space(mpo[j],3)')
+        f1 = isomorphism(fuse(sp*_firstspace(mpo[j])),sp*_firstspace(mpo[j]))
+        f2 = isomorphism(fuse(sp*_lastspace(mpo[j])'),sp*_lastspace(mpo[j])')
 
-        @tensor output[j][-1 -2;-3 -4] := mpo[j][1,-2,2,-4]*f1[-1,3,1]*conj(f2[-3,3,2])
+        @plansor output[j][-1 -2;-3 -4] := mpo[j][2 -2;3 5]*f1[-1;1 2]*conj(f2[-4;4 5])*τ[-3 1;4 3]
     end
 
     #do the left
-    f2 = isomorphism(fuse(sp*space(mpo[1],3)'),sp*space(mpo[1],3)')
-    @tensor output[1][-1 -2;-3 -4] := mpo[1][1,-2,2,-4]*conj(f2[-3,1,2])*utleg[-1]
+    f2 = isomorphism(fuse(sp*_lastspace(mpo[1])'),sp*_lastspace(mpo[1])')
+    @plansor output[1][-1 -2;-3 -4] := mpo[1][1 -2;3 5]*conj(f2[-4;4 5])*τ[-3 1;4 3]*utleg[-1]
 
     #do the right
-    f2 = isomorphism(fuse(sp*space(mpo[len],1)),sp*space(mpo[len],1))
-    @tensor output[end][-1 -2;-3 -4] := mpo[len][1,-2,2,-4]*f2[-1,2,1]*conj(utleg[-3])
+    f2 = isomorphism(fuse(sp*_firstspace(mpo[len])),sp*_firstspace(mpo[len]))
+    @plansor output[end][-1 -2;-3 -4] := mpo[len][2 -2;3 4]*f2[-1;1 2]*τ[-3 1;4 3]*conj(utleg[-4])
 
     InfiniteMPO(output)
 end

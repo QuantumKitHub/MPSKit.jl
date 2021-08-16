@@ -104,7 +104,7 @@ function transferplot end
     end
 
     for sector in sectors
-        below = length(h.arg) == 1 ? h.args[1] : h.args[2];
+        below = length(h.args) == 1 ? h.args[1] : h.args[2];
         spectrum = transfer_spectrum(h.args[1]; below=below, sector=sector, transferkwargs...)
 
         @series begin

@@ -45,8 +45,8 @@ end
 function Base.getindex(v::CRView{S},i::Int)::bond_type(S) where S <: Union{FiniteMPS,MPSComoving}
     if ismissing(v.parent.CLs[i+1])
         if i == 0 || !ismissing(v.parent.ALs[i])
-            (v.parent.CLs[i+1],temp) = rightorth(_permute_tail(v.parent.AC[i+1]),alg=LQpos())
-            v.parent.ARs[i+1] = _permute_front(temp);
+            (v.parent.CLs[i+1],temp) = rightorth(_transpose_tail(v.parent.AC[i+1]),alg=LQpos())
+            v.parent.ARs[i+1] = _transpose_front(temp);
         else
             (v.parent.ALs[i],v.parent.CLs[i+1]) = leftorth(v.parent.AC[i],alg=QRpos())
         end
@@ -57,8 +57,8 @@ end
 function Base.setindex!(v::CRView{S},vec,i::Int) where S <: Union{FiniteMPS,MPSComoving}
     if ismissing(v.parent.CLs[i+1])
         if !ismissing(v.parent.ALs[i])
-            (v.parent.CLs[i+1],temp) = rightorth(_permute_tail(v.parent.AC[i+1]),alg=LQpos())
-            v.parent.ARs[i+1] = _permute_front(temp);
+            (v.parent.CLs[i+1],temp) = rightorth(_transpose_tail(v.parent.AC[i+1]),alg=LQpos())
+            v.parent.ARs[i+1] = _transpose_front(temp);
         else
             (v.parent.ALs[i],v.parent.CLs[i+1]) = leftorth(v.parent.AC[i],alg=QRpos())
         end
@@ -85,7 +85,7 @@ function Base.getindex(v::ACView{S},i::Int)::eltype(S) where S<: Union{FiniteMPS
     if ismissing(v.parent.ACs[i]) && !ismissing(v.parent.ARs[i])
         c = v.parent.CR[i-1];
         ar = v.parent.ARs[i];
-        v.parent.ACs[i] = _permute_front(c*_permute_tail(ar))
+        v.parent.ACs[i] = _transpose_front(c*_transpose_tail(ar))
     elseif ismissing(v.parent.ACs[i]) && !ismissing(v.parent.ALs[i])
         c = v.parent.CR[i];
         al = v.parent.ALs[i];

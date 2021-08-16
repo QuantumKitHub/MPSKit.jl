@@ -13,7 +13,7 @@ function changebonds!(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) whe
         (U,S,V) = tsvd(state.CR[i],trunc=alg.trscheme,alg=TensorKit.SVD());
 
         state.AC[i] = (state.AL[i]*U,complex(S));
-        state.AC[i+1] = (complex(S),_permute_front(V*_permute_tail(state.AR[i+1])));
+        state.AC[i+1] = (complex(S),_transpose_front(V*_transpose_tail(state.AR[i+1])));
     end
 
     return state
@@ -29,7 +29,7 @@ function changebonds(state::InfiniteMPS,alg::SvdCut)
 
         (U,state.CR[i],V) = tsvd(state.CR[i],trunc=alg.trscheme,alg=TensorKit.SVD());
         copied[i] = copied[i]*U
-        copied[i+1] = _permute_front(U'*_permute_tail(copied[i+1]))
+        copied[i+1] = _transpose_front(U'*_transpose_tail(copied[i+1]))
     end
 
     InfiniteMPS(copied,state.CR[end]);

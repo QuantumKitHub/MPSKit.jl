@@ -58,7 +58,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
 
         #left to right sweep
         for pos= 1:(length(state)-1)
-            @tensor ac2[-1 -2; -3 -4]:=state.AC[pos][-1,-2,1]*state.AR[pos+1][1,-3,-4]
+            @plansor ac2[-1 -2; -3 -4]:=state.AC[pos][-1 -2;1]*state.AR[pos+1][1 -4;-3]
             (eigvals,vecs) = @closure eigsolve(ac2,1,:SR,ealg) do x
                 ac2_prime(x,pos,state,envs)
             end
@@ -66,16 +66,16 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
             normalize!(c);
-            v = @tensor ac2[1,2,3,4]*conj(al[1,2,5])*conj(c[5,6])*conj(ar[6,3,4])
+            v = @plansor ac2[1 2;3 4]*conj(al[1 2;5])*conj(c[5;6])*conj(ar[6;3 4])
             delta = max(delta,abs(1-abs(v)));
 
             state.AC[pos] = (al,complex(c))
-            state.AC[pos+1] = (complex(c),_permute_front(ar))
+            state.AC[pos+1] = (complex(c),_transpose_front(ar))
         end
 
 
         for pos = length(state)-2:-1:1
-            @tensor ac2[-1 -2; -3 -4]:=state.AL[pos][-1,-2,1]*state.AC[pos+1][1,-3,-4]
+            @plansor ac2[-1 -2; -3 -4]:=state.AL[pos][-1 -2;1]*state.AC[pos+1][1 -4;-3]
             (eigvals,vecs) = @closure eigsolve(ac2,1,:SR,ealg) do x
                 ac2_prime(x,pos,state,envs)
             end
@@ -83,10 +83,10 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,a
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
             normalize!(c);
-            v = @tensor ac2[1,2,3,4]*conj(al[1,2,5])*conj(c[5,6])*conj(ar[6,3,4])
+            v = @plansor ac2[1 2;3 4]*conj(al[1 2;5])*conj(c[5;6])*conj(ar[6;3 4])
             delta = max(delta,abs(1-abs(v)));
 
-            state.AC[pos+1] = (complex(c),_permute_front(ar))
+            state.AC[pos+1] = (complex(c),_transpose_front(ar))
             state.AC[pos] = (al,complex(c))
         end
 

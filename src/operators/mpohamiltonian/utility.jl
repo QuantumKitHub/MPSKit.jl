@@ -14,7 +14,7 @@ function Base.:+(a::MPOHamiltonian{S,T,E},e::AbstractArray{V,1}) where {S,T,E,V}
         if nOs[c,1,end] isa E
             nOs[c,1,end] += e[c]
         else
-            nOs[c,1,a.odim] += e[c]*one(nOs[c,1,a.odim])
+            nOs[c,1,end] += e[c]*isomorphism(storagetype(nOs[c,1,end]),codomain(nOs[c,1,end]),domain(nOs[c,1,end]))
         end
     end
 
@@ -65,7 +65,8 @@ function Base.:+(a::MPOHamiltonian{S,T,E},b::MPOHamiltonian{S,T,E}) where {S,T,E
                         if nOs[pos,1,a.odim+j-2] == zero(E)
                             nOs[pos,1,a.odim+j-2] = b[pos,i,j]
                         else
-                            nOs[pos,1,a.odim+j-2] = nOs[pos,1,a.odim+j-2]*one(b[pos,i,j])+b[pos,i,j]
+                            t_b = isomorphism(storagetype(b[pos,i,j]),codomain(b[pos,i,j]),domain(b[pos,i,j]));
+                            nOs[pos,1,a.odim+j-2] = nOs[pos,1,a.odim+j-2]*t_b+b[pos,i,j]
                         end
 
                     else
@@ -100,14 +101,16 @@ end
 
 function Base.:*(b::MPOHamiltonian{S,T,E},a::MPOHamiltonian{S,T,E}) where {S,T,E}
     nodim = a.odim*b.odim
-
     indmap = LinearIndices((a.odim,b.odim))
-
     nOs = PeriodicArray{Union{E,T},3}(fill(zero(E),a.period,nodim,nodim))
+
+    fusers = PeriodicArray(map(product(1:a.period,1:a.odim,1:b.odim)) do (pos,i,j)
+        isomorphism(fuse(a.domspaces[pos,i]*b.domspaces[pos,j]),a.domspaces[pos,i]*b.domspaces[pos,j])
+    end)
 
     ndomspaces = PeriodicArray{S,2}(undef,a.period,nodim)
     for pos = 1:a.period,i in 1:a.odim, j = 1:b.odim
-        ndomspaces[pos,indmap[i,j]]=fuse(a.domspaces[pos,i]*b.domspaces[pos,j])
+        ndomspaces[pos,indmap[i,j]] = codomain(fusers[pos,i,j])
     end
 
     for pos = 1:a.period,
@@ -117,14 +120,8 @@ function Base.:*(b::MPOHamiltonian{S,T,E},a::MPOHamiltonian{S,T,E}) where {S,T,E
         if isscal(a,pos,i,j) && isscal(b,pos,k,l)
             nOs[pos,indmap[i,k],indmap[j,l]] = a.Os[pos,i,j]*b.Os[pos,k,l]
         else
-
-            @tensor newopp_1[-1 -2;-3 -4 -5 -6]:=a[pos,i,j][-1,1,-4,-6]*b[pos,k,l][-2,-3,-5,1]
-            newopp_2 = TensorMap(newopp_1.data,ndomspaces[pos,indmap[i,k]],domain(newopp_1))
-            newopp_3 = permute(newopp_2,(1,2,5),(3,4))
-            newopp_4 = TensorMap(newopp_3.data,codomain(newopp_3),ndomspaces[pos+1,indmap[j,l]])
-            newopp_5 = permute(newopp_4,(1,2),(4,3))
-
-            nOs[pos,indmap[i,k],indmap[j,l]]=newopp_5
+            @plansor nOs[pos,indmap[i,k],indmap[j,l]][-1 -2;-3 -4] :=
+                fusers[pos,i,k][-1;1 2]*conj(fusers[pos+1,j,l][-4;3 4])*a[pos,i,j][1 5;-3 3]*b[pos,k,l][2 -2;5 4]
         end
     end
 
@@ -133,21 +130,14 @@ end
 
 #without the copy, we get side effects when repeating + setindex
 Base.repeat(x::MPOHamiltonian{S,T,E},n::Int) where {S,T,E} =
-    MPOHamiltonian{S,T,E}(
-                                            repeat(x.Os,n,1,1),
-                                            repeat(x.domspaces,n,1),
-                                            repeat(x.pspaces,n))
+    MPOHamiltonian{S,T,E}(repeat(x.Os,n,1,1),repeat(x.domspaces,n,1),repeat(x.pspaces,n))
 
-#transpo = false => inplace conjugate
-#transpo = true => flip physical legs
-function Base.conj(a::MPOHamiltonian;transpo=false)
+
+function Base.conj(a::MPOHamiltonian)
     b = copy(a.Os)
 
     for (i,j,k) in keys(a)
-        b[i,j,k] = @tensor temp[-1 -2;-3 -4]:=conj(a[i,j,k][-1,-2,-3,-4])
-        if transpo
-            b[i,j,k]=permute(b[i,j,k],(1,4),(3,2))
-        end
+        @plansor b[i,j,k][-1 -2;-3 -4]:=conj(a[i,j,k][-1 -3;-2 -4])
     end
 
     MPOHamiltonian(b)

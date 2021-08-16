@@ -10,7 +10,7 @@
 
     In a later stage we can perhaps support nonzero scalar -> scalar*isometry - though the usecases for that seem very limited
 
-    The principles are that you can write code without knowing anything about the senvse structure, and it should just work (potentially a bit slower)
+    The principles are that you can write code without knowing anything about the structure, and it should just work (potentially a bit slower)
 
     Unhappy about this design because :
         - the constructor is a mess
@@ -227,8 +227,8 @@ Base.eltype(x::MPOHamiltonian) = typeof(x[1,1,1])
 Base.size(x::MPOHamiltonian) = (x.period,x.odim,x.odim)
 Base.size(x::MPOHamiltonian,i) = size(x)[i]
 
-Base.keys(x::MPOHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))
-Base.keys(x::MPOHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),Iterators.product(1:x.odim,1:x.odim))
+Base.keys(x::MPOHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),product(1:x.period,1:x.odim,1:x.odim))
+Base.keys(x::MPOHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),product(1:x.odim,1:x.odim))
 
 opkeys(x::MPOHamiltonian) = Iterators.filter(a-> !isscal(x,a[1],a[2],a[3]),keys(x));
 opkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> !isscal(x,i,a[1],a[2]),keys(x,i));
@@ -269,19 +269,12 @@ end
 checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
 "
 function isid(x::MPOTensor)
-    cod = space(x,1)*space(x,2);
-    dom = space(x,3)'*space(x,4)';
+    (_firstspace(x) == _lastspace(x)' && space(x,2) == space(x,3)') || return false,zero(eltype(x));
+    _can_unambiguously_braid(_firstspace(x)) || return false,zero(eltype(x));
 
-    #would like to have an 'isisomorphic'
-    for c in union(blocksectors(cod), blocksectors(dom))
-        blockdim(cod, c) == blockdim(dom, c) || return false,0.0;
-    end
-
-    id = isomorphism(Matrix{eltype(x)},cod,dom)
+    id = isomorphism(Matrix{eltype(x)},codomain(x),domain(x))
     scal = dot(id,x)/dot(id,id)
     diff = x-scal*id
-
-    scal = (scal ≈ 0.0) ? 0.0 : scal #shouldn't be necessary (and I don't think it is)
 
     return norm(diff)<1e-14,scal
 end

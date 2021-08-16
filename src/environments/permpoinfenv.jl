@@ -17,7 +17,7 @@ end
 
 function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline)
     sameDspace = reduce((prev,i) -> prev && _lastspace(envs.lw[i...]) == _firstspace(nstate.CR[i...])',
-        Iterators.product(1:size(nstate,1),1:size(nstate,2)),init=true);
+        product(1:size(nstate,1),1:size(nstate,2)),init=true);
 
     init = collect(zip(envs.lw[:,1],envs.rw[:,end]))
     if !sameDspace
@@ -54,7 +54,7 @@ end
 
 function recalculate!(envs::MixPerMPOInfEnv,nstate::MPSMultiline)
     sameDspace = reduce((prev,i) -> prev && _firstspace(envs.lw[i...]) == _firstspace(nstate.CR[i...]),
-        Iterators.product(1:size(nstate,1),1:size(nstate,2)),init=true);
+        product(1:size(nstate,1),1:size(nstate,2)),init=true);
 
     init = collect(zip(envs.lw[:,1],envs.rw[:,end]))
     if !sameDspace

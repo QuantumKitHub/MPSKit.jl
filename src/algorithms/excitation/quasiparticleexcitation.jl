@@ -40,14 +40,14 @@ function excitations(
 )
     qp_envs(V) = environments(V, H, lenvs, renvs, solver=solver)
     H_eff = @closure(V->effective_excitation_hamiltonian(H, V, qp_envs(V)))
-    
+
     Es, Vs, convhist = eigsolve(
         H_eff, V₀, num, :SR, tol=alg.toler, krylovdim=alg.krylovdim
     )
-    
-    convhist.converged < num && 
+
+    convhist.converged < num &&
         @warn "Quasiparticle didn't converge: $(convhist.normres)"
-    
+
     return Es, Vs
 end
 function excitations(
@@ -73,7 +73,7 @@ end
 Create and optimise an infinite quasiparticle state with momentum ```p```.
 """
 function excitations(
-    H::Hamiltonian, alg::QuasiparticleAnsatz, p::Real, 
+    H::Hamiltonian, alg::QuasiparticleAnsatz, p::Real,
     lmps::InfiniteMPS, lenvs=environments(lmps, H),
     rmps::InfiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
     sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1,
@@ -95,12 +95,12 @@ function excitations(
             (E, V)
         end
     end
-    
+
     fetched = fetch.(tasks);
-    
+
     Ep = permutedims(reduce(hcat, map(x->x[1][1:num], fetched)));
     Bp = permutedims(reduce(hcat, map(x->x[2][1:num], fetched)));
-    
+
     return Ep, Bp
 end
 
@@ -119,21 +119,21 @@ Optimise the finite quasiparticle state ```V₀```.
 - `num=1`: number of excited states to compute.
 """
 function excitations(
-    H::Hamiltonian, alg::QuasiparticleAnsatz, 
+    H::Hamiltonian, alg::QuasiparticleAnsatz,
     V₀::FiniteQP, lenvs=environments(V₀.left_gs, H),
     renvs=V₀.trivial ? lenvs : environments(V₀.right_gs, H);
     num=1
 )
     qp_envs(V) = environments(V, H, lenvs, renvs)
     H_eff = @closure(V->effective_excitation_hamiltonian(H, V, qp_envs(V)))
-    
+
     Es, Vs, convhist = eigsolve(
         H_eff, V₀, num, :SR, tol=alg.toler, krylovdim=alg.krylovdim
     )
-    
+
     convhist.converged < num &&
         @warn "Quasiparticle didn't converge: $(convhist.normres)"
-    
+
     return Es, Vs
 end
 
@@ -143,7 +143,7 @@ end
 Create and optimise a finite quasiparticle state.
 """
 function excitations(
-    H::Hamiltonian, alg::QuasiparticleAnsatz, 
+    H::Hamiltonian, alg::QuasiparticleAnsatz,
     lmps::FiniteMPS, lenvs=environments(lmps, H),
     rmps::FiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H)environmentsleft;
     sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1
@@ -163,30 +163,30 @@ function effective_excitation_hamiltonian(
         T = zero(Bs[i]);
 
         for (j,k) in keys(H,i)
-            @tensor T[-1,-2,-3,-4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1,1,2]*
-                                                Bs[i][2,3,-3,4]*
-                                                H[i,j,k][1,-2,5,3]*
-                                                rightenv(envs.renvs,i,exci.right_gs)[k][4,5,-4]
+            @plansor T[-1 -2;-3 -4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1 1;2]*
+                                                Bs[i][2 3;-3 4]*
+                                                H[i,j,k][1 -2;3 5]*
+                                                rightenv(envs.renvs,i,exci.right_gs)[k][4 5;-4]
 
             # <B|H|B>-<H>
-            en = @tensor    conj(exci.left_gs.AC[i][11,12,13])*
-                            leftenv(envs.lenvs,i,exci.left_gs)[j][11,1,2]*
-                            exci.left_gs.AC[i][2,3,4]*
-                            H[i,j,k][1,12,5,3]*
-                            rightenv(envs.lenvs,i,exci.left_gs)[k][4,5,13]
+            en = @plansor    conj(exci.left_gs.AC[i][11 12;13])*
+                            leftenv(envs.lenvs,i,exci.left_gs)[j][11 1;2]*
+                            exci.left_gs.AC[i][2 3;4]*
+                            H[i,j,k][1 12;3 5]*
+                            rightenv(envs.lenvs,i,exci.left_gs)[k][4 5;13]
 
             T -= Bs[i]*en
             if i>1 || exci isa InfiniteQP
-                @tensor T[-1,-2,-3,-4] +=    envs.lBs[i-1][j][-1,1,-3,2]*
-                                                    exci.right_gs.AR[i][2,3,4]*
-                                                    H[i,j,k][1,-2,5,3]*
-                                                    rightenv(envs.renvs,i,exci.right_gs)[k][4,5,-4]
+                @plansor T[-1 -2;-3 -4] +=    envs.lBs[i-1][j][-1 1;-3 2]*
+                                                    exci.right_gs.AR[i][2 3;4]*
+                                                    H[i,j,k][1 -2;3 5]*
+                                                    rightenv(envs.renvs,i,exci.right_gs)[k][4 5;-4]
             end
             if i<length(exci.left_gs) || exci isa InfiniteQP
-                @tensor T[-1,-2,-3,-4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1,1,2]*
-                                                    exci.left_gs.AL[i][2,3,4]*
-                                                    H[i,j,k][1,-2,5,3]*
-                                                    envs.rBs[i+1][k][4,-3,5,-4]
+                @plansor T[-1 -2;-3 -4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1 1;2]*
+                                                    exci.left_gs.AL[i][2 3;4]*
+                                                    H[i,j,k][1 -2;3 5]*
+                                                    envs.rBs[i+1][k][4 5;-3 -4]
             end
         end
 

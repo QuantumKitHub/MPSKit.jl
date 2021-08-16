@@ -28,7 +28,7 @@ function MPSComoving(left::InfiniteMPS{A,B},site_tensors::Array{A},right::Infini
     site_tensors = copy(site_tensors)
     for i in 1:length(site_tensors)-1
         (site_tensors[i],C) = leftorth(site_tensors[i],alg=QRpos());
-        site_tensors[i+1] = _permute_front(C*_permute_tail(site_tensors[i+1]))
+        site_tensors[i+1] = _transpose_front(C*_transpose_tail(site_tensors[i+1]))
     end
 
     (site_tensors[end],C) = leftorth(site_tensors[end],alg=QRpos());
@@ -172,7 +172,7 @@ function TensorKit.dot(psi1::MPSComoving, psi2::MPSComoving)
     psi1.right_gs == psi2.right_gs || throw(ArgumentError("right InfiniteMPS is different"))
 
     ρr = transfer_right(r_RR(psi2),psi2.AR[2:end],psi1.AR[2:end]);
-    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]) * ρr)
+    return tr(_transpose_front(psi1.AC[1])' * _transpose_front(psi2.AC[1]) * ρr)
 end
 
 TensorKit.norm(psi::MPSComoving) = norm(psi.AC[1])

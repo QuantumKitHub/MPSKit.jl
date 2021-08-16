@@ -35,8 +35,8 @@ function environments(state::FiniteMPS,ham::MPOHamiltonian)
         util_left = Tensor(ones,eltype(eltype(state)),ham.domspaces[1,i]')
         util_right = Tensor(ones,eltype(eltype(state)),ham.imspaces[length(state),i]')
 
-        @tensor ctl[-1 -2; -3]:= lll[-1,-3]*util_left[-2]
-        @tensor ctr[-1 -2; -3]:= rrr[-1,-3]*util_right[-2]
+        @plansor ctl[-1 -2; -3]:= lll[-1;-3]*util_left[-2]
+        @plansor ctr[-1 -2; -3]:= rrr[-1;-3]*util_right[-2]
 
         if i != 1
             ctl = zero(ctl)

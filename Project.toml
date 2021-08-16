@@ -1,7 +1,7 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
 authors = ["Maarten Van Damme", "Jutho Haegeman", "Gertian Roose", "Markus Hauru"]
-version = "0.5.0"
+version = "0.6.0"
 
 [deps]
 FastClosures = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"

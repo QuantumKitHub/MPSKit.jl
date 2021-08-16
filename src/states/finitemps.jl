@@ -104,7 +104,7 @@ function FiniteMPS(site_tensors::Vector{A};normalize=false) where {A<:GenericMPS
     for i in 1:length(site_tensors)-1
         (site_tensors[i],C) = leftorth(site_tensors[i],alg=QRpos());
         normalize && normalize!(C);
-        site_tensors[i+1] = _permute_front(C*_permute_tail(site_tensors[i+1]))
+        site_tensors[i+1] = _transpose_front(C*_transpose_tail(site_tensors[i+1]))
     end
 
     (site_tensors[end],C) = leftorth(site_tensors[end],alg=QRpos());
@@ -191,7 +191,7 @@ function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
     #todo : rewrite this without having to gauge
     length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
     ρr = transfer_right(r_RR(psi2),psi2.AR[2:end],psi1.AR[2:end]);
-    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]) * ρr)
+    return tr(_transpose_front(psi1.AC[1])' * _transpose_front(psi2.AC[1]) * ρr)
 end
 
 #todo : rewrite this without having to gauge

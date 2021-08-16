@@ -16,7 +16,7 @@ function approximate!(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::Dmr
         (init,envs) = alg.finalize(iter,init,squash,envs)::Tuple{typeof(init),typeof(envs)};
 
         for pos=[1:(length(init)-1);length(init)-2:-1:1]
-            ac2 = init.AC[pos]*_permute_tail(init.AR[pos+1]);
+            ac2 = init.AC[pos]*_transpose_tail(init.AR[pos+1]);
 
             nac2 = sum(map(zip(squash,envs)) do (sq,pr)
                 ac2_proj(pos,init,pr)
@@ -24,11 +24,11 @@ function approximate!(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::Dmr
 
             (al,c,ar) = tsvd(nac2,trunc=alg.trscheme)
             normalize!(c);
-            v = @tensor ac2[1,2,3,4]*conj(al[1,2,5])*conj(c[5,6])*conj(ar[6,3,4])
+            v = @plansor ac2[1 2;4 3]*conj(al[1 2;5])*conj(c[5;6])*conj(ar[6;4 3])
             delta = max(delta,abs(1-abs(v)));
 
             init.AC[pos] = (al,complex(c))
-            init.AC[pos+1] = (complex(c),_permute_front(ar));
+            init.AC[pos+1] = (complex(c),_transpose_front(ar));
         end
 
         alg.verbose && @info "2site dmrg iter $(iter) error $(delta)"
