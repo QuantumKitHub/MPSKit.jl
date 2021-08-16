@@ -18,8 +18,8 @@ function Base.getindex(v::ALView{S},i::Int)::eltype(S) where S <: Union{FiniteMP
     return v.parent.ALs[i]
 end
 
-Base.getindex(v::ALView{<:MPSMultiline},i::Int,j::Int) = v.parent[i].AL[j]
-Base.setindex!(v::ALView{<:MPSMultiline},vec,i::Int,j::Int) = setindex!(v.parent[i].AL,vec,j);
+Base.getindex(v::ALView{<:Multiline},i::Int,j::Int) = v.parent[i].AL[j]
+Base.setindex!(v::ALView{<:Multiline},vec,i::Int,j::Int) = setindex!(v.parent[i].AL,vec,j);
 
 struct ARView{S}
     parent::S
@@ -34,8 +34,8 @@ function Base.getindex(v::ARView{S},i::Int)::eltype(S) where S <: Union{FiniteMP
     return v.parent.ARs[i]
 end
 
-Base.getindex(v::ARView{<:MPSMultiline},i::Int,j::Int) = v.parent[i].AR[j]
-Base.setindex!(v::ARView{<:MPSMultiline},vec,i::Int,j::Int) = setindex!(v.parent[i].AR,vec,j);
+Base.getindex(v::ARView{<:Multiline},i::Int,j::Int) = v.parent[i].AR[j]
+Base.setindex!(v::ARView{<:Multiline},vec,i::Int,j::Int) = setindex!(v.parent[i].AR,vec,j);
 
 struct CRView{S}
     parent::S
@@ -72,8 +72,8 @@ function Base.setindex!(v::CRView{S},vec,i::Int) where S <: Union{FiniteMPS,MPSC
     v.parent.CLs[i+1] = vec
 end
 
-Base.getindex(v::CRView{<:MPSMultiline},i::Int,j::Int) = v.parent[i].CR[j]
-Base.setindex!(v::CRView{<:MPSMultiline},vec,i::Int,j::Int) = setindex!(v.parent[i].CR,vec,j);
+Base.getindex(v::CRView{<:Multiline},i::Int,j::Int) = v.parent[i].CR[j]
+Base.setindex!(v::CRView{<:Multiline},vec,i::Int,j::Int) = setindex!(v.parent[i].CR,vec,j);
 
 struct ACView{S}
     parent::S
@@ -131,11 +131,11 @@ function Base.setindex!(v::ACView{S},vec::Tuple{<:GenericMPSTensor,<:GenericMPST
 
 end
 
-Base.getindex(v::ACView{<:MPSMultiline},i::Int,j::Int) = v.parent[i].AC[j]
-Base.setindex!(v::ACView{<:MPSMultiline},vec,i::Int,j::Int) = setindex!(v.parent[i].AC,vec,j);
+Base.getindex(v::ACView{<:Multiline},i::Int,j::Int) = v.parent[i].AC[j]
+Base.setindex!(v::ACView{<:Multiline},vec,i::Int,j::Int) = setindex!(v.parent[i].AC,vec,j);
 
 #linear indexing for MPSMultiline
-function Base.getindex(v::Union{ACView{S},ALView{S},ARView{S},CRView{S}},i::Int) where S<:MPSMultiline
+function Base.getindex(v::Union{ACView{S},ALView{S},ARView{S},CRView{S}},i::Int) where S<:Multiline
     inds = CartesianIndices(size(v))[i];
     v[inds[1],inds[2]]
 end
@@ -143,21 +143,21 @@ end
 Base.firstindex(psi::Union{ACView{S},ALView{S},ARView{S}}, i...) where S <: Union{FiniteMPS,MPSComoving} = firstindex(psi.parent.ALs, i...)
 Base.lastindex(psi::Union{ACView{S},ALView{S},ARView{S}}, i...) where S <: Union{FiniteMPS,MPSComoving} = lastindex(psi.parent.ALs, i...)
 
-Base.firstindex(psi::Union{ACView{S},ALView{S},ARView{S},CRView{S}},i...) where S<:MPSMultiline = 1;
-Base.lastindex(psi::Union{ACView{S},ALView{S},ARView{S},CRView{S}},i) where S<:MPSMultiline  = i == 1 ? lastindex(psi.parent.data) : lastindex(psi.parent[1].AC);
-Base.lastindex(psi::Union{ACView{S},ALView{S},ARView{S},CRView{S}}) where S<:MPSMultiline = prod(size(psi.parent));
+Base.firstindex(psi::Union{ACView{S},ALView{S},ARView{S},CRView{S}},i...) where S<:Multiline = 1;
+Base.lastindex(psi::Union{ACView{S},ALView{S},ARView{S},CRView{S}},i) where S<:Multiline  = i == 1 ? lastindex(psi.parent.data) : lastindex(psi.parent[1].AC);
+Base.lastindex(psi::Union{ACView{S},ALView{S},ARView{S},CRView{S}}) where S<:Multiline = prod(size(psi.parent));
 
 Base.length(psi::Union{ACView,ALView,ARView}) = length(psi.parent);
 Base.size(psi::Union{ACView,ALView,ARView},args...) = size(psi.parent,args...);
 Base.size(psi::Union{CRView{S}},args...) where S <: Union{FiniteMPS,MPSComoving} = size(psi.parent.CLs,args...);
-Base.size(psi::Union{CRView{S}},args...) where S <: MPSMultiline = size(psi.parent,args...);
+Base.size(psi::Union{CRView{S}},args...) where S <: Multiline = size(psi.parent,args...);
 
 Base.firstindex(psi::Union{CRView{S}}) where S <: Union{FiniteMPS,MPSComoving} = 0;
 Base.lastindex(psi::Union{CRView{S}}, i...) where S <: Union{FiniteMPS,MPSComoving} = lastindex(psi.parent.ALs, i...)
 Base.length(psi::Union{CRView{S}}) where S <: Union{FiniteMPS,MPSComoving} = length(psi.parent.CLs);
 
 Base.IteratorSize(::Type{<:Union{ACView{S},ALView{S},ARView{S},CRView{S}}}) where S <: Union{FiniteMPS,MPSComoving}  = Base.HasShape{1}()
-Base.IteratorSize(::Type{<:Union{ACView{S},ALView{S},ARView{S},CRView{S}}}) where S <: MPSMultiline  = Base.HasShape{2}()
+Base.IteratorSize(::Type{<:Union{ACView{S},ALView{S},ARView{S},CRView{S}}}) where S <: Multiline  = Base.HasShape{2}()
 
 Base.IteratorEltype(::Type{<:Union{ACView,ALView,ARView,CRView}}) = Base.HasEltype()
 Base.iterate(view::Union{ACView,ALView,ARView,CRView},istate = firstindex(view)) = istate > lastindex(view) ? nothing : (view[istate],istate+1)
