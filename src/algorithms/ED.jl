@@ -29,7 +29,7 @@ function exact_diagonalization(opp::MPOHamiltonian;sector = first(sectors(oneuni
     normalize!(ACs[middle_site]);
 
     #construct the largest possible finite mps of that length
-    state = FiniteMPS{mpst_type,mpsb_type}(ALs,ARs,ACs,CLs);
+    state = FiniteMPS(ALs,ARs,ACs,CLs);
     envs = environments(state,opp);
 
     #optimize the middle site. Because there is no truncation, this single site captures the entire possible hilbert space

@@ -13,7 +13,7 @@ mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
     ACs::Vector{Union{Missing,A}}
     CLs::Vector{Union{Missing,B}}
 
-    function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}},
+    function FiniteMPS(ALs::Vector{Union{Missing,A}},
                             ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
                             CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,B<:MPSBondTensor}
@@ -50,9 +50,6 @@ mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
             ismissing(CLs[i+1]) || domain(CLs[i+1]) == codomain(CLs[i+1]) || throw(SectorMismatch("CL isn't a map between identical spaces"))
             ismissing(CLs[i])  || _lastspace(CLs[i]) == dual(D1) || throw(SectorMismatch("CL doesn't fit"))
             ismissing(CLs[i+1]) || _firstspace(CLs[i+1]) == dual(D2) || throw(SectorMismatch("CL doesn't fit"))
-
-            #i != 1 || D1 == oneunit(D1) || throw(ArgumentError("finite mps should start with a trivial leg"))
-            #i != length(ACs) || dual(D2) == oneunit(dual(D2)) || throw(ArgumentError("finite mps should end with a trivial leg"))
         end
 
         return new{A,B}(ALs,ARs,ACs,CLs);
@@ -95,12 +92,13 @@ function FiniteMPS(f,elt,
 
     tensors = [TensorMap(f, elt,virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
 
-    return FiniteMPS(tensors,normalize=normalize)
+    return FiniteMPS(tensors,normalize=normalize,overwrite=true)
 end
 
 
 # allow construction with a simple array of tensors
-function FiniteMPS(site_tensors::Vector{A};normalize=false) where {A<:GenericMPSTensor}
+function FiniteMPS(site_tensors::Vector{A};normalize=false,overwrite=false) where {A<:GenericMPSTensor}
+    site_tensors = overwrite ? copy(site_tensors) : site_tensors;
     for i in 1:length(site_tensors)-1
         (site_tensors[i],C) = leftorth(site_tensors[i],alg=QRpos());
         normalize && normalize!(C);
@@ -119,11 +117,11 @@ function FiniteMPS(site_tensors::Vector{A};normalize=false) where {A<:GenericMPS
     ALs.= site_tensors;
     CLs[end] = C;
 
-    FiniteMPS{A,B}(ALs,ARs,ACs,CLs)
+    FiniteMPS(ALs,ARs,ACs,CLs)
 end
 
 
-Base.copy(psi::FiniteMPS{A,B}) where {A,B} = FiniteMPS{A,B}(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
+Base.copy(psi::FiniteMPS) = FiniteMPS(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
 
 function Base.getproperty(psi::FiniteMPS,prop::Symbol)
     if prop == :AL

@@ -158,9 +158,7 @@ MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)
 
 #a very simple utility constructor; given our "localmpo", constructs a mpohamiltonian
 function MPOHamiltonian(x::Array{T,1}) where T<:MPOTensor{Sp} where Sp
-    domspaces = Sp[_firstspace(y) for y in x]
-    push!(domspaces,_lastspace(x[end])')
-
+    domspaces = [_firstspace.(x);_lastspace(x[end])']
     pspaces = [space(x[1],2)]
 
     nOs = PeriodicArray{Union{eltype(T),T}}(fill(zero(eltype(T)),1,length(x)+1,length(x)+1))
@@ -253,12 +251,8 @@ function sanitycheck(ham::MPOHamiltonian)
         @assert isid(ham[i,1,1])[1]
         @assert isid(ham[i,ham.odim,ham.odim])[1]
 
-        for j in 1:ham.odim
-            for k in 1:(j-1)
-                if contains(ham,i,j,k)
-                    return false
-                end
-            end
+        for j in 1:ham.odim, k in 1:(j-1)
+            contains(ham,i,j,k) && return false
         end
     end
 
