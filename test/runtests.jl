@@ -519,11 +519,10 @@ end
         st6 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
 
         @test abs(dot(st1,st5)) ≈ 1.0 atol = dt
-        @test abs(dot(st2,st5)) ≈ 1.0 atol = dt
         @test abs(dot(st3,st5)) ≈ 1.0 atol = dt
-        @test abs(dot(st4,st5)) ≈ 1.0 atol = dt
         @test abs(dot(st6,st5)) ≈ 1.0 atol = dt
-
+        @test abs(dot(st2,st4)) ≈ 1.0 atol = dt
+        
         nW1 = changebonds(W1,SvdCut(trscheme=truncerr(dt))); #this should be a trivial mpo now
         @test dim(space(nW1.opp[1,1],1)) == 1
     end

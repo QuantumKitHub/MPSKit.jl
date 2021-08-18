@@ -5,13 +5,14 @@ Represents an infinite matrix product state
 The state is stored in the centergauge where
     state.AL[i]*state.CR[i] = state.AC[i] = state.CR[i-1]*state.AR[i]
 """
-struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor}
+struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
     AL::PeriodicArray{A,1}
     AR::PeriodicArray{A,1}
     CR::PeriodicArray{B,1}
     AC::PeriodicArray{A,1}
 end
 
+Base.size(arr::InfiniteMPS) = size(arr.AL);
 Base.size(arr::InfiniteMPS,i) = size(arr.AL,i)
 Base.length(arr::InfiniteMPS) = size(arr,1)
 Base.eltype(arr::InfiniteMPS) = eltype(arr.AL)
@@ -20,6 +21,9 @@ Base.repeat(m::InfiniteMPS,i::Int) = InfiniteMPS(repeat(m.AL,i),repeat(m.AR,i),r
 Base.similar(st::InfiniteMPS) = InfiniteMPS(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
 TensorKit.norm(st::InfiniteMPS) = norm(st.AC[1]);
 virtualspace(psi::InfiniteMPS, n::Integer) = _firstspace(psi.AL[n+1])
+
+site_type(::Type{InfiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
+bond_type(::Type{InfiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
 
 TensorKit.space(psi::InfiniteMPS{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)
 function TensorKit.space(psi::InfiniteMPS{<:GenericMPSTensor}, n::Integer)

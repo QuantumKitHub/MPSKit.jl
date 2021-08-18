@@ -60,6 +60,10 @@ for f in (:r_RR, :r_RL, :r_LR,:r_LL)
     @eval $f(t::MPSMultiline,i,j = size(t,2)) = $f(t[i],j)
 end
 
+
+site_type(::Type{Multiline{S}}) where S = site_type(S);
+bond_type(::Type{Multiline{S}}) where S = bond_type(S);
+
 TensorKit.dot(a::MPSMultiline,b::MPSMultiline;kwargs...) = sum(dot.(a.data,b.data;kwargs...))
 
 Base.convert(::Type{MPSMultiline},st::InfiniteMPS) = Multiline([st]);

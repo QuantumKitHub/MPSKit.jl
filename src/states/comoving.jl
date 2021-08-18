@@ -67,7 +67,9 @@ Base.length(state::MPSComoving) = length(state.window)
 Base.size(psi::MPSComoving, i...) = size(psi.window, i...)
 
 Base.eltype(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
+site_type(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 bond_type(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
+
 
 TensorKit.space(psi::MPSComoving{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)
 virtualspace(psi::MPSComoving, n::Integer) =

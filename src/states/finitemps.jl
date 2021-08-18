@@ -143,6 +143,8 @@ Base.size(psi::FiniteMPS, i...) = size(psi.ALs, i...)
 #conflicted if this is actually true
 Base.eltype(st::FiniteMPS{A,B}) where {A<:GenericMPSTensor,B} = A
 Base.eltype(::Type{FiniteMPS{A,B}}) where {A<:GenericMPSTensor,B} = A
+
+site_type(::Type{FiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 bond_type(::Type{FiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
 
 TensorKit.space(psi::FiniteMPS{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)

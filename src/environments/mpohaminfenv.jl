@@ -20,8 +20,8 @@ function gen_lw_rw(st::InfiniteMPS{A,B},ham::MPOHamiltonian) where {A,B}
     rw = PeriodicArray{A,2}(undef,length(st),ham.odim)
 
     for i = 1:length(st), j = 1:ham.odim
-        lw[i,j] = TensorMap(rand,eltype(eltype(st)),space(st.AL[i],1)*_firstspace(ham[i,j,1])',space(st.AL[i],1))
-        rw[i,j] = TensorMap(rand,eltype(eltype(st)),space(st.AR[i],3)'*_lastspace(ham[i,1,j])',space(st.AR[i],3)')
+        lw[i,j] = TensorMap(rand,eltype(eltype(st)),_firstspace(st.AL[i])*_firstspace(ham[i,j,1])',_firstspace(st.AL[i]))
+        rw[i,j] = TensorMap(rand,eltype(eltype(st)),_lastspace(st.AR[i])'*_lastspace(ham[i,1,j])',_lastspace(st.AR[i])')
     end
 
     return (lw,rw)
