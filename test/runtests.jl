@@ -511,8 +511,8 @@ end
         W2 = make_time_mpo(th,dt,WII());
 
 
-        (st1,_) = approximate(st,(W1,st),Vomps(verbose=false));
-        (st2,_) = approximate(st,(W2,st),Vomps(verbose=false));
+        (st1,_) = approximate(st,(W1,st),Vumps(verbose=false));
+        (st2,_) = approximate(st,(W2,st),Vumps(verbose=false));
         (st3,_) = approximate(st,(W1,st),Idmrg1(verbose=false));
         (st4,_) = approximate(st,(W2,st),Idmrg2(trscheme=truncdim(20),verbose=false));
         (st5,_) = timestep(st,th,dt,Tdvp());

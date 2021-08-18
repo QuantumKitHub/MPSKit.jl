@@ -34,7 +34,7 @@ module MPSKit
     export entropy
     export dynamicaldmrg
     export fidelity_susceptibility
-    export approximate!,approximate, Vomps
+    export approximate!,approximate
     export periodic_boundary_conditions
     export exact_diagonalization
 

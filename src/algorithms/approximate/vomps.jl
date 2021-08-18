@@ -1,12 +1,3 @@
-@with_kw struct Vomps{F} <: Algorithm
-    tol_galerkin::Float64 = Defaults.tol
-    tol_gauge::Float64 = Defaults.tolgauge
-    maxiter::Int = Defaults.maxiter
-    orthmaxiter::Int = Defaults.maxiter
-    finalize::F = Defaults._finalize
-    verbose::Bool = Defaults.verbose
-end
-
 function approximate(state::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS}, alg, envs = environments(state,toapprox))
     #PeriodicMPO's always act on MPSMultiline's. I therefore convert the imps to multilines, approximate and convert back
     (multi,envs) = approximate(convert(MPSMultiline,state),(convert(MPOMultiline,envs.opp),convert(MPSMultiline,envs.above)),alg,envs)
@@ -15,7 +6,7 @@ function approximate(state::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO,<:Infinit
 end
 
 
-function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::Vomps, envs = environments(state,toapprox))
+function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::Vumps, envs = environments(state,toapprox))
     (mpo,above) = toapprox;
 
     galerkin  = 1+alg.tol_galerkin
