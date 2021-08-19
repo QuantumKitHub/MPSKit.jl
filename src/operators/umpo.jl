@@ -48,7 +48,7 @@ function Base.:*(mpo::InfiniteMPO,st::FiniteMPS)
         isometry(fuse(_firstspace(al),_firstspace(mp)),_firstspace(al)*_firstspace(mp))
     end)
 
-    (_firstspace(mpot[1]) == oneunit(_firstspace(mpot[1])) && space(mpot[end],3)' == _firstspace(mpot[1])) ||
+    (_firstspace(mpot[1]) == oneunit(_firstspace(mpot[1])) && _lastspace(mpot[end])' == _firstspace(mpot[1])) ||
         @warn "mpo does not start/end with a trivial leg"
 
     FiniteMPS(map(1:length(st)) do i
