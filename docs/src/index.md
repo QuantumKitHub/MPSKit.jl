@@ -3,7 +3,7 @@
 
 ## User manual
 ```@contents
-Pages = ["man/intro.md","man/states.md","man/operators.md","man/algorithms.md"]
+Pages = ["man/intro.md","man/conventions.md","man/states.md","man/operators.md","man/algorithms.md"]
 Depth = 3
 ```
 
