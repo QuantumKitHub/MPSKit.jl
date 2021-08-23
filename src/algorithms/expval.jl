@@ -94,23 +94,28 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
     return ens
 end
 
+#kept for backwards compatibility; the new way is to pass a unitrange
+expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=environments(st,ham)) = expectation_value(st,prevca,1:size);
+expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,size::Int) = expectation_value(st,prevca,1:size);
+
 #the mpo hamiltonian over n sites has energy f+n*edens, which is what we calculate here. f can then be found as this - n*edens
-expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=environments(st,ham)) = expectation_value(st,prevca,size);
-function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,size::Int)
+expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,range::UnitRange{Int64},prevca = environments(st,ham)) = expectation_value(st,prevca,range)
+
+function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,range::UnitRange{Int64})
     ham = prevca.opp;
 
-    len=length(st)
-    start = map(leftenv(prevca,1,st)) do y
-        @plansor x[-1 -2;-3] := y[1 -2;3]*st.CR[0][3;-3]*conj(st.CR[0][1;-1])
+    len = length(st)
+    start = map(leftenv(prevca,range.start,st)) do y
+        @plansor x[-1 -2;-3] := y[1 -2;3]*st.CR[range.start-1][3;-3]*conj(st.CR[range.start-1][1;-1])
     end
 
-    for i in 1:size
+    for i in range
         start = transfer_left(start,ham[i],st.AR[i],st.AR[i])
     end
 
     tot = 0.0+0im
     for i=1:ham.odim
-        tot += @plansor start[i][1 2;3]*rightenv(prevca,size,st)[i][3 2;1]
+        tot += @plansor start[i][1 2;3]*rightenv(prevca,range.stop,st)[i][3 2;1]
     end
 
     return tot
