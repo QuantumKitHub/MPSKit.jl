@@ -31,10 +31,10 @@ function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMu
         state = MPSMultiline(temp_ACs,state.CR[:,end]; tol = alg.tol_gauge, maxiter = alg.orthmaxiter);
         recalculate!(envs,state);
 
+        (state,envs) = alg.finalize(iter,state,toapprox,envs) :: Tuple{typeof(state),typeof(envs)};
+
         galerkin   = calc_galerkin(state, envs)
         alg.verbose && @info "vomps @iteration $(iter) galerkin = $(galerkin)"
-
-        (state,envs) = alg.finalize(iter,state,toapprox,envs) :: Tuple{typeof(state),typeof(envs)};
 
         if (galerkin <= alg.tol_galerkin) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vomps didn't converge $(galerkin)"
