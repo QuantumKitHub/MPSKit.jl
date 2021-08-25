@@ -75,7 +75,7 @@ function changebonds(state::MPSMultiline, H,alg::OptimalExpand,envs=environments
     newstate = copy(state);
 
     #do the actual expansion
-    for (i,j) in Iterators.product(1:size(state,1),1:size(state,2))
+    for i in 1:size(state,1), j in 1:size(state,2)
         al = _transpose_tail(catdomain(newstate.AL[i,j],pexp[i,j][1]))
         lz = TensorMap(zeros,_lastspace(pexp[i,j-1][1])',domain(al))
 

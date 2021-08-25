@@ -1,5 +1,5 @@
 "calculates the entropy of a given state"
-entropy(state::InfiniteMPS) = [-tr(c*log(c)) for c in state.CR]
+entropy(state::InfiniteMPS) = [-tr(c*c'*log(c*c')) for c in state.CR]
 
 infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(Matrix{eltype(ham[1,1,1])},oneunit(sp)*sp,oneunit(sp)*sp),(1,2,4),(3,)) for sp in ham.pspaces]
 
