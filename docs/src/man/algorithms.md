@@ -2,6 +2,24 @@
 
 ## minimizing the energy
 
+There are a number of different possible energy-minimization algorithms, depending on the system size. Exclusive to finite systems are
+
+    - Dmrg
+
+    - Dmrg2
+
+Exclusive to infinite systems are
+
+    - Idmrg
+
+    - Idmrg2
+
+    - Vumps
+
+with a last algorithm - GradientGrassmann - implemented for both finite and infinite systems.
+
+MPSComoving, which is a finite patch of mutable tensors embedded in an infinite mps, is handled as a finite system where we only optimize over the match of mutable tensors.
+
 ### dmrg
 
 ```julia
@@ -10,7 +28,7 @@ operator = nonsym_ising_ham();
 (groundstate,environments,delta) = find_groundstate!(state,operator,Dmrg())
 ```
 
-The dmrg algorithm sweeps through the system, optimizing every site. This - on it's own - cannot increase the bond dimension. If you do want to increase the bond dimension dynamically, then there are two options. Either you use the two-site variant of dmrg, aptly called Dmrg2(), or you make use of the finalize option. Finalize is a function that gets called every iteration of dmrg and can modify the state.
+The dmrg algorithm sweeps through the system, optimizing every site. Because of its single-site behaviour, this will always keep the bond dimension fixed. If you do want to increase the bond dimension dynamically, then there are two options. Either you use the two-site variant of dmrg (Dmrg2()), or you make use of the finalize option. Finalize is a function that gets called at the end of every dmrg iteration. Within that function call one can modify the state.
 
 ```julia
 function my_finalize(iter,state,ham,envs)
@@ -20,6 +38,35 @@ end
 
 (groundstate,environments,delta) = find_groundstate!(state,operator,Dmrg(finalize = my_finalize))
 ```
+
+### dmrg2
+
+```julia
+state = FiniteMPS(20,ℂ^2,ℂ^10);
+operator = nonsym_ising_ham();
+(groundstate,environments,delta) = find_groundstate!(state,operator,Dmrg2(trscheme=truncbelow(1e-7)));
+```
+
+The twosite variant of dmrg, which optimizes blocks of two sites and then decomposes them into 2 mps tensors using the svd decomposition. By truncating the singular values up to a desired precision, one can dynamically grow and shrink the bond dimension as needed. However, this truncation in turn introduces an error. This is why a state converged with dmrg2 can often be slightly further converged by subsequently using dmrg.
+
+### idmrg
+
+```julia
+state = InfiniteMPS([ℂ^2],[ℂ^10]);
+operator = nonsym_ising_ham();
+(groundstate,environments,delta) = find_groundstate(state,operator,Idmrg1())
+```
+
+The dmrg algorithm for finite systems can be generalized to infinite mps. The idea is to start with a finite system and grow the system size, while we are sweeping through the system. This is again a single site algorithm, and therefore preserves the initial bond dimension.
+
+### idmrg2
+```julia
+state = InfiniteMPS([ℂ^2,ℂ^2],[ℂ^10,ℂ^10]);
+operator = repeat(nonsym_ising_ham(),2);
+(groundstate,environments,delta) = find_groundstate(state,operator,Idmrg2(trscheme=truncbelow(1e-5)))
+```
+
+The generalization of dmrg2 to infinite systems has the same caveats as its finite counterpart. We also require a unitcell ≥ 2. As a rule of thumb, a truncation cutoff of 1e-5 is already really good.
 
 ### vumps
 
@@ -42,12 +89,7 @@ operator = nonsym_ising_ham();
 (groundstate,environments,delta) = find_groundstate(state,operator,GradientGrassmann())
 ```
 
-### Idmrg
-
-We export a toy implementation of one-site idmrg. It converges slower then vumps, but is more reliable. Two-site idmrg support is planned in the future.
-
 ## time evolution
-
 
 ### Tdvp
 
@@ -138,37 +180,52 @@ changebonds(ts,SvdCut(trscheme = truncdim(10))) # truncate the state to one with
 
 A particularly simple scheme useful when doing vumps is to do a 2site update, and then truncating this back down. It changes the state itself, so cannot be used to do time evolution, but that is no problem for energy minimization.
 
-## dynamicaldmrg
-
-Dynamical dmrg has been described in other papers and is a way to find the propagator. The basic idea is that to calculate ``G(z) = < V | (H-z)^{-1} | V > `` , one can variationally find ``(H-z) |W > = | V > `` and then the propagator simply equals ``G(z) = < V | W >``.
-
-
-## fidelity susceptibility
-
-The fidelity susceptibility measures how much the groundstate changes when tuning a parameter in your hamiltonian. Divergences occur at phase transitions, making it a valuable measure when no order parameter is known.
-
-```julia
-suscept = fidelity_susceptibility(groundstate,H_0,perturbing_Hams::AbstractVector)
-```
-
-## periodic boundary conditions
-
-You can impose periodic boundary conditions on the hamiltonian itself, while still using a normal OBC finite matrix product states. This is straightforward to implement but competitive with more advanced PBC mps algorithms.
-
-## exact diagonalization
-
-As a side effect, our code support exact diagonalization. The idea is to construct a finite matrix product state with maximal bond dimension, and then optimize the middle site. Because we never truncated the bond dimension, this single site effectively parametrizes the entire hilbert space.
-
-```julia
-exact_diagonalization(periodic_boundary_conditions(su2_xxx_ham(spin=1),10)) # find the groundstate on 10 sites
-```
-
 ## leading boundary
 
-For statmech partition functions we want to find the approximate leading boundary mps. Again this can be done with vumps:
+For statmech partition functions we want to find the approximate leading boundary mps.  Again this can be done with vumps:
 
 ```julia
 th = nonsym_ising_mpo()
 ts = InfiniteMPS([ℂ^2],[ℂ^20]);
 (ts,envs,_) = leading_boundary(ts,th,Vumps(maxiter=400,verbose=false));
+```
+
+if the mpo satisfies certain properties (positive and hermitian), it may also be possible to use GradientGrassmann.
+
+## approximate
+
+Sometimes we want to approximate the product of an mpo and a state by another state (for example during time evolution). The call signature is
+
+```julia
+    approximate(initial_guess,(state,mpo),alg)
+```
+
+for finite systems alg can be Dmrg,Dmrg2 while for infinite systems we have Idmrg1,Idmrg2 and vumps. It's important to mention that the actual implementation differs a bit from the usual  Dmrg,Dmrg2,... for energy minimization but is rather inspired by it. For example, calling approximate with Vumps actually uses an algorithm that has been described as [vomps](https://scipost.org/submissions/scipost_202008_00013v1/).
+
+## varia
+
+What follows is a medley of lesser known (or used) algorithms and don't entirely fit under one of the above categories.
+
+### dynamicaldmrg
+
+Dynamical dmrg has been described in other papers and is a way to find the propagator. The basic idea is that to calculate ``G(z) = < V | (H-z)^{-1} | V > `` , one can variationally find ``(H-z) |W > = | V > `` and then the propagator simply equals ``G(z) = < V | W >``.
+
+### fidelity susceptibility
+
+The fidelity susceptibility measures how much the groundstate changes when tuning a parameter in your hamiltonian. Divergences occur at phase transitions, making it a valuable measure when no order parameter is known.
+
+```julia
+fidelity_susceptibility(groundstate,H_0,perturbing_Hams::AbstractVector)
+```
+
+### periodic boundary conditions
+
+You can impose periodic boundary conditions on the hamiltonian itself, while still using a normal OBC finite matrix product states. This is straightforward to implement but competitive with more advanced PBC mps algorithms.
+
+### exact diagonalization
+
+As a side effect, our code support exact diagonalization. The idea is to construct a finite matrix product state with maximal bond dimension, and then optimize the middle site. Because we never truncated the bond dimension, this single site effectively parametrizes the entire hilbert space.
+
+```julia
+exact_diagonalization(periodic_boundary_conditions(su2_xxx_ham(spin=1),10),which=:SR) # find the groundstate on 10 sites
 ```

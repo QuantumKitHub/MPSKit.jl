@@ -4,12 +4,12 @@
 ## User manual
 ```@contents
 Pages = ["man/intro.md","man/conventions.md","man/states.md","man/operators.md","man/algorithms.md"]
-Depth = 3
+Depth = 2
 ```
 
 ## Tutorials
 ```@contents
-Pages = ["tut/isingcft.md","tut/xxz_groundstate.md","tut/timeev.md","tut/haldane.md"]
+Pages = ["tut/anyonic_statmech.md","tut/isingcft.md","tut/xxz_groundstate.md","tut/timeev.md","tut/haldane.md"]
 Depth = 1
 ```
 

@@ -3,7 +3,7 @@ using MPSKit,MPSKitModels,TensorKit,Plots
 let
     #defining the hamiltonian
     th = nonsym_ising_ham(lambda = 0.3)
-    (sxt,syt,szt) = nonsym_spintensors(1//2);
+    (sx,sy,sz) = nonsym_spintensors(1//2);
 
     #initilizing a random mps
     ts = InfiniteMPS([ℂ^2],[ℂ^12]);
@@ -12,10 +12,11 @@ let
     (ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400));
 
     len=20;deltat=0.05;totaltime=3.0
+    middle = Int(round(len/2));
 
     #apply a single spinflip at the middle site
-    mpco = MPSComoving(ts,copy.([ts.AC[1];ts.AR[2:len]]),ts)
-    @tensor mpco.AC[Int(round(len/2))][-1 -2;-3] := mpco.AC[Int(round(len/2))][-1,1,-3]*sxt[-2,1]
+    mpco = MPSComoving(ts,len);
+    @tensor mpco.AC[middle][-1 -2;-3] := mpco.AC[middle][-1,1,-3]*sx[-2,1]
     normalize!(mpco);
 
     envs = environments(mpco,th)
@@ -23,9 +24,8 @@ let
     szdat = [expectation_value(mpco,szt)]
 
     for i in 1:(totaltime/deltat)
-        (mpco,envs) = changebonds(mpco,th,OptimalExpand()&SvdCut(trscheme = truncdim(20))) # grow the bond dimension by 1, and truncate at bond dimension 20
-        (mpco,envs) = timestep(mpco,th,deltat,Tdvp(),envs)
-        push!(szdat,expectation_value(mpco,szt))
+        (mpco,envs) = timestep(mpco,th,deltat,Tdvp2(trscheme = truncdim(20)),envs)
+        push!(szdat,expectation_value(mpco,sz))
     end
 
     display(heatmap(real.(reduce((a,b)->[a b],szdat))))
