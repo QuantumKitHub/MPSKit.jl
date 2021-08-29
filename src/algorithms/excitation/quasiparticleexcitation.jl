@@ -162,30 +162,30 @@ function effective_excitation_hamiltonian(
     for i = 1:length(exci)
         T = zero(Bs[i]);
 
-        for (j,k) in keys(H,i)
-            @plansor T[-1 -2;-3 -4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1 1;2]*
-                                                Bs[i][2 3;-3 4]*
-                                                H[i,j,k][1 -2;3 5]*
-                                                rightenv(envs.renvs,i,exci.right_gs)[k][4 5;-4]
+        for (j,k) in keys(H,i)            
+            @plansor T[-1 -2;-3 -4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1 5;4]*
+                                                Bs[i][4 2;-3 1]*
+                                                H[i,j,k][5 -2;2 3]*
+                                                rightenv(envs.renvs,i,exci.right_gs)[k][1 3;-4]
 
             # <B|H|B>-<H>
-            en = @plansor    conj(exci.left_gs.AC[i][11 12;13])*
-                            leftenv(envs.lenvs,i,exci.left_gs)[j][11 1;2]*
-                            exci.left_gs.AC[i][2 3;4]*
-                            H[i,j,k][1 12;3 5]*
-                            rightenv(envs.lenvs,i,exci.left_gs)[k][4 5;13]
+            en = @plansor    conj(exci.left_gs.AC[i][2 6;4])*
+                            leftenv(envs.lenvs,i,exci.left_gs)[j][2 5;3]*
+                            exci.left_gs.AC[i][3 7;1]*
+                            H[i,j,k][5 6;7 8]*
+                            rightenv(envs.lenvs,i,exci.left_gs)[k][1 8;4]
 
             T -= Bs[i]*en
             if i>1 || exci isa InfiniteQP
-                @plansor T[-1 -2;-3 -4] +=    envs.lBs[i-1][j][-1 1;-3 2]*
-                                                    exci.right_gs.AR[i][2 3;4]*
-                                                    H[i,j,k][1 -2;3 5]*
-                                                    rightenv(envs.renvs,i,exci.right_gs)[k][4 5;-4]
+                @plansor T[-1 -2;-3 -4] +=    envs.lBs[i-1][j][-1 4;-3 5]*
+                                                    exci.right_gs.AR[i][5 2;1]*
+                                                    H[i,j,k][4 -2;2 3]*
+                                                    rightenv(envs.renvs,i,exci.right_gs)[k][1 3;-4]
             end
             if i<length(exci.left_gs) || exci isa InfiniteQP
-                @plansor T[-1 -2;-3 -4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1 1;2]*
-                                                    exci.left_gs.AL[i][2 3;4]*
-                                                    H[i,j,k][1 -2;3 5]*
+                @plansor T[-1 -2;-3 -4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1 2;1]*
+                                                    exci.left_gs.AL[i][1 3;4]*
+                                                    H[i,j,k][2 -2;3 5]*
                                                     envs.rBs[i+1][k][4 5;-3 -4]
             end
         end
