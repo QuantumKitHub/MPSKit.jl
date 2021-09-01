@@ -217,3 +217,42 @@ function max_Ds(f::FiniteMPS{G}) where G<:GenericMPSTensor{S,N} where {S,N}
     end
     Ds
 end
+
+Base.:-(psi1::FiniteMPS,psi2::FiniteMPS) = psi1+(-1*psi2);
+function Base.:+(psi1::FiniteMPS{A}, psi2::FiniteMPS{A}) where A
+    length(psi1) == length(psi2) || throw(DimensionMismatch())
+    N = length(psi1)
+    for k = 1:N
+        space(psi1, k) == space(psi2, k) || throw(SpaceMismatch("Non-matching physical space on site $k."))
+    end
+    virtualspace(psi1, 0) == virtualspace(psi2, 0) || throw(SpaceMismatch("Non-matching left virtual space."))
+    virtualspace(psi1, N) == virtualspace(psi2, N) || throw(SpaceMismatch("Non-matching right virtual space."))
+
+    tensors = A[]
+
+    k = 1 # firstindex(psi1)
+    t1 = psi1.AL[k]
+    t2 = psi2.AL[k]
+    V1 = domain(t1)[1]
+    V2 = domain(t2)[1]
+    w1 = isometry(storagetype(A), V1 ⊕ V2, V1)
+    w2 = leftnull(w1)
+    @assert domain(w2) == ⊗(V2)
+
+    push!(tensors,t1*w1' + t2*w2')
+    for k = 2:N-1
+        t1 = _transpose_front(w1*_transpose_tail(psi1.AL[k]))
+        t2 = _transpose_front(w2*_transpose_tail(psi2.AL[k]))
+        V1 = domain(t1)[1]
+        V2 = domain(t2)[1]
+        w1 = isometry(storagetype(A), V1 ⊕ V2, V1)
+        w2 = leftnull(w1)
+        @assert domain(w2) == ⊗(V2)
+        push!(tensors, t1*w1' + t2*w2')
+    end
+    k = N
+    t1 = _transpose_front(w1*_transpose_tail(psi1.AC[k]))
+    t2 = _transpose_front(w2*_transpose_tail(psi2.AC[k]))
+    push!(tensors, t1 + t2)
+    return FiniteMPS(tensors)
+end

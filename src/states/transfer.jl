@@ -14,21 +14,21 @@ end
 # hence the checks - to make sure that this operation is uniquely defined
 function transfer_left(v::MPSTensor{S},A::MPSTensor{S},Ab::MPSTensor{S}=A) where S
     _can_unambiguously_braid(space(v,2)) || throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))
-    @plansor t[-1 -2;-3] := v[4 2;1]*A[1 3;-3]*τ[3 2;-2 5]*conj(Ab[4 5;-1])
+    @plansor v[-1 -2;-3] := v[1 2;4]*A[4 5;-3]*τ[2 3;5 -2]*conj(Ab[1 3;-1])
 end
 function transfer_right(v::MPSTensor{S},A::MPSTensor{S},Ab::MPSTensor{S}=A) where S
     _can_unambiguously_braid(space(v,2)) || throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))
-    @plansor t[-1 -2;-3] := A[-1 2;1]*v[1 3;4]*τ[-2 5;2 3]*conj(Ab[-3 5;4])
+    @plansor v[-1 -2;-3] := A[-1 2;1]*τ[-2 4;2 3]*conj(Ab[-3 4;5])*v[1 3;5]
 end
 
 # the transfer operation with a utility leg in both the domain and codomain is also ill defined - only due to the codomain utility space
 function transfer_left(v::MPOTensor{S},A::MPSTensor{S},Ab::MPSTensor{S}=A) where S
     _can_unambiguously_braid(space(v,2)) || throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))
-    @plansor t[-1 -2;-3 -4] := v[4 2;-3 1]*A[1 3;-4]*τ[3 2;-2 5]*conj(Ab[4 5;-1])
+    @plansor t[-1 -2;-3 -4] := v[1 2;-3 4]*A[4 5;-4]*O[2 3;5 -2]*conj(Ab[1 3;-1])
 end
 function transfer_right(v::MPOTensor{S},A::MPSTensor{S},Ab::MPSTensor{S}=A) where S
     _can_unambiguously_braid(space(v,2)) || throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))
-    @plansor t[-1 -2;-3 -4] := A[-1 2;1]*v[1 3;-3 4]*τ[-2 5;2 3]*conj(Ab[-4 5;4])
+    @plansor t[-1 -2;-3 -4] := A[-1 2;1]*τ[-2 4;2 3]*conj(Ab[-4 4;5])*v[1 3;-3 5]
 end
 
 #transfer for 2 mpo tensors
@@ -39,9 +39,9 @@ transfer_right(v::MPSBondTensor,A::MPOTensor,B::MPOTensor) =
 
 #mpo transfer
 transfer_left(v::MPSTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor) =
-    @plansor v[-1 -2;-3] := v[4 2;1]*A[1 3;-3]*O[2 5;3 -2]*conj(Ab[4 5;-1])
+    @plansor v[-1 -2;-3] := v[1 2;4]*A[4 5;-3]*O[2 3;5 -2]*conj(Ab[1 3;-1])
 transfer_right(v::MPSTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor) =
-    @plansor v[-1 -2;-3] := A[-1 4;5]*O[-2 2;4 3]*conj(Ab[-3 2;1])*v[5 3;1]
+    @plansor v[-1 -2;-3] := A[-1 2;1]*O[-2 4;2 3]*conj(Ab[-3 4;5])*v[1 3;5]
 
 #utility, allowing transfering with arrays
 function transfer_left(v,A::AbstractArray,Ab::AbstractArray=A;rvec=nothing,lvec=nothing)

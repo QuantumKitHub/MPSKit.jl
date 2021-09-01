@@ -28,6 +28,8 @@ println("------------------------------------")
     @test ovl*9 ≈ norm(ts)^2
     ts = 3*ts
     @test ovl*9*9 ≈ norm(ts)^2
+
+    @test norm(2*ts+ts-3*ts) ≈ 0.0 atol = sqrt(eps(real(elt)))
 end
 
 @timedtestset "InfiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
@@ -522,7 +524,7 @@ end
         @test abs(dot(st3,st5)) ≈ 1.0 atol = dt
         @test abs(dot(st6,st5)) ≈ 1.0 atol = dt
         @test abs(dot(st2,st4)) ≈ 1.0 atol = dt
-        
+
         nW1 = changebonds(W1,SvdCut(trscheme=truncerr(dt))); #this should be a trivial mpo now
         @test dim(space(nW1.opp[1,1],1)) == 1
     end
