@@ -24,7 +24,7 @@ end
 # the transfer operation with a utility leg in both the domain and codomain is also ill defined - only due to the codomain utility space
 function transfer_left(v::MPOTensor{S},A::MPSTensor{S},Ab::MPSTensor{S}=A) where S
     _can_unambiguously_braid(space(v,2)) || throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))
-    @plansor t[-1 -2;-3 -4] := v[1 2;-3 4]*A[4 5;-4]*O[2 3;5 -2]*conj(Ab[1 3;-1])
+    @plansor t[-1 -2;-3 -4] := v[1 2;-3 4]*A[4 5;-4]*τ[2 3;5 -2]*conj(Ab[1 3;-1])
 end
 function transfer_right(v::MPOTensor{S},A::MPSTensor{S},Ab::MPSTensor{S}=A) where S
     _can_unambiguously_braid(space(v,2)) || throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))

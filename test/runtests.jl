@@ -555,7 +555,7 @@ end
     (gs,envs) = find_groundstate(ts,th,Dmrg(verbose=false));
 
     #translation mpo:
-    @tensor bulk[-1 -2;-3 -4] := isomorphism(ℂ^2,ℂ^2)[-2,-4]*isomorphism(ℂ^2,ℂ^2)[-1,-3];
+    @tensor bulk[-1 -2;-3 -4] := isomorphism(ℂ^2,ℂ^2)[-2,-3]*isomorphism(ℂ^2,ℂ^2)[-1,-4];
     translation = periodic_boundary_conditions(InfiniteMPO(bulk),len);
 
     #the groundstate should be translation invariant:

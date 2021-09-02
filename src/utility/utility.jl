@@ -92,20 +92,55 @@ function plansor_parser(ex)
         t = first(TO.gettensorobjects(ex));
     end
 
-    #defaultparser = TO.TensorParser();
-    #push!(defaultparser.preprocessors, TensorKit._conj_to_adjoint)
-    #push!(defaultparser.preprocessors, TensorKit._extract_tensormap_objects2)
-    #push!(defaultparser.preprocessors, TensorKit._construct_braidingtensors)
-    #default = defaultparser(ex);
+    defaultparser = TO.TensorParser();
 
+    insert!(defaultparser.preprocessors,3,TensorKit._construct_braidingtensors)
+    push!(defaultparser.postprocessors,ex->fix_braidingtensor_assignments(ex))
+    default = defaultparser(ex);
     planar = TensorKit.planar2_parser(ex);
 
     quote
-        #if BraidingStyle(sectortype($t)) isa Bosonic
-        #    $(default)
-        #else
+        if BraidingStyle(sectortype($t)) isa Bosonic
+            $(default)
+        else
             $(planar)
-        #end
+        end
+    end
+end
+
+function fix_braidingtensor_assignments(ex)
+    braiding_temporaries = find_braidingtensor_temporaries(ex);
+    prune_tree!(ex,braiding_temporaries)
+    ex
+end
+
+function prune_tree!(ex,temporaries)
+    if ex isa Expr
+        filter!(ex.args) do x
+            if x isa Expr && x.head == :(=) && x.args[1] in temporaries && !(x.args[2] isa Expr)
+                false
+            else
+                true
+            end
+        end
+
+        for x in ex.args
+            prune_tree!(ex.args,temporaries)
+        end
+
+    end
+end
+function find_braidingtensor_temporaries(ex)
+    if ex isa Expr && ex.head == :(=)
+        if ex.args[2] isa Expr && ex.args[2].head == :call && ex.args[2].args[1] == GlobalRef(TensorKit,:BraidingTensor)
+            [ex.args[1]]
+        else
+            Symbol[];
+        end
+    elseif ex isa Expr
+        reduce(vcat,find_braidingtensor_temporaries.(ex.args));
+    else
+        Symbol[]
     end
 end
 

@@ -122,5 +122,4 @@ module MPSKit
 
     include("algorithms/unionalg.jl")
 
-    Base.@deprecate PeriodicMPO InfiniteMPO
 end
