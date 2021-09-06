@@ -13,7 +13,7 @@ Base.size(t::Multiline,i) = size(t)[i];
 Base.getindex(t::Multiline,i) = t.data[i];
 Base.copy(t::Multiline) = Multiline(map(copy,t.data));
 Multiline(t::AbstractArray) = Multiline(PeriodicArray(t));
-
+Base.iterate(t::Multiline,args...) = iterate(t.data,args...);
 Base.convert(::Vector,t::Multiline) = t.data.data;
 Base.convert(::PeriodicArray,t::Multiline) = t.data;
 

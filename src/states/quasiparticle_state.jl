@@ -296,3 +296,17 @@ function Base.convert(::Type{<:FiniteMPS},v::QP{S}) where S <: FiniteMPS
 
     return FiniteMPS(Ls+Rs+Bs,normalize=false)
 end
+
+function Base.getproperty(exci::Multiline{<:InfiniteQP},s::Symbol)
+    if s == :momentum
+        return first(exci.data).momentum;
+    elseif s == :left_gs
+        Multiline(map(x->x.left_gs,exci.data))
+    elseif s == :right_gs
+        Multiline(map(x->x.right_gs,exci.data))
+    elseif s == :trivial
+        return reduce(&,map(x->x.trivial,exci.data),init=true);
+    else
+        return getfield(exci,s);
+    end
+end

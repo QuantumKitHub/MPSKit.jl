@@ -32,6 +32,20 @@ exci_transfer_left(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) =
 exci_transfer_right(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) =
     @plansor v[-1 -2;-3 -4] := A[-1 4;5]*O[-2 2;4 3]*conj(Ab[-4 2;1])*v[5 3;-3 1]
 
+function exci_transfer_left(v,O::Vector{<:MPOTensor},A::Vector,Ab::Vector=A)
+    for (o,a,ab) in zip(O,A,Ab)
+        v = exci_transfer_left(v,o,a,ab)
+    end
+    v
+end
+
+function exci_transfer_right(v,O::Vector{<:MPOTensor},A::Vector,Ab::Vector=A)
+    for (o,a,ab) in zip(reverse(O),reverse(A),reverse(Ab))
+        v = exci_transfer_right(v,o,a,ab)
+    end
+    v
+end
+
 #A is an excitation tensor; with an excitation leg
 exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
     exci_transfer_left(M,vec,ham,A,Ab)
