@@ -157,8 +157,8 @@ end
 virtualspace(psi::FiniteMPS, n::Integer) =
     n < length(psi) ? _firstspace(psi.AC[n+1]) : dual(_lastspace(psi.AC[n]))
 
-r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.AC[end]),domain(state.AC[end]))
-l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.AC[1],1),space(state.AC[1],1))
+r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.AR[end]),domain(state.AR[end]))
+l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.AL[1],1),space(state.AL[1],1))
 
 # Linear algebra methods
 #------------------------

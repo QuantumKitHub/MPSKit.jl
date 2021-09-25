@@ -8,5 +8,5 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 [compat]
 MPSKitModels = "0.2"
 OptimKit = "0.3.1"
-TensorKit = "0.9"
+TensorKit = "0.10"
 TestExtras = "0.1"
