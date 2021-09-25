@@ -3,8 +3,6 @@ module MPSKit
     using Base.Iterators, Base.Threads
     using RecipesBase
 
-    import TensorOperations as TO;
-
     using LinearAlgebra:diag,Diagonal;
     import LinearAlgebra
 
