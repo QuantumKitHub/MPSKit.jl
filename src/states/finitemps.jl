@@ -13,7 +13,7 @@ mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
     ACs::Vector{Union{Missing,A}}
     CLs::Vector{Union{Missing,B}}
 
-    function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}},
+    function FiniteMPS(ALs::Vector{Union{Missing,A}},
                             ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
                             CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,B<:MPSBondTensor}
@@ -50,9 +50,6 @@ mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
             ismissing(CLs[i+1]) || domain(CLs[i+1]) == codomain(CLs[i+1]) || throw(SectorMismatch("CL isn't a map between identical spaces"))
             ismissing(CLs[i])  || _lastspace(CLs[i]) == dual(D1) || throw(SectorMismatch("CL doesn't fit"))
             ismissing(CLs[i+1]) || _firstspace(CLs[i+1]) == dual(D2) || throw(SectorMismatch("CL doesn't fit"))
-
-            #i != 1 || D1 == oneunit(D1) || throw(ArgumentError("finite mps should start with a trivial leg"))
-            #i != length(ACs) || dual(D2) == oneunit(dual(D2)) || throw(ArgumentError("finite mps should end with a trivial leg"))
         end
 
         return new{A,B}(ALs,ARs,ACs,CLs);
@@ -95,16 +92,17 @@ function FiniteMPS(f,elt,
 
     tensors = [TensorMap(f, elt,virtspaces[n] ⊗ physspaces[n], virtspaces[n+1]) for n=1:N]
 
-    return FiniteMPS(tensors,normalize=normalize)
+    return FiniteMPS(tensors,normalize=normalize,overwrite=true)
 end
 
 
 # allow construction with a simple array of tensors
-function FiniteMPS(site_tensors::Vector{A};normalize=false) where {A<:GenericMPSTensor}
+function FiniteMPS(site_tensors::Vector{A};normalize=false,overwrite=false) where {A<:GenericMPSTensor}
+    site_tensors = overwrite ? copy(site_tensors) : site_tensors;
     for i in 1:length(site_tensors)-1
         (site_tensors[i],C) = leftorth(site_tensors[i],alg=QRpos());
         normalize && normalize!(C);
-        site_tensors[i+1] = _permute_front(C*_permute_tail(site_tensors[i+1]))
+        site_tensors[i+1] = _transpose_front(C*_transpose_tail(site_tensors[i+1]))
     end
 
     (site_tensors[end],C) = leftorth(site_tensors[end],alg=QRpos());
@@ -119,11 +117,11 @@ function FiniteMPS(site_tensors::Vector{A};normalize=false) where {A<:GenericMPS
     ALs.= site_tensors;
     CLs[end] = C;
 
-    FiniteMPS{A,B}(ALs,ARs,ACs,CLs)
+    FiniteMPS(ALs,ARs,ACs,CLs)
 end
 
 
-Base.copy(psi::FiniteMPS{A,B}) where {A,B} = FiniteMPS{A,B}(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
+Base.copy(psi::FiniteMPS) = FiniteMPS(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
 
 function Base.getproperty(psi::FiniteMPS,prop::Symbol)
     if prop == :AL
@@ -145,6 +143,8 @@ Base.size(psi::FiniteMPS, i...) = size(psi.ALs, i...)
 #conflicted if this is actually true
 Base.eltype(st::FiniteMPS{A,B}) where {A<:GenericMPSTensor,B} = A
 Base.eltype(::Type{FiniteMPS{A,B}}) where {A<:GenericMPSTensor,B} = A
+
+site_type(::Type{FiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 bond_type(::Type{FiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
 
 TensorKit.space(psi::FiniteMPS{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)
@@ -157,8 +157,8 @@ end
 virtualspace(psi::FiniteMPS, n::Integer) =
     n < length(psi) ? _firstspace(psi.AC[n+1]) : dual(_lastspace(psi.AC[n]))
 
-r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.AC[end]),domain(state.AC[end]))
-l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.AC[1],1),space(state.AC[1],1))
+r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.AR[end]),domain(state.AR[end]))
+l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.AL[1],1),space(state.AL[1],1))
 
 # Linear algebra methods
 #------------------------
@@ -191,7 +191,7 @@ function TensorKit.dot(psi1::FiniteMPS, psi2::FiniteMPS)
     #todo : rewrite this without having to gauge
     length(psi1) == length(psi2) || throw(ArgumentError("MPS with different length"))
     ρr = transfer_right(r_RR(psi2),psi2.AR[2:end],psi1.AR[2:end]);
-    return tr(_permute_front(psi1.AC[1])' * _permute_front(psi2.AC[1]) * ρr)
+    return tr(_transpose_front(psi1.AC[1])' * _transpose_front(psi2.AC[1]) * ρr)
 end
 
 #todo : rewrite this without having to gauge
@@ -216,4 +216,43 @@ function max_Ds(f::FiniteMPS{G}) where G<:GenericMPSTensor{S,N} where {S,N}
         Ds[i] = min(Ds[i],Ds[i+1]*prod(map(x->dim(space(f.AC[i],x)),ntuple(x->x+1,Val{N-1}()))))
     end
     Ds
+end
+
+Base.:-(psi1::FiniteMPS,psi2::FiniteMPS) = psi1+(-1*psi2);
+function Base.:+(psi1::FiniteMPS{A}, psi2::FiniteMPS{A}) where A
+    length(psi1) == length(psi2) || throw(DimensionMismatch())
+    N = length(psi1)
+    for k = 1:N
+        space(psi1, k) == space(psi2, k) || throw(SpaceMismatch("Non-matching physical space on site $k."))
+    end
+    virtualspace(psi1, 0) == virtualspace(psi2, 0) || throw(SpaceMismatch("Non-matching left virtual space."))
+    virtualspace(psi1, N) == virtualspace(psi2, N) || throw(SpaceMismatch("Non-matching right virtual space."))
+
+    tensors = A[]
+
+    k = 1 # firstindex(psi1)
+    t1 = psi1.AL[k]
+    t2 = psi2.AL[k]
+    V1 = domain(t1)[1]
+    V2 = domain(t2)[1]
+    w1 = isometry(storagetype(A), V1 ⊕ V2, V1)
+    w2 = leftnull(w1)
+    @assert domain(w2) == ⊗(V2)
+
+    push!(tensors,t1*w1' + t2*w2')
+    for k = 2:N-1
+        t1 = _transpose_front(w1*_transpose_tail(psi1.AL[k]))
+        t2 = _transpose_front(w2*_transpose_tail(psi2.AL[k]))
+        V1 = domain(t1)[1]
+        V2 = domain(t2)[1]
+        w1 = isometry(storagetype(A), V1 ⊕ V2, V1)
+        w2 = leftnull(w1)
+        @assert domain(w2) == ⊗(V2)
+        push!(tensors, t1*w1' + t2*w2')
+    end
+    k = N
+    t1 = _transpose_front(w1*_transpose_tail(psi1.AC[k]))
+    t2 = _transpose_front(w2*_transpose_tail(psi2.AC[k]))
+    push!(tensors, t1 + t2)
+    return FiniteMPS(tensors)
 end

@@ -7,28 +7,56 @@ exci_transfer_left(v,A,B,C,D) = transfer_left(v,A,B,C,D)
 exci_transfer_right(v,A,B,C,D) = transfer_right(v,A,B,C,D)
 
 #transfer, but the upper A is an excited tensor
-exci_transfer_left(v::MPSBondTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3] := v[1,2]*A[2,3,-2,-3]*conj(Ab[1,3,-1])
-exci_transfer_right(v::MPSBondTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3] := A[-1,3,-2,1]*v[1,2]*conj(Ab[-3,3,2])
+exci_transfer_left(v::MPSBondTensor, A::MPOTensor, Ab::MPSTensor) =
+    @plansor t[-1;-2 -3] := v[1;2]*A[2 3;-2 -3]*conj(Ab[1 3;-1])
+exci_transfer_right(v::MPSBondTensor, A::MPOTensor, Ab::MPSTensor) =
+    @plansor t[-1;-2 -3] := A[-1 3;-2 1]*v[1;2]*conj(Ab[-3 3;2])
 
 #transfer, but the upper A is an excited tensor and there is an mpo leg being passed through
-exci_transfer_left(v::MPSTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := v[1,-2,2]*A[2,3,-3,-4]*conj(Ab[1,3,-1])
-exci_transfer_right(v::MPSTensor, A::MPOTensor, Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := A[-1,3,-2,1]*v[1,-3,2]*conj(Ab[-4,3,2])
+exci_transfer_left(v::MPSTensor, A::MPOTensor, Ab::MPSTensor) =
+    @plansor t[-1 -2;-3 -4] := v[1 3;4]*A[4 5;-3 -4]*τ[3 2;5 -2]*conj(Ab[1 2;-1])
+
+exci_transfer_right(v::MPSTensor, A::MPOTensor, Ab::MPSTensor) =
+    @plansor t[-1 -2;-3 -4] := A[-1 4;-3 5]*τ[-2 3;4 2]*conj(Ab[-4 3;1])*v[5 2;1]
+
 
 #mpo transfer, but with A an excitation-tensor
-exci_transfer_left(v::MPSTensor,O::MPOTensor,A::MPOTensor,Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := v[4,5,1]*A[1,3,-3,-4]*O[5,2,-2,3]*conj(Ab[4,2,-1])
-exci_transfer_right(v::MPSTensor,O::MPOTensor,A::MPOTensor,Ab::MPSTensor) = @tensor t[-1 -2;-3 -4] := A[-1,1,-2,5]*O[-3,3,4,1]*conj(Ab[-4,3,2])*v[5,4,2]
+exci_transfer_left(v::MPSTensor,O::MPOTensor,A::MPOTensor,Ab::MPSTensor) =
+    @plansor t[-1 -2;-3 -4] := v[4 2;1]*A[1 3;-3 -4]*O[2 5;3 -2]*conj(Ab[4 5;-1])
+exci_transfer_right(v::MPSTensor,O::MPOTensor,A::MPOTensor,Ab::MPSTensor) =
+    @plansor t[-1 -2;-3 -4] := A[-1 4;-3 5]*O[-2 2;4 3]*conj(Ab[-4 2;1])*v[5 3;1]
 
 #mpo transfer, with an excitation leg
-exci_transfer_left(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) = @tensor v[-1 -2;-3 -4] := v[4,5,-3,1]*A[1,3,-4]*O[5,2,-2,3]*conj(Ab[4,2,-1])
-exci_transfer_right(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) = @tensor v[-1 -2;-3 -4] := A[-1,1,5]*O[-3,3,4,1]*conj(Ab[-4,3,2])*v[5,-2,4,2]
+exci_transfer_left(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) =
+    @plansor v[-1 -2;-3 -4] := v[4 2;-3 1]*A[1 3;-4]*O[2 5;3 -2]*conj(Ab[4 5;-1])
+exci_transfer_right(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) =
+    @plansor v[-1 -2;-3 -4] := A[-1 4;5]*O[-2 2;4 3]*conj(Ab[-4 2;1])*v[5 3;-3 1]
+
+function exci_transfer_left(v,O::Vector{<:MPOTensor},A::Vector,Ab::Vector=A)
+    for (o,a,ab) in zip(O,A,Ab)
+        v = exci_transfer_left(v,o,a,ab)
+    end
+    v
+end
+
+function exci_transfer_right(v,O::Vector{<:MPOTensor},A::Vector,Ab::Vector=A)
+    for (o,a,ab) in zip(reverse(O),reverse(A),reverse(Ab))
+        v = exci_transfer_right(v,o,a,ab)
+    end
+    v
+end
 
 #A is an excitation tensor; with an excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor = exci_transfer_left(M,vec,ham,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor = exci_transfer_right(M,vec,ham,A,Ab)
+exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
+    exci_transfer_left(M,vec,ham,A,Ab)
+exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
+    exci_transfer_right(M,vec,ham,A,Ab)
 
 #v has an extra excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor = exci_transfer_left(V,vec,ham,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor = exci_transfer_right(V,vec,ham,A,Ab)
+exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
+    exci_transfer_left(V,vec,ham,A,Ab)
+exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
+    exci_transfer_right(V,vec,ham,A,Ab)
 
 function exci_transfer_left(RetType,vec,ham::MPOHamSlice,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));
@@ -107,7 +135,7 @@ function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solv
             start = exci_transfer_left(start,ham[k],exci.right_gs.AR[k],exci.left_gs.AL[k])*exp(conj(1im*mom))
 
             exci.trivial && for l in ids[2:end-1]
-                @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*r_RL(exci.right_gs,k)[2,1]*l_RL(exci.right_gs,k+1)[-1,-4]
+                @plansor start[l][-1 -2;-3 -4]-=start[l][1 4;-3 2]*r_RL(exci.right_gs,k)[2;3]*τ[3 4;5 1]*l_RL(exci.right_gs,k+1)[-1;6]*τ[5 6;-4 -2]
             end
         end
 
@@ -120,7 +148,7 @@ function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solv
                 end
 
                 if exci.trivial && i in ids
-                    @tensor x[-1,-2,-3,-4]-=x[1,-2,-3,2]*r_RL(exci.left_gs)[2,1]*l_RL(exci.left_gs)[-1,-4]
+                    @plansor x[-1 -2;-3 -4] -= x[3 4;-3 5]*r_RL(exci.left_gs)[5;2]*τ[2 4;6 3]*l_RL(exci.left_gs)[-1;1]*τ[6 1;-4 -2]
                 end
 
                 return y-x
@@ -145,7 +173,7 @@ function right_excitation_transfer_system(rBs, ham, exci; mom=exci.momentum, sol
             start = exci_transfer_right(start,ham[k],exci.left_gs.AL[k],exci.right_gs.AR[k])*exp(1im*mom)
 
             exci.trivial && for l in ids[2:end-1]
-                @tensor start[l][-1,-2,-3,-4]-=start[l][1,-2,-3,2]*l_LR(exci.right_gs,k)[2,1]*r_LR(exci.right_gs,k-1)[-1,-4]
+                @plansor start[l][-1 -2;-3 -4] -= τ[6 2;3 4]*start[l][3 4;-3 5]*l_LR(exci.right_gs,k)[5;2]*r_LR(exci.right_gs,k-1)[-1;1]*τ[-2 -4;1 6]
             end
 
         end
@@ -157,7 +185,7 @@ function right_excitation_transfer_system(rBs, ham, exci; mom=exci.momentum, sol
                 end
 
                 if exci.trivial && i in ids
-                    @tensor x[-1,-2,-3,-4]-=x[1,-2,-3,2]*l_LR(exci.right_gs)[2,1]*r_LR(exci.right_gs)[-1,-4]
+                    @plansor x[-1 -2;-3 -4] -= τ[6 2;3 4]*x[3 4;-3 5]*l_LR(exci.right_gs)[5;2]*r_LR(exci.right_gs)[-1;1]*τ[-2 -4;1 6]
                 end
 
                 return y-x

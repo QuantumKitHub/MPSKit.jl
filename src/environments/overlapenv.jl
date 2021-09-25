@@ -12,7 +12,7 @@ struct OvlEnv{S,C<:AbstractTensorMap,D <: GenericMPSTensor} <: Cache
     rightenvs::Vector{C}
 end
 
-function environments(below::S,above::S,leftstart::C,rightstart::C) where S <: Union{<:FiniteMPS,<:MPSComoving} where C <: GenericMPSTensor
+function environments(below::S,above::S,leftstart::C,rightstart::C) where S <: Union{<:FiniteMPS,<:MPSComoving} where C <: AbstractTensorMap
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 

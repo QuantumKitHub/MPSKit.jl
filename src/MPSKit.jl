@@ -1,6 +1,10 @@
 module MPSKit
-using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit, FastClosures
+    using TensorKit,KrylovKit,Parameters, OptimKit, FastClosures
+    using Base.Iterators, Base.Threads
     using RecipesBase
+
+    import TensorOperations as TO;
+
     using LinearAlgebra:diag,Diagonal;
     import LinearAlgebra
 
@@ -30,7 +34,7 @@ using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit, FastClosures
     export entropy
     export dynamicaldmrg
     export fidelity_susceptibility
-    export approximate!,approximate, Vomps
+    export approximate!,approximate
     export periodic_boundary_conditions
     export exact_diagonalization
 
@@ -112,10 +116,10 @@ using TensorKit,KrylovKit,Parameters, Base.Threads,OptimKit, FastClosures
 
     include("algorithms/approximate/vomps.jl")
     include("algorithms/approximate/fvomps.jl")
+    include("algorithms/approximate/idmrg.jl")
 
     include("algorithms/ED.jl")
 
     include("algorithms/unionalg.jl")
 
-    Base.@deprecate PeriodicMPO InfiniteMPO
 end

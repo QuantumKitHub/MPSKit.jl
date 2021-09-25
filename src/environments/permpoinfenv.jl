@@ -17,7 +17,7 @@ end
 
 function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline)
     sameDspace = reduce((prev,i) -> prev && _lastspace(envs.lw[i...]) == _firstspace(nstate.CR[i...])',
-        Iterators.product(1:size(nstate,1),1:size(nstate,2)),init=true);
+        product(1:size(nstate,1),1:size(nstate,2)),init=true);
 
     init = collect(zip(envs.lw[:,1],envs.rw[:,end]))
     if !sameDspace
@@ -54,7 +54,7 @@ end
 
 function recalculate!(envs::MixPerMPOInfEnv,nstate::MPSMultiline)
     sameDspace = reduce((prev,i) -> prev && _firstspace(envs.lw[i...]) == _firstspace(nstate.CR[i...]),
-        Iterators.product(1:size(nstate,1),1:size(nstate,2)),init=true);
+        product(1:size(nstate,1),1:size(nstate,2)),init=true);
 
     init = collect(zip(envs.lw[:,1],envs.rw[:,end]))
     if !sameDspace
@@ -116,7 +116,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
                 $lefties[cr,loc] = transfer_left($lefties[cr,loc-1],$mpo[cr,loc-1],$above.AL[cr,loc-1],$below.AL[cr+1,loc-1])
             end
 
-            renormfact::eltype(T) = @tensor Ls[1][1,2,3]*above.CR[cr,0][3,4]*Rs[1][4,2,5]*conj(below.CR[cr+1,0][1,5])
+            renormfact::eltype(T) = @plansor Ls[1][1 2;3]*above.CR[cr,0][3;4]*Rs[1][4 2;5]*conj(below.CR[cr+1,0][1;5])
 
             $righties[cr,end] = Rs[1]/sqrt(renormfact);
             $lefties[cr,1] /=sqrt(renormfact);
@@ -124,7 +124,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
             for loc in numcols-1:-1:1
                 $righties[cr,loc] = transfer_right($righties[cr,loc+1],$mpo[cr,loc+1],$above.AR[cr,loc+1],$below.AR[cr+1,loc+1])
 
-                renormfact = @tensor lefties[cr,loc+1][1,2,3]*above.CR[cr,loc][3,4]*righties[cr,loc][4,2,5]*conj(below.CR[cr+1,loc][1,5])
+                renormfact = @plansor lefties[cr,loc+1][1 2;3]*above.CR[cr,loc][3;4]*righties[cr,loc][4 2;5]*conj(below.CR[cr+1,loc][1;5])
                 $righties[cr,loc]/=sqrt(renormfact)
                 $lefties[cr,loc+1]/=sqrt(renormfact)
             end

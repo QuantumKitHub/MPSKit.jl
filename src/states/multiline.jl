@@ -13,7 +13,7 @@ Base.size(t::Multiline,i) = size(t)[i];
 Base.getindex(t::Multiline,i) = t.data[i];
 Base.copy(t::Multiline) = Multiline(map(copy,t.data));
 Multiline(t::AbstractArray) = Multiline(PeriodicArray(t));
-
+Base.iterate(t::Multiline,args...) = iterate(t.data,args...);
 Base.convert(::Vector,t::Multiline) = t.data.data;
 Base.convert(::PeriodicArray,t::Multiline) = t.data;
 
@@ -59,6 +59,10 @@ end
 for f in (:r_RR, :r_RL, :r_LR,:r_LL)
     @eval $f(t::MPSMultiline,i,j = size(t,2)) = $f(t[i],j)
 end
+
+
+site_type(::Type{Multiline{S}}) where S = site_type(S);
+bond_type(::Type{Multiline{S}}) where S = bond_type(S);
 
 TensorKit.dot(a::MPSMultiline,b::MPSMultiline;kwargs...) = sum(dot.(a.data,b.data;kwargs...))
 

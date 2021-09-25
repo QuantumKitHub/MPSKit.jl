@@ -10,7 +10,7 @@
 
     In a later stage we can perhaps support nonzero scalar -> scalar*isometry - though the usecases for that seem very limited
 
-    The principles are that you can write code without knowing anything about the senvse structure, and it should just work (potentially a bit slower)
+    The principles are that you can write code without knowing anything about the structure, and it should just work (potentially a bit slower)
 
     Unhappy about this design because :
         - the constructor is a mess
@@ -64,7 +64,7 @@ function MPOHamiltonian(x::AbstractArray{T,3}) where T<:Union{A} where A
 
     for (i,t) in enumerate(x)
         if t isa MPSBondTensor
-            nx[i] = permute(add_util_leg(t),(1,2),(4,3))
+            nx[i] = add_util_leg(t)
         elseif ismissing(t)
             nx[i] = zero(E)
         elseif t isa Number
@@ -100,7 +100,7 @@ function MPOHamiltonian{Sp,M,E}(x::AbstractArray{Union{E,M},3}) where {Sp,M<:MPO
                 isstopped = false;
 
                 #asign spaces when possible
-                dom = space(x[i,j,k],1);im = space(x[i,j,k],3);p = space(x[i,j,k],2)
+                dom = _firstspace(x[i,j,k]);im = _lastspace(x[i,j,k]);p = space(x[i,j,k],2)
 
                 ismissing(pspaces[i]) && (pspaces[i] = p);
                 pspaces[i] != p && throw(ArgumentError("physical space for $((i,j,k)) incompatible : $(pspaces[i]) ≠ $(p)"))
@@ -158,10 +158,8 @@ MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)
 
 #a very simple utility constructor; given our "localmpo", constructs a mpohamiltonian
 function MPOHamiltonian(x::Array{T,1}) where T<:MPOTensor{Sp} where Sp
-    domspaces = Sp[space(y,1) for y in x]
-    push!(domspaces,space(x[end],3)')
-
-    pspaces=[space(x[1],2)]
+    domspaces = [_firstspace.(x);_lastspace(x[end])']
+    pspaces = [space(x[1],2)]
 
     nOs = PeriodicArray{Union{eltype(T),T}}(fill(zero(eltype(T)),1,length(x)+1,length(x)+1))
 
@@ -197,9 +195,9 @@ function Base.getindex(x::MPOHamiltonian{S,T,E},a::Int,b::Int,c::Int)::T where {
     b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
     if x.Os[a,b,c] isa E
         if x.Os[a,b,c] == zero(E)
-            return TensorMap(zeros,E,x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])
+            return TensorMap(zeros,E,x.domspaces[a,b]*x.pspaces[a],x.pspaces[a]*x.imspaces[a,c]')
         else
-            return x.Os[a,b,c]*isomorphism(Matrix{E},x.domspaces[a,b]*x.pspaces[a],x.imspaces[a,c]'*x.pspaces[a])
+            return x.Os[a,b,c]*isomorphism(Matrix{E},x.domspaces[a,b]*x.pspaces[a],x.pspaces[a]*x.imspaces[a,c]')
         end
     else
         return x.Os[a,b,c]
@@ -227,8 +225,8 @@ Base.eltype(x::MPOHamiltonian) = typeof(x[1,1,1])
 Base.size(x::MPOHamiltonian) = (x.period,x.odim,x.odim)
 Base.size(x::MPOHamiltonian,i) = size(x)[i]
 
-Base.keys(x::MPOHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),Iterators.product(1:x.period,1:x.odim,1:x.odim))
-Base.keys(x::MPOHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),Iterators.product(1:x.odim,1:x.odim))
+Base.keys(x::MPOHamiltonian) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),product(1:x.period,1:x.odim,1:x.odim))
+Base.keys(x::MPOHamiltonian,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),product(1:x.odim,1:x.odim))
 
 opkeys(x::MPOHamiltonian) = Iterators.filter(a-> !isscal(x,a[1],a[2],a[3]),keys(x));
 opkeys(x::MPOHamiltonian,i::Int) = Iterators.filter(a-> !isscal(x,i,a[1],a[2]),keys(x,i));
@@ -253,12 +251,8 @@ function sanitycheck(ham::MPOHamiltonian)
         @assert isid(ham[i,1,1])[1]
         @assert isid(ham[i,ham.odim,ham.odim])[1]
 
-        for j in 1:ham.odim
-            for k in 1:(j-1)
-                if contains(ham,i,j,k)
-                    return false
-                end
-            end
+        for j in 1:ham.odim, k in 1:(j-1)
+            contains(ham,i,j,k) && return false
         end
     end
 
@@ -269,19 +263,12 @@ end
 checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
 "
 function isid(x::MPOTensor)
-    cod = space(x,1)*space(x,2);
-    dom = space(x,3)'*space(x,4)';
+    (_firstspace(x) == _lastspace(x)' && space(x,2) == space(x,3)') || return false,zero(eltype(x));
+    _can_unambiguously_braid(_firstspace(x)) || return false,zero(eltype(x));
 
-    #would like to have an 'isisomorphic'
-    for c in union(blocksectors(cod), blocksectors(dom))
-        blockdim(cod, c) == blockdim(dom, c) || return false,0.0;
-    end
-
-    id = isomorphism(Matrix{eltype(x)},cod,dom)
+    id = isomorphism(Matrix{eltype(x)},codomain(x),domain(x))
     scal = dot(id,x)/dot(id,id)
     diff = x-scal*id
-
-    scal = (scal ≈ 0.0) ? 0.0 : scal #shouldn't be necessary (and I don't think it is)
 
     return norm(diff)<1e-14,scal
 end

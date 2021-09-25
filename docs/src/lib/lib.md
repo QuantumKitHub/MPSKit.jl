@@ -11,8 +11,7 @@ MPSMultiline
 ## Operators
 ```@docs
 MPOHamiltonian
-ComAct
-PeriodicMPO
+InfiniteMPO
 ```
 
 ## Environments
@@ -41,12 +40,14 @@ leading_boundary
 dynamicaldmrg
 changebonds
 excitations
+approximate
 ```
 
 ### [Groundstate algorithms](@id lib_gs_alg)
 ```@docs
 Vumps
 Idmrg1
+Idmrg2
 Dmrg
 Dmrg2
 GradientGrassmann
@@ -67,6 +68,7 @@ PowerMethod
 ### [Bond change algorithms](@id lib_bc_alg)
 ```@docs
 OptimalExpand
+RandExpand
 VumpsSvdCut
 SvdCut
 ```

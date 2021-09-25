@@ -1,11 +1,11 @@
 #works for general tensors
 expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opp::AbstractTensorMap) = expectation_value(state,fill(opp,length(state)))
 function expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opps::AbstractArray{<:AbstractTensorMap})
-    #todo : gauge gets moved all over the place for finite and comoving states
-    #this will invalidate possible caches
-    #we should probably not be moving the gauge
-    map(zip(state.AC,opps)) do (t,opp)
-        tr(t'*permute(opp*permute(t,TensorKit.allind(t)[2:end-1],(1,TensorKit.numind(t))),(TensorKit.numind(t)-1,TensorKit.allind(t)[1:end-2]...),(TensorKit.numind(t),)))
+    map(zip(state.AC,opps)) do (ac,opp)
+        tr(ac'*transpose(
+            opp*transpose(ac,(TensorKit.allind(ac)[2:end-1]),(1,TensorKit.numind(ac))),
+            (TensorKit.numind(ac)-1,TensorKit.allind(ac)[1:end-2]...),
+            (TensorKit.numind(ac),)))
     end
 end
 
@@ -20,13 +20,14 @@ end
 calculates the expectation value of op = op1*op2*op3*... (ie an N site operator) starting at site at
 """
 function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{T}},op::AbstractArray{<:AbstractTensorMap}, at::Int) where T <: MPSTensor
-    @tensor tmp[-1  -2; -3 -4] := state.AC[at+0][1,2,-4]*op[1][-1,3,-3,2]*conj(state.AC[at+0][1,3,-2])
+    firstspace = _firstspace(first(op));
+    (firstspace == oneunit(firstspace) && _lastspace(last(op)) == firstspace') ||
+        throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"));
 
-    for index in 2:length(op)
-        @tensor tmp[-1, -2, -3, -4] := tmp[-1,1,2,4]*state.AR[at+index-1][4,5,-4]*op[index][2,3,-3,5]*conj(state.AR[at+index-1][1,3,-2])
-    end
-
-    return( @tensor tmp[1,2,1,2] )
+    ut = Tensor(ones,firstspace)
+    @plansor tmp[-1 -2;-3] := state.AC[at][4 2;-3]*op[1][1 3;2 -2]*conj(state.AC[at][4 3;-1])*conj(ut[1])
+    tmp = transfer_left(tmp,op[2:length(op)],state.AR[at+1:at+length(op)],state.AR[at+1:at+length(op)]);
+    return @plansor tmp[1 2;1]*ut[2];
 end
 
 
@@ -42,16 +43,15 @@ function expectation_value(state::MPSComoving,envs::FinEnv)
     vals = expectation_value_fimpl(state,envs);
 
     tot = 0.0+0im;
-    for i in 1:ham.odim
-        for j in 1:ham.odim
+    for i in 1:ham.odim,
+        j in 1:ham.odim
 
-            tot+= @tensor  leftenv(envs,length(state),state)[i][1,2,3]*
-                            state.AC[end][3,4,5]*
-                            rightenv(envs,length(state),state)[j][5,6,7]*
-                            ham[length(state),i,j][2,8,6,4]*
-                            conj(state.AC[end][1,8,7])
+        tot += @plansor  leftenv(envs,length(state),state)[i][1 2;3]*
+                        state.AC[end][3 4;5]*
+                        rightenv(envs,length(state),state)[j][5 6;7]*
+                        ham[length(state),i,j][2 8;4 6]*
+                        conj(state.AC[end][1 8;7])
 
-        end
     end
 
     return vals,tot/(norm(state.AC[end])^2);
@@ -62,20 +62,17 @@ function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},envs::FinEn
     ham = envs.opp;
 
     ens=zeros(eltype(eltype(state)),length(state))
-    for i=1:length(state)
-        for (j,k) in keys(ham,i)
+    for i in 1:length(state),
+        (j,k) in keys(ham,i)
 
-            if !((j == 1 && k!= 1) || (k == ham.odim && j!=ham.odim))
-                continue
-            end
+        !((j == 1 && k!= 1) || (k == ham.odim && j!=ham.odim)) && continue
 
-            cur = @tensor leftenv(envs,i,state)[j][1,2,3]*state.AC[i][3,7,5]*rightenv(envs,i,state)[k][5,8,6]*conj(state.AC[i][1,4,6])*ham[i,j,k][2,4,8,7]
-            if !(j==1 && k == ham.odim)
-                cur/=2
-            end
-
-            ens[i]+=cur
+        cur = @plansor leftenv(envs,i,state)[j][1 2;3]*state.AC[i][3 7;5]*rightenv(envs,i,state)[k][5 8;6]*conj(state.AC[i][1 4;6])*ham[i,j,k][2 4;7 8]
+        if !(j==1 && k == ham.odim)
+            cur/=2
         end
+
+        ens[i]+=cur
     end
 
     n = norm(state.AC[end])^2
@@ -91,43 +88,52 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
         util = Tensor(ones,space(prevca.lw[i+1,ham.odim],2))
         for j=ham.odim:-1:1
             apl = transfer_left(leftenv(prevca,i,st)[j],ham[i,j,ham.odim],st.AL[i],st.AL[i]);
-            ens[i] += @tensor apl[1,2,3]*r_LL(st,i)[3,1]*conj(util[2])
+            ens[i] += @plansor apl[1 2;3]*r_LL(st,i)[3;1]*conj(util[2])
         end
     end
     return ens
 end
 
+#kept for backwards compatibility; the new way is to pass a unitrange
+expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=environments(st,ham)) = expectation_value(st,prevca,1:size);
+expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,size::Int) = expectation_value(st,prevca,1:size);
+
 #the mpo hamiltonian over n sites has energy f+n*edens, which is what we calculate here. f can then be found as this - n*edens
-expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=environments(st,ham)) = expectation_value(st,prevca,size);
-function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,size::Int)
+expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,range::UnitRange{Int64},prevca = environments(st,ham)) = expectation_value(st,prevca,range)
+
+function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,range::UnitRange{Int64})
     ham = prevca.opp;
 
-    len=length(st)
-    start=leftenv(prevca,1,st)
-    start=[@tensor x[-1 -2;-3]:=y[1,-2,3]*st.CR[0][3,-3]*conj(st.CR[0][1,-1]) for y in start]
-
-    for i in 1:size
-        start=transfer_left(start,ham[i],st.AR[i],st.AR[i])
+    len = length(st)
+    start = map(leftenv(prevca,range.start,st)) do y
+        @plansor x[-1 -2;-3] := y[1 -2;3]*st.CR[range.start-1][3;-3]*conj(st.CR[range.start-1][1;-1])
     end
 
-    tot=0.0+0im
+    for i in range
+        start = transfer_left(start,ham[i],st.AR[i],st.AR[i])
+    end
+
+    tot = 0.0+0im
     for i=1:ham.odim
-        tot+=@tensor start[i][1,2,3]*rightenv(prevca,size,st)[i][3,2,1]
+        tot += @plansor start[i][1 2;3]*rightenv(prevca,range.stop,st)[i][3 2;1]
     end
 
     return tot
 end
 
+
+expectation_value(st::InfiniteMPS,mpo::InfiniteMPO) = expectation_value(convert(MPSMultiline,st),convert(MPOMultiline,mpo));
+expectation_value(st::MPSMultiline,mpo::MPOMultiline) = expectation_value(st,environments(st,mpo));
 expectation_value(st::InfiniteMPS,ca::PerMPOInfEnv) = expectation_value(convert(MPSMultiline,st),ca);
 function expectation_value(st::MPSMultiline,ca::PerMPOInfEnv)
     opp = ca.opp;
     retval = PeriodicArray{eltype(st.AC[1,1]),2}(undef,size(st,1),size(st,2));
-    for (i,j) in Iterators.product(1:size(st,1),1:size(st,2))
-        retval[i,j] = @tensor   leftenv(ca,i,j,st)[1,2,3]*
-                                opp[i,j][2,4,5,6]*
-                                st.AC[i,j][3,6,7]*
-                                rightenv(ca,i,j,st)[7,5,8]*
-                                conj(st.AC[i+1,j][1,4,8])
+    for (i,j) in product(1:size(st,1),1:size(st,2))
+        retval[i,j] = @plansor   leftenv(ca,i,j,st)[1 2;3]*
+                                opp[i,j][2 4;6 5]*
+                                st.AC[i,j][3 6;7]*
+                                rightenv(ca,i,j,st)[7 5;8]*
+                                conj(st.AC[i+1,j][1 4;8])
     end
     return retval
 end

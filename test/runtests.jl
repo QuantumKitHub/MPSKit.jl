@@ -1,10 +1,13 @@
 using MPSKit,TensorKit,Test,OptimKit,MPSKitModels,TestExtras
+using MPSKit:_transpose_tail,_transpose_front,@plansor;
+include("planarspace.jl");
+
 
 println("------------------------------------")
 println("|     States                       |")
 println("------------------------------------")
 @timedtestset "FiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
-        (ComplexSpace(10),ComplexSpace(2),ComplexF64),
+        (𝔹^10,𝔹^2,ComplexF64),
         (Rep[SU₂](1=>1,0=>3),Rep[SU₂](0=>1)*Rep[SU₂](0=>1),ComplexF32)
         ]
 
@@ -16,7 +19,7 @@ println("------------------------------------")
 
     for i in 1:length(ts)
         @test ts.AC[i] ≈ ts.AL[i]*ts.CR[i]
-        @test ts.AC[i] ≈ MPSKit._permute_front(ts.CR[i-1]*MPSKit._permute_tail(ts.AR[i]))
+        @test ts.AC[i] ≈ MPSKit._transpose_front(ts.CR[i-1]*MPSKit._transpose_tail(ts.AR[i]))
     end
 
     @test elt == eltype(eltype(ts))
@@ -25,10 +28,12 @@ println("------------------------------------")
     @test ovl*9 ≈ norm(ts)^2
     ts = 3*ts
     @test ovl*9*9 ≈ norm(ts)^2
+
+    @test norm(2*ts+ts-3*ts) ≈ 0.0 atol = sqrt(eps(real(elt)))
 end
 
 @timedtestset "InfiniteMPS ($D,$d,$elt)" for (D,d,elt) in [
-        (ComplexSpace(10),ComplexSpace(2),ComplexF64),
+        (𝔹^10,𝔹^2,ComplexF64),
         (Rep[U₁](1=>3),Rep[U₁](0=>1),ComplexF64)
         ]
     tol = Float64(eps(real(elt))*100);
@@ -36,7 +41,7 @@ end
     ts = InfiniteMPS([TensorMap(rand,elt,D*d,D),TensorMap(rand,elt,D*d,D)],tol = tol);
 
     for i in 1:length(ts)
-        @tensor difference[-1,-2,-3] := ts.AL[i][-1,-2,1]*ts.CR[i][1,-3]-ts.CR[i-1][-1,1]*ts.AR[i][1,-2,-3];
+        @plansor difference[-1 -2;-3] := ts.AL[i][-1 -2;1]*ts.CR[i][1;-3]-ts.CR[i-1][-1;1]*ts.AR[i][1 -2;-3];
         @test norm(difference,Inf) < tol*10;
 
         @test transfer_left(l_LL(ts,i),ts.AL[i],ts.AL[i]) ≈ l_LL(ts,i+1)
@@ -52,7 +57,7 @@ end
 end
 
 @timedtestset "MPSMultiline ($D,$d,$elt)" for (D,d,elt) in [
-        (ComplexSpace(10),ComplexSpace(2),ComplexF64),
+        (𝔹^10,𝔹^2,ComplexF64),
         (Rep[U₁](1=>3),Rep[U₁](0=>1),ComplexF32)
         ]
 
@@ -60,7 +65,7 @@ end
     ts = MPSMultiline([TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D);TensorMap(rand,elt,D*d,D) TensorMap(rand,elt,D*d,D)],tol = tol);
 
     for i = 1:size(ts,1), j = 1:size(ts,2)
-        @tensor difference[-1,-2,-3] := ts.AL[i,j][-1,-2,1]*ts.CR[i,j][1,-3]-ts.CR[i,j-1][-1,1]*ts.AR[i,j][1,-2,-3];
+        @plansor difference[-1 -2;-3] := ts.AL[i,j][-1 -2;1]*ts.CR[i,j][1;-3]-ts.CR[i,j-1][-1;1]*ts.AR[i,j][1 -2;-3];
         @test norm(difference,Inf) < tol*10;
 
         @test transfer_left(l_LL(ts,i,j),ts.AL[i,j],ts.AL[i,j]) ≈ l_LL(ts,i,j+1)
@@ -77,8 +82,8 @@ end
 
 
 @timedtestset "MPSComoving" begin
-    ham = nonsym_ising_ham(lambda=4.0);
-    (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
+    ham = force_planar(nonsym_ising_ham(lambda=4.0));
+    (gs,_,_) = find_groundstate(InfiniteMPS([𝔹^2],[𝔹^10]),ham,Vumps(verbose=false));
 
     #constructor 1 - give it a plain array of tensors
     window_1 = MPSComoving(gs,copy.([gs.AC[1];[gs.AR[i] for i in 2:10]]),gs);
@@ -91,12 +96,12 @@ end
     @test ovl ≈ 1 atol=1e-8
 
     #constructor 3 - random initial tensors
-    window = MPSComoving(rand,ComplexF64,10,ℂ^2,ℂ^10,gs,gs)
+    window = MPSComoving(rand,ComplexF64,10,𝔹^2,𝔹^10,gs,gs)
     normalize!(window);
 
     for i in 1:length(window)
         @test window.AC[i] ≈ window.AL[i]*window.CR[i]
-        @test window.AC[i] ≈ MPSKit._permute_front(window.CR[i-1]*MPSKit._permute_tail(window.AR[i]))
+        @test window.AC[i] ≈ MPSKit._transpose_front(window.CR[i-1]*MPSKit._transpose_tail(window.AR[i]))
     end
 
     @test norm(window) ≈ 1
@@ -128,7 +133,7 @@ end
 
 @timedtestset "Quasiparticle state" begin
     @timedtestset "Finite" for (th,D,d) in [
-        (nonsym_ising_ham(),ComplexSpace(10),ComplexSpace(2)),
+        (force_planar(nonsym_ising_ham()),𝔹^10,𝔹^2),
         (su2_xxx_ham(spin=1),Rep[SU₂](1=>1,0=>3),Rep[SU₂](1=>1))
         ]
 
@@ -158,7 +163,7 @@ end
     end
 
     @timedtestset "Infinite" for (th,D,d) in [
-        (nonsym_ising_ham(),ComplexSpace(10),ComplexSpace(2)),
+        (force_planar(nonsym_ising_ham()),𝔹^10,𝔹^2),
         (su2_xxx_ham(spin=1),Rep[SU₂](1=>1,0=>3),Rep[SU₂](1=>1))
         ]
 
@@ -181,7 +186,7 @@ println("------------------------------------")
 println("|     Operators                    |")
 println("------------------------------------")
 
-@timedtestset "mpoham $((pspace,Dspace))" for (pspace,Dspace) in [(ℂ^4,ℂ^10),
+@timedtestset "mpoham $((pspace,Dspace))" for (pspace,Dspace) in [(𝔹^4,𝔹^10),
         (Rep[U₁](0=>2),Rep[U₁]((0=>20))),
         (Rep[SU₂](1=>1),Rep[SU₂](1//2=>10,3//2=>5,5//2=>1))]
 
@@ -191,7 +196,7 @@ println("------------------------------------")
     nnn = TensorMap(rand,ComplexF64,pspace*pspace*pspace,pspace*pspace*pspace); nnn+=nnn';
 
     #can you pass in a proper mpo?
-    identity = complex(isomorphism(oneunit(pspace)*pspace,oneunit(pspace)*pspace));
+    identity = complex(isomorphism(oneunit(pspace)*pspace,pspace*oneunit(pspace)));
     mpoified = MPSKit.decompose_localmpo(MPSKit.add_util_leg(nnn));
     d3 = Array{Union{Missing,typeof(identity)},3}(missing,1,4,4);
     d3[1,1,1] = identity;
@@ -242,7 +247,7 @@ end
     physical_space = ham.pspaces[1];
     ou = oneunit(physical_space);
 
-    ts = InfiniteMPS([physical_space],[fuse(ou*physical_space)]);
+    ts = InfiniteMPS([physical_space],[ou⊕physical_space]);
 
     W = make_time_mpo(ham,1im*0.5,WII());
 
@@ -254,15 +259,15 @@ println("|     Algorithms                   |")
 println("------------------------------------")
 
 @timedtestset "find_groundstate $(ind)" for (ind,(state,alg,ham)) in enumerate([
-        (InfiniteMPS([ℂ^2],[ℂ^10]),Vumps(tol_galerkin=1e-8,verbose=false),nonsym_ising_ham(lambda=2.0)),
-        (InfiniteMPS([ℂ^2],[ℂ^10]), GradientGrassmann(tol=1e-8, verbosity=0), nonsym_ising_ham(lambda=2.0)),
-        (InfiniteMPS([ℂ^2],[ℂ^10]), GradientGrassmann(method=LBFGS(6; gradtol=1e-8, verbosity=0)), nonsym_ising_ham(lambda=2.0)),
-        (InfiniteMPS([ℂ^2],[ℂ^10]),Idmrg1(tol_galerkin=1e-8,maxiter=400,verbose=false),nonsym_ising_ham(lambda=2.0)),
-        (InfiniteMPS([ℂ^2,ℂ^2],[ℂ^10,ℂ^10]),Idmrg2(trscheme = truncdim(12),tol_galerkin=1e-8,maxiter=400,verbose=false),repeat(nonsym_ising_ham(lambda=2.0),2)),
-        (InfiniteMPS([ℂ^2], [ℂ^10]), Vumps(tol_galerkin=1e-5,verbose=false)&GradientGrassmann(tol=1e-8, verbosity=0), nonsym_ising_ham(lambda=2.0)),
-        (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),Dmrg2(verbose=false,trscheme=truncdim(10)),nonsym_ising_ham(lambda=2.0)),
-        (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),Dmrg(verbose=false),nonsym_ising_ham(lambda=2.0)),
-        (FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10),GradientGrassmann(verbosity=0),nonsym_ising_ham(lambda=2.0))
+        (InfiniteMPS([𝔹^2],[𝔹^10]),Vumps(tol_galerkin=1e-8,verbose=false),force_planar(nonsym_ising_ham(lambda=2.0))),
+        (InfiniteMPS([𝔹^2],[𝔹^10]), GradientGrassmann(tol=1e-8, verbosity=0), force_planar(nonsym_ising_ham(lambda=2.0))),
+        (InfiniteMPS([𝔹^2],[𝔹^10]), GradientGrassmann(method=LBFGS(6; gradtol=1e-8, verbosity=0)), force_planar(nonsym_ising_ham(lambda=2.0))),
+        (InfiniteMPS([𝔹^2],[𝔹^10]),Idmrg1(tol_galerkin=1e-8,maxiter=400,verbose=false),force_planar(nonsym_ising_ham(lambda=2.0))),
+        (InfiniteMPS([𝔹^2,𝔹^2],[𝔹^10,𝔹^10]),Idmrg2(trscheme = truncdim(12),tol_galerkin=1e-8,maxiter=400,verbose=false),force_planar(repeat(nonsym_ising_ham(lambda=2.0),2))),
+        (InfiniteMPS([𝔹^2], [𝔹^10]), Vumps(tol_galerkin=1e-5,verbose=false)&GradientGrassmann(tol=1e-8, verbosity=0), force_planar(nonsym_ising_ham(lambda=2.0))),
+        (FiniteMPS(rand,ComplexF64,10,𝔹^2,𝔹^10),Dmrg2(verbose=false,trscheme=truncdim(10)),force_planar(nonsym_ising_ham(lambda=2.0))),
+        (FiniteMPS(rand,ComplexF64,10,𝔹^2,𝔹^10),Dmrg(verbose=false),force_planar(nonsym_ising_ham(lambda=2.0))),
+        (FiniteMPS(rand,ComplexF64,10,𝔹^2,𝔹^10),GradientGrassmann(verbosity=0),force_planar(nonsym_ising_ham(lambda=2.0)))
         ])
 
     v1 = variance(state,ham);
@@ -275,9 +280,9 @@ println("------------------------------------")
 end
 
 @timedtestset "timestep $(ind)" for (ind,(state,alg,opp)) in enumerate([
-    (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),5)),Tdvp(),nonsym_xxz_ham(spin=1//2)),
-    (FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),7)),Tdvp2(),nonsym_xxz_ham(spin=1//2)),
-    (InfiniteMPS([ℂ^3,ℂ^3],[ℂ^50,ℂ^50]),Tdvp(),repeat(nonsym_xxz_ham(spin=1),2))
+    (FiniteMPS(fill(TensorMap(rand,ComplexF64,𝔹^1*𝔹^2,𝔹^1),5)),Tdvp(),force_planar(nonsym_xxz_ham(spin=1//2))),
+    (FiniteMPS(fill(TensorMap(rand,ComplexF64,𝔹^1*𝔹^2,𝔹^1),7)),Tdvp2(),force_planar(nonsym_xxz_ham(spin=1//2))),
+    (InfiniteMPS([𝔹^3,𝔹^3],[𝔹^50,𝔹^50]),Tdvp(),force_planar(repeat(nonsym_xxz_ham(spin=1),2)))
     ])
 
     edens = expectation_value(state,opp);
@@ -291,8 +296,8 @@ end
         Vumps(tol_galerkin=1e-5,verbose=false);
         GradientGrassmann(verbosity=0)])
 
-    mpo = nonsym_ising_mpo();
-    state = InfiniteMPS([ℂ^2],[ℂ^10]);
+    mpo = force_planar(nonsym_ising_mpo());
+    state = InfiniteMPS([𝔹^2],[𝔹^10]);
     (state,envs) = leading_boundary(state,mpo,alg);
     (state,envs) = changebonds(state,mpo,OptimalExpand(trscheme=truncdim(3)),envs)
     (state,envs) = leading_boundary(state,mpo,alg);
@@ -303,8 +308,8 @@ end
 
 @timedtestset "quasiparticle_excitation" begin
     @timedtestset "infinite" begin
-        th = nonsym_xxz_ham()
-        ts = InfiniteMPS([ℂ^3],[ℂ^48]);
+        th = force_planar(nonsym_xxz_ham())
+        ts = InfiniteMPS([𝔹^3],[𝔹^48]);
         (ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
         (energies,Bs) = excitations(th,QuasiparticleAnsatz(),Float64(pi),ts,envs);
         @test energies[1] ≈ 0.41047925 atol=1e-4
@@ -312,14 +317,14 @@ end
     end
 
     @timedtestset "finite" begin
-        th = nonsym_ising_ham()
-        ts = InfiniteMPS([ℂ^2],[ℂ^12]);
+        th = force_planar(nonsym_ising_ham())
+        ts = InfiniteMPS([𝔹^2],[𝔹^12]);
         (ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
         (energies,Bs) = excitations(th,QuasiparticleAnsatz(),0.0,ts,envs);
         inf_en = energies[1];
 
         fin_en = map([30,20,10]) do len
-            ts = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^12)
+            ts = FiniteMPS(rand,ComplexF64,len,𝔹^2,𝔹^12)
             (ts,envs,_) = find_groundstate(ts,th,Dmrg(verbose=false));
 
             #find energy with quasiparticle ansatz
@@ -337,7 +342,7 @@ end
     end
 end
 
-@timedtestset "changebonds $((pspace,Dspace))" for (pspace,Dspace) in [(ℂ^4,ℂ^10),
+@timedtestset "changebonds $((pspace,Dspace))" for (pspace,Dspace) in [(𝔹^4,𝔹^10),
         (Rep[SU₂](1=>1),Rep[SU₂](0=>10,1=>5,2=>1))]
 
     @timedtestset "mpo" begin
@@ -408,11 +413,11 @@ end
 end
 
 @timedtestset "dynamicaldmrg" begin
-    ham = nonsym_ising_ham(lambda=4.0);
-    (gs,_,_) = find_groundstate(InfiniteMPS([ℂ^2],[ℂ^10]),ham,Vumps(verbose=false));
+    ham = force_planar(nonsym_ising_ham(lambda=4.0));
+    (gs,_,_) = find_groundstate(InfiniteMPS([𝔹^2],[𝔹^10]),ham,Vumps(verbose=false));
     window = MPSComoving(gs,copy.([gs.AC[1];[gs.AR[i] for i in 2:10]]),gs);
 
-    szd = TensorMap([1 0;0 -1],ℂ^2,ℂ^2);
+    szd = force_planar(TensorMap([1 0;0 -1],ℂ^2,ℂ^2));
     @test expectation_value(gs,szd)[1] ≈ expectation_value(window,szd)[1] atol=1e-10
 
     polepos = expectation_value(gs,ham,10)
@@ -469,19 +474,19 @@ end
 #stub tests
 @timedtestset "correlation length / entropy" begin
 
-    st = InfiniteMPS([ℂ^2],[ℂ^10]);
-    th = nonsym_ising_ham();
+    st = InfiniteMPS([𝔹^2],[𝔹^10]);
+    th = force_planar(nonsym_ising_ham());
     (st,_) = find_groundstate(st,th,Vumps(verbose=false))
     len_crit = correlation_length(st)[1]
     entrop_crit = entropy(st);
 
-    th = nonsym_ising_ham(lambda=4);
+    th = force_planar(nonsym_ising_ham(lambda=4));
     (st,_) = find_groundstate(st,th,Vumps(verbose=false))
     len_gapped = correlation_length(st)[1]
     entrop_gapped = entropy(st);
 
     @test len_crit > len_gapped;
-    @test entrop_crit > entrop_gapped;
+    @test real(entrop_crit) > real(entrop_gapped);
 end
 
 @timedtestset "expectation value" begin
@@ -489,7 +494,7 @@ end
     th = nonsym_ising_ham(lambda=4);
     (st,_) = find_groundstate(st,th,Vumps(verbose=false))
 
-    sz_mpo =TensorMap([1.0 0;0 -1],ℂ^1*ℂ^2,ℂ^1*ℂ^2)
+    sz_mpo =TensorMap([1.0 0;0 -1],ℂ^1*ℂ^2,ℂ^2*ℂ^1)
     sz =TensorMap([1.0 0;0 -1],ℂ^2,ℂ^2)
     @tensor szsz[-1 -2;-3 -4]:=sz[-1 -3]*sz[-2 -4]
 
@@ -500,22 +505,25 @@ end
 
 @timedtestset "approximate" begin
     @timedtestset "mpo * infinite ≈ infinite" begin
-        st = InfiniteMPS([ℂ^2],[ℂ^10]);
-        th = nonsym_ising_ham(lambda=4);
+        st = InfiniteMPS([𝔹^2,𝔹^2],[𝔹^10,𝔹^10]);
+        th = force_planar(repeat(nonsym_ising_ham(lambda=4),2));
 
         dt = 1e-3;
         W1 = make_time_mpo(th,dt,WI());
         W2 = make_time_mpo(th,dt,WII());
 
 
-        (st1,_) = approximate(st,(W1,st),Vomps(verbose=false));
-        (st2,_) = approximate(st,(W2,st),Vomps(verbose=false));
-        (st3,_) = timestep(st,th,dt,Tdvp());
-        st4 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
+        (st1,_) = approximate(st,(W1,st),Vumps(verbose=false));
+        (st2,_) = approximate(st,(W2,st),Vumps(verbose=false));
+        (st3,_) = approximate(st,(W1,st),Idmrg1(verbose=false));
+        (st4,_) = approximate(st,(W2,st),Idmrg2(trscheme=truncdim(20),verbose=false));
+        (st5,_) = timestep(st,th,dt,Tdvp());
+        st6 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
 
-        @test abs(dot(st1,st3)) ≈ 1.0 atol = dt
-        @test abs(dot(st2,st3)) ≈ 1.0 atol = dt
-        @test abs(dot(st4,st3)) ≈ 1.0 atol = dt
+        @test abs(dot(st1,st5)) ≈ 1.0 atol = dt
+        @test abs(dot(st3,st5)) ≈ 1.0 atol = dt
+        @test abs(dot(st6,st5)) ≈ 1.0 atol = dt
+        @test abs(dot(st2,st4)) ≈ 1.0 atol = dt
 
         nW1 = changebonds(W1,SvdCut(trscheme=truncerr(dt))); #this should be a trivial mpo now
         @test dim(space(nW1.opp[1,1],1)) == 1
@@ -547,7 +555,7 @@ end
     (gs,envs) = find_groundstate(ts,th,Dmrg(verbose=false));
 
     #translation mpo:
-    @tensor bulk[-1 -2;-3 -4] := isomorphism(ℂ^2,ℂ^2)[-2,-3]*isomorphism(ℂ^2,ℂ^2)[-1,-4];
+    @tensor bulk[-1 -2;-3 -4] := isomorphism(ℂ^2,ℂ^2)[-2,-4]*isomorphism(ℂ^2,ℂ^2)[-1,-3];
     translation = periodic_boundary_conditions(InfiniteMPO(bulk),len);
 
     #the groundstate should be translation invariant:

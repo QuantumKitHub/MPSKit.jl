@@ -16,13 +16,13 @@ Base.iterate(t::InfiniteMPO,i = 1) = (i > length(t.opp)) ? nothing : (t[i],i+1);
 
 function Base.convert(::Type{InfiniteMPS},mpo::InfiniteMPO)
     InfiniteMPS(map(mpo.opp) do t
-        permute(t,(1,2,4),(3,))
+        @plansor tt[-1 -2 -3;-4] := t[-1 -2;1 2]*τ[1 2;-4 -3]
     end)
 end
 
 function Base.convert(::Type{InfiniteMPO},mps::InfiniteMPS)
     InfiniteMPO(map(mps.AL) do t
-        permute(t,(1,2),(4,3))
+        @plansor tt[-1 -2;-3 -4] := t[-1 -2 1;2]*τ[-3 2;-4 1]
     end)
 end
 
@@ -35,7 +35,7 @@ function Base.:*(mpo::InfiniteMPO,st::InfiniteMPS)
     end)
 
     InfiniteMPS(map(1:length(st)) do i
-        @tensor t[-1 -2;-3] := st.AL[i][1,2,3]*mpo[i][4,-2,5,2]*fusers[i][-1,1,4]*conj(fusers[i+1][-3,3,5])
+        @plansor t[-1 -2;-3] := st.AL[i][1 2;3]*mpo[i][4 -2;2 5]*fusers[i][-1;1 4]*conj(fusers[i+1][-3;3 5])
     end)
 end
 function Base.:*(mpo::InfiniteMPO,st::FiniteMPS)
@@ -48,11 +48,11 @@ function Base.:*(mpo::InfiniteMPO,st::FiniteMPS)
         isometry(fuse(_firstspace(al),_firstspace(mp)),_firstspace(al)*_firstspace(mp))
     end)
 
-    (_firstspace(mpot[1]) == oneunit(_firstspace(mpot[1])) && space(mpot[end],3)' == _firstspace(mpot[1])) ||
+    (_firstspace(mpot[1]) == oneunit(_firstspace(mpot[1])) && _lastspace(mpot[end])' == _firstspace(mpot[1])) ||
         @warn "mpo does not start/end with a trivial leg"
 
     FiniteMPS(map(1:length(st)) do i
-        @tensor t[-1 -2;-3] := tensors[i][1,2,3]*mpot[i][4,-2,5,2]*fusers[i][-1,1,4]*conj(fusers[i+1][-3,3,5])
+        @plansor t[-1 -2;-3] := tensors[i][1 2;3]*mpot[i][4 -2;2 5]*fusers[i][-1;1 4]*conj(fusers[i+1][-3;3 5])
     end)
 end
 
@@ -65,7 +65,7 @@ function Base.:*(mpo1::InfiniteMPO,mpo2::InfiniteMPO)
 
 
     InfiniteMPO(map(1:length(mpo1)) do i
-        @tensor t[-1 -2;-3 -4] := mpo2[i][1,2,3,-4]*mpo1[i][4,-2,5,2]*fusers[i][-1,1,4]*conj(fusers[i+1][-3,3,5])
+        @plansor t[-1 -2;-3 -4] := mpo2[i][1 2;-3 3]*mpo1[i][4 -2;2 5]*fusers[i][-1;1 4]*conj(fusers[i+1][-4;3 5])
     end)
 end
 

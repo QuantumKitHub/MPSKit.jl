@@ -6,9 +6,9 @@ makedocs(modules=[MPSKit],
                                         mathengine = MathJax()),
             pages = [
                 "Home" => "index.md",
-                "Manual" => ["man/intro.md", "man/states.md", "man/operators.md",
-                                "man/algorithms.md","man/environments.md"],
-                "Tutorials" => ["tut/isingcft.md","tut/xxz_groundstate.md",
+                "Manual" => ["man/intro.md", "man/conventions.md","man/states.md",
+                                "man/operators.md", "man/algorithms.md","man/environments.md"],
+                "Tutorials" => ["tut/anyonic_statmech.md","tut/isingcft.md","tut/xxz_groundstate.md",
                                 "tut/timeev.md","tut/haldane.md"],
                 "Library" => ["lib/lib.md"],
             ])

@@ -9,14 +9,12 @@ end
 function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,envs=environments(state,H))
     #determine optimal expansion spaces around bond i
     pexp = PeriodicArray(map(1:length(state)) do i
-        ACAR = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
+        ACAR = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
         AC2 = ac2_prime(ACAR,i,state,envs)
-
-
 
         #Calculate nullspaces for AL and AR
         NL = leftnull(state.AL[i])
-        NR = rightnull(_permute_tail(state.AR[i+1]))
+        NR = rightnull(_transpose_tail(state.AR[i+1]))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         intermediate = adjoint(NL)*AC2*adjoint(NR)
@@ -29,11 +27,11 @@ function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,envs=
 
     #do the actual expansion
     for i in 1:length(state)
-        al = _permute_tail(catdomain(newstate.AL[i],pexp[i][1]))
+        al = _transpose_tail(catdomain(newstate.AL[i],pexp[i][1]))
         lz = TensorMap(zeros,_lastspace(pexp[i-1][1])',domain(al))
-        newstate.AL[i] = _permute_front(catcodomain(al,lz))
+        newstate.AL[i] = _transpose_front(catcodomain(al,lz))
 
-        ar = _permute_front(catcodomain(_permute_tail(newstate.AR[i+1]),pexp[i][2]))
+        ar = _transpose_front(catcodomain(_transpose_tail(newstate.AR[i+1]),pexp[i][2]))
         rz = TensorMap(zeros,codomain(ar),space(pexp[i+1][2],1))
         newstate.AR[i+1] = catdomain(ar,rz)
 
@@ -60,12 +58,12 @@ function changebonds(state::MPSMultiline, H,alg::OptimalExpand,envs=environments
     #determine optimal expansion spaces around bond i
     pexp = PeriodicArray(map(Iterators.product(1:size(state,1),1:size(state,2))) do (i,j)
 
-        ACAR = _permute_front(state.AC[i-1,j])*_permute_tail(state.AR[i-1,j+1])
+        ACAR = _transpose_front(state.AC[i-1,j])*_transpose_tail(state.AR[i-1,j+1])
         AC2 = ac2_prime(ACAR,i-1,j,state,envs)
 
         #Calculate nullspaces for AL and AR
         NL = leftnull(state.AL[i,j])
-        NR = rightnull(_permute_tail(state.AR[i,j+1]))
+        NR = rightnull(_transpose_tail(state.AR[i,j+1]))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         intermediate = adjoint(NL)*AC2*adjoint(NR)
@@ -77,13 +75,13 @@ function changebonds(state::MPSMultiline, H,alg::OptimalExpand,envs=environments
     newstate = copy(state);
 
     #do the actual expansion
-    for (i,j) in Iterators.product(1:size(state,1),1:size(state,2))
-        al = _permute_tail(catdomain(newstate.AL[i,j],pexp[i,j][1]))
+    for i in 1:size(state,1), j in 1:size(state,2)
+        al = _transpose_tail(catdomain(newstate.AL[i,j],pexp[i,j][1]))
         lz = TensorMap(zeros,_lastspace(pexp[i,j-1][1])',domain(al))
 
-        newstate.AL[i,j] = _permute_front(catcodomain(al,lz))
+        newstate.AL[i,j] = _transpose_front(catcodomain(al,lz))
 
-        ar = _permute_front(catcodomain(_permute_tail(newstate.AR[i,j+1]),pexp[i,j][2]))
+        ar = _transpose_front(catcodomain(_transpose_tail(newstate.AR[i,j+1]),pexp[i,j][2]))
         rz = TensorMap(zeros,codomain(ar),space(pexp[i,j+1][2],1))
         newstate.AR[i,j+1] = catdomain(ar,rz)
 
@@ -107,12 +105,12 @@ function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::O
     #so during optimization of site i, you have access to these optimal vectors :)
 
     for i in 1:(length(state)-1)
-        ACAR = _permute_front(state.AC[i])*_permute_tail(state.AR[i+1])
+        ACAR = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
         AC2 = ac2_prime(ACAR,i,state,envs)
 
         #Calculate nullspaces for left and right
         NL = leftnull(state.AC[i])
-        NR = rightnull(_permute_tail(state.AR[i+1]))
+        NR = rightnull(_transpose_tail(state.AR[i+1]))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         intermediate = adjoint(NL) * AC2 * adjoint(NR);
@@ -122,7 +120,7 @@ function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::O
         ar_le = TensorMap(zeros,codomain(state.AC[i]),space(V,1))
 
         (nal,nc) = leftorth(catdomain(state.AC[i],ar_le),alg=QRpos())
-        nar = _permute_front(catcodomain(_permute_tail(state.AR[i+1]),ar_re));
+        nar = _transpose_front(catcodomain(_transpose_tail(state.AR[i+1]),ar_re));
 
         state.AC[i] = (nal,nc)
         state.AC[i+1] = (nc,nar)
