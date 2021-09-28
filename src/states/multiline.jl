@@ -7,7 +7,7 @@ struct Multiline{T}
     data::PeriodicArray{T,1}
 end
 
-Base.length(t::Multiline) = prod(size(t));
+#Base.length(t::Multiline) = prod(size(t));
 Base.size(t::Multiline) = (length(t.data),length(t.data[1]));
 Base.size(t::Multiline,i) = size(t)[i];
 Base.getindex(t::Multiline,i) = t.data[i];

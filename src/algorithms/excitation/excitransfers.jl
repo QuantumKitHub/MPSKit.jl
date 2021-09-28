@@ -27,9 +27,9 @@ exci_transfer_right(v::MPSTensor,O::MPOTensor,A::MPOTensor,Ab::MPSTensor) =
     @plansor t[-1 -2;-3 -4] := A[-1 4;-3 5]*O[-2 2;4 3]*conj(Ab[-4 2;1])*v[5 3;1]
 
 #mpo transfer, with an excitation leg
-exci_transfer_left(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) =
+exci_transfer_left(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor) =
     @plansor v[-1 -2;-3 -4] := v[4 2;-3 1]*A[1 3;-4]*O[2 5;3 -2]*conj(Ab[4 5;-1])
-exci_transfer_right(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor=A) =
+exci_transfer_right(v::MPOTensor,O::MPOTensor,A::MPSTensor,Ab::MPSTensor) =
     @plansor v[-1 -2;-3 -4] := A[-1 4;5]*O[-2 2;4 3]*conj(Ab[-4 2;1])*v[5 3;-3 1]
 
 function exci_transfer_left(v,O::Vector{<:MPOTensor},A::Vector,Ab::Vector=A)
