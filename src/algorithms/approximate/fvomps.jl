@@ -23,9 +23,8 @@ function approximate!(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::Dmr
             end)
 
             (al,c,ar) = tsvd(nac2,trunc=alg.trscheme)
-            normalize!(c);
-            v = @plansor ac2[1 2;4 3]*conj(al[1 2;5])*conj(c[5;6])*conj(ar[6;4 3])
-            delta = max(delta,abs(1-abs(v)));
+
+            delta = max(delta,norm(al*c*ar-ac2)/norm(ac2));
 
             init.AC[pos] = (al,complex(c))
             init.AC[pos+1] = (complex(c),_transpose_front(ar));
