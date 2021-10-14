@@ -15,7 +15,7 @@ TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
 
 [compat]
 FastClosures = "0.3"
-KrylovKit = "0.4 - 0.5.2"
+KrylovKit = "0.4 - 0.5.2, 0.5"
 OptimKit = "0.3.1"
 Parameters = "0.12.1"
 RecipesBase = "1.1"
