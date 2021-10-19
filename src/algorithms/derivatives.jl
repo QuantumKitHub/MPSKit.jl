@@ -4,13 +4,19 @@
     One-site derivative
 """
 function ac_prime(x::MPSTensor,ham::MPOHamSlice,leftenv,rightenv)
-    toret = zero(x)
-    for (i,j) in opkeys(ham)
-        @plansor toret[-1 -2;-3]+=leftenv[i][-1 5;4]*x[4 2;1]*ham[i,j][5 -2;2 3]*rightenv[j][1 3;-3]
-    end
-    for (i,j) in scalkeys(ham)
-        scal = ham.Os[i,j];
-        @plansor toret[-1 -2;-3]+=leftenv[i][-1 5;4]*(scal*x)[4 6;1]*τ[6 5;7 -2]*rightenv[j][1 7;-3]
+    local toret
+
+    @floop for (i,j) in keys(ham)
+        if isscal(ham,i,j)
+            scal = ham.Os[i,j];
+            @plansor t[-1 -2;-3] := leftenv[i][-1 5;4]*(scal*x)[4 6;1]*τ[6 5;7 -2]*rightenv[j][1 7;-3]
+        else
+            @plansor t[-1 -2;-3] := leftenv[i][-1 5;4]*x[4 2;1]*ham[i,j][5 -2;2 3]*rightenv[j][1 3;-3]
+        end
+
+        @reduce() do (toret = zero(x);t)
+            toret+=t
+        end
     end
 
     return toret

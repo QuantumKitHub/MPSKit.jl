@@ -32,29 +32,35 @@ Base.contains(x::MPOHamSlice,j,k) = contains(x.ham,x.i,j,k);
 
 #the usual mpoham transfer
 function transfer_left(vec::Vector{V},ham::MPOHamSlice,A::V,Ab::V=A) where V<:MPSTensor
-    toreturn = [TensorMap(zeros,eltype(A),_lastspace(Ab)'*ham.imspaces[i],_lastspace(A)') for i in 1:ham.odim]::Vector{V}
+    toret = [TensorMap(zeros,eltype(A),_lastspace(Ab)'*ham.imspaces[i],_lastspace(A)') for i in 1:ham.odim]::Vector{V}
 
-    for (j,k) in keys(ham)
-        if isscal(ham,j,k)
-            toreturn[k]+=ham.Os[j,k]*transfer_left(vec[j],A,Ab)
-        else
-            v = transfer_left(vec[j],ham[j,k],A,Ab)
-            toreturn[k]+=transfer_left(vec[j],ham[j,k],A,Ab)
-        end
+    @sync for k in 1:ham.odim
+        @Threads.spawn toret[k] = foldl(+, 1:ham.odim |>
+            Filter(j->contains(ham,j,k)) |>
+            Map() do j
+                if isscal(ham,j,k)
+                    ham.Os[j,k]*transfer_left(vec[j],A,Ab)
+                else
+                    transfer_left(vec[j],ham[j,k],A,Ab)
+                end
+            end,init=toret[k]);
     end
 
-    return toreturn
+    return toret
 end
 function transfer_right(vec::Vector{V},ham::MPOHamSlice,A::V,Ab::V=A) where V<:MPSTensor
-    toreturn = [TensorMap(zeros,eltype(A),_firstspace(A)*ham.domspaces[i],_firstspace(Ab)) for i in 1:ham.odim]::Vector{V}
+    toret = [TensorMap(zeros,eltype(A),_firstspace(A)*ham.domspaces[i],_firstspace(Ab)) for i in 1:ham.odim]::Vector{V}
 
-    for (j,k) in keys(ham)
-        if isscal(ham,j,k)
-            toreturn[j]+=ham.Os[j,k]*transfer_right(vec[k],A,Ab)
-        else
-            toreturn[j]+=transfer_right(vec[k],ham[j,k],A,Ab)
-        end
+    @sync for j in 1:ham.odim
+        @Threads.spawn toret[j] = foldl(+, 1:ham.odim |>
+            Filter(k->contains(ham,j,k)) |>
+            Map() do k
+                if isscal(ham,j,k)
+                    ham.Os[j,k]*transfer_right(vec[k],A,Ab)
+                else
+                    transfer_right(vec[k],ham[j,k],A,Ab)
+                end
+            end,init=toret[j]);
     end
-
-    return toreturn
+    return toret
 end

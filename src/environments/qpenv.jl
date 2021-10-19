@@ -66,8 +66,13 @@ function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver
     end
     rBs = reverse(rBs)
 
-    lBE::typeof(rB_cur) = left_excitation_transfer_system(lB_cur,ham,exci,solver=solver)
-    rBE::typeof(rB_cur) = right_excitation_transfer_system(rB_cur,ham,exci, solver=solver)
+    local lBE::typeof(rB_cur);
+    local rBE::typeof(rB_cur);
+
+    @sync begin
+        @Threads.spawn lBE = left_excitation_transfer_system(lB_cur,ham,exci,solver=solver)
+        @Threads.spawn rBE = right_excitation_transfer_system(rB_cur,ham,exci, solver=solver)
+    end
 
     lBs[end] = lBE;
 
