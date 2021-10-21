@@ -122,7 +122,7 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,range::UnitRange
 end
 
 
-expectation_value(st::InfiniteMPS,mpo::InfiniteMPO) = expectation_value(convert(MPSMultiline,st),convert(MPOMultiline,mpo));
+expectation_value(st::InfiniteMPS,mpo::DenseMPO) = expectation_value(convert(MPSMultiline,st),convert(MPOMultiline,mpo));
 expectation_value(st::MPSMultiline,mpo::MPOMultiline) = expectation_value(st,environments(st,mpo));
 expectation_value(st::InfiniteMPS,ca::PerMPOInfEnv) = expectation_value(convert(MPSMultiline,st),ca);
 function expectation_value(st::MPSMultiline,ca::PerMPOInfEnv)

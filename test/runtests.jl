@@ -243,7 +243,7 @@ println("------------------------------------")
     @test real(sum(expectation_value(ts2,h4)))>=0;
 end
 
-@timedtestset "InfiniteMPO"  for ham in (nonsym_ising_ham(),su2_xxx_ham(spin=1))
+@timedtestset "DenseMPO"  for ham in (nonsym_ising_ham(),su2_xxx_ham(spin=1))
     physical_space = ham.pspaces[1];
     ou = oneunit(physical_space);
 
@@ -556,7 +556,7 @@ end
 
     #translation mpo:
     @tensor bulk[-1 -2;-3 -4] := isomorphism(ℂ^2,ℂ^2)[-2,-4]*isomorphism(ℂ^2,ℂ^2)[-1,-3];
-    translation = periodic_boundary_conditions(InfiniteMPO(bulk),len);
+    translation = periodic_boundary_conditions(DenseMPO(bulk),len);
 
     #the groundstate should be translation invariant:
     ut = Tensor(ones,ℂ^1);

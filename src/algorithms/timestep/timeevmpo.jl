@@ -104,5 +104,5 @@ function _makedense(ham)
         @plansor data[i-1][-1 -2;-3 -4] := data[i-1][-1 -2;-3 1]*U[1;2]*S[2;-4]
     end
 
-    InfiniteMPO(data)
+    DenseMPO(data)
 end

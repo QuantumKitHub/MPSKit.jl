@@ -30,7 +30,7 @@ function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline)
     envs
 end
 
-environments(state::InfiniteMPS,opp::InfiniteMPO;kwargs...) = environments(convert(MPSMultiline,state),convert(MPOMultiline,opp);kwargs...);
+environments(state::InfiniteMPS,opp::DenseMPO;kwargs...) = environments(convert(MPSMultiline,state),convert(MPOMultiline,opp);kwargs...);
 function environments(state::MPSMultiline,mpo::MPOMultiline;tol = Defaults.tol,maxiter=Defaults.maxiter)
     (lw,rw) = mixed_fixpoints(state,mpo,state;tol = tol, maxiter = maxiter)
 
@@ -67,7 +67,7 @@ function recalculate!(envs::MixPerMPOInfEnv,nstate::MPSMultiline)
     envs
 end
 
-function environments(below::InfiniteMPS,toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS};kwargs...)
+function environments(below::InfiniteMPS,toapprox::Tuple{<:DenseMPO,<:InfiniteMPS};kwargs...)
     (opp,above) = toapprox
     environments(convert(MPSMultiline,below),(convert(MPOMultiline,opp),convert(MPSMultiline,above));kwargs...);
 end

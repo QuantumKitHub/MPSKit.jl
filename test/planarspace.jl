@@ -32,4 +32,4 @@ function force_planar(mpo::MPOHamiltonian)
         force_planar(mpo[i,j,k])
     end)
 end
-force_planar(mpo::InfiniteMPO) = InfiniteMPO(force_planar.(mpo.opp))
+force_planar(mpo::DenseMPO) = DenseMPO(force_planar.(mpo.opp))

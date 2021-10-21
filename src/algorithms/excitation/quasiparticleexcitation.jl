@@ -194,7 +194,7 @@ end
 
 
 function excitations(
-    H::InfiniteMPO, alg::QuasiparticleAnsatz, p::Real,
+    H::DenseMPO, alg::QuasiparticleAnsatz, p::Real,
     lmps, lenvs=environments(lmps, H),
     rmps=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
     sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1,

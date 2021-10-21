@@ -11,7 +11,7 @@ MPSMultiline
 ## Operators
 ```@docs
 MPOHamiltonian
-InfiniteMPO
+DenseMPO
 ```
 
 ## Environments

@@ -1,9 +1,3 @@
-#=
-    Implements mpohamiltonian algebra (addition,subtraction,multiplication)
-    other actions on mpohamiltonian objects
-    the mpohamiltonian transfers
-=#
-
 #addition / substraction
 function Base.:+(a::MPOHamiltonian{S,T,E},e::AbstractArray{V,1}) where {S,T,E,V}
     length(e) == a.period || throw(ArgumentError("periodicity should match $(a.period) ≠ $(length(e))"))
@@ -142,6 +136,3 @@ function Base.conj(a::MPOHamiltonian)
 
     MPOHamiltonian(b)
 end
-
-#needed this; perhaps move to tensorkit?
-TensorKit.fuse(f::T) where T<: VectorSpace = f

@@ -11,7 +11,7 @@ The general definition of an mps tensor is as follows
 
 mps tensors are well defined for any amount of physical legs and InfiniteMPS/FiniteMPS handle these general N-leg tensors just fine. This is necessary in for example peps code, where the number of physical spaces of a boundary mps tensor is 2.
 
-However our operators MPOHamiltonian/InfiniteMPO both only work on mps tensors with one leg. There is no fundamental problem, anyone is free to implement new operators working on the more general mps tensors.
+However our operators MPOHamiltonian/DenseMPO both only work on mps tensors with one leg. There is no fundamental problem, anyone is free to implement new operators working on the more general mps tensors.
 
 ## Bond tensors
 

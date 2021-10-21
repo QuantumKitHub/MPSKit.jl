@@ -246,7 +246,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 end
 
 #impose periodic boundary conditions on a normal mpo
-function periodic_boundary_conditions(mpo::InfiniteMPO{O},len = length(mpo)) where O
+function periodic_boundary_conditions(mpo::DenseMPO{O},len = length(mpo)) where O
     mod(len,length(mpo)) == 0 || throw(ArgumentError("len not a multiple of unitcell"))
 
     output = PeriodicArray{O,1}(undef,len);
@@ -271,5 +271,5 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},len = length(mpo)) whe
     f2 = isomorphism(fuse(sp*_firstspace(mpo[len])),sp*_firstspace(mpo[len]))
     @plansor output[end][-1 -2;-3 -4] := mpo[len][2 -2;3 4]*f2[-1;1 2]*τ[-3 1;4 3]*conj(utleg[-4])
 
-    InfiniteMPO(output)
+    DenseMPO(output)
 end

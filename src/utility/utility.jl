@@ -92,3 +92,20 @@ function _can_unambiguously_braid(sp::VectorSpace)
     end
     return true
 end
+
+"
+checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
+"
+function isid(x::MPOTensor;tol=Defaults.tolgauge)
+    (_firstspace(x) == _lastspace(x)' && space(x,2) == space(x,3)') || return false,zero(eltype(x));
+    _can_unambiguously_braid(_firstspace(x)) || return false,zero(eltype(x));
+
+    id = isomorphism(Matrix{eltype(x)},codomain(x),domain(x))
+    scal = dot(id,x)/dot(id,id)
+    diff = x-scal*id
+
+    return norm(diff)<tol,scal
+end
+
+#needed this; perhaps move to tensorkit?
+TensorKit.fuse(f::T) where T<: VectorSpace = f

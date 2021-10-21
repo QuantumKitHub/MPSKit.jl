@@ -18,7 +18,7 @@ module MPSKit
 
     #hamiltonian things
     export Hamiltonian,Operator,Cache
-    export MPOHamiltonian,InfiniteMPO,MPOMultiline
+    export MPOHamiltonian,DenseMPO,MPOMultiline
     export ac_prime,c_prime,environments,ac2_prime,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 

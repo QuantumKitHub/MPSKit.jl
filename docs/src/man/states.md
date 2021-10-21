@@ -153,4 +153,4 @@ end
 MPSMultiline/MPOMultiline are then defined as
 ```julia
 const MPSMultiline = Multiline{<:InfiniteMPS}
-const MPOMultiline = Multiline{<:InfiniteMPO}
+const MPOMultiline = Multiline{<:DenseMPO}

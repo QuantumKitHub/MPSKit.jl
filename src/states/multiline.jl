@@ -1,7 +1,7 @@
 "
 It is possible to have matrix product (operators / states) that are also periodic in the vertical direction
 For examples, as fix points of statmech problems
-These should be represented as respectively MultiLine{<:InfiniteMPO} / Multiline{<:InfiniteMPS}
+These should be represented as respectively MultiLine{<:DenseMPO} / Multiline{<:InfiniteMPS}
 "
 struct Multiline{T}
     data::PeriodicArray{T,1}
