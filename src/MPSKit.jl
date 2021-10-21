@@ -1,6 +1,7 @@
 module MPSKit
     using TensorKit,KrylovKit,Parameters, OptimKit, FastClosures
-    using Base.Iterators, Base.Threads
+    using Base.Threads,FLoops,Transducers
+    using Base.Iterators
     using RecipesBase
 
     using LinearAlgebra:diag,Diagonal;
