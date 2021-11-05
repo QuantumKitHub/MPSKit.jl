@@ -11,7 +11,7 @@ end
 include("excitransfers.jl")
 
 """
-    excitations(H::Hamiltonian, alg::QuasiparticleAnsatz, args...; kwargs...)
+    excitations(H, alg::QuasiparticleAnsatz, args...; kwargs...)
 
 Compute the first excited states and their energy gap above a groundstate.
 
@@ -35,7 +35,7 @@ Optimise the infinite quasiparticle state ```V₀```.
 - `solver=Defaults.solver`: the algorithm to compute the environments.
 """
 function excitations(
-    H::Hamiltonian, alg::QuasiparticleAnsatz, V₀::InfiniteQP, lenvs, renvs;
+    H, alg::QuasiparticleAnsatz, V₀::InfiniteQP, lenvs, renvs;
     num=1, solver=Defaults.solver
 )
     qp_envs(V) = environments(V, H, lenvs, renvs, solver=solver)
@@ -51,7 +51,7 @@ function excitations(
     return Es, Vs
 end
 function excitations(
-    H::Hamiltonian, alg::QuasiparticleAnsatz, V₀::InfiniteQP, lenvs;
+    H, alg::QuasiparticleAnsatz, V₀::InfiniteQP, lenvs;
     num=1, solver=Defaults.solver
 )
     # Infer `renvs` in function body as it depends on `solver`.
@@ -59,7 +59,7 @@ function excitations(
     return excitations(H, alg, V₀, lenvs, renvs; num, solver)
 end
 function excitations(
-    H::Hamiltonian, alg::QuasiparticleAnsatz, V₀::InfiniteQP;
+    H, alg::QuasiparticleAnsatz, V₀::InfiniteQP;
     num=1, solver=Defaults.solver
 )
     # Infer `lenvs` in function body as it depends on `solver`.
@@ -73,7 +73,7 @@ end
 Create and optimise an infinite quasiparticle state with momentum ```p```.
 """
 function excitations(
-    H::Hamiltonian, alg::QuasiparticleAnsatz, p::Real,
+    H, alg::QuasiparticleAnsatz, p::Real,
     lmps::InfiniteMPS, lenvs=environments(lmps, H),
     rmps::InfiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
     sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1,
@@ -118,7 +118,7 @@ Optimise the finite quasiparticle state ```V₀```.
 - `num=1`: number of excited states to compute.
 """
 function excitations(
-    H::Hamiltonian, alg::QuasiparticleAnsatz,
+    H, alg::QuasiparticleAnsatz,
     V₀::FiniteQP, lenvs=environments(V₀.left_gs, H),
     renvs=V₀.trivial ? lenvs : environments(V₀.right_gs, H);
     num=1
@@ -142,7 +142,7 @@ end
 Create and optimise a finite quasiparticle state.
 """
 function excitations(
-    H::Hamiltonian, alg::QuasiparticleAnsatz,
+    H, alg::QuasiparticleAnsatz,
     lmps::FiniteMPS, lenvs=environments(lmps, H),
     rmps::FiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H)environmentsleft;
     sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1

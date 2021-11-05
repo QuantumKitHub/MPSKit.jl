@@ -1,7 +1,7 @@
 "
     SparseMPO - used to represent both time evolution mpos and hamiltonians
 "
-struct SparseMPO{S,T<:MPOTensor,E<:Number}<:Operator
+struct SparseMPO{S,T<:MPOTensor,E<:Number} <: AbstractArray{T,3}
     Os::PeriodicArray{Union{E,T},3}
 
     domspaces::PeriodicArray{S,2}
@@ -30,8 +30,10 @@ allow passing in
 
 # bit of a helper - accept non strict typed data
 SparseMPO(x::AbstractArray{Any,3}) = SparseMPO(union_split(x));
+
 #another helper - artificially create a union and reuse next constructor
 SparseMPO(x::AbstractArray{T,3}) where T<: TensorMap = SparseMPO(convert(AbstractArray{Union{T,eltype(T)},3},x));
+
 function SparseMPO(x::AbstractArray{T,3}) where T<:Union{A} where A
     (Sp,M,E) = _envsetypes(union_types(T));
 
@@ -49,13 +51,14 @@ function SparseMPO(x::AbstractArray{T,3}) where T<:Union{A} where A
         end
     end
 
-    SparseMPO{Sp,M,E}(nx);
+    SparseMPO(nx);
 end
 
 #default constructor
-function SparseMPO{Sp,M,E}(x::AbstractArray{Union{E,M},3}) where {Sp,M<:MPOTensor{Sp},E<:Number}
+function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number}
     (period,numrows,numcols) = size(x);
 
+    Sp = spacetype(M);
     E == eltype(M) || throw(ArgumentError("scalar type should match mpo eltype $E ≠ $(eltype(M))"))
     numrows == numcols || throw(ArgumentError("mpos have to be square"))
 
@@ -125,7 +128,7 @@ function SparseMPO{Sp,M,E}(x::AbstractArray{Union{E,M},3}) where {Sp,M<:MPOTenso
     ndomspaces = PeriodicArray{Sp}(f_domspaces)
     npspaces = PeriodicArray{Sp}(pspaces)
 
-    return SparseMPO{Sp,M,E}(PeriodicArray(x[:,:,:]),ndomspaces,npspaces)
+    return SparseMPO{Sp,M,E}(PeriodicArray(copy(x)),ndomspaces,npspaces)
 end
 
 function _envsetypes(d::Tuple)
@@ -142,8 +145,12 @@ function _envsetypes(d::Tuple)
     end
 end
 
+
+# mandatory methods to implement for abstractarray
+Base.size(x::SparseMPO) = size(x.Os);
+
 #utility functions for finite mpo
-function Base.getindex(x::SparseMPO{S,T,E},a::Int,b::Int,c::Int)::T where {S,T,E}
+function Base.getindex(x::SparseMPO{S,T,E},a,b,c)::T where {S,T,E}
     b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
     if x.Os[a,b,c] isa E
         if x.Os[a,b,c] == zero(E)
@@ -156,7 +163,7 @@ function Base.getindex(x::SparseMPO{S,T,E},a::Int,b::Int,c::Int)::T where {S,T,E
     end
 end
 
-function Base.setindex!(x::SparseMPO{S,T,E},v::T,a::Int,b::Int,c::Int)  where {S,T,E}
+function Base.setindex!(x::SparseMPO{S,T,E},v::T,a,b,c)  where {S,T,E}
     b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
 
     (ii,scal) = isid(v);
@@ -171,11 +178,6 @@ function Base.setindex!(x::SparseMPO{S,T,E},v::T,a::Int,b::Int,c::Int)  where {S
 
     return x
 end
-Base.getindex(x::SparseMPO,a::Colon,b::Int,c::Int) = [x[i,b,c] for i in 1:x.period];
-
-Base.eltype(x::SparseMPO) = typeof(x[1,1,1])
-Base.size(x::SparseMPO) = (x.period,x.odim,x.odim)
-Base.size(x::SparseMPO,i) = size(x)[i]
 
 Base.keys(x::SparseMPO) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),product(1:x.period,1:x.odim,1:x.odim))
 Base.keys(x::SparseMPO,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),product(1:x.odim,1:x.odim))
@@ -193,6 +195,20 @@ isscal(x::SparseMPO{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = x.Os[a,b,c] isa
 checks if ham[:,i,i] = 1 for every i
 "
 isid(ham::SparseMPO{S,T,E},i::Int) where {S,T,E}= reduce((a,b) -> a && isscal(ham,b,i,i) && abs(ham.Os[b,i,i]-one(E))<1e-14,1:ham.period,init=true)
+
+"
+checks if the given 4leg tensor is the identity (needed for infinite mpo hamiltonians)
+"
+function isid(x::MPOTensor;tol=Defaults.tolgauge)
+    (_firstspace(x) == _lastspace(x)' && space(x,2) == space(x,3)') || return false,zero(eltype(x));
+    _can_unambiguously_braid(_firstspace(x)) || return false,zero(eltype(x));
+
+    id = isomorphism(Matrix{eltype(x)},codomain(x),domain(x))
+    scal = dot(id,x)/dot(id,id)
+    diff = x-scal*id
+
+    return norm(diff)<tol,scal
+end
 
 include("linalg.jl")
 include("sparseslice.jl")

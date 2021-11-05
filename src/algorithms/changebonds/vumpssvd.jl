@@ -8,7 +8,7 @@
     trscheme = notrunc()
 end
 
-function changebonds_1(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,envs=environments(state,H)) #would be more efficient if we also repeated envs
+function changebonds_1(state::InfiniteMPS, H,alg::VumpsSvdCut,envs=environments(state,H)) #would be more efficient if we also repeated envs
     #the unitcell==1 case is unique, because there you have a sef-consistency condition
 
     #expand the one site to two sites
@@ -30,7 +30,7 @@ function changebonds_1(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,envs=
     return collapsed, envs
 end
 
-function changebonds_n(state::InfiniteMPS, H::Hamiltonian,alg::VumpsSvdCut,envs=environments(state,H))
+function changebonds_n(state::InfiniteMPS, H,alg::VumpsSvdCut,envs=environments(state,H))
     meps=0.0
     for loc in 1:length(state)
         @plansor AC2[-1 -2;-3 -4] := state.AC[loc][-1 -2;1]*state.AR[loc+1][1 -4;-3]

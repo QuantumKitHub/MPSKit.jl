@@ -1,7 +1,7 @@
 "
     Represents a dense periodic mpo
 "
-struct DenseMPO{O<:MPOTensor} <: Operator
+struct DenseMPO{O<:MPOTensor}
     opp::PeriodicArray{O,1}
 end
 

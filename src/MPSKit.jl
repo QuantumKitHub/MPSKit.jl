@@ -17,8 +17,8 @@ module MPSKit
     export add_util_leg,max_Ds,virtualspace, recalculate!
 
     #hamiltonian things
-    export Hamiltonian,Operator,Cache
-    export MPOHamiltonian,DenseMPO,MPOMultiline
+    export Cache
+    export SparseMPO,Hamiltonian,DenseMPO,MPOMultiline
     export ac_prime,c_prime,environments,ac2_prime,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 
@@ -67,11 +67,10 @@ module MPSKit
     include("states/quasiparticle_state.jl")
     include("states/ortho.jl")
 
-    abstract type Operator end
-    abstract type Hamiltonian <: Operator end
-
+    include("operators/sparsempo/sparsempo.jl") #the mpohamiltonian objects
     include("operators/mpohamiltonian/mpohamiltonian.jl") #the mpohamiltonian objects
-    include("operators/umpo.jl")
+    include("operators/densempo.jl")
+    include("operators/mpomultiline.jl")
 
     abstract type Cache end #cache "manages" environments
 

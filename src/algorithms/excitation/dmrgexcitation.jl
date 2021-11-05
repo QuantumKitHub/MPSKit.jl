@@ -19,7 +19,7 @@ function excitations(hamiltonian::MPOHamiltonian,alg::FiniteExcited,states::Vect
 
     return ens,excis
 end
-excitations(hamiltonian::Hamiltonian, alg::FiniteExcited,gs::FiniteMPS;kwargs...) = excitations(hamiltonian,alg,[gs];kwargs...)
+excitations(hamiltonian, alg::FiniteExcited,gs::FiniteMPS;kwargs...) = excitations(hamiltonian,alg,[gs];kwargs...)
 
 #some simple environments
 

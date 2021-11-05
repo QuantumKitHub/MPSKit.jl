@@ -10,7 +10,7 @@ end
 
 time evolves psi by timestep dt using algorithm alg
 """
-function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp,envs::Cache=environments(state,H))
+function timestep(state::InfiniteMPS, H, timestep::Number,alg::Tdvp,envs::Cache=environments(state,H))
 
     temp_ACs = similar(state.AC);
     temp_CRs = similar(state.CR);
@@ -40,7 +40,7 @@ function timestep(state::InfiniteMPS, H::Hamiltonian, timestep::Number,alg::Tdvp
     nstate,envs
 end
 
-function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp,envs=environments(state,H))
+function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::Tdvp,envs=environments(state,H))
     #left to right
     for i in 1:(length(state)-1)
         (state.AC[i],convhist) = exponentiate(@closure(x->ac_prime(x,i,state,envs)),-1im*timestep/2,state.AC[i],Lanczos(tol=alg.tolgauge))
@@ -70,7 +70,7 @@ end
 end
 
 #twosite tdvp for finite mps
-function timestep!(state::Union{FiniteMPS,MPSComoving}, H::Operator, timestep::Number,alg::Tdvp2,envs=environments(state,H);rightorthed=false)
+function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::Tdvp2,envs=environments(state,H);rightorthed=false)
     #left to right
     for i in 1:(length(state)-1)
         ac2 = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])

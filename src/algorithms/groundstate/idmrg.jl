@@ -9,7 +9,7 @@ onesite infinite dmrg
 end
 
 
-function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg1,oenvs=environments(ost,ham))
+function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg1,oenvs=environments(ost,ham))
     st = copy(ost);
     envs = IDMRGEnv(ost,oenvs);
 
@@ -64,7 +64,7 @@ twosite infinite dmrg
     trscheme = truncerr(1e-6);
 end
 
-function find_groundstate(ost::InfiniteMPS, ham::Hamiltonian,alg::Idmrg2,oenvs=environments(ost,ham))
+function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg2,oenvs=environments(ost,ham))
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
 
     st = copy(ost);
