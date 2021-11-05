@@ -26,7 +26,7 @@ function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{
 
     ut = Tensor(ones,firstspace)
     @plansor tmp[-1 -2;-3] := state.AC[at][4 2;-3]*op[1][1 3;2 -2]*conj(state.AC[at][4 3;-1])*conj(ut[1])
-    tmp = transfer_left(tmp,op[2:length(op)],state.AR[at+1:at+length(op)],state.AR[at+1:at+length(op)]);
+    tmp = transfer_left(tmp,op[2:length(op)],state.AR[at+1:at+length(op)-1],state.AR[at+1:at+length(op)-1]);
     return @plansor tmp[1 2;1]*ut[2];
 end
 
