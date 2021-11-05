@@ -31,16 +31,16 @@ function MPOHamiltonian(x::Array{T,1}) where T<:MPOTensor{Sp} where Sp
 end
 
 function Base.getproperty(h::MPOHamiltonian,f::Symbol)
-    if f in (:odim,:period,:imspaces)
+    if f in (:odim,:period,:imspaces,:domspaces,:Os,:pspaces)
         return getproperty(h.data,f)
     else
         return getfield(h,f)
     end
 end
 
-#utility functions for finite mpo
-Base.getindex(x::MPOHamiltonian{S,T,E},a,b,c)  where {S,T,E} = x.data[a,b,c]
-Base.setindex!(x::MPOHamiltonian{S,T,E},v::T,a::Int,b::Int,c::Int) where {S,T,E} = setindex!(x.data,a,b,c)
+Base.getindex(x::MPOHamiltonian,a) = x.data[a,:,:];
+Base.getindex(x::MPOHamiltonian,a,b,c) = x.data[a,b,c];
+Base.setindex!(x::MPOHamiltonian,v,a,b,c) = setindex!(x.data,v,a,b,c);
 
 Base.eltype(x::MPOHamiltonian) = eltype(x.data);
 Base.size(x::MPOHamiltonian) = (x.period,x.odim,x.odim)
@@ -49,14 +49,14 @@ Base.size(x::MPOHamiltonian,i) = size(x)[i]
 Base.keys(x::MPOHamiltonian) = keys(x.data)
 Base.keys(x::MPOHamiltonian,i::Int) = keys(x.data,i)
 
-opkeys(x::MPOHamiltonian) = opkeys(x);
-opkeys(x::MPOHamiltonian,i::Int) = opkeys(x,i);
+opkeys(x::MPOHamiltonian) = opkeys(x.data);
+opkeys(x::MPOHamiltonian,i::Int) = opkeys(x.data,i);
 
-scalkeys(x::MPOHamiltonian) = scalkeys(x);
-scalkeys(x::MPOHamiltonian,i::Int) = scalkeys(x,i);
+scalkeys(x::MPOHamiltonian) = scalkeys(x.data);
+scalkeys(x::MPOHamiltonian,i::Int) = scalkeys(x.data,i);
 
-Base.contains(x::MPOHamiltonian,a,b,c) = contains(x,a,b,c)
-isscal(x::MPOHamiltonian,a,b,c) = isscal(x,a,b,c)
+Base.contains(x::MPOHamiltonian,a,b,c) = contains(x.data,a,b,c)
+isscal(x::MPOHamiltonian,a,b,c) = isscal(x.data,a,b,c)
 
 "
 checks if ham[:,i,i] = 1 for every i
@@ -81,4 +81,3 @@ function sanitycheck(ham::MPOHamiltonian)
 end
 
 include("linalg.jl")
-include("hamslice.jl")

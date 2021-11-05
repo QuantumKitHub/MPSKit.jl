@@ -3,7 +3,7 @@
 """
     One-site derivative
 """
-function ac_prime(x::MPSTensor,ham::MPOHamSlice,leftenv,rightenv)
+function ac_prime(x::MPSTensor,ham::SparseMPOSlice,leftenv,rightenv)
     local toret
 
     @floop for (i,j) in keys(ham)
@@ -29,7 +29,7 @@ end
 """
     Two-site derivative
 """
-function ac2_prime(x::MPOTensor,h1::MPOHamSlice,h2::MPOHamSlice,leftenv,rightenv)
+function ac2_prime(x::MPOTensor,h1::SparseMPOSlice,h2::SparseMPOSlice,leftenv,rightenv)
     toret=zero(x)
 
     for (i,j) in keys(h1), k in 1:h1.odim

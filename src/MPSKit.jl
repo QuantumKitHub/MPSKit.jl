@@ -18,7 +18,7 @@ module MPSKit
 
     #hamiltonian things
     export Cache
-    export SparseMPO,Hamiltonian,DenseMPO,MPOMultiline
+    export SparseMPO,MPOHamiltonian,DenseMPO,MPOMultiline
     export ac_prime,c_prime,environments,ac2_prime,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 
@@ -38,6 +38,7 @@ module MPSKit
     export exact_diagonalization
 
     @deprecate params(args...) environments(args...)
+    @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
     #default settings
     module Defaults

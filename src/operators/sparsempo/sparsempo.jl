@@ -20,6 +20,8 @@ function Base.getproperty(h::SparseMPO,f::Symbol)
     end
 end
 
+Base.checkbounds(a::SparseMPO, I...) = true
+
 #=
 allow passing in
         - non strictly typed matrices
@@ -128,7 +130,7 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
     ndomspaces = PeriodicArray{Sp}(f_domspaces)
     npspaces = PeriodicArray{Sp}(pspaces)
 
-    return SparseMPO{Sp,M,E}(PeriodicArray(copy(x)),ndomspaces,npspaces)
+    return SparseMPO{Sp,M,E}(PeriodicArray(x[:,:,:]),ndomspaces,npspaces)
 end
 
 function _envsetypes(d::Tuple)
@@ -148,9 +150,7 @@ end
 
 # mandatory methods to implement for abstractarray
 Base.size(x::SparseMPO) = size(x.Os);
-
-#utility functions for finite mpo
-function Base.getindex(x::SparseMPO{S,T,E},a,b,c)::T where {S,T,E}
+function Base.getindex(x::SparseMPO{S,T,E},a::Int,b::Int,c::Int)::T where {S,T,E}
     b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
     if x.Os[a,b,c] isa E
         if x.Os[a,b,c] == zero(E)
@@ -163,7 +163,7 @@ function Base.getindex(x::SparseMPO{S,T,E},a,b,c)::T where {S,T,E}
     end
 end
 
-function Base.setindex!(x::SparseMPO{S,T,E},v::T,a,b,c)  where {S,T,E}
+function Base.setindex!(x::SparseMPO{S,T,E},v::T,a::Int,b::Int,c::Int)  where {S,T,E}
     b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
 
     (ii,scal) = isid(v);
@@ -179,14 +179,16 @@ function Base.setindex!(x::SparseMPO{S,T,E},v::T,a,b,c)  where {S,T,E}
     return x
 end
 
+# basic utility methods
+
 Base.keys(x::SparseMPO) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),product(1:x.period,1:x.odim,1:x.odim))
-Base.keys(x::SparseMPO,i::Int) = Iterators.filter(a->contains(x,i,a[1],a[2]),product(1:x.odim,1:x.odim))
+Base.keys(x::SparseMPO,i::Int) = keys(x[i,:,:]);
 
 opkeys(x::SparseMPO) = Iterators.filter(a-> !isscal(x,a[1],a[2],a[3]),keys(x));
-opkeys(x::SparseMPO,i::Int) = Iterators.filter(a-> !isscal(x,i,a[1],a[2]),keys(x,i));
+opkeys(x::SparseMPO,i::Int) = opkeys(x[i,:,:]);
 
 scalkeys(x::SparseMPO) = Iterators.filter(a-> isscal(x,a[1],a[2],a[3]),keys(x));
-scalkeys(x::SparseMPO,i::Int) = Iterators.filter(a-> isscal(x,i,a[1],a[2]),keys(x,i));
+scalkeys(x::SparseMPO,i::Int) = scalkeys(x[i,:,:]);
 
 Base.contains(x::SparseMPO{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = !(x.Os[a,b,c] == zero(E))
 isscal(x::SparseMPO{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = x.Os[a,b,c] isa E && contains(x,a,b,c)
@@ -210,5 +212,48 @@ function isid(x::MPOTensor;tol=Defaults.tolgauge)
     return norm(diff)<tol,scal
 end
 
-include("linalg.jl")
+function Base.:*(b::SparseMPO{S,T,E},a::SparseMPO{S,T,E}) where {S,T,E}
+    nodim = a.odim*b.odim
+    indmap = LinearIndices((a.odim,b.odim))
+    nOs = PeriodicArray{Union{E,T},3}(fill(zero(E),a.period,nodim,nodim))
+
+    fusers = PeriodicArray(map(product(1:a.period,1:a.odim,1:b.odim)) do (pos,i,j)
+        isomorphism(fuse(a.domspaces[pos,i]*b.domspaces[pos,j]),a.domspaces[pos,i]*b.domspaces[pos,j])
+    end)
+
+    ndomspaces = PeriodicArray{S,2}(undef,a.period,nodim)
+    for pos = 1:a.period,i in 1:a.odim, j = 1:b.odim
+        ndomspaces[pos,indmap[i,j]] = codomain(fusers[pos,i,j])
+    end
+
+    for pos = 1:a.period,
+        (i,j) in keys(a,pos),
+        (k,l) in keys(b,pos)
+
+        if isscal(a,pos,i,j) && isscal(b,pos,k,l)
+            nOs[pos,indmap[i,k],indmap[j,l]] = a.Os[pos,i,j]*b.Os[pos,k,l]
+        else
+            @plansor nOs[pos,indmap[i,k],indmap[j,l]][-1 -2;-3 -4] :=
+                fusers[pos,i,k][-1;1 2]*conj(fusers[pos+1,j,l][-4;3 4])*a[pos,i,j][1 5;-3 3]*b[pos,k,l][2 -2;5 4]
+        end
+    end
+
+    return SparseMPO{S,T,E}(nOs,ndomspaces,a.pspaces)
+end
+
+#without the copy, we get side effects when repeating + setindex
+Base.repeat(x::SparseMPO{S,T,E},n::Int) where {S,T,E} =
+    SparseMPO{S,T,E}(repeat(x.Os,n,1,1),repeat(x.domspaces,n,1),repeat(x.pspaces,n))
+
+
+function Base.conj(a::SparseMPO)
+    b = copy(a.Os)
+
+    for (i,j,k) in keys(a)
+        @plansor b[i,j,k][-1 -2;-3 -4]:=conj(a[i,j,k][-1 -3;-2 -4])
+    end
+
+    SparseMPO(b)
+end
+
 include("sparseslice.jl")

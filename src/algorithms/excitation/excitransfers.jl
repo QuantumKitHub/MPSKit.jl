@@ -47,18 +47,18 @@ function exci_transfer_right(v,O::Vector{<:MPOTensor},A::Vector,Ab::Vector=A)
 end
 
 #A is an excitation tensor; with an excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
+exci_transfer_left(vec::Array{V,1},ham::SparseMPOSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
     exci_transfer_left(M,vec,ham,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
+exci_transfer_right(vec::Array{V,1},ham::SparseMPOSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
     exci_transfer_right(M,vec,ham,A,Ab)
 
 #v has an extra excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
+exci_transfer_left(vec::Array{V,1},ham::SparseMPOSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
     exci_transfer_left(V,vec,ham,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
+exci_transfer_right(vec::Array{V,1},ham::SparseMPOSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
     exci_transfer_right(V,vec,ham,A,Ab)
 
-function exci_transfer_left(RetType,vec,ham::MPOHamSlice,A,Ab=A)
+function exci_transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
@@ -90,7 +90,7 @@ function exci_transfer_left(RetType,vec,ham::MPOHamSlice,A,Ab=A)
 
     return toreturn
 end
-function exci_transfer_right(RetType,vec,ham::MPOHamSlice,A,Ab=A)
+function exci_transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
