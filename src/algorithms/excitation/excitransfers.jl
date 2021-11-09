@@ -121,7 +121,7 @@ function exci_transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
     return toreturn
 end
 
-function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solver=Defaults.solver)
+function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solver=Defaults.linearsolver)
     len = ham.period
     found = zero.(lBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
@@ -162,7 +162,7 @@ function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solv
     return found
 end
 
-function right_excitation_transfer_system(rBs, ham, exci; mom=exci.momentum, solver=Defaults.solver)
+function right_excitation_transfer_system(rBs, ham, exci; mom=exci.momentum, solver=Defaults.linearsolver)
     len = ham.period
     found = zero.(rBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));

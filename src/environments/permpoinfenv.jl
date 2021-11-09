@@ -2,14 +2,13 @@
 "
     This object manages the periodic mpo environments for an MPSMultiline
 "
-mutable struct PerMPOInfEnv{H,V,S<:MPSMultiline} <: AbstractInfEnv
+mutable struct PerMPOInfEnv{H,V,S<:MPSMultiline,A} <: AbstractInfEnv
     above :: Union{S,Nothing}
 
     opp :: H
 
     dependency :: S
-    tol :: Float64
-    maxiter :: Int
+    solver::A
 
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}
@@ -18,21 +17,21 @@ mutable struct PerMPOInfEnv{H,V,S<:MPSMultiline} <: AbstractInfEnv
 end
 
 environments(state::InfiniteMPS,opp::DenseMPO;kwargs...) = environments(convert(MPSMultiline,state),convert(MPOMultiline,opp);kwargs...);
-function environments(state::MPSMultiline,mpo::MPOMultiline;tol = Defaults.tol,maxiter=Defaults.maxiter)
-    (lw,rw) = mixed_fixpoints(state,mpo,state;tol = tol, maxiter = maxiter)
+function environments(state::MPSMultiline,mpo::MPOMultiline;solver=Defaults.eigsolver)
+    (lw,rw) = mixed_fixpoints(state,mpo,state;solver)
 
-    PerMPOInfEnv(nothing,mpo,state,tol,maxiter,lw,rw,ReentrantLock())
+    PerMPOInfEnv(nothing,mpo,state,solver,lw,rw,ReentrantLock())
 end
 
 function environments(below::InfiniteMPS,toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS};kwargs...)
     (opp,above) = toapprox
     environments(convert(MPSMultiline,below),(convert(MPOMultiline,opp),convert(MPSMultiline,above));kwargs...);
 end
-function environments(below::MPSMultiline,toapprox::Tuple{<:MPOMultiline,<:MPSMultiline};tol = Defaults.tol,maxiter=Defaults.maxiter)
+function environments(below::MPSMultiline,toapprox::Tuple{<:MPOMultiline,<:MPSMultiline};solver = Defaults.eigsolver)
     (mpo,above) = toapprox;
-    (lw,rw) = mixed_fixpoints(above,mpo,below;tol = tol, maxiter = maxiter)
+    (lw,rw) = mixed_fixpoints(above,mpo,below;solver)
 
-    PerMPOInfEnv(above,mpo,below,tol,maxiter,lw,rw,ReentrantLock())
+    PerMPOInfEnv(above,mpo,below,solver,lw,rw,ReentrantLock())
 end
 
 
@@ -46,7 +45,7 @@ function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline)
         init = gen_init_fps(above,envs.opp,nstate)
     end
 
-    (envs.lw,envs.rw) = mixed_fixpoints(above,envs.opp,nstate,init,tol = envs.tol, maxiter = envs.maxiter);
+    (envs.lw,envs.rw) = mixed_fixpoints(above,envs.opp,nstate,init,solver = envs.solver);
     envs.dependency = nstate;
 
     envs
@@ -84,7 +83,7 @@ function gen_init_fps(above::MPSMultiline,mpo::Multiline{<:SparseMPO},below::MPS
     end
 end
 
-function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultiline,init = gen_init_fps(above,mpo,below);tol = Defaults.tol, maxiter = Defaults.maxiter)
+function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultiline,init = gen_init_fps(above,mpo,below);solver = Defaults.eigsolver)
     T = eltype(above);
 
     #sanity check
@@ -100,9 +99,9 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
         @Threads.spawn begin
             (L0,R0) = $init[cr]
 
-            (_,Ls,convhist) = eigsolve(x-> transfer_left(x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:]),L0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
+            (_,Ls,convhist) = eigsolve(x-> transfer_left(x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:]),L0,1,:LM,$solver)
             convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-            (_,Rs,convhist) = eigsolve(x-> transfer_right(x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:]),R0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
+            (_,Rs,convhist) = eigsolve(x-> transfer_right(x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:]),R0,1,:LM,$solver)
             convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
 
 

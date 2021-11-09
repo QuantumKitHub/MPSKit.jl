@@ -32,11 +32,11 @@ Optimise the infinite quasiparticle state ```V₀```.
 - `lenvs=environments(V₀.left_gs, H; solver=solver)`: left environment of the groundstate.
 - `renvs=(V₀.trivial ? lenvs : environments(V₀.right_gs, H; solver=solver))`: right environment of the groundstate.
 - `num=1`: number of excited states to compute.
-- `solver=Defaults.solver`: the algorithm to compute the environments.
+- `solver=Defaults.linearsolver`: the algorithm to compute the environments.
 """
 function excitations(
     H, alg::QuasiparticleAnsatz, V₀::InfiniteQP, lenvs, renvs;
-    num=1, solver=Defaults.solver
+    num=1, solver=Defaults.linearsolver
 )
     qp_envs(V) = environments(V, H, lenvs, renvs, solver=solver)
     H_eff = @closure(V->effective_excitation_hamiltonian(H, V, qp_envs(V)))
@@ -52,7 +52,7 @@ function excitations(
 end
 function excitations(
     H, alg::QuasiparticleAnsatz, V₀::InfiniteQP, lenvs;
-    num=1, solver=Defaults.solver
+    num=1, solver=Defaults.linearsolver
 )
     # Infer `renvs` in function body as it depends on `solver`.
     renvs = V₀.trivial ? lenvs : environments(V₀.right_gs, H, solver=solver)
@@ -60,7 +60,7 @@ function excitations(
 end
 function excitations(
     H, alg::QuasiparticleAnsatz, V₀::InfiniteQP;
-    num=1, solver=Defaults.solver
+    num=1, solver=Defaults.linearsolver
 )
     # Infer `lenvs` in function body as it depends on `solver`.
     lenvs = environments(V₀.left_gs, H, solver=solver)
@@ -77,7 +77,7 @@ function excitations(
     lmps::InfiniteMPS, lenvs=environments(lmps, H),
     rmps::InfiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
     sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1,
-    solver=Defaults.solver
+    solver=Defaults.linearsolver
 )
     V₀ = LeftGaugedQP(rand, lmps, rmps; sector=sector, momentum=p)
     return excitations(H, alg, V₀, lenvs, renvs; num=num, solver=solver)
@@ -85,7 +85,7 @@ end
 function excitations(
     H, alg::QuasiparticleAnsatz, momenta, lmps, lenvs=environments(lmps, H),
     rmps=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
-    verbose=Defaults.verbose, num=1, solver=Defaults.solver, sector=first(sectors(oneunit(virtualspace(lmps, 1))))
+    verbose=Defaults.verbose, num=1, solver=Defaults.linearsolver, sector=first(sectors(oneunit(virtualspace(lmps, 1))))
 )
     tasks = map(momenta) do p
         @Threads.spawn begin
@@ -157,7 +157,7 @@ end
 
 function excitations(
     H::MPOMultiline,alg::QuasiparticleAnsatz,V₀::Multiline{<:InfiniteQP},lenvs,renvs;
-    num = 1, solver = Defaults.solver)
+    num = 1, solver = Defaults.linearsolver)
 
     qp_envs(V) = environments(V, H, lenvs, renvs, solver=solver)
     function H_eff(oV)
@@ -177,7 +177,7 @@ end
 
 function excitations(
     H::MPOMultiline, alg::QuasiparticleAnsatz, V₀::Multiline{<:InfiniteQP}, lenvs;
-    num=1, solver=Defaults.solver
+    num=1, solver=Defaults.linearsolver
 )
     # Infer `renvs` in function body as it depends on `solver`.
     renvs = V₀.trivial ? lenvs : environments(V₀.right_gs, H, solver=solver)
@@ -185,7 +185,7 @@ function excitations(
 end
 function excitations(
     H::MPOMultiline, alg::QuasiparticleAnsatz, V₀::Multiline{<:InfiniteQP};
-    num=1, solver=Defaults.solver
+    num=1, solver=Defaults.linearsolver
 )
     # Infer `lenvs` in function body as it depends on `solver`.
     lenvs = environments(V₀.left_gs, H, solver=solver)
@@ -198,7 +198,7 @@ function excitations(
     lmps, lenvs=environments(lmps, H),
     rmps=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
     sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1,
-    solver=Defaults.solver
+    solver=Defaults.linearsolver
 )
     multiline_lmps = convert(MPSMultiline,lmps);
     if lmps === rmps
@@ -215,7 +215,7 @@ function excitations(
     lmps::MPSMultiline, lenvs=environments(lmps, H),
     rmps=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
     sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1,
-    solver=Defaults.solver
+    solver=Defaults.linearsolver
 )
     V₀ = Multiline(map(1:size(lmps,1)) do row
         LeftGaugedQP(rand,lmps[row],rmps[row];sector,momentum=p)

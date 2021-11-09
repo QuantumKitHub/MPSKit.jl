@@ -28,7 +28,7 @@ function gen_lw_rw(st::InfiniteMPS{A},ham::Union{SparseMPO,MPOHamiltonian}) wher
 end
 
 #randomly initialize envs
-function environments(st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.solver)
+function environments(st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.linearsolver)
     (lw,rw) = gen_lw_rw(st,ham);
     envs = MPOHamInfEnv(ham,similar(st),solver,lw,rw,ReentrantLock())
     recalculate!(envs,st);
@@ -53,7 +53,7 @@ function recalculate!(envs::MPOHamInfEnv, nstate)
 end
 
 
-function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.solver)
+function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.linearsolver)
     len = length(st);
 
 
@@ -105,7 +105,7 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
     return fixpoints
 end
 
-function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.solver)
+function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.linearsolver)
     len = length(st)
 
     #the start element

@@ -48,8 +48,10 @@ module MPSKit
         const tol = 1e-12
         const verbose = true
         _finalize(iter,state,opp,envs) = (state,envs);
-        import KrylovKit: GMRES
-        const solver = GMRES(tol=1e-12, maxiter=100)
+
+        import KrylovKit: GMRES,Arnoldi
+        const linearsolver = GMRES(;tol,maxiter)
+        const eigsolver = Arnoldi(;tol,maxiter)
     end
 
     include("utility/periodicarray.jl")
