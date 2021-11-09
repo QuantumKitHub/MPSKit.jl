@@ -1,16 +1,10 @@
 # this object represents a sparse mpo at a single position
 # you can then do things like transfer_left(vector,ham[5],st.AL[5],st.AR[5])
 
-#=
-Os::PeriodicArray{Union{E,T},3}
-
-domspaces::PeriodicArray{S,2}
-pspaces::PeriodicArray{S,1}
-=#
 struct SparseMPOSlice{S,T,E} <: AbstractArray{T,2}
-    Os::Matrix{Union{E,T}}
-    domspaces::Vector{S}
-    imspaces::Vector{S}
+    Os::SubArray{Union{T,E}, 2, PeriodicArray{Union{T,E}, 3}, Tuple{Int64, Base.Slice{Base.OneTo{Int64}}, Base.Slice{Base.OneTo{Int64}}}, false}
+    domspaces::SubArray{S, 1, PeriodicArray{S, 2}, Tuple{Int64, Base.Slice{Base.OneTo{Int64}}}, false}
+    imspaces::SubArray{S, 1, PeriodicArray{S, 2}, Tuple{Int64, Base.Slice{Base.OneTo{Int64}}}, false}
     pspace::S
 end
 
@@ -22,13 +16,9 @@ function Base.getproperty(x::SparseMPOSlice,s::Symbol)
     end
 end
 
-#created here
-Base.getindex(x::SparseMPO{S,T,E},a::Int,b::Colon,c::Colon) where {S,T,E} = SparseMPOSlice{S,T,E}(convert(Matrix{Union{E,T}},x.Os[a,:,:]),x.domspaces[a,:],x.imspaces[a,:],x.pspaces[a]);
-Base.getindex(x::SparseMPO,a::Colon,b::Colon,c::Colon) = x;
-Base.getindex(x::SparseMPO,a::UnitRange,b::Colon,c::Colon) = map(t->x[t,:,:],a);
-
 #methods it must extend to be an abstractarray
 Base.size(sl::SparseMPOSlice) = size(sl.Os)
+
 function Base.getindex(x::SparseMPOSlice{S,T,E},a::Int,b::Int)::T where {S,T,E}
     a <= x.odim && b <= x.odim || throw(BoundsError(x,[a,b]))
     if x.Os[a,b] isa E

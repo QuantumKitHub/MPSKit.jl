@@ -1,7 +1,8 @@
 "
     SparseMPO - used to represent both time evolution mpos and hamiltonians
 "
-struct SparseMPO{S,T<:MPOTensor,E<:Number} <: AbstractArray{T,3}
+
+struct SparseMPO{S,T<:MPOTensor,E<:Number} <: AbstractVector{SparseMPOSlice{S,T,E}}
     Os::PeriodicArray{Union{E,T},3}
 
     domspaces::PeriodicArray{S,2}
@@ -147,52 +148,9 @@ function _envsetypes(d::Tuple)
     end
 end
 
-
-# mandatory methods to implement for abstractarray
-Base.size(x::SparseMPO) = size(x.Os);
-function Base.getindex(x::SparseMPO{S,T,E},a::Int,b::Int,c::Int)::T where {S,T,E}
-    b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
-    if x.Os[a,b,c] isa E
-        if x.Os[a,b,c] == zero(E)
-            return TensorMap(zeros,E,x.domspaces[a,b]*x.pspaces[a],x.pspaces[a]*x.imspaces[a,c]')
-        else
-            return x.Os[a,b,c]*isomorphism(Matrix{E},x.domspaces[a,b]*x.pspaces[a],x.pspaces[a]*x.imspaces[a,c]')
-        end
-    else
-        return x.Os[a,b,c]
-    end
-end
-
-function Base.setindex!(x::SparseMPO{S,T,E},v::T,a::Int,b::Int,c::Int)  where {S,T,E}
-    b <= x.odim && c <= x.odim || throw(BoundsError(x,[a,b,c]))
-
-    (ii,scal) = isid(v);
-
-    if ii
-        x.Os[a,b,c] = scal
-    elseif v ≈ zero(v)
-        x.Os[a,b,c] = zero(E)
-    else
-        x.Os[a,b,c] = v;
-    end
-
-    return x
-end
-
-# basic utility methods
-
-Base.keys(x::SparseMPO) = Iterators.filter(a->contains(x,a[1],a[2],a[3]),product(1:x.period,1:x.odim,1:x.odim))
-Base.keys(x::SparseMPO,i::Int) = keys(x[i,:,:]);
-
-opkeys(x::SparseMPO) = Iterators.filter(a-> !isscal(x,a[1],a[2],a[3]),keys(x));
-opkeys(x::SparseMPO,i::Int) = opkeys(x[i,:,:]);
-
-scalkeys(x::SparseMPO) = Iterators.filter(a-> isscal(x,a[1],a[2],a[3]),keys(x));
-scalkeys(x::SparseMPO,i::Int) = scalkeys(x[i,:,:]);
-
-Base.contains(x::SparseMPO{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = !(x.Os[a,b,c] == zero(E))
-isscal(x::SparseMPO{S,T,E},a::Int,b::Int,c::Int) where {S,T,E} = x.Os[a,b,c] isa E && contains(x,a,b,c)
-
+Base.size(x::SparseMPO) = (size(x.Os,1),);
+Base.getindex(x::SparseMPO{S,T,E},a::Int) where {S,T,E} = SparseMPOSlice{S,T,E}(@view(x.Os[a,:,:]),@view(x.domspaces[a,:]),@view(x.imspaces[a,:]),x.pspaces[a]);
+Base.copy(x::SparseMPO) = SparseMPO(copy(x.Os),copy(x.domspaces),copy(x.pspaces));
 "
 checks if ham[:,i,i] = 1 for every i
 "
@@ -227,14 +185,14 @@ function Base.:*(b::SparseMPO{S,T,E},a::SparseMPO{S,T,E}) where {S,T,E}
     end
 
     for pos = 1:a.period,
-        (i,j) in keys(a,pos),
-        (k,l) in keys(b,pos)
+        (i,j) in keys(a[pos]),
+        (k,l) in keys(b[pos])
 
-        if isscal(a,pos,i,j) && isscal(b,pos,k,l)
+        if isscal(a[pos],i,j) && isscal(b[pos],k,l)
             nOs[pos,indmap[i,k],indmap[j,l]] = a.Os[pos,i,j]*b.Os[pos,k,l]
         else
             @plansor nOs[pos,indmap[i,k],indmap[j,l]][-1 -2;-3 -4] :=
-                fusers[pos,i,k][-1;1 2]*conj(fusers[pos+1,j,l][-4;3 4])*a[pos,i,j][1 5;-3 3]*b[pos,k,l][2 -2;5 4]
+                fusers[pos,i,k][-1;1 2]*conj(fusers[pos+1,j,l][-4;3 4])*a[pos][i,j][1 5;-3 3]*b[pos][k,l][2 -2;5 4]
         end
     end
 
@@ -249,11 +207,34 @@ Base.repeat(x::SparseMPO{S,T,E},n::Int) where {S,T,E} =
 function Base.conj(a::SparseMPO)
     b = copy(a.Os)
 
-    for (i,j,k) in keys(a)
-        @plansor b[i,j,k][-1 -2;-3 -4]:=conj(a[i,j,k][-1 -3;-2 -4])
+    for i in 1:length(a),
+        (j,k) in keys(a[i])
+        @plansor b[i,j,k][-1 -2;-3 -4]:=conj(a[i][j,k][-1 -3;-2 -4])
     end
 
     SparseMPO(b)
 end
 
-include("sparseslice.jl")
+
+function Base.convert(::Type{DenseMPO},s::SparseMPO)
+    embeds = PeriodicArray(_embedders.([s[i].domspaces for i in 1:length(s)]))
+
+    data = PeriodicArray(map(1:size(s,1)) do loc
+        reduce(+,map(Iterators.product(1:s.odim,1:s.odim)) do (i,j)
+            @plansor temp[-1 -2;-3 -4]:=embeds[loc][i][-1;1]*s[loc][i,j][1 -2;-3 2]*conj(embeds[loc+1][j][-4;2])
+        end)
+    end)
+
+    #there are often 0-blocks, which we can just filter out
+    for i in 1:length(data)
+        (U,S,V) = tsvd(transpose(data[i],(3,1,2),(4,)),trunc=truncbelow(Defaults.tolgauge));
+        data[i] = transpose(U,(2,3,),(1,4))
+        @plansor data[i+1][-1 -2;-3 -4] := S[-1;1]*V[1;2]*data[i+1][2 -2;-3 -4]
+
+        (U,S,V) = tsvd(transpose(data[i],(1,),(3,4,2)),trunc=truncbelow(Defaults.tolgauge));
+        data[i] = transpose(V,(1,4),(2,3));
+        @plansor data[i-1][-1 -2;-3 -4] := data[i-1][-1 -2;-3 1]*U[1;2]*S[2;-4]
+    end
+
+    DenseMPO(data)
+end
