@@ -3,7 +3,7 @@ Idmrg environments are only to be used internally.
 They have to be updated manually, without any kind of checks
 =#
 
-struct IDMRGEnv{H,V<:AbstractTensorMap}
+struct IDMRGEnv{H,V}
     opp :: H
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}

@@ -8,10 +8,10 @@ calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64
     norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc,state,envs))
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs)::Float64 =
     maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
-calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64 =
-    maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col,state,envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
-calc_galerkin(state::MPSMultiline, envs::MixPerMPOInfEnv)::Float64 =
-    maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(envs.above.AC[row,col], row,col,state,envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
+function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
+    above = isnothing(envs.above) ? state : envs.above;
+    maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(above.AC[row,col], row,col,state,envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
+end
 
 "
 Calculates the (partial) transfer spectrum

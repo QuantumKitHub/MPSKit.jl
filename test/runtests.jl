@@ -508,14 +508,16 @@ end
         th = force_planar(repeat(nonsym_ising_ham(lambda=4),2));
 
         dt = 1e-3;
-        W1 = convert(DenseMPO,make_time_mpo(th,dt,WI()));
-        W2 = convert(DenseMPO,make_time_mpo(th,dt,WII()));
+        sW1 = make_time_mpo(th,dt,WI());
+        sW2 = make_time_mpo(th,dt,WII());
+        W1 = convert(DenseMPO,sW1);
+        W2 = convert(DenseMPO,sW2);
 
 
-        (st1,_) = approximate(st,(W1,st),Vumps(verbose=false));
+        (st1,_) = approximate(st,(sW1,st),Vumps(verbose=false));
         (st2,_) = approximate(st,(W2,st),Vumps(verbose=false));
         (st3,_) = approximate(st,(W1,st),Idmrg1(verbose=false));
-        (st4,_) = approximate(st,(W2,st),Idmrg2(trscheme=truncdim(20),verbose=false));
+        (st4,_) = approximate(st,(sW2,st),Idmrg2(trscheme=truncdim(20),verbose=false));
         (st5,_) = timestep(st,th,dt,Tdvp());
         st6 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
 
@@ -539,6 +541,22 @@ end
         after = abs(dot(a,b));
 
         @test before < after
+    end
+
+    @timedtestset "mpo*finitemps1 ≈ finitemps2" for alg in [Dmrg(verbose=false),Dmrg2(verbose=false,trscheme=truncdim(10))]
+        a = FiniteMPS(10,ℂ^2,ℂ^10);
+        b = FiniteMPS(10,ℂ^2,ℂ^20);
+        th = nonsym_ising_ham(lambda = 3);
+        smpo = make_time_mpo(th,0.01,WI());
+
+        before = abs(dot(b,b));
+
+        (a,_) = approximate(a,(smpo,b),alg);
+
+        (b,_) = timestep(b,th,-0.01,Tdvp())
+        after = abs(dot(a,b));
+
+        @test before ≈ after atol = 0.001
     end
 end
 
