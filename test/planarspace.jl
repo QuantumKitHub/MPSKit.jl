@@ -21,15 +21,15 @@ TensorKit.Nsymbol(args::Vararg{PlanarTrivial,3}) = 1
 
 
 #take a normal mpo hamiltonian and change its spaces to be \bbB, therefore disabling non planar operations
+force_planar(x::Number) = x
 function force_planar(x::AbstractTensorMap)
     t = TensorMap(zeros,eltype(x),reduce(*,map(i->𝔹^dim(space(x,i)),codomainind(x))),reduce(*,map(i->𝔹^dim(space(x,i)),domainind(x))))
     copyto!(blocks(t)[PlanarTrivial()],convert(Array,x));
     t
 end
-
 function force_planar(mpo::MPOHamiltonian)
     MPOHamiltonian(map(Iterators.product(1:mpo.period,1:mpo.odim,1:mpo.odim)) do (i,j,k)
-        force_planar(mpo[i,j,k])
+        force_planar(mpo.Os[i,j,k])
     end)
 end
 force_planar(mpo::DenseMPO) = DenseMPO(force_planar.(mpo.opp))

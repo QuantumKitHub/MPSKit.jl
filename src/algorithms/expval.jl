@@ -49,7 +49,7 @@ function expectation_value(state::MPSComoving,envs::FinEnv)
         tot += @plansor  leftenv(envs,length(state),state)[i][1 2;3]*
                         state.AC[end][3 4;5]*
                         rightenv(envs,length(state),state)[j][5 6;7]*
-                        ham[length(state),i,j][2 8;4 6]*
+                        ham[length(state)][i,j][2 8;4 6]*
                         conj(state.AC[end][1 8;7])
 
     end
@@ -63,11 +63,11 @@ function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},envs::FinEn
 
     ens=zeros(eltype(eltype(state)),length(state))
     for i in 1:length(state),
-        (j,k) in keys(ham,i)
+        (j,k) in keys(ham[i])
 
         !((j == 1 && k!= 1) || (k == ham.odim && j!=ham.odim)) && continue
 
-        cur = @plansor leftenv(envs,i,state)[j][1 2;3]*state.AC[i][3 7;5]*rightenv(envs,i,state)[k][5 8;6]*conj(state.AC[i][1 4;6])*ham[i,j,k][2 4;7 8]
+        cur = @plansor leftenv(envs,i,state)[j][1 2;3]*state.AC[i][3 7;5]*rightenv(envs,i,state)[k][5 8;6]*conj(state.AC[i][1 4;6])*ham[i][j,k][2 4;7 8]
         if !(j==1 && k == ham.odim)
             cur/=2
         end
@@ -87,7 +87,7 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
     for i=1:len
         util = Tensor(ones,space(prevca.lw[i+1,ham.odim],2))
         for j=ham.odim:-1:1
-            apl = transfer_left(leftenv(prevca,i,st)[j],ham[i,j,ham.odim],st.AL[i],st.AL[i]);
+            apl = transfer_left(leftenv(prevca,i,st)[j],ham[i][j,ham.odim],st.AL[i],st.AL[i]);
             ens[i] += @plansor apl[1 2;3]*r_LL(st,i)[3;1]*conj(util[2])
         end
     end

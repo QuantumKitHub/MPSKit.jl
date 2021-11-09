@@ -68,9 +68,10 @@ module MPSKit
     include("states/quasiparticle_state.jl")
     include("states/ortho.jl")
 
-    include("operators/sparsempo/sparsempo.jl") #the mpohamiltonian objects
-    include("operators/mpohamiltonian/mpohamiltonian.jl") #the mpohamiltonian objects
     include("operators/densempo.jl")
+    include("operators/sparsempo/sparseslice.jl")
+    include("operators/sparsempo/sparsempo.jl")
+    include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
     include("operators/mpomultiline.jl")
 
     abstract type Cache end #cache "manages" environments
@@ -79,7 +80,6 @@ module MPSKit
     include("environments/abstractinfenv.jl")
     include("environments/permpoinfenv.jl")
     include("environments/mpohaminfenv.jl")
-    include("environments/overlapenv.jl")
     include("environments/qpenv.jl")
     include("environments/idmrgenv.jl")
 

@@ -26,6 +26,9 @@ function ac_prime(x::MPSTensor,opp::MPOTensor,leftenv,rightenv)
     @plansor toret[-1 -2;-3] := leftenv[-1 2;1]*x[1 3;4]*opp[2 -2; 3 5]*rightenv[4 5;-3]
 end
 
+ac_prime(x::MPSTensor,::Nothing,leftenv,rightenv) = _transpose_front(leftenv*_transpose_tail(x*rightenv))
+
+
 """
     Two-site derivative
 """
@@ -55,8 +58,9 @@ end
 function ac2_prime(x::MPOTensor,opp1::MPOTensor,opp2::MPOTensor,leftenv,rightenv)
     @plansor toret[-1 -2;-3 -4] := leftenv[-1 7;6]*x[6 5;1 3]*opp1[7 -2;5 4]*opp2[4 -4;3 2]*rightenv[1 2;-3]
 end
-
-
+function ac2_prime(x::MPOTensor,::Nothing,::Nothing,leftenv,rightenv)
+    @plansor y[-1 -2;-3 -4] := x[1 -2;2 -4]*leftenv[-1;1]*rightenv[2;-3]
+end
 """
     Zero-site derivative (the C matrix to the right of pos)
 """
@@ -68,6 +72,10 @@ end
 
 function c_prime(x, leftenv::MPSTensor,rightenv::MPSTensor)
     @plansor toret[-1;-2] := leftenv[-1 3;1]*x[1;2]*rightenv[2 3;-2]
+end
+
+function c_prime(x, leftenv::MPSBondTensor,rightenv::MPSBondTensor)
+    @plansor toret[-1;-2] := leftenv[-1;1]*x[1;2]*rightenv[2;-2]
 end
 
 #not breaking everything immediatly
@@ -96,26 +104,26 @@ ac2_prime(x,pos::CartesianIndex,mps,envs) = ac2_prime(x,Tuple(pos)...,mps,envs)
 c_prime(x,pos::CartesianIndex,mps,envs) = c_prime(x,Tuple(pos)...,mps,envs)
 
 #downproject for approximate
-function c_proj(pos,below,envs::OvlEnv)
-    @plansor toret[-1;-2] := leftenv(envs,pos+1,below)[-1;1]*envs.above.CR[pos][1;2]*rightenv(envs,pos,below)[2;-2]
-end
+c_proj(pos,below,envs::FinEnv) = c_prime(envs.above.CR[pos],leftenv(envs,pos+1,below),rightenv(envs,pos,below))
+
 function c_proj(row,col,below,envs::MixPerMPOInfEnv)
     c_prime(envs.above.CR[row,col],leftenv(envs,row,col+1,below),rightenv(envs,row,col,below))
 end
-function ac_proj(pos,below,envs::OvlEnv)
+
+function ac_proj(pos,below,envs)
     le = leftenv(envs,pos,below)
     re = rightenv(envs,pos,below)
 
-    @plansor toret[-1 -2;-3] := le[-1;1]*envs.above.AC[pos][1 -2;2]*re[2;-3]
+    ac_prime(envs.above.AC[pos],envs.opp[pos],le,re)
 end
 function ac_proj(row,col,below,envs::MixPerMPOInfEnv)
     ac_prime(envs.above.AC[row,col],envs.opp[row,col],leftenv(envs,row,col,below),rightenv(envs,row,col,below))
 end
-function ac2_proj(pos,below,envs::OvlEnv)
+function ac2_proj(pos,below,envs)
     le = leftenv(envs,pos,below)
     re = rightenv(envs,pos+1,below)
 
-    @tensor toret[-1 -2;-3 -4] := le[-1;1]*envs.above.AC[pos][1 -2;2]*envs.above.AR[pos+1][2 -4;3]*re[3;-3]
+    ac2_prime(envs.above.AC[pos]*_transpose_tail(envs.above.AR[pos+1]),envs.opp[pos],envs.opp[pos+1],le,re)
 end
 function ac2_proj(row,col,below,envs::MixPerMPOInfEnv)
     @tensor ac2[-1 -2;-3 -4] := envs.above.AC[row,col][-1 -2;1]*envs.above.AR[row,col+1][1 -4;-3]

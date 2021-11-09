@@ -10,6 +10,9 @@ function transfer_right(v::AbstractTensorMap{S,1,N2},A::GenericMPSTensor{S,N},Ab
     transpose(t_AV*t_Ab,(N2,),(reverse(ntuple(x->x,N2-1))...,N2+1))
 end
 
+transfer_left(v,::Nothing,A,B=A) = transfer_left(v,A,B);
+transfer_right(v,::Nothing,A,B=A) = transfer_right(v,A,B);
+
 # the transfer operation of a density matrix with a utility leg in its codomain is ill defined - how should one braid the utility leg?
 # hence the checks - to make sure that this operation is uniquely defined
 function transfer_left(v::MPSTensor{S},A::MPSTensor{S},Ab::MPSTensor{S}=A) where S

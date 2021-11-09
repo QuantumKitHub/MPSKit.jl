@@ -1,39 +1,45 @@
 "
     FinEnv keeps track of the environments for FiniteMPS / MPSComoving
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
+
+    if above is set to nothing, above === below.
+
+    opp can be a vector of nothing, in which case it'll just be the overlap
 "
-struct FinEnv{B,C <: TensorMap,D <: TensorMap} <: Cache
-    ldependencies::Array{D,1} #the data we used to calculate leftenvs/rightenvs
-    rdependencies::Array{D,1}
+struct FinEnv{A,B,C,D} <: Cache
+    above::A
 
     opp::B #the operator
 
-    leftenvs::Array{Array{C,1},1}
-    rightenvs::Array{Array{C,1},1}
+    ldependencies::Vector{C} #the data we used to calculate leftenvs/rightenvs
+    rdependencies::Vector{C}
+
+    leftenvs::Vector{D}
+    rightenvs::Vector{D}
 end
 
-#the constructor used for any state (finitemps or mpscomoving)
-#we really should be doing this lazily
-function environments(state,opp,leftstart::Array{C,1},rightstart::Array{C,1}) where C<:TensorMap
+environments(below,t::Tuple,args...;kwargs...) = environments(below,t[1],t[2],args...;kwargs...);
+environments(below,opp,leftstart,rightstart) = environments(below,opp,nothing,leftstart,rightstart);
+function environments(below,opp,above,leftstart,rightstart)
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 
-    for i in 1:length(state)
-        push!(leftenvs,similar.(leftstart))
-        push!(rightenvs,similar.(rightstart))
+    for i in 1:length(below)
+        push!(leftenvs,similar(leftstart))
+        push!(rightenvs,similar(rightstart))
     end
-    t = similar(state.AL[1]);
-    return FinEnv(fill(t,length(state)),fill(t,length(state)),opp,leftenvs,reverse(rightenvs))
+    t = similar(below.AL[1]);
+    return FinEnv(above,opp,fill(t,length(below)),fill(t,length(below)),leftenvs,reverse(rightenvs))
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
-function environments(state::FiniteMPS,ham::MPOHamiltonian)
-    lll = l_LL(state);rrr = r_RR(state)
-    rightstart = Array{eltype(state),1}();leftstart = Array{eltype(state),1}()
+function environments(below::FiniteMPS{S},ham::Union{SparseMPO,MPOHamiltonian},above=nothing) where S
+    lll = l_LL(below);rrr = r_RR(below)
+    rightstart = Vector{S}();leftstart = Vector{S}()
 
     for i in 1:ham.odim
-        util_left = Tensor(ones,eltype(eltype(state)),ham.domspaces[1,i]')
-        util_right = Tensor(ones,eltype(eltype(state)),ham.imspaces[length(state),i]')
+        util_left = Tensor(ones,eltype(S),ham.domspaces[1,i]')
+        util_right = Tensor(ones,eltype(S),ham.imspaces[length(below),i]')
 
         @plansor ctl[-1 -2; -3]:= lll[-1;-3]*util_left[-2]
         @plansor ctr[-1 -2; -3]:= rrr[-1;-3]*util_right[-2]
@@ -42,7 +48,7 @@ function environments(state::FiniteMPS,ham::MPOHamiltonian)
             ctl = zero(ctl)
         end
 
-        if i != ham.odim
+        if (i != ham.odim && ham isa MPOHamiltonian) || (i != 1 && ham isa SparseMPO)
             ctr = zero(ctr)
         end
 
@@ -50,12 +56,20 @@ function environments(state::FiniteMPS,ham::MPOHamiltonian)
         push!(rightstart,ctr)
     end
 
-    return environments(state,ham,leftstart,rightstart)
+    return environments(below,ham,above,leftstart,rightstart)
 end
 
 #extract the correct leftstart/rightstart for mpscomoving
-function environments(state::MPSComoving,ham::MPOHamiltonian;lenvs=environments(state.left_gs,ham),renvs=environments(state.right_gs,ham))
-    environments(state,ham,copy.(leftenv(lenvs,1,state.left_gs)),copy.(rightenv(renvs,length(state),state.right_gs)))
+function environments(state::MPSComoving,ham::Union{SparseMPO,MPOHamiltonian,DenseMPO},above=nothing;lenvs=environments(state.left_gs,ham),renvs=environments(state.right_gs,ham))
+    environments(state,ham,above,copy(leftenv(lenvs,1,state.left_gs)),copy(rightenv(renvs,length(state),state.right_gs)))
+end
+
+function environments(below::S,above::S) where S <: Union{FiniteMPS,MPSComoving}
+    S isa MPSComoving && (above.left_gs == below.left_gs || throw(ArgumentError("left gs differs")))
+    S isa MPSComoving && (above.right_gs == below.right_gs || throw(ArgumentError("right gs differs")))
+
+    opp = fill(nothing,length(below));
+    environments(below,opp,above,l_LL(above),r_RR(above))
 end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies
@@ -72,7 +86,8 @@ function rightenv(ca::FinEnv,ind,state)
     if a != nothing
         #we need to recalculate
         for j = a:-1:ind+1
-            ca.rightenvs[j] = transfer_right(ca.rightenvs[j+1],ca.opp[j],state.AR[j])
+            above = isnothing(ca.above) ? state.AR[j] : ca.above.AR[j];
+            ca.rightenvs[j] = transfer_right(ca.rightenvs[j+1],ca.opp[j],above,state.AR[j])
             ca.rdependencies[j] = state.AR[j]
         end
     end
@@ -86,7 +101,8 @@ function leftenv(ca::FinEnv,ind,state)
     if a != nothing
         #we need to recalculate
         for j = a:ind-1
-            ca.leftenvs[j+1] = transfer_left(ca.leftenvs[j],ca.opp[j],state.AL[j])
+            above = isnothing(ca.above) ? state.AL[j] : ca.above.AL[j];
+            ca.leftenvs[j+1] = transfer_left(ca.leftenvs[j],ca.opp[j],above,state.AL[j])
             ca.ldependencies[j] = state.AL[j]
         end
     end

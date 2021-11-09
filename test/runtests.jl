@@ -2,7 +2,6 @@ using MPSKit,TensorKit,Test,OptimKit,MPSKitModels,TestExtras
 using MPSKit:_transpose_tail,_transpose_front,@plansor;
 include("planarspace.jl");
 
-
 println("------------------------------------")
 println("|     States                       |")
 println("------------------------------------")
@@ -249,7 +248,7 @@ end
 
     ts = InfiniteMPS([physical_space],[ou⊕physical_space]);
 
-    W = make_time_mpo(ham,1im*0.5,WII());
+    W = convert(DenseMPO,make_time_mpo(ham,1im*0.5,WII()));
 
     @test abs(dot(W*(W*ts),(W*W)*ts))≈1.0 atol=1e-10
 end
@@ -350,7 +349,7 @@ end
         nn = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace);
         nn += nn';
 
-        mpo1 = periodic_boundary_conditions(make_time_mpo(MPOHamiltonian(nn),0.1,WII()),10);
+        mpo1 = periodic_boundary_conditions(convert(DenseMPO,make_time_mpo(MPOHamiltonian(nn),0.1,WII())),10);
         mpo2 = changebonds(mpo1,SvdCut(trscheme = truncdim(5)));
 
         @test dim(space(mpo2[5],1)) < dim(space(mpo1[5],1))
@@ -509,8 +508,8 @@ end
         th = force_planar(repeat(nonsym_ising_ham(lambda=4),2));
 
         dt = 1e-3;
-        W1 = make_time_mpo(th,dt,WI());
-        W2 = make_time_mpo(th,dt,WII());
+        W1 = convert(DenseMPO,make_time_mpo(th,dt,WI()));
+        W2 = convert(DenseMPO,make_time_mpo(th,dt,WII()));
 
 
         (st1,_) = approximate(st,(W1,st),Vumps(verbose=false));
