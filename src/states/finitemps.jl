@@ -98,7 +98,7 @@ end
 
 # allow construction with a simple array of tensors
 function FiniteMPS(site_tensors::Vector{A};normalize=false,overwrite=false) where {A<:GenericMPSTensor}
-    site_tensors = overwrite ? copy(site_tensors) : site_tensors;
+    site_tensors = overwrite ? site_tensors : copy(site_tensors);
     for i in 1:length(site_tensors)-1
         (site_tensors[i],C) = leftorth(site_tensors[i],alg=QRpos());
         normalize && normalize!(C);
