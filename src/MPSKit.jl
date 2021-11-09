@@ -17,8 +17,8 @@ module MPSKit
     export add_util_leg,max_Ds,virtualspace, recalculate!
 
     #hamiltonian things
-    export Hamiltonian,Operator,Cache
-    export MPOHamiltonian,InfiniteMPO,MPOMultiline
+    export Cache
+    export SparseMPO,MPOHamiltonian,DenseMPO,MPOMultiline
     export ac_prime,c_prime,environments,ac2_prime,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 
@@ -38,6 +38,7 @@ module MPSKit
     export exact_diagonalization
 
     @deprecate params(args...) environments(args...)
+    @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
     #default settings
     module Defaults
@@ -47,8 +48,10 @@ module MPSKit
         const tol = 1e-12
         const verbose = true
         _finalize(iter,state,opp,envs) = (state,envs);
-        import KrylovKit: GMRES
-        const solver = GMRES(tol=1e-12, maxiter=100)
+
+        import KrylovKit: GMRES,Arnoldi
+        const linearsolver = GMRES(;tol,maxiter)
+        const eigsolver = Arnoldi(;tol,maxiter)
     end
 
     include("utility/periodicarray.jl")
@@ -67,11 +70,11 @@ module MPSKit
     include("states/quasiparticle_state.jl")
     include("states/ortho.jl")
 
-    abstract type Operator end
-    abstract type Hamiltonian <: Operator end
-
-    include("operators/mpohamiltonian/mpohamiltonian.jl") #the mpohamiltonian objects
-    include("operators/umpo.jl")
+    include("operators/densempo.jl")
+    include("operators/sparsempo/sparseslice.jl")
+    include("operators/sparsempo/sparsempo.jl")
+    include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
+    include("operators/mpomultiline.jl")
 
     abstract type Cache end #cache "manages" environments
 
@@ -79,7 +82,6 @@ module MPSKit
     include("environments/abstractinfenv.jl")
     include("environments/permpoinfenv.jl")
     include("environments/mpohaminfenv.jl")
-    include("environments/overlapenv.jl")
     include("environments/qpenv.jl")
     include("environments/idmrgenv.jl")
 

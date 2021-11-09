@@ -11,7 +11,7 @@ struct QPEnv{A,B} <: Cache
     renvs::B
 end
 
-function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H; solver=Defaults.solver)
+function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H; solver=Defaults.linearsolver)
     # Explicitly define optional arguments as these depend on solver,
     # which needs to come after these arguments.
     lenvs = environments(exci.left_gs, H; solver=solver)
@@ -19,7 +19,7 @@ function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H; solver
     return environments(exci, H, lenvs; solver=solver)
 end
 
-function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H, lenvs; solver=Defaults.solver)
+function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H, lenvs; solver=Defaults.linearsolver)
     # Explicitly define optional arguments as these depend on solver,
     # which needs to come after these arguments.
     renvs = exci.trivial ? lenvs : environments(exci.right_gs, H; solver=solver)
@@ -27,7 +27,7 @@ function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H, lenvs;
     return environments(exci, H, lenvs, renvs; solver=solver)
 end
 
-function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver=Defaults.solver)
+function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver=Defaults.linearsolver)
     ids = collect(Iterators.filter(x->isid(ham,x),2:ham.odim-1));
 
     #build lBs(c)
@@ -128,7 +128,7 @@ function environments(exci::FiniteQP,ham::MPOHamiltonian,lenvs=environments(exci
     return QPEnv(PeriodicArray(lBs),PeriodicArray(rBs),lenvs,renvs)
 end
 
-function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, renvs;solver=Defaults.solver)
+function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, renvs;solver=Defaults.linearsolver)
     exci.trivial || @warn "there is a phase ambiguity in topologically nontrivial statmech excitations"
 
     left_gs = exci.left_gs;

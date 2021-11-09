@@ -2,12 +2,13 @@
 "
     This object manages the periodic mpo environments for an MPSMultiline
 "
-mutable struct PerMPOInfEnv{H<:MPOMultiline,V,S<:MPSMultiline} <: AbstractInfEnv
+mutable struct PerMPOInfEnv{H,V,S<:MPSMultiline,A} <: AbstractInfEnv
+    above :: Union{S,Nothing}
+
     opp :: H
 
     dependency :: S
-    tol :: Float64
-    maxiter :: Int
+    solver::A
 
     lw :: PeriodicArray{V,2}
     rw :: PeriodicArray{V,2}
@@ -15,72 +16,44 @@ mutable struct PerMPOInfEnv{H<:MPOMultiline,V,S<:MPSMultiline} <: AbstractInfEnv
     lock :: ReentrantLock
 end
 
-function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline)
-    sameDspace = reduce((prev,i) -> prev && _lastspace(envs.lw[i...]) == _firstspace(nstate.CR[i...])',
-        product(1:size(nstate,1),1:size(nstate,2)),init=true);
+environments(state::InfiniteMPS,opp::DenseMPO;kwargs...) = environments(convert(MPSMultiline,state),convert(MPOMultiline,opp);kwargs...);
+function environments(state::MPSMultiline,mpo::MPOMultiline;solver=Defaults.eigsolver)
+    (lw,rw) = mixed_fixpoints(state,mpo,state;solver)
 
-    init = collect(zip(envs.lw[:,1],envs.rw[:,end]))
-    if !sameDspace
-        init = gen_init_fps(nstate,envs.opp,nstate)
-    end
-
-    (envs.lw,envs.rw) = mixed_fixpoints(nstate,envs.opp,nstate,init,tol = envs.tol, maxiter = envs.maxiter);
-    envs.dependency = nstate;
-
-    envs
+    PerMPOInfEnv(nothing,mpo,state,solver,lw,rw,ReentrantLock())
 end
 
-environments(state::InfiniteMPS,opp::InfiniteMPO;kwargs...) = environments(convert(MPSMultiline,state),convert(MPOMultiline,opp);kwargs...);
-function environments(state::MPSMultiline,mpo::MPOMultiline;tol = Defaults.tol,maxiter=Defaults.maxiter)
-    (lw,rw) = mixed_fixpoints(state,mpo,state;tol = tol, maxiter = maxiter)
-
-    PerMPOInfEnv(mpo,state,tol,maxiter,lw,rw,ReentrantLock())
-end
-
-mutable struct MixPerMPOInfEnv{H<:MPOMultiline,V,S<:MPSMultiline} <: AbstractInfEnv
-    opp :: H
-
-    above :: S
-    dependency :: S
-
-    tol :: Float64
-    maxiter :: Int
-
-    lw :: PeriodicArray{V,2}
-    rw :: PeriodicArray{V,2}
-
-    lock :: ReentrantLock
-end
-
-function recalculate!(envs::MixPerMPOInfEnv,nstate::MPSMultiline)
-    sameDspace = reduce((prev,i) -> prev && _firstspace(envs.lw[i...]) == _firstspace(nstate.CR[i...]),
-        product(1:size(nstate,1),1:size(nstate,2)),init=true);
-
-    init = collect(zip(envs.lw[:,1],envs.rw[:,end]))
-    if !sameDspace
-        init = gen_init_fps(envs.above,envs.opp,nstate)
-    end
-
-    (envs.lw,envs.rw) = mixed_fixpoints(envs.above,envs.opp,nstate,init,tol = envs.tol, maxiter = envs.maxiter);
-    envs.dependency = nstate;
-
-    envs
-end
-
-function environments(below::InfiniteMPS,toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS};kwargs...)
+function environments(below::InfiniteMPS,toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS};kwargs...)
     (opp,above) = toapprox
     environments(convert(MPSMultiline,below),(convert(MPOMultiline,opp),convert(MPSMultiline,above));kwargs...);
 end
-function environments(below::MPSMultiline,toapprox::Tuple{<:MPOMultiline,<:MPSMultiline};tol = Defaults.tol,maxiter=Defaults.maxiter)
+function environments(below::MPSMultiline,toapprox::Tuple{<:MPOMultiline,<:MPSMultiline};solver = Defaults.eigsolver)
     (mpo,above) = toapprox;
-    (lw,rw) = mixed_fixpoints(above,mpo,below;tol = tol, maxiter = maxiter)
+    (lw,rw) = mixed_fixpoints(above,mpo,below;solver)
 
-    MixPerMPOInfEnv(mpo,above,below,tol,maxiter,lw,rw,ReentrantLock())
+    PerMPOInfEnv(above,mpo,below,solver,lw,rw,ReentrantLock())
+end
+
+
+function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline)
+    sameDspace = reduce((prev,i) -> prev && _firstspace(envs.dependency.CR[i...]) == _firstspace(nstate.CR[i...]),
+        product(1:size(nstate,1),1:size(nstate,2)),init=true);
+
+    above = isnothing(envs.above) ? nstate : envs.above;
+    init = collect(zip(envs.lw[:,1],envs.rw[:,end]))
+    if !sameDspace
+        init = gen_init_fps(above,envs.opp,nstate)
+    end
+
+    (envs.lw,envs.rw) = mixed_fixpoints(above,envs.opp,nstate,init,solver = envs.solver);
+    envs.dependency = nstate;
+
+    envs
 end
 
 # --- utility functions ---
 
-function gen_init_fps(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultiline)
+function gen_init_fps(above::MPSMultiline,mpo::Multiline{<:DenseMPO},below::MPSMultiline)
     T = eltype(above)
 
     map(1:size(mpo,1)) do cr
@@ -90,7 +63,27 @@ function gen_init_fps(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultiline)
     end
 end
 
-function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultiline,init = gen_init_fps(above,mpo,below);tol = Defaults.tol, maxiter = Defaults.maxiter)
+function gen_init_fps(above::MPSMultiline,mpo::Multiline{<:SparseMPO},below::MPSMultiline)
+    map(1:size(mpo,1)) do cr
+        ham = mpo[cr];
+        ab = above[cr];
+        be = below[cr];
+
+        A = eltype(ab);
+
+        lw = Vector{A}(undef,ham.odim)
+        rw = Vector{A}(undef,ham.odim)
+
+        for j = 1:ham.odim
+            lw[j] = TensorMap(rand,eltype(A),_firstspace(be.AL[1])*ham[1].domspaces[j]',_firstspace(ab.AL[1]))
+            rw[j] = TensorMap(rand,eltype(A),_lastspace(ab.AR[end])'*ham[end].imspaces[j]',_lastspace(be.AR[end])')
+        end
+
+        (lw,rw)
+    end
+end
+
+function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultiline,init = gen_init_fps(above,mpo,below);solver = Defaults.eigsolver)
     T = eltype(above);
 
     #sanity check
@@ -98,16 +91,17 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
     @assert size(above) == size(mpo)
     @assert size(below) == size(mpo);
 
-    lefties = PeriodicArray{T,2}(undef,numrows,numcols);
-    righties = PeriodicArray{T,2}(undef,numrows,numcols);
+    envtype = eltype(init[1]);
+    lefties = PeriodicArray{envtype,2}(undef,numrows,numcols);
+    righties = PeriodicArray{envtype,2}(undef,numrows,numcols);
 
     @sync for cr = 1:numrows
         @Threads.spawn begin
             (L0,R0) = $init[cr]
 
-            (_,Ls,convhist) = eigsolve(x-> transfer_left(x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:]),L0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
+            (_,Ls,convhist) = eigsolve(x-> transfer_left(x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:]),L0,1,:LM,$solver)
             convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-            (_,Rs,convhist) = eigsolve(x-> transfer_right(x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:]),R0,1,:LM,Arnoldi(tol = tol,maxiter=maxiter))
+            (_,Rs,convhist) = eigsolve(x-> transfer_right(x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:]),R0,1,:LM,$solver)
             convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
 
 
@@ -116,7 +110,8 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
                 $lefties[cr,loc] = transfer_left($lefties[cr,loc-1],$mpo[cr,loc-1],$above.AL[cr,loc-1],$below.AL[cr+1,loc-1])
             end
 
-            renormfact::eltype(T) = @plansor Ls[1][1 2;3]*above.CR[cr,0][3;4]*Rs[1][4 2;5]*conj(below.CR[cr+1,0][1;5])
+
+            renormfact::eltype(T) = dot(below.CR[cr+1,0],c_prime(above.CR[cr,0],Ls[1],Rs[1]))
 
             $righties[cr,end] = Rs[1]/sqrt(renormfact);
             $lefties[cr,1] /=sqrt(renormfact);
@@ -124,7 +119,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
             for loc in numcols-1:-1:1
                 $righties[cr,loc] = transfer_right($righties[cr,loc+1],$mpo[cr,loc+1],$above.AR[cr,loc+1],$below.AR[cr+1,loc+1])
 
-                renormfact = @plansor lefties[cr,loc+1][1 2;3]*above.CR[cr,loc][3;4]*righties[cr,loc][4 2;5]*conj(below.CR[cr+1,loc][1;5])
+                renormfact = dot(below.CR[cr+1,loc],c_prime(above.CR[cr,loc],lefties[cr,loc+1],righties[cr,loc]))
                 $righties[cr,loc]/=sqrt(renormfact)
                 $lefties[cr,loc+1]/=sqrt(renormfact)
             end

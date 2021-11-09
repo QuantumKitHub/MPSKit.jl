@@ -45,7 +45,7 @@ Given a state, we would like to assign a momentum label. A natural way to do thi
 ```julia
 id = complex(isomorphism(ℂ^2,ℂ^2));
 @tensor O[-1 -2;-3 -4] := id[-1,-3]*id[-2,-4]
-mpo = InfiniteMPO(O);
+mpo = DenseMPO(O);
 ```
 
 We don't quite want an infinite mpo - which simply repeats this mpo ad infinitum, but would rather want to impose periodic boundary conditions to this mpo:
@@ -124,7 +124,7 @@ And we get the spectrum:
 states = [gs;qpstates];
 energies = map(x->sum(expectation_value(x,ham)),states);
 
-mpo = periodic_boundary_conditions(InfiniteMPO(O),circumference);
+mpo = periodic_boundary_conditions(DenseMPO(O),circumference);
 
 momenta = Float64[];
 

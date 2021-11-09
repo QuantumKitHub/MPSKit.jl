@@ -8,10 +8,10 @@ calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64
     norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc,state,envs))
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs)::Float64 =
     maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
-calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64 =
-    maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col,state,envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
-calc_galerkin(state::MPSMultiline, envs::MixPerMPOInfEnv)::Float64 =
-    maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(envs.above.AC[row,col], row,col,state,envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
+function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
+    above = isnothing(envs.above) ? state : envs.above;
+    maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(above.AC[row,col], row,col,state,envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
+end
 
 "
 Calculates the (partial) transfer spectrum
@@ -160,7 +160,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
     bulk = PeriodicArray(convert(Array{Union{T,E},3},fill(zero(E),ham.period,χ´,χ´)));
 
     for loc in 1:ham.period,
-        (j,k) in keys(ham,loc)
+        (j,k) in keys(ham[loc])
 
         #apply (j,k) above
         l = ham.odim
@@ -172,7 +172,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
             f2 = fusers[loc+1][k,i,l]
 
             @plansor bulk[loc,indmap(j,i,l),indmap(k,i,l)][-1 -2;-3 -4]:=
-                ham[loc,j,k][1 2;-3 6]*f1[-1;1 3 5]*conj(f2[-4;6 7 8])*τ[2 3;7 4]*τ[4 5;8 -2]
+                ham[loc][j,k][1 2;-3 6]*f1[-1;1 3 5]*conj(f2[-4;6 7 8])*τ[2 3;7 4]*τ[4 5;8 -2]
 
         end
 
@@ -187,14 +187,14 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
             f2 = fusers[loc+1][i,l,k];
 
             @plansor bulk[loc,indmap(i,l,j),indmap(i,l,k)][-1 -2;-3 -4] :=
-                ham[loc,j,k][1 -2;3 6]*f1[-1;4 2 1]*conj(f2[-4;8 7 6])*τ[5 2;7 3]*τ[-3 4;8 5]
+                ham[loc][j,k][1 -2;3 6]*f1[-1;4 2 1]*conj(f2[-4;8 7 6])*τ[5 2;7 3]*τ[-3 4;8 5]
         end
     end
 
 
     # make the starter
     starter = convert(Array{Union{T,E},2},fill(zero(E),χ´,χ´));
-    for (j,k) in keys(ham,1)
+    for (j,k) in keys(ham[1])
 
         #apply (j,k) above
         if j == 1
@@ -202,7 +202,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
             f2 = fusers[2][k,end,end];
 
             @plansor starter[1,indmap(k,ham.odim,ham.odim)][-1 -2;-3 -4]:=
-                ham[1,j,k][1 2;-3 6]*f1[-1;1 3 5]*conj(f2[-4;6 7 8])*τ[2 3;7 4]*τ[4 5;8 -2]
+                ham[1][j,k][1 2;-3 6]*f1[-1;1 3 5]*conj(f2[-4;6 7 8])*τ[2 3;7 4]*τ[4 5;8 -2]
         end
 
         #apply (j,k) below
@@ -211,7 +211,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
             f2 = fusers[2][1,j,k];
 
             @plansor starter[1,indmap(1,j,k)][-1 -2;-3 -4]:=
-                ham[1,j,k][4 -2;3 1]*conj(f2[-4;6 2 1])*τ[5 4;2 3]*τ[-3 -1;6 5]
+                ham[1][j,k][4 -2;3 1]*conj(f2[-4;6 2 1])*τ[5 4;2 3]*τ[-3 -1;6 5]
 
         end
 
@@ -222,12 +222,12 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 
     # make the ender
     ender = convert(Array{Union{T,E},2},fill(zero(E),χ´,χ´));
-    for (j,k) in keys(ham,ham.period)
+    for (j,k) in keys(ham[ham.period])
 
         if k > 1
             f1 = fusers[end][j,k,ham.odim]
             @plansor ender[indmap(j,k,ham.odim),end][-1 -2;-3 -4]:=
-                f1[-1;1 2 6]*ham[ham.period,j,k][1 3;-3 4]*τ[3 2;4 5]*τ[5 6;-4 -2]
+                f1[-1;1 2 6]*ham[ham.period][j,k][1 3;-3 4]*τ[3 2;4 5]*τ[5 6;-4 -2]
         end
     end
     ender[1,1] = one(E);
@@ -246,7 +246,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 end
 
 #impose periodic boundary conditions on a normal mpo
-function periodic_boundary_conditions(mpo::InfiniteMPO{O},len = length(mpo)) where O
+function periodic_boundary_conditions(mpo::DenseMPO{O},len = length(mpo)) where O
     mod(len,length(mpo)) == 0 || throw(ArgumentError("len not a multiple of unitcell"))
 
     output = PeriodicArray{O,1}(undef,len);
@@ -271,5 +271,5 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},len = length(mpo)) whe
     f2 = isomorphism(fuse(sp*_firstspace(mpo[len])),sp*_firstspace(mpo[len]))
     @plansor output[end][-1 -2;-3 -4] := mpo[len][2 -2;3 4]*f2[-1;1 2]*τ[-3 1;4 3]*conj(utleg[-4])
 
-    InfiniteMPO(output)
+    DenseMPO(output)
 end

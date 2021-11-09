@@ -19,7 +19,7 @@ function excitations(hamiltonian::MPOHamiltonian,alg::FiniteExcited,states::Vect
 
     return ens,excis
 end
-excitations(hamiltonian::Hamiltonian, alg::FiniteExcited,gs::FiniteMPS;kwargs...) = excitations(hamiltonian,alg,[gs];kwargs...)
+excitations(hamiltonian, alg::FiniteExcited,gs::FiniteMPS;kwargs...) = excitations(hamiltonian,alg,[gs];kwargs...)
 
 #some simple environments
 
@@ -38,7 +38,7 @@ function environments(state,ham,weight,projectout::Vector)
     overlaps  = map(projectout) do st
         @plansor leftstart[-1;-2 -3 -4] := l_LL(st)[-3;-4]*l_LL(state)[-1;-2]
         @plansor rightstart[-1;-2 -3 -4] := r_RR(st)[-1;-2]*r_RR(state)[-3;-4]
-        environments(state,st,leftstart,rightstart)
+        environments(state,fill(nothing,length(st)),st,leftstart,rightstart)
     end
 
     FinExEnv(weight,overlaps,hamenv)

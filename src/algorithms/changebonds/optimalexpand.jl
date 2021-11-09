@@ -6,7 +6,7 @@
 end
 
 
-function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,envs=environments(state,H))
+function changebonds(state::InfiniteMPS, H::MPOHamiltonian,alg::OptimalExpand,envs=environments(state,H))
     #determine optimal expansion spaces around bond i
     pexp = PeriodicArray(map(1:length(state)) do i
         ACAR = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
@@ -46,7 +46,7 @@ function changebonds(state::InfiniteMPS, H::Hamiltonian,alg::OptimalExpand,envs=
     return newstate,envs
 end
 
-function changebonds(state::InfiniteMPS,H::InfiniteMPO,alg,envs=environments(state,H))
+function changebonds(state::InfiniteMPS,H::DenseMPO,alg,envs=environments(state,H))
     (nmstate,envs) = changebonds(convert(MPSMultiline,state),convert(MPOMultiline,H),alg,envs);
     return (convert(InfiniteMPS,nmstate),envs)
 end
@@ -96,8 +96,8 @@ function changebonds(state::MPSMultiline, H,alg::OptimalExpand,envs=environments
     return newstate,envs
 end
 
-changebonds(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian, alg::OptimalExpand,envs=environments(state,H)) = changebonds!(copy(state),H,alg,envs)
-function changebonds!(state::Union{FiniteMPS,MPSComoving}, H::Hamiltonian,alg::OptimalExpand,envs=environments(state,H))
+changebonds(state::Union{FiniteMPS,MPSComoving}, H, alg::OptimalExpand,envs=environments(state,H)) = changebonds!(copy(state),H,alg,envs)
+function changebonds!(state::Union{FiniteMPS,MPSComoving}, H,alg::OptimalExpand,envs=environments(state,H))
     #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
 
     #the idea is that we always want to expand the state in such a way that there are zeros at site i

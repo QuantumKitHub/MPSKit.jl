@@ -2,7 +2,6 @@ using MPSKit,TensorKit,Test,OptimKit,MPSKitModels,TestExtras
 using MPSKit:_transpose_tail,_transpose_front,@plansor;
 include("planarspace.jl");
 
-
 println("------------------------------------")
 println("|     States                       |")
 println("------------------------------------")
@@ -243,13 +242,13 @@ println("------------------------------------")
     @test real(sum(expectation_value(ts2,h4)))>=0;
 end
 
-@timedtestset "InfiniteMPO"  for ham in (nonsym_ising_ham(),su2_xxx_ham(spin=1))
+@timedtestset "DenseMPO"  for ham in (nonsym_ising_ham(),su2_xxx_ham(spin=1))
     physical_space = ham.pspaces[1];
     ou = oneunit(physical_space);
 
     ts = InfiniteMPS([physical_space],[ou⊕physical_space]);
 
-    W = make_time_mpo(ham,1im*0.5,WII());
+    W = convert(DenseMPO,make_time_mpo(ham,1im*0.5,WII()));
 
     @test abs(dot(W*(W*ts),(W*W)*ts))≈1.0 atol=1e-10
 end
@@ -350,7 +349,7 @@ end
         nn = TensorMap(rand,ComplexF64,pspace*pspace,pspace*pspace);
         nn += nn';
 
-        mpo1 = periodic_boundary_conditions(make_time_mpo(MPOHamiltonian(nn),0.1,WII()),10);
+        mpo1 = periodic_boundary_conditions(convert(DenseMPO,make_time_mpo(MPOHamiltonian(nn),0.1,WII())),10);
         mpo2 = changebonds(mpo1,SvdCut(trscheme = truncdim(5)));
 
         @test dim(space(mpo2[5],1)) < dim(space(mpo1[5],1))
@@ -509,14 +508,16 @@ end
         th = force_planar(repeat(nonsym_ising_ham(lambda=4),2));
 
         dt = 1e-3;
-        W1 = make_time_mpo(th,dt,WI());
-        W2 = make_time_mpo(th,dt,WII());
+        sW1 = make_time_mpo(th,dt,WI());
+        sW2 = make_time_mpo(th,dt,WII());
+        W1 = convert(DenseMPO,sW1);
+        W2 = convert(DenseMPO,sW2);
 
 
-        (st1,_) = approximate(st,(W1,st),Vumps(verbose=false));
+        (st1,_) = approximate(st,(sW1,st),Vumps(verbose=false));
         (st2,_) = approximate(st,(W2,st),Vumps(verbose=false));
         (st3,_) = approximate(st,(W1,st),Idmrg1(verbose=false));
-        (st4,_) = approximate(st,(W2,st),Idmrg2(trscheme=truncdim(20),verbose=false));
+        (st4,_) = approximate(st,(sW2,st),Idmrg2(trscheme=truncdim(20),verbose=false));
         (st5,_) = timestep(st,th,dt,Tdvp());
         st6 = changebonds(W1*st,SvdCut(trscheme=truncdim(10)))
 
@@ -541,6 +542,22 @@ end
 
         @test before < after
     end
+
+    @timedtestset "mpo*finitemps1 ≈ finitemps2" for alg in [Dmrg(verbose=false),Dmrg2(verbose=false,trscheme=truncdim(10))]
+        a = FiniteMPS(10,ℂ^2,ℂ^10);
+        b = FiniteMPS(10,ℂ^2,ℂ^20);
+        th = nonsym_ising_ham(lambda = 3);
+        smpo = make_time_mpo(th,0.01,WI());
+
+        before = abs(dot(b,b));
+
+        (a,_) = approximate(a,(smpo,b),alg);
+
+        (b,_) = timestep(b,th,-0.01,Tdvp())
+        after = abs(dot(a,b));
+
+        @test before ≈ after atol = 0.001
+    end
 end
 
 @timedtestset "periodic boundary conditions" begin
@@ -556,7 +573,7 @@ end
 
     #translation mpo:
     @tensor bulk[-1 -2;-3 -4] := isomorphism(ℂ^2,ℂ^2)[-2,-4]*isomorphism(ℂ^2,ℂ^2)[-1,-3];
-    translation = periodic_boundary_conditions(InfiniteMPO(bulk),len);
+    translation = periodic_boundary_conditions(DenseMPO(bulk),len);
 
     #the groundstate should be translation invariant:
     ut = Tensor(ones,ℂ^1);

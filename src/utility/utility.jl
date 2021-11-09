@@ -92,3 +92,6 @@ function _can_unambiguously_braid(sp::VectorSpace)
     end
     return true
 end
+
+#needed this; perhaps move to tensorkit?
+TensorKit.fuse(f::T) where T<: VectorSpace = f

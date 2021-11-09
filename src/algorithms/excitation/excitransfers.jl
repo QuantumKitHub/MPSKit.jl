@@ -47,18 +47,18 @@ function exci_transfer_right(v,O::Vector{<:MPOTensor},A::Vector,Ab::Vector=A)
 end
 
 #A is an excitation tensor; with an excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
+exci_transfer_left(vec::Array{V,1},ham::SparseMPOSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
     exci_transfer_left(M,vec,ham,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
+exci_transfer_right(vec::Array{V,1},ham::SparseMPOSlice,A::M,Ab::V=A) where V<:MPSTensor where M <:MPOTensor =
     exci_transfer_right(M,vec,ham,A,Ab)
 
 #v has an extra excitation leg
-exci_transfer_left(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
+exci_transfer_left(vec::Array{V,1},ham::SparseMPOSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
     exci_transfer_left(V,vec,ham,A,Ab)
-exci_transfer_right(vec::Array{V,1},ham::MPOHamSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
+exci_transfer_right(vec::Array{V,1},ham::SparseMPOSlice,A::M,Ab::M=A) where V<:MPOTensor where M <:MPSTensor =
     exci_transfer_right(V,vec,ham,A,Ab)
 
-function exci_transfer_left(RetType,vec,ham::MPOHamSlice,A,Ab=A)
+function exci_transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
@@ -90,7 +90,7 @@ function exci_transfer_left(RetType,vec,ham::MPOHamSlice,A,Ab=A)
 
     return toreturn
 end
-function exci_transfer_right(RetType,vec,ham::MPOHamSlice,A,Ab=A)
+function exci_transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
     toreturn = Array{RetType,1}(undef,length(vec));
     assigned = [false for i in 1:ham.odim]
 
@@ -121,7 +121,7 @@ function exci_transfer_right(RetType,vec,ham::MPOHamSlice,A,Ab=A)
     return toreturn
 end
 
-function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solver=Defaults.solver)
+function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solver=Defaults.linearsolver)
     len = ham.period
     found = zero.(lBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
@@ -139,12 +139,12 @@ function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solv
             end
         end
 
-        #either the element ham_ii exists; in which case we have to solve a linear system
+        #either the element i,i exists; in which case we have to solve a linear system
         #otherwise it's easy and we already know found[i]
-        if reduce((a,b)->a&&contains(ham,b,i,i),1:len,init=true)
+        if reduce((a,b)->a&&contains(ham[b],i,i),1:len,init=true)
             (found[i],convhist) = linsolve(lBs[i]+start[i],lBs[i]+start[i],solver) do y
                 x = @closure reduce(1:len,init=y) do a,b
-                    exci_transfer_left(a,ham[b,i,i],exci.right_gs.AR[b],exci.left_gs.AL[b])*exp(conj(1im*mom))
+                    exci_transfer_left(a,ham[b][i,i],exci.right_gs.AR[b],exci.left_gs.AL[b])*exp(conj(1im*mom))
                 end
 
                 if exci.trivial && i in ids
@@ -162,7 +162,7 @@ function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solv
     return found
 end
 
-function right_excitation_transfer_system(rBs, ham, exci; mom=exci.momentum, solver=Defaults.solver)
+function right_excitation_transfer_system(rBs, ham, exci; mom=exci.momentum, solver=Defaults.linearsolver)
     len = ham.period
     found = zero.(rBs)
     ids = collect(Iterators.filter(x->isid(ham,x),1:ham.odim));
@@ -178,10 +178,10 @@ function right_excitation_transfer_system(rBs, ham, exci; mom=exci.momentum, sol
 
         end
 
-        if reduce((a,b)->a&&contains(ham,b,i,i),1:len,init=true)
+        if reduce((a,b)->a&&contains(ham[b],i,i),1:len,init=true)
             (found[i],convhist) = linsolve(rBs[i]+start[i],rBs[i]+start[i],solver) do y
                 x = @closure reduce(len:-1:1,init=y) do a,b
-                    exci_transfer_right(a,ham[b,i,i],exci.left_gs.AL[b],exci.right_gs.AR[b])*exp(1im*mom)
+                    exci_transfer_right(a,ham[b][i,i],exci.left_gs.AL[b],exci.right_gs.AR[b])*exp(1im*mom)
                 end
 
                 if exci.trivial && i in ids

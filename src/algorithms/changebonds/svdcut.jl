@@ -19,7 +19,7 @@ function changebonds!(state::Union{FiniteMPS{T},MPSComoving{T}},alg::SvdCut) whe
     return state
 end
 
-changebonds(state::InfiniteMPO,alg::SvdCut) = convert(InfiniteMPO,changebonds(convert(InfiniteMPS,state),alg));
+changebonds(state::DenseMPO,alg::SvdCut) = convert(DenseMPO,changebonds(convert(InfiniteMPS,state),alg));
 changebonds(state::MPOMultiline,alg::SvdCut) = convert(MPOMultiline,changebonds(convert(MPSMultiline,state),alg))
 changebonds(state::MPSMultiline,alg::SvdCut) = Multiline(map(x->changebonds(x,alg),state.data))
 function changebonds(state::InfiniteMPS,alg::SvdCut)

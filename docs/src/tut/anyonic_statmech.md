@@ -13,7 +13,7 @@ physical = Vect[FibonacciAnyon](:τ => 1);
 t = TensorMap(ones,ComplexF64,physical*physical,physical*physical);
 blocks(t)[FibonacciAnyon(:I)] *= 0;
 
-mpo = InfiniteMPO(t);
+mpo = DenseMPO(t);
 ```
 
 ## The leading boundary

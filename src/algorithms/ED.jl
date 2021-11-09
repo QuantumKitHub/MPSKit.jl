@@ -7,7 +7,7 @@ function exact_diagonalization(opp::MPOHamiltonian;sector = first(sectors(oneuni
 
     middle_site = Int(round(len/2));
 
-    Ot = eltype(opp);
+    Ot = eltype(opp[1]);
 
     mpst_type = tensormaptype(spacetype(Ot),2,1,eltype(Ot));
     mpsb_type = tensormaptype(spacetype(Ot),1,1,eltype(Ot));
