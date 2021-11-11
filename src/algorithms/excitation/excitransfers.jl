@@ -59,66 +59,50 @@ exci_transfer_right(vec::Array{V,1},ham::SparseMPOSlice,A::M,Ab::M=A) where V<:M
     exci_transfer_right(V,vec,ham,A,Ab)
 
 function exci_transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
-    toreturn = Array{RetType,1}(undef,length(vec));
-    assigned = [false for i in 1:ham.odim]
+    toret = Array{RetType,1}(undef,length(vec));
+    @sync for k in 1:ham.odim
+        @Threads.spawn begin
+            res = foldl(+, 1:ham.odim |>
+                Filter(j->contains(ham,j,k)) |>
+                Map() do j
+                    if isscal(ham,j,k)
+                        ham.Os[j,k]*exci_transfer_left(vec[j],A,Ab)
+                    else
+                        exci_transfer_left(vec[j],ham[j,k],A,Ab)
+                    end
+                end,init=Init(+));
 
-    for (j,k) in keys(ham)
-        if assigned[k]
-            if isscal(ham,j,k)
-                toreturn[k]+=ham.Os[j,k]*exci_transfer_left(vec[j],A,Ab)
+            if res == Init(+)
+                toret[k] = exci_transfer_left(vec[1],ham[1,k],A,Ab)
             else
-                toreturn[k]+=exci_transfer_left(vec[j],ham[j,k],A,Ab)
+                toret[k] = res;
             end
-        else
-            if isscal(ham,j,k)
-                toreturn[k]=ham.Os[j,k]*exci_transfer_left(vec[j],A,Ab)
-            else
-                toreturn[k]=exci_transfer_left(vec[j],ham[j,k],A,Ab)
-            end
-            assigned[k]=true
         end
     end
-
-
-    for k in 1:ham.odim
-        if !assigned[k]
-            #prefereably this never happens, because it's a wasted step
-            #it's also avoideable with a little bit more code
-            toreturn[k]=exci_transfer_left(vec[1],ham[1,k],A,Ab)
-        end
-    end
-
-    return toreturn
+    toret
 end
 function exci_transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
-    toreturn = Array{RetType,1}(undef,length(vec));
-    assigned = [false for i in 1:ham.odim]
+    toret = Array{RetType,1}(undef,length(vec));
 
-    for (j,k) in keys(ham)
-        if assigned[j]
-            if isscal(ham,j,k)
-                toreturn[j]+=ham.Os[j,k]*exci_transfer_right(vec[k],A,Ab)
+    @sync for j in 1:ham.odim
+        @Threads.spawn begin
+            res = foldl(+, 1:ham.odim |>
+                Filter(k->contains(ham,j,k)) |>
+                Map() do k
+                    if isscal(ham,j,k)
+                        ham.Os[j,k]*exci_transfer_right(vec[k],A,Ab)
+                    else
+                        exci_transfer_right(vec[k],ham[j,k],A,Ab)
+                    end
+                end,init=Init(+));
+            if res == Init(+)
+                toret[j] = exci_transfer_right(vec[1],ham[j,1],A,Ab)
             else
-                toreturn[j]+=exci_transfer_right(vec[k],ham[j,k],A,Ab)
+                toret[j] = res
             end
-
-        else
-            if isscal(ham,j,k)
-                toreturn[j]=ham.Os[j,k]*exci_transfer_right(vec[k],A,Ab)
-            else
-                toreturn[j]=exci_transfer_right(vec[k],ham[j,k],A,Ab)
-            end
-            assigned[j]=true
         end
     end
-
-    for j in 1:ham.odim
-        if !assigned[j]
-            toreturn[j]=exci_transfer_right(vec[1],ham[j,1],A,Ab)
-        end
-    end
-
-    return toreturn
+    toret
 end
 
 function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solver=Defaults.linearsolver)
