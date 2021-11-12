@@ -306,13 +306,20 @@ end
 end
 
 @timedtestset "quasiparticle_excitation" begin
-    @timedtestset "infinite" begin
+    @timedtestset "infinite (ham)" begin
         th = force_planar(nonsym_xxz_ham())
         ts = InfiniteMPS([𝔹^3],[𝔹^48]);
         (ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400,verbose=false));
         (energies,Bs) = excitations(th,QuasiparticleAnsatz(),Float64(pi),ts,envs);
         @test energies[1] ≈ 0.41047925 atol=1e-4
         @test variance(Bs[1],th) < 1e-8
+    end
+    @timedtestset "infinite (mpo)" begin
+        th = nonsym_sixvertex_mpo();
+        ts = InfiniteMPS([ℂ^2],[ℂ^10]);
+        (ts,envs,_) = leading_boundary(ts,th,Vumps(maxiter=400,verbose=false));
+        (energies,Bs) = excitations(th,QuasiparticleAnsatz(),[0.0,Float64(pi/2)],ts,envs,verbose=false);
+        @test abs(energies[1])>abs(energies[2]) # has a minima at pi/2
     end
 
     @timedtestset "finite" begin
