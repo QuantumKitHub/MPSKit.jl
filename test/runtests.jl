@@ -1,4 +1,4 @@
-using MPSKit,TensorKit,Test,OptimKit,MPSKitModels,TestExtras
+using MPSKit,TensorKit,Test,OptimKit,MPSKitModels,TestExtras,Plots
 using MPSKit:_transpose_tail,_transpose_front,@plansor;
 include("planarspace.jl");
 
@@ -592,4 +592,10 @@ end
 
     (energies,values) = exact_diagonalization(th,which=:SR);
     @test energies[1] ≈ sum(expectation_value(gs,th)) atol=1e-5
+end
+
+@timedtestset "plot 'tests'" begin
+    ts = InfiniteMPS([𝔹^2],[𝔹^5]);
+    @test transferplot(ts) isa Plots.Plot
+    @test entanglementplot(ts) isa Plots.Plot
 end
