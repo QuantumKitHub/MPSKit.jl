@@ -27,7 +27,7 @@ module MPSKit
     export leading_boundary
     export excitations,FiniteExcited,QuasiparticleAnsatz
     export marek_gap, correlation_length
-    export timestep!,timestep,Tdvp,Tdvp2,make_time_mpo,WI,WII
+    export timestep!,timestep,Tdvp,Tdvp2,make_time_mpo,WI,WII,Trotter
     export splitham,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
     export changebonds!,changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
     export entropy

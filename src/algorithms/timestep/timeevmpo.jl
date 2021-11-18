@@ -1,29 +1,40 @@
 #https://arxiv.org/pdf/1901.05824.pdf
 
-struct WI <: Algorithm
-end
-
 @with_kw struct WII <: Algorithm
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
 end
 
-function make_time_mpo(ham::MPOHamiltonian{S,T},dt,alg::WI) where {S,T}
-    δ = dt*(-1im);
-    W1 = PeriodicArray{Union{T,Missing},3}(missing,ham.period,ham.odim-1,ham.odim-1);
-    for loc in 1:size(ham,1)
-        W1[loc,1,1] = ham[loc][1,1] + δ * ham[loc][1,ham.odim];
+struct Trotter{N} <: Algorithm
+end
 
-        for j in 2:size(ham,2)-1,
-            k in 2:size(ham,3)-1
-            W1[loc,j,k] = ham[loc][j,k]
+const WI = Trotter{1};
 
-            W1[loc,1,k] = ham[loc][1,k]*sqrt(δ)
-            W1[loc,j,1] = ham[loc][j,ham.odim]*sqrt(δ)
+function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::Trotter{N}) where {S,T,E,N}
+    τ = -1im*dt;
+
+    mult = prod(fill(copy(th.data),N));
+    inds = LinearIndices(ntuple(i->th.odim,N));
+
+    for (loc,slice) in enumerate(mult)
+        el = ntuple(i->1,N);
+
+        for order in 1:N
+            el = Base.setindex(el,th.odim,order);
+
+            c_ind = inds[el...];
+
+            slice[1:c_ind-1,1].+= slice[1:c_ind-1,c_ind].*τ^order/factorial(order);
+        end
+
+        for a in Iterators.product(fill((1,th.odim),N)...)
+            all(a.==1) && continue;
+            slice[inds[a...],:].*=0;
+            slice[:,inds[a...]].*=0;
         end
     end
 
-    SparseMPO(W1)
+    remove_orphans(mult)
 end
 
 

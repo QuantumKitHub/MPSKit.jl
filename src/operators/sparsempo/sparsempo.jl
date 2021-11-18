@@ -238,3 +238,50 @@ function Base.convert(::Type{DenseMPO},s::SparseMPO)
 
     DenseMPO(data)
 end
+
+function remove_orphans(smpo::SparseMPO{S,T,E}) where {S,T,E}
+    changed = false; # if I change the mpo somewhere in the method, then I will return remove_orphans(changed_mpo)
+
+    out = copy(smpo);
+    dead_ends = fill(true,out.odim);
+    dead_starts = fill(true,out.odim);
+
+    for (loc,slice) in enumerate(out)
+
+        for i in 1:out.odim
+            if all(slice.Os[i,:].==zero(E)) # dead start
+                changed |= !all(out[loc-1].Os[:,i] .== zero(E))
+                out[loc-1].Os[:,i] .= zero(E);
+            else
+                dead_starts[i] = false;
+            end
+
+            if all(slice.Os[:,i].==zero(E)) # dead end
+                changed |=  !all(out[loc+1].Os[i,:] .== zero(E));
+
+                out[loc+1].Os[i,:] .= zero(E);
+            else
+                dead_ends[i] = false;
+            end
+
+
+        end
+    end
+
+    removeable = dead_ends.|dead_starts;
+    if any(removeable)
+        changed = true
+
+        keep  =.!removeable;
+
+        new_Os = PeriodicArray(out.Os[:,keep,keep]);
+        new_domspaces = PeriodicArray(out.domspaces[:,keep]);
+        new_pspaces = PeriodicArray(out.pspaces[keep]);
+
+        out = SparseMPO(new_Os,new_domspaces,new_pspaces);
+
+    end
+
+
+    changed ? remove_orphans(out) : out
+end
