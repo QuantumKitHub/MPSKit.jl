@@ -100,7 +100,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
             (L0,R0) = $init[cr]
 
             shouldpack = L0 isa Vector;
-            (_,Ls,convhist) = eigsolve(shouldpack ? RecursiveVec(L0) : R0,1,:LM,$solver) do x
+            (_,Ls,convhist) = eigsolve(shouldpack ? RecursiveVec(L0) : L0,1,:LM,$solver) do x
                 y = transfer_left(shouldpack ? x.vecs : x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:])
                 shouldpack ? RecursiveVec(y) : y
             end
