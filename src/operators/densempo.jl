@@ -9,7 +9,7 @@ DenseMPO(t::AbstractTensorMap) = DenseMPO(fill(t,1));
 DenseMPO(t::AbstractArray{T,1}) where T<:MPOTensor = DenseMPO(PeriodicArray(t));
 Base.length(t::DenseMPO) = length(t.opp);
 Base.size(t::DenseMPO) = (length(t),)
-
+Base.repeat(t::DenseMPO,n) = DenseMPO(repeat(t.opp,n));
 Base.getindex(t::DenseMPO,i) = getindex(t.opp,i);
 Base.eltype(t::DenseMPO{O}) where O = O;
 Base.iterate(t::DenseMPO,i = 1) = (i > length(t.opp)) ? nothing : (t[i],i+1);

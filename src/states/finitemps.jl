@@ -16,7 +16,7 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
     function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}},
                             ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
-                            CLs::Vector{Union{Missing,B}})
+                            CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,B<:MPSBondTensor}
 
         length(ACs) +1 == length(CLs) || throw(ArgumentError("length mismatch of AC/CL"))
 
@@ -32,22 +32,22 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
             (al,ar,ac) = tup;
 
             if !ismissing(al)
-                !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(al) || throw(SectorMismatch("Virtual space of AL on site $(i) doesn't match"));
+                !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(al) || throw(SectorMismatch("Virtual space of AL on site $(i) doesn't match")));
 
                 left_virt_spaces[i+1] = _lastspace(al)';
                 left_virt_spaces[i] = _firstspace(al)
             end
 
             if !ismissing(ar)
-                !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _firstspace(ar) || throw(SectorMismatch("Virtual space of AR on site $(i) doesn't match"));
+                !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _firstspace(ar) || throw(SectorMismatch("Virtual space of AR on site $(i) doesn't match")));
 
                 right_virt_spaces[i+1] = _lastspace(ar)';
                 right_virt_spaces[i] = _firstspace(ar)
             end
 
             if !ismissing(ac)
-                !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(ac) || throw(SectorMismatch("Left virtual space of AC on site $(i) doesn't match"));
-                !ismissing(right_virt_spaces[i+1]) && (right_virt_spaces[i+1] == _lastspace(ac)' || throw(SectorMismatch("Right virtual space of AC on site $(i) doesn't match"));
+                !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(ac) || throw(SectorMismatch("Left virtual space of AC on site $(i) doesn't match")));
+                !ismissing(right_virt_spaces[i+1]) && (right_virt_spaces[i+1] == _lastspace(ac)' || throw(SectorMismatch("Right virtual space of AC on site $(i) doesn't match")));
 
                 right_virt_spaces[i+1] = _lastspace(ac)';
                 left_virt_spaces[i] = _firstspace(ac)
@@ -55,8 +55,9 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
         end
 
         for (i,c) in enumerate(CLs)
-            !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(c) || throw(SectorMismatch("Left virtual space of CL on site $(i) doesn't match"));
-            !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _lastspace(c)' || throw(SectorMismatch("Left virtual space of CL on site $(i) doesn't match"));
+            ismissing(c) && continue;
+            !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(c) || throw(SectorMismatch("Left virtual space of CL on site $(i) doesn't match")));
+            !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _lastspace(c)' || throw(SectorMismatch("Left virtual space of CL on site $(i) doesn't match")));
         end
 
 
@@ -161,8 +162,8 @@ function TensorKit.space(psi::FiniteMPS{<:GenericMPSTensor}, n::Integer)
     return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
 end
 
-left_virtualspace(psi::FiniteMPS, n::Integer) = _firstspace(psi.CR[n-1]);
-right_virtualspace(psi::FiniteMPS, n::Integer) = dual(_lastspace(psi.CR[n-1]));
+left_virtualspace(psi::FiniteMPS, n::Integer) = _firstspace(psi.CR[n]);
+right_virtualspace(psi::FiniteMPS, n::Integer) = dual(_lastspace(psi.CR[n]));
 
 r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.AR[end]),domain(state.AR[end]))
 l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.AL[1],1),space(state.AL[1],1))

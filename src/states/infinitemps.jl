@@ -21,8 +21,8 @@ Base.repeat(m::InfiniteMPS,i::Int) = InfiniteMPS(repeat(m.AL,i),repeat(m.AR,i),r
 Base.similar(st::InfiniteMPS) = InfiniteMPS(similar(st.AL),similar(st.AR),similar(st.CR),similar(st.AC))
 TensorKit.norm(st::InfiniteMPS) = norm(st.AC[1]);
 
-left_virtualspace(psi::InfiniteMPS, n::Integer) = _firstspace(psi.CR[n-1]);
-right_virtualspace(psi::InfiniteMPS, n::Integer) = dual(_lastspace(psi.CR[n-1]));
+left_virtualspace(psi::InfiniteMPS, n::Integer) = _firstspace(psi.CR[n]);
+right_virtualspace(psi::InfiniteMPS, n::Integer) = dual(_lastspace(psi.CR[n]));
 
 site_type(::Type{InfiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 bond_type(::Type{InfiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
