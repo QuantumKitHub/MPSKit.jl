@@ -28,8 +28,8 @@ function MPSComoving(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, m
                     leftgs::M,
                     rightgs::M) where {S<:ElementarySpace,M<:InfiniteMPS}
 
-    left = virtualspace(leftgs,0);
-    right = virtualspace(rightgs,length(physspaces));
+    left = left_virtualspace(leftgs,0);
+    right = right_virtualspace(rightgs,length(physspaces));
     window = FiniteMPS(f,elt,physspaces,maxvirtspace,left=left,right=right);
     MPSComoving(leftgs,window,rightgs)
 end
@@ -72,9 +72,8 @@ bond_type(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype
 
 
 TensorKit.space(psi::MPSComoving{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)
-virtualspace(psi::MPSComoving, n::Integer) =
-    n < length(psi) ? _firstspace(psi.AC[n+1]) : dual(_lastspace(psi.AC[n]))
-
+left_virtualspace(psi::MPSComoving, n::Integer) = left_virtualspace(psi.window,n);
+right_virtualspace(psi::MPSComoving, n::Integer) = right_virtualspace(psi.window,n);
 
 r_RR(state::MPSComoving)=r_RR(state.right_gs,length(state))
 l_LL(state::MPSComoving)=l_LL(state.left_gs,1)

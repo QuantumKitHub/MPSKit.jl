@@ -32,8 +32,8 @@ function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver
 
     #build lBs(c)
     lB_cur = [ TensorMap(zeros,eltype(exci),
-                    virtualspace(exci.left_gs,0)*ham.domspaces[1,k]',
-                    space(exci[1],3)'*virtualspace(exci.right_gs,0)) for k in 1:ham.odim]
+                    left_virtualspace(exci.left_gs,0)*ham.domspaces[1,k]',
+                    space(exci[1],3)'*right_virtualspace(exci.right_gs,0)) for k in 1:ham.odim]
     lBs = typeof(lB_cur)[]
 
     for pos = 1:length(exci)
@@ -50,8 +50,8 @@ function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver
 
     #build rBs(c)
     rB_cur = [ TensorMap(zeros,eltype(exci),
-                    virtualspace(exci.left_gs,length(exci))*ham.imspaces[length(exci),k]',
-                    space(exci[1],3)'*virtualspace(exci.right_gs,length(exci))) for k in 1:ham.odim]
+                    left_virtualspace(exci.left_gs,length(exci))*ham.imspaces[length(exci),k]',
+                    space(exci[1],3)'*right_virtualspace(exci.right_gs,length(exci))) for k in 1:ham.odim]
     rBs = typeof(rB_cur)[]
 
     for pos=length(exci):-1:1
@@ -104,8 +104,8 @@ end
 function environments(exci::FiniteQP,ham::MPOHamiltonian,lenvs=environments(exci.left_gs,ham),renvs=exci.trivial ? lenvs : environments(exci.right_gs,ham))
     #construct lBE
     lB_cur = [ TensorMap(zeros,eltype(exci),
-                    virtualspace(exci.left_gs,0)*ham.domspaces[1,k]',
-                    space(exci[1],3)'*virtualspace(exci.left_gs,0)) for k in 1:ham.odim]
+                    left_virtualspace(exci.left_gs,0)*ham.domspaces[1,k]',
+                    space(exci[1],3)'*right_virtualspace(exci.left_gs,0)) for k in 1:ham.odim]
     lBs = typeof(lB_cur)[]
     for pos = 1:length(exci)
         lB_cur = exci_transfer_left(lB_cur,ham[pos],exci.right_gs.AR[pos],exci.left_gs.AL[pos])
@@ -115,8 +115,8 @@ function environments(exci::FiniteQP,ham::MPOHamiltonian,lenvs=environments(exci
 
     #build rBs(c)
     rB_cur = [ TensorMap(zeros,eltype(exci),
-                    virtualspace(exci.right_gs,length(exci))*ham.imspaces[length(exci),k]',
-                    space(exci[1],3)'*virtualspace(exci.right_gs,length(exci))) for k in 1:ham.odim]
+                    left_virtualspace(exci.right_gs,length(exci))*ham.imspaces[length(exci),k]',
+                    space(exci[1],3)'*right_virtualspace(exci.right_gs,length(exci))) for k in 1:ham.odim]
     rBs = typeof(rB_cur)[]
     for pos=length(exci):-1:1
         rB_cur = exci_transfer_right(rB_cur,ham[pos],exci.left_gs.AL[pos],exci.right_gs.AR[pos])
@@ -140,7 +140,7 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
             @plansor v[1 2;3]*rightenv(lenvs,row,col,left_gs)[3 2;1]
         end).^-1;
 
-        lB_cur = TensorMap(zeros,eltype(left_gs.AL[1,1]),virtualspace(left_gs,row+1,0)*_firstspace(ham[row,1])',exci_space'*virtualspace(left_gs,row,0));
+        lB_cur = TensorMap(zeros,eltype(left_gs.AL[1,1]),left_virtualspace(left_gs,row+1,0)*_firstspace(ham[row,1])',exci_space'*right_virtualspace(right_gs,row,0));
 
         c_lBs = typeof(lB_cur)[];
         for col in 1:size(left_gs,2)
@@ -173,7 +173,7 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
             @plansor v[1 2;3]*rightenv(renvs,row,col,right_gs)[3 2;1]
         end).^-1;
 
-        rB_cur = TensorMap(zeros,eltype(left_gs.AL[1,1]),virtualspace(left_gs,row,0)*_firstspace(ham[row,1]),exci_space'*virtualspace(left_gs,row+1,0));
+        rB_cur = TensorMap(zeros,eltype(left_gs.AL[1,1]),left_virtualspace(left_gs,row,0)*_firstspace(ham[row,1]),exci_space'*right_virtualspace(right_gs,row+1,0));
 
         c_rBs = typeof(rB_cur)[];
         for col in size(left_gs,2):-1:1

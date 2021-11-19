@@ -376,10 +376,10 @@ end
         @test dot(state,state_oe) ≈ 1 atol=1e-8
 
         (state_vs,_) = changebonds(state,MPOHamiltonian(nn),VumpsSvdCut(trscheme=notrunc()));
-        @test dim(virtualspace(state,1)) < dim(virtualspace(state_vs,1))
+        @test dim(left_virtualspace(state,1)) < dim(left_virtualspace(state_vs,1))
 
         state_vs_tr = changebonds(state_vs,SvdCut(trscheme = truncdim(dim(Dspace))));
-        @test dim(virtualspace(state_vs_tr,1)) < dim(virtualspace(state_vs,1))
+        @test dim(right_virtualspace(state_vs_tr,1)) < dim(right_virtualspace(state_vs,1))
     end
 
     @timedtestset "finite mps" begin
@@ -396,7 +396,7 @@ end
         @test dot(state,state_oe) ≈ 1 atol=1e-8
 
         state_tr = changebonds(state_oe,SvdCut(trscheme = truncdim(dim(Dspace))));
-        @test dim(virtualspace(state_tr,5)) < dim(virtualspace(state_oe,5))
+        @test dim(left_virtualspace(state_tr,5)) < dim(right_virtualspace(state_oe,5))
     end
 
     @timedtestset "MPSMultiline" begin
@@ -413,7 +413,7 @@ end
         @test dot(state,state_oe) ≈ 1 atol=1e-8
 
         state_tr = changebonds(state_oe,SvdCut(trscheme = truncdim(dim(Dspace))));
-        @test dim(virtualspace(state_tr,1,1)) < dim(virtualspace(state_oe,1,1))
+        @test dim(right_virtualspace(state_tr,1,1)) < dim(left_virtualspace(state_oe,1,1))
 
     end
 end

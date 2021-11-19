@@ -1,5 +1,5 @@
 """
-    mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
+    struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
 
 Represents a finite matrix product state
 
@@ -7,50 +7,58 @@ When queried for AL/AR/AC/CL it will check if it is missing.
     If not, return
     If it is, calculate it, store it and return
 """
-mutable struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
+struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
     ALs::Vector{Union{Missing,A}}
     ARs::Vector{Union{Missing,A}}
     ACs::Vector{Union{Missing,A}}
     CLs::Vector{Union{Missing,B}}
 
-    function FiniteMPS(ALs::Vector{Union{Missing,A}},
+    function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}},
                             ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
-                            CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,B<:MPSBondTensor}
-        # Relevant checks:
-        # for every site at least one AL/AR/AC should not be missing
-        # it should end and start with a trivial space
-        # consecutive virtual spaces should 'fit' into eachother
-        # checking the site tensor spaces
-        # at least one CL/AC
+                            CLs::Vector{Union{Missing,B}})
 
         length(ACs) +1 == length(CLs) || throw(ArgumentError("length mismatch of AC/CL"))
 
         sum(ismissing.(ACs)) + sum(ismissing.(CLs)) < length(ACs)+length(CLs) || throw(ArgumentError("at least one AC/CL should not be missing"))
 
-        prevD2 = nothing;
+        S = spacetype(A);
+        left_virt_spaces = Vector{Union{Missing,S}}(missing,length(CLs));
+        right_virt_spaces = Vector{Union{Missing,S}}(missing,length(CLs));
 
         for (i,tup) in enumerate(zip(ALs,ARs,ACs))
             non_missing = filter(!ismissing,tup)
             isempty(non_missing) && throw(ArgumentError("missing site tensor"))
+            (al,ar,ac) = tup;
 
-            codom = codomain(non_missing[1])
-            dom = domain(non_missing[1])
-            for j in 2:length(non_missing)
-                (dom == domain(non_missing[j]) && codom == codomain(non_missing[j])) || throw(SectorMismatch("AL/AC/AR should be maps over the same space"))
+            if !ismissing(al)
+                !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(al) || throw(SectorMismatch("Virtual space of AL on site $(i) doesn't match"));
+
+                left_virt_spaces[i+1] = _lastspace(al)';
+                left_virt_spaces[i] = _firstspace(al)
             end
 
-            D1 = _firstspace(non_missing[1])
-            D2 = _lastspace(non_missing[1])
+            if !ismissing(ar)
+                !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _firstspace(ar) || throw(SectorMismatch("Virtual space of AR on site $(i) doesn't match"));
 
-            i == 1 || prevD2 == dual(D1) || throw(SectorMismatch("consecutive space tensors don't fit on the virtual level"))
+                right_virt_spaces[i+1] = _lastspace(ar)';
+                right_virt_spaces[i] = _firstspace(ar)
+            end
 
-            prevD2 = D2;
-            ismissing(CLs[i]) || domain(CLs[i]) == codomain(CLs[i]) || throw(SectorMismatch("CL isn't a map between identical spaces"))
-            ismissing(CLs[i+1]) || domain(CLs[i+1]) == codomain(CLs[i+1]) || throw(SectorMismatch("CL isn't a map between identical spaces"))
-            ismissing(CLs[i])  || _lastspace(CLs[i]) == dual(D1) || throw(SectorMismatch("CL doesn't fit"))
-            ismissing(CLs[i+1]) || _firstspace(CLs[i+1]) == dual(D2) || throw(SectorMismatch("CL doesn't fit"))
+            if !ismissing(ac)
+                !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(ac) || throw(SectorMismatch("Left virtual space of AC on site $(i) doesn't match"));
+                !ismissing(right_virt_spaces[i+1]) && (right_virt_spaces[i+1] == _lastspace(ac)' || throw(SectorMismatch("Right virtual space of AC on site $(i) doesn't match"));
+
+                right_virt_spaces[i+1] = _lastspace(ac)';
+                left_virt_spaces[i] = _firstspace(ac)
+            end
         end
+
+        for (i,c) in enumerate(CLs)
+            !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(c) || throw(SectorMismatch("Left virtual space of CL on site $(i) doesn't match"));
+            !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _lastspace(c)' || throw(SectorMismatch("Left virtual space of CL on site $(i) doesn't match"));
+        end
+
 
         return new{A,B}(ALs,ARs,ACs,CLs);
     end
@@ -64,9 +72,8 @@ end
 
 # allow construction given only a physical space and length
 FiniteMPS(N::Int,V::VectorSpace, args...;kwargs...)  = FiniteMPS(rand,Defaults.eltype,N,V,args...;kwargs...);
-function FiniteMPS(f,elt, N::Int, V::VectorSpace, args...; kwargs...)
-    return FiniteMPS(f, elt,fill(V, N), args...; kwargs...)
-end
+FiniteMPS(f,elt, N::Int, V::VectorSpace, args...; kwargs...) = FiniteMPS(f, elt,fill(V, N), args...; kwargs...)
+
 
 FiniteMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;kwargs...)  where {S<:ElementarySpace}= FiniteMPS(rand,Defaults.eltype,physspaces,maxvirtspace;kwargs...);
 function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;
@@ -117,11 +124,11 @@ function FiniteMPS(site_tensors::Vector{A};normalize=false,overwrite=false) wher
     ALs.= site_tensors;
     CLs[end] = C;
 
-    FiniteMPS(ALs,ARs,ACs,CLs)
+    FiniteMPS{A,B}(ALs,ARs,ACs,CLs)
 end
 
 
-Base.copy(psi::FiniteMPS) = FiniteMPS(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
+Base.copy(psi::FiniteMPS{A,B}) where {A,B} = FiniteMPS{A,B}(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
 
 function Base.getproperty(psi::FiniteMPS,prop::Symbol)
     if prop == :AL
@@ -141,7 +148,7 @@ Base.length(psi::FiniteMPS) = length(psi.ALs)
 Base.size(psi::FiniteMPS, i...) = size(psi.ALs, i...)
 
 #conflicted if this is actually true
-Base.eltype(st::FiniteMPS{A,B}) where {A<:GenericMPSTensor,B} = A
+Base.eltype(st::FiniteMPS) = eltype(typeof(st));
 Base.eltype(::Type{FiniteMPS{A,B}}) where {A<:GenericMPSTensor,B} = A
 
 site_type(::Type{FiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
@@ -154,8 +161,8 @@ function TensorKit.space(psi::FiniteMPS{<:GenericMPSTensor}, n::Integer)
     return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
 end
 
-virtualspace(psi::FiniteMPS, n::Integer) =
-    n < length(psi) ? _firstspace(psi.AC[n+1]) : dual(_lastspace(psi.AC[n]))
+left_virtualspace(psi::FiniteMPS, n::Integer) = _firstspace(psi.CR[n-1]);
+right_virtualspace(psi::FiniteMPS, n::Integer) = dual(_lastspace(psi.CR[n-1]));
 
 r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.AR[end]),domain(state.AR[end]))
 l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.AL[1],1),space(state.AL[1],1))
@@ -225,8 +232,8 @@ function Base.:+(psi1::FiniteMPS{A}, psi2::FiniteMPS{A}) where A
     for k = 1:N
         space(psi1, k) == space(psi2, k) || throw(SpaceMismatch("Non-matching physical space on site $k."))
     end
-    virtualspace(psi1, 0) == virtualspace(psi2, 0) || throw(SpaceMismatch("Non-matching left virtual space."))
-    virtualspace(psi1, N) == virtualspace(psi2, N) || throw(SpaceMismatch("Non-matching right virtual space."))
+    left_virtualspace(psi1, 0) == left_virtualspace(psi2, 0) || throw(SpaceMismatch("Non-matching left virtual space."))
+    right_virtualspace(psi1, N) == right_virtualspace(psi2, N) || throw(SpaceMismatch("Non-matching right virtual space."))
 
     tensors = A[]
 

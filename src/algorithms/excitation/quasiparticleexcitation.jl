@@ -76,7 +76,7 @@ function excitations(
     H, alg::QuasiparticleAnsatz, p::Real,
     lmps::InfiniteMPS, lenvs=environments(lmps, H),
     rmps::InfiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
-    sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1,
+    sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1,
     solver=Defaults.linearsolver
 )
     V₀ = LeftGaugedQP(rand, lmps, rmps; sector=sector, momentum=p)
@@ -85,7 +85,7 @@ end
 function excitations(
     H, alg::QuasiparticleAnsatz, momenta, lmps, lenvs=environments(lmps, H),
     rmps=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
-    verbose=Defaults.verbose, num=1, solver=Defaults.linearsolver, sector=first(sectors(oneunit(virtualspace(lmps, 1))))
+    verbose=Defaults.verbose, num=1, solver=Defaults.linearsolver, sector=first(sectors(oneunit(left_virtualspace(lmps, 1))))
 )
     tasks = map(momenta) do p
         @Threads.spawn begin
@@ -145,7 +145,7 @@ function excitations(
     H, alg::QuasiparticleAnsatz,
     lmps::FiniteMPS, lenvs=environments(lmps, H),
     rmps::FiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H)environmentsleft;
-    sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1
+    sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1
 )
     V₀ = LeftGaugedQP(rand, lmps, rmps; sector=sector);
     return excitations(H, alg, V₀, lenvs, renvs; num=num)
@@ -197,7 +197,7 @@ function excitations(
     H::DenseMPO, alg::QuasiparticleAnsatz, p::Real,
     lmps::InfiniteMPS, lenvs=environments(lmps, H),
     rmps::InfiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
-    sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1,
+    sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1,
     solver=Defaults.linearsolver
 )
     multiline_lmps = convert(MPSMultiline,lmps);
@@ -214,7 +214,7 @@ function excitations(
     H::MPOMultiline, alg::QuasiparticleAnsatz, p::Real,
     lmps::MPSMultiline, lenvs=environments(lmps, H),
     rmps=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
-    sector=first(sectors(oneunit(virtualspace(lmps, 1)))), num=1,
+    sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1,
     solver=Defaults.linearsolver
 )
     V₀ = Multiline(map(1:size(lmps,1)) do row

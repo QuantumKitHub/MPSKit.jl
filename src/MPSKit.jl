@@ -14,7 +14,7 @@ module MPSKit
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
 
     #useful utility functions?
-    export add_util_leg,max_Ds,virtualspace, recalculate!
+    export add_util_leg,max_Ds,left_virtualspace,right_virtualspace, recalculate!
 
     #hamiltonian things
     export Cache
@@ -37,6 +37,7 @@ module MPSKit
     export periodic_boundary_conditions
     export exact_diagonalization
 
+    @deprecate virtualspace left_virtualspace # there is a possible ambiguity when C isn't square, necessitating specifying left or right virtualspace
     @deprecate params(args...) environments(args...)
     @deprecate InfiniteMPO(args...) DenseMPO(args...)
 

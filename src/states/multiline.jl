@@ -69,4 +69,5 @@ TensorKit.dot(a::MPSMultiline,b::MPSMultiline;kwargs...) = sum(dot.(a.data,b.dat
 Base.convert(::Type{MPSMultiline},st::InfiniteMPS) = Multiline([st]);
 Base.convert(::Type{InfiniteMPS},st::MPSMultiline) = st[1];
 Base.eltype(t::MPSMultiline) = eltype(t[1]);
-virtualspace(t::MPSMultiline,i::Int,j::Int) = virtualspace(t[i],j);
+left_virtualspace(t::MPSMultiline,i::Int,j::Int) = left_virtualspace(t[i],j);
+right_virtualspace(t::MPSMultiline,i::Int,j::Int) = right_virtualspace(t[i],j);

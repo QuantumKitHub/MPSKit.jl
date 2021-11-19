@@ -27,20 +27,20 @@ struct RightGaugedQP{S,T1,T2}
 end
 
 #constructors
-function LeftGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(oneunit(virtualspace(left_gs,1)))),momentum=0.0)
+function LeftGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(oneunit(left_virtualspace(left_gs,1)))),momentum=0.0)
     #find the left null spaces for the TNS
     excitation_space = ℂ[typeof(sector)](sector => 1);
     VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
-    Xs = [TensorMap(datfun,eltype(left_gs.AL[1]),_lastspace(VLs[loc])',excitation_space'*virtualspace(right_gs,loc)) for loc in 1:length(left_gs)]
+    Xs = [TensorMap(datfun,eltype(left_gs.AL[1]),_lastspace(VLs[loc])',excitation_space'*right_virtualspace(right_gs,loc)) for loc in 1:length(left_gs)]
     left_gs isa InfiniteMPS || momentum == zero(momentum) || @warn "momentum is ignored for finite quasiparticles"
     LeftGaugedQP(left_gs,right_gs,VLs,Xs,momentum)
 end
 
-function RightGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(oneunit(virtualspace(left_gs,1)))),momentum=0.0)
+function RightGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(oneunit(left_virtualspace(left_gs,1)))),momentum=0.0)
     #find the left null spaces for the TNS
     excitation_space = ℂ[typeof(sector)](sector => 1);
     VRs = [adjoint(leftnull(adjoint(v))) for v in _transpose_tail.(left_gs.AR)]
-    Xs = [TensorMap(datfun,eltype(left_gs.AL[1]),virtualspace(right_gs,loc-1)',excitation_space'*_firstspace(VRs[loc])) for loc in 1:length(left_gs)]
+    Xs = [TensorMap(datfun,eltype(left_gs.AL[1]),left_virtualspace(right_gs,loc-1)',excitation_space'*_firstspace(VRs[loc])) for loc in 1:length(left_gs)]
     left_gs isa InfiniteMPS || momentum == zero(momentum) || @warn "momentum is ignored for finite quasiparticles"
     RightGaugedQP(left_gs,right_gs,Xs,VRs,momentum)
 end
