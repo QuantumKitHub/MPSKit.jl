@@ -5,12 +5,12 @@
     maxiter::Int = Defaults.maxiter
 end
 
-struct Trotter{N} <: Algorithm
+struct TaylorCluster{N} <: Algorithm
 end
 
-const WI = Trotter{1};
+const WI = TaylorCluster{1};
 
-function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::Trotter{N}) where {S,T,E,N}
+function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where {S,T,E,N}
     τ = -1im*dt;
 
     mult = prod(fill(copy(th.data),N));
