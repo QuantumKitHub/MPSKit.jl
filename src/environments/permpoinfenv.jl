@@ -99,27 +99,36 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
         @Threads.spawn begin
             (L0,R0) = $init[cr]
 
-            (_,Ls,convhist) = eigsolve(x-> transfer_left(x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:]),L0,1,:LM,$solver)
+            shouldpack = L0 isa Vector;
+            (_,Ls,convhist) = eigsolve(shouldpack ? RecursiveVec(L0) : R0,1,:LM,$solver) do x
+                y = transfer_left(shouldpack ? x.vecs : x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:])
+                shouldpack ? RecursiveVec(y) : y
+            end
             convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-            (_,Rs,convhist) = eigsolve(x-> transfer_right(x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:]),R0,1,:LM,$solver)
+            (_,Rs,convhist) = eigsolve(shouldpack ? RecursiveVec(R0) : R0,1,:LM,$solver) do x
+                y = transfer_right(shouldpack ? x.vecs : x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:])
+                shouldpack ? RecursiveVec(y) : y
+            end
             convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
 
+            L_out = shouldpack ? Ls[1][:] : Ls[1];
+            R_out = shouldpack ? Rs[1][:] : Rs[1];
 
-            $lefties[cr,1] = Ls[1]
+            $lefties[cr,1] = L_out;
             for loc in 2:numcols
                 $lefties[cr,loc] = transfer_left($lefties[cr,loc-1],$mpo[cr,loc-1],$above.AL[cr,loc-1],$below.AL[cr+1,loc-1])
             end
 
 
-            renormfact::eltype(T) = dot(below.CR[cr+1,0],c_prime(above.CR[cr,0],Ls[1],Rs[1]))
+            renormfact::eltype(T) = dot($below.CR[cr+1,0],c_prime($above.CR[cr,0],L_out,R_out))
 
-            $righties[cr,end] = Rs[1]/sqrt(renormfact);
+            $righties[cr,end] = R_out/sqrt(renormfact);
             $lefties[cr,1] /=sqrt(renormfact);
 
             for loc in numcols-1:-1:1
                 $righties[cr,loc] = transfer_right($righties[cr,loc+1],$mpo[cr,loc+1],$above.AR[cr,loc+1],$below.AR[cr+1,loc+1])
 
-                renormfact = dot(below.CR[cr+1,loc],c_prime(above.CR[cr,loc],lefties[cr,loc+1],righties[cr,loc]))
+                renormfact = dot($below.CR[cr+1,loc],c_prime($above.CR[cr,loc],$lefties[cr,loc+1],$righties[cr,loc]))
                 $righties[cr,loc]/=sqrt(renormfact)
                 $lefties[cr,loc+1]/=sqrt(renormfact)
             end
