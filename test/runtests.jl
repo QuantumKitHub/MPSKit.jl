@@ -1,5 +1,9 @@
 using MPSKit,TensorKit,Test,OptimKit,MPSKitModels,TestExtras,Plots
 using MPSKit:_transpose_tail,_transpose_front,@plansor;
+
+using TensorOperations
+TensorOperations.disable_cache();
+
 include("planarspace.jl");
 
 println("------------------------------------")
@@ -348,8 +352,8 @@ end
     end
 end
 
-@timedtestset "changebonds $((pspace,Dspace))" for (pspace,Dspace) in [(𝔹^4,𝔹^10),
-        (Rep[SU₂](1=>1),Rep[SU₂](0=>10,1=>5,2=>1))]
+@timedtestset "changebonds $((pspace,Dspace))" for (pspace,Dspace) in [(𝔹^4,𝔹^3),
+        (Rep[SU₂](1=>1),Rep[SU₂](0=>2,1=>2,2=>1))]
 
     @timedtestset "mpo" begin
         #random nn interaction
