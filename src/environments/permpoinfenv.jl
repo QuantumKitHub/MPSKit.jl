@@ -100,29 +100,35 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
             (L0,R0) = $init[cr]
 
             shouldpack = L0 isa Vector;
-            (_,Ls,convhist) = eigsolve(shouldpack ? RecursiveVec(L0) : L0,1,:LM,$solver) do x
-                y = transfer_left(shouldpack ? x.vecs : x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:])
-                shouldpack ? RecursiveVec(y) : y
+            @sync begin
+                @Threads.spawn begin
+                    (_,Ls,convhist) = eigsolve(shouldpack ? RecursiveVec($L0) : $L0,1,:LM,$solver) do x
+                        y = transfer_left(shouldpack ? x.vecs : x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:])
+                        shouldpack ? RecursiveVec(y) : y
+                    end
+                    convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
+                    $L0 = shouldpack ? Ls[1][:] : Ls[1];
+                end
+                @Threads.spawn begin
+                    (_,Rs,convhist) = eigsolve(shouldpack ? RecursiveVec($R0) : $R0,1,:LM,$solver) do x
+                        y = transfer_right(shouldpack ? x.vecs : x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:])
+                        shouldpack ? RecursiveVec(y) : y
+                    end
+                    convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
+                    $R0 = shouldpack ? Rs[1][:] : Rs[1];
+                end
             end
-            convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-            (_,Rs,convhist) = eigsolve(shouldpack ? RecursiveVec(R0) : R0,1,:LM,$solver) do x
-                y = transfer_right(shouldpack ? x.vecs : x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:])
-                shouldpack ? RecursiveVec(y) : y
-            end
-            convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
 
-            L_out = shouldpack ? Ls[1][:] : Ls[1];
-            R_out = shouldpack ? Rs[1][:] : Rs[1];
 
-            $lefties[cr,1] = L_out;
+            $lefties[cr,1] = L0;
             for loc in 2:numcols
                 $lefties[cr,loc] = transfer_left($lefties[cr,loc-1],$mpo[cr,loc-1],$above.AL[cr,loc-1],$below.AL[cr+1,loc-1])
             end
 
 
-            renormfact::eltype(T) = dot($below.CR[cr+1,0],c_prime($above.CR[cr,0],L_out,R_out))
+            renormfact::eltype(T) = dot($below.CR[cr+1,0],c_prime($above.CR[cr,0],L0,R0))
 
-            $righties[cr,end] = R_out/sqrt(renormfact);
+            $righties[cr,end] = R0/sqrt(renormfact);
             $lefties[cr,1] /=sqrt(renormfact);
 
             for loc in numcols-1:-1:1

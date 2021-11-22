@@ -62,7 +62,7 @@ function exci_transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
     toret = Array{RetType,1}(undef,length(vec));
     @sync for k in 1:ham.odim
         @Threads.spawn begin
-            res = foldl(+, 1:ham.odim |>
+            res = foldxt(+, 1:ham.odim |>
                 Filter(j->contains(ham,j,k)) |>
                 Map() do j
                     if isscal(ham,j,k)
@@ -86,7 +86,7 @@ function exci_transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
 
     @sync for j in 1:ham.odim
         @Threads.spawn begin
-            res = foldl(+, 1:ham.odim |>
+            res = foldxt(+, 1:ham.odim |>
                 Filter(k->contains(ham,j,k)) |>
                 Map() do k
                     if isscal(ham,j,k)

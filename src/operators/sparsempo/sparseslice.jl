@@ -60,7 +60,7 @@ function transfer_left(vec::AbstractVector{V},ham::SparseMPOSlice,A::V,Ab::V=A) 
     toret = [TensorMap(zeros,eltype(A),_lastspace(Ab)'*ham.imspaces[i],_lastspace(A)') for i in 1:ham.odim]::Vector{V}
 
     @sync for k in 1:ham.odim
-        @Threads.spawn toret[k] = foldl(+, 1:ham.odim |>
+        @Threads.spawn toret[k] = foldxt(+, 1:ham.odim |>
             Filter(j->contains(ham,j,k)) |>
             Map() do j
                 if isscal(ham,j,k)
@@ -77,7 +77,7 @@ function transfer_right(vec::AbstractVector{V},ham::SparseMPOSlice,A::V,Ab::V=A)
     toret = [TensorMap(zeros,eltype(A),_firstspace(A)*ham.domspaces[i],_firstspace(Ab)) for i in 1:ham.odim]::Vector{V}
 
     @sync for j in 1:ham.odim
-        @Threads.spawn toret[j] = foldl(+, 1:ham.odim |>
+        @Threads.spawn toret[j] = foldxt(+, 1:ham.odim |>
             Filter(k->contains(ham,j,k)) |>
             Map() do k
                 if isscal(ham,j,k)
