@@ -58,7 +58,7 @@ function MPSComoving(state::InfiniteMPS{A,B},len::Int) where {A,B}
     ACs.= state.AC[1:len];
     CLs.= state.CR[0:len];
 
-    MPSComoving(state,FiniteMPS{A,B}(ALs,ARs,ACs,CLs),state)
+    MPSComoving(state,FiniteMPS(ALs,ARs,ACs,CLs),state)
 end
 
 Base.copy(state::MPSComoving{A,B}) where {A,B} = MPSComoving(state.left_gs,copy(state.window),state.right_gs);

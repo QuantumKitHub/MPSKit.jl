@@ -13,7 +13,7 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
     ACs::Vector{Union{Missing,A}}
     CLs::Vector{Union{Missing,B}}
 
-    function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}},
+    function FiniteMPS(ALs::Vector{Union{Missing,A}},
                             ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
                             CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,B<:MPSBondTensor}
@@ -125,11 +125,11 @@ function FiniteMPS(site_tensors::Vector{A};normalize=false,overwrite=false) wher
     ALs.= site_tensors;
     CLs[end] = C;
 
-    FiniteMPS{A,B}(ALs,ARs,ACs,CLs)
+    FiniteMPS(ALs,ARs,ACs,CLs)
 end
 
 
-Base.copy(psi::FiniteMPS{A,B}) where {A,B} = FiniteMPS{A,B}(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
+Base.copy(psi::FiniteMPS) where {A,B} = FiniteMPS(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
 
 function Base.getproperty(psi::FiniteMPS,prop::Symbol)
     if prop == :AL
