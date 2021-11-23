@@ -10,8 +10,9 @@ MPSMultiline
 
 ## Operators
 ```@docs
-MPOHamiltonian
+SparseMPO
 DenseMPO
+MPOHamiltonian
 ```
 
 ## Environments
@@ -20,8 +21,7 @@ MPSKit.AbstractInfEnv
 MPSKit.PerMPOInfEnv
 MPSKit.MPOHamInfEnv
 MPSKit.FinEnv
-MPSKit.SimpleEnv
-MPSKit.OvlEnv
+MPSKit.IDmrgEnvs
 ```
 
 ## Generic actions
@@ -29,6 +29,11 @@ MPSKit.OvlEnv
 c_prime
 ac_prime
 ac2_prime
+
+c_proj
+ac_proj
+ac2_proj
+
 expectation_value
 ```
 
@@ -57,6 +62,8 @@ GradientGrassmann
 ```@docs
 Tdvp
 Tdvp2
+TaylorCluster
+WII
 ```
 
 ### [Leading boundary algorithms](@id lib_bound_alg)
