@@ -107,7 +107,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
                         shouldpack ? RecursiveVec(y) : y
                     end
                     convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-                    $L0 = shouldpack ? Ls[1][:] : Ls[1];
+                    L0 = shouldpack ? Ls[1][:] : Ls[1];
                 end
                 @Threads.spawn begin
                     (_,Rs,convhist) = eigsolve(shouldpack ? RecursiveVec($R0) : $R0,1,:LM,$solver) do x
@@ -115,7 +115,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
                         shouldpack ? RecursiveVec(y) : y
                     end
                     convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
-                    $R0 = shouldpack ? Rs[1][:] : Rs[1];
+                    R0 = shouldpack ? Rs[1][:] : Rs[1];
                 end
             end
 
