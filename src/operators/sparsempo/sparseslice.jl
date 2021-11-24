@@ -60,15 +60,15 @@ function transfer_left(vec::AbstractVector{V},ham::SparseMPOSlice,A::V,Ab::V=A) 
     toret = [TensorMap(zeros,eltype(A),_lastspace(Ab)'*ham.imspaces[i],_lastspace(A)') for i in 1:ham.odim]::Vector{V}
 
     @sync for k in 1:ham.odim
-        @Threads.spawn toret[k] = foldxt(+, 1:ham.odim |>
-            Filter(j->contains(ham,j,k)) |>
+        @Threads.spawn $toret[k] = foldxt(+, 1:$ham.odim |>
+            Filter(j->contains($ham,j,k)) |>
             Map() do j
-                if isscal(ham,j,k)
-                    ham.Os[j,k]*transfer_left(vec[j],A,Ab)
+                if isscal($ham,j,k)
+                    $ham.Os[j,k]*transfer_left($vec[j],$A,$Ab)
                 else
-                    transfer_left(vec[j],ham[j,k],A,Ab)
+                    transfer_left($vec[j],$ham[j,k],$A,$Ab)
                 end
-            end,init=toret[k]);
+            end,init=$toret[k]);
     end
 
     return toret
@@ -77,15 +77,15 @@ function transfer_right(vec::AbstractVector{V},ham::SparseMPOSlice,A::V,Ab::V=A)
     toret = [TensorMap(zeros,eltype(A),_firstspace(A)*ham.domspaces[i],_firstspace(Ab)) for i in 1:ham.odim]::Vector{V}
 
     @sync for j in 1:ham.odim
-        @Threads.spawn toret[j] = foldxt(+, 1:ham.odim |>
-            Filter(k->contains(ham,j,k)) |>
+        @Threads.spawn $toret[j] = foldxt(+, 1:$ham.odim |>
+            Filter(k->contains($ham,j,k)) |>
             Map() do k
-                if isscal(ham,j,k)
-                    ham.Os[j,k]*transfer_right(vec[k],A,Ab)
+                if isscal($ham,j,k)
+                    $ham.Os[j,k]*transfer_right($vec[k],$A,$Ab)
                 else
-                    transfer_right(vec[k],ham[j,k],A,Ab)
+                    transfer_right($vec[k],$ham[j,k],$A,$Ab)
                 end
-            end,init=toret[j]);
+            end,init=$toret[j]);
     end
     return toret
 end

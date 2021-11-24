@@ -62,20 +62,20 @@ function exci_transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
     toret = Array{RetType,1}(undef,length(vec));
     @sync for k in 1:ham.odim
         @Threads.spawn begin
-            res = foldxt(+, 1:ham.odim |>
-                Filter(j->contains(ham,j,k)) |>
+            res = foldxt(+, 1:$ham.odim |>
+                Filter(j->contains($ham,j,k)) |>
                 Map() do j
-                    if isscal(ham,j,k)
-                        ham.Os[j,k]*exci_transfer_left(vec[j],A,Ab)
+                    if isscal($ham,j,k)
+                        $ham.Os[j,k]*exci_transfer_left($vec[j],$A,$Ab)
                     else
-                        exci_transfer_left(vec[j],ham[j,k],A,Ab)
+                        exci_transfer_left($vec[j],$ham[j,k],$A,$Ab)
                     end
                 end,init=Init(+));
 
             if res == Init(+)
-                toret[k] = exci_transfer_left(vec[1],ham[1,k],A,Ab)
+                $toret[k] = exci_transfer_left($vec[1],$ham[1,k],$A,$Ab)
             else
-                toret[k] = res;
+                $toret[k] = res;
             end
         end
     end
@@ -86,19 +86,19 @@ function exci_transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab=A)
 
     @sync for j in 1:ham.odim
         @Threads.spawn begin
-            res = foldxt(+, 1:ham.odim |>
-                Filter(k->contains(ham,j,k)) |>
+            res = foldxt(+, 1:$ham.odim |>
+                Filter(k->contains($ham,j,k)) |>
                 Map() do k
-                    if isscal(ham,j,k)
-                        ham.Os[j,k]*exci_transfer_right(vec[k],A,Ab)
+                    if isscal($ham,j,k)
+                        $ham.Os[j,k]*exci_transfer_right($vec[k],$A,$Ab)
                     else
-                        exci_transfer_right(vec[k],ham[j,k],A,Ab)
+                        exci_transfer_right($vec[k],$ham[j,k],$A,$Ab)
                     end
                 end,init=Init(+));
             if res == Init(+)
-                toret[j] = exci_transfer_right(vec[1],ham[j,1],A,Ab)
+                $toret[j] = exci_transfer_right($vec[1],$ham[j,1],$A,$Ab)
             else
-                toret[j] = res
+                $toret[j] = res
             end
         end
     end

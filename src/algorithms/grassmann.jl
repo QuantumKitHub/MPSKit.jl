@@ -22,9 +22,10 @@ function fg(x::Tuple{T,<:Cache}) where T <: Union{<:InfiniteMPS,FiniteMPS}
     (state, envs) = x
     # The partial derivative with respect to AL, al_d, is the partial derivative with
     # respect to AC times CR'.
-    ac_d = [ac_prime(state.AC[v], v, state, envs) for v in 1:length(state)]
-    al_d = [d*c' for (d, c) in zip(ac_d, state.CR[1:end])]
-    g = [Grassmann.project(d, a) for (d, a) in zip(al_d, state.AL)]
+    g = map(enumerate(zip(state.AL,state.CR[1:end],state.AC))) do (i,(al,c,ac))
+        al_d = (ac_prime(ac,i,state,envs)*c')::typeof(ac)
+        Grassmann.project(al_d,al)
+    end
     f = real(sum(expectation_value(state, envs)))
     return f, g
 end
@@ -141,9 +142,14 @@ function precondition(x, g)
     (state, envs) = x
     #hacky workaround - what is eltype(state)?
     delta = min(real(one(eltype(state.AL[1]))), sqrt(inner(x, g, g)))
-    crinvs = [MPSKit.reginv(cr, delta) for cr in state.CR[1:end]]
-    g_prec = [Grassmann.project(d[]*(crinv'*crinv), a)
-              for (d, crinv, a) in zip(g, crinvs, state.AL)]
+    crinvs = MPSKit.reginv.(state.CR[1:end],delta)
+
+    g_prec = similar(g);
+
+    for i in 1:length(state)
+        g_prec[i] = Grassmann.project(g[i][]*crinvs[i]'*crinvs[i],state.AL[i])
+    end
+
     return g_prec
 end
 
