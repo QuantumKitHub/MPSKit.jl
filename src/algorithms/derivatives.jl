@@ -1,8 +1,60 @@
 # Given a state and it's environments, we can act on it
 
 """
+    Draft operators
+"""
+struct C_eff{L,R}
+    leftenv::L
+    rightenv::R
+end
+
+struct AC_eff{O,L,R}
+    o::O
+    leftenv::L
+    rightenv::R
+end
+
+
+struct AC2_eff{O,L,R}
+    o1::O
+    o2::O
+    leftenv::L
+    rightenv::R
+end
+
+Base.:*(h::Union{<:C_eff,<:AC_eff,<:AC2_eff},v) = h(v);
+
+(h::C_eff)(x) = c_prime(x,h.leftenv,h.rightenv);
+(h::AC_eff)(x) = ac_prime(x,h.o,h.leftenv,h.rightenv);
+(h::AC2_eff)(x) = ac2_prime(x,h.o1,h.o2,h.leftenv,h.rightenv);
+
+# draft operator constructors
+C_eff(pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache) =
+    C_eff(leftenv(cache,pos+1,mps),rightenv(cache,pos,mps))
+C_eff(row::Int,col::Int, mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv) =
+    C_eff(leftenv(envs,row,col+1,mps),rightenv(envs,row,col,mps))
+
+AC_eff(pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IDMRGEnv}) =
+    AC_eff(cache.opp[pos],leftenv(cache,pos,mps),rightenv(cache,pos,mps))
+AC_eff(row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv) =
+    AC_eff(envs.opp[row,col],leftenv(envs,row,col,mps),rightenv(envs,row,col,mps));
+
+AC2_eff(pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IDMRGEnv}) =
+    AC2_eff(cache.opp[pos],cache.opp[pos+1],leftenv(cache,pos,mps),rightenv(cache,pos+1,mps));
+AC2_eff(row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv) =
+    AC2_eff(envs.opp[row,col],envs.opp[row,col+1],leftenv(envs,row,col,mps),rightenv(envs,row,col+1,mps))
+
+#allow calling them with CartesianIndices
+C_eff(pos::CartesianIndex,mps,envs) = C_eff(Tuple(pos)...,mps,envs)
+AC_eff(pos::CartesianIndex,mps,envs) = AC_eff(Tuple(pos)...,mps,envs)
+AC2_eff(pos::CartesianIndex,mps,envs) = AC2_eff(Tuple(pos)...,mps,envs)
+
+
+
+"""
     One-site derivative
 """
+
 function ac_prime(x::MPSTensor,ham::SparseMPOSlice,leftenv,rightenv)
     local toret
 
@@ -76,31 +128,6 @@ end
 function c_prime(x, leftenv::MPSBondTensor,rightenv::MPSBondTensor)
     @plansor toret[-1;-2] := leftenv[-1;1]*x[1;2]*rightenv[2;-2]
 end
-
-#not breaking everything immediatly
-function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IDMRGEnv})
-    ac_prime(x,cache.opp[pos],leftenv(cache,pos,mps),rightenv(cache,pos,mps))
-end
-function ac_prime(x::MPSTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv)
-    ac_prime(x,envs.opp[row,col],leftenv(envs,row,col,mps),rightenv(envs,row,col,mps));
-end
-function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IDMRGEnv})
-    ac2_prime(x,cache.opp[pos],cache.opp[pos+1],leftenv(cache,pos,mps),rightenv(cache,pos+1,mps));
-end
-function ac2_prime(x::MPOTensor, row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv)
-    ac2_prime(x,envs.opp[row,col],envs.opp[row,col+1],leftenv(envs,row,col,mps),rightenv(envs,row,col+1,mps))
-end
-function c_prime(x::MPSBondTensor,pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache)
-    c_prime(x,leftenv(cache,pos+1,mps),rightenv(cache,pos,mps))
-end
-function c_prime(x::TensorMap, row::Int,col::Int, mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv)
-    c_prime(x,leftenv(envs,row,col+1,mps),rightenv(envs,row,col,mps))
-end
-
-#allow calling them with CartesianIndices
-ac_prime(x,pos::CartesianIndex,mps,envs) = ac_prime(x,Tuple(pos)...,mps,envs)
-ac2_prime(x,pos::CartesianIndex,mps,envs) = ac2_prime(x,Tuple(pos)...,mps,envs)
-c_prime(x,pos::CartesianIndex,mps,envs) = c_prime(x,Tuple(pos)...,mps,envs)
 
 #downproject for approximate
 c_proj(pos,below,envs::FinEnv) = c_prime(envs.above.CR[pos],leftenv(envs,pos+1,below),rightenv(envs,pos,below))
