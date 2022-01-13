@@ -9,7 +9,6 @@ module MPSKit
 
     #bells and whistles for mpses
     export InfiniteMPS,FiniteMPS,MPSComoving,PeriodicArray,MPSMultiline
-    export transfer_left,transfer_right
     export leftorth,rightorth,leftorth!,rightorth!,poison!,uniform_leftorth,uniform_rightorth
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
 
@@ -37,6 +36,10 @@ module MPSKit
     export periodic_boundary_conditions
     export exact_diagonalization
 
+    #transfer matrix
+    export TransferMatrix
+    export transfer_left,transfer_right
+
     @deprecate virtualspace left_virtualspace # there is a possible ambiguity when C isn't square, necessitating specifying left or right virtualspace
     @deprecate params(args...) environments(args...)
     @deprecate InfiniteMPO(args...) DenseMPO(args...)
@@ -62,7 +65,6 @@ module MPSKit
 
     #maybe we should introduce an abstract state type
     include("states/abstractmps.jl")
-    include("states/transfer.jl") # mps transfer matrices
     include("states/infinitemps.jl")
     include("states/multiline.jl")
     include("states/finitemps.jl")
@@ -77,6 +79,8 @@ module MPSKit
     include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
     include("operators/mpomultiline.jl")
 
+    include("transfermatrix/transfermatrix.jl")
+    include("transfermatrix/transfer.jl")
     abstract type Cache end #cache "manages" environments
 
     include("environments/FinEnv.jl")
