@@ -7,7 +7,7 @@ function fidelity_susceptibility(state::Union{FiniteMPS,InfiniteMPS},H₀::T,Vs:
 
         Tos = LeftGaugedQP(rand,state)
         for (i,ac) in enumerate(state.AC)
-            temp = ac_prime(ac,i,state,venvs);
+            temp = AC_eff(i,state,envs)*ac;
             help = Tensor(ones,utilleg(Tos))
             @plansor Tos[i][-1 -2;-3 -4]:= temp[-1 -2;-4]*help[-3]
         end

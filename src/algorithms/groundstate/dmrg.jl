@@ -17,9 +17,8 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::Dmrg,envs
         delta=0.0
 
         for pos = [1:(length(state)-1);length(state):-1:2]
-            (eigvals,vecs) = @closure eigsolve(state.AC[pos],1,:SR,Lanczos()) do x
-                ac_prime(x,pos,state,envs)
-            end
+            h = AC_eff(pos,state,envs);
+            (eigvals,vecs) = eigsolve(h,state.AC[pos],1,:SR,Lanczos())
             delta = max(delta,calc_galerkin(state,pos,envs))
 
             state.AC[pos] = vecs[1]
@@ -59,10 +58,11 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::Dmrg2,env
         #left to right sweep
         for pos= 1:(length(state)-1)
             @plansor ac2[-1 -2; -3 -4]:=state.AC[pos][-1 -2;1]*state.AR[pos+1][1 -4;-3]
-            (eigvals,vecs) = @closure eigsolve(ac2,1,:SR,ealg) do x
-                ac2_prime(x,pos,state,envs)
-            end
-            newA2center = vecs[1]
+
+            h = AC2_eff(pos,state,envs)
+
+            (eigvals,vecs) = eigsolve(h,ac2,1,:SR,ealg)
+            newA2center = first(vecs);
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
             normalize!(c);
@@ -76,10 +76,11 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::Dmrg2,env
 
         for pos = length(state)-2:-1:1
             @plansor ac2[-1 -2; -3 -4]:=state.AL[pos][-1 -2;1]*state.AC[pos+1][1 -4;-3]
-            (eigvals,vecs) = @closure eigsolve(ac2,1,:SR,ealg) do x
-                ac2_prime(x,pos,state,envs)
-            end
-            newA2center = vecs[1]
+
+            h = AC2_eff(pos,state,envs)
+
+            (eigvals,vecs) = eigsolve(h,ac2,1,:SR,ealg)
+            newA2center = first(vecs)
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
             normalize!(c);

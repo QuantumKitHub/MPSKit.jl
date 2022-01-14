@@ -47,15 +47,15 @@ end
         @plansor difference[-1 -2;-3] := ts.AL[i][-1 -2;1]*ts.CR[i][1;-3]-ts.CR[i-1][-1;1]*ts.AR[i][1 -2;-3];
         @test norm(difference,Inf) < tol*10;
 
-        @test transfer_left(l_LL(ts,i),ts.AL[i],ts.AL[i]) ≈ l_LL(ts,i+1)
-        @test transfer_left(l_LR(ts,i),ts.AL[i],ts.AR[i]) ≈ l_LR(ts,i+1)
-        @test transfer_left(l_RL(ts,i),ts.AR[i],ts.AL[i]) ≈ l_RL(ts,i+1)
-        @test transfer_left(l_RR(ts,i),ts.AR[i],ts.AR[i]) ≈ l_RR(ts,i+1)
+        @test l_LL(ts,i)*TransferMatrix(ts.AL[i],ts.AL[i]) ≈ l_LL(ts,i+1)
+        @test l_LR(ts,i)*TransferMatrix(ts.AL[i],ts.AR[i]) ≈ l_LR(ts,i+1)
+        @test l_RL(ts,i)*TransferMatrix(ts.AR[i],ts.AL[i]) ≈ l_RL(ts,i+1)
+        @test l_RR(ts,i)*TransferMatrix(ts.AR[i],ts.AR[i]) ≈ l_RR(ts,i+1)
 
-        @test transfer_right(r_LL(ts,i),ts.AL[i],ts.AL[i]) ≈ r_LL(ts,i+1)
-        @test transfer_right(r_LR(ts,i),ts.AL[i],ts.AR[i]) ≈ r_LR(ts,i+1)
-        @test transfer_right(r_RL(ts,i),ts.AR[i],ts.AL[i]) ≈ r_RL(ts,i+1)
-        @test transfer_right(r_RR(ts,i),ts.AR[i],ts.AR[i]) ≈ r_RR(ts,i+1)
+        @test TransferMatrix(ts.AL[i],ts.AL[i])*r_LL(ts,i) ≈ r_LL(ts,i+1)
+        @test TransferMatrix(ts.AL[i],ts.AR[i])*r_LR(ts,i) ≈ r_LR(ts,i+1)
+        @test TransferMatrix(ts.AR[i],ts.AL[i])*r_RL(ts,i) ≈ r_RL(ts,i+1)
+        @test TransferMatrix(ts.AR[i],ts.AR[i])*r_RR(ts,i) ≈ r_RR(ts,i+1)
     end
 end
 
@@ -71,15 +71,15 @@ end
         @plansor difference[-1 -2;-3] := ts.AL[i,j][-1 -2;1]*ts.CR[i,j][1;-3]-ts.CR[i,j-1][-1;1]*ts.AR[i,j][1 -2;-3];
         @test norm(difference,Inf) < tol*10;
 
-        @test transfer_left(l_LL(ts,i,j),ts.AL[i,j],ts.AL[i,j]) ≈ l_LL(ts,i,j+1)
-        @test transfer_left(l_LR(ts,i,j),ts.AL[i,j],ts.AR[i,j]) ≈ l_LR(ts,i,j+1)
-        @test transfer_left(l_RL(ts,i,j),ts.AR[i,j],ts.AL[i,j]) ≈ l_RL(ts,i,j+1)
-        @test transfer_left(l_RR(ts,i,j),ts.AR[i,j],ts.AR[i,j]) ≈ l_RR(ts,i,j+1)
+        @test l_LL(ts,i,j)*TransferMatrix(ts.AL[i,j],ts.AL[i,j]) ≈ l_LL(ts,i,j+1)
+        @test l_LR(ts,i,j)*TransferMatrix(ts.AL[i,j],ts.AR[i,j]) ≈ l_LR(ts,i,j+1)
+        @test l_RL(ts,i,j)*TransferMatrix(ts.AR[i,j],ts.AL[i,j]) ≈ l_RL(ts,i,j+1)
+        @test l_RR(ts,i,j)*TransferMatrix(ts.AR[i,j],ts.AR[i,j]) ≈ l_RR(ts,i,j+1)
 
-        @test transfer_right(r_LL(ts,i,j),ts.AL[i,j],ts.AL[i,j]) ≈ r_LL(ts,i,j+1)
-        @test transfer_right(r_LR(ts,i,j),ts.AL[i,j],ts.AR[i,j]) ≈ r_LR(ts,i,j+1)
-        @test transfer_right(r_RL(ts,i,j),ts.AR[i,j],ts.AL[i,j]) ≈ r_RL(ts,i,j+1)
-        @test transfer_right(r_RR(ts,i,j),ts.AR[i,j],ts.AR[i,j]) ≈ r_RR(ts,i,j+1)
+        @test TransferMatrix(ts.AL[i,j],ts.AL[i,j])*r_LL(ts,i,j) ≈ r_LL(ts,i,j+1)
+        @test TransferMatrix(ts.AL[i,j],ts.AR[i,j])*r_LR(ts,i,j) ≈ r_LR(ts,i,j+1)
+        @test TransferMatrix(ts.AR[i,j],ts.AL[i,j])*r_RL(ts,i,j) ≈ r_RL(ts,i,j+1)
+        @test TransferMatrix(ts.AR[i,j],ts.AR[i,j])*r_RR(ts,i,j) ≈ r_RR(ts,i,j+1)
     end
 end
 
@@ -591,7 +591,7 @@ end
     #the groundstate should be translation invariant:
     ut = Tensor(ones,ℂ^1);
     @tensor leftstart[-1 -2;-3] := l_LL(gs)[-1,-3]*conj(ut[-2]);
-    v = transfer_left(leftstart,translation[:],[gs.AC[1];gs.AR[2:end]],[gs.AC[1];gs.AR[2:end]])
+    v = leftstart*TransferMatrix([gs.AC[1];gs.AR[2:end]],translation[:],[gs.AC[1];gs.AR[2:end]])
     expval = @tensor v[1,2,3]*r_RR(gs)[3,1]*ut[2]
 
     @test expval ≈ 1 atol=1e-5

@@ -36,8 +36,8 @@ end
 
 
 function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline)
-    sameDspace = reduce((prev,i) -> prev && _firstspace(envs.dependency.CR[i...]) == _firstspace(nstate.CR[i...]),
-        product(1:size(nstate,1),1:size(nstate,2)),init=true);
+    sameDspace = reduce(&,_firstspace.(envs.dependency.CR) .== _firstspace.(nstate.CR))
+
 
     above = isnothing(envs.above) ? nstate : envs.above;
     init = collect(zip(envs.lw[:,1],envs.rw[:,end]))
@@ -102,16 +102,18 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
             shouldpack = L0 isa Vector;
             @sync begin
                 @Threads.spawn begin
+                    E_LL = TransferMatrix($above.AL[cr,:],$mpo[cr,:],$below.AL[cr+1,:])
                     (_,Ls,convhist) = eigsolve(shouldpack ? RecursiveVec($L0) : $L0,1,:LM,$solver) do x
-                        y = transfer_left(shouldpack ? x.vecs : x,$mpo[cr,:],$above.AL[cr,:],$below.AL[cr+1,:])
+                        y = E_LL*(shouldpack ? x.vecs : x)
                         shouldpack ? RecursiveVec(y) : y
                     end
                     convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
                     L0 = shouldpack ? Ls[1][:] : Ls[1];
                 end
                 @Threads.spawn begin
+                    E_RR = TransferMatrix($above.AR[cr,:],$mpo[cr,:],$below.AR[cr+1,:])
                     (_,Rs,convhist) = eigsolve(shouldpack ? RecursiveVec($R0) : $R0,1,:LM,$solver) do x
-                        y = transfer_right(shouldpack ? x.vecs : x,$mpo[cr,:],$above.AR[cr,:],$below.AR[cr+1,:])
+                        y = E_RR*(shouldpack ? x.vecs : x)
                         shouldpack ? RecursiveVec(y) : y
                     end
                     convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
@@ -122,19 +124,19 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
 
             $lefties[cr,1] = L0;
             for loc in 2:numcols
-                $lefties[cr,loc] = transfer_left($lefties[cr,loc-1],$mpo[cr,loc-1],$above.AL[cr,loc-1],$below.AL[cr+1,loc-1])
+                $lefties[cr,loc] = $lefties[cr,loc-1]*TransferMatrix($above.AL[cr,loc-1],$mpo[cr,loc-1],$below.AL[cr+1,loc-1])
             end
 
 
-            renormfact::eltype(T) = dot($below.CR[cr+1,0],c_prime($above.CR[cr,0],L0,R0))
+            renormfact::eltype(T) = dot($below.CR[cr+1,0],C_eff(L0,R0)*$above.CR[cr,0])
 
             $righties[cr,end] = R0/sqrt(renormfact);
             $lefties[cr,1] /=sqrt(renormfact);
 
             for loc in numcols-1:-1:1
-                $righties[cr,loc] = transfer_right($righties[cr,loc+1],$mpo[cr,loc+1],$above.AR[cr,loc+1],$below.AR[cr+1,loc+1])
+                $righties[cr,loc] = TransferMatrix($above.AR[cr,loc+1],$mpo[cr,loc+1],$below.AR[cr+1,loc+1])*$righties[cr,loc+1]
 
-                renormfact = dot($below.CR[cr+1,loc],c_prime($above.CR[cr,loc],$lefties[cr,loc+1],$righties[cr,loc]))
+                renormfact = dot($below.CR[cr+1,loc],C_eff($lefties[cr,loc+1],$righties[cr,loc])*$above.CR[cr,loc])
                 $righties[cr,loc]/=sqrt(renormfact)
                 $lefties[cr,loc+1]/=sqrt(renormfact)
             end

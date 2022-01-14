@@ -36,7 +36,7 @@ end
 
 
 function recalculate!(envs::MPOHamInfEnv, nstate)
-    sameDspace = reduce((prev,i) -> prev && _lastspace(envs.lw[i,1]) == _firstspace(nstate.CR[i])',1:length(nstate),init=true);
+    sameDspace = reduce(&,_lastspace.(envs.lw[:,1]) .== _firstspace.(nstate.CR))
 
     if !sameDspace
         (envs.lw,envs.rw) = gen_lw_rw(nstate,envs.opp)
@@ -72,10 +72,8 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
             #subtract fixpoints
             @plansor tosvec[-1 -2;-3] := fixpoints[1,i][-1 -2;-3]-fixpoints[1,i][1 -2;2]*r_LL(st)[2;1]*l_LL(st)[-1;-3]
 
-            (fixpoints[1,i],convhist) = @closure linsolve(tosvec,prev,solver) do x
-                x-transfer_left(x,st.AL,st.AL,rvec=r_LL(st),lvec=l_LL(st))
-            end
-
+            tm = TransferMatrix(st.AL,st.AL,lvec=r_LL(st),rvec=l_LL(st));
+            (fixpoints[1,i],convhist) = linsolve(flip(tm),tosvec,prev,solver,1,-1)
             convhist.converged==0 && @info "calclw failed to converge $(convhist.normres)"
 
             (len>1) && left_cyclethrough!(i,fixpoints,ham,st)
@@ -86,13 +84,11 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
             end
 
         else
-            if reduce((a,b)->a&&b, [contains(ham[x],i,i) for x in 1:len])
+            if reduce(&,contains.(ham.data,i,i))
 
                 diag = map(b->b[i,i],ham[:]);
-                (fixpoints[1,i],convhist) = @closure linsolve(fixpoints[1,i],prev,solver) do x
-                    x-transfer_left(x,diag,st.AL,st.AL)
-                end
-
+                tm = TransferMatrix(st.AL,diag,st.AL);
+                (fixpoints[1,i],convhist) = linsolve(flip(tm),fixpoints[1,i],prev,solver,1,-1)
                 convhist.converged==0 && @info "calclw failed to converge $(convhist.normres)"
 
             end
@@ -124,9 +120,8 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
             #subtract fixpoints
             @plansor tosvec[-1 -2;-3]:=fixpoints[end,i][-1 -2;-3]-fixpoints[end,i][1 -2;2]*l_RR(st)[2;1]*r_RR(st)[-1;-3]
 
-            (fixpoints[end,i],convhist) = @closure linsolve(tosvec,prev,solver) do x
-                x-transfer_right(x,st.AR,st.AR,lvec=l_RR(st),rvec=r_RR(st))
-            end
+            tm = TransferMatrix(st.AR,st.AR,lvec=l_RR(st),rvec=r_RR(st));
+            (fixpoints[end,i],convhist) = linsolve(tm,tosvec,prev,solver,1,-1)
             convhist.converged==0 && @info "calcrw failed to converge $(convhist.normres)"
 
             len>1 && right_cyclethrough!(i,fixpoints,ham,st)
@@ -136,12 +131,11 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
                 @plansor fixpoints[potatoe,i][-1 -2;-3]-=fixpoints[potatoe,i][1 -2;2]*l_RR(st,potatoe+1)[2;1]*r_RR(st,potatoe)[-1;-3]
             end
         else
-            if reduce((a,b)->a&&b, [contains(ham[x],i,i) for x in 1:len])
+            if reduce(&, contains.(ham.data,i,i))
 
                 diag = map(b->b[i,i],ham[:]);
-                (fixpoints[end,i],convhist) = @closure linsolve(fixpoints[end,i],prev,solver) do x
-                    x-transfer_right(x,diag,st.AR,st.AR)
-                end
+                tm = TransferMatrix(st.AR,diag,st.AR);
+                (fixpoints[end,i],convhist) = linsolve(tm,fixpoints[end,i],prev,solver,1,-1)
                 convhist.converged==0 && @info "calcrw failed to converge $(convhist.normres)"
 
             end
@@ -161,9 +155,9 @@ function left_cyclethrough!(index::Int,fp,ham,st) #see code for explanation
             contains(ham[i],j,index) || continue
 
             if isscal(ham[i],j,index)
-                fp[i+1,index] += transfer_left(fp[i,j],st.AL[i],st.AL[i])*ham.Os[i,j,index]
+                fp[i+1,index] += fp[i,j]*TransferMatrix(st.AL[i],st.AL[i])*ham.Os[i,j,index]
             else
-                fp[i+1,index] += transfer_left(fp[i,j],ham[i][j,index],st.AL[i],st.AL[i])
+                fp[i+1,index] += fp[i,j]*TransferMatrix(st.AL[i],ham[i][j,index],st.AL[i])
             end
         end
     end
@@ -177,9 +171,9 @@ function right_cyclethrough!(index,fp,ham,st) #see code for explanation
             contains(ham[i],index,j) || continue
 
             if isscal(ham[i],index,j)
-                fp[i-1,index] += transfer_right(fp[i,j], st.AR[i], st.AR[i]) * ham.Os[i,index,j]
+                fp[i-1,index] += TransferMatrix(st.AR[i], st.AR[i]) * fp[i,j] * ham.Os[i,index,j]
             else
-                fp[i-1,index] += transfer_right(fp[i,j], ham[i][index,j], st.AR[i], st.AR[i])
+                fp[i-1,index] += TransferMatrix(st.AR[i], ham[i][index,j], st.AR[i]) * fp[i,j]
             end
         end
     end

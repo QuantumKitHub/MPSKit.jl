@@ -69,24 +69,24 @@ function Base.convert(::Type{RightGaugedQP},input::LeftGaugedQP{S}) where S<:Inf
     #construct environments
     rBs = [@plansor t[-1;-2 -3] := input[len][-1 2;-2 3]*conj(input.right_gs.AR[len][-3 2;3])*exp(1im*input.momentum)]
     for i in len-1:-1:1
-        t = exci_transfer_right(rBs[end],input.left_gs.AL[i],input.right_gs.AR[i]);
+        t = TransferMatrix(input.left_gs.AL[i],input.right_gs.AR[i])*rBs[end];
         @plansor t[-1;-2 -3] += input[i][-1 2;-2 3]*conj(input.right_gs.AR[i][-3 2;3])
         push!(rBs,exp(1im*input.momentum)*t);
     end
     rBs = reverse(rBs);
 
-    (rBE,convhist) = @closure linsolve(rBs[1],rBs[1],GMRES()) do x
-        y = transfer_right(x,input.left_gs.AL,input.right_gs.AR)*exp(1im*input.momentum*len)
-        if input.trivial
-            @plansor y[-1;-2 -3]-=y[1;-2 2]*l_LR(input.right_gs)[2;1]*r_LR(input.right_gs)[-1;-3]
-        end
-        x-y
+    if input.trivial
+        tm = TransferMatrix(input.left_gs.AL,input.right_gs.AR,rvec = r_LR(input.right_gs),lvec=l_LR(input.right_gs))
+    else
+        tm = TransferMatrix(input.left_gs.AL,input.right_gs.AR);
     end
+
+    (rBE,convhist) = linsolve(tm,rBs[1],rBs[1],GMRES(),1,-exp(1im*input.momentum*len))
     convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
 
     rBs[1] = rBE;
     for i in len:-1:2
-        rBE = transfer_right(rBE,input.left_gs.AL[i],input.right_gs.AR[i])*exp(1im*input.momentum);
+        rBE = TransferMatrix(input.left_gs.AL[i],input.right_gs.AR[i])*rBE*exp(1im*input.momentum);
         rBs[i] += rBE;
     end
 
@@ -105,23 +105,23 @@ function Base.convert(::Type{LeftGaugedQP},input::RightGaugedQP{S}) where S<:Inf
 
     lBs = [@plansor t[-1;-2 -3] := input[1][1 2;-2 -3]*conj(input.left_gs.AL[1][1 2;-1])*exp(-1im*input.momentum)];
     for i in 2:len
-        t = exci_transfer_left(lBs[end],input.right_gs.AR[i],input.left_gs.AL[i]);
+        t = lBs[end]*TransferMatrix(input.right_gs.AR[i],input.left_gs.AL[i])
         @plansor t[-1;-2 -3] += input[i][1 2;-2 -3]*conj(input.left_gs.AL[i][1 2;-1])
         push!(lBs,t*exp(-1im*input.momentum));
     end
 
-    (lBE,convhist) = @closure linsolve(lBs[end],lBs[end],GMRES()) do x
-        y = transfer_left(x,input.right_gs.AR,input.left_gs.AL)*exp(-1im*input.momentum*len)
-        if input.trivial
-            @plansor y[-1;-2 -3] -= y[1;-2 2]*r_RL(input.right_gs)[2;1]*l_RL(input.right_gs)[-1;-3]
-        end
-        x-y
+    if input.trivial
+        tm = TransferMatrix(input.right_gs.AR,input.left_gs.AL,rvec=r_RL(input.right_gs),lvec=l_RL(input.right_gs))
+    else
+        tm = TransferMatrix(input.right_gs.AR,input.left_gs.AL)
     end
+
+    (lBE,convhist) = linsolve(flip(tm),lBs[end],lBs[end],GMRES(),1,-exp(-1im*input.momentum*len))
     convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
 
     lBs[end] = lBE;
     for i in 1:len-1
-        lBE = transfer_left(lBE,input.right_gs.AR[i],input.left_gs.AL[i])*exp(-1im*input.momentum)
+        lBE = lBE*TransferMatrix(input.right_gs.AR[i],input.left_gs.AL[i])*exp(-1im*input.momentum)
         lBs[i]+=lBE;
     end
 

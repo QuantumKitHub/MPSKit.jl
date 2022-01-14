@@ -87,7 +87,7 @@ function rightenv(ca::FinEnv,ind,state)
         #we need to recalculate
         for j = a:-1:ind+1
             above = isnothing(ca.above) ? state.AR[j] : ca.above.AR[j];
-            ca.rightenvs[j] = transfer_right(ca.rightenvs[j+1],ca.opp[j],above,state.AR[j])
+            ca.rightenvs[j] = TransferMatrix(above,ca.opp[j],state.AR[j])*ca.rightenvs[j+1]
             ca.rdependencies[j] = state.AR[j]
         end
     end
@@ -102,7 +102,7 @@ function leftenv(ca::FinEnv,ind,state)
         #we need to recalculate
         for j = a:ind-1
             above = isnothing(ca.above) ? state.AL[j] : ca.above.AL[j];
-            ca.leftenvs[j+1] = transfer_left(ca.leftenvs[j],ca.opp[j],above,state.AL[j])
+            ca.leftenvs[j+1] = ca.leftenvs[j]*TransferMatrix(above,ca.opp[j],state.AL[j])
             ca.ldependencies[j] = state.AL[j]
         end
     end

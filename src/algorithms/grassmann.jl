@@ -23,7 +23,8 @@ function fg(x::Tuple{T,<:Cache}) where T <: Union{<:InfiniteMPS,FiniteMPS}
     # The partial derivative with respect to AL, al_d, is the partial derivative with
     # respect to AC times CR'.
     g = map(enumerate(zip(state.AL,state.CR[1:end],state.AC))) do (i,(al,c,ac))
-        al_d = (ac_prime(ac,i,state,envs)*c')::typeof(ac)
+        h_eff = MPSKit.AC_eff(i,state,envs);
+        al_d = (h_eff*ac*c')::typeof(ac)
         Grassmann.project(al_d,al)
     end
     f = real(sum(expectation_value(state, envs)))
@@ -35,7 +36,7 @@ function fg(x::Tuple{<:MPSMultiline,<:Cache})
 
     # The partial derivative with respect to AL, al_d, is the partial derivative with
     # respect to AC times CR'.
-    ac_d = [ac_prime(state.AC[v], v, state, envs) for v in CartesianIndices(state.AC)]
+    ac_d = [MPSKit.AC_eff(v,state,envs)*state.AC[v] for v in CartesianIndices(state.AC)]
     al_d = [d*c' for (d, c) in zip(ac_d, state.CR)]
     g = [Grassmann.project(d, a) for (d, a) in zip(al_d, state.AL)]
 

@@ -44,23 +44,41 @@ function environments(state,ham,weight,projectout::Vector)
     FinExEnv(weight,overlaps,hamenv)
 end
 
+leftenv(ca::FinExEnv,pos::Int,st::Union{FiniteMPS,MPSComoving}) =
+    (leftenv(ca.hamenv,pos,st),[leftenv(i,pos,st) for i in 1:length(ca.overlaps)]);
 
-function ac_prime(x::MPSTensor,pos::Int,mps::Union{FiniteMPS,MPSComoving},cache::FinExEnv)
-    y = ac_prime(x,pos,mps,cache.hamenv)
+rightenv(ca::FinExEnv,pos::Int,st::Union{FiniteMPS,MPSComoving}) =
+    (rightenv(ca.hamenv,pos,st),[rightenv(i,pos,st) for i in 1:length(ca.overlaps)]);
 
-    for i in cache.overlaps
-        @plansor v[-1;-2 -3 -4] := leftenv(i,pos,mps)[4;-1 -2 5]*i.above.AC[pos][5 2;1]*rightenv(i,pos,mps)[1;-3 -4 3]*conj(x[4 2;3])
-        @plansor y[-1 -2;-3] += conj(v[1;2 5 6])*(cache.weight*leftenv(i,pos,mps))[-1;1 2 4]*i.above.AC[pos][4 -2;3]*rightenv(i,pos,mps)[3;5 6 -3]
+
+function ac_prime(x::MPSTensor,opp,leftenv,rightenv)
+    lh = first(leftenv);
+    rh = first(rightenv);
+
+    y = AC_eff(pos,opp,lh,rh)*x
+
+    for (ind,i) in enumerate(cache.overlaps)
+        le = leftenv[2][ind];
+        re = rightenv[2][ind];
+
+        @plansor v[-1;-2 -3 -4] := le[4;-1 -2 5]*i.above.AC[pos][5 2;1]*re[1;-3 -4 3]*conj(x[4 2;3])
+        @plansor y[-1 -2;-3] += conj(v[1;2 5 6])*(cache.weight*le)[-1;1 2 4]*i.above.AC[pos][4 -2;3]*re[3;5 6 -3]
     end
 
     y
 end
-function ac2_prime(x::MPOTensor,pos::Int,mps::Union{FiniteMPS,MPSComoving},cache::FinExEnv)
-    y = ac2_prime(x,pos,mps,cache.hamenv)
+function ac2_prime(x::MPOTensor,opp,leftenv,rightenv)
+    lh = first(leftenv);
+    rh = first(rightenv);
 
-    for i in cache.overlaps
-        @plansor v[-1;-2 -3 -4] := leftenv(i,pos,mps)[6;-1 -2 7]*i.above.AC[pos][7 4;5]*i.above.AR[pos+1][5 2;1]*rightenv(i,pos+1,mps)[1;-3 -4 3]*conj(x[6 4;3 2])
-        @plansor y[-1 -2;-3 -4] += conj(v[2;3 5 6])*(cache.weight*leftenv(i,pos,mps))[-1;2 3 4]*i.above.AC[pos][4 -2;7]*i.above.AR[pos+1][7 -4;1]*rightenv(i,pos+1,mps)[1;5 6 -3]
+    y = AC2_eff(pos,opp,lh,rh)*x
+
+    for (ind,i) in enumerate(cache.overlaps)
+        le = leftenv[2][ind];
+        re = rightenv[2][ind];
+
+        @plansor v[-1;-2 -3 -4] := le[6;-1 -2 7]*i.above.AC[pos][7 4;5]*i.above.AR[pos+1][5 2;1]*re[1;-3 -4 3]*conj(x[6 4;3 2])
+        @plansor y[-1 -2;-3 -4] += conj(v[2;3 5 6])*(cache.weight*le)[-1;2 3 4]*i.above.AC[pos][4 -2;7]*i.above.AR[pos+1][7 -4;1]*re[1;5 6 -3]
     end
 
     y

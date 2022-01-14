@@ -14,8 +14,8 @@ struct ProductTransferMatrix{T<:AbstractTransferMatrix} <: AbstractTransferMatri
 end
 
 # a subset of possible operations, but certainly not all of them
-Base.:*(prod::ProductTransferMatrix{T},tm::T) where T = ProductTransferMatrix(vcat(prod.tms,tm));
-Base.:*(tm::T,prod::ProductTransferMatrix{T}) where T = ProductTransferMatrix(vcat(prod.tms,tm));
+Base.:*(prod::ProductTransferMatrix{T},tm::T) where T <:AbstractTransferMatrix = ProductTransferMatrix(vcat(prod.tms,tm));
+Base.:*(tm::T,prod::ProductTransferMatrix{T}) where T <:AbstractTransferMatrix = ProductTransferMatrix(vcat(prod.tms,tm));
 Base.:*(tm1::T,tm2::T) where T <: SingleTransferMatrix = ProductTransferMatrix([tm1,tm2]);
 
 # regularized transfer matrices; where we project out after every full application
@@ -31,16 +31,11 @@ TensorKit.flip(tm::ProductTransferMatrix) = ProductTransferMatrix(flip.(reverse(
 TensorKit.flip(tm::RegTransferMatrix) = RegTransferMatrix(flip(tm.tm),tm.rvec,tm.lvec);
 
 # TransferMatrix acting on a vector using *
-Base.:*(tm::ProductTransferMatrix,vec) = foldr(*,tm.tms,init=vec);
-Base.:*(vec,tm::ProductTransferMatrix) = foldl(*,tm.tms,init=vec);
-
-Base.:*(tm::SingleTransferMatrix,vec) = tm(vec);
-Base.:*(vec,tm::SingleTransferMatrix) = flip(tm)*vec;
-
-Base.:*(tm::RegTransferMatrix,vec) = tm(vec);
-Base.:*(vec,tm::RegTransferMatrix) = flip(tm)*vec;
+Base.:*(tm::AbstractTransferMatrix,vec) = tm(vec);
+Base.:*(vec,tm::AbstractTransferMatrix) = flip(tm)(vec);
 
 # TransferMatrix acting as a function
+(d::ProductTransferMatrix)(vec) = foldr(*,d.tms,init=vec);
 (d::SingleTransferMatrix)(vec) = d.isflipped  ? transfer_left(vec,d.middle,d.above,d.below) : transfer_right(vec,d.middle,d.above,d.below);
 function (d::RegTransferMatrix)(vec)
     v = d.tm*vec;
@@ -49,6 +44,8 @@ function (d::RegTransferMatrix)(vec)
         @plansor v[-1;-2]-=d.lvec[1;2]*v[2;1]*d.rvec[-1;-2]
     elseif v isa MPSTensor #utiity leg in the middle
         @plansor v[-1 -2;-3]-=d.lvec[1;2]*v[2 -2;1]*d.rvec[-1;-3]
+    elseif typeof(v) <: AbstractTensorMap{S,1,2} where S
+        @plansor v[-1;-2 -3]-=d.lvec[1;2]*v[2;-2 1]*d.rvec[-1;-3]
     else
         @assert false
     end
