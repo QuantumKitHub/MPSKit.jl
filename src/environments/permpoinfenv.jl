@@ -104,7 +104,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
                 @Threads.spawn begin
                     E_LL = TransferMatrix($above.AL[cr,:],$mpo[cr,:],$below.AL[cr+1,:])
                     (_,Ls,convhist) = eigsolve(shouldpack ? RecursiveVec($L0) : $L0,1,:LM,$solver) do x
-                        y = E_LL*(shouldpack ? x.vecs : x)
+                        y = (shouldpack ? x.vecs : x)*E_LL
                         shouldpack ? RecursiveVec(y) : y
                     end
                     convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"

@@ -10,7 +10,7 @@ function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solv
         #this operation can be sped up by at least a factor 2;  found mostly consists of zeros
         start = found
         for k in 1:len
-            start = start*TransferMatrix(exci.right_gs.AR[k],ham[k],exci.left_gs.AL[k])*exp(conj(1im*mom))
+            start = start*TransferMatrix(exci.right_gs.AR[k],ham[k],exci.left_gs.AL[k])*exp(-1im*mom)
 
             exci.trivial && for l in ids[2:end-1]
                 @plansor start[l][-1 -2;-3 -4]-=start[l][1 4;-3 2]*r_RL(exci.right_gs,k)[2;3]*τ[3 4;5 1]*l_RL(exci.right_gs,k+1)[-1;6]*τ[5 6;-4 -2]
@@ -22,14 +22,14 @@ function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solv
         if reduce((a,b)->a&&contains(ham[b],i,i),1:len,init=true)
             tm = TransferMatrix(exci.right_gs.AR,[ham[b][i,i] for b in 1:len],exci.left_gs.AL)
 
-            (found[i],convhist) = linsolve(lBs[i]+start[i],lBs[i]+start[i],solver,1,-exp(-1im*mom)) do y
+            (found[i],convhist) = linsolve(lBs[i]+start[i],lBs[i]+start[i],solver,1,-exp(-1im*mom*len)) do y
                 x = y*tm
 
                 if exci.trivial && i in ids
                     @plansor x[-1 -2;-3 -4] -= x[3 4;-3 5]*r_RL(exci.left_gs)[5;2]*τ[2 4;6 3]*l_RL(exci.left_gs)[-1;1]*τ[6 1;-4 -2]
                 end
 
-                return x
+                x
             end
             convhist.converged<1 && @info "left $(i) excitation inversion failed normres $(convhist.normres)"
 
@@ -58,14 +58,14 @@ function right_excitation_transfer_system(rBs, ham, exci; mom=exci.momentum, sol
 
         if reduce((a,b)->a&&contains(ham[b],i,i),1:len,init=true)
             tm = TransferMatrix(exci.left_gs.AL,[ham[b][i,i] for b in 1:len],exci.right_gs.AR);
-            (found[i],convhist) = linsolve(rBs[i]+start[i],rBs[i]+start[i],solver,1,-exp(1im*mom)) do y
+            (found[i],convhist) = linsolve(rBs[i]+start[i],rBs[i]+start[i],solver,1,-exp(1im*mom*len)) do y
                 x = tm*y
-                
+
                 if exci.trivial && i in ids
                     @plansor x[-1 -2;-3 -4] -= τ[6 2;3 4]*x[3 4;-3 5]*l_LR(exci.right_gs)[5;2]*r_LR(exci.right_gs)[-1;1]*τ[-2 -4;1 6]
                 end
 
-                return y-x
+                x
             end
             convhist.converged<1 && @info "right $(i) excitation inversion failed normres $(convhist.normres)"
 

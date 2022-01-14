@@ -26,7 +26,8 @@ excitations(hamiltonian, alg::FiniteExcited,gs::FiniteMPS;kwargs...) = excitatio
 #=
 FinExEnv == FinEnv(state,ham) + weight * sum_i <state|psi_i> <psi_i|state>
 =#
-struct FinExEnv{A,B} <:Cache
+struct FinExEnv{A,B,O} <:Cache
+    opp::O
     weight::Float64
     overlaps::Vector{A}
     hamenv::B
@@ -41,25 +42,37 @@ function environments(state,ham,weight,projectout::Vector)
         environments(state,fill(nothing,length(st)),st,leftstart,rightstart)
     end
 
-    FinExEnv(weight,overlaps,hamenv)
+    FinExEnv(ham,weight,overlaps,hamenv)
 end
 
-leftenv(ca::FinExEnv,pos::Int,st::Union{FiniteMPS,MPSComoving}) =
-    (leftenv(ca.hamenv,pos,st),[leftenv(i,pos,st) for i in 1:length(ca.overlaps)]);
+struct FinEx_AC_eff{S,E}
+    pos::Int
+    state::S
+    envs::E
+end
 
-rightenv(ca::FinExEnv,pos::Int,st::Union{FiniteMPS,MPSComoving}) =
-    (rightenv(ca.hamenv,pos,st),[rightenv(i,pos,st) for i in 1:length(ca.overlaps)]);
+
+struct FinEx_AC2_eff{S,E}
+    pos::Int
+    state::S
+    envs::E
+end
+
+AC_eff(pos::Int,mps::Union{FiniteMPS,MPSComoving},cache::FinExEnv) = FinEx_AC_eff(pos,mps,cache)
+AC2_eff(pos::Int,mps::Union{FiniteMPS,MPSComoving},cache::FinExEnv) = FinEx_AC2_eff(pos,mps,cache)
 
 
-function ac_prime(x::MPSTensor,opp,leftenv,rightenv)
-    lh = first(leftenv);
-    rh = first(rightenv);
+Base.:*(h::Union{<:FinEx_AC_eff,<:FinEx_AC2_eff},v) = h(v);
 
-    y = AC_eff(pos,opp,lh,rh)*x
+function (h::FinEx_AC_eff)(x)
+    cache = h.envs;
+    pos = h.pos;
+    state = h.state;
+    y = AC_eff(pos,state,cache.hamenv)*x
 
     for (ind,i) in enumerate(cache.overlaps)
-        le = leftenv[2][ind];
-        re = rightenv[2][ind];
+        le = leftenv(i,pos,state);
+        re = rightenv(i,pos,state);
 
         @plansor v[-1;-2 -3 -4] := le[4;-1 -2 5]*i.above.AC[pos][5 2;1]*re[1;-3 -4 3]*conj(x[4 2;3])
         @plansor y[-1 -2;-3] += conj(v[1;2 5 6])*(cache.weight*le)[-1;1 2 4]*i.above.AC[pos][4 -2;3]*re[3;5 6 -3]
@@ -67,15 +80,16 @@ function ac_prime(x::MPSTensor,opp,leftenv,rightenv)
 
     y
 end
-function ac2_prime(x::MPOTensor,opp,leftenv,rightenv)
-    lh = first(leftenv);
-    rh = first(rightenv);
-
-    y = AC2_eff(pos,opp,lh,rh)*x
+function (h::FinEx_AC2_eff)(x)
+    cache = h.envs;
+    pos = h.pos;
+    state = h.state;
+    y = AC2_eff(pos,state,cache.hamenv)*x
 
     for (ind,i) in enumerate(cache.overlaps)
-        le = leftenv[2][ind];
-        re = rightenv[2][ind];
+        le = leftenv(i,pos,state);
+        re = rightenv(i,pos+1,state);
+
 
         @plansor v[-1;-2 -3 -4] := le[6;-1 -2 7]*i.above.AC[pos][7 4;5]*i.above.AR[pos+1][5 2;1]*re[1;-3 -4 3]*conj(x[6 4;3 2])
         @plansor y[-1 -2;-3 -4] += conj(v[2;3 5 6])*(cache.weight*le)[-1;2 3 4]*i.above.AC[pos][4 -2;7]*i.above.AR[pos+1][7 -4;1]*re[1;5 6 -3]

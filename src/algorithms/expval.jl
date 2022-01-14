@@ -25,9 +25,9 @@ function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{
         throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"));
 
     ut = Tensor(ones,firstspace)
-    @plansor tmp[-1 -2;-3] := state.AC[at][4 2;-3]*op[1][1 3;2 -2]*conj(state.AC[at][4 3;-1])*conj(ut[1])
-    tmp = tmp*TransferMatrix(state.AR[at+1:at+length(op)-1],op[2:length(op)],state.AR[at+1:at+length(op)-1])
-    return @plansor tmp[1 2;1]*ut[2];
+    @plansor v[-1 -2;-3] := isomorphism(left_virtualspace(state,at),left_virtualspace(state,at))[-1;-3]*conj(ut[-2])
+    tmp = v*TransferMatrix(state.AL[at:at+length(op)-1],op,state.AL[at:at+length(op)-1])
+    return @plansor tmp[1 2;3]*ut[2]*state.CR[at+length(op)-1][3;4]*conj(state.CR[at+length(op)-1][1;4]);
 end
 
 

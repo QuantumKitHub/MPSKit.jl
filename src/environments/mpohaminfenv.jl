@@ -72,7 +72,7 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
             #subtract fixpoints
             @plansor tosvec[-1 -2;-3] := fixpoints[1,i][-1 -2;-3]-fixpoints[1,i][1 -2;2]*r_LL(st)[2;1]*l_LL(st)[-1;-3]
 
-            tm = TransferMatrix(st.AL,st.AL,lvec=r_LL(st),rvec=l_LL(st));
+            tm = TransferMatrix(st.AL,st.AL,lvec=l_LL(st),rvec=r_LL(st));
             (fixpoints[1,i],convhist) = linsolve(flip(tm),tosvec,prev,solver,1,-1)
             convhist.converged==0 && @info "calclw failed to converge $(convhist.normres)"
 

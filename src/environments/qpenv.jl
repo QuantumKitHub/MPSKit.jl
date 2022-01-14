@@ -80,7 +80,7 @@ function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver
     lBs[end] = lBE;
 
     for i=1:length(exci)-1
-        lBE = lBE*TransferMatrix(AR[i],ham[i],AL[i])*exp(conj(1im*exci.momentum))
+        lBE = lBE*TransferMatrix(AR[i],ham[i],AL[i])*exp(-1im*exci.momentum)
 
         exci.trivial && for k in ids
             @plansor lBE[k][-1 -2;-3 -4] -= lBE[k][1 4;-3 2]*r_RL(exci.left_gs,i)[2;3]*τ[3 4;5 1]*l_RL(exci.left_gs,i+1)[-1;6]*τ[5 6;-4 -2]
@@ -159,7 +159,7 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
         c_lBs = typeof(lB_cur)[];
         for col in 1:size(left_gs,2)
             lB_cur = renorms[col]*lB_cur*TransferMatrix(AR[row,col],ham[row,col],AL[row+1,col])*exp(-1im*exci.momentum)
-            lB_cur += renorms[col]*leftenv(lenvs,row,col,left_gs)*TransferMatrix(exci[row][col],ham[row,col]*AL[row+1,col])*exp(-1im*exci.momentum)
+            lB_cur += renorms[col]*leftenv(lenvs,row,col,left_gs)*TransferMatrix(exci[row][col],ham[row,col],AL[row+1,col])*exp(-1im*exci.momentum)
             push!(c_lBs,lB_cur);
         end
 
@@ -195,8 +195,8 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
 
         c_rBs = typeof(rB_cur)[];
         for col in size(left_gs,2):-1:1
-            rB_cur = renorms[col]*TransferMatrix(AL[row,col],ham[row,col],AR[row+1,col])*rB_cur*exp(1im*exci.momentum)
-            rB_cur += renorms[col]*TransferMatrix(exci[row][col],ham[row,col],AR[row+1,col])*rightenv(renvs,row,col,right_gs)*exp(1im*exci.momentum)
+            rB_cur = TransferMatrix(AL[row,col],ham[row,col],AR[row+1,col])*rB_cur*exp(1im*exci.momentum)*renorms[col]
+            rB_cur += TransferMatrix(exci[row][col],ham[row,col],AR[row+1,col])*rightenv(renvs,row,col,right_gs)*exp(1im*exci.momentum)*renorms[col]
             push!(c_rBs,rB_cur);
         end
         c_rBs = reverse(c_rBs);
@@ -213,7 +213,7 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
 
         cur = c_rBs[1];
         for col in size(left_gs,2):-1:2
-            cur = renorms[col]*TransferMatrix(AL[row,col],ham[row,col],AR[row+1,col])*cur*exp(1im*exci.momentum)
+            cur = TransferMatrix(AL[row,col],ham[row,col],AR[row+1,col])*cur*exp(1im*exci.momentum)*renorms[col]
             c_rBs[col] += cur
         end
 

@@ -21,7 +21,8 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
 
             (res,convhist) = @closure linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
                 y=(eta*eta+w*w)*x
-                y-=2*w*AC_eff(i,init,envs1)*x+AC_eff(i,init,envs2)*x
+                y-=2*w*(AC_eff(i,init,envs1)*x)
+                y+=(AC_eff(i,init,envs2)*x)
             end
 
             delta = max(delta,norm(res-init.AC[i]))
@@ -36,11 +37,11 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
     a = @plansor leftenv(mixedenvs,1,init)[-1;1]*A.AC[1][1 -2;2]*rightenv(mixedenvs,1,init)[2;-3]*conj(init.AC[1][-1 -2;-3])
     a = a';
 
-    cb = leftenv(envs1,1,A)*TransferMatrix(init.AL,ham,A.AL);
+    cb = leftenv(envs1,1,A)*TransferMatrix(init.AL,ham[1:length(A.AL)],A.AL);
 
     b = 0*a
     for i in 1:length(cb)
-        b+= @plansor cb[i][1 2;3]*A.CR[end][3;4]*rightenv(envs1,length(A),A)[i][4 2;5]*conj(init.CR[end][1;5]);
+        b+= @plansor cb[i][1 2;3]*init.CR[end][3;4]*rightenv(envs1,length(A),A)[i][4 2;5]*conj(A.CR[end][1;5]);
     end
 
     v = b/eta-w/eta*a+1im*a
