@@ -8,6 +8,9 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
     (ham2,envs2) = squaredenvs(init,ham,envs1) #environments for h^2
     mixedenvs = environments(init,A); #environments for <init | A>
 
+    super_op = LazyLinco((ham,ham2),(-2*w,1));
+    super_envs = LazyLincoCache(super_op,(envs1,envs2));
+
     delta=2*tol
 
     numit = 0
@@ -19,11 +22,8 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
 
             @plansor tos[-1 -2;-3] := leftenv(mixedenvs,i,init)[-1;1]*A.AC[i][1 -2;2]*rightenv(mixedenvs,i,init)[2;-3]
 
-            (res,convhist) = @closure linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
-                y=(eta*eta+w*w)*x
-                y-=2*w*(AC_eff(i,init,ham,envs1)*x)
-                y+=(AC_eff(i,init,ham2,envs2)*x)
-            end
+            H_AC = AC_eff(i,init,super_op,super_envs);
+            (res,convhist) = linsolve(H_AC,-eta*tos,init.AC[i],GMRES(tol=solvtol),(eta*eta+w*w),1);
 
             delta = max(delta,norm(res-init.AC[i]))
             init.AC[i] = res
