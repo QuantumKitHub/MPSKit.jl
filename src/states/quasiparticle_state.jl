@@ -75,10 +75,11 @@ function Base.convert(::Type{RightGaugedQP},input::LeftGaugedQP{S}) where S<:Inf
     end
     rBs = reverse(rBs);
 
+    tm = TransferMatrix(input.left_gs.AL,input.right_gs.AR);
+
+
     if input.trivial
-        tm = TransferMatrix(input.left_gs.AL,input.right_gs.AR,rvec = r_LR(input.right_gs),lvec=l_LR(input.right_gs))
-    else
-        tm = TransferMatrix(input.left_gs.AL,input.right_gs.AR);
+        tm = regularize(tm,l_LR(input.right_gs),r_LR(input.right_gs));
     end
 
     (rBE,convhist) = linsolve(tm,rBs[1],rBs[1],GMRES(),1,-exp(1im*input.momentum*len))
@@ -110,10 +111,9 @@ function Base.convert(::Type{LeftGaugedQP},input::RightGaugedQP{S}) where S<:Inf
         push!(lBs,t*exp(-1im*input.momentum));
     end
 
+    tm = TransferMatrix(input.right_gs.AR,input.left_gs.AL)
     if input.trivial
-        tm = TransferMatrix(input.right_gs.AR,input.left_gs.AL,rvec=r_RL(input.right_gs),lvec=l_RL(input.right_gs))
-    else
-        tm = TransferMatrix(input.right_gs.AR,input.left_gs.AL)
+        tm = regularize(tm,l_RL(input.right_gs),r_RL(input.right_gs))
     end
 
     (lBE,convhist) = linsolve(flip(tm),lBs[end],lBs[end],GMRES(),1,-exp(-1im*input.momentum*len))

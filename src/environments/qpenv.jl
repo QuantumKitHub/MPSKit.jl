@@ -164,14 +164,14 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
         end
 
         tm = TransferMatrix(AR[row,:],ham[row,:],AL[row+1,:]);
+        if exci.trivial
+            @plansor rvec[-1 -2;-3] :=  rightenv(lenvs,row,0,left_gs)[-1 -2;1]*conj(left_gs.CR[row+1,0][-3;1])
+            @plansor lvec[-1 -2;-3] := leftenv(lenvs,row,1,left_gs)[-1 -2;1]*left_gs.CR[row,0][1;-3]
 
-        (c_lBs[end],convhist) = linsolve(lB_cur,lB_cur,solver,1,-exp(-1im*size(left_gs,2)*exci.momentum)*prod(renorms)) do v
-            y = v*tm;
-            if exci.trivial
-                @plansor y[-1 -2;-3 -4] -= y[4 2;-3 3]*conj(left_gs.CR[row+1,0][4;1])*rightenv(lenvs,row,0,left_gs)[3 2;1]*leftenv(lenvs,row,1,left_gs)[-1 -2;5]*left_gs.CR[row,0][5;-4]
-            end
-            y
+            tm = regularize(tm,lvec,rvec);
         end
+
+        (c_lBs[end],convhist) = linsolve(flip(tm),lB_cur,lB_cur,solver,1,-exp(-1im*size(left_gs,2)*exci.momentum)*prod(renorms))
         convhist.converged == 0 && @warn "lbe failed to converge $(convhist.normres)"
 
         cur = c_lBs[end];
@@ -202,13 +202,15 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
         c_rBs = reverse(c_rBs);
 
         tm = TransferMatrix(AL[row,:],ham[row,:],AR[row+1,:])
-        (c_rBs[1],convhist) = linsolve(rB_cur,rB_cur,GMRES(),1,-exp(1im*size(left_gs,2)*exci.momentum)*prod(renorms)) do v
-            y = tm*v;
-            if exci.trivial
-                @plansor y[-1 -2;-3 -4] -= y[1 2;-3 3]*conj(left_gs.CR[row+1,0][1;4])*leftenv(lenvs,row,1,left_gs)[3 2;4]*rightenv(lenvs,row,0,left_gs)[5 -2;-4]*left_gs.CR[row,0][-1;5]
-            end
-            y
+
+        if exci.trivial
+            @plansor rvec[-1 -2;-3] :=  rightenv(lenvs,row,0,left_gs)[1 -2;-3]*left_gs.CR[row,0][-1;1]
+            @plansor lvec[-1 -2;-3] := conj(left_gs.CR[row+1,0][-3;1])*leftenv(lenvs,row,1,left_gs)[-1 -2;1]
+
+            tm = regularize(tm,lvec,rvec);
         end
+
+        (c_rBs[1],convhist) = linsolve(tm,rB_cur,rB_cur,GMRES(),1,-exp(1im*size(left_gs,2)*exci.momentum)*prod(renorms))
         convhist.converged == 0 && @warn "rbe failed to converge $(convhist.normres)"
 
         cur = c_rBs[1];

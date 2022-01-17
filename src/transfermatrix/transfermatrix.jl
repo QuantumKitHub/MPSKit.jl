@@ -37,29 +37,33 @@ Base.:*(vec,tm::AbstractTransferMatrix) = flip(tm)(vec);
 # TransferMatrix acting as a function
 (d::ProductTransferMatrix)(vec) = foldr(*,d.tms,init=vec);
 (d::SingleTransferMatrix)(vec) = d.isflipped  ? transfer_left(vec,d.middle,d.above,d.below) : transfer_right(vec,d.middle,d.above,d.below);
-function (d::RegTransferMatrix)(vec)
-    v = d.tm*vec;
+(d::RegTransferMatrix)(vec) = regularize!(d.tm*vec,d.lvec,d.rvec);
 
-    if v isa MPSBondTensor #normal transfer
-        @plansor v[-1;-2]-=d.lvec[1;2]*v[2;1]*d.rvec[-1;-2]
-    elseif v isa MPSTensor #utiity leg in the middle
-        @plansor v[-1 -2;-3]-=d.lvec[1;2]*v[2 -2;1]*d.rvec[-1;-3]
-    elseif typeof(v) <: AbstractTensorMap{S,1,2} where S
-        @plansor v[-1;-2 -3]-=d.lvec[1;2]*v[2;-2 1]*d.rvec[-1;-3]
-    else
-        @assert false
-    end
-
-    v
-end
 
 # constructors
-TransferMatrix(a;kwargs...) = TransferMatrix(a,nothing,a;kwargs...);
-TransferMatrix(a,b;kwargs...) = TransferMatrix(a,nothing,b;kwargs...);
-TransferMatrix(a,b,c;kwargs...) = TransferMatrix(a,b,c,false;kwargs...);
+TransferMatrix(a) = TransferMatrix(a,nothing,a);
+TransferMatrix(a,b) = TransferMatrix(a,nothing,b);
+TransferMatrix(a,b,c) = TransferMatrix(a,b,c,false);
 TransferMatrix(a::AbstractTensorMap,b,c::AbstractTensorMap,isflipped) = SingleTransferMatrix(a,b,c,isflipped);
-function TransferMatrix(a::AbstractVector,b,c::AbstractVector,isflipped;lvec=nothing,rvec=nothing)
+function TransferMatrix(a::AbstractVector,b,c::AbstractVector,isflipped)
     tot = prod(TransferMatrix.(a,b,c));
-    r_tot = isnothing(lvec) ? tot : RegTransferMatrix(tot,lvec,rvec);
-    isflipped ? flip(r_tot) : r_tot
+    isflipped ? flip(tot) : tot
 end
+
+
+regularize(t::AbstractTransferMatrix,lvec,rvec) = RegTransferMatrix(t,lvec,rvec);
+
+regularize!(v::MPSBondTensor,lvec::MPSBondTensor,rvec::MPSBondTensor) =
+    @plansor v[-1;-2]-=lvec[1;2]*v[2;1]*rvec[-1;-2]
+
+regularize!(v::MPSTensor,lvec::MPSBondTensor,rvec::MPSBondTensor) =
+    @plansor v[-1 -2;-3]-=lvec[1;2]*v[2 -2;1]*rvec[-1;-3]
+
+regularize!(v::AbstractTensorMap{S,1,2} where S,lvec::MPSBondTensor,rvec::MPSBondTensor) =
+    @plansor v[-1;-2 -3]-=lvec[1;2]*v[2;-2 1]*rvec[-1;-3]
+
+regularize!(v::MPOTensor,lvec::MPSTensor,rvec::MPSTensor) =
+    @plansor v[-1 -2;-3 -4] -= v[1 2;-3 3]*lvec[3 2;1]*rvec[-1 -2;-4]
+
+regularize!(v::MPOTensor,lvec::MPSBondTensor,rvec::MPSBondTensor) =
+    @plansor v[-1 -2;-3 -4] -= τ[6 2;3 4]*v[3 4;-3 5]*lvec[5;2]*rvec[-1;1]*τ[-2 -4;1 6]
