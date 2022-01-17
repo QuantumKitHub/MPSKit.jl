@@ -78,10 +78,14 @@ module MPSKit
     include("operators/sparsempo/sparsempo.jl")
     include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
     include("operators/mpomultiline.jl")
+    include("operators/projection.jl")
+    include("operators/lazylinco.jl")
+
 
     include("transfermatrix/transfermatrix.jl")
     include("transfermatrix/transfer.jl")
     
+
     abstract type Cache end #cache "manages" environments
 
     include("environments/FinEnv.jl")
@@ -90,6 +94,7 @@ module MPSKit
     include("environments/mpohaminfenv.jl")
     include("environments/qpenv.jl")
     include("environments/idmrgenv.jl")
+    include("environments/lazylincocache.jl")
 
     abstract type Algorithm end
 

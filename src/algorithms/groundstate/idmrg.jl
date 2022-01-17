@@ -21,7 +21,7 @@ function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg1,oenvs=environments(o
         curc = st.CR[0];
 
         for pos = 1:length(st)
-            h = AC_eff(pos,st,envs);
+            h = AC_eff(pos,st,ham,envs);
             (eigvals,vecs) = eigsolve(h,st.AC[pos],1,:SR,Arnoldi())
 
             st.AC[pos] = vecs[1]
@@ -32,7 +32,7 @@ function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg1,oenvs=environments(o
         end
 
         for pos = length(st):-1:1
-            h = AC_eff(pos,st,envs);
+            h = AC_eff(pos,st,ham,envs);
             (eigvals,vecs) = eigsolve(h,st.AC[pos],1,:SR,Arnoldi())
 
             st.AC[pos] = vecs[1]
@@ -80,7 +80,7 @@ function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg2,oenvs=environments(o
         #sweep from left to right
         for pos = 1:length(st)-1
             ac2 = st.AC[pos]*_transpose_tail(st.AR[pos+1]);
-            h_ac2 = AC2_eff(pos,st,envs);
+            h_ac2 = AC2_eff(pos,st,ham,envs);
 
             (eigvals,vecs) = eigsolve(h_ac2,ac2,1,:SR,Arnoldi())
 
@@ -98,7 +98,7 @@ function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg2,oenvs=environments(o
 
         #update the edge
         @plansor ac2[-1 -2;-3 -4] := st.AC[end][-1 -2;1]*inv(st.CR[0])[1;2]*st.AL[1][2 -4;3]*st.CR[1][3;-3]
-        h_ac2 = AC2_eff(0,st,envs);
+        h_ac2 = AC2_eff(0,st,ham,envs);
 
         (eigvals,vecs) = eigsolve(h_ac2,ac2,1,:SR,Arnoldi())
         (al,c,ar,ϵ) = tsvd(vecs[1],trunc=alg.trscheme,alg=TensorKit.SVD())
@@ -121,7 +121,7 @@ function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg2,oenvs=environments(o
         #sweep from right to left
         for pos = length(st)-1:-1:1
             ac2 = st.AL[pos]*_transpose_tail(st.AC[pos+1]);
-            h_ac2 = AC2_eff(pos,st,envs);
+            h_ac2 = AC2_eff(pos,st,ham,envs);
 
             (eigvals,vecs) = eigsolve(h_ac2,ac2,1,:SR,Arnoldi())
 
@@ -140,7 +140,7 @@ function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg2,oenvs=environments(o
 
         #update the edge
         @plansor ac2[-1 -2;-3 -4] :=  st.CR[end-1][-1;1]*st.AR[end][1 -2;2]*inv(st.CR[end])[2;3]*st.AC[1][3 -4;-3]
-        h_ac2 = AC2_eff(0,st,envs);
+        h_ac2 = AC2_eff(0,st,ham,envs);
         (eigvals,vecs) = eigsolve(h_ac2,ac2,1,:SR,Arnoldi())
         (al,c,ar,ϵ) = tsvd(vecs[1],trunc=alg.trscheme,alg=TensorKit.SVD())
         normalize!(c);

@@ -72,6 +72,12 @@ function environments(below::S,above::S) where S <: Union{FiniteMPS,MPSComoving}
     environments(below,opp,above,l_LL(above),r_RR(above))
 end
 
+function environments(state::Union{FiniteMPS,MPSComoving},opp::ProjectionOperator)
+    @plansor leftstart[-1;-2 -3 -4] := l_LL(opp.ket)[-3;-4]*l_LL(opp.ket)[-1;-2]
+    @plansor rightstart[-1;-2 -3 -4] := r_RR(opp.ket)[-1;-2]*r_RR(opp.ket)[-3;-4]
+    environments(state,fill(nothing,length(state)),state,leftstart,rightstart)
+end
+
 #notify the cache that we updated in-place, so it should invalidate the dependencies
 function poison!(ca::FinEnv,ind)
     ca.ldependencies[ind] = similar(ca.ldependencies[ind])

@@ -5,14 +5,14 @@ infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(Matrix{eltype(h
 
 "calculates the galerkin error"
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64 =
-    norm(leftnull(state.AC[loc])'*(AC_eff(loc,state,envs)*state.AC[loc]))
+    norm(leftnull(state.AC[loc])'*(AC_eff(loc,state,envs.opp,envs)*state.AC[loc]))
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs)::Float64 =
     maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
 function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
     above = isnothing(envs.above) ? state : envs.above;
 
     maximum([norm(leftnull(state.AC[row+1,col])'*
-        (AC_eff(row,col,state,envs)*above.AC[row,col]))
+        (AC_eff(row,col,state,envs.opp,envs)*above.AC[row,col]))
             for (row,col) in product(1:size(state,1),1:size(state,2))][:])
 end
 

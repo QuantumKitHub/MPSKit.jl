@@ -32,11 +32,11 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(
         @sync for col in 1:size(state,2)
 
             @Threads.spawn begin
-                (vals_ac,vecs_ac) = eigsolve(RecursiveVec($state.AC[:,col]), 1, :LM, eigalg) do x
+                (vals_ac,vecs_ac) = eigsolve($state.AC[col], 1, :LM, eigalg) do x
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = AC_eff(i,$col,$state,$envs)*x[i]
+                        @Threads.spawn y[mod1(i+1,end)] = AC_eff(i,$col,$state,$H,$envs)*x[i]
                     end
 
                     RecursiveVec(y)
@@ -46,11 +46,11 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(
             end
 
             @Threads.spawn begin
-                (vals_c,vecs_c) = eigsolve(RecursiveVec($state.CR[:,col]), 1, :LM, eigalg) do x
+                (vals_c,vecs_c) = eigsolve($state.CR[col], 1, :LM, eigalg) do x
                     y = similar(x.vecs);
 
                     @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = C_eff(i,$col,$state,$envs)*x[i]
+                        @Threads.spawn y[mod1(i+1,end)] = C_eff(i,$col,$state,$H,$envs)*x[i]
                     end
 
                     RecursiveVec(y)

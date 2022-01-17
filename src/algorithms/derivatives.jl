@@ -3,51 +3,51 @@
 """
     Draft operators
 """
-struct C_eff{L,R}
+struct MPO_C_eff{L,R}
     leftenv::L
     rightenv::R
 end
 
-struct AC_eff{O,L,R}
+struct MPO_AC_eff{O,L,R}
     o::O
     leftenv::L
     rightenv::R
 end
 
 
-struct AC2_eff{O,L,R}
+struct MPO_AC2_eff{O,L,R}
     o1::O
     o2::O
     leftenv::L
     rightenv::R
 end
 
-Base.:*(h::Union{<:C_eff,<:AC_eff,<:AC2_eff},v) = h(v);
+Base.:*(h::Union{<:MPO_C_eff,<:MPO_AC_eff,<:MPO_AC2_eff},v) = h(v);
 
-(h::C_eff)(x) = c_prime(x,h.leftenv,h.rightenv);
-(h::AC_eff)(x) = ac_prime(x,h.o,h.leftenv,h.rightenv);
-(h::AC2_eff)(x) = ac2_prime(x,h.o1,h.o2,h.leftenv,h.rightenv);
+(h::MPO_C_eff)(x) = c_prime(x,h.leftenv,h.rightenv);
+(h::MPO_AC_eff)(x) = ac_prime(x,h.o,h.leftenv,h.rightenv);
+(h::MPO_AC2_eff)(x) = ac2_prime(x,h.o1,h.o2,h.leftenv,h.rightenv);
 
 # draft operator constructors
-C_eff(pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache) =
-    C_eff(leftenv(cache,pos+1,mps),rightenv(cache,pos,mps))
-C_eff(row::Int,col::Int, mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv) =
-    C_eff(leftenv(envs,row,col+1,mps),rightenv(envs,row,col,mps))
+C_eff(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
+    MPO_C_eff(leftenv(cache,pos+1,mps),rightenv(cache,pos,mps))
+C_eff(row::Int,col::Int, mps, opp::MPOMultiline, envs) =
+    MPO_C_eff(leftenv(envs,row,col+1,mps),rightenv(envs,row,col,mps))
 
-AC_eff(pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IDMRGEnv}) =
-    AC_eff(cache.opp[pos],leftenv(cache,pos,mps),rightenv(cache,pos,mps))
-AC_eff(row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv) =
-    AC_eff(envs.opp[row,col],leftenv(envs,row,col,mps),rightenv(envs,row,col,mps));
+AC_eff(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
+    MPO_AC_eff(cache.opp[pos],leftenv(cache,pos,mps),rightenv(cache,pos,mps))
+AC_eff(row::Int,col::Int,mps, opp::MPOMultiline, envs) =
+    MPO_AC_eff(envs.opp[row,col],leftenv(envs,row,col,mps),rightenv(envs,row,col,mps));
 
-AC2_eff(pos::Int,mps::Union{FiniteMPS,InfiniteMPS,MPSComoving},cache::Union{FinEnv,MPOHamInfEnv,IDMRGEnv}) =
-    AC2_eff(cache.opp[pos],cache.opp[pos+1],leftenv(cache,pos,mps),rightenv(cache,pos+1,mps));
-AC2_eff(row::Int,col::Int,mps::Union{InfiniteMPS,MPSMultiline}, envs::PerMPOInfEnv) =
-    AC2_eff(envs.opp[row,col],envs.opp[row,col+1],leftenv(envs,row,col,mps),rightenv(envs,row,col+1,mps))
+AC2_eff(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
+    MPO_AC2_eff(cache.opp[pos],cache.opp[pos+1],leftenv(cache,pos,mps),rightenv(cache,pos+1,mps));
+AC2_eff(row::Int,col::Int,mps, opp::MPOMultiline,envs) =
+    MPO_AC2_eff(envs.opp[row,col],envs.opp[row,col+1],leftenv(envs,row,col,mps),rightenv(envs,row,col+1,mps))
 
 #allow calling them with CartesianIndices
-C_eff(pos::CartesianIndex,mps,envs) = C_eff(Tuple(pos)...,mps,envs)
-AC_eff(pos::CartesianIndex,mps,envs) = AC_eff(Tuple(pos)...,mps,envs)
-AC2_eff(pos::CartesianIndex,mps,envs) = AC2_eff(Tuple(pos)...,mps,envs)
+C_eff(pos::CartesianIndex,mps,opp,envs) = C_eff(Tuple(pos)...,mps,opp,envs)
+AC_eff(pos::CartesianIndex,mps,opp,envs) = AC_eff(Tuple(pos)...,mps,opp,envs)
+AC2_eff(pos::CartesianIndex,mps,opp,envs) = AC2_eff(Tuple(pos)...,mps,opp,envs)
 
 
 
@@ -155,3 +155,50 @@ function ac2_proj(row,col,below,envs::PerMPOInfEnv)
     @tensor ac2[-1 -2;-3 -4] := envs.above.AC[row,col][-1 -2;1]*envs.above.AR[row,col+1][1 -4;-3]
     ac2_prime(ac2,leftenv(envs,row,col+1,below),rightenv(envs,row,col+1,below))
 end
+
+# lazy linear combination H effective
+struct LazyLincoHEff{A<:Tuple,B<:Tuple}
+    Heffs::A
+    coeffs::B
+end
+
+Base.:*(h::Union{<:LazyLincoHEff},v) = h(v);
+
+(h::LazyLincoHEff)(x) = sum(map(v->v[2]*v[1](x),zip(h.Heffs,h.coeffs)))
+
+C_eff(pos::Int,mps,opp::LazyLinco,cache) =
+    LazyLincoHEff(broadcast((h,e) -> C_eff(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+
+AC_eff(pos::Int,mps,opp::LazyLinco,cache) =
+    LazyLincoHEff(broadcast((h,e) -> AC_eff(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+
+
+AC2_eff(pos::Int,mps,opp::LazyLinco,cache) =
+    LazyLincoHEff(broadcast((h,e) -> AC2_eff(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+
+struct AC_EffProj{A,L}
+    a1::A
+    le::L
+    re::L
+end
+struct AC2_EffProj{A,L}
+    a1::A
+    a2::A
+    le::L
+    re::L
+end
+Base.:*(h::Union{<:AC_EffProj,AC2_EffProj},v) = h(v);
+
+function (h::AC_EffProj)(x::MPSTensor)
+    @plansor v[-1;-2 -3 -4] := h.le[4;-1 -2 5]*h.a1[5 2;1]*h.re[1;-3 -4 3]*conj(x[4 2;3])
+    @plansor y[-1 -2;-3] := conj(v[1;2 5 6])*h.le[-1;1 2 4]*h.a1[4 -2;3]*h.re[3;5 6 -3]
+end
+function (h::AC2_EffProj)(x::MPOTensor)
+    @plansor v[-1;-2 -3 -4] := h.le[6;-1 -2 7]*h.a1[7 4;5]*h.a2[5 2;1]*h.re[1;-3 -4 3]*conj(x[6 4;3 2])
+    @plansor y[-1 -2;-3 -4] := conj(v[2;3 5 6])*h.le[-1;2 3 4]*h.a1[4 -2;7]*h.a2[7 -4;1]*h.re[1;5 6 -3]
+end
+
+AC_eff(pos::Int,state,opp::ProjectionOperator,env) =
+    AC_EffProj(opp.ket.AC[pos],leftenv(env,pos,state),rightenv(env,pos,state));
+AC2_eff(pos::Int,state,opp::ProjectionOperator,env) =
+    AC2_EffProj(opp.ket.AC[pos],opp.ket.AR[pos+1],leftenv(env,pos,state),rightenv(env,pos+1,state));

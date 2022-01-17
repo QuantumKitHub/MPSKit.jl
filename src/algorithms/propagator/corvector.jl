@@ -21,8 +21,8 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
 
             (res,convhist) = @closure linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
                 y=(eta*eta+w*w)*x
-                y-=2*w*(AC_eff(i,init,envs1)*x)
-                y+=(AC_eff(i,init,envs2)*x)
+                y-=2*w*(AC_eff(i,init,ham,envs1)*x)
+                y+=(AC_eff(i,init,ham2,envs2)*x)
             end
 
             delta = max(delta,norm(res-init.AC[i]))
