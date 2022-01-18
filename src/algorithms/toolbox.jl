@@ -22,7 +22,7 @@ Calculates the (partial) transfer spectrum
 function transfer_spectrum(above::InfiniteMPS;below=above,tol=Defaults.tol,num_vals = 20,sector=first(sectors(oneunit(left_virtualspace(above,1)))))
     init = TensorMap(rand, eltype(eltype(above)), left_virtualspace(below,0),ℂ[typeof(sector)](sector => 1)'*left_virtualspace(above,0))
 
-    transferspace = fuse(left_virtualspace(above,0)*left_virtualspace(below,0))
+    transferspace = fuse(left_virtualspace(above, 0) * left_virtualspace(below, 0)')
     num_vals = min(dim(transferspace, sector), num_vals); # we can ask at most this many values
     eigenvals, eigenvecs,convhist = eigsolve(TransferMatrix(above.AL,below.AL) , init, num_vals, :LM, tol=tol)
     convhist.converged < num_vals && @warn "correlation length failed to converge $(convhist.normres)"
