@@ -81,7 +81,7 @@ function gen_init_fps(above::MPSMultiline,mpo::Multiline{<:SparseMPO},below::MPS
             rw[j] = TensorMap(rand,eltype(A),_lastspace(ab.AR[end])'*ham[end].imspaces[j]',_lastspace(be.AR[end])')
         end
 
-        (RecursiveVec(lw),RecursiveVec(rw))
+        (lw,rw)
     end
 end
 
@@ -107,15 +107,19 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
             @sync begin
                 @Threads.spawn begin
                     E_LL = TransferMatrix($c_above.AL,$mpo[cr,:],$c_below.AL)
-                    (_,Ls,convhist) = eigsolve(flip(E_LL),$L0,1,:LM,$solver)
+
+                    packed_init = $L0 isa Vector ? RecursiveVec($L0) : $L0;
+                    (_,Ls,convhist) = eigsolve(flip(E_LL),packed_init,1,:LM,$solver)
                     convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-                    L0 = Ls[1];
+                    L0 = $L0 isa Vector ? Ls[1].vecs : Ls[1];
                 end
                 @Threads.spawn begin
+
+                    packed_init = $R0 isa Vector ? RecursiveVec($R0) : $R0;
                     E_RR = TransferMatrix($c_above.AR,$mpo[cr,:],$c_below.AR)
-                    (_,Rs,convhist) = eigsolve(E_RR, $R0,1,:LM,$solver)
+                    (_,Rs,convhist) = eigsolve(E_RR, packed_init,1,:LM,$solver)
                     convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
-                    R0 = Rs[1];
+                    R0 = $R0 isa Vector ? Rs[1].vecs : Rs[1];
                 end
             end
 

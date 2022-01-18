@@ -87,25 +87,25 @@ transfer_right(vec::RecursiveVec,opp,A,Ab) = RecursiveVec(transfer_right(vec.vec
 
 
 # usual sparsemposlice transfer
-transfer_left(vec::Vector{V},ham::SparseMPOSlice,A::V,Ab::V) where V<:MPSTensor =
+transfer_left(vec::AbstractVector{V},ham::SparseMPOSlice,A::V,Ab::V) where V<:MPSTensor =
     transfer_left(V,vec,ham,A,Ab)
-transfer_right(vec::Vector{V},ham::SparseMPOSlice,A::V,Ab::V) where V<:MPSTensor =
+transfer_right(vec::AbstractVector{V},ham::SparseMPOSlice,A::V,Ab::V) where V<:MPSTensor =
     transfer_right(V,vec,ham,A,Ab)
 
 # A excited
-transfer_left(vec::Vector{V},ham::SparseMPOSlice,A::M,Ab::V) where V<:MPSTensor where M <:MPOTensor =
+transfer_left(vec::AbstractVector{V},ham::SparseMPOSlice,A::M,Ab::V) where V<:MPSTensor where M <:MPOTensor =
     transfer_left(M,vec,ham,A,Ab)
-transfer_right(vec::Vector{V},ham::SparseMPOSlice,A::M,Ab::V) where V<:MPSTensor where M <:MPOTensor =
+transfer_right(vec::AbstractVector{V},ham::SparseMPOSlice,A::M,Ab::V) where V<:MPSTensor where M <:MPOTensor =
     transfer_right(M,vec,ham,A,Ab)
 
 # vec excited
-transfer_left(vec::Vector{V},ham::SparseMPOSlice,A::M,Ab::M) where V<:MPOTensor where M <:MPSTensor =
+transfer_left(vec::AbstractVector{V},ham::SparseMPOSlice,A::M,Ab::M) where V<:MPOTensor where M <:MPSTensor =
     transfer_left(V,vec,ham,A,Ab)
-transfer_right(vec::Vector{V},ham::SparseMPOSlice,A::M,Ab::M) where V<:MPOTensor where M <:MPSTensor =
+transfer_right(vec::AbstractVector{V},ham::SparseMPOSlice,A::M,Ab::M) where V<:MPOTensor where M <:MPSTensor =
     transfer_right(V,vec,ham,A,Ab)
 
 function transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab)
-    toret = Vector{RetType}(undef,length(vec));
+    toret = similar(vec,RetType,length(vec));
     @sync for k in 1:ham.odim
         @Threads.spawn begin
             res = foldxt(+, 1:$ham.odim |>
@@ -128,7 +128,7 @@ function transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab)
     toret
 end
 function transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab)
-    toret = Vector{RetType}(undef,length(vec));
+    toret = similar(vec,RetType,length(vec));
 
     @sync for j in 1:ham.odim
         @Threads.spawn begin

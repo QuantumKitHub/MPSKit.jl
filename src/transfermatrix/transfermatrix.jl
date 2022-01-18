@@ -35,7 +35,7 @@ Base.:*(tm::AbstractTransferMatrix,vec) = tm(vec);
 Base.:*(vec,tm::AbstractTransferMatrix) = flip(tm)(vec);
 
 # TransferMatrix acting as a function
-(d::ProductTransferMatrix)(vec) = foldr(*,d.tms,init=vec);
+(d::ProductTransferMatrix)(vec) = foldr((a,b)->a(b),d.tms,init=vec);
 (d::SingleTransferMatrix)(vec) = d.isflipped  ? transfer_left(vec,d.middle,d.above,d.below) : transfer_right(vec,d.middle,d.above,d.below);
 (d::RegTransferMatrix)(vec) = regularize!(d.tm*vec,d.lvec,d.rvec);
 

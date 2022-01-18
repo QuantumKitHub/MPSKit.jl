@@ -13,8 +13,15 @@ function rightenv(envs::AbstractInfEnv,pos::Int,state)
     envs.rw[:,pos]
 end
 
-leftenv(envs::AbstractInfEnv,row::Int,col::Int,state) = leftenv(envs,col,state)[row]
-rightenv(envs::AbstractInfEnv,row::Int,col::Int,state) = rightenv(envs,col,state)[row]
+function leftenv(envs::AbstractInfEnv,row::Int,col::Int,state)
+    check_recalculate!(envs,state);
+    envs.lw[row,col]
+end
+
+function rightenv(envs::AbstractInfEnv,row::Int,col::Int,state)
+    check_recalculate!(envs,state);
+    envs.rw[row,col]
+end
 
 leftenv(envs,pos::CartesianIndex,state) = leftenv(envs,Tuple(pos)...,state)
 rightenv(envs,pos::CartesianIndex,state) = rightenv(envs,Tuple(pos)...,state)
