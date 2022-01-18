@@ -81,7 +81,7 @@ function gen_init_fps(above::MPSMultiline,mpo::Multiline{<:SparseMPO},below::MPS
             rw[j] = TensorMap(rand,eltype(A),_lastspace(ab.AR[end])'*ham[end].imspaces[j]',_lastspace(be.AR[end])')
         end
 
-        (lw,rw)
+        (RecursiveVec(lw),RecursiveVec(rw))
     end
 end
 
@@ -104,34 +104,25 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
         @Threads.spawn begin
             (L0,R0) = $init[cr]
 
-            shouldpack = L0 isa Vector;
             @sync begin
                 @Threads.spawn begin
                     E_LL = TransferMatrix($c_above.AL,$mpo[cr,:],$c_below.AL)
-                    (_,Ls,convhist) = eigsolve(shouldpack ? RecursiveVec($L0) : $L0,1,:LM,$solver) do x
-                        y = (shouldpack ? x.vecs : x)*E_LL
-                        shouldpack ? RecursiveVec(y) : y
-                    end
+                    (_,Ls,convhist) = eigsolve(flip(E_LL),$L0,1,:LM,$solver)
                     convhist.converged < 1 && @info "left eigenvalue failed to converge $(convhist.normres)"
-                    L0 = shouldpack ? Ls[1][:] : Ls[1];
+                    L0 = Ls[1];
                 end
                 @Threads.spawn begin
                     E_RR = TransferMatrix($c_above.AR,$mpo[cr,:],$c_below.AR)
-                    (_,Rs,convhist) = eigsolve(shouldpack ? RecursiveVec($R0) : $R0,1,:LM,$solver) do x
-                        y = E_RR*(shouldpack ? x.vecs : x)
-                        shouldpack ? RecursiveVec(y) : y
-                    end
+                    (_,Rs,convhist) = eigsolve(E_RR, $R0,1,:LM,$solver)
                     convhist.converged < 1 && @info "right eigenvalue failed to converge $(convhist.normres)"
-                    R0 = shouldpack ? Rs[1][:] : Rs[1];
+                    R0 = Rs[1];
                 end
             end
-
 
             $lefties[cr,1] = L0;
             for loc in 2:numcols
                 $lefties[cr,loc] = $lefties[cr,loc-1]*TransferMatrix($c_above.AL[loc-1],$mpo[cr,loc-1],$c_below.AL[loc-1])
             end
-
 
             renormfact::eltype(T) = dot($c_below.CR[0],MPO_C_eff(L0,R0)*$c_above.CR[0])
 
