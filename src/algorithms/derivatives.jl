@@ -31,6 +31,8 @@ Base.:*(h::Union{<:MPO_C_eff,<:MPO_AC_eff,<:MPO_AC2_eff},v) = h(v);
 # draft operator constructors
 C_eff(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
     MPO_C_eff(leftenv(cache,pos+1,mps),rightenv(cache,pos,mps))
+C_eff(col::Int, mps, opp::MPOMultiline, envs) =
+    MPO_C_eff(leftenv(envs,col+1,mps),rightenv(envs,col,mps))
 C_eff(row::Int,col::Int, mps, opp::MPOMultiline, envs) =
     MPO_C_eff(leftenv(envs,row,col+1,mps),rightenv(envs,row,col,mps))
 
@@ -38,9 +40,13 @@ AC_eff(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
     MPO_AC_eff(cache.opp[pos],leftenv(cache,pos,mps),rightenv(cache,pos,mps))
 AC_eff(row::Int,col::Int,mps, opp::MPOMultiline, envs) =
     MPO_AC_eff(envs.opp[row,col],leftenv(envs,row,col,mps),rightenv(envs,row,col,mps));
+AC_eff(col::Int,mps, opp::MPOMultiline, envs) =
+    MPO_AC_eff(envs.opp[:,col],leftenv(envs,col,mps),rightenv(envs,col,mps));
 
 AC2_eff(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
     MPO_AC2_eff(cache.opp[pos],cache.opp[pos+1],leftenv(cache,pos,mps),rightenv(cache,pos+1,mps));
+AC2_eff(col::Int,mps, opp::MPOMultiline,envs) =
+    MPO_AC2_eff(envs.opp[:,col],envs.opp[:,col+1],leftenv(envs,col,mps),rightenv(envs,col+1,mps))
 AC2_eff(row::Int,col::Int,mps, opp::MPOMultiline,envs) =
     MPO_AC2_eff(envs.opp[row,col],envs.opp[row,col+1],leftenv(envs,row,col,mps),rightenv(envs,row,col+1,mps))
 
@@ -75,6 +81,10 @@ end
 function ac_prime(x::MPSTensor,opp::MPOTensor,leftenv,rightenv)
     @plansor toret[-1 -2;-3] := leftenv[-1 2;1]*x[1 3;4]*opp[2 -2; 3 5]*rightenv[4 5;-3]
 end
+
+# mpo multiline
+ac_prime(x::RecursiveVec,opp,leftenv,rightenv) =
+    RecursiveVec(circshift(map(t->ac_prime(t...),zip(x.vecs,opp,leftenv,rightenv)),1))
 
 ac_prime(x::MPSTensor,::Nothing,leftenv,rightenv) = _transpose_front(leftenv*_transpose_tail(x*rightenv))
 
@@ -112,22 +122,31 @@ end
 function ac2_prime(x::MPOTensor,::Nothing,::Nothing,leftenv,rightenv)
     @plansor y[-1 -2;-3 -4] := x[1 -2;2 -4]*leftenv[-1;1]*rightenv[2;-3]
 end
+
+ac2_prime(x::RecursiveVec,opp1,opp2,leftenv,rightenv) =
+    RecursiveVec(circshift(map(t->ac2_prime(t...),zip(x.vecs,opp1,opp2,leftenv,rightenv)),1))
+
+
 """
     Zero-site derivative (the C matrix to the right of pos)
 """
-function c_prime(x,leftenv::AbstractVector,rightenv::AbstractVector)
+function c_prime(x::MPSBondTensor,leftenv::AbstractVector,rightenv::AbstractVector)
     sum(zip(leftenv,rightenv)) do (le,re)
         c_prime(x,le,re)
     end
 end
 
-function c_prime(x, leftenv::MPSTensor,rightenv::MPSTensor)
+function c_prime(x::MPSBondTensor, leftenv::MPSTensor,rightenv::MPSTensor)
     @plansor toret[-1;-2] := leftenv[-1 3;1]*x[1;2]*rightenv[2 3;-2]
 end
 
-function c_prime(x, leftenv::MPSBondTensor,rightenv::MPSBondTensor)
+function c_prime(x::MPSBondTensor, leftenv::MPSBondTensor,rightenv::MPSBondTensor)
     @plansor toret[-1;-2] := leftenv[-1;1]*x[1;2]*rightenv[2;-2]
 end
+
+c_prime(x::RecursiveVec,leftenv,rightenv) =
+    RecursiveVec(circshift(map(t->c_prime(t...),zip(x.vecs,leftenv,rightenv)),1))
+
 
 #downproject for approximate
 c_proj(pos,below,envs::FinEnv) = c_prime(envs.above.CR[pos],leftenv(envs,pos+1,below),rightenv(envs,pos,below))

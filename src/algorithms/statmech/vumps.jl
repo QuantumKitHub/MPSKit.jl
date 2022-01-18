@@ -32,30 +32,17 @@ function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(
         @sync for col in 1:size(state,2)
 
             @Threads.spawn begin
-                (vals_ac,vecs_ac) = eigsolve($state.AC[col], 1, :LM, eigalg) do x
-                    y = similar(x.vecs);
+                H_AC = AC_eff($col,$state,$H,$envs);
 
-                    @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = AC_eff(i,$col,$state,$H,$envs)*x[i]
-                    end
-
-                    RecursiveVec(y)
-                end
-
-                $temp_ACs[:,col] = vecs_ac[1][:]
+                (vals_ac,vecs_ac) = eigsolve(H_AC,RecursiveVec($state.AC[:,col]), 1, :LM, eigalg)
+                $temp_ACs[:,col] = vecs_ac[1].vecs[:]
             end
 
             @Threads.spawn begin
-                (vals_c,vecs_c) = eigsolve($state.CR[col], 1, :LM, eigalg) do x
-                    y = similar(x.vecs);
+                H_C = C_eff($col,$state,$H,$envs);
 
-                    @sync for i in 1:length(x)
-                        @Threads.spawn y[mod1(i+1,end)] = C_eff(i,$col,$state,$H,$envs)*x[i]
-                    end
-
-                    RecursiveVec(y)
-                end
-                $temp_Cs[:,col] = vecs_c[1][:]
+                (vals_c,vecs_c) = eigsolve(H_C,RecursiveVec($state.CR[:,col]), 1, :LM, eigalg)
+                $temp_Cs[:,col] = vecs_c[1].vecs[:]
             end
         end
 

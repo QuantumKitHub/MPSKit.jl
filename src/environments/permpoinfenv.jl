@@ -16,7 +16,9 @@ mutable struct PerMPOInfEnv{H,V,S<:MPSMultiline,A} <: AbstractInfEnv
     lock :: ReentrantLock
 end
 
-environments(state::InfiniteMPS,opp::DenseMPO;kwargs...) = environments(convert(MPSMultiline,state),convert(MPOMultiline,opp);kwargs...);
+environments(state::InfiniteMPS,opp::DenseMPO;kwargs...) =
+    environments(convert(MPSMultiline,state),convert(MPOMultiline,opp);kwargs...);
+
 function environments(state::MPSMultiline,mpo::MPOMultiline;solver=Defaults.eigsolver)
     (lw,rw) = mixed_fixpoints(state,mpo,state;solver)
 
@@ -57,8 +59,8 @@ function gen_init_fps(above::MPSMultiline,mpo::Multiline{<:DenseMPO},below::MPSM
     T = eltype(above)
 
     map(1:size(mpo,1)) do cr
-        L0::T = TensorMap(rand,eltype(T),space(below.AL[cr,1],1)*space(mpo[cr,1],1)',space(above.AL[cr,1],1))
-        R0::T = TensorMap(rand,eltype(T),space(above.AR[cr,1],1)*space(mpo[cr,1],1),space(below.AR[cr,1],1))
+        L0::T = TensorMap(rand,eltype(T),left_virtualspace(below,cr+1,0)*_firstspace(mpo[cr,1])',left_virtualspace(above,cr,0))
+        R0::T = TensorMap(rand,eltype(T),right_virtualspace(above,cr,0)*_firstspace(mpo[cr,1]),right_virtualspace(below,cr+1,0))
         (L0,R0)
     end
 end
@@ -96,13 +98,16 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
     righties = PeriodicArray{envtype,2}(undef,numrows,numcols);
 
     @sync for cr = 1:numrows
+        c_above = above[cr];
+        c_below = below[cr+1];
+
         @Threads.spawn begin
             (L0,R0) = $init[cr]
 
             shouldpack = L0 isa Vector;
             @sync begin
                 @Threads.spawn begin
-                    E_LL = TransferMatrix($above.AL[cr,:],$mpo[cr,:],$below.AL[cr+1,:])
+                    E_LL = TransferMatrix($c_above.AL,$mpo[cr,:],$c_below.AL)
                     (_,Ls,convhist) = eigsolve(shouldpack ? RecursiveVec($L0) : $L0,1,:LM,$solver) do x
                         y = (shouldpack ? x.vecs : x)*E_LL
                         shouldpack ? RecursiveVec(y) : y
@@ -111,7 +116,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
                     L0 = shouldpack ? Ls[1][:] : Ls[1];
                 end
                 @Threads.spawn begin
-                    E_RR = TransferMatrix($above.AR[cr,:],$mpo[cr,:],$below.AR[cr+1,:])
+                    E_RR = TransferMatrix($c_above.AR,$mpo[cr,:],$c_below.AR)
                     (_,Rs,convhist) = eigsolve(shouldpack ? RecursiveVec($R0) : $R0,1,:LM,$solver) do x
                         y = E_RR*(shouldpack ? x.vecs : x)
                         shouldpack ? RecursiveVec(y) : y
@@ -124,19 +129,19 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
 
             $lefties[cr,1] = L0;
             for loc in 2:numcols
-                $lefties[cr,loc] = $lefties[cr,loc-1]*TransferMatrix($above.AL[cr,loc-1],$mpo[cr,loc-1],$below.AL[cr+1,loc-1])
+                $lefties[cr,loc] = $lefties[cr,loc-1]*TransferMatrix($c_above.AL[loc-1],$mpo[cr,loc-1],$c_below.AL[loc-1])
             end
 
 
-            renormfact::eltype(T) = dot($below.CR[cr+1,0],MPO_C_eff(L0,R0)*$above.CR[cr,0])
+            renormfact::eltype(T) = dot($c_below.CR[0],MPO_C_eff(L0,R0)*$c_above.CR[0])
 
             $righties[cr,end] = R0/sqrt(renormfact);
             $lefties[cr,1] /=sqrt(renormfact);
 
             for loc in numcols-1:-1:1
-                $righties[cr,loc] = TransferMatrix($above.AR[cr,loc+1],$mpo[cr,loc+1],$below.AR[cr+1,loc+1])*$righties[cr,loc+1]
+                $righties[cr,loc] = TransferMatrix($c_above.AR[loc+1],$mpo[cr,loc+1],$c_below.AR[loc+1])*$righties[cr,loc+1]
 
-                renormfact = dot($below.CR[cr+1,loc],MPO_C_eff($lefties[cr,loc+1],$righties[cr,loc])*$above.CR[cr,loc])
+                renormfact = dot($c_below.CR[loc],MPO_C_eff($lefties[cr,loc+1],$righties[cr,loc])*$c_above.CR[loc])
                 $righties[cr,loc]/=sqrt(renormfact)
                 $lefties[cr,loc+1]/=sqrt(renormfact)
             end

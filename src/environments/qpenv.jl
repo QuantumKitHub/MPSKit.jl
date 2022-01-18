@@ -141,86 +141,99 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
     left_gs = exci.left_gs;
     right_gs = exci.right_gs;
 
-    AL = left_gs.AL;
-    AR = right_gs.AR;
-
     exci_space = space(exci[1][1],3);
 
-    lBs = map(1:size(left_gs,1)) do row
-        renorms = (map(1:size(left_gs,2)) do col
-            v = leftenv(lenvs,row,col,left_gs)*TransferMatrix(left_gs.AC[row,col],ham[row,col],left_gs.AC[row+1,col]);
-            @plansor v[1 2;3]*rightenv(lenvs,row,col,left_gs)[3 2;1]
-        end).^-1;
+    (numrows,numcols) = size(left_gs);
 
-        lB_cur = TensorMap(zeros,eltype(AL[1,1]),
-                                left_virtualspace(left_gs,row+1,0)*_firstspace(ham[row,1])',
-                                exci_space'*right_virtualspace(right_gs,row,0));
+    site_type = site_type(left_gs);
+    B_type = tensormaptype(sectortype(site_type),2,2,eltype(site_type));
 
-        c_lBs = typeof(lB_cur)[];
-        for col in 1:size(left_gs,2)
-            lB_cur = renorms[col]*lB_cur*TransferMatrix(AR[row,col],ham[row,col],AL[row+1,col])*exp(-1im*exci.momentum)
-            lB_cur += renorms[col]*leftenv(lenvs,row,col,left_gs)*TransferMatrix(exci[row][col],ham[row,col],AL[row+1,col])*exp(-1im*exci.momentum)
-            push!(c_lBs,lB_cur);
+    lBs = PeriodicArray{B_type,2}(undef,size(left_gs)...);
+    rBs = PeriodicArray{B_type,2}(undef,size(left_gs)...);
+
+    for row in 1:numrows
+
+        c_lenvs = broadcast(col->leftenv(lenvs,col,left_gs)[row],1:numcols);
+        c_renvs = broadcast(col->rightenv(renvs,col,right_gs)[row],1:numcols);
+
+        hamrow = ham[row,:];
+
+        left_above = left_gs[row];
+        left_below = left_gs[row+1];
+        right_above = right_gs[row];
+        right_above = right_gs[row+1];
+
+        left_renorms = fill(zero(eltype(B_type)),numcols);
+        right_renorms = fill(zero(eltype(B_type)),numcols);
+
+        for col in 1:numcols
+            lv = leftenv(lenvs,col,left_gs)[row];
+            rv = rightenv(lenvs,col,left_gs)[row];
+            left_renorms[col] = @plansor lv[1 2;3]*left_above.AC[col][3 4;5]*hamrow[col][2 6;4 7]*rv[5 7;8]*conj(left_below.AC[1 6;8])
+
+            lv = leftenv(renvs,col,right_gs)[row];
+            rv = rightenv(renvs,col,right_gs)[row];
+            right_renorms[col] = @plansor lv[1 2;3]*right_above.AC[col][3 4;5]*hamrow[col][2 6;4 7]*rv[5 7;8]*conj(right_below.AC[1 6;8])
+
         end
 
-        tm = TransferMatrix(AR[row,:],ham[row,:],AL[row+1,:]);
+        left_renorms = left_renorms.^-1;
+        right_renorms = right_renorms.^-1;
+
+        lB_cur = TensorMap(zeros,eltype(B_type),
+                                left_virtualspace(left_below,0)*_firstspace(hamrow[1])',
+                                exci_space'*right_virtualspace(right_above,0));
+        rB_cur = TensorMap(zeros,eltype(B_type),
+                                left_virtualspace(left_below,0)*_firstspace(hamrow[1]),
+                                exci_space'*right_virtualspace(right_above,0));
+        for col in 1:numcols
+            lB_cur = lB_cur*TransferMatrix(right_above.AR[col],hamrow[col],left_below.AL[col])
+            lB_cur += c_lenvs[col]*TransferMatrix(exci[row][col],hamrow[col],left_below.AL[col])
+            lB_cur *= left_renorms[col]*exp(-1im*exci.momentum);
+            lBs[row,col] = lB_cur
+
+            col = numcols-col+1;
+
+            rB_cur = TransferMatrix(left_above.AL[col],hamrow[col],right_below.AR[col])*rB_cur
+            rB_cur += TransferMatrix(exci[row][col],hamrow[col],right_below.AR[col])*c_renvs[col]
+            rB_cur *= exp(1im*exci.momentum)*right_renorms[col]
+            rBs[row,col] = rB_cur;
+        end
+
+
+        tm_RL = TransferMatrix(right_above.AR,hamrow,left_below.AL);
+        tm_LR = TransferMatrix(left_above.AL,hamrow,right_below.AR);
+
         if exci.trivial
-            @plansor rvec[-1 -2;-3] :=  rightenv(lenvs,row,0,left_gs)[-1 -2;1]*conj(left_gs.CR[row+1,0][-3;1])
-            @plansor lvec[-1 -2;-3] := leftenv(lenvs,row,1,left_gs)[-1 -2;1]*left_gs.CR[row,0][1;-3]
+            @plansor rvec[-1 -2;-3] := rightenv(lenvs,0,left_gs)[row][-1 -2;1]*conj(left_below.CR[0][-3;1])
+            @plansor lvec[-1 -2;-3] := leftenv(lenvs,1,left_gs)[row][-1 -2;1]*left_above.CR[0][1;-3]
 
-            tm = regularize(tm,lvec,rvec);
+            tm_RL = regularize(tm_RL,lvec,rvec);
+
+            @plansor rvec[-1 -2;-3] := rightenv(renvs,0,right_gs)[row][1 -2;-3]*right_above.CR[0][-1;1]
+            @plansor lvec[-1 -2;-3] := conj(right_below.CR[0][-3;1])*leftenv(renvs,1,right_gs)[row][-1 -2;1]
+
+            tm_LR = regularize(tm_LR,lvec,rvec);
         end
 
-        (c_lBs[end],convhist) = linsolve(flip(tm),lB_cur,lB_cur,solver,1,-exp(-1im*size(left_gs,2)*exci.momentum)*prod(renorms))
+        (lBs[row,end],convhist) = linsolve(flip(tm_RL),lB_cur,lB_cur,solver,1,-exp(-1im*numcols*exci.momentum)*prod(left_renorms))
         convhist.converged == 0 && @warn "lbe failed to converge $(convhist.normres)"
 
-        cur = c_lBs[end];
-        for col in 1:size(left_gs,2)-1
-            cur = renorms[col]*cur*TransferMatrix(AR[row,col],ham[row,col],AL[row+1,col])*exp(conj(1im*exci.momentum))
-            c_lBs[col] += cur
-        end
-
-        PeriodicArray(c_lBs)
-    end
-
-    rBs = map(1:size(left_gs,1)) do row
-        renorms = (map(1:size(right_gs,2)) do col
-            v = leftenv(renvs,row,col,right_gs)*TransferMatrix(right_gs.AC[row,col],ham[row,col],right_gs.AC[row+1,col]);
-            @plansor v[1 2;3]*rightenv(renvs,row,col,right_gs)[3 2;1]
-        end).^-1;
-
-        rB_cur = TensorMap(zeros,eltype(AL[1,1]),
-                                left_virtualspace(left_gs,row,0)*_firstspace(ham[row,1]),
-                                exci_space'*right_virtualspace(right_gs,row+1,0));
-
-        c_rBs = typeof(rB_cur)[];
-        for col in size(left_gs,2):-1:1
-            rB_cur = TransferMatrix(AL[row,col],ham[row,col],AR[row+1,col])*rB_cur*exp(1im*exci.momentum)*renorms[col]
-            rB_cur += TransferMatrix(exci[row][col],ham[row,col],AR[row+1,col])*rightenv(renvs,row,col,right_gs)*exp(1im*exci.momentum)*renorms[col]
-            push!(c_rBs,rB_cur);
-        end
-        c_rBs = reverse(c_rBs);
-
-        tm = TransferMatrix(AL[row,:],ham[row,:],AR[row+1,:])
-
-        if exci.trivial
-            @plansor rvec[-1 -2;-3] :=  rightenv(lenvs,row,0,left_gs)[1 -2;-3]*left_gs.CR[row,0][-1;1]
-            @plansor lvec[-1 -2;-3] := conj(left_gs.CR[row+1,0][-3;1])*leftenv(lenvs,row,1,left_gs)[-1 -2;1]
-
-            tm = regularize(tm,lvec,rvec);
-        end
-
-        (c_rBs[1],convhist) = linsolve(tm,rB_cur,rB_cur,GMRES(),1,-exp(1im*size(left_gs,2)*exci.momentum)*prod(renorms))
+        (rBs[row,1],convhist) = linsolve(tm_LR,rB_cur,rB_cur,GMRES(),1,-exp(1im*numcols*exci.momentum)*prod(right_renorms))
         convhist.converged == 0 && @warn "rbe failed to converge $(convhist.normres)"
 
-        cur = c_rBs[1];
-        for col in size(left_gs,2):-1:2
-            cur = TransferMatrix(AL[row,col],ham[row,col],AR[row+1,col])*cur*exp(1im*exci.momentum)*renorms[col]
-            c_rBs[col] += cur
-        end
 
-        PeriodicArray(c_rBs)
+        left_cur = lBs[row,end];
+        right_cur = rBs[row,1];
+        for col in 1:numcols-1
+            left_cur = left_renorms[col]*left_cur*TransferMatrix(right_above.AR[col],hamrow[col],left_below.AL[col])*exp(-1im*exci.momentum)
+            lBs[row,col] += left_cur
+
+            col = numcols-col+1
+            right_cur = TransferMatrix(left_above.AL[col],hamrow[col],right_below.AR[col])*right_cur*exp(1im*exci.momentum)*right_renorms[col]
+            rBs[row,col] += right_cur
+        end
     end
 
-    QPEnv(PeriodicArray(lBs),PeriodicArray(rBs),lenvs,renvs)
+    QPEnv(lBs,rBs,lenvs,renvs)
 end

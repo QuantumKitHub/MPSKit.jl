@@ -10,7 +10,7 @@ function changebonds(state::InfiniteMPS, H::MPOHamiltonian,alg::OptimalExpand,en
     #determine optimal expansion spaces around bond i
     pexp = PeriodicArray(map(1:length(state)) do i
         ACAR = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
-        AC2 = AC2_eff(i,state,envs)*ACAR;
+        AC2 = AC2_eff(i,state,H,envs)*ACAR;
 
         #Calculate nullspaces for AL and AR
         NL = leftnull(state.AL[i])
@@ -59,7 +59,7 @@ function changebonds(state::MPSMultiline, H,alg::OptimalExpand,envs=environments
     pexp = PeriodicArray(map(Iterators.product(1:size(state,1),1:size(state,2))) do (i,j)
 
         ACAR = _transpose_front(state.AC[i-1,j])*_transpose_tail(state.AR[i-1,j+1])
-        AC2 = AC2_eff(i-1,j,state,envs)*ACAR
+        AC2 = AC2_eff(i-1,j,state,H,envs)*ACAR
 
         #Calculate nullspaces for AL and AR
         NL = leftnull(state.AL[i,j])
@@ -106,7 +106,7 @@ function changebonds!(state::Union{FiniteMPS,MPSComoving}, H,alg::OptimalExpand,
 
     for i in 1:(length(state)-1)
         ACAR = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
-        AC2 = AC2_eff(i,state,envs)*ACAR
+        AC2 = AC2_eff(i,state,H,envs)*ACAR
 
         #Calculate nullspaces for left and right
         NL = leftnull(state.AC[i])
