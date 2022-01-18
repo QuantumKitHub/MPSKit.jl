@@ -39,7 +39,7 @@ function changebonds_n(state::InfiniteMPS, H,alg::VumpsSvdCut,envs=environments(
         (vals,vecs,_) = eigsolve(h_ac2,AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
         nAC2 = vecs[1]
 
-        h_c = C_eff(loc+1,state,envs);
+        h_c = C_eff(loc+1,state,H,envs);
         (vals,vecs,_)  = eigsolve(h_c,state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
         nC2 = vecs[1]
 

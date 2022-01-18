@@ -12,7 +12,8 @@ end
 
 Base.lastindex(t::MPOMultiline) = prod(size(t));
 Base.iterate(t::MPOMultiline,i=1) = i <= lastindex(t) ? (t[(i÷end)+1][mod1(i,size(t,1))],i+1) : nothing;
-Base.getindex(t::MPOMultiline,i,j) = t[i][j];
+Base.getindex(t::MPOMultiline,i::Colon,j::Int) = Base.getindex.(t.data,j);
+Base.getindex(t::MPOMultiline,i::Int,j) = Base.getindex(t.data[i],j);
 Base.getindex(t::MPOMultiline,i::CartesianIndex{2}) = t[i[1],i[2]];
 Base.convert(::Type{MPOMultiline},t::Union{SparseMPO,DenseMPO}) = Multiline([t]);
 Base.convert(::Type{DenseMPO},t::MPOMultiline) = t[1];

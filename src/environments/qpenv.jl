@@ -145,11 +145,11 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
 
     (numrows,numcols) = size(left_gs);
 
-    site_type = site_type(left_gs);
-    B_type = tensormaptype(sectortype(site_type),2,2,eltype(site_type));
+    st = site_type(typeof(left_gs));
+    B_type = tensormaptype(spacetype(st),2,2,eltype(st));
 
-    lBs = PeriodicArray{B_type,2}(undef,size(left_gs)...);
-    rBs = PeriodicArray{B_type,2}(undef,size(left_gs)...);
+    lBs = [PeriodicArray{B_type,1}(undef,size(left_gs,2)) for row in 1:size(left_gs,1)];
+    rBs = [PeriodicArray{B_type,1}(undef,size(left_gs,2)) for row in 1:size(left_gs,1)];
 
     for row in 1:numrows
 
@@ -161,7 +161,7 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
         left_above = left_gs[row];
         left_below = left_gs[row+1];
         right_above = right_gs[row];
-        right_above = right_gs[row+1];
+        right_below = right_gs[row+1];
 
         left_renorms = fill(zero(eltype(B_type)),numcols);
         right_renorms = fill(zero(eltype(B_type)),numcols);
@@ -169,11 +169,11 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
         for col in 1:numcols
             lv = leftenv(lenvs,col,left_gs)[row];
             rv = rightenv(lenvs,col,left_gs)[row];
-            left_renorms[col] = @plansor lv[1 2;3]*left_above.AC[col][3 4;5]*hamrow[col][2 6;4 7]*rv[5 7;8]*conj(left_below.AC[1 6;8])
+            left_renorms[col] = @plansor lv[1 2;3]*left_above.AC[col][3 4;5]*hamrow[col][2 6;4 7]*rv[5 7;8]*conj(left_below.AC[col][1 6;8])
 
             lv = leftenv(renvs,col,right_gs)[row];
             rv = rightenv(renvs,col,right_gs)[row];
-            right_renorms[col] = @plansor lv[1 2;3]*right_above.AC[col][3 4;5]*hamrow[col][2 6;4 7]*rv[5 7;8]*conj(right_below.AC[1 6;8])
+            right_renorms[col] = @plansor lv[1 2;3]*right_above.AC[col][3 4;5]*hamrow[col][2 6;4 7]*rv[5 7;8]*conj(right_below.AC[col][1 6;8])
 
         end
 
@@ -190,14 +190,14 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
             lB_cur = lB_cur*TransferMatrix(right_above.AR[col],hamrow[col],left_below.AL[col])
             lB_cur += c_lenvs[col]*TransferMatrix(exci[row][col],hamrow[col],left_below.AL[col])
             lB_cur *= left_renorms[col]*exp(-1im*exci.momentum);
-            lBs[row,col] = lB_cur
+            lBs[row][col] = lB_cur
 
             col = numcols-col+1;
 
             rB_cur = TransferMatrix(left_above.AL[col],hamrow[col],right_below.AR[col])*rB_cur
             rB_cur += TransferMatrix(exci[row][col],hamrow[col],right_below.AR[col])*c_renvs[col]
             rB_cur *= exp(1im*exci.momentum)*right_renorms[col]
-            rBs[row,col] = rB_cur;
+            rBs[row][col] = rB_cur;
         end
 
 
@@ -216,24 +216,24 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
             tm_LR = regularize(tm_LR,lvec,rvec);
         end
 
-        (lBs[row,end],convhist) = linsolve(flip(tm_RL),lB_cur,lB_cur,solver,1,-exp(-1im*numcols*exci.momentum)*prod(left_renorms))
+        (lBs[row][end],convhist) = linsolve(flip(tm_RL),lB_cur,lB_cur,solver,1,-exp(-1im*numcols*exci.momentum)*prod(left_renorms))
         convhist.converged == 0 && @warn "lbe failed to converge $(convhist.normres)"
 
-        (rBs[row,1],convhist) = linsolve(tm_LR,rB_cur,rB_cur,GMRES(),1,-exp(1im*numcols*exci.momentum)*prod(right_renorms))
+        (rBs[row][1],convhist) = linsolve(tm_LR,rB_cur,rB_cur,GMRES(),1,-exp(1im*numcols*exci.momentum)*prod(right_renorms))
         convhist.converged == 0 && @warn "rbe failed to converge $(convhist.normres)"
 
 
-        left_cur = lBs[row,end];
-        right_cur = rBs[row,1];
+        left_cur = lBs[row][end];
+        right_cur = rBs[row][1];
         for col in 1:numcols-1
             left_cur = left_renorms[col]*left_cur*TransferMatrix(right_above.AR[col],hamrow[col],left_below.AL[col])*exp(-1im*exci.momentum)
-            lBs[row,col] += left_cur
+            lBs[row][col] += left_cur
 
             col = numcols-col+1
             right_cur = TransferMatrix(left_above.AL[col],hamrow[col],right_below.AR[col])*right_cur*exp(1im*exci.momentum)*right_renorms[col]
-            rBs[row,col] += right_cur
+            rBs[row][col] += right_cur
         end
     end
 
-    QPEnv(lBs,rBs,lenvs,renvs)
+    QPEnv(PeriodicArray(lBs),PeriodicArray(rBs),lenvs,renvs)
 end

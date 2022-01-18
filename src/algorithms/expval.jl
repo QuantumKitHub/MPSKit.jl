@@ -85,7 +85,7 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
     len = length(st);
     ens = PeriodicArray(zeros(eltype(st.AR[1]),len));
     for i=1:len
-        util = Tensor(ones,space(prevca.lw[i+1,ham.odim],2))
+        util = Tensor(ones,space(prevca.lw[ham.odim,i+1],2))
         for j=ham.odim:-1:1
             apl = leftenv(prevca,i,st)[j]*TransferMatrix(st.AL[i],ham[i][j,ham.odim],st.AL[i]);
             ens[i] += @plansor apl[1 2;3]*r_LL(st,i)[3;1]*conj(util[2])
