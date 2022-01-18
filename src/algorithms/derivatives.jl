@@ -171,7 +171,7 @@ function ac2_proj(pos,below,envs)
     ac2_prime(envs.above.AC[pos]*_transpose_tail(envs.above.AR[pos+1]),envs.opp[pos],envs.opp[pos+1],le,re)
 end
 function ac2_proj(row,col,below,envs::PerMPOInfEnv)
-    @tensor ac2[-1 -2;-3 -4] := envs.above.AC[row,col][-1 -2;1]*envs.above.AR[row,col+1][1 -4;-3]
+    @plansor ac2[-1 -2;-3 -4] := envs.above.AC[row,col][-1 -2;1]*envs.above.AR[row,col+1][1 -4;-3]
     ac2_prime(ac2,leftenv(envs,row,col+1,below),rightenv(envs,row,col+1,below))
 end
 
