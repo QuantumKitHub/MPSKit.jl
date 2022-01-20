@@ -106,9 +106,9 @@ transfer_right(vec::AbstractVector{V},ham::SparseMPOSlice,A::M,Ab::M) where V<:M
 
 function transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab)
     toret = similar(vec,RetType,length(vec));
-    @sync for k in 1:ham.odim
+    @sync for k in 1:length(vec)
         @Threads.spawn begin
-            res = foldxt(+, 1:$ham.odim |>
+            res = foldxt(+, 1:$length(vec) |>
                 Filter(j->contains($ham,j,k)) |>
                 Map() do j
                     if isscal($ham,j,k)
@@ -130,9 +130,9 @@ end
 function transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab)
     toret = similar(vec,RetType,length(vec));
 
-    @sync for j in 1:ham.odim
+    @sync for j in 1:length(vec)
         @Threads.spawn begin
-            res = foldxt(+, 1:$ham.odim |>
+            res = foldxt(+, 1:$length(vec) |>
                 Filter(k->contains($ham,j,k)) |>
                 Map() do k
                     if isscal($ham,j,k)

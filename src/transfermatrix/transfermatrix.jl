@@ -46,7 +46,7 @@ TransferMatrix(a,b) = TransferMatrix(a,nothing,b);
 TransferMatrix(a,b,c) = TransferMatrix(a,b,c,false);
 TransferMatrix(a::AbstractTensorMap,b,c::AbstractTensorMap,isflipped) = SingleTransferMatrix(a,b,c,isflipped);
 function TransferMatrix(a::AbstractVector,b,c::AbstractVector,isflipped)
-    tot = prod(TransferMatrix.(a,b,c));
+    tot = ProductTransferMatrix(TransferMatrix.(a,b,c));
     isflipped ? flip(tot) : tot
 end
 

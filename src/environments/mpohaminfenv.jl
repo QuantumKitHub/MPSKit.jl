@@ -61,7 +61,7 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
     leftutil = Tensor(ones,eltype(eltype(st)),ham[1].domspaces[1])
     @plansor fixpoints[1,1][-1 -2;-3] = l_LL(st)[-1;-3]*conj(leftutil[-2])
     (len>1) && left_cyclethrough!(1,fixpoints,ham,st)
-    for i = 2:ham.odim
+    for i = 2:size(fixpoints,1)
         prev = copy(fixpoints[i,1]);
 
         rmul!(fixpoints[i,1],0);
@@ -98,14 +98,14 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
 end
 
 function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.linearsolver)
-    len = length(st)
+    len = length(st); odim = size(fixpoints,1);
 
     #the start element
     rightutil = Tensor(ones,eltype(eltype(st)),ham[len].imspaces[1])
     @plansor fixpoints[end,end][-1 -2;-3] = r_RR(st)[-1;-3]*conj(rightutil[-2])
-    (len>1) && right_cyclethrough!(ham.odim,fixpoints,ham,st) #populate other sites
+    (len>1) && right_cyclethrough!(odim,fixpoints,ham,st) #populate other sites
 
-    for i = (ham.odim-1):-1:1
+    for i = (odim-1):-1:1
         prev = copy(fixpoints[i,end])
         rmul!(fixpoints[i,end],0);
         right_cyclethrough!(i,fixpoints,ham,st)
@@ -157,11 +157,11 @@ function left_cyclethrough!(index::Int,fp,ham,st) #see code for explanation
     end
 end
 
-function right_cyclethrough!(index,fp,ham,st) #see code for explanation
+function right_cyclethrough!(index::Int,fp,ham,st) #see code for explanation
     for i=size(fp,2):(-1):1
         rmul!(fp[index,i-1],0);
 
-        for j=index:ham.odim
+        for j=index:size(fp,1)
             contains(ham[i],index,j) || continue
 
             if isscal(ham[i],index,j)

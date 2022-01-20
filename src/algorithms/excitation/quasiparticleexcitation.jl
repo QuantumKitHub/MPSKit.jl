@@ -251,7 +251,7 @@ function effective_excitation_hamiltonian(
 
             T -= Bs[i]*en
             if i>1 || exci isa InfiniteQP
-                @plansor T[-1 -2;-3 -4] +=    envs.lBs[i-1][j][-1 4;-3 5]*
+                @plansor T[-1 -2;-3 -4] +=    envs.lBs[j,i][-1 4;-3 5]*
                                                     exci.right_gs.AR[i][5 2;1]*
                                                     H[i][j,k][4 -2;2 3]*
                                                     rightenv(envs.renvs,i,exci.right_gs)[k][1 3;-4]
@@ -260,7 +260,7 @@ function effective_excitation_hamiltonian(
                 @plansor T[-1 -2;-3 -4] +=    leftenv(envs.lenvs,i,exci.left_gs)[j][-1 2;1]*
                                                     exci.left_gs.AL[i][1 3;4]*
                                                     H[i][j,k][2 -2;3 5]*
-                                                    envs.rBs[i+1][k][4 5;-3 -4]
+                                                    envs.rBs[k,i][4 5;-3 -4]
             end
         end
 
@@ -296,7 +296,7 @@ function effective_excitation_hamiltonian(
                                                 rightenv(envs.renvs,row,col,right_gs)[1 3;-4]
 
 
-            @plansor T[-1 -2;-3 -4] +=    envs.lBs[row][col-1][-1 4;-3 5]*
+            @plansor T[-1 -2;-3 -4] +=    envs.lBs[row,col-1][-1 4;-3 5]*
                                                 right_gs.AR[row,col][5 2;1]*
                                                 H[row,col][4 -2;2 3]*
                                                 rightenv(envs.renvs,row,col,right_gs)[1 3;-4]
@@ -304,7 +304,7 @@ function effective_excitation_hamiltonian(
             @plansor T[-1 -2;-3 -4] +=    leftenv(envs.lenvs,row,col,left_gs)[-1 2;1]*
                                                 left_gs.AL[row,col][1 3;4]*
                                                 H[row,col][2 -2;3 5]*
-                                                envs.rBs[row][col+1][4 5;-3 -4]
+                                                envs.rBs[row,col+1][4 5;-3 -4]
 
             toreturn[row+1][col] = T/en;
         end

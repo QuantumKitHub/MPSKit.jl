@@ -4,8 +4,8 @@ seperates out this bit of logic from effective_excitation_hamiltonian (now more 
 can also - potentially - partially reuse this in other algorithms
 =#
 struct QPEnv{A,B} <: Cache
-    lBs::PeriodicArray{A,1}
-    rBs::PeriodicArray{A,1}
+    lBs::PeriodicArray{A,2}
+    rBs::PeriodicArray{A,2}
 
     lenvs::B
     renvs::B
@@ -27,81 +27,76 @@ function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H, lenvs;
     return environments(exci, H, lenvs, renvs; solver=solver)
 end
 
+function gen_exci_lw_rw(left_gs::Union{FiniteMPS{A},InfiniteMPS{A}},ham::Union{SparseMPO,MPOHamiltonian},right_gs,excileg) where {A}
+    B = tensormaptype(spacetype(A),2,2,eltype(A));
+
+    lw = PeriodicArray{B,2}(undef,ham.odim,length(left_gs))
+    rw = PeriodicArray{B,2}(undef,ham.odim,length(left_gs))
+
+    for j = 1:size(lw,1),i = 1:size(lw,2)
+        lw[j,i] = TensorMap(zeros,eltype(A),left_virtualspace(left_gs,i-1)*ham[i].domspaces[j]',excileg'*right_virtualspace(right_gs,i-1))
+        rw[j,i] = TensorMap(zeros,eltype(A),left_virtualspace(left_gs,i)*ham[i].imspaces[j]',excileg'*right_virtualspace(right_gs,i))
+    end
+
+    return (lw,rw)
+end
+
+
 function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver=Defaults.linearsolver)
     ids = collect(Iterators.filter(x->isid(ham,x),2:ham.odim-1));
 
     AL = exci.left_gs.AL;
     AR = exci.right_gs.AR;
 
-    #build lBs(c)
-    lB_cur = [ TensorMap(zeros,eltype(exci),
-                    left_virtualspace(exci.left_gs,0)*ham.domspaces[1,k]',
-                    space(exci[1],3)'*right_virtualspace(exci.right_gs,0)) for k in 1:ham.odim]
-    lBs = typeof(lB_cur)[]
+    (lBs,rBs) = gen_exci_lw_rw(exci.left_gs,ham,exci.right_gs,space(exci[1],3));
 
     for pos in  1:length(exci)
-        lB_cur = lB_cur * TransferMatrix(AR[pos],ham[pos],AL[pos])*exp(-1im*exci.momentum)
-        lB_cur += leftenv(lenvs,pos,exci.left_gs) * TransferMatrix(exci[pos],ham[pos],AL[pos])*exp(-1im*exci.momentum)
+        lBs[:,pos+1] = lBs[:,pos] * TransferMatrix(AR[pos],ham[pos],AL[pos])*exp(-1im*exci.momentum)
+        lBs[:,pos+1] += leftenv(lenvs,pos,exci.left_gs) * TransferMatrix(exci[pos],ham[pos],AL[pos])*exp(-1im*exci.momentum)
 
         exci.trivial && for i in ids
-            @plansor lB_cur[i][-1 -2;-3 -4] -= lB_cur[i][1 4;-3 2]*r_RL(exci.left_gs,pos)[2;3]*τ[3 4;5 1]*l_RL(exci.left_gs,pos+1)[-1;6]*τ[5 6;-4 -2]
+            @plansor lBs[i,pos+1][-1 -2;-3 -4] -= lBs[i,pos+1][1 4;-3 2]*r_RL(exci.left_gs,pos)[2;3]*τ[3 4;5 1]*l_RL(exci.left_gs,pos+1)[-1;6]*τ[5 6;-4 -2]
         end
-
-
-        push!(lBs,lB_cur)
     end
-
-    #build rBs(c)
-    rB_cur = [ TensorMap(zeros,eltype(exci),
-                    left_virtualspace(exci.left_gs,length(exci))*ham.imspaces[length(exci),k]',
-                    space(exci[1],3)'*right_virtualspace(exci.right_gs,length(exci))) for k in 1:ham.odim]
-    rBs = typeof(rB_cur)[]
 
     for pos in length(exci):-1:1
-        rB_cur = TransferMatrix(AL[pos],ham[pos],AR[pos])*rB_cur*exp(1im*exci.momentum)
-        rB_cur += TransferMatrix(exci[pos],ham[pos],AR[pos])*rightenv(renvs,pos,exci.right_gs)*exp(1im*exci.momentum)
+        rBs[:,pos-1] = TransferMatrix(AL[pos],ham[pos],AR[pos])*rBs[:,pos]*exp(1im*exci.momentum)
+        rBs[:,pos-1] += TransferMatrix(exci[pos],ham[pos],AR[pos])*rightenv(renvs,pos,exci.right_gs)*exp(1im*exci.momentum)
 
         exci.trivial && for i in ids
-            @plansor rB_cur[i][-1 -2;-3 -4] -= τ[6 4;1 3]*rB_cur[i][1 3;-3 2]*l_LR(exci.left_gs,pos)[2;4]*r_LR(exci.left_gs,pos-1)[-1;5]*τ[-2 -4;5 6]
+            @plansor rBs[i,pos-1][-1 -2;-3 -4] -= τ[6 4;1 3]*rBs[i,pos-1][1 3;-3 2]*l_LR(exci.left_gs,pos)[2;4]*r_LR(exci.left_gs,pos-1)[-1;5]*τ[-2 -4;5 6]
         end
-
-        push!(rBs,rB_cur)
     end
-    rBs = reverse(rBs)
-
-    local lBE::typeof(rB_cur);
-    local rBE::typeof(rB_cur);
 
     @sync begin
-        @Threads.spawn lBE = left_excitation_transfer_system($lB_cur,$ham,$exci,solver=$solver)
-        @Threads.spawn rBE = right_excitation_transfer_system($rB_cur,$ham,$exci, solver=$solver)
+        @Threads.spawn $lBs[:,1] = left_excitation_transfer_system($lBs[:,1],$ham,$exci,solver=$solver)
+        @Threads.spawn $rBs[:,end] = right_excitation_transfer_system($rBs[:,end],$ham,$exci, solver=$solver)
     end
 
-    lBs[end] = lBE;
+    lB_cur = lBs[:,1];
 
     for i=1:length(exci)-1
-        lBE = lBE*TransferMatrix(AR[i],ham[i],AL[i])*exp(-1im*exci.momentum)
+        lB_cur = lB_cur*TransferMatrix(AR[i],ham[i],AL[i])*exp(-1im*exci.momentum)
 
         exci.trivial && for k in ids
-            @plansor lBE[k][-1 -2;-3 -4] -= lBE[k][1 4;-3 2]*r_RL(exci.left_gs,i)[2;3]*τ[3 4;5 1]*l_RL(exci.left_gs,i+1)[-1;6]*τ[5 6;-4 -2]
+            @plansor lB_cur[k][-1 -2;-3 -4] -= lB_cur[k][1 4;-3 2]*r_RL(exci.left_gs,i)[2;3]*τ[3 4;5 1]*l_RL(exci.left_gs,i+1)[-1;6]*τ[5 6;-4 -2]
         end
 
-        lBs[i] += lBE;
+        lBs[:,i+1] += lB_cur;
     end
-
-    rBs[1] = rBE;
+    rB_cur = rBs[:,end];
 
     for i=length(exci):-1:2
-        rBE = TransferMatrix(AL[i],ham[i],AR[i])*rBE*exp(1im*exci.momentum)
+        rB_cur = TransferMatrix(AL[i],ham[i],AR[i])*rB_cur*exp(1im*exci.momentum)
 
         exci.trivial && for k in ids
-            @plansor rBE[k][-1 -2;-3 -4] -= τ[6 4;1 3]*rBE[k][1 3;-3 2]*l_LR(exci.left_gs,i)[2;4]*r_LR(exci.left_gs,i-1)[-1;5]*τ[-2 -4;5 6]
+            @plansor rB_cur[k][-1 -2;-3 -4] -= τ[6 4;1 3]*rB_cur[k][1 3;-3 2]*l_LR(exci.left_gs,i)[2;4]*r_LR(exci.left_gs,i-1)[-1;5]*τ[-2 -4;5 6]
         end
 
-        rBs[i] += rBE
+        rBs[:,i-1] += rB_cur
     end
 
-    return QPEnv(PeriodicArray(lBs),PeriodicArray(rBs),lenvs,renvs)
+    return QPEnv(lBs,rBs,lenvs,renvs)
 end
 
 function environments(exci::FiniteQP,ham::MPOHamiltonian,lenvs=environments(exci.left_gs,ham),renvs=exci.trivial ? lenvs : environments(exci.right_gs,ham))
@@ -110,29 +105,19 @@ function environments(exci::FiniteQP,ham::MPOHamiltonian,lenvs=environments(exci
     AR = exci.right_gs.AR;
 
     #construct lBE
-    lB_cur = [ TensorMap(zeros,eltype(exci),
-                    left_virtualspace(exci.left_gs,0)*ham.domspaces[1,k]',
-                    space(exci[1],3)'*right_virtualspace(exci.left_gs,0)) for k in 1:ham.odim]
-    lBs = typeof(lB_cur)[]
-    for pos = 1:length(exci)
-        lB_cur = lB_cur*TransferMatrix(AR[pos],ham[pos],AL[pos])
-        lB_cur += leftenv(lenvs,pos,exci.left_gs)*TransferMatrix(exci[pos],ham[pos],AL[pos])
-        push!(lBs,lB_cur)
+    (lBs,rBs) = gen_exci_lw_rw(exci.left_gs,ham,exci.right_gs,space(exci[1],3));
+
+    for pos = 1:(length(exci)-1)
+        lBs[:,pos+1] = lBs[:,pos]*TransferMatrix(AR[pos],ham[pos],AL[pos])
+        lBs[:,pos+1] += leftenv(lenvs,pos,exci.left_gs)*TransferMatrix(exci[pos],ham[pos],AL[pos])
     end
 
-    #build rBs(c)
-    rB_cur = [ TensorMap(zeros,eltype(exci),
-                    left_virtualspace(exci.right_gs,length(exci))*ham.imspaces[length(exci),k]',
-                    space(exci[1],3)'*right_virtualspace(exci.right_gs,length(exci))) for k in 1:ham.odim]
-    rBs = typeof(rB_cur)[]
-    for pos=length(exci):-1:1
-        rB_cur = TransferMatrix(AL[pos],ham[pos],AR[pos])*rB_cur
-        rB_cur += TransferMatrix(exci[pos],ham[pos],AR[pos])*rightenv(renvs,pos,exci.right_gs)
-        push!(rBs,rB_cur)
+    for pos=length(exci):-1:2
+        rBs[:,pos-1] = TransferMatrix(AL[pos],ham[pos],AR[pos])*rBs[:,pos]
+        rBs[:,pos-1] += TransferMatrix(exci[pos],ham[pos],AR[pos])*rightenv(renvs,pos,exci.right_gs)
     end
-    rBs=reverse(rBs)
 
-    return QPEnv(PeriodicArray(lBs),PeriodicArray(rBs),lenvs,renvs)
+    return QPEnv(lBs,rBs,lenvs,renvs)
 end
 
 function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, renvs;solver=Defaults.linearsolver)
@@ -148,8 +133,8 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
     st = site_type(typeof(left_gs));
     B_type = tensormaptype(spacetype(st),2,2,eltype(st));
 
-    lBs = [PeriodicArray{B_type,1}(undef,size(left_gs,2)) for row in 1:size(left_gs,1)];
-    rBs = [PeriodicArray{B_type,1}(undef,size(left_gs,2)) for row in 1:size(left_gs,1)];
+    lBs = PeriodicArray{B_type,2}(undef,size(left_gs,1),size(left_gs,2))
+    rBs = PeriodicArray{B_type,2}(undef,size(left_gs,1),size(left_gs,2))
 
     for row in 1:numrows
 
@@ -190,14 +175,14 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
             lB_cur = lB_cur*TransferMatrix(right_above.AR[col],hamrow[col],left_below.AL[col])
             lB_cur += c_lenvs[col]*TransferMatrix(exci[row][col],hamrow[col],left_below.AL[col])
             lB_cur *= left_renorms[col]*exp(-1im*exci.momentum);
-            lBs[row][col] = lB_cur
+            lBs[row,col] = lB_cur
 
             col = numcols-col+1;
 
             rB_cur = TransferMatrix(left_above.AL[col],hamrow[col],right_below.AR[col])*rB_cur
             rB_cur += TransferMatrix(exci[row][col],hamrow[col],right_below.AR[col])*c_renvs[col]
             rB_cur *= exp(1im*exci.momentum)*right_renorms[col]
-            rBs[row][col] = rB_cur;
+            rBs[row,col] = rB_cur;
         end
 
 
@@ -216,24 +201,24 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
             tm_LR = regularize(tm_LR,lvec,rvec);
         end
 
-        (lBs[row][end],convhist) = linsolve(flip(tm_RL),lB_cur,lB_cur,solver,1,-exp(-1im*numcols*exci.momentum)*prod(left_renorms))
+        (lBs[row,end],convhist) = linsolve(flip(tm_RL),lB_cur,lB_cur,solver,1,-exp(-1im*numcols*exci.momentum)*prod(left_renorms))
         convhist.converged == 0 && @warn "lbe failed to converge $(convhist.normres)"
 
-        (rBs[row][1],convhist) = linsolve(tm_LR,rB_cur,rB_cur,GMRES(),1,-exp(1im*numcols*exci.momentum)*prod(right_renorms))
+        (rBs[row,1],convhist) = linsolve(tm_LR,rB_cur,rB_cur,GMRES(),1,-exp(1im*numcols*exci.momentum)*prod(right_renorms))
         convhist.converged == 0 && @warn "rbe failed to converge $(convhist.normres)"
 
 
-        left_cur = lBs[row][end];
-        right_cur = rBs[row][1];
+        left_cur = lBs[row,end];
+        right_cur = rBs[row,1];
         for col in 1:numcols-1
             left_cur = left_renorms[col]*left_cur*TransferMatrix(right_above.AR[col],hamrow[col],left_below.AL[col])*exp(-1im*exci.momentum)
-            lBs[row][col] += left_cur
+            lBs[row,col] += left_cur
 
             col = numcols-col+1
             right_cur = TransferMatrix(left_above.AL[col],hamrow[col],right_below.AR[col])*right_cur*exp(1im*exci.momentum)*right_renorms[col]
-            rBs[row][col] += right_cur
+            rBs[row,col] += right_cur
         end
     end
 
-    QPEnv(PeriodicArray(lBs),PeriodicArray(rBs),lenvs,renvs)
+    QPEnv(lBs,rBs,lenvs,renvs)
 end
