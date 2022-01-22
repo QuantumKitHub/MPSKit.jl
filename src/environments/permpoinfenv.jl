@@ -128,7 +128,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
                 $lefties[cr,loc] = $lefties[cr,loc-1]*TransferMatrix($c_above.AL[loc-1],$mpo[cr,loc-1],$c_below.AL[loc-1])
             end
 
-            renormfact::eltype(T) = dot($c_below.CR[0],MPO_C_eff(L0,R0)*$c_above.CR[0])
+            renormfact::eltype(T) = dot($c_below.CR[0],MPO_∂∂C(L0,R0)*$c_above.CR[0])
 
             $righties[cr,end] = R0/sqrt(renormfact);
             $lefties[cr,1] /=sqrt(renormfact);
@@ -136,7 +136,7 @@ function mixed_fixpoints(above::MPSMultiline,mpo::MPOMultiline,below::MPSMultili
             for loc in numcols-1:-1:1
                 $righties[cr,loc] = TransferMatrix($c_above.AR[loc+1],$mpo[cr,loc+1],$c_below.AR[loc+1])*$righties[cr,loc+1]
 
-                renormfact = dot($c_below.CR[loc],MPO_C_eff($lefties[cr,loc+1],$righties[cr,loc])*$c_above.CR[loc])
+                renormfact = dot($c_below.CR[loc],MPO_∂∂C($lefties[cr,loc+1],$righties[cr,loc])*$c_above.CR[loc])
                 $righties[cr,loc]/=sqrt(renormfact)
                 $lefties[cr,loc+1]/=sqrt(renormfact)
             end

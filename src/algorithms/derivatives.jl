@@ -3,57 +3,57 @@
 """
     Draft operators
 """
-struct MPO_C_eff{L,R}
+struct MPO_∂∂C{L,R}
     leftenv::L
     rightenv::R
 end
 
-struct MPO_AC_eff{O,L,R}
+struct MPO_∂∂AC{O,L,R}
     o::O
     leftenv::L
     rightenv::R
 end
 
 
-struct MPO_AC2_eff{O,L,R}
+struct MPO_∂∂AC2{O,L,R}
     o1::O
     o2::O
     leftenv::L
     rightenv::R
 end
 
-Base.:*(h::Union{<:MPO_C_eff,<:MPO_AC_eff,<:MPO_AC2_eff},v) = h(v);
+Base.:*(h::Union{<:MPO_∂∂C,<:MPO_∂∂AC,<:MPO_∂∂AC2},v) = h(v);
 
-(h::MPO_C_eff)(x) = c_prime(x,h.leftenv,h.rightenv);
-(h::MPO_AC_eff)(x) = ac_prime(x,h.o,h.leftenv,h.rightenv);
-(h::MPO_AC2_eff)(x) = ac2_prime(x,h.o1,h.o2,h.leftenv,h.rightenv);
+(h::MPO_∂∂C)(x) = ∂C(x,h.leftenv,h.rightenv);
+(h::MPO_∂∂AC)(x) = ∂AC(x,h.o,h.leftenv,h.rightenv);
+(h::MPO_∂∂AC2)(x) = ∂AC2(x,h.o1,h.o2,h.leftenv,h.rightenv);
 
 # draft operator constructors
-C_eff(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
-    MPO_C_eff(leftenv(cache,pos+1,mps),rightenv(cache,pos,mps))
-C_eff(col::Int, mps, opp::MPOMultiline, envs) =
-    MPO_C_eff(leftenv(envs,col+1,mps),rightenv(envs,col,mps))
-C_eff(row::Int,col::Int, mps, opp::MPOMultiline, envs) =
-    MPO_C_eff(leftenv(envs,row,col+1,mps),rightenv(envs,row,col,mps))
+∂∂C(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
+    MPO_∂∂C(leftenv(cache,pos+1,mps),rightenv(cache,pos,mps))
+∂∂C(col::Int, mps, opp::MPOMultiline, envs) =
+    MPO_∂∂C(leftenv(envs,col+1,mps),rightenv(envs,col,mps))
+∂∂C(row::Int,col::Int, mps, opp::MPOMultiline, envs) =
+    MPO_∂∂C(leftenv(envs,row,col+1,mps),rightenv(envs,row,col,mps))
 
-AC_eff(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
-    MPO_AC_eff(cache.opp[pos],leftenv(cache,pos,mps),rightenv(cache,pos,mps))
-AC_eff(row::Int,col::Int,mps, opp::MPOMultiline, envs) =
-    MPO_AC_eff(envs.opp[row,col],leftenv(envs,row,col,mps),rightenv(envs,row,col,mps));
-AC_eff(col::Int,mps, opp::MPOMultiline, envs) =
-    MPO_AC_eff(envs.opp[:,col],leftenv(envs,col,mps),rightenv(envs,col,mps));
+∂∂AC(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
+    MPO_∂∂AC(cache.opp[pos],leftenv(cache,pos,mps),rightenv(cache,pos,mps))
+∂∂AC(row::Int,col::Int,mps, opp::MPOMultiline, envs) =
+    MPO_∂∂AC(envs.opp[row,col],leftenv(envs,row,col,mps),rightenv(envs,row,col,mps));
+∂∂AC(col::Int,mps, opp::MPOMultiline, envs) =
+    MPO_∂∂AC(envs.opp[:,col],leftenv(envs,col,mps),rightenv(envs,col,mps));
 
-AC2_eff(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
-    MPO_AC2_eff(cache.opp[pos],cache.opp[pos+1],leftenv(cache,pos,mps),rightenv(cache,pos+1,mps));
-AC2_eff(col::Int,mps, opp::MPOMultiline,envs) =
-    MPO_AC2_eff(envs.opp[:,col],envs.opp[:,col+1],leftenv(envs,col,mps),rightenv(envs,col+1,mps))
-AC2_eff(row::Int,col::Int,mps, opp::MPOMultiline,envs) =
-    MPO_AC2_eff(envs.opp[row,col],envs.opp[row,col+1],leftenv(envs,row,col,mps),rightenv(envs,row,col+1,mps))
+∂∂AC2(pos::Int,mps,opp::Union{MPOHamiltonian,SparseMPO,DenseMPO},cache) =
+    MPO_∂∂AC2(cache.opp[pos],cache.opp[pos+1],leftenv(cache,pos,mps),rightenv(cache,pos+1,mps));
+∂∂AC2(col::Int,mps, opp::MPOMultiline,envs) =
+    MPO_∂∂AC2(envs.opp[:,col],envs.opp[:,col+1],leftenv(envs,col,mps),rightenv(envs,col+1,mps))
+∂∂AC2(row::Int,col::Int,mps, opp::MPOMultiline,envs) =
+    MPO_∂∂AC2(envs.opp[row,col],envs.opp[row,col+1],leftenv(envs,row,col,mps),rightenv(envs,row,col+1,mps))
 
 #allow calling them with CartesianIndices
-C_eff(pos::CartesianIndex,mps,opp,envs) = C_eff(Tuple(pos)...,mps,opp,envs)
-AC_eff(pos::CartesianIndex,mps,opp,envs) = AC_eff(Tuple(pos)...,mps,opp,envs)
-AC2_eff(pos::CartesianIndex,mps,opp,envs) = AC2_eff(Tuple(pos)...,mps,opp,envs)
+∂∂C(pos::CartesianIndex,mps,opp,envs) = ∂∂C(Tuple(pos)...,mps,opp,envs)
+∂∂AC(pos::CartesianIndex,mps,opp,envs) = ∂∂AC(Tuple(pos)...,mps,opp,envs)
+∂∂AC2(pos::CartesianIndex,mps,opp,envs) = ∂∂AC2(Tuple(pos)...,mps,opp,envs)
 
 
 
@@ -61,7 +61,7 @@ AC2_eff(pos::CartesianIndex,mps,opp,envs) = AC2_eff(Tuple(pos)...,mps,opp,envs)
     One-site derivative
 """
 
-function ac_prime(x::MPSTensor,ham::SparseMPOSlice,leftenv,rightenv)
+function ∂AC(x::MPSTensor,ham::SparseMPOSlice,leftenv,rightenv)
     local toret
 
     @floop for (i,j) in keys(ham)
@@ -78,21 +78,21 @@ function ac_prime(x::MPSTensor,ham::SparseMPOSlice,leftenv,rightenv)
     return toret
 end
 
-function ac_prime(x::MPSTensor,opp::MPOTensor,leftenv,rightenv)
+function ∂AC(x::MPSTensor,opp::MPOTensor,leftenv,rightenv)
     @plansor toret[-1 -2;-3] := leftenv[-1 2;1]*x[1 3;4]*opp[2 -2; 3 5]*rightenv[4 5;-3]
 end
 
 # mpo multiline
-ac_prime(x::RecursiveVec,opp,leftenv,rightenv) =
-    RecursiveVec(circshift(map(t->ac_prime(t...),zip(x.vecs,opp,leftenv,rightenv)),1))
+∂AC(x::RecursiveVec,opp,leftenv,rightenv) =
+    RecursiveVec(circshift(map(t->∂AC(t...),zip(x.vecs,opp,leftenv,rightenv)),1))
 
-ac_prime(x::MPSTensor,::Nothing,leftenv,rightenv) = _transpose_front(leftenv*_transpose_tail(x*rightenv))
+∂AC(x::MPSTensor,::Nothing,leftenv,rightenv) = _transpose_front(leftenv*_transpose_tail(x*rightenv))
 
 
 """
     Two-site derivative
 """
-function ac2_prime(x::MPOTensor,h1::SparseMPOSlice,h2::SparseMPOSlice,leftenv,rightenv)
+function ∂AC2(x::MPOTensor,h1::SparseMPOSlice,h2::SparseMPOSlice,leftenv,rightenv)
     local toret
 
     @floop for (i,j) in collect(keys(h1)), k in 1:h1.odim
@@ -116,63 +116,63 @@ function ac2_prime(x::MPOTensor,h1::SparseMPOSlice,h2::SparseMPOSlice,leftenv,ri
 
     return toret
 end
-function ac2_prime(x::MPOTensor,opp1::MPOTensor,opp2::MPOTensor,leftenv,rightenv)
+function ∂AC2(x::MPOTensor,opp1::MPOTensor,opp2::MPOTensor,leftenv,rightenv)
     @plansor toret[-1 -2;-3 -4] := leftenv[-1 7;6]*x[6 5;1 3]*opp1[7 -2;5 4]*opp2[4 -4;3 2]*rightenv[1 2;-3]
 end
-function ac2_prime(x::MPOTensor,::Nothing,::Nothing,leftenv,rightenv)
+function ∂AC2(x::MPOTensor,::Nothing,::Nothing,leftenv,rightenv)
     @plansor y[-1 -2;-3 -4] := x[1 -2;2 -4]*leftenv[-1;1]*rightenv[2;-3]
 end
 
-ac2_prime(x::RecursiveVec,opp1,opp2,leftenv,rightenv) =
-    RecursiveVec(circshift(map(t->ac2_prime(t...),zip(x.vecs,opp1,opp2,leftenv,rightenv)),1))
+∂AC2(x::RecursiveVec,opp1,opp2,leftenv,rightenv) =
+    RecursiveVec(circshift(map(t->∂AC2(t...),zip(x.vecs,opp1,opp2,leftenv,rightenv)),1))
 
 
 """
     Zero-site derivative (the C matrix to the right of pos)
 """
-function c_prime(x::MPSBondTensor,leftenv::AbstractVector,rightenv::AbstractVector)
+function ∂C(x::MPSBondTensor,leftenv::AbstractVector,rightenv::AbstractVector)
     sum(zip(leftenv,rightenv)) do (le,re)
-        c_prime(x,le,re)
+        ∂C(x,le,re)
     end
 end
 
-function c_prime(x::MPSBondTensor, leftenv::MPSTensor,rightenv::MPSTensor)
+function ∂C(x::MPSBondTensor, leftenv::MPSTensor,rightenv::MPSTensor)
     @plansor toret[-1;-2] := leftenv[-1 3;1]*x[1;2]*rightenv[2 3;-2]
 end
 
-function c_prime(x::MPSBondTensor, leftenv::MPSBondTensor,rightenv::MPSBondTensor)
+function ∂C(x::MPSBondTensor, leftenv::MPSBondTensor,rightenv::MPSBondTensor)
     @plansor toret[-1;-2] := leftenv[-1;1]*x[1;2]*rightenv[2;-2]
 end
 
-c_prime(x::RecursiveVec,leftenv,rightenv) =
-    RecursiveVec(circshift(map(t->c_prime(t...),zip(x.vecs,leftenv,rightenv)),1))
+∂C(x::RecursiveVec,leftenv,rightenv) =
+    RecursiveVec(circshift(map(t->∂C(t...),zip(x.vecs,leftenv,rightenv)),1))
 
 
 #downproject for approximate
-c_proj(pos,below,envs::FinEnv) = c_prime(envs.above.CR[pos],leftenv(envs,pos+1,below),rightenv(envs,pos,below))
+c_proj(pos,below,envs::FinEnv) = ∂C(envs.above.CR[pos],leftenv(envs,pos+1,below),rightenv(envs,pos,below))
 
 function c_proj(row,col,below,envs::PerMPOInfEnv)
-    c_prime(envs.above.CR[row,col],leftenv(envs,row,col+1,below),rightenv(envs,row,col,below))
+    ∂C(envs.above.CR[row,col],leftenv(envs,row,col+1,below),rightenv(envs,row,col,below))
 end
 
 function ac_proj(pos,below,envs)
     le = leftenv(envs,pos,below)
     re = rightenv(envs,pos,below)
 
-    ac_prime(envs.above.AC[pos],envs.opp[pos],le,re)
+    ∂AC(envs.above.AC[pos],envs.opp[pos],le,re)
 end
 function ac_proj(row,col,below,envs::PerMPOInfEnv)
-    ac_prime(envs.above.AC[row,col],envs.opp[row,col],leftenv(envs,row,col,below),rightenv(envs,row,col,below))
+    ∂AC(envs.above.AC[row,col],envs.opp[row,col],leftenv(envs,row,col,below),rightenv(envs,row,col,below))
 end
 function ac2_proj(pos,below,envs)
     le = leftenv(envs,pos,below)
     re = rightenv(envs,pos+1,below)
 
-    ac2_prime(envs.above.AC[pos]*_transpose_tail(envs.above.AR[pos+1]),envs.opp[pos],envs.opp[pos+1],le,re)
+    ∂AC2(envs.above.AC[pos]*_transpose_tail(envs.above.AR[pos+1]),envs.opp[pos],envs.opp[pos+1],le,re)
 end
 function ac2_proj(row,col,below,envs::PerMPOInfEnv)
     @plansor ac2[-1 -2;-3 -4] := envs.above.AC[row,col][-1 -2;1]*envs.above.AR[row,col+1][1 -4;-3]
-    ac2_prime(ac2,leftenv(envs,row,col+1,below),rightenv(envs,row,col+1,below))
+    ∂AC2(ac2,leftenv(envs,row,col+1,below),rightenv(envs,row,col+1,below))
 end
 
 # lazy linear combination H effective
@@ -185,15 +185,15 @@ Base.:*(h::Union{<:LazyLincoHEff},v) = h(v);
 
 (h::LazyLincoHEff)(x) = sum(map(v->v[2]*v[1](x),zip(h.Heffs,h.coeffs)))
 
-C_eff(pos::Int,mps,opp::LazyLinco,cache) =
-    LazyLincoHEff(broadcast((h,e) -> C_eff(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+∂∂C(pos::Int,mps,opp::LazyLinco,cache) =
+    LazyLincoHEff(broadcast((h,e) -> ∂∂C(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
 
-AC_eff(pos::Int,mps,opp::LazyLinco,cache) =
-    LazyLincoHEff(broadcast((h,e) -> AC_eff(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+∂∂AC(pos::Int,mps,opp::LazyLinco,cache) =
+    LazyLincoHEff(broadcast((h,e) -> ∂∂AC(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
 
 
-AC2_eff(pos::Int,mps,opp::LazyLinco,cache) =
-    LazyLincoHEff(broadcast((h,e) -> AC2_eff(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+∂∂AC2(pos::Int,mps,opp::LazyLinco,cache) =
+    LazyLincoHEff(broadcast((h,e) -> ∂∂AC2(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
 
 struct AC_EffProj{A,L}
     a1::A
@@ -217,7 +217,7 @@ function (h::AC2_EffProj)(x::MPOTensor)
     @plansor y[-1 -2;-3 -4] := conj(v[2;3 5 6])*h.le[-1;2 3 4]*h.a1[4 -2;7]*h.a2[7 -4;1]*h.re[1;5 6 -3]
 end
 
-AC_eff(pos::Int,state,opp::ProjectionOperator,env) =
+∂∂AC(pos::Int,state,opp::ProjectionOperator,env) =
     AC_EffProj(opp.ket.AC[pos],leftenv(env,pos,state),rightenv(env,pos,state));
-AC2_eff(pos::Int,state,opp::ProjectionOperator,env) =
+∂∂AC2(pos::Int,state,opp::ProjectionOperator,env) =
     AC2_EffProj(opp.ket.AC[pos],opp.ket.AR[pos+1],leftenv(env,pos,state),rightenv(env,pos+1,state));

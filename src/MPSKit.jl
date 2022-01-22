@@ -18,7 +18,7 @@ module MPSKit
     #hamiltonian things
     export Cache
     export SparseMPO,MPOHamiltonian,DenseMPO,MPOMultiline
-    export ac_prime,c_prime,environments,ac2_prime,expectation_value,effective_excitation_hamiltonian
+    export ∂C,∂AC,∂AC2,environments,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 
     #algos
@@ -84,7 +84,7 @@ module MPSKit
 
     include("transfermatrix/transfermatrix.jl")
     include("transfermatrix/transfer.jl")
-    
+
 
     abstract type Cache end #cache "manages" environments
 

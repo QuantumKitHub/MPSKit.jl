@@ -11,7 +11,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
         curc = st.CR[:,0];
 
         for col in 1:size(st,2),row in 1:size(st,1)
-            h = MPO_AC_eff(mpo[row,col],leftenv(envs,row,col),rightenv(envs,row,col));
+            h = MPO_∂∂AC(mpo[row,col],leftenv(envs,row,col),rightenv(envs,row,col));
             st.AC[row+1,col] = h*above.AC[row,col];
             normalize!(st.AC[row+1,col])
 
@@ -22,7 +22,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
         end
 
         for col in size(st,2):-1:1, row in 1:size(st,1)
-            h = MPO_AC_eff(mpo[row,col],leftenv(envs,row,col),rightenv(envs,row,col));
+            h = MPO_∂∂AC(mpo[row,col],leftenv(envs,row,col),rightenv(envs,row,col));
             st.AC[row+1,col] = h*above.AC[row,col];
             normalize!(st.AC[row+1,col])
 
@@ -61,7 +61,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
         #sweep from left to right
         for col in 1:size(st,2),row in 1:size(st,1)
             ac2 = above.AC[row,col]*_transpose_tail(above.AR[row,col+1]);
-            h = MPO_AC2_eff(mpo[row,col],mpo[row,col+1],leftenv(envs,row,col),rightenv(envs,row,col+1));
+            h = MPO_∂∂AC2(mpo[row,col],mpo[row,col+1],leftenv(envs,row,col),rightenv(envs,row,col+1));
 
             (al,c,ar,ϵ) = tsvd(h*ac2,trunc=alg.trscheme,alg=TensorKit.SVD())
             normalize!(c);
@@ -78,7 +78,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
         #sweep from right to left
         for col in size(st,2)-1:-1:0,row in 1:size(st,1)
             ac2 = above.AL[row,col]*_transpose_tail(above.AC[row,col+1]);
-            h = MPO_AC2_eff(mpo[row,col],mpo[row,col+1],leftenv(envs,row,col),rightenv(envs,row,col+1));
+            h = MPO_∂∂AC2(mpo[row,col],mpo[row,col+1],leftenv(envs,row,col),rightenv(envs,row,col+1));
 
             (al,c,ar,ϵ) = tsvd(h*ac2,trunc=alg.trscheme,alg=TensorKit.SVD())
             normalize!(c);

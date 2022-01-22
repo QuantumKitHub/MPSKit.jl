@@ -22,7 +22,7 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
 
             @plansor tos[-1 -2;-3] := leftenv(mixedenvs,i,init)[-1;1]*A.AC[i][1 -2;2]*rightenv(mixedenvs,i,init)[2;-3]
 
-            H_AC = AC_eff(i,init,super_op,super_envs);
+            H_AC = ∂∂AC(i,init,super_op,super_envs);
             (res,convhist) = linsolve(H_AC,-eta*tos,init.AC[i],GMRES(tol=solvtol),(eta*eta+w*w),1);
 
             delta = max(delta,norm(res-init.AC[i]))

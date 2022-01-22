@@ -35,11 +35,11 @@ function changebonds_n(state::InfiniteMPS, H,alg::VumpsSvdCut,envs=environments(
     for loc in 1:length(state)
         @plansor AC2[-1 -2;-3 -4] := state.AC[loc][-1 -2;1]*state.AR[loc+1][1 -4;-3]
 
-        h_ac2 = AC2_eff(loc,state,H,envs);
+        h_ac2 = ∂∂AC2(loc,state,H,envs);
         (vals,vecs,_) = eigsolve(h_ac2,AC2, 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
         nAC2 = vecs[1]
 
-        h_c = C_eff(loc+1,state,H,envs);
+        h_c = ∂∂C(loc+1,state,H,envs);
         (vals,vecs,_)  = eigsolve(h_c,state.CR[loc+1], 1, :SR, tol = alg.tol_eigenval; ishermitian=false )
         nC2 = vecs[1]
 

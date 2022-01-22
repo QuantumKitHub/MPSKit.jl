@@ -17,7 +17,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::Dmrg,envs
         delta=0.0
 
         for pos = [1:(length(state)-1);length(state):-1:2]
-            h = AC_eff(pos,state,H,envs);
+            h = ∂∂AC(pos,state,H,envs);
             (eigvals,vecs) = eigsolve(h,state.AC[pos],1,:SR,Lanczos())
             delta = max(delta,calc_galerkin(state,pos,envs))
 
@@ -59,7 +59,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::Dmrg2,env
         for pos= 1:(length(state)-1)
             @plansor ac2[-1 -2; -3 -4]:=state.AC[pos][-1 -2;1]*state.AR[pos+1][1 -4;-3]
 
-            h = AC2_eff(pos,state,H,envs)
+            h = ∂∂AC2(pos,state,H,envs)
 
             (eigvals,vecs) = eigsolve(h,ac2,1,:SR,ealg)
             newA2center = first(vecs);
@@ -77,7 +77,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::Dmrg2,env
         for pos = length(state)-2:-1:1
             @plansor ac2[-1 -2; -3 -4]:=state.AL[pos][-1 -2;1]*state.AC[pos+1][1 -4;-3]
 
-            h = AC2_eff(pos,state,H,envs)
+            h = ∂∂AC2(pos,state,H,envs)
 
             (eigvals,vecs) = eigsolve(h,ac2,1,:SR,ealg)
             newA2center = first(vecs)

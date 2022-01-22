@@ -24,7 +24,7 @@ function fg(x::Tuple{T,<:Cache}) where T <: Union{<:InfiniteMPS,FiniteMPS}
     # respect to AC times CR'.
     al_d = Vector{MPSKit.site_type(T)}(undef,length(state));
     for i in 1:length(state)
-        h_eff = MPSKit.AC_eff(i,state,envs.opp,envs);
+        h_eff = MPSKit.∂∂AC(i,state,envs.opp,envs);
         al_d[i] = (h_eff*state.AC[i]*state.CR[i]')
     end
 
@@ -40,7 +40,7 @@ function fg(x::Tuple{<:MPSMultiline,<:Cache})
 
     # The partial derivative with respect to AL, al_d, is the partial derivative with
     # respect to AC times CR'.
-    ac_d = [MPSKit.AC_eff(v,state,envs.opp,envs)*state.AC[v] for v in CartesianIndices(state.AC)]
+    ac_d = [MPSKit.∂∂AC(v,state,envs.opp,envs)*state.AC[v] for v in CartesianIndices(state.AC)]
     al_d = [d*c' for (d, c) in zip(ac_d, state.CR)]
     g = [Grassmann.project(d, a) for (d, a) in zip(al_d, state.AL)]
 
