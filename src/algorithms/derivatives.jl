@@ -175,25 +175,15 @@ function ac2_proj(row,col,below,envs::PerMPOInfEnv)
     ∂AC2(ac2,leftenv(envs,row,col+1,below),rightenv(envs,row,col+1,below))
 end
 
-# lazy linear combination H effective
-struct LazyLincoHEff{A<:Tuple,B<:Tuple}
-    Heffs::A
-    coeffs::B
-end
+∂∂C(pos::Int,mps,opp::LinearCombination,cache) =
+    LinearCombination(broadcast((h,e) -> ∂∂C(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
 
-Base.:*(h::Union{<:LazyLincoHEff},v) = h(v);
-
-(h::LazyLincoHEff)(x) = sum(map(v->v[2]*v[1](x),zip(h.Heffs,h.coeffs)))
-
-∂∂C(pos::Int,mps,opp::LazyLinco,cache) =
-    LazyLincoHEff(broadcast((h,e) -> ∂∂C(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
-
-∂∂AC(pos::Int,mps,opp::LazyLinco,cache) =
-    LazyLincoHEff(broadcast((h,e) -> ∂∂AC(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+∂∂AC(pos::Int,mps,opp::LinearCombination,cache) =
+    LinearCombination(broadcast((h,e) -> ∂∂AC(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
 
 
-∂∂AC2(pos::Int,mps,opp::LazyLinco,cache) =
-    LazyLincoHEff(broadcast((h,e) -> ∂∂AC2(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+∂∂AC2(pos::Int,mps,opp::LinearCombination,cache) =
+    LinearCombination(broadcast((h,e) -> ∂∂AC2(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
 
 struct AC_EffProj{A,L}
     a1::A

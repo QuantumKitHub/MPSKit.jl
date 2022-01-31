@@ -14,6 +14,7 @@ module MPSKit
 
     #useful utility functions?
     export add_util_leg,max_Ds,left_virtualspace,right_virtualspace, recalculate!
+    export entanglementplot, transferplot
 
     #hamiltonian things
     export Cache
@@ -60,8 +61,8 @@ module MPSKit
 
     include("utility/periodicarray.jl")
     include("utility/utility.jl") #random utility functions
-    export entanglementplot, transferplot
     include("utility/plotting.jl")
+    include("utility/linearcombination.jl")
 
     #maybe we should introduce an abstract state type
     include("states/abstractmps.jl")
@@ -79,7 +80,6 @@ module MPSKit
     include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
     include("operators/mpomultiline.jl")
     include("operators/projection.jl")
-    include("operators/lazylinco.jl")
 
 
     include("transfermatrix/transfermatrix.jl")
