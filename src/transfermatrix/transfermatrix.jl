@@ -43,9 +43,8 @@ Base.:*(vec,tm::AbstractTransferMatrix) = flip(tm)(vec);
 # constructors
 TransferMatrix(a) = TransferMatrix(a,nothing,a);
 TransferMatrix(a,b) = TransferMatrix(a,nothing,b);
-TransferMatrix(a,b,c) = TransferMatrix(a,b,c,false);
-TransferMatrix(a::AbstractTensorMap,b,c::AbstractTensorMap,isflipped) = SingleTransferMatrix(a,b,c,isflipped);
-function TransferMatrix(a::AbstractVector,b,c::AbstractVector,isflipped)
+TransferMatrix(a::AbstractTensorMap,b,c::AbstractTensorMap,isflipped=false) = SingleTransferMatrix(a,b,c,isflipped);
+function TransferMatrix(a::AbstractVector,b,c::AbstractVector,isflipped=false)
     tot = ProductTransferMatrix(TransferMatrix.(a,b,c));
     isflipped ? flip(tot) : tot
 end
