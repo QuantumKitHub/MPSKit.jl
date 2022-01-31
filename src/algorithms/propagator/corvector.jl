@@ -19,11 +19,11 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
 
             @plansor tos[-1 -2;-3] := leftenv(mixedenvs,i,init)[-1;1]*A.AC[i][1 -2;2]*rightenv(mixedenvs,i,init)[2;-3]
 
-            (res,convhist) = @closure linsolve(-eta*tos,init.AC[i],GMRES(tol=solvtol)) do x
-                y=(eta*eta+w*w)*x
-                y-=2*w*ac_prime(x,i,init,envs1)
-                y+=ac_prime(x,i,init,envs2)
-            end
+
+            H1_AC = ∂∂AC(i,init,ham,envs1);
+            H2_AC = ∂∂AC(i,init,ham2,envs2);
+            H_AC = LinearCombination((H1_AC,H2_AC),(-2*w,1));
+            (res,convhist) = linsolve(H_AC,-eta*tos,init.AC[i],GMRES(tol=solvtol),(eta*eta+w*w),1);
 
             delta = max(delta,norm(res-init.AC[i]))
             init.AC[i] = res
@@ -37,14 +37,11 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
     a = @plansor leftenv(mixedenvs,1,init)[-1;1]*A.AC[1][1 -2;2]*rightenv(mixedenvs,1,init)[2;-3]*conj(init.AC[1][-1 -2;-3])
     a = a';
 
-    cb = leftenv(envs1,1,A);
-    for i in 1:length(A)
-        cb = transfer_left(cb,ham[i],init.AL[i],A.AL[i]);
-    end
+    cb = leftenv(envs1,1,A)*TransferMatrix(init.AL,ham[1:length(A.AL)],A.AL);
 
     b = 0*a
     for i in 1:length(cb)
-        b+= @plansor cb[i][1 2;3]*A.CR[end][3;4]*rightenv(envs1,length(A),A)[i][4 2;5]*conj(init.CR[end][1;5]);
+        b+= @plansor cb[i][1 2;3]*init.CR[end][3;4]*rightenv(envs1,length(A),A)[i][4 2;5]*conj(A.CR[end][1;5]);
     end
 
     v = b/eta-w/eta*a+1im*a

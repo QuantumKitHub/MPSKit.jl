@@ -129,9 +129,8 @@ r_LR(state::InfiniteMPS,loc::Int=length(state)) = state.CR[loc]
 r_LL(state::InfiniteMPS,loc::Int=length(state))= state.CR[loc]*adjoint(state.CR[loc])
 
 function TensorKit.dot(a::InfiniteMPS,b::InfiniteMPS;krylovdim = 30)
-    init = TensorMap(rand,ComplexF64,space(a.AL[1],1),space(b.AL[1],1))
-    num = lcm(length(a),length(b))
-    (vals,vecs,convhist) = eigsolve(x->transfer_left(x,b.AL[1:num],a.AL[1:num]),init,1,:LM,Arnoldi(krylovdim=krylovdim))
+    init = TensorMap(rand,eltype(a.AL[1]),_firstspace(b.AL[1]),_firstspace(a.AL[1]))
+    (vals,vecs,convhist) = eigsolve(TransferMatrix(b.AL,a.AL),init,1,:LM,Arnoldi(krylovdim=krylovdim))
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]
 end

@@ -116,7 +116,7 @@ function TensorKit.dot(psi1::MPSComoving, psi2::MPSComoving)
     psi1.left_gs == psi2.left_gs || throw(ArgumentError("left InfiniteMPS is different"))
     psi1.right_gs == psi2.right_gs || throw(ArgumentError("right InfiniteMPS is different"))
 
-    ρr = transfer_right(r_RR(psi2),psi2.AR[2:end],psi1.AR[2:end]);
+    ρr = TransferMatrix(psi2.AR[2:end],psi1.AR[2:end])*r_RR(psi2);
     return tr(_transpose_front(psi1.AC[1])' * _transpose_front(psi2.AC[1]) * ρr)
 end
 

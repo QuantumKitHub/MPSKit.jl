@@ -25,7 +25,6 @@ function Base.copyto!(dst::PeriodicArray,src::PeriodicArray)
     dst
 end
 # not necessary but maybe more efficient
-
 Base.convert(::Type{PeriodicArray{T}}, a::PeriodicArray) where {T} =
     PeriodicArray(convert(Array{T}, a.data))
 Base.convert(::Type{PeriodicArray{T,N}}, a::PeriodicArray) where {T,N} =

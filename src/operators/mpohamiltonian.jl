@@ -43,12 +43,16 @@ Base.getindex(x::MPOHamiltonian,a) = x.data[a];
 Base.eltype(x::MPOHamiltonian) = eltype(x.data);
 Base.size(x::MPOHamiltonian) = (x.period,x.odim,x.odim)
 Base.size(x::MPOHamiltonian,i) = size(x)[i]
-
+Base.length(x::MPOHamiltonian) = length(x.data);
 "
 checks if ham[:,i,i] = 1 for every i
 "
-isid(ham::MPOHamiltonian{S,T,E},i::Int) where {S,T,E}= reduce((a,b) -> a && isscal(ham[b],i,i) && abs(ham.Os[b,i,i]-one(E))<1e-14,1:ham.period,init=true)
-
+function isid(ham::MPOHamiltonian{S,T,E},i::Int) where {S,T,E}
+    for b in 1:size(ham,1)
+        (ham.Os[b,i,i] isa E && abs(ham.Os[b,i,i]-one(E))<1e-14) || return false
+    end
+    true
+end
 "
 to be valid in the thermodynamic limit, these hamiltonians need to have a peculiar structure
 "
@@ -139,3 +143,4 @@ end
 Base.:*(b::MPOHamiltonian,a::MPOHamiltonian) = MPOHamiltonian(b.data*a.data);
 Base.repeat(x::MPOHamiltonian,n::Int) = MPOHamiltonian(repeat(x.data,n));
 Base.conj(a::MPOHamiltonian) = MPOHamiltonian(conj(a.data))
+Base.lastindex(h::MPOHamiltonian) = lastindex(h.data);

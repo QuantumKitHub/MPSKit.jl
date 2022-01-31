@@ -9,17 +9,17 @@ module MPSKit
 
     #bells and whistles for mpses
     export InfiniteMPS,FiniteMPS,MPSComoving,PeriodicArray,MPSMultiline
-    export transfer_left,transfer_right
     export leftorth,rightorth,leftorth!,rightorth!,poison!,uniform_leftorth,uniform_rightorth
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
 
     #useful utility functions?
     export add_util_leg,max_Ds,left_virtualspace,right_virtualspace, recalculate!
+    export entanglementplot, transferplot
 
     #hamiltonian things
     export Cache
     export SparseMPO,MPOHamiltonian,DenseMPO,MPOMultiline
-    export ac_prime,c_prime,environments,ac2_prime,expectation_value,effective_excitation_hamiltonian
+    export ∂C,∂AC,∂AC2,environments,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 
     #algos
@@ -36,6 +36,10 @@ module MPSKit
     export approximate!,approximate
     export periodic_boundary_conditions
     export exact_diagonalization
+
+    #transfer matrix
+    export TransferMatrix
+    export transfer_left,transfer_right
 
     @deprecate virtualspace left_virtualspace # there is a possible ambiguity when C isn't square, necessitating specifying left or right virtualspace
     @deprecate params(args...) environments(args...)
@@ -57,12 +61,11 @@ module MPSKit
 
     include("utility/periodicarray.jl")
     include("utility/utility.jl") #random utility functions
-    export entanglementplot, transferplot
     include("utility/plotting.jl")
+    include("utility/linearcombination.jl")
 
     #maybe we should introduce an abstract state type
     include("states/abstractmps.jl")
-    include("states/transfer.jl") # mps transfer matrices
     include("states/infinitemps.jl")
     include("states/multiline.jl")
     include("states/finitemps.jl")
@@ -76,6 +79,12 @@ module MPSKit
     include("operators/sparsempo/sparsempo.jl")
     include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
     include("operators/mpomultiline.jl")
+    include("operators/projection.jl")
+
+
+    include("transfermatrix/transfermatrix.jl")
+    include("transfermatrix/transfer.jl")
+
 
     abstract type Cache end #cache "manages" environments
 
@@ -85,6 +94,7 @@ module MPSKit
     include("environments/mpohaminfenv.jl")
     include("environments/qpenv.jl")
     include("environments/idmrgenv.jl")
+    include("environments/lazylincocache.jl")
 
     abstract type Algorithm end
 
@@ -110,6 +120,7 @@ module MPSKit
 
     include("algorithms/excitation/quasiparticleexcitation.jl")
     include("algorithms/excitation/dmrgexcitation.jl")
+    include("algorithms/excitation/exci_transfer_system.jl")
 
     include("algorithms/statmech/vumps.jl")
     include("algorithms/statmech/gradient_grassmann.jl")

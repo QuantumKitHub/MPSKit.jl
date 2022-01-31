@@ -5,12 +5,15 @@ infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(Matrix{eltype(h
 
 "calculates the galerkin error"
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64 =
-    norm(leftnull(state.AC[loc])'*ac_prime(state.AC[loc], loc,state,envs))
+    norm(leftnull(state.AC[loc])'*(∂∂AC(loc,state,envs.opp,envs)*state.AC[loc]))
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs)::Float64 =
     maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
 function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
     above = isnothing(envs.above) ? state : envs.above;
-    maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(above.AC[row,col], row,col,state,envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
+
+    maximum([norm(leftnull(state.AC[row+1,col])'*
+        (∂∂AC(row,col,state,envs.opp,envs)*above.AC[row,col]))
+            for (row,col) in product(1:size(state,1),1:size(state,2))][:])
 end
 
 "
@@ -21,9 +24,7 @@ function transfer_spectrum(above::InfiniteMPS;below=above,tol=Defaults.tol,num_v
 
     transferspace = fuse(left_virtualspace(above, 0) * left_virtualspace(below, 0)')
     num_vals = min(dim(transferspace, sector), num_vals); # we can ask at most this many values
-    @assert num_vals > 0 "num_vals should be strictly positive."
-    
-    eigenvals, eigenvecs,convhist = eigsolve(x->transfer_left(x, above.AL, below.AL) , init, num_vals, :LM, tol=tol)
+    eigenvals, eigenvecs,convhist = eigsolve(TransferMatrix(above.AL,below.AL) , init, num_vals, :LM, tol=tol)
     convhist.converged < num_vals && @warn "correlation length failed to converge $(convhist.normres)"
 
     return eigenvals

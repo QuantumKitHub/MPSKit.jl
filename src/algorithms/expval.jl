@@ -25,9 +25,9 @@ function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{
         throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"));
 
     ut = Tensor(ones,firstspace)
-    @plansor tmp[-1 -2;-3] := state.AC[at][4 2;-3]*op[1][1 3;2 -2]*conj(state.AC[at][4 3;-1])*conj(ut[1])
-    tmp = transfer_left(tmp,op[2:length(op)],state.AR[at+1:at+length(op)-1],state.AR[at+1:at+length(op)-1]);
-    return @plansor tmp[1 2;1]*ut[2];
+    @plansor v[-1 -2;-3] := isomorphism(left_virtualspace(state,at),left_virtualspace(state,at))[-1;-3]*conj(ut[-2])
+    tmp = v*TransferMatrix(state.AL[at:at+length(op)-1],op,state.AL[at:at+length(op)-1])
+    return @plansor tmp[1 2;3]*ut[2]*state.CR[at+length(op)-1][3;4]*conj(state.CR[at+length(op)-1][1;4]);
 end
 
 
@@ -85,9 +85,9 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
     len = length(st);
     ens = PeriodicArray(zeros(eltype(st.AR[1]),len));
     for i=1:len
-        util = Tensor(ones,space(prevca.lw[i+1,ham.odim],2))
+        util = Tensor(ones,space(prevca.lw[ham.odim,i+1],2))
         for j=ham.odim:-1:1
-            apl = transfer_left(leftenv(prevca,i,st)[j],ham[i][j,ham.odim],st.AL[i],st.AL[i]);
+            apl = leftenv(prevca,i,st)[j]*TransferMatrix(st.AL[i],ham[i][j,ham.odim],st.AL[i]);
             ens[i] += @plansor apl[1 2;3]*r_LL(st,i)[3;1]*conj(util[2])
         end
     end
@@ -110,7 +110,7 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,range::UnitRange
     end
 
     for i in range
-        start = transfer_left(start,ham[i],st.AR[i],st.AR[i])
+        start = start*TransferMatrix(st.AR[i],ham[i],st.AR[i])
     end
 
     tot = 0.0+0im

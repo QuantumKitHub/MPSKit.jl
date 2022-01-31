@@ -33,9 +33,8 @@ function exact_diagonalization(opp::MPOHamiltonian;sector = first(sectors(oneuni
     envs = environments(state,opp);
 
     #optimize the middle site. Because there is no truncation, this single site captures the entire possible hilbert space
-    (vals,vecs,convhist) = eigsolve(state.AC[middle_site],num,which,alg) do x
-        ac_prime(x,middle_site,state,envs)
-    end
+    H_ac = ∂∂AC(middle_site,state,opp,envs); # this linear operator is now the actual full hamiltonian!
+    (vals,vecs,convhist) = eigsolve(H_ac,state.AC[middle_site],num,which,alg)
 
     state_vecs = map(vecs) do v
         cs = copy(state);
