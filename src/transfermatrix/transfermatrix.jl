@@ -26,7 +26,7 @@ struct RegTransferMatrix{T<:AbstractTransferMatrix,L,R} <: AbstractTransferMatri
 end
 
 #flip em
-TensorKit.flip(tm::SingleTransferMatrix) = SingleTransferMatrix(tm.above,tm.middle,tm.below,tm.isflipped ⊻ true);
+TensorKit.flip(tm::SingleTransferMatrix) = SingleTransferMatrix(tm.above,tm.middle,tm.below,!tm.isflipped);
 TensorKit.flip(tm::ProductTransferMatrix) = ProductTransferMatrix(flip.(reverse(tm.tms)));
 TensorKit.flip(tm::RegTransferMatrix) = RegTransferMatrix(flip(tm.tm),tm.rvec,tm.lvec);
 
