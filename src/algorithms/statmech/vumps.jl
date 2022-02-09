@@ -1,4 +1,4 @@
-#the statmech Vumps
+#the statmech VUMPS
 #it made sense to seperate both vumpses as
 # - leading_boundary primarily works on MPSMultiline
 # - they search for different eigenvalues
@@ -17,7 +17,7 @@ function leading_boundary(state::InfiniteMPS,H,alg,envs=environments(state,H))
     return convert(InfiniteMPS,st),pr,de
 end
 
-function leading_boundary(state::MPSMultiline, H,alg::Vumps,envs = environments(state,H))
+function leading_boundary(state::MPSMultiline, H,alg::VUMPS,envs = environments(state,H))
 
     galerkin  = 1+alg.tol_galerkin
     iter       = 1

@@ -1,4 +1,4 @@
-function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::Idmrg1, oenvs = environments(ost,toapprox))
+function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::IDMRG1, oenvs = environments(ost,toapprox))
     st = copy(ost);
     (mpo,above) = toapprox;
     envs = IDMRGEnv(ost,oenvs);
@@ -44,7 +44,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
     return nst,nenvs,delta;
 end
 
-function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::Idmrg2, oenvs = environments(ost,toapprox))
+function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::IDMRG2, oenvs = environments(ost,toapprox))
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
 
     (mpo,above) = toapprox;

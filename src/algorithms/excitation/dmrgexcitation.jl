@@ -1,5 +1,5 @@
 @with_kw struct FiniteExcited{A} <: Algorithm
-    gsalg::A = Dmrg()
+    gsalg::A = DMRG()
     weight::Float64 = 10.0;
 end
 

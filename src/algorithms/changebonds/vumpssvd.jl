@@ -1,14 +1,14 @@
 "
     use an idmrg2 step to truncate/expand the bond dimension
 "
-@with_kw struct VumpsSvdCut <: Algorithm
+@with_kw struct VUMPSSvdCut <: Algorithm
     tol_gauge = Defaults.tolgauge
     tol_galerkin = Defaults.tol
     tol_eigenval = Defaults.tol
     trscheme = notrunc()
 end
 
-function changebonds_1(state::InfiniteMPS, H,alg::VumpsSvdCut,envs=environments(state,H)) #would be more efficient if we also repeated envs
+function changebonds_1(state::InfiniteMPS, H,alg::VUMPSSvdCut,envs=environments(state,H)) #would be more efficient if we also repeated envs
     #the unitcell==1 case is unique, because there you have a sef-consistency condition
 
     #expand the one site to two sites
@@ -30,7 +30,7 @@ function changebonds_1(state::InfiniteMPS, H,alg::VumpsSvdCut,envs=environments(
     return collapsed, envs
 end
 
-function changebonds_n(state::InfiniteMPS, H,alg::VumpsSvdCut,envs=environments(state,H))
+function changebonds_n(state::InfiniteMPS, H,alg::VUMPSSvdCut,envs=environments(state,H))
     meps=0.0
     for loc in 1:length(state)
         @plansor AC2[-1 -2;-3 -4] := state.AC[loc][-1 -2;1]*state.AR[loc+1][1 -4;-3]
@@ -65,7 +65,7 @@ function changebonds_n(state::InfiniteMPS, H,alg::VumpsSvdCut,envs=environments(
     return state, envs
 end
 
-function changebonds(state::InfiniteMPS,H,alg::VumpsSvdCut,envs=environments(state,H))
+function changebonds(state::InfiniteMPS,H,alg::VUMPSSvdCut,envs=environments(state,H))
     if (length(state) == 1)
         return changebonds_1(state,H,alg,envs)
     else

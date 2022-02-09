@@ -23,13 +23,13 @@ module MPSKit
     export leftenv,rightenv
 
     #algos
-    export find_groundstate!, find_groundstate, Vumps, Dmrg, Dmrg2, GradDesc, Idmrg1, Idmrg2, GradientGrassmann
+    export find_groundstate!, find_groundstate, VUMPS, DMRG, DMRG2, GradDesc, IDMRG1, IDMRG2, GradientGrassmann
     export leading_boundary
     export excitations,FiniteExcited,QuasiparticleAnsatz
     export marek_gap, correlation_length
-    export timestep!,timestep,Tdvp,Tdvp2,make_time_mpo,WI,WII,TaylorCluster
+    export timestep!,timestep,TDVP,TDVP2,make_time_mpo,WI,WII,TaylorCluster
     export splitham,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
-    export changebonds!,changebonds,VumpsSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
+    export changebonds!,changebonds,VUMPSSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
     export entropy
     export dynamicaldmrg
     export fidelity_susceptibility

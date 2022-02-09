@@ -1,15 +1,15 @@
 "
     onesite dmrg
 "
-@with_kw struct Dmrg{F} <: Algorithm
+@with_kw struct DMRG{F} <: Algorithm
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
     verbose::Bool = Defaults.verbose
     finalize::F = Defaults._finalize
 end
 
-find_groundstate(state,H,alg::Dmrg,envs...) = find_groundstate!(copy(state),H,alg,envs...)
-function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::Dmrg,envs = environments(state,H))
+find_groundstate(state,H,alg::DMRG,envs...) = find_groundstate!(copy(state),H,alg,envs...)
+function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::DMRG,envs = environments(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta::Float64 = 2*tol
 
@@ -37,7 +37,7 @@ function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::Dmrg,envs
 end
 
 "twosite dmrg"
-@with_kw struct Dmrg2{F} <: Algorithm
+@with_kw struct DMRG2{F} <: Algorithm
     tol = Defaults.tol;
     maxiter = Defaults.maxiter;
     trscheme = truncerr(1e-6);
@@ -45,8 +45,8 @@ end
     finalize::F = Defaults._finalize
 end
 
-find_groundstate(state,H,alg::Dmrg2,envs...) = find_groundstate!(copy(state),H,alg,envs...)
-function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::Dmrg2,envs = environments(state,H))
+find_groundstate(state,H,alg::DMRG2,envs...) = find_groundstate!(copy(state),H,alg,envs...)
+function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::DMRG2,envs = environments(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta::Float64 = 2*tol
 

@@ -1,7 +1,7 @@
 """
 see https://arxiv.org/abs/1701.07035
 """
-@with_kw struct Vumps{F} <: Algorithm
+@with_kw struct VUMPS{F} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
@@ -16,7 +16,7 @@ end
     find the groundstate for ham using algorithm alg
 "
 
-function find_groundstate(state::InfiniteMPS, H,alg::Vumps,envs=environments(state,H))
+function find_groundstate(state::InfiniteMPS, H,alg::VUMPS,envs=environments(state,H))
     galerkin::Float64  = 1+alg.tol_galerkin
     iter      = 1
 

@@ -1,5 +1,5 @@
 "onesite tdvp"
-@with_kw struct Tdvp <: Algorithm
+@with_kw struct TDVP <: Algorithm
     tol::Float64 = Defaults.tol
     tolgauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
@@ -10,7 +10,7 @@ end
 
 time evolves psi by timestep dt using algorithm alg
 """
-function timestep(state::InfiniteMPS, H, timestep::Number,alg::Tdvp,envs::Cache=environments(state,H))
+function timestep(state::InfiniteMPS, H, timestep::Number,alg::TDVP,envs::Cache=environments(state,H))
 
     temp_ACs = similar(state.AC);
     temp_CRs = similar(state.CR);
@@ -42,7 +42,7 @@ function timestep(state::InfiniteMPS, H, timestep::Number,alg::Tdvp,envs::Cache=
     nstate,envs
 end
 
-function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::Tdvp,envs=environments(state,H))
+function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::TDVP,envs=environments(state,H))
     #left to right
     for i in 1:(length(state)-1)
         h_ac = ∂∂AC(i,state,H,envs);
@@ -72,7 +72,7 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg:
 end
 
 "twosite tdvp (works for finite mps's)"
-@with_kw struct Tdvp2 <: Algorithm
+@with_kw struct TDVP2 <: Algorithm
     tol::Float64 = Defaults.tol
     tolgauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
@@ -80,7 +80,7 @@ end
 end
 
 #twosite tdvp for finite mps
-function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::Tdvp2,envs=environments(state,H);rightorthed=false)
+function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::TDVP2,envs=environments(state,H);rightorthed=false)
     #left to right
     for i in 1:(length(state)-1)
         ac2 = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
@@ -122,4 +122,4 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg:
 end
 
 #copying version
-timestep(state::Union{FiniteMPS,MPSComoving},H,timestep,alg::Union{Tdvp,Tdvp2},envs=environments(state,H)) = timestep!(copy(state),H,timestep,alg,envs)
+timestep(state::Union{FiniteMPS,MPSComoving},H,timestep,alg::Union{TDVP,TDVP2},envs=environments(state,H)) = timestep!(copy(state),H,timestep,alg,envs)

@@ -6,7 +6,7 @@ function approximate(state::InfiniteMPS, toapprox::Tuple{<:Union{SparseMPO,Dense
 end
 
 
-function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::Vumps, envs = environments(state,toapprox))
+function approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::VUMPS, envs = environments(state,toapprox))
     (mpo,above) = toapprox;
 
     galerkin  = 1+alg.tol_galerkin

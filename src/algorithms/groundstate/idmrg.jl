@@ -1,7 +1,7 @@
 """
 onesite infinite dmrg
 """
-@with_kw struct Idmrg1{} <: Algorithm
+@with_kw struct IDMRG1{} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
@@ -9,7 +9,7 @@ onesite infinite dmrg
 end
 
 
-function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg1,oenvs=environments(ost,ham))
+function find_groundstate(ost::InfiniteMPS, ham,alg::IDMRG1,oenvs=environments(ost,ham))
     st = copy(ost);
     envs = IDMRGEnv(ost,oenvs);
 
@@ -56,7 +56,7 @@ end
 """
 twosite infinite dmrg
 """
-@with_kw struct Idmrg2{} <: Algorithm
+@with_kw struct IDMRG2{} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
@@ -64,7 +64,7 @@ twosite infinite dmrg
     trscheme = truncerr(1e-6);
 end
 
-function find_groundstate(ost::InfiniteMPS, ham,alg::Idmrg2,oenvs=environments(ost,ham))
+function find_groundstate(ost::InfiniteMPS, ham,alg::IDMRG2,oenvs=environments(ost,ham))
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
 
     st = copy(ost);
