@@ -110,12 +110,14 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
 
                     ismissing(domspaces[i+1,k]) && (domspaces[i+1,k] = domspaces[i,j])
                     domspaces[i+1,k] != domspaces[i,j] && throw(ArgumentError("Identity incompatible at $((i,j,k)) : $(domspaces[i+1,k]) ≠ $(domspaces[i,j])"))
+                    _can_unambiguously_braid(domspaces[i,j]) || throw(ArgumentError("ambiguous identity operator $((i,j,k))"))
                 elseif !ismissing(domspaces[i+1,k])
                     isused[i,j,k] = true;
                     isstopped = false;
 
                     ismissing(domspaces[i,j]) && (domspaces[i,j] = domspaces[i+1,k])
                     domspaces[i+1,k] != domspaces[i,j] && throw(ArgumentError("Identity incompatible at $((i,j,k)) : $(domspaces[i+1,k]) ≠ $(domspaces[i,j])"))
+                    _can_unambiguously_braid(domspaces[i,j]) || throw(ArgumentError("ambiguous identity operator $((i,j,k))"))
                 end
 
             else

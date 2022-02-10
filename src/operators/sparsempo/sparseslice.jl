@@ -23,7 +23,7 @@ function Base.getindex(x::SparseMPOSlice{S,T,E},a::Int,b::Int)::T where {S,T,E}
         if x.Os[a,b] == zero(E)
             return TensorMap(zeros,E,x.domspaces[a]*x.pspace,x.pspace*x.imspaces[b]')
         else
-            return x.Os[a,b]*isomorphism(Matrix{E},x.domspaces[a]*x.pspace,x.pspace*x.imspaces[b]')
+            return @plansor temp[-1 -2;-3 -4] := (x.Os[a,b]*isomorphism(Matrix{E},x.domspaces[a]*x.pspace,x.imspaces[b]'*x.pspace))[-1 -2;1 2]*τ[1 2;-3 -4]
         end
     else
         return x.Os[a,b]
