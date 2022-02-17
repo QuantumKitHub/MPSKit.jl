@@ -32,7 +32,42 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
             slice[inds[a...],:].*=0;
             slice[:,inds[a...]].*=0;
         end
+
+        #remove equivalent collumns
+        for c in CartesianIndices(inds)
+            tc = [Tuple(c)...];
+            keys = map(x-> x == 1 ? 1 : 2,tc);
+            s_tc = tc[sortperm(keys)];
+
+            if 1 in tc && tc != s_tc
+                slice[:,inds[s_tc...]] += slice[:,inds[c]];
+                slice[:,inds[s_tc...]] ./= 2;
+
+                slice[inds[s_tc...],:] += slice[inds[c],:];
+
+                slice[inds[c],:] .*=0;
+                slice[:,inds[c]] .*=0;
+            end
+        end
+
+        #remove equivalent rows
+        for c in CartesianIndices(inds)
+            tc = [Tuple(c)...];
+            keys = map(x-> x == th.odim ? 1 : 2,tc);
+            s_tc = tc[sortperm(keys)];
+
+            if th.odim in tc && tc != s_tc && !(1 in tc)
+                slice[inds[s_tc...],:] += slice[inds[c],:];
+                slice[inds[s_tc...],:] ./= 2;
+
+                slice[:,inds[s_tc...]] += slice[:,inds[c]];
+
+                slice[:,inds[c]] .*=0;
+                slice[inds[c],:] .*=0;
+            end
+        end
     end
+
 
     remove_orphans(mult)
 end
