@@ -39,7 +39,10 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
             keys = map(x-> x == 1 ? 1 : 2,tc);
             s_tc = tc[sortperm(keys)];
 
-            if 1 in tc && tc != s_tc
+            n1 = count(x->x==1,tc);
+            n3 = count(x->x==th.odim,tc);
+
+            if n1>=n3 && tc != s_tc
                 slice[:,inds[s_tc...]] += slice[:,inds[c]];
                 slice[:,inds[s_tc...]] ./= 2;
 
@@ -56,7 +59,10 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
             keys = map(x-> x == th.odim ? 1 : 2,tc);
             s_tc = tc[sortperm(keys)];
 
-            if th.odim in tc && tc != s_tc && !(1 in tc)
+            n1 = count(x->x==1,tc);
+            n3 = count(x->x==th.odim,tc);
+
+            if n3>n1 && tc != s_tc
                 slice[inds[s_tc...],:] += slice[inds[c],:];
                 slice[inds[s_tc...],:] ./= 2;
 

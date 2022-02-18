@@ -521,7 +521,7 @@ end
         th = force_planar(repeat(nonsym_ising_ham(lambda=4),2));
 
         dt = 1e-3;
-        sW1 = make_time_mpo(th,dt,WI());
+        sW1 = make_time_mpo(th,dt,TaylorCluster{3}());
         sW2 = make_time_mpo(th,dt,WII());
         W1 = convert(DenseMPO,sW1);
         W2 = convert(DenseMPO,sW2);
