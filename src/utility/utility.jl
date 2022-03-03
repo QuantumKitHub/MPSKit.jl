@@ -42,20 +42,6 @@ function add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
     return util_front*tensor*util_back
 end
 
-"""
-Take the L2 Tikhonov regularised inverse of a matrix `m`.
-
-The regularisation parameter is the larger of `delta` (the optional argument that defaults
-to zero) and square root of machine epsilon. The inverse is done using an SVD.
-"""
-function reginv(m, delta=zero(eltype(m)))
-    delta = max(abs(delta), sqrt(eps(real(float(one(eltype(m)))))))
-    U, S, Vdg = tsvd(m)
-    Sinv = inv(real(sqrt(S^2 + delta^2*one(S))))
-    minv = Vdg' * Sinv * U'
-    return minv
-end
-
 function union_split(a::AbstractArray)
     T = reduce((a,b)->Union{a,b},typeof.(a))
     nA = similar(a,T);
