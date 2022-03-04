@@ -4,7 +4,7 @@ th = nonsym_xxz_ham()
 
 ts = InfiniteMPS([ℂ^3],[ℂ^48]);
 
-(ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400));
+(ts,envs,_) = find_groundstate(ts,th,VUMPS(maxiter=400));
 
 (energies,Bs) = excitations(th,QuasiparticleAnsatz(),Float64(pi),ts,envs);
 

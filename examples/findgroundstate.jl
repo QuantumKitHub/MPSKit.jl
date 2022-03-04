@@ -8,7 +8,7 @@ szt = TensorMap([1 0;0 -1],ℂ^2,ℂ^2)
 # |     Drmg                         |
 # ------------------------------------
 ts = FiniteMPS(10,ℂ^2,ℂ^10);
-(ts,envs,_) = find_groundstate(ts,th,Dmrg());
+(ts,envs,_) = find_groundstate(ts,th,DMRG());
 
 szval_finite = sum(expectation_value(ts,szt))/length(ts)
 @test szval_finite ≈ 0 atol=1e-12
@@ -17,7 +17,7 @@ szval_finite = sum(expectation_value(ts,szt))/length(ts)
 # |     Drmg2                        |
 # ------------------------------------
 ts = FiniteMPS(fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10));
-(ts,envs,_) = find_groundstate(ts,th,Dmrg2(trscheme = truncdim(15)));
+(ts,envs,_) = find_groundstate(ts,th,DMRG2(trscheme = truncdim(15)));
 
 szval_finite = sum(expectation_value(ts,szt))/length(ts)
 @test szval_finite ≈ 0 atol=1e-12
@@ -26,7 +26,7 @@ szval_finite = sum(expectation_value(ts,szt))/length(ts)
 # |     Vumps                        |
 # ------------------------------------
 ts = InfiniteMPS([ℂ^2],[ℂ^50]);
-(ts,envs,_) = find_groundstate(ts,th,Vumps(maxiter=400));
+(ts,envs,_) = find_groundstate(ts,th,VUMPS(maxiter=400));
 
 szval_infinite = sum(expectation_value(ts,szt))/length(ts)
 @test szval_infinite ≈ 0 atol=1e-12
