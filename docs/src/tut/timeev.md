@@ -37,7 +37,7 @@ init = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^10);
 
 Find the pre-quench groundstate
 ```julia
-(ψ₀,_) = find_groundstate(init,ising_ham(0.5),Dmrg());
+(ψ₀,_) = find_groundstate(init,ising_ham(0.5),DMRG());
 ```
 
 We can define a help function that measures the loschmith echo
@@ -51,7 +51,7 @@ we will initially use a 2site tdvp scheme to increase the bond dimension while t
 ψₜ = deepcopy(ψ₀);
 dt = 0.01;
 
-(ψₜ,envs) = timestep(ψₜ,ising_ham(2),dt,Tdvp2(trscheme=truncdim(20)));
+(ψₜ,envs) = timestep(ψₜ,ising_ham(2),dt,TDVP2(trscheme=truncdim(20)));
 ```
 
 "envs" is a kind of cache object that keeps track of all environments in ψ. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
@@ -60,7 +60,7 @@ Putting it all together, we get
 ```julia
 function finite_sim(len; dt = 0.05, finaltime = 5.0)
     ψ₀ = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^10);
-    (ψ₀,_) = find_groundstate(ψ₀,ising_ham(0.5),Dmrg());
+    (ψ₀,_) = find_groundstate(ψ₀,ising_ham(0.5),DMRG());
 
     post_quench_ham = ising_ham(2);
     ψₜ = deepcopy(ψ₀);
@@ -70,7 +70,7 @@ function finite_sim(len; dt = 0.05, finaltime = 5.0)
     times = collect(0:dt:finaltime);
 
     @showprogress for t = times[2:end]
-        alg = t > 3*dt ? Tdvp() : Tdvp2(trscheme = truncdim(50))
+        alg = t > 3*dt ? TDVP() : TDVP2(trscheme = truncdim(50))
         (ψₜ,envs) = timestep(ψₜ,post_quench_ham,dt,alg,envs);
         push!(echos,echo(ψₜ,ψ₀))
     end

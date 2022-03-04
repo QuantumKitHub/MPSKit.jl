@@ -28,7 +28,7 @@ state = InfiniteMPS([random_data]);
 
 The groundstate can then be found by calling find_groundstate.
 ```julia
-(groundstate,cache,delta) = find_groundstate(state,ham,Vumps());
+(groundstate,cache,delta) = find_groundstate(state,ham,VUMPS());
 ```
 
 As you can see, vumps strugles to converge. On it's own, that is already quite curious.
@@ -62,12 +62,12 @@ ham = repeat(ham,2);
 
 Running vumps
 ```julia
-(groundstate,cache,delta) = find_groundstate(state,ham,Vumps(maxiter=100,tol_galerkin=1e-12));
+(groundstate,cache,delta) = find_groundstate(state,ham,VUMPS(maxiter=100,tol_galerkin=1e-12));
 ```
 we get convergence, but it takes an enormous amount of iterations. The reason behind this becomes more obvious at higher bond dimensions
 
 ```julia
-(groundstate,cache,delta) = find_groundstate(state,ham,Idmrg2(trscheme=truncdim(100),maxiter=100,tol_galerkin=1e-12));
+(groundstate,cache,delta) = find_groundstate(state,ham,IDMRG2(trscheme=truncdim(100),maxiter=100,tol_galerkin=1e-12));
 
 entanglementplot(groundstate)
 ```
@@ -105,5 +105,5 @@ Even though the bond dimension is higher then in the non symmetric example:
 
 Vumps converges much much faster
 ```julia
-(groundstate,cache,delta) = find_groundstate(state,ham,Vumps(maxiter=400,tol_galerkin=1e-12));
+(groundstate,cache,delta) = find_groundstate(state,ham,VUMPS(maxiter=400,tol_galerkin=1e-12));
 ```

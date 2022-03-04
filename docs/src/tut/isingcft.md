@@ -108,7 +108,7 @@ ham = periodic_boundary_conditions(nonsym_ising_ham(),circumference);
 
 state = FiniteMPS(circumference,ℂ^2,ℂ^50 #=bond dimension=#);
 
-(gs,envs) = find_groundstate(state,ham,Dmrg());
+(gs,envs) = find_groundstate(state,ham,DMRG());
 ```
 
 Excitations on top of the groundstate can be found using the quasiparticle ansatz. This returns quasiparticle states, which you can just convert back to the usual finite mps's.

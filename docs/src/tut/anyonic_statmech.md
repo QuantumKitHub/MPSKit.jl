@@ -27,7 +27,7 @@ init = InfiniteMPS([physical],[virtual]);
 
 and then pass it on to "leading_boundary":
 ```julia
-(dominant,_) = leading_boundary(init,mpo,Vumps());
+(dominant,_) = leading_boundary(init,mpo,VUMPS());
 ```
 
 This dominant eigenvector contains a lot of hidden information, for example the following calculates the free energy:
@@ -55,7 +55,7 @@ envs = environments(dominant,mpo);
 #this will take a fairly long time
 for Ds in 5:5:50
     (dominant,envs) = changebonds(dominant,mpo,OptimalExpand(trscheme = truncdim(5)),envs);
-    (dominant,envs) = leading_boundary(dominant,mpo,Vumps(maxiter=200));
+    (dominant,envs) = leading_boundary(dominant,mpo,VUMPS(maxiter=200));
     push!(entropies,real(entropy(dominant)[1]));
     push!(corlens,correlation_length(dominant));
 end
