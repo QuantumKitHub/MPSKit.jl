@@ -14,12 +14,52 @@ using ..MPSKit
 using TensorKit
 import TensorKitManifolds.Grassmann
 
+function TensorKit.rmul!(a::Grassmann.GrassmannTangent,b::AbstractTensorMap)
+    #rmul!(a.Z,b);
+    Base.setfield!(a,:Z,a.Z*b)
+    Base.setfield!(a,:U,nothing)
+    Base.setfield!(a,:S,nothing)
+    Base.setfield!(a,:V,nothing)
+    a
+end
+
+# preconditioned gradient
+struct PrecGrad{A,B}
+    Pg::A
+    g::A
+    rho::B
+end
+
+PrecGrad(v::Grassmann.GrassmannTangent) = PrecGrad(v,v,isometry(storagetype(v.Z),domain(v.Z),domain(v.Z)))
+PrecGrad(v::Grassmann.GrassmannTangent,rho) = PrecGrad(rmul!(copy(v),inv(rho)),v,rho)
+Grassmann.base(g::PrecGrad) = Grassmann.base(g.Pg);
+
+function inner(g1::PrecGrad,g2::PrecGrad,rho = one(g1.rho))
+    Grassmann.base(g1) == Grassmann.base(g2) || throw(ArgumentError("incompatible base"))
+    if g1.rho == rho
+        dot(g1.g.Z,g2.Pg.Z)
+    elseif g2.rho == rho
+        dot(g1.Pg.Z,g2.g.Z)
+    else
+        dot(g1.Pg.Z,g2.Pg.Z*rho)
+    end
+end
+
+Base.:*(g::PrecGrad,alpha::Number) = PrecGrad(g.Pg*alpha,g.g*alpha,g.rho);
+function Base.:+(a::PrecGrad,b::PrecGrad)
+    if a.rho == b.rho
+        PrecGrad(a.Pg+b.Pg,a.g+b.g,a.rho)
+    else
+        PrecGrad(a.Pg+b.Pg)
+    end
+end
+
 
 struct ManifoldPoint{T,E,G,C}
-    state :: T # the state at that point
-    envs :: E # the environments
-    g :: G # the MPS gradient, which is not equivalent with the grassmann gradient!
-    Creg :: C # the regularized CR's, used in the preconditioning step
+    state::T # the state at that point
+    envs::E # the environments
+    g::G # the MPS gradient, which is not equivalent with the grassmann gradient!
+    Rhoreg::C # the regularized density matrices
 end
 
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS},envs)
@@ -30,12 +70,12 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS},envs)
 
     g = Grassmann.project.(al_d,state.AL)
 
-    Creg = Vector{eltype(state.CR)}(undef,length(state));
+    Rhoreg = Vector{eltype(state.CR)}(undef,length(state));
     for i in 1:length(state)
-        Creg[i] = regularize(state.CR[i],norm(g[i])/10);
+        Rhoreg[i] = regularize(state.CR[i],norm(g[i])/10)
     end
 
-    ManifoldPoint(state,envs,g,Creg)
+    ManifoldPoint(state,envs,g,Rhoreg)
 end
 
 function ManifoldPoint(state::MPSMultiline,envs)
@@ -49,12 +89,12 @@ function ManifoldPoint(state::MPSMultiline,envs)
 
     g = -2*g./abs.(fr);
 
-    Creg = similar(state.CR);
+    Rhoreg = similar(state.CR);
     for (i,cg) in enumerate(g)
-        Creg[i] = regularize(state.CR[i],norm(cg)/10)
+        Rhoreg[i] = regularize(state.CR[i],norm(cg)/10)
     end
 
-    ManifoldPoint(state,envs,g,Creg)
+    ManifoldPoint(state,envs,g,Rhoreg)
 end
 
 """
@@ -63,10 +103,10 @@ cell as tangent vectors on Grassmann manifolds.
 """
 function fg(x::ManifoldPoint{T}) where T <: Union{<:InfiniteMPS,FiniteMPS}
     # the gradient I want to return is the preconditioned gradient!
-    g_prec = similar(x.g);
+    g_prec = Vector{PrecGrad{eltype(x.g),eltype(x.Rhoreg)}}(undef,length(x.g));
 
     for i in 1:length(x.state)
-        g_prec[i] = Grassmann.project(x.g[i][]*x.state.CR[i]'*inv(x.Creg[i])',x.state.AL[i])
+        g_prec[i] = PrecGrad(rmul!(copy(x.g[i]),x.state.CR[i]'),x.Rhoreg[i])
     end
 
     f = real(sum(expectation_value(x.state, x.envs)))
@@ -75,10 +115,8 @@ function fg(x::ManifoldPoint{T}) where T <: Union{<:InfiniteMPS,FiniteMPS}
 end
 function fg(x::ManifoldPoint{<:MPSMultiline})
     # the gradient I want to return is the preconditioned gradient!
-    g_prec = similar(x.g);
-
-    for i in 1:length(x.state)
-        g_prec[i] = Grassmann.project(x.g[i][]*x.state.CR[i]'*inv(x.Creg[i])',x.state.AL[i])
+    g_prec = map(enumerate(x.g)) do (i,cg)
+        PrecGrad(rmul!(copy(cg),x.state.CR[i]'),x.Rhoreg[i])
     end
 
     f = expectation_value(x.state, x.envs)
@@ -97,16 +135,12 @@ function retract(x::ManifoldPoint{<:MPSMultiline}, tg, alpha)
     nal = similar(x.state.AL);
     h = similar(g);
     for (i,cg) in enumerate(tg)
-        prec_g = Grassmann.project(cg[]*inv(x.Creg[i]),x.state.AL[i])
-        (nal[i], h[i]) = Grassmann.retract(x.state.AL[i], prec_g, alpha)
+        (nal[i], th) = Grassmann.retract(x.state.AL[i], cg.Pg, alpha)
+        h[i] = PrecGrad(th);
     end
 
-    nstate = MPSKit.MPSMultiline(nal);
+    nstate = MPSKit.MPSMultiline(nal,x.state.CR[:,end]);
     newpoint = ManifoldPoint(nstate,x.envs)
-
-    for i in 1:length(h)
-        h[i] = Grassmann.project(h[i][]*newpoint.Creg[i],nstate.AL[i])
-    end
 
     return newpoint, h[:]
 end
@@ -119,17 +153,13 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
     nal = similar(state.AL);
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
-        t_g = Grassmann.project(g[i][]*inv(x.Creg[i]),state.AL[i])
-        (nal[i], h[i]) = Grassmann.retract(state.AL[i], t_g, alpha)
+        (nal[i], th) = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        h[i] = PrecGrad(th);
     end
 
     nstate = InfiniteMPS(nal,state.CR[end]);
 
     newpoint = ManifoldPoint(nstate,envs);
-
-    for i in 1:length(g)
-        h[i] = Grassmann.project(h[i][]*newpoint.Creg[i],nstate.AL[i])
-    end
 
     return newpoint, h
 end
@@ -144,17 +174,13 @@ function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
     y = copy(state)  # The end-point
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
-        t_g = Grassmann.project(g[i][]*inv(x.Creg[i]),state.AL[i])
-        (yal, h[i]) = Grassmann.retract(state.AL[i], t_g, alpha)
+        (yal, th) = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        h[i] = PrecGrad(th);
         y.AC[i] = (yal,state.CR[i])
     end
     normalize!(y)
 
     n_y = ManifoldPoint(y,envs);
-
-    for i in 1:length(g)
-        h[i] = Grassmann.project(h[i][]*n_y.Creg[i],y.AL[i])
-    end
 
     return n_y, h
 end
@@ -165,8 +191,7 @@ Transport a tangent vector `h` along the retraction from `x` in direction `g` by
 """
 function transport!(h, x, g, alpha, xp)
     for i in 1:length(h)
-        t_g = Grassmann.project(g[i][]*inv(x.Creg[i]),x.state.AL[i]);
-        h[i] = Grassmann.transport!(h[i], x.state.AL[i], t_g, alpha, xp.state.AL[i])
+        h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha, xp.state.AL[i]))
     end
     return h
 end
@@ -175,8 +200,9 @@ end
 Euclidean inner product between two Grassmann tangents of an infinite MPS.
 """
 function inner(x, g1, g2)
-    tot = sum(Grassmann.inner(a, d1, d2) for (a, d1, d2) in zip(x.state.AL, g1, g2))
-    return 2*real(tot)
+    2 * real(sum(map(zip(x.Rhoreg,g1,g2)) do (a,b,c)
+        inner(b,c,a)
+    end))
 end
 
 """
@@ -198,9 +224,10 @@ to zero) and square root of machine epsilon.
 function regularize(m, delta = zero(eltype(m)))
     U, S, V = tsvd(m)
 
-    Sreg = real(sqrt(S^2 + delta^2*one(S)*norm(S,Inf)^2));
+    #Sreg = real(S*sqrt(one(S) + delta^2*one(S)*norm(S,Inf)^2/S^2));#
+    Sreg = S^2 + (norm(S,Inf)*delta)^2*one(S)
 
-    Mreg = U * Sreg * V
+    Mreg = U * Sreg * U'
 
     return Mreg
 end

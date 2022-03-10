@@ -262,15 +262,13 @@ println("|     Algorithms                   |")
 println("------------------------------------")
 
 @timedtestset "find_groundstate $(ind)" for (ind,(state,alg,ham)) in enumerate([
-        (InfiniteMPS([𝔹^2],[𝔹^10]),VUMPS(tol_galerkin=1e-8,verbose=false),force_planar(nonsym_ising_ham(lambda=2.0))),
-        (InfiniteMPS([𝔹^2],[𝔹^10]), GradientGrassmann(tol=1e-8, verbosity=0), force_planar(nonsym_ising_ham(lambda=2.0))),
-        (InfiniteMPS([𝔹^2],[𝔹^10]), GradientGrassmann(method=LBFGS(6; gradtol=1e-8, verbosity=0)), force_planar(nonsym_ising_ham(lambda=2.0))),
-        (InfiniteMPS([𝔹^2],[𝔹^10]),IDMRG1(tol_galerkin=1e-8,maxiter=400,verbose=false),force_planar(nonsym_ising_ham(lambda=2.0))),
-        (InfiniteMPS([𝔹^2,𝔹^2],[𝔹^10,𝔹^10]),IDMRG2(trscheme = truncdim(12),tol_galerkin=1e-8,maxiter=400,verbose=false),force_planar(repeat(nonsym_ising_ham(lambda=2.0),2))),
-        (InfiniteMPS([𝔹^2], [𝔹^10]), VUMPS(tol_galerkin=1e-5,verbose=false)&GradientGrassmann(tol=1e-8, verbosity=0), force_planar(nonsym_ising_ham(lambda=2.0))),
-        (FiniteMPS(rand,ComplexF64,10,𝔹^2,𝔹^10),DMRG2(verbose=false,trscheme=truncdim(10)),force_planar(nonsym_ising_ham(lambda=2.0))),
-        (FiniteMPS(rand,ComplexF64,10,𝔹^2,𝔹^10),DMRG(verbose=false),force_planar(nonsym_ising_ham(lambda=2.0))),
-        (FiniteMPS(rand,ComplexF64,10,𝔹^2,𝔹^10),GradientGrassmann(verbosity=0),force_planar(nonsym_ising_ham(lambda=2.0)))
+        (InfiniteMPS([𝔹^2],[𝔹^10]),VUMPS(tol_galerkin=1e-8,verbose=false),force_planar(nonsym_ising_ham(lambda=0.51))),
+        (InfiniteMPS([𝔹^2],[𝔹^10]),IDMRG1(tol_galerkin=1e-8,maxiter=400,verbose=false),force_planar(nonsym_ising_ham(lambda=0.51))),
+        (InfiniteMPS([𝔹^2,𝔹^2],[𝔹^10,𝔹^10]),IDMRG2(trscheme = truncdim(12),tol_galerkin=1e-8,maxiter=400,verbose=false),force_planar(repeat(nonsym_ising_ham(lambda=0.51),2))),
+        (InfiniteMPS([𝔹^2], [𝔹^10]), VUMPS(tol_galerkin=1e-5,verbose=false)&GradientGrassmann(tol=1e-8, verbosity=0), force_planar(nonsym_ising_ham(lambda=0.51))),
+        (FiniteMPS(rand,ComplexF64,10,𝔹^2,𝔹^10),DMRG2(verbose=false,trscheme=truncdim(10)),force_planar(nonsym_ising_ham(lambda=0.51))),
+        (FiniteMPS(rand,ComplexF64,10,𝔹^2,𝔹^10),DMRG(verbose=false),force_planar(nonsym_ising_ham(lambda=0.51))),
+        (FiniteMPS(rand,ComplexF64,10,𝔹^2,𝔹^10),GradientGrassmann(verbosity=0),force_planar(nonsym_ising_ham(lambda=0.51)))
         ])
 
     v1 = variance(state,ham);
