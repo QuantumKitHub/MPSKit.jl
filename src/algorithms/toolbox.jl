@@ -204,7 +204,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
             f2 = fusers[2][k,end,end];
 
             @plansor starter[1,indmap(k,ham.odim,ham.odim)][-1 -2;-3 -4]:=
-                ham[1][j,k][1 2;-3 6]*f1[-1;1 3 5]*conj(f2[-4;6 7 8])*τ[2 3;7 4]*τ[4 5;8 -2]
+                ham[1][j,k][-1 -2;-3 2]*conj(f2[-4;2 3 3])
         end
 
         #apply (j,k) below
