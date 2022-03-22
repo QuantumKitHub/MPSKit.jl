@@ -154,9 +154,18 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
     #b -> what virtual space did I "lend" in the beginning?
     #c -> what progress have I made in the lower layer?
     χ = ham.odim;
-    χ´ = Int((χ-1)*χ*(χ+1)/2+1);
 
-    indmap(a,b,c) = Int((χ-b)*(χ-b+1)/2+(a-1)*χ*(χ+1)/2+(c-b)+1)
+    indmap = zeros(Int,χ,χ,χ);
+    χ´ = 0;
+    for b in χ:-1:2,c in b:χ
+        χ´+=1;
+        indmap[1,b,c] = χ´;
+    end
+
+    for a in 2:χ,b in χ:-1:a
+        χ´+=1;
+        indmap[a,b,χ] = χ´;
+    end
 
     #do the bulk
     bulk = PeriodicArray(convert(Array{Union{T,E},3},fill(zero(E),ham.period,χ´,χ´)));
@@ -173,7 +182,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
             f1 = fusers[loc][j,i,l]
             f2 = fusers[loc+1][k,i,l]
 
-            @plansor bulk[loc,indmap(j,i,l),indmap(k,i,l)][-1 -2;-3 -4]:=
+            @plansor bulk[loc,indmap[j,i,l],indmap[k,i,l]][-1 -2;-3 -4]:=
                 ham[loc][j,k][1 2;-3 6]*f1[-1;1 3 5]*conj(f2[-4;6 7 8])*τ[2 3;7 4]*τ[4 5;8 -2]
 
         end
@@ -188,7 +197,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
             f1 = fusers[loc][i,l,j];
             f2 = fusers[loc+1][i,l,k];
 
-            @plansor bulk[loc,indmap(i,l,j),indmap(i,l,k)][-1 -2;-3 -4] :=
+            @plansor bulk[loc,indmap[i,l,j],indmap[i,l,k]][-1 -2;-3 -4] :=
                 ham[loc][j,k][1 -2;3 6]*f1[-1;4 2 1]*conj(f2[-4;8 7 6])*τ[5 2;7 3]*τ[-3 4;8 5]
         end
     end
@@ -203,7 +212,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
             f1 = fusers[1][1,end,end];
             f2 = fusers[2][k,end,end];
 
-            @plansor starter[1,indmap(k,ham.odim,ham.odim)][-1 -2;-3 -4]:=
+            @plansor starter[1,indmap[k,ham.odim,ham.odim]][-1 -2;-3 -4]:=
                 ham[1][j,k][-1 -2;-3 2]*conj(f2[-4;2 3 3])
         end
 
@@ -212,7 +221,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
             f1 = fusers[1][1,j,j];
             f2 = fusers[2][1,j,k];
 
-            @plansor starter[1,indmap(1,j,k)][-1 -2;-3 -4]:=
+            @plansor starter[1,indmap[1,j,k]][-1 -2;-3 -4]:=
                 ham[1][j,k][4 -2;3 1]*conj(f2[-4;6 2 1])*τ[5 4;2 3]*τ[-3 -1;6 5]
 
         end
@@ -228,7 +237,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 
         if k > 1
             f1 = fusers[end][j,k,ham.odim]
-            @plansor ender[indmap(j,k,ham.odim),end][-1 -2;-3 -4]:=
+            @plansor ender[indmap[j,k,ham.odim],end][-1 -2;-3 -4]:=
                 f1[-1;1 2 6]*ham[ham.period][j,k][1 3;-3 4]*τ[3 2;4 5]*τ[5 6;-4 -2]
         end
     end
