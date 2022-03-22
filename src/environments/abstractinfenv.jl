@@ -3,26 +3,6 @@
 "
 abstract type AbstractInfEnv <: Cache end;
 
-function leftenv(envs::AbstractInfEnv,pos::Int,state)
-    check_recalculate!(envs,state);
-    envs.lw[:,pos]
-end
-
-function rightenv(envs::AbstractInfEnv,pos::Int,state)
-    check_recalculate!(envs,state);
-    envs.rw[:,pos]
-end
-
-function leftenv(envs::AbstractInfEnv,row::Int,col::Int,state)
-    check_recalculate!(envs,state);
-    envs.lw[row,col]
-end
-
-function rightenv(envs::AbstractInfEnv,row::Int,col::Int,state)
-    check_recalculate!(envs,state);
-    envs.rw[row,col]
-end
-
 leftenv(envs,pos::CartesianIndex,state) = leftenv(envs,Tuple(pos)...,state)
 rightenv(envs,pos::CartesianIndex,state) = rightenv(envs,Tuple(pos)...,state)
 

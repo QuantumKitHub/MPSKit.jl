@@ -55,6 +55,37 @@ function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline)
     envs
 end
 
+function leftenv(envs::PerMPOInfEnv,pos::Int,state::InfiniteMPS)
+    check_recalculate!(envs,state);
+    envs.lw[1,pos]
+end
+
+function rightenv(envs::PerMPOInfEnv,pos::Int,state::InfiniteMPS)
+    check_recalculate!(envs,state);
+    envs.rw[1,pos]
+end
+
+function leftenv(envs::PerMPOInfEnv,pos::Int,state::MPSMultiline)
+    check_recalculate!(envs,state);
+    envs.lw[:,pos]
+end
+
+function rightenv(envs::PerMPOInfEnv,pos::Int,state::MPSMultiline)
+    check_recalculate!(envs,state);
+    envs.rw[:,pos]
+end
+
+function leftenv(envs::PerMPOInfEnv,row::Int,col::Int,state)
+    check_recalculate!(envs,state);
+    envs.lw[row,col]
+end
+
+function rightenv(envs::PerMPOInfEnv,row::Int,col::Int,state)
+    check_recalculate!(envs,state);
+    envs.rw[row,col]
+end
+
+
 # --- utility functions ---
 
 function gen_init_fps(above::MPSMultiline,mpo::Multiline{<:DenseMPO},below::MPSMultiline)

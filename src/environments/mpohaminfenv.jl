@@ -34,6 +34,16 @@ function environments(st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.linea
     recalculate!(envs,st);
 end
 
+function leftenv(envs::MPOHamInfEnv,pos::Int,state)
+    check_recalculate!(envs,state);
+    envs.lw[:,pos]
+end
+
+function rightenv(envs::MPOHamInfEnv,pos::Int,state)
+    check_recalculate!(envs,state);
+    envs.rw[:,pos]
+end
+
 
 function recalculate!(envs::MPOHamInfEnv, nstate)
     sameDspace = reduce(&,_lastspace.(envs.lw[1,:]) .== _firstspace.(nstate.CR))
