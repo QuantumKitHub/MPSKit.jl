@@ -37,6 +37,8 @@ function environments(below::MPSMultiline,toapprox::Tuple{<:MPOMultiline,<:MPSMu
 end
 
 
+
+recalculate!(envs::PerMPOInfEnv,nstate::InfiniteMPS) = recalculate!(envs,convert(MPSMultiline,nstate));
 function recalculate!(envs::PerMPOInfEnv,nstate::MPSMultiline)
     sameDspace = reduce(&,_firstspace.(envs.dependency.CR) .== _firstspace.(nstate.CR))
 

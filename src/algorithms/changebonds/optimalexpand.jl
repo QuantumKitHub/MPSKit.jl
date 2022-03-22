@@ -6,7 +6,7 @@
 end
 
 
-function changebonds(state::InfiniteMPS, H::MPOHamiltonian,alg::OptimalExpand,envs=environments(state,H))
+function changebonds(state::InfiniteMPS, H,alg::OptimalExpand,envs=environments(state,H))
     #determine optimal expansion spaces around bond i
     pexp = PeriodicArray(map(1:length(state)) do i
         ACAR = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
