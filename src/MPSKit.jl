@@ -9,6 +9,7 @@ module MPSKit
 
     #bells and whistles for mpses
     export InfiniteMPS,FiniteMPS,MPSComoving,PeriodicArray,MPSMultiline
+    export QP,LeftGaugedQP,RightGaugedQP
     export leftorth,rightorth,leftorth!,rightorth!,poison!,uniform_leftorth,uniform_rightorth
     export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
 
