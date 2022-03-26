@@ -128,7 +128,7 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
 
     sum(ismissing.(pspaces)) == 0 || throw(ArgumentError("Not all physical spaces were assigned"))
     sum(ismissing.(domspaces)) == 0 || @warn "failed to deduce all domspaces"
-    f_domspaces = map(x-> ismissing(x) ? one(Sp) : x,domspaces)
+    f_domspaces = map(x-> ismissing(x) ? oneunit(Sp) : x,domspaces)
 
     ndomspaces = PeriodicArray{Sp}(f_domspaces)
     npspaces = PeriodicArray{Sp}(pspaces)
