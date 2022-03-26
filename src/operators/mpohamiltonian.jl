@@ -44,6 +44,7 @@ Base.eltype(x::MPOHamiltonian) = eltype(x.data);
 Base.size(x::MPOHamiltonian) = (x.period,x.odim,x.odim)
 Base.size(x::MPOHamiltonian,i) = size(x)[i]
 Base.length(x::MPOHamiltonian) = length(x.data);
+TensorKit.space(x::MPOHamiltonian,i) = space(x.data,i);
 "
 checks if ham[:,i,i] = 1 for every i
 "

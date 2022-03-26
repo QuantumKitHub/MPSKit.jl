@@ -13,7 +13,7 @@ Base.repeat(t::DenseMPO,n) = DenseMPO(repeat(t.opp,n));
 Base.getindex(t::DenseMPO,i) = getindex(t.opp,i);
 Base.eltype(t::DenseMPO{O}) where O = O;
 Base.iterate(t::DenseMPO,i = 1) = (i > length(t.opp)) ? nothing : (t[i],i+1);
-
+TensorKit.space(t::DenseMPO,i) = space(t.opp[i],2)
 function Base.convert(::Type{InfiniteMPS},mpo::DenseMPO)
     InfiniteMPS(map(mpo.opp) do t
         @plansor tt[-1 -2 -3;-4] := t[-1 -2;1 2]*τ[1 2;-4 -3]

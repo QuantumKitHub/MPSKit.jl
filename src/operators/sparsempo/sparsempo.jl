@@ -153,6 +153,7 @@ end
 Base.size(x::SparseMPO) = (size(x.Os,1),);
 Base.getindex(x::SparseMPO{S,T,E},a::Int) where {S,T,E} = SparseMPOSlice{S,T,E}(@view(x.Os[a,:,:]),@view(x.domspaces[a,:]),@view(x.imspaces[a,:]),x.pspaces[a]);
 Base.copy(x::SparseMPO) = SparseMPO(copy(x.Os),copy(x.domspaces),copy(x.pspaces));
+TensorKit.space(x::SparseMPO,i) = x.pspaces[i]
 "
 checks if ham[:,i,i] = 1 for every i
 "
