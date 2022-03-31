@@ -83,17 +83,25 @@ end
 function excitations(
     H, alg::QuasiparticleAnsatz, momenta, lmps, lenvs=environments(lmps, H),
     rmps=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
-    verbose=Defaults.verbose, num=1, solver=Defaults.linearsolver, sector=first(sectors(oneunit(left_virtualspace(lmps, 1))))
+    verbose=Defaults.verbose, num=1, solver=Defaults.linearsolver, sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), parallel = true
 )
-    tasks = map(momenta) do p
-        @Threads.spawn begin
+    if parallel
+        tasks = map(momenta) do p
+            @Threads.spawn begin
+                (E, V) = excitations(H, alg, p, lmps, lenvs, rmps, renvs; num=num, solver=solver, sector=sector)
+                verbose && @info "Found excitations for p = $(p)"
+                (E, V)
+            end
+        end
+
+        fetched = fetch.(tasks);
+    else
+        fetched = map(momenta) do p
             (E, V) = excitations(H, alg, p, lmps, lenvs, rmps, renvs; num=num, solver=solver, sector=sector)
             verbose && @info "Found excitations for p = $(p)"
             (E, V)
         end
     end
-
-    fetched = fetch.(tasks);
 
     Ep = permutedims(reduce(hcat, map(x->x[1][1:num], fetched)));
     Bp = permutedims(reduce(hcat, map(x->x[2][1:num], fetched)));
