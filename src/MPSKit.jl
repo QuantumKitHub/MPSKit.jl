@@ -23,6 +23,8 @@ module MPSKit
     export ∂C,∂AC,∂AC2,environments,expectation_value,effective_excitation_hamiltonian
     export leftenv,rightenv
 
+    export ∂∂C,∂∂AC
+
     #algos
     export find_groundstate!, find_groundstate, VUMPS, DMRG, DMRG2, GradDesc, IDMRG1, IDMRG2, GradientGrassmann
     export leading_boundary
