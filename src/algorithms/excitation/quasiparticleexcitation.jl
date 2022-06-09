@@ -150,7 +150,7 @@ Create and optimise a finite quasiparticle state.
 function excitations(
     H, alg::QuasiparticleAnsatz,
     lmps::FiniteMPS, lenvs=environments(lmps, H),
-    rmps::FiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H)environmentsleft;
+    rmps::FiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
     sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1
 )
     V₀ = LeftGaugedQP(rand, lmps, rmps; sector=sector);
