@@ -45,6 +45,8 @@ Base.size(x::MPOHamiltonian) = (x.period,x.odim,x.odim)
 Base.size(x::MPOHamiltonian,i) = size(x)[i]
 Base.length(x::MPOHamiltonian) = length(x.data);
 TensorKit.space(x::MPOHamiltonian,i) = space(x.data,i);
+Base.copy(x::MPOHamiltonian) = MPOHamiltonian(copy(x.data));
+Base.iterate(x::MPOHamiltonian,args...) = iterate(x.data,args...);
 "
 checks if ham[:,i,i] = 1 for every i
 "
