@@ -17,35 +17,26 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
     inds = LinearIndices(ntuple(i->th.odim,N));
 
     for (loc,slice) in enumerate(mult)
-        el = ntuple(i->1,N);
-
-        for order in 1:N
-            el = Base.setindex(el,th.odim,order);
-
-            c_ind = inds[el...];
-
-            slice[1:c_ind-1,1].+= slice[1:c_ind-1,c_ind].*τ^order/factorial(order);
-        end
-
         for a in Iterators.product(fill((1,th.odim),N)...)
             all(a.==1) && continue;
-            slice[inds[a...],:].*=0;
-            slice[:,inds[a...]].*=0;
+
+            order = count(x->x==th.odim,a);
+            c_ind = inds[a...];
+            slice[1:c_ind-1,1].+= slice[1:c_ind-1,c_ind].*τ^order*factorial(N-order)/factorial(N);
+            slice[c_ind,:].*=0;
+            slice[:,c_ind].*=0;
         end
 
         #remove equivalent collumns
         for c in CartesianIndices(inds)
             tc = [Tuple(c)...];
-            keys = map(x-> x == 1 ? 1 : 2,tc);
+            keys = map(x-> x == 1 ? 2 : 1,tc);
             s_tc = tc[sortperm(keys)];
 
             n1 = count(x->x==1,tc);
             n3 = count(x->x==th.odim,tc);
 
             if n1>=n3 && tc != s_tc
-                slice[:,inds[s_tc...]] += slice[:,inds[c]];
-                slice[:,inds[s_tc...]] ./= 2;
-
                 slice[inds[s_tc...],:] += slice[inds[c],:];
 
                 slice[inds[c],:] .*=0;
@@ -56,16 +47,13 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
         #remove equivalent rows
         for c in CartesianIndices(inds)
             tc = [Tuple(c)...];
-            keys = map(x-> x == th.odim ? 1 : 2,tc);
+            keys = map(x-> x == th.odim ? 2 : 1,tc);
             s_tc = tc[sortperm(keys)];
 
             n1 = count(x->x==1,tc);
             n3 = count(x->x==th.odim,tc);
 
             if n3>n1 && tc != s_tc
-                slice[inds[s_tc...],:] += slice[inds[c],:];
-                slice[inds[s_tc...],:] ./= 2;
-
                 slice[:,inds[s_tc...]] += slice[:,inds[c]];
 
                 slice[:,inds[c]] .*=0;
