@@ -41,7 +41,6 @@ function timestep(state::InfiniteMPS, H, timestep::Number,alg::TDVP,envs::Cache=
     nstate,envs
 end
 
-<<<<<<< Updated upstream
 function timestep(state::InfiniteMPS, H, timestep::Number,alg::TDVP)
 
 	#start from InfiniteMPS and copy into Comoving MPS
@@ -104,9 +103,6 @@ function timestep(state::InfiniteMPS, H, timestep::Number,alg::TDVP)
     nstate,envs
 end
 
-=======
-<<<<<<< Updated upstream
-=======
 function timestep2(state::InfiniteMPS, H, timestep::Number,alg::TDVP)
 	tolerror = 1e-14
 	#start from InfiniteMPS and copy into Comoving MPS
@@ -357,8 +353,6 @@ function convergenceR3(Aup,Adown,Convergerror::Float64)
 	return (err < Convergerror ? true : false,err)
 end
 
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::TDVP,envs=environments(state,H))
     #left to right
     for i in 1:(length(state)-1)
