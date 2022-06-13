@@ -39,7 +39,7 @@ end
 function RightGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(oneunit(left_virtualspace(left_gs,1)))),momentum=0.0)
     #find the left null spaces for the TNS
     excitation_space = ℂ[typeof(sector)](sector => 1);
-    VRs = [adjoint(leftnull(adjoint(v))) for v in _transpose_tail.(left_gs.AR)]
+    VRs = [adjoint(leftnull(adjoint(v))) for v in _transpose_tail.(right_gs.AR)]
     Xs = [TensorMap(datfun,eltype(left_gs.AL[1]),left_virtualspace(right_gs,loc-1)',excitation_space'*_firstspace(VRs[loc])) for loc in 1:length(left_gs)]
     left_gs isa InfiniteMPS || momentum == zero(momentum) || @warn "momentum is ignored for finite quasiparticles"
     RightGaugedQP(left_gs,right_gs,Xs,VRs,momentum)
