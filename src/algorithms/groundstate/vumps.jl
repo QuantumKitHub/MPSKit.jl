@@ -53,7 +53,7 @@ function find_groundstate(state::InfiniteMPS, H,alg::VUMPS,envs=environments(sta
         galerkin   = calc_galerkin(state, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
-        if (galerkin <= alg.tol_galerkin || iter>=alg.maxiter) && !forcecont
+        if (galerkin <= alg.tol_galerkin && !forcecont ) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
             return state, envs, galerkin
         end
