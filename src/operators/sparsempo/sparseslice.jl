@@ -32,11 +32,10 @@ end
 
 function Base.setindex!(x::SparseMPOSlice{S,T,E},v::T,a::Int,b::Int)  where {S,T,E}
     a <= x.odim && b <= x.odim || throw(BoundsError(x,[a,b]))
-
     (ii,scal) = isid(v);
 
     if ii
-        x.Os[a,b] = scal
+        x.Os[a,b] = scal ≈ one(scal) ? one(scal) : scal
     elseif v ≈ zero(v)
         x.Os[a,b] = zero(E)
     else

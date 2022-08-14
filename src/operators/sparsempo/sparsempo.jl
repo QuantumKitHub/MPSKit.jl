@@ -100,7 +100,7 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
                     ii,sc = isid(x[i,j,k])
 
                     if ii #the tensor is actually proportional to the identity operator -> store this knowledge
-                        x[i,j,k] = sc
+                        x[i,j,k] = sc ≈ one(sc) ? one(sc) : sc
                     end
                 end
             elseif x[i,j,k] != zero(E)
@@ -128,9 +128,13 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
 
     sum(ismissing.(pspaces)) == 0 || throw(ArgumentError("Not all physical spaces were assigned"))
     sum(ismissing.(domspaces)) == 0 || @warn "failed to deduce all domspaces"
-    f_domspaces = map(x-> ismissing(x) ? oneunit(Sp) : x,domspaces)
 
-    ndomspaces = PeriodicArray{Sp}(f_domspaces)
+    for loc in 1:period,j in 1:numrows
+        ismissing(domspaces[loc,j]) || continue
+        domspaces[loc,j] = oneunit(Sp) # all(iszero.(x[loc,j,:])) ? zero(Sp) : oneunit(Sp)
+    end
+
+    ndomspaces = PeriodicArray{Sp}(domspaces)
     npspaces = PeriodicArray{Sp}(pspaces)
 
     return SparseMPO{Sp,M,E}(PeriodicArray(x[:,:,:]),ndomspaces,npspaces)
@@ -165,10 +169,13 @@ checks if the given 4leg tensor is the identity (needed for infinite mpo hamilto
 function isid(x::MPOTensor;tol=Defaults.tolgauge)
     (_firstspace(x) == _lastspace(x)' && space(x,2) == space(x,3)') || return false,zero(eltype(x));
     _can_unambiguously_braid(_firstspace(x)) || return false,zero(eltype(x));
+    iszero(norm(x)) && return false,zero(eltype(x));
 
-    id = isomorphism(Matrix{eltype(x)},codomain(x),domain(x))
-    scal = dot(id,x)/dot(id,id)
-    diff = x-scal*id
+    id = isomorphism(Matrix{eltype(x)},space(x,2),space(x,2))
+    @plansor t[-1;-2] := τ[3 -1;1 2]*x[1 2;3 -2]
+    scal = tr(t)/dim(codomain(x));
+    @plansor diff[-1 -2;-3 -4] := τ[-1 -2;1 2]*(scal*one(t))[2;-4]*id[1;-3]
+    diff-=x;
 
     return norm(diff)<tol,scal
 end
