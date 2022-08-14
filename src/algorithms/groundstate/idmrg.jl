@@ -179,12 +179,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
         delta < alg.tol_galerkin && break
     end
 
-    # fix spaces
-    for i = 1:length(st.AL)
-        st.AL[i] = _transpose_front(st.CR[i-1] * _transpose_tail(st.AR[i] * inv(st.CR[i])))
-    end
-
-    nst = InfiniteMPS(st.AL[1:end], tol=alg.tol_gauge)
+    nst = InfiniteMPS(st.AR[1:end], tol=alg.tol_gauge)
     nenvs = environments(nst, ham, solver=oenvs.solver)
     return nst, nenvs, delta
 end
