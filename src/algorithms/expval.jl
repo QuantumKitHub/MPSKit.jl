@@ -58,7 +58,7 @@ function expectation_value(state::MPSComoving,envs::FinEnv)
 end
 
 expectation_value(state::FiniteMPS,envs::FinEnv) = expectation_value_fimpl(state,envs)
-function expectation_value_fimpl(state::Union{MPSComoving,FiniteMPS},envs::FinEnv)
+function expectation_value_fimpl(state::AbstractFiniteMPS,envs::FinEnv)
     ham = envs.opp;
 
     ens=zeros(eltype(eltype(state)),length(state))

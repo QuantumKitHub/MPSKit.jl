@@ -42,7 +42,7 @@ function timestep(state::InfiniteMPS, H, timestep::Number,alg::TDVP,envs::Cache=
     nstate,envs
 end
 
-function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::TDVP,envs=environments(state,H))
+function timestep!(state::AbstractFiniteMPS, H, timestep::Number,alg::TDVP,envs=environments(state,H))
     #left to right
     for i in 1:(length(state)-1)
         h_ac = ∂∂AC(i,state,H,envs);
@@ -80,7 +80,7 @@ end
 end
 
 #twosite tdvp for finite mps
-function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::TDVP2,envs=environments(state,H);rightorthed=false)
+function timestep!(state::AbstractFiniteMPS, H, timestep::Number,alg::TDVP2,envs=environments(state,H);rightorthed=false)
     #left to right
     for i in 1:(length(state)-1)
         ac2 = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
@@ -122,4 +122,4 @@ function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg:
 end
 
 #copying version
-timestep(state::Union{FiniteMPS,MPSComoving},H,timestep,alg::Union{TDVP,TDVP2},envs=environments(state,H)) = timestep!(copy(state),H,timestep,alg,envs)
+timestep(state::AbstractFiniteMPS,H,timestep,alg::Union{TDVP,TDVP2},envs=environments(state,H)) = timestep!(copy(state),H,timestep,alg,envs)

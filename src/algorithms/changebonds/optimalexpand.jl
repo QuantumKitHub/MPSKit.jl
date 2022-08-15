@@ -96,8 +96,8 @@ function changebonds(state::MPSMultiline, H,alg::OptimalExpand,envs=environments
     return newstate,envs
 end
 
-changebonds(state::Union{FiniteMPS,MPSComoving}, H, alg::OptimalExpand,envs=environments(state,H)) = changebonds!(copy(state),H,alg,envs)
-function changebonds!(state::Union{FiniteMPS,MPSComoving}, H,alg::OptimalExpand,envs=environments(state,H))
+changebonds(state::AbstractFiniteMPS, H, alg::OptimalExpand,envs=environments(state,H)) = changebonds!(copy(state),H,alg,envs)
+function changebonds!(state::AbstractFiniteMPS, H,alg::OptimalExpand,envs=environments(state,H))
     #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
 
     #the idea is that we always want to expand the state in such a way that there are zeros at site i

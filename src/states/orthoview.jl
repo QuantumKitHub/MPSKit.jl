@@ -146,12 +146,12 @@ Base.size(psi::Union{ACView,ALView,ARView}) = size(psi.parent);
 #=
 CRView is tricky. It starts at 0 for finitemps/mpscomoving, but for multiline Infinitemps objects, it should start at 1.
 =#
-Base.size(psi::CRView{S}) where S <: Union{FiniteMPS,MPSComoving} = (length(psi.parent)+1,);
-Base.axes(psi::CRView{S}) where S <: Union{FiniteMPS,MPSComoving} = map(n->0:n-1, size(psi));
+Base.size(psi::CRView{<:AbstractFiniteMPS} = (length(psi.parent)+1,);
+Base.axes(psi::CRView{<:AbstractFiniteMPS})= map(n->0:n-1, size(psi));
 
 Base.size(psi::CRView{<:Multiline{<:InfiniteMPS}}) = size(psi.parent);
-Base.size(psi::CRView{<:Multiline{S}}) where S <: Union{FiniteMPS,MPSComoving} = (length(psi.parent.data),length(first(psi.parent.data))+1);
-Base.axes(psi::CRView{<:Multiline{S}}) where S <: Union{FiniteMPS,MPSComoving} = (Base.OneTo(length(psi.parent.data)),0:length(first(psi.parent.data)));
+Base.size(psi::CRView{<:Multiline{<:AbstractFiniteMPS}}) = (length(psi.parent.data),length(first(psi.parent.data))+1);
+Base.axes(psi::CRView{<:Multiline{<:AbstractFiniteMPS}}) = (Base.OneTo(length(psi.parent.data)),0:length(first(psi.parent.data)));
 
 #the checkbounds for multiline objects needs to be changed, as the first index is periodic
 #however if it is a Multiline(Infinitemps), then the second index is also periodic!

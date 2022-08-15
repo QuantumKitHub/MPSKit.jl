@@ -7,7 +7,7 @@ When queried for AL/AR/AC/CL it will check if it is missing.
     If not, return
     If it is, calculate it, store it and return
 """
-struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
+struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing,A}}
     ARs::Vector{Union{Missing,A}}
     ACs::Vector{Union{Missing,A}}
@@ -87,7 +87,7 @@ function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, max
         virtspaces[k] = infimum(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
     end
     virtspaces[N+1] = right
-    
+
     for k = N:-1:2
         virtspaces[k] = infimum(virtspaces[k], fuse(virtspaces[k+1], dual(fuse(physspaces[k]))))
     end

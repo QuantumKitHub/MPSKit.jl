@@ -94,8 +94,8 @@ function changebonds(state::MPSMultiline,alg::RandExpand)
     return newstate
 end
 
-changebonds(state::Union{FiniteMPS,MPSComoving}, alg::RandExpand) = changebonds!(copy(state),alg)
-function changebonds!(state::Union{FiniteMPS,MPSComoving},alg::RandExpand)
+changebonds(state::AbstractFiniteMPS, alg::RandExpand) = changebonds!(copy(state),alg)
+function changebonds!(state::AbstractFiniteMPS,alg::RandExpand)
     for i in 1:(length(state)-1)
         ACAR = _transpose_front(state.AC[i])*_transpose_tail(state.AR[i+1])
         AC2 = TensorMap(rand,eltype(ACAR),codomain(ACAR),domain(ACAR));
