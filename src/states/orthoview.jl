@@ -146,7 +146,7 @@ Base.size(psi::Union{ACView,ALView,ARView}) = size(psi.parent);
 #=
 CRView is tricky. It starts at 0 for finitemps/mpscomoving, but for multiline Infinitemps objects, it should start at 1.
 =#
-Base.size(psi::CRView{<:AbstractFiniteMPS} = (length(psi.parent)+1,);
+Base.size(psi::CRView{<:AbstractFiniteMPS}) = (length(psi.parent)+1,);
 Base.axes(psi::CRView{<:AbstractFiniteMPS})= map(n->0:n-1, size(psi));
 
 Base.size(psi::CRView{<:Multiline{<:InfiniteMPS}}) = size(psi.parent);
