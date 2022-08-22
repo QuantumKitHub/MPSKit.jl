@@ -15,7 +15,7 @@ function Base.getproperty(h::SparseMPO,f::Symbol)
     elseif f==:period
         return size(h.pspaces,1)
     elseif f==:imspaces
-        return PeriodicArray(circshift(adjoint.(h.domspaces),(-1,0)))
+        return circshift(adjoint.(h.domspaces),(-1,0))
     else
         return getfield(h,f)
     end
@@ -171,7 +171,7 @@ function isid(x::MPOTensor;tol=Defaults.tolgauge)
     _can_unambiguously_braid(_firstspace(x)) || return false,zero(eltype(x));
     iszero(norm(x)) && return false,zero(eltype(x));
 
-    id = isomorphism(Matrix{eltype(x)},space(x,2),space(x,2))
+    id = isomorphism(storagetype(x),space(x,2),space(x,2))
     @plansor t[-1;-2] := τ[3 -1;1 2]*x[1 2;3 -2]
     scal = tr(t)/dim(codomain(x));
     @plansor diff[-1 -2;-3 -4] := τ[-1 -2;1 2]*(scal*one(t))[2;-4]*id[1;-3]
@@ -186,7 +186,7 @@ function Base.:*(b::SparseMPO{S,T,E},a::SparseMPO{S,T,E}) where {S,T,E}
     nOs = PeriodicArray{Union{E,T},3}(fill(zero(E),a.period,nodim,nodim))
 
     fusers = PeriodicArray(map(product(1:a.period,1:a.odim,1:b.odim)) do (pos,i,j)
-        isomorphism(fuse(a.domspaces[pos,i]*b.domspaces[pos,j]),a.domspaces[pos,i]*b.domspaces[pos,j])
+        isomorphism(storagetype(T),fuse(a.domspaces[pos,i]*b.domspaces[pos,j]),a.domspaces[pos,i]*b.domspaces[pos,j])
     end)
 
     ndomspaces = PeriodicArray{S,2}(undef,a.period,nodim)

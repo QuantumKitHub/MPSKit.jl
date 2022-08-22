@@ -26,6 +26,8 @@ right_virtualspace(psi::InfiniteMPS, n::Integer) = dual(_lastspace(psi.CR[n]));
 
 site_type(::Type{InfiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 bond_type(::Type{InfiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
+site_type(st::InfiniteMPS) = site_type(typeof(st))
+bond_type(st::InfiniteMPS) = bond_type(typeof(st))
 
 TensorKit.space(psi::InfiniteMPS{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)
 function TensorKit.space(psi::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
@@ -45,9 +47,9 @@ function InfiniteMPS(A::AbstractArray{T,1}; kwargs...) where T<:GenericMPSTensor
     AR = PeriodicArray(A[:]);
 
     #initial guess for CR
-    CR = PeriodicArray([isomorphism(Matrix{eltype(AR[i])},space(AR[i+1],1),space(AR[i+1],1)) for i in 1:length(A)]);
+    CR = PeriodicArray([isomorphism(storagetype(T),space(AR[i+1],1),space(AR[i+1],1)) for i in 1:length(A)]);
 
-    AL = similar(AR);
+    AL = similar.(AR);
 
     uniform_leftorth!(AL,CR,AR;kwargs...);
     uniform_rightorth!(AR,CR,AL;kwargs...);
@@ -57,14 +59,14 @@ function InfiniteMPS(A::AbstractArray{T,1}; kwargs...) where T<:GenericMPSTensor
         AC[loc] = AL[loc]*CR[loc]
     end
 
-    CRtype = tensormaptype(spacetype(T),1,1,eltype(T));
+    CRtype = tensormaptype(spacetype(T),1,1,storagetype(T));
     return InfiniteMPS{T,CRtype}(AL,AR,CR,AC)
 end
 
 function InfiniteMPS(A::AbstractArray{T,1},cinit::B;kwargs...) where {T<:GenericMPSTensor, B<:MPSBondTensor}
     CR = PeriodicArray(fill(copy(cinit),length(A)));
     AL = PeriodicArray(A[:])
-    AR = similar(AL);
+    AR = similar.(AL);
     uniform_rightorth!(AR,CR,AL;kwargs...);
 
     AC = similar(AR)
@@ -102,13 +104,13 @@ l_LR(state::InfiniteMPS,loc::Int=1) = state.CR[loc-1]'
     l_LL(state,location)
     Left dominant eigenvector of the AL-AL transfermatrix
 "
-l_LL(state::InfiniteMPS{A},loc::Int=1) where A= isomorphism(Matrix{eltype(A)}, space(state.AL[loc],1),space(state.AL[loc],1))
+l_LL(state::InfiniteMPS{A},loc::Int=1) where A= isomorphism(storagetype(A), space(state.AL[loc],1),space(state.AL[loc],1))
 
 "
     r_RR(state,location)
     Right dominant eigenvector of the AR-AR transfermatrix
 "
-r_RR(state::InfiniteMPS{A},loc::Int=length(state)) where A= isomorphism(Matrix{eltype(A)},domain(state.AR[loc]),domain(state.AR[loc]))
+r_RR(state::InfiniteMPS{A},loc::Int=length(state)) where A= isomorphism(storagetype(A),domain(state.AR[loc]),domain(state.AR[loc]))
 
 "
     r_RL(state,location)
@@ -129,7 +131,9 @@ r_LR(state::InfiniteMPS,loc::Int=length(state)) = state.CR[loc]
 r_LL(state::InfiniteMPS,loc::Int=length(state))= state.CR[loc]*adjoint(state.CR[loc])
 
 function TensorKit.dot(a::InfiniteMPS,b::InfiniteMPS;krylovdim = 30)
-    init = TensorMap(rand,eltype(a.AL[1]),_firstspace(b.AL[1]),_firstspace(a.AL[1]))
+    init = similar(a.AL[1],_firstspace(b.AL[1])←_firstspace(a.AL[1]))
+    randomize!(init);
+
     (vals,vecs,convhist) = eigsolve(TransferMatrix(b.AL,a.AL),init,1,:LM,Arnoldi(krylovdim=krylovdim))
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]

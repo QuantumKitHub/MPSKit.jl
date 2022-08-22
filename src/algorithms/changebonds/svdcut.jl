@@ -23,7 +23,7 @@ changebonds(state::DenseMPO,alg::SvdCut) = convert(DenseMPO,changebonds(convert(
 changebonds(state::MPOMultiline,alg::SvdCut) = convert(MPOMultiline,changebonds(convert(MPSMultiline,state),alg))
 changebonds(state::MPSMultiline,alg::SvdCut) = Multiline(map(x->changebonds(x,alg),state.data))
 function changebonds(state::InfiniteMPS,alg::SvdCut)
-    copied = PeriodicArray(complex.(state.AL));
+    copied = complex.(state.AL);
     ncr = state.CR[1];
 
     for i in 1:length(state)

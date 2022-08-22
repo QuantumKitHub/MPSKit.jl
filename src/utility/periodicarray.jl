@@ -30,7 +30,12 @@ Base.convert(::Type{PeriodicArray{T}}, a::PeriodicArray) where {T} =
 Base.convert(::Type{PeriodicArray{T,N}}, a::PeriodicArray) where {T,N} =
     PeriodicArray(convert(Array{T,N}, a.data))
 
+#should this copy?
+Base.convert(::Type{Array{T,N}},a::PeriodicArray{T,N}) where {T,N} = a.data;
+
 Base.checkbounds(a::PeriodicArray, I...) = true
 
 Base.circshift(t::PeriodicArray{T,N},tup::Tuple{Vararg{Integer,N}}) where{T,N}= PeriodicArray{T,N}(circshift(t.data,tup))
 Base.repeat(t::PeriodicArray,args::Vararg{Integer,N} where N) = PeriodicArray(repeat(t.data,args...))
+Base.BroadcastStyle(::Type{T}) where T <:PeriodicArray = Broadcast.ArrayStyle{T}()
+Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{T}},::Type{Elt}) where {T<:PeriodicArray,Elt} = PeriodicArray(similar(Array{Elt},axes(bc))); 

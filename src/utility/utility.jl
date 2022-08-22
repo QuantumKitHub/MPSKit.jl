@@ -81,3 +81,25 @@ end
 
 #needed this; perhaps move to tensorkit?
 TensorKit.fuse(f::T) where T<: VectorSpace = f
+
+function inplace_add!(a::Union{<:AbstractTensorMap,Nothing},b::Union{<:AbstractTensorMap,Nothing})
+    isnothing(a) && isnothing(b) && return nothing
+    isnothing(a) && return b
+    isnothing(b) && return a
+    axpy!(true,a,b)
+end
+
+#=
+map every element in the tensormap to dfun(E)
+allows us to create random tensormaps for any storagetype
+=#
+function fill_data!(a::TensorMap,dfun)
+    E = eltype(a);
+
+    for (k,v) in blocks(a)
+        map!(x->dfun(E),v,v);
+    end
+
+    a
+end
+randomize!(a::TensorMap) = fill_data!(a,randn)

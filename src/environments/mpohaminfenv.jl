@@ -20,9 +20,12 @@ function gen_lw_rw(st::InfiniteMPS{A},ham::Union{SparseMPO,MPOHamiltonian}) wher
     rw = PeriodicArray{A,2}(undef,ham.odim,length(st))
 
     for i = 1:length(st), j = 1:ham.odim
-        lw[j,i] = TensorMap(rand,eltype(A),_firstspace(st.AL[i])*ham[i].domspaces[j]',_firstspace(st.AL[i]))
-        rw[j,i] = TensorMap(rand,eltype(A),_lastspace(st.AR[i])'*ham[i].imspaces[j]',_lastspace(st.AR[i])')
+        lw[j,i] = similar(st.AL[1],_firstspace(st.AL[i])*ham[i].domspaces[j]'←_firstspace(st.AL[i]))
+        rw[j,i] = similar(st.AL[1],_lastspace(st.AR[i])'*ham[i].imspaces[j]'←_lastspace(st.AR[i])')
     end
+
+    randomize!.(lw);
+    randomize!.(rw);
 
     return (lw,rw)
 end
@@ -68,7 +71,8 @@ function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
 
 
     #the start element
-    leftutil = Tensor(ones,eltype(eltype(st)),ham[1].domspaces[1])
+    leftutil = similar(st.AL[1],ham[1].domspaces[1]); fill_data!(leftutil,one);
+
     @plansor fixpoints[1,1][-1 -2;-3] = l_LL(st)[-1;-3]*conj(leftutil[-2])
     (len>1) && left_cyclethrough!(1,fixpoints,ham,st)
     for i = 2:size(fixpoints,1)
@@ -111,7 +115,7 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
     len = length(st); odim = size(fixpoints,1);
 
     #the start element
-    rightutil = Tensor(ones,eltype(eltype(st)),ham[len].imspaces[1])
+    rightutil = similar(st.AL[1],ham[len].imspaces[1]); fill_data!(rightutil,one);
     @plansor fixpoints[end,end][-1 -2;-3] = r_RR(st)[-1;-3]*conj(rightutil[-2])
     (len>1) && right_cyclethrough!(odim,fixpoints,ham,st) #populate other sites
 
@@ -151,7 +155,7 @@ function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.
     return fixpoints
 end
 
-function left_cyclethrough!(index::Int,fp,ham,st) #see code for explanation
+function left_cyclethrough!(index::Int,fp,ham,st) 
     for i=1:size(fp,2)
         rmul!(fp[index,i+1],0);
 
@@ -159,15 +163,17 @@ function left_cyclethrough!(index::Int,fp,ham,st) #see code for explanation
             contains(ham[i],j,index) || continue
 
             if isscal(ham[i],j,index)
-                fp[index,i+1] += fp[j,i]*TransferMatrix(st.AL[i],st.AL[i])*ham.Os[i,j,index]
+                axpy!(ham.Os[i,j,index],
+                    fp[j,i]*TransferMatrix(st.AL[i],st.AL[i]),
+                    fp[index,i+1])
             else
-                fp[index,i+1] += fp[j,i]*TransferMatrix(st.AL[i],ham[i][j,index],st.AL[i])
+                axpy!(true,fp[j,i]*TransferMatrix(st.AL[i],ham[i][j,index],st.AL[i]),fp[index,i+1])
             end
         end
     end
 end
 
-function right_cyclethrough!(index::Int,fp,ham,st) #see code for explanation
+function right_cyclethrough!(index::Int,fp,ham,st)
     for i=size(fp,2):(-1):1
         rmul!(fp[index,i-1],0);
 
@@ -175,9 +181,11 @@ function right_cyclethrough!(index::Int,fp,ham,st) #see code for explanation
             contains(ham[i],index,j) || continue
 
             if isscal(ham[i],index,j)
-                fp[index,i-1] += TransferMatrix(st.AR[i], st.AR[i]) * fp[j,i] * ham.Os[i,index,j]
+                axpy!(ham.Os[i,index,j],
+                    TransferMatrix(st.AR[i], st.AR[i]) * fp[j,i],fp[index,i-1])
             else
-                fp[index,i-1] += TransferMatrix(st.AR[i], ham[i][index,j], st.AR[i]) * fp[j,i]
+                
+                axpy!(true,TransferMatrix(st.AR[i], ham[i][index,j], st.AR[i]) * fp[j,i],fp[index,i-1])
             end
         end
     end

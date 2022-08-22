@@ -1,6 +1,6 @@
 module MPSKit
     using TensorKit,KrylovKit,Parameters, OptimKit, FastClosures
-    using Base.Threads,FLoops,Transducers
+    using Base.Threads, FLoops, Transducers, FoldsThreads
     using Base.Iterators
     using RecipesBase
 

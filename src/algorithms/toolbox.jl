@@ -1,7 +1,7 @@
 "calculates the entropy of a given state"
 entropy(state::InfiniteMPS) = [-tr(c*c'*log(c*c')) for c in state.CR]
 
-infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(Matrix{eltype(ham[1,1,1])},oneunit(sp)*sp,oneunit(sp)*sp),(1,2,4),(3,)) for sp in ham.pspaces]
+infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(storagetype(ham[1,1,1]),oneunit(sp)*sp,oneunit(sp)*sp),(1,2,4),(3,)) for sp in ham.pspaces]
 
 "calculates the galerkin error"
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64 =
@@ -20,7 +20,7 @@ end
 Calculates the (partial) transfer spectrum
 "
 function transfer_spectrum(above::InfiniteMPS;below=above,tol=Defaults.tol,num_vals = 20,sector=first(sectors(oneunit(left_virtualspace(above,1)))))
-    init = TensorMap(rand, eltype(eltype(above)), left_virtualspace(below,0),ℂ[typeof(sector)](sector => 1)'*left_virtualspace(above,0))
+    init = randomize!(similar(above.AL[1], left_virtualspace(below,0),ℂ[typeof(sector)](sector => 1)'*left_virtualspace(above,0)))
 
     transferspace = fuse(left_virtualspace(above, 0) * left_virtualspace(below, 0)')
     num_vals = min(dim(transferspace, sector), num_vals); # we can ask at most this many values
@@ -146,7 +146,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},len = ham.perio
 
     fusers = PeriodicArray(map(1:len) do loc
         map(Iterators.product(ham.domspaces[loc,:],ham.domspaces[len+1,:],ham.domspaces[loc,:])) do (v1,v2,v3)
-            isomorphism(fuse(v1*v2'*v3),v1*v2'*v3)
+            isomorphism(storagetype(T),fuse(v1*v2'*v3),v1*v2'*v3)
         end
     end)
 
@@ -264,22 +264,22 @@ function periodic_boundary_conditions(mpo::DenseMPO{O},len = length(mpo)) where 
 
 
     sp = _firstspace(mpo[1])';
-    utleg = Tensor(ones,oneunit(sp));
+    utleg = fill_data!(similar(mpo[1],oneunit(sp)),one)
 
     #do the bulk
     for j in 2:len-1
-        f1 = isomorphism(fuse(sp*_firstspace(mpo[j])),sp*_firstspace(mpo[j]))
-        f2 = isomorphism(fuse(sp*_lastspace(mpo[j])'),sp*_lastspace(mpo[j])')
+        f1 = isomorphism(storagetype(O),fuse(sp*_firstspace(mpo[j])),sp*_firstspace(mpo[j]))
+        f2 = isomorphism(storagetype(O),fuse(sp*_lastspace(mpo[j])'),sp*_lastspace(mpo[j])')
 
         @plansor output[j][-1 -2;-3 -4] := mpo[j][2 -2;3 5]*f1[-1;1 2]*conj(f2[-4;4 5])*τ[-3 1;4 3]
     end
 
     #do the left
-    f2 = isomorphism(fuse(sp*_lastspace(mpo[1])'),sp*_lastspace(mpo[1])')
+    f2 = isomorphism(storagetype(O),fuse(sp*_lastspace(mpo[1])'),sp*_lastspace(mpo[1])')
     @plansor output[1][-1 -2;-3 -4] := mpo[1][1 -2;3 5]*conj(f2[-4;4 5])*τ[-3 1;4 3]*utleg[-1]
 
     #do the right
-    f2 = isomorphism(fuse(sp*_firstspace(mpo[len])),sp*_firstspace(mpo[len]))
+    f2 = isomorphism(storagetype(O),fuse(sp*_firstspace(mpo[len])),sp*_firstspace(mpo[len]))
     @plansor output[end][-1 -2;-3 -4] := mpo[len][2 -2;3 4]*f2[-1;1 2]*τ[-3 1;4 3]*conj(utleg[-4])
 
     DenseMPO(output)

@@ -87,7 +87,7 @@ function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, max
         virtspaces[k] = infimum(fuse(virtspaces[k-1], fuse(physspaces[k])), maxvirtspace)
     end
     virtspaces[N+1] = right
-    
+
     for k = N:-1:2
         virtspaces[k] = infimum(virtspaces[k], fuse(virtspaces[k+1], dual(fuse(physspaces[k]))))
     end
@@ -154,6 +154,8 @@ Base.size(psi::FiniteMPS, i...) = size(psi.ALs, i...)
 Base.eltype(st::FiniteMPS) = eltype(typeof(st));
 Base.eltype(::Type{FiniteMPS{A,B}}) where {A<:GenericMPSTensor,B} = A
 
+site_type(st::FiniteMPS) = site_type(typeof(st))
+bond_type(st::FiniteMPS) = bond_type(typeof(st))
 site_type(::Type{FiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 bond_type(::Type{FiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
 
@@ -167,8 +169,8 @@ end
 left_virtualspace(psi::FiniteMPS, n::Integer) = _firstspace(psi.CR[n]);
 right_virtualspace(psi::FiniteMPS, n::Integer) = dual(_lastspace(psi.CR[n]));
 
-r_RR(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},domain(state.AR[end]),domain(state.AR[end]))
-l_LL(state::FiniteMPS{T}) where T = isomorphism(Matrix{eltype(T)},space(state.AL[1],1),space(state.AL[1],1))
+r_RR(state::FiniteMPS{T}) where T = isomorphism(storagetype(T),domain(state.AR[end]),domain(state.AR[end]))
+l_LL(state::FiniteMPS{T}) where T = isomorphism(storagetype(T),space(state.AL[1],1),space(state.AL[1],1))
 
 # Linear algebra methods
 #------------------------

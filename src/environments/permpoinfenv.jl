@@ -92,8 +92,8 @@ function gen_init_fps(above::MPSMultiline,mpo::Multiline{<:DenseMPO},below::MPSM
     T = eltype(above)
 
     map(1:size(mpo,1)) do cr
-        L0::T = TensorMap(rand,eltype(T),left_virtualspace(below,cr+1,0)*_firstspace(mpo[cr,1])',left_virtualspace(above,cr,0))
-        R0::T = TensorMap(rand,eltype(T),right_virtualspace(above,cr,0)*_firstspace(mpo[cr,1]),right_virtualspace(below,cr+1,0))
+        L0::T = randomize!(similar(above.AL[1,1],left_virtualspace(below,cr+1,0)*_firstspace(mpo[cr,1])',left_virtualspace(above,cr,0)))
+        R0::T = randomize!(similar(above.AL[1,1],right_virtualspace(above,cr,0)*_firstspace(mpo[cr,1]),right_virtualspace(below,cr+1,0)))
         (L0,R0)
     end
 end
@@ -110,9 +110,12 @@ function gen_init_fps(above::MPSMultiline,mpo::Multiline{<:SparseMPO},below::MPS
         rw = Vector{A}(undef,ham.odim)
 
         for j = 1:ham.odim
-            lw[j] = TensorMap(rand,eltype(A),_firstspace(be.AL[1])*ham[1].domspaces[j]',_firstspace(ab.AL[1]))
-            rw[j] = TensorMap(rand,eltype(A),_lastspace(ab.AR[end])'*ham[end].imspaces[j]',_lastspace(be.AR[end])')
+            lw[j] = similar(ab.AL[1],_firstspace(be.AL[1])*ham[1].domspaces[j]',_firstspace(ab.AL[1]))
+            rw[j] = similar(ab.AL[1],_lastspace(ab.AR[end])'*ham[end].imspaces[j]',_lastspace(be.AR[end])')
         end
+
+        randomize!.(lw);
+        randomize!.(rw);
 
         (lw,rw)
     end
