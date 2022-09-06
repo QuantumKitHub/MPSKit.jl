@@ -122,7 +122,7 @@ function transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab)
             @reduce(s = inplace_add!(nothing,t))
         end
 
-        if !(@isdefined s)
+        if isnothing(s)
             s = transfer_left(vec[1],ham[1,k],A,Ab)
         end
         toret[k] = s;
@@ -147,7 +147,7 @@ function transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab)
             @reduce(s = inplace_add!(nothing,t))
         end
 
-        if !(@isdefined s)
+        if isnothing(s)
             s = transfer_right(vec[1],ham[j,1],A,Ab)
         end
 
