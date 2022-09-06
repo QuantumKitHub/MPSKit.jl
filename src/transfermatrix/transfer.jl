@@ -114,12 +114,12 @@ function transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab)
 
         @floop WorkStealingEx() for j in els
             if isscal(ham,j,k)
-                t = ham.Os[j,k] * transfer_left(vec[j],A,Ab)
+                t = lmul!(ham.Os[j,k], transfer_left(vec[j],A,Ab))
             else
                 t = transfer_left(vec[j],ham[j,k],A,Ab)
             end
 
-            @reduce(s+=t)
+            @reduce(s = inplace_add!(nothing,t))
         end
 
         if !(@isdefined s)
@@ -139,12 +139,12 @@ function transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab)
 
         @floop WorkStealingEx() for k in els
             if isscal(ham,j,k)
-                t = ham.Os[j,k]*transfer_right(vec[k],A,Ab)
-            else
+                t = lmul!(ham.Os[j,k],transfer_right(vec[k],A,Ab))
+            else 
                 t = transfer_right(vec[k],ham[j,k],A,Ab)
             end
 
-            @reduce(s+=t)
+            @reduce(s = inplace_add!(nothing,t))
         end
 
         if !(@isdefined s)
@@ -156,3 +156,4 @@ function transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab)
 
     toret
 end
+

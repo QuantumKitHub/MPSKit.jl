@@ -66,8 +66,8 @@ function ∂AC(x::MPSTensor,ham::SparseMPOSlice,leftenv,rightenv)
 
     @floop WorkStealingEx() for (i,j) in keys(ham)
         if isscal(ham,i,j)
-            scal = ham.Os[i,j];
-            @plansor t[-1 -2;-3] := leftenv[i][-1 5;4]*(scal*x)[4 6;1]*τ[6 5;7 -2]*rightenv[j][1 7;-3]
+            @plansor t[-1 -2;-3] := leftenv[i][-1 5;4]*x[4 6;1]*τ[6 5;7 -2]*rightenv[j][1 7;-3]
+            lmul!(ham.Os[i,j],t);
         else
             @plansor t[-1 -2;-3] := leftenv[i][-1 5;4]*x[4 2;1]*ham[i,j][5 -2;2 3]*rightenv[j][1 3;-3]
         end
@@ -98,14 +98,15 @@ function ∂AC2(x::MPOTensor,h1::SparseMPOSlice,h2::SparseMPOSlice,leftenv,right
     @floop for (i,j) in collect(keys(h1)), k in keys(h2,j,:)
 
         if isscal(h1,i,j) && isscal(h2,j,k)
-            scal = h1.Os[i,j]*h2.Os[j,k]
-            @plansor t[-1 -2;-3 -4] := (scal*leftenv[i])[-1 7;6]*x[6 5;1 3]*τ[7 -2;5 4]*τ[4 -4;3 2]*rightenv[k][1 2;-3]
+            
+            @plansor t[-1 -2;-3 -4] := leftenv[i][-1 7;6]*x[6 5;1 3]*τ[7 -2;5 4]*τ[4 -4;3 2]*rightenv[k][1 2;-3]
+            lmul!(h1.Os[i,j]*h2.Os[j,k],t)
         elseif isscal(h1,i,j)
-            scal = h1.Os[i,j]
-            @plansor t[-1 -2;-3 -4] := (scal*leftenv[i])[-1 7;6]*x[6 5;1 3]*τ[7 -2;5 4]*h2[j,k][4 -4;3 2]*rightenv[k][1 2;-3]
+            @plansor t[-1 -2;-3 -4] := leftenv[i][-1 7;6]*x[6 5;1 3]*τ[7 -2;5 4]*h2[j,k][4 -4;3 2]*rightenv[k][1 2;-3]
+            lmul!(h1.Os[i,j],t)
         elseif isscal(h2,j,k)
-            scal = h2.Os[j,k]
-            @plansor t[-1 -2;-3 -4] := (scal*leftenv[i])[-1 7;6]*x[6 5;1 3]*h1[i,j][7 -2;5 4]*τ[4 -4;3 2]*rightenv[k][1 2;-3]
+            @plansor t[-1 -2;-3 -4] := leftenv[i][-1 7;6]*x[6 5;1 3]*h1[i,j][7 -2;5 4]*τ[4 -4;3 2]*rightenv[k][1 2;-3]
+            lmul!(h2.Os[j,k],t)
         else
             @plansor t[-1 -2;-3 -4] := leftenv[i][-1 7;6]*x[6 5;1 3]*h1[i,j][7 -2;5 4]*h2[j,k][4 -4;3 2]*rightenv[k][1 2;-3]
         end
