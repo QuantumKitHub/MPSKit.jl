@@ -81,3 +81,9 @@ end
 
 #needed this; perhaps move to tensorkit?
 TensorKit.fuse(f::T) where T<: VectorSpace = f
+
+
+function safe_xlogx(t::AbstractTensorMap,eps = eps(real(eltype(t))))
+    (U,S,V) = tsvd(t,alg = SVD(), trunc = truncbelow(eps));
+    U*S*log(S)*V
+end

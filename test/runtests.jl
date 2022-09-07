@@ -650,3 +650,10 @@ println("------------------------------------")
     ψ, envs, δ = find_groundstate(ψ₀, H, alg) # used to error
     @test ψ isa InfiniteMPS
 end
+
+@testset "NaN entanglement entropy" begin
+    ts = InfiniteMPS([ℂ^2],[ℂ^5]);
+    ts = changebonds(ts,RandExpand(trscheme=truncdim(2)));
+    @test !isnan(sum(entropy(ts)))
+    @test !isnan(sum(entropy(ts,2)))
+end
