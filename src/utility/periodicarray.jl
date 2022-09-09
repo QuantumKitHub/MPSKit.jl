@@ -1,6 +1,7 @@
 struct PeriodicArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
 end
+PeriodicArray(a::PeriodicArray) = a;
 PeriodicArray{T}(initializer, args...) where T =
     PeriodicArray(Array{T}(initializer, args...))
 PeriodicArray{T,N}(initializer, args...) where {T,N} =
@@ -14,10 +15,11 @@ Base.getindex(a::PeriodicArray{T,N}, I::Vararg{Int,N}) where {T,N} =
 Base.setindex!(a::PeriodicArray{T,N}, v, I::Vararg{Int,N}) where {T,N} =
     @inbounds setindex!(a.data, v, map(mod1, I, size(a.data))...)
 
-Base.similar(a::PeriodicArray, dims::Union{Integer, AbstractUnitRange}...) =
-    PeriodicArray(similar(a.data, dims...))
-Base.similar(a::PeriodicArray, T::Type, dims::Union{Integer, AbstractUnitRange}...) =
-    PeriodicArray(similar(a.data, T, dims...))
+Base.similar(a::PeriodicArray, ::Type{T}) where T = PeriodicArray(similar(a.data,T))
+Base.similar(a::PeriodicArray, dims::Dims) =
+    PeriodicArray(similar(a.data, dims))
+Base.similar(a::PeriodicArray, ::Type{T}, dims::Dims) where T =
+    PeriodicArray(similar(a.data, T, dims))
 
 Base.copy(a::PeriodicArray) = PeriodicArray(copy(a.data))
 function Base.copyto!(dst::PeriodicArray,src::PeriodicArray)

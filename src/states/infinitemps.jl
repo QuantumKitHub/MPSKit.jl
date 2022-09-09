@@ -44,7 +44,7 @@ end
 function InfiniteMPS(A::AbstractArray{T,1}; kwargs...) where T<:GenericMPSTensor
 
     #we make a copy, and are therfore garantueeing no side effects for the user
-    AR = PeriodicArray(A[:]);
+    AR = PeriodicArray(copy.(A));
 
     #initial guess for CR
     CR = PeriodicArray([isomorphism(storagetype(T),space(AR[i+1],1),space(AR[i+1],1)) for i in 1:length(A)]);
@@ -65,8 +65,8 @@ end
 
 function InfiniteMPS(A::AbstractArray{T,1},cinit::B;kwargs...) where {T<:GenericMPSTensor, B<:MPSBondTensor}
     CR = PeriodicArray(fill(copy(cinit),length(A)));
-    AL = PeriodicArray(A[:])
-    AR = similar.(AL);
+    AL = PeriodicArray(copy.(A));
+    AR = similar(AL);
     uniform_rightorth!(AR,CR,AL;kwargs...);
 
     AC = similar(AR)

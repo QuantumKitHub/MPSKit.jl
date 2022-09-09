@@ -137,7 +137,7 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
     ndomspaces = PeriodicArray{Sp}(domspaces)
     npspaces = PeriodicArray{Sp}(pspaces)
 
-    return SparseMPO{Sp,M,E}(PeriodicArray(x[:,:,:]),ndomspaces,npspaces)
+    return SparseMPO{Sp,M,E}(PeriodicArray(x),ndomspaces,npspaces)
 end
 
 function _envsetypes(d::Tuple)
