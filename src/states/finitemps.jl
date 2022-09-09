@@ -7,7 +7,7 @@ When queried for AL/AR/AC/CL it will check if it is missing.
     If not, return
     If it is, calculate it, store it and return
 """
-struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
+struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing,A}}
     ARs::Vector{Union{Missing,A}}
     ACs::Vector{Union{Missing,A}}

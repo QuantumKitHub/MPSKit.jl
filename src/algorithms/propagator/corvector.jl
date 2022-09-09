@@ -1,7 +1,7 @@
 "
 https://arxiv.org/pdf/cond-mat/0203500.pdf
 "
-function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;init=copy(A),solvtol=Defaults.tol,tol=solvtol*length(A)*2,maxiter=Defaults.maxiter,verbose=Defaults.verbose)
+function dynamicaldmrg(A::AbstractFiniteMPS,z,ham::MPOHamiltonian;init=copy(A),solvtol=Defaults.tol,tol=solvtol*length(A)*2,maxiter=Defaults.maxiter,verbose=Defaults.verbose)
     w=real(z);eta=imag(z)
 
     envs1 = environments(init,ham) #environments for h
@@ -48,7 +48,7 @@ function dynamicaldmrg(A::Union{MPSComoving,FiniteMPS},z,ham::MPOHamiltonian;ini
     return v,init
 end
 
-function squaredenvs(state::Union{MPSComoving,FiniteMPS},ham::MPOHamiltonian,envs=environments(state,ham))
+function squaredenvs(state::AbstractFiniteMPS,ham::MPOHamiltonian,envs=environments(state,ham))
     nham = conj(ham)*ham
 
     #to construct the squared caches we will first initialize environments

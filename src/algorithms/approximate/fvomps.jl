@@ -1,11 +1,11 @@
 approximate(state,toapprox,alg::Union{DMRG,DMRG2},envs...) = approximate!(copy(state),toapprox,alg,envs...)
 
-function approximate!(init::Union{MPSComoving,FiniteMPS},sq,alg,envs=environments(init,sq))
+function approximate!(init::AbstractFiniteMPS,sq,alg,envs=environments(init,sq))
     tor =  approximate!(init,[sq],alg,[envs]);
     return (tor[1],tor[2][1],tor[3])
 end
 
-function approximate!(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::DMRG2,envs=[environments(init,sq) for sq in squash])
+function approximate!(init::AbstractFiniteMPS,squash::Vector,alg::DMRG2,envs=[environments(init,sq) for sq in squash])
 
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta = 2*tol
@@ -40,7 +40,7 @@ function approximate!(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::DMR
     return init,envs,delta
 end
 
-function approximate!(init::Union{MPSComoving,FiniteMPS}, squash::Vector,alg::DMRG,envs = [environments(init,sq) for sq in squash])
+function approximate!(init::AbstractFiniteMPS, squash::Vector,alg::DMRG,envs = [environments(init,sq) for sq in squash])
 
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta = 2*tol

@@ -82,6 +82,7 @@ end
 #needed this; perhaps move to tensorkit?
 TensorKit.fuse(f::T) where T<: VectorSpace = f
 
+
 function inplace_add!(a::Union{<:AbstractTensorMap,Nothing},b::Union{<:AbstractTensorMap,Nothing})
     isnothing(a) && isnothing(b) && return nothing
     isnothing(a) && return b
@@ -103,3 +104,10 @@ function fill_data!(a::TensorMap,dfun)
     a
 end
 randomize!(a::TensorMap) = fill_data!(a,randn)
+
+
+function safe_xlogx(t::AbstractTensorMap,eps = eps(real(eltype(t))))
+    (U,S,V) = tsvd(t,alg = SVD(), trunc = truncbelow(eps));
+    U*S*log(S)*V
+end
+

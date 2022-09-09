@@ -9,7 +9,7 @@
 end
 
 find_groundstate(state,H,alg::DMRG,envs...) = find_groundstate!(copy(state),H,alg,envs...)
-function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::DMRG,envs = environments(state,H))
+function find_groundstate!(state::AbstractFiniteMPS, H,alg::DMRG,envs = environments(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta::Float64 = 2*tol
 
@@ -46,7 +46,7 @@ end
 end
 
 find_groundstate(state,H,alg::DMRG2,envs...) = find_groundstate!(copy(state),H,alg,envs...)
-function find_groundstate!(state::Union{FiniteMPS,MPSComoving}, H,alg::DMRG2,envs = environments(state,H))
+function find_groundstate!(state::AbstractFiniteMPS, H,alg::DMRG2,envs = environments(state,H))
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta::Float64 = 2*tol
 

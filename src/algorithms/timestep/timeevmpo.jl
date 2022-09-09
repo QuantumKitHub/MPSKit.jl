@@ -13,10 +13,42 @@ const WI = TaylorCluster{1};
 function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where {S,T,E,N}
     τ = -1im*dt;
 
-    mult = prod(fill(copy(th.data),N));
     inds = LinearIndices(ntuple(i->th.odim,N));
+    mult_data = Array{Union{Missing,eltype(th[1])},3}(missing,length(th),th.odim^N,th.odim^N);
+    for loc in 1:length(th),
+        a in CartesianIndices(inds),
+        b in CartesianIndices(inds)
+
+        has_prod_elem(th[loc],Tuple(a),Tuple(b)) || continue;
+
+        mult_data[loc,inds[a],inds[b]] = calc_prod_elem(th[loc],Tuple(a),Tuple(b))
+    end
+    mult = SparseMPO(mult_data);
 
     for (loc,slice) in enumerate(mult)
+        #=
+        #embed next order in this one - incompatible with approximate compression
+        for a in CartesianIndices(inds),
+            b in CartesianIndices(inds),
+            no in 1:1
+
+            t_a = [Tuple(a)...];
+            t_b = [Tuple(b)...];
+
+            all(x->x>1,t_b) || continue;
+            all(x-> x in (1,th.odim),t_a) && any(x->x==th.odim,t_a) && continue
+
+            n3 = count(x->x==th.odim,t_b)+no;
+            n1 = count(x->x==1,t_a)+no;
+            for e_b in interweave(fill(th.odim,no),t_b),
+                e_a in interweave(fill(1,no),t_a)
+                has_prod_elem(slice,e_a,e_b) || continue
+                slice[inds[a],inds[b]] += calc_prod_elem(slice,e_a,e_b)*τ^no*factorial(N)/(factorial(N+no)*n1*n3)
+            end
+        end
+        =#
+
+        # apply loopback
         for a in Iterators.product(fill((1,th.odim),N)...)
             all(a.==1) && continue;
 
@@ -27,7 +59,7 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
             slice[:,c_ind].*=0;
         end
 
-        #remove equivalent collumns
+        # remove equivalent collumns
         for c in CartesianIndices(inds)
             tc = [Tuple(c)...];
             keys = map(x-> x == 1 ? 2 : 1,tc);
@@ -44,7 +76,7 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
             end
         end
 
-        #remove equivalent rows
+        # remove equivalent rows
         for c in CartesianIndices(inds)
             tc = [Tuple(c)...];
             keys = map(x-> x == th.odim ? 2 : 1,tc);
@@ -53,6 +85,7 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
             n1 = count(x->x==1,tc);
             n3 = count(x->x==th.odim,tc);
 
+
             if n3>n1 && tc != s_tc
                 slice[:,inds[s_tc...]] += slice[:,inds[c]];
 
@@ -60,10 +93,61 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
                 slice[inds[c],:] .*=0;
             end
         end
+
+        # approximate compression
+        for c in CartesianIndices(inds)
+            tc = [Tuple(c)...];
+
+            n = count(x->x==th.odim,tc);
+            all(x->x>1,tc) && n>0 || continue
+
+            transformed = map(x-> x == th.odim ? 1 : x,tc);
+
+
+            slice[:,inds[transformed...]] += slice[:,inds[tc...]]*τ^n * factorial(N-n)/factorial(N);
+
+            slice[:,inds[tc...]] .*=0;
+            slice[inds[tc...],:] .*= 0
+        end
     end
 
 
     remove_orphans(mult)
+end
+
+
+has_prod_elem(slice,t1,t2) = all(map(x->contains(slice,x...),zip(t1,t2)))
+calc_prod_elem(slice,t1,t2) = calc_prod_elem(slice[first(t1),first(t2)],slice,t1[2:end],t2[2:end])
+function calc_prod_elem(o,slice,t1,t2)
+    isempty(t1) && return o
+
+    nel = slice[first(t1),first(t2)];
+    fuse_front = isomorphism(fuse(_firstspace(o)*_firstspace(nel)),_firstspace(o)*_firstspace(nel));
+    fuse_back = isomorphism(fuse(_lastspace(o)'*_lastspace(nel)'),_lastspace(o)'*_lastspace(nel)');
+
+    @plansor o[-1 -2;-3 -4] := fuse_front[-1;1 2]*o[1 3;-3 4]*nel[2 -2;3 5]*conj(fuse_back[-4;4 5])
+
+    calc_prod_elem(o,slice,t1[2:end],t2[2:end])
+end
+
+function interweave(a,b)
+    map(filter(x->sum(x.==1)==length(a) && sum(x.==2)==length(b),collect(Iterators.product(fill((1,2),length(a)+length(b))...)))) do key
+        ia = 1;
+        ib = 1;
+
+        output = Vector{eltype(a)}(undef,length(a)+length(b));
+        for k in key
+            if k == 1
+                el = a[ia]
+                ia+=1;
+            else
+                el = b[ib]
+                ib+=1
+            end
+            output[ia+ib-2] = el
+        end
+        output
+    end
 end
 
 
