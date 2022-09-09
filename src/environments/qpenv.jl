@@ -28,14 +28,14 @@ function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H, lenvs;
 end
 
 function gen_exci_lw_rw(left_gs::Union{FiniteMPS{A},InfiniteMPS{A}},ham::Union{SparseMPO,MPOHamiltonian},right_gs,excileg) where {A}
-    B = tensormaptype(spacetype(A),2,2,eltype(A));
+    B = tensormaptype(spacetype(A),2,2,storagetype(A));
 
     lw = PeriodicArray{B,2}(undef,ham.odim,length(left_gs))
     rw = PeriodicArray{B,2}(undef,ham.odim,length(left_gs))
 
     for j = 1:size(lw,1),i = 1:size(lw,2)
-        lw[j,i] = TensorMap(zeros,eltype(A),left_virtualspace(left_gs,i-1)*ham[i].domspaces[j]',excileg'*right_virtualspace(right_gs,i-1))
-        rw[j,i] = TensorMap(zeros,eltype(A),left_virtualspace(left_gs,i)*ham[i].imspaces[j]',excileg'*right_virtualspace(right_gs,i))
+        lw[j,i] = fill_data!(similar(left_gs.AL[1],left_virtualspace(left_gs,i-1)*ham[i].domspaces[j]',excileg'*right_virtualspace(right_gs,i-1)),zero)
+        rw[j,i] = fill_data!(similar(left_gs.AL[1],left_virtualspace(left_gs,i)*ham[i].imspaces[j]',excileg'*right_virtualspace(right_gs,i)),zero)
     end
 
     return (lw,rw)
@@ -131,7 +131,7 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
     (numrows,numcols) = size(left_gs);
 
     st = site_type(typeof(left_gs));
-    B_type = tensormaptype(spacetype(st),2,2,eltype(st));
+    B_type = tensormaptype(spacetype(st),2,2,storagetype(st));
 
     lBs = PeriodicArray{B_type,2}(undef,size(left_gs,1),size(left_gs,2))
     rBs = PeriodicArray{B_type,2}(undef,size(left_gs,1),size(left_gs,2))
@@ -165,12 +165,12 @@ function environments(exci::Multiline{<:InfiniteQP}, ham::MPOMultiline, lenvs, r
         left_renorms = left_renorms.^-1;
         right_renorms = right_renorms.^-1;
 
-        lB_cur = TensorMap(zeros,eltype(B_type),
+        lB_cur = fill_data!(similar(left_below.AL[1],
                                 left_virtualspace(left_below,0)*_firstspace(hamrow[1])',
-                                exci_space'*right_virtualspace(right_above,0));
-        rB_cur = TensorMap(zeros,eltype(B_type),
+                                exci_space'*right_virtualspace(right_above,0)),zero);
+        rB_cur = fill_data!(similar(left_below.AL[1],
                                 left_virtualspace(left_below,0)*_firstspace(hamrow[1]),
-                                exci_space'*right_virtualspace(right_above,0));
+                                exci_space'*right_virtualspace(right_above,0)),zero);
         for col in 1:numcols
             lB_cur = lB_cur*TransferMatrix(right_above.AR[col],hamrow[col],left_below.AL[col])
             lB_cur += c_lenvs[col]*TransferMatrix(exci[row][col],hamrow[col],left_below.AL[col])

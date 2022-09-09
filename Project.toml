@@ -6,6 +6,7 @@ version = "0.7.0"
 [deps]
 FLoops = "cc61a311-1640-44b5-9fba-1b764f453329"
 FastClosures = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
+FoldsThreads = "9c68100b-dfe1-47cf-94c8-95104e173443"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OptimKit = "77e91f04-9b3b-57a6-a776-40b61faaebe0"

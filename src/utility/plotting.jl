@@ -20,7 +20,6 @@ function entanglementplot end
     site <= length(mps) ||
         throw(ArgumentError("Not a valid site for the given mps."))
 
-
     (_, s, _) = tsvd(mps.CR[site])
     sectors = blocksectors(s)
     spectrum = []

@@ -83,7 +83,31 @@ end
 TensorKit.fuse(f::T) where T<: VectorSpace = f
 
 
+function inplace_add!(a::Union{<:AbstractTensorMap,Nothing},b::Union{<:AbstractTensorMap,Nothing})
+    isnothing(a) && isnothing(b) && return nothing
+    isnothing(a) && return b
+    isnothing(b) && return a
+    axpy!(true,a,b)
+end
+
+#=
+map every element in the tensormap to dfun(E)
+allows us to create random tensormaps for any storagetype
+=#
+function fill_data!(a::TensorMap,dfun)
+    E = eltype(a);
+
+    for (k,v) in blocks(a)
+        map!(x->dfun(E),v,v);
+    end
+
+    a
+end
+randomize!(a::TensorMap) = fill_data!(a,randn)
+
+
 function safe_xlogx(t::AbstractTensorMap,eps = eps(real(eltype(t))))
     (U,S,V) = tsvd(t,alg = SVD(), trunc = truncbelow(eps));
     U*S*log(S)*V
 end
+

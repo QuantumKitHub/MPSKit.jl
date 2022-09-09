@@ -67,11 +67,12 @@ function squaredenvs(state::AbstractFiniteMPS,ham::MPOHamiltonian,envs=environme
     nleft = leftenv(ncocache,1,state)
     nright = rightenv(ncocache,length(state),state)
 
+    stor = storagetype(eltype(state.AL));
     for i in 1:ham.odim,j in 1:ham.odim
-        f1 = isomorphism(space(nleft[indmap[i,j]],2),space(leftenv(envs,1,state)[i],2)'*space(leftenv(envs,1,state)[j],2))
+        f1 = isomorphism(stor,space(nleft[indmap[i,j]],2),space(leftenv(envs,1,state)[i],2)'*space(leftenv(envs,1,state)[j],2))
         @plansor nleft[indmap[i,j]][-1 -2;-3]:=leftenv(envs,1,state)[j][1 3;-3]*conj(leftenv(envs,1,state)[i][1 2;-1])*f1[-2;2 3]
 
-        f2 = isomorphism(space(nright[indmap[i,j]],2),space(rightenv(envs,length(state),state)[j],2)*space(rightenv(envs,length(state),state)[i],2)');
+        f2 = isomorphism(stor,space(nright[indmap[i,j]],2),space(rightenv(envs,length(state),state)[j],2)*space(rightenv(envs,length(state),state)[i],2)');
         @plansor nright[indmap[i,j]][-1 -2;-3]:=rightenv(envs,length(state),state)[j][-1 2;1]*conj(rightenv(envs,length(state),state)[i][-3 3;1])*f2[-2;2 3]
     end
 

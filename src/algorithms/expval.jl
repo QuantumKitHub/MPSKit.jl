@@ -24,8 +24,9 @@ function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{
     (firstspace == oneunit(firstspace) && _lastspace(last(op)) == firstspace') ||
         throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"));
 
-    ut = Tensor(ones,firstspace)
-    @plansor v[-1 -2;-3] := isomorphism(left_virtualspace(state,at-1),left_virtualspace(state,at-1))[-1;-3]*conj(ut[-2])
+
+    ut = fill_data!(similar(op[1],firstspace),one)
+    @plansor v[-1 -2;-3] := isomorphism(storagetype(T),left_virtualspace(state,at-1),left_virtualspace(state,at-1))[-1;-3]*conj(ut[-2])
     tmp = v*TransferMatrix(state.AL[at:at+length(op)-1],op,state.AL[at:at+length(op)-1])
     return @plansor tmp[1 2;3]*ut[2]*state.CR[at+length(op)-1][3;4]*conj(state.CR[at+length(op)-1][1;4]);
 end
@@ -85,7 +86,7 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
     len = length(st);
     ens = PeriodicArray(zeros(eltype(st.AR[1]),len));
     for i=1:len
-        util = Tensor(ones,space(prevca.lw[ham.odim,i+1],2))
+        util = fill_data!(similar(st.AL[1],space(prevca.lw[ham.odim,i+1],2)),one)
         for j=ham.odim:-1:1
             apl = leftenv(prevca,i,st)[j]*TransferMatrix(st.AL[i],ham[i][j,ham.odim],st.AL[i]);
             ens[i] += @plansor apl[1 2;3]*r_LL(st,i)[3;1]*conj(util[2])

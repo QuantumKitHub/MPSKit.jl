@@ -217,7 +217,7 @@ function Base.convert(::Type{<:FiniteMPS},v::QP{S}) where S <: FiniteMPS
     elt = eltype(v)
 
     utl = utilleg(v); ou = oneunit(utl); utsp = ou ⊕ ou;
-    upper = isometry(Matrix{elt},utsp,ou); lower = leftnull(upper);
+    upper = isometry(storagetype(site_type(v.left_gs)),utsp,ou); lower = leftnull(upper);
     upper_I = upper*upper'; lower_I = lower*lower'; uplow_I = upper*lower';
 
     Ls = v.left_gs.AL[1:end];
