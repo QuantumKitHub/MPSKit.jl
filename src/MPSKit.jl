@@ -28,7 +28,7 @@ module MPSKit
     export find_groundstate!, find_groundstate, VUMPS, DMRG, DMRG2, GradDesc, IDMRG1, IDMRG2, GradientGrassmann
     export leading_boundary
     export excitations,FiniteExcited,QuasiparticleAnsatz
-    export marek_gap, correlation_length
+    export marek_gap, correlation_length, correlator
     export timestep!,timestep,TDVP,TDVP2,make_time_mpo,WI,WII,TaylorCluster
     export splitham,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
     export changebonds!,changebonds,VUMPSSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
@@ -104,6 +104,7 @@ module MPSKit
     include("algorithms/expval.jl")
     include("algorithms/toolbox.jl")
     include("algorithms/grassmann.jl")
+    include("algorithms/correlators.jl")
 
     include("algorithms/changebonds/optimalexpand.jl")
     include("algorithms/changebonds/vumpssvd.jl")
