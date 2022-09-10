@@ -13,6 +13,8 @@ struct ProductTransferMatrix{T<:AbstractTransferMatrix} <: AbstractTransferMatri
     tms :: Vector{T} # I don't want to use tuples, as an infinite mps transfer matrix will then be non-inferable
 end
 
+ProductTransferMatrix(v::AbstractVector) = ProductTransferMatrix(convert(Vector,v));
+
 # a subset of possible operations, but certainly not all of them
 Base.:*(prod::ProductTransferMatrix{T},tm::T) where T <:AbstractTransferMatrix = ProductTransferMatrix(vcat(prod.tms,tm));
 Base.:*(tm::T,prod::ProductTransferMatrix{T}) where T <:AbstractTransferMatrix = ProductTransferMatrix(vcat(prod.tms,tm));
