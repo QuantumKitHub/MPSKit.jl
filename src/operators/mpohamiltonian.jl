@@ -147,3 +147,5 @@ Base.:*(b::MPOHamiltonian,a::MPOHamiltonian) = MPOHamiltonian(b.data*a.data);
 Base.repeat(x::MPOHamiltonian,n::Int) = MPOHamiltonian(repeat(x.data,n));
 Base.conj(a::MPOHamiltonian) = MPOHamiltonian(conj(a.data))
 Base.lastindex(h::MPOHamiltonian) = lastindex(h.data);
+
+Base.convert(::Type{DenseMPO}, H::MPOHamiltonian) = convert(DenseMPO, H.data)

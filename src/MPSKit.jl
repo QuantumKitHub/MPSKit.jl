@@ -24,7 +24,7 @@ module MPSKit
     export leftenv,rightenv
 
     #algos
-    export find_groundstate!, find_groundstate, VUMPS, DMRG, DMRG2, GradDesc, IDMRG1, IDMRG2, GradientGrassmann
+    export find_groundstate!, find_groundstate, VUMPS, DMRG, DMRG2, GradDesc, IDMRG1, IDMRG2, GradientGrassmann, CBE_DMRG
     export leading_boundary
     export excitations,FiniteExcited,QuasiparticleAnsatz
     export marek_gap, correlation_length
@@ -116,6 +116,7 @@ module MPSKit
     include("algorithms/groundstate/idmrg.jl")
     include("algorithms/groundstate/dmrg.jl")
     include("algorithms/groundstate/gradient_grassmann.jl")
+    include("algorithms/groundstate/cbe_dmrg.jl")
 
     include("algorithms/propagator/corvector.jl")
 
