@@ -11,8 +11,8 @@ Controlled bond expansion for DMRG ground state search at single-site costs.
 @with_kw struct CBE_DMRG{F} <: Algorithm
     tol = Defaults.tol
     maxiter = Defaults.maxiter
-    Dprime::Int = 20
-    Dcirc::Int = 20
+    Dfinal = 20
+    
     verbose = Defaults.verbose
     finalize::F = Defaults._finalize
 end
@@ -21,11 +21,6 @@ end
 function find_groundstate(state, H, alg::CBE_DMRG, envs=environments(state, H))
     return find_groundstate!(copy(state), H, alg, envs)
 end
-
-
-
-using MUntested
-size(t::AbstractTensorMap, i) = dim(space(t, i))
 
 function find_groundstate!(state::AbstractFiniteMPS, O, alg::CBE_DMRG, envs=environments(state, O))
     tol = alg.tol
@@ -36,7 +31,10 @@ function find_groundstate!(state::AbstractFiniteMPS, O, alg::CBE_DMRG, envs=envi
     while iter < maxiter && delta > tol
         delta = 0.0
         for l = length(state)-1:-1:1
-            Aex = shrewdselect_left(l, state, O, envs, alg.Dprime, alg.Dcirc)
+            Dprime = alg.Dfinal ÷ 2
+            Dcirc = alg.Dfinal ÷ 10
+            
+            Aex = shrewdselect_left(l, state, O, envs, Dprime, Dcirc)
             @info "expanded bond $l from $(space(state.AR[l], 3)) to $(space(Aex, 3))"
             H = MPO_∂∂AC(
                 O[l+1],
@@ -45,29 +43,35 @@ function find_groundstate!(state::AbstractFiniteMPS, O, alg::CBE_DMRG, envs=envi
             )
             @tensor AC[-1 -2; -3] := conj(Aex[1 2 -1]) * state.AL[l][1 2; 3] * state.AC[l+1][3 -2; -3]
             vals, vecs, info = eigsolve(H, AC, 1, :SR, Lanczos())
+            U, S, V, eta = tsvd!(_transpose_tail(vecs[1]); trunc=truncdim(alg.Dfinal))
+            
             delta = max(delta, calc_galerkin(state, l, envs))
-
-            L, Q = rightorth!(_transpose_tail(vecs[1]), alg=LQpos())
-
-            state.AC[l+1] = (L, _transpose_front(Q))
-            state.AC[l] = (Aex, L)
+            C = U * S
+            @assert space(Aex, 3) == space(C, 1)'
+            @assert space(C, 2) == space(V, 1)'
+            state.AC[l+1] = (C, _transpose_front(V))
+            state.AC[l] = (Aex, C)
         end
 
         for l = 2:length(state)
-            Aex = shrewdselect_right(l, state, O, envs, alg.Dprime, alg.Dcirc)
-            @info " expanded bond $l from $(space(state.AR[l], 3)) to $(space(Aex, 3))"
+            Dprime = alg.Dfinal ÷ 2
+            Dcirc = alg.Dfinal ÷ 10
+            Aex = shrewdselect_right(l, state, O, envs, Dprime, Dcirc)
+            @info "expanded bond $l from $(space(state.AR[l], 3)) to $(space(Aex, 3))"
             H = MPO_∂∂AC(
                 O[l-1],
                 leftenv(envs, l - 1, state),
                 transfer_right(rightenv(envs, l, state), O[l], Aex, Aex)
             )
-            @otensor AC[-1 -2; -3] := conj(Aex[-3 1; 2]) * state.AR[l][3 1; 2] * state.AC[l-1][-1 -2; 3]
+            @tensor AC[-1 -2; -3] := conj(Aex[-3 1; 2]) * state.AR[l][3 1; 2] * state.AC[l-1][-1 -2; 3]
             vals, vecs, info = eigsolve(H, AC, 1, :SR, Lanczos())
+            U, S, V, eta = tsvd(vecs[1], (1, 2), (3, ); trunc=truncdim(alg.Dfinal))
+            
+            
             delta = max(delta, calc_galerkin(state, l, envs))
-
-            Q, R = leftorth!(vecs[1], alg=QRpos())
-            state.AC[l-1] = (Q, R)
-            state.AC[l] = (R, Aex)
+            C = S * V
+            state.AC[l-1] = (U, C)
+            state.AC[l] = (C, Aex)
         end
         alg.verbose && @info "Iteraton $(iter) error $(delta)"
         flush(stdout)
@@ -100,8 +104,11 @@ function shrewdselect_left(l, state, O, envs, Dprime, Dcirc)
     @tensor Ctmp[-1 -2; -3] -= Ctmp[-1 1; 2] * conj(state.AR[l+1][3 1 2]) * state.AR[l+1][3 -2 -3]
 
     ũ, s̃, ṽ = tsvd(Ctmp, (1,), (2, 3), trunc=truncdim(Dcirc))
+    @info "selected $(dim(space(ũ, 2))) new vectors"
     return Aex = catdomain(state.AL[l], (Apr * ũ))
 end
+
+
 
 function shrewdselect_right(l, state, O, envs, Dprime, Dcirc)
     Lorth = transfer_left_complement(leftenv(envs, l - 1, state), O[l-1], state.AC[l-1], state.AL[l-1])
@@ -116,7 +123,8 @@ function shrewdselect_right(l, state, O, envs, Dprime, Dcirc)
     
     # v̂ -= (v̂ * _transpose_tail(state.AR[l])') * _transpose_tail(state.AR[l])
     Apr, _, _ = tsvd(v̂, (1, 2), (3,); trunc=truncbelow(1e-14))
-
+    norm(Apr) < 1e-13 && return state.AR[l]
+    @show space.(Ref(state.AR[l]), 1:3), space.(Ref(Apr), 1:3)
     Ctmp = ∂AC(
         state.AC[l-1],
         O[l-1],
@@ -126,6 +134,7 @@ function shrewdselect_right(l, state, O, envs, Dprime, Dcirc)
     @tensor Ctmp[-1 -2; -3] -= Ctmp[1 2; -3] * conj(state.AL[l-1][1 2; 3]) * state.AL[l-1][-1 -2; 3]
 
     ũ, s̃, ṽ = tsvd(Ctmp, (1, 2), (3,), trunc=truncdim(Dcirc))
+    @info "selected $(dim(space(ṽ, 1))) new vectors."
     return Aex = _transpose_front(catcodomain(_transpose_tail(state.AR[l]), ṽ * _transpose_tail(Apr)))
 end
 
