@@ -60,39 +60,41 @@ function find_groundstate!(state::AbstractFiniteMPS, H, alg::DMRG2, envs=environ
         ealg = Lanczos()
 
         #left to right sweep
-        for pos = 1:(length(state)-1)
-            @plansor ac2[-1 -2; -3 -4] := state.AC[pos][-1 -2; 1] * state.AR[pos+1][1 -4; -3]
+        @time begin
+            for pos = 1:(length(state)-1)
+                @plansor ac2[-1 -2; -3 -4] := state.AC[pos][-1 -2; 1] * state.AR[pos+1][1 -4; -3]
 
-            h = ∂∂AC2(pos, state, H, envs)
+                h = ∂∂AC2(pos, state, H, envs)
 
-            (eigvals, vecs) = eigsolve(h, ac2, 1, :SR, ealg)
-            newA2center = first(vecs)
+                (eigvals, vecs) = eigsolve(h, ac2, 1, :SR, ealg)
+                newA2center = first(vecs)
 
-            (al, c, ar, ϵ) = tsvd(newA2center, trunc=alg.trscheme, alg=TensorKit.SVD())
-            normalize!(c)
-            v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
-            delta = max(delta, abs(1 - abs(v)))
+                (al, c, ar, ϵ) = tsvd(newA2center, trunc=alg.trscheme, alg=TensorKit.SVD())
+                normalize!(c)
+                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
+                delta = max(delta, abs(1 - abs(v)))
 
-            state.AC[pos] = (al, complex(c))
-            state.AC[pos+1] = (complex(c), _transpose_front(ar))
-        end
+                state.AC[pos] = (al, complex(c))
+                state.AC[pos+1] = (complex(c), _transpose_front(ar))
+            end
 
 
-        for pos = length(state)-2:-1:1
-            @plansor ac2[-1 -2; -3 -4] := state.AL[pos][-1 -2; 1] * state.AC[pos+1][1 -4; -3]
+            for pos = length(state)-2:-1:1
+                @plansor ac2[-1 -2; -3 -4] := state.AL[pos][-1 -2; 1] * state.AC[pos+1][1 -4; -3]
 
-            h = ∂∂AC2(pos, state, H, envs)
+                h = ∂∂AC2(pos, state, H, envs)
 
-            (eigvals, vecs) = eigsolve(h, ac2, 1, :SR, ealg)
-            newA2center = first(vecs)
+                (eigvals, vecs) = eigsolve(h, ac2, 1, :SR, ealg)
+                newA2center = first(vecs)
 
-            (al, c, ar, ϵ) = tsvd(newA2center, trunc=alg.trscheme, alg=TensorKit.SVD())
-            normalize!(c)
-            v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
-            delta = max(delta, abs(1 - abs(v)))
+                (al, c, ar, ϵ) = tsvd(newA2center, trunc=alg.trscheme, alg=TensorKit.SVD())
+                normalize!(c)
+                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
+                delta = max(delta, abs(1 - abs(v)))
 
-            state.AC[pos+1] = (complex(c), _transpose_front(ar))
-            state.AC[pos] = (al, complex(c))
+                state.AC[pos+1] = (complex(c), _transpose_front(ar))
+                state.AC[pos] = (al, complex(c))
+            end
         end
 
         alg.verbose && @info "Iteraton $(iter) error $(delta)"
