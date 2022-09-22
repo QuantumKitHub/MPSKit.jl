@@ -68,3 +68,12 @@ function Base.:*(mpo1::DenseMPO,mpo2::DenseMPO)
         @plansor t[-1 -2;-3 -4] := mpo2[i][1 2;-3 3]*mpo1[i][4 -2;2 5]*fusers[i][-1;1 4]*conj(fusers[i+1][-4;3 5])
     end)
 end
+
+function TensorKit.dot(a::InfiniteMPS, mpo::DenseMPO, b::InfiniteMPS;krylovdim = 30)
+    init = similar(a.AL[1], _firstspace(b.AL[1])*_firstspace(mpo.opp[1]) ← _firstspace(a.AL[1]))
+    randomize!(init)
+
+    (vals,vecs,convhist) = eigsolve(TransferMatrix(b.AL, mpo.opp, a.AL),init,1,:LM,Arnoldi(krylovdim=krylovdim))
+    convhist.converged == 0 && @info "dot mps not converged"
+    return vals[1]
+end
