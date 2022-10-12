@@ -51,8 +51,8 @@ function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver
     (lBs,rBs) = gen_exci_lw_rw(exci.left_gs,ham,exci.right_gs,space(exci[1],3));
 
     for pos in  1:length(exci)
-        lBs[:,pos+1] = lBs[:,pos] * TransferMatrix(AR[pos],ham[pos],AL[pos])*exp(-1im*exci.momentum)
-        lBs[:,pos+1] += leftenv(lenvs,pos,exci.left_gs) * TransferMatrix(exci[pos],ham[pos],AL[pos])*exp(-1im*exci.momentum)
+        lBs[:,pos+1] = lBs[:,pos] * TransferMatrix(AR[pos],ham[pos],AL[pos])/exp(1im*exci.momentum)
+        lBs[:,pos+1] += leftenv(lenvs,pos,exci.left_gs) * TransferMatrix(exci[pos],ham[pos],AL[pos])/exp(1im*exci.momentum)
 
         exci.trivial && for i in ids
             @plansor lBs[i,pos+1][-1 -2;-3 -4] -= lBs[i,pos+1][1 4;-3 2]*r_RL(exci.left_gs,pos)[2;3]*τ[3 4;5 1]*l_RL(exci.left_gs,pos+1)[-1;6]*τ[5 6;-4 -2]
@@ -76,7 +76,7 @@ function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;solver
     lB_cur = lBs[:,1];
 
     for i=1:length(exci)-1
-        lB_cur = lB_cur*TransferMatrix(AR[i],ham[i],AL[i])*exp(-1im*exci.momentum)
+        lB_cur = lB_cur*TransferMatrix(AR[i],ham[i],AL[i])/exp(1im*exci.momentum)
 
         exci.trivial && for k in ids
             @plansor lB_cur[k][-1 -2;-3 -4] -= lB_cur[k][1 4;-3 2]*r_RL(exci.left_gs,i)[2;3]*τ[3 4;5 1]*l_RL(exci.left_gs,i+1)[-1;6]*τ[5 6;-4 -2]

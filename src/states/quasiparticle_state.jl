@@ -4,7 +4,7 @@ I think it makes sense to see these things as an actual state instead of return 
 This will allow us to plot energy density (finite qp) and measure observeables.
 =#
 
-struct LeftGaugedQP{S,T1,T2}
+struct LeftGaugedQP{S,T1,T2,E<:Number}
     # !(left_gs === right_gs) => domain wall excitation
     left_gs::S
     right_gs::S
@@ -12,10 +12,10 @@ struct LeftGaugedQP{S,T1,T2}
     VLs::Vector{T1} # AL' VL = 0 (and VL*X = B)
     Xs::Vector{T2} # contains variational parameters
 
-    momentum::Float64
+    momentum::E
 end
 
-struct RightGaugedQP{S,T1,T2}
+struct RightGaugedQP{S,T1,T2,E<:Number}
     # !(left_gs === right_gs) => domain wall excitation
     left_gs::S
     right_gs::S
@@ -23,7 +23,7 @@ struct RightGaugedQP{S,T1,T2}
     Xs::Vector{T2}
     VRs::Vector{T1}
 
-    momentum::Float64
+    momentum::E
 end
 
 #constructors
@@ -104,11 +104,11 @@ function Base.convert(::Type{LeftGaugedQP},input::RightGaugedQP{S}) where S<:Inf
     lg = LeftGaugedQP(zeros,input.left_gs,input.right_gs,sector = first(sectors(utilleg(input))), momentum = input.momentum);
     len = length(input);
 
-    lBs = [@plansor t[-1;-2 -3] := input[1][1 2;-2 -3]*conj(input.left_gs.AL[1][1 2;-1])*exp(-1im*input.momentum)];
+    lBs = [@plansor t[-1;-2 -3] := input[1][1 2;-2 -3]*conj(input.left_gs.AL[1][1 2;-1])]./exp(1im*input.momentum);
     for i in 2:len
         t = lBs[end]*TransferMatrix(input.right_gs.AR[i],input.left_gs.AL[i])
         @plansor t[-1;-2 -3] += input[i][1 2;-2 -3]*conj(input.left_gs.AL[i][1 2;-1])
-        push!(lBs,t*exp(-1im*input.momentum));
+        push!(lBs,t/exp(1im*input.momentum));
     end
 
     tm = TransferMatrix(input.right_gs.AR,input.left_gs.AL)
@@ -116,12 +116,12 @@ function Base.convert(::Type{LeftGaugedQP},input::RightGaugedQP{S}) where S<:Inf
         tm = regularize(tm,l_RL(input.right_gs),r_RL(input.right_gs))
     end
 
-    (lBE,convhist) = linsolve(flip(tm),lBs[end],lBs[end],GMRES(),1,-exp(-1im*input.momentum*len))
+    (lBE,convhist) = linsolve(flip(tm),lBs[end],lBs[end],GMRES(),1,-1/exp(1im*input.momentum*len))
     convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
 
     lBs[end] = lBE;
     for i in 1:len-1
-        lBE = lBE*TransferMatrix(input.right_gs.AR[i],input.left_gs.AL[i])*exp(-1im*input.momentum)
+        lBE = lBE*TransferMatrix(input.right_gs.AR[i],input.left_gs.AL[i])/exp(1im*input.momentum)
         lBs[i]+=lBE;
     end
 
