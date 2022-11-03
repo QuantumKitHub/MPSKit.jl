@@ -19,7 +19,6 @@ function changebonds(state::InfiniteMPS, H::MPOHamiltonian,alg::OptimalExpand,en
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         intermediate = adjoint(NL)*AC2*adjoint(NR)
         (U,S,V) = tsvd(intermediate,trunc=alg.trscheme,alg=SVD())
-
         (NL*U,V*NR)
     end)
 

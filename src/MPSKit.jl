@@ -33,7 +33,7 @@ module MPSKit
     export splitham,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
     export changebonds!,changebonds,VUMPSSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
     export entropy
-    export dynamicaldmrg
+    export propagator,NaiveInvert,Jeckelmann,DynamicalDMRG
     export fidelity_susceptibility
     export approximate!,approximate
     export periodic_boundary_conditions

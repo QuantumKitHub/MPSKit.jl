@@ -429,7 +429,7 @@ end
     end
 end
 
-@timedtestset "dynamicaldmrg" begin
+@timedtestset "dynamicaldmrg flavour $(f)" for f in (Jeckelmann(),NaiveInvert())
     ham = force_planar(nonsym_ising_ham(lambda=4.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(verbose=false))
     window = MPSComoving(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
@@ -447,7 +447,7 @@ end
 
     data = similar(predicted)
     for (i, v) in enumerate(vals)
-        (data[i], _) = dynamicaldmrg(window, v + eta, ham, verbose=false)
+        (data[i], _) = propagator(window, v + eta, ham, DynamicalDMRG(flavour = f, verbose = false))
     end
 
     @test data ≈ predicted atol = 1e-8

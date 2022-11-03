@@ -44,9 +44,11 @@ function Base.:*(mpo::DenseMPO,st::FiniteMPS)
     tensors = [st.AC[1];st.AR[2:end]];
     mpot = mpo[1:length(st)];
 
-    fusers = PeriodicArray(map(zip(tensors,mpot)) do (al,mp)
+    fusers = map(zip(tensors,mpot)) do (al,mp)
         isometry(fuse(_firstspace(al),_firstspace(mp)),_firstspace(al)*_firstspace(mp))
-    end)
+    end
+
+    push!(fusers,isometry(fuse(_lastspace(tensors[end])',_lastspace(mpot[end])'),_lastspace(tensors[end])'*_lastspace(mpot[end])'))
 
     (_firstspace(mpot[1]) == oneunit(_firstspace(mpot[1])) && _lastspace(mpot[end])' == _firstspace(mpot[1])) ||
         @warn "mpo does not start/end with a trivial leg"
