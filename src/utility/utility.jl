@@ -65,14 +65,12 @@ function _embedders(spaces)
 
     maps
 end
-
 function _can_unambiguously_braid(sp::VectorSpace)
     s = sectortype(sp);
 
-    #either the braidingstyle is bosonic
-    BraidingStyle(s) isa Bosonic && return true
+    BraidingStyle(s) isa SymmetricBraiding && return true
 
-    #or there is only one irrep ocurring - the trivial one
+    # if it's not symmetric, then we are only really garantueed that this is possible when only one irrep occurs - the trivial one
     for sect in sectors(sp)
         sect == one(sect) || return false
     end
