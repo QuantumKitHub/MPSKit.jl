@@ -286,7 +286,7 @@ function remove_orphans(smpo::SparseMPO{S,T,E}) where {S,T,E}
 
         new_Os = PeriodicArray(out.Os[:,keep,keep]);
         new_domspaces = PeriodicArray(out.domspaces[:,keep]);
-        new_pspaces = PeriodicArray(out.pspaces[keep]);
+        new_pspaces = PeriodicArray(out.pspaces);
 
         out = SparseMPO(new_Os,new_domspaces,new_pspaces);
 
