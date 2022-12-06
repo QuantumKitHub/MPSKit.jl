@@ -25,8 +25,7 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
     end
     mult = SparseMPO(mult_data);
 
-    for (loc,slice) in enumerate(mult)
-        #=
+    for slice in mult
         #embed next order in this one - incompatible with approximate compression
         for a in CartesianIndices(inds),
             b in CartesianIndices(inds),
@@ -46,8 +45,7 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
                 slice[inds[a],inds[b]] += calc_prod_elem(slice,e_a,e_b)*τ^no*factorial(N)/(factorial(N+no)*n1*n3)
             end
         end
-        =#
-
+        
         # apply loopback
         for a in Iterators.product(fill((1,th.odim),N)...)
             all(a.==1) && continue;
@@ -93,7 +91,6 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
                 slice[inds[c],:] .*=0;
             end
         end
-
         # approximate compression
         for c in CartesianIndices(inds)
             tc = [Tuple(c)...];

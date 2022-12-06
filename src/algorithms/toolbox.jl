@@ -5,8 +5,11 @@ entropy(state::Union{FiniteMPS,MPSComoving,InfiniteMPS},loc::Int) = -tr(safe_xlo
 infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(storagetype(ham[1,1,1]),oneunit(sp)*sp,oneunit(sp)*sp),(1,2,4),(3,)) for sp in ham.pspaces]
 
 "calculates the galerkin error"
-calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64 =
-    norm(leftnull(state.AC[loc])'*(∂∂AC(loc,state,envs.opp,envs)*state.AC[loc]))
+function calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64
+    out = ∂∂AC(loc,state,envs.opp,envs)*state.AC[loc];
+    out -= state.AL[loc]*state.AL[loc]'*out
+    norm(out)
+end
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs)::Float64 =
     maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
 function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
