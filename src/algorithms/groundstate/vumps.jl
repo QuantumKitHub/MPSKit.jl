@@ -16,14 +16,45 @@ end
     find the groundstate for ham using algorithm alg
 "
 
-function find_groundstate(state::InfiniteMPS, H,alg::VUMPS,envs=environments(state,H))
+function find_groundstate(state::InfiniteMPS, H, alg::VUMPS, envs=environments(state,H))
+    galerkin::Float64  = 1+alg.tol_galerkin
+
+    for iter in 1:alg.maxiter
+
+            (state,envs) = VUMPSstep(state,H,galerkin,iter,alg,envs=envs)
+
+            #finalize to enlarge bond dimension or show extra output for example
+            (state,envs,H,forcecont,forcestop) = alg.finalize(iter,state,H,envs) :: Tuple{typeof(state),typeof(envs),typeof(H),Bool,Bool};
+            #(state,envs,forcecont) = alg.finalize(iter,state,envs) :: Tuple{typeof(state),typeof(envs),Bool};
+
+            galerkin   = calc_galerkin(state, envs)
+            alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin), energy = $(sum(real.(expectation_value(state,H)))/length(state))"
+
+            if forcestop || (galerkin <= alg.tol_galerkin && !forcecont)
+                return state, envs, galerkin
+            end
+    end
+    @warn "vumps didn't converge $(galerkin)"
+    return state, envs, galerkin
+end
+
+
+"
+    find_groundstate(state,ham,alg,envs=environments(state,ham))
+
+    find the groundstate for ham using algorithm alg
+"
+
+function find_groundstate(state::InfiniteMPS, Hf::Function,alg::VUMPS, qinit::Float64,envs=environments(state,Hf(qinit)))
     galerkin::Float64  = 1+alg.tol_galerkin
     iter      = 1
 
     temp_ACs = similar.(state.AC);
     temp_Cs = similar.(state.CR);
 
-    while true
+    H = Hf(qinit);
+
+    while true        
         eigalg = Arnoldi(tol=galerkin/(4*sqrt(iter)))
 
         @sync for (loc,(ac,c)) in enumerate(zip(state.AC,state.CR))
@@ -48,10 +79,12 @@ function find_groundstate(state::InfiniteMPS, H,alg::VUMPS,envs=environments(sta
         state = InfiniteMPS(temp_ACs,state.CR[end]; tol = alg.tol_gauge, maxiter = alg.orthmaxiter)
         recalculate!(envs,state);
 
-        (state,envs,forcecont) = alg.finalize(iter,state,H,envs) :: Tuple{typeof(state),typeof(envs),Bool};
+        #@show calc_galerkin(state, envs)
+
+        (state,envs,H,forcecont,q) = alg.finalize(iter,state,Hf,envs,alg,qinit) :: Tuple{typeof(state),typeof(envs),typeof(H),Bool,Float64};
 
         galerkin   = calc_galerkin(state, envs)
-        alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
+        alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin), energy = $(sum(real.(expectation_value(state,H)))/length(state))"
 
         if (galerkin <= alg.tol_galerkin && !forcecont ) || iter>=alg.maxiter
             iter>=alg.maxiter && @warn "vumps didn't converge $(galerkin)"
@@ -61,3 +94,45 @@ function find_groundstate(state::InfiniteMPS, H,alg::VUMPS,envs=environments(sta
         iter += 1
     end
 end
+
+"
+    find_groundstate(state,ham,alg,envs=environments(state,ham))
+
+    find the groundstate for ham using algorithm alg to variationally optimize and alg_stirrup to get out of plateaus.
+"
+function find_groundstate(state::InfiniteMPS, H,alg::VUMPS,alg_stirrup::VUMPS,envs=environments(state,H))
+   @warn "Not implemented" 
+end
+
+function VUMPSstep(state::InfiniteMPS, H, galerkin, iter, tol_gauge, orthmaxiter, envs)
+    temp_ACs = similar.(state.AC);
+    temp_Cs = similar.(state.CR);
+
+    eigalg = Arnoldi(tol=galerkin/(4*sqrt(iter)))
+
+    @sync for (loc,(ac,c)) in enumerate(zip(state.AC,state.CR))
+        @Threads.spawn begin
+            (acvals,acvecs) = eigsolve(∂∂AC($loc,$state,$H,$envs),$ac, 1, :SR, eigalg)
+            $temp_ACs[loc] = acvecs[1];
+        end
+
+        @Threads.spawn begin
+            (crvals,crvecs) = eigsolve(∂∂C($loc,$state,$H,$envs),$c, 1, :SR, eigalg)
+            $temp_Cs[loc] = crvecs[1];
+        end
+    end
+
+    for (i,(ac,c)) in enumerate(zip(temp_ACs,temp_Cs))
+        QAc,_ = TensorKit.leftorth!(ac, alg=QRpos())
+        Qc,_  = TensorKit.leftorth!(c, alg=QRpos())
+
+        temp_ACs[i] = QAc*adjoint(Qc)
+    end
+
+    state = InfiniteMPS(temp_ACs,state.CR[end]; tol = tol_gauge, maxiter = orthmaxiter)
+    recalculate!(envs,state);
+
+    return state,envs
+end
+
+VUMPSstep(state::InfiniteMPS,H,galerkin,iter,alg::VUMPS;envs=environments(state,H)) = VUMPSstep(state,H,galerkin,iter,alg.tol_gauge,alg.orthmaxiter,envs)

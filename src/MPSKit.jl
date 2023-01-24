@@ -55,7 +55,7 @@ module MPSKit
         const tolgauge = 1e-14
         const tol = 1e-12
         const verbose = true
-        _finalize(iter,state,opp,envs) = (state,envs);
+        _finalize(iter,state,opp,envs) = (state,envs,opp,false,false);
 
         import KrylovKit: GMRES,Arnoldi
         const linearsolver = GMRES(;tol,maxiter)

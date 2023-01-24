@@ -82,7 +82,7 @@ function ManifoldPoint(state::MPSMultiline,envs)
     ac_d = [MPSKit.∂∂AC(v,state,envs.opp,envs)*state.AC[v] for v in CartesianIndices(state.AC)]
     g = [Grassmann.project(d, a) for (d, a) in zip(ac_d, state.AL)]
 
-    f = expectation_value(state, envs)
+    f = expectation_value(state, envs)/length(state)
     fi = imag.(f); fr = real.(f);
 
     sum(fi) > MPSKit.Defaults.tol && @warn "mpo is not hermitian $(fi)"
@@ -109,7 +109,7 @@ function fg(x::ManifoldPoint{T}) where T <: Union{<:InfiniteMPS,FiniteMPS}
         g_prec[i] = PrecGrad(rmul!(copy(x.g[i]),x.state.CR[i]'),x.Rhoreg[i])
     end
 
-    f = real(sum(expectation_value(x.state, x.envs)))
+    f = real(sum(expectation_value(x.state, x.envs)))/length(x.state)
 
     return f, g_prec
 end

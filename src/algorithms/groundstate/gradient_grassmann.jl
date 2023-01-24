@@ -32,7 +32,7 @@ struct GradientGrassmann <: Algorithm
     finalize!::Function
 
     function GradientGrassmann(; method = ConjugateGradient,
-                               finalize! = OptimKit._finalize!,
+                               finalize! = OptimKit._finalize_forcecont!,
                                tol = Defaults.tol,
                                maxiter = Defaults.maxiter,
                                verbosity = 2)
