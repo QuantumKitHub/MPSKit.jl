@@ -5,7 +5,7 @@ function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solv
 
     for i in 1:odim
         #this operation can be sped up by at least a factor 2;  found mostly consists of zeros
-        start = found*TransferMatrix(exci.right_gs.AR,ham[:],exci.left_gs.AL)*exp(-1im*mom*len);
+        start = found*TransferMatrix(exci.right_gs.AR,ham[:],exci.left_gs.AL)/exp(1im*mom*len);
         if exci.trivial && isid(ham,i)
             @plansor start[i][-1 -2;-3 -4]-=start[i][1 4;-3 2]*r_RL(exci.right_gs)[2;3]*τ[3 4;5 1]*l_RL(exci.right_gs)[-1;6]*τ[5 6;-4 -2]
         end
@@ -22,7 +22,7 @@ function left_excitation_transfer_system(lBs, ham, exci; mom=exci.momentum, solv
                 tm = TransferMatrix(exci.right_gs.AR,getindex.(ham.data,i,i),exci.left_gs.AL)
             end
 
-            (found[i],convhist) = linsolve(flip(tm),found[i],found[i],solver,1,-exp(-1im*mom*len))
+            (found[i],convhist) = linsolve(flip(tm),found[i],found[i],solver,1,-1/exp(1im*mom*len))
             convhist.converged<1 && @info "left $(i) excitation inversion failed normres $(convhist.normres)"
         end
 

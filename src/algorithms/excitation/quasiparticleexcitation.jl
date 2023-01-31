@@ -66,12 +66,12 @@ function excitations(
 end
 
 """
-    excitations(H, alg, p::Real, lmps, lenvs, rmps, renvs; sector, kwargs...)
+    excitations(H, alg, p::Number, lmps, lenvs, rmps, renvs; sector, kwargs...)
 
 Create and optimise an infinite quasiparticle state with momentum ```p```.
 """
 function excitations(
-    H, alg::QuasiparticleAnsatz, p::Real,
+    H, alg::QuasiparticleAnsatz, p::Number,
     lmps::InfiniteMPS, lenvs=environments(lmps, H),
     rmps::InfiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
     sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1,
@@ -150,7 +150,7 @@ Create and optimise a finite quasiparticle state.
 function excitations(
     H, alg::QuasiparticleAnsatz,
     lmps::FiniteMPS, lenvs=environments(lmps, H),
-    rmps::FiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H)environmentsleft;
+    rmps::FiniteMPS=lmps, renvs=lmps===rmps ? lenvs : environments(rmps, H);
     sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1
 )
     V₀ = LeftGaugedQP(rand, lmps, rmps; sector=sector);

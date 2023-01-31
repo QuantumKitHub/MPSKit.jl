@@ -9,8 +9,8 @@ function exact_diagonalization(opp::MPOHamiltonian;sector = first(sectors(oneuni
 
     Ot = eltype(opp[1]);
 
-    mpst_type = tensormaptype(spacetype(Ot),2,1,eltype(Ot));
-    mpsb_type = tensormaptype(spacetype(Ot),1,1,eltype(Ot));
+    mpst_type = tensormaptype(spacetype(Ot),2,1,storagetype(Ot));
+    mpsb_type = tensormaptype(spacetype(Ot),1,1,storagetype(Ot));
     CLs = Vector{Union{Missing,mpsb_type}}(missing,len+1);
     ALs = Vector{Union{Missing,mpst_type}}(missing,len);
     ARs = Vector{Union{Missing,mpst_type}}(missing,len);
@@ -21,12 +21,12 @@ function exact_diagonalization(opp::MPOHamiltonian;sector = first(sectors(oneuni
         left = _lastspace(ALs[i])';
     end
     for i in len:-1:middle_site+1
-        ARs[i] = _transpose_front(isomorphism(storagetype(Ot),fuse(right*opp.pspaces[i]'),right*opp.pspaces[i]'));
+        ARs[i] = _transpose_front(isomorphism(storagetype(Ot),fuse(right*opp.pspaces[i]'), right*opp.pspaces[i]'));
         right = _firstspace(ARs[i]);
     end
-    ACs[middle_site] = TensorMap(rand,ComplexF64,left*opp.pspaces[middle_site],right);
+    ACs[middle_site] = randomize!(similar(opp[1][1,1],left*opp.pspaces[middle_site]←right));
     norm(ACs[middle_site]) == 0 && throw(ArgumentError("invalid sector"));
-    normalize!(ACs[middle_site]);
+    normalize!(ACs[middle_site]);   
 
     #construct the largest possible finite mps of that length
     state = FiniteMPS(ALs,ARs,ACs,CLs);

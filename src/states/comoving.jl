@@ -3,7 +3,7 @@
 
     muteable window of tensors on top of an infinite chain
 "
-mutable struct MPSComoving{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
+mutable struct MPSComoving{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     left_gs::InfiniteMPS{A,B}
     window::FiniteMPS{A,B}
     right_gs::InfiniteMPS{A,B}
@@ -69,7 +69,8 @@ Base.size(psi::MPSComoving, i...) = size(psi.window, i...)
 Base.eltype(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 site_type(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Mtype
 bond_type(::Type{MPSComoving{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,Vtype<:MPSBondTensor} = Vtype
-
+site_type(st::MPSComoving) = site_type(typeof(st))
+bond_type(st::MPSComoving) = bond_type(typeof(st))
 
 TensorKit.space(psi::MPSComoving{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)
 left_virtualspace(psi::MPSComoving, n::Integer) = left_virtualspace(psi.window,n);

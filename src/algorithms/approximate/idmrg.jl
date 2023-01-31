@@ -39,7 +39,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
         alg.verbose && @info "idmrg iter $(topit) err $(delta)"
     end
 
-    nst = MPSMultiline(map(x->x,st.AL),st.CR[:,end],tol=alg.tol_gauge);
+    nst = MPSMultiline(map(x->x,st.AR),tol=alg.tol_gauge);
     nenvs = environments(nst, toapprox)
     return nst,nenvs,delta;
 end
@@ -105,7 +105,8 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
 
     end
 
-    nst = MPSMultiline(map(x->x,st.AL),st.CR[:,end],tol=alg.tol_gauge);
+    #nst = MPSMultiline(map(x->x,st.AL),st.CR[:,end],tol=alg.tol_gauge);
+    nst = MPSMultiline(map(x->x,st.AR),tol=alg.tol_gauge);
     nenvs = environments(nst, toapprox)
     return nst,nenvs,delta;
 end

@@ -65,14 +65,12 @@ function _embedders(spaces)
 
     maps
 end
-
 function _can_unambiguously_braid(sp::VectorSpace)
     s = sectortype(sp);
 
-    #either the braidingstyle is bosonic
-    BraidingStyle(s) isa Bosonic && return true
+    BraidingStyle(s) isa SymmetricBraiding && return true
 
-    #or there is only one irrep ocurring - the trivial one
+    # if it's not symmetric, then we are only really garantueed that this is possible when only one irrep occurs - the trivial one
     for sect in sectors(sp)
         sect == one(sect) || return false
     end
@@ -81,3 +79,33 @@ end
 
 #needed this; perhaps move to tensorkit?
 TensorKit.fuse(f::T) where T<: VectorSpace = f
+
+
+function inplace_add!(a::Union{<:AbstractTensorMap,Nothing},b::Union{<:AbstractTensorMap,Nothing})
+    isnothing(a) && isnothing(b) && return nothing
+    isnothing(a) && return b
+    isnothing(b) && return a
+    axpy!(true,a,b)
+end
+
+#=
+map every element in the tensormap to dfun(E)
+allows us to create random tensormaps for any storagetype
+=#
+function fill_data!(a::TensorMap,dfun)
+    E = eltype(a);
+
+    for (k,v) in blocks(a)
+        map!(x->dfun(E),v,v);
+    end
+
+    a
+end
+randomize!(a::TensorMap) = fill_data!(a,randn)
+
+
+function safe_xlogx(t::AbstractTensorMap,eps = eps(real(eltype(t))))
+    (U,S,V) = tsvd(t,alg = SVD(), trunc = truncbelow(eps));
+    U*S*log(S)*V
+end
+

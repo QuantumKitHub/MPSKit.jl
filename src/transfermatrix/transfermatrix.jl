@@ -13,6 +13,8 @@ struct ProductTransferMatrix{T<:AbstractTransferMatrix} <: AbstractTransferMatri
     tms :: Vector{T} # I don't want to use tuples, as an infinite mps transfer matrix will then be non-inferable
 end
 
+ProductTransferMatrix(v::AbstractVector) = ProductTransferMatrix(convert(Vector,v));
+
 # a subset of possible operations, but certainly not all of them
 Base.:*(prod::ProductTransferMatrix{T},tm::T) where T <:AbstractTransferMatrix = ProductTransferMatrix(vcat(prod.tms,tm));
 Base.:*(tm::T,prod::ProductTransferMatrix{T}) where T <:AbstractTransferMatrix = ProductTransferMatrix(vcat(prod.tms,tm));
@@ -45,7 +47,7 @@ TransferMatrix(a) = TransferMatrix(a,nothing,a);
 TransferMatrix(a,b) = TransferMatrix(a,nothing,b);
 TransferMatrix(a::AbstractTensorMap,b,c::AbstractTensorMap,isflipped=false) = SingleTransferMatrix(a,b,c,isflipped);
 function TransferMatrix(a::AbstractVector,b,c::AbstractVector,isflipped=false)
-    tot = ProductTransferMatrix(TransferMatrix.(a,b,c));
+    tot = ProductTransferMatrix(convert(Vector,TransferMatrix.(a,b,c)));
     isflipped ? flip(tot) : tot
 end
 
@@ -55,7 +57,7 @@ regularize(t::AbstractTransferMatrix,lvec,rvec) = RegTransferMatrix(t,lvec,rvec)
 regularize!(v::MPSBondTensor,lvec::MPSBondTensor,rvec::MPSBondTensor) =
     @plansor v[-1;-2]-=lvec[1;2]*v[2;1]*rvec[-1;-2]
 
-regularize!(v::MPSTensor,lvec::MPSBondTensor,rvec::MPSBondTensor) =
+regularize!(v::MPSTensor,lvec::MPSBondTensor,rvec::MPSBondTensor) = 
     @plansor v[-1 -2;-3]-=lvec[1;2]*v[2 -2;1]*rvec[-1;-3]
 
 regularize!(v::AbstractTensorMap{S,1,2} where S,lvec::MPSBondTensor,rvec::MPSBondTensor) =

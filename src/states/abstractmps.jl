@@ -8,3 +8,5 @@ const MPSTensor{S} = GenericMPSTensor{S,2} where {S<:EuclideanSpace} #the usual 
 abstract type AbstractMPS end
 
 Base.eltype(psi::AbstractMPS) = eltype(typeof(psi))
+
+abstract type AbstractFiniteMPS <: AbstractMPS end;

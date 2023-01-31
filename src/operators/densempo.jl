@@ -44,9 +44,11 @@ function Base.:*(mpo::DenseMPO,st::FiniteMPS)
     tensors = [st.AC[1];st.AR[2:end]];
     mpot = mpo[1:length(st)];
 
-    fusers = PeriodicArray(map(zip(tensors,mpot)) do (al,mp)
+    fusers = map(zip(tensors,mpot)) do (al,mp)
         isometry(fuse(_firstspace(al),_firstspace(mp)),_firstspace(al)*_firstspace(mp))
-    end)
+    end
+
+    push!(fusers,isometry(fuse(_lastspace(tensors[end])',_lastspace(mpot[end])'),_lastspace(tensors[end])'*_lastspace(mpot[end])'))
 
     (_firstspace(mpot[1]) == oneunit(_firstspace(mpot[1])) && _lastspace(mpot[end])' == _firstspace(mpot[1])) ||
         @warn "mpo does not start/end with a trivial leg"
@@ -67,4 +69,13 @@ function Base.:*(mpo1::DenseMPO,mpo2::DenseMPO)
     DenseMPO(map(1:length(mpo1)) do i
         @plansor t[-1 -2;-3 -4] := mpo2[i][1 2;-3 3]*mpo1[i][4 -2;2 5]*fusers[i][-1;1 4]*conj(fusers[i+1][-4;3 5])
     end)
+end
+
+function TensorKit.dot(a::InfiniteMPS, mpo::DenseMPO, b::InfiniteMPS;krylovdim = 30)
+    init = similar(a.AL[1], _firstspace(b.AL[1])*_firstspace(mpo.opp[1]) ← _firstspace(a.AL[1]))
+    randomize!(init)
+
+    (vals,vecs,convhist) = eigsolve(TransferMatrix(b.AL, mpo.opp, a.AL),init,1,:LM,Arnoldi(krylovdim=krylovdim))
+    convhist.converged == 0 && @info "dot mps not converged"
+    return vals[1]
 end
