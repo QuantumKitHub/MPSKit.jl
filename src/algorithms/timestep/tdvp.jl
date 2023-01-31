@@ -353,7 +353,7 @@ function convergenceR3(Aup,Adown,Convergerror::Float64)
 	return (err < Convergerror ? true : false,err)
 end
 
-#function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::TDVP,envs=environments(state,H))
+function timestep!(state::Union{FiniteMPS,MPSComoving}, H, timestep::Number,alg::TDVP,envs=environments(state,H))
 function timestep!(state::AbstractFiniteMPS, H, timestep::Number,alg::TDVP,envs=environments(state,H))
     #left to right
     for i in 1:(length(state)-1)
