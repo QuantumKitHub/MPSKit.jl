@@ -1,6 +1,7 @@
 module MPSKit
+
     using TensorKit,KrylovKit,Parameters, OptimKit, FastClosures
-    using Base.Threads,FLoops,Transducers
+    using Base.Threads, FLoops, Transducers, FoldsThreads
     using Base.Iterators
     using RecipesBase
 
@@ -29,12 +30,12 @@ module MPSKit
     export find_groundstate!, find_groundstate, VUMPS, DMRG, DMRG2, GradDesc, IDMRG1, IDMRG2, GradientGrassmann
     export leading_boundary
     export excitations,FiniteExcited,QuasiparticleAnsatz
-    export marek_gap, correlation_length
+    export marek_gap, correlation_length, correlator
     export timestep!,timestep,TDVP,TDVP2,make_time_mpo,WI,WII,TaylorCluster
     export splitham,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
     export changebonds!,changebonds,VUMPSSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
     export entropy
-    export dynamicaldmrg
+    export propagator,NaiveInvert,Jeckelmann,DynamicalDMRG
     export fidelity_susceptibility
     export approximate!,approximate
     export periodic_boundary_conditions
@@ -105,6 +106,7 @@ module MPSKit
     include("algorithms/expval.jl")
     include("algorithms/toolbox.jl")
     include("algorithms/grassmann.jl")
+    include("algorithms/correlators.jl")
 
     include("algorithms/changebonds/optimalexpand.jl")
     include("algorithms/changebonds/vumpssvd.jl")
@@ -137,5 +139,4 @@ module MPSKit
     include("algorithms/ED.jl")
 
     include("algorithms/unionalg.jl")
-
 end

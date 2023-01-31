@@ -60,7 +60,7 @@ function uniform_rightorth!(AR,CR,A; tol = Defaults.tolgauge, maxiter = Defaults
 
         cold = CR[end]
         for loc in length(AR):-1:1
-            AR[loc] = A[loc]*CR[loc]
+            AR[loc] = A[loc] * CR[loc]
 
             CR[mod1(loc-1,end)], temp = rightorth!(_transpose_tail(AR[loc]), alg=LQpos())
             AR[loc] = _transpose_front(temp)

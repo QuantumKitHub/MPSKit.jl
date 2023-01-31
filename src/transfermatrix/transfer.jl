@@ -106,47 +106,54 @@ transfer_right(vec::AbstractVector{V},ham::SparseMPOSlice,A::M,Ab::M) where V<:M
 
 function transfer_left(RetType,vec,ham::SparseMPOSlice,A,Ab)
     toret = similar(vec,RetType,length(vec));
-    @sync for k in 1:length(vec)
-        @Threads.spawn begin
-            res = foldxt(+, 1:$length(vec) |>
-                Filter(j->contains($ham,j,k)) |>
-                Map() do j
-                    if isscal($ham,j,k)
-                        $ham.Os[j,k]*transfer_left($vec[j],$A,$Ab)
-                    else
-                        transfer_left($vec[j],$ham[j,k],$A,$Ab)
-                    end
-                end,init=Init(+));
 
-            if res == Init(+)
-                $toret[k] = transfer_left($vec[1],$ham[1,k],$A,$Ab)
+    @threads for k in 1:length(vec)
+
+        els = keys(ham,:,k);
+
+
+        @floop WorkStealingEx() for j in els
+            if isscal(ham,j,k)
+                t = lmul!(ham.Os[j,k], transfer_left(vec[j],A,Ab))
             else
-                $toret[k] = res;
+                t = transfer_left(vec[j],ham[j,k],A,Ab)
             end
+
+            @reduce(s = inplace_add!(nothing,t))
         end
+
+        if isnothing(s)
+            s = transfer_left(vec[1],ham[1,k],A,Ab)
+        end
+        toret[k] = s;
     end
+
     toret
 end
 function transfer_right(RetType,vec,ham::SparseMPOSlice,A,Ab)
     toret = similar(vec,RetType,length(vec));
 
-    @sync for j in 1:length(vec)
-        @Threads.spawn begin
-            res = foldxt(+, 1:$length(vec) |>
-                Filter(k->contains($ham,j,k)) |>
-                Map() do k
-                    if isscal($ham,j,k)
-                        $ham.Os[j,k]*transfer_right($vec[k],$A,$Ab)
-                    else
-                        transfer_right($vec[k],$ham[j,k],$A,$Ab)
-                    end
-                end,init=Init(+));
-            if res == Init(+)
-                $toret[j] = transfer_right($vec[1],$ham[j,1],$A,$Ab)
-            else
-                $toret[j] = res
+    @threads for j in 1:length(vec)
+
+        els = keys(ham,j,:)
+
+        @floop WorkStealingEx() for k in els
+            if isscal(ham,j,k)
+                t = lmul!(ham.Os[j,k],transfer_right(vec[k],A,Ab))
+            else 
+                t = transfer_right(vec[k],ham[j,k],A,Ab)
             end
+
+            @reduce(s = inplace_add!(nothing,t))
         end
+
+        if isnothing(s)
+            s = transfer_right(vec[1],ham[j,1],A,Ab)
+        end
+
+        toret[j] = s
     end
+
     toret
 end
+

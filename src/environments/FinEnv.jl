@@ -38,8 +38,8 @@ function environments(below::FiniteMPS{S},ham::Union{SparseMPO,MPOHamiltonian},a
     rightstart = Vector{S}();leftstart = Vector{S}()
 
     for i in 1:ham.odim
-        util_left = Tensor(ones,eltype(S),ham.domspaces[1,i]')
-        util_right = Tensor(ones,eltype(S),ham.imspaces[length(below),i]')
+        util_left = Tensor(x->storagetype(S)(undef,x),ham.domspaces[1,i]'); fill_data!(util_left,one);
+        util_right = Tensor(x->storagetype(S)(undef,x),ham.imspaces[length(below),i]'); fill_data!(util_right,one);
 
         @plansor ctl[-1 -2; -3]:= lll[-1;-3]*util_left[-2]
         @plansor ctr[-1 -2; -3]:= rrr[-1;-3]*util_right[-2]
