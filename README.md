@@ -52,5 +52,5 @@ julia> hamiltonian = nonsym_ising_ham();
 
 And find the groundstate
 ```julia
-julia> (groundstate,_) = find_groundstate(state,hamiltonian,Vumps());
+julia> (groundstate,_) = find_groundstate(state,hamiltonian,VUMPS());
 ```
