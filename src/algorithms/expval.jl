@@ -37,7 +37,7 @@ end
     calculates the expectation value for the given operator/hamiltonian
 """
 expectation_value(state,envs::Cache) = expectation_value(state,envs.opp,envs);
-
+expectation_value(state,ham::MPOHamiltonian) = expectation_value(state,ham,environments(state,ham))
 function expectation_value(state::MPSComoving,ham::MPOHamiltonian,envs::FinEnv)
     vals = expectation_value_fimpl(state,envs);
 
@@ -56,7 +56,7 @@ function expectation_value(state::MPSComoving,ham::MPOHamiltonian,envs::FinEnv)
     return vals,tot/(norm(state.AC[end])^2);
 end
 
-expectation_value(state::FiniteMPS,ham,envs::FinEnv) = expectation_value_fimpl(state,ham,envs)
+expectation_value(state::FiniteMPS,ham::MPOHamiltonian,envs::FinEnv) = expectation_value_fimpl(state,ham,envs)
 function expectation_value_fimpl(state::AbstractFiniteMPS,ham::MPOHamiltonian,envs::FinEnv)
     ens = zeros(eltype(eltype(state)),length(state))
     for i in 1:length(state),
