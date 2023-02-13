@@ -68,7 +68,7 @@ end
 
 function calclw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.linearsolver)
     len = length(st);
-
+    @assert len == length(ham);
 
     #the start element
     leftutil = similar(st.AL[1],ham[1].domspaces[1]); fill_data!(leftutil,one);
@@ -113,6 +113,7 @@ end
 
 function calcrw!(fixpoints,st::InfiniteMPS,ham::MPOHamiltonian; solver=Defaults.linearsolver)
     len = length(st); odim = size(fixpoints,1);
+    @assert len == length(ham);
 
     #the start element
     rightutil = similar(st.AL[1],ham[len].imspaces[1]); fill_data!(rightutil,one);
