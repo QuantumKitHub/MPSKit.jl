@@ -131,7 +131,7 @@ function FiniteMPS(site_tensors::Vector{A};normalize=false,overwrite=false) wher
 end
 
 
-Base.copy(psi::FiniteMPS) where {A,B} = FiniteMPS(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
+Base.copy(psi::FiniteMPS) = FiniteMPS(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
 
 function Base.getproperty(psi::FiniteMPS,prop::Symbol)
     if prop == :AL
