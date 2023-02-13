@@ -36,11 +36,9 @@ end
 """
     calculates the expectation value for the given operator/hamiltonian
 """
-expectation_value(state,ham::MPOHamiltonian,envs=environments(state,ham)) = expectation_value(state,envs);
+expectation_value(state,envs::Cache) = expectation_value(state,envs.opp,envs);
 
-function expectation_value(state::MPSComoving,envs::FinEnv)
-    ham = envs.opp;
-
+function expectation_value(state::MPSComoving,ham::MPOHamiltonian,envs::FinEnv)
     vals = expectation_value_fimpl(state,envs);
 
     tot = 0.0+0im;
@@ -58,11 +56,9 @@ function expectation_value(state::MPSComoving,envs::FinEnv)
     return vals,tot/(norm(state.AC[end])^2);
 end
 
-expectation_value(state::FiniteMPS,envs::FinEnv) = expectation_value_fimpl(state,envs)
-function expectation_value_fimpl(state::AbstractFiniteMPS,envs::FinEnv)
-    ham = envs.opp;
-
-    ens=zeros(eltype(eltype(state)),length(state))
+expectation_value(state::FiniteMPS,ham,envs::FinEnv) = expectation_value_fimpl(state,ham,envs)
+function expectation_value_fimpl(state::AbstractFiniteMPS,ham::MPOHamiltonian,envs::FinEnv)
+    ens = zeros(eltype(eltype(state)),length(state))
     for i in 1:length(state),
         (j,k) in keys(ham[i])
 
@@ -80,8 +76,7 @@ function expectation_value_fimpl(state::AbstractFiniteMPS,envs::FinEnv)
     return ens./n;
 end
 
-function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
-    ham = prevca.opp;
+function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,prevca::MPOHamInfEnv);
     #calculate energy density
     len = length(st);
     ens = PeriodicArray(zeros(eltype(st.AR[1]),len));
@@ -95,17 +90,11 @@ function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv);
     return ens
 end
 
-#kept for backwards compatibility; the new way is to pass a unitrange
-expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,size::Int,prevca=environments(st,ham)) = expectation_value(st,prevca,1:size);
-expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,size::Int) = expectation_value(st,prevca,1:size);
 
 #the mpo hamiltonian over n sites has energy f+n*edens, which is what we calculate here. f can then be found as this - n*edens
-expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,range::UnitRange{Int64},prevca = environments(st,ham)) = expectation_value(st,prevca,range)
+expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,range::UnitRange{Int64}) = expectation_value(st,prevca.opp,range,prevca)
 
-function expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,range::UnitRange{Int64})
-    ham = prevca.opp;
-
-    len = length(st)
+function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,range::UnitRange{Int64},prevca = environments(st,ham))
     start = map(leftenv(prevca,range.start,st)) do y
         @plansor x[-1 -2;-3] := y[1 -2;3]*st.CR[range.start-1][3;-3]*conj(st.CR[range.start-1][1;-1])
     end
@@ -126,8 +115,7 @@ end
 expectation_value(st::InfiniteMPS,mpo::DenseMPO) = expectation_value(convert(MPSMultiline,st),convert(MPOMultiline,mpo));
 expectation_value(st::MPSMultiline,mpo::MPOMultiline) = expectation_value(st,environments(st,mpo));
 expectation_value(st::InfiniteMPS,ca::PerMPOInfEnv) = expectation_value(convert(MPSMultiline,st),ca);
-function expectation_value(st::MPSMultiline,ca::PerMPOInfEnv)
-    opp = ca.opp;
+function expectation_value(st::MPSMultiline,opp::MPOMultiline,ca::PerMPOInfEnv)
     retval = PeriodicArray{eltype(st.AC[1,1]),2}(undef,size(st,1),size(st,2));
     for (i,j) in product(1:size(st,1),1:size(st,2))
         retval[i,j] = @plansor   leftenv(ca,i,j,st)[1 2;3]*

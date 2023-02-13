@@ -93,10 +93,8 @@ map every element in the tensormap to dfun(E)
 allows us to create random tensormaps for any storagetype
 =#
 function fill_data!(a::TensorMap,dfun)
-    E = eltype(a);
-
     for (k,v) in blocks(a)
-        map!(x->dfun(E),v,v);
+        map!(x->dfun(typeof(x)),v,v);
     end
 
     a
