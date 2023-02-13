@@ -256,6 +256,14 @@ function effective_excitation_hamiltonian(
                             exci.left_gs.AC[i][3 7;1]*
                             H[i][j,k][5 6;7 8]*
                             rightenv(envs.lenvs,i,exci.left_gs)[k][1 8;4]
+            if !exci.trivial
+                en    += @plansor conj(exci.right_gs.AC[i][2 6;4])*
+                leftenv(envs.renvs,i,exci.right_gs)[j][2 5;3]*
+                exci.right_gs.AC[i][3 7;1]*
+                H[i][j,k][5 6;7 8]*
+                rightenv(envs.renvs,i,exci.right_gs)[k][1 8;4]
+                en /=2
+            end
 
             T -= Bs[i]*en
             if i>1 || exci isa InfiniteQP
