@@ -381,10 +381,10 @@ end
         state_re = changebonds(state, RandExpand(trscheme=truncdim(dim(Dspace) * dim(Dspace))))
         @test dot(state, state_re) ≈ 1 atol = 1e-8
 
-        (state_oe, _) = changebonds(state, MPOHamiltonian(nn), OptimalExpand(trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+        (state_oe, _) = changebonds(state, repeat(MPOHamiltonian(nn),2), OptimalExpand(trscheme=truncdim(dim(Dspace) * dim(Dspace))))
         @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
-        (state_vs, _) = changebonds(state, MPOHamiltonian(nn), VUMPSSvdCut(trscheme=notrunc()))
+        (state_vs, _) = changebonds(state, repeat(MPOHamiltonian(nn),2), VUMPSSvdCut(trscheme=notrunc()))
         @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
 
         state_vs_tr = changebonds(state_vs, SvdCut(trscheme=truncdim(dim(Dspace))))

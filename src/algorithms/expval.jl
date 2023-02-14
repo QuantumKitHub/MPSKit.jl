@@ -39,7 +39,7 @@ end
 expectation_value(state,envs::Cache) = expectation_value(state,envs.opp,envs);
 expectation_value(state,ham::MPOHamiltonian) = expectation_value(state,ham,environments(state,ham))
 function expectation_value(state::MPSComoving,ham::MPOHamiltonian,envs::FinEnv)
-    vals = expectation_value_fimpl(state,envs);
+    vals = expectation_value_fimpl(state,ham,envs);
 
     tot = 0.0+0im;
     for i in 1:ham.odim,
@@ -92,8 +92,8 @@ end
 
 
 #the mpo hamiltonian over n sites has energy f+n*edens, which is what we calculate here. f can then be found as this - n*edens
-expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,range::UnitRange{Int64}) = expectation_value(st,prevca.opp,range,prevca)
-
+expectation_value(st::InfiniteMPS,prevca::MPOHamInfEnv,range::Union{UnitRange{Int64},Int64}) = expectation_value(st,prevca.opp,range,prevca)
+expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,range::Int64,prevca = environments(st,ham)) = expectation_value(st,ham,1:range,prevca)
 function expectation_value(st::InfiniteMPS,ham::MPOHamiltonian,range::UnitRange{Int64},prevca = environments(st,ham))
     start = map(leftenv(prevca,range.start,st)) do y
         @plansor x[-1 -2;-3] := y[1 -2;3]*st.CR[range.start-1][3;-3]*conj(st.CR[range.start-1][1;-1])
