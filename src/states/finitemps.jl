@@ -130,6 +130,12 @@ function FiniteMPS(site_tensors::Vector{A};normalize=false,overwrite=false) wher
     FiniteMPS(ALs,ARs,ACs,CLs)
 end
 
+function Base.convert(TType::Type{<:AbstractTensorMap}, psi::FiniteMPS)
+    T = foldl(psi.AR[2:end]; init=first(psi.AC)) do x, y
+        return _transpose_front(x * _transpose_tail(y))
+    end
+    return convert(TType, T)
+end
 
 Base.copy(psi::FiniteMPS) = FiniteMPS(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
 
