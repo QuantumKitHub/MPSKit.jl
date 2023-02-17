@@ -90,6 +90,7 @@ function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, max
 
     for k = N:-1:2
         virtspaces[k] = infimum(virtspaces[k], fuse(virtspaces[k+1], dual(fuse(physspaces[k]))))
+        dim(virtspaces[k]) > 0 || @warn "no fusion channels available"
     end
 
     return FiniteMPS(f, elt,physspaces, virtspaces;kwargs...)
