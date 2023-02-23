@@ -13,7 +13,6 @@ println("------------------------------------")
     (𝔹^10, 𝔹^2, ComplexF64),
     (Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](0 => 1) * Rep[SU₂](0 => 1), ComplexF32)
 ]
-
     ts = FiniteMPS(rand, elt, rand(3:20), d, D)
 
     ovl = dot(ts, ts)
@@ -33,6 +32,15 @@ println("------------------------------------")
     @test ovl * 9 * 9 ≈ norm(ts)^2
 
     @test norm(2 * ts + ts - 3 * ts) ≈ 0.0 atol = sqrt(eps(real(elt)))
+end
+
+@timedtestset "FiniteMPS ($D, $d, $elt)" for (D, d, elt) in [
+    (𝔹^10, 𝔹^2, ComplexF64),
+    (Rep[U₁](-1 => 3, 0 => 3, 1 => 3), Rep[U₁](-1 => 1, 0 => 1, 1 => 1), ComplexF64)
+]
+    ts_small = FiniteMPS(rand, elt, 4, d, D)
+    ts_small2 = FiniteMPS(MPSKit.decompose_localmps(convert(TensorMap, ts_small)))
+    @test dot(ts_small, ts_small2) ≈ dot(ts_small, ts_small)
 end
 
 @timedtestset "InfiniteMPS ($D,$d,$elt)" for (D, d, elt) in [
@@ -381,10 +389,10 @@ end
         state_re = changebonds(state, RandExpand(trscheme=truncdim(dim(Dspace) * dim(Dspace))))
         @test dot(state, state_re) ≈ 1 atol = 1e-8
 
-        (state_oe, _) = changebonds(state, MPOHamiltonian(nn), OptimalExpand(trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+        (state_oe, _) = changebonds(state, repeat(MPOHamiltonian(nn),2), OptimalExpand(trscheme=truncdim(dim(Dspace) * dim(Dspace))))
         @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
-        (state_vs, _) = changebonds(state, MPOHamiltonian(nn), VUMPSSvdCut(trscheme=notrunc()))
+        (state_vs, _) = changebonds(state, repeat(MPOHamiltonian(nn),2), VUMPSSvdCut(trscheme=notrunc()))
         @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
 
         state_vs_tr = changebonds(state_vs, SvdCut(trscheme=truncdim(dim(Dspace))))
@@ -429,7 +437,7 @@ end
     end
 end
 
-@timedtestset "dynamicaldmrg flavour $(f)" for f in (Jeckelmann(),NaiveInvert())
+@timedtestset "dynamicaldmrg flavour $(f)" for f in (Jeckelmann(), NaiveInvert())
     ham = force_planar(nonsym_ising_ham(lambda=4.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(verbose=false))
     window = MPSComoving(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
@@ -447,7 +455,7 @@ end
 
     data = similar(predicted)
     for (i, v) in enumerate(vals)
-        (data[i], _) = propagator(window, v + eta, ham, DynamicalDMRG(flavour = f, verbose = false))
+        (data[i], _) = propagator(window, v + eta, ham, DynamicalDMRG(flavour=f, verbose=false))
     end
 
     @test data ≈ predicted atol = 1e-8
@@ -519,13 +527,13 @@ end
     @test isapprox(expectation_value(st, [sz_mpo], 1), expectation_value(st, sz, 1), atol=1e-2)
     @test isapprox(expectation_value(st, [sz_mpo, sz_mpo], 1), expectation_value(st, szsz, 1), atol=1e-2)
     @test isapprox(expectation_value(st, [sz_mpo, sz_mpo], 2), expectation_value(st, szsz, 1), atol=1e-2)
-    
+
     G = correlator(st, sz_mpo, sz_mpo, 1, 2:5)
     G2 = correlator(st, szsz, 1, 3:2:5)
     @test isapprox(G[2], G2[1], atol=1e-2)
     @test isapprox(last(G), last(G2), atol=1e-2)
-    @test isapprox(G[1], expectation_value(st, szsz, 1), atol = 1e-2)
-    @test isapprox(G[2], expectation_value(st, [sz_mpo, id_mpo, sz_mpo], 1), atol = 1e-2)
+    @test isapprox(G[1], expectation_value(st, szsz, 1), atol=1e-2)
+    @test isapprox(G[2], expectation_value(st, [sz_mpo, id_mpo, sz_mpo], 1), atol=1e-2)
     @test isapprox(first(correlator(st, sz_mpo, sz_mpo, 1, 2)), expectation_value(st, szsz, 1), atol=1e-2)
 end
 
@@ -643,17 +651,17 @@ println("------------------------------------")
     ##
     H = MPOHamiltonian(H_aklt)
     N = 6
-    H = repeat(H, N);
-    ψ₀ = InfiniteMPS(fill(SU2Space(1 => 1), N), fill(SU2Space(1//2 => 2, 3//2 => 1), N));
-    alg = IDMRG2(; verbose = false, tol_galerkin=1e-5, trscheme = truncdim(32));
+    H = repeat(H, N)
+    ψ₀ = InfiniteMPS(fill(SU2Space(1 => 1), N), fill(SU2Space(1 // 2 => 2, 3 // 2 => 1), N))
+    alg = IDMRG2(; verbose=false, tol_galerkin=1e-5, trscheme=truncdim(32))
 
     ψ, envs, δ = find_groundstate(ψ₀, H, alg) # used to error
     @test ψ isa InfiniteMPS
 end
 
 @testset "NaN entanglement entropy" begin
-    ts = InfiniteMPS([ℂ^2],[ℂ^5]);
-    ts = changebonds(ts,RandExpand(trscheme=truncdim(2)));
+    ts = InfiniteMPS([ℂ^2], [ℂ^5])
+    ts = changebonds(ts, RandExpand(trscheme=truncdim(2)))
     @test !isnan(sum(entropy(ts)))
-    @test !isnan(sum(entropy(ts,2)))
+    @test !isnan(sum(entropy(ts, 2)))
 end

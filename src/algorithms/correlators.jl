@@ -12,7 +12,7 @@ function correlator(state::AbstractMPS, O₁::MPOTensor, O₂::MPOTensor, i::Int
     return first(correlator(state, O₁, O₂, i, j:j))
 end
 
-function correlator(state::AbstractMPS, O₁::MPOTensor, O₂::MPOTensor, i::Int, js::AbstractRange{Int}) where {S}
+function correlator(state::AbstractMPS, O₁::MPOTensor, O₂::MPOTensor, i::Int, js::AbstractRange{Int})
     first(js) > i || @error "i should be smaller than j ($i, $(first(js)))"
     S₁ = _firstspace(O₁)
     S₁ == oneunit(S₁) ||

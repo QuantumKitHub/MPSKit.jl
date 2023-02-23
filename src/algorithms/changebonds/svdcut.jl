@@ -7,8 +7,6 @@ end
 
 changebonds(state::AbstractFiniteMPS,alg::SvdCut) = changebonds!(copy(state),alg);
 function changebonds!(state::AbstractFiniteMPS,alg::SvdCut)
-    newstate = copy(state);
-
     for i in length(state)-1:-1:1
         (U,S,V) = tsvd(state.CR[i],trunc=alg.trscheme,alg=TensorKit.SVD());
 
