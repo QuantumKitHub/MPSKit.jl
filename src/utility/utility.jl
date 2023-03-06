@@ -119,3 +119,6 @@ function safe_xlogx(t::AbstractTensorMap,eps = eps(real(eltype(t))))
     (U,S,V) = tsvd(t,alg = SVD(), trunc = truncbelow(eps));
     U*S*log(S)*V
 end
+
+tensorexpr(name::Symbol, inds) = Expr(:ref, name, inds...)
+tensorexpr(name::Symbol, indout, indin) = Expr(:typed_vcat, name, Expr(:row, indout...), Expr(:row, indin...))
