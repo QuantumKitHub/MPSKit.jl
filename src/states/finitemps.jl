@@ -90,6 +90,7 @@ function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}}, max
 
     for k = N:-1:2
         virtspaces[k] = infimum(virtspaces[k], fuse(virtspaces[k+1], dual(fuse(physspaces[k]))))
+        dim(virtspaces[k]) > 0 || @warn "no fusion channels available"
     end
 
     return FiniteMPS(f, elt,physspaces, virtspaces;kwargs...)
@@ -130,8 +131,14 @@ function FiniteMPS(site_tensors::Vector{A};normalize=false,overwrite=false) wher
     FiniteMPS(ALs,ARs,ACs,CLs)
 end
 
+function Base.convert(TType::Type{<:AbstractTensorMap}, psi::FiniteMPS)
+    T = foldl(psi.AR[2:end]; init=first(psi.AC)) do x, y
+        return _transpose_front(x * _transpose_tail(y))
+    end
+    return convert(TType, T)
+end
 
-Base.copy(psi::FiniteMPS) where {A,B} = FiniteMPS(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
+Base.copy(psi::FiniteMPS) = FiniteMPS(copy(psi.ALs), copy(psi.ARs),copy(psi.ACs),copy(psi.CLs));
 
 function Base.getproperty(psi::FiniteMPS,prop::Symbol)
     if prop == :AL

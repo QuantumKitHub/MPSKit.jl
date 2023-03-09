@@ -1,9 +1,10 @@
 "
     onesite dmrg
 "
-@with_kw struct DMRG{F} <: Algorithm
+@with_kw struct DMRG{A,F} <: Algorithm
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
+    eigalg::A = Defaults.eigsolver
     verbose::Bool = Defaults.verbose
     finalize::F = Defaults._finalize
 end
@@ -18,7 +19,7 @@ function find_groundstate!(state::AbstractFiniteMPS, H,alg::DMRG,envs = environm
 
         for pos = [1:(length(state)-1);length(state):-1:2]
             h = ∂∂AC(pos,state,H,envs);
-            (eigvals,vecs) = eigsolve(h,state.AC[pos],1,:SR,Lanczos())
+            (eigvals,vecs) = eigsolve(h,state.AC[pos],1,:SR,alg.eigalg)
             delta = max(delta,calc_galerkin(state,pos,envs))
 
             state.AC[pos] = vecs[1]
@@ -37,9 +38,10 @@ function find_groundstate!(state::AbstractFiniteMPS, H,alg::DMRG,envs = environm
 end
 
 "twosite dmrg"
-@with_kw struct DMRG2{F} <: Algorithm
+@with_kw struct DMRG2{A,F} <: Algorithm
     tol = Defaults.tol;
     maxiter = Defaults.maxiter;
+    eigalg::A = Defaults.eigsolver
     trscheme = truncerr(1e-6);
     verbose = Defaults.verbose
     finalize::F = Defaults._finalize
@@ -53,15 +55,13 @@ function find_groundstate!(state::AbstractFiniteMPS, H,alg::DMRG2,envs = environ
     while iter < maxiter && delta > tol
         delta=0.0
 
-        ealg = Lanczos()
-
         #left to right sweep
         for pos= 1:(length(state)-1)
             @plansor ac2[-1 -2; -3 -4]:=state.AC[pos][-1 -2;1]*state.AR[pos+1][1 -4;-3]
 
             h = ∂∂AC2(pos,state,H,envs)
 
-            (eigvals,vecs) = eigsolve(h,ac2,1,:SR,ealg)
+            (eigvals,vecs) = eigsolve(h,ac2,1,:SR,alg.eigalg)
             newA2center = first(vecs);
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
@@ -79,7 +79,7 @@ function find_groundstate!(state::AbstractFiniteMPS, H,alg::DMRG2,envs = environ
 
             h = ∂∂AC2(pos,state,H,envs)
 
-            (eigvals,vecs) = eigsolve(h,ac2,1,:SR,ealg)
+            (eigvals,vecs) = eigsolve(h,ac2,1,:SR,alg.eigalg)
             newA2center = first(vecs)
 
             (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())

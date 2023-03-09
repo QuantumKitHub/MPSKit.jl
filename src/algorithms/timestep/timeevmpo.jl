@@ -103,7 +103,7 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E},dt,alg::TaylorCluster{N}) where
 
             slice[:,inds[transformed...]] += slice[:,inds[tc...]]*τ^n * factorial(N-n)/factorial(N);
 
-            slice[:,inds[tc...]] .*=0;
+            slice[:,inds[tc...]] .*= 0;
             slice[inds[tc...],:] .*= 0
         end
     end

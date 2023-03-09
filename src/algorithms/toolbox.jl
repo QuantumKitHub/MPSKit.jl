@@ -132,7 +132,7 @@ function variance(state::InfiniteQP,ham::MPOHamiltonian,envs=environments(state,
 
     #I don't remember where the formula came from
     E_ex = dot(state,effective_excitation_hamiltonian(ham,state,envs));
-    E_f = expectation_value(state.left_gs,rescaled_ham,0);
+    E_f = expectation_value(state.left_gs,rescaled_ham,1:0);
 
     ham2 = rescaled_ham*rescaled_ham
 
