@@ -173,8 +173,26 @@ function TensorKit.space(psi::FiniteMPS{<:GenericMPSTensor}, n::Integer)
     return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
 end
 
-left_virtualspace(psi::FiniteMPS, n::Integer) = _firstspace(psi.CR[n]);
-right_virtualspace(psi::FiniteMPS, n::Integer) = dual(_lastspace(psi.CR[n]));
+function left_virtualspace(psi::FiniteMPS, n::Integer)
+    if n > 0 && !ismissing(psi.ALs[n])
+        dual(_lastspace(psi.ALs[n]))
+    elseif n < length(psi.ALs) && !ismissing(psi.ALs[n+1])
+        _firstspace(psi.ALs[n+1])
+    else
+        _firstspace(psi.CR[n]);
+    end
+end
+
+function right_virtualspace(psi::FiniteMPS, n::Integer)
+    if n>0 && !ismissing(psi.ARs[n])
+        dual(_lastspace(psi.ARs[n]))
+    elseif n<length(psi.ARs) && !ismissing(psi.ARs[n+1])
+        _firstspace(psi.ARs[n+1])
+    else
+        dual(_lastspace(psi.CR[n]));
+    end
+end
+
 
 r_RR(state::FiniteMPS{T}) where T = isomorphism(storagetype(T),domain(state.AR[end]),domain(state.AR[end]))
 l_LL(state::FiniteMPS{T}) where T = isomorphism(storagetype(T),space(state.AL[1],1),space(state.AL[1],1))
