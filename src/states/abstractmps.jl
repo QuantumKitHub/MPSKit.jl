@@ -20,3 +20,8 @@ Construct a random `MPSTensor` with given physical and virtual spaces.
 MPSTensor(pspace::S, vspace_left::S, vspace_right::S=vspace_left) where {S<:IndexSpace} = 
     TensorMap(rand, Defaults.eltype, vspace_left ⊗ pspace ← vspace_right)
 MPSTensor(d::Int, D_left::Int, D_right::Int=D_left) = MPSTensor(ℂ^d, ℂ^D_left, ℂ^D_right)
+function MPSTensor(A::AbstractArray{T,3}) where {T<:Number}
+    t = TensorMap(undef, T, ℂ^size(A, 1) ⊗ ℂ^size(A, 2) ← ℂ^size(A, 3))
+    t[] .= A
+    return t
+end
