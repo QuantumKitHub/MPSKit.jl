@@ -20,8 +20,16 @@ Construct a random `MPSTensor` with given physical and virtual spaces.
 MPSTensor(pspace::S, vspace_left::S, vspace_right::S=vspace_left) where {S<:IndexSpace} = 
     TensorMap(rand, Defaults.eltype, vspace_left ⊗ pspace ← vspace_right)
 MPSTensor(d::Int, D_left::Int, D_right::Int=D_left) = MPSTensor(ℂ^d, ℂ^D_left, ℂ^D_right)
-function MPSTensor(A::AbstractArray{T,3}) where {T<:Number}
-    t = TensorMap(undef, T, ℂ^size(A, 1) ⊗ ℂ^size(A, 2) ← ℂ^size(A, 3))
+
+"""
+    MPSTensor(A::AbstractArray)
+
+Convert an array to an `MPSTensor`.
+"""
+function MPSTensor(A::AbstractArray{T}) where {T<:Number}
+    @assert ndims(A) > 2 "MPSTensor should have at least 3 dims, but has $ndims(A)"
+    sz = size(A)
+    t = TensorMap(undef, T, foldl(⊗, ComplexSpace.(sz[1:end-1])) ← ℂ^sz[end])
     t[] .= A
     return t
 end
