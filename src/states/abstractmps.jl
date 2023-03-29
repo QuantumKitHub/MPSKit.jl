@@ -10,3 +10,13 @@ abstract type AbstractMPS end
 Base.eltype(psi::AbstractMPS) = eltype(typeof(psi))
 
 abstract type AbstractFiniteMPS <: AbstractMPS end;
+
+"""
+    MPSTensor(d::Int, D_left::Int [, D_right::Int])
+    MPSTensor(pspace, vspace_left [, vspace_right])
+
+Construct a random `MPSTensor` with given physical and virtual spaces.
+"""
+MPSTensor(pspace::S, vspace_left::S, vspace_right::S=vspace_left) where {S<:IndexSpace} = 
+    TensorMap(rand, Defaults.eltype, vspace_left ⊗ pspace ← vspace_right)
+MPSTensor(d::Int, D_left::Int, D_right::Int=D_left) = MPSTensor(ℂ^d, ℂ^D_left, ℂ^D_right)
