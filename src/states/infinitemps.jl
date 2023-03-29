@@ -14,9 +14,9 @@ struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
     AC::PeriodicArray{A,1}
 end
 
-#===========
+#===========================================================================================
 Constructors
-===========#
+===========================================================================================#
 
 function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractVector{B},
                      AC::AbstractVector{A}=PeriodicArray(AL .* CR)) where {A<:GenericMPSTensor,
@@ -73,34 +73,28 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
     return InfiniteMPS(AL, AR, CR)
 end
 
+#===========================================================================================
+Utility
+===========================================================================================#
 
+Base.size(Ψ::InfiniteMPS, args...) = size(Ψ.AL, args...)
+Base.length(Ψ::InfiniteMPS) = size(Ψ, 1)
+Base.eltype(Ψ::InfiniteMPS) = eltype(Ψ.AL)
+Base.copy(Ψ::InfiniteMPS) = InfiniteMPS(copy(Ψ.AL), copy(Ψ.AR), copy(Ψ.CR), copy(Ψ.AC))
+Base.repeat(Ψ::InfiniteMPS, i::Int) = InfiniteMPS(repeat(Ψ.AL, i), repeat(Ψ.AR, i),
+                                                  repeat(Ψ.CR, i), repeat(Ψ.AC, i))
+Base.similar(Ψ::InfiniteMPS) = InfiniteMPS(similar(Ψ.AL), similar(Ψ.AR), similar(Ψ.CR),
+                                           similar(Ψ.AC))
+Base.circshift(st::InfiniteMPS, n) = InfiniteMPS(circshift(st.AL, n), circshift(st.AR, n),
+                                                 circshift(st.CR, n), circshift(st.AC, n))
 
-Base.size(arr::InfiniteMPS) = size(arr.AL);
-Base.size(arr::InfiniteMPS, i) = size(arr.AL, i)
-Base.length(arr::InfiniteMPS) = size(arr, 1)
-Base.eltype(arr::InfiniteMPS) = eltype(arr.AL)
-Base.copy(m::InfiniteMPS) = InfiniteMPS(copy(m.AL), copy(m.AR), copy(m.CR), copy(m.AC));
-function Base.repeat(m::InfiniteMPS, i::Int)
-    return InfiniteMPS(repeat(m.AL, i), repeat(m.AR, i), repeat(m.CR, i), repeat(m.AC, i))
-end;
-function Base.similar(st::InfiniteMPS)
-    return InfiniteMPS(similar(st.AL), similar(st.AR), similar(st.CR), similar(st.AC))
-end
-TensorKit.norm(st::InfiniteMPS) = norm(st.AC[1]);
+site_type(Ψ::InfiniteMPS) = site_type(typeof(Ψ))
+site_type(::Type{InfiniteMPS{A}}) where {A} = A
+bond_type(Ψ::InfiniteMPS) = bond_type(typeof(Ψ))
+bond_type(::Type{InfiniteMPS{<:Any,B}}) where {B} = B
 
-left_virtualspace(psi::InfiniteMPS, n::Integer) = _firstspace(psi.CR[n]);
-right_virtualspace(psi::InfiniteMPS, n::Integer) = dual(_lastspace(psi.CR[n]));
-
-function site_type(::Type{InfiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,
-                                                            Vtype<:MPSBondTensor}
-    return Mtype
-end
-function bond_type(::Type{InfiniteMPS{Mtype,Vtype}}) where {Mtype<:GenericMPSTensor,
-                                                            Vtype<:MPSBondTensor}
-    return Vtype
-end
-site_type(st::InfiniteMPS) = site_type(typeof(st))
-bond_type(st::InfiniteMPS) = bond_type(typeof(st))
+left_virtualspace(Ψ::InfiniteMPS, n::Integer) = _firstspace(Ψ.CR[n])
+right_virtualspace(Ψ::InfiniteMPS, n::Integer) = dual(_lastspace(Ψ.CR[n]))
 
 TensorKit.space(psi::InfiniteMPS{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)
 function TensorKit.space(psi::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
@@ -109,13 +103,25 @@ function TensorKit.space(psi::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
     return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
 end
 
-#allow users to pass in simple arrays
-
-function TensorKit.normalize!(st::InfiniteMPS)
-    normalize!.(st.CR)
-    normalize!.(st.AC)
-    return st
+TensorKit.norm(Ψ::InfiniteMPS) = norm(Ψ.AC[1])
+function TensorKit.normalize!(Ψ::InfiniteMPS)
+    normalize!.(Ψ.CR)
+    normalize!.(Ψ.AC)
+    return Ψ
 end
+
+function TensorKit.dot(Ψ₁::InfiniteMPS, Ψ₂::InfiniteMPS; krylovdim=30)
+    init = similar(Ψ₁.AL[1], _firstspace(Ψ₂.AL[1]) ← _firstspace(Ψ₁.AL[1]))
+    randomize!(init)
+    (vals, _, convhist) = eigsolve(TransferMatrix(Ψ₂.AL, Ψ₁.AL), init, 1, :LM,
+                                      Arnoldi(; krylovdim=krylovdim))
+    convhist.converged == 0 && @info "dot mps not converged"
+    return vals[1]
+end
+
+#===========================================================================================
+Fixedpoints
+===========================================================================================#
 
 "
     l_RR(state,location)
@@ -168,18 +174,3 @@ r_LR(state::InfiniteMPS, loc::Int=length(state)) = state.CR[loc]
     Right dominant eigenvector of the AL-AL transfermatrix
 "
 r_LL(state::InfiniteMPS, loc::Int=length(state)) = state.CR[loc] * adjoint(state.CR[loc])
-
-function TensorKit.dot(a::InfiniteMPS, b::InfiniteMPS; krylovdim=30)
-    init = similar(a.AL[1], _firstspace(b.AL[1]) ← _firstspace(a.AL[1]))
-    randomize!(init)
-
-    (vals, vecs, convhist) = eigsolve(TransferMatrix(b.AL, a.AL), init, 1, :LM,
-                                      Arnoldi(; krylovdim=krylovdim))
-    convhist.converged == 0 && @info "dot mps not converged"
-    return vals[1]
-end
-
-function Base.circshift(st::InfiniteMPS, n)
-    return InfiniteMPS(circshift(st.AL, n), circshift(st.AR, n), circshift(st.CR, n),
-                       circshift(st.AC, n))
-end
