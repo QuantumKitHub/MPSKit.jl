@@ -46,12 +46,12 @@ Construct a gauged mps from tensors A.
 """
 function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
     AR = PeriodicArray(copy.(A)) # copy to avoid side effects
-    leftvspaces = circshift!(_firstspace.(AR), -1)
+    leftvspaces = circshift(_firstspace.(AR), -1)
     rightvspaces = conj.(_lastspace.(AR))
     isnothing(findfirst(leftvspaces .!= rightvspaces)) ||
         throw(SpaceMismatch("incompatible virtual spaces $leftvspaces and $rightvspaces"))
 
-    CR = PeriodicArray(isomorphism.(storagetype(T), leftvspaces, leftvspaces))
+    CR = PeriodicArray(isomorphism.(storagetype(eltype(A)), leftvspaces, leftvspaces))
     AL = similar.(AR)
 
     uniform_leftorth!(AL, CR, AR; kwargs...)
@@ -87,9 +87,17 @@ Base.similar(Ψ::InfiniteMPS) = InfiniteMPS(similar(Ψ.AL), similar(Ψ.AR), simi
                                            similar(Ψ.AC))
 Base.circshift(st::InfiniteMPS, n) = InfiniteMPS(circshift(st.AL, n), circshift(st.AR, n),
                                                  circshift(st.CR, n), circshift(st.AC, n))
+                                                 
+function Base.show(io::IO, ::MIME"text/plain", Ψ::InfiniteMPS)
+    println(io, "$(length(Ψ))-site InfiniteMPS:")
+    for (i, AL) in enumerate(Ψ.AL)
+        println(io, "\t$i: ", AL)
+    end
+    return
+end
 
 site_type(Ψ::InfiniteMPS) = site_type(typeof(Ψ))
-site_type(::Type{InfiniteMPS{A}}) where {A} = A
+site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
 bond_type(Ψ::InfiniteMPS) = bond_type(typeof(Ψ))
 bond_type(::Type{InfiniteMPS{<:Any,B}}) where {B} = B
 
