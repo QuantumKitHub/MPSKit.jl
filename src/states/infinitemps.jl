@@ -87,7 +87,7 @@ Base.similar(Ψ::InfiniteMPS) = InfiniteMPS(similar(Ψ.AL), similar(Ψ.AR), simi
                                            similar(Ψ.AC))
 Base.circshift(st::InfiniteMPS, n) = InfiniteMPS(circshift(st.AL, n), circshift(st.AR, n),
                                                  circshift(st.CR, n), circshift(st.AC, n))
-                                                 
+
 function Base.show(io::IO, ::MIME"text/plain", Ψ::InfiniteMPS)
     println(io, "$(length(Ψ))-site InfiniteMPS:")
     for (i, AL) in enumerate(Ψ.AL)
@@ -99,7 +99,7 @@ end
 site_type(Ψ::InfiniteMPS) = site_type(typeof(Ψ))
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
 bond_type(Ψ::InfiniteMPS) = bond_type(typeof(Ψ))
-bond_type(::Type{InfiniteMPS{<:Any,B}}) where {B} = B
+bond_type(::Type{<:InfiniteMPS{<:Any,B}}) where {B} = B
 
 left_virtualspace(Ψ::InfiniteMPS, n::Integer) = _firstspace(Ψ.CR[n])
 right_virtualspace(Ψ::InfiniteMPS, n::Integer) = dual(_lastspace(Ψ.CR[n]))
@@ -122,7 +122,7 @@ function TensorKit.dot(Ψ₁::InfiniteMPS, Ψ₂::InfiniteMPS; krylovdim=30)
     init = similar(Ψ₁.AL[1], _firstspace(Ψ₂.AL[1]) ← _firstspace(Ψ₁.AL[1]))
     randomize!(init)
     (vals, _, convhist) = eigsolve(TransferMatrix(Ψ₂.AL, Ψ₁.AL), init, 1, :LM,
-                                      Arnoldi(; krylovdim=krylovdim))
+                                   Arnoldi(; krylovdim=krylovdim))
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]
 end
