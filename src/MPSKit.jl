@@ -138,4 +138,7 @@ module MPSKit
     include("algorithms/ED.jl")
 
     include("algorithms/unionalg.jl")
+    
+    include("precompile.jl")
+    _precompile_()
 end
