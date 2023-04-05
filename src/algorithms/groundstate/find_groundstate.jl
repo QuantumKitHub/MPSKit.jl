@@ -21,15 +21,20 @@ function find_groundstate(Ψ::AbstractMPS, H, envs=environments(Ψ, H);
                           verbose=Defaults.verbose, trscheme=nothing)
     if isa(Ψ, InfiniteMPS)
         alg = VUMPS(; tol_galerkin=max(1e-4, tol), verbose=verbose, maxiter=maxiter)
-        tol < 1e-4 && alg = alg & GradientGrassmann(; tol=tol, maxiter=maxiter,
-                                                    verbosity=verbose ? 2 : 0)
-        isnothing(trscheme) || alg = IDMRG2(; tol_galerkin=min(1e-2, 100tol),
-                                            verbose=verbose,
-                                            trscheme=trscheme) & alg
+        if tol < 1e-4
+            alg = alg & GradientGrassmann(; tol=tol, maxiter=maxiter,
+                                          verbosity=verbose ? 2 : 0)
+        end
+        if !isnothing(trscheme)
+            alg = IDMRG2(; tol_galerkin=min(1e-2, 100tol), verbose=verbose,
+                         trscheme=trscheme) & alg
+        end
     elseif isa(Ψ, AbstractFiniteMPS)
         alg = DMRG(; tol=tol, maxiter=maxiter, verbose=verbose)
-        isnothing(trschemer) || alg = DMRG2(; tol=min(1e-2, 100tol), verbose=verbose,
-                                            trscheme=trscheme) & alg
+        if !isnothing(trscheme)
+            alg = DMRG2(; tol=min(1e-2, 100tol), verbose=verbose,
+                        trscheme=trscheme) & alg
+        end
     else
         throw(ArgumentError("Unknown input state type"))
     end
