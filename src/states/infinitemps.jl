@@ -1,11 +1,47 @@
 """
-    struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} end
+    InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbtractMPS
 
-Represents an infinite matrix product state in the center gauge.
-By convention, this means that
+Type that represents an infinite Matrix Product State.
+
+## Fields
+- `AL` -- left-gauged MPS tensors
+- `AR` -- right-gauged MPS tensors
+- `AC` -- center-gauged MPS tensors
+- `CR` -- gauge tensors
+
+## Notes
+By convention, we have that:
 - `AL[i] * CR[i]` = `AC[i]` = `CR[i-1] * AR[i]`
 - `AL[i]' * AL[i] = 1`
 - `AR[i] * AR[i]' = 1`
+
+---
+
+## Constructors
+    InfiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}},
+                virtualspaces::Vector{<:Union{S, CompositeSpace{S}}) where
+                {S<:ElementarySpace}
+    InfiniteMPS(As::AbstractVector{<:GenericMPSTensor}; tol=1e-14, maxiter=100)
+    InfiniteMPS(ALs::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor;
+                tol=1e-14, maxiter=100)
+
+Construct an MPS via a specification of physical and virtual spaces, or from a list of
+tensors `As`, or a list of left-gauged tensors `ALs`.
+
+### Arguments
+- `As::AbstractVector{<:GenericMPSTensor}`: vector of site tensors
+- `ALs::AbstractVector{<:GenericMPSTensor}`: vector of left-gauged site tensors
+- `C₀::MPSBondTensor`: initial gauge tensor
+
+- `f::Function=rand`: initializer function for tensor data
+- `eltype::Type{<:Number}=ComplexF64`: scalar type of tensors
+
+- `physicalspaces::AbstractVector{<:Union{S, CompositeSpace{S}}`: list of physical spaces
+- `virtualspaces::AbstractVector{<:Union{S, CompositeSpace{S}}`: list of virtual spaces
+
+### Keywords
+- `tol`: gauge fixing tolerance
+- `maxiter`: gauge fixing maximum iterations
 """
 struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
     AL::PeriodicArray{A,1}
@@ -24,26 +60,16 @@ function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractV
     return InfiniteMPS{A,B}(AL, AR, CR, AC)
 end
 
-"""
-    InfiniteMPS(pspaces, vspaces)
-    InfiniteMPS(d, D)
-
-Construct a random MPS with given physical and virtual spaces.
-"""
 function InfiniteMPS(pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
                      kwargs...) where {S<:IndexSpace}
     return InfiniteMPS(MPSTensor.(pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
 end
+
 InfiniteMPS(d::S, D::S) where {S<:Union{Int,<:IndexSpace}} = InfiniteMPS([d], [D])
-function InfiniteMPS(ds::AbstractArray{Int}, Ds::AbstractArray{Int})
+function InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int})
     return InfiniteMPS(ComplexSpace.(ds), ComplexSpace.(Ds))
 end
 
-"""
-    InfiniteMPS(A; kwargs...)
-
-Construct a gauged mps from tensors A.
-"""
 function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
     AR = PeriodicArray(copy.(A)) # copy to avoid side effects
     leftvspaces = circshift(_firstspace.(AR), -1)
@@ -60,11 +86,6 @@ function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
     return InfiniteMPS(AL, AR, CR)
 end
 
-"""
-    InfiniteMPS(AL, C₀; kwargs...)
-
-Construct a gauged mps from left-gauged tensors AL.
-"""
 function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor; kwargs...)
     CR = PeriodicArray(fill(copy(C₀), length(AL)))
     AL = PeriodicArray(copy.(AL))
@@ -78,15 +99,21 @@ Utility
 ===========================================================================================#
 
 Base.size(Ψ::InfiniteMPS, args...) = size(Ψ.AL, args...)
-Base.length(Ψ::InfiniteMPS) = size(Ψ, 1)
+Base.length(Ψ::InfiniteMPS) = length(Ψ.AL)
 Base.eltype(Ψ::InfiniteMPS) = eltype(Ψ.AL)
 Base.copy(Ψ::InfiniteMPS) = InfiniteMPS(copy(Ψ.AL), copy(Ψ.AR), copy(Ψ.CR), copy(Ψ.AC))
-Base.repeat(Ψ::InfiniteMPS, i::Int) = InfiniteMPS(repeat(Ψ.AL, i), repeat(Ψ.AR, i),
-                                                  repeat(Ψ.CR, i), repeat(Ψ.AC, i))
-Base.similar(Ψ::InfiniteMPS) = InfiniteMPS(similar(Ψ.AL), similar(Ψ.AR), similar(Ψ.CR),
-                                           similar(Ψ.AC))
-Base.circshift(st::InfiniteMPS, n) = InfiniteMPS(circshift(st.AL, n), circshift(st.AR, n),
-                                                 circshift(st.CR, n), circshift(st.AC, n))
+function Base.repeat(Ψ::InfiniteMPS, i::Int)
+    return InfiniteMPS(repeat(Ψ.AL, i), repeat(Ψ.AR, i),
+                       repeat(Ψ.CR, i), repeat(Ψ.AC, i))
+end
+function Base.similar(Ψ::InfiniteMPS)
+    return InfiniteMPS(similar(Ψ.AL), similar(Ψ.AR), similar(Ψ.CR),
+                       similar(Ψ.AC))
+end
+function Base.circshift(st::InfiniteMPS, n)
+    return InfiniteMPS(circshift(st.AL, n), circshift(st.AR, n),
+                       circshift(st.CR, n), circshift(st.AC, n))
+end
 
 function Base.show(io::IO, ::MIME"text/plain", Ψ::InfiniteMPS)
     println(io, "$(length(Ψ))-site InfiniteMPS:")
@@ -96,17 +123,15 @@ function Base.show(io::IO, ::MIME"text/plain", Ψ::InfiniteMPS)
     return
 end
 
-site_type(Ψ::InfiniteMPS) = site_type(typeof(Ψ))
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
-bond_type(Ψ::InfiniteMPS) = bond_type(typeof(Ψ))
 bond_type(::Type{<:InfiniteMPS{<:Any,B}}) where {B} = B
 
 left_virtualspace(Ψ::InfiniteMPS, n::Integer) = _firstspace(Ψ.CR[n])
 right_virtualspace(Ψ::InfiniteMPS, n::Integer) = dual(_lastspace(Ψ.CR[n]))
 
-TensorKit.space(psi::InfiniteMPS{<:MPSTensor}, n::Integer) = space(psi.AC[n], 2)
-function TensorKit.space(psi::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
-    t = psi.AC[n]
+TensorKit.space(Ψ::InfiniteMPS{<:MPSTensor}, n::Integer) = space(Ψ.AC[n], 2)
+function TensorKit.space(Ψ::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
+    t = Ψ.AC[n]
     S = spacetype(t)
     return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
 end
@@ -131,54 +156,62 @@ end
 Fixedpoints
 ===========================================================================================#
 
-"
-    l_RR(state,location)
-    Left dominant eigenvector of the AR-AR transfermatrix
-"
-l_RR(state::InfiniteMPS, loc::Int=1) = adjoint(state.CR[loc - 1]) * state.CR[loc - 1]
+"""
+    l_RR(Ψ, location)
 
-"
-    l_RL(state,location)
-    Left dominant eigenvector of the AR-AL transfermatrix
-"
-l_RL(state::InfiniteMPS, loc::Int=1) = state.CR[loc - 1]
+Left dominant eigenvector of the `AR`-`AR` transfermatrix.
+"""
+l_RR(Ψ::InfiniteMPS, loc::Int=1) = adjoint(Ψ.CR[loc - 1]) * Ψ.CR[loc - 1]
 
-"
-    l_LR(state,location)
-    Left dominant eigenvector of the AL-AR transfermatrix
-"
-l_LR(state::InfiniteMPS, loc::Int=1) = state.CR[loc - 1]'
+"""
+    l_RL(Ψ, location)
 
-"
-    l_LL(state,location)
-    Left dominant eigenvector of the AL-AL transfermatrix
-"
-function l_LL(state::InfiniteMPS{A}, loc::Int=1) where {A}
-    return isomorphism(storagetype(A), space(state.AL[loc], 1), space(state.AL[loc], 1))
+Left dominant eigenvector of the `AR`-`AL` transfermatrix.
+"""
+l_RL(Ψ::InfiniteMPS, loc::Int=1) = Ψ.CR[loc - 1]
+
+"""
+    l_LR(Ψ, location)
+
+Left dominant eigenvector of the `AL`-`AR` transfermatrix.
+"""
+l_LR(Ψ::InfiniteMPS, loc::Int=1) = Ψ.CR[loc - 1]'
+
+"""
+    l_LL(Ψ, location)
+
+Left dominant eigenvector of the `AL`-`AL` transfermatrix.
+"""
+function l_LL(Ψ::InfiniteMPS{A}, loc::Int=1) where {A}
+    return isomorphism(storagetype(A), space(Ψ.AL[loc], 1), space(Ψ.AL[loc], 1))
 end
 
-"
-    r_RR(state,location)
-    Right dominant eigenvector of the AR-AR transfermatrix
-"
-function r_RR(state::InfiniteMPS{A}, loc::Int=length(state)) where {A}
-    return isomorphism(storagetype(A), domain(state.AR[loc]), domain(state.AR[loc]))
+"""
+    r_RR(Ψ, location)
+
+Right dominant eigenvector of the `AR`-`AR` transfermatrix.
+"""
+function r_RR(Ψ::InfiniteMPS{A}, loc::Int=length(Ψ)) where {A}
+    return isomorphism(storagetype(A), domain(Ψ.AR[loc]), domain(Ψ.AR[loc]))
 end
 
-"
-    r_RL(state,location)
-    Right dominant eigenvector of the AR-AL transfermatrix
-"
-r_RL(state::InfiniteMPS, loc::Int=length(state)) = state.CR[loc]'
+"""
+    r_RL(Ψ, location)
 
-"
-    r_LR(state,location)
-    Right dominant eigenvector of the AL-AR transfermatrix
-"
-r_LR(state::InfiniteMPS, loc::Int=length(state)) = state.CR[loc]
+Right dominant eigenvector of the `AR`-`AL` transfermatrix.
+"""
+r_RL(Ψ::InfiniteMPS, loc::Int=length(Ψ)) = Ψ.CR[loc]'
 
-"
-    r_LL(state,location)
-    Right dominant eigenvector of the AL-AL transfermatrix
-"
-r_LL(state::InfiniteMPS, loc::Int=length(state)) = state.CR[loc] * adjoint(state.CR[loc])
+"""
+    r_LR(Ψ, location)
+
+Right dominant eigenvector of the `AL`-`AR` transfermatrix.
+"""
+r_LR(Ψ::InfiniteMPS, loc::Int=length(Ψ)) = Ψ.CR[loc]
+
+"""
+    r_LL(Ψ, location)
+
+Right dominant eigenvector of the `AL`-`AL` transfermatrix.
+"""
+r_LL(Ψ::InfiniteMPS, loc::Int=length(Ψ)) = Ψ.CR[loc] * adjoint(Ψ.CR[loc])
