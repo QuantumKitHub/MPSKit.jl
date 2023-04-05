@@ -119,6 +119,7 @@ module MPSKit
     include("algorithms/groundstate/idmrg.jl")
     include("algorithms/groundstate/dmrg.jl")
     include("algorithms/groundstate/gradient_grassmann.jl")
+    include("algorithms/groundstate/find_groundstate.jl")
 
     include("algorithms/propagator/corvector.jl")
 

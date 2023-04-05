@@ -40,7 +40,6 @@ function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
 
         iter += 1
 
-        #finalize
         Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
     end
 
