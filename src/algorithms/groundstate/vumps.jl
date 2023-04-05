@@ -9,7 +9,7 @@ https://arxiv.org/abs/1701.07035.
 - `tol_gauge::Float64`: tolerance for gauging algorithm
 - `maxiter::Int`: maximum amount of iterations
 - `orthmaxiter::Int`: maximum amount of gauging iterations
-- `finalize::Function`: user-supplied function which is applied after each iteration, with
+- `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, Ψ, H, envs) -> Ψ, envs`
 - `verbose::Bool`: display progress information
 """

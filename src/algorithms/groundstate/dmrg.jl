@@ -1,28 +1,38 @@
-"
-    onesite dmrg
-"
+"""
+    DMRG{A,F} <: Algorithm
+
+Single site DMRG algorithm for finding groundstates.
+
+# Fields
+- `tol::Float64`: tolerance for convergence criterium
+- `eigalg::A`: eigensolver algorithm
+- `maxiter::Int`: maximum number of outer iterations
+- `verbose::Bool`: display progress information
+- `finalize::F`: user-supplied function which is applied after each iteration, with
+    signature `finalize(iter, Ψ, H, envs) -> Ψ, envs`
+"""
 @with_kw struct DMRG{A,F} <: Algorithm
-    tol::Float64 = Defaults.tol
-    maxiter::Int = Defaults.maxiter
-    eigalg::A = Defaults.eigsolver
-    verbose::Bool = Defaults.verbose
-    finalize::F = Defaults._finalize
+    tol::Float64    = Defaults.tol
+    maxiter::Int    = Defaults.maxiter
+    eigalg::A       = Defaults.eigsolver
+    verbose::Bool   = Defaults.verbose
+    finalize::F     = Defaults._finalize
 end
 
-find_groundstate(state,H,alg::DMRG,envs...) = find_groundstate!(copy(state),H,alg,envs...)
-function find_groundstate!(state::AbstractFiniteMPS, H,alg::DMRG,envs = environments(state,H))
-    tol=alg.tol;maxiter=alg.maxiter
-    iter = 0; delta::Float64 = 2*tol
+function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environments(Ψ, H))
+    tol = alg.tol
+    maxiter = alg.maxiter
+    iter = 0
+    delta::Float64 = 2 * tol
 
     while iter < maxiter && delta > tol
-        delta=0.0
+        delta = 0.0
 
-        for pos = [1:(length(state)-1);length(state):-1:2]
-            h = ∂∂AC(pos,state,H,envs);
-            (eigvals,vecs) = eigsolve(h,state.AC[pos],1,:SR,alg.eigalg)
-            delta = max(delta,calc_galerkin(state,pos,envs))
-
-            state.AC[pos] = vecs[1]
+        for pos in [1:(length(Ψ) - 1); length(Ψ):-1:2]
+            h = ∂∂AC(pos, Ψ, H, envs)
+            _, vecs = eigsolve(h, Ψ.AC[pos], 1, :SR, alg.eigalg)
+            delta = max(delta, calc_galerkin(Ψ, pos, envs))
+            Ψ.AC[pos] = vecs[1]
         end
 
         alg.verbose && @info "Iteraton $(iter) error $(delta)"
@@ -31,72 +41,85 @@ function find_groundstate!(state::AbstractFiniteMPS, H,alg::DMRG,envs = environm
         iter += 1
 
         #finalize
-        (state,envs) = alg.finalize(iter,state,H,envs)::Tuple{typeof(state),typeof(envs)};
+        Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
     end
 
-    return state,envs,delta
+    return state, envs, delta
 end
 
-"twosite dmrg"
+"""
+    DMRG2{A,F} <: Algorithm
+
+2-site  DMRG algorithm for finding groundstates.
+
+# Fields
+- `tol::Float64`: tolerance for convergence criterium
+- `eigalg::A`: eigensolver algorithm
+- `maxiter::Int`: maximum number of outer iterations
+- `verbose::Bool`: display progress information
+- `finalize::F`: user-supplied function which is applied after each iteration, with
+    signature `finalize(iter, Ψ, H, envs) -> Ψ, envs`
+- `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
+"""
 @with_kw struct DMRG2{A,F} <: Algorithm
-    tol = Defaults.tol;
-    maxiter = Defaults.maxiter;
-    eigalg::A = Defaults.eigsolver
-    trscheme = truncerr(1e-6);
-    verbose = Defaults.verbose
+    tol         = Defaults.tol
+    maxiter     = Defaults.maxiter
+    eigalg::A   = Defaults.eigsolver
+    trscheme    = truncerr(1e-6)
+    verbose     = Defaults.verbose
     finalize::F = Defaults._finalize
 end
 
-find_groundstate(state,H,alg::DMRG2,envs...) = find_groundstate!(copy(state),H,alg,envs...)
-function find_groundstate!(state::AbstractFiniteMPS, H,alg::DMRG2,envs = environments(state,H))
-    tol=alg.tol;maxiter=alg.maxiter
-    iter = 0; delta::Float64 = 2*tol
+function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environments(Ψ, H))
+    tol = alg.tol
+    maxiter = alg.maxiter
+    iter = 0
+    delta::Float64 = 2 * tol
 
     while iter < maxiter && delta > tol
-        delta=0.0
+        delta = 0.0
 
         #left to right sweep
-        for pos= 1:(length(state)-1)
-            @plansor ac2[-1 -2; -3 -4]:=state.AC[pos][-1 -2;1]*state.AR[pos+1][1 -4;-3]
+        for pos in 1:(length(Ψ) - 1)
+            @plansor ac2[-1 -2; -3 -4] := Ψ.AC[pos][-1 -2; 1] * Ψ.AR[pos + 1][1 -4; -3]
 
-            h = ∂∂AC2(pos,state,H,envs)
-
-            (eigvals,vecs) = eigsolve(h,ac2,1,:SR,alg.eigalg)
-            newA2center = first(vecs);
-
-            (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
-            normalize!(c);
-            v = @plansor ac2[1 2;3 4]*conj(al[1 2;5])*conj(c[5;6])*conj(ar[6;3 4])
-            delta = max(delta,abs(1-abs(v)));
-
-            state.AC[pos] = (al,complex(c))
-            state.AC[pos+1] = (complex(c),_transpose_front(ar))
-        end
-
-
-        for pos = length(state)-2:-1:1
-            @plansor ac2[-1 -2; -3 -4]:=state.AL[pos][-1 -2;1]*state.AC[pos+1][1 -4;-3]
-
-            h = ∂∂AC2(pos,state,H,envs)
-
-            (eigvals,vecs) = eigsolve(h,ac2,1,:SR,alg.eigalg)
+            _, vecs = eigsolve(∂∂AC2(pos, Ψ, H, envs), ac2, 1, :SR, alg.eigalg)
             newA2center = first(vecs)
 
-            (al,c,ar,ϵ) = tsvd(newA2center,trunc=alg.trscheme,alg=TensorKit.SVD())
-            normalize!(c);
-            v = @plansor ac2[1 2;3 4]*conj(al[1 2;5])*conj(c[5;6])*conj(ar[6;3 4])
-            delta = max(delta,abs(1-abs(v)));
+            al, c, ar, ϵ = tsvd(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
+            normalize!(c)
+            v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
+            delta = max(delta, abs(1 - abs(v)))
 
-            state.AC[pos+1] = (complex(c),_transpose_front(ar))
-            state.AC[pos] = (al,complex(c))
+            Ψ.AC[pos] = (al, complex(c))
+            Ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
+        end
+
+        for pos in (length(Ψ) - 2):-1:1
+            @plansor ac2[-1 -2; -3 -4] := Ψ.AL[pos][-1 -2; 1] * Ψ.AC[pos + 1][1 -4; -3]
+
+            _, vecs = eigsolve(∂∂AC2(pos, Ψ, H, envs), ac2, 1, :SR, alg.eigalg)
+            newA2center = first(vecs)
+
+            al, c, ar, ϵ = tsvd(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
+            normalize!(c)
+            v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
+            delta = max(delta, abs(1 - abs(v)))
+
+            Ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
+            Ψ.AC[pos] = (al, complex(c))
         end
 
         alg.verbose && @info "Iteraton $(iter) error $(delta)"
         flush(stdout)
         #finalize
-        (state,envs) = alg.finalize(iter,state,H,envs)::Tuple{typeof(state),typeof(envs)};
+        Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
         iter += 1
     end
 
-    return state,envs,delta
+    return Ψ, envs, delta
+end
+
+function find_groundstate(Ψ, H, alg::Union{<:DMRG,<:DMRG2}, envs...)
+    return find_groundstate!(copy(Ψ), H, alg, envs...)
 end
