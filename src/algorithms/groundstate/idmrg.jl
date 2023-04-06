@@ -35,7 +35,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG1, oenvs=environments
             Ψ.AC[pos] = vecs[1]
             Ψ.AL[pos], Ψ.CR[pos] = leftorth(vecs[1])
 
-            tm = TransferMatrix(Ψ.AL[pos], ham[pos], st.AL[pos])
+            tm = TransferMatrix(Ψ.AL[pos], ham[pos], Ψ.AL[pos])
             setleftenv!(envs, pos + 1, leftenv(envs, pos) * tm)
         end
 
