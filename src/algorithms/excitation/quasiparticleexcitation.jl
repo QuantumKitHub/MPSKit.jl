@@ -66,14 +66,14 @@ Create and optimise infinite quasiparticle states.
 # Keywords
 - `num::Int`: number of excited states to compute
 - `solver`: algorithm for the linear solver of the quasiparticle environments
-- `sector`: charge of the quasiparticle state
+- `sector=one(sectortype(left_Ψ))`: charge of the quasiparticle state
 - `parallel=true`: enable multi-threading over different momenta
 """
 function excitations(H, alg::QuasiparticleAnsatz, p::Number,
                      lmps::InfiniteMPS, lenvs=environments(lmps, H),
                      rmps::InfiniteMPS=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
-                     sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1,
+                     sector=one(sectortype(lmps)), num=1,
                      solver=Defaults.linearsolver)
     V₀ = LeftGaugedQP(rand, lmps, rmps; sector=sector, momentum=p)
     return excitations(H, alg, V₀, lenvs, renvs; num=num, solver=solver)
@@ -82,7 +82,7 @@ function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
                      lenvs=environments(lmps, H),
                      rmps=lmps, renvs=lmps === rmps ? lenvs : environments(rmps, H);
                      verbose=Defaults.verbose, num=1, solver=Defaults.linearsolver,
-                     sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))),
+                     sector=one(sectortype(lmps)),
                      parallel=true)
     if parallel
         tasks = map(momenta) do p
@@ -145,13 +145,13 @@ Create and optimise finite quasiparticle states.
 
 # Keywords
 - `num::Int`: number of excited states to compute
-- `sector`: charge of the quasiparticle state
+- `sector=one(sectortype(left_Ψ))`: charge of the quasiparticle state
 """
 function excitations(H, alg::QuasiparticleAnsatz,
                      lmps::FiniteMPS, lenvs=environments(lmps, H),
                      rmps::FiniteMPS=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
-                     sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1)
+                     sector=one(sectortype(lmps)), num=1)
     V₀ = LeftGaugedQP(rand, lmps, rmps; sector=sector)
     return excitations(H, alg, V₀, lenvs, renvs; num=num)
 end
@@ -196,7 +196,7 @@ function excitations(H::DenseMPO, alg::QuasiparticleAnsatz, p::Real,
                      lmps::InfiniteMPS, lenvs=environments(lmps, H),
                      rmps::InfiniteMPS=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
-                     sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1,
+                     sector=one(sectortype(lmps)), num=1,
                      solver=Defaults.linearsolver)
     multiline_lmps = convert(MPSMultiline, lmps)
     if lmps === rmps
@@ -212,7 +212,7 @@ end
 function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, p::Real,
                      lmps::MPSMultiline, lenvs=environments(lmps, H),
                      rmps=lmps, renvs=lmps === rmps ? lenvs : environments(rmps, H);
-                     sector=first(sectors(oneunit(left_virtualspace(lmps, 1)))), num=1,
+                     sector=one(sectortype(lmps)), num=1,
                      solver=Defaults.linearsolver)
     V₀ = Multiline(map(1:size(lmps, 1)) do row
                        return LeftGaugedQP(rand, lmps[row], rmps[row]; sector, momentum=p)

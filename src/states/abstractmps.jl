@@ -75,4 +75,9 @@ Base.eltype(Ψ::AbstractMPS) = eltype(typeof(Ψ))
 site_type(Ψ::AbstractMPS) = site_type(typeof(Ψ))
 bond_type(Ψ::AbstractMPS) = bond_type(typeof(Ψ))
 
+TensorKit.spacetype(Ψ::AbstractMPS) = spacetype(typeof(Ψ))
+TensorKit.spacetype(Ψtype::Type{<:AbstractMPS}) = spacetype(site_type(Ψtype))
+TensorKit.sectortype(Ψ::AbstractMPS) = sectortype(typeof(Ψ))
+TensorKit.sectortype(Ψtype::Type{<:AbstractMPS}) = sectortype(site_type(Ψtype))
+
 abstract type AbstractFiniteMPS <: AbstractMPS end
