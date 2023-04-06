@@ -60,5 +60,5 @@ function find_groundstate(Ψ::S, H, alg::GradientGrassmann,
                                            (add!)=GrassmannMPS.add!,
                                            (finalize!)=alg.finalize!,
                                            isometrictransport=true)
-    return x.Ψ, x.envs, normgradhistory[end]
+    return x.state, x.envs, normgradhistory[end]
 end
