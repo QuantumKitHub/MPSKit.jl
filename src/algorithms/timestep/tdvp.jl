@@ -1,4 +1,19 @@
 """
+    timestep(Ψ, H, dt, algorithm, environments)
+    timestep!(Ψ, H, dt, algorithm, environments)
+
+Compute the time-evolved state ``Ψ′ ≈ exp(-iHdt) Ψ``.
+
+# Arguments
+- `Ψ::AbstractMPS`: current state
+- `H::AbstractMPO`: evolution operator
+- `dt::Number`: timestep
+- `algorithm`: evolution algorithm
+- `[environments]`: environment manager
+"""
+function timestep end, function timestep! end
+
+"""
     TDVP{A} <: Algorithm
 
 Single site [TDVP](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107.070601)
@@ -15,19 +30,6 @@ algorithm for time evolution.
     maxiter::Int = Defaults.maxiter
 end
 
-"""
-    timestep(Ψ, H, dt, algorithm, environments)
-    timestep!(Ψ, H, dt, algorithm, environments)
-
-Compute the time-evolved state ``Ψ′ ≈ exp(-iHdt) Ψ``.
-
-# Arguments
-- `Ψ::AbstractMPS`: current state
-- `H::AbstractMPO`: evolution operator
-- `dt::Number`: timestep
-- `algorithm`: evolution algorithm
-- `[environments]`: environment manager
-"""
 function timestep(Ψ::InfiniteMPS, H, dt::Number, alg::TDVP,
                   envs::Cache=environments(Ψ, H))
     temp_ACs = similar(Ψ.AC)
@@ -62,39 +64,29 @@ function timestep(Ψ::InfiniteMPS, H, dt::Number, alg::TDVP,
     return nstate, envs
 end
 
-function timestep!(state::AbstractFiniteMPS, H, timestep::Number, alg::TDVP,
-                   envs=environments(state, H))
-    #left to right
-    for i in 1:(length(state) - 1)
-        h_ac = ∂∂AC(i, state, H, envs)
-        (state.AC[i], convhist) = exponentiate(h_ac, -1im * timestep / 2, state.AC[i],
-                                               alg.expalg)
+function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP, envs=environments(Ψ, H))
+    for i in 1:(length(Ψ) - 1)
+        h_ac = ∂∂AC(i, Ψ, H, envs)
+        Ψ.AC[i], convhist = exponentiate(h_ac, -1im * dt / 2, Ψ.AC[i], alg.expalg)
 
-        h_c = ∂∂C(i, state, H, envs)
-        (state.CR[i], convhist) = exponentiate(h_c, 1im * timestep / 2, state.CR[i],
-                                               alg.expalg)
+        h_c = ∂∂C(i, Ψ, H, envs)
+        Ψ.CR[i], convhist = exponentiate(h_c, 1im * dt / 2, Ψ.CR[i], alg.expalg)
     end
 
-    h_ac = ∂∂AC(length(state), state, H, envs)
-    (state.AC[end], convhist) = exponentiate(h_ac, -1im * timestep / 2, state.AC[end],
-                                             alg.expalg)
+    h_ac = ∂∂AC(length(Ψ), Ψ, H, envs)
+    Ψ.AC[end], convhist = exponentiate(h_ac, -1im * dt / 2, Ψ.AC[end], alg.expalg)
 
-    #right to left
-    for i in length(state):-1:2
-        h_ac = ∂∂AC(i, state, H, envs)
-        (state.AC[i], convhist) = exponentiate(h_ac, -1im * timestep / 2, state.AC[i],
-                                               alg.expalg)
+    for i in length(Ψ):-1:2
+        h_ac = ∂∂AC(i, Ψ, H, envs)
+        Ψ.AC[i], convhist = exponentiate(h_ac, -1im * dt / 2, Ψ.AC[i], alg.expalg)
 
-        h_c = ∂∂C(i - 1, state, H, envs)
-        (state.CR[i - 1], convhist) = exponentiate(h_c, 1im * timestep / 2, state.CR[i - 1],
-                                                   alg.expalg)
+        h_c = ∂∂C(i - 1, Ψ, H, envs)
+        Ψ.CR[i - 1], convhist = exponentiate(h_c, 1im * dt / 2, Ψ.CR[i - 1], alg.expalg)
     end
 
-    h_ac = ∂∂AC(1, state, H, envs)
-    (state.AC[1], convhist) = exponentiate(h_ac, -1im * timestep / 2, state.AC[1],
-                                           alg.expalg)
-
-    return state, envs
+    h_ac = ∂∂AC(1, Ψ, H, envs)
+    Ψ.AC[1], convhist = exponentiate(h_ac, -1im * dt / 2, Ψ.AC[1], alg.expalg)
+    return Ψ, envs
 end
 
 """
@@ -116,52 +108,49 @@ algorithm for time evolution.
     trscheme = truncerr(1e-3)
 end
 
-#twosite tdvp for finite mps
-function timestep!(state::AbstractFiniteMPS, H, timestep::Number, alg::TDVP2,
-                   envs=environments(state, H); rightorthed=false)
+function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP2,
+                   envs=environments(Ψ, H); rightorthed=false)
     #left to right
-    for i in 1:(length(state) - 1)
-        ac2 = _transpose_front(state.AC[i]) * _transpose_tail(state.AR[i + 1])
+    for i in 1:(length(Ψ) - 1)
+        ac2 = _transpose_front(Ψ.AC[i]) * _transpose_tail(Ψ.AR[i + 1])
 
-        h_ac2 = ∂∂AC2(i, state, H, envs)
-        (nac2, convhist) = exponentiate(h_ac2, -1im * timestep / 2, ac2, alg.expalg)
+        h_ac2 = ∂∂AC2(i, Ψ, H, envs)
+        nac2, convhist = exponentiate(h_ac2, -1im * dt / 2, ac2, alg.expalg)
 
-        (nal, nc, nar) = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
+        nal, nc, nar = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
 
-        state.AC[i] = (nal, complex(nc))
-        state.AC[i + 1] = (complex(nc), _transpose_front(nar))
+        Ψ.AC[i] = (nal, complex(nc))
+        Ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
-        if (i != (length(state) - 1))
-            h_ac = ∂∂AC(i + 1, state, H, envs)
-            (state.AC[i + 1], convhist) = exponentiate(h_ac, 1im * timestep / 2,
-                                                       state.AC[i + 1], alg.expalg)
+        if i != (length(Ψ) - 1)
+            Ψ.AC[i + 1], convhist = exponentiate(∂∂AC(i + 1, Ψ, H, envs), 1im * dt / 2,
+                                                 Ψ.AC[i + 1], alg.expalg)
         end
     end
 
     #right to left
-    for i in length(state):-1:2
-        ac2 = _transpose_front(state.AL[i - 1]) * _transpose_tail(state.AC[i])
+    for i in length(Ψ):-1:2
+        ac2 = _transpose_front(Ψ.AL[i - 1]) * _transpose_tail(Ψ.AC[i])
 
-        h_ac2 = ∂∂AC2(i - 1, state, H, envs)
-        (nac2, convhist) = exponentiate(h_ac2, -1im * timestep / 2, ac2, alg.expalg)
+        h_ac2 = ∂∂AC2(i - 1, Ψ, H, envs)
+        (nac2, convhist) = exponentiate(h_ac2, -1im * dt / 2, ac2, alg.expalg)
 
-        (nal, nc, nar) = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
+        nal, nc, nar = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
 
-        state.AC[i - 1] = (nal, complex(nc))
-        state.AC[i] = (complex(nc), _transpose_front(nar))
+        Ψ.AC[i - 1] = (nal, complex(nc))
+        Ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
-        if (i != 2)
-            h_ac = ∂∂AC(i - 1, state, H, envs)
-            (state.AC[i - 1], convhist) = exponentiate(h_ac, 1im * timestep / 2,
-                                                       state.AC[i - 1], alg.expalg)
+        if i != 2
+            Ψ.AC[i - 1], convhist = exponentiate(∂∂AC(i - 1, Ψ, H, envs), 1im * dt / 2,
+                                                 Ψ.AC[i - 1], alg.expalg)
         end
     end
 
-    return state, envs
+    return Ψ, envs
 end
 
 #copying version
-function timestep(state::AbstractFiniteMPS, H, timestep, alg::Union{TDVP,TDVP2},
-                  envs=environments(state, H))
-    return timestep!(copy(state), H, timestep, alg, envs)
+function timestep(Ψ::AbstractFiniteMPS, H, timestep, alg::Union{TDVP,TDVP2},
+                  envs=environments(Ψ, H))
+    return timestep!(copy(Ψ), H, timestep, alg, envs)
 end
