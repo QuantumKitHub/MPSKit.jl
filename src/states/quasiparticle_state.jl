@@ -27,7 +27,7 @@ struct RightGaugedQP{S,T1,T2,E<:Number}
 end
 
 #constructors
-function LeftGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(oneunit(left_virtualspace(left_gs,1)))),momentum=0.0)
+function LeftGaugedQP(datfun,left_gs,right_gs=left_gs;sector=one(sectortype(left_gs)),momentum=0.0)
     #find the left null spaces for the TNS
     excitation_space = ℂ[typeof(sector)](sector => 1);
     VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
@@ -36,7 +36,7 @@ function LeftGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(one
     LeftGaugedQP(left_gs,right_gs,VLs,Xs,momentum)
 end
 
-function RightGaugedQP(datfun,left_gs,right_gs=left_gs;sector = first(sectors(oneunit(left_virtualspace(left_gs,1)))),momentum=0.0)
+function RightGaugedQP(datfun,left_gs,right_gs=left_gs;sector=one(sectortype(left_gs)),momentum=0.0)
     #find the left null spaces for the TNS
     excitation_space = ℂ[typeof(sector)](sector => 1);
     VRs = [adjoint(leftnull(adjoint(v))) for v in _transpose_tail.(right_gs.AR)]

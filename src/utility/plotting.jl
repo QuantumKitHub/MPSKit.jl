@@ -99,7 +99,7 @@ function transferplot end
 @recipe function f(h::TransferPlot; sectors=nothing, transferkwargs=(;), thetaorigin=0, sector_formatter=string)
 
     if sectors === nothing
-        sectors = [one(TensorKit.sectortype(space(h.args[1], 1)))]
+        sectors = [one(sectortype(h.args[1]))]
     end
 
     for sector in sectors
