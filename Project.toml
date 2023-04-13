@@ -19,6 +19,7 @@ Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
 [compat]
 FLoops = "0.1, 0.2"
 FastClosures = "0.3"
+FoldsThreads = "0.1"
 KrylovKit = "0.4 - 0.6"
 OptimKit = "0.3.1"
 Parameters = "0.12.1"
@@ -27,3 +28,12 @@ TensorKit = "0.10"
 TensorKitManifolds = "0.5,0.6"
 Transducers = "0.4.67"
 julia = "1.4 - 1.9"
+
+[extras]
+MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
+
+[targets]
+test = ["Test", "TestExtras", "Plots", "MPSKitModels"]
