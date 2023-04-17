@@ -128,3 +128,14 @@ function expectation_value(st::MPSMultiline,opp::MPOMultiline,ca::PerMPOInfEnv)
 end
 
 expectation_value(state::FiniteQP,opp) = expectation_value(convert(FiniteMPS,state),opp)
+
+"""
+    Calculate expectation value of a TimeDepProblem with TimeDepProblemEnvs in a state
+"""
+function expectation_value(st::Union{FiniteMPS,InfiniteMPS},H::TimeDepProblem,t::Number,envs::TimeDepProblemEnvs = environments(st,H))
+    sum([expectation_value(st,h,e)*f(t) for (h,f,e) in zip(H.hamiltonians,H.funs,envs.envs)])
+end
+
+function expectation_value(st::MPSComoving,H::TimeDepProblem,t::Number,envs::TimeDepProblemEnvs = environments(st,H))
+    sum([expectation_value(st,h,e)[1]*f(t) for (h,f,e) in zip(H.hamiltonians,H.funs,envs.envs)])
+end
