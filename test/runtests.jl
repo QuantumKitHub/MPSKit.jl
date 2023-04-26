@@ -500,7 +500,7 @@ end
 end
 
 @timedtestset "dynamicaldmrg flavour $(f)" for f in (Jeckelmann(), NaiveInvert())
-    ham = force_planar(nonsym_ising_ham(; lambda=4.0))
+    ham = force_planar(transverse_field_ising(; hx=4.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
     window = MPSComoving(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
@@ -560,12 +560,12 @@ end
 #stub tests
 @timedtestset "correlation length / entropy" begin
     st = InfiniteMPS([𝔹^2], [𝔹^10])
-    th = force_planar(nonsym_ising_ham())
+    th = force_planar(transverse_field_ising())
     (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
     len_crit = correlation_length(st)[1]
     entrop_crit = entropy(st)
 
-    th = force_planar(nonsym_ising_ham(; lambda=4))
+    th = force_planar(transverse_field_ising(; hx=4))
     (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
     len_gapped = correlation_length(st)[1]
     entrop_gapped = entropy(st)
@@ -576,7 +576,7 @@ end
 
 @timedtestset "expectation value / correlator" begin
     st = InfiniteMPS([ℂ^2], [ℂ^10])
-    th = nonsym_ising_ham(; lambda=4)
+    th = transverse_field_ising(; hx=4)
     (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
 
     sz_mpo = TensorMap([1.0 0; 0 -1], ℂ^1 * ℂ^2, ℂ^2 * ℂ^1)
@@ -604,7 +604,7 @@ end
 @timedtestset "approximate" begin
     @timedtestset "mpo * infinite ≈ infinite" begin
         st = InfiniteMPS([𝔹^2, 𝔹^2], [𝔹^10, 𝔹^10])
-        th = force_planar(repeat(nonsym_ising_ham(; lambda=4), 2))
+        th = force_planar(repeat(transverse_field_ising(; hx=4), 2))
 
         dt = 1e-3
         sW1 = make_time_mpo(th, dt, TaylorCluster{3}())
@@ -649,7 +649,7 @@ end
                                                                     trscheme=truncdim(10))]
         a = FiniteMPS(10, ℂ^2, ℂ^10)
         b = FiniteMPS(10, ℂ^2, ℂ^20)
-        th = nonsym_ising_ham(; lambda=3)
+        th = transverse_field_ising(; hx=3)
         smpo = make_time_mpo(th, 0.01, WI())
 
         before = abs(dot(b, b))
@@ -666,8 +666,8 @@ end
 @timedtestset "periodic boundary conditions" begin
     len = 10
 
-    #impose periodic boundary conditions on the hamiltonian (cirkel size 10)
-    th = nonsym_ising_ham()
+    #impose periodic boundary conditions on the hamiltonian (circle size 10)
+    th = transverse_field_ising()
     th = periodic_boundary_conditions(th, len)
 
     ts = FiniteMPS(len, ℂ^2, ℂ^10)
