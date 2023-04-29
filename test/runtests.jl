@@ -95,7 +95,7 @@ end
 end
 
 @timedtestset "MPSComoving" begin
-    ham = force_planar(nonsym_ising_ham(; lambda=4.0))
+    ham = force_planar(transverse_field_ising(; hx=4.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
 
     #constructor 1 - give it a plain array of tensors
@@ -147,7 +147,7 @@ end
 
 @timedtestset "Quasiparticle state" begin
     @timedtestset "Finite" for (th, D, d) in
-                               [(force_planar(nonsym_ising_ham()), 𝔹^10, 𝔹^2),
+                               [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
                                 (su2_xxx_ham(; spin=1), Rep[SU₂](1 => 1, 0 => 3),
                                  Rep[SU₂](1 => 1))]
         ts = FiniteMPS(rand, ComplexF64, rand(4:20), d, D)
@@ -176,7 +176,7 @@ end
     end
 
     @timedtestset "Infinite" for (th, D, d) in
-                                 [(force_planar(nonsym_ising_ham()), 𝔹^10, 𝔹^2),
+                                 [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
                                   (su2_xxx_ham(; spin=1), Rep[SU₂](1 => 1, 0 => 3),
                                    Rep[SU₂](1 => 1))]
         period = rand(1:4)
@@ -264,7 +264,7 @@ println("------------------------------------")
     @test real(sum(expectation_value(ts2, h4))) >= 0
 end
 
-@timedtestset "DenseMPO" for ham in (nonsym_ising_ham(), su2_xxx_ham(; spin=1))
+@timedtestset "DenseMPO" for ham in (transverse_field_ising(), su2_xxx_ham(; spin=1))
     physical_space = ham.pspaces[1]
     ou = oneunit(physical_space)
 
@@ -283,44 +283,44 @@ println("------------------------------------")
                                             enumerate([(InfiniteMPS([𝔹^2], [𝔹^10]),
                                                         VUMPS(; tol_galerkin=1e-8,
                                                               verbose=false),
-                                                        force_planar(nonsym_ising_ham(;
-                                                                                      lambda=0.51))),
+                                                        force_planar(transverse_field_ising(;
+                                                                                      hx=0.51))),
                                                        (InfiniteMPS([𝔹^2], [𝔹^10]),
                                                         IDMRG1(; tol_galerkin=1e-8,
                                                                maxiter=400, verbose=false),
-                                                        force_planar(nonsym_ising_ham(;
-                                                                                      lambda=0.51))),
+                                                        force_planar(transverse_field_ising(;
+                                                                                      hx=0.51))),
                                                        (InfiniteMPS([𝔹^2, 𝔹^2],
                                                                     [𝔹^10, 𝔹^10]),
                                                         IDMRG2(; trscheme=truncdim(12),
                                                                tol_galerkin=1e-8,
                                                                maxiter=400, verbose=false),
-                                                        force_planar(repeat(nonsym_ising_ham(;
-                                                                                             lambda=0.51),
+                                                        force_planar(repeat(transverse_field_ising(;
+                                                                                             hx=0.51),
                                                                             2))),
                                                        (InfiniteMPS([𝔹^2], [𝔹^10]),
                                                         VUMPS(; tol_galerkin=1e-5,
                                                               verbose=false) &
                                                         GradientGrassmann(; tol=1e-8,
                                                                           verbosity=0),
-                                                        force_planar(nonsym_ising_ham(;
-                                                                                      lambda=0.51))),
+                                                        force_planar(transverse_field_ising(;
+                                                                                      hx=0.51))),
                                                        (FiniteMPS(rand, ComplexF64, 10, 𝔹^2,
                                                                   𝔹^10),
                                                         DMRG2(; verbose=false,
                                                               trscheme=truncdim(10)),
-                                                        force_planar(nonsym_ising_ham(;
-                                                                                      lambda=0.51))),
+                                                        force_planar(transverse_field_ising(;
+                                                                                      hx=0.51))),
                                                        (FiniteMPS(rand, ComplexF64, 10, 𝔹^2,
                                                                   𝔹^10),
                                                         DMRG(; verbose=false),
-                                                        force_planar(nonsym_ising_ham(;
-                                                                                      lambda=0.51))),
+                                                        force_planar(transverse_field_ising(;
+                                                                                      hx=0.51))),
                                                        (FiniteMPS(rand, ComplexF64, 10, 𝔹^2,
                                                                   𝔹^10),
                                                         GradientGrassmann(; verbosity=0),
-                                                        force_planar(nonsym_ising_ham(;
-                                                                                      lambda=0.51)))])
+                                                        force_planar(transverse_field_ising(;
+                                                                                      hx=0.51)))])
     v1 = variance(state, ham)
     (ts, envs, delta) = find_groundstate(state, ham, alg)
     v2 = variance(ts, ham)
@@ -334,14 +334,14 @@ end
                                     enumerate([(FiniteMPS(fill(TensorMap(rand, ComplexF64,
                                                                          𝔹^1 * 𝔹^2, 𝔹^1),
                                                                5)), TDVP(),
-                                                force_planar(nonsym_xxz_ham(; spin=1 // 2))),
+                                                force_planar(xxx(; spin=1 // 2))),
                                                (FiniteMPS(fill(TensorMap(rand, ComplexF64,
                                                                          𝔹^1 * 𝔹^2, 𝔹^1),
                                                                7)), TDVP2(),
-                                                force_planar(nonsym_xxz_ham(; spin=1 // 2))),
+                                                force_planar(xxx(; spin=1 // 2))),
                                                (InfiniteMPS([𝔹^3, 𝔹^3], [𝔹^50, 𝔹^50]),
                                                 TDVP(),
-                                                force_planar(repeat(nonsym_xxz_ham(;
+                                                force_planar(repeat(xxx(;
                                                                                    spin=1),
                                                                     2)))])
     edens = expectation_value(state, opp)
@@ -367,7 +367,7 @@ end
 
 @timedtestset "quasiparticle_excitation" begin
     @timedtestset "infinite (ham)" begin
-        th = repeat(force_planar(nonsym_xxz_ham()), 2)
+        th = repeat(force_planar(xxx()), 2)
         ts = InfiniteMPS([𝔹^3, 𝔹^3], [𝔹^48, 𝔹^48])
         ts, envs, _ = find_groundstate(ts, th; maxiter=400, verbose=false)
         energies, Bs = excitations(th, QuasiparticleAnsatz(), Float64(pi), ts, envs)
@@ -384,7 +384,7 @@ end
     end
 
     @timedtestset "finite" begin
-        th = force_planar(nonsym_ising_ham())
+        th = force_planar(transverse_field_ising())
         ts = InfiniteMPS([𝔹^2], [𝔹^12])
         (ts, envs, _) = find_groundstate(ts, th; maxiter=400, verbose=false)
         (energies, Bs) = excitations(th, QuasiparticleAnsatz(), 0.0, ts, envs)
@@ -500,7 +500,7 @@ end
 end
 
 @timedtestset "dynamicaldmrg flavour $(f)" for f in (Jeckelmann(), NaiveInvert())
-    ham = force_planar(nonsym_ising_ham(; lambda=4.0))
+    ham = force_planar(transverse_field_ising(; hx=4.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
     window = MPSComoving(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
@@ -560,12 +560,12 @@ end
 #stub tests
 @timedtestset "correlation length / entropy" begin
     st = InfiniteMPS([𝔹^2], [𝔹^10])
-    th = force_planar(nonsym_ising_ham())
+    th = force_planar(transverse_field_ising())
     (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
     len_crit = correlation_length(st)[1]
     entrop_crit = entropy(st)
 
-    th = force_planar(nonsym_ising_ham(; lambda=4))
+    th = force_planar(transverse_field_ising(; hx=4))
     (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
     len_gapped = correlation_length(st)[1]
     entrop_gapped = entropy(st)
@@ -576,7 +576,7 @@ end
 
 @timedtestset "expectation value / correlator" begin
     st = InfiniteMPS([ℂ^2], [ℂ^10])
-    th = nonsym_ising_ham(; lambda=4)
+    th = transverse_field_ising(; hx=4)
     (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
 
     sz_mpo = TensorMap([1.0 0; 0 -1], ℂ^1 * ℂ^2, ℂ^2 * ℂ^1)
@@ -604,7 +604,7 @@ end
 @timedtestset "approximate" begin
     @timedtestset "mpo * infinite ≈ infinite" begin
         st = InfiniteMPS([𝔹^2, 𝔹^2], [𝔹^10, 𝔹^10])
-        th = force_planar(repeat(nonsym_ising_ham(; lambda=4), 2))
+        th = force_planar(repeat(transverse_field_ising(; hx=4), 2))
 
         dt = 1e-3
         sW1 = make_time_mpo(th, dt, TaylorCluster{3}())
@@ -649,7 +649,7 @@ end
                                                                     trscheme=truncdim(10))]
         a = FiniteMPS(10, ℂ^2, ℂ^10)
         b = FiniteMPS(10, ℂ^2, ℂ^20)
-        th = nonsym_ising_ham(; lambda=3)
+        th = transverse_field_ising(; hx=3)
         smpo = make_time_mpo(th, 0.01, WI())
 
         before = abs(dot(b, b))
@@ -666,8 +666,8 @@ end
 @timedtestset "periodic boundary conditions" begin
     len = 10
 
-    #impose periodic boundary conditions on the hamiltonian (cirkel size 10)
-    th = nonsym_ising_ham()
+    #impose periodic boundary conditions on the hamiltonian (circle size 10)
+    th = transverse_field_ising()
     th = periodic_boundary_conditions(th, len)
 
     ts = FiniteMPS(len, ℂ^2, ℂ^10)
