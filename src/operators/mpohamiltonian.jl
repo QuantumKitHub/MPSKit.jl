@@ -155,3 +155,7 @@ Base.convert(::Type{DenseMPO}, H::MPOHamiltonian) = convert(DenseMPO, convert(Sp
 Base.convert(::Type{SparseMPO}, H::MPOHamiltonian) = H.data
 
 Base.:*(H::MPOHamiltonian, mps::InfiniteMPS) = convert(DenseMPO, H) * mps
+
+function add_physical_charge(O::MPOHamiltonian, charges::AbstractVector)
+    return MPOHamiltonian(add_physical_charge(O.data, charges))
+end
