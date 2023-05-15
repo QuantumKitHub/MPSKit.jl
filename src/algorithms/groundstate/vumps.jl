@@ -13,7 +13,7 @@ https://arxiv.org/abs/1701.07035.
     signature `finalize(iter, Ψ, H, envs) -> Ψ, envs`
 - `verbose::Bool`: display progress information
 """
-@with_kw struct VUMPS{F} <: Algorithm
+@kwdef struct VUMPS{F} <: Algorithm
     tol_galerkin::Float64   = Defaults.tol
     tol_gauge::Float64      = Defaults.tolgauge
     maxiter::Int            = Defaults.maxiter

@@ -24,7 +24,7 @@ algorithm for time evolution.
 - `tolgauge::Float64`: tolerance for gauging algorithm
 - `maxiter::Int`: maximum amount of gauging iterations
 """
-@with_kw struct TDVP{A} <: Algorithm
+@kwdef struct TDVP{A} <: Algorithm
     expalg::A = Lanczos(; tol=Defaults.tol)
     tolgauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
@@ -101,7 +101,7 @@ algorithm for time evolution.
 - `maxiter::Int`: maximum amount of gauging iterations
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
-@with_kw struct TDVP2{A} <: Algorithm
+@kwdef struct TDVP2{A} <: Algorithm
     expalg::A = Lanczos(; tol=Defaults.tol)
     tolgauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter

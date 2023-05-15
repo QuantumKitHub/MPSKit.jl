@@ -24,7 +24,7 @@ struct NaiveInvert <: DDMRG_Flavour
 end;
 
 
-@with_kw struct DynamicalDMRG{F<: DDMRG_Flavour,S} <: Algorithm
+@kwdef struct DynamicalDMRG{F<: DDMRG_Flavour,S} <: Algorithm
     flavour::F = NaiveInvert;
     
     solver::S = Defaults.linearsolver;

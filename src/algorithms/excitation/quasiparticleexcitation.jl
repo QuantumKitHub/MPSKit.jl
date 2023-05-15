@@ -12,7 +12,7 @@ introduced in this [paper](https://journals.aps.org/prl/abstract/10.1103/PhysRev
 - `toler::Float64`: tolerance for convergence criterium
 - `krylovdim::Int`: Krylov subspace dimension
 """
-@with_kw struct QuasiparticleAnsatz <: Algorithm
+@kwdef struct QuasiparticleAnsatz <: Algorithm
     toler::Float64 = 1e-10
     krylovdim::Int = 30
 end

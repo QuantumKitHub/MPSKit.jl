@@ -1,7 +1,7 @@
 "
 expands the bond dimension by adding random unitary vectors
 "
-@with_kw struct RandExpand<:Algorithm
+@kwdef struct RandExpand<:Algorithm
     trscheme::TruncationScheme = truncdim(1)
 end
 
