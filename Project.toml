@@ -33,7 +33,7 @@ TensorKit = "0.10"
 TensorKitManifolds = "0.5,0.6"
 TensorOperations = "3"
 Transducers = "0.4.67"
-julia = "1.4 - 1.9"
+julia = "1.6"
 
 [extras]
 MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
