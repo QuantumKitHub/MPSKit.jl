@@ -1,4 +1,15 @@
 # this object represents a sparse mpo at a single position
+"""
+    SparseMPOSlice{S,T,E} <: AbstractArray{T,2}
+
+A view of a sparse MPO at a single position.
+
+# Fields
+- `Os::AbstractMatrix{Union{T,E}}`: matrix of operators.
+- `domspaces::AbstractVector{S}`: list of left virtual spaces.
+- `imspaces::AbstractVector{S}`: list of right virtual spaces.
+- `pspace::S`: physical space.
+"""
 struct SparseMPOSlice{S,T,E} <: AbstractArray{T,2}
     Os::SubArray{Union{T,E}, 2, PeriodicArray{Union{T,E}, 3}, Tuple{Int64, Base.Slice{Base.OneTo{Int64}}, Base.Slice{Base.OneTo{Int64}}}, false}
     domspaces::SubArray{S, 1, PeriodicArray{S, 2}, Tuple{Int64, Base.Slice{Base.OneTo{Int64}}}, false}
