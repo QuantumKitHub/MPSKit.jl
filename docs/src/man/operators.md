@@ -17,10 +17,10 @@ DenseMPO(t::AbstractArray{T,1}) where T<:MPOTensor
 Indexing a `SparseMPO` returns a `SparseMPOSlice` object, which has 3 fields
 
 ```@docs
-SparseMPOSlice
+MPSKit.SparseMPOSlice
 ```
 
-When indexing a SparseMPOSlice at index `[j, k]` (or equivalently `SparseMPO[i][j, k]`), the code looks up the corresponding field in `Os[j, k]`. Either that element is a tensormap, in which case it gets returned. If it equals `zero(E)`, then we return a tensormap
+When indexing a `SparseMPOSlice` at index `[j, k]` (or equivalently `SparseMPO[i][j, k]`), the code looks up the corresponding field in `Os[j, k]`. Either that element is a tensormap, in which case it gets returned. If it equals `zero(E)`, then we return a tensormap
 ```julia
 domspaces[j] * pspace ← pspace * imspaces[k]
 ```
