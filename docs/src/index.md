@@ -7,9 +7,10 @@ Pages = ["man/intro.md","man/conventions.md","man/states.md","man/operators.md",
 Depth = 1
 ```
 
-## Tutorials
+## Examples
 ```@contents
-Pages = ["tut/anyonic_statmech.md","tut/isingcft.md","tut/xxz_groundstate.md","tut/timeev.md","tut/haldane.md"]
+Pages = map(file -> joinpath("examples", file), 
+            filter(f -> endswith(f, ".md"), readdir("examples")))
 Depth = 1
 ```
 
