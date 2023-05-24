@@ -2,8 +2,8 @@ using MPSKit
 using Documenter
 using Weave
 
-example_in = joinpath("examples")
-example_out = joinpath("src", "examples")
+example_in = abspath("examples")
+example_out = abspath(joinpath("src", "examples"))
 
 example_pages = []
 for example in readdir(example_in)
