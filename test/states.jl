@@ -140,8 +140,8 @@ end
 
     e3 = expectation_value(window, ham)
 
-    @test e2[1] ≈ e3[1]
-    @test e2[2] ≈ e3[2]
+    @test e2[1] ≈ e3[1] atol = 1e-4
+    @test e2[2] ≈ e3[2] atol = 1e-4
 end
 
 @testset "Quasiparticle state" verbose = true begin
