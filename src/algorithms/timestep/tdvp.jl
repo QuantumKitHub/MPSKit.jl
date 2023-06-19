@@ -38,15 +38,15 @@ function timestep(Ψ::InfiniteMPS, H, dt::Number, alg::TDVP,
     @sync for (loc, (ac, c)) in enumerate(zip(Ψ.AC, Ψ.CR))
         Threads.@spawn begin
             h = ∂∂AC($loc, $Ψ, $H, $envs)
-            $temp_ACs[loc], convhist = exponentiate(h, -1im * $dt, $ac, alg.expalg)
-            convhist.converged == 0 &&
+            $temp_ACs[loc], converged, convhist = integrate(h, $ac, -1im * $dt, alg.expalg)
+            converged == 0 &&
                 @info "time evolving ac($loc) failed $(convhist.normres)"
         end
 
         Threads.@spawn begin
             h = ∂∂C($loc, $Ψ, $H, $envs)
-            $temp_CRs[loc], convhist = exponentiate(h, -1im * $dt, $c, alg.expalg)
-            convhist.converged == 0 &&
+            $temp_CRs[loc], converged, convhist = integrate(h, $c, -1im * $dt, alg.expalg)
+            converged == 0 &&
                 @info "time evolving a($loc) failed $(convhist.normres)"
         end
     end
@@ -67,25 +67,25 @@ end
 function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP, envs=environments(Ψ, H))
     for i in 1:(length(Ψ) - 1)
         h_ac = ∂∂AC(i, Ψ, H, envs)
-        Ψ.AC[i], convhist = exponentiate(h_ac, -1im * dt / 2, Ψ.AC[i], alg.expalg)
+        Ψ.AC[i], converged, convhist = integrate(h_ac, Ψ.AC[i], -1im * dt / 2, alg.expalg)
 
         h_c = ∂∂C(i, Ψ, H, envs)
-        Ψ.CR[i], convhist = exponentiate(h_c, 1im * dt / 2, Ψ.CR[i], alg.expalg)
+        Ψ.CR[i], converged, convhist = integrate(h_c, Ψ.CR[i], 1im * dt / 2, alg.expalg)
     end
 
     h_ac = ∂∂AC(length(Ψ), Ψ, H, envs)
-    Ψ.AC[end], convhist = exponentiate(h_ac, -1im * dt / 2, Ψ.AC[end], alg.expalg)
+    Ψ.AC[end], converged, convhist = integrate(h_ac, Ψ.AC[end], -1im * dt / 2, alg.expalg)
 
     for i in length(Ψ):-1:2
         h_ac = ∂∂AC(i, Ψ, H, envs)
-        Ψ.AC[i], convhist = exponentiate(h_ac, -1im * dt / 2, Ψ.AC[i], alg.expalg)
+        Ψ.AC[i], converged, convhist = integrate(h_ac, Ψ.AC[i], -1im * dt / 2, alg.expalg)
 
         h_c = ∂∂C(i - 1, Ψ, H, envs)
-        Ψ.CR[i - 1], convhist = exponentiate(h_c, 1im * dt / 2, Ψ.CR[i - 1], alg.expalg)
+        Ψ.CR[i - 1], converged, convhist = integrate(h_c, Ψ.CR[i - 1], 1im * dt / 2, alg.expalg)
     end
 
     h_ac = ∂∂AC(1, Ψ, H, envs)
-    Ψ.AC[1], convhist = exponentiate(h_ac, -1im * dt / 2, Ψ.AC[1], alg.expalg)
+    Ψ.AC[1], converged, convhist = integrate(h_ac, Ψ.AC[1], -1im * dt / 2, alg.expalg)
     return Ψ, envs
 end
 
@@ -115,7 +115,7 @@ function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP2,
         ac2 = _transpose_front(Ψ.AC[i]) * _transpose_tail(Ψ.AR[i + 1])
 
         h_ac2 = ∂∂AC2(i, Ψ, H, envs)
-        nac2, convhist = exponentiate(h_ac2, -1im * dt / 2, ac2, alg.expalg)
+        nac2, converged, convhist = integrate(h_ac2, ac2, -1im * dt / 2, alg.expalg)
 
         nal, nc, nar = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
 
@@ -123,8 +123,8 @@ function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP2,
         Ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
         if i != (length(Ψ) - 1)
-            Ψ.AC[i + 1], convhist = exponentiate(∂∂AC(i + 1, Ψ, H, envs), 1im * dt / 2,
-                                                 Ψ.AC[i + 1], alg.expalg)
+            Ψ.AC[i + 1], converged, convhist = integrate(∂∂AC(i + 1, Ψ, H, envs), Ψ.AC[i + 1], 1im * dt / 2,
+                                                 alg.expalg)
         end
     end
 
@@ -133,7 +133,7 @@ function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP2,
         ac2 = _transpose_front(Ψ.AL[i - 1]) * _transpose_tail(Ψ.AC[i])
 
         h_ac2 = ∂∂AC2(i - 1, Ψ, H, envs)
-        (nac2, convhist) = exponentiate(h_ac2, -1im * dt / 2, ac2, alg.expalg)
+        (nac2, converged, convhist) = integrate(h_ac2, ac2, -1im * dt / 2, alg.expalg)
 
         nal, nc, nar = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
 
@@ -141,8 +141,8 @@ function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP2,
         Ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
         if i != 2
-            Ψ.AC[i - 1], convhist = exponentiate(∂∂AC(i - 1, Ψ, H, envs), 1im * dt / 2,
-                                                 Ψ.AC[i - 1], alg.expalg)
+            Ψ.AC[i - 1], converged, convhist = integrate(∂∂AC(i - 1, Ψ, H, envs), Ψ.AC[i - 1], 1im * dt / 2,
+                                                 alg.expalg)
         end
     end
 
