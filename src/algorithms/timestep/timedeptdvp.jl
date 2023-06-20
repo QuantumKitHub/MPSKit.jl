@@ -120,7 +120,7 @@ function _update_right!(state::MPSComoving,H::BundledHams, time::Number, timeste
 end
 
 
-@with_kw struct MixedTDVP{A}
+@kwdef struct MixedTDVP{A}
     integrator::A = RK4();
 end
 
@@ -165,7 +165,7 @@ function timestep(state::MPSComoving,H::BundledHams, t::Number, dt::Number,alg::
 end
 
 
-@with_kw struct MixedTDVP2{A,B}
+@kwdef struct MixedTDVP2{A,B}
     integrator::A = RK4();
     trscheme::B = truncdim(42);
 end
