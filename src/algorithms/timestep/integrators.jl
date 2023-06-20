@@ -28,7 +28,7 @@ Second order and time-reversible method that preserves norm, even for time-depen
 - `tol::Float64`: desired tolerance for the linear problem solution
 """
 
-@with_kw struct ImplicitMidpoint <: MPSKit.Algorithm
+@kwdef struct ImplicitMidpoint <: MPSKit.Algorithm
     tol::Float64 = MPSKit.Defaults.tol;
 end
 
@@ -48,7 +48,7 @@ Taylor series approximation of exp( a*dt*f(y,t) ). Currently only first order is
 """
 
 #Taylor series integrator
-@with_kw struct Taylor <: MPSKit.Algorithm
+@kwdef struct Taylor <: MPSKit.Algorithm
     order::Int64 = 1
 end
 
@@ -67,7 +67,7 @@ Standard Runge-Kutta 4 numerical integrator
 - `nh::Int64`: number of time sub-intervals
 """
 
-@with_kw struct RK4 <: MPSKit.Algorithm
+@kwdef struct RK4 <: MPSKit.Algorithm
     nh::Int64 = 1
 end
 
