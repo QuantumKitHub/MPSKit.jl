@@ -1,7 +1,7 @@
 "
     use an idmrg2 step to truncate/expand the bond dimension
 "
-@with_kw struct VUMPSSvdCut <: Algorithm
+@kwdef struct VUMPSSvdCut <: Algorithm
     tol_gauge = Defaults.tolgauge
     tol_galerkin = Defaults.tol
     tol_eigenval = Defaults.tol

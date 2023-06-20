@@ -1,12 +1,13 @@
 module MPSKit
 
-using TensorKit, KrylovKit, Parameters, OptimKit, FastClosures
+using TensorKit, KrylovKit, OptimKit, FastClosures
 using Base.Threads, FLoops, Transducers, FoldsThreads
 using Base.Iterators
 using RecipesBase
 
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
+using Base: @kwdef
 
 #bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, MPSComoving, PeriodicArray, MPSMultiline

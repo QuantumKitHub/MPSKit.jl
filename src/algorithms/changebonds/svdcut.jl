@@ -1,7 +1,7 @@
 "
     Truncate a given state using svd
 "
-@with_kw struct SvdCut <: Algorithm
+@kwdef struct SvdCut <: Algorithm
     trscheme = notrunc()
 end
 

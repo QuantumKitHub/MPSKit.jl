@@ -101,7 +101,7 @@ algorithm for time evolution.
 - `maxiter::Int`: maximum amount of gauging iterations
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
-@kwdef  struct TDVP2{A} <: Algorithm
+@kwdef struct TDVP2{A} <: Algorithm
     expalg::A = Lanczos(; tol=Defaults.tol)
     tolgauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter

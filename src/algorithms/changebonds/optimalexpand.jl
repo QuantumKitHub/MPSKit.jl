@@ -1,7 +1,7 @@
 "
     expands the given mps using the algorithm given in the vumps paper
 "
-@with_kw struct OptimalExpand<:Algorithm
+@kwdef struct OptimalExpand<:Algorithm
     trscheme::TruncationScheme = truncdim(1)
 end
 

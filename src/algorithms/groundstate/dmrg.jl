@@ -11,7 +11,7 @@ Single site DMRG algorithm for finding groundstates.
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, Ψ, H, envs) -> Ψ, envs`
 """
-@with_kw struct DMRG{A,F} <: Algorithm
+@kwdef struct DMRG{A,F} <: Algorithm
     tol::Float64    = Defaults.tol
     maxiter::Int    = Defaults.maxiter
     eigalg::A       = Defaults.eigsolver
@@ -60,7 +60,7 @@ end
     signature `finalize(iter, Ψ, H, envs) -> Ψ, envs`
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
-@with_kw struct DMRG2{A,F} <: Algorithm
+@kwdef struct DMRG2{A,F} <: Algorithm
     tol         = Defaults.tol
     maxiter     = Defaults.maxiter
     eigalg::A   = Defaults.eigsolver
