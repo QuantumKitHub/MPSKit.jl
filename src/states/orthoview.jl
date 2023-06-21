@@ -8,7 +8,7 @@ function Base.getindex(v::ALView{<:FiniteMPS,E},i::Int)::E where E
     return v.parent.ALs[i]
 end
 
-function Base.getindex(v::ALView{<:MPSComoving,E},i::Int)::E where E
+function Base.getindex(v::ALView{<:WindowMPS,E},i::Int)::E where E
     i <= length(v.parent) || throw(ArgumentError("out of bounds"))
     i<1 && return v.parent.left_gs.AL[i]
     ALView(v.parent.window)[i]
@@ -27,7 +27,7 @@ function Base.getindex(v::ARView{<:FiniteMPS,E},i::Int)::E where E
     return v.parent.ARs[i]
 end
 
-function Base.getindex(v::ARView{<:MPSComoving,E},i::Int)::E where E
+function Base.getindex(v::ARView{<:WindowMPS,E},i::Int)::E where E
     i >=1 || throw(ArgumentError("out of bounds"))
     i>length(v.parent) && return v.parent.right_gs.AR[i]
     ARView(v.parent.window)[i]
@@ -71,8 +71,8 @@ function Base.setindex!(v::CRView{<:FiniteMPS},vec,i::Int)
     v.parent.CLs[i+1] = vec
 end
 
-Base.getindex(v::CRView{<:MPSComoving},i::Int) = CRView(v.parent.window)[i]
-Base.setindex!(v::CRView{<:MPSComoving},vec,i::Int) = Base.setindex!(CRView(v.parent.window),vec,i);
+Base.getindex(v::CRView{<:WindowMPS},i::Int) = CRView(v.parent.window)[i]
+Base.setindex!(v::CRView{<:WindowMPS},vec,i::Int) = Base.setindex!(CRView(v.parent.window),vec,i);
 Base.getindex(v::CRView{<:Multiline},i::Int,j::Int) = v.parent[i].CR[j]
 Base.setindex!(v::CRView{<:Multiline},vec,i::Int,j::Int) = setindex!(v.parent[i].CR,vec,j);
 
@@ -132,11 +132,11 @@ function Base.setindex!(v::ACView{<:FiniteMPS},vec::Tuple{<:GenericMPSTensor,<:G
 end
 
 
-function Base.getindex(v::ACView{<:MPSComoving,E},i::Int)::E where E
+function Base.getindex(v::ACView{<:WindowMPS,E},i::Int)::E where E
     (i >= 1 && i <= length(v.parent)) || throw(ArgumentError("out of bounds"))
     ACView(v.parent.window)[i]
 end
-Base.setindex!(v::ACView{<:MPSComoving},vec,i::Int) = Base.setindex!(ACView(v.parent.window),vec,i)
+Base.setindex!(v::ACView{<:WindowMPS},vec,i::Int) = Base.setindex!(ACView(v.parent.window),vec,i)
 Base.getindex(v::ACView{<:Multiline},i::Int,j::Int) = v.parent[i].AC[j]
 Base.setindex!(v::ACView{<:Multiline},vec,i::Int,j::Int) = setindex!(v.parent[i].AC,vec,j);
 
@@ -144,7 +144,7 @@ Base.setindex!(v::ACView{<:Multiline},vec,i::Int,j::Int) = setindex!(v.parent[i]
 Base.size(psi::Union{ACView,ALView,ARView}) = size(psi.parent);
 
 #=
-CRView is tricky. It starts at 0 for finitemps/mpscomoving, but for multiline Infinitemps objects, it should start at 1.
+CRView is tricky. It starts at 0 for finitemps/WindowMPS, but for multiline Infinitemps objects, it should start at 1.
 =#
 Base.size(psi::CRView{<:AbstractFiniteMPS}) = (length(psi.parent)+1,);
 Base.axes(psi::CRView{<:AbstractFiniteMPS})= map(n->0:n-1, size(psi));
