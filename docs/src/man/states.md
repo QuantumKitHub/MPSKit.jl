@@ -105,13 +105,13 @@ AC::PeriodicArray{A,1}
 
 The periodic array is an array-like type where all indices are repeated periodically.
 
-## MPSComoving
+## WindowMPS
 
-MPSComoving is a bit of a mix between an infinite mps and a finite mps. It represents a window of mutable tensors embedded in an infinite mps.
+WindowMPS is a bit of a mix between an infinite mps and a finite mps. It represents a window of mutable tensors embedded in an infinite mps.
 
 It can be created using:
 ```julia
-mpco = MPSComoving(left_infinite_mps,window_of_tensors,right_infinite_mps)
+mpco = WindowMPS(left_infinite_mps,window_of_tensors,right_infinite_mps)
 ```
 
 Algorithms will then act on this window of tensors, while leaving the left and right infinite mps's invariant.
