@@ -68,11 +68,7 @@ end
 MPS types
 ===========================================================================================#
 
-#abstract type AbstractMPS end
-#abstract type AbstractFiniteMPS <: AbstractMPS end
-
-const AbstractFiniteMPS = Union{FiniteMPS,WindowMPS}
-const AbstractMPS = Union{AbstractFiniteMPS,InfiniteMPS,Multiline}
+abstract type AbstractMPS end
 
 Base.eltype(Ψ::AbstractMPS) = eltype(typeof(Ψ))
 
@@ -84,4 +80,4 @@ TensorKit.spacetype(Ψtype::Type{<:AbstractMPS}) = spacetype(site_type(Ψtype))
 TensorKit.sectortype(Ψ::AbstractMPS) = sectortype(typeof(Ψ))
 TensorKit.sectortype(Ψtype::Type{<:AbstractMPS}) = sectortype(site_type(Ψtype))
 
-
+abstract type AbstractFiniteMPS <: AbstractMPS end

@@ -225,7 +225,7 @@ end
 @timedtestset "dynamicaldmrg flavour $(f)" for f in (Jeckelmann(), NaiveInvert())
     ham = force_planar(transverse_field_ising(; hx=4.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
-    window = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
+    window = MPSComoving(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
     szd = force_planar(TensorMap([1 0; 0 -1], ℂ^2, ℂ^2))
     @test expectation_value(gs, szd)[1] ≈ expectation_value(window, szd)[1] atol = 1e-10

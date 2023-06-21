@@ -86,22 +86,22 @@ end
     end
 end
 
-@timedtestset "WindowMPS" begin
+@timedtestset "MPSComoving" begin
     ham = force_planar(transverse_field_ising(; hx=4.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
 
     #constructor 1 - give it a plain array of tensors
-    window_1 = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
+    window_1 = MPSComoving(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
     #constructor 2 - used to take a "slice" from an infinite mps
-    window_2 = WindowMPS(gs, 10)
+    window_2 = MPSComoving(gs, 10)
 
     # we should logically have that window_1 approximates window_2
     ovl = dot(window_1, window_2)
     @test ovl ≈ 1 atol = 1e-8
 
     #constructor 3 - random initial tensors
-    window = WindowMPS(rand, ComplexF64, 10, 𝔹^2, 𝔹^10, gs, gs)
+    window = MPSComoving(rand, ComplexF64, 10, 𝔹^2, 𝔹^10, gs, gs)
     normalize!(window)
 
     for i in 1:length(window)

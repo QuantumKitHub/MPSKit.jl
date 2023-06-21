@@ -1,6 +1,6 @@
 #works for general tensors
-expectation_value(state::Union{InfiniteMPS,WindowMPS,FiniteMPS},opp::AbstractTensorMap) = expectation_value(state,fill(opp,length(state)))
-function expectation_value(state::Union{InfiniteMPS,WindowMPS,FiniteMPS},opps::AbstractArray{<:AbstractTensorMap})
+expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opp::AbstractTensorMap) = expectation_value(state,fill(opp,length(state)))
+function expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opps::AbstractArray{<:AbstractTensorMap})
     map(zip(state.AC,opps)) do (ac,opp)
         tr(ac'*transpose(
             opp*transpose(ac,(TensorKit.allind(ac)[2:end-1]),(1,TensorKit.numind(ac))),
@@ -12,14 +12,14 @@ end
 """
 calculates the expectation value of op, where op is a plain tensormap where the first index works on site at
 """
-function expectation_value(state::Union{FiniteMPS{T},WindowMPS{T},InfiniteMPS{T}},op::AbstractTensorMap,at::Int) where T <: MPSTensor
+function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{T}},op::AbstractTensorMap,at::Int) where T <: MPSTensor
     expectation_value(state,decompose_localmpo(add_util_leg(op)),at);
 end
 
 """
 calculates the expectation value of op = op1*op2*op3*... (ie an N site operator) starting at site at
 """
-function expectation_value(state::Union{FiniteMPS{T},WindowMPS{T},InfiniteMPS{T}},op::AbstractArray{<:AbstractTensorMap}, at::Int) where T <: MPSTensor
+function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{T}},op::AbstractArray{<:AbstractTensorMap}, at::Int) where T <: MPSTensor
     firstspace = _firstspace(first(op));
     (firstspace == oneunit(firstspace) && _lastspace(last(op)) == firstspace') ||
         throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"));
@@ -38,7 +38,7 @@ end
 """
 expectation_value(state,envs::Cache) = expectation_value(state,envs.opp,envs);
 expectation_value(state,ham::MPOHamiltonian) = expectation_value(state,ham,environments(state,ham))
-function expectation_value(state::WindowMPS,ham::MPOHamiltonian,envs::FinEnv)
+function expectation_value(state::MPSComoving,ham::MPOHamiltonian,envs::FinEnv)
     vals = expectation_value_fimpl(state,ham,envs);
 
     tot = 0.0+0im;

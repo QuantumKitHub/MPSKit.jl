@@ -10,8 +10,7 @@ using LinearAlgebra: LinearAlgebra
 using Base: @kwdef
 
 #bells and whistles for mpses
-export Window, PeriodicArray
-export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
+export InfiniteMPS, FiniteMPS, MPSComoving, PeriodicArray, MPSMultiline
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth, rightorth, leftorth!, rightorth!, poison!, uniform_leftorth,
