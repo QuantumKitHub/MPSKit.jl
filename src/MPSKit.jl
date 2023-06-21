@@ -10,7 +10,8 @@ using LinearAlgebra: LinearAlgebra
 using Base: @kwdef
 
 #bells and whistles for mpses
-export InfiniteMPS, FiniteMPS, MPSComoving, PeriodicArray, MPSMultiline
+export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
+export PeriodicArray, Window
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth, rightorth, leftorth!, rightorth!, poison!, uniform_leftorth,
@@ -71,11 +72,12 @@ include("utility/plotting.jl")
 include("utility/linearcombination.jl")
 
 #maybe we should introduce an abstract state type
+include("states/window.jl")
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
 include("states/multiline.jl")
 include("states/finitemps.jl")
-include("states/comoving.jl")
+include("states/windowmps.jl")
 include("states/orthoview.jl")
 include("states/quasiparticle_state.jl")
 include("states/ortho.jl")
