@@ -122,9 +122,9 @@ end
 # not sure about the underlying methods...
 Base.length(Ψ::WindowMPS) = length(Ψ.window)
 Base.size(Ψ::WindowMPS, i...) = size(Ψ.window, i...)
-Base.eltype(::Type{<:WindowMPS{A}}) where {A} = M
+Base.eltype(::Type{<:WindowMPS{A}}) where {A} = A
 
-site_type(::Type{<:WindowMPS{A}}) where {A} = M
+site_type(::Type{<:WindowMPS{A}}) where {A} = A
 bond_type(::Type{<:WindowMPS{<:Any,B}}) where {B} = B
 
 TensorKit.space(Ψ::WindowMPS, n::Integer) = space(Ψ.AC[n], 2)
