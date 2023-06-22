@@ -1,7 +1,7 @@
 "
     WindowMPS(leftstate,window,rightstate)
 
-    muteable window of tensors on top of an infinite chain
+    mutable window of tensors on top of an infinite chain
 "
 mutable struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     left_gs::InfiniteMPS{A,B}
