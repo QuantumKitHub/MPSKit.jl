@@ -30,63 +30,118 @@ algorithm for time evolution.
     maxiter::Int = Defaults.maxiter
 end
 
-function timestep(Ψ::InfiniteMPS, H, dt::Number, alg::TDVP,
-                  envs::Cache=environments(Ψ, H))
-    temp_ACs = similar(Ψ.AC)
-    temp_CRs = similar(Ψ.CR)
+function timestep(state::InfiniteMPS, H, time::Number, timestep::Number, alg::TDVP, envs::Union{Cache,MultipleEnvironments}=environments(state,H); leftorthflag=true)
+    #=
+    can we understand whether this is actually correct up to some order? what order?
+    =#
+    temp_ACs = similar(state.AC);
+    temp_CRs = similar(state.CR);
 
-    @sync for (loc, (ac, c)) in enumerate(zip(Ψ.AC, Ψ.CR))
-        Threads.@spawn begin
-            h = ∂∂AC($loc, $Ψ, $H, $envs)
-            $temp_ACs[loc], converged, convhist = integrate(h, $ac, -1im * $dt, alg.expalg)
+    @sync for (loc,(ac,c)) in enumerate(zip(state.AC,state.CR))
+        @Threads.spawn begin
+            h_ac = MPSKit.∂∂AC($loc,$state,$H,$envs);
+            $temp_ACs[loc], converged, convhist = integrate(h_ac,$ac,$time,-1im,$timestep,alg.expalg)
             converged == 0 &&
                 @info "time evolving ac($loc) failed $(convhist.normres)"
         end
 
-        Threads.@spawn begin
-            h = ∂∂C($loc, $Ψ, $H, $envs)
-            $temp_CRs[loc], converged, convhist = integrate(h, $c, -1im * $dt, alg.expalg)
+        @Threads.spawn begin
+            h_c = MPSKit.∂∂C($loc,$state,$H,$envs);
+            $temp_CRs[loc], converged, convhist = integrate(h_c,$c,$time,-1im,$timestep,alg.expalg)
             converged == 0 &&
-                @info "time evolving a($loc) failed $(convhist.normres)"
+                @info "time evolving ac($loc) failed $(convhist.normres)"
         end
     end
 
-    for loc in 1:length(Ψ)
+    if leftorthflag
 
-        #find Al that best fits these new Acenter and centers
-        QAc, _ = leftorth!(temp_ACs[loc]; alg=TensorKit.QRpos())
-        Qc, _ = leftorth!(temp_CRs[loc]; alg=TensorKit.QRpos())
-        @plansor temp_ACs[loc][-1 -2; -3] = QAc[-1 -2; 1] * conj(Qc[-3; 1])
+        for loc in 1:length(state)
+            #find AL that best fits these new Acenter and centers
+            QAc,_ = leftorth!(temp_ACs[loc],alg=TensorKit.QRpos())
+            Qc,_ = leftorth!(temp_CRs[loc],alg=TensorKit.QRpos())
+            @plansor temp_ACs[loc][-1 -2;-3] = QAc[-1 -2;1]*conj(Qc[-3;1])
+        end
+        nstate = InfiniteMPS(temp_ACs,state.CR[end]; tol = alg.tolgauge, maxiter = alg.maxiter)
+    
+    else
+
+        for loc in 1:length(state)
+            #find AR that best fits these new Acenter and centers
+            _,QAc = rightorth!(_transpose_tail(temp_ACs[loc]),alg=TensorKit.LQpos())
+            _,Qc = rightorth!(temp_CRs[mod1(loc-1,end)],alg=TensorKit.LQpos())
+            temp_ACs[loc] = _transpose_front(Qc'*QAc)
+        end
+        nstate = InfiniteMPS(state.CR[0],temp_ACs; tol = alg.tolgauge, maxiter = alg.maxiter)
     end
-
-    nstate = InfiniteMPS(temp_ACs, Ψ.CR[end]; tol=alg.tolgauge, maxiter=alg.maxiter)
-    recalculate!(envs, nstate)
-    return nstate, envs
+    
+    recalculate!(envs,nstate)
+    nstate,envs
 end
 
-function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP, envs=environments(Ψ, H))
-    for i in 1:(length(Ψ) - 1)
-        h_ac = ∂∂AC(i, Ψ, H, envs)
-        Ψ.AC[i], converged, convhist = integrate(h_ac, Ψ.AC[i], -1im * dt / 2, alg.expalg)
+#should also have timestep for FiniteMPS/WindowMPS with H::Union{TimedOperator,SumOfOperators}
 
-        h_c = ∂∂C(i, Ψ, H, envs)
-        Ψ.CR[i], converged, convhist = integrate(h_c, Ψ.CR[i], 1im * dt / 2, alg.expalg)
+function _update_leftEnv!(nleft::InfiniteMPS,WindowEnv::Window{O}) where O <: Cache
+
+    for (subEnvLeft,subEnvMiddle) in zip(WindowEnv.left, WindowEnv.middle)  # we force the windowed envs to be recalculated 
+        l = leftenv(subEnvLeft,1,nleft);
+        subEnvMiddle.ldependencies[:] = similar.(subEnvMiddle.ldependencies); # forget the old left dependencies - this forces recalculation whenever leftenv is called
+        subEnvMiddle.leftenvs[1] = l;
+    end
+    Window(WindowEnv.left,WindowEnv.middle,WindowEnv.right )
+end
+
+function _update_rightEnv!(nright::InfiniteMPS,WindowEnv::Window{O}) where O <: Cache
+
+    for (subEnvMiddle,subEnvRight) in zip(WindowEnv.middle,WindowEnv.right) # we force the windowed envs to be reculculated 
+        r = rightenv(subEnvRight,length(state),nright);
+        subEnvMiddle.rdependencies[:] = similar.(subEnvMiddle.rdependencies); # forget the old right dependencies - this forces recalculation
+        subEnvMiddle.rightenvs[end] = r;
+        
+    end
+    Window(WindowEnv.left,WindowEnv.middle,WindowEnv.right )
+end
+
+function timestep!(state::WindowMPS,H::Window, t::Number, dt::Number,alg::TDVP,env::Window{C,C,C}=environments(state,H)) where C <: Union{Cache,MultipleEnvironments}
+
+    #first evolve left state
+    if !isnothing(H.left)
+        nleft, _ = timestep(state.left_gs, H.left, t, dt, alg, env.left) #env gets updated in place, check this to be sure
+        env = _update_leftEnv!(nleft, env)
     end
 
-    h_ac = ∂∂AC(length(Ψ), Ψ, H, envs)
-    Ψ.AC[end], converged, convhist = integrate(h_ac, Ψ.AC[end], -1im * dt / 2, alg.expalg)
+    # some Notes
+    # - at what time do we evaluate h_ac and c? at t, t+dt/4 ? do we take both at the same time?
 
-    for i in length(Ψ):-1:2
-        h_ac = ∂∂AC(i, Ψ, H, envs)
-        Ψ.AC[i], converged, convhist = integrate(h_ac, Ψ.AC[i], -1im * dt / 2, alg.expalg)
+    #left to right sweep on window
+    for i in 1:(length(state)-1)
+        h_ac = ∂∂AC(i,state,H.middle,env.middle);
+        state.AC[i] = integrate(h_ac,state.AC[i],t,-1im,dt/2,alg.integrator)
 
-        h_c = ∂∂C(i - 1, Ψ, H, envs)
-        Ψ.CR[i - 1], converged, convhist = integrate(h_c, Ψ.CR[i - 1], 1im * dt / 2, alg.expalg)
+        h_c = ∂∂C(i,state,H.middle,env.middle);
+        state.CR[i] = integrate(h_c,state.CR[i],t,-1im,-dt/2,alg.integrator)
     end
 
-    h_ac = ∂∂AC(1, Ψ, H, envs)
-    Ψ.AC[1], converged, convhist = integrate(h_ac, Ψ.AC[1], -1im * dt / 2, alg.expalg)
-    return Ψ, envs
+    h_ac = ∂∂AC(length(state),state,H.middle,env.middle);
+    state.AC[end] = integrate(h_ac,state.AC[end],t,-1im,dt/2,alg.integrator)
+
+    if !isnothing(H.right)
+        nright, _ = timestep(state.right_gs, H.right, t, dt, alg, env.right) #env gets updated in place, check this to be sure
+        env = _update_rightEnv!(nright, env)
+    end
+
+    #right to left sweep on window
+    for i in length(state):-1:2
+        h_ac = ∂∂AC(i,state,H.middle,env.middle);
+        state.AC[i] = integrate(h_ac,state.AC[i],t+dt/2,-1im,dt/2,alg.integrator)
+
+        h_c = ∂∂C(i-1,state,H.middle,env.middle);
+        state.CR[i-1] = integrate(h_c,state.CR[i-1],t+dt/2,-1im,-dt/2,alg.integrator)
+    end
+
+    h_ac = ∂∂AC(1,state,H.middle,env.middle);
+    state.AC[1] = integrate(h_ac,state.AC[1],t+dt/2,-1im,dt/2,alg.integrator)
+
+    return WindowMPS(nleft,state.window,nright),env
 end
 
 """
@@ -96,61 +151,16 @@ end
 algorithm for time evolution.
 
 # Fields
-- `expalg::A`: exponentiator algorithm
+- `intalg::A`: integrator algorithm (defaults to Lanczos exponentiation)
 - `tolgauge::Float64`: tolerance for gauging algorithm
 - `maxiter::Int`: maximum amount of gauging iterations
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
 @kwdef struct TDVP2{A} <: Algorithm
-    expalg::A = Lanczos(; tol=Defaults.tol)
+    intalg::A = Lanczos(; tol=Defaults.tol)
     tolgauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
     trscheme = truncerr(1e-3)
 end
 
-function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP2,
-                   envs=environments(Ψ, H); rightorthed=false)
-    #left to right
-    for i in 1:(length(Ψ) - 1)
-        ac2 = _transpose_front(Ψ.AC[i]) * _transpose_tail(Ψ.AR[i + 1])
-
-        h_ac2 = ∂∂AC2(i, Ψ, H, envs)
-        nac2, converged, convhist = integrate(h_ac2, ac2, -1im * dt / 2, alg.expalg)
-
-        nal, nc, nar = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
-
-        Ψ.AC[i] = (nal, complex(nc))
-        Ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
-
-        if i != (length(Ψ) - 1)
-            Ψ.AC[i + 1], converged, convhist = integrate(∂∂AC(i + 1, Ψ, H, envs), Ψ.AC[i + 1], 1im * dt / 2,
-                                                 alg.expalg)
-        end
-    end
-
-    #right to left
-    for i in length(Ψ):-1:2
-        ac2 = _transpose_front(Ψ.AL[i - 1]) * _transpose_tail(Ψ.AC[i])
-
-        h_ac2 = ∂∂AC2(i - 1, Ψ, H, envs)
-        (nac2, converged, convhist) = integrate(h_ac2, ac2, -1im * dt / 2, alg.expalg)
-
-        nal, nc, nar = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
-
-        Ψ.AC[i - 1] = (nal, complex(nc))
-        Ψ.AC[i] = (complex(nc), _transpose_front(nar))
-
-        if i != 2
-            Ψ.AC[i - 1], converged, convhist = integrate(∂∂AC(i - 1, Ψ, H, envs), Ψ.AC[i - 1], 1im * dt / 2,
-                                                 alg.expalg)
-        end
-    end
-
-    return Ψ, envs
-end
-
-#copying version
-function timestep(Ψ::AbstractFiniteMPS, H, timestep, alg::Union{TDVP,TDVP2},
-                  envs=environments(Ψ, H))
-    return timestep!(copy(Ψ), H, timestep, alg, envs)
-end
+timestep(state, H, dt, alg, env) = timestep(state, H, 0., dt, alg, env) 

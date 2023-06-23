@@ -24,7 +24,7 @@ export entanglementplot, transferplot
 
 #hamiltonian things
 export Cache
-export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, TimeDepProblem
+export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, TimedOperator, SumOfOperators
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
 export leftenv, rightenv
 
@@ -118,7 +118,6 @@ include("algorithms/changebonds/randexpand.jl")
 
 include("algorithms/timestep/tdvp.jl")
 include("algorithms/timestep/timeevmpo.jl")
-include("algorithms/timestep/timedeptdvp.jl")
 include("algorithms/timestep/integrators.jl")
 
 include("algorithms/groundstate/vumps.jl")

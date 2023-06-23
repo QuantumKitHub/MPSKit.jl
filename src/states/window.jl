@@ -11,7 +11,6 @@ struct Window{L,M,R}
     right::R
 end
 
-Base.length(win::Window) = length(win.middle)
 
 # do we need copy? 
 # Base.copy(win::Window) = Window(copy(win.left),copy(win.middle),copy(win.right))

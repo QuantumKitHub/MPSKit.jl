@@ -1,67 +1,123 @@
 """
-    Structure representing a time dependent hamiltonian. Consists of
-        - A tuple of the sub-hamiltonians Hᵢ representing each time dependent part
-        - A tuple of functions fᵢ giving the time dependence of each sub-hamiltonian such that H(t) = ∑ᵢ fᵢ(t)*Hᵢ
+    Structure representing a time dependent operator. Consists of
+        - An operator (MPO, Hamiltonian, ...)
+        - A function f giving the time dependence i.e O(t) = f(t)*O
 """
-#
-struct TimeDepProblem{O,A}
-    hamiltonians::NTuple{A,O}
-    
-    funs::NTuple{A,Function}
+struct TimedOperator{O,F <: Function}
+    op::O
+    fun::F
 end
 
-#constructors for TimeDepProblem
-TimeDepProblem(H0) = TimeDepProblem((H0,),(x->1,));
+#constructors for TimedOperator
+TimedOperator(x) = TimedOperator(x,t->1);
 
-#%%
+#define so we can act on it with (x,t) and obtain normal operator
+(x::TimedOperator)(t::Number) = x.fun(t)*x.op
+(x::TimedOperator)(y,t::Number) = x.fun(t)*x.op(y) #this is for derivatives
+
+#define repeat please
+
+# environment for TimedOperator
+environments(st,x::TimedOperator) = environments(st,x.op)
+
+#define how derivative should work
+∂∂C(pos::Int,mps,opp::TimedOperator,cache) =
+    TimedOperator(∂∂C(pos::Int,mps,opp.op,cache),opp.fun)
+
+∂∂AC(pos::Int,mps,opp::TimedOperator,cache) =
+    TimedOperator(∂∂AC(pos::Int,mps,opp.op,cache),opp.fun)
+
+∂∂AC2(pos::Int,mps,opp::TimedOperator,cache) =
+    TimedOperator(∂∂AC2(pos::Int,mps,opp.op,cache),opp.fun)
+
+
+#define expectation_value and the like
+expectation_value(state,op::TimedOperator,t::Number,at::Int64) = expectation_value(state,op(t),at::Int64)
+
+expectation_value(state,op::TimedOperator,t::Number,envs::Cache=environments(state,op)) = expectation_value(state,op(t),envs)
+
 """
-    Bundle the sub-environments (=env of each time-dependent term in H) into a TimeDepProblemEnvs struct
-    which contains the TimeDepProblem in the opp field and the sub-envs in the envs field.
+    Structure representing a sum of operators. Consists of
+        - A vector of operators (MPO, Hamiltonian, TimedOperator, ...)
 """
-#considering moving this to a seperate Env file
-struct TimeDepProblemEnvs{O,E,A} <: Cache
-    opp :: TimeDepProblem{O,A}
-    envs :: NTuple{A,E}
+struct SumOfOperators{O} <: AbstractVector{O}
+    ops::Vector{O}
 end
 
+Base.size(x::SumOfOperators) = size(x.ops)
+Base.getindex(x::SumOfOperators,i) = x.ops[i]
+#iteration gets automatically implementend thanks to subtyping
 
-#let's use aliases to reduce clutter
-Bundled{T,B} = NamedTuple{(:left,:window,:right),Tuple{B,T,B}} where {T,B}
-BundledHams  = Bundled{TimeDepProblem,Union{TimeDepProblem,Nothing}}
-BundledEnvs  = Bundled{TimeDepProblemEnvs,TimeDepProblemEnvs}
+Base.length(x::SumOfOperators) = prod(size(x))
 
-"""
-    constructor for a TimeDepProblemEnvs from a Finite/Infinite MPS and a TimeDepProblem
-"""
-function environments(st::Union{FiniteMPS,InfiniteMPS},H::TimeDepProblem)
-    #for each time-dependent term in H, calcaulate its environment and put it
-    #in a TimeDepProblemEnvs container
-    TimeDepProblemEnvs(H,map(h->environments(st,h),H.hamiltonians))
+# singleton constructor
+SumOfOperators(x) = SumOfOperators([x])
+
+#define repeat please
+
+#add definition of sum, returns SumOfOperators object
+# should we only allow same type SumOfOperators/TimedOperator to sum?
+Base.:+(op1::TimedOperator,op2::TimedOperator) = SumOfOperators([op1,op2])
+
+Base.:+(op1::SumOfOperators,op2::TimedOperator) = SumOfOperators(vcat(op1.ops,op2))
+
+Base.:+(op1::SumOfOperators,op2::SumOfOperators) = SumOfOperators(vcat(op1.ops,op2.ops))
+
+Base.:+(op1::Union{TimedOperator,SumOfOperators},op2::SumOfOperators) = op2 + op1
+
+#define so we can act on it with (y,t) and obtain normal operator
+# there should not be any confusion about TimedOperator or not, but type parameter in case
+(x::SumOfOperators{O})(t::Number) where O <: TimedOperator = 
+        sum(map( top -> top(t), x))
+
+#this is for derivatives
+(x::SumOfOperators)(y) = sum(map( top -> top(y), x))
+
+(x::SumOfOperators{O})(y,t::Number) where O <: TimedOperator = 
+        sum(map( top -> top(y,t), x)) 
+
+
+# should this just be a alias for AbstractVector{C} where C <: Cache ?
+struct MultipleEnvironments{C}
+    envs::Vector{C}
 end
 
-"""
-    constructor for a TimeDepProblemEnvs from a Comoving MPS and a TimeDepProblem
-"""
-# *force* the definition of the left/right environments, as the default is probably wrong
-function environments(st::MPSComoving,H::TimeDepProblem,lenvs::TimeDepProblemEnvs,renvs::TimeDepProblemEnvs)
-    TimeDepProblemEnvs(H, map((le,h,re)->environments(st,h,lenvs=le,renvs=re),lenvs.envs,H.hamiltonians,renvs.envs))
-end
+Base.size(x::MultipleEnvironments) = size(x.envs)
+Base.getindex(x::MultipleEnvironments,i) = x.envs[i]
+Base.length(x::MultipleEnvironments) = prod(size(x))
 
+Base.iterate(x::MultipleEnvironments) = iterate(x.envs)
+Base.iterate(x::MultipleEnvironments,i) = iterate(x.envs,i)
 
+# we need constructor, agnostic of particular MPS?
+environments(st,ham::SumOfOperators) = MultipleEnvironments( map(op->environments(st,op),ham.ops) )
+
+# we need to define how to recalculate
 """
-    constructor for a TimeDepProblemEnvs from a Comoving MPS and a (named) tuple of RampingProblems for (left,window,right)
+    Recalculate in-place each sub-env in MultipleEnvironments
 """
-function environments(st::MPSComoving,Hs::BundledHams)
-    env_left  = environments(st.left_gs,Hs.left)
-    env_right = environments(st.right_gs,Hs.right)
-    BundledEnvs( (env_left,environments(st,Hs.window,env_left,env_right),env_right) )
-end
-"""
-    Recalculate in-place each sub-env in TimeDepProblemEnvs
-"""
-function recalculate!(env::TimeDepProblemEnvs,args...)
-    for en in env.envs
-        recalculate!(en,args...)
+function recalculate!(env::MultipleEnvironments,args...)
+    for subenv in env.envs
+        recalculate!(subenv,args...)
     end
     env
 end
+
+# derivatives
+∂∂C(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
+    SumOfOperators( map((op,openv)->∂∂C(pos,mps,op,openv),opp.ops,cache.envs) )
+
+∂∂AC(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
+    SumOfOperators( map((op,openv)->∂∂AC(pos,mps,op,openv),opp.ops,cache.envs) )
+
+∂∂AC2(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
+    SumOfOperators( map((op,openv)->∂∂AC2(pos,mps,op,openv),opp.ops,cache.envs) )
+
+#define expectation_value and the like
+expectation_value(state,ops::SumOfOperators,t::Number,at::Int64) = sum(map(top->expectation_value(state,top(t),at::Int64),ops))
+
+expectation_value(state,ops::SumOfOperators,t::Number,envs::MultipleEnvironments=environments(state,ops)) = sum(map( (top,tenv)->expectation_value(state,top(t),tenv),ops.ops,envs))
+
+#where do we put this in MPSKit.jl?
+
+environments(state::WindowMPS,win::Window) = Window([environments(state.left_gs,win.left), environments(state.window,win.middle), environments(state.right_gs,win.right)] )

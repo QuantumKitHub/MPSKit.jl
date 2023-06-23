@@ -222,38 +222,3 @@ end
     AC_EffProj(opp.ket.AC[pos],leftenv(env,pos,state),rightenv(env,pos,state));
 ∂∂AC2(pos::Int,state,opp::ProjectionOperator,env) =
     AC2_EffProj(opp.ket.AC[pos],opp.ket.AR[pos+1],leftenv(env,pos,state),rightenv(env,pos+1,state));
-
-"""
-    Simple struct for combining the effective hamiltonians for each term in the TimeDepProblem
-"""
-struct RampingEff{O,A}
-    h_effs :: NTuple{A,O}
-    timefuns :: NTuple{A,Function}
-end
-    
-function ∂∂AC2(i::Int,state,H::TimeDepProblem,E::TimeDepProblemEnvs)
-    h_effs = map(H.hamiltonians,E.envs) do h,e
-        ∂∂AC2(i,state,h,e)
-    end
-    
-    RampingEff(h_effs,H.funs);
-end
-    
-function ∂∂AC(i::Int,state,H::TimeDepProblem,E::TimeDepProblemEnvs)
-    h_effs = map(H.hamiltonians,E.envs) do h,e
-        ∂∂AC(i,state,h,e)
-    end
-    
-    RampingEff(h_effs,H.funs);
-end
-    
-function ∂∂C(i::Int,state,H::TimeDepProblem,E::TimeDepProblemEnvs)
-    h_effs = map(H.hamiltonians,E.envs) do h,e
-        ∂∂C(i,state,h,e)
-    end
-        
-    RampingEff(h_effs,H.funs);
-end
-
-    
-(h::RampingEff)(x,t) = sum(f(t)*h(x) for (h,f) in zip(h.h_effs,h.timefuns))
