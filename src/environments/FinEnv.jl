@@ -64,6 +64,10 @@ function environments(state::WindowMPS,ham::Union{SparseMPO,MPOHamiltonian,Dense
     environments(state,ham,above,copy(leftenv(lenvs,1,state.left_gs)),copy(rightenv(renvs,length(state),state.right_gs)))
 end
 
+function environments(Ψ::WindowMPS,windowH::Window{H,H,H}) where {H} #strictly the same type to prevent env mess 
+    Window(environments(Ψ.left_gs,windowH.left), environments(Ψ.window,windowH.middle), environments(Ψ.right_gs,windowH.right))
+end
+
 function environments(below::S,above::S) where S <: Union{FiniteMPS,WindowMPS}
     S isa WindowMPS && (above.left_gs == below.left_gs || throw(ArgumentError("left gs differs")))
     S isa WindowMPS && (above.right_gs == below.right_gs || throw(ArgumentError("right gs differs")))

@@ -33,7 +33,7 @@ export find_groundstate!, find_groundstate, leading_boundary
 export VUMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
 export excitations, FiniteExcited, QuasiparticleAnsatz
 export marek_gap, correlation_length, correlator
-export timestep!, timestep, TDVP, TDVP2, MixedTDVP, MixedTDVP2, make_time_mpo, WI, WII, TaylorCluster
+export timestep!, timestep, TDVP, TDVP2, make_time_mpo, WI, WII, TaylorCluster
 export ImplicitMidpoint, RK4, Taylor
 export splitham, infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
 export changebonds!, changebonds, VUMPSSvdCut, OptimalExpand, SvdCut, UnionTrunc, RandExpand
@@ -88,6 +88,8 @@ include("operators/sparsempo/sparsempo.jl")
 include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")
+include("operators/timedoperator.jl")
+include("operators/sumofoperators.jl")
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
@@ -98,7 +100,7 @@ include("environments/FinEnv.jl")
 include("environments/abstractinfenv.jl")
 include("environments/permpoinfenv.jl")
 include("environments/mpohaminfenv.jl")
-include("environments/timedepenv.jl")
+include("environments/multipleenv.jl")
 include("environments/qpenv.jl")
 include("environments/idmrgenv.jl")
 include("environments/lazylincocache.jl")

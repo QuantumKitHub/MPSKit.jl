@@ -128,3 +128,37 @@ function expectation_value(st::MPSMultiline,opp::MPOMultiline,ca::PerMPOInfEnv)
 end
 
 expectation_value(state::FiniteQP,opp) = expectation_value(convert(FiniteMPS,state),opp)
+
+# ignore time-dependence by default
+expectation_value(Ψ,op,t::Number,at::Int64) = expectation_value(Ψ,op,at)
+
+expectation_value(Ψ,op,t::Number,envs::Cache=environments(Ψ,op)) =  expectation_value(Ψ,op,envs)
+
+# define expectation_value for TimedOperator as scalar multiplication of the time-independent result, instead of multiplying the operator itself
+expectation_value(Ψ,op::TimedOperator,t::Number,at::Int64) = op.fun(t)*expectation_value(Ψ,op.op,at::Int64)
+
+expectation_value(Ψ,op::TimedOperator,t::Number,envs::Cache=environments(Ψ,op)) = op.fun(t)*expectation_value(Ψ,op.op,envs)
+
+# define expectation_value for SumOfOperators
+expectation_value(Ψ,ops::SumOfOperators,t::Number,at::Int64) = sum(op->expectation_value(Ψ,op,t,at),ops)
+
+expectation_value(Ψ,ops::SumOfOperators,t::Number,envs::MultipleEnvironments=environments(Ψ,ops)) = sum(map( (op,env)->expectation_value(Ψ,op,t,env),ops.ops,envs))
+
+# define expectation_value for Window
+function expectation_value(Ψ::WindowMPS,windowH::Window,t::Number,at::Int64)
+    if at < 1
+        toret = expectation_value(Ψ.left_gs,windowH.left,t,at)
+    elseif 1 <= at <= length(Ψ.window)
+        toret = expectation_value(Ψ.window,windowH.middle,t,at)
+    else
+        toret = expectation_value(Ψ.right_gs,windowH.right,t,at)
+    end
+    return toret
+end
+
+function expectation_value(Ψ::WindowMPS,windowH::Window,t::Number,windowEnvs::Window{C,C,C}=environments(Ψ,windowH)) where {C <: Union{MultipleEnvironments,Cache}}
+    left = expectation_value(Ψ,windowH.left,t,windowEnvs.left)
+    middle = expectation_value(Ψ,windowH.middle,t,windowEnvs.middle)
+    right = expectation_value(Ψ,windowH.right,t,windowEnvs.right)
+    return Window(left,middle,right)
+end

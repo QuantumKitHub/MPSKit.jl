@@ -1,9 +1,4 @@
-abstract type IntegrationMethod end
-
-function _integrate end
-
 """
-    integrate(f, y₀, a, dt, algorithm)
     integrate(f, y₀, t₀, a, dt, algorithm)
 
 Integrate the differential equation ``dy/dt = a f(y,t)`` over a time step 'dt' starting from ``y(t₀)=y₀``, using the provided algorithm. 
@@ -14,13 +9,16 @@ For time-independent operators (i.e. not a TimedOperator) t₀ is ingored.
 - `y₀`: object to integrate
 - `t₀`: time f is evaluated at
 - `a` : scalar prefactor
-- `dt::Number`: timestep
-- `method`: nethod to integrate TDVP equations
+- `dt`: timestep
+- `method`: method to integrate TDVP equations
 """
-# differentiate between time-dependent and time-independent
-integrate(f,y₀,t₀,a,dt,method::IntegrationMethod) = _integrate((x,t)->f(x),y₀,0.,a,dt,method)
+function integrate end
 
-integrate(f::Union{O,SumOfOperators{O}},y₀,t₀,a,dt,method::IntegrationMethod) where {O <: TimedOperator} = _integrate(f,y₀,t₀,a,dt,method)
+# differentiate between time-dependent and time-independent
+integrate(f::Union{O,SumOfOperators{O}},y₀,t,a,dt,method) where O = _integrate((x,t)->f(x),y₀,0.,a,dt,method) #should also work for SumOfOperators for regular operators
+
+integrate(f::Union{T,SumOfOperators{T}},y₀,t,a,dt,method) where {T <: TimedOperator} = _integrate(f,y₀,t,a,dt,method)
+
 
 #original integrator in iTDVP, namely exponentiation
 function _integrate(f,y₀,t₀,a,dt,method::Union{Arnoldi,Lanczos})
@@ -29,7 +27,7 @@ function _integrate(f,y₀,t₀,a,dt,method::Union{Arnoldi,Lanczos})
 end
 
 """
-    ImplicitMidpoint <: IntegrationMethod
+    ImplicitMidpoint
 
 Second order and time-reversible method that preserves norm, even for time-dependent driving functions f.
 
@@ -37,7 +35,7 @@ Second order and time-reversible method that preserves norm, even for time-depen
 - `tol::Float64`: desired tolerance for solving the implicit step via a linsolve
 """
 
-@kwdef struct ImplicitMidpoint <: IntegrationMethod
+@kwdef struct ImplicitMidpoint
     tol::Float64 = MPSKit.Defaults.tol;
 end
 
@@ -48,7 +46,7 @@ end
 
 
 """
-    Taylor <: IntegrationMethod
+    Taylor
 
 Taylor series approximation of exp( a*dt*f(y,t) ). Currently only first order is implemented.
 
@@ -57,7 +55,7 @@ Taylor series approximation of exp( a*dt*f(y,t) ). Currently only first order is
 """
 
 #Taylor series integrator
-@kwdef struct Taylor <: IntegrationMethod
+@kwdef struct Taylor
     order::Int64 = 1
 end
 
@@ -68,7 +66,7 @@ function _integrate(f,y₀,t₀,a,dt,method::Taylor)
 end
 
 """
-    RK4 <: IntegrationMethod
+    RK4
 
 Standard Runge-Kutta 4 numerical integrator
 
@@ -76,7 +74,7 @@ Standard Runge-Kutta 4 numerical integrator
 - `nh::Int64`: number of time sub-intervals
 """
 
-@kwdef struct RK4 <: IntegrationMethod
+@kwdef struct RK4
     nh::Int64 = 1 # number of function evaluations; more should be more accurate.
 end
 

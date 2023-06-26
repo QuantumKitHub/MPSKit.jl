@@ -222,3 +222,23 @@ end
     AC_EffProj(opp.ket.AC[pos],leftenv(env,pos,state),rightenv(env,pos,state));
 ∂∂AC2(pos::Int,state,opp::ProjectionOperator,env) =
     AC2_EffProj(opp.ket.AC[pos],opp.ket.AR[pos+1],leftenv(env,pos,state),rightenv(env,pos+1,state));
+
+# TimedOperator and SumOfOperators
+∂∂C(pos::Int,mps,opp::TimedOperator,cache) =
+    TimedOperator(∂∂C(pos::Int,mps,opp.op,cache),opp.fun)
+
+∂∂AC(pos::Int,mps,opp::TimedOperator,cache) =
+    TimedOperator(∂∂AC(pos::Int,mps,opp.op,cache),opp.fun)
+
+∂∂AC2(pos::Int,mps,opp::TimedOperator,cache) =
+    TimedOperator(∂∂AC2(pos::Int,mps,opp.op,cache),opp.fun)
+
+∂∂C(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
+    SumOfOperators( map((op,openv)->∂∂C(pos,mps,op,openv),opp.ops,cache.envs) )
+
+∂∂AC(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
+    SumOfOperators( map((op,openv)->∂∂AC(pos,mps,op,openv),opp.ops,cache.envs) )
+
+∂∂AC2(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
+    SumOfOperators( map((op,openv)->∂∂AC2(pos,mps,op,openv),opp.ops,cache.envs) )
+
