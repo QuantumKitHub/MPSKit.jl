@@ -20,12 +20,12 @@ Single site [TDVP](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107
 algorithm for time evolution.
 
 # Fields
-- `expalg::A`: exponentiator algorithm
+- `integrator::A`: integration algorithm
 - `tolgauge::Float64`: tolerance for gauging algorithm
 - `maxiter::Int`: maximum amount of gauging iterations
 """
 @kwdef struct TDVP{A} <: Algorithm
-    expalg::A = Lanczos(; tol=Defaults.tol)
+    integrator::A = Lanczos(; tol=Defaults.tol)
     tolgauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
 end
@@ -41,14 +41,14 @@ function timestep(Ψ::InfiniteMPS, H, time::Number, timestep::Number, alg::TDVP,
     @sync for (loc,(ac,c)) in enumerate(zip(Ψ.AC,Ψ.CR))
         @Threads.spawn begin
             h_ac = MPSKit.∂∂AC($loc,$Ψ,$H,$envs);
-            $temp_ACs[loc], converged, convhist = integrate(h_ac,$ac,$time,-1im,$timestep,alg.expalg)
+            $temp_ACs[loc], converged, convhist = integrate(h_ac,$ac,$time,-1im,$timestep,alg.integrator)
             converged == 0 &&
                 @info "time evolving ac($loc) failed $(convhist.normres)"
         end
 
         @Threads.spawn begin
             h_c = MPSKit.∂∂C($loc,$Ψ,$H,$envs);
-            $temp_CRs[loc], converged, convhist = integrate(h_c,$c,$time,-1im,$timestep,alg.expalg)
+            $temp_CRs[loc], converged, convhist = integrate(h_c,$c,$time,-1im,$timestep,alg.integrator)
             converged == 0 &&
                 @info "time evolving ac($loc) failed $(convhist.normres)"
         end
@@ -118,7 +118,7 @@ function timestep!(Ψ::FiniteMPS, H, t::Number, dt::Number, alg::TDVP,
     return Ψ, envs
 end
 
-function _update_leftEnv!(nleft::InfiniteMPS,WindowEnv::Window{O,O,O}) where O <: Cache
+function _update_leftEnv!(nleft::InfiniteMPS,WindowEnv::Window{E,F,E}) where {E <: Cache, F <: Cache}
 
     l = leftenv(WindowEnv.left,1,nleft);
     WindowEnv.middle.ldependencies[:] = similar.(WindowEnv.middle.ldependencies); # forget the old left dependencies - this forces recalculation whenever leftenv is called
@@ -127,7 +127,7 @@ function _update_leftEnv!(nleft::InfiniteMPS,WindowEnv::Window{O,O,O}) where O <
     Window(WindowEnv.left,WindowEnv.middle,WindowEnv.right )
 end
 
-function _update_leftEnv!(nleft::InfiniteMPS,WindowEnv::Window{O,O,O}) where O <: MultipleEnvironments
+function _update_leftEnv!(nleft::InfiniteMPS,WindowEnv::Window{E,F,E}) where {E <: MultipleEnvironments, F <: MultipleEnvironments}
     @assert length(WindowEnv.middle) == length(WindowEnv.left)
 
     for (subEnvLeft,subEnvMiddle) in zip(WindowEnv.left, WindowEnv.middle) 
@@ -139,7 +139,7 @@ function _update_leftEnv!(nleft::InfiniteMPS,WindowEnv::Window{O,O,O}) where O <
 end
 
 
-function _update_rightEnv!(nright::InfiniteMPS,WindowEnv::Window{O,O,O}) where O <: Cache
+function _update_rightEnv!(nright::InfiniteMPS,WindowEnv::Window{E,F,E}) where {E <: Cache, F <: Cache}
 
     r = rightenv(WindowEnv.right,length(nright),nright);
     WindowEnv.middle.rdependencies[:] = similar.(WindowEnv.middle.rdependencies); # forget the old right dependencies - this forces recalculation
@@ -148,7 +148,7 @@ function _update_rightEnv!(nright::InfiniteMPS,WindowEnv::Window{O,O,O}) where O
     Window(WindowEnv.left,WindowEnv.middle,WindowEnv.right )
 end
 
-function _update_rightEnv!(nright::InfiniteMPS,WindowEnv::Window{O,O,O}) where O <: MultipleEnvironments
+function _update_rightEnv!(nright::InfiniteMPS,WindowEnv::Window{E,F,E}) where {E <: MultipleEnvironments, F <: MultipleEnvironments}
     @assert length(WindowEnv.middle) == length(WindowEnv.right)
 
     for (subEnvMiddle,subEnvRight) in zip(WindowEnv.middle,WindowEnv.right) # we force the windowed envs to be reculculated 
@@ -175,14 +175,20 @@ function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP,env
     #left to right sweep on window
     for i in 1:(length(Ψ)-1)
         h_ac = ∂∂AC(i,Ψ,H.middle,env.middle);
-        Ψ.AC[i] = integrate(h_ac,Ψ.AC[i],t,-1im,dt/2,alg.integrator)
+        Ψ.AC[i], converged, convhist = integrate(h_ac,Ψ.AC[i],t,-1im,dt/2,alg.integrator)
+        converged == 0 &&
+                @info "time evolving ac($i) failed $(convhist.normres)"
 
         h_c = ∂∂C(i,Ψ,H.middle,env.middle);
-        Ψ.CR[i] = integrate(h_c,Ψ.CR[i],t,-1im,-dt/2,alg.integrator)
+        Ψ.CR[i], converged, convhist = integrate(h_c,Ψ.CR[i],t,-1im,-dt/2,alg.integrator)
+        converged == 0 &&
+                @info "time evolving c($i) failed $(convhist.normres)"
     end
 
     h_ac = ∂∂AC(length(Ψ),Ψ,H.middle,env.middle);
-    Ψ.AC[end] = integrate(h_ac,Ψ.AC[end],t,-1im,dt/2,alg.integrator)
+    Ψ.AC[end], converged, convhist = integrate(h_ac,Ψ.AC[end],t,-1im,dt/2,alg.integrator)
+    converged == 0 &&
+            @info "time evolving ac($(length(Ψ))) failed $(convhist.normres)"
 
     if !isnothing(H.right)
         nright, _ = timestep(Ψ.right_gs, H.right, t, dt, alg, env.right) #env gets updated in place, check this to be sure
@@ -192,14 +198,20 @@ function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP,env
     #right to left sweep on window
     for i in length(Ψ):-1:2
         h_ac = ∂∂AC(i,Ψ,H.middle,env.middle);
-        Ψ.AC[i] = integrate(h_ac,Ψ.AC[i],t+dt/2,-1im,dt/2,alg.integrator)
+        Ψ.AC[i], converged, convhist = integrate(h_ac,Ψ.AC[i],t+dt/2,-1im,dt/2,alg.integrator)
+        converged == 0 &&
+            @info "time evolving ac($i) failed $(convhist.normres)"
 
         h_c = ∂∂C(i-1,Ψ,H.middle,env.middle);
-        Ψ.CR[i-1] = integrate(h_c,Ψ.CR[i-1],t+dt/2,-1im,-dt/2,alg.integrator)
+        Ψ.CR[i-1], converged, convhist = integrate(h_c,Ψ.CR[i-1],t+dt/2,-1im,-dt/2,alg.integrator)
+        converged == 0 &&
+            @info "time evolving c($(i-1)) failed $(convhist.normres)"
     end
 
     h_ac = ∂∂AC(1,Ψ,H.middle,env.middle);
-    Ψ.AC[1] = integrate(h_ac,Ψ.AC[1],t+dt/2,-1im,dt/2,alg.integrator)
+    Ψ.AC[1], converged, convhist = integrate(h_ac,Ψ.AC[1],t+dt/2,-1im,dt/2,alg.integrator)
+    converged == 0 &&
+            @info "time evolving ac(1) failed $(convhist.normres)"
 
     return WindowMPS(nleft,Ψ.window,nright),env
 end
@@ -217,7 +229,7 @@ algorithm for time evolution.
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
 @kwdef struct TDVP2{A} <: Algorithm
-    intalg::A = Lanczos(; tol=Defaults.tol)
+    integrator::A = Lanczos(; tol=Defaults.tol)
     tolgauge::Float64 = Defaults.tolgauge
     maxiter::Int = Defaults.maxiter
     trscheme = truncerr(1e-3)
