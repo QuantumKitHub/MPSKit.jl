@@ -73,7 +73,7 @@ function sanitycheck(ham::MPOHamiltonian)
 end
 
 #addition / substraction
-function Base.:+(a::MPOHamiltonian, e::AbstractVector)
+function Base.:+(a::MPOHamiltonian, e::AbstractVector{<:Number})
     length(e) == a.period ||
         throw(ArgumentError("periodicity should match $(a.period) ≠ $(length(e))"))
 
