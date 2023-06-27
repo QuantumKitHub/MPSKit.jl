@@ -239,7 +239,7 @@ bond_type(::Type{<:FiniteMPS{<:Any,B}}) where {B} = B
 
 function left_virtualspace(Ψ::FiniteMPS, n::Integer)
     if n > 0 && !ismissing(Ψ.ALs[n])
-        dual(_lastspace(Ψ.ALs[n]))
+        _firstspace(Ψ.ALs[n])
     elseif n < length(Ψ.ALs) && !ismissing(Ψ.ALs[n + 1])
         _firstspace(Ψ.ALs[n + 1])
     else
