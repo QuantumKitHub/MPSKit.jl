@@ -67,12 +67,77 @@ end
                                                 force_planar(repeat(xxx(;
                                                                                    spin=1),
                                                                     2)))])
-    edens = expectation_value(state, opp)
+    envs = environments(state,opp)                                                                
+    edens = expectation_value(state, opp, envs)
+    dt = rand() / 10
 
-    (state, _) = timestep(state, opp, rand() / 10, alg)
+    (state_not, _) = timestep(state, opp, dt, alg, envs)
 
-    @test sum(expectation_value(state, opp)) ≈ sum(edens) atol = 1e-2
+    @test sum(expectation_value(state_not, opp, envs)) ≈ sum(edens) atol = 1e-4
+
+    # do trivial TimedOperator
+    oppt  = TimedOperator(opp)
+    envst = environments(state,oppt);
+    envs  = environments(state,opp);
+
+    (state_t, _) = timestep(state, oppt, 1., dt, alg, envst)
+
+    @test sum(expectation_value(state_t, oppt, 1., envst)) ≈ sum(expectation_value(state_not, opp, envs)) atol = 1e-4
+
+    # do sum of TimedOperator
+    oppt = 0.5*TimedOperator(opp) + 0.5*TimedOperator(opp)
+    envst = environments(state,oppt);
+
+    (state_t, _) = timestep(state, oppt, 1., dt, alg, envst)
+
+    @test sum(expectation_value(state_t, oppt, 1., envst)) ≈ sum(expectation_value(state_not, opp, envs)) atol = 1e-4
 end
+
+@timedtestset "time evolution windowMPS" begin
+
+    simpleH =  xxx(; spin=1 // 2)
+    alg = TDVP()
+
+    # with regular MPOHamiltonian
+    H0left   =  simpleH;
+    H0middle =  repeat(  simpleH, 20); # (= Hmiddle)
+    H0right  =  simpleH;
+
+    Ψ = InfiniteMPS([ℂ^2],[ℂ^20]);
+    Ψwindow = WindowMPS(Ψ,20);
+
+    Hwindow_0 = Window(H0left,H0middle,H0right);
+    WindEnvs_0 = environments(Ψwindow,Hwindow_0);
+    timevolvedwindow_0,WindEnvs_0 = timestep(Ψwindow,Hwindow_0,0.1,alg,WindEnvs_0);
+
+    # with SumOfOperators
+    Hleft = SumOfOperators([0.5*simpleH, 0.5*simpleH]) ;
+    Hmiddle =  SumOfOperators([0.5*repeat( simpleH, 20),0.5*repeat( simpleH, 20)]) ;
+    Hright =  SumOfOperators([0.5*simpleH, 0.5*simpleH]) ;
+
+    Hwindow = Window(Hleft,Hmiddle,Hright);
+    WindEnvs = environments(Ψwindow,Hwindow);
+
+    timevolvedwindow,WindEnvs = timestep(Ψwindow,Hwindow,0.1,alg,WindEnvs);
+
+    @test timevolvedwindow.left_gs  ≈ timevolvedwindow_0.left_gs  atol = 1e-10
+    @test timevolvedwindow.window   ≈ timevolvedwindow_0.window   atol = 1e-10
+    @test timevolvedwindow.right_gs ≈ timevolvedwindow_0.right_gs atol = 1e-10
+
+    # Now with time dependence
+    Htleft   =  TimedOperator(simpleH);
+    Htmiddle =  TimedOperator(repeat(  simpleH, 20)); # (= Hmiddle)
+    Htright  =  TimedOperator(simpleH);
+
+    Hwindow_t = Window(Htleft,Htmiddle,Htright);
+    WindEnvs_t = environments(Ψwindow,Hwindow_t);
+    timevolvedwindow_t,WindEnvs_t = timestep(Ψwindow,Hwindow_t,0.,0.1,alg,WindEnvs_t);
+
+    @test timevolvedwindow_t.left_gs  ≈ timevolvedwindow_0.left_gs  atol = 1e-10
+    @test timevolvedwindow_t.window   ≈ timevolvedwindow_0.window   atol = 1e-12
+    @test timevolvedwindow_t.right_gs ≈ timevolvedwindow_0.right_gs atol = 1e-12
+
+    end
 
 @timedtestset "leading_boundary $(ind)" for (ind, alg) in
                                             enumerate([VUMPS(; tol_galerkin=1e-5,

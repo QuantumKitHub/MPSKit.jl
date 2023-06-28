@@ -119,6 +119,7 @@ include("algorithms/changebonds/svdcut.jl")
 include("algorithms/changebonds/randexpand.jl")
 
 include("algorithms/timestep/tdvp.jl")
+include("algorithms/timestep/windowtdvp.jl")
 include("algorithms/timestep/timeevmpo.jl")
 include("algorithms/timestep/integrators.jl")
 
