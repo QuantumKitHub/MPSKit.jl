@@ -25,14 +25,13 @@ SumOfOperators(ops::AbstractVector,fs::AbstractVector) = SumOfOperators( map( (o
 Base.:+(op1::TimedOperator{O,F},op2::TimedOperator{O,G}) where {O,G,F} = SumOfOperators([op1,op2])
 
 Base.:+(op1::TimedOperator{O,F},op2::O) where {O,F} = SumOfOperators([op1,TimedOperator(op2)])
-Base.:+(op1::O,op2::TimedOperator{O,F}) where {O,F} = op2 + op1
+Base.:+(op1::O,op2::TimedOperator{O,F}) where {O,F} =  SumOfOperators([TimedOperator(op1),op2])
 
 Base.:+(SumOfOps::SumOfOperators{O},op::O) where {O} = SumOfOperators(vcat(SumOfOps.ops,op))
 Base.:+(op::O,SumOfOps::SumOfOperators{O}) where {O} = SumOfOps + op
 
 Base.:+(SumOfOps1::SumOfOperators{O},SumOfOps2::SumOfOperators{O}) where {O} = SumOfOperators(vcat(SumOfOps1.ops,SumOfOps2.ops))
 
-#cant get these to work for now, julia doesn't use this method, it defaults to MPO + abstractvector
 Base.:+(SumOfOps::SumOfOperators{T},op::O) where {O,F,T<:TimedOperator{O,F}} = SumOfOps + SumOfOperators(TimedOperator(op))
 Base.:+(op::O,SumOfOps::SumOfOperators{T}) where {O,F,T<:TimedOperator{O,F}} = SumOfOps + op
 

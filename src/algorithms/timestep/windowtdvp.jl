@@ -43,11 +43,13 @@ end
 
 
 function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP,env::Window=environments(Ψ,H))
-
+   
     #first evolve left state
     if !isnothing(H.left)
-        nleft, _ = timestep(Ψ.left_gs, H.left, t, dt, alg, env.left) #env gets updated in place, check this to be sure
-        env = _update_leftEnv!(nleft, env)
+        nleft, _ = timestep(Ψ.left_gs, H.left, t, dt, alg, env.left; leftorthflag = true) #env gets updated in place
+        _update_leftEnv!(nleft, env)
+    else
+        nleft = Ψ.left_gs #no need to copy, WindowMPS constructor copies automatically
     end
 
     # some Notes
@@ -72,8 +74,10 @@ function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP,env
             @info "time evolving ac($(length(Ψ))) failed $(convhist.normres)"
 
     if !isnothing(H.right)
-        nright, _ = timestep(Ψ.right_gs, H.right, t, dt, alg, env.right) #env gets updated in place, check this to be sure
-        env = _update_rightEnv!(nright, env)
+        nright, _ = timestep(Ψ.right_gs, H.right, t, dt, alg, env.right, leftorthflag = false) #env gets updated in place
+        _update_rightEnv!(nright, env)
+    else
+        nright = Ψ.right_gs #no need to copy, WindowMPS constructor copies automatically
     end
 
     #right to left sweep on window

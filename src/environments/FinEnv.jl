@@ -60,12 +60,21 @@ function environments(below::FiniteMPS{S},ham::Union{SparseMPO,MPOHamiltonian},a
 end
 
 #extract the correct leftstart/rightstart for WindowMPS
-function environments(state::WindowMPS,ham::Union{SparseMPO,MPOHamiltonian,DenseMPO},above=nothing;lenvs=environments(state.left_gs,ham),renvs=environments(state.right_gs,ham))
+function environments(state::WindowMPS,ham::Union{SparseMPO,MPOHamiltonian,DenseMPO,TimedOperator},above=nothing;lenvs=environments(state.left_gs,ham),renvs=environments(state.right_gs,ham))
     environments(state,ham,above,copy(leftenv(lenvs,1,state.left_gs)),copy(rightenv(renvs,length(state),state.right_gs)))
 end
 
-function environments(Ψ::WindowMPS,windowH::Window{H,H,H}) where {H} #strictly the same type to prevent env mess 
-    Window(environments(Ψ.left_gs,windowH.left), environments(Ψ.window,windowH.middle), environments(Ψ.right_gs,windowH.right))
+environments(below,opp::TimedOperator,above,leftstart,rightstart) = environments(below,opp.op,above,leftstart,rightstart)
+
+# unnecesarry I think
+#function environments(state::WindowMPS,ham::TimedOperator,above=nothing;lenvs=environments(state.left_gs,ham.op),renvs=environments(state.right_gs,ham.op))
+#    environments(state,ham.op,above,copy(leftenv(lenvs,1,state.left_gs)),copy(rightenv(renvs,length(state),state.right_gs)))
+#end
+
+function environments(Ψ::WindowMPS,windowH::Window)
+    lenvs = environments(Ψ.left_gs,windowH.left)
+    renvs = environments(Ψ.right_gs,windowH.right)
+    Window(lenvs, environments(Ψ,windowH.middle;lenvs=lenvs,renvs=renvs), renvs)
 end
 
 function environments(below::S,above::S) where S <: Union{FiniteMPS,WindowMPS}

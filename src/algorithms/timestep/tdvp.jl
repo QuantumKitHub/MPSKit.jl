@@ -179,7 +179,7 @@ function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
 end
 
 # time-independent version
-timestep(Ψ, H, dt, alg, env) = timestep(Ψ, H, 0., dt, alg, env) 
+timestep(Ψ, H, dt, alg, env; kwargs...) = timestep(Ψ, H, 0., dt, alg, env; kwargs...) 
 
 #copying version
 function timestep(Ψ::AbstractFiniteMPS, H, time ,timestep, alg::Union{TDVP,TDVP2},

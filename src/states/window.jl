@@ -11,6 +11,7 @@ struct Window{L,M,R}
     right::R
 end
 
-
 # do we need copy? 
 # Base.copy(win::Window) = Window(copy(win.left),copy(win.middle),copy(win.right))
+
+# what kind of checks can we make to ensure left,middle and right fit together?

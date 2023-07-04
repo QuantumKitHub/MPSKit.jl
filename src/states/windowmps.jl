@@ -116,7 +116,7 @@ Utility
 ===========================================================================================#
 
 function Base.copy(Ψ::WindowMPS)
-    return WindowMPS(copy(Ψ.left_gs), copy(Ψ.window), copy(Ψ.right_gs))
+    return WindowMPS(Ψ.left_gs, copy(Ψ.window), Ψ.right_gs) #no need to copy inf parts, the contructor already does this
 end
 
 # not sure about the underlying methods...
