@@ -41,45 +41,46 @@ mutable struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFinite
     right_gs::InfiniteMPS{A,B}
 
     function WindowMPS(Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B},
-                       Ψᵣ::InfiniteMPS{A,B}=Ψₗ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+                       Ψᵣ::InfiniteMPS{A,B}=copy(Ψₗ)) where {A<:GenericMPSTensor,B<:MPSBondTensor}
         left_virtualspace(Ψₗ, 0) == left_virtualspace(Ψₘ, 1) &&
             right_virtualspace(Ψₘ, length(Ψₘ)) == right_virtualspace(Ψᵣ, length(Ψₘ)) ||
             throw(SpaceMismatch("Mismatch between window and environment virtual spaces"))
-        return new{A,B}(copy(Ψₗ), Ψₘ, copy(Ψᵣ))
+        return new{A,B}(Ψₗ, Ψₘ, Ψᵣ)
     end
 end
 
 #===========================================================================================
 Constructors
 ===========================================================================================#
+# here i would like an outer constructor that copies the left and riht inf environments
 
 function WindowMPS(Ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor},
-                   Ψᵣ::InfiniteMPS=Ψₗ)
+                   Ψᵣ::InfiniteMPS=copy(Ψₗ))
     return WindowMPS(Ψₗ, FiniteMPS(site_tensors), Ψᵣ)
 end
 
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    maxvirtspace::S, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
+                   Ψᵣ::InfiniteMPS=copy(Ψₗ)) where {S<:ElementarySpace}
     Ψₘ = FiniteMPS(f, elt, physspaces, maxvirtspace; left=left_virtualspace(Ψₗ, 0),
                    right=right_virtualspace(Ψᵣ, length(physspaces)))
     return WindowMPS(Ψₗ, Ψₘ, Ψᵣ)
 end
 function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    maxvirtspace::S, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
+                   Ψᵣ::InfiniteMPS=copy(Ψₗ)) where {S<:ElementarySpace}
     return WindowMPS(rand, Defaults.eltype, physspaces, maxvirtspace, Ψₗ, Ψᵣ)
 end
 
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    virtspaces::Vector{S}, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
+                   Ψᵣ::InfiniteMPS=copy(Ψₗ)) where {S<:ElementarySpace}
     Ψₘ = FiniteMPS(f, elt, physspaces, virtspaces)
     return WindowMPS(Ψₗ, Ψₘ, Ψᵣ)
 end
 function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    virtspaces::Vector{S}, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
+                   Ψᵣ::InfiniteMPS=copy(Ψₗ)) where {S<:ElementarySpace}
     return WindowMPS(rand, Defaults.eltype, physspaces, virtspaces, Ψₗ, Ψᵣ)
 end
 
@@ -163,10 +164,10 @@ function TensorKit.rmul!(Ψ::WindowMPS, a::Number)
     return Ψ
 end
 
-function TensorKit.dot(Ψ₁::WindowMPS, Ψ₂::WindowMPS)
+function TensorKit.dot(Ψ₁::WindowMPS, Ψ₂::WindowMPS; kwargs...)
     length(Ψ₁) == length(Ψ₂) || throw(ArgumentError("MPS with different length"))
-    Ψ₁.left_gs ≈ Ψ₂.left_gs || throw(ArgumentError("left InfiniteMPS is different"))
-    Ψ₁.right_gs ≈ Ψ₂.right_gs || throw(ArgumentError("right InfiniteMPS is different"))
+    isapprox(Ψ₁.left_gs,Ψ₂.left_gs;kwargs...) || throw(ArgumentError("left InfiniteMPS is different"))
+    isapprox(Ψ₁.right_gs,Ψ₂.right_gs;kwargs...) || throw(ArgumentError("right InfiniteMPS is different"))
 
     ρr = TransferMatrix(Ψ₂.AR[2:end], Ψ₁.AR[2:end]) * r_RR(Ψ₂)
     return tr(_transpose_front(Ψ₁.AC[1])' * _transpose_front(Ψ₂.AC[1]) * ρr)

@@ -80,6 +80,6 @@ TensorKit.spacetype(Ψtype::Type{<:AbstractMPS}) = spacetype(site_type(Ψtype))
 TensorKit.sectortype(Ψ::AbstractMPS) = sectortype(typeof(Ψ))
 TensorKit.sectortype(Ψtype::Type{<:AbstractMPS}) = sectortype(site_type(Ψtype))
 
-Base.isapprox(Ψ1::AbstractMPS, Ψ2::AbstractMPS; atol = 1e-12) = abs(dot(Ψ1,Ψ2)-1) < atol
+Base.isapprox(Ψ1::AbstractMPS, Ψ2::AbstractMPS; kwargs...) = isapprox(abs(dot(Ψ1,Ψ2)),norm(Ψ1)*norm(Ψ2); kwargs...)
 
 abstract type AbstractFiniteMPS <: AbstractMPS end
