@@ -24,7 +24,7 @@ export entanglementplot, transferplot
 
 #hamiltonian things
 export Cache
-export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, TimedOperator, SumOfOperators
+export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, UntimedOperator, TimedOperator, SumOfOperators
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
 export leftenv, rightenv
 
@@ -69,7 +69,7 @@ end
 include("utility/periodicarray.jl")
 include("utility/utility.jl") #random utility functions
 include("utility/plotting.jl")
-include("utility/linearcombination.jl")
+#include("utility/linearcombination.jl")
 
 #maybe we should introduce an abstract state type
 include("states/window.jl")
@@ -88,7 +88,7 @@ include("operators/sparsempo/sparsempo.jl")
 include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")
-include("operators/timedoperator.jl")
+include("operators/multipliedoperator.jl")
 include("operators/sumofoperators.jl")
 
 include("transfermatrix/transfermatrix.jl")
@@ -103,7 +103,7 @@ include("environments/mpohaminfenv.jl")
 include("environments/multipleenv.jl")
 include("environments/qpenv.jl")
 include("environments/idmrgenv.jl")
-include("environments/lazylincocache.jl")
+#include("environments/lazylincocache.jl")
 
 abstract type Algorithm end
 

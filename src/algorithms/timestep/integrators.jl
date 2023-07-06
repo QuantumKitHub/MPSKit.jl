@@ -14,14 +14,17 @@ For time-independent operators (i.e. not a TimedOperator) t₀ is ingored.
 """
 function integrate end
 
-# differentiate between time-dependent and time-independent
-integrate(f::Union{O,SumOfOperators{O}},y₀,t,a,dt,method) where O = _integrate((x,t)->f(x),y₀,0.,a,dt,method) #should also work for SumOfOperators for regular operators
+# for backwards compatibility
+integrate(f,y₀,a,dt,method) = integrate(f,y₀,0.,a,dt,method) 
 
-integrate(f::Union{T,SumOfOperators{T}},y₀,t,a,dt,method) where {T <: TimedOperator} = _integrate(f,y₀,t,a,dt,method)
+# thanks to typing normal operator will automatically get converted to UntimedOperator and so ignore any time-dependence
+#integrate(f,y₀,t,a,dt,method) = _integrate((x,t)->f(x),y₀,0.,a,dt,method) #could also wrap 
+
+#integrate(f::Union{<:TimedOperator,<:SumOfOperators},y₀,t,a,dt,method) = _integrate(f,y₀,t,a,dt,method)
 
 
 #original integrator in iTDVP, namely exponentiation
-function _integrate(f,y₀,t₀,a,dt,method::Union{Arnoldi,Lanczos})
+function integrate(f::F,y₀,t₀,a,dt,method::Union{Arnoldi,Lanczos}) where {F <: Union{MultipliedOperator,SumOfOperators}}
     sol, convhist = exponentiate(x->f(x,t₀+dt/2),a*dt,y₀,method)
     sol, convhist.converged, convhist
 end
@@ -39,7 +42,7 @@ Second order and time-reversible method that preserves norm, even for time-depen
     tol::Float64 = MPSKit.Defaults.tol;
 end
 
-function _integrate(f,y₀,t₀,a,dt,method::ImplicitMidpoint)
+function integrate(f::F,y₀,t₀,a,dt,method::ImplicitMidpoint) where {F <: Union{MultipliedOperator,SumOfOperators}}
     y1, info = linsolve(x->f(x,t₀+dt/2),y₀,y₀,1,-0.5*a*dt;tol=method.tol) #solve implicit problem
     y1+0.5*a*dt*f(y1,t₀+dt/2), info.converged, info
 end
@@ -59,7 +62,7 @@ Taylor series approximation of exp( a*dt*f(y,t) ). Currently only first order is
     order::Int64 = 1
 end
 
-function _integrate(f,y₀,t₀,a,dt,method::Taylor)
+function integrate(f::F,y₀,t₀,a,dt,method::Taylor) where {F <: Union{MultipliedOperator,SumOfOperators}}
     if method.order == 1
         return y₀+a*dt*f(y₀,t₀+dt/2), 1, nothing
     end
@@ -78,7 +81,7 @@ Standard Runge-Kutta 4 numerical integrator
     nh::Int64 = 1 # number of function evaluations; more should be more accurate.
 end
 
-function _integrate(f,y₀,t₀,a,dt,method::RK4)
+function integrate(f::F,y₀,t₀,a,dt,method::RK4) where {F <: Union{MultipliedOperator,SumOfOperators}}
     h = dt/method.nh;
 
     y = y₀

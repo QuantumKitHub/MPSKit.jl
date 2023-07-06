@@ -52,7 +52,7 @@ end
 #===========================================================================================
 Constructors
 ===========================================================================================#
-# here i would like an outer constructor that copies the left and riht inf environments
+# here i would like an outer constructor that copies the left and right inf environments
 
 function WindowMPS(Ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor},
                    Ψᵣ::InfiniteMPS=copy(Ψₗ))
