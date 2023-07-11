@@ -3,12 +3,10 @@ println("------------------------------------")
 println("|     Operators                    |")
 println("------------------------------------")
 
-@timedtestset "mpoham $((pspace,Dspace))" for (pspace, Dspace) in [(𝔹^4, 𝔹^10),
-                                                                   (Rep[U₁](0 => 2), Rep[U₁]((0 => 20))),
-                                                                   (Rep[SU₂](1 => 1),
-                                                                    Rep[SU₂](1 // 2 => 10, 3 // 2 => 5,
-                                                                             5 // 2 => 1))]
+pspaces = (𝔹^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
+vspaces = (𝔹^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
 
+@testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces, vspaces)
     #generate a 1-2-3 body interaction
     n = TensorMap(rand, ComplexF64, pspace, pspace)
     n += n'
@@ -69,7 +67,7 @@ println("------------------------------------")
     @test real(sum(expectation_value(ts2, h4))) >= 0
 end
 
-@timedtestset "DenseMPO" for ham in (transverse_field_ising(), su2_xxx_ham(; spin=1))
+@testset "DenseMPO" for ham in (transverse_field_ising(), heisenberg_XXX(; spin=1))
     physical_space = ham.pspaces[1]
     ou = oneunit(physical_space)
 
