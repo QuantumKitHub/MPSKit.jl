@@ -72,12 +72,49 @@ abstract type AbstractMPS end
 
 Base.eltype(Ψ::AbstractMPS) = eltype(typeof(Ψ))
 
+"""
+    site_type(Ψ::AbstractMPS)
+    site_type(Ψtype::Type{<:AbstractMPS})
+
+Return the type of the site tensors of an `AbstractMPS`.
+"""
 site_type(Ψ::AbstractMPS) = site_type(typeof(Ψ))
+
+"""
+    bond_type(Ψ::AbstractMPS)
+    bond_type(Ψtype::Type{<:AbstractMPS})
+
+Return the type of the bond tensors of an `AbstractMPS`.
+"""
 bond_type(Ψ::AbstractMPS) = bond_type(typeof(Ψ))
 
 TensorKit.spacetype(Ψ::AbstractMPS) = spacetype(typeof(Ψ))
 TensorKit.spacetype(Ψtype::Type{<:AbstractMPS}) = spacetype(site_type(Ψtype))
 TensorKit.sectortype(Ψ::AbstractMPS) = sectortype(typeof(Ψ))
 TensorKit.sectortype(Ψtype::Type{<:AbstractMPS}) = sectortype(site_type(Ψtype))
+
+"""
+    left_virtualspace(Ψ::AbstractMPS, i::Int)
+    
+Return the left virtual space of the bond tensor at site `i`. This is equivalent to the
+left virtual space of the left-gauged site tensor at site `i + 1`.
+"""
+function left_virtualspace end
+
+"""
+    right_virtualspace(Ψ::AbstractMPS, i::Int)
+
+Return the right virtual space of the bond tensor at site `i`. This is equivalent to the
+right virtual space of the right-gauged site tensor at site `i`.
+"""
+function right_virtualspace end
+
+"""
+    physicalspace(Ψ::AbstractMPS, i::Int)
+
+Return the physical space of the site tensor at site `i`.
+"""
+function physicalspace end
+
 
 abstract type AbstractFiniteMPS <: AbstractMPS end
