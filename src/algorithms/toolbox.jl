@@ -106,6 +106,13 @@ function correlation_length(spectrum; kwargs...)
 end
 
 
+"""
+    variance(state, hamiltonian, [envs=environments(state, hamiltonian)])
+
+Compute the variance of the energy of the state with respect to the hamiltonian.
+"""
+function variance end
+
 function variance(state::InfiniteMPS,ham::MPOHamiltonian,envs = environments(state,ham))
     rescaled_ham = ham-expectation_value(state,ham,envs);
     real(sum(expectation_value(state,rescaled_ham*rescaled_ham)))
