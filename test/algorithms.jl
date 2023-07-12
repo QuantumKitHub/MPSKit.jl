@@ -225,8 +225,8 @@ end
 end
 
 @testset "Dynamical DMRG" verbose = true begin
-    ham = force_planar(transverse_field_ising(; g=4.0))
-    (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
+    ham = force_planar(-1.0 * MPOHamiltonian(σᶻᶻ()) + MPOHamiltonian(σˣ()) * 4.0)
+    gs, = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
     window = MPSComoving(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
     szd = force_planar(S_z())
@@ -241,12 +241,11 @@ end
     predicted = [1 / (v + eta - polepos) for v in vals]
 
     @testset "Flavour $f" for f in (Jeckelmann(), NaiveInvert())
-        data = similar(predicted)
-        for (i, v) in enumerate(vals)
-            (data[i], _) = propagator(window, v + eta, ham,
-                                      DynamicalDMRG(; flavour=f, verbose=false))
+        alg = DynamicalDMRG(; flavour=f, verbose=false, tol=1e-8)
+        data = map(vals) do v
+            result, = propagator(window, v + eta, ham, alg)
+            return result
         end
-
         @test data ≈ predicted atol = 1e-8
     end
 end
