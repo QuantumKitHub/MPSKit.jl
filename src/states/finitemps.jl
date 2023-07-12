@@ -256,6 +256,19 @@ function right_virtualspace(Ψ::FiniteMPS, n::Integer)
     end
 end
 
+function physicalspace(Ψ::FiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer) where {N}
+    N == 1 && return ProductSpace{spacetype(Ψ)}()
+    A = !ismissing(Ψ.ALs[n]) ? Ψ.ALs[n] : 
+        !ismissing(Ψ.ARs[n]) ? Ψ.ARs[n] : Ψ.AC[n] # should never reach last case?
+        
+    if N == 2
+        return space(A, 2)
+    else
+        return ProductSpace{spacetype(Ψ),N - 1}(space.(Ref(A),
+                                                Base.front(Base.tail(TensorKit.allind(A)))))
+    end
+end
+
 TensorKit.space(Ψ::FiniteMPS{<:MPSTensor}, n::Integer) = space(Ψ.AC[n], 2)
 function TensorKit.space(Ψ::FiniteMPS{<:GenericMPSTensor}, n::Integer)
     t = Ψ.AC[n]
