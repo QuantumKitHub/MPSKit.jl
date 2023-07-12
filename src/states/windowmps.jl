@@ -42,7 +42,7 @@ mutable struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFinite
 
     function WindowMPS(Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B},
                        Ψᵣ::InfiniteMPS{A,B}=copy(Ψₗ)) where {A<:GenericMPSTensor,B<:MPSBondTensor}
-        left_virtualspace(Ψₗ, 0) == left_virtualspace(Ψₘ, 1) &&
+        left_virtualspace(Ψₗ, 0) == left_virtualspace(Ψₘ, 0) &&
             right_virtualspace(Ψₘ, length(Ψₘ)) == right_virtualspace(Ψᵣ, length(Ψₘ)) ||
             throw(SpaceMismatch("Mismatch between window and environment virtual spaces"))
         return new{A,B}(Ψₗ, Ψₘ, Ψᵣ)
