@@ -7,19 +7,19 @@ println("------------------------------------")
                                                         VUMPS(; tol_galerkin=1e-8,
                                                               verbose=false),
                                                         force_planar(transverse_field_ising(;
-                                                                                      hx=0.51))),
+                                                                                      g=0.51))),
                                                        (InfiniteMPS([𝔹^2], [𝔹^10]),
                                                         IDMRG1(; tol_galerkin=1e-8,
                                                                maxiter=400, verbose=false),
                                                         force_planar(transverse_field_ising(;
-                                                                                      hx=0.51))),
+                                                                                      g=0.51))),
                                                        (InfiniteMPS([𝔹^2, 𝔹^2],
                                                                     [𝔹^10, 𝔹^10]),
                                                         IDMRG2(; trscheme=truncdim(12),
                                                                tol_galerkin=1e-8,
                                                                maxiter=400, verbose=false),
                                                         force_planar(repeat(transverse_field_ising(;
-                                                                                             hx=0.51),
+                                                                                             g=0.51),
                                                                             2))),
                                                        (InfiniteMPS([𝔹^2], [𝔹^10]),
                                                         VUMPS(; tol_galerkin=1e-5,
@@ -27,23 +27,23 @@ println("------------------------------------")
                                                         GradientGrassmann(; tol=1e-8,
                                                                           verbosity=0),
                                                         force_planar(transverse_field_ising(;
-                                                                                      hx=0.51))),
+                                                                                      g=0.51))),
                                                        (FiniteMPS(rand, ComplexF64, 10, 𝔹^2,
                                                                   𝔹^10),
                                                         DMRG2(; verbose=false,
                                                               trscheme=truncdim(10)),
                                                         force_planar(transverse_field_ising(;
-                                                                                      hx=0.51))),
+                                                                                      g=0.51))),
                                                        (FiniteMPS(rand, ComplexF64, 10, 𝔹^2,
                                                                   𝔹^10),
                                                         DMRG(; verbose=false),
                                                         force_planar(transverse_field_ising(;
-                                                                                      hx=0.51))),
+                                                                                      g=0.51))),
                                                        (FiniteMPS(rand, ComplexF64, 10, 𝔹^2,
                                                                   𝔹^10),
                                                         GradientGrassmann(; verbosity=0),
                                                         force_planar(transverse_field_ising(;
-                                                                                      hx=0.51)))])
+                                                                                      g=0.51)))])
     v1 = variance(state, ham)
     (ts, envs, delta) = find_groundstate(state, ham, alg)
     v2 = variance(ts, ham)
@@ -53,44 +53,93 @@ println("------------------------------------")
     @test v2 < 1e-2 #is the ground state variance relatively low?
 end
 
-@timedtestset "timestep $(ind)" for (ind, (state, alg, opp)) in
-                                    enumerate([(FiniteMPS(fill(TensorMap(rand, ComplexF64,
-                                                                         𝔹^1 * 𝔹^2, 𝔹^1),
-                                                               5)), TDVP(),
-                                                force_planar(xxx(; spin=1 // 2))),
-                                               (FiniteMPS(fill(TensorMap(rand, ComplexF64,
-                                                                         𝔹^1 * 𝔹^2, 𝔹^1),
-                                                               7)), TDVP2(),
-                                                force_planar(xxx(; spin=1 // 2))),
-                                               (InfiniteMPS([𝔹^3, 𝔹^3], [𝔹^50, 𝔹^50]),
-                                                TDVP(),
-                                                force_planar(repeat(xxx(;
-                                                                                   spin=1),
-                                                                    2)))])
-    envs = environments(state,opp)                                                                
-    edens = expectation_value(state, opp, envs)
-    dt = rand() / 10
+@testset "timestep" verbose = true begin
+    dt = 0.1
+    algs = [TDVP(), TDVP2()]
 
-    (state_not, _) = timestep(state, opp, dt, alg, envs)
+    H = force_planar(heisenberg_XXX(; spin=1 // 2))
+    ψ₀ = FiniteMPS(fill(TensorMap(rand, ComplexF64, 𝔹^1 * 𝔹^2, 𝔹^1), 5))
+    E₀ = expectation_value(ψ₀, H)
 
-    @test sum(expectation_value(state_not, opp, envs)) ≈ sum(edens) atol = 1e-4
+    @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
+        ψ, envs = timestep(ψ₀, H, dt, alg)
+        E = expectation_value(ψ, H, envs)
+        @test sum(E₀) ≈ sum(E) atol = 1e-2
+    end
 
-    # do trivial TimedOperator
-    oppt  = TimedOperator(opp)
-    envst = environments(state,oppt);
-    envs  = environments(state,opp);
+    @testset "Finite Trivial TimedOperator $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
+        ψ, envs = timestep(ψ₀, H, dt, alg)
+        E = expectation_value(ψ, H, envs)
+        
+        Ht  = TimedOperator(H)
+        (ψt, envst) = timestep(ψ₀, Ht, 0., dt, alg)
+        Et = expectation_value(ψt, Ht, 0., envst)
+    
+        @test sum(E) ≈ sum(Et) atol = 1e-10
+    end
 
-    (state_t, _) = timestep(state, oppt, 1., dt, alg, envst)
+    @testset "Finite TimedOperator $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
+        f(t) = 3cos(t); t = 1.
 
-    @test sum(expectation_value(state_t, oppt, 1., envst)) ≈ sum(expectation_value(state_not, opp, envs)) atol = 1e-4
+        Ht  = TimedOperator(H,f)
+        (ψt, envst) = timestep(ψ₀, Ht, t, dt, alg)
+        Et = expectation_value(ψt, Ht, 0., envst)
 
-    # do sum of TimedOperator
-    oppt = 0.5*TimedOperator(opp) + 0.5*TimedOperator(opp)
-    envst = environments(state,oppt);
+        Hunt = Ht(t)
+        (ψ, envs) = timestep(ψ₀, Hunt, dt, alg)
+        Euntt = expectation_value(ψ, Hunt, envs)
 
-    (state_t, _) = timestep(state, oppt, 1., dt, alg, envst)
+        Hmult = f(t)*H
+        (ψ, envs) = timestep(ψ₀, Hmult, dt, alg)
+        Emult = expectation_value(ψ, Hmult, envs)
+    
+        @test sum(Eunt) ≈ sum(Et) atol = 1e-2
+        @test sum(Eunt) ≈ sum(Emult) atol = 1e-2
+        @test sum(Et) ≈ sum(Emult) atol = 1e-2
+    end
 
-    @test sum(expectation_value(state_t, oppt, 1., envst)) ≈ sum(expectation_value(state_not, opp, envs)) atol = 1e-4
+    H = force_planar(heisenberg_XXX(InfiniteChain(2); spin=1))
+    ψ₀ = InfiniteMPS([𝔹^3, 𝔹^3], [𝔹^50, 𝔹^50])
+    E₀ = expectation_value(ψ₀, H)
+
+    @testset "Infinite TDVP" begin
+        ψ, envs = timestep(ψ₀, H, dt, TDVP())
+        E = expectation_value(ψ, H, envs)
+        @test sum(E₀) ≈ sum(E) atol = 1e-2
+    end
+
+    @testset "Finite Trivial TimedOperator  TDVP" begin
+        ψ, envs = timestep(ψ₀, H, dt, alg)
+        E = expectation_value(ψ, H, envs)
+        
+        Ht  = TimedOperator(H)
+        (ψt, envst) = timestep(ψ₀, Ht, 0., dt, alg)
+        Et = expectation_value(ψt, Ht, 0., envst)
+
+        @test sum(E) ≈ sum(Et) atol = 1e-10
+        end
+
+    @testset "Infinite TimedOperator TDVP" begin
+        f(t) = 3cos(t); t = 1.
+
+        Ht  = TimedOperator(H,f)
+        (ψt, envst) = timestep(ψ₀, Ht, t, dt, alg)
+        Et = expectation_value(ψt, Ht, 0., envst)
+
+        Hunt = Ht(t)
+        (ψ, envs) = timestep(ψ₀, Hunt, dt, alg)
+        Euntt = expectation_value(ψ, Hunt, envs)
+
+        Hmult = f(t)*H
+        (ψ, envs) = timestep(ψ₀, Hmult, dt, alg)
+        Emult = expectation_value(ψ, Hmult, envs)
+    
+        @test sum(Eunt) ≈ sum(Et) atol = 1e-2
+        @test sum(Eunt) ≈ sum(Emult) atol = 1e-2
+        @test sum(Et) ≈ sum(Emult) atol = 1e-2
+    end
+
+    
 end
 
 @timedtestset "time evolution windowMPS" begin
@@ -288,7 +337,7 @@ end
 end
 
 @timedtestset "dynamicaldmrg flavour $(f)" for f in (Jeckelmann(), NaiveInvert())
-    ham = force_planar(transverse_field_ising(; hx=4.0))
+    ham = force_planar(transverse_field_ising(; g=4.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
     window = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
@@ -353,7 +402,7 @@ end
     len_crit = correlation_length(st)[1]
     entrop_crit = entropy(st)
 
-    th = force_planar(transverse_field_ising(; hx=4))
+    th = force_planar(transverse_field_ising(; g=4))
     (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
     len_gapped = correlation_length(st)[1]
     entrop_gapped = entropy(st)
@@ -364,7 +413,7 @@ end
 
 @timedtestset "expectation value / correlator" begin
     st = InfiniteMPS([ℂ^2], [ℂ^10])
-    th = transverse_field_ising(; hx=4)
+    th = transverse_field_ising(; g=4)
     (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
 
     sz_mpo = TensorMap([1.0 0; 0 -1], ℂ^1 * ℂ^2, ℂ^2 * ℂ^1)
@@ -392,7 +441,7 @@ end
 @timedtestset "approximate" begin
     @timedtestset "mpo * infinite ≈ infinite" begin
         st = InfiniteMPS([𝔹^2, 𝔹^2], [𝔹^10, 𝔹^10])
-        th = force_planar(repeat(transverse_field_ising(; hx=4), 2))
+        th = force_planar(repeat(transverse_field_ising(; g=4), 2))
 
         dt = 1e-3
         sW1 = make_time_mpo(th, dt, TaylorCluster{3}())
@@ -437,7 +486,7 @@ end
                                                                     trscheme=truncdim(10))]
         a = FiniteMPS(10, ℂ^2, ℂ^10)
         b = FiniteMPS(10, ℂ^2, ℂ^20)
-        th = transverse_field_ising(; hx=3)
+        th = transverse_field_ising(; g=3)
         smpo = make_time_mpo(th, 0.01, WI())
 
         before = abs(dot(b, b))

@@ -52,6 +52,7 @@ Base.convert(::Type{MultipliedOperator},x::Union{MPOHamiltonian,DenseMPO,SparseM
 (x::TimedOperator)(t::Number) = UntimedOperator(x.op,x.f(t))
 
 # logic for derivatives
+Base.:*(x::MultipliedOperator,v) = x(v);
 
 (x::MultipliedOperator)(y) = x.f*x.op(y)
 

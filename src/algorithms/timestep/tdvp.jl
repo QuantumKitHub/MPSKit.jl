@@ -1,6 +1,6 @@
 """
     timestep(Ψ, H, t, dt, algorithm, environments)
-    timestep!(Ψ, H, t, dt, algorithm, environments)
+    timestep(Ψ, H, dt, algorithm, environments)
 
 Compute the time-evolved state ``Ψ′ ≈ exp(-iHdt) Ψ`` where H can be time-dependent. For a time-independent H (i.e. not a TimedOperator) t is ignored.
 
@@ -20,7 +20,7 @@ Single site [TDVP](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107
 algorithm for time evolution.
 
 # Fields
-- `integrator::A`: integration algorithm
+- `integrator::A`: integration algorithm (defaults to Lanczos exponentiation)
 - `tolgauge::Float64`: tolerance for gauging algorithm
 - `maxiter::Int`: maximum amount of gauging iterations
 """
@@ -32,9 +32,7 @@ end
 
 function timestep(Ψ::InfiniteMPS, H, time::Number, timestep::Number, alg::TDVP, 
     envs::Union{Cache,MultipleEnvironments}=environments(Ψ,H); leftorthflag=true)
-    #=
-    can we understand whether this is actually correct up to some order? what order?
-    =#
+
     temp_ACs = similar(Ψ.AC);
     temp_CRs = similar(Ψ.CR);
 
@@ -125,7 +123,7 @@ end
 algorithm for time evolution.
 
 # Fields
-- `intalg::A`: integrator algorithm (defaults to Lanczos exponentiation)
+- `integrator::A`: integrator algorithm (defaults to Lanczos exponentiation)
 - `tolgauge::Float64`: tolerance for gauging algorithm
 - `maxiter::Int`: maximum amount of gauging iterations
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
@@ -145,6 +143,8 @@ function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
 
         h_ac2 = ∂∂AC2(i, Ψ, H, envs)
         nac2, converged, convhist = integrate(h_ac2, ac2, t, -1im, dt / 2, alg.integrator)
+        converged == 0 &&
+                @info "time evolving ac2($i) failed $(convhist.normres)"
 
         nal, nc, nar = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
 
@@ -154,6 +154,8 @@ function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
         if i != (length(Ψ) - 1)
             Ψ.AC[i + 1], converged, convhist = integrate(∂∂AC(i + 1, Ψ, H, envs), Ψ.AC[i + 1], t, 1im, dt / 2,
                                         alg.integrator)
+            converged == 0 &&
+                @info "time evolving ac($i) failed $(convhist.normres)"
         end
     end
 
@@ -163,6 +165,8 @@ function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
 
         h_ac2 = ∂∂AC2(i - 1, Ψ, H, envs)
         (nac2, converged, convhist) = integrate(h_ac2, ac2, t, -1im, dt / 2, alg.integrator)
+        converged == 0 &&
+                @info "time evolving ac2($i) failed $(convhist.normres)"
 
         nal, nc, nar = tsvd(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
 
@@ -172,6 +176,8 @@ function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
         if i != 2
             Ψ.AC[i - 1], converged, convhist = integrate(∂∂AC(i - 1, Ψ, H, envs), Ψ.AC[i - 1], t, 1im, dt / 2,
                                         alg.integrator)
+            converged == 0 &&
+                @info "time evolving ac($i) failed $(convhist.normres)"
         end
     end
 
@@ -183,8 +189,6 @@ timestep(Ψ, H, dt, alg, env; kwargs...) = timestep(Ψ, H, 0., dt, alg, env; kwa
 
 #copying version
 function timestep(Ψ::AbstractFiniteMPS, H, time ,timestep, alg::Union{TDVP,TDVP2},
-    envs=environments(Ψ, H))
-return timestep!(copy(Ψ), H, time, timestep, alg, envs)
+    envs=environments(Ψ, H); kwargs...)
+return timestep!(copy(Ψ), H, time, timestep, alg, envs; kwargs...)
 end
-
-#given that I intend to put my infinite sweep algorithm into MPSKit, we might consider an abstract TDVP algorithm?

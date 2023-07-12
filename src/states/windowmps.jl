@@ -109,7 +109,7 @@ function WindowMPS(Ψ::InfiniteMPS{A,B}, L::Int) where {A,B}
     ACs .= Ψ.AC[1:L]
     CLs .= Ψ.CR[0:L]
 
-    return WindowMPS(Ψ, FiniteMPS(ALs, ARs, ACs, CLs), Ψ)
+    return WindowMPS(copy(Ψ), FiniteMPS(ALs, ARs, ACs, CLs), copy(Ψ))
 end
 
 #===========================================================================================
@@ -117,7 +117,7 @@ Utility
 ===========================================================================================#
 
 function Base.copy(Ψ::WindowMPS)
-    return WindowMPS(Ψ.left_gs, copy(Ψ.window), Ψ.right_gs) #no need to copy inf parts, the contructor already does this
+    return WindowMPS(copy(Ψ.left_gs), copy(Ψ.window), copy(Ψ.right_gs))
 end
 
 # not sure about the underlying methods...

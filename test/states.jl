@@ -87,7 +87,7 @@ end
 end
 
 @timedtestset "WindowMPS" begin
-    ham = force_planar(transverse_field_ising(; hx=4.0))
+    ham = force_planar(transverse_field_ising(; g=4.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
 
     #constructor 1 - give it a plain array of tensors
@@ -141,7 +141,7 @@ end
 @timedtestset "Quasiparticle state" begin
     @timedtestset "Finite $(d)" for (th, D, d) in
                                [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
-                                (su2_xxx_ham(; spin=1), Rep[SU₂](1 => 1, 0 => 3),
+                                (heisenberg_XXX(SU2Irrep), Rep[SU₂](1 => 1, 0 => 3),
                                  Rep[SU₂](1 => 1))]
         ts = FiniteMPS(rand, ComplexF64, rand(4:20), d, D)
         normalize!(ts)
@@ -175,7 +175,7 @@ end
 
     @timedtestset "Infinite" for (th, D, d) in
                                  [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
-                                  (su2_xxx_ham(; spin=1), Rep[SU₂](1 => 1, 0 => 3),
+                                  (heisenberg_XXX(SU2Irrep), Rep[SU₂](1 => 1, 0 => 3),
                                    Rep[SU₂](1 => 1))]
         period = rand(1:4)
         ts = InfiniteMPS(fill(d, period), fill(D, period))

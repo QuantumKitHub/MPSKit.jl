@@ -17,11 +17,8 @@ function integrate end
 # for backwards compatibility
 integrate(f,y₀,a,dt,method) = integrate(f,y₀,0.,a,dt,method) 
 
-# thanks to typing normal operator will automatically get converted to UntimedOperator and so ignore any time-dependence
-#integrate(f,y₀,t,a,dt,method) = _integrate((x,t)->f(x),y₀,0.,a,dt,method) #could also wrap 
-
-#integrate(f::Union{<:TimedOperator,<:SumOfOperators},y₀,t,a,dt,method) = _integrate(f,y₀,t,a,dt,method)
-
+# wrap function into UntimedOperator by default
+integrate(f,y₀,t₀,a,dt,method) = integrate(UntimedOperator(f),y₀,t₀,a,dt,method)
 
 #original integrator in iTDVP, namely exponentiation
 function integrate(f::F,y₀,t₀,a,dt,method::Union{Arnoldi,Lanczos}) where {F <: Union{MultipliedOperator,SumOfOperators}}
@@ -37,7 +34,6 @@ Second order and time-reversible method that preserves norm, even for time-depen
 # Fields
 - `tol::Float64`: desired tolerance for solving the implicit step via a linsolve
 """
-
 @kwdef struct ImplicitMidpoint
     tol::Float64 = MPSKit.Defaults.tol;
 end
@@ -56,8 +52,6 @@ Taylor series approximation of exp( a*dt*f(y,t) ). Currently only first order is
 # Fields
 - `order::Int64`: order of the approximation
 """
-
-#Taylor series integrator
 @kwdef struct Taylor
     order::Int64 = 1
 end
@@ -76,9 +70,8 @@ Standard Runge-Kutta 4 numerical integrator
 # Fields
 - `nh::Int64`: number of time sub-intervals
 """
-
 @kwdef struct RK4
-    nh::Int64 = 1 # number of function evaluations; more should be more accurate.
+    nh::Int64 = 1
 end
 
 function integrate(f::F,y₀,t₀,a,dt,method::RK4) where {F <: Union{MultipliedOperator,SumOfOperators}}
