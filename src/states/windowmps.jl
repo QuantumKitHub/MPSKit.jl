@@ -40,10 +40,10 @@ mutable struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFinite
     window::FiniteMPS{A,B}
     right_gs::InfiniteMPS{A,B}
 
-    function WindowMPS(Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B},
-                       Ψᵣ::InfiniteMPS{A,B}=copy(Ψₗ)) where {A<:GenericMPSTensor,B<:MPSBondTensor}
-        left_virtualspace(Ψₗ, 0) == left_virtualspace(Ψₘ, 0) &&
-            right_virtualspace(Ψₘ, length(Ψₘ)) == right_virtualspace(Ψᵣ, length(Ψₘ)) ||
+    function WindowMPS{A,B}(Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B},
+                       Ψᵣ::InfiniteMPS{A,B}=Ψₗ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+        right_virtualspace(Ψₗ, 0) == left_virtualspace(Ψₘ, 0) &&
+            right_virtualspace(Ψₘ, length(Ψₘ)) == left_virtualspace(Ψᵣ, 0) ||
             throw(SpaceMismatch("Mismatch between window and environment virtual spaces"))
         return new{A,B}(Ψₗ, Ψₘ, Ψᵣ)
     end
@@ -53,34 +53,38 @@ end
 Constructors
 ===========================================================================================#
 # here i would like an outer constructor that copies the left and right inf environments
+function WindowMPS(Ψₗ::InfiniteMPS{A,B},Ψₘ::FiniteMPS{A,B},
+                Ψᵣ::InfiniteMPS{A,B}=Ψₗ; docopy = true) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+    return WindowMPS{A,B}(docopy ? copy(Ψₗ) : Ψₗ, Ψₘ, docopy ? copy(Ψᵣ) : Ψᵣ)
+end
 
 function WindowMPS(Ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor},
-                   Ψᵣ::InfiniteMPS=copy(Ψₗ))
+                   Ψᵣ::InfiniteMPS=Ψₗ)
     return WindowMPS(Ψₗ, FiniteMPS(site_tensors), Ψᵣ)
 end
 
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    maxvirtspace::S, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=copy(Ψₗ)) where {S<:ElementarySpace}
+                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
     Ψₘ = FiniteMPS(f, elt, physspaces, maxvirtspace; left=left_virtualspace(Ψₗ, 0),
                    right=right_virtualspace(Ψᵣ, length(physspaces)))
     return WindowMPS(Ψₗ, Ψₘ, Ψᵣ)
 end
 function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    maxvirtspace::S, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=copy(Ψₗ)) where {S<:ElementarySpace}
+                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
     return WindowMPS(rand, Defaults.eltype, physspaces, maxvirtspace, Ψₗ, Ψᵣ)
 end
 
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    virtspaces::Vector{S}, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=copy(Ψₗ)) where {S<:ElementarySpace}
+                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
     Ψₘ = FiniteMPS(f, elt, physspaces, virtspaces)
     return WindowMPS(Ψₗ, Ψₘ, Ψᵣ)
 end
 function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    virtspaces::Vector{S}, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=copy(Ψₗ)) where {S<:ElementarySpace}
+                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
     return WindowMPS(rand, Defaults.eltype, physspaces, virtspaces, Ψₗ, Ψᵣ)
 end
 
@@ -109,7 +113,7 @@ function WindowMPS(Ψ::InfiniteMPS{A,B}, L::Int) where {A,B}
     ACs .= Ψ.AC[1:L]
     CLs .= Ψ.CR[0:L]
 
-    return WindowMPS(copy(Ψ), FiniteMPS(ALs, ARs, ACs, CLs), copy(Ψ))
+    return WindowMPS(Ψ, FiniteMPS(ALs, ARs, ACs, CLs), Ψ)
 end
 
 #===========================================================================================
@@ -117,7 +121,7 @@ Utility
 ===========================================================================================#
 
 function Base.copy(Ψ::WindowMPS)
-    return WindowMPS(copy(Ψ.left_gs), copy(Ψ.window), copy(Ψ.right_gs))
+    return WindowMPS(Ψ.left_gs, copy(Ψ.window), Ψ.right_gs)
 end
 
 # not sure about the underlying methods...

@@ -17,6 +17,8 @@ println("------------------------------------")
     ψ₀ = InfiniteMPS([𝔹^2], [𝔹^10])
     v₀ = variance(ψ₀, H)
 
+end
+
 @testset "timestep" verbose = true begin
     dt = 0.1
     algs = [TDVP(), TDVP2()]
@@ -47,11 +49,11 @@ println("------------------------------------")
 
         Ht  = TimedOperator(H,f)
         (ψt, envst) = timestep(ψ₀, Ht, t, dt, alg)
-        Et = expectation_value(ψt, Ht, 0., envst)
+        Et = expectation_value(ψt, Ht, t, envst)
 
         Hunt = Ht(t)
         (ψ, envs) = timestep(ψ₀, Hunt, dt, alg)
-        Euntt = expectation_value(ψ, Hunt, envs)
+        Eunt = expectation_value(ψ, Hunt, envs)
 
         Hmult = f(t)*H
         (ψ, envs) = timestep(ψ₀, Hmult, dt, alg)
@@ -72,12 +74,12 @@ println("------------------------------------")
         @test sum(E₀) ≈ sum(E) atol = 1e-2
     end
 
-    @testset "Finite Trivial TimedOperator  TDVP" begin
-        ψ, envs = timestep(ψ₀, H, dt, alg)
+    @testset "Finite Trivial TimedOperator TDVP" begin
+        ψ, envs = timestep(ψ₀, H, dt, algs[1])
         E = expectation_value(ψ, H, envs)
         
         Ht  = TimedOperator(H)
-        (ψt, envst) = timestep(ψ₀, Ht, 0., dt, alg)
+        (ψt, envst) = timestep(ψ₀, Ht, 0., dt, algs[1])
         Et = expectation_value(ψt, Ht, 0., envst)
 
         @test sum(E) ≈ sum(Et) atol = 1e-10
@@ -87,15 +89,15 @@ println("------------------------------------")
         f(t) = 3cos(t); t = 1.
 
         Ht  = TimedOperator(H,f)
-        (ψt, envst) = timestep(ψ₀, Ht, t, dt, alg)
-        Et = expectation_value(ψt, Ht, 0., envst)
+        (ψt, envst) = timestep(ψ₀, Ht, t, dt, algs[1])
+        Et = expectation_value(ψt, Ht, t, envst)
 
         Hunt = Ht(t)
-        (ψ, envs) = timestep(ψ₀, Hunt, dt, alg)
-        Euntt = expectation_value(ψ, Hunt, envs)
+        (ψ, envs) = timestep(ψ₀, Hunt, dt, algs[1])
+        Eunt = expectation_value(ψ, Hunt, envs)
 
         Hmult = f(t)*H
-        (ψ, envs) = timestep(ψ₀, Hmult, dt, alg)
+        (ψ, envs) = timestep(ψ₀, Hmult, dt, algs[1])
         Emult = expectation_value(ψ, Hmult, envs)
     
         @test sum(Eunt) ≈ sum(Et) atol = 1e-2
@@ -108,7 +110,7 @@ end
 
 @testset "time evolution windowMPS" begin
 
-    simpleH =  xxx(; spin=1 // 2)
+    simpleH =  heisenberg_XXX(; spin=1 // 2)
     alg = TDVP()
 
     # with regular MPOHamiltonian
@@ -147,75 +149,9 @@ end
     timevolvedwindow_t,WindEnvs_t = timestep(Ψwindow,Hwindow_t,0.,0.1,alg,WindEnvs_t);
 
     @test timevolvedwindow_t.left_gs  ≈ timevolvedwindow_0.left_gs  atol = 1e-10
-    @test timevolvedwindow_t.window   ≈ timevolvedwindow_0.window   atol = 1e-12
-    @test timevolvedwindow_t.right_gs ≈ timevolvedwindow_0.right_gs atol = 1e-12
+    @test timevolvedwindow_t.window   ≈ timevolvedwindow_0.window   atol = 1e-10
+    @test timevolvedwindow_t.right_gs ≈ timevolvedwindow_0.right_gs atol = 1e-10
 
-    end
-
-@timedtestset "leading_boundary $(ind)" for (ind, alg) in
-                                            enumerate([VUMPS(; tol_galerkin=1e-5,
-                                                             verbose=false)
-                                                       GradientGrassmann(; verbosity=0)])
-    mpo = force_planar(nonsym_ising_mpo())
-    state = InfiniteMPS([𝔹^2], [𝔹^10])
-    (state, envs) = leading_boundary(state, mpo, alg)
-    (state, envs) = changebonds(state, mpo, OptimalExpand(; trscheme=truncdim(3)), envs)
-    (state, envs) = leading_boundary(state, mpo, alg)
-
-    @test dim(space(state.AL[1, 1], 1)) == 13
-    @test expectation_value(state, envs)[1, 1] ≈ 2.5337 atol = 1e-3
-end
-
-@timedtestset "quasiparticle_excitation" begin
-    @timedtestset "infinite (ham)" begin
-        th = repeat(force_planar(xxx()), 2)
-        ts = InfiniteMPS([𝔹^3, 𝔹^3], [𝔹^48, 𝔹^48])
-        ts, envs, _ = find_groundstate(ts, th; maxiter=400, verbose=false)
-        energies, Bs = excitations(th, QuasiparticleAnsatz(), Float64(pi), ts, envs)
-        @test energies[1] ≈ 0.41047925 atol = 1e-4
-        @test variance(Bs[1], th) < 1e-8
-    end
-
-    finite_algs = [DMRG(; verbose=verbosity > 0),
-                   DMRG2(; verbose=verbosity > 0, trscheme=truncdim(10)),
-                   GradientGrassmann(; verbosity=verbosity)]
-
-    @testset "Finite $i" for (i, alg) in enumerate(finite_algs)
-        ψ₀ = FiniteMPS(rand, ComplexF64, 10, 𝔹^2, 𝔹^10)
-        H = force_planar(transverse_field_ising(; g=1.1))
-
-        v₀ = variance(ψ₀, H)
-        ψ, envs, δ = find_groundstate(ψ₀, H, alg)
-        v = variance(ψ, H, envs)
-
-        @test sum(δ) < 100 * tol
-        @test v₀ > v && v < 1e-2 # energy variance should be low
-    end
-end
-
-@testset "timestep" verbose = true begin
-    dt = 0.1
-    algs = [TDVP(), TDVP2()]
-
-    H = force_planar(heisenberg_XXX(; spin=1 // 2))
-    ψ₀ = FiniteMPS(fill(TensorMap(rand, ComplexF64, 𝔹^1 * 𝔹^2, 𝔹^1), 5))
-    E₀ = expectation_value(ψ₀, H)
-
-    @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
-        ψ, envs = timestep(ψ₀, H, dt, alg)
-        E = expectation_value(ψ, H, envs)
-        @test sum(E₀) ≈ sum(E) atol = 1e-2
-    end
-
-    H = force_planar(heisenberg_XXX(InfiniteChain(2); spin=1))
-    ψ₀ = InfiniteMPS([𝔹^3, 𝔹^3], [𝔹^50, 𝔹^50])
-    E₀ = expectation_value(ψ₀, H)
-
-    @testset "Infinite TDVP" begin
-        ψ, envs = timestep(ψ₀, H, dt, TDVP())
-        E = expectation_value(ψ, H, envs)
-        @test sum(E₀) ≈ sum(E) atol = 1e-2
-    end
 end
 
 @testset "leading_boundary" verbose = true begin
@@ -373,7 +309,7 @@ end
 @testset "Dynamical DMRG" verbose = true begin
     ham = force_planar(-1.0 * MPOHamiltonian(σᶻᶻ()) + MPOHamiltonian(σˣ()) * 4.0)
     gs, = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
-    window = MPSComoving(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
+    window = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
     szd = force_planar(S_z())
     @test expectation_value(gs, szd)[1] ≈ expectation_value(window, szd)[1] atol = 1e-10

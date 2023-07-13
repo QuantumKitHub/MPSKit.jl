@@ -15,12 +15,13 @@ Base.length(x::SumOfOperators) = prod(size(x))
 # singleton constructor
 SumOfOperators(x) = SumOfOperators([x])
 
-# handy constructor for SumOfOperators{TimedOperator} and backwards compatibility for LinearCombination
-LinearCombination(ops::Union{AbstractVector,Tuple},fs::Union{AbstractVector,Tuple}) = SumOfOperators( collect(map( (op,f)->MultipliedOperator(op,f),ops,fs)) )
+# handy constructor for SumOfOperators{MultipliedOperator} and backwards compatibility for LinearCombination
+SumOfOperators(ops::AbstractVector,fs::AbstractVector) = SumOfOperators( map( (op,f)->MultipliedOperator(op,f),ops,fs))
+LinearCombination(ops::Tuple,fs::Tuple) = SumOfOperators( collect(ops), collect(fs))
 
 
 # we can add operators to SumOfOperators by using +
-Base.:+(op1::MultipliedOperator{O,F},op2::MultipliedOperator{O,F}) where {O,F} = SumOfOperators([op1,op2])
+Base.:+(op1::MultipliedOperator{O,F},op2::MultipliedOperator{O,G}) where {O,F,G} = SumOfOperators([op1,op2])
 
 # this we can also do with promote
 Base.:+(op1::TimedOperator{O},op2::Union{O,UntimedOperator{O}}) where O   = SumOfOperators(TimedOperator{O}[op1, TimedOperator(op2)  ])
@@ -35,6 +36,8 @@ Base.:+(SumOfOps1::SumOfOperators{O},SumOfOps2::SumOfOperators{O}) where {O} = S
 
 Base.:+(SumOfOps::SumOfOperators{T},op::O) where {O,T<:MultipliedOperator{O}} = SumOfOps + SumOfOperators(UntimedOperator(op))
 Base.:+(op::O,SumOfOps::SumOfOperators{T}) where {O,T<:MultipliedOperator{O}} = SumOfOperators(UntimedOperator(op)) + SumOfOps
+
+(x::SumOfOperators{<: UntimedOperator})() = sum(op->op(),x)
 
 #ignore time-dependence by default
 (x::SumOfOperators)(t::Number) = x

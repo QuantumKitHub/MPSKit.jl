@@ -69,7 +69,6 @@ end
 include("utility/periodicarray.jl")
 include("utility/utility.jl") #random utility functions
 include("utility/plotting.jl")
-#include("utility/linearcombination.jl")
 
 #maybe we should introduce an abstract state type
 include("states/window.jl")
@@ -103,7 +102,6 @@ include("environments/mpohaminfenv.jl")
 include("environments/multipleenv.jl")
 include("environments/qpenv.jl")
 include("environments/idmrgenv.jl")
-#include("environments/lazylincocache.jl")
 
 abstract type Algorithm end
 

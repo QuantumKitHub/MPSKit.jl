@@ -129,11 +129,9 @@ end
 
 expectation_value(state::FiniteQP,opp) = expectation_value(convert(FiniteMPS,state),opp)
 
-# ignore time-dependence by default
-expectation_value(Ψ,op,t::Number,args...) = expectation_value(Ψ,op,args...)
-
 # define expectation_value for MultipliedOperator as scalar multiplication of the non-multiplied result, instead of multiplying the operator itself
 expectation_value(Ψ,op::TimedOperator,t::Number,args...) = op.f(t)*expectation_value(Ψ,op.op,args...)
+expectation_value(Ψ,op::UntimedOperator,t::Number,args...) = expectation_value(Ψ,op::UntimedOperator,args...)
 expectation_value(Ψ,op::UntimedOperator,args...) = op.f*expectation_value(Ψ,op.op,args...)
 
 # define expectation_value for SumOfOperators

@@ -41,10 +41,7 @@ function Base.:*(op::TimedOperator, b::Number)
 end
 Base.:*(b::Number, op::MultipliedOperator) = op * b
 
-#do we need to define * for two TimedOperators?
-
-Base.convert(::Type{MultipliedOperator},x::Union{MPOHamiltonian,DenseMPO,SparseMPO}) = UntimedOperator(x)
-#Base.convert(::Type{TimedOperator},x::Union{MPOHamiltonian,DenseMPO,SparseMPO}) = TimedOperator(x)
+(x::UntimedOperator)() = x.f*x.op
 
 #ignore time-dependence by default
 (x::MultipliedOperator)(t::Number) = x

@@ -2,9 +2,3 @@ docs/build
 Manifest.toml
 .vscode
 .DS_Store
-timedepenv_old.jl
-Testfile.jl
-tdvp_old.jl
-timedeptdvp_old.jl
-derivatives_old.jl
-timedep.jl

@@ -193,10 +193,10 @@ end
     end
 end
 
-@timedtestset "Copy _ $(d)" for (D,d) in [(𝔹^10, 𝔹^2),
+@testset "Copy $(d)" for (D,d) in [(𝔹^10, 𝔹^2),
                                 (Rep[SU₂](1 => 1, 0 => 3),Rep[SU₂](1 => 1)),
                                 (Rep[U₁]((0 => 20)), Rep[U₁](0 => 2))]
-    @timedtestset "InfiniteMPS $(d)" begin
+    @testset "InfiniteMPS $(d)" begin
 
         period = rand(1:4)
         Ψ = InfiniteMPS(fill(d, period), fill(D, period))
@@ -208,7 +208,7 @@ end
         @test abs(norm(Ψ_copied) - norm(Ψ)) > 0.5
     end
 
-    @timedtestset "WindowMPS $(d)" begin
+    @testset "WindowMPS $(d)" begin
 
         period = rand(1:4)
         Ψ = InfiniteMPS(fill(d, period), fill(D, period));

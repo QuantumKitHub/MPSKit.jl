@@ -82,10 +82,10 @@ function rightexpand(st::WindowMPS,H::Union{<:MultipliedOperator,<:SumOfOperator
 end
 rightexpand(st::WindowMPS,H::Union{MPOHamiltonian,DenseMPO,SparseMPO},t::Number,Envs; kwargs...) = rightexpand(st,UntimedOperator(H),t,Envs; kwargs...)
 
-function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP,env::Window=environments(Ψ,H))
+function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP,env::Window=environments(Ψ,H); leftevolve=true, rightevolve=true)
    
     #first evolve left state
-    if !isnothing(H.left)
+    if leftevolve
         nleft, _ = timestep(Ψ.left_gs, H.left, t, dt, alg, env.left; leftorthflag = true) #env gets updated in place
         _update_leftEnv!(nleft, env)
     else
@@ -113,7 +113,7 @@ function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP,env
     converged == 0 &&
             @info "time evolving ac($(length(Ψ))) failed $(convhist.normres)"
 
-    if !isnothing(H.right)
+    if rightevolve
         nright, _ = timestep(Ψ.right_gs, H.right, t, dt, alg, env.right, leftorthflag = false) #env gets updated in place
         _update_rightEnv!(nright, env)
     else
@@ -141,11 +141,11 @@ function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP,env
     return WindowMPS(nleft,Ψ.window,nright),env
 end
 
-function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP2,env::Window=environments(Ψ,H); kwargs...)
+function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP2,env::Window=environments(Ψ,H); leftevolve=false, rightevolve = false, kwargs...)
     singleTDVPalg = TDVP(integrator=alg.integrator,tolgauge=alg.tolgauge,maxiter=alg.maxiter)
     
     #first evolve left state
-    if !isnothing(H.left)
+    if leftevolve
         # expand the bond dimension using changebonds
         nleft,_ = leftexpand(Ψ,H.left,t,env.left; kwargs...)
         # fill it by doing regular TDVP
@@ -175,7 +175,7 @@ function timestep!(Ψ::WindowMPS, H::Window, t::Number, dt::Number,alg::TDVP2,en
         end
     end
 
-    if !isnothing(H.right)
+    if rightevolve
         # expand the bond dimension using changebonds
         nright,_ = rightexpand(Ψ,H.right,t,env.right; kwargs...)
         # fill it by doing regular TDVP
