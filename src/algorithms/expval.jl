@@ -19,7 +19,7 @@ end
 """
 calculates the expectation value of op = op1*op2*op3*... (ie an N site operator) starting at site at
 """
-function expectation_value(state::Union{FiniteMPS{T},WindowMPS{T},InfiniteMPS{T}},op::AbstractArray{<:AbstractTensorMap}, at::Int) where T <: MPSTensor
+function expectation_value(state::Union{FiniteMPS{T},InfiniteMPS{T}},op::AbstractArray{<:AbstractTensorMap}, at::Int) where T <: MPSTensor
     firstspace = _firstspace(first(op));
     (firstspace == oneunit(firstspace) && _lastspace(last(op)) == firstspace') ||
         throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"));
@@ -29,6 +29,20 @@ function expectation_value(state::Union{FiniteMPS{T},WindowMPS{T},InfiniteMPS{T}
     @plansor v[-1 -2;-3] := isomorphism(storagetype(T),left_virtualspace(state,at-1),left_virtualspace(state,at-1))[-1;-3]*conj(ut[-2])
     tmp = v*TransferMatrix(state.AL[at:at+length(op)-1],op,state.AL[at:at+length(op)-1])
     return @plansor tmp[1 2;3]*ut[2]*state.CR[at+length(op)-1][3;4]*conj(state.CR[at+length(op)-1][1;4]);
+end
+
+function expectation_value(state::WindowMPS{T},op::AbstractArray{<:AbstractTensorMap}, at::Int) where T <: MPSTensor
+    firstspace = _firstspace(first(op));
+    (firstspace == oneunit(firstspace) && _lastspace(last(op)) == firstspace') ||
+        throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"));
+
+
+    ut = fill_data!(similar(op[1],firstspace),one)
+    @plansor v[-1 -2;-3] := isomorphism(storagetype(T),left_virtualspace(state,at-1),left_virtualspace(state,at-1))[-1;-3]*conj(ut[-2])
+    ALs = [state.AL[at:min(at+length(op)-1,length(state))]...,state.right_gs.AL[length(state)+1:at+length(op)-1]...]
+    tmp = v*TransferMatrix(ALs,op,ALs)
+    CR = at+length(op)-1 > length(state) ? state.right_gs.CR[at+length(op)-1] : state.CR[at+length(op)-1]
+    return @plansor tmp[1 2;3]*ut[2]*CR[3;4]*conj(CR[1;4]);
 end
 
 
@@ -129,6 +143,8 @@ end
 
 expectation_value(state::FiniteQP,opp) = expectation_value(convert(FiniteMPS,state),opp)
 
+expectation_value(Ψ,op,t,args...) = expectation_value(Ψ,op,args...)
+
 # define expectation_value for MultipliedOperator as scalar multiplication of the non-multiplied result, instead of multiplying the operator itself
 expectation_value(Ψ,op::TimedOperator,t::Number,args...) = op.f(t)*expectation_value(Ψ,op.op,args...)
 expectation_value(Ψ,op::UntimedOperator,t::Number,args...) = expectation_value(Ψ,op::UntimedOperator,args...)
@@ -150,7 +166,7 @@ function expectation_value(Ψ::WindowMPS,windowH::Window,t::Number,at::Int64)
     if at < 1
         return expectation_value(Ψ.left_gs,windowH.left,t,at)
     elseif 1 <= at <= length(Ψ.window)
-        return expectation_value(Ψ.window,windowH.middle,t,at)
+        return expectation_value(Ψ,windowH.middle,t,at)
     else
         return expectation_value(Ψ.right_gs,windowH.right,t,at)
     end
@@ -158,7 +174,7 @@ end
 
 function expectation_value(Ψ::WindowMPS,windowH::Window,t::Number,windowEnvs::Window{C,D,C}=environments(Ψ,windowH)) where {C <: Union{MultipleEnvironments,Cache}, D <: Union{MultipleEnvironments,Cache}}
     left = expectation_value(Ψ.left_gs,windowH.left,t,windowEnvs.left)
-    middle = expectation_value(Ψ.window,windowH.middle,t,windowEnvs.middle)
+    middle = expectation_value(Ψ,windowH.middle,t,windowEnvs.middle)
     right = expectation_value(Ψ.right_gs,windowH.right,t,windowEnvs.right)
     return [left.data...,middle...,right.data...]
 end
