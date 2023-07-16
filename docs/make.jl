@@ -2,8 +2,10 @@ using MPSKit
 using Documenter
 using Weave
 
-example_in = abspath("examples")
-example_out = abspath(joinpath("src", "examples"))
+example_in = joinpath(@__DIR__, "examples")
+example_out = joinpath(@__DIR__, "src", "examples")
+
+isdir(example_out) || mkdir(example_out)
 
 example_pages = []
 for example in readdir(example_in)
@@ -15,7 +17,7 @@ for example in readdir(example_in)
     
     weave(joinpath(example_in, example);
         fig_ext=".svg", fig_path="figures",
-        cache=:all, cache_path=joinpath(abspath(example_in), "cache"),
+        cache=:all, cache_path=joinpath(example_in, "cache"),
         out_path=example_out, doctype="github", keep_unicode=true)
     push!(example_pages, joinpath("examples", splitext(example)[1] * ".md"))
 end
