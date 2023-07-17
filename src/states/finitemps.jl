@@ -295,10 +295,8 @@ function Base.show(io::IO, ::MIME"text/plain", Ψ::FiniteMPS)
     show(context, Ψ)
 end
 Base.show(io::IO, Ψ::FiniteMPS) = show(convert(IOContext, io), Ψ)
-
-const charset = (; start="┌", mid="├", stop="└", ver="│", dash="──")
-
 function Base.show(io::IOContext, Ψ::FiniteMPS)
+    charset = (; start="┌", mid="├", stop="└", ver="│", dash="──")
     limit = get(io, :limit, false)::Bool
     half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
     if !haskey(io, :compact)
