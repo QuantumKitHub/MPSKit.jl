@@ -183,6 +183,12 @@ E0 = expectation_value(mps, H)
 println("<mps|H|mps> = $(sum(real(E0)) / length(mps))")
 ```
 
-### Further reading
+### Additional Resources
 
-For more information, see the Manual section of the documentation, or the [Examples](@ref) section for some tutorials.
+For more detailed information on the functionality and capabilities of MPSKit, refer to the
+Manual section, or have a look at the [Examples](@ref) page.
+
+Keep in mind that the documentation is still a work in progress, and that some features may
+not be fully documented yet. If you encounter any issues or have questions, please check the
+library's [issue tracker](https://github.com/maartenvd/MPSKit.jl/issues) on the GitHub
+repository and open a new issue.

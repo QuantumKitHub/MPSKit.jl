@@ -27,7 +27,7 @@ For those ``g`` we expect non-analicities to occur at ``t_n ≈ 2.35 (n + 1/2)``
 First we construct the hamiltonian in mpo form, and obtain the pre-quenched groundstate:
 """
 
-H₀ = transverse_field_ising(; hx=-0.5)
+H₀ = transverse_field_ising(; g=-0.5)
 
 L = 20
 ψ₀ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^10)
@@ -46,7 +46,7 @@ md"""
 We will initially use a two-site TDVP scheme to dynamically increase the bond dimension while time evolving, and later on switch to a faster one-site scheme. A single timestep can be done using
 """
 
-H₁ = transverse_field_ising(; hx=-2.0)
+H₁ = transverse_field_ising(; g=-2.0)
 ψₜ = deepcopy(ψ₀)
 dt = 0.01
 ψₜ, envs = timestep(ψₜ, H₁, dt, TDVP2(; trscheme=truncdim(20)));

@@ -290,7 +290,8 @@ function max_Ds(Ψ::FiniteMPS)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", Ψ::FiniteMPS)
-    println(io, length(Ψ) == 1 ? "single site" : "$length-site", " FiniteMPS:")
+    L = length(Ψ)
+    println(io, L == 1 ? "single site" : "$L-site", " FiniteMPS:")
     context = IOContext(io, :typeinfo => eltype(Ψ), :compact => true)
     show(context, Ψ)
 end

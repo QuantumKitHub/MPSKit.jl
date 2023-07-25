@@ -16,7 +16,7 @@ Then we specify an initial guess, which we then further optimize.
 Working directly in the thermodynamic limit, this is achieved as follows:
 """
 
-H = xxz(; spin=1//2);
+H = heisenberg_XXX(; spin=1//2);
 
 md"""
 We then need an intial state, which we shall later optimize. In this example we work directly in the thermodynamic limit.
@@ -26,7 +26,7 @@ random_data = TensorMap(rand, ComplexF64, ℂ^20 * ℂ^2, ℂ^20);
 state = InfiniteMPS([random_data]);
 
 md"""
-The groundstate can then be found by calling find_groundstate.
+The groundstate can then be found by calling `find_groundstate`.
 """
 
 groundstate, cache, delta = find_groundstate(state, H, VUMPS());
@@ -69,11 +69,11 @@ This is not a big obstacle, you can simply repeat the original hamiltonian.
 Alternatively, the hamiltonian can be constructed directly on a two-site unitcell by making use of MPSKitModels.jl's `@mpoham`.
 """
 
-# H2 = repeat(H, 2); -- copies the one-site version
-H2 = xxx(ComplexF64, ℤ{1}, InfiniteChain(2); spin=1//2)
+## H2 = repeat(H, 2); -- copies the one-site version
+H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin=1//2)
 groundstate, cache, delta = find_groundstate(state, H2, VUMPS(maxiter=100, tol_galerkin=1e-12));
 
-md""" 
+md"""
 We get convergence, but it takes an enormous amount of iterations.
 The reason behind this becomes more obvious at higher bond dimensions:
 """
@@ -98,7 +98,7 @@ The XXZ Heisenberg hamiltonian is SU(2) symmetric and we can exploit this to gre
 It is cumbersome to construct symmetric hamiltonians, but luckily su(2) symmetric XXZ is already implemented:
 """
 
-H2 = xxx(ComplexF64, SU₂, InfiniteChain(2); spin=1//2);
+H2 = heisenberg_XXX(ComplexF64, SU2Irrep, InfiniteChain(2); spin=1//2);
 
 md"""
 Our initial state should also be SU(2) symmetric.
@@ -121,4 +121,4 @@ Even though the bond dimension is higher than in the example without symmetry, c
 
 println(dim(V1))
 println(dim(V2))
-groundstate, cache, delta = find_groundstate(state, ham, VUMPS(maxiter=400, tol_galerkin=1e-12));
+groundstate, cache, delta = find_groundstate(state, H2, VUMPS(maxiter=400, tol_galerkin=1e-12));

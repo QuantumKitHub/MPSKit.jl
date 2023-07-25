@@ -61,9 +61,10 @@ function build_example(root, name)
 
     if !iscached(root, name)
         Literate.markdown(source_file, target_dir; execute=true, name="index",
-                        preprocess=attach_notebook_badge(root, name), mdstrings=true)
+                        preprocess=attach_notebook_badge(root, name), mdstrings=true,
+                        nbviewer_root_url="https://nbviewer.jupyter.org/github/maartenvd/MPSKit.jl/blob/gh-pages/dev/", binder_root_url="https://mybinder.org/v2/gh/maartenvd/MPSKit.jl/gh-pages?filepath=dev/", credits=false)
         Literate.notebook(source_file, target_dir; execute=false, name="main",
-                        preprocess=str -> replace(str, r"(?<!`)``(?!`)" => "\$"), mdstrings=true)
+                        preprocess=str -> replace(str, r"(?<!`)``(?!`)" => "\$"), mdstrings=true, credits=false)
 
         foreach(filter(!=("main.jl"), readdir(source_dir))) do f
             cp(joinpath(source_dir, f), joinpath(target_dir, f); force=true)
