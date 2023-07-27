@@ -9,53 +9,10 @@
 
 apply a transfer matrix to the left.
 
-
 ```
-             *---◄-
-      ┌─┐ ┌─┐|┌─┐
-    ─◄┤ │ │ ├*│ ├◄─
-      │Ā├◄┤v├◄┤A│ 
-    ┌─┤ │ │ │ │ ├─┐
-    │ └─┘ └─┘ └─┘ │
-    └──────◄──────┘
-```
-
-```
- |┌─┴─┐
- |│ A │
- ▼└┬─┬┘
- | ▼ │
-┌┴─┴┐│
-│ v │▼
-└─┬─┘│
-  └┐ │
-  ┌┴─┴┐
-  │ Ā │
-  └─┬─┘
-```
-
-```
-   ┌───┐
- ─◄┤ A ├◄┐
-   └─┬─┘ │
-     │  ┌┴┐
-     ▼  │v├-◄-
-     │  └┬┘
-   ┌─┴─┐ │
- ─►┤ Ā ├►┘
-   └───┘
-```
-
-```
-─A─┐
- │ v
-─Ā─┘
-```
-
-```
-─A─┐
- │ v-
-─Ā─┘
+ ┌─A─
+-v │
+ └─Ā─
 ```
 """
 @generated function transfer_left(v::AbstractTensorMap{S,1,N₁}, A::GenericMPSTensor{S,N₂},
@@ -71,13 +28,12 @@ end
     transfer_right(v, A, Ā)
     
 apply a transfer matrix to the right.
-             ┌───◄─
-      ┌─┐ ┌─┐│┌─┐
-    ─◄┤ │ │ ├┘│ ├◄─
-      │A├◄┤v├◄┤Ā│ 
-    ┌─┤ │ │ │ │ ├─┐
-    │ └─┘ └─┘ └─┘ │
-    └──────►──────┘
+
+```
+─A─┐
+ │ v-
+─Ā─┘
+```
 """
 @generated function transfer_right(v::AbstractTensorMap{S,1,N₁}, A::GenericMPSTensor{S,N₂},
                                    Ā::GenericMPSTensor{S,N₂}) where {S,N₁,N₂}
