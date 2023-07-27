@@ -59,6 +59,13 @@ For more information, check out the [TensorKit documentation](https://jutho.gith
 
 ## Conventions
 
+The general definition of an MPS tensor is as follows:
+
+![convention MPSTensor](mps_tensor_definition.png)
+
+These tensors are allowed to have an arbitrary number of physical legs, and both FiniteMPS
+as well as InfiniteMPS will be able to handle the resulting objects. This allows for example
+for the definition of boundary tensors in PEPS code, which have two physical legs.
 
 
 Within MPSKit we defined a set of [states](@ref um_states), a number of [operators](@ref um_operators) and some [algorithms](@ref um_algorithms) which combine the two in a nontrivial way.
