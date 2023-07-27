@@ -259,15 +259,15 @@ end
 
     for λ in [1.05, 2.0, 4.0]
         H = hamiltonian(λ)
-        ψ = InfiniteMPS([ℂ^2], [ℂ^20])
-        ψ, envs, = find_groundstate(ψ, H, VUMPS(; maxiter=1000, verbose=false))
+        ψ = InfiniteMPS([ℂ^2], [ℂ^16])
+        ψ, envs, = find_groundstate(ψ, H, VUMPS(; maxiter=100, verbose=false))
 
         numerical_scusceptibility = fidelity_susceptibility(ψ, H, [H_X], envs; maxiter=10)
         @test numerical_scusceptibility[1, 1] ≈ analytical_susceptibility(λ) atol = 1e-2
 
-        #test if the finite fid sus approximates the analytical one with increasing system size
+        # test if the finite fid sus approximates the analytical one with increasing system size
         fin_en = map([20, 15, 10]) do L
-            ψ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^20)
+            ψ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^16)
             ψ, envs, = find_groundstate(ψ, H, DMRG(; verbose=false))
             numerical_scusceptibility = fidelity_susceptibility(ψ, H, [H_X], envs;
                                                                 maxiter=10)
