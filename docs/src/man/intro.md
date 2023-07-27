@@ -61,32 +61,23 @@ For more information, check out the [TensorKit documentation](https://jutho.gith
 
 The general definition of an MPS tensor is as follows:
 
-![convention MPSTensor](mps_tensor_definition.png)
+![convention MPSTensor](../assets/mps_tensor_definition.png)
 
-These tensors are allowed to have an arbitrary number of physical legs, and both FiniteMPS
-as well as InfiniteMPS will be able to handle the resulting objects. This allows for example
-for the definition of boundary tensors in PEPS code, which have two physical legs.
+These tensors are allowed to have an arbitrary number of physical legs, and both `FiniteMPS`
+as well as `InfiniteMPS` will be able to handle the resulting objects. This allows for
+example for the definition of boundary tensors in PEPS code, which have two physical legs.
 
+Similarly, the definition of a bond tensor, appearing in between two MPS tensors, is as
+follows:
 
-Within MPSKit we defined a set of [states](@ref um_states), a number of [operators](@ref um_operators) and some [algorithms](@ref um_algorithms) which combine the two in a nontrivial way.
+![convention BondTensor](../assets/bond_tensor_definition.png)
 
-As a simple example we can define a FiniteMPS
-```julia
-state = FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10);
-```
+Finally, the definition of a MPO tensor, which is used to represent statistical mechanics
+problems as well as quantum hamiltonians, is represented as:
 
-A hamiltonian operator
-```julia
-opp = nonsym_ising_ham();
-```
+![convention MPOTensor](../assets/mpo_tensor_definition.png)
 
-And use this to find the groundstate
-```julia
-(groundstate,_) = find_groundstate(state,opp,DMRG());
-```
-
-## Tips & tricks
-
-- There is an examples folder
-- Julia inference is taxed a lot; the first time any function is run takes a really long time
-- There are predefined hamiltonians in [MPSKitModels.jl](https://github.com/maartenvd/MPSKitModels.jl)
+While this results at first glance in the not very intuitive ordering of spaces as $V_l
+\otimes P \leftarrow P \otimes V_r$, this is actually the most natural ordering for keeping
+the algorithms planar. In particular, this is relevant for dealing with fermionic systems,
+where additional crossings would lead to sign problems.
