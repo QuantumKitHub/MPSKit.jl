@@ -2,9 +2,9 @@ println("------------------------------------")
 println("|     States                       |")
 println("------------------------------------")
 @testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
-                                                             (Rep[SU₂](1 => 1, 0 => 3),
-                                                              Rep[SU₂](0 => 1) * Rep[SU₂](0 => 1),
-                                                              ComplexF32)]
+                                                                  (Rep[SU₂](1 => 1, 0 => 3),
+                                                                   Rep[SU₂](0 => 1) * Rep[SU₂](0 => 1),
+                                                                   ComplexF32)]
     ts = FiniteMPS(rand, elt, rand(3:20), d, D)
 
     ovl = dot(ts, ts)
@@ -28,17 +28,18 @@ println("------------------------------------")
 end
 
 @testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
-                                                             (Rep[U₁](-1 => 3, 0 => 3, 1 => 3),
-                                                              Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
-                                                              ComplexF64)]
+                                                                  (Rep[U₁](-1 => 3, 0 => 3, 1 => 3),
+                                                                   Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
+                                                                   ComplexF64)]
     ts_small = FiniteMPS(rand, elt, 4, d, D)
     ts_small2 = FiniteMPS(MPSKit.decompose_localmps(convert(TensorMap, ts_small)))
     @test dot(ts_small, ts_small2) ≈ dot(ts_small, ts_small)
 end
 
-@testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
-                                                               (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
-                                                                ComplexF64)]
+@testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
+                                                    [(𝔹^10, 𝔹^2, ComplexF64),
+                                                     (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
+                                                      ComplexF64)]
     tol = Float64(eps(real(elt)) * 100)
 
     ts = InfiniteMPS([TensorMap(rand, elt, D * d, D), TensorMap(rand, elt, D * d, D)];
@@ -63,8 +64,8 @@ end
 
 @testset "MPSMultiline ($(sectortype(D)), $elt)" for (D, d, elt) in
                                                      [(𝔹^10, 𝔹^2, ComplexF64),
-                                                                (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
-                                                                 ComplexF32)]
+                                                      (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
+                                                       ComplexF32)]
     tol = Float64(eps(real(elt)) * 100)
     ts = MPSMultiline([TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D);
                        TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)];
@@ -138,11 +139,13 @@ end
     @test e2[2] ≈ e3[2]
 end
 
-@testset "Quasiparticle state" verbose=true begin
-    @testset "Finite" verbose=true for (th, D, d) in
-                               [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
-                                (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3),
-                                 Rep[SU₂](1 => 1))]
+@testset "Quasiparticle state" verbose = true begin
+    @testset "Finite" verbose = true for (th, D, d) in
+                                         [(force_planar(transverse_field_ising()), 𝔹^10,
+                                           𝔹^2),
+                                          (heisenberg_XXX(SU2Irrep; spin=1),
+                                           Rep[SU₂](1 => 1, 0 => 3),
+                                           Rep[SU₂](1 => 1))]
         ts = FiniteMPS(rand, ComplexF64, rand(4:20), d, D)
         normalize!(ts)
 
@@ -169,9 +172,9 @@ end
     end
 
     @testset "Infinite" for (th, D, d) in
-                                 [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
-                                  (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3),
-                                   Rep[SU₂](1 => 1))]
+                            [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
+                             (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3),
+                              Rep[SU₂](1 => 1))]
         period = rand(1:4)
         ts = InfiniteMPS(fill(d, period), fill(D, period))
 

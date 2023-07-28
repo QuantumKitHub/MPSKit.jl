@@ -6,7 +6,8 @@ println("------------------------------------")
 pspaces = (𝔹^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
 vspaces = (𝔹^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
 
-@testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces, vspaces)
+@testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
+                                                    zip(pspaces, vspaces)
     #generate a 1-2-3 body interaction
     n = TensorMap(rand, ComplexF64, pspace, pspace)
     n += n'
