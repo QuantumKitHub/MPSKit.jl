@@ -18,23 +18,35 @@ quantum_pages = map(readdir(joinpath(example_dir, "quantum1d"))) do dir
     return joinpath("examples", "quantum1d", dir, "index.md")
 end
 
-makedocs(; modules=[MPSKit],
-         sitename="MPSKit.jl",
-         format=Documenter.HTML(; 
-              prettyurls=get(ENV, "CI", nothing) == "true",
-              mathengine = MathJax3(Dict(
-                     :loader => Dict("load" => ["[tex]/physics"]),
-                     :tex => Dict(
-                            "inlineMath" => [["\$","\$"], ["\\(","\\)"]],
-                            "tags" => "ams",
-                            "packages" => ["base", "ams", "autoload", "physics"],
-                     ),
-                     ))),
-         pages=["Home" => "index.md",
-                "Manual" => ["man/intro.md", "man/states.md", "man/operators.md",
-                             "man/algorithms.md", "man/environments.md",
-                             "man/parallelism.md"],
-                "Examples" => "examples/index.md",
-                "Library" => "lib/lib.md"])
+makedocs(;
+    modules=[MPSKit],
+    sitename="MPSKit.jl",
+    format=Documenter.HTML(;
+        prettyurls=get(ENV, "CI", nothing) == "true",
+        mathengine=MathJax3(
+            Dict(
+                :loader => Dict("load" => ["[tex]/physics"]),
+                :tex => Dict(
+                    "inlineMath" => [["\$", "\$"], ["\\(", "\\)"]],
+                    "tags" => "ams",
+                    "packages" => ["base", "ams", "autoload", "physics"],
+                ),
+            ),
+        ),
+    ),
+    pages=[
+        "Home" => "index.md",
+        "Manual" => [
+            "man/intro.md",
+            "man/states.md",
+            "man/operators.md",
+            "man/algorithms.md",
+            "man/environments.md",
+            "man/parallelism.md",
+        ],
+        "Examples" => "examples/index.md",
+        "Library" => "lib/lib.md",
+    ],
+)
 
 deploydocs(; repo="github.com/maartenvd/MPSKit.jl.git")

@@ -10,11 +10,12 @@ using LinearAlgebra: LinearAlgebra
 using Base: @kwdef
 
 #bells and whistles for mpses
-export InfiniteMPS, FiniteMPS, MPSComoving, PeriodicArray, MPSMultiline
+export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
+export PeriodicArray, Window
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
-export leftorth, rightorth, leftorth!, rightorth!, poison!, uniform_leftorth,
-       uniform_rightorth
+export leftorth,
+    rightorth, leftorth!, rightorth!, poison!, uniform_leftorth, uniform_rightorth
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR #should be properties
 
 #useful utility functions?
@@ -53,16 +54,16 @@ export transfer_left, transfer_right
 
 #default settings
 module Defaults
-const eltype = ComplexF64
-const maxiter = 100
-const tolgauge = 1e-14
-const tol = 1e-12
-const verbose = true
-_finalize(iter, state, opp, envs) = (state, envs)
+    const eltype = ComplexF64
+    const maxiter = 100
+    const tolgauge = 1e-14
+    const tol = 1e-12
+    const verbose = true
+    _finalize(iter, state, opp, envs) = (state, envs)
 
-import KrylovKit: GMRES, Arnoldi
-const linearsolver = GMRES(; tol, maxiter)
-const eigsolver = Arnoldi(; tol, maxiter)
+    import KrylovKit: GMRES, Arnoldi
+    const linearsolver = GMRES(; tol, maxiter)
+    const eigsolver = Arnoldi(; tol, maxiter)
 end
 
 include("utility/periodicarray.jl")
@@ -71,11 +72,12 @@ include("utility/plotting.jl")
 include("utility/linearcombination.jl")
 
 #maybe we should introduce an abstract state type
+include("states/window.jl")
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
 include("states/multiline.jl")
 include("states/finitemps.jl")
-include("states/comoving.jl")
+include("states/windowmps.jl")
 include("states/orthoview.jl")
 include("states/quasiparticle_state.jl")
 include("states/ortho.jl")

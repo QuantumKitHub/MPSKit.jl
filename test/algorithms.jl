@@ -5,13 +5,14 @@ println("------------------------------------")
 @testset "find_groundstate" verbose = true begin
     tol = 1e-6
     verbosity = 0
-    infinite_algs = [VUMPS(; tol_galerkin=tol, verbose=verbosity > 0),
-                     IDMRG1(; tol_galerkin=tol, verbose=verbosity > 0),
-                     IDMRG2(; trscheme=truncdim(12), tol_galerkin=tol,
-                            verbose=verbosity > 0),
-                     GradientGrassmann(; tol=tol, verbosity=verbosity),
-                     VUMPS(; tol_galerkin=100 * tol, verbose=verbosity > 0) &
-                     GradientGrassmann(; tol=tol, verbosity=verbosity)]
+    infinite_algs = [
+        VUMPS(; tol_galerkin=tol, verbose=verbosity > 0),
+        IDMRG1(; tol_galerkin=tol, verbose=verbosity > 0),
+        IDMRG2(; trscheme=truncdim(12), tol_galerkin=tol, verbose=verbosity > 0),
+        GradientGrassmann(; tol=tol, verbosity=verbosity),
+        VUMPS(; tol_galerkin=100 * tol, verbose=verbosity > 0) &
+        GradientGrassmann(; tol=tol, verbosity=verbosity),
+    ]
 
     H = force_planar(transverse_field_ising(; g=1.1))
     ψ₀ = InfiniteMPS([𝔹^2], [𝔹^10])
@@ -30,9 +31,11 @@ println("------------------------------------")
         @test v₀ > v && v < 1e-2 # energy variance should be low
     end
 
-    finite_algs = [DMRG(; verbose=verbosity > 0),
-                   DMRG2(; verbose=verbosity > 0, trscheme=truncdim(10)),
-                   GradientGrassmann(; verbosity=verbosity)]
+    finite_algs = [
+        DMRG(; verbose=verbosity > 0),
+        DMRG2(; verbose=verbosity > 0, trscheme=truncdim(10)),
+        GradientGrassmann(; verbosity=verbosity),
+    ]
 
     @testset "Finite $i" for (i, alg) in enumerate(finite_algs)
         ψ₀ = FiniteMPS(rand, ComplexF64, 10, 𝔹^2, 𝔹^10)
@@ -51,7 +54,7 @@ end
     dt = 0.1
     algs = [TDVP(), TDVP2()]
 
-    H = force_planar(heisenberg_XXX(; spin=1 // 2))
+    H = force_planar(heisenberg_XXX(; spin=1//2))
     ψ₀ = FiniteMPS(fill(TensorMap(rand, ComplexF64, 𝔹^1 * 𝔹^2, 𝔹^1), 5))
     E₀ = expectation_value(ψ₀, H)
 
@@ -73,8 +76,7 @@ end
 end
 
 @testset "leading_boundary" verbose = true begin
-    algs = [VUMPS(; tol_galerkin=1e-5, verbose=false),
-            GradientGrassmann(; verbosity=0)]
+    algs = [VUMPS(; tol_galerkin=1e-5, verbose=false), GradientGrassmann(; verbosity=0)]
     mpo = force_planar(classical_ising())
 
     ψ₀ = InfiniteMPS([𝔹^2], [𝔹^10])
@@ -101,8 +103,9 @@ end
         th = repeat(sixvertex(), 2)
         ts = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^10, ℂ^10])
         (ts, envs, _) = leading_boundary(ts, th, VUMPS(; maxiter=400, verbose=false))
-        (energies, Bs) = excitations(th, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ts,
-                                     envs; verbose=false)
+        (energies, Bs) = excitations(
+            th, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ts, envs; verbose=false
+        )
         @test abs(energies[1]) > abs(energies[2]) # has a minima at pi/2
     end
 
@@ -122,11 +125,11 @@ end
             @test variance(Bs[1], th) < 1e-6
 
             #find energy with normal dmrg
-            (energies_dm, _) = excitations(th,
-                                           FiniteExcited(;
-                                                         gsalg=DMRG(; verbose=false,
-                                                                    tol=1e-6)), ts)
-            @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ts, th, envs)) atol = 1e-4
+            (energies_dm, _) = excitations(
+                th, FiniteExcited(; gsalg=DMRG(; verbose=false, tol=1e-6)), ts
+            )
+            @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ts, th, envs)) atol =
+                1e-4
 
             return energies_QP[1]
         end
@@ -135,19 +138,17 @@ end
     end
 end
 
-@testset "changebonds $((pspace,Dspace))" verbose = true for (pspace, Dspace) in
-                                                             [(𝔹^4, 𝔹^3),
-                                                              (Rep[SU₂](1 => 1),
-                                                               Rep[SU₂](0 => 2, 1 => 2,
-                                                                        2 => 1))]
+@testset "changebonds $((pspace,Dspace))" verbose = true for (pspace, Dspace) in [
+    (𝔹^4, 𝔹^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))
+]
     @testset "mpo" begin
         #random nn interaction
         nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
 
-        mpo1 = periodic_boundary_conditions(convert(DenseMPO,
-                                                    make_time_mpo(MPOHamiltonian(nn), 0.1,
-                                                                  WII())), 10)
+        mpo1 = periodic_boundary_conditions(
+            convert(DenseMPO, make_time_mpo(MPOHamiltonian(nn), 0.1, WII())), 10
+        )
         mpo2 = changebonds(mpo1, SvdCut(; trscheme=truncdim(5)))
 
         @test dim(space(mpo2[5], 1)) < dim(space(mpo1[5], 1))
@@ -160,18 +161,21 @@ end
 
         state = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
 
-        state_re = changebonds(state,
-                               RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+        state_re = changebonds(
+            state, RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace)))
+        )
         @test dot(state, state_re) ≈ 1 atol = 1e-8
 
-        (state_oe, _) = changebonds(state, repeat(MPOHamiltonian(nn), 2),
-                                    OptimalExpand(;
-                                                  trscheme=truncdim(dim(Dspace) *
-                                                                    dim(Dspace))))
+        (state_oe, _) = changebonds(
+            state,
+            repeat(MPOHamiltonian(nn), 2),
+            OptimalExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))),
+        )
         @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
-        (state_vs, _) = changebonds(state, repeat(MPOHamiltonian(nn), 2),
-                                    VUMPSSvdCut(; trscheme=notrunc()))
+        (state_vs, _) = changebonds(
+            state, repeat(MPOHamiltonian(nn), 2), VUMPSSvdCut(; trscheme=notrunc())
+        )
         @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
 
         state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
@@ -185,14 +189,16 @@ end
 
         state = FiniteMPS(10, pspace, Dspace)
 
-        state_re = changebonds(state,
-                               RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+        state_re = changebonds(
+            state, RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace)))
+        )
         @test dot(state, state_re) ≈ 1 atol = 1e-8
 
-        (state_oe, _) = changebonds(state, MPOHamiltonian(nn),
-                                    OptimalExpand(;
-                                                  trscheme=truncdim(dim(Dspace) *
-                                                                    dim(Dspace))))
+        (state_oe, _) = changebonds(
+            state,
+            MPOHamiltonian(nn),
+            OptimalExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))),
+        )
         @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
         state_tr = changebonds(state_oe, SvdCut(; trscheme=truncdim(dim(Dspace))))
@@ -207,27 +213,27 @@ end
         t = TensorMap(rand, ComplexF64, Dspace * pspace, Dspace)
         state = MPSMultiline(fill(t, 1, 1))
 
-        state_re = changebonds(state,
-                               RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+        state_re = changebonds(
+            state, RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace)))
+        )
         @test dot(state, state_re) ≈ 1 atol = 1e-8
 
-        (state_oe, _) = changebonds(state, mpo,
-                                    OptimalExpand(;
-                                                  trscheme=truncdim(dim(Dspace) *
-                                                                    dim(Dspace))))
+        (state_oe, _) = changebonds(
+            state, mpo, OptimalExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace)))
+        )
         @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
         state_tr = changebonds(state_oe, SvdCut(; trscheme=truncdim(dim(Dspace))))
 
         @test dim(right_virtualspace(state_tr, 1, 1)) <
-              dim(left_virtualspace(state_oe, 1, 1))
+            dim(left_virtualspace(state_oe, 1, 1))
     end
 end
 
 @testset "Dynamical DMRG" verbose = true begin
     ham = force_planar(-1.0 * MPOHamiltonian(σᶻᶻ()) + MPOHamiltonian(σˣ()) * 4.0)
     gs, = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
-    window = MPSComoving(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
+    window = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
     szd = force_planar(S_z())
     @test expectation_value(gs, szd)[1] ≈ expectation_value(window, szd)[1] atol = 1e-10
@@ -269,8 +275,9 @@ end
         fin_en = map([20, 15, 10]) do L
             ψ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^16)
             ψ, envs, = find_groundstate(ψ, H, DMRG(; verbose=false))
-            numerical_scusceptibility = fidelity_susceptibility(ψ, H, [H_X], envs;
-                                                                maxiter=10)
+            numerical_scusceptibility = fidelity_susceptibility(
+                ψ, H, [H_X], envs; maxiter=10
+            )
             return numerical_scusceptibility[1, 1] / L
         end
         @test issorted(abs.(fin_en .- analytical_susceptibility(λ)))
@@ -304,12 +311,19 @@ end
     id_mpo = TensorMap([1.0 0; 0 1.0], ℂ^1 * ℂ^2, ℂ^2 * ℂ^1)
     @tensor szsz[-1 -2; -3 -4] := sz[-1 -3] * sz[-2 -4]
 
-    @test isapprox(expectation_value(st, [sz_mpo], 1), expectation_value(st, sz, 1),
-                   atol=1e-2)
-    @test isapprox(expectation_value(st, [sz_mpo, sz_mpo], 1),
-                   expectation_value(st, szsz, 1), atol=1e-2)
-    @test isapprox(expectation_value(st, [sz_mpo, sz_mpo], 2),
-                   expectation_value(st, szsz, 1), atol=1e-2)
+    @test isapprox(
+        expectation_value(st, [sz_mpo], 1), expectation_value(st, sz, 1), atol=1e-2
+    )
+    @test isapprox(
+        expectation_value(st, [sz_mpo, sz_mpo], 1),
+        expectation_value(st, szsz, 1),
+        atol=1e-2,
+    )
+    @test isapprox(
+        expectation_value(st, [sz_mpo, sz_mpo], 2),
+        expectation_value(st, szsz, 1),
+        atol=1e-2,
+    )
 
     G = correlator(st, sz_mpo, sz_mpo, 1, 2:5)
     G2 = correlator(st, szsz, 1, 3:2:5)
@@ -317,8 +331,11 @@ end
     @test isapprox(last(G), last(G2), atol=1e-2)
     @test isapprox(G[1], expectation_value(st, szsz, 1), atol=1e-2)
     @test isapprox(G[2], expectation_value(st, [sz_mpo, id_mpo, sz_mpo], 1), atol=1e-2)
-    @test isapprox(first(correlator(st, sz_mpo, sz_mpo, 1, 2)),
-                   expectation_value(st, szsz, 1), atol=1e-2)
+    @test isapprox(
+        first(correlator(st, sz_mpo, sz_mpo, 1, 2)),
+        expectation_value(st, szsz, 1),
+        atol=1e-2,
+    )
 end
 
 @testset "approximate" verbose = true begin
@@ -335,8 +352,9 @@ end
         (st1, _) = approximate(st, (sW1, st), VUMPS(; verbose=false))
         (st2, _) = approximate(st, (W2, st), VUMPS(; verbose=false))
         (st3, _) = approximate(st, (W1, st), IDMRG1(; verbose=false))
-        (st4, _) = approximate(st, (sW2, st),
-                               IDMRG2(; trscheme=truncdim(20), verbose=false))
+        (st4, _) = approximate(
+            st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbose=false)
+        )
         (st5, _) = timestep(st, th, dt, TDVP())
         st6 = changebonds(W1 * st, SvdCut(; trscheme=truncdim(10)))
 
@@ -390,14 +408,15 @@ end
     (gs, envs) = find_groundstate(ts, th, DMRG(; verbose=false))
 
     #translation mpo:
-    @tensor bulk[-1 -2; -3 -4] := isomorphism(ℂ^2, ℂ^2)[-2, -4] *
-                                  isomorphism(ℂ^2, ℂ^2)[-1, -3]
+    @tensor bulk[-1 -2; -3 -4] :=
+        isomorphism(ℂ^2, ℂ^2)[-2, -4] * isomorphism(ℂ^2, ℂ^2)[-1, -3]
     translation = periodic_boundary_conditions(DenseMPO(bulk), len)
 
     #the groundstate should be translation invariant:
     ut = Tensor(ones, ℂ^1)
     @tensor leftstart[-1 -2; -3] := l_LL(gs)[-1, -3] * conj(ut[-2])
-    v = leftstart *
+    v =
+        leftstart *
         TransferMatrix([gs.AC[1]; gs.AR[2:end]], translation[:], [gs.AC[1]; gs.AR[2:end]])
     expval = @tensor v[1, 2, 3] * r_RR(gs)[3, 1] * ut[2]
 

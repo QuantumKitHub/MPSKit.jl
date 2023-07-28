@@ -8,7 +8,8 @@ analysis to larger system sizes through the use of MPS techniques.
 
 using MPSKit, MPSKitModels, TensorKit, Plots, KrylovKit
 using LinearAlgebra: eigen, diagm, Hermitian
-import TensorOperations; TensorOperations.disable_cache(); # hide
+using TensorOperations: TensorOperations;
+TensorOperations.disable_cache(); # hide
 
 md"""
 The hamiltonian is defined on a finite lattice with periodic boundary conditions,
@@ -28,8 +29,14 @@ tensor is equivalent to optimixing a state in the entire Hilbert space, as all o
 are just unitary matrices that mix the basis.
 """
 
-energies, states = exact_diagonalization(H, num=18, alg=Lanczos(krylovdim=200));
-plot(real.(energies), seriestype=:scatter, legend=false, ylabel="energy", xlabel="#eigenvalue")
+energies, states = exact_diagonalization(H; num=18, alg=Lanczos(; krylovdim=200));
+plot(
+    real.(energies);
+    seriestype=:scatter,
+    legend=false,
+    ylabel="energy",
+    xlabel="#eigenvalue",
+)
 
 md"""
 !!! note "Krylov dimension"
@@ -90,7 +97,14 @@ append!(momenta, fix_degeneracies(states[12:12]))
 append!(momenta, fix_degeneracies(states[13:16]))
 append!(momenta, fix_degeneracies(states[17:18]))
 
-plot(momenta, real.(energies[1:18]), seriestype=:scatter, xlabel="momentum", ylabel="energy", legend=false)
+plot(
+    momenta,
+    real.(energies[1:18]);
+    seriestype=:scatter,
+    xlabel="momentum",
+    ylabel="energy",
+    legend=false,
+)
 
 md"""
 ## Finite bond dimension
@@ -110,7 +124,7 @@ ansatz. This returns quasiparticle states, which can be converted to regular `Fi
 objects.
 """
 
-E_ex, qps = excitations(H, QuasiparticleAnsatz(), ψ, envs, num=16)
+E_ex, qps = excitations(H, QuasiparticleAnsatz(), ψ, envs; num=16)
 states_mps = vcat(ψ, map(qp -> convert(FiniteMPS, qp), qps))
 E_mps = map(x -> sum(expectation_value(x, H_mps)), states_mps)
 
@@ -125,4 +139,11 @@ append!(momenta_mps, fix_degeneracies(states[10:11]))
 append!(momenta_mps, fix_degeneracies(states[12:12]))
 append!(momenta_mps, fix_degeneracies(states[13:16]))
 
-plot(momenta_mps, real.(energies[1:16]), seriestype=:scatter, xlabel="momentum", ylabel="energy", legend=false)
+plot(
+    momenta_mps,
+    real.(energies[1:16]);
+    seriestype=:scatter,
+    xlabel="momentum",
+    ylabel="energy",
+    legend=false,
+)

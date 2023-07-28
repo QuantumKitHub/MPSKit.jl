@@ -18,7 +18,7 @@ Exclusive to infinite systems are
 
 with a last algorithm - GradientGrassmann - implemented for both finite and infinite systems.
 
-MPSComoving, which is a finite patch of mutable tensors embedded in an infinite MPS, is handled as a finite system where we only optimize over the patch of mutable tensors.
+WindowMPS, which is a finite patch of mutable tensors embedded in an infinite MPS, is handled as a finite system where we only optimize over the patch of mutable tensors.
 
 ### DMRG
 

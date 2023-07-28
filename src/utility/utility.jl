@@ -8,8 +8,9 @@ function _transpose_tail(t::AbstractTensorMap) # make TensorMap{S,1,N₁+N₂-1}
     I2 = TensorKit.domainind(t)
     return transpose(t, (I1[1],), (I2..., reverse(Base.tail(I1))...))
 end
-function _transpose_as(t1::AbstractTensorMap,
-                       t2::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
+function _transpose_as(
+    t1::AbstractTensorMap, t2::AbstractTensorMap{S,N1,N2}
+) where {S,N1,N2}
     I1 = (TensorKit.codomainind(t1)..., reverse(TensorKit.domainind(t1))...)
 
     A = ntuple(x -> I1[x], N1)
@@ -22,8 +23,9 @@ _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
-function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N,N},
-                            trunc=truncbelow(Defaults.tol)) where {PS,N}
+function decompose_localmpo(
+    inpmpo::AbstractTensorMap{PS,N,N}, trunc=truncbelow(Defaults.tol)
+) where {PS,N}
     N == 2 && return [inpmpo]
 
     leftind = (N + 1, 1, 2)
@@ -36,8 +38,9 @@ function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N,N},
 end
 
 # given a state with util legs on the side, decompose using svds to form an array of mpstensors
-function decompose_localmps(state::AbstractTensorMap{PS,N,1},
-                            trunc=truncbelow(Defaults.tol)) where {PS,N}
+function decompose_localmps(
+    state::AbstractTensorMap{PS,N,1}, trunc=truncbelow(Defaults.tol)
+) where {PS,N}
     N == 2 && return [state]
 
     leftind = (1, 2)
@@ -97,8 +100,9 @@ end
 #needed this; perhaps move to tensorkit?
 TensorKit.fuse(f::T) where {T<:VectorSpace} = f
 
-function inplace_add!(a::Union{<:AbstractTensorMap,Nothing},
-                      b::Union{<:AbstractTensorMap,Nothing})
+function inplace_add!(
+    a::Union{AbstractTensorMap,Nothing}, b::Union{AbstractTensorMap,Nothing}
+)
     isnothing(a) && isnothing(b) && return nothing
     isnothing(a) && return b
     isnothing(b) && return a
