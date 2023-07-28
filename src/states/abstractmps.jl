@@ -27,12 +27,14 @@ Construct an `MPSTensor` with given physical and virtual spaces.
 - `left_D::Int`: left virtual dimension
 - `right_D::Int`: right virtual dimension
 """
-function MPSTensor(f, eltype, P::Union{S,CompositeSpace{S}}, Vₗ::S,
-                   Vᵣ::S=Vₗ) where {S<:ElementarySpace}
+function MPSTensor(
+    f, eltype, P::Union{S,CompositeSpace{S}}, Vₗ::S, Vᵣ::S=Vₗ
+) where {S<:ElementarySpace}
     return TensorMap(f, eltype, Vₗ ⊗ P ← Vᵣ)
 end
-function MPSTensor(P::Union{S,CompositeSpace{S}}, Vₗ::S,
-                   Vᵣ::S=Vₗ) where {S<:ElementarySpace}
+function MPSTensor(
+    P::Union{S,CompositeSpace{S}}, Vₗ::S, Vᵣ::S=Vₗ
+) where {S<:ElementarySpace}
     return MPSTensor(rand, Defaults.eltype, P, Vₗ, Vᵣ)
 end
 
@@ -115,6 +117,5 @@ function right_virtualspace end
 Return the physical space of the site tensor at site `i`.
 """
 function physicalspace end
-
 
 abstract type AbstractFiniteMPS <: AbstractMPS end

@@ -49,8 +49,9 @@ end
 function Base.getindex(v::CRView{<:FiniteMPS,E}, i::Int)::E where {E}
     if ismissing(v.parent.CLs[i + 1])
         if i == 0 || !ismissing(v.parent.ALs[i])
-            (v.parent.CLs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
-                                                    alg=LQpos())
+            (v.parent.CLs[i + 1], temp) = rightorth(
+                _transpose_tail(v.parent.AC[i + 1]); alg=LQpos()
+            )
             v.parent.ARs[i + 1] = _transpose_front(temp)
         else
             (v.parent.ALs[i], v.parent.CLs[i + 1]) = leftorth(v.parent.AC[i]; alg=QRpos())
@@ -62,8 +63,9 @@ end
 function Base.setindex!(v::CRView{<:FiniteMPS}, vec, i::Int)
     if ismissing(v.parent.CLs[i + 1])
         if !ismissing(v.parent.ALs[i])
-            (v.parent.CLs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
-                                                    alg=LQpos())
+            (v.parent.CLs[i + 1], temp) = rightorth(
+                _transpose_tail(v.parent.AC[i + 1]); alg=LQpos()
+            )
             v.parent.ARs[i + 1] = _transpose_front(temp)
         else
             (v.parent.ALs[i], v.parent.CLs[i + 1]) = leftorth(v.parent.AC[i]; alg=QRpos())
@@ -118,8 +120,9 @@ function Base.setindex!(v::ACView{<:FiniteMPS}, vec::GenericMPSTensor, i::Int)
     return setindex!(v.parent.ACs, vec, i)
 end
 
-function Base.setindex!(v::ACView{<:FiniteMPS},
-                        vec::Tuple{<:GenericMPSTensor,<:GenericMPSTensor}, i::Int)
+function Base.setindex!(
+    v::ACView{<:FiniteMPS}, vec::Tuple{<:GenericMPSTensor,<:GenericMPSTensor}, i::Int
+)
     if ismissing(v.parent.ACs[i])
         i < length(v) && v.parent.AR[i + 1]
         i > 1 && v.parent.AL[i - 1]
@@ -174,9 +177,17 @@ end
 
 #the checkbounds for multiline objects needs to be changed, as the first index is periodic
 #however if it is a Multiline(Infinitemps), then the second index is also periodic!
-function Base.checkbounds(::Type{Bool},
-                          psi::Union{ACView{<:Multiline},ALView{<:Multiline},
-                                     ARView{<:Multiline},CRView{<:Multiline}}, a, b)
-    return first(psi.parent.data) isa InfiniteMPS ? true :
-           checkbounds(Bool, CRView(first(psi.parent.data)), b)
+function Base.checkbounds(
+    ::Type{Bool},
+    psi::Union{
+        ACView{<:Multiline},ALView{<:Multiline},ARView{<:Multiline},CRView{<:Multiline}
+    },
+    a,
+    b,
+)
+    return if first(psi.parent.data) isa InfiniteMPS
+        true
+    else
+        checkbounds(Bool, CRView(first(psi.parent.data)), b)
+    end
 end

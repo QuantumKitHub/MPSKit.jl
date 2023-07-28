@@ -6,7 +6,8 @@ To follow the tutorial you need the following packages:
 """
 
 using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
-import TensorOperations; TensorOperations.disable_cache(); # hide
+using TensorOperations: TensorOperations;
+TensorOperations.disable_cache(); # hide
 
 md"""
 The Heisenberg model is defined by the following hamiltonian:
@@ -70,13 +71,10 @@ end
 f = fit(Ls .^ (-2), ΔEs, 1)
 ΔE_extrapolated = f.coeffs[1]
 
-
 #+ 
 
-p_size_extrapolation = plot(; xaxis="L^(-2)", yaxis="ΔE",
-    xlims=(0, 0.015))
-plot!(p_size_extrapolation, Ls .^ (-2), ΔEs;
-    seriestype=:scatter, label="numerical")
+p_size_extrapolation = plot(; xaxis="L^(-2)", yaxis="ΔE", xlims=(0, 0.015))
+plot!(p_size_extrapolation, Ls .^ (-2), ΔEs; seriestype=:scatter, label="numerical")
 plot!(p_size_extrapolation, x -> f(x); label="fit")
 
 md"""
@@ -91,8 +89,7 @@ In contrast with the finite size case, we now should specify a momentum label to
 This way, it is possible to scan the dispersion relation over the entire momentum space.
 """
 
-virtual_space_inf = Rep[SU₂](1 // 2 => 20, 3 // 2 => 20, 5 // 2 => 10, 7 // 2 => 10,
-    9 // 2 => 5)
+virtual_space_inf = Rep[SU₂](1//2 => 20, 3//2 => 20, 5//2 => 10, 7//2 => 10, 9//2 => 5)
 ψ₀_inf = InfiniteMPS([physical_space], [virtual_space_inf])
 ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H)
 
@@ -101,7 +98,6 @@ Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ_inf, envs_inf; sector=S
 
 ΔE, idx = findmin(real.(Es))
 println("minimum @k = $(kspace[idx]):\t ΔE = $(ΔE)")
-
 
 #+ 
 

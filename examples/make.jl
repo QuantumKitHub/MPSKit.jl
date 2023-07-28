@@ -21,8 +21,9 @@ getcache() = isfile(CACHEFILE) ? TOML.parsefile(CACHEFILE) : Dict{String,Any}()
 
 function iscached(root, name)
     cache = getcache()
-    return haskey(cache, root) && haskey(cache[root], name) && 
-        cache[root][name] == checksum(root, name)
+    return haskey(cache, root) &&
+           haskey(cache[root], name) &&
+           cache[root][name] == checksum(root, name)
 end
 
 function setcached(root, name)
@@ -32,7 +33,7 @@ function setcached(root, name)
     else
         cache[root] = Dict{String,Any}(name => checksum(root, name))
     end
-    open(f -> TOML.print(f, cache), CACHEFILE, "w")
+    return open(f -> TOML.print(f, cache), CACHEFILE, "w")
 end
 
 checksum(root, name) = bytes2hex(sha256(joinpath(@__DIR__, root, name, "main.jl")))
@@ -60,11 +61,27 @@ function build_example(root, name)
     target_dir = joinpath(@__DIR__, "..", "docs", "src", "examples", root, name)
 
     if !iscached(root, name)
-        Literate.markdown(source_file, target_dir; execute=true, name="index",
-                        preprocess=attach_notebook_badge(root, name), mdstrings=true,
-                        nbviewer_root_url="https://nbviewer.jupyter.org/github/maartenvd/MPSKit.jl/blob/gh-pages/dev", binder_root_url="https://mybinder.org/v2/gh/maartenvd/MPSKit.jl/gh-pages?filepath=dev", credits=false, repo_root_url="https://github.com/maartenvd/MPSKit.jl")
-        Literate.notebook(source_file, target_dir; execute=false, name="main",
-                        preprocess=str -> replace(str, r"(?<!`)``(?!`)" => "\$"), mdstrings=true, credits=false)
+        Literate.markdown(
+            source_file,
+            target_dir;
+            execute=true,
+            name="index",
+            preprocess=attach_notebook_badge(root, name),
+            mdstrings=true,
+            nbviewer_root_url="https://nbviewer.jupyter.org/github/maartenvd/MPSKit.jl/blob/gh-pages/dev",
+            binder_root_url="https://mybinder.org/v2/gh/maartenvd/MPSKit.jl/gh-pages?filepath=dev",
+            credits=false,
+            repo_root_url="https://github.com/maartenvd/MPSKit.jl",
+        )
+        Literate.notebook(
+            source_file,
+            target_dir;
+            execute=false,
+            name="main",
+            preprocess=str -> replace(str, r"(?<!`)``(?!`)" => "\$"),
+            mdstrings=true,
+            credits=false,
+        )
 
         foreach(filter(!=("main.jl"), readdir(source_dir))) do f
             cp(joinpath(source_dir, f), joinpath(target_dir, f); force=true)

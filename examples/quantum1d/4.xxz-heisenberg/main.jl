@@ -6,7 +6,8 @@ The necessary packages to follow this tutorial are:
 """
 
 using MPSKit, MPSKitModels, TensorKit, Plots
-import TensorOperations; TensorOperations.disable_cache(); # hide
+using TensorOperations: TensorOperations;
+TensorOperations.disable_cache(); # hide
 
 md"""
 ## Failure
@@ -37,7 +38,7 @@ On it's own, that is already quite curious.
 Maybe we can do better using another algorithm, such as gradient descent.
 """
 
-groundstate, cache, delta = find_groundstate(state, H, GradientGrassmann(maxiter=20));
+groundstate, cache, delta = find_groundstate(state, H, GradientGrassmann(; maxiter=20));
 
 md"""
 Convergence is quite slow and even fails after sufficiently many iterations.
@@ -71,14 +72,18 @@ Alternatively, the hamiltonian can be constructed directly on a two-site unitcel
 
 ## H2 = repeat(H, 2); -- copies the one-site version
 H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin=1//2)
-groundstate, cache, delta = find_groundstate(state, H2, VUMPS(maxiter=100, tol_galerkin=1e-12));
+groundstate, cache, delta = find_groundstate(
+    state, H2, VUMPS(; maxiter=100, tol_galerkin=1e-12)
+);
 
 md"""
 We get convergence, but it takes an enormous amount of iterations.
 The reason behind this becomes more obvious at higher bond dimensions:
 """
 
-groundstate, cache, delta = find_groundstate(state, H2, IDMRG2(trscheme=truncdim(50), maxiter=20, tol_galerkin=1e-12))
+groundstate, cache, delta = find_groundstate(
+    state, H2, IDMRG2(; trscheme=truncdim(50), maxiter=20, tol_galerkin=1e-12)
+)
 entanglementplot(groundstate)
 
 md"""
@@ -110,8 +115,8 @@ The staggering thus happens on the virtual level.
 An alternative constructor for the initial state is
 """
 
-P = Rep[SU₂](1 // 2 => 1)
-V1 = Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 2)
+P = Rep[SU₂](1//2 => 1)
+V1 = Rep[SU₂](1//2 => 10, 3//2 => 5, 5//2 => 2)
 V2 = Rep[SU₂](0 => 15, 1 => 10, 2 => 5)
 state = InfiniteMPS([P, P], [V1, V2]);
 
@@ -121,4 +126,6 @@ Even though the bond dimension is higher than in the example without symmetry, c
 
 println(dim(V1))
 println(dim(V2))
-groundstate, cache, delta = find_groundstate(state, H2, VUMPS(maxiter=400, tol_galerkin=1e-12));
+groundstate, cache, delta = find_groundstate(
+    state, H2, VUMPS(; maxiter=400, tol_galerkin=1e-12)
+);

@@ -40,8 +40,9 @@ mutable struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFinite
     window::FiniteMPS{A,B}
     right_gs::InfiniteMPS{A,B}
 
-    function WindowMPS(Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B},
-                       Ψᵣ::InfiniteMPS{A,B}=copy(Ψₗ)) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+    function WindowMPS(
+        Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B}, Ψᵣ::InfiniteMPS{A,B}=copy(Ψₗ)
+    ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
         left_virtualspace(Ψₗ, 0) == left_virtualspace(Ψₘ, 0) &&
             right_virtualspace(Ψₘ, length(Ψₘ)) == right_virtualspace(Ψᵣ, length(Ψₘ)) ||
             throw(SpaceMismatch("Mismatch between window and environment virtual spaces"))
@@ -53,33 +54,56 @@ end
 Constructors
 ===========================================================================================#
 
-function WindowMPS(Ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor},
-                   Ψᵣ::InfiniteMPS=Ψₗ)
+function WindowMPS(
+    Ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor}, Ψᵣ::InfiniteMPS=Ψₗ
+)
     return WindowMPS(Ψₗ, FiniteMPS(site_tensors), Ψᵣ)
 end
 
-function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   maxvirtspace::S, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
-    Ψₘ = FiniteMPS(f, elt, physspaces, maxvirtspace; left=left_virtualspace(Ψₗ, 0),
-                   right=right_virtualspace(Ψᵣ, length(physspaces)))
+function WindowMPS(
+    f,
+    elt,
+    physspaces::Vector{<:Union{S,CompositeSpace{S}}},
+    maxvirtspace::S,
+    Ψₗ::InfiniteMPS,
+    Ψᵣ::InfiniteMPS=Ψₗ,
+) where {S<:ElementarySpace}
+    Ψₘ = FiniteMPS(
+        f,
+        elt,
+        physspaces,
+        maxvirtspace;
+        left=left_virtualspace(Ψₗ, 0),
+        right=right_virtualspace(Ψᵣ, length(physspaces)),
+    )
     return WindowMPS(Ψₗ, Ψₘ, Ψᵣ)
 end
-function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   maxvirtspace::S, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
+function WindowMPS(
+    physspaces::Vector{<:Union{S,CompositeSpace{S}}},
+    maxvirtspace::S,
+    Ψₗ::InfiniteMPS,
+    Ψᵣ::InfiniteMPS=Ψₗ,
+) where {S<:ElementarySpace}
     return WindowMPS(rand, Defaults.eltype, physspaces, maxvirtspace, Ψₗ, Ψᵣ)
 end
 
-function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   virtspaces::Vector{S}, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
+function WindowMPS(
+    f,
+    elt,
+    physspaces::Vector{<:Union{S,CompositeSpace{S}}},
+    virtspaces::Vector{S},
+    Ψₗ::InfiniteMPS,
+    Ψᵣ::InfiniteMPS=Ψₗ,
+) where {S<:ElementarySpace}
     Ψₘ = FiniteMPS(f, elt, physspaces, virtspaces)
     return WindowMPS(Ψₗ, Ψₘ, Ψᵣ)
 end
-function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   virtspaces::Vector{S}, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
+function WindowMPS(
+    physspaces::Vector{<:Union{S,CompositeSpace{S}}},
+    virtspaces::Vector{S},
+    Ψₗ::InfiniteMPS,
+    Ψᵣ::InfiniteMPS=Ψₗ,
+) where {S<:ElementarySpace}
     return WindowMPS(rand, Defaults.eltype, physspaces, virtspaces, Ψₗ, Ψᵣ)
 end
 

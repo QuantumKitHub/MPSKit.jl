@@ -3,5 +3,5 @@ struct LinearCombination{O<:Tuple,C<:Tuple}
     coeffs::C
 end
 
-Base.:*(h::LinearCombination,v) = sum((c*(o*v) for (o,c) in zip(h.opps,h.coeffs)))
-(h::LinearCombination)(v) = sum((c*o(v) for (o,c) in zip(h.opps,h.coeffs)))
+Base.:*(h::LinearCombination, v) = sum((c * (o * v) for (o, c) in zip(h.opps, h.coeffs)))
+(h::LinearCombination)(v) = sum((c * o(v) for (o, c) in zip(h.opps, h.coeffs)))
