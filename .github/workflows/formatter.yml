@@ -1,10 +1,6 @@
 name: format-check
 
 on:
-  push:
-    branches:
-      - 'master'
-    tags: '*'
   pull_request:
 
 jobs:
@@ -49,7 +45,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Format .jl files
           title: 'Automatic JuliaFormatter.jl run'
-          base: master
+          base: ${{ github.head_ref }}
           branch: auto-juliaformatter-pr
           delete-branch: true
           labels: formatting, automated pr, no changelog
