@@ -14,12 +14,12 @@ https://arxiv.org/abs/1701.07035.
 - `verbose::Bool`: display progress information
 """
 @kwdef struct VUMPS{F} <: Algorithm
-    tol_galerkin::Float64   = Defaults.tol
-    tol_gauge::Float64      = Defaults.tolgauge
-    maxiter::Int            = Defaults.maxiter
-    orthmaxiter::Int        = Defaults.maxiter
-    finalize::F             = Defaults._finalize
-    verbose::Bool           = Defaults.verbose
+    tol_galerkin::Float64 = Defaults.tol
+    tol_gauge::Float64 = Defaults.tolgauge
+    maxiter::Int = Defaults.maxiter
+    orthmaxiter::Int = Defaults.maxiter
+    finalize::F = Defaults._finalize
+    verbose::Bool = Defaults.verbose
 end
 
 "

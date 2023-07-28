@@ -26,7 +26,7 @@ end
 
 function Base.getindex(v::ARView{<:FiniteMPS,E}, i::Int)::E where {E}
     # by getting CL[i], we are garantueeing that AR[i] exists
-    ismissing(v.parent.ARs[i]) && v.parent.CR[i - 1] 
+    ismissing(v.parent.ARs[i]) && v.parent.CR[i - 1]
     return v.parent.ARs[i]
 end
 

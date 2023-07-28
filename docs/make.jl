@@ -20,16 +20,18 @@ end
 
 makedocs(; modules=[MPSKit],
          sitename="MPSKit.jl",
-         format=Documenter.HTML(; 
-              prettyurls=get(ENV, "CI", nothing) == "true",
-              mathengine = MathJax3(Dict(
-                     :loader => Dict("load" => ["[tex]/physics"]),
-                     :tex => Dict(
-                            "inlineMath" => [["\$","\$"], ["\\(","\\)"]],
-                            "tags" => "ams",
-                            "packages" => ["base", "ams", "autoload", "physics"],
-                     ),
-                     ))),
+         format=Documenter.HTML(;
+                                prettyurls=get(ENV, "CI", nothing) == "true",
+                                mathengine=MathJax3(Dict(:loader => Dict("load" => ["[tex]/physics"]),
+                                                         :tex => Dict("inlineMath" => [["\$",
+                                                                                        "\$"],
+                                                                                       ["\\(",
+                                                                                        "\\)"]],
+                                                                      "tags" => "ams",
+                                                                      "packages" => ["base",
+                                                                                     "ams",
+                                                                                     "autoload",
+                                                                                     "physics"])))),
          pages=["Home" => "index.md",
                 "Manual" => ["man/intro.md", "man/states.md", "man/operators.md",
                              "man/algorithms.md", "man/environments.md",

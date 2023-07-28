@@ -127,7 +127,8 @@ function physicalspace(Ψ::InfiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer)
     elseif N == 2
         return space(Ψ.AL[n], 2)
     else
-        return ProductSpace{spacetype(Ψ), N-1}(space.(Ref(Ψ.AL[n]), Base.front(Base.tail(TensorKit.allind(Ψ.AL[n])))))
+        return ProductSpace{spacetype(Ψ),N - 1}(space.(Ref(Ψ.AL[n]),
+                                                       Base.front(Base.tail(TensorKit.allind(Ψ.AL[n])))))
     end
 end
 
@@ -158,7 +159,7 @@ function Base.show(io::IO, ::MIME"text/plain", Ψ::InfiniteMPS)
     L = length(Ψ)
     println(io, L == 1 ? "single site" : "$L-site", " InfiniteMPS:")
     context = IOContext(io, :typeinfo => eltype(Ψ), :compact => true)
-    show(context, Ψ)
+    return show(context, Ψ)
 end
 Base.show(io::IO, Ψ::InfiniteMPS) = show(convert(IOContext, io), Ψ)
 function Base.show(io::IOContext, Ψ::InfiniteMPS)

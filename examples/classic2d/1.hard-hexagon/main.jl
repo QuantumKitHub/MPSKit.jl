@@ -11,7 +11,8 @@ To follow the tutorial you need the following packages.
 """
 
 using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
-import TensorOperations; TensorOperations.disable_cache(); # hide
+using TensorOperations: TensorOperations;
+TensorOperations.disable_cache(); # hide
 
 md"""
 The [hard hexagon model](https://en.wikipedia.org/wiki/Hard_hexagon_model) is a 2-dimensional lattice model of a gas, where particles are allowed to be on the vertices of a triangular lattice, but no two particles may be adjacent.
@@ -27,7 +28,6 @@ function virtual_space(D::Integer)
 end
 
 @assert isapprox(dim(virtual_space(100)), 100; atol=3)
-
 
 md"""
 ## The leading boundary
@@ -60,20 +60,19 @@ function scaling_simulations(ψ₀, mpo, Ds; verbose=false, tol=1e-6)
     entropies = similar(Ds, Float64)
     correlations = similar(Ds, Float64)
     alg = VUMPS(; verbose=verbose, tol_galerkin=tol)
-    
+
     ψ, envs, = leading_boundary(ψ₀, mpo, alg)
     entropies[1] = real(entropy(ψ)[1])
     correlations[1] = correlation_length(ψ)
-    
+
     for (i, d) in enumerate(diff(Ds))
         ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme=truncdim(d)), envs)
         ψ, envs, = leading_boundary(ψ, mpo, alg, envs)
-        entropies[i+1] = real(entropy(ψ)[1])
-        correlations[i+1] = correlation_length(ψ)
+        entropies[i + 1] = real(entropy(ψ)[1])
+        correlations[i + 1] = correlation_length(ψ)
     end
     return entropies, correlations
 end
-
 
 bond_dimensions = 10:5:25
 ψ₀ = InfiniteMPS([P], [virtual_space(bond_dimensions[1])])

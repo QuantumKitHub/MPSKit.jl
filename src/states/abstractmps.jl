@@ -116,5 +116,4 @@ Return the physical space of the site tensor at site `i`.
 """
 function physicalspace end
 
-
 abstract type AbstractFiniteMPS <: AbstractMPS end

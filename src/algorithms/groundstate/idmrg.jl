@@ -24,7 +24,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG1, oenvs=environments
 
     delta::Float64 = 2 * alg.tol_galerkin
 
-    for topit in 1:alg.maxiter
+    for topit in 1:(alg.maxiter)
         delta = 0.0
         curc = Ψ.CR[0]
 

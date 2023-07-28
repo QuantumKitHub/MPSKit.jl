@@ -170,7 +170,7 @@ function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    virtspaces::Vector{S}; normalize=true) where {S<:ElementarySpace}
     N = length(physspaces)
     length(virtspaces) == N + 1 || throw(DimensionMismatch("length mismatch of spaces"))
-    tensors = MPSTensor.(f, elt, physspaces, virtspaces[1:end-1], virtspaces[2:end])
+    tensors = MPSTensor.(f, elt, physspaces, virtspaces[1:(end - 1)], virtspaces[2:end])
     return FiniteMPS(tensors; normalize=normalize, overwrite=true)
 end
 function FiniteMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, virtspaces::Vector{S};
@@ -258,14 +258,14 @@ end
 
 function physicalspace(Ψ::FiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer) where {N}
     N == 1 && return ProductSpace{spacetype(Ψ)}()
-    A = !ismissing(Ψ.ALs[n]) ? Ψ.ALs[n] : 
+    A = !ismissing(Ψ.ALs[n]) ? Ψ.ALs[n] :
         !ismissing(Ψ.ARs[n]) ? Ψ.ARs[n] : Ψ.AC[n] # should never reach last case?
-        
+
     if N == 2
         return space(A, 2)
     else
         return ProductSpace{spacetype(Ψ),N - 1}(space.(Ref(A),
-                                                Base.front(Base.tail(TensorKit.allind(A)))))
+                                                       Base.front(Base.tail(TensorKit.allind(A)))))
     end
 end
 
@@ -293,7 +293,7 @@ function Base.show(io::IO, ::MIME"text/plain", Ψ::FiniteMPS)
     L = length(Ψ)
     println(io, L == 1 ? "single site" : "$L-site", " FiniteMPS:")
     context = IOContext(io, :typeinfo => eltype(Ψ), :compact => true)
-    show(context, Ψ)
+    return show(context, Ψ)
 end
 Base.show(io::IO, Ψ::FiniteMPS) = show(convert(IOContext, io), Ψ)
 function Base.show(io::IOContext, Ψ::FiniteMPS)
@@ -303,31 +303,38 @@ function Base.show(io::IOContext, Ψ::FiniteMPS)
     if !haskey(io, :compact)
         io = IOContext(io, :compact => true)
     end
-    
+
     L = length(Ψ)
     center = something(findlast(!ismissing, Ψ.ALs), 0)
-    
+
     for site in reverse(1:L)
         if site < half_screen_rows || site > L - half_screen_rows
             if site > center
                 ismissing(Ψ.ARs[site]) && throw(ArgumentError("invalid state"))
-                println(io, site == L ? charset.start : charset.mid, charset.dash, " AR[$site]: ", Ψ.ARs[site])
+                println(io, site == L ? charset.start : charset.mid, charset.dash,
+                        " AR[$site]: ", Ψ.ARs[site])
                 if site == 1
                     ismissing(Ψ.CLs[site]) && throw(ArgumentError("invalid state"))
                     println(io, charset.stop, " CL[$site]: ", Ψ.CLs[site])
                 end
             elseif site == center
                 if !ismissing(Ψ.ACs[site])
-                    println(io, site == L ? charset.start : site == 1 ? charset.stop : charset.mid, charset.dash, " AC[$site]: ", Ψ.ACs[site])
-                elseif !ismissing(Ψ.ALs[site]) && !ismissing(Ψ.CLs[site+1])
-                    println(io, site == L ? charset.start : charset.ver, " CL[$(site+1)]: ", Ψ.CLs[site+1])
-                    println(io, site == 1 ? charset.stop : charset.mid, charset.dash, " AL[$site]: ", Ψ.ALs[site])
+                    println(io,
+                            site == L ? charset.start :
+                            site == 1 ? charset.stop : charset.mid, charset.dash,
+                            " AC[$site]: ", Ψ.ACs[site])
+                elseif !ismissing(Ψ.ALs[site]) && !ismissing(Ψ.CLs[site + 1])
+                    println(io, site == L ? charset.start : charset.ver, " CL[$(site+1)]: ",
+                            Ψ.CLs[site + 1])
+                    println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
+                            " AL[$site]: ", Ψ.ALs[site])
                 else
                     throw(ArgumentError("invalid state"))
                 end
             else
                 ismissing(Ψ.ALs[site]) && throw(ArgumentError("invalid state"))
-                println(io, site == 1 ? charset.stop : charset.mid, charset.dash, " AL[$site]: ", Ψ.ALs[site])
+                println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
+                        " AL[$site]: ", Ψ.ALs[site])
             end
         elseif site == half_screen_rows
             println(io, charset.ver, "⋮")
