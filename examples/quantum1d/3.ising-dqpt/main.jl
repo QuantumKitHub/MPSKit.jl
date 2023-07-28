@@ -76,7 +76,6 @@ function finite_sim(L; dt=0.05, finaltime=5.0)
     return times, echos
 end
 
-
 # ![](finite_timeev.png)
 
 md"""
@@ -142,6 +141,5 @@ function infinite_sim(dt=0.05, finaltime=5.0)
 
     return times, echos
 end
-
 
 # ![](infinite_timeev.png)

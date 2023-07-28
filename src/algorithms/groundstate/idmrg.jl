@@ -24,7 +24,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG1, oenvs=environments
 
     delta::Float64 = 2 * alg.tol_galerkin
 
-    for topit in 1:alg.maxiter
+    for topit in 1:(alg.maxiter)
         delta = 0.0
         curc = Ψ.CR[0]
 
@@ -117,8 +117,8 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
         end
 
         # update the edge
-        @plansor ac2[-1 -2; -3 -4] := st.AC[end][-1 -2; 1] * inv(st.CR[0])[1; 2] *
-                                      st.AL[1][2 -4; 3] * st.CR[1][3; -3]
+        @plansor ac2[-1 -2; -3 -4] :=
+            st.AC[end][-1 -2; 1] * inv(st.CR[0])[1; 2] * st.AL[1][2 -4; 3] * st.CR[1][3; -3]
         h_ac2 = ∂∂AC2(0, st, ham, envs)
         _, vecs, _ = eigsolve(h_ac2, ac2, 1, :SR, alg.eigalg)
 
@@ -162,8 +162,11 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
         end
 
         # update the edge
-        @plansor ac2[-1 -2; -3 -4] := st.CR[end - 1][-1; 1] * st.AR[end][1 -2; 2] *
-                                      inv(st.CR[end])[2; 3] * st.AC[1][3 -4; -3]
+        @plansor ac2[-1 -2; -3 -4] :=
+            st.CR[end - 1][-1; 1] *
+            st.AR[end][1 -2; 2] *
+            inv(st.CR[end])[2; 3] *
+            st.AC[1][3 -4; -3]
         h_ac2 = ∂∂AC2(0, st, ham, envs)
         (eigvals, vecs) = eigsolve(h_ac2, ac2, 1, :SR, alg.eigalg)
         (al, c, ar, ϵ) = tsvd(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())

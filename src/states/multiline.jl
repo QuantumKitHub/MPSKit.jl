@@ -8,37 +8,48 @@ struct Multiline{T}
 end
 
 Base.length(t::Multiline) = prod(size(t));
-Base.size(t::Multiline) = (length(t.data),length(t.data[1]));
-Base.size(t::Multiline,i) = size(t)[i];
-Base.getindex(t::Multiline,i) = t.data[i];
-Base.copy(t::Multiline) = Multiline(map(copy,t.data));
+Base.size(t::Multiline) = (length(t.data), length(t.data[1]));
+Base.size(t::Multiline, i) = size(t)[i];
+Base.getindex(t::Multiline, i) = t.data[i];
+Base.copy(t::Multiline) = Multiline(map(copy, t.data));
 Multiline(t::AbstractArray) = Multiline(PeriodicArray(t));
-Base.iterate(t::Multiline,args...) = iterate(t.data,args...);
-Base.convert(::Vector,t::Multiline) = t.data.data;
-Base.convert(::PeriodicArray,t::Multiline) = t.data;
+Base.iterate(t::Multiline, args...) = iterate(t.data, args...);
+Base.convert(::Vector, t::Multiline) = t.data.data;
+Base.convert(::PeriodicArray, t::Multiline) = t.data;
 
-Base.convert(::Multiline,v::AbstractArray) = Multiline(v);
+Base.convert(::Multiline, v::AbstractArray) = Multiline(v);
 
 #--- implementation of MPSMultiline
 const MPSMultiline = Multiline{<:InfiniteMPS}
 
-function MPSMultiline(pspaces::AbstractArray{S,2},Dspaces::AbstractArray{S,2};kwargs...) where S
-    MPSMultiline(map(zip(circshift(Dspaces,(0,-1)),pspaces,Dspaces)) do (D1,p,D2)
-        TensorMap(rand,Defaults.eltype,D1*p,D2)
-    end; kwargs...)
+function MPSMultiline(
+    pspaces::AbstractArray{S,2}, Dspaces::AbstractArray{S,2}; kwargs...
+) where {S}
+    return MPSMultiline(
+        map(zip(circshift(Dspaces, (0, -1)), pspaces, Dspaces)) do (D1, p, D2)
+            TensorMap(rand, Defaults.eltype, D1 * p, D2)
+        end;
+        kwargs...,
+    )
 end
 
-function MPSMultiline(data::AbstractArray{T,2};kwargs...) where T<:GenericMPSTensor
-    Multiline(PeriodicArray(map(1:size(data,1)) do row
-        InfiniteMPS(data[row,:];kwargs...)
-    end))
+function MPSMultiline(data::AbstractArray{T,2}; kwargs...) where {T<:GenericMPSTensor}
+    return Multiline(PeriodicArray(
+        map(1:size(data, 1)) do row
+            InfiniteMPS(data[row, :]; kwargs...)
+        end,
+    ))
 end
-function MPSMultiline(data::AbstractArray{T,2},Cinit::AbstractArray{O,1};kwargs...) where {T<:GenericMPSTensor,O<:MPSBondTensor}
-    Multiline(PeriodicArray(map(1:size(data,1)) do row
-        InfiniteMPS(data[row,:],Cinit[row];kwargs...);
-    end))
+function MPSMultiline(
+    data::AbstractArray{T,2}, Cinit::AbstractArray{O,1}; kwargs...
+) where {T<:GenericMPSTensor,O<:MPSBondTensor}
+    return Multiline(PeriodicArray(
+        map(1:size(data, 1)) do row
+            InfiniteMPS(data[row, :], Cinit[row]; kwargs...)
+        end,
+    ))
 end
-function Base.getproperty(psi::MPSMultiline,prop::Symbol)
+function Base.getproperty(psi::MPSMultiline, prop::Symbol)
     if prop == :AL
         return ALView(psi)
     elseif prop == :AR
@@ -48,28 +59,29 @@ function Base.getproperty(psi::MPSMultiline,prop::Symbol)
     elseif prop == :CR
         return CRView(psi)
     else
-        return getfield(psi,prop)
+        return getfield(psi, prop)
     end
 end
 
 for f in (:l_RR, :l_RL, :l_LL, :l_LR)
-    @eval $f(t::MPSMultiline,i,j = 1) = $f(t[i],j)
+    @eval $f(t::MPSMultiline, i, j=1) = $f(t[i], j)
 end
 
-for f in (:r_RR, :r_RL, :r_LR,:r_LL)
-    @eval $f(t::MPSMultiline,i,j = size(t,2)) = $f(t[i],j)
+for f in (:r_RR, :r_RL, :r_LR, :r_LL)
+    @eval $f(t::MPSMultiline, i, j=size(t, 2)) = $f(t[i], j)
 end
 
-
-site_type(::Type{Multiline{S}}) where S = site_type(S);
-bond_type(::Type{Multiline{S}}) where S = bond_type(S);
+site_type(::Type{Multiline{S}}) where {S} = site_type(S);
+bond_type(::Type{Multiline{S}}) where {S} = bond_type(S);
 site_type(st::Multiline) = site_type(typeof(st))
 bond_type(st::Multiline) = bond_type(typeof(st))
 
-TensorKit.dot(a::MPSMultiline,b::MPSMultiline;kwargs...) = sum(dot.(a.data,b.data;kwargs...))
+function TensorKit.dot(a::MPSMultiline, b::MPSMultiline; kwargs...)
+    return sum(dot.(a.data, b.data; kwargs...))
+end
 
-Base.convert(::Type{MPSMultiline},st::InfiniteMPS) = Multiline([st]);
-Base.convert(::Type{InfiniteMPS},st::MPSMultiline) = st[1];
+Base.convert(::Type{MPSMultiline}, st::InfiniteMPS) = Multiline([st]);
+Base.convert(::Type{InfiniteMPS}, st::MPSMultiline) = st[1];
 Base.eltype(t::MPSMultiline) = eltype(t[1]);
-left_virtualspace(t::MPSMultiline,i::Int,j::Int) = left_virtualspace(t[i],j);
-right_virtualspace(t::MPSMultiline,i::Int,j::Int) = right_virtualspace(t[i],j);
+left_virtualspace(t::MPSMultiline, i::Int, j::Int) = left_virtualspace(t[i], j);
+right_virtualspace(t::MPSMultiline, i::Int, j::Int) = right_virtualspace(t[i], j);
