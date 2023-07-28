@@ -16,9 +16,6 @@ TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
 
-[weakdeps]
-MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
-
 [compat]
 FLoops = "0.1, 0.2"
 FastClosures = "0.3"
@@ -41,3 +38,6 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 
 [targets]
 test = ["Test", "TestExtras", "Plots", "MPSKitModels"]
+
+[weakdeps]
+MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"

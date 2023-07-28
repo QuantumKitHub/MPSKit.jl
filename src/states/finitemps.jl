@@ -289,6 +289,53 @@ function max_Ds(Ψ::FiniteMPS)
     return min.(D_left, D_right)
 end
 
+function Base.show(io::IO, ::MIME"text/plain", Ψ::FiniteMPS)
+    L = length(Ψ)
+    println(io, L == 1 ? "single site" : "$L-site", " FiniteMPS:")
+    context = IOContext(io, :typeinfo => eltype(Ψ), :compact => true)
+    show(context, Ψ)
+end
+Base.show(io::IO, Ψ::FiniteMPS) = show(convert(IOContext, io), Ψ)
+function Base.show(io::IOContext, Ψ::FiniteMPS)
+    charset = (; start="┌", mid="├", stop="└", ver="│", dash="──")
+    limit = get(io, :limit, false)::Bool
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
+    if !haskey(io, :compact)
+        io = IOContext(io, :compact => true)
+    end
+    
+    L = length(Ψ)
+    center = something(findlast(!ismissing, Ψ.ALs), 0)
+    
+    for site in reverse(1:L)
+        if site < half_screen_rows || site > L - half_screen_rows
+            if site > center
+                ismissing(Ψ.ARs[site]) && throw(ArgumentError("invalid state"))
+                println(io, site == L ? charset.start : charset.mid, charset.dash, " AR[$site]: ", Ψ.ARs[site])
+                if site == 1
+                    ismissing(Ψ.CLs[site]) && throw(ArgumentError("invalid state"))
+                    println(io, charset.stop, " CL[$site]: ", Ψ.CLs[site])
+                end
+            elseif site == center
+                if !ismissing(Ψ.ACs[site])
+                    println(io, site == L ? charset.start : site == 1 ? charset.stop : charset.mid, charset.dash, " AC[$site]: ", Ψ.ACs[site])
+                elseif !ismissing(Ψ.ALs[site]) && !ismissing(Ψ.CLs[site+1])
+                    println(io, site == L ? charset.start : charset.ver, " CL[$(site+1)]: ", Ψ.CLs[site+1])
+                    println(io, site == 1 ? charset.stop : charset.mid, charset.dash, " AL[$site]: ", Ψ.ALs[site])
+                else
+                    throw(ArgumentError("invalid state"))
+                end
+            else
+                ismissing(Ψ.ALs[site]) && throw(ArgumentError("invalid state"))
+                println(io, site == 1 ? charset.stop : charset.mid, charset.dash, " AL[$site]: ", Ψ.ALs[site])
+            end
+        elseif site == half_screen_rows
+            println(io, charset.ver, "⋮")
+        end
+    end
+    return nothing
+end
+
 #===========================================================================================
 Linear Algebra
 ===========================================================================================#

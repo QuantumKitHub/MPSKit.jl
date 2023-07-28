@@ -3,6 +3,18 @@
 # ------------------------------------------
 
 # transfer of density matrix (with possible utility legs in its domain) by generic mps tensors
+
+"""
+    transfer_left(v, A, Ā)
+
+apply a transfer matrix to the left.
+
+```
+ ┌─A─
+-v │
+ └─Ā─
+```
+"""
 @generated function transfer_left(v::AbstractTensorMap{S,1,N₁}, A::GenericMPSTensor{S,N₂},
                                   Ā::GenericMPSTensor{S,N₂}) where {S,N₁,N₂}
     t_out = tensorexpr(:v, -1, -(2:(N₁ + 1)))
@@ -12,6 +24,17 @@
     return :(return @plansor $t_out := $t_in * $t_top * conj($t_bot))
 end
 
+"""
+    transfer_right(v, A, Ā)
+    
+apply a transfer matrix to the right.
+
+```
+─A─┐
+ │ v-
+─Ā─┘
+```
+"""
 @generated function transfer_right(v::AbstractTensorMap{S,1,N₁}, A::GenericMPSTensor{S,N₂},
                                    Ā::GenericMPSTensor{S,N₂}) where {S,N₁,N₂}
     t_out = tensorexpr(:v, -1, -(2:(N₁ + 1)))
