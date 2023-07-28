@@ -22,7 +22,7 @@ struct MPO_∂∂AC2{O,L,R}
     rightenv::R
 end
 
-Base.:*(h::Union{<:MPO_∂∂C,<:MPO_∂∂AC,<:MPO_∂∂AC2},v) = h(v);
+Base.:*(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2},v) = h(v);
 
 (h::MPO_∂∂C)(x) = ∂C(x,h.leftenv,h.rightenv);
 (h::MPO_∂∂AC)(x) = ∂AC(x,h.o,h.leftenv,h.rightenv);
@@ -207,7 +207,7 @@ struct AC2_EffProj{A,L}
     le::L
     re::L
 end
-Base.:*(h::Union{<:AC_EffProj,AC2_EffProj},v) = h(v);
+Base.:*(h::Union{AC_EffProj,AC2_EffProj},v) = h(v);
 
 function (h::AC_EffProj)(x::MPSTensor)
     @plansor v[-1;-2 -3 -4] := h.le[4;-1 -2 5]*h.a1[5 2;1]*h.re[1;-3 -4 3]*conj(x[4 2;3])

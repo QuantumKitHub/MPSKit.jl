@@ -115,19 +115,21 @@ function Base.circshift(st::InfiniteMPS, n)
                        circshift(st.CR, n), circshift(st.AC, n))
 end
 
-function Base.show(io::IO, ::MIME"text/plain", Ψ::InfiniteMPS)
-    println(io, "$(length(Ψ))-site InfiniteMPS:")
-    for (i, AL) in enumerate(Ψ.AL)
-        println(io, "\t$i: ", AL)
-    end
-    return
-end
-
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:InfiniteMPS{<:Any,B}}) where {B} = B
 
 left_virtualspace(Ψ::InfiniteMPS, n::Integer) = _firstspace(Ψ.CR[n])
 right_virtualspace(Ψ::InfiniteMPS, n::Integer) = dual(_lastspace(Ψ.CR[n]))
+
+function physicalspace(Ψ::InfiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer) where {N}
+    if N == 1
+        return ProductSpace{spacetype(Ψ)}()
+    elseif N == 2
+        return space(Ψ.AL[n], 2)
+    else
+        return ProductSpace{spacetype(Ψ), N-1}(space.(Ref(Ψ.AL[n]), Base.front(Base.tail(TensorKit.allind(Ψ.AL[n])))))
+    end
+end
 
 TensorKit.space(Ψ::InfiniteMPS{<:MPSTensor}, n::Integer) = space(Ψ.AC[n], 2)
 function TensorKit.space(Ψ::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
@@ -150,6 +152,36 @@ function TensorKit.dot(Ψ₁::InfiniteMPS, Ψ₂::InfiniteMPS; krylovdim=30)
                                    Arnoldi(; krylovdim=krylovdim))
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]
+end
+
+function Base.show(io::IO, ::MIME"text/plain", Ψ::InfiniteMPS)
+    L = length(Ψ)
+    println(io, L == 1 ? "single site" : "$L-site", " InfiniteMPS:")
+    context = IOContext(io, :typeinfo => eltype(Ψ), :compact => true)
+    show(context, Ψ)
+end
+Base.show(io::IO, Ψ::InfiniteMPS) = show(convert(IOContext, io), Ψ)
+function Base.show(io::IOContext, Ψ::InfiniteMPS)
+    charset = (; mid="├", ver="│", dash="──")
+    limit = get(io, :limit, false)::Bool
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
+    if !haskey(io, :compact)
+        io = IOContext(io, :compact => true)
+    end
+    L = length(Ψ)
+    println(io, charset.ver, "   ⋮")
+    for site in reverse(1:L)
+        if site < half_screen_rows || site > L - half_screen_rows
+            if site == L
+                println(io, charset.ver, " CR[$site]: ", Ψ.CR[site])
+            end
+            println(io, charset.mid, charset.dash, " AL[$site]: ", Ψ.AL[site])
+        elseif site == half_screen_rows
+            println(io, charset.ver, "⋮")
+        end
+    end
+    println(io, charset.ver, "   ⋮")
+    return nothing
 end
 
 #===========================================================================================

@@ -119,6 +119,6 @@ function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
     return Ψ, envs, delta
 end
 
-function find_groundstate(Ψ, H, alg::Union{<:DMRG,<:DMRG2}, envs...)
+function find_groundstate(Ψ, H, alg::Union{DMRG,DMRG2}, envs...)
     return find_groundstate!(copy(Ψ), H, alg, envs...)
 end

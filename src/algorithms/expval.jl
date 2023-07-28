@@ -127,4 +127,5 @@ function expectation_value(st::MPSMultiline,opp::MPOMultiline,ca::PerMPOInfEnv)
     return retval
 end
 
-expectation_value(state::FiniteQP,opp) = expectation_value(convert(FiniteMPS,state),opp)
+expectation_value(state::FiniteQP, opp) = expectation_value(convert(FiniteMPS, state), opp)
+expectation_value(state::FiniteQP, opp::MPOHamiltonian) = expectation_value(convert(FiniteMPS, state), opp)

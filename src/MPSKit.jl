@@ -19,7 +19,8 @@ export leftorth, rightorth, leftorth!, rightorth!, poison!, uniform_leftorth,
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR #should be properties
 
 #useful utility functions?
-export add_util_leg, max_Ds, left_virtualspace, right_virtualspace, recalculate!
+export add_util_leg, max_Ds, recalculate!
+export left_virtualspace, right_virtualspace, physicalspace
 export entanglementplot, transferplot
 
 #hamiltonian things
@@ -143,7 +144,7 @@ include("algorithms/ED.jl")
 
 include("algorithms/unionalg.jl")
 
-include("precompile.jl")
-_precompile_()
+# include("precompile.jl")
+# _precompile_()
 
 end

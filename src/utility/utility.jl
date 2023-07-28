@@ -97,8 +97,8 @@ end
 #needed this; perhaps move to tensorkit?
 TensorKit.fuse(f::T) where {T<:VectorSpace} = f
 
-function inplace_add!(a::Union{<:AbstractTensorMap,Nothing},
-                      b::Union{<:AbstractTensorMap,Nothing})
+function inplace_add!(a::Union{AbstractTensorMap,Nothing},
+                      b::Union{AbstractTensorMap,Nothing})
     isnothing(a) && isnothing(b) && return nothing
     isnothing(a) && return b
     isnothing(b) && return a

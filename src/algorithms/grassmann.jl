@@ -101,7 +101,7 @@ end
 Compute the expectation value, and its gradient with respect to the tensors in the unit
 cell as tangent vectors on Grassmann manifolds.
 """
-function fg(x::ManifoldPoint{T}) where T <: Union{<:InfiniteMPS,FiniteMPS}
+function fg(x::ManifoldPoint{T}) where T <: Union{InfiniteMPS,FiniteMPS}
     # the gradient I want to return is the preconditioned gradient!
     g_prec = Vector{PrecGrad{eltype(x.g),eltype(x.Rhoreg)}}(undef,length(x.g));
 

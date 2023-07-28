@@ -1,7 +1,7 @@
 println("------------------------------------")
 println("|     States                       |")
 println("------------------------------------")
-@timedtestset "FiniteMPS ($D, $d, $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
+@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
                                                              (Rep[SU₂](1 => 1, 0 => 3),
                                                               Rep[SU₂](0 => 1) * Rep[SU₂](0 => 1),
                                                               ComplexF32)]
@@ -27,7 +27,7 @@ println("------------------------------------")
     @test norm(2 * ts + ts - 3 * ts) ≈ 0.0 atol = sqrt(eps(real(elt)))
 end
 
-@timedtestset "FiniteMPS ($D, $d, $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
+@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
                                                              (Rep[U₁](-1 => 3, 0 => 3, 1 => 3),
                                                               Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
                                                               ComplexF64)]
@@ -36,7 +36,7 @@ end
     @test dot(ts_small, ts_small2) ≈ dot(ts_small, ts_small)
 end
 
-@timedtestset "InfiniteMPS ($D, $d, $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
+@testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
                                                                (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
                                                                 ComplexF64)]
     tol = Float64(eps(real(elt)) * 100)
@@ -61,7 +61,8 @@ end
     end
 end
 
-@timedtestset "MPSMultiline ($D, $d, $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
+@testset "MPSMultiline ($(sectortype(D)), $elt)" for (D, d, elt) in
+                                                     [(𝔹^10, 𝔹^2, ComplexF64),
                                                                 (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
                                                                  ComplexF32)]
     tol = Float64(eps(real(elt)) * 100)
@@ -86,8 +87,8 @@ end
     end
 end
 
-@timedtestset "WindowMPS" begin
-    ham = force_planar(transverse_field_ising(; hx=4.0))
+@testset "WindowMPS" begin
+    ham = force_planar(transverse_field_ising(; g=8.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
 
     #constructor 1 - give it a plain array of tensors
@@ -137,10 +138,10 @@ end
     @test e2[2] ≈ e3[2]
 end
 
-@timedtestset "Quasiparticle state" begin
-    @timedtestset "Finite" for (th, D, d) in
+@testset "Quasiparticle state" verbose=true begin
+    @testset "Finite" verbose=true for (th, D, d) in
                                [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
-                                (su2_xxx_ham(; spin=1), Rep[SU₂](1 => 1, 0 => 3),
+                                (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3),
                                  Rep[SU₂](1 => 1))]
         ts = FiniteMPS(rand, ComplexF64, rand(4:20), d, D)
         normalize!(ts)
@@ -167,9 +168,9 @@ end
         @test ev_f ≈ ev_q atol = 1e-5
     end
 
-    @timedtestset "Infinite" for (th, D, d) in
+    @testset "Infinite" for (th, D, d) in
                                  [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
-                                  (su2_xxx_ham(; spin=1), Rep[SU₂](1 => 1, 0 => 3),
+                                  (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3),
                                    Rep[SU₂](1 => 1))]
         period = rand(1:4)
         ts = InfiniteMPS(fill(d, period), fill(D, period))
