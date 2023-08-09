@@ -35,7 +35,7 @@ left (and right) environment to construct the WindowMPS in one step.
 Construct a WindowMPS from an InfiniteMPS, by promoting a region of length `L` to a
 `FiniteMPS`.
 """
-mutable struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
+struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     left_gs::InfiniteMPS{A,B}
     window::FiniteMPS{A,B}
     right_gs::InfiniteMPS{A,B}
@@ -189,8 +189,10 @@ end
 
 function TensorKit.dot(Ψ₁::WindowMPS, Ψ₂::WindowMPS)
     length(Ψ₁) == length(Ψ₂) || throw(ArgumentError("MPS with different length"))
-    Ψ₁.left_gs == Ψ₂.left_gs || throw(ArgumentError("left InfiniteMPS is different"))
-    Ψ₁.right_gs == Ψ₂.right_gs || throw(ArgumentError("right InfiniteMPS is different"))
+    Ψ₁.left_gs == Ψ₂.left_gs || dot(Ψ₁.left_gs, Ψ₂.left_gs) ≈ 1 ||
+        throw(ArgumentError("left InfiniteMPS are different"))
+    Ψ₁.right_gs == Ψ₂.right_gs || dot(Ψ₁.right_gs, Ψ₂.right_gs) ≈ 1 ||
+        throw(ArgumentError("right InfiniteMPS are different"))
 
     ρr = TransferMatrix(Ψ₂.AR[2:end], Ψ₁.AR[2:end]) * r_RR(Ψ₂)
     return tr(_transpose_front(Ψ₁.AC[1])' * _transpose_front(Ψ₂.AC[1]) * ρr)
