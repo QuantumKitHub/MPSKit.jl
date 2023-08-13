@@ -46,12 +46,14 @@ Base.checkbounds(a::PeriodicArray, I...) = true
 function Base.circshift(t::PeriodicArray{T,N}, tup::Tuple{Vararg{Integer,N}}) where {T,N}
     return PeriodicArray{T,N}(circshift(t.data, tup))
 end
-function Base.repeat(t::PeriodicArray, args::Vararg{Integer,N} where {N})
+function Base.repeat(t::PeriodicArray, args::Vararg{Integer})
     return PeriodicArray(repeat(t.data, args...))
 end
+
 Base.BroadcastStyle(::Type{T}) where {T<:PeriodicArray} = Broadcast.ArrayStyle{T}()
+
 function Base.similar(
-    bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{T}}, ::Type{Elt}
-) where {T<:PeriodicArray,Elt}
-    return PeriodicArray(similar(Array{Elt}, axes(bc)))
-end;
+    bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{<:PeriodicArray}}, ::Type{T}
+) where {T}
+    return PeriodicArray(similar(Array{T}, axes(bc)))
+end
