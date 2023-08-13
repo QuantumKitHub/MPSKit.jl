@@ -34,7 +34,7 @@ println("------------------------------------")
     finite_algs = [
         DMRG(; verbose=verbosity > 0),
         DMRG2(; verbose=verbosity > 0, trscheme=truncdim(10)),
-        GradientGrassmann(; verbosity=verbosity),
+        GradientGrassmann(; tol=tol, verbosity=verbosity),
     ]
 
     @testset "Finite $i" for (i, alg) in enumerate(finite_algs)
