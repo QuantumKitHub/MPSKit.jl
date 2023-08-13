@@ -32,7 +32,7 @@ force_planar(x::Number) = x
 function force_planar(x::AbstractTensorMap)
     cod = reduce(*, map(i -> 𝔹^dim(space(x, i)), codomainind(x)))
     dom = reduce(*, map(i -> 𝔹^dim(space(x, i)), domainind(x)))
-    t = TensorMap(zeros, eltype(x), cod ← dom)
+    t = TensorMap(zeros, scalartype(x), cod ← dom)
     copyto!(blocks(t)[PlanarTrivial()], convert(Array, x))
     return t
 end

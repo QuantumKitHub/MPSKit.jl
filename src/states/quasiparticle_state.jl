@@ -36,7 +36,7 @@ function LeftGaugedQP(
     Xs = [
         TensorMap(
             datfun,
-            eltype(left_gs.AL[1]),
+            scalartype(left_gs.AL[1]),
             _lastspace(VLs[loc])',
             excitation_space' * right_virtualspace(right_gs, loc),
         ) for loc in 1:length(left_gs)
@@ -56,7 +56,7 @@ function RightGaugedQP(
     Xs = [
         TensorMap(
             datfun,
-            eltype(left_gs.AL[1]),
+            scalartype(left_gs.AL[1]),
             left_virtualspace(right_gs, loc - 1)',
             excitation_space' * _firstspace(VRs[loc]),
         ) for loc in 1:length(left_gs)
@@ -68,14 +68,14 @@ function RightGaugedQP(
 end
 
 #gauge dependent code
-function Base.similar(v::LeftGaugedQP, t=eltype(v))
+function Base.similar(v::LeftGaugedQP, T=scalartype(v))
     return LeftGaugedQP(
-        v.left_gs, v.right_gs, v.VLs, map(e -> similar(e, t), v.Xs), v.momentum
+        v.left_gs, v.right_gs, v.VLs, map(e -> similar(e, T), v.Xs), v.momentum
     )
 end
-function Base.similar(v::RightGaugedQP, t=eltype(v))
+function Base.similar(v::RightGaugedQP, T=scalartype(v))
     return RightGaugedQP(
-        v.left_gs, v.right_gs, map(e -> similar(e, t), v.Xs), v.VRs, v.momentum
+        v.left_gs, v.right_gs, map(e -> similar(e, T), v.Xs), v.VRs, v.momentum
     )
 end
 
@@ -199,13 +199,13 @@ function Base.convert(::Type{LeftGaugedQP}, input::RightGaugedQP{S}) where {S<:I
 end
 
 # gauge independent code
-const QP{S,T1,T2} = Union{LeftGaugedQP{S,T1,T2},RightGaugedQP{S,T1,T2}} where {S,T1,T2};
+const QP{S,T1,T2} = Union{LeftGaugedQP{S,T1,T2},RightGaugedQP{S,T1,T2}} where {S,T1,T2}
 const FiniteQP{S,T1,T2} = QP{S,T1,T2} where {S<:FiniteMPS}
 const InfiniteQP{S,T1,T2} = QP{S,T1,T2} where {S<:InfiniteMPS}
 
 utilleg(v::QP) = space(v.Xs[1], 2)
 Base.copy(a::QP) = copy!(similar(a), a)
-Base.copyto!(a::QP, b::QP) = copy!(a, b);
+Base.copyto!(a::QP, b::QP) = copy!(a, b)
 function Base.copy!(a::T, b::T) where {T<:QP}
     for (i, j) in zip(a.Xs, b.Xs)
         copy!(i, j)
@@ -230,11 +230,13 @@ function Base.:+(v::T, w::T) where {T<:QP}
     t.Xs[:] = (v.Xs + w.Xs)[:]
     return t
 end
+
 LinearAlgebra.dot(v::T, w::T) where {T<:QP} = sum(dot.(v.Xs, w.Xs))
 LinearAlgebra.norm(v::QP) = norm(norm.(v.Xs))
-LinearAlgebra.normalize!(w::QP) = rmul!(w, 1 / norm(w));
+LinearAlgebra.normalize!(w::QP) = rmul!(w, 1 / norm(w))
 Base.length(v::QP) = length(v.Xs)
-Base.eltype(v::QP) = eltype(eltype(v.Xs)) # - again debateable, need scaltype
+Base.eltype(::Type{<:QP{<:Any,<:Any,T}}) where {T} = T
+VectorInterface.scalartype(T::Type{<:QP}) = scalartype(eltype(T))
 
 function LinearAlgebra.mul!(w::T, a, v::T) where {T<:QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
@@ -277,7 +279,7 @@ Base.zero(v::QP) = v * 0;
 function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
     #very slow and clunky, but shouldn't be performance critical anyway
 
-    elt = eltype(v)
+    elt = scalartype(v)
 
     utl = utilleg(v)
     ou = oneunit(utl)

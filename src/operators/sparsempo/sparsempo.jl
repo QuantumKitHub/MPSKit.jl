@@ -36,8 +36,8 @@ SparseMPO(x::AbstractArray{Any,3}) = SparseMPO(union_split(x));
 
 #another helper - artificially create a union and reuse next constructor
 function SparseMPO(x::AbstractArray{T,3}) where {T<:TensorMap}
-    return SparseMPO(convert(AbstractArray{Union{T,eltype(T)},3}, x))
-end;
+    return SparseMPO(convert(AbstractArray{Union{T,scalartype(T)},3}, x))
+end
 
 function SparseMPO(x::AbstractArray{T,3}) where {T<:Union{A}} where {A}
     (Sp, M, E) = _envsetypes(union_types(T))
@@ -64,8 +64,8 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
     (period, numrows, numcols) = size(x)
 
     Sp = spacetype(M)
-    E == eltype(M) ||
-        throw(ArgumentError("scalar type should match mpo eltype $E ≠ $(eltype(M))"))
+    E == scalartype(M) ||
+        throw(ArgumentError("scalar type should match mpo scalartype $E ≠ $(scalartype(M))"))
     numrows == numcols || throw(ArgumentError("mpos have to be square"))
 
     domspaces = PeriodicArray{Union{Missing,Sp}}(missing, period, numrows)
@@ -174,9 +174,9 @@ function _envsetypes(d::Tuple)
     b = Base.tail(d)
 
     if a <: MPOTensor
-        return spacetype(a), a, eltype(a)
+        return spacetype(a), a, scalartype(a)
     elseif a <: MPSBondTensor
-        return spacetype(a), tensormaptype(spacetype(a), 2, 2, eltype(a)), eltype(a)
+        return spacetype(a), tensormaptype(spacetype(a), 2, 2, scalartype(a)), scalartype(a)
     else
         @assert !isempty(b)
         return _envsetypes(b)
@@ -210,9 +210,9 @@ checks if the given 4leg tensor is the identity (needed for infinite mpo hamilto
 "
 function isid(x::MPOTensor; tol=Defaults.tolgauge)
     (_firstspace(x) == _lastspace(x)' && space(x, 2) == space(x, 3)') ||
-        return false, zero(eltype(x))
-    _can_unambiguously_braid(_firstspace(x)) || return false, zero(eltype(x))
-    iszero(norm(x)) && return false, zero(eltype(x))
+        return false, zero(scalartype(x))
+    _can_unambiguously_braid(_firstspace(x)) || return false, zero(scalartype(x))
+    iszero(norm(x)) && return false, zero(scalartype(x))
 
     id = isomorphism(storagetype(x), space(x, 2), space(x, 2))
     @plansor t[-1; -2] := τ[3 -1; 1 2] * x[1 2; 3 -2]
@@ -289,42 +289,30 @@ end
 
 function Base.convert(::Type{DenseMPO}, s::SparseMPO)
     embeds = PeriodicArray(_embedders.([s[i].domspaces for i in 1:length(s)]))
-
+    
     data = PeriodicArray(
         map(1:size(s, 1)) do loc
-            return reduce(
-                +,
-                map(Iterators.product(1:(s.odim), 1:(s.odim))) do (i, j)
-                    @plansor temp[-1 -2; -3 -4] :=
-                        embeds[loc][i][
-                            -1
-                            1
-                        ] *
-                        s[loc][i, j][
-                            1 -2
-                            -3 2
-                        ] *
-                        conj(embeds[loc + 1][j][
-                            -4
-                            2
-                        ])
-                end,
-            )
+            return mapreduce(+, Iterators.product(1:(s.odim), 1:(s.odim))) do (i, j)
+                return @plansor temp[-1 -2; -3 -4] :=
+                    embeds[loc][i][-1; 1] *
+                    s[loc][i, j][1 -2; -3 2] *
+                    conj(embeds[loc + 1][j][-4; 2])
+            end
         end,
     )
 
     #there are often 0-blocks, which we can just filter out
     for i in 1:length(data)
         (U, S, V) = tsvd(
-            transpose(data[i], (3, 1, 2), (4,)); trunc=truncbelow(Defaults.tolgauge)
+            transpose(data[i], ((3, 1, 2), (4,))); trunc=truncbelow(Defaults.tolgauge)
         )
-        data[i] = transpose(U, (2, 3), (1, 4))
+        data[i] = transpose(U, ((2, 3), (1, 4)))
         @plansor data[i + 1][-1 -2; -3 -4] := S[-1; 1] * V[1; 2] * data[i + 1][2 -2; -3 -4]
 
         (U, S, V) = tsvd(
-            transpose(data[i], (1,), (3, 4, 2)); trunc=truncbelow(Defaults.tolgauge)
+            transpose(data[i], ((1,), (3, 4, 2))); trunc=truncbelow(Defaults.tolgauge)
         )
-        data[i] = transpose(V, (1, 4), (2, 3))
+        data[i] = transpose(V, ((1, 4), (2, 3)))
         @plansor data[i - 1][-1 -2; -3 -4] := data[i - 1][-1 -2; -3 1] * U[1; 2] * S[2; -4]
     end
 

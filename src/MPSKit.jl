@@ -4,6 +4,7 @@ using TensorKit, KrylovKit, OptimKit, FastClosures
 using Base.Threads, FLoops, Transducers, FoldsThreads
 using Base.Iterators
 using RecipesBase
+using VectorInterface
 
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra

@@ -2,7 +2,6 @@ using MPSKit, TensorKit, Test, OptimKit, MPSKitModels, TestExtras, Plots
 using MPSKit: _transpose_tail, _transpose_front, @plansor
 
 using TensorOperations
-TensorOperations.disable_cache()
 
 include("planarspace.jl")
 

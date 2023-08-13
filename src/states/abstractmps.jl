@@ -73,6 +73,7 @@ MPS types
 abstract type AbstractMPS end
 
 Base.eltype(Ψ::AbstractMPS) = eltype(typeof(Ψ))
+VectorInterface.scalartype(T::Type{<:AbstractMPS}) = scalartype(site_type(T))
 
 """
     site_type(Ψ::AbstractMPS)

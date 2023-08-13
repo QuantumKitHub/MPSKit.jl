@@ -20,7 +20,7 @@ function correlator(
     S₂ = _lastspace(O₂)
     S₂ == S₁' || throw(ArgumentError("O₂ should end with a trivial leg."))
 
-    G = similar(js, eltype(eltype(state)))
+    G = similar(js, scalartype(state))
     U = Tensor(ones, S₁)
 
     @tensor Vₗ[-1 -2; -3] :=

@@ -231,7 +231,7 @@ Take the L2 Tikhonov regularised of a matrix `m`.
 The regularisation parameter is the larger of `delta` (the optional argument that defaults
 to zero) and square root of machine epsilon.
 """
-function regularize(m, delta=zero(eltype(m)))
+function regularize(m, delta=zero(scalartype(m)))
     U, S, V = tsvd(m)
 
     #Sreg = real(S*sqrt(one(S) + delta^2*one(S)*norm(S,Inf)^2/S^2));#

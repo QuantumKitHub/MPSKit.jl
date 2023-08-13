@@ -3,7 +3,7 @@ const MPOMultiline = Multiline{<:Union{SparseMPO,DenseMPO}}
 Base.CartesianIndices(t::Union{DenseMPO,MPOMultiline}) = CartesianIndices(size(t))
 Base.eltype(t::MPOMultiline) = eltype(t[1]);
 
-MPOMultiline(t::AbstractTensorMap) = MPOMultiline(fill(t, 1, 1));
+MPOMultiline(t::AbstractTensorMap) = MPOMultiline(fill(t, 1, 1))
 function MPOMultiline(t::AbstractArray{T,2}) where {T<:MPOTensor}
     return Multiline(PeriodicArray(
         map(1:size(t, 1)) do row

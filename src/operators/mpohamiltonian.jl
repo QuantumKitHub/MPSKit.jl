@@ -17,16 +17,16 @@ MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)
 
 #a very simple utility constructor; given our "localmpo", constructs a mpohamiltonian
 function MPOHamiltonian(x::Array{T,1}) where {T<:MPOTensor{Sp}} where {Sp}
-    nOs = PeriodicArray{Union{eltype(T),T}}(
-        fill(zero(eltype(T)), 1, length(x) + 1, length(x) + 1)
+    nOs = PeriodicArray{Union{scalartype(T),T}}(
+        fill(zero(scalartype(T)), 1, length(x) + 1, length(x) + 1)
     )
 
     for (i, t) in enumerate(x)
         nOs[1, i, i + 1] = t
     end
 
-    nOs[1, 1, 1] = one(eltype(T))
-    nOs[1, end, end] = one(eltype(T))
+    nOs[1, 1, 1] = one(scalartype(T))
+    nOs[1, end, end] = one(scalartype(T))
 
     return MPOHamiltonian(SparseMPO(nOs))
 end
@@ -41,7 +41,8 @@ end
 
 Base.getindex(x::MPOHamiltonian, a) = x.data[a];
 
-Base.eltype(x::MPOHamiltonian) = eltype(x.data);
+Base.eltype(x::MPOHamiltonian) = eltype(x.data)
+VectorInterface.scalartype(::Type{<:MPOHamiltonian{<:Any,<:Any,E}}) where {E} = E
 Base.size(x::MPOHamiltonian) = (x.period, x.odim, x.odim)
 Base.size(x::MPOHamiltonian, i) = size(x)[i]
 Base.length(x::MPOHamiltonian) = length(x.data);

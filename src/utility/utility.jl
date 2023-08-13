@@ -1,12 +1,12 @@
 function _transpose_front(t::AbstractTensorMap) # make TensorMap{S,N₁+N₂-1,1}
     I1 = TensorKit.codomainind(t)
     I2 = TensorKit.domainind(t)
-    return transpose(t, (I1..., reverse(Base.tail(I2))...), (I2[1],))
+    return transpose(t, ((I1..., reverse(Base.tail(I2))...), (I2[1],)))
 end
 function _transpose_tail(t::AbstractTensorMap) # make TensorMap{S,1,N₁+N₂-1}
     I1 = TensorKit.codomainind(t)
     I2 = TensorKit.domainind(t)
-    return transpose(t, (I1[1],), (I2..., reverse(Base.tail(I1))...))
+    return transpose(t, ((I1[1],), (I2..., reverse(Base.tail(I1))...)))
 end
 function _transpose_as(
     t1::AbstractTensorMap, t2::AbstractTensorMap{S,N1,N2}
@@ -16,7 +16,7 @@ function _transpose_as(
     A = ntuple(x -> I1[x], N1)
     B = ntuple(x -> I1[x + N1], N2)
 
-    return transpose(t1, A, B)
+    return transpose(t1, (A, B))
 end
 
 _firstspace(t::AbstractTensorMap) = space(t, 1)
@@ -30,10 +30,10 @@ function decompose_localmpo(
 
     leftind = (N + 1, 1, 2)
     rightind = (ntuple(x -> x + N + 1, N - 1)..., reverse(ntuple(x -> x + 2, N - 2))...)
-    (U, S, V) = tsvd(transpose(inpmpo, leftind, rightind); trunc=trunc)
+    U, S, V = tsvd(transpose(inpmpo, (leftind, rightind)); trunc=trunc)
 
-    A = transpose(U * S, (2, 3), (1, 4))
-    B = transpose(V, (1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1))
+    A = transpose(U * S, ((2, 3), (1, 4)))
+    B = transpose(V, ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1)))
     return [A; decompose_localmpo(B)]
 end
 
@@ -45,7 +45,7 @@ function decompose_localmps(
 
     leftind = (1, 2)
     rightind = reverse(ntuple(x -> x + 2, N - 1))
-    U, S, V = tsvd(transpose(state, leftind, rightind); trunc=trunc)
+    U, S, V = tsvd(transpose(state, (leftind, rightind)); trunc=trunc)
 
     A = U * S
     B = _transpose_front(V)
@@ -122,7 +122,7 @@ function fill_data!(a::TensorMap, dfun)
 end
 randomize!(a::TensorMap) = fill_data!(a, randn)
 
-function safe_xlogx(t::AbstractTensorMap, eps=eps(real(eltype(t))))
+function safe_xlogx(t::AbstractTensorMap, eps=eps(real(scalartype(t))))
     (U, S, V) = tsvd(t; alg=SVD(), trunc=truncbelow(eps))
     return U * S * log(S) * V
 end

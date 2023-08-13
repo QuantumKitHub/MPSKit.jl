@@ -203,7 +203,7 @@ function mixed_fixpoints(
                 TransferMatrix(c_above.AL[loc - 1], mpo[cr, loc - 1], c_below.AL[loc - 1])
         end
 
-        renormfact::eltype(T) = dot(c_below.CR[0], MPO_∂∂C(L0, R0) * c_above.CR[0])
+        renormfact::scalartype(T) = dot(c_below.CR[0], MPO_∂∂C(L0, R0) * c_above.CR[0])
 
         righties[cr, end] = R0 / sqrt(renormfact)
         lefties[cr, 1] /= sqrt(renormfact)

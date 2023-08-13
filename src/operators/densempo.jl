@@ -11,7 +11,8 @@ Base.length(t::DenseMPO) = length(t.opp);
 Base.size(t::DenseMPO) = (length(t),)
 Base.repeat(t::DenseMPO, n) = DenseMPO(repeat(t.opp, n));
 Base.getindex(t::DenseMPO, i) = getindex(t.opp, i);
-Base.eltype(t::DenseMPO{O}) where {O} = O;
+Base.eltype(::DenseMPO{O}) where {O} = O
+VectorInterface.scalartype(::DenseMPO{O}) where {O} = scalartype(O)
 Base.iterate(t::DenseMPO, i=1) = (i > length(t.opp)) ? nothing : (t[i], i + 1);
 TensorKit.space(t::DenseMPO, i) = space(t.opp[i], 2)
 function Base.convert(::Type{InfiniteMPS}, mpo::DenseMPO)

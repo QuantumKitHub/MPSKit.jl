@@ -19,7 +19,7 @@ function excitations(
     init=FiniteMPS([copy(first(states).AC[i]) for i in 1:length(first(states))]),
     num=1,
 ) where {N,T<:FiniteMPS}
-    num == 0 && return (eltype(eltype(T))[], T[])
+    num == 0 && return (scalartype(T)[], T[])
 
     super_op = LinearCombination(
         tuple(H, ProjectionOperator.(states)...),

@@ -219,8 +219,8 @@ function environments(
         right_above = right_gs[row]
         right_below = right_gs[row + 1]
 
-        left_renorms = fill(zero(eltype(B_type)), numcols)
-        right_renorms = fill(zero(eltype(B_type)), numcols)
+        left_renorms = fill(zero(scalartype(B_type)), numcols)
+        right_renorms = fill(zero(scalartype(B_type)), numcols)
 
         for col in 1:numcols
             lv = leftenv(lenvs, col, left_gs)[row]

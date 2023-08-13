@@ -92,7 +92,7 @@ end
 function expectation_value_fimpl(
     state::AbstractFiniteMPS, ham::MPOHamiltonian, envs::FinEnv
 )
-    ens = zeros(eltype(eltype(state)), length(state))
+    ens = zeros(scalartype(state), length(state))
     for i in 1:length(state), (j, k) in keys(ham[i])
         !((j == 1 && k != 1) || (k == ham.odim && j != ham.odim)) && continue
 
@@ -115,7 +115,7 @@ end
 function expectation_value(st::InfiniteMPS, ham::MPOHamiltonian, prevca::MPOHamInfEnv)
     #calculate energy density
     len = length(st)
-    ens = PeriodicArray(zeros(eltype(st.AR[1]), len))
+    ens = PeriodicArray(zeros(scalartype(st.AR[1]), len))
     for i in 1:len
         util = fill_data!(similar(st.AL[1], space(prevca.lw[ham.odim, i + 1], 2)), one)
         for j in (ham.odim):-1:1
@@ -172,7 +172,7 @@ function expectation_value(st::InfiniteMPS, ca::PerMPOInfEnv)
     return expectation_value(convert(MPSMultiline, st), ca)
 end;
 function expectation_value(st::MPSMultiline, opp::MPOMultiline, ca::PerMPOInfEnv)
-    retval = PeriodicArray{eltype(st.AC[1, 1]),2}(undef, size(st, 1), size(st, 2))
+    retval = PeriodicArray{scalartype(st.AC[1, 1]),2}(undef, size(st, 1), size(st, 2))
     for (i, j) in product(1:size(st, 1), 1:size(st, 2))
         retval[i, j] = @plansor leftenv(ca, i, j, st)[1 2; 3] *
             opp[i, j][2 4; 6 5] *

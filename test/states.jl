@@ -17,7 +17,7 @@ println("------------------------------------")
             MPSKit._transpose_front(ts.CR[i - 1] * MPSKit._transpose_tail(ts.AR[i]))
     end
 
-    @test elt == eltype(eltype(ts))
+    @test elt == scalartype(ts)
 
     ts = ts * 3
     @test ovl * 9 ≈ norm(ts)^2

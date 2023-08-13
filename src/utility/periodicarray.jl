@@ -53,7 +53,7 @@ end
 Base.BroadcastStyle(::Type{T}) where {T<:PeriodicArray} = Broadcast.ArrayStyle{T}()
 
 function Base.similar(
-    bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{<:PeriodicArray}}, ::Type{T}
+    bc::Broadcast.Broadcasted{<:Broadcast.ArrayStyle{<:PeriodicArray}}, ::Type{T}
 ) where {T}
     return PeriodicArray(similar(Array{T}, axes(bc)))
 end
