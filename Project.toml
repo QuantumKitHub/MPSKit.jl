@@ -1,7 +1,7 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
 authors = ["Maarten Van Damme", "Jutho Haegeman", "Lukas Devos", "Gertian Roose", "Markus Hauru"]
-version = "0.8.0"
+version = "0.9.0"
 
 [deps]
 FLoops = "cc61a311-1640-44b5-9fba-1b764f453329"
@@ -24,9 +24,9 @@ KrylovKit = "0.4 - 0.6"
 MPSKitModels = "0.2"
 OptimKit = "0.3.1"
 RecipesBase = "1.1"
-TensorKit = "0.10"
+TensorKit = "0.11"
 TensorKitManifolds = "0.5, 0.6"
-TensorOperations = "3"
+TensorOperations = "4"
 Transducers = "0.4"
 julia = "1.6"
 
