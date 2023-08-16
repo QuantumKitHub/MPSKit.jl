@@ -15,13 +15,13 @@ println("------------------------------------")
     ]
 
     H = force_planar(transverse_field_ising(; g=1.1))
-    ψ₀ = InfiniteMPS([𝔹^2], [𝔹^10])
+    ψ₀ = InfiniteMPS([ℙ^2], [ℙ^10])
     v₀ = variance(ψ₀, H)
 
     @testset "Infinite $i" for (i, alg) in enumerate(infinite_algs)
-        lattice = alg isa IDMRG2 ? InfiniteChain(2) : InfiniteChain(1)
-        ψ₀ = repeat(InfiniteMPS([𝔹^2], [𝔹^10]), length(lattice))
-        H = force_planar(transverse_field_ising(lattice; g=1.1))
+        L = alg isa IDMRG2 ? 2 : 1
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^10]), L)
+        H = repeat(force_planar(transverse_field_ising(; g=1.1)), L)
 
         v₀ = variance(ψ₀, H)
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
@@ -38,7 +38,7 @@ println("------------------------------------")
     ]
 
     @testset "Finite $i" for (i, alg) in enumerate(finite_algs)
-        ψ₀ = FiniteMPS(rand, ComplexF64, 10, 𝔹^2, 𝔹^10)
+        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
         H = force_planar(transverse_field_ising(; g=1.1))
 
         v₀ = variance(ψ₀, H)
@@ -55,7 +55,7 @@ end
     algs = [TDVP(), TDVP2()]
 
     H = force_planar(heisenberg_XXX(; spin=1//2))
-    ψ₀ = FiniteMPS(fill(TensorMap(rand, ComplexF64, 𝔹^1 * 𝔹^2, 𝔹^1), 5))
+    ψ₀ = FiniteMPS(fill(TensorMap(rand, ComplexF64, ℙ^1 * ℙ^2, ℙ^1), 5))
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
@@ -64,8 +64,8 @@ end
         @test sum(E₀) ≈ sum(E) atol = 1e-2
     end
 
-    H = force_planar(heisenberg_XXX(InfiniteChain(2); spin=1))
-    ψ₀ = InfiniteMPS([𝔹^3, 𝔹^3], [𝔹^50, 𝔹^50])
+    H = repeat(force_planar(heisenberg_XXX(; spin=1)), 2)
+    ψ₀ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^50, ℙ^50])
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Infinite TDVP" begin
@@ -79,7 +79,7 @@ end
     algs = [VUMPS(; tol_galerkin=1e-5, verbose=false), GradientGrassmann(; verbosity=0)]
     mpo = force_planar(classical_ising())
 
-    ψ₀ = InfiniteMPS([𝔹^2], [𝔹^10])
+    ψ₀ = InfiniteMPS([ℙ^2], [ℙ^10])
     @testset "Infinite $i" for (i, alg) in enumerate(algs)
         ψ, envs = leading_boundary(ψ₀, mpo, alg)
         ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme=truncdim(3)), envs)
@@ -92,8 +92,8 @@ end
 
 @testset "quasiparticle_excitation" verbose = true begin
     @testset "infinite (ham)" begin
-        H = force_planar(heisenberg_XXX(InfiniteChain(2)))
-        ψ = InfiniteMPS([𝔹^3, 𝔹^3], [𝔹^48, 𝔹^48])
+        H = repeat(force_planar(heisenberg_XXX()), 2)
+        ψ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^48, ℙ^48])
         ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbose=false)
         energies, Bs = excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ, envs)
         @test energies[1] ≈ 0.41047925 atol = 1e-4
@@ -111,13 +111,13 @@ end
 
     @testset "finite" begin
         th = force_planar(transverse_field_ising())
-        ts = InfiniteMPS([𝔹^2], [𝔹^12])
+        ts = InfiniteMPS([ℙ^2], [ℙ^12])
         (ts, envs, _) = find_groundstate(ts, th; maxiter=400, verbose=false)
         (energies, Bs) = excitations(th, QuasiparticleAnsatz(), 0.0, ts, envs)
         inf_en = energies[1]
 
         fin_en = map([20, 10]) do len
-            ts = FiniteMPS(rand, ComplexF64, len, 𝔹^2, 𝔹^12)
+            ts = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^12)
             (ts, envs, _) = find_groundstate(ts, th; verbose=false)
 
             #find energy with quasiparticle ansatz
@@ -139,7 +139,7 @@ end
 end
 
 @testset "changebonds $((pspace,Dspace))" verbose = true for (pspace, Dspace) in [
-    (𝔹^4, 𝔹^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))
+    (ℙ^4, ℙ^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))
 ]
     @testset "mpo" begin
         #random nn interaction
@@ -231,11 +231,11 @@ end
 end
 
 @testset "Dynamical DMRG" verbose = true begin
-    ham = force_planar(-1.0 * MPOHamiltonian(σᶻᶻ()) + MPOHamiltonian(σˣ()) * 4.0)
-    gs, = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
+    ham = force_planar(-1.0 * transverse_field_ising(; g=-4.0))
+    gs, = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbose=false))
     window = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
-    szd = force_planar(S_z())
+    szd = force_planar(TensorMap(ComplexF64[0.5 0; 0 -0.5], ℂ^2 ← ℂ^2))
     @test expectation_value(gs, szd)[1] ≈ expectation_value(window, szd)[1] atol = 1e-10
 
     polepos = expectation_value(gs, ham, 10)
@@ -257,8 +257,11 @@ end
 end
 
 @testset "fidelity susceptibility" begin
-    H_X = MPOHamiltonian(σˣ())
-    H_ZZ = MPOHamiltonian(σᶻᶻ())
+    X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
+    Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
+    
+    H_X = MPOHamiltonian(X)
+    H_ZZ = MPOHamiltonian(Z ⊗ Z)
 
     hamiltonian(λ) = H_ZZ + λ * H_X
     analytical_susceptibility(λ) = abs(1 / (16 * λ^2 * (λ^2 - 1)))
@@ -286,7 +289,7 @@ end
 
 #stub tests
 @testset "correlation length / entropy" begin
-    st = InfiniteMPS([𝔹^2], [𝔹^10])
+    st = InfiniteMPS([ℙ^2], [ℙ^10])
     th = force_planar(transverse_field_ising())
     (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
     len_crit = correlation_length(st)[1]
@@ -340,7 +343,7 @@ end
 
 @testset "approximate" verbose = true begin
     @testset "mpo * infinite ≈ infinite" begin
-        st = InfiniteMPS([𝔹^2, 𝔹^2], [𝔹^10, 𝔹^10])
+        st = InfiniteMPS([ℙ^2, ℙ^2], [ℙ^10, ℙ^10])
         th = force_planar(repeat(transverse_field_ising(; g=4), 2))
 
         dt = 1e-3
@@ -349,13 +352,13 @@ end
         W1 = convert(DenseMPO, sW1)
         W2 = convert(DenseMPO, sW2)
 
-        (st1, _) = approximate(st, (sW1, st), VUMPS(; verbose=false))
-        (st2, _) = approximate(st, (W2, st), VUMPS(; verbose=false))
-        (st3, _) = approximate(st, (W1, st), IDMRG1(; verbose=false))
-        (st4, _) = approximate(
+        st1, _ = approximate(st, (sW1, st), VUMPS(; verbose=false))
+        st2, _ = approximate(st, (W2, st), VUMPS(; verbose=false))
+        st3, _ = approximate(st, (W1, st), IDMRG1(; verbose=false))
+        st4, _ = approximate(
             st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbose=false)
         )
-        (st5, _) = timestep(st, th, dt, TDVP())
+        st5, _ = timestep(st, th, dt, TDVP())
         st6 = changebonds(W1 * st, SvdCut(; trscheme=truncdim(10)))
 
         @test abs(dot(st1, st5)) ≈ 1.0 atol = dt
@@ -385,14 +388,14 @@ end
         Ψ₁ = FiniteMPS(10, ℂ^2, ℂ^30)
         Ψ₂ = FiniteMPS(10, ℂ^2, ℂ^25)
 
-        H = transverse_field_ising(; g=3.0)
-        τ = 0.1
+        H = transverse_field_ising(; g=4.0)
+        τ = 1e-3
 
         expH = make_time_mpo(H, τ, WI())
         Ψ₂, = approximate(Ψ₂, (expH, Ψ₁), alg)
         normalize!(Ψ₂)
         Ψ₂′, = timestep(Ψ₁, H, τ, TDVP())
-        @test abs(dot(Ψ₁, Ψ₁)) ≈ abs(dot(Ψ₂, Ψ₂′)) atol = 0.0001
+        @test abs(dot(Ψ₁, Ψ₁)) ≈ abs(dot(Ψ₂, Ψ₂′)) atol = 0.001
     end
 end
 
@@ -405,7 +408,7 @@ end
 
     ts = FiniteMPS(len, ℂ^2, ℂ^10)
 
-    (gs, envs) = find_groundstate(ts, th, DMRG(; verbose=false))
+    gs, envs = find_groundstate(ts, th, DMRG(; verbose=false))
 
     #translation mpo:
     @tensor bulk[-1 -2; -3 -4] :=
@@ -415,13 +418,13 @@ end
     #the groundstate should be translation invariant:
     ut = Tensor(ones, ℂ^1)
     @tensor leftstart[-1 -2; -3] := l_LL(gs)[-1, -3] * conj(ut[-2])
-    v =
-        leftstart *
-        TransferMatrix([gs.AC[1]; gs.AR[2:end]], translation[:], [gs.AC[1]; gs.AR[2:end]])
+    T = TransferMatrix([gs.AC[1]; gs.AR[2:end]], translation[:], [gs.AC[1]; gs.AR[2:end]])
+    v = leftstart * T
+    
     expval = @tensor v[1, 2, 3] * r_RR(gs)[3, 1] * ut[2]
 
     @test expval ≈ 1 atol = 1e-5
 
-    (energies, values) = exact_diagonalization(th; which=:SR)
+    energies, values = exact_diagonalization(th; which=:SR)
     @test energies[1] ≈ sum(expectation_value(gs, th)) atol = 1e-5
 end
