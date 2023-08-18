@@ -1,6 +1,11 @@
-println("------------------------------------")
-println("|     States                       |")
-println("------------------------------------")
+println("
+--------------
+|   States   |
+--------------
+")
+
+include("setup.jl")
+
 @testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
     (ℙ^10, ℙ^2, ComplexF64),
     (Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](0 => 1) * Rep[SU₂](0 => 1), ComplexF32),

@@ -1,7 +1,15 @@
 # Planar stuff
 # ----------------------------
 
+using Test, TestExtras
+using MPSKit
+using MPSKit: _transpose_tail, _transpose_front
+using TensorKit
 using TensorKit: PlanarTrivial, ℙ
+
+# using TensorOperations
+
+
 
 force_planar(x::Number) = x
 function force_planar(x::AbstractTensorMap)

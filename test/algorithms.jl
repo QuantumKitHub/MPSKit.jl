@@ -1,6 +1,10 @@
-println("------------------------------------")
-println("|     Algorithms                   |")
-println("------------------------------------")
+println("
+------------------
+|   Algorithms   |
+------------------
+")
+
+include("setup.jl")
 
 @testset "find_groundstate" verbose = true begin
     tol = 1e-6
