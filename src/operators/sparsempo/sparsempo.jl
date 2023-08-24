@@ -4,7 +4,6 @@
 
 struct SparseMPO{S,T<:MPOTensor,E<:Number} <: AbstractVector{SparseMPOSlice{S,T,E}}
     Os::PeriodicArray{Union{E,T},3}
-
     domspaces::PeriodicArray{S,2}
     pspaces::PeriodicArray{S,1}
 end
@@ -22,6 +21,28 @@ function Base.getproperty(h::SparseMPO, f::Symbol)
 end
 
 Base.checkbounds(a::SparseMPO, I...) = true
+
+# promotion and conversion
+# ------------------------
+function Base.promote_rule(
+    ::Type{SparseMPO{S,T₁,E₁}},
+    ::Type{SparseMPO{S,T₂,E₂}},
+) where {S,T₁,E₁,T₂,E₂}
+    return SparseMPO{S,promote_type(T₁, T₂),promote_type(E₁, E₂)}
+end
+
+function Base.convert(::Type{SparseMPO{S,T,E}}, x::SparseMPO{S}) where {S,T,E}
+    typeof(x) == SparseMPO{S,T,E} && return x
+    newOs = similar(x.Os, Union{E,T})
+    map!(newOs, x.Os) do t
+        if t isa MPOTensor
+            return convert(T, t)
+        else
+            return convert(E, t)
+        end
+    end
+    return SparseMPO{S,T,E}(newOs, x.domspaces, x.pspaces)
+end
 
 #=
 allow passing in
