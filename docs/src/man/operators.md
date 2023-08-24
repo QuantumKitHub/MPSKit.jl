@@ -33,28 +33,74 @@ In this way, we can both represent periodic infinite mpos and place dependent fi
 
 ## MPOHamiltonian
 
-We represent all quantum hamiltonians in their mpo form. As an example, the following bit of code constructs the ising hamiltonian.
+We represent all quantum hamiltonians in their MPO form. This consists of an upper
+triangular (sparse) matrix of regular MPO tensors per site, resulting in an array with 3
+dimensions. Thus, an `MPOHamiltonian` is just a wrapper around `SparseMPO`, but with some
+guarantees about its structure. As an example, the following bit of code constructs the
+Ising hamiltonian.
 
-```julia
-sx, sy, sz, id = nonsym_spintensors(1 // 2)
+```@setup mpohamiltonian
+using TensorKit
+using MPSKit
+```
+
+```@example mpohamiltonian
+T = ComplexF64
+X = TensorMap(T[0 1; 1 0], ℂ^2 ← ℂ^2)
+Z = TensorMap(T[1 0; 0 -1], ℂ^2 ← ℂ^2)
+
 data = Array{Any,3}(missing, 1, 3, 3)
-data[1, 1, 1] = id
-data[1, 1, 2] = -sz
-data[1, 2, 3] = sz
-data[1, 1, 3] = 3 * sx
-ham = MPOHamiltonian(data);
+data[1, 1, 1] = identity(ℂ^2)
+data[1, 1, 1] = one(T) # regular numbers are interpreted as identity operators
+data[1, 1, 2] = -Z
+data[1, 2, 3] = Z
+data[1, 1, 3] = 3 * X
+H_Ising = MPOHamiltonian(data)
+nothing # hide
 ```
 
-When we work with symmetries, it is often not possible to represent the entire hamiltonian as a sum of a product of one-body operators.
-For example, in the XXZ Heisenberg model only the sum ``sx * sx + sy * sy + sz * sz`` is su(2) symmetric, but individually none of the terms are.
-It is for this reason that we use 4 leg mpo tensors in this hamiltonian object. The following bit of code
+When working with symmetries, it is often not possible to represent the entire Hamiltonian
+as a sum of a product of one-body operators. This means that there will be auxiliary virtual
+spaces connecting the different MPO tensors. For example, when constructing the XXX
+Heisenberg model without symmetries, the following code suffices:
 
-```julia
-ham[1][1, 1]
+```@example mpohamiltonian
+Y = TensorMap(T[0 -im; im 0], ℂ^2 ← ℂ^2)
+data = Array{Any,3}(missing, 1, 5, 5)
+data[1, 1, 1] = one(T)
+data[1, end, end] = one(T)
+data[1, 1, 2] = X
+data[1, 2, end] = X
+data[1, 1, 3] = Y
+data[1, 3, end] = Y
+data[1, 1, 4] = Z
+data[1, 4, end] = Z
+H_Heisenberg = MPOHamiltonian(data)
+nothing # hide
 ```
 
-Will print out a tensormap mapping `virtual_space ⊗ physical_space` to `physical_space ⊗ virtual_space`.
-The conversion to mpo tensors was done automagically behind the scenes!
+However, none of the operators above are SU(2) symmetric, only the total hamiltonian is. The
+solution is found by combining `XX + YY + ZZ` into a single tensor, and then decomposing
+that tensor into a product of local MPO tensors.
 
+```@example mpohamiltonian
+using MPSKit: decompose_localmpo, add_util_leg
+SS = TensorMap(zeros, T, SU2Space(1//2 => 1)^2 ← SU2Space(1//2 => 1)^2)
+blocks(SS)[SU2Irrep(0)] .= -3/4
+blocks(SS)[SU2Irrep(1)] .= 1/4
+S_left, S_right = MPSKit.decompose_localmpo(add_util_leg(SS))
+@show space(S_right, 1) # this is the virtual space connecting the two mpo tensors
+data = Array{Any,3}(missing, 1, 3, 3)
+data[1, 1, 1] = one(T)
+data[1, end, end] = one(T)
+data[1, 1, 2] = S_left
+data[1, 2, end] = S_right
+H_Heisenberg_SU2 = MPOHamiltonian(data)
+nothing # hide
+```
 
-An `MPOHamiltonian` is really just a `SparseMPO`, but with the garantuee that the sub-blocks are upper triangular. This effectively means that they are finite state machines, which are general enough to encode any hamiltonian but are efficient to construct environments for.
+because of this, when indexing a Hamiltonian, a 2,2-tensormap is returned:
+
+```@example mpohamiltonian
+H_Heisenberg[1][1, 2]
+```
