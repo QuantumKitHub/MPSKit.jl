@@ -186,6 +186,7 @@ function ac2_proj(row,col,below,envs::PerMPOInfEnv)
     ∂AC2(ac2,leftenv(envs,row,col+1,below),rightenv(envs,row,col+1,below))
 end
 
+#=
 ∂∂C(pos::Int,mps,opp::LinearCombination,cache) =
     LinearCombination(broadcast((h,e) -> ∂∂C(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
 
@@ -195,7 +196,7 @@ end
 
 ∂∂AC2(pos::Int,mps,opp::LinearCombination,cache) =
     LinearCombination(broadcast((h,e) -> ∂∂AC2(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
-
+=#
 struct AC_EffProj{A,L}
     a1::A
     le::L
@@ -222,3 +223,23 @@ end
     AC_EffProj(opp.ket.AC[pos],leftenv(env,pos,state),rightenv(env,pos,state));
 ∂∂AC2(pos::Int,state,opp::ProjectionOperator,env) =
     AC2_EffProj(opp.ket.AC[pos],opp.ket.AR[pos+1],leftenv(env,pos,state),rightenv(env,pos+1,state));
+
+# MultipliedOperator and SumOfOperators
+∂∂C(pos::Int,mps,opp::MultipliedOperator,cache) =
+MultipliedOperator(∂∂C(pos::Int,mps,opp.op,cache),opp.f)
+
+∂∂AC(pos::Int,mps,opp::MultipliedOperator,cache) =
+MultipliedOperator(∂∂AC(pos::Int,mps,opp.op,cache),opp.f)
+
+∂∂AC2(pos::Int,mps,opp::MultipliedOperator,cache) =
+MultipliedOperator(∂∂AC2(pos::Int,mps,opp.op,cache),opp.f)
+
+∂∂C(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
+    SumOfOperators( map((op,openv)->∂∂C(pos,mps,op,openv),opp.ops,cache.envs) )
+
+∂∂AC(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
+    SumOfOperators( map((op,openv)->∂∂AC(pos,mps,op,openv),opp.ops,cache.envs) )
+
+∂∂AC2(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
+    SumOfOperators( map((op,openv)->∂∂AC2(pos,mps,op,openv),opp.ops,cache.envs) )
+

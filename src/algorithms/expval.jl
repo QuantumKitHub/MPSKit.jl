@@ -1,6 +1,6 @@
 #works for general tensors
-expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opp::AbstractTensorMap) = expectation_value(state,fill(opp,length(state)))
-function expectation_value(state::Union{InfiniteMPS,MPSComoving,FiniteMPS},opps::AbstractArray{<:AbstractTensorMap})
+expectation_value(state::Union{InfiniteMPS,WindowMPS,FiniteMPS},opp::AbstractTensorMap) = expectation_value(state,fill(opp,length(state)))
+function expectation_value(state::Union{InfiniteMPS,WindowMPS,FiniteMPS},opps::AbstractArray{<:AbstractTensorMap})
     map(zip(state.AC,opps)) do (ac,opp)
         tr(ac'*transpose(
             opp*transpose(ac,(TensorKit.allind(ac)[2:end-1]),(1,TensorKit.numind(ac))),
@@ -12,14 +12,14 @@ end
 """
 calculates the expectation value of op, where op is a plain tensormap where the first index works on site at
 """
-function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{T}},op::AbstractTensorMap,at::Int) where T <: MPSTensor
+function expectation_value(state::Union{FiniteMPS{T},WindowMPS{T},InfiniteMPS{T}},op::AbstractTensorMap,at::Int) where T <: MPSTensor
     expectation_value(state,decompose_localmpo(add_util_leg(op)),at);
 end
 
 """
 calculates the expectation value of op = op1*op2*op3*... (ie an N site operator) starting at site at
 """
-function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{T}},op::AbstractArray{<:AbstractTensorMap}, at::Int) where T <: MPSTensor
+function expectation_value(state::Union{FiniteMPS{T},InfiniteMPS{T}},op::AbstractArray{<:AbstractTensorMap}, at::Int) where T <: MPSTensor
     firstspace = _firstspace(first(op));
     (firstspace == oneunit(firstspace) && _lastspace(last(op)) == firstspace') ||
         throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"));
@@ -31,6 +31,20 @@ function expectation_value(state::Union{FiniteMPS{T},MPSComoving{T},InfiniteMPS{
     return @plansor tmp[1 2;3]*ut[2]*state.CR[at+length(op)-1][3;4]*conj(state.CR[at+length(op)-1][1;4]);
 end
 
+function expectation_value(state::WindowMPS{T},op::AbstractArray{<:AbstractTensorMap}, at::Int) where T <: MPSTensor
+    firstspace = _firstspace(first(op));
+    (firstspace == oneunit(firstspace) && _lastspace(last(op)) == firstspace') ||
+        throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"));
+
+
+    ut = fill_data!(similar(op[1],firstspace),one)
+    @plansor v[-1 -2;-3] := isomorphism(storagetype(T),left_virtualspace(state,at-1),left_virtualspace(state,at-1))[-1;-3]*conj(ut[-2])
+    ALs = [state.AL[at:min(at+length(op)-1,length(state))]...,state.right_gs.AL[length(state)+1:at+length(op)-1]...]
+    tmp = v*TransferMatrix(ALs,op,ALs)
+    CR = at+length(op)-1 > length(state) ? state.right_gs.CR[at+length(op)-1] : state.CR[at+length(op)-1]
+    return @plansor tmp[1 2;3]*ut[2]*CR[3;4]*conj(CR[1;4]);
+end
+
 
 
 """
@@ -38,7 +52,7 @@ end
 """
 expectation_value(state,envs::Cache) = expectation_value(state,envs.opp,envs);
 expectation_value(state,ham::MPOHamiltonian) = expectation_value(state,ham,environments(state,ham))
-function expectation_value(state::MPSComoving,ham::MPOHamiltonian,envs::FinEnv)
+function expectation_value(state::WindowMPS,ham::MPOHamiltonian,envs::FinEnv)
     vals = expectation_value_fimpl(state,ham,envs);
 
     tot = 0.0+0im;
@@ -128,3 +142,39 @@ function expectation_value(st::MPSMultiline,opp::MPOMultiline,ca::PerMPOInfEnv)
 end
 
 expectation_value(state::FiniteQP,opp) = expectation_value(convert(FiniteMPS,state),opp)
+
+expectation_value(Ψ,op,t,args...) = expectation_value(Ψ,op,args...)
+
+# define expectation_value for MultipliedOperator as scalar multiplication of the non-multiplied result, instead of multiplying the operator itself
+expectation_value(Ψ,op::TimedOperator,t::Number,args...) = op.f(t)*expectation_value(Ψ,op.op,args...)
+expectation_value(Ψ,op::UntimedOperator,t::Number,args...) = expectation_value(Ψ,op::UntimedOperator,args...)
+expectation_value(Ψ,op::UntimedOperator,args...) = op.f*expectation_value(Ψ,op.op,args...)
+
+# define expectation_value for SumOfOperators
+expectation_value(Ψ,ops::SumOfOperators,t::Number,at::Int64) = sum(op->expectation_value(Ψ,op,t,at),ops)
+expectation_value(Ψ,ops::SumOfOperators,t::Number,envs::MultipleEnvironments=environments(Ψ,ops)) = sum(map( (op,env)->expectation_value(Ψ,op,t,env),ops.ops,envs))
+
+# define expectation_value for Window
+
+# when no time is given
+expectation_value(Ψ::WindowMPS,windowH::Window, at::Int64) = expectation_value(Ψ,windowH, 0., at) 
+
+expectation_value(Ψ::WindowMPS,windowH::Window, windowEnvs=environments(Ψ,windowH)) = expectation_value(Ψ,windowH, 0., windowEnvs) 
+
+# with time argument
+function expectation_value(Ψ::WindowMPS,windowH::Window,t::Number,at::Int64)
+    if at < 1
+        return expectation_value(Ψ.left_gs,windowH.left,t,at)
+    elseif 1 <= at <= length(Ψ.window)
+        return expectation_value(Ψ,windowH.middle,t,at)
+    else
+        return expectation_value(Ψ.right_gs,windowH.right,t,at)
+    end
+end
+
+function expectation_value(Ψ::WindowMPS,windowH::Window,t::Number,windowEnvs::Window{C,D,C}=environments(Ψ,windowH)) where {C <: Union{MultipleEnvironments,Cache}, D <: Union{MultipleEnvironments,Cache}}
+    left = expectation_value(Ψ.left_gs,windowH.left,t,windowEnvs.left)
+    middle = expectation_value(Ψ,windowH.middle,t,windowEnvs.middle)
+    right = expectation_value(Ψ.right_gs,windowH.right,t,windowEnvs.right)
+    return [left.data...,middle...,right.data...]
+end

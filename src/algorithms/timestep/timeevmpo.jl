@@ -1,6 +1,6 @@
 #https://arxiv.org/pdf/1901.05824.pdf
 
-@with_kw struct WII <: Algorithm
+@kwdef struct WII <: Algorithm
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
 end

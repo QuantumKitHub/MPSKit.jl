@@ -10,7 +10,7 @@ Single site infinite DMRG algorithm for finding groundstates.
 - `maxiter::Int`: maximum number of outer iterations
 - `verbose::Bool`: display progress information
 """
-@with_kw struct IDMRG1{A} <: Algorithm
+@kwdef struct IDMRG1{A} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     eigalg::A = Defaults.eigsolver
@@ -74,7 +74,7 @@ end
 - `verbose::Bool`: display progress information
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
-@with_kw struct IDMRG2{A} <: Algorithm
+@kwdef struct IDMRG2{A} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     eigalg::A = Defaults.eigsolver

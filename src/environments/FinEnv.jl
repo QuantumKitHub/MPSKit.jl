@@ -1,5 +1,5 @@
 "
-    FinEnv keeps track of the environments for FiniteMPS / MPSComoving
+    FinEnv keeps track of the environments for FiniteMPS / WindowMPS
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
 
     if above is set to nothing, above === below.
@@ -59,20 +59,33 @@ function environments(below::FiniteMPS{S},ham::Union{SparseMPO,MPOHamiltonian},a
     return environments(below,ham,above,leftstart,rightstart)
 end
 
-#extract the correct leftstart/rightstart for mpscomoving
-function environments(state::MPSComoving,ham::Union{SparseMPO,MPOHamiltonian,DenseMPO},above=nothing;lenvs=environments(state.left_gs,ham),renvs=environments(state.right_gs,ham))
+#extract the correct leftstart/rightstart for WindowMPS
+function environments(state::WindowMPS,ham::Union{SparseMPO,MPOHamiltonian,DenseMPO,TimedOperator},above=nothing;lenvs=environments(state.left_gs,ham),renvs=environments(state.right_gs,ham))
     environments(state,ham,above,copy(leftenv(lenvs,1,state.left_gs)),copy(rightenv(renvs,length(state),state.right_gs)))
 end
 
-function environments(below::S,above::S) where S <: Union{FiniteMPS,MPSComoving}
-    S isa MPSComoving && (above.left_gs == below.left_gs || throw(ArgumentError("left gs differs")))
-    S isa MPSComoving && (above.right_gs == below.right_gs || throw(ArgumentError("right gs differs")))
+environments(below,opp::TimedOperator,above,leftstart,rightstart) = environments(below,opp.op,above,leftstart,rightstart)
+
+# unnecesarry I think
+#function environments(state::WindowMPS,ham::TimedOperator,above=nothing;lenvs=environments(state.left_gs,ham.op),renvs=environments(state.right_gs,ham.op))
+#    environments(state,ham.op,above,copy(leftenv(lenvs,1,state.left_gs)),copy(rightenv(renvs,length(state),state.right_gs)))
+#end
+
+function environments(Ψ::WindowMPS,windowH::Window)
+    lenvs = environments(Ψ.left_gs,windowH.left)
+    renvs = environments(Ψ.right_gs,windowH.right)
+    Window(lenvs, environments(Ψ,windowH.middle;lenvs=lenvs,renvs=renvs), renvs)
+end
+
+function environments(below::S,above::S) where S <: Union{FiniteMPS,WindowMPS}
+    S isa WindowMPS && (above.left_gs == below.left_gs || throw(ArgumentError("left gs differs")))
+    S isa WindowMPS && (above.right_gs == below.right_gs || throw(ArgumentError("right gs differs")))
 
     opp = fill(nothing,length(below));
     environments(below,opp,above,l_LL(above),r_RR(above))
 end
 
-function environments(state::Union{FiniteMPS,MPSComoving},opp::ProjectionOperator)
+function environments(state::Union{FiniteMPS,WindowMPS},opp::ProjectionOperator)
     @plansor leftstart[-1;-2 -3 -4] := l_LL(opp.ket)[-3;-4]*l_LL(opp.ket)[-1;-2]
     @plansor rightstart[-1;-2 -3 -4] := r_RR(opp.ket)[-1;-2]*r_RR(opp.ket)[-3;-4]
     environments(state,fill(nothing,length(state)),state,leftstart,rightstart)

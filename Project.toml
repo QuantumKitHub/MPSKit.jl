@@ -1,7 +1,7 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
-authors = ["Maarten Van Damme", "Jutho Haegeman", "Gertian Roose", "Markus Hauru"]
-version = "0.7.0"
+authors = ["Maarten Van Damme", "Jutho Haegeman", "Lukas Devos", "Gertian Roose", "Markus Hauru"]
+version = "0.8.0"
 
 [deps]
 FLoops = "cc61a311-1640-44b5-9fba-1b764f453329"
@@ -10,20 +10,34 @@ FoldsThreads = "9c68100b-dfe1-47cf-94c8-95104e173443"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OptimKit = "77e91f04-9b3b-57a6-a776-40b61faaebe0"
-Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
+TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
+
+[weakdeps]
+MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
 
 [compat]
 FLoops = "0.1, 0.2"
 FastClosures = "0.3"
+FoldsThreads = "0.1"
 KrylovKit = "0.4 - 0.6"
+MPSKitModels = "0.2"
 OptimKit = "0.3.1"
-Parameters = "0.12.1"
 RecipesBase = "1.1"
 TensorKit = "0.10"
-TensorKitManifolds = "0.5,0.6"
-Transducers = "0.4.67"
-julia = "1.4 - 1.8"
+TensorKitManifolds = "0.5, 0.6"
+TensorOperations = "3"
+Transducers = "0.4"
+julia = "1.6"
+
+[extras]
+MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
+
+[targets]
+test = ["Test", "TestExtras", "Plots", "MPSKitModels"]

@@ -94,6 +94,14 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
     return InfiniteMPS(AL, AR, CR)
 end
 
+function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}; kwargs...)
+    CR = PeriodicArray(fill(copy(C₀), length(AR)))
+    AR = PeriodicArray(copy.(AR))
+    AL = similar(AR)
+    uniform_leftorth!(AL, CR, AR; kwargs...)
+    return InfiniteMPS(AL, AR, CR)
+end
+
 #===========================================================================================
 Utility
 ===========================================================================================#
@@ -128,6 +136,16 @@ bond_type(::Type{<:InfiniteMPS{<:Any,B}}) where {B} = B
 
 left_virtualspace(Ψ::InfiniteMPS, n::Integer) = _firstspace(Ψ.CR[n])
 right_virtualspace(Ψ::InfiniteMPS, n::Integer) = dual(_lastspace(Ψ.CR[n]))
+
+function physicalspace(Ψ::InfiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer) where {N}
+    if N == 1
+        return ProductSpace{spacetype(Ψ)}()
+    elseif N == 2
+        return space(Ψ.AL[n], 2)
+    else
+        return ProductSpace{spacetype(Ψ), N-1}(space.(Ref(Ψ.AL[n]), Base.front(Base.tail(TensorKit.allind(Ψ.AL[n])))))
+    end
+end
 
 TensorKit.space(Ψ::InfiniteMPS{<:MPSTensor}, n::Integer) = space(Ψ.AC[n], 2)
 function TensorKit.space(Ψ::InfiniteMPS{<:GenericMPSTensor}, n::Integer)

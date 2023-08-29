@@ -1,13 +1,13 @@
 """
 see https://arxiv.org/abs/1701.07035
 """
-@with_kw struct VUMPS{F} <: Algorithm
-    tol_galerkin::Float64 = Defaults.tol
-    tol_gauge::Float64 = Defaults.tolgauge
-    maxiter::Int = Defaults.maxiter
-    orthmaxiter::Int = Defaults.maxiter
-    finalize::F = Defaults._finalize
-    verbose::Bool = Defaults.verbose
+@kwdef struct VUMPS{F} <: Algorithm
+    tol_galerkin::Float64   = Defaults.tol
+    tol_gauge::Float64      = Defaults.tolgauge
+    maxiter::Int            = Defaults.maxiter
+    orthmaxiter::Int        = Defaults.maxiter
+    finalize::F             = Defaults._finalize
+    verbose::Bool           = Defaults.verbose
 end
 
 "

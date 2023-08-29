@@ -1,45 +1,48 @@
 module MPSKit
 
-    using TensorKit,KrylovKit,Parameters, OptimKit, FastClosures
-    using Base.Threads, FLoops, Transducers, FoldsThreads
-    using Base.Iterators
-    using RecipesBase
+using TensorKit, KrylovKit, OptimKit, FastClosures
+using Base.Threads, FLoops, Transducers, FoldsThreads
+using Base.Iterators
+using RecipesBase
 
-    using LinearAlgebra:diag,Diagonal;
-    import LinearAlgebra
+using LinearAlgebra: diag, Diagonal
+using LinearAlgebra: LinearAlgebra
+using Base: @kwdef
 
-    #bells and whistles for mpses
-    export InfiniteMPS,FiniteMPS,MPSComoving,PeriodicArray,MPSMultiline
-    export QP,LeftGaugedQP,RightGaugedQP
-    export leftorth,rightorth,leftorth!,rightorth!,poison!,uniform_leftorth,uniform_rightorth
-    export r_LL,l_LL,r_RR,l_RR,r_RL,r_LR,l_RL,l_LR #should be properties
+#bells and whistles for mpses
+export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
+export PeriodicArray, Window
+export MPSTensor
+export QP, LeftGaugedQP, RightGaugedQP
+export leftorth, rightorth, leftorth!, rightorth!, poison!, uniform_leftorth,
+       uniform_rightorth
+export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR #should be properties
 
     #useful utility functions?
     export add_util_leg,max_Ds,left_virtualspace,right_virtualspace, recalculate!
     export entanglementplot, transferplot
 
-    #hamiltonian things
-    export Cache
-    export SparseMPO,MPOHamiltonian,DenseMPO,MPOMultiline
-    export ∂C,∂AC,∂AC2,environments,expectation_value,effective_excitation_hamiltonian
-    export leftenv,rightenv
+#hamiltonian things
+export Cache
+export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, UntimedOperator, TimedOperator, SumOfOperators
+export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
+export leftenv, rightenv
 
-    export ∂∂C,∂∂AC
-
-    #algos
-    export find_groundstate!, find_groundstate, VUMPS, DMRG, DMRG2, GradDesc, IDMRG1, IDMRG2, GradientGrassmann
-    export leading_boundary
-    export excitations,FiniteExcited,QuasiparticleAnsatz
-    export marek_gap, correlation_length, correlator
-    export timestep!,timestep,TDVP,TDVP2,make_time_mpo,WI,WII,TaylorCluster
-    export splitham,infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
-    export changebonds!,changebonds,VUMPSSvdCut,OptimalExpand,SvdCut,UnionTrunc,RandExpand
-    export entropy
-    export propagator,NaiveInvert,Jeckelmann,DynamicalDMRG
-    export fidelity_susceptibility
-    export approximate!,approximate
-    export periodic_boundary_conditions
-    export exact_diagonalization
+#algos
+export find_groundstate!, find_groundstate, leading_boundary
+export VUMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
+export excitations, FiniteExcited, QuasiparticleAnsatz
+export marek_gap, correlation_length, correlator
+export timestep!, timestep, TDVP, TDVP2, make_time_mpo, WI, WII, TaylorCluster
+export ImplicitMidpoint, RK4, Taylor
+export splitham, infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
+export changebonds!, changebonds, VUMPSSvdCut, OptimalExpand, SvdCut, UnionTrunc, RandExpand
+export entropy
+export propagator, NaiveInvert, Jeckelmann, DynamicalDMRG
+export fidelity_susceptibility
+export approximate!, approximate
+export periodic_boundary_conditions
+export exact_diagonalization
 
     #transfer matrix
     export TransferMatrix
@@ -63,28 +66,29 @@ module MPSKit
         const eigsolver = Arnoldi(;tol,maxiter)
     end
 
-    include("utility/periodicarray.jl")
-    include("utility/utility.jl") #random utility functions
-    include("utility/plotting.jl")
-    include("utility/linearcombination.jl")
+include("utility/periodicarray.jl")
+include("utility/utility.jl") #random utility functions
+include("utility/plotting.jl")
 
-    #maybe we should introduce an abstract state type
-    include("states/abstractmps.jl")
-    include("states/infinitemps.jl")
-    include("states/multiline.jl")
-    include("states/finitemps.jl")
-    include("states/comoving.jl")
-    include("states/orthoview.jl")
-    include("states/quasiparticle_state.jl")
-    include("states/ortho.jl")
+#maybe we should introduce an abstract state type
+include("states/window.jl")
+include("states/abstractmps.jl")
+include("states/infinitemps.jl")
+include("states/multiline.jl")
+include("states/finitemps.jl")
+include("states/windowmps.jl")
+include("states/orthoview.jl")
+include("states/quasiparticle_state.jl")
+include("states/ortho.jl")
 
-    include("operators/densempo.jl")
-    include("operators/sparsempo/sparseslice.jl")
-    include("operators/sparsempo/sparsempo.jl")
-    include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
-    include("operators/mpomultiline.jl")
-    include("operators/projection.jl")
-
+include("operators/densempo.jl")
+include("operators/sparsempo/sparseslice.jl")
+include("operators/sparsempo/sparsempo.jl")
+include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
+include("operators/mpomultiline.jl")
+include("operators/projection.jl")
+include("operators/multipliedoperator.jl")
+include("operators/sumofoperators.jl")
 
     include("transfermatrix/transfermatrix.jl")
     include("transfermatrix/transfer.jl")
@@ -92,13 +96,13 @@ module MPSKit
 
     abstract type Cache end #cache "manages" environments
 
-    include("environments/FinEnv.jl")
-    include("environments/abstractinfenv.jl")
-    include("environments/permpoinfenv.jl")
-    include("environments/mpohaminfenv.jl")
-    include("environments/qpenv.jl")
-    include("environments/idmrgenv.jl")
-    include("environments/lazylincocache.jl")
+include("environments/FinEnv.jl")
+include("environments/abstractinfenv.jl")
+include("environments/permpoinfenv.jl")
+include("environments/mpohaminfenv.jl")
+include("environments/multipleenv.jl")
+include("environments/qpenv.jl")
+include("environments/idmrgenv.jl")
 
     abstract type Algorithm end
 
@@ -113,8 +117,10 @@ module MPSKit
     include("algorithms/changebonds/svdcut.jl")
     include("algorithms/changebonds/randexpand.jl")
 
-    include("algorithms/timestep/tdvp.jl")
-    include("algorithms/timestep/timeevmpo.jl")
+include("algorithms/timestep/tdvp.jl")
+include("algorithms/timestep/windowtdvp.jl")
+include("algorithms/timestep/timeevmpo.jl")
+include("algorithms/timestep/integrators.jl")
 
     include("algorithms/groundstate/vumps.jl")
     include("algorithms/groundstate/idmrg.jl")

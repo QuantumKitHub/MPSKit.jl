@@ -15,7 +15,7 @@ let
     middle = Int(round(len/2));
 
     #apply a single spinflip at the middle site
-    mpco = MPSComoving(ts,len);
+    mpco = WindowMPS(ts,len);
     @tensor mpco.AC[middle][-1 -2;-3] := mpco.AC[middle][-1,1,-3]*sx[-2,1]
     normalize!(mpco);
 

@@ -1,16 +1,16 @@
 "calculates the entropy of a given state"
 entropy(state::InfiniteMPS) = map(c->-tr(safe_xlogx(c*c')),state.CR);
-entropy(state::Union{FiniteMPS,MPSComoving,InfiniteMPS},loc::Int) = -tr(safe_xlogx(state.CR[loc]*state.CR[loc]'));
+entropy(state::Union{FiniteMPS,WindowMPS,InfiniteMPS},loc::Int) = -tr(safe_xlogx(state.CR[loc]*state.CR[loc]'));
 
 infinite_temperature(ham::MPOHamiltonian) = [permute(isomorphism(storagetype(ham[1,1,1]),oneunit(sp)*sp,oneunit(sp)*sp),(1,2,4),(3,)) for sp in ham.pspaces]
 
 "calculates the galerkin error"
-function calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving},loc,envs)::Float64
+function calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS},loc,envs)::Float64
     out = ∂∂AC(loc,state,envs.opp,envs)*state.AC[loc];
     out -= state.AL[loc]*state.AL[loc]'*out
     norm(out)
 end
-calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,MPSComoving}, envs)::Float64 =
+calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS}, envs)::Float64 =
     maximum([calc_galerkin(state,loc,envs) for loc in 1:length(state)])
 function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
     above = isnothing(envs.above) ? state : envs.above;
@@ -37,7 +37,7 @@ end
 "
 Returns the (full) entanglement spectrum at site I
 "
-function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,MPSComoving},site::Int=0)
+function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS},site::Int=0)
     @assert site<=length(st)
 
     (_,S,_) = tsvd(st.CR[site]);
@@ -106,6 +106,13 @@ function correlation_length(spectrum; kwargs...)
 end
 
 
+"""
+    variance(state, hamiltonian, [envs=environments(state, hamiltonian)])
+
+Compute the variance of the energy of the state with respect to the hamiltonian.
+"""
+function variance end
+
 function variance(state::InfiniteMPS,ham::MPOHamiltonian,envs = environments(state,ham))
     rescaled_ham = ham-expectation_value(state,ham,envs);
     real(sum(expectation_value(state,rescaled_ham*rescaled_ham)))
@@ -116,7 +123,7 @@ function variance(state::FiniteMPS,ham::MPOHamiltonian,envs = environments(state
     real(sum(expectation_value(state,ham2)) - sum(expectation_value(state,ham,envs))^2)
 end
 
-function variance(state::MPSComoving,ham::MPOHamiltonian,envs = environments(state,ham))
+function variance(state::WindowMPS,ham::MPOHamiltonian,envs = environments(state,ham))
     #tricky to define
     (ham2,nenvs) = squaredenvs(state,ham,envs);
     real(expectation_value(state,ham2,nenvs)[2] - expectation_value(state,ham,envs)[2]^2)

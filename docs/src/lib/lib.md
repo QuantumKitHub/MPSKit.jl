@@ -4,7 +4,7 @@
 ```@docs
 FiniteMPS
 InfiniteMPS
-MPSComoving
+WindowMPS
 MPSMultiline
 ```
 
