@@ -283,7 +283,7 @@ Compute the dimension of the maximal virtual space at a given site.
 """
 function max_Ds(Ψ::FiniteMPS)
     N = length(Ψ)
-    physicaldims = dim.(space.(Ref(Ψ)), 1:N)
+    physicaldims = dim.(space.(Ref(Ψ), 1:N))
     D_left = cumprod(vcat(dim(left_virtualspace(Ψ, 1)), physicaldims))
     D_right = cumprod(vcat(dim(right_virtualspace(Ψ, N)), reverse(physicaldims)))
     return min.(D_left, D_right)
