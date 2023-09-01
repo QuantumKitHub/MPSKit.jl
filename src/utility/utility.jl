@@ -33,7 +33,9 @@ function decompose_localmpo(
     U, S, V = tsvd(transpose(inpmpo, (leftind, rightind)); trunc=trunc)
 
     A = transpose(U * S, ((2, 3), (1, 4)))
-    B = transpose(V, ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1)))
+    B = transpose(
+        V, ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1))
+    )
     return [A; decompose_localmpo(B)]
 end
 

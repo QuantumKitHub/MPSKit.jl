@@ -263,7 +263,7 @@ end
 @testset "fidelity susceptibility" begin
     X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
     Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
-    
+
     H_X = MPOHamiltonian(X)
     H_ZZ = MPOHamiltonian(Z ⊗ Z)
 
@@ -359,9 +359,7 @@ end
         st1, _ = approximate(st, (sW1, st), VUMPS(; verbose=false))
         st2, _ = approximate(st, (W2, st), VUMPS(; verbose=false))
         st3, _ = approximate(st, (W1, st), IDMRG1(; verbose=false))
-        st4, _ = approximate(
-            st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbose=false)
-        )
+        st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbose=false))
         st5, _ = timestep(st, th, dt, TDVP())
         st6 = changebonds(W1 * st, SvdCut(; trscheme=truncdim(10)))
 
@@ -424,7 +422,7 @@ end
     @tensor leftstart[-1 -2; -3] := l_LL(gs)[-1, -3] * conj(ut[-2])
     T = TransferMatrix([gs.AC[1]; gs.AR[2:end]], translation[:], [gs.AC[1]; gs.AR[2:end]])
     v = leftstart * T
-    
+
     expval = @tensor v[1, 2, 3] * r_RR(gs)[3, 1] * ut[2]
 
     @test expval ≈ 1 atol = 1e-5
