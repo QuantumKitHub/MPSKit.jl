@@ -13,8 +13,10 @@ function expectation_value(
                 opp * transpose(
                     ac, ((TensorKit.allind(ac)[2:(end - 1)]), (1, TensorKit.numind(ac)))
                 ),
-                ((TensorKit.numind(ac) - 1, TensorKit.allind(ac)[1:(end - 2)]...),
-                (TensorKit.numind(ac),)),
+                (
+                    (TensorKit.numind(ac) - 1, TensorKit.allind(ac)[1:(end - 2)]...),
+                    (TensorKit.numind(ac),),
+                ),
             ),
         )
     end

@@ -9,8 +9,6 @@ using TensorKit: PlanarTrivial, ℙ
 
 # using TensorOperations
 
-
-
 force_planar(x::Number) = x
 function force_planar(x::AbstractTensorMap)
     cod = reduce(*, map(i -> ℙ^dim(space(x, i)), codomainind(x)))

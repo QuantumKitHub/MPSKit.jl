@@ -25,8 +25,7 @@ Base.checkbounds(a::SparseMPO, I...) = true
 # promotion and conversion
 # ------------------------
 function Base.promote_rule(
-    ::Type{SparseMPO{S,T₁,E₁}},
-    ::Type{SparseMPO{S,T₂,E₂}},
+    ::Type{SparseMPO{S,T₁,E₁}}, ::Type{SparseMPO{S,T₂,E₂}}
 ) where {S,T₁,E₁,T₂,E₂}
     return SparseMPO{S,promote_type(T₁, T₂),promote_type(E₁, E₂)}
 end
@@ -85,8 +84,9 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
     (period, numrows, numcols) = size(x)
 
     Sp = spacetype(M)
-    E == scalartype(M) ||
-        throw(ArgumentError("scalar type should match mpo scalartype $E ≠ $(scalartype(M))"))
+    E == scalartype(M) || throw(
+        ArgumentError("scalar type should match mpo scalartype $E ≠ $(scalartype(M))")
+    )
     numrows == numcols || throw(ArgumentError("mpos have to be square"))
 
     domspaces = PeriodicArray{Union{Missing,Sp}}(missing, period, numrows)
@@ -310,7 +310,7 @@ end
 
 function Base.convert(::Type{DenseMPO}, s::SparseMPO)
     embeds = PeriodicArray(_embedders.([s[i].domspaces for i in 1:length(s)]))
-    
+
     data = PeriodicArray(
         map(1:size(s, 1)) do loc
             return mapreduce(+, Iterators.product(1:(s.odim), 1:(s.odim))) do (i, j)
