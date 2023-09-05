@@ -7,7 +7,7 @@ println("
 include("setup.jl")
 
 @testset "find_groundstate" verbose = true begin
-    tol = 1e-6
+    tol = 1e-8
     verbosity = 0
     infinite_algs = [
         VUMPS(; tol_galerkin=tol, verbose=verbosity > 0),
@@ -19,19 +19,17 @@ include("setup.jl")
     ]
 
     H = force_planar(transverse_field_ising(; g=1.1))
-    ψ₀ = InfiniteMPS([ℙ^2], [ℙ^10])
-    v₀ = variance(ψ₀, H)
 
     @testset "Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
-        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^10]), L)
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^16]), L)
         H = repeat(force_planar(transverse_field_ising(; g=1.1)), L)
 
         v₀ = variance(ψ₀, H)
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
         v = variance(ψ, H, envs)
 
-        @test sum(δ) < 100 * tol
+        @test sum(δ) < 1e-4
         @test v₀ > v && v < 1e-2 # energy variance should be low
     end
 
