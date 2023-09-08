@@ -189,38 +189,61 @@ expectation_value(state::FiniteQP, opp) = expectation_value(convert(FiniteMPS, s
 function expectation_value(state::FiniteQP, opp::MPOHamiltonian)
     return expectation_value(convert(FiniteMPS, state), opp)
 end
-expectation_value(Ψ,op,t,args...) = expectation_value(Ψ,op,args...)
+expectation_value(Ψ, op, t, args...) = expectation_value(Ψ, op, args...)
 
 # define expectation_value for MultipliedOperator as scalar multiplication of the non-multiplied result, instead of multiplying the operator itself
-expectation_value(Ψ,op::TimedOperator,t::Number,args...) = op.f(t)*expectation_value(Ψ,op.op,args...)
-expectation_value(Ψ,op::UntimedOperator,t::Number,args...) = expectation_value(Ψ,op::UntimedOperator,args...)
-expectation_value(Ψ,op::UntimedOperator,args...) = op.f*expectation_value(Ψ,op.op,args...)
+function expectation_value(Ψ, op::TimedOperator, t::Number, args...)
+    return op.f(t) * expectation_value(Ψ, op.op, args...)
+end
+function expectation_value(Ψ, op::UntimedOperator, t::Number, args...)
+    return expectation_value(Ψ, op::UntimedOperator, args...)
+end
+function expectation_value(Ψ, op::UntimedOperator, args...)
+    return op.f * expectation_value(Ψ, op.op, args...)
+end
 
 # define expectation_value for SumOfOperators
-expectation_value(Ψ,ops::SumOfOperators,t::Number,at::Int64) = sum(op->expectation_value(Ψ,op,t,at),ops)
-expectation_value(Ψ,ops::SumOfOperators,t::Number,envs::MultipleEnvironments=environments(Ψ,ops)) = sum(map( (op,env)->expectation_value(Ψ,op,t,env),ops.ops,envs))
+function expectation_value(Ψ, ops::SumOfOperators, t::Number, at::Int64)
+    return sum(op -> expectation_value(Ψ, op, t, at), ops)
+end
+function expectation_value(
+    Ψ, ops::SumOfOperators, t::Number, envs::MultipleEnvironments=environments(Ψ, ops)
+)
+    return sum(map((op, env) -> expectation_value(Ψ, op, t, env), ops.ops, envs))
+end
 
 # define expectation_value for Window
 
 # when no time is given
-expectation_value(Ψ::WindowMPS,windowH::Window, at::Int64) = expectation_value(Ψ,windowH, 0., at) 
+function expectation_value(Ψ::WindowMPS, windowH::Window, at::Int64)
+    return expectation_value(Ψ, windowH, 0.0, at)
+end
 
-expectation_value(Ψ::WindowMPS,windowH::Window, windowEnvs=environments(Ψ,windowH)) = expectation_value(Ψ,windowH, 0., windowEnvs) 
+function expectation_value(
+    Ψ::WindowMPS, windowH::Window, windowEnvs=environments(Ψ, windowH)
+)
+    return expectation_value(Ψ, windowH, 0.0, windowEnvs)
+end
 
 # with time argument
-function expectation_value(Ψ::WindowMPS,windowOp::Window,t::Number,at::Int64)
+function expectation_value(Ψ::WindowMPS, windowOp::Window, t::Number, at::Int64)
     if at < 1
-        return expectation_value(Ψ.left_gs,windowOp.left,t,at)
+        return expectation_value(Ψ.left_gs, windowOp.left, t, at)
     elseif 1 <= at <= length(Ψ.window)
-        return expectation_value(Ψ,windowOp.middle,t,at)
+        return expectation_value(Ψ, windowOp.middle, t, at)
     else
-        return expectation_value(Ψ.right_gs,windowOp.right,t,at)
+        return expectation_value(Ψ.right_gs, windowOp.right, t, at)
     end
 end
 
-function expectation_value(Ψ::WindowMPS,windowH::Window,t::Number,windowEnvs::Window{C,D,C}=environments(Ψ,windowH)) where {C <: Union{MultipleEnvironments,Cache}, D <: Union{MultipleEnvironments,Cache}}
-    left = expectation_value(Ψ.left_gs,windowH.left,t,windowEnvs.left)
-    middle = expectation_value(Ψ.window,windowH.middle,t,windowEnvs.middle)
-    right = expectation_value(Ψ.right_gs,windowH.right,t,windowEnvs.right)
-    return [left.data...,middle...,right.data...]
+function expectation_value(
+    Ψ::WindowMPS,
+    windowH::Window,
+    t::Number,
+    windowEnvs::Window{C,D,C}=environments(Ψ, windowH),
+) where {C<:Union{MultipleEnvironments,Cache},D<:Union{MultipleEnvironments,Cache}}
+    left = expectation_value(Ψ.left_gs, windowH.left, t, windowEnvs.left)
+    middle = expectation_value(Ψ.window, windowH.middle, t, windowEnvs.middle)
+    right = expectation_value(Ψ.right_gs, windowH.right, t, windowEnvs.right)
+    return [left.data..., middle..., right.data...]
 end

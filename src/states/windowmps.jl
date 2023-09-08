@@ -53,9 +53,9 @@ end
 #===========================================================================================
 Constructors
 ===========================================================================================#
-function WindowMPS(Ψₗ::InfiniteMPS{A,B},Ψₘ::FiniteMPS{A,B},Ψᵣ::InfiniteMPS{A,B}=Ψₗ; docopy = true
-    ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
-
+function WindowMPS(
+    Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B}, Ψᵣ::InfiniteMPS{A,B}=Ψₗ; docopy=true
+) where {A<:GenericMPSTensor,B<:MPSBondTensor}
     return WindowMPS{A,B}(docopy ? copy(Ψₗ) : Ψₗ, Ψₘ, docopy ? copy(Ψᵣ) : Ψᵣ)
 end
 
