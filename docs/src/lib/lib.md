@@ -72,7 +72,7 @@ WII
 ### [Leading boundary algorithms](@id lib_bound_alg)
 ```@docs
 VUMPS
-PowerMethod
+GradientGrassmann
 ```
 
 ### [Bond change algorithms](@id lib_bc_alg)

@@ -4,6 +4,7 @@ using TensorKit, KrylovKit, OptimKit, FastClosures
 using Base.Threads, FLoops, Transducers, FoldsThreads
 using Base.Iterators
 using RecipesBase
+using VectorInterface
 
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
@@ -14,12 +15,13 @@ export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
 export PeriodicArray, Window
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
-export leftorth, rightorth, leftorth!, rightorth!, poison!, uniform_leftorth,
-       uniform_rightorth
+export leftorth,
+    rightorth, leftorth!, rightorth!, poison!, uniform_leftorth, uniform_rightorth
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR #should be properties
 
 #useful utility functions?
-export add_util_leg, max_Ds, left_virtualspace, right_virtualspace, recalculate!
+export add_util_leg, max_Ds, recalculate!
+export left_virtualspace, right_virtualspace, physicalspace
 export entanglementplot, transferplot
 
 #hamiltonian things
@@ -54,16 +56,16 @@ export transfer_left, transfer_right
 
 #default settings
 module Defaults
-const eltype = ComplexF64
-const maxiter = 100
-const tolgauge = 1e-14
-const tol = 1e-12
-const verbose = true
-_finalize(iter, state, opp, envs) = (state, envs)
+    const eltype = ComplexF64
+    const maxiter = 100
+    const tolgauge = 1e-14
+    const tol = 1e-12
+    const verbose = true
+    _finalize(iter, state, opp, envs) = (state, envs)
 
-import KrylovKit: GMRES, Arnoldi
-const linearsolver = GMRES(; tol, maxiter)
-const eigsolver = Arnoldi(; tol, maxiter)
+    import KrylovKit: GMRES, Arnoldi
+    const linearsolver = GMRES(; tol, maxiter)
+    const eigsolver = Arnoldi(; tol, maxiter)
 end
 
 include("utility/periodicarray.jl")
@@ -147,7 +149,7 @@ include("algorithms/ED.jl")
 
 include("algorithms/unionalg.jl")
 
-include("precompile.jl")
-_precompile_()
+# include("precompile.jl")
+# _precompile_()
 
 end

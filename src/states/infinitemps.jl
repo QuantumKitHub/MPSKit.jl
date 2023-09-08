@@ -54,14 +54,18 @@ end
 Constructors
 ===========================================================================================#
 
-function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractVector{B},
-                     AC::AbstractVector{A}=PeriodicArray(AL .* CR)) where {A<:GenericMPSTensor,
-                                                                           B<:MPSBondTensor}
+function InfiniteMPS(
+    AL::AbstractVector{A},
+    AR::AbstractVector{A},
+    CR::AbstractVector{B},
+    AC::AbstractVector{A}=PeriodicArray(AL .* CR),
+) where {A<:GenericMPSTensor,B<:MPSBondTensor}
     return InfiniteMPS{A,B}(AL, AR, CR, AC)
 end
 
-function InfiniteMPS(pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
-                     kwargs...) where {S<:IndexSpace}
+function InfiniteMPS(
+    pspaces::AbstractVector{S}, Dspaces::AbstractVector{S}; kwargs...
+) where {S<:IndexSpace}
     return InfiniteMPS(MPSTensor.(pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
 end
 
@@ -111,24 +115,15 @@ Base.length(Ψ::InfiniteMPS) = length(Ψ.AL)
 Base.eltype(Ψ::InfiniteMPS) = eltype(Ψ.AL)
 Base.copy(Ψ::InfiniteMPS) = InfiniteMPS(copy(Ψ.AL), copy(Ψ.AR), copy(Ψ.CR), copy(Ψ.AC))
 function Base.repeat(Ψ::InfiniteMPS, i::Int)
-    return InfiniteMPS(repeat(Ψ.AL, i), repeat(Ψ.AR, i),
-                       repeat(Ψ.CR, i), repeat(Ψ.AC, i))
+    return InfiniteMPS(repeat(Ψ.AL, i), repeat(Ψ.AR, i), repeat(Ψ.CR, i), repeat(Ψ.AC, i))
 end
 function Base.similar(Ψ::InfiniteMPS)
-    return InfiniteMPS(similar(Ψ.AL), similar(Ψ.AR), similar(Ψ.CR),
-                       similar(Ψ.AC))
+    return InfiniteMPS(similar(Ψ.AL), similar(Ψ.AR), similar(Ψ.CR), similar(Ψ.AC))
 end
 function Base.circshift(st::InfiniteMPS, n)
-    return InfiniteMPS(circshift(st.AL, n), circshift(st.AR, n),
-                       circshift(st.CR, n), circshift(st.AC, n))
-end
-
-function Base.show(io::IO, ::MIME"text/plain", Ψ::InfiniteMPS)
-    println(io, "$(length(Ψ))-site InfiniteMPS:")
-    for (i, AL) in enumerate(Ψ.AL)
-        println(io, "\t$i: ", AL)
-    end
-    return
+    return InfiniteMPS(
+        circshift(st.AL, n), circshift(st.AR, n), circshift(st.CR, n), circshift(st.AC, n)
+    )
 end
 
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
@@ -143,7 +138,9 @@ function physicalspace(Ψ::InfiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer)
     elseif N == 2
         return space(Ψ.AL[n], 2)
     else
-        return ProductSpace{spacetype(Ψ), N-1}(space.(Ref(Ψ.AL[n]), Base.front(Base.tail(TensorKit.allind(Ψ.AL[n])))))
+        return ProductSpace{spacetype(Ψ),N - 1}(
+            space.(Ref(Ψ.AL[n]), Base.front(Base.tail(TensorKit.allind(Ψ.AL[n]))))
+        )
     end
 end
 
@@ -164,10 +161,41 @@ end
 function TensorKit.dot(Ψ₁::InfiniteMPS, Ψ₂::InfiniteMPS; krylovdim=30)
     init = similar(Ψ₁.AL[1], _firstspace(Ψ₂.AL[1]) ← _firstspace(Ψ₁.AL[1]))
     randomize!(init)
-    (vals, _, convhist) = eigsolve(TransferMatrix(Ψ₂.AL, Ψ₁.AL), init, 1, :LM,
-                                   Arnoldi(; krylovdim=krylovdim))
+    (vals, _, convhist) = eigsolve(
+        TransferMatrix(Ψ₂.AL, Ψ₁.AL), init, 1, :LM, Arnoldi(; krylovdim=krylovdim)
+    )
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]
+end
+
+function Base.show(io::IO, ::MIME"text/plain", Ψ::InfiniteMPS)
+    L = length(Ψ)
+    println(io, L == 1 ? "single site" : "$L-site", " InfiniteMPS:")
+    context = IOContext(io, :typeinfo => eltype(Ψ), :compact => true)
+    return show(context, Ψ)
+end
+Base.show(io::IO, Ψ::InfiniteMPS) = show(convert(IOContext, io), Ψ)
+function Base.show(io::IOContext, Ψ::InfiniteMPS)
+    charset = (; mid="├", ver="│", dash="──")
+    limit = get(io, :limit, false)::Bool
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
+    if !haskey(io, :compact)
+        io = IOContext(io, :compact => true)
+    end
+    L = length(Ψ)
+    println(io, charset.ver, "   ⋮")
+    for site in reverse(1:L)
+        if site < half_screen_rows || site > L - half_screen_rows
+            if site == L
+                println(io, charset.ver, " CR[$site]: ", Ψ.CR[site])
+            end
+            println(io, charset.mid, charset.dash, " AL[$site]: ", Ψ.AL[site])
+        elseif site == half_screen_rows
+            println(io, charset.ver, "⋮")
+        end
+    end
+    println(io, charset.ver, "   ⋮")
+    return nothing
 end
 
 #===========================================================================================

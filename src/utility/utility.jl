@@ -1,48 +1,53 @@
 function _transpose_front(t::AbstractTensorMap) # make TensorMap{S,N₁+N₂-1,1}
     I1 = TensorKit.codomainind(t)
     I2 = TensorKit.domainind(t)
-    return transpose(t, (I1..., reverse(Base.tail(I2))...), (I2[1],))
+    return transpose(t, ((I1..., reverse(Base.tail(I2))...), (I2[1],)))
 end
 function _transpose_tail(t::AbstractTensorMap) # make TensorMap{S,1,N₁+N₂-1}
     I1 = TensorKit.codomainind(t)
     I2 = TensorKit.domainind(t)
-    return transpose(t, (I1[1],), (I2..., reverse(Base.tail(I1))...))
+    return transpose(t, ((I1[1],), (I2..., reverse(Base.tail(I1))...)))
 end
-function _transpose_as(t1::AbstractTensorMap,
-                       t2::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
+function _transpose_as(
+    t1::AbstractTensorMap, t2::AbstractTensorMap{S,N1,N2}
+) where {S,N1,N2}
     I1 = (TensorKit.codomainind(t1)..., reverse(TensorKit.domainind(t1))...)
 
     A = ntuple(x -> I1[x], N1)
     B = ntuple(x -> I1[x + N1], N2)
 
-    return transpose(t1, A, B)
+    return transpose(t1, (A, B))
 end
 
 _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
-function decompose_localmpo(inpmpo::AbstractTensorMap{PS,N,N},
-                            trunc=truncbelow(Defaults.tol)) where {PS,N}
+function decompose_localmpo(
+    inpmpo::AbstractTensorMap{PS,N,N}, trunc=truncbelow(Defaults.tol)
+) where {PS,N}
     N == 2 && return [inpmpo]
 
     leftind = (N + 1, 1, 2)
     rightind = (ntuple(x -> x + N + 1, N - 1)..., reverse(ntuple(x -> x + 2, N - 2))...)
-    (U, S, V) = tsvd(transpose(inpmpo, leftind, rightind); trunc=trunc)
+    U, S, V = tsvd(transpose(inpmpo, (leftind, rightind)); trunc=trunc)
 
-    A = transpose(U * S, (2, 3), (1, 4))
-    B = transpose(V, (1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1))
+    A = transpose(U * S, ((2, 3), (1, 4)))
+    B = transpose(
+        V, ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1))
+    )
     return [A; decompose_localmpo(B)]
 end
 
 # given a state with util legs on the side, decompose using svds to form an array of mpstensors
-function decompose_localmps(state::AbstractTensorMap{PS,N,1},
-                            trunc=truncbelow(Defaults.tol)) where {PS,N}
+function decompose_localmps(
+    state::AbstractTensorMap{PS,N,1}, trunc=truncbelow(Defaults.tol)
+) where {PS,N}
     N == 2 && return [state]
 
     leftind = (1, 2)
     rightind = reverse(ntuple(x -> x + 2, N - 1))
-    U, S, V = tsvd(transpose(state, leftind, rightind); trunc=trunc)
+    U, S, V = tsvd(transpose(state, (leftind, rightind)); trunc=trunc)
 
     A = U * S
     B = _transpose_front(V)
@@ -97,8 +102,9 @@ end
 #needed this; perhaps move to tensorkit?
 TensorKit.fuse(f::T) where {T<:VectorSpace} = f
 
-function inplace_add!(a::Union{<:AbstractTensorMap,Nothing},
-                      b::Union{<:AbstractTensorMap,Nothing})
+function inplace_add!(
+    a::Union{AbstractTensorMap,Nothing}, b::Union{AbstractTensorMap,Nothing}
+)
     isnothing(a) && isnothing(b) && return nothing
     isnothing(a) && return b
     isnothing(b) && return a
@@ -118,7 +124,7 @@ function fill_data!(a::TensorMap, dfun)
 end
 randomize!(a::TensorMap) = fill_data!(a, randn)
 
-function safe_xlogx(t::AbstractTensorMap, eps=eps(real(eltype(t))))
+function safe_xlogx(t::AbstractTensorMap, eps=eps(real(scalartype(t))))
     (U, S, V) = tsvd(t; alg=SVD(), trunc=truncbelow(eps))
     return U * S * log(S) * V
 end

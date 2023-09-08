@@ -188,7 +188,7 @@ end
 timestep(Ψ, H, dt, alg, env=environments(Ψ, H); kwargs...) = timestep(Ψ, H, 0., dt, alg, env; kwargs...) 
 
 #copying version
-function timestep(Ψ::AbstractFiniteMPS, H, time ,timestep, alg::Union{TDVP,TDVP2},
-    envs=environments(Ψ, H); kwargs...)
-return timestep!(copy(Ψ), H, time, timestep, alg, envs; kwargs...)
+function timestep(Ψ::AbstractFiniteMPS, H, time ,timestep, alg::Union{TDVP,TDVP2},envs=environments(Ψ, H); kwargs...
+)
+    return timestep!(copy(Ψ), H, time, timestep, alg, envs; kwargs...)
 end

@@ -17,15 +17,16 @@ MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)
 
 #a very simple utility constructor; given our "localmpo", constructs a mpohamiltonian
 function MPOHamiltonian(x::Array{T,1}) where {T<:MPOTensor{Sp}} where {Sp}
-    nOs = PeriodicArray{Union{eltype(T),T}}(fill(zero(eltype(T)), 1, length(x) + 1,
-                                                 length(x) + 1))
+    nOs = PeriodicArray{Union{scalartype(T),T}}(
+        fill(zero(scalartype(T)), 1, length(x) + 1, length(x) + 1)
+    )
 
     for (i, t) in enumerate(x)
         nOs[1, i, i + 1] = t
     end
 
-    nOs[1, 1, 1] = one(eltype(T))
-    nOs[1, end, end] = one(eltype(T))
+    nOs[1, 1, 1] = one(scalartype(T))
+    nOs[1, end, end] = one(scalartype(T))
 
     return MPOHamiltonian(SparseMPO(nOs))
 end
@@ -40,13 +41,14 @@ end
 
 Base.getindex(x::MPOHamiltonian, a) = x.data[a];
 
-Base.eltype(x::MPOHamiltonian) = eltype(x.data);
+Base.eltype(x::MPOHamiltonian) = eltype(x.data)
+VectorInterface.scalartype(::Type{<:MPOHamiltonian{<:Any,<:Any,E}}) where {E} = E
 Base.size(x::MPOHamiltonian) = (x.period, x.odim, x.odim)
 Base.size(x::MPOHamiltonian, i) = size(x)[i]
-Base.length(x::MPOHamiltonian) = length(x.data);
-TensorKit.space(x::MPOHamiltonian, i) = space(x.data, i);
-Base.copy(x::MPOHamiltonian) = MPOHamiltonian(copy(x.data));
-Base.iterate(x::MPOHamiltonian, args...) = iterate(x.data, args...);
+Base.length(x::MPOHamiltonian) = length(x.data)
+TensorKit.space(x::MPOHamiltonian, i) = space(x.data, i)
+Base.copy(x::MPOHamiltonian) = MPOHamiltonian(copy(x.data))
+Base.iterate(x::MPOHamiltonian, args...) = iterate(x.data, args...)
 "
 checks if ham[:,i,i] = 1 for every i
 "
@@ -73,6 +75,7 @@ function sanitycheck(ham::MPOHamiltonian)
 end
 
 #addition / substraction
+Base.:-(a::MPOHamiltonian) = -one(scalartype(a)) * a
 function Base.:+(a::MPOHamiltonian, e::AbstractVector{<:Number})
     length(e) == a.period ||
         throw(ArgumentError("periodicity should match $(a.period) ≠ $(length(e))"))
@@ -80,9 +83,12 @@ function Base.:+(a::MPOHamiltonian, e::AbstractVector{<:Number})
     nOs = copy(a.data) # we don't want our addition to change different copies of the original hamiltonian
 
     for c in 1:(a.period)
-        nOs[c][1, end] += e[c] *
-                          isomorphism(storagetype(nOs[c][1, end]), codomain(nOs[c][1, end]),
-                                      domain(nOs[c][1, end]))
+        nOs[c][1, end] +=
+            e[c] * isomorphism(
+                storagetype(nOs[c][1, end]),
+                codomain(nOs[c][1, end]),
+                domain(nOs[c][1, end]),
+            )
     end
 
     return MPOHamiltonian(nOs)
@@ -91,7 +97,12 @@ Base.:-(e::AbstractVector, a::MPOHamiltonian) = -1.0 * a + e
 Base.:+(e::AbstractVector, a::MPOHamiltonian) = a + e
 Base.:-(a::MPOHamiltonian, e::AbstractVector) = a + (-e)
 
-function Base.:+(a::MPOHamiltonian{S,T,E}, b::MPOHamiltonian{S,T,E}) where {S,T,E}
+Base.:+(a::H1, b::H2) where {H1<:MPOHamiltonian,H2<:MPOHamiltonian} = +(promote(a, b)...)
+function Base.:+(a::H, b::H) where {H<:MPOHamiltonian}
+    # this is a bit of a hack because I can't figure out how to make this more specialised
+    # than the fallback which promotes, while still having access to S,T, and E.
+    S, T, E = H.parameters
+
     a.period == b.period ||
         throw(ArgumentError("periodicity should match $(a.period) ≠ $(b.period)"))
     @assert sanitycheck(a)
@@ -131,9 +142,9 @@ function Base.:+(a::MPOHamiltonian{S,T,E}, b::MPOHamiltonian{S,T,E}) where {S,T,
         end
     end
 
-    return MPOHamiltonian(SparseMPO(nOs))
+    return MPOHamiltonian{S,T,E}(SparseMPO(nOs))
 end
-Base.:-(a::MPOHamiltonian, b::MPOHamiltonian) = a + (-1.0 * b)
+Base.:-(a::MPOHamiltonian, b::MPOHamiltonian) = a + (-b)
 
 #multiplication
 Base.:*(b::Number, a::MPOHamiltonian) = a * b
@@ -158,4 +169,17 @@ Base.:*(H::MPOHamiltonian, mps::InfiniteMPS) = convert(DenseMPO, H) * mps
 
 function add_physical_charge(O::MPOHamiltonian, charges::AbstractVector)
     return MPOHamiltonian(add_physical_charge(O.data, charges))
+end
+
+# promotion and conversion
+# ------------------------
+function Base.promote_rule(
+    ::Type{MPOHamiltonian{S,T₁,E₁}}, ::Type{MPOHamiltonian{S,T₂,E₂}}
+) where {S,T₁,E₁,T₂,E₂}
+    return MPOHamiltonian{S,promote_type(T₁, T₂),promote_type(E₁, E₂)}
+end
+
+function Base.convert(::Type{MPOHamiltonian{S,T,E}}, x::MPOHamiltonian{S}) where {S,T,E}
+    typeof(x) == MPOHamiltonian{S,T,E} && return x
+    return MPOHamiltonian{S,T,E}(convert(SparseMPO{S,T,E}, x.data))
 end

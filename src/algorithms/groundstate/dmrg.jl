@@ -12,11 +12,11 @@ Single site DMRG algorithm for finding groundstates.
     signature `finalize(iter, Ψ, H, envs) -> Ψ, envs`
 """
 @kwdef struct DMRG{A,F} <: Algorithm
-    tol::Float64    = Defaults.tol
-    maxiter::Int    = Defaults.maxiter
-    eigalg::A       = Defaults.eigsolver
-    verbose::Bool   = Defaults.verbose
-    finalize::F     = Defaults._finalize
+    tol::Float64 = Defaults.tol
+    maxiter::Int = Defaults.maxiter
+    eigalg::A = Defaults.eigsolver
+    verbose::Bool = Defaults.verbose
+    finalize::F = Defaults._finalize
 end
 
 function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environments(Ψ, H))
@@ -61,11 +61,11 @@ end
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
 @kwdef struct DMRG2{A,F} <: Algorithm
-    tol         = Defaults.tol
-    maxiter     = Defaults.maxiter
-    eigalg::A   = Defaults.eigsolver
-    trscheme    = truncerr(1e-6)
-    verbose     = Defaults.verbose
+    tol = Defaults.tol
+    maxiter = Defaults.maxiter
+    eigalg::A = Defaults.eigsolver
+    trscheme = truncerr(1e-6)
+    verbose = Defaults.verbose
     finalize::F = Defaults._finalize
 end
 
@@ -119,6 +119,6 @@ function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
     return Ψ, envs, delta
 end
 
-function find_groundstate(Ψ, H, alg::Union{<:DMRG,<:DMRG2}, envs...)
+function find_groundstate(Ψ, H, alg::Union{DMRG,DMRG2}, envs...)
     return find_groundstate!(copy(Ψ), H, alg, envs...)
 end

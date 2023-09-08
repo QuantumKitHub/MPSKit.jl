@@ -1,76 +1,83 @@
-# Basics
+# Prerequisites
 
-The following few sections should help you on your way to setting up and running simulations.
+The following sections describe the prerequisites for using MPSKit. If you are already
+familiar with the concepts of MPSKit and TensorKit, you can skip to the [Overview](@ref)
+section.
 
 ## TensorKit
 
-MPSKit works on "TensorMap" objects defined in [TensorKit.jl](https://github.com/Jutho/TensorKit.jl). These abstract objects can represent not only plain arrays but also symmetric tensors. A TensorMap is a linear map from its domain to its codomain.
-
-Initializing a TensorMap can be done using
-```julia
-TensorMap(initializer,eltype,codomain,domain);
-TensorMap(inputdat,codomain,domain);
+```@example tensorkit
+using TensorKit
 ```
 
-As an example, the following creates a random map from ℂ^10 to ℂ^10 (which is equivalent to a random matrix)
+MPSKit uses the tensors defined in [TensorKit.jl](https://github.com/Jutho/TensorKit.jl) as
+its underlying data structure. This is what allows the library to be generic with respect to
+the symmetry of the tensors. The main difference with regular multi-dimensional arrays is
+the notion of a partition of the dimensions in **incoming** and **outgoing**, which are
+respectively called **domain** and **codomain**. In other words, a `TensorMap` can be
+interpreted as a linear map from its domain to its codomain. Additionally, as generic
+symmetries are supported, in general the structure of the indices are not just integers, but
+are given by spaces.
+
+The general syntax for creating a tensor is one of the following equivalent forms:
 ```julia
-TensorMap(rand,ComplexF64,ℂ^10,ℂ^10);
-```
-Similarly, the following creates a symmetric tensor
-```julia
-TensorMap(rand,ComplexF64,Rep[U₁](0=>1)*Rep[U₁](1//2=>3),Rep[U₁](1//2=>1,-1//2=>2))
-```
-
-TensorKit defines a number of operations on TensorMap objects
-```julia
-a = TensorMap(rand,ComplexF64,ℂ^10,ℂ^10);
-
-3*a; # multiply by a scalar
-
-a+a; #addition of tensormaps
-
-a*a; #multiplication of tensormaps
-
-a*adjoint(a); #taking the adjoint
-
-dot(a,a); #inner product
-
-permute(a,(1,2),()); # create a new tensormap ℂ^10 * (ℂ^10)' ← nothing
-
-...
+TensorMap(initializer, scalartype, codomain, domain)
+TensorMap(initializer, scalartype, codomain ← domain) # ← is the `\leftarrow` operator
 ```
 
-for more complicated operations, we can use the same @tensor macro defined in [TensorOperations.jl](https://github.com/Jutho/TensorOperations.jl)
-```julia
-a = TensorMap(rand,ComplexF64,ℂ^10,ℂ^10);
-b = TensorMap(rand,ComplexF64,ℂ^10,ℂ^10);
-@tensor c[-1;-2]:=a[-1,1]*b[1,-2];
+For example, the following creates a random tensor with three legs, each of which has
+dimension two, however with different partitions.
+
+```@example tensorkit
+V1 = ℂ^2 # ℂ is the `\bbC` operator, equivalent to ComplexSpace(10)
+t1 = Tensor(rand, Float64, V1 ⊗ V1 ⊗ V1) # all spaces in codomain
+t2 = TensorMap(rand, Float64, V1, V1 ⊗ V1) # one space in codomain, two in domain
+
+try
+    t1 + t2 # incompatible partition
+catch err
+    println(err)
+end
+
+try
+    t1 + permute(t2, (1, 2, 3), ()) # incompatible arrows
+catch err
+    println(err)
+end
 ```
-creates a new TensorMap c equal to a*b.
+
+These abstract objects can represent not only plain arrays but also symmetric tensors. The
+following creates a symmetric tensor with ℤ₂ symmetry, again with three legs of dimension
+two. However, now the dimension two is now split over even and odd sectors of ℤ₂.
+
+```@example tensorkit
+V2 = Z2Space(0 => 1, 1 => 1)
+t3 = TensorMap(rand, Float64, V2 ⊗ V2, V2)
+```
 
 For more information, check out the [TensorKit documentation](https://jutho.github.io/TensorKit.jl/stable/)!
 
-## Overview
+## Conventions
 
-Within MPSKit we defined a set of [states](@ref um_states), a number of [operators](@ref um_operators) and some [algorithms](@ref um_algorithms) which combine the two in a nontrivial way.
+The general definition of an MPS tensor is as follows:
 
-As a simple example we can define a FiniteMPS
-```julia
-state = FiniteMPS(rand,ComplexF64,10,ℂ^2,ℂ^10);
-```
+![convention MPSTensor](../assets/mps_tensor_definition.png)
 
-A hamiltonian operator
-```julia
-opp = nonsym_ising_ham();
-```
+These tensors are allowed to have an arbitrary number of physical legs, and both `FiniteMPS`
+as well as `InfiniteMPS` will be able to handle the resulting objects. This allows for
+example for the definition of boundary tensors in PEPS code, which have two physical legs.
 
-And use this to find the groundstate
-```julia
-(groundstate,_) = find_groundstate(state,opp,DMRG());
-```
+Similarly, the definition of a bond tensor, appearing in between two MPS tensors, is as
+follows:
 
-## Tips & tricks
+![convention BondTensor](../assets/bond_tensor_definition.png)
 
-- There is an examples folder
-- Julia inference is taxed a lot; the first time any function is run takes a really long time
-- There are predefined hamiltonians in [MPSKitModels.jl](https://github.com/maartenvd/MPSKitModels.jl)
+Finally, the definition of a MPO tensor, which is used to represent statistical mechanics
+problems as well as quantum hamiltonians, is represented as:
+
+![convention MPOTensor](../assets/mpo_tensor_definition.png)
+
+While this results at first glance in the not very intuitive ordering of spaces as $V_l
+\otimes P \leftarrow P \otimes V_r$, this is actually the most natural ordering for keeping
+the algorithms planar. In particular, this is relevant for dealing with fermionic systems,
+where additional crossings would lead to sign problems.

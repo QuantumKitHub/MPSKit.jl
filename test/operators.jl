@@ -1,12 +1,16 @@
+println("
+-----------------
+|   Operators   |
+-----------------
+")
 
-println("------------------------------------")
-println("|     Operators                    |")
-println("------------------------------------")
+include("setup.jl")
 
-pspaces = (𝔹^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
-vspaces = (𝔹^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
+pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
+vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1//2 => 10, 3//2 => 5, 5//2 => 1))
 
-@testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces, vspaces)
+@testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
+                                                    zip(pspaces, vspaces)
     #generate a 1-2-3 body interaction
     n = TensorMap(rand, ComplexF64, pspace, pspace)
     n += n'
@@ -78,7 +82,7 @@ end
     @test abs(dot(W * (W * ts), (W * W) * ts)) ≈ 1.0 atol = 1e-10
 end
 
-@testset "Timed/SumOf Operators $(sectortype(pspace))" for (pspace,Dspace) in [(𝔹^4, 𝔹^10),
+@testset "Timed/SumOf Operators $(sectortype(pspace))" for (pspace,Dspace) in [(ℙ^4, ℙ^10),
                                                         (Rep[U₁](0 => 2), Rep[U₁]((0 => 20))),
                                                         (Rep[SU₂](1 => 1),
                                                         Rep[SU₂](1 // 2 => 10, 3 // 2 => 5,
@@ -103,7 +107,7 @@ end
 
 end
 
-@testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (pspace,Dspace,HDspace) in [(𝔹^4, 𝔹^10,𝔹^2),
+@testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (pspace,Dspace,HDspace) in [(ℙ^4, ℙ^10,ℙ^2),
                                                                                     (Rep[U₁](0 => 2), Rep[U₁]((0 => 20)),Rep[U₁]((0 => 4))),
                                                                                     (Rep[SU₂](0 => 2),Rep[SU₂](1 => 1, 0 => 3),Rep[SU₂](0 => 1))]
 

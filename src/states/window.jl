@@ -3,7 +3,7 @@
 "
     Window(leftstate,window,rightstate)
 
-    general struct an object with a left, middle and right part.
+    general struct of an object with a left, middle and right part.
 "
 struct Window{L,M,R}
     left::L
@@ -13,5 +13,3 @@ end
 
 # do we need copy? 
 # Base.copy(win::Window) = Window(copy(win.left),copy(win.middle),copy(win.right))
-
-# what kind of checks can we make to ensure left,middle and right fit together?

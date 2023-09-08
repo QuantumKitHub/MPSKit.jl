@@ -1,10 +1,15 @@
-println("------------------------------------")
-println("|     States                       |")
-println("------------------------------------")
-@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
-                                                             (Rep[SU₂](1 => 1, 0 => 3),
-                                                              Rep[SU₂](0 => 1) * Rep[SU₂](0 => 1),
-                                                              ComplexF32)]
+println("
+--------------
+|   States   |
+--------------
+")
+
+include("setup.jl")
+
+@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
+    (ℙ^10, ℙ^2, ComplexF64),
+    (Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](0 => 1) * Rep[SU₂](0 => 1), ComplexF32),
+]
     ts = FiniteMPS(rand, elt, rand(3:20), d, D)
 
     ovl = dot(ts, ts)
@@ -14,10 +19,10 @@ println("------------------------------------")
     for i in 1:length(ts)
         @test ts.AC[i] ≈ ts.AL[i] * ts.CR[i]
         @test ts.AC[i] ≈
-              MPSKit._transpose_front(ts.CR[i - 1] * MPSKit._transpose_tail(ts.AR[i]))
+            MPSKit._transpose_front(ts.CR[i - 1] * MPSKit._transpose_tail(ts.AR[i]))
     end
 
-    @test elt == eltype(eltype(ts))
+    @test elt == scalartype(ts)
 
     ts = ts * 3
     @test ovl * 9 ≈ norm(ts)^2
@@ -27,26 +32,27 @@ println("------------------------------------")
     @test norm(2 * ts + ts - 3 * ts) ≈ 0.0 atol = sqrt(eps(real(elt)))
 end
 
-@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
-                                                             (Rep[U₁](-1 => 3, 0 => 3, 1 => 3),
-                                                              Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
-                                                              ComplexF64)]
+@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
+    (ℙ^10, ℙ^2, ComplexF64),
+    (Rep[U₁](-1 => 3, 0 => 3, 1 => 3), Rep[U₁](-1 => 1, 0 => 1, 1 => 1), ComplexF64),
+]
     ts_small = FiniteMPS(rand, elt, 4, d, D)
     ts_small2 = FiniteMPS(MPSKit.decompose_localmps(convert(TensorMap, ts_small)))
     @test dot(ts_small, ts_small2) ≈ dot(ts_small, ts_small)
 end
 
-@testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(𝔹^10, 𝔹^2, ComplexF64),
-                                                               (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
-                                                                ComplexF64)]
+@testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
+    (ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)
+]
     tol = Float64(eps(real(elt)) * 100)
 
-    ts = InfiniteMPS([TensorMap(rand, elt, D * d, D), TensorMap(rand, elt, D * d, D)];
-                     tol=tol)
+    ts = InfiniteMPS(
+        [TensorMap(rand, elt, D * d, D), TensorMap(rand, elt, D * d, D)]; tol=tol
+    )
 
     for i in 1:length(ts)
-        @plansor difference[-1 -2; -3] := ts.AL[i][-1 -2; 1] * ts.CR[i][1; -3] -
-                                          ts.CR[i - 1][-1; 1] * ts.AR[i][1 -2; -3]
+        @plansor difference[-1 -2; -3] :=
+            ts.AL[i][-1 -2; 1] * ts.CR[i][1; -3] - ts.CR[i - 1][-1; 1] * ts.AR[i][1 -2; -3]
         @test norm(difference, Inf) < tol * 10
 
         @test l_LL(ts, i) * TransferMatrix(ts.AL[i], ts.AL[i]) ≈ l_LL(ts, i + 1)
@@ -61,18 +67,22 @@ end
     end
 end
 
-@testset "MPSMultiline ($(sectortype(D)), $elt)" for (D, d, elt) in
-                                                     [(𝔹^10, 𝔹^2, ComplexF64),
-                                                                (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
-                                                                 ComplexF32)]
+@testset "MPSMultiline ($(sectortype(D)), $elt)" for (D, d, elt) in [
+    (ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF32)
+]
     tol = Float64(eps(real(elt)) * 100)
-    ts = MPSMultiline([TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D);
-                       TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)];
-                      tol=tol)
+    ts = MPSMultiline(
+        [
+            TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)
+            TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)
+        ];
+        tol=tol,
+    )
 
     for i in 1:size(ts, 1), j in 1:size(ts, 2)
-        @plansor difference[-1 -2; -3] := ts.AL[i, j][-1 -2; 1] * ts.CR[i, j][1; -3] -
-                                          ts.CR[i, j - 1][-1; 1] * ts.AR[i, j][1 -2; -3]
+        @plansor difference[-1 -2; -3] :=
+            ts.AL[i, j][-1 -2; 1] * ts.CR[i, j][1; -3] -
+            ts.CR[i, j - 1][-1; 1] * ts.AR[i, j][1 -2; -3]
         @test norm(difference, Inf) < tol * 10
 
         @test l_LL(ts, i, j) * TransferMatrix(ts.AL[i, j], ts.AL[i, j]) ≈ l_LL(ts, i, j + 1)
@@ -89,7 +99,7 @@ end
 
 @testset "WindowMPS" begin
     ham = force_planar(transverse_field_ising(; g=8.0))
-    (gs, _, _) = find_groundstate(InfiniteMPS([𝔹^2], [𝔹^10]), ham, VUMPS(; verbose=false))
+    (gs, _, _) = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbose=false))
 
     #constructor 1 - give it a plain array of tensors
     window_1 = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
@@ -102,13 +112,14 @@ end
     @test ovl ≈ 1 atol = 1e-8
 
     #constructor 3 - random initial tensors
-    window = WindowMPS(rand, ComplexF64, 10, 𝔹^2, 𝔹^10, gs, gs)
+    window = WindowMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10, gs, gs)
     normalize!(window)
     
     for i in 1:length(window)
         @test window.AC[i] ≈ window.AL[i] * window.CR[i]
-        @test window.AC[i] ≈ MPSKit._transpose_front(window.CR[i - 1] *
-                                                     MPSKit._transpose_tail(window.AR[i]))
+        @test window.AC[i] ≈ MPSKit._transpose_front(
+            window.CR[i - 1] * MPSKit._transpose_tail(window.AR[i])
+        )
     end
 
     @test norm(window) ≈ 1
@@ -134,16 +145,15 @@ end
 
     e3 = expectation_value(window, ham)
 
-    #why is this not exactly the same anymore? TDVP() is fine, TDVP2() make difference of the order 1e-06
-    @test real.(e2[1]) ≈ real.(e3[1]) atol = 1e-04
-    @test real(e2[2]) ≈ real(e3[2]) atol = 1e-04
+    @test e2[1] ≈ e3[1] atol = 1e-4
+    @test e2[2] ≈ e3[2] atol = 1e-4
 end
 
-@testset "Quasiparticle state" verbose=true begin
-    @testset "Finite" verbose=true for (th, D, d) in
-                               [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
-                                (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3),
-                                 Rep[SU₂](1 => 1))]
+@testset "Quasiparticle state" verbose = true begin
+    @testset "Finite" verbose = true for (th, D, d) in [
+        (force_planar(transverse_field_ising()), ℙ^10, ℙ^2),
+        (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1)),
+    ]
         ts = FiniteMPS(rand, ComplexF64, rand(4:20), d, D)
         normalize!(ts)
 
@@ -174,10 +184,10 @@ end
 
     end
 
-    @testset "Infinite" for (th, D, d) in
-                                 [(force_planar(transverse_field_ising()), 𝔹^10, 𝔹^2),
-                                  (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3),
-                                   Rep[SU₂](1 => 1))]
+    @testset "Infinite" for (th, D, d) in [
+        (force_planar(transverse_field_ising()), ℙ^10, ℙ^2),
+        (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1)),
+    ]
         period = rand(1:4)
         ts = InfiniteMPS(fill(d, period), fill(D, period))
 
@@ -189,11 +199,11 @@ end
         @test norm(qst1) * 3 ≈ norm(qst1 * 3)
 
         @test dot(qst1, convert(MPSKit.LeftGaugedQP, convert(MPSKit.RightGaugedQP, qst1))) ≈
-              dot(qst1, qst1) atol = 1e-10
+            dot(qst1, qst1) atol = 1e-10
     end
 end
 
-@testset "Copy $(d)" for (D,d) in [(𝔹^10, 𝔹^2),
+@testset "Copy $(d)" for (D,d) in [(ℙ^10, ℙ^2),
                                 (Rep[SU₂](1 => 1, 0 => 3),Rep[SU₂](1 => 1)),
                                 (Rep[U₁]((0 => 20)), Rep[U₁](0 => 2))]
     @testset "InfiniteMPS $(d)" begin
