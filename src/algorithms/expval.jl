@@ -162,19 +162,19 @@ expectation_value(Ψ::WindowMPS,windowH::Window, at::Int64) = expectation_value(
 expectation_value(Ψ::WindowMPS,windowH::Window, windowEnvs=environments(Ψ,windowH)) = expectation_value(Ψ,windowH, 0., windowEnvs) 
 
 # with time argument
-function expectation_value(Ψ::WindowMPS,windowH::Window,t::Number,at::Int64)
+function expectation_value(Ψ::WindowMPS,windowOp::Window,t::Number,at::Int64)
     if at < 1
-        return expectation_value(Ψ.left_gs,windowH.left,t,at)
+        return expectation_value(Ψ.left_gs,windowOp.left,t,at)
     elseif 1 <= at <= length(Ψ.window)
-        return expectation_value(Ψ,windowH.middle,t,at)
+        return expectation_value(Ψ,windowOp.middle,t,at)
     else
-        return expectation_value(Ψ.right_gs,windowH.right,t,at)
+        return expectation_value(Ψ.right_gs,windowOp.right,t,at)
     end
 end
 
 function expectation_value(Ψ::WindowMPS,windowH::Window,t::Number,windowEnvs::Window{C,D,C}=environments(Ψ,windowH)) where {C <: Union{MultipleEnvironments,Cache}, D <: Union{MultipleEnvironments,Cache}}
     left = expectation_value(Ψ.left_gs,windowH.left,t,windowEnvs.left)
-    middle = expectation_value(Ψ,windowH.middle,t,windowEnvs.middle)
+    middle = expectation_value(Ψ.window,windowH.middle,t,windowEnvs.middle)
     right = expectation_value(Ψ.right_gs,windowH.right,t,windowEnvs.right)
     return [left.data...,middle...,right.data...]
 end
