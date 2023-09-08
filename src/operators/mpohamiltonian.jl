@@ -102,7 +102,7 @@ function Base.:+(a::H, b::H) where {H<:MPOHamiltonian}
     # this is a bit of a hack because I can't figure out how to make this more specialised
     # than the fallback which promotes, while still having access to S,T, and E.
     S, T, E = H.parameters
-    
+
     a.period == b.period ||
         throw(ArgumentError("periodicity should match $(a.period) ≠ $(b.period)"))
     @assert sanitycheck(a)

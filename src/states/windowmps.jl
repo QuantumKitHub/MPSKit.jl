@@ -189,9 +189,11 @@ end
 
 function TensorKit.dot(Ψ₁::WindowMPS, Ψ₂::WindowMPS)
     length(Ψ₁) == length(Ψ₂) || throw(ArgumentError("MPS with different length"))
-    Ψ₁.left_gs == Ψ₂.left_gs || dot(Ψ₁.left_gs, Ψ₂.left_gs) ≈ 1 ||
+    Ψ₁.left_gs == Ψ₂.left_gs ||
+        dot(Ψ₁.left_gs, Ψ₂.left_gs) ≈ 1 ||
         throw(ArgumentError("left InfiniteMPS are different"))
-    Ψ₁.right_gs == Ψ₂.right_gs || dot(Ψ₁.right_gs, Ψ₂.right_gs) ≈ 1 ||
+    Ψ₁.right_gs == Ψ₂.right_gs ||
+        dot(Ψ₁.right_gs, Ψ₂.right_gs) ≈ 1 ||
         throw(ArgumentError("right InfiniteMPS are different"))
 
     ρr = TransferMatrix(Ψ₂.AR[2:end], Ψ₁.AR[2:end]) * r_RR(Ψ₂)
