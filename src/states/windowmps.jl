@@ -41,7 +41,7 @@ struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     right_gs::InfiniteMPS{A,B}
 
     function WindowMPS(
-        Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B}, Ψᵣ::InfiniteMPS{A,B}
+        Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B}, Ψᵣ::InfiniteMPS{A,B}=copy(Ψₗ)
     ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
         left_virtualspace(Ψₗ, 0) == left_virtualspace(Ψₘ, 0) &&
             right_virtualspace(Ψₘ, length(Ψₘ)) == right_virtualspace(Ψᵣ, length(Ψₘ)) ||
@@ -53,11 +53,12 @@ end
 #===========================================================================================
 Constructors
 ===========================================================================================#
-function WindowMPS(Ψₗ::InfiniteMPS{A,B},Ψₘ::FiniteMPS{A,B},Ψᵣ::InfiniteMPS{A,B}=Ψₗ; docopy = true
+function WindowMPS_copied(Ψₗ::InfiniteMPS{A,B},Ψₘ::FiniteMPS{A,B},Ψᵣ::InfiniteMPS{A,B}=Ψₗ
     ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
 
-    return WindowMPS{A,B}(docopy ? copy(Ψₗ) : Ψₗ, Ψₘ, docopy ? copy(Ψᵣ) : Ψᵣ)
+    return WindowMPS{A,B}(copy(Ψₗ), Ψₘ, copy(Ψᵣ) )
 end
+
 
 function WindowMPS(
     Ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor}, Ψᵣ::InfiniteMPS=Ψₗ
