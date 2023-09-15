@@ -330,24 +330,3 @@ MultipliedOperator(∂∂AC2(pos::Int,mps,opp.op,cache),opp.f)
 
 ∂∂AC2(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
     SumOfOperators( map((op,openv)->∂∂AC2(pos,mps,op,openv),opp.ops,cache.envs) )
-
-
-# MultipliedOperator and SumOfOperators
-∂∂C(pos::Int,mps,opp::MultipliedOperator,cache) =
-MultipliedOperator(∂∂C(pos::Int,mps,opp.op,cache),opp.f)
-
-∂∂AC(pos::Int,mps,opp::MultipliedOperator,cache) =
-MultipliedOperator(∂∂AC(pos::Int,mps,opp.op,cache),opp.f)
-
-∂∂AC2(pos::Int,mps,opp::MultipliedOperator,cache) =
-MultipliedOperator(∂∂AC2(pos::Int,mps,opp.op,cache),opp.f)
-
-∂∂C(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
-    SumOfOperators( map((op,openv)->∂∂C(pos,mps,op,openv),opp.ops,cache.envs) )
-
-∂∂AC(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
-    SumOfOperators( map((op,openv)->∂∂AC(pos,mps,op,openv),opp.ops,cache.envs) )
-
-∂∂AC2(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
-    SumOfOperators( map((op,openv)->∂∂AC2(pos,mps,op,openv),opp.ops,cache.envs) )
-
