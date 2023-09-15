@@ -223,7 +223,7 @@ end
         period = rand(1:4)
         Ψ = InfiniteMPS(fill(d, period), fill(D, period));
 
-        Ψwindow = WindowMPS(rand, ComplexF64, rand(5:10), d, D, Ψ, Ψ);
+        Ψwindow = WindowMPS(rand, ComplexF64, rand(5:10), d, D, Ψ);
 
         @test Ψwindow.left_gs !== Ψwindow.right_gs # not the same reference
         @test Ψwindow.left_gs ≈ Ψwindow.right_gs  # but the same state
@@ -233,7 +233,11 @@ end
         @test abs(norm(Ψwindow.left_gs) - norm(Ψ)) > 0.5
 
         Ψwindow = WindowMPS(rand, ComplexF64, rand(5:10), d, D, Ψ, Ψ);
+        @test Ψwindow.left_gs !== Ψwindow.right_gs # the same reference
+
         Ψwindow_copied = copy(Ψwindow);
+        @test Ψwindow_copied.left_gs !== Ψwindow_copied.right_gs # not the same reference
+        @test Ψwindow_copied.left_gs ≈ Ψwindow_copied.right_gs  # but the same state
 
         Ψwindow.left_gs.AC[1] *= 2;
         @test abs(norm(Ψwindow_copied.left_gs) - norm(Ψwindow.left_gs)) > 0.5
