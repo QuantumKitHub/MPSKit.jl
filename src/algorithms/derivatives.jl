@@ -262,7 +262,6 @@ function ∂∂AC(pos::Int, mps, opp::LinearCombination, cache)
     )
 end
 
-
 ∂∂AC2(pos::Int,mps,opp::LinearCombination,cache) =
     LinearCombination(broadcast((h,e) -> ∂∂AC2(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
 =#
@@ -313,20 +312,30 @@ function ∂∂AC2(pos::Int, state, opp::ProjectionOperator, env)
 end
 
 # MultipliedOperator and SumOfOperators
-∂∂C(pos::Int,mps,opp::MultipliedOperator,cache) =
-MultipliedOperator(∂∂C(pos::Int,mps,opp.op,cache),opp.f)
+function ∂∂C(pos::Int, mps, opp::MultipliedOperator, cache)
+    return MultipliedOperator(∂∂C(pos::Int, mps, opp.op, cache), opp.f)
+end
 
-∂∂AC(pos::Int,mps,opp::MultipliedOperator,cache) =
-MultipliedOperator(∂∂AC(pos::Int,mps,opp.op,cache),opp.f)
+function ∂∂AC(pos::Int, mps, opp::MultipliedOperator, cache)
+    return MultipliedOperator(∂∂AC(pos::Int, mps, opp.op, cache), opp.f)
+end
 
-∂∂AC2(pos::Int,mps,opp::MultipliedOperator,cache) =
-MultipliedOperator(∂∂AC2(pos::Int,mps,opp.op,cache),opp.f)
+function ∂∂AC2(pos::Int, mps, opp::MultipliedOperator, cache)
+    return MultipliedOperator(∂∂AC2(pos::Int, mps, opp.op, cache), opp.f)
+end
 
-∂∂C(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
-    SumOfOperators( map((op,openv)->∂∂C(pos,mps,op,openv),opp.ops,cache.envs) )
+function ∂∂C(pos::Int, mps, opp::SumOfOperators, cache::MultipleEnvironments)
+    return SumOfOperators(map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops, cache.envs))
+end
 
-∂∂AC(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
-    SumOfOperators( map((op,openv)->∂∂AC(pos,mps,op,openv),opp.ops,cache.envs) )
+function ∂∂AC(pos::Int, mps, opp::SumOfOperators, cache::MultipleEnvironments)
+    return SumOfOperators(
+        map((op, openv) -> ∂∂AC(pos, mps, op, openv), opp.ops, cache.envs)
+    )
+end
 
-∂∂AC2(pos::Int,mps,opp::SumOfOperators,cache::MultipleEnvironments) =
-    SumOfOperators( map((op,openv)->∂∂AC2(pos,mps,op,openv),opp.ops,cache.envs) )
+function ∂∂AC2(pos::Int, mps, opp::SumOfOperators, cache::MultipleEnvironments)
+    return SumOfOperators(
+        map((op, openv) -> ∂∂AC2(pos, mps, op, openv), opp.ops, cache.envs)
+    )
+end

@@ -114,7 +114,7 @@ end
     #constructor 3 - random initial tensors
     window = WindowMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10, gs, gs)
     normalize!(window)
-    
+
     for i in 1:length(window)
         @test window.AC[i] ≈ window.AL[i] * window.CR[i]
         @test window.AC[i] ≈ MPSKit._transpose_front(
@@ -174,14 +174,10 @@ end
         @test ovl_f ≈ ovl_q atol = 1e-5
         @test norm(qst1_f) ≈ norm(qst1) atol = 1e-5
 
-        
-        
         ev_f = sum(expectation_value(qst1_f, th) - expectation_value(ts, th))
 
-       
         ev_q = dot(qst1, effective_excitation_hamiltonian(th, qst1))
         @test ev_f ≈ ev_q atol = 1e-5
-
     end
 
     @testset "Infinite" for (th, D, d) in [
@@ -203,49 +199,49 @@ end
     end
 end
 
-@testset "Copy $(d)" for (D,d) in [(ℙ^10, ℙ^2),
-                                (Rep[SU₂](1 => 1, 0 => 3),Rep[SU₂](1 => 1)),
-                                (Rep[U₁]((0 => 20)), Rep[U₁](0 => 2))]
+@testset "Copy $(d)" for (D, d) in [
+    (ℙ^10, ℙ^2),
+    (Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1)),
+    (Rep[U₁]((0 => 20)), Rep[U₁](0 => 2)),
+]
     @testset "InfiniteMPS $(d)" begin
-
         period = rand(1:4)
         Ψ = InfiniteMPS(fill(d, period), fill(D, period))
-        Ψ_copied = copy(Ψ);
+        Ψ_copied = copy(Ψ)
 
         norm(Ψ)
-        Ψ.AC[1] *= 2;
+        Ψ.AC[1] *= 2
         norm(Ψ)
         @test abs(norm(Ψ_copied) - norm(Ψ)) > 0.5
     end
 
     @testset "WindowMPS $(d)" begin
-
         period = rand(1:4)
-        Ψ = InfiniteMPS(fill(d, period), fill(D, period));
+        Ψ = InfiniteMPS(fill(d, period), fill(D, period))
 
-        Ψwindow = WindowMPS(rand, ComplexF64, rand(5:10), d, D, Ψ); #does copy Ψ or not?
+        Ψwindow = WindowMPS(rand, ComplexF64, rand(5:10), d, D, Ψ) #does copy Ψ or not?
 
         @test Ψwindow.left_gs !== Ψwindow.right_gs # not the same reference
         @test Ψwindow.left_gs ≈ Ψwindow.right_gs  # but the same state
 
-        Ψwindow.left_gs.AC[1] *= 2;
+        Ψwindow.left_gs.AC[1] *= 2
         @test abs(norm(Ψwindow.left_gs) - norm(Ψwindow.right_gs)) > 0.5
         @test abs(norm(Ψwindow.left_gs) - norm(Ψ)) > 0.5
 
-        Ψwindow = WindowMPS(rand, ComplexF64, rand(5:10), d, D, Ψ, Ψ);
+        Ψwindow = WindowMPS(rand, ComplexF64, rand(5:10), d, D, Ψ, Ψ)
         @test Ψwindow.left_gs == Ψwindow.right_gs # the same reference
 
-        Ψwindow_copied = copy(Ψwindow);
+        Ψwindow_copied = copy(Ψwindow)
         @test Ψwindow_copied.left_gs !== Ψwindow_copied.right_gs # not the same reference
         @test Ψwindow_copied.left_gs ≈ Ψwindow_copied.right_gs  # but the same state
 
-        Ψwindow.left_gs.AC[1] *= 2;
+        Ψwindow.left_gs.AC[1] *= 2
         @test abs(norm(Ψwindow_copied.left_gs) - norm(Ψwindow.left_gs)) > 0.5
 
-        Ψwindow.right_gs.AC[1] *= 2;
+        Ψwindow.right_gs.AC[1] *= 2
         @test abs(norm(Ψwindow_copied.right_gs) - norm(Ψwindow.right_gs)) > 0.5
 
-        Ψwindow.window.AC[1] *= 2;
+        Ψwindow.window.AC[1] *= 2
         @test abs(norm(Ψwindow_copied.window) - norm(Ψwindow.window)) > 0.5
     end
 end

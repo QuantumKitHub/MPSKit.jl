@@ -93,12 +93,14 @@ function environments(
     )
 end
 
-environments(below,opp::TimedOperator,above,leftstart,rightstart) = environments(below,opp.op,above,leftstart,rightstart)
+function environments(below, opp::TimedOperator, above, leftstart, rightstart)
+    return environments(below, opp.op, above, leftstart, rightstart)
+end
 
-function environments(Ψ::WindowMPS,windowH::Window)
-    lenvs = environments(Ψ.left_gs,windowH.left)
-    renvs = environments(Ψ.right_gs,windowH.right)
-    Window(lenvs, environments(Ψ,windowH.middle;lenvs=lenvs,renvs=renvs), renvs)
+function environments(Ψ::WindowMPS, windowH::Window)
+    lenvs = environments(Ψ.left_gs, windowH.left)
+    renvs = environments(Ψ.right_gs, windowH.right)
+    return Window(lenvs, environments(Ψ, windowH.middle; lenvs=lenvs, renvs=renvs), renvs)
 end
 
 function environments(below::S, above::S) where {S<:Union{FiniteMPS,WindowMPS}}
