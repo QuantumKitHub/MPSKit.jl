@@ -82,137 +82,168 @@ end
     @test abs(dot(W * (W * ts), (W * W) * ts)) ≈ 1.0 atol = 1e-10
 end
 
-@testset "Timed/SumOf Operators $(sectortype(pspace))" for (pspace,Dspace) in [(ℙ^4, ℙ^10),
-                                                        (Rep[U₁](0 => 2), Rep[U₁]((0 => 20))),
-                                                        (Rep[SU₂](1 => 1),
-                                                        Rep[SU₂](1 // 2 => 10, 3 // 2 => 5,
-                                                                5 // 2 => 1))]
-    O = TensorMap(rand,ComplexF64,Dspace*pspace,Dspace*pspace)
-    f(t) = 3*exp(t)
+@testset "Timed/SumOf Operators $(sectortype(pspace))" for (pspace, Dspace) in [
+    (ℙ^4, ℙ^10),
+    (Rep[U₁](0 => 2), Rep[U₁]((0 => 20))),
+    (Rep[SU₂](1 => 1), Rep[SU₂](1//2 => 10, 3//2 => 5, 5//2 => 1)),
+]
+    O = TensorMap(rand, ComplexF64, Dspace * pspace, Dspace * pspace)
+    f(t) = 3 * exp(t)
 
-    timedO = TimedOperator(O,f);
+    timedO = TimedOperator(O, f)
 
     @test timedO(0.5)() == f(0.5) * O
 
     # SumOfOperators
-    Os = map(i->TensorMap(rand,ComplexF64,Dspace*pspace,Dspace*pspace),1:4);
-    fs = [t->3+t,t->7*t,t->2*cos(t),t->t^2];
+    Os = map(i -> TensorMap(rand, ComplexF64, Dspace * pspace, Dspace * pspace), 1:4)
+    fs = [t -> 3 + t, t -> 7 * t, t -> 2 * cos(t), t -> t^2]
 
     # different ways of constructing SumOfOperators
-    SummedOs = SumOfOperators(Os,fs); #direct construction
-    SummedOs2 = sum(map( (O,f)->TimedOperator(O,f),Os,fs)); # sum the different timedoperators using defined +
+    SummedOs = SumOfOperators(Os, fs) #direct construction
+    SummedOs2 = sum(map((O, f) -> TimedOperator(O, f), Os, fs)) # sum the different timedoperators using defined +
 
-    @test SummedOs(0.5)() == sum(map( (O,f) -> f(0.5)*O,Os,fs))
-    @test SummedOs(1.)() == SummedOs2(1.)()
-
+    @test SummedOs(0.5)() == sum(map((O, f) -> f(0.5) * O, Os, fs))
+    @test SummedOs(1.0)() == SummedOs2(1.0)()
 end
 
-@testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (pspace,Dspace,HDspace) in [(ℙ^4, ℙ^10,ℙ^2),
-                                                                                    (Rep[U₁](0 => 2), Rep[U₁]((0 => 20)),Rep[U₁]((0 => 4))),
-                                                                                    (Rep[SU₂](0 => 2),Rep[SU₂](1 => 1, 0 => 3),Rep[SU₂](0 => 1))]
+@testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (
+    pspace, Dspace, HDspace
+) in [
+    (ℙ^4, ℙ^10, ℙ^2),
+    (Rep[U₁](0 => 2), Rep[U₁]((0 => 20)), Rep[U₁]((0 => 4))),
+    (Rep[SU₂](0 => 2), Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](0 => 1)),
+]
+    Os = map(
+        (D1, D2) -> TensorMap(rand, ComplexF64, D1 * pspace, pspace * D2),
+        [oneunit(HDspace), HDspace],
+        [HDspace, oneunit(HDspace)],
+    )
+    H = repeat(MPOHamiltonian(Os), 2)
+    f(t) = 3 * exp(0.1 * t)
+    Ht = TimedOperator(H, f)
 
-        Os = map((D1,D2)->TensorMap(rand,ComplexF64,D1*pspace,pspace*D2),[oneunit(HDspace),HDspace],[HDspace,oneunit(HDspace)]);
-        H  = repeat(MPOHamiltonian(Os),2);
-        f(t) = 3*exp(0.1*t)
-        Ht =  TimedOperator(H,f)
+    Ψs = [
+        FiniteMPS(rand, ComplexF64, rand(3:20), pspace, Dspace),
+        InfiniteMPS([
+            TensorMap(rand, ComplexF64, Dspace * pspace, Dspace),
+            TensorMap(rand, ComplexF64, Dspace * pspace, Dspace),
+        ]),
+    ]
 
-        Ψs = [FiniteMPS(rand, ComplexF64, rand(3:20), pspace, Dspace), InfiniteMPS([TensorMap(rand, ComplexF64, Dspace * pspace, Dspace), TensorMap(rand, ComplexF64, Dspace * pspace, Dspace)])]
+    @testset "TimedOperator $(Ψ isa InfiniteMPS ? "InfiniteMPS" : "FiniteMPS")" for Ψ in Ψs
+        envs = environments(Ψ, H)
+        envs2 = environments(Ψ, Ht(3.0))
+        envst = environments(Ψ, Ht)
 
-        @testset "TimedOperator $(Ψ isa InfiniteMPS ? "InfiniteMPS" : "FiniteMPS")" for Ψ in Ψs
-        
-                    
-            envs  = environments(Ψ,H);
-            envs2 = environments(Ψ,Ht(3.0));
-            envst = environments(Ψ,Ht);
+        @test envs.opp.data == envst.opp.data #check that env are the same, time-dep sits elsewhere
 
-            @test envs.opp.data == envst.opp.data #check that env are the same, time-dep sits elsewhere
+        @test sum(
+            abs,
+            f(3.0) * expectation_value(Ψ, H, envs) - expectation_value(Ψ, Ht, 3.0, envst),
+        ) < 1e-8
 
-            @test sum(abs,f(3.) * expectation_value(Ψ,H,envs) - expectation_value(Ψ,Ht,3.,envst)) < 1e-8
+        @test sum(
+            abs, expectation_value(Ψ, Ht(3.0), envs2) - expectation_value(Ψ, Ht, 3.0, envst)
+        ) < 1e-8
 
-            @test sum(abs,expectation_value(Ψ,Ht(3.),envs2) - expectation_value(Ψ,Ht,3.,envst)) < 1e-8
+        ## time-dependence of derivatives
+        hc = MPSKit.∂∂C(1, Ψ, H, envs)
+        hct = MPSKit.∂∂C(1, Ψ, Ht, envst)
 
-            ## time-dependence of derivatives
-            hc = MPSKit.∂∂C(1,Ψ,H,envs);
-            hct = MPSKit.∂∂C(1,Ψ,Ht,envst);
+        @test norm(hct(Ψ.CR[1], 3.0) - f(3.0) * hc(Ψ.CR[1])) < 1e-5
 
-            @test norm(hct(Ψ.CR[1],3.) - f(3.)*hc(Ψ.CR[1])) < 1e-5
+        hac = MPSKit.∂∂AC(1, Ψ, H, envs)
+        hact = MPSKit.∂∂AC(1, Ψ, Ht, envst)
 
-            hac = MPSKit.∂∂AC(1,Ψ,H,envs);
-            hact = MPSKit.∂∂AC(1,Ψ,Ht,envst);
+        @test norm(hact(Ψ.AC[1], 3.0) - f(3.0) * hac(Ψ.AC[1])) < 1e-5
 
-            @test norm(hact(Ψ.AC[1],3.) - f(3.)*hac(Ψ.AC[1])) < 1e-5
+        hac2 = MPSKit.∂∂AC2(1, Ψ, H, envs)
+        hac2t = MPSKit.∂∂AC2(1, Ψ, Ht, envst)
 
-            hac2 = MPSKit.∂∂AC2(1,Ψ,H,envs);
-            hac2t = MPSKit.∂∂AC2(1,Ψ,Ht,envst);
+        v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2])
 
-            v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2]);
-
-            @test norm(hac2t(v,3.) - f(3.)*hac2(v)) < 1e-5
-        
-        end
+        @test norm(hac2t(v, 3.0) - f(3.0) * hac2(v)) < 1e-5
+    end
 
     ##########################
     #tests for sumofoperators
     ##########################
-    
-    Os =  map((D1,D2)->TensorMap(rand,ComplexF64,D1*pspace,pspace*D2),[oneunit(HDspace),HDspace,HDspace,HDspace],[HDspace,HDspace,HDspace,oneunit(HDspace)]);
-    Hs = repeat.(map( i-> MPOHamiltonian([Os[1:i]...,Os[end]]), 1:length(Os)-1),2);
-    fs = [t->3+t,t->7*t,t->2*cos(t),t->t^2]
-    summedH = SumOfOperators(Hs,fs);
 
-    @testset "SumOfOperators{TimedOperator} $(Ψ isa InfiniteMPS ? "InfiniteMPS" : "FiniteMPS")" for Ψ in Ψs
-        
-        Envs = map(H->environments(Ψ,H),Hs);
-        summedEnvs = environments(Ψ,summedH);
+    Os = map(
+        (D1, D2) -> TensorMap(rand, ComplexF64, D1 * pspace, pspace * D2),
+        [oneunit(HDspace), HDspace, HDspace, HDspace],
+        [HDspace, HDspace, HDspace, oneunit(HDspace)],
+    )
+    Hs = repeat.(map(i -> MPOHamiltonian([Os[1:i]..., Os[end]]), 1:(length(Os) - 1)), 2)
+    fs = [t -> 3 + t, t -> 7 * t, t -> 2 * cos(t), t -> t^2]
+    summedH = SumOfOperators(Hs, fs)
 
-        manual_sum = sum( map( (H,E,f)->f(5.)*sum(expectation_value(Ψ, H,E)),Hs,Envs,fs));
-        @test abs( sum(expectation_value(Ψ, summedH,5.,summedEnvs)) - manual_sum ) < 1e-5
+    @testset "SumOfOperators{TimedOperator} $(Ψ isa InfiniteMPS ? "InfiniteMPS" : "FiniteMPS")" for Ψ in
+                                                                                                    Ψs
+        Envs = map(H -> environments(Ψ, H), Hs)
+        summedEnvs = environments(Ψ, summedH)
+
+        manual_sum = sum(
+            map((H, E, f) -> f(5.0) * sum(expectation_value(Ψ, H, E)), Hs, Envs, fs)
+        )
+        @test abs(sum(expectation_value(Ψ, summedH, 5.0, summedEnvs)) - manual_sum) < 1e-5
 
         # test derivatives
-        summedhct = MPSKit.∂∂C(1,Ψ,summedH,summedEnvs);
+        summedhct = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
 
-        manual_sum = sum( map( (H,E,f)->f(5.)*MPSKit.∂∂C(1,Ψ, H,E)(Ψ.CR[1]),Hs,Envs,fs));
-        @test norm(summedhct(Ψ.CR[1],5.) - manual_sum ) < 1e-5
+        manual_sum = sum(
+            map((H, E, f) -> f(5.0) * MPSKit.∂∂C(1, Ψ, H, E)(Ψ.CR[1]), Hs, Envs, fs)
+        )
+        @test norm(summedhct(Ψ.CR[1], 5.0) - manual_sum) < 1e-5
 
-        summedhct = MPSKit.∂∂AC(1,Ψ,summedH,summedEnvs);
+        summedhct = MPSKit.∂∂AC(1, Ψ, summedH, summedEnvs)
 
-        manual_sum = sum( map( (H,E,f)->f(5.)*MPSKit.∂∂AC(1,Ψ, H,E)(Ψ.AC[1]),Hs,Envs,fs));
-        @test norm(summedhct(Ψ.AC[1],5.) - manual_sum ) < 1e-5
+        manual_sum = sum(
+            map((H, E, f) -> f(5.0) * MPSKit.∂∂AC(1, Ψ, H, E)(Ψ.AC[1]), Hs, Envs, fs)
+        )
+        @test norm(summedhct(Ψ.AC[1], 5.0) - manual_sum) < 1e-5
 
-        summedhct = MPSKit.∂∂AC2(1,Ψ,summedH,summedEnvs);
+        summedhct = MPSKit.∂∂AC2(1, Ψ, summedH, summedEnvs)
 
-        v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2]);
-        manual_sum = sum( map( (H,E,f)->f(5.)*MPSKit.∂∂AC2(1,Ψ, H,E)(v),Hs,Envs,fs));
-        @test norm(summedhct(v,5.) - manual_sum ) < 1e-5
+        v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2])
+        manual_sum = sum(
+            map((H, E, f) -> f(5.0) * MPSKit.∂∂AC2(1, Ψ, H, E)(v), Hs, Envs, fs)
+        )
+        @test norm(summedhct(v, 5.0) - manual_sum) < 1e-5
     end
 
     # finally test in case SumOfOperators contains non-timed operators
-    fs = [3, 5., 10, 1]
-    summedH = SumOfOperators(Hs,fs);
+    fs = [3, 5.0, 10, 1]
+    summedH = SumOfOperators(Hs, fs)
 
-    @testset "SumOfOperators{UntimedOperator} $(Ψ isa InfiniteMPS ? "InfiniteMPS" : "FiniteMPS")" for Ψ in Ψs
-        
-        Envs = map(H->environments(Ψ,H),Hs);
-        summedEnvs = environments(Ψ,summedH);
+    @testset "SumOfOperators{UntimedOperator} $(Ψ isa InfiniteMPS ? "InfiniteMPS" : "FiniteMPS")" for Ψ in
+                                                                                                      Ψs
+        Envs = map(H -> environments(Ψ, H), Hs)
+        summedEnvs = environments(Ψ, summedH)
 
-        manual_sum = sum( map( (H,E,f)->sum(f*expectation_value(Ψ, H,E)),Hs,Envs,fs));
-        @test abs( sum(expectation_value(Ψ, summedH,5.,summedEnvs)) - manual_sum ) < 1e-5
+        manual_sum = sum(
+            map((H, E, f) -> sum(f * expectation_value(Ψ, H, E)), Hs, Envs, fs)
+        )
+        @test abs(sum(expectation_value(Ψ, summedH, 5.0, summedEnvs)) - manual_sum) < 1e-5
 
-        summedhc = MPSKit.∂∂C(1,Ψ,summedH,summedEnvs);
+        summedhc = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
 
-        manual_sum = sum( map( (H,E,f)->f*MPSKit.∂∂C(1,Ψ, H,E)(Ψ.CR[1]),Hs,Envs,fs));
-        @test norm(summedhc(Ψ.CR[1]) - manual_sum ) < 1e-5
-        
-        summedhac= MPSKit.∂∂AC(1,Ψ,summedH,summedEnvs);
+        manual_sum = sum(
+            map((H, E, f) -> f * MPSKit.∂∂C(1, Ψ, H, E)(Ψ.CR[1]), Hs, Envs, fs)
+        )
+        @test norm(summedhc(Ψ.CR[1]) - manual_sum) < 1e-5
 
-        manual_sum = sum( map( (H,E,f)->f*MPSKit.∂∂AC(1,Ψ, H,E)(Ψ.AC[1]),Hs,Envs,fs));
-        @test norm(summedhac(Ψ.AC[1]) - manual_sum ) < 1e-5
+        summedhac = MPSKit.∂∂AC(1, Ψ, summedH, summedEnvs)
 
-        summedhac2 = MPSKit.∂∂AC2(1,Ψ,summedH,summedEnvs);
+        manual_sum = sum(
+            map((H, E, f) -> f * MPSKit.∂∂AC(1, Ψ, H, E)(Ψ.AC[1]), Hs, Envs, fs)
+        )
+        @test norm(summedhac(Ψ.AC[1]) - manual_sum) < 1e-5
 
-        v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2]);
-        manual_sum = sum( map( (H,E,f)->f*MPSKit.∂∂AC2(1,Ψ, H,E)(v),Hs,Envs,fs));
-        @test norm(summedhac2(v) - manual_sum ) < 1e-5
+        summedhac2 = MPSKit.∂∂AC2(1, Ψ, summedH, summedEnvs)
+
+        v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2])
+        manual_sum = sum(map((H, E, f) -> f * MPSKit.∂∂AC2(1, Ψ, H, E)(v), Hs, Envs, fs))
+        @test norm(summedhac2(v) - manual_sum) < 1e-5
     end
-    
 end

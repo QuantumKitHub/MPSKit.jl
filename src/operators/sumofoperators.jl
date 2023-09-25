@@ -7,7 +7,7 @@ struct SumOfOperators{O} <: AbstractVector{O}
 end
 
 Base.size(x::SumOfOperators) = size(x.ops)
-Base.getindex(x::SumOfOperators,i) = x.ops[i]
+Base.getindex(x::SumOfOperators, i) = x.ops[i]
 #iteration gets automatically implementend thanks to subtyping
 
 Base.length(x::SumOfOperators) = prod(size(x))
@@ -16,38 +16,58 @@ Base.length(x::SumOfOperators) = prod(size(x))
 SumOfOperators(x) = SumOfOperators([x])
 
 # handy constructor for SumOfOperators{MultipliedOperator} and backwards compatibility for LinearCombination
-SumOfOperators(ops::AbstractVector,fs::AbstractVector) = SumOfOperators( map( (op,f)->MultipliedOperator(op,f),ops,fs))
-LinearCombination(ops::Tuple,fs::Tuple) = SumOfOperators( collect(ops), collect(fs))
-
+function SumOfOperators(ops::AbstractVector, fs::AbstractVector)
+    return SumOfOperators(map((op, f) -> MultipliedOperator(op, f), ops, fs))
+end
+LinearCombination(ops::Tuple, fs::Tuple) = SumOfOperators(collect(ops), collect(fs))
 
 # we can add operators to SumOfOperators by using +
-Base.:+(op1::MultipliedOperator{O,F},op2::MultipliedOperator{O,G}) where {O,F,G} = SumOfOperators([op1,op2])
+function Base.:+(op1::MultipliedOperator{O,F}, op2::MultipliedOperator{O,G}) where {O,F,G}
+    return SumOfOperators([op1, op2])
+end
 
 # this we can also do with promote
-Base.:+(op1::TimedOperator{O},op2::Union{O,UntimedOperator{O}}) where O   = SumOfOperators(TimedOperator{O}[op1, TimedOperator(op2)  ])
-Base.:+(op1::Union{O,UntimedOperator{O}},op2::TimedOperator{O}) where O   = SumOfOperators(TimedOperator{O}[TimedOperator(op1), op2  ])
-Base.:+(op1::UntimedOperator{O},op2::O) where O = SumOfOperators(UntimedOperator{O}[op1,UntimedOperator( op2)])
-Base.:+(op1::O,op2::UntimedOperator{O}) where O = SumOfOperators(UntimedOperator{O}[UntimedOperator(op1), op2])
+function Base.:+(op1::TimedOperator{O}, op2::Union{O,UntimedOperator{O}}) where {O}
+    return SumOfOperators(TimedOperator{O}[op1, TimedOperator(op2)])
+end
+function Base.:+(op1::Union{O,UntimedOperator{O}}, op2::TimedOperator{O}) where {O}
+    return SumOfOperators(TimedOperator{O}[TimedOperator(op1), op2])
+end
+function Base.:+(op1::UntimedOperator{O}, op2::O) where {O}
+    return SumOfOperators(UntimedOperator{O}[op1, UntimedOperator(op2)])
+end
+function Base.:+(op1::O, op2::UntimedOperator{O}) where {O}
+    return SumOfOperators(UntimedOperator{O}[UntimedOperator(op1), op2])
+end
 
-Base.:+(SumOfOps::SumOfOperators{O},op::O) where {O} = SumOfOperators(vcat(SumOfOps.ops,op))
-Base.:+(op::O,SumOfOps::SumOfOperators{O}) where {O} = SumOfOperators(vcat(op,SumOfOps.ops))
+function Base.:+(SumOfOps::SumOfOperators{O}, op::O) where {O}
+    return SumOfOperators(vcat(SumOfOps.ops, op))
+end
+function Base.:+(op::O, SumOfOps::SumOfOperators{O}) where {O}
+    return SumOfOperators(vcat(op, SumOfOps.ops))
+end
 
-Base.:+(SumOfOps1::SumOfOperators{O},SumOfOps2::SumOfOperators{O}) where {O} = SumOfOperators(vcat(SumOfOps1.ops,SumOfOps2.ops))
+function Base.:+(SumOfOps1::SumOfOperators{O}, SumOfOps2::SumOfOperators{O}) where {O}
+    return SumOfOperators(vcat(SumOfOps1.ops, SumOfOps2.ops))
+end
 
-Base.:+(SumOfOps::SumOfOperators{T},op::O) where {O,T<:MultipliedOperator{O}} = SumOfOps + SumOfOperators(UntimedOperator(op))
-Base.:+(op::O,SumOfOps::SumOfOperators{T}) where {O,T<:MultipliedOperator{O}} = SumOfOperators(UntimedOperator(op)) + SumOfOps
+function Base.:+(SumOfOps::SumOfOperators{T}, op::O) where {O,T<:MultipliedOperator{O}}
+    return SumOfOps + SumOfOperators(UntimedOperator(op))
+end
+function Base.:+(op::O, SumOfOps::SumOfOperators{T}) where {O,T<:MultipliedOperator{O}}
+    return SumOfOperators(UntimedOperator(op)) + SumOfOps
+end
 
-(x::SumOfOperators{<: UntimedOperator})() = sum(op->op(),x)
+(x::SumOfOperators{<:UntimedOperator})() = sum(op -> op(), x)
 
 #ignore time-dependence by default
 (x::SumOfOperators)(t::Number) = x
 
-(x::SumOfOperators{<: MultipliedOperator})(t::Number) = SumOfOperators(map(op->op(t),x)) #will convert to SumOfOperators{UnTimedOperator}
+(x::SumOfOperators{<:MultipliedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x)) #will convert to SumOfOperators{UnTimedOperator}
 
 # logic for derivatives
-Base.:*(x::SumOfOperators,v) = x(v);
+Base.:*(x::SumOfOperators, v) = x(v);
 
-(x::SumOfOperators)(y) = sum(op-> op(y),x)
+(x::SumOfOperators)(y) = sum(op -> op(y), x)
 
-(x::SumOfOperators)(y,t::Number) = x(t)(y)
-
+(x::SumOfOperators)(y, t::Number) = x(t)(y)

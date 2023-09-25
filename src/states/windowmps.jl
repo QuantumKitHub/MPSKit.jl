@@ -53,12 +53,11 @@ end
 #===========================================================================================
 Constructors
 ===========================================================================================#
-function WindowMPS_copied(Ψₗ::InfiniteMPS{A,B},Ψₘ::FiniteMPS{A,B},Ψᵣ::InfiniteMPS{A,B}=Ψₗ
-    ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
-
-    return WindowMPS{A,B}(copy(Ψₗ), Ψₘ, copy(Ψᵣ) )
+function WindowMPS_copied(
+    Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B}, Ψᵣ::InfiniteMPS{A,B}=Ψₗ
+) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+    return WindowMPS{A,B}(copy(Ψₗ), Ψₘ, copy(Ψᵣ))
 end
-
 
 function WindowMPS(
     Ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor}, Ψᵣ::InfiniteMPS=Ψₗ

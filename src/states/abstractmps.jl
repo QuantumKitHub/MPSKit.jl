@@ -96,7 +96,9 @@ TensorKit.spacetype(Ψtype::Type{<:AbstractMPS}) = spacetype(site_type(Ψtype))
 TensorKit.sectortype(Ψ::AbstractMPS) = sectortype(typeof(Ψ))
 TensorKit.sectortype(Ψtype::Type{<:AbstractMPS}) = sectortype(site_type(Ψtype))
 
-Base.isapprox(Ψ1::AbstractMPS, Ψ2::AbstractMPS; kwargs...) = isapprox(abs(dot(Ψ1,Ψ2)),norm(Ψ1)*norm(Ψ2); kwargs...)
+function Base.isapprox(Ψ1::AbstractMPS, Ψ2::AbstractMPS; kwargs...)
+    return isapprox(abs(dot(Ψ1, Ψ2)), norm(Ψ1) * norm(Ψ2); kwargs...)
+end
 
 """
     left_virtualspace(Ψ::AbstractMPS, i::Int)
