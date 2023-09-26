@@ -147,9 +147,9 @@ end
     alg = TDVP()
 
     # with regular MPOHamiltonian
-    H0left   =  simpleH;
-    H0middle =  repeat(  simpleH, 20);
-    H0right  =  simpleH;
+    H0left = simpleH
+    H0middle = repeat(simpleH, 20)
+    H0right = simpleH
 
     Ψ = InfiniteMPS([ℂ^2], [ℂ^20])
     Ψwindow = WindowMPS(Ψ, 20)
