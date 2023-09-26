@@ -63,4 +63,6 @@ Base.:*(x::MultipliedOperator, v) = x(v);
 
 # don't know a better place to put this
 # environment for MultipliedOperator
-environments(st,x::MultipliedOperator,args...;kwargs...) = environments(st,x.op,args...;kwargs...)
+function environments(st, x::MultipliedOperator, args...; kwargs...)
+    return environments(st, x.op, args...; kwargs...)
+end

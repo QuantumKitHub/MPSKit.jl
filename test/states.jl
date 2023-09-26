@@ -219,7 +219,7 @@ end
         period = rand(1:4)
         Ψ = InfiniteMPS(fill(d, period), fill(D, period))
 
-        Ψwindow = WindowMPS(rand, ComplexF64, rand(5:10), d, D, Ψ, Ψ); # version that does not copy
+        Ψwindow = WindowMPS(rand, ComplexF64, rand(5:10), d, D, Ψ, Ψ) # version that does not copy
         @test Ψwindow.left_gs === Ψwindow.right_gs # the same reference
 
         Ψwindow_copied = copy(Ψwindow)
