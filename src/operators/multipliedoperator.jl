@@ -43,7 +43,7 @@ function Base.:*(op::UntimedOperator, b::Number)
     return UntimedOperator(op.op, b * op.f)
 end
 function Base.:*(op::TimedOperator, b::Number)
-    return UntimedOperator(op.op, t -> b * op.f(t))
+    return TimedOperator(op.op, t -> b * op.f(t))
 end
 Base.:*(b::Number, op::MultipliedOperator) = op * b
 
