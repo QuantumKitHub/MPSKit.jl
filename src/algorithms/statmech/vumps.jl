@@ -26,7 +26,7 @@ function leading_boundary(Ψ::MPSMultiline, H, alg::VUMPS, envs=environments(Ψ,
 
     while true
         eigalg = Arnoldi(; tol=galerkin / (4 * sqrt(iter)))
-        
+
         if Defaults.parallelize_sites
             @sync begin
                 for col in 1:size(Ψ, 2)
@@ -36,7 +36,7 @@ function leading_boundary(Ψ::MPSMultiline, H, alg::VUMPS, envs=environments(Ψ,
                         _, acvecs = eigsolve(H_AC, ac, 1, :LM, eigalg)
                         $temp_ACs[:, col] = acvecs[1].vecs[:]
                     end
-                    
+
                     Threads.@spawn begin
                         H_C = ∂∂C($col, $Ψ, $H, $envs)
                         c = RecursiveVec($Ψ.CR[:, col])
@@ -51,7 +51,7 @@ function leading_boundary(Ψ::MPSMultiline, H, alg::VUMPS, envs=environments(Ψ,
                 ac = RecursiveVec(Ψ.AC[:, col])
                 _, acvecs = eigsolve(H_AC, ac, 1, :LM, eigalg)
                 temp_ACs[:, col] = acvecs[1].vecs[:]
-                
+
                 H_C = ∂∂C(col, Ψ, H, envs)
                 c = RecursiveVec(Ψ.CR[:, col])
                 _, cvecs = eigsolve(H_C, c, 1, :LM, eigalg)
@@ -65,13 +65,10 @@ function leading_boundary(Ψ::MPSMultiline, H, alg::VUMPS, envs=environments(Ψ,
             temp_ACs[row, col] = QAc * adjoint(Qc)
         end
 
-        Ψ = MPSMultiline(
-            temp_ACs, Ψ.CR[:, end]; tol=alg.tol_gauge, maxiter=alg.orthmaxiter
-        )
+        Ψ = MPSMultiline(temp_ACs, Ψ.CR[:, end]; tol=alg.tol_gauge, maxiter=alg.orthmaxiter)
         recalculate!(envs, Ψ)
 
-        (Ψ, envs) =
-            alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
+        (Ψ, envs) = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
 
         galerkin = calc_galerkin(Ψ, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"

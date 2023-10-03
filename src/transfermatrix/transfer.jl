@@ -190,7 +190,7 @@ end
 
 function transfer_left(RetType, vec, ham::SparseMPOSlice, A, Ab)
     toret = similar(vec, RetType, length(vec))
-    
+
     if Defaults.parallelize_transfers
         @threads for k in 1:length(vec)
             els = keys(ham, :, k)
@@ -267,7 +267,6 @@ function transfer_right(RetType, vec, ham::SparseMPOSlice, A, Ab)
                     end
                 end
             end
-            
         end
     end
 

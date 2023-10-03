@@ -37,7 +37,7 @@ function find_groundstate(Ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(Ψ, 
 
     while true
         eigalg = Arnoldi(; tol=galerkin / (4 * sqrt(iter)))
-        
+
         if Defaults.parallelize_sites
             @sync begin
                 for (loc, ac) in enumerate(Ψ.AC)

@@ -107,7 +107,8 @@ function ∂AC(x::MPSTensor, ham::SparseMPOSlice, leftenv, rightenv)::typeof(x)
         for (i, j) in keys(ham)
             if isscal(ham, i, j)
                 h = ham.Os[i, j]
-                @plansor y[-1 -2; -3] += h * 
+                @plansor y[-1 -2; -3] +=
+                    h *
                     (leftenv[i][-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] * rightenv[j][1 7; -3])
             else
                 @plansor y[-1 -2; -3] +=
