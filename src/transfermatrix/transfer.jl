@@ -211,12 +211,13 @@ function transfer_left(RetType, vec, ham::SparseMPOSlice, A, Ab)
         end
     else
         for k in 1:length(vec)
-            els = keys(ham, :, k)
+            els = collect(keys(ham, :, k))
             if isempty(els)
                 toret[k] = transfer_left(vec[1], ham[1, k], A, Ab)
             else
-                zerovector!(toret[k])
-                for j in els
+                j = els[1]
+                toret[k] = isscal(ham, j, k) ? lmul!(ham.Os[j, k], transfer_left(vec[k], A, Ab)) : transfer_left(vec[k], ham[j, k], A, Ab)
+                for j in els[2:end]
                     if isscal(ham, j, k)
                         add!(toret[k], transfer_left(vec[k], A, Ab), ham.Os[j, k])
                     else
@@ -254,12 +255,13 @@ function transfer_right(RetType, vec, ham::SparseMPOSlice, A, Ab)
         end
     else
         for j in 1:length(vec)
-            els = keys(ham, j, :)
+            els = collect(keys(ham, j, :))
             if isempty(els)
                 toret[j] = transfer_left(vec[1], ham[j, 1], A, Ab)
             else
-                zerovector!(toret[j])
-                for k in els
+                k = els[1]
+                toret[j] = isscal(ham, j, k) ? lmul!(ham.Os[j, k], transfer_right(vec[k], A, Ab)) : transfer_right(vec[k], ham[j, k], A, Ab)
+                for k in els[2:end]
                     if isscal(ham, j, k)
                         add!(toret[j], transfer_right(vec[k], A, Ab), ham.Os[j, k])
                     else
