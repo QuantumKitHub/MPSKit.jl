@@ -13,7 +13,7 @@ multiple lines of `InfiniteMPS` (`MPSMultiline`) or MPO (`Multiline{<:AbstractMP
 # Fields
 - `data::PeriodicArray{T,1}`: the data of the multiline object
 
-See also: [`MPSMultiline`](@ref)
+See also: [`MPSMultiline`](@ref) and [`MPOMultiline`](@ref)
 """
 struct Multiline{T} <: AbstractVector{T}
     data::PeriodicArray{T,1}
@@ -35,11 +35,12 @@ Base.copy(t::Multiline) = Multiline(map(copy, t.data))
 # MPSMultiline
 # ------------
 """
-    const MPSMultiline{T} = Multiline{<:InfiniteMPS}
+    const MPSMultiline{A<:InfiniteMPS} = Multiline{A}
 
 Type that represents multiple lines of `InfiniteMPS` objects.
 
 # Constructors
+    MPSMultiline(mpss::AbstractVector{<:InfiniteMPS})
     MPSMultiline([f, eltype], physicalspaces::Matrix{<:Union{S, CompositeSpace{S}},
                  virtualspaces::Matrix{<:Union{S, CompositeSpace{S}}) where
                  {S<:ElementarySpace}
@@ -49,7 +50,7 @@ Type that represents multiple lines of `InfiniteMPS` objects.
 
 See also: [`Multiline`](@ref)
 """
-const MPSMultiline{A,B} = Multiline{InfiniteMPS{A,B}}
+const MPSMultiline{A<:InfiniteMPS} = Multiline{A}
 
 function MPSMultiline(pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...) where {S}
     data = map(eachrow(pspaces), eachrow(Dspaces)) do (p, D)
