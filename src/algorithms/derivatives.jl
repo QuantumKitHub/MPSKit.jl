@@ -85,25 +85,41 @@ end
 """
 
 function ∂AC(x::MPSTensor, ham::SparseMPOSlice, leftenv, rightenv)::typeof(x)
-    local toret
+    local y
+    if Defaults.parallelize_derivatives
+        @floop WorkStealingEx() for (i, j) in keys(ham)
+            if isscal(ham, i, j)
+                @plansor t[-1 -2; -3] :=
+                    leftenv[i][-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] * rightenv[j][1 7; -3]
+                lmul!(ham.Os[i, j], t)
+            else
+                @plansor t[-1 -2; -3] :=
+                    leftenv[i][-1 5; 4] *
+                    x[4 2; 1] *
+                    ham[i, j][5 -2; 2 3] *
+                    rightenv[j][1 3; -3]
+            end
 
-    @floop WorkStealingEx() for (i, j) in keys(ham)
-        if isscal(ham, i, j)
-            @plansor t[-1 -2; -3] :=
-                leftenv[i][-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] * rightenv[j][1 7; -3]
-            lmul!(ham.Os[i, j], t)
-        else
-            @plansor t[-1 -2; -3] :=
-                leftenv[i][-1 5; 4] *
-                x[4 2; 1] *
-                ham[i, j][5 -2; 2 3] *
-                rightenv[j][1 3; -3]
+            @reduce(y = inplace_add!(nothing, t))
         end
-
-        @reduce(toret = inplace_add!(nothing, t))
+    else
+        y = zerovector(x)
+        for (i, j) in keys(ham)
+            if isscal(ham, i, j)
+                h = ham.Os[i, j]
+                @plansor y[-1 -2; -3] += h * 
+                    (leftenv[i][-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] * rightenv[j][1 7; -3])
+            else
+                @plansor y[-1 -2; -3] +=
+                    leftenv[i][-1 5; 4] *
+                    x[4 2; 1] *
+                    ham[i, j][5 -2; 2 3] *
+                    rightenv[j][1 3; -3]
+            end
+        end
     end
 
-    return toret
+    return y
 end
 
 function ∂AC(x::MPSTensor, opp::MPOTensor, leftenv, rightenv)::typeof(x)
@@ -184,13 +200,19 @@ end
     Zero-site derivative (the C matrix to the right of pos)
 """
 function ∂C(x::MPSBondTensor, leftenv::AbstractVector, rightenv::AbstractVector)::typeof(x)
-    @floop WorkStealingEx() for (le, re) in zip(leftenv, rightenv)
-        t = ∂C(x, le, re)
-
-        @reduce(s = inplace_add!(nothing, t))
+    if Defaults.parallelize_derivatives
+        @floop WorkStealingEx() for (le, re) in zip(leftenv, rightenv)
+            t = ∂C(x, le, re)
+            @reduce(y = inplace_add!(nothing, t))
+        end
+    else
+        y = zerovector(x)
+        for (le, re) in zip(leftenv, rightenv)
+            VectorInterface.add!(y, ∂C(x, le, re))
+        end
     end
 
-    return s
+    return y
 end
 
 function ∂C(x::MPSBondTensor, leftenv::MPSTensor, rightenv::MPSTensor)

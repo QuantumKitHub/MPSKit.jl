@@ -190,24 +190,41 @@ end
 
 function transfer_left(RetType, vec, ham::SparseMPOSlice, A, Ab)
     toret = similar(vec, RetType, length(vec))
+    
+    if Defaults.parallelize_transfers
+        @threads for k in 1:length(vec)
+            els = keys(ham, :, k)
+            @floop WorkStealingEx() for j in els
+                if isscal(ham, j, k)
+                    t = lmul!(ham.Os[j, k], transfer_left(vec[j], A, Ab))
+                else
+                    t = transfer_left(vec[j], ham[j, k], A, Ab)
+                end
 
-    @threads for k in 1:length(vec)
-        els = keys(ham, :, k)
-
-        @floop WorkStealingEx() for j in els
-            if isscal(ham, j, k)
-                t = lmul!(ham.Os[j, k], transfer_left(vec[j], A, Ab))
-            else
-                t = transfer_left(vec[j], ham[j, k], A, Ab)
+                @reduce(s = inplace_add!(nothing, t))
             end
 
-            @reduce(s = inplace_add!(nothing, t))
+            if isnothing(s)
+                s = transfer_left(vec[1], ham[1, k], A, Ab)
+            end
+            toret[k] = s
         end
-
-        if isnothing(s)
-            s = transfer_left(vec[1], ham[1, k], A, Ab)
+    else
+        for k in 1:length(vec)
+            els = keys(ham, :, k)
+            if isempty(els)
+                toret[k] = transfer_left(vec[1], ham[1, k], A, Ab)
+            else
+                zerovector!(toret[k])
+                for j in els
+                    if isscal(ham, j, k)
+                        add!(toret[k], transfer_left(vec[k], A, Ab), ham.Os[j, k])
+                    else
+                        add!(toret[k], transfer_left(vec[k], ham[j, k], A, Ab))
+                    end
+                end
+            end
         end
-        toret[k] = s
     end
 
     return toret
@@ -215,24 +232,43 @@ end
 function transfer_right(RetType, vec, ham::SparseMPOSlice, A, Ab)
     toret = similar(vec, RetType, length(vec))
 
-    @threads for j in 1:length(vec)
-        els = keys(ham, j, :)
+    if Defaults.parallelize_transfers
+        @threads for j in 1:length(vec)
+            els = keys(ham, j, :)
 
-        @floop WorkStealingEx() for k in els
-            if isscal(ham, j, k)
-                t = lmul!(ham.Os[j, k], transfer_right(vec[k], A, Ab))
-            else
-                t = transfer_right(vec[k], ham[j, k], A, Ab)
+            @floop WorkStealingEx() for k in els
+                if isscal(ham, j, k)
+                    t = lmul!(ham.Os[j, k], transfer_right(vec[k], A, Ab))
+                else
+                    t = transfer_right(vec[k], ham[j, k], A, Ab)
+                end
+
+                @reduce(s = inplace_add!(nothing, t))
             end
 
-            @reduce(s = inplace_add!(nothing, t))
-        end
+            if isnothing(s)
+                s = transfer_right(vec[1], ham[j, 1], A, Ab)
+            end
 
-        if isnothing(s)
-            s = transfer_right(vec[1], ham[j, 1], A, Ab)
+            toret[j] = s
         end
-
-        toret[j] = s
+    else
+        for j in 1:length(vec)
+            els = keys(ham, j, :)
+            if isempty(els)
+                toret[j] = transfer_left(vec[1], ham[j, 1], A, Ab)
+            else
+                zerovector!(toret[j])
+                for k in els
+                    if isscal(ham, j, k)
+                        add!(toret[j], transfer_right(vec[k], A, Ab), ham.Os[j, k])
+                    else
+                        add!(toret[j], transfer_right(vec[k], ham[j, k], A, Ab))
+                    end
+                end
+            end
+            
+        end
     end
 
     return toret

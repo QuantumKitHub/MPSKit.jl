@@ -37,23 +37,36 @@ function find_groundstate(Ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(Ψ, 
 
     while true
         eigalg = Arnoldi(; tol=galerkin / (4 * sqrt(iter)))
-
-        @sync for (loc, (ac, c)) in enumerate(zip(Ψ.AC, Ψ.CR))
-            Threads.@spawn begin
-                _, acvecs = eigsolve(∂∂AC($loc, $Ψ, $H, $envs), $ac, 1, :SR, eigalg)
-                $temp_ACs[loc] = acvecs[1]
+        
+        if Defaults.parallelize_sites
+            @sync begin
+                for (loc, ac) in enumerate(Ψ.AC)
+                    Threads.@spawn begin
+                        _, acvecs = eigsolve(∂∂AC($loc, $Ψ, $H, $envs), $ac, 1, :SR, eigalg)
+                        $temp_ACs[loc] = acvecs[1]
+                    end
+                end
+                for (loc, c) in enumerate(Ψ.CR)
+                    Threads.@spawn begin
+                        _, crvecs = eigsolve(∂∂C($loc, $Ψ, $H, $envs), $c, 1, :SR, eigalg)
+                        $temp_Cs[loc] = crvecs[1]
+                    end
+                end
             end
-
-            Threads.@spawn begin
-                _, crvecs = eigsolve(∂∂C($loc, $Ψ, $H, $envs), $c, 1, :SR, eigalg)
-                $temp_Cs[loc] = crvecs[1]
+        else
+            for (loc, ac) in enumerate(Ψ.AC)
+                _, acvecs = eigsolve(∂∂AC(loc, Ψ, H, envs), ac, 1, :SR, eigalg)
+                temp_ACs[loc] = acvecs[1]
+            end
+            for (loc, c) in enumerate(Ψ.CR)
+                _, crvecs = eigsolve(∂∂C(loc, Ψ, H, envs), c, 1, :SR, eigalg)
+                temp_Cs[loc] = crvecs[1]
             end
         end
 
         for (i, (ac, c)) in enumerate(zip(temp_ACs, temp_Cs))
             QAc, _ = TensorKit.leftorth!(ac; alg=QRpos())
             Qc, _ = TensorKit.leftorth!(c; alg=QRpos())
-
             temp_ACs[i] = QAc * adjoint(Qc)
         end
 
