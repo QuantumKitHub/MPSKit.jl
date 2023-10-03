@@ -29,43 +29,45 @@ end
 "
 
 function find_groundstate(Ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(Ψ, H))
-    galerkin::Float64 = 1 + alg.tol_galerkin
-    iter = 1
+    ε::Float64 = 1 + alg.tol_galerkin
 
     temp_ACs = similar.(Ψ.AC)
 
-    while true
-        eigalg = Arnoldi(; tol=galerkin / (4 * sqrt(iter)))
+    for iter in 1:(alg.maxiter)
+        Δt = @elapsed begin
+            eigalg = Arnoldi(; tol=ε / (4 * sqrt(iter)))
 
-        @static if Defaults.parallelize_sites
-            @sync begin
-                for loc in 1:length(Ψ)
-                    Threads.@spawn begin
-                        _vumps_localupdate!(temp_ACs[loc], loc, Ψ, H, envs, eigalg)
+            @static if Defaults.parallelize_sites
+                @sync begin
+                    for loc in 1:length(Ψ)
+                        Threads.@spawn begin
+                            _vumps_localupdate!(temp_ACs[loc], loc, Ψ, H, envs, eigalg)
+                        end
                     end
                 end
+            else
+                for loc in 1:length(Ψ)
+                    _vumps_localupdate!(temp_ACs[loc], loc, Ψ, H, envs, eigalg)
+                end
             end
-        else
-            for loc in 1:length(Ψ)
-                _vumps_localupdate!(temp_ACs[loc], loc, Ψ, H, envs, eigalg)
-            end
+
+            Ψ = InfiniteMPS(temp_ACs, Ψ.CR[end]; tol=alg.tol_gauge, maxiter=alg.orthmaxiter)
+            recalculate!(envs, Ψ)
+
+            Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
+
+            ε = calc_galerkin(Ψ, envs)
         end
 
-        Ψ = InfiniteMPS(temp_ACs, Ψ.CR[end]; tol=alg.tol_gauge, maxiter=alg.orthmaxiter)
-        recalculate!(envs, Ψ)
+        alg.verbose &&
+            @info "VUMPS iteration:" iter ε λ = sum(expectation_value(Ψ, H, envs)) Δt
 
-        Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
-
-        galerkin = calc_galerkin(Ψ, envs)
-        alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
-
-        if galerkin <= alg.tol_galerkin || iter >= alg.maxiter
-            iter >= alg.maxiter && @warn "vumps didn't converge $(galerkin)"
-            return Ψ, envs, galerkin
-        end
-
-        iter += 1
+        ε <= alg.tol_galerkin && break
+        iter == alg.maxiter &&
+            @warn "VUMPS maximum iterations" iter ε λ = sum(expectation_value(Ψ, H, envs)) Δt
     end
+
+    return Ψ, envs, ε
 end
 
 function _vumps_localupdate!(AC′, loc, Ψ, H, envs, eigalg, factalg=QRpos())
