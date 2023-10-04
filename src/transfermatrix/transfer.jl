@@ -216,12 +216,12 @@ function transfer_left(RetType, vec, ham::SparseMPOSlice, A, Ab)
                 toret[k] = transfer_left(vec[1], ham[1, k], A, Ab)
             else
                 j = els[1]
-                toret[k] = isscal(ham, j, k) ? lmul!(ham.Os[j, k], transfer_left(vec[k], A, Ab)) : transfer_left(vec[k], ham[j, k], A, Ab)
+                toret[k] = isscal(ham, j, k) ? lmul!(ham.Os[j, k], transfer_left(vec[j], A, Ab)) : transfer_left(vec[j], ham[j, k], A, Ab)
                 for j in els[2:end]
                     if isscal(ham, j, k)
-                        add!(toret[k], transfer_left(vec[k], A, Ab), ham.Os[j, k])
+                        add!(toret[k], transfer_left(vec[j], A, Ab), ham.Os[j, k])
                     else
-                        add!(toret[k], transfer_left(vec[k], ham[j, k], A, Ab))
+                        add!(toret[k], transfer_left(vec[j], ham[j, k], A, Ab))
                     end
                 end
             end
@@ -256,8 +256,8 @@ function transfer_right(RetType, vec, ham::SparseMPOSlice, A, Ab)
     else
         for j in 1:length(vec)
             els = collect(keys(ham, j, :))
-            if isempty(els)
-                toret[j] = transfer_left(vec[1], ham[j, 1], A, Ab)
+            if length(els) == 0
+                toret[j] = transfer_right(vec[1], ham[j, 1], A, Ab)
             else
                 k = els[1]
                 toret[j] = isscal(ham, j, k) ? lmul!(ham.Os[j, k], transfer_right(vec[k], A, Ab)) : transfer_right(vec[k], ham[j, k], A, Ab)
