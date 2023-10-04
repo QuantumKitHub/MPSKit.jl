@@ -14,7 +14,7 @@ See also: [`Multiline`](@ref), [`SparseMPO`](@ref), [`DenseMPO`](@ref)
 const MPOMultiline = Multiline{<:Union{SparseMPO,DenseMPO}}
 
 function MPOMultiline(Os::AbstractMatrix{<:MPOTensor})
-    return MPOMultiline(dat map(DenseMPO, eachrow(Os))a)
+    return MPOMultiline(data, map(DenseMPO, eachrow(Os)))
 end
 MPOMultiline(mpos::AbstractVector{<:Union{SparseMPO,DenseMPO}}) = Multiline(mpos)
 MPOMultiline(t::MPOTensor) = MPOMultiline(fill(t, 1, 1))
