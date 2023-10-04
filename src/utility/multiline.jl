@@ -39,3 +39,4 @@ function Base.circshift(A::Multiline, shifts::Tuple{Int,Int})
     return Multiline(circshift!(data′, shifts[1]))
 end
 Base.reverse(A::Multiline) = Multiline(reverse(parent(A)))
+Base.only(A::Multiline) = only(parent(A))
