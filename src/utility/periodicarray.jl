@@ -1,7 +1,35 @@
+"""
+    PeriodicArray{T,N} <: AbstractArray{T,N}
+
+Array wrapper with periodic boundary conditions.
+
+# Fields
+- `data::Array{T,N}`: the data of the array
+
+# Examples
+```jldoctest
+A = PeriodicArray([1, 2, 3])
+A[0], A[2], A[4]
+
+# output
+
+(3, 2, 1)
+```
+```jldoctest
+A = PeriodicArray([1 2; 3 4])
+A[-1, 1], A[1, 1], A[4, 5]
+
+# output
+
+(1, 1, 4)
+```
+
+See also [`PeriodicVector`](@ref), [`PeriodicMatrix`](@ref)
+"""
 struct PeriodicArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
 end
-PeriodicArray(a::PeriodicArray) = a;
+PeriodicArray(data::AbstractArray{T,N}) where {T,N} = PeriodicArray{T,N}(data)
 function PeriodicArray{T}(initializer, args...) where {T}
     return PeriodicArray(Array{T}(initializer, args...))
 end
@@ -9,47 +37,35 @@ function PeriodicArray{T,N}(initializer, args...) where {T,N}
     return PeriodicArray(Array{T,N}(initializer, args...))
 end
 
-Base.size(a::PeriodicArray) = size(a.data)
-Base.size(a::PeriodicArray, i) = size(a.data, i)
-Base.length(a::PeriodicArray) = length(a.data)
-function Base.getindex(a::PeriodicArray{T,N}, I::Vararg{Int,N}) where {T,N}
-    @inbounds getindex(a.data, map(mod1, I, size(a.data))...)
+const PeriodicVector{T} = PeriodicArray{T,1}
+const PeriodicMatrix{T} = PeriodicArray{T,2}
+
+Base.parent(A::PeriodicArray) = A.data
+
+# AbstractArray interface
+# -----------------------
+Base.size(A::PeriodicArray) = size(parent(A))
+
+function Base.getindex(A::PeriodicArray{T,N}, I::Vararg{Int,N}) where {T,N}
+    @inbounds getindex(parent(A), map(mod1, I, size(A))...)
 end
-function Base.setindex!(a::PeriodicArray{T,N}, v, I::Vararg{Int,N}) where {T,N}
-    @inbounds setindex!(a.data, v, map(mod1, I, size(a.data))...)
+function Base.setindex!(A::PeriodicArray{T,N}, v, I::Vararg{Int,N}) where {T,N}
+    @inbounds setindex!(parent(A), v, map(mod1, I, size(A))...)
 end
 
-Base.similar(a::PeriodicArray, ::Type{T}) where {T} = PeriodicArray(similar(a.data, T))
-Base.similar(a::PeriodicArray, dims::Dims) = PeriodicArray(similar(a.data, dims))
-function Base.similar(a::PeriodicArray, ::Type{T}, dims::Dims) where {T}
-    return PeriodicArray(similar(a.data, T, dims))
-end
+Base.checkbounds(A::PeriodicArray, I...) = true
 
-Base.copy(a::PeriodicArray) = PeriodicArray(copy(a.data))
+function Base.similar(A::PeriodicArray, ::Type{S}, dims::Dims) where {S}
+    return PeriodicArray(similar(parent(A), S, dims))
+end
+Base.copy(A::PeriodicArray) = PeriodicArray(copy(parent(A)))
 function Base.copyto!(dst::PeriodicArray, src::PeriodicArray)
-    copyto!(dst.data, src.data)
+    copyto!(parent(dst), parent(src))
     return dst
 end
-# not necessary but maybe more efficient
-function Base.convert(::Type{PeriodicArray{T}}, a::PeriodicArray) where {T}
-    return PeriodicArray(convert(Array{T}, a.data))
-end
-function Base.convert(::Type{PeriodicArray{T,N}}, a::PeriodicArray) where {T,N}
-    return PeriodicArray(convert(Array{T,N}, a.data))
-end
 
-#should this copy?
-Base.convert(::Type{Array{T,N}}, a::PeriodicArray{T,N}) where {T,N} = a.data;
-
-Base.checkbounds(a::PeriodicArray, I...) = true
-
-function Base.circshift(t::PeriodicArray{T,N}, tup::Tuple{Vararg{Integer,N}}) where {T,N}
-    return PeriodicArray{T,N}(circshift(t.data, tup))
-end
-function Base.repeat(t::PeriodicArray, args::Vararg{Integer})
-    return PeriodicArray(repeat(t.data, args...))
-end
-
+# Broadcasting
+# ------------
 Base.BroadcastStyle(::Type{T}) where {T<:PeriodicArray} = Broadcast.ArrayStyle{T}()
 
 function Base.similar(
@@ -57,3 +73,11 @@ function Base.similar(
 ) where {T}
     return PeriodicArray(similar(Array{T}, axes(bc)))
 end
+
+# Conversion
+# ----------
+Base.convert(::Type{T}, A::AbstractArray) where {T<:PeriodicArray} = T(A)
+Base.convert(::Type{T}, A::PeriodicArray) where {T<:AbstractArray} = convert(T, parent(A))
+# fix ambiguities
+Base.convert(::Type{T}, A::PeriodicArray) where {T<:PeriodicArray} = A
+Base.convert(::Type{T}, A::PeriodicArray) where {T<:Array} = parent(A)
