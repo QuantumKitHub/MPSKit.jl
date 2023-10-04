@@ -1,41 +1,7 @@
-"
-It is possible to have matrix product (operators / states) that are also periodic in the vertical direction
-For examples, as fix points of statmech problems
-These should be represented as respectively MultiLine{<:DenseMPO} / Multiline{<:InfiniteMPS}
-"
-
-"""
-    struct Multiline{T} <: AbstractVector{T}
-
-Object that represents multiple lines of objects of type `T`. Typically used to represent
-multiple lines of `InfiniteMPS` (`MPSMultiline`) or MPO (`Multiline{<:AbstractMPO}`).
-
-# Fields
-- `data::PeriodicArray{T,1}`: the data of the multiline object
-
-See also: [`MPSMultiline`](@ref) and [`MPOMultiline`](@ref)
-"""
-struct Multiline{T} <: AbstractVector{T}
-    data::PeriodicArray{T,1}
-end
-
-Multiline(data::AbstractVector{T}) where {T} = Multiline{T}(data)
-
-# AbstractArray interface
-# -----------------------
-Base.parent(m::Multiline) = m.data
-Base.size(m) = size(parent(m))
-Base.getindex(m, i::Int) = parent(m)[i]
-Base.setindex!(m, v, i::Int) = (setindex!(parent(m), v, i); m)
-
-Base.copy(t::Multiline) = Multiline(map(copy, t.data))
-# Multiline(t::AbstractArray) = Multiline(PeriodicArray(t));
-# Base.iterate(t::Multiline, args...) = iterate(t.data, args...);
-
 # MPSMultiline
 # ------------
 """
-    const MPSMultiline{A<:InfiniteMPS} = Multiline{A}
+    const MPSMultiline = Multiline{<:InfiniteMPS}
 
 Type that represents multiple lines of `InfiniteMPS` objects.
 
@@ -50,9 +16,9 @@ Type that represents multiple lines of `InfiniteMPS` objects.
 
 See also: [`Multiline`](@ref)
 """
-const MPSMultiline{A<:InfiniteMPS} = Multiline{A}
-
-function MPSMultiline(pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...) where {S}
+const MPSMultiline = Multiline{<:InfiniteMPS}
+MPSMultiline(mpss::AbstractVector{<:InfiniteMPS}) = Multiline(mpss)
+function MPSMultiline(pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...) where {S<:VectorSpace}
     data = map(eachrow(pspaces), eachrow(Dspaces)) do (p, D)
         return InfiniteMPS(p, D; kwargs...)
     end
@@ -66,7 +32,7 @@ function MPSMultiline(As::AbstractMatrix{T}; kwargs...) where {T<:GenericMPSTens
 end
 function MPSMultiline(ALs::AbstractMatrix{<:GenericMPSTensor}, 
                       C₀::AbstractVector{<:MPSBondTensor}; kwargs...)
-    data = map(eachrow(ALs), C₀) do (ALrow, C₀row)
+    data = map(eachrow(ALs), C₀) do ALrow, C₀row
         return InfiniteMPS(ALrow, C₀row; kwargs...)
     end
     return MPSMultiline(data)
@@ -106,6 +72,6 @@ end
 
 Base.convert(::Type{MPSMultiline}, st::InfiniteMPS) = Multiline([st])
 Base.convert(::Type{InfiniteMPS}, st::MPSMultiline) = only(st)
-# Base.eltype(t::MPSMultiline) = eltype(t[1]);
-left_virtualspace(t::MPSMultiline, i::Int, j::Int) = left_virtualspace(t[i], j);
-right_virtualspace(t::MPSMultiline, i::Int, j::Int) = right_virtualspace(t[i], j);
+Base.eltype(t::MPSMultiline) = eltype(t[1])
+left_virtualspace(t::MPSMultiline, i::Int, j::Int) = left_virtualspace(t[i], j)
+right_virtualspace(t::MPSMultiline, i::Int, j::Int) = right_virtualspace(t[i], j)

@@ -1,7 +1,7 @@
 # MPOMultiline
 # ------------
 """
-    const MPOMultiline{O<:Union{SparseMPO,DenseMPO}} = Multiline{O}
+    const MPOMultiline = Multiline{<:Union{SparseMPO,DenseMPO}}
 
 Type that represents multiple lines of `MPO` objects.
 
@@ -11,7 +11,7 @@ Type that represents multiple lines of `MPO` objects.
 
 See also: [`Multiline`](@ref)
 """
-const MPOMultiline{O<:Union{SparseMPO,DenseMPO}} = Multiline{O}
+const MPOMultiline = Multiline{<:Union{SparseMPO,DenseMPO}}
 
 function MPOMultiline(Os::AbstractMatrix{<:MPOTensor})
     data = map(eachrow(Os)) do Orow
@@ -28,9 +28,9 @@ Base.getindex(t::MPOMultiline, I::CartesianIndex{2}) = t[I.I...]
 
 # converters
 
-Base.convert(::Type{MPOMultiline}, t::Union{SparseMPO,DenseMPO}) = Multiline([t]);
-Base.convert(::Type{DenseMPO}, t::MPOMultiline{<:DenseMPO}) = only(t)
-Base.convert(::Type{SparseMPO}, t::MPOMultiline{<:SparseMPO}) = only(t)
+Base.convert(::Type{MPOMultiline}, t::Union{SparseMPO,DenseMPO}) = Multiline([t])
+Base.convert(::Type{DenseMPO}, t::MPOMultiline) = only(t)
+Base.convert(::Type{SparseMPO}, t::MPOMultiline) = only(t)
 
 function Base.:*(mpo::MPOMultiline, st::MPSMultiline)
     size(mpo) == size(st) || throw(ArgumentError("dimension mismatch"))
