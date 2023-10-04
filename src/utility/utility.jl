@@ -138,3 +138,8 @@ tensorexpr(name::Symbol, inds) = Expr(:ref, name, inds...)
 function tensorexpr(name::Symbol, indout, indin)
     return Expr(:typed_vcat, name, Expr(:row, indout...), Expr(:row, indin...))
 end
+
+# check all elements are equal -> only defined in 1.8+
+@static if !isdefined(Base, :allequal)
+    allequal(itr) = isempty(itr) ? true : all(isequal(first(itr)), itr)
+end

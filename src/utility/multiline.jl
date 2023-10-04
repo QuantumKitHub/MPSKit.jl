@@ -12,10 +12,7 @@ See also: [`MPSMultiline`](@ref) and [`MPOMultiline`](@ref)
 struct Multiline{T}
     data::PeriodicArray{T,1}
     function Multiline{T}(data::AbstractVector{T}) where {T}
-        L = length(data[1])
-        for d in data[2:end]
-            @assert length(d) == L "All lines must have the same length"
-        end
+        @assert allequal(length.(data)) "All lines must have the same length"
         return new{T}(data)
     end
 end
@@ -24,12 +21,12 @@ Multiline(data::AbstractVector{T}) where {T} = Multiline{T}(data)
 # AbstractArray interface
 # -----------------------
 Base.parent(m::Multiline) = m.data
-Base.size(m::Multiline) = (length(parent(m)), length(m.data[1]))
+Base.size(m::Multiline) = (length(parent(m)), length(parent(m)[1]))
 Base.size(m::Multiline, i::Int) = getindex(size(m), i)
-Base.length(m::Multiline) = length(parent(m))
+Base.length(m::Multiline) = prod(size(m))
 
 Base.getindex(m::Multiline, i::Int) = getindex(parent(m), i)
 Base.setindex!(m::Multiline, v, i::Int) = (setindex!(parent(m), v, i); m)
 
-Base.copy(t::Multiline) = Multiline(map(copy, t.data))
-Base.iterate(t::Multiline, args...) = iterate(parent(t), args...)
+Base.copy(m::Multiline) = Multiline(map(copy, parent(m)))
+Base.iterate(m::Multiline, args...) = iterate(parent(m), args...)
