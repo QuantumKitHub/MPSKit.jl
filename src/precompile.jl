@@ -309,9 +309,7 @@ function _precompile_()
             Function,
             Type,
             Int,
-            ProductSpace{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},2
-            },
+            ProductSpace{GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},2},
             GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
         },
     )
@@ -1387,9 +1385,7 @@ function _precompile_()
                 MPOMultiline{
                     DenseMPO{
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             2,
                             2,
                             SU2Irrep,
@@ -1411,9 +1407,7 @@ function _precompile_()
                 MPSMultiline{
                     InfiniteMPS{
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             2,
                             1,
                             SU2Irrep,
@@ -1422,9 +1416,7 @@ function _precompile_()
                             FusionTree{SU2Irrep,1,0,0,Nothing},
                         },
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             1,
                             1,
                             SU2Irrep,
@@ -2754,9 +2746,7 @@ function _precompile_()
                 MPOMultiline{
                     DenseMPO{
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             2,
                             2,
                             SU2Irrep,
@@ -2778,9 +2768,7 @@ function _precompile_()
                 MPSMultiline{
                     InfiniteMPS{
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             2,
                             1,
                             SU2Irrep,
@@ -2789,9 +2777,7 @@ function _precompile_()
                             FusionTree{SU2Irrep,1,0,0,Nothing},
                         },
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             1,
                             1,
                             SU2Irrep,
