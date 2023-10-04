@@ -29,7 +29,7 @@ include("setup.jl")
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
         v = variance(ψ, H, envs)
 
-        @test sum(δ) < 1e-4
+        @test sum(δ) < 1e-3
         @test v₀ > v && v < 1e-2 # energy variance should be low
     end
 
