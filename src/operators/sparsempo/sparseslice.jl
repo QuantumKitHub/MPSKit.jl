@@ -18,12 +18,8 @@ struct SparseMPOSlice{S,T,E} <: AbstractArray{T,2}
         Tuple{Int,Base.Slice{Base.OneTo{Int}},Base.Slice{Base.OneTo{Int}}},
         false,
     }
-    domspaces::SubArray{
-        S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false
-    }
-    imspaces::SubArray{
-        S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false
-    }
+    domspaces::SubArray{S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false}
+    imspaces::SubArray{S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false}
     pspace::S
 end
 
