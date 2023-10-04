@@ -19,6 +19,7 @@ function MPOMultiline(Os::AbstractMatrix{<:MPOTensor})
     end
     return MPOMultiline(data)
 end
+MPOMultiline(mpos::AbstractVector{<:Union{SparseMPO,DenseMPO}}) = Multiline(mpos)
 MPOMultiline(t::MPOTensor) = MPOMultiline(fill(t, 1, 1))
 
 # allow indexing with two indices
