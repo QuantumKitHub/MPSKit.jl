@@ -10,27 +10,27 @@ using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
 using Base: @kwdef
 
-#bells and whistles for mpses
+# bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
 export PeriodicArray, Window
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth,
     rightorth, leftorth!, rightorth!, poison!, uniform_leftorth, uniform_rightorth
-export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR #should be properties
+export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # should be properties
 
-#useful utility functions?
+# useful utility functions?
 export add_util_leg, max_Ds, recalculate!
 export left_virtualspace, right_virtualspace, physicalspace
 export entanglementplot, transferplot
 
-#hamiltonian things
+# hamiltonian things
 export Cache
 export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
 export leftenv, rightenv
 
-#algos
+# algos
 export find_groundstate!, find_groundstate, leading_boundary
 export VUMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
 export excitations, FiniteExcited, QuasiparticleAnsatz
@@ -45,7 +45,7 @@ export approximate!, approximate
 export periodic_boundary_conditions
 export exact_diagonalization
 
-#transfer matrix
+# transfer matrix
 export TransferMatrix
 export transfer_left, transfer_right
 
@@ -53,7 +53,7 @@ export transfer_left, transfer_right
 @deprecate params(args...) environments(args...)
 @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
-#default settings
+# default settings
 module Defaults
     const eltype = ComplexF64
     const maxiter = 100
@@ -68,15 +68,16 @@ module Defaults
 end
 
 include("utility/periodicarray.jl")
-include("utility/utility.jl") #random utility functions
+include("utility/multiline.jl")
+include("utility/utility.jl") # random utility functions
 include("utility/plotting.jl")
 include("utility/linearcombination.jl")
 
-#maybe we should introduce an abstract state type
+# maybe we should introduce an abstract state type
 include("states/window.jl")
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
-include("states/multiline.jl")
+include("states/mpsmultiline.jl")
 include("states/finitemps.jl")
 include("states/windowmps.jl")
 include("states/orthoview.jl")
@@ -86,14 +87,14 @@ include("states/ortho.jl")
 include("operators/densempo.jl")
 include("operators/sparsempo/sparseslice.jl")
 include("operators/sparsempo/sparsempo.jl")
-include("operators/mpohamiltonian.jl") #the mpohamiltonian objects
+include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
 
-abstract type Cache end #cache "manages" environments
+abstract type Cache end # cache "manages" environments
 
 include("environments/FinEnv.jl")
 include("environments/abstractinfenv.jl")
