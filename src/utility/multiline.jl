@@ -30,3 +30,12 @@ Base.setindex!(m::Multiline, v, i::Int) = (setindex!(parent(m), v, i); m)
 
 Base.copy(m::Multiline) = Multiline(map(copy, parent(m)))
 Base.iterate(m::Multiline, args...) = iterate(parent(m), args...)
+
+# Utility functions
+# -----------------
+Base.circshift(A::Multiline, n::Int) = Multiline(circshift(parent(A), n))
+function Base.circshift(A::Multiline, shifts::Tuple{Int,Int})
+    data′ = circshift.(parent(A), shifts[2])
+    return Multiline(circshift!(data′, shifts[1]))
+end
+Base.reverse(A::Multiline) = Multiline(reverse(parent(A)))
