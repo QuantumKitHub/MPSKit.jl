@@ -15,14 +15,14 @@ struct SparseMPOSlice{S,T,E} <: AbstractArray{T,2}
         Union{T,E},
         2,
         PeriodicArray{Union{T,E},3},
-        Tuple{Int64,Base.Slice{Base.OneTo{Int64}},Base.Slice{Base.OneTo{Int64}}},
+        Tuple{Int,Base.Slice{Base.OneTo{Int}},Base.Slice{Base.OneTo{Int}}},
         false,
     }
     domspaces::SubArray{
-        S,1,PeriodicArray{S,2},Tuple{Int64,Base.Slice{Base.OneTo{Int64}}},false
+        S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false
     }
     imspaces::SubArray{
-        S,1,PeriodicArray{S,2},Tuple{Int64,Base.Slice{Base.OneTo{Int64}}},false
+        S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false
     }
     pspace::S
 end

@@ -132,19 +132,19 @@ end
 
 #the mpo hamiltonian over n sites has energy f+n*edens, which is what we calculate here. f can then be found as this - n*edens
 function expectation_value(
-    st::InfiniteMPS, prevca::MPOHamInfEnv, range::Union{UnitRange{Int64},Int64}
+    st::InfiniteMPS, prevca::MPOHamInfEnv, range::Union{UnitRange{Int},Int}
 )
     return expectation_value(st, prevca.opp, range, prevca)
 end
 function expectation_value(
-    st::InfiniteMPS, ham::MPOHamiltonian, range::Int64, prevca=environments(st, ham)
+    st::InfiniteMPS, ham::MPOHamiltonian, range::Int, prevca=environments(st, ham)
 )
     return expectation_value(st, ham, 1:range, prevca)
 end
 function expectation_value(
     st::InfiniteMPS,
     ham::MPOHamiltonian,
-    range::UnitRange{Int64},
+    range::UnitRange{Int},
     prevca=environments(st, ham),
 )
     start = map(leftenv(prevca, range.start, st)) do y
