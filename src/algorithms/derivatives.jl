@@ -102,15 +102,18 @@ function ∂AC(x::MPSTensor, ham::SparseMPOSlice, leftenv, rightenv)::typeof(x)
     return y
 end
 
-function ∂AC(x::MPSTensor{S}, opp::MPOTensor{S}, leftenv::MPSTensor{S}, rightenv::MPSTensor{S})::typeof(x) where {S}
+function ∂AC(
+    x::MPSTensor{S}, opp::MPOTensor{S}, leftenv::MPSTensor{S}, rightenv::MPSTensor{S}
+)::typeof(x) where {S}
     @plansor y[-1 -2; -3] :=
         leftenv[-1 5; 4] * x[4 2; 1] * opp[5 -2; 2 3] * rightenv[1 3; -3]
 end
-function ∂AC(x::MPSTensor{S}, opp::Number, leftenv::MPSTensor{S}, rightenv::MPSTensor{S})::typeof(x) where {S}
+function ∂AC(
+    x::MPSTensor{S}, opp::Number, leftenv::MPSTensor{S}, rightenv::MPSTensor{S}
+)::typeof(x) where {S}
     @plansor y[-1 -2; -3] :=
         opp * (leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] * rightenv[1 7; -3])
 end
-
 
 # mpo multiline
 function ∂AC(x::RecursiveVec, opp, leftenv, rightenv)
