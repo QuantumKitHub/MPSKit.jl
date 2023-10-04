@@ -67,7 +67,7 @@ function find_groundstate(Ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(Ψ, 
             @warn "VUMPS maximum iterations" iter ε λ = sum(expectation_value(Ψ, H, envs)) Δt
     end
     
-    @info "VUMPS summary:" ε λ = sum(expectation_value(Ψ, H, envs)) Δt =
+    alg.verbose && @info "VUMPS summary:" ε λ = sum(expectation_value(Ψ, H, envs)) Δt =
         ((Base.time_ns() - t₀) / 1.0e9)
     return Ψ, envs, ε
 end
