@@ -53,19 +53,7 @@ export transfer_left, transfer_right
 @deprecate params(args...) environments(args...)
 @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
-# default settings
-module Defaults
-    const eltype = ComplexF64
-    const maxiter = 100
-    const tolgauge = 1e-14
-    const tol = 1e-12
-    const verbose = true
-    _finalize(iter, state, opp, envs) = (state, envs)
-
-    import KrylovKit: GMRES, Arnoldi
-    const linearsolver = GMRES(; tol, maxiter)
-    const eigsolver = Arnoldi(; tol, maxiter)
-end
+include("utility/defaults.jl")
 
 include("utility/periodicarray.jl")
 include("utility/multiline.jl")

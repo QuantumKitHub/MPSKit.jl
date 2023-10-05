@@ -1,81 +1,124 @@
 # Parallelism in julia
 
-Julia has [really great parallelism infrastructure](https://julialang.org/blog/2019/07/multithreading/), but there is a caveat that is relevant for all algorithms implemented in mpskit. The julia threads do not play nicely together with the BLAS threads, which are the threads used for matrix matrix multiplications (amongst other things).
+Julia has great
+[parallelism infrastructure](https://julialang.org/blog/2019/07/multithreading/), but there
+is a caveat that is relevant for all algorithms implemented in MPSKit. The Julia threads do
+not play nicely together with the BLAS threads, which are the threads used for many of the
+linear algebra routines, and in particular for `gemm` (general matrix-matrix
+multiplication). As this is a core routine in MPSKit, this has a significant impact on the
+overall performance.
 
+## Julia threads vs BLAS threads
 
-## The problem
+A lot of the confusion stems from the fact that the BLAS threading behaviour is not
+consistent between different vendors. Additionally, performance behaviour is severely
+dependent on hardware, the specifics of the problem, and the availability of other resources
+such as total memory, or memory bandwith. This means that there is no one size fits all
+solution, and that you will have to experiment with the settings to get optimal performance.
+Nevertheless, there are some general guidelines that can be followed, which seem to at least
+work well in most cases.
 
-The default behaviour is to have some BLAS threads running, which accept multiplication jobs, to which the julia threads can then submit jobs. These jobs are in turn sequentially executed over the BLAS threads. This means that if your program is waiting on a matrix multiplication to finish, it can not in parallel do other matrix multiplications!
+The number of threads that are set by `BLAS.set_num_threads()`, in the case of OpenBLAS (the
+default vendor), is equal to the **total number** of BLAS threads that is kept in a pool,
+which is then shared by all Julia threads. This means that if you have 4 julia threads and 4
+BLAS threads, then all julia threads will share the same 4 BLAS threads. On the other hand,
+using `BLAS.set_num_threads(1)`, OpenBLAS will now utilize the julia threads to run the BLAS
+jobs. Thus, for OpenBLAS, very often setting the number of BLAS threads to 1 is the best
+option, which will then maximally utilize the julia threading infrastructure of MPSKit.
 
-The behaviour can be demonstrated using the following bit of code:
+In the case of [MKL.jl](), which often outperforms OpenBLAS, the situation is a bit
+different. Here, the number of BLAS threads corresponds to the number of threads that are
+spawned by **each** julia thread. Thus, if you have 4 julia threads and 4 BLAS threads, then
+each julia thread will spawn 4 BLAS threads, for a total of 16 BLAS threads. As such, it
+might become necessary to adapt the settings to avoid oversubscription of the cores.
+
+A careful analysis of the different cases and benefits can be inspected by making use of
+[`ThreadPinning.jl`](https://github.com/carstenbauer/ThreadPinning.jl)'s tool
+`threadinfo(; blas=true, info=true)`. In particular, the following might demonstrate the
+difference between OpenBLAS and MKL:
+
+```julia-repl
+julia> Threads.nthreads()
+4
+
+julia> using ThreadPinning; threadinfo(; blas=true, hints=true)
+
+System: 8 cores (2-way SMT), 1 sockets, 1 NUMA domains
+
+| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 | 
+
+# = Julia thread, # = HT, # = Julia thread on HT, | = Socket seperator
+
+Julia threads: 4
+├ Occupied CPU-threads: 4
+└ Mapping (Thread => CPUID): 1 => 8, 2 => 5, 3 => 9, 4 => 2,
+
+BLAS: libopenblas64_.so
+└ openblas_get_num_threads: 8
+
+[ Info: jlthreads != 1 && blasthreads < cputhreads. You should either set BLAS.set_num_threads(1) (recommended!) or at least BLAS.set_num_threads(16).
+[ Info: jlthreads < cputhreads. Perhaps increase number of Julia threads to 16?
+julia> using MKL; threadinfo(; blas=true, hints=true)
+
+System: 8 cores (2-way SMT), 1 sockets, 1 NUMA domains
+
+| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 | 
+
+# = Julia thread, # = HT, # = Julia thread on HT, | = Socket seperator
+
+Julia threads: 4
+├ Occupied CPU-threads: 4
+└ Mapping (Thread => CPUID): 1 => 11, 2 => 12, 3 => 1, 4 => 2,
+
+BLAS: libmkl_rt.so
+├ mkl_get_num_threads: 8
+└ mkl_get_dynamic: true
+
+┌ Warning: blasthreads_per_jlthread > cputhreads_per_jlthread. You should decrease the number of MKL threads, i.e. BLAS.set_num_threads(4).
+└ @ ThreadPinning ~/.julia/packages/ThreadPinning/qV2Cd/src/threadinfo.jl:256
+[ Info: jlthreads < cputhreads. Perhaps increase number of Julia threads to 16?
 ```
-function parallelworker(As,Bs)
-   temp = similar.(As);
-   @sync for i in 1:length(As)
-       Threads.@spawn mul!($temp[i], $As[i],$Bs[i])
-   end
-   sum(temp);
-end
 
-function serialworker(As,Bs)
-    temp = similar.(As);
-    for i in 1:length(As)
-        mul!(temp[i], As[i],Bs[i])
-    end
-    sum(temp);
-end
+## MPSKit multithreading
 
-As = [rand(1000,1000) for a in 1:50];
-Bs = [rand(1000,1000) for b in 1:50];
+Within MPSKit, when Julia is started with multiple threads, by default the `Threads.@spawn`
+machinery will be used to parallelize the code as much as possible. In particular, there are
+three main places where this is happening, which can be disabled separately through a preference-based system.
 
-@btime parallelworker($As,$Bs);
-@btime serialworker($As,$Bs);
+1. During the process of some algorithms (e.g. VUMPS), local updates can take place at each
+   site in parallel. This can be controlled by the `parallelize_sites` preference.
+
+2. During the calculation of the environments, when the MPO is block-sparse, it is possible
+   to parallelize over these blocks. This can be enabled or disabled by the
+   `parallelize_environments` preference.
+
+3. During the calculation of the derivatives, when the MPO is block-sparse, it is possible
+   to parallelize over these blocks. This can be enabled or disabled by the
+   `parallelize_derivatives` preference.
+
+For convenience, these preferences can be set via [`MPSKit.Defaults.set_parallelization`](@ref), which takes as input pairs of preferences and booleans. For example, to disable all parallelization, one can call
+
+```julia
+Defaults.set_parallelization("sites" => false, "environments" => false, "derivatives" => false)
 ```
 
-running this on my laptop with 4 julia threads and 4 BLAS threads, I see the following:
-```
-998.506 ms (513 allocations: 755.34 MiB)
-1.080 s (199 allocations: 755.32 MiB)
-```
+!!! warning
+    These settings are statically set at compile-time, and for changes to take
+    effect the Julia session must be restarted.
 
-The julia threads give next to no speedup! Despite mpskit trying to implement parallel code, you will most likely not be able to exploit this to the fullest when running julia with the default settings.
+## TensorKit multithreading
 
-## The possible solution
+Finally, when dealing with tensors that have some internal symmetry, it is also possible to
+parallelize over the symmetry sectors. This is handled by TensorKit, and more information
+can be found in its documentation (Soon TM).
 
-The short term 'solution' is to disable BLAS threads altogether. Multiplication jobs are then run in the julia thread that call them. Individual multiplication jobs will be slower, but they can be done in parallel.
-```
-using LinearAlgebra
-BLAS.set_num_threads(1);
-@btime parallelworker($As,$Bs);
-```
-outputs:
-```
-681.954 ms (514 allocations: 755.34 MiB)
-```
+## Memory management
 
-This has some drawbacks: BLAS is also responsible for matrix factorizations, which will now run single threaded. If your program only needs to spawn 10 jobs then you will also not see any further improvement when running the code with even more julia threads, as those other threads have nothing to do. A possible solution to this is given by [Strided.jl](https://github.com/Jutho/Strided.jl), which is internally used by [TensorKit.jl](https://github.com/Jutho/TensorKit.jl) and consequently also MPSKit. Strided has an option to subdivide multiplication jobs into smaller multiplication jobs distributed over julia threads. When BLAS is single threaded, those jobs will be done in parallel, and you may be able to further speed up your code! Controlling the number of threads over which strided will distribute the matrix multiplications can be done by calling:
-
-```
-Strided.enable_threaded_mul(); # enable the subdivision of jobs
-Strided.set_num_threads(N); # set the number of threads strided will use
-```
-
-In an ideal world we would have a julia implemention of BLAS, or some way to make the BLAS scheduler collaborate with the julia scheduler. Now however, the best performance can usually be achieved by experimenting with the number of julia and strided threads after disabling the BLAS threading.
-
-## In practice
-
-Real world performance is dependent on the particular problem, and one typically needs to do some experimentation to get optimal settings. As an illustration I have benchmarked the time it takes to get environments of the second order time evolution operator for ising, with an mps of bond dimension 500.
-
-I always took 50 samples and used the median timing. This may not be enough to do proper statistics, and there is even further randomness in the initial conditions, but it should be enough to get some kind of idea.
-
-![](D_500_blas.png)
-
-BLAS scales really well initially. The bond dimension is pretty big, which translates to fairly large blocks being multiplied. However, after a certain point, we start to see diminishing returns. Nothing is gained from further parallization.
-
-If we just take the last point (14 threads) and set BLAS threading to 1, we can fully leverage julia multithreading. The only variable to play with is in how many jobs every matrix multiplication should be subdivided.
-
-![](D_500_strided.png)
-
-We clearly see that already by disabling BLAS multithreading we were able to get faster simulations, and allowing strided to further subdivide mutiplications iallows us to push the simulation even further! The optimal amount of strided jobs is very problem and architecture dependent. Below I remade the same plot at bond dimension 100. Because of the smaller bond dimension we don't benefit from having a large amount of jobs per multiplication. In fact, we are probably seeing all but numerical noise.
-
-![](D_100_strided.png)
+Because of the way julia threads work, it is possible that the total memory usage of your
+program becomes rather high. This seems to be because of the fact that MPSKit spawns several
+tasks (in a nested way), which each allocate and deallocate quite a bit of memory in a tight
+loop. This seems to lead to a situation where the garbage collector is not able to keep up,
+and can even fail to clear the garbage before an `OutOfMemory` error occurs. In this case,
+often the best thing to do is disable the multithreading of MPSKit, specifically for the
+`derivatives`, as this seems to be the most memory intensive part. This is something that is
+under investigation, and hopefully will be fixed in the future.
