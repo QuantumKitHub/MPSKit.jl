@@ -13,11 +13,17 @@ const maxiter = 100
 const tolgauge = 1e-14
 const tol = 1e-12
 const verbose = true
+const dynamical_tols = true
+const tol_min = 1e-14
+const tol_max = 1e-5
+const eigs_tolfactor = 1e-5
+const gauge_tolfactor = 1e-8
+const envs_tolfactor = 1e-5
 
 _finalize(iter, state, opp, envs) = (state, envs)
 
 const linearsolver = GMRES(; tol, maxiter)
-const eigsolver = Arnoldi(; tol, maxiter)
+const eigsolver = Arnoldi(; tol, maxiter, eager=true)
 
 # Preferences
 # -----------

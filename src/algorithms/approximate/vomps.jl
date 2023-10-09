@@ -33,15 +33,14 @@ function approximate(
     alg::VUMPS,
     envs=environments(state, toapprox),
 )
-    (mpo, above) = toapprox
-
-    galerkin = 1 + alg.tol_galerkin
+    galerkin = calc_galerkin(state, envs)
     iter = 1
 
     temp_ACs = similar.(state.AC)
     temp_Cs = similar.(state.CR)
 
     while true
+        _, tol_gauge, tol_envs = updatetols(alg, iter, galerkin)
         @sync for col in 1:size(state, 2)
             Threads.@spawn $temp_ACs[:, col] = circshift(
                 [ac_proj(row, $col, $state, $envs) for row in 1:size($state, 1)], 1
@@ -58,9 +57,9 @@ function approximate(
         end
 
         state = MPSMultiline(
-            temp_ACs, state.CR[:, end]; tol=alg.tol_gauge, maxiter=alg.orthmaxiter
+            temp_ACs, state.CR[:, end]; tol=tol_gauge, maxiter=alg.orthmaxiter
         )
-        recalculate!(envs, state)
+        recalculate!(envs, state; tol=tol_envs)
 
         (state, envs) =
             alg.finalize(iter, state, toapprox, envs)::Tuple{typeof(state),typeof(envs)}

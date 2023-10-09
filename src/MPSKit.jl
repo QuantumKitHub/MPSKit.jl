@@ -5,6 +5,7 @@ using Base.Threads, FLoops, Transducers, FoldsThreads
 using Base.Iterators
 using RecipesBase
 using VectorInterface
+using Accessors
 
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
