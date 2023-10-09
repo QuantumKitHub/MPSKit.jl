@@ -7,25 +7,27 @@
 # - (a)c-prime takes a different number of arguments
 # - it's very litle duplicate code, but together it'd be a bit more convoluted (primarily because of the indexing way)
 
-"
+"""
     leading_boundary(Ψ,opp,alg,envs=environments(Ψ,ham))
 
-    approximate the leading eigenvector for opp
-"
+Approximate the leading eigenvector for opp.
+"""
 function leading_boundary(Ψ::InfiniteMPS, H, alg, envs=environments(Ψ, H))
     (st, pr, de) = leading_boundary(convert(MPSMultiline, Ψ), Multiline([H]), alg, envs)
     return convert(InfiniteMPS, st), pr, de
 end
 
 function leading_boundary(Ψ::MPSMultiline, H, alg::VUMPS, envs=environments(Ψ, H))
-    galerkin = 1 + alg.tol_galerkin
+    galerkin = calc_galerkin(Ψ, envs)
     iter = 1
 
     temp_ACs = similar.(Ψ.AC)
     temp_Cs = similar.(Ψ.CR)
 
     while true
-        eigalg = Arnoldi(; tol=galerkin / (4 * sqrt(iter)))
+        tol_eigs, tol_gauge, tol_envs = updatetols(alg, iter, galerkin)
+
+        eigalg = Arnoldi(; tol=tol_eigs)
 
         if Defaults.parallelize_sites
             @sync begin
@@ -65,8 +67,8 @@ function leading_boundary(Ψ::MPSMultiline, H, alg::VUMPS, envs=environments(Ψ,
             temp_ACs[row, col] = QAc * adjoint(Qc)
         end
 
-        Ψ = MPSMultiline(temp_ACs, Ψ.CR[:, end]; tol=alg.tol_gauge, maxiter=alg.orthmaxiter)
-        recalculate!(envs, Ψ)
+        Ψ = MPSMultiline(temp_ACs, Ψ.CR[:, end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
+        recalculate!(envs, Ψ; tol=tol_envs)
 
         (Ψ, envs) = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
 

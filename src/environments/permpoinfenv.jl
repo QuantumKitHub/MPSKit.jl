@@ -49,10 +49,10 @@ function environments(
     return PerMPOInfEnv(above, mpo, below, solver, lw, rw, ReentrantLock())
 end
 
-function recalculate!(envs::PerMPOInfEnv, nstate::InfiniteMPS)
-    return recalculate!(envs, convert(MPSMultiline, nstate))
+function recalculate!(envs::PerMPOInfEnv, nstate::InfiniteMPS; kwargs...)
+    return recalculate!(envs, convert(MPSMultiline, nstate); kwargs...)
 end;
-function recalculate!(envs::PerMPOInfEnv, nstate::MPSMultiline)
+function recalculate!(envs::PerMPOInfEnv, nstate::MPSMultiline; tol=envs.solver.tol)
     sameDspace = reduce(&, _firstspace.(envs.dependency.CR) .== _firstspace.(nstate.CR))
 
     above = isnothing(envs.above) ? nstate : envs.above
@@ -61,8 +61,11 @@ function recalculate!(envs::PerMPOInfEnv, nstate::MPSMultiline)
         init = gen_init_fps(above, envs.opp, nstate)
     end
 
-    (envs.lw, envs.rw) = mixed_fixpoints(above, envs.opp, nstate, init; solver=envs.solver)
+    solver = envs.solver
+    solver = @set solver.tol=tol
+    (envs.lw, envs.rw) = mixed_fixpoints(above, envs.opp, nstate, init; solver)
     envs.dependency = nstate
+    envs.solver = solver
 
     return envs
 end
