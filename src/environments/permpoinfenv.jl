@@ -62,7 +62,7 @@ function recalculate!(envs::PerMPOInfEnv, nstate::MPSMultiline; tol=envs.solver.
     end
 
     solver = envs.solver
-    solver = @set solver.tol=tol
+    solver = @set solver.tol = tol
     (envs.lw, envs.rw) = mixed_fixpoints(above, envs.opp, nstate, init; solver)
     envs.dependency = nstate
     envs.solver = solver

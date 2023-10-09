@@ -61,7 +61,7 @@ function recalculate!(envs::MPOHamInfEnv, nstate; tol=envs.solver.tol)
     end
 
     solver = envs.solver
-    solver = @set solver.tol=tol
+    solver = @set solver.tol = tol
     @sync begin
         Threads.@spawn calclw!(envs.lw, nstate, envs.opp; solver=solver)
         Threads.@spawn calcrw!(envs.rw, nstate, envs.opp; solver=solver)
