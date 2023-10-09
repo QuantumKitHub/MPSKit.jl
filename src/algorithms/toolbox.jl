@@ -25,14 +25,13 @@ calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS}, envs)::Float64 =
 function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
     above = isnothing(envs.above) ? state : envs.above
 
-    return maximum(
-        [
-            norm(
-                leftnull(state.AC[row + 1, col])' *
-                (∂∂AC(row, col, state, envs.opp, envs) * above.AC[row, col]),
-            ) for (row, col) in product(1:size(state, 1), 1:size(state, 2))
-        ][:],
-    )
+    εs = zeros(Float64, size(state, 1), size(state, 2))
+    for (row, col) in product(1:size(state, 1), 1:size(state, 2))
+        AC´ = ∂∂AC(row, col, state, envs.opp, envs) * above.AC[row, col]
+        εs[row, col] = norm(leftnull(state.AC[row + 1, col])' * (AC´ / norm(AC´)))
+    end
+
+    return maximum(εs[:])
 end
 
 "
