@@ -29,15 +29,6 @@ UntimedOperator(x::O, c::C) where {C<:Real,O} = MultipliedOperator(x, c)
 TimedOperator(x) = TimedOperator(x, t -> 1)
 UntimedOperator(x) = UntimedOperator(x, 1)
 
-TimedOperator(x::UntimedOperator) = TimedOperator(x.op, t -> x.f)
-function UntimedOperator(x::TimedOperator)
-    throw(
-        ArgumentError(
-            "Cannot make a UntimedOperator from a TimedOperator without a time argument"
-        ),
-    )
-end
-
 # what to do when we multiply by a scalar
 function Base.:*(op::UntimedOperator, b::Number)
     return UntimedOperator(op.op, b * op.f)
@@ -46,11 +37,6 @@ function Base.:*(op::TimedOperator, b::Number)
     return TimedOperator(op.op, t -> b * op.f(t))
 end
 Base.:*(b::Number, op::MultipliedOperator) = op * b
-
-(x::UntimedOperator)() = x.f * x.op
-
-#ignore time-dependence by default
-(x::MultipliedOperator)(t::Number) = x
 
 (x::TimedOperator)(t::Number) = UntimedOperator(x.op, x.f(t))
 

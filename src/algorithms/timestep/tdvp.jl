@@ -22,12 +22,12 @@ algorithm for time evolution.
 # Fields
 - `integrator::A`: integration algorithm (defaults to Lanczos exponentiation)
 - `tolgauge::Float64`: tolerance for gauging algorithm
-- `maxiter::Int`: maximum amount of gauging iterations
+- `gaugemaxiter::Int`: maximum amount of gauging iterations
 """
 @kwdef struct TDVP{A} <: Algorithm
     integrator::A = Lanczos(; tol=Defaults.tol)
     tolgauge::Float64 = Defaults.tolgauge
-    maxiter::Int = Defaults.maxiter
+    gaugemaxiter::Int = Defaults.maxiter
 end
 
 function timestep(
@@ -67,7 +67,7 @@ function timestep(
             Qc, _ = leftorth!(temp_CRs[loc]; alg=TensorKit.QRpos())
             @plansor temp_ACs[loc][-1 -2; -3] = QAc[-1 -2; 1] * conj(Qc[-3; 1])
         end
-        newΨ = InfiniteMPS(temp_ACs, Ψ.CR[end]; tol=alg.tolgauge, maxiter=alg.maxiter)
+        newΨ = InfiniteMPS(temp_ACs, Ψ.CR[end]; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
 
     else
         for loc in 1:length(Ψ)
@@ -76,7 +76,7 @@ function timestep(
             _, Qc = rightorth!(temp_CRs[mod1(loc - 1, end)]; alg=TensorKit.LQpos())
             temp_ACs[loc] = _transpose_front(Qc' * QAc)
         end
-        newΨ = InfiniteMPS(Ψ.CR[0], temp_ACs; tol=alg.tolgauge, maxiter=alg.maxiter)
+        newΨ = InfiniteMPS(Ψ.CR[0], temp_ACs; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
     end
 
     recalculate!(envs, newΨ)
@@ -148,13 +148,13 @@ algorithm for time evolution.
 # Fields
 - `integrator::A`: integrator algorithm (defaults to Lanczos exponentiation)
 - `tolgauge::Float64`: tolerance for gauging algorithm
-- `maxiter::Int`: maximum amount of gauging iterations
+- `gaugemaxiter::Int`: maximum amount of gauging iterations
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
 @kwdef struct TDVP2{A} <: Algorithm
     integrator::A = Lanczos(; tol=Defaults.tol)
     tolgauge::Float64 = Defaults.tolgauge
-    maxiter::Int = Defaults.maxiter
+    gaugemaxiter::Int = Defaults.maxiter
     trscheme = truncerr(1e-3)
 end
 
@@ -204,11 +204,6 @@ function timestep!(
     end
 
     return Ψ, envs
-end
-
-# time-independent version
-function timestep(Ψ, H, dt, alg, env=environments(Ψ, H); kwargs...)
-    return timestep(Ψ, H, 0.0, dt, alg, env; kwargs...)
 end
 
 #copying version

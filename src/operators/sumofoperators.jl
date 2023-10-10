@@ -19,14 +19,13 @@ SumOfOperators(x) = SumOfOperators([x])
 function SumOfOperators(ops::AbstractVector, fs::AbstractVector)
     return SumOfOperators(map((op, f) -> MultipliedOperator(op, f), ops, fs))
 end
-LinearCombination(ops::Tuple, fs::Tuple) = SumOfOperators(collect(ops), collect(fs))
 
 # we can add operators to SumOfOperators by using +
 function Base.:+(op1::MultipliedOperator{O,F}, op2::MultipliedOperator{O,G}) where {O,F,G}
     return SumOfOperators([op1, op2])
 end
 
-# this we can also do with promote
+# this we could also do with promote
 function Base.:+(op1::TimedOperator{O}, op2::Union{O,UntimedOperator{O}}) where {O}
     return SumOfOperators(TimedOperator{O}[op1, TimedOperator(op2)])
 end
@@ -58,12 +57,7 @@ function Base.:+(op::O, SumOfOps::SumOfOperators{T}) where {O,T<:MultipliedOpera
     return SumOfOperators(UntimedOperator(op)) + SumOfOps
 end
 
-(x::SumOfOperators{<:UntimedOperator})() = sum(op -> op(), x)
-
-#ignore time-dependence by default
-(x::SumOfOperators)(t::Number) = x
-
-(x::SumOfOperators{<:MultipliedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x)) #will convert to SumOfOperators{UnTimedOperator}
+(x::SumOfOperators{<:TimedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x)) #will convert to SumOfOperators{UnTimedOperator}
 
 # logic for derivatives
 Base.:*(x::SumOfOperators, v) = x(v);

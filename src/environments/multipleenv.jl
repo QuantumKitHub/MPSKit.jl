@@ -15,6 +15,11 @@ function environments(st, ham::SumOfOperators)
     return MultipleEnvironments(ham, map(op -> environments(st, op), ham.ops))
 end
 
+#broadcast vs map?
+function environments(state, ham::LinearCombination)
+    return MultipleEnvironments(ham, broadcast(o -> environments(state, o), ham.opps))
+end;
+
 function environments(
     st::WindowMPS,
     ham::SumOfOperators;

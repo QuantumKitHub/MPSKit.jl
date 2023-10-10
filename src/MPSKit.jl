@@ -63,6 +63,7 @@ module Defaults
     const tol = 1e-12
     const verbose = true
     _finalize(iter, state, opp, envs) = (state, envs)
+    _time_finalize(iter, state, opp, envs) = (state, envs, tobesaved)
 
     import KrylovKit: GMRES, Arnoldi
     const linearsolver = GMRES(; tol, maxiter)
@@ -72,6 +73,7 @@ end
 include("utility/periodicarray.jl")
 include("utility/utility.jl") #random utility functions
 include("utility/plotting.jl")
+include("utility/linearcombination.jl")
 
 #maybe we should introduce an abstract state type
 include("states/window.jl")
