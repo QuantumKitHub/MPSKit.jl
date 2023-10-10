@@ -1,40 +1,28 @@
 """
-    integrate(f, y₀, t₀, a, dt, algorithm)
+    integrate(f, y₀, t, dt, alg)
 
-Integrate the differential equation ``dy/dt = a*f(y,t)`` over a time step 'dt' starting from ``y(t₀)=y₀``, using the provided algorithm. 
+Integrate the differential equation ``dy/dt = f(y, t)`` over a time step 'dt' starting from
+``y(t₀)=y₀``, using the provided algorithm.
 
 # Arguments
-- `f::Function`: driving function
+- `f`: driving function
 - `y₀`: object to integrate
-- `t₀`: time f is evaluated at
-- `a` : scalar prefactor
-- `dt`: timestep
-- `algorithm`: integration scheme
+- `t::Number`: starting time of time-step
+- `dt::Number`: time-step magnitude
+- `alg`: integration scheme
 """
 function integrate end
 
-# make time evaluation dispatchable
-# user provides f(y,t) that can be called with two arguments
-Eval(f,x,t::Number) = f(x)
-Eval(f::F,x,t::Number) where {O<:TimedOperator,F<:Union{O,SumOfOperators{O}}} = f(x,t)
+# default for things that are callable on two arguments
+_eval_t(f, t::Number) = Base.Fix2(f, t)
+_eval_x(f, x) = Base.Fix1(f, x)
 
+# time-independent effective hamiltonians
+_eval_t(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, t::Number) = h
+_eval_x(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, x) = t -> h(x)
 
-"""
-    ExpIntegrator
-
-Method that solves ``dy/dt = a*f(y,t)`` by exponentiating the action of f(y,t).
-
-# Fields
-- `krylovmethod::Union{Arnoldi,Lanczos}`` KrylovKit method for exponentiation. For options such as tolerance, see Lanczos/Arnoldi in KrylovKit.
-"""
-@kwdef struct ExpIntegrator
-    krylovmethod::Union{Arnoldi,Lanczos} = Lanczos();
-end
-
-#original integrator in iTDVP, namely exponentiation
-function integrate(
-    f, y₀, t₀::Number, a::Number, dt::Number, method::ExpIntegrator
-)
-    sol, convhist = exponentiate( x->Eval_t(f,x,t₀), a*dt, y₀, method.krylovmethod)
-    return sol, convhist.converged, convhist
+function integrate(f, y₀, t::Number, dt::Number, alg::Union{Arnoldi,Lanczos})
+    y, convhist = exponentiate(_eval_t(f, t), dt, y₀, alg)
+    convhist.converged || @warn "integration failed $(convhist.normres)"
+    return y
 end
