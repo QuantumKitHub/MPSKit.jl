@@ -102,7 +102,7 @@ function propagator(
     eta = imag(z)
 
     envs1 = environments(init, H) # environments for h
-    (ham2, envs2) = squaredenvs(init, H, envs1) # environments for h^2
+    ham2, envs2 = squaredenvs(init, H, envs1) # environments for h^2
     mixedenvs = environments(init, A) # environments for <init | A>
 
     delta = 2 * alg.tol
@@ -150,62 +150,38 @@ function squaredenvs(
     state::AbstractFiniteMPS, H::MPOHamiltonian, envs=environments(state, ham)
 )
     nham = conj(H) * H
-
+    L = length(state)
+    
     # to construct the squared caches we will first initialize environments
     # then make all data invalid so it will be recalculated
     # then initialize the right caches at the edge
     ncocache = environments(state, nham)
 
     # make sure the dependencies are incorrect, so data will be recalculated
-    for i in 1:length(state)
+    for i in 1:L
         poison!(ncocache, i)
     end
 
     # impose the correct boundary conditions
     # (important for comoving mps, should do nothing for finite mps)
     indmap = LinearIndices((H.odim, H.odim))
-
-    nleft = leftenv(ncocache, 1, state)
-    nright = rightenv(ncocache, length(state), state)
-
-    # stor = storagetype(eltype(state.AL))
-    for i in 1:(H.odim), j in 1:(H.odim)
-        nleft[indmap[i, j]] = _contract_leftenv²(
-            leftenv(envs, 1, state)[j], leftenv(envs, 1, state)[i]
-        )
-        # f1 = isomorphism(
-        #     stor,
-        #     space(nleft[indmap[i, j]], 2),
-        #     space(leftenv(envs, 1, state)[i], 2)' * space(leftenv(envs, 1, state)[j], 2),
-        # )
-        # @plansor begin
-        #     nleft[indmap[i, j]][-1 -2; -3] :=
-        #         leftenv(envs, 1, state)[j][1 3; -3] *
-        #         conj(leftenv(envs, 1, state)[i][1 2; -1]) *
-        #         f1[-2; 2 3]
-        # end
-        # f2 = isomorphism(
-        #     stor,
-        #     space(nright[indmap[i, j]], 2),
-        #     space(rightenv(envs, length(state), state)[j], 2) *
-        #     space(rightenv(envs, length(state), state)[i], 2)',
-        # )
-        # @plansor begin
-        #     nright[indmap[i, j]][-1 -2; -3] :=
-        #         rightenv(envs, length(state), state)[j][
-        #             -1 2
-        #             1
-        #         ] *
-        #         conj(rightenv(envs, length(state), state)[i][
-        #             -3 3
-        #             1
-        #         ]) *
-        #         f2[-2; 2 3]
-        # end
-        nright[indmap[i, j]] = _contract_rightenv²(
-            rightenv(envs, length(state), state)[j],
-            rightenv(envs, length(state), state)[i],
-        )
+    @sync begin
+        Threads.@spawn begin
+            nleft = leftenv(ncocache, 1, state)
+            for i in 1:(H.odim), j in 1:(H.odim)
+                nleft[indmap[i, j]] = _contract_leftenv²(
+                    leftenv(envs, 1, state)[j], leftenv(envs, 1, state)[i]
+                )
+            end
+        end
+        Threads.@spawn begin
+            nright = rightenv(ncocache, L, state)
+            for i in 1:(H.odim), j in 1:(H.odim)
+                nright[indmap[i, j]] = _contract_rightenv²(
+                    rightenv(envs, L, state)[j], rightenv(envs, L, state)[i]
+                )
+            end
+        end
     end
 
     return nham, ncocache
