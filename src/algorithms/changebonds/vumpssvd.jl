@@ -1,6 +1,14 @@
-"
-    use an idmrg2 step to truncate/expand the bond dimension
-"
+"""
+    struct VUMPSSvdCut <: Algorithm end
+
+An algorithm that uses an IDMRG2 step to change the bond dimension of a state.
+
+# Fields
+- `tol_gauge::Real = Defaults.tolgauge` : The tolerance for the gauge.
+- `tol_galerkin::Real = Defaults.tol` : The tolerance for the Galerkin truncation.
+- `tol_eigenval::Real = Defaults.tol` : The tolerance for the eigenvalue solver.
+- `trscheme::TruncationScheme = notrunc()` : The truncation scheme to use.
+"""
 @kwdef struct VUMPSSvdCut <: Algorithm
     tol_gauge = Defaults.tolgauge
     tol_galerkin = Defaults.tol
@@ -8,21 +16,19 @@
     trscheme = notrunc()
 end
 
-function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environments(state, H)) #would be more efficient if we also repeated envs
-    #the unitcell==1 case is unique, because there you have a sef-consistency condition
+function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environments(state, H)) # would be more efficient if we also repeated envs
+    # the unitcell==1 case is unique, because there you have a sef-consistency condition
 
-    #expand the one site to two sites
+    # expand the one site to two sites
     nstate = InfiniteMPS(repeat(state.AL, 2))
     nH = repeat(H, 2)
 
     nstate, nenvs = changebonds(nstate, nH, alg)
 
-    A1 = nstate.AL[1]
-    A2 = nstate.AL[2]
-    D1 = space(A1, 1)
-    D2 = space(A2, 1)
+    D1 = space(nstate.AL[1], 1)
+    D2 = space(nstate.AL[2], 1)
 
-    #collapse back to 1 site
+    # collapse back to 1 site
     if D2 != D1
         (nstate, nenvs) = changebonds(
             nstate, nH, SvdCut(; trscheme=truncspace(infimum(D1, D2))), nenvs

@@ -16,7 +16,7 @@ function changebonds!(Ψ::AbstractFiniteMPS, alg::SvdCut)
         U, S, V, = tsvd(Ψ.CR[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
         AL′ = Ψ.AL[i] * U
         Ψ.AC[i] = (AL′, complex(S))
-        AR′ = _transpose_front(V' * _transpose_tail(Ψ.AR[i + 1]))
+        AR′ = _transpose_front(V * _transpose_tail(Ψ.AR[i + 1]))
         Ψ.AC[i + 1] = (complex(S), AR′)
     end
     return normalize!(Ψ)
@@ -41,7 +41,7 @@ function changebonds(Ψ::InfiniteMPS, alg::SvdCut)
         copied[i + 1] = _transpose_front(U' * _transpose_tail(copied[i + 1]))
     end
 
-    return InfiniteMPS(copied, complex(ncr))
+    return normalize!(InfiniteMPS(copied, complex(ncr)))
 end
 
 function changebonds(Ψ, H, alg::SvdCut, envs=environments(Ψ, H))
