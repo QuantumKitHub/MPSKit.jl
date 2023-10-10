@@ -29,12 +29,12 @@ jobs:
           - windows-latest
         arch:
           - x64
-          - x86
-        exclude:
-          - os: macOS-latest
-            arch: x86
-          - os: windows-latest
-            arch: x86
+          # - x86 # exclude x86 tests - not enough memory and already failing on TensorKt
+        # exclude:
+        #   - os: macOS-latest
+        #     arch: x86
+        #   - os: windows-latest
+        #     arch: x86
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v1
