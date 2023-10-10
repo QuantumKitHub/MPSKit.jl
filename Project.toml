@@ -20,6 +20,7 @@ Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 
 [compat]
+Accessors = "0.1"
 FLoops = "0.1, 0.2"
 FastClosures = "0.3"
 FoldsThreads = "0.1"
