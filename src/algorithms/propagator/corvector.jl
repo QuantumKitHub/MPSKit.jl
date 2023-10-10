@@ -1,45 +1,61 @@
+"""
+    abstract type DDMRG_Flavour end
 
+Abstract supertype for the different flavours of dynamical DMRG.
+"""
 abstract type DDMRG_Flavour end
 
-"
-The 'original' flavor of dynamical DMRG, containing quadratic terms in (H-E)
-https://arxiv.org/pdf/cond-mat/0203500.pdf
+"""
+    struct DynamicalDMRG{F,S} <: Algorithm end
 
-The Algorithm essentially minimizes
-|| (H-E) |psi> - |target>||
-"
-struct Jeckelmann <: DDMRG_Flavour end;
+A dynamical DMRG method for calculating dynamical properties and excited states, based on a
+variational principle for dynamical correlation functions.
 
-"
-A simpler approach, with a less well defined approximation. We minmize : 
+The algorithm is described in detail in https://arxiv.org/pdf/cond-mat/0203500.pdf.
 
-W(psi) = < psi | (H-E) | psi > - <psi | target> - <target | psi>
-
-If we truly optimized the entire wavefunction psi, then we would obtain
-
-|target> = (H-E) | psi >
-"
-struct NaiveInvert <: DDMRG_Flavour end;
-
+# Fields
+- `flavour::F = NaiveInvert` : The flavour of the algorithm to use. Currently only `NaiveInvert` and `Jeckelmann` are implemented.
+- `solver::S = Defaults.linearsolver` : The linear solver to use for the linear systems.
+- `tol::Float64 = Defaults.tol * 10` : The stopping criterium.
+- `maxiter::Int = Defaults.maxiter` : The maximum number of iterations.
+- `verbose::Bool = Defaults.verbose` : Whether to print information about the progress of the algorithm.
+"""
 @kwdef struct DynamicalDMRG{F<:DDMRG_Flavour,S} <: Algorithm
     flavour::F = NaiveInvert
-
     solver::S = Defaults.linearsolver
-
     tol::Float64 = Defaults.tol * 10
     maxiter::Int = Defaults.maxiter
     verbose::Bool = Defaults.verbose
 end
 
+"""
+    propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init=copy(ψ₀))
+
+Calculate the propagator ``\\frac{1}{E₀ + z - H}|ψ₀>`` using the dynamical DMRG
+algorithm.
+"""
+function propagator end
+
+"""
+    struct NaiveInvert <: DDMRG_Flavour end
+
+An alternative approach to the dynamical DMRG algorithm, without quadratic terms but with a
+less controlled approximation.
+
+This algorithm essentially minimizes ``<ψ|(H - E)|ψ> - <ψ|ψ₀> - <ψ₀|ψ>``, which is
+equivalent to the original approach if ``|ψ₀> = (H - E)|ψ>``.
+"""
+struct NaiveInvert <: DDMRG_Flavour end
+
 function propagator(
     A::AbstractFiniteMPS,
-    z,
-    ham::MPOHamiltonian,
+    z::Number,
+    H::MPOHamiltonian,
     alg::DynamicalDMRG{NaiveInvert};
     init=copy(A),
 )
-    h_envs = environments(init, ham) #environments for h
-    mixedenvs = environments(init, A) #environments for <init | A>
+    h_envs = environments(init, H) # environments for h
+    mixedenvs = environments(init, A) # environments for <init | A>
 
     delta = 2 * alg.tol
     numit = 0
@@ -51,7 +67,7 @@ function propagator(
         for i in [1:(length(A) - 1); length(A):-1:2]
             tos = ac_proj(i, init, mixedenvs)
 
-            H_AC = ∂∂AC(i, init, ham, h_envs)
+            H_AC = ∂∂AC(i, init, H, h_envs)
             (res, convhist) = linsolve(H_AC, -tos, init.AC[i], alg.solver, -z, one(z))
 
             delta = max(delta, norm(res - init.AC[i]))
@@ -66,19 +82,28 @@ function propagator(
     return dot(A, init), init
 end
 
+"""
+    struct Jeckelmann <: DDMRG_Flavour end
+
+The original flavour of dynamical DMRG, as described in
+https://arxiv.org/pdf/cond-mat/0203500.pdf. The algorithm minimizes
+``||(H - E)|ψ₀> - |ψ>||``, thus containing quadratic terms in ``H - E``.
+"""
+struct Jeckelmann <: DDMRG_Flavour end
+
 function propagator(
     A::AbstractFiniteMPS,
     z,
-    ham::MPOHamiltonian,
+    H::MPOHamiltonian,
     alg::DynamicalDMRG{Jeckelmann};
     init=copy(A),
 )
     w = real(z)
     eta = imag(z)
 
-    envs1 = environments(init, ham) #environments for h
-    (ham2, envs2) = squaredenvs(init, ham, envs1) #environments for h^2
-    mixedenvs = environments(init, A) #environments for <init | A>
+    envs1 = environments(init, H) # environments for h
+    (ham2, envs2) = squaredenvs(init, H, envs1) # environments for h^2
+    mixedenvs = environments(init, A) # environments for <init | A>
 
     delta = 2 * alg.tol
 
@@ -89,9 +114,7 @@ function propagator(
 
         for i in [1:(length(A) - 1); length(A):-1:2]
             tos = ac_proj(i, init, mixedenvs)
-            #@plansor tos[-1 -2;-3] := leftenv(mixedenvs,i,init)[-1;1]*A.AC[i][1 -2;2]*rightenv(mixedenvs,i,init)[2;-3]
-
-            H1_AC = ∂∂AC(i, init, ham, envs1)
+            H1_AC = ∂∂AC(i, init, H, envs1)
             H2_AC = ∂∂AC(i, init, ham2, envs2)
             H_AC = LinearCombination((H1_AC, H2_AC), (-2 * w, 1))
             (res, convhist) = linsolve(
@@ -108,10 +131,8 @@ function propagator(
     end
 
     a = dot(ac_proj(1, init, mixedenvs), init.AC[1])
-    #a = @plansor leftenv(mixedenvs,1,init)[-1;1]*A.AC[1][1 -2;2]*rightenv(mixedenvs,1,init)[2;-3]*conj(init.AC[1][-1 -2;-3])
-    #a = a';
 
-    cb = leftenv(envs1, 1, A) * TransferMatrix(init.AL, ham[1:length(A.AL)], A.AL)
+    cb = leftenv(envs1, 1, A) * TransferMatrix(init.AL, H[1:length(A.AL)], A.AL)
 
     b = zero(a)
     for i in 1:length(cb)
@@ -126,9 +147,9 @@ function propagator(
 end
 
 function squaredenvs(
-    state::AbstractFiniteMPS, ham::MPOHamiltonian, envs=environments(state, ham)
+    state::AbstractFiniteMPS, H::MPOHamiltonian, envs=environments(state, ham)
 )
-    nham = conj(ham) * ham
+    nham = conj(H) * H
 
     # to construct the squared caches we will first initialize environments
     # then make all data invalid so it will be recalculated
@@ -142,43 +163,62 @@ function squaredenvs(
 
     # impose the correct boundary conditions
     # (important for comoving mps, should do nothing for finite mps)
-    indmap = LinearIndices((ham.odim, ham.odim))
+    indmap = LinearIndices((H.odim, H.odim))
 
     nleft = leftenv(ncocache, 1, state)
     nright = rightenv(ncocache, length(state), state)
 
-    stor = storagetype(eltype(state.AL))
-    for i in 1:(ham.odim), j in 1:(ham.odim)
-        f1 = isomorphism(
-            stor,
-            space(nleft[indmap[i, j]], 2),
-            space(leftenv(envs, 1, state)[i], 2)' * space(leftenv(envs, 1, state)[j], 2),
+    # stor = storagetype(eltype(state.AL))
+    for i in 1:(H.odim), j in 1:(H.odim)
+        nleft[indmap[i, j]] = _contract_leftenv²(
+            leftenv(envs, 1, state)[j], leftenv(envs, 1, state)[i]
         )
-        @plansor begin
-            nleft[indmap[i, j]][-1 -2; -3] :=
-                leftenv(envs, 1, state)[j][1 3; -3] *
-                conj(leftenv(envs, 1, state)[i][1 2; -1]) *
-                f1[-2; 2 3]
-        end
-        f2 = isomorphism(
-            stor,
-            space(nright[indmap[i, j]], 2),
-            space(rightenv(envs, length(state), state)[j], 2) *
-            space(rightenv(envs, length(state), state)[i], 2)',
+        # f1 = isomorphism(
+        #     stor,
+        #     space(nleft[indmap[i, j]], 2),
+        #     space(leftenv(envs, 1, state)[i], 2)' * space(leftenv(envs, 1, state)[j], 2),
+        # )
+        # @plansor begin
+        #     nleft[indmap[i, j]][-1 -2; -3] :=
+        #         leftenv(envs, 1, state)[j][1 3; -3] *
+        #         conj(leftenv(envs, 1, state)[i][1 2; -1]) *
+        #         f1[-2; 2 3]
+        # end
+        # f2 = isomorphism(
+        #     stor,
+        #     space(nright[indmap[i, j]], 2),
+        #     space(rightenv(envs, length(state), state)[j], 2) *
+        #     space(rightenv(envs, length(state), state)[i], 2)',
+        # )
+        # @plansor begin
+        #     nright[indmap[i, j]][-1 -2; -3] :=
+        #         rightenv(envs, length(state), state)[j][
+        #             -1 2
+        #             1
+        #         ] *
+        #         conj(rightenv(envs, length(state), state)[i][
+        #             -3 3
+        #             1
+        #         ]) *
+        #         f2[-2; 2 3]
+        # end
+        nright[indmap[i, j]] = _contract_rightenv²(
+            rightenv(envs, length(state), state)[j],
+            rightenv(envs, length(state), state)[i],
         )
-        @plansor begin
-            nright[indmap[i, j]][-1 -2; -3] :=
-                rightenv(envs, length(state), state)[j][
-                    -1 2
-                    1
-                ] *
-                conj(rightenv(envs, length(state), state)[i][
-                    -3 3
-                    1
-                ]) *
-                f2[-2; 2 3]
-        end
     end
 
     return nham, ncocache
+end
+
+function _contract_leftenv²(GL_top, GL_bot)
+    V_mid = space(GL_bot, 2)' ⊗ space(GL_top, 2)
+    F = isomorphism(storagetype(GL_top), fuse(V_mid)' ← V_mid)
+    return @plansor GL[-1 -2; -3] := GL_top[1 3; -3] * conj(GL_bot[1 2; -1]) * F[-2; 2 3]
+end
+
+function _contract_rightenv²(GR_top, GR_bot)
+    V_mid = space(GR_top, 2) ⊗ space(GR_bot, 2)'
+    F = isomorphism(storagetype(GR_top), fuse(V_mid) ← V_mid)
+    return @plansor GR[-1 -2; -3] := GR_top[-1 2; 1] * conj(GR_bot[-3 3; 1]) * F[-2; 2 3]
 end
