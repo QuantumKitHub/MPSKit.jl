@@ -61,19 +61,19 @@ end
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
-        ψ, envs = timestep(ψ₀, H, dt, alg)
+        ψ, envs = timestep(ψ₀, H, 0.0, dt, alg)
         E = expectation_value(ψ, H, envs)
         @test sum(E₀) ≈ sum(E) atol = 1e-2
     end
 
     @testset "Finite Trivial TimedOperator $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in
                                                                                    algs
-        ψ, envs = timestep(ψ₀, H, dt, alg)
+        ψ, envs = timestep(ψ₀, H, 0.0, dt, alg)
         E = expectation_value(ψ, H, envs)
 
         Ht = TimedOperator(H)
         (ψt, envst) = timestep(ψ₀, Ht, 0.0, dt, alg)
-        Et = expectation_value(ψt, Ht, 0.0, envst)
+        Et = expectation_value(ψt, Ht(t), envst)
 
         @test sum(E) ≈ sum(Et) atol = 1e-10
     end
@@ -84,15 +84,15 @@ end
 
         Ht = TimedOperator(H, f)
         (ψt, envst) = timestep(ψ₀, Ht, t, dt, alg)
-        Et = expectation_value(ψt, Ht, t, envst)
+        Et = expectation_value(ψt, Ht(t), envst)
 
         Hunt = Ht(t)
-        (ψ, envs) = timestep(ψ₀, Hunt, dt, alg)
+        (ψ, envs) = timestep(ψ₀, Hunt, t, dt, alg)
         Eunt = expectation_value(ψ, Hunt, envs)
 
         Hmult = f(t) * H
-        (ψ, envs) = timestep(ψ₀, Hmult, dt, alg)
-        Emult = expectation_value(ψ, Hmult, envs)
+        (ψ, envs) = timestep(ψ₀, Hmult, t, dt, alg)
+        Emult = expectation_value(ψ, Hmult(t), envs)
 
         @test sum(Eunt) ≈ sum(Et) atol = 1e-2
         @test sum(Eunt) ≈ sum(Emult) atol = 1e-2
@@ -104,18 +104,18 @@ end
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Infinite TDVP" begin
-        ψ, envs = timestep(ψ₀, H, dt, TDVP())
+        ψ, envs = timestep(ψ₀, H, 0.0, dt, TDVP())
         E = expectation_value(ψ, H, envs)
         @test sum(E₀) ≈ sum(E) atol = 1e-2
     end
 
     @testset "Finite Trivial TimedOperator TDVP" begin
-        ψ, envs = timestep(ψ₀, H, dt, algs[1])
+        ψ, envs = timestep(ψ₀, H, 0.0, dt, algs[1])
         E = expectation_value(ψ, H, envs)
 
         Ht = TimedOperator(H)
         (ψt, envst) = timestep(ψ₀, Ht, 0.0, dt, algs[1])
-        Et = expectation_value(ψt, Ht, 0.0, envst)
+        Et = expectation_value(ψt, Ht(0.0), envst)
 
         @test sum(E) ≈ sum(Et) atol = 1e-10
     end
@@ -126,15 +126,15 @@ end
 
         Ht = TimedOperator(H, f)
         (ψt, envst) = timestep(ψ₀, Ht, t, dt, algs[1])
-        Et = expectation_value(ψt, Ht, t, envst)
+        Et = expectation_value(ψt, Ht(t), envst)
 
         Hunt = Ht(t)
-        (ψ, envs) = timestep(ψ₀, Hunt, dt, algs[1])
+        (ψ, envs) = timestep(ψ₀, Hunt, t, dt, algs[1])
         Eunt = expectation_value(ψ, Hunt, envs)
 
         Hmult = f(t) * H
-        (ψ, envs) = timestep(ψ₀, Hmult, dt, algs[1])
-        Emult = expectation_value(ψ, Hmult, envs)
+        (ψ, envs) = timestep(ψ₀, Hmult, t, dt, algs[1])
+        Emult = expectation_value(ψ, Hmult(t), envs)
 
         @test sum(Eunt) ≈ sum(Et) atol = 1e-2
         @test sum(Eunt) ≈ sum(Emult) atol = 1e-2
@@ -156,7 +156,7 @@ end
 
     Hwindow_0 = Window(H0left, H0middle, H0right)
     WindEnvs_0 = environments(Ψwindow, Hwindow_0)
-    timevolvedwindow_0, WindEnvs_0 = timestep(Ψwindow, Hwindow_0, 0.1, alg, WindEnvs_0)
+    timevolvedwindow_0, WindEnvs_0 = timestep(Ψwindow, Hwindow_0, 0.0, 0.1, alg, WindEnvs_0)
 
     # with SumOfOperators
     Hleft = SumOfOperators([0.5 * simpleH, 0.5 * simpleH])
@@ -166,7 +166,7 @@ end
     Hwindow = Window(Hleft, Hmiddle, Hright)
     WindEnvs = environments(Ψwindow, Hwindow)
 
-    timevolvedwindow, WindEnvs = timestep(Ψwindow, Hwindow, 0.1, alg, WindEnvs)
+    timevolvedwindow, WindEnvs = timestep(Ψwindow, Hwindow, 0.0, 0.1, alg, WindEnvs)
 
     @test timevolvedwindow.left_gs ≈ timevolvedwindow_0.left_gs atol = 1e-10
     @test timevolvedwindow.window ≈ timevolvedwindow_0.window atol = 1e-10
