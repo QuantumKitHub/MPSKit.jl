@@ -15,7 +15,7 @@ function _precompile_()
             Type{FiniteMPS},
             Vector{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -33,7 +33,7 @@ function _precompile_()
             Type{FiniteMPS},
             Vector{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     3,
                     1,
                     SU2Irrep,
@@ -51,7 +51,7 @@ function _precompile_()
             Type{FiniteMPS},
             Vector{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -69,7 +69,7 @@ function _precompile_()
             Type{InfiniteMPS},
             Vector{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -87,7 +87,7 @@ function _precompile_()
             Type{MPSMultiline},
             Matrix{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -215,7 +215,7 @@ function _precompile_()
     Base.precompile(
         Tuple{
             Core.kwftype(typeof(fidelity_susceptibility)),
-            NamedTuple{(:maxiter,),Tuple{Int64}},
+            NamedTuple{(:maxiter,),Tuple{Int}},
             typeof(fidelity_susceptibility),
             FiniteMPS{
                 TensorMap{ComplexSpace,2,1,Trivial,Matrix{ComplexF64},Nothing,Nothing},
@@ -250,7 +250,7 @@ function _precompile_()
     Base.precompile(
         Tuple{
             Core.kwftype(typeof(fidelity_susceptibility)),
-            NamedTuple{(:maxiter,),Tuple{Int64}},
+            NamedTuple{(:maxiter,),Tuple{Int}},
             typeof(fidelity_susceptibility),
             InfiniteMPS{
                 TensorMap{ComplexSpace,2,1,Trivial,Matrix{ComplexF64},Nothing,Nothing},
@@ -288,9 +288,9 @@ function _precompile_()
             Type{FiniteMPS},
             Function,
             Type,
-            Int64,
-            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
-            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+            Int,
+            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
+            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
         },
     )
     Base.precompile(
@@ -298,9 +298,9 @@ function _precompile_()
             Type{FiniteMPS},
             Function,
             Type,
-            Int64,
-            GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
-            GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+            Int,
+            GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
+            GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
         },
     )
     Base.precompile(
@@ -308,34 +308,32 @@ function _precompile_()
             Type{FiniteMPS},
             Function,
             Type,
-            Int64,
-            ProductSpace{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},2
-            },
-            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+            Int,
+            ProductSpace{GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},2},
+            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
         },
     )
     Base.precompile(
         Tuple{
             Type{FiniteMPS},
-            Int64,
-            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
-            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+            Int,
+            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
+            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
         },
     )
     Base.precompile(Tuple{Type{InfiniteMPS},Vector{ComplexSpace},Vector{ComplexSpace}})
     Base.precompile(
         Tuple{
             Type{InfiniteMPS},
-            Vector{GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}}},
-            Vector{GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}}},
+            Vector{GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}}},
+            Vector{GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}}},
         },
     )
     Base.precompile(
         Tuple{
             Type{InfiniteMPS},
-            Vector{GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}}},
-            Vector{GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}}},
+            Vector{GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}}},
+            Vector{GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}}},
         },
     )
     Base.precompile(
@@ -344,7 +342,7 @@ function _precompile_()
             Function,
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -353,7 +351,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -370,7 +368,7 @@ function _precompile_()
             Function,
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -379,7 +377,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -398,7 +396,7 @@ function _precompile_()
                 Union{
                     Missing,
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         2,
                         SU2Irrep,
@@ -418,7 +416,7 @@ function _precompile_()
                 Union{
                     Missing,
                     TensorMap{
-                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                         2,
                         2,
                         U1Irrep,
@@ -441,7 +439,7 @@ function _precompile_()
         Tuple{
             Type{MPOHamiltonian},
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 2,
                 2,
                 U1Irrep,
@@ -455,7 +453,7 @@ function _precompile_()
         Tuple{
             Type{MPOMultiline},
             TensorMap{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 2,
                 2,
                 SU2Irrep,
@@ -470,7 +468,7 @@ function _precompile_()
             Type{MPSMultiline},
             Matrix{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -487,7 +485,7 @@ function _precompile_()
             Array{
                 Union{
                     Missing,
-                    Int64,
+                    Int,
                     TensorMap{ComplexSpace,2,2,Trivial,Matrix{ComplexF64},Nothing,Nothing},
                 },
                 3,
@@ -500,9 +498,9 @@ function _precompile_()
             Array{
                 Union{
                     Missing,
-                    Int64,
+                    Int,
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -521,9 +519,9 @@ function _precompile_()
             Array{
                 Union{
                     Missing,
-                    Int64,
+                    Int,
                     TensorMap{
-                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                         1,
                         1,
                         U1Irrep,
@@ -565,7 +563,7 @@ function _precompile_()
             typeof(*),
             DenseMPO{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -576,7 +574,7 @@ function _precompile_()
             },
             DenseMPO{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -592,7 +590,7 @@ function _precompile_()
             typeof(*),
             DenseMPO{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -603,7 +601,7 @@ function _precompile_()
             },
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -612,7 +610,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -628,7 +626,7 @@ function _precompile_()
             typeof(*),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     3,
                     1,
                     SU2Irrep,
@@ -637,7 +635,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -646,7 +644,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
             },
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -663,11 +661,11 @@ function _precompile_()
     Base.precompile(
         Tuple{
             typeof(*),
-            Int64,
+            Int,
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -682,11 +680,11 @@ function _precompile_()
     Base.precompile(
         Tuple{
             typeof(*),
-            Int64,
+            Int,
             MPOHamiltonian{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     2,
                     U1Irrep,
@@ -702,9 +700,9 @@ function _precompile_()
         Tuple{
             typeof(*),
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -715,9 +713,9 @@ function _precompile_()
                 ComplexF64,
             },
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -733,9 +731,9 @@ function _precompile_()
         Tuple{
             typeof(*),
             MPOHamiltonian{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     2,
                     U1Irrep,
@@ -746,9 +744,9 @@ function _precompile_()
                 ComplexF64,
             },
             MPOHamiltonian{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     2,
                     U1Irrep,
@@ -764,7 +762,7 @@ function _precompile_()
         Tuple{
             typeof(*),
             TensorKit.AdjointTensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 1,
                 1,
                 U1Irrep,
@@ -774,7 +772,7 @@ function _precompile_()
             },
             SingleTransferMatrix{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -784,7 +782,7 @@ function _precompile_()
                 },
                 Nothing,
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -799,7 +797,7 @@ function _precompile_()
         Tuple{
             typeof(*),
             TensorKit.AdjointTensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 1,
                 1,
                 U1Irrep,
@@ -809,7 +807,7 @@ function _precompile_()
             },
             SingleTransferMatrix{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -819,7 +817,7 @@ function _precompile_()
                 },
                 Nothing,
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -835,7 +833,7 @@ function _precompile_()
             typeof(+),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     3,
                     1,
                     SU2Irrep,
@@ -844,7 +842,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -855,7 +853,7 @@ function _precompile_()
             },
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     3,
                     1,
                     SU2Irrep,
@@ -864,7 +862,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -894,9 +892,9 @@ function _precompile_()
         Tuple{
             typeof(+),
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -907,9 +905,9 @@ function _precompile_()
                 ComplexF64,
             },
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -925,9 +923,9 @@ function _precompile_()
         Tuple{
             typeof(+),
             MPOHamiltonian{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     2,
                     U1Irrep,
@@ -938,9 +936,9 @@ function _precompile_()
                 ComplexF64,
             },
             MPOHamiltonian{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     2,
                     U1Irrep,
@@ -956,9 +954,9 @@ function _precompile_()
         Tuple{
             typeof(-),
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -968,16 +966,16 @@ function _precompile_()
                 },
                 ComplexF64,
             },
-            Vector{Int64},
+            Vector{Int},
         },
     )
     Base.precompile(
         Tuple{
             typeof(-),
             MPOHamiltonian{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     2,
                     U1Irrep,
@@ -987,7 +985,7 @@ function _precompile_()
                 },
                 ComplexF64,
             },
-            Vector{Int64},
+            Vector{Int},
         },
     )
     Base.precompile(
@@ -1016,7 +1014,7 @@ function _precompile_()
         Tuple{
             typeof(add_util_leg),
             TensorMap{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 3,
                 3,
                 SU2Irrep,
@@ -1030,7 +1028,7 @@ function _precompile_()
         Tuple{
             typeof(add_util_leg),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 3,
                 3,
                 U1Irrep,
@@ -1118,8 +1116,8 @@ function _precompile_()
                 TensorMap{ComplexSpace,2,2,Trivial,Matrix{ComplexF64},Nothing,Nothing},
                 ComplexF64,
             },
-            Vector{Int64},
-            Vector{Int64},
+            Vector{Int},
+            Vector{Int},
         },
     )
     Base.precompile(
@@ -1127,7 +1125,7 @@ function _precompile_()
             typeof(changebonds),
             DenseMPO{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -1144,7 +1142,7 @@ function _precompile_()
             typeof(changebonds),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1153,7 +1151,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -1163,9 +1161,9 @@ function _precompile_()
                 },
             },
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -1183,7 +1181,7 @@ function _precompile_()
             typeof(changebonds),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1192,7 +1190,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -1209,7 +1207,7 @@ function _precompile_()
             typeof(changebonds),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1218,7 +1216,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -1245,7 +1243,7 @@ function _precompile_()
             typeof(changebonds),
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1254,7 +1252,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -1264,9 +1262,9 @@ function _precompile_()
                 },
             },
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -1284,7 +1282,7 @@ function _precompile_()
             typeof(changebonds),
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1293,7 +1291,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -1303,9 +1301,9 @@ function _precompile_()
                 },
             },
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -1323,7 +1321,7 @@ function _precompile_()
             typeof(changebonds),
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1332,7 +1330,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -1350,7 +1348,7 @@ function _precompile_()
             MPSMultiline{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -1359,7 +1357,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -1372,7 +1370,7 @@ function _precompile_()
             MPOMultiline{
                 DenseMPO{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         2,
                         SU2Irrep,
@@ -1387,9 +1385,7 @@ function _precompile_()
                 MPOMultiline{
                     DenseMPO{
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             2,
                             2,
                             SU2Irrep,
@@ -1400,7 +1396,7 @@ function _precompile_()
                     },
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1411,9 +1407,7 @@ function _precompile_()
                 MPSMultiline{
                     InfiniteMPS{
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             2,
                             1,
                             SU2Irrep,
@@ -1422,9 +1416,7 @@ function _precompile_()
                             FusionTree{SU2Irrep,1,0,0,Nothing},
                         },
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             1,
                             1,
                             SU2Irrep,
@@ -1444,7 +1436,7 @@ function _precompile_()
             MPSMultiline{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -1453,7 +1445,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -1466,7 +1458,7 @@ function _precompile_()
             MPOMultiline{
                 DenseMPO{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         2,
                         SU2Irrep,
@@ -1485,7 +1477,7 @@ function _precompile_()
             MPSMultiline{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -1494,7 +1486,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -1513,7 +1505,7 @@ function _precompile_()
             MPSMultiline{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -1522,7 +1514,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -1551,9 +1543,9 @@ function _precompile_()
             typeof(convert),
             Type{DenseMPO},
             SparseMPO{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -1572,7 +1564,7 @@ function _precompile_()
             LeftGaugedQP{
                 FiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -1581,7 +1573,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -1591,7 +1583,7 @@ function _precompile_()
                     },
                 },
                 TensorKit.AdjointTensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1600,7 +1592,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     2,
                     SU2Irrep,
@@ -1619,7 +1611,7 @@ function _precompile_()
             RightGaugedQP{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -1628,7 +1620,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -1638,7 +1630,7 @@ function _precompile_()
                     },
                 },
                 TensorKit.AdjointTensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     2,
                     SU2Irrep,
@@ -1647,7 +1639,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,2,0,1,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     2,
                     SU2Irrep,
@@ -1666,7 +1658,7 @@ function _precompile_()
             LeftGaugedQP{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -1675,7 +1667,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -1685,7 +1677,7 @@ function _precompile_()
                     },
                 },
                 TensorKit.AdjointTensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1694,7 +1686,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     2,
                     SU2Irrep,
@@ -1712,7 +1704,7 @@ function _precompile_()
             Type{TensorMap},
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -1721,7 +1713,7 @@ function _precompile_()
                     FusionTree{U1Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     1,
                     1,
                     U1Irrep,
@@ -1738,7 +1730,7 @@ function _precompile_()
             LeftGaugedQP{
                 FiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -1747,7 +1739,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -1757,7 +1749,7 @@ function _precompile_()
                     },
                 },
                 TensorKit.AdjointTensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1766,7 +1758,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     2,
                     SU2Irrep,
@@ -1786,8 +1778,8 @@ function _precompile_()
                 TensorMap{ComplexSpace,1,1,Trivial,Matrix{ComplexF64},Nothing,Nothing},
             },
             TensorMap{ComplexSpace,2,2,Trivial,Matrix{Float64},Nothing,Nothing},
-            Int64,
-            StepRange{Int64,Int64},
+            Int,
+            StepRange{Int,Int},
         },
     )
     Base.precompile(
@@ -1799,8 +1791,8 @@ function _precompile_()
             },
             TensorMap{ComplexSpace,2,2,Trivial,Matrix{Float64},Nothing,Nothing},
             TensorMap{ComplexSpace,2,2,Trivial,Matrix{Float64},Nothing,Nothing},
-            Int64,
-            UnitRange{Int64},
+            Int,
+            UnitRange{Int},
         },
     )
     Base.precompile(
@@ -1813,7 +1805,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmpo),
             TensorMap{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 3,
                 3,
                 SU2Irrep,
@@ -1828,7 +1820,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmpo),
             TensorMap{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 4,
                 4,
                 SU2Irrep,
@@ -1842,7 +1834,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmpo),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 3,
                 3,
                 U1Irrep,
@@ -1857,7 +1849,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmpo),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 3,
                 3,
                 U1Irrep,
@@ -1871,7 +1863,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmpo),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 4,
                 4,
                 U1Irrep,
@@ -1886,7 +1878,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmpo),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 4,
                 4,
                 U1Irrep,
@@ -1900,7 +1892,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmps),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 3,
                 1,
                 U1Irrep,
@@ -1914,7 +1906,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmps),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 4,
                 1,
                 U1Irrep,
@@ -1929,7 +1921,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmps),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 4,
                 1,
                 U1Irrep,
@@ -1943,7 +1935,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmps),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 5,
                 1,
                 U1Irrep,
@@ -1958,7 +1950,7 @@ function _precompile_()
         Tuple{
             typeof(decompose_localmps),
             TensorMap{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 5,
                 1,
                 U1Irrep,
@@ -1986,7 +1978,7 @@ function _precompile_()
             typeof(dot),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -1995,7 +1987,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2006,7 +1998,7 @@ function _precompile_()
             },
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2015,7 +2007,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2031,7 +2023,7 @@ function _precompile_()
             typeof(dot),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     3,
                     1,
                     SU2Irrep,
@@ -2040,7 +2032,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2051,7 +2043,7 @@ function _precompile_()
             },
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     3,
                     1,
                     SU2Irrep,
@@ -2060,7 +2052,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2076,7 +2068,7 @@ function _precompile_()
             typeof(dot),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -2085,7 +2077,7 @@ function _precompile_()
                     FusionTree{U1Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     1,
                     1,
                     U1Irrep,
@@ -2096,7 +2088,7 @@ function _precompile_()
             },
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -2105,7 +2097,7 @@ function _precompile_()
                     FusionTree{U1Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     1,
                     1,
                     U1Irrep,
@@ -2134,7 +2126,7 @@ function _precompile_()
             typeof(dot),
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2143,7 +2135,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2154,7 +2146,7 @@ function _precompile_()
             },
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2163,7 +2155,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2180,7 +2172,7 @@ function _precompile_()
             LeftGaugedQP{
                 FiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -2189,7 +2181,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -2199,7 +2191,7 @@ function _precompile_()
                     },
                 },
                 TensorKit.AdjointTensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2208,7 +2200,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     2,
                     SU2Irrep,
@@ -2221,7 +2213,7 @@ function _precompile_()
             LeftGaugedQP{
                 FiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -2230,7 +2222,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -2240,7 +2232,7 @@ function _precompile_()
                     },
                 },
                 TensorKit.AdjointTensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2249,7 +2241,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     2,
                     SU2Irrep,
@@ -2267,7 +2259,7 @@ function _precompile_()
             MPSMultiline{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -2276,7 +2268,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -2289,7 +2281,7 @@ function _precompile_()
             MPSMultiline{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -2298,7 +2290,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -2314,9 +2306,9 @@ function _precompile_()
         Tuple{
             typeof(effective_excitation_hamiltonian),
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -2329,7 +2321,7 @@ function _precompile_()
             LeftGaugedQP{
                 FiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -2338,7 +2330,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -2348,7 +2340,7 @@ function _precompile_()
                     },
                 },
                 TensorKit.AdjointTensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2357,7 +2349,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     2,
                     SU2Irrep,
@@ -2397,7 +2389,7 @@ function _precompile_()
             typeof(expectation_value),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2406,7 +2398,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2416,9 +2408,9 @@ function _precompile_()
                 },
             },
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -2438,7 +2430,7 @@ function _precompile_()
                 TensorMap{ComplexSpace,1,1,Trivial,Matrix{ComplexF64},Nothing,Nothing},
             },
             TensorMap{ComplexSpace,1,1,Trivial,Matrix{Float64},Nothing,Nothing},
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -2449,7 +2441,7 @@ function _precompile_()
                 TensorMap{ComplexSpace,1,1,Trivial,Matrix{ComplexF64},Nothing,Nothing},
             },
             TensorMap{ComplexSpace,2,2,Trivial,Matrix{Float64},Nothing,Nothing},
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -2460,7 +2452,7 @@ function _precompile_()
                 TensorMap{ComplexSpace,1,1,Trivial,Matrix{ComplexF64},Nothing,Nothing},
             },
             Vector{TensorMap{ComplexSpace,2,2,Trivial,Matrix{Float64},Nothing,Nothing}},
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -2468,7 +2460,7 @@ function _precompile_()
             typeof(expectation_value),
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2477,7 +2469,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2487,9 +2479,9 @@ function _precompile_()
                 },
             },
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -2506,7 +2498,7 @@ function _precompile_()
             typeof(expectation_value),
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -2515,7 +2507,7 @@ function _precompile_()
                     FusionTree{U1Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     1,
                     1,
                     U1Irrep,
@@ -2525,9 +2517,9 @@ function _precompile_()
                 },
             },
             MPOHamiltonian{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     2,
                     U1Irrep,
@@ -2574,7 +2566,7 @@ function _precompile_()
             typeof(find_groundstate),
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2583,7 +2575,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2593,9 +2585,9 @@ function _precompile_()
                 },
             },
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -2616,8 +2608,8 @@ function _precompile_()
                 TensorMap{ComplexSpace,2,2,Trivial,Matrix{ComplexF64},Nothing,Nothing},
                 ComplexF64,
             },
-            Int64,
-            Int64,
+            Int,
+            Int,
         },
     )
     Base.precompile(
@@ -2628,8 +2620,8 @@ function _precompile_()
                 TensorMap{ComplexSpace,2,2,Trivial,Matrix{ComplexF64},Nothing,Nothing},
                 ComplexF64,
             },
-            Tuple{Int64},
-            Tuple{Int64},
+            Tuple{Int},
+            Tuple{Int},
         },
     )
     Base.precompile(
@@ -2640,17 +2632,17 @@ function _precompile_()
                 TensorMap{ComplexSpace,2,2,Trivial,Matrix{ComplexF64},Nothing,Nothing},
                 ComplexF64,
             },
-            Vector{Int64},
-            Vector{Int64},
+            Vector{Int},
+            Vector{Int},
         },
     )
-    Base.precompile(Tuple{typeof(interweave),Vector{Int64},Vector{Int64}})
+    Base.precompile(Tuple{typeof(interweave),Vector{Int},Vector{Int}})
     Base.precompile(
         Tuple{
             typeof(l_RR),
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -2659,7 +2651,7 @@ function _precompile_()
                     FusionTree{U1Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     1,
                     1,
                     U1Irrep,
@@ -2668,7 +2660,7 @@ function _precompile_()
                     FusionTree{U1Irrep,1,0,0,Nothing},
                 },
             },
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -2677,7 +2669,7 @@ function _precompile_()
             MPSMultiline{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                         2,
                         1,
                         U1Irrep,
@@ -2686,7 +2678,7 @@ function _precompile_()
                         FusionTree{U1Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                         1,
                         1,
                         U1Irrep,
@@ -2696,8 +2688,8 @@ function _precompile_()
                     },
                 },
             },
-            Int64,
-            Int64,
+            Int,
+            Int,
         },
     )
     Base.precompile(
@@ -2754,9 +2746,7 @@ function _precompile_()
                 MPOMultiline{
                     DenseMPO{
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             2,
                             2,
                             SU2Irrep,
@@ -2767,7 +2757,7 @@ function _precompile_()
                     },
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2778,9 +2768,7 @@ function _precompile_()
                 MPSMultiline{
                     InfiniteMPS{
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             2,
                             1,
                             SU2Irrep,
@@ -2789,9 +2777,7 @@ function _precompile_()
                             FusionTree{SU2Irrep,1,0,0,Nothing},
                         },
                         TensorMap{
-                            GradedSpace{
-                                SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}
-                            },
+                            GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                             1,
                             1,
                             SU2Irrep,
@@ -2803,12 +2789,12 @@ function _precompile_()
                 },
                 Arnoldi{ModifiedGramSchmidt2,Float64},
             },
-            Int64,
-            Int64,
+            Int,
+            Int,
             MPSMultiline{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -2817,7 +2803,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -2857,9 +2843,9 @@ function _precompile_()
         Tuple{
             typeof(make_time_mpo),
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -2877,9 +2863,9 @@ function _precompile_()
         Tuple{
             typeof(make_time_mpo),
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -2899,7 +2885,7 @@ function _precompile_()
             LeftGaugedQP{
                 FiniteMPS{
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         2,
                         1,
                         SU2Irrep,
@@ -2908,7 +2894,7 @@ function _precompile_()
                         FusionTree{SU2Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                        GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                         1,
                         1,
                         SU2Irrep,
@@ -2918,7 +2904,7 @@ function _precompile_()
                     },
                 },
                 TensorKit.AdjointTensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2927,7 +2913,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     2,
                     SU2Irrep,
@@ -2944,7 +2930,7 @@ function _precompile_()
             typeof(normalize!),
             FiniteMPS{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     1,
                     SU2Irrep,
@@ -2953,7 +2939,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     1,
                     1,
                     SU2Irrep,
@@ -2968,7 +2954,7 @@ function _precompile_()
         Tuple{
             typeof(periodic_boundary_conditions),
             DenseMPO{TensorMap{ComplexSpace,2,2,Trivial,Matrix{Float64},Nothing,Nothing}},
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -2976,7 +2962,7 @@ function _precompile_()
             typeof(periodic_boundary_conditions),
             DenseMPO{
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -2985,7 +2971,7 @@ function _precompile_()
                     FusionTree{SU2Irrep,2,0,1,Nothing},
                 },
             },
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -2996,7 +2982,7 @@ function _precompile_()
                 TensorMap{ComplexSpace,2,2,Trivial,Matrix{ComplexF64},Nothing,Nothing},
                 ComplexF64,
             },
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -3004,7 +2990,7 @@ function _precompile_()
             typeof(r_LL),
             InfiniteMPS{
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     1,
                     U1Irrep,
@@ -3013,7 +2999,7 @@ function _precompile_()
                     FusionTree{U1Irrep,1,0,0,Nothing},
                 },
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     1,
                     1,
                     U1Irrep,
@@ -3022,7 +3008,7 @@ function _precompile_()
                     FusionTree{U1Irrep,1,0,0,Nothing},
                 },
             },
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -3031,7 +3017,7 @@ function _precompile_()
             MPSMultiline{
                 InfiniteMPS{
                     TensorMap{
-                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                         2,
                         1,
                         U1Irrep,
@@ -3040,7 +3026,7 @@ function _precompile_()
                         FusionTree{U1Irrep,1,0,0,Nothing},
                     },
                     TensorMap{
-                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                        GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                         1,
                         1,
                         U1Irrep,
@@ -3050,8 +3036,8 @@ function _precompile_()
                     },
                 },
             },
-            Int64,
-            Int64,
+            Int,
+            Int,
         },
     )
     Base.precompile(
@@ -3060,7 +3046,7 @@ function _precompile_()
             DenseMPO{
                 TensorMap{ComplexSpace,2,2,Trivial,Matrix{ComplexF64},Nothing,Nothing}
             },
-            Int64,
+            Int,
         },
     )
     Base.precompile(
@@ -3071,16 +3057,16 @@ function _precompile_()
                 TensorMap{ComplexSpace,2,2,Trivial,Matrix{ComplexF64},Nothing,Nothing},
                 ComplexF64,
             },
-            Int64,
+            Int,
         },
     )
     Base.precompile(
         Tuple{
             typeof(repeat),
             MPOHamiltonian{
-                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                 TensorMap{
-                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int64}},
+                    GradedSpace{SU2Irrep,TensorKit.SortedVectorDict{SU2Irrep,Int}},
                     2,
                     2,
                     SU2Irrep,
@@ -3090,16 +3076,16 @@ function _precompile_()
                 },
                 ComplexF64,
             },
-            Int64,
+            Int,
         },
     )
     Base.precompile(
         Tuple{
             typeof(repeat),
             MPOHamiltonian{
-                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                 TensorMap{
-                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int64}},
+                    GradedSpace{U1Irrep,TensorKit.SortedVectorDict{U1Irrep,Int}},
                     2,
                     2,
                     U1Irrep,
@@ -3109,7 +3095,7 @@ function _precompile_()
                 },
                 ComplexF64,
             },
-            Int64,
+            Int,
         },
     )
     return Base.precompile(

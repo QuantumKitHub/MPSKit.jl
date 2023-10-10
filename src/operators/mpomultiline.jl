@@ -1,27 +1,31 @@
+# MPOMultiline
+# ------------
+"""
+    const MPOMultiline = Multiline{<:Union{SparseMPO,DenseMPO}}
+
+Type that represents multiple lines of `MPO` objects.
+
+# Constructors
+    MPOMultiline(mpos::AbstractVector{<:Union{SparseMPO,DenseMPO}})
+    MPOMultiline(Os::AbstractMatrix{<:MPOTensor})
+
+See also: [`Multiline`](@ref), [`SparseMPO`](@ref), [`DenseMPO`](@ref)
+"""
 const MPOMultiline = Multiline{<:Union{SparseMPO,DenseMPO}}
 
-Base.CartesianIndices(t::Union{DenseMPO,MPOMultiline}) = CartesianIndices(size(t))
-Base.eltype(t::MPOMultiline) = eltype(t[1]);
+MPOMultiline(Os::AbstractMatrix{<:MPOTensor}) = MPOMultiline(map(DenseMPO, eachrow(Os)))
+MPOMultiline(mpos::AbstractVector{<:Union{SparseMPO,DenseMPO}}) = Multiline(mpos)
+MPOMultiline(t::MPOTensor) = MPOMultiline(fill(t, 1, 1))
 
-MPOMultiline(t::AbstractTensorMap) = MPOMultiline(fill(t, 1, 1))
-function MPOMultiline(t::AbstractArray{T,2}) where {T<:MPOTensor}
-    return Multiline(PeriodicArray(
-        map(1:size(t, 1)) do row
-            DenseMPO(t[row, :])
-        end,
-    ))
-end
+# allow indexing with two indices
+Base.getindex(t::MPOMultiline, ::Colon, j::Int) = Base.getindex.(t.data, j)
+Base.getindex(t::MPOMultiline, i::Int, j) = Base.getindex(t[i], j)
+Base.getindex(t::MPOMultiline, I::CartesianIndex{2}) = t[I.I...]
 
-Base.lastindex(t::MPOMultiline) = prod(size(t));
-function Base.iterate(t::MPOMultiline, i=1)
-    return i <= lastindex(t) ? (t[(i ÷ end) + 1][mod1(i, size(t, 1))], i + 1) : nothing
-end;
-Base.getindex(t::MPOMultiline, i::Colon, j::Int) = Base.getindex.(t.data, j);
-Base.getindex(t::MPOMultiline, i::Int, j) = Base.getindex(t.data[i], j);
-Base.getindex(t::MPOMultiline, i::CartesianIndex{2}) = t[i[1], i[2]];
-Base.convert(::Type{MPOMultiline}, t::Union{SparseMPO,DenseMPO}) = Multiline([t]);
-Base.convert(::Type{DenseMPO}, t::MPOMultiline) = t[1];
-Base.convert(::Type{SparseMPO}, t::MPOMultiline) = t[1];
+# converters
+Base.convert(::Type{MPOMultiline}, t::Union{SparseMPO,DenseMPO}) = Multiline([t])
+Base.convert(::Type{DenseMPO}, t::MPOMultiline) = only(t)
+Base.convert(::Type{SparseMPO}, t::MPOMultiline) = only(t)
 
 function Base.:*(mpo::MPOMultiline, st::MPSMultiline)
     size(mpo) == size(st) || throw(ArgumentError("dimension mismatch"))

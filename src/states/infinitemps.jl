@@ -19,11 +19,11 @@ By convention, we have that:
 
 ## Constructors
     InfiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}},
-                virtualspaces::Vector{<:Union{S, CompositeSpace{S}}) where
-                {S<:ElementarySpace}
-    InfiniteMPS(As::AbstractVector{<:GenericMPSTensor}; tol=1e-14, maxiter=100)
+                virtualspaces::Vector{<:Union{S, CompositeSpace{S}};
+                kwargs...) where {S<:ElementarySpace}
+    InfiniteMPS(As::AbstractVector{<:GenericMPSTensor}; kwargs...)
     InfiniteMPS(ALs::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor;
-                tol=1e-14, maxiter=100)
+                kwargs...)
 
 Construct an MPS via a specification of physical and virtual spaces, or from a list of
 tensors `As`, or a list of left-gauged tensors `ALs`.

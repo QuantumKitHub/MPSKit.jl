@@ -53,19 +53,22 @@ function rightenv(envs::MPOHamInfEnv, pos::Int, state)
     return envs.rw[:, pos]
 end
 
-function recalculate!(envs::MPOHamInfEnv, nstate)
+function recalculate!(envs::MPOHamInfEnv, nstate; tol=envs.solver.tol)
     sameDspace = reduce(&, _lastspace.(envs.lw[1, :]) .== _firstspace.(nstate.CR))
 
     if !sameDspace
         (envs.lw, envs.rw) = gen_lw_rw(nstate, envs.opp)
     end
 
+    solver = envs.solver
+    solver = solver.tol == tol ? solver : @set solver.tol = tol
     @sync begin
-        Threads.@spawn calclw!(envs.lw, nstate, envs.opp; solver=envs.solver)
-        Threads.@spawn calcrw!(envs.rw, nstate, envs.opp; solver=envs.solver)
+        Threads.@spawn calclw!(envs.lw, nstate, envs.opp; solver)
+        Threads.@spawn calcrw!(envs.rw, nstate, envs.opp; solver)
     end
 
     envs.dependency = nstate
+    envs.solver = solver
 
     return envs
 end
