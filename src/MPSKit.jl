@@ -101,6 +101,7 @@ include("algorithms/toolbox.jl")
 include("algorithms/grassmann.jl")
 include("algorithms/correlators.jl")
 
+include("algorithms/changebonds/changebonds.jl")
 include("algorithms/changebonds/optimalexpand.jl")
 include("algorithms/changebonds/vumpssvd.jl")
 include("algorithms/changebonds/svdcut.jl")

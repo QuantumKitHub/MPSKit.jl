@@ -72,6 +72,7 @@ bond_type(st::Multiline) = bond_type(typeof(st))
 function TensorKit.dot(a::MPSMultiline, b::MPSMultiline; kwargs...)
     return sum(dot.(parent(a), parent(b); kwargs...))
 end
+TensorKit.normalize!(a::MPSMultiline) = (normalize!.(parent(a)); return a)
 
 Base.convert(::Type{MPSMultiline}, st::InfiniteMPS) = Multiline([st])
 Base.convert(::Type{InfiniteMPS}, st::MPSMultiline) = only(st)
