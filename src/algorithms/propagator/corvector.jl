@@ -92,11 +92,7 @@ https://arxiv.org/pdf/cond-mat/0203500.pdf. The algorithm minimizes
 struct Jeckelmann <: DDMRG_Flavour end
 
 function propagator(
-    A::AbstractFiniteMPS,
-    z,
-    H::MPOHamiltonian,
-    alg::DynamicalDMRG{Jeckelmann};
-    init=copy(A),
+    A::AbstractFiniteMPS, z, H::MPOHamiltonian, alg::DynamicalDMRG{Jeckelmann}; init=copy(A)
 )
     w = real(z)
     eta = imag(z)
@@ -151,7 +147,7 @@ function squaredenvs(
 )
     nham = conj(H) * H
     L = length(state)
-    
+
     # to construct the squared caches we will first initialize environments
     # then make all data invalid so it will be recalculated
     # then initialize the right caches at the edge
