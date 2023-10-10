@@ -25,7 +25,8 @@ function entanglementplot end
     mps = h.args[1]
     site <= length(mps) || throw(ArgumentError("Not a valid site for the given mps."))
 
-    (_, s, _) = tsvd(mps.CR[site])
+    (_, s′, _) = tsvd(mps.CR[site])
+    s = real(s′)
     sectors = blocksectors(s)
     spectrum = []
     for sector in sectors
