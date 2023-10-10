@@ -14,10 +14,15 @@ function infinite_temperature(ham::MPOHamiltonian)
     ]
 end
 
-"calculates the galerkin error"
+"""
+    calc_galerkin(state, envs)
+
+Calculate the galerkin error.
+"""
 function calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS}, loc, envs)::Float64
-    out = ∂∂AC(loc, state, envs.opp, envs) * state.AC[loc]
-    out -= state.AL[loc] * state.AL[loc]' * out
+    AC´ = ∂∂AC(loc, state, envs.opp, envs) * state.AC[loc]
+    normalize!(AC´)
+    out = add!(AC´, state.AL[loc] * state.AL[loc]' * AC´, -1)
     return norm(out)
 end
 calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS}, envs)::Float64 =
@@ -28,7 +33,9 @@ function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
     εs = zeros(Float64, size(state, 1), size(state, 2))
     for (row, col) in product(1:size(state, 1), 1:size(state, 2))
         AC´ = ∂∂AC(row, col, state, envs.opp, envs) * above.AC[row, col]
-        εs[row, col] = norm(leftnull(state.AC[row + 1, col])' * (AC´ / norm(AC´)))
+        normalize!(AC´)
+        out = add!(AC´, state.AL[row + 1, col] * state.AL[row + 1, col]' * AC´, -1)
+        εs[row, col] = norm(out)
     end
 
     return maximum(εs[:])
