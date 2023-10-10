@@ -10,47 +10,95 @@
 
 [ci-url]: https://github.com/maartenvd/MPSKit.jl/workflows/CI/badge.svg
 
-Contains code for tackling 1 dimensional quantum (and 2d classical) problems using tensor network algorithms. While it is still in beta, exported algorithms should just work. If you encounter an issue, feel free to open a bug report.
+Contains code for tackling one-dimensional quantum and two-dimensional statistical mechanics
+problems using tensor network algorithms. The main focus is on matrix product states (MPS)
+and matrix product operators (MPO), both finite and infinite.
 
-We implemented different algorithms for finding the groundstate (both finite and infinite systems), performing time evolution, finding excitations and much more. Check out the [tutorials](https://maartenvd.github.io/MPSKit.jl/dev/#Tutorials-1) or [examples](https://github.com/maartenvd/MPSKit.jl/tree/master/examples) (the documentation itself is still quite terse).
+Additionally, the framework is built upon
+[TensorKit.jl](https://github.com/jutho/TensorKit.jl), which provides functionality for
+generic symmetries.
+
+The toolbox contains different algorithms for finding MPS representations of groundstates or
+leading boundary states, performing time evolution, finding excitations and much more. Check
+out the [examples](https://maartenvd.github.io/MPSKit.jl/dev/examples/) for concrete
+use-cases.
+
+This package is under active development and new algorithms are added regularly.
+Nevertheless, the documentation is quite terse, so feel free to open an issue if you have
+any questions.
 
 ## Installation
 
-First, install this package by opening julia and pressing "]". Then type
+The package can be installed through the Julia general registry, via the package manager:
 
-```julia
+```julia-repl
 pkg> add MPSKit
 ```
 
-MPSKit works on Tensormap objects, which are defined in [another package](https://github.com/Jutho/TensorKit.jl).
-You will have to add this pacakge as well to create the basic building blocks.
-```julia
+Because of the heavy use of [TensorKit.jl](https://github.com/jutho/TensorKit.jl), it is
+recommended to install the latest version of this package as well. Additionally, several
+extension packages exist that provide additional symmetries, which should all be compatible
+with MPSKit. For example, to install the package with support for SU(N) symmetries,
+[SUNRepresentations.jl](https://github.com/maartenvd/SUNRepresentations.jl) can be used.
+
+```julia-repl
 pkg> add TensorKit
 ```
 
-Last but not least, we have already implemented a few hamiltonians in [MPSKitModels.jl](https://github.com/maartenvd/MPSKitModels.jl). It is recommended to install this package too.
-```julia
+Finally, several pre-defined operators, hamiltonians and statistical mechanics models are available in [MPSKitModels.jl](https://github.com/maartenvd/MPSKitModels.jl). It is recommended to install this package too.
+
+```julia-repl
 pkg> add MPSKitModels
 ```
 
 ## Quickstart
 
-After following the installation process, you should now be able to call
+After following the installation process, it should now be possible to load the packages and
+start simulating. For example, to obtain the groundstate of the 1D Ising model, we can use
+the following code:
+
 ```julia
-julia> using MPSKit,MPSKitModels,TensorKit
+using MPSKit, MPSKitModels, TensorKit
+using ProgressMeter, Plots # for demonstration purposes
+
+L = 16 # length of the chain
+D = 4 # bonddimension
+init_state = FiniteMPS(L, ℂ^2, ℂ^D)
+
+g_values = 0:0.1:2
+Z = @mpoham sum(σᶻ(){i} for i in vertices(FiniteChain(L)))
+
+M = @showprogress map(g_values) do g
+    H = periodic_boundary_conditions(transverse_field_ising(; g=g), L)
+    groundstate, environment, δ = find_groundstate(init_state, H; verbose=false)
+    return abs(sum(expectation_value(groundstate, Z))) / L
+end
+
+scatter(g_values, M, xlabel="g", ylabel="M", label="D=$D", title="Magnetization")
 ```
 
-You can create a random 1 site periodic infinite mps (bond dimension 10) by calling
+![Magnetization](docs/src/assets/README_ising_finite.png)
+
+Similarly, these simulations can be carried out directly in the thermodynamic limit, with
+very minor code-changes:
+
 ```julia
-julia> state = InfiniteMPS([ℂ^2],[ℂ^10]);
+using MPSKit, MPSKitModels, TensorKit
+using ProgressMeter, Plots # for demonstration purposes
+
+D = 4 # bonddimension
+init_state = InfiniteMPS(ℂ^2, ℂ^D)
+
+g_values = 0.1:0.1:2
+Z = @mpoham sum(σᶻ(){i} for i in vertices(InfiniteChain()))
+
+M = @showprogress map(g_values) do g
+    H = transverse_field_ising(; g=g)
+    groundstate, environment, δ = find_groundstate(init_state, H, VUMPS(; verbose=false))
+    return abs(sum(expectation_value(groundstate, Z)))
+end
+
+scatter(g_values, M, xlabel="g", ylabel="M", label="D=$D", title="Magnetization")
 ```
 
-We can use a pre-defined hamiltonian from MPSKitModels
-```julia
-julia> hamiltonian = nonsym_ising_ham();
-```
-
-And find the groundstate
-```julia
-julia> (groundstate,_) = find_groundstate(state,hamiltonian,VUMPS());
-```
+![Magnetization](docs/src/assets/README_ising_infinite.png)
