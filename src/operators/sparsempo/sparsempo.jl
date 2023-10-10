@@ -177,7 +177,7 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
 
     sum(ismissing.(pspaces)) == 0 ||
         throw(ArgumentError("Not all physical spaces were assigned"))
-    sum(ismissing.(domspaces)) == 0 || @warn "failed to deduce all domspaces"
+    # sum(ismissing.(domspaces)) == 0 || @warn "failed to deduce all domspaces"
 
     for loc in 1:period, j in 1:numrows
         ismissing(domspaces[loc, j]) || continue
