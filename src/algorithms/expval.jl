@@ -1,4 +1,18 @@
-#works for general tensors
+"""
+    expectation_value(ψ, O, [location], [environments])
+
+Compute the expectation value of an operator `O` on a state `ψ`. If `location` is given, the
+operator is applied at that location. If `environments` is given, the expectation value
+might be computed more efficiently by re-using previously calculated environments.
+
+# Arguments
+* `ψ::AbstractMPS` : the state on which to compute the expectation value
+* `O` : the operator to compute the expectation value of. This can either be an `AbstractMPO`, a single `AbstractTensorMap` or an array of `AbstractTensorMap`s.
+* `location::Union{Int,AbstractRange{Int}}` : the location at which to apply the operator. Only applicable for operators that act on a subset of all sites.
+* `environments::Cache` : the environments to use for the calculation. If not given, they will be calculated.
+"""
+function expectation_value end
+
 function expectation_value(
     state::Union{InfiniteMPS,WindowMPS,FiniteMPS}, opp::AbstractTensorMap
 )
@@ -166,13 +180,13 @@ end
 
 function expectation_value(st::InfiniteMPS, mpo::DenseMPO)
     return expectation_value(convert(MPSMultiline, st), convert(MPOMultiline, mpo))
-end;
+end
 function expectation_value(st::MPSMultiline, mpo::MPOMultiline)
     return expectation_value(st, environments(st, mpo))
-end;
+end
 function expectation_value(st::InfiniteMPS, ca::PerMPOInfEnv)
     return expectation_value(convert(MPSMultiline, st), ca)
-end;
+end
 function expectation_value(st::MPSMultiline, opp::MPOMultiline, ca::PerMPOInfEnv)
     retval = PeriodicArray{scalartype(st.AC[1, 1]),2}(undef, size(st, 1), size(st, 2))
     for (i, j) in product(1:size(st, 1), 1:size(st, 2))
@@ -219,9 +233,7 @@ function expectation_value(Ψ::WindowMPS, windowOp::Window, at::Int64)
 end
 
 function expectation_value(
-    Ψ::WindowMPS,
-    windowH::Window,
-    windowEnvs::Window{C,D,C}=environments(Ψ, windowH),
+    Ψ::WindowMPS, windowH::Window, windowEnvs::Window{C,D,C}=environments(Ψ, windowH)
 ) where {C<:Union{MultipleEnvironments,Cache},D<:Union{MultipleEnvironments,Cache}}
     left = expectation_value(Ψ.left_gs, windowH.left, windowEnvs.left)
     middle = expectation_value(Ψ.window, windowH.middle, windowEnvs.middle)
