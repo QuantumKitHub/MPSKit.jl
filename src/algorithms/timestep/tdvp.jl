@@ -1,19 +1,4 @@
 """
-    timestep(Ψ, H, t, dt, algorithm, environments)
-    timestep(Ψ, H, dt, algorithm, environments)
-
-Compute the time-evolved state ``Ψ′ ≈ exp(-iHdt) Ψ`` where H can be time-dependent. For a time-independent H (i.e. not a TimedOperator) t is ignored.
-
-# Arguments
-- `Ψ::AbstractMPS`: current state
-- `H::AbstractMPO`: evolution operator
-- `dt::Number`: timestep
-- `algorithm`: evolution algorithm
-- `[environments]`: environment manager
-"""
-function timestep end, function timestep! end
-
-"""
     TDVP{A} <: Algorithm
 
 Single site [TDVP](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107.070601)

@@ -12,10 +12,37 @@ through each of the time points obtained by iterating t_span.
 - `[alg]`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
 - `[envs]`: MPS environment manager
 """
-function time_evolve end,
-function time_evolve! end
+function time_evolve end, function time_evolve! end
 
-function time_evolve(Ψ₀::AbstractFiniteMPS, H, 
+# re-route finite MPS to in-place version
+function time_evolve(Ψ₀::AbstractFiniteMPS, args...; kwargs...)
+    return time_evolve!(copy(Ψ₀), args...; kwargs...)
+end
+
+function time_evolve!(Ψ₀::AbstractFiniteMPS, H, t_span::AbstractVector{<:Number}, alg, envs=environments(Ψ₀, H); verbose=false)
+    for (dt, t) in zip(diff(t_span), t_span[2:end])
+        elapsed = @elapsed Ψ₀, envs = timestep!(Ψ₀, H, t, dt, alg, envs)
+        verbose && @info "Timestep to $t completed" elapsed
+    end
+end
+
+"""
+    timestep(ψ₀, H, t, dt, [alg], [envs]; kwargs...)
+    timestep!(ψ₀, H, t, dt, [alg], [envs]; kwargs...)
+
+Time-step the state `ψ₀` with Hamiltonian `H` over a given time step `dt` at time `t`,
+solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
+
+
+# Arguments
+- `ψ₀::AbstractMPS`: initial state
+- `H::AbstractMPO`: operator that generates the time evolution (can be time-dependent).
+- `t::Number`: starting time of time-step
+- `dt::Number`: time-step magnitude
+- `[alg]`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
+- `[envs]`: MPS environment manager
+"""
+function timestep end, function timestep! end
 
 
 """
