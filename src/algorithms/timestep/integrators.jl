@@ -23,6 +23,6 @@ _eval_x(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, x) = t -> h(x)
 
 function integrate(f, y₀, t::Number, dt::Number, alg::Union{Arnoldi,Lanczos})
     y, convhist = exponentiate(_eval_t(f, t), dt, y₀, alg)
-    convhist.converged || @warn "integration failed $(convhist.normres)"
+    convhist.converged == 0 && @warn "integration failed $(convhist.normres)"
     return y
 end
