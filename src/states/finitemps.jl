@@ -346,6 +346,9 @@ function Base.show(io::IOContext, Ψ::FiniteMPS)
 
     L = length(Ψ)
     center = something(findlast(!ismissing, Ψ.ALs), 0)
+    if center != L && !ismissing(Ψ.ACs[center + 1])
+        center += 1
+    end
 
     for site in reverse(1:L)
         if site < half_screen_rows || site > L - half_screen_rows
