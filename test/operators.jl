@@ -92,7 +92,7 @@ end
 
     timedO = TimedOperator(O, f)
 
-    @test timedO(0.5)() == f(0.5) * O
+    @test timedO(0.5) == f(0.5) * O
 
     # SumOfOperators
     Os = map(i -> TensorMap(rand, ComplexF64, Dspace * pspace, Dspace * pspace), 1:4)
@@ -102,8 +102,8 @@ end
     SummedOs = SumOfOperators(Os, fs) #direct construction
     SummedOs2 = sum(map((O, f) -> TimedOperator(O, f), Os, fs)) # sum the different timedoperators using defined +
 
-    @test SummedOs(0.5)() == sum(map((O, f) -> f(0.5) * O, Os, fs))
-    @test SummedOs(1.0)() == SummedOs2(1.0)()
+    @test SummedOs(0.5) == sum(map((O, f) -> f(0.5) * O, Os, fs))
+    @test SummedOs(1.0) == SummedOs2(1.0)
 end
 
 @testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (
@@ -136,15 +136,8 @@ end
         envst = environments(Ψ, Ht)
 
         @test envs.opp.data == envst.opp.data #check that env are the same, time-dep sits elsewhere
+        @test f(3.0) .* expectation_value(Ψ, H) ≈ expectation_value(Ψ, Ht(3.0))
 
-        @test sum(
-            abs,
-            f(3.0) * expectation_value(Ψ, H, envs) - expectation_value(Ψ, Ht, 3.0, envst),
-        ) < 1e-8
-
-        @test sum(
-            abs, expectation_value(Ψ, Ht(3.0), envs2) - expectation_value(Ψ, Ht, 3.0, envst)
-        ) < 1e-8
 
         ## time-dependence of derivatives
         hc = MPSKit.∂∂C(1, Ψ, H, envs)
@@ -178,72 +171,69 @@ end
     fs = [t -> 3 + t, t -> 7 * t, t -> 2 * cos(t), t -> t^2]
     summedH = SumOfOperators(Hs, fs)
 
-    @testset "SumOfOperators{TimedOperator} $(Ψ isa InfiniteMPS ? "InfiniteMPS" : "FiniteMPS")" for Ψ in
-                                                                                                    Ψs
+    @testset "Timed Sum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
         Envs = map(H -> environments(Ψ, H), Hs)
         summedEnvs = environments(Ψ, summedH)
-
-        manual_sum = sum(
-            map((H, E, f) -> f(5.0) * sum(expectation_value(Ψ, H, E)), Hs, Envs, fs)
-        )
-        @test abs(sum(expectation_value(Ψ, summedH, 5.0, summedEnvs)) - manual_sum) < 1e-5
+    
+        expval1 = sum(zip(Hs, fs)) do (H, f)
+            f(5.0) * expectation_value(Ψ, H)
+        end
+        expval2 = expectation_value(Ψ, summedH(5.0))
+        @test expval1 ≈ expval2 
 
         # test derivatives
         summedhct = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
-
-        manual_sum = sum(
-            map((H, E, f) -> f(5.0) * MPSKit.∂∂C(1, Ψ, H, E)(Ψ.CR[1]), Hs, Envs, fs)
-        )
-        @test norm(summedhct(Ψ.CR[1], 5.0) - manual_sum) < 1e-5
+        sum1 = sum(zip(Hs, fs, Envs)) do (H, f, env)
+            f(5.0) * MPSKit.∂∂C(1, Ψ, H, env)(Ψ.CR[1])
+        end
+        @test summedhct(Ψ.CR[1], 5.0) ≈ sum1
 
         summedhct = MPSKit.∂∂AC(1, Ψ, summedH, summedEnvs)
-
-        manual_sum = sum(
-            map((H, E, f) -> f(5.0) * MPSKit.∂∂AC(1, Ψ, H, E)(Ψ.AC[1]), Hs, Envs, fs)
-        )
-        @test norm(summedhct(Ψ.AC[1], 5.0) - manual_sum) < 1e-5
-
-        summedhct = MPSKit.∂∂AC2(1, Ψ, summedH, summedEnvs)
+        sum2 = sum(zip(Hs, fs, Envs)) do (H, f, env)
+            f(5.0) * MPSKit.∂∂AC(1, Ψ, H, env)(Ψ.AC[1])
+        end
+        @test summedhct(Ψ.AC[1], 5.0) ≈ sum2
 
         v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2])
-        manual_sum = sum(
-            map((H, E, f) -> f(5.0) * MPSKit.∂∂AC2(1, Ψ, H, E)(v), Hs, Envs, fs)
-        )
-        @test norm(summedhct(v, 5.0) - manual_sum) < 1e-5
+        summedhct = MPSKit.∂∂AC2(1, Ψ, summedH, summedEnvs)
+        sum3 = sum(zip(Hs, fs, Envs)) do (H, f, env)
+            f(5.0) * MPSKit.∂∂AC2(1, Ψ, H, env)(v)
+        end
+        @test summedhct(v, 5.0) ≈ sum3
     end
 
     # finally test in case SumOfOperators contains non-timed operators
     fs = [3, 5.0, 10, 1]
     summedH = SumOfOperators(Hs, fs)
 
-    @testset "SumOfOperators{UntimedOperator} $(Ψ isa InfiniteMPS ? "InfiniteMPS" : "FiniteMPS")" for Ψ in
-                                                                                                      Ψs
+    @testset "Untimed Sum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
         Envs = map(H -> environments(Ψ, H), Hs)
         summedEnvs = environments(Ψ, summedH)
+        
+        expval1 = sum(zip(Hs, fs)) do (H, f)
+            f * expectation_value(Ψ, H)
+        end
+        expval2 = expectation_value(Ψ, summedH(5.0))
+        @test expval1 ≈ expval2
 
-        manual_sum = sum(
-            map((H, E, f) -> sum(f * expectation_value(Ψ, H, E)), Hs, Envs, fs)
-        )
-        @test abs(sum(expectation_value(Ψ, summedH, 5.0, summedEnvs)) - manual_sum) < 1e-5
+        # test derivatives
+        summedhct = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
+        sum1 = sum(zip(Hs, fs, Envs)) do (H, f, env)
+            f * MPSKit.∂∂C(1, Ψ, H, env)(Ψ.CR[1])
+        end
+        @test summedhct(Ψ.CR[1], 5.0) ≈ sum1
 
-        summedhc = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
-
-        manual_sum = sum(
-            map((H, E, f) -> f * MPSKit.∂∂C(1, Ψ, H, E)(Ψ.CR[1]), Hs, Envs, fs)
-        )
-        @test norm(summedhc(Ψ.CR[1]) - manual_sum) < 1e-5
-
-        summedhac = MPSKit.∂∂AC(1, Ψ, summedH, summedEnvs)
-
-        manual_sum = sum(
-            map((H, E, f) -> f * MPSKit.∂∂AC(1, Ψ, H, E)(Ψ.AC[1]), Hs, Envs, fs)
-        )
-        @test norm(summedhac(Ψ.AC[1]) - manual_sum) < 1e-5
-
-        summedhac2 = MPSKit.∂∂AC2(1, Ψ, summedH, summedEnvs)
+        summedhct = MPSKit.∂∂AC(1, Ψ, summedH, summedEnvs)
+        sum2 = sum(zip(Hs, fs, Envs)) do (H, f, env)
+            f * MPSKit.∂∂AC(1, Ψ, H, env)(Ψ.AC[1])
+        end
+        @test summedhct(Ψ.AC[1], 5.0) ≈ sum2
 
         v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2])
-        manual_sum = sum(map((H, E, f) -> f * MPSKit.∂∂AC2(1, Ψ, H, E)(v), Hs, Envs, fs))
-        @test norm(summedhac2(v) - manual_sum) < 1e-5
+        summedhct = MPSKit.∂∂AC2(1, Ψ, summedH, summedEnvs)
+        sum3 = sum(zip(Hs, fs, Envs)) do (H, f, env)
+            f * MPSKit.∂∂AC2(1, Ψ, H, env)(v)
+        end
+        @test summedhct(v, 5.0) ≈ sum3
     end
 end

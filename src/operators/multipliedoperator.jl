@@ -23,7 +23,7 @@ const TimedOperator{O} = MultipliedOperator{O,<:Function}
 const UntimedOperator{O} = MultipliedOperator{O,<:Real}
 
 #constructors for (un)TimedOperator
-TimedOperator(x::O, f::F) where {F<:Function,O} = MultipliedOperator(x, f);
+TimedOperator(x::O, f::F) where {F<:Function,O} = MultipliedOperator(x, f)
 UntimedOperator(x::O, c::C) where {C<:Real,O} = MultipliedOperator(x, c)
 
 TimedOperator(x) = TimedOperator(x, t -> 1)
@@ -41,11 +41,15 @@ Base.:*(b::Number, op::MultipliedOperator) = op * b
 (x::TimedOperator)(t::Number) = UntimedOperator(x.op, x.f(t))
 
 # logic for derivatives
-Base.:*(x::MultipliedOperator, v) = x(v);
+(x::MultipliedOperator{<:Any,<:Function})(y, t::Number) = x.f(t) * x.op(y)
+(x::MultipliedOperator{<:Any,<:Number})(y, ::Number) = x.f * x.op(y)
 
-(x::MultipliedOperator)(y) = x.f * x.op(y)
+(x::MultipliedOperator{<:Any,<:Function})(t::Number) = x.f(t) * x.op
+(x::MultipliedOperator{<:Any,<:Function})(y) = t -> x.f(t) * x.op(y)
+(x::MultipliedOperator{<:Any,<:Number})(::Number) = x.f * x.op
+(x::MultipliedOperator{<:Any,<:Number})(y) = t -> x.f * x.op(y)
 
-(x::MultipliedOperator)(y, t::Number) = x(t)(y)
+Base.:*(x::MultipliedOperator, v) = x(v)
 
 # don't know a better place to put this
 # environment for MultipliedOperator
