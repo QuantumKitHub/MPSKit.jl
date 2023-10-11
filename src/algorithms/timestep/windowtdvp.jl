@@ -129,7 +129,7 @@ function timestep!(
     leftevolve=true,
     rightevolve=true,
 )
-
+    dτ = im * dt / 2
     #first evolve left state
     if leftevolve
         nleft, _ = timestep(Ψ.left_gs, H.left, t, dt, alg, env.left; leftorthflag=true) #env gets updated in place
@@ -141,52 +141,36 @@ function timestep!(
     # some Notes
     # - at what time do we evaluate h_ac and c? at t, t+dt/4 ? do we take both at the same time? integrate itself already evaluates at t+dt/2 I think
 
-    #left to right sweep on window
+    # left to right sweep on window
     for i in 1:(length(Ψ) - 1)
         h_ac = ∂∂AC(i, Ψ, H.middle, env.middle)
-        Ψ.AC[i], converged, convhist = integrate(
-            h_ac, Ψ.AC[i], t + dt / 2, -1im, dt / 2, alg.integrator
-        )
-        converged == 0 && @info "time evolving ac($i) failed $(convhist.normres)"
+        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t, -dτ, alg.integrator)
 
         h_c = ∂∂C(i, Ψ, H.middle, env.middle)
-        Ψ.CR[i], converged, convhist = integrate(
-            h_c, Ψ.CR[i], t + dt / 2, -1im, -dt / 2, alg.integrator
-        )
-        converged == 0 && @info "time evolving c($i) failed $(convhist.normres)"
+        Ψ.CR[i] = integrate(h_c, Ψ.CR[i], t, -dτ, alg.integrator)
     end
 
     h_ac = ∂∂AC(length(Ψ), Ψ, H.middle, env.middle)
-    Ψ.AC[end], converged, convhist = integrate(
-        h_ac, Ψ.AC[end], t + dt / 2, -1im, dt / 2, alg.integrator
-    )
-    converged == 0 && @info "time evolving ac($(length(Ψ))) failed $(convhist.normres)"
+    Ψ.AC[end] = integrate(h_ac, Ψ.AC[end], t, -dτ, alg.integrator)
 
     if rightevolve
-        nright, _ = timestep(Ψ.right_gs, H.right, t, dt, alg, env.right; leftorthflag=false) #env gets updated in place
+        nright, _ = timestep(Ψ.right_gs, H.right, t, dt, alg, env.right; leftorthflag=false) # env gets updated in place
         _update_rightEnv!(nright, env)
     else
         nright = Ψ.right_gs
     end
 
-    #right to left sweep on window
+    # right to left sweep on window
     for i in length(Ψ):-1:2
         h_ac = ∂∂AC(i, Ψ, H.middle, env.middle)
-        Ψ.AC[i], converged, convhist = integrate(
-            h_ac, Ψ.AC[i], t, -1im, dt / 2, alg.integrator
-        )
-        converged == 0 && @info "time evolving ac($i) failed $(convhist.normres)"
+        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t + dt / 2, -dτ, alg.integrator)
 
         h_c = ∂∂C(i - 1, Ψ, H.middle, env.middle)
-        Ψ.CR[i - 1], converged, convhist = integrate(
-            h_c, Ψ.CR[i - 1], t, -1im, -dt / 2, alg.integrator
-        )
-        converged == 0 && @info "time evolving c($(i-1)) failed $(convhist.normres)"
+        Ψ.CR[i - 1] = integrate(h_c, Ψ.CR[i - 1], t + dt / 2, -dτ, alg.integrator)
     end
 
     h_ac = ∂∂AC(1, Ψ, H.middle, env.middle)
-    Ψ.AC[1], converged, convhist = integrate(h_ac, Ψ.AC[1], t, -1im, dt / 2, alg.integrator)
-    converged == 0 && @info "time evolving ac(1) failed $(convhist.normres)"
+    Ψ.AC[1] = integrate(h_ac, Ψ.AC[1], t, -dτ, alg.integrator)
 
     return WindowMPS(nleft, Ψ.window, nright), env
 end
@@ -206,7 +190,7 @@ function timestep!(
         integrator=alg.integrator, tolgauge=alg.tolgauge, maxiter=alg.maxiter
     )
 
-    #first evolve left state
+    # first evolve left state
     if leftevolve
         # expand the bond dimension using changebonds
         nleft, _ = leftexpand(Ψ, H.left, t, env.left; kwargs...)
@@ -219,25 +203,20 @@ function timestep!(
         nleft = Ψ.left_gs
     end
 
-    #left to right sweep on window
+    # left to right sweep on window
     for i in 1:(length(Ψ) - 1)
         h_ac2 = ∂∂AC2(i, Ψ, H.middle, env.middle)
         ac2 = Ψ.AC[i] * _transpose_tail(Ψ.AR[i + 1])
-        ac2, converged, convhist = integrate(
-            h_ac2, ac2, t + dt / 2, -1im, dt / 2, alg.integrator
-        )
-        converged == 0 && @info "time evolving ac2($i) failed $(convhist.normres)"
-        (U, S, V) = tsvd(ac2; alg=TensorKit.SVD(), trunc=alg.trscheme)
+        ac2 = integrate(h_ac2, ac2, t, -dτ, alg.integrator)
+
+        U, S, V, = tsvd!(ac2; alg=TensorKit.SVD(), trunc=alg.trscheme)
 
         Ψ.AC[i] = (U, S)
         Ψ.AC[i + 1] = (S, _transpose_front(V))
 
         if i < length(Ψ) - 1
             h_ac = ∂∂AC(i + 1, Ψ, H.middle, env.middle)
-            Ψ.AC[i + 1], converged, convhist = integrate(
-                h_ac, Ψ.AC[i + 1], t + dt / 2, -1im, -dt / 2, alg.integrator
-            )
-            converged == 0 && @info "time evolving ac($i) failed $(convhist.normres)"
+            Ψ.AC[i + 1] = integrate(h_ac, Ψ.AC[i + 1], t, -dτ, alg.integrator)
         end
     end
 
@@ -253,23 +232,19 @@ function timestep!(
         nright = Ψ.right_gs
     end
 
-    #right to left sweep on window
+    # right to left sweep on window
     for i in length(Ψ):-1:2
         h_ac2 = ∂∂AC2(i - 1, Ψ, H.middle, env.middle)
         ac2 = Ψ.AL[i - 1] * _transpose_tail(Ψ.AC[i])
-        ac2, converged, convhist = integrate(h_ac2, ac2, t, -1im, dt / 2, alg.integrator)
-        converged == 0 && @info "time evolving ac2($i) failed $(convhist.normres)"
-        (U, S, V) = tsvd(ac2; alg=TensorKit.SVD(), trunc=alg.trscheme)
+        ac2 = integrate(h_ac2, ac2, t + dt / 2, -dτ, alg.integrator)
+        U, S, V, = tsvd!(ac2; alg=TensorKit.SVD(), trunc=alg.trscheme)
 
         Ψ.AC[i - 1] = (U, S)
         Ψ.AC[i] = (S, _transpose_front(V))
 
         if i > 2
             h_ac = ∂∂AC(i - 1, Ψ, H.middle, env.middle)
-            Ψ.AC[i - 1], converged, convhist = integrate(
-                h_ac, Ψ.AC[i - 1], t, -1im, -dt / 2, alg.integrator
-            )
-            converged == 0 && @info "time evolving ac($i) failed $(convhist.normres)"
+            Ψ.AC[i - 1] = integrate(h_ac, Ψ.AC[i - 1], t + dt / 2, -dτ, alg.integrator)
         end
     end
 

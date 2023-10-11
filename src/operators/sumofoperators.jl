@@ -60,8 +60,10 @@ end
 (x::SumOfOperators{<:TimedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x)) #will convert to SumOfOperators{UnTimedOperator}
 
 # logic for derivatives
-(x::SumOfOperators)(y, t::Number) = sum(O -> O(y, t), x)
-(x::SumOfOperators)(t::Number) = sum(O -> O(t), x)
+(x::SumOfOperators{<:TimedOperator})(y, t::Number) = sum(O -> O(y, t), x)
+(x::SumOfOperators)(y, ::Number) = sum(O -> O(y), x)
+(x::SumOfOperators{<:TimedOperator})(t::Number) = sum(O -> O(t), x)
+(x::SumOfOperators)(t::Number) = sum(x)
 (x::SumOfOperators)(y) = sum(O -> O(y), x)
 
 Base.:*(x::SumOfOperators, v) = x(v)

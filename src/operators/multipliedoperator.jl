@@ -38,13 +38,13 @@ function Base.:*(op::TimedOperator, b::Number)
 end
 Base.:*(b::Number, op::MultipliedOperator) = op * b
 
-(x::TimedOperator)(t::Number) = UntimedOperator(x.op, x.f(t))
+# (x::TimedOperator)(t::Number) = UntimedOperator(x.op, x.f(t))
 
 # logic for derivatives
 (x::MultipliedOperator{<:Any,<:Function})(y, t::Number) = x.f(t) * x.op(y)
 (x::MultipliedOperator{<:Any,<:Number})(y, ::Number) = x.f * x.op(y)
 
-(x::MultipliedOperator{<:Any,<:Function})(t::Number) = x.f(t) * x.op
+(x::MultipliedOperator{<:Any,<:Function})(t::Number) = UntimedOperator(x.op, x.f(t))
 (x::MultipliedOperator{<:Any,<:Function})(y) = t -> x.f(t) * x.op(y)
 (x::MultipliedOperator{<:Any,<:Number})(::Number) = x.f * x.op
 (x::MultipliedOperator{<:Any,<:Number})(y) = t -> x.f * x.op(y)

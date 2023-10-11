@@ -68,11 +68,12 @@ end
 
     @testset "Finite Trivial TimedOperator $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in
                                                                                    algs
-        ψ, envs = timestep(ψ₀, H, 0.0, dt, alg)
+        t = 0.0
+        ψ, envs = timestep(ψ₀, H, t, dt, alg)
         E = expectation_value(ψ, H, envs)
 
         Ht = TimedOperator(H)
-        (ψt, envst) = timestep(ψ₀, Ht, 0.0, dt, alg)
+        (ψt, envst) = timestep(ψ₀, Ht, t, dt, alg)
         Et = expectation_value(ψt, Ht(t), envst)
 
         @test sum(E) ≈ sum(Et) atol = 1e-10
@@ -92,7 +93,7 @@ end
 
         Hmult = f(t) * H
         (ψ, envs) = timestep(ψ₀, Hmult, t, dt, alg)
-        Emult = expectation_value(ψ, Hmult(t), envs)
+        Emult = expectation_value(ψ, Hmult, envs)
 
         @test sum(Eunt) ≈ sum(Et) atol = 1e-2
         @test sum(Eunt) ≈ sum(Emult) atol = 1e-2
@@ -134,7 +135,7 @@ end
 
         Hmult = f(t) * H
         (ψ, envs) = timestep(ψ₀, Hmult, t, dt, algs[1])
-        Emult = expectation_value(ψ, Hmult(t), envs)
+        Emult = expectation_value(ψ, Hmult, envs)
 
         @test sum(Eunt) ≈ sum(Et) atol = 1e-2
         @test sum(Eunt) ≈ sum(Emult) atol = 1e-2
@@ -503,7 +504,7 @@ end
         expH = make_time_mpo(H, τ, WI())
         Ψ₂, = approximate(Ψ₂, (expH, Ψ₁), alg)
         normalize!(Ψ₂)
-        Ψ₂′, = timestep(Ψ₁, H, τ, TDVP())
+        Ψ₂′, = timestep(Ψ₁, H, 0.0, τ, TDVP())
         @test abs(dot(Ψ₁, Ψ₁)) ≈ abs(dot(Ψ₂, Ψ₂′)) atol = 0.001
     end
 end
