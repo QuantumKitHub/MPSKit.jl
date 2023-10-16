@@ -262,9 +262,11 @@ function ac2_proj(row, col, below, envs::PerMPOInfEnv)
     )
 end
 
-
-∂∂C(pos::Int,mps,opp::LinearCombination,cache) =
-    LinearCombination(broadcast((h,e) -> ∂∂C(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+function ∂∂C(pos::Int, mps, opp::LinearCombination, cache)
+    return LinearCombination(
+        broadcast((h, e) -> ∂∂C(pos, mps, h, e), opp.opps, cache.envs), opp.coeffs
+    )
+end
 
 function ∂∂AC(pos::Int, mps, opp::LinearCombination, cache)
     return LinearCombination(
@@ -272,8 +274,11 @@ function ∂∂AC(pos::Int, mps, opp::LinearCombination, cache)
     )
 end
 
-∂∂AC2(pos::Int,mps,opp::LinearCombination,cache) =
-    LinearCombination(broadcast((h,e) -> ∂∂AC2(pos,mps,h,e),opp.opps,cache.envs),opp.coeffs)
+function ∂∂AC2(pos::Int, mps, opp::LinearCombination, cache)
+    return LinearCombination(
+        broadcast((h, e) -> ∂∂AC2(pos, mps, h, e), opp.opps, cache.envs), opp.coeffs
+    )
+end
 
 struct AC_EffProj{A,L}
     a1::A
