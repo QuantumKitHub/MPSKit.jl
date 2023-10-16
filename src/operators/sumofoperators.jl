@@ -57,7 +57,7 @@ function Base.:+(op::O, SumOfOps::SumOfOperators{T}) where {O,T<:MultipliedOpera
     return SumOfOperators(UntimedOperator(op)) + SumOfOps
 end
 
-(x::SumOfOperators{<:TimedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x)) #will convert to SumOfOperators{UnTimedOperator}
+# (x::SumOfOperators{<:TimedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x)) #will convert to SumOfOperators{UnTimedOperator}
 
 # logic for derivatives
 (x::SumOfOperators{<:TimedOperator})(y, t::Number) = sum(O -> O(y, t), x)
