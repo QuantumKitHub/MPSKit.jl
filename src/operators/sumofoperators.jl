@@ -17,7 +17,7 @@ SumOfOperators(x) = SumOfOperators([x])
 
 # handy constructor for SumOfOperators{MultipliedOperator} and backwards compatibility for LinearCombination
 function SumOfOperators(ops::AbstractVector, fs::AbstractVector)
-    return SumOfOperators(map((op, f) -> MultipliedOperator(op, f), ops, fs))
+    return SumOfOperators(map(MultipliedOperator, ops, fs))
 end
 
 # we can add operators to SumOfOperators by using +
@@ -57,17 +57,10 @@ function Base.:+(op::O, SumOfOps::SumOfOperators{T}) where {O,T<:MultipliedOpera
     return SumOfOperators(UntimedOperator(op)) + SumOfOps
 end
 
-# (x::SumOfOperators{<:TimedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x)) #will convert to SumOfOperators{UnTimedOperator}
 
 # logic for derivatives
-(x::SumOfOperators{<:TimedOperator})(y, t::Number) = sum(O -> O(y, t), x)
-(x::SumOfOperators)(y, ::Number) = sum(O -> O(y), x)
-(x::SumOfOperators{<:TimedOperator})(t::Number) = sum(O -> O(t), x)
-(x::SumOfOperators)(t::Number) = sum(x)
-(x::SumOfOperators)(y) = sum(O -> O(y), x)
+(x::SumOfOperators)(y, t::Number) = sum(O -> O(y, t), x)
+(x::SumOfOperators)(t::Number) = SumOfOperators(map(op -> op(t), x))
+(x::SumOfOperators)(y) = SumOfOperators(map(op -> op(y), x))
 
 Base.:*(x::SumOfOperators, v) = x(v)
-
-# (x::SumOfOperators)(y) = sum(op -> op(y), x)
-
-# (x::SumOfOperators)(y, t::Number) = x(t)(y)

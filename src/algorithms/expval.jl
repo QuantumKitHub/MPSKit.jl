@@ -214,7 +214,7 @@ end
 function expectation_value(
     Ψ, ops::SumOfOperators, envs::MultipleEnvironments=environments(Ψ, ops)
 )
-    return sum(map((op, env) -> expectation_value(Ψ, op, env), ops.ops, envs))
+    return sum(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
 end
 
 # define expectation_value for Window
