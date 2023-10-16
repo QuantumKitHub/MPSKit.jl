@@ -202,7 +202,6 @@ end
     end
 end
 
-
 @testset "quasiparticle_excitation" verbose = true begin
     verbose = false
     @testset "infinite (ham)" begin
@@ -216,14 +215,11 @@ end
     @testset "infinite (mpo)" begin
         th = repeat(sixvertex(), 2)
         ts = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^10, ℂ^10])
-        (ts, envs, _) = leading_boundary(ts, th, VUMPS(; maxiter=100, tol_galerkin=1e-10, verbose))
+        (ts, envs, _) = leading_boundary(
+            ts, th, VUMPS(; maxiter=100, tol_galerkin=1e-10, verbose)
+        )
         (energies, Bs) = excitations(
-            th,
-            QuasiparticleAnsatz(),
-            [0.0, Float64(pi / 2)],
-            ts,
-            envs;
-            verbose,
+            th, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ts, envs; verbose
         )
         @test abs(energies[1]) > abs(energies[2]) # has a minima at pi/2
     end
