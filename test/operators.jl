@@ -7,7 +7,7 @@ println("
 include("setup.jl")
 
 pspaces = (ℙ^2, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
-vspaces = (ℙ^4, Rep[U₁]((0 => 10)), Rep[SU₂](1//2 => 5, 3//2 => 2, 5//2 => 1))
+vspaces = (ℙ^4, Rep[U₁]((0 => 10)), Rep[SU₂](0 => 5, 1 => 2, 2 => 1))
 
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
                                                     zip(pspaces, vspaces)
@@ -82,24 +82,28 @@ end
     @test abs(dot(W * (W * ts), (W * W) * ts)) ≈ 1.0 atol = 1e-10
 end
 
-@testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (
-    pspace, Dspace, HDspace
-) in [
-    (ℙ^4, ℙ^10, ℙ^2),
-    (Rep[U₁](0 => 2), Rep[U₁]((0 => 20)), Rep[U₁]((0 => 4))),
-    (Rep[SU₂](0 => 2), Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](0 => 1)),
-]
-    Os = map(
-        (D1, D2) -> TensorMap(rand, ComplexF64, D1 * pspace, pspace * D2),
-        [oneunit(HDspace), HDspace],
-        [HDspace, oneunit(HDspace)],
-    )
-    H = repeat(MPOHamiltonian(Os), 2)
+@testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
+                                                                         zip(
+    pspaces, vspaces
+)
+    n = TensorMap(rand, ComplexF64, pspace, pspace)
+    n += n'
+    nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+    nn += nn'
+    nnn = TensorMap(rand, ComplexF64, pspace * pspace * pspace, pspace * pspace * pspace)
+    nnn += nnn'
+
+    # Os = map(
+    #     (D1, D2) -> TensorMap(rand, ComplexF64, D1 * pspace, pspace * D2),
+    #     [oneunit(HDspace), HDspace],
+    #     [HDspace, oneunit(HDspace)],
+    # )
+    H = repeat(MPOHamiltonian(nn), 2)
     f(t) = 3 * exp(0.1 * t)
     Ht = TimedOperator(H, f)
 
     Ψs = [
-        FiniteMPS(rand, ComplexF64, rand(3:20), pspace, Dspace),
+        FiniteMPS(rand, ComplexF64, rand(3:2:20), pspace, Dspace),
         InfiniteMPS([
             TensorMap(rand, ComplexF64, Dspace * pspace, Dspace),
             TensorMap(rand, ComplexF64, Dspace * pspace, Dspace),
@@ -118,32 +122,33 @@ end
         hc = MPSKit.∂∂C(1, Ψ, H, envs)
         hct = MPSKit.∂∂C(1, Ψ, Ht, envst)
 
-        @test norm(hct(Ψ.CR[1], 3.0) - f(3.0) * hc(Ψ.CR[1])) < 1e-5
+        @test hct(Ψ.CR[1], 3.0) ≈ f(3.0) * hc(Ψ.CR[1]) atol = 1e-5
 
         hac = MPSKit.∂∂AC(1, Ψ, H, envs)
         hact = MPSKit.∂∂AC(1, Ψ, Ht, envst)
 
-        @test norm(hact(Ψ.AC[1], 3.0) - f(3.0) * hac(Ψ.AC[1])) < 1e-5
+        @test hact(Ψ.AC[1], 3.0) ≈ f(3.0) * hac(Ψ.AC[1]) atol = 1e-5
 
         hac2 = MPSKit.∂∂AC2(1, Ψ, H, envs)
         hac2t = MPSKit.∂∂AC2(1, Ψ, Ht, envst)
 
         v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2])
 
-        @test norm(hac2t(v, 3.0) - f(3.0) * hac2(v)) < 1e-5
+        @test hac2t(v, 3.0) ≈ f(3.0) * hac2(v) atol = 1e-5
     end
 
     ##########################
     #tests for sumofoperators
     ##########################
 
-    Os = map(
-        (D1, D2) -> TensorMap(rand, ComplexF64, D1 * pspace, pspace * D2),
-        [oneunit(HDspace), HDspace, HDspace, HDspace],
-        [HDspace, HDspace, HDspace, oneunit(HDspace)],
-    )
-    Hs = repeat.(map(i -> MPOHamiltonian([Os[1:i]..., Os[end]]), 1:(length(Os) - 1)), 2)
+    # Os = map(
+    #     (D1, D2) -> TensorMap(rand, ComplexF64, D1 * pspace, pspace * D2),
+    #     [oneunit(HDspace), HDspace, HDspace, HDspace],
+    #     [HDspace, HDspace, HDspace, oneunit(HDspace)],
+    # )
+
     fs = [t -> 3 + t, t -> 7 * t, t -> 2 * cos(t), t -> t^2]
+    Hs = repeat.(map(i -> MPOHamiltonian(iseven(i) ? nn : nnn), 1:length(fs)), 2)
     summedH = SumOfOperators(Hs, fs)
 
     @testset "Timed Sum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
