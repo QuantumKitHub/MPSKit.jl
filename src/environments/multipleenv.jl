@@ -16,9 +16,9 @@ function environments(st, ham::SumOfOperators)
 end
 
 #broadcast vs map?
-function environments(state, ham::LinearCombination)
-    return MultipleEnvironments(ham, broadcast(o -> environments(state, o), ham.opps))
-end;
+# function environments(state, ham::LinearCombination)
+#     return MultipleEnvironments(ham, broadcast(o -> environments(state, o), ham.opps))
+# end;
 
 function environments(
     st::WindowMPS,

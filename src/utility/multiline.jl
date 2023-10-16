@@ -40,3 +40,5 @@ function Base.circshift(A::Multiline, shifts::Tuple{Int,Int})
 end
 Base.reverse(A::Multiline) = Multiline(reverse(parent(A)))
 Base.only(A::Multiline) = only(parent(A))
+
+VectorInterface.scalartype(::Type{Multiline{T}}) where {T} = scalartype(T)

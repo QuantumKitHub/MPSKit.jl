@@ -15,7 +15,6 @@ Base.length(x::SumOfOperators) = prod(size(x))
 # singleton constructor
 SumOfOperators(x) = SumOfOperators([x])
 
-# handy constructor for SumOfOperators{MultipliedOperator} and backwards compatibility for LinearCombination
 function SumOfOperators(ops::AbstractVector, fs::AbstractVector)
     return SumOfOperators(map(MultipliedOperator, ops, fs))
 end
@@ -59,6 +58,7 @@ end
 
 # logic for derivatives
 (x::SumOfOperators)(y, t::Number) = sum(O -> O(y, t), x)
+(x::SumOfOperators{<:MultipliedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x))
 (x::SumOfOperators)(t::Number) = SumOfOperators(map(op -> op(t), x))
 (x::SumOfOperators)(y) = SumOfOperators(map(op -> op(y), x))
 

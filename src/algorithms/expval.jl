@@ -188,7 +188,7 @@ function expectation_value(ψ::MPSMultiline, O::MPOMultiline, ca::PerMPOInfEnv)
         retval[i, j] = @plansor leftenv(ca, i, j, ψ)[1 2; 3] *
             O[i, j][2 4; 6 5] *
             ψ.AC[i, j][3 6; 7] *
-            rightenv(ca, i, j, st)[7 5; 8] *
+            rightenv(ca, i, j, ψ)[7 5; 8] *
             conj(ψ.AC[i + 1, j][1 4; 8])
     end
     return retval

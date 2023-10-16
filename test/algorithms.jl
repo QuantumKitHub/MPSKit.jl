@@ -202,11 +202,13 @@ end
     end
 end
 
+
 @testset "quasiparticle_excitation" verbose = true begin
+    verbose = false
     @testset "infinite (ham)" begin
         H = repeat(force_planar(heisenberg_XXX()), 2)
         ψ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^48, ℙ^48])
-        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbose=false)
+        ψ, envs, _ = find_groundstate(ψ, H; maxiter=100, tol=1e-10, verbose)
         energies, Bs = excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ, envs)
         @test energies[1] ≈ 0.41047925 atol = 1e-4
         @test variance(Bs[1], H) < 1e-8
@@ -214,9 +216,14 @@ end
     @testset "infinite (mpo)" begin
         th = repeat(sixvertex(), 2)
         ts = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^10, ℂ^10])
-        (ts, envs, _) = leading_boundary(ts, th, VUMPS(; maxiter=400, verbose=false))
+        (ts, envs, _) = leading_boundary(ts, th, VUMPS(; maxiter=100, tol_galerkin=1e-10, verbose))
         (energies, Bs) = excitations(
-            th, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ts, envs; verbose=false
+            th,
+            QuasiparticleAnsatz(),
+            [0.0, Float64(pi / 2)],
+            ts,
+            envs;
+            verbose,
         )
         @test abs(energies[1]) > abs(energies[2]) # has a minima at pi/2
     end
@@ -224,13 +231,13 @@ end
     @testset "finite" begin
         th = force_planar(transverse_field_ising())
         ts = InfiniteMPS([ℙ^2], [ℙ^12])
-        (ts, envs, _) = find_groundstate(ts, th; maxiter=400, verbose=false)
+        (ts, envs, _) = find_groundstate(ts, th; maxiter=100, tol=1e-10, verbose)
         (energies, Bs) = excitations(th, QuasiparticleAnsatz(), 0.0, ts, envs)
         inf_en = energies[1]
 
         fin_en = map([20, 10]) do len
             ts = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^12)
-            (ts, envs, _) = find_groundstate(ts, th; verbose=false)
+            (ts, envs, _) = find_groundstate(ts, th; tol=1e-10, verbose)
 
             #find energy with quasiparticle ansatz
             (energies_QP, Bs) = excitations(th, QuasiparticleAnsatz(), ts, envs)
@@ -238,7 +245,7 @@ end
 
             #find energy with normal dmrg
             (energies_dm, _) = excitations(
-                th, FiniteExcited(; gsalg=DMRG(; verbose=false, tol=1e-6)), ts
+                th, FiniteExcited(; gsalg=DMRG(; verbose, tol=1e-6, maxiter=50)), ts
             )
             @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ts, th, envs)) atol =
                 1e-4
@@ -468,7 +475,7 @@ end
         st2, _ = approximate(st, (W2, st), VUMPS(; verbose=false))
         st3, _ = approximate(st, (W1, st), IDMRG1(; verbose=false))
         st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbose=false))
-        st5, _ = timestep(st, th, dt, TDVP())
+        st5, _ = timestep(st, th, 0.0, dt, TDVP())
         st6 = changebonds(W1 * st, SvdCut(; trscheme=truncdim(10)))
 
         @test abs(dot(st1, st5)) ≈ 1.0 atol = dt

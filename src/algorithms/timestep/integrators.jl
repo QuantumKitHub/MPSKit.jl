@@ -17,9 +17,14 @@ function integrate end
 _eval_t(f, t::Number) = Base.Fix2(f, t)
 _eval_x(f, x) = Base.Fix1(f, x)
 
-# time-independent effective hamiltonians
-_eval_t(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, t::Number) = h
-_eval_x(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, x) = t -> h(x)
+# TODO: properly clean up this mess
+const DerivativeOperator = Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}
+(h::DerivativeOperator)(x, ::Number) = h(x)
+
+_eval_t(h::DerivativeOperator, t::Number) = h
+_eval_x(h::DerivativeOperator, x) = t -> h(x)
+
+# _eval_x(h::SumOfOperators, x) = h(x)
 
 function integrate(f, y₀, t::Number, dt::Number, alg::Union{Arnoldi,Lanczos})
     y, convhist = exponentiate(_eval_t(f, t), dt, y₀, alg)

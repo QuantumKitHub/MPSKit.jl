@@ -96,6 +96,7 @@ include("environments/mpohaminfenv.jl")
 include("environments/multipleenv.jl")
 include("environments/qpenv.jl")
 include("environments/idmrgenv.jl")
+include("environments/lazylincocache.jl")
 
 abstract type Algorithm end
 
