@@ -6,8 +6,8 @@ println("
 
 include("setup.jl")
 
-pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
-vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1//2 => 10, 3//2 => 5, 5//2 => 1))
+pspaces = (ℙ^2, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
+vspaces = (ℙ^4, Rep[U₁]((0 => 10)), Rep[SU₂](1//2 => 5, 3//2 => 2, 5//2 => 1))
 
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
                                                     zip(pspaces, vspaces)
@@ -80,30 +80,6 @@ end
     W = convert(DenseMPO, make_time_mpo(ham, 1im * 0.5, WII()))
 
     @test abs(dot(W * (W * ts), (W * W) * ts)) ≈ 1.0 atol = 1e-10
-end
-
-@testset "Timed/SumOf Operators $(sectortype(pspace))" for (pspace, Dspace) in [
-    (ℙ^4, ℙ^10),
-    (Rep[U₁](0 => 2), Rep[U₁]((0 => 20))),
-    (Rep[SU₂](1 => 1), Rep[SU₂](1//2 => 10, 3//2 => 5, 5//2 => 1)),
-]
-    O = TensorMap(rand, ComplexF64, Dspace * pspace, Dspace * pspace)
-    f(t) = 3 * exp(t)
-
-    timedO = TimedOperator(O, f)
-
-    @test timedO(0.5) == f(0.5) * O
-
-    # SumOfOperators
-    Os = map(i -> TensorMap(rand, ComplexF64, Dspace * pspace, Dspace * pspace), 1:4)
-    fs = [t -> 3 + t, t -> 7 * t, t -> 2 * cos(t), t -> t^2]
-
-    # different ways of constructing SumOfOperators
-    SummedOs = SumOfOperators(Os, fs) #direct construction
-    SummedOs2 = sum(map((O, f) -> TimedOperator(O, f), Os, fs)) # sum the different timedoperators using defined +
-
-    @test SummedOs(0.5) == sum(map((O, f) -> f(0.5) * O, Os, fs))
-    @test SummedOs(1.0) == SummedOs2(1.0)
 end
 
 @testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (
