@@ -21,7 +21,8 @@ function expectation_value(
     return expectation_value(ψ, fill(O, length(ψ)))
 end
 function expectation_value(
-    ψ::Union{InfiniteMPS,WindowMPS,FiniteMPS}, opps::AbstractArray{<:AbstractTensorMap{S,1,1}}
+    ψ::Union{InfiniteMPS,WindowMPS,FiniteMPS},
+    opps::AbstractArray{<:AbstractTensorMap{S,1,1}},
 ) where {S}
     return map(zip(ψ.AC, opps)) do (ac, opp)
         tr(
@@ -61,17 +62,13 @@ function expectation_value(
     ut = fill_data!(similar(O[1], firstspace), one)
     @plansor v[-1 -2; -3] :=
         isomorphism(
-            storagetype(T),
-            left_virtualspace(ψ, at - 1),
-            left_virtualspace(ψ, at - 1),
+            storagetype(T), left_virtualspace(ψ, at - 1), left_virtualspace(ψ, at - 1)
         )[
             -1
             -3
         ] * conj(ut[-2])
     tmp =
-        v * TransferMatrix(
-            ψ.AL[at:(at + length(O) - 1)], O, ψ.AL[at:(at + length(O) - 1)]
-        )
+        v * TransferMatrix(ψ.AL[at:(at + length(O) - 1)], O, ψ.AL[at:(at + length(O) - 1)])
     return @plansor tmp[1 2; 3] *
         ut[2] *
         ψ.CR[at + length(O) - 1][3; 4] *
@@ -103,9 +100,7 @@ end
 function expectation_value(ψ::FiniteMPS, ham::MPOHamiltonian, envs::FinEnv)
     return expectation_value_fimpl(ψ, ham, envs)
 end
-function expectation_value_fimpl(
-    ψ::AbstractFiniteMPS, ham::MPOHamiltonian, envs::FinEnv
-)
+function expectation_value_fimpl(ψ::AbstractFiniteMPS, ham::MPOHamiltonian, envs::FinEnv)
     ens = zeros(scalartype(ψ), length(ψ))
     for i in 1:length(ψ), (j, k) in keys(ham[i])
         !((j == 1 && k != 1) || (k == ham.odim && j != ham.odim)) && continue
@@ -203,8 +198,6 @@ expectation_value(ψ::FiniteQP, O) = expectation_value(convert(FiniteMPS, ψ), O
 function expectation_value(ψ::FiniteQP, O::MPOHamiltonian)
     return expectation_value(convert(FiniteMPS, ψ), O)
 end
-
-
 
 # expectation_value(Ψ, op, t, args...) = expectation_value(Ψ, op, args...)
 

@@ -114,7 +114,6 @@ end
         @test envs.opp.data == envst.opp.data #check that env are the same, time-dep sits elsewhere
         @test f(3.0) .* expectation_value(Ψ, H) ≈ expectation_value(Ψ, Ht(3.0))
 
-
         ## time-dependence of derivatives
         hc = MPSKit.∂∂C(1, Ψ, H, envs)
         hct = MPSKit.∂∂C(1, Ψ, Ht, envst)
@@ -150,12 +149,12 @@ end
     @testset "Timed Sum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
         Envs = map(H -> environments(Ψ, H), Hs)
         summedEnvs = environments(Ψ, summedH)
-    
+
         expval1 = sum(zip(Hs, fs)) do (H, f)
             f(5.0) * expectation_value(Ψ, H)
         end
         expval2 = expectation_value(Ψ, summedH(5.0))
-        @test expval1 ≈ expval2 
+        @test expval1 ≈ expval2
 
         # test derivatives
         summedhct = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
@@ -185,7 +184,7 @@ end
     @testset "Untimed Sum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
         Envs = map(H -> environments(Ψ, H), Hs)
         summedEnvs = environments(Ψ, summedH)
-        
+
         expval1 = sum(zip(Hs, fs)) do (H, f)
             f * expectation_value(Ψ, H)
         end

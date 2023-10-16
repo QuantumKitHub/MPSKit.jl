@@ -11,7 +11,7 @@ algorithm for time evolution.
 - `finalize::F`: user-supplied function which is applied after each timestep, with
     signature `finalize(t, Ψ, H, envs) -> Ψ, envs`
 """
-@kwdef struct TDVP{A, F} <: Algorithm
+@kwdef struct TDVP{A,F} <: Algorithm
     integrator::A = Lanczos(; tol=Defaults.tol)
     tolgauge::Float64 = Defaults.tolgauge
     gaugemaxiter::Int = Defaults.maxiter
@@ -130,7 +130,7 @@ function timestep!(
     Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2, envs=environments(Ψ, H)
 )
     dτ = im * dt / 2
-    
+
     # sweep left to right
     for i in 1:(length(Ψ) - 1)
         ac2 = _transpose_front(Ψ.AC[i]) * _transpose_tail(Ψ.AR[i + 1])
@@ -153,7 +153,7 @@ function timestep!(
         ac2 = _transpose_front(Ψ.AL[i - 1]) * _transpose_tail(Ψ.AC[i])
         h_ac2 = ∂∂AC2(i - 1, Ψ, H, envs)
         nac2 = integrate(h_ac2, ac2, t, -dτ, alg.integrator)
-        
+
         nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
         Ψ.AC[i - 1] = (nal, complex(nc))
         Ψ.AC[i] = (complex(nc), _transpose_front(nar))

@@ -68,8 +68,6 @@ end
 
 Base.:*(x::SumOfOperators, v) = x(v)
 
-
-
 # (x::SumOfOperators)(y) = sum(op -> op(y), x)
 
 # (x::SumOfOperators)(y, t::Number) = x(t)(y)
