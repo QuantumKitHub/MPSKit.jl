@@ -50,7 +50,7 @@ makedocs(;
         "Examples" => "examples/index.md",
         "Library" => "lib/lib.md",
     ],
-    warnonly=true
+    warnonly=true,
 )
 
 deploydocs(; repo="github.com/maartenvd/MPSKit.jl.git")
