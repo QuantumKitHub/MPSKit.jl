@@ -21,7 +21,7 @@ A[-1, 1], A[1, 1], A[4, 5]
 
 # output
 
-(1, 1, 4)
+(1, 1, 3)
 ```
 
 See also [`PeriodicVector`](@ref), [`PeriodicMatrix`](@ref)

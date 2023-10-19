@@ -192,3 +192,20 @@ Keep in mind that the documentation is still a work in progress, and that some f
 not be fully documented yet. If you encounter any issues or have questions, please check the
 library's [issue tracker](https://github.com/maartenvd/MPSKit.jl/issues) on the GitHub
 repository and open a new issue.
+
+## Publications using MPSKit
+
+Below you can find a list of publications that have made use of MPSKit. If you have used
+this package and wish to have your publication added to this list, please open a pull
+request or an issue on the [GitHub repository](https://github.com/maartenvd/MPSKit.jl/).
+
+- R. Belyansky et al., *“High-Energy Collision of Quarks and Hadrons in the Schwinger Model: From Tensor Networks to Circuit QED,”* 2023, doi: 10.48550/ARXIV.2307.02522.
+- L. Devos, L. Vanderstraeten, and F. Verstraete, *“Haldane gap in the SU(3) [3 0 0] Heisenberg chain,”* Phys. Rev. B, vol. 106, no. 15, p. 155103, Oct. 2022, doi: 10.1103/PhysRevB.106.155103.
+- J. C. Halimeh, M. V. Damme, T. V. Zache, D. Banerjee, and P. Hauke, *“Achieving the quantum field theory limit in far-from-equilibrium quantum link models,”* Quantum, vol. 6, p. 878, Dec. 2022, doi: 10.22331/q-2022-12-19-878.
+- J. C. Halimeh, D. Trapin, M. Van Damme, and M. Heyl, *“Local measures of dynamical quantum phase transitions,”* Phys. Rev. B, vol. 104, no. 7, p. 075130, Aug. 2021, doi: 10.1103/PhysRevB.104.075130.
+- M. Hauru, M. Van Damme, and J. Haegeman, *“Riemannian optimization of isometric tensor networks,”* SciPost Physics, vol. 10, no. 2, p. 040, Feb. 2021, doi: 10.21468/SciPostPhys.10.2.040.
+- M. Van Damme, R. Vanhove, J. Haegeman, F. Verstraete, and L. Vanderstraeten, *“Efficient matrix product state methods for extracting spectral information on rings and cylinders,”* Phys. Rev. B, vol. 104, no. 11, p. 115142, Sep. 2021, doi: 10.1103/PhysRevB.104.115142.
+- M. Van Damme, T. V. Zache, D. Banerjee, P. Hauke, and J. C. Halimeh, *“Dynamical quantum phase transitions in spin-$S$ $\text{U}(1)$ quantum link models,”* Phys. Rev. B, vol. 106, no. 24, p. 245110, Dec. 2022, doi: 10.1103/PhysRevB.106.245110.
+- E. L. Weerda and M. Rizzi, *“Fractional quantum Hall states with variational Projected Entangled-Pair States: a study of the bosonic Harper-Hofstadter model,”* 2023, doi: 10.48550/ARXIV.2309.12811.
+- C. Yu and J.-W. Lee, *“Closing of the Haldane gap in a spin-1 XXZ chain,”* J. Korean Phys. Soc., vol. 79, no. 9, pp. 841–845, Nov. 2021, doi: 10.1007/s40042-021-00283-z.
+- Y. Zhang, A. Hulsch, H.-C. Zhang, W. Tang, L. Wang, and H.-H. Tu, *“Universal Scaling of Klein Bottle Entropy near Conformal Critical Points,”* Phys. Rev. Lett., vol. 130, no. 15, p. 151602, Apr. 2023, doi: 10.1103/PhysRevLett.130.151602.
