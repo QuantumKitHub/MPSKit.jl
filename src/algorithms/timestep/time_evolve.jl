@@ -20,7 +20,7 @@ function time_evolve(
 )
     for (t, dt) in zip(t_span[2:end], diff(t_span))
         elapsed = @elapsed ψ, envs = timestep(ψ, H, t, dt, alg, envs)
-        verbose && @info "Timestep iteration:" t elapsed
+        verbose && @info "Timestep iteration $(t): $(elapsed)"
         ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
     end
     return ψ, envs
@@ -30,7 +30,7 @@ function time_evolve!(
 )
     for (t, dt) in zip(t_span[2:end], diff(t_span))
         elapsed = @elapsed ψ, envs = timestep!(ψ, H, t, dt, alg, envs)
-        verbose && @info "Timestep iteration:" t elapsed
+        verbose && @info "Timestep iteration $(t): $(elapsed)"
         ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
     end
     return ψ, envs
