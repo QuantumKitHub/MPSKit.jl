@@ -21,7 +21,6 @@ const gauge_tolfactor = 1e-8
 const envs_tolfactor = 1e-5
 
 _finalize(iter, state, opp, envs) = (state, envs)
-_time_finalize(iter, state, opp, envs) = (state, envs, tobesaved)
 
 const linearsolver = GMRES(; tol, maxiter)
 const eigsolver = Arnoldi(; tol, maxiter, eager=true)
