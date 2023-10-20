@@ -1,5 +1,6 @@
 # Given a state and it's environments, we can act on it
 
+#make this into one struct?
 """
     Draft operators
 """
@@ -21,12 +22,16 @@ struct MPO_∂∂AC2{O,L,R}
     rightenv::R
 end
 
-Base.:*(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, v) = h(v);
+const DerivativeOperator = Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}
+
+Base.:*(h::DerivativeOperator, v) = h(v);
 
 (h::MPO_∂∂C)(x) = ∂C(x, h.leftenv, h.rightenv);
 (h::MPO_∂∂AC)(x) = ∂AC(x, h.o, h.leftenv, h.rightenv);
 (h::MPO_∂∂AC2)(x) = ∂AC2(x, h.o1, h.o2, h.leftenv, h.rightenv);
+(h::DerivativeOperator)(v, ::Number) = h(v)
 
+# can we reduce code duplication for ∂∂C,∂∂AC,∂∂AC2 by defining constructors for DerivativeOperator?
 # draft operator constructors
 function ∂∂C(pos::Int, mps, opp::Union{MPOHamiltonian,SparseMPO,DenseMPO}, cache)
     return MPO_∂∂C(leftenv(cache, pos + 1, mps), rightenv(cache, pos, mps))
