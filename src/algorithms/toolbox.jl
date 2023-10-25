@@ -70,14 +70,16 @@ function transfer_spectrum(
     return eigenvals
 end
 
-"
-Returns the (full) entanglement spectrum at site I
-"
+"""
+    entanglement_spectrum(ψ, site::Int=0) -> SectorDict{sectortype(ψ),Vector{<:Real}}
+
+Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
+matrix at that site. This is a dictionary mapping the charge to the singular value.
+"""
 function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS}, site::Int=0)
     @assert site <= length(st)
-
-    (_, S, _) = tsvd(st.CR[site])
-    return diag(convert(Array, S))
+    _, S, = tsvd(st.CR[site])
+    return TensorKit.SectorDict(c => real(diag(b)) for (c, b) in blocks(S))
 end
 
 """
