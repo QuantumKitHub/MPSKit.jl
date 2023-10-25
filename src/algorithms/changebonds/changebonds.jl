@@ -21,12 +21,12 @@ function _expand!(ψ::InfiniteMPS, AL′::PeriodicVector, AR′::PeriodicVector)
         # update AR: add vectors, make room for new vectors:
         # AR -> [AR 0; expansion 0]
         ar′ = _transpose_front(catcodomain(_transpose_tail(ψ.AR[i + 1]), AR′[i + 1]))
-        rz = zerovector!(similar(ar′, codomain(ar′) ← space(AR′[i + 1], 1)))
+        rz = zerovector!(similar(ar′, codomain(ar′) ← _firstspace(AR′[i + 2])))
         ψ.AR[i + 1] = catdomain(ar′, rz)
 
         # update C: add vectors, make room for new vectors:
         # C -> [C 0; 0 expansion]
-        l = zerovector!(similar(ψ.CR[i], codomain(ψ.CR[i]) ← space(AR′[i + 1], 1)))
+        l = zerovector!(similar(ψ.CR[i], codomain(ψ.CR[i]) ← _firstspace(AR′[i + 1])))
         ψ.CR[i] = catdomain(ψ.CR[i], l)
         r = zerovector!(similar(ψ.CR[i], _lastspace(AL′[i])' ← domain(ψ.CR[i])))
         ψ.CR[i] = catcodomain(ψ.CR[i], r)

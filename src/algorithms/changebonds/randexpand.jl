@@ -13,20 +13,21 @@ two-site MPS tensor, which is made orthogonal to the existing state.
 end
 
 function changebonds(ψ::InfiniteMPS, alg::RandExpand)
-    # determine optimal expansion spaces around bond i
-    AL′ = leftnull.(ψ.AL)
-    AR′ = circshift(rightnull!.(_transpose_tail.(ψ.AR)), -1)
-
+    T = eltype(ψ.AL)
+    AL′ = similar(ψ.AL)
+    AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
     for i in 1:length(ψ)
-        AC2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        AC2 = randomize!(AC2)
+        # determine optimal expansion spaces around bond i
+        AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
-        intermediate = adjoint(AL′[i]) * AC2 * adjoint(AR′[i])
+        VL = leftnull(ψ.AL[i])
+        VR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
+        intermediate = adjoint(VL) * AC2 * adjoint(VR)
         U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=SVD())
 
-        AL′[i] = AL′[i] * U
-        AR′[i] = V * AR′[i]
+        AL′[i] = VL * U
+        AR′[i + 1] = V * VR
     end
 
     return _expand(ψ, AL′, AR′)
