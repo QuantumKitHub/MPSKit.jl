@@ -18,6 +18,9 @@ quantum_pages = map(readdir(joinpath(example_dir, "quantum1d"))) do dir
     return joinpath("examples", "quantum1d", dir, "index.md")
 end
 
+# include MPSKit in all doctests
+DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit); recursive=true)
+
 makedocs(;
     modules=[MPSKit],
     sitename="MPSKit.jl",
@@ -47,6 +50,7 @@ makedocs(;
         "Examples" => "examples/index.md",
         "Library" => "lib/lib.md",
     ],
+    warnonly=true,
 )
 
 deploydocs(; repo="github.com/maartenvd/MPSKit.jl.git")

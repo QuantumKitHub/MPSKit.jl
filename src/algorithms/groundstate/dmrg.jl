@@ -20,30 +20,33 @@ Single site DMRG algorithm for finding groundstates.
 end
 
 function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environments(Ψ, H))
-    tol = alg.tol
-    maxiter = alg.maxiter
-    iter = 0
-    delta::Float64 = 2 * tol
+    t₀ = Base.time_ns()
+    ϵ::Float64 = 2 * alg.tol
 
-    while iter < maxiter && delta > tol
-        delta = 0.0
+    for iter in 1:(alg.maxiter)
+        global ϵ = 0.0
+        Δt = @elapsed begin
+            for pos in [1:(length(Ψ) - 1); length(Ψ):-1:2]
+                h = ∂∂AC(pos, Ψ, H, envs)
+                _, vecs = eigsolve(h, Ψ.AC[pos], 1, :SR, alg.eigalg)
+                ϵ = max(ϵ, calc_galerkin(Ψ, pos, envs))
+                Ψ.AC[pos] = vecs[1]
+            end
 
-        for pos in [1:(length(Ψ) - 1); length(Ψ):-1:2]
-            h = ∂∂AC(pos, Ψ, H, envs)
-            _, vecs = eigsolve(h, Ψ.AC[pos], 1, :SR, alg.eigalg)
-            delta = max(delta, calc_galerkin(Ψ, pos, envs))
-            Ψ.AC[pos] = vecs[1]
+            Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
         end
 
-        alg.verbose && @info "Iteraton $(iter) error $(delta)"
-        flush(stdout)
+        alg.verbose &&
+            @info "DMRG iteration:" iter ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
 
-        iter += 1
-
-        Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
+        ϵ <= alg.tol && break
+        iter == alg.maxiter &&
+            @warn "DMRG maximum iterations" iter ϵ λ = sum(expectation_value(Ψ, H, envs))
     end
 
-    return Ψ, envs, delta
+    Δt = (Base.time_ns() - t₀) / 1.0e9
+    alg.verbose && @info "DMRG summary:" ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
+    return Ψ, envs, ϵ
 end
 
 """
@@ -70,53 +73,62 @@ end
 end
 
 function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environments(Ψ, H))
-    tol = alg.tol
-    maxiter = alg.maxiter
-    iter = 0
-    delta::Float64 = 2 * tol
+    t₀ = Base.time_ns()
+    ϵ::Float64 = 2 * alg.tol
 
-    while iter < maxiter && delta > tol
-        delta = 0.0
+    for iter in 1:(alg.maxiter)
+        ϵ = 0.0
+        Δt = @elapsed begin
+            #left to right sweep
+            for pos in 1:(length(Ψ) - 1)
+                @plansor ac2[-1 -2; -3 -4] := Ψ.AC[pos][-1 -2; 1] * Ψ.AR[pos + 1][1 -4; -3]
 
-        #left to right sweep
-        for pos in 1:(length(Ψ) - 1)
-            @plansor ac2[-1 -2; -3 -4] := Ψ.AC[pos][-1 -2; 1] * Ψ.AR[pos + 1][1 -4; -3]
+                _, vecs = eigsolve(∂∂AC2(pos, Ψ, H, envs), ac2, 1, :SR, alg.eigalg)
+                newA2center = first(vecs)
 
-            _, vecs = eigsolve(∂∂AC2(pos, Ψ, H, envs), ac2, 1, :SR, alg.eigalg)
-            newA2center = first(vecs)
+                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
+                normalize!(c)
+                v = @plansor ac2[1 2; 3 4] *
+                    conj(al[1 2; 5]) *
+                    conj(c[5; 6]) *
+                    conj(ar[6; 3 4])
+                ϵ = max(ϵ, abs(1 - abs(v)))
 
-            al, c, ar, ϵ = tsvd(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
-            normalize!(c)
-            v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
-            delta = max(delta, abs(1 - abs(v)))
+                Ψ.AC[pos] = (al, complex(c))
+                Ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
+            end
 
-            Ψ.AC[pos] = (al, complex(c))
-            Ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
+            for pos in (length(Ψ) - 2):-1:1
+                @plansor ac2[-1 -2; -3 -4] := Ψ.AL[pos][-1 -2; 1] * Ψ.AC[pos + 1][1 -4; -3]
+
+                _, vecs = eigsolve(∂∂AC2(pos, Ψ, H, envs), ac2, 1, :SR, alg.eigalg)
+                newA2center = first(vecs)
+
+                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
+                normalize!(c)
+                v = @plansor ac2[1 2; 3 4] *
+                    conj(al[1 2; 5]) *
+                    conj(c[5; 6]) *
+                    conj(ar[6; 3 4])
+                ϵ = max(ϵ, abs(1 - abs(v)))
+
+                Ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
+                Ψ.AC[pos] = (al, complex(c))
+            end
+
+            Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
         end
 
-        for pos in (length(Ψ) - 2):-1:1
-            @plansor ac2[-1 -2; -3 -4] := Ψ.AL[pos][-1 -2; 1] * Ψ.AC[pos + 1][1 -4; -3]
+        alg.verbose && @info "DMRG iteration:" iter ϵ λ = expectation_value(Ψ, H, envs) Δt
 
-            _, vecs = eigsolve(∂∂AC2(pos, Ψ, H, envs), ac2, 1, :SR, alg.eigalg)
-            newA2center = first(vecs)
-
-            al, c, ar, ϵ = tsvd(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
-            normalize!(c)
-            v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
-            delta = max(delta, abs(1 - abs(v)))
-
-            Ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
-            Ψ.AC[pos] = (al, complex(c))
-        end
-
-        alg.verbose && @info "Iteraton $(iter) error $(delta)"
-        flush(stdout)
-        #finalize
-        Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
-        iter += 1
+        ϵ <= alg.tol && break
+        iter == alg.maxiter &&
+            @warn "DMRG maximum iterations" iter ϵ λ = expectation_value(Ψ, H, envs)
     end
 
-    return Ψ, envs, delta
+    Δt = (Base.time_ns() - t₀) / 1.0e9
+    alg.verbose && @info "DMRG summary:" ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
+    return Ψ, envs, ϵ
 end
 
 function find_groundstate(Ψ, H, alg::Union{DMRG,DMRG2}, envs...)

@@ -1,6 +1,8 @@
 # MPSMultiline
 # ------------
-"""
+const MPSMultiline = Multiline{<:InfiniteMPS}
+
+@doc """
     const MPSMultiline = Multiline{<:InfiniteMPS}
 
 Type that represents multiple lines of `InfiniteMPS` objects.
@@ -16,12 +18,13 @@ Type that represents multiple lines of `InfiniteMPS` objects.
 
 See also: [`Multiline`](@ref)
 """
-const MPSMultiline = Multiline{<:InfiniteMPS}
+function MPSMultiline end
+
 MPSMultiline(mpss::AbstractVector{<:InfiniteMPS}) = Multiline(mpss)
 function MPSMultiline(
     pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...
 ) where {S<:VectorSpace}
-    data = map(eachrow(pspaces), eachrow(Dspaces)) do (p, D)
+    data = map(eachrow(pspaces), eachrow(Dspaces)) do p, D
         return InfiniteMPS(p, D; kwargs...)
     end
     return MPSMultiline(data)

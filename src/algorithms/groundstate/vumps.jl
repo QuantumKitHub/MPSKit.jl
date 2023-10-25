@@ -35,11 +35,11 @@ https://arxiv.org/abs/1701.07035.
     gauge_tolfactor::Float64 = Defaults.gauge_tolfactor
 end
 
-function updatetols(alg::VUMPS, iter, ε)
+function updatetols(alg::VUMPS, iter, ϵ)
     if alg.dynamical_tols
-        tol_eigs = between(alg.tol_min, ε * alg.eigs_tolfactor / sqrt(iter), alg.tol_max)
-        tol_envs = between(alg.tol_min, ε * alg.envs_tolfactor / sqrt(iter), alg.tol_max)
-        tol_gauge = between(alg.tol_min, ε * alg.gauge_tolfactor / sqrt(iter), alg.tol_max)
+        tol_eigs = between(alg.tol_min, ϵ * alg.eigs_tolfactor / sqrt(iter), alg.tol_max)
+        tol_envs = between(alg.tol_min, ϵ * alg.envs_tolfactor / sqrt(iter), alg.tol_max)
+        tol_gauge = between(alg.tol_min, ϵ * alg.gauge_tolfactor / sqrt(iter), alg.tol_max)
     else # preserve legacy behavior
         tol_eigs = alg.tol_galerkin / 10
         tol_envs = Defaults.tol
@@ -56,11 +56,11 @@ end
 
 function find_groundstate(Ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(Ψ, H))
     t₀ = Base.time_ns()
-    ε::Float64 = calc_galerkin(Ψ, envs)
+    ϵ::Float64 = calc_galerkin(Ψ, envs)
     temp_ACs = similar.(Ψ.AC)
 
     for iter in 1:(alg.maxiter)
-        tol_eigs, tol_envs, tol_gauge = updatetols(alg, iter, ε)
+        tol_eigs, tol_envs, tol_gauge = updatetols(alg, iter, ϵ)
         Δt = @elapsed begin
             eigalg = Arnoldi(; tol=tol_eigs)
 
@@ -83,21 +83,20 @@ function find_groundstate(Ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(Ψ, 
 
             Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
 
-            ε = calc_galerkin(Ψ, envs)
+            ϵ = calc_galerkin(Ψ, envs)
         end
 
         alg.verbose &&
-            @info "VUMPS iteration:" iter ε λ = sum(expectation_value(Ψ, H, envs)) Δt
+            @info "VUMPS iteration:" iter ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
 
-        ε <= alg.tol_galerkin && break
+        ϵ <= alg.tol_galerkin && break
         iter == alg.maxiter &&
-            @warn "VUMPS maximum iterations" iter ε λ = sum(expectation_value(Ψ, H, envs)) Δt
+            @warn "VUMPS maximum iterations" iter ϵ λ = sum(expectation_value(Ψ, H, envs))
     end
 
-    alg.verbose && @info "VUMPS summary:" ε λ = sum(expectation_value(Ψ, H, envs)) Δt = (
-        (Base.time_ns() - t₀) / 1.0e9
-    )
-    return Ψ, envs, ε
+    Δt = (Base.time_ns() - t₀) / 1.0e9
+    alg.verbose && @info "VUMPS summary:" ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
+    return Ψ, envs, ϵ
 end
 
 function _vumps_localupdate!(AC′, loc, Ψ, H, envs, eigalg, factalg=QRpos())
