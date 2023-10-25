@@ -23,11 +23,11 @@ function changebonds(ψ::InfiniteMPS, H, alg::OptimalExpand, envs=environments(�
         AC2 = ∂∂AC2(i, ψ, H, envs) * AC2
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
-        intermediate = adjoint(AL′[i]) * AC2 * adjoint(AR′[i])
+        intermediate = adjoint(AL′[i]) * AC2 * adjoint(AR′[i+1])
         U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=SVD())
 
         AL′[i] = AL′[i] * U
-        AR′[i] = V * AR′[i]
+        AR′[i+1] = V * AR′[i+1]
     end
 
     newψ = _expand(ψ, AL′, AR′)
