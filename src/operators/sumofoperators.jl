@@ -20,7 +20,7 @@ function SumOfOperators(ops::AbstractVector, fs::AbstractVector)
 end
 
 # evaluating at t should return object of type(object.opp)
-(x::SumOfOperators)(t::Number) = SumOfOperators( map(O -> O(t), x))
+(x::SumOfOperators)(t::Number) = SumOfOperators(map(O -> O(t), x))
 
 # we can add operators to SumOfOperators by using +
 function Base.:+(op1::MultipliedOperator{O,F}, op2::MultipliedOperator{O,G}) where {O,F,G}

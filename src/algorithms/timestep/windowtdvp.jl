@@ -91,10 +91,7 @@ function rightexpand(
 
     if minimum([minimum(diag(v)) for (k, v) in blocks(S)]) > singval
         (nst, _) = changebonds(
-            st.right_gs,
-            H,
-            OptimalExpand(; trscheme=truncbelow(singval, growspeed)),
-            Envs,
+            st.right_gs, H, OptimalExpand(; trscheme=truncbelow(singval, growspeed)), Envs
         )
 
         v = TensorMap(
@@ -148,7 +145,9 @@ function timestep!(
     Ψ.AC[end] = integrate(h_ac, Ψ.AC[end], t, dt / 2, alg.integrator)
 
     if rightevolve
-        nright, _ = timestep(Ψ.right_gs, H.right, t + dt, dt, alg, env.right; leftorthflag=false) # env gets updated in place
+        nright, _ = timestep(
+            Ψ.right_gs, H.right, t + dt, dt, alg, env.right; leftorthflag=false
+        ) # env gets updated in place
         _update_rightEnv!(nright, env)
     else
         nright = Ψ.right_gs

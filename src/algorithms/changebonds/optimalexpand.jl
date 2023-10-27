@@ -45,6 +45,10 @@ function changebonds(ψ::MPSMultiline, H, alg::OptimalExpand, envs=environments(
     AL′ = PeriodicArray(leftnull.(ψ.AL))
     AR′ = PeriodicArray(circshift(rightnull!.(_transpose_tail.(ψ.AR)), (0, -1)))
 
+    T = eltype(ψ.AL)
+    AL′ = similar(ψ.AL)
+    AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
+
     # determine optimal expansion spaces around bond i
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
         AC2 = _transpose_front(ψ.AC[i - 1, j]) * _transpose_tail(ψ.AR[i - 1, j + 1])

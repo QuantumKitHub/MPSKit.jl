@@ -217,7 +217,8 @@ function expectation_value(
 end
 function expectation_value(
     Ψ::WindowMPS, ops::SumOfOperators, envs::MultipleEnvironments=environments(Ψ, ops)
-)   expvals = map(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
+)
+    expvals = map(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
     return sum.(zip(expvals...)) #changes type though
 end
 

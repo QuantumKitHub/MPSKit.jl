@@ -43,7 +43,6 @@ function Base.:*(op::TimedOperator, b::Number)
 end
 Base.:*(b::Number, op::MultipliedOperator) = op * b
 
-
 # logic for derivatives
 
 #(x::MultipliedOperator{<:Any,<:Number})(y, ::Number) = x.f * x.op(y)
