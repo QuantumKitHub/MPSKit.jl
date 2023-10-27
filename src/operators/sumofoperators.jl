@@ -19,11 +19,15 @@ function SumOfOperators(ops::AbstractVector, fs::AbstractVector)
     return SumOfOperators(map(MultipliedOperator, ops, fs))
 end
 
+# evaluating at t should return object of type(object.opp)
+(x::SumOfOperators)(t::Number) = SumOfOperators( map(O -> O(t), x))
+
 # we can add operators to SumOfOperators by using +
 function Base.:+(op1::MultipliedOperator{O,F}, op2::MultipliedOperator{O,G}) where {O,F,G}
     return SumOfOperators([op1, op2])
 end
 
+# under review
 # this we could also do with promote
 function Base.:+(op1::TimedOperator{O}, op2::Union{O,UntimedOperator{O}}) where {O}
     return SumOfOperators(TimedOperator{O}[op1, TimedOperator(op2)])
@@ -57,9 +61,9 @@ function Base.:+(op::O, SumOfOps::SumOfOperators{T}) where {O,T<:MultipliedOpera
 end
 
 # logic for derivatives
-(x::SumOfOperators)(y, t::Number) = sum(O -> O(y, t), x)
-(x::SumOfOperators{<:MultipliedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x))
-(x::SumOfOperators)(t::Number) = SumOfOperators(map(op -> op(t), x))
-(x::SumOfOperators)(y) = SumOfOperators(map(op -> op(y), x))
 
-Base.:*(x::SumOfOperators, v) = x(v)
+#(x::SumOfOperators{<:MultipliedOperator})(t::Number) = SumOfOperators(map(op -> op(t), x))
+
+#(x::SumOfOperators)(y) = SumOfOperators(map(op -> op(y), x))
+
+#Base.:*(x::SumOfOperators, v) = x(v)
