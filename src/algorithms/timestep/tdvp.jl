@@ -29,16 +29,15 @@ function timestep(
 )
     temp_ACs = similar(Ψ.AC)
     temp_CRs = similar(Ψ.CR)
-    dτ = -im * dt
     @sync for (loc, (ac, c)) in enumerate(zip(Ψ.AC, Ψ.CR))
         Threads.@spawn begin
-            h_ac = MPSKit.∂∂AC(loc, Ψ, H, envs)
-            temp_ACs[loc] = integrate(h_ac, ac, t, dτ, alg.integrator)
+            h_ac = ∂∂AC(loc, Ψ, H, envs)
+            temp_ACs[loc] = integrate(h_ac, ac, t, dt, alg.integrator)
         end
 
         Threads.@spawn begin
-            h_c = MPSKit.∂∂C(loc, Ψ, H, envs)
-            temp_CRs[loc] = integrate(h_c, c, t, dτ, alg.integrator)
+            h_c = ∂∂C(loc, Ψ, H, envs)
+            temp_CRs[loc] = integrate(h_c, c, t, dt, alg.integrator)
         end
     end
 
@@ -73,33 +72,32 @@ function timestep!(
     alg::TDVP,
     envs::Union{Cache,MultipleEnvironments}=environments(Ψ, H),
 )
-    dτ = im * dt / 2
 
     # sweep left to right
     for i in 1:(length(Ψ) - 1)
         h_ac = ∂∂AC(i, Ψ, H, envs)
-        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t, -dτ, alg.integrator)
+        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t, dt / 2, alg.integrator)
 
         h_c = ∂∂C(i, Ψ, H, envs)
-        Ψ.CR[i] = integrate(h_c, Ψ.CR[i], t, dτ, alg.integrator)
+        Ψ.CR[i] = integrate(h_c, Ψ.CR[i], t, -dt / 2, alg.integrator)
     end
 
     # edge case
     h_ac = ∂∂AC(length(Ψ), Ψ, H, envs)
-    Ψ.AC[end] = integrate(h_ac, Ψ.AC[end], t, -dτ, alg.integrator)
+    Ψ.AC[end] = integrate(h_ac, Ψ.AC[end], t, dt / 2, alg.integrator)
 
     # sweep right to left
     for i in length(Ψ):-1:2
         h_ac = ∂∂AC(i, Ψ, H, envs)
-        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t + dt / 2, -dτ, alg.integrator)
+        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
 
         h_c = ∂∂C(i - 1, Ψ, H, envs)
-        Ψ.CR[i - 1] = integrate(h_c, Ψ.CR[i - 1], t + dt / 2, dτ, alg.integrator)
+        Ψ.CR[i - 1] = integrate(h_c, Ψ.CR[i - 1], t + dt / 2, -dt / 2, alg.integrator)
     end
 
     # edge case
     h_ac = ∂∂AC(1, Ψ, H, envs)
-    Ψ.AC[1] = integrate(h_ac, Ψ.AC[1], t + dt / 2, -dτ, alg.integrator)
+    Ψ.AC[1] = integrate(h_ac, Ψ.AC[1], t + dt / 2, dt / 2, alg.integrator)
 
     return Ψ, envs
 end
@@ -129,13 +127,12 @@ end
 function timestep!(
     Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2, envs=environments(Ψ, H)
 )
-    dτ = im * dt / 2
 
     # sweep left to right
     for i in 1:(length(Ψ) - 1)
         ac2 = _transpose_front(Ψ.AC[i]) * _transpose_tail(Ψ.AR[i + 1])
         h_ac2 = ∂∂AC2(i, Ψ, H, envs)
-        nac2 = integrate(h_ac2, ac2, t, -dτ, alg.integrator)
+        nac2 = integrate(h_ac2, ac2, t, dt / 2, alg.integrator)
 
         nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
         Ψ.AC[i] = (nal, complex(nc))
@@ -143,7 +140,7 @@ function timestep!(
 
         if i != (length(Ψ) - 1)
             Ψ.AC[i + 1] = integrate(
-                ∂∂AC(i + 1, Ψ, H, envs), Ψ.AC[i + 1], t, dτ, alg.integrator
+                ∂∂AC(i + 1, Ψ, H, envs), Ψ.AC[i + 1], t, -dt / 2, alg.integrator
             )
         end
     end
@@ -152,7 +149,7 @@ function timestep!(
     for i in length(Ψ):-1:2
         ac2 = _transpose_front(Ψ.AL[i - 1]) * _transpose_tail(Ψ.AC[i])
         h_ac2 = ∂∂AC2(i - 1, Ψ, H, envs)
-        nac2 = integrate(h_ac2, ac2, t, -dτ, alg.integrator)
+        nac2 = integrate(h_ac2, ac2, t + dt / 2,  dt / 2, alg.integrator)
 
         nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
         Ψ.AC[i - 1] = (nal, complex(nc))
@@ -160,7 +157,7 @@ function timestep!(
 
         if i != 2
             Ψ.AC[i - 1] = integrate(
-                ∂∂AC(i - 1, Ψ, H, envs), Ψ.AC[i - 1], t, dτ, alg.integrator
+                ∂∂AC(i - 1, Ψ, H, envs), Ψ.AC[i - 1], t + dt / 2,  -dt / 2, alg.integrator
             )
         end
     end
