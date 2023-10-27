@@ -199,8 +199,7 @@ function expectation_value(ψ::FiniteQP, O::MPOHamiltonian)
     return expectation_value(convert(FiniteMPS, ψ), O)
 end
 
-# expectation_value(Ψ, op, t, args...) = expectation_value(Ψ, op, args...)
-
+# more specific typing to account for onsite operators, array of operators, ...
 # define expectation_value for MultipliedOperator as scalar multiplication of the non-multiplied result, instead of multiplying the operator itself
 
 function expectation_value(ψ, op::UntimedOperator, args...)
@@ -215,6 +214,11 @@ function expectation_value(
     Ψ, ops::SumOfOperators, envs::MultipleEnvironments=environments(Ψ, ops)
 )
     return sum(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
+end
+function expectation_value(
+    Ψ::WindowMPS, ops::SumOfOperators, envs::MultipleEnvironments=environments(Ψ, ops)
+)   expvals = map(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
+    return sum.(zip(expvals...)) #changes type though
 end
 
 # define expectation_value for Window
