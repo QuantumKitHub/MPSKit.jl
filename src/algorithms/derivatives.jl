@@ -332,6 +332,10 @@ function ∂∂AC2(pos::Int, state, opp::ProjectionOperator, env)
 end
 
 # MultipliedOperator and SumOfOperators
+(x::TimedOperator{<:DerivativeOperator})(y, t::Number) = x.f(t) * x.op(y)
+(x::MultipliedOperator{<:DerivativeOperator,<:Any})(y, ::Number) = x.f * x.op(y)
+(x::SumOfOperators{M})(y, t::Number) where {M<:MultipliedOperator{<:MPSKit.DerivativeOperator,<:Any}} = sum(O -> O(y, t), x)
+
 function ∂∂C(pos::Int, mps, opp::MultipliedOperator, cache)
     return MultipliedOperator(∂∂C(pos::Int, mps, opp.op, cache), opp.f)
 end
