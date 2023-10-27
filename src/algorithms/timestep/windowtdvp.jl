@@ -48,7 +48,6 @@ end
 function leftexpand(
     st::WindowMPS,
     H::Union{<:MultipliedOperator,<:SumOfOperators},
-    t::Number,
     Envs;
     singval=1e-2,
     growspeed=10,
@@ -57,7 +56,7 @@ function leftexpand(
 
     if minimum([minimum(diag(v)) for (k, v) in blocks(S)]) > singval
         (nst, _) = changebonds(
-            st.left_gs, H(t), OptimalExpand(; trscheme=truncbelow(singval, growspeed)), Envs
+            st.left_gs, H, OptimalExpand(; trscheme=truncbelow(singval, growspeed)), Envs
         )
 
         # the AL-bond dimension changed, and therefore our window also needs updating
@@ -84,7 +83,6 @@ end
 function rightexpand(
     st::WindowMPS,
     H::Union{<:MultipliedOperator,<:SumOfOperators},
-    t::Number,
     Envs;
     singval=1e-2,
     growspeed=10,
@@ -94,7 +92,7 @@ function rightexpand(
     if minimum([minimum(diag(v)) for (k, v) in blocks(S)]) > singval
         (nst, _) = changebonds(
             st.right_gs,
-            H(t),
+            H,
             OptimalExpand(; trscheme=truncbelow(singval, growspeed)),
             Envs,
         )
@@ -129,7 +127,6 @@ function timestep!(
     leftevolve=true,
     rightevolve=true,
 )
-    dτ = im * dt / 2
     #first evolve left state
     if leftevolve
         nleft, _ = timestep(Ψ.left_gs, H.left, t, dt, alg, env.left; leftorthflag=true) #env gets updated in place
@@ -138,23 +135,20 @@ function timestep!(
         nleft = Ψ.left_gs
     end
 
-    # some Notes
-    # - at what time do we evaluate h_ac and c? at t, t+dt/4 ? do we take both at the same time? integrate itself already evaluates at t+dt/2 I think
-
     # left to right sweep on window
     for i in 1:(length(Ψ) - 1)
         h_ac = ∂∂AC(i, Ψ, H.middle, env.middle)
-        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t, -dτ, alg.integrator)
+        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t, dt / 2, alg.integrator)
 
         h_c = ∂∂C(i, Ψ, H.middle, env.middle)
-        Ψ.CR[i] = integrate(h_c, Ψ.CR[i], t, -dτ, alg.integrator)
+        Ψ.CR[i] = integrate(h_c, Ψ.CR[i], t, -dt / 2, alg.integrator)
     end
 
     h_ac = ∂∂AC(length(Ψ), Ψ, H.middle, env.middle)
-    Ψ.AC[end] = integrate(h_ac, Ψ.AC[end], t, -dτ, alg.integrator)
+    Ψ.AC[end] = integrate(h_ac, Ψ.AC[end], t, dt / 2, alg.integrator)
 
     if rightevolve
-        nright, _ = timestep(Ψ.right_gs, H.right, t, dt, alg, env.right; leftorthflag=false) # env gets updated in place
+        nright, _ = timestep(Ψ.right_gs, H.right, t + dt, dt, alg, env.right; leftorthflag=false) # env gets updated in place
         _update_rightEnv!(nright, env)
     else
         nright = Ψ.right_gs
@@ -163,14 +157,14 @@ function timestep!(
     # right to left sweep on window
     for i in length(Ψ):-1:2
         h_ac = ∂∂AC(i, Ψ, H.middle, env.middle)
-        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t + dt / 2, -dτ, alg.integrator)
+        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
 
         h_c = ∂∂C(i - 1, Ψ, H.middle, env.middle)
-        Ψ.CR[i - 1] = integrate(h_c, Ψ.CR[i - 1], t + dt / 2, -dτ, alg.integrator)
+        Ψ.CR[i - 1] = integrate(h_c, Ψ.CR[i - 1], t + dt / 2, -dt / 2, alg.integrator)
     end
 
     h_ac = ∂∂AC(1, Ψ, H.middle, env.middle)
-    Ψ.AC[1] = integrate(h_ac, Ψ.AC[1], t, -dτ, alg.integrator)
+    Ψ.AC[1] = integrate(h_ac, Ψ.AC[1], t, dt / 2, alg.integrator)
 
     return WindowMPS(nleft, Ψ.window, nright), env
 end
@@ -193,7 +187,7 @@ function timestep!(
     # first evolve left state
     if leftevolve
         # expand the bond dimension using changebonds
-        nleft, _ = leftexpand(Ψ, H.left, t, env.left; kwargs...)
+        nleft, _ = leftexpand(Ψ, H.left(t), env.left; kwargs...)
         # fill it by doing regular TDVP
         nleft, _ = timestep(
             nleft, H.left, t, dt, singleTDVPalg, env.left; leftorthflag=true
@@ -207,7 +201,7 @@ function timestep!(
     for i in 1:(length(Ψ) - 1)
         h_ac2 = ∂∂AC2(i, Ψ, H.middle, env.middle)
         ac2 = Ψ.AC[i] * _transpose_tail(Ψ.AR[i + 1])
-        ac2 = integrate(h_ac2, ac2, t, -dτ, alg.integrator)
+        ac2 = integrate(h_ac2, ac2, t, dt / 2, alg.integrator)
 
         U, S, V, = tsvd!(ac2; alg=TensorKit.SVD(), trunc=alg.trscheme)
 
@@ -216,16 +210,16 @@ function timestep!(
 
         if i < length(Ψ) - 1
             h_ac = ∂∂AC(i + 1, Ψ, H.middle, env.middle)
-            Ψ.AC[i + 1] = integrate(h_ac, Ψ.AC[i + 1], t, -dτ, alg.integrator)
+            Ψ.AC[i + 1] = integrate(h_ac, Ψ.AC[i + 1], t, -dt / 2, alg.integrator)
         end
     end
 
     if rightevolve
         # expand the bond dimension using changebonds
-        nright, _ = rightexpand(Ψ, H.right, t, env.right; kwargs...)
+        nright, _ = rightexpand(Ψ, H.right(t), env.right; kwargs...)
         # fill it by doing regular TDVP
         nright, _ = timestep(
-            nright, H.right, t, dt, singleTDVPalg, env.right; leftorthflag=false
+            nright, H.right, t + dt, dt, singleTDVPalg, env.right; leftorthflag=false
         ) #env gets updated in place
         _update_rightEnv!(nright, env)
     else
@@ -236,7 +230,7 @@ function timestep!(
     for i in length(Ψ):-1:2
         h_ac2 = ∂∂AC2(i - 1, Ψ, H.middle, env.middle)
         ac2 = Ψ.AL[i - 1] * _transpose_tail(Ψ.AC[i])
-        ac2 = integrate(h_ac2, ac2, t + dt / 2, -dτ, alg.integrator)
+        ac2 = integrate(h_ac2, ac2, t + dt / 2, dt / 2, alg.integrator)
         U, S, V, = tsvd!(ac2; alg=TensorKit.SVD(), trunc=alg.trscheme)
 
         Ψ.AC[i - 1] = (U, S)
@@ -244,7 +238,7 @@ function timestep!(
 
         if i > 2
             h_ac = ∂∂AC(i - 1, Ψ, H.middle, env.middle)
-            Ψ.AC[i - 1] = integrate(h_ac, Ψ.AC[i - 1], t + dt / 2, -dτ, alg.integrator)
+            Ψ.AC[i - 1] = integrate(h_ac, Ψ.AC[i - 1], t + dt / 2, -dt / 2, alg.integrator)
         end
     end
 
