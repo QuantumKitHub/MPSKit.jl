@@ -30,14 +30,14 @@ end
         @test !isnan(sum(entropy(ts)))
         @test !isnan(sum(entropy(ts, 2)))
     end
-    
+
     @testset "changebonds with unitcells" begin
         ψ = InfiniteMPS([ℂ^2, ℂ^2, ℂ^2], [ℂ^2, ℂ^3, ℂ^4])
         H = repeat(transverse_field_ising(), 3)
         ψ1, envs = changebonds(ψ, H, OptimalExpand(; trscheme=truncdim(2)))
         @test ψ1 isa InfiniteMPS
         @test norm(ψ1) ≈ 1
-        
+
         ψ2 = changebonds(ψ, RandExpand(; trscheme=truncdim(2)))
         @test ψ2 isa InfiniteMPS
         @test norm(ψ2) ≈ 1
