@@ -1,16 +1,3 @@
-"""
-    approximate(state::InfiniteMPS, toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS}, alg, envs = environments(state,toapprox))
-    approximate(state::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::VUMPS, envs = environments(state,toapprox))
-    approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::IDMRG1, oenvs = environments(ost,toapprox))
-    approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline}, alg::IDMRG2, oenvs = environments(ost,toapprox))
-
-    Approximate an infinite MPO-MPS state (a state obtained by applying an iMPO to an iMPS) by an iMPS with a smaller bond dimension.
-
-    - The MPO-MPS state to be truncated is provided in `toapprox`, and the truncated state is initialized by the input `state`. The iMPO and iMPS can be periodic in the vertical direction (using `MPOMultiline` and `MPSMultiline`).
-    - The truncation algorithm can be chosen among `VUMPS`, `IDMRG1`, `IDMRG2`. 
-"""
-function approximate end
-
 function approximate(
     state::InfiniteMPS,
     toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS},
