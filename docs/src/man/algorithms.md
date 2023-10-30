@@ -114,8 +114,8 @@ two algorithms are available, corresponding to different orders of precision. It
 ```julia
 state = InfiniteMPS([ℂ^2],[ℂ^10]);
 operator = nonsym_ising_ham();
-mpo = make_time_mpo(operator,0.1,WII());
-approximate(state,(state,mpo),VUMPS())
+mpo = make_time_mpo(operator, 0.1, WII());
+approximate(state, (mpo, state), VUMPS())
 ```
 
 This feature is at the moment not very well supported.
@@ -192,15 +192,15 @@ ts = InfiniteMPS([ℂ^2],[ℂ^20]);
 
 if the mpo satisfies certain properties (positive and hermitian), it may also be possible to use GradientGrassmann.
 
-## approximate
+## `approximate`
 
-Sometimes we want to approximate the product of an MPO and a state by another state (for example during time evolution). The call signature is
+Often, it is useful to approximate a given MPS by another, typically by one of a different
+bond dimension. This is achieved by approximating an application of an MPO to the initial
+state, by a new state.
 
-```julia
-    approximate(initial_guess,(state,mpo),alg)
+```@docs; canonical=false
+approximate
 ```
-
-for finite systems alg can be Dmrg,Dmrg2 while for infinite systems we have Idmrg1,Idmrg2 and VUMPS. It's important to mention that the actual implementation differs a bit from the usual  Dmrg,Dmrg2,... for energy minimization but is rather inspired by it. For example, calling approximate with VUMPS actually uses an algorithm that has been described as [VOMPS](https://scipost.org/submissions/scipost_202008_00013v1/).
 
 ## Varia
 
