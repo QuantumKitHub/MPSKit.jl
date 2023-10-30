@@ -148,37 +148,47 @@ ts = FiniteMPS(10,ℂ^2,ℂ^12);
 (energies,Bs) = excitations(th,FiniteExcited(),ts,envs);
 ```
 
-## changebonds
+## `changebonds`
 
-### optimal expand
+Many of the previously mentioned algorithms do not possess a way to dynamically change to
+bond dimension. This is often a problem, as the optimal bond dimension is often not a priori
+known, or needs to increase because of entanglement growth throughout the course of a
+simulation. [`changebonds`](@ref) exposes a way to change the bond dimension of a given
+state, without altering the state itself.
 
-One possible way to expand the bond dimension is described in the [original VUMPS paper](https://arxiv.org/abs/1701.07035). The idea is to look at the 2site derivative and add the most important blocks orthogonal to the current MPS. From the point of view of a local 2site update, this procedure is 'optimal'.
-
-The state will remain physically unchanged, but a one-site scheme will now be able to push the optimization further.
-
-```julia
-th = nonsym_ising_ham()
-ts = FiniteMPS(10,ℂ^2,ℂ^12);
-changebonds(ts,OptimalExpand(trscheme = truncdim(1))) # expand the bond dimension by 1
+```@docs; canonical=false
+changebonds
 ```
 
-### random expand
+There are several different algorithms implemented, each having their own advantages and
+disadvantages:
 
-This algorithm is almost identical to optimal expand, except we don't try to do anything 'clever'. The unitary blocks that get added are chosen at random.
+* [`SvdCut`](@ref): The simplest method for changing the bonddimension is found by simply
+  locally truncating the state using an SVD decomposition. This yields a (locally) optimal
+  truncation, but clearly cannot be used to increase the bond dimension. Note that a
+  globally optimal truncation can be obtained by using the [`SvdCut`](@ref) algorithm in
+  combination with [`approximate`](@ref). The state will remain largely unchanged.
 
-### svd cut
+* [`OptimalExpand`](@ref): This algorithm is based on the idea of expanding the bond
+  dimension by investigating the two-site derivative, and adding the most important blocks
+  which are orthogonal to the current state. From the point of view of a local two-site
+  update, this procedure is *optimal*, but it requires to evaluate a two-site derivative,
+  which can be costly when the physical space is large. The state will remain unchanged, but
+  a one-site scheme will now be able to push the optimization further.
 
-It is possible to truncate a state using the svd decomposition, this is implemented in svdcut.
+* [`RandExpand`](@ref): This algorithm similarly adds blocks orthogonal to the current
+  state, but does not attempt to select the most important ones, and rather just selects
+  them at random. The advantage here is that this is much cheaper than the optimal expand,
+  and if the bond dimension is grown slow enough, this still obtains a very good expansion
+  scheme. Again, the state will remain unchanged, and a one-site scheme will be able to push
+  the optimization further.
 
-```julia
-th = nonsym_ising_ham()
-ts = FiniteMPS(10,ℂ^2,ℂ^12);
-changebonds(ts,SvdCut(trscheme = truncdim(10))) # truncate the state to one with bond dimension 10
-```
+* [`VUMPSSvdCut`](@ref): This algorithm is based on the [`VUMPS`](@ref) algorithm, and
+  consists of performing a two-site update, and then truncating the state back down. Because
+  of the two-site update, this can again become expensive, but the algorithm has the option
+  of both expanding as well as truncating the bond dimension. Note that this will change the
+  state itself, as it consists of an update step.
 
-### VUMPS svd cut
-
-A particularly simple scheme useful when doing VUMPS is to do a 2site update, and then truncating this back down. It changes the state itself, so cannot be used to do time evolution, but that is no problem for energy minimization.
 
 ## leading boundary
 
