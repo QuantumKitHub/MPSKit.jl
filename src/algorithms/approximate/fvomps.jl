@@ -1,5 +1,6 @@
-function approximate(state, toapprox, alg::Union{DMRG,DMRG2}, envs...)
-    return approximate!(copy(state), toapprox, alg, envs...)
+# dispatch to in-place method
+function approximate(ψ, toapprox, alg::Union{DMRG,DMRG2}, envs...)
+    return approximate!(copy(ψ), toapprox, alg, envs...)
 end
 
 function approximate!(init::AbstractFiniteMPS, sq, alg, envs=environments(init, sq))
