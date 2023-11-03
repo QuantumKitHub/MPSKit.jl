@@ -1,3 +1,5 @@
+<img src="https://github.com/maartenvd/MPSKit.jl/blob/master/docs/src/assets/logo.svg" width="150">
+
 # MPSKit.jl
 
 [![docs][docs-dev-img]][docs-dev-url] [![codecov][codecov-img]][codecov-url] ![CI][ci-url]
