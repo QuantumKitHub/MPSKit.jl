@@ -136,6 +136,7 @@ include("algorithms/statmech/gradient_grassmann.jl")
 
 include("algorithms/fidelity_susceptibility.jl")
 
+include("algorithms/approximate/approximate.jl")
 include("algorithms/approximate/vomps.jl")
 include("algorithms/approximate/fvomps.jl")
 include("algorithms/approximate/idmrg.jl")

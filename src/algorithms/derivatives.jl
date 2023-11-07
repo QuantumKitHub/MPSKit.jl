@@ -233,6 +233,7 @@ function c_proj(row, col, below, envs::PerMPOInfEnv)
     )
 end
 
+# TODO: rewrite this to not use operator from cache?
 function ac_proj(pos, below, envs)
     le = leftenv(envs, pos, below)
     re = rightenv(envs, pos, below)
@@ -321,7 +322,7 @@ end
 
 function ∂∂AC(pos::Int, state, opp::ProjectionOperator, env)
     return AC_EffProj(opp.ket.AC[pos], leftenv(env, pos, state), rightenv(env, pos, state))
-end;
+end
 function ∂∂AC2(pos::Int, state, opp::ProjectionOperator, env)
     return AC2_EffProj(
         opp.ket.AC[pos],

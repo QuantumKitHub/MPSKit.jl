@@ -14,20 +14,22 @@ original ψ.
 end
 
 function changebonds(ψ::InfiniteMPS, H, alg::OptimalExpand, envs=environments(ψ, H))
-    # determine optimal expansion spaces around bond i
-    AL′ = leftnull.(ψ.AL)
-    AR′ = circshift(rightnull!.(_transpose_tail.(ψ.AR)), -1)
-
+    T = eltype(ψ.AL)
+    AL′ = similar(ψ.AL)
+    AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
     for i in 1:length(ψ)
+        # determine optimal expansion spaces around bond i
         AC2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
         AC2 = ∂∂AC2(i, ψ, H, envs) * AC2
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
-        intermediate = adjoint(AL′[i]) * AC2 * adjoint(AR′[i])
+        VL = leftnull(ψ.AL[i])
+        VR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
+        intermediate = adjoint(VL) * AC2 * adjoint(VR)
         U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=SVD())
 
-        AL′[i] = AL′[i] * U
-        AR′[i] = V * AR′[i]
+        AL′[i] = VL * U
+        AR′[i + 1] = V * VR
     end
 
     newψ = _expand(ψ, AL′, AR′)
@@ -42,8 +44,10 @@ function changebonds(
 end
 
 function changebonds(ψ::MPSMultiline, H, alg::OptimalExpand, envs=environments(ψ, H))
-    AL′ = PeriodicArray(leftnull.(ψ.AL))
-    AR′ = PeriodicArray(circshift(rightnull!.(_transpose_tail.(ψ.AR)), (0, -1)))
+    TL = eltype(ψ.AL)
+    AL′ = PeriodicMatrix{TL}(undef, size(ψ.AL))
+    TR = tensormaptype(spacetype(TL), 1, numind(TL) - 1, storagetype(TL))
+    AR′ = PeriodicMatrix{TR}(undef, size(ψ.AR))
 
     # determine optimal expansion spaces around bond i
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
@@ -51,11 +55,13 @@ function changebonds(ψ::MPSMultiline, H, alg::OptimalExpand, envs=environments(
         AC2 = ∂∂AC2(i - 1, j, ψ, H, envs) * AC2
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
-        intermediate = adjoint(AL′[i, j]) * AC2 * adjoint(AR′[i, j])
+        VL = leftnull(ψ.AL[i, j])
+        VR = rightnull!(_transpose_tail(ψ.AR[i, j + 1]))
+        intermediate = adjoint(VL) * AC2 * adjoint(VR)
         U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=SVD())
 
-        AL′[i, j] = AL′[i, j] * U
-        AR′[i, j] = V * AR′[i, j]
+        AL′[i, j] = VL * U
+        AR′[i, j + 1] = V * VR
     end
 
     return _expand(ψ, AL′, AR′), envs

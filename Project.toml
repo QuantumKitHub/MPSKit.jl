@@ -1,7 +1,7 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
 authors = ["Maarten Van Damme", "Jutho Haegeman", "Lukas Devos", "Gertian Roose", "Markus Hauru"]
-version = "0.10.0"
+version = "0.10.1"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -25,6 +25,7 @@ FLoops = "0.1, 0.2"
 FastClosures = "0.3"
 FoldsThreads = "0.1"
 KrylovKit = "0.4 - 0.6"
+LinearAlgebra = "1.6"
 OptimKit = "0.3.1"
 Preferences = "1"
 RecipesBase = "1.1"

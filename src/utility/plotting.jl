@@ -25,20 +25,18 @@ function entanglementplot end
     mps = h.args[1]
     site <= length(mps) || throw(ArgumentError("Not a valid site for the given mps."))
 
-    (_, s′, _) = tsvd(mps.CR[site])
-    s = real(s′)
-    sectors = blocksectors(s)
+    spectra = entanglement_spectrum(mps)
+    sectors = []
     spectrum = []
-    for sector in sectors
-        partial_spectrum = diag(block(s, sector))
-
-        # Duplicate entries according to the quantum dimension.
-        if expand_symmetry
-            partial_spectrum = repeat(partial_spectrum, dim(sector))
-            sort!(partial_spectrum; rev=true)
+    for (c, b) in spectra
+        if expand_symmetry # Duplicate entries according to the quantum dimension.
+            b′ = repeat(b, dim(c))
+            sort!(b′; rev=true)
+            push!(spectrum, b′)
+        else
+            push!(spectrum, b)
         end
-
-        push!(spectrum, diag(block(s, sector)))
+        push!(sectors, c)
     end
 
     if length(spectrum) > 1
@@ -68,7 +66,7 @@ function entanglementplot end
     grid --> :xy
     widen --> true
 
-    xguide --> "χ = $(dim(domain(s)))"
+    xguide --> "χ = $(dim(left_virtualspace(mps, site)))"
     xticks --> (1:length(sectors), sector_formatter.(sectors))
     xtickfonthalign --> :center
     xtick_direction --> :out
