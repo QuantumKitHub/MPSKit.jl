@@ -81,7 +81,7 @@ end
 
 #default constructor
 function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number}
-    (period, numrows, numcols) = size(x)
+    period, numrows, numcols = size(x)
 
     Sp = spacetype(M)
     E == scalartype(M) || throw(
@@ -175,8 +175,15 @@ function SparseMPO(x::AbstractArray{Union{E,M},3}) where {M<:MPOTensor,E<:Number
         end
     end
 
-    sum(ismissing.(pspaces)) == 0 ||
-        throw(ArgumentError("Not all physical spaces were assigned"))
+    if sum(ismissing.(pspaces)) != 0
+        if allequal(Iterators.filter(!ismissing, pspaces))
+            V = pspaces[findfirst(!ismissing, pspaces)]
+            @warn "Not all physical spaces were assigned, assumed $V everywhere"
+            pspaces .= Ref(V)
+        else
+            throw(ArgumentError("Not all physical spaces were assigned"))
+        end
+    end
     # sum(ismissing.(domspaces)) == 0 || @warn "failed to deduce all domspaces"
 
     for loc in 1:period, j in 1:numrows
