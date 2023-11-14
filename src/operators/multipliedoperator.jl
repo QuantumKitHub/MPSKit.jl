@@ -29,10 +29,14 @@ UntimedOperator(x::O, c::C) where {C<:Real,O} = MultipliedOperator(x, c)
 TimedOperator(x) = TimedOperator(x, t -> 1)
 UntimedOperator(x) = UntimedOperator(x, 1)
 
-# evaluating at t should return object of type(object.opp)
-(x::TimedOperator)(t::Number) = x.f(t) * x.op
-(x::MultipliedOperator)(t::Number) = x.f * x.op
-(x::UntimedOperator)() = x.f * x.op
+# For internal use
+ConvertOperator(x::UntimedOperator) = x.f * x.op
+ConvertOperator(x::TimedOperator, t::Number) = x.f(t) * x.op
+ConvertOperator(x::O,args...) where {O} = x
+
+# For users
+(x::UntimedOperator)() = ConvertOperator(x)
+(x::TimedOperator)(t::Number)  = ConvertOperator(x,t)
 
 # what to do when we multiply by a scalar
 function Base.:*(op::UntimedOperator, b::Number)
@@ -42,18 +46,7 @@ function Base.:*(op::TimedOperator, b::Number)
     return TimedOperator(op.op, t -> b * op.f(t))
 end
 Base.:*(b::Number, op::MultipliedOperator) = op * b
-
-
-# logic for derivatives
-
-#(x::MultipliedOperator{<:Any,<:Number})(y, ::Number) = x.f * x.op(y)
-
-#(x::MultipliedOperator{<:Any,<:Function})(t::Number) = UntimedOperator(x.op, x.f(t))
-#(x::MultipliedOperator{<:Any,<:Function})(y) = t -> x.f(t) * x.op(y)
-#(x::MultipliedOperator{<:Any,<:Number})(::Number) = x.f * x.op
-#(x::MultipliedOperator{<:Any,<:Number})(y) = t -> x.f * x.op(y)
-
-#Base.:*(x::MultipliedOperator, v) = x(v)
+#should probably also define a method that allows f(t)*TimedOperator, but I don't know how to dispatch on this
 
 # don't know a better place to put this
 # environment for MultipliedOperator
