@@ -20,17 +20,29 @@ const TimedOperator{O} = MultipliedOperator{O,<:Function}
         - An operator (MPO, Hamiltonian, ...)
         - A number f that gets multiplied with the operator
 """
-const UntimedOperator{O} = MultipliedOperator{O,<:Real}
+const UntimedOperator{O} = MultipliedOperator{O,<:Union{Real,Nothing}}
+const OnlyOperator{O} = MultipliedOperator{O,<:Nothing}
 
 #constructors for (un)TimedOperator
 TimedOperator(x::O, f::F) where {F<:Function,O} = MultipliedOperator(x, f)
 UntimedOperator(x::O, c::C) where {C<:Real,O} = MultipliedOperator(x, c)
 
-TimedOperator(x) = TimedOperator(x, t -> 1)
-UntimedOperator(x) = UntimedOperator(x, 1)
+OnlyOperator(x) = MultipliedOperator(x,nothing)
+TimedOperator(x) = OnlyOperator(x)
+UntimedOperator(x) = OnlyOperator(x)
 
-# For internal use
+# promoting operators to MultipliedOperator
+Base.promote_rule(::Type{<:MultipliedOperator},::Type{S}) where {S} = MultipliedOperator
+Base.promote_rule(::Type{<:UntimedOperator},::Type{<:MultipliedOperator}) = MultipliedOperator
+Base.promote_rule(::Type{<:UntimedOperator},::Type{O}) where {O} = UntimedOperator
+Base.promote_rule(::Type{S},::Type{T}) where {S<:UntimedOperator,T<:UntimedOperator} = UntimedOperator
+
+Base.convert(::Type{T},x::T) where {T<:MultipliedOperator} = x # maybe this can be prevented by defining an appropriate promote_rule?
+Base.convert(::Type{<:MultipliedOperator},x::O) where {O} = OnlyOperator(x)
+
+# For internal use only
 ConvertOperator(x::UntimedOperator) = x.f * x.op
+ConvertOperator(x::MultipliedOperator{O,Nothing}) where {O} = x.op
 ConvertOperator(x::TimedOperator, t::Number) = x.f(t) * x.op
 ConvertOperator(x::O,args...) where {O} = x
 
@@ -39,6 +51,9 @@ ConvertOperator(x::O,args...) where {O} = x
 (x::TimedOperator)(t::Number)  = ConvertOperator(x,t)
 
 # what to do when we multiply by a scalar
+function Base.:*(op::OnlyOperator, b::Number)
+    return UntimedOperator(op.op, b)
+end
 function Base.:*(op::UntimedOperator, b::Number)
     return UntimedOperator(op.op, b * op.f)
 end

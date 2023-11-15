@@ -4,6 +4,7 @@ Structure representing a sum of operators. Consists of
 """
 struct SumOfOperators{O} <: AbstractVector{O}
     ops::Vector{O}
+
 end
 
 Base.size(x::SumOfOperators) = size(x.ops)
@@ -12,23 +13,27 @@ Base.getindex(x::SumOfOperators, i) = x.ops[i]
 
 Base.length(x::SumOfOperators) = prod(size(x))
 
-# singleton constructor
+# constructors
 SumOfOperators(x) = SumOfOperators([x])
 
 function SumOfOperators(ops::AbstractVector, fs::AbstractVector)
     return SumOfOperators(map(MultipliedOperator, ops, fs))
 end
 
+# For users
 # evaluating at t should return UntimedOperators
-(x::SumOfOperators)(t::Number) = SumOfOperators( map(O -> ConvertOperator(O,t), x))
-(x::SumOfOperators{O})() where {A,O<:Union{A,UntimedOperator{A}}}= sum(ConvertOperator,x)
+(x::SumOfOperators{<:MultipliedOperator})(t::Number) = SumOfOperators{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
+(x::SumOfOperators{<:UntimedOperator})() sum(ConvertOperator,x)
+Base.sum(x::SumOfOperators{<:UntimedOperator}) = x()
+Base.sum(x::SumOfOperators{:MultipliedOperator},t::Number) = sum(ConvertOperator,map(y->ConvertOperator(y,t),x))
+# I consider putting a method error for (x::SumOfOperators{<:UntimedOperator})(::Number) if I would know how to write this so it gives the same message as julia would do
 
 # we define the addition for SumOfOperators and we do the rest with promote
 function Base.:+(SumOfOps1::SumOfOperators, SumOfOps2::SumOfOperators)
     return SumOfOperators([SumOfOps1...,SumOfOps2...])
 end
 
-Base.promote_rule(::Type{<:SumOfOperators},::Type{O}) where {O} = SumOfOperators
+Base.promote_rule(::Type{<:SumOfOperators},::Type{T}) where {T} = SumOfOperators
 Base.convert(::Type{<:SumOfOperators},x::O) where {O} = SumOfOperators(x)
 Base.convert(::Type{T}, x::T) where {T<:SumOfOperators} = x
 
