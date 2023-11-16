@@ -23,6 +23,8 @@ const TimedOperator{O} = MultipliedOperator{O,<:Function}
 const UntimedOperator{O} = MultipliedOperator{O,<:Union{Real,Nothing}}
 const OnlyOperator{O} = MultipliedOperator{O,<:Nothing}
 
+const TimedUnion = Union{UntimedOperator,TimedOperator}
+
 #constructors for (un)TimedOperator
 TimedOperator(x::O, f::F) where {F<:Function,O} = MultipliedOperator(x, f)
 UntimedOperator(x::O, c::C) where {C<:Real,O} = MultipliedOperator(x, c)
@@ -32,19 +34,18 @@ TimedOperator(x) = OnlyOperator(x)
 UntimedOperator(x) = OnlyOperator(x)
 
 # promoting operators to MultipliedOperator
-Base.promote_rule(::Type{<:MultipliedOperator},::Type{S}) where {S} = MultipliedOperator
-Base.promote_rule(::Type{<:UntimedOperator},::Type{<:MultipliedOperator}) = MultipliedOperator
-Base.promote_rule(::Type{<:UntimedOperator},::Type{O}) where {O} = UntimedOperator
-Base.promote_rule(::Type{S},::Type{T}) where {S<:UntimedOperator,T<:UntimedOperator} = UntimedOperator
-
-Base.convert(::Type{T},x::T) where {T<:MultipliedOperator} = x # maybe this can be prevented by defining an appropriate promote_rule?
+Base.promote_rule(::Type{<:TimedUnion},::Type{S}) where {S} = TimedUnion
+Base.promote_rule(::Type{<:UntimedOperator},::Type{S}) where {S} = UntimedOperator
+Base.promote_rule(::Type{<:UntimedOperator},::Type{<:TimedOperator}) = TimedUnion
 Base.convert(::Type{<:MultipliedOperator},x::O) where {O} = OnlyOperator(x)
+Base.convert(::Type{<:MultipliedOperator},x::MultipliedOperator) = x
 
 # For internal use only
 ConvertOperator(x::UntimedOperator) = x.f * x.op
 ConvertOperator(x::MultipliedOperator{O,Nothing}) where {O} = x.op
+ConvertOperator(x::MultipliedOperator{O,Nothing}, ::Number) where {O} = x.op
 ConvertOperator(x::TimedOperator, t::Number) = x.f(t) * x.op
-ConvertOperator(x::O,args...) where {O} = x
+ConvertOperator(x::O,::Number) where {O} = x
 
 # For users
 (x::UntimedOperator)() = ConvertOperator(x)

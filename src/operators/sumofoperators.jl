@@ -22,11 +22,11 @@ end
 
 # For users
 # evaluating at t should return UntimedOperators
-(x::SumOfOperators{<:MultipliedOperator})(t::Number) = SumOfOperators{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
-(x::SumOfOperators{<:UntimedOperator})() sum(ConvertOperator,x)
-Base.sum(x::SumOfOperators{<:UntimedOperator}) = x()
-Base.sum(x::SumOfOperators{:MultipliedOperator},t::Number) = sum(ConvertOperator,map(y->ConvertOperator(y,t),x))
-# I consider putting a method error for (x::SumOfOperators{<:UntimedOperator})(::Number) if I would know how to write this so it gives the same message as julia would do
+(x::SumOfOperators{TimedUnion})(t::Number) = SumOfOperators{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
+(x::SumOfOperators{UntimedOperator})() = sum(ConvertOperator,x)
+Base.sum(x::SumOfOperators{UntimedOperator}) = x()
+Base.sum(x::SumOfOperators{TimedUnion},t::Number) = sum(y->ConvertOperator(y,t),x)
+Base.sum(x::SumOfOperators{TimedUnion}) = throw(MethodError(sum,(x,)))
 
 # we define the addition for SumOfOperators and we do the rest with promote
 function Base.:+(SumOfOps1::SumOfOperators, SumOfOps2::SumOfOperators)

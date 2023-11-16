@@ -336,7 +336,7 @@ end
 (x::TimedOperator{<:DerivativeOperator})(y, t::Number) = x.f(t) * x.op(y)
 (x::UntimedOperator{<:DerivativeOperator})(y, ::Number) = x.f * x.op(y)
 (x::OnlyOperator{<:DerivativeOperator})(y, ::Number) = x.op(y)
-(x::SumOfOperators{M})(y, t::Number) where {M<:MultipliedOperator{<:MPSKit.DerivativeOperator,<:Any}} = sum(O -> O(y, t), x)
+(x::SumOfOperators{M})(y, t::Number) where {M<:MultipliedOperator{<:MPSKit.DerivativeOperator,<:Any}} = sum(O -> O(y, t), x) #not strict enough?
 
 function ∂∂C(pos::Int, mps, opp::MultipliedOperator, cache)
     return MultipliedOperator(∂∂C(pos::Int, mps, opp.op, cache), opp.f)
