@@ -224,7 +224,7 @@ end
 
         Ψwindow_copied = copy(Ψwindow)
         @test Ψwindow_copied.left_gs !== Ψwindow_copied.right_gs # not the same reference
-        @test Ψwindow_copied.left_gs ≈ Ψwindow_copied.right_gs  # but the same state
+        @test dot(Ψwindow_copied.left_gs,Ψwindow_copied.right_gs) ≈ 1  # but the same state
 
         Ψwindow.left_gs.AC[1] *= 2
         @test abs(norm(Ψwindow_copied.left_gs) - norm(Ψwindow.left_gs)) > 0.5

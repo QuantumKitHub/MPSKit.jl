@@ -82,6 +82,32 @@ end
     @test abs(dot(W * (W * ts), (W * W) * ts)) ≈ 1.0 atol = 1e-10
 end
 
+@testset "Simple MultipliedOperator/SumOfOperators" begin
+
+    a = 1.4678
+    O = 1.1
+    Ou = UntimedOperator(O,a)
+    Ot = TimedOperator(O,t->(1+a)*t)
+    Os = SumOfOperators([Ou,Ot,O])
+    Osu = SumOfOperators([Ou,Ou,O])
+
+    #test user interface
+    @test Ou() == a*O
+    @test Ot(3.5)() == 3.5*(1+a)*O
+    @test Os(3.5)() == Ou()+Ot(3.5)()+O
+    @test evalat(Os,3.5) == Ou()+evalat(Ot,3.5)+O
+    @test Osu() == Ou()+Ou()+O
+
+    @test applicable(Ou,)
+    @test !applicable(Ou,1)
+    @test !applicable(Ot,)
+    @test applicable(Ot,1)
+    @test applicable(Os,1)
+    @test !applicable(Os,)
+    @test applicable(Osu,)
+    #@test !applicable(Osu,1)
+end
+
 @testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
                                                                          zip(
     pspaces, vspaces
@@ -101,6 +127,7 @@ end
     H = repeat(MPOHamiltonian(nn), 2)
     f(t) = 3 * exp(0.1 * t)
     Ht = TimedOperator(H, f)
+    Hu = UntimedOperator(H,f(3.0))
 
     Ψs = [
         FiniteMPS(rand, ComplexF64, rand(3:2:20), pspace, Dspace),
@@ -110,13 +137,47 @@ end
         ]),
     ]
 
-    @testset "TimedOperator $(Ψ isa InfiniteMPS ? "InfiniteMPS" : "FiniteMPS")" for Ψ in Ψs
+    @testset "UntimedOperator $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
+        envs = environments(Ψ, H)
+        envs2 = environments(Ψ, Hu())
+        envsu = environments(Ψ, Hu)
+
+        @test envs.opp.data == envsu.opp.data #check that env are the same
+        expresult = f(3.0) .* expectation_value(Ψ, H, envs)
+        @test expresult ≈ expectation_value(Ψ, Hu(), envs2)
+        @test expresult ≈ expectation_value(Ψ, Hu, envsu)
+        @test expresult ≈ expectation_value(Ψ, Hu())
+        @test expresult ≈ expectation_value(Ψ, Hu)
+
+        ## derivatives
+        hc = MPSKit.∂∂C(1, Ψ, H, envs)
+        hcu = MPSKit.∂∂C(1, Ψ, Hu, envsu)
+
+        @test hcu(Ψ.CR[1], 3.0) ≈ f(3.0) * hc(Ψ.CR[1]) atol = 1e-5
+
+        hac = MPSKit.∂∂AC(1, Ψ, H, envs)
+        hacu = MPSKit.∂∂AC(1, Ψ, Hu, envsu)
+
+        @test hacu(Ψ.AC[1], 3.0) ≈ f(3.0) * hac(Ψ.AC[1]) atol = 1e-5
+
+        hac2 = MPSKit.∂∂AC2(1, Ψ, H, envs)
+        hac2u = MPSKit.∂∂AC2(1, Ψ, Hu, envsu)
+
+        v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2])
+
+        @test hac2u(v, 3.0) ≈ f(3.0) * hac2(v) atol = 1e-5
+    end
+
+    @testset "TimedOperator $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
         envs = environments(Ψ, H)
         envs2 = environments(Ψ, Ht(3.0))
         envst = environments(Ψ, Ht)
 
         @test envs.opp.data == envst.opp.data #check that env are the same, time-dep sits elsewhere
-        @test f(3.0) .* expectation_value(Ψ, H) ≈ expectation_value(Ψ, Ht(3.0))
+        expresult = f(3.0) .* expectation_value(Ψ, H, envs)
+        @test expresult ≈ expectation_value(Ψ, Ht(3.0), envst)
+        @test expresult ≈ expectation_value(Ψ, Ht(3.0), envs2)
+        @test expresult ≈ expectation_value(Ψ, Ht(3.0))
 
         ## time-dependence of derivatives
         hc = MPSKit.∂∂C(1, Ψ, H, envs)
@@ -154,12 +215,19 @@ end
     @testset "Timed Sum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
         Envs = map(H -> environments(Ψ, H), Hs)
         summedEnvs = environments(Ψ, summedH)
+        summedEnvs2 = environments(Ψ, summedH(5.0))
 
-        expval1 = sum(zip(Hs, fs)) do (H, f)
-            f(5.0) * expectation_value(Ψ, H)
+        #@test envs.opp.data == summedEnvs.opp.data #check that env are the same, time-dep sits elsewhere
+
+        expval = sum(zip(Hs, fs, Envs)) do (H, f, Env)
+            f(5.0) * expectation_value(Ψ, H, Env)
         end
+        expval1 = expectation_value(Ψ, summedH(5.0), summedEnvs)
         expval2 = expectation_value(Ψ, summedH(5.0))
-        @test expval1 ≈ expval2
+        expval3 = expectation_value(Ψ, summedH(5.0), summedEnvs2)
+        @test expval ≈ expval1
+        @test expval ≈ expval2
+        @test expval ≈ expval3
 
         # test derivatives
         summedhct = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
@@ -190,11 +258,15 @@ end
         Envs = map(H -> environments(Ψ, H), Hs)
         summedEnvs = environments(Ψ, summedH)
 
-        expval1 = sum(zip(Hs, fs)) do (H, f)
-            f * expectation_value(Ψ, H)
+        expval = sum(zip(Hs, fs, Envs)) do (H, f, Env)
+            f * expectation_value(Ψ, H, Env)
         end
-        expval2 = expectation_value(Ψ, summedH(5.0))
-        @test expval1 ≈ expval2
+        expval1 = expectation_value(Ψ, summedH())
+        expval2 = expectation_value(Ψ, summedH, summedEnvs)
+        expval3 = expectation_value(Ψ, summedH)
+        @test expval ≈ expval1
+        @test expval ≈ expval2
+        @test expval ≈ expval3
 
         # test derivatives
         summedhct = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
