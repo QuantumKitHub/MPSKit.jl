@@ -22,12 +22,14 @@ end
 
 # For users
 # evaluating at t should return UntimedOperators
-(x::SumOfOperators{TimedUnion})(t::Number) = SumOfOperators{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
-(x::SumOfOperators{UntimedOperator})() = sum(ConvertOperator,x)
-Base.sum(x::SumOfOperators{UntimedOperator}) = x()
-Base.sum(x::SumOfOperators{TimedUnion},t::Number) = sum(y->ConvertOperator(y,t),x)
-Base.sum(x::SumOfOperators{TimedUnion}) = throw(MethodError(sum,(x,)))
-
+(x::SumOfOperators{<:UntimedOperator})() = sum(ConvertOperator,x)
+(x::SumOfOperators{<:UntimedOperator})(::Number) = x
+(x::SumOfOperators{<:MultipliedOperator})(t::Number) = SumOfOperators{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
+#(x::SumOfOperators{MultipliedOperator{S}})(t::Number) where {S} = SumOfOperators{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
+#(x::SumOfOperators{MultipliedOperator{S,T}})(t::Number) where {S,T} = SumOfOperators{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
+evalat(x::SumOfOperators{<:UntimedOperator}) = x()
+evalat(x::SumOfOperators{<:MultipliedOperator},t::Number) = sum(y->ConvertOperator(y,t)(),x)
+evalat(x::SumOfOperators{<:UntimedOperator},::Number) = x
 # we define the addition for SumOfOperators and we do the rest with promote
 function Base.:+(SumOfOps1::SumOfOperators, SumOfOps2::SumOfOperators)
     return SumOfOperators([SumOfOps1...,SumOfOps2...])

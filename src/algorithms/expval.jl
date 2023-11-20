@@ -240,3 +240,8 @@ function expectation_value(
     right = expectation_value(Ψ.right_gs, windowH.right, windowEnvs.right)
     return [left.data..., middle..., right.data...]
 end
+
+# for now we also have LinearCombination
+function expectation_value(Ψ, H::LinearCombination, envs::LazyLincoCache=environments(Ψ,H))
+    return return sum(((c, op, env),) -> c * expectation_value(Ψ, op, env), zip(H.coeffs,H.opps, envs.envs))
+end

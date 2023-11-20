@@ -20,41 +20,38 @@ const TimedOperator{O} = MultipliedOperator{O,<:Function}
         - An operator (MPO, Hamiltonian, ...)
         - A number f that gets multiplied with the operator
 """
-const UntimedOperator{O} = MultipliedOperator{O,<:Union{Real,Nothing}}
-const OnlyOperator{O} = MultipliedOperator{O,<:Nothing}
+const UntimedOperator{O} = MultipliedOperator{O,<:Union{Real,One}}
 
 const TimedUnion = Union{UntimedOperator,TimedOperator}
 
 #constructors for (un)TimedOperator
 TimedOperator(x::O, f::F) where {F<:Function,O} = MultipliedOperator(x, f)
-UntimedOperator(x::O, c::C) where {C<:Real,O} = MultipliedOperator(x, c)
+UntimedOperator(x::O, c::C) where {C<:Union{Real,One},O} = MultipliedOperator(x, c)
 
-OnlyOperator(x) = MultipliedOperator(x,nothing)
-TimedOperator(x) = OnlyOperator(x)
-UntimedOperator(x) = OnlyOperator(x)
+TimedOperator(x) = TimedOperator(x,t->One())
+UntimedOperator(x) = UntimedOperator(x,One())
 
 # promoting operators to MultipliedOperator
-Base.promote_rule(::Type{<:TimedUnion},::Type{S}) where {S} = TimedUnion
 Base.promote_rule(::Type{<:UntimedOperator},::Type{S}) where {S} = UntimedOperator
-Base.promote_rule(::Type{<:UntimedOperator},::Type{<:TimedOperator}) = TimedUnion
-Base.convert(::Type{<:MultipliedOperator},x::O) where {O} = OnlyOperator(x)
+Base.promote_rule(::Type{<:UntimedOperator},::Type{<:UntimedOperator}) = UntimedOperator
+Base.promote_rule(::Type{<:MultipliedOperator},::Type{S}) where {S} = MultipliedOperator
+Base.promote_rule(::Type{<:UntimedOperator},::Type{<:MultipliedOperator}) = MultipliedOperator
+#Base.promote_rule(::Type{MultipliedOperator},::Type{S}) where {S} = MultipliedOperator
+#Base.promote_rule(::Type{MultipliedOperator},::Type{<:UntimedOperator}) = MultipliedOperator
+Base.convert(::Type{<:MultipliedOperator},x::O) where {O} = UntimedOperator(x)
 Base.convert(::Type{<:MultipliedOperator},x::MultipliedOperator) = x
 
 # For internal use only
 ConvertOperator(x::UntimedOperator) = x.f * x.op
-ConvertOperator(x::MultipliedOperator{O,Nothing}) where {O} = x.op
-ConvertOperator(x::MultipliedOperator{O,Nothing}, ::Number) where {O} = x.op
-ConvertOperator(x::TimedOperator, t::Number) = x.f(t) * x.op
+ConvertOperator(x::TimedOperator, t::Number) = UntimedOperator(x.op,x.f(t))
 ConvertOperator(x::O,::Number) where {O} = x
 
 # For users
 (x::UntimedOperator)() = ConvertOperator(x)
 (x::TimedOperator)(t::Number)  = ConvertOperator(x,t)
+evalat(x::TimedOperator,t::Number) = x(t)()
 
 # what to do when we multiply by a scalar
-function Base.:*(op::OnlyOperator, b::Number)
-    return UntimedOperator(op.op, b)
-end
 function Base.:*(op::UntimedOperator, b::Number)
     return UntimedOperator(op.op, b * op.f)
 end
