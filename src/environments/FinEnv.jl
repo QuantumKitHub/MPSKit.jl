@@ -80,9 +80,11 @@ end
 function environments(
     state::WindowMPS,
     ham::Union{SparseMPO,MPOHamiltonian,DenseMPO},
+    infham::Union{SparseMPO,MPOHamiltonian,DenseMPO},
+    rightinfham::Union{SparseMPO,MPOHamiltonian,DenseMPO}=infham,
     above=nothing;
-    lenvs=environments(state.left_gs, ham),
-    renvs=environments(state.right_gs, ham),
+    lenvs=environments(state.left_gs, infham),
+    renvs=environments(state.right_gs, rightinfham),
 )
     return environments(
         state,
@@ -91,6 +93,31 @@ function environments(
         copy(leftenv(lenvs, 1, state.left_gs)),
         copy(rightenv(renvs, length(state), state.right_gs)),
     )
+end
+
+function environments(
+    state::WindowMPS,
+    ham::Union{SparseMPO,MPOHamiltonian,DenseMPO},
+    lenvs::Cache,
+    renvs::Cache,
+    above=nothing;
+)
+    return environments(
+        state,
+        ham,
+        above,
+        copy(leftenv(lenvs, 1, state.left_gs)),
+        copy(rightenv(renvs, length(state), state.right_gs)),
+    )
+end
+
+function environments(
+    Ψ::WindowMPS,
+    windowH::Window;
+    lenvs = environments(Ψ.left_gs, windowH.left)
+    renvs = environments(Ψ.right_gs, windowH.right)
+)
+    return Window(lenvs, environments(Ψ, windowH.middle, lenvs, renvs), renvs)
 end
 
 function environments(below::S, above::S) where {S<:Union{FiniteMPS,WindowMPS}}
