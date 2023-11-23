@@ -119,15 +119,15 @@ function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
             Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
         end
 
-        alg.verbose && @info "DMRG iteration:" iter ϵ λ = expectation_value(Ψ, H, envs) Δt
+        alg.verbose && @info "DMRG2 iteration:" iter ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
 
         ϵ <= alg.tol && break
         iter == alg.maxiter &&
-            @warn "DMRG maximum iterations" iter ϵ λ = expectation_value(Ψ, H, envs)
+            @warn "DMRG2 maximum iterations" iter ϵ λ = sum(expectation_value(Ψ, H, envs))
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbose && @info "DMRG summary:" ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
+    alg.verbose && @info "DMRG2 summary:" ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
     return Ψ, envs, ϵ
 end
 
