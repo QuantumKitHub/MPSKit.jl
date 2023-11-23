@@ -25,7 +25,7 @@ function entanglementplot end
     mps = h.args[1]
     site <= length(mps) || throw(ArgumentError("Not a valid site for the given mps."))
 
-    spectra = entanglement_spectrum(mps)
+    spectra = entanglement_spectrum(mps, site)
     sectors = []
     spectrum = []
     for (c, b) in spectra
