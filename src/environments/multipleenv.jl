@@ -11,7 +11,7 @@ Base.iterate(x::MultipleEnvironments, i) = iterate(x.envs, i)
 
 # we need constructor, agnostic of particular MPS
 function environments(st, ham::LazySum)
-    return MultipleEnvironments(ham, map(op -> environments(st, op), ham.ops))
+    return MultipleEnvironments(map(op -> environments(st, op), ham.ops))
 end
 
 #broadcast vs map?
