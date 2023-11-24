@@ -326,3 +326,21 @@ function ∂∂AC2(pos::Int, state, opp::ProjectionOperator, env)
         rightenv(env, pos + 1, state),
     )
 end
+
+(x::LazySum{<:MPSKit.DerivativeOperator})(y, t::Number) = sum(O -> O(y, t), x) #not strict enough?
+
+function ∂∂C(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
+    return LazySum{MPO_∂∂C}(map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops, cache.envs))
+end
+
+function ∂∂AC(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
+    return LazySum{MPO_∂∂AC}(
+        map((op, openv) -> ∂∂AC(pos, mps, op, openv), opp.ops, cache.envs)
+    )
+end
+
+function ∂∂AC2(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
+    return LazySum{MPO_∂∂AC2}(
+        map((op, openv) -> ∂∂AC2(pos, mps, op, openv), opp.ops, cache.envs)
+    )
+end
