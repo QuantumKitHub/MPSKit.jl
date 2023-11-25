@@ -9,19 +9,6 @@ function _update_leftEnv!(
     return Window(WindowEnv.left, WindowEnv.middle, WindowEnv.right)
 end
 
-function _update_leftEnv!(
-    nleft::InfiniteMPS, WindowEnv::Window{E,F,E}
-) where {E<:MultipleEnvironments,F<:MultipleEnvironments}
-    @assert length(WindowEnv.middle) == length(WindowEnv.left)
-
-    for (subEnvLeft, subEnvMiddle) in zip(WindowEnv.left, WindowEnv.middle)
-        l = leftenv(subEnvLeft, 1, nleft)
-        subEnvMiddle.ldependencies[:] = similar.(subEnvMiddle.ldependencies) # forget the old left dependencies - this forces recalculation whenever leftenv is called
-        subEnvMiddle.leftenvs[1] = l
-    end
-    return Window(WindowEnv.left, WindowEnv.middle, WindowEnv.right)
-end
-
 function _update_rightEnv!(
     nright::InfiniteMPS, WindowEnv::Window{E,F,E}
 ) where {E<:Cache,F<:Cache}
@@ -32,22 +19,10 @@ function _update_rightEnv!(
     return Window(WindowEnv.left, WindowEnv.middle, WindowEnv.right)
 end
 
-function _update_rightEnv!(
-    nright::InfiniteMPS, WindowEnv::Window{E,F,E}
-) where {E<:MultipleEnvironments,F<:MultipleEnvironments}
-    @assert length(WindowEnv.middle) == length(WindowEnv.right)
-
-    for (subEnvMiddle, subEnvRight) in zip(WindowEnv.middle, WindowEnv.right)
-        r = rightenv(subEnvRight, length(nright), nright)
-        subEnvMiddle.rdependencies[:] = similar.(subEnvMiddle.rdependencies) # forget the old right dependencies - this forces recalculation
-        subEnvMiddle.rightenvs[end] = r
-    end
-    return Window(WindowEnv.left, WindowEnv.middle, WindowEnv.right)
-end
-
+#Note: this needs to be tested
 function leftexpand(
     st::WindowMPS,
-    H::Union{<:MultipliedOperator,<:SumOfOperators},
+    H,
     Envs;
     singval=1e-2,
     growspeed=10,
@@ -74,15 +49,10 @@ function leftexpand(
     end
     return st.left_gs, Envs
 end
-function leftexpand(
-    st::WindowMPS, H::Union{MPOHamiltonian,DenseMPO,SparseMPO}, t::Number, Envs; kwargs...
-)
-    return leftexpand(st, UntimedOperator(H), t, Envs; kwargs...)
-end
 
 function rightexpand(
     st::WindowMPS,
-    H::Union{<:MultipliedOperator,<:SumOfOperators},
+    H,
     Envs;
     singval=1e-2,
     growspeed=10,
@@ -110,11 +80,6 @@ function rightexpand(
         return nst, Envs
     end
     return st.right_gs, Envs
-end
-function rightexpand(
-    st::WindowMPS, H::Union{MPOHamiltonian,DenseMPO,SparseMPO}, t::Number, Envs; kwargs...
-)
-    return rightexpand(st, UntimedOperator(H), t, Envs; kwargs...)
 end
 
 function timestep!(
