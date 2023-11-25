@@ -18,16 +18,31 @@ include("setup.jl")
         GradientGrassmann(; tol=tol, verbosity=verbosity),
     ]
 
-    H = force_planar(transverse_field_ising(; g=1.1))
+    H1 = force_planar(transverse_field_ising(; g=1.1))
 
     @testset "Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
         ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^16]), L)
-        H = repeat(force_planar(transverse_field_ising(; g=1.1)), L)
+        H = repeat(H1, L)
 
         v₀ = variance(ψ₀, H)
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
         v = variance(ψ, H, envs)
+
+        @test sum(δ) < 1e-3
+        @test v₀ > v && v < 1e-2 # energy variance should be low
+    end
+
+    Hlazy1 = LazySum([13*H1,-1*H1,5.557*H1])
+
+    @testset "LazySum Infinite $i" for (i, alg) in enumerate(infinite_algs)
+        L = alg isa IDMRG2 ? 2 : 1
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^16]), L)
+        Hlazy = repeat(Hlazy1, L)
+
+        v₀ = variance(ψ₀, Hlazy)
+        ψ, envs, δ = find_groundstate(ψ₀, Hlazy, alg)
+        v = variance(ψ, Hlazy)
 
         @test sum(δ) < 1e-3
         @test v₀ > v && v < 1e-2 # energy variance should be low
@@ -39,13 +54,27 @@ include("setup.jl")
         GradientGrassmann(; tol=tol, verbosity=verbosity),
     ]
 
+    H = force_planar(transverse_field_ising(; g=1.1))
+
     @testset "Finite $i" for (i, alg) in enumerate(finite_algs)
         ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
-        H = force_planar(transverse_field_ising(; g=1.1))
 
         v₀ = variance(ψ₀, H)
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
         v = variance(ψ, H, envs)
+
+        @test sum(δ) < 100 * tol
+        @test v₀ > v && v < 1e-2 # energy variance should be low
+    end
+
+    Hlazy = LazySum([13*H,-1*H,5.557*H])
+
+    @testset "LazySum Finite $i" for (i, alg) in enumerate(finite_algs)
+        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
+
+        v₀ = variance(ψ₀, Hlazy)
+        ψ, envs, δ = find_groundstate(ψ₀, Hlazy, alg)
+        v = variance(ψ, Hlazy)
 
         @test sum(δ) < 100 * tol
         @test v₀ > v && v < 1e-2 # energy variance should be low
@@ -66,6 +95,14 @@ end
         @test sum(E₀) ≈ sum(E) atol = 1e-2
     end
 
+    Hlazy = LazySum([3*H,1.55*H,-0.1*H])
+
+    @testset "Finite LazySum $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
+        ψ, envs = timestep(ψ₀, Hlazy, dt, alg)
+        E = expectation_value(ψ, Hlazy, envs)
+        @test (3+1.55-0.1)*sum(E₀) ≈ sum(E) atol = 1e-2
+    end
+
     H = repeat(force_planar(heisenberg_XXX(; spin=1)), 2)
     ψ₀ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^50, ℙ^50])
     E₀ = expectation_value(ψ₀, H)
@@ -74,6 +111,14 @@ end
         ψ, envs = timestep(ψ₀, H, dt, TDVP())
         E = expectation_value(ψ, H, envs)
         @test sum(E₀) ≈ sum(E) atol = 1e-2
+    end
+
+    Hlazy = LazySum([3*H,1.55*H,-0.1*H])
+
+    @testset "Infinite LazySum TDVP" begin
+        ψ, envs = timestep(ψ₀, Hlazy, dt, TDVP())
+        E = expectation_value(ψ, Hlazy, envs)
+        @test (3+1.55-0.1)*sum(E₀) ≈ sum(E) atol = 1e-2
     end
 end
 

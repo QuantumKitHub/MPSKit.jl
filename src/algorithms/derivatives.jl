@@ -21,6 +21,8 @@ struct MPO_∂∂AC2{O,L,R}
     rightenv::R
 end
 
+const DerivativeOperator = Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}
+
 Base.:*(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, v) = h(v);
 
 (h::MPO_∂∂C)(x) = ∂C(x, h.leftenv, h.rightenv);
@@ -327,7 +329,8 @@ function ∂∂AC2(pos::Int, state, opp::ProjectionOperator, env)
     )
 end
 
-(x::LazySum{<:MPSKit.DerivativeOperator})(y, t::Number) = sum(O -> O(y, t), x) #not strict enough?
+(x::LazySum{<:MPSKit.DerivativeOperator})(y) = sum(O -> O(y), x)
+Base.:*(h::LazySum{<:MPSKit.DerivativeOperator}, v) = h(v)
 
 function ∂∂C(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
     return LazySum{MPO_∂∂C}(map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops, cache.envs))

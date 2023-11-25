@@ -190,6 +190,11 @@ function variance(state::InfiniteQP, ham::MPOHamiltonian, envs=environments(stat
     )
 end
 
+function variance(Ψ, ham::LazySum, envs=environments(Ψ, ham()))
+    envs isa MultipleEnvironments && throw(ArgumentError("The environment cannot be Lazy i.e. use environments of H()"))
+    return variance(Ψ, ham(), envs)
+end
+
 """
 You can impose periodic boundary conditions on an mpo-hamiltonian (for a given size)
 That creates a new mpo-hamiltonian with larger bond dimension

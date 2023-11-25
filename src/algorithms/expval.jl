@@ -209,31 +209,6 @@ function expectation_value(
 )
     return sum(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
 end
-function expectation_value(
-    Ψ::WindowMPS, ops::LazySum, envs::MultipleEnvironments=environments(Ψ, ops)
-)   expvals = map(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
-    return sum.(zip(expvals...)) #changes type though
-end
-
-# define expectation_value for Window
-function expectation_value(Ψ::WindowMPS, windowOp::Window, at::Int)
-    if at < 1
-        return expectation_value(Ψ.left_gs, windowOp.left, at)
-    elseif 1 <= at <= length(Ψ.window)
-        return expectation_value(Ψ, windowOp.middle, at)
-    else
-        return expectation_value(Ψ.right_gs, windowOp.right, at)
-    end
-end
-
-function expectation_value(
-    Ψ::WindowMPS, windowH::Window, windowEnvs::Window{C,D,C}=environments(Ψ, windowH)
-) where {C<:Union{MultipleEnvironments,Cache},D<:Union{MultipleEnvironments,Cache}}
-    left = expectation_value(Ψ.left_gs, windowH.left, windowEnvs.left)
-    middle = expectation_value(Ψ.window, windowH.middle, windowEnvs.middle)
-    right = expectation_value(Ψ.right_gs, windowH.right, windowEnvs.right)
-    return [left.data..., middle..., right.data...]
-end
 
 # for now we also have LinearCombination
 function expectation_value(Ψ, H::LinearCombination, envs::LazyLincoCache=environments(Ψ,H))
