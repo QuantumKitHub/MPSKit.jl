@@ -335,7 +335,7 @@ end
 # MultipliedOperator and SumOfOperators
 (x::TimedOperator{<:DerivativeOperator})(y, t::Number) = x.f(t) * x.op(y)
 (x::UntimedOperator{<:DerivativeOperator})(y, ::Number) = x.f * x.op(y)
-(x::SumOfOperators{M})(y, t::Number) where {D<:MPSKit.DerivativeOperator,M<:Union{MultipliedOperator{D,<:Any},D}} = sum(O -> O(y, t), x) #not strict enough?
+(x::LazySum{<:Union{MPSKit.MultipliedOperator{D}, D} where {D<:MPSKit.DerivativeOperator}})(y, t::Number) = sum(O -> O(y, t), x) #not strict enough?
 
 function ∂∂C(pos::Int, mps, opp::MultipliedOperator, cache)
     return MultipliedOperator(∂∂C(pos::Int, mps, opp.op, cache), opp.f)
@@ -349,18 +349,18 @@ function ∂∂AC2(pos::Int, mps, opp::MultipliedOperator, cache)
     return MultipliedOperator(∂∂AC2(pos::Int, mps, opp.op, cache), opp.f)
 end
 
-function ∂∂C(pos::Int, mps, opp::SumOfOperators, cache::MultipleEnvironments)
-    return SumOfOperators(map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops, cache.envs))
+function ∂∂C(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
+    return LazySum{Union{MPO_∂∂C,MultipliedOperator{<:MPO_∂∂C}}}(map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops, cache.envs))
 end
 
-function ∂∂AC(pos::Int, mps, opp::SumOfOperators, cache::MultipleEnvironments)
-    return SumOfOperators(
+function ∂∂AC(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
+    return LazySum{Union{MPO_∂∂AC,MultipliedOperator{<:MPO_∂∂AC}}}(
         map((op, openv) -> ∂∂AC(pos, mps, op, openv), opp.ops, cache.envs)
     )
 end
 
-function ∂∂AC2(pos::Int, mps, opp::SumOfOperators, cache::MultipleEnvironments)
-    return SumOfOperators(
+function ∂∂AC2(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
+    return LazySum{Union{MPO_∂∂AC2,MultipliedOperator{<:MPO_∂∂AC2}}}(
         map((op, openv) -> ∂∂AC2(pos, mps, op, openv), opp.ops, cache.envs)
     )
 end

@@ -22,8 +22,6 @@ const TimedOperator{O} = MultipliedOperator{O,<:Function}
 """
 const UntimedOperator{O} = MultipliedOperator{O,<:Union{Real,One}}
 
-const TimedUnion = Union{UntimedOperator,TimedOperator}
-
 #constructors for (un)TimedOperator
 TimedOperator(x::O, f::F) where {F<:Function,O} = MultipliedOperator(x, f)
 UntimedOperator(x::O, c::C) where {C<:Union{Real,One},O} = MultipliedOperator(x, c)
@@ -31,25 +29,17 @@ UntimedOperator(x::O, c::C) where {C<:Union{Real,One},O} = MultipliedOperator(x,
 TimedOperator(x) = TimedOperator(x,t->One())
 UntimedOperator(x) = UntimedOperator(x,One())
 
-# promoting operators to MultipliedOperator
-Base.promote_rule(::Type{<:UntimedOperator},::Type{S}) where {S} = UntimedOperator
-Base.promote_rule(::Type{<:UntimedOperator},::Type{<:UntimedOperator}) = UntimedOperator
-Base.promote_rule(::Type{<:MultipliedOperator},::Type{S}) where {S} = MultipliedOperator
-Base.promote_rule(::Type{<:UntimedOperator},::Type{<:MultipliedOperator}) = MultipliedOperator
-#Base.promote_rule(::Type{MultipliedOperator},::Type{S}) where {S} = MultipliedOperator
-#Base.promote_rule(::Type{MultipliedOperator},::Type{<:UntimedOperator}) = MultipliedOperator
-Base.convert(::Type{<:MultipliedOperator},x::O) where {O} = UntimedOperator(x)
-Base.convert(::Type{<:MultipliedOperator},x::MultipliedOperator) = x
-
 # For internal use only
-ConvertOperator(x::UntimedOperator) = x.f * x.op
-ConvertOperator(x::TimedOperator, t::Number) = UntimedOperator(x.op,x.f(t))
-ConvertOperator(x::O,::Number) where {O} = x
+_eval_at(x::UntimedOperator) = x.f * x.op
+_eval_at(x::TimedOperator, t::Number) = UntimedOperator(x.op,x.f(t))
+_eval_at(x::O,args...) where {O} = x
 
 # For users
-(x::UntimedOperator)() = ConvertOperator(x)
-(x::TimedOperator)(t::Number)  = ConvertOperator(x,t)
-evalat(x::TimedOperator,t::Number) = x(t)()
+# ConvertOperator does the multiplication explicitly
+(x::UntimedOperator)()  = _eval_at(x)
+ConvertOperator(x::UntimedOperator) = _eval_at(x)
+(x::TimedOperator)(t::Number)  = _eval_at(x,t)
+ConvertOperator(x::TimedOperator,t::Number) = x(t)()
 
 # what to do when we multiply by a scalar
 function Base.:*(op::UntimedOperator, b::Number)

@@ -82,33 +82,29 @@ end
     @test abs(dot(W * (W * ts), (W * W) * ts)) ≈ 1.0 atol = 1e-10
 end
 
-@testset "Simple MultipliedOperator/SumOfOperators" begin
+@testset "Simple MultipliedOperator/LazySum" begin
 
     a = 1.4678
     O = 1.1
     Ou = UntimedOperator(O,a)
     Ot = TimedOperator(O,t->(1+a)*t)
-    Os = SumOfOperators([Ou,Ot,O])
-    Osu = SumOfOperators([Ou,Ou,O])
+    Os = LazySum([Ou,Ot,O])
+    Osu = LazySum([Ou,Ou,O])
 
     #test user interface
     @test Ou() == a*O
     @test Ot(3.5)() == 3.5*(1+a)*O
     @test Os(3.5)() == Ou()+Ot(3.5)()+O
-    @test evalat(Os,3.5) == Ou()+evalat(Ot,3.5)+O
+    @test ConvertOperator(Os,3.5) == Ou()+ConvertOperator(Ot,3.5)+O
     @test Osu() == Ou()+Ou()+O
 
     @test applicable(Ou,)
     @test !applicable(Ou,1)
     @test !applicable(Ot,)
     @test applicable(Ot,1)
-    @test applicable(Os,1)
-    @test !applicable(Os,)
-    @test applicable(Osu,)
-    #@test !applicable(Osu,1)
 end
 
-@testset "Timed/SumOf (effective) Hamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
+@testset "Timed/LazySum (effective) Hamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
                                                                          zip(
     pspaces, vspaces
 )
@@ -199,7 +195,7 @@ end
     end
 
     ##########################
-    #tests for sumofoperators
+    #tests for LazySum
     ##########################
 
     # Os = map(
@@ -210,7 +206,7 @@ end
 
     fs = [t -> 3 + t, t -> 7 * t, t -> 2 * cos(t), t -> t^2]
     Hs = repeat.(map(i -> MPOHamiltonian(iseven(i) ? nn : nnn), 1:length(fs)), 2)
-    summedH = SumOfOperators(Hs, fs)
+    summedH = LazySum(Hs, fs)
 
     @testset "Timed Sum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
         Envs = map(H -> environments(Ψ, H), Hs)
@@ -250,9 +246,9 @@ end
         @test summedhct(v, 5.0) ≈ sum3
     end
 
-    # finally test in case SumOfOperators contains non-timed operators
+    # finally test in case LazySum contains non-timed operators
     fs = [3, 5.0, 10, 1]
-    summedH = SumOfOperators(Hs, fs)
+    summedH = LazySum(Hs, fs)
 
     @testset "Untimed Sum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
         Envs = map(H -> environments(Ψ, H), Hs)
@@ -287,5 +283,44 @@ end
             f * MPSKit.∂∂AC2(1, Ψ, H, env)(v)
         end
         @test summedhct(v, 5.0) ≈ sum3
+    end
+
+    Hs      = [Hs[1],Hs[2],Hs[1]]
+    fs      = [1,5,3.5*2]
+    summedH = Hs[1] + UntimedOperator(Hs[2],5) + TimedOperator(Hs[3],t->3.5*t)
+
+    @testset "Mixed Sum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
+        Envs = map(H -> environments(Ψ, H), summedH)
+        summedEnvs = environments(Ψ, summedH)
+
+        expval = sum(zip(Hs, fs, Envs)) do (H, f, Env)
+            f * expectation_value(Ψ, H, Env)
+        end
+        expval1 = expectation_value(Ψ, summedH(2)())
+        expval2 = expectation_value(Ψ, summedH(2), summedEnvs)
+        expval3 = expectation_value(Ψ, summedH(2))
+        @test expval ≈ expval1
+        @test expval ≈ expval2
+        @test expval ≈ expval3
+
+        # test derivatives
+        summedhct = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
+        sum1 = sum(zip(Hs, fs, Envs)) do (H, f, env)
+            f * MPSKit.∂∂C(1, Ψ, H, env)(Ψ.CR[1])
+        end
+        @test summedhct(Ψ.CR[1], 2.0) ≈ sum1
+
+        summedhct = MPSKit.∂∂AC(1, Ψ, summedH, summedEnvs)
+        sum2 = sum(zip(Hs, fs, Envs)) do (H, f, env)
+            f * MPSKit.∂∂AC(1, Ψ, H, env)(Ψ.AC[1])
+        end
+        @test summedhct(Ψ.AC[1], 2.0) ≈ sum2
+
+        v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2])
+        summedhct = MPSKit.∂∂AC2(1, Ψ, summedH, summedEnvs)
+        sum3 = sum(zip(Hs, fs, Envs)) do (H, f, env)
+            f * MPSKit.∂∂AC2(1, Ψ, H, env)(v)
+        end
+        @test summedhct(v, 2.0) ≈ sum3
     end
 end

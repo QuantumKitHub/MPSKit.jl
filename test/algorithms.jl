@@ -159,10 +159,10 @@ end
     WindEnvs_0 = environments(Ψwindow, Hwindow_0)
     timevolvedwindow_0, WindEnvs_0 = timestep(Ψwindow, Hwindow_0, 0.0, 0.1, alg, WindEnvs_0)
 
-    # with SumOfOperators
-    Hleft = SumOfOperators([0.5 * simpleH, 0.5 * simpleH])
-    Hmiddle = SumOfOperators([0.5 * repeat(simpleH, 20), 0.5 * repeat(simpleH, 20)])
-    Hright = SumOfOperators([0.5 * simpleH, 0.5 * simpleH])
+    # with LazySum
+    Hleft = LazySum([0.5 * simpleH, 0.5 * simpleH])
+    Hmiddle = LazySum([0.5 * repeat(simpleH, 20), 0.5 * repeat(simpleH, 20)])
+    Hright = LazySum([0.5 * simpleH, 0.5 * simpleH])
 
     Hwindow = Window(Hleft, Hmiddle, Hright)
     WindEnvs = environments(Ψwindow, Hwindow)

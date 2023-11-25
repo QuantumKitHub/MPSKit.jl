@@ -28,7 +28,7 @@ export entanglementplot, transferplot
 # hamiltonian things
 export Cache
 export SparseMPO,
-    MPOHamiltonian, DenseMPO, MPOMultiline, UntimedOperator, TimedOperator, SumOfOperators, evalat
+    MPOHamiltonian, DenseMPO, MPOMultiline, UntimedOperator, TimedOperator, LazySum, ConvertOperator
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
 export leftenv, rightenv
 
@@ -82,7 +82,7 @@ include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")
 include("operators/multipliedoperator.jl")
-include("operators/sumofoperators.jl")
+include("operators/lazysum.jl")
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")

@@ -47,7 +47,7 @@ end
 
 function leftexpand(
     st::WindowMPS,
-    H::Union{<:MultipliedOperator,<:SumOfOperators},
+    H::Union{<:MultipliedOperator,<:LazySum},
     Envs;
     singval=1e-2,
     growspeed=10,
@@ -82,7 +82,7 @@ end
 
 function rightexpand(
     st::WindowMPS,
-    H::Union{<:MultipliedOperator,<:SumOfOperators},
+    H::Union{<:MultipliedOperator,<:LazySum},
     Envs;
     singval=1e-2,
     growspeed=10,

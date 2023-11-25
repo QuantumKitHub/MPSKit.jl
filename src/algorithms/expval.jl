@@ -206,17 +206,17 @@ function expectation_value(ψ, op::UntimedOperator, args...)
     return op.f * expectation_value(ψ, op.op, args...)
 end
 
-# define expectation_value for SumOfOperators
-function expectation_value(ψ, ops::SumOfOperators, at::Int)
+# define expectation_value for LazySum
+function expectation_value(ψ, ops::LazySum, at::Int)
     return sum(op -> expectation_value(ψ, op, at), ops)
 end
 function expectation_value(
-    Ψ, ops::SumOfOperators, envs::MultipleEnvironments=environments(Ψ, ops)
+    Ψ, ops::LazySum, envs::MultipleEnvironments=environments(Ψ, ops)
 )
     return sum(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
 end
 function expectation_value(
-    Ψ::WindowMPS, ops::SumOfOperators, envs::MultipleEnvironments=environments(Ψ, ops)
+    Ψ::WindowMPS, ops::LazySum, envs::MultipleEnvironments=environments(Ψ, ops)
 )   expvals = map(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
     return sum.(zip(expvals...)) #changes type though
 end

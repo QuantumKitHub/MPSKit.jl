@@ -11,7 +11,7 @@ Base.iterate(x::MultipleEnvironments) = iterate(x.envs)
 Base.iterate(x::MultipleEnvironments, i) = iterate(x.envs, i)
 
 # we need constructor, agnostic of particular MPS
-function environments(st, ham::SumOfOperators)
+function environments(st, ham::LazySum)
     return MultipleEnvironments(ham, map(op -> environments(st, op), ham.ops))
 end
 
@@ -22,7 +22,7 @@ end
 
 function environments(
     st::WindowMPS,
-    ham::SumOfOperators;
+    ham::LazySum;
     lenvs=environments(st.left_gs, ham),
     renvs=environments(st.right_gs, ham),
 )
