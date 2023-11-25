@@ -214,7 +214,7 @@ end
 
 function expectation_value(
     Ψ::WindowMPS, windowH::Window, windowEnvs::Window{C,D,C}=environments(Ψ, windowH)
-) where {C<:Union{MultipleEnvironments,Cache},D<:Union{MultipleEnvironments,Cache}}
+) where {C<:Cache,D<:Cache}
     left = expectation_value(Ψ.left_gs, windowH.left, windowEnvs.left)
     middle = expectation_value(Ψ.window, windowH.middle, windowEnvs.middle)
     right = expectation_value(Ψ.right_gs, windowH.right, windowEnvs.right)

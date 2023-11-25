@@ -75,6 +75,16 @@ end
         E = expectation_value(ψ, H, envs)
         @test sum(E₀) ≈ sum(E) atol = 1e-2
     end
+
+    Ψwindow₀ = WindowMPS(ψ₀, 10)
+    Hwindow = Window(H, repeat(H, 10), H)
+    E₀ = expectation_value(Ψwindow₀, Hwindow)
+
+    @testset "WindowMPS TDVP" begin
+        ψwindow, envs = timestep(Ψwindow₀, H, dt, TDVP())
+        E = expectation_value(ψ, H, envs)
+        @test sum(E₀) ≈ sum(E) atol = 1e-2
+    end
 end
 
 @testset "leading_boundary" verbose = true begin
