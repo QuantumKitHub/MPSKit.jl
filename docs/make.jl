@@ -36,6 +36,7 @@ makedocs(;
                 ),
             ),
         ),
+        size_threshold=512000,
     ),
     pages=[
         "Home" => "index.md",

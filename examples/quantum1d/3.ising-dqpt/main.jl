@@ -6,8 +6,6 @@ In this tutorial we will try to reproduce the results from
 """
 
 using MPSKit, MPSKitModels, TensorKit
-using TensorOperations: TensorOperations;
-TensorOperations.disable_cache(); # hide
 
 md"""
 Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the loschmidth echo.

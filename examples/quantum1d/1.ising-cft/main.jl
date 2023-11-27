@@ -8,8 +8,6 @@ analysis to larger system sizes through the use of MPS techniques.
 
 using MPSKit, MPSKitModels, TensorKit, Plots, KrylovKit
 using LinearAlgebra: eigen, diagm, Hermitian
-using TensorOperations: TensorOperations;
-TensorOperations.disable_cache(); # hide
 
 md"""
 The hamiltonian is defined on a finite lattice with periodic boundary conditions,

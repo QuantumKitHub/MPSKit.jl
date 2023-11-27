@@ -6,8 +6,6 @@ The necessary packages to follow this tutorial are:
 """
 
 using MPSKit, MPSKitModels, TensorKit, Plots
-using TensorOperations: TensorOperations;
-TensorOperations.disable_cache(); # hide
 
 md"""
 ## Failure
