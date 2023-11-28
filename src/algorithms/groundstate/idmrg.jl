@@ -35,8 +35,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG1, oenvs=environments
             Ψ.AC[pos] = vecs[1]
             Ψ.AL[pos], Ψ.CR[pos] = leftorth(vecs[1])
 
-            tm = TransferMatrix(Ψ.AL[pos], ham[pos], Ψ.AL[pos])
-            setleftenv!(envs, pos + 1, leftenv(envs, pos) * tm)
+            update_leftenv!(envs, Ψ, ham, pos)
         end
 
         for pos in length(Ψ):-1:1
@@ -47,8 +46,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG1, oenvs=environments
             Ψ.CR[pos - 1], temp = rightorth(_transpose_tail(vecs[1]))
             Ψ.AR[pos] = _transpose_front(temp)
 
-            tm = TransferMatrix(Ψ.AR[pos], ham[pos], Ψ.AR[pos])
-            setrightenv!(envs, pos - 1, tm * rightenv(envs, pos))
+            update_rightenv!(envs, Ψ, ham, pos)
         end
 
         delta = norm(curc - Ψ.CR[0])
@@ -110,10 +108,8 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
             st.AR[pos + 1] = _transpose_front(ar)
             st.AC[pos + 1] = _transpose_front(c * ar)
 
-            tm_L = TransferMatrix(st.AL[pos], ham[pos], st.AL[pos])
-            setleftenv!(envs, pos + 1, leftenv(envs, pos) * tm_L)
-            tm_R = TransferMatrix(st.AR[pos + 1], ham[pos + 1], st.AR[pos + 1])
-            setrightenv!(envs, pos, tm_R * rightenv(envs, pos + 1))
+            update_leftenv!(envs, st, ham, pos)
+            update_rightenv!(envs, st, ham, pos)
         end
 
         # update the edge
@@ -135,10 +131,8 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
         curc = complex(c)
 
         # update environments
-        tm_L = TransferMatrix(st.AL[0], ham[0], st.AL[0])
-        setleftenv!(envs, 1, leftenv(envs, 0) * tm_L)
-        tm_R = TransferMatrix(st.AR[1], ham[1], st.AR[1])
-        setrightenv!(envs, 0, tm_R * rightenv(envs, 1))
+        update_leftenv!(envs, st, ham, 0)
+        update_rightenv!(envs, st, ham, 0)
 
         # sweep from right to left
         for pos in (length(st) - 1):-1:1
@@ -155,10 +149,8 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
             st.AR[pos + 1] = _transpose_front(ar)
             st.AC[pos + 1] = _transpose_front(c * ar)
 
-            tm_L = TransferMatrix(st.AL[pos], ham[pos], st.AL[pos])
-            setleftenv!(envs, pos + 1, leftenv(envs, pos) * tm_L)
-            tm_R = TransferMatrix(st.AR[pos + 1], ham[pos + 1], st.AR[pos + 1])
-            setrightenv!(envs, pos, tm_R * rightenv(envs, pos + 1))
+            update_leftenv!(envs, st, ham, pos)
+            update_rightenv!(envs, st, ham, pos)
         end
 
         # update the edge
@@ -178,10 +170,8 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
         st.AR[1] = _transpose_front(ar)
         st.AC[1] = _transpose_front(c * ar)
 
-        tm_L = TransferMatrix(st.AL[0], ham[0], st.AL[0])
-        setleftenv!(envs, 1, leftenv(envs, 0) * tm_L)
-        tm_R = TransferMatrix(st.AR[1], ham[1], st.AR[1])
-        setrightenv!(envs, 0, tm_R * rightenv(envs, 1))
+        update_leftenv!(envs, st, ham, 0)
+        update_rightenv!(envs, st, ham, 0)
 
         # update error
         smallest = infimum(_firstspace(curc), _firstspace(c))
