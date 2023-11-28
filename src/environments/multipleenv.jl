@@ -12,7 +12,14 @@ Base.iterate(x::MultipleEnvironments, i) = iterate(x.envs, i)
 
 # we need constructor, agnostic of particular MPS
 function environments(st, ham::LazySum)
-    return MultipleEnvironments(ham, map(op -> environments(st, op), ham.ops))
+    return MultipleEnvironments(ham, map( op -> environments(st, op), ham.ops))
+end
+
+function environments(st::Union{InfiniteMPS,MPSMultiline}, ham::LazySum; solver = Defaults.linearsolver)
+    if !(solver isa Vector)
+        solver = repeat([solver],length(ham))
+    end
+    return MultipleEnvironments(ham, map( (op,solv) -> environments(st, op; solver=solv), ham.ops,solver))
 end
 
 #broadcast vs map?
@@ -41,9 +48,19 @@ end
 """
     Recalculate in-place each sub-env in MultipleEnvironments
 """
-function recalculate!(env::MultipleEnvironments, args...)
+function recalculate!(env::MultipleEnvironments, args...; kwargs...)
     for subenv in env.envs
-        recalculate!(subenv, args...)
+        recalculate!(subenv, args...; kwargs...)
     end
     return env
 end
+
+#maybe this can be used to provide compatibility with existing code?
+function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
+    if prop == :solver
+        return map(env->env.solver,envs)
+    else 
+        return getfield(envs,prop)
+    end
+end
+
