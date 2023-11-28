@@ -71,6 +71,7 @@ site_type(::Type{Multiline{S}}) where {S} = site_type(S)
 bond_type(::Type{Multiline{S}}) where {S} = bond_type(S)
 site_type(st::Multiline) = site_type(typeof(st))
 bond_type(st::Multiline) = bond_type(typeof(st))
+VectorInterface.scalartype(::Multiline{T}) where {T} = scalartype(T)
 
 function TensorKit.dot(a::MPSMultiline, b::MPSMultiline; kwargs...)
     return sum(dot.(parent(a), parent(b); kwargs...))
