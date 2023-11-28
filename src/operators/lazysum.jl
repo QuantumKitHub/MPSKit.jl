@@ -28,30 +28,34 @@ Base.length(x::LazySum) = prod(size(x))
 struct TimeDependent end
 struct NotTimeDependent end
 
-TimeDependence(x::T) where {T} = TimeDependence(T)
-TimeDependence(::Type) = NotTimeDependent
-#TimeDependence(::Type{<:TimedOperator}) = TimeDependent
-TimeDependence(x::LazySum) = promote_type(TimeDependence.(x)...)
+TimeDependence(x) = NotTimeDependent()
+TimeDependence(x::LazySum) = istimed(x) ? TimeDependent() : NotTimeDependent()
 
-Base.promote_rule(::Type{TimeDependent},::Type{NotTimeDependent}) = TimeDependent
+istimed(::TimeDependent) = true
+istimed(::NotTimeDependent) = false
+istimed(x) = istimed(TimeDependence(x))
+istimed(x::LazySum) = any(istimed, x)
 
 # constructors
 LazySum(x) = LazySum([x])
+LazySum(f::Function,x) = LazySum(map(y->f(y),x))
 
-# For internal use only
-_eval_at(x::O,args...) where {O} = x
+# Internal use only, works always
+_eval_at(x,args...) = x # -> this is what you should define for your custom structs inside a LazySum
+#see derivatives.jl for x::DerivativeOperator
 
-_eval_at(x::LazySum,args...) = _eval_at(TimeDependence(x),x,args...)
-_eval_at(::Type{NotTimeDependent},x) = sum(_eval_at,x)
-_eval_at(::Type{NotTimeDependent},x,::Number) =  ArgumentError("A time independent LazySum cannot be evaluated at a time t")
+# wrapper around _eval_at
+eval_at(x,args...) = eval_at(TimeDependence(x),x,args...)
+eval_at(::TimeDependent,x::LazySum,t::Number) = LazySum(O -> _eval_at(O,t),x) 
+eval_at(::TimeDependent,x::LazySum) = throw(ArgumentError("attempting to evaluate time-dependent LazySum without specifiying a time"))
+eval_at(::NotTimeDependent,x::LazySum) = sum(_eval_at,x)
+eval_at(::NotTimeDependent,x::LazySum,t::Number) = throw(ArgumentError("attempting to evaluate time-independent LazySum at time"))
 
 # For users
-# using (t) should return LazySum{UntimedOperators}
-# using ConvertOperator should do explicit multiplication
-(x::LazySum)() = _eval_at(x)
-ConvertOperator(x::LazySum) = _eval_at(x,t)
-(x::LazySum)(t::Number) = _eval_at(x,t)
-ConvertOperator(x::LazySum,t) = x(t)()
+(x::LazySum)() = eval_at(x)
+ConvertOperator(x::LazySum) = eval_at(x) # using ConvertOperator should do explicit multiplication
+(x::LazySum)(t::Number) = eval_at(x,t) # using (t) should return NotTimeDependent LazySum
+ConvertOperator(x::LazySum,t) = x(t)() 
 
 # we define the addition for LazySum and we do the rest with promote
 function Base.:+(SumOfOps1::LazySum, SumOfOps2::LazySum)
