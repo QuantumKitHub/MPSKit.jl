@@ -24,10 +24,10 @@ By convention, we have that:
               virtualspaces::Vector{<:Union{S, CompositeSpace{S}};
               normalize=true) where {S<:ElementarySpace}
     FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
-              maxvirtualspace::S;
+              maxvirtualspace::Union{S,Vector{S}};
               normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
     FiniteMPS([f, eltype], N::Int, physicalspace::Union{S,CompositeSpace{S}},
-              maxvirtualspace::S;
+              maxvirtualspace::Union{S,Vector{S}};
               normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
     FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=false)
 
@@ -171,54 +171,57 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=fa
     return FiniteMPS(ALs, ARs, ACs, CLs)
 end
 
-function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   virtspaces::Vector{S}; normalize=true) where {S<:ElementarySpace}
-    N = length(physspaces)
-    length(virtspaces) == N + 1 || throw(DimensionMismatch("length mismatch of spaces"))
-    tensors = MPSTensor.(f, elt, physspaces, virtspaces[1:(end - 1)], virtspaces[2:end])
-    return FiniteMPS(tensors; normalize=normalize, overwrite=true)
-end
-function FiniteMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, virtspaces::Vector{S};
-                   kwargs...) where {S<:ElementarySpace}
-    return FiniteMPS(rand, Defaults.eltype, physspaces, virtspaces; kwargs...)
-end
-
-function FiniteMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   maxvirtspace::S; left::S=oneunit(S), right::S=oneunit(S),
-                   kwargs...) where {S<:ElementarySpace}
-    N = length(physspaces)
-    virtspaces = Vector{S}(undef, N + 1)
-    virtspaces[1] = left
+function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
+                   maxVspaces::Vector{S}; normalize=true, left::S=oneunit(S),
+                   right::S=oneunit(S)) where {S<:ElementarySpace}
+    N = length(Pspaces)
+    length(maxVspaces) == N - 1 || throw(DimensionMismatch("length of physical spaces ($N) and virtual spaces $(length(maxVspaces)) should differ by 1"))
+    
+    # limit the maximum virtual dimension such that result is full rank
+    fusedPspaces = fuse.(Pspaces) # for working with multiple physical spaces
+    Vspaces = similar(maxVspaces)
+    
+    Vspaces[1] = left
     for k in 2:N
-        virtspaces[k] = infimum(fuse(virtspaces[k - 1], fuse(physspaces[k])), maxvirtspace)
-        dim(virtspaces[k]) > 0 || @warn "no fusion channels available"
+        Vspaces[k] = infimum(fuse(Vspaces[k - 1], fusedPspaces[k]), maxVspaces[k - 1])
+        dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
     end
-    virtspaces[N + 1] = right
 
+    Vspaces[end] = right
     for k in N:-1:2
-        virtspaces[k] = infimum(virtspaces[k],
-                                fuse(virtspaces[k + 1], dual(fuse(physspaces[k]))))
-        dim(virtspaces[k]) > 0 || @warn "no fusion channels available"
+        Vspaces[k] = infimum(maxVspaces[k - 1], fuse(Vspaces[k + 1], dual(fusedPspaces[k])))
+        dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
     end
 
-    return FiniteMPS(f, elt, physspaces, virtspaces; kwargs...)
+    # construct MPS
+    tensors = MPSTensor.(f, elt, Pspaces, Vspaces[1:(end - 1)], Vspaces[2:end])
+    return FiniteMPS(tensors; normalize, overwrite=true)
 end
-function FiniteMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S;
+function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
+                   maxVspace::S; kwargs...) where {S<:ElementarySpace}
+    maxVspaces = fill(maxVspace, length(Pspaces) - 1)
+    return FiniteMPS(f, elt, Pspaces, maxVspaces; kwargs...)
+end
+function FiniteMPS(Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
+                   maxVspaces::Union{S,Vector{S}};
                    kwargs...) where {S<:ElementarySpace}
-    return FiniteMPS(rand, Defaults.eltype, physspaces, maxvirtspace; kwargs...)
+    return FiniteMPS(rand, Defaults.eltype, Pspaces, maxVspaces; kwargs...)
 end
 
-FiniteMPS(P::ProductSpace, args...; kwargs...) = FiniteMPS(collect(P), args...; kwargs...)
-function FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...)
-    return FiniteMPS(f, elt, collect(P), args...; kwargs...)
-end
-
+# Also accept single physical space and length
 function FiniteMPS(N::Int, V::VectorSpace, args...; kwargs...)
     return FiniteMPS(fill(V, N), args...; kwargs...)
 end
 function FiniteMPS(f, elt, N::Int, V::VectorSpace, args...; kwargs...)
     return FiniteMPS(f, elt, fill(V, N), args...; kwargs...)
 end
+
+# Also accept ProductSpace of physical spaces
+FiniteMPS(P::ProductSpace, args...; kwargs...) = FiniteMPS(collect(P), args...; kwargs...)
+function FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...)
+    return FiniteMPS(f, elt, collect(P), args...; kwargs...)
+end
+
 
 #===========================================================================================
 Utility
