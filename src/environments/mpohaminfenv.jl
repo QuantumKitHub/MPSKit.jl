@@ -17,6 +17,10 @@ function Base.copy(p::MPOHamInfEnv)
     return MPOHamInfEnv(p.opp, p.dependency, p.solver, copy(p.lw), copy(p.rw))
 end;
 
+function Base.repeat(x::MPOHamInfEnv,n::Int; dependency=repeat(x.dependency,n))
+    MPOHamInfEnv(repeat(x.opp,n),dependency,x.solver,repeat(x.lw,1,n),repeat(x.rw,1,n),ReentrantLock())
+end
+
 function gen_lw_rw(st::InfiniteMPS{A}, ham::Union{SparseMPO,MPOHamiltonian}) where {A}
     lw = PeriodicArray{A,2}(undef, ham.odim, length(st))
     rw = PeriodicArray{A,2}(undef, ham.odim, length(st))
