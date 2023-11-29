@@ -39,33 +39,36 @@ end
 function IDMRGEnv(Ψ::Union{MPSMultiline,InfiniteMPS}, env::MultipleEnvironments)
     tmp = map(env.envs) do subenv
         Ψ === subenv.dependency || recalculate!(subenv, Ψ)
-        (subenv.opp,IDMRGEnv(subenv.opp, deepcopy(subenv.lw), deepcopy(subenv.rw)))
+        (subenv.opp, IDMRGEnv(subenv.opp, deepcopy(subenv.lw), deepcopy(subenv.rw)))
     end
-    hams,envs = collect.(zip(tmp...))
-    return MultipleEnvironments(LazySum(hams),envs)
+    hams, envs = collect.(zip(tmp...))
+    return MultipleEnvironments(LazySum(hams), envs)
 end
 
-function update_rightenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham, pos::Int)
-    for (subham,subenv) in zip(ham,envs.envs)
+function update_rightenv!(
+    envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham, pos::Int
+)
+    for (subham, subenv) in zip(ham, envs.envs)
         tm = TransferMatrix(st.AR[pos + 1], subham[pos + 1], st.AR[pos + 1])
-        setrightenv!(subenv, pos, tm * rightenv(subenv,pos+1))
+        setrightenv!(subenv, pos, tm * rightenv(subenv, pos + 1))
     end
 end
 
-function update_leftenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham, pos::Int)
-    for (subham,subenv) in zip(ham,envs.envs)
+function update_leftenv!(
+    envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham, pos::Int
+)
+    for (subham, subenv) in zip(ham, envs.envs)
         tm = TransferMatrix(st.AL[pos], subham[pos], st.AL[pos])
-        setleftenv!(subenv, pos+1, leftenv(subenv,pos) * tm )
+        setleftenv!(subenv, pos + 1, leftenv(subenv, pos) * tm)
     end
 end
 
 function update_rightenv!(envs::IDMRGEnv, st, ham, pos::Int)
     tm = TransferMatrix(st.AR[pos + 1], ham[pos + 1], st.AR[pos + 1])
-    setrightenv!(envs, pos, tm * rightenv(envs,pos+1))
+    return setrightenv!(envs, pos, tm * rightenv(envs, pos + 1))
 end
 
 function update_leftenv!(envs::IDMRGEnv, st, ham, pos::Int)
     tm = TransferMatrix(st.AL[pos], ham[pos], st.AL[pos])
-    setleftenv!(envs, pos+1, leftenv(envs,pos) * tm)
+    return setleftenv!(envs, pos + 1, leftenv(envs, pos) * tm)
 end
-

@@ -71,21 +71,23 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1//2 => 10, 3//2 => 5, 5//2 
     @test real(sum(expectation_value(ts2, h4))) >= 0
 end
 
-@testset "General LazySum of $(eltype(Os))" for Os in (rand(Float64,rand(1:10)),map(i->rand(ComplexF64,3,4),1:rand(1:10)),
-    map(i->TensorMap(rand,ComplexF64,ℂ^13,ℂ^7),1:rand(1:10)))
-
+@testset "General LazySum of $(eltype(Os))" for Os in (
+    rand(Float64, rand(1:10)),
+    map(i -> rand(ComplexF64, 3, 4), 1:rand(1:10)),
+    map(i -> TensorMap(rand, ComplexF64, ℂ^13, ℂ^7), 1:rand(1:10)),
+)
     LazyOs = LazySum(Os)
-    
+
     #test user interface
     summed = sum(Os)
 
-    @test LazyOs() ≈ summed atol = 1-08
-    @test ConvertOperator(LazyOs) ≈ summed atol = 1-08
+    @test LazyOs() ≈ summed atol = 1 - 08
+    @test ConvertOperator(LazyOs) ≈ summed atol = 1 - 08
 
-    LazyOs_added = +(LazyOs,Os...)
+    LazyOs_added = +(LazyOs, Os...)
 
-    @test LazyOs_added() ≈ 2*summed atol = 1-08
-    @test ConvertOperator(LazyOs_added) ≈ 2*summed atol = 1-08
+    @test LazyOs_added() ≈ 2 * summed atol = 1 - 08
+    @test ConvertOperator(LazyOs_added) ≈ 2 * summed atol = 1 - 08
 end
 
 @testset "DenseMPO" for ham in (transverse_field_ising(), heisenberg_XXX(; spin=1))
@@ -103,10 +105,9 @@ pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1, 2 => 1))
 vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
 
 @testset "LazySum of (effective) Hamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
-    zip(
-pspaces, vspaces
+                                                                        zip(
+    pspaces, vspaces
 )
-
     n = TensorMap(rand, ComplexF64, pspace, pspace)
     n += n'
     nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
@@ -117,11 +118,11 @@ pspaces, vspaces
     H1 = repeat(MPOHamiltonian(n), 2)
     H2 = repeat(MPOHamiltonian(nn), 2)
     H3 = repeat(MPOHamiltonian(nnn), 2)
-    Hs = [H1,H2,H3]
+    Hs = [H1, H2, H3]
     summedH = LazySum(Hs)
-    
+
     Ψs = [
-        FiniteMPS(rand, ComplexF64, rand(3:2:20) ,pspace, Dspace),
+        FiniteMPS(rand, ComplexF64, rand(3:2:20), pspace, Dspace),
         InfiniteMPS([
             TensorMap(rand, ComplexF64, Dspace * pspace, Dspace),
             TensorMap(rand, ComplexF64, Dspace * pspace, Dspace),
