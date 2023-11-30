@@ -58,10 +58,7 @@ function eval_at(::NotTimeDependent, x::LazySum, t::Number)
 end
 
 # For users
-(x::LazySum)() = eval_at(x)
-ConvertOperator(x::LazySum) = eval_at(x) # using ConvertOperator should do explicit multiplication
 (x::LazySum)(t::Number) = eval_at(x, t) # using (t) should return NotTimeDependent LazySum
-ConvertOperator(x::LazySum, t) = x(t)()
 
 # we define the addition for LazySum and we do the rest with this
 function Base.:+(SumOfOps1::LazySum, SumOfOps2::LazySum)
