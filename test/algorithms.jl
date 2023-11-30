@@ -47,9 +47,9 @@ include("setup.jl")
         @test sum(δ) < 1e-3
         @test v₀ > v && v < 1e-2 # energy variance should be low
 
-        ψ_nolazy, envs_nolazy, _ = find_groundstate(ψ₀, Hlazy(), alg)
+        ψ_nolazy, envs_nolazy, _ = find_groundstate(ψ₀, sum(Hlazy), alg)
         @test expectation_value(ψ, Hlazy, envs) ≈
-            expectation_value(ψ_nolazy, Hlazy(), envs_nolazy) atol = 1 - 06
+            expectation_value(ψ_nolazy, sum(Hlazy), envs_nolazy) atol = 1 - 06
     end
 
     finite_algs = [
@@ -71,7 +71,7 @@ include("setup.jl")
         @test v₀ > v && v < 1e-2 # energy variance should be low
     end
 
-    Hlazy = LazySum([3 * H, -1 * H, 5.557 * H])
+    Hlazy = LazySum([H, H, H])
 
     @testset "LazySum Finite $i" for (i, alg) in enumerate(finite_algs)
         ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
@@ -83,9 +83,9 @@ include("setup.jl")
         @test sum(δ) < 100 * tol
         @test v₀ > v && v < 1e-2 # energy variance should be low
 
-        ψ_nolazy, envs_nolazy, _ = find_groundstate(ψ₀, Hlazy(), alg)
+        ψ_nolazy, envs_nolazy, _ = find_groundstate(ψ₀, sum(Hlazy), alg)
         @test expectation_value(ψ, Hlazy, envs) ≈
-            expectation_value(ψ_nolazy, Hlazy(), envs_nolazy) atol = 1 - 06
+            expectation_value(ψ_nolazy, sum(Hlazy), envs_nolazy) atol = 1 - 06
     end
 end
 

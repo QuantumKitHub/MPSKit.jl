@@ -58,7 +58,7 @@ function update_leftenv!(
     envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham, pos::Int
 )
     for (subham, subenv) in zip(ham, envs.envs)
-        tm = TransferMatrix(st.AL[pos], subham[pos], st.AL[pos])
+        tm = TransferMatrix(st.AL[pos - 1], subham[pos - 1], st.AL[pos - 1])
         setleftenv!(subenv, pos, leftenv(subenv, pos - 1) * tm)
     end
 end
@@ -69,6 +69,6 @@ function update_rightenv!(envs::IDMRGEnv, st, ham, pos::Int)
 end
 
 function update_leftenv!(envs::IDMRGEnv, st, ham, pos::Int)
-    tm = TransferMatrix(st.AL[pos], ham[pos], st.AL[pos])
+    tm = TransferMatrix(st.AL[pos - 1], ham[pos - 1], st.AL[pos - 1])
     return setleftenv!(envs, pos, leftenv(envs, pos - 1) * tm)
 end

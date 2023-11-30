@@ -72,22 +72,20 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1//2 => 10, 3//2 => 5, 5//2 
 end
 
 @testset "General LazySum of $(eltype(Os))" for Os in (
-    rand(Float64, rand(1:10)),
-    map(i -> rand(ComplexF64, 3, 4), 1:rand(1:10)),
+    rand(ComplexF64, rand(1:10)),
     map(i -> TensorMap(rand, ComplexF64, ℂ^13, ℂ^7), 1:rand(1:10)),
+    map(i -> TensorMap(rand, ComplexF64, ℂ^1⊗ℂ^2,ℂ^3⊗ℂ^4), 1:rand(1:10)),
 )
     LazyOs = LazySum(Os)
 
     #test user interface
     summed = sum(Os)
 
-    @test LazyOs() ≈ summed atol = 1 - 08
-    @test ConvertOperator(LazyOs) ≈ summed atol = 1 - 08
+    @test sum(LazyOs) ≈ summed atol = 1 - 08
 
     LazyOs_added = +(LazyOs, Os...)
 
-    @test LazyOs_added() ≈ 2 * summed atol = 1 - 08
-    @test ConvertOperator(LazyOs_added) ≈ 2 * summed atol = 1 - 08
+    @test sum(LazyOs_added) ≈ 2 * summed atol = 1 - 08
 end
 
 @testset "DenseMPO" for ham in (transverse_field_ising(), heisenberg_XXX(; spin=1))
@@ -136,7 +134,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         expval = sum(zip(Hs, Envs)) do (H, Env)
             expectation_value(Ψ, H, Env)
         end
-        expval1 = expectation_value(Ψ, summedH())
+        expval1 = expectation_value(Ψ, sum(summedH))
         expval2 = expectation_value(Ψ, summedH, summedEnvs)
         expval3 = expectation_value(Ψ, summedH)
         @test expval ≈ expval1
