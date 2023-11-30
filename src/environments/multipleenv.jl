@@ -61,7 +61,7 @@ end
 
 #maybe this can be used to provide compatibility with existing code?
 function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
-    if prop == :solver
+    if prop === :solver
         return map(env -> env.solver, envs)
     else
         return getfield(envs, prop)
