@@ -70,5 +70,5 @@ end
 
 function update_leftenv!(envs::IDMRGEnv, st, ham, pos::Int)
     tm = TransferMatrix(st.AL[pos], ham[pos], st.AL[pos])
-    return setleftenv!(envs, pos, leftenv(envs, pos-1) * tm)
+    return setleftenv!(envs, pos, leftenv(envs, pos - 1) * tm)
 end
