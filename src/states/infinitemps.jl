@@ -68,10 +68,28 @@ function InfiniteMPS(
 ) where {S<:IndexSpace}
     return InfiniteMPS(MPSTensor.(pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
 end
-
+function InfiniteMPS(
+    f,
+    elt::Type{<:Number},
+    pspaces::AbstractVector{S},
+    Dspaces::AbstractVector{S};
+    kwargs...,
+) where {S<:IndexSpace}
+    return InfiniteMPS(
+        MPSTensor.(f, elt, pspaces, circshift(Dspaces, 1), Dspaces); kwargs...
+    )
+end
 InfiniteMPS(d::S, D::S) where {S<:Union{Int,<:IndexSpace}} = InfiniteMPS([d], [D])
+function InfiniteMPS(f, elt::Type{<:Number}, d::S, D::S) where {S<:Union{Int,<:IndexSpace}}
+    return InfiniteMPS(f, elt, [d], [D])
+end
 function InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int})
     return InfiniteMPS(ComplexSpace.(ds), ComplexSpace.(Ds))
+end
+function InfiniteMPS(
+    f, elt::Type{<:Number}, ds::AbstractVector{Int}, Ds::AbstractVector{Int}, kwargs...
+)
+    return InfiniteMPS(f, elt, ComplexSpace.(ds), ComplexSpace.(Ds); kwargs...)
 end
 
 function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
