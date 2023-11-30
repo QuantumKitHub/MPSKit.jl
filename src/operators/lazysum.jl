@@ -68,16 +68,7 @@ function Base.:+(SumOfOps1::LazySum, SumOfOps2::LazySum)
     return LazySum([SumOfOps1..., SumOfOps2...])
 end
 
-#Base.promote_rule(::Type{<:LazySum},::Type{T}) where {T} = LazySum
-#Base.convert(::Type{<:LazySum},x::O) where {O} = LazySum(x)
-#Base.convert(::Type{T}, x::T) where {T<:LazySum} = x
-
-#Base.:+(op1::LazySum, op2) = +(promote(op1,op2)...)
-
 Base.:+(op1::LazySum, op2) = op1 + LazySum(op2)
 Base.:+(op1, op2::LazySum) = LazySum(op1) + op2
-# removes ambiguity for +(A::AbstractArray, B::AbstractArray)
-Base.:+(op1::LazySum, op2::AbstractArray) = op1 + LazySum(op2)
-Base.:+(op1::AbstractArray, op2::LazySum) = LazySum(op1) + op2
 
 Base.repeat(x::LazySum, args...) = LazySum(repeat.(x, args...))
