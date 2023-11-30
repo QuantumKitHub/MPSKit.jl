@@ -74,7 +74,7 @@ end
 @testset "General LazySum of $(eltype(Os))" for Os in (
     rand(ComplexF64, rand(1:10)),
     map(i -> TensorMap(rand, ComplexF64, ℂ^13, ℂ^7), 1:rand(1:10)),
-    map(i -> TensorMap(rand, ComplexF64, ℂ^1⊗ℂ^2,ℂ^3⊗ℂ^4), 1:rand(1:10)),
+    map(i -> TensorMap(rand, ComplexF64, ℂ^1 ⊗ ℂ^2, ℂ^3 ⊗ ℂ^4), 1:rand(1:10)),
 )
     LazyOs = LazySum(Os)
 
