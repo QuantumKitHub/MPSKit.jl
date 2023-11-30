@@ -22,7 +22,7 @@ Base.getindex(x::LazySum, i) = x.ops[i]
 #iteration and summation gets automatically implementend thanks to subtyping
 
 Base.length(x::LazySum) = prod(size(x))
-Base.similar(x::LazySum, ::Type{S}, dims::Dims) where S = LazySum(similar(x.ops, S, dims))
+Base.similar(x::LazySum, ::Type{S}, dims::Dims) where {S} = LazySum(similar(x.ops, S, dims))
 
 # Holy traits
 struct TimeDependent end
