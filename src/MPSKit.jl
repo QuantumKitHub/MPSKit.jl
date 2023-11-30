@@ -38,7 +38,7 @@ export excitations, FiniteExcited, QuasiparticleAnsatz
 export marek_gap, correlation_length, correlator
 export timestep!, timestep, TDVP, TDVP2, make_time_mpo, WI, WII, TaylorCluster
 export splitham, infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
-export changebonds!, changebonds, VUMPSSvdCut, OptimalExpand, SvdCut, UnionTrunc, RandExpand
+export changebonds!, changebonds, VumpsExpand, OptimalExpand, SvdCut, UnionTrunc, RandExpand
 export entropy
 export propagator, NaiveInvert, Jeckelmann, DynamicalDMRG
 export fidelity_susceptibility
@@ -103,7 +103,7 @@ include("algorithms/correlators.jl")
 
 include("algorithms/changebonds/changebonds.jl")
 include("algorithms/changebonds/optimalexpand.jl")
-include("algorithms/changebonds/vumpssvd.jl")
+include("algorithms/changebonds/vumpsexpand.jl")
 include("algorithms/changebonds/svdcut.jl")
 include("algorithms/changebonds/randexpand.jl")
 

@@ -176,7 +176,7 @@ end
         @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
         (state_vs, _) = changebonds(
-            state, repeat(MPOHamiltonian(nn), 2), VUMPSSvdCut(; trscheme=notrunc())
+            state, repeat(MPOHamiltonian(nn), 2), VumpsExpand(; trscheme=notrunc())
         )
         @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
 

@@ -4,7 +4,7 @@
 
 Change the bond dimension of `ψ` using the algorithm `alg`, and return the new `ψ` and the new `envs`.
 
-See also: [`SvdCut`](@ref), [`RandExpand`](@ref), [`VUMPSSvdCut`](@ref), [`OptimalExpand`](@ref)
+See also: [`SvdCut`](@ref), [`RandExpand`](@ref), [`VumpsExpand`](@ref), [`OptimalExpand`](@ref)
 """
 function changebonds end
 function changebonds! end

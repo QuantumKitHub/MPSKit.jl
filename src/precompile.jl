@@ -1313,7 +1313,7 @@ function _precompile_()
                 },
                 ComplexF64,
             },
-            VUMPSSvdCut,
+            VumpsExpand,
         },
     )
     Base.precompile(
