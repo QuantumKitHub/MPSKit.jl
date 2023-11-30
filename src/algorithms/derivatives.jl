@@ -333,7 +333,9 @@ end
 Base.:*(h::LazySum{<:MPSKit.DerivativeOperator}, v) = h(v)
 
 function ∂∂C(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
-    return LazySum{MPO_∂∂C}(map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops, cache.envs))
+    return LazySum{MPO_∂∂C}(
+        map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops, cache.envs)
+    )
 end
 
 function ∂∂AC(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)

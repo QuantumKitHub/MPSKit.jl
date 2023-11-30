@@ -199,18 +199,18 @@ function expectation_value(ψ::FiniteQP, O::MPOHamiltonian)
     return expectation_value(convert(FiniteMPS, ψ), O)
 end
 
-
 # define expectation_value for LazySum
 function expectation_value(ψ, ops::LazySum, at::Int)
     return sum(op -> expectation_value(ψ, op, at), ops)
 end
-function expectation_value(
-    Ψ, ops::LazySum, envs::MultipleEnvironments=environments(Ψ, ops)
-)
+function expectation_value(Ψ, ops::LazySum, envs::MultipleEnvironments=environments(Ψ, ops))
     return sum(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
 end
 
 # for now we also have LinearCombination
-function expectation_value(Ψ, H::LinearCombination, envs::LazyLincoCache=environments(Ψ,H))
-    return return sum(((c, op, env),) -> c * expectation_value(Ψ, op, env), zip(H.coeffs,H.opps, envs.envs))
+function expectation_value(Ψ, H::LinearCombination, envs::LazyLincoCache=environments(Ψ, H))
+    return return sum(
+        ((c, op, env),) -> c * expectation_value(Ψ, op, env),
+        zip(H.coeffs, H.opps, envs.envs),
+    )
 end

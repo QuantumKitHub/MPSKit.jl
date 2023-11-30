@@ -4,7 +4,6 @@ Structure representing a sum of operators. Consists of
 """
 struct LazySum{O} <: AbstractVector{O}
     ops::Vector{O}
-
 end
 
 Base.size(x::LazySum) = size(x.ops)
@@ -22,22 +21,26 @@ end
 
 # For users
 # evaluating at t should return UntimedOperators
-(x::LazySum{<:UntimedOperator})() = sum(ConvertOperator,x)
+(x::LazySum{<:UntimedOperator})() = sum(ConvertOperator, x)
 (x::LazySum{<:UntimedOperator})(::Number) = x
-(x::LazySum{<:MultipliedOperator})(t::Number) = LazySum{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
+function (x::LazySum{<:MultipliedOperator})(t::Number)
+    return LazySum{UntimedOperator}(map(y -> ConvertOperator(y, t), x))
+end
 #(x::LazySum{MultipliedOperator{S}})(t::Number) where {S} = LazySum{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
 #(x::LazySum{MultipliedOperator{S,T}})(t::Number) where {S,T} = LazySum{UntimedOperator}( map(y -> ConvertOperator(y,t), x))
 evalat(x::LazySum{<:UntimedOperator}) = x()
-evalat(x::LazySum{<:MultipliedOperator},t::Number) = sum(y->ConvertOperator(y,t)(),x)
-evalat(x::LazySum{<:UntimedOperator},::Number) = x
+evalat(x::LazySum{<:MultipliedOperator}, t::Number) = sum(y -> ConvertOperator(y, t)(), x)
+evalat(x::LazySum{<:UntimedOperator}, ::Number) = x
 # we define the addition for LazySum and we do the rest with promote
 function Base.:+(SumOfOps1::LazySum, SumOfOps2::LazySum)
-    return LazySum([SumOfOps1...,SumOfOps2...])
+    return LazySum([SumOfOps1..., SumOfOps2...])
 end
 
-Base.promote_rule(::Type{<:LazySum},::Type{T}) where {T} = LazySum
-Base.convert(::Type{<:LazySum},x::O) where {O} = LazySum(x)
+Base.promote_rule(::Type{<:LazySum}, ::Type{T}) where {T} = LazySum
+Base.convert(::Type{<:LazySum}, x::O) where {O} = LazySum(x)
 Base.convert(::Type{T}, x::T) where {T<:LazySum} = x
 
-Base.:+(op1::Union{MultipliedOperator,LazySum}, op2::MultipliedOperator) = +(promote(op1,op2)...)
-Base.:+(op1::MultipliedOperator, op2::LazySum) = +(promote(op1,op2)...)
+function Base.:+(op1::Union{MultipliedOperator,LazySum}, op2::MultipliedOperator)
+    return +(promote(op1, op2)...)
+end
+Base.:+(op1::MultipliedOperator, op2::LazySum) = +(promote(op1, op2)...)
