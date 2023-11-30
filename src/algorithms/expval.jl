@@ -82,10 +82,17 @@ expectation_value(ψ, envs::Cache) = expectation_value(ψ, envs.opp, envs)
 function expectation_value(ψ, ham::MPOHamiltonian)
     return expectation_value(ψ, ham, environments(ψ, ham))
 end
+
+
+"""
+    expectation_value(ψ::WindowMPS, ham::MPOHAmiltonian, envs) -> vals, tot
+
+TODO
+"""
 function expectation_value(ψ::WindowMPS, ham::MPOHamiltonian, envs::FinEnv)
     vals = expectation_value_fimpl(ψ, ham, envs)
 
-    tot = 0.0 + 0im
+        tot = 0.0 + 0im
     for i in 1:(ham.odim), j in 1:(ham.odim)
         tot += @plansor leftenv(envs, length(ψ), ψ)[i][1 2; 3] *
             ψ.AC[end][3 4; 5] *
