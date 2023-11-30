@@ -59,7 +59,7 @@ function update_leftenv!(
 )
     for (subham, subenv) in zip(ham, envs.envs)
         tm = TransferMatrix(st.AL[pos], subham[pos], st.AL[pos])
-        setleftenv!(subenv, pos + 1, leftenv(subenv, pos) * tm)
+        setleftenv!(subenv, pos, leftenv(subenv, pos-1) * tm)
     end
 end
 
@@ -70,5 +70,5 @@ end
 
 function update_leftenv!(envs::IDMRGEnv, st, ham, pos::Int)
     tm = TransferMatrix(st.AL[pos], ham[pos], st.AL[pos])
-    return setleftenv!(envs, pos + 1, leftenv(envs, pos) * tm)
+    return setleftenv!(envs, pos, leftenv(envs, pos-1) * tm)
 end
