@@ -35,7 +35,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG1, oenvs=environments
             Ψ.AC[pos] = vecs[1]
             Ψ.AL[pos], Ψ.CR[pos] = leftorth(vecs[1])
 
-            update_leftenv!(envs, Ψ, ham, pos+1)
+            update_leftenv!(envs, Ψ, ham, pos + 1)
         end
 
         for pos in length(Ψ):-1:1
@@ -46,7 +46,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG1, oenvs=environments
             Ψ.CR[pos - 1], temp = rightorth(_transpose_tail(vecs[1]))
             Ψ.AR[pos] = _transpose_front(temp)
 
-            update_rightenv!(envs, Ψ, ham, pos-1)
+            update_rightenv!(envs, Ψ, ham, pos - 1)
         end
 
         delta = norm(curc - Ψ.CR[0])
@@ -108,7 +108,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
             st.AR[pos + 1] = _transpose_front(ar)
             st.AC[pos + 1] = _transpose_front(c * ar)
 
-            update_leftenv!(envs, st, ham, pos+1)
+            update_leftenv!(envs, st, ham, pos + 1)
             update_rightenv!(envs, st, ham, pos)
         end
 
@@ -149,7 +149,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
             st.AR[pos + 1] = _transpose_front(ar)
             st.AC[pos + 1] = _transpose_front(c * ar)
 
-            update_leftenv!(envs, st, ham, pos+1)
+            update_leftenv!(envs, st, ham, pos + 1)
             update_rightenv!(envs, st, ham, pos)
         end
 
