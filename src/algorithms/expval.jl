@@ -83,7 +83,6 @@ function expectation_value(ψ, ham::MPOHamiltonian)
     return expectation_value(ψ, ham, environments(ψ, ham))
 end
 
-
 """
     expectation_value(ψ::WindowMPS, ham::MPOHAmiltonian, envs) -> vals, tot
 
