@@ -27,7 +27,7 @@ export entanglementplot, transferplot
 
 # hamiltonian things
 export Cache
-export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline
+export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, LazySum
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
 export leftenv, rightenv
 
@@ -79,6 +79,7 @@ include("operators/sparsempo/sparsempo.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")
+include("operators/lazysum.jl")
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
@@ -90,6 +91,7 @@ include("environments/abstractinfenv.jl")
 include("environments/permpoinfenv.jl")
 include("environments/mpohaminfenv.jl")
 include("environments/qpenv.jl")
+include("environments/multipleenv.jl")
 include("environments/idmrgenv.jl")
 include("environments/lazylincocache.jl")
 
