@@ -88,7 +88,7 @@ In contrast with the finite size case, we now should specify a momentum label to
 This way, it is possible to scan the dispersion relation over the entire momentum space.
 """
 
-virtual_space_inf = Rep[SU₂](1//2 => 16, 3//2 => 16, 5//2 => 8, 7//2 => 4)
+virtual_space_inf = Rep[SU₂](1 // 2 => 16, 3 // 2 => 16, 5 // 2 => 8, 7 // 2 => 4)
 ψ₀_inf = InfiniteMPS([physical_space], [virtual_space_inf])
 ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H)
 

@@ -47,11 +47,7 @@ _eval_at(x, args...) = x # -> this is what you should define for your custom str
 eval_at(x, args...) = eval_at(TimeDependence(x), x, args...)
 eval_at(::TimeDependent, x::LazySum, t::Number) = LazySum(O -> _eval_at(O, t), x)
 function eval_at(::TimeDependent, x::LazySum)
-    throw(
-        ArgumentError(
-            "attempting to evaluate time-dependent LazySum without specifiying a time"
-        ),
-    )
+    throw(ArgumentError("attempting to evaluate time-dependent LazySum without specifiying a time"))
 end
 eval_at(::NotTimeDependent, x::LazySum) = sum(O -> _eval_at(O), x)
 function eval_at(::NotTimeDependent, x::LazySum, t::Number)

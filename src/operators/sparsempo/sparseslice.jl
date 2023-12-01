@@ -11,13 +11,8 @@ A view of a sparse MPO at a single position.
 - `pspace::S`: physical space.
 """
 struct SparseMPOSlice{S,T,E} <: AbstractArray{T,2}
-    Os::SubArray{
-        Union{T,E},
-        2,
-        PeriodicArray{Union{T,E},3},
-        Tuple{Int,Base.Slice{Base.OneTo{Int}},Base.Slice{Base.OneTo{Int}}},
-        false,
-    }
+    Os::SubArray{Union{T,E},2,PeriodicArray{Union{T,E},3},
+                 Tuple{Int,Base.Slice{Base.OneTo{Int}},Base.Slice{Base.OneTo{Int}}},false}
     domspaces::SubArray{S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false}
     imspaces::SubArray{S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false}
     pspace::S
@@ -38,24 +33,14 @@ function Base.getindex(x::SparseMPOSlice{S,T,E}, a::Int, b::Int)::T where {S,T,E
     a <= x.odim && b <= x.odim || throw(BoundsError(x, [a, b]))
     if x.Os[a, b] isa E
         if x.Os[a, b] == zero(E)
-            return fill_data!(
-                TensorMap(
-                    x -> storagetype(T)(undef, x),
-                    x.domspaces[a] * x.pspace,
-                    x.pspace * x.imspaces[b]',
-                ),
-                zero,
-            )
+            return fill_data!(TensorMap(x -> storagetype(T)(undef, x),
+                                        x.domspaces[a] * x.pspace,
+                                        x.pspace * x.imspaces[b]'), zero)
         else
-            return @plansor temp[-1 -2; -3 -4] :=
-                (
-                    x.Os[a, b] * isomorphism(
-                        storagetype(T), x.domspaces[a] * x.pspace, x.imspaces[b]' * x.pspace
-                    )
-                )[
-                    -1 -2
-                    1 2
-                ] * τ[1 2; -3 -4]
+            F = isomorphism(storagetype(T), x.domspaces[a] * x.pspace,
+                            x.imspaces[b]' * x.pspace)
+            return @plansor temp[-1 -2; -3 -4] := (x.Os[a, b] * F)[-1 -2; 1 2] *
+                                                  τ[1 2; -3 -4]
         end
     else
         return x.Os[a, b]

@@ -88,10 +88,8 @@ function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
 
                 al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
                 normalize!(c)
-                v = @plansor ac2[1 2; 3 4] *
-                    conj(al[1 2; 5]) *
-                    conj(c[5; 6]) *
-                    conj(ar[6; 3 4])
+                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
+                             conj(ar[6; 3 4])
                 ϵ = max(ϵ, abs(1 - abs(v)))
 
                 Ψ.AC[pos] = (al, complex(c))
@@ -106,10 +104,8 @@ function find_groundstate!(Ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
 
                 al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
                 normalize!(c)
-                v = @plansor ac2[1 2; 3 4] *
-                    conj(al[1 2; 5]) *
-                    conj(c[5; 6]) *
-                    conj(ar[6; 3 4])
+                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
+                             conj(ar[6; 3 4])
                 ϵ = max(ϵ, abs(1 - abs(v)))
 
                 Ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))

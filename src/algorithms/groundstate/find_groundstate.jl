@@ -16,27 +16,18 @@ optimization algorithm will be attempted based on the supplied keywords.
 - `maxiter::Int`: maximum amount of iterations
 - `verbose::Bool`: display progress information
 """
-function find_groundstate(
-    Ψ::AbstractMPS,
-    H,
-    envs::Cache=environments(Ψ, H);
-    tol=Defaults.tol,
-    maxiter=Defaults.maxiter,
-    verbose=Defaults.verbose,
-    trscheme=nothing,
-)
+function find_groundstate(Ψ::AbstractMPS, H, envs::Cache=environments(Ψ, H);
+                          tol=Defaults.tol, maxiter=Defaults.maxiter,
+                          verbose=Defaults.verbose, trscheme=nothing)
     if isa(Ψ, InfiniteMPS)
         alg = VUMPS(; tol_galerkin=max(1e-4, tol), verbose=verbose, maxiter=maxiter)
         if tol < 1e-4
-            alg =
-                alg &
-                GradientGrassmann(; tol=tol, maxiter=maxiter, verbosity=verbose ? 2 : 0)
+            alg = alg &
+                  GradientGrassmann(; tol=tol, maxiter=maxiter, verbosity=verbose ? 2 : 0)
         end
         if !isnothing(trscheme)
-            alg =
-                IDMRG2(;
-                    tol_galerkin=min(1e-2, 100tol), verbose=verbose, trscheme=trscheme
-                ) & alg
+            alg = IDMRG2(; tol_galerkin=min(1e-2, 100tol), verbose=verbose,
+                         trscheme=trscheme) & alg
         end
     elseif isa(Ψ, AbstractFiniteMPS)
         alg = DMRG(; tol=tol, maxiter=maxiter, verbose=verbose)

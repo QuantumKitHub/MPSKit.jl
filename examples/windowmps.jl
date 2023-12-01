@@ -3,7 +3,7 @@ using MPSKit, MPSKitModels, TensorKit, Plots
 let
     #defining the hamiltonian
     th = nonsym_ising_ham(; lambda=0.3)
-    (sx, sy, sz) = nonsym_spintensors(1//2)
+    sx, sy, sz = nonsym_spintensors(1 // 2)
 
     #initilizing a random mps
     ts = InfiniteMPS([ℂ^2], [ℂ^12])

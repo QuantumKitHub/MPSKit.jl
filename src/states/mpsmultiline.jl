@@ -21,9 +21,8 @@ See also: [`Multiline`](@ref)
 function MPSMultiline end
 
 MPSMultiline(mpss::AbstractVector{<:InfiniteMPS}) = Multiline(mpss)
-function MPSMultiline(
-    pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...
-) where {S<:VectorSpace}
+function MPSMultiline(pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S};
+                      kwargs...) where {S<:VectorSpace}
     data = map(eachrow(pspaces), eachrow(Dspaces)) do p, D
         return InfiniteMPS(p, D; kwargs...)
     end
@@ -35,9 +34,8 @@ function MPSMultiline(As::AbstractMatrix{T}; kwargs...) where {T<:GenericMPSTens
     end
     return MPSMultiline(data)
 end
-function MPSMultiline(
-    ALs::AbstractMatrix{<:GenericMPSTensor}, C₀::AbstractVector{<:MPSBondTensor}; kwargs...
-)
+function MPSMultiline(ALs::AbstractMatrix{<:GenericMPSTensor},
+                      C₀::AbstractVector{<:MPSBondTensor}; kwargs...)
     data = map(eachrow(ALs), C₀) do ALrow, C₀row
         return InfiniteMPS(ALrow, C₀row; kwargs...)
     end

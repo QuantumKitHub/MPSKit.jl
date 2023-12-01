@@ -15,15 +15,14 @@ function environments(st, ham::LazySum)
     return MultipleEnvironments(ham, map(op -> environments(st, op), ham.ops))
 end
 
-function environments(
-    st::Union{InfiniteMPS,MPSMultiline}, ham::LazySum; solver=Defaults.linearsolver
-)
+function environments(st::Union{InfiniteMPS,MPSMultiline}, ham::LazySum;
+                      solver=Defaults.linearsolver)
     if !(solver isa Vector)
         solver = repeat([solver], length(ham))
     end
-    return MultipleEnvironments(
-        ham, map((op, solv) -> environments(st, op; solver=solv), ham.ops, solver)
-    )
+    return MultipleEnvironments(ham,
+                                map((op, solv) -> environments(st, op; solver=solv),
+                                    ham.ops, solver))
 end
 
 #broadcast vs map?
@@ -31,21 +30,15 @@ end
 #     return MultipleEnvironments(ham, broadcast(o -> environments(state, o), ham.opps))
 # end;
 
-function environments(
-    st::WindowMPS,
-    ham::LazySum;
-    lenvs=environments(st.left_gs, ham),
-    renvs=environments(st.right_gs, ham),
-)
-    return MultipleEnvironments(
-        ham,
-        map(
-            (op, sublenv, subrenv) -> environments(st, op; lenvs=sublenv, renvs=subrenv),
-            ham.ops,
-            lenvs,
-            renvs,
-        ),
-    )
+function environments(st::WindowMPS,
+                      ham::LazySum;
+                      lenvs=environments(st.left_gs, ham),
+                      renvs=environments(st.right_gs, ham))
+    return MultipleEnvironments(ham,
+                                map((op, sublenv, subrenv) -> environments(st, op;
+                                                                           lenvs=sublenv,
+                                                                           renvs=subrenv),
+                                    ham.ops, lenvs, renvs))
 end
 
 # we need to define how to recalculate

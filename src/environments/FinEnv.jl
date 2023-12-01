@@ -33,20 +33,13 @@ function environments(below, opp, above, leftstart, rightstart)
         push!(rightenvs, similar(rightstart))
     end
     t = similar(below.AL[1])
-    return FinEnv(
-        above,
-        opp,
-        fill(t, length(below)),
-        fill(t, length(below)),
-        leftenvs,
-        reverse(rightenvs),
-    )
+    return FinEnv(above, opp, fill(t, length(below)), fill(t, length(below)), leftenvs,
+                  reverse(rightenvs))
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
-function environments(
-    below::FiniteMPS{S}, ham::Union{SparseMPO,MPOHamiltonian}, above=nothing
-) where {S}
+function environments(below::FiniteMPS{S}, ham::Union{SparseMPO,MPOHamiltonian},
+                      above=nothing) where {S}
     lll = l_LL(below)
     rrr = r_RR(below)
     rightstart = Vector{S}()
@@ -77,20 +70,11 @@ function environments(
 end
 
 #extract the correct leftstart/rightstart for WindowMPS
-function environments(
-    state::WindowMPS,
-    ham::Union{SparseMPO,MPOHamiltonian,DenseMPO},
-    above=nothing;
-    lenvs=environments(state.left_gs, ham),
-    renvs=environments(state.right_gs, ham),
-)
-    return environments(
-        state,
-        ham,
-        above,
-        copy(leftenv(lenvs, 1, state.left_gs)),
-        copy(rightenv(renvs, length(state), state.right_gs)),
-    )
+function environments(state::WindowMPS, ham::Union{SparseMPO,MPOHamiltonian,DenseMPO},
+                      above=nothing; lenvs=environments(state.left_gs, ham),
+                      renvs=environments(state.right_gs, ham))
+    return environments(state, ham, above, copy(leftenv(lenvs, 1, state.left_gs)),
+                        copy(rightenv(renvs, length(state), state.right_gs)))
 end
 
 function environments(below::S, above::S) where {S<:Union{FiniteMPS,WindowMPS}}
@@ -124,8 +108,8 @@ function rightenv(ca::FinEnv, ind, state)
         #we need to recalculate
         for j in a:-1:(ind + 1)
             above = isnothing(ca.above) ? state.AR[j] : ca.above.AR[j]
-            ca.rightenvs[j] =
-                TransferMatrix(above, ca.opp[j], state.AR[j]) * ca.rightenvs[j + 1]
+            ca.rightenvs[j] = TransferMatrix(above, ca.opp[j], state.AR[j]) *
+                              ca.rightenvs[j + 1]
             ca.rdependencies[j] = state.AR[j]
         end
     end
@@ -140,8 +124,8 @@ function leftenv(ca::FinEnv, ind, state)
         #we need to recalculate
         for j in a:(ind - 1)
             above = isnothing(ca.above) ? state.AL[j] : ca.above.AL[j]
-            ca.leftenvs[j + 1] =
-                ca.leftenvs[j] * TransferMatrix(above, ca.opp[j], state.AL[j])
+            ca.leftenvs[j + 1] = ca.leftenvs[j] *
+                                 TransferMatrix(above, ca.opp[j], state.AL[j])
             ca.ldependencies[j] = state.AL[j]
         end
     end

@@ -16,7 +16,8 @@ An algorithm that uses an IDMRG2 step to change the bond dimension of a state.
     trscheme = notrunc()
 end
 
-function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environments(state, H)) # would be more efficient if we also repeated envs
+function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
+                       envs=environments(state, H)) # would be more efficient if we also repeated envs
     # the unitcell==1 case is unique, because there you have a sef-consistency condition
 
     # expand the one site to two sites
@@ -30,9 +31,8 @@ function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
 
     # collapse back to 1 site
     if D2 != D1
-        (nstate, nenvs) = changebonds(
-            nstate, nH, SvdCut(; trscheme=truncspace(infimum(D1, D2))), nenvs
-        )
+        (nstate, nenvs) = changebonds(nstate, nH,
+                                      SvdCut(; trscheme=truncspace(infimum(D1, D2))), nenvs)
     end
 
     collapsed = InfiniteMPS([nstate.AL[1]], nstate.CR[1]; tol=alg.tol_gauge)
@@ -46,15 +46,13 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
         @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
 
         h_ac2 = ∂∂AC2(loc, state, H, envs)
-        (vals, vecs, _) = eigsolve(
-            h_ac2, AC2, 1, :SR; tol=alg.tol_eigenval, ishermitian=false
-        )
+        (vals, vecs, _) = eigsolve(h_ac2, AC2, 1, :SR; tol=alg.tol_eigenval,
+                                   ishermitian=false)
         nAC2 = vecs[1]
 
         h_c = ∂∂C(loc + 1, state, H, envs)
-        (vals, vecs, _) = eigsolve(
-            h_c, state.CR[loc + 1], 1, :SR; tol=alg.tol_eigenval, ishermitian=false
-        )
+        (vals, vecs, _) = eigsolve(h_c, state.CR[loc + 1], 1, :SR; tol=alg.tol_eigenval,
+                                   ishermitian=false)
         nC2 = vecs[1]
 
         #svd ac2, get new AL1 and S,V ---> AC

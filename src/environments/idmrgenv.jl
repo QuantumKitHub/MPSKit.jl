@@ -39,24 +39,22 @@ end
 function IDMRGEnv(Ψ::Union{MPSMultiline,InfiniteMPS}, env::MultipleEnvironments)
     tmp = map(env.envs) do subenv
         Ψ === subenv.dependency || recalculate!(subenv, Ψ)
-        (subenv.opp, IDMRGEnv(subenv.opp, deepcopy(subenv.lw), deepcopy(subenv.rw)))
+        return subenv.opp, IDMRGEnv(subenv.opp, deepcopy(subenv.lw), deepcopy(subenv.rw))
     end
     hams, envs = collect.(zip(tmp...))
     return MultipleEnvironments(LazySum(hams), envs)
 end
 
-function update_rightenv!(
-    envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham, pos::Int
-)
+function update_rightenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham,
+                          pos::Int)
     for (subham, subenv) in zip(ham, envs.envs)
         tm = TransferMatrix(st.AR[pos + 1], subham[pos + 1], st.AR[pos + 1])
         setrightenv!(subenv, pos, tm * rightenv(subenv, pos + 1))
     end
 end
 
-function update_leftenv!(
-    envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham, pos::Int
-)
+function update_leftenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham,
+                         pos::Int)
     for (subham, subenv) in zip(ham, envs.envs)
         tm = TransferMatrix(st.AL[pos - 1], subham[pos - 1], st.AL[pos - 1])
         setleftenv!(subenv, pos, leftenv(subenv, pos - 1) * tm)

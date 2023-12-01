@@ -107,14 +107,8 @@ algorithm for time evolution.
     trscheme = truncerr(1e-3)
 end
 
-function timestep!(
-    Ψ::AbstractFiniteMPS,
-    H,
-    dt::Number,
-    alg::TDVP2,
-    envs=environments(Ψ, H);
-    rightorthed=false,
-)
+function timestep!(Ψ::AbstractFiniteMPS, H, dt::Number, alg::TDVP2, envs=environments(Ψ, H);
+                   rightorthed=false)
     #left to right
     for i in 1:(length(Ψ) - 1)
         ac2 = _transpose_front(Ψ.AC[i]) * _transpose_tail(Ψ.AR[i + 1])
@@ -128,9 +122,8 @@ function timestep!(
         Ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
         if i != (length(Ψ) - 1)
-            Ψ.AC[i + 1], convhist = exponentiate(
-                ∂∂AC(i + 1, Ψ, H, envs), 1im * dt / 2, Ψ.AC[i + 1], alg.expalg
-            )
+            Ψ.AC[i + 1], convhist = exponentiate(∂∂AC(i + 1, Ψ, H, envs), 1im * dt / 2,
+                                                 Ψ.AC[i + 1], alg.expalg)
         end
     end
 
@@ -147,9 +140,8 @@ function timestep!(
         Ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
         if i != 2
-            Ψ.AC[i - 1], convhist = exponentiate(
-                ∂∂AC(i - 1, Ψ, H, envs), 1im * dt / 2, Ψ.AC[i - 1], alg.expalg
-            )
+            Ψ.AC[i - 1], convhist = exponentiate(∂∂AC(i - 1, Ψ, H, envs), 1im * dt / 2,
+                                                 Ψ.AC[i - 1], alg.expalg)
         end
     end
 
@@ -157,8 +149,7 @@ function timestep!(
 end
 
 #copying version
-function timestep(
-    Ψ::AbstractFiniteMPS, H, timestep, alg::Union{TDVP,TDVP2}, envs=environments(Ψ, H)
-)
+function timestep(Ψ::AbstractFiniteMPS, H, timestep, alg::Union{TDVP,TDVP2},
+                  envs=environments(Ψ, H))
     return timestep!(copy(Ψ), H, timestep, alg, envs)
 end
