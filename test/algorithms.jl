@@ -423,7 +423,7 @@ end
         @test before < after
     end
 
-    @testset "mpo * finitemps1 ≈ finitemps2" for alg in finite_algs
+    @testset "sparse_mpo * finitemps1 ≈ finitemps2" for alg in finite_algs
         Ψ₁ = FiniteMPS(10, ℂ^2, ℂ^30)
         Ψ₂ = FiniteMPS(10, ℂ^2, ℂ^25)
 
@@ -435,6 +435,16 @@ end
         normalize!(Ψ₂)
         Ψ₂′, = timestep(Ψ₁, H, τ, TDVP())
         @test abs(dot(Ψ₁, Ψ₁)) ≈ abs(dot(Ψ₂, Ψ₂′)) atol = 0.001
+    end
+
+    @testset "dense_mpo * finitemps1 ≈ finitemps2" for alg in finite_algs
+        Ψ₁ = FiniteMPS(10, ℂ^2, ℂ^20)
+        Ψ₂ = FiniteMPS(10, ℂ^2, ℂ^10)
+
+        O = finite_classical_ising(10)
+        Ψ₂, = approximate(Ψ₂, (O, Ψ₁), alg)
+
+        @test norm(O * Ψ₁ - Ψ₂) ≈ 0 atol = 0.001
     end
 end
 
