@@ -1,11 +1,11 @@
-"
+"""
     FinEnv keeps track of the environments for FiniteMPS / WindowMPS
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
 
     if above is set to nothing, above === below.
 
     opp can be a vector of nothing, in which case it'll just be the overlap
-"
+"""
 struct FinEnv{A,B,C,D} <: Cache
     above::A
 
@@ -66,6 +66,20 @@ function environments(below::FiniteMPS{S}, O::Union{SparseMPO,MPOHamiltonian},
         push!(rightstart, ctr)
     end
 
+    return environments(below, O, above, leftstart, rightstart)
+end
+
+function MPSKit.environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) where {S}
+    N = length(below)
+    leftstart = isomorphism(
+        storagetype(S),
+        left_virtualspace(below, 0) ⊗ space(O[1], 1)' ← left_virtualspace(below, 0),
+    )
+    rightstart = isomorphism(
+        storagetype(S),
+        right_virtualspace(below, N) ⊗ space(O[N], 4)' ←
+        right_virtualspace(below, length(below)),
+    )
     return environments(below, O, above, leftstart, rightstart)
 end
 
