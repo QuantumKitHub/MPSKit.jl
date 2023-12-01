@@ -2,13 +2,13 @@
 #it made sense to seperate both vumpses as
 # - leading_boundary primarily works on MPSMultiline
 # - they search for different eigenvalues
-# - ham vumps should use Lanczos, this has to use arnoldi
+# - Hamiltonian vumps should use Lanczos, this has to use arnoldi
 # - this vumps updates entire collumns (ψ[:,i]); incompatible with InfiniteMPS
 # - (a)c-prime takes a different number of arguments
 # - it's very litle duplicate code, but together it'd be a bit more convoluted (primarily because of the indexing way)
 
 """
-    leading_boundary(ψ,opp,alg,envs=environments(ψ,ham))
+    leading_boundary(ψ, opp, alg, envs=environments(ψ, opp))
 
 Approximate the leading eigenvector for opp.
 """

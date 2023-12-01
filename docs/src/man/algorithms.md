@@ -31,7 +31,7 @@ operator = nonsym_ising_ham();
 The DMRG algorithm sweeps through the system, optimizing every site. Because of its single-site behaviour, this will always keep the bond dimension fixed. If you do want to increase the bond dimension dynamically, then there are two options. Either you use the two-site variant of DMRG (DMRG2()), or you make use of the finalize option. Finalize is a function that gets called at the end of every DMRG iteration. Within that function call one can modify the state.
 
 ```julia
-function my_finalize(iter,state,ham,envs)
+function my_finalize(iter,state,H,envs)
     println("Hello from iteration $iter")
     return state,envs;
 end
@@ -105,8 +105,8 @@ and the two-site scheme for finite MPS (TDVP2()). Similarly to DMRG, the one sit
 We have rudimentary support for turning an MPO hamiltonian into a time evolution MPO.
 
 ```julia
-make_time_mpo(ham,dt,alg::WI)
-make_time_mpo(ham,dt,alg::WII)
+make_time_mpo(H,dt,alg::WI)
+make_time_mpo(H,dt,alg::WII)
 ```
 
 two algorithms are available, corresponding to different orders of precision. It is possible to then multiply a state by this MPO, or to approximate (MPO,state) by a new state

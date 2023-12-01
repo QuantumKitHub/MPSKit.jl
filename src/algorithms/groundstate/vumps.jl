@@ -49,9 +49,9 @@ function updatetols(alg::VUMPS, iter, ϵ)
 end
 
 "
-    find_groundstate(ψ,ham,alg,envs=environments(ψ,ham))
+    find_groundstate(ψ, H, alg, envs=environments(ψ, H))
 
-    find the groundstate for ham using algorithm alg
+find the groundstate for `H` using algorithm `alg`
 "
 
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))

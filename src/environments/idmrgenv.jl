@@ -41,32 +41,32 @@ function IDMRGEnv(ψ::Union{MPSMultiline,InfiniteMPS}, env::MultipleEnvironments
         ψ === subenv.dependency || recalculate!(subenv, ψ)
         return subenv.opp, IDMRGEnv(subenv.opp, deepcopy(subenv.lw), deepcopy(subenv.rw))
     end
-    hams, envs = collect.(zip(tmp...))
-    return MultipleEnvironments(LazySum(hams), envs)
+    Hs, envs = collect.(zip(tmp...))
+    return MultipleEnvironments(LazySum(Hs), envs)
 end
 
-function update_rightenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham,
+function update_rightenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, H,
                           pos::Int)
-    for (subham, subenv) in zip(ham, envs.envs)
-        tm = TransferMatrix(st.AR[pos + 1], subham[pos + 1], st.AR[pos + 1])
+    for (subH, subenv) in zip(H, envs.envs)
+        tm = TransferMatrix(st.AR[pos + 1], subH[pos + 1], st.AR[pos + 1])
         setrightenv!(subenv, pos, tm * rightenv(subenv, pos + 1))
     end
 end
 
-function update_leftenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, ham,
+function update_leftenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnv}, st, H,
                          pos::Int)
-    for (subham, subenv) in zip(ham, envs.envs)
-        tm = TransferMatrix(st.AL[pos - 1], subham[pos - 1], st.AL[pos - 1])
+    for (subH, subenv) in zip(H, envs.envs)
+        tm = TransferMatrix(st.AL[pos - 1], subH[pos - 1], st.AL[pos - 1])
         setleftenv!(subenv, pos, leftenv(subenv, pos - 1) * tm)
     end
 end
 
-function update_rightenv!(envs::IDMRGEnv, st, ham, pos::Int)
-    tm = TransferMatrix(st.AR[pos + 1], ham[pos + 1], st.AR[pos + 1])
+function update_rightenv!(envs::IDMRGEnv, st, H, pos::Int)
+    tm = TransferMatrix(st.AR[pos + 1], H[pos + 1], st.AR[pos + 1])
     return setrightenv!(envs, pos, tm * rightenv(envs, pos + 1))
 end
 
-function update_leftenv!(envs::IDMRGEnv, st, ham, pos::Int)
-    tm = TransferMatrix(st.AL[pos - 1], ham[pos - 1], st.AL[pos - 1])
+function update_leftenv!(envs::IDMRGEnv, st, H, pos::Int)
+    tm = TransferMatrix(st.AL[pos - 1], H[pos - 1], st.AL[pos - 1])
     return setleftenv!(envs, pos, leftenv(envs, pos - 1) * tm)
 end

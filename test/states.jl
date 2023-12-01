@@ -47,8 +47,7 @@ end
                                                       ComplexF64)]
     tol = Float64(eps(real(elt)) * 100)
 
-    ψ = InfiniteMPS([TensorMap(rand, elt, D * d, D), TensorMap(rand, elt, D * d, D)];
-                     tol=tol)
+    ψ = InfiniteMPS([TensorMap(rand, elt, D * d, D), TensorMap(rand, elt, D * d, D)]; tol)
 
     for i in 1:length(ψ)
         @plansor difference[-1 -2; -3] := ψ.AL[i][-1 -2; 1] * ψ.CR[i][1; -3] -
@@ -73,8 +72,7 @@ end
                                                        ComplexF32)]
     tol = Float64(eps(real(elt)) * 100)
     ψ = MPSMultiline([TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)
-                       TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)];
-                      tol=tol)
+                      TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)]; tol)
 
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
         @plansor difference[-1 -2; -3] := ψ.AL[i, j][-1 -2; 1] * ψ.CR[i, j][1; -3] -

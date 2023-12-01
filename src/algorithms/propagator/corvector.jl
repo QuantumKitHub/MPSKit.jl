@@ -92,7 +92,7 @@ function propagator(A::AbstractFiniteMPS, z, H::MPOHamiltonian,
     eta = imag(z)
 
     envs1 = environments(init, H) # environments for h
-    ham2, envs2 = squaredenvs(init, H, envs1) # environments for h^2
+    H2, envs2 = squaredenvs(init, H, envs1) # environments for h^2
     mixedenvs = environments(init, A) # environments for <init | A>
 
     delta = 2 * alg.tol
@@ -105,7 +105,7 @@ function propagator(A::AbstractFiniteMPS, z, H::MPOHamiltonian,
         for i in [1:(length(A) - 1); length(A):-1:2]
             tos = ac_proj(i, init, mixedenvs)
             H1_AC = ∂∂AC(i, init, H, envs1)
-            H2_AC = ∂∂AC(i, init, ham2, envs2)
+            H2_AC = ∂∂AC(i, init, H2, envs2)
             H_AC = LinearCombination((H1_AC, H2_AC), (-2 * w, 1))
             (res, convhist) = linsolve(H_AC, -eta * tos, init.AC[i], alg.solver,
                                        (eta * eta + w * w), 1)
@@ -134,14 +134,14 @@ function propagator(A::AbstractFiniteMPS, z, H::MPOHamiltonian,
 end
 
 function squaredenvs(state::AbstractFiniteMPS, H::MPOHamiltonian,
-                     envs=environments(state, ham))
-    nham = conj(H) * H
+                     envs=environments(state, H))
+    nH = conj(H) * H
     L = length(state)
 
     # to construct the squared caches we will first initialize environments
     # then make all data invalid so it will be recalculated
     # then initialize the right caches at the edge
-    ncocache = environments(state, nham)
+    ncocache = environments(state, nH)
 
     # make sure the dependencies are incorrect, so data will be recalculated
     for i in 1:L
@@ -168,7 +168,7 @@ function squaredenvs(state::AbstractFiniteMPS, H::MPOHamiltonian,
         end
     end
 
-    return nham, ncocache
+    return nH, ncocache
 end
 
 function _contract_leftenv²(GL_top, GL_bot)

@@ -73,18 +73,18 @@ end
     One-site derivative
 """
 
-function ∂AC(x::MPSTensor, ham::SparseMPOSlice, leftenv, rightenv)::typeof(x)
+function ∂AC(x::MPSTensor, H::SparseMPOSlice, leftenv, rightenv)::typeof(x)
     local y
     @static if Defaults.parallelize_derivatives
-        @floop WorkStealingEx() for (i, j) in keys(ham)
-            t = ∂AC(x, ham.Os[i, j], leftenv[i], rightenv[j])
+        @floop WorkStealingEx() for (i, j) in keys(H)
+            t = ∂AC(x, H.Os[i, j], leftenv[i], rightenv[j])
             @reduce(y = inplace_add!(nothing, t))
         end
     else
-        els = collect(keys(ham))
-        y = ∂AC(x, ham.Os[els[1]...], leftenv[els[1][1]], rightenv[els[1][2]])
+        els = collect(keys(H))
+        y = ∂AC(x, H.Os[els[1]...], leftenv[els[1][1]], rightenv[els[1][2]])
         for (i, j) in els[2:end]
-            add!(y, ∂AC(x, ham.Os[i, j], leftenv[i], rightenv[j]))
+            add!(y, ∂AC(x, H.Os[i, j], leftenv[i], rightenv[j]))
         end
     end
 

@@ -38,17 +38,17 @@ function environments(below, opp, above, leftstart, rightstart)
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
-function environments(below::FiniteMPS{S}, ham::Union{SparseMPO,MPOHamiltonian},
+function environments(below::FiniteMPS{S}, O::Union{SparseMPO,MPOHamiltonian},
                       above=nothing) where {S}
     lll = l_LL(below)
     rrr = r_RR(below)
     rightstart = Vector{S}()
     leftstart = Vector{S}()
 
-    for i in 1:(ham.odim)
-        util_left = Tensor(x -> storagetype(S)(undef, x), ham.domspaces[1, i]')
+    for i in 1:(O.odim)
+        util_left = Tensor(x -> storagetype(S)(undef, x), O.domspaces[1, i]')
         fill_data!(util_left, one)
-        util_right = Tensor(x -> storagetype(S)(undef, x), ham.imspaces[length(below), i]')
+        util_right = Tensor(x -> storagetype(S)(undef, x), O.imspaces[length(below), i]')
         fill_data!(util_right, one)
 
         @plansor ctl[-1 -2; -3] := lll[-1; -3] * util_left[-2]
@@ -58,7 +58,7 @@ function environments(below::FiniteMPS{S}, ham::Union{SparseMPO,MPOHamiltonian},
             ctl = zero(ctl)
         end
 
-        if (i != ham.odim && ham isa MPOHamiltonian) || (i != 1 && ham isa SparseMPO)
+        if (i != O.odim && O isa MPOHamiltonian) || (i != 1 && O isa SparseMPO)
             ctr = zero(ctr)
         end
 
@@ -66,14 +66,14 @@ function environments(below::FiniteMPS{S}, ham::Union{SparseMPO,MPOHamiltonian},
         push!(rightstart, ctr)
     end
 
-    return environments(below, ham, above, leftstart, rightstart)
+    return environments(below, O, above, leftstart, rightstart)
 end
 
 #extract the correct leftstart/rightstart for WindowMPS
-function environments(state::WindowMPS, ham::Union{SparseMPO,MPOHamiltonian,DenseMPO},
-                      above=nothing; lenvs=environments(state.left_gs, ham),
-                      renvs=environments(state.right_gs, ham))
-    return environments(state, ham, above, copy(leftenv(lenvs, 1, state.left_gs)),
+function environments(state::WindowMPS, O::Union{SparseMPO,MPOHamiltonian,DenseMPO},
+                      above=nothing; lenvs=environments(state.left_gs, O),
+                      renvs=environments(state.right_gs, O))
+    return environments(state, O, above, copy(leftenv(lenvs, 1, state.left_gs)),
                         copy(rightenv(renvs, length(state), state.right_gs)))
 end
 
