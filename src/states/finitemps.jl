@@ -58,7 +58,14 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     ARs::Vector{Union{Missing,A}}
     ACs::Vector{Union{Missing,A}}
     CLs::Vector{Union{Missing,B}}
-
+    function FiniteMPS{A,B}(
+        ALs::Vector{Union{Missing,A}},
+        ARs::Vector{Union{Missing,A}},
+        ACs::Vector{Union{Missing,A}},
+        CLs::Vector{Union{Missing,B}},
+    ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+        return new{A,B}(ALs, ARs, ACs, CLs)
+    end
     function FiniteMPS(
         ALs::Vector{Union{Missing,A}},
         ARs::Vector{Union{Missing,A}},
@@ -257,8 +264,8 @@ Base.size(Ψ::FiniteMPS, args...) = size(Ψ.ALs, args...)
 Base.length(Ψ::FiniteMPS) = length(Ψ.ALs)
 Base.eltype(Ψtype::Type{<:FiniteMPS}) = site_type(Ψtype) # this might not be true
 Base.copy(Ψ::FiniteMPS) = FiniteMPS(copy(Ψ.ALs), copy(Ψ.ARs), copy(Ψ.ACs), copy(Ψ.CLs))
-function Base.similar(Ψ::FiniteMPS)
-    return FiniteMPS(similar(Ψ.ALs), similar(Ψ.ARs), similar(Ψ.ACs), similar(Ψ.CLs))
+function Base.similar(Ψ::FiniteMPS{A,B}) where {A,B}
+    return FiniteMPS{A,B}(similar(Ψ.ALs), similar(Ψ.ARs), similar(Ψ.ACs), similar(Ψ.CLs))
 end
 
 function Base.convert(TType::Type{<:AbstractTensorMap}, Ψ::FiniteMPS)
@@ -270,6 +277,7 @@ end
 
 site_type(::Type{<:FiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:FiniteMPS{<:Any,B}}) where {B} = B
+TensorKit.storagetype(::Union{MPS,Type{MPS}}) where {A,MPS<:FiniteMPS{A}} = storagetype(A)
 
 function left_virtualspace(Ψ::FiniteMPS, n::Integer)
     if n > 0 && !ismissing(Ψ.ALs[n])
@@ -435,7 +443,7 @@ function Base.:+(Ψ₁::MPS, Ψ₂::MPS) where {MPS<:FiniteMPS}
     fill!(Ψ.ARs, missing)
     fill!(Ψ.ACs, missing)
     fill!(Ψ.CLs, missing)
-    
+
     halfN = div(length(Ψ), 2)
 
     # left half
@@ -455,13 +463,13 @@ function Base.:+(Ψ₁::MPS, Ψ₂::MPS) where {MPS<:FiniteMPS}
         AL₂ = _transpose_front(F₂ * _transpose_tail(Ψ₂.AL[i]))
 
         F₁ = isometry(
-            storagetype(Ψ), _lastspace(AL₁) ⊕ _lastspace(Ψ₂.AL[i]), _lastspace(AL₁)
+            storagetype(Ψ), (_lastspace(AL₁) ⊕ _lastspace(Ψ₂.AL[i]))', _lastspace(AL₁)'
         )
         F₂ = leftnull(F₁)
-        @assert _lastspace(F₂) == ⊗(_lastspace(Ψ₂.AL[i]))
+        @assert _lastspace(F₂) == _lastspace(Ψ₂.AL[i])
 
         AL = _transpose_front(R * _transpose_tail(AL₁ * F₁' + AL₂ * F₂'))
-        Ψ.ALs[i], R = leftorth!(AL′)
+        Ψ.ALs[i], R = leftorth!(AL)
     end
 
     C₁ = F₁ * Ψ₁.CR[halfN]
