@@ -44,37 +44,24 @@ function ∂∂AC(pos::Int, mps, opp::Union{MPOHamiltonian,SparseMPO,DenseMPO}, 
     return MPO_∂∂AC(cache.opp[pos], leftenv(cache, pos, mps), rightenv(cache, pos, mps))
 end
 function ∂∂AC(row::Int, col::Int, mps, opp::MPOMultiline, envs)
-    return MPO_∂∂AC(
-        envs.opp[row, col], leftenv(envs, row, col, mps), rightenv(envs, row, col, mps)
-    )
+    return MPO_∂∂AC(envs.opp[row, col], leftenv(envs, row, col, mps),
+                    rightenv(envs, row, col, mps))
 end;
 function ∂∂AC(col::Int, mps, opp::MPOMultiline, envs)
     return MPO_∂∂AC(envs.opp[:, col], leftenv(envs, col, mps), rightenv(envs, col, mps))
 end;
 
 function ∂∂AC2(pos::Int, mps, opp::Union{MPOHamiltonian,SparseMPO,DenseMPO}, cache)
-    return MPO_∂∂AC2(
-        cache.opp[pos],
-        cache.opp[pos + 1],
-        leftenv(cache, pos, mps),
-        rightenv(cache, pos + 1, mps),
-    )
+    return MPO_∂∂AC2(cache.opp[pos], cache.opp[pos + 1], leftenv(cache, pos, mps),
+                     rightenv(cache, pos + 1, mps))
 end;
 function ∂∂AC2(col::Int, mps, opp::MPOMultiline, envs)
-    return MPO_∂∂AC2(
-        envs.opp[:, col],
-        envs.opp[:, col + 1],
-        leftenv(envs, col, mps),
-        rightenv(envs, col + 1, mps),
-    )
+    return MPO_∂∂AC2(envs.opp[:, col], envs.opp[:, col + 1], leftenv(envs, col, mps),
+                     rightenv(envs, col + 1, mps))
 end
 function ∂∂AC2(row::Int, col::Int, mps, opp::MPOMultiline, envs)
-    return MPO_∂∂AC2(
-        envs.opp[row, col],
-        envs.opp[row, col + 1],
-        leftenv(envs, row, col, mps),
-        rightenv(envs, row, col + 1, mps),
-    )
+    return MPO_∂∂AC2(envs.opp[row, col], envs.opp[row, col + 1],
+                     leftenv(envs, row, col, mps), rightenv(envs, row, col + 1, mps))
 end
 
 #allow calling them with CartesianIndices
@@ -104,24 +91,21 @@ function ∂AC(x::MPSTensor, ham::SparseMPOSlice, leftenv, rightenv)::typeof(x)
     return y
 end
 
-function ∂AC(
-    x::MPSTensor{S}, opp::MPOTensor{S}, leftenv::MPSTensor{S}, rightenv::MPSTensor{S}
-)::typeof(x) where {S}
-    @plansor y[-1 -2; -3] :=
-        leftenv[-1 5; 4] * x[4 2; 1] * opp[5 -2; 2 3] * rightenv[1 3; -3]
+function ∂AC(x::MPSTensor{S}, opp::MPOTensor{S}, leftenv::MPSTensor{S},
+             rightenv::MPSTensor{S})::typeof(x) where {S}
+    @plansor y[-1 -2; -3] := leftenv[-1 5; 4] * x[4 2; 1] * opp[5 -2; 2 3] *
+                             rightenv[1 3; -3]
 end
-function ∂AC(
-    x::MPSTensor{S}, opp::Number, leftenv::MPSTensor{S}, rightenv::MPSTensor{S}
-)::typeof(x) where {S}
-    @plansor y[-1 -2; -3] :=
-        opp * (leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] * rightenv[1 7; -3])
+function ∂AC(x::MPSTensor{S}, opp::Number, leftenv::MPSTensor{S},
+             rightenv::MPSTensor{S})::typeof(x) where {S}
+    @plansor y[-1 -2; -3] := opp * (leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] *
+                                    rightenv[1 7; -3])
 end
 
 # mpo multiline
 function ∂AC(x::RecursiveVec, opp, leftenv, rightenv)
-    return RecursiveVec(
-        circshift(map(t -> ∂AC(t...), zip(x.vecs, opp, leftenv, rightenv)), 1)
-    )
+    return RecursiveVec(circshift(map(t -> ∂AC(t...), zip(x.vecs, opp, leftenv, rightenv)),
+                                  1))
 end
 
 function ∂AC(x::MPSTensor, ::Nothing, leftenv, rightenv)
@@ -131,9 +115,8 @@ end
 """
     Two-site derivative
 """
-function ∂AC2(
-    x::MPOTensor, h1::SparseMPOSlice, h2::SparseMPOSlice, leftenv, rightenv
-)::typeof(x)
+function ∂AC2(x::MPOTensor, h1::SparseMPOSlice, h2::SparseMPOSlice, leftenv,
+              rightenv)::typeof(x)
     local toret
 
     tl = tensormaptype(spacetype(x), 2, 3, storagetype(x))
@@ -141,11 +124,11 @@ function ∂AC2(
     @threads for j in 1:(h1.odim)
         @floop WorkStealingEx() for i in keys(h1, :, j)
             if isscal(h1, i, j)
-                @plansor t[-1 -2; -3 -4 -5] :=
-                    (h1.Os[i, j] * leftenv[i])[-1 1; 2] * τ[1 -2; 3 -5] * x[2 3; -3 -4]
+                @plansor t[-1 -2; -3 -4 -5] := (h1.Os[i, j] * leftenv[i])[-1 1; 2] *
+                                               τ[1 -2; 3 -5] * x[2 3; -3 -4]
             else
-                @plansor t[-1 -2; -3 -4 -5] :=
-                    leftenv[i][-1 1; 2] * h1[i, j][1 -2; 3 -5] * x[2 3; -3 -4]
+                @plansor t[-1 -2; -3 -4 -5] := leftenv[i][-1 1; 2] * h1[i, j][1 -2; 3 -5] *
+                                               x[2 3; -3 -4]
             end
             @reduce(curel = inplace_add!(nothing, t))
         end
@@ -156,11 +139,11 @@ function ∂AC2(
         isnothing(hl[j]) && continue
 
         if isscal(h2, j, k)
-            @plansor t[-1 -2; -3 -4] :=
-                (h2.Os[j, k] * hl[j])[-1 -2; 5 3 4] * τ[4 -4; 3 6] * rightenv[k][5 6; -3]
+            @plansor t[-1 -2; -3 -4] := (h2.Os[j, k] * hl[j])[-1 -2; 5 3 4] * τ[4 -4; 3 6] *
+                                        rightenv[k][5 6; -3]
         else
-            @plansor t[-1 -2; -3 -4] :=
-                hl[j][-1 -2; 5 3 4] * h2[j, k][4 -4; 3 6] * rightenv[k][5 6; -3]
+            @plansor t[-1 -2; -3 -4] := hl[j][-1 -2; 5 3 4] * h2[j, k][4 -4; 3 6] *
+                                        rightenv[k][5 6; -3]
         end
 
         @reduce(toret = inplace_add!(nothing, t))
@@ -169,21 +152,16 @@ function ∂AC2(
     return toret
 end
 function ∂AC2(x::MPOTensor, opp1::MPOTensor, opp2::MPOTensor, leftenv, rightenv)
-    @plansor toret[-1 -2; -3 -4] :=
-        leftenv[-1 7; 6] *
-        x[6 5; 1 3] *
-        opp1[7 -2; 5 4] *
-        opp2[4 -4; 3 2] *
-        rightenv[1 2; -3]
+    @plansor toret[-1 -2; -3 -4] := leftenv[-1 7; 6] * x[6 5; 1 3] * opp1[7 -2; 5 4] *
+                                    opp2[4 -4; 3 2] * rightenv[1 2; -3]
 end
 function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv, rightenv)
     @plansor y[-1 -2; -3 -4] := x[1 -2; 2 -4] * leftenv[-1; 1] * rightenv[2; -3]
 end
 
 function ∂AC2(x::RecursiveVec, opp1, opp2, leftenv, rightenv)
-    return RecursiveVec(
-        circshift(map(t -> ∂AC2(t...), zip(x.vecs, opp1, opp2, leftenv, rightenv)), 1)
-    )
+    return RecursiveVec(circshift(map(t -> ∂AC2(t...),
+                                      zip(x.vecs, opp1, opp2, leftenv, rightenv)), 1))
 end
 
 """
@@ -223,11 +201,8 @@ function c_proj(pos, below, envs::FinEnv)
 end
 
 function c_proj(row, col, below, envs::PerMPOInfEnv)
-    return ∂C(
-        envs.above.CR[row, col],
-        leftenv(envs, row, col + 1, below),
-        rightenv(envs, row, col, below),
-    )
+    return ∂C(envs.above.CR[row, col], leftenv(envs, row, col + 1, below),
+              rightenv(envs, row, col, below))
 end
 
 # TODO: rewrite this to not use operator from cache?
@@ -238,49 +213,36 @@ function ac_proj(pos, below, envs)
     return ∂AC(envs.above.AC[pos], envs.opp[pos], le, re)
 end
 function ac_proj(row, col, below, envs::PerMPOInfEnv)
-    return ∂AC(
-        envs.above.AC[row, col],
-        envs.opp[row, col],
-        leftenv(envs, row, col, below),
-        rightenv(envs, row, col, below),
-    )
+    return ∂AC(envs.above.AC[row, col], envs.opp[row, col], leftenv(envs, row, col, below),
+               rightenv(envs, row, col, below))
 end
 function ac2_proj(pos, below, envs)
     le = leftenv(envs, pos, below)
     re = rightenv(envs, pos + 1, below)
 
-    return ∂AC2(
-        envs.above.AC[pos] * _transpose_tail(envs.above.AR[pos + 1]),
-        envs.opp[pos],
-        envs.opp[pos + 1],
-        le,
-        re,
-    )
+    return ∂AC2(envs.above.AC[pos] * _transpose_tail(envs.above.AR[pos + 1]), envs.opp[pos],
+                envs.opp[pos + 1], le, re)
 end
 function ac2_proj(row, col, below, envs::PerMPOInfEnv)
-    @plansor ac2[-1 -2; -3 -4] :=
-        envs.above.AC[row, col][-1 -2; 1] * envs.above.AR[row, col + 1][1 -4; -3]
-    return ∂AC2(
-        ac2, leftenv(envs, row, col + 1, below), rightenv(envs, row, col + 1, below)
-    )
+    @plansor ac2[-1 -2; -3 -4] := envs.above.AC[row, col][-1 -2; 1] *
+                                  envs.above.AR[row, col + 1][1 -4; -3]
+    return ∂AC2(ac2, leftenv(envs, row, col + 1, below),
+                rightenv(envs, row, col + 1, below))
 end
 
 function ∂∂C(pos::Int, mps, opp::LinearCombination, cache)
-    return LinearCombination(
-        broadcast((h, e) -> ∂∂C(pos, mps, h, e), opp.opps, cache.envs), opp.coeffs
-    )
+    return LinearCombination(broadcast((h, e) -> ∂∂C(pos, mps, h, e), opp.opps, cache.envs),
+                             opp.coeffs)
 end
 
 function ∂∂AC(pos::Int, mps, opp::LinearCombination, cache)
-    return LinearCombination(
-        broadcast((h, e) -> ∂∂AC(pos, mps, h, e), opp.opps, cache.envs), opp.coeffs
-    )
+    return LinearCombination(broadcast((h, e) -> ∂∂AC(pos, mps, h, e), opp.opps,
+                                       cache.envs), opp.coeffs)
 end
 
 function ∂∂AC2(pos::Int, mps, opp::LinearCombination, cache)
-    return LinearCombination(
-        broadcast((h, e) -> ∂∂AC2(pos, mps, h, e), opp.opps, cache.envs), opp.coeffs
-    )
+    return LinearCombination(broadcast((h, e) -> ∂∂AC2(pos, mps, h, e), opp.opps,
+                                       cache.envs), opp.coeffs)
 end
 
 struct AC_EffProj{A,L}
@@ -297,55 +259,40 @@ end
 Base.:*(h::Union{AC_EffProj,AC2_EffProj}, v) = h(v);
 
 function (h::AC_EffProj)(x::MPSTensor)
-    @plansor v[-1; -2 -3 -4] :=
-        h.le[4; -1 -2 5] * h.a1[5 2; 1] * h.re[1; -3 -4 3] * conj(x[4 2; 3])
-    @plansor y[-1 -2; -3] :=
-        conj(v[1; 2 5 6]) * h.le[-1; 1 2 4] * h.a1[4 -2; 3] * h.re[3; 5 6 -3]
+    @plansor v[-1; -2 -3 -4] := h.le[4; -1 -2 5] * h.a1[5 2; 1] * h.re[1; -3 -4 3] *
+                                conj(x[4 2; 3])
+    @plansor y[-1 -2; -3] := conj(v[1; 2 5 6]) * h.le[-1; 1 2 4] * h.a1[4 -2; 3] *
+                             h.re[3; 5 6 -3]
 end
 function (h::AC2_EffProj)(x::MPOTensor)
-    @plansor v[-1; -2 -3 -4] :=
-        h.le[6; -1 -2 7] *
-        h.a1[7 4; 5] *
-        h.a2[5 2; 1] *
-        h.re[1; -3 -4 3] *
-        conj(x[6 4; 3 2])
-    @plansor y[-1 -2; -3 -4] :=
-        conj(v[2; 3 5 6]) *
-        h.le[-1; 2 3 4] *
-        h.a1[4 -2; 7] *
-        h.a2[7 -4; 1] *
-        h.re[1; 5 6 -3]
+    @plansor v[-1; -2 -3 -4] := h.le[6; -1 -2 7] * h.a1[7 4; 5] * h.a2[5 2; 1] *
+                                h.re[1; -3 -4 3] * conj(x[6 4; 3 2])
+    @plansor y[-1 -2; -3 -4] := conj(v[2; 3 5 6]) * h.le[-1; 2 3 4] * h.a1[4 -2; 7] *
+                                h.a2[7 -4; 1] * h.re[1; 5 6 -3]
 end
 
 function ∂∂AC(pos::Int, state, opp::ProjectionOperator, env)
     return AC_EffProj(opp.ket.AC[pos], leftenv(env, pos, state), rightenv(env, pos, state))
 end
 function ∂∂AC2(pos::Int, state, opp::ProjectionOperator, env)
-    return AC2_EffProj(
-        opp.ket.AC[pos],
-        opp.ket.AR[pos + 1],
-        leftenv(env, pos, state),
-        rightenv(env, pos + 1, state),
-    )
+    return AC2_EffProj(opp.ket.AC[pos], opp.ket.AR[pos + 1], leftenv(env, pos, state),
+                       rightenv(env, pos + 1, state))
 end
 
 (x::LazySum{<:MPSKit.DerivativeOperator})(y) = sum(O -> O(y), x)
 Base.:*(h::LazySum{<:MPSKit.DerivativeOperator}, v) = h(v)
 
 function ∂∂C(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
-    return LazySum{MPO_∂∂C}(
-        map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops, cache.envs)
-    )
+    return LazySum{MPO_∂∂C}(map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops,
+                                cache.envs))
 end
 
 function ∂∂AC(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
-    return LazySum{MPO_∂∂AC}(
-        map((op, openv) -> ∂∂AC(pos, mps, op, openv), opp.ops, cache.envs)
-    )
+    return LazySum{MPO_∂∂AC}(map((op, openv) -> ∂∂AC(pos, mps, op, openv), opp.ops,
+                                 cache.envs))
 end
 
 function ∂∂AC2(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
-    return LazySum{MPO_∂∂AC2}(
-        map((op, openv) -> ∂∂AC2(pos, mps, op, openv), opp.ops, cache.envs)
-    )
+    return LazySum{MPO_∂∂AC2}(map((op, openv) -> ∂∂AC2(pos, mps, op, openv), opp.ops,
+                                  cache.envs))
 end

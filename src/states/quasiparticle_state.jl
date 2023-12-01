@@ -27,40 +27,28 @@ struct RightGaugedQP{S,T1,T2,E<:Number}
 end
 
 #constructors
-function LeftGaugedQP(
-    datfun, left_gs, right_gs=left_gs; sector=one(sectortype(left_gs)), momentum=0.0
-)
+function LeftGaugedQP(datfun, left_gs, right_gs=left_gs;
+                      sector=one(sectortype(left_gs)), momentum=0.0)
     #find the left null spaces for the TNS
     excitation_space = ℂ[typeof(sector)](sector => 1)
     VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
-    Xs = [
-        TensorMap(
-            datfun,
-            scalartype(left_gs.AL[1]),
-            _lastspace(VLs[loc])',
-            excitation_space' * right_virtualspace(right_gs, loc),
-        ) for loc in 1:length(left_gs)
-    ]
+    Xs = [TensorMap(datfun, scalartype(left_gs.AL[1]), _lastspace(VLs[loc])',
+                    excitation_space' * right_virtualspace(right_gs, loc))
+          for loc in 1:length(left_gs)]
     left_gs isa InfiniteMPS ||
         momentum == zero(momentum) ||
         @warn "momentum is ignored for finite quasiparticles"
     return LeftGaugedQP(left_gs, right_gs, VLs, Xs, momentum)
 end
 
-function RightGaugedQP(
-    datfun, left_gs, right_gs=left_gs; sector=one(sectortype(left_gs)), momentum=0.0
-)
+function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
+                       sector=one(sectortype(left_gs)), momentum=0.0)
     #find the left null spaces for the TNS
     excitation_space = ℂ[typeof(sector)](sector => 1)
     VRs = [adjoint(leftnull(adjoint(v))) for v in _transpose_tail.(right_gs.AR)]
-    Xs = [
-        TensorMap(
-            datfun,
-            scalartype(left_gs.AL[1]),
-            left_virtualspace(right_gs, loc - 1)',
-            excitation_space' * _firstspace(VRs[loc]),
-        ) for loc in 1:length(left_gs)
-    ]
+    Xs = [TensorMap(datfun, scalartype(left_gs.AL[1]),
+                    left_virtualspace(right_gs, loc - 1)',
+                    excitation_space' * _firstspace(VRs[loc])) for loc in 1:length(left_gs)]
     left_gs isa InfiniteMPS ||
         momentum == zero(momentum) ||
         @warn "momentum is ignored for finite quasiparticles"
@@ -69,14 +57,12 @@ end
 
 #gauge dependent code
 function Base.similar(v::LeftGaugedQP, T=scalartype(v))
-    return LeftGaugedQP(
-        v.left_gs, v.right_gs, v.VLs, map(e -> similar(e, T), v.Xs), v.momentum
-    )
+    return LeftGaugedQP(v.left_gs, v.right_gs, v.VLs, map(e -> similar(e, T), v.Xs),
+                        v.momentum)
 end
 function Base.similar(v::RightGaugedQP, T=scalartype(v))
-    return RightGaugedQP(
-        v.left_gs, v.right_gs, map(e -> similar(e, T), v.Xs), v.VRs, v.momentum
-    )
+    return RightGaugedQP(v.left_gs, v.right_gs, map(e -> similar(e, T), v.Xs), v.VRs,
+                         v.momentum)
 end
 
 Base.getindex(v::LeftGaugedQP, i::Int) = v.VLs[mod1(i, end)] * v.Xs[mod1(i, end)];
@@ -89,29 +75,22 @@ function Base.setindex!(v::LeftGaugedQP, B, i::Int)
     return v
 end
 function Base.setindex!(v::RightGaugedQP, B, i::Int)
-    @plansor v.Xs[mod1(i, end)][-1; -2 -3] :=
-        B[-1 1; -2 2] * conj(v.VRs[mod1(i, end)][-3; 2 1])
+    @plansor v.Xs[mod1(i, end)][-1; -2 -3] := B[-1 1; -2 2] *
+                                              conj(v.VRs[mod1(i, end)][-3; 2 1])
     return v
 end
 
 #conversion between gauges (partially implemented)
-function Base.convert(::Type{RightGaugedQP}, input::LeftGaugedQP{S}) where {S<:InfiniteMPS}
-    rg = RightGaugedQP(
-        zeros,
-        input.left_gs,
-        input.right_gs;
-        sector=first(sectors(utilleg(input))),
-        momentum=input.momentum,
-    )
+function Base.convert(::Type{RightGaugedQP},
+                      input::LeftGaugedQP{S}) where {S<:InfiniteMPS}
+    rg = RightGaugedQP(zeros, input.left_gs, input.right_gs;
+                       sector=first(sectors(utilleg(input))), momentum=input.momentum)
     len = length(input)
 
     #construct environments
-    rBs = [
-        @plansor t[-1; -2 -3] :=
-            input[len][-1 2; -2 3] *
-            conj(input.right_gs.AR[len][-3 2; 3]) *
-            exp(1im * input.momentum)
-    ]
+    rBs = [@plansor t[-1; -2 -3] := input[len][-1 2; -2 3] *
+                                    conj(input.right_gs.AR[len][-3 2; 3]) *
+                                    exp(1im * input.momentum)]
     for i in (len - 1):-1:1
         t = TransferMatrix(input.left_gs.AL[i], input.right_gs.AR[i]) * rBs[end]
         @plansor t[-1; -2 -3] += input[i][-1 2; -2 3] * conj(input.right_gs.AR[i][-3 2; 3])
@@ -125,45 +104,36 @@ function Base.convert(::Type{RightGaugedQP}, input::LeftGaugedQP{S}) where {S<:I
         tm = regularize(tm, l_LR(input.right_gs), r_LR(input.right_gs))
     end
 
-    (rBE, convhist) = linsolve(
-        tm, rBs[1], rBs[1], GMRES(), 1, -exp(1im * input.momentum * len)
-    )
+    rBE, convhist = linsolve(tm, rBs[1], rBs[1], GMRES(), 1,
+                             -exp(1im * input.momentum * len))
     convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
 
     rBs[1] = rBE
     for i in len:-1:2
-        rBE =
-            TransferMatrix(input.left_gs.AL[i], input.right_gs.AR[i]) *
-            rBE *
-            exp(1im * input.momentum)
+        rBE = TransferMatrix(input.left_gs.AL[i], input.right_gs.AR[i]) * rBE *
+              exp(1im * input.momentum)
         rBs[i] += rBE
     end
 
     #final contraction is now easy
     for i in 1:len
-        @plansor T[-1 -2; -3 -4] :=
-            input.left_gs.AL[i][-1 -2; 1] * rBs[mod1(i + 1, end)][1; -3 -4]
+        @plansor T[-1 -2; -3 -4] := input.left_gs.AL[i][-1 -2; 1] *
+                                    rBs[mod1(i + 1, end)][1; -3 -4]
         @plansor T[-1 -2; -3 -4] += input[i][-1 -2; -3 -4]
         rg[i] = T
     end
 
     return rg
 end
-function Base.convert(::Type{LeftGaugedQP}, input::RightGaugedQP{S}) where {S<:InfiniteMPS}
-    lg = LeftGaugedQP(
-        zeros,
-        input.left_gs,
-        input.right_gs;
-        sector=first(sectors(utilleg(input))),
-        momentum=input.momentum,
-    )
+function Base.convert(::Type{LeftGaugedQP},
+                      input::RightGaugedQP{S}) where {S<:InfiniteMPS}
+    lg = LeftGaugedQP(zeros, input.left_gs, input.right_gs;
+                      sector=first(sectors(utilleg(input))), momentum=input.momentum)
     len = length(input)
 
-    lBs =
-        [
-            @plansor t[-1; -2 -3] :=
-                input[1][1 2; -2 -3] * conj(input.left_gs.AL[1][1 2; -1])
-        ] ./ exp(1im * input.momentum)
+    lBs = [@plansor t[-1; -2 -3] := input[1][1 2; -2 -3] *
+                                    conj(input.left_gs.AL[1][1 2; -1])] ./
+          exp(1im * input.momentum)
     for i in 2:len
         t = lBs[end] * TransferMatrix(input.right_gs.AR[i], input.left_gs.AL[i])
         @plansor t[-1; -2 -3] += input[i][1 2; -2 -3] * conj(input.left_gs.AL[i][1 2; -1])
@@ -175,22 +145,20 @@ function Base.convert(::Type{LeftGaugedQP}, input::RightGaugedQP{S}) where {S<:I
         tm = regularize(tm, l_RL(input.right_gs), r_RL(input.right_gs))
     end
 
-    (lBE, convhist) = linsolve(
-        flip(tm), lBs[end], lBs[end], GMRES(), 1, -1 / exp(1im * input.momentum * len)
-    )
+    lBE, convhist = linsolve(flip(tm), lBs[end], lBs[end], GMRES(), 1,
+                             -1 / exp(1im * input.momentum * len))
     convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
 
     lBs[end] = lBE
     for i in 1:(len - 1)
-        lBE =
-            lBE * TransferMatrix(input.right_gs.AR[i], input.left_gs.AL[i]) /
-            exp(1im * input.momentum)
+        lBE = lBE * TransferMatrix(input.right_gs.AR[i], input.left_gs.AL[i]) /
+              exp(1im * input.momentum)
         lBs[i] += lBE
     end
 
     for i in 1:len
-        @plansor T[-1 -2; -3 -4] :=
-            lBs[mod1(i - 1, len)][-1; -3 1] * input.right_gs.AR[i][1 -2; -4]
+        @plansor T[-1 -2; -3 -4] := lBs[mod1(i - 1, len)][-1; -3 1] *
+                                    input.right_gs.AR[i][1 -2; -4]
         @plansor T[-1 -2; -3 -4] += input[i][-1 -2; -3 -4]
         lg[i] = T
     end
@@ -296,26 +264,19 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
     #step 0 : fuse the utility leg of B with the first leg of B
     orig_Bs = map(i -> v[i], 1:length(v))
     Bs = @closure map(orig_Bs) do t
-        frontmap = isomorphism(
-            storagetype(t), fuse(utl * _firstspace(t)), utl * _firstspace(t)
-        )
+        frontmap = isomorphism(storagetype(t), fuse(utl * _firstspace(t)),
+                               utl * _firstspace(t))
         @plansor tt[-1 -2; -3] := t[1 -2; 2 -3] * frontmap[-1; 2 1]
     end
 
     function simplefuse(temp)
-        frontmap = isomorphism(
-            storagetype(temp),
-            fuse(space(temp, 1) * space(temp, 2)),
-            space(temp, 1) * space(temp, 2),
-        )
-        backmap = isomorphism(
-            storagetype(temp),
-            space(temp, 5)' * space(temp, 4)',
-            fuse(space(temp, 5)' * space(temp, 4)'),
-        )
+        frontmap = isomorphism(storagetype(temp), fuse(space(temp, 1) * space(temp, 2)),
+                               space(temp, 1) * space(temp, 2))
+        backmap = isomorphism(storagetype(temp), space(temp, 5)' * space(temp, 4)',
+                              fuse(space(temp, 5)' * space(temp, 4)'))
 
-        @plansor tempp[-1 -2; -3] :=
-            frontmap[-1; 1 2] * temp[1 2 -2 3; 4] * backmap[4 3; -3]
+        @plansor tempp[-1 -2; -3] := frontmap[-1; 1 2] * temp[1 2 -2 3; 4] *
+                                     backmap[4 3; -3]
     end
 
     #step 1 : pass utl through Ls
@@ -327,21 +288,15 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
 
     #step 2 : embed all Ls/Bs/Rs in the same space
     superspaces = map(zip(Ls, Rs)) do (L, R)
-        supremum(space(L, 1), space(R, 1))
+        return supremum(space(L, 1), space(R, 1))
     end
     push!(superspaces, supremum(_lastspace(Ls[end])', _lastspace(Rs[end])'))
 
     for i in 1:(length(v) + 1)
-        Lf = isometry(
-            Matrix{elt},
-            superspaces[i],
-            i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i - 1])',
-        )
-        Rf = isometry(
-            Matrix{elt},
-            superspaces[i],
-            i <= length(v) ? _firstspace(Rs[i]) : _lastspace(Rs[i - 1])',
-        )
+        Lf = isometry(Matrix{elt}, superspaces[i],
+                      i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i - 1])')
+        Rf = isometry(Matrix{elt}, superspaces[i],
+                      i <= length(v) ? _firstspace(Rs[i]) : _lastspace(Rs[i - 1])')
 
         if i <= length(v)
             @plansor Ls[i][-1 -2; -3] := Lf[-1; 1] * Ls[i][1 -2; -3]

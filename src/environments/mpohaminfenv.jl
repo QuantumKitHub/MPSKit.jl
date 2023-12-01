@@ -22,12 +22,12 @@ function gen_lw_rw(st::InfiniteMPS{A}, ham::Union{SparseMPO,MPOHamiltonian}) whe
     rw = PeriodicArray{A,2}(undef, ham.odim, length(st))
 
     for i in 1:length(st), j in 1:(ham.odim)
-        lw[j, i] = similar(
-            st.AL[1], _firstspace(st.AL[i]) * ham[i].domspaces[j]' ← _firstspace(st.AL[i])
-        )
-        rw[j, i] = similar(
-            st.AL[1], _lastspace(st.AR[i])' * ham[i].imspaces[j]' ← _lastspace(st.AR[i])'
-        )
+        lw[j, i] = similar(st.AL[1],
+                           _firstspace(st.AL[i]) * ham[i].domspaces[j]' ←
+                           _firstspace(st.AL[i]))
+        rw[j, i] = similar(st.AL[1],
+                           _lastspace(st.AR[i])' * ham[i].imspaces[j]' ←
+                           _lastspace(st.AR[i])')
     end
 
     randomize!.(lw)
@@ -73,9 +73,8 @@ function recalculate!(envs::MPOHamInfEnv, nstate; tol=envs.solver.tol)
     return envs
 end
 
-function calclw!(
-    fixpoints, st::InfiniteMPS, ham::MPOHamiltonian; solver=Defaults.linearsolver
-)
+function calclw!(fixpoints, st::InfiniteMPS, ham::MPOHamiltonian;
+                 solver=Defaults.linearsolver)
     len = length(st)
     @assert len == length(ham)
 
@@ -93,28 +92,25 @@ function calclw!(
 
         if (isid(ham, i)) #identity matrices; do the hacky renormalization
             tm = regularize(TransferMatrix(st.AL, st.AL), l_LL(st), r_LL(st))
-            (fixpoints[i, 1], convhist) = linsolve(
-                flip(tm), fixpoints[i, 1], prev, solver, 1, -1
-            )
+            fixpoints[i, 1], convhist = linsolve(flip(tm), fixpoints[i, 1], prev, solver,
+                                                 1, -1)
             convhist.converged == 0 && @info "calclw failed to converge $(convhist.normres)"
 
             (len > 1) && left_cyclethrough!(i, fixpoints, ham, st)
 
             #go through the unitcell, again subtracting fixpoints
             for potato in 1:len
-                @plansor fixpoints[i, potato][-1 -2; -3] -=
-                    fixpoints[i, potato][1 -2; 2] *
-                    r_LL(st, potato - 1)[2; 1] *
-                    l_LL(st, potato)[-1; -3]
+                @plansor fixpoints[i, potato][-1 -2; -3] -= fixpoints[i, potato][1 -2; 2] *
+                                                            r_LL(st, potato - 1)[2; 1] *
+                                                            l_LL(st, potato)[-1; -3]
             end
 
         else
             if reduce(&, contains.(ham.data, i, i))
                 diag = map(b -> b[i, i], ham[:])
                 tm = TransferMatrix(st.AL, diag, st.AL)
-                (fixpoints[i, 1], convhist) = linsolve(
-                    flip(tm), fixpoints[i, 1], prev, solver, 1, -1
-                )
+                fixpoints[i, 1], convhist = linsolve(flip(tm), fixpoints[i, 1], prev,
+                                                     solver, 1, -1)
                 convhist.converged == 0 &&
                     @info "calclw failed to converge $(convhist.normres)"
             end
@@ -125,9 +121,8 @@ function calclw!(
     return fixpoints
 end
 
-function calcrw!(
-    fixpoints, st::InfiniteMPS, ham::MPOHamiltonian; solver=Defaults.linearsolver
-)
+function calcrw!(fixpoints, st::InfiniteMPS, ham::MPOHamiltonian;
+                 solver=Defaults.linearsolver)
     len = length(st)
     odim = size(fixpoints, 1)
     @assert len == length(ham)
@@ -147,27 +142,25 @@ function calcrw!(
 
             #subtract fixpoints
             tm = regularize(TransferMatrix(st.AR, st.AR), l_RR(st), r_RR(st))
-            (fixpoints[i, end], convhist) = linsolve(
-                tm, fixpoints[i, end], prev, solver, 1, -1
-            )
+            fixpoints[i, end], convhist = linsolve(tm, fixpoints[i, end], prev, solver, 1,
+                                                   -1)
             convhist.converged == 0 && @info "calcrw failed to converge $(convhist.normres)"
 
             len > 1 && right_cyclethrough!(i, fixpoints, ham, st)
 
             #go through the unitcell, again subtracting fixpoints
             for potatoe in 1:len
-                @plansor fixpoints[i, potatoe][-1 -2; -3] -=
-                    fixpoints[i, potatoe][1 -2; 2] *
-                    l_RR(st, potatoe + 1)[2; 1] *
-                    r_RR(st, potatoe)[-1; -3]
+                @plansor fixpoints[i, potatoe][-1 -2; -3] -= fixpoints[i, potatoe][1 -2;
+                                                                                   2] *
+                                                             l_RR(st, potatoe + 1)[2; 1] *
+                                                             r_RR(st, potatoe)[-1; -3]
             end
         else
             if reduce(&, contains.(ham.data, i, i))
                 diag = map(b -> b[i, i], ham[:])
                 tm = TransferMatrix(st.AR, diag, st.AR)
-                (fixpoints[i, end], convhist) = linsolve(
-                    tm, fixpoints[i, end], prev, solver, 1, -1
-                )
+                fixpoints[i, end], convhist = linsolve(tm, fixpoints[i, end], prev,
+                                                       solver, 1, -1)
                 convhist.converged == 0 &&
                     @info "calcrw failed to converge $(convhist.normres)"
             end
@@ -187,17 +180,13 @@ function left_cyclethrough!(index::Int, fp, ham, st)
             contains(ham[i], j, index) || continue
 
             if isscal(ham[i], j, index)
-                axpy!(
-                    ham.Os[i, j, index],
-                    fp[j, i] * TransferMatrix(st.AL[i], st.AL[i]),
-                    fp[index, i + 1],
-                )
+                axpy!(ham.Os[i, j, index],
+                      fp[j, i] * TransferMatrix(st.AL[i], st.AL[i]),
+                      fp[index, i + 1])
             else
-                axpy!(
-                    true,
-                    fp[j, i] * TransferMatrix(st.AL[i], ham[i][j, index], st.AL[i]),
-                    fp[index, i + 1],
-                )
+                axpy!(true,
+                      fp[j, i] * TransferMatrix(st.AL[i], ham[i][j, index], st.AL[i]),
+                      fp[index, i + 1])
             end
         end
     end
@@ -211,17 +200,13 @@ function right_cyclethrough!(index::Int, fp, ham, st)
             contains(ham[i], index, j) || continue
 
             if isscal(ham[i], index, j)
-                axpy!(
-                    ham.Os[i, index, j],
-                    TransferMatrix(st.AR[i], st.AR[i]) * fp[j, i],
-                    fp[index, i - 1],
-                )
+                axpy!(ham.Os[i, index, j],
+                      TransferMatrix(st.AR[i], st.AR[i]) * fp[j, i],
+                      fp[index, i - 1])
             else
-                axpy!(
-                    true,
-                    TransferMatrix(st.AR[i], ham[i][index, j], st.AR[i]) * fp[j, i],
-                    fp[index, i - 1],
-                )
+                axpy!(true,
+                      TransferMatrix(st.AR[i], ham[i][index, j], st.AR[i]) * fp[j, i],
+                      fp[index, i - 1])
             end
         end
     end

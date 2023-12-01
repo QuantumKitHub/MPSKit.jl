@@ -54,41 +54,31 @@ end
 Constructors
 ===========================================================================================#
 
-function InfiniteMPS(
-    AL::AbstractVector{A},
-    AR::AbstractVector{A},
-    CR::AbstractVector{B},
-    AC::AbstractVector{A}=PeriodicArray(AL .* CR),
-) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractVector{B},
+                     AC::AbstractVector{A}=PeriodicArray(AL .* CR)) where {A<:GenericMPSTensor,
+                                                                           B<:MPSBondTensor}
     return InfiniteMPS{A,B}(AL, AR, CR, AC)
 end
 
-function InfiniteMPS(
-    pspaces::AbstractVector{S}, Dspaces::AbstractVector{S}; kwargs...
-) where {S<:IndexSpace}
+function InfiniteMPS(pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
+                     kwargs...) where {S<:IndexSpace}
     return InfiniteMPS(MPSTensor.(pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
 end
-function InfiniteMPS(
-    f,
-    elt::Type{<:Number},
-    pspaces::AbstractVector{S},
-    Dspaces::AbstractVector{S};
-    kwargs...,
-) where {S<:IndexSpace}
-    return InfiniteMPS(
-        MPSTensor.(f, elt, pspaces, circshift(Dspaces, 1), Dspaces); kwargs...
-    )
+function InfiniteMPS(f, elt::Type{<:Number}, pspaces::AbstractVector{S},
+                     Dspaces::AbstractVector{S}; kwargs...) where {S<:IndexSpace}
+    return InfiniteMPS(MPSTensor.(f, elt, pspaces, circshift(Dspaces, 1), Dspaces);
+                       kwargs...)
 end
 InfiniteMPS(d::S, D::S) where {S<:Union{Int,<:IndexSpace}} = InfiniteMPS([d], [D])
-function InfiniteMPS(f, elt::Type{<:Number}, d::S, D::S) where {S<:Union{Int,<:IndexSpace}}
+function InfiniteMPS(f, elt::Type{<:Number}, d::S,
+                     D::S) where {S<:Union{Int,<:IndexSpace}}
     return InfiniteMPS(f, elt, [d], [D])
 end
 function InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int})
     return InfiniteMPS(ComplexSpace.(ds), ComplexSpace.(Ds))
 end
-function InfiniteMPS(
-    f, elt::Type{<:Number}, ds::AbstractVector{Int}, Ds::AbstractVector{Int}, kwargs...
-)
+function InfiniteMPS(f, elt::Type{<:Number}, ds::AbstractVector{Int},
+                     Ds::AbstractVector{Int}, kwargs...)
     return InfiniteMPS(f, elt, ComplexSpace.(ds), ComplexSpace.(Ds); kwargs...)
 end
 
@@ -131,9 +121,8 @@ function Base.similar(Ψ::InfiniteMPS)
     return InfiniteMPS(similar(Ψ.AL), similar(Ψ.AR), similar(Ψ.CR), similar(Ψ.AC))
 end
 function Base.circshift(st::InfiniteMPS, n)
-    return InfiniteMPS(
-        circshift(st.AL, n), circshift(st.AR, n), circshift(st.CR, n), circshift(st.AC, n)
-    )
+    return InfiniteMPS(circshift(st.AL, n), circshift(st.AR, n), circshift(st.CR, n),
+                       circshift(st.AC, n))
 end
 
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
@@ -148,9 +137,8 @@ function physicalspace(Ψ::InfiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer)
     elseif N == 2
         return space(Ψ.AL[n], 2)
     else
-        return ProductSpace{spacetype(Ψ),N - 1}(
-            space.(Ref(Ψ.AL[n]), Base.front(Base.tail(TensorKit.allind(Ψ.AL[n]))))
-        )
+        return ProductSpace{spacetype(Ψ),N - 1}(space.(Ref(Ψ.AL[n]),
+                                                       Base.front(Base.tail(TensorKit.allind(Ψ.AL[n])))))
     end
 end
 
@@ -171,9 +159,8 @@ end
 function TensorKit.dot(Ψ₁::InfiniteMPS, Ψ₂::InfiniteMPS; krylovdim=30)
     init = similar(Ψ₁.AL[1], _firstspace(Ψ₂.AL[1]) ← _firstspace(Ψ₁.AL[1]))
     randomize!(init)
-    (vals, _, convhist) = eigsolve(
-        TransferMatrix(Ψ₂.AL, Ψ₁.AL), init, 1, :LM, Arnoldi(; krylovdim=krylovdim)
-    )
+    (vals, _, convhist) = eigsolve(TransferMatrix(Ψ₂.AL, Ψ₁.AL), init, 1, :LM,
+                                   Arnoldi(; krylovdim=krylovdim))
     convhist.converged == 0 && @info "dot mps not converged"
     return vals[1]
 end

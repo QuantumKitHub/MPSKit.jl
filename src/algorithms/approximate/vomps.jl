@@ -1,25 +1,15 @@
-function approximate(
-    ψ::InfiniteMPS,
-    toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS},
-    algorithm,
-    envs=environments(ψ, toapprox),
-)
+function approximate(ψ::InfiniteMPS,
+                     toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS}, algorithm,
+                     envs=environments(ψ, toapprox))
     # PeriodicMPO's always act on MPSMultiline's. To avoid code duplication, define everything in terms of MPSMultiline's.
-    multi, envs = approximate(
-        convert(MPSMultiline, ψ),
-        (convert(MPOMultiline, toapprox[1]), convert(MPSMultiline, toapprox[2])),
-        algorithm,
-        envs,
-    )
+    multi, envs = approximate(convert(MPSMultiline, ψ),
+                              (convert(MPOMultiline, toapprox[1]),
+                               convert(MPSMultiline, toapprox[2])), algorithm, envs)
     ψ = convert(InfiniteMPS, multi)
     return ψ, envs
 end
-function approximate(
-    ψ::MPSMultiline,
-    toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
-    alg::VUMPS,
-    envs=environments(ψ, toapprox),
-)
+function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
+                     alg::VUMPS, envs=environments(ψ, toapprox))
     t₀ = Base.time_ns()
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
@@ -29,9 +19,8 @@ function approximate(
         Δt = @elapsed begin
             @static if Defaults.parallelize_sites
                 @sync for col in 1:size(ψ, 2)
-                    Threads.@spawn _vomps_localupdate!(
-                        temp_ACs[:, col], col, ψ, toapprox, envs
-                    )
+                    Threads.@spawn _vomps_localupdate!(temp_ACs[:, col], col, ψ, toapprox,
+                                                       envs)
                 end
             else
                 for col in 1:size(ψ, 2)

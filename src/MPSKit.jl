@@ -17,7 +17,7 @@ export PeriodicArray, Window
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth,
-    rightorth, leftorth!, rightorth!, poison!, uniform_leftorth, uniform_rightorth
+       rightorth, leftorth!, rightorth!, poison!, uniform_leftorth, uniform_rightorth
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # should be properties
 
 # useful utility functions?

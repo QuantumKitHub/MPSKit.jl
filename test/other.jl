@@ -17,7 +17,8 @@ end
     @testset "IDMRG2 space mismatch" begin
         N = 6
         H = repeat(bilinear_biquadratic_model(SU2Irrep; θ=atan(1 / 3)), N)
-        ψ₀ = InfiniteMPS(fill(SU2Space(1 => 1), N), fill(SU2Space(1//2 => 2, 3//2 => 1), N))
+        ψ₀ = InfiniteMPS(fill(SU2Space(1 => 1), N),
+                         fill(SU2Space(1 // 2 => 2, 3 // 2 => 1), N))
         alg = IDMRG2(; verbose=false, tol_galerkin=1e-5, trscheme=truncdim(32))
 
         ψ, envs, δ = find_groundstate(ψ₀, H, alg) # used to error

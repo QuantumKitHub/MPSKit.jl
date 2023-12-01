@@ -36,9 +36,8 @@ function changebonds(ψ::InfiniteMPS, H, alg::OptimalExpand, envs=environments(�
     return newψ, envs
 end
 
-function changebonds(
-    ψ::InfiniteMPS, H::DenseMPO, alg::OptimalExpand, envs=environments(ψ, H)
-)
+function changebonds(ψ::InfiniteMPS, H::DenseMPO, alg::OptimalExpand,
+                     envs=environments(ψ, H))
     (nmψ, envs) = changebonds(convert(MPSMultiline, ψ), convert(MPOMultiline, H), alg, envs)
     return (convert(InfiniteMPS, nmψ), envs)
 end

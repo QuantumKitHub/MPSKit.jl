@@ -78,10 +78,10 @@ non-injective MPS.
 """
 
 ℋ = SU2Space(1 => 1)
-V_wrong = SU2Space(0 => 8, 1//2 => 8, 1 => 3, 3//2 => 3)
+V_wrong = SU2Space(0 => 8, 1 // 2 => 8, 1 => 3, 3 // 2 => 3)
 ψ = InfiniteMPS(ℋ, V_wrong)
 ψ, environments, δ = find_groundstate(ψ, H, VUMPS(; maxiter=10))
-sectors = SU2Irrep[0, 1//2, 1, 3//2]
+sectors = SU2Irrep[0, 1 // 2, 1, 3 // 2]
 transferplot(ψ; sectors, title="Transfer matrix spectrum", legend=:outertop)
 
 md"""
@@ -109,19 +109,17 @@ E_plus = expectation_value(ψ_plus, H)
 
 #+
 
-V_minus = SU2Space(1//2 => 10, 3//2 => 5, 5//2 => 3)
+V_minus = SU2Space(1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 3)
 ψ_minus = InfiniteMPS(ℋ, V_minus)
 ψ_minus, = find_groundstate(ψ_minus, H, VUMPS(; maxiter=100))
 E_minus = expectation_value(ψ_minus, H)
 
 #+
 
-transferp_plus = transferplot(
-    ψ_plus; sectors=SU2Irrep[0, 1, 2], title="ψ_plus", legend=:outertop
-)
-transferp_minus = transferplot(
-    ψ_minus; sectors=SU2Irrep[0, 1, 2], title="ψ_minus", legend=:outertop
-)
+transferp_plus = transferplot(ψ_plus; sectors=SU2Irrep[0, 1, 2], title="ψ_plus",
+                              legend=:outertop)
+transferp_minus = transferplot(ψ_minus; sectors=SU2Irrep[0, 1, 2], title="ψ_minus",
+                               legend=:outertop)
 plot(transferp_plus, transferp_minus; layout=(1, 2), size=(800, 400))
 
 #+

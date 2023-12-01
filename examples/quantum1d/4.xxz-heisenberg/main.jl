@@ -15,7 +15,7 @@ Then we specify an initial guess, which we then further optimize.
 Working directly in the thermodynamic limit, this is achieved as follows:
 """
 
-H = heisenberg_XXX(; spin=1//2);
+H = heisenberg_XXX(; spin=1 // 2);
 
 md"""
 We then need an intial state, which we shall later optimize. In this example we work directly in the thermodynamic limit.
@@ -69,19 +69,18 @@ Alternatively, the hamiltonian can be constructed directly on a two-site unitcel
 """
 
 ## H2 = repeat(H, 2); -- copies the one-site version
-H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin=1//2)
-groundstate, cache, delta = find_groundstate(
-    state, H2, VUMPS(; maxiter=100, tol_galerkin=1e-12)
-);
+H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin=1 // 2)
+groundstate, cache, delta = find_groundstate(state, H2,
+                                             VUMPS(; maxiter=100, tol_galerkin=1e-12));
 
 md"""
 We get convergence, but it takes an enormous amount of iterations.
 The reason behind this becomes more obvious at higher bond dimensions:
 """
 
-groundstate, cache, delta = find_groundstate(
-    state, H2, IDMRG2(; trscheme=truncdim(50), maxiter=20, tol_galerkin=1e-12)
-)
+groundstate, cache, delta = find_groundstate(state, H2,
+                                             IDMRG2(; trscheme=truncdim(50), maxiter=20,
+                                                    tol_galerkin=1e-12))
 entanglementplot(groundstate)
 
 md"""
@@ -101,7 +100,7 @@ The XXZ Heisenberg hamiltonian is SU(2) symmetric and we can exploit this to gre
 It is cumbersome to construct symmetric hamiltonians, but luckily su(2) symmetric XXZ is already implemented:
 """
 
-H2 = heisenberg_XXX(ComplexF64, SU2Irrep, InfiniteChain(2); spin=1//2);
+H2 = heisenberg_XXX(ComplexF64, SU2Irrep, InfiniteChain(2); spin=1 // 2);
 
 md"""
 Our initial state should also be SU(2) symmetric.
@@ -113,8 +112,8 @@ The staggering thus happens on the virtual level.
 An alternative constructor for the initial state is
 """
 
-P = Rep[SU₂](1//2 => 1)
-V1 = Rep[SU₂](1//2 => 10, 3//2 => 5, 5//2 => 2)
+P = Rep[SU₂](1 // 2 => 1)
+V1 = Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 2)
 V2 = Rep[SU₂](0 => 15, 1 => 10, 2 => 5)
 state = InfiniteMPS([P, P], [V1, V2]);
 
@@ -124,6 +123,5 @@ Even though the bond dimension is higher than in the example without symmetry, c
 
 println(dim(V1))
 println(dim(V2))
-groundstate, cache, delta = find_groundstate(
-    state, H2, VUMPS(; maxiter=400, tol_galerkin=1e-12)
-);
+groundstate, cache, delta = find_groundstate(state, H2,
+                                             VUMPS(; maxiter=400, tol_galerkin=1e-12));

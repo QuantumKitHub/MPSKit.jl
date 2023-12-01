@@ -18,11 +18,11 @@ function force_planar(x::AbstractTensorMap)
     return t
 end
 function force_planar(mpo::MPOHamiltonian)
-    return MPOHamiltonian(
-        map(Iterators.product(1:(mpo.period), 1:(mpo.odim), 1:(mpo.odim))) do (i, j, k)
-            force_planar(mpo.Os[i, j, k])
-        end,
-    )
+    L = mpo.period
+    V = mpo.odim
+    return MPOHamiltonian(map(Iterators.product(1:L, 1:V, 1:V)) do (i, j, k)
+                              return force_planar(mpo.Os[i, j, k])
+                          end)
 end
 force_planar(mpo::DenseMPO) = DenseMPO(force_planar.(mpo.opp))
 
@@ -84,11 +84,9 @@ function classical_ising()
 end
 
 function sixvertex(; a=1.0, b=1.0, c=1.0)
-    d = ComplexF64[
-        a 0 0 0
-        0 c b 0
-        0 b c 0
-        0 0 0 a
-    ]
+    d = ComplexF64[a 0 0 0
+                   0 c b 0
+                   0 b c 0
+                   0 0 0 a]
     return DenseMPO(permute(TensorMap(d, ℂ^2 ⊗ ℂ^2, ℂ^2 ⊗ ℂ^2), ((1, 2), (4, 3))))
 end

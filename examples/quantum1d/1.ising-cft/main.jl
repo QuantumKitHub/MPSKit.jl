@@ -28,13 +28,11 @@ are just unitary matrices that mix the basis.
 """
 
 energies, states = exact_diagonalization(H; num=18, alg=Lanczos(; krylovdim=200));
-plot(
-    real.(energies);
-    seriestype=:scatter,
-    legend=false,
-    ylabel="energy",
-    xlabel="#eigenvalue",
-)
+plot(real.(energies);
+     seriestype=:scatter,
+     legend=false,
+     ylabel="energy",
+     xlabel="#eigenvalue")
 
 md"""
 !!! note "Krylov dimension"
@@ -95,14 +93,12 @@ append!(momenta, fix_degeneracies(states[12:12]))
 append!(momenta, fix_degeneracies(states[13:16]))
 append!(momenta, fix_degeneracies(states[17:18]))
 
-plot(
-    momenta,
-    real.(energies[1:18]);
-    seriestype=:scatter,
-    xlabel="momentum",
-    ylabel="energy",
-    legend=false,
-)
+plot(momenta,
+     real.(energies[1:18]);
+     seriestype=:scatter,
+     xlabel="momentum",
+     ylabel="energy",
+     legend=false)
 
 md"""
 ## Finite bond dimension
@@ -137,11 +133,9 @@ append!(momenta_mps, fix_degeneracies(states[10:11]))
 append!(momenta_mps, fix_degeneracies(states[12:12]))
 append!(momenta_mps, fix_degeneracies(states[13:16]))
 
-plot(
-    momenta_mps,
-    real.(energies[1:16]);
-    seriestype=:scatter,
-    xlabel="momentum",
-    ylabel="energy",
-    legend=false,
-)
+plot(momenta_mps,
+     real.(energies[1:16]);
+     seriestype=:scatter,
+     xlabel="momentum",
+     ylabel="energy",
+     legend=false)

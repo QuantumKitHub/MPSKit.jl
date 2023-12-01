@@ -6,10 +6,10 @@ println("
 
 include("setup.jl")
 
-@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
-    (ℙ^10, ℙ^2, ComplexF64),
-    (Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](0 => 1) * Rep[SU₂](0 => 1), ComplexF32),
-]
+@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(ℙ^10, ℙ^2, ComplexF64),
+                                                                  (Rep[SU₂](1 => 1, 0 => 3),
+                                                                   Rep[SU₂](0 => 1) * Rep[SU₂](0 => 1),
+                                                                   ComplexF32)]
     ts = FiniteMPS(rand, elt, rand(3:20), d, D)
 
     ovl = dot(ts, ts)
@@ -19,7 +19,7 @@ include("setup.jl")
     for i in 1:length(ts)
         @test ts.AC[i] ≈ ts.AL[i] * ts.CR[i]
         @test ts.AC[i] ≈
-            MPSKit._transpose_front(ts.CR[i - 1] * MPSKit._transpose_tail(ts.AR[i]))
+              MPSKit._transpose_front(ts.CR[i - 1] * MPSKit._transpose_tail(ts.AR[i]))
     end
 
     @test elt == scalartype(ts)
@@ -32,27 +32,27 @@ include("setup.jl")
     @test norm(2 * ts + ts - 3 * ts) ≈ 0.0 atol = sqrt(eps(real(elt)))
 end
 
-@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
-    (ℙ^10, ℙ^2, ComplexF64),
-    (Rep[U₁](-1 => 3, 0 => 3, 1 => 3), Rep[U₁](-1 => 1, 0 => 1, 1 => 1), ComplexF64),
-]
+@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(ℙ^10, ℙ^2, ComplexF64),
+                                                                  (Rep[U₁](-1 => 3, 0 => 3, 1 => 3),
+                                                                   Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
+                                                                   ComplexF64)]
     ts_small = FiniteMPS(rand, elt, 4, d, D)
     ts_small2 = FiniteMPS(MPSKit.decompose_localmps(convert(TensorMap, ts_small)))
     @test dot(ts_small, ts_small2) ≈ dot(ts_small, ts_small)
 end
 
-@testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
-    (ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)
-]
+@testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
+                                                    [(ℙ^10, ℙ^2, ComplexF64),
+                                                     (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
+                                                      ComplexF64)]
     tol = Float64(eps(real(elt)) * 100)
 
-    ts = InfiniteMPS(
-        [TensorMap(rand, elt, D * d, D), TensorMap(rand, elt, D * d, D)]; tol=tol
-    )
+    ts = InfiniteMPS([TensorMap(rand, elt, D * d, D), TensorMap(rand, elt, D * d, D)];
+                     tol=tol)
 
     for i in 1:length(ts)
-        @plansor difference[-1 -2; -3] :=
-            ts.AL[i][-1 -2; 1] * ts.CR[i][1; -3] - ts.CR[i - 1][-1; 1] * ts.AR[i][1 -2; -3]
+        @plansor difference[-1 -2; -3] := ts.AL[i][-1 -2; 1] * ts.CR[i][1; -3] -
+                                          ts.CR[i - 1][-1; 1] * ts.AR[i][1 -2; -3]
         @test norm(difference, Inf) < tol * 10
 
         @test l_LL(ts, i) * TransferMatrix(ts.AL[i], ts.AL[i]) ≈ l_LL(ts, i + 1)
@@ -67,22 +67,18 @@ end
     end
 end
 
-@testset "MPSMultiline ($(sectortype(D)), $elt)" for (D, d, elt) in [
-    (ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF32)
-]
+@testset "MPSMultiline ($(sectortype(D)), $elt)" for (D, d, elt) in
+                                                     [(ℙ^10, ℙ^2, ComplexF64),
+                                                      (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
+                                                       ComplexF32)]
     tol = Float64(eps(real(elt)) * 100)
-    ts = MPSMultiline(
-        [
-            TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)
-            TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)
-        ];
-        tol=tol,
-    )
+    ts = MPSMultiline([TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)
+                       TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)];
+                      tol=tol)
 
     for i in 1:size(ts, 1), j in 1:size(ts, 2)
-        @plansor difference[-1 -2; -3] :=
-            ts.AL[i, j][-1 -2; 1] * ts.CR[i, j][1; -3] -
-            ts.CR[i, j - 1][-1; 1] * ts.AR[i, j][1 -2; -3]
+        @plansor difference[-1 -2; -3] := ts.AL[i, j][-1 -2; 1] * ts.CR[i, j][1; -3] -
+                                          ts.CR[i, j - 1][-1; 1] * ts.AR[i, j][1 -2; -3]
         @test norm(difference, Inf) < tol * 10
 
         @test l_LL(ts, i, j) * TransferMatrix(ts.AL[i, j], ts.AL[i, j]) ≈ l_LL(ts, i, j + 1)
@@ -117,9 +113,8 @@ end
 
     for i in 1:length(window)
         @test window.AC[i] ≈ window.AL[i] * window.CR[i]
-        @test window.AC[i] ≈ MPSKit._transpose_front(
-            window.CR[i - 1] * MPSKit._transpose_tail(window.AR[i])
-        )
+        @test window.AC[i] ≈ MPSKit._transpose_front(window.CR[i - 1] *
+                                                     MPSKit._transpose_tail(window.AR[i]))
     end
 
     @test norm(window) ≈ 1
@@ -150,10 +145,11 @@ end
 end
 
 @testset "Quasiparticle state" verbose = true begin
-    @testset "Finite" verbose = true for (th, D, d) in [
-        (force_planar(transverse_field_ising()), ℙ^10, ℙ^2),
-        (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1)),
-    ]
+    @testset "Finite" verbose = true for (th, D, d) in
+                                         [(force_planar(transverse_field_ising()), ℙ^10,
+                                           ℙ^2),
+                                          (heisenberg_XXX(SU2Irrep; spin=1),
+                                           Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1))]
         ts = FiniteMPS(rand, ComplexF64, rand(4:20), d, D)
         normalize!(ts)
 
@@ -179,10 +175,10 @@ end
         @test ev_f ≈ ev_q atol = 1e-5
     end
 
-    @testset "Infinite" for (th, D, d) in [
-        (force_planar(transverse_field_ising()), ℙ^10, ℙ^2),
-        (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1)),
-    ]
+    @testset "Infinite" for (th, D, d) in
+                            [(force_planar(transverse_field_ising()), ℙ^10, ℙ^2),
+                             (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3),
+                              Rep[SU₂](1 => 1))]
         period = rand(1:4)
         ts = InfiniteMPS(fill(d, period), fill(D, period))
 
@@ -193,7 +189,8 @@ end
         @test norm(axpy!(1, qst1, copy(qst2))) ≤ norm(qst1) + norm(qst2)
         @test norm(qst1) * 3 ≈ norm(qst1 * 3)
 
-        @test dot(qst1, convert(MPSKit.LeftGaugedQP, convert(MPSKit.RightGaugedQP, qst1))) ≈
-            dot(qst1, qst1) atol = 1e-10
+        @test dot(qst1,
+                  convert(MPSKit.LeftGaugedQP, convert(MPSKit.RightGaugedQP, qst1))) ≈
+              dot(qst1, qst1) atol = 1e-10
     end
 end
