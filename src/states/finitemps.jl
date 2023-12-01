@@ -431,6 +431,11 @@ function Base.:+(Ψ₁::MPS, Ψ₂::MPS) where {MPS<:FiniteMPS}
     @assert length(Ψ₁) > 1 "not implemented for length < 2"
 
     Ψ = similar(Ψ₁)
+    fill!(Ψ.ALs, missing)
+    fill!(Ψ.ARs, missing)
+    fill!(Ψ.ACs, missing)
+    fill!(Ψ.CLs, missing)
+    
     halfN = div(length(Ψ), 2)
 
     # left half
