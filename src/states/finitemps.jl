@@ -58,7 +58,14 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     ARs::Vector{Union{Missing,A}}
     ACs::Vector{Union{Missing,A}}
     CLs::Vector{Union{Missing,B}}
-
+    function FiniteMPS{A,B}(
+        ALs::Vector{Union{Missing,A}},
+        ARs::Vector{Union{Missing,A}},
+        ACs::Vector{Union{Missing,A}},
+        CLs::Vector{Union{Missing,B}},
+    ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+        return new{A,B}(ALs, ARs, ACs, CLs)
+    end
     function FiniteMPS(
         ALs::Vector{Union{Missing,A}},
         ARs::Vector{Union{Missing,A}},
@@ -257,8 +264,8 @@ Base.size(Ψ::FiniteMPS, args...) = size(Ψ.ALs, args...)
 Base.length(Ψ::FiniteMPS) = length(Ψ.ALs)
 Base.eltype(Ψtype::Type{<:FiniteMPS}) = site_type(Ψtype) # this might not be true
 Base.copy(Ψ::FiniteMPS) = FiniteMPS(copy(Ψ.ALs), copy(Ψ.ARs), copy(Ψ.ACs), copy(Ψ.CLs))
-function Base.similar(Ψ::FiniteMPS)
-    return FiniteMPS(similar(Ψ.ALs), similar(Ψ.ARs), similar(Ψ.ACs), similar(Ψ.CLs))
+function Base.similar(Ψ::FiniteMPS{A,B}) where {A,B}
+    return FiniteMPS{A,B}(similar(Ψ.ALs), similar(Ψ.ARs), similar(Ψ.ACs), similar(Ψ.CLs))
 end
 
 function Base.convert(TType::Type{<:AbstractTensorMap}, Ψ::FiniteMPS)
@@ -270,6 +277,7 @@ end
 
 site_type(::Type{<:FiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:FiniteMPS{<:Any,B}}) where {B} = B
+TensorKit.storagetype(::Union{MPS,Type{MPS}}) where {A,MPS<:FiniteMPS{A}} = storagetype(A)
 
 function left_virtualspace(Ψ::FiniteMPS, n::Integer)
     if n > 0 && !ismissing(Ψ.ALs[n])
@@ -424,46 +432,85 @@ No support yet for converting the scalar type, also no in-place operations
 Base.:*(Ψ::FiniteMPS, a::Number) = rmul!(copy(Ψ), a)
 Base.:*(a::Number, Ψ::FiniteMPS) = lmul!(a, copy(Ψ))
 
-function Base.:+(Ψ₁::FiniteMPS{A}, Ψ₂::FiniteMPS{A}) where {A}
-    length(Ψ₁) == length(Ψ₂) || throw(DimensionMismatch())
-    N = length(Ψ₁)
-    for k in 1:N
-        space(Ψ₁, k) == space(Ψ₂, k) ||
-            throw(SpaceMismatch("Non-matching physical space on site $k."))
+function Base.:+(Ψ₁::MPS, Ψ₂::MPS) where {MPS<:FiniteMPS}
+    length(Ψ₁) == length(Ψ₂) || throw(
+        DimensionMismatch("Cannot add states of length $(length(Ψ₁)) and $(length(Ψ₂))")
+    )
+    @assert length(Ψ₁) > 1 "not implemented for length < 2"
+
+    Ψ = similar(Ψ₁)
+    fill!(Ψ.ALs, missing)
+    fill!(Ψ.ARs, missing)
+    fill!(Ψ.ACs, missing)
+    fill!(Ψ.CLs, missing)
+
+    halfN = div(length(Ψ), 2)
+
+    # left half
+    F₁ = isometry(
+        storagetype(Ψ),
+        (_lastspace(Ψ₁.AL[1]) ⊕ _lastspace(Ψ₂.AL[1]))',
+        _lastspace(Ψ₁.AL[1])',
+    )
+    F₂ = leftnull(F₁)
+    @assert _lastspace(F₂) == _lastspace(Ψ₂.AL[1])
+
+    AL = Ψ₁.AL[1] * F₁' + Ψ₂.AL[1] * F₂'
+    Ψ.ALs[1], R = leftorth!(AL)
+
+    for i in 2:halfN
+        AL₁ = _transpose_front(F₁ * _transpose_tail(Ψ₁.AL[i]))
+        AL₂ = _transpose_front(F₂ * _transpose_tail(Ψ₂.AL[i]))
+
+        F₁ = isometry(
+            storagetype(Ψ), (_lastspace(AL₁) ⊕ _lastspace(Ψ₂.AL[i]))', _lastspace(AL₁)'
+        )
+        F₂ = leftnull(F₁)
+        @assert _lastspace(F₂) == _lastspace(Ψ₂.AL[i])
+
+        AL = _transpose_front(R * _transpose_tail(AL₁ * F₁' + AL₂ * F₂'))
+        Ψ.ALs[i], R = leftorth!(AL)
     end
-    left_virtualspace(Ψ₁, 0) == left_virtualspace(Ψ₂, 0) ||
-        throw(SpaceMismatch("Non-matching left virtual space."))
-    right_virtualspace(Ψ₁, N) == right_virtualspace(Ψ₂, N) ||
-        throw(SpaceMismatch("Non-matching right virtual space."))
 
-    tensors = A[]
+    C₁ = F₁ * Ψ₁.CR[halfN]
+    C₂ = F₂ * Ψ₂.CR[halfN]
 
-    k = 1 # firstindex(Ψ₁)
-    t1 = Ψ₁.AL[k]
-    t2 = Ψ₂.AL[k]
-    V1 = domain(t1)[1]
-    V2 = domain(t2)[1]
-    w1 = isometry(storagetype(A), V1 ⊕ V2, V1)
-    w2 = leftnull(w1)
-    @assert domain(w2) == ⊗(V2)
+    # right half
+    F₁ = isometry(
+        storagetype(Ψ),
+        _firstspace(Ψ₁.AR[end]) ⊕ _firstspace(Ψ₂.AR[end]),
+        _firstspace(Ψ₁.AR[end]),
+    )
+    F₂ = leftnull(F₁)
+    @assert _lastspace(F₂) == _firstspace(Ψ₂.AR[end])'
 
-    push!(tensors, t1 * w1' + t2 * w2')
-    for k in 2:(N - 1)
-        t1 = _transpose_front(w1 * _transpose_tail(Ψ₁.AL[k]))
-        t2 = _transpose_front(w2 * _transpose_tail(Ψ₂.AL[k]))
-        V1 = domain(t1)[1]
-        V2 = domain(t2)[1]
-        w1 = isometry(storagetype(A), V1 ⊕ V2, V1)
-        w2 = leftnull(w1)
-        @assert domain(w2) == ⊗(V2)
-        push!(tensors, t1 * w1' + t2 * w2')
+    AR = F₁ * _transpose_tail(Ψ₁.AR[end]) + F₂ * _transpose_tail(Ψ₂.AR[end])
+    L, AR′ = rightorth!(AR)
+    Ψ.ARs[end] = _transpose_front(AR′)
+
+    for i in Iterators.reverse((halfN + 1):(length(Ψ) - 1))
+        AR₁ = _transpose_tail(Ψ₁.AR[i] * F₁')
+        AR₂ = _transpose_tail(Ψ₂.AR[i] * F₂')
+
+        F₁ = isometry(
+            storagetype(Ψ), _firstspace(Ψ₁.AR[i]) ⊕ _firstspace(AR₂), _firstspace(Ψ₁.AR[i])
+        )
+        F₂ = leftnull(F₁)
+        @assert _lastspace(F₂) == _firstspace(AR₂)'
+
+        AR = _transpose_tail(_transpose_front(F₁ * AR₁ + F₂ * AR₂) * L)
+        L, AR′ = rightorth!(AR)
+        Ψ.ARs[i] = _transpose_front(AR′)
     end
-    k = N
-    t1 = _transpose_front(w1 * _transpose_tail(Ψ₁.AC[k]))
-    t2 = _transpose_front(w2 * _transpose_tail(Ψ₂.AC[k]))
-    push!(tensors, t1 + t2)
-    return FiniteMPS(tensors)
+
+    # center
+    C₁ = C₁ * F₁'
+    C₂ = C₂ * F₂'
+    Ψ.CLs[halfN + 1] = R * (C₁ + C₂) * L
+
+    return Ψ
 end
+
 Base.:-(Ψ₁::FiniteMPS, Ψ₂::FiniteMPS) = Ψ₁ + (-1 * Ψ₂)
 
 function TensorKit.lmul!(a::Number, Ψ::FiniteMPS)
