@@ -47,8 +47,8 @@ end
 
 """
     excitations(H, algorithm::QuasiparticleAnsatz, p::Union{Number, Vector{<:Number}},
-                left_Ψ::InfiniteMPS, [left_environment],
-                [right_Ψ::InfiniteMPS], [right_environment];
+                left_ψ::InfiniteMPS, [left_environment],
+                [right_ψ::InfiniteMPS], [right_environment];
                 kwargs...)
 
 Create and optimise infinite quasiparticle states.
@@ -57,15 +57,15 @@ Create and optimise infinite quasiparticle states.
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm::QuasiparticleAnsatz`: optimization algorithm
 - `p::Union{Number, Vector{<:Number}}`: momentum or list of momenta
-- `left_Ψ::InfiniteMPS`: left groundstate
+- `left_ψ::InfiniteMPS`: left groundstate
 - `[left_environment]`: left groundstate environment
-- `[right_Ψ::InfiniteMPS]`: right groundstate
+- `[right_ψ::InfiniteMPS]`: right groundstate
 - `[right_environment]`: right groundstate environment
 
 # Keywords
 - `num::Int`: number of excited states to compute
 - `solver`: algorithm for the linear solver of the quasiparticle environments
-- `sector=one(sectortype(left_Ψ))`: charge of the quasiparticle state
+- `sector=one(sectortype(left_ψ))`: charge of the quasiparticle state
 - `parallel=true`: enable multi-threading over different momenta
 """
 function excitations(H, alg::QuasiparticleAnsatz, p::Number, lmps::InfiniteMPS,
@@ -122,22 +122,22 @@ function excitations(H, alg::QuasiparticleAnsatz, V₀::FiniteQP,
 end
 
 """
-    excitations(H, algorithm::QuasiparticleAnsatz, left_Ψ::InfiniteMPS, [left_environment],
-                [right_Ψ::InfiniteMPS], [right_environment]; kwargs...)
+    excitations(H, algorithm::QuasiparticleAnsatz, left_ψ::InfiniteMPS, [left_environment],
+                [right_ψ::InfiniteMPS], [right_environment]; kwargs...)
 
 Create and optimise finite quasiparticle states.
 
 # Arguments
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm::QuasiparticleAnsatz`: optimization algorithm
-- `left_Ψ::FiniteMPS`: left groundstate
+- `left_ψ::FiniteMPS`: left groundstate
 - `[left_environment]`: left groundstate environment
-- `[right_Ψ::FiniteMPS]`: right groundstate
+- `[right_ψ::FiniteMPS]`: right groundstate
 - `[right_environment]`: right groundstate environment
 
 # Keywords
 - `num::Int`: number of excited states to compute
-- `sector=one(sectortype(left_Ψ))`: charge of the quasiparticle state
+- `sector=one(sectortype(left_ψ))`: charge of the quasiparticle state
 """
 function excitations(H, alg::QuasiparticleAnsatz, lmps::FiniteMPS,
                      lenvs=environments(lmps, H), rmps::FiniteMPS=lmps,

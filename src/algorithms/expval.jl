@@ -176,12 +176,12 @@ end
 function expectation_value(ψ, ops::LazySum, at::Int)
     return sum(op -> expectation_value(ψ, op, at), ops)
 end
-function expectation_value(Ψ, ops::LazySum, envs::MultipleEnvironments=environments(Ψ, ops))
-    return sum(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
+function expectation_value(ψ, ops::LazySum, envs::MultipleEnvironments=environments(ψ, ops))
+    return sum(((op, env),) -> expectation_value(ψ, op, env), zip(ops.ops, envs))
 end
 
 # for now we also have LinearCombination
-function expectation_value(Ψ, H::LinearCombination, envs::LazyLincoCache=environments(Ψ, H))
-    return return sum(((c, op, env),) -> c * expectation_value(Ψ, op, env),
+function expectation_value(ψ, H::LinearCombination, envs::LazyLincoCache=environments(ψ, H))
+    return return sum(((c, op, env),) -> c * expectation_value(ψ, op, env),
                       zip(H.coeffs, H.opps, envs.envs))
 end

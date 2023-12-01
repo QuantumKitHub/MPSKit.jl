@@ -33,8 +33,8 @@ function changebonds(ψ::InfiniteMPS, alg::RandExpand)
     return _expand(ψ, AL′, AR′)
 end
 
-function changebonds(Ψ::MPSMultiline, alg::RandExpand)
-    return Multiline(map(x -> changebonds(x, alg), Ψ.data))
+function changebonds(ψ::MPSMultiline, alg::RandExpand)
+    return Multiline(map(x -> changebonds(x, alg), ψ.data))
 end
 
 changebonds(ψ::AbstractFiniteMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)

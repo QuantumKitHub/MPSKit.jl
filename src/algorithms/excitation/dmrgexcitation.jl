@@ -31,6 +31,6 @@ function excitations(H::MPOHamiltonian, alg::FiniteExcited, states::NTuple{N,T};
 
     return ens, excis
 end
-function excitations(H, alg::FiniteExcited, Ψ::FiniteMPS; kwargs...)
-    return excitations(H, alg, (Ψ,); kwargs...)
+function excitations(H, alg::FiniteExcited, ψ::FiniteMPS; kwargs...)
+    return excitations(H, alg, (ψ,); kwargs...)
 end

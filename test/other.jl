@@ -8,9 +8,9 @@ include("setup.jl")
 using Plots
 
 @testset "plot tests" begin
-    ts = InfiniteMPS([ℙ^2], [ℙ^5])
-    @test transferplot(ts) isa Plots.Plot
-    @test entanglementplot(ts) isa Plots.Plot
+    ψ = InfiniteMPS([ℙ^2], [ℙ^5])
+    @test transferplot(ψ) isa Plots.Plot
+    @test entanglementplot(ψ) isa Plots.Plot
 end
 
 @testset "Old bugs" verbose = true begin
@@ -26,10 +26,10 @@ end
     end
 
     @testset "NaN entanglement entropy" begin
-        ts = InfiniteMPS([ℂ^2], [ℂ^5])
-        ts = changebonds(ts, RandExpand(; trscheme=truncdim(2)))
-        @test !isnan(sum(entropy(ts)))
-        @test !isnan(sum(entropy(ts, 2)))
+        ψ = InfiniteMPS([ℂ^2], [ℂ^5])
+        ψ = changebonds(ψ, RandExpand(; trscheme=truncdim(2)))
+        @test !isnan(sum(entropy(ψ)))
+        @test !isnan(sum(entropy(ψ, 2)))
     end
 
     @testset "changebonds with unitcells" begin

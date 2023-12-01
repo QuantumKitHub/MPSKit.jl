@@ -154,34 +154,34 @@ end
     end
     @testset "infinite (mpo)" begin
         th = repeat(sixvertex(), 2)
-        ts = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^10, ℂ^10])
-        ts, envs, _ = leading_boundary(ts, th, VUMPS(; maxiter=400, verbose=false))
-        energies, Bs = excitations(th, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ts,
+        ψ = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^10, ℂ^10])
+        ψ, envs, _ = leading_boundary(ψ, th, VUMPS(; maxiter=400, verbose=false))
+        energies, Bs = excitations(th, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ψ,
                                    envs; verbose=false)
         @test abs(energies[1]) > abs(energies[2]) # has a minima at pi/2
     end
 
     @testset "finite" begin
         th = force_planar(transverse_field_ising())
-        ts = InfiniteMPS([ℙ^2], [ℙ^12])
-        ts, envs, _ = find_groundstate(ts, th; maxiter=400, verbose=false)
-        energies, Bs = excitations(th, QuasiparticleAnsatz(), 0.0, ts, envs)
+        ψ = InfiniteMPS([ℙ^2], [ℙ^12])
+        ψ, envs, _ = find_groundstate(ψ, th; maxiter=400, verbose=false)
+        energies, Bs = excitations(th, QuasiparticleAnsatz(), 0.0, ψ, envs)
         inf_en = energies[1]
 
         fin_en = map([20, 10]) do len
-            ts = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^12)
-            (ts, envs, _) = find_groundstate(ts, th; verbose=false)
+            ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^12)
+            (ψ, envs, _) = find_groundstate(ψ, th; verbose=false)
 
             #find energy with quasiparticle ansatz
-            energies_QP, Bs = excitations(th, QuasiparticleAnsatz(), ts, envs)
+            energies_QP, Bs = excitations(th, QuasiparticleAnsatz(), ψ, envs)
             @test variance(Bs[1], th) < 1e-6
 
             #find energy with normal dmrg
             energies_dm, _ = excitations(th,
                                          FiniteExcited(;
                                                        gsalg=DMRG(; verbose=false,
-                                                                  tol=1e-6)), ts)
-            @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ts, th, envs)) atol = 1e-4
+                                                                  tol=1e-6)), ψ)
+            @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ψ, th, envs)) atol = 1e-4
 
             return energies_QP[1]
         end
@@ -424,17 +424,17 @@ end
     end
 
     @testset "mpo * finitemps1 ≈ finitemps2" for alg in finite_algs
-        Ψ₁ = FiniteMPS(10, ℂ^2, ℂ^30)
-        Ψ₂ = FiniteMPS(10, ℂ^2, ℂ^25)
+        ψ₁ = FiniteMPS(10, ℂ^2, ℂ^30)
+        ψ₂ = FiniteMPS(10, ℂ^2, ℂ^25)
 
         H = transverse_field_ising(; g=4.0)
         τ = 1e-3
 
         expH = make_time_mpo(H, τ, WI())
-        Ψ₂, = approximate(Ψ₂, (expH, Ψ₁), alg)
-        normalize!(Ψ₂)
-        Ψ₂′, = timestep(Ψ₁, H, τ, TDVP())
-        @test abs(dot(Ψ₁, Ψ₁)) ≈ abs(dot(Ψ₂, Ψ₂′)) atol = 0.001
+        ψ₂, = approximate(ψ₂, (expH, ψ₁), alg)
+        normalize!(ψ₂)
+        ψ₂′, = timestep(ψ₁, H, τ, TDVP())
+        @test abs(dot(ψ₁, ψ₁)) ≈ abs(dot(ψ₂, ψ₂′)) atol = 0.001
     end
 end
 
@@ -445,9 +445,9 @@ end
     th = transverse_field_ising()
     th = periodic_boundary_conditions(th, len)
 
-    ts = FiniteMPS(len, ℂ^2, ℂ^10)
+    ψ = FiniteMPS(len, ℂ^2, ℂ^10)
 
-    gs, envs = find_groundstate(ts, th, DMRG(; verbose=false))
+    gs, envs = find_groundstate(ψ, th, DMRG(; verbose=false))
 
     #translation mpo:
     @tensor bulk[-1 -2; -3 -4] := isomorphism(ℂ^2, ℂ^2)[-2, -4] *

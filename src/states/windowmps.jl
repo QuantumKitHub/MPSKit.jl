@@ -40,13 +40,13 @@ struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     window::FiniteMPS{A,B}
     right_gs::InfiniteMPS{A,B}
 
-    function WindowMPS(Ψₗ::InfiniteMPS{A,B}, Ψₘ::FiniteMPS{A,B},
-                       Ψᵣ::InfiniteMPS{A,B}=copy(Ψₗ)) where {A<:GenericMPSTensor,
+    function WindowMPS(ψₗ::InfiniteMPS{A,B}, ψₘ::FiniteMPS{A,B},
+                       ψᵣ::InfiniteMPS{A,B}=copy(ψₗ)) where {A<:GenericMPSTensor,
                                                              B<:MPSBondTensor}
-        left_virtualspace(Ψₗ, 0) == left_virtualspace(Ψₘ, 0) &&
-            right_virtualspace(Ψₘ, length(Ψₘ)) == right_virtualspace(Ψᵣ, length(Ψₘ)) ||
+        left_virtualspace(ψₗ, 0) == left_virtualspace(ψₘ, 0) &&
+            right_virtualspace(ψₘ, length(ψₘ)) == right_virtualspace(ψᵣ, length(ψₘ)) ||
             throw(SpaceMismatch("Mismatch between window and environment virtual spaces"))
-        return new{A,B}(Ψₗ, Ψₘ, Ψᵣ)
+        return new{A,B}(ψₗ, ψₘ, ψᵣ)
     end
 end
 
@@ -54,32 +54,32 @@ end
 Constructors
 ===========================================================================================#
 
-function WindowMPS(Ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor},
-                   Ψᵣ::InfiniteMPS=Ψₗ)
-    return WindowMPS(Ψₗ, FiniteMPS(site_tensors), Ψᵣ)
+function WindowMPS(ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor},
+                   ψᵣ::InfiniteMPS=ψₗ)
+    return WindowMPS(ψₗ, FiniteMPS(site_tensors), ψᵣ)
 end
 
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   maxvirtspace::S, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
-    Ψₘ = FiniteMPS(f, elt, physspaces, maxvirtspace; left=left_virtualspace(Ψₗ, 0),
-                   right=right_virtualspace(Ψᵣ, length(physspaces)))
-    return WindowMPS(Ψₗ, Ψₘ, Ψᵣ)
+                   maxvirtspace::S, ψₗ::InfiniteMPS,
+                   ψᵣ::InfiniteMPS=ψₗ) where {S<:ElementarySpace}
+    ψₘ = FiniteMPS(f, elt, physspaces, maxvirtspace; left=left_virtualspace(ψₗ, 0),
+                   right=right_virtualspace(ψᵣ, length(physspaces)))
+    return WindowMPS(ψₗ, ψₘ, ψᵣ)
 end
 function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S,
-                   Ψₗ::InfiniteMPS, Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
-    return WindowMPS(rand, Defaults.eltype, physspaces, maxvirtspace, Ψₗ, Ψᵣ)
+                   ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS=ψₗ) where {S<:ElementarySpace}
+    return WindowMPS(rand, Defaults.eltype, physspaces, maxvirtspace, ψₗ, ψᵣ)
 end
 
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   virtspaces::Vector{S}, Ψₗ::InfiniteMPS,
-                   Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
-    Ψₘ = FiniteMPS(f, elt, physspaces, virtspaces)
-    return WindowMPS(Ψₗ, Ψₘ, Ψᵣ)
+                   virtspaces::Vector{S}, ψₗ::InfiniteMPS,
+                   ψᵣ::InfiniteMPS=ψₗ) where {S<:ElementarySpace}
+    ψₘ = FiniteMPS(f, elt, physspaces, virtspaces)
+    return WindowMPS(ψₗ, ψₘ, ψᵣ)
 end
 function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, virtspaces::Vector{S},
-                   Ψₗ::InfiniteMPS, Ψᵣ::InfiniteMPS=Ψₗ) where {S<:ElementarySpace}
-    return WindowMPS(rand, Defaults.eltype, physspaces, virtspaces, Ψₗ, Ψᵣ)
+                   ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS=ψₗ) where {S<:ElementarySpace}
+    return WindowMPS(rand, Defaults.eltype, physspaces, virtspaces, ψₗ, ψᵣ)
 end
 
 function WindowMPS(f, elt, P::ProductSpace, args...; kwargs...)
@@ -96,86 +96,86 @@ function WindowMPS(N::Int, V::VectorSpace, args...; kwargs...)
     return WindowMPS(fill(V, N), args...; kwargs...)
 end
 
-function WindowMPS(Ψ::InfiniteMPS{A,B}, L::Int) where {A,B}
+function WindowMPS(ψ::InfiniteMPS{A,B}, L::Int) where {A,B}
     CLs = Vector{Union{Missing,B}}(missing, L + 1)
     ALs = Vector{Union{Missing,A}}(missing, L)
     ARs = Vector{Union{Missing,A}}(missing, L)
     ACs = Vector{Union{Missing,A}}(missing, L)
 
-    ALs .= Ψ.AL[1:L]
-    ARs .= Ψ.AR[1:L]
-    ACs .= Ψ.AC[1:L]
-    CLs .= Ψ.CR[0:L]
+    ALs .= ψ.AL[1:L]
+    ARs .= ψ.AR[1:L]
+    ACs .= ψ.AC[1:L]
+    CLs .= ψ.CR[0:L]
 
-    return WindowMPS(Ψ, FiniteMPS(ALs, ARs, ACs, CLs), Ψ)
+    return WindowMPS(ψ, FiniteMPS(ALs, ARs, ACs, CLs), ψ)
 end
 
 #===========================================================================================
 Utility
 ===========================================================================================#
 
-function Base.copy(Ψ::WindowMPS)
-    return WindowMPS(copy(Ψ.left_gs), copy(Ψ.window), copy(Ψ.right_gs))
+function Base.copy(ψ::WindowMPS)
+    return WindowMPS(copy(ψ.left_gs), copy(ψ.window), copy(ψ.right_gs))
 end
 
 # not sure about the underlying methods...
-Base.length(Ψ::WindowMPS) = length(Ψ.window)
-Base.size(Ψ::WindowMPS, i...) = size(Ψ.window, i...)
+Base.length(ψ::WindowMPS) = length(ψ.window)
+Base.size(ψ::WindowMPS, i...) = size(ψ.window, i...)
 Base.eltype(::Type{<:WindowMPS{A}}) where {A} = A
 
 site_type(::Type{<:WindowMPS{A}}) where {A} = A
 bond_type(::Type{<:WindowMPS{<:Any,B}}) where {B} = B
 
-TensorKit.space(Ψ::WindowMPS, n::Integer) = space(Ψ.AC[n], 2)
-left_virtualspace(Ψ::WindowMPS, n::Integer) = left_virtualspace(Ψ.window, n);
-right_virtualspace(Ψ::WindowMPS, n::Integer) = right_virtualspace(Ψ.window, n);
+TensorKit.space(ψ::WindowMPS, n::Integer) = space(ψ.AC[n], 2)
+left_virtualspace(ψ::WindowMPS, n::Integer) = left_virtualspace(ψ.window, n);
+right_virtualspace(ψ::WindowMPS, n::Integer) = right_virtualspace(ψ.window, n);
 
-r_RR(Ψ::WindowMPS) = r_RR(Ψ.right_gs, length(Ψ))
-l_LL(Ψ::WindowMPS) = l_LL(Ψ.left_gs, 1)
+r_RR(ψ::WindowMPS) = r_RR(ψ.right_gs, length(ψ))
+l_LL(ψ::WindowMPS) = l_LL(ψ.left_gs, 1)
 
-function Base.getproperty(Ψ::WindowMPS, prop::Symbol)
+function Base.getproperty(ψ::WindowMPS, prop::Symbol)
     if prop == :AL
-        return ALView(Ψ)
+        return ALView(ψ)
     elseif prop == :AR
-        return ARView(Ψ)
+        return ARView(ψ)
     elseif prop == :AC
-        return ACView(Ψ)
+        return ACView(ψ)
     elseif prop == :CR
-        return CRView(Ψ)
+        return CRView(ψ)
     else
-        return getfield(Ψ, prop)
+        return getfield(ψ, prop)
     end
 end
 
-max_Ds(Ψ::WindowMPS) = max_Ds(Ψ.window)
+max_Ds(ψ::WindowMPS) = max_Ds(ψ.window)
 
-Base.:*(Ψ::WindowMPS, a::Number) = rmul!(copy(Ψ), a)
-Base.:*(a::Number, Ψ::WindowMPS) = lmul!(a, copy(Ψ))
+Base.:*(ψ::WindowMPS, a::Number) = rmul!(copy(ψ), a)
+Base.:*(a::Number, ψ::WindowMPS) = lmul!(a, copy(ψ))
 
-function TensorKit.lmul!(a::Number, Ψ::WindowMPS)
-    lmul!(a, Ψ.window)
-    return Ψ
+function TensorKit.lmul!(a::Number, ψ::WindowMPS)
+    lmul!(a, ψ.window)
+    return ψ
 end
 
-function TensorKit.rmul!(Ψ::WindowMPS, a::Number)
-    rmul!(Ψ.window, a)
-    return Ψ
+function TensorKit.rmul!(ψ::WindowMPS, a::Number)
+    rmul!(ψ.window, a)
+    return ψ
 end
 
-function TensorKit.dot(Ψ₁::WindowMPS, Ψ₂::WindowMPS)
-    length(Ψ₁) == length(Ψ₂) || throw(ArgumentError("MPS with different length"))
-    Ψ₁.left_gs == Ψ₂.left_gs ||
-        dot(Ψ₁.left_gs, Ψ₂.left_gs) ≈ 1 ||
+function TensorKit.dot(ψ₁::WindowMPS, ψ₂::WindowMPS)
+    length(ψ₁) == length(ψ₂) || throw(ArgumentError("MPS with different length"))
+    ψ₁.left_gs == ψ₂.left_gs ||
+        dot(ψ₁.left_gs, ψ₂.left_gs) ≈ 1 ||
         throw(ArgumentError("left InfiniteMPS are different"))
-    Ψ₁.right_gs == Ψ₂.right_gs ||
-        dot(Ψ₁.right_gs, Ψ₂.right_gs) ≈ 1 ||
+    ψ₁.right_gs == ψ₂.right_gs ||
+        dot(ψ₁.right_gs, ψ₂.right_gs) ≈ 1 ||
         throw(ArgumentError("right InfiniteMPS are different"))
 
-    ρr = TransferMatrix(Ψ₂.AR[2:end], Ψ₁.AR[2:end]) * r_RR(Ψ₂)
-    return tr(_transpose_front(Ψ₁.AC[1])' * _transpose_front(Ψ₂.AC[1]) * ρr)
+    ρr = TransferMatrix(ψ₂.AR[2:end], ψ₁.AR[2:end]) * r_RR(ψ₂)
+    return tr(_transpose_front(ψ₁.AC[1])' * _transpose_front(ψ₂.AC[1]) * ρr)
 end
 
-TensorKit.norm(Ψ::WindowMPS) = norm(Ψ.window)
+TensorKit.norm(ψ::WindowMPS) = norm(ψ.window)
 
-TensorKit.normalize!(Ψ::WindowMPS) = normalize!(Ψ.window)
-TensorKit.normalize(Ψ::WindowMPS) = normalize!(copy(Ψ))
+TensorKit.normalize!(ψ::WindowMPS) = normalize!(ψ.window)
+TensorKit.normalize(ψ::WindowMPS) = normalize!(copy(ψ))

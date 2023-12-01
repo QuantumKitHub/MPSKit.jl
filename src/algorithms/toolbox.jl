@@ -171,10 +171,10 @@ function variance(state::InfiniteQP, ham::MPOHamiltonian, envs=environments(stat
                 2 * (E_f + E_ex) * E_ex + E_ex^2)
 end
 
-function variance(Ψ, ham::LazySum, envs=environments(Ψ, sum(ham)))
+function variance(ψ, ham::LazySum, envs=environments(ψ, sum(ham)))
     envs isa MultipleEnvironments &&
         throw(ArgumentError("The environment cannot be Lazy i.e. use environments of sum(H)"))
-    return variance(Ψ, sum(ham), envs)
+    return variance(ψ, sum(ham), envs)
 end
 
 """

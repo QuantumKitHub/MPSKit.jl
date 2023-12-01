@@ -19,42 +19,42 @@ Single site infinite DMRG algorithm for finding groundstates.
 end
 
 function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG1, oenvs=environments(ost, ham))
-    Ψ = copy(ost)
+    ψ = copy(ost)
     envs = IDMRGEnv(ost, oenvs)
 
     delta::Float64 = 2 * alg.tol_galerkin
 
     for topit in 1:(alg.maxiter)
         delta = 0.0
-        curc = Ψ.CR[0]
+        curc = ψ.CR[0]
 
-        for pos in 1:length(Ψ)
-            h = ∂∂AC(pos, Ψ, ham, envs)
-            _, vecs = eigsolve(h, Ψ.AC[pos], 1, :SR, alg.eigalg)
+        for pos in 1:length(ψ)
+            h = ∂∂AC(pos, ψ, ham, envs)
+            _, vecs = eigsolve(h, ψ.AC[pos], 1, :SR, alg.eigalg)
 
-            Ψ.AC[pos] = vecs[1]
-            Ψ.AL[pos], Ψ.CR[pos] = leftorth(vecs[1])
+            ψ.AC[pos] = vecs[1]
+            ψ.AL[pos], ψ.CR[pos] = leftorth(vecs[1])
 
-            update_leftenv!(envs, Ψ, ham, pos + 1)
+            update_leftenv!(envs, ψ, ham, pos + 1)
         end
 
-        for pos in length(Ψ):-1:1
-            h = ∂∂AC(pos, Ψ, ham, envs)
-            _, vecs = eigsolve(h, Ψ.AC[pos], 1, :SR, alg.eigalg)
+        for pos in length(ψ):-1:1
+            h = ∂∂AC(pos, ψ, ham, envs)
+            _, vecs = eigsolve(h, ψ.AC[pos], 1, :SR, alg.eigalg)
 
-            Ψ.AC[pos] = vecs[1]
-            Ψ.CR[pos - 1], temp = rightorth(_transpose_tail(vecs[1]))
-            Ψ.AR[pos] = _transpose_front(temp)
+            ψ.AC[pos] = vecs[1]
+            ψ.CR[pos - 1], temp = rightorth(_transpose_tail(vecs[1]))
+            ψ.AR[pos] = _transpose_front(temp)
 
-            update_rightenv!(envs, Ψ, ham, pos - 1)
+            update_rightenv!(envs, ψ, ham, pos - 1)
         end
 
-        delta = norm(curc - Ψ.CR[0])
+        delta = norm(curc - ψ.CR[0])
         delta < alg.tol_galerkin && break
         alg.verbose && @info "idmrg iter $(topit) err $(delta)"
     end
 
-    nst = InfiniteMPS(Ψ.AR[1:end]; tol=alg.tol_gauge)
+    nst = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
     nenvs = environments(nst, ham; solver=oenvs.solver)
     return nst, nenvs, delta
 end

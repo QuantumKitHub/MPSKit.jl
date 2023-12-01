@@ -1,12 +1,12 @@
 """
-    find_groundstate(Ψ, H, [environments]; kwargs...)
-    find_groundstate(Ψ, H, algorithm, environments)
+    find_groundstate(ψ, H, [environments]; kwargs...)
+    find_groundstate(ψ, H, algorithm, environments)
 
-Compute the groundstate for Hamiltonian `H` with initial guess `Ψ`. If not specified, an
+Compute the groundstate for Hamiltonian `H` with initial guess `ψ`. If not specified, an
 optimization algorithm will be attempted based on the supplied keywords.
 
 ## Arguments
-- `Ψ::AbstractMPS`: initial guess
+- `ψ::AbstractMPS`: initial guess
 - `H::AbstractMPO`: operator for which to find the groundstate
 - `[environments]`: MPS environment manager
 - `algorithm`: optimization algorithm
@@ -16,10 +16,10 @@ optimization algorithm will be attempted based on the supplied keywords.
 - `maxiter::Int`: maximum amount of iterations
 - `verbose::Bool`: display progress information
 """
-function find_groundstate(Ψ::AbstractMPS, H, envs::Cache=environments(Ψ, H);
+function find_groundstate(ψ::AbstractMPS, H, envs::Cache=environments(ψ, H);
                           tol=Defaults.tol, maxiter=Defaults.maxiter,
                           verbose=Defaults.verbose, trscheme=nothing)
-    if isa(Ψ, InfiniteMPS)
+    if isa(ψ, InfiniteMPS)
         alg = VUMPS(; tol_galerkin=max(1e-4, tol), verbose=verbose, maxiter=maxiter)
         if tol < 1e-4
             alg = alg &
@@ -29,7 +29,7 @@ function find_groundstate(Ψ::AbstractMPS, H, envs::Cache=environments(Ψ, H);
             alg = IDMRG2(; tol_galerkin=min(1e-2, 100tol), verbose=verbose,
                          trscheme=trscheme) & alg
         end
-    elseif isa(Ψ, AbstractFiniteMPS)
+    elseif isa(ψ, AbstractFiniteMPS)
         alg = DMRG(; tol=tol, maxiter=maxiter, verbose=verbose)
         if !isnothing(trscheme)
             alg = DMRG2(; tol=min(1e-2, 100tol), verbose=verbose, trscheme=trscheme) & alg
@@ -37,5 +37,5 @@ function find_groundstate(Ψ::AbstractMPS, H, envs::Cache=environments(Ψ, H);
     else
         throw(ArgumentError("Unknown input state type"))
     end
-    return find_groundstate(Ψ, H, alg, envs)
+    return find_groundstate(ψ, H, alg, envs)
 end
