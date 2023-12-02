@@ -177,7 +177,7 @@ function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
 
     # limit the maximum virtual dimension such that result is full rank
     fusedPspaces = fuse.(Pspaces) # for working with multiple physical spaces
-    Vspaces = similar(maxVspaces)
+    Vspaces = similar(maxVspaces, N + 1)
 
     Vspaces[1] = left
     for k in 2:N
