@@ -20,14 +20,11 @@ By convention, we have that:
 ---
 
 ## Constructors
-    FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}},
-              virtualspaces::Vector{<:Union{S, CompositeSpace{S}};
-              normalize=true) where {S<:ElementarySpace}
     FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
-              maxvirtualspace::Union{S,Vector{S}};
+              maxvirtualspaces::Union{S,Vector{S}};
               normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
     FiniteMPS([f, eltype], N::Int, physicalspace::Union{S,CompositeSpace{S}},
-              maxvirtualspace::Union{S,Vector{S}};
+              maxvirtualspaces::Union{S,Vector{S}};
               normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
     FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=false)
 
