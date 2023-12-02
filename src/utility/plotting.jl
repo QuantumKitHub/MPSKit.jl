@@ -1,10 +1,10 @@
 """
     entanglementplot(state; site=0[, kwargs])
 
-Plot the entanglement spectrum of a given InfiniteMPS.
+Plot the entanglement spectrum of a given InfiniteMPS. 
 
 # Arguments
-- `site::Int=0`: mps index for multisite unit cells.
+- `site::Int=0`: mps index for multisite unit cells. Spectrum is computed for the bond between `site` and `site + 1`.
 - `expand_symmetry::Logical=false`: add quantum dimension degeneracies.
 - `sortby=maximum`: the method of sorting the sectors.
 - `sector_margin=1//10`: the amount of whitespace between sectors.

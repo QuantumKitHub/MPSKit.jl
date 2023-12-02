@@ -5,6 +5,11 @@ Compute the expectation value of an operator `O` on a state `ψ`. If `location` 
 operator is applied at that location. If `environments` is given, the expectation value
 might be computed more efficiently by re-using previously calculated environments.
 
+!!! note
+    For `MPOHamiltonian`, the expectation value is not uniquely defined, as it is unclear to
+    what site a given term belongs. For this reason, the returned value is half the
+    expectation value of all terms that start and end on the site.
+
 # Arguments
 * `ψ::AbstractMPS` : the state on which to compute the expectation value
 * `O` : the operator to compute the expectation value of. This can either be an `AbstractMPO`, a single `AbstractTensorMap` or an array of `AbstractTensorMap`s.

@@ -56,10 +56,11 @@ function transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, nu
 end
 
 """
-    entanglement_spectrum(ψ, site::Int=0) -> SectorDict{sectortype(ψ),Vector{<:Real}}
+    entanglement_spectrum(ψ; site::Int=0) -> SectorDict{sectortype(ψ),Vector{<:Real}}
 
 Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
-matrix at that site. This is a dictionary mapping the charge to the singular value.
+matrix to the right of a given site. This is a dictionary mapping the charge to the singular
+value.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS}, site::Int=0)
     @assert site <= length(st)
