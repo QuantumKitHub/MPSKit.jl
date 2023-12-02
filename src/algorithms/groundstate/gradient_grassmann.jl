@@ -43,16 +43,16 @@ struct GradientGrassmann <: Algorithm
     end
 end
 
-function find_groundstate(Ψ::S, H, alg::GradientGrassmann,
-                          envs::P=environments(Ψ, H))::Tuple{S,P,Float64} where {S,P}
-    !isa(Ψ, FiniteMPS) ||
-        dim(Ψ.CR[end]) == 1 ||
+function find_groundstate(ψ::S, H, alg::GradientGrassmann,
+                          envs::P=environments(ψ, H))::Tuple{S,P,Float64} where {S,P}
+    !isa(ψ, FiniteMPS) ||
+        dim(ψ.CR[end]) == 1 ||
         @warn "This is not fully supported - split the mps up in a sum of mps's and optimize seperately"
-    normalize!(Ψ)
+    normalize!(ψ)
 
-    #optimtest(GrassmannMPS.fg,(Ψ,envs);alpha=-0.01:0.001:0.01,retract=GrassmannMPS.retract,inner=GrassmannMPS.inner)
+    #optimtest(GrassmannMPS.fg,(ψ,envs);alpha=-0.01:0.001:0.01,retract=GrassmannMPS.retract,inner=GrassmannMPS.inner)
     x, _, _, _, normgradhistory = optimize(GrassmannMPS.fg,
-                                           GrassmannMPS.ManifoldPoint(Ψ, envs),
+                                           GrassmannMPS.ManifoldPoint(ψ, envs),
                                            alg.method;
                                            (transport!)=GrassmannMPS.transport!,
                                            retract=GrassmannMPS.retract,

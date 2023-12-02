@@ -1,18 +1,18 @@
 """
-    excitations(H, algorithm::QuasiparticleAnsatz, Ψ::FiniteQP, [left_environments],
+    excitations(H, algorithm::QuasiparticleAnsatz, ψ::FiniteQP, [left_environments],
                 [right_environments]; num=1)
-    excitations(H, algorithm::QuasiparticleAnsatz, Ψ::InfiniteQP, [left_environments],
+    excitations(H, algorithm::QuasiparticleAnsatz, ψ::InfiniteQP, [left_environments],
                 [right_environments]; num=1, solver=Defaults.solver)
-    excitations(H, algorithm::FiniteExcited, Ψs::NTuple{<:Any, <:FiniteMPS};
-                num=1, init=copy(first(Ψs)))
+    excitations(H, algorithm::FiniteExcited, ψs::NTuple{<:Any, <:FiniteMPS};
+                num=1, init=copy(first(ψs)))
 
 Compute the first excited states and their energy gap above a groundstate.
 
 # Arguments
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm`: optimization algorithm
-- `Ψ::QP`: initial quasiparticle guess
-- `Ψs::NTuple{N, <:FiniteMPS}`: `N` first excited states
+- `ψ::QP`: initial quasiparticle guess
+- `ψs::NTuple{N, <:FiniteMPS}`: `N` first excited states
 - `[left_environments]`: left groundstate environment
 - `[right_environments]`: right groundstate environment
 

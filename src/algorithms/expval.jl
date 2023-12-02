@@ -59,40 +59,40 @@ end
 # --------------
 # TODO: add section in documentation to explain convention
 expectation_value(ψ, envs::Cache) = expectation_value(ψ, envs.opp, envs)
-function expectation_value(ψ, ham::MPOHamiltonian)
-    return expectation_value(ψ, ham, environments(ψ, ham))
+function expectation_value(ψ, H::MPOHamiltonian)
+    return expectation_value(ψ, H, environments(ψ, H))
 end
 
 """
-    expectation_value(ψ::WindowMPS, ham::MPOHAmiltonian, envs) -> vals, tot
+    expectation_value(ψ::WindowMPS, H::MPOHAmiltonian, envs) -> vals, tot
 
 TODO
 """
-function expectation_value(ψ::WindowMPS, ham::MPOHamiltonian, envs::FinEnv)
-    vals = expectation_value_fimpl(ψ, ham, envs)
+function expectation_value(ψ::WindowMPS, H::MPOHamiltonian, envs::FinEnv)
+    vals = expectation_value_fimpl(ψ, H, envs)
 
     tot = 0.0 + 0im
-    for i in 1:(ham.odim), j in 1:(ham.odim)
+    for i in 1:(H.odim), j in 1:(H.odim)
         tot += @plansor leftenv(envs, length(ψ), ψ)[i][1 2; 3] * ψ.AC[end][3 4; 5] *
                         rightenv(envs, length(ψ), ψ)[j][5 6; 7] *
-                        ham[length(ψ)][i, j][2 8; 4 6] * conj(ψ.AC[end][1 8; 7])
+                        H[length(ψ)][i, j][2 8; 4 6] * conj(ψ.AC[end][1 8; 7])
     end
 
     return vals, tot / (norm(ψ.AC[end])^2)
 end
 
-function expectation_value(ψ::FiniteMPS, ham::MPOHamiltonian, envs::FinEnv)
-    return expectation_value_fimpl(ψ, ham, envs)
+function expectation_value(ψ::FiniteMPS, H::MPOHamiltonian, envs::FinEnv)
+    return expectation_value_fimpl(ψ, H, envs)
 end
-function expectation_value_fimpl(ψ::AbstractFiniteMPS, ham::MPOHamiltonian, envs::FinEnv)
+function expectation_value_fimpl(ψ::AbstractFiniteMPS, H::MPOHamiltonian, envs::FinEnv)
     ens = zeros(scalartype(ψ), length(ψ))
-    for i in 1:length(ψ), (j, k) in keys(ham[i])
-        !((j == 1 && k != 1) || (k == ham.odim && j != ham.odim)) && continue
+    for i in 1:length(ψ), (j, k) in keys(H[i])
+        !((j == 1 && k != 1) || (k == H.odim && j != H.odim)) && continue
 
         cur = @plansor leftenv(envs, i, ψ)[j][1 2; 3] * ψ.AC[i][3 7; 5] *
                        rightenv(envs, i, ψ)[k][5 8; 6] * conj(ψ.AC[i][1 4; 6]) *
-                       ham[i][j, k][2 4; 7 8]
-        if !(j == 1 && k == ham.odim)
+                       H[i][j, k][2 4; 7 8]
+        if !(j == 1 && k == H.odim)
             cur /= 2
         end
 
@@ -103,15 +103,15 @@ function expectation_value_fimpl(ψ::AbstractFiniteMPS, ham::MPOHamiltonian, env
     return ens ./ n
 end
 
-function expectation_value(st::InfiniteMPS, ham::MPOHamiltonian, prevca::MPOHamInfEnv)
+function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, prevca::MPOHamInfEnv)
     #calculate energy density
     len = length(st)
     ens = PeriodicArray(zeros(scalartype(st.AR[1]), len))
     for i in 1:len
-        util = fill_data!(similar(st.AL[1], space(prevca.lw[ham.odim, i + 1], 2)), one)
-        for j in (ham.odim):-1:1
+        util = fill_data!(similar(st.AL[1], space(prevca.lw[H.odim, i + 1], 2)), one)
+        for j in (H.odim):-1:1
             apl = leftenv(prevca, i, st)[j] *
-                  TransferMatrix(st.AL[i], ham[i][j, ham.odim], st.AL[i])
+                  TransferMatrix(st.AL[i], H[i][j, H.odim], st.AL[i])
             ens[i] += @plansor apl[1 2; 3] * r_LL(st, i)[3; 1] * conj(util[2])
         end
     end
@@ -123,23 +123,23 @@ function expectation_value(st::InfiniteMPS, prevca::MPOHamInfEnv,
                            range::Union{UnitRange{Int},Int})
     return expectation_value(st, prevca.opp, range, prevca)
 end
-function expectation_value(st::InfiniteMPS, ham::MPOHamiltonian, range::Int,
-                           prevca=environments(st, ham))
-    return expectation_value(st, ham, 1:range, prevca)
+function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, range::Int,
+                           prevca=environments(st, H))
+    return expectation_value(st, H, 1:range, prevca)
 end
-function expectation_value(st::InfiniteMPS, ham::MPOHamiltonian, range::UnitRange{Int},
-                           prevca=environments(st, ham))
+function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, range::UnitRange{Int},
+                           prevca=environments(st, H))
     start = map(leftenv(prevca, range.start, st)) do y
         @plansor x[-1 -2; -3] := y[1 -2; 3] * st.CR[range.start - 1][3; -3] *
                                  conj(st.CR[range.start - 1][1; -1])
     end
 
     for i in range
-        start = start * TransferMatrix(st.AR[i], ham[i], st.AR[i])
+        start = start * TransferMatrix(st.AR[i], H[i], st.AR[i])
     end
 
     tot = 0.0 + 0im
-    for i in 1:(ham.odim)
+    for i in 1:(H.odim)
         tot += @plansor start[i][1 2; 3] * rightenv(prevca, range.stop, st)[i][3 2; 1]
     end
 
@@ -176,12 +176,12 @@ end
 function expectation_value(ψ, ops::LazySum, at::Int)
     return sum(op -> expectation_value(ψ, op, at), ops)
 end
-function expectation_value(Ψ, ops::LazySum, envs::MultipleEnvironments=environments(Ψ, ops))
-    return sum(((op, env),) -> expectation_value(Ψ, op, env), zip(ops.ops, envs))
+function expectation_value(ψ, ops::LazySum, envs::MultipleEnvironments=environments(ψ, ops))
+    return sum(((op, env),) -> expectation_value(ψ, op, env), zip(ops.ops, envs))
 end
 
 # for now we also have LinearCombination
-function expectation_value(Ψ, H::LinearCombination, envs::LazyLincoCache=environments(Ψ, H))
-    return return sum(((c, op, env),) -> c * expectation_value(Ψ, op, env),
+function expectation_value(ψ, H::LinearCombination, envs::LazyLincoCache=environments(ψ, H))
+    return return sum(((c, op, env),) -> c * expectation_value(ψ, op, env),
                       zip(H.coeffs, H.opps, envs.envs))
 end

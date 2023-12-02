@@ -46,29 +46,29 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     h3 = MPOHamiltonian(d1)
 
     #make a teststate to measure expectation values for
-    ts1 = InfiniteMPS([pspace], [Dspace])
-    ts2 = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
+    ψ1 = InfiniteMPS([pspace], [Dspace])
+    ψ2 = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
 
-    e1 = expectation_value(ts1, h1)
-    e2 = expectation_value(ts1, h2)
+    e1 = expectation_value(ψ1, h1)
+    e2 = expectation_value(ψ1, h2)
 
     h1 = 2 * h1 - [1]
-    @test e1[1] * 2 - 1 ≈ expectation_value(ts1, h1)[1] atol = 1e-10
+    @test e1[1] * 2 - 1 ≈ expectation_value(ψ1, h1)[1] atol = 1e-10
 
     h1 = h1 + h2
 
-    @test e1[1] * 2 + e2[1] - 1 ≈ expectation_value(ts1, h1)[1] atol = 1e-10
+    @test e1[1] * 2 + e2[1] - 1 ≈ expectation_value(ψ1, h1)[1] atol = 1e-10
 
     h1 = repeat(h1, 2)
 
-    e1 = expectation_value(ts2, h1)
-    e3 = expectation_value(ts2, h3)
+    e1 = expectation_value(ψ2, h1)
+    e3 = expectation_value(ψ2, h3)
 
-    @test e1 + e3 ≈ expectation_value(ts2, h1 + h3) atol = 1e-10
+    @test e1 + e3 ≈ expectation_value(ψ2, h1 + h3) atol = 1e-10
 
     h4 = h1 + h3
     h4 = h4 * h4
-    @test real(sum(expectation_value(ts2, h4))) >= 0
+    @test real(sum(expectation_value(ψ2, h4))) >= 0
 end
 
 @testset "General LazySum of $(eltype(Os))" for Os in (rand(ComplexF64, rand(1:10)),
@@ -95,11 +95,11 @@ end
     physical_space = ham.pspaces[1]
     ou = oneunit(physical_space)
 
-    ts = InfiniteMPS([physical_space], [ou ⊕ physical_space])
+    ψ = InfiniteMPS([physical_space], [ou ⊕ physical_space])
 
     W = convert(DenseMPO, make_time_mpo(ham, 1im * 0.5, WII()))
 
-    @test abs(dot(W * (W * ts), (W * W) * ts)) ≈ 1.0 atol = 1e-10
+    @test abs(dot(W * (W * ψ), (W * W) * ψ)) ≈ 1.0 atol = 1e-10
 end
 
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1, 2 => 1))
@@ -121,41 +121,41 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
     Hs = [H1, H2, H3]
     summedH = LazySum(Hs)
 
-    Ψs = [FiniteMPS(rand, ComplexF64, rand(3:2:20), pspace, Dspace),
+    ψs = [FiniteMPS(rand, ComplexF64, rand(3:2:20), pspace, Dspace),
           InfiniteMPS([TensorMap(rand, ComplexF64, Dspace * pspace, Dspace),
                        TensorMap(rand, ComplexF64, Dspace * pspace, Dspace)])]
 
-    @testset "LazySum $(Ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for Ψ in Ψs
-        Envs = map(H -> environments(Ψ, H), Hs)
-        summedEnvs = environments(Ψ, summedH)
+    @testset "LazySum $(ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for ψ in ψs
+        Envs = map(H -> environments(ψ, H), Hs)
+        summedEnvs = environments(ψ, summedH)
 
         expval = sum(zip(Hs, Envs)) do (H, Env)
-            return expectation_value(Ψ, H, Env)
+            return expectation_value(ψ, H, Env)
         end
-        expval1 = expectation_value(Ψ, sum(summedH))
-        expval2 = expectation_value(Ψ, summedH, summedEnvs)
-        expval3 = expectation_value(Ψ, summedH)
+        expval1 = expectation_value(ψ, sum(summedH))
+        expval2 = expectation_value(ψ, summedH, summedEnvs)
+        expval3 = expectation_value(ψ, summedH)
         @test expval ≈ expval1
         @test expval ≈ expval2
         @test expval ≈ expval3
 
         # test derivatives
-        summedhct = MPSKit.∂∂C(1, Ψ, summedH, summedEnvs)
+        summedhct = MPSKit.∂∂C(1, ψ, summedH, summedEnvs)
         sum1 = sum(zip(Hs, Envs)) do (H, env)
-            return MPSKit.∂∂C(1, Ψ, H, env)(Ψ.CR[1])
+            return MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
         end
-        @test summedhct(Ψ.CR[1]) ≈ sum1
+        @test summedhct(ψ.CR[1]) ≈ sum1
 
-        summedhct = MPSKit.∂∂AC(1, Ψ, summedH, summedEnvs)
+        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summedEnvs)
         sum2 = sum(zip(Hs, Envs)) do (H, env)
-            return MPSKit.∂∂AC(1, Ψ, H, env)(Ψ.AC[1])
+            return MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
         end
-        @test summedhct(Ψ.AC[1]) ≈ sum2
+        @test summedhct(ψ.AC[1]) ≈ sum2
 
-        v = MPSKit._transpose_front(Ψ.AC[1]) * MPSKit._transpose_tail(Ψ.AR[2])
-        summedhct = MPSKit.∂∂AC2(1, Ψ, summedH, summedEnvs)
+        v = MPSKit._transpose_front(ψ.AC[1]) * MPSKit._transpose_tail(ψ.AR[2])
+        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summedEnvs)
         sum3 = sum(zip(Hs, Envs)) do (H, env)
-            return MPSKit.∂∂AC2(1, Ψ, H, env)(v)
+            return MPSKit.∂∂AC2(1, ψ, H, env)(v)
         end
         @test summedhct(v) ≈ sum3
     end

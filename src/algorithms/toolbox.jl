@@ -4,9 +4,9 @@ function entropy(state::Union{FiniteMPS,WindowMPS,InfiniteMPS}, loc::Int)
     return -tr(safe_xlogx(state.CR[loc] * state.CR[loc]'))
 end;
 
-function infinite_temperature(ham::MPOHamiltonian)
-    return [permute(isomorphism(storagetype(ham[1, 1, 1]), oneunit(sp) * sp,
-                                oneunit(sp) * sp), (1, 2, 4), (3,)) for sp in ham.pspaces]
+function infinite_temperature(H::MPOHamiltonian)
+    return [permute(isomorphism(storagetype(H[1, 1, 1]), oneunit(sp) * sp,
+                                oneunit(sp) * sp), (1, 2, 4), (3,)) for sp in H.pspaces]
 end
 
 """
@@ -132,49 +132,49 @@ Compute the variance of the energy of the state with respect to the hamiltonian.
 """
 function variance end
 
-function variance(state::InfiniteMPS, ham::MPOHamiltonian, envs=environments(state, ham))
-    rescaled_ham = ham - expectation_value(state, ham, envs)
-    return real(sum(expectation_value(state, rescaled_ham * rescaled_ham)))
+function variance(state::InfiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
+    rescaled_H = H - expectation_value(state, H, envs)
+    return real(sum(expectation_value(state, rescaled_H * rescaled_H)))
 end
 
-function variance(state::FiniteMPS, ham::MPOHamiltonian, envs=environments(state, ham))
-    ham2 = ham * ham
-    return real(sum(expectation_value(state, ham2)) -
-                sum(expectation_value(state, ham, envs))^2)
+function variance(state::FiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
+    H2 = H * H
+    return real(sum(expectation_value(state, H2)) -
+                sum(expectation_value(state, H, envs))^2)
 end
 
-function variance(state::WindowMPS, ham::MPOHamiltonian, envs=environments(state, ham))
+function variance(state::WindowMPS, H::MPOHamiltonian, envs=environments(state, H))
     #tricky to define
-    ham2, nenvs = squaredenvs(state, ham, envs)
-    return real(expectation_value(state, ham2, nenvs)[2] -
-                expectation_value(state, ham, envs)[2]^2)
+    H2, nenvs = squaredenvs(state, H, envs)
+    return real(expectation_value(state, H2, nenvs)[2] -
+                expectation_value(state, H, envs)[2]^2)
 end
 
-function variance(state::FiniteQP, ham::MPOHamiltonian, args...)
-    return variance(convert(FiniteMPS, state), ham)
+function variance(state::FiniteQP, H::MPOHamiltonian, args...)
+    return variance(convert(FiniteMPS, state), H)
 end;
 
-function variance(state::InfiniteQP, ham::MPOHamiltonian, envs=environments(state, ham))
+function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state, H))
     # I remember there being an issue here @gertian?
     state.trivial ||
         throw(ArgumentError("variance of domain wall excitations is not implemented"))
 
-    rescaled_ham = ham - expectation_value(state.left_gs, ham)
+    rescaled_H = H - expectation_value(state.left_gs, H)
 
     #I don't remember where the formula came from
-    E_ex = dot(state, effective_excitation_hamiltonian(ham, state, envs))
-    E_f = expectation_value(state.left_gs, rescaled_ham, 1:0)
+    E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
+    E_f = expectation_value(state.left_gs, rescaled_H, 1:0)
 
-    ham2 = rescaled_ham * rescaled_ham
+    H2 = rescaled_H * rescaled_H
 
-    return real(dot(state, effective_excitation_hamiltonian(ham2, state)) -
+    return real(dot(state, effective_excitation_hamiltonian(H2, state)) -
                 2 * (E_f + E_ex) * E_ex + E_ex^2)
 end
 
-function variance(Ψ, ham::LazySum, envs=environments(Ψ, sum(ham)))
+function variance(ψ, H::LazySum, envs=environments(ψ, sum(H)))
     envs isa MultipleEnvironments &&
         throw(ArgumentError("The environment cannot be Lazy i.e. use environments of sum(H)"))
-    return variance(Ψ, sum(ham), envs)
+    return variance(ψ, sum(H), envs)
 end
 
 """
@@ -182,17 +182,17 @@ You can impose periodic boundary conditions on an mpo-hamiltonian (for a given s
 That creates a new mpo-hamiltonian with larger bond dimension
 The interaction never wraps around multiple times
 """
-function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},
-                                      len=ham.period) where {S,T,E}
-    sanitycheck(ham) || throw(ArgumentError("invalid ham"))
-    mod(len, ham.period) == 0 ||
+function periodic_boundary_conditions(H::MPOHamiltonian{S,T,E},
+                                      len=H.period) where {S,T,E}
+    sanitycheck(H) || throw(ArgumentError("invalid hamiltonian"))
+    mod(len, H.period) == 0 ||
         throw(ArgumentError("$(len) is not a multiple of unitcell"))
 
     fusers = PeriodicArray(map(1:len) do loc
-                               map(Iterators.product(ham.domspaces[loc, :],
-                                                     ham.domspaces[len + 1, :],
-                                                     ham.domspaces[loc, :])) do (v1, v2,
-                                                                                 v3)
+                               map(Iterators.product(H.domspaces[loc, :],
+                                                     H.domspaces[len + 1, :],
+                                                     H.domspaces[loc, :])) do (v1, v2,
+                                                                               v3)
                                    return isomorphism(storagetype(T), fuse(v1 * v2' * v3),
                                                       v1 * v2' * v3)
                                end
@@ -201,7 +201,7 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},
     #a -> what progress have I made in the upper layer?
     #b -> what virtual space did I "lend" in the beginning?
     #c -> what progress have I made in the lower layer?
-    χ = ham.odim
+    χ = H.odim
 
     indmap = zeros(Int, χ, χ, χ)
     χ´ = 0
@@ -216,20 +216,20 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},
     end
 
     #do the bulk
-    bulk = PeriodicArray(convert(Array{Union{T,E},3}, fill(zero(E), ham.period, χ´, χ´)))
+    bulk = PeriodicArray(convert(Array{Union{T,E},3}, fill(zero(E), H.period, χ´, χ´)))
 
-    for loc in 1:(ham.period), (j, k) in keys(ham[loc])
+    for loc in 1:(H.period), (j, k) in keys(H[loc])
 
         #apply (j,k) above
-        l = ham.odim
-        for i in 2:(ham.odim)
+        l = H.odim
+        for i in 2:(H.odim)
             k <= i && i <= l || continue
 
             f1 = fusers[loc][j, i, l]
             f2 = fusers[loc + 1][k, i, l]
             j′ = indmap[j, i, l]
             k′ = indmap[k, i, l]
-            @plansor bulk[loc, j′, k′][-1 -2; -3 -4] := ham[loc][j, k][1 2; -3 6] *
+            @plansor bulk[loc, j′, k′][-1 -2; -3 -4] := H[loc][j, k][1 2; -3 6] *
                                                         f1[-1; 1 3 5] *
                                                         conj(f2[-4; 6 7 8]) * τ[2 3; 7 4] *
                                                         τ[4 5; 8 -2]
@@ -237,14 +237,14 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},
 
         #apply (j,k) below
         i = 1
-        for l in 2:(ham.odim - 1)
+        for l in 2:(H.odim - 1)
             l > 1 && l >= i && l <= j || continue
 
             f1 = fusers[loc][i, l, j]
             f2 = fusers[loc + 1][i, l, k]
             j′ = indmap[i, l, j]
             k′ = indmap[i, l, k]
-            @plansor bulk[loc, j′, k′][-1 -2; -3 -4] := ham[loc][j, k][1 -2; 3 6] *
+            @plansor bulk[loc, j′, k′][-1 -2; -3 -4] := H[loc][j, k][1 -2; 3 6] *
                                                         f1[-1; 4 2 1] *
                                                         conj(f2[-4; 8 7 6]) * τ[5 2; 7 3] *
                                                         τ[-3 4; 8 5]
@@ -253,23 +253,23 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},
 
     # make the starter
     starter = convert(Array{Union{T,E},2}, fill(zero(E), χ´, χ´))
-    for (j, k) in keys(ham[1])
+    for (j, k) in keys(H[1])
 
         #apply (j,k) above
         if j == 1
             f1 = fusers[1][1, end, end]
             f2 = fusers[2][k, end, end]
-            j′ = indmap[k, ham.odim, ham.odim]
-            @plansor starter[1, j′][-1 -2; -3 -4] := ham[1][j, k][-1 -2; -3 2] *
+            j′ = indmap[k, H.odim, H.odim]
+            @plansor starter[1, j′][-1 -2; -3 -4] := H[1][j, k][-1 -2; -3 2] *
                                                      conj(f2[-4; 2 3 3])
         end
 
         #apply (j,k) below
-        if j > 1 && j < ham.odim
+        if j > 1 && j < H.odim
             f1 = fusers[1][1, j, j]
             f2 = fusers[2][1, j, k]
 
-            @plansor starter[1, indmap[1, j, k]][-1 -2; -3 -4] := ham[1][j, k][4 -2; 3 1] *
+            @plansor starter[1, indmap[1, j, k]][-1 -2; -3 -4] := H[1][j, k][4 -2; 3 1] *
                                                                   conj(f2[-4; 6 2 1]) *
                                                                   τ[5 4; 2 3] *
                                                                   τ[-3 -1; 6 5]
@@ -280,19 +280,19 @@ function periodic_boundary_conditions(ham::MPOHamiltonian{S,T,E},
 
     # make the ender
     ender = convert(Array{Union{T,E},2}, fill(zero(E), χ´, χ´))
-    for (j, k) in keys(ham[ham.period])
+    for (j, k) in keys(H[H.period])
         if k > 1
-            f1 = fusers[end][j, k, ham.odim]
-            k′ = indmap[j, k, ham.odim]
+            f1 = fusers[end][j, k, H.odim]
+            k′ = indmap[j, k, H.odim]
             @plansor ender[k′, end][-1 -2; -3 -4] := f1[-1; 1 2 6] *
-                                                     ham[ham.period][j, k][1 3; -3 4] *
+                                                     H[H.period][j, k][1 3; -3 4] *
                                                      τ[3 2; 4 5] * τ[5 6; -4 -2]
         end
     end
     ender[1, 1] = one(E)
     ender[end, end] = one(E)
 
-    # fill in the entire ham
+    # fill in the entire H
     nos = convert(Array{Union{T,E},3}, fill(zero(E), len, χ´, χ´))
     nos[1, :, :] = starter[:, :]
     nos[end, :, :] = ender[:, :]
