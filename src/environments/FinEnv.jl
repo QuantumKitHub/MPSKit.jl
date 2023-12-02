@@ -71,15 +71,12 @@ end
 
 function MPSKit.environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) where {S}
     N = length(below)
-    leftstart = isomorphism(
-        storagetype(S),
-        left_virtualspace(below, 0) ⊗ space(O[1], 1)' ← left_virtualspace(below, 0),
-    )
-    rightstart = isomorphism(
-        storagetype(S),
-        right_virtualspace(below, N) ⊗ space(O[N], 4)' ←
-        right_virtualspace(below, length(below)),
-    )
+    leftstart = isomorphism(storagetype(S),
+                            left_virtualspace(below, 0) ⊗ space(O[1], 1)' ←
+                            left_virtualspace(below, 0))
+    rightstart = isomorphism(storagetype(S),
+                             right_virtualspace(below, N) ⊗ space(O[N], 4)' ←
+                             right_virtualspace(below, length(below)))
     return environments(below, O, above, leftstart, rightstart)
 end
 

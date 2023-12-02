@@ -172,12 +172,13 @@ function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    maxVspaces::Vector{S}; normalize=true, left::S=oneunit(S),
                    right::S=oneunit(S)) where {S<:ElementarySpace}
     N = length(Pspaces)
-    length(maxVspaces) == N - 1 || throw(DimensionMismatch("length of physical spaces ($N) and virtual spaces $(length(maxVspaces)) should differ by 1"))
-    
+    length(maxVspaces) == N - 1 ||
+        throw(DimensionMismatch("length of physical spaces ($N) and virtual spaces $(length(maxVspaces)) should differ by 1"))
+
     # limit the maximum virtual dimension such that result is full rank
     fusedPspaces = fuse.(Pspaces) # for working with multiple physical spaces
     Vspaces = similar(maxVspaces)
-    
+
     Vspaces[1] = left
     for k in 2:N
         Vspaces[k] = infimum(fuse(Vspaces[k - 1], fusedPspaces[k]), maxVspaces[k - 1])
@@ -218,7 +219,6 @@ FiniteMPS(P::ProductSpace, args...; kwargs...) = FiniteMPS(collect(P), args...; 
 function FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...)
     return FiniteMPS(f, elt, collect(P), args...; kwargs...)
 end
-
 
 #===========================================================================================
 Utility
