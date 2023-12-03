@@ -21,7 +21,7 @@ include("setup.jl")
 
     @testset "Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
-        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^16]), L)
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^15]), L)
         H = repeat(H1, L)
 
         v₀ = variance(ψ₀, H)
