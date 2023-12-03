@@ -147,7 +147,7 @@ end
     @testset "infinite (ham)" begin
         H = repeat(force_planar(heisenberg_XXX()), 2)
         ψ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^48, ℙ^48])
-        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbose=false)
+        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbose=false, tol=1e-11)
         energies, Bs = excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ, envs)
         @test energies[1] ≈ 0.41047925 atol = 1e-4
         @test variance(Bs[1], H) < 1e-8
