@@ -162,15 +162,16 @@ end
     end
 
     @testset "finite" begin
+        verbose = false
         th = force_planar(transverse_field_ising())
-        ψ = InfiniteMPS([ℙ^2], [ℙ^12])
-        ψ, envs, _ = find_groundstate(ψ, th; maxiter=400, verbose=false)
+        ψ = InfiniteMPS([ℙ^2], [ℙ^10])
+        ψ, envs, _ = find_groundstate(ψ, th; maxiter=400, verbose, tol=1e-9)
         energies, Bs = excitations(th, QuasiparticleAnsatz(), 0.0, ψ, envs)
         inf_en = energies[1]
 
         fin_en = map([20, 10]) do len
-            ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^12)
-            (ψ, envs, _) = find_groundstate(ψ, th; verbose=false)
+            ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^15)
+            (ψ, envs, _) = find_groundstate(ψ, th; verbose)
 
             #find energy with quasiparticle ansatz
             energies_QP, Bs = excitations(th, QuasiparticleAnsatz(), ψ, envs)
@@ -179,7 +180,7 @@ end
             #find energy with normal dmrg
             energies_dm, _ = excitations(th,
                                          FiniteExcited(;
-                                                       gsalg=DMRG(; verbose=false,
+                                                       gsalg=DMRG(; verbose,
                                                                   tol=1e-6)), ψ)
             @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ψ, th, envs)) atol = 1e-4
 
