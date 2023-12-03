@@ -190,3 +190,17 @@ function expectation_value(ψ, H::LinearCombination, envs::LazyLincoCache=enviro
     return return sum(((c, op, env),) -> c * expectation_value(ψ, op, env),
                       zip(H.coeffs, H.opps, envs.envs))
 end
+
+# ProjectionOperator
+# ------------------
+function expectation_value(ψ::FiniteMPS, O::ProjectionOperator,
+                           envs::FinEnv=environments(ψ, O))
+    ens = zeros(scalartype(ψ), length(ψ))
+    for i in 1:length(ψ)
+        operator = ∂∂AC(i, ψ, O, envs)
+        ens[i] = dot(ψ.AC[i], operator * ψ.AC[i])
+    end
+
+    n = norm(ψ.AC[end])^2
+    return ens ./ n
+end
