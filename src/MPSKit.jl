@@ -79,6 +79,7 @@ include("operators/sparsempo/sparsempo.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")
+include("operators/timedependence.jl")
 include("operators/lazysum.jl")
 
 include("transfermatrix/transfermatrix.jl")
