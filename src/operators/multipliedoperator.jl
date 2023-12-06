@@ -30,13 +30,13 @@ TimedOperator(x) = TimedOperator(x,t->One())
 UntimedOperator(x) = UntimedOperator(x,One())
 
 # For internal use only
-unsafe_eval(x::UntimedOperator) = x.f * x.op
-unsafe_eval(x::UntimedOperator, ::Number) = unsafe_eval(x)
-unsafe_eval(x::TimedOperator, t::Number) = UntimedOperator(x.op,x.f(t))
+_eval_at(x::UntimedOperator) = x.f * x.op
+_eval_at(x::UntimedOperator, ::Number) = _eval_at(x)
+_eval_at(x::TimedOperator, t::Number) = UntimedOperator(x.op,x.f(t))
 
 # For users
-(x::UntimedOperator)()  = unsafe_eval(x)
-(x::TimedOperator)(t::Number)  = unsafe_eval(x,t)
+(x::UntimedOperator)()  = _eval_at(x)
+(x::TimedOperator)(t::Number)  = _eval_at(x,t)
 
 # what to do when we multiply by a scalar
 Base.:*(op::UntimedOperator, b::Number) = UntimedOperator(op.op, b * op.f)

@@ -11,4 +11,4 @@ istimed(x) = istimed(TimeDependence(x))
 safe_eval(x, args...) = safe_eval(TimeDependence(x), x, args...)
 
 # Internal use only, works always
-unsafe_eval(x, args...) = x # -> this is what you should define for custom structs
+_eval_at(x, args...) = x # -> this is what you should define for custom structs
