@@ -22,6 +22,7 @@ Base.size(x::LazySum) = size(x.ops)
 Base.getindex(x::LazySum, i) = x.ops[i]
 Base.length(x::LazySum) = prod(size(x))
 Base.similar(x::LazySum, ::Type{S}, dims::Dims) where {S} = LazySum(similar(x.ops, S, dims))
+Base.setindex!(A::LazySum, X, i) = setindex!(A.ops, X, i)
 
 # Holy traits
 TimeDependence(x::LazySum) = istimed(x) ? TimeDependent() : NotTimeDependent()
@@ -29,14 +30,14 @@ istimed(x::LazySum) = any(istimed, x)
 
 # constructors
 LazySum(x) = LazySum([x])
-LazySum(f::Function, x) = LazySum(map(y -> f(y), x))
+LazySum(ops::AbstractVector, fs::AbstractVector) = LazySum(map(MultipliedOperator, ops, fs))
 
 # wrapper around _eval_at
-safe_eval(::TimeDependent, x::LazySum, t::Number) = LazySum(O -> _eval_at(O, t), x)
+safe_eval(::TimeDependent, x::LazySum, t::Number) = map(O -> _eval_at(O, t), x)
 function safe_eval(::TimeDependent, x::LazySum)
     throw(ArgumentError("attempting to evaluate time-dependent LazySum without specifiying a time"))
 end
-safe_eval(::NotTimeDependent, x::LazySum) = sum(O -> _eval_at(O), x)
+safe_eval(::NotTimeDependent, x::LazySum) = sum(_eval_at, x)
 function safe_eval(::NotTimeDependent, x::LazySum, t::Number)
     throw(ArgumentError("attempting to evaluate time-independent LazySum at time"))
 end
@@ -44,6 +45,7 @@ end
 # For users
 # using (t) should return NotTimeDependent LazySum
 (x::LazySum)(t::Number) = safe_eval(x, t) 
+Base.sum(x::LazySum) = safe_eval(x) #so it works for untimedoperator
 
 # we define the addition for LazySum and we do the rest with this
 function Base.:+(SumOfOps1::LazySum, SumOfOps2::LazySum)

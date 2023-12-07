@@ -29,6 +29,9 @@ UntimedOperator(x::O, c::C) where {C<:Union{Real,One},O} = MultipliedOperator(x,
 TimedOperator(x) = TimedOperator(x,t->One())
 UntimedOperator(x) = UntimedOperator(x,One())
 
+# Holy traits
+TimeDependence(x::TimedOperator) = TimeDependent()
+
 # For internal use only
 _eval_at(x::UntimedOperator) = x.f * x.op
 _eval_at(x::UntimedOperator, ::Number) = _eval_at(x)
