@@ -177,6 +177,12 @@ function expectation_value(ψ::FiniteQP, O::MPOHamiltonian)
     return expectation_value(convert(FiniteMPS, ψ), O)
 end
 
+# more specific typing to account for onsite operators, array of operators, ...
+# define expectation_value for MultipliedOperator as scalar multiplication of the non-multiplied result, instead of multiplying the operator itself
+function expectation_value(ψ, op::UntimedOperator, args...)
+    return op.f * expectation_value(ψ, op.op, args...)
+end
+
 # define expectation_value for LazySum
 function expectation_value(ψ, ops::LazySum, at::Int)
     return sum(op -> expectation_value(ψ, op, at), ops)
