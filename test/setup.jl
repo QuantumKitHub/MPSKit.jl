@@ -6,6 +6,7 @@ using MPSKit
 using MPSKit: _transpose_tail, _transpose_front
 using TensorKit
 using TensorKit: PlanarTrivial, ℙ
+using VectorInterface: One
 
 # using TensorOperations
 
