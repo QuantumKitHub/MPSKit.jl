@@ -16,7 +16,7 @@ function time_evolve end, function time_evolve! end
 
 # TODO: is it possible to remove this code-duplication?
 function time_evolve(
-    ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(Ψ₀, H); verbose=false
+    ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H); verbose=false
 )
     for (t, dt) in zip(t_span[2:end], diff(t_span))
         elapsed = @elapsed ψ, envs = timestep(ψ, H, t, dt, alg, envs)
@@ -26,7 +26,7 @@ function time_evolve(
     return ψ, envs
 end
 function time_evolve!(
-    ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(Ψ₀, H); verbose=false
+    ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H); verbose=false
 )
     for (t, dt) in zip(t_span[2:end], diff(t_span))
         elapsed = @elapsed ψ, envs = timestep!(ψ, H, t, dt, alg, envs)

@@ -54,5 +54,6 @@ end
 
 Base.:+(op1::LazySum, op2) = op1 + LazySum(op2)
 Base.:+(op1, op2::LazySum) = LazySum(op1) + op2
+Base.:+(op1::MultipliedOperator, op2::MultipliedOperator) = LazySum([op1,op2])
 
 Base.repeat(x::LazySum, args...) = LazySum(repeat.(x, args...))

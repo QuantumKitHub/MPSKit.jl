@@ -285,7 +285,8 @@ end
 (h::UntimedOperator{<:DerivativeOperator})(y, args...) = h.f * h.op(y)
 (h::TimedOperator{<:DerivativeOperator})(y, t::Number) = h.f(t) * h.op(y)
 (x::LazySum{<:Union{MultipliedOperator{D}, D} where {D<:DerivativeOperator}})(y, t::Number) = sum(O -> O(y,t), x)
-Base.:*(h::LazySum{<:DerivativeOperator}, v) = h(v)
+(x::LazySum{<:Union{MultipliedOperator{D}, D} where {D<:DerivativeOperator}})(y) = sum(O -> O(y), x)
+Base.:*(h::LazySum{<:Union{D,MultipliedOperator{D}} where {D<:DerivativeOperator}}, v)  = h(v)
 
 function ∂∂C(pos::Int, mps, opp::MultipliedOperator, cache)
     return MultipliedOperator(∂∂C(pos::Int, mps, opp.op, cache), opp.f)

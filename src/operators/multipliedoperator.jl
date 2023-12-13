@@ -34,7 +34,7 @@ TimeDependence(x::TimedOperator) = TimeDependent()
 
 # For internal use only
 _eval_at(x::UntimedOperator) = x.f * x.op
-_eval_at(x::UntimedOperator, ::Number) = _eval_at(x)
+_eval_at(x::UntimedOperator, ::Number) = x #_eval_at(x)
 _eval_at(x::TimedOperator, t::Number) = UntimedOperator(x.op,x.f(t))
 
 # For users
