@@ -26,8 +26,8 @@ const UntimedOperator{O} = MultipliedOperator{O,<:Union{Real,One}}
 TimedOperator(x::O, f::F) where {F<:Function,O} = MultipliedOperator(x, f)
 UntimedOperator(x::O, c::C) where {C<:Union{Real,One},O} = MultipliedOperator(x, c)
 
-TimedOperator(x) = TimedOperator(x,t->One())
-UntimedOperator(x) = UntimedOperator(x,One())
+TimedOperator(x) = TimedOperator(x, t -> One())
+UntimedOperator(x) = UntimedOperator(x, One())
 
 # Holy traits
 TimeDependence(x::TimedOperator) = TimeDependent()
@@ -35,15 +35,15 @@ TimeDependence(x::TimedOperator) = TimeDependent()
 # For internal use only
 _eval_at(x::UntimedOperator) = x.f * x.op
 _eval_at(x::UntimedOperator, ::Number) = x #_eval_at(x)
-_eval_at(x::TimedOperator, t::Number) = UntimedOperator(x.op,x.f(t))
+_eval_at(x::TimedOperator, t::Number) = UntimedOperator(x.op, x.f(t))
 
 # For users
-(x::UntimedOperator)()  = _eval_at(x)
-(x::TimedOperator)(t::Number)  = _eval_at(x,t)
+(x::UntimedOperator)() = _eval_at(x)
+(x::TimedOperator)(t::Number) = _eval_at(x, t)
 
 # what to do when we multiply by a scalar
 Base.:*(op::UntimedOperator, b::Number) = UntimedOperator(op.op, b * op.f)
-Base.:*(op::TimedOperator, b::Number)   = TimedOperator(op.op, t -> b * op.f(t))
+Base.:*(op::TimedOperator, b::Number) = TimedOperator(op.op, t -> b * op.f(t))
 Base.:*(b::Number, op::MultipliedOperator) = op * b
 
 Base.:*(op::TimedOperator, g::Function) = TimedOperator(op.op, t -> g(t) * op.f(t)) #slightly dangerous

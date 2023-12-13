@@ -91,47 +91,54 @@ end
     @test sum(LazyOs_added) ≈ 2 * summed atol = 1 - 08
 end
 
-@testset "MulitpliedOperator of $(typeof(O)) with $(typeof(f))" for (O,f) in zip((rand(ComplexF64),
-                                                    TensorMap(rand, ComplexF64,
-                                                                    ℂ^13, ℂ^7),
-                                                    TensorMap(rand, ComplexF64,
-                                                                    ℂ^1 ⊗ ℂ^2,
-                                                                    ℂ^3 ⊗ ℂ^4),
-                                                        ),(t->3t,1.1,One()))
-
-    tmp = MPSKit.MultipliedOperator(O,f)
+@testset "MulitpliedOperator of $(typeof(O)) with $(typeof(f))" for (O, f) in
+                                                                    zip((rand(ComplexF64),
+                                                                         TensorMap(rand,
+                                                                                   ComplexF64,
+                                                                                   ℂ^13,
+                                                                                   ℂ^7),
+                                                                         TensorMap(rand,
+                                                                                   ComplexF64,
+                                                                                   ℂ^1 ⊗
+                                                                                   ℂ^2,
+                                                                                   ℂ^3 ⊗
+                                                                                   ℂ^4)),
+                                                                        (t -> 3t, 1.1,
+                                                                         One()))
+    tmp = MPSKit.MultipliedOperator(O, f)
     if tmp isa TimedOperator
-        @test tmp(1.1)() ≈ f(1.1)*O atol = 1 - 08
+        @test tmp(1.1)() ≈ f(1.1) * O atol = 1 - 08
     elseif tmp isa UntimedOperator
-        @test tmp() ≈ f*O atol = 1 - 08
+        @test tmp() ≈ f * O atol = 1 - 08
     end
 end
 
 @testset "General Time-dependent LazySum of $(eltype(Os))" for Os in (rand(ComplexF64, 4),
-                                                    fill(TensorMap(rand, ComplexF64,
-                                                                    ℂ^13, ℂ^7),
-                                                        4),
-                                                    fill(TensorMap(rand, ComplexF64,
-                                                                    ℂ^1 ⊗ ℂ^2,
-                                                                    ℂ^3 ⊗ ℂ^4),
-                                                        4))
-    
-    
+                                                                      fill(TensorMap(rand,
+                                                                                     ComplexF64,
+                                                                                     ℂ^13, ℂ^7),
+                                                                           4),
+                                                                      fill(TensorMap(rand,
+                                                                                     ComplexF64,
+                                                                                     ℂ^1 ⊗ ℂ^2,
+                                                                                     ℂ^3 ⊗ ℂ^4),
+                                                                           4))
+
     #test user interface
-    fs     = [t->3t,t->t+2,4,1]
-    Ofs = map(zip(fs,Os)) do (f,O)
+    fs = [t -> 3t, t -> t + 2, 4, 1]
+    Ofs = map(zip(fs, Os)) do (f, O)
         if f == 1
             return O
         else
-            return MPSKit.MultipliedOperator(O,f)
+            return MPSKit.MultipliedOperator(O, f)
         end
     end
-    LazyOs = LazySum(Ofs) 
-    summed = sum(zip(fs,Os)) do (f,O)
+    LazyOs = LazySum(Ofs)
+    summed = sum(zip(fs, Os)) do (f, O)
         if f isa Function
-            f(1.1)*O
+            f(1.1) * O
         else
-            f*O
+            f * O
         end
     end
 
@@ -195,24 +202,24 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         sum1 = sum(zip(Hs, Envs)) do (H, env)
             return MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
         end
-        @test summedhct(ψ.CR[1], 0.) ≈ sum1
+        @test summedhct(ψ.CR[1], 0.0) ≈ sum1
 
         summedhct = MPSKit.∂∂AC(1, ψ, summedH, summedEnvs)
         sum2 = sum(zip(Hs, Envs)) do (H, env)
             return MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
         end
-        @test summedhct(ψ.AC[1], 0.) ≈ sum2
+        @test summedhct(ψ.AC[1], 0.0) ≈ sum2
 
         v = MPSKit._transpose_front(ψ.AC[1]) * MPSKit._transpose_tail(ψ.AR[2])
         summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summedEnvs)
         sum3 = sum(zip(Hs, Envs)) do (H, env)
             return MPSKit.∂∂AC2(1, ψ, H, env)(v)
         end
-        @test summedhct(v, 0.) ≈ sum3
+        @test summedhct(v, 0.0) ≈ sum3
     end
 
-    fs = [t->3t,2,1]
-    Hts = [TimedOperator(H1,fs[1]),UntimedOperator(H2,fs[2]),H3]
+    fs = [t -> 3t, 2, 1]
+    Hts = [TimedOperator(H1, fs[1]), UntimedOperator(H2, fs[2]), H3]
     summedH = LazySum(Hts)
     t = 1.1
     summedH_at = summedH(t)
@@ -220,13 +227,12 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
     @testset "Time-dependent LazySum $(ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for ψ in ψs
         Envs = map(H -> environments(ψ, H), Hs)
         summedEnvs = environments(ψ, summedH)
-        
 
         expval = sum(zip(fs, Hs, Envs)) do (f, H, Env)
             if f isa Function
                 f = f(t)
             end
-            f*expectation_value(ψ, H, Env)
+            return f * expectation_value(ψ, H, Env)
         end
         expval1 = expectation_value(ψ, sum(summedH_at))
         expval2 = expectation_value(ψ, summedH_at, summedEnvs)
@@ -241,7 +247,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
             if f isa Function
                 f = f(t)
             end
-            return f*MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
+            return f * MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
         end
         @test summedhct(ψ.CR[1], t) ≈ sum1
 
@@ -250,7 +256,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
             if f isa Function
                 f = f(t)
             end
-            return f*MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
+            return f * MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
         end
         @test summedhct(ψ.AC[1], t) ≈ sum2
 
@@ -260,7 +266,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
             if f isa Function
                 f = f(t)
             end
-            return f*MPSKit.∂∂AC2(1, ψ, H, env)(v)
+            return f * MPSKit.∂∂AC2(1, ψ, H, env)(v)
         end
         @test summedhct(v, t) ≈ sum3
     end

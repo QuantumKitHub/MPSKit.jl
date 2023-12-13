@@ -96,7 +96,7 @@ end
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
-        ψ, envs = timestep(ψ₀, H, 0., dt, alg)
+        ψ, envs = timestep(ψ₀, H, 0.0, dt, alg)
         E = expectation_value(ψ, H, envs)
         @test sum(E₀) ≈ sum(E) atol = 1e-2
     end
@@ -104,19 +104,20 @@ end
     Hlazy = LazySum([3 * H, 1.55 * H, -0.1 * H])
 
     @testset "Finite LazySum $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
-        ψ, envs = timestep(ψ₀, Hlazy, 0., dt, alg)
+        ψ, envs = timestep(ψ₀, Hlazy, 0.0, dt, alg)
         E = expectation_value(ψ, Hlazy, envs)
         @test (3 + 1.55 - 0.1) * sum(E₀) ≈ sum(E) atol = 1e-2
     end
 
-    Ht = TimedOperator(H,t->4) + UntimedOperator(H,1.45)
-    
-    @testset "Finite TimeDependent LazySum $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
-        ψ, envs = timestep(ψ₀, Ht(1.), 0., dt, alg)
-        E = expectation_value(ψ, Ht(1.), envs) 
+    Ht = TimedOperator(H, t -> 4) + UntimedOperator(H, 1.45)
 
-        ψt, envst = timestep(ψ₀, Ht, 1., dt, alg)
-        Et = expectation_value(ψt, Ht(1.), envst)
+    @testset "Finite TimeDependent LazySum $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in
+                                                                                   algs
+        ψ, envs = timestep(ψ₀, Ht(1.0), 0.0, dt, alg)
+        E = expectation_value(ψ, Ht(1.0), envs)
+
+        ψt, envst = timestep(ψ₀, Ht, 1.0, dt, alg)
+        Et = expectation_value(ψt, Ht(1.0), envst)
         @test sum(E) ≈ sum(Et) atol = 1e-8
     end
 
@@ -125,7 +126,7 @@ end
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Infinite TDVP" begin
-        ψ, envs = timestep(ψ₀, H, 0., dt, TDVP())
+        ψ, envs = timestep(ψ₀, H, 0.0, dt, TDVP())
         E = expectation_value(ψ, H, envs)
         @test sum(E₀) ≈ sum(E) atol = 1e-2
     end
@@ -133,22 +134,21 @@ end
     Hlazy = LazySum([3 * H, 1.55 * H, -0.1 * H])
 
     @testset "Infinite LazySum TDVP" begin
-        ψ, envs = timestep(ψ₀, Hlazy, 0., dt, TDVP())
+        ψ, envs = timestep(ψ₀, Hlazy, 0.0, dt, TDVP())
         E = expectation_value(ψ, Hlazy, envs)
         @test (3 + 1.55 - 0.1) * sum(E₀) ≈ sum(E) atol = 1e-2
     end
 
-    Ht = TimedOperator(H,t->4) + UntimedOperator(H,1.45)
+    Ht = TimedOperator(H, t -> 4) + UntimedOperator(H, 1.45)
 
     @testset "Infinite TimeDependent LazySum" begin
-        ψ, envs = timestep(ψ₀, Ht(1.), 0., dt, TDVP())
-        E = expectation_value(ψ, Ht(1.), envs) 
+        ψ, envs = timestep(ψ₀, Ht(1.0), 0.0, dt, TDVP())
+        E = expectation_value(ψ, Ht(1.0), envs)
 
-        ψt, envst = timestep(ψ₀, Ht, 1., dt, TDVP())
-        Et = expectation_value(ψt, Ht(1.), envst)
+        ψt, envst = timestep(ψ₀, Ht, 1.0, dt, TDVP())
+        Et = expectation_value(ψt, Ht(1.0), envst)
         @test sum(E) ≈ sum(Et) atol = 1e-8
     end
-
 end
 
 @testset "time_evolve" verbose = true begin
@@ -174,8 +174,6 @@ end
         E = expectation_value(ψ, H, envs)
         @test sum(E₀) ≈ sum(E) atol = 1e-2
     end
-
-
 end
 
 @testset "leading_boundary" verbose = true begin
@@ -448,7 +446,7 @@ end
         st2, _ = approximate(st, (W2, st), VUMPS(; verbose=false))
         st3, _ = approximate(st, (W1, st), IDMRG1(; verbose=false))
         st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbose=false))
-        st5, _ = timestep(st, th, 0., dt, TDVP())
+        st5, _ = timestep(st, th, 0.0, dt, TDVP())
         st6 = changebonds(W1 * st, SvdCut(; trscheme=truncdim(10)))
 
         @test abs(dot(st1, st5)) ≈ 1.0 atol = dt
@@ -484,7 +482,7 @@ end
         expH = make_time_mpo(H, τ, WI())
         ψ₂, = approximate(ψ₂, (expH, ψ₁), alg)
         normalize!(ψ₂)
-        ψ₂′, = timestep(ψ₁, H, 0., τ, TDVP())
+        ψ₂′, = timestep(ψ₁, H, 0.0, τ, TDVP())
         @test abs(dot(ψ₁, ψ₁)) ≈ abs(dot(ψ₂, ψ₂′)) atol = 0.001
     end
 

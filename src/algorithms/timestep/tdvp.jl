@@ -18,15 +18,9 @@ algorithm for time evolution.
     finalize::F = Defaults._finalize
 end
 
-function timestep(
-    Ψ::InfiniteMPS,
-    H,
-    t::Number,
-    dt::Number,
-    alg::TDVP,
-    envs::Union{Cache,MultipleEnvironments}=environments(Ψ, H);
-    leftorthflag=true,
-)
+function timestep(Ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
+                  envs::Union{Cache,MultipleEnvironments}=environments(Ψ, H);
+                  leftorthflag=true)
     temp_ACs = similar(Ψ.AC)
     temp_CRs = similar(Ψ.CR)
     @sync for (loc, (ac, c)) in enumerate(zip(Ψ.AC, Ψ.CR))
@@ -64,14 +58,8 @@ function timestep(
     return newΨ, envs
 end
 
-function timestep!(
-    Ψ::AbstractFiniteMPS,
-    H,
-    t::Number,
-    dt::Number,
-    alg::TDVP,
-    envs::Union{Cache,MultipleEnvironments}=environments(Ψ, H),
-)
+function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
+                   envs::Union{Cache,MultipleEnvironments}=environments(Ψ, H))
 
     # sweep left to right
     for i in 1:(length(Ψ) - 1)
@@ -124,9 +112,8 @@ algorithm for time evolution.
     finalize::F = Defaults._finalize
 end
 
-function timestep!(
-    Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2, envs=environments(Ψ, H)
-)
+function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
+                   envs=environments(Ψ, H))
 
     # sweep left to right
     for i in 1:(length(Ψ) - 1)
@@ -139,9 +126,8 @@ function timestep!(
         Ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
         if i != (length(Ψ) - 1)
-            Ψ.AC[i + 1] = integrate(
-                ∂∂AC(i + 1, Ψ, H, envs), Ψ.AC[i + 1], t, -dt / 2, alg.integrator
-            )
+            Ψ.AC[i + 1] = integrate(∂∂AC(i + 1, Ψ, H, envs), Ψ.AC[i + 1], t, -dt / 2,
+                                    alg.integrator)
         end
     end
 
@@ -149,16 +135,15 @@ function timestep!(
     for i in length(Ψ):-1:2
         ac2 = _transpose_front(Ψ.AL[i - 1]) * _transpose_tail(Ψ.AC[i])
         h_ac2 = ∂∂AC2(i - 1, Ψ, H, envs)
-        nac2 = integrate(h_ac2, ac2, t + dt / 2,  dt / 2, alg.integrator)
+        nac2 = integrate(h_ac2, ac2, t + dt / 2, dt / 2, alg.integrator)
 
         nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
         Ψ.AC[i - 1] = (nal, complex(nc))
         Ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
         if i != 2
-            Ψ.AC[i - 1] = integrate(
-                ∂∂AC(i - 1, Ψ, H, envs), Ψ.AC[i - 1], t + dt / 2,  -dt / 2, alg.integrator
-            )
+            Ψ.AC[i - 1] = integrate(∂∂AC(i - 1, Ψ, H, envs), Ψ.AC[i - 1], t + dt / 2,
+                                    -dt / 2, alg.integrator)
         end
     end
 
@@ -166,14 +151,7 @@ function timestep!(
 end
 
 #copying version
-function timestep(
-    Ψ::AbstractFiniteMPS,
-    H,
-    time::Number,
-    timestep::Number,
-    alg::Union{TDVP,TDVP2},
-    envs=environments(Ψ, H);
-    kwargs...,
-)
+function timestep(Ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
+                  alg::Union{TDVP,TDVP2}, envs=environments(Ψ, H); kwargs...)
     return timestep!(copy(Ψ), H, time, timestep, alg, envs; kwargs...)
 end

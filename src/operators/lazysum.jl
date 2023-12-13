@@ -44,7 +44,7 @@ end
 
 # For users
 # using (t) should return NotTimeDependent LazySum
-(x::LazySum)(t::Number) = safe_eval(x, t) 
+(x::LazySum)(t::Number) = safe_eval(x, t)
 Base.sum(x::LazySum) = safe_eval(x) #so it works for untimedoperator
 
 # we define the addition for LazySum and we do the rest with this
@@ -54,6 +54,6 @@ end
 
 Base.:+(op1::LazySum, op2) = op1 + LazySum(op2)
 Base.:+(op1, op2::LazySum) = LazySum(op1) + op2
-Base.:+(op1::MultipliedOperator, op2::MultipliedOperator) = LazySum([op1,op2])
+Base.:+(op1::MultipliedOperator, op2::MultipliedOperator) = LazySum([op1, op2])
 
 Base.repeat(x::LazySum, args...) = LazySum(repeat.(x, args...))

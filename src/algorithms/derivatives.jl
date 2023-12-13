@@ -280,13 +280,20 @@ function ∂∂AC2(pos::Int, state, opp::ProjectionOperator, env)
                        rightenv(env, pos + 1, state))
 end
 
-
 # time dependent derivate operators
 (h::UntimedOperator{<:DerivativeOperator})(y, args...) = h.f * h.op(y)
 (h::TimedOperator{<:DerivativeOperator})(y, t::Number) = h.f(t) * h.op(y)
-(x::LazySum{<:Union{MultipliedOperator{D}, D} where {D<:DerivativeOperator}})(y, t::Number) = sum(O -> O(y,t), x)
-(x::LazySum{<:Union{MultipliedOperator{D}, D} where {D<:DerivativeOperator}})(y) = sum(O -> O(y), x)
-Base.:*(h::LazySum{<:Union{D,MultipliedOperator{D}} where {D<:DerivativeOperator}}, v)  = h(v)
+function (x::LazySum{<:Union{MultipliedOperator{D},D} where {D<:DerivativeOperator}})(y,
+                                                                                      t::Number)
+    return sum(O -> O(y, t), x)
+end
+function (x::LazySum{<:Union{MultipliedOperator{D},D} where {D<:DerivativeOperator}})(y)
+    return sum(O -> O(y), x)
+end
+function Base.:*(h::LazySum{<:Union{D,MultipliedOperator{D}} where {D<:DerivativeOperator}},
+                 v)
+    return h(v)
+end
 
 function ∂∂C(pos::Int, mps, opp::MultipliedOperator, cache)
     return MultipliedOperator(∂∂C(pos::Int, mps, opp.op, cache), opp.f)
@@ -301,16 +308,16 @@ function ∂∂AC2(pos::Int, mps, opp::MultipliedOperator, cache)
 end
 
 function ∂∂C(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
-    return LazySum{Union{MPO_∂∂C,MultipliedOperator{<:MPO_∂∂C}}}(map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops,
-                                cache.envs))
+    suboperators = map((op, openv) -> ∂∂C(pos, mps, op, openv), opp.ops, cache.envs)
+    return LazySum{Union{MPO_∂∂C,MultipliedOperator{<:MPO_∂∂C}}}(suboperators)
 end
 
 function ∂∂AC(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
-    return LazySum{Union{MPO_∂∂AC,MultipliedOperator{<:MPO_∂∂AC}}}(map((op, openv) -> ∂∂AC(pos, mps, op, openv), opp.ops,
-                                 cache.envs))
+    suboperators = map((op, openv) -> ∂∂AC(pos, mps, op, openv), opp.ops, cache.envs)
+    return LazySum{Union{MPO_∂∂AC,MultipliedOperator{<:MPO_∂∂AC}}}(suboperators)
 end
 
 function ∂∂AC2(pos::Int, mps, opp::LazySum, cache::MultipleEnvironments)
-    return LazySum{Union{MPO_∂∂AC2,MultipliedOperator{<:MPO_∂∂AC2}}}(map((op, openv) -> ∂∂AC2(pos, mps, op, openv), opp.ops,
-                                  cache.envs))
+    suboperators = map((op, openv) -> ∂∂AC2(pos, mps, op, openv), opp.ops, cache.envs)
+    return LazySum{Union{MPO_∂∂AC2,MultipliedOperator{<:MPO_∂∂AC2}}}(suboperators)
 end

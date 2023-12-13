@@ -15,10 +15,10 @@ function integrate end
 
 # default for things that are callable on two arguments
 _eval_t(f, t::Number) = Base.Fix2(f, t)
-_eval_x(f, x)         = Base.Fix1(f, x)
+_eval_x(f, x) = Base.Fix1(f, x)
 
 function integrate(f, y₀, t::Number, dt::Number, alg::Union{Arnoldi,Lanczos})
-    y, convhist = exponentiate(_eval_t(f, t), -1im*dt, y₀, alg)
+    y, convhist = exponentiate(_eval_t(f, t), -1im * dt, y₀, alg)
     convhist.converged == 0 && @warn "integration failed $(convhist.normres)"
     return y
 end

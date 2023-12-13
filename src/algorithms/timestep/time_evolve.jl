@@ -15,9 +15,8 @@ through each of the time points obtained by iterating t_span.
 function time_evolve end, function time_evolve! end
 
 # TODO: is it possible to remove this code-duplication?
-function time_evolve(
-    ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H); verbose=false
-)
+function time_evolve(ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H);
+                     verbose=false)
     for (t, dt) in zip(t_span[2:end], diff(t_span))
         elapsed = @elapsed ψ, envs = timestep(ψ, H, t, dt, alg, envs)
         verbose && @info "Timestep iteration:" t elapsed
@@ -25,9 +24,8 @@ function time_evolve(
     end
     return ψ, envs
 end
-function time_evolve!(
-    ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H); verbose=false
-)
+function time_evolve!(ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H);
+                      verbose=false)
     for (t, dt) in zip(t_span[2:end], diff(t_span))
         elapsed = @elapsed ψ, envs = timestep!(ψ, H, t, dt, alg, envs)
         verbose && @info "Timestep iteration:" t elapsed
