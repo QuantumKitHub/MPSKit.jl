@@ -219,7 +219,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
     end
 
     fs = [t -> 3t, 2, 1]
-    Hts = [TimedOperator(H1, fs[1]), UntimedOperator(H2, fs[2]), H3]
+    Hts = [MultipliedOperator(H1, fs[1]), MultipliedOperator(H2, fs[2]), H3]
     summedH = LazySum(Hts)
     t = 1.1
     summedH_at = summedH(t)

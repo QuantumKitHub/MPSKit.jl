@@ -109,7 +109,7 @@ end
         @test (3 + 1.55 - 0.1) * sum(E₀) ≈ sum(E) atol = 1e-2
     end
 
-    Ht = TimedOperator(H, t -> 4) + UntimedOperator(H, 1.45)
+    Ht = MultipliedOperator(H, t -> 4) + MultipliedOperator(H, 1.45)
 
     @testset "Finite TimeDependent LazySum $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in
                                                                                    algs
@@ -139,7 +139,7 @@ end
         @test (3 + 1.55 - 0.1) * sum(E₀) ≈ sum(E) atol = 1e-2
     end
 
-    Ht = TimedOperator(H, t -> 4) + UntimedOperator(H, 1.45)
+    Ht = MultipliedOperator(H, t -> 4) + MultipliedOperator(H, 1.45)
 
     @testset "Infinite TimeDependent LazySum" begin
         ψ, envs = timestep(ψ₀, Ht(1.0), 0.0, dt, TDVP())

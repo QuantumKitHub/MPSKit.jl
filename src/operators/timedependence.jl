@@ -1,7 +1,8 @@
 # Holy traits to differentiate between time dependent and time independent types
 
-struct TimeDependent end
-struct NotTimeDependent end
+abstract type TimeDependence end
+struct TimeDependent <: TimeDependence end
+struct NotTimeDependent <: TimeDependence end
 
 TimeDependence(x) = NotTimeDependent()
 istimed(::TimeDependent) = true
