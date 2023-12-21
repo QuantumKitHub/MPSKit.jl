@@ -42,9 +42,8 @@ Base.:*(op::TimedOperator, b::Number) = MultipliedOperator(op.op, t -> b * op.f(
 Base.:*(b, op::MultipliedOperator) = op * b
 
 # slightly dangerous
-Base.:*(op::TimedOperator, g::Function) = MultipliedOperator(op.op, t -> g(t) * op.f(t)) 
+Base.:*(op::TimedOperator, g::Function) = MultipliedOperator(op.op, t -> g(t) * op.f(t))
 Base.:*(op::UntimedOperator, g::Function) = MultipliedOperator(op.op, t -> g(t) * op.f)
-
 
 # don't know a better place to put this
 # environment for MultipliedOperator
