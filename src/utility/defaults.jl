@@ -39,7 +39,7 @@ function set_parallelization(options::Pair{String,Bool}...)
 
     sites = @load_preference("parallelize_sites", nothing)
     derivatives = @load_preference("parallelize_derivatives", nothing)
-    transfers = @load_preference("parallelize_derivatives", nothing)
+    transfers = @load_preference("parallelize_transfers", nothing)
     @info "Parallelization changed; restart your Julia session for this change to take effect!" sites derivatives transfers
     return nothing
 end

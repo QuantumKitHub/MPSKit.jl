@@ -90,7 +90,8 @@ three main places where this is happening, which can be disabled separately thro
 
 2. During the calculation of the environments, when the MPO is block-sparse, it is possible
    to parallelize over these blocks. This can be enabled or disabled by the
-   `parallelize_environments` preference.
+   `parallelize_transfers` preference. (Note that left- and right environments will always
+   be computed in parallel)
 
 3. During the calculation of the derivatives, when the MPO is block-sparse, it is possible
    to parallelize over these blocks. This can be enabled or disabled by the
@@ -99,7 +100,7 @@ three main places where this is happening, which can be disabled separately thro
 For convenience, these preferences can be set via [`MPSKit.Defaults.set_parallelization`](@ref), which takes as input pairs of preferences and booleans. For example, to disable all parallelization, one can call
 
 ```julia
-Defaults.set_parallelization("sites" => false, "environments" => false, "derivatives" => false)
+Defaults.set_parallelization("sites" => false, "transfers" => false, "derivatives" => false)
 ```
 
 !!! warning
