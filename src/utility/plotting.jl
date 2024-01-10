@@ -69,8 +69,9 @@ function entanglementplot end
 
     ylims --> (-Inf, 1 + 1e-1)
     yscale --> :log10
+    label := nothing
 
-    return ([])
+    return []
 end
 
 """
