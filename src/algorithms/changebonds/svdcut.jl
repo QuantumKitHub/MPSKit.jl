@@ -1,7 +1,7 @@
 """
     struct SvdCut <: Algorithm end
 
-An algorithm that uses truncated SVD to change the bond dimension of a Ψ.
+An algorithm that uses truncated SVD to change the bond dimension of a ψ.
 
 # Fields
 - `trscheme::TruncationScheme = notrunc()` : The truncation scheme to use.
@@ -10,33 +10,33 @@ An algorithm that uses truncated SVD to change the bond dimension of a Ψ.
     trscheme::TruncationScheme = notrunc()
 end
 
-changebonds(Ψ::AbstractFiniteMPS, alg::SvdCut) = changebonds!(copy(Ψ), alg)
-function changebonds!(Ψ::AbstractFiniteMPS, alg::SvdCut)
-    for i in (length(Ψ) - 1):-1:1
-        U, S, V, = tsvd(Ψ.CR[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
-        AL′ = Ψ.AL[i] * U
-        Ψ.AC[i] = (AL′, complex(S))
-        AR′ = _transpose_front(V * _transpose_tail(Ψ.AR[i + 1]))
-        Ψ.AC[i + 1] = (complex(S), AR′)
+changebonds(ψ::AbstractFiniteMPS, alg::SvdCut) = changebonds!(copy(ψ), alg)
+function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut)
+    for i in (length(ψ) - 1):-1:1
+        U, S, V, = tsvd(ψ.CR[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
+        AL′ = ψ.AL[i] * U
+        ψ.AC[i] = (AL′, complex(S))
+        AR′ = _transpose_front(V * _transpose_tail(ψ.AR[i + 1]))
+        ψ.AC[i + 1] = (complex(S), AR′)
     end
-    return normalize!(Ψ)
+    return normalize!(ψ)
 end
 
-function changebonds(Ψ::DenseMPO, alg::SvdCut)
-    return convert(DenseMPO, changebonds(convert(InfiniteMPS, Ψ), alg))
+function changebonds(ψ::DenseMPO, alg::SvdCut)
+    return convert(DenseMPO, changebonds(convert(InfiniteMPS, ψ), alg))
 end
-function changebonds(Ψ::MPOMultiline, alg::SvdCut)
-    return convert(MPOMultiline, changebonds(convert(MPSMultiline, Ψ), alg))
+function changebonds(ψ::MPOMultiline, alg::SvdCut)
+    return convert(MPOMultiline, changebonds(convert(MPSMultiline, ψ), alg))
 end
-function changebonds(Ψ::MPSMultiline, alg::SvdCut)
-    return Multiline(map(x -> changebonds(x, alg), Ψ.data))
+function changebonds(ψ::MPSMultiline, alg::SvdCut)
+    return Multiline(map(x -> changebonds(x, alg), ψ.data))
 end
-function changebonds(Ψ::InfiniteMPS, alg::SvdCut)
-    copied = complex.(Ψ.AL)
-    ncr = Ψ.CR[1]
+function changebonds(ψ::InfiniteMPS, alg::SvdCut)
+    copied = complex.(ψ.AL)
+    ncr = ψ.CR[1]
 
-    for i in 1:length(Ψ)
-        U, ncr, = tsvd(Ψ.CR[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
+    for i in 1:length(ψ)
+        U, ncr, = tsvd(ψ.CR[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
         copied[i] = copied[i] * U
         copied[i + 1] = _transpose_front(U' * _transpose_tail(copied[i + 1]))
     end
@@ -44,6 +44,6 @@ function changebonds(Ψ::InfiniteMPS, alg::SvdCut)
     return normalize!(InfiniteMPS(copied, complex(ncr)))
 end
 
-function changebonds(Ψ, H, alg::SvdCut, envs=environments(Ψ, H))
-    return (changebonds(Ψ, alg), envs)
+function changebonds(ψ, H, alg::SvdCut, envs=environments(ψ, H))
+    return (changebonds(ψ, alg), envs)
 end

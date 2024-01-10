@@ -6,8 +6,6 @@ To follow the tutorial you need the following packages:
 """
 
 using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
-using TensorOperations: TensorOperations;
-TensorOperations.disable_cache(); # hide
 
 md"""
 The Heisenberg model is defined by the following hamiltonian:
@@ -19,7 +17,7 @@ H = -J∑_{⟨i,j⟩} (X_i X_j + Y_i Y_j + Z_i Z_j)
 This hamiltonian has an SU(2) symmetry, which we can enforce by using SU(2)-symmetric tensors:
 """
 
-H = heisenberg_XXX(ComplexF64, SU2Irrep; spin=1, J=-1);
+H = heisenberg_XXX(ComplexF64, SU2Irrep; spin=1, J=1);
 
 md"""
 ## Finite size extrapolation
@@ -36,13 +34,13 @@ This can be done as follows.
 """
 
 L = 10
-physical_space = Rep[SU₂](1 => 1)
-virtual_space = Rep[SU₂](0 => 15, 1 => 15, 2 => 10, 3 => 5)
+physical_space = SU2Space(1 => 1)
+virtual_space = SU2Space(0 => 12, 1 => 12, 2 => 5, 3 => 3)
 ψ₀ = FiniteMPS(rand, ComplexF64, L, physical_space, virtual_space)
 ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbose=false))
 E₀ = real.(expectation_value(ψ, H))
-En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU₂(1))
-En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU₂(2))
+En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(1))
+En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(2))
 ΔE_finite = real(En_2[1] - En_1[1])
 
 md"""
@@ -59,12 +57,13 @@ md"""
 Finally, we can obtain a value for the Haldane gap by extrapolating our results for different system sizes.
 """
 
-Ls = 5:5:50
+Ls = 12:4:30
 ΔEs = map(Ls) do L
+    @info "computing L = $L"
     ψ₀ = FiniteMPS(rand, ComplexF64, L, physical_space, virtual_space)
     ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbose=false))
-    En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU₂(1))
-    En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU₂(2))
+    En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(1))
+    En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(2))
     return real(En_2[1] - En_1[1])
 end
 
@@ -89,12 +88,12 @@ In contrast with the finite size case, we now should specify a momentum label to
 This way, it is possible to scan the dispersion relation over the entire momentum space.
 """
 
-virtual_space_inf = Rep[SU₂](1//2 => 20, 3//2 => 20, 5//2 => 10, 7//2 => 10, 9//2 => 5)
+virtual_space_inf = Rep[SU₂](1 // 2 => 16, 3 // 2 => 16, 5 // 2 => 8, 7 // 2 => 4)
 ψ₀_inf = InfiniteMPS([physical_space], [virtual_space_inf])
 ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H)
 
 kspace = range(0, π, 16)
-Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ_inf, envs_inf; sector=SU₂(1))
+Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ_inf, envs_inf; sector=SU2Irrep(1))
 
 ΔE, idx = findmin(real.(Es))
 println("minimum @k = $(kspace[idx]):\t ΔE = $(ΔE)")

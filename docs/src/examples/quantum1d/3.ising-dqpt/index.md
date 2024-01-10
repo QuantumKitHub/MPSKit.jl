@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/maartenvd/MPSKit.jl/examples/quantum1d/3.ising-dqpt/main.jl"
+EditURL = "../../../../../examples/quantum1d/3.ising-dqpt/main.jl"
 ```
 
 [![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/maartenvd/MPSKit.jl/gh-pages?filepath=dev/examples/quantum1d/3.ising-dqpt/main.ipynb)
@@ -13,8 +13,6 @@ In this tutorial we will try to reproduce the results from
 
 ````julia
 using MPSKit, MPSKitModels, TensorKit
-using TensorOperations: TensorOperations;
-TensorOperations.disable_cache(); # hide
 ````
 
 Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the loschmidth echo.
@@ -42,12 +40,35 @@ L = 20
 ````
 
 ````
-[ Info: Iteraton 0 error 0.06549008355303014
-[ Info: Iteraton 1 error 3.8736052080636905e-5
-[ Info: Iteraton 2 error 1.7276421455149173e-5
-[ Info: Iteraton 3 error 4.6807658588611276e-8
-[ Info: Iteraton 4 error 4.473231419129997e-11
-[ Info: Iteraton 5 error 9.43878140025498e-13
+┌ Info: DMRG iteration:
+│   iter = 1
+│   ϵ = 0.0020961633753540897
+│   λ = -20.400216273406606 + 8.422766878640786e-16im
+└   Δt = 0.536897639
+┌ Info: DMRG iteration:
+│   iter = 2
+│   ϵ = 1.9324532268037547e-6
+│   λ = -20.400217866998595 - 1.2632476413240967e-15im
+└   Δt = 0.320009526
+┌ Info: DMRG iteration:
+│   iter = 3
+│   ϵ = 4.883113394407934e-7
+│   λ = -20.400217867025678 - 3.206562451130956e-15im
+└   Δt = 0.064756649
+┌ Info: DMRG iteration:
+│   iter = 4
+│   ϵ = 6.335026911022001e-10
+│   λ = -20.400217867025653 - 3.741871084156128e-17im
+└   Δt = 0.014713191
+┌ Info: DMRG iteration:
+│   iter = 5
+│   ϵ = 6.289053913528775e-13
+│   λ = -20.400217867025678 - 2.632644424352837e-16im
+└   Δt = 0.008818727
+┌ Info: DMRG summary:
+│   ϵ = 2.0e-12
+│   λ = -20.400217867025678 - 2.632644424352837e-16im
+└   Δt = 0.980341265
 
 ````
 
@@ -110,14 +131,45 @@ Similarly we could start with an initial infinite state and find the pre-quench 
 ````
 
 ````
-[ Info: vumps @iteration 1 galerkin = 0.06601870321517138
-[ Info: vumps @iteration 2 galerkin = 2.2516739036323203e-5
-[ Info: vumps @iteration 3 galerkin = 3.4932735965628556e-8
-[ Info: vumps @iteration 4 galerkin = 1.1714311204809937e-9
-[ Info: vumps @iteration 5 galerkin = 9.49274778774588e-11
-[ Info: vumps @iteration 6 galerkin = 9.53461947599348e-12
-[ Info: vumps @iteration 7 galerkin = 1.0106476372085772e-12
-[ Info: vumps @iteration 8 galerkin = 1.2306829064204868e-13
+┌ Info: VUMPS iteration:
+│   iter = 1
+│   ϵ = 0.12051227031956392
+│   λ = -1.0188109913987968 - 3.4277346718849837e-17im
+└   Δt = 0.044219456
+┌ Info: VUMPS iteration:
+│   iter = 2
+│   ϵ = 0.0005804392121373009
+│   λ = -1.0635439538780795 - 8.36203471080629e-18im
+└   Δt = 0.007141174
+┌ Info: VUMPS iteration:
+│   iter = 3
+│   ϵ = 1.8720667377867497e-7
+│   λ = -1.0635444099733329 + 9.033112781731065e-17im
+└   Δt = 0.00646285
+┌ Info: VUMPS iteration:
+│   iter = 4
+│   ϵ = 2.77487479109346e-10
+│   λ = -1.0635444099733624 + 3.8230698255590467e-17im
+└   Δt = 0.005835234
+┌ Info: VUMPS iteration:
+│   iter = 5
+│   ϵ = 2.965633592874595e-11
+│   λ = -1.0635444099733646 - 1.7021513375968543e-16im
+└   Δt = 0.033198408
+┌ Info: VUMPS iteration:
+│   iter = 6
+│   ϵ = 2.9750646414566318e-12
+│   λ = -1.063544409973365 - 1.349628283023072e-16im
+└   Δt = 0.004876971
+┌ Info: VUMPS iteration:
+│   iter = 7
+│   ϵ = 3.154873820110237e-13
+│   λ = -1.0635444099733644 - 2.0618524039270857e-17im
+└   Δt = 0.004216146
+┌ Info: VUMPS summary:
+│   ϵ = 3.154873820110237e-13
+│   λ = -1.0635444099733644 - 2.0618524039270857e-17im
+└   Δt = 0.938766166
 
 ````
 
@@ -129,7 +181,7 @@ dot(ψ₀, ψ₀)
 ````
 
 ````
-0.9999999999999998 + 7.851374352485397e-16im
+0.9999999999999984 + 9.734886193402987e-17im
 ````
 
 so the loschmidth echo takes on the pleasant form

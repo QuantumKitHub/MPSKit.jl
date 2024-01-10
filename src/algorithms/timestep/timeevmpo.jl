@@ -13,9 +13,8 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E}, dt, alg::TaylorCluster{N}) whe
     τ = -1im * dt
 
     inds = LinearIndices(ntuple(i -> th.odim, N))
-    mult_data = Array{Union{Missing,eltype(th[1])},3}(
-        missing, length(th), th.odim^N, th.odim^N
-    )
+    mult_data = Array{Union{Missing,eltype(th[1])},3}(missing, length(th), th.odim^N,
+                                                      th.odim^N)
     for loc in 1:length(th), a in CartesianIndices(inds), b in CartesianIndices(inds)
         has_prod_elem(th[loc], Tuple(a), Tuple(b)) || continue
 
@@ -38,9 +37,8 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E}, dt, alg::TaylorCluster{N}) whe
                 e_a in interweave(fill(1, no), t_a)
 
                 has_prod_elem(slice, e_a, e_b) || continue
-                slice[inds[a], inds[b]] +=
-                    calc_prod_elem(slice, e_a, e_b) * τ^no * factorial(N) /
-                    (factorial(N + no) * n1 * n3)
+                slice[inds[a], inds[b]] += calc_prod_elem(slice, e_a, e_b) * τ^no *
+                                           factorial(N) / (factorial(N + no) * n1 * n3)
             end
         end
 
@@ -50,8 +48,8 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E}, dt, alg::TaylorCluster{N}) whe
 
             order = count(x -> x == th.odim, a)
             c_ind = inds[a...]
-            slice[1:(c_ind - 1), 1] .+=
-                slice[1:(c_ind - 1), c_ind] .* τ^order * factorial(N - order) / factorial(N)
+            slice[1:(c_ind - 1), 1] .+= slice[1:(c_ind - 1), c_ind] .* τ^order *
+                                        factorial(N - order) / factorial(N)
             slice[c_ind, :] .*= 0
             slice[:, c_ind] .*= 0
         end
@@ -98,8 +96,8 @@ function make_time_mpo(th::MPOHamiltonian{S,T,E}, dt, alg::TaylorCluster{N}) whe
 
             transformed = map(x -> x == th.odim ? 1 : x, tc)
 
-            slice[:, inds[transformed...]] +=
-                slice[:, inds[tc...]] * τ^n * factorial(N - n) / factorial(N)
+            slice[:, inds[transformed...]] += slice[:, inds[tc...]] * τ^n *
+                                              factorial(N - n) / factorial(N)
 
             slice[:, inds[tc...]] .*= 0
             slice[inds[tc...], :] .*= 0
@@ -117,26 +115,20 @@ function calc_prod_elem(o, slice, t1, t2)
     isempty(t1) && return o
 
     nel = slice[first(t1), first(t2)]
-    fuse_front = isomorphism(
-        fuse(_firstspace(o) * _firstspace(nel)), _firstspace(o) * _firstspace(nel)
-    )
-    fuse_back = isomorphism(
-        fuse(_lastspace(o)' * _lastspace(nel)'), _lastspace(o)' * _lastspace(nel)'
-    )
+    fuse_front = isomorphism(fuse(_firstspace(o) * _firstspace(nel)),
+                             _firstspace(o) * _firstspace(nel))
+    fuse_back = isomorphism(fuse(_lastspace(o)' * _lastspace(nel)'),
+                            _lastspace(o)' * _lastspace(nel)')
 
-    @plansor o[-1 -2; -3 -4] :=
-        fuse_front[-1; 1 2] * o[1 3; -3 4] * nel[2 -2; 3 5] * conj(fuse_back[-4; 4 5])
+    @plansor o[-1 -2; -3 -4] := fuse_front[-1; 1 2] * o[1 3; -3 4] * nel[2 -2; 3 5] *
+                                conj(fuse_back[-4; 4 5])
 
     return calc_prod_elem(o, slice, t1[2:end], t2[2:end])
 end
 
 function interweave(a, b)
-    map(
-        filter(
-            x -> sum(x .== 1) == length(a) && sum(x .== 2) == length(b),
-            collect(Iterators.product(fill((1, 2), length(a) + length(b))...)),
-        ),
-    ) do key
+    map(filter(x -> sum(x .== 1) == length(a) && sum(x .== 2) == length(b),
+               collect(Iterators.product(fill((1, 2), length(a) + length(b))...)))) do key
         ia = 1
         ib = 1
 
@@ -151,54 +143,50 @@ function interweave(a, b)
             end
             output[ia + ib - 2] = el
         end
-        output
+        return output
     end
 end
 
-function make_time_mpo(ham::MPOHamiltonian{S,T}, dt, alg::WII) where {S,T}
-    WA = PeriodicArray{T,3}(undef, ham.period, ham.odim - 2, ham.odim - 2)
-    WB = PeriodicArray{T,2}(undef, ham.period, ham.odim - 2)
-    WC = PeriodicArray{T,2}(undef, ham.period, ham.odim - 2)
-    WD = PeriodicArray{T,1}(undef, ham.period)
+function make_time_mpo(H::MPOHamiltonian{S,T}, dt, alg::WII) where {S,T}
+    WA = PeriodicArray{T,3}(undef, H.period, H.odim - 2, H.odim - 2)
+    WB = PeriodicArray{T,2}(undef, H.period, H.odim - 2)
+    WC = PeriodicArray{T,2}(undef, H.period, H.odim - 2)
+    WD = PeriodicArray{T,1}(undef, H.period)
 
     δ = dt * (-1im)
 
-    for i in 1:(ham.period), j in 2:(ham.odim - 1), k in 2:(ham.odim - 1)
-        init_1 = isometry(
-            storagetype(ham[i][1, ham.odim]),
-            codomain(ham[i][1, ham.odim]),
-            domain(ham[i][1, ham.odim]),
-        )
-        init = [init_1, zero(ham[i][1, k]), zero(ham[i][j, ham.odim]), zero(ham[i][j, k])]
+    for i in 1:(H.period), j in 2:(H.odim - 1), k in 2:(H.odim - 1)
+        init_1 = isometry(storagetype(H[i][1, H.odim]), codomain(H[i][1, H.odim]),
+                          domain(H[i][1, H.odim]))
+        init = [init_1, zero(H[i][1, k]), zero(H[i][j, H.odim]), zero(H[i][j, k])]
 
-        (y, convhist) = exponentiate(
-            1.0, RecursiveVec(init), Arnoldi(; tol=alg.tol, maxiter=alg.maxiter)
-        ) do x
+        (y, convhist) = exponentiate(1.0, RecursiveVec(init),
+                                     Arnoldi(; tol=alg.tol, maxiter=alg.maxiter)) do x
             out = similar(x.vecs)
 
-            @plansor out[1][-1 -2; -3 -4] :=
-                δ * x[1][-1 1; -3 -4] * ham[i][1, ham.odim][2 3; 1 4] * τ[-2 4; 2 3]
+            @plansor out[1][-1 -2; -3 -4] := δ * x[1][-1 1; -3 -4] *
+                                             H[i][1, H.odim][2 3; 1 4] * τ[-2 4; 2 3]
 
-            @plansor out[2][-1 -2; -3 -4] :=
-                δ * x[2][-1 1; -3 -4] * ham[i][1, ham.odim][2 3; 1 4] * τ[-2 4; 2 3]
-            @plansor out[2][-1 -2; -3 -4] +=
-                sqrt(δ) * x[1][1 2; -3 4] * ham[i][1, k][-1 -2; 3 -4] * τ[3 4; 1 2]
+            @plansor out[2][-1 -2; -3 -4] := δ * x[2][-1 1; -3 -4] *
+                                             H[i][1, H.odim][2 3; 1 4] * τ[-2 4; 2 3]
+            @plansor out[2][-1 -2; -3 -4] += sqrt(δ) * x[1][1 2; -3 4] *
+                                             H[i][1, k][-1 -2; 3 -4] * τ[3 4; 1 2]
 
-            @plansor out[3][-1 -2; -3 -4] :=
-                δ * x[3][-1 1; -3 -4] * ham[i][1, ham.odim][2 3; 1 4] * τ[-2 4; 2 3]
-            @plansor out[3][-1 -2; -3 -4] +=
-                sqrt(δ) * x[1][1 2; -3 4] * ham[i][j, ham.odim][-1 -2; 3 -4] * τ[3 4; 1 2]
+            @plansor out[3][-1 -2; -3 -4] := δ * x[3][-1 1; -3 -4] *
+                                             H[i][1, H.odim][2 3; 1 4] * τ[-2 4; 2 3]
+            @plansor out[3][-1 -2; -3 -4] += sqrt(δ) * x[1][1 2; -3 4] *
+                                             H[i][j, H.odim][-1 -2; 3 -4] * τ[3 4; 1 2]
 
-            @plansor out[4][-1 -2; -3 -4] :=
-                δ * x[4][-1 1; -3 -4] * ham[i][1, ham.odim][2 3; 1 4] * τ[-2 4; 2 3]
-            @plansor out[4][-1 -2; -3 -4] +=
-                x[1][1 2; -3 4] * ham[i][j, k][-1 -2; 3 -4] * τ[3 4; 1 2]
-            @plansor out[4][-1 -2; -3 -4] +=
-                sqrt(δ) * x[2][1 2; -3 -4] * ham[i][j, ham.odim][-1 -2; 3 4] * τ[3 4; 1 2]
-            @plansor out[4][-1 -2; -3 -4] +=
-                sqrt(δ) * x[3][-1 4; -3 3] * ham[i][1, k][2 -2; 1 -4] * τ[3 4; 1 2]
+            @plansor out[4][-1 -2; -3 -4] := δ * x[4][-1 1; -3 -4] *
+                                             H[i][1, H.odim][2 3; 1 4] * τ[-2 4; 2 3]
+            @plansor out[4][-1 -2; -3 -4] += x[1][1 2; -3 4] * H[i][j, k][-1 -2; 3 -4] *
+                                             τ[3 4; 1 2]
+            @plansor out[4][-1 -2; -3 -4] += sqrt(δ) * x[2][1 2; -3 -4] *
+                                             H[i][j, H.odim][-1 -2; 3 4] * τ[3 4; 1 2]
+            @plansor out[4][-1 -2; -3 -4] += sqrt(δ) * x[3][-1 4; -3 3] *
+                                             H[i][1, k][2 -2; 1 -4] * τ[3 4; 1 2]
 
-            RecursiveVec(out)
+            return RecursiveVec(out)
         end
         convhist.converged == 0 && @warn "failed to exponentiate $(convhist.normres)"
 
@@ -208,7 +196,7 @@ function make_time_mpo(ham::MPOHamiltonian{S,T}, dt, alg::WII) where {S,T}
         WD[i] = y[1]
     end
 
-    W2 = PeriodicArray{Union{T,Missing},3}(missing, ham.period, ham.odim - 1, ham.odim - 1)
+    W2 = PeriodicArray{Union{T,Missing},3}(missing, H.period, H.odim - 1, H.odim - 1)
     W2[:, 2:end, 2:end] = WA
     W2[:, 2:end, 1] = WB
     W2[:, 1, 2:end] = WC

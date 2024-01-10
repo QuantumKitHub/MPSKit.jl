@@ -1,9 +1,5 @@
-function approximate(
-    ost::MPSMultiline,
-    toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
-    alg::IDMRG1,
-    oenvs=environments(ost, toapprox),
-)
+function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
+                     alg::IDMRG1, oenvs=environments(ost, toapprox))
     st = copy(ost)
     (mpo, above) = toapprox
     envs = IDMRGEnv(ost, oenvs)
@@ -31,9 +27,7 @@ function approximate(
             st.AC[row + 1, col] = h * above.AC[row, col]
             normalize!(st.AC[row + 1, col])
 
-            (st.CR[row + 1, col - 1], temp) = rightorth(
-                _transpose_tail(st.AC[row + 1, col])
-            )
+            st.CR[row + 1, col - 1], temp = rightorth(_transpose_tail(st.AC[row + 1, col]))
             st.AR[row + 1, col] = _transpose_front(temp)
 
             tm = TransferMatrix(above.AR[row, col], mpo[row, col], st.AR[row + 1, col])
@@ -50,12 +44,8 @@ function approximate(
     return nst, nenvs, delta
 end
 
-function approximate(
-    ost::MPSMultiline,
-    toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
-    alg::IDMRG2,
-    oenvs=environments(ost, toapprox),
-)
+function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
+                     alg::IDMRG2, oenvs=environments(ost, toapprox))
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
 
     (mpo, above) = toapprox
@@ -72,12 +62,8 @@ function approximate(
         #sweep from left to right
         for col in 1:size(st, 2), row in 1:size(st, 1)
             ac2 = above.AC[row, col] * _transpose_tail(above.AR[row, col + 1])
-            h = MPO_∂∂AC2(
-                mpo[row, col],
-                mpo[row, col + 1],
-                leftenv(envs, row, col),
-                rightenv(envs, row, col + 1),
-            )
+            h = MPO_∂∂AC2(mpo[row, col], mpo[row, col + 1], leftenv(envs, row, col),
+                          rightenv(envs, row, col + 1))
 
             (al, c, ar, ϵ) = tsvd(h * ac2; trunc=alg.trscheme, alg=TensorKit.SVD())
             normalize!(c)
@@ -87,36 +73,21 @@ function approximate(
             st.AR[row + 1, col + 1] = _transpose_front(ar)
             #st.AC[row+1,col+1] = _transpose_front(c*_transpose_tail(ar));
 
-            setleftenv!(
-                envs,
-                row,
-                col + 1,
-                normalize(
-                    leftenv(envs, row, col) *
-                    TransferMatrix(above.AL[row, col], mpo[row, col], st.AL[row + 1, col]),
-                ),
-            )
-            setrightenv!(
-                envs,
-                row,
-                col,
-                normalize(
-                    TransferMatrix(
-                        above.AR[row, col + 1], mpo[row, col + 1], st.AR[row + 1, col + 1]
-                    ) * rightenv(envs, row, col + 1),
-                ),
-            )
+            setleftenv!(envs, row, col + 1,
+                        normalize(leftenv(envs, row, col) *
+                                  TransferMatrix(above.AL[row, col], mpo[row, col],
+                                                 st.AL[row + 1, col])))
+            setrightenv!(envs, row, col,
+                         normalize(TransferMatrix(above.AR[row, col + 1], mpo[row, col + 1],
+                                                  st.AR[row + 1, col + 1]) *
+                                   rightenv(envs, row, col + 1)))
         end
 
         #sweep from right to left
         for col in (size(st, 2) - 1):-1:0, row in 1:size(st, 1)
             ac2 = above.AL[row, col] * _transpose_tail(above.AC[row, col + 1])
-            h = MPO_∂∂AC2(
-                mpo[row, col],
-                mpo[row, col + 1],
-                leftenv(envs, row, col),
-                rightenv(envs, row, col + 1),
-            )
+            h = MPO_∂∂AC2(mpo[row, col], mpo[row, col + 1], leftenv(envs, row, col),
+                          rightenv(envs, row, col + 1))
 
             (al, c, ar, ϵ) = tsvd(h * ac2; trunc=alg.trscheme, alg=TensorKit.SVD())
             normalize!(c)
@@ -126,36 +97,23 @@ function approximate(
             st.AR[row + 1, col + 1] = _transpose_front(ar)
             #st.AC[row+1,col] = al*c;
 
-            setleftenv!(
-                envs,
-                row,
-                col + 1,
-                normalize(
-                    leftenv(envs, row, col) *
-                    TransferMatrix(above.AL[row, col], mpo[row, col], st.AL[row + 1, col]),
-                ),
-            )
-            setrightenv!(
-                envs,
-                row,
-                col,
-                normalize(
-                    TransferMatrix(
-                        above.AR[row, col + 1], mpo[row, col + 1], st.AR[row + 1, col + 1]
-                    ) * rightenv(envs, row, col + 1),
-                ),
-            )
+            setleftenv!(envs, row, col + 1,
+                        normalize(leftenv(envs, row, col) *
+                                  TransferMatrix(above.AL[row, col], mpo[row, col],
+                                                 st.AL[row + 1, col])))
+            setrightenv!(envs, row, col,
+                         normalize(TransferMatrix(above.AR[row, col + 1], mpo[row, col + 1],
+                                                  st.AR[row + 1, col + 1]) *
+                                   rightenv(envs, row, col + 1)))
         end
 
-        delta = sum(
-            map(zip(curc, st.CR[:, 0])) do (c1, c2)
-                #update error
-                smallest = infimum(_firstspace(c1), _firstspace(c2))
-                e1 = isometry(_firstspace(c1), smallest)
-                e2 = isometry(_firstspace(c2), smallest)
-                delta = norm(e2' * c2 * e2 - e1' * c1 * e1)
-            end,
-        )
+        delta = sum(map(zip(curc, st.CR[:, 0])) do (c1, c2)
+                        #update error
+                        smallest = infimum(_firstspace(c1), _firstspace(c2))
+                        e1 = isometry(_firstspace(c1), smallest)
+                        e2 = isometry(_firstspace(c2), smallest)
+                        return delta = norm(e2' * c2 * e2 - e1' * c1 * e1)
+                    end)
         alg.verbose && @info "idmrg iter $(topit) err $(delta)"
 
         delta < alg.tol_galerkin && break

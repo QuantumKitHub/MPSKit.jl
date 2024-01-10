@@ -9,7 +9,7 @@ https://arxiv.org/abs/1701.07035.
 - `maxiter::Int`: maximum amount of iterations
 - `orthmaxiter::Int`: maximum amount of gauging iterations
 - `finalize::F`: user-supplied function which is applied after each iteration, with
-    signature `finalize(iter, Ψ, H, envs) -> Ψ, envs`
+    signature `finalize(iter, ψ, H, envs) -> ψ, envs`
 - `verbose::Bool`: display progress information
 - `dynamical_tols::Bool`: whether to use dynamically adjusted tolerances
 - `tol_min::Float64`: minimum tolerance for subroutines
@@ -49,15 +49,15 @@ function updatetols(alg::VUMPS, iter, ϵ)
 end
 
 "
-    find_groundstate(Ψ,ham,alg,envs=environments(Ψ,ham))
+    find_groundstate(ψ, H, alg, envs=environments(ψ, H))
 
-    find the groundstate for ham using algorithm alg
+find the groundstate for `H` using algorithm `alg`
 "
 
-function find_groundstate(Ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(Ψ, H))
+function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
     t₀ = Base.time_ns()
-    ϵ::Float64 = calc_galerkin(Ψ, envs)
-    temp_ACs = similar.(Ψ.AC)
+    ϵ::Float64 = calc_galerkin(ψ, envs)
+    temp_ACs = similar.(ψ.AC)
 
     for iter in 1:(alg.maxiter)
         tol_eigs, tol_envs, tol_gauge = updatetols(alg, iter, ϵ)
@@ -66,56 +66,56 @@ function find_groundstate(Ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(Ψ, 
 
             @static if Defaults.parallelize_sites
                 @sync begin
-                    for loc in 1:length(Ψ)
+                    for loc in 1:length(ψ)
                         Threads.@spawn begin
-                            _vumps_localupdate!(temp_ACs[loc], loc, Ψ, H, envs, eigalg)
+                            _vumps_localupdate!(temp_ACs[loc], loc, ψ, H, envs, eigalg)
                         end
                     end
                 end
             else
-                for loc in 1:length(Ψ)
-                    _vumps_localupdate!(temp_ACs[loc], loc, Ψ, H, envs, eigalg)
+                for loc in 1:length(ψ)
+                    _vumps_localupdate!(temp_ACs[loc], loc, ψ, H, envs, eigalg)
                 end
             end
 
-            Ψ = InfiniteMPS(temp_ACs, Ψ.CR[end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
-            recalculate!(envs, Ψ; tol=tol_envs)
+            ψ = InfiniteMPS(temp_ACs, ψ.CR[end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
+            recalculate!(envs, ψ; tol=tol_envs)
 
-            Ψ, envs = alg.finalize(iter, Ψ, H, envs)::Tuple{typeof(Ψ),typeof(envs)}
+            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
-            ϵ = calc_galerkin(Ψ, envs)
+            ϵ = calc_galerkin(ψ, envs)
         end
 
         alg.verbose &&
-            @info "VUMPS iteration:" iter ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
+            @info "VUMPS iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
 
         ϵ <= alg.tol_galerkin && break
         iter == alg.maxiter &&
-            @warn "VUMPS maximum iterations" iter ϵ λ = sum(expectation_value(Ψ, H, envs))
+            @warn "VUMPS maximum iterations" iter ϵ λ = sum(expectation_value(ψ, H, envs))
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbose && @info "VUMPS summary:" ϵ λ = sum(expectation_value(Ψ, H, envs)) Δt
-    return Ψ, envs, ϵ
+    alg.verbose && @info "VUMPS summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
+    return ψ, envs, ϵ
 end
 
-function _vumps_localupdate!(AC′, loc, Ψ, H, envs, eigalg, factalg=QRpos())
+function _vumps_localupdate!(AC′, loc, ψ, H, envs, eigalg, factalg=QRpos())
     local Q_AC, Q_C
     @static if Defaults.parallelize_sites
         @sync begin
             Threads.@spawn begin
-                _, acvecs = eigsolve(∂∂AC(loc, Ψ, H, envs), Ψ.AC[loc], 1, :SR, eigalg)
+                _, acvecs = eigsolve(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], 1, :SR, eigalg)
                 Q_AC, _ = TensorKit.leftorth!(acvecs[1]; alg=factalg)
             end
             Threads.@spawn begin
-                _, crvecs = eigsolve(∂∂C(loc, Ψ, H, envs), Ψ.CR[loc], 1, :SR, eigalg)
+                _, crvecs = eigsolve(∂∂C(loc, ψ, H, envs), ψ.CR[loc], 1, :SR, eigalg)
                 Q_C, _ = TensorKit.leftorth!(crvecs[1]; alg=factalg)
             end
         end
     else
-        _, acvecs = eigsolve(∂∂AC(loc, Ψ, H, envs), Ψ.AC[loc], 1, :SR, eigalg)
+        _, acvecs = eigsolve(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], 1, :SR, eigalg)
         Q_AC, _ = TensorKit.leftorth!(acvecs[1]; alg=factalg)
-        _, crvecs = eigsolve(∂∂C(loc, Ψ, H, envs), Ψ.CR[loc], 1, :SR, eigalg)
+        _, crvecs = eigsolve(∂∂C(loc, ψ, H, envs), ψ.CR[loc], 1, :SR, eigalg)
         Q_C, _ = TensorKit.leftorth!(crvecs[1]; alg=factalg)
     end
     return mul!(AC′, Q_AC, adjoint(Q_C))

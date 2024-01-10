@@ -27,14 +27,12 @@ Construct an `MPSTensor` with given physical and virtual spaces.
 - `left_D::Int`: left virtual dimension
 - `right_D::Int`: right virtual dimension
 """
-function MPSTensor(
-    f, eltype, P::Union{S,CompositeSpace{S}}, Vₗ::S, Vᵣ::S=Vₗ
-) where {S<:ElementarySpace}
+function MPSTensor(f, eltype, P::Union{S,CompositeSpace{S}}, Vₗ::S,
+                   Vᵣ::S=Vₗ) where {S<:ElementarySpace}
     return TensorMap(f, eltype, Vₗ ⊗ P ← Vᵣ)
 end
-function MPSTensor(
-    P::Union{S,CompositeSpace{S}}, Vₗ::S, Vᵣ::S=Vₗ
-) where {S<:ElementarySpace}
+function MPSTensor(P::Union{S,CompositeSpace{S}}, Vₗ::S,
+                   Vᵣ::S=Vₗ) where {S<:ElementarySpace}
     return MPSTensor(rand, Defaults.eltype, P, Vₗ, Vᵣ)
 end
 
@@ -72,32 +70,32 @@ MPS types
 
 abstract type AbstractMPS end
 
-Base.eltype(Ψ::AbstractMPS) = eltype(typeof(Ψ))
+Base.eltype(ψ::AbstractMPS) = eltype(typeof(ψ))
 VectorInterface.scalartype(T::Type{<:AbstractMPS}) = scalartype(site_type(T))
 
 """
-    site_type(Ψ::AbstractMPS)
-    site_type(Ψtype::Type{<:AbstractMPS})
+    site_type(ψ::AbstractMPS)
+    site_type(ψtype::Type{<:AbstractMPS})
 
 Return the type of the site tensors of an `AbstractMPS`.
 """
-site_type(Ψ::AbstractMPS) = site_type(typeof(Ψ))
+site_type(ψ::AbstractMPS) = site_type(typeof(ψ))
 
 """
-    bond_type(Ψ::AbstractMPS)
-    bond_type(Ψtype::Type{<:AbstractMPS})
+    bond_type(ψ::AbstractMPS)
+    bond_type(ψtype::Type{<:AbstractMPS})
 
 Return the type of the bond tensors of an `AbstractMPS`.
 """
-bond_type(Ψ::AbstractMPS) = bond_type(typeof(Ψ))
+bond_type(ψ::AbstractMPS) = bond_type(typeof(ψ))
 
-TensorKit.spacetype(Ψ::AbstractMPS) = spacetype(typeof(Ψ))
-TensorKit.spacetype(Ψtype::Type{<:AbstractMPS}) = spacetype(site_type(Ψtype))
-TensorKit.sectortype(Ψ::AbstractMPS) = sectortype(typeof(Ψ))
-TensorKit.sectortype(Ψtype::Type{<:AbstractMPS}) = sectortype(site_type(Ψtype))
+TensorKit.spacetype(ψ::AbstractMPS) = spacetype(typeof(ψ))
+TensorKit.spacetype(ψtype::Type{<:AbstractMPS}) = spacetype(site_type(ψtype))
+TensorKit.sectortype(ψ::AbstractMPS) = sectortype(typeof(ψ))
+TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype))
 
 """
-    left_virtualspace(Ψ::AbstractMPS, i::Int)
+    left_virtualspace(ψ::AbstractMPS, i::Int)
     
 Return the left virtual space of the bond tensor at site `i`. This is equivalent to the
 left virtual space of the left-gauged site tensor at site `i + 1`.
@@ -105,7 +103,7 @@ left virtual space of the left-gauged site tensor at site `i + 1`.
 function left_virtualspace end
 
 """
-    right_virtualspace(Ψ::AbstractMPS, i::Int)
+    right_virtualspace(ψ::AbstractMPS, i::Int)
 
 Return the right virtual space of the bond tensor at site `i`. This is equivalent to the
 right virtual space of the right-gauged site tensor at site `i`.
@@ -113,7 +111,7 @@ right virtual space of the right-gauged site tensor at site `i`.
 function right_virtualspace end
 
 """
-    physicalspace(Ψ::AbstractMPS, i::Int)
+    physicalspace(ψ::AbstractMPS, i::Int)
 
 Return the physical space of the site tensor at site `i`.
 """

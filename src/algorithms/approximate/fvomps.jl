@@ -8,12 +8,8 @@ function approximate!(init::AbstractFiniteMPS, sq, alg, envs=environments(init, 
     return (tor[1], tor[2][1], tor[3])
 end
 
-function approximate!(
-    init::AbstractFiniteMPS,
-    squash::Vector,
-    alg::DMRG2,
-    envs=[environments(init, sq) for sq in squash],
-)
+function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
+                      envs=[environments(init, sq) for sq in squash])
     tol = alg.tol
     maxiter = alg.maxiter
     iter = 0
@@ -22,17 +18,15 @@ function approximate!(
     while iter < maxiter && delta > tol
         delta = 0.0
 
-        (init, envs) =
-            alg.finalize(iter, init, squash, envs)::Tuple{typeof(init),typeof(envs)}
+        init, envs = alg.finalize(iter, init, squash,
+                                  envs)::Tuple{typeof(init),typeof(envs)}
 
         for pos in [1:(length(init) - 1); (length(init) - 2):-1:1]
             ac2 = init.AC[pos] * _transpose_tail(init.AR[pos + 1])
 
-            nac2 = sum(
-                map(zip(squash, envs)) do (sq, pr)
-                    ac2_proj(pos, init, pr)
-                end,
-            )
+            nac2 = sum(map(zip(squash, envs)) do (sq, pr)
+                           return ac2_proj(pos, init, pr)
+                       end)
 
             (al, c, ar) = tsvd(nac2; trunc=alg.trscheme)
 
@@ -52,12 +46,8 @@ function approximate!(
     return init, envs, delta
 end
 
-function approximate!(
-    init::AbstractFiniteMPS,
-    squash::Vector,
-    alg::DMRG,
-    envs=[environments(init, sq) for sq in squash],
-)
+function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG,
+                      envs=[environments(init, sq) for sq in squash])
     tol = alg.tol
     maxiter = alg.maxiter
     iter = 0
@@ -67,15 +57,13 @@ function approximate!(
         delta = 0.0
 
         #finalize
-        (init, envs) =
-            alg.finalize(iter, init, squash, envs)::Tuple{typeof(init),typeof(envs)}
+        (init, envs) = alg.finalize(iter, init, squash,
+                                    envs)::Tuple{typeof(init),typeof(envs)}
 
         for pos in [1:(length(init) - 1); length(init):-1:2]
-            newac = sum(
-                map(zip(squash, envs)) do (sq, pr)
-                    ac_proj(pos, init, pr)
-                end,
-            )
+            newac = sum(map(zip(squash, envs)) do (sq, pr)
+                            return ac_proj(pos, init, pr)
+                        end)
 
             delta = max(delta, norm(newac - init.AC[pos]) / norm(newac))
 

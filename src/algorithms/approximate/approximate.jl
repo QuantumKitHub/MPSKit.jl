@@ -1,13 +1,13 @@
 @doc """
-    approximate(Ψ₀, (O, Ψ), algorithm, [environments]; kwargs...)
-    approximate!(Ψ₀, (O, Ψ), algorithm, [environments]; kwargs...)
+    approximate(ψ₀, (O, ψ), algorithm, [environments]; kwargs...)
+    approximate!(ψ₀, (O, ψ), algorithm, [environments]; kwargs...)
 
-Compute an approximation to the application of an operator `O` to the state `Ψ` in the form
-of an MPS `Ψ₀`.
+Compute an approximation to the application of an operator `O` to the state `ψ` in the form
+of an MPS `ψ₀`.
 
 ## Arguments
-- `Ψ₀::AbstractMPS`: initial guess of the approximated state
-- `(O::AbstractMPO, Ψ::AbstractMPS)`: operator `O` and state `Ψ` to be approximated
+- `ψ₀::AbstractMPS`: initial guess of the approximated state
+- `(O::AbstractMPO, ψ::AbstractMPS)`: operator `O` and state `ψ` to be approximated
 - `algorithm`: approximation algorithm. See below for a list of available algorithms.
 - `[environments]`: MPS environment manager
 

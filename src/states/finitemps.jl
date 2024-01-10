@@ -20,14 +20,11 @@ By convention, we have that:
 ---
 
 ## Constructors
-    FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}},
-              virtualspaces::Vector{<:Union{S, CompositeSpace{S}};
-              normalize=true) where {S<:ElementarySpace}
     FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
-              maxvirtualspace::S;
+              maxvirtualspaces::Union{S,Vector{S}};
               normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
     FiniteMPS([f, eltype], N::Int, physicalspace::Union{S,CompositeSpace{S}},
-              maxvirtualspace::S;
+              maxvirtualspaces::Union{S,Vector{S}};
               normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
     FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=false)
 
@@ -58,13 +55,16 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     ARs::Vector{Union{Missing,A}}
     ACs::Vector{Union{Missing,A}}
     CLs::Vector{Union{Missing,B}}
-
-    function FiniteMPS(
-        ALs::Vector{Union{Missing,A}},
-        ARs::Vector{Union{Missing,A}},
-        ACs::Vector{Union{Missing,A}},
-        CLs::Vector{Union{Missing,B}},
-    ) where {A<:GenericMPSTensor,B<:MPSBondTensor}
+    function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
+                            ACs::Vector{Union{Missing,A}},
+                            CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
+                                                                  B<:MPSBondTensor}
+        return new{A,B}(ALs, ARs, ACs, CLs)
+    end
+    function FiniteMPS(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
+                       ACs::Vector{Union{Missing,A}},
+                       CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
+                                                             B<:MPSBondTensor}
         length(ACs) == length(CLs) - 1 == length(ALs) == length(ARs) ||
             throw(DimensionMismatch("length mismatch of tensors"))
         sum(ismissing.(ACs)) + sum(ismissing.(CLs)) < length(ACs) + length(CLs) ||
@@ -80,42 +80,30 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
             (al, ar, ac) = tup
 
             if !ismissing(al)
-                !ismissing(left_virt_spaces[i]) && (
-                    left_virt_spaces[i] == _firstspace(al) || throw(
-                        SpaceMismatch("Virtual space of AL on site $(i) doesn't match")
-                    )
-                )
+                !ismissing(left_virt_spaces[i]) &&
+                    (left_virt_spaces[i] == _firstspace(al) ||
+                     throw(SpaceMismatch("Virtual space of AL on site $(i) doesn't match")))
 
                 left_virt_spaces[i + 1] = _lastspace(al)'
                 left_virt_spaces[i] = _firstspace(al)
             end
 
             if !ismissing(ar)
-                !ismissing(right_virt_spaces[i]) && (
-                    right_virt_spaces[i] == _firstspace(ar) || throw(
-                        SpaceMismatch("Virtual space of AR on site $(i) doesn't match")
-                    )
-                )
+                !ismissing(right_virt_spaces[i]) &&
+                    (right_virt_spaces[i] == _firstspace(ar) ||
+                     throw(SpaceMismatch("Virtual space of AR on site $(i) doesn't match")))
 
                 right_virt_spaces[i + 1] = _lastspace(ar)'
                 right_virt_spaces[i] = _firstspace(ar)
             end
 
             if !ismissing(ac)
-                !ismissing(left_virt_spaces[i]) && (
-                    left_virt_spaces[i] == _firstspace(ac) || throw(
-                        SpaceMismatch(
-                            "Left virtual space of AC on site $(i) doesn't match"
-                        ),
-                    )
-                )
-                !ismissing(right_virt_spaces[i + 1]) && (
-                    right_virt_spaces[i + 1] == _lastspace(ac)' || throw(
-                        SpaceMismatch(
-                            "Right virtual space of AC on site $(i) doesn't match"
-                        ),
-                    )
-                )
+                !ismissing(left_virt_spaces[i]) &&
+                    (left_virt_spaces[i] == _firstspace(ac) ||
+                     throw(SpaceMismatch("Left virtual space of AC on site $(i) doesn't match")))
+                !ismissing(right_virt_spaces[i + 1]) &&
+                    (right_virt_spaces[i + 1] == _lastspace(ac)' ||
+                     throw(SpaceMismatch("Right virtual space of AC on site $(i) doesn't match")))
 
                 right_virt_spaces[i + 1] = _lastspace(ac)'
                 left_virt_spaces[i] = _firstspace(ac)
@@ -124,33 +112,27 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
 
         for (i, c) in enumerate(CLs)
             ismissing(c) && continue
-            !ismissing(left_virt_spaces[i]) && (
-                left_virt_spaces[i] == _firstspace(c) || throw(
-                    SpaceMismatch("Left virtual space of CL on site $(i) doesn't match")
-                )
-            )
-            !ismissing(right_virt_spaces[i]) && (
-                right_virt_spaces[i] == _lastspace(c)' || throw(
-                    SpaceMismatch("Right virtual space of CL on site $(i) doesn't match"),
-                )
-            )
+            !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(c) ||
+                                                throw(SpaceMismatch("Left virtual space of CL on site $(i) doesn't match")))
+            !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _lastspace(c)' ||
+                                                 throw(SpaceMismatch("Right virtual space of CL on site $(i) doesn't match")))
         end
 
         return new{A,B}(ALs, ARs, ACs, CLs)
     end
 end
 
-function Base.getproperty(Ψ::FiniteMPS, prop::Symbol)
+function Base.getproperty(ψ::FiniteMPS, prop::Symbol)
     if prop == :AL
-        return ALView(Ψ)
+        return ALView(ψ)
     elseif prop == :AR
-        return ARView(Ψ)
+        return ARView(ψ)
     elseif prop == :AC
-        return ACView(Ψ)
+        return ACView(ψ)
     elseif prop == :CR
-        return CRView(Ψ)
+        return CRView(ψ)
     else
-        return getfield(Ψ, prop)
+        return getfield(ψ, prop)
     end
 end
 
@@ -186,62 +168,45 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=fa
     return FiniteMPS(ALs, ARs, ACs, CLs)
 end
 
-function FiniteMPS(
-    f,
-    elt,
-    physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-    virtspaces::Vector{S};
-    normalize=true,
-) where {S<:ElementarySpace}
-    N = length(physspaces)
-    length(virtspaces) == N + 1 || throw(DimensionMismatch("length mismatch of spaces"))
-    tensors = MPSTensor.(f, elt, physspaces, virtspaces[1:(end - 1)], virtspaces[2:end])
-    return FiniteMPS(tensors; normalize=normalize, overwrite=true)
-end
-function FiniteMPS(
-    physspaces::Vector{<:Union{S,CompositeSpace{S}}}, virtspaces::Vector{S}; kwargs...
-) where {S<:ElementarySpace}
-    return FiniteMPS(rand, Defaults.eltype, physspaces, virtspaces; kwargs...)
-end
+function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
+                   maxVspaces::Vector{S}; normalize=true, left::S=oneunit(S),
+                   right::S=oneunit(S)) where {S<:ElementarySpace}
+    N = length(Pspaces)
+    length(maxVspaces) == N - 1 ||
+        throw(DimensionMismatch("length of physical spaces ($N) and virtual spaces $(length(maxVspaces)) should differ by 1"))
 
-function FiniteMPS(
-    f,
-    elt,
-    physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-    maxvirtspace::S;
-    left::S=oneunit(S),
-    right::S=oneunit(S),
-    kwargs...,
-) where {S<:ElementarySpace}
-    N = length(physspaces)
-    virtspaces = Vector{S}(undef, N + 1)
-    virtspaces[1] = left
+    # limit the maximum virtual dimension such that result is full rank
+    fusedPspaces = fuse.(Pspaces) # for working with multiple physical spaces
+    Vspaces = similar(maxVspaces, N + 1)
+
+    Vspaces[1] = left
     for k in 2:N
-        virtspaces[k] = infimum(fuse(virtspaces[k - 1], fuse(physspaces[k])), maxvirtspace)
-        dim(virtspaces[k]) > 0 || @warn "no fusion channels available"
+        Vspaces[k] = infimum(fuse(Vspaces[k - 1], fusedPspaces[k]), maxVspaces[k - 1])
+        dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
     end
-    virtspaces[N + 1] = right
 
+    Vspaces[end] = right
     for k in N:-1:2
-        virtspaces[k] = infimum(
-            virtspaces[k], fuse(virtspaces[k + 1], dual(fuse(physspaces[k])))
-        )
-        dim(virtspaces[k]) > 0 || @warn "no fusion channels available"
+        Vspaces[k] = infimum(maxVspaces[k - 1], fuse(Vspaces[k + 1], dual(fusedPspaces[k])))
+        dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
     end
 
-    return FiniteMPS(f, elt, physspaces, virtspaces; kwargs...)
+    # construct MPS
+    tensors = MPSTensor.(f, elt, Pspaces, Vspaces[1:(end - 1)], Vspaces[2:end])
+    return FiniteMPS(tensors; normalize, overwrite=true)
 end
-function FiniteMPS(
-    physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S; kwargs...
-) where {S<:ElementarySpace}
-    return FiniteMPS(rand, Defaults.eltype, physspaces, maxvirtspace; kwargs...)
+function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
+                   maxVspace::S; kwargs...) where {S<:ElementarySpace}
+    maxVspaces = fill(maxVspace, length(Pspaces) - 1)
+    return FiniteMPS(f, elt, Pspaces, maxVspaces; kwargs...)
+end
+function FiniteMPS(Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
+                   maxVspaces::Union{S,Vector{S}};
+                   kwargs...) where {S<:ElementarySpace}
+    return FiniteMPS(rand, Defaults.eltype, Pspaces, maxVspaces; kwargs...)
 end
 
-FiniteMPS(P::ProductSpace, args...; kwargs...) = FiniteMPS(collect(P), args...; kwargs...)
-function FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...)
-    return FiniteMPS(f, elt, collect(P), args...; kwargs...)
-end
-
+# Also accept single physical space and length
 function FiniteMPS(N::Int, V::VectorSpace, args...; kwargs...)
     return FiniteMPS(fill(V, N), args...; kwargs...)
 end
@@ -249,20 +214,26 @@ function FiniteMPS(f, elt, N::Int, V::VectorSpace, args...; kwargs...)
     return FiniteMPS(f, elt, fill(V, N), args...; kwargs...)
 end
 
+# Also accept ProductSpace of physical spaces
+FiniteMPS(P::ProductSpace, args...; kwargs...) = FiniteMPS(collect(P), args...; kwargs...)
+function FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...)
+    return FiniteMPS(f, elt, collect(P), args...; kwargs...)
+end
+
 #===========================================================================================
 Utility
 ===========================================================================================#
 
-Base.size(Ψ::FiniteMPS, args...) = size(Ψ.ALs, args...)
-Base.length(Ψ::FiniteMPS) = length(Ψ.ALs)
-Base.eltype(Ψtype::Type{<:FiniteMPS}) = site_type(Ψtype) # this might not be true
-Base.copy(Ψ::FiniteMPS) = FiniteMPS(copy(Ψ.ALs), copy(Ψ.ARs), copy(Ψ.ACs), copy(Ψ.CLs))
-function Base.similar(Ψ::FiniteMPS)
-    return FiniteMPS(similar(Ψ.ALs), similar(Ψ.ARs), similar(Ψ.ACs), similar(Ψ.CLs))
+Base.size(ψ::FiniteMPS, args...) = size(ψ.ALs, args...)
+Base.length(ψ::FiniteMPS) = length(ψ.ALs)
+Base.eltype(ψtype::Type{<:FiniteMPS}) = site_type(ψtype) # this might not be true
+Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.CLs))
+function Base.similar(ψ::FiniteMPS{A,B}) where {A,B}
+    return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.CLs))
 end
 
-function Base.convert(TType::Type{<:AbstractTensorMap}, Ψ::FiniteMPS)
-    T = foldl(Ψ.AR[2:end]; init=first(Ψ.AC)) do x, y
+function Base.convert(TType::Type{<:AbstractTensorMap}, ψ::FiniteMPS)
+    T = foldl(ψ.AR[2:end]; init=first(ψ.AC)) do x, y
         return _transpose_front(x * _transpose_tail(y))
     end
     return convert(TType, T)
@@ -270,73 +241,75 @@ end
 
 site_type(::Type{<:FiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:FiniteMPS{<:Any,B}}) where {B} = B
-
-function left_virtualspace(Ψ::FiniteMPS, n::Integer)
-    if n > 0 && !ismissing(Ψ.ALs[n])
-        dual(_lastspace(Ψ.ALs[n]))
-    elseif n < length(Ψ.ALs) && !ismissing(Ψ.ALs[n + 1])
-        _firstspace(Ψ.ALs[n + 1])
-    else
-        _firstspace(Ψ.CR[n])
-    end
-end
-function right_virtualspace(Ψ::FiniteMPS, n::Integer)
-    if n > 0 && !ismissing(Ψ.ARs[n])
-        dual(_lastspace(Ψ.ARs[n]))
-    elseif n < length(Ψ.ARs) && !ismissing(Ψ.ARs[n + 1])
-        _firstspace(Ψ.ARs[n + 1])
-    else
-        dual(_lastspace(Ψ.CR[n]))
-    end
+function TensorKit.storagetype(::Union{MPS,Type{MPS}}) where {A,MPS<:FiniteMPS{A}}
+    return storagetype(A)
 end
 
-function physicalspace(Ψ::FiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer) where {N}
-    N == 1 && return ProductSpace{spacetype(Ψ)}()
-    A = if !ismissing(Ψ.ALs[n])
-        Ψ.ALs[n]
-    elseif !ismissing(Ψ.ARs[n])
-        Ψ.ARs[n] # should never reach last case?
+function left_virtualspace(ψ::FiniteMPS, n::Integer)
+    if n > 0 && !ismissing(ψ.ALs[n])
+        dual(_lastspace(ψ.ALs[n]))
+    elseif n < length(ψ.ALs) && !ismissing(ψ.ALs[n + 1])
+        _firstspace(ψ.ALs[n + 1])
     else
-        Ψ.AC[n] # should never reach last case?
+        _firstspace(ψ.CR[n])
+    end
+end
+function right_virtualspace(ψ::FiniteMPS, n::Integer)
+    if n > 0 && !ismissing(ψ.ARs[n])
+        dual(_lastspace(ψ.ARs[n]))
+    elseif n < length(ψ.ARs) && !ismissing(ψ.ARs[n + 1])
+        _firstspace(ψ.ARs[n + 1])
+    else
+        dual(_lastspace(ψ.CR[n]))
+    end
+end
+
+function physicalspace(ψ::FiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer) where {N}
+    N == 1 && return ProductSpace{spacetype(ψ)}()
+    A = if !ismissing(ψ.ALs[n])
+        ψ.ALs[n]
+    elseif !ismissing(ψ.ARs[n])
+        ψ.ARs[n] # should never reach last case?
+    else
+        ψ.AC[n] # should never reach last case?
     end # should never reach last case?
 
     if N == 2
         return space(A, 2)
     else
-        return ProductSpace{spacetype(Ψ),N - 1}(
-            space.(Ref(A), Base.front(Base.tail(TensorKit.allind(A))))
-        )
+        return ProductSpace{spacetype(ψ),N - 1}(space.(Ref(A),
+                                                       Base.front(Base.tail(TensorKit.allind(A)))))
     end
 end
 
-TensorKit.space(Ψ::FiniteMPS{<:MPSTensor}, n::Integer) = space(Ψ.AC[n], 2)
-function TensorKit.space(Ψ::FiniteMPS{<:GenericMPSTensor}, n::Integer)
-    t = Ψ.AC[n]
+TensorKit.space(ψ::FiniteMPS{<:MPSTensor}, n::Integer) = space(ψ.AC[n], 2)
+function TensorKit.space(ψ::FiniteMPS{<:GenericMPSTensor}, n::Integer)
+    t = ψ.AC[n]
     S = spacetype(t)
     return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
 end
 
 """
-    max_Ds(Ψ::FiniteMPS) -> Vector{Float64}
+    max_Ds(ψ::FiniteMPS) -> Vector{Float64}
 
 Compute the dimension of the maximal virtual space at a given site.
 """
-function max_Ds(Ψ::FiniteMPS)
-    N = length(Ψ)
-    physicaldims = dim.(space.(Ref(Ψ)), 1:N)
-    D_left = cumprod(vcat(dim(left_virtualspace(Ψ, 1)), physicaldims))
-    D_right = cumprod(vcat(dim(right_virtualspace(Ψ, N)), reverse(physicaldims)))
+function max_Ds(ψ::FiniteMPS)
+    N = length(ψ)
+    physicaldims = dim.(space.(Ref(ψ)), 1:N)
+    D_left = cumprod(vcat(dim(left_virtualspace(ψ, 1)), physicaldims))
+    D_right = cumprod(vcat(dim(right_virtualspace(ψ, N)), reverse(physicaldims)))
     return min.(D_left, D_right)
 end
 
-function Base.show(io::IO, ::MIME"text/plain", Ψ::FiniteMPS)
-    L = length(Ψ)
+function Base.show(io::IO, ::MIME"text/plain", ψ::FiniteMPS)
+    L = length(ψ)
     println(io, L == 1 ? "single site" : "$L-site", " FiniteMPS:")
-    context = IOContext(io, :typeinfo => eltype(Ψ), :compact => true)
-    return show(context, Ψ)
+    context = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
+    return show(context, ψ)
 end
-Base.show(io::IO, Ψ::FiniteMPS) = show(convert(IOContext, io), Ψ)
-function Base.show(io::IOContext, Ψ::FiniteMPS)
+Base.show(io::IO, ψ::FiniteMPS) = show(convert(IOContext, io), ψ)
+function Base.show(io::IOContext, ψ::FiniteMPS)
     charset = (; start="┌", mid="├", stop="└", ver="│", dash="──")
     limit = get(io, :limit, false)::Bool
     half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
@@ -344,68 +317,43 @@ function Base.show(io::IOContext, Ψ::FiniteMPS)
         io = IOContext(io, :compact => true)
     end
 
-    L = length(Ψ)
-    center = something(findlast(!ismissing, Ψ.ALs), 0)
-    if center != L && !ismissing(Ψ.ACs[center + 1])
+    L = length(ψ)
+    center = something(findlast(!ismissing, ψ.ALs), 0)
+    if center != L && !ismissing(ψ.ACs[center + 1])
         center += 1
     end
 
     for site in reverse(1:L)
         if site < half_screen_rows || site > L - half_screen_rows
             if site > center
-                ismissing(Ψ.ARs[site]) && throw(ArgumentError("invalid state"))
-                println(
-                    io,
-                    site == L ? charset.start : charset.mid,
-                    charset.dash,
-                    " AR[$site]: ",
-                    Ψ.ARs[site],
-                )
+                ismissing(ψ.ARs[site]) && throw(ArgumentError("invalid state"))
+                println(io, site == L ? charset.start : charset.mid, charset.dash,
+                        " AR[$site]: ", ψ.ARs[site])
                 if site == 1
-                    ismissing(Ψ.CLs[site]) && throw(ArgumentError("invalid state"))
-                    println(io, charset.stop, " CL[$site]: ", Ψ.CLs[site])
+                    ismissing(ψ.CLs[site]) && throw(ArgumentError("invalid state"))
+                    println(io, charset.stop, " CL[$site]: ", ψ.CLs[site])
                 end
             elseif site == center
-                if !ismissing(Ψ.ACs[site])
-                    println(
-                        io,
-                        if site == L
-                            charset.start
-                        elseif site == 1
-                            charset.stop
-                        else
-                            charset.mid
-                        end,
-                        charset.dash,
-                        " AC[$site]: ",
-                        Ψ.ACs[site],
-                    )
-                elseif !ismissing(Ψ.ALs[site]) && !ismissing(Ψ.CLs[site + 1])
-                    println(
-                        io,
-                        site == L ? charset.start : charset.ver,
-                        " CL[$(site+1)]: ",
-                        Ψ.CLs[site + 1],
-                    )
-                    println(
-                        io,
-                        site == 1 ? charset.stop : charset.mid,
-                        charset.dash,
-                        " AL[$site]: ",
-                        Ψ.ALs[site],
-                    )
+                if !ismissing(ψ.ACs[site])
+                    println(io, if site == L
+                                charset.start
+                            elseif site == 1
+                                charset.stop
+                            else
+                                charset.mid
+                            end, charset.dash, " AC[$site]: ", ψ.ACs[site])
+                elseif !ismissing(ψ.ALs[site]) && !ismissing(ψ.CLs[site + 1])
+                    println(io, site == L ? charset.start : charset.ver, " CL[$(site+1)]: ",
+                            ψ.CLs[site + 1])
+                    println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
+                            " AL[$site]: ", ψ.ALs[site])
                 else
                     throw(ArgumentError("invalid state"))
                 end
             else
-                ismissing(Ψ.ALs[site]) && throw(ArgumentError("invalid state"))
-                println(
-                    io,
-                    site == 1 ? charset.stop : charset.mid,
-                    charset.dash,
-                    " AL[$site]: ",
-                    Ψ.ALs[site],
-                )
+                ismissing(ψ.ALs[site]) && throw(ArgumentError("invalid state"))
+                println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
+                        " AL[$site]: ", ψ.ALs[site])
             end
         elseif site == half_screen_rows
             println(io, charset.ver, "⋮")
@@ -421,82 +369,112 @@ Linear Algebra
 #=
 No support yet for converting the scalar type, also no in-place operations
 =#
-Base.:*(Ψ::FiniteMPS, a::Number) = rmul!(copy(Ψ), a)
-Base.:*(a::Number, Ψ::FiniteMPS) = lmul!(a, copy(Ψ))
+Base.:*(ψ::FiniteMPS, a::Number) = rmul!(copy(ψ), a)
+Base.:*(a::Number, ψ::FiniteMPS) = lmul!(a, copy(ψ))
 
-function Base.:+(Ψ₁::FiniteMPS{A}, Ψ₂::FiniteMPS{A}) where {A}
-    length(Ψ₁) == length(Ψ₂) || throw(DimensionMismatch())
-    N = length(Ψ₁)
-    for k in 1:N
-        space(Ψ₁, k) == space(Ψ₂, k) ||
-            throw(SpaceMismatch("Non-matching physical space on site $k."))
+function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS<:FiniteMPS}
+    length(ψ₁) == length(ψ₂) ||
+        throw(DimensionMismatch("Cannot add states of length $(length(ψ₁)) and $(length(ψ₂))"))
+    @assert length(ψ₁) > 1 "not implemented for length < 2"
+
+    ψ = similar(ψ₁)
+    fill!(ψ.ALs, missing)
+    fill!(ψ.ARs, missing)
+    fill!(ψ.ACs, missing)
+    fill!(ψ.CLs, missing)
+
+    halfN = div(length(ψ), 2)
+
+    # left half
+    F₁ = isometry(storagetype(ψ), (_lastspace(ψ₁.AL[1]) ⊕ _lastspace(ψ₂.AL[1]))',
+                  _lastspace(ψ₁.AL[1])')
+    F₂ = leftnull(F₁)
+    @assert _lastspace(F₂) == _lastspace(ψ₂.AL[1])
+
+    AL = ψ₁.AL[1] * F₁' + ψ₂.AL[1] * F₂'
+    ψ.ALs[1], R = leftorth!(AL)
+
+    for i in 2:halfN
+        AL₁ = _transpose_front(F₁ * _transpose_tail(ψ₁.AL[i]))
+        AL₂ = _transpose_front(F₂ * _transpose_tail(ψ₂.AL[i]))
+
+        F₁ = isometry(storagetype(ψ), (_lastspace(AL₁) ⊕ _lastspace(ψ₂.AL[i]))',
+                      _lastspace(AL₁)')
+        F₂ = leftnull(F₁)
+        @assert _lastspace(F₂) == _lastspace(ψ₂.AL[i])
+
+        AL = _transpose_front(R * _transpose_tail(AL₁ * F₁' + AL₂ * F₂'))
+        ψ.ALs[i], R = leftorth!(AL)
     end
-    left_virtualspace(Ψ₁, 0) == left_virtualspace(Ψ₂, 0) ||
-        throw(SpaceMismatch("Non-matching left virtual space."))
-    right_virtualspace(Ψ₁, N) == right_virtualspace(Ψ₂, N) ||
-        throw(SpaceMismatch("Non-matching right virtual space."))
 
-    tensors = A[]
+    C₁ = F₁ * ψ₁.CR[halfN]
+    C₂ = F₂ * ψ₂.CR[halfN]
 
-    k = 1 # firstindex(Ψ₁)
-    t1 = Ψ₁.AL[k]
-    t2 = Ψ₂.AL[k]
-    V1 = domain(t1)[1]
-    V2 = domain(t2)[1]
-    w1 = isometry(storagetype(A), V1 ⊕ V2, V1)
-    w2 = leftnull(w1)
-    @assert domain(w2) == ⊗(V2)
+    # right half
+    F₁ = isometry(storagetype(ψ), _firstspace(ψ₁.AR[end]) ⊕ _firstspace(ψ₂.AR[end]),
+                  _firstspace(ψ₁.AR[end]))
+    F₂ = leftnull(F₁)
+    @assert _lastspace(F₂) == _firstspace(ψ₂.AR[end])'
 
-    push!(tensors, t1 * w1' + t2 * w2')
-    for k in 2:(N - 1)
-        t1 = _transpose_front(w1 * _transpose_tail(Ψ₁.AL[k]))
-        t2 = _transpose_front(w2 * _transpose_tail(Ψ₂.AL[k]))
-        V1 = domain(t1)[1]
-        V2 = domain(t2)[1]
-        w1 = isometry(storagetype(A), V1 ⊕ V2, V1)
-        w2 = leftnull(w1)
-        @assert domain(w2) == ⊗(V2)
-        push!(tensors, t1 * w1' + t2 * w2')
+    AR = F₁ * _transpose_tail(ψ₁.AR[end]) + F₂ * _transpose_tail(ψ₂.AR[end])
+    L, AR′ = rightorth!(AR)
+    ψ.ARs[end] = _transpose_front(AR′)
+
+    for i in Iterators.reverse((halfN + 1):(length(ψ) - 1))
+        AR₁ = _transpose_tail(ψ₁.AR[i] * F₁')
+        AR₂ = _transpose_tail(ψ₂.AR[i] * F₂')
+
+        F₁ = isometry(storagetype(ψ), _firstspace(ψ₁.AR[i]) ⊕ _firstspace(AR₂),
+                      _firstspace(ψ₁.AR[i]))
+        F₂ = leftnull(F₁)
+        @assert _lastspace(F₂) == _firstspace(AR₂)'
+
+        AR = _transpose_tail(_transpose_front(F₁ * AR₁ + F₂ * AR₂) * L)
+        L, AR′ = rightorth!(AR)
+        ψ.ARs[i] = _transpose_front(AR′)
     end
-    k = N
-    t1 = _transpose_front(w1 * _transpose_tail(Ψ₁.AC[k]))
-    t2 = _transpose_front(w2 * _transpose_tail(Ψ₂.AC[k]))
-    push!(tensors, t1 + t2)
-    return FiniteMPS(tensors)
-end
-Base.:-(Ψ₁::FiniteMPS, Ψ₂::FiniteMPS) = Ψ₁ + (-1 * Ψ₂)
 
-function TensorKit.lmul!(a::Number, Ψ::FiniteMPS)
-    Ψ.ACs .*= a
-    Ψ.CLs .*= a
-    return Ψ
+    # center
+    C₁ = C₁ * F₁'
+    C₂ = C₂ * F₂'
+    ψ.CLs[halfN + 1] = R * (C₁ + C₂) * L
+
+    return ψ
 end
 
-function TensorKit.rmul!(Ψ::FiniteMPS, a::Number)
-    Ψ.ACs .*= a
-    Ψ.CLs .*= a
-    return Ψ
+Base.:-(ψ₁::FiniteMPS, ψ₂::FiniteMPS) = ψ₁ + (-1 * ψ₂)
+
+function TensorKit.lmul!(a::Number, ψ::FiniteMPS)
+    ψ.ACs .*= a
+    ψ.CLs .*= a
+    return ψ
 end
 
-function TensorKit.dot(Ψ₁::FiniteMPS, Ψ₂::FiniteMPS)
+function TensorKit.rmul!(ψ::FiniteMPS, a::Number)
+    ψ.ACs .*= a
+    ψ.CLs .*= a
+    return ψ
+end
+
+function TensorKit.dot(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
     #todo : rewrite this without having to gauge
-    length(Ψ₁) == length(Ψ₂) || throw(ArgumentError("MPS with different length"))
-    ρr = TransferMatrix(Ψ₂.AR[2:end], Ψ₁.AR[2:end]) * r_RR(Ψ₂)
-    return tr(_transpose_front(Ψ₁.AC[1])' * _transpose_front(Ψ₂.AC[1]) * ρr)
+    length(ψ₁) == length(ψ₂) || throw(ArgumentError("MPS with different length"))
+    ρr = TransferMatrix(ψ₂.AR[2:end], ψ₁.AR[2:end]) * r_RR(ψ₂)
+    return tr(_transpose_front(ψ₁.AC[1])' * _transpose_front(ψ₂.AC[1]) * ρr)
 end
 
 #todo : rewrite this without having to gauge
-TensorKit.norm(Ψ::FiniteMPS) = norm(Ψ.AC[1])
-TensorKit.normalize!(Ψ::FiniteMPS) = rmul!(Ψ, 1 / norm(Ψ))
-TensorKit.normalize(Ψ::FiniteMPS) = normalize!(copy(Ψ))
+TensorKit.norm(ψ::FiniteMPS) = norm(ψ.AC[1])
+TensorKit.normalize!(ψ::FiniteMPS) = rmul!(ψ, 1 / norm(ψ))
+TensorKit.normalize(ψ::FiniteMPS) = normalize!(copy(ψ))
 
 #===========================================================================================
 Fixedpoints
 ===========================================================================================#
 
-function r_RR(Ψ::FiniteMPS{T}) where {T}
-    return isomorphism(storagetype(T), domain(Ψ.AR[end]), domain(Ψ.AR[end]))
+function r_RR(ψ::FiniteMPS{T}) where {T}
+    return isomorphism(storagetype(T), domain(ψ.AR[end]), domain(ψ.AR[end]))
 end
-function l_LL(Ψ::FiniteMPS{T}) where {T}
-    return isomorphism(storagetype(T), space(Ψ.AL[1], 1), space(Ψ.AL[1], 1))
+function l_LL(ψ::FiniteMPS{T}) where {T}
+    return isomorphism(storagetype(T), space(ψ.AL[1], 1), space(ψ.AL[1], 1))
 end

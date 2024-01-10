@@ -1,10 +1,10 @@
 """
     entanglementplot(state; site=0[, kwargs])
 
-Plot the entanglement spectrum of a given InfiniteMPS.
+Plot the entanglement spectrum of a given InfiniteMPS. 
 
 # Arguments
-- `site::Int=0`: mps index for multisite unit cells.
+- `site::Int=0`: mps index for multisite unit cells. Spectrum is computed for the bond between `site` and `site + 1`.
 - `expand_symmetry::Logical=false`: add quantum dimension degeneracies.
 - `sortby=maximum`: the method of sorting the sectors.
 - `sector_margin=1//10`: the amount of whitespace between sectors.
@@ -14,18 +14,12 @@ Plot the entanglement spectrum of a given InfiniteMPS.
 function entanglementplot end
 @userplot EntanglementPlot
 
-@recipe function f(
-    h::EntanglementPlot;
-    site=0,
-    expand_symmetry=false,
-    sortby=maximum,
-    sector_margin=1//10,
-    sector_formatter=string,
-)
+@recipe function f(h::EntanglementPlot; site=0, expand_symmetry=false, sortby=maximum,
+                   sector_margin=1 // 10, sector_formatter=string)
     mps = h.args[1]
     site <= length(mps) || throw(ArgumentError("Not a valid site for the given mps."))
 
-    spectra = entanglement_spectrum(mps)
+    spectra = entanglement_spectrum(mps, site)
     sectors = []
     spectrum = []
     for (c, b) in spectra
@@ -53,7 +47,7 @@ function entanglementplot end
 
             # Put single dot in the middle, or a linear range with padding.
             if n_spectrum == 1
-                x = [i + 1//2]
+                x = [i + 1 // 2]
             else
                 x = range(i + sector_margin, i + 1 - sector_margin; length=n_spectrum)
             end
@@ -75,8 +69,9 @@ function entanglementplot end
 
     ylims --> (-Inf, 1 + 1e-1)
     yscale --> :log10
+    label := nothing
 
-    return ([])
+    return []
 end
 
 """
@@ -95,22 +90,16 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 """
 function transferplot end
 @userplot TransferPlot
-@recipe function f(
-    h::TransferPlot;
-    sectors=nothing,
-    transferkwargs=(;),
-    thetaorigin=0,
-    sector_formatter=string,
-)
+@recipe function f(h::TransferPlot; sectors=nothing, transferkwargs=(;), thetaorigin=0,
+                   sector_formatter=string)
     if sectors === nothing
         sectors = [one(sectortype(h.args[1]))]
     end
 
     for sector in sectors
         below = length(h.args) == 1 ? h.args[1] : h.args[2]
-        spectrum = transfer_spectrum(
-            h.args[1]; below=below, sector=sector, transferkwargs...
-        )
+        spectrum = transfer_spectrum(h.args[1]; below=below, sector=sector,
+                                     transferkwargs...)
 
         @series begin
             yguide --> "r"

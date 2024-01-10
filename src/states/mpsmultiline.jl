@@ -21,9 +21,8 @@ See also: [`Multiline`](@ref)
 function MPSMultiline end
 
 MPSMultiline(mpss::AbstractVector{<:InfiniteMPS}) = Multiline(mpss)
-function MPSMultiline(
-    pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...
-) where {S<:VectorSpace}
+function MPSMultiline(pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S};
+                      kwargs...) where {S<:VectorSpace}
     data = map(eachrow(pspaces), eachrow(Dspaces)) do p, D
         return InfiniteMPS(p, D; kwargs...)
     end
@@ -35,9 +34,8 @@ function MPSMultiline(As::AbstractMatrix{T}; kwargs...) where {T<:GenericMPSTens
     end
     return MPSMultiline(data)
 end
-function MPSMultiline(
-    ALs::AbstractMatrix{<:GenericMPSTensor}, C₀::AbstractVector{<:MPSBondTensor}; kwargs...
-)
+function MPSMultiline(ALs::AbstractMatrix{<:GenericMPSTensor},
+                      C₀::AbstractVector{<:MPSBondTensor}; kwargs...)
     data = map(eachrow(ALs), C₀) do ALrow, C₀row
         return InfiniteMPS(ALrow, C₀row; kwargs...)
     end
@@ -71,6 +69,7 @@ site_type(::Type{Multiline{S}}) where {S} = site_type(S)
 bond_type(::Type{Multiline{S}}) where {S} = bond_type(S)
 site_type(st::Multiline) = site_type(typeof(st))
 bond_type(st::Multiline) = bond_type(typeof(st))
+VectorInterface.scalartype(::Multiline{T}) where {T} = scalartype(T)
 
 function TensorKit.dot(a::MPSMultiline, b::MPSMultiline; kwargs...)
     return sum(dot.(parent(a), parent(b); kwargs...))

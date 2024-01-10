@@ -18,46 +18,44 @@ Single site infinite DMRG algorithm for finding groundstates.
     verbose::Bool = Defaults.verbose
 end
 
-function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG1, oenvs=environments(ost, ham))
-    Ψ = copy(ost)
+function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(ost, H))
+    ψ = copy(ost)
     envs = IDMRGEnv(ost, oenvs)
 
     delta::Float64 = 2 * alg.tol_galerkin
 
     for topit in 1:(alg.maxiter)
         delta = 0.0
-        curc = Ψ.CR[0]
+        curc = ψ.CR[0]
 
-        for pos in 1:length(Ψ)
-            h = ∂∂AC(pos, Ψ, ham, envs)
-            _, vecs = eigsolve(h, Ψ.AC[pos], 1, :SR, alg.eigalg)
+        for pos in 1:length(ψ)
+            h = ∂∂AC(pos, ψ, H, envs)
+            _, vecs = eigsolve(h, ψ.AC[pos], 1, :SR, alg.eigalg)
 
-            Ψ.AC[pos] = vecs[1]
-            Ψ.AL[pos], Ψ.CR[pos] = leftorth(vecs[1])
+            ψ.AC[pos] = vecs[1]
+            ψ.AL[pos], ψ.CR[pos] = leftorth(vecs[1])
 
-            tm = TransferMatrix(Ψ.AL[pos], ham[pos], Ψ.AL[pos])
-            setleftenv!(envs, pos + 1, leftenv(envs, pos) * tm)
+            update_leftenv!(envs, ψ, H, pos + 1)
         end
 
-        for pos in length(Ψ):-1:1
-            h = ∂∂AC(pos, Ψ, ham, envs)
-            _, vecs = eigsolve(h, Ψ.AC[pos], 1, :SR, alg.eigalg)
+        for pos in length(ψ):-1:1
+            h = ∂∂AC(pos, ψ, H, envs)
+            _, vecs = eigsolve(h, ψ.AC[pos], 1, :SR, alg.eigalg)
 
-            Ψ.AC[pos] = vecs[1]
-            Ψ.CR[pos - 1], temp = rightorth(_transpose_tail(vecs[1]))
-            Ψ.AR[pos] = _transpose_front(temp)
+            ψ.AC[pos] = vecs[1]
+            ψ.CR[pos - 1], temp = rightorth(_transpose_tail(vecs[1]))
+            ψ.AR[pos] = _transpose_front(temp)
 
-            tm = TransferMatrix(Ψ.AR[pos], ham[pos], Ψ.AR[pos])
-            setrightenv!(envs, pos - 1, tm * rightenv(envs, pos))
+            update_rightenv!(envs, ψ, H, pos - 1)
         end
 
-        delta = norm(curc - Ψ.CR[0])
+        delta = norm(curc - ψ.CR[0])
         delta < alg.tol_galerkin && break
         alg.verbose && @info "idmrg iter $(topit) err $(delta)"
     end
 
-    nst = InfiniteMPS(Ψ.AR[1:end]; tol=alg.tol_gauge)
-    nenvs = environments(nst, ham; solver=oenvs.solver)
+    nst = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
+    nenvs = environments(nst, H; solver=oenvs.solver)
     return nst, nenvs, delta
 end
 
@@ -83,7 +81,7 @@ end
     trscheme = truncerr(1e-6)
 end
 
-function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments(ost, ham))
+function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(ost, H))
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
 
     st = copy(ost)
@@ -99,7 +97,7 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
         # sweep from left to right
         for pos in 1:(length(st) - 1)
             ac2 = st.AC[pos] * _transpose_tail(st.AR[pos + 1])
-            h_ac2 = ∂∂AC2(pos, st, ham, envs)
+            h_ac2 = ∂∂AC2(pos, st, H, envs)
             _, vecs, _ = eigsolve(h_ac2, ac2, 1, :SR, alg.eigalg)
 
             (al, c, ar, ϵ) = tsvd(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())
@@ -110,16 +108,14 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
             st.AR[pos + 1] = _transpose_front(ar)
             st.AC[pos + 1] = _transpose_front(c * ar)
 
-            tm_L = TransferMatrix(st.AL[pos], ham[pos], st.AL[pos])
-            setleftenv!(envs, pos + 1, leftenv(envs, pos) * tm_L)
-            tm_R = TransferMatrix(st.AR[pos + 1], ham[pos + 1], st.AR[pos + 1])
-            setrightenv!(envs, pos, tm_R * rightenv(envs, pos + 1))
+            update_leftenv!(envs, st, H, pos + 1)
+            update_rightenv!(envs, st, H, pos)
         end
 
         # update the edge
-        @plansor ac2[-1 -2; -3 -4] :=
-            st.AC[end][-1 -2; 1] * inv(st.CR[0])[1; 2] * st.AL[1][2 -4; 3] * st.CR[1][3; -3]
-        h_ac2 = ∂∂AC2(0, st, ham, envs)
+        @plansor ac2[-1 -2; -3 -4] := st.AC[end][-1 -2; 1] * inv(st.CR[0])[1; 2] *
+                                      st.AL[1][2 -4; 3] * st.CR[1][3; -3]
+        h_ac2 = ∂∂AC2(0, st, H, envs)
         _, vecs, _ = eigsolve(h_ac2, ac2, 1, :SR, alg.eigalg)
 
         (al, c, ar, ϵ) = tsvd(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())
@@ -135,15 +131,13 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
         curc = complex(c)
 
         # update environments
-        tm_L = TransferMatrix(st.AL[0], ham[0], st.AL[0])
-        setleftenv!(envs, 1, leftenv(envs, 0) * tm_L)
-        tm_R = TransferMatrix(st.AR[1], ham[1], st.AR[1])
-        setrightenv!(envs, 0, tm_R * rightenv(envs, 1))
+        update_leftenv!(envs, st, H, 1)
+        update_rightenv!(envs, st, H, 0)
 
         # sweep from right to left
         for pos in (length(st) - 1):-1:1
             ac2 = st.AL[pos] * _transpose_tail(st.AC[pos + 1])
-            h_ac2 = ∂∂AC2(pos, st, ham, envs)
+            h_ac2 = ∂∂AC2(pos, st, H, envs)
             _, vecs, _ = eigsolve(h_ac2, ac2, 1, :SR, alg.eigalg)
 
             (al, c, ar, ϵ) = tsvd(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())
@@ -155,21 +149,16 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
             st.AR[pos + 1] = _transpose_front(ar)
             st.AC[pos + 1] = _transpose_front(c * ar)
 
-            tm_L = TransferMatrix(st.AL[pos], ham[pos], st.AL[pos])
-            setleftenv!(envs, pos + 1, leftenv(envs, pos) * tm_L)
-            tm_R = TransferMatrix(st.AR[pos + 1], ham[pos + 1], st.AR[pos + 1])
-            setrightenv!(envs, pos, tm_R * rightenv(envs, pos + 1))
+            update_leftenv!(envs, st, H, pos + 1)
+            update_rightenv!(envs, st, H, pos)
         end
 
         # update the edge
-        @plansor ac2[-1 -2; -3 -4] :=
-            st.CR[end - 1][-1; 1] *
-            st.AR[end][1 -2; 2] *
-            inv(st.CR[end])[2; 3] *
-            st.AC[1][3 -4; -3]
-        h_ac2 = ∂∂AC2(0, st, ham, envs)
-        (eigvals, vecs) = eigsolve(h_ac2, ac2, 1, :SR, alg.eigalg)
-        (al, c, ar, ϵ) = tsvd(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())
+        @plansor ac2[-1 -2; -3 -4] := st.CR[end - 1][-1; 1] * st.AR[end][1 -2; 2] *
+                                      inv(st.CR[end])[2; 3] * st.AC[1][3 -4; -3]
+        h_ac2 = ∂∂AC2(0, st, H, envs)
+        eigvals, vecs = eigsolve(h_ac2, ac2, 1, :SR, alg.eigalg)
+        al, c, ar, ϵ = tsvd(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())
         normalize!(c)
 
         st.AR[end] = _transpose_front(inv(st.CR[end - 1]) * _transpose_tail(al * c))
@@ -178,10 +167,8 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
         st.AR[1] = _transpose_front(ar)
         st.AC[1] = _transpose_front(c * ar)
 
-        tm_L = TransferMatrix(st.AL[0], ham[0], st.AL[0])
-        setleftenv!(envs, 1, leftenv(envs, 0) * tm_L)
-        tm_R = TransferMatrix(st.AR[1], ham[1], st.AR[1])
-        setrightenv!(envs, 0, tm_R * rightenv(envs, 1))
+        update_leftenv!(envs, st, H, 1)
+        update_rightenv!(envs, st, H, 0)
 
         # update error
         smallest = infimum(_firstspace(curc), _firstspace(c))
@@ -194,6 +181,6 @@ function find_groundstate(ost::InfiniteMPS, ham, alg::IDMRG2, oenvs=environments
     end
 
     nst = InfiniteMPS(st.AR[1:end]; tol=alg.tol_gauge)
-    nenvs = environments(nst, ham; solver=oenvs.solver)
+    nenvs = environments(nst, H; solver=oenvs.solver)
     return nst, nenvs, delta
 end

@@ -6,6 +6,7 @@ using MPSKit
 using MPSKit: _transpose_tail, _transpose_front
 using TensorKit
 using TensorKit: PlanarTrivial, ℙ
+using VectorInterface: One
 
 # using TensorOperations
 
@@ -18,11 +19,11 @@ function force_planar(x::AbstractTensorMap)
     return t
 end
 function force_planar(mpo::MPOHamiltonian)
-    return MPOHamiltonian(
-        map(Iterators.product(1:(mpo.period), 1:(mpo.odim), 1:(mpo.odim))) do (i, j, k)
-            force_planar(mpo.Os[i, j, k])
-        end,
-    )
+    L = mpo.period
+    V = mpo.odim
+    return MPOHamiltonian(map(Iterators.product(1:L, 1:V, 1:V)) do (i, j, k)
+                              return force_planar(mpo.Os[i, j, k])
+                          end)
 end
 force_planar(mpo::DenseMPO) = DenseMPO(force_planar.(mpo.opp))
 
@@ -70,11 +71,16 @@ function bilinear_biquadratic_model(::Type{SU2Irrep}; θ=atan(1 / 3))
     return MPOHamiltonian(H)
 end
 
-function classical_ising()
-    β = log(1 + sqrt(2)) / 2
+function ising_bond_tensor(β)
     t = [exp(β) exp(-β); exp(-β) exp(β)]
     r = eigen(t)
     nt = r.vectors * sqrt(Diagonal(r.values)) * r.vectors
+    return nt
+end
+
+function classical_ising()
+    β = log(1 + sqrt(2)) / 2
+    nt = ising_bond_tensor(β)
     O = zeros(ComplexF64, (2, 2, 2, 2))
     O[1, 1, 1, 1] = 1
     O[2, 2, 2, 2] = 1
@@ -83,12 +89,38 @@ function classical_ising()
     return DenseMPO(TensorMap(o, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2))
 end
 
+function finite_classical_ising(N)
+    β = log(1 + sqrt(2)) / 2
+    nt = ising_bond_tensor(β)
+
+    # bulk
+    O = zeros(ComplexF64, (2, 2, 2, 2))
+    O[1, 1, 1, 1] = 1
+    O[2, 2, 2, 2] = 1
+    @tensor o[-1 -2; -3 -4] := O[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] * nt[-4; 4]
+    Obulk = TensorMap(o, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
+
+    # left
+    OL = zeros(ComplexF64, (1, 2, 2, 2))
+    OL[1, 1, 1, 1] = 1
+    OL[1, 2, 2, 2] = 1
+    @tensor oL[-1 -2; -3 -4] := OL[-1 1; 2 3] * nt[-2; 1] * nt[-3; 2] * nt[-4; 3]
+    Oleft = TensorMap(oL, ℂ^1 * ℂ^2, ℂ^2 * ℂ^2)
+
+    # right
+    OR = zeros(ComplexF64, (2, 2, 2, 1))
+    OR[1, 1, 1, 1] = 1
+    OR[2, 2, 2, 1] = 1
+    @tensor oR[-1 -2; -3 -4] := OR[1 2; 3 -4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3]
+    Oright = TensorMap(oR, ℂ^2 * ℂ^2, ℂ^2 * ℂ^1)
+
+    return DenseMPO([Oleft, fill(Obulk, N - 2)..., Oright])
+end
+
 function sixvertex(; a=1.0, b=1.0, c=1.0)
-    d = ComplexF64[
-        a 0 0 0
-        0 c b 0
-        0 b c 0
-        0 0 0 a
-    ]
+    d = ComplexF64[a 0 0 0
+                   0 c b 0
+                   0 b c 0
+                   0 0 0 a]
     return DenseMPO(permute(TensorMap(d, ℂ^2 ⊗ ℂ^2, ℂ^2 ⊗ ℂ^2), ((1, 2), (4, 3))))
 end

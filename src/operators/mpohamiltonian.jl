@@ -17,9 +17,8 @@ MPOHamiltonian(t::TensorMap) = MPOHamiltonian(decompose_localmpo(add_util_leg(t)
 
 #a very simple utility constructor; given our "localmpo", constructs a mpohamiltonian
 function MPOHamiltonian(x::Array{T,1}) where {T<:MPOTensor{Sp}} where {Sp}
-    nOs = PeriodicArray{Union{scalartype(T),T}}(
-        fill(zero(scalartype(T)), 1, length(x) + 1, length(x) + 1)
-    )
+    nOs = PeriodicArray{Union{scalartype(T),T}}(fill(zero(scalartype(T)), 1, length(x) + 1,
+                                                     length(x) + 1))
 
     for (i, t) in enumerate(x)
         nOs[1, i, i + 1] = t
@@ -83,12 +82,9 @@ function Base.:+(a::MPOHamiltonian, e::AbstractVector)
     nOs = copy(a.data) # we don't want our addition to change different copies of the original hamiltonian
 
     for c in 1:(a.period)
-        nOs[c][1, end] +=
-            e[c] * isomorphism(
-                storagetype(nOs[c][1, end]),
-                codomain(nOs[c][1, end]),
-                domain(nOs[c][1, end]),
-            )
+        nOs[c][1, end] += e[c] *
+                          isomorphism(storagetype(nOs[c][1, end]), codomain(nOs[c][1, end]),
+                                      domain(nOs[c][1, end]))
     end
 
     return MPOHamiltonian(nOs)
@@ -173,9 +169,8 @@ end
 
 # promotion and conversion
 # ------------------------
-function Base.promote_rule(
-    ::Type{MPOHamiltonian{S,T₁,E₁}}, ::Type{MPOHamiltonian{S,T₂,E₂}}
-) where {S,T₁,E₁,T₂,E₂}
+function Base.promote_rule(::Type{MPOHamiltonian{S,T₁,E₁}},
+                           ::Type{MPOHamiltonian{S,T₂,E₂}}) where {S,T₁,E₁,T₂,E₂}
     return MPOHamiltonian{S,promote_type(T₁, T₂),promote_type(E₁, E₂)}
 end
 

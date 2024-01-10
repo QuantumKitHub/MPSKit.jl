@@ -1,11 +1,11 @@
-"
+"""
     FinEnv keeps track of the environments for FiniteMPS / WindowMPS
     It automatically checks if the queried environment is still correctly cached and if not - recalculates
 
     if above is set to nothing, above === below.
 
     opp can be a vector of nothing, in which case it'll just be the overlap
-"
+"""
 struct FinEnv{A,B,C,D} <: Cache
     above::A
 
@@ -33,29 +33,22 @@ function environments(below, opp, above, leftstart, rightstart)
         push!(rightenvs, similar(rightstart))
     end
     t = similar(below.AL[1])
-    return FinEnv(
-        above,
-        opp,
-        fill(t, length(below)),
-        fill(t, length(below)),
-        leftenvs,
-        reverse(rightenvs),
-    )
+    return FinEnv(above, opp, fill(t, length(below)), fill(t, length(below)), leftenvs,
+                  reverse(rightenvs))
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
-function environments(
-    below::FiniteMPS{S}, ham::Union{SparseMPO,MPOHamiltonian}, above=nothing
-) where {S}
+function environments(below::FiniteMPS{S}, O::Union{SparseMPO,MPOHamiltonian},
+                      above=nothing) where {S}
     lll = l_LL(below)
     rrr = r_RR(below)
     rightstart = Vector{S}()
     leftstart = Vector{S}()
 
-    for i in 1:(ham.odim)
-        util_left = Tensor(x -> storagetype(S)(undef, x), ham.domspaces[1, i]')
+    for i in 1:(O.odim)
+        util_left = Tensor(x -> storagetype(S)(undef, x), O.domspaces[1, i]')
         fill_data!(util_left, one)
-        util_right = Tensor(x -> storagetype(S)(undef, x), ham.imspaces[length(below), i]')
+        util_right = Tensor(x -> storagetype(S)(undef, x), O.imspaces[length(below), i]')
         fill_data!(util_right, one)
 
         @plansor ctl[-1 -2; -3] := lll[-1; -3] * util_left[-2]
@@ -65,7 +58,7 @@ function environments(
             ctl = zero(ctl)
         end
 
-        if (i != ham.odim && ham isa MPOHamiltonian) || (i != 1 && ham isa SparseMPO)
+        if (i != O.odim && O isa MPOHamiltonian) || (i != 1 && O isa SparseMPO)
             ctr = zero(ctr)
         end
 
@@ -73,24 +66,26 @@ function environments(
         push!(rightstart, ctr)
     end
 
-    return environments(below, ham, above, leftstart, rightstart)
+    return environments(below, O, above, leftstart, rightstart)
+end
+
+function MPSKit.environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) where {S}
+    N = length(below)
+    leftstart = isomorphism(storagetype(S),
+                            left_virtualspace(below, 0) ⊗ space(O[1], 1)' ←
+                            left_virtualspace(below, 0))
+    rightstart = isomorphism(storagetype(S),
+                             right_virtualspace(below, N) ⊗ space(O[N], 4)' ←
+                             right_virtualspace(below, length(below)))
+    return environments(below, O, above, leftstart, rightstart)
 end
 
 #extract the correct leftstart/rightstart for WindowMPS
-function environments(
-    state::WindowMPS,
-    ham::Union{SparseMPO,MPOHamiltonian,DenseMPO},
-    above=nothing;
-    lenvs=environments(state.left_gs, ham),
-    renvs=environments(state.right_gs, ham),
-)
-    return environments(
-        state,
-        ham,
-        above,
-        copy(leftenv(lenvs, 1, state.left_gs)),
-        copy(rightenv(renvs, length(state), state.right_gs)),
-    )
+function environments(state::WindowMPS, O::Union{SparseMPO,MPOHamiltonian,DenseMPO},
+                      above=nothing; lenvs=environments(state.left_gs, O),
+                      renvs=environments(state.right_gs, O))
+    return environments(state, O, above, copy(leftenv(lenvs, 1, state.left_gs)),
+                        copy(rightenv(renvs, length(state), state.right_gs)))
 end
 
 function environments(below::S, above::S) where {S<:Union{FiniteMPS,WindowMPS}}
@@ -124,8 +119,8 @@ function rightenv(ca::FinEnv, ind, state)
         #we need to recalculate
         for j in a:-1:(ind + 1)
             above = isnothing(ca.above) ? state.AR[j] : ca.above.AR[j]
-            ca.rightenvs[j] =
-                TransferMatrix(above, ca.opp[j], state.AR[j]) * ca.rightenvs[j + 1]
+            ca.rightenvs[j] = TransferMatrix(above, ca.opp[j], state.AR[j]) *
+                              ca.rightenvs[j + 1]
             ca.rdependencies[j] = state.AR[j]
         end
     end
@@ -140,8 +135,8 @@ function leftenv(ca::FinEnv, ind, state)
         #we need to recalculate
         for j in a:(ind - 1)
             above = isnothing(ca.above) ? state.AL[j] : ca.above.AL[j]
-            ca.leftenvs[j + 1] =
-                ca.leftenvs[j] * TransferMatrix(above, ca.opp[j], state.AL[j])
+            ca.leftenvs[j + 1] = ca.leftenvs[j] *
+                                 TransferMatrix(above, ca.opp[j], state.AL[j])
             ca.ldependencies[j] = state.AL[j]
         end
     end
