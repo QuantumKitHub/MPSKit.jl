@@ -106,6 +106,14 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
     return InfiniteMPS(AL, AR, CR)
 end
 
+function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}; kwargs...)
+    CR = PeriodicArray(fill(copy(C₀), length(AR)))
+    AR = PeriodicArray(copy.(AR))
+    AL = similar(AR)
+    uniform_leftorth!(AL, CR, AR; kwargs...)
+    return InfiniteMPS(AL, AR, CR)
+end
+
 #===========================================================================================
 Utility
 ===========================================================================================#

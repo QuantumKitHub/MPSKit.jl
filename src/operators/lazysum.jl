@@ -17,45 +17,35 @@ struct LazySum{O} <: AbstractVector{O}
     ops::Vector{O}
 end
 
+# for the AbstractArray interface
 Base.size(x::LazySum) = size(x.ops)
 Base.getindex(x::LazySum, i) = x.ops[i]
-#iteration and summation gets automatically implementend thanks to subtyping
-
 Base.length(x::LazySum) = prod(size(x))
 Base.similar(x::LazySum, ::Type{S}, dims::Dims) where {S} = LazySum(similar(x.ops, S, dims))
+Base.setindex!(A::LazySum, X, i) = setindex!(A.ops, X, i)
 
 # Holy traits
-struct TimeDependent end
-struct NotTimeDependent end
-
-TimeDependence(x) = NotTimeDependent()
 TimeDependence(x::LazySum) = istimed(x) ? TimeDependent() : NotTimeDependent()
-
-istimed(::TimeDependent) = true
-istimed(::NotTimeDependent) = false
-istimed(x) = istimed(TimeDependence(x))
 istimed(x::LazySum) = any(istimed, x)
 
 # constructors
 LazySum(x) = LazySum([x])
-LazySum(f::Function, x) = LazySum(map(y -> f(y), x))
-
-# Internal use only, works always
-_eval_at(x, args...) = x # -> this is what you should define for your custom structs inside a LazySum
+LazySum(ops::AbstractVector, fs::AbstractVector) = LazySum(map(MultipliedOperator, ops, fs))
 
 # wrapper around _eval_at
-eval_at(x, args...) = eval_at(TimeDependence(x), x, args...)
-eval_at(::TimeDependent, x::LazySum, t::Number) = LazySum(O -> _eval_at(O, t), x)
-function eval_at(::TimeDependent, x::LazySum)
+safe_eval(::TimeDependent, x::LazySum, t::Number) = map(O -> _eval_at(O, t), x)
+function safe_eval(::TimeDependent, x::LazySum)
     throw(ArgumentError("attempting to evaluate time-dependent LazySum without specifiying a time"))
 end
-eval_at(::NotTimeDependent, x::LazySum) = sum(O -> _eval_at(O), x)
-function eval_at(::NotTimeDependent, x::LazySum, t::Number)
+safe_eval(::NotTimeDependent, x::LazySum) = sum(_eval_at, x)
+function safe_eval(::NotTimeDependent, x::LazySum, t::Number)
     throw(ArgumentError("attempting to evaluate time-independent LazySum at time"))
 end
 
 # For users
-(x::LazySum)(t::Number) = eval_at(x, t) # using (t) should return NotTimeDependent LazySum
+# using (t) should return NotTimeDependent LazySum
+(x::LazySum)(t::Number) = safe_eval(x, t)
+Base.sum(x::LazySum) = safe_eval(x) #so it works for untimedoperator
 
 # we define the addition for LazySum and we do the rest with this
 function Base.:+(SumOfOps1::LazySum, SumOfOps2::LazySum)
@@ -64,5 +54,6 @@ end
 
 Base.:+(op1::LazySum, op2) = op1 + LazySum(op2)
 Base.:+(op1, op2::LazySum) = LazySum(op1) + op2
+Base.:+(op1::MultipliedOperator, op2::MultipliedOperator) = LazySum([op1, op2])
 
 Base.repeat(x::LazySum, args...) = LazySum(repeat.(x, args...))
