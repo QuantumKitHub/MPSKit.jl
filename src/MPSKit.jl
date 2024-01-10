@@ -28,7 +28,7 @@ export entanglementplot, transferplot
 # hamiltonian things
 export Cache
 export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline
-export UntimedOperator, TimedOperator, LazySum
+export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
 export leftenv, rightenv
