@@ -75,7 +75,7 @@ struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
         # verify tensors are compatible
         spacetype(A) == spacetype(B) ||
             throw(SpaceMismatch("incompatible space types of AL and CR"))
-        
+
         for i in 1:L
             N = numind(AL[i])
             N == numind(AR[i]) == numind(AC[i]) ||
@@ -86,7 +86,7 @@ struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
             all(space.(Ref(AL[i]), phys_ind) .== space.(Ref(AR[i]), phys_ind) .==
                 space.(Ref(AC[i]), phys_ind)) ||
                 throw(SpaceMismatch("incompatible physical spaces at site $i"))
-            
+
             # verify that the virtual spaces are compatible
             space(AL[i], 1) == dual(space(AL[i - 1], N)) &&
                 space(AR[i], 1) == dual(space(AR[i - 1], N)) &&
