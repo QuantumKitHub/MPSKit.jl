@@ -8,13 +8,28 @@
 Optimization algorithm for quasiparticle excitations on top of MPS groundstates, as
 introduced in this [paper](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.111.080401).
 
-# Fields
-- `toler::Float64`: tolerance for convergence criterium
-- `krylovdim::Int`: Krylov subspace dimension
+## Fields
+- `alg::A = Defaults.eigsolver`: algorithm to use for the eigenvalue problem
+
+## Constructors
+    
+    QuasiparticleAnsatz()
+    QuasiparticleAnsatz(; kwargs...)
+    QuasiparticleAnsatz(alg)
+
+Create a `QuasiparticleAnsatz` algorithm with the given algorithm, or by passing the 
+keyword arguments to `Arnoldi`.
 """
-@kwdef struct QuasiparticleAnsatz <: Algorithm
-    toler::Float64 = 1e-10
-    krylovdim::Int = 30
+struct QuasiparticleAnsatz{A} <: Algorithm
+    alg::A
+end
+function QuasiparticleAnsatz(; kwargs...)
+    if isempty(kwargs)
+        alg = Arnoldi(; krylovdim=30, tol=1e-10, eager=true)
+    else
+        alg = Arnoldi(; kwargs...)
+    end
+    return QuasiparticleAnsatz(alg)
 end
 
 ################################################################################
@@ -27,7 +42,7 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renv
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
 
-    Es, Vs, convhist = eigsolve(H_eff, ϕ₀, num, :SR; tol=alg.toler, krylovdim=alg.krylovdim)
+    Es, Vs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
     convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
 
     return Es, Vs
@@ -114,8 +129,7 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::FiniteQP,
     qp_envs(V) = environments(V, H, lenvs, renvs)
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = @closure(V -> effective_excitation_hamiltonian(H, V, qp_envs(V), E))
-
-    Es, Vs, convhist = eigsolve(H_eff, ϕ₀, num, :SR; tol=alg.toler, krylovdim=alg.krylovdim)
+    Es, Vs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
 
     convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
 
@@ -160,8 +174,7 @@ function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, V₀::Multiline{
         return RecursiveVec(effective_excitation_hamiltonian(H, V, qp_envs(V)).data.data)
     end
 
-    Es, Vs, convhist = eigsolve(H_eff, RecursiveVec(V₀.data.data), num, :LM;
-                                tol=alg.toler, krylovdim=alg.krylovdim)
+    Es, Vs, convhist = eigsolve(H_eff, RecursiveVec(V₀.data.data), num, :LM, alg.alg)
 
     convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
 
