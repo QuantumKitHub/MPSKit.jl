@@ -21,13 +21,13 @@ end
 #                           Infinite Excitations                               #
 ################################################################################
 
-function excitations(H, alg::QuasiparticleAnsatz, V₀::InfiniteQP, lenvs, renvs;
+function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renvs;
                      num=1, solver=Defaults.linearsolver)
-    qp_envs(V) = environments(V, H, lenvs, renvs; solver=solver)
-    H_eff = @closure(V -> effective_excitation_hamiltonian(H, V, qp_envs(V)))
+    qp_envs(ϕ) = enϕironments(ϕ, H, lenvs, renvs; solver=solver)
+    E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
+    H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
 
-    Es, Vs, convhist = eigsolve(H_eff, V₀, num, :SR; tol=alg.toler, krylovdim=alg.krylovdim)
-
+    Es, Vs, convhist = eigsolve(H_eff, ϕ₀, num, :SR; tol=alg.toler, krylovdim=alg.krylovdim)
     convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
 
     return Es, Vs
@@ -108,13 +108,14 @@ end
 #                           Finite Excitations                                 #
 ################################################################################
 
-function excitations(H, alg::QuasiparticleAnsatz, V₀::FiniteQP,
-                     lenvs=environments(V₀.left_gs, H),
-                     renvs=V₀.trivial ? lenvs : environments(V₀.right_gs, H); num=1)
+function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::FiniteQP,
+                     lenvs=environments(ϕ₀.left_gs, H),
+                     renvs=ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H); num=1)
     qp_envs(V) = environments(V, H, lenvs, renvs)
-    H_eff = @closure(V -> effective_excitation_hamiltonian(H, V, qp_envs(V)))
+    E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
+    H_eff = @closure(V -> effective_excitation_hamiltonian(H, V, qp_envs(V), E))
 
-    Es, Vs, convhist = eigsolve(H_eff, V₀, num, :SR; tol=alg.toler, krylovdim=alg.krylovdim)
+    Es, Vs, convhist = eigsolve(H_eff, ϕ₀, num, :SR; tol=alg.toler, krylovdim=alg.krylovdim)
 
     convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
 
@@ -209,55 +210,28 @@ end
 #                                H_eff                                         #
 ################################################################################
 
-function effective_excitation_hamiltonian(H::MPOHamiltonian, exci::QP,
-                                          envs=environments(exci, H))
-    Bs = [exci[i] for i in 1:length(exci)]
-    toret = similar(exci)
+function effective_excitation_hamiltonian(H::MPOHamiltonian, ϕ::QP,
+                                          envs=environments(ϕ, H),
+                                          energy=effective_excitation_renormalization_energy(H,
+                                                                                             ϕ,
+                                                                                             envs.lenvs,
+                                                                                             envs.renvs))
+    ϕ′ = similar(ϕ)
 
-    #do necessary contractions
-    for i in 1:length(exci)
-        T = zero(Bs[i])
-
-        for (j, k) in keys(H[i])
-            @plansor T[-1 -2; -3 -4] += leftenv(envs.lenvs, i, exci.left_gs)[j][-1 5; 4] *
-                                        Bs[i][4 2; -3 1] *
-                                        H[i][j, k][5 -2; 2 3] *
-                                        rightenv(envs.renvs, i, exci.right_gs)[k][1 3; -4]
-
-            # <B|H|B>-<H>
-            en = @plansor conj(exci.left_gs.AC[i][2 6; 4]) *
-                          leftenv(envs.lenvs, i, exci.left_gs)[j][2 5; 3] *
-                          exci.left_gs.AC[i][3 7; 1] *
-                          H[i][j, k][5 6; 7 8] *
-                          rightenv(envs.lenvs, i, exci.left_gs)[k][1 8; 4]
-            if !exci.trivial
-                en += @plansor conj(exci.right_gs.AC[i][2 6; 4]) *
-                               leftenv(envs.renvs, i, exci.right_gs)[j][2 5; 3] *
-                               exci.right_gs.AC[i][3 7; 1] *
-                               H[i][j, k][5 6; 7 8] *
-                               rightenv(envs.renvs, i, exci.right_gs)[k][1 8; 4]
-                en /= 2
-            end
-
-            T -= Bs[i] * en
-            if i > 1 || exci isa InfiniteQP
-                GR = rightenv(envs.renvs, i, exci.right_gs)[k]
-                @plansor T[-1 -2; -3 -4] += envs.lBs[j, i][-1 4; -3 5] *
-                                            exci.right_gs.AR[i][5 2; 1] *
-                                            H[i][j, k][4 -2; 2 3] * GR[1 3; -4]
-            end
-            if i < length(exci.left_gs) || exci isa InfiniteQP
-                GL = leftenv(envs.lenvs, i, exci.left_gs)[j]
-                @plansor T[-1 -2; -3 -4] += GL[-1 2; 1] * exci.left_gs.AL[i][1 3; 4] *
-                                            H[i][j, k][2 -2; 3 5] *
-                                            envs.rBs[k, i][4 5; -3 -4]
+    @static if Defaults.parallelize_sites
+        @sync for loc in 1:length(ϕ)
+            Threads.@spawn begin
+                ϕ′[loc] = _effective_excitation_local_apply(loc, ϕ, H, energy[loc],
+                                                            envs)
             end
         end
-
-        toret[i] = T
+    else
+        for loc in 1:length(ϕ)
+            ϕ′[loc] = _effective_excitation_local_apply(loc, ϕ, H, energy[loc], envs)
+        end
     end
 
-    return toret
+    return ϕ′
 end
 
 function effective_excitation_hamiltonian(H::MPOMultiline, exci::Multiline{<:InfiniteQP},
@@ -296,4 +270,73 @@ function effective_excitation_hamiltonian(H::MPOMultiline, exci::Multiline{<:Inf
     end
 
     return toreturn
+end
+
+function _effective_excitation_local_apply(loc, ϕ, H::MPOHamiltonian, E::Number, envs)
+    B = ϕ[loc]
+    GL = leftenv(envs.lenvs, loc, ϕ.left_gs)
+    GR = rightenv(envs.renvs, loc, ϕ.right_gs)
+
+    # renormalize first -> allocates destination
+    B′ = scale(B, -E)
+
+    # add all contributions
+    for (j, k) in keys(H[loc])
+        h = H[loc][j, k]
+        # B in center
+        @plansor begin
+            B′[-1 -2; -3 -4] += GL[j][-1 5; 4] * B[4 2; -3 1] * h[5 -2; 2 3] *
+                                GR[k][1 3; -4]
+        end
+
+        # B to the left
+        if loc > 1 || ϕ isa InfiniteQP
+            AR = ϕ.right_gs.AR[loc]
+            GBL = envs.lBs[j, loc]
+            @plansor begin
+                B′[-1 -2; -3 -4] += GBL[-1 4; -3 5] * AR[5 2; 1] * h[4 -2; 2 3] *
+                                    GR[k][1 3; -4]
+            end
+        end
+
+        # B to the right
+        if loc < length(ϕ.left_gs) || ϕ isa InfiniteQP
+            AL = ϕ.left_gs.AL[loc]
+            GBR = envs.rBs[k, loc]
+            @plansor begin
+                B′[-1 -2; -3 -4] += GL[j][-1 2; 1] * AL[1 3; 4] * h[2 -2; 3 5] *
+                                    GBR[4 5; -3 -4]
+            end
+        end
+    end
+
+    return B′
+end
+
+function effective_excitation_renormalization_energy(H, ϕ, lenvs, renvs)
+    E_left = map(1:length(ϕ)) do loc
+        AC = ϕ.left_gs.AC[loc]
+        GL = leftenv(lenvs, loc, ϕ.left_gs)
+        GR = rightenv(lenvs, loc, ϕ.left_gs)
+        return sum(keys(H[loc]); init=zero(scalartype(ϕ))) do (j, k)
+            return @plansor conj(AC[2 6; 4]) * GL[j][2 5; 3] * AC[3 7; 1] *
+                            H[loc][j, k][5 6; 7 8] *
+                            GR[k][1 8; 4]
+        end
+    end
+
+    ϕ.trivial && return E_left
+
+    E_right = map(1:length(ϕ)) do loc
+        AC = ϕ.right_gs.AC[loc]
+        GL = leftenv(renvs, loc, ϕ.right_gs)
+        GR = rightenv(renvs, loc, ϕ.right_gs)
+        return sum(keys(H[loc]); init=zero(scalartype(ϕ))) do (j, k)
+            return @plansor conj(AC[2 6; 4]) * GL[j][2 5; 3] * AC[3 7; 1] *
+                            H[loc][j, k][5 6; 7 8] *
+                            GR[k][1 8; 4]
+        end
+    end
+
+    return (E_left .+ E_right) ./ 2
 end
