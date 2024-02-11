@@ -23,7 +23,7 @@ end
 
 function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renvs;
                      num=1, solver=Defaults.linearsolver)
-    qp_envs(ϕ) = enϕironments(ϕ, H, lenvs, renvs; solver=solver)
+    qp_envs(ϕ) = environments(ϕ, H, lenvs, renvs; solver)
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
 
