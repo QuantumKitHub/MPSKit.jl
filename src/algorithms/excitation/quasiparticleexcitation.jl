@@ -42,26 +42,26 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renv
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
 
-    Es, Vs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
+    Es, ϕs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
     convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
 
-    return Es, Vs
+    return Es, ϕs
 end
-function excitations(H, alg::QuasiparticleAnsatz, V₀::InfiniteQP, lenvs;
+function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs;
                      num=1, solver=Defaults.linearsolver)
     # Infer `renvs` in function body as it depends on `solver`.
-    renvs = V₀.trivial ? lenvs : environments(V₀.right_gs, H; solver=solver)
-    return excitations(H, alg, V₀, lenvs, renvs; num, solver)
+    renvs = ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H; solver=solver)
+    return excitations(H, alg, ϕ₀, lenvs, renvs; num, solver)
 end
-function excitations(H, alg::QuasiparticleAnsatz, V₀::InfiniteQP;
+function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP;
                      num=1, solver=Defaults.linearsolver)
     # Infer `lenvs` in function body as it depends on `solver`.
-    lenvs = environments(V₀.left_gs, H; solver=solver)
-    return excitations(H, alg, V₀, lenvs; num, solver)
+    lenvs = environments(ϕ₀.left_gs, H; solver=solver)
+    return excitations(H, alg, ϕ₀, lenvs; num, solver)
 end
 
 """
-    excitations(H, algorithm::QuasiparticleAnsatz, p::Union{Number, Vector{<:Number}},
+    excitations(H, algorithm::QuasiparticleAnsatz, momentum::Union{Number, Vector{<:Number}},
                 left_ψ::InfiniteMPS, [left_environment],
                 [right_ψ::InfiniteMPS], [right_environment];
                 kwargs...)
@@ -71,7 +71,7 @@ Create and optimise infinite quasiparticle states.
 # Arguments
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm::QuasiparticleAnsatz`: optimization algorithm
-- `p::Union{Number, Vector{<:Number}}`: momentum or list of momenta
+- `momentum::Union{Number, Vector{<:Number}}`: momentum or list of momenta
 - `left_ψ::InfiniteMPS`: left groundstate
 - `[left_environment]`: left groundstate environment
 - `[right_ψ::InfiniteMPS]`: right groundstate
@@ -83,12 +83,12 @@ Create and optimise infinite quasiparticle states.
 - `sector=one(sectortype(left_ψ))`: charge of the quasiparticle state
 - `parallel=true`: enable multi-threading over different momenta
 """
-function excitations(H, alg::QuasiparticleAnsatz, p::Number, lmps::InfiniteMPS,
+function excitations(H, alg::QuasiparticleAnsatz, momentum::Number, lmps::InfiniteMPS,
                      lenvs=environments(lmps, H), rmps::InfiniteMPS=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
                      sector=one(sectortype(lmps)), num=1, solver=Defaults.linearsolver)
-    V₀ = LeftGaugedQP(rand, lmps, rmps; sector=sector, momentum=p)
-    return excitations(H, alg, V₀, lenvs, renvs; num=num, solver=solver)
+    ϕ₀ = LeftGaugedQP(rand, lmps, rmps; sector, momentum)
+    return excitations(H, alg, ϕ₀, lenvs, renvs; num, solver)
 end
 function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
                      lenvs=environments(lmps, H), rmps=lmps,
@@ -96,20 +96,22 @@ function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
                      verbose=Defaults.verbose, num=1, solver=Defaults.linearsolver,
                      sector=one(sectortype(lmps)), parallel=true)
     if parallel
-        tasks = map(momenta) do p
+        tasks = map(momenta) do momentum
             Threads.@spawn begin
-                E, V = excitations(H, alg, p, lmps, lenvs, rmps, renvs; num, solver, sector)
-                verbose && @info "Found excitations for p = $(p)"
-                return E, V
+                E, ϕ = excitations(H, alg, momentum, lmps, lenvs, rmps, renvs; num, solver,
+                                   sector)
+                verbose && @info "Found excitations for momentum = $(momentum)"
+                return E, ϕ
             end
         end
 
         fetched = fetch.(tasks)
     else
-        fetched = map(momenta) do p
-            E, V = excitations(H, alg, p, lmps, lenvs, rmps, renvs; num, solver, sector)
-            verbose && @info "Found excitations for p = $(p)"
-            return E, V
+        fetched = map(momenta) do momentum
+            E, ϕ = excitations(H, alg, momentum, lmps, lenvs, rmps, renvs; num, solver,
+                               sector)
+            verbose && @info "Found excitations for momentum = $(momentum)"
+            return E, ϕ
         end
     end
 
@@ -126,14 +128,14 @@ end
 function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::FiniteQP,
                      lenvs=environments(ϕ₀.left_gs, H),
                      renvs=ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H); num=1)
-    qp_envs(V) = environments(V, H, lenvs, renvs)
+    qp_envs(ϕ) = environments(ϕ, H, lenvs, renvs)
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
-    H_eff = @closure(V -> effective_excitation_hamiltonian(H, V, qp_envs(V), E))
-    Es, Vs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
+    H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_ens(ϕ), E))
+    Es, ϕs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
 
     convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
 
-    return Es, Vs
+    return Es, ϕs
 end
 
 """
@@ -158,65 +160,67 @@ function excitations(H, alg::QuasiparticleAnsatz, lmps::FiniteMPS,
                      lenvs=environments(lmps, H), rmps::FiniteMPS=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
                      sector=one(sectortype(lmps)), num=1)
-    V₀ = LeftGaugedQP(rand, lmps, rmps; sector=sector)
-    return excitations(H, alg, V₀, lenvs, renvs; num=num)
+    ϕ₀ = LeftGaugedQP(rand, lmps, rmps; sector)
+    return excitations(H, alg, ϕ₀, lenvs, renvs; num)
 end
 
 ################################################################################
 #                           Statmech Excitations                               #
 ################################################################################
 
-function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, V₀::Multiline{<:InfiniteQP},
+function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP},
                      lenvs, renvs; num=1, solver=Defaults.linearsolver)
-    qp_envs(V) = environments(V, H, lenvs, renvs; solver=solver)
-    function H_eff(oV)
-        V = Multiline(oV.vecs)
-        return RecursiveVec(effective_excitation_hamiltonian(H, V, qp_envs(V)).data.data)
+    qp_envs(ϕ) = environments(ϕ, H, lenvs, renvs; solver)
+    function H_eff(ϕ′)
+        ϕ = Multiline(ϕ′.vecs)
+        return RecursiveVec(effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ)).data.data)
     end
 
-    Es, Vs, convhist = eigsolve(H_eff, RecursiveVec(V₀.data.data), num, :LM, alg.alg)
-
+    Es, ϕs, convhist = eigsolve(H_eff, RecursiveVec(ϕ₀.data.data), num, :LM, alg.alg)
     convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
 
-    return Es, map(x -> Multiline(x.vecs), Vs)
+    return Es, map(x -> Multiline(x.vecs), ϕs)
 end
 
-function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, V₀::Multiline{<:InfiniteQP},
+function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP},
                      lenvs; num=1, solver=Defaults.linearsolver)
     # Infer `renvs` in function body as it depends on `solver`.
-    renvs = V₀.trivial ? lenvs : environments(V₀.right_gs, H; solver=solver)
-    return excitations(H, alg, V₀, lenvs, renvs; num, solver)
+    renvs = ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H; solver)
+    return excitations(H, alg, ϕ₀, lenvs, renvs; num, solver)
 end
-function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, V₀::Multiline{<:InfiniteQP};
+function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP};
                      num=1, solver=Defaults.linearsolver)
     # Infer `lenvs` in function body as it depends on `solver`.
-    lenvs = environments(V₀.left_gs, H; solver=solver)
-    return excitations(H, alg, V₀, lenvs; num, solver)
+    lenvs = environments(ϕ₀.left_gs, H; solver)
+    return excitations(H, alg, ϕ₀, lenvs; num, solver)
 end
 
-function excitations(H::DenseMPO, alg::QuasiparticleAnsatz, p::Real, lmps::InfiniteMPS,
+function excitations(H::DenseMPO, alg::QuasiparticleAnsatz, momentum::Real,
+                     lmps::InfiniteMPS,
                      lenvs=environments(lmps, H), rmps::InfiniteMPS=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
                      sector=one(sectortype(lmps)), num=1, solver=Defaults.linearsolver)
     multiline_lmps = convert(MPSMultiline, lmps)
     if lmps === rmps
-        excitations(convert(MPOMultiline, H), alg, p, multiline_lmps, lenvs, multiline_lmps,
+        excitations(convert(MPOMultiline, H), alg, momentum, multiline_lmps, lenvs,
+                    multiline_lmps,
                     lenvs; sector, num, solver)
     else
-        excitations(convert(MPOMultiline, H), alg, p, multiline_lmps, lenvs,
+        excitations(convert(MPOMultiline, H), alg, momentum, multiline_lmps, lenvs,
                     convert(MPSMultiline, rmps), renvs; sector, num, solver)
     end
 end
 
-function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, p::Real, lmps::MPSMultiline,
+function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, momentum::Real,
+                     lmps::MPSMultiline,
                      lenvs=environments(lmps, H), rmps=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
                      sector=one(sectortype(lmps)), num=1, solver=Defaults.linearsolver)
-    V₀ = Multiline(map(1:size(lmps, 1)) do row
-                       return LeftGaugedQP(rand, lmps[row], rmps[row]; sector, momentum=p)
+    ϕ₀ = Multiline(map(1:size(lmps, 1)) do row
+                       return LeftGaugedQP(rand, lmps[row], rmps[row]; sector, momentum)
                    end)
 
-    return excitations(H, alg, V₀, lenvs, renvs; num=num, solver=solver)
+    return excitations(H, alg, ϕ₀, lenvs, renvs; num, solver)
 end
 
 ################################################################################
@@ -247,15 +251,15 @@ function effective_excitation_hamiltonian(H::MPOHamiltonian, ϕ::QP,
     return ϕ′
 end
 
-function effective_excitation_hamiltonian(H::MPOMultiline, exci::Multiline{<:InfiniteQP},
-                                          envs=environments(exci, H))
-    toreturn = Multiline(similar.(exci.data))
+function effective_excitation_hamiltonian(H::MPOMultiline, ϕ::Multiline{<:InfiniteQP},
+                                          envs=environments(ϕ, H))
+    ϕ′ = Multiline(similar.(ϕ.data))
 
-    left_gs = exci.left_gs
-    right_gs = exci.right_gs
+    left_gs = ϕ.left_gs
+    right_gs = ϕ.right_gs
 
     for row in 1:size(H, 1)
-        Bs = [exci[row][i] for i in 1:size(H, 2)]
+        Bs = [ϕ[row][i] for i in 1:size(H, 2)]
         for col in 1:size(H, 2)
             en = @plansor conj(left_gs.AC[row, col][2 6; 4]) *
                           leftenv(envs.lenvs, row, col, left_gs)[2 5; 3] *
@@ -278,11 +282,11 @@ function effective_excitation_hamiltonian(H::MPOMultiline, exci::Multiline{<:Inf
                                         H[row, col][2 -2; 3 5] *
                                         envs.rBs[row, col + 1][4 5; -3 -4]
 
-            toreturn[row + 1][col] = T / en
+            ϕ′[row + 1][col] = T / en
         end
     end
 
-    return toreturn
+    return ϕ′
 end
 
 function _effective_excitation_local_apply(loc, ϕ, H::MPOHamiltonian, E::Number, envs)
