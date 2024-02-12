@@ -44,10 +44,63 @@ tensors `As`, or a list of left-gauged tensors `ALs`.
 - `maxiter`: gauge fixing maximum iterations
 """
 struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
-    AL::PeriodicArray{A,1}
-    AR::PeriodicArray{A,1}
-    CR::PeriodicArray{B,1}
-    AC::PeriodicArray{A,1}
+    AL::PeriodicVector{A}
+    AR::PeriodicVector{A}
+    CR::PeriodicVector{B}
+    AC::PeriodicVector{A}
+    function InfiniteMPS{A,B}(AL::PeriodicVector{A},
+                              AR::PeriodicVector{A},
+                              CR::PeriodicVector{B},
+                              AC::PeriodicVector{A}=AL .* CR) where {A<:GenericMPSTensor,
+                                                                     B<:MPSBondTensor}
+        # verify lengths are compatible
+        L = length(AL)
+        L == length(AR) == length(CR) == length(AC) ||
+            throw(ArgumentError("incompatible lengths of AL, AR, CR, and AC"))
+        # verify tensors are compatible
+        spacetype(A) == spacetype(B) ||
+            throw(SpaceMismatch("incompatible space types of AL and CR"))
+
+        return new{A,B}(AL, AR, CR, AC)
+    end
+    function InfiniteMPS(AL::PeriodicVector{A},
+                         AR::PeriodicVector{A},
+                         CR::PeriodicVector{B},
+                         AC::PeriodicVector{A}=AL .* CR) where {A<:GenericMPSTensor,
+                                                                B<:MPSBondTensor}
+        # verify lengths are compatible
+        L = length(AL)
+        L == length(AR) == length(CR) == length(AC) ||
+            throw(ArgumentError("incompatible lengths of AL, AR, CR, and AC"))
+        # verify tensors are compatible
+        spacetype(A) == spacetype(B) ||
+            throw(SpaceMismatch("incompatible space types of AL and CR"))
+
+        for i in 1:L
+            N = numind(AL[i])
+            N == numind(AR[i]) == numind(AC[i]) ||
+                throw(SpaceMismatch("incompatible spaces at site $i"))
+
+            # verify that the physical spaces are compatible
+            phys_ind = 2:(N - 1)
+            all(space.(Ref(AL[i]), phys_ind) .== space.(Ref(AR[i]), phys_ind) .==
+                space.(Ref(AC[i]), phys_ind)) ||
+                throw(SpaceMismatch("incompatible physical spaces at site $i"))
+
+            # verify that the virtual spaces are compatible
+            space(AL[i], 1) == dual(space(AL[i - 1], N)) &&
+                space(AR[i], 1) == dual(space(AR[i - 1], N)) &&
+                space(AC[i], 1) == space(AL[i], 1) &&
+                space(AC[i], N) == space(AR[i], N) &&
+                space(CR[i], 1) == dual(space(AL[i], N)) &&
+                space(AR[i], 1) == dual(space(CR[i - 1], 2)) ||
+                throw(SpaceMismatch("incompatible virtual spaces at site $i"))
+            # verify that the spaces are non-zero
+            dim(space(AL[i])) > 0 && dim(space(CR[i])) > 0 ||
+                @warn "no fusion channels available at site $i"
+        end
+        return new{A,B}(AL, AR, CR, AC)
+    end
 end
 
 #===========================================================================================
@@ -55,9 +108,10 @@ Constructors
 ===========================================================================================#
 
 function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractVector{B},
-                     AC::AbstractVector{A}=PeriodicArray(AL .* CR)) where {A<:GenericMPSTensor,
-                                                                           B<:MPSBondTensor}
-    return InfiniteMPS{A,B}(AL, AR, CR, AC)
+                     AC::AbstractVector{A}=AL .* CR) where {A<:GenericMPSTensor,
+                                                            B<:MPSBondTensor}
+    return InfiniteMPS(convert(PeriodicVector{A}, AL), convert(PeriodicVector{A}, AR),
+                       convert(PeriodicVector{B}, CR), convert(PeriodicVector{A}, AC))
 end
 
 function InfiniteMPS(pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
@@ -125,12 +179,12 @@ Base.copy(ψ::InfiniteMPS) = InfiniteMPS(copy(ψ.AL), copy(ψ.AR), copy(ψ.CR), 
 function Base.repeat(ψ::InfiniteMPS, i::Int)
     return InfiniteMPS(repeat(ψ.AL, i), repeat(ψ.AR, i), repeat(ψ.CR, i), repeat(ψ.AC, i))
 end
-function Base.similar(ψ::InfiniteMPS)
-    return InfiniteMPS(similar(ψ.AL), similar(ψ.AR), similar(ψ.CR), similar(ψ.AC))
+function Base.similar(ψ::InfiniteMPS{A,B}) where {A,B}
+    return InfiniteMPS{A,B}(similar(ψ.AL), similar(ψ.AR), similar(ψ.CR), similar(ψ.AC))
 end
-function Base.circshift(st::InfiniteMPS, n)
-    return InfiniteMPS(circshift(st.AL, n), circshift(st.AR, n), circshift(st.CR, n),
-                       circshift(st.AC, n))
+function Base.circshift(ψ::InfiniteMPS, n)
+    return InfiniteMPS(circshift(ψ.AL, n), circshift(ψ.AR, n), circshift(ψ.CR, n),
+                       circshift(ψ.AC, n))
 end
 
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
