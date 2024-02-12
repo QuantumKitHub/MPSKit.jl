@@ -130,7 +130,7 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::FiniteQP,
                      renvs=ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H); num=1)
     qp_envs(ϕ) = environments(ϕ, H, lenvs, renvs)
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
-    H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_ens(ϕ), E))
+    H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
     Es, ϕs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
 
     convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
@@ -254,7 +254,6 @@ end
 function effective_excitation_hamiltonian(H::MPOMultiline, ϕ::Multiline{<:InfiniteQP},
                                           envs=environments(ϕ, H))
     ϕ′ = Multiline(similar.(ϕ.data))
-
     left_gs = ϕ.left_gs
     right_gs = ϕ.right_gs
 
