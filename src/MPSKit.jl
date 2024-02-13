@@ -14,6 +14,7 @@ using Base: @kwdef
 # bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
 export PeriodicArray, Window
+export fix_left,fix_right,fix_infinite
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth,

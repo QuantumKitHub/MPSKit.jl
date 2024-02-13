@@ -138,15 +138,15 @@ end
 #===========================================================================================
 Utility
 ===========================================================================================#
-function Base.copy(ψ::WindowMPS{A,B,:V,:V})
+function Base.copy(ψ::WindowMPS{A,B,:V,:V}) where {A,B}
     return WindowMPS(copy(ψ.left_gs), copy(ψ.window), copy(ψ.right_gs))
 end
 
-function Base.copy(ψ::WindowMPS{A,B,:F,:V})
+function Base.copy(ψ::WindowMPS{A,B,:F,:V}) where {A,B}
     return WindowMPS(ψ.left_gs, copy(ψ.window), copy(ψ.right_gs))
 end
 
-function Base.copy(ψ::WindowMPS{A,B,:V,:F})
+function Base.copy(ψ::WindowMPS{A,B,:V,:F}) where {A,B}
     return WindowMPS(copy(ψ.left_gs), copy(ψ.window), ψ.right_gs)
 end
 
