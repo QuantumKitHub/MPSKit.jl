@@ -2,7 +2,8 @@
 
 # MPSKit.jl
 
-[![docs][docs-dev-img]][docs-dev-url] [![codecov][codecov-img]][codecov-url] ![CI][ci-url]
+[![docs][docs-dev-img]][docs-dev-url] [![codecov][codecov-img]][codecov-url] ![CI][ci-url] [![DOI][zenodo-img]][zenodo-url]
+
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://maartenvd.github.io/MPSKit.jl/dev/
@@ -11,6 +12,9 @@
 [codecov-url]: https://codecov.io/gh/maartenvd/MPSKit.jl
 
 [ci-url]: https://github.com/maartenvd/MPSKit.jl/workflows/CI/badge.svg
+
+[zenodo-img]: https://zenodo.org/badge/237936707.svg
+[zenodo-url]: https://zenodo.org/doi/10.5281/zenodo.10654900
 
 Contains code for tackling one-dimensional quantum and two-dimensional statistical mechanics
 problems using tensor network algorithms. The main focus is on matrix product states (MPS)
