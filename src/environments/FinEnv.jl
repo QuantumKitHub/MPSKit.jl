@@ -96,7 +96,7 @@ end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies
 # this forces the transfers to be recalculated lazily 
-function poison!(ca::FinEnv, ind)
+function invalidate!(ca::FinEnv, ind)
     ca.ldependencies[ind] = similar(ca.ldependencies[ind])
     ca.rdependencies[ind] = similar(ca.rdependencies[ind])
 end

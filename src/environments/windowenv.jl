@@ -25,13 +25,13 @@ function environments(below::WindowMPS, above::WindowMPS)
 end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies
-poison!(ca::WindowEnv, ind) = poison!(ca.fin_env,ind)
+invalidate!(ca::WindowEnv, ind) = invalidate!(ca.fin_env,ind)
 
 # check and recalculate the left and right start
 function check_rightinfenv!(ca::WindowEnv)
     if ca.right_env.rw[:,0] != ca.fin_env.rightstart[end]# !== doesn't work as intended
         
-        poison!(ca, lastindex(ca.fin_env.rightstart)) #forces transfers to be recalculated lazily 
+        invalidate!(ca, lastindex(ca.fin_env.rightstart)) #forces transfers to be recalculated lazily 
 
         ca.fin_env.rightstart = ca.right_env.rw[:,0] #do some other checks and recalcs for bonddimensions?
     
@@ -41,7 +41,7 @@ end
 function check_leftinfenv!(ca::WindowEnv)
     if ca.left_env.lw[:,end+1] != ca.fin_env.leftstart[1]# !== doesn't work as intended
         
-        poison!(ca, firstindex(ca.fin_env.leftstart)) #forces transfers to be recalculated lazily 
+        invalidate!(ca, firstindex(ca.fin_env.leftstart)) #forces transfers to be recalculated lazily 
 
         ca.fin_env.leftstart = ca.left_env.rw[:,end+1] #do some other checks and recalcs for bonddimensions?
     

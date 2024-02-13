@@ -91,10 +91,11 @@ include("transfermatrix/transfer.jl")
 
 abstract type Cache end # cache "manages" environments
 
-include("environments/FinEnv.jl")
+include("environments/finenv.jl")
 include("environments/abstractinfenv.jl")
 include("environments/permpoinfenv.jl")
 include("environments/mpohaminfenv.jl")
+include("environments/windowenv.jl")
 include("environments/qpenv.jl")
 include("environments/multipleenv.jl")
 include("environments/idmrgenv.jl")
