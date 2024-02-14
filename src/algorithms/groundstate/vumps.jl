@@ -39,10 +39,10 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
                finalize=Defaults._finalize,
                verbosity::Integer=Defaults.verbosity,
                orthmaxiter::Integer=Defaults.maxiter,
-               dynamical_tols::Bool=Defaults.dynamical_tols,
+               dynamic_tols::Bool=Defaults.dynamic_tols,
                tol_min=nothing, tol_max=nothing, eigs_tolfactor=nothing,
                envs_tolfactor=nothing, gauge_tolfactor=nothing, tol_galerkin=nothing,
-               verbose=nothing)
+               verbose=nothing, dynamical_tols=nothing)
     # Deprecation warnings
     actual_tol = if !isnothing(tol_galerkin)
         Base.depwarn("VUMPS(; kwargs..., tol_galerkin=...) is deprecated. Use VUMPS(; kwargs..., tol=...) instead.",
@@ -58,19 +58,26 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
     else
         verbosity
     end
+    dynamic_tols = if !isnothing(dynamical_tols)
+        Base.depwarn("VUMPS(; kwargs..., dynamic_tols=...) is deprecated. Use VUMPS(; kwargs..., dynamic_tols=...) instead.",
+                     :VUMPS; force=true)
+        dynamical_tols
+    else
+        dynamic_tols
+    end
 
     # Keyword handling
     eigalg = Arnoldi(; tol, eager=true, verbosity=actual_verbosity - 2)
     orthalg = UniformOrthogonalization(; tol, maxiter=orthmaxiter,
-                                       verbosity=actual_verbosity)
+                                       verbosity=actual_verbosity - 2)
     envalg = (; tol, verbosity=actual_verbosity - 2)
 
-    if !dynamical_tols
+    if !dynamic_tols
         return VUMPS(actual_tol, maxiter, actual_verbosity, finalize, eigalg, orthalg,
                      envalg)
     end
 
-    # Setup dynamical tolerances
+    # Setup dynamic tolerances
     actual_tol_min = something(tol_min, Defaults.tol_min)
     actual_tol_max = something(tol_max, Defaults.tol_max)
     dyn_eigalg = DynamicTolerance(eigalg, actual_tol_min, actual_tol_max,
@@ -78,7 +85,7 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
     dyn_envalg = DynamicTolerance(envalg, actual_tol_min, actual_tol_max,
                                   something(envs_tolfactor, Defaults.envs_tolfactor))
     dyn_orthalg = DynamicTolerance(orthalg, actual_tol_min, actual_tol_max,
-                                     something(gauge_tolfactor, Defaults.gauge_tolfactor))
+                                   something(gauge_tolfactor, Defaults.gauge_tolfactor))
     return VUMPS(actual_tol, maxiter, actual_verbosity, finalize, dyn_eigalg, dyn_orthalg,
                  dyn_envalg)
 end
