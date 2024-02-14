@@ -20,13 +20,26 @@ The algorithm is described in detail in https://arxiv.org/pdf/cond-mat/0203500.p
 - `maxiter::Int = Defaults.maxiter` : The maximum number of iterations.
 - `verbose::Bool = Defaults.verbose` : Whether to print information about the progress of the algorithm.
 """
-@kwdef struct DynamicalDMRG{F<:DDMRG_Flavour,S} <: Algorithm
-    flavour::F = NaiveInvert
-    solver::S = Defaults.linearsolver
-    tol::Float64 = Defaults.tol * 10
-    maxiter::Int = Defaults.maxiter
-    verbose::Bool = Defaults.verbose
+struct DynamicalDMRG{F<:DDMRG_Flavour,S} <: Algorithm
+    flavour::F
+    solver::S
+    tol::Float64
+    maxiter::Int
+    verbosity::Int
 end
+function DynamicalDMRG(; flavour::DDMRG_Flavour=NaiveInvert, solver=Defaults.linearsolver,
+                       tol=Defaults.tol * 10, maxiter=Defaults.maxiter,
+                       verbosity=Defaults.verbosity, verbose=nothing)
+    verbosity = if !isnothing(verbose)
+        Base.depwarn("DynamicalDMRG(; kwargs..., verbose=...) is deprecated. Use DynamicalDMRG(; kwargs..., verbosity=...) instead.",
+                     :DynamicalDMRG; force=true)
+        verbose ? VERBOSE_ITER : VERBOSE_WARN
+    else
+        verbosity
+    end
+    return DynamicalDMRG{typeof(flavour),typeof(solver)}(flavour, solver, tol, maxiter, verbosity)
+end
+
 
 """
     propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init=copy(ψ₀))
@@ -71,7 +84,7 @@ function propagator(A::AbstractFiniteMPS, z::Number, H::MPOHamiltonian,
             convhist.converged == 0 && @warn "($(i)) failed to converge $(convhist.normres)"
         end
 
-        alg.verbose && @info "ddmrg sweep delta : $(delta)"
+        alg.verbosity >= VERBOSE_ITER && @info "ddmrg sweep delta : $(delta)"
     end
 
     return dot(A, init), init
@@ -116,7 +129,7 @@ function propagator(A::AbstractFiniteMPS, z, H::MPOHamiltonian,
             convhist.converged == 0 && @warn "($(i)) failed to converge $(convhist.normres)"
         end
 
-        alg.verbose && @info "ddmrg sweep delta : $(delta)"
+        alg.verbosity >= VERBOSE_ITER && @info "ddmrg sweep delta : $(delta)"
     end
 
     a = dot(ac_proj(1, init, mixedenvs), init.AC[1])
