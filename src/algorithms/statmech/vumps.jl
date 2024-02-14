@@ -13,7 +13,7 @@
 Approximate the leading eigenvector for opp.
 """
 function leading_boundary(ψ::InfiniteMPS, H, alg, envs=environments(ψ, H))
-    (st, pr, de) = leading_boundary(convert(MPSMultiline, ψ), Multiline([H]), alg, envs)
+    st, pr, de = leading_boundary(convert(MPSMultiline, ψ), Multiline([H]), alg, envs)
     return convert(InfiniteMPS, st), pr, de
 end
 
@@ -70,13 +70,15 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
         ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
         recalculate!(envs, ψ; tol=tol_envs)
 
-        (ψ, envs) = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
+        ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
         galerkin = calc_galerkin(ψ, envs)
-        alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
+        alg.verbosity >= Iteration &&
+            @info "VUMPS @iteration $(iter) galerkin = $(galerkin)"
 
-        if (galerkin <= alg.tol_galerkin) || iter >= alg.maxiter
-            iter >= alg.maxiter && @warn "vumps didn't converge $(galerkin)"
+        if (galerkin <= alg.tol) || iter >= alg.maxiter
+            alg.verbosity >= Warning && iter >= alg.maxiter &&
+                @warn "VUMPS didn't converge $(galerkin)"
             return ψ, envs, galerkin
         end
 
