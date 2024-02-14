@@ -145,3 +145,12 @@ function between(x1, x, x2)
     x > x2 && return x2
     return x
 end
+
+@enum Verbosity begin
+    Silent
+    Warning
+    Convergence
+    Iteration
+    Detailed
+    Debug
+end
