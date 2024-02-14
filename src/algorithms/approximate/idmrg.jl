@@ -4,7 +4,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
     (mpo, above) = toapprox
     envs = IDMRGEnv(ost, oenvs)
 
-    delta::Float64 = 2 * alg.tol_galerkin
+    delta::Float64 = 2 * alg.tol
 
     for topit in 1:(alg.maxiter)
         delta = 0.0
@@ -35,7 +35,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
         end
 
         delta = norm(curc - st.CR[:, 0])
-        delta < alg.tol_galerkin && break
+        delta < alg.tol && break
         alg.verbose && @info "idmrg iter $(topit) err $(delta)"
     end
 
@@ -52,7 +52,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
     st = copy(ost)
     envs = IDMRGEnv(ost, oenvs)
 
-    delta::Float64 = 2 * alg.tol_galerkin
+    delta::Float64 = 2 * alg.tol
 
     for topit in 1:(alg.maxiter)
         delta = 0.0
@@ -116,7 +116,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
                     end)
         alg.verbose && @info "idmrg iter $(topit) err $(delta)"
 
-        delta < alg.tol_galerkin && break
+        delta < alg.tol && break
     end
 
     #nst = MPSMultiline(map(x->x,st.AL),st.CR[:,end],tol=alg.tol_gauge);

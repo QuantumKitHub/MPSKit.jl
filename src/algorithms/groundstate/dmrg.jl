@@ -7,16 +7,30 @@ Single site DMRG algorithm for finding groundstates.
 - `tol::Float64`: tolerance for convergence criterium
 - `eigalg::A`: eigensolver algorithm
 - `maxiter::Int`: maximum number of outer iterations
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
 """
-@kwdef struct DMRG{A,F} <: Algorithm
-    tol::Float64 = Defaults.tol
-    maxiter::Int = Defaults.maxiter
-    eigalg::A = Defaults.eigsolver
-    verbose::Bool = Defaults.verbose
-    finalize::F = Defaults._finalize
+struct DMRG{A,F} <: Algorithm
+    tol::Float64
+    maxiter::Int
+    eigalg::A
+    verbosity::Int
+    finalize::F
+end
+function DMRG(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
+              finalize=Defaults._finalize, eigalg=Defaults.eigsolver,
+              verbose=nothing, verbosity::Integer=Defaults.verbosity)
+    # Deprecation warnings
+    actual_verbosity = if !isnothing(verbose)
+        Base.depwarn("DMRG(; kwargs..., verbose=...) is deprecated. Use DMRG(; kwargs..., verbosity=...) instead.",
+                     :DMRG; force=true)
+        verbose ? Iteration : Warning
+    else
+        verbosity
+    end
+    return DMRG{typeof(eigalg),typeof(finalize)}(tol, maxiter, eigalg, actual_verbosity,
+                                                 finalize)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environments(ψ, H))
@@ -36,16 +50,17 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
         end
 
-        alg.verbose &&
+        alg.verbosity >= Iteration &&
             @info "DMRG iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
 
         ϵ <= alg.tol && break
-        iter == alg.maxiter &&
+        alg.verbosity >= Warning && iter == alg.maxiter &&
             @warn "DMRG maximum iterations" iter ϵ λ = sum(expectation_value(ψ, H, envs))
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbose && @info "DMRG summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
+    alg.verbosity >= Convergence &&
+        @info "DMRG summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end
 
@@ -58,18 +73,32 @@ end
 - `tol::Float64`: tolerance for convergence criterium
 - `eigalg::A`: eigensolver algorithm
 - `maxiter::Int`: maximum number of outer iterations
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
 @kwdef struct DMRG2{A,F} <: Algorithm
-    tol = Defaults.tol
-    maxiter = Defaults.maxiter
-    eigalg::A = Defaults.eigsolver
-    trscheme = truncerr(1e-6)
-    verbose = Defaults.verbose
-    finalize::F = Defaults._finalize
+    tol::Float64
+    maxiter::Int
+    eigalg::A
+    trscheme::TruncationScheme
+    verbosity
+    finalize::F
+end
+function DMRG2(; tol::Real = Defaults.tol, maxiter::Integer = Defaults.maxiter,
+               finalize = Defaults._finalize, eigalg = Defaults.eigsolver,
+               trscheme = truncerr(sqrt(tol)), verbose = nothing, verbosity::Integer = Defaults.verbosity)
+    # Deprecation warnings
+    actual_verbosity = if !isnothing(verbose)
+        Base.depwarn("DMRG2(; kwargs..., verbose=...) is deprecated. Use DMRG2(; kwargs..., verbosity=...) instead.",
+                     :DMRG2; force=true)
+        verbose ? Iteration : Warning
+    else
+        verbosity
+    end
+    return DMRG2{typeof(eigalg),typeof(finalize)}(tol, maxiter, eigalg, trscheme, actual_verbosity,
+                                                 finalize)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environments(ψ, H))
@@ -115,16 +144,16 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
         end
 
-        alg.verbose &&
+        alg.verbosity >= Iteration &&
             @info "DMRG2 iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
 
         ϵ <= alg.tol && break
-        iter == alg.maxiter &&
+        alg.verbosity >= Warning && iter == alg.maxiter &&
             @warn "DMRG2 maximum iterations" iter ϵ λ = sum(expectation_value(ψ, H, envs))
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbose && @info "DMRG2 summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
+    alg.verbosity >= Convergence && @info "DMRG2 summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end
 

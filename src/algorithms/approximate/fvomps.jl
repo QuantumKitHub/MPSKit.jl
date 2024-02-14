@@ -28,7 +28,7 @@ function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
                            return ac2_proj(pos, init, pr)
                        end)
 
-            (al, c, ar) = tsvd(nac2; trunc=alg.trscheme)
+            al, c, ar, = tsvd(nac2; trunc=alg.trscheme)
 
             delta = max(delta, norm(al * c * ar - ac2) / norm(ac2))
 
@@ -36,13 +36,14 @@ function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
             init.AC[pos + 1] = (complex(c), _transpose_front(ar))
         end
 
-        alg.verbose && @info "2site dmrg iter $(iter) error $(delta)"
+        alg.verbosity >= Iteration && @info "DMRG2 iter $(iter) error $(delta)"
 
-        #finalize
+        # finalize
         iter += 1
     end
 
-    delta > tol && @warn "2site dmrg failed to converge $(delta)>$(tol)"
+    alg.verbosity >= Warning && delta > tol &&
+        @warn "DMRG2 failed to converge $(delta)>$(tol)"
     return init, envs, delta
 end
 
@@ -56,9 +57,9 @@ function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG,
     while iter < maxiter && delta > tol
         delta = 0.0
 
-        #finalize
-        (init, envs) = alg.finalize(iter, init, squash,
-                                    envs)::Tuple{typeof(init),typeof(envs)}
+        # finalize
+        init, envs = alg.finalize(iter, init, squash,
+                                  envs)::Tuple{typeof(init),typeof(envs)}
 
         for pos in [1:(length(init) - 1); length(init):-1:2]
             newac = sum(map(zip(squash, envs)) do (sq, pr)
@@ -70,11 +71,12 @@ function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG,
             init.AC[pos] = newac
         end
 
-        alg.verbose && @info "dmrg iter $(iter) error $(delta)"
+        alg.verbosity >= Iteration && @info "DMRG iter $(iter) error $(delta)"
 
         iter += 1
     end
 
-    delta > tol && @warn "dmrg failed to converge $(delta)>$(tol)"
+    alg.verbosity >= Warning && delta > tol &&
+        @warn "DMRG failed to converge $(delta)>$(tol)"
     return init, envs, delta
 end
