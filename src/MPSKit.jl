@@ -58,12 +58,12 @@ export transfer_left, transfer_right
 @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
 include("utility/defaults.jl")
-
 include("utility/periodicarray.jl")
 include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
 include("utility/plotting.jl")
 include("utility/linearcombination.jl")
+include("utility/dynamic_tolerance.jl")
 
 # maybe we should introduce an abstract state type
 include("states/window.jl")
