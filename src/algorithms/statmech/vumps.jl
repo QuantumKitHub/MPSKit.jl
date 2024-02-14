@@ -25,8 +25,6 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
     temp_Cs = similar.(ψ.CR)
 
     while true
-        tol_eigs, tol_gauge, tol_envs = updatetols(alg, iter, galerkin)
-
         eigalg = updatetol(alg.eigalg, iter, galerkin)
 
         if Defaults.parallelize_sites
