@@ -53,6 +53,8 @@ export exact_diagonalization
 export TransferMatrix
 export transfer_left, transfer_right
 
+abstract type Algorithm end
+
 @deprecate virtualspace left_virtualspace # there is a possible ambiguity when C isn't square, necessitating specifying left or right virtualspace
 @deprecate params(args...) environments(args...)
 @deprecate InfiniteMPO(args...) DenseMPO(args...)
@@ -99,8 +101,6 @@ include("environments/qpenv.jl")
 include("environments/multipleenv.jl")
 include("environments/idmrgenv.jl")
 include("environments/lazylincocache.jl")
-
-abstract type Algorithm end
 
 include("algorithms/derivatives.jl")
 include("algorithms/expval.jl")
