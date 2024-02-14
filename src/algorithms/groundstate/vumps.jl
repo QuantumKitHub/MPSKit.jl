@@ -21,31 +21,27 @@ https://arxiv.org/abs/1701.07035.
 - `gauge_tolfactor::Float64`: factor for dynamically setting the gauging tolerance with
     respect to the current galerkin error
 """
-struct VUMPS{F} <: Algorithm
+struct VUMPS{F,A,B,C} <: Algorithm
     tol::Float64
     maxiter::Int
-    orthmaxiter::Int
-    finalize::F
     verbosity::Int
-    dynamical_tols::Bool
-    tol_min::Float64
-    tol_max::Float64
-    eigs_tolfactor::Float64
-    envs_tolfactor::Float64
-    gauge_tolfactor::Float64
+    finalize::F
+    eigalg::A
+    gaugealg::B
+    envalg::C
+    function VUMPS(tol, maxiter, verbosity, finalize::F, eigalg::A, gaugealg::B,
+                   envalg::C) where {F,A,B,C}
+        return new{F,A,B,C}(tol, maxiter, verbosity, finalize, eigalg, gaugealg, envalg)
+    end
 end
 
 function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
-               orthmaxiter::Integer=Defaults.maxiter,
                finalize=Defaults._finalize,
                verbosity::Integer=Defaults.verbosity,
+               orthmaxiter::Integer=Defaults.maxiter,
                dynamical_tols::Bool=Defaults.dynamical_tols,
-               tol_min::Real=Defaults.tol_min,
-               tol_max::Real=Defaults.tol_max,
-               eigs_tolfactor::Real=Defaults.eigs_tolfactor,
-               envs_tolfactor::Real=Defaults.envs_tolfactor,
-               gauge_tolfactor::Real=Defaults.gauge_tolfactor,
-               tol_galerkin=nothing,
+               tol_min=nothing, tol_max=nothing, eigs_tolfactor=nothing,
+               envs_tolfactor=nothing, gauge_tolfactor=nothing, tol_galerkin=nothing,
                verbose=nothing)
     # Deprecation warnings
     actual_tol = if !isnothing(tol_galerkin)
@@ -62,8 +58,29 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
     else
         verbosity
     end
-    return VUMPS{typeof(finalize)}(actual_tol, maxiter, orthmaxiter, finalize, actual_verbosity, dynamical_tols,
-                    tol_min, tol_max, eigs_tolfactor, envs_tolfactor, gauge_tolfactor)
+
+    # Keyword handling
+    eigalg = Arnoldi(; tol, eager=true, verbosity=actual_verbosity - 2)
+    orthalg = UniformOrthogonalization(; tol, maxiter=orthmaxiter,
+                                       verbosity=actual_verbosity)
+    envalg = (; tol, verbosity=actual_verbosity - 2)
+
+    if !dynamical_tols
+        return VUMPS(actual_tol, maxiter, actual_verbosity, finalize, eigalg, orthalg,
+                     envalg)
+    end
+
+    # Setup dynamical tolerances
+    actual_tol_min = something(tol_min, Defaults.tol_min)
+    actual_tol_max = something(tol_max, Defaults.tol_max)
+    dyn_eigalg = DynamicTolerance(eigalg, actual_tol_min, actual_tol_max,
+                                  something(eigs_tolfactor, Defaults.eigs_tolfactor))
+    dyn_envalg = DynamicTolerance(envalg, actual_tol_min, actual_tol_max,
+                                  something(envs_tolfactor, Defaults.envs_tolfactor))
+    dyn_orthalg = DynamicTolerance(orthalg, actual_tol_min, actual_tol_max,
+                                     something(gauge_tolfactor, Defaults.gauge_tolfactor))
+    return VUMPS(actual_tol, maxiter, actual_verbosity, finalize, dyn_eigalg, dyn_orthalg,
+                 dyn_envalg)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", alg::VUMPS)
@@ -79,18 +96,18 @@ function Base.show(io::IO, ::MIME"text/plain", alg::VUMPS)
     return nothing
 end
 
-function updatetols(alg::VUMPS, iter, ϵ)
-    if alg.dynamical_tols
-        tol_eigs = between(alg.tol_min, ϵ * alg.eigs_tolfactor / sqrt(iter), alg.tol_max)
-        tol_envs = between(alg.tol_min, ϵ * alg.envs_tolfactor / sqrt(iter), alg.tol_max)
-        tol_gauge = between(alg.tol_min, ϵ * alg.gauge_tolfactor / sqrt(iter), alg.tol_max)
-    else # preserve legacy behavior
-        tol_eigs = alg.tol / 10
-        tol_envs = Defaults.tol
-        tol_gauge = Defaults.tolgauge
-    end
-    return tol_eigs, tol_envs, tol_gauge
-end
+# function updatetols(alg::VUMPS, iter, ϵ)
+#     if alg.dynamical_tols
+#         tol_eigs = between(alg.tol_min, ϵ * alg.eigs_tolfactor / sqrt(iter), alg.tol_max)
+#         tol_envs = between(alg.tol_min, ϵ * alg.envs_tolfactor / sqrt(iter), alg.tol_max)
+#         tol_gauge = between(alg.tol_min, ϵ * alg.gauge_tolfactor / sqrt(iter), alg.tol_max)
+#     else # preserve legacy behavior
+#         tol_eigs = alg.tol / 10
+#         tol_envs = Defaults.tol
+#         tol_gauge = Defaults.tolgauge
+#     end
+#     return tol_eigs, tol_envs, tol_gauge
+# end
 
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
     t₀ = Base.time_ns()
@@ -98,10 +115,10 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
     temp_ACs = similar.(ψ.AC)
 
     for iter in 1:(alg.maxiter)
-        tol_eigs, tol_envs, tol_gauge = updatetols(alg, iter, ϵ)
         Δt = @elapsed begin
-            eigalg = Arnoldi(; tol=tol_eigs, eager=true)
+            eigalg = updatetol(alg.eigalg, iter, ϵ)
 
+            # TODO: make the choice of QR or LQ together with the choice of gauging alg
             @static if Defaults.parallelize_sites
                 @sync begin
                     for loc in 1:length(ψ)
@@ -116,10 +133,15 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
                 end
             end
 
-            ψ = InfiniteMPS(temp_ACs, ψ.CR[end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
-            recalculate!(envs, ψ; tol=tol_envs)
+            # TODO: properly pass gaugealg to InfiniteMPS
+            gaugealg = updatetol(alg.gaugealg, iter, ϵ)
+            ψ = InfiniteMPS(temp_ACs, ψ.CR[end]; gaugealg.tol, gaugealg.maxiter)
 
-            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
+            # TODO: properly pass envalg to environments
+            envalg = updatetol(alg.envalg, iter, ϵ)
+            recalculate!(envs, ψ; envalg.tol)
+
+            ψ, envs = alg.finalize(iter, ψ, H, envs)::typeof((ψ, envs))
 
             ϵ = calc_galerkin(ψ, envs)
         end

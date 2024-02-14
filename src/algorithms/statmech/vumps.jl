@@ -27,7 +27,7 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
     while true
         tol_eigs, tol_gauge, tol_envs = updatetols(alg, iter, galerkin)
 
-        eigalg = Arnoldi(; tol=tol_eigs)
+        eigalg = updatetol(alg.eigalg, iter, galerkin)
 
         if Defaults.parallelize_sites
             @sync begin
@@ -67,8 +67,11 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
             temp_ACs[row, col] = QAc * adjoint(Qc)
         end
 
-        ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
-        recalculate!(envs, ψ; tol=tol_envs)
+        gaugealg = updatetol(alg.gaugealg, iter, galerkin)
+        ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; gaugealg.tol, gaugealg.maxiter)
+        
+        envalg = updatetol(alg.envalg, iter, galerkin)
+        recalculate!(envs, ψ; envalg.tol)
 
         ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
