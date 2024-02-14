@@ -9,11 +9,10 @@ An algorithm that uses an two-site VUMPS step to change the bond dimension of a 
 - `trscheme::TruncationScheme = notrunc()` : The truncation scheme to use.
 """
 struct VUMPSSvdCut <: Algorithm
-    tol::Float64 = Defaults.tol
-    tol_gauge::Float64 = Defaults.tolgauge
-    trscheme::TruncationScheme = notrunc()
+    tol::Float64
+    tol_gauge::Float64
+    trscheme::TruncationScheme
 end
-
 function VUMPSSvdCut(; tol_gauge::Real=Defaults.tolgauge, tol::Real=Defaults.tol,
                      trscheme::TruncationScheme=notrunc(), tol_galerkin=nothing,
                      tol_eigenval=nothing)

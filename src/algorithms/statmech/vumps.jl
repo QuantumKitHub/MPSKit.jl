@@ -73,11 +73,11 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
         ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
         galerkin = calc_galerkin(ψ, envs)
-        alg.verbosity >= Iteration &&
+        alg.verbosity >= VERBOSE_ITER &&
             @info "VUMPS @iteration $(iter) galerkin = $(galerkin)"
 
         if (galerkin <= alg.tol) || iter >= alg.maxiter
-            alg.verbosity >= Warning && iter >= alg.maxiter &&
+            alg.verbosity >= VERBOSE_WARN && iter >= alg.maxiter &&
                 @warn "VUMPS didn't converge $(galerkin)"
             return ψ, envs, galerkin
         end

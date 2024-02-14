@@ -17,22 +17,28 @@ optimization algorithm will be attempted based on the supplied keywords.
 - `verbose::Bool`: display progress information
 """
 function find_groundstate(ψ::AbstractMPS, H, envs::Cache=environments(ψ, H);
-                          tol=Defaults.tol, maxiter=Defaults.maxiter,
-                          verbose=Defaults.verbose, trscheme=nothing)
+                          tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
+                          verbosity::Integer=Defaults.verbosity, trscheme=nothing, verbose=nothing)
+    verbosity = if !isnothing(verbose)
+        Base.depwarn("find_groundstate(ψ, H; verbose=...) is deprecated. Use find_groundstate(ψ, H; verbosity=...) instead.",
+                     :find_groundstate; force=true)
+        verbose ? VERBOSE_ITER : VERBOSE_WARN
+    else
+        verbosity
+    end
     if isa(ψ, InfiniteMPS)
-        alg = VUMPS(; tol_galerkin=max(1e-4, tol), verbose=verbose, maxiter=maxiter)
+        alg = VUMPS(; tol=max(1e-4, tol), verbosity, maxiter)
         if tol < 1e-4
             alg = alg &
-                  GradientGrassmann(; tol=tol, maxiter=maxiter, verbosity=verbose ? 2 : 0)
+                  GradientGrassmann(; tol, maxiter, verbosity)
         end
         if !isnothing(trscheme)
-            alg = IDMRG2(; tol_galerkin=min(1e-2, 100tol), verbose=verbose,
-                         trscheme=trscheme) & alg
+            alg = IDMRG2(; tol=min(1e-2, 100tol), verbosity, trscheme) & alg
         end
     elseif isa(ψ, AbstractFiniteMPS)
-        alg = DMRG(; tol=tol, maxiter=maxiter, verbose=verbose)
+        alg = DMRG(; tol, maxiter, verbosity)
         if !isnothing(trscheme)
-            alg = DMRG2(; tol=min(1e-2, 100tol), verbose=verbose, trscheme=trscheme) & alg
+            alg = DMRG2(; tol=min(1e-2, 100tol), verbosity, trscheme) & alg
         end
     else
         throw(ArgumentError("Unknown input state type"))

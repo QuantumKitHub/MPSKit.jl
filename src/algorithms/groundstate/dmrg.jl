@@ -25,7 +25,7 @@ function DMRG(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
     actual_verbosity = if !isnothing(verbose)
         Base.depwarn("DMRG(; kwargs..., verbose=...) is deprecated. Use DMRG(; kwargs..., verbosity=...) instead.",
                      :DMRG; force=true)
-        verbose ? Iteration : Warning
+        verbose ? VERBOSE_ITER : VERBOSE_WARN
     else
         verbosity
     end
@@ -50,16 +50,16 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
         end
 
-        alg.verbosity >= Iteration &&
+        alg.verbosity >= VERBOSE_ITER &&
             @info "DMRG iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
 
         ϵ <= alg.tol && break
-        alg.verbosity >= Warning && iter == alg.maxiter &&
+        alg.verbosity >= VERBOSE_WARN && iter == alg.maxiter &&
             @warn "DMRG maximum iterations" iter ϵ λ = sum(expectation_value(ψ, H, envs))
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbosity >= Convergence &&
+    alg.verbosity >= VERBOSE_CONVERGENCE &&
         @info "DMRG summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end
@@ -78,7 +78,7 @@ end
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
-@kwdef struct DMRG2{A,F} <: Algorithm
+struct DMRG2{A,F} <: Algorithm
     tol::Float64
     maxiter::Int
     eigalg::A
@@ -93,7 +93,7 @@ function DMRG2(; tol::Real = Defaults.tol, maxiter::Integer = Defaults.maxiter,
     actual_verbosity = if !isnothing(verbose)
         Base.depwarn("DMRG2(; kwargs..., verbose=...) is deprecated. Use DMRG2(; kwargs..., verbosity=...) instead.",
                      :DMRG2; force=true)
-        verbose ? Iteration : Warning
+        verbose ? VERBOSE_ITER : VERBOSE_WARN
     else
         verbosity
     end
@@ -144,16 +144,16 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
         end
 
-        alg.verbosity >= Iteration &&
+        alg.verbosity >= VERBOSE_ITER &&
             @info "DMRG2 iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
 
         ϵ <= alg.tol && break
-        alg.verbosity >= Warning && iter == alg.maxiter &&
+        alg.verbosity >= VERBOSE_WARN && iter == alg.maxiter &&
             @warn "DMRG2 maximum iterations" iter ϵ λ = sum(expectation_value(ψ, H, envs))
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbosity >= Convergence && @info "DMRG2 summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
+    alg.verbosity >= VERBOSE_CONVERGENCE && @info "DMRG2 summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end
 

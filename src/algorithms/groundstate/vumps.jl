@@ -58,7 +58,7 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
     actual_verbosity = if !isnothing(verbose)
         Base.depwarn("VUMPS(; kwargs..., verbose=...) is deprecated. Use VUMPS(; kwargs..., verbosity=...) instead.",
                      :VUMPS; force=true)
-        verbose ? Iteration : Warning
+        verbose ? VERBOSE_ITER : VERBOSE_WARN
     else
         verbosity
     end
@@ -124,16 +124,16 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
             ϵ = calc_galerkin(ψ, envs)
         end
 
-        alg.verbosity >= Iteration &&
+        alg.verbosity >= VERBOSE_ITER &&
             @info "VUMPS iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
 
-        ϵ <= alg.tol_galerkin && break
-        alg.verbosity >= Warn && iter == alg.maxiter &&
+        ϵ <= alg.tol && break
+        alg.verbosity >= VERBOSE_WARN && iter == alg.maxiter &&
             @warn "VUMPS maximum iterations" iter ϵ λ = sum(expectation_value(ψ, H, envs))
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbosity >= Convergence &&
+    alg.verbosity >= VERBOSE_CONVERGENCE &&
         @info "VUMPS summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end

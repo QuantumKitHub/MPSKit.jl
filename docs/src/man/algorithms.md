@@ -153,7 +153,7 @@ H = transverse_field_ising(; g)
 
 # Finding the ground state
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^32)
-ψ, = find_groundstate(ψ₀, H; verbose=false)
+ψ, = find_groundstate(ψ₀, H; verbosity=0)
 
 # Computing excitations using the Quasiparticle Ansatz
 Es, ϕs = excitations(H, QuasiparticleAnsatz(), ψ; num=1)
@@ -178,7 +178,7 @@ H = heisenberg_XXX()
 
 # Ground state computation
 ψ₀ = InfiniteMPS(ℂ^3, ℂ^48)
-ψ, = find_groundstate(ψ₀, H; verbose=false)
+ψ, = find_groundstate(ψ₀, H; verbosity=0)
 
 # Excitation calculations
 Es, ϕs = excitations(H, QuasiparticleAnsatz(), momentum, ψ)
@@ -201,7 +201,7 @@ g = 10.0
 L = 16
 H = transverse_field_ising(Z2Irrep; g)
 ψ₀ = FiniteMPS(L, Z2Space(0 => 1, 1 => 1), Z2Space(0 => 16, 1 => 16))
-ψ, = find_groundstate(ψ₀, H; verbose=false)
+ψ, = find_groundstate(ψ₀, H; verbosity=0)
 Es, ϕs = excitations(H, QuasiparticleAnsatz(), ψ; num=1, sector=Z2Irrep(1))
 isapprox(Es[1], 2(g - 1); rtol=1e-2) # infinite analytical result
 
@@ -217,7 +217,7 @@ For finite systems we can also do something else - find the groundstate of the h
 ```julia
 th = nonsym_ising_ham()
 ts = FiniteMPS(10,ℂ^2,ℂ^12);
-(ts,envs,_) = find_groundstate(ts,th,DMRG(verbose=false));
+(ts,envs,_) = find_groundstate(ts,th,DMRG(verbosity=0));
 (energies,Bs) = excitations(th,FiniteExcited(),ts,envs);
 ```
 
@@ -270,7 +270,7 @@ For statmech partition functions we want to find the approximate leading boundar
 ```julia
 th = nonsym_ising_mpo()
 ts = InfiniteMPS([ℂ^2],[ℂ^20]);
-(ts,envs,_) = leading_boundary(ts,th,VUMPS(maxiter=400,verbose=false));
+(ts,envs,_) = leading_boundary(ts,th,VUMPS(maxiter=400,verbosity=0));
 ```
 
 if the mpo satisfies certain properties (positive and hermitian), it may also be possible to use GradientGrassmann.

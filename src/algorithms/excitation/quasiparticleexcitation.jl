@@ -93,14 +93,14 @@ end
 function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
                      lenvs=environments(lmps, H), rmps=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
-                     verbose=Defaults.verbose, num=1, solver=Defaults.linearsolver,
+                     verbosity=Defaults.verbosity, num=1, solver=Defaults.linearsolver,
                      sector=one(sectortype(lmps)), parallel=true)
     if parallel
         tasks = map(momenta) do momentum
             Threads.@spawn begin
                 E, ϕ = excitations(H, alg, momentum, lmps, lenvs, rmps, renvs; num, solver,
                                    sector)
-                verbose && @info "Found excitations for momentum = $(momentum)"
+                verbosity >= VERBOSE_ITER && @info "Found excitations for momentum = $(momentum)"
                 return E, ϕ
             end
         end
@@ -110,7 +110,7 @@ function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
         fetched = map(momenta) do momentum
             E, ϕ = excitations(H, alg, momentum, lmps, lenvs, rmps, renvs; num, solver,
                                sector)
-            verbose && @info "Found excitations for momentum = $(momentum)"
+            verbosity >= VERBOSE_ITER && @info "Found excitations for momentum = $(momentum)"
             return E, ϕ
         end
     end

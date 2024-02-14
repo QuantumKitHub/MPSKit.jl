@@ -61,7 +61,7 @@ Ls = 12:4:30
 ΔEs = map(Ls) do L
     @info "computing L = $L"
     ψ₀ = FiniteMPS(rand, ComplexF64, L, physical_space, virtual_space)
-    ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbose=false))
+    ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity=0))
     En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(1))
     En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(2))
     return real(En_2[1] - En_1[1])

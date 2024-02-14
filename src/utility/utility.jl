@@ -146,11 +146,7 @@ function between(x1, x, x2)
     return x
 end
 
-@enum Verbosity begin
-    Silent
-    Warning
-    Convergence
-    Iteration
-    Detailed
-    Debug
-end
+const VERBOSE_OFF = 0
+const VERBOSE_WARN = 1
+const VERBOSE_CONVERGENCE = 2
+const VERBOSE_ITER = 3

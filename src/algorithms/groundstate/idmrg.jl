@@ -71,7 +71,7 @@ function find_groundstate(ψ′::InfiniteMPS, H, alg::IDMRG1, oenvs=environments
 
         δ = norm(curc - ψ.CR[0])
         δ < alg.tol && break
-        alg.verbosity <= Iteration && @info "IDMRG iter $(topit) err $(δ)"
+        alg.verbosity <= VERBOSE_ITER && @info "IDMRG iter $(topit) err $(δ)"
     end
 
     ψ″ = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
@@ -219,9 +219,9 @@ function find_groundstate(ψ′::InfiniteMPS, H, alg::IDMRG2, envs′=environmen
         e1 = isometry(_firstspace(curc), smallest)
         e2 = isometry(_firstspace(c), smallest)
         δ = norm(e2' * c * e2 - e1' * curc * e1)
-        alg.verbosity >= Iteration && @info "IDMRG2 iter $(topit) err $(δ)"
+        alg.verbosity >= VERBOSE_ITER && @info "IDMRG2 iter $(topit) err $(δ)"
 
-        δ < alg.tol_galerkin && break
+        δ < alg.tol && break
     end
 
     ψ″ = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)

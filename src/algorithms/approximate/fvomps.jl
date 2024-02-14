@@ -36,13 +36,13 @@ function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
             init.AC[pos + 1] = (complex(c), _transpose_front(ar))
         end
 
-        alg.verbosity >= Iteration && @info "DMRG2 iter $(iter) error $(delta)"
+        alg.verbosity >= VERBOSE_ITER && @info "DMRG2 iter $(iter) error $(delta)"
 
         # finalize
         iter += 1
     end
 
-    alg.verbosity >= Warning && delta > tol &&
+    alg.verbosity >= VERBOSE_WARN && delta > tol &&
         @warn "DMRG2 failed to converge $(delta)>$(tol)"
     return init, envs, delta
 end
@@ -71,12 +71,12 @@ function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG,
             init.AC[pos] = newac
         end
 
-        alg.verbosity >= Iteration && @info "DMRG iter $(iter) error $(delta)"
+        alg.verbosity >= VERBOSE_ITER && @info "DMRG iter $(iter) error $(delta)"
 
         iter += 1
     end
 
-    alg.verbosity >= Warning && delta > tol &&
+    alg.verbosity >= VERBOSE_WARN && delta > tol &&
         @warn "DMRG failed to converge $(delta)>$(tol)"
     return init, envs, delta
 end
