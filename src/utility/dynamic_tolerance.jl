@@ -10,7 +10,7 @@ updatetol(alg, iter::Integer, ϵ::Real) = alg
 
 Algorithm wrapper with dynamically adjusted tolerances.
 """
-struct DynamicTolerance{A}
+struct DynamicTolerance{A} <: Algorithm
     alg::A
     tol_min::Float64
     tol_max::Float64
