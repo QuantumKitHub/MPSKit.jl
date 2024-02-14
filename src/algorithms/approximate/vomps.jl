@@ -1,3 +1,37 @@
+struct VOMPS{F,A,B} <: Algorithm
+    tol::Float64
+    maxiter::Int
+    verbosity::Int
+    finalize::F
+    gaugealg::A
+    envalg::B
+    function VOMPS(tol, maxiter, verbosity, finalize::F, gaugealg::A, envalg::B) where {F,A,B}
+        return new{F,A,B}(tol, maxiter, verbosity, finalize, gaugealg, envalg)
+    end
+end
+function VOMPS(; tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity::Integer=Defaults.verbosity,
+               orthmaxiter::Integer=Defaults.maxiter,
+               dynamic_tols::Bool=Defaults.dynamical_tols,
+               tol_min=nothing, tol_max=nothing,
+               envs_tolfactor=nothing, gauge_tolfactor=nothing)
+    gaugealg = UniformOrthogonalization(; tol, maxiter=orthmaxiter,
+                                        verbosity=verbosity - 2)
+    envalg = (; tol, verbosity=verbosity - 2)
+
+    if !dynamic_tols
+        return VOMPS(tol, maxiter, verbosity, finalize, gaugealg, envalg)
+    end
+    
+    # setup dynamic tolerances
+    dyn_gaugealg = DynamicTolerance(gaugealg, something(tol_min, Defaults.tol_min),
+                                    something(tol_max, Defaults.tol_max),
+                                    something(gauge_tolfactor, Defaults.gauge_tolfactor))
+    dyn_envalg = DynamicTolerance(envalg, something(tol_min, Defaults.tol_min),
+                                  something(tol_max, Defaults.tol_max),
+                                  something(envs_tolfactor, Defaults.envs_tolfactor))
+    return VOMPS(tol, maxiter, verbosity, finalize, dyn_gaugealg, dyn_envalg)
+end
+
 function approximate(ψ::InfiniteMPS,
                      toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS}, algorithm,
                      envs=environments(ψ, toapprox))
@@ -15,7 +49,7 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
     temp_ACs = similar.(ψ.AC)
 
     for iter in 1:(alg.maxiter)
-        _, tol_gauge, tol_envs = updatetols(alg, iter, ϵ)
+        # _, tol_gauge, tol_envs = updatetols(alg, iter, ϵ)
         Δt = @elapsed begin
             @static if Defaults.parallelize_sites
                 @sync for col in 1:size(ψ, 2)
@@ -27,11 +61,16 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
                     _vomps_localupdate!(temp_ACs[:, col], col, ψ, toapprox, envs)
                 end
             end
+            
+            # TODO: properly pass gaugealg to MPSMultiline
+            gaugealg = updatetol(alg.gaugealg, iter, ϵ)
+            ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; gaugealg.tol, gaugealg.maxiter)
+            
+            # TODO: properly pass envalg to environments
+            envalg = updatetol(alg.envalg, iter, ϵ)
+            recalculate!(envs, ψ; envalg.tol)
 
-            ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
-            recalculate!(envs, ψ; tol=tol_envs)
-
-            ψ, envs = alg.finalize(iter, ψ, toapprox, envs)::Tuple{typeof(ψ),typeof(envs)}
+            ψ, envs = alg.finalize(iter, ψ, toapprox, envs)::typeof((ψ, envs))
 
             ϵ = calc_galerkin(ψ, envs)
         end
