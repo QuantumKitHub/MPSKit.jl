@@ -1,3 +1,9 @@
+```@meta
+DocTestSetup = quote
+    using MPSKit, MPSKitModels, TensorKit
+end
+```
+
 # [Algorithms](@id um_algorithms)
 
 ## Minimizing the energy
@@ -122,20 +128,87 @@ This feature is at the moment not very well supported.
 
 ## Excitations
 
-### Quasiparticle ansatz
+### Quasiparticle Ansatz
 
-We export code that implements the [quasiparticle excitation ansatz](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.111.080401) for finite and infinite systems.
-For example, the following calculates the haldane gap for spin-1 heisenberg.
+The Quasiparticle Ansatz offers an approach to compute low-energy eigenstates in quantum
+systems, playing a key role in both finite and infinite systems. It leverages localized
+perturbations for approximations, as detailed in
+[this paper](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.111.080401).
 
-```julia
-th = nonsym_xxz_ham()
-ts = InfiniteMPS([ℂ^3],[ℂ^48]);
-(ts,envs,_) = find_groundstate(ts,th,VUMPS(maxiter=400,verbose=false));
-(energies,Bs) = excitations(th,QuasiparticleAnsatz(),Float64(pi),ts,envs);
-@test energies[1] ≈ 0.41047925 atol=1e-4
+#### Finite Systems:
+
+In finite systems, we approximate low-energy states by altering a single tensor in the
+Matrix Product State (MPS) for each site, and summing these across all sites. This method
+introduces additional gauge freedoms, utilized to ensure orthogonality to the ground state.
+Optimizing within this framework translates to solving an eigenvalue problem. For example,
+in the transverse field Ising model, we calculate the first excited state as shown in the
+provided code snippet, amd check the accuracy against theoretical values. Some deviations
+are expected, both due to finite-bond-dimension and finite-size effects.
+
+```jldoctest; output = false
+# Model parameters
+g = 10.0
+L = 16
+H = transverse_field_ising(; g)
+
+# Finding the ground state
+ψ₀ = FiniteMPS(L, ℂ^2, ℂ^32)
+ψ, = find_groundstate(ψ₀, H; verbose=false)
+
+# Computing excitations using the Quasiparticle Ansatz
+Es, ϕs = excitations(H, QuasiparticleAnsatz(), ψ; num=1)
+isapprox(Es[1], 2(g - 1); rtol=1e-2)
+
+# output
+
+true
 ```
 
-For infinite systems you have to specify the momentum of your particle. In contrast, momentum is not a well defined quantum number and you therefore do not have to specify it when finding excitations on top of a finite MPS.
+#### Infinite Systems:
+
+The ansatz in infinite systems maintains translational invariance by perturbing every site
+in the unit cell in a plane-wave superposition, requiring momentum specification. The
+[Haldane gap](https://iopscience.iop.org/article/10.1088/0953-8984/1/19/001) computation in
+the Heisenberg model illustrates this approach.
+
+```jldoctest; output = false
+# Setting up the model and momentum
+momentum = π
+H = heisenberg_XXX()
+
+# Ground state computation
+ψ₀ = InfiniteMPS(ℂ^3, ℂ^48)
+ψ, = find_groundstate(ψ₀, H; verbose=false)
+
+# Excitation calculations
+Es, ϕs = excitations(H, QuasiparticleAnsatz(), momentum, ψ)
+isapprox(Es[1], 0.41047925; atol=1e-4)
+
+# output
+
+true
+```
+
+#### Charged excitations:
+
+When dealing with symmetric systems, the default optimization is for eigenvectors with
+trivial total charge. However, quasiparticles with different charges can be obtained using
+the sector keyword. For instance, in the transverse field Ising model, we consider an
+excitation built up of flipping a single spin, aligning with `Z2Irrep(1)`.
+
+```jldoctest; output = false
+g = 10.0
+L = 16
+H = transverse_field_ising(Z2Irrep; g)
+ψ₀ = FiniteMPS(L, Z2Space(0 => 1, 1 => 1), Z2Space(0 => 16, 1 => 16))
+ψ, = find_groundstate(ψ₀, H; verbose=false)
+Es, ϕs = excitations(H, QuasiparticleAnsatz(), ψ; num=1, sector=Z2Irrep(1))
+isapprox(Es[1], 2(g - 1); rtol=1e-2) # infinite analytical result
+
+# output
+
+true
+```
 
 ### Finite excitations
 
@@ -238,4 +311,8 @@ As a side effect, our code support exact diagonalization. The idea is to constru
 
 ```julia
 exact_diagonalization(periodic_boundary_conditions(su2_xxx_ham(spin=1),10),which=:SR) # find the groundstate on 10 sites
+```
+
+```@meta
+DocTestSetup = nothing
 ```
