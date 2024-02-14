@@ -146,8 +146,9 @@ function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
     CR = PeriodicArray(isomorphism.(storagetype(eltype(A)), leftvspaces, leftvspaces))
     AL = similar.(AR)
 
-    uniform_leftorth!(AL, CR, AR; kwargs...)
-    uniform_rightorth!(AR, CR, AL; kwargs...)
+    alg = UniformOrthogonalization(; kwargs...)
+    uniform_leftorth!(AL, CR, AR, alg)
+    uniform_rightorth!(AR, CR, AL, alg)
 
     return InfiniteMPS(AL, AR, CR)
 end
@@ -156,7 +157,8 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
     CR = PeriodicArray(fill(copy(C₀), length(AL)))
     AL = PeriodicArray(copy.(AL))
     AR = similar(AL)
-    uniform_rightorth!(AR, CR, AL; kwargs...)
+    alg = UniformOrthogonalization(; kwargs...)
+    uniform_rightorth!(AR, CR, AL, alg)
     return InfiniteMPS(AL, AR, CR)
 end
 
@@ -164,7 +166,8 @@ function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}
     CR = PeriodicArray(fill(copy(C₀), length(AR)))
     AR = PeriodicArray(copy.(AR))
     AL = similar(AR)
-    uniform_leftorth!(AL, CR, AR; kwargs...)
+    alg = UniformOrthogonalization(; kwargs...)
+    uniform_leftorth!(AL, CR, AR, alg)
     return InfiniteMPS(AL, AR, CR)
 end
 
