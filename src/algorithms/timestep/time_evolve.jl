@@ -16,7 +16,12 @@ function time_evolve end, function time_evolve! end
 
 # TODO: is it possible to remove this code-duplication?
 function time_evolve(ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H);
-                     verbosity=0)
+                     verbose=nothing)
+    if !isnothing(verbose)
+        Base.depwarn("`time_evolve(ψ, H, t_span, alg, envs; verbose=...)` is deprecated. Use `alg.verbosity` instead.",
+                     :time_evolve; force=true)
+        alg = @set alg.verbosity = verbose ? VERBOSE_ITER : VERBOSE_WARN
+    end
     for (t, dt) in zip(t_span[2:end], diff(t_span))
         elapsed = @elapsed ψ, envs = timestep(ψ, H, t, dt, alg, envs)
         alg.verbosity >= VERBOSE_ITER && @info "Timestep iteration:" t elapsed
@@ -25,7 +30,12 @@ function time_evolve(ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environm
     return ψ, envs
 end
 function time_evolve!(ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H);
-                      verbosity=0)
+                      verbose=nothing)
+    if !isnothing(verbose)
+        Base.depwarn("`time_evolve(ψ, H, t_span, alg, envs; verbose=...)` is deprecated. Use `alg.verbosity` instead.",
+                     :time_evolve; force=true)
+        alg = @set alg.verbosity = verbose ? VERBOSE_ITER : VERBOSE_WARN
+    end
     for (t, dt) in zip(t_span[2:end], diff(t_span))
         elapsed = @elapsed ψ, envs = timestep!(ψ, H, t, dt, alg, envs)
         alg.verbosity >= VERBOSE_ITER && @info "Timestep iteration:" t elapsed
