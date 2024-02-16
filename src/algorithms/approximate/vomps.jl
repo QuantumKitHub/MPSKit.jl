@@ -23,10 +23,10 @@ function VOMPS(; tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity::Integer=
     end
     
     # setup dynamic tolerances
-    dyn_gaugealg = DynamicTolerance(gaugealg, something(tol_min, Defaults.tol_min),
+    dyn_gaugealg = ThrottledTol(gaugealg, something(tol_min, Defaults.tol_min),
                                     something(tol_max, Defaults.tol_max),
                                     something(gauge_tolfactor, Defaults.gauge_tolfactor))
-    dyn_envalg = DynamicTolerance(envalg, something(tol_min, Defaults.tol_min),
+    dyn_envalg = ThrottledTol(envalg, something(tol_min, Defaults.tol_min),
                                   something(tol_max, Defaults.tol_max),
                                   something(envs_tolfactor, Defaults.envs_tolfactor))
     return VOMPS(tol, maxiter, verbosity, finalize, dyn_gaugealg, dyn_envalg)

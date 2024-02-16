@@ -20,7 +20,7 @@ function default_orth_eigalg(tol, maxiter)
     tol_min = tol / 10
     tol_max = Inf
     tol_factor = 1
-    return DynamicTolerance(eigalg, tol_min, tol_max, tol_factor)
+    return ThrottledTol(eigalg, tol_min, tol_max, tol_factor)
 end
 
 Base.@deprecate(uniform_leftorth!(AL, CR, A; kwargs...),

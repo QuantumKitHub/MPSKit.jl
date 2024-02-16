@@ -80,11 +80,11 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
     # Setup dynamic tolerances
     actual_tol_min = something(tol_min, Defaults.tol_min)
     actual_tol_max = something(tol_max, Defaults.tol_max)
-    dyn_eigalg = DynamicTolerance(eigalg, actual_tol_min, actual_tol_max,
+    dyn_eigalg = ThrottledTol(eigalg, actual_tol_min, actual_tol_max,
                                   something(eigs_tolfactor, Defaults.eigs_tolfactor))
-    dyn_envalg = DynamicTolerance(envalg, actual_tol_min, actual_tol_max,
+    dyn_envalg = ThrottledTol(envalg, actual_tol_min, actual_tol_max,
                                   something(envs_tolfactor, Defaults.envs_tolfactor))
-    dyn_orthalg = DynamicTolerance(orthalg, actual_tol_min, actual_tol_max,
+    dyn_orthalg = ThrottledTol(orthalg, actual_tol_min, actual_tol_max,
                                    something(gauge_tolfactor, Defaults.gauge_tolfactor))
     return VUMPS(actual_tol, maxiter, actual_verbosity, finalize, dyn_eigalg, dyn_orthalg,
                  dyn_envalg)
