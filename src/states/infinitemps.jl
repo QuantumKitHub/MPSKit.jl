@@ -149,7 +149,7 @@ Utility
 Base.size(ψ::InfiniteMPS, args...) = size(ψ.AL, args...)
 Base.length(ψ::InfiniteMPS) = length(ψ.AL)
 Base.eltype(ψ::InfiniteMPS) = eltype(ψ.AL)
-Base.copy(ψ::InfiniteMPS) = InfiniteMPS(copy(ψ.AL), copy(ψ.AR), copy(ψ.CR), copy(ψ.AC))
+Base.copy(ψ::InfiniteMPS) = InfiniteMPS(copy.(ψ.AL), copy.(ψ.AR), copy.(ψ.CR), copy.(ψ.AC))
 function Base.repeat(ψ::InfiniteMPS, i::Int)
     return InfiniteMPS(repeat(ψ.AL, i), repeat(ψ.AR, i), repeat(ψ.CR, i), repeat(ψ.AC, i))
 end
