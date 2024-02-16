@@ -68,8 +68,8 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
 
     # Keyword handling
     eigalg = Arnoldi(; tol, eager=true, verbosity=actual_verbosity - 2)
-    orthalg = UniformOrthogonalization(; tol, maxiter=orthmaxiter,
-                                       verbosity=actual_verbosity - 2)
+    orthalg = UniformGauging(; tol, maxiter=orthmaxiter,
+                             verbosity=actual_verbosity - 2)
     envalg = (; tol, verbosity=actual_verbosity - 2)
 
     if !dynamic_tols
@@ -81,11 +81,11 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
     actual_tol_min = something(tol_min, Defaults.tol_min)
     actual_tol_max = something(tol_max, Defaults.tol_max)
     dyn_eigalg = ThrottledTol(eigalg, actual_tol_min, actual_tol_max,
-                                  something(eigs_tolfactor, Defaults.eigs_tolfactor))
+                              something(eigs_tolfactor, Defaults.eigs_tolfactor))
     dyn_envalg = ThrottledTol(envalg, actual_tol_min, actual_tol_max,
-                                  something(envs_tolfactor, Defaults.envs_tolfactor))
+                              something(envs_tolfactor, Defaults.envs_tolfactor))
     dyn_orthalg = ThrottledTol(orthalg, actual_tol_min, actual_tol_max,
-                                   something(gauge_tolfactor, Defaults.gauge_tolfactor))
+                               something(gauge_tolfactor, Defaults.gauge_tolfactor))
     return VUMPS(actual_tol, maxiter, actual_verbosity, finalize, dyn_eigalg, dyn_orthalg,
                  dyn_envalg)
 end
@@ -103,20 +103,11 @@ function Base.show(io::IO, ::MIME"text/plain", alg::VUMPS)
     return nothing
 end
 
-# function updatetols(alg::VUMPS, iter, ϵ)
-#     if alg.dynamical_tols
-#         tol_eigs = between(alg.tol_min, ϵ * alg.eigs_tolfactor / sqrt(iter), alg.tol_max)
-#         tol_envs = between(alg.tol_min, ϵ * alg.envs_tolfactor / sqrt(iter), alg.tol_max)
-#         tol_gauge = between(alg.tol_min, ϵ * alg.gauge_tolfactor / sqrt(iter), alg.tol_max)
-#     else # preserve legacy behavior
-#         tol_eigs = alg.tol / 10
-#         tol_envs = Defaults.tol
-#         tol_gauge = Defaults.tolgauge
-#     end
-#     return tol_eigs, tol_envs, tol_gauge
-# end
-
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
+    return find_groundstate!(copy(ψ), H, alg, envs)
+end
+
+function find_groundstate!(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
     t₀ = Base.time_ns()
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
@@ -140,9 +131,9 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
                 end
             end
 
-            # TODO: properly pass gaugealg to InfiniteMPS
             gaugealg = updatetol(alg.gaugealg, iter, ϵ)
-            ψ = InfiniteMPS(temp_ACs, ψ.CR[end]; gaugealg.tol, gaugealg.maxiter)
+            uniform_gauge!(ψ.AL, ψ.AR, ψ.CR, temp_ACs; alg=gaugealg)
+            mul!.(ψ.AC, ψ.AL, ψ.CR)
 
             # TODO: properly pass envalg to environments
             envalg = updatetol(alg.envalg, iter, ϵ)
