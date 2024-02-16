@@ -107,6 +107,7 @@ end
 Constructors
 ===========================================================================================#
 
+# From tensors
 function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractVector{B},
                      AC::AbstractVector{A}=AL .* CR) where {A<:GenericMPSTensor,
                                                             B<:MPSBondTensor}
@@ -114,6 +115,11 @@ function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractV
                        convert(PeriodicVector{B}, CR), convert(PeriodicVector{A}, AC))
 end
 
+function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
+    return InfiniteMPS(uniform_gauge(A; kwargs...)...)
+end
+
+# From spaces
 function InfiniteMPS(pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
                      kwargs...) where {S<:IndexSpace}
     return InfiniteMPS(MPSTensor.(pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
@@ -134,41 +140,6 @@ end
 function InfiniteMPS(f, elt::Type{<:Number}, ds::AbstractVector{Int},
                      Ds::AbstractVector{Int}, kwargs...)
     return InfiniteMPS(f, elt, ComplexSpace.(ds), ComplexSpace.(Ds); kwargs...)
-end
-
-function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    AR = PeriodicArray(copy.(A)) # copy to avoid side effects
-    leftvspaces = circshift(_firstspace.(AR), -1)
-    rightvspaces = conj.(_lastspace.(AR))
-    isnothing(findfirst(leftvspaces .!= rightvspaces)) ||
-        throw(SpaceMismatch("incompatible virtual spaces $leftvspaces and $rightvspaces"))
-
-    CR = PeriodicArray(isomorphism.(storagetype(eltype(A)), leftvspaces, leftvspaces))
-    AL = similar.(AR)
-
-    alg = UniformOrthogonalization(; kwargs...)
-    uniform_leftorth!(AL, CR, AR, alg)
-    uniform_rightorth!(AR, CR, AL, alg)
-
-    return InfiniteMPS(AL, AR, CR)
-end
-
-function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor; kwargs...)
-    CR = PeriodicArray(fill(copy(C₀), length(AL)))
-    AL = PeriodicArray(copy.(AL))
-    AR = similar(AL)
-    alg = UniformOrthogonalization(; kwargs...)
-    uniform_rightorth!(AR, CR, AL, alg)
-    return InfiniteMPS(AL, AR, CR)
-end
-
-function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    CR = PeriodicArray(fill(copy(C₀), length(AR)))
-    AR = PeriodicArray(copy.(AR))
-    AL = similar(AR)
-    alg = UniformOrthogonalization(; kwargs...)
-    uniform_leftorth!(AL, CR, AR, alg)
-    return InfiniteMPS(AL, AR, CR)
 end
 
 #===========================================================================================
