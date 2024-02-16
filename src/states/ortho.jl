@@ -1,18 +1,33 @@
-struct UniformOrthogonalization{A,B,C}
+"""
+    UniformGauging{A,B,C} <: Algorithm
+
+Algorithm for bringing an infinite MPS into a uniform gauge.
+
+# Fields
+- `tol::Float64`: tolerance for convergence
+- `maxiter::Int`: maximum number of iterations
+- `verbosity::Int`: verbosity level
+- `leftorthalg::A`: left-orthogonalization algorithm
+- `rightorthalg::B`: right-orthogonalization algorithm
+- `eigalg::C`: eigensolver algorithm
+- `eig_miniter::Int`: minimum number of iterations before eigensolver is used
+"""
+struct UniformGauging{A,B,C} <: Algorithm
     tol::Float64
     maxiter::Int
     verbosity::Int
     leftorthalg::A
     rightorthalg::B
+    order::Symbol
     eigalg::C
     eig_miniter::Int
 end
-function UniformOrthogonalization(; tol=Defaults.tolgauge, maxiter=Defaults.maxiter,
-                                  verbosity=VERBOSE_WARN, leftorthalg=TensorKit.QRpos(),
-                                  rightorthalg=TensorKit.LQpos(),
-                                  eigalg=default_orth_eigalg(tol, maxiter), eig_miniter=10)
-    return UniformOrthogonalization(tol, maxiter, verbosity, leftorthalg, rightorthalg,
-                                    eigalg, eig_miniter)
+function UniformGauging(; tol=Defaults.tolgauge, maxiter=Defaults.maxiter,
+                        verbosity=VERBOSE_WARN, leftorthalg=TensorKit.QRpos(),
+                        rightorthalg=TensorKit.LQpos(), order::Symbol=:LR,
+                        eigalg=default_orth_eigalg(tol, maxiter), eig_miniter=10)
+    return UniformGauging(tol, maxiter, verbosity, leftorthalg, rightorthalg, order,
+                          eigalg, eig_miniter)
 end
 
 function default_orth_eigalg(tol, maxiter)
@@ -24,14 +39,66 @@ function default_orth_eigalg(tol, maxiter)
 end
 
 Base.@deprecate(uniform_leftorth!(AL, CR, A; kwargs...),
-                uniform_leftorth!(AL, CR, A, UniformOrthogonalization(; kwargs...)))
+                uniform_leftorth!(AL, CR, A, UniformGauging(; kwargs...)))
+
+@doc """
+    uniform_gauge(A, [C₀]; kwargs...) -> AL, AR, CR
+    uniform_gauge!(AL, AR, CR, A, [C₀]; kwargs...) -> AL, AR, CR
+
+Brings an infinite MPS, characterized by the tensors `A`, into the center gauge.
+"""
+uniform_gauge, uniform_gauge!
+
+function uniform_gauge(A::AbstractVector{<:GenericMPSTensor}, C₀=gauge_init(A); kwargs...)
+    AL = PeriodicArray(similar(A))
+    AR = PeriodicArray(similar(A))
+    CR = PeriodicArray(similar(A, typeof(C₀)))
+    return uniform_gauge!(AL, AR, CR, A, C₀; kwargs...)
+end
+
+function uniform_gauge!(AL, AR, CR, A, C₀; kwargs...)
+    CR[end] = C₀
+    return uniform_gauge!(AL, AR, CR, A; kwargs...)
+end
+function uniform_gauge!(AL, AR, CR, A; kwargs...)
+    alg = gauge_algselector(; kwargs...)
+    if alg.order === :LR
+        uniform_leftgauge!(AL, CR, A, alg)
+        uniform_rightgauge!(AR, CR, AL, alg)
+    elseif alg.order === :RL
+        uniform_rightgauge!(AR, CR, A, alg)
+        uniform_leftgauge!(AL, CR, AR, alg)
+    elseif alg.order === :L
+        AR .= A
+        uniform_leftgauge!(AL, CR, AR, alg)
+    elseif alg.order === :R
+        AL .= A
+        uniform_rightgauge!(AR, CR, AL, alg)
+    else
+        throw(ArgumentError("Invalid order: $(alg.order)"))
+    end
+    return AL, AR, CR
+end
+
+function gauge_algselector(; alg=nothing, kwargs...)
+    return isnothing(alg) ? UniformGauging(; kwargs...) : alg
+end
+
+function gauge_init(A::AbstractVector{<:GenericMPSTensor})
+    C = isomorphism(storagetype(A[1]), _firstspace(A[1]),
+                       _firstspace(A[1]))
+    return C
+end
+
+# Subroutines
+# -----------
 
 """
-    uniform_leftorth!(AL, CR, A, alg::UniformOrthogonalization)
+    uniform_leftgauge!(AL, CR, A, alg::UniformGauging)
 
 Solves `AL[i] * CR[i] = CR[i] * A[i+1]`.
 """
-function uniform_leftorth!(AL, CR, A, alg::UniformOrthogonalization)
+function uniform_leftgauge!(AL, CR, A, alg::UniformGauging)
     normalize!(CR[end])
     local δ
     for iter in 1:(alg.maxiter)
@@ -63,15 +130,15 @@ function uniform_leftorth!(AL, CR, A, alg::UniformOrthogonalization)
     return AL, CR
 end
 
-Base.@deprecate(uniform_rightorth!(AR, CR, A; kwargs...),
-                uniform_rightorth!(AR, CR, A, UniformOrthogonalization(; kwargs...)))
+Base.@deprecate(uniform_rightgauge!(AR, CR, A; kwargs...),
+                uniform_rightgauge!(AR, CR, A, UniformGauging(; kwargs...)))
 
 """
-    uniform_rightorth!(AR, CR, A, alg::UniformOrthogonalization)
+    uniform_rightgauge!(AR, CR, A, alg::UniformGauging)
 
 Solves C[i-1] * AR[i] = A[i] * C[i].
 """
-function uniform_rightorth!(AR, CR, A, alg::UniformOrthogonalization)
+function uniform_rightgauge!(AR, CR, A, alg::UniformGauging)
     normalize!(CR[end])
     local δ
     for iter in 1:(alg.maxiter)
@@ -87,7 +154,7 @@ function uniform_rightorth!(AR, CR, A, alg::UniformOrthogonalization)
             # TODO: there are definitely unnecessary allocations here
             AR[loc] = A[loc] * CR[loc]
             CR[mod1(loc - 1, end)], tmp = rightorth!(_transpose_tail(AR[loc]);
-                                                         alg=alg.rightorthalg)
+                                                     alg=alg.rightorthalg)
             AR[loc] = _transpose_front(tmp)
             normalize!(CR[mod1(loc - 1, end)])
         end
