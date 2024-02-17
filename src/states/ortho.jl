@@ -38,7 +38,7 @@ function default_orth_eigalg(tol, maxiter)
     return ThrottledTol(eigalg, tol_min, tol_max, tol_factor)
 end
 
-Base.@deprecate(uniform_leftorth!(AL, CR, A; kwargs...),
+Base.@deprecate(uniform_leftgauge!(AL, CR, A; kwargs...),
                 uniform_leftorth!(AL, CR, A, UniformGauging(; kwargs...)))
 
 @doc """
@@ -50,8 +50,8 @@ Brings an infinite MPS, characterized by the tensors `A`, into the center gauge.
 uniform_gauge, uniform_gauge!
 
 function uniform_gauge(A::AbstractVector{<:GenericMPSTensor}, C₀=gauge_init(A); kwargs...)
-    AL = PeriodicArray(similar(A))
-    AR = PeriodicArray(similar(A))
+    AL = PeriodicArray(similar.(A))
+    AR = PeriodicArray(similar.(A))
     CR = PeriodicArray(similar(A, typeof(C₀)))
     return uniform_gauge!(AL, AR, CR, A, C₀; kwargs...)
 end
@@ -101,6 +101,9 @@ Solves `AL[i] * CR[i] = CR[i] * A[i+1]`.
 function uniform_leftgauge!(AL, CR, A, alg::UniformGauging)
     normalize!(CR[end])
     local δ
+    Aᵀ = _transpose_tail.(A)
+    tmps = similar.(Aᵀ)
+    
     for iter in 1:(alg.maxiter)
         if iter > alg.eig_miniter
             # attempt to somewhat replicate previous code: tol = max(δ², tol / 10)
@@ -113,7 +116,9 @@ function uniform_leftgauge!(AL, CR, A, alg::UniformGauging)
         for loc in 1:length(AL)
             # TODO: there are definitely unnecessary allocations here,
             # and the transposition of A should be moved outside of the loop
-            AL[loc] = _transpose_front(CR[mod1(loc - 1, end)] * _transpose_tail(A[loc]))
+            # AL[loc] = _transpose_front(CR[mod1(loc - 1, end)] * Aᵀ[loc])
+            tmps[loc] = mul!!(tmps[loc], CR[mod1(loc - 1, end)], Aᵀ[loc])
+            AL[loc] = _repartition!!(AL[loc], tmps[loc])
             AL[loc], CR[loc] = leftorth!(AL[loc]; alg=alg.leftorthalg)
             normalize!(CR[loc])
         end
@@ -130,7 +135,7 @@ function uniform_leftgauge!(AL, CR, A, alg::UniformGauging)
     return AL, CR
 end
 
-Base.@deprecate(uniform_rightgauge!(AR, CR, A; kwargs...),
+Base.@deprecate(uniform_rightorth!(AR, CR, A; kwargs...),
                 uniform_rightgauge!(AR, CR, A, UniformGauging(; kwargs...)))
 
 """
@@ -141,6 +146,8 @@ Solves C[i-1] * AR[i] = A[i] * C[i].
 function uniform_rightgauge!(AR, CR, A, alg::UniformGauging)
     normalize!(CR[end])
     local δ
+    TT = eltype(A)
+    tmps = similar(A, tensormaptype(spacetype(TT), 1, numind(TT)-1, storagetype(TT)))
     for iter in 1:(alg.maxiter)
         if iter > alg.eig_miniter
             eigalg = updatetol(alg.eigalg, 1, δ^2)
@@ -152,10 +159,16 @@ function uniform_rightgauge!(AR, CR, A, alg::UniformGauging)
 
         for loc in length(AR):-1:1
             # TODO: there are definitely unnecessary allocations here
-            AR[loc] = A[loc] * CR[loc]
-            CR[mod1(loc - 1, end)], tmp = rightorth!(_transpose_tail(AR[loc]);
+            AR[loc] = mul!!(AR[loc], A[loc], CR[loc])
+            
+            if iter == 1
+                tmps[loc] = _transpose_tail(AR[loc])
+            else
+                tmps[loc] = _repartition!!(tmps[loc], AR[loc])
+            end
+            CR[mod1(loc - 1, end)], tmp = rightorth!(tmps[loc];
                                                      alg=alg.rightorthalg)
-            AR[loc] = _transpose_front(tmp)
+            AR[loc] = _repartition!!(AR[loc], tmp)
             normalize!(CR[mod1(loc - 1, end)])
         end
 

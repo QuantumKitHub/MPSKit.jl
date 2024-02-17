@@ -18,6 +18,39 @@ function _transpose_as(t1::AbstractTensorMap,
     return transpose(t1, (A, B))
 end
 
+function _repartition!(tdst::AbstractTensorMap{S,N₁,N₂}, tsrc::AbstractTensorMap{S}) where {S,N₁,N₂}
+    numind(tdst) == numind(tsrc) || throw(ArgumentError("number of indices must match"))
+    @boundscheck begin
+        all(space.(Ref(tdst), 1:numind(tdst)) .== space.(Ref(tsrc), 1:numind(tsrc))) ||
+            throw(ArgumentError("spaces must match"))
+    end
+    inds = (TensorKit.codomainind(tsrc)..., reverse(TensorKit.domainind(tsrc))...)
+    p = (ntuple(x -> inds[x], N₁), reverse(ntuple(x -> inds[x + N₁], N₂)))
+    return transpose!(tdst, tsrc, p)
+end
+
+function _repartition!!(tdst::AbstractTensorMap{S,N₁,N₂}, tsrc::AbstractTensorMap{S}) where {S,N₁,N₂}
+    numind(tdst) == numind(tsrc) || throw(ArgumentError("number of indices must match"))
+    inds_dst = (TensorKit.codomainind(tdst)..., reverse(TensorKit.domainind(tdst))...)
+    inds_src = (TensorKit.codomainind(tsrc)..., reverse(TensorKit.domainind(tsrc))...)
+    p = (ntuple(x -> inds_src[x], N₁), reverse(ntuple(x -> inds_src[x + N₁], N₂)))
+
+    is_same_space = all(space.(Ref(tdst), inds_dst) .== space.(Ref(tsrc), inds_src))
+    if is_same_space
+        return transpose!(tdst, tsrc, p)
+    else
+        return transpose(tsrc, p)
+    end
+end
+
+function mul!!(C::AbstractTensorMap{S}, A::AbstractTensorMap{S}, B::AbstractTensorMap{S}) where {S}
+    if domain(C) == domain(B) && codomain(C) == codomain(A)
+        return mul!(C, A, B)
+    else
+        return A * B
+    end
+end
+
 _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
