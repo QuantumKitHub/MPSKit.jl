@@ -68,12 +68,11 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
 
     # Keyword handling
     eigalg = Arnoldi(; tol, eager=true, verbosity=actual_verbosity - 2)
-    orthalg = UniformGauging(; tol, maxiter=orthmaxiter,
-                             verbosity=actual_verbosity - 2)
+    gauge_alg = UniformGauging(; tol, maxiter=orthmaxiter, verbosity=actual_verbosity-2)
     envalg = (; tol, verbosity=actual_verbosity - 2)
 
     if !dynamic_tols
-        return VUMPS(actual_tol, maxiter, actual_verbosity, finalize, eigalg, orthalg,
+        return VUMPS(actual_tol, maxiter, actual_verbosity, finalize, eigalg, gauge_alg,
                      envalg)
     end
 
@@ -84,7 +83,7 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
                               something(eigs_tolfactor, Defaults.eigs_tolfactor))
     dyn_envalg = ThrottledTol(envalg, actual_tol_min, actual_tol_max,
                               something(envs_tolfactor, Defaults.envs_tolfactor))
-    dyn_orthalg = ThrottledTol(orthalg, actual_tol_min, actual_tol_max,
+    dyn_orthalg = ThrottledTol(gauge_alg, actual_tol_min, actual_tol_max,
                                something(gauge_tolfactor, Defaults.gauge_tolfactor))
     return VUMPS(actual_tol, maxiter, actual_verbosity, finalize, dyn_eigalg, dyn_orthalg,
                  dyn_envalg)
@@ -104,10 +103,6 @@ function Base.show(io::IO, ::MIME"text/plain", alg::VUMPS)
 end
 
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
-    return find_groundstate!(copy(ψ), H, alg, envs)
-end
-
-function find_groundstate!(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
     t₀ = Base.time_ns()
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
@@ -132,9 +127,9 @@ function find_groundstate!(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ,
             end
 
             gaugealg = updatetol(alg.gaugealg, iter, ϵ)
-            uniform_gauge!(ψ.AL, ψ.AR, ψ.CR, temp_ACs; alg=gaugealg)
-            mul!.(ψ.AC, ψ.AL, ψ.CR)
-
+            AL, AR, CR = uniform_gauge(temp_ACs, ψ.CR[end], gaugealg)
+            ψ = InfiniteMPS(AL, AR, CR)
+            
             # TODO: properly pass envalg to environments
             envalg = updatetol(alg.envalg, iter, ϵ)
             recalculate!(envs, ψ; envalg.tol)

@@ -141,8 +141,11 @@ function retract(x::ManifoldPoint{<:MPSMultiline}, tg, alpha)
         (nal[i], th) = Grassmann.retract(x.state.AL[i], cg.Pg, alpha)
         h[i] = PrecGrad(th)
     end
-
-    nstate = MPSKit.MPSMultiline(nal, x.state.CR[:, end])
+    
+    ψs = map(eachrow(nal), x.state.CR[:, end]) do al, cr
+        return InfiniteMPS(uniform_gauge(PeriodicArray(al), cr)...)
+    end
+    nstate = MPSKit.MPSMultiline(ψs)
     newpoint = ManifoldPoint(nstate, x.envs)
 
     return newpoint, h[:]
@@ -152,18 +155,18 @@ end
 Retract a left-canonical infinite MPS along Grassmann tangent `g` by distance `alpha`.
 """
 function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
-    state = x.state
+    ψ = x.state
     envs = x.envs
-    nal = similar(state.AL)
-    h = similar(g)  # The tangent at the end-point
+    AL = similar(ψ.AL)
+    h = similar(g) # The tangent at the end-point
     for i in 1:length(g)
-        (nal[i], th) = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        AL[i], th = Grassmann.retract(ψ.AL[i], g[i].Pg, alpha)
         h[i] = PrecGrad(th)
     end
+    AR, CR = uniform_rightgauge(AL, ψ.CR[end])
+    ψ′ = InfiniteMPS(AL, AR, CR)
 
-    nstate = InfiniteMPS(nal, state.CR[end])
-
-    newpoint = ManifoldPoint(nstate, envs)
+    newpoint = ManifoldPoint(ψ′, envs)
 
     return newpoint, h
 end

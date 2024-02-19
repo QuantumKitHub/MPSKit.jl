@@ -30,13 +30,7 @@ function UniformGauging(; tol=Defaults.tolgauge, maxiter=Defaults.maxiter,
                           eigalg, eig_miniter)
 end
 
-function default_orth_eigalg(tol, maxiter)
-    eigalg = Arnoldi(; krylovdim=30, maxiter)
-    tol_min = tol / 10
-    tol_max = Inf
-    tol_factor = 1
-    return ThrottledTol(eigalg, tol_min, tol_max, tol_factor)
-end
+
 
 Base.@deprecate(uniform_leftgauge!(AL, CR, A; kwargs...),
                 uniform_leftorth!(AL, CR, A, UniformGauging(; kwargs...)))
@@ -84,11 +78,7 @@ function gauge_algselector(; alg=nothing, kwargs...)
     return isnothing(alg) ? UniformGauging(; kwargs...) : alg
 end
 
-function gauge_init(A::AbstractVector{<:GenericMPSTensor})
-    C = isomorphism(storagetype(A[1]), _firstspace(A[1]),
-                       _firstspace(A[1]))
-    return C
-end
+
 
 # Subroutines
 # -----------

@@ -16,8 +16,8 @@ export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
 export PeriodicArray, Window
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
-export leftorth,
-       rightorth, leftorth!, rightorth!, poison!, uniform_leftorth, uniform_rightorth
+export leftorth, rightorth, leftorth!, rightorth!, poison!
+export uniform_gauge, uniform_leftgauge, uniform_rightgauge
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # should be properties
 
 # useful utility functions?
@@ -76,7 +76,8 @@ include("states/finitemps.jl")
 include("states/windowmps.jl")
 include("states/orthoview.jl")
 include("states/quasiparticle_state.jl")
-include("states/ortho.jl")
+# include("states/ortho.jl")
+include("algorithms/gauging.jl")
 
 include("operators/densempo.jl")
 include("operators/sparsempo/sparseslice.jl")

@@ -20,12 +20,11 @@ end
 
 function _repartition!(tdst::AbstractTensorMap{S,N₁,N₂}, tsrc::AbstractTensorMap{S}) where {S,N₁,N₂}
     numind(tdst) == numind(tsrc) || throw(ArgumentError("number of indices must match"))
-    @boundscheck begin
-        all(space.(Ref(tdst), 1:numind(tdst)) .== space.(Ref(tsrc), 1:numind(tsrc))) ||
-            throw(ArgumentError("spaces must match"))
-    end
-    inds = (TensorKit.codomainind(tsrc)..., reverse(TensorKit.domainind(tsrc))...)
-    p = (ntuple(x -> inds[x], N₁), reverse(ntuple(x -> inds[x + N₁], N₂)))
+    inds_dst = (TensorKit.codomainind(tdst)..., reverse(TensorKit.domainind(tdst))...)
+    inds_src = (TensorKit.codomainind(tsrc)..., reverse(TensorKit.domainind(tsrc))...)
+    @boundscheck all(space.(Ref(tdst), inds_dst) .== space.(Ref(tsrc), inds_src))
+    
+    p = (ntuple(x -> inds_src[x], N₁), reverse(ntuple(x -> inds_src[x + N₁], N₂)))
     return transpose!(tdst, tsrc, p)
 end
 

@@ -28,3 +28,7 @@ function updatetol(alg::ThrottledTol, iter::Integer, ϵ::Real)
     old_alg = alg.alg
     return @set old_alg.tol = new_tol
 end
+
+function updatetol(alg, tol::Real)
+    return @set alg.tol = tol
+end

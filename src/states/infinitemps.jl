@@ -115,8 +115,8 @@ function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractV
                        convert(PeriodicVector{B}, CR), convert(PeriodicVector{A}, AC))
 end
 
-function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    return InfiniteMPS(uniform_gauge(A; kwargs...)...)
+function InfiniteMPS(A::AbstractVector{TA}; kwargs...) where {TA<:GenericMPSTensor}
+    return InfiniteMPS(uniform_gauge(convert(PeriodicVector{TA}, A); kwargs...)...)
 end
 
 # From spaces

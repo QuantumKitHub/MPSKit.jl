@@ -49,7 +49,7 @@ Construct an `MPSTensor` with given physical and virtual dimensions.
 - `Dᵣ::Int`: right virtual dimension
 """
 MPSTensor(f, eltype, d::Int, Dₗ::Int, Dᵣ::Int=Dₗ) = MPSTensor(f, eltype, ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
-MPSTensor(d::Int, Dₗ::Int; Dᵣ::Int=Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
+MPSTensor(d::Int, Dₗ::Int, Dᵣ::Int=Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
 
 """
     MPSTensor(A::AbstractArray)
@@ -62,6 +62,20 @@ function MPSTensor(A::AbstractArray{T}) where {T<:Number}
     t = TensorMap(undef, T, foldl(⊗, ComplexSpace.(sz[1:(end - 1)])) ← ℂ^sz[end])
     t[] .= A
     return t
+end
+
+"""
+    isfullrank(A::GenericMPSTensor)
+
+Determine whether the given tensor is full rank, i.e. whether both the map from the left
+virtual space and the physical space to the right virtual space, and the map from the right
+virtual space and the physical space to the left virtual space are injective.
+"""
+function isfullrank(A::GenericMPSTensor)
+    Vₗ = _firstspace(A)
+    Vᵣ = _lastspace(A)
+    P = ⊗(space.(Ref(A), 2:(numind(A) - 1))...)
+    return Vₗ ⊗ P ≿ Vᵣ' && Vₗ' ≾ P ⊗ Vᵣ
 end
 
 #===========================================================================================

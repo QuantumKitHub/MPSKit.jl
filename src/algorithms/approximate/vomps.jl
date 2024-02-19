@@ -14,7 +14,7 @@ function VOMPS(; tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity::Integer=
                dynamic_tols::Bool=Defaults.dynamical_tols,
                tol_min=nothing, tol_max=nothing,
                envs_tolfactor=nothing, gauge_tolfactor=nothing)
-    gaugealg = UniformOrthogonalization(; tol, maxiter=orthmaxiter,
+    gaugealg = UniformGauging(; tol, maxiter=orthmaxiter,
                                         verbosity=verbosity - 2)
     envalg = (; tol, verbosity=verbosity - 2)
 
