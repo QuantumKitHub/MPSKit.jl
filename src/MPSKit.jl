@@ -120,6 +120,7 @@ include("algorithms/timestep/tdvp.jl")
 include("algorithms/timestep/timeevmpo.jl")
 include("algorithms/timestep/integrators.jl")
 include("algorithms/timestep/time_evolve.jl")
+include("algorithms/timestep/windowtdvp.jl")
 
 include("algorithms/groundstate/vumps.jl")
 include("algorithms/groundstate/idmrg.jl")
