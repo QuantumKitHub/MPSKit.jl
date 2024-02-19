@@ -37,7 +37,7 @@ Construct a WindowMPS from an InfiniteMPS, by promoting a region of length `L` t
 Options for fixing the left and right infinite state (i.e. so they don't get time evolved) 
 can be done via the keyword arguments `fixleft` and `fixright`.
 """
-struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor,VL,VR} <: AbstractMPS
+struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor,VL,VR} <: AbstractFiniteMPS
     window::Window{InfiniteMPS{A,B},FiniteMPS{A,B},InfiniteMPS{A,B}}
 
     function WindowMPS(ψₗ::InfiniteMPS{A,B}, ψₘ::FiniteMPS{A,B},
