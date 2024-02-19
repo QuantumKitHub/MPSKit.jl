@@ -1,42 +1,47 @@
 # make a struct for WindowTDVP, finalize for bondexpansion and glue after that
 
-# we should use finenv here explicitly probably
-function timestep!(Ψ::WindowMPS{A,B,VL,VR},H,t::Number,dt::Number,alg::TDVP,env=environments(Ψ, H)) where {A,B,VL,VR}
+function timestep!(Ψ::WindowMPS{A,B,VL,VR},H,t::Number,dt::Number,alg::TDVP,env::Cache=environments(Ψ, H)) where {A,B,VL,VR}
+    if H isa Window
+        Hl,Hm,Hr = (H.left,H.middle,H.right)
+    else
+        Hl = Hm = Hr = H
+    end
+
     #first evolve left state
     if VL === WINDOW_VARIABLE
         println("Doing left")
-        nleft, _ = timestep(Ψ.left, H, t, dt, alg, env.left; leftorthflag=true) #env gets updated in place
+        nleft, _ = timestep(Ψ.left, Hl, t, dt, alg, env.left; leftorthflag=true) #env gets updated in place
         Ψ = WindowMPS(nleft,Ψ.middle,Ψ.right)
     end
 
     # left to right sweep on window
     for i in 1:(length(Ψ) - 1)
-        h_ac = ∂∂AC(i, Ψ, H, env)
+        h_ac = ∂∂AC(i, Ψ, Hm, finenv(env,Ψ))
         Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t, dt / 2, alg.integrator)
 
-        h_c = ∂∂C(i, Ψ, H, env)
+        h_c = ∂∂C(i, Ψ, Hm, finenv(env,Ψ))
         Ψ.CR[i] = integrate(h_c, Ψ.CR[i], t, -dt / 2, alg.integrator)
     end
 
-    h_ac = ∂∂AC(length(Ψ), Ψ, H, env)
+    h_ac = ∂∂AC(length(Ψ), Ψ, Hm, finenv(env,Ψ))
     Ψ.AC[end] = integrate(h_ac, Ψ.AC[end], t, dt / 2, alg.integrator)
 
     if VR === WINDOW_VARIABLE
         println("Doing right")
-        nright, _ = timestep(Ψ.right, H, t + dt, dt, alg, env.right; leftorthflag=false) # env gets updated in place
+        nright, _ = timestep(Ψ.right, Hr, t + dt, dt, alg, env.right; leftorthflag=false) # env gets updated in place
         Ψ = WindowMPS(Ψ.left,Ψ.middle,nright)
     end
 
     # right to left sweep on window
     for i in length(Ψ):-1:2
-        h_ac = ∂∂AC(i, Ψ, H, env)
+        h_ac = ∂∂AC(i, Ψ, Hm, finenv(env,Ψ))
         Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
 
-        h_c = ∂∂C(i - 1, Ψ, H, env)
+        h_c = ∂∂C(i - 1, Ψ, Hm, finenv(env,Ψ))
         Ψ.CR[i - 1] = integrate(h_c, Ψ.CR[i - 1], t + dt / 2, -dt / 2, alg.integrator)
     end
 
-    h_ac = ∂∂AC(1, Ψ, H, env)
+    h_ac = ∂∂AC(1, Ψ, Hm, finenv(env,Ψ))
     Ψ.AC[1] = integrate(h_ac, Ψ.AC[1], t, dt / 2, alg.integrator)
 
     return Ψ, env
