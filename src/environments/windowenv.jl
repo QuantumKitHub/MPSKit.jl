@@ -56,11 +56,6 @@ function finenv(ca::WindowEnv,ψ::WindowMPS{A,B,VL,VR}) where {A,B,VL,VR}
 end
 finenv(ca::Window{A,<:WindowEnv,B},ψ::WindowMPS) where {A,B} = finenv(ca.middle,ψ)
 
-left_of_finenv(ca::WindowEnv) = ca.left
-right_of_finenv(ca::WindowEnv) = ca.right
-left_of_finenv(ca::Window{A,<:WindowEnv,B}) where {A,B} = ca.middle.left
-right_of_finenv(ca::Window{A,<:WindowEnv,B}) where {A,B} = ca.middle.right
-
 #notify the cache that we updated in-place, so it should invalidate the dependencies
 invalidate!(ca::WindowEnv, ind) = invalidate!(ca.middle,ind)
 
@@ -72,9 +67,8 @@ function check_rightinfenv!(ca::WindowEnv, ψ::WindowMPS)
         invalidate!(ca, length(ψ.middle)) #forces transfers to be recalculated lazily 
 
         update_rightstart!(ca.middle,ca.right,ψ.right)
-        glue_right!(ψ,ca.rinfdeps) #
+        glue_right!(ψ,ca.rinfdeps)
         ca.rinfdeps .= ψ.right.AR
-        #do some other checks and recalcs for bonddimensions?   
     end
 end
 
@@ -84,9 +78,8 @@ function check_leftinfenv!(ca::WindowEnv, ψ::WindowMPS)
         println("changing left env")
         invalidate!(ca, 1) #forces transfers to be recalculated lazily 
 
-        # replace this line with a function to do this for lazy environments
         update_leftstart!(ca.middle,ca.left,ψ.left)
-        glue_left!(ψ,ca.linfdeps) #
+        glue_left!(ψ,ca.linfdeps)
         ca.linfdeps .= ψ.left.AL
     end
 end
@@ -96,28 +89,29 @@ function glue_left!(ψ::WindowMPS,oldALs)
     #do we need C of finite part too?
     newD = left_virtualspace(ψ.left, 0)
     oldD = left_virtualspace(ψ, 0)
-    if newD == oldD
-        return nothing
-    end
+    #if newD == oldD
+    #    return nothing
+    #end
     v = TensorMap(rand, ComplexF64, newD, oldD)
     (vals, vecs) = eigsolve(
-        flip(TransferMatrix(oldAls, ψ.left.AL)), v, 1, :LM, Arnoldi()
+        flip(TransferMatrix(oldALs, ψ.left.AL)), v, 1, :LM, Arnoldi()
     )
     rho = pinv(ψ.left.CR[0]) * vecs[1] * ψ.CR[0] #CR[0] == CL[1]
     ψ.AC[1] = _transpose_front(normalize!(rho * ψ.CR[0]) * _transpose_tail(ψ.AR[1]))
 end
 
+#space mismatch here still
 function glue_right!(ψ::WindowMPS,oldARs)
     newD = right_virtualspace(ψ.right, 0)
     oldD = right_virtualspace(ψ, 0)
-    if newD == oldD
-        return nothing
-    end
+    #if newD == oldD
+    #    return nothing
+    #end
     v = TensorMap(rand, ComplexF64, oldD, newD)
     (vals, vecs) = eigsolve(
         TransferMatrix(oldARs, ψ.right.AR), v, 1, :LM, Arnoldi()
     )
-    rho = ψ.CR[0] * vecs[1] * pinv(ψ.right.CR[0])
+    rho = ψ.CR[end] * vecs[1] * pinv(ψ.right.CR[0])
     ψ.AC[end] = ψ.AL[end] * normalize!(ψ.CR[end] * rho)
 end
 
@@ -131,6 +125,12 @@ function update_rightstart!(ca_fin::FinEnv,ca_infin::MPOHamInfEnv, ψ::InfiniteM
 end
 
 # under review
+#=
+left_of_finenv(ca::WindowEnv) = ca.left
+right_of_finenv(ca::WindowEnv) = ca.right
+left_of_finenv(ca::Window{A,<:WindowEnv,B}) where {A,B} = ca.middle.left
+right_of_finenv(ca::Window{A,<:WindowEnv,B}) where {A,B} = ca.middle.right
+
 function leftenv(ca::WindowEnvUnion, ind, ψ::WindowMPS)
     if ind < 1
         return leftenv(left_of_finenv(ca),ind,ψ.left)
@@ -150,6 +150,7 @@ function rightenv(ca::WindowEnvUnion, ind, ψ::WindowMPS)
         return rightenv(finenv(ca,ψ),ind,ψ)
     end
 end
+=#
 
 # to be moved
 function expectation_value(Ψ::WindowMPS, windowH::Window, windowEnvs::Window{A,<:WindowEnv,B}=environments(Ψ, windowH)) where {A,B}
