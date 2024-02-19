@@ -1,4 +1,4 @@
-# Note : this is intended to be a template for windowmps and windows of operators/environments but this clashes with abstractfinitemps.
+# Note : this is intended to be a template for windowmps and windows of operators/environments
 
 "
     Window(leftstate,window,rightstate)
@@ -10,6 +10,3 @@ struct Window{L,M,R}
     middle::M
     right::R
 end
-
-# do we need copy? 
-# Base.copy(win::Window) = Window(copy(win.left),copy(win.middle),copy(win.right))
