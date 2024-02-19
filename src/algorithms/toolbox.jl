@@ -160,11 +160,11 @@ function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state,
     state.trivial ||
         throw(ArgumentError("variance of domain wall excitations is not implemented"))
 
-    rescaled_H = H - expectation_value(state.left_gs, H)
+    rescaled_H = H - expectation_value(state.left, H)
 
     #I don't remember where the formula came from
     E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
-    E_f = expectation_value(state.left_gs, rescaled_H, 1:0)
+    E_f = expectation_value(state.left, rescaled_H, 1:0)
 
     H2 = rescaled_H * rescaled_H
 

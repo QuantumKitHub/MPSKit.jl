@@ -32,8 +32,8 @@ end
 
 function environments(st::WindowMPS,
                       H::LazySum;
-                      lenvs=environments(st.left_gs, H),
-                      renvs=environments(st.right_gs, H))
+                      lenvs=environments(st.left, H),
+                      renvs=environments(st.right, H))
     return MultipleEnvironments(H,
                                 map((op, sublenv, subrenv) -> environments(st, op;
                                                                            lenvs=sublenv,
