@@ -23,11 +23,12 @@ using TensorKit: ℙ
                      GradientGrassmann(; tol=tol, verbosity=verbosity)]
     
     g = 4.0
+    D = 6
     H1 = force_planar(transverse_field_ising(; g))
 
     @testset "Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
-        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^16]), L)
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^D]), L)
         H = repeat(H1, L)
 
         v₀ = variance(ψ₀, H)
@@ -42,7 +43,7 @@ using TensorKit: ℙ
 
     @testset "LazySum Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
-        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^16]), L)
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^D]), L)
         Hlazy = repeat(Hlazy1, L)
 
         v₀ = variance(ψ₀, Hlazy)
@@ -59,13 +60,13 @@ using TensorKit: ℙ
     end
 
     finite_algs = [DMRG(; verbose=verbosity > 0),
-                   DMRG2(; verbose=verbosity > 0, trscheme=truncdim(10)),
+                   DMRG2(; verbose=verbosity > 0, trscheme=truncdim(D)),
                    GradientGrassmann(; tol=tol, verbosity=verbosity)]
 
     H = force_planar(transverse_field_ising(; g))
 
     @testset "Finite $i" for (i, alg) in enumerate(finite_algs)
-        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
+        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^D)
 
         v₀ = variance(ψ₀, H)
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
@@ -78,7 +79,7 @@ using TensorKit: ℙ
     Hlazy = LazySum([H, H, H])
 
     @testset "LazySum Finite $i" for (i, alg) in enumerate(finite_algs)
-        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
+        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^D)
 
         v₀ = variance(ψ₀, Hlazy)
         ψ, envs, δ = find_groundstate(ψ₀, Hlazy, alg)
