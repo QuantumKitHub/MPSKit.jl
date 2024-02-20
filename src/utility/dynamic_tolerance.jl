@@ -1,8 +1,9 @@
-"""
+@doc """
     updatetol(alg, iter, ϵ)
 
 Update the tolerance of the algorithm `alg` based on the current iteration `iter` and the current error `ϵ`.
-"""
+""" updatetol
+
 updatetol(alg, iter::Integer, ϵ::Real) = alg
 
 """
