@@ -37,9 +37,9 @@ end
 
 function updatetols(alg::VUMPS, iter, ϵ)
     if alg.dynamical_tols
-        tol_eigs = between(alg.tol_min, ϵ * alg.eigs_tolfactor / sqrt(iter), alg.tol_max)
-        tol_envs = between(alg.tol_min, ϵ * alg.envs_tolfactor / sqrt(iter), alg.tol_max)
-        tol_gauge = between(alg.tol_min, ϵ * alg.gauge_tolfactor / sqrt(iter), alg.tol_max)
+        tol_eigs = clamp(ϵ * alg.eigs_tolfactor / sqrt(iter), alg.tol_min, alg.tol_max)
+        tol_envs = clamp(ϵ * alg.envs_tolfactor / sqrt(iter), alg.tol_min, alg.tol_max)
+        tol_gauge = clamp(ϵ * alg.gauge_tolfactor / sqrt(iter), alg.tol_min, alg.tol_max)
     else # preserve legacy behavior
         tol_eigs = alg.tol_galerkin / 10
         tol_envs = Defaults.tol
