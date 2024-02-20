@@ -15,7 +15,6 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
     temp_ACs = similar.(ψ.AC)
 
     for iter in 1:(alg.maxiter)
-        _, tol_gauge, tol_envs = updatetols(alg, iter, ϵ)
         Δt = @elapsed begin
             @static if Defaults.parallelize_sites
                 @sync for col in 1:size(ψ, 2)
@@ -28,8 +27,11 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
                 end
             end
 
-            ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
-            recalculate!(envs, ψ; tol=tol_envs)
+            alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+            ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
+
+            alg_environments = updatetol(alg.alg_environments, iter, ϵ)
+            recalculate!(envs, ψ; alg_environments.tol)
 
             ψ, envs = alg.finalize(iter, ψ, toapprox, envs)::Tuple{typeof(ψ),typeof(envs)}
 
