@@ -40,7 +40,7 @@ function transverse_field_ising(; g=1.0)
     Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
     E = TensorMap(ComplexF64[1 0; 0 1], ℂ^2 ← ℂ^2)
     H = Z ⊗ Z + (g / 2) * (X ⊗ E + E ⊗ X)
-    return MPOHamiltonian(H)
+    return MPOHamiltonian(-H)
 end
 
 function heisenberg_XXX(::Type{SU2Irrep}; spin=1)
