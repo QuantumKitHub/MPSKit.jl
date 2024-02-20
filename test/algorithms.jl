@@ -3,8 +3,13 @@ println("
 |   Algorithms   |
 ------------------
 ")
+module TestAlgorithms
 
-include("setup.jl")
+using ..TestSetup
+using Test, TestExtras
+using MPSKit
+using TensorKit
+using TensorKit: ℙ
 
 @testset "find_groundstate" verbose = true begin
     tol = 1e-8
@@ -16,12 +21,13 @@ include("setup.jl")
                      GradientGrassmann(; tol=tol, verbosity=verbosity),
                      VUMPS(; tol_galerkin=100 * tol, verbose=verbosity > 0) &
                      GradientGrassmann(; tol=tol, verbosity=verbosity)]
-
-    H1 = force_planar(transverse_field_ising(; g=1.1))
+    
+    g = 4.0
+    H1 = force_planar(transverse_field_ising(; g))
 
     @testset "Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
-        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^15]), L)
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^16]), L)
         H = repeat(H1, L)
 
         v₀ = variance(ψ₀, H)
@@ -56,7 +62,7 @@ include("setup.jl")
                    DMRG2(; verbose=verbosity > 0, trscheme=truncdim(10)),
                    GradientGrassmann(; tol=tol, verbosity=verbosity)]
 
-    H = force_planar(transverse_field_ising(; g=1.1))
+    H = force_planar(transverse_field_ising(; g))
 
     @testset "Finite $i" for (i, alg) in enumerate(finite_algs)
         ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
@@ -525,4 +531,6 @@ end
 
     energies, values = exact_diagonalization(th; which=:SR)
     @test energies[1] ≈ sum(expectation_value(gs, th)) atol = 1e-5
+end
+
 end
