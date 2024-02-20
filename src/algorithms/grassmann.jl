@@ -141,11 +141,8 @@ function retract(x::ManifoldPoint{<:MPSMultiline}, tg, alpha)
         (nal[i], th) = Grassmann.retract(x.state.AL[i], cg.Pg, alpha)
         h[i] = PrecGrad(th)
     end
-    
-    ψs = map(eachrow(nal), x.state.CR[:, end]) do al, cr
-        return InfiniteMPS(uniform_gauge(PeriodicArray(al), cr)...)
-    end
-    nstate = MPSKit.MPSMultiline(ψs)
+
+    nstate = MPSKit.MPSMultiline(nal, x.state.CR[:, end])
     newpoint = ManifoldPoint(nstate, x.envs)
 
     return newpoint, h[:]
@@ -163,6 +160,9 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
         AL[i], th = Grassmann.retract(ψ.AL[i], g[i].Pg, alpha)
         h[i] = PrecGrad(th)
     end
+
+    # important to do it like this because Grassmann retract checks if base point is the same
+    # and `uniform_gauge()` creates new AL (I think?)
     AR, CR = uniform_rightgauge(AL, ψ.CR[end])
     ψ′ = InfiniteMPS(AL, AR, CR)
 
