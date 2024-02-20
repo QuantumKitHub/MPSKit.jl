@@ -1,3 +1,10 @@
+module ThrottledTols
+
+import ..MPSKit: Algorithm
+using Accessors
+
+export updatetol, ThrottledTol
+
 @doc """
     updatetol(alg, iter, ϵ)
 
@@ -48,4 +55,6 @@ end
 # default implementation with Accessors.jl, but can be hooked into
 function _updatetol(alg, tol::Real)
     return @set alg.tol = tol
+end
+
 end

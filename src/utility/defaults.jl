@@ -7,6 +7,7 @@ module Defaults
 
 using Preferences
 import KrylovKit: GMRES, Arnoldi
+using ..MPSKit: ThrottledTol
 
 const eltype = ComplexF64
 const maxiter = 100
@@ -24,6 +25,30 @@ _finalize(iter, state, opp, envs) = (state, envs)
 
 const linearsolver = GMRES(; tol, maxiter)
 const eigsolver = Arnoldi(; tol, maxiter, eager=true)
+
+# Default algorithms
+# ------------------
+
+function alg_gauge(; tol=tolgauge, maxiter=maxiter,
+                   dynamical_tols=dynamical_tols, tol_min=tol_min, tol_max=tol_max,
+                   tol_factor=gauge_tolfactor)
+    alg = (; tol, maxiter)
+    return dynamical_tols ? ThrottledTol(alg, tol, tol_max, tol_factor) : alg
+end
+
+function alg_eigsolve(; tol=tol, maxiter=maxiter, eager=true,
+                      dynamical_tols=dynamical_tols, tol_min=tol_min, tol_max=tol_max,
+                      tol_factor=eigs_tolfactor)
+    alg = Arnoldi(; tol, maxiter, eager)
+    return dynamical_tols ? ThrottledTol(alg, tol, tol_max, tol_factor) : alg
+end
+
+function alg_environments(; tol=tol, maxiter=maxiter,
+                          dynamical_tols=dynamical_tols, tol_min=tol_min, tol_max=tol_max,
+                          tol_factor=envs_tolfactor)
+    alg = (; tol, maxiter)
+    return dynamical_tols ? ThrottledTol(alg, tol, tol_max, tol_factor) : alg
+end
 
 # Preferences
 # -----------
