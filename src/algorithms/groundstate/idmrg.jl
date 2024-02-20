@@ -120,7 +120,7 @@ function IDMRG2(; tol::Real=Defaults.tol, tol_gauge::Real=Defaults.tolgauge,
     else
         verbosity
     end
-    
+
     return IDMRG2{typeof(eigalg)}(actual_tol, tol_gauge, eigalg, maxiter, actual_verbosity,
                                   trscheme)
 end

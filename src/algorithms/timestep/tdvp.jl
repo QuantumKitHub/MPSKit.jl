@@ -16,10 +16,10 @@ struct TDVP{A,G,F} <: Algorithm
     gaugealg::G
     verbosity::Int
     finalize::F
-    
+
     # automatically fill type parameters
     function TDVP(integrator::A, gaugealg::G, verbosity, finalize::F) where {A,G,F}
-        new{A,G,F}(integrator, gaugealg, verbosity, finalize)
+        return new{A,G,F}(integrator, gaugealg, verbosity, finalize)
     end
 end
 function TDVP(; tol=Defaults.tol, integrator=nothing, tolgauge=Defaults.tolgauge,
@@ -39,9 +39,10 @@ end
 function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
                   envs::Union{Cache,MultipleEnvironments}=environments(ψ, H);
                   leftorthflag=nothing)
-    isnothing(leftorthflag) || Base.depwarn("leftorthflag is deprecated; use `alg.gaugealg` instead",
-                                            :leftorthflag)
-    
+    isnothing(leftorthflag) ||
+        Base.depwarn("leftorthflag is deprecated; use `alg.gaugealg` instead",
+                     :leftorthflag)
+
     temp_ACs = similar(ψ.AC)
     temp_CRs = similar(ψ.CR)
     @sync for (loc, (ac, c)) in enumerate(zip(ψ.AC, ψ.CR))
@@ -55,7 +56,7 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
             temp_CRs[loc] = integrate(h_c, c, t, dt, alg.integrator)
         end
     end
-    
+
     A = regauge!(temp_ACs, temp_CRs, alg.gaugealg)
     AL, AR, CR = uniform_gauge(A, ψ.CR[end], alg.gaugealg)
     ψ′ = InfiniteMPS(AL, AR, CR)
@@ -116,10 +117,11 @@ struct TDVP2{A,G,F} <: Algorithm
     verbosity::Int
     trscheme::TruncationScheme
     finalize::F
-    
+
     # automatically fill type parameters
-    function TDVP2(integrator::A, gaugealg::G, verbosity, trscheme, finalize::F) where {A,G,F}
-        new{A,G,F}(integrator, gaugealg, verbosity, trscheme, finalize)
+    function TDVP2(integrator::A, gaugealg::G, verbosity, trscheme,
+                   finalize::F) where {A,G,F}
+        return new{A,G,F}(integrator, gaugealg, verbosity, trscheme, finalize)
     end
 end
 function TDVP2(; tol=Defaults.tol, integrator=nothing, tolgauge=Defaults.tolgauge,
@@ -132,7 +134,7 @@ function TDVP2(; tol=Defaults.tol, integrator=nothing, tolgauge=Defaults.tolgaug
     end
 
     gaugealg = UniformGauging(; tol=tolgauge, maxiter=gaugemaxiter)
-    
+
     return TDVP2(integrator, gaugealg, verbosity, trscheme, finalize)
 end
 

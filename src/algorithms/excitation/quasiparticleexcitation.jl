@@ -100,7 +100,8 @@ function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
             Threads.@spawn begin
                 E, ϕ = excitations(H, alg, momentum, lmps, lenvs, rmps, renvs; num, solver,
                                    sector)
-                verbosity >= VERBOSE_ITER && @info "Found excitations for momentum = $(momentum)"
+                verbosity >= VERBOSE_ITER &&
+                    @info "Found excitations for momentum = $(momentum)"
                 return E, ϕ
             end
         end
@@ -110,7 +111,8 @@ function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
         fetched = map(momenta) do momentum
             E, ϕ = excitations(H, alg, momentum, lmps, lenvs, rmps, renvs; num, solver,
                                sector)
-            verbosity >= VERBOSE_ITER && @info "Found excitations for momentum = $(momentum)"
+            verbosity >= VERBOSE_ITER &&
+                @info "Found excitations for momentum = $(momentum)"
             return E, ϕ
         end
     end

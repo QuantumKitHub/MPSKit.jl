@@ -18,7 +18,8 @@ optimization algorithm will be attempted based on the supplied keywords.
 """
 function find_groundstate(ψ::AbstractMPS, H, envs::Cache=environments(ψ, H);
                           tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
-                          verbosity::Integer=Defaults.verbosity, trscheme=nothing, verbose=nothing)
+                          verbosity::Integer=Defaults.verbosity, trscheme=nothing,
+                          verbose=nothing)
     verbosity = if !isnothing(verbose)
         Base.depwarn("find_groundstate(ψ, H; verbose=...) is deprecated. Use find_groundstate(ψ, H; verbosity=...) instead.",
                      :find_groundstate; force=true)

@@ -67,7 +67,7 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
 
         gaugealg = updatetol(alg.gaugealg, iter, galerkin)
         ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; gaugealg.tol, gaugealg.maxiter)
-        
+
         envalg = updatetol(alg.envalg, iter, galerkin)
         recalculate!(envs, ψ; envalg.tol)
 

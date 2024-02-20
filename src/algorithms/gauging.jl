@@ -17,12 +17,12 @@ struct UniformGauging <: Algorithm
     tol::Float64
     maxiter::Int
     verbosity::Int
-    
-    alg_leftorth
-    alg_rightorth
-    alg_eigsolve
+
+    alg_leftorth::Any
+    alg_rightorth::Any
+    alg_eigsolve::Any
     eig_miniter::Int
-    
+
     order::Symbol
 end
 
@@ -35,8 +35,9 @@ function UniformGauging(;
                         alg_eigsolve=default_gauge_alg_eigsolve(tol, maxiter),
                         eig_miniter=10,
                         order::Symbol=:LR)
-    return UniformGauging(tol, maxiter, verbosity, alg_leftorth, alg_rightorth, alg_eigsolve,
-               eig_miniter, order)
+    return UniformGauging(tol, maxiter, verbosity, alg_leftorth, alg_rightorth,
+                          alg_eigsolve,
+                          eig_miniter, order)
 end
 
 """
@@ -82,8 +83,9 @@ end
 Solves `AL[i] * CR[i] = CR[i] * A[i+1]`.
 """
 function uniform_leftgauge(A::PeriodicVector{TA}, C₀::TB,
-                           alg::UniformGauging=UniformGauging()) where {S,TA<:GenericMPSTensor{S},
-                                                       TB<:MPSBondTensor{S}}
+                           alg::UniformGauging=UniformGauging()) where {S,
+                                                                        TA<:GenericMPSTensor{S},
+                                                                        TB<:MPSBondTensor{S}}
     iterable = LeftGaugeIterable(A, C₀; alg.tol, alg.maxiter, alg.verbosity,
                                  alg.alg_leftorth, alg.alg_eigsolve, alg.eig_miniter)
     for _ in iterable
@@ -99,7 +101,7 @@ Solves C[i-1] * AR[i] = A[i] * C[i].
 function uniform_rightgauge(A::PeriodicVector{TA}, C₀::TB,
                             alg::UniformGauging=UniformGauging()) where {S,
                                                                          TA<:GenericMPSTensor{S},
-                                              TB<:MPSBondTensor{S}}
+                                                                         TB<:MPSBondTensor{S}}
     iterable = RightGaugeIterable(A, C₀; alg.tol, alg.maxiter, alg.verbosity,
                                   alg.alg_rightorth, alg.alg_eigsolve, alg.eig_miniter)
     for _ in iterable

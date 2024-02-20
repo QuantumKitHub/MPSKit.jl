@@ -40,7 +40,7 @@ function changebonds(ψ::InfiniteMPS, alg::SvdCut)
         copied[i] = copied[i] * U
         copied[i + 1] = _transpose_front(U' * _transpose_tail(copied[i + 1]))
     end
-    
+
     return InfiniteMPS(uniform_gauge(copied, complex(ncr))...)
 end
 

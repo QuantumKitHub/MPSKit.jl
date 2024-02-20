@@ -5,30 +5,32 @@ struct VOMPS{F,A,B} <: Algorithm
     finalize::F
     gaugealg::A
     envalg::B
-    function VOMPS(tol, maxiter, verbosity, finalize::F, gaugealg::A, envalg::B) where {F,A,B}
+    function VOMPS(tol, maxiter, verbosity, finalize::F, gaugealg::A,
+                   envalg::B) where {F,A,B}
         return new{F,A,B}(tol, maxiter, verbosity, finalize, gaugealg, envalg)
     end
 end
-function VOMPS(; tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity::Integer=Defaults.verbosity,
+function VOMPS(; tol=Defaults.tol, maxiter=Defaults.maxiter,
+               verbosity::Integer=Defaults.verbosity,
                orthmaxiter::Integer=Defaults.maxiter,
                dynamic_tols::Bool=Defaults.dynamical_tols,
                tol_min=nothing, tol_max=nothing,
                envs_tolfactor=nothing, gauge_tolfactor=nothing)
     gaugealg = UniformGauging(; tol, maxiter=orthmaxiter,
-                                        verbosity=verbosity - 2)
+                              verbosity=verbosity - 2)
     envalg = (; tol, verbosity=verbosity - 2)
 
     if !dynamic_tols
         return VOMPS(tol, maxiter, verbosity, finalize, gaugealg, envalg)
     end
-    
+
     # setup dynamic tolerances
     dyn_gaugealg = ThrottledTol(gaugealg, something(tol_min, Defaults.tol_min),
-                                    something(tol_max, Defaults.tol_max),
-                                    something(gauge_tolfactor, Defaults.gauge_tolfactor))
+                                something(tol_max, Defaults.tol_max),
+                                something(gauge_tolfactor, Defaults.gauge_tolfactor))
     dyn_envalg = ThrottledTol(envalg, something(tol_min, Defaults.tol_min),
-                                  something(tol_max, Defaults.tol_max),
-                                  something(envs_tolfactor, Defaults.envs_tolfactor))
+                              something(tol_max, Defaults.tol_max),
+                              something(envs_tolfactor, Defaults.envs_tolfactor))
     return VOMPS(tol, maxiter, verbosity, finalize, dyn_gaugealg, dyn_envalg)
 end
 
@@ -61,11 +63,11 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
                     _vomps_localupdate!(temp_ACs[:, col], col, ψ, toapprox, envs)
                 end
             end
-            
+
             # TODO: properly pass gaugealg to MPSMultiline
             gaugealg = updatetol(alg.gaugealg, iter, ϵ)
             ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; gaugealg.tol, gaugealg.maxiter)
-            
+
             # TODO: properly pass envalg to environments
             envalg = updatetol(alg.envalg, iter, ϵ)
             recalculate!(envs, ψ; envalg.tol)
@@ -78,7 +80,7 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
         alg.verbosity >= VERBOSE_ITER && @info "VOMPS iteration:" iter ϵ Δt
 
         ϵ <= alg.tol && break
-        alg.verbosity >= VERBOSE_WARN && iter == alg.maxiter && 
+        alg.verbosity >= VERBOSE_WARN && iter == alg.maxiter &&
             @warn "VOMPS maximum iterations" iter ϵ
     end
 

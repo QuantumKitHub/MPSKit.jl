@@ -37,9 +37,9 @@ function DynamicalDMRG(; flavour::DDMRG_Flavour=NaiveInvert, solver=Defaults.lin
     else
         verbosity
     end
-    return DynamicalDMRG{typeof(flavour),typeof(solver)}(flavour, solver, tol, maxiter, verbosity)
+    return DynamicalDMRG{typeof(flavour),typeof(solver)}(flavour, solver, tol, maxiter,
+                                                         verbosity)
 end
-
 
 """
     propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init=copy(ψ₀))

@@ -83,12 +83,13 @@ struct DMRG2{A,F} <: Algorithm
     maxiter::Int
     eigalg::A
     trscheme::TruncationScheme
-    verbosity
+    verbosity::Any
     finalize::F
 end
-function DMRG2(; tol::Real = Defaults.tol, maxiter::Integer = Defaults.maxiter,
-               finalize = Defaults._finalize, eigalg = Defaults.eigsolver,
-               trscheme = truncerr(sqrt(tol)), verbose = nothing, verbosity::Integer = Defaults.verbosity)
+function DMRG2(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
+               finalize=Defaults._finalize, eigalg=Defaults.eigsolver,
+               trscheme=truncerr(sqrt(tol)), verbose=nothing,
+               verbosity::Integer=Defaults.verbosity)
     # Deprecation warnings
     actual_verbosity = if !isnothing(verbose)
         Base.depwarn("DMRG2(; kwargs..., verbose=...) is deprecated. Use DMRG2(; kwargs..., verbosity=...) instead.",
@@ -97,8 +98,9 @@ function DMRG2(; tol::Real = Defaults.tol, maxiter::Integer = Defaults.maxiter,
     else
         verbosity
     end
-    return DMRG2{typeof(eigalg),typeof(finalize)}(tol, maxiter, eigalg, trscheme, actual_verbosity,
-                                                 finalize)
+    return DMRG2{typeof(eigalg),typeof(finalize)}(tol, maxiter, eigalg, trscheme,
+                                                  actual_verbosity,
+                                                  finalize)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environments(ψ, H))
@@ -153,7 +155,8 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbosity >= VERBOSE_CONVERGENCE && @info "DMRG2 summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
+    alg.verbosity >= VERBOSE_CONVERGENCE &&
+        @info "DMRG2 summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end
 

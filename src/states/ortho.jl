@@ -30,8 +30,6 @@ function UniformGauging(; tol=Defaults.tolgauge, maxiter=Defaults.maxiter,
                           eigalg, eig_miniter)
 end
 
-
-
 Base.@deprecate(uniform_leftgauge!(AL, CR, A; kwargs...),
                 uniform_leftorth!(AL, CR, A, UniformGauging(; kwargs...)))
 
@@ -78,8 +76,6 @@ function gauge_algselector(; alg=nothing, kwargs...)
     return isnothing(alg) ? UniformGauging(; kwargs...) : alg
 end
 
-
-
 # Subroutines
 # -----------
 
@@ -93,7 +89,7 @@ function uniform_leftgauge!(AL, CR, A, alg::UniformGauging)
     local δ
     Aᵀ = _transpose_tail.(A)
     tmps = similar.(Aᵀ)
-    
+
     for iter in 1:(alg.maxiter)
         if iter > alg.eig_miniter
             # attempt to somewhat replicate previous code: tol = max(δ², tol / 10)
@@ -137,7 +133,7 @@ function uniform_rightgauge!(AR, CR, A, alg::UniformGauging)
     normalize!(CR[end])
     local δ
     TT = eltype(A)
-    tmps = similar(A, tensormaptype(spacetype(TT), 1, numind(TT)-1, storagetype(TT)))
+    tmps = similar(A, tensormaptype(spacetype(TT), 1, numind(TT) - 1, storagetype(TT)))
     for iter in 1:(alg.maxiter)
         if iter > alg.eig_miniter
             eigalg = updatetol(alg.eigalg, 1, δ^2)
@@ -150,7 +146,7 @@ function uniform_rightgauge!(AR, CR, A, alg::UniformGauging)
         for loc in length(AR):-1:1
             # TODO: there are definitely unnecessary allocations here
             AR[loc] = mul!!(AR[loc], A[loc], CR[loc])
-            
+
             if iter == 1
                 tmps[loc] = _transpose_tail(AR[loc])
             else

@@ -68,7 +68,7 @@ function VUMPS(; tol::Real=Defaults.tol, maxiter::Integer=Defaults.maxiter,
 
     # Keyword handling
     eigalg = Arnoldi(; tol, eager=true, verbosity=actual_verbosity - 2)
-    gauge_alg = UniformGauging(; tol, maxiter=orthmaxiter, verbosity=actual_verbosity-2)
+    gauge_alg = UniformGauging(; tol, maxiter=orthmaxiter, verbosity=actual_verbosity - 2)
     envalg = (; tol, verbosity=actual_verbosity - 2)
 
     if !dynamic_tols
@@ -129,7 +129,7 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
             gaugealg = updatetol(alg.gaugealg, iter, ϵ)
             AL, AR, CR = uniform_gauge(temp_ACs, ψ.CR[end], gaugealg)
             ψ = InfiniteMPS(AL, AR, CR)
-            
+
             # TODO: properly pass envalg to environments
             envalg = updatetol(alg.envalg, iter, ϵ)
             recalculate!(envs, ψ; envalg.tol)
