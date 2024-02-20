@@ -13,7 +13,7 @@ using TensorKit: ℙ
 
 @testset "find_groundstate" verbose = true begin
     tol = 1e-8
-    verbosity = 0
+    verbosity = 2
     infinite_algs = [VUMPS(; tol_galerkin=tol, verbose=verbosity > 0),
                      IDMRG1(; tol_galerkin=tol, verbose=verbosity > 0),
                      IDMRG2(; trscheme=truncdim(12), tol_galerkin=tol,
@@ -61,7 +61,7 @@ using TensorKit: ℙ
 
     finite_algs = [DMRG(; verbose=verbosity > 0),
                    DMRG2(; verbose=verbosity > 0, trscheme=truncdim(D)),
-                   GradientGrassmann(; tol=tol, verbosity=verbosity)]
+                   GradientGrassmann(; tol, verbosity, maxiter=300)]
 
     H = force_planar(transverse_field_ising(; g))
 
@@ -72,11 +72,11 @@ using TensorKit: ℙ
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
         v = variance(ψ, H, envs)
 
-        @test sum(δ) < 100 * tol
+        @test sum(δ) < 1e-3
         @test v₀ > v && v < 1e-2 # energy variance should be low
     end
 
-    Hlazy = LazySum([H, H, H])
+    Hlazy = LazySum([3 * H, H, 5.557 * H])
 
     @testset "LazySum Finite $i" for (i, alg) in enumerate(finite_algs)
         ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^D)
@@ -85,7 +85,7 @@ using TensorKit: ℙ
         ψ, envs, δ = find_groundstate(ψ₀, Hlazy, alg)
         v = variance(ψ, Hlazy)
 
-        @test sum(δ) < 100 * tol
+        @test sum(δ) < 1e-3
         @test v₀ > v && v < 1e-2 # energy variance should be low
 
         ψ_nolazy, envs_nolazy, _ = find_groundstate(ψ₀, sum(Hlazy), alg)
