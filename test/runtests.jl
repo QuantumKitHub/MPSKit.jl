@@ -1,6 +1,7 @@
-using Pkg, Test
-
+using Test
 const GROUP = uppercase(get(ENV, "GROUP", "ALL"))
+
+include("setup.jl")
 
 @time begin
     if GROUP == "ALL" || GROUP == "STATES"
