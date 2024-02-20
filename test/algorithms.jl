@@ -21,7 +21,7 @@ using TensorKit: ℙ
                      GradientGrassmann(; tol=tol, verbosity=verbosity),
                      VUMPS(; tol_galerkin=100 * tol, verbose=verbosity > 0) &
                      GradientGrassmann(; tol=tol, verbosity=verbosity)]
-    
+
     g = 4.0
     D = 6
     H1 = force_planar(transverse_field_ising(; g))
