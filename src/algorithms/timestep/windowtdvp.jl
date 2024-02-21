@@ -15,7 +15,7 @@
     finalize::F = Defaults._finalize
 end
 
-function timestep(Ψ::WindowMPS{A,B,VL,VR},H::Union{Window,LazySum{<:Window}},t::Number,dt::Number,alg::WindowTDVP,env::Cache=environments(Ψ, H)) where {A,B,VL,VR}
+function timestep(Ψ::WindowMPS{A,B,VL,VR},H::Union{Window,LazySum{<:Window}},t::Number,dt::Number,alg::WindowTDVP,env=environments(Ψ, H)) where {A,B,VL,VR}
     
     #first evolve left state
     if VL === WINDOW_VARIABLE
