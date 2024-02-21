@@ -64,32 +64,11 @@ end
 # --------------
 # TODO: add section in documentation to explain convention
 expectation_value(ψ, envs::Cache) = expectation_value(ψ, envs.opp, envs)
-function expectation_value(ψ, H::MPOHamiltonian)
+function expectation_value(ψ, H::Union{MPOHamiltonian,Window,LazySum})
     return expectation_value(ψ, H, environments(ψ, H))
 end
 
-"""
-    expectation_value(ψ::WindowMPS, H::MPOHAmiltonian, envs) -> vals, tot
-
-TODO
-"""
-function expectation_value(ψ::WindowMPS, H::MPOHamiltonian, envs::FinEnv)
-    vals = expectation_value_fimpl(ψ, H, envs)
-
-    tot = 0.0 + 0im
-    for i in 1:(H.odim), j in 1:(H.odim)
-        tot += @plansor leftenv(envs, length(ψ), ψ)[i][1 2; 3] * ψ.AC[end][3 4; 5] *
-                        rightenv(envs, length(ψ), ψ)[j][5 6; 7] *
-                        H[length(ψ)][i, j][2 8; 4 6] * conj(ψ.AC[end][1 8; 7])
-    end
-
-    return vals, tot / (norm(ψ.AC[end])^2)
-end
-
-function expectation_value(ψ::FiniteMPS, H::MPOHamiltonian, envs::FinEnv)
-    return expectation_value_fimpl(ψ, H, envs)
-end
-function expectation_value_fimpl(ψ::AbstractFiniteMPS, H::MPOHamiltonian, envs::FinEnv)
+function expectation_value(ψ::AbstractFiniteMPS, H::MPOHamiltonian, envs::FinEnv)
     ens = zeros(scalartype(ψ), length(ψ))
     for i in 1:length(ψ), (j, k) in keys(H[i])
         !((j == 1 && k != 1) || (k == H.odim && j != H.odim)) && continue
@@ -187,7 +166,7 @@ end
 function expectation_value(ψ, ops::LazySum, at::Int)
     return sum(op -> expectation_value(ψ, op, at), ops)
 end
-function expectation_value(ψ, ops::LazySum, envs::MultipleEnvironments=environments(ψ, ops))
+function expectation_value(ψ, ops::LazySum, envs::MultipleEnvironments)
     return sum(((op, env),) -> expectation_value(ψ, op, env), zip(ops.ops, envs))
 end
 
@@ -209,4 +188,10 @@ function expectation_value(ψ::FiniteMPS, O::ProjectionOperator,
 
     n = norm(ψ.AC[end])^2
     return ens ./ n
+end
+
+# Window
+# ------
+function expectation_value(Ψ::WindowMPS, windowH::Union{Window,LazySum{<:Window}}, windowenvs) =
+    return expectation_value(Ψ, windowH.middle, windowenvs.middle)
 end
