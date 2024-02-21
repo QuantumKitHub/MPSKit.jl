@@ -10,20 +10,12 @@ struct WindowEnv{A,B,C,D} <: Cache
     rinfdeps::PeriodicArray{D}
 end
 
-const WindowEnvUnion = Union{T,Window{A,T,B}} where {T<:WindowEnv,A,B}
-
 #automatically construct the correct leftstart/rightstart for a WindowMPS
 # copying the vector where the tensors reside in makes it have another memory adress, while keeping the references of the elements
-function environments(ψ::WindowMPS, O::Union{SparseMPO,MPOHamiltonian,DenseMPO}, above=nothing; lenvs=environments(ψ.left, O),renvs=environments(ψ.right, O))
-    fin_env = environments(ψ, O, above, leftenv(lenvs, 1, ψ.left),
+function environments(ψ::WindowMPS, O::Window, above=nothing; lenvs=environments(ψ.left, O.left),renvs=environments(ψ.right, O.right))
+    fin_env = environments(ψ, O.middle, above, leftenv(lenvs, 1, ψ.left),
     rightenv(renvs, length(ψ), ψ.right))
     return WindowEnv(Window(lenvs,fin_env,renvs),copy(ψ.left.AL),copy(ψ.right.AR))
-end
-
-# when supplied with a Window Hamiltonian, we cannot assume H.left/H.right is the same as H.middle
-function environments(ψ::WindowMPS, O::Window, above=nothing; lenvs=environments(ψ.left, O.left),renvs=environments(ψ.right, O.right))
-    window_env = Window(environments(ψ.left, O.middle),environments(ψ.middle, O.middle),environments(ψ.left, O.middle))
-    return Window(lenvs,WindowEnv(window_env,copy(ψ.left.AL),copy(ψ.right.AR)),renvs)
 end
 
 function environments(below::WindowMPS, above::WindowMPS)
@@ -38,11 +30,30 @@ end
 #===========================================================================================
 Utility
 ===========================================================================================#
-function Base.getproperty(ca::WindowEnv,sym::Symbol)
+function Base.getproperty(ca::WindowEnv,sym::Symbol) #under review
     if sym === :left || sym === :middle || sym === :right 
         return getfield(ca.window, sym)
     elseif sym === :opp #this is for derivatives. Could we remove opp field from derivatives?
         return getfield(ca.window.middle, sym)
+    else
+        return getfield(ca, sym)
+    end
+end
+
+#to be tested
+function Base.getproperty(sumops::LazySum{<:Window},sym::Symbol)
+    if sym === :left || sym === :middle || sym === :right
+        #extract the left/right parts
+        return map(x->getproperty(x,sym),sumops)
+    else
+        return getfield(sumops, sym)
+    end
+end
+
+function Base.getproperty(ca::MultipleEnvironments{<:LazySum,<:WindowEnv},sym::Symbol)
+    if sym === :left || sym === :right
+        #extract the left/right parts
+        return MultipleEnvironments(getproperty(ca.opp,sym),map(x->getproperty(x,sym),ca))
     else
         return getfield(ca, sym)
     end
@@ -54,7 +65,10 @@ function finenv(ca::WindowEnv,ψ::WindowMPS{A,B,VL,VR}) where {A,B,VL,VR}
     VR === WINDOW_FIXED || check_rightinfenv!(ca,ψ)
     return ca.middle
 end
-finenv(ca::Window{A,<:WindowEnv,B},ψ::WindowMPS) where {A,B} = finenv(ca.middle,ψ)
+#to be tested
+function finenv(ca::MultipleEnvironments{<:WindowEnv},ψ::WindowMPS) 
+    return MultipleEnvironments(ca.opp.middle,map(x->finenv(x.middle,ψ),ca))
+end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies
 invalidate!(ca::WindowEnv, ind) = invalidate!(ca.middle,ind)
@@ -84,14 +98,13 @@ function check_leftinfenv!(ca::WindowEnv, ψ::WindowMPS)
     end
 end
 
-#replace ψ.left by appropriate site index
 function glue_left!(ψ::WindowMPS,oldALs)
     #do we need C of finite part too?
     newD = left_virtualspace(ψ.left, 0)
     oldD = left_virtualspace(ψ, 0)
-    #if newD == oldD
-    #    return nothing
-    #end
+    if newD == oldD
+        return nothing
+    end
     v = TensorMap(rand, ComplexF64, newD, oldD)
     (vals, vecs) = eigsolve(
         flip(TransferMatrix(oldALs, ψ.left.AL)), v, 1, :LM, Arnoldi()
@@ -100,13 +113,12 @@ function glue_left!(ψ::WindowMPS,oldALs)
     ψ.AC[1] = _transpose_front(normalize!(rho * ψ.CR[0]) * _transpose_tail(ψ.AR[1]))
 end
 
-#space mismatch here still
 function glue_right!(ψ::WindowMPS,oldARs)
     newD = right_virtualspace(ψ.right, 0)
-    oldD = right_virtualspace(ψ, 0)
-    #if newD == oldD
-    #    return nothing
-    #end
+    oldD = right_virtualspace(ψ, length(ψ))
+    if newD == oldD
+        return nothing
+    end
     v = TensorMap(rand, ComplexF64, oldD, newD)
     (vals, vecs) = eigsolve(
         TransferMatrix(oldARs, ψ.right.AR), v, 1, :LM, Arnoldi()
@@ -130,29 +142,30 @@ left_of_finenv(ca::WindowEnv) = ca.left
 right_of_finenv(ca::WindowEnv) = ca.right
 left_of_finenv(ca::Window{A,<:WindowEnv,B}) where {A,B} = ca.middle.left
 right_of_finenv(ca::Window{A,<:WindowEnv,B}) where {A,B} = ca.middle.right
+=#
 
-function leftenv(ca::WindowEnvUnion, ind, ψ::WindowMPS)
+# automatic recalculation
+function leftenv(ca::WindowEnv, ind, ψ::WindowMPS)
     if ind < 1
-        return leftenv(left_of_finenv(ca),ind,ψ.left)
+        return leftenv(ca.left,ind,ψ.left)
     elseif ind > length(ψ)
-        return leftenv(right_of_finenv(ca),ind,ψ.right)
+        return leftenv(ca.right,ind,ψ.right)
     else
         return leftenv(finenv(ca,ψ),ind,ψ)
     end
 end
 
-function rightenv(ca::WindowEnvUnion, ind, ψ::WindowMPS)
+function rightenv(ca::WindowEnv, ind, ψ::WindowMPS)
     if ind < 1
-        return rightenv(left_of_finenv(ca),ind,ψ.left)
+        return rightenv(ca.left,ind,ψ.left)
     elseif ind > length(ψ)
-        return rightenv(right_of_finenv(ca),ind,ψ.right)
+        return rightenv(ca.right,ind,ψ.right)
     else
         return rightenv(finenv(ca,ψ),ind,ψ)
     end
 end
-=#
 
-# to be moved
+# remove optional env like the rest and use doorgever
 function expectation_value(Ψ::WindowMPS, windowH::Window, windowEnvs::Window{A,<:WindowEnv,B}=environments(Ψ, windowH)) where {A,B}
     left = expectation_value(Ψ.left, windowH.left, windowEnvs.left)
     middle = expectation_value(Ψ.middle, windowH.middle, finenv(windowEnvs,Ψ))
@@ -160,7 +173,7 @@ function expectation_value(Ψ::WindowMPS, windowH::Window, windowEnvs::Window{A,
     return left,middle,right
 end
 
-function expectation_value(Ψ::WindowMPS, H, windowEnvs::WindowEnv=environments(Ψ, H))
+function expectation_value(Ψ::WindowMPS, H, windowEnvs::WindowEnv)
     left = expectation_value(Ψ.left, H, windowEnvs.left)
     middle = expectation_value(Ψ.middle, H, finenv(windowEnvs,Ψ))
     right = expectation_value(Ψ.right, H, windowEnvs.right)
@@ -169,6 +182,7 @@ end
 
 
 # do we need this? I find it convenvient
+# currently broken though
 function forget_infinite(ψ::WindowMPS,env::WindowEnvUnion)
     fin_env = finenv(env,ψ)
     newenv = environments(ψ.middle,fin_env.opp,fin_env.above,copy(leftenv(env, 1, ψ)),copy(rightenv(env, length(ψ), ψ)))

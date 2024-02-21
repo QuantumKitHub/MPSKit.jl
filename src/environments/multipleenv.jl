@@ -30,17 +30,6 @@ end
 #     return MultipleEnvironments(H, broadcast(o -> environments(state, o), H.opps))
 # end;
 
-function environments(st::WindowMPS,
-                      H::LazySum;
-                      lenvs=environments(st.left, H),
-                      renvs=environments(st.right, H))
-    return MultipleEnvironments(H,
-                                map((op, sublenv, subrenv) -> environments(st, op;
-                                                                           lenvs=sublenv,
-                                                                           renvs=subrenv),
-                                    H.ops, lenvs, renvs))
-end
-
 # we need to define how to recalculate
 """
     Recalculate in-place each sub-env in MultipleEnvironments
