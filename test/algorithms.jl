@@ -13,7 +13,7 @@ using TensorKit: ℙ
 
 @testset "find_groundstate" verbose = true begin
     tol = 1e-8
-    verbosity = 2
+    verbosity = 0
     infinite_algs = [VUMPS(; tol_galerkin=tol, verbose=verbosity > 0),
                      IDMRG1(; tol_galerkin=tol, verbose=verbosity > 0),
                      IDMRG2(; trscheme=truncdim(12), tol_galerkin=tol,
