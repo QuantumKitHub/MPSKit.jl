@@ -25,7 +25,7 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
     temp_Cs = similar.(ψ.CR)
 
     while true
-        alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
+        alg_eigsolve = updatetol(alg.alg_eigsolve, iter, galerkin)
         if Defaults.parallelize_sites
             @sync begin
                 for col in 1:size(ψ, 2)
@@ -64,16 +64,16 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
             temp_ACs[row, col] = QAc * adjoint(Qc)
         end
 
-        alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+        alg_gauge = updatetol(alg.alg_gauge, iter, galerkin)
         ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
-        alg_environments = updatetol(alg.alg_environments, iter, ϵ)
+        alg_environments = updatetol(alg.alg_environments, iter, galerkin)
         recalculate!(envs, ψ; alg_environments.tol)
 
         ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
         galerkin = calc_galerkin(ψ, envs)
-        alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
+        alg.verbosity ≥ VERBOSE_ITER && @info "vumps @iteration $(iter) galerkin = $(galerkin)"
 
         if (galerkin <= alg.tol_galerkin) || iter >= alg.maxiter
             iter >= alg.maxiter && @warn "vumps didn't converge $(galerkin)"

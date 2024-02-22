@@ -66,6 +66,8 @@ include("utility/dynamictols.jl")
 using .DynamicTols
 
 include("utility/defaults.jl")
+using .Defaults: VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
+
 include("utility/periodicarray.jl")
 include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions

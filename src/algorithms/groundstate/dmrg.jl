@@ -7,7 +7,7 @@ Single site DMRG algorithm for finding groundstates.
 - `tol::Float64`: tolerance for convergence criterium
 - `eigalg::A`: eigensolver algorithm
 - `maxiter::Int`: maximum number of outer iterations
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
 """
@@ -15,7 +15,7 @@ Single site DMRG algorithm for finding groundstates.
     tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
     eigalg::A = Defaults.eigsolver
-    verbose::Bool = Defaults.verbose
+    verbosity::Int = Defaults.verbosity
     finalize::F = Defaults._finalize
 end
 
@@ -36,7 +36,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
         end
 
-        alg.verbose &&
+        alg.verbosity ≥ VERBOSE_ITER &&
             @info "DMRG iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
 
         ϵ <= alg.tol && break
@@ -45,7 +45,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbose && @info "DMRG summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
+    alg.verbosity ≥ VERBOSE_CONV && @info "DMRG summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end
 
@@ -58,7 +58,7 @@ end
 - `tol::Float64`: tolerance for convergence criterium
 - `eigalg::A`: eigensolver algorithm
 - `maxiter::Int`: maximum number of outer iterations
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
@@ -68,7 +68,7 @@ end
     maxiter = Defaults.maxiter
     eigalg::A = Defaults.eigsolver
     trscheme = truncerr(1e-6)
-    verbose = Defaults.verbose
+    verbosity = Defaults.verbosity
     finalize::F = Defaults._finalize
 end
 
@@ -115,7 +115,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
         end
 
-        alg.verbose &&
+        alg.verbosity ≥ VERBOSE_ITER &&
             @info "DMRG2 iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
 
         ϵ <= alg.tol && break
@@ -124,7 +124,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbose && @info "DMRG2 summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
+    alg.verbosity ≥ VERBOSE_CONV && @info "DMRG2 summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end
 

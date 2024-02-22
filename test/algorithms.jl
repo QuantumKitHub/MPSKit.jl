@@ -14,13 +14,12 @@ using TensorKit: ℙ
 @testset "find_groundstate" verbose = true begin
     tol = 1e-8
     verbosity = 0
-    infinite_algs = [VUMPS(; tol_galerkin=tol, verbose=verbosity > 0),
-                     IDMRG1(; tol_galerkin=tol, verbose=verbosity > 0),
-                     IDMRG2(; trscheme=truncdim(12), tol_galerkin=tol,
-                            verbose=verbosity > 0),
-                     GradientGrassmann(; tol=tol, verbosity=verbosity),
-                     VUMPS(; tol_galerkin=100 * tol, verbose=verbosity > 0) &
-                     GradientGrassmann(; tol=tol, verbosity=verbosity)]
+    infinite_algs = [VUMPS(; tol_galerkin=tol, verbosity),
+                     IDMRG1(; tol_galerkin=tol, verbosity),
+                     IDMRG2(; trscheme=truncdim(12), tol_galerkin=tol, verbosity),
+                     GradientGrassmann(; tol, verbosity),
+                     VUMPS(; tol_galerkin=100 * tol, verbosity) &
+                     GradientGrassmann(; tol, verbosity)]
 
     g = 4.0
     D = 6
@@ -59,8 +58,8 @@ using TensorKit: ℙ
               expectation_value(ψ_nolazy, sum(Hlazy), envs_nolazy) atol = 1 - 06
     end
 
-    finite_algs = [DMRG(; verbose=verbosity > 0),
-                   DMRG2(; verbose=verbosity > 0, trscheme=truncdim(D)),
+    finite_algs = [DMRG(; verbosity),
+                   DMRG2(; verbosity, trscheme=truncdim(D)),
                    GradientGrassmann(; tol, verbosity, maxiter=300)]
 
     H = force_planar(transverse_field_ising(; g))
@@ -184,7 +183,7 @@ end
 end
 
 @testset "leading_boundary" verbose = true begin
-    algs = [VUMPS(; tol_galerkin=1e-5, verbose=false), GradientGrassmann(; verbosity=0)]
+    algs = [VUMPS(; tol_galerkin=1e-5, verbosity=0), GradientGrassmann(; verbosity=0)]
     mpo = force_planar(classical_ising())
 
     ψ₀ = InfiniteMPS([ℙ^2], [ℙ^10])
@@ -202,7 +201,7 @@ end
     @testset "infinite (ham)" begin
         H = repeat(force_planar(heisenberg_XXX()), 2)
         ψ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^48, ℙ^48])
-        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbose=false, tol=1e-11)
+        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbosity=0, tol=1e-11)
         energies, ϕs = excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ, envs)
         @test energies[1] ≈ 0.41047925 atol = 1e-4
         @test variance(ϕs[1], H) < 1e-8
@@ -210,23 +209,23 @@ end
     @testset "infinite (mpo)" begin
         H = repeat(sixvertex(), 2)
         ψ = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^10, ℂ^10])
-        ψ, envs, _ = leading_boundary(ψ, H, VUMPS(; maxiter=400, verbose=false))
+        ψ, envs, _ = leading_boundary(ψ, H, VUMPS(; maxiter=400, verbosity=0))
         energies, ϕs = excitations(H, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ψ,
-                                   envs; verbose=false)
+                                   envs; verbosity=0)
         @test abs(energies[1]) > abs(energies[2]) # has a minima at pi/2
     end
 
     @testset "finite" begin
-        verbose = false
+        verbosity = 0
         H = force_planar(transverse_field_ising())
         ψ = InfiniteMPS([ℙ^2], [ℙ^10])
-        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbose, tol=1e-9)
+        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbosity, tol=1e-9)
         energies, ϕs = excitations(H, QuasiparticleAnsatz(), 0.0, ψ, envs)
         inf_en = energies[1]
 
         fin_en = map([20, 10]) do len
             ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^15)
-            (ψ, envs, _) = find_groundstate(ψ, H; verbose)
+            (ψ, envs, _) = find_groundstate(ψ, H; verbosity)
 
             #find energy with quasiparticle ansatz
             energies_QP, ϕs = excitations(H, QuasiparticleAnsatz(), ψ, envs)
@@ -235,7 +234,7 @@ end
             #find energy with normal dmrg
             energies_dm, _ = excitations(H,
                                          FiniteExcited(;
-                                                       gsalg=DMRG(; verbose,
+                                                       gsalg=DMRG(; verbosity,
                                                                   tol=1e-6)), ψ)
             @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ψ, H, envs)) atol = 1e-4
 
@@ -337,7 +336,7 @@ end
 
 @testset "Dynamical DMRG" verbose = true begin
     ham = force_planar(-1.0 * transverse_field_ising(; g=-4.0))
-    gs, = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbose=false))
+    gs, = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbosity=0))
     window = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
     szd = force_planar(TensorMap(ComplexF64[0.5 0; 0 -0.5], ℂ^2 ← ℂ^2))
@@ -352,7 +351,7 @@ end
     predicted = [1 / (v + eta - polepos) for v in vals]
 
     @testset "Flavour $f" for f in (Jeckelmann(), NaiveInvert())
-        alg = DynamicalDMRG(; flavour=f, verbose=false, tol=1e-8)
+        alg = DynamicalDMRG(; flavour=f, verbosity=0, tol=1e-8)
         data = map(vals) do v
             result, = propagator(window, v + eta, ham, alg)
             return result
@@ -374,7 +373,7 @@ end
     for λ in [1.05, 2.0, 4.0]
         H = hamiltonian(λ)
         ψ = InfiniteMPS([ℂ^2], [ℂ^16])
-        ψ, envs, = find_groundstate(ψ, H, VUMPS(; maxiter=100, verbose=false))
+        ψ, envs, = find_groundstate(ψ, H, VUMPS(; maxiter=100, verbosity=0))
 
         numerical_scusceptibility = fidelity_susceptibility(ψ, H, [H_X], envs; maxiter=10)
         @test numerical_scusceptibility[1, 1] ≈ analytical_susceptibility(λ) atol = 1e-2
@@ -382,7 +381,7 @@ end
         # test if the finite fid sus approximates the analytical one with increasing system size
         fin_en = map([20, 15, 10]) do L
             ψ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^16)
-            ψ, envs, = find_groundstate(ψ, H, DMRG(; verbose=false))
+            ψ, envs, = find_groundstate(ψ, H, DMRG(; verbosity=0))
             numerical_scusceptibility = fidelity_susceptibility(ψ, H, [H_X], envs;
                                                                 maxiter=10)
             return numerical_scusceptibility[1, 1] / L
@@ -395,12 +394,12 @@ end
 @testset "correlation length / entropy" begin
     st = InfiniteMPS([ℙ^2], [ℙ^10])
     th = force_planar(transverse_field_ising())
-    (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
+    (st, _) = find_groundstate(st, th, VUMPS(; verbosity=0))
     len_crit = correlation_length(st)[1]
     entrop_crit = entropy(st)
 
     th = force_planar(transverse_field_ising(; g=4))
-    (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
+    (st, _) = find_groundstate(st, th, VUMPS(; verbosity=0))
     len_gapped = correlation_length(st)[1]
     entrop_gapped = entropy(st)
 
@@ -411,7 +410,7 @@ end
 @testset "expectation value / correlator" begin
     st = InfiniteMPS([ℂ^2], [ℂ^10])
     th = transverse_field_ising(; g=4)
-    (st, _) = find_groundstate(st, th, VUMPS(; verbose=false))
+    (st, _) = find_groundstate(st, th, VUMPS(; verbosity=0))
 
     sz_mpo = TensorMap([1.0 0; 0 -1], ℂ^1 * ℂ^2, ℂ^2 * ℂ^1)
     sz = TensorMap([1.0 0; 0 -1], ℂ^2, ℂ^2)
@@ -449,10 +448,10 @@ end
         W1 = convert(DenseMPO, sW1)
         W2 = convert(DenseMPO, sW2)
 
-        st1, _ = approximate(st, (sW1, st), VUMPS(; verbose=false))
-        st2, _ = approximate(st, (W2, st), VUMPS(; verbose=false))
-        st3, _ = approximate(st, (W1, st), IDMRG1(; verbose=false))
-        st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbose=false))
+        st1, _ = approximate(st, (sW1, st), VUMPS(; verbosity=0))
+        st2, _ = approximate(st, (W2, st), VUMPS(; verbosity=0))
+        st3, _ = approximate(st, (W1, st), IDMRG1(; verbosity=0))
+        st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbosity=0))
         st5, _ = timestep(st, th, 0.0, dt, TDVP())
         st6 = changebonds(W1 * st, SvdCut(; trscheme=truncdim(10)))
 
@@ -465,7 +464,7 @@ end
         @test dim(space(nW1.opp[1, 1], 1)) == 1
     end
 
-    finite_algs = [DMRG(; verbose=false), DMRG2(; verbose=false, trscheme=truncdim(10))]
+    finite_algs = [DMRG(; verbosity=0), DMRG2(; verbosity=0, trscheme=truncdim(10))]
     @testset "finitemps1 ≈ finitemps2" for alg in finite_algs
         a = FiniteMPS(10, ℂ^2, ℂ^10)
         b = FiniteMPS(10, ℂ^2, ℂ^20)
@@ -513,7 +512,7 @@ end
 
     ψ = FiniteMPS(len, ℂ^2, ℂ^10)
 
-    gs, envs = find_groundstate(ψ, th, DMRG(; verbose=false))
+    gs, envs = find_groundstate(ψ, th, DMRG(; verbosity=0))
 
     #translation mpo:
     @tensor bulk[-1 -2; -3 -4] := isomorphism(ℂ^2, ℂ^2)[-2, -4] *

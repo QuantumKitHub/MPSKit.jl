@@ -98,7 +98,7 @@ end
 
 @testset "WindowMPS" begin
     ham = force_planar(transverse_field_ising(; g=8.0))
-    (gs, _, _) = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbose=false))
+    (gs, _, _) = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbosity=0))
 
     #constructor 1 - give it a plain array of tensors
     window_1 = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
@@ -130,7 +130,7 @@ end
     e1 = expectation_value(window, ham)
 
     v1 = variance(window, ham)
-    (window, envs, _) = find_groundstate(window, ham, DMRG(; verbose=false))
+    (window, envs, _) = find_groundstate(window, ham, DMRG(; verbosity=0))
     v2 = variance(window, ham)
 
     e2 = expectation_value(window, ham)

@@ -36,7 +36,7 @@ function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
             init.AC[pos + 1] = (complex(c), _transpose_front(ar))
         end
 
-        alg.verbose && @info "2site dmrg iter $(iter) error $(delta)"
+        alg.verbosity ≥ VERBOSE_ITER && @info "2site dmrg iter $(iter) error $(delta)"
 
         #finalize
         iter += 1
@@ -70,7 +70,7 @@ function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG,
             init.AC[pos] = newac
         end
 
-        alg.verbose && @info "dmrg iter $(iter) error $(delta)"
+        alg.verbosity ≥ VERBOSE_ITER && @info "dmrg iter $(iter) error $(delta)"
 
         iter += 1
     end

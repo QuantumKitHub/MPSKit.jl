@@ -8,14 +8,14 @@ Single site infinite DMRG algorithm for finding groundstates.
 - `tol_gauge::Float64`: tolerance for gauging algorithm
 - `eigalg::A`: eigensolver algorithm
 - `maxiter::Int`: maximum number of outer iterations
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 """
 @kwdef struct IDMRG1{A} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     eigalg::A = Defaults.eigsolver
     maxiter::Int = Defaults.maxiter
-    verbose::Bool = Defaults.verbose
+    verbosity::Int = Defaults.verbosity
 end
 
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(ost, H))
@@ -51,7 +51,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
 
         delta = norm(curc - ψ.CR[0])
         delta < alg.tol_galerkin && break
-        alg.verbose && @info "idmrg iter $(topit) err $(delta)"
+        alg.verbosity ≥ VERBOSE_ITER && @info "idmrg iter $(topit) err $(delta)"
     end
 
     nst = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
@@ -69,7 +69,7 @@ end
 - `tol_gauge::Float64`: tolerance for gauging algorithm
 - `eigalg::A`: eigensolver algorithm
 - `maxiter::Int`: maximum number of outer iterations
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
 @kwdef struct IDMRG2{A} <: Algorithm
@@ -77,7 +77,7 @@ end
     tol_gauge::Float64 = Defaults.tolgauge
     eigalg::A = Defaults.eigsolver
     maxiter::Int = Defaults.maxiter
-    verbose::Bool = Defaults.verbose
+    verbosity::Int = Defaults.verbosity
     trscheme = truncerr(1e-6)
 end
 
@@ -175,7 +175,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
         e1 = isometry(_firstspace(curc), smallest)
         e2 = isometry(_firstspace(c), smallest)
         delta = norm(e2' * c * e2 - e1' * curc * e1)
-        alg.verbose && @info "idmrg iter $(topit) err $(delta)"
+        alg.verbosity ≥ VERBOSE_ITER && @info "idmrg iter $(topit) err $(delta)"
 
         delta < alg.tol_galerkin && break
     end

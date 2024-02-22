@@ -18,14 +18,14 @@ The algorithm is described in detail in https://arxiv.org/pdf/cond-mat/0203500.p
 - `solver::S = Defaults.linearsolver` : The linear solver to use for the linear systems.
 - `tol::Float64 = Defaults.tol * 10` : The stopping criterium.
 - `maxiter::Int = Defaults.maxiter` : The maximum number of iterations.
-- `verbose::Bool = Defaults.verbose` : Whether to print information about the progress of the algorithm.
+- `verbosity::Int = Defaults.verbosity` : Whether to print information about the progress of the algorithm.
 """
 @kwdef struct DynamicalDMRG{F<:DDMRG_Flavour,S} <: Algorithm
     flavour::F = NaiveInvert
     solver::S = Defaults.linearsolver
     tol::Float64 = Defaults.tol * 10
     maxiter::Int = Defaults.maxiter
-    verbose::Bool = Defaults.verbose
+    verbosity::Int = Defaults.verbosity
 end
 
 """
@@ -71,7 +71,7 @@ function propagator(A::AbstractFiniteMPS, z::Number, H::MPOHamiltonian,
             convhist.converged == 0 && @warn "($(i)) failed to converge $(convhist.normres)"
         end
 
-        alg.verbose && @info "ddmrg sweep delta : $(delta)"
+        alg.verbosity ≥ VERBOSE_ITER && @info "ddmrg sweep delta : $(delta)"
     end
 
     return dot(A, init), init
@@ -116,7 +116,7 @@ function propagator(A::AbstractFiniteMPS, z, H::MPOHamiltonian,
             convhist.converged == 0 && @warn "($(i)) failed to converge $(convhist.normres)"
         end
 
-        alg.verbose && @info "ddmrg sweep delta : $(delta)"
+        alg.verbosity ≥ VERBOSE_ITER && @info "ddmrg sweep delta : $(delta)"
     end
 
     a = dot(ac_proj(1, init, mixedenvs), init.AC[1])

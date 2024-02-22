@@ -36,7 +36,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
 
         delta = norm(curc - st.CR[:, 0])
         delta < alg.tol_galerkin && break
-        alg.verbose && @info "idmrg iter $(topit) err $(delta)"
+        alg.verbosity ≥ VERBOSE_ITER && @info "idmrg iter $(topit) err $(delta)"
     end
 
     nst = MPSMultiline(map(x -> x, st.AR); tol=alg.tol_gauge)
@@ -114,7 +114,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
                         e2 = isometry(_firstspace(c2), smallest)
                         return delta = norm(e2' * c2 * e2 - e1' * c1 * e1)
                     end)
-        alg.verbose && @info "idmrg iter $(topit) err $(delta)"
+        alg.verbosity ≥ VERBOSE_ITER && @info "idmrg iter $(topit) err $(delta)"
 
         delta < alg.tol_galerkin && break
     end

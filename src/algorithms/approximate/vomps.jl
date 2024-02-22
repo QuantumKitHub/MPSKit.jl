@@ -38,14 +38,14 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
             ϵ = calc_galerkin(ψ, envs)
         end
 
-        alg.verbose && @info "VOMPS iteration:" iter ϵ Δt
+        alg.verbosity ≥ VERBOSE_ITER && @info "VOMPS iteration:" iter ϵ Δt
 
         ϵ <= alg.tol_galerkin && break
         iter == alg.maxiter && @warn "VOMPS maximum iterations" iter ϵ
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbose && @info "VOMPS summary:" ϵ Δt
+    alg.verbosity ≥ VERBOSE_CONV && @info "VOMPS summary:" ϵ Δt
     return ψ, envs, ϵ
 end
 

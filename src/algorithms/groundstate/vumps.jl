@@ -9,7 +9,7 @@ https://arxiv.org/abs/1701.07035.
 - `maxiter::Int`: maximum amount of iterations
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 
 - `alg_gauge=Defaults.alg_gauge()`: algorithm for gauging
 - `alg_eigsolve=Defaults.alg_eigsolve()`: algorithm for eigensolvers
@@ -19,7 +19,7 @@ https://arxiv.org/abs/1701.07035.
     tol_galerkin::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
     finalize::F = Defaults._finalize
-    verbose::Bool = Defaults.verbose
+    verbosity::Int = Defaults.verbosity
 
     alg_gauge = Defaults.alg_gauge()
     alg_eigsolve = Defaults.alg_eigsolve()
@@ -60,7 +60,7 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
             ϵ = calc_galerkin(ψ, envs)
         end
 
-        alg.verbose &&
+        alg.verbosity ≥ VERBOSE_ITER &&
             @info "VUMPS iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
 
         ϵ <= alg.tol_galerkin && break
@@ -69,7 +69,7 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
     end
 
     Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbose && @info "VUMPS summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
+    alg.verbosity ≥ VERBOSE_CONV && @info "VUMPS summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end
 
