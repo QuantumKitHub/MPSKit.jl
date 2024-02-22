@@ -57,31 +57,31 @@ end
 Constructors
 ===========================================================================================#
 function WindowMPS(ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor},
-                   ψᵣ::InfiniteMPS)
-    return WindowMPS(ψₗ, FiniteMPS(site_tensors), ψᵣ)
+                   ψᵣ::InfiniteMPS; kwargs...)
+    return WindowMPS(ψₗ, FiniteMPS(site_tensors), ψᵣ; kwargs...)
 end
 
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    maxvirtspace::S, ψₗ::InfiniteMPS,
-                   ψᵣ::InfiniteMPS) where {S<:ElementarySpace}
+                   ψᵣ::InfiniteMPS; kwargs...) where {S<:ElementarySpace}
     ψₘ = FiniteMPS(f, elt, physspaces, maxvirtspace; left=left_virtualspace(ψₗ, 0),
                    right=right_virtualspace(ψᵣ, length(physspaces)))
-    return WindowMPS(ψₗ, ψₘ, ψᵣ)
+    return WindowMPS(ψₗ, ψₘ, ψᵣ; kwargs...)
 end
 function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S,
-                   ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS) where {S<:ElementarySpace}
-    return WindowMPS(rand, Defaults.eltype, physspaces, maxvirtspace, ψₗ, ψᵣ)
+                   ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS; kwargs...) where {S<:ElementarySpace}
+    return WindowMPS(rand, Defaults.eltype, physspaces, maxvirtspace, ψₗ, ψᵣ; kwargs...)
 end
 
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    virtspaces::Vector{S}, ψₗ::InfiniteMPS,
-                   ψᵣ::InfiniteMPS) where {S<:ElementarySpace}
+                   ψᵣ::InfiniteMPS; kwargs...) where {S<:ElementarySpace}
     ψₘ = FiniteMPS(f, elt, physspaces, virtspaces)
-    return WindowMPS(ψₗ, ψₘ, ψᵣ)
+    return WindowMPS(ψₗ, ψₘ, ψᵣ; kwargs...)
 end
 function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, virtspaces::Vector{S},
-                   ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS) where {S<:ElementarySpace}
-    return WindowMPS(rand, Defaults.eltype, physspaces, virtspaces, ψₗ, ψᵣ)
+                   ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS; kwargs...) where {S<:ElementarySpace}
+    return WindowMPS(rand, Defaults.eltype, physspaces, virtspaces, ψₗ, ψᵣ; kwargs...)
 end
 
 function WindowMPS(f, elt, P::ProductSpace, args...; kwargs...)

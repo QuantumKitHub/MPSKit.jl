@@ -40,33 +40,11 @@ function Base.getproperty(ca::WindowEnv,sym::Symbol) #under review
     end
 end
 
-function Base.getproperty(sumops::LazySum{<:Window},sym::Symbol)
-    if sym === :left || sym === :middle || sym === :right
-        #extract the left/right parts
-        return map(x->getproperty(x,sym),sumops)
-    else
-        return getfield(sumops, sym)
-    end
-end
-
-function Base.getproperty(ca::MultipleEnvironments{<:LazySum,<:WindowEnv},sym::Symbol)
-    if sym === :left || sym === :right
-        #extract the left/right parts
-        return MultipleEnvironments(getproperty(ca.opp,sym),map(x->getproperty(x,sym),ca))
-    else
-        return getfield(ca, sym)
-    end
-end
-
 # when accesing the finite part of the env, use this function
 function finenv(ca::WindowEnv,ψ::WindowMPS{A,B,VL,VR}) where {A,B,VL,VR}
     VL === WINDOW_FIXED || check_leftinfenv!(ca,ψ)
     VR === WINDOW_FIXED || check_rightinfenv!(ca,ψ)
     return ca.middle
-end
-
-function finenv(ca::MultipleEnvironments{<:WindowEnv},ψ::WindowMPS) 
-    return MultipleEnvironments(ca.opp.middle,map(x->finenv(x.middle,ψ),ca))
 end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies

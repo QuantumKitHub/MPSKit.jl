@@ -30,6 +30,31 @@ end
 #     return MultipleEnvironments(H, broadcast(o -> environments(state, o), H.opps))
 # end;
 
+
+#===========================================================================================
+Utility
+===========================================================================================#
+function Base.getproperty(ca::MultipleEnvironments{<:LazySum,<:WindowEnv},sym::Symbol)
+    if sym === :left || sym === :right
+        #extract the left/right parts
+        return MultipleEnvironments(getproperty(ca.opp,sym),map(x->getproperty(x,sym),ca))
+    else
+        return getfield(ca, sym)
+    end
+end
+
+function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
+    if prop === :solver
+        return map(env -> env.solver, envs)
+    else
+        return getfield(envs, prop)
+    end
+end
+
+function finenv(ca::MultipleEnvironments{<:WindowEnv},ψ::WindowMPS) 
+    return MultipleEnvironments(ca.opp.middle,map(x->finenv(x.middle,ψ),ca))
+end
+
 # we need to define how to recalculate
 """
     Recalculate in-place each sub-env in MultipleEnvironments
@@ -41,11 +66,6 @@ function recalculate!(env::MultipleEnvironments, args...; kwargs...)
     return env
 end
 
-#maybe this can be used to provide compatibility with existing code?
-function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
-    if prop === :solver
-        return map(env -> env.solver, envs)
-    else
-        return getfield(envs, prop)
-    end
-end
+
+
+

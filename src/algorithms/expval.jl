@@ -192,6 +192,6 @@ end
 
 # Window
 # ------
-function expectation_value(Ψ::WindowMPS, windowH::Union{Window,LazySum{<:Window}}, windowenvs) =
+function expectation_value(Ψ::WindowMPS, windowH::Union{Window,LazySum{<:Window}}, windowenvs)
     return expectation_value(Ψ, windowH.middle, windowenvs.middle)
 end
