@@ -40,7 +40,7 @@ export VUMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
 export excitations, FiniteExcited, QuasiparticleAnsatz
 export marek_gap, correlation_length, correlator
 export time_evolve, timestep!, timestep
-export TDVP, TDVP2, make_time_mpo, WI, WII, TaylorCluster
+export TDVP, TDVP2, WindowTDVP, make_time_mpo, WI, WII, TaylorCluster
 export splitham, infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
 export changebonds!, changebonds, VUMPSSvdCut, OptimalExpand, SvdCut, UnionTrunc, RandExpand
 export entropy
@@ -119,9 +119,9 @@ include("algorithms/changebonds/randexpand.jl")
 include("algorithms/timestep/tdvp.jl")
 include("algorithms/timestep/timeevmpo.jl")
 include("algorithms/timestep/integrators.jl")
-include("algorithms/timestep/timestep.jl")
 include("algorithms/timestep/time_evolve.jl")
 include("algorithms/timestep/windowtdvp.jl")
+include("algorithms/timestep/timestep.jl")
 
 include("algorithms/groundstate/vumps.jl")
 include("algorithms/groundstate/idmrg.jl")

@@ -60,7 +60,7 @@ function check_rightinfenv!(ca::WindowEnv, ψ::WindowMPS)
         #update_rightstart!(ca.middle,ca.right,ψ.right)
         #glue_right!(ψ,ca.rinfdeps)
 
-        ca_fin.rightenvs[end] = rightenv(ca_infin, 0, ψ)
+        ca.middle.rightenvs[end] = rightenv(ca.right, 0, ψ.right)
         ca.rinfdeps .= ψ.right.AR
     end
 end
@@ -74,7 +74,7 @@ function check_leftinfenv!(ca::WindowEnv, ψ::WindowMPS)
         #update_leftstart!(ca.middle,ca.left,ψ.left)
         #glue_left!(ψ,ca.linfdeps)
 
-        ca_fin.leftenvs[1] = leftenv(ca_infin, length(ψ)+1, ψ)
+        ca.middle.leftenvs[1] = leftenv(ca.left, length(ψ.left)+1, ψ.left)
         ca.linfdeps .= ψ.left.AL
     end
 end
