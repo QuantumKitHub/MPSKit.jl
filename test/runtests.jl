@@ -1,26 +1,19 @@
-using Pkg, Test
-
+using Test
 const GROUP = uppercase(get(ENV, "GROUP", "ALL"))
+
+include("setup.jl")
 
 @time begin
     if GROUP == "ALL" || GROUP == "STATES"
-        @time @testset "States" verbose = true begin
-            include("states.jl")
-        end
+        @time include("states.jl")
     end
     if GROUP == "ALL" || GROUP == "OPERATORS"
-        @time @testset "Operators" verbose = true begin
-            include("operators.jl")
-        end
+        @time include("operators.jl")
     end
     if GROUP == "ALL" || GROUP == "ALGORITHMS"
-        @time @testset "Algorithms" verbose = true begin
-            include("algorithms.jl")
-        end
+        @time include("algorithms.jl")
     end
     if GROUP == "ALL" || GROUP == "OTHER"
-        @time @testset "Other" verbose = true begin
-            include("other.jl")
-        end
+        @time include("other.jl")
     end
 end
