@@ -29,7 +29,7 @@ struct DynamicTol{A} <: Algorithm
     tol_max::Float64
     tol_factor::Float64
     function DynamicTol(alg::A, tol_min::Real, tol_max::Real,
-                          tol_factor::Real) where {A}
+                        tol_factor::Real) where {A}
         0 <= tol_min <= tol_max ||
             throw(ArgumentError("tol_min must be between 0 and tol_max"))
         return new{A}(alg, tol_min, tol_max, tol_factor)
