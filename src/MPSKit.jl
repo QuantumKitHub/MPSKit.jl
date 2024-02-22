@@ -62,8 +62,8 @@ abstract type Algorithm end
 abstract type Cache end # cache "manages" environments
 
 # submodules
-include("utility/throttledtol.jl")
-using .ThrottledTols
+include("utility/dynamictols.jl")
+using .DynamicTols
 
 include("utility/defaults.jl")
 include("utility/periodicarray.jl")
