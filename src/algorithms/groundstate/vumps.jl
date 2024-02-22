@@ -7,52 +7,24 @@ https://arxiv.org/abs/1701.07035.
 # Fields
 - `tol_galerkin::Float64`: tolerance for convergence criterium
 - `maxiter::Int`: maximum amount of iterations
-- `orthmaxiter::Int`: maximum amount of gauging iterations
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
 - `verbose::Bool`: display progress information
-- `dynamical_tols::Bool`: whether to use dynamically adjusted tolerances
-- `tol_min::Float64`: minimum tolerance for subroutines
-- `tol_max::Float64`: maximum tolerance for subroutines
-- `eigs_tolfactor::Float64`: factor for dynamically setting the eigensolver tolerance  with
-    respect to the current galerkin error
-- `envs_tolfactor::Float64`: factor for dynamically setting the environment tolerance with
-    respect to the current galerkin error
-- `gauge_tolfactor::Float64`: factor for dynamically setting the gauging tolerance with
-    respect to the current galerkin error
+
+- `alg_gauge=Defaults.alg_gauge()`: algorithm for gauging
+- `alg_eigsolve=Defaults.alg_eigsolve()`: algorithm for eigensolvers
+- `alg_environments=Defaults.alg_environments()`: algorithm for updating environments
 """
 @kwdef struct VUMPS{F} <: Algorithm
     tol_galerkin::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
-    orthmaxiter::Int = Defaults.maxiter
     finalize::F = Defaults._finalize
     verbose::Bool = Defaults.verbose
-    dynamical_tols::Bool = Defaults.dynamical_tols
-    tol_min::Float64 = Defaults.tol_min
-    tol_max::Float64 = Defaults.tol_max
-    eigs_tolfactor::Float64 = Defaults.eigs_tolfactor
-    envs_tolfactor::Float64 = Defaults.envs_tolfactor
-    gauge_tolfactor::Float64 = Defaults.gauge_tolfactor
+
+    alg_gauge = Defaults.alg_gauge()
+    alg_eigsolve = Defaults.alg_eigsolve()
+    alg_environments = Defaults.alg_environments()
 end
-
-function updatetols(alg::VUMPS, iter, ϵ)
-    if alg.dynamical_tols
-        tol_eigs = between(alg.tol_min, ϵ * alg.eigs_tolfactor / sqrt(iter), alg.tol_max)
-        tol_envs = between(alg.tol_min, ϵ * alg.envs_tolfactor / sqrt(iter), alg.tol_max)
-        tol_gauge = between(alg.tol_min, ϵ * alg.gauge_tolfactor / sqrt(iter), alg.tol_max)
-    else # preserve legacy behavior
-        tol_eigs = alg.tol_galerkin / 10
-        tol_envs = Defaults.tol
-        tol_gauge = Defaults.tolgauge
-    end
-    return tol_eigs, tol_envs, tol_gauge
-end
-
-"
-    find_groundstate(ψ, H, alg, envs=environments(ψ, H))
-
-find the groundstate for `H` using algorithm `alg`
-"
 
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
     t₀ = Base.time_ns()
@@ -60,26 +32,28 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
     temp_ACs = similar.(ψ.AC)
 
     for iter in 1:(alg.maxiter)
-        tol_eigs, tol_envs, tol_gauge = updatetols(alg, iter, ϵ)
         Δt = @elapsed begin
-            eigalg = Arnoldi(; tol=tol_eigs)
-
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             @static if Defaults.parallelize_sites
                 @sync begin
                     for loc in 1:length(ψ)
                         Threads.@spawn begin
-                            _vumps_localupdate!(temp_ACs[loc], loc, ψ, H, envs, eigalg)
+                            _vumps_localupdate!(temp_ACs[loc], loc, ψ, H, envs,
+                                                alg_eigsolve)
                         end
                     end
                 end
             else
                 for loc in 1:length(ψ)
-                    _vumps_localupdate!(temp_ACs[loc], loc, ψ, H, envs, eigalg)
+                    _vumps_localupdate!(temp_ACs[loc], loc, ψ, H, envs, alg_eigsolve)
                 end
             end
 
-            ψ = InfiniteMPS(temp_ACs, ψ.CR[end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
-            recalculate!(envs, ψ; tol=tol_envs)
+            alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+            ψ = InfiniteMPS(temp_ACs, ψ.CR[end]; alg_gauge.tol, alg_gauge.maxiter)
+
+            alg_environments = updatetol(alg.alg_environments, iter, ϵ)
+            recalculate!(envs, ψ; alg_environments.tol)
 
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 

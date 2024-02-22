@@ -57,8 +57,15 @@ export transfer_left, transfer_right
 @deprecate params(args...) environments(args...)
 @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
-include("utility/defaults.jl")
+# Abstract type defs
+abstract type Algorithm end
+abstract type Cache end # cache "manages" environments
 
+# submodules
+include("utility/dynamictols.jl")
+using .DynamicTols
+
+include("utility/defaults.jl")
 include("utility/periodicarray.jl")
 include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
@@ -89,8 +96,6 @@ include("operators/lazysum.jl")
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
 
-abstract type Cache end # cache "manages" environments
-
 include("environments/FinEnv.jl")
 include("environments/abstractinfenv.jl")
 include("environments/permpoinfenv.jl")
@@ -99,8 +104,6 @@ include("environments/qpenv.jl")
 include("environments/multipleenv.jl")
 include("environments/idmrgenv.jl")
 include("environments/lazylincocache.jl")
-
-abstract type Algorithm end
 
 include("algorithms/derivatives.jl")
 include("algorithms/expval.jl")
