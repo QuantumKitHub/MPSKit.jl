@@ -22,16 +22,16 @@ function correlator(state::AbstractMPS, O₁::MPOTensor, O₂::MPOTensor, i::Int
     G = similar(js, scalartype(state))
     U = Tensor(ones, S₁)
 
-    @tensor Vₗ[-1 -2; -3] := state.AC[i][3 4; -3] * conj(U[1]) * O₁[1 2; 4 -2] *
-                             conj(state.AC[i][3 2; -1])
+    @plansor Vₗ[-1 -2; -3] := state.AC[i][3 4; -3] * conj(U[1]) * O₁[1 2; 4 -2] *
+                              conj(state.AC[i][3 2; -1])
     ctr = i + 1
 
     for (k, j) in enumerate(js)
         if j > ctr
             Vₗ = Vₗ * TransferMatrix(state.AR[ctr:(j - 1)])
         end
-        G[k] = @tensor Vₗ[2; 3 5] * state.AR[j][5 6; 7] * O₂[3 4; 6 1] * U[1] *
-                       conj(state.AR[j][2 4; 7])
+        G[k] = @plansor Vₗ[2 3; 5] * state.AR[j][5 6; 7] * O₂[3 4; 6 1] * U[1] *
+                        conj(state.AR[j][2 4; 7])
         ctr = j
     end
     return G
