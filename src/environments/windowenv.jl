@@ -52,13 +52,8 @@ invalidate!(ca::WindowEnv, ind) = invalidate!(ca.middle,ind)
 
 # Check the infinite envs and recalculate the right start
 function check_rightinfenv!(ca::WindowEnv, ψ::WindowMPS)
-    println("Doing right check")
     if !all(ca.rinfdeps .=== ψ.right.AR)
-        println("changing right env")
         invalidate!(ca, length(ψ.middle)) #forces transfers to be recalculated lazily 
-
-        #update_rightstart!(ca.middle,ca.right,ψ.right)
-        #glue_right!(ψ,ca.rinfdeps)
 
         ca.middle.rightenvs[end] = rightenv(ca.right, 0, ψ.right)
         ca.rinfdeps .= ψ.right.AR
@@ -66,13 +61,8 @@ function check_rightinfenv!(ca::WindowEnv, ψ::WindowMPS)
 end
 
 function check_leftinfenv!(ca::WindowEnv, ψ::WindowMPS)
-    println("Doing left check")
     if !all(ca.linfdeps .=== ψ.left.AL)
-        println("changing left env")
         invalidate!(ca, 1) #forces transfers to be recalculated lazily 
-
-        #update_leftstart!(ca.middle,ca.left,ψ.left)
-        #glue_left!(ψ,ca.linfdeps)
 
         ca.middle.leftenvs[1] = leftenv(ca.left, length(ψ.left)+1, ψ.left)
         ca.linfdeps .= ψ.left.AL
