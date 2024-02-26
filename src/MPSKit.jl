@@ -18,7 +18,7 @@ export fix_left,fix_right,fix_infinite
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth,
-       rightorth, leftorth!, rightorth!, poison!, uniform_leftorth, uniform_rightorth
+       rightorth, leftorth!, rightorth!, invalidate!, uniform_leftorth, uniform_rightorth
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # should be properties
 
 # useful utility functions?
@@ -65,6 +65,7 @@ include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
 include("utility/plotting.jl")
 include("utility/linearcombination.jl")
+include("utility/timedependence.jl")
 
 # maybe we should introduce an abstract state type
 include("states/window.jl")
@@ -83,7 +84,6 @@ include("operators/sparsempo/sparsempo.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")
-include("operators/timedependence.jl")
 include("operators/multipliedoperator.jl")
 include("operators/lazysum.jl")
 
