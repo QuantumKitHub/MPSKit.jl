@@ -34,13 +34,7 @@ LazySum(ops::AbstractVector, fs::AbstractVector) = LazySum(map(MultipliedOperato
 
 # wrapper around _eval_at
 safe_eval(::TimeDependent, x::LazySum, t::Number) = map(O -> _eval_at(O, t), x)
-function safe_eval(::TimeDependent, x::LazySum)
-    throw(ArgumentError("attempting to evaluate time-dependent LazySum without specifiying a time"))
-end
 safe_eval(::NotTimeDependent, x::LazySum) = sum(_eval_at, x)
-function safe_eval(::NotTimeDependent, x::LazySum, t::Number)
-    throw(ArgumentError("attempting to evaluate time-independent LazySum at time"))
-end
 
 # For users
 # using (t) should return NotTimeDependent LazySum
