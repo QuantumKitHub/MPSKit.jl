@@ -35,7 +35,7 @@ end
 Utility
 ===========================================================================================#
 function Base.getproperty(ca::MultipleEnvironments{<:LazySum,<:WindowEnv},sym::Symbol)
-    if sym === :left || sym === :right
+    if sym === :left || sym === :middle || sym === :right
         #extract the left/right parts
         return MultipleEnvironments(getproperty(ca.opp,sym),map(x->getproperty(x,sym),ca))
     else
@@ -49,10 +49,6 @@ function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
     else
         return getfield(envs, prop)
     end
-end
-
-function finenv(ca::MultipleEnvironments{<:WindowEnv},ψ::WindowMPS) 
-    return MultipleEnvironments(ca.opp.middle,map(x->finenv(x.middle,ψ),ca))
 end
 
 # we need to define how to recalculate
