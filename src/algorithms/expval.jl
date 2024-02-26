@@ -130,6 +130,18 @@ function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, range::UnitRange{
     return tot
 end
 
+# maybe rename this so there is no confusion on what it does?
+function expectation_value(ψ::WindowMPS, H::MPOHamiltonian, envs::WindowEnv)
+    tot = 0.0 + 0im
+    for i in 1:(H.odim), j in 1:(H.odim)
+        tot += @plansor leftenv(envs, length(ψ), ψ)[i][1 2; 3] * ψ.AC[end][3 4; 5] *
+                        rightenv(envs, length(ψ), ψ)[j][5 6; 7] *
+                        H[length(ψ)][i, j][2 8; 4 6] * conj(ψ.AC[end][1 8; 7])
+    end
+
+    return tot / (norm(ψ.AC[end])^2)
+end
+
 # Transfer matrices
 # -----------------
 function expectation_value(ψ::InfiniteMPS, mpo::DenseMPO)

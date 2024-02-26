@@ -144,13 +144,6 @@ function variance(state::FiniteMPS, H::MPOHamiltonian, envs=environments(state, 
                 sum(expectation_value(state, H, envs))^2)
 end
 
-function variance(state::WindowMPS, H::MPOHamiltonian, envs=environments(state, H))
-    #tricky to define
-    H2, nenvs = squaredenvs(state, H, envs)
-    return real(expectation_value(state, H2, nenvs)[2] -
-                expectation_value(state, H, envs)[2]^2)
-end
-
 function variance(state::FiniteQP, H::MPOHamiltonian, args...)
     return variance(convert(FiniteMPS, state), H)
 end;
@@ -176,6 +169,12 @@ function variance(ψ, H::LazySum, envs=environments(ψ, sum(H)))
     envs isa MultipleEnvironments &&
         throw(ArgumentError("The environment cannot be Lazy i.e. use environments of sum(H)"))
     return variance(ψ, sum(H), envs)
+end
+
+function variance(ψ::WindowMPS, H::Window, envs::WindowEnv=environments(ψ,H))
+    #tricky to define
+    H2, nenvs = squaredenvs(ψ, H, envs)
+    return real(expectation_value(ψ, H2.middle, nenvs) - expectation_value(ψ, H.middle, envs)^2)
 end
 
 """
