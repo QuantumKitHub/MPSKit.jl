@@ -162,7 +162,8 @@ function expectation_value(ψ, op::UntimedOperator, args...)
     return op.f * expectation_value(ψ, op.op, args...)
 end
 
-# define expectation_value for LazySum
+# LazySum
+# -------
 function expectation_value(ψ, ops::LazySum, at::Int)
     return sum(op -> expectation_value(ψ, op, at), ops)
 end
@@ -192,6 +193,11 @@ end
 
 # Window
 # ------
-function expectation_value(Ψ::WindowMPS, windowH::Union{Window,LazySum{<:Window}}, windowenvs)
-    return expectation_value(Ψ, windowH.middle, windowenvs.middle)
+function expectation_value(Ψ::WindowMPS, windowH::Window, windowenvs::WindowEnv)
+    left_expval = expectation_value(Ψ.left, windowH.left, windowenvs.left)
+    middle_expval = expectation_value(Ψ.middle, windowH.middle, windowenvs.middle)
+    right_expval = expectation_value(Ψ.right, windowH.right, windowenvs.right)
+    return vcat(left_expval,middle_expval,right_expval)
 end
+
+#I need to think about expval with location
