@@ -9,6 +9,10 @@ struct Window{L,M,R}
     right::R
 end
 
+function Base.:+(window1::Window, window2::Window)
+    return Window(window1.left+window2.left,window1.middle+window2.middle,window1.right+window2.right)
+end
+
 # Holy traits
 TimeDependence(x::Window) = istimed(x) ? TimeDependent() : NotTimeDependent()
 istimed(x::Window) = istimed(x.left) || istimed(x.middle) || istimed(x.right)
