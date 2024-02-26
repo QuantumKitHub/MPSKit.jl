@@ -13,9 +13,12 @@ end
 #automatically construct the correct leftstart/rightstart for a WindowMPS
 # copying the vector where the tensors reside in makes it have another memory adress, while keeping the references of the elements
 function environments(ψ::WindowMPS, O::Window, above=nothing; lenvs=environments(ψ.left, O.left),renvs=environments(ψ.right, O.right))
-    fin_env = environments(ψ, O.middle, above, leftenv(lenvs, 1, ψ.left),
-    rightenv(renvs, length(ψ), ψ.right))
+    fin_env = environments(ψ, O.middle, above, lenvs, renvs)
     return WindowEnv(Window(lenvs,fin_env,renvs),copy(ψ.left.AL),copy(ψ.right.AR))
+end
+
+function environments(ψ::WindowMPS, O::MPOHamiltonian, above, lenvs::MPOHamInfEnv,renvs::MPOHamInfEnv)
+    return fin_env = environments(ψ, O, above, leftenv(lenvs, 1, ψ.left),rightenv(renvs, length(ψ), ψ.right))
 end
 
 function environments(below::WindowMPS, above::WindowMPS)
