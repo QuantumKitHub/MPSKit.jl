@@ -45,7 +45,7 @@ function find_groundstate(ψ::AbstractMPS, H, envs::Union{Cache,MultipleEnvironm
     return find_groundstate(ψ, H, alg, envs)
 end
 
-function find_groundstate(state::WindowMPS{A,B,VL,VR}, H::Window, alg::Window, envs=environments(state, H)) where {A,B,VL,VR}
+function find_groundstate!(state::WindowMPS{A,B,VL,VR}, H::Union{Window,LazySum{<:Window}}, alg::Window, envs=environments(state, H)) where {A,B,VL,VR}
     # first find infinite groundstates
     if VL === WINDOW_VARIABLE
         (gs_left, _) = find_groundstate(state.left, H.left, alg.left, envs.left)
@@ -56,4 +56,8 @@ function find_groundstate(state::WindowMPS{A,B,VL,VR}, H::Window, alg::Window, e
     #set infinite parts
     state = WindowMPS(gs_left,state.middle,gs_right)
     return find_groundstate(state, H.middle, alg.middle, envs)
+end
+
+function find_groundstate(ψ::WindowMPS, H::Union{Window,LazySum{<:Window}}, alg::Window, envs...)
+    return find_groundstate!(copy(ψ), H, alg, envs...)
 end
