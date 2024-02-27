@@ -18,7 +18,7 @@ function environments(ψ::WindowMPS, O::Window, above=nothing; lenvs=environment
 end
 
 function environments(ψ::WindowMPS, O::MPOHamiltonian, above, lenvs::MPOHamInfEnv,renvs::MPOHamInfEnv)
-    return fin_env = environments(ψ, O, above, leftenv(lenvs, 1, ψ.left),rightenv(renvs, length(ψ), ψ.right))
+    return environments(ψ, O, above, leftenv(lenvs, 1, ψ.left),rightenv(renvs, length(ψ), ψ.right))
 end
 
 function environments(below::WindowMPS, above::WindowMPS)

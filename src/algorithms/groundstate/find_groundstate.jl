@@ -16,7 +16,7 @@ optimization algorithm will be attempted based on the supplied keywords.
 - `maxiter::Int`: maximum amount of iterations
 - `verbose::Bool`: display progress information
 """
-function find_groundstate(ψ::AbstractMPS, H, envs::Cache=environments(ψ, H);
+function find_groundstate(ψ::AbstractMPS, H, envs::Union{Cache,MultipleEnvironments}=environments(ψ, H);
                           tol=Defaults.tol, maxiter=Defaults.maxiter,
                           verbose=Defaults.verbose, trscheme=nothing)
     if isa(ψ, InfiniteMPS)
@@ -37,5 +37,23 @@ function find_groundstate(ψ::AbstractMPS, H, envs::Cache=environments(ψ, H);
     else
         throw(ArgumentError("Unknown input state type"))
     end
+    if isa(ψ, WindowMPS)
+        alg_infin = VUMPS(; tol_galerkin=tol, verbose=verbose, maxiter=maxiter)
+        alg = Window(alg_infin,alg,alg_infin)
+    end
+   
     return find_groundstate(ψ, H, alg, envs)
+end
+
+function find_groundstate(state::WindowMPS{A,B,VL,VR}, H::Window, alg::Window, envs=environments(state, H)) where {A,B,VL,VR}
+    # first find infinite groundstates
+    if VL === WINDOW_VARIABLE
+        (gs_left, _) = find_groundstate(state.left, H.left, alg.left, envs.left)
+    end
+    if VR === WINDOW_VARIABLE
+        (gs_right, _) = find_groundstate(state.right, H.right, alg.right, envs.right)
+    end
+    #set infinite parts
+    state = WindowMPS(gs_left,state.middle,gs_right)
+    return find_groundstate(state, H.middle, alg.middle, envs)
 end
