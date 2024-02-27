@@ -72,7 +72,7 @@ function check_leftinfenv!(ca::WindowEnv, ψ::WindowMPS)
     end
 end
 
-# automatic recalculation
+#should be used to calculate expvals for operators over the boundary, also need views to work for this
 function leftenv(ca::WindowEnv, ind, ψ::WindowMPS)
     if ind < 1
         return leftenv(ca.left,ind,ψ.left)
