@@ -25,24 +25,21 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
     temp_Cs = similar.(ψ.CR)
 
     while true
-        tol_eigs, tol_gauge, tol_envs = updatetols(alg, iter, galerkin)
-
-        eigalg = Arnoldi(; tol=tol_eigs)
-
+        alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
         if Defaults.parallelize_sites
             @sync begin
                 for col in 1:size(ψ, 2)
                     Threads.@spawn begin
                         H_AC = ∂∂AC($col, $ψ, $H, $envs)
                         ac = RecursiveVec($ψ.AC[:, col])
-                        _, acvecs = eigsolve(H_AC, ac, 1, :LM, eigalg)
+                        _, acvecs = eigsolve(H_AC, ac, 1, :LM, alg_eigsolve)
                         $temp_ACs[:, col] = acvecs[1].vecs[:]
                     end
 
                     Threads.@spawn begin
                         H_C = ∂∂C($col, $ψ, $H, $envs)
                         c = RecursiveVec($ψ.CR[:, col])
-                        _, cvecs = eigsolve(H_C, c, 1, :LM, eigalg)
+                        _, cvecs = eigsolve(H_C, c, 1, :LM, alg_eigsolve)
                         $temp_Cs[:, col] = cvecs[1].vecs[:]
                     end
                 end
@@ -51,12 +48,12 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
             for col in 1:size(ψ, 2)
                 H_AC = ∂∂AC(col, ψ, H, envs)
                 ac = RecursiveVec(ψ.AC[:, col])
-                _, acvecs = eigsolve(H_AC, ac, 1, :LM, eigalg)
+                _, acvecs = eigsolve(H_AC, ac, 1, :LM, alg_eigsolve)
                 temp_ACs[:, col] = acvecs[1].vecs[:]
 
                 H_C = ∂∂C(col, ψ, H, envs)
                 c = RecursiveVec(ψ.CR[:, col])
-                _, cvecs = eigsolve(H_C, c, 1, :LM, eigalg)
+                _, cvecs = eigsolve(H_C, c, 1, :LM, alg_eigsolve)
                 temp_Cs[:, col] = cvecs[1].vecs[:]
             end
         end
@@ -67,10 +64,13 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
             temp_ACs[row, col] = QAc * adjoint(Qc)
         end
 
-        ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; tol=tol_gauge, maxiter=alg.orthmaxiter)
-        recalculate!(envs, ψ; tol=tol_envs)
+        alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+        ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
-        (ψ, envs) = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
+        alg_environments = updatetol(alg.alg_environments, iter, ϵ)
+        recalculate!(envs, ψ; alg_environments.tol)
+
+        ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
         galerkin = calc_galerkin(ψ, envs)
         alg.verbose && @info "vumps @iteration $(iter) galerkin = $(galerkin)"

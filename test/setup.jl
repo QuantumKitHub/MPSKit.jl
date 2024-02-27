@@ -1,12 +1,17 @@
 # Planar stuff
 # ----------------------------
+module TestSetup
 
-using Test, TestExtras
+# imports
 using MPSKit
-using MPSKit: _transpose_tail, _transpose_front
 using TensorKit
 using TensorKit: PlanarTrivial, ℙ
-using VectorInterface: One
+using LinearAlgebra: Diagonal
+
+# exports
+export force_planar
+export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model
+export classical_ising, finite_classical_ising, sixvertex
 
 # using TensorOperations
 
@@ -29,14 +34,13 @@ force_planar(mpo::DenseMPO) = DenseMPO(force_planar.(mpo.opp))
 
 # Toy models
 # ----------------------------
-using LinearAlgebra: Diagonal
 
 function transverse_field_ising(; g=1.0)
     X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
     Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
     E = TensorMap(ComplexF64[1 0; 0 1], ℂ^2 ← ℂ^2)
     H = Z ⊗ Z + (g / 2) * (X ⊗ E + E ⊗ X)
-    return MPOHamiltonian(H)
+    return MPOHamiltonian(-H)
 end
 
 function heisenberg_XXX(::Type{SU2Irrep}; spin=1)
@@ -123,4 +127,6 @@ function sixvertex(; a=1.0, b=1.0, c=1.0)
                    0 b c 0
                    0 0 0 a]
     return DenseMPO(permute(TensorMap(d, ℂ^2 ⊗ ℂ^2, ℂ^2 ⊗ ℂ^2), ((1, 2), (4, 3))))
+end
+
 end

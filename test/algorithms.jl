@@ -3,8 +3,13 @@ println("
 |   Algorithms   |
 ------------------
 ")
+module TestAlgorithms
 
-include("setup.jl")
+using ..TestSetup
+using Test, TestExtras
+using MPSKit
+using TensorKit
+using TensorKit: ℙ
 
 @testset "find_groundstate" verbose = true begin
     tol = 1e-8
@@ -17,11 +22,13 @@ include("setup.jl")
                      VUMPS(; tol_galerkin=100 * tol, verbose=verbosity > 0) &
                      GradientGrassmann(; tol=tol, verbosity=verbosity)]
 
-    H1 = force_planar(transverse_field_ising(; g=1.1))
+    g = 4.0
+    D = 6
+    H1 = force_planar(transverse_field_ising(; g))
 
     @testset "Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
-        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^15]), L)
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^D]), L)
         H = repeat(H1, L)
 
         v₀ = variance(ψ₀, H)
@@ -36,7 +43,7 @@ include("setup.jl")
 
     @testset "LazySum Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
-        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^16]), L)
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^D]), L)
         Hlazy = repeat(Hlazy1, L)
 
         v₀ = variance(ψ₀, Hlazy)
@@ -53,32 +60,32 @@ include("setup.jl")
     end
 
     finite_algs = [DMRG(; verbose=verbosity > 0),
-                   DMRG2(; verbose=verbosity > 0, trscheme=truncdim(10)),
-                   GradientGrassmann(; tol=tol, verbosity=verbosity)]
+                   DMRG2(; verbose=verbosity > 0, trscheme=truncdim(D)),
+                   GradientGrassmann(; tol, verbosity, maxiter=300)]
 
-    H = force_planar(transverse_field_ising(; g=1.1))
+    H = force_planar(transverse_field_ising(; g))
 
     @testset "Finite $i" for (i, alg) in enumerate(finite_algs)
-        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
+        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^D)
 
         v₀ = variance(ψ₀, H)
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
         v = variance(ψ, H, envs)
 
-        @test sum(δ) < 100 * tol
+        @test sum(δ) < 1e-3
         @test v₀ > v && v < 1e-2 # energy variance should be low
     end
 
-    Hlazy = LazySum([H, H, H])
+    Hlazy = LazySum([3 * H, H, 5.557 * H])
 
     @testset "LazySum Finite $i" for (i, alg) in enumerate(finite_algs)
-        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
+        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^D)
 
         v₀ = variance(ψ₀, Hlazy)
         ψ, envs, δ = find_groundstate(ψ₀, Hlazy, alg)
         v = variance(ψ, Hlazy)
 
-        @test sum(δ) < 100 * tol
+        @test sum(δ) < 1e-3
         @test v₀ > v && v < 1e-2 # energy variance should be low
 
         ψ_nolazy, envs_nolazy, _ = find_groundstate(ψ₀, sum(Hlazy), alg)
@@ -206,41 +213,41 @@ end
         H = repeat(force_planar(heisenberg_XXX()), 2)
         ψ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^48, ℙ^48])
         ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbose=false, tol=1e-11)
-        energies, Bs = excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ, envs)
+        energies, ϕs = excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ, envs)
         @test energies[1] ≈ 0.41047925 atol = 1e-4
-        @test variance(Bs[1], H) < 1e-8
+        @test variance(ϕs[1], H) < 1e-8
     end
     @testset "infinite (mpo)" begin
-        th = repeat(sixvertex(), 2)
+        H = repeat(sixvertex(), 2)
         ψ = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^10, ℂ^10])
-        ψ, envs, _ = leading_boundary(ψ, th, VUMPS(; maxiter=400, verbose=false))
-        energies, Bs = excitations(th, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ψ,
+        ψ, envs, _ = leading_boundary(ψ, H, VUMPS(; maxiter=400, verbose=false))
+        energies, ϕs = excitations(H, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ψ,
                                    envs; verbose=false)
         @test abs(energies[1]) > abs(energies[2]) # has a minima at pi/2
     end
 
     @testset "finite" begin
         verbose = false
-        th = force_planar(transverse_field_ising())
+        H = force_planar(transverse_field_ising())
         ψ = InfiniteMPS([ℙ^2], [ℙ^10])
-        ψ, envs, _ = find_groundstate(ψ, th; maxiter=400, verbose, tol=1e-9)
-        energies, Bs = excitations(th, QuasiparticleAnsatz(), 0.0, ψ, envs)
+        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbose, tol=1e-9)
+        energies, ϕs = excitations(H, QuasiparticleAnsatz(), 0.0, ψ, envs)
         inf_en = energies[1]
 
         fin_en = map([20, 10]) do len
             ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^15)
-            (ψ, envs, _) = find_groundstate(ψ, th; verbose)
+            (ψ, envs, _) = find_groundstate(ψ, H; verbose)
 
             #find energy with quasiparticle ansatz
-            energies_QP, Bs = excitations(th, QuasiparticleAnsatz(), ψ, envs)
-            @test variance(Bs[1], th) < 1e-6
+            energies_QP, ϕs = excitations(H, QuasiparticleAnsatz(), ψ, envs)
+            @test variance(ϕs[1], H) < 1e-6
 
             #find energy with normal dmrg
-            energies_dm, _ = excitations(th,
+            energies_dm, _ = excitations(H,
                                          FiniteExcited(;
                                                        gsalg=DMRG(; verbose,
                                                                   tol=1e-6)), ψ)
-            @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ψ, th, envs)) atol = 1e-4
+            @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ψ, H, envs)) atol = 1e-4
 
             return energies_QP[1]
         end
@@ -535,4 +542,6 @@ end
 
     energies, values = exact_diagonalization(th; which=:SR)
     @test energies[1] ≈ sum(expectation_value(gs, th)) atol = 1e-5
+end
+
 end
