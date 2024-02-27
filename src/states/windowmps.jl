@@ -41,19 +41,16 @@ struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor,VL,VR} <: AbstractFiniteMP
     window::Window{InfiniteMPS{A,B},FiniteMPS{A,B},InfiniteMPS{A,B}}
 
     function WindowMPS(ψₗ::InfiniteMPS{A,B}, ψₘ::FiniteMPS{A,B},
-                       ψᵣ::InfiniteMPS{A,B}; fixleft::Bool=false, fixright::Bool=false) where {A,B}
+                       ψᵣ::InfiniteMPS{A,B}; fixleft::Bool=false,
+                       fixright::Bool=false) where {A,B}
         left_virtualspace(ψₗ, 0) == left_virtualspace(ψₘ, 0) &&
             right_virtualspace(ψₘ, length(ψₘ)) == right_virtualspace(ψᵣ, length(ψₘ)) ||
             throw(SpaceMismatch("Mismatch between window and environment virtual spaces"))
-        
         VL = fixleft ? WINDOW_FIXED : WINDOW_VARIABLE
         VR = fixright ? WINDOW_FIXED : WINDOW_VARIABLE
         return new{A,B,VL,VR}(Window(ψₗ, ψₘ, ψᵣ))
     end
-    
 end
-
-
 
 #===========================================================================================
 Constructors
@@ -117,8 +114,8 @@ end
 #===========================================================================================
 Utility
 ===========================================================================================#
-function Base.getproperty(ψ::WindowMPS,sym::Symbol)
-    if sym === :left || sym === :middle || sym === :right 
+function Base.getproperty(ψ::WindowMPS, sym::Symbol)
+    if sym === :left || sym === :middle || sym === :right
         return getfield(ψ.window, sym)
     elseif sym === :AL
         return ALView(ψ)

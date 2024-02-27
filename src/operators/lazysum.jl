@@ -52,10 +52,10 @@ Base.:+(op1::MultipliedOperator, op2::MultipliedOperator) = LazySum([op1, op2])
 
 Base.repeat(x::LazySum, args...) = LazySum(repeat.(x, args...))
 
-function Base.getproperty(sumops::LazySum{<:Window},sym::Symbol)
+function Base.getproperty(sumops::LazySum{<:Window}, sym::Symbol)
     if sym === :left || sym === :middle || sym === :right
         #extract the left/right parts
-        return map(x->getproperty(x,sym),sumops)
+        return map(x -> getproperty(x, sym), sumops)
     else
         return getfield(sumops, sym)
     end
