@@ -16,7 +16,8 @@ optimization algorithm will be attempted based on the supplied keywords.
 - `maxiter::Int`: maximum amount of iterations
 - `verbose::Bool`: display progress information
 """
-function find_groundstate(ψ::AbstractMPS, H, envs::Union{Cache,MultipleEnvironments}=environments(ψ, H);
+function find_groundstate(ψ::AbstractMPS, H,
+                          envs::Union{Cache,MultipleEnvironments}=environments(ψ, H);
                           tol=Defaults.tol, maxiter=Defaults.maxiter,
                           verbose=Defaults.verbose, trscheme=nothing)
     if isa(ψ, InfiniteMPS)
@@ -39,13 +40,13 @@ function find_groundstate(ψ::AbstractMPS, H, envs::Union{Cache,MultipleEnvironm
     end
     if isa(ψ, WindowMPS)
         alg_infin = VUMPS(; tol_galerkin=tol, verbose=verbose, maxiter=maxiter)
-        alg = Window(alg_infin,alg,alg_infin)
+        alg = Window(alg_infin, alg, alg_infin)
     end
-   
     return find_groundstate(ψ, H, alg, envs)
 end
 
-function find_groundstate!(state::WindowMPS{A,B,VL,VR}, H::Union{Window,LazySum{<:Window}}, alg::Window, envs=environments(state, H)) where {A,B,VL,VR}
+function find_groundstate!(state::WindowMPS{A,B,VL,VR}, H::Union{Window,LazySum{<:Window}},
+                           alg::Window, envs=environments(state, H)) where {A,B,VL,VR}
     # first find infinite groundstates
     if VL === WINDOW_VARIABLE
         (gs_left, _) = find_groundstate(state.left, H.left, alg.left, envs.left)
@@ -54,10 +55,11 @@ function find_groundstate!(state::WindowMPS{A,B,VL,VR}, H::Union{Window,LazySum{
         (gs_right, _) = find_groundstate(state.right, H.right, alg.right, envs.right)
     end
     #set infinite parts
-    state = WindowMPS(gs_left,state.middle,gs_right)
+    state = WindowMPS(gs_left, state.middle, gs_right)
     return find_groundstate(state, H.middle, alg.middle, envs)
 end
 
-function find_groundstate(ψ::WindowMPS, H::Union{Window,LazySum{<:Window}}, alg::Window, envs...)
+function find_groundstate(ψ::WindowMPS, H::Union{Window,LazySum{<:Window}}, alg::Window,
+                          envs...)
     return find_groundstate!(copy(ψ), H, alg, envs...)
 end
