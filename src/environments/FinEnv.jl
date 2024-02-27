@@ -98,7 +98,7 @@ end
 # this forces the transfers to be recalculated lazily 
 function invalidate!(ca::FinEnv, ind)
     ca.ldependencies[ind] = similar(ca.ldependencies[ind])
-    ca.rdependencies[ind] = similar(ca.rdependencies[ind])
+    return ca.rdependencies[ind] = similar(ca.rdependencies[ind])
 end
 
 #rightenv[ind] will be contracteable with the tensor on site [ind]

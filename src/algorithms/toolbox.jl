@@ -171,10 +171,11 @@ function variance(ψ, H::LazySum, envs=environments(ψ, sum(H)))
     return variance(ψ, sum(H), envs)
 end
 
-function variance(ψ::WindowMPS, H::Window, envs::WindowEnv=environments(ψ,H))
+function variance(ψ::WindowMPS, H::Window, envs::WindowEnv=environments(ψ, H))
     #tricky to define
     H2, nenvs = squaredenvs(ψ, H, envs)
-    return real(expectation_value(ψ, H2.middle, nenvs) - expectation_value(ψ, H.middle, envs)^2)
+    return real(expectation_value(ψ, H2.middle, nenvs) -
+                expectation_value(ψ, H.middle, envs)^2)
 end
 
 """

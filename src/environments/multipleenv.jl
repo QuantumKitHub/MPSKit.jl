@@ -30,14 +30,14 @@ end
 #     return MultipleEnvironments(H, broadcast(o -> environments(state, o), H.opps))
 # end;
 
-
 #===========================================================================================
 Utility
 ===========================================================================================#
-function Base.getproperty(ca::MultipleEnvironments{<:LazySum,<:WindowEnv},sym::Symbol)
+function Base.getproperty(ca::MultipleEnvironments{<:LazySum,<:WindowEnv}, sym::Symbol)
     if sym === :left || sym === :middle || sym === :right
         #extract the left/right parts
-        return MultipleEnvironments(getproperty(ca.opp,sym),map(x->getproperty(x,sym),ca))
+        return MultipleEnvironments(getproperty(ca.opp, sym),
+                                    map(x -> getproperty(x, sym), ca))
     else
         return getfield(ca, sym)
     end
