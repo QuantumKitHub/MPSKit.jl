@@ -25,6 +25,12 @@ function environments(ψ::WindowMPS, O::MPOHamiltonian, above, lenvs::MPOHamInfE
                         rightenv(renvs, length(ψ), ψ.right))
 end
 
+#Backwards compability
+function environments(ψ::WindowMPS{A,B,WINDOW_FIXED,WINDOW_FIXED}, H::MPOHamiltonian,
+                      above=nothing) where {A,B}
+    return environments(ψ, H, above, environments(ψ.left, H), environments(ψ.right, H))
+end
+
 function environments(below::WindowMPS, above::WindowMPS)
     above.left == below.left || throw(ArgumentError("left gs differs"))
     above.right == below.right || throw(ArgumentError("right gs differs"))
