@@ -54,9 +54,12 @@ function find_groundstate!(state::WindowMPS{A,B,VL,VR}, H::Union{Window,LazySum{
     if VR === WINDOW_VARIABLE
         (gs_right, _) = find_groundstate(state.right, H.right, alg.right, envs.right)
     end
-    #set infinite parts
+    #what do we if bond dimension has changed?
+    #set infinite parts and put through to optimize finite part
     state = WindowMPS(gs_left, state.middle, gs_right)
-    return find_groundstate(state, H.middle, alg.middle, envs)
+    state, _, delta = find_groundstate(state, H.middle, alg.middle,
+                                       finenv(envs, state))
+    return state, envs, delta
 end
 
 function find_groundstate(ψ::WindowMPS, H::Union{Window,LazySum{<:Window}}, alg::Window,
