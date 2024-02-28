@@ -20,7 +20,7 @@ Type that represents a finite Matrix Product State embedded in an infinite Matri
     WindowMPS(left::InfiniteMPS, middle_tensors::AbstractVector, right::InfiniteMPS)
     WindowMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}},
               virtualspaces::Vector{<:Union{S, CompositeSpace{S}}, left::InfiniteMPS,
-              [right_gs::InfiniteMPS])
+              right_gs::InfiniteMPS)
     WindowMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
               maxvirtualspace::S, left::InfiniteMPS, right_gs::InfiniteMPS)
     
@@ -29,10 +29,10 @@ a middle state or a vector of tensors to construct the middle. Alternatively, it
 to supply the same arguments as for the constructor of [`FiniteMPS`](@ref), followed by a
 left and right state to construct the WindowMPS in one step.
 
-    WindowMPS(state::InfiniteMPS, L::Int)
+    WindowMPS(state::InfiniteMPS, L::Int; copyright=false)
 
 Construct a WindowMPS from an InfiniteMPS, by promoting a region of length `L` to a
-`FiniteMPS`.
+`FiniteMPS`. Note that by default the right state is not copied (and thus .left === .right).
 
 Options for fixing the left and right infinite state (i.e. so they don't get time evolved) 
 can be done via the Boolean keyword arguments `fixleft` and `fixright`.
@@ -60,6 +60,8 @@ function WindowMPS(ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPS
     return WindowMPS(ψₗ, FiniteMPS(site_tensors), ψᵣ; kwargs...)
 end
 
+#perhaps we want to consider not using the FiniteMPS constructor since I believe these constructs
+#the spaces so that the edge virtual sapces are one dimensional.
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    maxvirtspace::S, ψₗ::InfiniteMPS,
                    ψᵣ::InfiniteMPS; kwargs...) where {S<:ElementarySpace}
