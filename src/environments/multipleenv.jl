@@ -51,6 +51,10 @@ function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
     end
 end
 
+function finenv(ca::MultipleEnvironments{<:LazySum,<:WindowEnv}, ψ::WindowMPS)
+    return MultipleEnvironments(ca.opp.middle, map(x -> finenv(x, ψ), ca))
+end
+
 # we need to define how to recalculate
 """
     Recalculate in-place each sub-env in MultipleEnvironments
@@ -61,7 +65,3 @@ function recalculate!(env::MultipleEnvironments, args...; kwargs...)
     end
     return env
 end
-
-
-
-
