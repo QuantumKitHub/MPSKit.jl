@@ -132,8 +132,10 @@ end
 
 function Base.copy(ψ::WindowMPS{A,B,VL,VR}) where {A,B,VL,VR}
     left = VL === WINDOW_VARIABLE ? copy(ψ.left) : ψ.left
+    fixleft = VL === WINDOW_VARIABLE ? false : true
     right = VR === WINDOW_VARIABLE ? copy(ψ.right) : ψ.right
-    return WindowMPS(left, copy(ψ.middle), right)
+    fixright = VR === WINDOW_VARIABLE ? false : true
+    return WindowMPS(left, copy(ψ.middle), right; fixleft=fixleft, fixright=fixright)
 end
 
 # not sure about the underlying methods...
