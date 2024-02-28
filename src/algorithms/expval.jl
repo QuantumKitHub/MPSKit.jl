@@ -130,16 +130,27 @@ function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, range::UnitRange{
     return tot
 end
 
-# maybe rename this so there is no confusion on what it does?
-function expectation_value(ψ::WindowMPS, H::MPOHamiltonian, envs::WindowEnv)
-    tot = 0.0 + 0im
-    for i in 1:(H.odim), j in 1:(H.odim)
-        tot += @plansor leftenv(envs, length(ψ), ψ)[i][1 2; 3] * ψ.AC[end][3 4; 5] *
-                        rightenv(envs, length(ψ), ψ)[j][5 6; 7] *
-                        H[length(ψ)][i, j][2 8; 4 6] * conj(ψ.AC[end][1 8; 7])
-    end
+function expectation_value(ψ::WindowMPS, H::MPOHamiltonian, range::UnitRange{Int},
+                           envs::FinEnv=environments(ψ, H))
+    if range == 1:length(ψ)
+        tot = 0.0 + 0im
+        for i in 1:(H.odim), j in 1:(H.odim)
+            tot += @plansor leftenv(envs, length(ψ), ψ)[i][1 2; 3] * ψ.AC[end][3 4; 5] *
+                            rightenv(envs, length(ψ), ψ)[j][5 6; 7] *
+                            H[length(ψ)][i, j][2 8; 4 6] * conj(ψ.AC[end][1 8; 7])
+        end
 
-    return tot / (norm(ψ.AC[end])^2)
+        return tot / (norm(ψ.AC[end])^2)
+    else
+        # probably doesn't make sense for any other range
+        # does it even make sense for unequal left and right states?
+        throw(ArgumentError("range $range not supported"))
+    end
+end
+
+function expectation_value(ψ::WindowMPS, H::Window, range::UnitRange{Int},
+                           envs::WindowEnv=environments(ψ, H))
+    return expectation_value(ψ, H.middle, range, finenv(envs, ψ))
 end
 
 # Transfer matrices
