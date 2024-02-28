@@ -162,7 +162,8 @@ function squaredenvs(Ψ, H, envs, H2, envs2)
     return H2, envs2
 end
 
-function squaredenvs(Ψ::FiniteMPS, H::MPOHamiltonian, envs=environments(Ψ, H))
+function squaredenvs(Ψ::AbstractFiniteMPS, H::MPOHamiltonian,
+                     envs::FinEnv=environments(Ψ, H))
     # to construct the squared caches we will first initialize environments
     # then make all data invalid so it will be recalculated
     # then initialize the correct caches at the edge
@@ -170,7 +171,7 @@ function squaredenvs(Ψ::FiniteMPS, H::MPOHamiltonian, envs=environments(Ψ, H))
     return squaredenvs(Ψ, H, envs, nH, environments(Ψ, nH))
 end
 
-function squaredenvs(Ψ::WindowMPS, H::Window, envs=environments(Ψ, H))
+function squaredenvs(Ψ::WindowMPS, H::Window, envs::WindowEnv=environments(Ψ, H))
     nH = Window(conj(H.left) * H.left, conj(H.middle) * H.middle, conj(H.right) * H.right)
     return squaredenvs(Ψ, H.middle, envs, nH, environments(Ψ, nH))
 end
