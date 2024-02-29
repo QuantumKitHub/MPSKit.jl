@@ -28,8 +28,10 @@ end
 #Backwards compability
 function environments(ψ::WindowMPS{A,B,WINDOW_FIXED,WINDOW_FIXED}, H::MPOHamiltonian,
                       above=nothing) where {A,B}
-    length(H) == length(ψ.left) || throw(ArgumentError("length(ψ.left) != length(H), use H=Window(Hleft,Hmiddle,Hright) instead"))
-    length(H) == length(ψ.right) || throw(ArgumentError("length(ψ.right) != length(H), use H=Window(Hleft,Hmiddle,Hright) instead"))
+    length(H) == length(ψ.left) ||
+        throw(ArgumentError("length(ψ.left) != length(H), use H=Window(Hleft,Hmiddle,Hright) instead"))
+    length(H) == length(ψ.right) ||
+        throw(ArgumentError("length(ψ.right) != length(H), use H=Window(Hleft,Hmiddle,Hright) instead"))
     return environments(ψ, H, above, environments(ψ.left, H), environments(ψ.right, H))
 end
 
