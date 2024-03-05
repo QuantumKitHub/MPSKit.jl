@@ -98,7 +98,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
                 normalize!(c)
                 v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
                              conj(ar[6; 3 4])
-                ϵ[pos] = max(ϵ[pos], abs(1 - abs(v)))
+                ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
 
                 ψ.AC[pos] = (al, complex(c))
                 ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))

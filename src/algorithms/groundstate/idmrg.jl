@@ -188,7 +188,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             smallest = infimum(_firstspace(C_current), _firstspace(c))
             e1 = isometry(_firstspace(C_current), smallest)
             e2 = isometry(_firstspace(c), smallest)
-            ϵ = norm(e2' * c * e2 - e1' * curc * e1)
+            ϵ = norm(e2' * c * e2 - e1' * C_current * e1)
 
             if ϵ < alg.tol_galerkin
                 @infov 2 logfinish!(log, iter, ϵ, _objective(ψ, H, envs))
