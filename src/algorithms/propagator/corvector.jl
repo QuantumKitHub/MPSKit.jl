@@ -68,7 +68,7 @@ function propagator(A::AbstractFiniteMPS, z::Number, H::MPOHamiltonian,
             delta = max(delta, norm(res - init.AC[i]))
             init.AC[i] = res
 
-            convhist.converged == 0 && @warn "($(i)) failed to converge $(convhist.normres)"
+            convhist.converged == 0 && @warn "propagator ($i) failed to converge: normres = $(convhist.normres)"
         end
 
         alg.verbosity ≥ VERBOSE_ITER && @info "ddmrg sweep delta : $(delta)"
@@ -113,7 +113,7 @@ function propagator(A::AbstractFiniteMPS, z, H::MPOHamiltonian,
             delta = max(delta, norm(res - init.AC[i]))
             init.AC[i] = res
 
-            convhist.converged == 0 && @warn "($(i)) failed to converge $(convhist.normres)"
+            convhist.converged == 0 && @warn "propagator ($i) failed to converge: normres $(convhist.normres)"
         end
 
         alg.verbosity ≥ VERBOSE_ITER && @info "ddmrg sweep delta : $(delta)"

@@ -94,7 +94,7 @@ function calclw!(fixpoints, st::InfiniteMPS, H::MPOHamiltonian;
             tm = regularize(TransferMatrix(st.AL, st.AL), l_LL(st), r_LL(st))
             fixpoints[i, 1], convhist = linsolve(flip(tm), fixpoints[i, 1], prev, solver,
                                                  1, -1)
-            convhist.converged == 0 && @info "calclw failed to converge $(convhist.normres)"
+            convhist.converged == 0 && @warn "GL$i failed to converge: normres = $(convhist.normres)"
 
             (len > 1) && left_cyclethrough!(i, fixpoints, H, st)
 
@@ -112,7 +112,7 @@ function calclw!(fixpoints, st::InfiniteMPS, H::MPOHamiltonian;
                 fixpoints[i, 1], convhist = linsolve(flip(tm), fixpoints[i, 1], prev,
                                                      solver, 1, -1)
                 convhist.converged == 0 &&
-                    @info "calclw failed to converge $(convhist.normres)"
+                    @warn "GL$i failed to converge: normres = $(convhist.normres)"
             end
             (len > 1) && left_cyclethrough!(i, fixpoints, H, st)
         end
@@ -144,7 +144,7 @@ function calcrw!(fixpoints, st::InfiniteMPS, H::MPOHamiltonian;
             tm = regularize(TransferMatrix(st.AR, st.AR), l_RR(st), r_RR(st))
             fixpoints[i, end], convhist = linsolve(tm, fixpoints[i, end], prev, solver, 1,
                                                    -1)
-            convhist.converged == 0 && @info "calcrw failed to converge $(convhist.normres)"
+            convhist.converged == 0 && @warn "GR failed to converge: normres = $(convhist.normres)"
 
             len > 1 && right_cyclethrough!(i, fixpoints, H, st)
 
@@ -162,7 +162,7 @@ function calcrw!(fixpoints, st::InfiniteMPS, H::MPOHamiltonian;
                 fixpoints[i, end], convhist = linsolve(tm, fixpoints[i, end], prev,
                                                        solver, 1, -1)
                 convhist.converged == 0 &&
-                    @info "calcrw failed to converge $(convhist.normres)"
+                    @warn "GR failed to converge: normres = $(convhist.normres)"
             end
 
             (len > 1) && right_cyclethrough!(i, fixpoints, H, st)
