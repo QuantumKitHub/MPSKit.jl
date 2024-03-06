@@ -25,7 +25,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
     log = IterLog("IDMRG")
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, _objective(ψ, H, envs))
+        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
             C_current = ψ.CR[0]
@@ -56,13 +56,13 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
             ϵ = norm(C_current - ψ.CR[0])
 
             if ϵ < alg.tol_galerkin
-                @infov 2 logfinish!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, _objective(ψ, H, envs))
+                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             else
-                @infov 2 logiter!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 2 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             end
         end
     end
@@ -103,7 +103,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
     log = IterLog("IDMRG2")
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, _objective(ψ, H, envs))
+        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
             C_current = ψ.CR[0]
@@ -191,13 +191,13 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             ϵ = norm(e2' * c * e2 - e1' * C_current * e1)
 
             if ϵ < alg.tol_galerkin
-                @infov 2 logfinish!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, _objective(ψ, H, envs))
+                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             else
-                @infov 2 logiter!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 2 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             end
         end
     end

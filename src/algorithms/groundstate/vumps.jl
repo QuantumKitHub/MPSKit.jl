@@ -33,7 +33,7 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
     log = IterLog("VUMPS")
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, _objective(ψ, H, envs))
+        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             @static if Defaults.parallelize_sites
@@ -63,25 +63,18 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
 
             # breaking conditions
             if ϵ <= alg.tol_galerkin
-                @infov 2 logfinish!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, _objective(ψ, H, envs))
+                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             else
-                @infov 3 logiter!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             end
         end
     end
 
     return ψ, envs, ϵ
-end
-
-function _objective(ψ, H, envs)
-    E = sum(expectation_value(ψ, H, envs))
-    isapprox(imag(E), 0; atol=eps(abs(E))^(3 / 4)) ||
-        @warn "Objective has imaginary part: $E"
-    return real(E)
 end
 
 function _vumps_localupdate!(AC′, loc, ψ, H, envs, eigalg, factalg=QRpos())

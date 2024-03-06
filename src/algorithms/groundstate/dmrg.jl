@@ -25,7 +25,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
     log = IterLog("DMRG")
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, _objective(ψ, H, envs))
+        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
 
@@ -41,13 +41,13 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, _objective(ψ, H, envs))
+                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             else
-                @infov 2 logiter!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 2 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             end
         end
     end
@@ -125,13 +125,13 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, _objective(ψ, H, envs))
+                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             else
-                @infov 2 logiter!(log, iter, ϵ, _objective(ψ, H, envs))
+                @infov 2 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             end
         end
     end
