@@ -18,7 +18,7 @@ and matrix product operators (MPO), both finite and infinite.
 [docs-stable-url]: https://maartenvd.github.io/MPSKit.jl/stable
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
-[docs-dev-url]: https://maartenvd.github.io/MPSKit.jl/latest
+[docs-dev-url]: https://maartenvd.github.io/MPSKit.jl/dev
 
 [doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10654901.svg
 [doi-url]: https://doi.org/10.5281/zenodo.10654901
