@@ -13,8 +13,8 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
     log = IterLog("VOMPS")
-    
-    LoggingEtras.withlevel(; alg.verbosity) do 
+
+    LoggingEtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
         for iter in 1:(alg.maxiter)
             @static if Defaults.parallelize_sites
@@ -37,7 +37,7 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
             ψ, envs = alg.finalize(iter, ψ, toapprox, envs)::Tuple{typeof(ψ),typeof(envs)}
 
             ϵ = calc_galerkin(ψ, envs)
-            
+
             if ϵ <= alg.tol_galerkin
                 @infov 2 logfinish!(log, iter, ϵ)
                 break
