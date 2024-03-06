@@ -14,7 +14,7 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
     temp_ACs = similar.(ψ.AC)
     log = IterLog("VOMPS")
 
-    LoggingEtras.withlevel(; alg.verbosity) do
+    LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
         for iter in 1:(alg.maxiter)
             @static if Defaults.parallelize_sites
