@@ -75,7 +75,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
                 h = MPO_∂∂AC2(mpo[row, col], mpo[row, col + 1], leftenv(envs, row, col),
                             rightenv(envs, row, col + 1))
 
-                al, c, ar, = tsvd(h * ac2; trunc=alg.trscheme, alg=TensorKit.SVD())
+                al, c, ar, = tsvd!(h * ac2; trunc=alg.trscheme, alg=TensorKit.SVD())
                 normalize!(c)
 
                 ψ.AL[row + 1, col] = al
@@ -98,7 +98,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
                 h = MPO_∂∂AC2(mpo[row, col], mpo[row, col + 1], leftenv(envs, row, col),
                             rightenv(envs, row, col + 1))
 
-                al, c, ar, = tsvd(h * ac2; trunc=alg.trscheme, alg=TensorKit.SVD())
+                al, c, ar, = tsvd!(h * ac2; trunc=alg.trscheme, alg=TensorKit.SVD())
                 normalize!(c)
 
                 ψ.AL[row + 1, col] = al
