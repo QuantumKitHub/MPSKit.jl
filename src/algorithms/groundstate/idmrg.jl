@@ -62,7 +62,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
             if iter == alg.maxiter
                 @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             else
-                @infov 2 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             end
         end
     end
@@ -197,7 +197,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             if iter == alg.maxiter
                 @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             else
-                @infov 2 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             end
         end
     end
