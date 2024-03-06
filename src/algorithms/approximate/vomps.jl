@@ -10,12 +10,13 @@ function approximate(ψ::InfiniteMPS,
 end
 function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
                      alg::VUMPS, envs=environments(ψ, toapprox))
-    t₀ = Base.time_ns()
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
-
-    for iter in 1:(alg.maxiter)
-        Δt = @elapsed begin
+    log = IterLog("VOMPS")
+    
+    LoggingEtras.withlevel(; alg.verbosity) do 
+        @infov 2 loginit!(log, ϵ)
+        for iter in 1:(alg.maxiter)
             @static if Defaults.parallelize_sites
                 @sync for col in 1:size(ψ, 2)
                     Threads.@spawn _vomps_localupdate!(temp_ACs[:, col], col, ψ, toapprox,
@@ -36,16 +37,19 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
             ψ, envs = alg.finalize(iter, ψ, toapprox, envs)::Tuple{typeof(ψ),typeof(envs)}
 
             ϵ = calc_galerkin(ψ, envs)
+            
+            if ϵ <= alg.tol_galerkin
+                @infov 2 logfinish!(log, iter, ϵ)
+                break
+            end
+            if iter == alg.maxiter
+                @warnv 1 logcancel!(log, iter, ϵ)
+            else
+                @infov 3 logiter!(log, iter, ϵ)
+            end
         end
-
-        alg.verbosity ≥ VERBOSE_ITER && @info "VOMPS iteration:" iter ϵ Δt
-
-        ϵ <= alg.tol_galerkin && break
-        iter == alg.maxiter && @warn "VOMPS maximum iterations" iter ϵ
     end
 
-    Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbosity ≥ VERBOSE_CONV && @info "VOMPS summary:" ϵ Δt
     return ψ, envs, ϵ
 end
 
