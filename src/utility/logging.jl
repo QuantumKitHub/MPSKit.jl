@@ -33,21 +33,21 @@ isapproxreal(x::Number) = isreal(x) || isapprox(imag(x), 0; atol=eps(abs(x))^(3 
 warnapproxreal(x::Number) = isapproxreal(x) || @warn "Objective has imaginary part: $x"
 
 function loginit!(log::IterLog, error::Float64,
-                 objective::Union{Nothing,Number}=nothing)
+                  objective::Union{Nothing,Number}=nothing)
     log.iter = 0
     log.error = error
-    
+
     warnapproxreal(objective)
     log.objective = real(objective)
-    
+
     log.t_init = log.t_prev = log.t_last = Base.time()
     log.state = INIT
-    
+
     return log
 end
 
 function logiter!(log::IterLog, iter::Int, error::Float64,
-                 objective::Union{Nothing,Number}=nothing)
+                  objective::Union{Nothing,Number}=nothing)
     log.iter = iter
     log.error = error
 
@@ -57,12 +57,12 @@ function logiter!(log::IterLog, iter::Int, error::Float64,
     log.t_prev = log.t_last
     log.t_last = Base.time()
     log.state = ITER
-    
+
     return log
 end
 
 function logfinish!(log::IterLog, iter::Int, error::Float64,
-                 objective::Union{Nothing,Number}=nothing)
+                    objective::Union{Nothing,Number}=nothing)
     log.iter = iter
     log.error = error
 
@@ -77,7 +77,7 @@ function logfinish!(log::IterLog, iter::Int, error::Float64,
 end
 
 function logcancel!(log::IterLog, iter::Int, error::Float64,
-                 objective::Union{Nothing,Number}=nothing)
+                    objective::Union{Nothing,Number}=nothing)
     log.iter = iter
     log.error = error
 

@@ -43,7 +43,8 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renv
     H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
 
     Es, ϕs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
-    convhist.converged < num && @warn "excitation failed to converge: normres = $(convhist.normres)"
+    convhist.converged < num &&
+        @warn "excitation failed to converge: normres = $(convhist.normres)"
 
     return Es, ϕs
 end
@@ -134,7 +135,8 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::FiniteQP,
     H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
     Es, ϕs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
 
-    convhist.converged < num && @warn "excitation failed to converge: normres = $(convhist.normres)"
+    convhist.converged < num &&
+        @warn "excitation failed to converge: normres = $(convhist.normres)"
 
     return Es, ϕs
 end
@@ -178,7 +180,8 @@ function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, ϕ₀::Multiline
     end
 
     Es, ϕs, convhist = eigsolve(H_eff, RecursiveVec(ϕ₀.data.data), num, :LM, alg.alg)
-    convhist.converged < num && @warn "excitation failed to converge: normres = $(convhist.normres)"
+    convhist.converged < num &&
+        @warn "excitation failed to converge: normres = $(convhist.normres)"
 
     return Es, map(x -> Multiline(x.vecs), ϕs)
 end
