@@ -22,6 +22,6 @@ of an MPS `ψ₀`.
 
 - `IDMRG1`: Variant of `DMRG` for maximizing fidelity density in the thermodynamic limit.
 - `IDMRG2`: Variant of `DMRG2` for maximizing fidelity density in the thermodynamic limit.
-- `VUMPS`: Tangent space method for truncating uniform MPS. See [SciPost:4.1.004](https://scipost.org/SciPostPhysCore.4.1.004). Also known as "VOMPS".
+- `VOMPS`: Tangent space method for truncating uniform MPS.
 """
 approximate, approximate!
