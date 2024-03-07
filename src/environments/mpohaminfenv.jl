@@ -146,7 +146,7 @@ function calcrw!(fixpoints, st::InfiniteMPS, H::MPOHamiltonian;
             fixpoints[i, end], convhist = linsolve(tm, fixpoints[i, end], prev, solver, 1,
                                                    -1)
             convhist.converged == 0 &&
-                @warn "GR failed to converge: normres = $(convhist.normres)"
+                @warn "GR$i failed to converge: normres = $(convhist.normres)"
 
             len > 1 && right_cyclethrough!(i, fixpoints, H, st)
 
@@ -164,7 +164,7 @@ function calcrw!(fixpoints, st::InfiniteMPS, H::MPOHamiltonian;
                 fixpoints[i, end], convhist = linsolve(tm, fixpoints[i, end], prev,
                                                        solver, 1, -1)
                 convhist.converged == 0 &&
-                    @warn "GR failed to converge: normres = $(convhist.normres)"
+                    @warn "GR$i failed to converge: normres = $(convhist.normres)"
             end
 
             (len > 1) && right_cyclethrough!(i, fixpoints, H, st)
