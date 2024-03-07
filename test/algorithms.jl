@@ -183,7 +183,9 @@ end
 end
 
 @testset "leading_boundary" verbose = true begin
-    algs = [VUMPS(; tol=1e-5, verbosity=0), GradientGrassmann(; verbosity=0)]
+    tol = 1e-5
+    verbosity = 0
+    algs = [VUMPS(; tol, verbosity), VOMPS(; tol, verbosity), GradientGrassmann(; verbosity)]
     mpo = force_planar(classical_ising())
 
     ψ₀ = InfiniteMPS([ℙ^2], [ℙ^10])

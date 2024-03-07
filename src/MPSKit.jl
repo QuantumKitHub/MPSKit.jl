@@ -36,7 +36,7 @@ export leftenv, rightenv
 
 # algos
 export find_groundstate!, find_groundstate, leading_boundary
-export VUMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
+export VUMPS, VOMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
 export excitations, FiniteExcited, QuasiparticleAnsatz
 export marek_gap, correlation_length, correlator
 export time_evolve, timestep!, timestep
@@ -141,6 +141,7 @@ include("algorithms/excitation/dmrgexcitation.jl")
 include("algorithms/excitation/exci_transfer_system.jl")
 
 include("algorithms/statmech/vumps.jl")
+include("algorithms/statmech/vomps.jl")
 include("algorithms/statmech/gradient_grassmann.jl")
 
 include("algorithms/fidelity_susceptibility.jl")

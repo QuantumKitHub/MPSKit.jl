@@ -1,29 +1,3 @@
-"""
-    VOMPS{F} <: Algorithm
-    
-Power method algorithm for infinite MPS.
-[SciPost:4.1.004](https://scipost.org/SciPostPhysCore.4.1.004)
-    
-## Fields
-- `tol::Float64`: tolerance for convergence criterium
-- `maxiter::Int`: maximum amount of iterations
-- `finalize::F`: user-supplied function which is applied after each iteration, with
-    signature `finalize(iter, ψ, toapprox, envs) -> ψ, envs`
-- `verbosity::Int`: display progress information
-
-- `alg_gauge=Defaults.alg_gauge()`: algorithm for gauging
-- `alg_environments=Defaults.alg_environments()`: algorithm for updating environments
-"""
-@kwdef struct VOMPS{F} <: Algorithm
-    tol::Float64 = Defaults.tol
-    maxiter::Int = Defaults.maxiter
-    finalize::F = Defaults._finalize
-    verbosity::Int = Defaults.verbosity
-
-    alg_gauge = Defaults.alg_gauge()
-    alg_environments = Defaults.alg_environments()
-end
-
 function approximate(ψ::InfiniteMPS,
                      toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS}, algorithm,
                      envs=environments(ψ, toapprox))
