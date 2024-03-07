@@ -14,7 +14,7 @@ of an MPS `ψ₀`.
 ## Keywords
 - `tol::Float64`: tolerance for convergence criterium
 - `maxiter::Int`: maximum amount of iterations
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 
 ## Algorithms
 - `DMRG`: Alternating least square method for maximizing the fidelity with a single-site scheme.

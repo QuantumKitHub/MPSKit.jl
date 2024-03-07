@@ -9,11 +9,17 @@ using Preferences
 import KrylovKit: GMRES, Arnoldi
 using ..MPSKit: DynamicTol
 
+const VERBOSE_NONE = 0
+const VERBOSE_WARN = 1
+const VERBOSE_CONV = 2
+const VERBOSE_ITER = 3
+const VERBOSE_ALL = 4
+
 const eltype = ComplexF64
 const maxiter = 100
 const tolgauge = 1e-14
 const tol = 1e-12
-const verbose = true
+const verbosity = VERBOSE_ITER
 const dynamic_tols = true
 const tol_min = 1e-14
 const tol_max = 1e-5

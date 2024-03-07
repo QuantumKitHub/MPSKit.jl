@@ -9,7 +9,7 @@ https://arxiv.org/abs/1701.07035.
 - `maxiter::Int`: maximum amount of iterations
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 
 - `alg_gauge=Defaults.alg_gauge()`: algorithm for gauging
 - `alg_eigsolve=Defaults.alg_eigsolve()`: algorithm for eigensolvers
@@ -19,7 +19,7 @@ https://arxiv.org/abs/1701.07035.
     tol_galerkin::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
     finalize::F = Defaults._finalize
-    verbose::Bool = Defaults.verbose
+    verbosity::Int = Defaults.verbosity
 
     alg_gauge = Defaults.alg_gauge()
     alg_eigsolve = Defaults.alg_eigsolve()
@@ -27,12 +27,14 @@ https://arxiv.org/abs/1701.07035.
 end
 
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
-    t₀ = Base.time_ns()
+    # initialization
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
+    log = IterLog("VUMPS")
 
-    for iter in 1:(alg.maxiter)
-        Δt = @elapsed begin
+    LoggingExtras.withlevel(; alg.verbosity) do
+        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
+        for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             @static if Defaults.parallelize_sites
                 @sync begin
@@ -58,18 +60,20 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
             ϵ = calc_galerkin(ψ, envs)
+
+            # breaking conditions
+            if ϵ <= alg.tol_galerkin
+                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                break
+            end
+            if iter == alg.maxiter
+                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+            else
+                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+            end
         end
-
-        alg.verbose &&
-            @info "VUMPS iteration:" iter ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
-
-        ϵ <= alg.tol_galerkin && break
-        iter == alg.maxiter &&
-            @warn "VUMPS maximum iterations" iter ϵ λ = sum(expectation_value(ψ, H, envs))
     end
 
-    Δt = (Base.time_ns() - t₀) / 1.0e9
-    alg.verbose && @info "VUMPS summary:" ϵ λ = sum(expectation_value(ψ, H, envs)) Δt
     return ψ, envs, ϵ
 end
 

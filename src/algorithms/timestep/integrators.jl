@@ -19,6 +19,7 @@ _eval_x(f, x) = Base.Fix1(f, x)
 
 function integrate(f, y₀, t::Number, dt::Number, alg::Union{Arnoldi,Lanczos})
     y, convhist = exponentiate(_eval_t(f, t + dt / 2), -1im * dt, y₀, alg)
-    convhist.converged == 0 && @warn "integration failed $(convhist.normres)"
+    convhist.converged == 0 &&
+        @warn "integrator failed to converge: normres = $(convhist.normres)"
     return y
 end

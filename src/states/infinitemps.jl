@@ -221,9 +221,9 @@ end
 function TensorKit.dot(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; krylovdim=30)
     init = similar(ψ₁.AL[1], _firstspace(ψ₂.AL[1]) ← _firstspace(ψ₁.AL[1]))
     randomize!(init)
-    (vals, _, convhist) = eigsolve(TransferMatrix(ψ₂.AL, ψ₁.AL), init, 1, :LM,
-                                   Arnoldi(; krylovdim=krylovdim))
-    convhist.converged == 0 && @info "dot mps not converged"
+    vals, _, convhist = eigsolve(TransferMatrix(ψ₂.AL, ψ₁.AL), init, 1, :LM,
+                                 Arnoldi(; krylovdim=krylovdim))
+    convhist.converged == 0 && @warn "dot failed to converge: normres = $(convhist.normres)"
     return vals[1]
 end
 
