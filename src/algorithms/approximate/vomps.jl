@@ -9,7 +9,8 @@ function approximate(ψ::InfiniteMPS,
     return ψ, envs
 end
 
-Base.@deprecate(approximate(ψ, toapprox, alg::VUMPS, envs...),
+Base.@deprecate(approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
+                            alg::VUMPS, envs...),
                 approximate(ψ, toapprox,
                             VOMPS(; alg.tol, alg.maxiter, alg.finalize,
                                   alg.verbosity, alg.alg_gauge, alg.alg_environments),
