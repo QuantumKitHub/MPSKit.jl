@@ -38,7 +38,7 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
 
             ϵ = calc_galerkin(ψ, envs)
 
-            if ϵ <= alg.tol_galerkin
+            if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 break
             end

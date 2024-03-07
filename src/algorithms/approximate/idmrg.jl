@@ -4,7 +4,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
     mpo, above = toapprox
     envs = IDMRGEnv(ost, oenvs)
     log = IterLog("IDMRG")
-    ϵ::Float64 = 2 * alg.tol_galerkin
+    ϵ::Float64 = 2 * alg.tol
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
@@ -40,7 +40,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
 
             ϵ = norm(C_current - ψ.CR[:, 0])
 
-            if ϵ < alg.tol_galerkin
+            if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 break
             end
@@ -63,7 +63,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
     mpo, above = toapprox
     ψ = copy(ost)
     envs = IDMRGEnv(ost, oenvs)
-    ϵ::Float64 = 2 * alg.tol_galerkin
+    ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
 
     LoggingExtras.withlevel(; alg.verbosity) do
@@ -127,7 +127,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
                 return norm(e2' * c2 * e2 - e1' * c1 * e1)
             end
 
-            if ϵ < alg.tol_galerkin
+            if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 break
             end

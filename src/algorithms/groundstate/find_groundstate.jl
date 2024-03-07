@@ -20,13 +20,13 @@ function find_groundstate(ψ::AbstractMPS, H, envs::Cache=environments(ψ, H);
                           tol=Defaults.tol, maxiter=Defaults.maxiter,
                           verbosity=Defaults.verbosity, trscheme=nothing)
     if isa(ψ, InfiniteMPS)
-        alg = VUMPS(; tol_galerkin=max(1e-4, tol), verbosity, maxiter)
+        alg = VUMPS(; tol=max(1e-4, tol), verbosity, maxiter)
         if tol < 1e-4
             alg = alg &
                   GradientGrassmann(; tol=tol, maxiter, verbosity)
         end
         if !isnothing(trscheme)
-            alg = IDMRG2(; tol_galerkin=min(1e-2, 100tol), verbosity,
+            alg = IDMRG2(; tol=min(1e-2, 100tol), verbosity,
                          trscheme) & alg
         end
     elseif isa(ψ, AbstractFiniteMPS)

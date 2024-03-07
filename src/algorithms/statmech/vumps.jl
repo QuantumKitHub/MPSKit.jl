@@ -73,7 +73,7 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
 
             ϵ = calc_galerkin(ψ, envs)
 
-            if ϵ <= alg.tol_galerkin
+            if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
                 break
             end

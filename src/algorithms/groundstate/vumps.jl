@@ -5,7 +5,7 @@ Variational optimization algorithm for uniform matrix product states, as introdu
 https://arxiv.org/abs/1701.07035.
 
 # Fields
-- `tol_galerkin::Float64`: tolerance for convergence criterium
+- `tol::Float64`: tolerance for convergence criterium
 - `maxiter::Int`: maximum amount of iterations
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
@@ -16,7 +16,7 @@ https://arxiv.org/abs/1701.07035.
 - `alg_environments=Defaults.alg_environments()`: algorithm for updating environments
 """
 @kwdef struct VUMPS{F} <: Algorithm
-    tol_galerkin::Float64 = Defaults.tol
+    tol::Float64 = Defaults.tol
     maxiter::Int = Defaults.maxiter
     finalize::F = Defaults._finalize
     verbosity::Int = Defaults.verbosity
@@ -62,7 +62,7 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
             ϵ = calc_galerkin(ψ, envs)
 
             # breaking conditions
-            if ϵ <= alg.tol_galerkin
+            if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
                 break
             end
