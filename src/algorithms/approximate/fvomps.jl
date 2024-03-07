@@ -70,7 +70,6 @@ function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG,
 
             # finalize
             ψ, envs = alg.finalize(iter, ψ, squash, envs)::Tuple{typeof(ψ),typeof(envs)}
-            alg.verbosity ≥ VERBOSE_ITER && @info "dmrg iter $(iter) error $(ϵ)"
 
             if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
