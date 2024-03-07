@@ -14,7 +14,7 @@ using TensorKit: ℙ
 @testset "find_groundstate" verbose = true begin
     tol = 1e-8
     verbosity = 0
-    infinite_algs = [VUMPS(; toll, verbosity),
+    infinite_algs = [VUMPS(; tol, verbosity),
                      IDMRG1(; tol, verbosity),
                      IDMRG2(; trscheme=truncdim(12), tol, verbosity),
                      GradientGrassmann(; tol, verbosity),
