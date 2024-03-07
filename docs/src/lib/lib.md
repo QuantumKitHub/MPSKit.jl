@@ -72,6 +72,7 @@ WII
 ### [Leading boundary algorithms](@id lib_bound_alg)
 ```@docs
 VUMPS
+VOMPS
 GradientGrassmann
 ```
 
