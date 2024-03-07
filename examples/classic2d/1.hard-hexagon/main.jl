@@ -57,7 +57,7 @@ According to the scaling hypothesis we should have ``S \propto \frac{c}{6} log(�
 function scaling_simulations(ψ₀, mpo, Ds; verbosity=0, tol=1e-6)
     entropies = similar(Ds, Float64)
     correlations = similar(Ds, Float64)
-    alg = VUMPS(; verbosity, tol_galerkin=tol)
+    alg = VUMPS(; verbosity, tol)
 
     ψ, envs, = leading_boundary(ψ₀, mpo, alg)
     entropies[1] = real(entropy(ψ)[1])

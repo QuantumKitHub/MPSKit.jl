@@ -4,14 +4,14 @@
 Single site infinite DMRG algorithm for finding groundstates.
 
 # Fields
-- `tol_galerkin::Float64`: tolerance for convergence criterium
+- `tol::Float64`: tolerance for convergence criterium
 - `tol_gauge::Float64`: tolerance for gauging algorithm
 - `eigalg::A`: eigensolver algorithm
 - `maxiter::Int`: maximum number of outer iterations
 - `verbosity::Int`: display progress information
 """
 @kwdef struct IDMRG1{A} <: Algorithm
-    tol_galerkin::Float64 = Defaults.tol
+    tol::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     eigalg::A = Defaults.eigsolver
     maxiter::Int = Defaults.maxiter
@@ -55,7 +55,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
 
             ϵ = norm(C_current - ψ.CR[0])
 
-            if ϵ < alg.tol_galerkin
+            if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
                 break
             end
@@ -78,7 +78,7 @@ end
 2-site infinite DMRG algorithm for finding groundstates.
 
 # Fields
-- `tol_galerkin::Float64`: tolerance for convergence criterium
+- `tol::Float64`: tolerance for convergence criterium
 - `tol_gauge::Float64`: tolerance for gauging algorithm
 - `eigalg::A`: eigensolver algorithm
 - `maxiter::Int`: maximum number of outer iterations
@@ -86,7 +86,7 @@ end
 - `trscheme::TruncationScheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
 @kwdef struct IDMRG2{A} <: Algorithm
-    tol_galerkin::Float64 = Defaults.tol
+    tol::Float64 = Defaults.tol
     tol_gauge::Float64 = Defaults.tolgauge
     eigalg::A = Defaults.eigsolver
     maxiter::Int = Defaults.maxiter
@@ -190,7 +190,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             e2 = isometry(_firstspace(c), smallest)
             ϵ = norm(e2' * c * e2 - e1' * C_current * e1)
 
-            if ϵ < alg.tol_galerkin
+            if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
                 break
             end

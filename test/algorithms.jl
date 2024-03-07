@@ -14,11 +14,11 @@ using TensorKit: ℙ
 @testset "find_groundstate" verbose = true begin
     tol = 1e-8
     verbosity = 0
-    infinite_algs = [VUMPS(; tol_galerkin=tol, verbosity),
-                     IDMRG1(; tol_galerkin=tol, verbosity),
-                     IDMRG2(; trscheme=truncdim(12), tol_galerkin=tol, verbosity),
+    infinite_algs = [VUMPS(; tol, verbosity),
+                     IDMRG1(; tol, verbosity),
+                     IDMRG2(; trscheme=truncdim(12), tol, verbosity),
                      GradientGrassmann(; tol, verbosity),
-                     VUMPS(; tol_galerkin=100 * tol, verbosity) &
+                     VUMPS(; tol=100 * tol, verbosity) &
                      GradientGrassmann(; tol, verbosity)]
 
     g = 4.0
@@ -183,7 +183,7 @@ end
 end
 
 @testset "leading_boundary" verbose = true begin
-    algs = [VUMPS(; tol_galerkin=1e-5, verbosity=0), GradientGrassmann(; verbosity=0)]
+    algs = [VUMPS(; tol=1e-5, verbosity=0), GradientGrassmann(; verbosity=0)]
     mpo = force_planar(classical_ising())
 
     ψ₀ = InfiniteMPS([ℙ^2], [ℙ^10])
