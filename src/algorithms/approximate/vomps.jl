@@ -8,8 +8,16 @@ function approximate(ψ::InfiniteMPS,
     ψ = convert(InfiniteMPS, multi)
     return ψ, envs
 end
+
+Base.@deprecate(approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
+                            alg::VUMPS, envs...; kwargs...),
+                approximate(ψ, toapprox,
+                            VOMPS(; alg.tol, alg.maxiter, alg.finalize,
+                                  alg.verbosity, alg.alg_gauge, alg.alg_environments),
+                            envs...; kwargs...))
+
 function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
-                     alg::VUMPS, envs=environments(ψ, toapprox))
+                     alg::VOMPS, envs=environments(ψ, toapprox))
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
     log = IterLog("VOMPS")
