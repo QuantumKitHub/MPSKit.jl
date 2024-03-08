@@ -441,6 +441,7 @@ end
 end
 
 @testset "approximate" verbose = true begin
+    verbosity = 0
     @testset "mpo * infinite ≈ infinite" begin
         st = InfiniteMPS([ℙ^2, ℙ^2], [ℙ^10, ℙ^10])
         th = force_planar(repeat(transverse_field_ising(; g=4), 2))
@@ -451,10 +452,10 @@ end
         W1 = convert(DenseMPO, sW1)
         W2 = convert(DenseMPO, sW2)
 
-        st1, _ = approximate(st, (sW1, st), VUMPS(; verbosity=0))
-        st2, _ = approximate(st, (W2, st), VUMPS(; verbosity=0))
-        st3, _ = approximate(st, (W1, st), IDMRG1(; verbosity=0))
-        st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbosity=0))
+        st1, _ = approximate(st, (sW1, st), VOMPS(; verbosity))
+        st2, _ = approximate(st, (W2, st), VOMPS(; verbosity))
+        st3, _ = approximate(st, (W1, st), IDMRG1(; verbosity))
+        st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbosity))
         st5, _ = timestep(st, th, 0.0, dt, TDVP())
         st6 = changebonds(W1 * st, SvdCut(; trscheme=truncdim(10)))
 
@@ -467,7 +468,7 @@ end
         @test dim(space(nW1.opp[1, 1], 1)) == 1
     end
 
-    finite_algs = [DMRG(; verbosity=0), DMRG2(; verbosity=0, trscheme=truncdim(10))]
+    finite_algs = [DMRG(; verbosity), DMRG2(; verbosity, trscheme=truncdim(10))]
     @testset "finitemps1 ≈ finitemps2" for alg in finite_algs
         a = FiniteMPS(10, ℂ^2, ℂ^10)
         b = FiniteMPS(10, ℂ^2, ℂ^20)
