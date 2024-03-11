@@ -13,17 +13,14 @@ Parameters for the uniform gauging algorithm.
 - `eig_miniter::Int`: Minimum number of iterations before eigensolver is used.
 - `order::Symbol=:LR`: Order of the gauge algorithm.
 """
-struct UniformGauging <: Algorithm
+struct UniformGauging{side} <: Algorithm
     tol::Float64
     maxiter::Int
     verbosity::Int
 
-    alg_leftorth::Any
-    alg_rightorth::Any
+    alg_orth::Any
     alg_eigsolve::Any
     eig_miniter::Int
-
-    order::Symbol
 end
 
 function UniformGauging(;
@@ -35,272 +32,151 @@ function UniformGauging(;
                         alg_eigsolve=default_gauge_alg_eigsolve(tol, maxiter),
                         eig_miniter=10,
                         order::Symbol=:LR)
-    return UniformGauging(tol, maxiter, verbosity, alg_leftorth, alg_rightorth,
-                          alg_eigsolve, eig_miniter, order)
-end
-
-"""
-    uniform_gauge(A, [C₀]; kwargs...) -> AL, AR, CR
-
-Brings an infinite MPS, characterized by the tensors `A`, into the center gauge. Optionally,
-a gauge tensor `C₀` can be provided to seed the algorithm. The algorithm parameters are set
-via keyword arguments.
-
-## Keyword Arguments
-- `tol::Real=Defaults.tolgauge`: Tolerance for the gauge convergence.
-- `maxiter::Int=Defaults.maxiter`: Maximum number of iterations.
-- `verbosity::Int=VERBOSE_WARN`: Verbosity level.
-- `order::Symbol=:LR`: Order of the gauge algorithm. Can be `:LR` or `:RL`.
-- `alg_leftorth=TensorKit.QRpos()`: Left-orthogonalization algorithm.
-- `alg_rightorth=TensorKit.LQpos()`: Right-orthogonalization algorithm.
-- `alg_eigsolve=default_gauge_alg_eigsolve(tol, maxiter)`:
-    Eigensolver algorithm for the gauge tensor.
-- `eig_miniter::Int=10`: Minimum number of iterations before eigensolver is used.
-"""
-function uniform_gauge(A::AbstractVector{<:GenericMPSTensor}, C₀=gauge_init(A);
-                       kwargs...)
-    alg = UniformGauging(; kwargs...)
-    return uniform_gauge(A, C₀, alg)
-end
-function uniform_gauge(A::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor,
-                       alg::UniformGauging)
-    if alg.order === :LR
-        AL, CR = uniform_leftgauge(A, C₀, alg)
-        AR, CR = uniform_rightgauge(AL, CR[end], alg)
-    elseif alg.order === :RL
-        AR, CR = uniform_rightgauge(A, C₀, alg)
-        AL, CR = uniform_leftgauge(AR, CR[end], alg)
+    alg_left = UniformGauging{:L}(tol, maxiter, verbosity, alg_leftorth, alg_eigsolve,
+                                  eig_miniter)
+    alg_right = UniformGauging{:R}(tol, maxiter, verbosity, alg_rightorth, alg_eigsolve,
+                                   eig_miniter)
+    if order === :LR
+        return (alg_left, alg_right)
+    elseif order === :RL
+        return (alg_right, alg_left)
     else
         throw(ArgumentError("invalid order: $order"))
     end
+end
+
+const UG{side1, side2} = Tuple{UniformGauging{side1}, UniformGauging{side2}}
+
+# Interface
+# ---------
+
+function gaugefix!(ψ::InfiniteMPS; kwargs...)
+    alg = UniformGauging(; kwargs...)
+    return gaugefix!(ψ, alg)
+end
+
+function gaugefix!(ψ::InfiniteMPS, alg::UniformGauging)
+    solve!(ψ, alg)
+    return ψ
+end
+
+# expert mode
+function gaugefix!(ψ::InfiniteMPS,
+                 (alg₁, alg₂)::UG{side1, side2}) where {side1, side2}
+    if side1 === :L
+        copy!.(ψ.AR, ψ.AC)
+    else
+        copy!.(ψ.AL, ψ.AC)
+    end
+    
+    solve!(ψ.AL, ψ.AR, ψ.CR, alg₁)
+    solve!(ψ.AL, ψ.AR, ψ.CR, alg₂)
+    mul!.(ψ.AC, ψ.AL, ψ.CR)
+    return ψ
+end
+
+# Implementation
+# --------------
+
+function initialize!(AL::PeriodicVector{A},
+                   AR::PeriodicVector{A},
+                   CR::PeriodicVector{B},
+                   alg::UniformGauging{side}) where {side, S, A<:GenericMPSTensor{S}, B<:MPSBondTensor{S}}
+    if side === :L
+        log = IterLog("UniformGauging{:L}")
+        A_tail = _transpose_tail.(AR)
+        CA_tail = similar.(A_tail)
+        workspace = (; A_tail, CA_tail)
+    else
+        log = IterLog("UniformGauging{:R}")
+        AC_tail = _similar_tail.(AL)
+        workspace = (; AC_tail)
+    end
+    
+    state = (; AL, AR, CR, workspace, ϵ=Inf, iter=0, log)
+    loginit!(log, Inf)
+    
+    return IterativeSolver(alg, state)
+end
+
+function isfinished(alg::IterativeSolver{<:UniformGauging})
+    return alg.state.ϵ < alg.alg.tol
+end
+
+function iscancelled(alg::IterativeSolver{<:UniformGauging})
+    return alg.state.iter ≥ alg.alg.maxiter
+end
+
+function iterate!(it::IterativeSolver{UniformGauging{:L}})
+    (; AL, AR, CR, workspace, iter, ϵ, log) = it.state
+    alg = it.alg
+    if iter ≥ alg.eig_miniter
+        # attempt to replicate previous code: tol = max(ϵ², tol / 10)
+        alg_eigsolve = updatetol(alg.alg_eigsolve, 1, ϵ^2)
+        _, vecs = eigsolve(flip(TransferMatrix(AR, AL)), CR[end], 1, :LM, alg_eigsolve)
+        _, CR[end] = leftorth!(vecs[1]; alg=alg.alg_orth)
+    end
+    
+    C₀ = CR[end]
+    for i in 1:length(AL)
+        mul!(workspace.CA_tail[i], CR[i - 1], workspace.A_tail[i])
+        _repartition!(AL[i], workspace.CA_tail[i])
+        AL[i], CR[i] = leftorth!(AL[i]; alg=alg.alg_orth)
+    end
+    normalize!(CR[end])
+    
+    ϵ = oftype(ϵ, norm(C₀ - CR[end]))
+    iter += 1
+    
+    it.state = (; AL, AR, CR, workspace, ϵ, iter, log)
+    
     return AL, AR, CR
 end
 
-"""
-    uniform_leftgauge!(AL, CR, A, alg::UniformGauging)
-
-Solves `AL[i] * CR[i] = CR[i] * A[i+1]`.
-"""
-function uniform_leftgauge(A::PeriodicVector{TA}, C₀::TB,
-                           alg::UniformGauging=UniformGauging()) where {S,
-                                                                        TA<:GenericMPSTensor{S},
-                                                                        TB<:MPSBondTensor{S}}
-    iterable = LeftGaugeIterable(A, C₀; alg.tol, alg.maxiter, alg.verbosity,
-                                 alg.alg_leftorth, alg.alg_eigsolve, alg.eig_miniter)
-    for _ in iterable
-    end
-    return iterable.AL, iterable.CR
-end
-
-"""
-    uniform_rightgauge!(AR, CR, A, alg::UniformGauging)
-
-Solves C[i-1] * AR[i] = A[i] * C[i].
-"""
-function uniform_rightgauge(A::PeriodicVector{TA}, C₀::TB,
-                            alg::UniformGauging=UniformGauging()) where {S,
-                                                                         TA<:GenericMPSTensor{S},
-                                                                         TB<:MPSBondTensor{S}}
-    iterable = RightGaugeIterable(A, C₀; alg.tol, alg.maxiter, alg.verbosity,
-                                  alg.alg_rightorth, alg.alg_eigsolve, alg.eig_miniter)
-    for _ in iterable
-    end
-    return iterable.AR, iterable.CR
-end
-
-function default_gauge_alg_eigsolve(tol, maxiter)
-    eigalg = Arnoldi(; krylovdim=30, maxiter)
-    tol_min = tol / 10
-    tol_max = Inf
-    tol_factor = 1
-    return ThrottledTol(eigalg, tol_min, tol_max, tol_factor)
-end
-
-function gauge_init(A::AbstractVector{<:GenericMPSTensor})
-    C = isomorphism(storagetype(A[1]), _firstspace(A[1]),
-                    _firstspace(A[1]))
-    return C
-end
-
-# ------------------------------------------------------------------------------------------
-# Left Gauge
-# ------------------------------------------------------------------------------------------
-
-mutable struct LeftGaugeIterable{TA<:GenericMPSTensor,TAᵀ<:AbstractTensorMap,
-                                 TB<:MPSBondTensor,T<:Number,Alg₁,Alg₂}
-    # input MPS tensors
-    A::PeriodicVector{TA}
-    A_tail::PeriodicVector{TAᵀ}
-    C::TB # gauge tensor left of unit cell
-
-    # output tensors and workspace
-    AL::PeriodicVector{TA}
-    CA_tail::PeriodicVector{TAᵀ}
-    CR::PeriodicVector{TB}
-    δ::T
-
-    # algorithm parameters
-    tol::T
-    maxiter::Int
-    verbosity::Int
-
-    alg_leftorth::Alg₁
-    alg_eigsolve::Alg₂
-    eig_miniter::Int
-
-    function LeftGaugeIterable(A::PeriodicVector{TA}, C::TB,
-                               AL::PeriodicVector{TA}=similar.(A),
-                               CR::PeriodicVector{TB}=similar(A, TB),
-                               A_tail::PeriodicVector{TAᵀ}=_transpose_tail.(A),
-                               CA_tail::PeriodicVector{TAᵀ}=similar.(A_tail);
-                               tol=Defaults.tolgauge,
-                               δ=Inf,
-                               maxiter=Defaults.maxiter,
-                               verbosity=VERBOSE_WARN,
-                               alg_leftorth::Alg₁=TensorKit.QRpos(),
-                               alg_eigsolve::Alg₂=default_gauge_alg_eigsolve(tol, maxiter),
-                               eig_miniter=10) where {TA,TAᵀ,TB,Alg₁,Alg₂}
-        @assert all(isfullrank, A) "input tensors must be full rank.\n$(space.(A))"
-        @assert domain(C) == codomain(C) "C must be square: $(space(C))"
-        scalartype(A) === scalartype(C) ||
-            throw(ArgumentError("A and C must have the same scalar type"))
-        T = real(scalartype(A))
-        return new{TA,TAᵀ,TB,T,Alg₁,Alg₂}(A, A_tail, C, AL, CA_tail, CR,
-                                          T(δ), T(tol), maxiter, verbosity,
-                                          alg_leftorth, alg_eigsolve, eig_miniter)
-    end
-end
-
-function Base.iterate(it::LeftGaugeIterable, iteration::Int=0)
-    # check for termination
-    if it.δ ≤ it.tol
-        it.verbosity ≥ VERBOSE_CONVERGENCE &&
-            @info "leftgauge converged after $iteration iterations: δ = $(it.δ)"
-        return nothing
-    elseif iteration ≥ it.maxiter
-        it.verbosity ≥ VERBOSE_WARN &&
-            @warn "leftgauge not converged after $iteration iterations: δ = $(it.δ)"
-        return nothing
-    end
-
+function iterate!(it::IterativeSolver{UniformGauging{:R}})
+    (; AL, AR, CR, workspace, iter, ϵ, log) = it.state
+    alg = it.alg
     # eigsolve step
-    if iteration ≥ it.eig_miniter
-        # attempt to replicate previous code: tol = max(δ², tol / 10)
-        alg_eigsolve = updatetol(it.alg_eigsolve, 1, it.δ^2)
-        _, vecs = eigsolve(flip(TransferMatrix(it.A, it.AL)), it.C, 1, :LM, alg_eigsolve)
-        _, it.C = leftorth!(vecs[1]; alg=it.alg_leftorth)
+    if iter ≥ alg.eig_miniter
+        # attempt to replicate previous code: tol = max(ϵ², tol / 10)
+        alg_eigsolve = updatetol(alg.alg_eigsolve, 1, ϵ^2)
+        _, vecs = eigsolve(TransferMatrix(AL, AR), CR[end], 1, :LM, alg_eigsolve)
+        CR[end], _ = rightorth!(vecs[1]; alg=alg.alg_orth)
     end
-
-    # leftorth step
-    it.CR[end] = it.C
-    for i in 1:length(it.AL)
-        mul!(it.CA_tail[i], it.CR[i - 1], it.A_tail[i])
-        _repartition!(it.AL[i], it.CA_tail[i])
-        it.AL[i], it.CR[i] = leftorth!(it.AL[i]; alg=it.alg_leftorth)
-    end
-    normalize!(it.CR[end])
-
-    # check for convergence
-    it.δ = norm(it.C - it.CR[end])
-    it.C = it.CR[end]
-
-    it.verbosity ≥ VERBOSE_ITER && @info "leftgauge iteration $iteration: δ = $(it.δ)"
-
-    return it.C, iteration + 1
-end
-
-# ------------------------------------------------------------------------------------------
-# Right Gauge
-# ------------------------------------------------------------------------------------------
-
-mutable struct RightGaugeIterable{TA<:GenericMPSTensor,TAᵀ<:AbstractTensorMap,
-                                  TB<:MPSBondTensor,T<:Number,Alg₁,Alg₂}
-    # input MPS tensors
-    A::PeriodicVector{TA}
-    C::TB # gauge tensor left of unit cell
-
-    # output tensors and workspace
-    AR::PeriodicVector{TA}
-    AC_tail::PeriodicVector{TAᵀ}
-    CR::PeriodicVector{TB}
-    δ::T
-
-    # algorithm parameters
-    tol::T
-    maxiter::Int
-    verbosity::Int
-
-    alg_rightorth::Alg₁
-    alg_eigsolve::Alg₂
-    eig_miniter::Int
-
-    function RightGaugeIterable(A::PeriodicVector{TA}, C::TB,
-                                AR::PeriodicVector{TA}=similar.(A),
-                                CR::PeriodicVector{TB}=similar(A, TB),
-                                AC_tail::PeriodicVector{TAᵀ}=_similar_tail.(A);
-                                tol=Defaults.tolgauge,
-                                δ=Inf,
-                                maxiter=Defaults.maxiter,
-                                verbosity=VERBOSE_WARN,
-                                alg_rightorth::Alg₁=TensorKit.LQpos(),
-                                alg_eigsolve::Alg₂=default_gauge_alg_eigsolve(tol, maxiter),
-                                eig_miniter=10) where {TA,TAᵀ,TB,Alg₁,Alg₂}
-        @assert all(isfullrank, A) "input tensors must be full rank"
-        @assert domain(C) == codomain(C) "C must be square: $(space(C))"
-        scalartype(A) === scalartype(C) ||
-            throw(ArgumentError("A and C must have the same scalar type"))
-        T = real(scalartype(A))
-        return new{TA,TAᵀ,TB,T,Alg₁,Alg₂}(A, C, AR, AC_tail, CR,
-                                          T(δ), T(tol), maxiter, verbosity,
-                                          alg_rightorth, alg_eigsolve, eig_miniter)
-    end
-end
-
-function _similar_tail(A::GenericMPSTensor)
-    cod = _firstspace(A)
-    dom = ⊗(dual(_lastspace(A)), dual.(space.(Ref(A), reverse(2:(numind(A) - 1))))...)
-    return similar(A, cod ← dom)
-end
-
-function Base.iterate(it::RightGaugeIterable, iteration::Int=0)
-    # check for termination
-    if it.δ ≤ it.tol
-        it.verbosity ≥ VERBOSE_CONVERGENCE &&
-            @info "rightgauge converged after $iteration iterations: δ = $(it.δ)"
-        return nothing
-    elseif iteration ≥ it.maxiter
-        it.verbosity ≥ VERBOSE_WARN &&
-            @warn "rightgauge not converged after $iteration iterations: δ = $(it.δ)"
-        return nothing
-    end
-
-    # eigsolve step
-    if iteration ≥ it.eig_miniter
-        # attempt to replicate previous code: tol = max(δ², tol / 10)
-        alg_eigsolve = updatetol(it.alg_eigsolve, 1, it.δ^2)
-        _, vecs = eigsolve(TransferMatrix(it.A, it.AR), it.C, 1, :LM, alg_eigsolve)
-        it.C, _ = rightorth!(vecs[1]; alg=it.alg_rightorth)
-    end
-
+    
     # rightorth step
-    it.CR[end] = it.C
-    for i in length(it.AR):-1:1
-        mul!(it.AR[i], it.A[i], it.CR[i]) # use AR as temporary storage for A-C
-        _repartition!(it.AC_tail[i], it.AR[i])
-        it.CR[i - 1], it.AC_tail[i] = rightorth!(it.AC_tail[i]; alg=it.alg_rightorth)
-        # TODO: this last repartition is only strictly necessary for the last iteration
-        # this is because AR is stored in the same format as AL.
-        _repartition!(it.AR[i], it.AC_tail[i])
+    C₀ = CR[end]
+    for i in length(AR):-1:1
+        mul!(AR[i], AL[i], CR[i]) # use AR as temporary storage for A-C
+        tmp = _repartition!(workspace.AC_tail[i], AR[i])
+        CR[i - 1], tmp = rightorth!(tmp; alg=alg.alg_orth)
+        _repartition!(AR[i], tmp)
     end
-    normalize!(it.CR[end])
+    normalize!(CR[end])
+    
+    
+    ϵ = oftype(ϵ, norm(C₀ - CR[end]))
+    iter += 1
+    
+    it.state = (; AL, AR, CR, workspace, ϵ, iter, log)
+    
+    return AL, AR, CR
+end
 
-    # check for convergence
-    it.δ = norm(it.C - it.CR[end])
-    it.C = it.CR[1]
+function finalize!(it::IterativeSolver{<:UniformGauging})
+    return it.state.AL, it.state.AR, it.state.CR
+end
 
-    it.verbosity ≥ VERBOSE_ITER && @info "rightgauge iteration $iteration: δ = $(it.δ)"
+function logiter(it::IterativeSolver{<:UniformGauging})
+    @infov 3 logiter!(it.state.log, it.state.iter, it.state.ϵ)
+end
 
-    return it.C, iteration + 1
+function logfinish(it::IterativeSolver{<:UniformGauging})
+    @infov 2 logfinish!(it.state.log, it.state.iter, it.state.ϵ)
+end
+
+function logcancel(it::IterativeSolver{<:UniformGauging})
+    @warnv 1 logcancel!(it.state.log, it.state.iter, it.state.ϵ)
 end
 
 # ------------------------------------------------------------------------------------------
@@ -308,28 +184,43 @@ end
 # ------------------------------------------------------------------------------------------
 
 function regauge!(AC::PeriodicVector{<:GenericMPSTensor},
-                  CR::PeriodicVector{<:MPSBondTensor}, alg::UniformGauging)
-    if alg.order === :LR
-        for i in 1:length(AC)
-            # find AL that best fits these new AC and CR
-            QAc, _ = leftorth!(AC[i]; alg=alg.alg_leftorth)
-            Qc, _ = leftorth!(CR[i]; alg=alg.alg_leftorth)
-            mul!(AC[i], QAc, Qc')
-        end
-    elseif alg.order === :RL
-        for i in 1:length(AC)
-            # find AR that best fits these new AC and CR
-            AC_tail = _transpose_tail(AC[i])
-            _, QAc = rightorth!(AC_tail; alg=alg.alg_rightorth)
-            _, Qc = rightorth!(CR[i - 1]; alg=alg.alg_rightorth)
-            mul!(AC_tail, Qc', QAc)
-            _repartition!(AC[i], AC_tail)
-        end
-    else
-        throw(ArgumentError("invalid order: $order"))
+                  CR::PeriodicVector{<:MPSBondTensor}, alg::QRpos)
+    for i in 1:length(AC)
+        # find AL that best fits these new AC and CR
+        QAc, _ = leftorth!(AC[i]; alg)
+        Qc, _ = leftorth!(CR[i]; alg)
+        mul!(AC[i], QAc, Qc')
     end
     return AC
 end
+
+# Utility
+# -------
+
+function default_gauge_alg_eigsolve(tol, maxiter)
+    eigalg = Arnoldi(; krylovdim=30, maxiter)
+    tol_min = tol / 10
+    tol_max = Inf
+    tol_factor = 1
+    return DynamicTol(eigalg, tol_min, tol_max, tol_factor)
+end
+
+
+
+# function regauge!(AC::PeriodicVector{<:GenericMPSTensor},
+#                   CR::PeriodicVector{<:MPSBondTensor}, alg::LQpos)
+#     for i in 1:length(AC)
+#         # find AR that best fits these new AC and CR
+#         AC_tail = _transpose_tail(AC[i])
+#         _, QAc = rightorth!(AC_tail; alg)
+#         _, Qc = rightorth!(CR[i - 1]; alg)
+#         mul!(AC_tail, Qc', QAc)
+#         _repartition!(AC[i], AC_tail)
+#     end
+#     return AC
+# end
+
+
 
 # first iteration:
 #   needs to set up correct tensors with correct spaces

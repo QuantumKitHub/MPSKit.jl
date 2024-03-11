@@ -15,8 +15,8 @@ algorithm for time evolution.
     finalize::F = Defaults._finalize
     verbosity::Int = Defaults.verbosity
     
-    alg_gauge = Defaults.alg_gauge()
-    alg_integrate = Defaults.alg_integrate()
+    alg_gauge = UniformGauging()
+    alg_integrate = Lanczos(; tol=Defaults.tol)
     alg_environments = Defaults.alg_environments()
 end
 
@@ -41,12 +41,12 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         end
     end
 
-    A = regauge!(temp_ACs, temp_CRs, alg.gaugealg)
-    AL, AR, CR = uniform_gauge(A, ψ.CR[end], alg.gaugealg)
-    ψ′ = InfiniteMPS(AL, AR, CR)
+    regauge!(temp_ACs, temp_CRs, QRPos())
+    gaugefix!(ψ, alg_gauge)
+    
 
-    recalculate!(envs, ψ′; alg.alg_environments.tol)
-    return ψ′, envs
+    recalculate!(envs, ψ; alg.alg_environments.tol)
+    return ψ, envs
 end
 
 function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
@@ -76,7 +76,7 @@ function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
 
     # edge case
     h_ac = ∂∂AC(1, Ψ, H, envs)
-    Ψ.AC[1] = integrate(h_ac, Ψ.AC[1], t + dt / 2, dt / 2, alg.integrator)
+    Ψ.AC[1] = integrate(h_ac, Ψ.AC[1], t + dt / 2, dt / 2, alg.alg_integrate)
 
     return Ψ, envs
 end

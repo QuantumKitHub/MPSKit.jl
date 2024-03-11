@@ -22,11 +22,11 @@ By convention, we have that:
                 virtualspaces::Vector{<:Union{S, CompositeSpace{S}};
                 kwargs...) where {S<:ElementarySpace}
     InfiniteMPS(As::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    InfiniteMPS(ALs::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor;
-                kwargs...)
+    InfiniteMPS(AL, AR, CR, [AC]) # expert
 
-Construct an MPS via a specification of physical and virtual spaces, or from a list of
-tensors `As`, or a list of left-gauged tensors `ALs`.
+Construct and gauge an MPS via a specification of physical and virtual spaces, or from a list of
+tensors `As`. Alternatively, just supply the fields `AL`, `AR`, `CR`, and `AC` directly, but
+beware that no gauging will be performed in that case.
 
 ### Arguments
 - `As::AbstractVector{<:GenericMPSTensor}`: vector of site tensors
@@ -115,13 +115,18 @@ function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractV
                        convert(PeriodicVector{B}, CR), convert(PeriodicVector{A}, AC))
 end
 
-function InfiniteMPS(A::AbstractVector{TA}; kwargs...) where {TA<:GenericMPSTensor}
-    return InfiniteMPS(uniform_gauge(convert(PeriodicVector{TA}, A); kwargs...)...)
-end
-function InfiniteMPS(A::AbstractVector{TA}, C₀::TB;
-                     kwargs...) where {TA<:GenericMPSTensor,
-                                       TB<:MPSBondTensor}
-    return InfiniteMPS(uniform_gauge(convert(PeriodicVector{TA}, A), C₀; kwargs...)...)
+function InfiniteMPS(A::AbstractVector{TA}; order=:LR, kwargs...) where {TA<:GenericMPSTensor}
+    AC = PeriodicArray(A)
+    AL = similar.(AC)
+    AR = similar.(AL)
+
+    CR = map(AL) do a
+        id(storagetype(a), dual(right_virtualspace(a)))
+    end
+    
+    ψ = InfiniteMPS(AL, AR, CR, AC)
+    gaugefix!(ψ; order, kwargs...)
+    return ψ
 end
 
 # From spaces

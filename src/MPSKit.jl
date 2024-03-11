@@ -76,6 +76,7 @@ include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
 include("utility/plotting.jl")
 include("utility/linearcombination.jl")
+include("utility/iterativesolvers.jl")
 
 # maybe we should introduce an abstract state type
 include("states/window.jl")

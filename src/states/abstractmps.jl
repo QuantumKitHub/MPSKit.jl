@@ -78,6 +78,9 @@ function isfullrank(A::GenericMPSTensor)
     return Vₗ ⊗ P ≿ Vᵣ' && Vₗ' ≾ P ⊗ Vᵣ
 end
 
+left_virtualspace(A::GenericMPSTensor) = _firstspace(A)
+right_virtualspace(A::GenericMPSTensor) = _lastspace(A)
+
 #===========================================================================================
 MPS types
 ===========================================================================================#

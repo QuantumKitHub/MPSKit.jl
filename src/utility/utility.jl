@@ -44,6 +44,12 @@ function _repartition!!(tdst::AbstractTensorMap{S,N₁,N₂},
     end
 end
 
+function _similar_tail(A::AbstractTensorMap)
+    cod = _firstspace(A)
+    dom = ⊗(dual(_lastspace(A)), dual.(space.(Ref(A), reverse(2:(numind(A) - 1))))...)
+    return similar(A, cod ← dom)
+end
+
 function mul!!(C::AbstractTensorMap{S}, A::AbstractTensorMap{S},
                B::AbstractTensorMap{S}) where {S}
     if domain(C) == domain(B) && codomain(C) == codomain(A)
