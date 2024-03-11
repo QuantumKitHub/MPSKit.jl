@@ -1,39 +1,3 @@
-struct VOMPS{F,A,B} <: Algorithm
-    tol::Float64
-    maxiter::Int
-    verbosity::Int
-    finalize::F
-    gaugealg::A
-    envalg::B
-    function VOMPS(tol, maxiter, verbosity, finalize::F, gaugealg::A,
-                   envalg::B) where {F,A,B}
-        return new{F,A,B}(tol, maxiter, verbosity, finalize, gaugealg, envalg)
-    end
-end
-function VOMPS(; tol=Defaults.tol, maxiter=Defaults.maxiter,
-               verbosity::Integer=Defaults.verbosity,
-               orthmaxiter::Integer=Defaults.maxiter,
-               dynamic_tols::Bool=Defaults.dynamical_tols,
-               tol_min=nothing, tol_max=nothing,
-               envs_tolfactor=nothing, gauge_tolfactor=nothing)
-    gaugealg = UniformGauging(; tol, maxiter=orthmaxiter,
-                              verbosity=verbosity - 2)
-    envalg = (; tol, verbosity=verbosity - 2)
-
-    if !dynamic_tols
-        return VOMPS(tol, maxiter, verbosity, finalize, gaugealg, envalg)
-    end
-
-    # setup dynamic tolerances
-    dyn_gaugealg = ThrottledTol(gaugealg, something(tol_min, Defaults.tol_min),
-                                something(tol_max, Defaults.tol_max),
-                                something(gauge_tolfactor, Defaults.gauge_tolfactor))
-    dyn_envalg = ThrottledTol(envalg, something(tol_min, Defaults.tol_min),
-                              something(tol_max, Defaults.tol_max),
-                              something(envs_tolfactor, Defaults.envs_tolfactor))
-    return VOMPS(tol, maxiter, verbosity, finalize, dyn_gaugealg, dyn_envalg)
-end
-
 function approximate(ψ::InfiniteMPS,
                      toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS}, algorithm,
                      envs=environments(ψ, toapprox))
@@ -77,10 +41,6 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
             recalculate!(envs, ψ; alg_environments.tol)
-
-            # TODO: properly pass envalg to environments
-            envalg = updatetol(alg.envalg, iter, ϵ)
-            recalculate!(envs, ψ; envalg.tol)
 
             ψ, envs = alg.finalize(iter, ψ, toapprox, envs)::typeof((ψ, envs))
 

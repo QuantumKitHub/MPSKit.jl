@@ -57,10 +57,6 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
             recalculate!(envs, ψ; alg_environments.tol)
 
-            # TODO: properly pass envalg to environments
-            envalg = updatetol(alg.envalg, iter, ϵ)
-            recalculate!(envs, ψ; envalg.tol)
-
             ψ, envs = alg.finalize(iter, ψ, H, envs)::typeof((ψ, envs))
 
             ϵ = calc_galerkin(ψ, envs)

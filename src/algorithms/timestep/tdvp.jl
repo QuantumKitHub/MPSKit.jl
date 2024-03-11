@@ -1,5 +1,5 @@
 """
-    TDVP{A,G,F} <: Algorithm
+    TDVP{F} <: Algorithm
 
 Single site [TDVP](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107.070601)
 algorithm for time evolution.
@@ -11,29 +11,13 @@ algorithm for time evolution.
 - `finalize::F`: user-supplied function which is applied after each timestep, with
     signature `finalize(t, Ψ, H, envs) -> Ψ, envs`
 """
-struct TDVP{A,G,F} <: Algorithm
-    integrator::A
-    gaugealg::G
-    verbosity::Int
-    finalize::F
-
-    # automatically fill type parameters
-    function TDVP(integrator::A, gaugealg::G, verbosity, finalize::F) where {A,G,F}
-        return new{A,G,F}(integrator, gaugealg, verbosity, finalize)
-    end
-end
-function TDVP(; tol=Defaults.tol, integrator=nothing, tolgauge=Defaults.tolgauge,
-              gaugemaxiter::Integer=Defaults.maxiter, verbosity=Defaults.verbosity,
-              finalize=Defaults._finalize)
-    if isnothing(integrator)
-        integrator = Lanczos(; tol)
-    elseif !isnothing(tol)
-        integrator = @set integrator.tol = tol
-    end
-
-    gaugealg = UniformGauging(; tol=tolgauge, maxiter=gaugemaxiter)
-
-    return TDVP(integrator, gaugealg, verbosity, finalize)
+@kwdef struct TDVP{F} <: Algorithm
+    finalize::F = Defaults._finalize
+    verbosity::Int = Defaults.verbosity
+    
+    alg_gauge = Defaults.alg_gauge()
+    alg_integrate = Defaults.alg_integrate()
+    alg_environments = Defaults.alg_environments()
 end
 
 function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
@@ -48,12 +32,12 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
     @sync for (loc, (ac, c)) in enumerate(zip(ψ.AC, ψ.CR))
         Threads.@spawn begin
             h_ac = ∂∂AC(loc, ψ, H, envs)
-            temp_ACs[loc] = integrate(h_ac, ac, t, dt, alg.integrator)
+            temp_ACs[loc] = integrate(h_ac, ac, t, dt, alg.alg_integrate)
         end
 
         Threads.@spawn begin
             h_c = ∂∂C(loc, ψ, H, envs)
-            temp_CRs[loc] = integrate(h_c, c, t, dt, alg.integrator)
+            temp_CRs[loc] = integrate(h_c, c, t, dt, alg.alg_integrate)
         end
     end
 
@@ -61,7 +45,7 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
     AL, AR, CR = uniform_gauge(A, ψ.CR[end], alg.gaugealg)
     ψ′ = InfiniteMPS(AL, AR, CR)
 
-    recalculate!(envs, ψ′)
+    recalculate!(envs, ψ′; alg.alg_environments.tol)
     return ψ′, envs
 end
 
@@ -71,23 +55,23 @@ function timestep!(Ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
     # sweep left to right
     for i in 1:(length(Ψ) - 1)
         h_ac = ∂∂AC(i, Ψ, H, envs)
-        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t, dt / 2, alg.integrator)
+        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t, dt / 2, alg.alg_integrate)
 
         h_c = ∂∂C(i, Ψ, H, envs)
-        Ψ.CR[i] = integrate(h_c, Ψ.CR[i], t, -dt / 2, alg.integrator)
+        Ψ.CR[i] = integrate(h_c, Ψ.CR[i], t, -dt / 2, alg.alg_integrate)
     end
 
     # edge case
     h_ac = ∂∂AC(length(Ψ), Ψ, H, envs)
-    Ψ.AC[end] = integrate(h_ac, Ψ.AC[end], t, dt / 2, alg.integrator)
+    Ψ.AC[end] = integrate(h_ac, Ψ.AC[end], t, dt / 2, alg.alg_integrate)
 
     # sweep right to left
     for i in length(Ψ):-1:2
         h_ac = ∂∂AC(i, Ψ, H, envs)
-        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
+        Ψ.AC[i] = integrate(h_ac, Ψ.AC[i], t + dt / 2, dt / 2, alg.alg_integrate)
 
         h_c = ∂∂C(i - 1, Ψ, H, envs)
-        Ψ.CR[i - 1] = integrate(h_c, Ψ.CR[i - 1], t + dt / 2, -dt / 2, alg.integrator)
+        Ψ.CR[i - 1] = integrate(h_c, Ψ.CR[i - 1], t + dt / 2, -dt / 2, alg.alg_integrate)
     end
 
     # edge case

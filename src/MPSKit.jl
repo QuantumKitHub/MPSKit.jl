@@ -54,8 +54,6 @@ export exact_diagonalization
 export TransferMatrix
 export transfer_left, transfer_right
 
-abstract type Algorithm end
-
 @deprecate virtualspace left_virtualspace # there is a possible ambiguity when C isn't square, necessitating specifying left or right virtualspace
 @deprecate params(args...) environments(args...)
 @deprecate InfiniteMPO(args...) DenseMPO(args...)
@@ -78,7 +76,6 @@ include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
 include("utility/plotting.jl")
 include("utility/linearcombination.jl")
-include("utility/dynamic_tolerance.jl")
 
 # maybe we should introduce an abstract state type
 include("states/window.jl")
@@ -89,8 +86,7 @@ include("states/finitemps.jl")
 include("states/windowmps.jl")
 include("states/orthoview.jl")
 include("states/quasiparticle_state.jl")
-# include("states/ortho.jl")
-include("algorithms/gauging.jl")
+include("states/ortho.jl")
 
 include("operators/densempo.jl")
 include("operators/sparsempo/sparseslice.jl")
