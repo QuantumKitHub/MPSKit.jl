@@ -3,8 +3,13 @@ println("
 |   Miscellaneous   |
 ---------------------
 ")
+module TestMiscellaneous
 
-include("setup.jl")
+using ..TestSetup
+using Test, TestExtras
+using MPSKit
+using TensorKit
+using TensorKit: ℙ
 using Plots
 
 @testset "plot tests" begin
@@ -43,4 +48,6 @@ end
         @test ψ2 isa InfiniteMPS
         @test norm(ψ2) ≈ 1
     end
+end
+
 end

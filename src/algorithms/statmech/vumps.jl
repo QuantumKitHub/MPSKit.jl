@@ -18,71 +18,72 @@ function leading_boundary(ψ::InfiniteMPS, H, alg, envs=environments(ψ, H))
 end
 
 function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ, H))
-    galerkin = calc_galerkin(ψ, envs)
-    iter = 1
-
+    ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
     temp_Cs = similar.(ψ.CR)
+    log = IterLog("VUMPS")
 
-    while true
-        eigalg = updatetol(alg.eigalg, iter, galerkin)
-
-        if Defaults.parallelize_sites
-            @sync begin
-                for col in 1:size(ψ, 2)
+    LoggingExtras.withlevel(; alg.verbosity) do
+        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
+        for iter in 1:(alg.maxiter)
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
+            @static if Defaults.parallelize_sites
+                @sync for col in 1:size(ψ, 2)
                     Threads.@spawn begin
                         H_AC = ∂∂AC($col, $ψ, $H, $envs)
                         ac = RecursiveVec($ψ.AC[:, col])
-                        _, acvecs = eigsolve(H_AC, ac, 1, :LM, eigalg)
+                        _, acvecs = eigsolve(H_AC, ac, 1, :LM, alg_eigsolve)
                         $temp_ACs[:, col] = acvecs[1].vecs[:]
                     end
 
                     Threads.@spawn begin
                         H_C = ∂∂C($col, $ψ, $H, $envs)
                         c = RecursiveVec($ψ.CR[:, col])
-                        _, cvecs = eigsolve(H_C, c, 1, :LM, eigalg)
+                        _, cvecs = eigsolve(H_C, c, 1, :LM, alg_eigsolve)
                         $temp_Cs[:, col] = cvecs[1].vecs[:]
                     end
                 end
+            else
+                for col in 1:size(ψ, 2)
+                    H_AC = ∂∂AC(col, ψ, H, envs)
+                    ac = RecursiveVec(ψ.AC[:, col])
+                    _, acvecs = eigsolve(H_AC, ac, 1, :LM, alg_eigsolve)
+                    temp_ACs[:, col] = acvecs[1].vecs[:]
+
+                    H_C = ∂∂C(col, ψ, H, envs)
+                    c = RecursiveVec(ψ.CR[:, col])
+                    _, cvecs = eigsolve(H_C, c, 1, :LM, alg_eigsolve)
+                    temp_Cs[:, col] = cvecs[1].vecs[:]
+                end
             end
-        else
-            for col in 1:size(ψ, 2)
-                H_AC = ∂∂AC(col, ψ, H, envs)
-                ac = RecursiveVec(ψ.AC[:, col])
-                _, acvecs = eigsolve(H_AC, ac, 1, :LM, eigalg)
-                temp_ACs[:, col] = acvecs[1].vecs[:]
 
-                H_C = ∂∂C(col, ψ, H, envs)
-                c = RecursiveVec(ψ.CR[:, col])
-                _, cvecs = eigsolve(H_C, c, 1, :LM, eigalg)
-                temp_Cs[:, col] = cvecs[1].vecs[:]
+            for row in 1:size(ψ, 1), col in 1:size(ψ, 2)
+                QAc, _ = leftorth!(temp_ACs[row, col]; alg=TensorKit.QRpos())
+                Qc, _ = leftorth!(temp_Cs[row, col]; alg=TensorKit.QRpos())
+                temp_ACs[row, col] = QAc * adjoint(Qc)
+            end
+
+            alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+            ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
+
+            alg_environments = updatetol(alg.alg_environments, iter, ϵ)
+            recalculate!(envs, ψ; alg_environments.tol)
+
+            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
+
+            ϵ = calc_galerkin(ψ, envs)
+
+            if ϵ <= alg.tol
+                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                break
+            end
+            if iter == alg.maxiter
+                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+            else
+                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
             end
         end
-
-        for row in 1:size(ψ, 1), col in 1:size(ψ, 2)
-            QAc, _ = leftorth!(temp_ACs[row, col]; alg=TensorKit.QRpos())
-            Qc, _ = leftorth!(temp_Cs[row, col]; alg=TensorKit.QRpos())
-            temp_ACs[row, col] = QAc * adjoint(Qc)
-        end
-
-        gaugealg = updatetol(alg.gaugealg, iter, galerkin)
-        ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; gaugealg.tol, gaugealg.maxiter)
-
-        envalg = updatetol(alg.envalg, iter, galerkin)
-        recalculate!(envs, ψ; envalg.tol)
-
-        ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
-
-        galerkin = calc_galerkin(ψ, envs)
-        alg.verbosity >= VERBOSE_ITER &&
-            @info "VUMPS @iteration $(iter) galerkin = $(galerkin)"
-
-        if (galerkin <= alg.tol) || iter >= alg.maxiter
-            alg.verbosity >= VERBOSE_WARN && iter >= alg.maxiter &&
-                @warn "VUMPS didn't converge $(galerkin)"
-            return ψ, envs, galerkin
-        end
-
-        iter += 1
     end
+
+    return ψ, envs, ϵ
 end

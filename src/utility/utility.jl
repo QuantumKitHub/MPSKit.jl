@@ -173,15 +173,3 @@ end
 @static if !isdefined(Base, :allequal)
     allequal(itr) = isempty(itr) ? true : all(isequal(first(itr)), itr)
 end
-
-function between(x1, x, x2)
-    @assert x1 <= x2 "x1 should be smaller than  or equal to x2"
-    x < x1 && return x1
-    x > x2 && return x2
-    return x
-end
-
-const VERBOSE_OFF = 0
-const VERBOSE_WARN = 1
-const VERBOSE_CONVERGENCE = 2
-const VERBOSE_ITER = 3

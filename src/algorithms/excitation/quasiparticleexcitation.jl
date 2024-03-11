@@ -43,7 +43,8 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renv
     H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
 
     Es, ϕs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
-    convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
+    convhist.converged < num &&
+        @warn "excitation failed to converge: normres = $(convhist.normres)"
 
     return Es, ϕs
 end
@@ -100,7 +101,7 @@ function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
             Threads.@spawn begin
                 E, ϕ = excitations(H, alg, momentum, lmps, lenvs, rmps, renvs; num, solver,
                                    sector)
-                verbosity >= VERBOSE_ITER &&
+                verbosity ≥ VERBOSE_CONV &&
                     @info "Found excitations for momentum = $(momentum)"
                 return E, ϕ
             end
@@ -111,8 +112,7 @@ function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
         fetched = map(momenta) do momentum
             E, ϕ = excitations(H, alg, momentum, lmps, lenvs, rmps, renvs; num, solver,
                                sector)
-            verbosity >= VERBOSE_ITER &&
-                @info "Found excitations for momentum = $(momentum)"
+            verbosity ≥ VERBOSE_CONV && @info "Found excitations for momentum = $(momentum)"
             return E, ϕ
         end
     end
@@ -135,7 +135,8 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::FiniteQP,
     H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
     Es, ϕs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
 
-    convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
+    convhist.converged < num &&
+        @warn "excitation failed to converge: normres = $(convhist.normres)"
 
     return Es, ϕs
 end
@@ -179,7 +180,8 @@ function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, ϕ₀::Multiline
     end
 
     Es, ϕs, convhist = eigsolve(H_eff, RecursiveVec(ϕ₀.data.data), num, :LM, alg.alg)
-    convhist.converged < num && @warn "Quasiparticle didn't converge: $(convhist.normres)"
+    convhist.converged < num &&
+        @warn "excitation failed to converge: normres = $(convhist.normres)"
 
     return Es, map(x -> Multiline(x.vecs), ϕs)
 end

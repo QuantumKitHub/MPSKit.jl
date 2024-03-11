@@ -3,8 +3,14 @@ println("
 |   States   |
 --------------
 ")
+module TestStates
 
-include("setup.jl")
+using ..TestSetup
+using Test, TestExtras
+using MPSKit
+using MPSKit: _transpose_front, _transpose_tail
+using TensorKit
+using TensorKit: ℙ
 
 @testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [(ℙ^10, ℙ^2, ComplexF64),
                                                                   (Rep[SU₂](1 => 1, 0 => 3),
@@ -18,8 +24,7 @@ include("setup.jl")
 
     for i in 1:length(ψ)
         @test ψ.AC[i] ≈ ψ.AL[i] * ψ.CR[i]
-        @test ψ.AC[i] ≈
-              MPSKit._transpose_front(ψ.CR[i - 1] * MPSKit._transpose_tail(ψ.AR[i]))
+        @test ψ.AC[i] ≈ _transpose_front(ψ.CR[i - 1] * _transpose_tail(ψ.AR[i]))
     end
 
     @test elt == scalartype(ψ)
@@ -111,8 +116,8 @@ end
 
     for i in 1:length(window)
         @test window.AC[i] ≈ window.AL[i] * window.CR[i]
-        @test window.AC[i] ≈ MPSKit._transpose_front(window.CR[i - 1] *
-                                                     MPSKit._transpose_tail(window.AR[i]))
+        @test window.AC[i] ≈
+              _transpose_front(window.CR[i - 1] * _transpose_tail(window.AR[i]))
     end
 
     @test norm(window) ≈ 1
@@ -133,8 +138,8 @@ end
     @test v2 < v1
     @test real(e2[2]) ≤ real(e1[2])
 
-    (window, envs) = timestep(window, ham, 0.1, 0.0, TDVP2(), envs)
-    (window, envs) = timestep(window, ham, 0.1, 0.0, TDVP(), envs)
+    window, envs = timestep(window, ham, 0.1, 0.0, TDVP2(), envs)
+    window, envs = timestep(window, ham, 0.1, 0.0, TDVP(), envs)
 
     e3 = expectation_value(window, ham)
 
@@ -189,4 +194,6 @@ end
                   convert(MPSKit.LeftGaugedQP, convert(MPSKit.RightGaugedQP, ϕ₁))) ≈
               dot(ϕ₁, ϕ₁) atol = 1e-10
     end
+end
+
 end

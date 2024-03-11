@@ -50,7 +50,7 @@ function transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, nu
     eigenvals, eigenvecs, convhist = eigsolve(flip(TransferMatrix(above.AL, below.AL)),
                                               init, num_vals, :LM; tol=tol)
     convhist.converged < num_vals &&
-        @warn "correlation length failed to converge $(convhist.normres)"
+        @warn "correlation length failed to converge: normres = $(convhist.normres)"
 
     return eigenvals
 end

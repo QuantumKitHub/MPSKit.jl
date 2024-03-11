@@ -270,7 +270,7 @@ For statmech partition functions we want to find the approximate leading boundar
 ```julia
 th = nonsym_ising_mpo()
 ts = InfiniteMPS([ℂ^2],[ℂ^20]);
-(ts,envs,_) = leading_boundary(ts,th,VUMPS(maxiter=400,verbosity=0));
+(ts,envs,_) = leading_boundary(ts,th,VUMPS(maxiter=400,verbosity=false));
 ```
 
 if the mpo satisfies certain properties (positive and hermitian), it may also be possible to use GradientGrassmann.

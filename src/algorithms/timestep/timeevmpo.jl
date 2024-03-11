@@ -188,7 +188,8 @@ function make_time_mpo(H::MPOHamiltonian{S,T}, dt, alg::WII) where {S,T}
 
             return RecursiveVec(out)
         end
-        convhist.converged == 0 && @warn "failed to exponentiate $(convhist.normres)"
+        convhist.converged == 0 &&
+            @warn "exponentiate failed to converge: normres = $(convhist.normres)"
 
         WA[i, j - 1, k - 1] = y[4]
         WB[i, j - 1] = y[3]

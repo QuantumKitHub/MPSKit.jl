@@ -3,8 +3,15 @@ println("
 |   Operators   |
 -----------------
 ")
+module TestOperators
 
-include("setup.jl")
+using ..TestSetup
+using Test, TestExtras
+using MPSKit
+using MPSKit: _transpose_front, _transpose_tail
+using TensorKit
+using TensorKit: ℙ
+using VectorInterface: One
 
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
 vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
@@ -210,7 +217,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         end
         @test summedhct(ψ.AC[1], 0.0) ≈ sum2
 
-        v = MPSKit._transpose_front(ψ.AC[1]) * MPSKit._transpose_tail(ψ.AR[2])
+        v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
         summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summedEnvs)
         sum3 = sum(zip(Hs, Envs)) do (H, env)
             return MPSKit.∂∂AC2(1, ψ, H, env)(v)
@@ -260,7 +267,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         end
         @test summedhct(ψ.AC[1], t) ≈ sum2
 
-        v = MPSKit._transpose_front(ψ.AC[1]) * MPSKit._transpose_tail(ψ.AR[2])
+        v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
         summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summedEnvs)
         sum3 = sum(zip(fs, Hs, Envs)) do (f, H, env)
             if f isa Function
@@ -270,4 +277,6 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         end
         @test summedhct(v, t) ≈ sum3
     end
+end
+
 end

@@ -274,12 +274,14 @@ function environments(exci::Multiline{<:InfiniteQP},
         lBs[row, end], convhist = linsolve(flip(tm_RL), lB_cur, lB_cur, solver, 1,
                                            -exp(-1im * numcols * exci.momentum) *
                                            prod(left_renorms))
-        convhist.converged == 0 && @warn "lbe failed to converge $(convhist.normres)"
+        convhist.converged == 0 &&
+            @warn "GBL[$row] failed to converge: normres = $(convhist.normres)"
 
         rBs[row, 1], convhist = linsolve(tm_LR, rB_cur, rB_cur, GMRES(), 1,
                                          -exp(1im * numcols * exci.momentum) *
                                          prod(right_renorms))
-        convhist.converged == 0 && @warn "rbe failed to converge $(convhist.normres)"
+        convhist.converged == 0 &&
+            @warn "GBR[$row] failed to converge: normres = $(convhist.normres)"
 
         left_cur = lBs[row, end]
         right_cur = rBs[row, 1]

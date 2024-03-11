@@ -6,30 +6,15 @@ An algorithm that uses an two-site VUMPS step to change the bond dimension of a 
 # Fields
 - `tol::Real = Defaults.tol` : The tolerance for the eigenvalue solver.
 - `tol_gauge::Real = Defaults.tolgauge` : The tolerance for the gauge.
+- `tol::Real = Defaults.tol` : The tolerance for the Galerkin truncation.
+- `tol_eigenval::Real = Defaults.tol` : The tolerance for the eigenvalue solver.
 - `trscheme::TruncationScheme = notrunc()` : The truncation scheme to use.
 """
-struct VUMPSSvdCut <: Algorithm
-    tol::Float64
-    tol_gauge::Float64
-    trscheme::TruncationScheme
-end
-function VUMPSSvdCut(; tol_gauge::Real=Defaults.tolgauge, tol::Real=Defaults.tol,
-                     trscheme::TruncationScheme=notrunc(), tol_galerkin=nothing,
-                     tol_eigenval=nothing)
-    # Deprecation warnings
-    if !isnothing(tol_galerkin)
-        Base.depwarn("VUMPSSvdCut(; kwargs..., tol_galerkin=...) is deprecated. Use VUMPSSvdCut(; kwargs...) instead.",
-                     :VUMPSSvdCut; force=true)
-    end
-    actual_tol = if !isnothing(tol_eigenval)
-        Base.depwarn("VUMPSSvdCut(; kwargs..., tol_eigenval=...) is deprecated. Use VUMPSSvdCut(; kwargs..., tol=...) instead.",
-                     :VUMPSSvdCut; force=true)
-        tol_eigenval
-    else
-        tol
-    end
-
-    return VUMPSSvdCut(actual_tol, tol_gauge, trscheme)
+@kwdef struct VUMPSSvdCut <: Algorithm
+    tol_gauge = Defaults.tolgauge
+    tol = Defaults.tol
+    tol_eigenval = Defaults.tol
+    trscheme = notrunc()
 end
 
 function changebonds_1(ψ₁::InfiniteMPS, H, alg::VUMPSSvdCut,

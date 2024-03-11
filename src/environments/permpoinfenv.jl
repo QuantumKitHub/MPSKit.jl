@@ -161,7 +161,7 @@ function mixed_fixpoints(above::MPSMultiline, mpo::MPOMultiline, below::MPSMulti
                 packed_init = $L0 isa Vector ? RecursiveVec($L0) : $L0
                 (_, Ls, convhist) = eigsolve(flip(E_LL), packed_init, 1, :LM, $solver)
                 convhist.converged < 1 &&
-                    @info "left eigenvalue failed to converge $(convhist.normres)"
+                    @warn "GL failed to converge: normres = $(convhist.normres)"
                 L0 = $L0 isa Vector ? Ls[1].vecs : Ls[1]
             end
             Threads.@spawn begin
@@ -169,7 +169,7 @@ function mixed_fixpoints(above::MPSMultiline, mpo::MPOMultiline, below::MPSMulti
                 E_RR = TransferMatrix($c_above.AR, $mpo[cr, :], $c_below.AR)
                 (_, Rs, convhist) = eigsolve(E_RR, packed_init, 1, :LM, $solver)
                 convhist.converged < 1 &&
-                    @info "right eigenvalue failed to converge $(convhist.normres)"
+                    @warn "GR failed to converge: normres = $(convhist.normres)"
                 R0 = $R0 isa Vector ? Rs[1].vecs : Rs[1]
             end
         end

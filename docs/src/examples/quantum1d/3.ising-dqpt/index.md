@@ -40,35 +40,12 @@ L = 20
 ````
 
 ````
-┌ Info: DMRG iteration:
-│   iter = 1
-│   ϵ = 0.0020961633753540897
-│   λ = -20.400216273406606 + 8.422766878640786e-16im
-└   Δt = 0.536897639
-┌ Info: DMRG iteration:
-│   iter = 2
-│   ϵ = 1.9324532268037547e-6
-│   λ = -20.400217866998595 - 1.2632476413240967e-15im
-└   Δt = 0.320009526
-┌ Info: DMRG iteration:
-│   iter = 3
-│   ϵ = 4.883113394407934e-7
-│   λ = -20.400217867025678 - 3.206562451130956e-15im
-└   Δt = 0.064756649
-┌ Info: DMRG iteration:
-│   iter = 4
-│   ϵ = 6.335026911022001e-10
-│   λ = -20.400217867025653 - 3.741871084156128e-17im
-└   Δt = 0.014713191
-┌ Info: DMRG iteration:
-│   iter = 5
-│   ϵ = 6.289053913528775e-13
-│   λ = -20.400217867025678 - 2.632644424352837e-16im
-└   Δt = 0.008818727
-┌ Info: DMRG summary:
-│   ϵ = 2.0e-12
-│   λ = -20.400217867025678 - 2.632644424352837e-16im
-└   Δt = 0.980341265
+[ Info: DMRG init:	obj = +9.914551645185e+00	err = 1.3697e-01
+[ Info: DMRG   1:	obj = -2.040021698083e+01	err = 9.7284195077e-04	time = 0.44 sec
+[ Info: DMRG   2:	obj = -2.040021786696e+01	err = 7.5203822885e-06	time = 0.35 sec
+[ Info: DMRG   3:	obj = -2.040021786703e+01	err = 9.3598556558e-07	time = 0.09 sec
+[ Info: DMRG   4:	obj = -2.040021786703e+01	err = 8.3709447459e-10	time = 0.02 sec
+[ Info: DMRG conv 5:	obj = -2.040021786703e+01	err = 6.6974743335e-13	time = 0.91 sec
 
 ````
 
@@ -87,7 +64,7 @@ We will initially use a two-site TDVP scheme to dynamically increase the bond di
 H₁ = transverse_field_ising(; g=-2.0)
 ψₜ = deepcopy(ψ₀)
 dt = 0.01
-ψₜ, envs = timestep(ψₜ, H₁, dt, TDVP2(; trscheme=truncdim(20)));
+ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP2(; trscheme=truncdim(20)));
 ````
 
 "envs" is a kind of cache object that keeps track of all environments in `ψ`. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
@@ -107,7 +84,7 @@ function finite_sim(L; dt=0.05, finaltime=5.0)
 
     for t in times[2:end]
         alg = t > 3 * dt ? TDVP() : TDVP2(; trscheme=truncdim(50))
-        ψₜ, envs = timestep(ψₜ, H₁, dt, alg, envs)
+        ψₜ, envs = timestep(ψₜ, H₁, 0, dt, alg, envs)
         push!(echos, echo(ψₜ, ψ₀))
     end
 
@@ -131,45 +108,14 @@ Similarly we could start with an initial infinite state and find the pre-quench 
 ````
 
 ````
-┌ Info: VUMPS iteration:
-│   iter = 1
-│   ϵ = 0.12051227031956392
-│   λ = -1.0188109913987968 - 3.4277346718849837e-17im
-└   Δt = 0.044219456
-┌ Info: VUMPS iteration:
-│   iter = 2
-│   ϵ = 0.0005804392121373009
-│   λ = -1.0635439538780795 - 8.36203471080629e-18im
-└   Δt = 0.007141174
-┌ Info: VUMPS iteration:
-│   iter = 3
-│   ϵ = 1.8720667377867497e-7
-│   λ = -1.0635444099733329 + 9.033112781731065e-17im
-└   Δt = 0.00646285
-┌ Info: VUMPS iteration:
-│   iter = 4
-│   ϵ = 2.77487479109346e-10
-│   λ = -1.0635444099733624 + 3.8230698255590467e-17im
-└   Δt = 0.005835234
-┌ Info: VUMPS iteration:
-│   iter = 5
-│   ϵ = 2.965633592874595e-11
-│   λ = -1.0635444099733646 - 1.7021513375968543e-16im
-└   Δt = 0.033198408
-┌ Info: VUMPS iteration:
-│   iter = 6
-│   ϵ = 2.9750646414566318e-12
-│   λ = -1.063544409973365 - 1.349628283023072e-16im
-└   Δt = 0.004876971
-┌ Info: VUMPS iteration:
-│   iter = 7
-│   ϵ = 3.154873820110237e-13
-│   λ = -1.0635444099733644 - 2.0618524039270857e-17im
-└   Δt = 0.004216146
-┌ Info: VUMPS summary:
-│   ϵ = 3.154873820110237e-13
-│   λ = -1.0635444099733644 - 2.0618524039270857e-17im
-└   Δt = 0.938766166
+[ Info: VUMPS init:	obj = +4.927142607127e-01	err = 3.7065e-01
+[ Info: VUMPS   1:	obj = -1.062269158559e+00	err = 3.2878729027e-02	time = 1.11 sec
+[ Info: VUMPS   2:	obj = -1.063544409816e+00	err = 1.0900961086e-05	time = 0.01 sec
+[ Info: VUMPS   3:	obj = -1.063544409973e+00	err = 6.2659245120e-08	time = 0.01 sec
+[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 9.8860768603e-10	time = 0.01 sec
+[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 6.5293129644e-11	time = 0.00 sec
+[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 6.4544340049e-12	time = 0.00 sec
+[ Info: VUMPS conv 7:	obj = -1.063544409973e+00	err = 6.4503123241e-13	time = 1.14 sec
 
 ````
 
@@ -181,7 +127,7 @@ dot(ψ₀, ψ₀)
 ````
 
 ````
-0.9999999999999984 + 9.734886193402987e-17im
+0.9999999999999993 - 8.56544100434766e-17im
 ````
 
 so the loschmidth echo takes on the pleasant form
@@ -205,7 +151,7 @@ a single timestep is easy
 
 ````julia
 dt = 0.01
-ψₜ, envs = timestep(ψₜ, H₁, dt, TDVP(), envs);
+ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP(), envs);
 ````
 
 With performance in mind we should once again try to re-use these "envs" cache objects.
@@ -226,7 +172,7 @@ function infinite_sim(dt=0.05, finaltime=5.0)
         if t < 50dt # if t is sufficiently small, we increase the bond dimension
             ψₜ, envs = changebonds(ψₜ, H₁, OptimalExpand(; trscheme=truncdim(1)), envs)
         end
-        (ψₜ, envs) = timestep(ψₜ, H₁, dt, TDVP(), envs)
+        (ψₜ, envs) = timestep(ψₜ, H₁, 0, dt, TDVP(), envs)
         push!(echos, echo(ψₜ, ψ₀))
     end
 

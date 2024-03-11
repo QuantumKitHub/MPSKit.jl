@@ -18,7 +18,7 @@ function fidelity_susceptibility(state::Union{FiniteMPS,InfiniteMPS}, H₀::T,
         (vec, convhist) = linsolve(Tos, Tos, GMRES(; maxiter=maxiter, tol=tol)) do x
             return effective_excitation_hamiltonian(H₀, x, environments(x, H₀, henvs))
         end
-        convhist.converged == 0 && @info "failed to converge $(convhist.normres)"
+        convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
 
         return vec
     end

@@ -3,8 +3,13 @@ println("
 |   Algorithms   |
 ------------------
 ")
+module TestAlgorithms
 
-include("setup.jl")
+using ..TestSetup
+using Test, TestExtras
+using MPSKit
+using TensorKit
+using TensorKit: ℙ
 
 @testset "find_groundstate" verbose = true begin
     tol = 1e-8
@@ -16,11 +21,13 @@ include("setup.jl")
                      VUMPS(; tol=100 * tol, verbosity) &
                      GradientGrassmann(; tol, verbosity)]
 
-    H1 = force_planar(transverse_field_ising(; g=1.1))
+    g = 4.0
+    D = 6
+    H1 = force_planar(transverse_field_ising(; g))
 
     @testset "Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
-        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^15]), L)
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^D]), L)
         H = repeat(H1, L)
 
         v₀ = variance(ψ₀, H)
@@ -35,7 +42,7 @@ include("setup.jl")
 
     @testset "LazySum Infinite $i" for (i, alg) in enumerate(infinite_algs)
         L = alg isa IDMRG2 ? 2 : 1
-        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^16]), L)
+        ψ₀ = repeat(InfiniteMPS([ℙ^2], [ℙ^D]), L)
         Hlazy = repeat(Hlazy1, L)
 
         v₀ = variance(ψ₀, Hlazy)
@@ -51,33 +58,33 @@ include("setup.jl")
               expectation_value(ψ_nolazy, sum(Hlazy), envs_nolazy) atol = 1 - 06
     end
 
-    finite_algs = [DMRG(; verbose=verbosity > 0),
-                   DMRG2(; verbose=verbosity > 0, trscheme=truncdim(10)),
-                   GradientGrassmann(; tol=tol, verbosity=verbosity)]
+    finite_algs = [DMRG(; verbosity),
+                   DMRG2(; verbosity, trscheme=truncdim(D)),
+                   GradientGrassmann(; tol, verbosity, maxiter=300)]
 
-    H = force_planar(transverse_field_ising(; g=1.1))
+    H = force_planar(transverse_field_ising(; g))
 
     @testset "Finite $i" for (i, alg) in enumerate(finite_algs)
-        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
+        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^D)
 
         v₀ = variance(ψ₀, H)
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
         v = variance(ψ, H, envs)
 
-        @test sum(δ) < 100 * tol
+        @test sum(δ) < 1e-3
         @test v₀ > v && v < 1e-2 # energy variance should be low
     end
 
-    Hlazy = LazySum([H, H, H])
+    Hlazy = LazySum([3 * H, H, 5.557 * H])
 
     @testset "LazySum Finite $i" for (i, alg) in enumerate(finite_algs)
-        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10)
+        ψ₀ = FiniteMPS(rand, ComplexF64, 10, ℙ^2, ℙ^D)
 
         v₀ = variance(ψ₀, Hlazy)
         ψ, envs, δ = find_groundstate(ψ₀, Hlazy, alg)
         v = variance(ψ, Hlazy)
 
-        @test sum(δ) < 100 * tol
+        @test sum(δ) < 1e-3
         @test v₀ > v && v < 1e-2 # energy variance should be low
 
         ψ_nolazy, envs_nolazy, _ = find_groundstate(ψ₀, sum(Hlazy), alg)
@@ -176,7 +183,10 @@ end
 end
 
 @testset "leading_boundary" verbose = true begin
-    algs = [VUMPS(; tol=1e-5, verbosity=0), GradientGrassmann(; verbosity=0)]
+    tol = 1e-5
+    verbosity = 0
+    algs = [VUMPS(; tol, verbosity), VOMPS(; tol, verbosity),
+            GradientGrassmann(; verbosity)]
     mpo = force_planar(classical_ising())
 
     ψ₀ = InfiniteMPS([ℙ^2], [ℙ^10])
@@ -431,6 +441,7 @@ end
 end
 
 @testset "approximate" verbose = true begin
+    verbosity = 0
     @testset "mpo * infinite ≈ infinite" begin
         st = InfiniteMPS([ℙ^2, ℙ^2], [ℙ^10, ℙ^10])
         th = force_planar(repeat(transverse_field_ising(; g=4), 2))
@@ -441,10 +452,10 @@ end
         W1 = convert(DenseMPO, sW1)
         W2 = convert(DenseMPO, sW2)
 
-        st1, _ = approximate(st, (sW1, st), VUMPS(; verbosity=0))
-        st2, _ = approximate(st, (W2, st), VUMPS(; verbosity=0))
-        st3, _ = approximate(st, (W1, st), IDMRG1(; verbosity=0))
-        st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbosity=0))
+        st1, _ = approximate(st, (sW1, st), VOMPS(; verbosity))
+        st2, _ = approximate(st, (W2, st), VOMPS(; verbosity))
+        st3, _ = approximate(st, (W1, st), IDMRG1(; verbosity))
+        st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbosity))
         st5, _ = timestep(st, th, 0.0, dt, TDVP())
         st6 = changebonds(W1 * st, SvdCut(; trscheme=truncdim(10)))
 
@@ -457,7 +468,7 @@ end
         @test dim(space(nW1.opp[1, 1], 1)) == 1
     end
 
-    finite_algs = [DMRG(; verbosity=0), DMRG2(; verbosity=0, trscheme=truncdim(10))]
+    finite_algs = [DMRG(; verbosity), DMRG2(; verbosity, trscheme=truncdim(10))]
     @testset "finitemps1 ≈ finitemps2" for alg in finite_algs
         a = FiniteMPS(10, ℂ^2, ℂ^10)
         b = FiniteMPS(10, ℂ^2, ℂ^20)
@@ -524,4 +535,6 @@ end
 
     energies, values = exact_diagonalization(th; which=:SR)
     @test energies[1] ≈ sum(expectation_value(gs, th)) atol = 1e-5
+end
+
 end

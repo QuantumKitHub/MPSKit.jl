@@ -106,7 +106,7 @@ function Base.convert(::Type{RightGaugedQP},
 
     rBE, convhist = linsolve(tm, rBs[1], rBs[1], GMRES(), 1,
                              -exp(1im * input.momentum * len))
-    convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
+    convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
 
     rBs[1] = rBE
     for i in len:-1:2
@@ -147,7 +147,7 @@ function Base.convert(::Type{LeftGaugedQP},
 
     lBE, convhist = linsolve(flip(tm), lBs[end], lBs[end], GMRES(), 1,
                              -1 / exp(1im * input.momentum * len))
-    convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
+    convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
 
     lBs[end] = lBE
     for i in 1:(len - 1)

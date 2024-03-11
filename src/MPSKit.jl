@@ -10,6 +10,7 @@ using Accessors
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
 using Base: @kwdef
+using LoggingExtras
 
 # bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
@@ -35,7 +36,7 @@ export leftenv, rightenv
 
 # algos
 export find_groundstate!, find_groundstate, leading_boundary
-export VUMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
+export VUMPS, VOMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
 export excitations, FiniteExcited, QuasiparticleAnsatz
 export marek_gap, correlation_length, correlator
 export time_evolve, timestep!, timestep
@@ -59,7 +60,19 @@ abstract type Algorithm end
 @deprecate params(args...) environments(args...)
 @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
+# Abstract type defs
+abstract type Algorithm end
+abstract type Cache end # cache "manages" environments
+
+# submodules
+include("utility/dynamictols.jl")
+using .DynamicTols
+
 include("utility/defaults.jl")
+using .Defaults: VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
+include("utility/logging.jl")
+using .IterativeLoggers
+
 include("utility/periodicarray.jl")
 include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
@@ -91,8 +104,6 @@ include("operators/lazysum.jl")
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
-
-abstract type Cache end # cache "manages" environments
 
 include("environments/FinEnv.jl")
 include("environments/abstractinfenv.jl")
@@ -134,6 +145,7 @@ include("algorithms/excitation/dmrgexcitation.jl")
 include("algorithms/excitation/exci_transfer_system.jl")
 
 include("algorithms/statmech/vumps.jl")
+include("algorithms/statmech/vomps.jl")
 include("algorithms/statmech/gradient_grassmann.jl")
 
 include("algorithms/fidelity_susceptibility.jl")
