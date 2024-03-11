@@ -17,17 +17,18 @@ function Base.iterate(alg::IterativeSolver, state=alg.state)
         logcancel(alg)
         return nothing
     end
-    
+
     item = iterate!(alg)
     logiter(alg)
-    
+
     return item, alg.state
 end
 
 function solve!(args...)
     return LoggingExtras.withlevel(; args[end].verbosity) do
         iterator = initialize!(args...)
-        for _ in iterator end
+        for _ in iterator
+        end
         return finalize!(iterator)
     end
 end

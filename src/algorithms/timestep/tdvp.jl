@@ -14,7 +14,7 @@ algorithm for time evolution.
 @kwdef struct TDVP{F} <: Algorithm
     finalize::F = Defaults._finalize
     verbosity::Int = Defaults.verbosity
-    
+
     alg_gauge = UniformGauging()
     alg_integrate = Lanczos(; tol=Defaults.tol)
     alg_environments = Defaults.alg_environments()
@@ -43,7 +43,6 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
 
     regauge!(temp_ACs, temp_CRs, QRPos())
     gaugefix!(ψ, alg_gauge)
-    
 
     recalculate!(envs, ψ; alg.alg_environments.tol)
     return ψ, envs

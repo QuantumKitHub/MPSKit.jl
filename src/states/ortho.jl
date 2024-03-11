@@ -45,7 +45,7 @@ function UniformGauging(;
     end
 end
 
-const UG{side1, side2} = Tuple{UniformGauging{side1}, UniformGauging{side2}}
+const UG{side1,side2} = Tuple{UniformGauging{side1},UniformGauging{side2}}
 
 # Interface
 # ---------
@@ -62,13 +62,13 @@ end
 
 # expert mode
 function gaugefix!(ψ::InfiniteMPS,
-                 (alg₁, alg₂)::UG{side1, side2}) where {side1, side2}
+                   (alg₁, alg₂)::UG{side1,side2}) where {side1,side2}
     if side1 === :L
         copy!.(ψ.AR, ψ.AC)
     else
         copy!.(ψ.AL, ψ.AC)
     end
-    
+
     solve!(ψ.AL, ψ.AR, ψ.CR, alg₁)
     solve!(ψ.AL, ψ.AR, ψ.CR, alg₂)
     mul!.(ψ.AC, ψ.AL, ψ.CR)
@@ -79,9 +79,10 @@ end
 # --------------
 
 function initialize!(AL::PeriodicVector{A},
-                   AR::PeriodicVector{A},
-                   CR::PeriodicVector{B},
-                   alg::UniformGauging{side}) where {side, S, A<:GenericMPSTensor{S}, B<:MPSBondTensor{S}}
+                     AR::PeriodicVector{A},
+                     CR::PeriodicVector{B},
+                     alg::UniformGauging{side}) where {side,S,A<:GenericMPSTensor{S},
+                                                       B<:MPSBondTensor{S}}
     if side === :L
         log = IterLog("UniformGauging{:L}")
         A_tail = _transpose_tail.(AR)
@@ -92,10 +93,10 @@ function initialize!(AL::PeriodicVector{A},
         AC_tail = _similar_tail.(AL)
         workspace = (; AC_tail)
     end
-    
+
     state = (; AL, AR, CR, workspace, ϵ=Inf, iter=0, log)
     loginit!(log, Inf)
-    
+
     return IterativeSolver(alg, state)
 end
 
@@ -116,7 +117,7 @@ function iterate!(it::IterativeSolver{UniformGauging{:L}})
         _, vecs = eigsolve(flip(TransferMatrix(AR, AL)), CR[end], 1, :LM, alg_eigsolve)
         _, CR[end] = leftorth!(vecs[1]; alg=alg.alg_orth)
     end
-    
+
     C₀ = CR[end]
     for i in 1:length(AL)
         mul!(workspace.CA_tail[i], CR[i - 1], workspace.A_tail[i])
@@ -124,12 +125,12 @@ function iterate!(it::IterativeSolver{UniformGauging{:L}})
         AL[i], CR[i] = leftorth!(AL[i]; alg=alg.alg_orth)
     end
     normalize!(CR[end])
-    
+
     ϵ = oftype(ϵ, norm(C₀ - CR[end]))
     iter += 1
-    
+
     it.state = (; AL, AR, CR, workspace, ϵ, iter, log)
-    
+
     return AL, AR, CR
 end
 
@@ -143,7 +144,7 @@ function iterate!(it::IterativeSolver{UniformGauging{:R}})
         _, vecs = eigsolve(TransferMatrix(AL, AR), CR[end], 1, :LM, alg_eigsolve)
         CR[end], _ = rightorth!(vecs[1]; alg=alg.alg_orth)
     end
-    
+
     # rightorth step
     C₀ = CR[end]
     for i in length(AR):-1:1
@@ -153,13 +154,12 @@ function iterate!(it::IterativeSolver{UniformGauging{:R}})
         _repartition!(AR[i], tmp)
     end
     normalize!(CR[end])
-    
-    
+
     ϵ = oftype(ϵ, norm(C₀ - CR[end]))
     iter += 1
-    
+
     it.state = (; AL, AR, CR, workspace, ϵ, iter, log)
-    
+
     return AL, AR, CR
 end
 
@@ -205,8 +205,6 @@ function default_gauge_alg_eigsolve(tol, maxiter)
     return DynamicTol(eigalg, tol_min, tol_max, tol_factor)
 end
 
-
-
 # function regauge!(AC::PeriodicVector{<:GenericMPSTensor},
 #                   CR::PeriodicVector{<:MPSBondTensor}, alg::LQpos)
 #     for i in 1:length(AC)
@@ -219,8 +217,6 @@ end
 #     end
 #     return AC
 # end
-
-
 
 # first iteration:
 #   needs to set up correct tensors with correct spaces

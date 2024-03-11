@@ -115,15 +115,16 @@ function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, CR::AbstractV
                        convert(PeriodicVector{B}, CR), convert(PeriodicVector{A}, AC))
 end
 
-function InfiniteMPS(A::AbstractVector{TA}; order=:LR, kwargs...) where {TA<:GenericMPSTensor}
+function InfiniteMPS(A::AbstractVector{TA}; order=:LR,
+                     kwargs...) where {TA<:GenericMPSTensor}
     AC = PeriodicArray(A)
     AL = similar.(AC)
     AR = similar.(AL)
 
     CR = map(AL) do a
-        id(storagetype(a), dual(right_virtualspace(a)))
+        return id(storagetype(a), dual(right_virtualspace(a)))
     end
-    
+
     ψ = InfiniteMPS(AL, AR, CR, AC)
     gaugefix!(ψ; order, kwargs...)
     return ψ

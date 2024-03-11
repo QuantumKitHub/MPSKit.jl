@@ -164,7 +164,7 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
     # important to do it like this because Grassmann retract checks if base point is the same
     # and `uniform_gauge()` creates new AL (I think?)
     gaugefix!(ψ′; order=:LR) # needs to be this order for efficiency
-    
+
     # AR, CR = uniform_rightgauge(AL, ψ.CR[end])
     # ψ′ = InfiniteMPS(AL, AR, CR)
 
