@@ -4,8 +4,9 @@
 [Mixed TDVP](https://arxiv.org/abs/2007.15035) algorithm for time evolution.
 
 # Fields
-- `finite_alg::A`: algorithm to do the timestep of the finite part of the WindowMPS. This can be `TDVP2` to expand the bonddimension.
-- `infinite_alg::A`: algorithm to do the timestep of the infinite part of the WindowMPS
+- `left::A`: algorithm to do the timestep of the infinite part of the WindowMPS. 
+- `middle::B`: algorithm to do the timestep of the finite part of the WindowMPS. This can be `TDVP2` to expand the bonddimension.
+- `right::C`: algorithm to do the timestep of the right part of the WindowMPS. By default the same as left
 - `finalize::F`: user-supplied function which is applied after each timestep, with
     signature `finalize(t, Ψ, H, envs) -> Ψ, envs`. Can be used to enlarge the bond dimension of the infinite part.
 """
