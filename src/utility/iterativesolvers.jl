@@ -38,4 +38,4 @@ end
 # Defaults to very simple messages
 
 alg_id(alg::IterativeSolver) = objectid(alg)
-alg_group(alg::IterativeSolver) = nameof(alg.alg)
+alg_group(alg::IterativeSolver) = nameof(typeof(alg.alg))
