@@ -41,7 +41,7 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         end
     end
 
-    regauge!(temp_ACs, temp_CRs, QRPos())
+    regauge!(temp_ACs, temp_CRs)
     gaugefix!(ψ, alg_gauge)
 
     recalculate!(envs, ψ; alg.alg_environments.tol)

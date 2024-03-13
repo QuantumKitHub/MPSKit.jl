@@ -184,7 +184,7 @@ end
 # ------------------------------------------------------------------------------------------
 
 function regauge!(AC::PeriodicVector{<:GenericMPSTensor},
-                  CR::PeriodicVector{<:MPSBondTensor}, alg::QRpos)
+                  CR::PeriodicVector{<:MPSBondTensor}, alg::QRpos=TensorKit.QRPos())
     for i in 1:length(AC)
         # find AL that best fits these new AC and CR
         QAc, _ = leftorth!(AC[i]; alg)
