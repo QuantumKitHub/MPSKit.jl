@@ -27,8 +27,8 @@ function UniformGauging(;
                         tol=Defaults.tolgauge,
                         maxiter=Defaults.maxiter,
                         verbosity=VERBOSE_WARN,
-                        alg_leftorth=TensorKit.QRpos(),
-                        alg_rightorth=TensorKit.LQpos(),
+                        alg_leftorth=QRpos(),
+                        alg_rightorth=LQpos(),
                         alg_eigsolve=default_gauge_alg_eigsolve(tol, maxiter),
                         eig_miniter=10,
                         order::Symbol=:LR)
@@ -184,7 +184,7 @@ end
 # ------------------------------------------------------------------------------------------
 
 function regauge!(AC::PeriodicVector{<:GenericMPSTensor},
-                  CR::PeriodicVector{<:MPSBondTensor}, alg::QRpos=TensorKit.QRPos())
+                  CR::PeriodicVector{<:MPSBondTensor}, alg::QRpos=QRpos())
     for i in 1:length(AC)
         # find AL that best fits these new AC and CR
         QAc, _ = leftorth!(AC[i]; alg)

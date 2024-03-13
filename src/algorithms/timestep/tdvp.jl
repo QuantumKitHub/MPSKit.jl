@@ -17,7 +17,7 @@ algorithm for time evolution.
 
     alg_gauge = UniformGauging()
     alg_integrate = Lanczos(; tol=Defaults.tol)
-    alg_environments = Defaults.alg_environments()
+    alg_environments = Defaults.alg_environments(; dynamic_tols=false)
 end
 
 function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
@@ -42,7 +42,7 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
     end
 
     regauge!(temp_ACs, temp_CRs)
-    gaugefix!(ψ, alg_gauge)
+    gaugefix!(ψ, alg.alg_gauge)
 
     recalculate!(envs, ψ; alg.alg_environments.tol)
     return ψ, envs

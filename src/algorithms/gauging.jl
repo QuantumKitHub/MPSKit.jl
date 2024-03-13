@@ -30,7 +30,7 @@ function UniformGauging(;
                         tol=Defaults.tolgauge,
                         maxiter=Defaults.maxiter,
                         verbosity=VERBOSE_WARN,
-                        alg_leftorth=TensorKit.QRpos(),
+                        alg_leftorth=QRpos(),
                         alg_rightorth=TensorKit.LQpos(),
                         alg_eigsolve=default_gauge_alg_eigsolve(tol, maxiter),
                         eig_miniter=10,
@@ -52,7 +52,7 @@ via keyword arguments.
 - `maxiter::Int=Defaults.maxiter`: Maximum number of iterations.
 - `verbosity::Int=VERBOSE_WARN`: Verbosity level.
 - `order::Symbol=:LR`: Order of the gauge algorithm. Can be `:LR` or `:RL`.
-- `alg_leftorth=TensorKit.QRpos()`: Left-orthogonalization algorithm.
+- `alg_leftorth=QRpos()`: Left-orthogonalization algorithm.
 - `alg_rightorth=TensorKit.LQpos()`: Right-orthogonalization algorithm.
 - `alg_eigsolve=default_gauge_alg_eigsolve(tol, maxiter)`:
     Eigensolver algorithm for the gauge tensor.
@@ -158,7 +158,7 @@ mutable struct LeftGaugeIterable{TA<:GenericMPSTensor,TAᵀ<:AbstractTensorMap,
                                δ=Inf,
                                maxiter=Defaults.maxiter,
                                verbosity=VERBOSE_WARN,
-                               alg_leftorth::Alg₁=TensorKit.QRpos(),
+                               alg_leftorth::Alg₁=QRpos(),
                                alg_eigsolve::Alg₂=default_gauge_alg_eigsolve(tol, maxiter),
                                eig_miniter=10) where {TA,TAᵀ,TB,Alg₁,Alg₂}
         @assert all(isfullrank, A) "input tensors must be full rank.\n$(space.(A))"
