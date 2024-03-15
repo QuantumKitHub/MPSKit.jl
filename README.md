@@ -88,7 +88,7 @@ Z = @mpoham sum(σᶻ(){i} for i in vertices(FiniteChain(L)))
 
 M = @showprogress map(g_values) do g
     H = periodic_boundary_conditions(transverse_field_ising(; g=g), L)
-    groundstate, environment, δ = find_groundstate(init_state, H; verbosity=0)
+    groundstate, environment, δ = find_groundstate(init_state, H; verbose=false)
     return abs(sum(expectation_value(groundstate, Z))) / L
 end
 
