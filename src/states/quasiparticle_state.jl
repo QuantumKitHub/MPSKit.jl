@@ -359,7 +359,7 @@ end
 
 VectorInterface.scalartype(T::Type{<:QP}) = scalartype(eltype(T))
 
-function VectorInterface.zerovector(ϕ::QP, ::Type{S}) where S<:Number
+function VectorInterface.zerovector(ϕ::QP, ::Type{S}) where {S<:Number}
     ϕ = similar(ϕ, S)
     return zerovector!(ϕ)
 end
