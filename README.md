@@ -105,14 +105,14 @@ using MPSKit, MPSKitModels, TensorKit
 using ProgressMeter, Plots # for demonstration purposes
 
 D = 4 # bonddimension
-init_state = InfiniteMPS(ℂ^2, ℂ^D)
+init_state = MPSKit.InfiniteMPS(ℂ^2, ℂ^D)
 
 g_values = 0.1:0.1:2
 Z = @mpoham sum(σᶻ(){i} for i in vertices(InfiniteChain()))
 
 M = @showprogress map(g_values) do g
     H = transverse_field_ising(; g=g)
-    groundstate, environment, δ = find_groundstate(init_state, H, VUMPS(; verbosity=0))
+    groundstate, environment, δ = find_groundstate(init_state, H, VUMPS(; verbose=false))
     return abs(sum(expectation_value(groundstate, Z)))
 end
 
