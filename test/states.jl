@@ -178,7 +178,7 @@ end
 
     @testset "Infinite" for (th, D, d) in
                             [(force_planar(transverse_field_ising()), ℙ^10, ℙ^2),
-                             (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 1, 0 => 3),
+                             (heisenberg_XXX(SU2Irrep; spin=1), Rep[SU₂](1 => 3, 0 => 2),
                               Rep[SU₂](1 => 1))]
         period = rand(1:4)
         ψ = InfiniteMPS(fill(d, period), fill(D, period))

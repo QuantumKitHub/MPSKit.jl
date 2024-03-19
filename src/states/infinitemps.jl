@@ -137,57 +137,59 @@ function InfiniteMPS(f, elt::Type{<:Number}, ds::AbstractVector{Int},
 end
 
 function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    AR = PeriodicArray(copy.(A)) # copy to avoid side effects
+    all(isfullrank, A) || @warn "some tensors are not full rank"
     leftvspaces = circshift(_firstspace.(AR), -1)
     rightvspaces = conj.(_lastspace.(AR))
     isnothing(findfirst(leftvspaces .!= rightvspaces)) ||
         throw(SpaceMismatch("incompatible virtual spaces $leftvspaces and $rightvspaces"))
-    
+
+    AR = PeriodicArray(copy.(A)) # copy to avoid side effects
+
     # initial guess for the gauge tensor
     C₀ = isomorphism(storagetype(eltype(A)), leftvspaces[end], rightvspaces[end])
-    
+
     # initialize tensor storage
     AL = similar.(AR)
     AC = similar.(AR)
     CR = similar(AR, typeof(C₀))
-    ψ = InfiniteMPS{eltype(AL), eltype(CR)}(AL, AR, CR, AC)
-    
+    ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
+
     # gaugefix the MPS
     uniform_gaugefix!(ψ, A, C₀; kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.CR)
-    
+
     return ψ
 end
 
 function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor; kwargs...)
     AL = PeriodicArray(copy.(AL))
-    
+
     # initialize tensor storage
     AC = similar.(AL)
     AR = similar.(AL)
     CR = similar(AR, typeof(C₀))
-    ψ = InfiniteMPS{eltype(AL), eltype(CR)}(AL, AR, CR, AC)
-    
+    ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
+
     # gaugefix the MPS
     uniform_gaugefix!(ψ, AL, C₀; order=:R, kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.CR)
-    
+
     return ψ
 end
 
 function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}; kwargs...)
     AR = PeriodicArray(copy.(AR))
-    
+
     # initialize tensor storage
     AC = similar.(AR)
     AL = similar.(AR)
     CR = similar(AR, typeof(C₀))
-    ψ = InfiniteMPS{eltype(AL), eltype(CR)}(AL, AR, CR, AC)
-    
+    ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
+
     # gaugefix the MPS
     uniform_gaugefix!(ψ, AR, C₀; order=:L, kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.CR)
-    
+
     return ψ
 end
 

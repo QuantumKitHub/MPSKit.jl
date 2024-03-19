@@ -64,6 +64,20 @@ function MPSTensor(A::AbstractArray{T}) where {T<:Number}
     return t
 end
 
+"""
+    isfullrank(A::GenericMPSTensor)
+
+Determine whether the given tensor is full rank, i.e. whether both the map from the left
+virtual space and the physical space to the right virtual space, and the map from the right
+virtual space and the physical space to the left virtual space are injective.
+"""
+function isfullrank(A::GenericMPSTensor)
+    Vₗ = _firstspace(A)
+    Vᵣ = _lastspace(A)
+    P = ⊗(space.(Ref(A), 2:(numind(A) - 1))...)
+    return Vₗ ⊗ P ≿ Vᵣ' && Vₗ' ≾ P ⊗ Vᵣ
+end
+
 #===========================================================================================
 MPS types
 ===========================================================================================#
