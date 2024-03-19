@@ -260,7 +260,7 @@ end
         H = MPOHamiltonian(nn)
         Δt = 0.1
         expH = make_time_mpo(H, Δt, WII())
-        
+
         O = convert(DenseMPO, expH)
         Op = periodic_boundary_conditions(O, 10)
         Op′ = changebonds(Op, SvdCut(; trscheme=truncdim(5)))
@@ -268,75 +268,75 @@ end
         @test dim(space(Op′[5], 1)) < dim(space(Op[5], 1))
     end
 
-    # @testset "infinite mps" begin
-    #     #random nn interaction
-    #     nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
-    #     nn += nn'
+    @testset "infinite mps" begin
+        #random nn interaction
+        nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+        nn += nn'
 
-    #     state = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
+        state = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
 
-    #     state_re = changebonds(state,
-    #                            RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
-    #     @test dot(state, state_re) ≈ 1 atol = 1e-8
+        state_re = changebonds(state,
+                               RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+        @test dot(state, state_re) ≈ 1 atol = 1e-8
 
-    #     state_oe, _ = changebonds(state,
-    #                               repeat(MPOHamiltonian(nn), 2),
-    #                               OptimalExpand(;
-    #                                             trscheme=truncdim(dim(Dspace) *
-    #                                                               dim(Dspace))))
-    #     @test dot(state, state_oe) ≈ 1 atol = 1e-8
+        state_oe, _ = changebonds(state,
+                                  repeat(MPOHamiltonian(nn), 2),
+                                  OptimalExpand(;
+                                                trscheme=truncdim(dim(Dspace) *
+                                                                  dim(Dspace))))
+        @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
-    #     state_vs, _ = changebonds(state, repeat(MPOHamiltonian(nn), 2),
-    #                               VUMPSSvdCut(; trscheme=notrunc()))
-    #     @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
+        state_vs, _ = changebonds(state, repeat(MPOHamiltonian(nn), 2),
+                                  VUMPSSvdCut(; trscheme=notrunc()))
+        @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
 
-    #     state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
-    #     @test dim(right_virtualspace(state_vs_tr, 1)) < dim(right_virtualspace(state_vs, 1))
-    # end
+        state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
+        @test dim(right_virtualspace(state_vs_tr, 1)) < dim(right_virtualspace(state_vs, 1))
+    end
 
-    # @testset "finite mps" begin
-    #     #random nn interaction
-    #     nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
-    #     nn += nn'
+    @testset "finite mps" begin
+        #random nn interaction
+        nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+        nn += nn'
 
-    #     state = FiniteMPS(10, pspace, Dspace)
+        state = FiniteMPS(10, pspace, Dspace)
 
-    #     state_re = changebonds(state,
-    #                            RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
-    #     @test dot(state, state_re) ≈ 1 atol = 1e-8
+        state_re = changebonds(state,
+                               RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+        @test dot(state, state_re) ≈ 1 atol = 1e-8
 
-    #     state_oe, _ = changebonds(state, MPOHamiltonian(nn),
-    #                               OptimalExpand(;
-    #                                             trscheme=truncdim(dim(Dspace) * dim(Dspace))))
-    #     @test dot(state, state_oe) ≈ 1 atol = 1e-8
+        state_oe, _ = changebonds(state, MPOHamiltonian(nn),
+                                  OptimalExpand(;
+                                                trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+        @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
-    #     state_tr = changebonds(state_oe, SvdCut(; trscheme=truncdim(dim(Dspace))))
+        state_tr = changebonds(state_oe, SvdCut(; trscheme=truncdim(dim(Dspace))))
 
-    #     @test dim(left_virtualspace(state_tr, 5)) < dim(right_virtualspace(state_oe, 5))
-    # end
+        @test dim(left_virtualspace(state_tr, 5)) < dim(right_virtualspace(state_oe, 5))
+    end
 
-    # @testset "MPSMultiline" begin
-    #     o = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
-    #     mpo = MPOMultiline(o)
+    @testset "MPSMultiline" begin
+        o = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+        mpo = MPOMultiline(o)
 
-    #     t = TensorMap(rand, ComplexF64, Dspace * pspace, Dspace)
-    #     state = MPSMultiline(fill(t, 1, 1))
+        t = TensorMap(rand, ComplexF64, Dspace * pspace, Dspace)
+        state = MPSMultiline(fill(t, 1, 1))
 
-    #     state_re = changebonds(state,
-    #                            RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
-    #     @test dot(state, state_re) ≈ 1 atol = 1e-8
+        state_re = changebonds(state,
+                               RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+        @test dot(state, state_re) ≈ 1 atol = 1e-8
 
-    #     state_oe, _ = changebonds(state, mpo,
-    #                               OptimalExpand(;
-    #                                             trscheme=truncdim(dim(Dspace) *
-    #                                                               dim(Dspace))))
-    #     @test dot(state, state_oe) ≈ 1 atol = 1e-8
+        state_oe, _ = changebonds(state, mpo,
+                                  OptimalExpand(;
+                                                trscheme=truncdim(dim(Dspace) *
+                                                                  dim(Dspace))))
+        @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
-    #     state_tr = changebonds(state_oe, SvdCut(; trscheme=truncdim(dim(Dspace))))
+        state_tr = changebonds(state_oe, SvdCut(; trscheme=truncdim(dim(Dspace))))
 
-    #     @test dim(right_virtualspace(state_tr, 1, 1)) <
-    #           dim(left_virtualspace(state_oe, 1, 1))
-    # end
+        @test dim(right_virtualspace(state_tr, 1, 1)) <
+              dim(left_virtualspace(state_oe, 1, 1))
+    end
 end
 
 @testset "Dynamical DMRG" verbose = true begin
