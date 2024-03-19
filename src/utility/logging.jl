@@ -36,7 +36,7 @@ function loginit!(log::IterLog, error::Float64,
                   objective::Union{Nothing,Number}=nothing)
     log.iter = 0
     log.error = error
-    
+
     if !isnothing(objective)
         warnapproxreal(objective)
         log.objective = real(objective)

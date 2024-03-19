@@ -87,7 +87,7 @@ function uniform_gaugefix!(ψ::InfiniteMPS, A, C₀=ψ.CR[end]; order=:LR, kwarg
     else
         throw(ArgumentError("Invalid order: $order"))
     end
-    
+
     return uniform_gaugefix!(ψ, A, C₀, alg)
 end
 
@@ -126,7 +126,7 @@ function uniform_leftorth!((AL, CR), A, C₀, alg::LeftCanonical)
         state = (; AL, CR, A, A_tail, CA_tail, iter=0, ϵ=Inf)
         it = IterativeSolver(alg, state)
         loginit!(log, it.ϵ)
-        
+
         # iteratively solve
         for (AL, CR) in it
             iter, ϵ = it.iter, it.ϵ
@@ -146,10 +146,10 @@ function Base.iterate(it::IterativeSolver{LeftCanonical}, state=it.state)
     C₀ = gauge_eigsolve_step!(it, state)
     C₁ = gauge_orth_step!(it, state)
     ϵ = oftype(state.ϵ, norm(C₀ - C₁))
-    
+
     iter = state.iter + 1
     it.state = (; state.AL, state.CR, state.A, state.A_tail, state.CA_tail, iter, ϵ)
-    
+
     return (it.state.AL, it.state.CR), it.state
 end
 
@@ -183,7 +183,7 @@ function uniform_rightorth!((AR, CR), A, C₀, alg::RightCanonical)
         state = (; AR, CR, A, AC_tail, iter=0, ϵ=Inf)
         it = IterativeSolver(alg, state)
         loginit!(log, it.ϵ)
-        
+
         # iteratively solve
         for (AR, CR) in it
             iter, ϵ = it.iter, it.ϵ
@@ -203,10 +203,10 @@ function Base.iterate(it::IterativeSolver{RightCanonical}, state=it.state)
     C₀ = gauge_eigsolve_step!(it, state)
     C₁ = gauge_orth_step!(it, state)
     ϵ = oftype(state.ϵ, norm(C₀ - C₁))
-    
+
     iter = state.iter + 1
     it.state = (; state.AR, state.CR, state.A, state.AC_tail, iter, ϵ)
-    
+
     return (it.state.AR, it.state.CR), it.state
 end
 
