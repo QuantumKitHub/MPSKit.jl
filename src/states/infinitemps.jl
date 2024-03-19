@@ -137,16 +137,28 @@ function InfiniteMPS(f, elt::Type{<:Number}, ds::AbstractVector{Int},
 end
 
 function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    all(isfullrank, A) || @warn "some tensors are not full rank"
+    # check spaces
+    leftvspaces = circshift(_firstspace.(A), -1)
+    rightvspaces = conj.(_lastspace.(A))
+    isnothing(findfirst(leftvspaces .!= rightvspaces)) ||
+        throw(SpaceMismatch("incompatible virtual spaces $leftvspaces and $rightvspaces"))
+
+    # check rank
+    A_copy = PeriodicArray(copy.(A)) # copy to avoid side effects
+    all(isfullrank, A_copy) ||
+        @warn "Constructing an MPS from tensors that are not full rank"
+    makefullrank!(A_copy)
+
+    AR = A_copy
+
     leftvspaces = circshift(_firstspace.(AR), -1)
     rightvspaces = conj.(_lastspace.(AR))
     isnothing(findfirst(leftvspaces .!= rightvspaces)) ||
         throw(SpaceMismatch("incompatible virtual spaces $leftvspaces and $rightvspaces"))
 
-    AR = PeriodicArray(copy.(A)) # copy to avoid side effects
-
     # initial guess for the gauge tensor
-    C₀ = isomorphism(storagetype(eltype(A)), leftvspaces[end], rightvspaces[end])
+    V = _firstspace(A_copy[1])
+    C₀ = isomorphism(storagetype(eltype(A_copy)), V, V)
 
     # initialize tensor storage
     AL = similar.(AR)
@@ -155,7 +167,7 @@ function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
     ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
 
     # gaugefix the MPS
-    uniform_gaugefix!(ψ, A, C₀; kwargs...)
+    uniform_gaugefix!(ψ, A_copy, C₀; kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.CR)
 
     return ψ
