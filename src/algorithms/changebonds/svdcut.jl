@@ -22,6 +22,7 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut)
     return normalize!(ψ)
 end
 
+# TODO: this assumes the MPO is infinite, and does weird things for finite MPOs.
 function changebonds(ψ::DenseMPO, alg::SvdCut)
     return convert(DenseMPO, changebonds(convert(InfiniteMPS, ψ), alg))
 end
