@@ -36,9 +36,11 @@ function loginit!(log::IterLog, error::Float64,
                   objective::Union{Nothing,Number}=nothing)
     log.iter = 0
     log.error = error
-
-    warnapproxreal(objective)
-    log.objective = real(objective)
+    
+    if !isnothing(objective)
+        warnapproxreal(objective)
+        log.objective = real(objective)
+    end
 
     log.t_init = log.t_prev = log.t_last = Base.time()
     log.state = INIT
@@ -51,8 +53,10 @@ function logiter!(log::IterLog, iter::Int, error::Float64,
     log.iter = iter
     log.error = error
 
-    warnapproxreal(objective)
-    log.objective = real(objective)
+    if !isnothing(objective)
+        warnapproxreal(objective)
+        log.objective = real(objective)
+    end
 
     log.t_prev = log.t_last
     log.t_last = Base.time()
@@ -66,8 +70,10 @@ function logfinish!(log::IterLog, iter::Int, error::Float64,
     log.iter = iter
     log.error = error
 
-    warnapproxreal(objective)
-    log.objective = real(objective)
+    if !isnothing(objective)
+        warnapproxreal(objective)
+        log.objective = real(objective)
+    end
 
     log.t_prev = log.t_last
     log.t_last = Base.time()
@@ -81,8 +87,10 @@ function logcancel!(log::IterLog, iter::Int, error::Float64,
     log.iter = iter
     log.error = error
 
-    warnapproxreal(objective)
-    log.objective = real(objective)
+    if !isnothing(objective)
+        warnapproxreal(objective)
+        log.objective = real(objective)
+    end
 
     log.t_prev = log.t_last
     log.t_last = Base.time()
