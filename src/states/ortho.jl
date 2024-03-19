@@ -70,14 +70,14 @@ end
 # ---------
 
 @doc """
-    uniform_gaugefix!(ψ::InfiniteMPS, A, C₀; kwargs...) -> ψ
-    uniform_gaugefix!(ψ::InfiniteMPS, A, C₀, alg::Algorithm) -> ψ
+    gaugefix!(ψ::InfiniteMPS, A, C₀; kwargs...) -> ψ
+    gaugefix!(ψ::InfiniteMPS, A, C₀, alg::Algorithm) -> ψ
 
 Bring an `InfiniteMPS` into a uniform gauge, using the specified algorithm.
 """
-uniform_gaugefix!
+gaugefix!
 
-function uniform_gaugefix!(ψ::InfiniteMPS, A, C₀=ψ.CR[end]; order=:LR, kwargs...)
+function gaugefix!(ψ::InfiniteMPS, A, C₀=ψ.CR[end]; order=:LR, kwargs...)
     alg = if order === :LR || order === :RL
         MixedCanonical(; order, kwargs...)
     elseif order === :L
@@ -88,27 +88,27 @@ function uniform_gaugefix!(ψ::InfiniteMPS, A, C₀=ψ.CR[end]; order=:LR, kwarg
         throw(ArgumentError("Invalid order: $order"))
     end
 
-    return uniform_gaugefix!(ψ, A, C₀, alg)
+    return gaugefix!(ψ, A, C₀, alg)
 end
 
 # expert mode: actual implementation
-function uniform_gaugefix!(ψ::InfiniteMPS, A, C₀, alg::MixedCanonical)
+function gaugefix!(ψ::InfiniteMPS, A, C₀, alg::MixedCanonical)
     if alg.order === :LR
-        uniform_gaugefix!(ψ, A, C₀, alg.alg_leftcanonical)
-        uniform_gaugefix!(ψ, ψ.AL, ψ.CR[end], alg.alg_rightcanonical)
+        gaugefix!(ψ, A, C₀, alg.alg_leftcanonical)
+        gaugefix!(ψ, ψ.AL, ψ.CR[end], alg.alg_rightcanonical)
     elseif alg.order === :RL
-        uniform_gaugefix!(ψ, A, C₀, alg.alg_rightcanonical)
-        uniform_gaugefix!(ψ, ψ.AR, ψ.CR[end], alg.alg_leftcanonical)
+        gaugefix!(ψ, A, C₀, alg.alg_rightcanonical)
+        gaugefix!(ψ, ψ.AR, ψ.CR[end], alg.alg_leftcanonical)
     else
         throw(ArgumentError("Invalid order: $(alg.order)"))
     end
     return ψ
 end
-function uniform_gaugefix!(ψ::InfiniteMPS, A, C₀, alg::LeftCanonical)
+function gaugefix!(ψ::InfiniteMPS, A, C₀, alg::LeftCanonical)
     uniform_leftorth!((ψ.AL, ψ.CR), A, C₀, alg)
     return ψ
 end
-function uniform_gaugefix!(ψ::InfiniteMPS, A, C₀, alg::RightCanonical)
+function gaugefix!(ψ::InfiniteMPS, A, C₀, alg::RightCanonical)
     uniform_rightorth!((ψ.AR, ψ.CR), A, C₀, alg)
     return ψ
 end

@@ -167,7 +167,7 @@ function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
     ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
 
     # gaugefix the MPS
-    uniform_gaugefix!(ψ, A_copy, C₀; kwargs...)
+    gaugefix!(ψ, A_copy, C₀; kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.CR)
 
     return ψ
@@ -183,7 +183,7 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
     ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
 
     # gaugefix the MPS
-    uniform_gaugefix!(ψ, AL, C₀; order=:R, kwargs...)
+    gaugefix!(ψ, AL, C₀; order=:R, kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.CR)
 
     return ψ
@@ -199,7 +199,7 @@ function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}
     ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
 
     # gaugefix the MPS
-    uniform_gaugefix!(ψ, AR, C₀; order=:L, kwargs...)
+    gaugefix!(ψ, AR, C₀; order=:L, kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.CR)
 
     return ψ
