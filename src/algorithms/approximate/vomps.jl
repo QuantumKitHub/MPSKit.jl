@@ -33,7 +33,7 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
                 end
             else
                 for col in 1:size(ψ, 2)
-                    tem_ACs[:, col] = _vomps_localupdate(col, ψ, toapprox, envs)
+                    temp_ACs[:, col] = _vomps_localupdate(col, ψ, toapprox, envs)
                 end
             end
 
