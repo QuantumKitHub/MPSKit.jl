@@ -111,6 +111,7 @@ include("environments/multipleenv.jl")
 include("environments/idmrgenv.jl")
 include("environments/lazylincocache.jl")
 
+include("algorithms/fixedpoint.jl")
 include("algorithms/derivatives.jl")
 include("algorithms/expval.jl")
 include("algorithms/toolbox.jl")
