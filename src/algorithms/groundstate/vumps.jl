@@ -75,20 +75,18 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
 end
 
 function _vumps_localupdate(loc, ψ, H, envs, eigalg, factalg=QRpos())
-    AC′, C′ = @static if Defaults.parallelize_sites
+    @static if Defaults.parallelize_sites
         @sync begin
             Threads.@spawn begin
-                _, acvecs = eigsolve(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], 1, :SR, eigalg)
+                _, AC′ = fixedpoint(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], :SR, eigalg)
             end
             Threads.@spawn begin
-                _, crvecs = eigsolve(∂∂C(loc, ψ, H, envs), ψ.CR[loc], 1, :SR, eigalg)
+                _, C′ = fixedpoint(∂∂C(loc, ψ, H, envs), ψ.CR[loc], :SR, eigalg)
             end
         end
-        acvecs[1], crvecs[1]
     else
-        _, acvecs = eigsolve(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], 1, :SR, eigalg)
-        _, crvecs = eigsolve(∂∂C(loc, ψ, H, envs), ψ.CR[loc], 1, :SR, eigalg)
-        acvecs[1], crvecs[1]
+        _, AC′ = fixedpoint(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], :SR, eigalg)
+        _, C′ = fixedpoint(∂∂C(loc, ψ, H, envs), ψ.CR[loc], :SR, eigalg)
     end
     return regauge!(AC′, C′; alg=factalg)
 end

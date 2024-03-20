@@ -160,8 +160,6 @@ function mixed_fixpoints(above::MPSMultiline, mpo::MPOMultiline, below::MPSMulti
 
                 packed_init = $L0 isa Vector ? RecursiveVec($L0) : $L0
                 (_, Ls, convhist) = eigsolve(flip(E_LL), packed_init, 1, :LM, $solver)
-                convhist.converged < 1 &&
-                    @warn "GL failed to converge: normres = $(convhist.normres)"
                 L0 = $L0 isa Vector ? Ls[1].vecs : Ls[1]
             end
             Threads.@spawn begin

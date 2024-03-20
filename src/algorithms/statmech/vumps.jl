@@ -32,28 +32,28 @@ function leading_boundary(ψ::MPSMultiline, H, alg::VUMPS, envs=environments(ψ,
                     Threads.@spawn begin
                         H_AC = ∂∂AC($col, $ψ, $H, $envs)
                         ac = RecursiveVec($ψ.AC[:, col])
-                        _, acvecs = eigsolve(H_AC, ac, 1, :LM, alg_eigsolve)
-                        $temp_ACs[:, col] = acvecs[1].vecs[:]
+                        _, ac′ = fixedpoint(H_AC, ac, :LM, alg_eigsolve)
+                        $temp_ACs[:, col] = ac′.vecs[:]
                     end
 
                     Threads.@spawn begin
                         H_C = ∂∂C($col, $ψ, $H, $envs)
                         c = RecursiveVec($ψ.CR[:, col])
-                        _, cvecs = eigsolve(H_C, c, 1, :LM, alg_eigsolve)
-                        $temp_Cs[:, col] = cvecs[1].vecs[:]
+                        _, c′ = fixedpoint(H_C, c, :LM, alg_eigsolve)
+                        $temp_Cs[:, col] = c′.vecs[:]
                     end
                 end
             else
                 for col in 1:size(ψ, 2)
                     H_AC = ∂∂AC(col, ψ, H, envs)
                     ac = RecursiveVec(ψ.AC[:, col])
-                    _, acvecs = eigsolve(H_AC, ac, 1, :LM, alg_eigsolve)
-                    temp_ACs[:, col] = acvecs[1].vecs[:]
+                    _, ac′ = fixedpoint(H_AC, ac, :LM, alg_eigsolve)
+                    temp_ACs[:, col] = ac′.vecs[:]
 
                     H_C = ∂∂C(col, ψ, H, envs)
                     c = RecursiveVec(ψ.CR[:, col])
-                    _, cvecs = eigsolve(H_C, c, 1, :LM, alg_eigsolve)
-                    temp_Cs[:, col] = cvecs[1].vecs[:]
+                    _, c′ = fixedpoint(H_C, c, :LM, alg_eigsolve)
+                    temp_Cs[:, col] = c′.vecs[:]
                 end
             end
 
