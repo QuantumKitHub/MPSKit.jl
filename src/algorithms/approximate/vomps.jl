@@ -27,12 +27,13 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
         for iter in 1:(alg.maxiter)
             @static if Defaults.parallelize_sites
                 @sync for col in 1:size(ψ, 2)
-                    Threads.@spawn _vomps_localupdate!(temp_ACs[:, col], col, ψ, toapprox,
-                                                       envs)
+                    Threads.@spawn begin
+                        temp_ACs[:, col] = _vomps_localupdate(col, ψ, toapprox, envs)
+                    end
                 end
             else
                 for col in 1:size(ψ, 2)
-                    _vomps_localupdate!(temp_ACs[:, col], col, ψ, toapprox, envs)
+                    temp_ACs[:, col] = _vomps_localupdate(col, ψ, toapprox, envs)
                 end
             end
 
@@ -61,24 +62,19 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
     return ψ, envs, ϵ
 end
 
-function _vomps_localupdate!(AC′, loc, ψ, (O, ψ₀), envs, factalg=QRpos())
-    local Q_AC, Q_C
+function _vomps_localupdate(loc, ψ, (O, ψ₀), envs, factalg=QRpos())
     @static if Defaults.parallelize_sites
         @sync begin
             Threads.@spawn begin
                 tmp_AC = circshift([ac_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
-                Q_AC = first.(leftorth!.(tmp_AC; alg=factalg))
             end
             Threads.@spawn begin
                 tmp_C = circshift([c_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
-                Q_C = first.(leftorth!.(tmp_C; alg=factalg))
             end
         end
     else
         tmp_AC = circshift([ac_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
-        Q_AC = first.(leftorth!.(tmp_AC; alg=factalg))
         tmp_C = circshift([c_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
-        Q_C = first.(leftorth!.(tmp_C; alg=factalg))
     end
-    return mul!.(AC′, Q_AC, adjoint.(Q_C))
+    return regauge!.(tmp_AC, tmp_C; alg=factalg)
 end

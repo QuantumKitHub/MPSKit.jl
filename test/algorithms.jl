@@ -257,13 +257,15 @@ end
         #random nn interaction
         nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
+        H = MPOHamiltonian(nn)
+        Δt = 0.1
+        expH = make_time_mpo(H, Δt, WII())
 
-        mpo1 = periodic_boundary_conditions(convert(DenseMPO,
-                                                    make_time_mpo(MPOHamiltonian(nn), 0.1,
-                                                                  WII())), 10)
-        mpo2 = changebonds(mpo1, SvdCut(; trscheme=truncdim(5)))
+        O = convert(DenseMPO, expH)
+        Op = periodic_boundary_conditions(O, 10)
+        Op′ = changebonds(Op, SvdCut(; trscheme=truncdim(5)))
 
-        @test dim(space(mpo2[5], 1)) < dim(space(mpo1[5], 1))
+        @test dim(space(Op′[5], 1)) < dim(space(Op[5], 1))
     end
 
     @testset "infinite mps" begin

@@ -70,6 +70,7 @@ include("utility/defaults.jl")
 using .Defaults: VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
 include("utility/logging.jl")
 using .IterativeLoggers
+include("utility/iterativesolvers.jl")
 
 include("utility/periodicarray.jl")
 include("utility/multiline.jl")

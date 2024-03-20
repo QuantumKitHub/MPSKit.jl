@@ -137,35 +137,72 @@ function InfiniteMPS(f, elt::Type{<:Number}, ds::AbstractVector{Int},
 end
 
 function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    AR = PeriodicArray(copy.(A)) # copy to avoid side effects
+    # check spaces
+    leftvspaces = circshift(_firstspace.(A), -1)
+    rightvspaces = conj.(_lastspace.(A))
+    isnothing(findfirst(leftvspaces .!= rightvspaces)) ||
+        throw(SpaceMismatch("incompatible virtual spaces $leftvspaces and $rightvspaces"))
+
+    # check rank
+    A_copy = PeriodicArray(copy.(A)) # copy to avoid side effects
+    all(isfullrank, A_copy) ||
+        @warn "Constructing an MPS from tensors that are not full rank"
+    makefullrank!(A_copy)
+
+    AR = A_copy
+
     leftvspaces = circshift(_firstspace.(AR), -1)
     rightvspaces = conj.(_lastspace.(AR))
     isnothing(findfirst(leftvspaces .!= rightvspaces)) ||
         throw(SpaceMismatch("incompatible virtual spaces $leftvspaces and $rightvspaces"))
 
-    CR = PeriodicArray(isomorphism.(storagetype(eltype(A)), leftvspaces, leftvspaces))
+    # initial guess for the gauge tensor
+    V = _firstspace(A_copy[1])
+    C₀ = isomorphism(storagetype(eltype(A_copy)), V, V)
+
+    # initialize tensor storage
     AL = similar.(AR)
+    AC = similar.(AR)
+    CR = similar(AR, typeof(C₀))
+    ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
 
-    uniform_leftorth!(AL, CR, AR; kwargs...)
-    uniform_rightorth!(AR, CR, AL; kwargs...)
+    # gaugefix the MPS
+    gaugefix!(ψ, A_copy, C₀; kwargs...)
+    mul!.(ψ.AC, ψ.AL, ψ.CR)
 
-    return InfiniteMPS(AL, AR, CR)
+    return ψ
 end
 
 function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor; kwargs...)
-    CR = PeriodicArray(fill(copy(C₀), length(AL)))
     AL = PeriodicArray(copy.(AL))
-    AR = similar(AL)
-    uniform_rightorth!(AR, CR, AL; kwargs...)
-    return InfiniteMPS(AL, AR, CR)
+
+    # initialize tensor storage
+    AC = similar.(AL)
+    AR = similar.(AL)
+    CR = similar(AR, typeof(C₀))
+    ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
+
+    # gaugefix the MPS
+    gaugefix!(ψ, AL, C₀; order=:R, kwargs...)
+    mul!.(ψ.AC, ψ.AL, ψ.CR)
+
+    return ψ
 end
 
 function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    CR = PeriodicArray(fill(copy(C₀), length(AR)))
     AR = PeriodicArray(copy.(AR))
-    AL = similar(AR)
-    uniform_leftorth!(AL, CR, AR; kwargs...)
-    return InfiniteMPS(AL, AR, CR)
+
+    # initialize tensor storage
+    AC = similar.(AR)
+    AL = similar.(AR)
+    CR = similar(AR, typeof(C₀))
+    ψ = InfiniteMPS{eltype(AL),eltype(CR)}(AL, AR, CR, AC)
+
+    # gaugefix the MPS
+    gaugefix!(ψ, AR, C₀; order=:L, kwargs...)
+    mul!.(ψ.AC, ψ.AL, ψ.CR)
+
+    return ψ
 end
 
 #===========================================================================================
