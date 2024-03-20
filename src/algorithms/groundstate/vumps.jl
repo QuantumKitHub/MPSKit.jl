@@ -74,7 +74,7 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
     return ψ, envs, ϵ
 end
 
-function _vumps_localupdate!(AC′, loc, ψ, H, envs, eigalg, factalg=QRpos())
+function _vumps_localupdate(loc, ψ, H, envs, eigalg, factalg=QRpos())
     AC′, C′ = @static if Defaults.parallelize_sites
         @sync begin
             Threads.@spawn begin
