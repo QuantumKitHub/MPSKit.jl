@@ -60,12 +60,7 @@ function leading_boundary(ψ::MPSMultiline, O::MPOMultiline, alg::VOMPS,
                 end
             end
 
-            for row in 1:size(ψ, 1), col in 1:size(ψ, 2)
-                QAc, _ = leftorth!(temp_ACs[row, col]; alg=TensorKit.QRpos())
-                Qc, _ = leftorth!(temp_Cs[row, col]; alg=TensorKit.QRpos())
-                temp_ACs[row, col] = QAc * adjoint(Qc)
-            end
-
+            regauge!.(temp_ACs, temp_Cs; alg=TensorKit.QRpos())
             alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
             ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 

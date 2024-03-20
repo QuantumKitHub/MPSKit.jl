@@ -37,17 +37,14 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             @static if Defaults.parallelize_sites
-                @sync begin
-                    for loc in 1:length(ψ)
-                        Threads.@spawn begin
-                            _vumps_localupdate!(temp_ACs[loc], loc, ψ, H, envs,
-                                                alg_eigsolve)
-                        end
+                @sync for loc in 1:length(ψ)
+                    Threads.@spawn begin
+                        temp_ACs[loc] = _vumps_localupdate(loc, ψ, H, envs, alg_eigsolve)
                     end
                 end
             else
                 for loc in 1:length(ψ)
-                    _vumps_localupdate!(temp_ACs[loc], loc, ψ, H, envs, alg_eigsolve)
+                    temp_ACs[loc] = _vumps_localupdate(loc, ψ, H, envs, alg_eigsolve)
                 end
             end
 
@@ -78,23 +75,20 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
 end
 
 function _vumps_localupdate!(AC′, loc, ψ, H, envs, eigalg, factalg=QRpos())
-    local Q_AC, Q_C
-    @static if Defaults.parallelize_sites
+    AC′, C′ = @static if Defaults.parallelize_sites
         @sync begin
             Threads.@spawn begin
                 _, acvecs = eigsolve(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], 1, :SR, eigalg)
-                Q_AC, _ = TensorKit.leftorth!(acvecs[1]; alg=factalg)
             end
             Threads.@spawn begin
                 _, crvecs = eigsolve(∂∂C(loc, ψ, H, envs), ψ.CR[loc], 1, :SR, eigalg)
-                Q_C, _ = TensorKit.leftorth!(crvecs[1]; alg=factalg)
             end
         end
+        acvecs[1], crvecs[1]
     else
         _, acvecs = eigsolve(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], 1, :SR, eigalg)
-        Q_AC, _ = TensorKit.leftorth!(acvecs[1]; alg=factalg)
         _, crvecs = eigsolve(∂∂C(loc, ψ, H, envs), ψ.CR[loc], 1, :SR, eigalg)
-        Q_C, _ = TensorKit.leftorth!(crvecs[1]; alg=factalg)
+        acvecs[1], crvecs[1]
     end
-    return mul!(AC′, Q_AC, adjoint(Q_C))
+    return regauge!(AC′, C′; alg=factalg)
 end

@@ -113,6 +113,30 @@ function gaugefix!(ψ::InfiniteMPS, A, C₀, alg::RightCanonical)
     return ψ
 end
 
+@doc """
+    regauge!(AC::GenericMPSTensor, CR::MPSBondTensor; alg=QRpos()) -> AL
+    regauge!(CL::MPSBondTensor, AC::GenericMPSTensor; alg=LQpos()) -> AR
+
+Bring updated `AC` and `C` tensors back into a consistent set of left or right canonical
+tensors. This minimizes `∥AC - AL * CR∥` or `∥AC - CL * AR∥`. The optimal algorithm uses
+`Polar()` decompositions, but `QR`-based algorithms are typically more performant. Note that
+the first signature is slightly faster, as it avoids an intermediate transposition.
+"""
+regauge!
+
+function regauge!(AC::GenericMPSTensor, CR::MPSBondTensor; alg=QRpos())
+    Q_AC, _ = leftorth!(AC; alg)
+    Q_C, _ = leftorth!(CR; alg)
+    return mul!(AC, Q_AC, Q_C')
+end
+function regauge!(CL::MPSBondTensor, AC::GenericMPSTensor; alg=LQpos())
+    AC_tail = _transpose_tail(AC)
+    _, Q_AC = rightorth!(AC_tail; alg)
+    _, Q_C = rightorth!(CL; alg)
+    AR_tail = mul!(AC_tail, Q_C', Q_AC)
+    return _transpose_front(AR_tail)
+end
+
 # Implementation
 # --------------
 
