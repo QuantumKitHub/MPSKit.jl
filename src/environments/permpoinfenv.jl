@@ -150,12 +150,7 @@ function mixed_fixpoints(above::MPSMultiline, mpo::MPOMultiline, below::MPSMulti
         Os = mpo[row, :]
         ALs_top, ALs_bot = above[row].AL, below[row + 1].AL
         ARs_top, ARs_bot = above[row].AR, below[row + 1].AR
-        
-        c_above = above[row]
-        c_below = below[row + 1]
-        
         L0, R0 = init[row]
-
         @sync begin
             Threads.@spawn begin
                 E_LL = TransferMatrix(ALs_top, Os, ALs_bot)
@@ -163,25 +158,25 @@ function mixed_fixpoints(above::MPSMultiline, mpo::MPOMultiline, below::MPSMulti
                 # compute rest of unitcell
                 for col in 2:numcols
                     GLs[row, col] = GLs[row, col - 1] *
-                                       TransferMatrix(ALs_top[col - 1], Os[col - 1],
-                                                      ALs_bot[col - 1])
+                                    TransferMatrix(ALs_top[col - 1], Os[col - 1],
+                                                   ALs_bot[col - 1])
                 end
             end
-            
+
             Threads.@spawn begin
                 E_RR = TransferMatrix(ARs_top, Os, ARs_bot)
                 _, GRs[row, end] = fixedpoint(E_RR, R0, :LM, solver)
                 # compute rest of unitcell
                 for col in (numcols - 1):-1:1
                     GRs[row, col] = TransferMatrix(ARs_top[col + 1], Os[col + 1],
-                                                       ARs_bot[col + 1]) *
-                                        GRs[row, col + 1]
+                                                   ARs_bot[col + 1]) *
+                                    GRs[row, col + 1]
                 end
             end
         end
 
         # fix normalization
-        CRs_top, CRs_bot = c_above.CR, c_below.CR
+        CRs_top, CRs_bot = above[row].CR, below[row + 1].CR
         for col in 1:numcols
             λ = dot(CRs_bot[col],
                     MPO_∂∂C(GLs[row, col + 1], GRs[row, col]) * CRs_top[col])

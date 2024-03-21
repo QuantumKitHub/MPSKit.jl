@@ -259,7 +259,7 @@ function TensorKit.dot(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; krylovdim=30)
     init = similar(ψ₁.AL[1], _firstspace(ψ₂.AL[1]) ← _firstspace(ψ₁.AL[1]))
     randomize!(init)
     val, = fixedpoint(TransferMatrix(ψ₂.AL, ψ₁.AL), init, :LM,
-                                 Arnoldi(; krylovdim=krylovdim))
+                      Arnoldi(; krylovdim=krylovdim))
     return val
 end
 

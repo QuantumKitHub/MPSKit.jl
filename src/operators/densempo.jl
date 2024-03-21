@@ -92,6 +92,6 @@ function TensorKit.dot(a::InfiniteMPS, mpo::DenseMPO, b::InfiniteMPS; krylovdim=
     randomize!(init)
 
     val, = fixedpoint(TransferMatrix(b.AL, mpo.opp, a.AL), init, :LM,
-                                      Arnoldi(; krylovdim=krylovdim))
+                      Arnoldi(; krylovdim=krylovdim))
     return val
 end
