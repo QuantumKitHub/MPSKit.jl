@@ -32,9 +32,9 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
             zerovector!(ϵs)
             for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
                 h = ∂∂AC(pos, ψ, H, envs)
-                _, vecs = eigsolve(h, ψ.AC[pos], 1, :SR, alg_eigsolve)
+                _, vec = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
                 ϵs[pos] = max(ϵs[pos], calc_galerkin(ψ, pos, envs))
-                ψ.AC[pos] = vecs[1]
+                ψ.AC[pos] = vec
             end
             ϵ = maximum(ϵs)
 
@@ -91,8 +91,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
             for pos in 1:(length(ψ) - 1)
                 @plansor ac2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
 
-                _, vecs = eigsolve(∂∂AC2(pos, ψ, H, envs), ac2, 1, :SR, alg_eigsolve)
-                newA2center = first(vecs)
+                _, newA2center = fixedpoint(∂∂AC2(pos, ψ, H, envs), ac2, :SR, alg_eigsolve)
 
                 al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
                 normalize!(c)
@@ -108,8 +107,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
             for pos in (length(ψ) - 2):-1:1
                 @plansor ac2[-1 -2; -3 -4] := ψ.AL[pos][-1 -2; 1] * ψ.AC[pos + 1][1 -4; -3]
 
-                _, vecs = eigsolve(∂∂AC2(pos, ψ, H, envs), ac2, 1, :SR, alg_eigsolve)
-                newA2center = first(vecs)
+                _, newA2center = fixedpoint(∂∂AC2(pos, ψ, H, envs), ac2, :SR, alg_eigsolve)
 
                 al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
                 normalize!(c)

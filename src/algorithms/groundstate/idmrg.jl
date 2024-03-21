@@ -33,21 +33,17 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
             # left to right sweep
             for pos in 1:length(ψ)
                 h = ∂∂AC(pos, ψ, H, envs)
-                _, vecs = eigsolve(h, ψ.AC[pos], 1, :SR, alg_eigsolve)
-
-                ψ.AC[pos] = vecs[1]
-                ψ.AL[pos], ψ.CR[pos] = leftorth!(vecs[1])
-
+                _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
+                ψ.AL[pos], ψ.CR[pos] = leftorth!(ψ.AC[pos])
                 update_leftenv!(envs, ψ, H, pos + 1)
             end
 
             # right to left sweep
             for pos in length(ψ):-1:1
                 h = ∂∂AC(pos, ψ, H, envs)
-                _, vecs = eigsolve(h, ψ.AC[pos], 1, :SR, alg_eigsolve)
+                _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
 
-                ψ.AC[pos] = vecs[1]
-                ψ.CR[pos - 1], temp = rightorth!(_transpose_tail(vecs[1]))
+                ψ.CR[pos - 1], temp = rightorth!(_transpose_tail(ψ.AC[pos]))
                 ψ.AR[pos] = _transpose_front(temp)
 
                 update_rightenv!(envs, ψ, H, pos - 1)
@@ -112,9 +108,9 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             for pos in 1:(length(ψ) - 1)
                 ac2 = ψ.AC[pos] * _transpose_tail(ψ.AR[pos + 1])
                 h_ac2 = ∂∂AC2(pos, ψ, H, envs)
-                _, vecs, _ = eigsolve(h_ac2, ac2, 1, :SR, alg_eigsolve)
+                _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())
+                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=TensorKit.SVD())
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -130,9 +126,9 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             @plansor ac2[-1 -2; -3 -4] := ψ.AC[end][-1 -2; 1] * inv(ψ.CR[0])[1; 2] *
                                           ψ.AL[1][2 -4; 3] * ψ.CR[1][3; -3]
             h_ac2 = ∂∂AC2(0, ψ, H, envs)
-            _, vecs, _ = eigsolve(h_ac2, ac2, 1, :SR, alg_eigsolve)
+            _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-            al, c, ar, = tsvd!(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())
+            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=TensorKit.SVD())
             normalize!(c)
 
             ψ.AC[end] = al * c
@@ -152,9 +148,9 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             for pos in (length(ψ) - 1):-1:1
                 ac2 = ψ.AL[pos] * _transpose_tail(ψ.AC[pos + 1])
                 h_ac2 = ∂∂AC2(pos, ψ, H, envs)
-                _, vecs, _ = eigsolve(h_ac2, ac2, 1, :SR, alg_eigsolve)
+                _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())
+                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=TensorKit.SVD())
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -171,8 +167,8 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             @plansor ac2[-1 -2; -3 -4] := ψ.CR[end - 1][-1; 1] * ψ.AR[end][1 -2; 2] *
                                           inv(ψ.CR[end])[2; 3] * ψ.AC[1][3 -4; -3]
             h_ac2 = ∂∂AC2(0, ψ, H, envs)
-            _, vecs, = eigsolve(h_ac2, ac2, 1, :SR, alg_eigsolve)
-            al, c, ar, = tsvd!(vecs[1]; trunc=alg.trscheme, alg=TensorKit.SVD())
+            _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
+            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=TensorKit.SVD())
             normalize!(c)
 
             ψ.AR[end] = _transpose_front(inv(ψ.CR[end - 1]) * _transpose_tail(al * c))
@@ -202,7 +198,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
         end
     end
 
-    nst = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
-    nenvs = environments(nst, H; solver=oenvs.solver)
-    return nst, nenvs, ϵ
+    ψ′ = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
+    nenvs = environments(ψ′, H; solver=oenvs.solver)
+    return ψ′, nenvs, ϵ
 end
