@@ -10,6 +10,7 @@ using Accessors
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
 using Base: @kwdef
+using LoggingExtras
 
 # bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
@@ -35,7 +36,7 @@ export leftenv, rightenv
 
 # algos
 export find_groundstate!, find_groundstate, leading_boundary
-export VUMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
+export VUMPS, VOMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
 export excitations, FiniteExcited, QuasiparticleAnsatz
 export marek_gap, correlation_length, correlator
 export time_evolve, time_evolve!, timestep!, timestep
@@ -66,6 +67,11 @@ include("utility/dynamictols.jl")
 using .DynamicTols
 
 include("utility/defaults.jl")
+using .Defaults: VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
+include("utility/logging.jl")
+using .IterativeLoggers
+include("utility/iterativesolvers.jl")
+
 include("utility/periodicarray.jl")
 include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
@@ -106,6 +112,7 @@ include("environments/multipleenv.jl")
 include("environments/idmrgenv.jl")
 include("environments/lazylincocache.jl")
 
+include("algorithms/fixedpoint.jl")
 include("algorithms/derivatives.jl")
 include("algorithms/expval.jl")
 include("algorithms/toolbox.jl")
@@ -139,6 +146,7 @@ include("algorithms/excitation/dmrgexcitation.jl")
 include("algorithms/excitation/exci_transfer_system.jl")
 
 include("algorithms/statmech/vumps.jl")
+include("algorithms/statmech/vomps.jl")
 include("algorithms/statmech/gradient_grassmann.jl")
 
 include("algorithms/fidelity_susceptibility.jl")

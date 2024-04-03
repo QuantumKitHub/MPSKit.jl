@@ -29,10 +29,10 @@ function left_excitation_transfer_system(lBs, H, exci; mom=exci.momentum,
                                     exci.left_gs.AL)
             end
 
-            (found[i], convhist) = linsolve(flip(tm), found[i], found[i], solver, 1,
-                                            -1 / exp(1im * mom * len))
-            convhist.converged < 1 &&
-                @info "left $(i) excitation inversion failed normres $(convhist.normres)"
+            found[i], convhist = linsolve(flip(tm), found[i], found[i], solver, 1,
+                                          -cis(-mom * len))
+            convhist.converged == 0 &&
+                @warn "GBL$i failed to converge: normres = $(convhist.normres)"
         end
     end
     return found
@@ -68,10 +68,10 @@ function right_excitation_transfer_system(rBs, H, exci; mom=exci.momentum,
                                     exci.right_gs.AR)
             end
 
-            (found[i], convhist) = linsolve(tm, found[i], found[i], solver, 1,
-                                            -exp(1im * mom * len))
+            found[i], convhist = linsolve(tm, found[i], found[i], solver, 1,
+                                          -cis(mom * len))
             convhist.converged < 1 &&
-                @info "right $(i) excitation inversion failed normres $(convhist.normres)"
+                @warn "GBR$i failed to converge: normres = $(convhist.normres)"
         end
     end
     return found

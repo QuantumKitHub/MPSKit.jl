@@ -18,7 +18,7 @@ and matrix product operators (MPO), both finite and infinite.
 [docs-stable-url]: https://maartenvd.github.io/MPSKit.jl/stable
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
-[docs-dev-url]: https://maartenvd.github.io/MPSKit.jl/latest
+[docs-dev-url]: https://maartenvd.github.io/MPSKit.jl/dev
 
 [doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10654901.svg
 [doi-url]: https://doi.org/10.5281/zenodo.10654901
@@ -88,7 +88,7 @@ Z = @mpoham sum(σᶻ(){i} for i in vertices(FiniteChain(L)))
 
 M = @showprogress map(g_values) do g
     H = periodic_boundary_conditions(transverse_field_ising(; g=g), L)
-    groundstate, environment, δ = find_groundstate(init_state, H; verbose=false)
+    groundstate, environment, δ = find_groundstate(init_state, H; verbosity=0)
     return abs(sum(expectation_value(groundstate, Z))) / L
 end
 
@@ -112,7 +112,7 @@ Z = @mpoham sum(σᶻ(){i} for i in vertices(InfiniteChain()))
 
 M = @showprogress map(g_values) do g
     H = transverse_field_ising(; g=g)
-    groundstate, environment, δ = find_groundstate(init_state, H, VUMPS(; verbose=false))
+    groundstate, environment, δ = find_groundstate(init_state, H, VUMPS(; verbosity=0))
     return abs(sum(expectation_value(groundstate, Z)))
 end
 

@@ -137,67 +137,53 @@ end
 
 function mixed_fixpoints(above::MPSMultiline, mpo::MPOMultiline, below::MPSMultiline,
                          init=gen_init_fps(above, mpo, below); solver=Defaults.eigsolver)
-    T = eltype(above)
-
-    #sanity check
-    (numrows, numcols) = size(above)
+    # sanity check
+    numrows, numcols = size(above)
     @assert size(above) == size(mpo)
     @assert size(below) == size(mpo)
 
     envtype = eltype(init[1])
-    lefties = PeriodicArray{envtype,2}(undef, numrows, numcols)
-    righties = PeriodicArray{envtype,2}(undef, numrows, numcols)
+    GLs = PeriodicArray{envtype,2}(undef, numrows, numcols)
+    GRs = PeriodicArray{envtype,2}(undef, numrows, numcols)
 
-    @threads for cr in 1:numrows
-        c_above = above[cr]
-        c_below = below[cr + 1]
-
-        (L0, R0) = init[cr]
-
+    @threads for row in 1:numrows
+        Os = mpo[row, :]
+        ALs_top, ALs_bot = above[row].AL, below[row + 1].AL
+        ARs_top, ARs_bot = above[row].AR, below[row + 1].AR
+        L0, R0 = init[row]
         @sync begin
             Threads.@spawn begin
-                E_LL = TransferMatrix($c_above.AL, $mpo[cr, :], $c_below.AL)
-
-                packed_init = $L0 isa Vector ? RecursiveVec($L0) : $L0
-                (_, Ls, convhist) = eigsolve(flip(E_LL), packed_init, 1, :LM, $solver)
-                convhist.converged < 1 &&
-                    @info "left eigenvalue failed to converge $(convhist.normres)"
-                L0 = $L0 isa Vector ? Ls[1].vecs : Ls[1]
+                E_LL = TransferMatrix(ALs_top, Os, ALs_bot)
+                _, GLs[row, 1] = fixedpoint(flip(E_LL), L0, :LM, solver)
+                # compute rest of unitcell
+                for col in 2:numcols
+                    GLs[row, col] = GLs[row, col - 1] *
+                                    TransferMatrix(ALs_top[col - 1], Os[col - 1],
+                                                   ALs_bot[col - 1])
+                end
             end
+
             Threads.@spawn begin
-                packed_init = $R0 isa Vector ? RecursiveVec($R0) : $R0
-                E_RR = TransferMatrix($c_above.AR, $mpo[cr, :], $c_below.AR)
-                (_, Rs, convhist) = eigsolve(E_RR, packed_init, 1, :LM, $solver)
-                convhist.converged < 1 &&
-                    @info "right eigenvalue failed to converge $(convhist.normres)"
-                R0 = $R0 isa Vector ? Rs[1].vecs : Rs[1]
+                E_RR = TransferMatrix(ARs_top, Os, ARs_bot)
+                _, GRs[row, end] = fixedpoint(E_RR, R0, :LM, solver)
+                # compute rest of unitcell
+                for col in (numcols - 1):-1:1
+                    GRs[row, col] = TransferMatrix(ARs_top[col + 1], Os[col + 1],
+                                                   ARs_bot[col + 1]) *
+                                    GRs[row, col + 1]
+                end
             end
         end
 
-        lefties[cr, 1] = L0
-        for loc in 2:numcols
-            lefties[cr, loc] = lefties[cr, loc - 1] *
-                               TransferMatrix(c_above.AL[loc - 1], mpo[cr, loc - 1],
-                                              c_below.AL[loc - 1])
-        end
-
-        renormfact::scalartype(T) = dot(c_below.CR[0], MPO_∂∂C(L0, R0) * c_above.CR[0])
-
-        righties[cr, end] = R0 / sqrt(renormfact)
-        lefties[cr, 1] /= sqrt(renormfact)
-
-        for loc in (numcols - 1):-1:1
-            righties[cr, loc] = TransferMatrix(c_above.AR[loc + 1], mpo[cr, loc + 1],
-                                               c_below.AR[loc + 1]) *
-                                righties[cr, loc + 1]
-
-            renormfact = dot(c_below.CR[loc],
-                             MPO_∂∂C(lefties[cr, loc + 1], righties[cr, loc]) *
-                             c_above.CR[loc])
-            righties[cr, loc] /= sqrt(renormfact)
-            lefties[cr, loc + 1] /= sqrt(renormfact)
+        # fix normalization
+        CRs_top, CRs_bot = above[row].CR, below[row + 1].CR
+        for col in 1:numcols
+            λ = dot(CRs_bot[col],
+                    MPO_∂∂C(GLs[row, col + 1], GRs[row, col]) * CRs_top[col])
+            scale!(GLs[row, col + 1], 1 / sqrt(λ))
+            scale!(GRs[row, col], 1 / sqrt(λ))
         end
     end
 
-    return (lefties, righties)
+    return GLs, GRs
 end

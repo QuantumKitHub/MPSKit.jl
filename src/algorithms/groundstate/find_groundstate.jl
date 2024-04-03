@@ -14,26 +14,26 @@ optimization algorithm will be attempted based on the supplied keywords.
 ## Keywords
 - `tol::Float64`: tolerance for convergence criterium
 - `maxiter::Int`: maximum amount of iterations
-- `verbose::Bool`: display progress information
+- `verbosity::Int`: display progress information
 """
 function find_groundstate(ψ::AbstractMPS, H,
                           envs::Union{Cache,MultipleEnvironments}=environments(ψ, H);
                           tol=Defaults.tol, maxiter=Defaults.maxiter,
-                          verbose=Defaults.verbose, trscheme=nothing)
+                          verbosity=Defaults.verbosity, trscheme=nothing)
     if isa(ψ, InfiniteMPS)
-        alg = VUMPS(; tol_galerkin=max(1e-4, tol), verbose=verbose, maxiter=maxiter)
+        alg = VUMPS(; tol=max(1e-4, tol), verbosity, maxiter)
         if tol < 1e-4
             alg = alg &
-                  GradientGrassmann(; tol=tol, maxiter=maxiter, verbosity=verbose ? 2 : 0)
+                  GradientGrassmann(; tol=tol, maxiter, verbosity)
         end
         if !isnothing(trscheme)
-            alg = IDMRG2(; tol_galerkin=min(1e-2, 100tol), verbose=verbose,
-                         trscheme=trscheme) & alg
+            alg = IDMRG2(; tol=min(1e-2, 100tol), verbosity,
+                         trscheme) & alg
         end
     elseif isa(ψ, AbstractFiniteMPS)
-        alg = DMRG(; tol=tol, maxiter=maxiter, verbose=verbose)
+        alg = DMRG(; tol, maxiter, verbosity)
         if !isnothing(trscheme)
-            alg = DMRG2(; tol=min(1e-2, 100tol), verbose=verbose, trscheme=trscheme) & alg
+            alg = DMRG2(; tol=min(1e-2, 100tol), verbosity, trscheme) & alg
         end
     else
         throw(ArgumentError("Unknown input state type"))

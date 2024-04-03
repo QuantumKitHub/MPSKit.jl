@@ -91,8 +91,7 @@ function TensorKit.dot(a::InfiniteMPS, mpo::DenseMPO, b::InfiniteMPS; krylovdim=
                    _firstspace(b.AL[1]) * _firstspace(mpo.opp[1]) ← _firstspace(a.AL[1]))
     randomize!(init)
 
-    (vals, vecs, convhist) = eigsolve(TransferMatrix(b.AL, mpo.opp, a.AL), init, 1, :LM,
-                                      Arnoldi(; krylovdim=krylovdim))
-    convhist.converged == 0 && @info "dot mps not converged"
-    return vals[1]
+    val, = fixedpoint(TransferMatrix(b.AL, mpo.opp, a.AL), init, :LM,
+                      Arnoldi(; krylovdim=krylovdim))
+    return val
 end

@@ -47,7 +47,7 @@ We will initially use a two-site TDVP scheme to dynamically increase the bond di
 H₁ = transverse_field_ising(; g=-2.0)
 ψₜ = deepcopy(ψ₀)
 dt = 0.01
-ψₜ, envs = timestep(ψₜ, H₁, dt, TDVP2(; trscheme=truncdim(20)));
+ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP2(; trscheme=truncdim(20)));
 
 md"""
 "envs" is a kind of cache object that keeps track of all environments in `ψ`. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
@@ -67,7 +67,7 @@ function finite_sim(L; dt=0.05, finaltime=5.0)
 
     for t in times[2:end]
         alg = t > 3 * dt ? TDVP() : TDVP2(; trscheme=truncdim(50))
-        ψₜ, envs = timestep(ψₜ, H₁, dt, alg, envs)
+        ψₜ, envs = timestep(ψₜ, H₁, 0, dt, alg, envs)
         push!(echos, echo(ψₜ, ψ₀))
     end
 
@@ -112,7 +112,7 @@ Growing the bond dimension by ``5`` can be done by calling:
 # a single timestep is easy
 
 dt = 0.01
-ψₜ, envs = timestep(ψₜ, H₁, dt, TDVP(), envs);
+ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP(), envs);
 
 md"""
 With performance in mind we should once again try to re-use these "envs" cache objects.
@@ -133,7 +133,7 @@ function infinite_sim(dt=0.05, finaltime=5.0)
         if t < 50dt # if t is sufficiently small, we increase the bond dimension
             ψₜ, envs = changebonds(ψₜ, H₁, OptimalExpand(; trscheme=truncdim(1)), envs)
         end
-        (ψₜ, envs) = timestep(ψₜ, H₁, dt, TDVP(), envs)
+        (ψₜ, envs) = timestep(ψₜ, H₁, 0, dt, TDVP(), envs)
         push!(echos, echo(ψₜ, ψ₀))
     end
 

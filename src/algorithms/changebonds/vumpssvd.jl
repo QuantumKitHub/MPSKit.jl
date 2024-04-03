@@ -5,13 +5,13 @@ An algorithm that uses an IDMRG2 step to change the bond dimension of a state.
 
 # Fields
 - `tol_gauge::Real = Defaults.tolgauge` : The tolerance for the gauge.
-- `tol_galerkin::Real = Defaults.tol` : The tolerance for the Galerkin truncation.
+- `tol::Real = Defaults.tol` : The tolerance for the Galerkin truncation.
 - `tol_eigenval::Real = Defaults.tol` : The tolerance for the eigenvalue solver.
 - `trscheme::TruncationScheme = notrunc()` : The truncation scheme to use.
 """
 @kwdef struct VUMPSSvdCut <: Algorithm
     tol_gauge = Defaults.tolgauge
-    tol_galerkin = Defaults.tol
+    tol = Defaults.tol
     tol_eigenval = Defaults.tol
     trscheme = notrunc()
 end

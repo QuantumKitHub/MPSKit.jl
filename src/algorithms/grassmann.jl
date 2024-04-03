@@ -88,7 +88,7 @@ function ManifoldPoint(state::MPSMultiline, envs)
     fi = imag.(f)
     fr = real.(f)
 
-    sum(fi) > MPSKit.Defaults.tol && @warn "mpo is not hermitian $(fi)"
+    sum(fi) > MPSKit.Defaults.tol && @warn "mpo is not hermitian $fi"
 
     g = -2 * g ./ abs.(fr)
 

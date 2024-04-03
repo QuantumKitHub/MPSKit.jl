@@ -14,24 +14,26 @@ through each of the time points obtained by iterating t_span.
 """
 function time_evolve end, function time_evolve! end
 
-# TODO: is it possible to remove this code-duplication?
-function time_evolve(ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H);
-                     verbose=false)
-    for (t, dt) in zip(t_span[2:end], diff(t_span))
-        elapsed = @elapsed ψ, envs = timestep(ψ, H, t, dt, alg, envs)
-        verbose && @info "Timestep iteration:" t elapsed
-        ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
+for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time_evolve!))
+    @eval function $time_evolve(ψ, H, t_span::AbstractVector{<:Number}, alg,
+                                envs=environments(ψ, H);
+                                verbosity::Int=0)
+        log = IterLog("TDVP")
+        LoggingExtras.withlevel(; verbosity) do
+            @infov 2 loginit!(log, 0, t)
+            for iter in 1:(length(t_span) - 1)
+                t = t_span[iter]
+                dt = t_span[iter + 1] - t
+
+                ψ, envs = $timestep(ψ, H, t, dt, alg, envs)
+                ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
+
+                @infov 3 logiter!(log, iter, 0, t)
+            end
+            @infov 2 logfinish!(log, length(t_span), 0, t_span[end])
+        end
+        return ψ, envs
     end
-    return ψ, envs
-end
-function time_evolve!(ψ, H, t_span::AbstractVector{<:Number}, alg, envs=environments(ψ, H);
-                      verbose=false)
-    for (t, dt) in zip(t_span[2:end], diff(t_span))
-        elapsed = @elapsed ψ, envs = timestep!(ψ, H, t, dt, alg, envs)
-        verbose && @info "Timestep iteration:" t elapsed
-        ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
-    end
-    return ψ, envs
 end
 
 """

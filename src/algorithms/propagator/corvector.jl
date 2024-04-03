@@ -18,14 +18,14 @@ The algorithm is described in detail in https://arxiv.org/pdf/cond-mat/0203500.p
 - `solver::S = Defaults.linearsolver` : The linear solver to use for the linear systems.
 - `tol::Float64 = Defaults.tol * 10` : The stopping criterium.
 - `maxiter::Int = Defaults.maxiter` : The maximum number of iterations.
-- `verbose::Bool = Defaults.verbose` : Whether to print information about the progress of the algorithm.
+- `verbosity::Int = Defaults.verbosity` : Whether to print information about the progress of the algorithm.
 """
 @kwdef struct DynamicalDMRG{F<:DDMRG_Flavour,S} <: Algorithm
     flavour::F = NaiveInvert
     solver::S = Defaults.linearsolver
     tol::Float64 = Defaults.tol * 10
     maxiter::Int = Defaults.maxiter
-    verbose::Bool = Defaults.verbose
+    verbosity::Int = Defaults.verbosity
 end
 
 """
@@ -52,26 +52,38 @@ function propagator(A::AbstractFiniteMPS, z::Number, H::MPOHamiltonian,
     h_envs = environments(init, H) # environments for h
     mixedenvs = environments(init, A) # environments for <init | A>
 
-    delta = 2 * alg.tol
-    numit = 0
+    ϵ = 2 * alg.tol
+    log = IterLog("DDMRG")
 
-    while delta > alg.tol && numit < alg.maxiter
-        numit += 1
-        delta = 0.0
+    LoggingExtras.withlevel(; alg.verbosity) do
+        @infov 2 loginit!(log, ϵ)
+        for iter in 1:(alg.maxiter)
+            ϵ = 0.0
 
-        for i in [1:(length(A) - 1); length(A):-1:2]
-            tos = ac_proj(i, init, mixedenvs)
+            for i in [1:(length(A) - 1); length(A):-1:2]
+                tos = ac_proj(i, init, mixedenvs)
 
-            H_AC = ∂∂AC(i, init, H, h_envs)
-            (res, convhist) = linsolve(H_AC, -tos, init.AC[i], alg.solver, -z, one(z))
+                H_AC = ∂∂AC(i, init, H, h_envs)
+                AC = init.AC[i]
+                AC′, convhist = linsolve(H_AC, -tos, AC, alg.solver, -z, one(z))
 
-            delta = max(delta, norm(res - init.AC[i]))
-            init.AC[i] = res
+                ϵ = max(ϵ, norm(AC′ - AC))
+                init.AC[i] = AC′
 
-            convhist.converged == 0 && @warn "($(i)) failed to converge $(convhist.normres)"
+                convhist.converged == 0 &&
+                    @warn "propagator ($i) failed to converge: normres = $(convhist.normres)"
+            end
+
+            if ϵ <= alg.tol
+                @infov 2 logfinish!(log, iter, ϵ)
+                break
+            end
+            if iter == alg.maxiter
+                @warnv 1 logcancel!(log, iter, ϵ)
+            else
+                @infov 3 logiter!(log, iter, ϵ)
+            end
         end
-
-        alg.verbose && @info "ddmrg sweep delta : $(delta)"
     end
 
     return dot(A, init), init
@@ -88,48 +100,56 @@ struct Jeckelmann <: DDMRG_Flavour end
 
 function propagator(A::AbstractFiniteMPS, z, H::MPOHamiltonian,
                     alg::DynamicalDMRG{Jeckelmann}; init=copy(A))
-    w = real(z)
-    eta = imag(z)
+    ω = real(z)
+    η = imag(z)
 
     envs1 = environments(init, H) # environments for h
     H2, envs2 = squaredenvs(init, H, envs1) # environments for h^2
     mixedenvs = environments(init, A) # environments for <init | A>
 
-    delta = 2 * alg.tol
+    ϵ = 2 * alg.tol
+    log = IterLog("DDMRG")
 
-    numit = 0
-    while delta > alg.tol && numit < alg.maxiter
-        numit += 1
-        delta = 0.0
+    LoggingExtras.withlevel(; alg.verbosity) do
+        @infov 2 loginit!(log, ϵ)
+        for iter in 1:(alg.maxiter)
+            ϵ = 0.0
 
-        for i in [1:(length(A) - 1); length(A):-1:2]
-            tos = ac_proj(i, init, mixedenvs)
-            H1_AC = ∂∂AC(i, init, H, envs1)
-            H2_AC = ∂∂AC(i, init, H2, envs2)
-            H_AC = LinearCombination((H1_AC, H2_AC), (-2 * w, 1))
-            (res, convhist) = linsolve(H_AC, -eta * tos, init.AC[i], alg.solver,
-                                       (eta * eta + w * w), 1)
+            for i in [1:(length(A) - 1); length(A):-1:2]
+                tos = ac_proj(i, init, mixedenvs)
+                H1_AC = ∂∂AC(i, init, H, envs1)
+                H2_AC = ∂∂AC(i, init, H2, envs2)
+                H_AC = LinearCombination((H1_AC, H2_AC), (-2 * ω, 1))
+                AC′, convhist = linsolve(H_AC, -η * tos, init.AC[i], alg.solver, abs2(z), 1)
 
-            delta = max(delta, norm(res - init.AC[i]))
-            init.AC[i] = res
+                ϵ = max(ϵ, norm(AC′ - init.AC[i]))
+                init.AC[i] = AC′
 
-            convhist.converged == 0 && @warn "($(i)) failed to converge $(convhist.normres)"
+                convhist.converged == 0 &&
+                    @warn "propagator ($i) failed to converge: normres $(convhist.normres)"
+            end
+
+            if ϵ <= alg.tol
+                @infov 2 logfinish!(log, iter, ϵ)
+                break
+            end
+            if iter == alg.maxiter
+                @warnv 1 logcancel!(log, iter, ϵ)
+            else
+                @infov 3 logiter!(log, iter, ϵ)
+            end
         end
-
-        alg.verbose && @info "ddmrg sweep delta : $(delta)"
     end
 
     a = dot(ac_proj(1, init, mixedenvs), init.AC[1])
-
     cb = leftenv(envs1, 1, A) * TransferMatrix(init.AL, H[1:length(A.AL)], A.AL)
-
     b = zero(a)
     for i in 1:length(cb)
         b += @plansor cb[i][1 2; 3] * init.CR[end][3; 4] *
                       rightenv(envs1, length(A), A)[i][4 2; 5] * conj(A.CR[end][1; 5])
     end
 
-    v = b / eta - w / eta * a + 1im * a
+    v = b / η - ω / η * a + 1im * a
     return v, init
 end
 

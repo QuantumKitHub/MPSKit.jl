@@ -3,78 +3,85 @@ function approximate(ψ, toapprox, alg::Union{DMRG,DMRG2}, envs...)
     return approximate!(copy(ψ), toapprox, alg, envs...)
 end
 
-function approximate!(init::AbstractFiniteMPS, sq, alg, envs=environments(init, sq))
-    tor = approximate!(init, [sq], alg, [envs])
+function approximate!(ψ::AbstractFiniteMPS, sq, alg, envs=environments(ψ, sq))
+    tor = approximate!(ψ, [sq], alg, [envs])
     return (tor[1], tor[2][1], tor[3])
 end
 
-function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
-                      envs=[environments(init, sq) for sq in squash])
-    tol = alg.tol
-    maxiter = alg.maxiter
-    iter = 0
-    delta = 2 * tol
+function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
+                      envs=[environments(ψ, sq) for sq in squash])
+    ϵ::Float64 = 2 * alg.tol
+    log = IterLog("DMRG2")
 
-    while iter < maxiter && delta > tol
-        delta = 0.0
+    LoggingExtras.withlevel(; alg.verbosity) do
+        @infov 2 loginit!(log, ϵ)
+        for iter in 1:(alg.maxiter)
+            ϵ = 0.0
+            for pos in [1:(length(ψ) - 1); (length(ψ) - 2):-1:1]
+                AC2′ = sum(zip(squash, envs)) do (sq, pr)
+                    return ac2_proj(pos, ψ, pr)
+                end
+                al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme)
 
-        init, envs = alg.finalize(iter, init, squash,
-                                  envs)::Tuple{typeof(init),typeof(envs)}
+                AC2 = ψ.AC[pos] * _transpose_tail(ψ.AR[pos + 1])
+                ϵ = max(ϵ, norm(al * c * ar - AC2) / norm(AC2))
 
-        for pos in [1:(length(init) - 1); (length(init) - 2):-1:1]
-            ac2 = init.AC[pos] * _transpose_tail(init.AR[pos + 1])
+                ψ.AC[pos] = (al, complex(c))
+                ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
+            end
 
-            nac2 = sum(map(zip(squash, envs)) do (sq, pr)
-                           return ac2_proj(pos, init, pr)
-                       end)
+            # finalize
+            ψ, envs = alg.finalize(iter, ψ, squash, envs)::Tuple{typeof(ψ),typeof(envs)}
 
-            (al, c, ar) = tsvd(nac2; trunc=alg.trscheme)
-
-            delta = max(delta, norm(al * c * ar - ac2) / norm(ac2))
-
-            init.AC[pos] = (al, complex(c))
-            init.AC[pos + 1] = (complex(c), _transpose_front(ar))
+            if ϵ < alg.tol
+                @infov 2 logfinish!(log, iter, ϵ)
+                break
+            end
+            if iter == alg.maxiter
+                @warnv 1 logcancel!(log, iter, ϵ)
+            else
+                @infov 3 logiter!(log, iter, ϵ)
+            end
         end
-
-        alg.verbose && @info "2site dmrg iter $(iter) error $(delta)"
-
-        #finalize
-        iter += 1
     end
 
-    delta > tol && @warn "2site dmrg failed to converge $(delta)>$(tol)"
-    return init, envs, delta
+    return ψ, envs, ϵ
 end
 
-function approximate!(init::AbstractFiniteMPS, squash::Vector, alg::DMRG,
-                      envs=[environments(init, sq) for sq in squash])
-    tol = alg.tol
-    maxiter = alg.maxiter
-    iter = 0
-    delta = 2 * tol
+function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG,
+                      envs=[environments(ψ, sq) for sq in squash])
+    ϵ::Float64 = 2 * alg.tol
+    log = IterLog("DMRG")
 
-    while iter < maxiter && delta > tol
-        delta = 0.0
+    LoggingExtras.withlevel(; alg.verbosity) do
+        @infov 2 loginit!(log, ϵ)
+        for iter in 1:(alg.maxiter)
+            ϵ = 0.0
+            for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
+                AC′ = sum(zip(squash, envs)) do (sq, pr)
+                    return ac_proj(pos, ψ, pr)
+                end
 
-        #finalize
-        (init, envs) = alg.finalize(iter, init, squash,
-                                    envs)::Tuple{typeof(init),typeof(envs)}
+                AC = ψ.AC[pos]
+                ϵ = max(ϵ, norm(AC′ - AC) / norm(AC′))
 
-        for pos in [1:(length(init) - 1); length(init):-1:2]
-            newac = sum(map(zip(squash, envs)) do (sq, pr)
-                            return ac_proj(pos, init, pr)
-                        end)
+                ψ.AC[pos] = AC′
+            end
 
-            delta = max(delta, norm(newac - init.AC[pos]) / norm(newac))
+            # finalize
+            ψ, envs = alg.finalize(iter, ψ, squash, envs)::Tuple{typeof(ψ),typeof(envs)}
 
-            init.AC[pos] = newac
+            if ϵ < alg.tol
+                @infov 2 logfinish!(log, iter, ϵ)
+                break
+            end
+            if iter == alg.maxiter
+                @warnv 1 logcancel!(log, iter, ϵ)
+            else
+                @infov 3 logiter!(log, iter, ϵ)
+            end
         end
-
-        alg.verbose && @info "dmrg iter $(iter) error $(delta)"
-
-        iter += 1
     end
 
-    delta > tol && @warn "dmrg failed to converge $(delta)>$(tol)"
-    return init, envs, delta
+    return ψ, envs, ϵ
 end

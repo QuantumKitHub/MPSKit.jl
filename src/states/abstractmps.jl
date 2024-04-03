@@ -64,6 +64,49 @@ function MPSTensor(A::AbstractArray{T}) where {T<:Number}
     return t
 end
 
+"""
+    isfullrank(A::GenericMPSTensor; side=:both)
+
+Determine whether the given tensor is full rank, i.e. whether both the map from the left
+virtual space and the physical space to the right virtual space, and the map from the right
+virtual space and the physical space to the left virtual space are injective.
+"""
+function isfullrank(A::GenericMPSTensor; side=:both)
+    Vₗ = _firstspace(A)
+    Vᵣ = _lastspace(A)
+    P = ⊗(space.(Ref(A), 2:(numind(A) - 1))...)
+    return if side === :both
+        Vₗ ⊗ P ≿ Vᵣ' && Vₗ' ≾ P ⊗ Vᵣ
+    elseif side === :right
+        Vₗ ⊗ P ≿ Vᵣ'
+    elseif side === :left
+        Vₗ' ≾ P ⊗ Vᵣ
+    else
+        throw(ArgumentError("Invalid side: $side"))
+    end
+end
+
+"""
+    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=QRpos())
+
+Make the set of MPS tensors full rank by performing a series of orthogonalizations.
+"""
+function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=QRpos())
+    while true
+        i = findfirst(!isfullrank, A)
+        isnothing(i) && break
+        if !isfullrank(A[i]; side=:left)
+            L, Q = rightorth!(_transpose_tail(A[i]); alg=alg')
+            A[i] = _transpose_front(Q)
+            A[i - 1] = A[i - 1] * L
+        else
+            A[i], R = leftorth!(A[i]; alg)
+            A[i + 1] = _transpose_front(R * _transpose_tail(A[i + 1]))
+        end
+    end
+    return A
+end
+
 #===========================================================================================
 MPS types
 ===========================================================================================#

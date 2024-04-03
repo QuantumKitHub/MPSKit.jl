@@ -106,7 +106,7 @@ function Base.convert(::Type{RightGaugedQP},
 
     rBE, convhist = linsolve(tm, rBs[1], rBs[1], GMRES(), 1,
                              -exp(1im * input.momentum * len))
-    convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
+    convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
 
     rBs[1] = rBE
     for i in len:-1:2
@@ -147,7 +147,7 @@ function Base.convert(::Type{LeftGaugedQP},
 
     lBE, convhist = linsolve(flip(tm), lBs[end], lBs[end], GMRES(), 1,
                              -1 / exp(1im * input.momentum * len))
-    convhist.converged == 0 && @warn "failed to converge $(convhist.normres)"
+    convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
 
     lBs[end] = lBE
     for i in 1:(len - 1)
@@ -204,7 +204,6 @@ LinearAlgebra.norm(v::QP) = norm(norm.(v.Xs))
 LinearAlgebra.normalize!(w::QP) = rmul!(w, 1 / norm(w))
 Base.length(v::QP) = length(v.Xs)
 Base.eltype(::Type{<:QP{<:Any,<:Any,T}}) where {T} = T
-VectorInterface.scalartype(T::Type{<:QP}) = scalartype(eltype(T))
 
 function LinearAlgebra.mul!(w::T, a, v::T) where {T<:QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
@@ -353,4 +352,60 @@ function Base.getproperty(exci::Multiline{<:InfiniteQP}, s::Symbol)
     else
         return getfield(exci, s)
     end
+end
+
+# VectorInterface
+# ---------------
+
+VectorInterface.scalartype(T::Type{<:QP}) = scalartype(eltype(T))
+
+function VectorInterface.zerovector(ϕ::QP, ::Type{S}) where {S<:Number}
+    ϕ = similar(ϕ, S)
+    return zerovector!(ϕ)
+end
+
+function VectorInterface.zerovector!(ϕ::QP)
+    zerovector!.(ϕ.Xs)
+    return ϕ
+end
+
+# TODO: zerovector!!?
+
+function VectorInterface.scale(ϕ::QP, α::Number)
+    return scale!(zerovector(ϕ, VectorInterface.promote_scale(ϕ, α)), ϕ, α)
+end
+
+function VectorInterface.scale!(ϕ::QP, α::Number)
+    scale!.(ϕ.Xs, α)
+    return ϕ
+end
+
+VectorInterface.scale!!(ϕ::QP, α::Number) = scale!(ϕ, α)
+
+function VectorInterface.scale!(ϕ₁::QP, ϕ₂::QP, α::Number)
+    scale!.(ϕ₁.Xs, ϕ₂.Xs, α)
+    return ϕ₁
+end
+
+VectorInterface.scale!!(ϕ₁::QP, ϕ₂::QP, α::Number) = scale!(ϕ₁, ϕ₂, α)
+
+# add
+
+function VectorInterface.add(ϕ₁::QP, ϕ₂::QP, α::Number, β::Number)
+    # TODO: this might be more efficient by calling `add` on Xs directly
+    ϕ = zerovector(ϕ₁, VectorInterface.promote_add(ϕ₁, ϕ₂, α, β))
+    return add!(scale!(ϕ, ϕ₁, β), ϕ₂, α)
+end
+
+function VectorInterface.add!(ϕ₁::QP, ϕ₂::QP, α::Number, β::Number)
+    add!.(ϕ₁.Xs, ϕ₂.Xs, α, β)
+    return ϕ₁
+end
+
+VectorInterface.add!!(ϕ₁::QP, ϕ₂::QP, α::Number, β::Number) = add!(ϕ₁, ϕ₂, α, β)
+
+# inner
+
+function VectorInterface.inner(ϕ₁::QP, ϕ₂::QP)
+    return inner(ϕ₁.Xs, ϕ₂.Xs)
 end
