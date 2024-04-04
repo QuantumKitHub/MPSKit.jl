@@ -98,7 +98,7 @@ end
 
 @testset "Fixed WindowMPS" begin
     ham = force_planar(transverse_field_ising(; g=8.0))
-    (gs, _, _) = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbose=false))
+    (gs, _, _) = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbosity=0))
 
     #constructor 1 - give it a plain array of tensors
     window_1 = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs; fixleft=true,
@@ -132,7 +132,7 @@ end
     e1 = expectation_value(window, ham, 1:length(window))
 
     v1 = variance(window, ham)
-    (window, envs, _) = find_groundstate(window, ham, DMRG(; verbose=false))
+    (window, envs, _) = find_groundstate(window, ham, DMRG(; verbosity=0))
     v2 = variance(window, ham)
 
     edens2 = expectation_value(window, ham)
@@ -153,7 +153,7 @@ end
 
 @testset "Variable WindowMPS" begin
     ham = force_planar(transverse_field_ising(; g=8.0))
-    (gs, _, _) = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbose=false))
+    (gs, _, _) = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbosity=0))
 
     #constructor 1 - give it a plain array of tensors
     window_1 = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
@@ -187,7 +187,7 @@ end
     e1 = expectation_value(window, ham, 1:length(window))
 
     v1 = variance(window, ham)
-    gs_alg = Window(VUMPS(; verbose=false), DMRG(; verbose=false), VUMPS(; verbose=false))
+    gs_alg = Window(VUMPS(; verbosity=0), DMRG(; verbosity=0), VUMPS(; verbosity=0))
     (window, envs, _) = find_groundstate(window, ham, gs_alg)
     v2 = variance(window, ham)
 

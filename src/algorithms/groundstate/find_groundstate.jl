@@ -39,7 +39,7 @@ function find_groundstate(ψ::AbstractMPS, H,
         throw(ArgumentError("Unknown input state type"))
     end
     if isa(ψ, WindowMPS)
-        alg_infin = VUMPS(; tol_galerkin=tol, verbose=verbose, maxiter=maxiter)
+        alg_infin = VUMPS(; tol=tol, verbosity=verbosity, maxiter=maxiter)
         alg = Window(alg_infin, alg, alg_infin)
     end
     return find_groundstate(ψ, H, alg, envs)
