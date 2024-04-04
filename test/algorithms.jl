@@ -573,10 +573,10 @@ end
         W1 = convert(DenseMPO, sW1)
         W2 = convert(DenseMPO, sW2)
 
-        st1, _ = approximate(st, (sW1, st), VUMPS(; verbosity))
-        st2, _ = approximate(st, (W2, st), VUMPS(; verbosity))
+        st1, _ = approximate(st, (sW1, st), VOMPS(; verbosity))
+        st2, _ = approximate(st, (W2, st), VOMPS(; verbosity))
         st3, _ = approximate(st, (W1, st), IDMRG1(; verbosity))
-        st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbose=false))
+        st4, _ = approximate(st, (sW2, st), IDMRG2(; trscheme=truncdim(20), verbosity))
         st5, _ = timestep(st, th, 0.0, dt, TDVP())
         st6 = changebonds(W1 * st, SvdCut(; trscheme=truncdim(10)))
 
