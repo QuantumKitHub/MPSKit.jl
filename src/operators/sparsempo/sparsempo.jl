@@ -195,12 +195,10 @@ function _envsetypes(d::Tuple)
 end
 
 Base.size(x::SparseMPO) = (size(x.Os, 1),);
-function Base.getindex(x::SparseMPO{S,T,E}, a::Int) where {S,T,E}
-    return SparseMPOSlice{S,T,E}(@view(x.Os[a, :, :]),
-                                 @view(x.domspaces[a, :]),
-                                 @view(x.imspaces[a, :]),
-                                 x.pspaces[a])
-end;
+function Base.getindex(x::SparseMPO, i::Int, j=:, k=:)
+    return SparseMPOSlice(@view(x.Os[i, j, k]), @view(x.domspaces[i, k]),
+                          @view(x.imspaces[i, j]), x.pspaces[i])
+end
 Base.copy(x::SparseMPO) = SparseMPO(copy(x.Os), copy(x.domspaces), copy(x.pspaces));
 TensorKit.space(x::SparseMPO, i) = x.pspaces[i]
 "
