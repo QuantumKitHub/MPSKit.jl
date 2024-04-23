@@ -10,7 +10,8 @@ A view of a sparse MPO at a single position.
 - `imspaces::AbstractVector{S}`: list of right virtual spaces.
 - `pspace::S`: physical space.
 """
-struct SparseMPOSlice{S,T,E,A<:AbstractMatrix{Union{E,T}},B<:AbstractVector{Union{S}}} <: AbstractMatrix{T}
+struct SparseMPOSlice{S,T,E,A<:AbstractMatrix{Union{E,T}},B<:AbstractVector{Union{S}}} <:
+       AbstractMatrix{T}
     Os::A
     domspaces::B
     imspaces::B
@@ -21,9 +22,8 @@ struct SparseMPOSlice{S,T,E,A<:AbstractMatrix{Union{E,T}},B<:AbstractVector{Unio
         sz1, sz2 = size(Os)
         sz1 == length(imspaces) || throw(ArgumentError("imspaces must have length $sz1"))
         sz2 == length(domspaces) || throw(ArgumentError("domspaces must have length $sz2"))
-        new{S,T,E,A,B}(Os, domspaces, imspaces, pspace)
+        return new{S,T,E,A,B}(Os, domspaces, imspaces, pspace)
     end
-    
 end
 
 function Base.getproperty(x::SparseMPOSlice, s::Symbol)
