@@ -1,5 +1,5 @@
 """
-    struct LocalOperator{T,G}
+    struct LocalOperator{T,I}
 
 `N`-body operator acting on `N` sites, indexed through lattice points of type `G`. The
 operator is represented as a vector of `MPOTensor`s, each of which acts on a single site.
@@ -8,34 +8,56 @@ operator is represented as a vector of `MPOTensor`s, each of which acts on a sin
 - `opp::Vector{T}`: `N`-body operator represented by an MPO.
 - `inds::Vector{G}`: `N` site indices.
 """
-struct LocalOperator{T<:AbstractTensorMap{<:Any,2,2},G<:LatticePoint}
+struct LocalOperator{T<:AbstractTensorMap{<:Any,2,2},I}
     opp::Vector{T}
-    inds::Vector{G}
-    function LocalOperator{T,G}(O::Vector{T},
-                                inds::Vector{G}) where {T<:AbstractTensorMap{<:Any,2,2},
-                                                        G<:LatticePoint}
+    inds::Vector{I}
+    function LocalOperator(O::Vector{T}, inds::Vector{I}) where {T<:MPOTensor,I}
         length(O) == length(inds) ||
             throw(ArgumentError("number of operators and indices should be the same"))
-        issorted(inds) && allunique(inds) ||
-            throw(ArgumentError("indices should be ascending and unique"))
-        allequal(getfield.(inds, :lattice)) ||
-            throw(ArgumentError("points should be defined on the same lattice"))
-        return new{T,G}(O, inds)
+        return new{T,I}(O, inds)
     end
 end
 
-function LocalOperator(t::AbstractTensorMap{<:Any,N,N},
-                       inds::Vararg{G,N}) where {N,G<:LatticePoint}
-    p = TupleTools.sortperm(linearize_index.(inds))
-    t = permute(t, (p, p .+ N))
+LocalOperator((ind, O)::Pair) = LocalOperator(O, ind...)
+function LocalOperator(t::AbstractTensorMap{<:Any,N,N}, inds::Vararg{I,N}) where {N,I}
     t_mpo = collect(MPSKit.decompose_localmpo(MPSKit.add_util_leg(t)))
-
-    return LocalOperator{eltype(t_mpo),G}(t_mpo, collect(getindex.(Ref(inds), p)))
+    return LocalOperator(t_mpo, collect(inds))
 end
 
-const SumOfLocalOperators{L<:LocalOperator} = LazySum{L}
+# const SumOfLocalOperators{L<:LocalOperator} = LazySum{L}
+Base.copy(O::LocalOperator) = LocalOperator(copy(O.opp), copy(O.inds))
 
-Base.copy(O::LocalOperator{T,G}) where {T,G} = LocalOperator{T,G}(copy(O.opp), copy(O.inds))
+function instantiate_operator(hilbert_space::AbstractArray{<:VectorSpace},
+                              O::LocalOperator{T}) where {T}
+    indices = eachindex(IndexLinear(), hilbert_space)[O.inds] # convert to canonical index type
+    operators = O.opp
+
+    local_mpo = Union{T,scalartype(T)}[]
+    sites = Int[]
+
+    i = 1
+    current_site = first(indices)
+    previous_site = current_site # to avoid infinite loops
+
+    while i <= length(operators)
+        @assert !isnothing(current_site) "LocalOperator does not fit into the given Hilbert space"
+        if current_site == indices[i] # add MPO tensor
+            @assert space(operators[i], 2) == hilbert_space[current_site] "LocalOperator does not fit into the given Hilbert space"
+            push!(local_mpo, operators[i])
+            push!(sites, current_site)
+            previous_site = current_site
+            i += 1
+        else
+            push!(local_mpo, one(scalartype(T)))
+            push!(sites, current_site)
+        end
+
+        current_site = nextindex(hilbert_space, current_site)
+        @assert current_site != previous_site "LocalOperator does not fit into the given Hilbert space"
+    end
+
+    return sites, local_mpo
+end
 
 # Linear Algebra
 # --------------
@@ -48,54 +70,55 @@ function Base.:*(a::LocalOperator, b::Number)
 end
 Base.:*(a::Number, b::LocalOperator) = b * a
 
-function Base.:*(a::LocalOperator{T₁,G}, b::LocalOperator{T₂,G}) where {T₁,T₂,G}
-    inds = sort!(union(a.inds, b.inds))
-    T = promote_type(T₁, T₂)
-    operators = Vector{T}(undef, length(inds))
-    M = storagetype(T)
+# TODO: lazy product?
+# function Base.:*(a::LocalOperator{T₁,I}, b::LocalOperator{T₂,I}) where {T₁,T₂,I}
+#     inds = sort!(union(a.inds, b.inds))
+#     T = promote_type(T₁, T₂)
+#     operators = Vector{T}(undef, length(inds))
+#     M = storagetype(T)
 
-    left_vspace_A = space(first(a.opp), 1)
-    left_vspace_B = space(first(b.opp), 1)
+#     left_vspace_A = space(first(a.opp), 1)
+#     left_vspace_B = space(first(b.opp), 1)
 
-    for (i, ind) in enumerate(inds)
-        i_A = findfirst(==(ind), a.inds)
-        i_B = findfirst(==(ind), b.inds)
+#     for (i, ind) in enumerate(inds)
+#         i_A = findfirst(==(ind), a.inds)
+#         i_B = findfirst(==(ind), b.inds)
 
-        right_vspace_A = isnothing(i_A) ? left_vspace_A : space(a.opp[i_A], 4)'
-        right_vspace_B = isnothing(i_B) ? left_vspace_B : space(b.opp[i_B], 4)'
+#         right_vspace_A = isnothing(i_A) ? left_vspace_A : space(a.opp[i_A], 4)'
+#         right_vspace_B = isnothing(i_B) ? left_vspace_B : space(b.opp[i_B], 4)'
 
-        left_fuse = unitary(M, fuse(left_vspace_B, left_vspace_A),
-                            left_vspace_B ⊗ left_vspace_A)
-        right_fuse = unitary(M, fuse(right_vspace_B, right_vspace_A),
-                             right_vspace_B ⊗ right_vspace_A)
+#         left_fuse = unitary(M, fuse(left_vspace_B, left_vspace_A),
+#                             left_vspace_B ⊗ left_vspace_A)
+#         right_fuse = unitary(M, fuse(right_vspace_B, right_vspace_A),
+#                              right_vspace_B ⊗ right_vspace_A)
 
-        if !isnothing(i_A) && !isnothing(i_B)
-            @plansor operators[i][-1 -2; -3 -4] := b.opp[i_B][1 2; -3 4] *
-                                                   a.opp[i_A][3 -2; 2 5] *
-                                                   left_fuse[-1; 1 3] *
-                                                   conj(right_fuse[-4; 4 5])
-        elseif !isnothing(i_A)
-            @plansor operators[i][-1 -2; -3 -4] := τ[1 2; -3 4] *
-                                                   a.opp[i_A][3 -2; 2 5] *
-                                                   left_fuse[-1; 1 3] *
-                                                   conj(right_fuse[-4; 4 5])
-        elseif !isnothing(i_B)
-            @plansor operators[i][-1 -2; -3 -4] := b.opp[i_B][1 2; -3 4] *
-                                                   τ[3 -2; 2 5] *
-                                                   left_fuse[-1; 1 3] *
-                                                   conj(right_fuse[-4; 4 5])
-        else
-            error("this should not happen")
-        end
+#         if !isnothing(i_A) && !isnothing(i_B)
+#             @plansor operators[i][-1 -2; -3 -4] := b.opp[i_B][1 2; -3 4] *
+#                                                    a.opp[i_A][3 -2; 2 5] *
+#                                                    left_fuse[-1; 1 3] *
+#                                                    conj(right_fuse[-4; 4 5])
+#         elseif !isnothing(i_A)
+#             @plansor operators[i][-1 -2; -3 -4] := τ[1 2; -3 4] *
+#                                                    a.opp[i_A][3 -2; 2 5] *
+#                                                    left_fuse[-1; 1 3] *
+#                                                    conj(right_fuse[-4; 4 5])
+#         elseif !isnothing(i_B)
+#             @plansor operators[i][-1 -2; -3 -4] := b.opp[i_B][1 2; -3 4] *
+#                                                    τ[3 -2; 2 5] *
+#                                                    left_fuse[-1; 1 3] *
+#                                                    conj(right_fuse[-4; 4 5])
+#         else
+#             error("this should not happen")
+#         end
 
-        left_vspace_A = right_vspace_A
-        left_vspace_B = right_vspace_B
-    end
+#         left_vspace_A = right_vspace_A
+#         left_vspace_B = right_vspace_B
+#     end
 
-    return LocalOperator{T,G}(operators, inds)
-end
+#     return LocalOperator(operators, inds)
+# end
 
 Base.:-(O::LocalOperator) = -1 * O
 
-Base.:+(O1::LocalOperator, O2::LocalOperator) = SumOfLocalOperators([O1, O2])
-Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
+# Base.:+(O1::LocalOperator, O2::LocalOperator) = SumOfLocalOperators([O1, O2])
+# Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)

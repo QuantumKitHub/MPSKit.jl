@@ -1,10 +1,20 @@
-"
-    MPOHamiltonian
+"""
+    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, O::LocalOperator...)
+    MPOHamiltonian(x::AbstractArray{<:Any,3})
 
-    represents a general periodic quantum hamiltonian
+MPO representation of a hamiltonian. This is a specific form of a [`SparseMPO`](@ref), where
+all the sites are represented by an upper triangular block matrix of the following form:
 
-    really just a sparsempo, with some garantuees on its structure
-"
+```math
+\\begin{pmatrix}
+1 C D
+0 A B
+0 0 1
+\\end{pmatrix}
+```
+
+where `A`, `B`, `C`, and `D` are `MPOTensor`s, or (sparse) blocks thereof.
+"""
 struct MPOHamiltonian{S,T<:MPOTensor,E<:Number}
     data::SparseMPO{S,T,E}
 end
@@ -29,6 +39,59 @@ function MPOHamiltonian(x::Array{T,1}) where {T<:MPOTensor{Sp}} where {Sp}
 
     return MPOHamiltonian(SparseMPO(nOs))
 end
+
+function MPOHamiltonian(hilbert_space::AbstractArray{<:VectorSpace}, O::LocalOperator{T},
+                        Orest::LocalOperator{T}...) where {T}
+    nonzero_keys = similar(hilbert_space, Vector{NTuple{2,Int}})
+    nonzero_opps = similar(hilbert_space, Vector{Any})
+    for i in eachindex(hilbert_space)
+        nonzero_keys[i] = []
+        nonzero_opps[i] = []
+    end
+
+    for local_operator in (O, Orest...)
+        # instantiate the operator as Vector{MPOTensor}
+        sites, local_mpo = instantiate_operator(hilbert_space, local_operator)
+        for (i, (site, O)) in enumerate(zip(sites, local_mpo))
+            key_L = i == 1 ? 1 : key_R
+            key_R = i == length(local_mpo) ? 0 :
+                    maximum(last, nonzero_keys[site]; init=key_L) + 1
+            push!(nonzero_keys[site], (key_L, key_R))
+            push!(nonzero_opps[site], O)
+        end
+    end
+
+    # construct the sparse MPO
+    E = scalartype(T)
+
+    max_key = maximum(x -> maximum(last, x; init=1), nonzero_keys) + 1
+    O_data = fill!(Array{Union{E,T},3}(undef, length(hilbert_space), max_key, max_key),
+                   zero(E))
+    O_data[:, 1, 1] .= one(E)
+    O_data[:, end, end] .= one(E)
+
+    for site in eachindex(hilbert_space)
+        for ((key_L, key_R), O) in zip(nonzero_keys[site], nonzero_opps[site])
+            key_R′ = key_R == 0 ? max_key : key_R
+            if O_data[site, key_L, key_R′] == zero(E)
+                O_data[site, key_L, key_R′] = O
+            else
+                O_data[site, key_L, key_R′] += O
+            end
+        end
+    end
+
+    return MPOHamiltonian(SparseMPO(O_data))
+end
+
+# accept pairs
+function MPOHamiltonian(hilbert_space::AbstractArray{<:VectorSpace}, O::Pair, Orest::Pair...)
+    return MPOHamiltonian(hilbert_space, LocalOperator.((O, Orest...))...)
+end
+
+
+
+
 
 function Base.getproperty(h::MPOHamiltonian, f::Symbol)
     if f in (:odim, :period, :imspaces, :domspaces, :Os, :pspaces)
