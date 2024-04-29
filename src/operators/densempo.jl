@@ -1,3 +1,24 @@
+"""
+    FiniteMPO(Os::Vector{<:MPOTensor}) -> FiniteMPO
+    FiniteMPO(O::AbstractTensorMap{S,N,N}) where {S,N} -> FiniteMPO
+
+Matrix Product Operator (MPO) acting on a finite tensor product space with a linear order.
+"""
+struct FiniteMPO{O<:MPOTensor}
+    opp::Vector{O}
+    function FiniteMPO(Os::Vector{O}) where {O<:MPOTensor}
+        for i in eachindex(Os)[1:end-1]
+            dual(right_virtualspace(Os[i])) == left_virtualspace(Os[i + 1]) ||
+                throw(SpaceMismatch("umatching virtual spaces at site $i"))
+        end
+        return FiniteMPO{O}(Os)
+    end
+    function FiniteMPO{O}(Os::Vector{O}) where {O<:MPOTensor}
+        return new{O}(Os)
+    end
+end
+FiniteMPO(O::AbstractTensorMap{S,N,N}) where {S,N} = FiniteMPO(decompose_localmpo(add_util_leg(O)))
+
 "
     Represents a dense periodic mpo
 "
