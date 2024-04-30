@@ -39,6 +39,22 @@ function Base.setindex!(t::FiniteMPO{O}, v::O, i::Int) where {O}
     return t
 end
 
+# Converters
+# ----------
+function Base.convert(::Type{<:FiniteMPS}, mpo::FiniteMPO)
+    return FiniteMPS(map(mpo.opp) do O
+                           @plansor A[-1 -2 -3; -4] := O[-1 -2; 1 2] * τ[1 2; -4 -3]
+                       end)
+end
+function Base.convert(::Type{<:FiniteMPO}, mps::FiniteMPS)
+    mpo_tensors = map([mps.AC[1]; mps.AR[2:end]]) do A
+        @plansor O[-1 -2; -3 -4] := A[-1 -2 1; 2] * τ[-3 2; -4 1]
+    end
+    return FiniteMPO(mpo_tensors)
+end
+
+# Linear Algebra
+# --------------
 
 
 "
