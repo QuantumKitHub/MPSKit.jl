@@ -19,6 +19,28 @@ struct FiniteMPO{O<:MPOTensor}
 end
 FiniteMPO(O::AbstractTensorMap{S,N,N}) where {S,N} = FiniteMPO(decompose_localmpo(add_util_leg(O)))
 
+# AbstractVector
+# --------------
+Base.length(t::FiniteMPO) = length(t.opp)
+Base.size(t::FiniteMPO) = (length(t),)
+
+Base.eltype(::FiniteMPO{O}) where {O} = O
+Base.eltype(::Type{FiniteMPO{O}}) where {O} = O
+
+Base.getindex(t::FiniteMPO, i) = getindex(t.opp, i)
+function Base.setindex!(t::FiniteMPO{O}, v::O, i::Int) where {O}
+    @boundscheck begin
+        checkbounds(t.opp, i)
+        left_virtualspace(v) == left_virtualspace(t, i) &&
+        right_virtualspace(v) == right_virtualspace(t, i) ||
+            throw(SpaceMismatch("umatching virtual spaces at site $i"))
+    end
+    @inbounds t.opp[i] = v
+    return t
+end
+
+
+
 "
     Represents a dense periodic mpo
 "
