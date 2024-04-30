@@ -59,6 +59,25 @@ function Base.convert(::Type{<:FiniteMPO}, mps::FiniteMPS)
     end
     return FiniteMPO(mpo_tensors)
 end
+function Base.convert(::Type{<:AbstractTensorMap}, mpo::FiniteMPO)
+    N = length(mpo)
+    # add trivial tensors to remove left and right trivial leg.
+    V_left = left_virtualspace(mpo, 1)
+    @assert V_left == oneunit(V_left)
+    U_left = Tensor(ones, scalartype(mpo), V_left)'
+
+    V_right = right_virtualspace(mpo, length(mpo))
+    @assert V_right == oneunit(V_right)'
+    U_right = Tensor(ones, scalartype(mpo), V_right')
+
+    tensors = vcat(U_left, mpo.opp, U_right)
+    indices = [[i, -i, -(i + N), i + 1] for i in 1:length(mpo)]
+    pushfirst!(indices, [1])
+    push!(indices, [N + 1])
+    O = ncon(tensors, indices)
+
+    return transpose(O, ntuple(identity, N), ntuple(i -> i + N, N))
+end
 
 # Linear Algebra
 # --------------
