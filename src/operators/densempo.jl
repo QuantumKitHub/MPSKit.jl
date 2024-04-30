@@ -86,6 +86,7 @@ end
 # --------------
 VectorInterface.scalartype(::Type{FiniteMPO{O}}) where {O} = scalartype(O)
 
+Base.:+(mpo::FiniteMPO) = FiniteMPO(map(+, mpo.opp))
 function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
     @assert left_virtualspace(mpo1, 1) == left_virtualspace(mpo2, 1) &&
