@@ -16,6 +16,23 @@ using VectorInterface: One
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
 vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
 
+@testset "FiniteMPO" begin
+    # start from random operators
+    L = 4
+    O₁ = TensorMap(rand, ComplexF64, (ℂ^2)^L, (ℂ^2)^L)
+    O₂ = TensorMap(rand, ComplexF64, space(O₁))
+    
+    # create MPO and convert it back to see if it is the same
+    mpo₁ = FiniteMPO(O₁) # type-unstable for now!
+    mpo₂ = FiniteMPO(O₂)
+    @test convert(TensorMap, mpo₁) ≈ O₁
+    @test convert(TensorMap, mpo₂) ≈ O₂
+    
+    # test addition and multiplication
+    @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
+    @test convert(TensorMap, mpo₁ * mpo₂) ≈ O₁ * O₂
+end
+
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
                                                                             vspaces)
     #generate a 1-2-3 body interaction
