@@ -21,6 +21,11 @@ function FiniteMPO(O::AbstractTensorMap{S,N,N}) where {S,N}
     return FiniteMPO(decompose_localmpo(add_util_leg(O)))
 end
 
+# Properties
+# ----------
+left_virtualspace(mpo::FiniteMPO, i) = left_virtualspace(mpo[i])
+right_virtualspace(mpo::FiniteMPO, i) = right_virtualspace(mpo[i])
+
 # AbstractVector
 # --------------
 Base.length(t::FiniteMPO) = length(t.opp)
