@@ -26,7 +26,12 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     mpo₁ = FiniteMPO(O₁) # type-unstable for now!
     mpo₂ = FiniteMPO(O₂)
     @test convert(TensorMap, mpo₁) ≈ O₁
-    @test convert(TensorMap, mpo₂) ≈ O₂
+    @test convert(TensorMap, -mpo₂) ≈ -O₂
+    
+    # test scalar multiplication
+    α = rand(ComplexF64)
+    @test convert(TensorMap, α * mpo₁) ≈ α * O₁
+    @test convert(TensorMap, mpo₁ * α) ≈ O₁ * α
     
     # test addition and multiplication
     @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
