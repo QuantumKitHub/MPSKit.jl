@@ -213,6 +213,26 @@ function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     return FiniteMPO(O)
 end
 
+function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
+    length(mpo) == length(mps) || throw(ArgumentError("dimension mismatch"))
+
+    A = [mps.AC[1]; mps.AR[2:end]]
+    TT = storagetype(eltype(A))
+
+    local Fᵣ # trick to make Fᵣ defined in the loop
+    for i in 1:length(mps)
+        Fₗ = i != 1 ? Fᵣ :
+             isomorphism(TT, fuse(left_virtualspace(A[i]), left_virtualspace(mpo, i)),
+                         left_virtualspace(A[i]) * left_virtualspace(mpo, i))
+        Fᵣ = isomorphism(TT, fuse(right_virtualspace(A[i]), right_virtualspace(mpo, i)),
+                         right_virtualspace(A[i])' * right_virtualspace(mpo, i)')
+        @plansor contractcheck=true A[i][-1 -2; -3] := Fₗ[-1; 1 3] * A[i][1 2; 4] *
+                                    mpo[i][3 -2; 2 5] * conj(Fᵣ[-3; 4 5])
+    end
+
+    return FiniteMPS(A)
+end
+
 #==========================================================================================#
 
 "

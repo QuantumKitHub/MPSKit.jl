@@ -36,6 +36,12 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     # test addition and multiplication
     @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
     @test convert(TensorMap, mpo₁ * mpo₂) ≈ O₁ * O₂
+    
+    # test application to a state
+    ψ₁ = Tensor(rand, ComplexF64, domain(O₁))
+    mps₁ = FiniteMPS(ψ₁)
+    
+    @test convert(TensorMap, mpo₁ * mps₁) ≈ O₁ * ψ₁
 end
 
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
