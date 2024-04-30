@@ -34,6 +34,9 @@ Base.size(t::FiniteMPO) = (length(t),)
 Base.eltype(::FiniteMPO{O}) where {O} = O
 Base.eltype(::Type{FiniteMPO{O}}) where {O} = O
 
+Base.firstindex(mpo::FiniteMPO) = firstindex(mpo.opp)
+Base.lastindex(mpo::FiniteMPO) = lastindex(mpo.opp)
+
 Base.getindex(t::FiniteMPO, i) = getindex(t.opp, i)
 function Base.setindex!(t::FiniteMPO{O}, v::O, i::Int) where {O}
     @boundscheck begin
