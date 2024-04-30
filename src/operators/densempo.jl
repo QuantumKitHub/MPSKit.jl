@@ -141,6 +141,41 @@ function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     return FiniteMPO(mpo)
 end
 
+function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
+    (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
+    S = spacetype(TO)
+    if (left_virtualspace(mpo1, 1) != oneunit(S) ||
+        left_virtualspace(mpo2, 1) != oneunit(S)) ||
+       (right_virtualspace(mpo1, N)' != oneunit(S) ||
+        right_virtualspace(mpo2, N)' != oneunit(S))
+        @warn "left/right virtual space is not trivial, fusion may not be unique"
+        # this is a warning because technically any isomorphism that fuses the left/right
+        # would work and for now I dont feel like figuring out if this is important
+    end
+
+    O = similar(mpo1.opp)
+    A = storagetype(TO)
+
+    # note order of mpos: mpo1 * mpo2 * state -> mpo2 on top of mpo1
+    local Fᵣ # trick to make Fᵣ defined in the loop
+    for i in 1:N
+        Fₗ = i != 1 ? Fᵣ :
+             isomorphism(A, fuse(left_virtualspace(mpo2, i), left_virtualspace(mpo1, i)),
+                         left_virtualspace(mpo2, i) * left_virtualspace(mpo1, i))
+        Fᵣ = isomorphism(A, fuse(right_virtualspace(mpo2, i), right_virtualspace(mpo1, i)),
+                         right_virtualspace(mpo2, i)' * right_virtualspace(mpo1, i)')
+
+        @plansor O[i][-1 -2; -3 -4] := Fₗ[-1; 1 4] * mpo2[i][1 2; -3 3] *
+                                       mpo1[i][4 -2; 2 5] *
+                                       conj(Fᵣ[-4; 3 5])
+    end
+
+    # TODO: make operator full rank: presumably cuts virtual dimension by a bit
+    return FiniteMPO(O)
+end
+
+#==========================================================================================#
+
 "
     Represents a dense periodic mpo
 "
