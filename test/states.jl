@@ -42,7 +42,7 @@ end
                                                                    Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
                                                                    ComplexF64)]
     ψ_small = FiniteMPS(rand, elt, 4, d, D)
-    ψ_small2 = FiniteMPS(MPSKit.decompose_localmps(convert(TensorMap, ψ_small)))
+    ψ_small2 = FiniteMPS(convert(TensorMap, ψ_small))
     @test dot(ψ_small, ψ_small2) ≈ dot(ψ_small, ψ_small)
 end
 

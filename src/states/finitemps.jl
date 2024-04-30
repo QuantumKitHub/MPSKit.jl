@@ -220,6 +220,15 @@ function FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...)
     return FiniteMPS(f, elt, collect(P), args...; kwargs...)
 end
 
+# construct from dense state
+# TODO: make planar?
+function FiniteMPS(ψ::AbstractTensor)
+    U = Tensor(ones, scalartype(ψ), oneunit(spacetype(ψ)))
+    A = _transpose_front(U *
+                         transpose(ψ * U', ((), reverse(ntuple(identity, numind(ψ) + 1)))))
+    return FiniteMPS(decompose_localmps(A); normalize=false, overwrite=true)
+end
+
 #===========================================================================================
 Utility
 ===========================================================================================#
@@ -236,7 +245,16 @@ function Base.convert(TType::Type{<:AbstractTensorMap}, ψ::FiniteMPS)
     T = foldl(ψ.AR[2:end]; init=first(ψ.AC)) do x, y
         return _transpose_front(x * _transpose_tail(y))
     end
-    return convert(TType, T)
+
+    # remove utility legs
+    space(T, 1) == oneunit(spacetype(T)) || throw(ArgumentError("utility leg not trivial"))
+    space(T, numind(T)) == oneunit(spacetype(T))' ||
+        throw(ArgumentError("utility leg not trivial"))
+    U = Tensor(ones, scalartype(T), oneunit(spacetype(T)))
+    UTU = transpose(U' * _transpose_tail(T * U),
+                    (reverse(ntuple(identity, numind(T) - 2)), ()))
+
+    return convert(TType, UTU)
 end
 
 site_type(::Type{<:FiniteMPS{A}}) where {A} = A
