@@ -168,6 +168,12 @@ function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     return FiniteMPO(mpo)
 end
 
+# TODO: replace `copy` with `+` once this is defined for tensormaps
+function Base.:-(mpo::FiniteMPO)
+    return FiniteMPO(map(i -> i == 1 ? -mpo[i] : copy(mpo[i]), 1:length(mpo)))
+end
+Base.:-(mpo₁::FiniteMPO, mpo₂::FiniteMPO) = +(mpo₁, -mpo₂)
+
 function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
     S = spacetype(TO)
