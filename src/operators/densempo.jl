@@ -226,11 +226,39 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
                          left_virtualspace(A[i]) * left_virtualspace(mpo, i))
         Fᵣ = isomorphism(TT, fuse(right_virtualspace(A[i]), right_virtualspace(mpo, i)),
                          right_virtualspace(A[i])' * right_virtualspace(mpo, i)')
-        @plansor contractcheck=true A[i][-1 -2; -3] := Fₗ[-1; 1 3] * A[i][1 2; 4] *
-                                    mpo[i][3 -2; 2 5] * conj(Fᵣ[-3; 4 5])
+        @plansor contractcheck = true A[i][-1 -2; -3] := Fₗ[-1; 1 3] * A[i][1 2; 4] *
+                                                         mpo[i][3 -2; 2 5] *
+                                                         conj(Fᵣ[-3; 4 5])
     end
 
     return FiniteMPS(A)
+end
+
+# TODO: I think the fastest order is to start from both ends, and take the overlap at the
+# largest virtual space cut, but it might be better to just multithread both sides and meet
+# in the middle
+function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO, ket::FiniteMPS{T}) where {T}
+    (N = length(bra)) == length(mpo) == length(ket) ||
+        throw(ArgumentError("dimension mismatch"))
+    Nhalf = N ÷ 2
+    # left half
+    ρ_left = isomorphism(storagetype(T),
+                         left_virtualspace(bra, 0) ⊗ left_virtualspace(mpo, 1)',
+                         left_virtualspace(ket, 0))
+    T_left = TransferMatrix(ket.AL[1:Nhalf], mpo.opp[1:Nhalf], bra.AL[1:Nhalf])
+    ρ_left = ρ_left * T_left
+
+    # right half
+    ρ_right = isomorphism(storagetype(T),
+                          right_virtualspace(ket, N) ⊗ right_virtualspace(mpo, N)',
+                          right_virtualspace(ket, length(ket)))
+    T_right = TransferMatrix(ket.AR[(Nhalf + 1):end], mpo.opp[(Nhalf + 1):end],
+                             bra.AR[(Nhalf + 1):end])
+    ρ_right = T_right * ρ_right
+
+    # center
+    return @plansor ρ_left[3 4; 1] * ket.CR[Nhalf][1; 5] * ρ_right[5 4; 2] *
+                    conj(ket.CR[Nhalf][3; 2])
 end
 
 #==========================================================================================#

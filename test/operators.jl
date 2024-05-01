@@ -21,27 +21,30 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     L = 4
     O₁ = TensorMap(rand, ComplexF64, (ℂ^2)^L, (ℂ^2)^L)
     O₂ = TensorMap(rand, ComplexF64, space(O₁))
-    
+
     # create MPO and convert it back to see if it is the same
     mpo₁ = FiniteMPO(O₁) # type-unstable for now!
     mpo₂ = FiniteMPO(O₂)
     @test convert(TensorMap, mpo₁) ≈ O₁
     @test convert(TensorMap, -mpo₂) ≈ -O₂
-    
+
     # test scalar multiplication
     α = rand(ComplexF64)
     @test convert(TensorMap, α * mpo₁) ≈ α * O₁
     @test convert(TensorMap, mpo₁ * α) ≈ O₁ * α
-    
+
     # test addition and multiplication
     @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
     @test convert(TensorMap, mpo₁ * mpo₂) ≈ O₁ * O₂
-    
+
     # test application to a state
     ψ₁ = Tensor(rand, ComplexF64, domain(O₁))
     mps₁ = FiniteMPS(ψ₁)
-    
+
     @test convert(TensorMap, mpo₁ * mps₁) ≈ O₁ * ψ₁
+
+    @test dot(mps₁, mpo₁, mps₁) ≈ dot(ψ₁, O₁, ψ₁)
+    @test dot(mps₁, mpo₁, mps₁) ≈ dot(mps₁, mpo₁ * mps₁)
 end
 
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
