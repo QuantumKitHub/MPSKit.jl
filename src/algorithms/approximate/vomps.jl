@@ -63,6 +63,7 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
 end
 
 function _vomps_localupdate(loc, ψ, (O, ψ₀), envs, factalg=QRpos())
+    local tmp_AC, tmp_C
     @static if Defaults.parallelize_sites
         @sync begin
             Threads.@spawn begin
