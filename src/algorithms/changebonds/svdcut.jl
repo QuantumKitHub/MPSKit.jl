@@ -22,6 +22,12 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut)
     return normalize!(ψ)
 end
 
+# Note: it might be better to go to an MPS representation first
+# such that the SVD cut happens in a canonical form;
+# this would still not be the correct norm, so we will ignore this for now.
+# this implementation cuts the bond dimension in a non-canonical basis from left to right,
+# but then the basis would be somewhat canonical automatically, so in the reverse direction
+# we can cut the bond dimension in a canonical basis?
 changebonds(mpo::FiniteMPO, alg::SvdCut) = changebonds!(copy(mpo), alg)
 function changebonds!(mpo::FiniteMPO, alg::SvdCut)
     # cannot cut a MPO with only one site
@@ -29,25 +35,29 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
 
     # left to right
     O_left = transpose(mpo.opp[1], (3, 1, 2), (4,))
+    local O_right
     for i in 2:length(mpo)
         U, S, V, = tsvd!(O_left; trunc=alg.trscheme, alg=TensorKit.SVD())
         mpo.opp[i - 1] = transpose(U, (2, 3), (1, 4))
         if i < length(mpo)
             @plansor O_left[-3 -1 -2; -4] := S[-1; 1] * V[1; 2] * mpo.opp[i][2 -2; -3 -4]
+        else
+            @plansor O_right[-1; -3 -4 -2] := S[-1; 1] * V[1; 2] * mpo.opp[end][2 -2; -3 -4]
         end
     end
 
     # right to left
-    @plansor O_right[-1; -3 -4 -2] := S[-1; 1] * V[1; 2] * mpo.opp[end][2 -2; -3 -4]
-    for i in (length(mpo) - 1):-1:2
+    for i in (length(mpo) - 1):-1:1
         U, S, V, = tsvd!(O_right; trunc=alg.trscheme, alg=TensorKit.SVD())
-        opp′[i + 1] = transpose(V, (1, 4), (2, 3))
-        if i > 2
+        mpo.opp[i + 1] = transpose(V, (1, 4), (2, 3))
+        if i > 1
             @plansor O_right[-1; -3 -4 -2] := mpo.opp[i][-1 -2; -3 2] * U[2; 1] * S[1; -4]
+        else
+            @plansor mpo.opp[1][-1 -2; -3 -4] := mpo.opp[1][-1 -2; -3 2] * U[2; 1] *
+                                                 S[1; -4]
         end
     end
 
-    @plansor mpo.opp[1][-1 -2; -3 -4] := mpo.opp[1][-1 -2; -3 2] * U[2; 1] * S[1; -4]
     return mpo
 end
 
