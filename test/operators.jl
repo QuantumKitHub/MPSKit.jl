@@ -45,13 +45,12 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
 
     @test dot(mps₁, mpo₁, mps₁) ≈ dot(ψ₁, O₁, ψ₁)
     @test dot(mps₁, mpo₁, mps₁) ≈ dot(mps₁, mpo₁ * mps₁)
-    
     # test conversion to and from mps
     mpomps₁ = convert(FiniteMPS, mpo₁)
     mpompsmpo₁ = convert(FiniteMPO, mpomps₁)
 
-    @test convert(FiniteMPO, mpomps₁) ≈ mpo₁ rtol=1e-6
-    
+    @test convert(FiniteMPO, mpomps₁) ≈ mpo₁ rtol = 1e-6
+
     @test dot(mpomps₁, mpomps₁) ≈ dot(mpo₁, mpo₁)
 end
 
