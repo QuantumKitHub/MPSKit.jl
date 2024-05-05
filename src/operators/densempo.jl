@@ -26,6 +26,10 @@ end
 left_virtualspace(mpo::FiniteMPO, i) = left_virtualspace(mpo[i])
 right_virtualspace(mpo::FiniteMPO, i) = right_virtualspace(mpo[i])
 
+# Utility
+# -------
+Base.copy(mpo::FiniteMPO) = FiniteMPO(map(copy, mpo.opp))
+
 # AbstractVector
 # --------------
 Base.length(t::FiniteMPO) = length(t.opp)
@@ -47,6 +51,10 @@ function Base.setindex!(t::FiniteMPO{O}, v::O, i::Int) where {O}
     end
     @inbounds t.opp[i] = v
     return t
+end
+
+function Base.similar(mpo::FiniteMPO, ::Type{O}, L::Int=length(mpo)) where {O}
+    return FiniteMPO{O}(similar(mpo.opp, O, L))
 end
 
 # Converters
