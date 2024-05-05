@@ -296,7 +296,7 @@ function Base.isapprox(mpo₁::FiniteMPO, mpo₂::FiniteMPO;
     norm₁² = abs(dot(mpo₁, mpo₁))
     norm₂² = abs(dot(mpo₂, mpo₂))
     norm₁₂² = norm₁² + norm₂² - 2 * real(dot(mpo₁, mpo₂))
-    
+
     # don't take square roots to avoid precision loss
     return norm₁₂² ≤ max(atol^2, rtol^2 * max(norm₁², norm₂²))
 end
