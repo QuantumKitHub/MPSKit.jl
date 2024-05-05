@@ -87,7 +87,7 @@ function Base.convert(::Type{<:AbstractTensorMap}, mpo::FiniteMPO)
     push!(indices, [N + 1])
     O = ncon(tensors, indices)
 
-    return transpose(O, ntuple(identity, N), ntuple(i -> i + N, N))
+    return transpose(O, (ntuple(identity, N), ntuple(i -> i + N, N)))
 end
 
 # Linear Algebra
@@ -115,7 +115,7 @@ function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
 
     # making sure that the new operator is "full rank"
     O, R = leftorth!(O)
-    mpo[1] = transpose(O, (2, 3), (1, 4))
+    mpo[1] = transpose(O, ((2, 3), (1, 4)))
 
     for i in 2:halfN
         # incorporate fusers from left side
@@ -132,7 +132,7 @@ function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
 
         # making sure that the new operator is "full rank"
         O, R = leftorth!(O)
-        mpo[i] = transpose(O, (2, 3), (1, 4))
+        mpo[i] = transpose(O, ((2, 3), (1, 4)))
     end
 
     C₁, C₂ = F₁, F₂
@@ -148,7 +148,7 @@ function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
 
     # making sure that the new operator is "full rank"
     L, O = rightorth!(O)
-    mpo[end] = transpose(O, (1, 4), (2, 3))
+    mpo[end] = transpose(O, ((1, 4), (2, 3)))
 
     for i in (N - 1):-1:(halfN + 1)
         # incorporate fusers from right side
@@ -165,7 +165,7 @@ function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
 
         # making sure that the new operator is "full rank"
         L, O = rightorth!(O)
-        mpo[i] = transpose(O, (1, 4), (2, 3))
+        mpo[i] = transpose(O, ((1, 4), (2, 3)))
     end
 
     # create center gauge and absorb to the right
