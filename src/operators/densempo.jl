@@ -269,6 +269,43 @@ function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO, ket::FiniteMPS{T}) whe
                     conj(ket.CR[Nhalf][3; 2])
 end
 
+function TensorKit.dot(mpo₁::FiniteMPO, mpo₂::FiniteMPO)
+    length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
+    
+    N = length(mpo₁)
+    Nhalf = N ÷ 2
+    
+    # left half
+    @plansor ρ_left[-1; -2] := conj(mpo₁[1][1 2; 3 -1]) * mpo₂[1][1 2; 3 -2]
+    for i in 2:Nhalf
+        @plansor ρ_left[-1; -2] := ρ_left[1; 2] * conj(mpo₁[i][1 3; 4 -1]) *
+                                    mpo₂[i][2 3; 4 -2]
+    end
+    
+    # right half
+    @plansor ρ_right[-1; -2] := conj(mpo₁[N][-2 1; 2 3]) * mpo₂[N][-1 1; 2 3]
+    for i in (N - 1):-1:(Nhalf + 1)
+        @plansor ρ_right[-1; -2] := ρ_right[1; 2] * conj(mpo₁[i][-2 4; 3 2]) *
+                                     mpo₂[i][-1 4; 3 1]
+    end
+    
+    return @plansor ρ_left[1; 2] * ρ_right[2; 1]
+end
+
+function Base.isapprox(mpo₁::FiniteMPO, mpo₂::FiniteMPO;
+                       atol::Real=0, rtol::Real=atol > 0 ? 0 : √eps(real(scalartype(mpo₁))))
+    length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
+    
+    # computing ||mpo₁ - mpo₂|| without constructing mpo₁ - mpo₂
+    # ||mpo₁ - mpo₂||² = ||mpo₁||² + ||mpo₂||² - 2 ⟨mpo₁, mpo₂⟩
+    norm₁² = abs(dot(mpo₁, mpo₁))
+    norm₂² = abs(dot(mpo₂, mpo₂))
+    norm₁₂² = norm₁² + norm₂² - 2 * real(dot(mpo₁, mpo₂))
+    
+    # don't take square roots to avoid precision loss
+    return norm₁₂² ≤ max(atol^2, rtol^2 * max(norm₁², norm₂²))
+end
+
 #==========================================================================================#
 
 "
