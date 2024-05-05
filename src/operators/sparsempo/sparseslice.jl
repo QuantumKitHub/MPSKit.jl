@@ -18,7 +18,8 @@ struct SparseMPOSlice{S,T,E,A<:AbstractMatrix{Union{E,T}},B<:AbstractVector{Unio
     pspace::S
     function SparseMPOSlice(Os::AbstractMatrix{Union{E,T}},
                             domspaces::B, imspaces::B,
-                            pspace::S) where {S<:IndexSpace,T<:AbstractTensorMap{S},E<:Number,B<:AbstractVector{S}}
+                            pspace::S) where {S<:IndexSpace,T<:AbstractTensorMap{S},
+                                              E<:Number,B<:AbstractVector{S}}
         sz1, sz2 = size(Os)
         sz1 == length(imspaces) || throw(ArgumentError("imspaces must have length $sz1"))
         sz2 == length(domspaces) || throw(ArgumentError("domspaces must have length $sz2"))
