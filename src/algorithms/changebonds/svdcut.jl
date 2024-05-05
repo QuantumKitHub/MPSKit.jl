@@ -22,7 +22,7 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut)
     return normalize!(ψ)
 end
 
-changebonds(mpo::FiniteMPS, alg::SvdCut) = changebonds!(copy(mpo), alg)
+changebonds(mpo::FiniteMPO, alg::SvdCut) = changebonds!(copy(mpo), alg)
 function changebonds!(mpo::FiniteMPO, alg::SvdCut)
     # left to right
     O_left = transpose(mpo.opp[1], (3, 1, 2), (4,))
