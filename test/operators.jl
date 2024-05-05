@@ -16,6 +16,44 @@ using VectorInterface: One
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
 vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
 
+@testset "FiniteMPO" begin
+    # start from random operators
+    L = 4
+    O₁ = TensorMap(rand, ComplexF64, (ℂ^2)^L, (ℂ^2)^L)
+    O₂ = TensorMap(rand, ComplexF64, space(O₁))
+
+    # create MPO and convert it back to see if it is the same
+    mpo₁ = FiniteMPO(O₁) # type-unstable for now!
+    mpo₂ = FiniteMPO(O₂)
+    @test convert(TensorMap, mpo₁) ≈ O₁
+    @test convert(TensorMap, -mpo₂) ≈ -O₂
+
+    # test scalar multiplication
+    α = rand(ComplexF64)
+    @test convert(TensorMap, α * mpo₁) ≈ α * O₁
+    @test convert(TensorMap, mpo₁ * α) ≈ O₁ * α
+
+    # test addition and multiplication
+    @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
+    @test convert(TensorMap, mpo₁ * mpo₂) ≈ O₁ * O₂
+
+    # test application to a state
+    ψ₁ = Tensor(rand, ComplexF64, domain(O₁))
+    mps₁ = FiniteMPS(ψ₁)
+
+    @test convert(TensorMap, mpo₁ * mps₁) ≈ O₁ * ψ₁
+
+    @test dot(mps₁, mpo₁, mps₁) ≈ dot(ψ₁, O₁, ψ₁)
+    @test dot(mps₁, mpo₁, mps₁) ≈ dot(mps₁, mpo₁ * mps₁)
+    # test conversion to and from mps
+    mpomps₁ = convert(FiniteMPS, mpo₁)
+    mpompsmpo₁ = convert(FiniteMPO, mpomps₁)
+
+    @test convert(FiniteMPO, mpomps₁) ≈ mpo₁ rtol = 1e-6
+
+    @test dot(mpomps₁, mpomps₁) ≈ dot(mpo₁, mpo₁)
+end
+
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
                                                                             vspaces)
     #generate a 1-2-3 body interaction

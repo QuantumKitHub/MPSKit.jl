@@ -144,6 +144,8 @@ Return the left virtual space of the bond tensor at site `i`. This is equivalent
 left virtual space of the left-gauged site tensor at site `i + 1`.
 """
 function left_virtualspace end
+left_virtualspace(A::GenericMPSTensor) = space(A, 1)
+left_virtualspace(O::MPOTensor) = space(O, 1)
 
 """
     right_virtualspace(ψ::AbstractMPS, i::Int)
@@ -152,6 +154,8 @@ Return the right virtual space of the bond tensor at site `i`. This is equivalen
 right virtual space of the right-gauged site tensor at site `i`.
 """
 function right_virtualspace end
+right_virtualspace(A::GenericMPSTensor) = space(A, numind(A))
+right_virtualspace(O::MPOTensor) = space(O, 4)
 
 """
     physicalspace(ψ::AbstractMPS, i::Int)
