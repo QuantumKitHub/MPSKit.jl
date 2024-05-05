@@ -217,8 +217,7 @@ function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
                                        conj(Fᵣ[-4; 3 5])
     end
 
-    # TODO: make operator full rank: presumably cuts virtual dimension by a bit
-    return FiniteMPO(O)
+    return changebonds!(FiniteMPO(O), SvdCut(; trscheme=notrunc()))
 end
 
 function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
