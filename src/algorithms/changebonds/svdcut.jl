@@ -24,6 +24,9 @@ end
 
 changebonds(mpo::FiniteMPO, alg::SvdCut) = changebonds!(copy(mpo), alg)
 function changebonds!(mpo::FiniteMPO, alg::SvdCut)
+    # cannot cut a MPO with only one site
+    length(mpo) == 1 && return mpo
+
     # left to right
     O_left = transpose(mpo.opp[1], (3, 1, 2), (4,))
     for i in 2:length(mpo)
