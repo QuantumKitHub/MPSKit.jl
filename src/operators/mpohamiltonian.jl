@@ -1,5 +1,6 @@
 """
-    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, O::LocalOperator...)
+    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
+    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace})
     MPOHamiltonian(x::AbstractArray{<:Any,3})
 
 MPO representation of a hamiltonian. This is a specific form of a [`SparseMPO`](@ref), where
@@ -14,6 +15,18 @@ all the sites are represented by an upper triangular block matrix of the followi
 ```
 
 where `A`, `B`, `C`, and `D` are `MPOTensor`s, or (sparse) blocks thereof.
+
+## Examples
+
+For example, constructing a nearest-neighbour Hamiltonian would look like this:
+
+```julia
+lattice = fill(ℂ^2, 10)
+H = MPOHamiltonian(lattice, (i, i+1) => O for i in 1:length(lattice)-1)
+```
+
+See also [`instantiate_operator`](@ref), which is responsable for instantiating the local
+operators in a form that is compatible with this constructor.
 """
 struct MPOHamiltonian{S,T<:MPOTensor,E<:Number}
     data::SparseMPO{S,T,E}
@@ -40,18 +53,28 @@ function MPOHamiltonian(x::Array{T,1}) where {T<:MPOTensor{Sp}} where {Sp}
     return MPOHamiltonian(SparseMPO(nOs))
 end
 
-function MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, O::LocalOperator{T},
-                        Orest::LocalOperator{T}...) where {T}
-    nonzero_keys = similar(lattice, Vector{NTuple{2,Int}})
-    nonzero_opps = similar(lattice, Vector{Any})
-    for i in eachindex(lattice)
+# TODO: consider if we even need to constrain the type of "local_operators" here,
+# in principle any type that knows how to instantiate itself on a lattice should work
+function MPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
+                        local_operators::Union{Base.Generator,AbstractDict})
+    return MPOHamiltonian(lattice, local_operators...)
+end
+function MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators::Pair...)
+    # initialize vectors for storing the data
+    # TODO: generalize to weird lattice types
+    # nonzero_keys = similar(lattice, Vector{NTuple{2,Int}})
+    # nonzero_opps = similar(lattice, Vector{Any})
+    nonzero_keys = Vector{Vector{NTuple{2,Int}}}(undef, length(lattice))
+    nonzero_opps = Vector{Vector{Any}}(undef, length(lattice))
+    for i in eachindex(nonzero_keys)
         nonzero_keys[i] = []
         nonzero_opps[i] = []
     end
 
-    for local_operator in (O, Orest...)
+    for local_operator in local_operators
         # instantiate the operator as Vector{MPOTensor}
         sites, local_mpo = instantiate_operator(lattice, local_operator)
+        local key_R # trick to define key_R before the first iteration
         for (i, (site, O)) in enumerate(zip(sites, local_mpo))
             key_L = i == 1 ? 1 : key_R
             key_R = i == length(local_mpo) ? 0 :
@@ -62,6 +85,7 @@ function MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, O::LocalOperator{
     end
 
     # construct the sparse MPO
+    T = _find_tensortype(nonzero_opps)
     E = scalartype(T)
 
     max_key = maximum(x -> maximum(last, x; init=1), nonzero_keys) + 1
@@ -74,9 +98,9 @@ function MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, O::LocalOperator{
         for ((key_L, key_R), O) in zip(nonzero_keys[site], nonzero_opps[site])
             key_R′ = key_R == 0 ? max_key : key_R
             if O_data[site, key_L, key_R′] == zero(E)
-                O_data[site, key_L, key_R′] = O
+                O_data[site, key_L, key_R′] = O isa Number ? convert(E, O) : convert(T, O)
             else
-                O_data[site, key_L, key_R′] += O
+                O_data[site, key_L, key_R′] += O isa Number ? convert(E, O) : convert(T, O)
             end
         end
     end
@@ -84,14 +108,69 @@ function MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, O::LocalOperator{
     return MPOHamiltonian(SparseMPO(O_data))
 end
 
-# accept pairs
-function MPOHamiltonian(hilbert_space::AbstractArray{<:VectorSpace}, O::Pair, Orest::Pair...)
-    return MPOHamiltonian(hilbert_space, LocalOperator.((O, Orest...))...)
+"""
+    instantiate_operator(lattice::AbstractArray{<:VectorSpace}, O::Pair)
+
+Instantiate a local operator `O` on a lattice `lattice` as a vector of MPO tensors, and a
+vector of linear site indices.
+"""
+function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
+                              (inds, mpo)::Pair{NTuple{N,I},<:FiniteMPO}) where {N,I}
+    # convert to linear index type
+    operators = mpo.opp
+    indices = map(x -> getindex(eachindex(IndexLinear(), lattice), x...), inds)
+    T = eltype(mpo)
+    local_mpo = Union{T,scalartype(T)}[]
+    sites = Int[]
+
+    i = 1
+    current_site = first(indices)
+    previous_site = current_site # to avoid infinite loops
+
+    while i <= length(operators)
+        @assert !isnothing(current_site) "LocalOperator does not fit into the given Hilbert space"
+        if current_site == indices[i] # add MPO tensor
+            @assert space(operators[i], 2) == lattice[current_site] "LocalOperator does not fit into the given Hilbert space"
+            push!(local_mpo, operators[i])
+            push!(sites, current_site)
+            previous_site = current_site
+            i += 1
+        else
+            push!(local_mpo, one(scalartype(T)))
+            push!(sites, current_site)
+        end
+
+        current_site = nextindex(lattice, current_site)
+        @assert current_site != previous_site "LocalOperator does not fit into the given Hilbert space"
+    end
+
+    return sites => local_mpo
+end
+function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
+                              operator::Pair{NTuple{N,I},O}) where {N,I,
+                                                                    O<:AbstractTensorMap{<:Any,
+                                                                                         N,
+                                                                                         N}}
+    return instantiate_operator(lattice,
+                                operator.first => FiniteMPO(operator.second))
+end
+function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
+                              (inds, opp)::Pair{Int})
+    return instantiate_operator(lattice, (inds,) => opp)
+end
+function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
+                              (inds, opp)::Pair{CartesianIndex})
+    return instantiate_operator(lattice, inds.I => opp)
 end
 
-
-
-
+# yields the promoted tensortype of all tensors
+function _find_tensortype(nonzero_operators::AbstractArray)
+    return mapreduce(promote_type, nonzero_operators) do x
+        return mapreduce(promote_type, x; init=Base.Bottom) do y
+            return y isa AbstractTensorMap ? typeof(y) : Base.Bottom
+        end
+    end
+end
 
 function Base.getproperty(h::MPOHamiltonian, f::Symbol)
     if f in (:odim, :period, :imspaces, :domspaces, :Os, :pspaces)
