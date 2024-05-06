@@ -27,9 +27,9 @@ end
 # const SumOfLocalOperators{L<:LocalOperator} = LazySum{L}
 Base.copy(O::LocalOperator) = LocalOperator(copy(O.opp), copy(O.inds))
 
-function instantiate_operator(hilbert_space::AbstractArray{<:VectorSpace},
+function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
                               O::LocalOperator{T}) where {T}
-    indices = eachindex(IndexLinear(), hilbert_space)[O.inds] # convert to canonical index type
+    indices = eachindex(IndexLinear(), lattice)[O.inds] # convert to canonical index type
     operators = O.opp
 
     local_mpo = Union{T,scalartype(T)}[]
@@ -42,7 +42,7 @@ function instantiate_operator(hilbert_space::AbstractArray{<:VectorSpace},
     while i <= length(operators)
         @assert !isnothing(current_site) "LocalOperator does not fit into the given Hilbert space"
         if current_site == indices[i] # add MPO tensor
-            @assert space(operators[i], 2) == hilbert_space[current_site] "LocalOperator does not fit into the given Hilbert space"
+            @assert space(operators[i], 2) == lattice[current_site] "LocalOperator does not fit into the given Hilbert space"
             push!(local_mpo, operators[i])
             push!(sites, current_site)
             previous_site = current_site
@@ -52,7 +52,7 @@ function instantiate_operator(hilbert_space::AbstractArray{<:VectorSpace},
             push!(sites, current_site)
         end
 
-        current_site = nextindex(hilbert_space, current_site)
+        current_site = nextindex(lattice, current_site)
         @assert current_site != previous_site "LocalOperator does not fit into the given Hilbert space"
     end
 
