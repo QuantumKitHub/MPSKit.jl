@@ -25,6 +25,7 @@ end
 # ----------
 left_virtualspace(mpo::FiniteMPO, i) = left_virtualspace(mpo[i])
 right_virtualspace(mpo::FiniteMPO, i) = right_virtualspace(mpo[i])
+physicalspace(mpo::FiniteMPO, i) = physicalspace(mpo[i])
 
 # Utility
 # -------
