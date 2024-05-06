@@ -309,6 +309,8 @@ function add_physical_charge(O::MPOHamiltonian, charges::AbstractVector)
     return MPOHamiltonian(add_physical_charge(O.data, charges))
 end
 
+Base.:*(H::MPOHamiltonian, mps::FiniteMPS) = convert(FiniteMPO, H) * mps
+
 function LinearAlgebra.dot(bra::FiniteMPS, H::MPOHamiltonian, ket::FiniteMPS,
                            envs=environments(bra, H, ket))
     # TODO: find where environments are already computed and use that site
@@ -338,4 +340,54 @@ end
 function Base.convert(::Type{MPOHamiltonian{S,T,E}}, x::MPOHamiltonian{S}) where {S,T,E}
     typeof(x) == MPOHamiltonian{S,T,E} && return x
     return MPOHamiltonian{S,T,E}(convert(SparseMPO{S,T,E}, x.data))
+end
+
+function Base.convert(::Type{FiniteMPO}, H::MPOHamiltonian)
+    # special case for single site operator
+    if length(H) == 1
+        @plansor O[-1 -2; -3 -4] := H[1][1, end][-1 -2; -3 -4]
+        return FiniteMPO([O])
+    end
+
+    embeds = _embedders.([H[i].domspaces for i in 2:length(H)])
+    data′ = map(1:length(H)) do site
+        if site == 1 && site == length(H)
+            @plansor O[-1 -2; -3 -4] := H[site][1, end][-1 -2; -3 -4]
+        elseif site == 1
+            for j in 1:(H.odim)
+                if j == 1
+                    @plansor O[-1 -2; -3 -4] := H[site][1, j][-1 -2; -3 1] *
+                                                conj(embeds[site][j][-4; 1])
+                else
+                    @plansor O[-1 -2; -3 -4] += H[site][1, j][-1 -2; -3 1] *
+                                                conj(embeds[site][j][-4; 1])
+                end
+            end
+        elseif site == length(H)
+            for i in 1:(H.odim)
+                if i == 1
+                    @plansor O[-1 -2; -3 -4] := embeds[site-1][i][-1; 1] *
+                                                H[site][i, end][1 -2; -3 -4]
+                else
+                    @plansor O[-1 -2; -3 -4] += embeds[site-1][i][-1; 1] *
+                                                H[site][i, end][1 -2; -3 -4]
+                end
+            end
+        else
+            for i in 1:(H.odim), j in 1:(H.odim)
+                if i == j == 1
+                    @plansor O[-1 -2; -3 -4] := embeds[site-1][i][-1; 1] *
+                                                H[site][i, j][1 -2; -3 2] *
+                                                conj(embeds[site][j][-4; 2])
+                else
+                    @plansor O[-1 -2; -3 -4] += embeds[site-1][i][-1; 1] *
+                                                H[site][i, j][1 -2; -3 2] *
+                                                conj(embeds[site][j][-4; 2])
+                end
+            end
+        end
+        return O
+    end
+
+    return FiniteMPO(data′)
 end
