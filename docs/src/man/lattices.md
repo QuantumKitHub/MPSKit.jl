@@ -1,4 +1,4 @@
 # [Lattices](@id lattices)
 
-!!! warn
+!!! warning
     This section is still under construction. Coming soon!

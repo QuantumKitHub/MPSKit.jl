@@ -13,7 +13,7 @@ These objects can be created either directly from a vector of `MPOTensor`s, or s
 a dense operator (a subtype of `AbstractTensorMap{S,N,N}`), which is then decomposed into a
 product of local tensors.
 
-<!-- TODO: insert picture -->
+![](mpo.svg)
 
 ```@setup operators
 using TensorKit, MPSKit
@@ -32,6 +32,11 @@ case, the left- and right virtual spaces are trivial, but this is not a requirem
 ```@example operators
 O_xzx[1]
 ```
+
+!!! warning
+    The local tensors are defined only up to a gauge transformation of the virtual spaces.
+    This means that the tensors are not uniquely defined, and special care must be taken
+    when comparing MPOs on an element-wise basis.
 
 For convenience, a number of utility functions are defined for probing the structure of the
 constructed MPO. For example, the spaces can be queried as follows:
@@ -57,7 +62,7 @@ println("Virtual dimension of O_xzx_sum: ", left_virtualspace(O_xzx_sum, 2))
 ```
 
 ```@example operators
-O_xzx * FiniteMPS(3, ℂ^2, ℂ^4)
+O_xzx_sum * FiniteMPS(3, ℂ^2, ℂ^4)
 ```
 
 !!! note
@@ -98,7 +103,7 @@ h = 0.5
 chain = fill(ℂ^2, 4) # a finite chain of 4 sites, each with a 2-dimensional Hilbert space
 single_site_operators = [1 => -h * S_z, 2 => -h * S_z, 3 => -h * S_z]
 two_site_operators = [(1, 2) => -J * S_x ⊗ S_x, (2, 3) => -J * S_x ⊗ S_x]
-H_ising = MPOHamiltonian(chain, single_site_operators..., two_site_operators...)
+H_ising = MPOHamiltonian(chain, single_site_operators..., two_site_operators...);
 ```
 
 Various alternative constructions are possible, such as using a `Dict` with key-value pairs
@@ -108,7 +113,7 @@ that specify the operators, or using generator expressions to simplify the const
 H_ising′ = -J * MPOHamiltonian(chain,
                                (i, i + 1) => S_x ⊗ S_x for i in 1:(length(chain) - 1)) -
             h * MPOHamiltonian(chain, i => S_z for i in 1:length(chain))
-H_ising ≈ H_ising′
+isapprox(H_ising, H_ising′; atol=1e-6)
 ```
 
 Note that this construction is not limited to nearest-neighbour interactions, or 1D systems.
@@ -125,17 +130,18 @@ for I in eachindex(square)
     local_operators[(I,)] = -h * S_z # single site operators still require tuples of indices
 end
 
+# horizontal and vertical interactions are easier using Cartesian indices
 horizontal_operators = Dict()
-for I in eachindex(square)
+for I in eachindex(IndexCartesian(), square)
     if I[1] < size(square, 1)
-        horizontal_operators[(I, I + (1, 0))] = -J * S_x ⊗ S_x
+        horizontal_operators[(I, I .+ (1, 0))] = -J * S_x ⊗ S_x
     end
 end
 
 vertical_operators = Dict()
-for I in eachindex(square)
+for I in eachindex(IndexCartesian(), square)
     if I[2] < size(square, 2)
-        vertical_operators[(I, I + (0, 1))] = -J * S_x ⊗ S_x
+        vertical_operators[(I, I .+ (0, 1))] = -J * S_x ⊗ S_x
     end
 end
 
