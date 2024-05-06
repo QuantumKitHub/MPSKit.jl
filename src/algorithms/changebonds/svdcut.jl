@@ -10,7 +10,9 @@ An algorithm that uses truncated SVD to change the bond dimension of a ψ.
     trscheme::TruncationScheme = notrunc()
 end
 
-changebonds(ψ::AbstractFiniteMPS, alg::SvdCut; kwargs...) = changebonds!(copy(ψ), alg; kwargs...)
+function changebonds(ψ::AbstractFiniteMPS, alg::SvdCut; kwargs...)
+    return changebonds!(copy(ψ), alg; kwargs...)
+end
 function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut; normalize::Bool=true)
     for i in (length(ψ) - 1):-1:1
         U, S, V, = tsvd(ψ.CR[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
