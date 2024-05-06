@@ -309,6 +309,25 @@ function add_physical_charge(O::MPOHamiltonian, charges::AbstractVector)
     return MPOHamiltonian(add_physical_charge(O.data, charges))
 end
 
+function LinearAlgebra.dot(bra::FiniteMPS, H::MPOHamiltonian, ket::FiniteMPS,
+                           envs=environments(bra, H, ket))
+    # TODO: find where environments are already computed and use that site
+    Nhalf = length(bra) ÷ 2
+
+    h = H[Nhalf]
+    GL = leftenv(envs, Nhalf, bra)
+    GR = rightenv(envs, Nhalf, bra)
+    AC = ket.AC[Nhalf]
+    AC̄ = bra.AC[Nhalf]
+
+    E = zero(promote_type(scalartype(bra), scalartype(H), scalartype(ket)))
+    for (j, k) in keys(h)
+        E += @plansor GL[j][1 2; 3] * AC[3 7; 5] * GR[k][5 8; 6] * conj(AC̄[1 4; 6]) *
+                      h[j, k][2 4; 7 8]
+    end
+    return E
+end
+
 # promotion and conversion
 # ------------------------
 function Base.promote_rule(::Type{MPOHamiltonian{S,T₁,E₁}},
