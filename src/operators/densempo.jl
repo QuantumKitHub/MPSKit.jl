@@ -233,12 +233,12 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
                          left_virtualspace(A[i]) * left_virtualspace(mpo, i))
         Fᵣ = isomorphism(TT, fuse(right_virtualspace(A[i]), right_virtualspace(mpo, i)),
                          right_virtualspace(A[i])' * right_virtualspace(mpo, i)')
-        @plansor contractcheck = true A[i][-1 -2; -3] := Fₗ[-1; 1 3] * A[i][1 2; 4] *
-                                                         mpo[i][3 -2; 2 5] *
-                                                         conj(Fᵣ[-3; 4 5])
+        @plansor A[i][-1 -2; -3] := Fₗ[-1; 1 3] * A[i][1 2; 4] *
+                                    mpo[i][3 -2; 2 5] *
+                                    conj(Fᵣ[-3; 4 5])
     end
 
-    return FiniteMPS(A)
+    return changebonds!(FiniteMPS(A), SvdCut(; trscheme=notrunc()); normalize=false)
 end
 
 # TODO: I think the fastest order is to start from both ends, and take the overlap at the
