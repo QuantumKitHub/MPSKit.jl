@@ -54,6 +54,30 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     @test dot(mpomps₁, mpomps₁) ≈ dot(mpo₁, mpo₁)
 end
 
+@testset "Finite MPOHamiltonian" begin
+    L = 3
+    lattice = fill(ℂ^2, L)
+    O₁ = TensorMap(rand, ComplexF64, ℂ^2, ℂ^2)
+    E = id(Matrix{ComplexF64}, domain(O₁))
+    O₂ = TensorMap(rand, ComplexF64, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
+    
+    H1 = MPOHamiltonian(lattice, i => O₁ for i in 1:L)
+    H2 = MPOHamiltonian(lattice, (i, i+1) => O₂ for i in 1:L-1)
+    
+    # check if constructor works after converting back to tensormap
+    H1_tm = convert(TensorMap, H1)
+    
+    operators = vcat(fill(E, L - 1), O₁)
+    @test H1_tm ≈ mapreduce(+, 1:L) do i
+        return reduce(⊗, circshift(operators, i))
+    end
+    
+    operators = vcat(fill(E, L - 2), O₂)
+    @test convert(TensorMap, H2) ≈ mapreduce(+, 1:L-1) do i
+        return reduce(⊗, circshift(operators, i))
+    end
+end
+
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
                                                                             vspaces)
     #generate a 1-2-3 body interaction
