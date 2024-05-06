@@ -199,7 +199,10 @@ function Base.getindex(x::SparseMPO, i::Int, j=:, k=:)
     return SparseMPOSlice(@view(x.Os[i, j, k]), @view(x.domspaces[i, k]),
                           @view(x.imspaces[i, j]), x.pspaces[i])
 end
-Base.copy(x::SparseMPO) = SparseMPO(copy(x.Os), copy(x.domspaces), copy(x.pspaces));
+function Base.copy(x::SparseMPO)
+    Os = map!(copy, similar(x.Os), x.Os) # force array type
+    return SparseMPO(Os, copy(x.domspaces), copy(x.pspaces))
+end
 TensorKit.space(x::SparseMPO, i) = x.pspaces[i]
 "
 checks if ham[:,i,i] = 1 for every i
