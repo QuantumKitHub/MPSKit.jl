@@ -38,7 +38,8 @@ makedocs(;
                              "man/operators.md",
                              "man/algorithms.md",
                              "man/environments.md",
-                             "man/parallelism.md"],
+                             "man/parallelism.md",
+                             "man/lattices.md"],
                 "Examples" => "examples/index.md",
                 "Library" => "lib/lib.md"],
          warnonly=true)

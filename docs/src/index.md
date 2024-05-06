@@ -5,7 +5,7 @@
 ## Table of contents
 
 ```@contents
-Pages = ["man/intro.md","man/conventions.md","man/states.md","man/operators.md","man/algorithms.md","man/parallelism.md"]
+Pages = ["man/intro.md","man/conventions.md","man/states.md","man/operators.md","man/algorithms.md","man/parallelism.md", "man/lattices.md"]
 Depth = 1
 ```
 
