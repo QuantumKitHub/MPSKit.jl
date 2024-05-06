@@ -330,6 +330,10 @@ function LinearAlgebra.dot(bra::FiniteMPS, H::MPOHamiltonian, ket::FiniteMPS,
     return E
 end
 
+function Base.isapprox(H1::MPOHamiltonian, H2::MPOHamiltonian; kwargs...)
+    return isapprox(convert(FiniteMPO, H1), convert(FiniteMPO, H2); kwargs...)
+end
+
 # promotion and conversion
 # ------------------------
 function Base.promote_rule(::Type{MPOHamiltonian{S,T₁,E₁}},
