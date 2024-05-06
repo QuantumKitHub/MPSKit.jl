@@ -366,21 +366,21 @@ function Base.convert(::Type{FiniteMPO}, H::MPOHamiltonian)
         elseif site == length(H)
             for i in 1:(H.odim)
                 if i == 1
-                    @plansor O[-1 -2; -3 -4] := embeds[site-1][i][-1; 1] *
+                    @plansor O[-1 -2; -3 -4] := embeds[site - 1][i][-1; 1] *
                                                 H[site][i, end][1 -2; -3 -4]
                 else
-                    @plansor O[-1 -2; -3 -4] += embeds[site-1][i][-1; 1] *
+                    @plansor O[-1 -2; -3 -4] += embeds[site - 1][i][-1; 1] *
                                                 H[site][i, end][1 -2; -3 -4]
                 end
             end
         else
             for i in 1:(H.odim), j in 1:(H.odim)
                 if i == j == 1
-                    @plansor O[-1 -2; -3 -4] := embeds[site-1][i][-1; 1] *
+                    @plansor O[-1 -2; -3 -4] := embeds[site - 1][i][-1; 1] *
                                                 H[site][i, j][1 -2; -3 2] *
                                                 conj(embeds[site][j][-4; 2])
                 else
-                    @plansor O[-1 -2; -3 -4] += embeds[site-1][i][-1; 1] *
+                    @plansor O[-1 -2; -3 -4] += embeds[site - 1][i][-1; 1] *
                                                 H[site][i, j][1 -2; -3 2] *
                                                 conj(embeds[site][j][-4; 2])
                 end
@@ -390,4 +390,8 @@ function Base.convert(::Type{FiniteMPO}, H::MPOHamiltonian)
     end
 
     return FiniteMPO(data′)
+end
+
+function Base.convert(T::Type{<:AbstractTensorMap}, H::MPOHamiltonian)
+    return convert(T, convert(FiniteMPO, H))
 end
