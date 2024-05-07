@@ -89,7 +89,6 @@ include("states/orthoview.jl")
 include("states/quasiparticle_state.jl")
 include("states/ortho.jl")
 
-include("operators/localoperator.jl")
 include("operators/densempo.jl")
 include("operators/sparsempo/sparseslice.jl")
 include("operators/sparsempo/sparsempo.jl")
