@@ -157,14 +157,12 @@ end
 end
 
 """
-    nextindex(collection, idx)
+    nextindex(A, idx)
 
-Return the next index of `collection`, or nothing if `idx` is the last index, as defined by iterating over `eachindex`.
+Return the next index of `A`, or nothing if `idx` is the last index. 
+
+Indices are of the same type as those returned by `keys(A)` and `pairs(A)`.
 
 See also: [`firstindex`](@ref), [`lastindex`](@ref)
 """
-function nextindex(A::AbstractArray, idx::Int)
-    nextidx = Base.iterate(eachindex(A), idx)
-    isnothing(nextidx) && return nothing
-    return nextidx[1]
-end
+nextindex(A::AbstractArray, idx) = findnext(i -> true, A, idx)
