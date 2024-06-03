@@ -10,8 +10,10 @@ An algorithm that uses truncated SVD to change the bond dimension of a ψ.
     trscheme::TruncationScheme = notrunc()
 end
 
-changebonds(ψ::AbstractFiniteMPS, alg::SvdCut) = changebonds!(copy(ψ), alg)
-function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut)
+function changebonds(ψ::AbstractFiniteMPS, alg::SvdCut; kwargs...)
+    return changebonds!(copy(ψ), alg; kwargs...)
+end
+function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut; normalize::Bool=true)
     for i in (length(ψ) - 1):-1:1
         U, S, V, = tsvd(ψ.CR[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
         AL′ = ψ.AL[i] * U
@@ -19,7 +21,7 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut)
         AR′ = _transpose_front(V * _transpose_tail(ψ.AR[i + 1]))
         ψ.AC[i + 1] = (complex(S), AR′)
     end
-    return normalize!(ψ)
+    return normalize ? normalize!(ψ) : ψ
 end
 
 # Note: it might be better to go to an MPS representation first
@@ -34,11 +36,11 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
     length(mpo) == 1 && return mpo
 
     # left to right
-    O_left = transpose(mpo.opp[1], (3, 1, 2), (4,))
+    O_left = transpose(mpo.opp[1], ((3, 1, 2), (4,)))
     local O_right
     for i in 2:length(mpo)
         U, S, V, = tsvd!(O_left; trunc=alg.trscheme, alg=TensorKit.SVD())
-        mpo.opp[i - 1] = transpose(U, (2, 3), (1, 4))
+        mpo.opp[i - 1] = transpose(U, ((2, 3), (1, 4)))
         if i < length(mpo)
             @plansor O_left[-3 -1 -2; -4] := S[-1; 1] * V[1; 2] * mpo.opp[i][2 -2; -3 -4]
         else
@@ -49,7 +51,7 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
     # right to left
     for i in (length(mpo) - 1):-1:1
         U, S, V, = tsvd!(O_right; trunc=alg.trscheme, alg=TensorKit.SVD())
-        mpo.opp[i + 1] = transpose(V, (1, 4), (2, 3))
+        mpo.opp[i + 1] = transpose(V, ((1, 4), (2, 3)))
         if i > 1
             @plansor O_right[-1; -3 -4 -2] := mpo.opp[i][-1 -2; -3 2] * U[2; 1] * S[1; -4]
         else

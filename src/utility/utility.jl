@@ -155,3 +155,16 @@ end
 @static if !isdefined(Base, :allequal)
     allequal(itr) = isempty(itr) ? true : all(isequal(first(itr)), itr)
 end
+
+"""
+    nextindex(collection, idx)
+
+Return the next index of `collection`, or nothing if `idx` is the last index, as defined by iterating over `eachindex`.
+
+See also: [`firstindex`](@ref), [`lastindex`](@ref)
+"""
+function nextindex(A::AbstractArray, idx::Int)
+    nextidx = Base.iterate(eachindex(A), idx)
+    isnothing(nextidx) && return nothing
+    return nextidx[1]
+end

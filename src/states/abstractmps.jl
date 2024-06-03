@@ -163,5 +163,7 @@ right_virtualspace(O::MPOTensor) = space(O, 4)
 Return the physical space of the site tensor at site `i`.
 """
 function physicalspace end
+physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
+physicalspace(O::MPOTensor) = space(O, 2)
 
 abstract type AbstractFiniteMPS <: AbstractMPS end

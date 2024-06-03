@@ -54,6 +54,37 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     @test dot(mpomps₁, mpomps₁) ≈ dot(mpo₁, mpo₁)
 end
 
+@testset "Finite MPOHamiltonian" begin
+    L = 3
+    lattice = fill(ℂ^2, L)
+    O₁ = TensorMap(rand, ComplexF64, ℂ^2, ℂ^2)
+    E = id(Matrix{ComplexF64}, domain(O₁))
+    O₂ = TensorMap(rand, ComplexF64, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
+
+    H1 = MPOHamiltonian(lattice, i => O₁ for i in 1:L)
+    H2 = MPOHamiltonian(lattice, (i, i + 1) => O₂ for i in 1:(L - 1))
+    H3 = MPOHamiltonian(lattice, 1 => O₁, (2, 3) => O₂, 3 => O₁)
+
+    # check if constructor works by converting back to tensormap
+    H1_tm = convert(TensorMap, H1)
+    operators = vcat(fill(E, L - 1), O₁)
+    @test H1_tm ≈ mapreduce(+, 1:L) do i
+        return reduce(⊗, circshift(operators, i))
+    end
+    operators = vcat(fill(E, L - 2), O₂)
+    @test convert(TensorMap, H2) ≈ mapreduce(+, 1:(L - 1)) do i
+        return reduce(⊗, circshift(operators, i))
+    end
+    @test convert(TensorMap, H3) ≈ O₁ ⊗ E ⊗ E + E ⊗ O₂ + E ⊗ E ⊗ O₁
+
+    # test linear algebra
+    @test H1 ≈
+          MPOHamiltonian(lattice, 1 => O₁) + MPOHamiltonian(lattice, 2 => O₁) +
+          MPOHamiltonian(lattice, 3 => O₁)
+    @test 0.8 * H1 + 0.2 * H1 ≈ H1 atol = 1e-6
+    @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1e-6
+end
+
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
                                                                             vspaces)
     #generate a 1-2-3 body interaction

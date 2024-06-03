@@ -10,6 +10,7 @@ MPSMultiline
 
 ## Operators
 ```@docs
+FiniteMPO
 SparseMPO
 DenseMPO
 MPOHamiltonian
