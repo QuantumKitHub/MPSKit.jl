@@ -26,7 +26,7 @@ O_xzx = FiniteMPO(S_x ⊗ S_x ⊗ S_x);
 ```
 
 The individual tensors are accessible via regular indexing. Note that the tensors are
-internally converted to the `MPOTensor` objects, thus having 4 indices. In this specific
+internally converted to the `MPOTensor` objects, thus having four indices. In this specific
 case, the left- and right virtual spaces are trivial, but this is not a requirement.
 
 ```@example operators
@@ -100,7 +100,7 @@ H = -J \sum_{\langle i, j \rangle} X_i X_j - h \sum_j Z_j
 ```@example operators
 J = 1.0
 h = 0.5
-chain = fill(ℂ^2, 4) # a finite chain of 4 sites, each with a 2-dimensional Hilbert space
+chain = fill(ℂ^2, 3) # a finite chain of 4 sites, each with a 2-dimensional Hilbert space
 single_site_operators = [1 => -h * S_z, 2 => -h * S_z, 3 => -h * S_z]
 two_site_operators = [(1, 2) => -J * S_x ⊗ S_x, (2, 3) => -J * S_x ⊗ S_x]
 H_ising = MPOHamiltonian(chain, single_site_operators..., two_site_operators...);
@@ -122,7 +122,7 @@ different arrays of `VectorSpace` objects. For example, the 2D Ising model on a 
 lattice can be constructed as follows:
 
 ```@example operators
-square = fill(ℂ^2, 4, 4) # a 4x4 square lattice
+square = fill(ℂ^2, 3, 3) # a 3x3 square lattice
 operators = Dict()
 
 local_operators = Dict()
@@ -149,7 +149,7 @@ end
 
 H_ising_2d = MPOHamiltonian(square, local_operators) +
     MPOHamiltonian(square, horizontal_operators) +
-    MPOHamiltonian(square, vertical_operators)
+    MPOHamiltonian(square, vertical_operators);
 ```
 
 There are various utility functions available for constructing more advanced lattices, for
@@ -229,11 +229,26 @@ general form, by supplying a 3-dimensional array $W$ to the constructor. Here, t
 dimension specifies the site in the unit cell, the second dimension specifies the row of the
 matrix, and the third dimension specifies the column of the matrix.
 
+```@example operators
+data = Array{Any,3}(missing, 1, 3, 3) # missing is interpreted as zero
+data[1, 1, 1] = identity(ℂ^2)
+data[1, 3, 3] = one(T) # regular numbers are interpreted as identity operators
+data[1, 1, 2] = -J * S_x
+data[1, 2, 3] = S_x
+data[1, 1, 3] = -h * S_z
+data_range = repeat(data, 4, 1, 1) # make 4 sites long
+H_ising″ = MPOHamiltonian(data_range)
+```
+
+MPSKit will then automatically attach the correct boundary vectors to the Hamiltonian whenever this is required.
+
 !!! note
     While the above example can be constructed from building blocks that are strictly local
-    operators, this is not always the case, especially when symmetries are involved. In
+    operators, i.e. TensorMaps with a single ingoing and outgoing index.
+    This is not always the case, especially when symmetries are involved. In
     those cases, the elements of the matrix $W$ have additional virtual legs that are
-    contracted between different sites.
+    contracted between different sites. As such, indexing an MPOHamiltonian object will result
+    in a TensorMap with four legs.
 
 ### Working with `MPOHamiltonian` objects
 
@@ -279,76 +294,3 @@ The idea here is that you don't have to worry about the underlying structure, yo
 SparseMPO are always assumed to be periodic in the first index (position).
 In this way, we can both represent periodic infinite mpos and place dependent finite mpos.
 
-## MPOHamiltonian
-
-We represent all quantum hamiltonians in their MPO form. This consists of an upper
-triangular (sparse) matrix of regular MPO tensors per site, resulting in an array with 3
-dimensions. Thus, an `MPOHamiltonian` is just a wrapper around `SparseMPO`, but with some
-guarantees about its structure. As an example, the following bit of code constructs the
-Ising hamiltonian.
-
-```@setup mpohamiltonian
-using TensorKit
-using MPSKit
-```
-
-```@example mpohamiltonian
-T = ComplexF64
-X = TensorMap(T[0 1; 1 0], ℂ^2 ← ℂ^2)
-Z = TensorMap(T[1 0; 0 -1], ℂ^2 ← ℂ^2)
-
-data = Array{Any,3}(missing, 1, 3, 3)
-data[1, 1, 1] = identity(ℂ^2)
-data[1, 1, 1] = one(T) # regular numbers are interpreted as identity operators
-data[1, 1, 2] = -Z
-data[1, 2, 3] = Z
-data[1, 1, 3] = 3 * X
-H_Ising = MPOHamiltonian(data)
-nothing # hide
-```
-
-When working with symmetries, it is often not possible to represent the entire Hamiltonian
-as a sum of a product of one-body operators. This means that there will be auxiliary virtual
-spaces connecting the different MPO tensors. For example, when constructing the XXX
-Heisenberg model without symmetries, the following code suffices:
-
-```@example mpohamiltonian
-Y = TensorMap(T[0 -im; im 0], ℂ^2 ← ℂ^2)
-data = Array{Any,3}(missing, 1, 5, 5)
-data[1, 1, 1] = one(T)
-data[1, end, end] = one(T)
-data[1, 1, 2] = X
-data[1, 2, end] = X
-data[1, 1, 3] = Y
-data[1, 3, end] = Y
-data[1, 1, 4] = Z
-data[1, 4, end] = Z
-H_Heisenberg = MPOHamiltonian(data)
-nothing # hide
-```
-
-However, none of the operators above are SU(2) symmetric, only the total hamiltonian is. The
-solution is found by combining `XX + YY + ZZ` into a single tensor, and then decomposing
-that tensor into a product of local MPO tensors.
-
-```@example mpohamiltonian
-using MPSKit: decompose_localmpo, add_util_leg
-SS = TensorMap(zeros, T, SU2Space(1//2 => 1)^2 ← SU2Space(1//2 => 1)^2)
-blocks(SS)[SU2Irrep(0)] .= -3/4
-blocks(SS)[SU2Irrep(1)] .= 1/4
-S_left, S_right = MPSKit.decompose_localmpo(add_util_leg(SS))
-@show space(S_right, 1) # this is the virtual space connecting the two mpo tensors
-data = Array{Any,3}(missing, 1, 3, 3)
-data[1, 1, 1] = one(T)
-data[1, end, end] = one(T)
-data[1, 1, 2] = S_left
-data[1, 2, end] = S_right
-H_Heisenberg_SU2 = MPOHamiltonian(data)
-nothing # hide
-```
-
-because of this, when indexing a Hamiltonian, a 2,2-tensormap is returned:
-
-```@example mpohamiltonian
-H_Heisenberg[1][1, 2]
-```

@@ -114,11 +114,13 @@ end
 Instantiate a local operator `O` on a lattice `lattice` as a vector of MPO tensors, and a
 vector of linear site indices.
 """
-function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
-                              (inds, mpo)::Pair{NTuple{N,I},<:FiniteMPO}) where {N,I}
+function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O)::Pair)
+    inds = inds′ isa Int ? tuple(inds′) : inds′
+    mpo = O isa FiniteMPO ? O : FiniteMPO(O)
+
     # convert to linear index type
     operators = mpo.opp
-    indices = map(x -> getindex(eachindex(IndexLinear(), lattice), x...), inds)
+    indices = map(x -> LinearIndices(lattice)[x], inds)
     T = eltype(mpo)
     local_mpo = Union{T,scalartype(T)}[]
     sites = Int[]
@@ -126,11 +128,10 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
     i = 1
     current_site = first(indices)
     previous_site = current_site # to avoid infinite loops
-
     while i <= length(operators)
-        @assert !isnothing(current_site) "LocalOperator does not fit into the given Hilbert space"
+        @assert !isnothing(current_site) "indices do not fit in the given lattice: $inds in $lattice"
         if current_site == indices[i] # add MPO tensor
-            @assert space(operators[i], 2) == lattice[current_site] "LocalOperator does not fit into the given Hilbert space"
+            @assert space(operators[i], 2) == lattice[current_site] "operator does not fit into the given Hilbert space: $(space(operators[i], 2)) ≠ $(lattice[current_site])"
             push!(local_mpo, operators[i])
             push!(sites, current_site)
             previous_site = current_site
@@ -141,26 +142,10 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
         end
 
         current_site = nextindex(lattice, current_site)
-        @assert current_site != previous_site "LocalOperator does not fit into the given Hilbert space"
+        @assert current_site != previous_site "indices do not fit in the given lattice: $inds in $lattice"
     end
 
     return sites => local_mpo
-end
-function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
-                              operator::Pair{NTuple{N,I},O}) where {N,I,
-                                                                    O<:AbstractTensorMap{<:Any,
-                                                                                         N,
-                                                                                         N}}
-    return instantiate_operator(lattice,
-                                operator.first => FiniteMPO(operator.second))
-end
-function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
-                              (inds, opp)::Pair{Int})
-    return instantiate_operator(lattice, (inds,) => opp)
-end
-function instantiate_operator(lattice::AbstractArray{<:VectorSpace},
-                              (inds, opp)::Pair{CartesianIndex})
-    return instantiate_operator(lattice, inds.I => opp)
 end
 
 # yields the promoted tensortype of all tensors
