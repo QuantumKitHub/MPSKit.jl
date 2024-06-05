@@ -55,7 +55,7 @@ using TensorKit: ℙ
         ψ_nolazy, envs_nolazy, _ = find_groundstate(ψ₀, sum(Hlazy), alg)
         @test expectation_value(ψ, Hlazy,
                                 envs) ≈
-              expectation_value(ψ_nolazy, sum(Hlazy), envs_nolazy) atol = 1 - 06
+              expectation_value(ψ_nolazy, sum(Hlazy), envs_nolazy) atol = 1e-6
     end
 
     finite_algs = [DMRG(; verbosity),
