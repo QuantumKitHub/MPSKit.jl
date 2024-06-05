@@ -221,6 +221,49 @@ ts = FiniteMPS(10,ℂ^2,ℂ^12);
 (energies,Bs) = excitations(th,FiniteExcited(),ts,envs);
 ```
 
+### "Chepiga Ansatz"
+
+Sometimes, it might be sufficient to find excited states by only locally perturbing the groundstate.
+To this end, you might consider selecting a single site, and allowing only variations for these tensors, keeping all other tensors fixed.
+This algorithm is especially well-suited whenever the system is sufficiently gapped.
+This is supported via the following syntax:
+
+```jldoctest; output=false
+g = 10.0
+L = 16
+H = transverse_field_ising(; g)
+ψ₀ = FiniteMPS(L, ComplexSpace(2), ComplexSpace(32))
+ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
+E₀ = real(sum(expectation_value(ψ, H, envs)))
+Es, ϕs = excitations(H, ChepigaAnsatz(), ψ, envs; num=1)
+isapprox(Es[1] - E₀,  2(g - 1); rtol=1e-2) # infinite analytical result
+
+# output
+
+true
+```
+
+In order to improve the accuracy, a two-site version also exists, which varies two neighbouring sites:
+
+```jldoctest; output=false
+g = 10.0
+L = 16
+H = transverse_field_ising(; g)
+ψ₀ = FiniteMPS(L, ComplexSpace(2), ComplexSpace(32))
+ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
+E₀ = real(sum(expectation_value(ψ, H, envs)))
+Es, ϕs = excitations(H, ChepigaAnsatz2(), ψ, envs; num=1)
+isapprox(Es[1] - E₀,  2(g - 1); rtol=1e-2) # infinite analytical result
+
+# output
+
+true
+```
+
+The algorithm is described in more detail in the following paper:
+
+- Chepiga, N., & Mila, F. (2017). Excitation spectrum and density matrix renormalization group iterations. Physical Review B, 96(5), 054425.
+
 ## `changebonds`
 
 Many of the previously mentioned algorithms do not possess a way to dynamically change to
