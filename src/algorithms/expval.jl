@@ -108,7 +108,8 @@ function expectation_value_fimpl(ψ::AbstractFiniteMPS, H::MPOHamiltonian, envs:
     return ens ./ n
 end
 
-function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, prevca::MPOHamInfEnv)
+function expectation_value(st::InfiniteMPS, H::MPOHamiltonian,
+                           prevca::Union{MPOHamInfEnv,IDMRGEnv})
     #calculate energy density
     len = length(st)
     ens = PeriodicArray(zeros(scalartype(st.AR[1]), len))
