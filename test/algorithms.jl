@@ -393,7 +393,7 @@ end
     end
 end
 
-@testset "quasiparticle_excitation" verbose = true begin
+@testset "excitations" verbose = true begin
     @testset "infinite (ham)" begin
         H = repeat(force_planar(heisenberg_XXX()), 2)
         ψ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^48, ℙ^48])
@@ -434,6 +434,11 @@ end
                                                                   tol=1e-6)), ψ)
             @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ψ, H, envs)) atol = 1e-4
 
+            # find energy with Chepiga ansatz
+            energies_ch, _ = excitations(H, ChepigaAnsatz(), ψ, envs)
+            @test energies_ch[1] ≈ energies_QP[1] + sum(expectation_value(ψ, H, envs)) atol = 1e-4
+            energies_ch2, _ = excitations(H, ChepigaAnsatz2(), ψ, envs)
+            @test energies_ch2[1] ≈ energies_QP[1] + sum(expectation_value(ψ, H, envs)) atol = 1e-4
             return energies_QP[1]
         end
 
