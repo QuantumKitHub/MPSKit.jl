@@ -242,9 +242,6 @@ E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz(), ψ, envs; num=1)
 @show Es
 
-# output
-
-true
 ```
 
 In order to improve the accuracy, a two-site version also exists, which varies two neighbouring sites:
@@ -259,9 +256,6 @@ E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz2(), ψ, envs; num=1)
 @show Es
 
-# output
-
-true
 ```
 
 The algorithm is described in more detail in the following paper:
