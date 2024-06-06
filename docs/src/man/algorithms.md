@@ -225,7 +225,6 @@ ts = FiniteMPS(10,ℂ^2,ℂ^12);
 
 Sometimes, it might be sufficient to find excited states by only locally perturbing the groundstate.
 To this end, you might consider selecting a single site, and allowing only variations for these tensors, keeping all other tensors fixed.
-This algorithm is especially well-suited whenever the system is sufficiently gapped.
 This is supported via the following syntax:
 
 ```jldoctest; output=false
