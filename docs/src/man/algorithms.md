@@ -222,18 +222,25 @@ ts = FiniteMPS(10,ℂ^2,ℂ^12);
 ```
 
 ### "Chepiga Ansatz"
-Computing excitations in critical systems poses a significant challenge due to the diverging correlation length, which requires very large bond dimensions. However, we can leverage this long-range correlation to effectively identify excitations. In this context, the left/right gauged MPS, serving as isometries, are effectively projecting the Hamiltonian into the low-energy sector. This projection method is particularly effective in long-range systems, where excitations are distributed throughout the entire system. Consequently, the low-lying energy spectrum can be extracted by diagonalizing the effective Hamiltonian (without any additional DMRG costs!). The states of these excitations are then represented by the ground state MPS, with one site substituted by the corresponding eigenvector. This approach is often referred to as the 'Chepiga ansatz', named after one of the authors of this paper.
+Computing excitations in critical systems poses a significant challenge due to the diverging correlation length, which requires very large bond dimensions. 
+However, we can leverage this long-range correlation to effectively identify excitations. 
+In this context, the left/right gauged MPS, serving as isometries, are effectively projecting the Hamiltonian into the low-energy sector.
+This projection method is particularly effective in long-range systems, where excitations are distributed throughout the entire system. 
+Consequently, the low-lying energy spectrum can be extracted by diagonalizing the effective Hamiltonian (without any additional DMRG costs!). 
+The states of these excitations are then represented by the ground state MPS, with one site substituted by the corresponding eigenvector. 
+This approach is often referred to as the 'Chepiga ansatz', named after one of the authors of this paper.
+
 This is supported via the following syntax:
 
 ```jldoctest; output=false
-g = 10.0
+g = 1.0
 L = 16
 H = transverse_field_ising(; g)
 ψ₀ = FiniteMPS(L, ComplexSpace(2), ComplexSpace(32))
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz(), ψ, envs; num=1)
-isapprox(Es[1] - E₀,  2(g - 1); rtol=1e-2) # infinite analytical result
+@show Es
 
 # output
 
@@ -243,14 +250,14 @@ true
 In order to improve the accuracy, a two-site version also exists, which varies two neighbouring sites:
 
 ```jldoctest; output=false
-g = 10.0
+g = 1.0
 L = 16
 H = transverse_field_ising(; g)
 ψ₀ = FiniteMPS(L, ComplexSpace(2), ComplexSpace(32))
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz2(), ψ, envs; num=1)
-isapprox(Es[1] - E₀,  2(g - 1); rtol=1e-2) # infinite analytical result
+@show Es
 
 # output
 
