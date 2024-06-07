@@ -232,7 +232,7 @@ This approach is often referred to as the 'Chepiga ansatz', named after one of t
 
 This is supported via the following syntax:
 
-```jldoctest; output=false
+```jldoctest
 g = 1.0
 L = 16
 H = transverse_field_ising(; g)
@@ -240,13 +240,12 @@ H = transverse_field_ising(; g)
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz(), ψ, envs; num=1)
-@show Es
-
+E₀, Es
 ```
 
 In order to improve the accuracy, a two-site version also exists, which varies two neighbouring sites:
 
-```jldoctest; output=false
+```jldoctest
 g = 1.0
 L = 16
 H = transverse_field_ising(; g)
@@ -254,8 +253,7 @@ H = transverse_field_ising(; g)
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz2(), ψ, envs; num=1)
-@show Es
-
+E₀, Es
 ```
 
 The algorithm is described in more detail in the following paper:
