@@ -29,7 +29,7 @@ pkg> add MPSKit
 
 To get started with MPSKit, we recommend also including
 [TensorKit.jl](https://github.com/Jutho/TensorKit.jl) and
-[MPSKitModels.jl](https://github.com/maartenvd/MPSKitModels.jl). The former defines the
+[MPSKitModels.jl](https://github.com/QuantumKitHub/MPSKitModels.jl). The former defines the
 tensor backend which is used throughout MPSKit, while the latter includes some common
 operators and models.
 
@@ -190,14 +190,14 @@ Manual section, or have a look at the [Examples](@ref) page.
 
 Keep in mind that the documentation is still a work in progress, and that some features may
 not be fully documented yet. If you encounter any issues or have questions, please check the
-library's [issue tracker](https://github.com/maartenvd/MPSKit.jl/issues) on the GitHub
+library's [issue tracker](https://github.com/QuantumKitHub/MPSKit.jl/issues) on the GitHub
 repository and open a new issue.
 
 ## Publications using MPSKit
 
 Below you can find a list of publications that have made use of MPSKit. If you have used
 this package and wish to have your publication added to this list, please open a pull
-request or an issue on the [GitHub repository](https://github.com/maartenvd/MPSKit.jl/).
+request or an issue on the [GitHub repository](https://github.com/QuantumKitHub/MPSKit.jl/).
 
 - R. Belyansky et al., *“High-Energy Collision of Quarks and Hadrons in the Schwinger Model: From Tensor Networks to Circuit QED,”* 2023, doi: 10.48550/ARXIV.2307.02522.
 - L. Devos, L. Vanderstraeten, and F. Verstraete, *“Haldane gap in the SU(3) [3 0 0] Heisenberg chain,”* Phys. Rev. B, vol. 106, no. 15, p. 155103, Oct. 2022, doi: 10.1103/PhysRevB.106.155103.
