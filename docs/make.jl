@@ -44,4 +44,4 @@ makedocs(;
                 "Library" => "lib/lib.md"],
          warnonly=true)
 
-deploydocs(; repo="github.com/maartenvd/MPSKit.jl.git")
+deploydocs(; repo="https://github.com/QuantumKitHub/MPSKit.jl.git")

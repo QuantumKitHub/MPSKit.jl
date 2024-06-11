@@ -49,7 +49,7 @@ function attach_notebook_badge(root, name, str)
     download_badge_url = "https://img.shields.io/badge/download-project-orange"
     mybinder = "[![]($mybinder_badge_url)](@__BINDER_ROOT_URL__/examples/$root/$name/main.ipynb)"
     nbviewer = "[![]($nbviewer_badge_url)](@__NBVIEWER_ROOT_URL__/examples/$root/$name/main.ipynb)"
-    download = "[![]($download_badge_url)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/maartenvd/MPSKit.jl/examples/tree/gh-pages/dev/examples/$root/$name)"
+    download = "[![]($download_badge_url)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/MPSKit.jl/examples/tree/gh-pages/dev/examples/$root/$name)"
 
     markdown_only(x) = "#md # " * x
     return join(map(markdown_only, (mybinder, nbviewer, download)), "\n") * "\n\n" * str
@@ -63,10 +63,10 @@ function build_example(root, name)
     if !iscached(root, name)
         Literate.markdown(source_file, target_dir; execute=true, name="index",
                           preprocess=attach_notebook_badge(root, name), mdstrings=true,
-                          nbviewer_root_url="https://nbviewer.jupyter.org/github/maartenvd/MPSKit.jl/blob/gh-pages/dev",
-                          binder_root_url="https://mybinder.org/v2/gh/maartenvd/MPSKit.jl/gh-pages?filepath=dev",
+                          nbviewer_root_url="https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev",
+                          binder_root_url="https://mybinder.org/v2/gh/QuantumKitHub/MPSKit.jl/gh-pages?filepath=dev",
                           credits=false,
-                          repo_root_url="https://github.com/maartenvd/MPSKit.jl")
+                          repo_root_url="https://github.com/QuantumKitHub/MPSKit.jl")
         Literate.notebook(source_file, target_dir; execute=false, name="main",
                           preprocess=str -> replace(str, r"(?<!`)``(?!`)" => "\$"),
                           mdstrings=true, credits=false)
