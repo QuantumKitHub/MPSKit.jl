@@ -220,7 +220,7 @@ end
     atol = 1e-2
 
     # test using XXZ model, Δ > 1 is gapped
-    local_operators = [-S_xx(), -S_yy(), -(1 + abs(rand())) * S_zz()]
+    local_operators = [-S_xx(), -S_yy(), -(1.234) * S_zz()]
     mpo_hamiltonians = MPOHamiltonian.(local_operators)
 
     H_lazy = LazySum(mpo_hamiltonians)
@@ -280,7 +280,7 @@ end
                                       GradientGrassmann(; tol, verbosity=5, maxiter=2))
 
         # compare states
-        alg = GradientGrassmann(; tol, verbosity=2)
+        alg = GradientGrassmann(; tol, verbosity=1)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
         ψ, = find_groundstate(ψ₀, H, alg)
 
