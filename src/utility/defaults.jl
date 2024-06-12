@@ -6,7 +6,7 @@ Some default values and settings for MPSKit.
 module Defaults
 
 using Preferences
-import KrylovKit: GMRES, Arnoldi
+import KrylovKit: GMRES, Arnoldi, Lanczos
 using ..MPSKit: DynamicTol
 
 const VERBOSE_NONE = 0
@@ -26,6 +26,7 @@ const tol_max = 1e-5
 const eigs_tolfactor = 1e-5
 const gauge_tolfactor = 1e-8
 const envs_tolfactor = 1e-5
+const krylovdim = 30
 
 _finalize(iter, state, opp, envs) = (state, envs)
 
@@ -42,10 +43,12 @@ function alg_gauge(; tol=tolgauge, maxiter=maxiter,
     return dynamic_tols ? DynamicTol(alg, tol, tol_max, tol_factor) : alg
 end
 
-function alg_eigsolve(; tol=tol, maxiter=maxiter, eager=true,
+function alg_eigsolve(; ishermitian=true, tol=tol, maxiter=maxiter, eager=true,
+                      krylovdim=krylovdim,
                       dynamic_tols=dynamic_tols, tol_min=tol_min, tol_max=tol_max,
                       tol_factor=eigs_tolfactor)
-    alg = Arnoldi(; tol, maxiter, eager)
+    alg = ishermitian ? Lanczos(; tol, maxiter, eager, krylovdim) :
+          Arnoldi(; tol, maxiter, eager, krylovdim)
     return dynamic_tols ? DynamicTol(alg, tol, tol_max, tol_factor) : alg
 end
 
@@ -54,6 +57,10 @@ function alg_environments(; tol=tol, maxiter=maxiter,
                           tol_factor=envs_tolfactor)
     alg = (; tol, maxiter)
     return dynamic_tols ? DynamicTol(alg, tol, tol_max, tol_factor) : alg
+end
+function alg_expsolve(; tol=tol, maxiter=maxiter, ishermitian=true, krylovdim=krylovdim)
+    return ishermitian ? Lanczos(; tol, maxiter, krylovdim) :
+           Arnoldi(; tol, maxiter, krylovdim)
 end
 
 # Preferences
