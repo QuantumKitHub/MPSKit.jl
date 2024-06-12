@@ -233,7 +233,7 @@ end
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy, VUMPS(; tol, verbosity=5, maxiter=2))
 
         # compare states
-        alg = VUMPS(; tol, verbosity=1)
+        alg = VUMPS(; tol, verbosity=2)
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
@@ -247,7 +247,7 @@ end
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy, IDMRG1(; tol, verbosity=5, maxiter=2))
 
         # compare states
-        alg = IDMRG1(; tol, verbosity=1)
+        alg = IDMRG1(; tol, verbosity=2)
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
@@ -265,7 +265,7 @@ end
                                       IDMRG2(; tol, verbosity=5, maxiter=2, trscheme))
 
         # compare states
-        alg = IDMRG2(; tol, verbosity=1, trscheme)
+        alg = IDMRG2(; tol, verbosity=2, trscheme)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy′, alg)
         ψ, = find_groundstate(ψ₀, H′, alg)
 
@@ -280,7 +280,7 @@ end
                                       GradientGrassmann(; tol, verbosity=5, maxiter=2))
 
         # compare states
-        alg = GradientGrassmann(; tol, verbosity=1)
+        alg = GradientGrassmann(; tol, verbosity=2)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
         ψ, = find_groundstate(ψ₀, H, alg)
 
