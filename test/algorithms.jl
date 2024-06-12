@@ -158,7 +158,7 @@ end
 @testset "LazySum FiniteMPS groundstate" verbose = true begin
     tol = 1e-8
     D = 15
-    atol = 1e-2
+    atol = 1e-6
 
     # test using XXZ model, Δ > 1 is gapped
     local_operators = [-S_xx(), -S_yy(), -(1 + abs(rand())) * S_zz()]
@@ -179,7 +179,7 @@ end
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1 atol = atol
+        @test sum(expectation_value(ψ, H)) ≈ sum(expectation_value(ψ_lazy, H_lazy)) atol = atol
     end
 
     @testset "DMRG2" begin
@@ -195,7 +195,7 @@ end
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1 atol = atol
+        @test sum(expectation_value(ψ, H)) ≈ sum(expectation_value(ψ_lazy, H_lazy)) atol = atol
     end
 
     @testset "GradientGrassmann" begin
@@ -210,14 +210,14 @@ end
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1 atol = atol
+        @test sum(expectation_value(ψ, H)) ≈ sum(expectation_value(ψ_lazy, H_lazy)) atol = atol
     end
 end
 
 @testset "LazySum InfiniteMPS groundstate" verbose = true begin
     tol = 1e-8
     D = 15
-    atol = 1e-2
+    atol = 1e-6
 
     # test using XXZ model, Δ > 1 is gapped
     local_operators = [-S_xx(), -S_yy(), -(1.234) * S_zz()]
@@ -237,7 +237,7 @@ end
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1 atol = atol
+        @test sum(expectation_value(ψ, H)) ≈ sum(expectation_value(ψ_lazy, H_lazy)) atol = atol
     end
 
     @testset "IDMRG1" begin
@@ -251,7 +251,7 @@ end
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1 atol = atol
+        @test sum(expectation_value(ψ, H)) ≈ sum(expectation_value(ψ_lazy, H_lazy)) atol = atol
     end
 
     @testset "IDMRG2" begin
@@ -269,7 +269,7 @@ end
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy′, alg)
         ψ, = find_groundstate(ψ₀, H′, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1 atol = atol
+        @test sum(expectation_value(ψ, H′)) ≈ sum(expectation_value(ψ_lazy, H_lazy′)) atol = atol
     end
 
     @testset "GradientGrassmann" begin
@@ -284,7 +284,7 @@ end
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
         ψ, = find_groundstate(ψ₀, H, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1 atol = atol
+        @test sum(expectation_value(ψ, H)) ≈ sum(expectation_value(ψ_lazy, H_lazy)) atol = atol
     end
 end
 
