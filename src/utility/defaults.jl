@@ -16,16 +16,16 @@ const VERBOSE_ITER = 3
 const VERBOSE_ALL = 4
 
 const eltype = ComplexF64
-const maxiter = 100
-const tolgauge = 1e-14
-const tol = 1e-12
+const maxiter = 200
+const tolgauge = 1e-13
+const tol = 1e-10
 const verbosity = VERBOSE_ITER
 const dynamic_tols = true
 const tol_min = 1e-14
-const tol_max = 1e-5
-const eigs_tolfactor = 1e-5
-const gauge_tolfactor = 1e-8
-const envs_tolfactor = 1e-5
+const tol_max = 1e-4
+const eigs_tolfactor = 1e-3
+const gauge_tolfactor = 1e-6
+const envs_tolfactor = 1e-4
 
 _finalize(iter, state, opp, envs) = (state, envs)
 
