@@ -220,7 +220,7 @@ end
     atol = 1e-6
 
     # test using XXZ model, Δ > 1 is gapped
-    local_operators = [-S_xx(), -S_yy(), -(1.234) * S_zz()]
+    local_operators = [S_xx(), S_yy(), (1.234) * S_zz()]
     mpo_hamiltonians = MPOHamiltonian.(local_operators)
 
     H_lazy = LazySum(mpo_hamiltonians)
