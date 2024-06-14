@@ -22,6 +22,9 @@ function TensorKit.rmul!(a::Grassmann.GrassmannTangent, b::AbstractTensorMap)
     Base.setfield!(a, :V, nothing)
     return a
 end
+function Base.:/(a::Grassmann.GrassmannTangent, b::AbstractTensorMap)
+    return Grassmann.GrassmannTangent(a.W, a.Z / b)
+end
 
 # preconditioned gradient
 struct PrecGrad{A,B}
@@ -33,7 +36,8 @@ end
 function PrecGrad(v::Grassmann.GrassmannTangent)
     return PrecGrad(v, v, isometry(storagetype(v.Z), domain(v.Z), domain(v.Z)))
 end
-PrecGrad(v::Grassmann.GrassmannTangent, rho) = PrecGrad(rmul!(copy(v), inv(rho)), v, rho)
+PrecGrad(v::Grassmann.GrassmannTangent, rho) = PrecGrad(v / rho, v, rho)
+
 Grassmann.base(g::PrecGrad) = Grassmann.base(g.Pg)
 
 function inner(g1::PrecGrad, g2::PrecGrad, rho=one(g1.rho))
@@ -72,8 +76,9 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     g = Grassmann.project.(al_d, state.AL)
 
     Rhoreg = Vector{eltype(state.CR)}(undef, length(state))
+    δmin = sqrt(eps(real(scalartype(state))))
     for i in 1:length(state)
-        Rhoreg[i] = regularize(state.CR[i], norm(g[i]) / 10)
+        Rhoreg[i] = regularize(state.CR[i], max(norm(g[i]) / 10, δmin))
     end
 
     return ManifoldPoint(state, envs, g, Rhoreg)
@@ -85,16 +90,16 @@ function ManifoldPoint(state::MPSMultiline, envs)
     g = [Grassmann.project(d, a) for (d, a) in zip(ac_d, state.AL)]
 
     f = expectation_value(state, envs)
-    fi = imag.(f)
-    fr = real.(f)
+    sum(imag(f)) > MPSKit.Defaults.tol && @warn "MPO might not be Hermitian $f"
 
-    sum(fi) > MPSKit.Defaults.tol && @warn "mpo is not hermitian $fi"
-
-    g = -2 * g ./ abs.(fr)
+    # actual costfunction is F = -log(sum(f)^2) => ∂F = -2 * g / |sum(f)|
+    # TODO: check if elementwise thing is correct?
+    g .*= (-2 ./ abs.(real(f)))
 
     Rhoreg = similar(state.CR)
+    δmin = sqrt(eps(real(scalartype(state))))
     for (i, cg) in enumerate(g)
-        Rhoreg[i] = regularize(state.CR[i], norm(cg) / 10)
+        Rhoreg[i] = regularize(state.CR[i], max(norm(cg) / 10, δmin))
     end
 
     return ManifoldPoint(state, envs, g, Rhoreg)
@@ -112,9 +117,10 @@ function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
         g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.CR[i]'), x.Rhoreg[i])
     end
 
-    f = real(sum(expectation_value(x.state, x.envs)))
+    f = sum(expectation_value(x.state, x.envs))
+    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
-    return f, g_prec
+    return real(f), g_prec
 end
 function fg(x::ManifoldPoint{<:MPSMultiline})
     # the gradient I want to return is the preconditioned gradient!
@@ -122,11 +128,10 @@ function fg(x::ManifoldPoint{<:MPSMultiline})
         return PrecGrad(rmul!(copy(cg), x.state.CR[i]'), x.Rhoreg[i])
     end
 
-    f = expectation_value(x.state, x.envs)
-    fi = imag.(f)
-    fr = real.(f)
+    f = sum(expectation_value(x.state, x.envs))
+    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
-    return -log(sum(fr)^2), g_prec[:]
+    return -log(sum(real(f))^2), g_prec[:]
 end
 
 """
