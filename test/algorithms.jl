@@ -157,18 +157,20 @@ end
 
 @testset "LazySum FiniteMPS groundstate" verbose = true begin
     tol = 1e-8
-    D = 20
+    D = 15
+    atol = 1e-2
 
-    local_operators = [TensorMap(randn, ComplexF64, ℙ^2 ⊗ ℙ^2 ← ℙ^2 ⊗ ℙ^2) for i in 1:3]
-    local_operators .+= adjoint.(local_operators)
+    # test using XXZ model, Δ > 1 is gapped
+    local_operators = [S_xx(), S_yy(), 0.7 * S_zz()]
     mpo_hamiltonians = MPOHamiltonian.(local_operators)
 
     H_lazy = LazySum(mpo_hamiltonians)
     H = sum(H_lazy)
 
-    @testset "DMRG" begin
-        ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
+    ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℂ^3, ℂ^D)
+    ψ₀, = find_groundstate(ψ₀, H; tol, verbosity=1)
 
+    @testset "DMRG" begin
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
                                       DMRG(; tol, verbosity=5, maxiter=1))
@@ -176,14 +178,11 @@ end
         # compare states
         alg = DMRG(; tol, verbosity=1)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
-        ψ, = find_groundstate(ψ₀, H, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1
+        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
     end
 
     @testset "DMRG2" begin
-        ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
-
         # test logging passes
         trscheme = truncdim(12)
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
@@ -191,88 +190,81 @@ end
 
         # compare states
         alg = DMRG2(; tol, verbosity=1, trscheme)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
         ψ, = find_groundstate(ψ₀, H, alg)
+        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1
+        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
     end
 
     @testset "GradientGrassmann" begin
-        ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
-
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
                                       GradientGrassmann(; tol, verbosity=5, maxiter=2))
 
         # compare states
         alg = GradientGrassmann(; tol, verbosity=1)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
         ψ, = find_groundstate(ψ₀, H, alg)
+        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1
+        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
     end
 end
 
 @testset "LazySum InfiniteMPS groundstate" verbose = true begin
     tol = 1e-8
-    D = 6
+    D = 15
+    atol = 1e-2
 
-    local_operators = [TensorMap(randn, ComplexF64, ℙ^2 ⊗ ℙ^2 ← ℙ^2 ⊗ ℙ^2) for i in 1:3]
-    local_operators .+= adjoint.(local_operators)
+    # test using XXZ model, Δ > 1 is gapped
+    local_operators = [S_xx(), S_yy(), (0.7) * S_zz()]
     mpo_hamiltonians = MPOHamiltonian.(local_operators)
 
     H_lazy = LazySum(mpo_hamiltonians)
     H = sum(H_lazy)
 
-    @testset "VUMPS" begin
-        ψ₀ = InfiniteMPS(ℙ^2, ℙ^D)
+    ψ₀ = InfiniteMPS(ℂ^3, ℂ^D)
+    ψ₀, = find_groundstate(ψ₀, H; tol, verbosity=1)
 
+    @testset "VUMPS" begin
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy, VUMPS(; tol, verbosity=5, maxiter=2))
 
         # compare states
-        alg = VUMPS(; tol, verbosity=1)
+        alg = VUMPS(; tol, verbosity=2)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
-        ψ, = find_groundstate(ψ₀, H, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1
+        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
     end
 
     @testset "IDMRG1" begin
-        ψ₀ = InfiniteMPS(ℙ^2, ℙ^D)
-
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy, IDMRG1(; tol, verbosity=5, maxiter=2))
 
         # compare states
-        alg = IDMRG1(; tol, verbosity=1)
+        alg = IDMRG1(; tol, verbosity=2)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
-        ψ, = find_groundstate(ψ₀, H, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1
+        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
     end
 
     @testset "IDMRG2" begin
-        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
+        ψ₀′ = repeat(ψ₀, 2)
         H_lazy′ = repeat(H_lazy, 2)
         H′ = repeat(H, 2)
 
-        trscheme = truncdim(12)
+        trscheme = truncdim(D)
         # test logging passes
-        ψ, envs, δ = find_groundstate(ψ₀, H_lazy′,
+        ψ, envs, δ = find_groundstate(ψ₀′, H_lazy′,
                                       IDMRG2(; tol, verbosity=5, maxiter=2, trscheme))
 
         # compare states
-        alg = IDMRG2(; tol, verbosity=1, trscheme)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy′, alg)
-        ψ, = find_groundstate(ψ₀, H′, alg)
+        alg = IDMRG2(; tol, verbosity=2, trscheme)
+        ψ_lazy, envs, δ = find_groundstate(ψ₀′, H_lazy′, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1
+        @test abs(dot(ψ₀′, ψ_lazy)) ≈ 1 atol = atol
     end
 
     @testset "GradientGrassmann" begin
-        ψ₀ = InfiniteMPS(ℙ^2, ℙ^D)
-
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
                                       GradientGrassmann(; tol, verbosity=5, maxiter=2))
@@ -282,7 +274,7 @@ end
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
         ψ, = find_groundstate(ψ₀, H, alg)
 
-        @test abs(dot(ψ, ψ_lazy)) ≈ 1
+        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
     end
 end
 

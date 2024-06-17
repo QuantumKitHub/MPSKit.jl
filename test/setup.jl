@@ -9,6 +9,7 @@ using TensorKit: PlanarTrivial, ℙ
 using LinearAlgebra: Diagonal
 
 # exports
+export S_xx, S_yy, S_zz
 export force_planar
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model
 export classical_ising, finite_classical_ising, sixvertex
@@ -34,6 +35,37 @@ force_planar(mpo::DenseMPO) = DenseMPO(force_planar.(mpo.opp))
 
 # Toy models
 # ----------------------------
+
+function S_xx(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1) where {T<:Number}
+    X = if spin == 1 // 2
+        TensorMap(T[0 1; 1 0], ℂ^2 ← ℂ^2)
+    elseif spin == 1
+        TensorMap(T[0 1 0; 1 0 1; 0 1 0], ℂ^3 ← ℂ^3) / sqrt(2)
+    else
+        throw(ArgumentError("spin $spin not supported"))
+    end
+    return X ⊗ X
+end
+function S_yy(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1) where {T<:Number}
+    Y = if spin == 1 / 2
+        TensorMap(T[0 -im; im 0], ℂ^2 ← ℂ^2)
+    elseif spin == 1
+        TensorMap(T[0 -im 0; im 0 -im; 0 im 0], ℂ^3 ← ℂ^3) / sqrt(2)
+    else
+        throw(ArgumentError("spin $spin not supported"))
+    end
+    return Y ⊗ Y
+end
+function S_zz(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1) where {T<:Number}
+    Z = if spin == 1 // 2
+        TensorMap(T[1 0; 0 -1], ℂ^2 ← ℂ^2)
+    elseif spin == 1
+        TensorMap(T[1 0 0; 0 0 0; 0 0 -1], ℂ^3 ← ℂ^3)
+    else
+        throw(ArgumentError("spin $spin not supported"))
+    end
+    return Z ⊗ Z
+end
 
 function transverse_field_ising(; g=1.0)
     X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
