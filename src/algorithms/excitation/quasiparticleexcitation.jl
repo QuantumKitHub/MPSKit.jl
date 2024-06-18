@@ -24,11 +24,7 @@ struct QuasiparticleAnsatz{A} <: Algorithm
     alg::A
 end
 function QuasiparticleAnsatz(; kwargs...)
-    if isempty(kwargs)
-        alg = Arnoldi(; krylovdim=30, tol=1e-10, eager=true)
-    else
-        alg = Arnoldi(; kwargs...)
-    end
+    alg = Defaults.alg_eigsolve(; dynamic_tols=false, kwargs...)
     return QuasiparticleAnsatz(alg)
 end
 

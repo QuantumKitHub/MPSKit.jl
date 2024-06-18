@@ -10,12 +10,17 @@ Single site infinite DMRG algorithm for finding groundstates.
 - `maxiter::Int`: maximum number of outer iterations
 - `verbosity::Int`: display progress information
 """
-@kwdef struct IDMRG1{A} <: Algorithm
-    tol::Float64 = Defaults.tol
-    tol_gauge::Float64 = Defaults.tolgauge
-    eigalg::A = Defaults.eigsolver
-    maxiter::Int = Defaults.maxiter
-    verbosity::Int = Defaults.verbosity
+struct IDMRG1{A} <: Algorithm
+    tol::Float64
+    tol_gauge::Float64
+    eigalg::A
+    maxiter::Int
+    verbosity::Int
+end
+function IDMRG1(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),
+                maxiter=Defaults.maxiter, verbosity=Defaults.verbosity)
+    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
+    return IDMRG1{typeof(eigalg′)}(tol, tol_gauge, eigalg′, maxiter, verbosity)
 end
 
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(ost, H))
@@ -81,13 +86,19 @@ end
 - `verbosity::Int`: display progress information
 - `trscheme::TruncationScheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
-@kwdef struct IDMRG2{A} <: Algorithm
-    tol::Float64 = Defaults.tol
-    tol_gauge::Float64 = Defaults.tolgauge
-    eigalg::A = Defaults.eigsolver
-    maxiter::Int = Defaults.maxiter
-    verbosity::Int = Defaults.verbosity
-    trscheme::TruncationScheme = truncerr(1e-6)
+struct IDMRG2{A} <: Algorithm
+    tol::Float64
+    tol_gauge::Float64
+    eigalg::A
+    maxiter::Int
+    verbosity::Int
+    trscheme::TruncationScheme
+end
+function IDMRG2(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),
+                maxiter=Defaults.maxiter, verbosity=Defaults.verbosity,
+                trscheme=truncerr(1e-6))
+    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
+    return IDMRG2{typeof(eigalg′)}(tol, tol_gauge, eigalg′, maxiter, verbosity, trscheme)
 end
 
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(ost, H))
