@@ -24,7 +24,7 @@ struct QuasiparticleAnsatz{A} <: Algorithm
     alg::A
 end
 function QuasiparticleAnsatz(; kwargs...)
-    alg = Defaults.alg_eigsolve(; kwargs...)
+    alg = Defaults.alg_eigsolve(; dynamic_tols=false, kwargs...)
     return QuasiparticleAnsatz(alg)
 end
 
