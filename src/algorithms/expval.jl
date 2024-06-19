@@ -73,48 +73,38 @@ function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
     end
 
     # right side
-    return @plansor M[1 2; 3] * Ut[2] * ψ.CR[sites[end]][3; 4] *
-                    conj(ψ.CR[sites[end]][1; 4])
+    E = @plansor M[1 2; 3] * Ut[2] * ψ.CR[sites[end]][3; 4] *
+                 conj(ψ.CR[sites[end]][1; 4])
+    return E / norm(ψ)^2
 end
 
-function expectation_value(ψ::Union{InfiniteMPS,WindowMPS,FiniteMPS},
-                           O::AbstractTensorMap{S,1,1}) where {S}
-    return expectation_value(ψ, fill(O, length(ψ)))
-end
-function expectation_value(ψ::Union{InfiniteMPS,WindowMPS,FiniteMPS},
-                           opps::AbstractArray{<:AbstractTensorMap{S,1,1}}) where {S}
-    return map(zip(ψ.AC, opps)) do (ac, opp)
-        return tr(ac' * transpose(opp * transpose(ac,
-                                                  ((TensorKit.allind(ac)[2:(end - 1)]),
-                                                   (1, TensorKit.numind(ac)))),
-                                  ((TensorKit.numind(ac) - 1,
-                                    TensorKit.allind(ac)[1:(end - 2)]...),
-                                   (TensorKit.numind(ac),))))
+# MPOs
+# ----
+
+function expectation_value(ψ::AbstractFiniteMPS, H::MPOHamiltonian,
+                           envs::Cache=environments(ψ, H))
+    L = length(ψ) ÷ 2
+    GL = leftenv(envs, L, ψ)
+    GR = rightenv(envs, L, ψ)
+    AC = ψ.AC[L]
+    E = sum(keys(H[L])) do (j, k)
+        return @plansor GL[j][1 2; 3] * AC[3 7; 5] * GR[k][5 8; 6] * conj(AC[1 4; 6]) *
+                        H[L][j, k][2 4; 7 8]
     end
+    return E / norm(ψ)^2
 end
+function expectation_value(ψ::InfiniteMPS, H::MPOHamiltonian,
+                           envs::Cache=environments(ψ, H))
+    # environments are renormalized per site -- we need to contract entire unitcell
+    # TODO: this could be done slightly more efficiently, we do not need:
+    # - the entire left environment
+    # - the right environments GR[1][2:end]
 
-# Multi-site operators
-# --------------------
-# TODO: replace Vector{MPOTensor} with FiniteMPO
-function expectation_value(ψ::Union{FiniteMPS{T},WindowMPS{T},InfiniteMPS{T}},
-                           O::AbstractTensorMap{S,N,N}, at::Int) where {S,N,T<:MPSTensor{S}}
-    return expectation_value(ψ, decompose_localmpo(add_util_leg(O)), at)
-end
-function expectation_value(ψ::Union{FiniteMPS{T},WindowMPS{T},InfiniteMPS{T}},
-                           O::AbstractArray{<:MPOTensor{S}},
-                           at::Int) where {S,T<:MPSTensor{S}}
-    firstspace = _firstspace(first(O))
-    (firstspace == oneunit(firstspace) && _lastspace(last(O)) == firstspace') ||
-        throw(ArgumentError("localmpo should start and end in a trivial leg, not with $(firstspace)"))
-
-    ut = fill_data!(similar(O[1], firstspace), one)
-    @plansor v[-1 -2; -3] := isomorphism(storagetype(T), left_virtualspace(ψ, at - 1),
-                                         left_virtualspace(ψ, at - 1))[-1; -3] *
-                             conj(ut[-2])
-    tmp = v *
-          TransferMatrix(ψ.AL[at:(at + length(O) - 1)], O, ψ.AL[at:(at + length(O) - 1)])
-    return @plansor tmp[1 2; 3] * ut[2] * ψ.CR[at + length(O) - 1][3; 4] *
-                    conj(ψ.CR[at + length(O) - 1][1; 4])
+    GL = leftenv(envs, 1, ψ)
+    GR = rightenv(envs, 1, ψ)
+    A = [i == 1 ? ψ.AC[i] : ψ.AR[i] for i in 1:length(ψ)]
+    T = TransferMatrix(A, H[:], A)
+    return @plansor GL[1][1 2; 3] * (T * GR)[1][3 2; 1] / norm(ψ)^2
 end
 
 # MPOHamiltonian
@@ -143,71 +133,49 @@ function expectation_value(ψ::WindowMPS, H::MPOHamiltonian, envs::FinEnv)
     return vals, tot / (norm(ψ.AC[end])^2)
 end
 
-function expectation_value(ψ::FiniteMPS, H::MPOHamiltonian, envs::FinEnv)
-    return expectation_value_fimpl(ψ, H, envs)
-end
-function expectation_value_fimpl(ψ::AbstractFiniteMPS, H::MPOHamiltonian, envs::FinEnv)
-    ens = zeros(scalartype(ψ), length(ψ))
-    for i in 1:length(ψ), (j, k) in keys(H[i])
-        !((j == 1 && k != 1) || (k == H.odim && j != H.odim)) && continue
-
-        cur = @plansor leftenv(envs, i, ψ)[j][1 2; 3] * ψ.AC[i][3 7; 5] *
-                       rightenv(envs, i, ψ)[k][5 8; 6] * conj(ψ.AC[i][1 4; 6]) *
-                       H[i][j, k][2 4; 7 8]
-        if !(j == 1 && k == H.odim)
-            cur /= 2
-        end
-
-        ens[i] += cur
-    end
-
-    n = norm(ψ.AC[end])^2
-    return ens ./ n
-end
-
-function expectation_value(st::InfiniteMPS, H::MPOHamiltonian,
-                           prevca::Union{MPOHamInfEnv,IDMRGEnv})
-    #calculate energy density
-    len = length(st)
-    ens = PeriodicArray(zeros(scalartype(st.AR[1]), len))
-    for i in 1:len
-        util = fill_data!(similar(st.AL[1], space(prevca.lw[H.odim, i + 1], 2)), one)
-        for j in (H.odim):-1:1
-            apl = leftenv(prevca, i, st)[j] *
-                  TransferMatrix(st.AL[i], H[i][j, H.odim], st.AL[i])
-            ens[i] += @plansor apl[1 2; 3] * r_LL(st, i)[3; 1] * conj(util[2])
-        end
-    end
-    return ens
-end
+# function expectation_value(st::InfiniteMPS, H::MPOHamiltonian,
+#                            prevca::Union{MPOHamInfEnv,IDMRGEnv})
+#     #calculate energy density
+#     len = length(st)
+#     ens = PeriodicArray(zeros(scalartype(st.AR[1]), len))
+#     for i in 1:len
+#         util = fill_data!(similar(st.AL[1], space(prevca.lw[H.odim, i + 1], 2)), one)
+#         for j in (H.odim):-1:1
+#             apl = leftenv(prevca, i, st)[j] *
+#                   TransferMatrix(st.AL[i], H[i][j, H.odim], st.AL[i])
+#             ens[i] += @plansor apl[1 2; 3] * r_LL(st, i)[3; 1] * conj(util[2])
+#         end
+#     end
+#     return ens
+# end
 
 #the mpo hamiltonian over n sites has energy f+n*edens, which is what we calculate here. f can then be found as this - n*edens
-function expectation_value(st::InfiniteMPS, prevca::MPOHamInfEnv,
-                           range::Union{UnitRange{Int},Int})
-    return expectation_value(st, prevca.opp, range, prevca)
-end
-function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, range::Int,
-                           prevca=environments(st, H))
-    return expectation_value(st, H, 1:range, prevca)
-end
-function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, range::UnitRange{Int},
-                           prevca=environments(st, H))
-    start = map(leftenv(prevca, range.start, st)) do y
-        @plansor x[-1 -2; -3] := y[1 -2; 3] * st.CR[range.start - 1][3; -3] *
-                                 conj(st.CR[range.start - 1][1; -1])
-    end
-
-    for i in range
-        start = start * TransferMatrix(st.AR[i], H[i], st.AR[i])
-    end
-
-    tot = 0.0 + 0im
-    for i in 1:(H.odim)
-        tot += @plansor start[i][1 2; 3] * rightenv(prevca, range.stop, st)[i][3 2; 1]
-    end
-
-    return tot
-end
+# function expectation_value(st::InfiniteMPS, prevca::MPOHamInfEnv,
+#                            range::Union{UnitRange{Int},Int})
+#     return expectation_value(st, prevca.opp, range, prevca)
+# end
+# function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, range::Int,
+#                            prevca=environments(st, H))
+#     return expectation_value(st, H, 1:range, prevca)
+# end
+# function expectation_value(st::InfiniteMPS, H::MPOHamiltonian, range::UnitRange{Int},
+#                            prevca=environments(st, H))
+#     start = map(leftenv(prevca, range.start, st)) do y
+#         @plansor x[-1 -2; -3] := y[1 -2; 3] * st.CR[range.start - 1][3; -3] *
+#                                  conj(st.CR[range.start - 1][1; -1])
+#     end
+#
+#     for i in range
+#         start = start * TransferMatrix(st.AR[i], H[i], st.AR[i])
+#     end
+#
+#     tot = 0.0 + 0im
+#     for i in 1:(H.odim)
+#         tot += @plansor start[i][1 2; 3] * rightenv(prevca, range.stop, st)[i][3 2; 1]
+#     end
+#
+#     return tot
+# end
 
 # Transfer matrices
 # -----------------
