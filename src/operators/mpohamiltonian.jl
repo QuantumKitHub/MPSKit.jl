@@ -120,14 +120,13 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
 
     # convert to linear index type
     operators = mpo.opp
-    indices = map(x -> LinearIndices(lattice)[x], inds)
+    indices = map(x -> LinearIndices(lattice)[x], inds) # this should mean all inds are valid...
     T = eltype(mpo)
     local_mpo = Union{T,scalartype(T)}[]
     sites = Int[]
 
     i = 1
     current_site = first(indices)
-    previous_site = current_site # to avoid infinite loops
     while i <= length(operators)
         @assert !isnothing(current_site) "indices do not fit in the given lattice: $inds in $lattice"
         if current_site == indices[i] # add MPO tensor
@@ -142,7 +141,6 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
         end
 
         current_site = nextindex(lattice, current_site)
-        @assert current_site != previous_site "indices do not fit in the given lattice: $inds in $lattice"
     end
 
     return sites => local_mpo
