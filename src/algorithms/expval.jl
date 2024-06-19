@@ -1,25 +1,82 @@
 """
-    expectation_value(ψ, O, [location], [environments])
+    expectation_value(ψ, O, [environments])
+    expectation_value(ψ, inds => O)
 
-Compute the expectation value of an operator `O` on a state `ψ`. If `location` is given, the
-operator is applied at that location. If `environments` is given, the expectation value
-might be computed more efficiently by re-using previously calculated environments.
+Compute the expectation value of an operator `O` on a state `ψ`. 
+Optionally, it is possible to make the computations more efficient by also passing in
+previously calculated `environments`.
 
-!!! note
-    For `MPOHamiltonian`, the expectation value is not uniquely defined, as it is unclear to
-    what site a given term belongs. For this reason, the returned value is half the
-    expectation value of all terms that start and end on the site.
+In general, the operator `O` may consist of an arbitrary MPO `O <: AbstractMPO` that acts
+on all sites, or a local operator `O = inds => operator` acting on a subset of sites. 
+In the latter case, `inds` is a tuple of indices that specify the sites on which the operator
+acts, while the operator is either a `AbstractTensorMap` or a `FiniteMPO`.
 
 # Arguments
 * `ψ::AbstractMPS` : the state on which to compute the expectation value
-* `O` : the operator to compute the expectation value of. This can either be an `AbstractMPO`, a single `AbstractTensorMap` or an array of `AbstractTensorMap`s.
-* `location::Union{Int,AbstractRange{Int}}` : the location at which to apply the operator. Only applicable for operators that act on a subset of all sites.
+* `O::Union{AbstractMPO,Pair}` : the operator to compute the expectation value of. 
+    This can either be an `AbstractMPO`, or a pair of indices and local operator..
 * `environments::Cache` : the environments to use for the calculation. If not given, they will be calculated.
+
+# Examples
+
+
 """
 function expectation_value end
 
 # Local operators
 # ---------------
+function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
+    @boundscheck foreach(Base.Fix1(checkbounds, ψ), inds)
+
+    sites, local_mpo = instantiate_operator(physicalspace(ψ), inds => O)
+    @assert _firstspace(first(local_mpo)) == oneunit(_firstspace(first(local_mpo))) ==
+            dual(_lastspace(last(local_mpo)))
+    for (site, o) in zip(sites, local_mpo)
+        if o isa MPOTensor
+            physicalspace(ψ)[site] == physicalspace(o) ||
+                throw(SpaceMismatch("physical space does not match at site $site"))
+        end
+    end
+
+    Ut = fill_data!(similar(local_mpo[1], _firstspace(first(local_mpo))), one)
+
+    # some special cases that avoid using transfer matrices
+    if length(sites) == 1
+        AC = ψ.AC[sites[1]]
+        return @plansor conj(AC[4 5; 6]) *
+                        conj(Ut[1]) * local_mpo[1][1 5; 3 2] * Ut[2] *
+                        AC[4 3; 6]
+    end
+    if length(sites) == 2
+        AC = ψ.AC[sites[1]]
+        AR = ψ.AR[sites[2]]
+        O1, O2 = local_mpo
+        return @plansor conj(AC[4 5; 10]) * conj(Ut[1]) * O1[1 5; 3 8] * AC[4 3; 6] *
+                        conj(AR[10 9; 11]) * Ut[2] * O2[8 9; 7 2] * AR[6 7; 11]
+    end
+
+    # generic case: write as Vl * T^N * Vr
+    # left side
+    T = storagetype(site_type(ψ))
+    @plansor Vl[-1 -2; -3] := isomorphism(T,
+                                          left_virtualspace(ψ, sites[1] - 1),
+                                          left_virtualspace(ψ, sites[1] - 1))[-1; -3] *
+                              conj(Ut[-2])
+
+    # middle
+    M = foldl(zip(sites, local_mpo); init=Vl) do v, (site, o)
+        if o isa Number
+            return scale!(v * TransferMatrix(ψ.AL[site], ψ.AL[site]), o)
+        else
+            return v * TransferMatrix(ψ.AL[site], o, ψ.AL[site])
+        end
+    end
+
+    # right side
+    return @plansor M[1 2; 3] * Ut[2] * ψ.CR[sites[end]][3; 4] *
+                    conj(ψ.CR[sites[end]][1; 4])
+end
+
 function expectation_value(ψ::Union{InfiniteMPS,WindowMPS,FiniteMPS},
                            O::AbstractTensorMap{S,1,1}) where {S}
     return expectation_value(ψ, fill(O, length(ψ)))
