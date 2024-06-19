@@ -55,6 +55,9 @@ end
 
 Base.checkbounds(A::PeriodicArray, I...) = true
 
+Base.LinearIndices(A::PeriodicArray) = PeriodicArray(LinearIndices(parent(A)))
+Base.CartesianIndices(A::PeriodicArray) = PeriodicArray(CartesianIndices(parent(A)))
+
 function Base.similar(A::PeriodicArray, ::Type{S}, dims::Dims) where {S}
     return PeriodicArray(similar(parent(A), S, dims))
 end
@@ -80,3 +83,7 @@ Base.convert(::Type{T}, A::PeriodicArray) where {T<:AbstractArray} = convert(T, 
 # fix ambiguities
 Base.convert(::Type{T}, A::PeriodicArray) where {T<:PeriodicArray} = A
 Base.convert(::Type{T}, A::PeriodicArray) where {T<:Array} = parent(A)
+
+# Utility
+# -------
+nextindex(A::PeriodicVector, i::Int) = mod1(i + 1, length(A))

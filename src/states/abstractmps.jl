@@ -116,6 +116,8 @@ abstract type AbstractMPS end
 Base.eltype(ψ::AbstractMPS) = eltype(typeof(ψ))
 VectorInterface.scalartype(T::Type{<:AbstractMPS}) = scalartype(site_type(T))
 
+Base.checkbounds(ψ::AbstractMPS, i) = checkbounds(Bool, ψ, i) || throw(BoundsError(ψ, i))
+
 """
     site_type(ψ::AbstractMPS)
     site_type(ψtype::Type{<:AbstractMPS})

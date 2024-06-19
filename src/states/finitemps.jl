@@ -242,9 +242,6 @@ function Base.similar(ψ::FiniteMPS{A,B}) where {A,B}
 end
 
 Base.checkbounds(::Type{Bool}, ψ::FiniteMPS, i::Integer) = 1 <= i <= length(ψ)
-function Base.checkbounds(ψ::FiniteMPS, i::Integer)
-    return checkbounds(Bool, ψ, i) || throw(BoundsError(ψ, i))
-end
 
 function Base.convert(TType::Type{<:AbstractTensorMap}, ψ::FiniteMPS)
     T = foldl(ψ.AR[2:end]; init=first(ψ.AC)) do x, y
