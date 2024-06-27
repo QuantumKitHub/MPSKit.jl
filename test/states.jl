@@ -136,15 +136,14 @@ end
     e2 = expectation_value(window, ham)
 
     @test v2 < v1
-    @test real(e2[2]) ≤ real(e1[2])
+    @test real(e2) ≤ real(e1)
 
     window, envs = timestep(window, ham, 0.1, 0.0, TDVP2(), envs)
     window, envs = timestep(window, ham, 0.1, 0.0, TDVP(), envs)
 
     e3 = expectation_value(window, ham)
 
-    @test e2[1] ≈ e3[1] atol = 1e-4
-    @test e2[2] ≈ e3[2] atol = 1e-4
+    @test e2 ≈ e3 atol = 1e-4
 end
 
 @testset "Quasiparticle state" verbose = true begin
@@ -171,7 +170,7 @@ end
         @test dot(ϕ₁_f, ϕ₂_f) ≈ dot(ϕ₁, ϕ₂) atol = 1e-5
         @test norm(ϕ₁_f) ≈ norm(ϕ₁) atol = 1e-5
 
-        ev_f = sum(expectation_value(ϕ₁_f, H) - expectation_value(ψ, H))
+        ev_f = expectation_value(ϕ₁_f, H) - expectation_value(ψ, H)
         ev_q = dot(ϕ₁, effective_excitation_hamiltonian(H, ϕ₁))
         @test ev_f ≈ ev_q atol = 1e-5
     end

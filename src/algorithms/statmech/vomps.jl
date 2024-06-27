@@ -32,7 +32,7 @@ function leading_boundary(ψ::MPSMultiline, O::MPOMultiline, alg::VOMPS,
     log = IterLog("VOMPS")
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, O, envs)))
+        @infov 2 loginit!(log, ϵ, expectation_value(ψ, O, envs))
         for iter in 1:(alg.maxiter)
             @static if Defaults.parallelize_sites
                 @sync for col in 1:size(ψ, 2)
@@ -72,13 +72,13 @@ function leading_boundary(ψ::MPSMultiline, O::MPOMultiline, alg::VOMPS,
             ϵ = calc_galerkin(ψ, envs)
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, O, envs)))
+                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, O, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, O, envs)))
+                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, O, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, O, envs)))
+                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, O, envs))
             end
         end
     end

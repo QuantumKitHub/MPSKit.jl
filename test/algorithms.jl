@@ -289,7 +289,7 @@ end
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
         ψ, envs = timestep(ψ₀, H, 0.0, dt, alg)
         E = expectation_value(ψ, H, envs)
-        @test sum(E₀) ≈ sum(E) atol = 1e-2
+        @test E₀ ≈ E atol = 1e-2
     end
 
     Hlazy = LazySum([3 * H, 1.55 * H, -0.1 * H])
@@ -297,7 +297,7 @@ end
     @testset "Finite LazySum $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
         ψ, envs = timestep(ψ₀, Hlazy, 0.0, dt, alg)
         E = expectation_value(ψ, Hlazy, envs)
-        @test (3 + 1.55 - 0.1) * sum(E₀) ≈ sum(E) atol = 1e-2
+        @test (3 + 1.55 - 0.1) * E₀ ≈ E atol = 1e-2
     end
 
     Ht = MultipliedOperator(H, t -> 4) + MultipliedOperator(H, 1.45)
@@ -309,7 +309,7 @@ end
 
         ψt, envst = timestep(ψ₀, Ht, 1.0, dt, alg)
         Et = expectation_value(ψt, Ht(1.0), envst)
-        @test sum(E) ≈ sum(Et) atol = 1e-8
+        @test E ≈ Et atol = 1e-8
     end
 
     H = repeat(force_planar(heisenberg_XXX(; spin=1)), 2)
@@ -319,7 +319,7 @@ end
     @testset "Infinite TDVP" begin
         ψ, envs = timestep(ψ₀, H, 0.0, dt, TDVP())
         E = expectation_value(ψ, H, envs)
-        @test sum(E₀) ≈ sum(E) atol = 1e-2
+        @test E₀ ≈ E atol = 1e-2
     end
 
     Hlazy = LazySum([3 * H, 1.55 * H, -0.1 * H])
@@ -327,7 +327,7 @@ end
     @testset "Infinite LazySum TDVP" begin
         ψ, envs = timestep(ψ₀, Hlazy, 0.0, dt, TDVP())
         E = expectation_value(ψ, Hlazy, envs)
-        @test (3 + 1.55 - 0.1) * sum(E₀) ≈ sum(E) atol = 1e-2
+        @test (3 + 1.55 - 0.1) * E₀ ≈ E atol = 1e-2
     end
 
     Ht = MultipliedOperator(H, t -> 4) + MultipliedOperator(H, 1.45)
@@ -338,7 +338,7 @@ end
 
         ψt, envst = timestep(ψ₀, Ht, 1.0, dt, TDVP())
         Et = expectation_value(ψt, Ht(1.0), envst)
-        @test sum(E) ≈ sum(Et) atol = 1e-8
+        @test E ≈ Et atol = 1e-8
     end
 end
 
@@ -353,7 +353,7 @@ end
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
         ψ, envs = time_evolve(ψ₀, H, t_span, alg)
         E = expectation_value(ψ, H, envs)
-        @test sum(E₀) ≈ sum(E) atol = 1e-2
+        @test E₀ ≈ E atol = 1e-2
     end
 
     H = repeat(force_planar(heisenberg_XXX(; spin=1)), 2)
@@ -363,7 +363,7 @@ end
     @testset "Infinite TDVP" begin
         ψ, envs = time_evolve(ψ₀, H, t_span, TDVP())
         E = expectation_value(ψ, H, envs)
-        @test sum(E₀) ≈ sum(E) atol = 1e-2
+        @test E₀ ≈ E atol = 1e-2
     end
 end
 
@@ -381,7 +381,7 @@ end
         ψ, envs = leading_boundary(ψ, mpo, alg)
 
         @test dim(space(ψ.AL[1, 1], 1)) == dim(space(ψ₀.AL[1, 1], 1)) + 3
-        @test expectation_value(ψ, envs)[1, 1] ≈ 2.5337 atol = 1e-3
+        @test expectation_value(ψ, envs) ≈ 2.5337 atol = 1e-3
     end
 end
 
@@ -424,13 +424,13 @@ end
                                          FiniteExcited(;
                                                        gsalg=DMRG(; verbosity,
                                                                   tol=1e-6)), ψ)
-            @test energies_dm[1] ≈ energies_QP[1] + sum(expectation_value(ψ, H, envs)) atol = 1e-4
+            @test energies_dm[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
 
             # find energy with Chepiga ansatz
             energies_ch, _ = excitations(H, ChepigaAnsatz(), ψ, envs)
-            @test energies_ch[1] ≈ energies_QP[1] + sum(expectation_value(ψ, H, envs)) atol = 1e-4
+            @test energies_ch[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
             energies_ch2, _ = excitations(H, ChepigaAnsatz2(), ψ, envs)
-            @test energies_ch2[1] ≈ energies_QP[1] + sum(expectation_value(ψ, H, envs)) atol = 1e-4
+            @test energies_ch2[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
             return energies_QP[1]
         end
 
@@ -535,10 +535,10 @@ end
     window = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
     szd = force_planar(TensorMap(ComplexF64[0.5 0; 0 -0.5], ℂ^2 ← ℂ^2))
-    @test expectation_value(gs, szd)[1] ≈ expectation_value(window, szd)[1] atol = 1e-10
+    @test expectation_value(gs, szd) ≈ expectation_value(window, szd) atol = 1e-10
 
     polepos = expectation_value(gs, ham, 10)
-    @test polepos ≈ expectation_value(window, ham)[2]
+    @test polepos ≈ expectation_value(window, ham)
 
     vals = (-0.5:0.2:0.5) .+ polepos
     eta = 0.3im
@@ -603,33 +603,19 @@ end
 end
 
 @testset "expectation value / correlator" begin
-    st = InfiniteMPS([ℂ^2], [ℂ^10])
-    th = transverse_field_ising(; g=4)
-    (st, _) = find_groundstate(st, th, VUMPS(; verbosity=0))
+    ψ = InfiniteMPS(ℂ^2, ℂ^10)
+    H = transverse_field_ising(; g=4)
+    ψ, = find_groundstate(ψ, H, VUMPS(; verbosity=0))
 
-    sz_mpo = TensorMap([1.0 0; 0 -1], ℂ^1 * ℂ^2, ℂ^2 * ℂ^1)
-    sz = TensorMap([1.0 0; 0 -1], ℂ^2, ℂ^2)
-    id_mpo = TensorMap([1.0 0; 0 1.0], ℂ^1 * ℂ^2, ℂ^2 * ℂ^1)
-    @tensor szsz[-1 -2; -3 -4] := sz[-1 -3] * sz[-2 -4]
-
-    @test isapprox(expectation_value(st, [sz_mpo], 1), expectation_value(st, sz, 1),
-                   atol=1e-2)
-    @test isapprox(expectation_value(st, [sz_mpo, sz_mpo], 1),
-                   expectation_value(st, szsz, 1),
-                   atol=1e-2)
-    @test isapprox(expectation_value(st, [sz_mpo, sz_mpo], 2),
-                   expectation_value(st, szsz, 1),
-                   atol=1e-2)
-
-    G = correlator(st, sz_mpo, sz_mpo, 1, 2:5)
-    G2 = correlator(st, szsz, 1, 3:2:5)
+    @test expectation_value(ψ, H) ≈
+          expectation_value(ψ, 1 => -g * S_x()) + expectation_value(ψ, (1, 2) => -S_zz())
+    Z_mpo = MPSKit.add_util_leg(S_z())
+    G = correlator(st, Z_mpo, Z_mpo, 1, 2:5)
+    G2 = correlator(st, S_zz(), 1, 3:2:5)
     @test isapprox(G[2], G2[1], atol=1e-2)
     @test isapprox(last(G), last(G2), atol=1e-2)
-    @test isapprox(G[1], expectation_value(st, szsz, 1), atol=1e-2)
-    @test isapprox(G[2], expectation_value(st, [sz_mpo, id_mpo, sz_mpo], 1), atol=1e-2)
-    @test isapprox(first(correlator(st, sz_mpo, sz_mpo, 1, 2)),
-                   expectation_value(st, szsz, 1),
-                   atol=1e-2)
+    @test isapprox(G[1], expectation_value(st, (1, 2) => S_zz()), atol=1e-2)
+    @test isapprox(G[2], expectation_value(st, (1, 3) => S_zz()), atol=1e-2)
 end
 
 @testset "approximate" verbose = true begin
@@ -726,7 +712,7 @@ end
     @test expval ≈ 1 atol = 1e-5
 
     energies, values = exact_diagonalization(th; which=:SR)
-    @test energies[1] ≈ sum(expectation_value(gs, th)) atol = 1e-5
+    @test energies[1] ≈ expectation_value(gs, th) atol = 1e-5
 end
 
 end

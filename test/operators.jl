@@ -137,11 +137,11 @@ end
     e2 = expectation_value(ψ1, h2)
 
     h1 = 2 * h1 - [1]
-    @test e1[1] * 2 - 1 ≈ expectation_value(ψ1, h1)[1] atol = 1e-10
+    @test e1 * 2 - 1 ≈ expectation_value(ψ1, h1) atol = 1e-10
 
     h1 = h1 + h2
 
-    @test e1[1] * 2 + e2[1] - 1 ≈ expectation_value(ψ1, h1)[1] atol = 1e-10
+    @test e1 * 2 + e2 - 1 ≈ expectation_value(ψ1, h1) atol = 1e-10
 
     h1 = repeat(h1, 2)
 
@@ -152,7 +152,7 @@ end
 
     h4 = h1 + h3
     h4 = h4 * h4
-    @test real(sum(expectation_value(ψ2, h4))) >= 0
+    @test real(expectation_value(ψ2, h4)) >= 0
 end
 
 @testset "General LazySum of $(eltype(Os))" for Os in (rand(ComplexF64, rand(1:10)),

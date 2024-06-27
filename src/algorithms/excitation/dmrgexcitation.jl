@@ -26,7 +26,7 @@ function excitations(H::MPOHamiltonian, alg::FiniteExcited, states::NTuple{N,T};
     nstates = (states..., ne)
     ens, excis = excitations(H, alg, nstates; init=init, num=num - 1)
 
-    push!(ens, sum(expectation_value(ne, H)))
+    push!(ens, expectation_value(ne, H))
     push!(excis, ne)
 
     return ens, excis
