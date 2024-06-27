@@ -120,7 +120,9 @@ function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
         g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.CR[i]'), x.Rhoreg[i])
     end
 
-    f = sum(expectation_value(x.state, x.envs))
+    # TODO: the operator really should not be part of the environments, and this should
+    # be passed as an explicit argument
+    f = expectation_value(x.state, x.envs.opp)
     isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     return real(f), g_prec
