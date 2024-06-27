@@ -135,20 +135,13 @@ function variance end
 
 function variance(state::InfiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
     rescaled_H = H - expectation_value(state, H, envs)
-    return real(sum(expectation_value(state, rescaled_H * rescaled_H)))
+    return real(expectation_value(state, rescaled_H * rescaled_H))
 end
 
 function variance(state::FiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
     H2 = H * H
-    return real(sum(expectation_value(state, H2)) -
-                sum(expectation_value(state, H, envs))^2)
-end
-
-function variance(state::WindowMPS, H::MPOHamiltonian, envs=environments(state, H))
-    #tricky to define
-    H2, nenvs = squaredenvs(state, H, envs)
-    return real(expectation_value(state, H2, nenvs)[2] -
-                expectation_value(state, H, envs)[2]^2)
+    return real(expectation_value(state, H2) -
+                expectation_value(state, H, envs)^2)
 end
 
 function variance(state::FiniteQP, H::MPOHamiltonian, args...)
@@ -163,6 +156,7 @@ function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state,
     rescaled_H = H - expectation_value(state.left_gs, H)
 
     #I don't remember where the formula came from
+    # TODO: this is probably broken
     E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
     E_f = expectation_value(state.left_gs, rescaled_H, 1:0)
 
@@ -173,6 +167,7 @@ function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state,
 end
 
 function variance(ψ, H::LazySum, envs=environments(ψ, sum(H)))
+    # TODO: avoid throwing error and just compute correct environments 
     envs isa MultipleEnvironments &&
         throw(ArgumentError("The environment cannot be Lazy i.e. use environments of sum(H)"))
     return variance(ψ, sum(H), envs)
