@@ -78,10 +78,10 @@ function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
     return E / norm(ψ)^2
 end
 
-# MPOs
-# ----
+# MPOHamiltonian
+# --------------
 
-function expectation_value(ψ::AbstractFiniteMPS, H::MPOHamiltonian,
+function expectation_value(ψ::FiniteMPS, H::MPOHamiltonian,
                            envs::Cache=environments(ψ, H))
     L = length(ψ) ÷ 2
     GL = leftenv(envs, L, ψ)
@@ -99,7 +99,6 @@ function expectation_value(ψ::InfiniteMPS, H::MPOHamiltonian,
     # TODO: this could be done slightly more efficiently, we do not need:
     # - the entire left environment
     # - the right environments GR[1][2:end]
-
     GL = leftenv(envs, 1, ψ)
     GR = rightenv(envs, 1, ψ)
     A = [i == 1 ? ψ.AC[i] : ψ.AR[i] for i in 1:length(ψ)]
@@ -107,31 +106,10 @@ function expectation_value(ψ::InfiniteMPS, H::MPOHamiltonian,
     return @plansor GL[1][1 2; 3] * (T * GR)[1][3 2; 1] / norm(ψ)^2
 end
 
-# MPOHamiltonian
-# --------------
-# TODO: add section in documentation to explain convention
-expectation_value(ψ, envs::Cache) = expectation_value(ψ, envs.opp, envs)
-function expectation_value(ψ, H::MPOHamiltonian)
-    return expectation_value(ψ, H, environments(ψ, H))
-end
+# no definition for WindowMPS -> not well defined
 
-"""
-    expectation_value(ψ::WindowMPS, H::MPOHAmiltonian, envs) -> vals, tot
-
-TODO
-"""
-function expectation_value(ψ::WindowMPS, H::MPOHamiltonian, envs::FinEnv)
-    vals = expectation_value_fimpl(ψ, H, envs)
-
-    tot = 0.0 + 0im
-    for i in 1:(H.odim), j in 1:(H.odim)
-        tot += @plansor leftenv(envs, length(ψ), ψ)[i][1 2; 3] * ψ.AC[end][3 4; 5] *
-                        rightenv(envs, length(ψ), ψ)[j][5 6; 7] *
-                        H[length(ψ)][i, j][2 8; 4 6] * conj(ψ.AC[end][1 8; 7])
-    end
-
-    return vals, tot / (norm(ψ.AC[end])^2)
-end
+# DenseMPO
+# --------
 
 # function expectation_value(st::InfiniteMPS, H::MPOHamiltonian,
 #                            prevca::Union{MPOHamInfEnv,IDMRGEnv})
