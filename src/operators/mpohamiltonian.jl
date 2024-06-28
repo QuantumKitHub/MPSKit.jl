@@ -199,24 +199,34 @@ function sanitycheck(ham::MPOHamiltonian)
 end
 
 #addition / substraction
+Base.:+(a::MPOHamiltonian) = copy(a)
 Base.:-(a::MPOHamiltonian) = -one(scalartype(a)) * a
-function Base.:+(a::MPOHamiltonian, e::AbstractVector)
-    length(e) == a.period ||
-        throw(ArgumentError("periodicity should match $(a.period) ≠ $(length(e))"))
-
-    nOs = copy(a.data) # we don't want our addition to change different copies of the original hamiltonian
-
-    for c in 1:(a.period)
-        nOs[c][1, end] += e[c] *
-                          isomorphism(storagetype(nOs[c][1, end]), codomain(nOs[c][1, end]),
-                                      domain(nOs[c][1, end]))
-    end
-
-    return MPOHamiltonian(nOs)
+function Base.:+(H::MPOHamiltonian, λ::Number)
+    # in principle there is no unique way of adding a scalar to the Hamiltonian
+    # by convention, we add it to the first site
+    # (this is presumably slightly faster than distributing over all sites)
+    H′ = copy(H)
+    H1 = H′[end][1, end]
+    H′[end][1, end] = add!!(H1, isomorphism(storagetype(H1), space(H1)), λ)
+    return H′
 end
-Base.:-(e::AbstractVector, a::MPOHamiltonian) = -1.0 * a + e
-Base.:+(e::AbstractVector, a::MPOHamiltonian) = a + e
-Base.:-(a::MPOHamiltonian, e::AbstractVector) = a + (-e)
+Base.:+(λ::Number, H::MPOHamiltonian) = H + λ
+function Base.:+(H::MPOHamiltonian, λs::AbstractVector{<:Number})
+    length(λs) == H.period ||
+        throw(ArgumentError("periodicity should match $(H.period) ≠ $(length(λs))"))
+
+    H′ = copy(H)
+    for (i, λ) in enumerate(λs)
+        H1 = H′[i][1, end]
+        H′[i][1, end] = add!!(H1, isomorphism(storagetype(H1), space(H1)), λ)
+    end
+    return H′
+end
+Base.:+(λs::AbstractVector{<:Number}, H::MPOHamiltonian) = H + λs
+Base.:-(H::MPOHamiltonian, λ::Number) = H + (-λ)
+Base.:-(λ::Number, H::MPOHamiltonian) = λ + (-H)
+Base.:-(H::MPOHamiltonian, λs::AbstractVector{<:Number}) = H + (-λs)
+Base.:-(λs::AbstractVector{<:Number}, H::MPOHamiltonian) = λs + (-H)
 
 Base.:+(a::H1, b::H2) where {H1<:MPOHamiltonian,H2<:MPOHamiltonian} = +(promote(a, b)...)
 function Base.:+(a::H, b::H) where {H<:MPOHamiltonian}
