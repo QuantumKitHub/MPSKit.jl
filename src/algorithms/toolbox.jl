@@ -134,7 +134,18 @@ Compute the variance of the energy of the state with respect to the hamiltonian.
 function variance end
 
 function variance(state::InfiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
-    rescaled_H = H - expectation_value(state, H, envs)
+    # first rescale, such that the ground state energy is zero
+    # this needs to be done in a way that is consistent with the computation of the environments
+    # TODO: actually figure out why/if this is correct
+    e_local = map(1:length(state)) do i
+        return sum(1:(H.odim)) do j
+            @plansor (leftenv(envs, i, state)[j] *
+                      TransferMatrix(state.AC[i], H[i][j, H.odim], state.AC[i]))[1 2; 3] *
+                     rightenv(envs, i, state)[H.odim][3 2; 1]
+        end
+    end
+    rescaled_H = H - e_local
+
     return real(expectation_value(state, rescaled_H * rescaled_H))
 end
 
