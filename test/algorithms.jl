@@ -86,7 +86,8 @@ end
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1e-3
-        @test v < v₀ && v < 1e-2
+        @test v < v₀
+        @test v < 1e-2
     end
 
     @testset "IDMRG1" begin
@@ -101,7 +102,8 @@ end
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1e-3
-        @test v < v₀ && v < 1e-2
+        @test v < v₀
+        @test v < 1e-2
     end
 
     @testset "IDMRG2" begin
@@ -120,7 +122,8 @@ end
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1e-3
-        @test v < v₀ && v < 1e-2
+        @test v < v₀
+        @test v < 1e-2
     end
 
     @testset "GradientGrassmann" begin
@@ -136,7 +139,8 @@ end
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1e-3
-        @test v < v₀ && v < 1e-2
+        @test v < v₀
+        @test v < 1e-2
     end
 
     @testset "Combination" begin
@@ -151,7 +155,8 @@ end
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1e-3
-        @test v < v₀ && v < 1e-2
+        @test v < v₀
+        @test v < 1e-2
     end
 end
 
