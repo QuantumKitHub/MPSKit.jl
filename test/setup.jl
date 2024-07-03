@@ -9,7 +9,7 @@ using TensorKit: PlanarTrivial, ℙ
 using LinearAlgebra: Diagonal
 
 # exports
-export S_xx, S_yy, S_zz
+export S_xx, S_yy, S_zz, S_x, S_y, S_z
 export force_planar
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model
 export classical_ising, finite_classical_ising, sixvertex
