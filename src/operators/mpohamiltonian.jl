@@ -133,7 +133,6 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
             @assert space(operators[i], 2) == lattice[current_site] "operator does not fit into the given Hilbert space: $(space(operators[i], 2)) ≠ $(lattice[current_site])"
             push!(local_mpo, operators[i])
             push!(sites, current_site)
-            previous_site = current_site
             i += 1
         else
             push!(local_mpo, one(scalartype(T)))
