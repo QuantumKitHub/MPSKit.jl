@@ -224,7 +224,7 @@ function Base.circshift(ψ::InfiniteMPS, n)
                        circshift(ψ.AC, n))
 end
 
-checkbounds(::Type{Bool}, ψ::InfiniteMPS, i::Integer) = true
+Base.checkbounds(::Type{Bool}, ψ::InfiniteMPS, i::Integer) = true
 
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:InfiniteMPS{<:Any,B}}) where {B} = B
