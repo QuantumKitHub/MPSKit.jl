@@ -386,7 +386,7 @@ end
         ψ, envs = leading_boundary(ψ, mpo, alg)
 
         @test dim(space(ψ.AL[1, 1], 1)) == dim(space(ψ₀.AL[1, 1], 1)) + 3
-        @test expectation_value(ψ, envs) ≈ 2.5337 atol = 1e-3
+        @test expectation_value(ψ, mpo, envs) ≈ 2.5337 atol = 1e-3
     end
 end
 
