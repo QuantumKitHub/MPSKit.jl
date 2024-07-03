@@ -123,13 +123,21 @@ Base.length(ψ::WindowMPS) = length(ψ.window)
 Base.size(ψ::WindowMPS, i...) = size(ψ.window, i...)
 Base.eltype(::Type{<:WindowMPS{A}}) where {A} = A
 
+Base.checkbounds(::Type{Bool}, ψ::WindowMPS, i::Integer) = true
+
 site_type(::Type{<:WindowMPS{A}}) where {A} = A
 bond_type(::Type{<:WindowMPS{<:Any,B}}) where {B} = B
 
 TensorKit.space(ψ::WindowMPS, n::Integer) = space(ψ.AC[n], 2)
-left_virtualspace(ψ::WindowMPS, n::Integer) = left_virtualspace(ψ.window, n);
-right_virtualspace(ψ::WindowMPS, n::Integer) = right_virtualspace(ψ.window, n);
-
+for f in (:physicalspace, :left_virtualspace, :right_virtualspace)
+    @eval $f(ψ::WindowMPS, n::Integer) = n < 1 ? $f(ψ.left_gs, n) :
+                                         n > length(ψ) ? $f(ψ.right_gs, n - length(ψ)) :
+                                         $f(ψ.window, n)
+end
+function physicalspace(ψ::WindowMPS)
+    return WindowArray(physicalspace(ψ.left_gs), physicalspace(ψ.window),
+                       physicalspace(ψ.right_gs))
+end
 r_RR(ψ::WindowMPS) = r_RR(ψ.right_gs, length(ψ))
 l_LL(ψ::WindowMPS) = l_LL(ψ.left_gs, 1)
 
