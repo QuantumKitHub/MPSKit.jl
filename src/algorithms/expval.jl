@@ -26,7 +26,7 @@ function expectation_value end
 # Local operators
 # ---------------
 function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
-    @boundscheck foreach(Base.Fix1(checkbounds, ψ), inds)
+    @boundscheck foreach(Base.Fix1(Base.checkbounds, ψ), inds)
 
     sites, local_mpo = instantiate_operator(physicalspace(ψ), inds => O)
     @assert _firstspace(first(local_mpo)) == oneunit(_firstspace(first(local_mpo))) ==
@@ -95,15 +95,17 @@ function expectation_value(ψ::FiniteMPS, H::MPOHamiltonian,
 end
 function expectation_value(ψ::InfiniteMPS, H::MPOHamiltonian,
                            envs::Cache=environments(ψ, H))
-    # environments are renormalized per site -- we need to contract entire unitcell
-    # TODO: this could be done slightly more efficiently, we do not need:
-    # - the entire left environment
-    # - the right environments GR[1][2:end]
-    GL = leftenv(envs, 1, ψ)
-    GR = rightenv(envs, 1, ψ)
-    A = [i == 1 ? ψ.AC[i] : ψ.AR[i] for i in 1:length(ψ)]
-    T = TransferMatrix(A, H[:], A)
-    return @plansor GL[1][1 2; 3] * (T * GR)[1][3 2; 1] / norm(ψ)^2
+    # TODO: this presumably could be done more efficiently
+    return sum(1:length(ψ)) do i
+        return sum((H.odim):-1:1) do j
+            ρ_LL = r_LL(ψ, i)
+            util = fill_data!(similar(ψ.AL[1], space(envs.lw[H.odim, i + 1], 2)), one)
+            GL = leftenv(envs, i, ψ)
+            return @plansor (GL[j] * TransferMatrix(ψ.AL[i], H[i][j, H.odim], ψ.AL[i]))[1 2;
+                                                                                        3] *
+                            ρ_LL[3; 1] * conj(util[2])
+        end
+    end
 end
 
 # no definition for WindowMPS -> not well defined
