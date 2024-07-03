@@ -97,7 +97,7 @@ function ManifoldPoint(state::MPSMultiline, envs)
         AC′ = MPSKit.∂∂AC(I, state, envs.opp, envs) * state.AC[I]
         # the following formula is wrong when unitcells are involved
         # actual costfunction should be F = -log(prod(f)) => ∂F = -2 * g / |f|
-        return scale!(Grassmann.project(AC′, state.AL[I]), -2 / f)
+        return rmul!(Grassmann.project(AC′, state.AL[I]), -2 / f)
     end
 
     δmin = sqrt(eps(real(scalartype(state))))
@@ -122,7 +122,7 @@ function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
 
     # TODO: the operator really should not be part of the environments, and this should
     # be passed as an explicit argument
-    f = expectation_value(x.state, x.envs.opp)
+    f = expectation_value(x.state, x.envs.opp, x.envs)
     isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     return real(f), g_prec
@@ -134,8 +134,9 @@ function fg(x::ManifoldPoint{<:MPSMultiline})
         return PrecGrad(rmul!(copy(cg), x.state.CR[i]'), x.Rhoreg[i])
     end
 
-    # TODO: this should be giving a product instead of a sum
-    f = expectation_value(x.state, x.envs)
+    # TODO: the operator really should not be part of the environments, and this should
+    # be passed as an explicit argument
+    f = expectation_value(x.state, x.envs.opp, x.envs)
     isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
     real(f) > 0 || @warn "MPO might not be positive definite: $f"
 
@@ -170,7 +171,7 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
     nal = similar(state.AL)
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
-        (nal[i], th) = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
         h[i] = PrecGrad(th)
     end
 
@@ -191,7 +192,7 @@ function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
     y = copy(state)  # The end-point
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
-        (yal, th) = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
         h[i] = PrecGrad(th)
         y.AC[i] = (yal, state.CR[i])
     end
