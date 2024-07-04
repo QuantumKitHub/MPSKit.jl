@@ -19,7 +19,7 @@ quantum_pages = map(readdir(joinpath(example_dir, "quantum1d"))) do dir
 end
 
 # include MPSKit in all doctests
-DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit); recursive=true)
+DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit, TensorKit); recursive=true)
 
 mathengine = MathJax3(Dict(:loader => Dict("load" => ["[tex]/physics"]),
                            :tex => Dict("inlineMath" => [["\$", "\$"], ["\\(", "\\)"]],
