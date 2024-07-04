@@ -63,13 +63,13 @@ function S_z(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {
         throw(ArgumentError("spin $spin not supported"))
     end
 end
-function S_xx(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1) where {T<:Number}
+function S_xx(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
     return S_x(Trivial, T; spin) ⊗ S_x(Trivial, T; spin)
 end
-function S_yy(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1) where {T<:Number}
+function S_yy(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
     return S_y(Trivial, T; spin) ⊗ S_y(Trivial, T; spin)
 end
-function S_zz(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1) where {T<:Number}
+function S_zz(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
     return S_z(Trivial, T; spin) ⊗ S_z(Trivial, T; spin)
 end
 
