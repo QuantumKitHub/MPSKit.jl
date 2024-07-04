@@ -60,13 +60,13 @@ function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
                         conj(Ut[1]) * local_mpo[1][1 5; 3 2] * Ut[2] *
                         AC[4 3; 6]
     end
-    if length(sites) == 2 && (sites[1] + 1 == sites[2])
-        AC = ψ.AC[sites[1]]
-        AR = ψ.AR[sites[2]]
-        O1, O2 = local_mpo
-        return @plansor conj(AC[4 5; 10]) * conj(Ut[1]) * O1[1 5; 3 8] * AC[4 3; 6] *
-                        conj(AR[10 9; 11]) * Ut[2] * O2[8 9; 7 2] * AR[6 7; 11]
-    end
+    # if length(sites) == 2 && (sites[1] + 1 == sites[2])
+    #     AC = ψ.AC[sites[1]]
+    #     AR = ψ.AR[sites[2]]
+    #     O1, O2 = local_mpo
+    #     return @plansor conj(AC[4 5; 10]) * conj(Ut[1]) * O1[1 5; 3 8] * AC[4 3; 6] *
+    #                     conj(AR[10 9; 11]) * Ut[2] * O2[8 9; 7 2] * AR[6 7; 11]
+    # end
 
     # generic case: write as Vl * T^N * Vr
     # left side
