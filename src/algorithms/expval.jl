@@ -41,6 +41,7 @@ function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
     @boundscheck foreach(Base.Fix1(Base.checkbounds, ψ), inds)
 
     sites, local_mpo = instantiate_operator(physicalspace(ψ), inds => O)
+    @show sites
     @assert _firstspace(first(local_mpo)) == oneunit(_firstspace(first(local_mpo))) ==
             dual(_lastspace(last(local_mpo)))
     for (site, o) in zip(sites, local_mpo)
@@ -59,7 +60,7 @@ function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
                         conj(Ut[1]) * local_mpo[1][1 5; 3 2] * Ut[2] *
                         AC[4 3; 6]
     end
-    if length(sites) == 2
+    if length(sites) == 2 && (sites[1] + 1 == sites[2])
         AC = ψ.AC[sites[1]]
         AR = ψ.AR[sites[2]]
         O1, O2 = local_mpo

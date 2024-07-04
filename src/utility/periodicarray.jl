@@ -86,4 +86,4 @@ Base.convert(::Type{T}, A::PeriodicArray) where {T<:Array} = parent(A)
 
 # Utility
 # -------
-nextindex(A::PeriodicVector, i::Int) = mod1(i + 1, length(A))
+nextindex(::PeriodicVector, i::Int) = i + 1
