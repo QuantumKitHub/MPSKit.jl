@@ -128,20 +128,15 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     sites = Int[]
 
     i = 1
-    current_site = first(indices)
-    while i <= length(operators)
-        @assert !isnothing(current_site) "indices do not fit in the given lattice: $inds in $lattice"
-        if current_site == indices[i] # add MPO tensor
-            @assert space(operators[i], 2) == lattice[current_site] "operator does not fit into the given Hilbert space: $(space(operators[i], 2)) ≠ $(lattice[current_site])"
+    for j in first(indices):last(indices)
+        if j == indices[i]
+            @assert space(operators[i], 2) == lattice[j] "operator does not fit into the given Hilbert space: $(space(operators[i], 2)) ≠ $(lattice[j])"
             push!(local_mpo, operators[i])
-            push!(sites, current_site)
             i += 1
         else
             push!(local_mpo, one(scalartype(T)))
-            push!(sites, current_site)
         end
-
-        current_site += 1 # nextindex(lattice, current_site)
+        push!(sites, j)
     end
 
     return sites => local_mpo
