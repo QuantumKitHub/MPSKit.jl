@@ -14,7 +14,7 @@ using LoggingExtras
 
 # bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
-export PeriodicArray, Window
+export PeriodicArray, WindowArray
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth,
@@ -73,13 +73,13 @@ using .IterativeLoggers
 include("utility/iterativesolvers.jl")
 
 include("utility/periodicarray.jl")
+include("utility/windowarray.jl")
 include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
 include("utility/plotting.jl")
 include("utility/linearcombination.jl")
 
 # maybe we should introduce an abstract state type
-include("states/window.jl")
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
 include("states/mpsmultiline.jl")

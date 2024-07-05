@@ -112,9 +112,14 @@ MPS types
 ===========================================================================================#
 
 abstract type AbstractMPS end
+abstract type AbstractFiniteMPS <: AbstractMPS end
 
 Base.eltype(ψ::AbstractMPS) = eltype(typeof(ψ))
 VectorInterface.scalartype(T::Type{<:AbstractMPS}) = scalartype(site_type(T))
+
+function Base.checkbounds(ψ::AbstractMPS, i)
+    return Base.checkbounds(Bool, ψ, i) || throw(BoundsError(ψ, i))
+end
 
 """
     site_type(ψ::AbstractMPS)
@@ -165,5 +170,3 @@ Return the physical space of the site tensor at site `i`.
 function physicalspace end
 physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
 physicalspace(O::MPOTensor) = space(O, 2)
-
-abstract type AbstractFiniteMPS <: AbstractMPS end

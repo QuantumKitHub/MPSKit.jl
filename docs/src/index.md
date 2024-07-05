@@ -96,7 +96,7 @@ of the MPS, can be computed as:
 
 ```@example finitemps
 N1 = LinearAlgebra.norm(mps)
-N2 = expectation_value(mps, id(physicalspace(mps, 3)), 3)
+N2 = expectation_value(mps, 3 => id(physicalspace(mps, 3)))
 println("‖mps‖ = $N1")
 println("<mps|𝕀₃|mps> = $N2")
 ```
@@ -162,7 +162,7 @@ computed by:
 
 ```@example infinitemps
 N1 = norm(mps)
-N2 = expectation_value(mps, id(physicalspace(mps, 1)), 1)
+N2 = expectation_value(mps, 1 => id(physicalspace(mps, 1)))
 println("‖mps‖ = $N1")
 println("<mps|𝕀₁|mps> = $N2")
 ```

@@ -9,7 +9,7 @@ using TensorKit: PlanarTrivial, ℙ
 using LinearAlgebra: Diagonal
 
 # exports
-export S_xx, S_yy, S_zz
+export S_xx, S_yy, S_zz, S_x, S_y, S_z
 export force_planar
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model
 export classical_ising, finite_classical_ising, sixvertex
@@ -36,42 +36,47 @@ force_planar(mpo::DenseMPO) = DenseMPO(force_planar.(mpo.opp))
 # Toy models
 # ----------------------------
 
-function S_xx(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1) where {T<:Number}
-    X = if spin == 1 // 2
+function S_x(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+    return if spin == 1 // 2
         TensorMap(T[0 1; 1 0], ℂ^2 ← ℂ^2)
     elseif spin == 1
         TensorMap(T[0 1 0; 1 0 1; 0 1 0], ℂ^3 ← ℂ^3) / sqrt(2)
     else
         throw(ArgumentError("spin $spin not supported"))
     end
-    return X ⊗ X
 end
-function S_yy(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1) where {T<:Number}
-    Y = if spin == 1 / 2
+function S_y(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+    return if spin == 1 // 2
         TensorMap(T[0 -im; im 0], ℂ^2 ← ℂ^2)
     elseif spin == 1
         TensorMap(T[0 -im 0; im 0 -im; 0 im 0], ℂ^3 ← ℂ^3) / sqrt(2)
     else
         throw(ArgumentError("spin $spin not supported"))
     end
-    return Y ⊗ Y
 end
-function S_zz(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1) where {T<:Number}
-    Z = if spin == 1 // 2
+function S_z(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+    return if spin == 1 // 2
         TensorMap(T[1 0; 0 -1], ℂ^2 ← ℂ^2)
     elseif spin == 1
         TensorMap(T[1 0 0; 0 0 0; 0 0 -1], ℂ^3 ← ℂ^3)
     else
         throw(ArgumentError("spin $spin not supported"))
     end
-    return Z ⊗ Z
+end
+function S_xx(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+    return S_x(Trivial, T; spin) ⊗ S_x(Trivial, T; spin)
+end
+function S_yy(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+    return S_y(Trivial, T; spin) ⊗ S_y(Trivial, T; spin)
+end
+function S_zz(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+    return S_z(Trivial, T; spin) ⊗ S_z(Trivial, T; spin)
 end
 
 function transverse_field_ising(; g=1.0)
-    X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
-    Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
+    X = S_x(; spin=1 // 2)
     E = TensorMap(ComplexF64[1 0; 0 1], ℂ^2 ← ℂ^2)
-    H = Z ⊗ Z + (g / 2) * (X ⊗ E + E ⊗ X)
+    H = S_zz(; spin=1 // 2) + (g / 2) * (X ⊗ E + E ⊗ X)
     return MPOHamiltonian(-H)
 end
 

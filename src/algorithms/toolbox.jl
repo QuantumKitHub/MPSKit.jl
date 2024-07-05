@@ -134,21 +134,25 @@ Compute the variance of the energy of the state with respect to the hamiltonian.
 function variance end
 
 function variance(state::InfiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
-    rescaled_H = H - expectation_value(state, H, envs)
-    return real(sum(expectation_value(state, rescaled_H * rescaled_H)))
+    # first rescale, such that the ground state energy is zero
+    # this needs to be done in a way that is consistent with the computation of the environments
+    # TODO: actually figure out why/if this is correct
+    e_local = map(1:length(state)) do i
+        return sum(1:(H.odim)) do j
+            @plansor (leftenv(envs, i, state)[j] *
+                      TransferMatrix(state.AC[i], H[i][j, H.odim], state.AC[i]))[1 2; 3] *
+                     rightenv(envs, i, state)[H.odim][3 2; 1]
+        end
+    end
+    rescaled_H = H - e_local
+
+    return real(expectation_value(state, rescaled_H * rescaled_H))
 end
 
 function variance(state::FiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
     H2 = H * H
-    return real(sum(expectation_value(state, H2)) -
-                sum(expectation_value(state, H, envs))^2)
-end
-
-function variance(state::WindowMPS, H::MPOHamiltonian, envs=environments(state, H))
-    #tricky to define
-    H2, nenvs = squaredenvs(state, H, envs)
-    return real(expectation_value(state, H2, nenvs)[2] -
-                expectation_value(state, H, envs)[2]^2)
+    return real(expectation_value(state, H2) -
+                expectation_value(state, H, envs)^2)
 end
 
 function variance(state::FiniteQP, H::MPOHamiltonian, args...)
@@ -159,12 +163,20 @@ function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state,
     # I remember there being an issue here @gertian?
     state.trivial ||
         throw(ArgumentError("variance of domain wall excitations is not implemented"))
+    gs = state.left_gs
 
-    rescaled_H = H - expectation_value(state.left_gs, H)
+    rescaled_H = H - expectation_value(gs, H)
 
     #I don't remember where the formula came from
+    # TODO: this is probably broken
     E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
-    E_f = expectation_value(state.left_gs, rescaled_H, 1:0)
+
+    rescaled_envs = environments(gs, rescaled_H)
+    GL = leftenv(rescaled_envs, 1, gs)
+    GR = rightenv(rescaled_envs, 0, gs)
+    E_f = sum(zip(GL, GR)) do (gl, gr)
+        @plansor gl[5 3; 1] * gs.CR[0][1; 4] * conj(gs.CR[0][5; 2]) * gr[4 3; 2]
+    end
 
     H2 = rescaled_H * rescaled_H
 
@@ -173,6 +185,7 @@ function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state,
 end
 
 function variance(ψ, H::LazySum, envs=environments(ψ, sum(H)))
+    # TODO: avoid throwing error and just compute correct environments 
     envs isa MultipleEnvironments &&
         throw(ArgumentError("The environment cannot be Lazy i.e. use environments of sum(H)"))
     return variance(ψ, sum(H), envs)

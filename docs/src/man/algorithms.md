@@ -240,7 +240,11 @@ H = transverse_field_ising(; g)
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz(), ψ, envs; num=1)
-E₀, Es
+isapprox(Es[1], 2(g - 1); rtol=1e-2) # infinite analytical result
+
+# output
+
+true
 ```
 
 In order to improve the accuracy, a two-site version also exists, which varies two neighbouring sites:
@@ -253,7 +257,11 @@ H = transverse_field_ising(; g)
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz2(), ψ, envs; num=1)
-E₀, Es
+isapprox(Es[1], 2(g - 1); rtol=1e-2) # infinite analytical result
+
+# output
+
+true
 ```
 
 The algorithm is described in more detail in the following paper:

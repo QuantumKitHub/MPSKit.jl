@@ -55,6 +55,9 @@ end
 
 Base.checkbounds(A::PeriodicArray, I...) = true
 
+Base.LinearIndices(A::PeriodicArray) = PeriodicArray(LinearIndices(parent(A)))
+Base.CartesianIndices(A::PeriodicArray) = PeriodicArray(CartesianIndices(parent(A)))
+
 function Base.similar(A::PeriodicArray, ::Type{S}, dims::Dims) where {S}
     return PeriodicArray(similar(parent(A), S, dims))
 end

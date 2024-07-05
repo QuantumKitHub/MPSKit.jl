@@ -97,20 +97,27 @@ end
 end
 
 @testset "WindowMPS" begin
-    ham = force_planar(transverse_field_ising(; g=8.0))
-    (gs, _, _) = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbosity=0))
+    g = 8.0
+    ham = force_planar(transverse_field_ising(; g))
 
-    #constructor 1 - give it a plain array of tensors
+    # operator for testing expectation_value
+    X = S_x(; spin=1 // 2)
+    E = TensorMap(ComplexF64[1 0; 0 1], ℂ^2 ← ℂ^2)
+    O = force_planar(-(S_zz(; spin=1 // 2) + (g / 2) * (X ⊗ E + E ⊗ X)))
+
+    gs, = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbosity=0))
+
+    # constructor 1 - give it a plain array of tensors
     window_1 = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
-    #constructor 2 - used to take a "slice" from an infinite mps
+    # constructor 2 - used to take a "slice" from an infinite mps
     window_2 = WindowMPS(gs, 10)
 
     # we should logically have that window_1 approximates window_2
     ovl = dot(window_1, window_2)
     @test ovl ≈ 1 atol = 1e-8
 
-    #constructor 3 - random initial tensors
+    # constructor 3 - random initial tensors
     window = WindowMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10, gs, gs)
     normalize!(window)
 
@@ -127,24 +134,20 @@ end
     @test 9 * 9 ≈ norm(window)^2
     normalize!(window)
 
-    e1 = expectation_value(window, ham)
+    e1 = expectation_value(window, (1, 2) => O)
 
-    v1 = variance(window, ham)
-    (window, envs, _) = find_groundstate(window, ham, DMRG(; verbosity=0))
-    v2 = variance(window, ham)
+    window, envs, _ = find_groundstate(window, ham, DMRG(; verbosity=0))
 
-    e2 = expectation_value(window, ham)
+    e2 = expectation_value(window, (1, 2) => O)
 
-    @test v2 < v1
-    @test real(e2[2]) ≤ real(e1[2])
+    @test real(e2) ≤ real(e1)
 
     window, envs = timestep(window, ham, 0.1, 0.0, TDVP2(), envs)
     window, envs = timestep(window, ham, 0.1, 0.0, TDVP(), envs)
 
-    e3 = expectation_value(window, ham)
+    e3 = expectation_value(window, (1, 2) => O)
 
-    @test e2[1] ≈ e3[1] atol = 1e-4
-    @test e2[2] ≈ e3[2] atol = 1e-4
+    @test e2 ≈ e3 atol = 1e-4
 end
 
 @testset "Quasiparticle state" verbose = true begin
@@ -171,7 +174,7 @@ end
         @test dot(ϕ₁_f, ϕ₂_f) ≈ dot(ϕ₁, ϕ₂) atol = 1e-5
         @test norm(ϕ₁_f) ≈ norm(ϕ₁) atol = 1e-5
 
-        ev_f = sum(expectation_value(ϕ₁_f, H) - expectation_value(ψ, H))
+        ev_f = expectation_value(ϕ₁_f, H) - expectation_value(ψ, H)
         ev_q = dot(ϕ₁, effective_excitation_hamiltonian(H, ϕ₁))
         @test ev_f ≈ ev_q atol = 1e-5
     end
