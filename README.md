@@ -84,12 +84,11 @@ D = 4 # bonddimension
 init_state = FiniteMPS(L, ℂ^2, ℂ^D)
 
 g_values = 0:0.1:2
-Z = @mpoham sum(σᶻ(){i} for i in vertices(FiniteChain(L)))
 
 M = @showprogress map(g_values) do g
     H = periodic_boundary_conditions(transverse_field_ising(; g=g), L)
     groundstate, environment, δ = find_groundstate(init_state, H; verbosity=0)
-    return abs(sum(expectation_value(groundstate, Z))) / L
+    return abs(sum(expectation_value(groundstate, i => σᶻ()) for i in 1:L)) / L
 end
 
 scatter(g_values, M, xlabel="g", ylabel="M", label="D=$D", title="Magnetization")
@@ -108,12 +107,11 @@ D = 4 # bonddimension
 init_state = InfiniteMPS(ℂ^2, ℂ^D)
 
 g_values = 0.1:0.1:2
-Z = @mpoham sum(σᶻ(){i} for i in vertices(InfiniteChain()))
 
 M = @showprogress map(g_values) do g
     H = transverse_field_ising(; g=g)
     groundstate, environment, δ = find_groundstate(init_state, H, VUMPS(; verbosity=0))
-    return abs(sum(expectation_value(groundstate, Z)))
+    return abs(expectation_value(groundstate, 1 => σᶻ()))
 end
 
 scatter(g_values, M, xlabel="g", ylabel="M", label="D=$D", title="Magnetization")
