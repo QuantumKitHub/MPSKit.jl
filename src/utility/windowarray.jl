@@ -60,5 +60,3 @@ function Base.CartesianIndices(window::WindowArray)
                        CartesianIndices(window.middle),
                        CartesianIndices(window.right))
 end
-
-nextindex(::WindowArray, i::Int) = i + 1
