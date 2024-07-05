@@ -33,12 +33,12 @@ In Steven White's original DMRG paper it was remarked that the ``S = 1`` excitat
 This can be done as follows.
 """
 
-L = 10
+L = 11
 physical_space = SU2Space(1 => 1)
 virtual_space = SU2Space(0 => 12, 1 => 12, 2 => 5, 3 => 3)
 ψ₀ = FiniteMPS(rand, ComplexF64, L, physical_space, virtual_space)
 ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity=0))
-E₀ = real.(expectation_value(ψ, H))
+E₀ = real(expectation_value(ψ, H))
 En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(1))
 En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(2))
 ΔE_finite = real(En_2[1] - En_1[1])
@@ -50,8 +50,13 @@ We can go even further and doublecheck the claim that ``S = 1`` is an edge excit
 p_density = plot(; xaxis="position", yaxis="energy density")
 excited_1 = convert(FiniteMPS, st_1[1])
 excited_2 = convert(FiniteMPS, st_2[1])
-plot!(p_density, real.(expectation_value(excited_1, H) .- E₀) ./ L; label="S = 1")
-plot!(p_density, real.(expectation_value(excited_2, H) .- E₀) ./ L; label="S = 2")
+SS = -S_exchange(ComplexF64, SU2Irrep; spin=1)
+e₀ = [real(expectation_value(ψ, (i, i + 1) => SS)) for i in 1:(L - 1)]
+e₁ = [real(expectation_value(excited_1, (i, i + 1) => SS)) for i in 1:(L - 1)]
+e₂ = [real(expectation_value(excited_2, (i, i + 1) => SS)) for i in 1:(L - 1)]
+plot!(p_density, e₀; label="S = 0")
+plot!(p_density, e₁; label="S = 1")
+plot!(p_density, e₂; label="S = 2")
 
 md"""
 Finally, we can obtain a value for the Haldane gap by extrapolating our results for different system sizes.
@@ -90,7 +95,7 @@ This way, it is possible to scan the dispersion relation over the entire momentu
 
 virtual_space_inf = Rep[SU₂](1 // 2 => 16, 3 // 2 => 16, 5 // 2 => 8, 7 // 2 => 4)
 ψ₀_inf = InfiniteMPS([physical_space], [virtual_space_inf])
-ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H)
+ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H; verbosity=0)
 
 kspace = range(0, π, 16)
 Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ_inf, envs_inf; sector=SU2Irrep(1))

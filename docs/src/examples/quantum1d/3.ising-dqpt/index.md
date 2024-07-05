@@ -40,12 +40,13 @@ L = 20
 ````
 
 ````
-[ Info: DMRG init:	obj = +9.914551645185e+00	err = 1.3697e-01
-[ Info: DMRG   1:	obj = -2.040021698083e+01	err = 9.7284195077e-04	time = 0.44 sec
-[ Info: DMRG   2:	obj = -2.040021786696e+01	err = 7.5203822885e-06	time = 0.35 sec
-[ Info: DMRG   3:	obj = -2.040021786703e+01	err = 9.3598556558e-07	time = 0.09 sec
-[ Info: DMRG   4:	obj = -2.040021786703e+01	err = 8.3709447459e-10	time = 0.02 sec
-[ Info: DMRG conv 5:	obj = -2.040021786703e+01	err = 6.6974743335e-13	time = 0.91 sec
+[ Info: DMRG init:	obj = +9.833992820341e+00	err = 1.5162e-01
+[ Info: DMRG   1:	obj = -2.040021714792e+01	err = 1.0482607701e-02	time = 0.07 sec
+[ Info: DMRG   2:	obj = -2.040021715176e+01	err = 2.9301055999e-07	time = 0.02 sec
+[ Info: DMRG   3:	obj = -2.040021783353e+01	err = 2.1923563339e-05	time = 0.14 sec
+[ Info: DMRG   4:	obj = -2.040021786702e+01	err = 1.8539117704e-06	time = 0.21 sec
+[ Info: DMRG   5:	obj = -2.040021786703e+01	err = 7.8191209682e-08	time = 0.04 sec
+[ Info: DMRG conv 6:	obj = -2.040021786703e+01	err = 6.4920277294e-11	time = 0.49 sec
 
 ````
 
@@ -108,14 +109,13 @@ Similarly we could start with an initial infinite state and find the pre-quench 
 ````
 
 ````
-[ Info: VUMPS init:	obj = +4.927142607127e-01	err = 3.7065e-01
-[ Info: VUMPS   1:	obj = -1.062269158559e+00	err = 3.2878729027e-02	time = 1.11 sec
-[ Info: VUMPS   2:	obj = -1.063544409816e+00	err = 1.0900961086e-05	time = 0.01 sec
-[ Info: VUMPS   3:	obj = -1.063544409973e+00	err = 6.2659245120e-08	time = 0.01 sec
-[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 9.8860768603e-10	time = 0.01 sec
-[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 6.5293129644e-11	time = 0.00 sec
-[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 6.4544340049e-12	time = 0.00 sec
-[ Info: VUMPS conv 7:	obj = -1.063544409973e+00	err = 6.4503123241e-13	time = 1.14 sec
+[ Info: VUMPS init:	obj = +5.083504996507e-01	err = 3.8682e-01
+[ Info: VUMPS   1:	obj = -1.060586960116e+00	err = 4.7773289906e-02	time = 1.51 sec
+[ Info: VUMPS   2:	obj = -1.063544400328e+00	err = 8.6203478863e-05	time = 0.01 sec
+[ Info: VUMPS   3:	obj = -1.063544409973e+00	err = 2.6470717828e-07	time = 0.01 sec
+[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 8.9760940163e-09	time = 0.00 sec
+[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 4.1698951454e-10	time = 0.00 sec
+[ Info: VUMPS conv 6:	obj = -1.063544409973e+00	err = 3.7060383050e-11	time = 1.53 sec
 
 ````
 
@@ -127,7 +127,7 @@ dot(ψ₀, ψ₀)
 ````
 
 ````
-0.9999999999999993 - 8.56544100434766e-17im
+0.9999999999999964 - 7.217459182439675e-17im
 ````
 
 so the loschmidth echo takes on the pleasant form
