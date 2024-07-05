@@ -40,7 +40,7 @@ D = 10
 V = virtual_space(D)
 ψ₀ = InfiniteMPS([P], [V])
 ψ, envs, = leading_boundary(ψ₀, mpo, VUMPS(; verbosity=0))
-F = real(first(expectation_value(ψ, mpo)))
+F = real(expectation_value(ψ, mpo))
 S = real(first(entropy(ψ)))
 ξ = correlation_length(ψ)
 println("F = $F\tS = $S\tξ = $ξ")

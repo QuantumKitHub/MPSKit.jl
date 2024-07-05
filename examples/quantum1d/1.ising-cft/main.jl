@@ -120,7 +120,7 @@ objects.
 
 E_ex, qps = excitations(H, QuasiparticleAnsatz(), ψ, envs; num=16)
 states_mps = vcat(ψ, map(qp -> convert(FiniteMPS, qp), qps))
-E_mps = map(x -> sum(expectation_value(x, H_mps)), states_mps)
+E_mps = map(x -> expectation_value(x, H_mps), states_mps)
 
 T_mps = periodic_boundary_conditions(DenseMPO(O), L_mps)
 momenta_mps = Float64[]
