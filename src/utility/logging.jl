@@ -13,7 +13,7 @@ mutable struct IterLog
     name::AbstractString
     iter::Int
     error::Float64
-    objective::Union{Nothing,Float64}
+    objective::Union{Nothing,Number}
 
     t_init::Float64
     t_prev::Float64
@@ -36,11 +36,7 @@ function loginit!(log::IterLog, error::Float64,
                   objective::Union{Nothing,Number}=nothing)
     log.iter = 0
     log.error = error
-
-    if !isnothing(objective)
-        warnapproxreal(objective)
-        log.objective = real(objective)
-    end
+    log.objective = objective
 
     log.t_init = log.t_prev = log.t_last = Base.time()
     log.state = INIT
@@ -52,11 +48,7 @@ function logiter!(log::IterLog, iter::Int, error::Float64,
                   objective::Union{Nothing,Number}=nothing)
     log.iter = iter
     log.error = error
-
-    if !isnothing(objective)
-        warnapproxreal(objective)
-        log.objective = real(objective)
-    end
+    log.objective = objective
 
     log.t_prev = log.t_last
     log.t_last = Base.time()
@@ -69,11 +61,7 @@ function logfinish!(log::IterLog, iter::Int, error::Float64,
                     objective::Union{Nothing,Number}=nothing)
     log.iter = iter
     log.error = error
-
-    if !isnothing(objective)
-        warnapproxreal(objective)
-        log.objective = real(objective)
-    end
+    log.objective = objective
 
     log.t_prev = log.t_last
     log.t_last = Base.time()
@@ -86,11 +74,7 @@ function logcancel!(log::IterLog, iter::Int, error::Float64,
                     objective::Union{Nothing,Number}=nothing)
     log.iter = iter
     log.error = error
-
-    if !isnothing(objective)
-        warnapproxreal(objective)
-        log.objective = real(objective)
-    end
+    log.objective = objective
 
     log.t_prev = log.t_last
     log.t_last = Base.time()
@@ -108,34 +92,46 @@ function format_time(t::Float64)
            @sprintf("%0.2f hr", t / 3600)
 end
 
+function format_objective(t::Number)
+    if isapproxreal(t)
+        return @sprintf("%+0.12e", real(t))
+    else
+        return @sprintf("%+0.12e %+0.12eim", real(t), imag(t))
+    end
+end
+
 # defined to make standard logging behave nicely
 function Base.show(io::IO, log::IterLog)
     if log.state === INIT
         if isnothing(log.objective)
             return @printf io "%s init:\terr = %0.4e" log.name log.error
         else
-            return @printf io "%s init:\tobj = %+0.12e\terr = %0.4e" log.name log.objective log.error
+            obj_str = format_objective(log.objective)
+            return @printf io "%s init:\tobj = %s\terr = %0.4e" log.name obj_str log.error
         end
     elseif log.state === CONV
         Δt_str = format_time(log.t_last - log.t_init)
         if isnothing(log.objective)
             return @printf io "%s conv %d:\terr = %0.10e\ttime = %s" log.name log.iter log.error Δt_str
         else
-            return @printf io "%s conv %d:\tobj = %+0.12e\terr = %0.10e\ttime = %s" log.name log.iter log.objective log.error Δt_str
+            obj_str = format_objective(log.objective)
+            return @printf io "%s conv %d:\tobj = %s\terr = %0.10e\ttime = %s" log.name log.iter obj_str log.error Δt_str
         end
     elseif log.state === ITER
         Δt_str = format_time(log.t_last - log.t_prev)
         if isnothing(log.objective)
             return @printf io "%s %3d:\terr = %0.10e\ttime = %s" log.name log.iter log.error Δt_str
         else
-            return @printf io "%s %3d:\tobj = %+0.12e\terr = %0.10e\ttime = %s" log.name log.iter log.objective log.error Δt_str
+            obj_str = format_objective(log.objective)
+            return @printf io "%s %3d:\tobj = %s\terr = %0.10e\ttime = %s" log.name log.iter obj_str log.error Δt_str
         end
     elseif log.state === CANCEL
         Δt_str = format_time(log.t_last - log.t_init)
         if isnothing(log.objective)
             return @printf io "%s cancel %d:\terr = %0.10e\ttime = %s" log.name log.iter log.error Δt_str
         else
-            return @printf io "%s cancel %d:\tobj = %+0.12e\terr = %0.10e\ttime = %s" log.name log.iter log.objective log.error Δt_str
+            obj_str = format_objective(log.objective)
+            return @printf io "%s cancel %d:\tobj = %s\terr = %0.10e\ttime = %s" log.name log.iter obj_str log.error Δt_str
         end
     end
     return nothing
