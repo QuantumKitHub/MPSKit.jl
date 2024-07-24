@@ -1,4 +1,4 @@
-# Given a state and it's environments, we can act on it
+# Given a state and its environments, we can act on it
 
 """
     Draft operators
@@ -8,10 +8,9 @@ struct MPO_∂∂C{L,R}
     rightenv::R
 end
 
-struct MPO_∂∂AC{O,L,R}
-    o::O
-    leftenv::L
-    rightenv::R
+struct MPO_∂∂AC{L,R}
+    leftblocks::L
+    rightblocks::R
 end
 
 struct MPO_∂∂AC2{O,L,R}
@@ -26,9 +25,32 @@ const DerivativeOperator = Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}
 Base.:*(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, v) = h(v);
 
 (h::MPO_∂∂C)(x) = ∂C(x, h.leftenv, h.rightenv);
-(h::MPO_∂∂AC)(x) = ∂AC(x, h.o, h.leftenv, h.rightenv);
+(h::MPO_∂∂AC)(x) = ∂AC(x, h.leftblocks, h.rightblocks);
 (h::MPO_∂∂AC2)(x) = ∂AC2(x, h.o1, h.o2, h.leftenv, h.rightenv);
 (h::DerivativeOperator)(v, ::Number) = h(v)
+
+function MPO_∂∂AC(opp::SparseMPOSlice,l,r)
+    blocked = map(keys(opp)) do (i,j)
+        @plansor left_blocked[-1 -2 -3;-4 -5] := l[i][-1 1;-4]*opp[i,j][1 -2;-5 -3]
+        right_blocked = r[j]
+        (left_blocked,right_blocked)
+    end
+    return MPO_∂∂AC(first.(blocked),last.(blocked))
+end
+
+function MPO_∂∂AC(opp::MPOTensor,l,r)
+    @plansor left_blocked[-1 -2 -3;-4 -5] := l[-1 1;-4]*opp[1 -2;-5 -3]
+    return MPO_∂∂AC([left_blocked],[r])
+end
+
+function MPO_∂∂AC(opp::AbstractVector{T},l,r) where T<:MPOTensor
+    blocked = map(zip(opp,l,r)) do (o,left,right)
+        @plansor left_blocked[-1 -2 -3;-4 -5] := left[-1 1;-4]*o[1 -2;-5 -3]
+
+        (left_blocked,right)
+    end
+    return MPO_∂∂AC(first.(blocked),last.(blocked))
+end
 
 # draft operator constructors
 function ∂∂C(pos::Int, mps, opp::Union{MPOHamiltonian,SparseMPO,DenseMPO}, cache)
@@ -74,41 +96,32 @@ end
     One-site derivative
 """
 
-function ∂AC(x::MPSTensor, H::SparseMPOSlice, leftenv, rightenv)::typeof(x)
+function ∂AC(x::MPSTensor, leftblocks,rightblocks)::typeof(x)
     local y
     @static if Defaults.parallelize_derivatives
-        @floop WorkStealingEx() for (i, j) in keys(H)
-            t = ∂AC(x, H.Os[i, j], leftenv[i], rightenv[j])
+        @floop WorkStealingEx() for (lb, rb) in zip(leftblocks,rightblocks)
+            @plansor t[-1 -2;-3] := lb[-1 -2 3;1 2]*x[1 2;4]*rb[4 3;-3]
             @reduce(y = inplace_add!(nothing, t))
         end
     else
-        els = collect(keys(H))
-        y = ∂AC(x, H.Os[els[1]...], leftenv[els[1][1]], rightenv[els[1][2]])
-        for (i, j) in els[2:end]
-            add!(y, ∂AC(x, H.Os[i, j], leftenv[i], rightenv[j]))
+        @plansor y[-1 -2;-3] := leftblocks[1][-1 -2 3;1 2]*x[1 2;4]*rightblocks[1][4 3;-3]
+        for (lb, rb) in zip(leftblocks[2:end],rightblocks[2:end])
+            @plansor y[-1 -2;-3] += lb[-1 -2 3;1 2]*x[1 2;4]*rb[4 3;-3]
         end
     end
 
     return y
 end
 
-function ∂AC(x::MPSTensor{S}, opp::MPOTensor{S}, leftenv::MPSTensor{S},
-             rightenv::MPSTensor{S})::typeof(x) where {S}
-    @plansor y[-1 -2; -3] := leftenv[-1 5; 4] * x[4 2; 1] * opp[5 -2; 2 3] *
-                             rightenv[1 3; -3]
-end
-function ∂AC(x::MPSTensor{S}, opp::Number, leftenv::MPSTensor{S},
-             rightenv::MPSTensor{S})::typeof(x) where {S}
-    @plansor y[-1 -2; -3] := opp * (leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] *
-                                    rightenv[1 7; -3])
-end
-
 # mpo multiline
-function ∂AC(x::RecursiveVec, opp, leftenv, rightenv)
-    return RecursiveVec(circshift(map(t -> ∂AC(t...), zip(x.vecs, opp, leftenv, rightenv)),
-                                  1))
+function ∂AC(x::RecursiveVec, leftblocks,rightblocks)::typeof(x)
+    return RecursiveVec(circshift(map(zip(x.vecs,leftblocks,rightblocks)) do (x,l,r)
+        @plansor y[-1 -2;-3] := l[-1 -2 3;1 2]*x[1 2;4]*r[4 3;-3]
+    end,1))
 end
 
+
+∂AC(x::MPSTensor, h, leftenv, rightenv) = MPO_∂∂AC(h,leftenv,rightenv)(x)
 function ∂AC(x::MPSTensor, ::Nothing, leftenv, rightenv)
     return _transpose_front(leftenv * _transpose_tail(x * rightenv))
 end
