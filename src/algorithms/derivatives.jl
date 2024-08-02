@@ -13,11 +13,9 @@ struct MPO_∂∂AC{L,R}
     rightblocks::R
 end
 
-struct MPO_∂∂AC2{O,L,R}
-    o1::O
-    o2::O
-    leftenv::L
-    rightenv::R
+struct MPO_∂∂AC2{L,R}
+    leftblocks::L
+    rightblocks::R
 end
 
 const DerivativeOperator = Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}
@@ -26,14 +24,19 @@ Base.:*(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, v) = h(v);
 
 (h::MPO_∂∂C)(x) = ∂C(x, h.leftenv, h.rightenv);
 (h::MPO_∂∂AC)(x) = ∂AC(x, h.leftblocks, h.rightblocks);
-(h::MPO_∂∂AC2)(x) = ∂AC2(x, h.o1, h.o2, h.leftenv, h.rightenv);
+(h::MPO_∂∂AC2)(x) = ∂AC2(x, h.leftblocks, h.rightblocks);
 (h::DerivativeOperator)(v, ::Number) = h(v)
 
 function MPO_∂∂AC(opp::SparseMPOSlice,l,r)
-    blocked = map(keys(opp)) do (i,j)
-        @plansor left_blocked[-1 -2 -3;-4 -5] := l[i][-1 1;-4]*opp[i,j][1 -2;-5 -3]
-        right_blocked = r[j]
-        (left_blocked,right_blocked)
+
+    un_r = unique(last.(keys(opp)))
+
+    blocked = map(un_r) do j
+        left_blocked = sum(map(keys(opp,:,j)) do i
+            @plansor left_blocked[-1 -2 -3;-4 -5] := l[i][-1 1;-4]*opp[i,j][1 -2;-5 -3]
+        end)
+
+        (left_blocked,r[j])
     end
     return MPO_∂∂AC(first.(blocked),last.(blocked))
 end
@@ -52,6 +55,44 @@ function MPO_∂∂AC(opp::AbstractVector{T},l,r) where T<:MPOTensor
     return MPO_∂∂AC(first.(blocked),last.(blocked))
 end
 
+
+function MPO_∂∂AC2(opp1::SparseMPOSlice,opp2::SparseMPOSlice,l,r)
+
+    middle = intersect(unique(last.(keys(opp1))),unique(first.(keys(opp2))))
+
+    lblocked = map(middle) do j
+        sum(map(keys(opp1,:,j)) do i
+            @plansor left_blocked[-1 -2 -3;-4 -5] := l[i][-1 1;-4]*opp1[i,j][1 -2;-5 -3]
+        end)
+    end
+
+    rblocked = map(middle) do i
+        sum(map(keys(opp2,i,:)) do j
+            @plansor right_blocked[-1 -2 -3;-4 -5] := opp2[i,j][-3 -5;-2 1]*r[j][-1 1;-4]
+        end)
+    end
+
+    MPO_∂∂AC2(lblocked,rblocked)
+end
+
+function MPO_∂∂AC2(opp1::MPOTensor,opp2::MPOTensor,l,r)
+    @plansor left_blocked[-1 -2 -3;-4 -5] := l[-1 1;-4]*opp1[1 -2;-5 -3]
+    @plansor right_blocked[-1 -2 -3;-4 -5] := opp2[-3 -5;-2 1]*r[-1 1;-4]
+
+    MPO_∂∂AC2([left_blocked],[right_blocked])
+end
+
+function MPO_∂∂AC2(opp1::AbstractVector{T},opp2::AbstractVector{T},l,r) where T<:MPOTensor
+    lblocked = map(zip(l,opp1)) do (cl,o)
+        @plansor left_blocked[-1 -2 -3;-4 -5] := cl[-1 1;-4]*o[1 -2;-5 -3]
+    end
+
+    rblocked = map(zip(opp2,r)) do (o,cr)
+        @plansor right_blocked[-1 -2 -3;-4 -5] := o[-3 -5;-2 1]*cr[-1 1;-4]
+    end
+
+    MPO_∂∂AC2(lblocked,rblocked)
+end
 # draft operator constructors
 function ∂∂C(pos::Int, mps, opp::Union{MPOHamiltonian,SparseMPO,DenseMPO}, cache)
     return MPO_∂∂C(leftenv(cache, pos + 1, mps), rightenv(cache, pos, mps))
@@ -129,45 +170,28 @@ end
 """
     Two-site derivative
 """
-function ∂AC2(x::MPOTensor, h1::SparseMPOSlice, h2::SparseMPOSlice, leftenv,
-              rightenv)::typeof(x)
-    local toret
-
+function ∂AC2(x::MPOTensor, leftblocks,rightblocks)
     tl = tensormaptype(spacetype(x), 2, 3, storagetype(x))
-    hl = Vector{Union{Nothing,tl}}(undef, h1.odim)
-    @threads for j in 1:(h1.odim)
-        @floop WorkStealingEx() for i in keys(h1, :, j)
-            if isscal(h1, i, j)
-                @plansor t[-1 -2; -3 -4 -5] := (h1.Os[i, j] * leftenv[i])[-1 1; 2] *
-                                               τ[1 -2; 3 -5] * x[2 3; -3 -4]
-            else
-                @plansor t[-1 -2; -3 -4 -5] := leftenv[i][-1 1; 2] * h1[i, j][1 -2; 3 -5] *
-                                               x[2 3; -3 -4]
-            end
-            @reduce(curel = inplace_add!(nothing, t))
-        end
-        hl[j] = curel
+    hl = Vector{Union{Nothing,tl}}(undef, length(leftblocks))
+    @floop WorkStealingEx()  for (i,lb) in enumerate(leftblocks)
+        @plansor hl[i][-1 -2;-3 -4 -5] := lb[-1 -2 -5;1 2]*x[1 2;-3 -4]
     end
-
-    @floop WorkStealingEx() for (j, k) in keys(h2)
-        isnothing(hl[j]) && continue
-
-        if isscal(h2, j, k)
-            @plansor t[-1 -2; -3 -4] := (h2.Os[j, k] * hl[j])[-1 -2; 5 3 4] * τ[4 -4; 3 6] *
-                                        rightenv[k][5 6; -3]
-        else
-            @plansor t[-1 -2; -3 -4] := hl[j][-1 -2; 5 3 4] * h2[j, k][4 -4; 3 6] *
-                                        rightenv[k][5 6; -3]
-        end
-
+    
+    @floop WorkStealingEx() for (i,rb) in enumerate(rightblocks)
+        t = hl[i]*rb
+        
         @reduce(toret = inplace_add!(nothing, t))
     end
 
     return toret
 end
+
+function ∂AC2(x::MPOTensor, h1::SparseMPOSlice, h2::SparseMPOSlice, leftenv,
+              rightenv)::typeof(x)
+    return MPO_∂∂AC2(h1,h2,leftenv,rightenv)(x)
+end
 function ∂AC2(x::MPOTensor, opp1::MPOTensor, opp2::MPOTensor, leftenv, rightenv)
-    @plansor toret[-1 -2; -3 -4] := leftenv[-1 7; 6] * x[6 5; 1 3] * opp1[7 -2; 5 4] *
-                                    opp2[4 -4; 3 2] * rightenv[1 2; -3]
+    return MPO_∂∂AC2(opp1,opp2,leftenv,rightenv)(x)
 end
 function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv, rightenv)
     @plansor y[-1 -2; -3 -4] := x[1 -2; 2 -4] * leftenv[-1; 1] * rightenv[2; -3]
