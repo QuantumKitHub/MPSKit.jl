@@ -36,31 +36,34 @@ const eigsolver = Arnoldi(; tol, maxiter, eager=true)
 # Default algorithms
 # ------------------
 
-function alg_gauge(; tol=tolgauge, maxiter=maxiter,
+function alg_gauge(; tol=tolgauge, maxiter=maxiter, verbosity=VERBOSE_WARN,
                    dynamic_tols=dynamic_tols, tol_min=tol_min, tol_max=tol_max,
                    tol_factor=gauge_tolfactor)
-    alg = (; tol, maxiter)
+    alg = (; tol, maxiter, verbosity)
     return dynamic_tols ? DynamicTol(alg, tol, tol_max, tol_factor) : alg
 end
 
-function alg_eigsolve(; ishermitian=true, tol=tol, maxiter=maxiter, eager=true,
+function alg_eigsolve(; ishermitian=true, tol=tol, maxiter=maxiter, verbosity=0,
+                      eager=true,
                       krylovdim=krylovdim,
                       dynamic_tols=dynamic_tols, tol_min=tol_min, tol_max=tol_max,
                       tol_factor=eigs_tolfactor)
-    alg = ishermitian ? Lanczos(; tol, maxiter, eager, krylovdim) :
-          Arnoldi(; tol, maxiter, eager, krylovdim)
+    alg = ishermitian ? Lanczos(; tol, maxiter, eager, krylovdim, verbosity) :
+          Arnoldi(; tol, maxiter, eager, krylovdim, verbosity)
     return dynamic_tols ? DynamicTol(alg, tol, tol_max, tol_factor) : alg
 end
 
-function alg_environments(; tol=tol, maxiter=maxiter,
+# TODO: make verbosity and maxiter actually do something
+function alg_environments(; tol=tol, maxiter=maxiter, verbosity=0,
                           dynamic_tols=dynamic_tols, tol_min=tol_min, tol_max=tol_max,
                           tol_factor=envs_tolfactor)
-    alg = (; tol, maxiter)
+    alg = (; tol, maxiter, verbosity)
     return dynamic_tols ? DynamicTol(alg, tol, tol_max, tol_factor) : alg
 end
-function alg_expsolve(; tol=tol, maxiter=maxiter, ishermitian=true, krylovdim=krylovdim)
-    return ishermitian ? Lanczos(; tol, maxiter, krylovdim) :
-           Arnoldi(; tol, maxiter, krylovdim)
+function alg_expsolve(; tol=tol, maxiter=maxiter, verbosity=0,
+                      ishermitian=true, krylovdim=krylovdim)
+    return ishermitian ? Lanczos(; tol, maxiter, krylovdim, verbosity) :
+           Arnoldi(; tol, maxiter, krylovdim, verbosity)
 end
 
 # Preferences
