@@ -1,7 +1,7 @@
 """
     struct SvdCut <: Algorithm end
 
-An algorithm that uses truncated SVD to change the bond dimension of a ψ.
+An algorithm that uses truncated SVD to change the bond dimension of a ψ. This can only lower the bond dimension ! The outputted state is not equal to the inputted state.
 
 # Fields
 - `trscheme::TruncationScheme = notrunc()` : The truncation scheme to use.

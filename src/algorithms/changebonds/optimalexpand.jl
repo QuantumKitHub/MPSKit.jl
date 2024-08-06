@@ -6,6 +6,8 @@ An algorithm that expands the given mps using the algorithm given in the
 selecting the dominant contributions of a two-site updated MPS tensor, orthogonal to the
 original ψ.
 
+The new bond dimension is added with singular values 0 s.t. the enlarged state equals the input state.
+
 # Fields
 - `trscheme::TruncationScheme = truncdim(1)` : The truncation scheme to use.
 """

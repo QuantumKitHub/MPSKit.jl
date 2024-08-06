@@ -5,6 +5,8 @@ An algorithm that expands the bond dimension by adding random unitary vectors th
 orthogonal to the existing state. This is achieved by performing a truncated SVD on a random
 two-site MPS tensor, which is made orthogonal to the existing state.
 
+The newly added bond dimension will come with singular values 0 which guarantees that the new state is equal to the old state. 
+
 # Fields
 - `trscheme::TruncationScheme = truncdim(1)` : The truncation scheme to use.
 """
@@ -19,13 +21,13 @@ function changebonds(ψ::InfiniteMPS, alg::RandExpand)
     for i in 1:length(ψ)
         # determine optimal expansion spaces around bond i
         AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
-
+        i ==1 && @show AC2
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = leftnull(ψ.AL[i])
-        VR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
+        VR = rightnull(_transpose_tail(ψ.AR[i + 1]))
         intermediate = adjoint(VL) * AC2 * adjoint(VR)
-        U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=SVD())
-
+        i == 1 && @show intermediate
+        U, S, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=SVD())
         AL′[i] = VL * U
         AR′[i + 1] = V * VR
     end
