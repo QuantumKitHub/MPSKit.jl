@@ -274,7 +274,7 @@ Many of the previously mentioned algorithms do not possess a way to dynamically 
 bond dimension. This is often a problem, as the optimal bond dimension is often not a priori
 known, or needs to increase because of entanglement growth throughout the course of a
 simulation. [`changebonds`](@ref) exposes a way to change the bond dimension of a given
-state, without altering the state itself.
+state.
 
 ```@docs; canonical=false
 changebonds
@@ -287,28 +287,38 @@ disadvantages:
   locally truncating the state using an SVD decomposition. This yields a (locally) optimal
   truncation, but clearly cannot be used to increase the bond dimension. Note that a
   globally optimal truncation can be obtained by using the [`SvdCut`](@ref) algorithm in
-  combination with [`approximate`](@ref). The state will remain largely unchanged.
+  combination with [`approximate`](@ref). Since the output of this method might have a truncated bonddimension, the new state might not be identical to the input state.
+
+  The truncation is implemented through the kwarg trscheme which truncates the singular values of the inputted state. 
+
 
 * [`OptimalExpand`](@ref): This algorithm is based on the idea of expanding the bond
   dimension by investigating the two-site derivative, and adding the most important blocks
   which are orthogonal to the current state. From the point of view of a local two-site
   update, this procedure is *optimal*, but it requires to evaluate a two-site derivative,
-  which can be costly when the physical space is large. The state will remain unchanged, but
-  a one-site scheme will now be able to push the optimization further.
+  which can be costly when the physical space is large. 
+
+  Since the new sectors are added with singular values 0 the state will remain unchanged. Afterwards a one-site scheme will be able to push the optimization further.
+
+  For optimalexpand the kwarg trscheme only truncates the added sectors. E.g. with trscheme=truncdim(d_extra) the bonddimension increases with no more than d_extra.
 
 * [`RandExpand`](@ref): This algorithm similarly adds blocks orthogonal to the current
   state, but does not attempt to select the most important ones, and rather just selects
   them at random. The advantage here is that this is much cheaper than the optimal expand,
   and if the bond dimension is grown slow enough, this still obtains a very good expansion
-  scheme. Again, the state will remain unchanged, and a one-site scheme will be able to push
-  the optimization further.
+  scheme. 
+  
+  Again, the new sectors are added with singular value 0 so that the state remains unchanged, and a one-site scheme will be able to push the optimization further.
+
+  Similarly to the Optimalexpand algortihm the trscheme kwarg only truncates added sectors. 
 
 * [`VUMPSSvdCut`](@ref): This algorithm is based on the [`VUMPS`](@ref) algorithm, and
-  consists of performing a two-site update, and then truncating the state back down. Because
-  of the two-site update, this can again become expensive, but the algorithm has the option
-  of both expanding as well as truncating the bond dimension. Note that this will change the
-  state itself, as it consists of an update step.
+  consists of performing a two-site update (which introduced new sectors), and then truncating the state back down using some truncation algorithm. In contrast with the previous methods the new sectors are not added with singular values 0 (but rather with singular values optimal to lower the energy) so that the outputted state is, in general, not equal to the input state. 
 
+  Because of the two-site update, this can again become expensive, but the algorithm has the option
+  of both expanding as well as truncating the bond dimension. 
+
+  Here the trscheme kwarg truncates the full state s.t. for example trscheme=truncdim(d) will return a state with bonddimension smaller than d.
 
 ## leading boundary
 
