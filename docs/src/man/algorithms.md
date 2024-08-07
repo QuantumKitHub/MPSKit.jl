@@ -327,10 +327,8 @@ disadvantages:
   dimension by investigating the two-site derivative, and adding the most important blocks
   which are orthogonal to the current state. From the point of view of a local two-site
   update, this procedure is *optimal*, but it requires to evaluate a two-site derivative,
-  which can be costly when the physical space is large. 
-
-  Since the new sectors are added with singular values 0 the state will remain unchanged.
-  Afterwards a one-site scheme will be able to push the optimization further.
+  which can be costly when the physical space is large. The state will remain unchanged, but
+  a one-site scheme will now be able to push the optimization further.
 
   For optimalexpand the kwarg trscheme only truncates the added sectors. E.g. with
   trscheme=truncdim(d_extra) the bonddimension increases with no more than d_extra.
