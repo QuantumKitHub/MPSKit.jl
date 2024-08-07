@@ -354,8 +354,7 @@ disadvantages:
   Because of the two-site update, this can again become expensive, but the algorithm has the
   option of both expanding as well as truncating the bond dimension. 
 
-  Here the trscheme kwarg truncates the full state s.t. for example trscheme=truncdim(d)
-  will return a state with bonddimension smaller than d.
+  Here, `trscheme` controls the truncation of the state after the two-site update.
 
 ## leading boundary
 
