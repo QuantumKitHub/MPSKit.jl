@@ -319,8 +319,8 @@ disadvantages:
   combination with [`approximate`](@ref). Since the output of this method might have a
   truncated bonddimension, the new state might not be identical to the input state.
 
-  The truncation is implemented through the kwarg trscheme which truncates the singular
-  values of the inputted state. 
+  The truncation is controlled through `trscheme`, which dictates how the singular values
+  of the original state are truncated.
 
 
 * [`OptimalExpand`](@ref): This algorithm is based on the idea of expanding the bond
