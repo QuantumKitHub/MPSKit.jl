@@ -1,5 +1,5 @@
 """
-    entanglementplot(state; site=0[, kwargs])
+    entanglementplot(state; site=0[, kwargs...])
 
 Plot the entanglement spectrum of a given InfiniteMPS. 
 
@@ -9,7 +9,7 @@ Plot the entanglement spectrum of a given InfiniteMPS.
 - `sortby=maximum`: the method of sorting the sectors.
 - `sector_margin=1//10`: the amount of whitespace between sectors.
 - `sector_formatter=string`: how to convert sectors to strings.
-- `kwargs...: other kwargs are passed on to the plotting backend.
+- `kwargs...`: other kwargs are passed on to the plotting backend.
 """
 function entanglementplot end
 @userplot EntanglementPlot
@@ -80,10 +80,10 @@ end
 Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 
 # Arguments
-- `above::InfiniteMPS`: above mps for ``transfer_spectrum``.
-- `below::InfiniteMPS`: below mps for ``transfer_spectrum``.
+- `above::InfiniteMPS`: above mps for [`transfer_spectrum`](@ref).
+- `below::InfiniteMPS`: below mps for [`transfer_spectrum`](@ref).
 - `sectors=[]`: vector of sectors for which to compute the spectrum.
-- `transferkwargs`: kwargs for call to ``transfer_spectrum``.
+- `transferkwargs`: kwargs for call to [`transfer_spectrum`](@ref).
 - `kwargs`: other kwargs are passed on to the plotting backend.
 - `thetaorigin=0`: origin of the angle range.
 - `sector_formatter=string`: how to convert sectors to strings.
