@@ -1,4 +1,10 @@
-"calculates the entropy of a given state"
+"""
+    entropy(state, [site::Int])
+
+Calculate the Von Neumann entanglement entropy of a given MPS. If an integer `site` is
+given, the entropy is across the entanglement cut to the right of site `site`. Otherwise, a
+vector of entropies is returned, one for each site.
+"""
 entropy(state::InfiniteMPS) = map(c -> -tr(safe_xlogx(c * c')), state.CR);
 function entropy(state::Union{FiniteMPS,WindowMPS,InfiniteMPS}, loc::Int)
     return -tr(safe_xlogx(state.CR[loc] * state.CR[loc]'))
@@ -37,9 +43,17 @@ function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
     return maximum(εs[:])
 end
 
-"
-Calculates the (partial) transfer spectrum
-"
+"""
+    transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
+                           sector=first(sectors(oneunit(left_virtualspace(above, 1)))))
+
+Calculate the partial spectrum of the left mixed transfer matrix corresponding to the
+overlap of a given `above` state and a `below` state. The `sector` keyword argument can be
+used to specify a non-trivial total charge for the transfer matrix eigenvectors.
+Specifically, an auxiliary space `ℂ[typeof(sector)](sector => 1)'` will be added to the
+domain of each eigenvector. The `tol` and `num_vals` keyword arguments are passed to
+`KrylovKit.eigolve`
+"""
 function transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
                            sector=first(sectors(oneunit(left_virtualspace(above, 1)))))
     init = randomize!(similar(above.AL[1], left_virtualspace(below, 0),
@@ -56,11 +70,11 @@ function transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, nu
 end
 
 """
-    entanglement_spectrum(ψ; site::Int=0) -> SectorDict{sectortype(ψ),Vector{<:Real}}
+    entanglement_spectrum(ψ, [site::Int=0]) -> SectorDict{sectortype(ψ),Vector{<:Real}}
 
 Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
 matrix to the right of a given site. This is a dictionary mapping the charge to the singular
-value.
+values.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS}, site::Int=0)
     @assert site <= length(st)
@@ -82,7 +96,8 @@ function approx_angles(spectrum; tol_angle=0.1)
 end
 
 """
-Given an InfiniteMPS, compute the gap ```ϵ``` for the asymptotics of the transfer matrix, as well as the Marek gap ```δ``` as a scaling measure of the bond dimension.
+Given an InfiniteMPS, compute the gap ```ϵ``` for the asymptotics of the transfer matrix, as
+well as the Marek gap ```δ``` as a scaling measure of the bond dimension.
 """
 function marek_gap(above::InfiniteMPS; tol_angle=0.1, kwargs...)
     spectrum = transfer_spectrum(above; kwargs...)
@@ -114,7 +129,11 @@ function marek_gap(spectrum; tol_angle=0.1)
 end
 
 """
-Compute the correlation length of a given InfiniteMPS.
+    correlation_length(above::InfiniteMPS; kwargs...)
+
+Compute the correlation length of a given InfiniteMPS based on the next-to-leading
+eigenvalue of the transfer matrix. The `kwargs` are passed to [`transfer_spectrum`](@ref),
+and can for example be used to target the correlation length in a specific sector. 
 """
 function correlation_length(above::InfiniteMPS; kwargs...)
     ϵ, = marek_gap(above; kwargs...)
