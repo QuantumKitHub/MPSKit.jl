@@ -1,7 +1,8 @@
-"
-    SparseMPO - used to represent both time evolution mpos and hamiltonians
-"
-
+"""
+    struct SparseMPO{S,T<:MPOTensor,E<:Number}
+    
+Sparse MPO, used to represent both time evolution MPOs and hamiltonians.
+"""
 struct SparseMPO{S,T<:MPOTensor,E<:Number} <: AbstractVector{SparseMPOSlice{S,T,E}}
     Os::PeriodicArray{Union{E,T},3}
     domspaces::PeriodicArray{S,2}
