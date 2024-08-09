@@ -231,7 +231,7 @@ matrix, and the third dimension specifies the column of the matrix.
 
 ```@example operators
 data = Array{Any,3}(missing, 1, 3, 3) # missing is interpreted as zero
-data[1, 1, 1] = identity(ℂ^2)
+data[1, 1, 1] = id(Matrix{ComplexF64}, ℂ^2)
 data[1, 3, 3] = 1 # regular numbers are interpreted as identity operators
 data[1, 1, 2] = -J * S_x
 data[1, 2, 3] = S_x

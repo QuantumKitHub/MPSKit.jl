@@ -121,7 +121,7 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     # convert to linear index type
     operators = mpo.opp
     indices = map(inds) do I
-        return Base._to_linear_index(lattice, I...) # this should mean all inds are valid...
+        return Base._to_linear_index(lattice, Tuple(I)...) # this should mean all inds are valid...
     end
     T = eltype(mpo)
     local_mpo = Union{T,scalartype(T)}[]
