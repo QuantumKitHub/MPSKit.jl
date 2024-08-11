@@ -319,8 +319,8 @@ disadvantages:
   combination with [`approximate`](@ref). Since the output of this method might have a
   truncated bonddimension, the new state might not be identical to the input state.
 
-  The truncation is controlled through `trscheme`, which dictates how the singular values
-  of the original state are truncated.
+  The truncation is controlled through `trscheme`, which dictates how the singular values of
+  the original state are truncated.
 
 
 * [`OptimalExpand`](@ref): This algorithm is based on the idea of expanding the bond
@@ -330,7 +330,8 @@ disadvantages:
   which can be costly when the physical space is large. The state will remain unchanged, but
   a one-site scheme will now be able to push the optimization further.
 
-  The subspace used for expansion can be truncated through `trscheme`, which dictates how many singular values will be added.
+  The subspace used for expansion can be truncated through `trscheme`, which dictates how
+  many singular values will be added.
 
 * [`RandExpand`](@ref): This algorithm similarly adds blocks orthogonal to the current
   state, but does not attempt to select the most important ones, and rather just selects
@@ -338,24 +339,29 @@ disadvantages:
   and if the bond dimension is grown slow enough, this still obtains a very good expansion
   scheme. 
   
-  Again, The state will remain unchanged and a one-site scheme will now be able to push the optimization further.
+  Again, The state will remain unchanged and a one-site scheme will now be able to push the
+  optimization further.
 
-  The subspace used for expansion can be truncated through `trscheme`, which dictates how many singular values will be added.
+  The subspace used for expansion can be truncated through `trscheme`, which dictates how
+  many singular values will be added.
 
 
 * [`VUMPSSvdCut`](@ref): This algorithm is based on the [`VUMPS`](@ref) algorithm, and
   consists of performing a two-site update (which introduced new sectors), and then
-  truncating the state back down using some truncation algorithm. Here, `trscheme` controls the truncation of the full state after the two-site update. 
+  truncating the state back down using some truncation algorithm. Here, `trscheme` controls
+  the truncation of the full state after the two-site update. 
 
   Because of the two-site update, this can again become expensive, but the algorithm has the
-  option of both expanding as well as truncating the bond dimension. Furthermore this is done in a nonlocal fashion which helps towards avoiding local minima. (This is sadly not guaranteed !)
+  option of both expanding as well as truncating the bond dimension. Furthermore this is
+  done in a nonlocal fashion which helps towards avoiding local minima. (This is sadly not
+  guaranteed !)
 
   
 
 ## leading boundary
 
-For statmech partition functions we want to find the approximate leading boundary MPS.
-Again this can be done with VUMPS:
+For statmech partition functions we want to find the approximate leading boundary MPS. Again
+this can be done with VUMPS:
 
 ```julia
 th = nonsym_ising_mpo()
