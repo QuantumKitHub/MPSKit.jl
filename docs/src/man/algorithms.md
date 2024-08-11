@@ -330,8 +330,7 @@ disadvantages:
   which can be costly when the physical space is large. The state will remain unchanged, but
   a one-site scheme will now be able to push the optimization further.
 
-  For optimalexpand the kwarg trscheme only truncates the added sectors. E.g. with
-  trscheme=truncdim(d_extra) the bonddimension increases with no more than d_extra.
+  The subspace used for expansion can be truncated through `trscheme`, which dictates how many singular values will be added.
 
 * [`RandExpand`](@ref): This algorithm similarly adds blocks orthogonal to the current
   state, but does not attempt to select the most important ones, and rather just selects
@@ -339,22 +338,19 @@ disadvantages:
   and if the bond dimension is grown slow enough, this still obtains a very good expansion
   scheme. 
   
-  Again, the new sectors are added with singular value 0 so that the state remains
-  unchanged, and a one-site scheme will be able to push the optimization further.
+  Again, The state will remain unchanged and a one-site scheme will now be able to push the optimization further.
 
-  Similarly to the Optimalexpand algortihm the trscheme kwarg only truncates added sectors. 
+  The subspace used for expansion can be truncated through `trscheme`, which dictates how many singular values will be added.
+
 
 * [`VUMPSSvdCut`](@ref): This algorithm is based on the [`VUMPS`](@ref) algorithm, and
   consists of performing a two-site update (which introduced new sectors), and then
-  truncating the state back down using some truncation algorithm. In contrast with the
-  previous methods the new sectors are not added with singular values 0 (but rather with
-  singular values optimal to lower the energy) so that the outputted state is, in general,
-  not equal to the input state. 
+  truncating the state back down using some truncation algorithm. Here, `trscheme` controls the truncation of the full state after the two-site update. 
 
   Because of the two-site update, this can again become expensive, but the algorithm has the
-  option of both expanding as well as truncating the bond dimension. 
+  option of both expanding as well as truncating the bond dimension. Furthermore this is done in a nonlocal fashion which helps towards avoiding local minima. (This is sadly not guaranteed !)
 
-  Here, `trscheme` controls the truncation of the state after the two-site update.
+  
 
 ## leading boundary
 
