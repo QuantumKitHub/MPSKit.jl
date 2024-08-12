@@ -132,17 +132,17 @@ end
 
 # horizontal and vertical interactions are easier using Cartesian indices
 horizontal_operators = Dict()
-I_horizontal = CartesianIndex(1, 0)
+I_horizontal = CartesianIndex(0, 1)
 for I in eachindex(IndexCartesian(), square)
-    if I[1] < size(square, 1)
+    if I[2] < size(square, 2)
         horizontal_operators[(I, I + I_horizontal)] = -J * S_x ⊗ S_x
     end
 end
 
 vertical_operators = Dict()
-I_vertical = CartesianIndex(0, 1)
+I_vertical = CartesianIndex(1, 0)
 for I in eachindex(IndexCartesian(), square)
-    if I[2] < size(square, 2)
+    if I[1] < size(square, 1)
         vertical_operators[(I, I + I_vertical)] = -J * S_x ⊗ S_x
     end
 end
