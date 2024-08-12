@@ -91,6 +91,20 @@ end
 
     @test convert(TensorMap, H1 * mps) ≈ H1_tm * state
     @test dot(mps, H2, mps) ≈ dot(mps, H2 * mps)
+
+    # test constructor from dictionary with mixed linear and Cartesian lattice indices as keys
+    grid = square = fill(ℂ^2, 3, 3)
+
+    local_operators = Dict((I,) => O₁ for I in eachindex(grid))
+    I_vertical = CartesianIndex(1, 0)
+    vertical_operators = Dict((I, I + I_vertical) => O₂
+                              for I in eachindex(IndexCartesian(), square)
+                              if I[1] < size(square, 1))
+    operators = merge(local_operators, vertical_operators)
+    H4 = MPOHamiltonian(grid, operators)
+
+    @test H4 ≈
+          MPOHamiltonian(grid, local_operators) + MPOHamiltonian(grid, vertical_operators)
 end
 
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
