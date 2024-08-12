@@ -22,13 +22,14 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `tol::Float64`: tolerance for convergence criterium
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: level of information display
+- `alg::OrthogonalFactorizationAlgorithm` : algorithm to perform the orthogonal factorizations during the automatic differentiation
 """
 struct GradientGrassmann <: Algorithm
     method::OptimKit.OptimizationAlgorithm
     finalize!::Function
-
+    svd_alg::OrthogonalFactorizationAlgorithm
     function GradientGrassmann(; method=ConjugateGradient, (finalize!)=OptimKit._finalize!,
-                               tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity=2)
+                               tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity=2, svd_alg=TensorKit.SDD()) 
         if isa(method, OptimKit.OptimizationAlgorithm)
             # We were given an optimisation method, just use it.
             m = method
@@ -39,7 +40,7 @@ struct GradientGrassmann <: Algorithm
             msg = "method should be either an instance or a subtype of `OptimKit.OptimizationAlgorithm`."
             throw(ArgumentError(msg))
         end
-        return new(m, finalize!)
+        return new(m, finalize!, svd_alg)
     end
 end
 
@@ -54,8 +55,8 @@ function find_groundstate(ψ::S, H, alg::GradientGrassmann,
     x, _, _, _, normgradhistory = optimize(GrassmannMPS.fg,
                                            GrassmannMPS.ManifoldPoint(ψ, envs),
                                            alg.method;
-                                           (transport!)=GrassmannMPS.transport!,
-                                           retract=GrassmannMPS.retract,
+                                           (transport!)=(Θ, W, Δ, α, W′) -> GrassmannMPS.transport!(Θ, W, Δ, α, W′; alg=alg.svd_alg),
+                                           retract=(W, Δ, α) -> GrassmannMPS.retract(W, Δ, α; alg=alg.svd_alg)                      ,
                                            inner=GrassmannMPS.inner,
                                            (scale!)=GrassmannMPS.scale!,
                                            (add!)=GrassmannMPS.add!,
