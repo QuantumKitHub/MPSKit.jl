@@ -83,7 +83,16 @@ function changebonds(ψ::InfiniteMPS, alg::SvdCut)
         copied[i + 1] = _transpose_front(U' * _transpose_tail(copied[i + 1]))
     end
 
-    return normalize!(InfiniteMPS(copied, complex(ncr)))
+    # make sure everything is full rank:
+    makefullrank!(copied)
+
+    # if the bond dimension is not changed, we can keep the same center, otherwise recompute
+    ψ = if space(ncr, 1) != space(copied[1], 1)
+        InfiniteMPS(copied)
+    else
+        InfiniteMPS(copied, complex(ncr))
+    end
+    return normalize!(ψ)
 end
 
 function changebonds(ψ, H, alg::SvdCut, envs=environments(ψ, H))
