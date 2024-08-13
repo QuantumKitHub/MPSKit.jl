@@ -246,6 +246,7 @@ ts = FiniteMPS(10,ℂ^2,ℂ^12);
 ```
 
 ### "Chepiga Ansatz"
+
 Computing excitations in critical systems poses a significant challenge due to the diverging
 correlation length, which requires very large bond dimensions. However, we can leverage this
 long-range correlation to effectively identify excitations. In this context, the left/right
@@ -318,7 +319,6 @@ disadvantages:
   globally optimal truncation can be obtained by using the [`SvdCut`](@ref) algorithm in
   combination with [`approximate`](@ref). Since the output of this method might have a
   truncated bonddimension, the new state might not be identical to the input state.
-
   The truncation is controlled through `trscheme`, which dictates how the singular values of
   the original state are truncated.
 
@@ -328,35 +328,23 @@ disadvantages:
   which are orthogonal to the current state. From the point of view of a local two-site
   update, this procedure is *optimal*, but it requires to evaluate a two-site derivative,
   which can be costly when the physical space is large. The state will remain unchanged, but
-  a one-site scheme will now be able to push the optimization further.
-
-  The subspace used for expansion can be truncated through `trscheme`, which dictates how
-  many singular values will be added.
+  a one-site scheme will now be able to push the optimization further. The subspace used for
+  expansion can be truncated through `trscheme`, which dictates how many singular values will
+  be added.
 
 * [`RandExpand`](@ref): This algorithm similarly adds blocks orthogonal to the current
   state, but does not attempt to select the most important ones, and rather just selects
   them at random. The advantage here is that this is much cheaper than the optimal expand,
   and if the bond dimension is grown slow enough, this still obtains a very good expansion
-  scheme. 
-  
-  Again, The state will remain unchanged and a one-site scheme will now be able to push the
-  optimization further.
-
-  The subspace used for expansion can be truncated through `trscheme`, which dictates how
-  many singular values will be added.
-
+  scheme. Again, The state will remain unchanged and a one-site scheme will now be able to 
+  push the optimization further. The subspace used for expansion can be truncated through
+  `trscheme`, which dictates how many singular values will be added.
 
 * [`VUMPSSvdCut`](@ref): This algorithm is based on the [`VUMPS`](@ref) algorithm, and
-  consists of performing a two-site update (which introduced new sectors), and then
-  truncating the state back down using some truncation algorithm. Here, `trscheme` controls
-  the truncation of the full state after the two-site update. 
-
-  Because of the two-site update, this can again become expensive, but the algorithm has the
-  option of both expanding as well as truncating the bond dimension. Furthermore this is
-  done in a nonlocal fashion which helps towards avoiding local minima. (This is sadly not
-  guaranteed !)
-
-  
+  consists of performing a two-site update, and then truncating the state back down. Because
+  of the two-site update, this can again become expensive, but the algorithm has the option
+  of both expanding as well as truncating the bond dimension. Here, `trscheme` controls the
+  truncation of the full state after the two-site update.
 
 ## leading boundary
 
