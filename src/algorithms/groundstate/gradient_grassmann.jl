@@ -2,7 +2,7 @@
     GradientGrassmann <: Algorithm
 
 Variational gradient-based optimization algorithm that keeps the MPS in left-canonical form,
-as points on a Grassmann manifold. The optimization is then a Riemannian gradient descent 
+as points on a Grassmann manifold. The optimization is then a Riemannian gradient descent
 with a preconditioner to induce the metric from the Hilbert space inner product.
 
 ## Fields
@@ -22,7 +22,9 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `tol::Float64`: tolerance for convergence criterium
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: level of information display
-- `alg::OrthogonalFactorizationAlgorithm` : algorithm to perform the orthogonal factorizations during the automatic differentiation
+- `alg::OrthogonalFactorizationAlgorithm` : specifies which algorithm is used for singular
+  value decompositions in the retract and transport functions. Choices are SDD() which is faster but
+  less stable and SVD() which is slower but more stable.
 """
 struct GradientGrassmann <: Algorithm
     method::OptimKit.OptimizationAlgorithm
