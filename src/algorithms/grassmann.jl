@@ -146,13 +146,13 @@ end
 """
 Retract a left-canonical MPSMultiline along Grassmann tangent `g` by distance `alpha`.
 """
-function retract(x::ManifoldPoint{<:MPSMultiline}, tg, alpha)
+function retract(x::ManifoldPoint{<:MPSMultiline}, tg, alpha; alg = SDD())
     g = reshape(tg, size(x.state))
 
     nal = similar(x.state.AL)
     h = similar(g)
     for (i, cg) in enumerate(tg)
-        (nal[i], th) = Grassmann.retract(x.state.AL[i], cg.Pg, alpha)
+        (nal[i], th) = Grassmann.retract(x.state.AL[i], cg.Pg, alpha; alg = alg)
         h[i] = PrecGrad(th)
     end
 
@@ -165,13 +165,13 @@ end
 """
 Retract a left-canonical infinite MPS along Grassmann tangent `g` by distance `alpha`.
 """
-function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
+function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha; alg = SDD())
     state = x.state
     envs = x.envs
     nal = similar(state.AL)
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
-        nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha; alg = alg)
         h[i] = PrecGrad(th)
     end
 
@@ -185,14 +185,14 @@ end
 """
 Retract a left-canonical finite MPS along Grassmann tangent `g` by distance `alpha`.
 """
-function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
+function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha; alg = SDD())
     state = x.state
     envs = x.envs
 
     y = copy(state)  # The end-point
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
-        yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha; alg = alg)
         h[i] = PrecGrad(th)
         y.AC[i] = (yal, state.CR[i])
     end
@@ -207,10 +207,10 @@ end
 Transport a tangent vector `h` along the retraction from `x` in direction `g` by distance
 `alpha`. `xp` is the end-point of the retraction.
 """
-function transport!(h, x, g, alpha, xp)
+function transport!(h, x, g, alpha, xp; alg = SDD())
     for i in 1:length(h)
         h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
-                                             xp.state.AL[i]))
+                                             xp.state.AL[i]; alg = alg))
     end
     return h
 end
