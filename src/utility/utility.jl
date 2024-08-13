@@ -67,6 +67,13 @@ function decompose_localmps(state::AbstractTensorMap{PS,N,1},
     return [A; decompose_localmps(B)]
 end
 
+"""
+    add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
+        -> AbstractTensorMap{S,N1+1,N2+1}
+
+Add trivial one-dimensional utility spaces with trivial sector to the left and right of a
+given tensor map, i.e. as the first space of the codomain and the last space of the domain.
+"""
 function add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
     ou = oneunit(_firstspace(tensor))
 
@@ -144,7 +151,8 @@ end
 """
     tensorexpr(name::Symbol, ind_out, [ind_in])
 
-Generates expressions for use within [`@tensor`](@ref TensorOperations.@tensor) environments of the form `name[ind_out...; ind_in]`.
+Generates expressions for use within [`@tensor`](@ref TensorOperations.@tensor) environments
+of the form `name[ind_out...; ind_in]`.
 """
 tensorexpr(name::Symbol, inds) = Expr(:ref, name, inds...)
 function tensorexpr(name::Symbol, indout, indin)

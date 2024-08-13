@@ -176,6 +176,9 @@ end
 function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor; kwargs...)
     AL = PeriodicArray(copy.(AL))
 
+    all(isfullrank, AL) ||
+        @warn "Constructing an MPS from tensors that are not full rank"
+
     # initialize tensor storage
     AC = similar.(AL)
     AR = similar.(AL)
