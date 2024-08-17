@@ -18,8 +18,9 @@ struct SparseMPOSlice{S,T,E,A<:AbstractMatrix{Union{E,T}},B<:AbstractVector{Unio
     pspace::S
     function SparseMPOSlice(Os::AbstractMatrix{Union{E,T}},
                             domspaces::B, imspaces::B,
-                            pspace::S) where {S<:IndexSpace,T<:AbstractTensorMap{S},
-                                              E<:Number,B<:AbstractVector{S}}
+                            pspace::S) where {S<:IndexSpace,E<:Number,
+                                              T<:AbstractTensorMap{E,S},
+                                              B<:AbstractVector{S}}
         sz1, sz2 = size(Os)
         sz1 == length(imspaces) || throw(ArgumentError("imspaces must have length $sz1"))
         sz2 == length(domspaces) || throw(ArgumentError("domspaces must have length $sz2"))
@@ -42,9 +43,10 @@ function Base.getindex(x::SparseMPOSlice{S,T,E}, a::Int, b::Int)::T where {S,T,E
     a <= x.odim && b <= x.odim || throw(BoundsError(x, [a, b]))
     if x.Os[a, b] isa E
         if x.Os[a, b] == zero(E)
-            return fill_data!(TensorMap(x -> storagetype(T)(undef, x),
-                                        x.domspaces[a] * x.pspace,
-                                        x.pspace * x.imspaces[b]'), zero)
+            return zeros(E, x.domspaces[a] * x.pspace, x.pspace * x.imspaces[b]')
+            # return fill_data!(TensorMap(x -> storagetype(T)(undef, x),
+            #                             x.domspaces[a] * x.pspace,
+            #                             x.pspace * x.imspaces[b]'), zero)
         else
             F = isomorphism(storagetype(T), x.domspaces[a] * x.pspace,
                             x.imspaces[b]' * x.pspace)

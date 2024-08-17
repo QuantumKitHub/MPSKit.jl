@@ -20,7 +20,7 @@ force_planar(x::Number) = x
 function force_planar(x::AbstractTensorMap)
     cod = reduce(*, map(i -> ℙ^dim(space(x, i)), codomainind(x)))
     dom = reduce(*, map(i -> ℙ^dim(space(x, i)), domainind(x)))
-    t = TensorMap(zeros, scalartype(x), cod ← dom)
+    t = zeros(scalartype(x), cod ← dom)
     copyto!(blocks(t)[PlanarTrivial()], convert(Array, x))
     return t
 end
@@ -81,7 +81,7 @@ function transverse_field_ising(; g=1.0)
 end
 
 function heisenberg_XXX(::Type{SU2Irrep}; spin=1)
-    H = TensorMap(ones, ComplexF64, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
+    H = ones(ComplexF64, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
     for (c, b) in blocks(H)
         S = (dim(c) - 1) / 2
         b .= S * (S + 1) / 2 - spin * (spin + 1)
@@ -90,7 +90,7 @@ function heisenberg_XXX(::Type{SU2Irrep}; spin=1)
 end
 
 function heisenberg_XXX(; spin=1)
-    H = TensorMap(ones, ComplexF64, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
+    H = ones(ComplexF64, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
     for (c, b) in blocks(H)
         S = (dim(c) - 1) / 2
         b .= S * (S + 1) / 2 - spin * (spin + 1)
@@ -102,7 +102,7 @@ function heisenberg_XXX(; spin=1)
 end
 
 function bilinear_biquadratic_model(::Type{SU2Irrep}; θ=atan(1 / 3))
-    H1 = TensorMap(ones, ComplexF64, SU2Space(1 => 1)^2 ← SU2Space(1 => 1)^2)
+    H1 = ones(ComplexF64, SU2Space(1 => 1)^2 ← SU2Space(1 => 1)^2)
     for (c, b) in blocks(H1)
         S = (dim(c) - 1) / 2
         b .= S * (S + 1) / 2 - 1 * (1 + 1)

@@ -19,8 +19,8 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
 @testset "FiniteMPO" begin
     # start from random operators
     L = 4
-    O₁ = TensorMap(rand, ComplexF64, (ℂ^2)^L, (ℂ^2)^L)
-    O₂ = TensorMap(rand, ComplexF64, space(O₁))
+    O₁ = rand(ComplexF64, (ℂ^2)^L, (ℂ^2)^L)
+    O₂ = rand(ComplexF64, space(O₁))
 
     # create MPO and convert it back to see if it is the same
     mpo₁ = FiniteMPO(O₁) # type-unstable for now!
@@ -38,7 +38,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     @test convert(TensorMap, mpo₁ * mpo₂) ≈ O₁ * O₂
 
     # test application to a state
-    ψ₁ = Tensor(rand, ComplexF64, domain(O₁))
+    ψ₁ = rand(ComplexF64, domain(O₁))
     mps₁ = FiniteMPS(ψ₁)
 
     @test convert(TensorMap, mpo₁ * mps₁) ≈ O₁ * ψ₁
@@ -57,9 +57,9 @@ end
 @testset "Finite MPOHamiltonian" begin
     L = 3
     lattice = fill(ℂ^2, L)
-    O₁ = TensorMap(rand, ComplexF64, ℂ^2, ℂ^2)
+    O₁ = rand(ComplexF64, ℂ^2, ℂ^2)
     E = id(Matrix{ComplexF64}, domain(O₁))
-    O₂ = TensorMap(rand, ComplexF64, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
+    O₂ = rand(ComplexF64, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
 
     H1 = MPOHamiltonian(lattice, i => O₁ for i in 1:L)
     H2 = MPOHamiltonian(lattice, (i, i + 1) => O₂ for i in 1:(L - 1))
@@ -86,7 +86,7 @@ end
     @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1e-6
 
     # test dot and application
-    state = Tensor(rand, ComplexF64, prod(lattice))
+    state = rand(ComplexF64, prod(lattice))
     mps = FiniteMPS(state)
 
     @test convert(TensorMap, H1 * mps) ≈ H1_tm * state
@@ -110,11 +110,11 @@ end
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
                                                                             vspaces)
     #generate a 1-2-3 body interaction
-    n = TensorMap(rand, ComplexF64, pspace, pspace)
+    n = rand(ComplexF64, pspace, pspace)
     n += n'
-    nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+    nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
     nn += nn'
-    nnn = TensorMap(rand, ComplexF64, pspace * pspace * pspace, pspace * pspace * pspace)
+    nnn = rand(ComplexF64, pspace * pspace * pspace, pspace * pspace * pspace)
     nnn += nnn'
 
     #can you pass in a proper mpo?
@@ -170,12 +170,12 @@ end
 end
 
 @testset "General LazySum of $(eltype(Os))" for Os in (rand(ComplexF64, rand(1:10)),
-                                                       map(i -> TensorMap(rand, ComplexF64,
-                                                                          ℂ^13, ℂ^7),
+                                                       map(i -> rand(ComplexF64,
+                                                                     ℂ^13, ℂ^7),
                                                            1:rand(1:10)),
-                                                       map(i -> TensorMap(rand, ComplexF64,
-                                                                          ℂ^1 ⊗ ℂ^2,
-                                                                          ℂ^3 ⊗ ℂ^4),
+                                                       map(i -> rand(ComplexF64,
+                                                                     ℂ^1 ⊗ ℂ^2,
+                                                                     ℂ^3 ⊗ ℂ^4),
                                                            1:rand(1:10)))
     LazyOs = LazySum(Os)
 
@@ -191,16 +191,11 @@ end
 
 @testset "MulitpliedOperator of $(typeof(O)) with $(typeof(f))" for (O, f) in
                                                                     zip((rand(ComplexF64),
-                                                                         TensorMap(rand,
-                                                                                   ComplexF64,
-                                                                                   ℂ^13,
-                                                                                   ℂ^7),
-                                                                         TensorMap(rand,
-                                                                                   ComplexF64,
-                                                                                   ℂ^1 ⊗
-                                                                                   ℂ^2,
-                                                                                   ℂ^3 ⊗
-                                                                                   ℂ^4)),
+                                                                         rand(ComplexF64,
+                                                                              ℂ^13, ℂ^7),
+                                                                         rand(ComplexF64,
+                                                                              ℂ^1 ⊗ ℂ^2,
+                                                                              ℂ^3 ⊗ ℂ^4)),
                                                                         (t -> 3t, 1.1,
                                                                          One()))
     tmp = MPSKit.MultipliedOperator(O, f)
@@ -210,16 +205,13 @@ end
         @test tmp() ≈ f * O atol = 1 - 08
     end
 end
-
 @testset "General Time-dependent LazySum of $(eltype(Os))" for Os in (rand(ComplexF64, 4),
-                                                                      fill(TensorMap(rand,
-                                                                                     ComplexF64,
-                                                                                     ℂ^13, ℂ^7),
+                                                                      fill(rand(ComplexF64,
+                                                                                ℂ^13, ℂ^7),
                                                                            4),
-                                                                      fill(TensorMap(rand,
-                                                                                     ComplexF64,
-                                                                                     ℂ^1 ⊗ ℂ^2,
-                                                                                     ℂ^3 ⊗ ℂ^4),
+                                                                      fill(rand(ComplexF64,
+                                                                                ℂ^1 ⊗ ℂ^2,
+                                                                                ℂ^3 ⊗ ℂ^4),
                                                                            4))
 
     #test user interface
@@ -264,11 +256,11 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
 @testset "LazySum of (effective) Hamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
                                                                         zip(pspaces,
                                                                             vspaces)
-    n = TensorMap(rand, ComplexF64, pspace, pspace)
+    n = rand(ComplexF64, pspace, pspace)
     n += n'
-    nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+    nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
     nn += nn'
-    nnn = TensorMap(rand, ComplexF64, pspace * pspace * pspace, pspace * pspace * pspace)
+    nnn = rand(ComplexF64, pspace * pspace * pspace, pspace * pspace * pspace)
     nnn += nnn'
 
     H1 = repeat(MPOHamiltonian(n), 2)
@@ -278,8 +270,8 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
     summedH = LazySum(Hs)
 
     ψs = [FiniteMPS(rand, ComplexF64, rand(3:2:20), pspace, Dspace),
-          InfiniteMPS([TensorMap(rand, ComplexF64, Dspace * pspace, Dspace),
-                       TensorMap(rand, ComplexF64, Dspace * pspace, Dspace)])]
+          InfiniteMPS([rand(ComplexF64, Dspace * pspace, Dspace),
+                       rand(ComplexF64, Dspace * pspace, Dspace)])]
 
     @testset "LazySum $(ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for ψ in ψs
         Envs = map(H -> environments(ψ, H), Hs)

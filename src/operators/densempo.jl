@@ -17,7 +17,7 @@ struct FiniteMPO{O<:MPOTensor}
         return new{O}(Os)
     end
 end
-function FiniteMPO(O::AbstractTensorMap{S,N,N}) where {S,N}
+function FiniteMPO(O::AbstractTensorMap{T,S,N,N}) where {T,S,N}
     return FiniteMPO(decompose_localmpo(add_util_leg(O)))
 end
 
@@ -71,16 +71,16 @@ function Base.convert(::Type{<:FiniteMPO}, mps::FiniteMPS)
     end
     return FiniteMPO(mpo_tensors)
 end
-function Base.convert(::Type{<:AbstractTensorMap}, mpo::FiniteMPO)
+function Base.convert(::Type{TensorMap}, mpo::FiniteMPO)
     N = length(mpo)
     # add trivial tensors to remove left and right trivial leg.
     V_left = left_virtualspace(mpo, 1)
     @assert V_left == oneunit(V_left)
-    U_left = Tensor(ones, scalartype(mpo), V_left)'
+    U_left = ones(scalartype(mpo), V_left)'
 
     V_right = right_virtualspace(mpo, length(mpo))
     @assert V_right == oneunit(V_right)'
-    U_right = Tensor(ones, scalartype(mpo), V_right')
+    U_right = ones(scalartype(mpo), V_right')
 
     tensors = vcat(U_left, mpo.opp, U_right)
     indices = [[i, -i, -(i + N), i + 1] for i in 1:length(mpo)]

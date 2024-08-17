@@ -385,6 +385,6 @@ function Base.convert(::Type{FiniteMPO}, H::MPOHamiltonian)
     return FiniteMPO(data′)
 end
 
-function Base.convert(T::Type{<:AbstractTensorMap}, H::MPOHamiltonian)
-    return convert(T, convert(FiniteMPO, H))
+function Base.convert(::Type{TensorMap}, H::MPOHamiltonian)
+    return convert(TensorMap, convert(FiniteMPO, H))
 end

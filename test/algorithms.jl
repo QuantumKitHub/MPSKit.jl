@@ -290,7 +290,7 @@ end
     algs = [TDVP(), TDVP2()]
 
     H = force_planar(heisenberg_XXX(; spin=1 // 2))
-    ψ₀ = FiniteMPS(fill(TensorMap(rand, ComplexF64, ℙ^1 * ℙ^2, ℙ^1), 5))
+    ψ₀ = FiniteMPS(5, ℙ^2, ℙ^1)
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
@@ -354,7 +354,7 @@ end
     algs = [TDVP(), TDVP2()]
 
     H = force_planar(heisenberg_XXX(; spin=1 // 2))
-    ψ₀ = FiniteMPS(fill(TensorMap(rand, ComplexF64, ℙ^1 * ℙ^2, ℙ^1), 5))
+    ψ₀ = FiniteMPS(5, ℙ^2, ℙ^1)
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
@@ -452,7 +452,7 @@ end
                                                                         2 => 1))]
     @testset "mpo" begin
         #random nn interaction
-        nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+        nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
         H = MPOHamiltonian(nn)
         Δt = 0.1
@@ -467,7 +467,7 @@ end
 
     @testset "infinite mps" begin
         #random nn interaction
-        nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+        nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
 
         state = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
@@ -493,7 +493,7 @@ end
 
     @testset "finite mps" begin
         #random nn interaction
-        nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+        nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
 
         state = FiniteMPS(10, pspace, Dspace)
@@ -513,10 +513,10 @@ end
     end
 
     @testset "MPSMultiline" begin
-        o = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
+        o = rand(ComplexF64, pspace * pspace, pspace * pspace)
         mpo = MPOMultiline(o)
 
-        t = TensorMap(rand, ComplexF64, Dspace * pspace, Dspace)
+        t = rand(ComplexF64, Dspace * pspace, Dspace)
         state = MPSMultiline(fill(t, 1, 1))
 
         state_re = changebonds(state,
@@ -710,7 +710,7 @@ end
     translation = periodic_boundary_conditions(DenseMPO(bulk), len)
 
     #the groundstate should be translation invariant:
-    ut = Tensor(ones, ℂ^1)
+    ut = ones(ℂ^1)
     @tensor leftstart[-1 -2; -3] := l_LL(gs)[-1, -3] * conj(ut[-2])
     T = TransferMatrix([gs.AC[1]; gs.AR[2:end]], translation[:], [gs.AC[1]; gs.AR[2:end]])
     v = leftstart * T

@@ -1,6 +1,7 @@
 module MPSKit
 
-using TensorKit, KrylovKit, OptimKit, FastClosures
+using TensorKit
+using KrylovKit, OptimKit, FastClosures
 using Base.Threads, FLoops, Transducers, FoldsThreads
 using Base.Iterators
 using RecipesBase
@@ -9,6 +10,7 @@ using Accessors
 
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
+using Random
 using Base: @kwdef
 using LoggingExtras
 

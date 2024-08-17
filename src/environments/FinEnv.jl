@@ -46,10 +46,8 @@ function environments(below::FiniteMPS{S}, O::Union{SparseMPO,MPOHamiltonian},
     leftstart = Vector{S}()
 
     for i in 1:(O.odim)
-        util_left = Tensor(x -> storagetype(S)(undef, x), O.domspaces[1, i]')
-        fill_data!(util_left, one)
-        util_right = Tensor(x -> storagetype(S)(undef, x), O.imspaces[length(below), i]')
-        fill_data!(util_right, one)
+        util_left = fill_data!(similar(lll, O.domspaces[1, i]'), one)
+        util_right = fill_data!(similar(rrr, O.imspaces[length(below), i]'), one)
 
         @plansor ctl[-1 -2; -3] := lll[-1; -3] * util_left[-2]
         @plansor ctr[-1 -2; -3] := rrr[-1; -3] * util_right[-2]

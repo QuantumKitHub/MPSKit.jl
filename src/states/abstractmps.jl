@@ -2,11 +2,10 @@
 Tensor types
 ===========================================================================================#
 
-const MPOTensor{S} = AbstractTensorMap{S,2,2} where {S}
-const MPSBondTensor{S} = AbstractTensorMap{S,1,1} where {S}
-const GenericMPSTensor{S,N} = AbstractTensorMap{S,N,1} where {S,N} #some functions are also defined for "general mps tensors" (used in peps code)
-const MPSTensor{S} = GenericMPSTensor{S,2} where {S} #the usual mps tensors on which we work
-#const ExMPSTensor{S,N,A,G,F1,F2}=GenericMPSTensor{S,3,A,G,F1,F2} #and mps tensor with an extra excitation - utility leg
+const MPOTensor{S} = AbstractTensorMap{T,S,2,2} where {T}
+const MPSBondTensor{S} = AbstractTensorMap{T,S,1,1} where {T}
+const GenericMPSTensor{S,N} = AbstractTensorMap{T,S,N,1} where {T} # some functions are also defined for "general mps tensors" (used in peps code)
+const MPSTensor{S} = GenericMPSTensor{S,2} # the usual mps tensors on which we work
 
 """
     MPSTensor([f, eltype], d::Int, left_D::Int, [right_D]::Int])
@@ -27,10 +26,24 @@ Construct an `MPSTensor` with given physical and virtual spaces.
 - `left_D::Int`: left virtual dimension
 - `right_D::Int`: right virtual dimension
 """
+function MPSTensor(::UndefInitializer, eltype, P::Union{S,CompositeSpace{S}}, Vₗ::S,
+                   Vᵣ::S=Vₗ) where {S<:ElementarySpace}
+    return TensorMap{eltype}(undef, Vₗ ⊗ P ← Vᵣ)
+end
 function MPSTensor(f, eltype, P::Union{S,CompositeSpace{S}}, Vₗ::S,
                    Vᵣ::S=Vₗ) where {S<:ElementarySpace}
-    return TensorMap(f, eltype, Vₗ ⊗ P ← Vᵣ)
+    A = MPSTensor(undef, eltype, P, Vₗ, Vᵣ)
+    if f === rand
+        return rand!(A)
+    elseif f === randn
+        return randn!(A)
+    elseif f === zeros
+        return zeros!(A)
+    else
+        throw(ArgumentError("Unsupported initializer function: $f"))
+    end
 end
+# TODO: reinstate function initializers?
 function MPSTensor(P::Union{S,CompositeSpace{S}}, Vₗ::S,
                    Vᵣ::S=Vₗ) where {S<:ElementarySpace}
     return MPSTensor(rand, Defaults.eltype, P, Vₗ, Vᵣ)

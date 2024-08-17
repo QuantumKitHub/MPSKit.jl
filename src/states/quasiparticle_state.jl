@@ -29,12 +29,14 @@ end
 #constructors
 function LeftGaugedQP(datfun, left_gs, right_gs=left_gs;
                       sector=one(sectortype(left_gs)), momentum=0.0)
-    #find the left null spaces for the TNS
-    excitation_space = ℂ[typeof(sector)](sector => 1)
+    # find the left null spaces for the TNS
+    excitation_space = Vect[typeof(sector)](sector => 1)
     VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
-    Xs = [TensorMap(datfun, scalartype(left_gs.AL[1]), _lastspace(VLs[loc])',
-                    excitation_space' * right_virtualspace(right_gs, loc))
+    Xs = [TensorMap{scalartype(left_gs)}(undef, _lastspace(VLs[loc])',
+                                         excitation_space' *
+                                         right_virtualspace(right_gs, loc))
           for loc in 1:length(left_gs)]
+    fill_data!.(Xs, datfun)
     left_gs isa InfiniteMPS ||
         momentum == zero(momentum) ||
         @warn "momentum is ignored for finite quasiparticles"
@@ -44,11 +46,12 @@ end
 function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
                        sector=one(sectortype(left_gs)), momentum=0.0)
     #find the left null spaces for the TNS
-    excitation_space = ℂ[typeof(sector)](sector => 1)
+    excitation_space = Vect[typeof(sector)](sector => 1)
     VRs = [adjoint(leftnull(adjoint(v))) for v in _transpose_tail.(right_gs.AR)]
-    Xs = [TensorMap(datfun, scalartype(left_gs.AL[1]),
-                    left_virtualspace(right_gs, loc - 1)',
-                    excitation_space' * _firstspace(VRs[loc])) for loc in 1:length(left_gs)]
+    Xs = [TensorMap{scalartype(left_gs)}(undef, left_virtualspace(right_gs, loc - 1)',
+                                         excitation_space' * _firstspace(VRs[loc]))
+          for loc in 1:length(left_gs)]
+    fill_data!.(Xs, datfun)
     left_gs isa InfiniteMPS ||
         momentum == zero(momentum) ||
         @warn "momentum is ignored for finite quasiparticles"
@@ -83,7 +86,7 @@ end
 #conversion between gauges (partially implemented)
 function Base.convert(::Type{RightGaugedQP},
                       input::LeftGaugedQP{S}) where {S<:InfiniteMPS}
-    rg = RightGaugedQP(zeros, input.left_gs, input.right_gs;
+    rg = RightGaugedQP(zero, input.left_gs, input.right_gs;
                        sector=first(sectors(utilleg(input))), momentum=input.momentum)
     len = length(input)
 
@@ -127,7 +130,7 @@ function Base.convert(::Type{RightGaugedQP},
 end
 function Base.convert(::Type{LeftGaugedQP},
                       input::RightGaugedQP{S}) where {S<:InfiniteMPS}
-    lg = LeftGaugedQP(zeros, input.left_gs, input.right_gs;
+    lg = LeftGaugedQP(zero, input.left_gs, input.right_gs;
                       sector=first(sectors(utilleg(input))), momentum=input.momentum)
     len = length(input)
 
