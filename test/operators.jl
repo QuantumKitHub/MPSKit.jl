@@ -61,9 +61,9 @@ end
     E = id(Matrix{ComplexF64}, domain(O₁))
     O₂ = rand(ComplexF64, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
 
-    H1 = MPOHamiltonian(lattice, i => O₁ for i in 1:L)
-    H2 = MPOHamiltonian(lattice, (i, i + 1) => O₂ for i in 1:(L - 1))
-    H3 = MPOHamiltonian(lattice, 1 => O₁, (2, 3) => O₂, (1, 3) => O₂)
+    H1 = FiniteMPOHamiltonian(lattice, i => O₁ for i in 1:L)
+    H2 = FiniteMPOHamiltonian(lattice, (i, i + 1) => O₂ for i in 1:(L - 1))
+    H3 = FiniteMPOHamiltonian(lattice, 1 => O₁, (2, 3) => O₂, (1, 3) => O₂)
 
     # check if constructor works by converting back to tensormap
     H1_tm = convert(TensorMap, H1)
@@ -80,8 +80,8 @@ end
 
     # test linear algebra
     @test H1 ≈
-          MPOHamiltonian(lattice, 1 => O₁) + MPOHamiltonian(lattice, 2 => O₁) +
-          MPOHamiltonian(lattice, 3 => O₁)
+          FiniteMPOHamiltonian(lattice, 1 => O₁) + FiniteMPOHamiltonian(lattice, 2 => O₁) +
+          FiniteMPOHamiltonian(lattice, 3 => O₁)
     @test 0.8 * H1 + 0.2 * H1 ≈ H1 atol = 1e-6
     @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1e-6
 

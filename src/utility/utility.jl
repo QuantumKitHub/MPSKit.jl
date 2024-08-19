@@ -162,3 +162,8 @@ end
 @static if !isdefined(Base, :allequal)
     allequal(itr) = isempty(itr) ? true : all(isequal(first(itr)), itr)
 end
+
+function check_length(a, b, c...)
+    length(a) == length(b) || throw(ArgumentError("lengths must match"))
+    return isempty(c) || check_length(b, c...)
+end

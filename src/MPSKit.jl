@@ -1,6 +1,8 @@
 module MPSKit
 
 using TensorKit
+using TensorKit: BraidingTensor
+using BlockTensorKit
 using KrylovKit, OptimKit, FastClosures
 using Base.Threads, FLoops, Transducers, FoldsThreads
 using Base.Iterators
@@ -30,7 +32,7 @@ export entanglementplot, transferplot
 
 # hamiltonian things
 export Cache
-export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, FiniteMPO
+export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, FiniteMPO, FiniteMPOHamiltonian
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian

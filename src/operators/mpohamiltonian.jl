@@ -388,3 +388,139 @@ end
 function Base.convert(::Type{TensorMap}, H::MPOHamiltonian)
     return convert(TensorMap, convert(FiniteMPO, H))
 end
+
+struct FiniteMPOHamiltonian{O}
+    data::Vector{O}
+end
+
+function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
+                              local_operators::Pair...)
+    # initialize vectors for storing the data
+    # TODO: generalize to weird lattice types
+    # nonzero_keys = similar(lattice, Vector{NTuple{2,Int}})
+    # nonzero_opps = similar(lattice, Vector{Any})
+    nonzero_keys = Vector{Vector{NTuple{2,Int}}}(undef, length(lattice))
+    nonzero_opps = Vector{Vector{Any}}(undef, length(lattice))
+    for i in eachindex(nonzero_keys)
+        nonzero_keys[i] = []
+        nonzero_opps[i] = []
+    end
+
+    for local_operator in local_operators
+        # instantiate the operator as Vector{MPOTensor}
+        sites, local_mpo = instantiate_operator(lattice, local_operator)
+        local key_R # trick to define key_R before the first iteration
+        for (i, (site, O)) in enumerate(zip(sites, local_mpo))
+            key_L = i == 1 ? 1 : key_R
+            key_R = i == length(local_mpo) ? 0 :
+                    maximum(last, nonzero_keys[site]; init=key_L) + 1
+            push!(nonzero_keys[site], (key_L, key_R))
+            push!(nonzero_opps[site], O)
+        end
+    end
+
+    # construct the sparse MPO
+    T = _find_tensortype(nonzero_opps)
+    E = scalartype(T)
+    S = spacetype(T)
+
+    virtualspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
+    virtualspaces[1] = SumSpace(oneunit(S))
+    virtualspaces[end] = SumSpace(oneunit(S))
+
+    for i in 1:(length(lattice) - 1)
+        V = SumSpace(fill(oneunit(S), maximum(last, nonzero_keys[i]; init=1) + 1))
+        for ((key_L, key_R), O) in zip(nonzero_keys[i], nonzero_opps[i])
+            V[key_R == 0 ? end : key_R] = if O isa Number
+                virtualspaces[i][key_L]
+            else
+                right_virtualspace(O)'
+            end
+        end
+        virtualspaces[i + 1] = V
+    end
+
+    Otype = tensormaptype(SumSpace{S}, 2, 2,
+                          Base.promote_typejoin(T, BraidingTensor{E,S}))
+    Os = map(1:length(lattice)) do site
+        # Initialize blocktensor 
+        O = Otype(undef, virtualspaces[site] * lattice[site],
+                  lattice[site] * virtualspaces[site + 1])
+        fill!(O, zero(E))
+        if site != length(lattice)
+            O[1, 1, 1, 1] = BraidingTensor{E}(eachspace(O)[1, 1, 1, 1])
+        end
+        if site != 1
+            O[end, end, end, end] = BraidingTensor{E}(eachspace(O)[end, end, end, end])
+        end
+
+        # Fill it
+        for ((key_L, key_R), o) in zip(nonzero_keys[site], nonzero_opps[site])
+            key_R′ = key_R == 0 ? length(virtualspaces[site + 1]) : key_R
+            O[key_L, 1, 1, key_R′] = if o isa Number
+                iszero(o) && continue
+                τ = BraidingTensor{E}(eachspace(O)[key_L, 1, 1, key_R′])
+                isone(o) ? τ : τ * o
+            else
+                o
+            end
+        end
+
+        return O
+    end
+
+    return FiniteMPOHamiltonian(Os)
+end
+function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
+                              local_operators::Union{Base.Generator,AbstractDict})
+    return FiniteMPOHamiltonian(lattice, local_operators...)
+end
+
+Base.parent(H::FiniteMPOHamiltonian) = H.data
+Base.eltype(H::FiniteMPOHamiltonian) = eltype(parent(H))
+Base.length(H::FiniteMPOHamiltonian) = length(parent(H))
+Base.size(H::FiniteMPOHamiltonian) = size(parent(H))
+
+left_virtualspace(H::FiniteMPOHamiltonian, i::Int) = left_virtualspace(H[i])
+right_virtualspace(H::FiniteMPOHamiltonian, i::Int) = right_virtualspace(H[i])
+physicalspace(H::FiniteMPOHamiltonian, i::Int) = physicalspace(H[i])
+
+Base.getindex(H::FiniteMPOHamiltonian, i::Int) = H.data[i]
+Base.firstindex(H::FiniteMPOHamiltonian) = firstindex(H.data)
+Base.lastindex(H::FiniteMPOHamiltonian) = lastindex(H.data)
+
+function Base.getproperty(H::FiniteMPOHamiltonian, sym::Symbol)
+    if sym === :A
+        return map(h -> h[2:(end - 1), 1, 1, 2:(end - 1)], parent(H))
+    elseif sym === :B
+        return map(h -> h[2:(end - 1), 1, 1, end], parent(H))
+    elseif sym === :C
+        return map(h -> h[1, 1, 1, 2:(end - 1)], parent(H))
+    elseif sym === :D
+        return map(h -> h[1, 1, 1, end], parent(H))
+    else
+        return getfield(H, sym)
+    end
+end
+
+VectorInterface.scalartype(::Type{FiniteMPOHamiltonian{O}}) where {O} = scalartype(O)
+
+function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
+    N = length(H)
+    # add trivial tensors to remove left and right trivial leg.
+    V_left = left_virtualspace(H, 1)
+    @assert V_left == oneunit(V_left)
+    U_left = ones(scalartype(H), V_left)'
+
+    V_right = right_virtualspace(H, length(H))
+    @assert V_right == oneunit(V_right)'
+    U_right = ones(scalartype(H), V_right')
+
+    tensors = vcat(U_left, H.data, U_right)
+    indices = [[i, -i, -(i + N), i + 1] for i in 1:length(H)]
+    pushfirst!(indices, [1])
+    push!(indices, [N + 1])
+    O = convert(TensorMap, ncon(tensors, indices))
+
+    return transpose(O, (ntuple(identity, N), ntuple(i -> i + N, N)))
+end
