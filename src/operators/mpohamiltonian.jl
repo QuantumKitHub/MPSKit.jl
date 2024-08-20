@@ -524,3 +524,174 @@ function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
 
     return transpose(O, (ntuple(identity, N), ntuple(i -> i + N, N)))
 end
+
+# Linear Algebra
+# --------------
+
+function Base.:+(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian)
+    check_length(H₁, H₂)
+    @assert all(physicalspace.(parent(H₁)) .== physicalspace.(parent(H₂))) "physical spaces should match"
+
+    H = similar(parent(H₁), promote_type(eltype(H₁), eltype(H₂)))
+    for i in 1:length(H)
+        # instantiate new blocktensor
+        Vₗ₁ = left_virtualspace(H₁, i)
+        Vₗ₂ = left_virtualspace(H₂, i)
+        @assert Vₗ₁[1] == Vₗ₂[1] && Vₗ₁[end] == Vₗ₂[end] "trivial spaces should match"
+        Vₗ = i == 1 ? Vₗ₁ : Vₗ₁[1:(end - 1)] ⊕ Vₗ₂[2:end]
+
+        Vᵣ₁ = right_virtualspace(H₁, i)
+        Vᵣ₂ = right_virtualspace(H₂, i)
+        @assert Vᵣ₁[1] == Vᵣ₂[1] && Vᵣ₁[end] == Vᵣ₂[end] "trivial spaces should match"
+        Vᵣ = i == length(H) ? Vᵣ₁ : Vᵣ₁[1:(end - 1)] ⊕ Vᵣ₂[2:end]
+
+        W = eltype(H)(undef, Vₗ ⊗ physicalspace(H₁, i) ← physicalspace(H₁, i) ⊗ Vᵣ')
+
+        #=
+        (Direct) sum of two hamiltonians in Jordan form:
+        (1 C₁ D₁)   (1 C₂ D₂)   (1  C₁  C₂  D₁+D₂)
+        (0 A₁ B₁) + (0 A₂ B₂) = (0  A₁  0   B₁   )
+        (0 0  1 )   (0 0  1 )   (0  0   A₂  B₂   )
+                                (0  0   0   1    )
+        =#
+        fill!(W, zero(scalartype(W)))
+        W[1, 1, 1, 1] = BraidingTensor{scalartype(W)}(eachspace(W)[1, 1, 1, 1])
+        W[end, 1, 1, end] = BraidingTensor{scalartype(W)}(eachspace(W)[end, 1, 1, end])
+
+        if i != length(H)
+            C₁ = H₁.C[i]
+            C₁_inds = CartesianIndices((1:1, 1:1, 1:1, 2:(size(H₁[i], 4) - 1)))
+            copyto!(W, C₁_inds, C₁, CartesianIndices(C₁))
+
+            C₂ = H₂.C[i]
+            C₂_inds = CartesianIndices((1:1, 1:1, 1:1, size(H₁[i], 4):(size(W, 4) - 1)))
+            copyto!(W, C₂_inds, C₂, CartesianIndices(C₂))
+        end
+
+        D₁ = H₁.D[i]
+        D₂ = H₂.D[i]
+        W[1, 1, 1, end] = D₁ + D₂
+
+        if i != 1 && i != length(H)
+            A₁ = H₁.A[i]
+            A₁_inds = CartesianIndices((2:(size(H₁[i], 1) - 1), 1:1, 1:1,
+                                        2:(size(H₁[i], 4) - 1)))
+            copyto!(W, A₁_inds, A₁, CartesianIndices(A₁))
+
+            A₂ = H₂.A[i]
+            A₂_inds = CartesianIndices((size(H₁[i], 1):(size(W, 1) - 1), 1:1, 1:1,
+                                        size(H₁[i], 4):(size(W, 4) - 1)))
+            copyto!(W, A₂_inds, A₂, CartesianIndices(A₂))
+        end
+
+        if i != 1
+            B₁ = H₁.B[i]
+            B₁_inds = CartesianIndices((2:(size(H₁[i], 1) - 1), 1:1, 1:1,
+                                        size(W, 4):size(W, 4)))
+            copyto!(W, B₁_inds, B₁, CartesianIndices(B₁))
+
+            B₂ = H₂.B[i]
+            B₂_inds = CartesianIndices((size(H₁[i], 1):(size(W, 1) - 1), 1:1, 1:1,
+                                        size(W, 4):size(W, 4)))
+            copyto!(W, B₂_inds, B₂, CartesianIndices(B₂))
+        end
+
+        H[i] = W
+    end
+
+    return FiniteMPOHamiltonian(H)
+end
+Base.:-(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian) = H₁ + (-H₂)
+
+function Base.:*(λ::Number, H::FiniteMPOHamiltonian)
+    Ws = map(parent(H)) do W
+        return similar(W, promote_type(scalartype(H), scalartype(λ)))
+    end
+    for i in eachindex(Ws)
+        for I in eachindex(IndexCartesian(), Ws[i])
+            if (i == 1 && I[4] == size(Ws[i], 4)) ||
+               (i != 1 && I[1] != size(Ws[i], 1) && I[4] == size(Ws[i], 4))
+                Ws[i][I] = λ * H[i][I]
+            else
+                Ws[i][I] = copy(H[i][I])
+            end
+        end
+    end
+    return FiniteMPOHamiltonian(Ws)
+end
+Base.:*(H::FiniteMPOHamiltonian, λ::Number) = λ * H
+
+function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
+    check_length(H, mps)
+    @assert length(mps) > 2 "MPS should have at least three sites, to be implemented otherwise"
+    A = convert.(BlockTensorMap, [mps.AC[1]; mps.AR[2:end]])
+    A′ = similar(A,
+                 tensormaptype(spacetype(mps), numout(eltype(mps)), numin(eltype(mps)),
+                               promote_type(scalartype(H), scalartype(mps))))
+    # left to middle
+    U = ones(scalartype(H), left_virtualspace(H, 1))
+    @plansor a[-1 -2; -3 -4] := A[1][-1 2; -3] * H[1][1 -2; 2 -4] * conj(U[1])
+    Q, R = leftorth!(a; alg=QR())
+    A′[1] = convert(TensorMap, Q)
+
+    for i in 2:(length(mps) ÷ 2)
+        @plansor a[-1 -2; -3 -4] := R[-1; 1 2] * A[i][1 3; -3] * H[i][2 -2; 3 -4]
+        Q, R = leftorth!(a; alg=QR())
+        A′[i] = convert(TensorMap, Q)
+    end
+
+    # right to middle
+    U = ones(scalartype(H), right_virtualspace(H, length(H)))
+    @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * conj(U[1])
+    L, Q = rightorth!(a; alg=LQ())
+    A′[end] = transpose(convert(TensorMap, Q), (1, 3), (2,))
+
+    for i in (length(mps) - 1):-1:(length(mps) ÷ 2 + 2)
+        @plansor a[-1 -2; -3 -4] := A[i][-1 3; 1] * H[i][-2 -4; 3 2] * L[1 2; -3]
+        L, Q = rightorth!(a; alg=LQ())
+        A′[i] = transpose(convert(TensorMap, Q), (1, 3), (2,))
+    end
+
+    # connect pieces
+    @plansor a[-1 -2; -3] := R[-1; 1 2] *
+                             A[length(mps) ÷ 2 + 1][1 3; 4] *
+                             H[length(mps) ÷ 2 + 1][2 -2; 3 5] *
+                             L[4 5; -3]
+    A′[length(mps) ÷ 2 + 1] = convert(TensorMap, a)
+
+    return FiniteMPS(A′)
+end
+
+function TensorKit.dot(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian)
+    check_length(H₁, H₂)
+
+    N = length(H₁)
+    Nhalf = N ÷ 2
+    # left half
+    @plansor ρ_left[-1; -2] := conj(H₁[1][1 2; 3 -1]) * H₂[1][1 2; 3 -2]
+    for i in 2:Nhalf
+        @plansor ρ_left[-1; -2] := ρ_left[1; 2] * conj(H₁[i][1 3; 4 -1]) *
+                                   H₂[i][2 3; 4 -2]
+    end
+    # right half
+    @plansor ρ_right[-1; -2] := conj(H₁[N][-2 1; 2 3]) * H₂[N][-1 1; 2 3]
+    for i in (N - 1):-1:(Nhalf + 1)
+        @plansor ρ_right[-1; -2] := ρ_right[1; 2] * conj(H₁[i][-2 4; 3 2]) *
+                                    H₂[i][-1 4; 3 1]
+    end
+    return @plansor ρ_left[1; 2] * ρ_right[2; 1]
+end
+
+function Base.isapprox(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian;
+                       atol::Real=0, rtol::Real=atol > 0 ? 0 : √eps(real(scalartype(H₁))))
+    check_length(H₁, H₂)
+
+    # computing ||H₁ - H₂|| without constructing H₁ - H₂
+    # ||H₁ - H₂||² = ||H₁||² + ||H₂||² - 2 ⟨H₁, H₂⟩
+    norm₁² = abs(dot(H₁, H₁))
+    norm₂² = abs(dot(H₂, H₂))
+    norm₁₂² = norm₁² + norm₂² - 2 * real(dot(H₁, H₂))
+
+    # don't take square roots to avoid precision loss
+    return norm₁₂² ≤ max(atol^2, rtol^2 * max(norm₁², norm₂²))
+end
