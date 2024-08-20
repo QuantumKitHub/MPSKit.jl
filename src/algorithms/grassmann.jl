@@ -2,8 +2,8 @@
 # submodule, to keep the MPSKit module namespace cleaner.
 """
 A module for functions related to treating an InfiniteMPS in left-canonical form as a bunch
-of points on Grassmann manifolds, and performing things like retractions and transports
-on these Grassmann manifolds.
+of points on Grassmann manifolds, and performing things like retractions and transports on
+these Grassmann manifolds.
 
 The module exports nothing, and all references to it should be qualified, e.g.
 `GrassmannMPS.fg`.
