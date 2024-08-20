@@ -30,7 +30,8 @@ struct GradientGrassmann <: Algorithm
     finalize!::Function
     svd_alg::OrthogonalFactorizationAlgorithm
     function GradientGrassmann(; method=ConjugateGradient, (finalize!)=OptimKit._finalize!,
-                               tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity=2, svd_alg=TensorKit.SDD()) 
+                               tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity=2,
+                               svd_alg=TensorKit.SDD())
         if isa(method, OptimKit.OptimizationAlgorithm)
             # We were given an optimisation method, just use it.
             m = method
@@ -56,8 +57,15 @@ function find_groundstate(ψ::S, H, alg::GradientGrassmann,
     x, _, _, _, normgradhistory = optimize(GrassmannMPS.fg,
                                            GrassmannMPS.ManifoldPoint(ψ, envs),
                                            alg.method;
-                                           (transport!)=(Θ, W, Δ, α, W′) -> GrassmannMPS.transport!(Θ, W, Δ, α, W′; alg=alg.svd_alg),
-                                           retract=(W, Δ, α) -> GrassmannMPS.retract(W, Δ, α; alg=alg.svd_alg)                      ,
+                                           (transport!)=(Θ, W, Δ, α, W′) -> GrassmannMPS.transport!(Θ,
+                                                                                                    W,
+                                                                                                    Δ,
+                                                                                                    α,
+                                                                                                    W′;
+                                                                                                    alg=alg.svd_alg),
+                                           retract=(W, Δ, α) -> GrassmannMPS.retract(W, Δ,
+                                                                                     α;
+                                                                                     alg=alg.svd_alg),
                                            inner=GrassmannMPS.inner,
                                            (scale!)=GrassmannMPS.scale!,
                                            (add!)=GrassmannMPS.add!,
