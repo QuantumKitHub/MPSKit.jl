@@ -23,7 +23,7 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: level of information display
 - `alg::OrthogonalFactorizationAlgorithm` : specifies which algorithm is used for singular
-  value decompositions in the retract and transport functions.
+    value decompositions in the retract and transport functions.
 """
 struct GradientGrassmann <: Algorithm
     method::OptimKit.OptimizationAlgorithm
