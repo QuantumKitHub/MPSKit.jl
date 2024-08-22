@@ -122,4 +122,10 @@ loop. This seems to lead to a situation where the garbage collector is not able 
 and can even fail to clear the garbage before an `OutOfMemory` error occurs. In this case,
 often the best thing to do is disable the multithreading of MPSKit, specifically for the
 `derivatives`, as this seems to be the most memory intensive part. This is something that is
-under investigation, and hopefully will be fixed in the future.
+under investigation, and hopefully will be fixed in the future. For now, a partial
+solution is to occasionally run the julia garbage collector via the finalize! function. 
+
+
+
+
+
