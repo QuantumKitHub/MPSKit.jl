@@ -110,14 +110,15 @@ end
         ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
         H2 = repeat(H, 2)
         v₀ = variance(ψ₀, H2)
+        trscheme = truncbelow(1e-8)
 
         # test logging
         ψ, envs, δ = find_groundstate(ψ₀, H2,
                                       IDMRG2(; tol, verbosity=5, maxiter=2,
-                                             trscheme=truncdim(12)))
+                                             trscheme))
 
         ψ, envs, δ = find_groundstate(ψ, H2,
-                                      IDMRG2(; tol, verbosity=1, trscheme=truncdim(12)))
+                                      IDMRG2(; tol, verbosity=1, trscheme))
         v = variance(ψ, H2, envs)
 
         # test using low variance
