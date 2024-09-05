@@ -439,7 +439,7 @@ end
         ψ, envs, _ = leading_boundary(ψ, H, VUMPS(; maxiter=400, verbosity=0))
         energies, ϕs = excitations(H, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ψ,
                                    envs; verbosity=0)
-        @test abs(energies[1]) > abs(energies[2]) # has a minima at pi/2
+        @test abs(energies[1]) > abs(energies[2]) # has a minimum at pi/2
     end
 
     @testset "finite" begin
