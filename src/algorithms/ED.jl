@@ -1,7 +1,7 @@
 """
 Use krylovkit to perform exact diagonalization
 """
-function exact_diagonalization(opp::MPOHamiltonian;
+function exact_diagonalization(opp::FiniteMPOHamiltonian;
                                sector=first(sectors(oneunit(opp.pspaces[1]))),
                                len::Int=opp.period, num::Int=1, which::Symbol=:SR,
                                alg=Defaults.alg_eigsolve(; dynamic_tols=false))
