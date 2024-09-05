@@ -24,6 +24,10 @@ Base.parent(m::Multiline) = m.data
 Base.size(m::Multiline) = (length(parent(m)), length(parent(m)[1]))
 Base.size(m::Multiline, i::Int) = getindex(size(m), i)
 Base.length(m::Multiline) = prod(size(m))
+function Base.axes(m::Multiline, i::Int)
+    return i == 1 ? axes(parent(m), 1) :
+           i == 2 ? axes(parent(m)[1], 1) : throw(ArgumentError("Invalid index $i"))
+end
 
 Base.getindex(m::Multiline, i::Int) = getindex(parent(m), i)
 Base.setindex!(m::Multiline, v, i::Int) = (setindex!(parent(m), v, i); m)
