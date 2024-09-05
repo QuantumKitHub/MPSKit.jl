@@ -10,10 +10,10 @@ function entropy(state::Union{FiniteMPS,WindowMPS,InfiniteMPS}, loc::Int)
     return -tr(safe_xlogx(state.CR[loc] * state.CR[loc]'))
 end;
 
-function infinite_temperature(H::MPOHamiltonian)
-    return [permute(isomorphism(storagetype(H[1, 1, 1]), oneunit(sp) * sp,
-                                oneunit(sp) * sp), (1, 2, 4), (3,)) for sp in H.pspaces]
-end
+# function infinite_temperature(H::MPOHamiltonian)
+#     return [permute(isomorphism(storagetype(H[1, 1, 1]), oneunit(sp) * sp,
+#                                 oneunit(sp) * sp), (1, 2, 4), (3,)) for sp in H.pspaces]
+# end
 
 """
     calc_galerkin(state, envs)
@@ -158,52 +158,107 @@ Compute the variance of the energy of the state with respect to the hamiltonian.
 """
 function variance end
 
-function variance(state::InfiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
-    # first rescale, such that the ground state energy is zero
-    # this needs to be done in a way that is consistent with the computation of the environments
-    # TODO: actually figure out why/if this is correct
+# function variance(state::InfiniteMPS, H::MPOHamiltonian,
+#                   envs=environments(state, H))
+#     # first rescale, such that the ground state energy is zero
+#     # this needs to be done in a way that is consistent with the computation of the environments
+#     # TODO: actually figure out why/if this is correct
+#     e_local = map(1:length(state)) do i
+#         return sum(1:(H.odim)) do j
+#             @plansor (leftenv(envs, i, state)[j] *
+#                       TransferMatrix(state.AC[i], H[i][j, H.odim], state.AC[i]))[1 2; 3] *
+#                      rightenv(envs, i, state)[H.odim][3 2; 1]
+#         end
+#     end
+#     rescaled_H = H - e_local
+#
+#     return real(expectation_value(state, rescaled_H * rescaled_H))
+# end
+function variance(state::InfiniteMPS, H::InfiniteMPOHamiltonian,
+                  envs=environments(state, H))
     e_local = map(1:length(state)) do i
-        return sum(1:(H.odim)) do j
-            @plansor (leftenv(envs, i, state)[j] *
-                      TransferMatrix(state.AC[i], H[i][j, H.odim], state.AC[i]))[1 2; 3] *
-                     rightenv(envs, i, state)[H.odim][3 2; 1]
-        end
+        return @plansor state.AC[i][3 7; 5] *
+                        leftenv(envs, i, state)[1 2; 3] *
+                        H[i][:, :, :, end][2 4; 7 8] *
+                        rightenv(envs, i, state)[end][5 8; 6] *
+                        conj(state.AC[i][1 4; 6])
     end
-    rescaled_H = H - e_local
-
-    return real(expectation_value(state, rescaled_H * rescaled_H))
+    lattice = physicalspace.(Ref(state), 1:length(state))
+    H_renormalized = InfiniteMPOHamiltonian(lattice,
+                                            i => e *
+                                                 id(Matrix{scalartype(state)}, lattice[i])
+                                            for (i, e) in enumerate(e_local))
+    return real(expectation_value(state, (H - H_renormalized)^2))
 end
 
-function variance(state::FiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
+# function variance(state::FiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
+#     H2 = H * H
+#     return real(expectation_value(state, H2) -
+#                 expectation_value(state, H, envs)^2)
+# end
+function variance(state::FiniteMPS, H::FiniteMPOHamiltonian, envs=environments(state, H))
     H2 = H * H
     return real(expectation_value(state, H2) -
                 expectation_value(state, H, envs)^2)
 end
 
-function variance(state::FiniteQP, H::MPOHamiltonian, args...)
+function variance(state::FiniteQP, H::FiniteMPOHamiltonian, args...)
     return variance(convert(FiniteMPS, state), H)
-end;
+end
 
-function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state, H))
+# function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state, H))
+#     # I remember there being an issue here @gertian?
+#     state.trivial ||
+#         throw(ArgumentError("variance of domain wall excitations is not implemented"))
+#     gs = state.left_gs
+#
+#     rescaled_H = H - expectation_value(gs, H)
+#
+#     #I don't remember where the formula came from
+#     # TODO: this is probably broken
+#     E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
+#
+#     rescaled_envs = environments(gs, rescaled_H)
+#     GL = leftenv(rescaled_envs, 1, gs)
+#     GR = rightenv(rescaled_envs, 0, gs)
+#     E_f = sum(zip(GL, GR)) do (gl, gr)
+#         @plansor gl[5 3; 1] * gs.CR[0][1; 4] * conj(gs.CR[0][5; 2]) * gr[4 3; 2]
+#     end
+#
+#     H2 = rescaled_H * rescaled_H
+#
+#     return real(dot(state, effective_excitation_hamiltonian(H2, state)) -
+#                 2 * (E_f + E_ex) * E_ex + E_ex^2)
+# end
+function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs=environments(state, H))
     # I remember there being an issue here @gertian?
     state.trivial ||
         throw(ArgumentError("variance of domain wall excitations is not implemented"))
     gs = state.left_gs
 
-    rescaled_H = H - expectation_value(gs, H)
+    e_local = map(1:length(state)) do i
+        return @plansor gs.AC[i][3 7; 5] *
+                        leftenv(envs.leftenvs, i, gs)[1 2; 3] *
+                        H[i][:, :, :, end][2 4; 7 8] *
+                        rightenv(envs.rightenvs, i, gs)[end][5 8; 6] *
+                        conj(gs.AC[i][1 4; 6])
+    end
+    lattice = physicalspace.(Ref(gs), 1:length(state))
+    H_regularized = H - InfiniteMPOHamiltonian(lattice,
+                                               i => e *
+                                                    id(Matrix{scalartype(state)}, lattice[i])
+                                               for (i, e) in enumerate(e_local))
 
-    #I don't remember where the formula came from
+    # I don't remember where the formula came from
     # TODO: this is probably broken
     E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
 
-    rescaled_envs = environments(gs, rescaled_H)
+    rescaled_envs = environments(gs, H_regularized)
     GL = leftenv(rescaled_envs, 1, gs)
     GR = rightenv(rescaled_envs, 0, gs)
-    E_f = sum(zip(GL, GR)) do (gl, gr)
-        @plansor gl[5 3; 1] * gs.CR[0][1; 4] * conj(gs.CR[0][5; 2]) * gr[4 3; 2]
-    end
+    E_f = @plansor GL[5 3; 1] * gs.CR[0][1; 4] * conj(gs.CR[0][5; 2]) * GR[4 3; 2]
 
-    H2 = rescaled_H * rescaled_H
+    H2 = H_regularized^2
 
     return real(dot(state, effective_excitation_hamiltonian(H2, state)) -
                 2 * (E_f + E_ex) * E_ex + E_ex^2)
@@ -221,159 +276,162 @@ You can impose periodic boundary conditions on an mpo-hamiltonian (for a given s
 That creates a new mpo-hamiltonian with larger bond dimension
 The interaction never wraps around multiple times
 """
-function periodic_boundary_conditions(H::MPOHamiltonian{S,T,E},
-                                      len=H.period) where {S,T,E}
-    sanitycheck(H) || throw(ArgumentError("invalid hamiltonian"))
-    mod(len, H.period) == 0 ||
-        throw(ArgumentError("$(len) is not a multiple of unitcell"))
-
-    fusers = PeriodicArray(map(1:len) do loc
-                               map(Iterators.product(H.domspaces[loc, :],
-                                                     H.domspaces[len + 1, :],
-                                                     H.domspaces[loc, :])) do (v1, v2,
-                                                                               v3)
-                                   return isomorphism(storagetype(T), fuse(v1 * v2' * v3),
-                                                      v1 * v2' * v3)
-                               end
-                           end)
-
-    #a -> what progress have I made in the upper layer?
-    #b -> what virtual space did I "lend" in the beginning?
-    #c -> what progress have I made in the lower layer?
-    χ = H.odim
-
-    indmap = zeros(Int, χ, χ, χ)
-    χ´ = 0
-    for b in χ:-1:2, c in b:χ
-        χ´ += 1
-        indmap[1, b, c] = χ´
-    end
-
-    for a in 2:χ, b in χ:-1:a
-        χ´ += 1
-        indmap[a, b, χ] = χ´
-    end
-
-    #do the bulk
-    bulk = PeriodicArray(convert(Array{Union{T,E},3}, fill(zero(E), H.period, χ´, χ´)))
-
-    for loc in 1:(H.period), (j, k) in keys(H[loc])
-
-        #apply (j,k) above
-        l = H.odim
-        for i in 2:(H.odim)
-            k <= i && i <= l || continue
-
-            f1 = fusers[loc][j, i, l]
-            f2 = fusers[loc + 1][k, i, l]
-            j′ = indmap[j, i, l]
-            k′ = indmap[k, i, l]
-            @plansor bulk[loc, j′, k′][-1 -2; -3 -4] := H[loc][j, k][1 2; -3 6] *
-                                                        f1[-1; 1 3 5] *
-                                                        conj(f2[-4; 6 7 8]) * τ[2 3; 7 4] *
-                                                        τ[4 5; 8 -2]
-        end
-
-        #apply (j,k) below
-        i = 1
-        for l in 2:(H.odim - 1)
-            l > 1 && l >= i && l <= j || continue
-
-            f1 = fusers[loc][i, l, j]
-            f2 = fusers[loc + 1][i, l, k]
-            j′ = indmap[i, l, j]
-            k′ = indmap[i, l, k]
-            @plansor bulk[loc, j′, k′][-1 -2; -3 -4] := H[loc][j, k][1 -2; 3 6] *
-                                                        f1[-1; 4 2 1] *
-                                                        conj(f2[-4; 8 7 6]) * τ[5 2; 7 3] *
-                                                        τ[-3 4; 8 5]
-        end
-    end
-
-    # make the starter
-    starter = convert(Array{Union{T,E},2}, fill(zero(E), χ´, χ´))
-    for (j, k) in keys(H[1])
-
-        #apply (j,k) above
-        if j == 1
-            f1 = fusers[1][1, end, end]
-            f2 = fusers[2][k, end, end]
-            j′ = indmap[k, H.odim, H.odim]
-            @plansor starter[1, j′][-1 -2; -3 -4] := H[1][j, k][-1 -2; -3 2] *
-                                                     conj(f2[-4; 2 3 3])
-        end
-
-        #apply (j,k) below
-        if j > 1 && j < H.odim
-            f1 = fusers[1][1, j, j]
-            f2 = fusers[2][1, j, k]
-
-            @plansor starter[1, indmap[1, j, k]][-1 -2; -3 -4] := H[1][j, k][4 -2; 3 1] *
-                                                                  conj(f2[-4; 6 2 1]) *
-                                                                  τ[5 4; 2 3] *
-                                                                  τ[-3 -1; 6 5]
-        end
-    end
-    starter[1, 1] = one(E)
-    starter[end, end] = one(E)
-
-    # make the ender
-    ender = convert(Array{Union{T,E},2}, fill(zero(E), χ´, χ´))
-    for (j, k) in keys(H[H.period])
-        if k > 1
-            f1 = fusers[end][j, k, H.odim]
-            k′ = indmap[j, k, H.odim]
-            @plansor ender[k′, end][-1 -2; -3 -4] := f1[-1; 1 2 6] *
-                                                     H[H.period][j, k][1 3; -3 4] *
-                                                     τ[3 2; 4 5] * τ[5 6; -4 -2]
-        end
-    end
-    ender[1, 1] = one(E)
-    ender[end, end] = one(E)
-
-    # fill in the entire H
-    nos = convert(Array{Union{T,E},3}, fill(zero(E), len, χ´, χ´))
-    nos[1, :, :] = starter[:, :]
-    nos[end, :, :] = ender[:, :]
-
-    for i in 2:(len - 1)
-        nos[i, :, :] = bulk[i, :, :]
-    end
-
-    return MPOHamiltonian(nos)
-end
+# function periodic_boundary_conditions(H::MPOHamiltonian{S,T,E},
+#                                       len=H.period) where {S,T,E}
+#     sanitycheck(H) || throw(ArgumentError("invalid hamiltonian"))
+#     mod(len, H.period) == 0 ||
+#         throw(ArgumentError("$(len) is not a multiple of unitcell"))
+#
+#     fusers = PeriodicArray(map(1:len) do loc
+#                                map(Iterators.product(H.domspaces[loc, :],
+#                                                      H.domspaces[len + 1, :],
+#                                                      H.domspaces[loc, :])) do (v1, v2,
+#                                                                                v3)
+#                                    return isomorphism(storagetype(T), fuse(v1 * v2' * v3),
+#                                                       v1 * v2' * v3)
+#                                end
+#                            end)
+#
+#     #a -> what progress have I made in the upper layer?
+#     #b -> what virtual space did I "lend" in the beginning?
+#     #c -> what progress have I made in the lower layer?
+#     χ = H.odim
+#
+#     indmap = zeros(Int, χ, χ, χ)
+#     χ´ = 0
+#     for b in χ:-1:2, c in b:χ
+#         χ´ += 1
+#         indmap[1, b, c] = χ´
+#     end
+#
+#     for a in 2:χ, b in χ:-1:a
+#         χ´ += 1
+#         indmap[a, b, χ] = χ´
+#     end
+#
+#     #do the bulk
+#     bulk = PeriodicArray(convert(Array{Union{T,E},3}, fill(zero(E), H.period, χ´, χ´)))
+#
+#     for loc in 1:(H.period), (j, k) in keys(H[loc])
+#
+#         #apply (j,k) above
+#         l = H.odim
+#         for i in 2:(H.odim)
+#             k <= i && i <= l || continue
+#
+#             f1 = fusers[loc][j, i, l]
+#             f2 = fusers[loc + 1][k, i, l]
+#             j′ = indmap[j, i, l]
+#             k′ = indmap[k, i, l]
+#             @plansor bulk[loc, j′, k′][-1 -2; -3 -4] := H[loc][j, k][1 2; -3 6] *
+#                                                         f1[-1; 1 3 5] *
+#                                                         conj(f2[-4; 6 7 8]) * τ[2 3; 7 4] *
+#                                                         τ[4 5; 8 -2]
+#         end
+#
+#         #apply (j,k) below
+#         i = 1
+#         for l in 2:(H.odim - 1)
+#             l > 1 && l >= i && l <= j || continue
+#
+#             f1 = fusers[loc][i, l, j]
+#             f2 = fusers[loc + 1][i, l, k]
+#             j′ = indmap[i, l, j]
+#             k′ = indmap[i, l, k]
+#             @plansor bulk[loc, j′, k′][-1 -2; -3 -4] := H[loc][j, k][1 -2; 3 6] *
+#                                                         f1[-1; 4 2 1] *
+#                                                         conj(f2[-4; 8 7 6]) * τ[5 2; 7 3] *
+#                                                         τ[-3 4; 8 5]
+#         end
+#     end
+#
+#     # make the starter
+#     starter = convert(Array{Union{T,E},2}, fill(zero(E), χ´, χ´))
+#     for (j, k) in keys(H[1])
+#
+#         #apply (j,k) above
+#         if j == 1
+#             f1 = fusers[1][1, end, end]
+#             f2 = fusers[2][k, end, end]
+#             j′ = indmap[k, H.odim, H.odim]
+#             @plansor starter[1, j′][-1 -2; -3 -4] := H[1][j, k][-1 -2; -3 2] *
+#                                                      conj(f2[-4; 2 3 3])
+#         end
+#
+#         #apply (j,k) below
+#         if j > 1 && j < H.odim
+#             f1 = fusers[1][1, j, j]
+#             f2 = fusers[2][1, j, k]
+#
+#             @plansor starter[1, indmap[1, j, k]][-1 -2; -3 -4] := H[1][j, k][4 -2; 3 1] *
+#                                                                   conj(f2[-4; 6 2 1]) *
+#                                                                   τ[5 4; 2 3] *
+#                                                                   τ[-3 -1; 6 5]
+#         end
+#     end
+#     starter[1, 1] = one(E)
+#     starter[end, end] = one(E)
+#
+#     # make the ender
+#     ender = convert(Array{Union{T,E},2}, fill(zero(E), χ´, χ´))
+#     for (j, k) in keys(H[H.period])
+#         if k > 1
+#             f1 = fusers[end][j, k, H.odim]
+#             k′ = indmap[j, k, H.odim]
+#             @plansor ender[k′, end][-1 -2; -3 -4] := f1[-1; 1 2 6] *
+#                                                      H[H.period][j, k][1 3; -3 4] *
+#                                                      τ[3 2; 4 5] * τ[5 6; -4 -2]
+#         end
+#     end
+#     ender[1, 1] = one(E)
+#     ender[end, end] = one(E)
+#
+#     # fill in the entire H
+#     nos = convert(Array{Union{T,E},3}, fill(zero(E), len, χ´, χ´))
+#     nos[1, :, :] = starter[:, :]
+#     nos[end, :, :] = ender[:, :]
+#
+#     for i in 2:(len - 1)
+#         nos[i, :, :] = bulk[i, :, :]
+#     end
+#
+#     return MPOHamiltonian(nos)
+# end
 
 #impose periodic boundary conditions on a normal mpo
-function periodic_boundary_conditions(mpo::DenseMPO{O}, len=length(mpo)) where {O}
-    mod(len, length(mpo)) == 0 || throw(ArgumentError("len not a multiple of unitcell"))
+"""
+    periodic_boundary_conditions(mpo::AbstractInfiniteMPO, L::Int)
 
-    output = PeriodicArray{O,1}(undef, len)
+Convert an infinite MPO into a finite MPO of length `L`, by mapping periodic boundary conditions onto an open system.
+"""
+function periodic_boundary_conditions(mpo::Union{InfiniteMPO{O},DenseMPO{O}},
+                                      L=length(mpo)) where {O}
+    mod(L, length(mpo)) == 0 ||
+        throw(ArgumentError("length $L is not a multiple of the infinite unitcell"))
 
-    sp = _firstspace(mpo[1])'
-    utleg = fill_data!(similar(mpo[1], oneunit(sp)), one)
+    # allocate output
+    output = Vector{O}(undef, L)
+    V_wrap = left_virtualspace(mpo, 1)'
+    ST = storagetype(O)
 
-    #do the bulk
-    for j in 2:(len - 1)
-        f1 = isomorphism(storagetype(O), fuse(sp * _firstspace(mpo[j])),
-                         sp * _firstspace(mpo[j]))
-        f2 = isomorphism(storagetype(O), fuse(sp * _lastspace(mpo[j])'),
-                         sp * _lastspace(mpo[j])')
+    util = fill!(Tensor{scalartype(O)}(undef, oneunit(V_wrap)), one(scalartype(O)))
+    @plansor cup[-1; -2 -3] := id(ST, V_wrap)[-3; -2] * util[-1]
 
-        @plansor output[j][-1 -2; -3 -4] := mpo[j][2 -2; 3 5] * f1[-1; 1 2] *
-                                            conj(f2[-4; 4 5]) * τ[-3 1; 4 3]
+    local F_right
+    for i in 1:L
+        V_left = i == 1 ? oneunit(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
+        V_right = i == L ? oneunit(V_wrap) : fuse(V_wrap' ⊗ right_virtualspace(mpo, i)')
+        output[i] = similar(mpo[i],
+                            V_left * physicalspace(mpo, i) ←
+                            physicalspace(mpo, i) * V_right)
+        F_left = i == 1 ? cup : F_right
+        F_right = i == L ? cup :
+                  isomorphism(ST, V_right ← V_wrap * right_virtualspace(mpo, i)')
+        @plansor output[i][-1 -2; -3 -4] = F_left[-1; 1 2] *
+                                           τ[-3 1; 4 3] *
+                                           mpo[i][2 -2; 3 5] *
+                                           conj(F_right[-4; 4 5])
     end
 
-    #do the left
-    f2 = isomorphism(storagetype(O), fuse(sp * _lastspace(mpo[1])'),
-                     sp * _lastspace(mpo[1])')
-    @plansor output[1][-1 -2; -3 -4] := mpo[1][1 -2; 3 5] * conj(f2[-4; 4 5]) *
-                                        τ[-3 1; 4 3] * utleg[-1]
-
-    #do the right
-    f2 = isomorphism(storagetype(O), fuse(sp * _firstspace(mpo[len])),
-                     sp * _firstspace(mpo[len]))
-    @plansor output[end][-1 -2; -3 -4] := mpo[len][2 -2; 3 4] * f2[-1; 1 2] * τ[-3 1; 4 3] *
-                                          conj(utleg[-4])
-
-    return DenseMPO(output)
+    return mpo isa DenseMPO ? DenseMPO(output) : FiniteMPO(output)
 end
