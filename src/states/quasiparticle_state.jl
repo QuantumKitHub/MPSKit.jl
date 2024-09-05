@@ -170,9 +170,15 @@ function Base.convert(::Type{LeftGaugedQP},
 end
 
 # gauge independent code
-const QP{S,T1,T2} = Union{LeftGaugedQP{S,T1,T2},RightGaugedQP{S,T1,T2}} where {S,T1,T2}
-const FiniteQP{S,T1,T2} = QP{S,T1,T2} where {S<:FiniteMPS}
-const InfiniteQP{S,T1,T2} = QP{S,T1,T2} where {S<:InfiniteMPS}
+const QP{S,T1,T2} = Union{LeftGaugedQP{S,T1,T2},RightGaugedQP{S,T1,T2}}
+const FiniteQP{S<:FiniteMPS,T1,T2} = QP{S,T1,T2}
+const InfiniteQP{S<:InfiniteMPS,T1,T2} = QP{S,T1,T2}
+
+left_virtualspace(state::QP, i::Int) = space(state.Xs[mod1(i, end)], 1)
+function right_virtualspace(state::QP, i::Int)
+    return space(state.Xs[mod1(i, end)], numind(state.Xs[mod1(i, end)]))
+end
+auxiliaryspace(state::QP) = space(state.Xs[1], 2)
 
 utilleg(v::QP) = space(v.Xs[1], 2)
 Base.copy(a::QP) = copy!(similar(a), a)
