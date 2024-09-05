@@ -11,21 +11,28 @@ using MPSKit
 using TensorKit
 using TensorKit: ℙ
 
+verbosity_full = 5
+verbosity_conv = 1
+
 @testset "FiniteMPS groundstate" verbose = true begin
     tol = 1e-8
     g = 4.0
     D = 6
+    L = 10
 
-    H = force_planar(transverse_field_ising(; g))
+    H = force_planar(transverse_field_ising(; g, L))
 
     @testset "DMRG" begin
-        ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^D)
         v₀ = variance(ψ₀, H)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ₀, H, DMRG(; verbosity=5, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ₀, H,
+                                      DMRG(; verbosity=verbosity_full, maxiter=2))
 
-        ψ, envs, δ = find_groundstate(ψ, H, DMRG(; verbosity=1, maxiter=10), envs)
+        ψ, envs, δ = find_groundstate(ψ, H,
+                                      DMRG(; verbosity=verbosity_conv, maxiter=10),
+                                      envs)
         v = variance(ψ, H)
 
         # test using low variance
@@ -39,10 +46,11 @@ using TensorKit: ℙ
 
         # test logging
         ψ, envs, δ = find_groundstate(ψ₀, H,
-                                      DMRG2(; verbosity=5, maxiter=2, trscheme=truncdim(D)))
+                                      DMRG2(; verbosity=verbosity_full, maxiter=2,
+                                            trscheme=truncdim(D)))
 
         ψ, envs, δ = find_groundstate(ψ, H,
-                                      DMRG2(; verbosity=1, maxiter=10,
+                                      DMRG2(; verbosity=verbosity_conv, maxiter=10,
                                             trscheme=truncdim(D)), envs)
         v = variance(ψ, H)
 
@@ -56,9 +64,13 @@ using TensorKit: ℙ
         v₀ = variance(ψ₀, H)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ₀, H, GradientGrassmann(; verbosity=5, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ₀, H,
+                                      GradientGrassmann(; verbosity=verbosity_full,
+                                                        maxiter=2))
 
-        ψ, envs, δ = find_groundstate(ψ, H, GradientGrassmann(; verbosity=1, maxiter=50),
+        ψ, envs, δ = find_groundstate(ψ, H,
+                                      GradientGrassmann(; verbosity=verbosity_conv,
+                                                        maxiter=50),
                                       envs)
         v = variance(ψ, H)
 
@@ -72,6 +84,7 @@ end
     tol = 1e-8
     g = 4.0
     D = 6
+    D2 = 8
     H = force_planar(transverse_field_ising(; g))
 
     @testset "VUMPS" begin
@@ -79,9 +92,10 @@ end
         v₀ = variance(ψ₀, H)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ₀, H, VUMPS(; tol, verbosity=5, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ₀, H,
+                                      VUMPS(; tol, verbosity=verbosity_full, maxiter=2))
 
-        ψ, envs, δ = find_groundstate(ψ, H, VUMPS(; tol, verbosity=1))
+        ψ, envs, δ = find_groundstate(ψ, H, VUMPS(; tol, verbosity=verbosity_conv))
         v = variance(ψ, H, envs)
 
         # test using low variance
@@ -95,9 +109,11 @@ end
         v₀ = variance(ψ₀, H)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ₀, H, IDMRG1(; tol, verbosity=5, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ₀, H,
+                                      IDMRG1(; tol, verbosity=verbosity_full,
+                                             maxiter=2))
 
-        ψ, envs, δ = find_groundstate(ψ, H, IDMRG1(; tol, verbosity=1))
+        ψ, envs, δ = find_groundstate(ψ, H, IDMRG1(; tol, verbosity=verbosity_conv))
         v = variance(ψ, H, envs)
 
         # test using low variance
@@ -113,11 +129,12 @@ end
 
         # test logging
         ψ, envs, δ = find_groundstate(ψ₀, H2,
-                                      IDMRG2(; tol, verbosity=5, maxiter=2,
-                                             trscheme=truncdim(12)))
+                                      IDMRG2(; tol, verbosity=verbosity_full, maxiter=2,
+                                             trscheme=truncdim(D2)))
 
         ψ, envs, δ = find_groundstate(ψ, H2,
-                                      IDMRG2(; tol, verbosity=1, trscheme=truncdim(12)))
+                                      IDMRG2(; tol, verbosity=verbosity_full,
+                                             trscheme=truncdim(D2)))
         v = variance(ψ, H2, envs)
 
         # test using low variance
@@ -132,9 +149,12 @@ end
 
         # test logging
         ψ, envs, δ = find_groundstate(ψ₀, H,
-                                      GradientGrassmann(; tol, verbosity=5, maxiter=2))
+                                      GradientGrassmann(; tol, verbosity=verbosity_full,
+                                                        maxiter=2))
 
-        ψ, envs, δ = find_groundstate(ψ, H, GradientGrassmann(; tol, verbosity=1))
+        ψ, envs, δ = find_groundstate(ψ, H,
+                                      GradientGrassmann(; tol,
+                                                        verbosity=verbosity_conv))
         v = variance(ψ, H, envs)
 
         # test using low variance
@@ -147,8 +167,8 @@ end
         ψ₀ = InfiniteMPS(ℙ^2, ℙ^D)
         v₀ = variance(ψ₀, H)
 
-        alg = VUMPS(; tol=100 * tol, verbosity=1, maxiter=10) &
-              GradientGrassmann(; tol, verbosity=1, maxiter=50)
+        alg = VUMPS(; tol=100 * tol, verbosity=verbosity_conv, maxiter=10) &
+              GradientGrassmann(; tol, verbosity=verbosity_conv, maxiter=50)
         ψ, envs, δ = find_groundstate(ψ₀, H, alg)
 
         v = variance(ψ, H, envs)
@@ -164,11 +184,17 @@ end
     tol = 1e-8
     D = 15
     atol = 1e-2
+    L = 10
 
     # test using XXZ model, Δ > 1 is gapped
     spin = 1
     local_operators = [S_xx(; spin), S_yy(; spin), 0.7 * S_zz(; spin)]
-    mpo_hamiltonians = MPOHamiltonian.(local_operators)
+    Pspace = space(local_operators[1], 1)
+    lattice = fill(Pspace, L)
+
+    mpo_hamiltonians = map(local_operators) do O
+        return FiniteMPOHamiltonian(lattice, (i, i + 1) => O for i in 1:(L - 1))
+    end
 
     H_lazy = LazySum(mpo_hamiltonians)
     H = sum(H_lazy)
@@ -223,8 +249,12 @@ end
 
     # test using XXZ model, Δ > 1 is gapped
     spin = 1
-    local_operators = [S_xx(; spin), S_yy(; spin), (0.7) * S_zz(; spin)]
-    mpo_hamiltonians = MPOHamiltonian.(local_operators)
+    local_operators = [S_xx(; spin), S_yy(; spin), S_zz(; spin)]
+    Pspace = space(local_operators[1], 1)
+    lattice = PeriodicVector([Pspace])
+    mpo_hamiltonians = map(local_operators) do O
+        return InfiniteMPOHamiltonian(lattice, (1, 2) => O)
+    end
 
     H_lazy = LazySum(mpo_hamiltonians)
     H = sum(H_lazy)
@@ -288,9 +318,10 @@ end
 @testset "timestep" verbose = true begin
     dt = 0.1
     algs = [TDVP(), TDVP2()]
+    L = 10
 
-    H = force_planar(heisenberg_XXX(; spin=1 // 2))
-    ψ₀ = FiniteMPS(5, ℙ^2, ℙ^1)
+    H = force_planar(heisenberg_XXX(; spin=1 // 2, L))
+    ψ₀ = FiniteMPS(L, ℙ^2, ℙ^1)
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
@@ -329,7 +360,7 @@ end
         @test E₀ ≈ E atol = 1e-2
     end
 
-    Hlazy = LazySum([3 * H, 1.55 * H, -0.1 * H])
+    Hlazy = LazySum([3 * deepcopy(H), 1.55 * deepcopy(H), -0.1 * deepcopy(H)])
 
     @testset "Infinite LazySum TDVP" begin
         ψ, envs = timestep(ψ₀, Hlazy, 0.0, dt, TDVP())
@@ -353,8 +384,9 @@ end
     t_span = 0:0.1:0.1
     algs = [TDVP(), TDVP2()]
 
-    H = force_planar(heisenberg_XXX(; spin=1 // 2))
-    ψ₀ = FiniteMPS(5, ℙ^2, ℙ^1)
+    L = 10
+    H = force_planar(heisenberg_XXX(; spin=1 // 2, L))
+    ψ₀ = FiniteMPS(L, ℙ^2, ℙ^1)
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
@@ -412,15 +444,16 @@ end
 
     @testset "finite" begin
         verbosity = 0
-        H = force_planar(transverse_field_ising())
-        ψ = InfiniteMPS([ℙ^2], [ℙ^10])
-        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbosity, tol=1e-9)
-        energies, ϕs = excitations(H, QuasiparticleAnsatz(), 0.0, ψ, envs)
+        H_inf = force_planar(transverse_field_ising())
+        ψ_inf = InfiniteMPS([ℙ^2], [ℙ^10])
+        ψ_inf, envs, _ = find_groundstate(ψ_inf, H_inf; maxiter=400, verbosity, tol=1e-9)
+        energies, ϕs = excitations(H_inf, QuasiparticleAnsatz(), 0.0, ψ_inf, envs)
         inf_en = energies[1]
 
         fin_en = map([20, 10]) do len
+            H = force_planar(transverse_field_ising(; L=len))
             ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^15)
-            (ψ, envs, _) = find_groundstate(ψ, H; verbosity)
+            ψ, envs, = find_groundstate(ψ, H; verbosity)
 
             #find energy with quasiparticle ansatz
             energies_QP, ϕs = excitations(H, QuasiparticleAnsatz(), ψ, envs)
@@ -454,11 +487,11 @@ end
         #random nn interaction
         nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
-        H = MPOHamiltonian(nn)
+        H = InfiniteMPOHamiltonian(PeriodicVector(fill(pspace, 1)), (1, 2) => nn)
         Δt = 0.1
         expH = make_time_mpo(H, Δt, WII())
 
-        O = convert(DenseMPO, expH)
+        O = convert(InfiniteMPO, expH)
         Op = periodic_boundary_conditions(O, 10)
         Op′ = changebonds(Op, SvdCut(; trscheme=truncdim(5)))
 
@@ -469,7 +502,7 @@ end
         #random nn interaction
         nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
-
+        H = InfiniteMPOHamiltonian(PeriodicVector(fill(pspace, 1)), (1, 2) => nn)
         state = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
 
         state_re = changebonds(state,
@@ -477,13 +510,13 @@ end
         @test dot(state, state_re) ≈ 1 atol = 1e-8
 
         state_oe, _ = changebonds(state,
-                                  repeat(MPOHamiltonian(nn), 2),
+                                  repeat(H, 2),
                                   OptimalExpand(;
                                                 trscheme=truncdim(dim(Dspace) *
                                                                   dim(Dspace))))
         @test dot(state, state_oe) ≈ 1 atol = 1e-8
 
-        state_vs, _ = changebonds(state, repeat(MPOHamiltonian(nn), 2),
+        state_vs, _ = changebonds(state, repeat(H, 2),
                                   VUMPSSvdCut(; trscheme=notrunc()))
         @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
 
@@ -493,16 +526,18 @@ end
 
     @testset "finite mps" begin
         #random nn interaction
+        L = 10
         nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
+        H = FiniteMPOHamiltonian(fill(pspace, L), (i, i + 1) => nn for i in 1:(L - 1))
 
-        state = FiniteMPS(10, pspace, Dspace)
+        state = FiniteMPS(L, pspace, Dspace)
 
         state_re = changebonds(state,
                                RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
         @test dot(state, state_re) ≈ 1 atol = 1e-8
 
-        state_oe, _ = changebonds(state, MPOHamiltonian(nn),
+        state_oe, _ = changebonds(state, H,
                                   OptimalExpand(;
                                                 trscheme=truncdim(dim(Dspace) * dim(Dspace))))
         @test dot(state, state_oe) ≈ 1 atol = 1e-8
@@ -566,8 +601,8 @@ end
     X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
     Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
 
-    H_X = MPOHamiltonian(X)
-    H_ZZ = MPOHamiltonian(Z ⊗ Z)
+    H_X = InfiniteMPOHamiltonian(X)
+    H_ZZ = InfiniteMPOHamiltonian(Z ⊗ Z)
 
     hamiltonian(λ) = H_ZZ + λ * H_X
     analytical_susceptibility(λ) = abs(1 / (16 * λ^2 * (λ^2 - 1)))
@@ -633,7 +668,7 @@ end
         H = force_planar(repeat(transverse_field_ising(; g=4), 2))
 
         dt = 1e-3
-        sW1 = make_time_mpo(H, dt, TaylorCluster{3}())
+        sW1 = make_time_mpo(H, dt, TaylorCluster(; N=3))
         sW2 = make_time_mpo(H, dt, WII())
         W1 = convert(DenseMPO, sW1)
         W2 = convert(DenseMPO, sW2)

@@ -101,10 +101,11 @@ end
                               for I in eachindex(IndexCartesian(), square)
                               if I[1] < size(square, 1))
     operators = merge(local_operators, vertical_operators)
-    H4 = MPOHamiltonian(grid, operators)
+    H4 = FiniteMPOHamiltonian(grid, operators)
 
     @test H4 ≈
-          MPOHamiltonian(grid, local_operators) + MPOHamiltonian(grid, vertical_operators)
+          FiniteMPOHamiltonian(grid, local_operators) +
+          FiniteMPOHamiltonian(grid, vertical_operators)
 end
 
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
