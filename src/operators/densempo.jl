@@ -4,58 +4,93 @@
 
 Matrix Product Operator (MPO) acting on a finite tensor product space with a linear order.
 """
-struct FiniteMPO{O<:MPOTensor}
-    opp::Vector{O}
-    function FiniteMPO(Os::Vector{O}) where {O<:MPOTensor}
-        for i in eachindex(Os)[1:(end - 1)]
-            dual(right_virtualspace(Os[i])) == left_virtualspace(Os[i + 1]) ||
-                throw(SpaceMismatch("umatching virtual spaces at site $i"))
-        end
-        return FiniteMPO{O}(Os)
+struct FiniteMPO{O<:MPOTensor} <: AbstractMPO{O}
+    data::Vector{O}
+    function FiniteMPO{O}(::UndefInitializer, dims) where {O<:MPOTensor}
+        return FiniteMPO{O}(Vector{O}(undef, dims))
     end
     function FiniteMPO{O}(Os::Vector{O}) where {O<:MPOTensor}
         return new{O}(Os)
     end
 end
+function FiniteMPO(Os::Vector{O}) where {O<:MPOTensor}
+    for i in eachindex(Os)[1:(end - 1)]
+        dual(right_virtualspace(Os[i])) == left_virtualspace(Os[i + 1]) ||
+            throw(SpaceMismatch("unmatching virtual spaces at site $i"))
+    end
+    return FiniteMPO{O}(Os)
+end
+
 function FiniteMPO(O::AbstractTensorMap{T,S,N,N}) where {T,S,N}
     return FiniteMPO(decompose_localmpo(add_util_leg(O)))
 end
 
-# Properties
-# ----------
-left_virtualspace(mpo::FiniteMPO, i) = left_virtualspace(mpo[i])
-right_virtualspace(mpo::FiniteMPO, i) = right_virtualspace(mpo[i])
-physicalspace(mpo::FiniteMPO, i) = physicalspace(mpo[i])
+"""
+    InfiniteMPO(Os::PeriodicVector{<:MPOTensor}) -> InfiniteMPO
+
+Matrix Product Operator (MPO) acting on an infinite tensor product space with a linear order.
+"""
+struct InfiniteMPO{O<:MPOTensor} <: AbstractMPO{O}
+    data::PeriodicVector{O}
+    function InfiniteMPO{O}(::UndefInitializer, dims) where {O<:MPOTensor}
+        return InfiniteMPO{O}(PeriodicVector{O}(undef, dims))
+    end
+    function InfiniteMPO{O}(Os::PeriodicVector{O}) where {O<:MPOTensor}
+        return new{O}(Os)
+    end
+end
+function InfiniteMPO(Os::PeriodicVector{O}) where {O<:MPOTensor}
+    for i in eachindex(Os)
+        dual(right_virtualspace(Os[i])) == left_virtualspace(Os[1]) ||
+            throw(SpaceMismatch("umatching virtual spaces at site $i"))
+    end
+    return InfiniteMPO{O}(Os)
+end
+InfiniteMPO(Os::AbstractVector{<:MPOTensor}) = InfiniteMPO(PeriodicVector(Os))
+
+const InfOrFinMPO{O} = Union{FiniteMPO{O},InfiniteMPO{O}}
 
 # Utility
 # -------
-Base.copy(mpo::FiniteMPO) = FiniteMPO(map(copy, mpo.opp))
+Base.parent(mpo::InfOrFinMPO) = mpo.data
+Base.copy(mpo::FiniteMPO) = FiniteMPO(map(copy, parent(mpo)))
+Base.copy(mpo::InfiniteMPO) = InfiniteMPO(map(copy, parent(mpo)))
 
-# AbstractVector
-# --------------
-Base.length(t::FiniteMPO) = length(t.opp)
-Base.size(t::FiniteMPO) = (length(t),)
-
-Base.eltype(::FiniteMPO{O}) where {O} = O
-Base.eltype(::Type{FiniteMPO{O}}) where {O} = O
-
-Base.firstindex(mpo::FiniteMPO) = firstindex(mpo.opp)
-Base.lastindex(mpo::FiniteMPO) = lastindex(mpo.opp)
-
-Base.getindex(t::FiniteMPO, i) = getindex(t.opp, i)
-function Base.setindex!(t::FiniteMPO{O}, v::O, i::Int) where {O}
-    @boundscheck begin
-        checkbounds(t.opp, i)
-        left_virtualspace(v) == left_virtualspace(t, i) &&
-            right_virtualspace(v) == right_virtualspace(t, i) ||
-            throw(SpaceMismatch("umatching virtual spaces at site $i"))
-    end
-    @inbounds t.opp[i] = v
-    return t
+function Base.similar(::FiniteMPO, ::Type{O}, L::Int) where {O<:MPOTensor}
+    return FiniteMPO{O}(undef, L)
+end
+function Base.similar(::InfiniteMPO, ::Type{O}, L::Int) where {O<:MPOTensor}
+    return InfiniteMPO{O}(undef, L)
 end
 
-function Base.similar(mpo::FiniteMPO, ::Type{O}, L::Int=length(mpo)) where {O}
-    return FiniteMPO{O}(similar(mpo.opp, O, L))
+Base.repeat(mpo::FiniteMPO, n::Int) = FiniteMPO(repeat(parent(mpo), n))
+Base.repeat(mpo::InfiniteMPO, n::Int) = InfiniteMPO(repeat(parent(mpo), n))
+
+function remove_orphans!(mpo::SparseMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
+    # drop zeros
+    for slice in parent(mpo)
+        for (k, v) in nonzero_pairs(slice)
+            norm(v) < tol && delete!(slice, k)
+        end
+    end
+
+    # drop dead starts/ends
+    changed = true
+    while changed
+        changed = false
+        for i in 1:length(mpo)
+            # slice empty columns on right or empty rows on left
+            mask = filter(1:size(mpo[i], 4)) do j
+                return j ∈ getindex.(nonzero_keys(mpo[i]), 1) ||
+                       j ∈ getindex.(nonzero_keys(mpo[i + 1]), 4)
+            end
+            changed |= length(mask) == size(mpo[i], 4)
+            mpo[i] = mpo[i][:, :, :, mask]
+            mpo[i + 1] = mpo[i + 1][mask, :, :, :]
+        end
+    end
+
+    return mpo
 end
 
 # Converters
@@ -268,6 +303,17 @@ function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO, ket::FiniteMPS{T}) whe
     return @plansor ρ_left[3 4; 1] * ket.CR[Nhalf][1; 5] * ρ_right[5 4; 2] *
                     conj(ket.CR[Nhalf][3; 2])
 end
+function TensorKit.dot(bra::InfiniteMPS, mpo::InfiniteMPO, ket::InfiniteMPS;
+                       ishermitian=false, krylovdim=30, kwargs...)
+    ρ₀ = similar(bra.AL[1],
+                 left_virtualspace(bra, 1) * left_virtualspace(mpo, 1) ←
+                 left_virtualspace(ket, 1))
+    randomize!(ρ₀)
+
+    val, = fixedpoint(TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM; ishermitian,
+                      krylovdim, kwargs...)
+    return val
+end
 
 function TensorKit.dot(mpo₁::FiniteMPO, mpo₂::FiniteMPO)
     length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
@@ -306,97 +352,97 @@ end
 "
     Represents a dense periodic mpo
 "
-struct DenseMPO{O<:MPOTensor}
-    opp::PeriodicArray{O,1}
-end
+# struct DenseMPO{O<:MPOTensor}
+#     opp::PeriodicArray{O,1}
+# end
 
-DenseMPO(t::AbstractTensorMap) = DenseMPO(fill(t, 1));
-DenseMPO(t::AbstractArray{T,1}) where {T<:MPOTensor} = DenseMPO(PeriodicArray(t));
-Base.length(t::DenseMPO) = length(t.opp);
-Base.size(t::DenseMPO) = (length(t),)
-Base.repeat(t::DenseMPO, n) = DenseMPO(repeat(t.opp, n));
-Base.getindex(t::DenseMPO, i) = getindex(t.opp, i);
-Base.eltype(::DenseMPO{O}) where {O} = O
-VectorInterface.scalartype(::DenseMPO{O}) where {O} = scalartype(O)
-Base.iterate(t::DenseMPO, i=1) = (i > length(t.opp)) ? nothing : (t[i], i + 1);
-TensorKit.space(t::DenseMPO, i) = space(t.opp[i], 2)
-function Base.convert(::Type{InfiniteMPS}, mpo::DenseMPO)
-    return InfiniteMPS(map(mpo.opp) do t
-                           @plansor tt[-1 -2 -3; -4] := t[-1 -2; 1 2] * τ[1 2; -4 -3]
-                       end)
-end
-
-function Base.convert(::Type{DenseMPO}, mps::InfiniteMPS)
-    return DenseMPO(map(mps.AL) do t
-                        @plansor tt[-1 -2; -3 -4] := t[-1 -2 1; 2] * τ[-3 2; -4 1]
-                    end)
-end
-
-#naively apply the mpo to the mps
-function Base.:*(mpo::DenseMPO, st::InfiniteMPS)
-    length(st) == length(mpo) || throw(ArgumentError("dimension mismatch"))
-
-    fusers = PeriodicArray(map(zip(st.AL, mpo)) do (al, mp)
-                               return isometry(fuse(_firstspace(al), _firstspace(mp)),
-                                               _firstspace(al) * _firstspace(mp))
-                           end)
-
-    return InfiniteMPS(map(1:length(st)) do i
-                           @plansor t[-1 -2; -3] := st.AL[i][1 2; 3] *
-                                                    mpo[i][4 -2; 2 5] *
-                                                    fusers[i][-1; 1 4] *
-                                                    conj(fusers[i + 1][-3; 3 5])
-                       end)
-end
-function Base.:*(mpo::DenseMPO, st::FiniteMPS)
-    mod(length(mpo), length(st)) == 0 || throw(ArgumentError("dimension mismatch"))
-
-    tensors = [st.AC[1]; st.AR[2:end]]
-    mpot = mpo[1:length(st)]
-
-    fusers = map(zip(tensors, mpot)) do (al, mp)
-        return isometry(fuse(_firstspace(al), _firstspace(mp)),
-                        _firstspace(al) * _firstspace(mp))
-    end
-
-    push!(fusers,
-          isometry(fuse(_lastspace(tensors[end])', _lastspace(mpot[end])'),
-                   _lastspace(tensors[end])' * _lastspace(mpot[end])'))
-
-    (_firstspace(mpot[1]) == oneunit(_firstspace(mpot[1])) &&
-     _lastspace(mpot[end])' == _firstspace(mpot[1])) ||
-        @warn "mpo does not start/end with a trivial leg"
-
-    return FiniteMPS(map(1:length(st)) do i
-                         @plansor t[-1 -2; -3] := tensors[i][1 2; 3] *
-                                                  mpot[i][4 -2; 2 5] *
-                                                  fusers[i][-1; 1 4] *
-                                                  conj(fusers[i + 1][-3; 3 5])
-                     end)
-end
-
-function Base.:*(mpo1::DenseMPO, mpo2::DenseMPO)
-    length(mpo1) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
-
-    fusers = PeriodicArray(map(zip(mpo2.opp, mpo1.opp)) do (mp1, mp2)
-                               return isometry(fuse(_firstspace(mp1), _firstspace(mp2)),
-                                               _firstspace(mp1) * _firstspace(mp2))
-                           end)
-
-    return DenseMPO(map(1:length(mpo1)) do i
-                        @plansor t[-1 -2; -3 -4] := mpo2[i][1 2; -3 3] *
-                                                    mpo1[i][4 -2; 2 5] *
-                                                    fusers[i][-1; 1 4] *
-                                                    conj(fusers[i + 1][-4; 3 5])
-                    end)
-end
-
-function TensorKit.dot(a::InfiniteMPS, mpo::DenseMPO, b::InfiniteMPS; krylovdim=30)
-    init = similar(a.AL[1],
-                   _firstspace(b.AL[1]) * _firstspace(mpo.opp[1]) ← _firstspace(a.AL[1]))
-    randomize!(init)
-
-    val, = fixedpoint(TransferMatrix(b.AL, mpo.opp, a.AL), init, :LM,
-                      Arnoldi(; krylovdim=krylovdim))
-    return val
-end
+# DenseMPO(t::AbstractTensorMap) = DenseMPO(fill(t, 1));
+# DenseMPO(t::AbstractArray{T,1}) where {T<:MPOTensor} = DenseMPO(PeriodicArray(t));
+# Base.length(t::DenseMPO) = length(t.opp)
+# Base.size(t::DenseMPO) = (length(t),)
+# Base.repeat(t::DenseMPO, n) = DenseMPO(repeat(t.opp, n));
+# Base.getindex(t::DenseMPO, i) = getindex(t.opp, i);
+# Base.eltype(::DenseMPO{O}) where {O} = O
+# VectorInterface.scalartype(::DenseMPO{O}) where {O} = scalartype(O)
+# Base.iterate(t::DenseMPO, i=1) = (i > length(t.opp)) ? nothing : (t[i], i + 1);
+# TensorKit.space(t::DenseMPO, i) = space(t.opp[i], 2)
+# function Base.convert(::Type{InfiniteMPS}, mpo::DenseMPO)
+#     return InfiniteMPS(map(mpo.opp) do t
+#                            @plansor tt[-1 -2 -3; -4] := t[-1 -2; 1 2] * τ[1 2; -4 -3]
+#                        end)
+# end
+#
+# function Base.convert(::Type{DenseMPO}, mps::InfiniteMPS)
+#     return DenseMPO(map(mps.AL) do t
+#                         @plansor tt[-1 -2; -3 -4] := t[-1 -2 1; 2] * τ[-3 2; -4 1]
+#                     end)
+# end
+#
+# #naively apply the mpo to the mps
+# function Base.:*(mpo::DenseMPO, st::InfiniteMPS)
+#     length(st) == length(mpo) || throw(ArgumentError("dimension mismatch"))
+#
+#     fusers = PeriodicArray(map(zip(st.AL, mpo)) do (al, mp)
+#                                return isometry(fuse(_firstspace(al), _firstspace(mp)),
+#                                                _firstspace(al) * _firstspace(mp))
+#                            end)
+#
+#     return InfiniteMPS(map(1:length(st)) do i
+#                            @plansor t[-1 -2; -3] := st.AL[i][1 2; 3] *
+#                                                     mpo[i][4 -2; 2 5] *
+#                                                     fusers[i][-1; 1 4] *
+#                                                     conj(fusers[i + 1][-3; 3 5])
+#                        end)
+# end
+# function Base.:*(mpo::DenseMPO, st::FiniteMPS)
+#     mod(length(mpo), length(st)) == 0 || throw(ArgumentError("dimension mismatch"))
+#
+#     tensors = [st.AC[1]; st.AR[2:end]]
+#     mpot = mpo[1:length(st)]
+#
+#     fusers = map(zip(tensors, mpot)) do (al, mp)
+#         return isometry(fuse(_firstspace(al), _firstspace(mp)),
+#                         _firstspace(al) * _firstspace(mp))
+#     end
+#
+#     push!(fusers,
+#           isometry(fuse(_lastspace(tensors[end])', _lastspace(mpot[end])'),
+#                    _lastspace(tensors[end])' * _lastspace(mpot[end])'))
+#
+#     (_firstspace(mpot[1]) == oneunit(_firstspace(mpot[1])) &&
+#      _lastspace(mpot[end])' == _firstspace(mpot[1])) ||
+#         @warn "mpo does not start/end with a trivial leg"
+#
+#     return FiniteMPS(map(1:length(st)) do i
+#                          @plansor t[-1 -2; -3] := tensors[i][1 2; 3] *
+#                                                   mpot[i][4 -2; 2 5] *
+#                                                   fusers[i][-1; 1 4] *
+#                                                   conj(fusers[i + 1][-3; 3 5])
+#                      end)
+# end
+#
+# function Base.:*(mpo1::DenseMPO, mpo2::DenseMPO)
+#     length(mpo1) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
+#
+#     fusers = PeriodicArray(map(zip(mpo2.opp, mpo1.opp)) do (mp1, mp2)
+#                                return isometry(fuse(_firstspace(mp1), _firstspace(mp2)),
+#                                                _firstspace(mp1) * _firstspace(mp2))
+#                            end)
+#
+#     return DenseMPO(map(1:length(mpo1)) do i
+#                         @plansor t[-1 -2; -3 -4] := mpo2[i][1 2; -3 3] *
+#                                                     mpo1[i][4 -2; 2 5] *
+#                                                     fusers[i][-1; 1 4] *
+#                                                     conj(fusers[i + 1][-4; 3 5])
+#                     end)
+# end
+#
+# function TensorKit.dot(a::InfiniteMPS, mpo::DenseMPO, b::InfiniteMPS; krylovdim=30)
+#     init = similar(a.AL[1],
+#                    _firstspace(b.AL[1]) * _firstspace(mpo.opp[1]) ← _firstspace(a.AL[1]))
+#     randomize!(init)
+#
+#     val, = fixedpoint(TransferMatrix(b.AL, mpo.opp, a.AL), init, :LM,
+#                       Arnoldi(; krylovdim=krylovdim))
+#     return val
+# end

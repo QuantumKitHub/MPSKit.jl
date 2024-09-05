@@ -32,7 +32,9 @@ export entanglementplot, transferplot
 
 # hamiltonian things
 export Cache
-export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, FiniteMPO, FiniteMPOHamiltonian
+export SparseMPO, DenseMPO, MPOMultiline
+export AbstractMPO, FiniteMPO, InfiniteMPO
+export AbstractHMPO, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, HMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
@@ -60,7 +62,7 @@ export transfer_left, transfer_right
 
 @deprecate virtualspace left_virtualspace # there is a possible ambiguity when C isn't square, necessitating specifying left or right virtualspace
 @deprecate params(args...) environments(args...)
-@deprecate InfiniteMPO(args...) DenseMPO(args...)
+# @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
 # Abstract type defs
 abstract type Algorithm end
@@ -93,9 +95,10 @@ include("states/orthoview.jl")
 include("states/quasiparticle_state.jl")
 include("states/ortho.jl")
 
+include("operators/abstractmpo.jl")
 include("operators/densempo.jl")
-include("operators/sparsempo/sparseslice.jl")
-include("operators/sparsempo/sparsempo.jl")
+# include("operators/sparsempo/sparseslice.jl")
+# include("operators/sparsempo/sparsempo.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")

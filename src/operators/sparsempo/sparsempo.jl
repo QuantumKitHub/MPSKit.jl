@@ -3,11 +3,11 @@
     
 Sparse MPO, used to represent both time evolution MPOs and hamiltonians.
 """
-struct SparseMPO{S,T<:MPOTensor,E<:Number} <: AbstractVector{SparseMPOSlice{S,T,E}}
-    Os::PeriodicArray{Union{E,T},3}
-    domspaces::PeriodicArray{S,2}
-    pspaces::PeriodicArray{S,1}
-end
+# struct SparseMPO{S,T<:MPOTensor,E<:Number} <: AbstractMPO{SparseMPOSlice{S,T,E}}
+#     Os::PeriodicArray{Union{E,T},3}
+#     domspaces::PeriodicArray{S,2}
+#     pspaces::PeriodicArray{S,1}
+# end
 
 function Base.getproperty(h::SparseMPO, f::Symbol)
     if f == :odim
