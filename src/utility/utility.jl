@@ -163,7 +163,12 @@ end
     allequal(itr) = isempty(itr) ? true : all(isequal(first(itr)), itr)
 end
 
-function check_length(a, b, c...)
-    length(a) == length(b) || throw(ArgumentError("lengths must match"))
-    return isempty(c) || check_length(b, c...)
+function check_length(a, b...)
+    L = length(a)
+    all(==(L), length.(b)) || throw(ArgumentError("lengths must match"))
+    return L
+end
+
+function fuser(::Type{T}, V1::S, V2::S) where {T<:Number,S<:IndexSpace}
+    return isomorphism(Matrix{T}, fuse(V1 ⊗ V2), V1 ⊗ V2)
 end
