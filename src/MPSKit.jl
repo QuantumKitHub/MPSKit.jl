@@ -109,6 +109,7 @@ include("operators/lazysum.jl")
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
 
+include("environments/abstractenvironments.jl")
 include("environments/FinEnv.jl")
 include("environments/abstractinfenv.jl")
 include("environments/permpoinfenv.jl")

@@ -21,7 +21,7 @@ end
 Calculate the galerkin error.
 """
 function calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS}, loc, envs)::Float64
-    AC´ = ∂∂AC(loc, state, envs.opp, envs) * state.AC[loc]
+    AC´ = ∂∂AC(loc, state, envs.operator, envs) * state.AC[loc]
     normalize!(AC´)
     out = add!(AC´, state.AL[loc] * state.AL[loc]' * AC´, -1)
     return norm(out)
@@ -29,18 +29,24 @@ end
 function calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS}, envs)::Float64
     return maximum([calc_galerkin(state, loc, envs) for loc in 1:length(state)])
 end
-function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
+function calc_galerkin(state::MPSMultiline, envs::InfiniteMPOEnvironments)::Float64
     above = isnothing(envs.above) ? state : envs.above
 
     εs = zeros(Float64, size(state, 1), size(state, 2))
     for (row, col) in product(1:size(state, 1), 1:size(state, 2))
-        AC´ = ∂∂AC(row, col, state, envs.opp, envs) * above.AC[row, col]
+        AC´ = ∂∂AC(row, col, state, envs.operator, envs) * above.AC[row, col]
         normalize!(AC´)
         out = add!(AC´, state.AL[row + 1, col] * state.AL[row + 1, col]' * AC´, -1)
         εs[row, col] = norm(out)
     end
 
     return maximum(εs[:])
+end
+function calc_galerkin(state::InfiniteMPS, site::Int, envs::InfiniteEnvironments)
+    AC´ = ∂∂AC(site, state, envs.operator, envs) * state.AC[site]
+    normalize!(AC´)
+    out = add!(AC´, state.AL[site] * (state.AL[site]' * AC´), -1)
+    return norm(out)
 end
 
 """
