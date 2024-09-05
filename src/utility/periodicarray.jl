@@ -30,6 +30,7 @@ struct PeriodicArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
 end
 PeriodicArray(data::AbstractArray{T,N}) where {T,N} = PeriodicArray{T,N}(data)
+PeriodicArray{T}(data::AbstractArray{T,N}) where {T,N} = PeriodicArray{T,N}(data)
 function PeriodicArray{T}(initializer, args...) where {T}
     return PeriodicArray(Array{T}(initializer, args...))
 end
@@ -38,7 +39,9 @@ function PeriodicArray{T,N}(initializer, args...) where {T,N}
 end
 
 const PeriodicVector{T} = PeriodicArray{T,1}
+PeriodicVector(data::AbstractVector{T}) where {T} = PeriodicVector{T}(data)
 const PeriodicMatrix{T} = PeriodicArray{T,2}
+PeriodicMatrix(data::AbstractMatrix{T}) where {T} = PeriodicMatrix{T}(data)
 
 Base.parent(A::PeriodicArray) = A.data
 

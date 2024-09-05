@@ -18,7 +18,7 @@ using LoggingExtras
 
 # bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
-export PeriodicArray, WindowArray
+export PeriodicArray, PeriodicVector, PeriodicMatrix, WindowArray
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth,
