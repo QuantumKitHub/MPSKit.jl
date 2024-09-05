@@ -102,10 +102,10 @@ end
 
 transfer_left(v, ::Nothing, A, B) = transfer_left(v, A, B);
 transfer_right(v, ::Nothing, A, B) = transfer_right(v, A, B);
-
 #mpo transfer
-function transfer_left(v::MPSTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
-    @plansor v[-1 -2; -3] := v[1 2; 4] * A[4 5; -3] * O[2 3; 5 -2] * conj(Ab[1 3; -1])
+function transfer_left(x::MPSTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
+    @plansor y[-1 -2; -3] := x[1 2; 4] * A[4 5; -3] * O[2 3; 5 -2] * conj(Ab[1 3; -1])
+    return y
 end
 function transfer_right(v::MPSTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
     @plansor v[-1 -2; -3] := A[-1 2; 1] * O[-2 4; 2 3] * conj(Ab[-3 4; 5]) * v[1 3; 5]
@@ -124,7 +124,8 @@ function transfer_left(v::MPOTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
     @plansor v[-1 -2; -3 -4] := v[4 2; -3 1] * A[1 3; -4] * O[2 5; 3 -2] * conj(Ab[4 5; -1])
 end
 function transfer_right(v::MPOTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
-    @plansor v[-1 -2; -3 -4] := A[-1 4; 5] * O[-2 2; 4 3] * conj(Ab[-4 2; 1]) * v[5 3; -3 1]
+    @plansor v[-1 -2; -3 -4] := A[-1 4; 5] * O[-2 2; 4 3] *
+                                conj(Ab[-4 2; 1]) * v[5 3; -3 1]
 end
 
 # --- the following really needs a proper rewrite; probably without transducers
@@ -136,126 +137,126 @@ function transfer_right(vec::RecursiveVec, opp, A, Ab)
 end;
 
 # usual sparsemposlice transfer
-function transfer_left(vec::AbstractVector{V}, ham::SparseMPOSlice, A::V,
-                       Ab::V) where {V<:MPSTensor}
-    return transfer_left(V, vec, ham, A, Ab)
-end
-function transfer_right(vec::AbstractVector{V}, ham::SparseMPOSlice, A::V,
-                        Ab::V) where {V<:MPSTensor}
-    return transfer_right(V, vec, ham, A, Ab)
-end
+# function transfer_left(vec::AbstractVector{V}, ham::SparseMPOSlice, A::V,
+#                        Ab::V) where {V<:MPSTensor}
+#     return transfer_left(V, vec, ham, A, Ab)
+# end
+# function transfer_right(vec::AbstractVector{V}, ham::SparseMPOSlice, A::V,
+#                         Ab::V) where {V<:MPSTensor}
+#     return transfer_right(V, vec, ham, A, Ab)
+# end
 
 # A excited
-function transfer_left(vec::AbstractVector{V}, ham::SparseMPOSlice, A::M,
-                       Ab::V) where {V<:MPSTensor} where {M<:MPOTensor}
-    return transfer_left(M, vec, ham, A, Ab)
-end
-function transfer_right(vec::AbstractVector{V}, ham::SparseMPOSlice, A::M,
-                        Ab::V) where {V<:MPSTensor} where {M<:MPOTensor}
-    return transfer_right(M, vec, ham, A, Ab)
-end
+# function transfer_left(vec::AbstractVector{V}, ham::SparseMPOSlice, A::M,
+#                        Ab::V) where {V<:MPSTensor} where {M<:MPOTensor}
+#     return transfer_left(M, vec, ham, A, Ab)
+# end
+# function transfer_right(vec::AbstractVector{V}, ham::SparseMPOSlice, A::M,
+#                         Ab::V) where {V<:MPSTensor} where {M<:MPOTensor}
+#     return transfer_right(M, vec, ham, A, Ab)
+# end
 
 # vec excited
-function transfer_left(vec::AbstractVector{V}, ham::SparseMPOSlice, A::M,
-                       Ab::M) where {V<:MPOTensor} where {M<:MPSTensor}
-    return transfer_left(V, vec, ham, A, Ab)
-end
-function transfer_right(vec::AbstractVector{V}, ham::SparseMPOSlice, A::M,
-                        Ab::M) where {V<:MPOTensor} where {M<:MPSTensor}
-    return transfer_right(V, vec, ham, A, Ab)
-end
-
-function transfer_left(RetType, vec, ham::SparseMPOSlice, A, Ab)
-    toret = similar(vec, RetType, length(vec))
-
-    if Defaults.parallelize_transfers
-        @threads for k in 1:length(vec)
-            els = keys(ham, :, k)
-            @floop WorkStealingEx() for j in els
-                if isscal(ham, j, k)
-                    t = lmul!(ham.Os[j, k], transfer_left(vec[j], A, Ab))
-                else
-                    t = transfer_left(vec[j], ham[j, k], A, Ab)
-                end
-
-                @reduce(s = inplace_add!(nothing, t))
-            end
-
-            if isnothing(s)
-                s = transfer_left(vec[1], ham[1, k], A, Ab)
-            end
-            toret[k] = s
-        end
-    else
-        for k in 1:length(vec)
-            els = collect(keys(ham, :, k))
-            if isempty(els)
-                toret[k] = transfer_left(vec[1], ham[1, k], A, Ab)
-            else
-                j = els[1]
-                toret[k] = if isscal(ham, j, k)
-                    lmul!(ham.Os[j, k], transfer_left(vec[j], A, Ab))
-                else
-                    transfer_left(vec[j], ham[j, k], A, Ab)
-                end
-                for j in els[2:end]
-                    if isscal(ham, j, k)
-                        add!(toret[k], transfer_left(vec[j], A, Ab), ham.Os[j, k])
-                    else
-                        add!(toret[k], transfer_left(vec[j], ham[j, k], A, Ab))
-                    end
-                end
-            end
-        end
-    end
-
-    return toret
-end
-function transfer_right(RetType, vec, ham::SparseMPOSlice, A, Ab)
-    toret = similar(vec, RetType, length(vec))
-
-    if Defaults.parallelize_transfers
-        @threads for j in 1:length(vec)
-            els = keys(ham, j, :)
-
-            @floop WorkStealingEx() for k in els
-                if isscal(ham, j, k)
-                    t = lmul!(ham.Os[j, k], transfer_right(vec[k], A, Ab))
-                else
-                    t = transfer_right(vec[k], ham[j, k], A, Ab)
-                end
-
-                @reduce(s = inplace_add!(nothing, t))
-            end
-
-            if isnothing(s)
-                s = transfer_right(vec[1], ham[j, 1], A, Ab)
-            end
-
-            toret[j] = s
-        end
-    else
-        for j in 1:length(vec)
-            els = collect(keys(ham, j, :))
-            if length(els) == 0
-                toret[j] = transfer_right(vec[1], ham[j, 1], A, Ab)
-            else
-                k = els[1]
-                toret[j] = if isscal(ham, j, k)
-                    lmul!(ham.Os[j, k], transfer_right(vec[k], A, Ab))
-                else
-                    transfer_right(vec[k], ham[j, k], A, Ab)
-                end
-                for k in els[2:end]
-                    if isscal(ham, j, k)
-                        add!(toret[j], transfer_right(vec[k], A, Ab), ham.Os[j, k])
-                    else
-                        add!(toret[j], transfer_right(vec[k], ham[j, k], A, Ab))
-                    end
-                end
-            end
-        end
-    end
-
-    return toret
-end
+# function transfer_left(vec::AbstractVector{V}, ham::SparseMPOSlice, A::M,
+#                        Ab::M) where {V<:MPOTensor} where {M<:MPSTensor}
+#     return transfer_left(V, vec, ham, A, Ab)
+# end
+# function transfer_right(vec::AbstractVector{V}, ham::SparseMPOSlice, A::M,
+#                         Ab::M) where {V<:MPOTensor} where {M<:MPSTensor}
+#     return transfer_right(V, vec, ham, A, Ab)
+# end
+#
+# function transfer_left(RetType, vec, ham::SparseMPOSlice, A, Ab)
+#     toret = similar(vec, RetType, length(vec))
+#
+#     if Defaults.parallelize_transfers
+#         @threads for k in 1:length(vec)
+#             els = keys(ham, :, k)
+#             @floop WorkStealingEx() for j in els
+#                 if isscal(ham, j, k)
+#                     t = lmul!(ham.Os[j, k], transfer_left(vec[j], A, Ab))
+#                 else
+#                     t = transfer_left(vec[j], ham[j, k], A, Ab)
+#                 end
+#
+#                 @reduce(s = inplace_add!(nothing, t))
+#             end
+#
+#             if isnothing(s)
+#                 s = transfer_left(vec[1], ham[1, k], A, Ab)
+#             end
+#             toret[k] = s
+#         end
+#     else
+#         for k in 1:length(vec)
+#             els = collect(keys(ham, :, k))
+#             if isempty(els)
+#                 toret[k] = transfer_left(vec[1], ham[1, k], A, Ab)
+#             else
+#                 j = els[1]
+#                 toret[k] = if isscal(ham, j, k)
+#                     lmul!(ham.Os[j, k], transfer_left(vec[j], A, Ab))
+#                 else
+#                     transfer_left(vec[j], ham[j, k], A, Ab)
+#                 end
+#                 for j in els[2:end]
+#                     if isscal(ham, j, k)
+#                         add!(toret[k], transfer_left(vec[j], A, Ab), ham.Os[j, k])
+#                     else
+#                         add!(toret[k], transfer_left(vec[j], ham[j, k], A, Ab))
+#                     end
+#                 end
+#             end
+#         end
+#     end
+#
+#     return toret
+# end
+# function transfer_right(RetType, vec, ham::SparseMPOSlice, A, Ab)
+#     toret = similar(vec, RetType, length(vec))
+#
+#     if Defaults.parallelize_transfers
+#         @threads for j in 1:length(vec)
+#             els = keys(ham, j, :)
+#
+#             @floop WorkStealingEx() for k in els
+#                 if isscal(ham, j, k)
+#                     t = lmul!(ham.Os[j, k], transfer_right(vec[k], A, Ab))
+#                 else
+#                     t = transfer_right(vec[k], ham[j, k], A, Ab)
+#                 end
+#
+#                 @reduce(s = inplace_add!(nothing, t))
+#             end
+#
+#             if isnothing(s)
+#                 s = transfer_right(vec[1], ham[j, 1], A, Ab)
+#             end
+#
+#             toret[j] = s
+#         end
+#     else
+#         for j in 1:length(vec)
+#             els = collect(keys(ham, j, :))
+#             if length(els) == 0
+#                 toret[j] = transfer_right(vec[1], ham[j, 1], A, Ab)
+#             else
+#                 k = els[1]
+#                 toret[j] = if isscal(ham, j, k)
+#                     lmul!(ham.Os[j, k], transfer_right(vec[k], A, Ab))
+#                 else
+#                     transfer_right(vec[k], ham[j, k], A, Ab)
+#                 end
+#                 for k in els[2:end]
+#                     if isscal(ham, j, k)
+#                         add!(toret[j], transfer_right(vec[k], A, Ab), ham.Os[j, k])
+#                     else
+#                         add!(toret[j], transfer_right(vec[k], ham[j, k], A, Ab))
+#                     end
+#                 end
+#             end
+#         end
+#     end
+#
+#     return toret
+# end
