@@ -1,5 +1,5 @@
 struct LazyLincoCache{A<:LinearCombination,C<:Tuple} <: Cache
-    opp::A
+    operator::A
     envs::C
 end
 
