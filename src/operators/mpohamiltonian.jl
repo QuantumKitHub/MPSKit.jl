@@ -677,7 +677,7 @@ end
 function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:AbstractMPOHamiltonian}
     check_length(H₁, H₂)
     @assert all(physicalspace.(parent(H₁)) .== physicalspace.(parent(H₂))) "physical spaces should match"
-    @show isinf = MPOH <: InfiniteMPOHamiltonian
+    isinf = MPOH <: InfiniteMPOHamiltonian
 
     H = similar(parent(H₁))
     for i in 1:length(H)
@@ -685,12 +685,12 @@ function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:AbstractMPOHamiltonian}
         Vₗ₁ = left_virtualspace(H₁, i)
         Vₗ₂ = left_virtualspace(H₂, i)
         @assert Vₗ₁[1] == Vₗ₂[1] && Vₗ₁[end] == Vₗ₂[end] "trivial spaces should match"
-        @show Vₗ = (!isinf && i == 1) ? Vₗ₁ : Vₗ₁[1:(end - 1)] ⊕ Vₗ₂[2:end]
+        Vₗ = (!isinf && i == 1) ? Vₗ₁ : Vₗ₁[1:(end - 1)] ⊕ Vₗ₂[2:end]
 
         Vᵣ₁ = right_virtualspace(H₁, i)
         Vᵣ₂ = right_virtualspace(H₂, i)
         @assert Vᵣ₁[1] == Vᵣ₂[1] && Vᵣ₁[end] == Vᵣ₂[end] "trivial spaces should match"
-        @show Vᵣ = (!isinf && i == length(H)) ? Vᵣ₁ : Vᵣ₁[1:(end - 1)] ⊕ Vᵣ₂[2:end]
+        Vᵣ = (!isinf && i == length(H)) ? Vᵣ₁ : Vᵣ₁[1:(end - 1)] ⊕ Vᵣ₂[2:end]
 
         W = eltype(H)(undef, Vₗ ⊗ physicalspace(H₁, i) ← physicalspace(H₁, i) ⊗ Vᵣ')
 
