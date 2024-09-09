@@ -595,6 +595,17 @@ function InfiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
     return InfiniteMPOHamiltonian(lattice, local_operators...)
 end
 
+for MPOHamType in (:FiniteMPOHamiltonian, :InfiniteMPOHamiltonian)
+    @eval begin 
+        function $MPOHamType(local_operator::TensorMap{E,S,N,N}) where {E,S,N}
+            lattice_space = space(local_operator, 1)
+            n_sites = length(domain(local_operator))
+            lattice = fill(lattice_space, n_sites)
+            return $MPOHamType(lattice, (tuple(collect(1:n_sites)...) => local_operator))
+        end
+    end
+end
+
 Base.parent(H::AbstractMPOHamiltonian) = H.data
 Base.eltype(::Type{FiniteMPOHamiltonian{O}}) where {O} = O
 Base.eltype(::Type{InfiniteMPOHamiltonian{O}}) where {O} = O
