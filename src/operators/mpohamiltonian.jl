@@ -764,36 +764,31 @@ function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:AbstractMPOHamiltonian}
 end
 Base.:-(H₁::AbstractMPOHamiltonian, H₂::AbstractMPOHamiltonian) = H₁ + (-H₂)
 Base.:-(H::AbstractMPOHamiltonian) = -one(scalartype(H)) * H
+Base.:*(λ::Number, H::AbstractMPOHamiltonian) = H * λ
+Base.:*(H::AbstractMPOHamiltonian, λ::Number) = scale(H, λ)
 
-function Base.:*(λ::Number, H::AbstractMPOHamiltonian)
-    T = promote_type(scalartype(H), scalartype(λ))
-    isinf = H isa InfiniteMPOHamiltonian
-    Otype = jordanmpotensortype(spacetype(H), T)
-    Ws = map(parent(H)) do h
-        return Otype(undef, space(h))
+function VectorInterface.scale(H::InfiniteMPOHamiltonian, λ::Number)
+    Hλ = copy(H)
+    foreach(Hλ.data) do h
+        # multiply scalar with start of every interaction
+        # this avoids double counting
+        # 2:end to avoid multiplying the top left and bottom right corners
+        return rmul!(h[1, 1, 1, 2:end], λ)
     end
-    for i in eachindex(Ws)
-        for I in eachindex(IndexCartesian(), Ws[i])
-            if isinf
-                if I[4] == size(Ws[i], 4) && I[1] != size(Ws[i], 1)
-                    Ws[i][I] = λ * H[i][I]
-                else
-                    Ws[i][I] = copy(H[i][I])
-                end
-            else
-                if (i == 1 && I[4] == size(Ws[i], 4)) ||
-                   (i != 1 && I[1] != size(Ws[i], 1) && I[4] == size(Ws[i], 4))
-                    Ws[i][I] = λ * H[i][I]
-                else
-                    Ws[i][I] = copy(H[i][I])
-                end
-            end
+    return Hλ
+end
+
+function VectorInterface.scale(H::FiniteMPOHamiltonian, λ::Number)
+    Hλ = copy(H)
+    foreach(enumerate(Hλ.data)) do (i, h)
+        if i != length(Hλ)
+            rmul!(h[1, 1, 1, 2:end], λ) # multiply top row (except BraidingTensor)
+        else
+            rmul!(h[end, 1, 1, 1:(end-1)], λ) # multiply right column (except BraidingTensor)
         end
     end
-    return H isa FiniteMPOHamiltonian ? FiniteMPOHamiltonian(Ws) :
-           InfiniteMPOHamiltonian(Ws)
+    return Hλ
 end
-Base.:*(H::AbstractMPOHamiltonian, λ::Number) = λ * H
 
 function Base.:*(H1::FiniteMPOHamiltonian, H2::FiniteMPOHamiltonian)
     check_length(H1, H2)
