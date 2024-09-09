@@ -606,6 +606,9 @@ function Base.repeat(H::InfiniteMPOHamiltonian, i::Int)
     return InfiniteMPOHamiltonian(repeat(parent(H), i))
 end
 
+Base.copy(H::FiniteMPOHamiltonian) = FiniteMPOHamiltonian(copy(H.data))
+Base.copy(H::InfiniteMPOHamiltonian) = InfiniteMPOHamiltonian(copy(H.data))
+
 function TensorKit.spacetype(::Union{H,Type{H}}) where {H<:AbstractMPOHamiltonian}
     return spacetype(eltype(H))
 end
