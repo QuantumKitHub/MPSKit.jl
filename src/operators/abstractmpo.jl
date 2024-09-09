@@ -45,15 +45,8 @@ Base.size(mpo::AbstractMPO, args...) = size(parent(mpo), args...)
 Base.length(mpo::AbstractMPO) = length(parent(mpo))
 
 @inline Base.getindex(mpo::AbstractMPO, args...) = getindex(parent(mpo), args...)
-
 @inline function Base.setindex!(mpo::AbstractMPO, value::MPOTensor, i::Int)
-    @boundscheck begin
-        checkbounds(parent(mpo), i)
-        (left_virtualspace(mpo, i) == left_virtualspace(value) &&
-         right_virtualspace(mpo, i) == right_virtualspace(value)) ||
-            throw(SpaceMismatch("The virtual spaces of the MPO and the tensor do not match."))
-    end
-    @inbounds parent(mpo)[i] = value
+    setindex!(parent(mpo), value, i)
     return mpo
 end
 
