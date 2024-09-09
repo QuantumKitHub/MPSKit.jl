@@ -710,7 +710,7 @@ end
         H = transverse_field_ising(; g=4.0)
         τ = 1e-3
 
-        expH = make_time_mpo(H, τ, WI())
+        expH = make_time_mpo(H, τ, WI)
         ψ₂, = approximate(ψ₂, (expH, ψ₁), alg)
         normalize!(ψ₂)
         ψ₂′, = timestep(ψ₁, H, 0.0, τ, TDVP())
