@@ -53,8 +53,8 @@ const InfOrFinMPO{O} = Union{FiniteMPO{O},InfiniteMPO{O}}
 # Utility
 # -------
 Base.parent(mpo::InfOrFinMPO) = mpo.data
-Base.copy(mpo::FiniteMPO) = FiniteMPO(map(copy, parent(mpo)))
-Base.copy(mpo::InfiniteMPO) = InfiniteMPO(map(copy, parent(mpo)))
+Base.copy(mpo::FiniteMPO) = FiniteMPO(map(copy, mpo))
+Base.copy(mpo::InfiniteMPO) = InfiniteMPO(map(copy, mpo))
 
 function Base.similar(::FiniteMPO, ::Type{O}, L::Int) where {O<:MPOTensor}
     return FiniteMPO{O}(undef, L)
@@ -96,7 +96,7 @@ end
 # Converters
 # ----------
 function Base.convert(::Type{<:FiniteMPS}, mpo::FiniteMPO)
-    return FiniteMPS(map(mpo.opp) do O
+    return FiniteMPS(map(parent(mpo)) do O
                          @plansor A[-1 -2 -3; -4] := O[-1 -2; 1 2] * τ[1 2; -4 -3]
                      end)
 end
@@ -117,7 +117,7 @@ function Base.convert(::Type{TensorMap}, mpo::FiniteMPO)
     @assert V_right == oneunit(V_right)'
     U_right = ones(scalartype(mpo), V_right')
 
-    tensors = vcat(U_left, mpo.opp, U_right)
+    tensors = vcat(U_left, parent(mpo), U_right)
     indices = [[i, -i, -(i + N), i + 1] for i in 1:length(mpo)]
     pushfirst!(indices, [1])
     push!(indices, [N + 1])
@@ -130,13 +130,13 @@ end
 # --------------
 VectorInterface.scalartype(::Type{FiniteMPO{O}}) where {O} = scalartype(O)
 
-Base.:+(mpo::FiniteMPO) = FiniteMPO(map(+, mpo.opp))
+Base.:+(mpo::FiniteMPO) = FiniteMPO(map(+, mpo))
 function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
     @assert left_virtualspace(mpo1, 1) == left_virtualspace(mpo2, 1) &&
             right_virtualspace(mpo1, N) == right_virtualspace(mpo2, N)
 
-    mpo = similar(mpo1.opp)
+    mpo = similar(parent(mpo1))
     halfN = N ÷ 2
     A = storagetype(TO)
 
@@ -236,7 +236,7 @@ function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
         # would work and for now I dont feel like figuring out if this is important
     end
 
-    O = similar(mpo1.opp)
+    O = similar(parent(mpo1))
     A = storagetype(TO)
 
     # note order of mpos: mpo1 * mpo2 * state -> mpo2 on top of mpo1
@@ -288,14 +288,14 @@ function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO, ket::FiniteMPS{T}) whe
     ρ_left = isomorphism(storagetype(T),
                          left_virtualspace(bra, 0) ⊗ left_virtualspace(mpo, 1)',
                          left_virtualspace(ket, 0))
-    T_left = TransferMatrix(ket.AL[1:Nhalf], mpo.opp[1:Nhalf], bra.AL[1:Nhalf])
+    T_left = TransferMatrix(ket.AL[1:Nhalf], mpo[1:Nhalf], bra.AL[1:Nhalf])
     ρ_left = ρ_left * T_left
 
     # right half
     ρ_right = isomorphism(storagetype(T),
                           right_virtualspace(ket, N) ⊗ right_virtualspace(mpo, N)',
                           right_virtualspace(ket, length(ket)))
-    T_right = TransferMatrix(ket.AR[(Nhalf + 1):end], mpo.opp[(Nhalf + 1):end],
+    T_right = TransferMatrix(ket.AR[(Nhalf + 1):end], mpo[(Nhalf + 1):end],
                              bra.AR[(Nhalf + 1):end])
     ρ_right = T_right * ρ_right
 
