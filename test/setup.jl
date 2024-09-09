@@ -151,7 +151,7 @@ function heisenberg_XXX(::Type{SU2Irrep}; spin=1, L=Inf)
         S = (dim(c) - 1) / 2
         b .= S * (S + 1) / 2 - spin * (spin + 1)
     end
-    scale!(H, 4)
+    scale!(h, 4)
 
     if L == Inf
         lattice = PeriodicArray([space(h, 1)])
