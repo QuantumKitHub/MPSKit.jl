@@ -612,16 +612,16 @@ end
         ψ = InfiniteMPS([ℂ^2], [ℂ^16])
         ψ, envs, = find_groundstate(ψ, H, VUMPS(; maxiter=100, verbosity=0))
 
-        numerical_scusceptibility = fidelity_susceptibility(ψ, H, [H_X], envs; maxiter=10)
-        @test numerical_scusceptibility[1, 1] ≈ analytical_susceptibility(λ) atol = 1e-2
+        numerical_susceptibility = fidelity_susceptibility(ψ, H, [H_X], envs; maxiter=10)
+        @test numerical_susceptibility[1, 1] ≈ analytical_susceptibility(λ) atol = 1e-2
 
         # test if the finite fid sus approximates the analytical one with increasing system size
         fin_en = map([20, 15, 10]) do L
             ψ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^16)
             ψ, envs, = find_groundstate(ψ, H, DMRG(; verbosity=0))
-            numerical_scusceptibility = fidelity_susceptibility(ψ, H, [H_X], envs;
+            numerical_susceptibility = fidelity_susceptibility(ψ, H, [H_X], envs;
                                                                 maxiter=10)
-            return numerical_scusceptibility[1, 1] / L
+            return numerical_susceptibility[1, 1] / L
         end
         @test issorted(abs.(fin_en .- analytical_susceptibility(λ)))
     end
