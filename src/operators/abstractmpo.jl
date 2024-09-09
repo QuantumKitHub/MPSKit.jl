@@ -65,5 +65,5 @@ physicalspace(mpo::AbstractMPO, site::Int) = physicalspace(mpo[site])
 # -----------------
 function jordanmpotensortype(::Type{S}, ::Type{T}) where {S<:VectorSpace,T<:Number}
     TT = Base.promote_typejoin(tensormaptype(S, 2, 2, T), BraidingTensor{T,S})
-    return BlockTensorKit.sparseblocktensormaptype(S, 2, 2, TT)
+    return SparseBlockTensorMap{TT}
 end

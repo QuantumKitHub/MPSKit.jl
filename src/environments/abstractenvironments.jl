@@ -15,10 +15,11 @@ function allocate_GL(bra::AbstractMPS, mpo::AbstractMPO, ket::AbstractMPS, i::In
     V = left_virtualspace(bra, i - 1) ⊗ left_virtualspace(mpo, i)' ←
         left_virtualspace(ket, i - 1)
     if V isa BlockTensorKit.TensorMapSumSpace
-        return BlockTensorMap{T}(undef, V)
+        TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
     else
-        return TensorMap{T}(undef, V)
+        TT = TensorMap{T}
     end
+    return TT(undef, V)
 end
 
 function allocate_GR(bra::AbstractMPS, mpo::AbstractMPO, ket::AbstractMPS, i::Int)
@@ -26,10 +27,11 @@ function allocate_GR(bra::AbstractMPS, mpo::AbstractMPO, ket::AbstractMPS, i::In
     V = right_virtualspace(ket, i) ⊗ right_virtualspace(mpo, i)' ←
         right_virtualspace(bra, i)
     if V isa BlockTensorKit.TensorMapSumSpace
-        return BlockTensorMap{T}(undef, V)
+        TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
     else
-        return TensorMap{T}(undef, V)
+        TT = TensorMap{T}
     end
+    return TT(undef, V)
 end
 
 function allocate_GBL(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
@@ -37,10 +39,11 @@ function allocate_GBL(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
     V = left_virtualspace(bra.left_gs, i - 1) ⊗ left_virtualspace(mpo, i)' ←
         auxiliaryspace(ket)' ⊗ left_virtualspace(ket.left_gs, i - 1)
     if V isa BlockTensorKit.TensorMapSumSpace
-        return BlockTensorMap{T}(undef, V)
+        TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
     else
-        return TensorMap{T}(undef, V)
+        TT = TensorMap{T}
     end
+    return TT(undef, V)
 end
 
 function allocate_GBR(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
@@ -48,8 +51,9 @@ function allocate_GBR(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
     V = right_virtualspace(ket.right_gs, i) ⊗ right_virtualspace(mpo, i)' ←
         auxiliaryspace(ket)' ⊗ right_virtualspace(bra.right_gs, i)
     if V isa BlockTensorKit.TensorMapSumSpace
-        return BlockTensorMap{T}(undef, V)
+        TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
     else
-        return TensorMap{T}(undef, V)
+        TT = TensorMap{T}
     end
+    return TT(undef, V)
 end

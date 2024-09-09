@@ -55,9 +55,9 @@ function force_planar(x::SparseBlockTensorMap)
                             return ℙ^dim(s)
                         end)
     end
-    data = SparseTensorArray(Dict(I => force_planar(v) for (I, v) in pairs(x.data)),
-                             cod ← dom)
-    return BlockTensorMap(data, cod, dom)
+
+    data = Dict(I => force_planar(v) for (I, v) in pairs(x.data))
+    return SparseBlockTensorMap{valtype(data)}(data, cod, dom)
 end
 # function force_planar(mpo::MPOHamiltonian)
 #     L = mpo.period
