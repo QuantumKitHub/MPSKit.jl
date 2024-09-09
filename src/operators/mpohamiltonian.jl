@@ -740,12 +740,13 @@ function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:AbstractMPOHamiltonian}
             A₁ = H₁.A[i]
             A₁_inds = CartesianIndices((2:(size(H₁[i], 1) - 1), 1:1, 1:1,
                                         2:(size(H₁[i], 4) - 1)))
-            copyto!(W, A₁_inds, A₁, CartesianIndices(A₁))
+
+            iszero(A₁) || copyto!(W, A₁_inds, A₁, CartesianIndices(A₁))
 
             A₂ = H₂.A[i]
             A₂_inds = CartesianIndices((size(H₁[i], 1):(size(W, 1) - 1), 1:1, 1:1,
                                         size(H₁[i], 4):(size(W, 4) - 1)))
-            copyto!(W, A₂_inds, A₂, CartesianIndices(A₂))
+            iszero(A₂) || copyto!(W, A₂_inds, A₂, CartesianIndices(A₂))
         end
 
         if H₁ isa InfiniteMPOHamiltonian || i != 1
