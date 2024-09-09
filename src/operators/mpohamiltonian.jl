@@ -702,8 +702,7 @@ function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:AbstractMPOHamiltonian}
         @assert Vᵣ₁[1] == Vᵣ₂[1] && Vᵣ₁[end] == Vᵣ₂[end] "trivial spaces should match"
         Vᵣ = (!isinf && i == length(H)) ? Vᵣ₁ : Vᵣ₁[1:(end - 1)] ⊕ Vᵣ₂[2:end]
 
-        W = eltype(H)(undef, Vₗ ⊗ physicalspace(H₁, i) ← physicalspace(H₁, i) ⊗ Vᵣ')
-
+        W = similar(eltype(H), Vₗ ⊗ physicalspace(H₁, i) ← physicalspace(H₁, i) ⊗ Vᵣ')
         #=
         (Direct) sum of two hamiltonians in Jordan form:
         (1 C₁ D₁)   (1 C₂ D₂)   (1  C₁  C₂  D₁+D₂)
@@ -763,27 +762,30 @@ Base.:-(H::AbstractMPOHamiltonian) = -one(scalartype(H)) * H
 Base.:*(λ::Number, H::AbstractMPOHamiltonian) = H * λ
 Base.:*(H::AbstractMPOHamiltonian, λ::Number) = scale(H, λ)
 
-function VectorInterface.scale(H::InfiniteMPOHamiltonian, λ::Number)
-    Hλ = copy(H)
-    foreach(Hλ.data) do h
+function VectorInterface.scale(H::Union{FiniteMPOHamiltonian,InfiniteMPOHamiltonian},
+                               λ::Number)
+    return scale!(copy(H), λ)
+end
+
+function VectorInterface.scale!(H::InfiniteMPOHamiltonian, λ::Number)
+    foreach(parent(H)) do h
         # multiply scalar with start of every interaction
         # this avoids double counting
         # 2:end to avoid multiplying the top left and bottom right corners
-        return rmul!(h[1, 1, 1, 2:end], λ)
+        return scale!(h[1, 1, 1, 2:end], λ)
     end
-    return Hλ
+    return H
 end
 
-function VectorInterface.scale(H::FiniteMPOHamiltonian, λ::Number)
-    Hλ = copy(H)
-    foreach(enumerate(Hλ.data)) do (i, h)
-        if i != length(Hλ)
-            rmul!(h[1, 1, 1, 2:end], λ) # multiply top row (except BraidingTensor)
+function VectorInterface.scale!(H::FiniteMPOHamiltonian, λ::Number)
+    foreach(enumerate(parent(H))) do (i, h)
+        if i != length(H)
+            scale!(h[1, 1, 1, 2:end], λ) # multiply top row (except BraidingTensor)
         else
-            rmul!(h[end, 1, 1, 1:(end-1)], λ) # multiply right column (except BraidingTensor)
+            scale!(h[end, 1, 1, 1:(end - 1)], λ) # multiply right column (except BraidingTensor)
         end
     end
-    return Hλ
+    return H
 end
 
 function Base.:*(H1::FiniteMPOHamiltonian, H2::FiniteMPOHamiltonian)
