@@ -151,12 +151,13 @@ end
 end
 
 @testset "Quasiparticle state" verbose = true begin
+    L = 10
     @testset "Finite" verbose = true for (H, D, d) in
-                                         [(force_planar(transverse_field_ising()), ℙ^10,
+                                         [(force_planar(transverse_field_ising(; L)), ℙ^10,
                                            ℙ^2),
-                                          (heisenberg_XXX(SU2Irrep; spin=1),
+                                          (heisenberg_XXX(SU2Irrep; spin=1, L),
                                            Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1))]
-        ψ = FiniteMPS(rand, ComplexF64, rand(4:20), d, D)
+        ψ = FiniteMPS(rand, ComplexF64, L, d, D)
         normalize!(ψ)
 
         #rand_quasiparticle is a private non-exported function
