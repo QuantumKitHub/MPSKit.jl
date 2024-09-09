@@ -94,7 +94,15 @@ function MPSKit.environments(below::FiniteMPS{S}, O::FiniteMPOHamiltonian,
 
     return environments(below, O, above, leftstart, rightstart)
 end
+function environments(below::WindowMPS, O::Union{InfiniteMPOHamiltonian,InfiniteMPO},
+                      above=nothing;
+                      lenvs=environments(below.left_gs, O),
+                      renvs=environments(below.right_gs, O))
+    leftstart = copy(leftenv(lenvs, 1, below.left_gs))
+    rightstart = copy(rightenv(renvs, length(below), below.right_gs))
 
+    return environments(below, O, above, leftstart, rightstart)
+end
 #extract the correct leftstart/rightstart for WindowMPS
 # function environments(state::WindowMPS, O::Union{SparseMPO,MPOHamiltonian,DenseMPO},
 #                       above=nothing; lenvs=environments(state.left_gs, O),
