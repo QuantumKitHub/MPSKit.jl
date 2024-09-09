@@ -740,7 +740,6 @@ function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:AbstractMPOHamiltonian}
             A₁ = H₁.A[i]
             A₁_inds = CartesianIndices((2:(size(H₁[i], 1) - 1), 1:1, 1:1,
                                         2:(size(H₁[i], 4) - 1)))
-
             iszero(A₁) || copyto!(W, A₁_inds, A₁, CartesianIndices(A₁))
 
             A₂ = H₂.A[i]
