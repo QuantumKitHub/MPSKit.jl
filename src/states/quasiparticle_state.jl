@@ -174,6 +174,9 @@ const QP{S,T1,T2} = Union{LeftGaugedQP{S,T1,T2},RightGaugedQP{S,T1,T2}}
 const FiniteQP{S<:FiniteMPS,T1,T2} = QP{S,T1,T2}
 const InfiniteQP{S<:InfiniteMPS,T1,T2} = QP{S,T1,T2}
 
+TensorKit.spacetype(::Union{QP{S},Type{<:QP{S}}}) where {S} = spacetype(S)
+TensorKit.sectortype(::Union{QP{S},Type{<:QP{S}}}) where {S} = sectortype(S)
+
 left_virtualspace(state::QP, i::Int) = space(state.Xs[mod1(i, end)], 1)
 function right_virtualspace(state::QP, i::Int)
     return space(state.Xs[mod1(i, end)], numind(state.Xs[mod1(i, end)]))
