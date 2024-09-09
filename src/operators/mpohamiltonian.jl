@@ -595,13 +595,6 @@ function InfiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
     return InfiniteMPOHamiltonian(lattice, local_operators...)
 end
 
-function FiniteMPOHamiltonian(local_operator::TensorMap{E,S,N}) where {E,S,N}
-    lattice_space = space(local_operator, 1)
-    n_sites = length(domain(local_operator))
-    lattice = fill(lattice_space, n_sites)
-    return FiniteMPOHamiltonian(lattice, (tuple(collect(1:n_sites)...) => local_operator))
-end
-
 function InfiniteMPOHamiltonian(local_operator::TensorMap{E,S,N,N}) where {E,S,N}
     lattice_space = space(local_operator, 1)
     n_sites = length(domain(local_operator))
