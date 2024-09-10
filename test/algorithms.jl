@@ -620,7 +620,7 @@ end
             ψ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^16)
             ψ, envs, = find_groundstate(ψ, H, DMRG(; verbosity=0))
             numerical_susceptibility = fidelity_susceptibility(ψ, H, [H_X], envs;
-                                                                maxiter=10)
+                                                               maxiter=10)
             return numerical_susceptibility[1, 1] / L
         end
         @test issorted(abs.(fin_en .- analytical_susceptibility(λ)))
@@ -670,8 +670,8 @@ end
         dt = 1e-3
         sW1 = make_time_mpo(H, dt, TaylorCluster(; N=3))
         sW2 = make_time_mpo(H, dt, WII())
-        W1 = convert(DenseMPO, sW1)
-        W2 = convert(DenseMPO, sW2)
+        W1 = DenseMPO(sW1)
+        W2 = DenseMPO(sW2)
 
         ψ1, _ = approximate(ψ, (sW1, ψ), VOMPS(; verbosity))
         ψ2, _ = approximate(ψ, (W2, ψ), VOMPS(; verbosity))

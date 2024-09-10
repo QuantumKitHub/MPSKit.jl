@@ -37,8 +37,7 @@ function HMPO(operator::AbstractTensorMap{E,S,N,N}; L=Inf) where {E,S,N}
 end
 
 # useful union types
-const SparseMPO = AbstractMPO{<:SparseBlockTensorMap}
-const DenseMPO = AbstractMPO{<:TensorMap}
+const SparseMPO{O<:SparseBlockTensorMap} = AbstractMPO{O}
 
 # By default, define things in terms of parent
 Base.size(mpo::AbstractMPO, args...) = size(parent(mpo), args...)

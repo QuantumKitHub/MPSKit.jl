@@ -49,6 +49,14 @@ end
 InfiniteMPO(Os::AbstractVector{<:MPOTensor}) = InfiniteMPO(PeriodicVector(Os))
 
 const InfOrFinMPO{O} = Union{FiniteMPO{O},InfiniteMPO{O}}
+const DenseMPO{O<:TensorMap} = InfOrFinMPO{O}
+
+function DenseMPO(mpo::FiniteMPO)
+    return FiniteMPO(map(TensorMap, mpo))
+end
+function DenseMPO(mpo::InfiniteMPO)
+    return InfiniteMPO(map(TensorMap, mpo))
+end
 
 # Utility
 # -------
