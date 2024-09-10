@@ -60,3 +60,10 @@ function jordanmpotensortype(::Type{S}, ::Type{T}) where {S<:VectorSpace,T<:Numb
     TT = Base.promote_typejoin(tensormaptype(S, 2, 2, T), BraidingTensor{T,S})
     return SparseBlockTensorMap{TT}
 end
+
+# Linear Algebra
+# --------------
+Base.:*(α::Number, mpo::AbstractMPO) = scale(mpo, α)
+Base.:*(mpo::AbstractMPO, α::Number) = scale(mpo, α)
+Base.:/(mpo::AbstractMPO, α::Number) = scale(mpo, inv(α))
+Base.:\(α::Number, mpo::AbstractMPO) = scale(mpo, inv(α))

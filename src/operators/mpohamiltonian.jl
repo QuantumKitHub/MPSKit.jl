@@ -757,10 +757,30 @@ function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:AbstractMPOHamiltonian}
 
     return H₁ isa FiniteMPOHamiltonian ? FiniteMPOHamiltonian(H) : InfiniteMPOHamiltonian(H)
 end
-Base.:-(H₁::AbstractMPOHamiltonian, H₂::AbstractMPOHamiltonian) = H₁ + (-H₂)
+function Base.:+(H::FiniteMPOHamiltonian, λs::AbstractVector{<:Number})
+    check_length(H, λs)
+    lattice = [physicalspace(H, i) for i in 1:length(H)]
+    M = storagetype(H)
+    Hλ = FiniteMPOHamiltonian(lattice,
+                              i => scale!(id(M, lattice[i]), λs[i]) for i in 1:length(H))
+    return H + Hλ
+end
+function Base.:+(H::InfiniteMPOHamiltonian, λs::AbstractVector{<:Number})
+    check_length(H, λs)
+    lattice = [physicalspace(H, i) for i in 1:length(H)]
+    M = storagetype(H)
+    Hλ = InfiniteMPOHamiltonian(lattice,
+                                i => scale!(id(M, lattice[i]), λs[i]) for i in 1:length(H))
+    return H + Hλ
+end
+function Base.:+(λs::AbstractVector{<:Number}, H::AbstractMPOHamiltonian)
+    return H + λs
+end
+
 Base.:-(H::AbstractMPOHamiltonian) = -one(scalartype(H)) * H
-Base.:*(λ::Number, H::AbstractMPOHamiltonian) = H * λ
-Base.:*(H::AbstractMPOHamiltonian, λ::Number) = scale(H, λ)
+Base.:-(H₁::AbstractMPOHamiltonian, H₂::AbstractMPOHamiltonian) = H₁ + (-H₂)
+Base.:-(H::AbstractMPOHamiltonian, λs::AbstractVector{<:Number}) = H + (-λs)
+Base.:-(λs::AbstractVector{<:Number}, H::AbstractMPOHamiltonian) = λs + (-H)
 
 function VectorInterface.scale(H::Union{FiniteMPOHamiltonian,InfiniteMPOHamiltonian},
                                λ::Number)
