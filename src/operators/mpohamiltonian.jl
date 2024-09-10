@@ -847,10 +847,7 @@ function Base.:*(H1::FiniteMPOHamiltonian, H2::FiniteMPOHamiltonian)
 end
 function Base.:*(H1::InfiniteMPOHamiltonian, H2::InfiniteMPOHamiltonian)
     L = check_length(H1, H2)
-    TT = BlockTensorKit.sparseblocktensormaptype(spacetype(H1),
-                                                 2, 2,
-                                                 promote_type(eltype(eltype(H1)),
-                                                              eltype(eltype(H2))))
+    TT = SparseBlockTensorMap{promote_type(eltype(eltype(H1)), eltype(eltype(H2)))}
     T = scalartype(TT)
     Ws = PeriodicArray(map(parent(H1), parent(H2)) do h1, h2
                            return TT(undef,
