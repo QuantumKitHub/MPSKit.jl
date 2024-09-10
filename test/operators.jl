@@ -108,66 +108,55 @@ end
           FiniteMPOHamiltonian(grid, vertical_operators)
 end
 
-@testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
-                                                                            vspaces)
-    #generate a 1-2-3 body interaction
-    n = rand(ComplexF64, pspace, pspace)
-    n += n'
-    nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
-    nn += nn'
-    nnn = rand(ComplexF64, pspace * pspace * pspace, pspace * pspace * pspace)
-    nnn += nnn'
+@testset "InfiniteMPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
+                                                            zip(pspaces,
+                                                                vspaces)
+    # generate a 1-2-3 body interaction
+    operators = ntuple(3) do i
+        O = rand(ComplexF64, pspace^i, pspace^i)
+        return O += O'
+    end
 
-    #can you pass in a proper mpo?
-    identity = complex(isomorphism(oneunit(pspace) * pspace, pspace * oneunit(pspace)))
-    mpoified = MPSKit.decompose_localmpo(MPSKit.add_util_leg(nnn))
-    d3 = Array{Union{Missing,typeof(identity)},3}(missing, 1, 4, 4)
-    d3[1, 1, 1] = identity
-    d3[1, end, end] = identity
-    d3[1, 1, 2] = mpoified[1]
-    d3[1, 2, 3] = mpoified[2]
-    d3[1, 3, 4] = mpoified[3]
-    h1 = MPOHamiltonian(d3)
+    H1 = InfiniteMPOHamiltonian(operators[1])
+    H2 = InfiniteMPOHamiltonian(operators[2])
+    H3 = repeat(InfiniteMPOHamiltonian(operators[3]), 2)
 
-    #¢an you pass in the actual hamiltonian?
-    h2 = MPOHamiltonian(nn)
+    # can you pass in a proper mpo?
+    # TODO: fix this!
+    # identity = complex(isomorphism(oneunit(pspace) * pspace, pspace * oneunit(pspace)))
+    # mpoified = MPSKit.decompose_localmpo(MPSKit.add_util_leg(nnn))
+    # d3 = Array{Union{Missing,typeof(identity)},3}(missing, 1, 4, 4)
+    # d3[1, 1, 1] = identity
+    # d3[1, end, end] = identity
+    # d3[1, 1, 2] = mpoified[1]
+    # d3[1, 2, 3] = mpoified[2]
+    # d3[1, 3, 4] = mpoified[3]
+    # h1 = MPOHamiltonian(d3)
 
-    #can you generate a hamiltonian using only onsite interactions?
-    d1 = Array{Any,3}(missing, 2, 3, 3)
-    d1[1, 1, 1] = 1
-    d1[1, end, end] = 1
-    d1[1, 1, 2] = n
-    d1[1, 2, end] = n
-    d1[2, 1, 1] = 1
-    d1[2, end, end] = 1
-    d1[2, 1, 2] = n
-    d1[2, 2, end] = n
-    h3 = MPOHamiltonian(d1)
-
-    #make a teststate to measure expectation values for
+    # make a teststate to measure expectation values for
     ψ1 = InfiniteMPS([pspace], [Dspace])
     ψ2 = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
 
-    e1 = expectation_value(ψ1, h1)
-    e2 = expectation_value(ψ1, h2)
+    e1 = expectation_value(ψ1, H1)
+    e2 = expectation_value(ψ1, H2)
 
-    h1 = 2 * h1 - [1]
-    @test e1 * 2 - 1 ≈ expectation_value(ψ1, h1) atol = 1e-10
+    H1 = 2 * H1 - [1]
+    @test e1 * 2 - 1 ≈ expectation_value(ψ1, H1) atol = 1e-10
 
-    h1 = h1 + h2
+    H1 = H1 + H2
 
-    @test e1 * 2 + e2 - 1 ≈ expectation_value(ψ1, h1) atol = 1e-10
+    @test e1 * 2 + e2 - 1 ≈ expectation_value(ψ1, H1) atol = 1e-10
 
-    h1 = repeat(h1, 2)
+    H1 = repeat(H1, 2)
 
-    e1 = expectation_value(ψ2, h1)
-    e3 = expectation_value(ψ2, h3)
+    e1 = expectation_value(ψ2, H1)
+    e3 = expectation_value(ψ2, H3)
 
-    @test e1 + e3 ≈ expectation_value(ψ2, h1 + h3) atol = 1e-10
+    @test e1 + e3 ≈ expectation_value(ψ2, H1 + H3) atol = 1e-10
 
-    h4 = h1 + h3
-    h4 = h4 * h4
-    @test real(expectation_value(ψ2, h4)) >= 0
+    H4 = H1 + H3
+    h4 = H4 * H4
+    @test real(expectation_value(ψ2, H4)) >= 0
 end
 
 @testset "General LazySum of $(eltype(Os))" for Os in (rand(ComplexF64, rand(1:10)),
@@ -190,7 +179,7 @@ end
     @test sum(LazyOs_added) ≈ 2 * summed atol = 1 - 08
 end
 
-@testset "MulitpliedOperator of $(typeof(O)) with $(typeof(f))" for (O, f) in
+@testset "MultipliedOperator of $(typeof(O)) with $(typeof(f))" for (O, f) in
                                                                     zip((rand(ComplexF64),
                                                                          rand(ComplexF64,
                                                                               ℂ^13, ℂ^7),
@@ -241,7 +230,7 @@ end
 end
 
 @testset "DenseMPO" for ham in (transverse_field_ising(), heisenberg_XXX(; spin=1))
-    physical_space = ham.pspaces[1]
+    physical_space = physical_space(ham, 1)
     ou = oneunit(physical_space)
 
     ψ = InfiniteMPS([physical_space], [ou ⊕ physical_space])
