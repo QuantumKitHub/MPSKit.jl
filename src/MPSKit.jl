@@ -53,7 +53,7 @@ export entropy
 export propagator, NaiveInvert, Jeckelmann, DynamicalDMRG
 export fidelity_susceptibility
 export approximate!, approximate
-export periodic_boundary_conditions
+export periodic_boundary_conditions, open_boundary_conditions
 export exact_diagonalization
 
 # transfer matrix

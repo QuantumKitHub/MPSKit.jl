@@ -435,3 +435,34 @@ function periodic_boundary_conditions(mpo::Union{InfiniteMPO{O},DenseMPO{O}},
 
     return mpo isa DenseMPO ? DenseMPO(output) : FiniteMPO(output)
 end
+
+function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
+    Hmpo = periodic_boundary_conditions(InfiniteMPO(H), L)
+    return FiniteMPOHamiltonian(Hmpo.data)
+end
+
+"""
+    open_boundary_conditions(mpo::AbstractInfiniteMPO, L::Int)
+
+Convert an infinite MPO into a finite MPO of length `L`, by applying open boundary conditions.
+"""
+function open_boundary_conditions(mpo::Union{InfiniteMPO,DenseMPO},
+                                  L=length(mpo))
+    mod(L, length(mpo)) == 0 ||
+        throw(ArgumentError("length $L is not a multiple of the infinite unitcell"))
+
+    # Make a FiniteMPO, filling it up with the tensors of H
+    # Only keep top row of the first and last column of the last MPO tensor
+
+    # allocate output
+    output = Vector(repeat(copy(mpo.data), L ÷ length(mpo)))
+    output[1] = output[1][1, 1, 1, :]
+    output[end] = output[end][:, 1, 1, 1]
+
+    return mpo isa DenseMPO ? DenseMPO(output) : FiniteMPO(output)
+end
+
+function open_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
+    Hmpo = open_boundary_conditions(InfiniteMPO(H), L)
+    return FiniteMPOHamiltonian(Hmpo.data)
+end
