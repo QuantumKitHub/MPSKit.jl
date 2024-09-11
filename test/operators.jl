@@ -230,10 +230,10 @@ end
 end
 
 @testset "DenseMPO" for ham in (transverse_field_ising(), heisenberg_XXX(; spin=1))
-    physical_space = physical_space(ham, 1)
-    ou = oneunit(physical_space)
+    pspace = physicalspace(ham, 1)
+    ou = oneunit(pspace)
 
-    ψ = InfiniteMPS([physical_space], [ou ⊕ physical_space])
+    ψ = InfiniteMPS([pspace], [ou ⊕ pspace])
 
     W = convert(DenseMPO, make_time_mpo(ham, 1im * 0.5, WII()))
 

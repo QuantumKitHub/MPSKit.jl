@@ -54,6 +54,7 @@ end
 left_virtualspace(mpo::AbstractMPO, site::Int) = left_virtualspace(mpo[site])
 right_virtualspace(mpo::AbstractMPO, site::Int) = right_virtualspace(mpo[site])
 physicalspace(mpo::AbstractMPO, site::Int) = physicalspace(mpo[site])
+physicalspace(mpo::AbstractMPO) = map(physicalspace, mpo)
 
 TensorKit.spacetype(::Union{AbstractMPO{O},Type{AbstractMPO{O}}}) where {O} = spacetype(O)
 TensorKit.sectortype(::Union{AbstractMPO{O},Type{AbstractMPO{O}}}) where {O} = sectortype(O)
