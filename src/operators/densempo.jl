@@ -296,7 +296,7 @@ function Base.:*(mpo::InfiniteMPO, st::InfiniteMPS)
         return _fuse_mpo_mps(mpo[i], st.AL[i], fusers[i], fusers[i + 1])
     end
 
-    return changebonds(InfiniteMPS(As), SvdCut(; trscheme=notrunc()); normalize=false)
+    return changebonds(InfiniteMPS(As), SvdCut(; trscheme=notrunc()))
 end
 
 function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
