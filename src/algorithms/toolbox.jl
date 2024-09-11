@@ -433,7 +433,7 @@ function periodic_boundary_conditions(mpo::Union{InfiniteMPO{O},DenseMPO{O}},
                                            conj(F_right[-4; 4 5])
     end
 
-    return mpo isa DenseMPO ? DenseMPO(output) : FiniteMPO(output)
+    return mpo isa DenseMPO ? DenseMPO(FiniteMPO(output)) : FiniteMPO(output)
 end
 
 function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
