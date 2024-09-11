@@ -230,12 +230,12 @@ end
 end
 
 @testset "DenseMPO" for ham in (transverse_field_ising(), heisenberg_XXX(; spin=1))
-    pspace = physicalspace(ham, 1)
+    pspace = only(physicalspace(ham, 1))
     ou = oneunit(pspace)
 
     ψ = InfiniteMPS([pspace], [ou ⊕ pspace])
 
-    W = convert(DenseMPO, make_time_mpo(ham, 1im * 0.5, WII()))
+    W = DenseMPO(make_time_mpo(ham, 1im * 0.5, WII()))
 
     @test abs(dot(W * (W * ψ), (W * W) * ψ)) ≈ 1.0 atol = 1e-10
 end
@@ -246,84 +246,88 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
 @testset "LazySum of (effective) Hamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
                                                                         zip(pspaces,
                                                                             vspaces)
-    n = rand(ComplexF64, pspace, pspace)
-    n += n'
-    nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
-    nn += nn'
-    nnn = rand(ComplexF64, pspace * pspace * pspace, pspace * pspace * pspace)
-    nnn += nnn'
+    # n = rand(ComplexF64, pspace, pspace)
+    # n += n'
+    # nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
+    # nn += nn'
+    # nnn = rand(ComplexF64, pspace * pspace * pspace, pspace * pspace * pspace)
+    # nnn += nnn'
+    Os = map(1:3) do i
+        O = rand(ComplexF64, pspace^i, pspace^i)
+        return O += O'
+    end
 
-    H1 = repeat(MPOHamiltonian(n), 2)
-    H2 = repeat(MPOHamiltonian(nn), 2)
-    H3 = repeat(MPOHamiltonian(nnn), 2)
-    Hs = [H1, H2, H3]
-    summedH = LazySum(Hs)
+    fs = [t -> 3t, 2, 1]
 
-    ψs = [FiniteMPS(rand, ComplexF64, rand(3:2:20), pspace, Dspace),
-          InfiniteMPS([rand(ComplexF64, Dspace * pspace, Dspace),
-                       rand(ComplexF64, Dspace * pspace, Dspace)])]
 
-    @testset "LazySum $(ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for ψ in ψs
-        Envs = map(H -> environments(ψ, H), Hs)
-        summedEnvs = environments(ψ, summedH)
+    # H1 = repeat(MPOHamiltonian(n), 2)
+    # H2 = repeat(MPOHamiltonian(nn), 2)
+    # H3 = repeat(MPOHamiltonian(nnn), 2)
+    # Hs = [H1, H2, H3]
+    # summedH = LazySum(Hs)
 
-        expval = sum(zip(Hs, Envs)) do (H, Env)
-            return expectation_value(ψ, H, Env)
+    @testset "LazySum FiniteMPOHamiltonian" begin
+        L = rand(3:2:20)
+        ψ = FiniteMPS(rand, ComplexF64, L, pspace, Dspace)
+        lattice = fill(pspace, L)
+        Hs = map(FiniteMPOHamiltonian, Os)
+        summedH = LazySum(Hs)
+
+        envs = map(H -> environments(ψ, H), Hs)
+        summed_envs = environments(ψ, summedH)
+
+        expval = sum(zip(Hs, envs)) do (H, env)
+            return expectation_value(ψ, H, env)
         end
         expval1 = expectation_value(ψ, sum(summedH))
-        expval2 = expectation_value(ψ, summedH, summedEnvs)
+        expval2 = expectation_value(ψ, summedH, summed_envs)
         expval3 = expectation_value(ψ, summedH)
         @test expval ≈ expval1
         @test expval ≈ expval2
         @test expval ≈ expval3
 
         # test derivatives
-        summedhct = MPSKit.∂∂C(1, ψ, summedH, summedEnvs)
-        sum1 = sum(zip(Hs, Envs)) do (H, env)
+        summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
+        sum1 = sum(zip(Hs, envs)) do (H, env)
             return MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
         end
         @test summedhct(ψ.CR[1], 0.0) ≈ sum1
 
-        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summedEnvs)
-        sum2 = sum(zip(Hs, Envs)) do (H, env)
+        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
+        sum2 = sum(zip(Hs, envs)) do (H, env)
             return MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
         end
         @test summedhct(ψ.AC[1], 0.0) ≈ sum2
 
         v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
-        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summedEnvs)
-        sum3 = sum(zip(Hs, Envs)) do (H, env)
+        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summed_envs)
+        sum3 = sum(zip(Hs, envs)) do (H, env)
             return MPSKit.∂∂AC2(1, ψ, H, env)(v)
         end
         @test summedhct(v, 0.0) ≈ sum3
-    end
 
-    fs = [t -> 3t, 2, 1]
-    Hts = [MultipliedOperator(H1, fs[1]), MultipliedOperator(H2, fs[2]), H3]
-    summedH = LazySum(Hts)
-    t = 1.1
-    summedH_at = summedH(t)
 
-    @testset "Time-dependent LazySum $(ψ isa FiniteMPS ? "F" : "Inf")initeMPS" for ψ in ψs
-        Envs = map(H -> environments(ψ, H), Hs)
-        summedEnvs = environments(ψ, summedH)
+        Hts = [MultipliedOperator(Hs[1], fs[1]), MultipliedOperator(Hs[2], fs[2]), Hs[3]]
+        summedH = LazySum(Hts)
+        t = 1.1
+        summedH_at = summedH(t)
+        
+        envs = map(H -> environments(ψ, H), Hs)
+        summed_envs = environments(ψ, summedH)
 
-        expval = sum(zip(fs, Hs, Envs)) do (f, H, Env)
-            if f isa Function
-                f = f(t)
-            end
-            return f * expectation_value(ψ, H, Env)
+        expval = sum(zip(fs, Hs, envs)) do (f, H, env)
+            return (f isa Function ? f(t) : f) * expectation_value(ψ, H, env)
         end
         expval1 = expectation_value(ψ, sum(summedH_at))
-        expval2 = expectation_value(ψ, summedH_at, summedEnvs)
+        expval2 = expectation_value(ψ, summedH_at, summed_envs)
         expval3 = expectation_value(ψ, summedH_at)
         @test expval ≈ expval1
         @test expval ≈ expval2
         @test expval ≈ expval3
 
         # test derivatives
-        summedhct = MPSKit.∂∂C(1, ψ, summedH, summedEnvs)
-        sum1 = sum(zip(fs, Hs, Envs)) do (f, H, env)
+        summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
+        sum1 = sum(zip(fs, Hs, envs)) do (f, H, env)
             if f isa Function
                 f = f(t)
             end
@@ -331,7 +335,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         end
         @test summedhct(ψ.CR[1], t) ≈ sum1
 
-        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summedEnvs)
+        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
         sum2 = sum(zip(fs, Hs, Envs)) do (f, H, env)
             if f isa Function
                 f = f(t)
@@ -341,12 +345,94 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         @test summedhct(ψ.AC[1], t) ≈ sum2
 
         v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
-        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summedEnvs)
-        sum3 = sum(zip(fs, Hs, Envs)) do (f, H, env)
+        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summed_envs)
+        sum3 = sum(zip(fs, Hs, envs)) do (f, H, env)
+            return (f isa Function ? f(t) : f) * MPSKit.∂∂AC2(1, ψ, H, env)(v)
+        end
+        @test summedhct(v, t) ≈ sum3
+    end
+
+    @testset "LazySum InfiniteMPOHamiltonian" begin
+        ψ = repeat(InfiniteMPS(pspace, Dspace), 2)
+        Hs = map(Os) do O
+            H = InfiniteMPOHamiltonian(O)
+            return repeat(H, 2)
+        end
+        envs = map(H -> environments(ψ, H), Hs)
+        summed_envs = environments(ψ, summedH)
+
+        expval = sum(zip(Hs, envs)) do (H, Env)
+            return expectation_value(ψ, H, Env)
+        end
+        expval1 = expectation_value(ψ, sum(summedH))
+        expval2 = expectation_value(ψ, summedH, summed_envs)
+        expval3 = expectation_value(ψ, summedH)
+        @test expval ≈ expval1
+        @test expval ≈ expval2
+        @test expval ≈ expval3
+
+        # test derivatives
+        summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
+        sum1 = sum(zip(Hs, envs)) do (H, env)
+            return MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
+        end
+        @test summedhct(ψ.CR[1], 0.0) ≈ sum1
+
+        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
+        sum2 = sum(zip(Hs, envs)) do (H, env)
+            return MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
+        end
+        @test summedhct(ψ.AC[1], 0.0) ≈ sum2
+
+        v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
+        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summed_envs)
+        sum3 = sum(zip(Hs, envs)) do (H, env)
+            return MPSKit.∂∂AC2(1, ψ, H, env)(v)
+        end
+        @test summedhct(v, 0.0) ≈ sum3
+        
+
+        Hts = [MultipliedOperator(Hs[1], fs[1]), MultipliedOperator(Hs[2], fs[2]), Hs[3]]
+        summedH = LazySum(Hts)
+        t = 1.1
+        summedH_at = summedH(t)
+        
+        envs = map(H -> environments(ψ, H), Hs)
+        summed_envs = environments(ψ, summedH)
+
+        expval = sum(zip(fs, Hs, envs)) do (f, H, env)
+            return (f isa Function ? f(t) : f) * expectation_value(ψ, H, env)
+        end
+        expval1 = expectation_value(ψ, sum(summedH_at))
+        expval2 = expectation_value(ψ, summedH_at, summed_envs)
+        expval3 = expectation_value(ψ, summedH_at)
+        @test expval ≈ expval1
+        @test expval ≈ expval2
+        @test expval ≈ expval3
+
+        # test derivatives
+        summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
+        sum1 = sum(zip(fs, Hs, envs)) do (f, H, env)
             if f isa Function
                 f = f(t)
             end
-            return f * MPSKit.∂∂AC2(1, ψ, H, env)(v)
+            return f * MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
+        end
+        @test summedhct(ψ.CR[1], t) ≈ sum1
+
+        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
+        sum2 = sum(zip(fs, Hs, Envs)) do (f, H, env)
+            if f isa Function
+                f = f(t)
+            end
+            return f * MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
+        end
+        @test summedhct(ψ.AC[1], t) ≈ sum2
+
+        v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
+        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summed_envs)
+        sum3 = sum(zip(fs, Hs, envs)) do (f, H, env)
+            return (f isa Function ? f(t) : f) * MPSKit.∂∂AC2(1, ψ, H, env)(v)
         end
         @test summedhct(v, t) ≈ sum3
     end
