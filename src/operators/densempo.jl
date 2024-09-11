@@ -277,12 +277,31 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
                          left_virtualspace(A[i]) * left_virtualspace(mpo, i))
         Fᵣ = isomorphism(TT, fuse(right_virtualspace(A[i]), right_virtualspace(mpo, i)),
                          right_virtualspace(A[i])' * right_virtualspace(mpo, i)')
-        @plansor A[i][-1 -2; -3] := Fₗ[-1; 1 3] * A[i][1 2; 4] *
-                                    mpo[i][3 -2; 2 5] *
-                                    conj(Fᵣ[-3; 4 5])
+        A[i] = _fuse_mpo_mps(mpo[i], A[i], Fₗ, Fᵣ)
     end
 
     return changebonds!(FiniteMPS(A), SvdCut(; trscheme=notrunc()); normalize=false)
+end
+
+function Base.:*(mpo::InfiniteMPO, st::InfiniteMPS)
+    length(st) == length(mpo) || throw(ArgumentError("dimension mismatch"))
+    T = promote_type(scalartype(mpo), scalartype(st))
+    fusers = PeriodicArray(map(zip(st.AL, mpo)) do (al, mp)
+                               return fuser(T, _firstspace(al), _firstspace(mp))
+                           end)
+    As = map(1:length(st)) do i
+        return _fuse_mpo_mps(mpo[i], st.AL[i], fusers[i], fusers[i + 1])
+    end
+
+    return changebonds(InfiniteMPS(As), SvdCut(; trscheme=notrunc()); normalize=false)
+end
+
+function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
+    @plansor A′[-1 -2; -3] := Fₗ[-1; 1 3] *
+                              A[1 2; 4] *
+                              O[3 -2; 2 5] *
+                              conj(Fᵣ[-3; 4 5])
+    return A′ isa AbstractBlockTensorMap ? only(A′) : A′
 end
 
 # TODO: I think the fastest order is to start from both ends, and take the overlap at the
