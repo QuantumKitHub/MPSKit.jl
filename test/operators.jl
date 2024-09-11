@@ -230,7 +230,7 @@ end
 end
 
 @testset "DenseMPO" for ham in (transverse_field_ising(), heisenberg_XXX(; spin=1))
-    pspace = only(physicalspace(ham, 1))
+    pspace = physicalspace(ham, 1)
     ou = oneunit(pspace)
 
     ψ = InfiniteMPS([pspace], [ou ⊕ pspace])

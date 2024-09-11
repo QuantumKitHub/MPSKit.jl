@@ -182,4 +182,8 @@ Return the physical space of the site tensor at site `i`.
 """
 function physicalspace end
 physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
-physicalspace(O::MPOTensor) = space(O, 2)
+function physicalspace(O::MPOTensor)
+    pspace = space(O, 2)
+    # Disallow SumSpace in physical space
+    return pspace isa SumSpace ? only(pspace) : pspace
+end
