@@ -65,8 +65,8 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
 end
 
 # TODO: this assumes the MPO is infinite, and does weird things for finite MPOs.
-function changebonds(ψ::DenseMPO, alg::SvdCut)
-    return convert(DenseMPO, changebonds(convert(InfiniteMPS, ψ), alg))
+function changebonds(ψ::InfiniteMPO, alg::SvdCut)
+    return convert(InfiniteMPO, changebonds(convert(InfiniteMPS, ψ), alg))
 end
 function changebonds(ψ::MPOMultiline, alg::SvdCut)
     return convert(MPOMultiline, changebonds(convert(MPSMultiline, ψ), alg))

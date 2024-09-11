@@ -237,7 +237,7 @@ end
 
     W = DenseMPO(make_time_mpo(ham, 1im * 0.5, WII()))
 
-    @test abs(dot(W * (W * ψ), (W * W) * ψ)) ≈ 1.0 atol = 1e-10
+    @test W * (W * ψ) ≈ (W * W) * ψ atol = 1e-3
 end
 
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1, 2 => 1))

@@ -107,16 +107,27 @@ end
 # Converters
 # ----------
 function Base.convert(::Type{<:FiniteMPS}, mpo::FiniteMPO)
-    return FiniteMPS(map(parent(mpo)) do O
-                         @plansor A[-1 -2 -3; -4] := O[-1 -2; 1 2] * τ[1 2; -4 -3]
-                     end)
+    return FiniteMPS(map(_mpo_to_mps, parent(mpo)))
 end
+function Base.convert(::Type{<:InfiniteMPS}, mpo::InfiniteMPO)
+    return InfiniteMPS(map(_mpo_to_mps, parent(mpo)))
+end
+function _mpo_to_mps(O::MPOTensor)
+    @plansor A[-1 -2 -3; -4] := O[-1 -2; 1 2] * τ[1 2; -4 -3]
+    return A isa AbstractBlockTensorMap ? TensorMap(A) : A
+end
+
 function Base.convert(::Type{<:FiniteMPO}, mps::FiniteMPS)
-    mpo_tensors = map([mps.AC[1]; mps.AR[2:end]]) do A
-        @plansor O[-1 -2; -3 -4] := A[-1 -2 1; 2] * τ[-3 2; -4 1]
-    end
-    return FiniteMPO(mpo_tensors)
+    return FiniteMPO(map(_mps_to_mpo, [mps.AC[1]; mps.AR[2:end]]))
 end
+function Base.convert(::Type{<:InfiniteMPO}, mps::InfiniteMPS)
+    return InfiniteMPO(map(_mps_to_mpo, mps.AL))
+end
+function _mps_to_mpo(A::GenericMPSTensor{S,3}) where {S}
+    @plansor O[-1 -2; -3 -4] := A[-1 -2 1; 2] * τ[-3 2; -4 1]
+    return O
+end
+
 function Base.convert(::Type{TensorMap}, mpo::FiniteMPO)
     N = length(mpo)
     # add trivial tensors to remove left and right trivial leg.
@@ -283,19 +294,20 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
         A[i] = _fuse_mpo_mps(mpo[i], A[i], Fₗ, Fᵣ)
     end
 
-    return changebonds!(FiniteMPS(A), SvdCut(; trscheme=notrunc()); normalize=false)
+    return changebonds!(FiniteMPS(A),
+                        SvdCut(; trscheme=truncbelow(real(eps(scalartype(TT)))));
+                        normalize=false)
 end
 
-function Base.:*(mpo::InfiniteMPO, st::InfiniteMPS)
-    length(st) == length(mpo) || throw(ArgumentError("dimension mismatch"))
-    T = promote_type(scalartype(mpo), scalartype(st))
-    fusers = PeriodicArray(map(zip(st.AL, mpo)) do (al, mp)
+function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
+    check_length(mpo, mps)
+    T = promote_type(scalartype(mpo), scalartype(mps))
+    fusers = PeriodicArray(map(mps.AL, mpo) do al, mp
                                return fuser(T, _firstspace(al), _firstspace(mp))
                            end)
-    As = map(1:length(st)) do i
-        return _fuse_mpo_mps(mpo[i], st.AL[i], fusers[i], fusers[i + 1])
+    As = map(1:length(mps)) do i
+        return _fuse_mpo_mps(mpo[i], mps.AL[i], fusers[i], fusers[i + 1])
     end
-
     return changebonds(InfiniteMPS(As), SvdCut(; trscheme=notrunc()))
 end
 
@@ -305,6 +317,26 @@ function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
                               O[3 -2; 2 5] *
                               conj(Fᵣ[-3; 4 5])
     return A′ isa AbstractBlockTensorMap ? only(A′) : A′
+end
+
+function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
+    L = check_length(mpo1, mpo2)
+
+    T = promote_type(scalartype(mpo1), scalartype(mpo2))
+    make_fuser(i) = fuser(T, left_virtualspace(mpo2, i), left_virtualspace(mpo1, i))
+    fusers = PeriodicArray(map(make_fuser, 1:L))
+
+    Os = map(1:L) do i
+        return _fuse_mpo_mpo(mpo1[i], mpo2[i], fusers[i], fusers[i + 1])
+    end
+    return InfiniteMPO(Os)
+end
+
+function _fuse_mpo_mpo(O1::MPOTensor, O2::MPOTensor, Fₗ, Fᵣ)
+    return @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 4] *
+                                        O2[1 2; -3 3] *
+                                        O1[4 -2; 2 5] *
+                                        conj(Fᵣ[-4; 3 5])
 end
 
 # TODO: I think the fastest order is to start from both ends, and take the overlap at the
