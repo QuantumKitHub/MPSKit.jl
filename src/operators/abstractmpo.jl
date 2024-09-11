@@ -76,6 +76,15 @@ Base.:*(mpo::AbstractMPO, α::Number) = scale(mpo, α)
 Base.:/(mpo::AbstractMPO, α::Number) = scale(mpo, inv(α))
 Base.:\(α::Number, mpo::AbstractMPO) = scale(mpo, inv(α))
 
+VectorInterface.scale(mpo::AbstractMPO, α::Number) = scale!(copy(mpo), α)
+
+LinearAlgebra.norm(mpo::AbstractMPO) = sqrt(abs(dot(mpo, mpo)))
+
+function Base.:(^)(a::AbstractMPO, n::Int)
+    n >= 1 || throw(DomainError(n, "n should be a positive integer"))
+    return Base.power_by_squaring(a, n)
+end
+
 Base.conj(mpo::AbstractMPO) = conj!(copy(mpo))
 function Base.conj!(mpo::AbstractMPO)
     foreach(mpo) do o

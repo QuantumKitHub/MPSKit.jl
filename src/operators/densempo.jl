@@ -241,10 +241,10 @@ function Base.:-(mpo::FiniteMPO)
 end
 Base.:-(mpo₁::FiniteMPO, mpo₂::FiniteMPO) = +(mpo₁, -mpo₂)
 
-function Base.:*(mpo::FiniteMPO, α::Number)
-    return FiniteMPO(map(i -> i == 1 ? α * mpo[i] : copy(mpo[i]), 1:length(mpo)))
+function VectorInterface.scale!(mpo::InfOrFinMPO, α::Number)
+    scale!(first(mpo), α)
+    return mpo
 end
-Base.:*(α::Number, mpo::FiniteMPO) = mpo * α
 
 function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
@@ -295,7 +295,7 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
     end
 
     return changebonds!(FiniteMPS(A),
-                        SvdCut(; trscheme=truncbelow(real(eps(scalartype(TT)))));
+                        SvdCut(; trscheme=truncbelow(eps(real(scalartype(TT)))));
                         normalize=false)
 end
 
@@ -368,8 +368,8 @@ end
 function TensorKit.dot(bra::InfiniteMPS, mpo::InfiniteMPO, ket::InfiniteMPS;
                        ishermitian=false, krylovdim=30, kwargs...)
     ρ₀ = similar(bra.AL[1],
-                 left_virtualspace(bra, 1) * left_virtualspace(mpo, 1) ←
-                 left_virtualspace(ket, 1))
+                 left_virtualspace(ket, 1) * left_virtualspace(mpo, 1) ←
+                 left_virtualspace(bra, 1))
     randomize!(ρ₀)
 
     val, = fixedpoint(TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM; ishermitian,
@@ -397,6 +397,18 @@ function TensorKit.dot(mpo₁::FiniteMPO, mpo₂::FiniteMPO)
 end
 
 function Base.isapprox(mpo₁::FiniteMPO, mpo₂::FiniteMPO;
+                       atol::Real=0, rtol::Real=atol > 0 ? 0 : √eps(real(scalartype(mpo₁))))
+    length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
+    # computing ||mpo₁ - mpo₂|| without constructing mpo₁ - mpo₂
+    # ||mpo₁ - mpo₂||² = ||mpo₁||² + ||mpo₂||² - 2 ⟨mpo₁, mpo₂⟩
+    norm₁² = abs(dot(mpo₁, mpo₁))
+    norm₂² = abs(dot(mpo₂, mpo₂))
+    norm₁₂² = norm₁² + norm₂² - 2 * real(dot(mpo₁, mpo₂))
+
+    # don't take square roots to avoid precision loss
+    return norm₁₂² ≤ max(atol^2, rtol^2 * max(norm₁², norm₂²))
+end
+function Base.isapprox(mpo₁::InfiniteMPO, mpo₂::InfiniteMPO;
                        atol::Real=0, rtol::Real=atol > 0 ? 0 : √eps(real(scalartype(mpo₁))))
     length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
     # computing ||mpo₁ - mpo₂|| without constructing mpo₁ - mpo₂

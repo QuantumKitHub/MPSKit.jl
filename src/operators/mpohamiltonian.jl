@@ -883,11 +883,6 @@ function Base.:*(H1::InfiniteMPOHamiltonian, H2::InfiniteMPOHamiltonian)
     return InfiniteMPOHamiltonian(Ws)
 end
 
-function Base.:(^)(a::AbstractMPOHamiltonian, n::Int)
-    n >= 1 || throw(DomainError(n, "n should be a positive integer"))
-    return Base.power_by_squaring(a, n)
-end
-
 function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     check_length(H, mps)
     @assert length(mps) > 2 "MPS should have at least three sites, to be implemented otherwise"
