@@ -810,8 +810,7 @@ end
 
 function Base.:*(H1::FiniteMPOHamiltonian, H2::FiniteMPOHamiltonian)
     check_length(H1, H2)
-    TT = tensormaptype(BlockTensorKit.sumspacetype(spacetype(H1)), 2, 2,
-                       promote_type(eltype(eltype(H1)), eltype(eltype(H2))))
+    TT = SparseBlockTensorMap{promote_type(eltype(eltype(H1)), eltype(eltype(H2)))}
     T = scalartype(TT)
     Ws = map(parent(H1), parent(H2)) do h1, h2
         return TT(undef,
