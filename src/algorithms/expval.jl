@@ -179,8 +179,7 @@ function expectation_value(ψ, op::UntimedOperator, args...)
 end
 
 function expectation_value(ψ, ops::LazySum)
-    @info "hi"
-    return sum(op -> @show(expectation_value(ψ, op)), ops.ops)
+    return sum(op -> expectation_value(ψ, op), ops.ops)
 end
 function expectation_value(ψ, ops::LazySum, envs::MultipleEnvironments)
     return sum(((op, env),) -> expectation_value(ψ, op, env), zip(ops.ops, envs))
