@@ -742,7 +742,7 @@ end
     #translation mpo:
     @tensor bulk[-1 -2; -3 -4] := isomorphism(ℂ^2, ℂ^2)[-2, -4] *
                                   isomorphism(ℂ^2, ℂ^2)[-1, -3]
-    translation = periodic_boundary_conditions(DenseMPO(bulk), len)
+    translation = periodic_boundary_conditions(DenseMPO(InfiniteMPO(bulk)), len)
 
     #the groundstate should be translation invariant:
     ut = ones(ℂ^1)
