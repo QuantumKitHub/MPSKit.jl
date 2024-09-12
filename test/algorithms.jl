@@ -580,7 +580,8 @@ end
     @test [expectation_value(gs, i => szd) for i in 1:length(window)] ≈
           [expectation_value(window, i => szd) for i in 1:length(window)] atol = 1e-10
 
-    polepos = expectation_value(window.window, ham, environments(window, ham))
+    openham = open_boundary_conditions(ham, length(window.window))
+    polepos = expectation_value(window.window, openham, environments(window.window, openham))
 
     vals = (-0.5:0.2:0.5) .+ polepos
     eta = 0.3im
@@ -590,7 +591,7 @@ end
     @testset "Flavour $f" for f in (Jeckelmann(), NaiveInvert())
         alg = DynamicalDMRG(; flavour=f, verbosity=0, tol=1e-8)
         data = map(vals) do v
-            result, = propagator(window, v + eta, ham, alg)
+            result, = propagator(window.window, v + eta, openham, alg)
             return result
         end
         @test data ≈ predicted atol = 1e-8
