@@ -40,6 +40,8 @@ _eval_at(x::TimedOperator, t::Number) = MultipliedOperator(x.op, x.f(t))
 Base.:*(op::UntimedOperator, b::Number) = MultipliedOperator(op.op, b * op.f)
 Base.:*(op::TimedOperator, b::Number) = MultipliedOperator(op.op, t -> b * op.f(t))
 Base.:*(b, op::MultipliedOperator) = op * b
+Base.:/(op::MultipliedOperator, b::Number) = op * inv(b)
+Base.:\(b::Number, op::MultipliedOperator) = inv(b) * op
 
 # slightly dangerous
 Base.:*(op::TimedOperator, g::Function) = MultipliedOperator(op.op, t -> g(t) * op.f(t))
