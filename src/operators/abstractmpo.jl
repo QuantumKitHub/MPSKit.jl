@@ -76,7 +76,7 @@ function Base.show(io::IO, ::MIME"text/plain", W::AbstractMPO)
     return show(context, W)
 end
 
-Base.show(io::IO, ψ::SparseMPO) = show(convert(IOContext, io), ψ)
+Base.show(io::IO, mpo::AbstractMPO) = show(convert(IOContext, io), mpo)
 
 function Base.show(io::IOContext, mpo::AbstractMPO)
     charset = (; top = "┬", bot="┴", mid="┼", ver="│", dash="──")
@@ -107,6 +107,36 @@ function Base.show(io::IOContext, mpo::AbstractMPO)
     return nothing
 end
 
+function BlockTensorKit.show_braille(H::AbstractHMPO)
+    isfinite = (H isa FiniteMPO) || (H isa FiniteMPOHamiltonian)
+    dash="🭻"
+    stride = 2 #amount of dashes between braille
+    L = length(H)
+
+    brailles = Vector{Vector{String}}(undef, L)
+    buffer = IOBuffer()
+    for (i, W) in enumerate(H)
+        BlockTensorKit.show_braille(buffer, W)
+        brailles[i] = split(String(take!(buffer)))
+    end
+
+    maxheight = maximum(length.(brailles))
+
+    for i in 1:maxheight
+        line = ""
+        line *= ((i == 1 && !isfinite) ? ("... "*dash) : " ")
+        line *= (i > 1 && !isfinite) ? "    " : ""
+        for (j, braille) in enumerate(brailles)
+            line *= (checkbounds(Bool, braille, i) ? braille[i] : repeat(" ", length(braille[1])))
+            if j < L
+                line *= repeat(((i==1) ? dash : " "), stride)
+            end
+        end
+        line *= ((i == 1 && !isfinite) ? (dash * " ...") : " ")
+        println(line)
+    end
+    return nothing
+end
 
 # Linear Algebra
 # --------------
