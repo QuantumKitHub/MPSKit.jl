@@ -613,8 +613,8 @@ function Base.repeat(H::InfiniteMPOHamiltonian, i::Int)
     return InfiniteMPOHamiltonian(repeat(parent(H), i))
 end
 
-Base.copy(H::FiniteMPOHamiltonian) = FiniteMPOHamiltonian(deepcopy(H.data))
-Base.copy(H::InfiniteMPOHamiltonian) = InfiniteMPOHamiltonian(deepcopy(H.data))
+Base.copy(H::FiniteMPOHamiltonian) = FiniteMPOHamiltonian(map(copy, parent(H)))
+Base.copy(H::InfiniteMPOHamiltonian) = InfiniteMPOHamiltonian(map(copy, parent(H)))
 
 function TensorKit.spacetype(::Union{H,Type{H}}) where {H<:AbstractMPOHamiltonian}
     return spacetype(eltype(H))
@@ -802,7 +802,7 @@ function VectorInterface.scale!(H::FiniteMPOHamiltonian, λ::Number)
         if i != length(H)
             scale!(h[1, 1, 1, 2:end], λ) # multiply top row (except BraidingTensor)
         else
-            scale!(h[end, 1, 1, 1:(end - 1)], λ) # multiply right column (except BraidingTensor)
+            scale!(h[1, 1, 1, end], λ) # multiply right column (except BraidingTensor)
         end
     end
     return H
