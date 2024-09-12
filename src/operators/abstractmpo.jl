@@ -88,7 +88,7 @@ end
 Base.conj(mpo::AbstractMPO) = conj!(copy(mpo))
 function Base.conj!(mpo::AbstractMPO)
     foreach(mpo) do o
-        @plansor o[-1 -2; -3 -4] := conj(o[-1 -3; -2 -4])
+        @plansor q[-1 -2; -3 -4] := conj(o[-1 -3; -2 -4])
     end
     return mpo
 end

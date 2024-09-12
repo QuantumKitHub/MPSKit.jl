@@ -155,40 +155,21 @@ end
 
 function squaredenvs(state::AbstractFiniteMPS, H::FiniteMPOHamiltonian,
                      envs=environments(state, H))
-    nH = conj(H) * H
+    H² = conj(H) * H
     L = length(state)
+
+    # impose the correct boundary conditions (important for WindowMPS)
+    leftstart = _contract_leftenv²(leftenv(envs, 1, state), leftenv(envs, 1, state))
+    rightstart = _contract_rightenv²(rightenv(envs, L, state), rightenv(envs, L, state))
 
     # to construct the squared caches we will first initialize environments
     # then make all data invalid so it will be recalculated
-    # then initialize the right caches at the edge
-    ncocache = environments(state, nH)
-
-    # make sure the dependencies are incorrect, so data will be recalculated
+    envs² = environments(state, H², leftstart, rightstart)
     for i in 1:L
-        poison!(ncocache, i)
+        poison!(envs², i)
     end
 
-    # impose the correct boundary conditions
-    # (important for comoving mps, should do nothing for finite mps)
-    indmap = LinearIndices((H.odim, H.odim))
-    @sync begin
-        Threads.@spawn begin
-            nleft = leftenv(ncocache, 1, state)
-            for i in 1:(H.odim), j in 1:(H.odim)
-                nleft[indmap[i, j]] = _contract_leftenv²(leftenv(envs, 1, state)[j],
-                                                         leftenv(envs, 1, state)[i])
-            end
-        end
-        Threads.@spawn begin
-            nright = rightenv(ncocache, L, state)
-            for i in 1:(H.odim), j in 1:(H.odim)
-                nright[indmap[i, j]] = _contract_rightenv²(rightenv(envs, L, state)[j],
-                                                           rightenv(envs, L, state)[i])
-            end
-        end
-    end
-
-    return nH, ncocache
+    return H², envs²
 end
 
 function _contract_leftenv²(GL_top, GL_bot)
