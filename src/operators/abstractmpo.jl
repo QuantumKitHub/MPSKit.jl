@@ -76,7 +76,7 @@ function Base.show(io::IO, ::MIME"text/plain", W::AbstractMPO)
     return show(context, W)
 end
 
-Base.show(io::IO, ψ::SparseMPO) = show(convert(IOContext, io), ψ)
+Base.show(io::IO, ψ::AbstractMPO) = show(convert(IOContext, io), ψ)
 
 function Base.show(io::IOContext, mpo::AbstractMPO)
     charset = (; top = "┬", bot="┴", mid="┼", ver="│", dash="──")
