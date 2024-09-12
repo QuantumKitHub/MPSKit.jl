@@ -840,6 +840,9 @@ function Base.:*(H1::FiniteMPOHamiltonian, H2::FiniteMPOHamiltonian)
                 Ws[i][j, 1, 1, k] = BraidingTensor{T}(eachspace(Ws[i])[j, 1, 1, k])
             end
         end
+
+        # TODO: this should not be necessary
+        dropzeros!(Ws[i])
     end
 
     return FiniteMPOHamiltonian(Ws)
@@ -878,6 +881,9 @@ function Base.:*(H1::InfiniteMPOHamiltonian, H2::InfiniteMPOHamiltonian)
                 Ws[i][j, 1, 1, k] = BraidingTensor{T}(eachspace(Ws[i])[j, 1, 1, k])
             end
         end
+        
+        # TODO: this should not be necessary
+        dropzeros!(Ws[i])
     end
 
     return InfiniteMPOHamiltonian(Ws)
