@@ -144,6 +144,10 @@ end
 
 # Linear Algebra
 # --------------
+Base.:+(mpo::AbstractMPO) = scale(mpo, One())
+Base.:-(mpo::AbstractMPO) = scale(mpo, -1)
+Base.:-(mpo1::AbstractMPO, mpo2::AbstractMPO) = mpo1 + (-mpo2)
+
 Base.:*(α::Number, mpo::AbstractMPO) = scale(mpo, α)
 Base.:*(mpo::AbstractMPO, α::Number) = scale(mpo, α)
 Base.:/(mpo::AbstractMPO, α::Number) = scale(mpo, inv(α))
