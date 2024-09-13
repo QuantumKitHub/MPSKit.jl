@@ -32,9 +32,10 @@ export entanglementplot, transferplot
 
 # hamiltonian things
 export Cache
+export AbstractMPO
+export MPO, FiniteMPO, InfiniteMPO
+export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, HMPO
 export SparseMPO, DenseMPO, MPOMultiline
-export AbstractMPO, FiniteMPO, InfiniteMPO
-export AbstractHMPO, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, HMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
@@ -96,7 +97,7 @@ include("states/quasiparticle_state.jl")
 include("states/ortho.jl")
 
 include("operators/abstractmpo.jl")
-include("operators/densempo.jl")
+include("operators/mpo.jl")
 # include("operators/sparsempo/sparseslice.jl")
 # include("operators/sparsempo/sparsempo.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects

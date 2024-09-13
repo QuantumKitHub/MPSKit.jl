@@ -59,22 +59,8 @@ function force_planar(x::SparseBlockTensorMap)
     data = Dict(I => force_planar(v) for (I, v) in pairs(x.data))
     return SparseBlockTensorMap{valtype(data)}(data, cod, dom)
 end
-# function force_planar(mpo::MPOHamiltonian)
-#     L = mpo.period
-#     V = mpo.odim
-#     return MPOHamiltonian(map(Iterators.product(1:L, 1:V, 1:V)) do (i, j, k)
-#                               return force_planar(mpo.Os[i, j, k])
-#                           end)
-# end
-function force_planar(mpo::FiniteMPOHamiltonian)
-    return FiniteMPOHamiltonian(map(force_planar, parent(mpo)))
-end
-function force_planar(mpo::InfiniteMPOHamiltonian)
-    return InfiniteMPOHamiltonian(map(force_planar, parent(mpo)))
-end
-force_planar(mpo::DenseMPO) = DenseMPO(force_planar.(mpo.opp))
-force_planar(mpo::FiniteMPO) = FiniteMPO(force_planar.(parent(mpo)))
-force_planar(mpo::InfiniteMPO) = InfiniteMPO(force_planar.(parent(mpo)))
+force_planar(mpo::MPOHamiltonian) = MPOHamiltonian(map(force_planar, parent(mpo)))
+force_planar(mpo::MPO) = MPO(map(force_planar, parent(mpo)))
 
 # Toy models
 # ----------------------------
