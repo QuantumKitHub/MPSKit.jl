@@ -150,11 +150,11 @@ end
 function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
-function expectation_value(ψ::InfiniteMPS, mpo::DenseMPO, envs...)
+function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
     return expectation_value(convert(MPSMultiline, ψ), convert(MPOMultiline, mpo), envs...)
 end
 function expectation_value(ψ::MPSMultiline, O::MPOMultiline{<:Union{DenseMPO,SparseMPO}},
-                           envs::PerMPOInfEnv=environments(ψ, O))
+                           envs::InfiniteMPOEnvironments=environments(ψ, O))
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
         GL = leftenv(envs, i, j, ψ)
         GR = rightenv(envs, i, j, ψ)

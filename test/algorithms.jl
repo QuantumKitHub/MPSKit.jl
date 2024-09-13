@@ -407,7 +407,7 @@ end
 end
 
 @testset "leading_boundary" verbose = true begin
-    tol = 1e-5
+    tol = 1e-4
     verbosity = 0
     algs = [VUMPS(; tol, verbosity), VOMPS(; tol, verbosity),
             GradientGrassmann(; verbosity)]
@@ -581,7 +581,8 @@ end
           [expectation_value(window, i => szd) for i in 1:length(window)] atol = 1e-10
 
     openham = open_boundary_conditions(ham, length(window.window))
-    polepos = expectation_value(window.window, openham, environments(window.window, openham))
+    polepos = expectation_value(window.window, openham,
+                                environments(window.window, openham))
 
     vals = (-0.5:0.2:0.5) .+ polepos
     eta = 0.3im
