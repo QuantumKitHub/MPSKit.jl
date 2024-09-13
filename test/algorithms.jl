@@ -452,7 +452,7 @@ end
 
         fin_en = map([20, 10]) do len
             H = force_planar(transverse_field_ising(; L=len))
-            ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^15)
+            ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^10)
             ψ, envs, = find_groundstate(ψ, H; verbosity)
 
             #find energy with quasiparticle ansatz
@@ -463,7 +463,7 @@ end
             energies_dm, _ = excitations(H,
                                          FiniteExcited(;
                                                        gsalg=DMRG(; verbosity,
-                                                                  tol=1e-6)), ψ)
+                                                                  tol=1e-6, maxiter=30)), ψ)
             @test energies_dm[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
 
             # find energy with Chepiga ansatz
