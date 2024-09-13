@@ -56,10 +56,9 @@ right_virtualspace(mpo::AbstractMPO, site::Int) = right_virtualspace(mpo[site])
 physicalspace(mpo::AbstractMPO, site::Int) = physicalspace(mpo[site])
 physicalspace(mpo::AbstractMPO) = map(physicalspace, mpo)
 
-TensorKit.spacetype(::Union{AbstractMPO{O},Type{AbstractMPO{O}}}) where {O} = spacetype(O)
-TensorKit.sectortype(::Union{AbstractMPO{O},Type{AbstractMPO{O}}}) where {O} = sectortype(O)
-function TensorKit.storagetype(::Union{AbstractMPO{O},Type{AbstractMPO{O}}}) where {O}
-    return storagetype(O)
+for ftype in (:spacetype, :sectortype, :storagetype)
+    @eval TensorKit.$ftype(mpo::AbstractMPO) = $ftype(typeof(mpo))
+    @eval TensorKit.$ftype(::Type{MPO}) where {MPO<:AbstractMPO} = $ftype(eltype(MPO))
 end
 
 # Utility functions
@@ -69,6 +68,8 @@ function jordanmpotensortype(::Type{S}, ::Type{T}) where {S<:VectorSpace,T<:Numb
     return SparseBlockTensorMap{TT}
 end
 
+# Show
+# ----
 function Base.show(io::IO, ::MIME"text/plain", W::AbstractMPO)
     L = length(W)
     println(io, L == 1 ? "single site " : "$L-site ", typeof(W), ":")
@@ -77,27 +78,29 @@ function Base.show(io::IO, ::MIME"text/plain", W::AbstractMPO)
 end
 
 Base.show(io::IO, mpo::AbstractMPO) = show(convert(IOContext, io), mpo)
-
 function Base.show(io::IOContext, mpo::AbstractMPO)
-    charset = (; top = "┬", bot="┴", mid="┼", ver="│", dash="──")
+    charset = (; top="┬", bot="┴", mid="┼", ver="│", dash="──")
     limit = get(io, :limit, false)::Bool
     half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
     L = length(mpo)
 
     # used to align all mposite infos regardless of the length of the mpo (100 takes up more space than 5)
     npad = floor(Int, log10(L))
-    mpoletter  = mpo isa AbstractHMPO ? "W" : "O"
+    mpoletter = mpo isa AbstractHMPO ? "W" : "O"
     isfinite = (mpo isa FiniteMPO) || (mpo isa FiniteMPOHamiltonian)
-    
+
     !isfinite && println(io, "╷  ⋮")
     for site in reverse(1:L)
         if site < half_screen_rows || site > L - half_screen_rows
             if site == L && isfinite
-                println(io, charset.top, " $mpoletter[$site]: ", repeat(" ", npad - floor(Int, log10(site))), mpo[site])
+                println(io, charset.top, " $mpoletter[$site]: ",
+                        repeat(" ", npad - floor(Int, log10(site))), mpo[site])
             elseif (site == 1) && isfinite
-                println(io, charset.bot, " $mpoletter[$site]: ", repeat(" ", npad - floor(Int, log10(site))), mpo[site])
+                println(io, charset.bot, " $mpoletter[$site]: ",
+                        repeat(" ", npad - floor(Int, log10(site))), mpo[site])
             else
-                println(io, charset.mid, " $mpoletter[$site]: ", repeat(" ", npad - floor(Int, log10(site))), mpo[site])
+                println(io, charset.mid, " $mpoletter[$site]: ",
+                        repeat(" ", npad - floor(Int, log10(site))), mpo[site])
             end
         elseif site == half_screen_rows
             println(io, "   ", "⋮")
@@ -109,7 +112,7 @@ end
 
 function BlockTensorKit.show_braille(H::AbstractHMPO)
     isfinite = (H isa FiniteMPO) || (H isa FiniteMPOHamiltonian)
-    dash="🭻"
+    dash = "🭻"
     stride = 2 #amount of dashes between braille
     L = length(H)
 
@@ -124,12 +127,13 @@ function BlockTensorKit.show_braille(H::AbstractHMPO)
 
     for i in 1:maxheight
         line = ""
-        line *= ((i == 1 && !isfinite) ? ("... "*dash) : " ")
+        line *= ((i == 1 && !isfinite) ? ("... " * dash) : " ")
         line *= (i > 1 && !isfinite) ? "    " : ""
         for (j, braille) in enumerate(brailles)
-            line *= (checkbounds(Bool, braille, i) ? braille[i] : repeat(" ", length(braille[1])))
+            line *= (checkbounds(Bool, braille, i) ? braille[i] :
+                     repeat(" ", length(braille[1])))
             if j < L
-                line *= repeat(((i==1) ? dash : " "), stride)
+                line *= repeat(((i == 1) ? dash : " "), stride)
             end
         end
         line *= ((i == 1 && !isfinite) ? (dash * " ...") : " ")
@@ -156,8 +160,12 @@ end
 
 Base.conj(mpo::AbstractMPO) = conj!(copy(mpo))
 function Base.conj!(mpo::AbstractMPO)
-    foreach(mpo) do o
-        @plansor q[-1 -2; -3 -4] := conj(o[-1 -3; -2 -4])
+    for i in 1:length(mpo)
+        mpo[i] = _conj_mpo(mpo[i])
     end
     return mpo
+end
+
+function _conj_mpo(O::MPOTensor)
+    return @plansor O′[-1 -2; -3 -4] := conj(O[-1 -3; -2 -4])
 end
