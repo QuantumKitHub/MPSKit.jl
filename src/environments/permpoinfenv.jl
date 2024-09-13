@@ -42,7 +42,7 @@ end
 
 function environments(state::MPSMultiline, mpo::MPOMultiline; solver=Defaults.eigsolver)
     GL, GR = initialize_environments(state, mpo, state)
-    envs = InfiniteMPOEnvironments(state, mpo, state, solver, GL, GR, ReentrantLock())
+    envs = InfiniteMPOEnvironments(nothing, mpo, state, solver, GL, GR, ReentrantLock())
     return recalculate!(envs, state)
 end
 
