@@ -404,7 +404,7 @@ The interaction never wraps around multiple times
 
 Convert an infinite MPO into a finite MPO of length `L`, by mapping periodic boundary conditions onto an open system.
 """
-function periodic_boundary_conditions(mpo::Union{InfiniteMPO{O},DenseMPO{O}},
+function periodic_boundary_conditions(mpo::InfiniteMPO{O},
                                       L=length(mpo)) where {O}
     mod(L, length(mpo)) == 0 ||
         throw(ArgumentError("length $L is not a multiple of the infinite unitcell"))
@@ -433,20 +433,21 @@ function periodic_boundary_conditions(mpo::Union{InfiniteMPO{O},DenseMPO{O}},
                                            conj(F_right[-4; 4 5])
     end
 
-    return mpo isa DenseMPO ? DenseMPO(FiniteMPO(output)) : FiniteMPO(output)
+    return FiniteMPO(output)
 end
 
+# TODO: check if this is correct?
 function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
     Hmpo = periodic_boundary_conditions(InfiniteMPO(H), L)
     return FiniteMPOHamiltonian(Hmpo.data)
 end
 
 """
-    open_boundary_conditions(mpo::AbstractInfiniteMPO, L::Int)
+    open_boundary_conditions(mpo::InfiniteMPOHamiltonian, L::Int) -> FiniteMPOHamiltonian
 
 Convert an infinite MPO into a finite MPO of length `L`, by applying open boundary conditions.
 """
-function open_boundary_conditions(mpo::Union{InfiniteMPO,DenseMPO},
+function open_boundary_conditions(mpo::InfiniteMPOHamiltonian,
                                   L=length(mpo))
     mod(L, length(mpo)) == 0 ||
         throw(ArgumentError("length $L is not a multiple of the infinite unitcell"))
@@ -455,14 +456,9 @@ function open_boundary_conditions(mpo::Union{InfiniteMPO,DenseMPO},
     # Only keep top row of the first and last column of the last MPO tensor
 
     # allocate output
-    output = Vector(repeat(copy(mpo.data), L ÷ length(mpo)))
+    output = Vector(repeat(copy(parent(mpo)), L ÷ length(mpo)))
     output[1] = output[1][1, 1, 1, :]
     output[end] = output[end][:, 1, 1, 1]
 
-    return mpo isa DenseMPO ? DenseMPO(output) : FiniteMPO(output)
-end
-
-function open_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
-    Hmpo = open_boundary_conditions(InfiniteMPO(H), L)
-    return FiniteMPOHamiltonian(Hmpo.data)
+    return FiniteMPOHamiltonian(output)
 end

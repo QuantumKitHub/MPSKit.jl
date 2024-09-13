@@ -46,7 +46,7 @@ end
 
 const DenseMPO = MPO{<:TensorMap}
 
-DenseMPO(mpo::MPO) = MPO(map(TensorMap, parent(mpo)))
+DenseMPO(mpo::MPO) = mpo isa DenseMPO ? copy(mpo) : MPO(map(TensorMap, parent(mpo)))
 
 # Utility
 # -------

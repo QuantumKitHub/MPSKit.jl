@@ -491,7 +491,7 @@ end
         Δt = 0.1
         expH = make_time_mpo(H, Δt, WII())
 
-        O = convert(InfiniteMPO, expH)
+        O = DenseMPO(expH)
         Op = periodic_boundary_conditions(O, 10)
         Op′ = changebonds(Op, SvdCut(; trscheme=truncdim(5)))
 
@@ -619,9 +619,11 @@ end
 
         # test if the finite fid sus approximates the analytical one with increasing system size
         fin_en = map([20, 15, 10]) do L
+            Hfin = open_boundary_conditions(hamiltonian(λ), L)
+            H_Xfin = open_boundary_conditions(H_X, L)
             ψ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^16)
-            ψ, envs, = find_groundstate(ψ, H, DMRG(; verbosity=0))
-            numerical_susceptibility = fidelity_susceptibility(ψ, H, [H_X], envs;
+            ψ, envs, = find_groundstate(ψ, Hfin, DMRG(; verbosity=0))
+            numerical_susceptibility = fidelity_susceptibility(ψ, Hfin, [H_Xfin], envs;
                                                                maxiter=10)
             return numerical_susceptibility[1, 1] / L
         end
