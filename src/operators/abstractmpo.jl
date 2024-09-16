@@ -86,7 +86,7 @@ function Base.show(io::IOContext, mpo::AbstractMPO)
 
     # used to align all mposite infos regardless of the length of the mpo (100 takes up more space than 5)
     npad = floor(Int, log10(L))
-    mpoletter = mpo isa AbstractHMPO ? "W" : "O"
+    mpoletter = mpo isa MPOHamiltonian ? "W" : "O"
     isfinite = (mpo isa FiniteMPO) || (mpo isa FiniteMPOHamiltonian)
 
     !isfinite && println(io, "╷  ⋮")
@@ -110,7 +110,7 @@ function Base.show(io::IOContext, mpo::AbstractMPO)
     return nothing
 end
 
-function BlockTensorKit.show_braille(H::AbstractHMPO)
+function BlockTensorKit.show_braille(H::MPOHamiltonian)
     isfinite = (H isa FiniteMPO) || (H isa FiniteMPOHamiltonian)
     dash = "🭻"
     stride = 2 #amount of dashes between braille
