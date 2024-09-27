@@ -432,14 +432,18 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},
                                            mpo[i][2 -2; 3 5] *
                                            conj(F_right[-4; 4 5])
     end
-
+    if mpo isa SparseMPO # the above process fills sparse mpos with zeros.
+        for i in eachindex(output)
+            dropzeros!(output[i])
+        end
+    end
     return FiniteMPO(output)
 end
 
 # TODO: check if this is correct?
 function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
     Hmpo = periodic_boundary_conditions(InfiniteMPO(H), L)
-    return FiniteMPOHamiltonian(Hmpo.data)
+    return FiniteMPOHamiltonian(parent(Hmpo))
 end
 
 """
