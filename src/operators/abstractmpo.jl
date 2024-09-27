@@ -110,7 +110,7 @@ function Base.show(io::IOContext, mpo::AbstractMPO)
     return nothing
 end
 
-function BlockTensorKit.show_braille(H::MPOHamiltonian)
+function BlockTensorKit.show_braille(H::SparseMPO)
     isfinite = (H isa FiniteMPO) || (H isa FiniteMPOHamiltonian)
     dash = "🭻"
     stride = 2 #amount of dashes between braille
