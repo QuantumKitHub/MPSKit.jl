@@ -645,3 +645,6 @@ function Base.isapprox(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian;
     # don't take square roots to avoid precision loss
     return norm₁₂² ≤ max(atol^2, rtol^2 * max(norm₁², norm₂²))
 end
+
+DenseMPO(H::FiniteMPOHamiltonian) = DenseMPO(FiniteMPO(H))
+DenseMPO(H::InfiniteMPOHamiltonian) = DenseMPO(InfiniteMPO(H))
