@@ -115,10 +115,8 @@ function remove_orphans!(mpo::FiniteMPO, tol=eps(real(scalartype(mpo)))^(3 / 4))
     end
 
     # Impose boundary conditions as in arXiv:2302.14181
-    if mpo isa FiniteMPO
-        mpo[1] = mpo[1][1, :, :, :]
-        mpo[end] = mpo[end][:, :, :, 1]
-    end
+    mpo[1] = mpo[1][1, :, :, :]
+    mpo[end] = mpo[end][:, :, :, 1]
 
     return mpo
 end
