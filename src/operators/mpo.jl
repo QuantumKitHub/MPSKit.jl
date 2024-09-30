@@ -59,7 +59,7 @@ end
 
 Base.repeat(mpo::MPO, n::Int) = MPO(repeat(parent(mpo), n))
 
-function remove_orphans!(mpo::SparseMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
+function remove_orphans!(mpo::InfiniteMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
     # drop zeros
     for slice in parent(mpo)
         for (k, v) in nonzero_pairs(slice)
@@ -81,6 +81,43 @@ function remove_orphans!(mpo::SparseMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
             mpo[i] = mpo[i][:, :, :, mask]
             mpo[i + 1] = mpo[i + 1][mask, :, :, :]
         end
+    end
+
+    return mpo
+end
+
+function remove_orphans!(mpo::FiniteMPO, tol=eps(real(scalartype(mpo)))^(3 / 4))
+
+    for slice in parent(mpo)
+        for (k, v) in nonzero_pairs(slice)
+            norm(v) < tol && delete!(slice, k)
+        end
+    end
+
+    # Forward sweep
+    # col j on site i empty -> remove row j on site i + 1
+    for i in 1:(length(mpo) - 1)
+        mask = filter(1:size(mpo[i], 4)) do j
+            return j ∈ getindex.(nonzero_keys(mpo[i]), 4)
+        end
+        mpo[i] = mpo[i][:, :, :, mask]
+        mpo[i + 1] = mpo[i + 1][mask, :, :, :]
+    end
+
+    # Backward sweep
+    # row j on site i empty -> remove col j on site i - 1
+    for i in length(mpo):-1:2
+        mask = filter(1:size(mpo[i], 1)) do j
+            return j ∈ getindex.(nonzero_keys(mpo[i]), 1)
+        end
+        mpo[i] = mpo[i][mask, :, :, :]
+        mpo[i - 1] = mpo[i - 1][:, :, :, mask]
+    end
+
+    # Impose boundary conditions as in arXiv:2302.14181
+    if mpo isa FiniteMPO
+        mpo[1] = mpo[1][1, :, :, :]
+        mpo[end] = mpo[end][:, :, :, 1]
     end
 
     return mpo
