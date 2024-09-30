@@ -87,7 +87,6 @@ function remove_orphans!(mpo::InfiniteMPO; tol=eps(real(scalartype(mpo)))^(3 / 4
 end
 
 function remove_orphans!(mpo::FiniteMPO, tol=eps(real(scalartype(mpo)))^(3 / 4))
-
     for slice in parent(mpo)
         for (k, v) in nonzero_pairs(slice)
             norm(v) < tol && delete!(slice, k)
@@ -113,10 +112,6 @@ function remove_orphans!(mpo::FiniteMPO, tol=eps(real(scalartype(mpo)))^(3 / 4))
         mpo[i] = mpo[i][mask, :, :, :]
         mpo[i - 1] = mpo[i - 1][:, :, :, mask]
     end
-
-    # Impose boundary conditions as in arXiv:2302.14181
-    mpo[1] = mpo[1][1, :, :, :]
-    mpo[end] = mpo[end][:, :, :, 1]
 
     return mpo
 end

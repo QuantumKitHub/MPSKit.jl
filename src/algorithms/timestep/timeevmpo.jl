@@ -21,7 +21,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
     if H isa FiniteMPOHamiltonian
         H′ = copy(H)
         H′[1] = similar(H[2])
-        H′[end] = similar(H[end-1])
+        H′[end] = similar(H[end - 1])
 
         for i in nonzero_keys(H[1])
             H′[1][i] = H[1][i]
@@ -131,7 +131,13 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
         end
     end
 
-    remove_orphans!(mpo)
+    # Impose boundary conditions as in arXiv:2302.14181
+    if mpo isa FiniteMPO
+        mpo[1] = mpo[1][1, :, :, :]
+        mpo[end] = mpo[end][:, :, :, 1]
+    end
+
+    return remove_orphans!(mpo)
 end
 
 # function make_time_mpo(th::MPOHamiltonian{S,T,E}, dt, alg::TaylorCluster) where {S,T,E}
