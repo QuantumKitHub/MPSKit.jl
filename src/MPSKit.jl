@@ -29,6 +29,7 @@ export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # should be properties
 export add_util_leg, max_Ds, recalculate!
 export left_virtualspace, right_virtualspace, physicalspace
 export entanglementplot, transferplot
+export braille
 
 # hamiltonian things
 export Cache
