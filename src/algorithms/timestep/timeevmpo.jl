@@ -13,13 +13,29 @@ end
 
 const WI = TaylorCluster(; N=1, extension=false, compression=false)
 
-function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::TaylorCluster)
+function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
     N = alg.N
     τ = -1im * dt
-    # start with H^N
-    H_n = H^N
 
-    V = size(H[1], 1)
+    # Hack to store FiniteMPOhamiltonians in "square" blocktensormaps
+    if H isa FiniteMPOHamiltonian
+        H′ = copy(H)
+        H′[1] = similar(H[2])
+        H′[end] = similar(H[end-1])
+
+        for i in nonzero_keys(H[1])
+            H′[1][i] = H[1][i]
+        end
+        for i in nonzero_keys(H[end])
+            H′[end][i] = H[end][i]
+        end
+    else
+        H′ = H
+    end
+
+    # start with H^N
+    H_n = H′^N
+    V = size(H′[1], 1)
     linds = LinearIndices(ntuple(i -> V, N))
     cinds = CartesianIndices(linds)
 
@@ -53,7 +69,11 @@ function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::TaylorCluster
 
     # loopback step: Algorithm 1
     # constructing the Nth order time evolution MPO
-    mpo = InfiniteMPO(parent(H_n))
+    if H isa FiniteMPOHamiltonian
+        mpo = FiniteMPO(parent(H_n))
+    else
+        mpo = InfiniteMPO(parent(H_n))
+    end
     for slice in parent(mpo)
         for b in cinds[2:end]
             all(in((1, V)), b.I) || continue
@@ -111,7 +131,7 @@ function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::TaylorCluster
         end
     end
 
-    return remove_orphans!(mpo)
+    remove_orphans!(mpo)
 end
 
 # function make_time_mpo(th::MPOHamiltonian{S,T,E}, dt, alg::TaylorCluster) where {S,T,E}
