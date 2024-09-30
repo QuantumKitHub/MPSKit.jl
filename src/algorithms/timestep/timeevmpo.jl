@@ -17,7 +17,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
     N = alg.N
     τ = -1im * dt
 
-    # Hack to store FiniteMPOhamiltonians in "square" blocktensormaps
+    # Hack to store FiniteMPOhamiltonians in "square" MPO tensors
     if H isa FiniteMPOHamiltonian
         H′ = copy(H)
         H′[1] = similar(H[2])
@@ -32,6 +32,9 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
     else
         H′ = H
     end
+
+    # Check if mpo has the same size everywhere. This is assumed in the following.
+    @assert allequal(size.(H′)) "make_time_mpo assumes all mpo tensors to have equal size. A fix for this is yet to be implemented"
 
     # start with H^N
     H_n = H′^N
