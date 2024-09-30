@@ -87,11 +87,7 @@ function remove_orphans!(mpo::InfiniteMPO; tol=eps(real(scalartype(mpo)))^(3 / 4
 end
 
 function remove_orphans!(mpo::FiniteMPO, tol=eps(real(scalartype(mpo)))^(3 / 4))
-    for slice in parent(mpo)
-        for (k, v) in nonzero_pairs(slice)
-            norm(v) < tol && delete!(slice, k)
-        end
-    end
+    droptol!.(mpo, tol)
 
     # Forward sweep
     # col j on site i empty -> remove row j on site i + 1
