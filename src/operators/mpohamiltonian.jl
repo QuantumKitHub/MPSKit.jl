@@ -498,8 +498,8 @@ function Base.:*(H1::FiniteMPOHamiltonian, H2::FiniteMPOHamiltonian)
         row_inds = CartesianIndices((size(H2[i], 1), size(H1[i], 1)))
         col_inds = CartesianIndices((size(H2[i], 4), size(H1[i], 4)))
         for j in axes(Ws[i], 1), k in axes(Ws[i], 4)
-            r1, r2 = row_inds[j].I
-            c1, c2 = col_inds[k].I
+            r2, r1 = row_inds[j].I
+            c2, c1 = col_inds[k].I
             if get(H1[i], CartesianIndex(r1, 1, 1, c1), nothing) isa BraidingTensor &&
                get(H2[i], CartesianIndex(r2, 1, 1, c2), nothing) isa BraidingTensor
                 Ws[i][j, 1, 1, k] = BraidingTensor{T}(eachspace(Ws[i])[j, 1, 1, k])
