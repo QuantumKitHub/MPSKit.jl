@@ -60,12 +60,7 @@ end
 Base.repeat(mpo::MPO, n::Int) = MPO(repeat(parent(mpo), n))
 
 function remove_orphans!(mpo::InfiniteMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
-    # drop zeros
-    for slice in parent(mpo)
-        for (k, v) in nonzero_pairs(slice)
-            norm(v) < tol && delete!(slice, k)
-        end
-    end
+    droptol!.(mpo, tol)
 
     # drop dead starts/ends
     changed = true
