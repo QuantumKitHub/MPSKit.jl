@@ -220,7 +220,7 @@ end
 Retract a left-canonical finite MPS along Grassmann tangent `g` by distance `alpha`.
 """
 function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
-    #TODO : support parralelize_sites
+    #TODO : support parralelize_sites.
     state = x.state
     envs = x.envs
 
@@ -247,13 +247,13 @@ function transport!(h, x, g, alpha, xp)
         @sync for i in 1:length(h)
             Threads.@spawn begin
                 h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
-                                                     xp.state.AL[i]))
+                    xp.state.AL[i]))
             end
         end
     else
         for i in 1:length(h)
             h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
-                                                xp.state.AL[i]))
+                xp.state.AL[i]))
         end
     end
     return h
