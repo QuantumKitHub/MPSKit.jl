@@ -567,7 +567,6 @@ end
         state2 = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
         state3 = InfiniteMPS([pspace, pspace, pspace], [Dspace, Dspace, Dspace])
 
-
         state_re = changebonds(state2,
                                RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
         @test dot(state2, state_re) ≈ 1 atol = 1e-8
@@ -581,11 +580,14 @@ end
 
         #test vumpssvd with different unit cells 
         for state in [state1, state2, state3]
-            state_vs, _ = changebonds(state, repeat(MPOHamiltonian(nn), lengh(state)), VUMPSSvdCut(; trscheme=notrunc()))
+            @show length(state)
+            state_vs, _ = changebonds(state, repeat(MPOHamiltonian(nn), length(state)),
+                                      VUMPSSvdCut(; trscheme=notrunc()))
             @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
 
             state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
-            @test dim(right_virtualspace(state_vs_tr, 1)) < dim(right_virtualspace(state_vs, 1))   
+            @test dim(right_virtualspace(state_vs_tr, 1)) <
+                  dim(right_virtualspace(state_vs, 1))
         end
     end
 
