@@ -168,7 +168,7 @@ end
     H = repeat(force_planar(transverse_field_ising(; g)), 3)
 
     @testset "VUMPS" begin
-        ψ₀ = repeat( InfiniteMPS(ℙ^2, ℙ^D) ,3)
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 3)
         v₀ = variance(ψ₀, H)
 
         # test logging
@@ -184,7 +184,7 @@ end
     end
 
     @testset "IDMRG1" begin
-        ψ₀ = repeat( InfiniteMPS(ℙ^2, ℙ^D) ,3)
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 3)
         v₀ = variance(ψ₀, H)
 
         # test logging
@@ -252,7 +252,6 @@ end
         @test v < 1e-2
     end
 end
-
 
 @testset "LazySum FiniteMPS groundstate" verbose = true begin
     tol = 1e-8
