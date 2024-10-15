@@ -77,32 +77,36 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
     return state, envs
 end
 
-function changebonds_parallel_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environments(state, H))
+function changebonds_parallel_n(state::InfiniteMPS, H, alg::VUMPSSvdCut,
+                                envs=environments(state, H))
     #prepare the loops we'll have to run over, this is different depending on wether the length of the state is odd or even ! 
     subsets = nothing
     start_locs = nothing
     if iseven(length(state))
         subsets = ["even", "odd"]
-        start_locs = Dict("even" => 1:2:length(state)  , "odd" => 2:2:length(state)  )
+        start_locs = Dict("even" => 1:2:length(state), "odd" => 2:2:length(state))
     else
         subsets = ["even", "odd", "last"]
-        start_locs = Dict("even" => 1:2:length(state)-1, "odd" => 2:2:length(state)-1, "last" => length(state))
+        start_locs = Dict("even" => 1:2:(length(state) - 1),
+                          "odd" => 2:2:(length(state) - 1), "last" => length(state))
     end
 
     for subset in subsets
         new_ALs = copy(state.AL)
         @sync for loc in start_locs[subset]
             Threads.@spawn begin
-                @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
+                @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] *
+                                              state.AR[loc + 1][1 -4; -3]
 
                 h_ac2 = ∂∂AC2(loc, state, H, envs)
                 (vals, vecs, _) = eigsolve(h_ac2, AC2, 1, :SR; tol=alg.tol_eigenval,
-                                        ishermitian=false)
+                                           ishermitian=false)
                 nAC2 = vecs[1]
 
                 h_c = ∂∂C(loc + 1, state, H, envs)
-                (vals, vecs, _) = eigsolve(h_c, state.CR[loc + 1], 1, :SR; tol=alg.tol_eigenval,
-                                        ishermitian=false)
+                (vals, vecs, _) = eigsolve(h_c, state.CR[loc + 1], 1, :SR;
+                                           tol=alg.tol_eigenval,
+                                           ishermitian=false)
                 nC2 = vecs[1]
 
                 #svd ac2, get new AL1 and S,V ---> AC
@@ -114,7 +118,8 @@ function changebonds_parallel_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=en
                 QC, _ = leftorth(nC2; alg=QRpos())
                 dom_map = isometry(domain(QC), domain(QAC))
 
-                @plansor AL2[-1 -2; -3] := QAC[-1 -2; 1] * conj(dom_map[2; 1]) * conj(QC[-3; 2])
+                @plansor AL2[-1 -2; -3] := QAC[-1 -2; 1] * conj(dom_map[2; 1]) *
+                                           conj(QC[-3; 2])
 
                 #make a new state using the updated A's
                 new_ALs[loc] = AL1
