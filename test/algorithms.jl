@@ -563,25 +563,32 @@ end
         nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
 
-        state = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
+        state1 = InfiniteMPS(pspace, Dspace)
+        state2 = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
+        state3 = InfiniteMPS([pspace, pspace, pspace], [Dspace, Dspace, Dspace])
 
-        state_re = changebonds(state,
+        state_re = changebonds(state2,
                                RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
-        @test dot(state, state_re) ≈ 1 atol = 1e-8
+        @test dot(state2, state_re) ≈ 1 atol = 1e-8
 
-        state_oe, _ = changebonds(state,
+        state_oe, _ = changebonds(state2,
                                   repeat(MPOHamiltonian(nn), 2),
                                   OptimalExpand(;
                                                 trscheme=truncdim(dim(Dspace) *
                                                                   dim(Dspace))))
-        @test dot(state, state_oe) ≈ 1 atol = 1e-8
+        @test dot(state2, state_oe) ≈ 1 atol = 1e-8
 
-        state_vs, _ = changebonds(state, repeat(MPOHamiltonian(nn), 2),
-                                  VUMPSSvdCut(; trscheme=notrunc()))
-        @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
+        #test vumpssvd with different unit cells 
+        for state in [state1, state2, state3]
+            @show length(state)
+            state_vs, _ = changebonds(state, repeat(MPOHamiltonian(nn), length(state)),
+                                      VUMPSSvdCut(; trscheme=notrunc()))
+            @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
 
-        state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
-        @test dim(right_virtualspace(state_vs_tr, 1)) < dim(right_virtualspace(state_vs, 1))
+            state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
+            @test dim(right_virtualspace(state_vs_tr, 1)) <
+                  dim(right_virtualspace(state_vs, 1))
+        end
     end
 
     @testset "finite mps" begin
