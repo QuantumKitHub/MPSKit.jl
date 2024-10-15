@@ -161,6 +161,99 @@ end
     end
 end
 
+@testset "InfiniteMPS 3-site groundstates" verbose = true begin
+    tol = 1e-8
+    g = 4.0
+    D = 6
+    H = repeat(force_planar(transverse_field_ising(; g)), 3)
+
+    @testset "VUMPS" begin
+        ψ₀ = repeat( InfiniteMPS(ℙ^2, ℙ^D) ,3)
+        v₀ = variance(ψ₀, H)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(ψ₀, H, VUMPS(; tol, verbosity=5, maxiter=2))
+
+        ψ, envs, δ = find_groundstate(ψ, H, VUMPS(; tol, verbosity=1))
+        v = variance(ψ, H, envs)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1e-3
+        @test v < v₀
+        @test v < 1e-2
+    end
+
+    @testset "IDMRG1" begin
+        ψ₀ = repeat( InfiniteMPS(ℙ^2, ℙ^D) ,3)
+        v₀ = variance(ψ₀, H)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(ψ₀, H, IDMRG1(; tol, verbosity=5, maxiter=2))
+
+        ψ, envs, δ = find_groundstate(ψ, H, IDMRG1(; tol, verbosity=1))
+        v = variance(ψ, H, envs)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1e-3
+        @test v < v₀
+        @test v < 1e-2
+    end
+
+    @testset "IDMRG2" begin
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 3)
+        v₀ = variance(ψ₀, H)
+        trscheme = truncbelow(1e-8)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(ψ₀, H,
+                                      IDMRG2(; tol, verbosity=5, maxiter=2,
+                                             trscheme))
+
+        ψ, envs, δ = find_groundstate(ψ, H,
+                                      IDMRG2(; tol, verbosity=1, trscheme))
+        v = variance(ψ, H, envs)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1e-3
+        @test v < v₀
+        @test v < 1e-2
+    end
+
+    @testset "GradientGrassmann" begin
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 3)
+        v₀ = variance(ψ₀, H)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(ψ₀, H,
+                                      GradientGrassmann(; tol, verbosity=5, maxiter=2))
+
+        ψ, envs, δ = find_groundstate(ψ, H, GradientGrassmann(; tol, verbosity=1))
+        v = variance(ψ, H, envs)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1e-3
+        @test v < v₀
+        @test v < 1e-2
+    end
+
+    @testset "Combination" begin
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 3)
+        v₀ = variance(ψ₀, H)
+
+        alg = VUMPS(; tol=100 * tol, verbosity=1, maxiter=10) &
+              GradientGrassmann(; tol, verbosity=1, maxiter=50)
+        ψ, envs, δ = find_groundstate(ψ₀, H, alg)
+
+        v = variance(ψ, H, envs)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1e-3
+        @test v < v₀
+        @test v < 1e-2
+    end
+end
+
+
 @testset "LazySum FiniteMPS groundstate" verbose = true begin
     tol = 1e-8
     D = 15
