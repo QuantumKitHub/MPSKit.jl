@@ -41,6 +41,7 @@ function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
 end
 
 function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environments(state, H))
+    meps = 0.0
     for loc in 1:length(state)
         @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
 
@@ -57,6 +58,7 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
         #svd ac2, get new AL1 and S,V ---> AC
         (AL1, S, V, eps) = tsvd(nAC2; trunc=alg.trscheme, alg=TensorKit.SVD())
         @plansor AC[-1 -2; -3] := S[-1; 1] * V[1; -3 -2]
+        meps = max(eps, meps)
 
         #find AL2 from AC and C as in vumps paper
         QAC, _ = leftorth(AC; alg=QRpos())
@@ -82,13 +84,13 @@ function changebonds_parallel_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=en
     if iseven(length(state))
         subsets = ["even", "odd"]
         start_locs = Dict("even" => 1:2:length(state)  , "odd" => 2:2:length(state)  )
-    start_locs
+    else
         subsets = ["even", "odd", "last"]
         start_locs = Dict("even" => 1:2:length(state)-1, "odd" => 2:2:length(state)-1, "last" => length(state))
     end
 
     for subset in subsets
-        new_ALs = similar(state.AL)
+        new_ALs = copy(state.AL)
         @sync for loc in start_locs[subset]
             Threads.@spawn begin
                 @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
@@ -135,5 +137,3 @@ function changebonds(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environments(
         end
     end
 end
-
-
