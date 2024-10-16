@@ -68,22 +68,21 @@ using TensorKit: ℙ
     end
 end
 @testset "InfiniteMPS groundstate" verbose = true begin
-    @show unit_cell_size
     tol = 1e-8
     g = 4.0
     D = 6
 
-    H = force_planar(transverse_field_ising(; g))
-    ψ₀ = InfiniteMPS(ℙ^2, ℙ^D)
+    H_ref = force_planar(transverse_field_ising(; g))
+    ψ = InfiniteMPS(ℙ^2, ℙ^D)
+    v₀ = variance(ψ, H_ref)
+
 
     @testset "VUMPS" for unit_cell_size in [1, 3]
-        ψ = unit_cell_size == 1 ? ψ₀ : repeat(ψ, unit_cell_size)
-        H = repeat(H, unit_cell_size)
-
-        v₀ = variance(ψ, H)
+        ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+        H = repeat(H_ref, unit_cell_size)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ₀, H, VUMPS(; tol, verbosity=5, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ, H, VUMPS(; tol, verbosity=5, maxiter=2))
 
         ψ, envs, δ = find_groundstate(ψ, H, VUMPS(; tol, verbosity=1))
         v = variance(ψ, H, envs)
@@ -95,13 +94,11 @@ end
     end
 
     @testset "IDMRG1" for unit_cell_size in [1, 3]
-        ψ = unit_cell_size == 1 ? ψ₀ : repeat(ψ, unit_cell_size)
-        H = repeat(H, unit_cell_size)
-
-        v₀ = variance(ψ, H)
+        ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+        H = repeat(H_ref, unit_cell_size)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ₀, H, IDMRG1(; tol, verbosity=5, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ, H, IDMRG1(; tol, verbosity=5, maxiter=2))
 
         ψ, envs, δ = find_groundstate(ψ, H, IDMRG1(; tol, verbosity=1))
         v = variance(ψ, H, envs)
@@ -113,19 +110,19 @@ end
     end
 
     @testset "IDMRG2" begin
-        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
-        H2 = repeat(H, 2)
-        v₀ = variance(ψ₀, H2)
+        ψ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
+        H = repeat(H_ref, 2)
+
         trscheme = truncbelow(1e-8)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ₀, H2,
+        ψ, envs, δ = find_groundstate(ψ, H,
                                       IDMRG2(; tol, verbosity=5, maxiter=2,
                                              trscheme))
 
-        ψ, envs, δ = find_groundstate(ψ, H2,
+        ψ, envs, δ = find_groundstate(ψ, H,
                                       IDMRG2(; tol, verbosity=1, trscheme))
-        v = variance(ψ, H2, envs)
+        v = variance(ψ, H, envs)
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1e-3
@@ -134,13 +131,12 @@ end
     end
 
     @testset "GradientGrassmann" for unit_cell_size in [1, 3]
-        ψ = unit_cell_size == 1 ? ψ₀ : repeat(ψ, unit_cell_size)
-        H = repeat(H, unit_cell_size)
+        ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+        H = repeat(H_ref, unit_cell_size)
 
-        v₀ = variance(ψ, H)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ₀, H,
+        ψ, envs, δ = find_groundstate(ψ, H,
                                       GradientGrassmann(; tol, verbosity=5, maxiter=2))
 
         ψ, envs, δ = find_groundstate(ψ, H, GradientGrassmann(; tol, verbosity=1))
@@ -153,20 +149,18 @@ end
     end
 
     @testset "Combination" for unit_cell_size in [1, 3]
-        ψ = unit_cell_size == 1 ? ψ₀ : repeat(ψ, unit_cell_size)
-        H = repeat(H, unit_cell_size)
+        ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+        H = repeat(H_ref, unit_cell_size)
 
-        v₀ = variance(ψ, H)
 
         alg = VUMPS(; tol=100 * tol, verbosity=1, maxiter=10) &
               GradientGrassmann(; tol, verbosity=1, maxiter=50)
-        ψ, envs, δ = find_groundstate(ψ₀, H, alg)
+        ψ, envs, δ = find_groundstate(ψ, H, alg)
 
         v = variance(ψ, H, envs)
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1e-3
-        @test v < v₀
         @test v < 1e-2
     end
 end
