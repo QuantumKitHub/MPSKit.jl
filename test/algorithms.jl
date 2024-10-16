@@ -76,7 +76,6 @@ end
     ψ = InfiniteMPS(ℙ^2, ℙ^D)
     v₀ = variance(ψ, H_ref)
 
-
     @testset "VUMPS" for unit_cell_size in [1, 3]
         ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
@@ -134,7 +133,6 @@ end
         ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
-
         # test logging
         ψ, envs, δ = find_groundstate(ψ, H,
                                       GradientGrassmann(; tol, verbosity=5, maxiter=2))
@@ -151,7 +149,6 @@ end
     @testset "Combination" for unit_cell_size in [1, 3]
         ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
-
 
         alg = VUMPS(; tol=100 * tol, verbosity=1, maxiter=10) &
               GradientGrassmann(; tol, verbosity=1, maxiter=50)
