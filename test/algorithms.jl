@@ -67,17 +67,20 @@ using TensorKit: ℙ
         @test v < v₀ && v < 1e-2
     end
 end
-@testset "InfiniteMPS groundstate" verbose = true for unit_cell_size in 1:4
+@testset "InfiniteMPS groundstate" verbose = true begin
     @show unit_cell_size
     tol = 1e-8
     g = 4.0
     D = 6
 
-    H = repeat(force_planar(transverse_field_ising(; g)), unit_cell_size)
-    ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), unit_cell_size)
+    H = force_planar(transverse_field_ising(; g))
+    ψ₀ = InfiniteMPS(ℙ^2, ℙ^D)
 
-    @testset "VUMPS" begin
-        v₀ = variance(ψ₀, H)
+    @testset "VUMPS" for unit_cell_size in [1, 3]
+        ψ = unit_cell_size == 1 ? ψ₀ : repeat(ψ, unit_cell_size)
+        H = repeat(H, unit_cell_size)
+
+        v₀ = variance(ψ, H)
 
         # test logging
         ψ, envs, δ = find_groundstate(ψ₀, H, VUMPS(; tol, verbosity=5, maxiter=2))
@@ -91,8 +94,11 @@ end
         @test v < 1e-2
     end
 
-    @testset "IDMRG1" begin
-        v₀ = variance(ψ₀, H)
+    @testset "IDMRG1" for unit_cell_size in [1, 3]
+        ψ = unit_cell_size == 1 ? ψ₀ : repeat(ψ, unit_cell_size)
+        H = repeat(H, unit_cell_size)
+
+        v₀ = variance(ψ, H)
 
         # test logging
         ψ, envs, δ = find_groundstate(ψ₀, H, IDMRG1(; tol, verbosity=5, maxiter=2))
@@ -106,31 +112,32 @@ end
         @test v < 1e-2
     end
 
-    if unit_cell_size != 1
-        @testset "IDMRG2" begin
-            ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
-            H2 = repeat(H, 2)
-            v₀ = variance(ψ₀, H2)
-            trscheme = truncbelow(1e-8)
+    @testset "IDMRG2" begin
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
+        H2 = repeat(H, 2)
+        v₀ = variance(ψ₀, H2)
+        trscheme = truncbelow(1e-8)
 
-            # test logging
-            ψ, envs, δ = find_groundstate(ψ₀, H2,
-                                          IDMRG2(; tol, verbosity=5, maxiter=2,
-                                                 trscheme))
+        # test logging
+        ψ, envs, δ = find_groundstate(ψ₀, H2,
+                                      IDMRG2(; tol, verbosity=5, maxiter=2,
+                                             trscheme))
 
-            ψ, envs, δ = find_groundstate(ψ, H2,
-                                          IDMRG2(; tol, verbosity=1, trscheme))
-            v = variance(ψ, H2, envs)
+        ψ, envs, δ = find_groundstate(ψ, H2,
+                                      IDMRG2(; tol, verbosity=1, trscheme))
+        v = variance(ψ, H2, envs)
 
-            # test using low variance
-            @test sum(δ) ≈ 0 atol = 1e-3
-            @test v < v₀
-            @test v < 1e-2
-        end
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1e-3
+        @test v < v₀
+        @test v < 1e-2
     end
 
-    @testset "GradientGrassmann" begin
-        v₀ = variance(ψ₀, H)
+    @testset "GradientGrassmann" for unit_cell_size in [1, 3]
+        ψ = unit_cell_size == 1 ? ψ₀ : repeat(ψ, unit_cell_size)
+        H = repeat(H, unit_cell_size)
+
+        v₀ = variance(ψ, H)
 
         # test logging
         ψ, envs, δ = find_groundstate(ψ₀, H,
@@ -145,8 +152,11 @@ end
         @test v < 1e-2
     end
 
-    @testset "Combination" begin
-        v₀ = variance(ψ₀, H)
+    @testset "Combination" for unit_cell_size in [1, 3]
+        ψ = unit_cell_size == 1 ? ψ₀ : repeat(ψ, unit_cell_size)
+        H = repeat(H, unit_cell_size)
+
+        v₀ = variance(ψ, H)
 
         alg = VUMPS(; tol=100 * tol, verbosity=1, maxiter=10) &
               GradientGrassmann(; tol, verbosity=1, maxiter=50)
@@ -466,21 +476,26 @@ end
         @test dim(space(Op′[5], 1)) < dim(space(Op[5], 1))
     end
 
-    @testset "infinite mps" for unit_cell_size in 1:4
-        @show unit_cell_size
+    @testset "infinite mps" begin
         #random nn interaction
         nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
-        H = repeat(MPOHamiltonian(nn), unit_cell_size)
-        state = repeat(InfiniteMPS(pspace, Dspace), unit_cell_size)
 
-        if unit_cell_size != 1
-            #test rand_expand
+        #test rand_expand
+        for unit_cell_size in 2:3
+            H = repeat(MPOHamiltonian(nn), unit_cell_size)
+            state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
+
             state_re = changebonds(state,
                                    RandExpand(;
                                               trscheme=truncdim(dim(Dspace) * dim(Dspace))))
             @test dot(state, state_re) ≈ 1 atol = 1e-8
-            #test optimal_expand
+        end
+        #test optimal_expand
+        for unit_cell_size in 2:3
+            H = repeat(MPOHamiltonian(nn), unit_cell_size)
+            state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
+
             state_oe, _ = changebonds(state,
                                       H,
                                       OptimalExpand(;
@@ -489,12 +504,18 @@ end
             @test dot(state, state_oe) ≈ 1 atol = 1e-8
         end
         #test VUMPSSvdCut
-        state_vs, _ = changebonds(state, H,
-                                  VUMPSSvdCut(; trscheme=notrunc()))
-        @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
+        for unit_cell_size in [1, 2, 3, 4]
+            H = repeat(MPOHamiltonian(nn), unit_cell_size)
+            state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
 
-        state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
-        @test dim(right_virtualspace(state_vs_tr, 1)) < dim(right_virtualspace(state_vs, 1))
+            state_vs, _ = changebonds(state, H,
+                                      VUMPSSvdCut(; trscheme=notrunc()))
+            @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
+
+            state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
+            @test dim(right_virtualspace(state_vs_tr, 1)) <
+                  dim(right_virtualspace(state_vs, 1))
+        end
     end
 
     @testset "finite mps" begin
