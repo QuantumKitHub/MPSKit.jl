@@ -68,6 +68,7 @@ using TensorKit: ℙ
     end
 end
 @testset "InfiniteMPS groundstate" verbose = true for unit_cell_size in 1:4
+    @show unit_cell_size
     tol = 1e-8
     g = 4.0
     D = 6
@@ -466,6 +467,7 @@ end
     end
 
     @testset "infinite mps" for unit_cell_size in 1:4
+        @show unit_cell_size
         #random nn interaction
         nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
