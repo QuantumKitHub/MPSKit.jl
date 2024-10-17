@@ -708,10 +708,11 @@ end
     end
 
     @testset "sparse_mpo * finitemps1 ≈ finitemps2" for alg in finite_algs
-        ψ₁ = FiniteMPS(10, ℂ^2, ℂ^30)
-        ψ₂ = FiniteMPS(10, ℂ^2, ℂ^25)
+        L = 10
+        ψ₁ = FiniteMPS(L, ℂ^2, ℂ^30)
+        ψ₂ = FiniteMPS(L, ℂ^2, ℂ^25)
 
-        H = transverse_field_ising(; g=4.0, L=10)
+        H = transverse_field_ising(; g=4.0, L=L)
         τ = 1e-3
 
         expH = make_time_mpo(H, τ, WI)
