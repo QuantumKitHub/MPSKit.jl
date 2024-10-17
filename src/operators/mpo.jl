@@ -313,7 +313,7 @@ function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
                               A[1 2; 4] *
                               O[3 -2; 2 5] *
                               conj(Fᵣ[-3; 4 5])
-    return A′ isa AbstractBlockTensorMap ? only(A′) : A′
+    return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
 end
 
 function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
