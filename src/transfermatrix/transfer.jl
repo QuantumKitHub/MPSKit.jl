@@ -105,7 +105,6 @@ transfer_right(v, ::Nothing, A, B) = transfer_right(v, A, B);
 #mpo transfer
 function transfer_left(x::MPSTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
     @plansor y[-1 -2; -3] := x[1 2; 4] * A[4 5; -3] * O[2 3; 5 -2] * conj(Ab[1 3; -1])
-    return y
 end
 function transfer_right(v::MPSTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
     @plansor v[-1 -2; -3] := A[-1 2; 1] * O[-2 4; 2 3] * conj(Ab[-3 4; 5]) * v[1 3; 5]
