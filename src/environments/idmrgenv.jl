@@ -17,7 +17,7 @@ end
 
 function IDMRGEnv(ψ::Union{MPSMultiline,InfiniteMPS}, env)
     ψ === env.dependency || recalculate!(env, ψ)
-    return IDMRGEnv(env.opp, deepcopy(env.lw), deepcopy(env.rw))
+    return IDMRGEnv(env.operator, deepcopy(env.leftenvs), deepcopy(env.rightenvs))
 end
 
 # TODO: change this function name
