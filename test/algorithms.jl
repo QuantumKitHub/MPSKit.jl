@@ -690,7 +690,7 @@ end
         @test abs(dot(ψ2, ψ4)) ≈ 1.0 atol = dt
 
         nW1 = changebonds(W1, SvdCut(; trscheme=truncerr(dt))) #this should be a trivial mpo now
-        @test dim(space(nW1.opp[1, 1], 1)) == 1
+        @test dim(space(nW1[1], 1)) == 1
     end
 
     finite_algs = [DMRG(; verbosity), DMRG2(; verbosity, trscheme=truncdim(10))]
