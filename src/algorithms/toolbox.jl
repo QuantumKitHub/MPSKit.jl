@@ -459,8 +459,8 @@ function open_boundary_conditions(mpo::InfiniteMPOHamiltonian,
 
     # allocate output
     output = Vector(repeat(copy(parent(mpo)), L ÷ length(mpo)))
-    output[1] = output[1][1, 1, 1, :]
-    output[end] = output[end][:, 1, 1, 1]
+    output[1] = output[1][1, :, :, :]
+    output[end] = output[end][:, :, :, 1]
 
     return FiniteMPOHamiltonian(output)
 end
