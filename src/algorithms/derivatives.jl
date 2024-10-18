@@ -207,7 +207,7 @@ function c_proj(pos, below, envs::FinEnv)
     return ∂C(envs.above.CR[pos], leftenv(envs, pos + 1, below), rightenv(envs, pos, below))
 end
 
-function c_proj(row, col, below, envs::PerMPOInfEnv)
+function c_proj(row, col, below, envs::InfiniteMPOEnvironments)
     return ∂C(envs.above.CR[row, col], leftenv(envs, row, col + 1, below),
               rightenv(envs, row, col, below))
 end
@@ -219,7 +219,7 @@ function ac_proj(pos, below, envs)
 
     return ∂AC(envs.above.AC[pos], envs.operator[pos], le, re)
 end
-function ac_proj(row, col, below, envs::PerMPOInfEnv)
+function ac_proj(row, col, below, envs::InfiniteMPOEnvironments)
     return ∂AC(envs.above.AC[row, col], envs.operator[row, col],
                leftenv(envs, row, col, below),
                rightenv(envs, row, col, below))
@@ -232,7 +232,7 @@ function ac2_proj(pos, below, envs)
                 envs.operator[pos],
                 envs.operator[pos + 1], le, re)
 end
-function ac2_proj(row, col, below, envs::PerMPOInfEnv)
+function ac2_proj(row, col, below, envs::InfiniteMPOEnvironments)
     @plansor ac2[-1 -2; -3 -4] := envs.above.AC[row, col][-1 -2; 1] *
                                   envs.above.AR[row, col + 1][1 -4; -3]
     return ∂AC2(ac2, leftenv(envs, row, col + 1, below),
