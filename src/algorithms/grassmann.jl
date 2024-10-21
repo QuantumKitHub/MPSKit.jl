@@ -71,7 +71,7 @@ end
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     al_d = similar(state.AL)
     @static if Defaults.parallelize_sites
-        g = fill(nothing, length(state))  #not typstable but this won't be a performance issue for now :) 
+        g = Array{Any}(undef, length(state))  #not typstable but this won't be a performance issue for now :) 
         @sync for i in 1:length(state)
             Threads.@spawn begin
                 al_d[i] = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
