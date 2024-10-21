@@ -2,20 +2,6 @@
 "
     This object manages the periodic mpo environments for an MPSMultiline
 "
-mutable struct PerMPOInfEnv{H,V,S<:MPSMultiline,A} <: AbstractInfEnv
-    above::Union{S,Nothing}
-
-    operator::H
-
-    dependency::S
-    solver::A
-
-    lw::PeriodicArray{V,2}
-    rw::PeriodicArray{V,2}
-
-    lock::ReentrantLock
-end
-
 mutable struct InfiniteMPOEnvironments{O,V,S<:MPSMultiline,A} <: AbstractInfEnv
     above::Union{S,Nothing}
     operator::O
@@ -123,26 +109,6 @@ function TensorKit.normalize!(envs::InfiniteMPOEnvironments)
         end
     end
 end
-# function recalculate!(envs::PerMPOInfEnv, nstate::InfiniteMPS; kwargs...)
-#     return recalculate!(envs, convert(MPSMultiline, nstate); kwargs...)
-# end;
-# function recalculate!(envs::PerMPOInfEnv, nstate::MPSMultiline; tol=envs.solver.tol)
-#     sameDspace = reduce(&, _firstspace.(envs.dependency.CR) .== _firstspace.(nstate.CR))
-#
-#     above = isnothing(envs.above) ? nstate : envs.above
-#     init = collect(zip(envs.lw[:, 1], envs.rw[:, end]))
-#     if !sameDspace
-#         init = gen_init_fps(above, envs.operator, nstate)
-#     end
-#
-#     solver = envs.solver
-#     solver = solver.tol == tol ? solver : @set solver.tol = tol
-#     (envs.lw, envs.rw) = mixed_fixpoints(above, envs.opp, nstate, init; solver)
-#     envs.dependency = nstate
-#     envs.solver = solver
-#
-#     return envs
-# end
 function leftenv(envs::InfiniteMPOEnvironments, pos::Int, state::InfiniteMPS)
     check_recalculate!(envs, state)
     return envs.leftenvs[1, pos]
