@@ -432,9 +432,9 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},
                                            mpo[i][2 -2; 3 5] *
                                            conj(F_right[-4; 4 5])
     end
-    if mpo isa SparseMPO # the above process fills sparse mpos with zeros.
-        dropzeros!.(output)
-    end
+
+    mpo isa SparseMPO && dropzeros!.(output) # the above process fills sparse mpos with zeros.
+
     return FiniteMPO(output)
 end
 
