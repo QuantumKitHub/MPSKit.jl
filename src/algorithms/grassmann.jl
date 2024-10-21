@@ -11,6 +11,7 @@ The module exports nothing, and all references to it should be qualified, e.g.
 module GrassmannMPS
 
 using ..MPSKit
+using ..Defaults
 using TensorKit
 import TensorKitManifolds.Grassmann
 
@@ -69,22 +70,38 @@ end
 
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     al_d = similar(state.AL)
-    for i in 1:length(state)
-        al_d[i] = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
+    @static if Defaults.parallelize_sites
+        @sync for i in 1:length(state)
+            Threads.@spawn begin
+                al_d[i] = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
+            end
+        end
+    else
+        for i in 1:length(state)
+            al_d[i] = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
+        end
     end
-
     g = Grassmann.project.(al_d, state.AL)
 
     Rhoreg = Vector{eltype(state.CR)}(undef, length(state))
     δmin = sqrt(eps(real(scalartype(state))))
-    for i in 1:length(state)
-        Rhoreg[i] = regularize(state.CR[i], max(norm(g[i]) / 10, δmin))
+    @static if Defaults.parallelize_sites
+        @sync for i in 1:length(state)
+            Threads.@spawn begin
+                Rhoreg[i] = regularize(state.CR[i], max(norm(g[i]) / 10, δmin))
+            end
+        end
+    else
+        for i in 1:length(state)
+            Rhoreg[i] = regularize(state.CR[i], max(norm(g[i]) / 10, δmin))
+        end
     end
 
     return ManifoldPoint(state, envs, g, Rhoreg)
 end
 
 function ManifoldPoint(state::MPSMultiline, envs)
+    #TODO : support parralelize_sites
     # FIXME: add support for unitcells
     @assert length(state.AL) == 1 "GradientGrassmann only supports MPSMultiline without unitcells for now"
 
@@ -115,9 +132,16 @@ cell as tangent vectors on Grassmann manifolds.
 function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
     # the gradient I want to return is the preconditioned gradient!
     g_prec = Vector{PrecGrad{eltype(x.g),eltype(x.Rhoreg)}}(undef, length(x.g))
-
-    for i in 1:length(x.state)
-        g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.CR[i]'), x.Rhoreg[i])
+    @static if Defaults.parallelize_sites
+        @sync for i in 1:length(x.state)
+            Threads.@spawn begin
+                g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.CR[i]'), x.Rhoreg[i])
+            end
+        end
+    else
+        for i in 1:length(x.state)
+            g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.CR[i]'), x.Rhoreg[i])
+        end
     end
 
     # TODO: the operator really should not be part of the environments, and this should
@@ -128,6 +152,7 @@ function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
     return real(f), g_prec
 end
 function fg(x::ManifoldPoint{<:MPSMultiline})
+    #TODO : support parralelize_sites
     @assert length(x.state) == 1 "GradientGrassmann only supports MPSMultiline without unitcells for now"
     # the gradient I want to return is the preconditioned gradient!
     g_prec = map(enumerate(x.g)) do (i, cg)
@@ -147,6 +172,7 @@ end
 Retract a left-canonical MPSMultiline along Grassmann tangent `g` by distance `alpha`.
 """
 function retract(x::ManifoldPoint{<:MPSMultiline}, tg, alpha)
+    #TODO : support parralelize_sites
     g = reshape(tg, size(x.state))
 
     nal = similar(x.state.AL)
@@ -170,11 +196,19 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
     envs = x.envs
     nal = similar(state.AL)
     h = similar(g)  # The tangent at the end-point
-    for i in 1:length(g)
-        nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
-        h[i] = PrecGrad(th)
+    @static if Defaults.parallelize_sites
+        @sync for i in 1:length(g)
+            Threads.@spawn begin
+                nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+                h[i] = PrecGrad(th)
+            end
+        end
+    else
+        for i in 1:length(g)
+            nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+            h[i] = PrecGrad(th)
+        end
     end
-
     nstate = InfiniteMPS(nal, state.CR[end])
 
     newpoint = ManifoldPoint(nstate, envs)
@@ -186,6 +220,7 @@ end
 Retract a left-canonical finite MPS along Grassmann tangent `g` by distance `alpha`.
 """
 function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
+    #TODO : support parralelize_sites.
     state = x.state
     envs = x.envs
 
@@ -208,9 +243,18 @@ Transport a tangent vector `h` along the retraction from `x` in direction `g` by
 `alpha`. `xp` is the end-point of the retraction.
 """
 function transport!(h, x, g, alpha, xp)
-    for i in 1:length(h)
-        h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
-                                             xp.state.AL[i]))
+    @static if Defaults.parallelize_sites
+        @sync for i in 1:length(h)
+            Threads.@spawn begin
+                h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
+                                                     xp.state.AL[i]))
+            end
+        end
+    else
+        for i in 1:length(h)
+            h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
+                                                 xp.state.AL[i]))
+        end
     end
     return h
 end
