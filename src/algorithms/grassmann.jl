@@ -69,19 +69,21 @@ struct ManifoldPoint{T,E,G,C}
 end
 
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
-    al_d = similar(state.AL)
+    g = similar(state.AL)
     @static if Defaults.parallelize_sites
         @sync for i in 1:length(state)
             Threads.@spawn begin
-                al_d[i] = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
+                al_d_i = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
+                g[i] = Grassmann.project(al_d_i, state.AL[i])
             end
         end
     else
+        al_d = similar(state.AL)
         for i in 1:length(state)
             al_d[i] = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
         end
+        g = Grassmann.project.(al_d, state.AL)
     end
-    g = Grassmann.project.(al_d, state.AL)
 
     Rhoreg = Vector{eltype(state.CR)}(undef, length(state))
     δmin = sqrt(eps(real(scalartype(state))))
