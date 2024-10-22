@@ -69,7 +69,7 @@ struct ManifoldPoint{T,E,G,C}
 end
 
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
-    g = similar(state.AL)
+    g = Vector{  Grassmann.GrassmannTangent  }(undef, length(state.Al))
     @static if Defaults.parallelize_sites
         @sync for i in 1:length(state)
             Threads.@spawn begin
