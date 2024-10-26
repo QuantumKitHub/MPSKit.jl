@@ -19,39 +19,43 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
 @testset "FiniteMPO" begin
     # start from random operators
     L = 4
-    O₁ = TensorMap(rand, ComplexF64, (ℂ^2)^L, (ℂ^2)^L)
-    O₂ = TensorMap(rand, ComplexF64, space(O₁))
+    T = ComplexF64
 
-    # create MPO and convert it back to see if it is the same
-    mpo₁ = FiniteMPO(O₁) # type-unstable for now!
-    mpo₂ = FiniteMPO(O₂)
-    @test convert(TensorMap, mpo₁) ≈ O₁
-    @test convert(TensorMap, -mpo₂) ≈ -O₂
+    for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
+        O₁ = TensorMap(rand, T, V^L, V^L)
+        O₂ = TensorMap(rand, T, space(O₁))
 
-    # test scalar multiplication
-    α = rand(ComplexF64)
-    @test convert(TensorMap, α * mpo₁) ≈ α * O₁
-    @test convert(TensorMap, mpo₁ * α) ≈ O₁ * α
+        # create MPO and convert it back to see if it is the same
+        mpo₁ = FiniteMPO(O₁) # type-unstable for now!
+        mpo₂ = FiniteMPO(O₂)
+        @test convert(TensorMap, mpo₁) ≈ O₁
+        @test convert(TensorMap, -mpo₂) ≈ -O₂
 
-    # test addition and multiplication
-    @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
-    @test convert(TensorMap, mpo₁ * mpo₂) ≈ O₁ * O₂
+        # test scalar multiplication
+        α = rand(T)
+        @test convert(TensorMap, α * mpo₁) ≈ α * O₁
+        @test convert(TensorMap, mpo₁ * α) ≈ O₁ * α
 
-    # test application to a state
-    ψ₁ = Tensor(rand, ComplexF64, domain(O₁))
-    mps₁ = FiniteMPS(ψ₁)
+        # test addition and multiplication
+        @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
+        @test convert(TensorMap, mpo₁ * mpo₂) ≈ O₁ * O₂
 
-    @test convert(TensorMap, mpo₁ * mps₁) ≈ O₁ * ψ₁
+        # test application to a state
+        ψ₁ = Tensor(rand, T, domain(O₁))
+        mps₁ = FiniteMPS(ψ₁)
 
-    @test dot(mps₁, mpo₁, mps₁) ≈ dot(ψ₁, O₁, ψ₁)
-    @test dot(mps₁, mpo₁, mps₁) ≈ dot(mps₁, mpo₁ * mps₁)
-    # test conversion to and from mps
-    mpomps₁ = convert(FiniteMPS, mpo₁)
-    mpompsmpo₁ = convert(FiniteMPO, mpomps₁)
+        @test convert(TensorMap, mpo₁ * mps₁) ≈ O₁ * ψ₁
 
-    @test convert(FiniteMPO, mpomps₁) ≈ mpo₁ rtol = 1e-6
+        @test dot(mps₁, mpo₁, mps₁) ≈ dot(ψ₁, O₁, ψ₁)
+        @test dot(mps₁, mpo₁, mps₁) ≈ dot(mps₁, mpo₁ * mps₁)
+        # test conversion to and from mps
+        mpomps₁ = convert(FiniteMPS, mpo₁)
+        mpompsmpo₁ = convert(FiniteMPO, mpomps₁)
 
-    @test dot(mpomps₁, mpomps₁) ≈ dot(mpo₁, mpo₁)
+        @test convert(FiniteMPO, mpomps₁) ≈ mpo₁ rtol = 1e-6
+
+        @test dot(mpomps₁, mpomps₁) ≈ dot(mpo₁, mpo₁)
+    end
 end
 
 @testset "Finite MPOHamiltonian" begin
