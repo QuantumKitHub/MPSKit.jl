@@ -159,6 +159,7 @@ end
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1e-3
+        @test v < v₀
         @test v < 1e-2
     end
 end
