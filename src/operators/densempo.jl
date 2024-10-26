@@ -83,12 +83,12 @@ function Base.convert(::Type{<:AbstractTensorMap}, mpo::FiniteMPO)
     U_right = Tensor(ones, scalartype(mpo), V_right')
 
     tensors = vcat(U_left, mpo.opp, U_right)
-    indices = [[i, -i, -(i + N), i + 1] for i in 1:length(mpo)]
+    indices = [[i, -i, -(2N - i + 1), i + 1] for i in 1:length(mpo)]
     pushfirst!(indices, [1])
     push!(indices, [N + 1])
     O = ncon(tensors, indices)
 
-    return transpose(O, (ntuple(identity, N), ntuple(i -> i + N, N)))
+    return transpose(O, (ntuple(identity, N), ntuple(i -> 2N - i + 1, N)))
 end
 
 # Linear Algebra
