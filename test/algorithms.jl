@@ -67,6 +67,7 @@ using TensorKit: ℙ
         @test v < v₀ && v < 1e-2
     end
 end
+
 @testset "InfiniteMPS groundstate" verbose = true begin
     tol = 1e-8
     g = 4.0
@@ -453,7 +454,7 @@ end
                                                                Rep[SU₂](0 => 2, 1 => 2,
                                                                         2 => 1))]
     @testset "mpo" begin
-        #random nn interaction
+        # random nn interaction
         nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
         H = MPOHamiltonian(nn)
@@ -468,11 +469,11 @@ end
     end
 
     @testset "infinite mps" begin
-        #random nn interaction
+        # random nn interaction
         nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
 
-        #test rand_expand
+        # test rand_expand
         for unit_cell_size in 2:3
             H = repeat(MPOHamiltonian(nn), unit_cell_size)
             state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
@@ -482,7 +483,7 @@ end
                                               trscheme=truncdim(dim(Dspace) * dim(Dspace))))
             @test dot(state, state_re) ≈ 1 atol = 1e-8
         end
-        #test optimal_expand
+        # test optimal_expand
         for unit_cell_size in 2:3
             H = repeat(MPOHamiltonian(nn), unit_cell_size)
             state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
@@ -494,7 +495,7 @@ end
                                                                       dim(Dspace))))
             @test dot(state, state_oe) ≈ 1 atol = 1e-8
         end
-        #test VUMPSSvdCut
+        # test VUMPSSvdCut
         for unit_cell_size in [1, 2, 3, 4]
             H = repeat(MPOHamiltonian(nn), unit_cell_size)
             state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
@@ -510,7 +511,7 @@ end
     end
 
     @testset "finite mps" begin
-        #random nn interaction
+        # random nn interaction
         nn = TensorMap(rand, ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
 
@@ -593,7 +594,7 @@ end
     for λ in [1.05, 2.0, 4.0]
         H = hamiltonian(λ)
         ψ = InfiniteMPS([ℂ^2], [ℂ^16])
-        ψ, envs, = find_groundstate(ψ, H, VUMPS(; maxiter=100, verbosity=0))
+        ψ, envs = find_groundstate(ψ, H, VUMPS(; maxiter=100, verbosity=0))
 
         numerical_scusceptibility = fidelity_susceptibility(ψ, H, [H_X], envs; maxiter=10)
         @test numerical_scusceptibility[1, 1] ≈ analytical_susceptibility(λ) atol = 1e-2
@@ -601,7 +602,7 @@ end
         # test if the finite fid sus approximates the analytical one with increasing system size
         fin_en = map([20, 15, 10]) do L
             ψ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^16)
-            ψ, envs, = find_groundstate(ψ, H, DMRG(; verbosity=0))
+            ψ, envs = find_groundstate(ψ, H, DMRG(; verbosity=0))
             numerical_scusceptibility = fidelity_susceptibility(ψ, H, [H_X], envs;
                                                                 maxiter=10)
             return numerical_scusceptibility[1, 1] / L
@@ -610,7 +611,7 @@ end
     end
 end
 
-#stub tests
+# stub tests
 @testset "correlation length / entropy" begin
     ψ = InfiniteMPS([ℙ^2], [ℙ^10])
     H = force_planar(transverse_field_ising())
@@ -714,7 +715,7 @@ end
 @testset "periodic boundary conditions" begin
     len = 10
 
-    #impose periodic boundary conditions on the hamiltonian (circle size 10)
+    # impose periodic boundary conditions on the hamiltonian (circle size 10)
     H = transverse_field_ising()
     H = periodic_boundary_conditions(H, len)
 
@@ -722,12 +723,12 @@ end
 
     gs, envs = find_groundstate(ψ, H, DMRG(; verbosity=0))
 
-    #translation mpo:
+    # translation mpo:
     @tensor bulk[-1 -2; -3 -4] := isomorphism(ℂ^2, ℂ^2)[-2, -4] *
                                   isomorphism(ℂ^2, ℂ^2)[-1, -3]
     translation = periodic_boundary_conditions(DenseMPO(bulk), len)
 
-    #the groundstate should be translation invariant:
+    # the groundstate should be translation invariant:
     ut = Tensor(ones, ℂ^1)
     @tensor leftstart[-1 -2; -3] := l_LL(gs)[-1, -3] * conj(ut[-2])
     T = TransferMatrix([gs.AC[1]; gs.AR[2:end]], translation[:], [gs.AC[1]; gs.AR[2:end]])
