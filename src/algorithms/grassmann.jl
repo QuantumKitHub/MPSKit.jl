@@ -69,7 +69,6 @@ struct ManifoldPoint{T,E,G,C}
 end
 
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
-    g = Vector{  Grassmann.GrassmannTangent  }(undef, length(state.AL))
     @static if Defaults.parallelize_sites
         @sync for i in 1:length(state)
             Threads.@spawn begin
@@ -77,6 +76,9 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
                 g[i] = Grassmann.project(al_d_i, state.AL[i])
             end
         end
+        g = map(CartesianIndices(state.AL)) do I
+            return Grassmann.project(al_d[I], state.AL[I])  
+        end 
     else
         al_d = similar(state.AL)
         for i in 1:length(state)
@@ -103,8 +105,8 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
 end
 
 function ManifoldPoint(state::MPSMultiline, envs)
-    #TODO : support parralelize_sites
     # FIXME: add support for unitcells
+    # TODO : then support parralelize_sites
     @assert length(state.AL) == 1 "GradientGrassmann only supports MPSMultiline without unitcells for now"
 
     # TODO: this really should not use the operator from the environment
