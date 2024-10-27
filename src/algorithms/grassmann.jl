@@ -77,8 +77,8 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
             end
         end
         g = map(CartesianIndices(state.AL)) do I
-            return Grassmann.project(al_d[I], state.AL[I])  
-        end 
+            return Threads.@spawn Grassmann.project(al_d[I], state.AL[I])  
+        end .|> fetch
     else
         al_d = similar(state.AL)
         for i in 1:length(state)
