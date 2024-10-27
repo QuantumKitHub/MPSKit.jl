@@ -70,10 +70,10 @@ end
 
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     @static if Defaults.parallelize_sites
+        al_d = similar(state.AL)
         @sync for i in 1:length(state)
             Threads.@spawn begin
-                al_d_i = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
-                g[i] = Grassmann.project(al_d_i, state.AL[i])
+                al_d[i] = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
             end
         end
         g = map(CartesianIndices(state.AL)) do I
