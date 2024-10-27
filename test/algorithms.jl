@@ -712,7 +712,7 @@ end
         ψ₁ = FiniteMPS(L, ℂ^2, ℂ^30)
         ψ₂ = FiniteMPS(L, ℂ^2, ℂ^25)
 
-        H = transverse_field_ising(; g=4.0, L=L)
+        H = transverse_field_ising(; g=4.0, L)
         τ = 1e-3
 
         expH = make_time_mpo(H, τ, WI)
@@ -723,10 +723,11 @@ end
     end
 
     @testset "dense_mpo * finitemps1 ≈ finitemps2" for alg in finite_algs
-        ψ₁ = FiniteMPS(10, ℂ^2, ℂ^20)
-        ψ₂ = FiniteMPS(10, ℂ^2, ℂ^10)
+        L = 10
+        ψ₁ = FiniteMPS(L, ℂ^2, ℂ^20)
+        ψ₂ = FiniteMPS(L, ℂ^2, ℂ^10)
 
-        O = finite_classical_ising(10)
+        O = finite_classical_ising(L)
         ψ₂, = approximate(ψ₂, (O, ψ₁), alg)
 
         @test norm(O * ψ₁ - ψ₂) ≈ 0 atol = 0.001
