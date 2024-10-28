@@ -186,7 +186,7 @@ function variance(state::InfiniteMPS, H::InfiniteMPOHamiltonian,
     lattice = physicalspace.(Ref(state), 1:length(state))
     H_renormalized = InfiniteMPOHamiltonian(lattice,
                                             i => e *
-                                                 id(Matrix{scalartype(state)}, lattice[i])
+                                                 id(storagetype(eltype(H)), lattice[i])
                                             for (i, e) in enumerate(e_local))
     return real(expectation_value(state, (H - H_renormalized)^2))
 end
@@ -246,7 +246,7 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs=environment
     lattice = physicalspace.(Ref(gs), 1:length(state))
     H_regularized = H - InfiniteMPOHamiltonian(lattice,
                                                i => e *
-                                                    id(Matrix{scalartype(state)}, lattice[i])
+                                                    id(storagetype(eltype(H)), lattice[i])
                                                for (i, e) in enumerate(e_local))
 
     # I don't remember where the formula came from

@@ -176,5 +176,5 @@ function check_length(a, b...)
 end
 
 function fuser(::Type{T}, V1::S, V2::S) where {T<:Number,S<:IndexSpace}
-    return isomorphism(Matrix{T}, fuse(V1 ⊗ V2), V1 ⊗ V2)
+    return isomorphism(Vector{T}, fuse(V1 ⊗ V2), V1 ⊗ V2)
 end

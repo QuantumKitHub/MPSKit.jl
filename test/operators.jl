@@ -58,7 +58,7 @@ end
     L = 3
     lattice = fill(ℂ^2, L)
     O₁ = rand(ComplexF64, ℂ^2, ℂ^2)
-    E = id(Matrix{ComplexF64}, domain(O₁))
+    E = id(storagetype(O₁), domain(O₁))
     O₂ = rand(ComplexF64, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
 
     H1 = FiniteMPOHamiltonian(lattice, i => O₁ for i in 1:L)

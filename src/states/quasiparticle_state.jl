@@ -291,7 +291,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
     end
 
     #step 1 : pass utl through Ls
-    passer = isomorphism(Matrix{elt}, utl, utl)
+    passer = isomorphism(storagetype(eltype(Ls)), utl, utl)
     for (i, L) in enumerate(Ls)
         @plansor temp[-1 -2 -3 -4; -5] := L[-2 -3; -4] * passer[-1; -5]
         Ls[i] = simplefuse(temp)
@@ -304,9 +304,9 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
     push!(superspaces, supremum(_lastspace(Ls[end])', _lastspace(Rs[end])'))
 
     for i in 1:(length(v) + 1)
-        Lf = isometry(Matrix{elt}, superspaces[i],
+        Lf = isometry(storagetype(Ls[i <= length(v) ? i : i - 1]), superspaces[i],
                       i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i - 1])')
-        Rf = isometry(Matrix{elt}, superspaces[i],
+        Rf = isometry(storagetype(Rs[i <= length(v) ? i : i - 1]), superspaces[i],
                       i <= length(v) ? _firstspace(Rs[i]) : _lastspace(Rs[i - 1])')
 
         if i <= length(v)
