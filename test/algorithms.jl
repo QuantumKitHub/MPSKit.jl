@@ -94,7 +94,8 @@ end
         H = repeat(H_ref, unit_cell_size)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ, H, VUMPS(; tol, verbosity=verbosity_full, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ, H,
+                                      VUMPS(; tol, verbosity=verbosity_full, maxiter=2))
 
         ψ, envs, δ = find_groundstate(ψ, H, VUMPS(; tol, verbosity=verbosity_conv))
         v = variance(ψ, H, envs)
@@ -110,7 +111,8 @@ end
         H = repeat(H_ref, unit_cell_size)
 
         # test logging
-        ψ, envs, δ = find_groundstate(ψ, H, IDMRG1(; tol, verbosity=verbosity_full, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ, H,
+                                      IDMRG1(; tol, verbosity=verbosity_full, maxiter=2))
 
         ψ, envs, δ = find_groundstate(ψ, H, IDMRG1(; tol, verbosity=verbosity_conv))
         v = variance(ψ, H, envs)
@@ -148,9 +150,11 @@ end
 
         # test logging
         ψ, envs, δ = find_groundstate(ψ, H,
-                                      GradientGrassmann(; tol, verbosity=verbosity_full, maxiter=2))
+                                      GradientGrassmann(; tol, verbosity=verbosity_full,
+                                                        maxiter=2))
 
-        ψ, envs, δ = find_groundstate(ψ, H, GradientGrassmann(; tol, verbosity=verbosity_conv))
+        ψ, envs, δ = find_groundstate(ψ, H,
+                                      GradientGrassmann(; tol, verbosity=verbosity_conv))
         v = variance(ψ, H, envs)
 
         # test using low variance
@@ -763,7 +767,8 @@ end
     for N in 2:6
         for H in Hs
             TH = convert(TensorMap, periodic_boundary_conditions(H, N))
-            @test TH ≈ permute(TH, (vcat(N, 1:N-1)...,), (vcat(2N, N+1:2N-1)...,))
+            @test TH ≈
+                  permute(TH, (vcat(N, 1:(N - 1))...,), (vcat(2N, (N + 1):(2N - 1))...,))
         end
     end
 end
