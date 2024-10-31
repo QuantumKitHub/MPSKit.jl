@@ -18,46 +18,39 @@ export classical_ising, finite_classical_ising, sixvertex
 # using TensorOperations
 
 force_planar(x::Number) = x
-function force_planar(x::AbstractTensorMap)
-    cod = reduce(*, map(i -> ℙ^dim(space(x, i)), codomainind(x)))
-    dom = reduce(*, map(i -> ℙ^dim(space(x, i)), domainind(x)))
-    t = zeros(scalartype(x), cod ← dom)
-    copyto!(blocks(t)[PlanarTrivial()], convert(Array, x))
-    return t
+
+force_planar(c::Sector) = PlanarTrivial() ⊠ c
+
+# convert spaces
+force_planar(V::Union{CartesianSpace,ComplexSpace}) = ℙ^dim(V)
+force_planar(V::GradedSpace) = Vect[PlanarTrivial ⊠ sectortype(V)](force_planar(c)=>dim(V, c) for c in sectors(V))
+force_planar(V::SumSpace) = SumSpace(map(force_planar, V.spaces))
+force_planar(V::ProductSpace) = ProductSpace(map(force_planar, V.spaces))
+force_planar(V::HomSpace) = force_planar(codomain(V)) ← force_planar(domain(V))
+
+# convert tensors
+function force_planar(tsrc::AbstractTensorMap)
+    V′ = force_planar(space(tsrc))
+    tdst = similar(tsrc, V′)
+    for (c, b) in blocks(tsrc)
+        c′ = force_planar(c)
+        copyto!(block(tdst, c′), b)
+    end
+    return tdst
+end
+function force_planar(tsrc::TensorMap)
+    return TensorMap{eltype(tsrc)}(copy(tsrc.data), force_planar(space(tsrc)))
 end
 function force_planar(x::BraidingTensor)
-    cod = reduce(*, map(i -> ℙ^dim(space(x, i)), codomainind(x)))
-    dom = reduce(*, map(i -> ℙ^dim(space(x, i)), domainind(x)))
-    return BraidingTensor{scalartype(x)}(cod ← dom)
+    return BraidingTensor{scalartype(x)}(force_planar(space(x)))
 end
 function force_planar(x::BlockTensorMap)
-    cod = mapreduce(*, codomainind(x)) do i
-        return SumSpace(map(space(x, i).spaces) do s
-                            return ℙ^dim(s)
-                        end)
-    end
-    dom = mapreduce(*, domainind(x)) do i
-        return SumSpace(map(space(x, i).spaces) do s
-                            return ℙ^dim(s)
-                        end)
-    end
     data = map(force_planar, x.data)
-    return BlockTensorMap(data, cod, dom)
+    return BlockTensorMap{eltype(data)}(data, force_planar(space(x)))
 end
 function force_planar(x::SparseBlockTensorMap)
-    cod = mapreduce(*, codomainind(x)) do i
-        return SumSpace(map(space(x, i).spaces) do s
-                            return ℙ^dim(s)
-                        end)
-    end
-    dom = mapreduce(*, domainind(x)) do i
-        return SumSpace(map(space(x, i).spaces) do s
-                            return ℙ^dim(s)
-                        end)
-    end
-
     data = Dict(I => force_planar(v) for (I, v) in pairs(x.data))
-    return SparseBlockTensorMap{valtype(data)}(data, cod, dom)
+    return SparseBlockTensorMap{valtype(data)}(data, force_planar(space(x)))
 end
 force_planar(mpo::MPOHamiltonian) = MPOHamiltonian(map(force_planar, parent(mpo)))
 force_planar(mpo::MPO) = MPO(map(force_planar, parent(mpo)))
