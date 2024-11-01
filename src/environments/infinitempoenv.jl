@@ -43,9 +43,9 @@ end
 function initialize_environments(ket::MPSMultiline, operator::MPOMultiline,
                                  bra::MPSMultiline=ket)
     # allocate
-    GL = PeriodicArray([allocate_GL(ket[row], operator[row], bra[row], col)
+    GL = PeriodicArray([allocate_GL(bra[row], operator[row], ket[row], col)
                         for row in 1:size(ket, 1), col in 1:size(ket, 2)])
-    GR = PeriodicArray([allocate_GR(ket[row], operator[row], bra[row], col)
+    GR = PeriodicArray([allocate_GR(bra[row], operator[row], ket[row], col)
                         for row in 1:size(ket, 1), col in 1:size(ket, 2)])
 
     # initialize: randomize
