@@ -79,7 +79,7 @@ function MPSKit.environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) wh
     return environments(below, O, above, leftstart, rightstart)
 end
 
-function MPSKit.environments(below::FiniteMPS{S}, O::Union{FiniteMPO, FiniteMPOHamiltonian},
+function MPSKit.environments(below::FiniteMPS{S}, O::Union{FiniteMPO,FiniteMPOHamiltonian},
                              above=nothing) where {S}
     Vl_bot = left_virtualspace(below, 0)
     Vl_mid = left_virtualspace(O, 1)

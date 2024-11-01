@@ -27,10 +27,10 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
             H′[1][i] = H[1][i]
         end
         for i in nonzero_keys(H[end])
-            H′[end][:,1,1,end] = H[end][:,1,1,1]
+            H′[end][:, 1, 1, end] = H[end][:, 1, 1, 1]
         end
-        H′[1][end,1,1,end] += add_util_leg(id(space(H[1][end,1,1,end], 2)))
-        H′[end][1,1,1,1] += add_util_leg(id(space(H[end][1,1,1,1], 2)))
+        H′[1][end, 1, 1, end] += add_util_leg(id(space(H[1][end, 1, 1, end], 2)))
+        H′[end][1, 1, 1, 1] += add_util_leg(id(space(H[end][1, 1, 1, 1], 2)))
     else
         H′ = H
     end
