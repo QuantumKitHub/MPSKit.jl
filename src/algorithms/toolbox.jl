@@ -414,7 +414,7 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},
     V_wrap = left_virtualspace(mpo, 1)'
     ST = storagetype(O)
 
-    util = fill!(Tensor{scalartype(O)}(undef, oneunit(V_wrap)), one(scalartype(O)))
+    util = fill!(similar(mpo[1], oneunit(V_wrap)), one(scalartype(O)))
     @plansor cup[-1; -2 -3] := id(ST, V_wrap)[-3; -2] * util[-1]
 
     local F_right
