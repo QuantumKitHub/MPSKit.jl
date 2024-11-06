@@ -216,7 +216,7 @@ end
 
     @testset "DMRG2" begin
         # test logging passes
-        trscheme = truncdim(12)
+        trscheme = truncdim(15)
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
                                       DMRG2(; tol, verbosity=5, maxiter=1, trscheme))
 
@@ -768,7 +768,7 @@ end
         for H in Hs
             TH = convert(TensorMap, periodic_boundary_conditions(H, N))
             @test TH ≈
-                  permute(TH, (vcat(N, 1:(N - 1))...,), (vcat(2N, (N + 1):(2N - 1))...,))
+                  permute(TH, ((vcat(N, 1:(N - 1))...,), (vcat(2N, (N + 1):(2N - 1))...,)))
         end
     end
 end
