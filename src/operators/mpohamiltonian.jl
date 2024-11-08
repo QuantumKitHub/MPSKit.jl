@@ -475,7 +475,7 @@ end
 
 function Base.:*(H1::MPOHamiltonian, H2::MPOHamiltonian)
     check_length(H1, H2)
-    Ws = map(fuse_mul_mpo, parent(H1), parent(H2))
+    Ws = fuse_mul_mpo.(parent(H1), parent(H2))
     return MPOHamiltonian(Ws)
 end
 
