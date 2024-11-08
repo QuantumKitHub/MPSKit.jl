@@ -473,85 +473,10 @@ function VectorInterface.scale!(H::FiniteMPOHamiltonian, λ::Number)
     return H
 end
 
-function Base.:*(H1::FiniteMPOHamiltonian, H2::FiniteMPOHamiltonian)
+function Base.:*(H1::MPOHamiltonian, H2::MPOHamiltonian)
     check_length(H1, H2)
-    TT = SparseBlockTensorMap{promote_type(eltype(eltype(H1)), eltype(eltype(H2)))}
-    T = scalartype(TT)
-    Ws = map(parent(H1), parent(H2)) do h1, h2
-        return TT(undef,
-                  fuse(left_virtualspace(h2) ⊗ left_virtualspace(h1)) ⊗ physicalspace(h1),
-                  physicalspace(h2) ⊗
-                  fuse(right_virtualspace(h2) ⊗ right_virtualspace(h1)))
-    end
-
-    local F_right # make F_right available outside the loop
-    for i in 1:length(H1)
-        F_left = i == 1 ? fuser(T, left_virtualspace(H2, i), left_virtualspace(H1, i)) :
-                 F_right
-        F_right = fuser(T, right_virtualspace(H2, i)', right_virtualspace(H1, i)')
-        @plansor Ws[i][-1 -2; -3 -4] = F_left[-1; 1 2] *
-                                       H2[i][1 5; -3 3] *
-                                       H1[i][2 -2; 5 4] *
-                                       conj(F_right[-4; 3 4])
-
-        # weird attempt to reinstate sparsity
-        row_inds = CartesianIndices((size(H2[i], 1), size(H1[i], 1)))
-        col_inds = CartesianIndices((size(H2[i], 4), size(H1[i], 4)))
-        for j in axes(Ws[i], 1), k in axes(Ws[i], 4)
-            r2, r1 = row_inds[j].I
-            c2, c1 = col_inds[k].I
-            if get(H1[i], CartesianIndex(r1, 1, 1, c1), nothing) isa BraidingTensor &&
-               get(H2[i], CartesianIndex(r2, 1, 1, c2), nothing) isa BraidingTensor
-                Ws[i][j, 1, 1, k] = BraidingTensor{T}(eachspace(Ws[i])[j, 1, 1, k])
-            end
-        end
-
-        # TODO: this should not be necessary
-        dropzeros!(Ws[i])
-    end
-
-    return FiniteMPOHamiltonian(Ws)
-end
-function Base.:*(H1::InfiniteMPOHamiltonian, H2::InfiniteMPOHamiltonian)
-    L = check_length(H1, H2)
-    TT = SparseBlockTensorMap{promote_type(eltype(eltype(H1)), eltype(eltype(H2)))}
-    T = scalartype(TT)
-    Ws = PeriodicArray(map(parent(H1), parent(H2)) do h1, h2
-                           return TT(undef,
-                                     fuse(left_virtualspace(h2) ⊗ left_virtualspace(h1)) ⊗
-                                     physicalspace(h1),
-                                     physicalspace(h2) ⊗
-                                     fuse(right_virtualspace(h2) ⊗ right_virtualspace(h1)))
-                       end)
-
-    fusers = PeriodicArray(map(1:L) do i
-                               return fuser(T, left_virtualspace(H2, i),
-                                            left_virtualspace(H1, i))
-                           end)
-
-    for i in 1:L
-        @plansor Ws[i][-1 -2; -3 -4] = fusers[i][-1; 1 2] *
-                                       H2[i][1 5; -3 3] *
-                                       H1[i][2 -2; 5 4] *
-                                       conj(fusers[i + 1][-4; 3 4])
-
-        # weird attempt to reinstate sparsity
-        row_inds = CartesianIndices((size(H2[i], 1), size(H1[i], 1)))
-        col_inds = CartesianIndices((size(H2[i], 4), size(H1[i], 4)))
-        for j in axes(Ws[i], 1), k in axes(Ws[i], 4)
-            r2, r1 = row_inds[j].I
-            c2, c1 = col_inds[k].I
-            if get(H1[i], CartesianIndex(r1, 1, 1, c1), nothing) isa BraidingTensor &&
-               get(H2[i], CartesianIndex(r2, 1, 1, c2), nothing) isa BraidingTensor
-                Ws[i][j, 1, 1, k] = BraidingTensor{T}(eachspace(Ws[i])[j, 1, 1, k])
-            end
-        end
-
-        # TODO: this should not be necessary
-        dropzeros!(Ws[i])
-    end
-
-    return InfiniteMPOHamiltonian(Ws)
+    Ws = map(fuse_mul_mpo, parent(H1), parent(H2))
+    return MPOHamiltonian(Ws)
 end
 
 function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)

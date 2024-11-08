@@ -173,3 +173,48 @@ end
 function _conj_mpo(O::MPOTensor)
     return @plansor O′[-1 -2; -3 -4] := conj(O[-1 -3; -2 -4])
 end
+
+# Kernels
+# -------
+# TODO: diagram
+"""
+    fuse_mul_mpo(O1, O2)
+
+Compute the mpo tensor that arises from multiplying MPOs.
+"""
+function fuse_mul_mpo(O1::MPOTensor, O2::MPOTensor)
+    T = promote_type(scalartype(O1), scalartype(O2))
+    F_left = fuser(T, left_virtualspace(O2), left_virtualspace(O1))
+    F_right = fuser(T, right_virtualspace(O2)', right_virtualspace(O1)')
+    @plansor O[-1 -2; -3 -4] := F_left[-1; 1 2] *
+                                O2[1 5; -3 3] *
+                                O1[2 -2; 5 4] *
+                                conj(F_right[-4; 3 4])
+    return O
+end
+function fuse_mul_mpo(O1::BraidingTensor, O2::BraidingTensor)
+    T = promote_type(scalartype(O1), scalartype(O2))
+    V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
+        physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
+    return BraidingTensor{T}(V)
+end
+function fuse_mul_mpo(O1::AbstractBlockTensorMap{T₁,S,2,2},
+                      O2::AbstractBlockTensorMap{T₂,S,2,2}) where {T₁,T₂,S}
+    TT = promote_type((eltype(O1)), eltype((O2)))
+    V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
+        physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
+    if BlockTensorKit.issparse(O1) && BlockTensorKit.issparse(O2)
+        O = SparseBlockTensorMap{TT}(undef, V)
+    else
+        O = BlockTensorMap{TT}(undef, V)
+    end
+    cartesian_inds = reshape(CartesianIndices(O),
+                             size(O2, 1), size(O1, 1),
+                             size(O, 2), size(O, 3),
+                             size(O2, 4), size(O1, 4))
+    for (I, o2) in nonzero_pairs(O2), (J, o1) in nonzero_pairs(O1)
+        K = cartesian_inds[I[1], J[1], I[2], I[3], I[4], J[4]]
+        O[K] = fuse_mul_mpo(o1, o2)
+    end
+    return O
+end
