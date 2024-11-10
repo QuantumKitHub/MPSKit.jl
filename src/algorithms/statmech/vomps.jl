@@ -38,24 +38,24 @@ function leading_boundary(ψ::MPSMultiline, O::MPOMultiline, alg::VOMPS,
                 @sync for col in 1:size(ψ, 2)
                     Threads.@spawn begin
                         H_AC = ∂∂AC(col, ψ, O, envs)
-                        ac = RecursiveVec(ψ.AC[:, col])
+                        ac = ψ.AC[:, col]
                         temp_ACs[:, col] .= H_AC(ac)
                     end
 
                     Threads.@spawn begin
                         H_C = ∂∂C(col, ψ, O, envs)
-                        c = RecursiveVec(ψ.CR[:, col])
+                        c = ψ.CR[:, col]
                         temp_Cs[:, col] .= H_C(c)
                     end
                 end
             else
                 for col in 1:size(ψ, 2)
                     H_AC = ∂∂AC(col, ψ, O, envs)
-                    ac = RecursiveVec(ψ.AC[:, col])
+                    ac = ψ.AC[:, col]
                     temp_ACs[:, col] .= H_AC(ac)
 
                     H_C = ∂∂C(col, ψ, O, envs)
-                    c = RecursiveVec(ψ.CR[:, col])
+                    c = ψ.CR[:, col]
                     temp_Cs[:, col] .= H_C(c)
                 end
             end

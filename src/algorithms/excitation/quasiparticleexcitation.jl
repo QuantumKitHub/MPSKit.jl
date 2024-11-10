@@ -171,15 +171,15 @@ function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, ϕ₀::Multiline
                      lenvs, renvs; num=1, solver=Defaults.linearsolver)
     qp_envs(ϕ) = environments(ϕ, H, lenvs, renvs; solver)
     function H_eff(ϕ′)
-        ϕ = Multiline(ϕ′.vecs)
-        return RecursiveVec(effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ)).data.data)
+        ϕ = Multiline(ϕ′)
+        return effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ)).data.data
     end
 
-    Es, ϕs, convhist = eigsolve(H_eff, RecursiveVec(ϕ₀.data.data), num, :LM, alg.alg)
+    Es, ϕs, convhist = eigsolve(H_eff, ϕ₀.data.data, num, :LM, alg.alg)
     convhist.converged < num &&
         @warn "excitation failed to converge: normres = $(convhist.normres)"
 
-    return Es, map(x -> Multiline(x.vecs), ϕs)
+    return Es, map(Multiline, ϕs)
 end
 
 function excitations(H::InfiniteMPO, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renvs;

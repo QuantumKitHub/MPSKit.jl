@@ -358,9 +358,9 @@ function make_time_mpo(H::InfiniteMPOHamiltonian{T}, dt, alg::WII) where {T}
                     zero(H[i][j, 1, 1, end]),
                     zero(H[i][j, 1, 1, k])]
 
-            y, convhist = exponentiate(1.0, RecursiveVec(init),
+            y, convhist = exponentiate(1.0, init,
                                        Arnoldi(; tol=alg.tol, maxiter=alg.maxiter)) do x
-                out = similar(x.vecs)
+                out = similar(x)
 
                 @plansor out[1][-1 -2; -3 -4] := δ * x[1][-1 1; -3 -4] *
                                                  H[i][1, 1, 1, end][2 3; 1 4] *
@@ -397,7 +397,7 @@ function make_time_mpo(H::InfiniteMPOHamiltonian{T}, dt, alg::WII) where {T}
                                                  H[i][1, 1, 1, k][2 -2; 1 -4] *
                                                  τ[3 4; 1 2]
 
-                return RecursiveVec(out)
+                return out
             end
             convhist.converged == 0 &&
                 @warn "failed to exponentiate $(convhist.normres)"

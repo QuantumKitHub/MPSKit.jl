@@ -106,10 +106,10 @@ function ∂AC(x::MPSTensor{S}, operator::Number, leftenv::MPSTensor{S},
 end
 
 # mpo multiline
-function ∂AC(x::RecursiveVec, operator, leftenv, rightenv)
-    return RecursiveVec(circshift(map(t -> ∂AC(t...),
-                                      zip(x.vecs, operator, leftenv, rightenv)),
-                                  1))
+function ∂AC(x::Vector, operator, leftenv, rightenv)
+    return circshift(map(t -> ∂AC(t...),
+                         zip(x, operator, leftenv, rightenv)),
+                     1)
 end
 
 function ∂AC(x::MPSTensor, ::Nothing, leftenv, rightenv)
@@ -164,10 +164,10 @@ function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv, rightenv)
     @plansor y[-1 -2; -3 -4] := x[1 -2; 2 -4] * leftenv[-1; 1] * rightenv[2; -3]
 end
 
-function ∂AC2(x::RecursiveVec, operator1, operator2, leftenv, rightenv)
-    return RecursiveVec(circshift(map(t -> ∂AC2(t...),
-                                      zip(x.vecs, operator1, operator2, leftenv, rightenv)),
-                                  1))
+function ∂AC2(x::Vector, operator1, operator2, leftenv, rightenv)
+    return circshift(map(t -> ∂AC2(t...),
+                         zip(x.vecs, operator1, operator2, leftenv, rightenv)),
+                     1)
 end
 
 """
@@ -198,8 +198,8 @@ function ∂C(x::MPSBondTensor, leftenv::MPSBondTensor, rightenv::MPSBondTensor)
     @plansor toret[-1; -2] := leftenv[-1; 1] * x[1; 2] * rightenv[2; -2]
 end
 
-function ∂C(x::RecursiveVec, leftenv, rightenv)
-    return RecursiveVec(circshift(map(t -> ∂C(t...), zip(x.vecs, leftenv, rightenv)), 1))
+function ∂C(x::Vector, leftenv, rightenv)
+    return circshift(map(t -> ∂C(t...), zip(x, leftenv, rightenv)), 1)
 end
 
 #downproject for approximate
