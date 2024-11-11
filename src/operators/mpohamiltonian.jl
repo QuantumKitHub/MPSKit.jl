@@ -97,6 +97,14 @@ function _find_tensortype(nonzero_operators::AbstractArray)
     end
 end
 
+function _find_channel(nonzero_keys; init=2)
+    range = unique!(last.(nonzero_keys))
+    for i in max(2, init):max(maximum(range) + 1, 2)
+        i ∉ range && return i
+    end
+    return error("should not happen")
+end
+
 function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
                               local_operators::Pair...)
     # initialize vectors for storing the data
@@ -110,14 +118,16 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
         nonzero_opps[i] = []
     end
 
-    for local_operator in local_operators
-        # instantiate the operator as Vector{MPOTensor}
-        sites, local_mpo = instantiate_operator(lattice, local_operator)
+    # partial sort by interaction range
+    local_mpos = sort!(map(Base.Fix1(instantiate_operator, lattice),
+                           collect(local_operators)); by=x -> length(x[1]))
+
+    for (sites, local_mpo) in local_mpos
         local key_R # trick to define key_R before the first iteration
         for (i, (site, O)) in enumerate(zip(sites, local_mpo))
             key_L = i == 1 ? 1 : key_R
             key_R = i == length(local_mpo) ? 0 :
-                    maximum(last, nonzero_keys[site]; init=key_L) + 1
+                    _find_channel(nonzero_keys[site]; init=key_L)
             push!(nonzero_keys[site], (key_L, key_R))
             push!(nonzero_opps[site], O)
         end
@@ -189,14 +199,17 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
         nonzero_opps[i] = []
     end
 
-    for local_operator in local_operators
-        # instantiate the operator as Vector{MPOTensor}
-        sites, local_mpo = instantiate_operator(lattice, local_operator)
+    # partial sort by interaction range
+    local_mpos = sort!(map(Base.Fix1(instantiate_operator, lattice),
+                           collect(local_operators)); by=x -> length(x[1]))
+
+    for (sites, local_mpo) in local_mpos
+        @show sites
         local key_R # trick to define key_R before the first iteration
         for (i, (site, O)) in enumerate(zip(sites, local_mpo))
             key_L = i == 1 ? 1 : key_R
             key_R = i == length(local_mpo) ? 0 :
-                    maximum(last, nonzero_keys[site]; init=key_L) + 1
+                    _find_channel(nonzero_keys[site]; init=key_L)
             push!(nonzero_keys[site], (key_L, key_R))
             push!(nonzero_opps[site], O)
         end
@@ -220,14 +233,18 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     for i in 1:length(lattice)
         for j in findall(x -> x isa AbstractTensorMap, nonzero_opps[i])
             key_L, key_R′ = nonzero_keys[i][j]
-            key_R = key_R′ == 0 ? length(virtualspaces[i + 1]) : key_R′
+            key_R = key_R′ == 0 ? length(virtualspaces[i]) : key_R′
             O = nonzero_opps[i][j]
 
             if ismissing(virtualspaces[i - 1][key_L])
                 virtualspaces[i - 1][key_L] = left_virtualspace(O)
+            else
+                @assert virtualspaces[i - 1][key_L] == left_virtualspace(O)
             end
             if ismissing(virtualspaces[i][key_R])
                 virtualspaces[i][key_R] = right_virtualspace(O)'
+            else
+                @assert virtualspaces[i][key_R] == right_virtualspace(O)'
             end
         end
     end
@@ -239,7 +256,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
         for i in 1:length(lattice)
             for j in findall(x -> !(x isa AbstractTensorMap), nonzero_opps[i])
                 key_L, key_R′ = nonzero_keys[i][j]
-                key_R = key_R′ == 0 ? length(virtualspaces[i + 1]) : key_R′
+                key_R = key_R′ == 0 ? length(virtualspaces[i]) : key_R′
 
                 if !ismissing(virtualspaces[i - 1][key_L]) &&
                    ismissing(virtualspaces[i][key_R])
@@ -254,7 +271,13 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
             end
         end
     end
-    @assert all(x -> !any(ismissing, x), virtualspaces) "could not fill in all virtual spaces"
+
+    for i in 1:length(lattice)
+        if any(ismissing, virtualspaces[i])
+            @warn "missing virtual spaces at site $i: $(findall(ismissing, virtualspaces[i]))"
+            replace!(virtualspaces[i], missing => oneunit(S))
+        end
+    end
     virtualsumspaces = map(virtualspaces) do V
         return SumSpace(collect(S, V))
     end
@@ -269,7 +292,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
 
         # Fill it
         for ((key_L, key_R′), o) in zip(nonzero_keys[site], nonzero_opps[site])
-            key_R = key_R′ == 0 ? length(virtualspaces[site + 1]) : key_R′
+            key_R = key_R′ == 0 ? length(virtualspaces[site]) : key_R′
             O[key_L, 1, 1, key_R] = if o isa Number
                 iszero(o) && continue
                 τ = BraidingTensor{E}(eachspace(O)[key_L, 1, 1, key_R])
