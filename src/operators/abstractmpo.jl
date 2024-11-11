@@ -18,9 +18,9 @@ abstract type AbstractHMPO{O<:MPOTensor} <: AbstractMPO{O} end
 
 function HMPO(lattice::AbstractVector{S}, terms...) where {S<:VectorSpace}
     if lattice isa PeriodicArray
-        return InfiniteHamiltonianMPO(lattice, terms...)
+        return InfiniteMPOHamiltonian(lattice, terms...)
     else
-        return FiniteHamiltonianMPO(lattice, terms...)
+        return FiniteMPOHamiltonian(lattice, terms...)
     end
 end
 function HMPO(operator::AbstractTensorMap{E,S,N,N}; L=Inf) where {E,S,N}
