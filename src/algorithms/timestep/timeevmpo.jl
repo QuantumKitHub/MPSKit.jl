@@ -160,9 +160,9 @@ function make_time_mpo(H::MPOHamiltonian{S,T}, dt, alg::WII) where {S,T}
                           domain(H[i][1, H.odim]))
         init = [init_1, zero(H[i][1, k]), zero(H[i][j, H.odim]), zero(H[i][j, k])]
 
-        (y, convhist) = exponentiate(1.0, RecursiveVec(init),
+        (y, convhist) = exponentiate(1.0, init,
                                      Arnoldi(; tol=alg.tol, maxiter=alg.maxiter)) do x
-            out = similar(x.vecs)
+            out = similar(x)
 
             @plansor out[1][-1 -2; -3 -4] := δ * x[1][-1 1; -3 -4] *
                                              H[i][1, H.odim][2 3; 1 4] * τ[-2 4; 2 3]
@@ -186,7 +186,7 @@ function make_time_mpo(H::MPOHamiltonian{S,T}, dt, alg::WII) where {S,T}
             @plansor out[4][-1 -2; -3 -4] += sqrt(δ) * x[3][-1 4; -3 3] *
                                              H[i][1, k][2 -2; 1 -4] * τ[3 4; 1 2]
 
-            return RecursiveVec(out)
+            return out
         end
         convhist.converged == 0 &&
             @warn "exponentiate failed to converge: normres = $(convhist.normres)"
