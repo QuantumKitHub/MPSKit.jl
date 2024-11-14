@@ -218,3 +218,33 @@ function fuse_mul_mpo(O1::AbstractBlockTensorMap{T₁,S,2,2},
     end
     return O
 end
+
+function add_physical_charge(O::MPOTensor, charge::Sector)
+    sectortype(O) === typeof(charge) || throw(SectorMismatch())
+    auxspace = Vect[typeof(charge)](charge => 1)
+    F = fuser(scalartype(O), physicalspace(O), auxspace)
+    @plansor O_charged[-1 -2; -3 -4] := F[-2; 1 2] *
+                                        O[-1 1; 4 3] *
+                                        τ[3 2; 5 -4] * conj(F[-3; 4 5])
+    return O_charged
+end
+function add_physical_charge(O::BraidingTensor, charge::Sector)
+    sectortype(O) === typeof(charge) || throw(SectorMismatch())
+    auxspace = Vect[typeof(charge)](charge => 1)
+    V = left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
+        fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)'
+    return BraidingTensor{scalartype(O)}(V)
+end
+function add_physical_charge(O::AbstractBlockTensorMap{<:Any,<:Any,2,2}, charge::Sector)
+    sectortype(O) == typeof(charge) || throw(SectorMismatch())
+
+    auxspace = Vect[typeof(charge)](charge => 1)
+
+    Odst = similar(O,
+                   left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
+                   fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)')
+    for (I, v) in nonzero_pairs(O)
+        Odst[I] = add_physical_charge(v, charge)
+    end
+    return Odst
+end
