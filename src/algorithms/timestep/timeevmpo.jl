@@ -48,7 +48,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
     # incorporate higher order terms
     # TODO: don't need to fully construct H_next...
     if alg.extension
-        H_next = H_n * H
+        H_next = H_n * H′
         linds_next = LinearIndices(ntuple(i -> V, N + 1))
         for (i, slice) in enumerate(parent(H_n))
             for a in cinds, b in cinds
