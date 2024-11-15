@@ -98,11 +98,13 @@ function _find_tensortype(nonzero_operators::AbstractArray)
 end
 
 function _find_channel(nonzero_keys; init=2)
+    init = max(init, 2)
     range = unique!(last.(nonzero_keys))
-    for i in max(2, init):max(maximum(range) + 1, 2)
+    isempty(range) && return init
+    for i in init:max(maximum(range), 2)
         i ∉ range && return i
     end
-    return error("should not happen")
+    return maximum(range) + 1
 end
 
 function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
@@ -127,7 +129,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
         for (i, (site, O)) in enumerate(zip(sites, local_mpo))
             key_L = i == 1 ? 1 : key_R
             key_R = i == length(local_mpo) ? 0 :
-                    _find_channel(nonzero_keys[site]; init=key_L)
+                    _find_channel(nonzero_keys[site]; init=max(2, key_L))
             push!(nonzero_keys[site], (key_L, key_R))
             push!(nonzero_opps[site], O)
         end
@@ -204,7 +206,6 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
                            collect(local_operators)); by=x -> length(x[1]))
 
     for (sites, local_mpo) in local_mpos
-        @show sites
         local key_R # trick to define key_R before the first iteration
         for (i, (site, O)) in enumerate(zip(sites, local_mpo))
             key_L = i == 1 ? 1 : key_R
