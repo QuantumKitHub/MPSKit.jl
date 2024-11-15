@@ -20,6 +20,7 @@ RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
 Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
+TupleTools = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 
 [compat]
@@ -38,15 +39,16 @@ TensorKit = "0.13"
 TensorKitManifolds = "0.7"
 TensorOperations = "5"
 Transducers = "0.4"
+TupleTools = "1.6.0"
 VectorInterface = "0.2, 0.3, 0.4"
 julia = "1.8"
 
 [extras]
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
-TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [targets]
 test = ["Pkg", "Test", "TestExtras", "Plots"]

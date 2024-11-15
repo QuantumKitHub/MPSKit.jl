@@ -5,6 +5,12 @@
     maxiter::Int = Defaults.maxiter
 end
 
+"""
+    TaylorCluster(; N=2, extension=true, compression=true)
+
+Algorithm for constructing the Nth order time evolution MPO using the Taylor cluster expansion.
+This is based on the paper [arXiv:2302.14181](https://arxiv.org/abs/2302.14181).
+"""
 @kwdef struct TaylorCluster <: Algorithm
     N::Int = 2
     extension::Bool = true
@@ -50,23 +56,20 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
     if alg.extension
         H_next = H_n * H′
         linds_next = LinearIndices(ntuple(i -> V, N + 1))
+        cinds_next = CartesianIndices(linds_next)
         for (i, slice) in enumerate(parent(H_n))
-            for a in cinds, b in cinds
-                all(>(1), b.I) || continue
-                all(in((1, V)), a.I) && any(==(V), a.I) && continue
-
-                n1 = count(==(1), a.I) + 1
-                n3 = count(==(V), b.I) + 1
-                factor = τ * factorial(N) / (factorial(N + 1) * n1 * n3)
-
-                for c in 1:(N + 1), d in 1:(N + 1)
-                    aₑ = insert!([a.I...], c, 1)
-                    bₑ = insert!([b.I...], d, V)
-
-                    # TODO: use VectorInterface for memory efficiency
-                    slice[linds[a], 1, 1, linds[b]] += factor *
-                                                       H_next[i][linds_next[aₑ...], 1, 1,
-                                                                 linds_next[bₑ...]]
+            for Inext in nonzero_keys(H_next[i])
+                aₑ = cinds_next[Inext[1]]
+                bₑ = cinds_next[Inext[4]]
+                for c in findall(==(1), aₑ.I), d in findall(==(V), bₑ.I)
+                    a = TT.deleteat(Tuple(aₑ), c)
+                    b = TT.deleteat(Tuple(bₑ), d)
+                    if all(>(1), b) && !(all(in((1, V), a)) && any(==(V), a))
+                        n1 = count(==(1), a) + 1
+                        n3 = count(==(V), b) + 1
+                        factor = τ * factorial(N) / (factorial(N + 1) * n1 * n3)
+                        slice[linds[a...], 1, 1, linds[b...]] += factor * H_next[i][Inext]
+                    end
                 end
             end
         end
@@ -80,39 +83,46 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
         mpo = InfiniteMPO(parent(H_n))
     end
     for slice in parent(mpo)
-        for b in cinds[2:end]
-            all(in((1, V)), b.I) || continue
-
-            b_lin = linds[b]
-            a = count(==(V), b.I)
-            factor = τ^a * factorial(N - a) / factorial(N)
-            slice[:, 1, 1, 1] = slice[:, 1, 1, 1] + factor * slice[:, 1, 1, b_lin]
-            for I in nonzero_keys(slice)
-                (I[1] == b_lin || I[4] == b_lin) && delete!(slice, I)
+        for (I, v) in nonzero_pairs(slice)
+            a = cinds[I[1]]
+            b = cinds[I[4]]
+            if all(in((1, V)), a.I) && any(!=(1), a.I)
+                delete!(slice, I)
+            elseif any(!=(1), b.I) && all(in((1, V)), b.I)
+                exponent = count(==(V), b.I)
+                factor = τ^exponent * factorial(N - exponent) / factorial(N)
+                Idst = CartesianIndex(Base.setindex(I.I, 1, 4))
+                slice[Idst] += factor * v
+                delete!(slice, I)
             end
         end
     end
 
     # Remove equivalent rows and columns: Algorithm 2
     for slice in parent(mpo)
-        for c in cinds
-            c_lin = linds[c]
-            s_c = CartesianIndex(sort(collect(c.I); by=(!=(1)))...)
-            s_r = CartesianIndex(sort(collect(c.I); by=(!=(V)))...)
+        for I in nonzero_keys(slice)
+            a = cinds[I[1]]
+            a_sort = CartesianIndex(sort(collect(a.I); by=(!=(1)))...)
+            n1_a = count(==(1), a.I)
+            n3_a = count(==(V), a.I)
+            if n3_a <= n1_a && a_sort != a
+                Idst = CartesianIndex(Base.setindex(I.I, linds[a_sort], 1))
+                slice[Idst] += slice[I]
+                delete!(slice, I)
+            elseif a != a_sort
+                delete!(slice, I)
+            end
 
-            n1 = count(==(1), c.I)
-            n3 = count(==(V), c.I)
-
-            if n3 <= n1 && s_c != c
-                slice[linds[s_c], 1, 1, :] += slice[c_lin, 1, 1, :]
-                for I in nonzero_keys(slice)
-                    (I[1] == c_lin || I[4] == c_lin) && delete!(slice, I)
-                end
-            elseif n3 > n1 && s_r != c
-                slice[:, 1, 1, linds[s_r]] += slice[:, 1, 1, c_lin]
-                for I in nonzero_keys(slice)
-                    (I[1] == c_lin || I[4] == c_lin) && delete!(slice, I)
-                end
+            b = cinds[I[4]]
+            b_sort = CartesianIndex(sort(collect(b.I); by=(!=(V)))...)
+            n1_b = count(==(1), b.I)
+            n3_b = count(==(V), b.I)
+            if n3_b > n1_b && b_sort != b
+                Idst = CartesianIndex(Base.setindex(I.I, linds[b_sort], 4))
+                slice[Idst] += slice[I]
+                delete!(slice, I)
+            elseif b != b_sort
+                delete!(slice, I)
             end
         end
     end
@@ -127,10 +137,14 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
                 b = CartesianIndex(replace(a.I, V => 1))
                 b_lin = linds[b]
                 factor = τ^n1 * factorial(N - n1) / factorial(N)
-                slice[:, 1, 1, b_lin] += factor * slice[:, 1, 1, a_lin]
-
                 for I in nonzero_keys(slice)
-                    (I[1] == a_lin || I[4] == a_lin) && delete!(slice, I)
+                    if I[4] == a_lin
+                        Idst = CartesianIndex(Base.setindex(I.I, b_lin, 4))
+                        slice[Idst] += factor * slice[I]
+                        delete!(slice, I)
+                    elseif I[1] == a_lin
+                        delete!(slice, I)
+                    end
                 end
             end
         end
@@ -144,105 +158,6 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
 
     return remove_orphans!(mpo)
 end
-
-# function make_time_mpo(th::MPOHamiltonian{S,T,E}, dt, alg::TaylorCluster) where {S,T,E}
-#     N = alg.N
-#     τ = -1im * dt
-#
-#     inds = LinearIndices(ntuple(i -> th.odim, N))
-#     mult_data = Array{Union{Missing,eltype(th[1])},3}(missing, length(th), th.odim^N,
-#                                                       th.odim^N)
-#     for loc in 1:length(th), a in CartesianIndices(inds), b in CartesianIndices(inds)
-#         has_prod_elem(th[loc], Tuple(a), Tuple(b)) || continue
-#
-#         mult_data[loc, inds[a], inds[b]] = calc_prod_elem(th[loc], Tuple(a), Tuple(b))
-#     end
-#     mult = SparseMPO(mult_data)
-#
-#     for slice in mult
-#         #embed next order in this one - incompatible with approximate compression
-#         for a in CartesianIndices(inds), b in CartesianIndices(inds), no in 1:1
-#             t_a = [Tuple(a)...]
-#             t_b = [Tuple(b)...]
-#
-#             all(x -> x > 1, t_b) || continue
-#             all(x -> x in (1, th.odim), t_a) && any(x -> x == th.odim, t_a) && continue
-#
-#             n3 = count(x -> x == th.odim, t_b) + no
-#             n1 = count(x -> x == 1, t_a) + no
-#             for e_b in interweave(fill(th.odim, no), t_b),
-#                 e_a in interweave(fill(1, no), t_a)
-#
-#                 has_prod_elem(slice, e_a, e_b) || continue
-#                 slice[inds[a], inds[b]] += calc_prod_elem(slice, e_a, e_b) * τ^no *
-#                                            factorial(N) / (factorial(N + no) * n1 * n3)
-#             end
-#         end
-#
-#         # apply loopback
-#         for a in Iterators.product(fill((1, th.odim), N)...)
-#             all(a .== 1) && continue
-#
-#             order = count(x -> x == th.odim, a)
-#             c_ind = inds[a...]
-#             slice[1:(c_ind - 1), 1] .+= slice[1:(c_ind - 1), c_ind] .* τ^order *
-#                                         factorial(N - order) / factorial(N)
-#             slice[c_ind, :] .*= 0
-#             slice[:, c_ind] .*= 0
-#         end
-#
-#         # remove equivalent collumns
-#         for c in CartesianIndices(inds)
-#             tc = [Tuple(c)...]
-#             keys = map(x -> x == 1 ? 2 : 1, tc)
-#             s_tc = tc[sortperm(keys)]
-#
-#             n1 = count(x -> x == 1, tc)
-#             n3 = count(x -> x == th.odim, tc)
-#
-#             if n1 >= n3 && tc != s_tc
-#                 slice[inds[s_tc...], :] += slice[inds[c], :]
-#
-#                 slice[inds[c], :] .*= 0
-#                 slice[:, inds[c]] .*= 0
-#             end
-#         end
-#
-#         # remove equivalent rows
-#         for c in CartesianIndices(inds)
-#             tc = [Tuple(c)...]
-#             keys = map(x -> x == th.odim ? 2 : 1, tc)
-#             s_tc = tc[sortperm(keys)]
-#
-#             n1 = count(x -> x == 1, tc)
-#             n3 = count(x -> x == th.odim, tc)
-#
-#             if n3 > n1 && tc != s_tc
-#                 slice[:, inds[s_tc...]] += slice[:, inds[c]]
-#
-#                 slice[:, inds[c]] .*= 0
-#                 slice[inds[c], :] .*= 0
-#             end
-#         end
-#         # approximate compression
-#         for c in CartesianIndices(inds)
-#             tc = [Tuple(c)...]
-#
-#             n = count(x -> x == th.odim, tc)
-#             all(x -> x > 1, tc) && n > 0 || continue
-#
-#             transformed = map(x -> x == th.odim ? 1 : x, tc)
-#
-#             slice[:, inds[transformed...]] += slice[:, inds[tc...]] * τ^n *
-#                                               factorial(N - n) / factorial(N)
-#
-#             slice[:, inds[tc...]] .*= 0
-#             slice[inds[tc...], :] .*= 0
-#         end
-#     end
-#
-#     return remove_orphans(mult)
-# end
 
 has_prod_elem(slice, t1, t2) = all(map(x -> contains(slice, x...), zip(t1, t2)))
 function calc_prod_elem(slice, t1, t2)
