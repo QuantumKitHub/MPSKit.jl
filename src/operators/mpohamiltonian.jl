@@ -104,7 +104,7 @@ function _find_channel(nonzero_keys; init=2)
     for i in init:max(maximum(range), 2)
         i ∉ range && return i
     end
-    return maximum(range) + 1
+    return max(maximum(range) + 1, init)
 end
 
 function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
@@ -129,7 +129,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
         for (i, (site, O)) in enumerate(zip(sites, local_mpo))
             key_L = i == 1 ? 1 : key_R
             key_R = i == length(local_mpo) ? 0 :
-                    _find_channel(nonzero_keys[site]; init=max(2, key_L))
+                    _find_channel(nonzero_keys[site]; init=key_L)
             push!(nonzero_keys[site], (key_L, key_R))
             push!(nonzero_opps[site], O)
         end
@@ -145,12 +145,15 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
     virtualspaces[end] = SumSpace(oneunit(S))
 
     for i in 1:(length(lattice) - 1)
-        V = SumSpace(fill(oneunit(S), maximum(last, nonzero_keys[i]; init=1) + 1))
-        for ((key_L, key_R), O) in zip(nonzero_keys[i], nonzero_opps[i])
-            V[key_R == 0 ? end : key_R] = if O isa Number
-                virtualspaces[i][key_L]
-            else
-                right_virtualspace(O)'
+        n_channels = maximum(last, nonzero_keys[i]; init=1) + 1
+        V = SumSpace(fill(oneunit(S), n_channels))
+        if n_channels > 2
+            for ((key_L, key_R), O) in zip(nonzero_keys[i], nonzero_opps[i])
+                V[key_R == 0 ? end : key_R] = if O isa Number
+                    virtualspaces[i][key_L]
+                else
+                    right_virtualspace(O)'
+                end
             end
         end
         virtualspaces[i + 1] = V
