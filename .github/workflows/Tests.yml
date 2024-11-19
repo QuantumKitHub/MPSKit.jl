@@ -1,0 +1,44 @@
+name: Tests
+on:
+  push:
+    branches:
+      - 'master'
+      - 'main'
+      - 'release-'
+    tags: '*'
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Cancel intermediate builds: only if it is a pull request build.
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  tests:
+    name: "Tests"
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.8' # minimal supported version
+          - '1' # latest released Julia version
+        group:
+          - states
+          - operators
+          - algorithms
+          - other
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+    uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/Tests.yml@main"
+    with:
+      group: "${{ matrix.group }}"
+      nthreads: 4
+      julia-version: "${{ matrix.version }}"
+      os: "${{ matrix.os }}"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
