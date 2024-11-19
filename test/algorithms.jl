@@ -689,7 +689,7 @@ end
         @test abs(dot(ψ6, ψ5)) ≈ 1.0 atol = dt
         @test abs(dot(ψ2, ψ4)) ≈ 1.0 atol = dt
 
-        nW1 = changebonds(W1, SvdCut(; trscheme=truncerr(dt))) #this should be a trivial mpo now
+        nW1 = changebonds(W1, SvdCut(; trscheme=truncbelow(dt))) # this should be a trivial mpo now
         @test dim(space(nW1[1], 1)) == 1
     end
 
