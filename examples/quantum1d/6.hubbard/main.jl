@@ -51,28 +51,28 @@ e(u) = - u - 4 \int_0^{\infty} \frac{d\omega}{\omega} \frac{J_0(\omega) J_1(\ome
 We can easily verify this by comparing the numerical results to the analytic solution.
 """
 
-_integrandum(u, ω) = besselj0(ω) * besselj1(ω) / (1 + exp(2u * ω)) / ω
 function hubbard_energy(u; rtol=1e-12)
-    int, err = quadgk(Base.Fix1(_integrandum, u), 0, Inf; rtol)
+    integrandum(ω) = besselj0(ω) * besselj1(ω) / (1 + exp(2u * ω)) / ω
+    int, err = quadgk(Base.Fix1(_integrandum, u), 0, Inf; rtol=rtol)
     return -u - 4 * int
 end
 
-function compute_groundstate(psi, H; svalue=1e-3, expansion_factor=1 / 5, expansion_iter=20)
-    # initial state
+function compute_groundstate(psi, H;
+                             svalue=1e-3,
+                             expansionfactor=(1 / 5),
+                             expansioniter=20)
     psi, = find_groundstate(psi, H; tol=svalue * 10)
-
-    # expansion steps
-    for _ in 1:expansion_iter
+    for _ in 1:expansioniter
         D = maximum(x -> dim(left_virtualspace(psi, x)), 1:length(psi))
-        D′ = max(2, round(Int, D * expansion_factor))
+        D′ = max(2, round(Int, D * expansionfactor))
         trscheme = truncbelow(svalue / 10) & truncdim(D′)
-        psi′, = changebonds(psi, H, OptimalExpand(; trscheme))
+        psi′, = changebonds(psi, H, OptimalExpand(; trscheme=trscheme))
         all(left_virtualspace.(Ref(psi), 1:length(psi)) .==
             left_virtualspace.(Ref(psi′), 1:length(psi))) && break
         psi, = find_groundstate(psi′, H, VUMPS(; tol=svalue / 5))
     end
 
-    # convergence steps
+    ## convergence steps
     psi, = changebonds(psi, H, SvdCut(; trscheme=truncbelow(svalue)))
     psi, = find_groundstate(psi, H,
                             VUMPS(; tol=svalue) & GradientGrassmann(; tol=svalue / 100))
@@ -110,8 +110,8 @@ H_u1_su2 = MPSKit.add_physical_charge(H_u1_su2, dual.(charges));
 pspaces = H_u1_su2.data.pspaces
 vspaces = [oneunit(eltype(pspaces)), first(pspaces)]
 psi = InfiniteMPS(pspaces, vspaces)
-psi = compute_groundstate(psi, H_u1_su2; svalue=1e-3, expansion_factor=1 / 3,
-                          expansion_iter=20)
+psi = compute_groundstate(psi, H_u1_su2; svalue=1e-3, expansionfactor=1 / 3,
+                          expansioniter=20)
 E = real(expectation_value(psi, H_u1_su2)) / 2
 @info """
 Groundstate energy:
@@ -155,20 +155,20 @@ Here, the formulae for the excitation energies are expressed in terms of dressed
 
 function spinon_momentum(Λ, u; rtol=1e-12)
     integrandum(ω) = besselj0(ω) * sin(ω * Λ) / ω / cosh(ω * u)
-    return π / 2 - quadgk(integrandum, 0, Inf; rtol)[1]
+    return π / 2 - quadgk(integrandum, 0, Inf; rtol=rtol)[1]
 end
 function spinon_energy(Λ, u; rtol=1e-12)
     integrandum(ω) = besselj1(ω) * cos(ω * Λ) / ω / cosh(ω * u)
-    return 2 * quadgk(integrandum, 0, Inf; rtol)[1]
+    return 2 * quadgk(integrandum, 0, Inf; rtol=rtol)[1]
 end
 
 function holon_momentum(k, u; rtol=1e-12)
     integrandum(ω) = besselj0(ω) * sin(ω * sin(k)) / ω / (1 + exp(2u * abs(ω)))
-    return π / 2 - k - 2 * quadgk(integrandum, 0, Inf; rtol)[1]
+    return π / 2 - k - 2 * quadgk(integrandum, 0, Inf; rtol=rtol)[1]
 end
 function holon_energy(k, u; rtol=1e-12)
     integrandum(ω) = besselj1(ω) * cos(ω * sin(k)) * exp(-ω * u) / ω / cosh(ω * u)
-    return 2 * cos(k) + 2u + 2 * quadgk(integrandum, 0, Inf; rtol)[1]
+    return 2 * cos(k) + 2u + 2 * quadgk(integrandum, 0, Inf; rtol=rtol)[1]
 end
 
 Λs = range(-10, 10; length=51)
