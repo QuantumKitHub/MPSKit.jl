@@ -1,3 +1,5 @@
+using Markdown
+
 md"""
 # [Hubbard chain at half filling](@id hubbard)
 
@@ -31,6 +33,8 @@ using MPSKitModels
 using SpecialFunctions: besselj0, besselj1
 using QuadGK: quadgk
 using Plots
+using Interpolations
+using Optim
 
 const t = 1.0
 const mu = 0.0
@@ -124,11 +128,11 @@ The fact that the spin and charge sectors are separate is a phenomenon known as 
 
 The domain walls can be constructed by noticing that there are two equivalent groundstates, which differ by a translation over a single site.
 In other words, the groundstates are ``\psi_{AB}` and ``\psi_{BA}``, where ``A`` and ``B`` are the two sites.
-These excitations can then be constructed as follows:
+These excitations can be constructed as follows:
 """
 
 alg = QuasiparticleAnsatz(; tol=1e-3)
-momenta = range(-π, π; length=12)
+momenta = range(-π, π; length=33)
 psi_AB = psi
 envs_AB = environments(psi_AB, H_u1_su2);
 psi_BA = circshift(psi, 1)
@@ -139,11 +143,131 @@ E_spinon, ϕ_spinon = excitations(H_u1_su2, alg, momenta,
                                  psi_AB, envs_AB, psi_BA, envs_BA;
                                  sector=spinon_charge, num=1)
 
-holon_charge = FermionParity(0) ⊠ U1Irrep(1) ⊠ SU2Irrep(0)
-E_spinon, ϕ_spinon = excitations(H_u1_su2, alg, momenta,
-                                 psi_AB, envs_AB, psi_BA, envs_BA;
-                                 sector=holon_charge, num=1)
+holon_charge = FermionParity(1) ⊠ U1Irrep(1) ⊠ SU2Irrep(0)
+E_holon, ϕ_holon = excitations(H_u1_su2, alg, momenta,
+                               psi_AB, envs_AB, psi_BA, envs_BA;
+                               sector=holon_charge, num=1)
 
-p_excitations = plot(; xaxis="momentum", yaxis="energy")
-plot!(p_excitations, momenta, real(E_spinon); label="spinon")
-plot!(p_excitations, momenta, real(E_holon); label="holon")
+md"""
+Again, we can compare the numerical results to the analytic solution.
+Here, the formulae for the excitation energies are expressed in terms of dressed momenta:
+"""
+
+function spinon_momentum(Λ, u; rtol=1e-12)
+    integrandum(ω) = besselj0(ω) * sin(ω * Λ) / ω / cosh(ω * u)
+    return π / 2 - quadgk(integrandum, 0, Inf; rtol)[1]
+end
+function spinon_energy(Λ, u; rtol=1e-12)
+    integrandum(ω) = besselj1(ω) * cos(ω * Λ) / ω / cosh(ω * u)
+    return 2 * quadgk(integrandum, 0, Inf; rtol)[1]
+end
+
+function holon_momentum(k, u; rtol=1e-12)
+    integrandum(ω) = besselj0(ω) * sin(ω * sin(k)) / ω / (1 + exp(2u * abs(ω)))
+    return π / 2 - k - 2 * quadgk(integrandum, 0, Inf; rtol)[1]
+end
+function holon_energy(k, u; rtol=1e-12)
+    integrandum(ω) = besselj1(ω) * cos(ω * sin(k)) * exp(-ω * u) / ω / cosh(ω * u)
+    return 2 * cos(k) + 2u + 2 * quadgk(integrandum, 0, Inf; rtol)[1]
+end
+
+Λs = range(-10, 10; length=51)
+P_spinon_analytic = rem2pi.(spinon_momentum.(Λs, U / 4), RoundNearest)
+E_spinon_analytic = spinon_energy.(Λs, U / 4)
+I_spinon = sortperm(P_spinon_analytic)
+P_spinon_analytic = P_spinon_analytic[I_spinon]
+E_spinon_analytic = E_spinon_analytic[I_spinon]
+P_spinon_analytic = [reverse(-P_spinon_analytic); P_spinon_analytic]
+E_spinon_analytic = [reverse(E_spinon_analytic); E_spinon_analytic]
+
+ks = range(0, 2π; length=51)
+P_holon_analytic = rem2pi.(holon_momentum.(ks, U / 4), RoundNearest)
+E_holon_analytic = holon_energy.(ks, U / 4)
+I_holon = sortperm(P_holon_analytic)
+P_holon_analytic = P_holon_analytic[I_holon]
+E_holon_analytic = E_holon_analytic[I_holon]
+
+p = let p_excitations = plot(; xaxis="momentum", yaxis="energy")
+    scatter!(p_excitations, momenta, real(E_spinon); label="spinon")
+    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label="spinon (analytic)")
+
+    scatter!(p_excitations, momenta, real(E_holon); label="holon")
+    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label="holon (analytic)")
+
+    p_excitations
+end
+
+md"""
+The plot shows some discrepancies between the numerical and analytic results.
+First and foremost, we must realize that in the thermodynamic limit, the momentum of a domain wall is actually not well-defined.
+Concretely, only the difference in momentum between the two groundstates is well-defined, as we can always shift the momentum by multiplying one of the groundstates by a phase.
+Here, we can fix this shift by realizing that our choice of shifting the groundstates by a single site, differs from the formula by a factor ``\pi/2``.
+"""
+
+momenta_shifted = rem2pi.(momenta .- π / 2, RoundNearest)
+p = let p_excitations = plot(; xaxis="momentum", yaxis="energy", xlims=(-π, π))
+    scatter!(p_excitations, momenta_shifted, real(E_spinon); label="spinon")
+    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label="spinon (analytic)")
+
+    scatter!(p_excitations, momenta_shifted, real(E_holon); label="holon")
+    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label="holon (analytic)")
+
+    p_excitations
+end
+
+md"""
+The second discrepancy is that while the spinon dispersion is well-reproduced, the holon dispersion is not.
+This is due to the fact that the excitation ansatz captures the lowest-energy excitation, and not the elementary single-particle excitation.
+To make this explicit, we can consider the scattering states comprising of a holon and two spinons.
+If these are truly scattering states, the energy of the scattering state should be the sum of the energies of the individual excitations, and the momentum is the sum of the momenta.
+Thus, we can find the lowest-energy scattering states by minimizing the energy over the combination of momenta for the constituent elementary excitations.
+"""
+
+holon_dispersion_itp = linear_interpolation(P_holon_analytic, E_holon_analytic;
+                                            extrapolation_bc=Line())
+spinon_dispersion_itp = linear_interpolation(P_spinon_analytic, E_spinon_analytic;
+                                             extrapolation_bc=Line())
+function scattering_energy(p1, p2, p3)
+    p1, p2, p3 = rem2pi.((p1, p2, p3), RoundNearest)
+    return holon_dispersion_itp(p1) + spinon_dispersion_itp(p2) + spinon_dispersion_itp(p3)
+end
+
+E_scattering_min = map(momenta_shifted) do p
+    e = Inf
+    for i in 1:10 # repeat for stability
+        res = optimize((rand(2) .* (2π) .- π)) do (p₁, p₂)
+            p₃ = p - p₁ - p₂
+            return scattering_energy(p₁, p₂, p₃)
+        end
+
+        e = min(Optim.minimum(res), e)
+    end
+    return e
+end
+E_scattering_max = map(momenta_shifted) do p
+    e = -Inf
+    for i in 1:10 # repeat for stability
+        res = optimize((rand(Float64, 2) .* (2π) .- π)) do (p₁, p₂)
+            p₃ = p - p₁ - p₂
+            return -scattering_energy(p₁, p₂, p₃)
+        end
+
+        e = max(-Optim.minimum(res), e)
+    end
+    return e
+end
+
+p = let p_excitations = plot(; xaxis="momentum", yaxis="energy", xlims=(-π, π),
+                             ylims=(-0.1, 5))
+    scatter!(p_excitations, momenta_shifted, real(E_spinon); label="spinon")
+    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label="spinon (analytic)")
+
+    scatter!(p_excitations, momenta_shifted, real(E_holon); label="holon")
+    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label="holon (analytic)")
+
+    I = sortperm(momenta_shifted)
+    plot!(p_excitations, momenta_shifted[I], E_scattering_min[I]; label="scattering states",
+          fillrange=E_scattering_max[I], fillalpha=0.3, fillstyle=:x)
+
+    p_excitations
+end
