@@ -76,7 +76,8 @@ function compute_groundstate(psi, H;
     ## convergence steps
     psi, = changebonds(psi, H, SvdCut(; trscheme=truncbelow(svalue)))
     psi, = find_groundstate(psi, H,
-                            VUMPS(; tol=svalue, verbosity) & GradientGrassmann(; tol=svalue / 100, verbosity))
+                            VUMPS(; tol=svalue, verbosity) &
+                            GradientGrassmann(; tol=svalue / 100, verbosity))
 
     return psi
 end
