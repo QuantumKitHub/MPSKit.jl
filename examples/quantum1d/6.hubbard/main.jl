@@ -53,7 +53,7 @@ We can easily verify this by comparing the numerical results to the analytic sol
 
 function hubbard_energy(u; rtol=1e-12)
     integrandum(ω) = besselj0(ω) * besselj1(ω) / (1 + exp(2u * ω)) / ω
-    int, err = quadgk(Base.Fix1(_integrandum, u), 0, Inf; rtol=rtol)
+    int, err = quadgk(integrandum, 0, Inf; rtol=rtol)
     return -u - 4 * int
 end
 
@@ -61,7 +61,8 @@ function compute_groundstate(psi, H;
                              svalue=1e-3,
                              expansionfactor=(1 / 5),
                              expansioniter=20)
-    psi, = find_groundstate(psi, H; tol=svalue * 10)
+    verbosity = 1
+    psi, = find_groundstate(psi, H; tol=svalue * 10, verbosity)
     for _ in 1:expansioniter
         D = maximum(x -> dim(left_virtualspace(psi, x)), 1:length(psi))
         D′ = max(2, round(Int, D * expansionfactor))
@@ -69,13 +70,13 @@ function compute_groundstate(psi, H;
         psi′, = changebonds(psi, H, OptimalExpand(; trscheme=trscheme))
         all(left_virtualspace.(Ref(psi), 1:length(psi)) .==
             left_virtualspace.(Ref(psi′), 1:length(psi))) && break
-        psi, = find_groundstate(psi′, H, VUMPS(; tol=svalue / 5))
+        psi, = find_groundstate(psi′, H, VUMPS(; tol=svalue / 5, verbosity))
     end
 
     ## convergence steps
     psi, = changebonds(psi, H, SvdCut(; trscheme=truncbelow(svalue)))
     psi, = find_groundstate(psi, H,
-                            VUMPS(; tol=svalue) & GradientGrassmann(; tol=svalue / 100))
+                            VUMPS(; tol=svalue, verbosity) & GradientGrassmann(; tol=svalue / 100, verbosity))
 
     return psi
 end
@@ -141,12 +142,12 @@ envs_BA = environments(psi_BA, H_u1_su2);
 spinon_charge = FermionParity(0) ⊠ U1Irrep(0) ⊠ SU2Irrep(1 // 2)
 E_spinon, ϕ_spinon = excitations(H_u1_su2, alg, momenta,
                                  psi_AB, envs_AB, psi_BA, envs_BA;
-                                 sector=spinon_charge, num=1)
+                                 sector=spinon_charge, num=1);
 
 holon_charge = FermionParity(1) ⊠ U1Irrep(1) ⊠ SU2Irrep(0)
 E_holon, ϕ_holon = excitations(H_u1_su2, alg, momenta,
                                psi_AB, envs_AB, psi_BA, envs_BA;
-                               sector=holon_charge, num=1)
+                               sector=holon_charge, num=1);
 
 md"""
 Again, we can compare the numerical results to the analytic solution.
@@ -178,14 +179,14 @@ I_spinon = sortperm(P_spinon_analytic)
 P_spinon_analytic = P_spinon_analytic[I_spinon]
 E_spinon_analytic = E_spinon_analytic[I_spinon]
 P_spinon_analytic = [reverse(-P_spinon_analytic); P_spinon_analytic]
-E_spinon_analytic = [reverse(E_spinon_analytic); E_spinon_analytic]
+E_spinon_analytic = [reverse(E_spinon_analytic); E_spinon_analytic];
 
 ks = range(0, 2π; length=51)
 P_holon_analytic = rem2pi.(holon_momentum.(ks, U / 4), RoundNearest)
 E_holon_analytic = holon_energy.(ks, U / 4)
 I_holon = sortperm(P_holon_analytic)
 P_holon_analytic = P_holon_analytic[I_holon]
-E_holon_analytic = E_holon_analytic[I_holon]
+E_holon_analytic = E_holon_analytic[I_holon];
 
 p = let p_excitations = plot(; xaxis="momentum", yaxis="energy")
     scatter!(p_excitations, momenta, real(E_spinon); label="spinon")
@@ -230,7 +231,7 @@ spinon_dispersion_itp = linear_interpolation(P_spinon_analytic, E_spinon_analyti
 function scattering_energy(p1, p2, p3)
     p1, p2, p3 = rem2pi.((p1, p2, p3), RoundNearest)
     return holon_dispersion_itp(p1) + spinon_dispersion_itp(p2) + spinon_dispersion_itp(p3)
-end
+end;
 
 E_scattering_min = map(momenta_shifted) do p
     e = Inf
@@ -255,7 +256,7 @@ E_scattering_max = map(momenta_shifted) do p
         e = max(-Optim.minimum(res), e)
     end
     return e
-end
+end;
 
 p = let p_excitations = plot(; xaxis="momentum", yaxis="energy", xlims=(-π, π),
                              ylims=(-0.1, 5))
