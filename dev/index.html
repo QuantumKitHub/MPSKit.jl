@@ -37,23 +37,23 @@ println(mps)</code></pre><pre class="documenter-example-output"><code class="noh
 └── AL[1]: TensorMap((ℂ^1 ⊗ ℂ^2) ← ℂ^2)</code></pre><p>These objects can then be used to compute observables and expectation values. For example, the expectation value of the identity operator at the third site, which is equal to the norm of the MPS, can be computed as:</p><pre><code class="language-julia hljs">N1 = LinearAlgebra.norm(mps)
 N2 = expectation_value(mps, 3 =&gt; id(physicalspace(mps, 3)))
 println(&quot;‖mps‖ = $N1&quot;)
-println(&quot;&lt;mps|𝕀₃|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 2.23606797749979
-&lt;mps|𝕀₃|mps&gt; = 5.0 + 0.0im</code></pre><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">H = transverse_field_ising(; J=1.0, g=0.5)
+println(&quot;&lt;mps|𝕀₃|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 2.2360679774997894
+&lt;mps|𝕀₃|mps&gt; = 5.000000000000001 + 0.0im</code></pre><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">H = transverse_field_ising(; J=1.0, g=0.5)
 find_groundstate!(mps, H, DMRG(; maxiter=10))
 E0 = expectation_value(mps, H)
-println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: DMRG init:	obj = -2.083437027390e+00	err = 5.5750e-01
-[ Info: DMRG   1:	obj = -9.765499738896e+00	err = 5.0649174825e-02	time = 0.50 sec
-[ Info: DMRG   2:	obj = -9.765503466377e+00	err = 4.2830402585e-04	time = 0.32 sec
-[ Info: DMRG   3:	obj = -9.765503469790e+00	err = 7.0054848195e-06	time = 0.01 sec
-[ Info: DMRG   4:	obj = -9.765503472284e+00	err = 7.3696924927e-06	time = 0.02 sec
-[ Info: DMRG   5:	obj = -9.765503474179e+00	err = 7.0217720369e-06	time = 0.02 sec
-[ Info: DMRG   6:	obj = -9.765503475272e+00	err = 5.7128237462e-06	time = 0.02 sec
-[ Info: DMRG   7:	obj = -9.765503475768e+00	err = 3.9779125495e-06	time = 0.01 sec
-[ Info: DMRG   8:	obj = -9.765503475960e+00	err = 2.5068709847e-06	time = 0.01 sec
-[ Info: DMRG   9:	obj = -9.765503476030e+00	err = 1.4948588666e-06	time = 0.01 sec
-┌ Warning: DMRG cancel 10:	obj = -9.765503476053e+00	err = 8.6591634543e-07	time = 0.94 sec
+println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: DMRG init:	obj = -2.733816237983e+00	err = 4.8070e-01
+[ Info: DMRG   1:	obj = -9.765501602864e+00	err = 2.4968668312e-02	time = 0.50 sec
+[ Info: DMRG   2:	obj = -9.765503468882e+00	err = 1.0879268589e-04	time = 0.32 sec
+[ Info: DMRG   3:	obj = -9.765503492654e+00	err = 7.5131230665e-06	time = 0.02 sec
+[ Info: DMRG   4:	obj = -9.765503493140e+00	err = 3.3658030475e-06	time = 0.01 sec
+[ Info: DMRG   5:	obj = -9.765503493261e+00	err = 1.5349083930e-06	time = 0.01 sec
+[ Info: DMRG   6:	obj = -9.765503493294e+00	err = 8.4153324601e-07	time = 0.01 sec
+[ Info: DMRG   7:	obj = -9.765503493304e+00	err = 5.0942677133e-07	time = 0.01 sec
+[ Info: DMRG   8:	obj = -9.765503493307e+00	err = 3.1298953463e-07	time = 0.01 sec
+[ Info: DMRG   9:	obj = -9.765503493308e+00	err = 1.9413796258e-07	time = 0.01 sec
+┌ Warning: DMRG cancel 10:	obj = -9.765503493309e+00	err = 1.2114747492e-07	time = 0.94 sec
 └ @ MPSKit ~/work/MPSKit.jl/MPSKit.jl/src/algorithms/groundstate/dmrg.jl:54
-&lt;mps|H|mps&gt; = -0.976550347605331</code></pre><h3 id="Infinite-Matrix-Product-States"><a class="docs-heading-anchor" href="#Infinite-Matrix-Product-States">Infinite Matrix Product States</a><a id="Infinite-Matrix-Product-States-1"></a><a class="docs-heading-anchor-permalink" href="#Infinite-Matrix-Product-States" title="Permalink"></a></h3><p>Similarly, an infinite MPS can be constructed by specifying the tensors for the unit cell, characterised by the spaces (dimensions) thereof.</p><pre><code class="language-julia hljs">d = 2 # physical dimension
+&lt;mps|H|mps&gt; = -0.9765503493308904</code></pre><h3 id="Infinite-Matrix-Product-States"><a class="docs-heading-anchor" href="#Infinite-Matrix-Product-States">Infinite Matrix Product States</a><a id="Infinite-Matrix-Product-States-1"></a><a class="docs-heading-anchor-permalink" href="#Infinite-Matrix-Product-States" title="Permalink"></a></h3><p>Similarly, an infinite MPS can be constructed by specifying the tensors for the unit cell, characterised by the spaces (dimensions) thereof.</p><pre><code class="language-julia hljs">d = 2 # physical dimension
 D = 5 # virtual dimension
 mps = InfiniteMPS(d, D) # random MPS</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">single site InfiniteMPS:
 │   ⋮
@@ -73,101 +73,52 @@ mps = InfiniteMPS(als)</code></pre><pre class="documenter-example-output"><code 
 </code></pre><p>These objects can then be used to compute observables and expectation values. For example, the norm of the MPS, which is equal to the expectation value of the identity operator can be computed by:</p><pre><code class="language-julia hljs">N1 = norm(mps)
 N2 = expectation_value(mps, 1 =&gt; id(physicalspace(mps, 1)))
 println(&quot;‖mps‖ = $N1&quot;)
-println(&quot;&lt;mps|𝕀₁|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 1.0000000000000002
-&lt;mps|𝕀₁|mps&gt; = 1.0000000000000004 + 0.0im</code></pre><div class="admonition is-info"><header class="admonition-header">Normalization of infinite MPS</header><div class="admonition-body"><p>Because infinite MPS cannot sensibly be normalized to anything but <span>$1$</span>, the <code>norm</code> of an infinite MPS is always set to be <span>$1$</span> at construction. If this were not the case, any observable computed from the MPS would either blow up to infinity or vanish to zero.</p></div></div><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">H = transverse_field_ising(; J=1.0, g=0.5)
+println(&quot;&lt;mps|𝕀₁|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 0.9999999999999999
+&lt;mps|𝕀₁|mps&gt; = 0.9999999999999996 + 0.0im</code></pre><div class="admonition is-info"><header class="admonition-header">Normalization of infinite MPS</header><div class="admonition-body"><p>Because infinite MPS cannot sensibly be normalized to anything but <span>$1$</span>, the <code>norm</code> of an infinite MPS is always set to be <span>$1$</span> at construction. If this were not the case, any observable computed from the MPS would either blow up to infinity or vanish to zero.</p></div></div><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">H = transverse_field_ising(; J=1.0, g=0.5)
 mps, = find_groundstate(mps, H, VUMPS(; maxiter=10))
 E0 = expectation_value(mps, H)
-println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: VUMPS init:	obj = -5.181474077699e-01	err = 4.6731e-01
-[ Info: VUMPS   1:	obj = -1.063040238151e+00	err = 2.1744047423e-02	time = 0.00 sec
-┌ Warning: ignoring imaginary component 1.8056744473735065e-6 from total weight 2.1570137753700456: operator might not be hermitian?
-│   α = 1.8501393748700075 + 1.8056744473735065e-6im
-│   β₁ = 0.09265935533399691
-│   β₂ = 1.1050370874127173
+println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: VUMPS init:	obj = -5.021876093998e-01	err = 4.5075e-01
+[ Info: VUMPS   1:	obj = -1.038920289822e+00	err = 1.0636274549e-01	time = 0.00 sec
+┌ Warning: ignoring imaginary component 1.1738374042363775e-6 from total weight 1.0888813436641487: operator might not be hermitian?
+│   α = -0.10529135664495481 + 1.1738374042363775e-6im
+│   β₁ = 0.6939250475606353
+│   β₂ = 0.8324928463129875
 └ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 4.256266268737319e-6 from total weight 2.4427266618558328: operator might not be hermitian?
-│   α = 1.8558022112749242 + 4.256266268737319e-6im
-│   β₁ = 1.1050370874127173
-│   β₂ = 1.1409665782102232
+┌ Warning: ignoring imaginary component 1.7400000109531188e-6 from total weight 2.6230979783673254: operator might not be hermitian?
+│   α = 2.1015354940385427 + 1.7400000109531188e-6im
+│   β₁ = 0.8324928463129875
+│   β₂ = 1.330844556004044
 └ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 5.151449161577837e-6 from total weight 3.7096068323868736: operator might not be hermitian?
-│   α = 3.0294899216373894 + 5.151449161577837e-6im
-│   β₁ = 1.1409665782102232
-│   β₂ = 1.8115101249978083
+┌ Warning: ignoring imaginary component 1.786125635887259e-6 from total weight 3.2318109568483693: operator might not be hermitian?
+│   α = 2.3415739860724325 + 1.786125635887259e-6im
+│   β₁ = 1.330844556004044
+│   β₂ = 1.7861931856059805
 └ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 7.352259235149372e-6 from total weight 4.93532261769312: operator might not be hermitian?
-│   α = 4.121391944750827 + 7.352259235149372e-6im
-│   β₁ = 1.8115101249978083
-│   β₂ = 2.022367139129944
+┌ Warning: ignoring imaginary component 1.31521591536371e-6 from total weight 1.3576410523133957: operator might not be hermitian?
+│   α = 0.9220754287035805 + 1.31521591536371e-6im
+│   β₁ = 0.6571534675491175
+│   β₂ = 0.7490763985029655
 └ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 9.11628826125166e-6 from total weight 4.999756705034466: operator might not be hermitian?
-│   α = 4.055389822846883 + 9.11628826125166e-6im
-│   β₁ = 2.022367139129944
-│   β₂ = 2.11220539928561
+┌ Warning: ignoring imaginary component 1.9047184168022313e-6 from total weight 3.382197752602955: operator might not be hermitian?
+│   α = 3.01972789143682 + 1.9047184168022313e-6im
+│   β₁ = 0.7490763985029655
+│   β₂ = 1.3264198613535667
 └ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 1.1743327790976477e-5 from total weight 5.782464953691945: operator might not be hermitian?
-│   α = 4.8402932613499114 + 1.1743327790976477e-5im
-│   β₁ = 2.11220539928561
-│   β₂ = 2.3552177045651312
+┌ Warning: ignoring imaginary component 2.2681652829537047e-6 from total weight 3.5912447010893533: operator might not be hermitian?
+│   α = 3.0329402312390186 + 2.2681652829537047e-6im
+│   β₁ = 1.3264198613535667
+│   β₂ = 1.3924519410865892
 └ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 1.3537416337028318e-5 from total weight 6.005718105960271: operator might not be hermitian?
-│   α = 4.878052519645104 + 1.3537416337028318e-5im
-│   β₁ = 2.3552177045651312
-│   β₂ = 2.593492461481767
+┌ Warning: ignoring imaginary component 2.370950433157326e-6 from total weight 4.325466307153559: operator might not be hermitian?
+│   α = 3.859949253623568 + 2.370950433157326e-6im
+│   β₁ = 1.3924519410865892
+│   β₂ = 1.368038057047419
 └ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 1.2706832813704633e-5 from total weight 6.067671176408643: operator might not be hermitian?
-│   α = 5.069044831704548 + 1.2706832813704633e-5im
-│   β₁ = 2.593492461481767
-│   β₂ = 2.0964767709816
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 1.1433712370716165e-5 from total weight 5.04047452680127: operator might not be hermitian?
-│   α = 4.181856810889952 + 1.1433712370716165e-5im
-│   β₁ = 2.0964767709816
-│   β₂ = 1.8770301588279403
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 2.3433538796947817e-6 from total weight 3.030014050305159: operator might not be hermitian?
-│   α = 2.8294453023010235 + 2.3433538796947817e-6im
-│   β₁ = 0.08170533682433949
-│   β₂ = 1.0809942942783166
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 5.246547293728983e-6 from total weight 3.268173849837615: operator might not be hermitian?
-│   α = 2.8884618652322955 + 5.246547293728983e-6im
-│   β₁ = 1.0809942942783166
-│   β₂ = 1.0812953812771893
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 7.32759455832066e-6 from total weight 4.330549370516921: operator might not be hermitian?
-│   α = 3.8870346315939788 + 7.32759455832066e-6im
-│   β₁ = 1.0812953812771893
-│   β₂ = 1.5733467264555785
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 1.0841571626341029e-5 from total weight 5.0228712346766695: operator might not be hermitian?
-│   α = 4.462044424026542 + 1.0841571626341029e-5im
-│   β₁ = 1.5733467264555785
-│   β₂ = 1.6864089291716728
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 1.1512390659607075e-5 from total weight 5.085124664343902: operator might not be hermitian?
-│   α = 4.546245701605134 + 1.1512390659607075e-5im
-│   β₁ = 1.6864089291716728
-│   β₂ = 1.531720534573146
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 1.530405156698056e-5 from total weight 4.5748342166406735: operator might not be hermitian?
-│   α = 4.069671964411379 + 1.530405156698056e-5im
-│   β₁ = 1.531720534573146
-│   β₂ = 1.4215169417080675
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 1.4306485092790977e-5 from total weight 4.913271658513786: operator might not be hermitian?
-│   α = 4.365658395332932 + 1.4306485092790977e-5im
-│   β₁ = 1.4215169417080675
-│   β₂ = 1.7494441259572022
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-┌ Warning: ignoring imaginary component 1.4817101695055457e-5 from total weight 4.692973731281466: operator might not be hermitian?
-│   α = 4.234115367740591 + 1.4817101695055457e-5im
-│   β₁ = 1.7494441259572022
-│   β₂ = 1.017700714893695
-└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
-[ Info: VUMPS   2:	obj = -1.063544409730e+00	err = 1.4876722342e-05	time = 0.07 sec
-[ Info: VUMPS   3:	obj = -1.063544409973e+00	err = 7.5692126412e-07	time = 0.00 sec
-[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 5.8890174813e-08	time = 0.00 sec
-[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 6.2527261188e-09	time = 0.00 sec
-[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 6.6813910904e-10	time = 0.00 sec
-[ Info: VUMPS conv 7:	obj = -1.063544409973e+00	err = 7.5306266495e-11	time = 0.09 sec
-&lt;mps|H|mps&gt; = -1.0635444099732512</code></pre><h3 id="Additional-Resources"><a class="docs-heading-anchor" href="#Additional-Resources">Additional Resources</a><a id="Additional-Resources-1"></a><a class="docs-heading-anchor-permalink" href="#Additional-Resources" title="Permalink"></a></h3><p>For more detailed information on the functionality and capabilities of MPSKit, refer to the Manual section, or have a look at the <a href="examples/#Examples">Examples</a> page.</p><p>Keep in mind that the documentation is still a work in progress, and that some features may not be fully documented yet. If you encounter any issues or have questions, please check the library&#39;s <a href="https://github.com/QuantumKitHub/MPSKit.jl/issues">issue tracker</a> on the GitHub repository and open a new issue.</p><h2 id="Publications-using-MPSKit"><a class="docs-heading-anchor" href="#Publications-using-MPSKit">Publications using MPSKit</a><a id="Publications-using-MPSKit-1"></a><a class="docs-heading-anchor-permalink" href="#Publications-using-MPSKit" title="Permalink"></a></h2><p>Below you can find a list of publications that have made use of MPSKit. If you have used this package and wish to have your publication added to this list, please open a pull request or an issue on the <a href="https://github.com/QuantumKitHub/MPSKit.jl/">GitHub repository</a>.</p><ul><li>R. Belyansky et al., <em>“High-Energy Collision of Quarks and Hadrons in the Schwinger Model: From Tensor Networks to Circuit QED,”</em> 2023, doi: 10.48550/ARXIV.2307.02522.</li><li>L. Devos, L. Vanderstraeten, and F. Verstraete, <em>“Haldane gap in the SU(3) [3 0 0] Heisenberg chain,”</em> Phys. Rev. B, vol. 106, no. 15, p. 155103, Oct. 2022, doi: 10.1103/PhysRevB.106.155103.</li><li>J. C. Halimeh, M. V. Damme, T. V. Zache, D. Banerjee, and P. Hauke, <em>“Achieving the quantum field theory limit in far-from-equilibrium quantum link models,”</em> Quantum, vol. 6, p. 878, Dec. 2022, doi: 10.22331/q-2022-12-19-878.</li><li>J. C. Halimeh, D. Trapin, M. Van Damme, and M. Heyl, <em>“Local measures of dynamical quantum phase transitions,”</em> Phys. Rev. B, vol. 104, no. 7, p. 075130, Aug. 2021, doi: 10.1103/PhysRevB.104.075130.</li><li>M. Hauru, M. Van Damme, and J. Haegeman, <em>“Riemannian optimization of isometric tensor networks,”</em> SciPost Physics, vol. 10, no. 2, p. 040, Feb. 2021, doi: 10.21468/SciPostPhys.10.2.040.</li><li>M. Van Damme, R. Vanhove, J. Haegeman, F. Verstraete, and L. Vanderstraeten, <em>“Efficient matrix product state methods for extracting spectral information on rings and cylinders,”</em> Phys. Rev. B, vol. 104, no. 11, p. 115142, Sep. 2021, doi: 10.1103/PhysRevB.104.115142.</li><li>M. Van Damme, T. V. Zache, D. Banerjee, P. Hauke, and J. C. Halimeh, <em>“Dynamical quantum phase transitions in spin-<span>$S$</span> <span>$\text{U}(1)$</span> quantum link models,”</em> Phys. Rev. B, vol. 106, no. 24, p. 245110, Dec. 2022, doi: 10.1103/PhysRevB.106.245110.</li><li>E. L. Weerda and M. Rizzi, <em>“Fractional quantum Hall states with variational Projected Entangled-Pair States: a study of the bosonic Harper-Hofstadter model,”</em> 2023, doi: 10.48550/ARXIV.2309.12811.</li><li>C. Yu and J.-W. Lee, <em>“Closing of the Haldane gap in a spin-1 XXZ chain,”</em> J. Korean Phys. Soc., vol. 79, no. 9, pp. 841–845, Nov. 2021, doi: 10.1007/s40042-021-00283-z.</li><li>Y. Zhang, A. Hulsch, H.-C. Zhang, W. Tang, L. Wang, and H.-H. Tu, <em>“Universal Scaling of Klein Bottle Entropy near Conformal Critical Points,”</em> Phys. Rev. Lett., vol. 130, no. 15, p. 151602, Apr. 2023, doi: 10.1103/PhysRevLett.130.151602.</li><li>Gertian Roose, Laurens Vanderstraeten, Jutho Haegeman, and Nick Bultinck. Anomalous domain wall condensation in a modified ising chain. Phys. Rev. B, 99: 195132, May 2019. 10.1103/​PhysRevB.99.195132.</li></ul><p>https:/​/​doi.org/​10.1103/​PhysRevB.99.195132</p><ul><li>Roose, G., Bultinck, N., Vanderstraeten, L. et al. Lattice regularisation and entanglement structure of the Gross-Neveu model. J. High Energ. Phys. 2021, 207 (2021). https://doi.org/10.1007/JHEP07(2021)207</li><li>Roose, G., Haegeman, J., Van Acoleyen, K. et al. The chiral Gross-Neveu model on the lattice via a Landau-forbidden phase transition. J. High Energ. Phys. 2022, 19 (2022). https://doi.org/10.1007/JHEP06(2022)019</li></ul></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="man/intro/">Prerequisites »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Tuesday 19 November 2024 01:09">Tuesday 19 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+[ Info: VUMPS   2:	obj = -1.063542783231e+00	err = 1.0474740843e-03	time = 0.08 sec
+[ Info: VUMPS   3:	obj = -1.063544409917e+00	err = 6.5701602717e-06	time = 0.00 sec
+[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 7.1750093965e-07	time = 0.00 sec
+[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 6.0977966998e-08	time = 0.00 sec
+[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 6.0533436026e-09	time = 0.00 sec
+[ Info: VUMPS   7:	obj = -1.063544409973e+00	err = 6.4589017660e-10	time = 0.00 sec
+[ Info: VUMPS conv 8:	obj = -1.063544409973e+00	err = 7.6260743024e-11	time = 0.10 sec
+&lt;mps|H|mps&gt; = -1.063544409973251</code></pre><h3 id="Additional-Resources"><a class="docs-heading-anchor" href="#Additional-Resources">Additional Resources</a><a id="Additional-Resources-1"></a><a class="docs-heading-anchor-permalink" href="#Additional-Resources" title="Permalink"></a></h3><p>For more detailed information on the functionality and capabilities of MPSKit, refer to the Manual section, or have a look at the <a href="examples/#Examples">Examples</a> page.</p><p>Keep in mind that the documentation is still a work in progress, and that some features may not be fully documented yet. If you encounter any issues or have questions, please check the library&#39;s <a href="https://github.com/QuantumKitHub/MPSKit.jl/issues">issue tracker</a> on the GitHub repository and open a new issue.</p><h2 id="Publications-using-MPSKit"><a class="docs-heading-anchor" href="#Publications-using-MPSKit">Publications using MPSKit</a><a id="Publications-using-MPSKit-1"></a><a class="docs-heading-anchor-permalink" href="#Publications-using-MPSKit" title="Permalink"></a></h2><p>Below you can find a list of publications that have made use of MPSKit. If you have used this package and wish to have your publication added to this list, please open a pull request or an issue on the <a href="https://github.com/QuantumKitHub/MPSKit.jl/">GitHub repository</a>.</p><ul><li>R. Belyansky et al., <em>“High-Energy Collision of Quarks and Hadrons in the Schwinger Model: From Tensor Networks to Circuit QED,”</em> 2023, doi: 10.48550/ARXIV.2307.02522.</li><li>L. Devos, L. Vanderstraeten, and F. Verstraete, <em>“Haldane gap in the SU(3) [3 0 0] Heisenberg chain,”</em> Phys. Rev. B, vol. 106, no. 15, p. 155103, Oct. 2022, doi: 10.1103/PhysRevB.106.155103.</li><li>J. C. Halimeh, M. V. Damme, T. V. Zache, D. Banerjee, and P. Hauke, <em>“Achieving the quantum field theory limit in far-from-equilibrium quantum link models,”</em> Quantum, vol. 6, p. 878, Dec. 2022, doi: 10.22331/q-2022-12-19-878.</li><li>J. C. Halimeh, D. Trapin, M. Van Damme, and M. Heyl, <em>“Local measures of dynamical quantum phase transitions,”</em> Phys. Rev. B, vol. 104, no. 7, p. 075130, Aug. 2021, doi: 10.1103/PhysRevB.104.075130.</li><li>M. Hauru, M. Van Damme, and J. Haegeman, <em>“Riemannian optimization of isometric tensor networks,”</em> SciPost Physics, vol. 10, no. 2, p. 040, Feb. 2021, doi: 10.21468/SciPostPhys.10.2.040.</li><li>M. Van Damme, R. Vanhove, J. Haegeman, F. Verstraete, and L. Vanderstraeten, <em>“Efficient matrix product state methods for extracting spectral information on rings and cylinders,”</em> Phys. Rev. B, vol. 104, no. 11, p. 115142, Sep. 2021, doi: 10.1103/PhysRevB.104.115142.</li><li>M. Van Damme, T. V. Zache, D. Banerjee, P. Hauke, and J. C. Halimeh, <em>“Dynamical quantum phase transitions in spin-<span>$S$</span> <span>$\text{U}(1)$</span> quantum link models,”</em> Phys. Rev. B, vol. 106, no. 24, p. 245110, Dec. 2022, doi: 10.1103/PhysRevB.106.245110.</li><li>E. L. Weerda and M. Rizzi, <em>“Fractional quantum Hall states with variational Projected Entangled-Pair States: a study of the bosonic Harper-Hofstadter model,”</em> 2023, doi: 10.48550/ARXIV.2309.12811.</li><li>C. Yu and J.-W. Lee, <em>“Closing of the Haldane gap in a spin-1 XXZ chain,”</em> J. Korean Phys. Soc., vol. 79, no. 9, pp. 841–845, Nov. 2021, doi: 10.1007/s40042-021-00283-z.</li><li>Y. Zhang, A. Hulsch, H.-C. Zhang, W. Tang, L. Wang, and H.-H. Tu, <em>“Universal Scaling of Klein Bottle Entropy near Conformal Critical Points,”</em> Phys. Rev. Lett., vol. 130, no. 15, p. 151602, Apr. 2023, doi: 10.1103/PhysRevLett.130.151602.</li><li>Gertian Roose, Laurens Vanderstraeten, Jutho Haegeman, and Nick Bultinck. Anomalous domain wall condensation in a modified ising chain. Phys. Rev. B, 99: 195132, May 2019. 10.1103/​PhysRevB.99.195132.</li></ul><p>https:/​/​doi.org/​10.1103/​PhysRevB.99.195132</p><ul><li>Roose, G., Bultinck, N., Vanderstraeten, L. et al. Lattice regularisation and entanglement structure of the Gross-Neveu model. J. High Energ. Phys. 2021, 207 (2021). https://doi.org/10.1007/JHEP07(2021)207</li><li>Roose, G., Haegeman, J., Van Acoleyen, K. et al. The chiral Gross-Neveu model on the lattice via a Landau-forbidden phase transition. J. High Energ. Phys. 2022, 19 (2022). https://doi.org/10.1007/JHEP06(2022)019</li></ul></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="man/intro/">Prerequisites »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Friday 22 November 2024 12:37">Friday 22 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
