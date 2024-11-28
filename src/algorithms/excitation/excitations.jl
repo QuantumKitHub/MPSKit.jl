@@ -5,6 +5,10 @@
                 [right_environments]; num=1, solver=Defaults.solver)
     excitations(H, algorithm::FiniteExcited, ψs::NTuple{<:Any, <:FiniteMPS};
                 num=1, init=copy(first(ψs)))
+    excitations(H, algorithm::ChepigaAnsatz, ψ::FiniteMPS, [envs];
+                num=1, pos=length(ψ)÷2)
+    excitations(H, algorithm::ChepigaAnsatz2, ψ::FiniteMPS, [envs];
+                num=1, pos=length(ψ)÷2)
 
 Compute the first excited states and their energy gap above a groundstate.
 
@@ -20,5 +24,6 @@ Compute the first excited states and their energy gap above a groundstate.
 - `num::Int`: number of excited states to compute
 - `solver`: algorithm for the linear solver of the quasiparticle environments
 - `init`: initial excited state guess
+- `pos`: position of perturbation
 """
 function excitations end

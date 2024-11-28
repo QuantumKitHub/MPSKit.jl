@@ -10,6 +10,7 @@ MPSMultiline
 
 ## Operators
 ```@docs
+FiniteMPO
 SparseMPO
 DenseMPO
 MPOHamiltonian
@@ -37,7 +38,8 @@ c_proj
 ac_proj
 ac2_proj
 
-expectation_value
+transfer_left
+transfer_right
 ```
 
 ## Algorithms
@@ -84,8 +86,24 @@ VUMPSSvdCut
 SvdCut
 ```
 
-### [Excitations]
+### [Excitations](@id lib_ex_alg)
 ```@docs
 QuasiparticleAnsatz
 FiniteExcited
+```
+
+## Utility
+```@docs
+left_virtualspace
+right_virtualspace
+physicalspace
+add_util_leg
+expectation_value
+variance
+entanglement_spectrum
+entropy
+transfer_spectrum
+correlation_length
+entanglementplot
+transferplot
 ```

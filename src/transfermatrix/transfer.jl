@@ -125,14 +125,6 @@ function transfer_right(v::MPOTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
     @plansor v[-1 -2; -3 -4] := A[-1 4; 5] * O[-2 2; 4 3] * conj(Ab[-4 2; 1]) * v[5 3; -3 1]
 end
 
-# --- the following really needs a proper rewrite; probably without transducers
-function transfer_left(vec::RecursiveVec, opp, A, Ab)
-    return RecursiveVec(transfer_left(vec.vecs, opp, A, Ab))
-end;
-function transfer_right(vec::RecursiveVec, opp, A, Ab)
-    return RecursiveVec(transfer_right(vec.vecs, opp, A, Ab))
-end;
-
 # usual sparsemposlice transfer
 function transfer_left(vec::AbstractVector{V}, ham::SparseMPOSlice, A::V,
                        Ab::V) where {V<:MPSTensor}

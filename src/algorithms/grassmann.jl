@@ -22,6 +22,9 @@ function TensorKit.rmul!(a::Grassmann.GrassmannTangent, b::AbstractTensorMap)
     Base.setfield!(a, :V, nothing)
     return a
 end
+function Base.:/(a::Grassmann.GrassmannTangent, b::AbstractTensorMap)
+    return Grassmann.GrassmannTangent(a.W, a.Z / b)
+end
 
 # preconditioned gradient
 struct PrecGrad{A,B}
@@ -33,7 +36,8 @@ end
 function PrecGrad(v::Grassmann.GrassmannTangent)
     return PrecGrad(v, v, isometry(storagetype(v.Z), domain(v.Z), domain(v.Z)))
 end
-PrecGrad(v::Grassmann.GrassmannTangent, rho) = PrecGrad(rmul!(copy(v), inv(rho)), v, rho)
+PrecGrad(v::Grassmann.GrassmannTangent, rho) = PrecGrad(v / rho, v, rho)
+
 Grassmann.base(g::PrecGrad) = Grassmann.base(g.Pg)
 
 function inner(g1::PrecGrad, g2::PrecGrad, rho=one(g1.rho))
@@ -72,32 +76,36 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     g = Grassmann.project.(al_d, state.AL)
 
     Rhoreg = Vector{eltype(state.CR)}(undef, length(state))
+    δmin = sqrt(eps(real(scalartype(state))))
     for i in 1:length(state)
-        Rhoreg[i] = regularize(state.CR[i], norm(g[i]) / 10)
+        Rhoreg[i] = regularize(state.CR[i], max(norm(g[i]) / 10, δmin))
     end
 
     return ManifoldPoint(state, envs, g, Rhoreg)
 end
 
 function ManifoldPoint(state::MPSMultiline, envs)
-    ac_d = [MPSKit.∂∂AC(v, state, envs.opp, envs) * state.AC[v]
-            for v in CartesianIndices(state.AC)]
-    g = [Grassmann.project(d, a) for (d, a) in zip(ac_d, state.AL)]
+    # FIXME: add support for unitcells
+    @assert length(state.AL) == 1 "GradientGrassmann only supports MPSMultiline without unitcells for now"
 
-    f = expectation_value(state, envs)
-    fi = imag.(f)
-    fr = real.(f)
+    # TODO: this really should not use the operator from the environment
+    f = expectation_value(state, envs.opp, envs)
+    imag(f) > MPSKit.Defaults.tol && @warn "MPO might not be Hermitian $f"
+    real(f) > 0 || @warn "MPO might not be positive definite $f"
 
-    sum(fi) > MPSKit.Defaults.tol && @warn "mpo is not hermitian $fi"
-
-    g = -2 * g ./ abs.(fr)
-
-    Rhoreg = similar(state.CR)
-    for (i, cg) in enumerate(g)
-        Rhoreg[i] = regularize(state.CR[i], norm(cg) / 10)
+    grad = map(CartesianIndices(state.AC)) do I
+        AC′ = MPSKit.∂∂AC(I, state, envs.opp, envs) * state.AC[I]
+        # the following formula is wrong when unitcells are involved
+        # actual costfunction should be F = -log(prod(f)) => ∂F = -2 * g / |f|
+        return rmul!(Grassmann.project(AC′, state.AL[I]), -2 / f)
     end
 
-    return ManifoldPoint(state, envs, g, Rhoreg)
+    δmin = sqrt(eps(real(scalartype(state))))
+    ρ_regularized = map(state.CR, grad) do ρ, g
+        return regularize(ρ, max(norm(g) / 10, δmin))
+    end
+
+    return ManifoldPoint(state, envs, grad, ρ_regularized)
 end
 
 """
@@ -112,21 +120,27 @@ function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
         g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.CR[i]'), x.Rhoreg[i])
     end
 
-    f = real(sum(expectation_value(x.state, x.envs)))
+    # TODO: the operator really should not be part of the environments, and this should
+    # be passed as an explicit argument
+    f = expectation_value(x.state, x.envs.opp, x.envs)
+    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
-    return f, g_prec
+    return real(f), g_prec
 end
 function fg(x::ManifoldPoint{<:MPSMultiline})
+    @assert length(x.state) == 1 "GradientGrassmann only supports MPSMultiline without unitcells for now"
     # the gradient I want to return is the preconditioned gradient!
     g_prec = map(enumerate(x.g)) do (i, cg)
         return PrecGrad(rmul!(copy(cg), x.state.CR[i]'), x.Rhoreg[i])
     end
 
-    f = expectation_value(x.state, x.envs)
-    fi = imag.(f)
-    fr = real.(f)
+    # TODO: the operator really should not be part of the environments, and this should
+    # be passed as an explicit argument
+    f = expectation_value(x.state, x.envs.opp, x.envs)
+    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
+    real(f) > 0 || @warn "MPO might not be positive definite: $f"
 
-    return -log(sum(fr)^2), g_prec[:]
+    return -log(real(f)), g_prec[:]
 end
 
 """
@@ -157,7 +171,7 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
     nal = similar(state.AL)
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
-        (nal[i], th) = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
         h[i] = PrecGrad(th)
     end
 
@@ -178,7 +192,7 @@ function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
     y = copy(state)  # The end-point
     h = similar(g)  # The tangent at the end-point
     for i in 1:length(g)
-        (yal, th) = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
         h[i] = PrecGrad(th)
         y.AC[i] = (yal, state.CR[i])
     end

@@ -16,6 +16,101 @@ using VectorInterface: One
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
 vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
 
+@testset "FiniteMPO" begin
+    # start from random operators
+    L = 4
+    T = ComplexF64
+
+    for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
+        O₁ = TensorMap(rand, T, V^L, V^L)
+        O₂ = TensorMap(rand, T, space(O₁))
+
+        # create MPO and convert it back to see if it is the same
+        mpo₁ = FiniteMPO(O₁) # type-unstable for now!
+        mpo₂ = FiniteMPO(O₂)
+        @test convert(TensorMap, mpo₁) ≈ O₁
+        @test convert(TensorMap, -mpo₂) ≈ -O₂
+
+        # test scalar multiplication
+        α = rand(T)
+        @test convert(TensorMap, α * mpo₁) ≈ α * O₁
+        @test convert(TensorMap, mpo₁ * α) ≈ O₁ * α
+
+        # test addition and multiplication
+        @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
+        @test convert(TensorMap, mpo₁ * mpo₂) ≈ O₁ * O₂
+
+        # test application to a state
+        ψ₁ = Tensor(rand, T, domain(O₁))
+        mps₁ = FiniteMPS(ψ₁)
+
+        @test convert(TensorMap, mpo₁ * mps₁) ≈ O₁ * ψ₁
+
+        @test dot(mps₁, mpo₁, mps₁) ≈ dot(ψ₁, O₁, ψ₁)
+        @test dot(mps₁, mpo₁, mps₁) ≈ dot(mps₁, mpo₁ * mps₁)
+        # test conversion to and from mps
+        mpomps₁ = convert(FiniteMPS, mpo₁)
+        mpompsmpo₁ = convert(FiniteMPO, mpomps₁)
+
+        @test convert(FiniteMPO, mpomps₁) ≈ mpo₁ rtol = 1e-6
+
+        @test dot(mpomps₁, mpomps₁) ≈ dot(mpo₁, mpo₁)
+    end
+end
+
+@testset "Finite MPOHamiltonian" begin
+    L = 3
+    lattice = fill(ℂ^2, L)
+    O₁ = TensorMap(rand, ComplexF64, ℂ^2, ℂ^2)
+    E = id(Matrix{ComplexF64}, domain(O₁))
+    O₂ = TensorMap(rand, ComplexF64, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
+
+    H1 = MPOHamiltonian(lattice, i => O₁ for i in 1:L)
+    H2 = MPOHamiltonian(lattice, (i, i + 1) => O₂ for i in 1:(L - 1))
+    H3 = MPOHamiltonian(lattice, 1 => O₁, (2, 3) => O₂, (1, 3) => O₂)
+
+    # check if constructor works by converting back to tensormap
+    H1_tm = convert(TensorMap, H1)
+    operators = vcat(fill(E, L - 1), O₁)
+    @test H1_tm ≈ mapreduce(+, 1:L) do i
+        return reduce(⊗, circshift(operators, i))
+    end
+    operators = vcat(fill(E, L - 2), O₂)
+    @test convert(TensorMap, H2) ≈ mapreduce(+, 1:(L - 1)) do i
+        return reduce(⊗, circshift(operators, i))
+    end
+    @test convert(TensorMap, H3) ≈
+          O₁ ⊗ E ⊗ E + E ⊗ O₂ + permute(O₂ ⊗ E, ((1, 3, 2), (4, 6, 5)))
+
+    # test linear algebra
+    @test H1 ≈
+          MPOHamiltonian(lattice, 1 => O₁) + MPOHamiltonian(lattice, 2 => O₁) +
+          MPOHamiltonian(lattice, 3 => O₁)
+    @test 0.8 * H1 + 0.2 * H1 ≈ H1 atol = 1e-6
+    @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1e-6
+
+    # test dot and application
+    state = Tensor(rand, ComplexF64, prod(lattice))
+    mps = FiniteMPS(state)
+
+    @test convert(TensorMap, H1 * mps) ≈ H1_tm * state
+    @test dot(mps, H2, mps) ≈ dot(mps, H2 * mps)
+
+    # test constructor from dictionary with mixed linear and Cartesian lattice indices as keys
+    grid = square = fill(ℂ^2, 3, 3)
+
+    local_operators = Dict((I,) => O₁ for I in eachindex(grid))
+    I_vertical = CartesianIndex(1, 0)
+    vertical_operators = Dict((I, I + I_vertical) => O₂
+                              for I in eachindex(IndexCartesian(), square)
+                              if I[1] < size(square, 1))
+    operators = merge(local_operators, vertical_operators)
+    H4 = MPOHamiltonian(grid, operators)
+
+    @test H4 ≈
+          MPOHamiltonian(grid, local_operators) + MPOHamiltonian(grid, vertical_operators)
+end
+
 @testset "MPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces,
                                                                             vspaces)
     #generate a 1-2-3 body interaction
@@ -60,11 +155,11 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     e2 = expectation_value(ψ1, h2)
 
     h1 = 2 * h1 - [1]
-    @test e1[1] * 2 - 1 ≈ expectation_value(ψ1, h1)[1] atol = 1e-10
+    @test e1 * 2 - 1 ≈ expectation_value(ψ1, h1) atol = 1e-10
 
     h1 = h1 + h2
 
-    @test e1[1] * 2 + e2[1] - 1 ≈ expectation_value(ψ1, h1)[1] atol = 1e-10
+    @test e1 * 2 + e2 - 1 ≈ expectation_value(ψ1, h1) atol = 1e-10
 
     h1 = repeat(h1, 2)
 
@@ -75,7 +170,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
 
     h4 = h1 + h3
     h4 = h4 * h4
-    @test real(sum(expectation_value(ψ2, h4))) >= 0
+    @test real(expectation_value(ψ2, h4)) >= 0
 end
 
 @testset "General LazySum of $(eltype(Os))" for Os in (rand(ComplexF64, rand(1:10)),

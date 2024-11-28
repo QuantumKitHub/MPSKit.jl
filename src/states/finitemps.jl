@@ -220,6 +220,15 @@ function FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...)
     return FiniteMPS(f, elt, collect(P), args...; kwargs...)
 end
 
+# construct from dense state
+# TODO: make planar?
+function FiniteMPS(ψ::AbstractTensor)
+    U = Tensor(ones, scalartype(ψ), oneunit(spacetype(ψ)))
+    A = _transpose_front(U *
+                         transpose(ψ * U', ((), reverse(ntuple(identity, numind(ψ) + 1)))))
+    return FiniteMPS(decompose_localmps(A); normalize=false, overwrite=true)
+end
+
 #===========================================================================================
 Utility
 ===========================================================================================#
@@ -232,11 +241,22 @@ function Base.similar(ψ::FiniteMPS{A,B}) where {A,B}
     return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.CLs))
 end
 
+Base.checkbounds(::Type{Bool}, ψ::FiniteMPS, i::Integer) = 1 <= i <= length(ψ)
+
 function Base.convert(TType::Type{<:AbstractTensorMap}, ψ::FiniteMPS)
     T = foldl(ψ.AR[2:end]; init=first(ψ.AC)) do x, y
         return _transpose_front(x * _transpose_tail(y))
     end
-    return convert(TType, T)
+
+    # remove utility legs
+    space(T, 1) == oneunit(spacetype(T)) || throw(ArgumentError("utility leg not trivial"))
+    space(T, numind(T)) == oneunit(spacetype(T))' ||
+        throw(ArgumentError("utility leg not trivial"))
+    U = Tensor(ones, scalartype(T), oneunit(spacetype(T)))
+    UTU = transpose(U' * _transpose_tail(T * U),
+                    (reverse(ntuple(identity, numind(T) - 2)), ()))
+
+    return convert(TType, UTU)
 end
 
 site_type(::Type{<:FiniteMPS{A}}) where {A} = A
@@ -264,6 +284,7 @@ function right_virtualspace(ψ::FiniteMPS, n::Integer)
     end
 end
 
+physicalspace(ψ::FiniteMPS) = physicalspace.(Ref(ψ), 1:length(ψ))
 function physicalspace(ψ::FiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer) where {N}
     N == 1 && return ProductSpace{spacetype(ψ)}()
     A = if !ismissing(ψ.ALs[n])
@@ -302,9 +323,11 @@ function max_Ds(ψ::FiniteMPS)
     return min.(D_left, D_right)
 end
 
+function Base.summary(io::IO, ψ::FiniteMPS)
+    return print(io, "$(length(ψ))-site FiniteMPS ($(scalartype(ψ)), $(spacetype(ψ)))")
+end
 function Base.show(io::IO, ::MIME"text/plain", ψ::FiniteMPS)
-    L = length(ψ)
-    println(io, L == 1 ? "single site" : "$L-site", " FiniteMPS:")
+    println(io, summary(ψ), ":")
     context = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
     return show(context, ψ)
 end

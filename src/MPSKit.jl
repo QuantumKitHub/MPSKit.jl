@@ -14,7 +14,7 @@ using LoggingExtras
 
 # bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
-export PeriodicArray, Window
+export PeriodicArray, WindowArray
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth,
@@ -28,7 +28,7 @@ export entanglementplot, transferplot
 
 # hamiltonian things
 export Cache
-export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline
+export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, FiniteMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
@@ -37,7 +37,7 @@ export leftenv, rightenv
 # algos
 export find_groundstate!, find_groundstate, leading_boundary
 export VUMPS, VOMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
-export excitations, FiniteExcited, QuasiparticleAnsatz
+export excitations, FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export marek_gap, correlation_length, correlator
 export time_evolve, time_evolve!, timestep!, timestep
 export TDVP, TDVP2, WindowTDVP, make_time_mpo, WI, WII, TaylorCluster
@@ -73,6 +73,7 @@ using .IterativeLoggers
 include("utility/iterativesolvers.jl")
 
 include("utility/periodicarray.jl")
+include("utility/windowarray.jl")
 include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
 include("utility/plotting.jl")
@@ -80,7 +81,6 @@ include("utility/linearcombination.jl")
 include("utility/timedependence.jl")
 
 # maybe we should introduce an abstract state type
-include("states/window.jl")
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
 include("states/mpsmultiline.jl")
@@ -143,6 +143,7 @@ include("algorithms/propagator/corvector.jl")
 include("algorithms/excitation/excitations.jl")
 include("algorithms/excitation/quasiparticleexcitation.jl")
 include("algorithms/excitation/dmrgexcitation.jl")
+include("algorithms/excitation/chepigaansatz.jl")
 include("algorithms/excitation/exci_transfer_system.jl")
 
 include("algorithms/statmech/vumps.jl")

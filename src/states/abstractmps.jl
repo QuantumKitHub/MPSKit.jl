@@ -112,9 +112,14 @@ MPS types
 ===========================================================================================#
 
 abstract type AbstractMPS end
+abstract type AbstractFiniteMPS <: AbstractMPS end
 
 Base.eltype(ψ::AbstractMPS) = eltype(typeof(ψ))
 VectorInterface.scalartype(T::Type{<:AbstractMPS}) = scalartype(site_type(T))
+
+function Base.checkbounds(ψ::AbstractMPS, i)
+    return Base.checkbounds(Bool, ψ, i) || throw(BoundsError(ψ, i))
+end
 
 """
     site_type(ψ::AbstractMPS)
@@ -140,18 +145,22 @@ TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype)
 """
     left_virtualspace(ψ::AbstractMPS, i::Int)
     
-Return the left virtual space of the bond tensor at site `i`. This is equivalent to the
-left virtual space of the left-gauged site tensor at site `i + 1`.
+Return the left virtual space of the bond tensor to the right of site `i`. This is
+equivalent to the left virtual space of the left-gauged site tensor at site `i + 1`.
 """
 function left_virtualspace end
+left_virtualspace(A::GenericMPSTensor) = space(A, 1)
+left_virtualspace(O::MPOTensor) = space(O, 1)
 
 """
     right_virtualspace(ψ::AbstractMPS, i::Int)
 
-Return the right virtual space of the bond tensor at site `i`. This is equivalent to the
-right virtual space of the right-gauged site tensor at site `i`.
+Return the right virtual space of the bond tensor to the right of site `i`. This is
+equivalent to the right virtual space of the right-gauged site tensor at site `i`.
 """
 function right_virtualspace end
+right_virtualspace(A::GenericMPSTensor) = space(A, numind(A))
+right_virtualspace(O::MPOTensor) = space(O, 4)
 
 """
     physicalspace(ψ::AbstractMPS, i::Int)
@@ -159,5 +168,5 @@ function right_virtualspace end
 Return the physical space of the site tensor at site `i`.
 """
 function physicalspace end
-
-abstract type AbstractFiniteMPS <: AbstractMPS end
+physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
+physicalspace(O::MPOTensor) = space(O, 2)

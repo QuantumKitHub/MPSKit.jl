@@ -12,7 +12,7 @@ algorithm for time evolution.
     signature `finalize(t, Ψ, H, envs) -> Ψ, envs`
 """
 @kwdef struct TDVP{A,F} <: Algorithm
-    integrator::A = Lanczos(; tol=Defaults.tol)
+    integrator::A = Defaults.alg_expsolve()
     tolgauge::Float64 = Defaults.tolgauge
     gaugemaxiter::Int = Defaults.maxiter
     finalize::F = Defaults._finalize
@@ -111,7 +111,7 @@ algorithm for time evolution.
     signature `finalize(t, Ψ, H, envs) -> Ψ, envs`
 """
 @kwdef struct TDVP2{A,F} <: Algorithm
-    integrator::A = Lanczos(; tol=Defaults.tol)
+    integrator::A = Defaults.alg_expsolve()
     tolgauge::Float64 = Defaults.tolgauge
     gaugemaxiter::Int = Defaults.maxiter
     trscheme = truncerr(1e-3)

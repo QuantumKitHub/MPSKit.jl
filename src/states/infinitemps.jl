@@ -176,6 +176,9 @@ end
 function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor; kwargs...)
     AL = PeriodicArray(copy.(AL))
 
+    all(isfullrank, AL) ||
+        @warn "Constructing an MPS from tensors that are not full rank"
+
     # initialize tensor storage
     AC = similar.(AL)
     AR = similar.(AL)
@@ -224,6 +227,8 @@ function Base.circshift(ψ::InfiniteMPS, n)
                        circshift(ψ.AC, n))
 end
 
+Base.checkbounds(::Type{Bool}, ψ::InfiniteMPS, i::Integer) = true
+
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:InfiniteMPS{<:Any,B}}) where {B} = B
 
@@ -240,6 +245,7 @@ function physicalspace(ψ::InfiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer)
                                                        Base.front(Base.tail(TensorKit.allind(ψ.AL[n])))))
     end
 end
+physicalspace(ψ::InfiniteMPS) = PeriodicArray(map(Base.Fix1(physicalspace, ψ), 1:length(ψ)))
 
 TensorKit.space(ψ::InfiniteMPS{<:MPSTensor}, n::Integer) = space(ψ.AC[n], 2)
 function TensorKit.space(ψ::InfiniteMPS{<:GenericMPSTensor}, n::Integer)

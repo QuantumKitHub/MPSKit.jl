@@ -10,12 +10,17 @@ Single site infinite DMRG algorithm for finding groundstates.
 - `maxiter::Int`: maximum number of outer iterations
 - `verbosity::Int`: display progress information
 """
-@kwdef struct IDMRG1{A} <: Algorithm
-    tol::Float64 = Defaults.tol
-    tol_gauge::Float64 = Defaults.tolgauge
-    eigalg::A = Defaults.eigsolver
-    maxiter::Int = Defaults.maxiter
-    verbosity::Int = Defaults.verbosity
+struct IDMRG1{A} <: Algorithm
+    tol::Float64
+    tol_gauge::Float64
+    eigalg::A
+    maxiter::Int
+    verbosity::Int
+end
+function IDMRG1(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),
+                maxiter=Defaults.maxiter, verbosity=Defaults.verbosity)
+    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
+    return IDMRG1{typeof(eigalg′)}(tol, tol_gauge, eigalg′, maxiter, verbosity)
 end
 
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(ost, H))
@@ -25,7 +30,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
     log = IterLog("IDMRG")
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
+        @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
             C_current = ψ.CR[0]
@@ -52,13 +57,13 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
             ϵ = norm(C_current - ψ.CR[0])
 
             if ϵ < alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
             end
         end
     end
@@ -81,13 +86,19 @@ end
 - `verbosity::Int`: display progress information
 - `trscheme::TruncationScheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
-@kwdef struct IDMRG2{A} <: Algorithm
-    tol::Float64 = Defaults.tol
-    tol_gauge::Float64 = Defaults.tolgauge
-    eigalg::A = Defaults.eigsolver
-    maxiter::Int = Defaults.maxiter
-    verbosity::Int = Defaults.verbosity
-    trscheme::TruncationScheme = truncerr(1e-6)
+struct IDMRG2{A} <: Algorithm
+    tol::Float64
+    tol_gauge::Float64
+    eigalg::A
+    maxiter::Int
+    verbosity::Int
+    trscheme::TruncationScheme
+end
+function IDMRG2(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),
+                maxiter=Defaults.maxiter, verbosity=Defaults.verbosity,
+                trscheme=truncerr(1e-6))
+    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
+    return IDMRG2{typeof(eigalg′)}(tol, tol_gauge, eigalg′, maxiter, verbosity, trscheme)
 end
 
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(ost, H))
@@ -99,7 +110,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
     log = IterLog("IDMRG2")
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
+        @infov 2 loginit!(log, ϵ)
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
             C_current = ψ.CR[0]
@@ -187,13 +198,13 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             ϵ = norm(e2' * c * e2 - e1' * C_current * e1)
 
             if ϵ < alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 2 logfinish!(log, iter, ϵ)
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @warnv 1 logcancel!(log, iter, ϵ)
             else
-                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 3 logiter!(log, iter, ϵ)
             end
         end
     end

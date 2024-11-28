@@ -1,4 +1,10 @@
-"calculates the entropy of a given state"
+"""
+    entropy(state, [site::Int])
+
+Calculate the Von Neumann entanglement entropy of a given MPS. If an integer `site` is
+given, the entropy is across the entanglement cut to the right of site `site`. Otherwise, a
+vector of entropies is returned, one for each site.
+"""
 entropy(state::InfiniteMPS) = map(c -> -tr(safe_xlogx(c * c')), state.CR);
 function entropy(state::Union{FiniteMPS,WindowMPS,InfiniteMPS}, loc::Int)
     return -tr(safe_xlogx(state.CR[loc] * state.CR[loc]'))
@@ -37,9 +43,17 @@ function calc_galerkin(state::MPSMultiline, envs::PerMPOInfEnv)::Float64
     return maximum(εs[:])
 end
 
-"
-Calculates the (partial) transfer spectrum
-"
+"""
+    transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
+                           sector=first(sectors(oneunit(left_virtualspace(above, 1)))))
+
+Calculate the partial spectrum of the left mixed transfer matrix corresponding to the
+overlap of a given `above` state and a `below` state. The `sector` keyword argument can be
+used to specify a non-trivial total charge for the transfer matrix eigenvectors.
+Specifically, an auxiliary space `ℂ[typeof(sector)](sector => 1)'` will be added to the
+domain of each eigenvector. The `tol` and `num_vals` keyword arguments are passed to
+`KrylovKit.eigolve`
+"""
 function transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
                            sector=first(sectors(oneunit(left_virtualspace(above, 1)))))
     init = randomize!(similar(above.AL[1], left_virtualspace(below, 0),
@@ -56,11 +70,11 @@ function transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, nu
 end
 
 """
-    entanglement_spectrum(ψ; site::Int=0) -> SectorDict{sectortype(ψ),Vector{<:Real}}
+    entanglement_spectrum(ψ, [site::Int=0]) -> SectorDict{sectortype(ψ),Vector{<:Real}}
 
 Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
 matrix to the right of a given site. This is a dictionary mapping the charge to the singular
-value.
+values.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS}, site::Int=0)
     @assert site <= length(st)
@@ -82,7 +96,8 @@ function approx_angles(spectrum; tol_angle=0.1)
 end
 
 """
-Given an InfiniteMPS, compute the gap ```ϵ``` for the asymptotics of the transfer matrix, as well as the Marek gap ```δ``` as a scaling measure of the bond dimension.
+Given an InfiniteMPS, compute the gap ```ϵ``` for the asymptotics of the transfer matrix, as
+well as the Marek gap ```δ``` as a scaling measure of the bond dimension.
 """
 function marek_gap(above::InfiniteMPS; tol_angle=0.1, kwargs...)
     spectrum = transfer_spectrum(above; kwargs...)
@@ -114,7 +129,11 @@ function marek_gap(spectrum; tol_angle=0.1)
 end
 
 """
-Compute the correlation length of a given InfiniteMPS.
+    correlation_length(above::InfiniteMPS; kwargs...)
+
+Compute the correlation length of a given InfiniteMPS based on the next-to-leading
+eigenvalue of the transfer matrix. The `kwargs` are passed to [`transfer_spectrum`](@ref),
+and can for example be used to target the correlation length in a specific sector. 
 """
 function correlation_length(above::InfiniteMPS; kwargs...)
     ϵ, = marek_gap(above; kwargs...)
@@ -134,14 +153,25 @@ Compute the variance of the energy of the state with respect to the hamiltonian.
 function variance end
 
 function variance(state::InfiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
-    rescaled_H = H - expectation_value(state, H, envs)
-    return real(sum(expectation_value(state, rescaled_H * rescaled_H)))
+    # first rescale, such that the ground state energy is zero
+    # this needs to be done in a way that is consistent with the computation of the environments
+    # TODO: actually figure out why/if this is correct
+    e_local = map(1:length(state)) do i
+        return sum(1:(H.odim)) do j
+            @plansor (leftenv(envs, i, state)[j] *
+                      TransferMatrix(state.AC[i], H[i][j, H.odim], state.AC[i]))[1 2; 3] *
+                     rightenv(envs, i, state)[H.odim][3 2; 1]
+        end
+    end
+    rescaled_H = H - e_local
+
+    return real(expectation_value(state, rescaled_H * rescaled_H))
 end
 
 function variance(state::FiniteMPS, H::MPOHamiltonian, envs=environments(state, H))
     H2 = H * H
-    return real(sum(expectation_value(state, H2)) -
-                sum(expectation_value(state, H, envs))^2)
+    return real(expectation_value(state, H2) -
+                expectation_value(state, H, envs)^2)
 end
 
 function variance(state::FiniteQP, H::MPOHamiltonian, args...)
@@ -152,12 +182,20 @@ function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state,
     # I remember there being an issue here @gertian?
     state.trivial ||
         throw(ArgumentError("variance of domain wall excitations is not implemented"))
+    gs = state.left_gs
 
-    rescaled_H = H - expectation_value(state.left_gs, H)
+    rescaled_H = H - expectation_value(gs, H)
 
     #I don't remember where the formula came from
+    # TODO: this is probably broken
     E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
-    E_f = expectation_value(state.left_gs, rescaled_H, 1:0)
+
+    rescaled_envs = environments(gs, rescaled_H)
+    GL = leftenv(rescaled_envs, 1, gs)
+    GR = rightenv(rescaled_envs, 0, gs)
+    E_f = sum(zip(GL, GR)) do (gl, gr)
+        @plansor gl[5 3; 1] * gs.CR[0][1; 4] * conj(gs.CR[0][5; 2]) * gr[4 3; 2]
+    end
 
     H2 = rescaled_H * rescaled_H
 
@@ -166,6 +204,7 @@ function variance(state::InfiniteQP, H::MPOHamiltonian, envs=environments(state,
 end
 
 function variance(ψ, H::LazySum, envs=environments(ψ, sum(H)))
+    # TODO: avoid throwing error and just compute correct environments 
     envs isa MultipleEnvironments &&
         throw(ArgumentError("The environment cannot be Lazy i.e. use environments of sum(H)"))
     return variance(ψ, sum(H), envs)

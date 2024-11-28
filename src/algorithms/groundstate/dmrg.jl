@@ -5,18 +5,24 @@ Single site DMRG algorithm for finding groundstates.
 
 # Fields
 - `tol::Float64`: tolerance for convergence criterium
-- `eigalg::A`: eigensolver algorithm
+- `eigalg::A`: eigensolver algorithm or a NamedTuple with the eigensolver settings
 - `maxiter::Int`: maximum number of outer iterations
 - `verbosity::Int`: display progress information
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
 """
-@kwdef struct DMRG{A,F} <: Algorithm
-    tol::Float64 = Defaults.tol
-    maxiter::Int = Defaults.maxiter
-    eigalg::A = Defaults.eigsolver
-    verbosity::Int = Defaults.verbosity
-    finalize::F = Defaults._finalize
+struct DMRG{A,F} <: Algorithm
+    tol::Float64
+    maxiter::Int
+    eigalg::A
+    verbosity::Int
+    finalize::F
+end
+function DMRG(; tol=Defaults.tol, maxiter=Defaults.maxiter, eigalg=(;),
+              verbosity=Defaults.verbosity, finalize=Defaults._finalize)
+    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
+    return DMRG{typeof(eigalg′),typeof(finalize)}(tol, maxiter, eigalg′, verbosity,
+                                                  finalize)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environments(ψ, H))
@@ -25,7 +31,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
     log = IterLog("DMRG")
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
+        @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
 
@@ -41,13 +47,13 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
             end
         end
     end
@@ -61,20 +67,29 @@ end
 
 # Fields
 - `tol::Float64`: tolerance for convergence criterium
-- `eigalg::A`: eigensolver algorithm
+- `eigalg::A`: eigensolver algorithm or a NamedTuple with the eigensolver settings
 - `maxiter::Int`: maximum number of outer iterations
 - `verbosity::Int`: display progress information
 - `finalize::F`: user-supplied function which is applied after each iteration, with
     signature `finalize(iter, ψ, H, envs) -> ψ, envs`
 - `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
-@kwdef struct DMRG2{A,F} <: Algorithm
-    tol::Float64 = Defaults.tol
-    maxiter::Int = Defaults.maxiter
-    eigalg::A = Defaults.eigsolver
-    trscheme::TruncationScheme = truncerr(1e-6)
-    verbosity::Int = Defaults.verbosity
-    finalize::F = Defaults._finalize
+struct DMRG2{A,F} <: Algorithm
+    tol::Float64
+    maxiter::Int
+    eigalg::A
+    trscheme::TruncationScheme
+    verbosity::Int
+    finalize::F
+end
+# TODO: find better default truncation
+function DMRG2(; tol=Defaults.tol, maxiter=Defaults.maxiter, eigalg=(;),
+               trscheme=truncerr(1e-6), verbosity=Defaults.verbosity,
+               finalize=Defaults._finalize)
+    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
+    return DMRG2{typeof(eigalg′),typeof(finalize)}(tol, maxiter, eigalg′, trscheme,
+                                                   verbosity,
+                                                   finalize)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environments(ψ, H))
@@ -123,13 +138,13 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
             end
         end
     end

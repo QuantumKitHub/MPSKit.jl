@@ -2,9 +2,9 @@
 EditURL = "../../../../../examples/quantum1d/3.ising-dqpt/main.jl"
 ```
 
-[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/maartenvd/MPSKit.jl/gh-pages?filepath=dev/examples/quantum1d/3.ising-dqpt/main.ipynb)
-[![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/maartenvd/MPSKit.jl/blob/gh-pages/dev/examples/quantum1d/3.ising-dqpt/main.ipynb)
-[![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/maartenvd/MPSKit.jl/examples/tree/gh-pages/dev/examples/quantum1d/3.ising-dqpt)
+[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/QuantumKitHub/MPSKit.jl/gh-pages?filepath=dev/examples/quantum1d/3.ising-dqpt/main.ipynb)
+[![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev/examples/quantum1d/3.ising-dqpt/main.ipynb)
+[![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/MPSKit.jl/examples/tree/gh-pages/dev/examples/quantum1d/3.ising-dqpt)
 
 # DQPT in the Ising model(@id demo_dqpt)
 
@@ -40,12 +40,14 @@ L = 20
 ````
 
 ````
-[ Info: DMRG init:	obj = +9.914551645185e+00	err = 1.3697e-01
-[ Info: DMRG   1:	obj = -2.040021698083e+01	err = 9.7284195077e-04	time = 0.44 sec
-[ Info: DMRG   2:	obj = -2.040021786696e+01	err = 7.5203822885e-06	time = 0.35 sec
-[ Info: DMRG   3:	obj = -2.040021786703e+01	err = 9.3598556558e-07	time = 0.09 sec
-[ Info: DMRG   4:	obj = -2.040021786703e+01	err = 8.3709447459e-10	time = 0.02 sec
-[ Info: DMRG conv 5:	obj = -2.040021786703e+01	err = 6.6974743335e-13	time = 0.91 sec
+[ Info: DMRG init:	obj = +9.799964091770e+00	err = 1.5223e-01
+[ Info: DMRG   1:	obj = -2.040021714743e+01	err = 2.4038839149e-02	time = 0.09 sec
+[ Info: DMRG   2:	obj = -2.040021715170e+01	err = 6.0313575856e-07	time = 0.07 sec
+[ Info: DMRG   3:	obj = -2.040021773534e+01	err = 1.6799456960e-05	time = 0.14 sec
+[ Info: DMRG   4:	obj = -2.040021786694e+01	err = 1.9058246307e-06	time = 0.09 sec
+[ Info: DMRG   5:	obj = -2.040021786703e+01	err = 1.1474711603e-06	time = 0.05 sec
+[ Info: DMRG   6:	obj = -2.040021786703e+01	err = 4.3837579221e-10	time = 0.02 sec
+[ Info: DMRG conv 7:	obj = -2.040021786703e+01	err = 1.9834477158e-11	time = 0.50 sec
 
 ````
 
@@ -108,14 +110,23 @@ Similarly we could start with an initial infinite state and find the pre-quench 
 ````
 
 ````
-[ Info: VUMPS init:	obj = +4.927142607127e-01	err = 3.7065e-01
-[ Info: VUMPS   1:	obj = -1.062269158559e+00	err = 3.2878729027e-02	time = 1.11 sec
-[ Info: VUMPS   2:	obj = -1.063544409816e+00	err = 1.0900961086e-05	time = 0.01 sec
-[ Info: VUMPS   3:	obj = -1.063544409973e+00	err = 6.2659245120e-08	time = 0.01 sec
-[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 9.8860768603e-10	time = 0.01 sec
-[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 6.5293129644e-11	time = 0.00 sec
-[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 6.4544340049e-12	time = 0.00 sec
-[ Info: VUMPS conv 7:	obj = -1.063544409973e+00	err = 6.4503123241e-13	time = 1.14 sec
+[ Info: VUMPS init:	obj = +5.000419382862e-01	err = 3.8507e-01
+[ Info: VUMPS   1:	obj = -1.062780898337e+00	err = 2.4151374798e-02	time = 1.31 sec
+┌ Warning: ignoring imaginary component -3.817802691569172e-6 from total weight 2.4343214394239743: operator might not be hermitian?
+│   α = 1.7081089443203243 - 3.817802691569172e-6im
+│   β₁ = 0.14004438155194618
+│   β₂ = 1.7287776826281838
+└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -4.33258309393697e-6 from total weight 3.290563788912538: operator might not be hermitian?
+│   α = 2.784222669687663 - 4.33258309393697e-6im
+│   β₁ = 0.13141322180957496
+│   β₂ = 1.7488981501547187
+└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
+[ Info: VUMPS   2:	obj = -1.063544409753e+00	err = 1.4337063091e-05	time = 0.08 sec
+[ Info: VUMPS   3:	obj = -1.063544409973e+00	err = 1.7048015038e-07	time = 0.01 sec
+[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 1.7183182449e-08	time = 0.01 sec
+[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 5.8865202016e-10	time = 0.01 sec
+[ Info: VUMPS conv 6:	obj = -1.063544409973e+00	err = 6.8020365686e-11	time = 1.42 sec
 
 ````
 
@@ -127,7 +138,7 @@ dot(ψ₀, ψ₀)
 ````
 
 ````
-0.9999999999999993 - 8.56544100434766e-17im
+1.0000000000000018 - 7.06078012856404e-16im
 ````
 
 so the loschmidth echo takes on the pleasant form

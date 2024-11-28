@@ -10,12 +10,21 @@ A view of a sparse MPO at a single position.
 - `imspaces::AbstractVector{S}`: list of right virtual spaces.
 - `pspace::S`: physical space.
 """
-struct SparseMPOSlice{S,T,E} <: AbstractArray{T,2}
-    Os::SubArray{Union{T,E},2,PeriodicArray{Union{T,E},3},
-                 Tuple{Int,Base.Slice{Base.OneTo{Int}},Base.Slice{Base.OneTo{Int}}},false}
-    domspaces::SubArray{S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false}
-    imspaces::SubArray{S,1,PeriodicArray{S,2},Tuple{Int,Base.Slice{Base.OneTo{Int}}},false}
+struct SparseMPOSlice{S,T,E,A<:AbstractMatrix{Union{E,T}},B<:AbstractVector{Union{S}}} <:
+       AbstractMatrix{T}
+    Os::A
+    domspaces::B
+    imspaces::B
     pspace::S
+    function SparseMPOSlice(Os::AbstractMatrix{Union{E,T}},
+                            domspaces::B, imspaces::B,
+                            pspace::S) where {S<:IndexSpace,T<:AbstractTensorMap{S},
+                                              E<:Number,B<:AbstractVector{S}}
+        sz1, sz2 = size(Os)
+        sz1 == length(imspaces) || throw(ArgumentError("imspaces must have length $sz1"))
+        sz2 == length(domspaces) || throw(ArgumentError("domspaces must have length $sz2"))
+        return new{S,T,E,typeof(Os),B}(Os, domspaces, imspaces, pspace)
+    end
 end
 
 function Base.getproperty(x::SparseMPOSlice, s::Symbol)

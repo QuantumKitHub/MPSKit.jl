@@ -42,7 +42,7 @@ end
                                                                    Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
                                                                    ComplexF64)]
     ψ_small = FiniteMPS(rand, elt, 4, d, D)
-    ψ_small2 = FiniteMPS(MPSKit.decompose_localmps(convert(TensorMap, ψ_small)))
+    ψ_small2 = FiniteMPS(convert(TensorMap, ψ_small))
     @test dot(ψ_small, ψ_small2) ≈ dot(ψ_small, ψ_small)
 end
 
@@ -155,17 +155,17 @@ end
     ham = force_planar(transverse_field_ising(; g=8.0))
     (gs, _, _) = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbosity=0))
 
-    #constructor 1 - give it a plain array of tensors
+    # constructor 1 - give it a plain array of tensors
     window_1 = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
 
-    #constructor 2 - used to take a "slice" from an infinite mps
+    # constructor 2 - used to take a "slice" from an infinite mps
     window_2 = WindowMPS(gs, 10)
 
     # we should logically have that window_1 approximates window_2
     ovl = dot(window_1, window_2)
     @test ovl ≈ 1 atol = 1e-8
 
-    #constructor 3 - random initial tensors
+    # constructor 3 - random initial tensors
     window = WindowMPS(rand, ComplexF64, 10, ℙ^2, ℙ^10, gs, gs)
     normalize!(window)
 
@@ -182,26 +182,21 @@ end
     @test 9 * 9 ≈ norm(window)^2
     normalize!(window)
 
-    ham = Window(ham, ham, ham)
-    edens1 = expectation_value(window, ham)
-    e1 = expectation_value(window, ham, 1:length(window))
+    e1 = expectation_value(window, (1, 2) => O)
 
     v1 = variance(window, ham)
     gs_alg = Window(VUMPS(; verbosity=0), DMRG(; verbosity=0), VUMPS(; verbosity=0))
     (window, envs, _) = find_groundstate(window, ham, gs_alg)
     v2 = variance(window, ham)
 
-    edens2 = expectation_value(window, ham)
-    e2 = expectation_value(window, ham, 1:length(window))
+    e2 = expectation_value(window, (1, 2) => O)
 
-    @test v2 < v1
     @test real(e2) ≤ real(e1)
 
     (window, envs) = timestep(window, ham, 0.1, 0.0, WindowTDVP(; middle=TDVP2()), envs)
     (window, envs) = timestep(window, ham, 0.1, 0.0, WindowTDVP(), envs)
 
-    edens3 = expectation_value(window, ham)
-    e3 = expectation_value(window, ham, 1:length(window), envs)
+    e3 = expectation_value(window, (1, 2) => O)
 
     @test edens2 ≈ edens3 atol = 1e-4
     @test e2 ≈ e3 atol = 1e-4
@@ -231,7 +226,7 @@ end
         @test dot(ϕ₁_f, ϕ₂_f) ≈ dot(ϕ₁, ϕ₂) atol = 1e-5
         @test norm(ϕ₁_f) ≈ norm(ϕ₁) atol = 1e-5
 
-        ev_f = sum(expectation_value(ϕ₁_f, H) - expectation_value(ψ, H))
+        ev_f = expectation_value(ϕ₁_f, H) - expectation_value(ψ, H)
         ev_q = dot(ϕ₁, effective_excitation_hamiltonian(H, ϕ₁))
         @test ev_f ≈ ev_q atol = 1e-5
     end

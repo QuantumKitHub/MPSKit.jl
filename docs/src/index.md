@@ -5,7 +5,7 @@
 ## Table of contents
 
 ```@contents
-Pages = ["man/intro.md","man/conventions.md","man/states.md","man/operators.md","man/algorithms.md","man/parallelism.md"]
+Pages = ["man/intro.md","man/conventions.md","man/states.md","man/operators.md","man/algorithms.md","man/parallelism.md", "man/lattices.md"]
 Depth = 1
 ```
 
@@ -29,7 +29,7 @@ pkg> add MPSKit
 
 To get started with MPSKit, we recommend also including
 [TensorKit.jl](https://github.com/Jutho/TensorKit.jl) and
-[MPSKitModels.jl](https://github.com/maartenvd/MPSKitModels.jl). The former defines the
+[MPSKitModels.jl](https://github.com/QuantumKitHub/MPSKitModels.jl). The former defines the
 tensor backend which is used throughout MPSKit, while the latter includes some common
 operators and models.
 
@@ -96,7 +96,7 @@ of the MPS, can be computed as:
 
 ```@example finitemps
 N1 = LinearAlgebra.norm(mps)
-N2 = expectation_value(mps, id(physicalspace(mps, 3)), 3)
+N2 = expectation_value(mps, 3 => id(physicalspace(mps, 3)))
 println("‖mps‖ = $N1")
 println("<mps|𝕀₃|mps> = $N2")
 ```
@@ -162,7 +162,7 @@ computed by:
 
 ```@example infinitemps
 N1 = norm(mps)
-N2 = expectation_value(mps, id(physicalspace(mps, 1)), 1)
+N2 = expectation_value(mps, 1 => id(physicalspace(mps, 1)))
 println("‖mps‖ = $N1")
 println("<mps|𝕀₁|mps> = $N2")
 ```
@@ -190,14 +190,14 @@ Manual section, or have a look at the [Examples](@ref) page.
 
 Keep in mind that the documentation is still a work in progress, and that some features may
 not be fully documented yet. If you encounter any issues or have questions, please check the
-library's [issue tracker](https://github.com/maartenvd/MPSKit.jl/issues) on the GitHub
+library's [issue tracker](https://github.com/QuantumKitHub/MPSKit.jl/issues) on the GitHub
 repository and open a new issue.
 
 ## Publications using MPSKit
 
 Below you can find a list of publications that have made use of MPSKit. If you have used
 this package and wish to have your publication added to this list, please open a pull
-request or an issue on the [GitHub repository](https://github.com/maartenvd/MPSKit.jl/).
+request or an issue on the [GitHub repository](https://github.com/QuantumKitHub/MPSKit.jl/).
 
 - R. Belyansky et al., *“High-Energy Collision of Quarks and Hadrons in the Schwinger Model: From Tensor Networks to Circuit QED,”* 2023, doi: 10.48550/ARXIV.2307.02522.
 - L. Devos, L. Vanderstraeten, and F. Verstraete, *“Haldane gap in the SU(3) [3 0 0] Heisenberg chain,”* Phys. Rev. B, vol. 106, no. 15, p. 155103, Oct. 2022, doi: 10.1103/PhysRevB.106.155103.
@@ -209,3 +209,7 @@ request or an issue on the [GitHub repository](https://github.com/maartenvd/MPSK
 - E. L. Weerda and M. Rizzi, *“Fractional quantum Hall states with variational Projected Entangled-Pair States: a study of the bosonic Harper-Hofstadter model,”* 2023, doi: 10.48550/ARXIV.2309.12811.
 - C. Yu and J.-W. Lee, *“Closing of the Haldane gap in a spin-1 XXZ chain,”* J. Korean Phys. Soc., vol. 79, no. 9, pp. 841–845, Nov. 2021, doi: 10.1007/s40042-021-00283-z.
 - Y. Zhang, A. Hulsch, H.-C. Zhang, W. Tang, L. Wang, and H.-H. Tu, *“Universal Scaling of Klein Bottle Entropy near Conformal Critical Points,”* Phys. Rev. Lett., vol. 130, no. 15, p. 151602, Apr. 2023, doi: 10.1103/PhysRevLett.130.151602.
+- Gertian Roose, Laurens Vanderstraeten, Jutho Haegeman, and Nick Bultinck. Anomalous domain wall condensation in a modified ising chain. Phys. Rev. B, 99: 195132, May 2019. 10.1103/​PhysRevB.99.195132.
+https:/​/​doi.org/​10.1103/​PhysRevB.99.195132
+- Roose, G., Bultinck, N., Vanderstraeten, L. et al. Lattice regularisation and entanglement structure of the Gross-Neveu model. J. High Energ. Phys. 2021, 207 (2021). https://doi.org/10.1007/JHEP07(2021)207
+- Roose, G., Haegeman, J., Van Acoleyen, K. et al. The chiral Gross-Neveu model on the lattice via a Landau-forbidden phase transition. J. High Energ. Phys. 2022, 19 (2022). https://doi.org/10.1007/JHEP06(2022)019
