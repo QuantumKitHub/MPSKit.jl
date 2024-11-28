@@ -12,9 +12,9 @@ function my_transverse_field_ising(gs)
     return a + b
 end
 
-function my_timedependent_ising(gl,gs,gr,f)
+function my_timedependent_ising(gl, gs, gr, f)
     L = length(gs)
-    lattice  = InfiniteChain(1)
+    lattice = InfiniteChain(1)
     latticeL = InfiniteChain(L)
     ZZ = rmul!(σᶻᶻ(), -1)
     X = rmul!(σˣ(), -1)
@@ -27,16 +27,18 @@ function my_timedependent_ising(gl,gs,gr,f)
     Xm = @mpoham sum(gs[i] * X{i} for i in vertices(latticeL))
     Xr = @mpoham sum(gr * X{i} for i in vertices(lattice))
 
-    H1 = Window(ZZl,ZZm,ZZr)
-    H2 = Window(Xl,Xm,Xr)
-    return LazySum([H1,MultipliedOperator(H2,f)])
+    H1 = Window(ZZl, ZZm, ZZr)
+    H2 = Window(Xl, Xm, Xr)
+    return LazySum([H1, MultipliedOperator(H2, f)])
 end
 
-function my_expectation_value(Ψwindow::WindowMPS,O::Window{A,A,A}) where {A<:TrivialTensorMap{ComplexSpace, 1, 1, Matrix{ComplexF64}}}
-    left   = expectation_value(Ψwindow.left, O.left)
+function my_expectation_value(Ψwindow::WindowMPS,
+                              O::Window{A,A,A}) where {A<:TrivialTensorMap{ComplexSpace,1,1,
+                                                                           Matrix{ComplexF64}}}
+    left = expectation_value(Ψwindow.left, O.left)
     middle = expectation_value(Ψwindow, O.middle)
-    right  = expectation_value(Ψwindow.right, O.right)
-    return vcat(left,middle,right)
+    right = expectation_value(Ψwindow.right, O.right)
+    return vcat(left, middle, right)
 end
 
 function my_finalize(t, Ψ, H, envs, si, tosave)
@@ -75,7 +77,7 @@ szdat = [expectation_value(Ψwindow, sz)]
 
 #setup for time_evolve
 alg = TDVP2(; trscheme=truncdim(20),
-            finalize=(t, Ψ, H, envs) -> my_finalize(t, Ψ, H, envs, sz,szdat));
+            finalize=(t, Ψ, H, envs) -> my_finalize(t, Ψ, H, envs, sz, szdat));
 t_span = 0:0.05:3.0
 Ψwindow, envs = time_evolve!(Ψwindow, H, t_span, alg, envs);
 
@@ -143,23 +145,25 @@ Ts = fill(TensorMap(rand, ComplexF64, ℂ^D * ℂ^2, ℂ^D), L);
 (Ψwindow, envs_gs, _) = find_groundstate(Ψwindow, Hgs);
 
 #define the quench Hamiltonian
-f(t) = 0.1*t #we take a linear ramp
+f(t) = 0.1 * t #we take a linear ramp
 gs = range(gl, gr; length=L); #interpolating values for g
-Hquench = my_timedependent_ising(gl,gs,gr,f);
+Hquench = my_timedependent_ising(gl, gs, gr, f);
 # Hquench is a time-dependent Hamiltonian i.e. we can do H(t) to get the instantanious Hamiltonian.
 # Note: To get an expectation_value of a time-dependent Hamiltonian one needs to give H(t) tot he function.
 
-envs = environments(Ψwindow,Hquench);
+envs = environments(Ψwindow, Hquench);
 
-sdat = [my_expectation_value(Ψwindow, Window(sx,sx,sx))]
+sdat = [my_expectation_value(Ψwindow, Window(sx, sx, sx))]
 
 #setup for time_evolve
 left_alg = rightalg = TDVP();
-middle_alg =  TDVP2(; trscheme=truncdim(20));
-alg = WindowTDVP(;left=left_alg,middle=middle_alg,right=rightalg,
-            finalize=(t, Ψ, H, envs) -> my_finalize(t, Ψ, H, envs, Window(sx,sx,sx), sdat));
+middle_alg = TDVP2(; trscheme=truncdim(20));
+alg = WindowTDVP(; left=left_alg, middle=middle_alg, right=rightalg,
+                 finalize=(t, Ψ, H, envs) -> my_finalize(t, Ψ, H, envs, Window(sx, sx, sx),
+                                                         sdat));
 t_span = 0:0.005:1.0
 
 Ψwindow, envs = time_evolve!(Ψwindow, Hquench, t_span, alg, envs; verbose=true);
 
-display(heatmap(t_span,0:L+1,real.(reduce((a, b) -> [a b], sdat)),xlabel="t",ylabel="i"))
+display(heatmap(t_span, 0:(L + 1), real.(reduce((a, b) -> [a b], sdat)); xlabel="t",
+                ylabel="i"))
