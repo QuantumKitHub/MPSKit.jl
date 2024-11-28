@@ -19,8 +19,9 @@ function environments(ψ::WindowMPS, O::Window, above=nothing;
     return WindowEnv(Window(lenvs, fin_env, renvs), copy(ψ.left.AL), copy(ψ.right.AR))
 end
 
-function environments(ψ::WindowMPS, O::MPOHamiltonian, above, lenvs::MPOHamInfEnv,
-                      renvs::MPOHamInfEnv)
+function environments(ψ::WindowMPS, O::Union{DenseMPO,SparseMPO,MPOHamiltonian}, above,
+                      lenvs::Union{PerMPOInfEnv,MPOHamInfEnv},
+                      renvs::Union{PerMPOInfEnv,MPOHamInfEnv})
     return environments(ψ, O, above, leftenv(lenvs, 1, ψ.left),
                         rightenv(renvs, length(ψ), ψ.right))
 end
