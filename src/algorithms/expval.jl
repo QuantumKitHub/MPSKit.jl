@@ -195,3 +195,14 @@ function expectation_value(ψ::FiniteMPS, O::ProjectionOperator,
     n = norm(ψ.AC[end])^2
     return sum(ens) / n
 end
+
+# Window
+# ------
+function expectation_value(Ψ::WindowMPS, windowH::Window, windowenvs::WindowEnv)
+    left_expval = expectation_value(Ψ.left, windowH.left, windowenvs.left)
+    middle_expval = expectation_value(Ψ.middle, windowH.middle, windowenvs.middle)
+    right_expval = expectation_value(Ψ.right, windowH.right, windowenvs.right)
+    return vcat(left_expval, middle_expval, right_expval)
+end
+
+#I need to think about expval with location

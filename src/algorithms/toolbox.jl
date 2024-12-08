@@ -210,6 +210,13 @@ function variance(ψ, H::LazySum, envs=environments(ψ, sum(H)))
     return variance(ψ, sum(H), envs)
 end
 
+function variance(ψ::WindowMPS, H::Union{MPOHamiltonian,Window}, envs=environments(ψ, H))
+    #tricky to define
+    H2, nenvs = squaredenvs(ψ, H, envs)
+    return real(expectation_value(ψ, H2, 1:length(ψ), nenvs) -
+                expectation_value(ψ, H, 1:length(ψ), envs)^2)
+end
+
 """
 You can impose periodic boundary conditions on an mpo-hamiltonian (for a given size)
 That creates a new mpo-hamiltonian with larger bond dimension
