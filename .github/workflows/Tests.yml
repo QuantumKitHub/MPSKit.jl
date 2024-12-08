@@ -40,5 +40,6 @@ jobs:
       nthreads: 4
       julia-version: "${{ matrix.version }}"
       os: "${{ matrix.os }}"
+      timeout-minutes: 120
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
