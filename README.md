@@ -26,8 +26,8 @@ and matrix product operators (MPO), both finite and infinite.
 [codecov-img]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl/graph/badge.svg?token=rmp3bu7qn3
 [codecov-url]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl
 
-[ci-img]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/CI.yml/badge.svg
-[ci-url]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/CI.yml
+[ci-img]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/Tests.yml/badge.svg
+[ci-url]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/Tests.yml
 
 [pkgeval-img]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/T/MPSKit.svg
 [pkgeval-url]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/T/MPSKit.html
