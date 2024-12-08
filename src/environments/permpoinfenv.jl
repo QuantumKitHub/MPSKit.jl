@@ -180,8 +180,7 @@ function mixed_fixpoints(above::MPSMultiline, mpo::MPOMultiline, below::MPSMulti
         for col in 1:numcols
             λ = dot(CRs_bot[col],
                     MPO_∂∂C(GLs[row, col + 1], GRs[row, col]) * CRs_top[col])
-            scale!(GLs[row, col + 1], 1 / sqrt(λ))
-            scale!(GRs[row, col], 1 / sqrt(λ))
+            scale!(GLs[row, col + 1], inv(λ))
         end
     end
 
