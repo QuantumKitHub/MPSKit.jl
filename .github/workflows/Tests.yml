@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.8' # minimal supported version
+          - 'lts' # minimal supported version
           - '1' # latest released Julia version
         group:
           - states
