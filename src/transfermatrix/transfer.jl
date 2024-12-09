@@ -22,7 +22,8 @@ apply a transfer matrix to the left.
     t_top = tensorexpr(:A, 2:(N₂ + 1), -(N₁ + 1))
     t_bot = tensorexpr(:Abar, (1, (3:(N₂ + 1))...), -1)
     t_in = tensorexpr(:v, 1, (-(2:N₁)..., 2))
-    return :(return @plansor $t_out := $t_in * $t_top * conj($t_bot))
+    return macroexpand(@__MODULE__,
+                       :(return @plansor $t_out := $t_in * $t_top * conj($t_bot)))
 end
 
 """
@@ -43,7 +44,8 @@ apply a transfer matrix to the right.
     t_top = tensorexpr(:A, (-1, reverse(3:(N₂ + 1))...), 1)
     t_bot = tensorexpr(:Abar, (-(N₁ + 1), reverse(3:(N₂ + 1))...), 2)
     t_in = tensorexpr(:v, 1, (-(2:N₁)..., 2))
-    return :(return @plansor $t_out := $t_top * conj($t_bot) * $t_in)
+    return macroexpand(@__MODULE__,
+                       :(return @plansor $t_out := $t_top * conj($t_bot) * $t_in))
 end
 
 # transfer, but the upper A is an excited tensor

@@ -23,7 +23,10 @@ force_planar(c::Sector) = PlanarTrivial() ⊠ c
 
 # convert spaces
 force_planar(V::Union{CartesianSpace,ComplexSpace}) = ℙ^dim(V)
-force_planar(V::GradedSpace) = Vect[PlanarTrivial ⊠ sectortype(V)](force_planar(c)=>dim(V, c) for c in sectors(V))
+function force_planar(V::GradedSpace)
+    return Vect[PlanarTrivial ⊠ sectortype(V)](force_planar(c) => dim(V, c)
+                                               for c in sectors(V))
+end
 force_planar(V::SumSpace) = SumSpace(map(force_planar, V.spaces))
 force_planar(V::ProductSpace) = ProductSpace(map(force_planar, V.spaces))
 force_planar(V::HomSpace) = force_planar(codomain(V)) ← force_planar(domain(V))

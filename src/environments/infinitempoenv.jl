@@ -104,8 +104,7 @@ function TensorKit.normalize!(envs::InfiniteMPOEnvironments)
             λ = dot(CRs_bot[col],
                     MPO_∂∂C(envs.leftenvs[row, col + 1], envs.rightenvs[row, col]) *
                     CRs_top[col])
-            scale!(envs.leftenvs[row, col + 1], 1 / sqrt(λ))
-            scale!(envs.rightenvs[row, col], 1 / sqrt(λ))
+            scale!(envs.leftenvs[row, col + 1], inv(λ))
         end
     end
 end

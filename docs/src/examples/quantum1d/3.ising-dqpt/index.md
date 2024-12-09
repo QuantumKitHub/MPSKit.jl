@@ -40,13 +40,14 @@ L = 20
 ````
 
 ````
-[ Info: DMRG init:	obj = +9.833992820341e+00	err = 1.5162e-01
-[ Info: DMRG   1:	obj = -2.040021714792e+01	err = 1.0482607701e-02	time = 0.07 sec
-[ Info: DMRG   2:	obj = -2.040021715176e+01	err = 2.9301055999e-07	time = 0.02 sec
-[ Info: DMRG   3:	obj = -2.040021783353e+01	err = 2.1923563339e-05	time = 0.14 sec
-[ Info: DMRG   4:	obj = -2.040021786702e+01	err = 1.8539117704e-06	time = 0.21 sec
-[ Info: DMRG   5:	obj = -2.040021786703e+01	err = 7.8191209682e-08	time = 0.04 sec
-[ Info: DMRG conv 6:	obj = -2.040021786703e+01	err = 6.4920277294e-11	time = 0.49 sec
+[ Info: DMRG init:	obj = +9.799964091770e+00	err = 1.5223e-01
+[ Info: DMRG   1:	obj = -2.040021714743e+01	err = 2.4038839149e-02	time = 0.09 sec
+[ Info: DMRG   2:	obj = -2.040021715170e+01	err = 6.0313575856e-07	time = 0.07 sec
+[ Info: DMRG   3:	obj = -2.040021773534e+01	err = 1.6799456960e-05	time = 0.14 sec
+[ Info: DMRG   4:	obj = -2.040021786694e+01	err = 1.9058246307e-06	time = 0.09 sec
+[ Info: DMRG   5:	obj = -2.040021786703e+01	err = 1.1474711603e-06	time = 0.05 sec
+[ Info: DMRG   6:	obj = -2.040021786703e+01	err = 4.3837579221e-10	time = 0.02 sec
+[ Info: DMRG conv 7:	obj = -2.040021786703e+01	err = 1.9834477158e-11	time = 0.50 sec
 
 ````
 
@@ -109,13 +110,23 @@ Similarly we could start with an initial infinite state and find the pre-quench 
 ````
 
 ````
-[ Info: VUMPS init:	obj = +5.083504996507e-01	err = 3.8682e-01
-[ Info: VUMPS   1:	obj = -1.060586960116e+00	err = 4.7773289906e-02	time = 1.51 sec
-[ Info: VUMPS   2:	obj = -1.063544400328e+00	err = 8.6203478863e-05	time = 0.01 sec
-[ Info: VUMPS   3:	obj = -1.063544409973e+00	err = 2.6470717828e-07	time = 0.01 sec
-[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 8.9760940163e-09	time = 0.00 sec
-[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 4.1698951454e-10	time = 0.00 sec
-[ Info: VUMPS conv 6:	obj = -1.063544409973e+00	err = 3.7060383050e-11	time = 1.53 sec
+[ Info: VUMPS init:	obj = +5.000419382862e-01	err = 3.8507e-01
+[ Info: VUMPS   1:	obj = -1.062780898337e+00	err = 2.4151374798e-02	time = 1.31 sec
+┌ Warning: ignoring imaginary component -3.817802691569172e-6 from total weight 2.4343214394239743: operator might not be hermitian?
+│   α = 1.7081089443203243 - 3.817802691569172e-6im
+│   β₁ = 0.14004438155194618
+│   β₂ = 1.7287776826281838
+└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -4.33258309393697e-6 from total weight 3.290563788912538: operator might not be hermitian?
+│   α = 2.784222669687663 - 4.33258309393697e-6im
+│   β₁ = 0.13141322180957496
+│   β₂ = 1.7488981501547187
+└ @ KrylovKit ~/.julia/packages/KrylovKit/xccMN/src/factorizations/lanczos.jl:170
+[ Info: VUMPS   2:	obj = -1.063544409753e+00	err = 1.4337063091e-05	time = 0.08 sec
+[ Info: VUMPS   3:	obj = -1.063544409973e+00	err = 1.7048015038e-07	time = 0.01 sec
+[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 1.7183182449e-08	time = 0.01 sec
+[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 5.8865202016e-10	time = 0.01 sec
+[ Info: VUMPS conv 6:	obj = -1.063544409973e+00	err = 6.8020365686e-11	time = 1.42 sec
 
 ````
 
@@ -127,7 +138,7 @@ dot(ψ₀, ψ₀)
 ````
 
 ````
-0.9999999999999964 - 7.217459182439675e-17im
+1.0000000000000018 - 7.06078012856404e-16im
 ````
 
 so the loschmidth echo takes on the pleasant form

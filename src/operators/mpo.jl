@@ -143,12 +143,12 @@ function Base.convert(::Type{TensorMap}, mpo::FiniteMPO)
     U_right = ones(scalartype(mpo), V_right')
 
     tensors = vcat(U_left, parent(mpo), U_right)
-    indices = [[i, -i, -(i + N), i + 1] for i in 1:length(mpo)]
+    indices = [[i, -i, -(2N - i + 1), i + 1] for i in 1:length(mpo)]
     pushfirst!(indices, [1])
     push!(indices, [N + 1])
     O = ncon(tensors, indices)
 
-    return transpose(O, (ntuple(identity, N), ntuple(i -> i + N, N)))
+    return repartition(O, N, N)
 end
 
 # Linear Algebra
@@ -264,7 +264,8 @@ function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
         Fₗ = i != 1 ? Fᵣ :
              isomorphism(A, fuse(left_virtualspace(mpo2, i), left_virtualspace(mpo1, i)),
                          left_virtualspace(mpo2, i) * left_virtualspace(mpo1, i))
-        Fᵣ = isomorphism(A, fuse(right_virtualspace(mpo2, i), right_virtualspace(mpo1, i)),
+        Fᵣ = isomorphism(A,
+                         fuse(right_virtualspace(mpo2, i)', right_virtualspace(mpo1, i)'),
                          right_virtualspace(mpo2, i)' * right_virtualspace(mpo1, i)')
 
         @plansor O[i][-1 -2; -3 -4] := Fₗ[-1; 1 4] * mpo2[i][1 2; -3 3] *
@@ -286,7 +287,7 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
         Fₗ = i != 1 ? Fᵣ :
              isomorphism(TT, fuse(left_virtualspace(A[i]), left_virtualspace(mpo, i)),
                          left_virtualspace(A[i]) * left_virtualspace(mpo, i))
-        Fᵣ = isomorphism(TT, fuse(right_virtualspace(A[i]), right_virtualspace(mpo, i)),
+        Fᵣ = isomorphism(TT, fuse(right_virtualspace(A[i])', right_virtualspace(mpo, i)'),
                          right_virtualspace(A[i])' * right_virtualspace(mpo, i)')
         A[i] = _fuse_mpo_mps(mpo[i], A[i], Fₗ, Fᵣ)
     end

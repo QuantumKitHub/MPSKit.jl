@@ -106,10 +106,8 @@ function ∂AC(x::MPSTensor{S}, operator::Number, leftenv::MPSTensor{S},
 end
 
 # mpo multiline
-function ∂AC(x::Vector, operator, leftenv, rightenv)
-    return circshift(map(t -> ∂AC(t...),
-                         zip(x, operator, leftenv, rightenv)),
-                     1)
+function ∂AC(x::Vector, opp, leftenv, rightenv)
+    return circshift(map(∂AC, x, opp, leftenv, rightenv), 1)
 end
 
 function ∂AC(x::MPSTensor, ::Nothing, leftenv, rightenv)
@@ -164,10 +162,8 @@ function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv, rightenv)
     @plansor y[-1 -2; -3 -4] := x[1 -2; 2 -4] * leftenv[-1; 1] * rightenv[2; -3]
 end
 
-function ∂AC2(x::Vector, operator1, operator2, leftenv, rightenv)
-    return circshift(map(t -> ∂AC2(t...),
-                         zip(x.vecs, operator1, operator2, leftenv, rightenv)),
-                     1)
+function ∂AC2(x::Vector, opp1, opp2, leftenv, rightenv)
+    return circshift(map(∂AC2, x, opp1, opp2, leftenv, rightenv), 1)
 end
 
 """

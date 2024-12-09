@@ -499,29 +499,46 @@ end
     end
 
     @testset "infinite mps" begin
-        #random nn interaction
+        # random nn interaction
         nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
         nn += nn'
-        H = InfiniteMPOHamiltonian(PeriodicVector(fill(pspace, 1)), (1, 2) => nn)
-        state = InfiniteMPS([pspace, pspace], [Dspace, Dspace])
+        H0 = InfiniteMPOHamiltonian(PeriodicVector(fill(pspace, 1)), (1, 2) => nn)
 
-        state_re = changebonds(state,
-                               RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))
-        @test dot(state, state_re) ≈ 1 atol = 1e-8
+        # test rand_expand
+        for unit_cell_size in 2:3
+            H = repeat(H0, unit_cell_size)
+            state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
 
-        state_oe, _ = changebonds(state,
-                                  repeat(H, 2),
-                                  OptimalExpand(;
-                                                trscheme=truncdim(dim(Dspace) *
-                                                                  dim(Dspace))))
-        @test dot(state, state_oe) ≈ 1 atol = 1e-8
+            state_re = changebonds(state,
+                                   RandExpand(;
+                                              trscheme=truncdim(dim(Dspace) * dim(Dspace))))
+            @test dot(state, state_re) ≈ 1 atol = 1e-8
+        end
+        # test optimal_expand
+        for unit_cell_size in 2:3
+            H = repeat(H0, unit_cell_size)
+            state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
 
-        state_vs, _ = changebonds(state, repeat(H, 2),
-                                  VUMPSSvdCut(; trscheme=notrunc()))
-        @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
+            state_oe, _ = changebonds(state,
+                                      H,
+                                      OptimalExpand(;
+                                                    trscheme=truncdim(dim(Dspace) *
+                                                                      dim(Dspace))))
+            @test dot(state, state_oe) ≈ 1 atol = 1e-8
+        end
+        # test VUMPSSvdCut
+        for unit_cell_size in [1, 2, 3, 4]
+            H = repeat(H0, unit_cell_size)
+            state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
 
-        state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
-        @test dim(right_virtualspace(state_vs_tr, 1)) < dim(right_virtualspace(state_vs, 1))
+            state_vs, _ = changebonds(state, H,
+                                      VUMPSSvdCut(; trscheme=notrunc()))
+            @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
+
+            state_vs_tr = changebonds(state_vs, SvdCut(; trscheme=truncdim(dim(Dspace))))
+            @test dim(right_virtualspace(state_vs_tr, 1)) <
+                  dim(right_virtualspace(state_vs, 1))
+        end
     end
 
     @testset "finite mps" begin
@@ -631,7 +648,7 @@ end
     end
 end
 
-#stub tests
+# stub tests
 @testset "correlation length / entropy" begin
     ψ = InfiniteMPS([ℙ^2], [ℙ^10])
     H = force_planar(transverse_field_ising())
