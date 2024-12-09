@@ -19,7 +19,7 @@ MPOHamiltonian
 ## Environments
 ```@docs
 MPSKit.AbstractInfEnv
-MPSKit.PerMPOInfEnv
+MPSKit.InfiniteMPOEnvironments
 MPSKit.MPOHamInfEnv
 MPSKit.FinEnv
 MPSKit.IDMRGEnvs

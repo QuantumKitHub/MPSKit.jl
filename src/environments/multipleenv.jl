@@ -1,5 +1,5 @@
 struct MultipleEnvironments{O,C} <: Cache
-    opp::O
+    operator::O
     envs::Vector{C}
 end
 

@@ -1,5 +1,5 @@
 function approximate(ψ::InfiniteMPS,
-                     toapprox::Tuple{<:Union{SparseMPO,DenseMPO},<:InfiniteMPS}, algorithm,
+                     toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS}, algorithm,
                      envs=environments(ψ, toapprox))
     # PeriodicMPO's always act on MPSMultiline's. To avoid code duplication, define everything in terms of MPSMultiline's.
     multi, envs = approximate(convert(MPSMultiline, ψ),

@@ -1,20 +1,25 @@
 module MPSKit
 
-using TensorKit, KrylovKit, OptimKit, FastClosures
+using TensorKit
+using TensorKit: BraidingTensor
+using BlockTensorKit
+using KrylovKit, OptimKit, FastClosures
 using Base.Threads, FLoops, Transducers, FoldsThreads
 using Base.Iterators
 using RecipesBase
 using VectorInterface
 using Accessors
+import TupleTools as TT
 
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
+using Random
 using Base: @kwdef
 using LoggingExtras
 
 # bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
-export PeriodicArray, WindowArray
+export PeriodicArray, PeriodicVector, PeriodicMatrix, WindowArray
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export leftorth,
@@ -25,10 +30,14 @@ export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # should be properties
 export add_util_leg, max_Ds, recalculate!
 export left_virtualspace, right_virtualspace, physicalspace
 export entanglementplot, transferplot
+export braille
 
 # hamiltonian things
 export Cache
-export SparseMPO, MPOHamiltonian, DenseMPO, MPOMultiline, FiniteMPO
+export AbstractMPO
+export MPO, FiniteMPO, InfiniteMPO
+export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, HMPO
+export SparseMPO, DenseMPO, MPOMultiline
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
@@ -47,7 +56,7 @@ export entropy
 export propagator, NaiveInvert, Jeckelmann, DynamicalDMRG
 export fidelity_susceptibility
 export approximate!, approximate
-export periodic_boundary_conditions
+export periodic_boundary_conditions, open_boundary_conditions
 export exact_diagonalization
 
 # transfer matrix
@@ -56,7 +65,7 @@ export transfer_left, transfer_right
 
 @deprecate virtualspace left_virtualspace # there is a possible ambiguity when C isn't square, necessitating specifying left or right virtualspace
 @deprecate params(args...) environments(args...)
-@deprecate InfiniteMPO(args...) DenseMPO(args...)
+# @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
 # Abstract type defs
 abstract type Algorithm end
@@ -89,9 +98,10 @@ include("states/orthoview.jl")
 include("states/quasiparticle_state.jl")
 include("states/ortho.jl")
 
-include("operators/densempo.jl")
-include("operators/sparsempo/sparseslice.jl")
-include("operators/sparsempo/sparsempo.jl")
+include("operators/abstractmpo.jl")
+include("operators/mpo.jl")
+# include("operators/sparsempo/sparseslice.jl")
+# include("operators/sparsempo/sparsempo.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")
@@ -102,9 +112,10 @@ include("operators/lazysum.jl")
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
 
+include("environments/abstractenvironments.jl")
 include("environments/FinEnv.jl")
 include("environments/abstractinfenv.jl")
-include("environments/permpoinfenv.jl")
+include("environments/infinitempoenv.jl")
 include("environments/mpohaminfenv.jl")
 include("environments/qpenv.jl")
 include("environments/multipleenv.jl")
