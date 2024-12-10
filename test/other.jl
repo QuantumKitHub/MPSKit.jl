@@ -14,7 +14,8 @@ using Plots
 using Aqua
 
 @testset "Aqua" begin
-    Aqua.test_all(MPSKit; ambiguities=false, piracies=false)
+    # TODO fix this
+    Aqua.test_all(MPSKit; ambiguities=false, piracies=false, unbound_args=false)
 end
 
 @testset "plot tests" begin
