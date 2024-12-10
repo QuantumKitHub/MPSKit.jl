@@ -19,7 +19,7 @@ This can be encoded in a transfer matrix with a local MPO tensor using anyonic s
 In order to use these anyonic symmetries, we need to generalise the notion of the bond dimension and define how it interacts with the symmetry. Thus, we implement away of converting integers to symmetric spaces of the given dimension, which provides a crude guess for how the final MPS would distribute its Schmidt spectrum.
 """
 mpo = hard_hexagon()
-P = space(mpo.opp[1], 2)
+P = physicalspace(mpo, 1)
 function virtual_space(D::Integer)
     _D = round(Int, D / sum(dim, values(FibonacciAnyon)))
     return Vect[FibonacciAnyon](sector => _D for sector in (:I, :τ))
