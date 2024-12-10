@@ -1,4 +1,4 @@
-struct MultipleEnvironments{O,C} <: Cache
+struct MultipleEnvironments{O,C} <: AbstractMPSEnvironments
     operator::O
     envs::Vector{C}
 end
@@ -23,6 +23,13 @@ function environments(st::Union{InfiniteMPS,MPSMultiline}, H::LazySum;
     return MultipleEnvironments(H,
                                 map((op, solv) -> environments(st, op; solver=solv),
                                     H.ops, solver))
+end
+
+# TODO: fix this such that `T(...) isa T`
+function IDMRGEnvironments(ψ::Union{MPSMultiline,InfiniteMPS}, env::MultipleEnvironments)
+    envs = IDMRGEnvironments.(Ref(ψ), env.envs)
+    Hs = getproperty.(env.envs, :operator)
+    return MultipleEnvironments(LazySum(Hs), envs)
 end
 
 #broadcast vs map?
@@ -58,5 +65,21 @@ function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
         return map(env -> env.solver, envs)
     else
         return getfield(envs, prop)
+    end
+end
+
+function update_rightenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnvironments}, st, H,
+                          pos::Int)
+    for (subH, subenv) in zip(H, envs.envs)
+        tm = TransferMatrix(st.AR[pos + 1], subH[pos + 1], st.AR[pos + 1])
+        setrightenv!(subenv, pos, tm * rightenv(subenv, pos + 1))
+    end
+end
+
+function update_leftenv!(envs::MultipleEnvironments{<:LazySum,<:IDMRGEnvironments}, st, H,
+                         pos::Int)
+    for (subH, subenv) in zip(H, envs.envs)
+        tm = TransferMatrix(st.AL[pos - 1], subH[pos - 1], st.AL[pos - 1])
+        setleftenv!(subenv, pos, leftenv(subenv, pos - 1) * tm)
     end
 end

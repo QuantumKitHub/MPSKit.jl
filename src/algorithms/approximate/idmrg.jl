@@ -2,7 +2,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
                      alg::IDMRG1, oenvs=environments(ost, toapprox))
     ψ = copy(ost)
     mpo, above = toapprox
-    envs = IDMRGEnv(ost, oenvs)
+    envs = IDMRGEnvironments(ost, oenvs)
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
 
@@ -62,7 +62,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     mpo, above = toapprox
     ψ = copy(ost)
-    envs = IDMRGEnv(ost, oenvs)
+    envs = IDMRGEnvironments(ost, oenvs)
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
 

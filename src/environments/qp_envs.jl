@@ -3,7 +3,7 @@ nothing fancy - only used internally (and therefore cryptic) - stores some parti
 seperates out this bit of logic from effective_excitation_hamiltonian (now more readable)
 can also - potentially - partially reuse this in other algorithms
 =#
-struct QPEnv{A,B} <: Cache
+struct QPEnv{A,B} <: AbstractMPSEnvironments
     lBs::PeriodicArray{A,2}
     rBs::PeriodicArray{A,2}
 
@@ -11,7 +11,7 @@ struct QPEnv{A,B} <: Cache
     renvs::B
 end
 
-struct QuasiparticleEnvironments{A,B} <: Cache
+struct QuasiparticleEnvironments{A,B} <: AbstractMPSEnvironments
     leftBenvs::PeriodicVector{A}
     rightBenvs::PeriodicVector{A}
 
@@ -37,28 +37,6 @@ function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H, lenvs;
     return environments(exci, H, lenvs, renvs; solver=solver)
 end
 
-# function gen_exci_lw_rw(left_gs::Union{FiniteMPS{A},InfiniteMPS{A}},
-#                         ham::Union{SparseMPO,MPOHamiltonian}, right_gs, excileg) where {A}
-#     B = tensormaptype(spacetype(A), 2, 2, storagetype(A))
-#
-#     lw = PeriodicArray{B,2}(undef, ham.odim, length(left_gs))
-#     rw = PeriodicArray{B,2}(undef, ham.odim, length(left_gs))
-#
-#     for j in 1:size(lw, 1), i in 1:size(lw, 2)
-#         lw[j, i] = fill_data!(similar(left_gs.AL[1],
-#                                       left_virtualspace(left_gs, i - 1) *
-#                                       ham[i].domspaces[j]',
-#                                       excileg' * right_virtualspace(right_gs, i - 1)),
-#                               zero)
-#         rw[j, i] = fill_data!(similar(left_gs.AL[1],
-#                                       left_virtualspace(left_gs, i) * ham[i].imspaces[j]',
-#                                       excileg' * right_virtualspace(right_gs, i)),
-#                               zero)
-#     end
-#
-#     return (lw, rw)
-# end
-
 function gen_exci_lw_rw(left_gs::InfiniteMPS, H::Union{InfiniteMPO,InfiniteMPOHamiltonian},
                         right_gs,
                         excileg)
@@ -83,97 +61,6 @@ function gen_exci_lw_rw(left_gs::InfiniteMPS, H::Union{InfiniteMPO,InfiniteMPOHa
     return GBL, GBR
 end
 
-# function environments(exci::InfiniteQP, ham::MPOHamiltonian, lenvs, renvs;
-#                       solver=Defaults.linearsolver)
-#     ids = collect(Iterators.filter(x -> isid(ham, x), 2:(ham.odim - 1)))
-#
-#     AL = exci.left_gs.AL
-#     AR = exci.right_gs.AR
-#
-#     (lBs, rBs) = gen_exci_lw_rw(exci.left_gs, ham, exci.right_gs, space(exci[1], 3))
-#
-#     for pos in 1:length(exci)
-#         lBs[:, pos + 1] = lBs[:, pos] * TransferMatrix(AR[pos], ham[pos], AL[pos]) /
-#                           exp(1im * exci.momentum)
-#         lBs[:, pos + 1] += leftenv(lenvs, pos, exci.left_gs) *
-#                            TransferMatrix(exci[pos], ham[pos], AL[pos]) /
-#                            exp(1im * exci.momentum)
-#
-#         if exci.trivial
-#             for i in ids
-#                 @plansor lBs[i, pos + 1][-1 -2; -3 -4] -= lBs[i, pos + 1][1 4; -3 2] *
-#                                                           r_RL(exci.left_gs, pos)[2; 3] *
-#                                                           τ[3 4; 5 1] *
-#                                                           l_RL(exci.left_gs, pos + 1)[-1;
-#                                                                                       6] *
-#                                                           τ[5 6; -4 -2]
-#             end
-#         end
-#     end
-#
-#     for pos in length(exci):-1:1
-#         rBs[:, pos - 1] = TransferMatrix(AL[pos], ham[pos], AR[pos]) *
-#                           rBs[:, pos] * exp(1im * exci.momentum)
-#         rBs[:, pos - 1] += TransferMatrix(exci[pos], ham[pos], AR[pos]) *
-#                            rightenv(renvs, pos, exci.right_gs) * exp(1im * exci.momentum)
-#
-#         if exci.trivial
-#             for i in ids
-#                 @plansor rBs[i, pos - 1][-1 -2; -3 -4] -= τ[6 4; 1 3] *
-#                                                           rBs[i, pos - 1][1 3; -3 2] *
-#                                                           l_LR(exci.left_gs, pos)[2; 4] *
-#                                                           r_LR(exci.left_gs, pos - 1)[-1;
-#                                                                                       5] *
-#                                                           τ[-2 -4; 5 6]
-#             end
-#         end
-#     end
-#
-#     @sync begin
-#         Threads.@spawn $lBs[:, 1] = left_excitation_transfer_system($lBs[:, 1], $ham, $exci;
-#                                                                     solver=$solver)
-#         Threads.@spawn $rBs[:, end] = right_excitation_transfer_system($rBs[:, end], $ham,
-#                                                                        $exci;
-#                                                                        solver=$solver)
-#     end
-#
-#     lB_cur = lBs[:, 1]
-#
-#     for i in 1:(length(exci) - 1)
-#         lB_cur = lB_cur * TransferMatrix(AR[i], ham[i], AL[i]) / exp(1im * exci.momentum)
-#
-#         if exci.trivial
-#             for k in ids
-#                 @plansor lB_cur[k][-1 -2; -3 -4] -= lB_cur[k][1 4; -3 2] *
-#                                                     r_RL(exci.left_gs, i)[2; 3] *
-#                                                     τ[3 4; 5 1] *
-#                                                     l_RL(exci.left_gs, i + 1)[-1; 6] *
-#                                                     τ[5 6; -4 -2]
-#             end
-#         end
-#
-#         lBs[:, i + 1] += lB_cur
-#     end
-#     rB_cur = rBs[:, end]
-#
-#     for i in length(exci):-1:2
-#         rB_cur = TransferMatrix(AL[i], ham[i], AR[i]) * rB_cur * exp(1im * exci.momentum)
-#
-#         if exci.trivial
-#             for k in ids
-#                 @plansor rB_cur[k][-1 -2; -3 -4] -= τ[6 4; 1 3] *
-#                                                     rB_cur[k][1 3; -3 2] *
-#                                                     l_LR(exci.left_gs, i)[2; 4] *
-#                                                     r_LR(exci.left_gs, i - 1)[-1; 5] *
-#                                                     τ[-2 -4; 5 6]
-#             end
-#         end
-#
-#         rBs[:, i - 1] += rB_cur
-#     end
-#
-#     return QPEnv(lBs, rBs, lenvs, renvs)
-# end
 function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
                       solver=Defaults.linearsolver)
     ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1))
@@ -275,30 +162,6 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
     return QuasiparticleEnvironments(lBs, rBs, lenvs, renvs)
 end
 
-# function environments(exci::FiniteQP,
-#                       ham::MPOHamiltonian,
-#                       lenvs=environments(exci.left_gs, ham),
-#                       renvs=exci.trivial ? lenvs : environments(exci.right_gs, ham))
-#     AL = exci.left_gs.AL
-#     AR = exci.right_gs.AR
-#
-#     #construct lBE
-#     (lBs, rBs) = gen_exci_lw_rw(exci.left_gs, ham, exci.right_gs, space(exci[1], 3))
-#
-#     for pos in 1:(length(exci) - 1)
-#         lBs[:, pos + 1] = lBs[:, pos] * TransferMatrix(AR[pos], ham[pos], AL[pos])
-#         lBs[:, pos + 1] += leftenv(lenvs, pos, exci.left_gs) *
-#                            TransferMatrix(exci[pos], ham[pos], AL[pos])
-#     end
-#
-#     for pos in length(exci):-1:2
-#         rBs[:, pos - 1] = TransferMatrix(AL[pos], ham[pos], AR[pos]) * rBs[:, pos]
-#         rBs[:, pos - 1] += TransferMatrix(exci[pos], ham[pos], AR[pos]) *
-#                            rightenv(renvs, pos, exci.right_gs)
-#     end
-#
-#     return QPEnv(lBs, rBs, lenvs, renvs)
-# end
 function environments(exci::FiniteQP,
                       H::FiniteMPOHamiltonian,
                       lenvs=environments(exci.left_gs, H),

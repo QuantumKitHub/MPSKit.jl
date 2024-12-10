@@ -1,4 +1,4 @@
-struct LazyLincoCache{A<:LinearCombination,C<:Tuple} <: Cache
+struct LazyLincoCache{A<:LinearCombination,C<:Tuple} <: AbstractMPSEnvironments
     operator::A
     envs::C
 end

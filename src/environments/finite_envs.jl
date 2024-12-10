@@ -1,15 +1,13 @@
 """
-    FinEnv keeps track of the environments for FiniteMPS / WindowMPS
-    It automatically checks if the queried environment is still correctly cached and if not - recalculates
+    struct FiniteEnvironments <: AbstractMPSEnvironments
 
-    if above is set to nothing, above === below.
-
-    opp can be a vector of nothing, in which case it'll just be the overlap
+Environment manager for `FiniteMPS` and `WindowMPS`. This structure is responsable for automatically checking
+if the queried environment is still correctly cached and if not recalculates.
 """
-struct FinEnv{A,B,C,D} <: Cache
+struct FiniteEnvironments{A,B,C,D} <: AbstractMPSEnvironments
     above::A
 
-    opp::B #the operator
+    operator::B #the operator
 
     ldependencies::Vector{C} #the data we used to calculate leftenvs/rightenvs
     rdependencies::Vector{C}
@@ -18,24 +16,22 @@ struct FinEnv{A,B,C,D} <: Cache
     rightenvs::Vector{D}
 end
 
-function Base.getproperty(envs::FinEnv, name::Symbol)
-    return name === :operator ? getfield(envs, :opp) : getfield(envs, name)
+function environments(below, (operator, above)::Tuple, args...; kwargs...)
+    return environments(below, operator, above, args...; kwargs...)
 end
-
-function environments(below, t::Tuple, args...; kwargs...)
-    return environments(below, t[1], t[2], args...; kwargs...)
-end;
-function environments(below, opp, leftstart, rightstart)
-    return environments(below, opp, nothing, leftstart, rightstart)
-end;
-function environments(below, opp, above, leftstart, rightstart)
+function environments(below, operator, leftstart, rightstart)
+    return environments(below, operator, nothing, leftstart, rightstart)
+end
+function environments(below, operator, above, leftstart, rightstart)
     leftenvs = [i == 0 ? leftstart : similar(leftstart) for i in 0:length(below)]
     N = length(below)
     rightenvs = [i == N ? rightstart : similar(rightstart) for i in 0:length(below)]
 
     t = similar(below.AL[1])
-    return FinEnv(above, opp, fill(t, length(below)), fill(t, length(below)), leftenvs,
-                  rightenvs)
+    return FiniteEnvironments(above, operator, fill(t, length(below)),
+                              fill(t, length(below)),
+                              leftenvs,
+                              rightenvs)
 end
 
 #automatically construct the correct leftstart/rightstart for a finitemps
@@ -68,7 +64,7 @@ end
 #     return environments(below, O, above, leftstart, rightstart)
 # end
 
-function MPSKit.environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) where {S}
+function environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) where {S}
     N = length(below)
     leftstart = isomorphism(storagetype(S),
                             left_virtualspace(below, 0) ⊗ space(O[1], 1)' ←
@@ -79,8 +75,8 @@ function MPSKit.environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) wh
     return environments(below, O, above, leftstart, rightstart)
 end
 
-function MPSKit.environments(below::FiniteMPS{S}, O::Union{FiniteMPO,FiniteMPOHamiltonian},
-                             above=nothing) where {S}
+function environments(below::FiniteMPS{S}, O::Union{FiniteMPO,FiniteMPOHamiltonian},
+                      above=nothing) where {S}
     Vl_bot = left_virtualspace(below, 0)
     Vl_mid = left_virtualspace(O, 1)
     Vl_top = isnothing(above) ? left_virtualspace(below, 0) : left_virtualspace(above, 0)
@@ -117,24 +113,26 @@ function environments(below::S, above::S) where {S<:Union{FiniteMPS,WindowMPS}}
     S isa WindowMPS &&
         (above.right_gs == below.right_gs || throw(ArgumentError("right gs differs")))
 
-    opp = fill(nothing, length(below))
-    return environments(below, opp, above, l_LL(above), r_RR(above))
+    operator = fill(nothing, length(below))
+    return environments(below, operator, above, l_LL(above), r_RR(above))
 end
 
-function environments(state::Union{FiniteMPS,WindowMPS}, opp::ProjectionOperator)
-    @plansor leftstart[-1; -2 -3 -4] := l_LL(opp.ket)[-3; -4] * l_LL(opp.ket)[-1; -2]
-    @plansor rightstart[-1; -2 -3 -4] := r_RR(opp.ket)[-1; -2] * r_RR(opp.ket)[-3; -4]
+function environments(state::Union{FiniteMPS,WindowMPS}, operator::ProjectionOperator)
+    @plansor leftstart[-1; -2 -3 -4] := l_LL(operator.ket)[-3; -4] *
+                                        l_LL(operator.ket)[-1; -2]
+    @plansor rightstart[-1; -2 -3 -4] := r_RR(operator.ket)[-1; -2] *
+                                         r_RR(operator.ket)[-3; -4]
     return environments(state, fill(nothing, length(state)), state, leftstart, rightstart)
 end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies
-function poison!(ca::FinEnv, ind)
+function poison!(ca::FiniteEnvironments, ind)
     ca.ldependencies[ind] = similar(ca.ldependencies[ind])
     return ca.rdependencies[ind] = similar(ca.rdependencies[ind])
 end
 
 #rightenv[ind] will be contracteable with the tensor on site [ind]
-function rightenv(ca::FinEnv, ind, state)
+function rightenv(ca::FiniteEnvironments, ind, state)
     a = findfirst(i -> !(state.AR[i] === ca.rdependencies[i]), length(state):-1:(ind + 1))
     a = a == nothing ? nothing : length(state) - a + 1
 
@@ -142,7 +140,7 @@ function rightenv(ca::FinEnv, ind, state)
         #we need to recalculate
         for j in a:-1:(ind + 1)
             above = isnothing(ca.above) ? state.AR[j] : ca.above.AR[j]
-            ca.rightenvs[j] = TransferMatrix(above, ca.opp[j], state.AR[j]) *
+            ca.rightenvs[j] = TransferMatrix(above, ca.operator[j], state.AR[j]) *
                               ca.rightenvs[j + 1]
             ca.rdependencies[j] = state.AR[j]
         end
@@ -151,7 +149,7 @@ function rightenv(ca::FinEnv, ind, state)
     return ca.rightenvs[ind + 1]
 end
 
-function leftenv(ca::FinEnv, ind, state)
+function leftenv(ca::FiniteEnvironments, ind, state)
     a = findfirst(i -> !(state.AL[i] === ca.ldependencies[i]), 1:(ind - 1))
 
     if a != nothing
@@ -159,7 +157,7 @@ function leftenv(ca::FinEnv, ind, state)
         for j in a:(ind - 1)
             above = isnothing(ca.above) ? state.AL[j] : ca.above.AL[j]
             ca.leftenvs[j + 1] = ca.leftenvs[j] *
-                                 TransferMatrix(above, ca.opp[j], state.AL[j])
+                                 TransferMatrix(above, ca.operator[j], state.AL[j])
             ca.ldependencies[j] = state.AL[j]
         end
     end

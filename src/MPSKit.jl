@@ -33,7 +33,6 @@ export entanglementplot, transferplot
 export braille
 
 # hamiltonian things
-export Cache
 export AbstractMPO
 export MPO, FiniteMPO, InfiniteMPO
 export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, HMPO
@@ -69,7 +68,6 @@ export transfer_left, transfer_right
 
 # Abstract type defs
 abstract type Algorithm end
-abstract type Cache end # cache "manages" environments
 
 # submodules
 include("utility/dynamictols.jl")
@@ -112,14 +110,13 @@ include("operators/lazysum.jl")
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
 
-include("environments/abstractenvironments.jl")
-include("environments/FinEnv.jl")
-include("environments/abstractinfenv.jl")
-include("environments/infinitempoenv.jl")
-include("environments/mpohaminfenv.jl")
-include("environments/qpenv.jl")
-include("environments/multipleenv.jl")
-include("environments/idmrgenv.jl")
+include("environments/abstract_envs.jl")
+include("environments/finite_envs.jl")
+include("environments/infinitempo_envs.jl")
+include("environments/infinitempohamiltonian_envs.jl")
+include("environments/qp_envs.jl")
+include("environments/idmrg_envs.jl")
+include("environments/multiple_envs.jl")
 include("environments/lazylincocache.jl")
 
 include("algorithms/fixedpoint.jl")

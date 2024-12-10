@@ -19,7 +19,7 @@ algorithm for time evolution.
 end
 
 function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-                  envs::Union{Cache,MultipleEnvironments}=environments(ψ, H);
+                  envs::AbstractMPSEnvironments=environments(ψ, H);
                   leftorthflag=true)
     temp_ACs = similar(ψ.AC)
     temp_CRs = similar(ψ.CR)
@@ -59,7 +59,7 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
 end
 
 function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-                   envs::Union{Cache,MultipleEnvironments}=environments(ψ, H))
+                   envs::AbstractMPSEnvironments=environments(ψ, H))
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
@@ -113,7 +113,7 @@ algorithm for time evolution.
 end
 
 function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
-                   envs=environments(ψ, H))
+                   envs::AbstractMPSEnvironments=environments(ψ, H))
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
@@ -152,6 +152,7 @@ end
 
 #copying version
 function timestep(ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
-                  alg::Union{TDVP,TDVP2}, envs=environments(ψ, H); kwargs...)
+                  alg::Union{TDVP,TDVP2}, envs::AbstractMPSEnvironments=environments(ψ, H);
+                  kwargs...)
     return timestep!(copy(ψ), H, time, timestep, alg, envs; kwargs...)
 end

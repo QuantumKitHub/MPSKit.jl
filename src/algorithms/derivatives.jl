@@ -199,7 +199,7 @@ function ∂C(x::Vector, leftenv, rightenv)
 end
 
 #downproject for approximate
-function c_proj(pos, below, envs::FinEnv)
+function c_proj(pos, below, envs::FiniteEnvironments)
     return ∂C(envs.above.CR[pos], leftenv(envs, pos + 1, below), rightenv(envs, pos, below))
 end
 

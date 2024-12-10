@@ -18,11 +18,12 @@ MPOHamiltonian
 
 ## Environments
 ```@docs
-MPSKit.AbstractInfEnv
+MPSKit.AbstractMPSEnvironments
+MPSKit.AbstractInfiniteEnvironments
 MPSKit.InfiniteMPOEnvironments
-MPSKit.MPOHamInfEnv
-MPSKit.FinEnv
-MPSKit.IDMRGEnvs
+MPSKit.InfiniteMPOHamiltonianEnvironments
+MPSKit.FiniteEnvironments
+MPSKit.IDMRGEnvironments
 ```
 
 ## Generic actions
