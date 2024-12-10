@@ -61,10 +61,10 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
                                                                   B<:MPSBondTensor}
         return new{A,B}(ALs, ARs, ACs, CLs)
     end
-    function FiniteMPS(ALs::Vector{A}, ARs::Vector{A},
-                       ACs::Vector{A},
-                       CLs::Vector{B}) where {A<:Union{Missing,GenericMPSTensor},
-                                              B<:Union{Missing,MPSBondTensor}}
+    function FiniteMPS(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
+                       ACs::Vector{Union{Missing,A}},
+                       CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
+                                                             B<:MPSBondTensor}
         length(ACs) == length(CLs) - 1 == length(ALs) == length(ARs) ||
             throw(DimensionMismatch("length mismatch of tensors"))
         sum(ismissing.(ACs)) + sum(ismissing.(CLs)) < length(ACs) + length(CLs) ||

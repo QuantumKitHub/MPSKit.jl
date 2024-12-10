@@ -13,11 +13,10 @@ Variational optimization algorithm for excitations of finite Matrix Product Stat
 end
 
 function excitations(H::FiniteMPOHamiltonian, alg::FiniteExcited,
-                     states::FiniteMPS...;
+                     states::Tuple{T,Vararg{T}};
                      init=FiniteMPS([copy(first(states).AC[i])
                                      for i in 1:length(first(states))]),
-                     num=1)
-    T = eltype(states)
+                     num=1) where {T<:FiniteMPS}
     num == 0 && return (scalartype(T)[], T[])
 
     super_op = LinearCombination(tuple(H, ProjectionOperator.(states)...),
