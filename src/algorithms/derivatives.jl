@@ -71,28 +71,6 @@ end
 ∂∂AC(pos::CartesianIndex, mps, operator, envs) = ∂∂AC(Tuple(pos)..., mps, operator, envs)
 ∂∂AC2(pos::CartesianIndex, mps, operator, envs) = ∂∂AC2(Tuple(pos)..., mps, operator, envs)
 
-"""
-    One-site derivative
-"""
-
-# function ∂AC(x::MPSTensor, H::SparseMPOSlice, leftenv, rightenv)::typeof(x)
-#     local y
-#     @static if Defaults.parallelize_derivatives
-#         @floop WorkStealingEx() for (i, j) in keys(H)
-#             t = ∂AC(x, H.Os[i, j], leftenv[i], rightenv[j])
-#             @reduce(y = inplace_add!(nothing, t))
-#         end
-#     else
-#         els = collect(keys(H))
-#         y = ∂AC(x, H.Os[els[1]...], leftenv[els[1][1]], rightenv[els[1][2]])
-#         for (i, j) in els[2:end]
-#             add!(y, ∂AC(x, H.Os[i, j], leftenv[i], rightenv[j]))
-#         end
-#     end
-#
-#     return y
-# end
-
 function ∂AC(x::MPSTensor{S}, operator::MPOTensor{S}, leftenv::MPSTensor{S},
              rightenv::MPSTensor{S})::typeof(x) where {S}
     @plansor y[-1 -2; -3] := leftenv[-1 5; 4] * x[4 2; 1] * operator[5 -2; 2 3] *
@@ -114,45 +92,6 @@ function ∂AC(x::MPSTensor, ::Nothing, leftenv, rightenv)
     return _transpose_front(leftenv * _transpose_tail(x * rightenv))
 end
 
-"""
-    Two-site derivative
-"""
-# function ∂AC2(x::MPOTensor, h1::SparseMPOSlice, h2::SparseMPOSlice, leftenv,
-#               rightenv)::typeof(x)
-#     local toret
-#
-#     tl = tensormaptype(spacetype(x), 2, 3, storagetype(x))
-#     hl = Vector{Union{Nothing,tl}}(undef, h1.odim)
-#     @threads for j in 1:(h1.odim)
-#         @floop WorkStealingEx() for i in keys(h1, :, j)
-#             if isscal(h1, i, j)
-#                 @plansor t[-1 -2; -3 -4 -5] := (h1.Os[i, j] * leftenv[i])[-1 1; 2] *
-#                                                τ[1 -2; 3 -5] * x[2 3; -3 -4]
-#             else
-#                 @plansor t[-1 -2; -3 -4 -5] := leftenv[i][-1 1; 2] * h1[i, j][1 -2; 3 -5] *
-#                                                x[2 3; -3 -4]
-#             end
-#             @reduce(curel = inplace_add!(nothing, t))
-#         end
-#         hl[j] = curel
-#     end
-#
-#     @floop WorkStealingEx() for (j, k) in keys(h2)
-#         isnothing(hl[j]) && continue
-#
-#         if isscal(h2, j, k)
-#             @plansor t[-1 -2; -3 -4] := (h2.Os[j, k] * hl[j])[-1 -2; 5 3 4] * τ[4 -4; 3 6] *
-#                                         rightenv[k][5 6; -3]
-#         else
-#             @plansor t[-1 -2; -3 -4] := hl[j][-1 -2; 5 3 4] * h2[j, k][4 -4; 3 6] *
-#                                         rightenv[k][5 6; -3]
-#         end
-#
-#         @reduce(toret = inplace_add!(nothing, t))
-#     end
-#
-#     return toret
-# end
 function ∂AC2(x::MPOTensor, operator1::MPOTensor, operator2::MPOTensor, leftenv, rightenv)
     @plansor toret[-1 -2; -3 -4] := leftenv[-1 7; 6] * x[6 5; 1 3] * operator1[7 -2; 5 4] *
                                     operator2[4 -4; 3 2] * rightenv[1 2; -3]
