@@ -97,9 +97,9 @@ end
 #rightenv[ind] will be contracteable with the tensor on site [ind]
 function rightenv(ca::FiniteEnvironments, ind, state)
     a = findfirst(i -> !(state.AR[i] === ca.rdependencies[i]), length(state):-1:(ind + 1))
-    a = a == nothing ? nothing : length(state) - a + 1
+    a = isnothing(a) ? nothing : length(state) - a + 1
 
-    if a != nothing
+    if !isnothing(a)
         #we need to recalculate
         for j in a:-1:(ind + 1)
             above = isnothing(ca.above) ? state.AR[j] : ca.above.AR[j]
@@ -115,7 +115,7 @@ end
 function leftenv(ca::FiniteEnvironments, ind, state)
     a = findfirst(i -> !(state.AL[i] === ca.ldependencies[i]), 1:(ind - 1))
 
-    if a != nothing
+    if !isnothing(a)
         #we need to recalculate
         for j in a:(ind - 1)
             above = isnothing(ca.above) ? state.AL[j] : ca.above.AL[j]
