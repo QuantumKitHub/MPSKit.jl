@@ -62,7 +62,6 @@ export transfer_left, transfer_right
 
 @deprecate virtualspace left_virtualspace # there is a possible ambiguity when C isn't square, necessitating specifying left or right virtualspace
 @deprecate params(args...) environments(args...)
-# @deprecate InfiniteMPO(args...) DenseMPO(args...)
 
 # Abstract type defs
 abstract type Algorithm end
@@ -96,8 +95,6 @@ include("states/ortho.jl")
 
 include("operators/abstractmpo.jl")
 include("operators/mpo.jl")
-# include("operators/sparsempo/sparseslice.jl")
-# include("operators/sparsempo/sparsempo.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
 include("operators/mpomultiline.jl")
 include("operators/projection.jl")
@@ -163,8 +160,5 @@ include("algorithms/approximate/idmrg.jl")
 include("algorithms/ED.jl")
 
 include("algorithms/unionalg.jl")
-
-# include("precompile.jl")
-# _precompile_()
 
 end
