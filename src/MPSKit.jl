@@ -22,8 +22,6 @@ export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
 export PeriodicArray, PeriodicVector, PeriodicMatrix, WindowArray
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
-export leftorth,
-       rightorth, leftorth!, rightorth!, poison!, uniform_leftorth, uniform_rightorth
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # should be properties
 
 # useful utility functions?
@@ -49,8 +47,8 @@ export excitations, FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAn
 export marek_gap, correlation_length, correlator
 export time_evolve, timestep!, timestep
 export TDVP, TDVP2, make_time_mpo, WI, WII, TaylorCluster
-export splitham, infinite_temperature, entanglement_spectrum, transfer_spectrum, variance
-export changebonds!, changebonds, VUMPSSvdCut, OptimalExpand, SvdCut, UnionTrunc, RandExpand
+export entanglement_spectrum, transfer_spectrum, variance
+export changebonds!, changebonds, VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand
 export entropy
 export propagator, NaiveInvert, Jeckelmann, DynamicalDMRG
 export fidelity_susceptibility
