@@ -34,36 +34,6 @@ function environments(below, operator, above, leftstart, rightstart)
                               rightenvs)
 end
 
-#automatically construct the correct leftstart/rightstart for a finitemps
-# function environments(below::FiniteMPS{S}, O::Union{SparseMPO,MPOHamiltonian},
-#                       above=nothing) where {S}
-#     lll = l_LL(below)
-#     rrr = r_RR(below)
-#     rightstart = Vector{S}()
-#     leftstart = Vector{S}()
-#
-#     for i in 1:(O.odim)
-#         util_left = fill_data!(similar(lll, O.domspaces[1, i]'), one)
-#         util_right = fill_data!(similar(rrr, O.imspaces[length(below), i]'), one)
-#
-#         @plansor ctl[-1 -2; -3] := lll[-1; -3] * util_left[-2]
-#         @plansor ctr[-1 -2; -3] := rrr[-1; -3] * util_right[-2]
-#
-#         if i != 1
-#             ctl = zero(ctl)
-#         end
-#
-#         if (i != O.odim && O isa MPOHamiltonian) || (i != 1 && O isa SparseMPO)
-#             ctr = zero(ctr)
-#         end
-#
-#         push!(leftstart, ctl)
-#         push!(rightstart, ctr)
-#     end
-#
-#     return environments(below, O, above, leftstart, rightstart)
-# end
-
 function environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) where {S}
     N = length(below)
     leftstart = isomorphism(storagetype(S),
@@ -99,13 +69,6 @@ function environments(below::WindowMPS, O::Union{InfiniteMPOHamiltonian,Infinite
 
     return environments(below, O, above, leftstart, rightstart)
 end
-#extract the correct leftstart/rightstart for WindowMPS
-# function environments(state::WindowMPS, O::Union{SparseMPO,MPOHamiltonian,DenseMPO},
-#                       above=nothing; lenvs=environments(state.left_gs, O),
-#                       renvs=environments(state.right_gs, O))
-#     return environments(state, O, above, copy(leftenv(lenvs, 1, state.left_gs)),
-#                         copy(rightenv(renvs, length(state), state.right_gs)))
-# end
 
 function environments(below::S, above::S) where {S<:Union{FiniteMPS,WindowMPS}}
     S isa WindowMPS &&
