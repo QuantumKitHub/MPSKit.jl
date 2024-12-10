@@ -26,7 +26,7 @@ end
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(ost, H))
     ϵ::Float64 = calc_galerkin(ost, oenvs)
     ψ = copy(ost)
-    envs = IDMRGEnv(ost, oenvs)
+    envs = IDMRGEnvironments(ost, oenvs)
     log = IterLog("IDMRG")
 
     LoggingExtras.withlevel(; alg.verbosity) do
@@ -106,7 +106,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
     ϵ::Float64 = calc_galerkin(ost, oenvs)
 
     ψ = copy(ost)
-    envs = IDMRGEnv(ost, oenvs)
+    envs = IDMRGEnvironments(ost, oenvs)
     log = IterLog("IDMRG2")
 
     LoggingExtras.withlevel(; alg.verbosity) do
