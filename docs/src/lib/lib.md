@@ -10,10 +10,15 @@ MPSMultiline
 
 ## Operators
 ```@docs
+AbstractMPO
+MPO
 FiniteMPO
+InfiniteMPO
+MPOHamiltonian
+FiniteMPOHamiltonian
+InfiniteMPOHamiltonian
 SparseMPO
 DenseMPO
-MPOHamiltonian
 ```
 
 ## Environments
