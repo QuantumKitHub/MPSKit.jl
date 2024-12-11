@@ -33,7 +33,7 @@ export braille
 # hamiltonian things
 export AbstractMPO
 export MPO, FiniteMPO, InfiniteMPO
-export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, HMPO
+export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian
 export SparseMPO, DenseMPO, MPOMultiline
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 

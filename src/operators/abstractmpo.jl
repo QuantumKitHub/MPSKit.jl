@@ -7,35 +7,6 @@ Abstract supertype for Matrix Product Operators (MPOs).
 """
 abstract type AbstractMPO{O<:MPOTensor} <: AbstractVector{O} end
 
-# Hamiltonian Matrix Product Operators
-# ====================================
-"""
-    abstract type AbstractHMPO{O<:MPOTensor} <: AbstractMPO{O}
-
-Abstract supertype for Hamiltonian MPOs.
-"""
-abstract type AbstractHMPO{O<:MPOTensor} <: AbstractMPO{O} end
-
-function HMPO(lattice::AbstractVector{S}, terms...) where {S<:VectorSpace}
-    if lattice isa PeriodicArray
-        return InfiniteMPOHamiltonian(lattice, terms...)
-    else
-        return FiniteMPOHamiltonian(lattice, terms...)
-    end
-end
-function HMPO(operator::AbstractTensorMap{E,S,N,N}; L=Inf) where {E,S,N}
-    @assert domain(operator) == codomain(operator) "Not a valid Hamiltonian operator."
-    @assert allequal(collect(domain(operator))) "The operator must have the same local spaces."
-
-    if isfinite(L)
-        lattice = repeat([space(operator, 1)], L)
-        return HMPO(lattice, ntuple(x -> x + i - 1, N) => operator for i in 1:(L - (N - 1)))
-    else
-        lattice = PeriodicArray([space(operator, 1)])
-        return HMPO(lattice, ntuple(identity, N) => operator)
-    end
-end
-
 # useful union types
 const SparseMPO{O<:SparseBlockTensorMap} = AbstractMPO{O}
 
