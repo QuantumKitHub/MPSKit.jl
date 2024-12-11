@@ -73,9 +73,10 @@ function MPSKit.environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) wh
     N = length(below)
     leftstart = isomorphism(storagetype(S),
                             left_virtualspace(below, 0) ⊗ space(O[1], 1)' ←
-                            left_virtualspace(below, 0))
+                            left_virtualspace(something(above, below), 0))
     rightstart = isomorphism(storagetype(S),
-                             right_virtualspace(below, N) ⊗ space(O[N], 4)' ←
+                             right_virtualspace(something(above, below), N) ⊗
+                             space(O[N], 4)' ←
                              right_virtualspace(below, length(below)))
     return environments(below, O, above, leftstart, rightstart)
 end
@@ -101,7 +102,7 @@ end
 function environments(state::Union{FiniteMPS,WindowMPS}, opp::ProjectionOperator)
     @plansor leftstart[-1; -2 -3 -4] := l_LL(opp.ket)[-3; -4] * l_LL(opp.ket)[-1; -2]
     @plansor rightstart[-1; -2 -3 -4] := r_RR(opp.ket)[-1; -2] * r_RR(opp.ket)[-3; -4]
-    return environments(state, fill(nothing, length(state)), state, leftstart, rightstart)
+    return environments(state, fill(nothing, length(state)), opp.ket, leftstart, rightstart)
 end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies
