@@ -43,15 +43,15 @@ verbosity_conv = 1
     @testset "DMRG2" begin
         ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
         v₀ = variance(ψ₀, H)
-
+        trscheme = truncdim(floor(Int, D * 1.5))
         # test logging
         ψ, envs, δ = find_groundstate(ψ₀, H,
                                       DMRG2(; verbosity=verbosity_full, maxiter=2,
-                                            trscheme=truncdim(D)))
+                                            trscheme))
 
         ψ, envs, δ = find_groundstate(ψ, H,
                                       DMRG2(; verbosity=verbosity_conv, maxiter=10,
-                                            trscheme=truncdim(D)), envs)
+                                            trscheme), envs)
         v = variance(ψ, H)
 
         # test using low variance
@@ -216,7 +216,7 @@ end
 
     @testset "DMRG2" begin
         # test logging passes
-        trscheme = truncdim(15)
+        trscheme = truncdim(floor(Int, D * 1.5))
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
                                       DMRG2(; tol, verbosity=5, maxiter=1, trscheme))
 
@@ -289,7 +289,7 @@ end
         H_lazy′ = repeat(H_lazy, 2)
         H′ = repeat(H, 2)
 
-        trscheme = truncdim(D)
+        trscheme = truncdim(floor(Int, D * 1.5))
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀′, H_lazy′,
                                       IDMRG2(; tol, verbosity=5, maxiter=2, trscheme))
