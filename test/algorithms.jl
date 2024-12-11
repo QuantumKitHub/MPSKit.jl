@@ -426,16 +426,16 @@ end
             ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^15)
             (ψ, envs, _) = find_groundstate(ψ, H; verbosity)
 
-            #find energy with quasiparticle ansatz
+            # find energy with quasiparticle ansatz
             energies_QP, ϕs = excitations(H, QuasiparticleAnsatz(), ψ, envs)
             @test variance(ϕs[1], H) < 1e-6
 
-            #find energy with normal dmrg
-            energies_dm, _ = excitations(H,
-                                         FiniteExcited(;
-                                                       gsalg=DMRG(; verbosity,
-                                                                  tol=1e-6)), ψ)
-            @test energies_dm[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
+            # find energy with normal dmrg
+            for gsalg in (DMRG(; verbosity, tol=1e-6),
+                          DMRG2(; verbosity, tol=1e-6, trscheme=truncbelow(1e-4)))
+                energies_dm, _ = excitations(H, FiniteExcited(; gsalg), ψ)
+                @test energies_dm[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
+            end
 
             # find energy with Chepiga ansatz
             energies_ch, _ = excitations(H, ChepigaAnsatz(), ψ, envs)
