@@ -34,30 +34,18 @@ function environments(below, operator, above, leftstart, rightstart)
                               rightenvs)
 end
 
-function environments(below::FiniteMPS{S}, O::DenseMPO, above=nothing) where {S}
-    N = length(below)
-    leftstart = isomorphism(storagetype(S),
-                            left_virtualspace(below, 0) ⊗ space(O[1], 1)' ←
-                            left_virtualspace(something(above, below), 0))
-    rightstart = isomorphism(storagetype(S),
-                             right_virtualspace(something(above, below), N) ⊗
-                             space(O[N], 4)' ←
-                             right_virtualspace(below, length(below)))
-    return environments(below, O, above, leftstart, rightstart)
-end
-
 function environments(below::FiniteMPS{S}, O::Union{FiniteMPO,FiniteMPOHamiltonian},
                       above=nothing) where {S}
-    Vl_bot = left_virtualspace(below, 0)
+    Vl_bot = left_virtualspace(below, 1)
     Vl_mid = left_virtualspace(O, 1)
-    Vl_top = isnothing(above) ? left_virtualspace(below, 0) : left_virtualspace(above, 0)
+    Vl_top = isnothing(above) ? left_virtualspace(below, 1) : left_virtualspace(above, 1)
     leftstart = isomorphism(storagetype(S), Vl_bot ⊗ Vl_mid' ← Vl_top)
 
     N = length(below)
     Vr_bot = right_virtualspace(below, N)
     Vr_mid = right_virtualspace(O, N)
     Vr_top = isnothing(above) ? right_virtualspace(below, N) : right_virtualspace(above, N)
-    rightstart = isomorphism(storagetype(S), Vr_top ⊗ Vr_mid' ← Vr_bot)
+    rightstart = isomorphism(storagetype(S), Vr_top ⊗ Vr_mid ← Vr_bot)
 
     return environments(below, O, above, leftstart, rightstart)
 end

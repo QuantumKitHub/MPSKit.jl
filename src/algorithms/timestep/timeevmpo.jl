@@ -327,7 +327,7 @@ function make_time_mpo(H::InfiniteMPOHamiltonian{T}, dt, alg::WII) where {T}
         Vᵣ = right_virtualspace(H, i)[1:(end - 1)]
         P = physicalspace(H, i)
 
-        h′ = similar(H[i], Vₗ ⊗ P ← P ⊗ Vᵣ')
+        h′ = similar(H[i], Vₗ ⊗ P ← P ⊗ Vᵣ)
         h′[2:end, 1, 1, 2:end] = WA[i]
         h′[2:end, 1, 1, 1] = WB[i]
         h′[1, 1, 1, 2:end] = WC[i]

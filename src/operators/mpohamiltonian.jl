@@ -36,7 +36,7 @@ const FiniteMPOHamiltonian{O<:MPOTensor} = MPOHamiltonian{O,Vector{O}}
 
 function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Ws)[1:(end - 1)]
-        dual(right_virtualspace(Ws[i])) == left_virtualspace(Ws[i + 1]) ||
+        right_virtualspace(Ws[i]) == left_virtualspace(Ws[i + 1]) ||
             throw(ArgumentError("The virtual spaces of the MPO tensors at site $i do not match."))
     end
     return FiniteMPOHamiltonian{O}(Ws)
@@ -46,7 +46,7 @@ const InfiniteMPOHamiltonian{O<:MPOTensor} = MPOHamiltonian{O,PeriodicVector{O}}
 
 function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Ws)
-        dual(right_virtualspace(Ws[i])) == left_virtualspace(Ws[mod1(i + 1, end)]) ||
+        right_virtualspace(Ws[i]) == left_virtualspace(Ws[mod1(i + 1, end)]) ||
             throw(ArgumentError("The virtual spaces of the MPO tensors at site $i do not match."))
     end
     return InfiniteMPOHamiltonian{O}(Ws)
@@ -152,7 +152,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
                 V[key_R == 0 ? end : key_R] = if O isa Number
                     virtualspaces[i][key_L]
                 else
-                    right_virtualspace(O)'
+                    right_virtualspace(O)
                 end
             end
         end
@@ -246,9 +246,9 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
                 @assert virtualspaces[i - 1][key_L] == left_virtualspace(O)
             end
             if ismissing(virtualspaces[i][key_R])
-                virtualspaces[i][key_R] = right_virtualspace(O)'
+                virtualspaces[i][key_R] = right_virtualspace(O)
             else
-                @assert virtualspaces[i][key_R] == right_virtualspace(O)'
+                @assert virtualspaces[i][key_R] == right_virtualspace(O)
             end
         end
     end
@@ -368,8 +368,8 @@ function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
     U_left = ones(scalartype(H), V_left)'
 
     V_right = right_virtualspace(H, length(H))
-    @assert V_right == oneunit(V_right)'
-    U_right = ones(scalartype(H), V_right')
+    @assert V_right == oneunit(V_right)
+    U_right = ones(scalartype(H), V_right)
 
     tensors = vcat(U_left, parent(H), U_right)
     indices = [[i, -i, -(i + N), i + 1] for i in 1:length(H)]
@@ -402,7 +402,7 @@ function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:MPOHamiltonian}
         Vᵣ = (!isinf && i == length(H)) ? Vᵣ₁ :
              BlockTensorKit.oplus(Vᵣ₁[1:(end - 1)], Vᵣ₂[2:end])
 
-        W = similar(eltype(H), Vₗ ⊗ physicalspace(H₁, i) ← physicalspace(H₁, i) ⊗ Vᵣ')
+        W = similar(eltype(H), Vₗ ⊗ physicalspace(H₁, i) ← physicalspace(H₁, i) ⊗ Vᵣ)
         #=
         (Direct) sum of two hamiltonians in Jordan form:
         (1 C₁ D₁)   (1 C₂ D₂)   (1  C₁  C₂  D₁+D₂)
@@ -528,7 +528,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
 
     # right to middle
     U = ones(scalartype(H), right_virtualspace(H, length(H)))
-    @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * conj(U[1])
+    @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * U[1]
     L, Q = rightorth!(a; alg=LQ())
     A′[end] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
 

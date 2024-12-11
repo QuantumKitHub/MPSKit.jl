@@ -66,8 +66,8 @@ function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
         # left side
         T = storagetype(site_type(ψ))
         @plansor Vl[-1 -2; -3] := isomorphism(T,
-                                              left_virtualspace(ψ, sites[1] - 1),
-                                              left_virtualspace(ψ, sites[1] - 1))[-1; -3] *
+                                              left_virtualspace(ψ, sites[1]),
+                                              left_virtualspace(ψ, sites[1]))[-1; -3] *
                                   conj(Ut[-2])
 
         # middle
@@ -104,7 +104,7 @@ function expectation_value(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
                            envs::AbstractMPSEnvironments=environments(ψ, H))
     return sum(1:length(ψ)) do i
         util = fill_data!(similar(ψ.AL[1], right_virtualspace(H, i)[end]), one)
-        @plansor GR[-1 -2; -3] := r_LL(ψ, i)[-1; -3] * conj(util[-2])
+        @plansor GR[-1 -2; -3] := r_LL(ψ, i)[-1; -3] * util[-2]
         return contract_mpo_expval(ψ.AL[i], leftenv(envs, i, ψ), H[i][:, 1, 1, end], GR)
     end
 end

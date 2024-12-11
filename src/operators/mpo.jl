@@ -19,7 +19,7 @@ const FiniteMPO{O<:MPOTensor} = MPO{O,Vector{O}}
 
 function FiniteMPO(Os::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Os)[1:(end - 1)]
-        dual(right_virtualspace(Os[i])) == left_virtualspace(Os[i + 1]) ||
+        right_virtualspace(Os[i]) == left_virtualspace(Os[i + 1]) ||
             throw(SpaceMismatch("unmatching virtual spaces at site $i"))
     end
     return FiniteMPO{O}(Os)
@@ -38,7 +38,7 @@ const InfiniteMPO{O<:MPOTensor} = MPO{O,PeriodicVector{O}}
 
 function InfiniteMPO(Os::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Os)
-        dual(right_virtualspace(Os[i])) == left_virtualspace(Os[mod1(i + 1, end)]) ||
+        right_virtualspace(Os[i]) == left_virtualspace(Os[mod1(i + 1, end)]) ||
             throw(SpaceMismatch("umatching virtual spaces at site $i"))
     end
     return InfiniteMPO{O}(Os)
@@ -139,8 +139,8 @@ function Base.convert(::Type{TensorMap}, mpo::FiniteMPO)
     U_left = ones(scalartype(mpo), V_left)'
 
     V_right = right_virtualspace(mpo, length(mpo))
-    @assert V_right == oneunit(V_right)'
-    U_right = ones(scalartype(mpo), V_right')
+    @assert V_right == oneunit(V_right)
+    U_right = ones(scalartype(mpo), V_right)
 
     tensors = vcat(U_left, parent(mpo), U_right)
     indices = [[i, -i, -(2N - i + 1), i + 1] for i in 1:length(mpo)]
@@ -166,10 +166,10 @@ function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     A = storagetype(TO)
 
     # left half
-    F₁ = isometry(A, (right_virtualspace(mpo1, 1) ⊕ right_virtualspace(mpo2, 1))',
-                  right_virtualspace(mpo1, 1)')
+    F₁ = isometry(A, (right_virtualspace(mpo1, 1) ⊕ right_virtualspace(mpo2, 1)),
+                  right_virtualspace(mpo1, 1))
     F₂ = leftnull(F₁)
-    @assert _lastspace(F₂) == right_virtualspace(mpo2, 1)
+    @assert _lastspace(F₂) == right_virtualspace(mpo2, 1)'
 
     @plansor O[-3 -1 -2; -4] := mpo1[1][-1 -2; -3 1] * conj(F₁[-4; 1]) +
                                 mpo2[1][-1 -2; -3 1] * conj(F₂[-4; 1])
@@ -184,10 +184,10 @@ function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
         @plansor O₂[-1 -2; -3 -4] := R[-1; 1] * F₂[1; 2] * mpo2[i][2 -2; -3 -4]
 
         # incorporate fusers from right side
-        F₁ = isometry(A, (right_virtualspace(mpo1, i) ⊕ right_virtualspace(mpo2, i))',
-                      right_virtualspace(mpo1, i)')
+        F₁ = isometry(A, (right_virtualspace(mpo1, i) ⊕ right_virtualspace(mpo2, i)),
+                      right_virtualspace(mpo1, i))
         F₂ = leftnull(F₁)
-        @assert _lastspace(F₂) == right_virtualspace(mpo2, i)
+        @assert _lastspace(F₂) == right_virtualspace(mpo2, i)'
         @plansor O[-3 -1 -2; -4] := O₁[-1 -2; -3 1] * conj(F₁[-4; 1]) +
                                     O₂[-1 -2; -3 1] * conj(F₂[-4; 1])
 
@@ -248,8 +248,8 @@ function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     S = spacetype(TO)
     if (left_virtualspace(mpo1, 1) != oneunit(S) ||
         left_virtualspace(mpo2, 1) != oneunit(S)) ||
-       (right_virtualspace(mpo1, N)' != oneunit(S) ||
-        right_virtualspace(mpo2, N)' != oneunit(S))
+       (right_virtualspace(mpo1, N) != oneunit(S) ||
+        right_virtualspace(mpo2, N) != oneunit(S))
         @warn "left/right virtual space is not trivial, fusion may not be unique"
         # this is a warning because technically any isomorphism that fuses the left/right
         # would work and for now I dont feel like figuring out if this is important
@@ -261,13 +261,8 @@ function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
     # note order of mpos: mpo1 * mpo2 * state -> mpo2 on top of mpo1
     local Fᵣ # trick to make Fᵣ defined in the loop
     for i in 1:N
-        Fₗ = i != 1 ? Fᵣ :
-             isomorphism(A, fuse(left_virtualspace(mpo2, i), left_virtualspace(mpo1, i)),
-                         left_virtualspace(mpo2, i) * left_virtualspace(mpo1, i))
-        Fᵣ = isomorphism(A,
-                         fuse(right_virtualspace(mpo2, i)', right_virtualspace(mpo1, i)'),
-                         right_virtualspace(mpo2, i)' * right_virtualspace(mpo1, i)')
-
+        Fₗ = i != 1 ? Fᵣ : fuser(A, left_virtualspace(mpo2, i), left_virtualspace(mpo1, i))
+        Fᵣ = fuser(A, right_virtualspace(mpo2, i), right_virtualspace(mpo1, i))
         @plansor O[i][-1 -2; -3 -4] := Fₗ[-1; 1 4] * mpo2[i][1 2; -3 3] *
                                        mpo1[i][4 -2; 2 5] *
                                        conj(Fᵣ[-4; 3 5])
@@ -284,11 +279,8 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
 
     local Fᵣ # trick to make Fᵣ defined in the loop
     for i in 1:length(mps)
-        Fₗ = i != 1 ? Fᵣ :
-             isomorphism(TT, fuse(left_virtualspace(A[i]), left_virtualspace(mpo, i)),
-                         left_virtualspace(A[i]) * left_virtualspace(mpo, i))
-        Fᵣ = isomorphism(TT, fuse(right_virtualspace(A[i])', right_virtualspace(mpo, i)'),
-                         right_virtualspace(A[i])' * right_virtualspace(mpo, i)')
+        Fₗ = i != 1 ? Fᵣ : fuser(TT, left_virtualspace(mps, i), left_virtualspace(mpo, i))
+        Fᵣ = fuser(TT, right_virtualspace(mps, i), right_virtualspace(mpo, i))
         A[i] = _fuse_mpo_mps(mpo[i], A[i], Fₗ, Fᵣ)
     end
 
@@ -298,12 +290,11 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
 end
 
 function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
-    check_length(mpo, mps)
+    L = check_length(mpo, mps)
     T = promote_type(scalartype(mpo), scalartype(mps))
-    fusers = PeriodicArray(map(mps.AL, mpo) do al, mp
-                               return fuser(T, _firstspace(al), _firstspace(mp))
-                           end)
-    As = map(1:length(mps)) do i
+    fusers = PeriodicArray(fuser.(T, left_virtualspace.(Ref(mps), 1:L),
+                                  left_virtualspace.(Ref(mpo), 1:L)))
+    As = map(1:L) do i
         return _fuse_mpo_mps(mpo[i], mps.AL[i], fusers[i], fusers[i + 1])
     end
     return changebonds(InfiniteMPS(As), SvdCut(; trscheme=notrunc()))
@@ -346,14 +337,14 @@ function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO, ket::FiniteMPS{T}) whe
     Nhalf = N ÷ 2
     # left half
     ρ_left = isomorphism(storagetype(T),
-                         left_virtualspace(bra, 0) ⊗ left_virtualspace(mpo, 1)',
-                         left_virtualspace(ket, 0))
+                         left_virtualspace(bra, 1) ⊗ left_virtualspace(mpo, 1)',
+                         left_virtualspace(ket, 1))
     T_left = TransferMatrix(ket.AL[1:Nhalf], mpo[1:Nhalf], bra.AL[1:Nhalf])
     ρ_left = ρ_left * T_left
 
     # right half
     ρ_right = isomorphism(storagetype(T),
-                          right_virtualspace(ket, N) ⊗ right_virtualspace(mpo, N)',
+                          right_virtualspace(ket, N) ⊗ right_virtualspace(mpo, N),
                           right_virtualspace(ket, length(ket)))
     T_right = TransferMatrix(ket.AR[(Nhalf + 1):end], mpo[(Nhalf + 1):end],
                              bra.AR[(Nhalf + 1):end])
