@@ -43,7 +43,7 @@ struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     function WindowMPS(ψₗ::InfiniteMPS{A,B}, ψₘ::FiniteMPS{A,B},
                        ψᵣ::InfiniteMPS{A,B}=copy(ψₗ)) where {A<:GenericMPSTensor,
                                                              B<:MPSBondTensor}
-        left_virtualspace(ψₗ, 0) == left_virtualspace(ψₘ, 0) &&
+        left_virtualspace(ψₗ, 1) == left_virtualspace(ψₘ, 1) &&
             right_virtualspace(ψₘ, length(ψₘ)) == right_virtualspace(ψᵣ, length(ψₘ)) ||
             throw(SpaceMismatch("Mismatch between window and environment virtual spaces"))
         return new{A,B}(ψₗ, ψₘ, ψᵣ)
@@ -62,7 +62,7 @@ end
 function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
                    maxvirtspace::S, ψₗ::InfiniteMPS,
                    ψᵣ::InfiniteMPS=ψₗ) where {S<:ElementarySpace}
-    ψₘ = FiniteMPS(f, elt, physspaces, maxvirtspace; left=left_virtualspace(ψₗ, 0),
+    ψₘ = FiniteMPS(f, elt, physspaces, maxvirtspace; left=left_virtualspace(ψₗ, 1),
                    right=right_virtualspace(ψᵣ, length(physspaces)))
     return WindowMPS(ψₗ, ψₘ, ψᵣ)
 end

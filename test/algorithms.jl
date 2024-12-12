@@ -561,7 +561,7 @@ end
 
         state_tr = changebonds(state_oe, SvdCut(; trscheme=truncdim(dim(Dspace))))
 
-        @test dim(left_virtualspace(state_tr, 5)) < dim(right_virtualspace(state_oe, 5))
+        @test dim(left_virtualspace(state_tr, 5)) < dim(left_virtualspace(state_oe, 5))
     end
 
     @testset "MPSMultiline" begin
@@ -583,7 +583,7 @@ end
 
         state_tr = changebonds(state_oe, SvdCut(; trscheme=truncdim(dim(Dspace))))
 
-        @test dim(right_virtualspace(state_tr, 1, 1)) <
+        @test dim(left_virtualspace(state_tr, 1, 1)) <
               dim(left_virtualspace(state_oe, 1, 1))
     end
 end

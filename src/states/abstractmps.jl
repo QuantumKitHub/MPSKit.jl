@@ -156,34 +156,38 @@ TensorKit.sectortype(ψ::AbstractMPS) = sectortype(typeof(ψ))
 TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype))
 
 """
-    left_virtualspace(ψ::AbstractMPS, i::Int)
+    left_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
     
-Return the left virtual space of the bond tensor to the right of site `i`. This is
-equivalent to the left virtual space of the left-gauged site tensor at site `i + 1`.
+Return the virtual space of the bond to the left of sites `pos`.
+
+!!! warning
+    In rare cases, the gauge tensor on the virtual space might not be square, and as a result it
+    cannot always be guaranteed that `right_virtualspace(ψ, i - 1) == left_virtualspace(ψ, i)`
 """
 function left_virtualspace end
 left_virtualspace(A::GenericMPSTensor) = space(A, 1)
 left_virtualspace(O::MPOTensor) = space(O, 1)
 
 """
-    right_virtualspace(ψ::AbstractMPS, i::Int)
+    right_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
 
-Return the right virtual space of the bond tensor to the right of site `i`. This is
-equivalent to the right virtual space of the right-gauged site tensor at site `i`.
+Return the virtual space of the bond to the right of site(s) `pos`.
+
+!!! warning
+    In rare cases, the gauge tensor on the virtual space might not be square, and as a result it
+    cannot always be guaranteed that `right_virtualspace(ψ, i - 1) == left_virtualspace(ψ, i)`
 """
 function right_virtualspace end
-right_virtualspace(A::GenericMPSTensor) = space(A, numind(A))
-right_virtualspace(O::MPOTensor) = space(O, 4)
+right_virtualspace(A::GenericMPSTensor) = space(A, numind(A))'
+right_virtualspace(O::MPOTensor) = space(O, 4)'
 
 """
-    physicalspace(ψ::AbstractMPS, i::Int)
+    physicalspace(ψ::AbstractMPS, [pos=1:length(ψ)])
 
 Return the physical space of the site tensor at site `i`.
 """
 function physicalspace end
+physicalspace(A::MPSTensor) = space(A, 2)
 physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
-function physicalspace(O::MPOTensor)
-    pspace = space(O, 2)
-    # Disallow SumSpace in physical space
-    return pspace isa SumSpace ? only(pspace) : pspace
-end
+physicalspace(O::MPOTensor) = space(O, 2)
+physicalspace(O::AbstractBlockTensorMap{<:Any,<:Any,2,2}) = only(space(O, 2))

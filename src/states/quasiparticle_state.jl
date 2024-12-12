@@ -48,7 +48,7 @@ function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
     #find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
     VRs = [adjoint(leftnull(adjoint(v))) for v in _transpose_tail.(right_gs.AR)]
-    Xs = [TensorMap{scalartype(left_gs)}(undef, left_virtualspace(right_gs, loc - 1)',
+    Xs = [TensorMap{scalartype(left_gs)}(undef, left_virtualspace(right_gs, loc)',
                                          excitation_space' * _firstspace(VRs[loc]))
           for loc in 1:length(left_gs)]
     fill_data!.(Xs, datfun)
@@ -87,7 +87,8 @@ end
 function Base.convert(::Type{RightGaugedQP},
                       input::LeftGaugedQP{S}) where {S<:InfiniteMPS}
     rg = RightGaugedQP(zero, input.left_gs, input.right_gs;
-                       sector=first(sectors(utilleg(input))), momentum=input.momentum)
+                       sector=first(sectors(auxiliaryspace(input))),
+                       momentum=input.momentum)
     len = length(input)
 
     #construct environments
@@ -131,7 +132,7 @@ end
 function Base.convert(::Type{LeftGaugedQP},
                       input::RightGaugedQP{S}) where {S<:InfiniteMPS}
     lg = LeftGaugedQP(zero, input.left_gs, input.right_gs;
-                      sector=first(sectors(utilleg(input))), momentum=input.momentum)
+                      sector=first(sectors(auxiliaryspace(input))), momentum=input.momentum)
     len = length(input)
 
     lBs = [@plansor t[-1; -2 -3] := input[1][1 2; -2 -3] *
@@ -177,13 +178,10 @@ const InfiniteQP{S<:InfiniteMPS,T1,T2} = QP{S,T1,T2}
 TensorKit.spacetype(::Union{QP{S},Type{<:QP{S}}}) where {S} = spacetype(S)
 TensorKit.sectortype(::Union{QP{S},Type{<:QP{S}}}) where {S} = sectortype(S)
 
-left_virtualspace(state::QP, i::Int) = space(state.Xs[mod1(i, end)], 1)
-function right_virtualspace(state::QP, i::Int)
-    return space(state.Xs[mod1(i, end)], numind(state.Xs[mod1(i, end)]))
-end
+left_virtualspace(state::QP, i::Int) = left_virtualspace(state.left_gs, i)
+right_virtualspace(state::QP, i::Int) = right_virtualspace(state.right_gs, i)
 auxiliaryspace(state::QP) = space(state.Xs[1], 2)
 
-utilleg(v::QP) = space(v.Xs[1], 2)
 Base.copy(a::QP) = copy!(similar(a), a)
 Base.copyto!(a::QP, b::QP) = copy!(a, b)
 function Base.copy!(a::T, b::T) where {T<:QP}
@@ -260,7 +258,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
 
     elt = scalartype(v)
 
-    utl = utilleg(v)
+    utl = auxiliaryspace(v)
     ou = oneunit(utl)
     utsp = ou ⊕ ou
     upper = isometry(storagetype(site_type(v.left_gs)), utsp, ou)

@@ -232,27 +232,17 @@ Base.checkbounds(::Type{Bool}, ψ::InfiniteMPS, i::Integer) = true
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:InfiniteMPS{<:Any,B}}) where {B} = B
 
-left_virtualspace(ψ::InfiniteMPS, n::Integer) = _firstspace(ψ.CR[n])
-right_virtualspace(ψ::InfiniteMPS, n::Integer) = dual(_lastspace(ψ.CR[n]))
-
-function physicalspace(ψ::InfiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer) where {N}
-    if N == 1
-        return ProductSpace{spacetype(ψ)}()
-    elseif N == 2
-        return space(ψ.AL[n], 2)
-    else
-        return ProductSpace{spacetype(ψ),N - 1}(space.(Ref(ψ.AL[n]),
-                                                       Base.front(Base.tail(TensorKit.allind(ψ.AL[n])))))
-    end
-end
+left_virtualspace(ψ::InfiniteMPS, n::Integer) = left_virtualspace(ψ.AL[n])
+right_virtualspace(ψ::InfiniteMPS, n::Integer) = right_virtualspace(ψ.AL[n])
+physicalspace(ψ::InfiniteMPS, n::Integer) = physicalspace(ψ.AL[n])
 physicalspace(ψ::InfiniteMPS) = PeriodicArray(map(Base.Fix1(physicalspace, ψ), 1:length(ψ)))
 
-TensorKit.space(ψ::InfiniteMPS{<:MPSTensor}, n::Integer) = space(ψ.AC[n], 2)
-function TensorKit.space(ψ::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
-    t = ψ.AC[n]
-    S = spacetype(t)
-    return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
-end
+# TensorKit.space(ψ::InfiniteMPS{<:MPSTensor}, n::Integer) = space(ψ.AC[n], 2)
+# function TensorKit.space(ψ::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
+#     t = ψ.AC[n]
+#     S = spacetype(t)
+#     return ProductSpace{S}(space.(Ref(t), Base.front(Base.tail(TensorKit.allind(t)))))
+# end
 
 TensorKit.norm(ψ::InfiniteMPS) = norm(ψ.AC[1])
 function TensorKit.normalize!(ψ::InfiniteMPS)
@@ -333,7 +323,7 @@ l_LR(ψ::InfiniteMPS, loc::Int=1) = ψ.CR[loc - 1]'
 Left dominant eigenvector of the `AL`-`AL` transfermatrix.
 """
 function l_LL(ψ::InfiniteMPS{A}, loc::Int=1) where {A}
-    return isomorphism(storagetype(A), space(ψ.AL[loc], 1), space(ψ.AL[loc], 1))
+    return isomorphism(storagetype(A), left_virtualspace(ψ, loc), left_virtualspace(ψ, loc))
 end
 
 """
@@ -342,7 +332,8 @@ end
 Right dominant eigenvector of the `AR`-`AR` transfermatrix.
 """
 function r_RR(ψ::InfiniteMPS{A}, loc::Int=length(ψ)) where {A}
-    return isomorphism(storagetype(A), domain(ψ.AR[loc]), domain(ψ.AR[loc]))
+    return isomorphism(storagetype(A), right_virtualspace(ψ, loc),
+                       right_virtualspace(ψ, loc))
 end
 
 """

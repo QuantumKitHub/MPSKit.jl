@@ -60,8 +60,6 @@ export exact_diagonalization
 export TransferMatrix
 export transfer_left, transfer_right
 
-@deprecate virtualspace left_virtualspace # there is a possible ambiguity when C isn't square, necessitating specifying left or right virtualspace
-
 # Abstract type defs
 abstract type Algorithm end
 

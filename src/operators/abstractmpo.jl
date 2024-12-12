@@ -156,7 +156,7 @@ Compute the mpo tensor that arises from multiplying MPOs.
 function fuse_mul_mpo(O1::MPOTensor, O2::MPOTensor)
     T = promote_type(scalartype(O1), scalartype(O2))
     F_left = fuser(T, left_virtualspace(O2), left_virtualspace(O1))
-    F_right = fuser(T, right_virtualspace(O2)', right_virtualspace(O1)')
+    F_right = fuser(T, right_virtualspace(O2), right_virtualspace(O1))
     @plansor O[-1 -2; -3 -4] := F_left[-1; 1 2] *
                                 O2[1 5; -3 3] *
                                 O1[2 -2; 5 4] *
@@ -203,7 +203,7 @@ function add_physical_charge(O::BraidingTensor, charge::Sector)
     sectortype(O) === typeof(charge) || throw(SectorMismatch())
     auxspace = Vect[typeof(charge)](charge => 1)
     V = left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
-        fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)'
+        fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
     return BraidingTensor{scalartype(O)}(V)
 end
 function add_physical_charge(O::AbstractBlockTensorMap{<:Any,<:Any,2,2}, charge::Sector)
@@ -213,7 +213,7 @@ function add_physical_charge(O::AbstractBlockTensorMap{<:Any,<:Any,2,2}, charge:
 
     Odst = similar(O,
                    left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
-                   fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)')
+                   fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O))
     for (I, v) in nonzero_pairs(O)
         Odst[I] = add_physical_charge(v, charge)
     end

@@ -266,41 +266,22 @@ function TensorKit.storagetype(::Union{MPS,Type{MPS}}) where {A,MPS<:FiniteMPS{A
 end
 
 function left_virtualspace(ψ::FiniteMPS, n::Integer)
-    if n > 0 && !ismissing(ψ.ALs[n])
-        dual(_lastspace(ψ.ALs[n]))
-    elseif n < length(ψ.ALs) && !ismissing(ψ.ALs[n + 1])
-        _firstspace(ψ.ALs[n + 1])
-    else
-        _firstspace(ψ.CR[n])
-    end
+    checkbounds(ψ, n)
+    return !ismissing(ψ.ALs[n]) ? left_virtualspace(ψ.ALs[n]) :
+           !ismissing(ψ.ARs[n]) ? left_virtualspace(ψ.ARs[n]) :
+           dual(_lastspace(ψ.CR[n - 1]))
 end
 function right_virtualspace(ψ::FiniteMPS, n::Integer)
-    if n > 0 && !ismissing(ψ.ARs[n])
-        dual(_lastspace(ψ.ARs[n]))
-    elseif n < length(ψ.ARs) && !ismissing(ψ.ARs[n + 1])
-        _firstspace(ψ.ARs[n + 1])
-    else
-        dual(_lastspace(ψ.CR[n]))
-    end
+    checkbounds(ψ, n)
+    return !ismissing(ψ.ARs[n]) ? right_virtualspace(ψ.ARs[n]) :
+           !ismissing(ψ.ALs[n]) ? right_virtualspace(ψ.ALs[n]) :
+           _firstspace(ψ.CR[n])
 end
 
 physicalspace(ψ::FiniteMPS) = physicalspace.(Ref(ψ), 1:length(ψ))
 function physicalspace(ψ::FiniteMPS{<:GenericMPSTensor{<:Any,N}}, n::Integer) where {N}
     N == 1 && return ProductSpace{spacetype(ψ)}()
-    A = if !ismissing(ψ.ALs[n])
-        ψ.ALs[n]
-    elseif !ismissing(ψ.ARs[n])
-        ψ.ARs[n] # should never reach last case?
-    else
-        ψ.AC[n] # should never reach last case?
-    end # should never reach last case?
-
-    if N == 2
-        return space(A, 2)
-    else
-        return ProductSpace{spacetype(ψ),N - 1}(space.(Ref(A),
-                                                       Base.front(Base.tail(TensorKit.allind(A)))))
-    end
+    return physicalspace(coalesce(ψ.ALs[n], ψ.ARs[n], ψ.ACs[n]))
 end
 
 TensorKit.space(ψ::FiniteMPS{<:MPSTensor}, n::Integer) = space(ψ.AC[n], 2)
