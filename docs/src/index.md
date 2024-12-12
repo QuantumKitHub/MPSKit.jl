@@ -37,7 +37,6 @@ operators and models.
 using TensorOperations
 using TensorKit
 using MPSKit
-using MPSKitModels
 using LinearAlgebra: norm
 ```
 
@@ -48,7 +47,6 @@ using LinearAlgebra
 using TensorOperations
 using TensorKit
 using MPSKit
-using MPSKitModels
 ```
 
 Finite MPS are characterised by a set of tensors, one for each site, which each have 3 legs.
@@ -106,10 +104,16 @@ Using the pre-defined models in `MPSKitModels`, we can construct the groundstate
 transverse field Ising model:
 
 ```@example finitemps
-H = transverse_field_ising(; J=1.0, g=0.5)
+J = 1.0
+g = 0.5
+lattice = fill(ComplexSpace(2), 10)
+X = TensorMap(ComplexF64[0 1; 1 0], ComplexSpace(2), ComplexSpace(2))
+Z = TensorMap(ComplexF64[1 0; 0 -1], space(X))
+H = FiniteMPOHamiltonian(lattice, (i, i+1) => -J * X ⊗ X for i in 1:length(lattice)-1) +
+    FiniteMPOHamiltonian(lattice, (i,) => - g * Z for i in 1:length(lattice))
 find_groundstate!(mps, H, DMRG(; maxiter=10))
 E0 = expectation_value(mps, H)
-println("<mps|H|mps> = $(sum(real(E0)) / length(mps))")
+println("<mps|H|mps> = $real(E0)")
 ```
 
 ### Infinite Matrix Product States
@@ -119,7 +123,6 @@ using LinearAlgebra
 using TensorOperations
 using TensorKit
 using MPSKit
-using MPSKitModels
 ```
 
 Similarly, an infinite MPS can be constructed by specifying the tensors for the unit cell,
@@ -173,11 +176,16 @@ println("<mps|𝕀₁|mps> = $N2")
     observable computed from the MPS would either blow up to infinity or vanish to zero.
 
 Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians.
-Using the pre-defined models in `MPSKitModels`, we can construct the groundstate for the
-transverse field Ising model:
+There are plenty of pre-defined models in `MPSKitModels`, but we can also manually construct
+the groundstate for the transverse field Ising model:
 
 ```@example infinitemps
-H = transverse_field_ising(; J=1.0, g=0.5)
+J = 1.0
+g = 0.5
+lattice = PeriodicVector([ComplexSpace(2)])
+X = TensorMap(ComplexF64[0 1; 1 0], ComplexSpace(2), ComplexSpace(2))
+Z = TensorMap(ComplexF64[1 0; 0 -1], space(X))
+H = InfiniteMPOHamiltonian(lattice, (1, 2) => -J * X ⊗ X, (1,) => - g * Z)
 mps, = find_groundstate(mps, H, VUMPS(; maxiter=10))
 E0 = expectation_value(mps, H)
 println("<mps|H|mps> = $(sum(real(E0)) / length(mps))")

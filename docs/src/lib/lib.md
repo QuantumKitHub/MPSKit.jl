@@ -12,13 +12,7 @@ MPSMultiline
 ```@docs
 AbstractMPO
 MPO
-FiniteMPO
-InfiniteMPO
 MPOHamiltonian
-FiniteMPOHamiltonian
-InfiniteMPOHamiltonian
-SparseMPO
-DenseMPO
 ```
 
 ## Environments
@@ -29,23 +23,6 @@ MPSKit.InfiniteMPOEnvironments
 MPSKit.InfiniteMPOHamiltonianEnvironments
 MPSKit.FiniteEnvironments
 MPSKit.IDMRGEnvironments
-```
-
-## Generic actions
-```@docs
-∂C
-∂∂C
-∂AC
-∂∂AC
-∂AC2
-∂∂AC2
-
-c_proj
-ac_proj
-ac2_proj
-
-transfer_left
-transfer_right
 ```
 
 ## Algorithms

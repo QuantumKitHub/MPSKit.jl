@@ -19,7 +19,7 @@ acts, while the operator is either a `AbstractTensorMap` or a `FiniteMPO`.
 
 # Examples
 ```jldoctest
-julia> ψ = FiniteMPS(ones, Float64, 4, ℂ^2, ℂ^3);
+julia> ψ = FiniteMPS(ones(Float64, (ℂ^2)^4));
 
 julia> S_x = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2);
 
@@ -28,9 +28,6 @@ julia> round(expectation_value(ψ, 2 => S_x))
 
 julia> round(expectation_value(ψ, (2, 3) => S_x ⊗ S_x))
 1.0
-
-julia> round(expectation_value(ψ, MPOHamiltonian(S_x)))
-4.0
 ```
 """
 function expectation_value end
