@@ -69,8 +69,9 @@ end
 
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     al_d = similar(state.AL)
+    O = envs.operator
     for i in 1:length(state)
-        al_d[i] = MPSKit.∂∂AC(i, state, envs.opp, envs) * state.AC[i]
+        al_d[i] = MPSKit.∂∂AC(i, state, O, envs) * state.AC[i]
     end
 
     g = Grassmann.project.(al_d, state.AL)
@@ -89,12 +90,12 @@ function ManifoldPoint(state::MPSMultiline, envs)
     @assert length(state.AL) == 1 "GradientGrassmann only supports MPSMultiline without unitcells for now"
 
     # TODO: this really should not use the operator from the environment
-    f = expectation_value(state, envs.opp, envs)
+    f = expectation_value(state, envs.operator, envs)
     imag(f) > MPSKit.Defaults.tol && @warn "MPO might not be Hermitian $f"
     real(f) > 0 || @warn "MPO might not be positive definite $f"
 
     grad = map(CartesianIndices(state.AC)) do I
-        AC′ = MPSKit.∂∂AC(I, state, envs.opp, envs) * state.AC[I]
+        AC′ = MPSKit.∂∂AC(I, state, envs.operator, envs) * state.AC[I]
         # the following formula is wrong when unitcells are involved
         # actual costfunction should be F = -log(prod(f)) => ∂F = -2 * g / |f|
         return rmul!(Grassmann.project(AC′, state.AL[I]), -2 / f)
@@ -122,7 +123,7 @@ function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
 
     # TODO: the operator really should not be part of the environments, and this should
     # be passed as an explicit argument
-    f = expectation_value(x.state, x.envs.opp, x.envs)
+    f = expectation_value(x.state, x.envs.operator, x.envs)
     isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     return real(f), g_prec
@@ -136,7 +137,7 @@ function fg(x::ManifoldPoint{<:MPSMultiline})
 
     # TODO: the operator really should not be part of the environments, and this should
     # be passed as an explicit argument
-    f = expectation_value(x.state, x.envs.opp, x.envs)
+    f = expectation_value(x.state, x.envs.operator, x.envs)
     isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
     real(f) > 0 || @warn "MPO might not be positive definite: $f"
 

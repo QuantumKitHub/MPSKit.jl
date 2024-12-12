@@ -15,11 +15,11 @@ acts, while the operator is either a `AbstractTensorMap` or a `FiniteMPO`.
 * `ψ::AbstractMPS` : the state on which to compute the expectation value
 * `O::Union{AbstractMPO,Pair}` : the operator to compute the expectation value of. 
     This can either be an `AbstractMPO`, or a pair of indices and local operator..
-* `environments::Cache` : the environments to use for the calculation. If not given, they will be calculated.
+* `environments::AbstractMPSEnvironments` : the environments to use for the calculation. If not given, they will be calculated.
 
 # Examples
 ```jldoctest
-julia> ψ = FiniteMPS(ones, Float64, 4, ℂ^2, ℂ^3);
+julia> ψ = FiniteMPS(ones(Float64, (ℂ^2)^4));
 
 julia> S_x = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2);
 
@@ -28,9 +28,6 @@ julia> round(expectation_value(ψ, 2 => S_x))
 
 julia> round(expectation_value(ψ, (2, 3) => S_x ⊗ S_x))
 1.0
-
-julia> round(expectation_value(ψ, MPOHamiltonian(S_x)))
-4.0
 ```
 """
 function expectation_value end
@@ -92,37 +89,25 @@ end
 
 # MPOHamiltonian
 # --------------
-function expectation_value(ψ::FiniteMPS, H::MPOHamiltonian,
-                           envs::Cache=environments(ψ, H))
-    L = length(ψ) ÷ 2
-    GL = leftenv(envs, L, ψ)
-    GR = rightenv(envs, L, ψ)
-    AC = ψ.AC[L]
-    E = sum(keys(H[L])) do (j, k)
-        return @plansor GL[j][1 2; 3] * AC[3 7; 5] * GR[k][5 8; 6] * conj(AC[1 4; 6]) *
-                        H[L][j, k][2 4; 7 8]
-    end
-    return E / norm(ψ)^2
-end
-function expectation_value(ψ::FiniteQP, H::MPOHamiltonian)
-    return expectation_value(convert(FiniteMPS, ψ), H)
-end
-function expectation_value(ψ::InfiniteMPS, H::MPOHamiltonian,
-                           envs::Cache=environments(ψ, H))
-    # TODO: this presumably could be done more efficiently
-    return sum(1:length(ψ)) do i
-        return sum((H.odim):-1:1) do j
-            ρ_LL = r_LL(ψ, i)
-            util = fill_data!(similar(ψ.AL[1], space(envs.lw[H.odim, i + 1], 2)), one)
-            GL = leftenv(envs, i, ψ)
-            return @plansor (GL[j] * TransferMatrix(ψ.AL[i], H[i][j, H.odim], ψ.AL[i]))[1 2;
-                                                                                        3] *
-                            ρ_LL[3; 1] * conj(util[2])
-        end
-    end
+function contract_mpo_expval(AC::MPSTensor, GL::MPSTensor, O::MPOTensor, GR::MPSTensor,
+                             ACbar::MPSTensor=AC)
+    return @plansor GL[1 2; 3] * AC[3 7; 5] * GR[5 8; 6] *
+                    O[2 4; 7 8] * conj(ACbar[1 4; 6])
 end
 
-# no definition for WindowMPS -> not well defined
+function expectation_value(ψ::FiniteMPS, H::FiniteMPOHamiltonian,
+                           envs::AbstractMPSEnvironments=environments(ψ, H))
+    return dot(ψ, H, ψ, envs) / dot(ψ, ψ)
+end
+
+function expectation_value(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
+                           envs::AbstractMPSEnvironments=environments(ψ, H))
+    return sum(1:length(ψ)) do i
+        util = fill_data!(similar(ψ.AL[1], right_virtualspace(H, i)[end]), one)
+        @plansor GR[-1 -2; -3] := r_LL(ψ, i)[-1; -3] * conj(util[-2])
+        return contract_mpo_expval(ψ.AL[i], leftenv(envs, i, ψ), H[i][:, 1, 1, end], GR)
+    end
+end
 
 # DenseMPO
 # --------
@@ -132,11 +117,11 @@ end
 function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
-function expectation_value(ψ::InfiniteMPS, mpo::DenseMPO, envs...)
+function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
     return expectation_value(convert(MPSMultiline, ψ), convert(MPOMultiline, mpo), envs...)
 end
-function expectation_value(ψ::MPSMultiline, O::MPOMultiline,
-                           envs::PerMPOInfEnv=environments(ψ, O))
+function expectation_value(ψ::MPSMultiline, O::MPOMultiline{<:Union{DenseMPO,SparseMPO}},
+                           envs::InfiniteMPOEnvironments=environments(ψ, O))
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
         GL = leftenv(envs, i, j, ψ)
         GR = rightenv(envs, i, j, ψ)
@@ -145,6 +130,14 @@ function expectation_value(ψ::MPSMultiline, O::MPOMultiline,
                  conj(ψ.AC[i + 1, j][1 4; 8])
     end
 end
+function expectation_value(ψ::MPSMultiline, mpo::MPOMultiline, envs...)
+    # TODO: fix environments
+    return prod(x -> expectation_value(x...), zip(parent(ψ), parent(mpo)))
+end
+# fallback
+function expectation_value(ψ::AbstractMPS, mpo::AbstractMPO, envs...)
+    return dot(ψ, mpo, ψ) / dot(ψ, ψ)
+end
 
 # Lazy operators
 # --------------
@@ -152,30 +145,12 @@ function expectation_value(ψ, op::UntimedOperator, args...)
     return op.f * expectation_value(ψ, op.op, args...)
 end
 
-function expectation_value(ψ, ops::LazySum, envs::MultipleEnvironments=environments(ψ, ops))
+function expectation_value(ψ, ops::LazySum)
+    return sum(op -> expectation_value(ψ, op), ops.ops)
+end
+function expectation_value(ψ, ops::LazySum, envs::MultipleEnvironments)
     return sum(((op, env),) -> expectation_value(ψ, op, env), zip(ops.ops, envs))
 end
-
-# Transfer matrices
-# -----------------
-# function expectation_value(ψ::InfiniteMPS, mpo::DenseMPO)
-#     return expectation_value(convert(MPSMultiline, ψ), convert(MPOMultiline, mpo))
-# end
-# function expectation_value(ψ::MPSMultiline, mpo::MPOMultiline)
-#     return expectation_value(ψ, environments(ψ, mpo))
-# end
-# function expectation_value(ψ::InfiniteMPS, ca::PerMPOInfEnv)
-#     return expectation_value(convert(MPSMultiline, ψ), ca)
-# end
-# function expectation_value(ψ::MPSMultiline, O::MPOMultiline, ca::PerMPOInfEnv)
-#     retval = PeriodicMatrix{scalartype(ψ)}(undef, size(ψ, 1), size(ψ, 2))
-#     for (i, j) in product(1:size(ψ, 1), 1:size(ψ, 2))
-#         retval[i, j] = @plansor leftenv(ca, i, j, ψ)[1 2; 3] * O[i, j][2 4; 6 5] *
-#                                 ψ.AC[i, j][3 6; 7] * rightenv(ca, i, j, ψ)[7 5; 8] *
-#                                 conj(ψ.AC[i + 1, j][1 4; 8])
-#     end
-#     return retval
-# end
 
 # for now we also have LinearCombination
 function expectation_value(ψ, H::LinearCombination, envs::LazyLincoCache=environments(ψ, H))
@@ -186,7 +161,7 @@ end
 # ProjectionOperator
 # ------------------
 function expectation_value(ψ::FiniteMPS, O::ProjectionOperator,
-                           envs::FinEnv=environments(ψ, O))
+                           envs::FiniteEnvironments=environments(ψ, O))
     ens = zeros(scalartype(ψ), length(ψ))
     for i in 1:length(ψ)
         operator = ∂∂AC(i, ψ, O, envs)

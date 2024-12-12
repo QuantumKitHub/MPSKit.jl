@@ -52,7 +52,7 @@ end
                                                       ComplexF64)]
     tol = Float64(eps(real(elt)) * 100)
 
-    ψ = InfiniteMPS([TensorMap(rand, elt, D * d, D), TensorMap(rand, elt, D * d, D)]; tol)
+    ψ = InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol)
 
     for i in 1:length(ψ)
         @plansor difference[-1 -2; -3] := ψ.AL[i][-1 -2; 1] * ψ.CR[i][1; -3] -
@@ -76,8 +76,8 @@ end
                                                       (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
                                                        ComplexF32)]
     tol = Float64(eps(real(elt)) * 100)
-    ψ = MPSMultiline([TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)
-                      TensorMap(rand, elt, D * d, D) TensorMap(rand, elt, D * d, D)]; tol)
+    ψ = MPSMultiline([rand(elt, D * d, D) rand(elt, D * d, D)
+                      rand(elt, D * d, D) rand(elt, D * d, D)]; tol)
 
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
         @plansor difference[-1 -2; -3] := ψ.AL[i, j][-1 -2; 1] * ψ.CR[i, j][1; -3] -
@@ -151,12 +151,13 @@ end
 end
 
 @testset "Quasiparticle state" verbose = true begin
+    L = 10
     @testset "Finite" verbose = true for (H, D, d) in
-                                         [(force_planar(transverse_field_ising()), ℙ^10,
+                                         [(force_planar(transverse_field_ising(; L)), ℙ^10,
                                            ℙ^2),
-                                          (heisenberg_XXX(SU2Irrep; spin=1),
+                                          (heisenberg_XXX(SU2Irrep; spin=1, L),
                                            Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1))]
-        ψ = FiniteMPS(rand, ComplexF64, rand(4:20), d, D)
+        ψ = FiniteMPS(rand, ComplexF64, L, d, D)
         normalize!(ψ)
 
         #rand_quasiparticle is a private non-exported function

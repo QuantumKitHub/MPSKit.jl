@@ -10,7 +10,7 @@ function fidelity_susceptibility(state::Union{FiniteMPS,InfiniteMPS}, H₀::T,
 
         Tos = LeftGaugedQP(rand, state)
         for (i, ac) in enumerate(state.AC)
-            temp = ∂∂AC(i, state, H₀, venvs) * ac
+            temp = ∂∂AC(i, state, V, venvs) * ac
             help = fill_data!(similar(ac, utilleg(Tos)), one)
             @plansor Tos[i][-1 -2; -3 -4] := temp[-1 -2; -4] * help[-3]
         end

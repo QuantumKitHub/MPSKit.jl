@@ -16,7 +16,8 @@ optimization algorithm will be attempted based on the supplied keywords.
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 """
-function find_groundstate(ψ::AbstractMPS, H, envs::Cache=environments(ψ, H);
+function find_groundstate(ψ::AbstractMPS, H,
+                          envs::AbstractMPSEnvironments=environments(ψ, H);
                           tol=Defaults.tol, maxiter=Defaults.maxiter,
                           verbosity=Defaults.verbosity, trscheme=nothing)
     if isa(ψ, InfiniteMPS)

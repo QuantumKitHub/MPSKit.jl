@@ -71,13 +71,13 @@ O_xzx_sum * FiniteMPS(3, ℂ^2, ℂ^4)
     make sure that the virtual spaces do not increase past the maximal virtual space that
     is dictated by the requirement of being full-rank tensors.
 
-## MPOHamiltonian
+## FiniteMPOHamiltonian
 
 We can also represent quantum Hamiltonians in the same form. This is done by converting a
 sum of local operators into a single MPO operator. The resulting operator has a very
 specific structure, and is often referred to as a *Jordan block MPO*.
 
-This object can be constructed as an MPO by using the [`MPOHamiltonian`](@ref) constructor,
+This object can be constructed as an MPO by using the [`FiniteMPOHamiltonian`](@ref) constructor,
 which takes two crucial pieces of information:
 
 1. An array of `VectorSpace` objects, which determines the local Hilbert spaces of the
@@ -103,16 +103,16 @@ h = 0.5
 chain = fill(ℂ^2, 3) # a finite chain of 4 sites, each with a 2-dimensional Hilbert space
 single_site_operators = [1 => -h * S_z, 2 => -h * S_z, 3 => -h * S_z]
 two_site_operators = [(1, 2) => -J * S_x ⊗ S_x, (2, 3) => -J * S_x ⊗ S_x]
-H_ising = MPOHamiltonian(chain, single_site_operators..., two_site_operators...);
+H_ising = FiniteMPOHamiltonian(chain, single_site_operators..., two_site_operators...);
 ```
 
 Various alternative constructions are possible, such as using a `Dict` with key-value pairs
 that specify the operators, or using generator expressions to simplify the construction.
 
 ```@example operators
-H_ising′ = -J * MPOHamiltonian(chain,
+H_ising′ = -J * FiniteMPOHamiltonian(chain,
                                (i, i + 1) => S_x ⊗ S_x for i in 1:(length(chain) - 1)) -
-            h * MPOHamiltonian(chain, i => S_z for i in 1:length(chain))
+            h * FiniteMPOHamiltonian(chain, i => S_z for i in 1:length(chain))
 isapprox(H_ising, H_ising′; atol=1e-6)
 ```
 
@@ -147,9 +147,9 @@ for I in eachindex(IndexCartesian(), square)
     end
 end
 
-H_ising_2d = MPOHamiltonian(square, local_operators) +
-    MPOHamiltonian(square, horizontal_operators) +
-    MPOHamiltonian(square, vertical_operators);
+H_ising_2d = FiniteMPOHamiltonian(square, local_operators) +
+    FiniteMPOHamiltonian(square, horizontal_operators) +
+    FiniteMPOHamiltonian(square, vertical_operators);
 ```
 
 There are various utility functions available for constructing more advanced lattices, for
@@ -224,20 +224,22 @@ Vᵣ = [0, 0, 1]
 expand(Vₗ * prod(Ws) * Vᵣ)
 ```
 
-The `MPOHamiltonian` constructor can also be used to construct the operator from this most
+The `FiniteMPOHamiltonian` constructor can also be used to construct the operator from this most
 general form, by supplying a 3-dimensional array $W$ to the constructor. Here, the first
 dimension specifies the site in the unit cell, the second dimension specifies the row of the
 matrix, and the third dimension specifies the column of the matrix.
 
-```@example operators
+<!-- TODO: reenable doctest -->
+
+```julia
 data = Array{Any,3}(missing, 1, 3, 3) # missing is interpreted as zero
-data[1, 1, 1] = id(Matrix{ComplexF64}, ℂ^2)
+data[1, 1, 1] = id(ComplexF64, ℂ^2)
 data[1, 3, 3] = 1 # regular numbers are interpreted as identity operators
 data[1, 1, 2] = -J * S_x
 data[1, 2, 3] = S_x
 data[1, 1, 3] = -h * S_z
 data_range = repeat(data, 4, 1, 1) # make 4 sites long
-H_ising″ = MPOHamiltonian(data_range)
+H_ising″ = FiniteMPOHamiltonian(data_range)
 ```
 
 MPSKit will then automatically attach the correct boundary vectors to the Hamiltonian whenever this is required.
@@ -255,42 +257,11 @@ MPSKit will then automatically attach the correct boundary vectors to the Hamilt
 !!! warning
     This part is still a work in progress
 
-Because of the discussion above, the `MPOHamiltonian` object is in fact just a `FiniteMPO`,
+Because of the discussion above, the `FiniteMPOHamiltonian` object is in fact just an `AbstractMPO`,
 with some additional structure. This means that similar operations and properties are
 available, such as the virtual spaces, or the individual tensors. However, the block
 structure of the operator means that now the virtual spaces are not just a single space, but
 a collection (direct sum) of spaces, one for each row/column.
 
 <!-- TODO: add examples virtualspace once blocktensors are in place -->
-
-## DenseMPO
-
-This operator is used for statistical physics problems. It is simply a periodic array of mpo tensors.
-
-Can be created using
-```julia
-DenseMPO(t::AbstractArray{T,1}) where T<:MPOTensor
-```
-
-## SparseMPO
-
-`SparseMPO` is similar to a `DenseMPO`, in that it again represents an mpo tensor, periodically repeated. However this type keeps track of all internal zero blocks, allowing for a more efficient representation of certain operators (such as time evolution operators and quantum hamiltonians). You can convert a sparse mpo to a densempo, but the converse does not hold.
-
-
-Indexing a `SparseMPO` returns a `SparseMPOSlice` object, which has 3 fields
-
-```@docs
-MPSKit.SparseMPOSlice
-```
-
-When indexing a `SparseMPOSlice` at index `[j, k]` (or equivalently `SparseMPO[i][j, k]`), the code looks up the corresponding field in `Os[j, k]`. Either that element is a tensormap, in which case it gets returned. If it equals `zero(E)`, then we return a tensormap
-```julia
-domspaces[j] * pspace ← pspace * imspaces[k]
-```
-with norm zero. If the element is a nonzero number, then implicitly we have the identity operator there (multiplied by that element).
-
-The idea here is that you don't have to worry about the underlying structure, you can just index into a sparsempo as if it is a vector of matrices. Behind the scenes we then optimize certain contractions by using the sparsity structure.
-
-SparseMPO are always assumed to be periodic in the first index (position).
-In this way, we can both represent periodic infinite mpos and place dependent finite mpos.
 

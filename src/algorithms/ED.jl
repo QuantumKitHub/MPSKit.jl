@@ -1,9 +1,9 @@
 """
 Use krylovkit to perform exact diagonalization
 """
-function exact_diagonalization(opp::MPOHamiltonian;
-                               sector=first(sectors(oneunit(opp.pspaces[1]))),
-                               len::Int=opp.period, num::Int=1, which::Symbol=:SR,
+function exact_diagonalization(opp::FiniteMPOHamiltonian;
+                               sector=first(sectors(oneunit(physicalspace(opp, 1)))),
+                               len::Int=length(opp), num::Int=1, which::Symbol=:SR,
                                alg=Defaults.alg_eigsolve(; dynamic_tols=false))
     left = ℂ[typeof(sector)](sector => 1)
     right = oneunit(left)
@@ -20,18 +20,18 @@ function exact_diagonalization(opp::MPOHamiltonian;
     ACs = Vector{Union{Missing,mpst_type}}(missing, len)
 
     for i in 1:(middle_site - 1)
-        ALs[i] = isomorphism(storagetype(Ot), left * opp.pspaces[i],
-                             fuse(left * opp.pspaces[i]))
+        ALs[i] = isomorphism(storagetype(Ot), left * physicalspace(opp, i),
+                             fuse(left * physicalspace(opp, i)))
         left = _lastspace(ALs[i])'
     end
     for i in len:-1:(middle_site + 1)
         ARs[i] = _transpose_front(isomorphism(storagetype(Ot),
-                                              fuse(right * opp.pspaces[i]'),
-                                              right * opp.pspaces[i]'))
+                                              fuse(right * physicalspace(opp, i)'),
+                                              right * physicalspace(opp, i)'))
         right = _firstspace(ARs[i])
     end
-    ACs[middle_site] = randomize!(similar(opp[1][1, 1],
-                                          left * opp.pspaces[middle_site] ← right))
+    ACs[middle_site] = randomize!(similar(opp[1][1, 1, 1, 1],
+                                          left * physicalspace(opp, middle_site) ← right))
     norm(ACs[middle_site]) == 0 && throw(ArgumentError("invalid sector"))
     normalize!(ACs[middle_site])
 

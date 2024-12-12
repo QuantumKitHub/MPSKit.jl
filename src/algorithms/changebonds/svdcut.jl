@@ -36,27 +36,28 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
     length(mpo) == 1 && return mpo
 
     # left to right
-    O_left = transpose(mpo.opp[1], ((3, 1, 2), (4,)))
+    O_left = transpose(mpo[1], ((3, 1, 2), (4,)))
     local O_right
     for i in 2:length(mpo)
         U, S, V, = tsvd!(O_left; trunc=alg.trscheme, alg=TensorKit.SVD())
-        mpo.opp[i - 1] = transpose(U, ((2, 3), (1, 4)))
+        @inbounds mpo[i - 1] = transpose(U, ((2, 3), (1, 4)))
         if i < length(mpo)
-            @plansor O_left[-3 -1 -2; -4] := S[-1; 1] * V[1; 2] * mpo.opp[i][2 -2; -3 -4]
+            @plansor O_left[-3 -1 -2; -4] := S[-1; 1] * V[1; 2] * mpo[i][2 -2; -3 -4]
         else
-            @plansor O_right[-1; -3 -4 -2] := S[-1; 1] * V[1; 2] * mpo.opp[end][2 -2; -3 -4]
+            @plansor O_right[-1; -3 -4 -2] := S[-1; 1] * V[1; 2] * mpo[end][2 -2; -3 -4]
         end
     end
 
     # right to left
     for i in (length(mpo) - 1):-1:1
         U, S, V, = tsvd!(O_right; trunc=alg.trscheme, alg=TensorKit.SVD())
-        mpo.opp[i + 1] = transpose(V, ((1, 4), (2, 3)))
+        @inbounds mpo[i + 1] = transpose(V, ((1, 4), (2, 3)))
         if i > 1
-            @plansor O_right[-1; -3 -4 -2] := mpo.opp[i][-1 -2; -3 2] * U[2; 1] * S[1; -4]
+            @plansor O_right[-1; -3 -4 -2] := mpo[i][-1 -2; -3 2] * U[2; 1] * S[1; -4]
         else
-            @plansor mpo.opp[1][-1 -2; -3 -4] := mpo.opp[1][-1 -2; -3 2] * U[2; 1] *
-                                                 S[1; -4]
+            @plansor _O[-1 -2; -3 -4] := mpo[1][-1 -2; -3 2] * U[2; 1] *
+                                         S[1; -4]
+            @inbounds mpo[1] = _O
         end
     end
 
@@ -64,8 +65,8 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
 end
 
 # TODO: this assumes the MPO is infinite, and does weird things for finite MPOs.
-function changebonds(ψ::DenseMPO, alg::SvdCut)
-    return convert(DenseMPO, changebonds(convert(InfiniteMPS, ψ), alg))
+function changebonds(ψ::InfiniteMPO, alg::SvdCut)
+    return convert(InfiniteMPO, changebonds(convert(InfiniteMPS, ψ), alg))
 end
 function changebonds(ψ::MPOMultiline, alg::SvdCut)
     return convert(MPOMultiline, changebonds(convert(MPSMultiline, ψ), alg))

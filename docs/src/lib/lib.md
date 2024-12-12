@@ -10,36 +10,19 @@ MPSMultiline
 
 ## Operators
 ```@docs
-FiniteMPO
-SparseMPO
-DenseMPO
+AbstractMPO
+MPO
 MPOHamiltonian
 ```
 
 ## Environments
 ```@docs
-MPSKit.AbstractInfEnv
-MPSKit.PerMPOInfEnv
-MPSKit.MPOHamInfEnv
-MPSKit.FinEnv
-MPSKit.IDMRGEnvs
-```
-
-## Generic actions
-```@docs
-∂C
-∂∂C
-∂AC
-∂∂AC
-∂AC2
-∂∂AC2
-
-c_proj
-ac_proj
-ac2_proj
-
-transfer_left
-transfer_right
+MPSKit.AbstractMPSEnvironments
+MPSKit.AbstractInfiniteEnvironments
+MPSKit.InfiniteMPOEnvironments
+MPSKit.InfiniteMPOHamiltonianEnvironments
+MPSKit.FiniteEnvironments
+MPSKit.IDMRGEnvironments
 ```
 
 ## Algorithms

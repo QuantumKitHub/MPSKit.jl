@@ -12,16 +12,16 @@ A FiniteMPS is - at its core - a chain of mps tensors.
 A [`FiniteMPS`](@ref) can be created by passing in a vector of tensormaps:
 
 ```julia
-data = fill(TensorMap(rand,ComplexF64,ℂ^1*ℂ^2,ℂ^1),10);
-FiniteMPS(data);
+L = 10
+data = [rand(ComplexF64, ℂ^1 ⊗ ℂ^2  ← ℂ^1) for _ in 1:L];
+FiniteMPS(data)
 ```
 
-Or alternatively by
+Or alternatively by specifying its structure
 ```julia
-len = 10;
-max_bond_dimension = ℂ^10;
-physical_space = ℂ^2;
-FiniteMPS(rand,ComplexF64,len,physical_space,max_bond_dimension);
+max_bond_dimension = ℂ^10
+physical_space = ℂ^2
+FiniteMPS(rand, ComplexF64, L, physical_space, max_bond_dimension)
 ```
 
 You can take dot products, renormalize!, expectation values,....
@@ -43,7 +43,8 @@ then the state will be gauged such that the third tensor is a left isometry (sim
 ```julia
 state.AC[3]
 ```
-gauges the state in such a way that all tensors to the left are left isometries, and to the right will be right isometries.As a result you should have
+gauges the state in such a way that all tensors to the left are left isometries, and to the right will be right isometries.
+As a result you should have
 
 ```julia
 norm(state) == norm(state.AC[3])
@@ -68,12 +69,14 @@ ACs::Vector{Union{Missing,A}}
 CLs::Vector{Union{Missing,B}}
 ```
 
-calling state.AC returns an "orthoview" instance, which is a very simple dummy object. When you call get/setindex on an orthoview, it will move the gauge for the underlying state, and return the result. The idea behind this construction is that one never has to worry about how the state is gauged, as this gets handled automagically.
+calling `state.AC` returns an "orthoview" instance, which is a very simple dummy object.
+When you call get/setindex on an orthoview, it will move the gauge for the underlying state, and return the result.
+The idea behind this construction is that one never has to worry about how the state is gauged, as this gets handled automagically.
 
 The following bit of code shows the logic in action:
 
 ```julia
-state = FiniteMPS(10,ℂ^2,ℂ^10); # a random initial state
+state = FiniteMPS(10, ℂ^2, ℂ^10); # a random initial state
 @show ismissing.(state.ALs) # all AL fields are already calculated
 @show ismissing.(state.ARs) # all AR fields are missing
 

@@ -268,6 +268,9 @@ function TensorKit.dot(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; krylovdim=30)
                       Arnoldi(; krylovdim=krylovdim))
     return val
 end
+function Base.isapprox(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; kwargs...)
+    return isapprox(dot(ψ₁, ψ₂), 1; kwargs...)
+end
 
 function Base.show(io::IO, ::MIME"text/plain", ψ::InfiniteMPS)
     L = length(ψ)

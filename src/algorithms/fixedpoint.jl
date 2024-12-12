@@ -1,6 +1,7 @@
 # wrapper around KrylovKit.jl's eigsolve function
 
 """
+    fixedpoint(A, x₀, which::Symbol; kwargs...) -> val, vec
     fixedpoint(A, x₀, which::Symbol, alg) -> val, vec
 
 Compute the fixedpoint of a linear operator `A` using the specified eigensolver `alg`. The
@@ -27,4 +28,9 @@ function fixedpoint(A, x₀, which::Symbol, alg::Arnoldi)
     end
 
     return vals[1], vecs[1]
+end
+
+function fixedpoint(A, x₀, which::Symbol; kwargs...)
+    alg = KrylovKit.eigselector(A, scalartype(x₀); kwargs...)
+    return fixedpoint(A, x₀, which, alg)
 end

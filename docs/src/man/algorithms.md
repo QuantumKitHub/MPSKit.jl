@@ -1,7 +1,5 @@
 ```@meta
-DocTestSetup = quote
-    using MPSKit, MPSKitModels, TensorKit
-end
+DocTestSetup = :( using MPSKit, TensorKit)
 ```
 
 # [Algorithms](@id um_algorithms)
@@ -168,7 +166,9 @@ in the transverse field Ising model, we calculate the first excited state as sho
 provided code snippet, amd check the accuracy against theoretical values. Some deviations
 are expected, both due to finite-bond-dimension and finite-size effects.
 
-```jldoctest; output = false
+<!-- TODO: reenable doctest -->
+
+```julia
 # Model parameters
 g = 10.0
 L = 16
@@ -194,7 +194,9 @@ in the unit cell in a plane-wave superposition, requiring momentum specification
 [Haldane gap](https://iopscience.iop.org/article/10.1088/0953-8984/1/19/001) computation in
 the Heisenberg model illustrates this approach.
 
-```jldoctest; output = false
+<!-- TODO: reenable doctest -->
+
+```julia
 # Setting up the model and momentum
 momentum = π
 H = heisenberg_XXX()
@@ -219,7 +221,9 @@ trivial total charge. However, quasiparticles with different charges can be obta
 the sector keyword. For instance, in the transverse field Ising model, we consider an
 excitation built up of flipping a single spin, aligning with `Z2Irrep(1)`.
 
-```jldoctest; output = false
+<!-- TODO: reenable doctest -->
+
+```julia
 g = 10.0
 L = 16
 H = transverse_field_ising(Z2Irrep; g)
@@ -260,7 +264,9 @@ often referred to as the 'Chepiga ansatz', named after one of the authors of thi
 
 This is supported via the following syntax:
 
-```jldoctest
+<!-- TODO: reenable doctest -->
+
+```julia
 g = 1.0
 L = 16
 H = transverse_field_ising(; g)
@@ -278,7 +284,9 @@ true
 In order to improve the accuracy, a two-site version also exists, which varies two
 neighbouring sites:
 
-```jldoctest
+<!-- TODO: reenable doctest -->
+
+```julia
 g = 1.0
 L = 16
 H = transverse_field_ising(; g)
