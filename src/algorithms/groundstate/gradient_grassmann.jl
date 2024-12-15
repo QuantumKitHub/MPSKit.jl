@@ -23,9 +23,9 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: level of information display
 """
-struct GradientGrassmann <: Algorithm
-    method::OptimKit.OptimizationAlgorithm
-    finalize!::Function
+struct GradientGrassmann{O<:OptimKit.OptimizationAlgorithm,F} <: Algorithm
+    method::O
+    finalize!::F
 
     function GradientGrassmann(; method=ConjugateGradient, (finalize!)=OptimKit._finalize!,
                                tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity=2)
