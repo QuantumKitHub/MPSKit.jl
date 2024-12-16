@@ -1,4 +1,4 @@
-function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
+function approximate(ost::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
                      alg::IDMRG1, oenvs=environments(ost, toapprox))
     ψ = copy(ost)
     mpo, above = toapprox
@@ -52,12 +52,12 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
         end
     end
 
-    nst = MPSMultiline(map(x -> x, ψ.AR); tol=alg.tol_gauge)
+    nst = MultilineMPS(map(x -> x, ψ.AR); tol=alg.tol_gauge)
     nenvs = environments(nst, toapprox)
     return nst, nenvs, ϵ
 end
 
-function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
+function approximate(ost::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
                      alg::IDMRG2, oenvs=environments(ost, toapprox))
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     mpo, above = toapprox
@@ -139,7 +139,7 @@ function approximate(ost::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMult
         end
     end
 
-    nst = MPSMultiline(map(x -> x, ψ.AR); tol=alg.tol_gauge)
+    nst = MultilineMPS(map(x -> x, ψ.AR); tol=alg.tol_gauge)
     nenvs = environments(nst, toapprox)
     return nst, nenvs, ϵ
 end

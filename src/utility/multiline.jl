@@ -2,12 +2,12 @@
     struct Multiline{T}
 
 Object that represents multiple lines of objects of type `T`. Typically used to represent
-multiple lines of `InfiniteMPS` (`MPSMultiline`) or MPO (`Multiline{<:AbstractMPO}`).
+multiple lines of `InfiniteMPS` (`MultilineMPS`) or MPO (`Multiline{<:AbstractMPO}`).
 
 # Fields
 - `data::PeriodicArray{T,1}`: the data of the multiline object
 
-See also: [`MPSMultiline`](@ref) and [`MPOMultiline`](@ref)
+See also: [`MultilineMPS`](@ref) and [`MultilineMPO`](@ref)
 """
 struct Multiline{T}
     data::PeriodicArray{T,1}

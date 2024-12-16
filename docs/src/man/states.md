@@ -133,9 +133,9 @@ Such a set can be created by
 
 ```julia
 data = fill(TensorMap(rand,ComplexF64,ℂ^10*ℂ^2,ℂ^10),2,2);
-MPSMultiline(data);
+MultilineMPS(data);
 ```
-MPSMultiline is also used extensively in as of yet unreleased peps code.
+MultilineMPS is also used extensively in as of yet unreleased peps code.
 
 You can access properties by calling
 ```julia
@@ -153,7 +153,7 @@ struct Multiline{T}
 end
 ```
 
-MPSMultiline/MPOMultiline are then defined as
+MultilineMPS/MultilineMPO are then defined as
 ```julia
-const MPSMultiline = Multiline{<:InfiniteMPS}
-const MPOMultiline = Multiline{<:DenseMPO}
+const MultilineMPS = Multiline{<:InfiniteMPS}
+const MultilineMPO = Multiline{<:DenseMPO}

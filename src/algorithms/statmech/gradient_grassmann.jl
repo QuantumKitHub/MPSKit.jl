@@ -1,12 +1,12 @@
 function leading_boundary(state::InfiniteMPS, H::DenseMPO, alg::GradientGrassmann,
                           envs=environments(state, H))
-    (multi, envs, err) = leading_boundary(convert(MPSMultiline, state),
-                                          convert(MPOMultiline, H), alg, envs)
+    (multi, envs, err) = leading_boundary(convert(MultilineMPS, state),
+                                          convert(MultilineMPO, H), alg, envs)
     state = convert(InfiniteMPS, multi)
     return (state, envs, err)
 end
 
-function leading_boundary(state::MPSMultiline, H, alg::GradientGrassmann,
+function leading_boundary(state::MultilineMPS, H, alg::GradientGrassmann,
                           envs=environments(state, H))
     res = optimize(GrassmannMPS.fg,
                    GrassmannMPS.ManifoldPoint(state, envs),

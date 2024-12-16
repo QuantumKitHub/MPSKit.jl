@@ -1,9 +1,9 @@
 """
-    InfiniteMPOEnvironments{O<:MPOMultiline,V,S<:MPSMultiline,A} <: AbstractMPSEnvironments
+    InfiniteMPOEnvironments{O<:MultilineMPO,V,S<:MultilineMPS,A} <: AbstractMPSEnvironments
 
 Environment manager for `InfiniteMPO` and its `Multiline` version.
 """
-mutable struct InfiniteMPOEnvironments{O,V,S<:MPSMultiline,A} <:
+mutable struct InfiniteMPOEnvironments{O,V,S<:MultilineMPS,A} <:
                AbstractInfiniteEnvironments
     above::Union{S,Nothing}
     operator::O
@@ -23,31 +23,31 @@ end
 # Constructors
 # ------------
 function environments(state::InfiniteMPS, O::InfiniteMPO; kwargs...)
-    return environments(convert(MPSMultiline, state), convert(MPOMultiline, O); kwargs...)
+    return environments(convert(MultilineMPS, state), convert(MultilineMPO, O); kwargs...)
 end
 function environments(below::InfiniteMPS,
                       (mpo, above)::Tuple{<:InfiniteMPO,<:InfiniteMPS}; kwargs...)
-    return environments(convert(MPSMultiline, below),
-                        (convert(MPOMultiline, mpo), convert(MPSMultiline, above));
+    return environments(convert(MultilineMPS, below),
+                        (convert(MultilineMPO, mpo), convert(MultilineMPS, above));
                         kwargs...)
 end
 
-function environments(state::MPSMultiline, mpo::MPOMultiline; solver=Defaults.eigsolver)
+function environments(state::MultilineMPS, mpo::MultilineMPO; solver=Defaults.eigsolver)
     GL, GR = initialize_environments(state, mpo, state)
     envs = InfiniteMPOEnvironments(nothing, mpo, state, solver, GL, GR)
     return recalculate!(envs, state)
 end
 
-function environments(below::MPSMultiline,
-                      (mpo, above)::Tuple{<:MPOMultiline,<:MPSMultiline};
+function environments(below::MultilineMPS,
+                      (mpo, above)::Tuple{<:MultilineMPO,<:MultilineMPS};
                       solver=Defaults.eigsolver)
     GL, GR = initialize_environments(above, mpo, below)
     envs = InfiniteMPOEnvironments(above, mpo, below, solver, GL, GR)
     return recalculate!(envs, below)
 end
 
-function initialize_environments(ket::MPSMultiline, operator::MPOMultiline,
-                                 bra::MPSMultiline=ket)
+function initialize_environments(ket::MultilineMPS, operator::MultilineMPO,
+                                 bra::MultilineMPS=ket)
     # allocate
     GL = PeriodicArray([allocate_GL(bra[row], operator[row], ket[row], col)
                         for row in 1:size(ket, 1), col in 1:size(ket, 2)])
@@ -67,7 +67,7 @@ function leftenv(envs::InfiniteMPOEnvironments, pos::Int, state::InfiniteMPS)
     check_recalculate!(envs, state)
     return envs.leftenvs[1, pos]
 end
-function leftenv(envs::InfiniteMPOEnvironments, pos::Int, state::MPSMultiline)
+function leftenv(envs::InfiniteMPOEnvironments, pos::Int, state::MultilineMPS)
     check_recalculate!(envs, state)
     return envs.leftenvs[:, pos]
 end
@@ -80,7 +80,7 @@ function rightenv(envs::InfiniteMPOEnvironments, pos::Int, state::InfiniteMPS)
     check_recalculate!(envs, state)
     return envs.rightenvs[1, pos]
 end
-function rightenv(envs::InfiniteMPOEnvironments, pos::Int, state::MPSMultiline)
+function rightenv(envs::InfiniteMPOEnvironments, pos::Int, state::MultilineMPS)
     check_recalculate!(envs, state)
     return envs.rightenvs[:, pos]
 end
@@ -91,11 +91,11 @@ end
 
 # Utility
 # -------
-function check_dependency(envs::InfiniteMPOEnvironments, state::MPSMultiline)
+function check_dependency(envs::InfiniteMPOEnvironments, state::MultilineMPS)
     return all(x -> ===(x...), zip(envs.dependency, state))
 end
 
-function issamespace(envs::InfiniteMPOEnvironments, state::MPSMultiline)
+function issamespace(envs::InfiniteMPOEnvironments, state::MultilineMPS)
     for row in 1:size(state, 1)
         newstate = state[row]
         oldstate = envs.dependency[row]
@@ -114,7 +114,7 @@ end
 # Calculation
 # -----------
 function recalculate!(envs::InfiniteMPOEnvironments, nstate::InfiniteMPS; kwargs...)
-    return recalculate!(envs, convert(MPSMultiline, nstate); kwargs...)
+    return recalculate!(envs, convert(MultilineMPS, nstate); kwargs...)
 end
 
 function compute_leftenv!(envs::InfiniteMPOEnvironments)

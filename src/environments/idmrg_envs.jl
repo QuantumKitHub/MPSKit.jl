@@ -20,7 +20,7 @@ function IDMRGEnvironments(ψ::InfiniteMPS, envs::InfiniteMPOHamiltonianEnvironm
     rightenvs = PeriodicMatrix(reshape(deepcopy(envs.rightenvs), (1, L)))
     return IDMRGEnvironments(envs.operator, leftenvs, rightenvs)
 end
-function IDMRGEnvironments(ψ::Union{InfiniteMPS,MPSMultiline},
+function IDMRGEnvironments(ψ::Union{InfiniteMPS,MultilineMPS},
                            envs::InfiniteMPOEnvironments)
     check_recalculate!(envs, ψ)
     return IDMRGEnvironments(envs.operator, deepcopy(envs.leftenvs),

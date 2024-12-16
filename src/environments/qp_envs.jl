@@ -192,7 +192,7 @@ function environments(exci::FiniteQP,
 end
 
 function environments(exci::Multiline{<:InfiniteQP},
-                      ham::MPOMultiline,
+                      ham::MultilineMPO,
                       lenvs,
                       renvs;
                       solver=Defaults.linearsolver)
