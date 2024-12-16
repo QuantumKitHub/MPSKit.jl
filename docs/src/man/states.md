@@ -153,7 +153,7 @@ struct Multiline{T}
 end
 ```
 
-MultilineMPS/MPOMultiline are then defined as
+MultilineMPS/MultilineMPO are then defined as
 ```julia
 const MultilineMPS = Multiline{<:InfiniteMPS}
-const MPOMultiline = Multiline{<:DenseMPO}
+const MultilineMPO = Multiline{<:DenseMPO}
