@@ -7,7 +7,7 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 
 ## Fields
 - `method::OptimKit.OptimizationAlgorithm`: algorithm to perform the gradient search
-- `finalize!::Function`: user-supplied function which is applied after each iteration, with
+- `finalize!`: user-supplied callable which is applied after each iteration, with
     signature `finalize!(x::GrassmannMPS.ManifoldPoint, f, g, numiter) -> x, f, g`
 
 ---
