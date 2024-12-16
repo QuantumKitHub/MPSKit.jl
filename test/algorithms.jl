@@ -566,7 +566,7 @@ end
 
     @testset "MultilineMPS" begin
         o = rand(ComplexF64, pspace * pspace, pspace * pspace)
-        mpo = MPOMultiline(o)
+        mpo = MultilineMPO(o)
 
         t = rand(ComplexF64, Dspace * pspace, Dspace)
         state = MultilineMPS(fill(t, 1, 1))

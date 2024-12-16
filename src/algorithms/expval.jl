@@ -118,9 +118,9 @@ function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
 function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
-    return expectation_value(convert(MultilineMPS, ψ), convert(MPOMultiline, mpo), envs...)
+    return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), envs...)
 end
-function expectation_value(ψ::MultilineMPS, O::MPOMultiline{<:Union{DenseMPO,SparseMPO}},
+function expectation_value(ψ::MultilineMPS, O::MultilineMPO{<:Union{DenseMPO,SparseMPO}},
                            envs::InfiniteMPOEnvironments=environments(ψ, O))
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
         GL = leftenv(envs, i, j, ψ)
@@ -130,7 +130,7 @@ function expectation_value(ψ::MultilineMPS, O::MPOMultiline{<:Union{DenseMPO,Sp
                  conj(ψ.AC[i + 1, j][1 4; 8])
     end
 end
-function expectation_value(ψ::MultilineMPS, mpo::MPOMultiline, envs...)
+function expectation_value(ψ::MultilineMPS, mpo::MultilineMPO, envs...)
     # TODO: fix environments
     return prod(x -> expectation_value(x...), zip(parent(ψ), parent(mpo)))
 end

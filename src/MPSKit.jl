@@ -34,7 +34,7 @@ export braille
 export AbstractMPO
 export MPO, FiniteMPO, InfiniteMPO
 export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian
-export SparseMPO, DenseMPO, MPOMultiline
+export SparseMPO, DenseMPO, MultilineMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
@@ -93,7 +93,7 @@ include("states/ortho.jl")
 include("operators/abstractmpo.jl")
 include("operators/mpo.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
-include("operators/mpomultiline.jl")
+include("operators/multilinempo.jl")
 include("operators/projection.jl")
 include("operators/timedependence.jl")
 include("operators/multipliedoperator.jl")

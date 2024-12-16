@@ -1,5 +1,5 @@
 """
-    InfiniteMPOEnvironments{O<:MPOMultiline,V,S<:MultilineMPS,A} <: AbstractMPSEnvironments
+    InfiniteMPOEnvironments{O<:MultilineMPO,V,S<:MultilineMPS,A} <: AbstractMPSEnvironments
 
 Environment manager for `InfiniteMPO` and its `Multiline` version.
 """
@@ -23,30 +23,30 @@ end
 # Constructors
 # ------------
 function environments(state::InfiniteMPS, O::InfiniteMPO; kwargs...)
-    return environments(convert(MultilineMPS, state), convert(MPOMultiline, O); kwargs...)
+    return environments(convert(MultilineMPS, state), convert(MultilineMPO, O); kwargs...)
 end
 function environments(below::InfiniteMPS,
                       (mpo, above)::Tuple{<:InfiniteMPO,<:InfiniteMPS}; kwargs...)
     return environments(convert(MultilineMPS, below),
-                        (convert(MPOMultiline, mpo), convert(MultilineMPS, above));
+                        (convert(MultilineMPO, mpo), convert(MultilineMPS, above));
                         kwargs...)
 end
 
-function environments(state::MultilineMPS, mpo::MPOMultiline; solver=Defaults.eigsolver)
+function environments(state::MultilineMPS, mpo::MultilineMPO; solver=Defaults.eigsolver)
     GL, GR = initialize_environments(state, mpo, state)
     envs = InfiniteMPOEnvironments(nothing, mpo, state, solver, GL, GR)
     return recalculate!(envs, state)
 end
 
 function environments(below::MultilineMPS,
-                      (mpo, above)::Tuple{<:MPOMultiline,<:MultilineMPS};
+                      (mpo, above)::Tuple{<:MultilineMPO,<:MultilineMPS};
                       solver=Defaults.eigsolver)
     GL, GR = initialize_environments(above, mpo, below)
     envs = InfiniteMPOEnvironments(above, mpo, below, solver, GL, GR)
     return recalculate!(envs, below)
 end
 
-function initialize_environments(ket::MultilineMPS, operator::MPOMultiline,
+function initialize_environments(ket::MultilineMPS, operator::MultilineMPO,
                                  bra::MultilineMPS=ket)
     # allocate
     GL = PeriodicArray([allocate_GL(bra[row], operator[row], ket[row], col)

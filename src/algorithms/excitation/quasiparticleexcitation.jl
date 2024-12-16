@@ -167,7 +167,7 @@ end
 #                           Statmech Excitations                               #
 ################################################################################
 
-function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP},
+function excitations(H::MultilineMPO, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP},
                      lenvs, renvs; num=1, solver=Defaults.linearsolver)
     qp_envs(ϕ) = environments(ϕ, H, lenvs, renvs; solver)
     function H_eff(ϕ′)
@@ -194,13 +194,13 @@ function excitations(H::InfiniteMPO, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP
     return Es, ϕs
 end
 
-function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP},
+function excitations(H::MultilineMPO, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP},
                      lenvs; num=1, solver=Defaults.linearsolver)
     # Infer `renvs` in function body as it depends on `solver`.
     renvs = ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H; solver)
     return excitations(H, alg, ϕ₀, lenvs, renvs; num, solver)
 end
-function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP};
+function excitations(H::MultilineMPO, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP};
                      num=1, solver=Defaults.linearsolver)
     # Infer `lenvs` in function body as it depends on `solver`.
     lenvs = environments(ϕ₀.left_gs, H; solver)
@@ -214,16 +214,16 @@ function excitations(H::DenseMPO, alg::QuasiparticleAnsatz, momentum::Real,
                      sector=one(sectortype(lmps)), num=1, solver=Defaults.linearsolver)
     multiline_lmps = convert(MultilineMPS, lmps)
     if lmps === rmps
-        excitations(convert(MPOMultiline, H), alg, momentum, multiline_lmps, lenvs,
+        excitations(convert(MultilineMPO, H), alg, momentum, multiline_lmps, lenvs,
                     multiline_lmps,
                     lenvs; sector, num, solver)
     else
-        excitations(convert(MPOMultiline, H), alg, momentum, multiline_lmps, lenvs,
+        excitations(convert(MultilineMPO, H), alg, momentum, multiline_lmps, lenvs,
                     convert(MultilineMPS, rmps), renvs; sector, num, solver)
     end
 end
 
-function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, momentum::Real,
+function excitations(H::MultilineMPO, alg::QuasiparticleAnsatz, momentum::Real,
                      lmps::MultilineMPS,
                      lenvs=environments(lmps, H), rmps=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
@@ -263,7 +263,7 @@ function effective_excitation_hamiltonian(H::Union{InfiniteMPOHamiltonian,
     return ϕ′
 end
 
-function effective_excitation_hamiltonian(H::MPOMultiline, ϕ::Multiline{<:InfiniteQP},
+function effective_excitation_hamiltonian(H::MultilineMPO, ϕ::Multiline{<:InfiniteQP},
                                           envs=environments(ϕ, H))
     ϕ′ = Multiline(similar.(ϕ.data))
     left_gs = ϕ.left_gs

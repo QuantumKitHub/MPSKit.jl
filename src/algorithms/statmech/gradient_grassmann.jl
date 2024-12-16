@@ -1,7 +1,7 @@
 function leading_boundary(state::InfiniteMPS, H::DenseMPO, alg::GradientGrassmann,
                           envs=environments(state, H))
     (multi, envs, err) = leading_boundary(convert(MultilineMPS, state),
-                                          convert(MPOMultiline, H), alg, envs)
+                                          convert(MultilineMPO, H), alg, envs)
     state = convert(InfiniteMPS, multi)
     return (state, envs, err)
 end

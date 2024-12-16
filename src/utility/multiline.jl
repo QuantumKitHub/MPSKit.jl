@@ -7,7 +7,7 @@ multiple lines of `InfiniteMPS` (`MultilineMPS`) or MPO (`Multiline{<:AbstractMP
 # Fields
 - `data::PeriodicArray{T,1}`: the data of the multiline object
 
-See also: [`MultilineMPS`](@ref) and [`MPOMultiline`](@ref)
+See also: [`MultilineMPS`](@ref) and [`MultilineMPO`](@ref)
 """
 struct Multiline{T}
     data::PeriodicArray{T,1}

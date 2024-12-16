@@ -24,7 +24,7 @@ Power method algorithm for infinite MPS.
     alg_environments = Defaults.alg_environments()
 end
 
-function leading_boundary(ψ::MultilineMPS, O::MPOMultiline, alg::VOMPS,
+function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS,
                           envs=environments(ψ, O))
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
