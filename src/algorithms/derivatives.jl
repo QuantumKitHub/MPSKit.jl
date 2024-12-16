@@ -34,21 +34,21 @@ Base.:*(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, v) = h(v);
 function ∂∂C(pos::Int, mps, operator::AbstractMPO, cache)
     return MPO_∂∂C(leftenv(cache, pos + 1, mps), rightenv(cache, pos, mps))
 end
-function ∂∂C(col::Int, mps, operator::MPOMultiline, envs)
+function ∂∂C(col::Int, mps, operator::MultilineMPO, envs)
     return MPO_∂∂C(leftenv(envs, col + 1, mps), rightenv(envs, col, mps))
 end
-function ∂∂C(row::Int, col::Int, mps, operator::MPOMultiline, envs)
+function ∂∂C(row::Int, col::Int, mps, operator::MultilineMPO, envs)
     return MPO_∂∂C(leftenv(envs, row, col + 1, mps), rightenv(envs, row, col, mps))
 end
 
 function ∂∂AC(pos::Int, mps, operator::AbstractMPO, cache)
     return MPO_∂∂AC(operator[pos], leftenv(cache, pos, mps), rightenv(cache, pos, mps))
 end
-function ∂∂AC(row::Int, col::Int, mps, operator::MPOMultiline, envs)
+function ∂∂AC(row::Int, col::Int, mps, operator::MultilineMPO, envs)
     return MPO_∂∂AC(operator[row, col], leftenv(envs, row, col, mps),
                     rightenv(envs, row, col, mps))
 end
-function ∂∂AC(col::Int, mps, operator::MPOMultiline, envs)
+function ∂∂AC(col::Int, mps, operator::MultilineMPO, envs)
     return MPO_∂∂AC(envs.operator[:, col], leftenv(envs, col, mps),
                     rightenv(envs, col, mps))
 end;
@@ -57,11 +57,11 @@ function ∂∂AC2(pos::Int, mps, operator::AbstractMPO, cache)
     return MPO_∂∂AC2(operator[pos], operator[pos + 1], leftenv(cache, pos, mps),
                      rightenv(cache, pos + 1, mps))
 end;
-function ∂∂AC2(col::Int, mps, operator::MPOMultiline, envs)
+function ∂∂AC2(col::Int, mps, operator::MultilineMPO, envs)
     return MPO_∂∂AC2(operator[:, col], operator[:, col + 1], leftenv(envs, col, mps),
                      rightenv(envs, col + 1, mps))
 end
-function ∂∂AC2(row::Int, col::Int, mps, operator::MPOMultiline, envs)
+function ∂∂AC2(row::Int, col::Int, mps, operator::MultilineMPO, envs)
     return MPO_∂∂AC2(operator[row, col], operator[row, col + 1],
                      leftenv(envs, row, col, mps), rightenv(envs, row, col + 1, mps))
 end

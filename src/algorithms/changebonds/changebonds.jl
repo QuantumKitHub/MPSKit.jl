@@ -36,7 +36,7 @@ function _expand!(ψ::InfiniteMPS, AL′::PeriodicVector, AR′::PeriodicVector)
     end
     return normalize!(ψ)
 end
-function _expand!(ψ::MPSMultiline, AL′::PeriodicMatrix, AR′::PeriodicMatrix)
+function _expand!(ψ::MultilineMPS, AL′::PeriodicMatrix, AR′::PeriodicMatrix)
     for i in 1:size(ψ, 1)
         _expand!(ψ[i], AL′[i, :], AR′[i, :])
     end

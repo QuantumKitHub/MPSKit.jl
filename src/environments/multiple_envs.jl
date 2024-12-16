@@ -15,7 +15,7 @@ function environments(st, H::LazySum)
     return MultipleEnvironments(H, map(op -> environments(st, op), H.ops))
 end
 
-function environments(st::Union{InfiniteMPS,MPSMultiline}, H::LazySum;
+function environments(st::Union{InfiniteMPS,MultilineMPS}, H::LazySum;
                       solver=Defaults.linearsolver)
     if !(solver isa Vector)
         solver = repeat([solver], length(H))
@@ -26,7 +26,7 @@ function environments(st::Union{InfiniteMPS,MPSMultiline}, H::LazySum;
 end
 
 # TODO: fix this such that `T(...) isa T`
-function IDMRGEnvironments(ψ::Union{MPSMultiline,InfiniteMPS}, env::MultipleEnvironments)
+function IDMRGEnvironments(ψ::Union{MultilineMPS,InfiniteMPS}, env::MultipleEnvironments)
     envs = IDMRGEnvironments.(Ref(ψ), env.envs)
     Hs = getproperty.(env.envs, :operator)
     return MultipleEnvironments(LazySum(Hs), envs)

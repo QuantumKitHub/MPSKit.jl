@@ -1,22 +1,22 @@
 function approximate(ψ::InfiniteMPS,
                      toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS}, algorithm,
                      envs=environments(ψ, toapprox))
-    # PeriodicMPO's always act on MPSMultiline's. To avoid code duplication, define everything in terms of MPSMultiline's.
-    multi, envs = approximate(convert(MPSMultiline, ψ),
-                              (convert(MPOMultiline, toapprox[1]),
-                               convert(MPSMultiline, toapprox[2])), algorithm, envs)
+    # PeriodicMPO's always act on MultilineMPS's. To avoid code duplication, define everything in terms of MultilineMPS's.
+    multi, envs = approximate(convert(MultilineMPS, ψ),
+                              (convert(MultilineMPO, toapprox[1]),
+                               convert(MultilineMPS, toapprox[2])), algorithm, envs)
     ψ = convert(InfiniteMPS, multi)
     return ψ, envs
 end
 
-Base.@deprecate(approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
+Base.@deprecate(approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
                             alg::VUMPS, envs...; kwargs...),
                 approximate(ψ, toapprox,
                             VOMPS(; alg.tol, alg.maxiter, alg.finalize,
                                   alg.verbosity, alg.alg_gauge, alg.alg_environments),
                             envs...; kwargs...))
 
-function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMultiline},
+function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
                      alg::VOMPS, envs=environments(ψ, toapprox))
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
@@ -38,7 +38,7 @@ function approximate(ψ::MPSMultiline, toapprox::Tuple{<:MPOMultiline,<:MPSMulti
             end
 
             alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
-            ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
+            ψ = MultilineMPS(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
             recalculate!(envs, ψ; alg_environments.tol)

@@ -18,7 +18,7 @@ using Base: @kwdef
 using LoggingExtras
 
 # bells and whistles for mpses
-export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
+export InfiniteMPS, FiniteMPS, WindowMPS, MultilineMPS
 export PeriodicArray, PeriodicVector, PeriodicMatrix, WindowArray
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
@@ -34,7 +34,7 @@ export braille
 export AbstractMPO
 export MPO, FiniteMPO, InfiniteMPO
 export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian
-export SparseMPO, DenseMPO, MPOMultiline
+export SparseMPO, DenseMPO, MultilineMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
 export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
@@ -83,7 +83,7 @@ include("utility/linearcombination.jl")
 # maybe we should introduce an abstract state type
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
-include("states/mpsmultiline.jl")
+include("states/multilinemps.jl")
 include("states/finitemps.jl")
 include("states/windowmps.jl")
 include("states/orthoview.jl")
@@ -93,7 +93,7 @@ include("states/ortho.jl")
 include("operators/abstractmpo.jl")
 include("operators/mpo.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
-include("operators/mpomultiline.jl")
+include("operators/multilinempo.jl")
 include("operators/projection.jl")
 include("operators/timedependence.jl")
 include("operators/multipliedoperator.jl")
