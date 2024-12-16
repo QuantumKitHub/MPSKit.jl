@@ -85,9 +85,9 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     return ManifoldPoint(state, envs, g, Rhoreg)
 end
 
-function ManifoldPoint(state::MPSMultiline, envs)
+function ManifoldPoint(state::MultilineMPS, envs)
     # FIXME: add support for unitcells
-    @assert length(state.AL) == 1 "GradientGrassmann only supports MPSMultiline without unitcells for now"
+    @assert length(state.AL) == 1 "GradientGrassmann only supports MultilineMPS without unitcells for now"
 
     # TODO: this really should not use the operator from the environment
     f = expectation_value(state, envs.operator, envs)
@@ -128,8 +128,8 @@ function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
 
     return real(f), g_prec
 end
-function fg(x::ManifoldPoint{<:MPSMultiline})
-    @assert length(x.state) == 1 "GradientGrassmann only supports MPSMultiline without unitcells for now"
+function fg(x::ManifoldPoint{<:MultilineMPS})
+    @assert length(x.state) == 1 "GradientGrassmann only supports MultilineMPS without unitcells for now"
     # the gradient I want to return is the preconditioned gradient!
     g_prec = map(enumerate(x.g)) do (i, cg)
         return PrecGrad(rmul!(copy(cg), x.state.CR[i]'), x.Rhoreg[i])
@@ -145,9 +145,9 @@ function fg(x::ManifoldPoint{<:MPSMultiline})
 end
 
 """
-Retract a left-canonical MPSMultiline along Grassmann tangent `g` by distance `alpha`.
+Retract a left-canonical MultilineMPS along Grassmann tangent `g` by distance `alpha`.
 """
-function retract(x::ManifoldPoint{<:MPSMultiline}, tg, alpha)
+function retract(x::ManifoldPoint{<:MultilineMPS}, tg, alpha)
     g = reshape(tg, size(x.state))
 
     nal = similar(x.state.AL)
@@ -157,7 +157,7 @@ function retract(x::ManifoldPoint{<:MPSMultiline}, tg, alpha)
         h[i] = PrecGrad(th)
     end
 
-    nstate = MPSKit.MPSMultiline(nal, x.state.CR[:, end])
+    nstate = MPSKit.MultilineMPS(nal, x.state.CR[:, end])
     newpoint = ManifoldPoint(nstate, x.envs)
 
     return newpoint, h[:]
