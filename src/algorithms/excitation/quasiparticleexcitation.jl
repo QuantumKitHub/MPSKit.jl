@@ -212,19 +212,19 @@ function excitations(H::DenseMPO, alg::QuasiparticleAnsatz, momentum::Real,
                      lenvs=environments(lmps, H), rmps::InfiniteMPS=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
                      sector=one(sectortype(lmps)), num=1, solver=Defaults.linearsolver)
-    multiline_lmps = convert(MPSMultiline, lmps)
+    multiline_lmps = convert(MultilineMPS, lmps)
     if lmps === rmps
         excitations(convert(MPOMultiline, H), alg, momentum, multiline_lmps, lenvs,
                     multiline_lmps,
                     lenvs; sector, num, solver)
     else
         excitations(convert(MPOMultiline, H), alg, momentum, multiline_lmps, lenvs,
-                    convert(MPSMultiline, rmps), renvs; sector, num, solver)
+                    convert(MultilineMPS, rmps), renvs; sector, num, solver)
     end
 end
 
 function excitations(H::MPOMultiline, alg::QuasiparticleAnsatz, momentum::Real,
-                     lmps::MPSMultiline,
+                     lmps::MultilineMPS,
                      lenvs=environments(lmps, H), rmps=lmps,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
                      sector=one(sectortype(lmps)), num=1, solver=Defaults.linearsolver)

@@ -24,7 +24,7 @@ Power method algorithm for infinite MPS.
     alg_environments = Defaults.alg_environments()
 end
 
-function leading_boundary(ψ::MPSMultiline, O::MPOMultiline, alg::VOMPS,
+function leading_boundary(ψ::MultilineMPS, O::MPOMultiline, alg::VOMPS,
                           envs=environments(ψ, O))
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
@@ -62,7 +62,7 @@ function leading_boundary(ψ::MPSMultiline, O::MPOMultiline, alg::VOMPS,
 
             regauge!.(temp_ACs, temp_Cs; alg=TensorKit.QRpos())
             alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
-            ψ = MPSMultiline(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
+            ψ = MultilineMPS(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
             recalculate!(envs, ψ; alg_environments.tol)

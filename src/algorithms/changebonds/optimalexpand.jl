@@ -38,11 +38,11 @@ end
 
 function changebonds(ψ::InfiniteMPS, H::DenseMPO, alg::OptimalExpand,
                      envs=environments(ψ, H))
-    (nmψ, envs) = changebonds(convert(MPSMultiline, ψ), convert(MPOMultiline, H), alg, envs)
+    (nmψ, envs) = changebonds(convert(MultilineMPS, ψ), convert(MPOMultiline, H), alg, envs)
     return (convert(InfiniteMPS, nmψ), envs)
 end
 
-function changebonds(ψ::MPSMultiline, H, alg::OptimalExpand, envs=environments(ψ, H))
+function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs=environments(ψ, H))
     TL = eltype(ψ.AL)
     AL′ = PeriodicMatrix{TL}(undef, size(ψ.AL))
     TR = tensormaptype(spacetype(TL), 1, numind(TL) - 1, storagetype(TL))

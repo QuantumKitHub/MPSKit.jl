@@ -71,12 +71,12 @@ end
     end
 end
 
-@testset "MPSMultiline ($(sectortype(D)), $elt)" for (D, d, elt) in
+@testset "MultilineMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
                                                      [(ℙ^10, ℙ^2, ComplexF64),
                                                       (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
                                                        ComplexF32)]
     tol = Float64(eps(real(elt)) * 100)
-    ψ = MPSMultiline([rand(elt, D * d, D) rand(elt, D * d, D)
+    ψ = MultilineMPS([rand(elt, D * d, D) rand(elt, D * d, D)
                       rand(elt, D * d, D) rand(elt, D * d, D)]; tol)
 
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)

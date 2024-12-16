@@ -564,12 +564,12 @@ end
         @test dim(left_virtualspace(state_tr, 5)) < dim(left_virtualspace(state_oe, 5))
     end
 
-    @testset "MPSMultiline" begin
+    @testset "MultilineMPS" begin
         o = rand(ComplexF64, pspace * pspace, pspace * pspace)
         mpo = MPOMultiline(o)
 
         t = rand(ComplexF64, Dspace * pspace, Dspace)
-        state = MPSMultiline(fill(t, 1, 1))
+        state = MultilineMPS(fill(t, 1, 1))
 
         state_re = changebonds(state,
                                RandExpand(; trscheme=truncdim(dim(Dspace) * dim(Dspace))))

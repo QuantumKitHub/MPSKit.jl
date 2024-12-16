@@ -18,7 +18,7 @@ using Base: @kwdef
 using LoggingExtras
 
 # bells and whistles for mpses
-export InfiniteMPS, FiniteMPS, WindowMPS, MPSMultiline
+export InfiniteMPS, FiniteMPS, WindowMPS, MultilineMPS
 export PeriodicArray, PeriodicVector, PeriodicMatrix, WindowArray
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
@@ -83,7 +83,7 @@ include("utility/linearcombination.jl")
 # maybe we should introduce an abstract state type
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
-include("states/mpsmultiline.jl")
+include("states/multilinemps.jl")
 include("states/finitemps.jl")
 include("states/windowmps.jl")
 include("states/orthoview.jl")

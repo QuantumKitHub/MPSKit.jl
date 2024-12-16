@@ -34,7 +34,7 @@ Base.convert(::Type{SparseMPO}, t::MPOMultiline{<:SparseMPO}) = only(t)
 Base.convert(::Type{FiniteMPO}, t::MPOMultiline{<:FiniteMPO}) = only(t)
 Base.convert(::Type{InfiniteMPO}, t::MPOMultiline{<:InfiniteMPO}) = only(t)
 
-function Base.:*(mpo::MPOMultiline, st::MPSMultiline)
+function Base.:*(mpo::MPOMultiline, st::MultilineMPS)
     size(mpo) == size(st) || throw(ArgumentError("dimension mismatch"))
     return Multiline(map(*, zip(mpo, st)))
 end

@@ -69,9 +69,9 @@ function changebonds(ψ::InfiniteMPO, alg::SvdCut)
     return convert(InfiniteMPO, changebonds(convert(InfiniteMPS, ψ), alg))
 end
 function changebonds(ψ::MPOMultiline, alg::SvdCut)
-    return convert(MPOMultiline, changebonds(convert(MPSMultiline, ψ), alg))
+    return convert(MPOMultiline, changebonds(convert(MultilineMPS, ψ), alg))
 end
-function changebonds(ψ::MPSMultiline, alg::SvdCut)
+function changebonds(ψ::MultilineMPS, alg::SvdCut)
     return Multiline(map(x -> changebonds(x, alg), ψ.data))
 end
 function changebonds(ψ::InfiniteMPS, alg::SvdCut)

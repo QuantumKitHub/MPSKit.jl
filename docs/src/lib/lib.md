@@ -5,7 +5,7 @@
 FiniteMPS
 InfiniteMPS
 WindowMPS
-MPSMultiline
+MultilineMPS
 ```
 
 ## Operators

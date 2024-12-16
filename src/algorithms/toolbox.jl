@@ -29,7 +29,7 @@ end
 function calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS}, envs)::Float64
     return maximum([calc_galerkin(state, loc, envs) for loc in 1:length(state)])
 end
-function calc_galerkin(state::MPSMultiline, envs::InfiniteMPOEnvironments)::Float64
+function calc_galerkin(state::MultilineMPS, envs::InfiniteMPOEnvironments)::Float64
     above = isnothing(envs.above) ? state : envs.above
 
     εs = zeros(Float64, size(state, 1), size(state, 2))
