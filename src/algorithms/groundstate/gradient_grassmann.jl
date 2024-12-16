@@ -39,7 +39,7 @@ struct GradientGrassmann{O<:OptimKit.OptimizationAlgorithm,F} <: Algorithm
             msg = "method should be either an instance or a subtype of `OptimKit.OptimizationAlgorithm`."
             throw(ArgumentError(msg))
         end
-        return new(m, finalize!)
+        return new{typeof(m),typeof(finalize!)}(m, finalize!)
     end
 end
 
