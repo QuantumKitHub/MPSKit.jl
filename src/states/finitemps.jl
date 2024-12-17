@@ -71,7 +71,7 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
         length(ACs) == length(Cs) - 1 == length(ALs) == length(ARs) ||
             throw(DimensionMismatch("length mismatch of tensors"))
         sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
-            throw(ArgumentError("at least one AC/CL should not be missing"))
+            throw(ArgumentError("at least one AC/C should not be missing"))
 
         S = spacetype(A)
         left_virt_spaces = Vector{Union{Missing,S}}(missing, length(Cs))
@@ -116,9 +116,9 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
         for (i, c) in enumerate(Cs)
             ismissing(c) && continue
             !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(c) ||
-                                                throw(SpaceMismatch("Left virtual space of CL on site $(i) doesn't match")))
+                                                throw(SpaceMismatch("Left virtual space of C on site $(i-1) doesn't match")))
             !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _lastspace(c)' ||
-                                                 throw(SpaceMismatch("Right virtual space of CL on site $(i) doesn't match")))
+                                                 throw(SpaceMismatch("Right virtual space of C on site $(i-1) doesn't match")))
         end
 
         return new{A,B}(ALs, ARs, ACs, Cs, center)
