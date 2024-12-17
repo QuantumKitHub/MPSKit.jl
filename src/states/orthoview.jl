@@ -47,35 +47,35 @@ struct CRView{S,E,N} <: AbstractArray{E,N}
 end
 
 function Base.getindex(v::CRView{<:FiniteMPS,E}, i::Int)::E where {E}
-    if ismissing(v.parent.CLs[i + 1])
+    if ismissing(v.parent.Cs[i + 1])
         if i == 0 || !ismissing(v.parent.ALs[i])
-            (v.parent.CLs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
+            (v.parent.Cs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
                                                     alg=LQpos())
             v.parent.ARs[i + 1] = _transpose_front(temp)
         else
-            (v.parent.ALs[i], v.parent.CLs[i + 1]) = leftorth(v.parent.AC[i]; alg=QRpos())
+            (v.parent.ALs[i], v.parent.Cs[i + 1]) = leftorth(v.parent.AC[i]; alg=QRpos())
         end
     end
-    return v.parent.CLs[i + 1]
+    return v.parent.Cs[i + 1]
 end
 
 function Base.setindex!(v::CRView{<:FiniteMPS}, vec, i::Int)
-    if ismissing(v.parent.CLs[i + 1])
+    if ismissing(v.parent.Cs[i + 1])
         if !ismissing(v.parent.ALs[i])
-            (v.parent.CLs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
+            (v.parent.Cs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
                                                     alg=LQpos())
             v.parent.ARs[i + 1] = _transpose_front(temp)
         else
-            (v.parent.ALs[i], v.parent.CLs[i + 1]) = leftorth(v.parent.AC[i]; alg=QRpos())
+            (v.parent.ALs[i], v.parent.Cs[i + 1]) = leftorth(v.parent.AC[i]; alg=QRpos())
         end
     end
 
-    v.parent.CLs .= missing
+    v.parent.Cs .= missing
     v.parent.ACs .= missing
     v.parent.ALs[(i + 1):end] .= missing
     v.parent.ARs[1:i] .= missing
 
-    return setindex!(v.parent.CLs, vec, i + 1)
+    return setindex!(v.parent.Cs, vec, i + 1)
 end
 
 Base.getindex(v::CRView{<:WindowMPS}, i::Int) = CRView(v.parent.window)[i]
@@ -112,7 +112,7 @@ function Base.setindex!(v::ACView{<:FiniteMPS}, vec::GenericMPSTensor, i::Int)
     end
 
     v.parent.ACs .= missing
-    v.parent.CLs .= missing
+    v.parent.Cs .= missing
     v.parent.ALs[i:end] .= missing
     v.parent.ARs[1:i] .= missing
     return setindex!(v.parent.ACs, vec, i)
@@ -126,16 +126,16 @@ function Base.setindex!(v::ACView{<:FiniteMPS},
     end
 
     v.parent.ACs .= missing
-    v.parent.CLs .= missing
+    v.parent.Cs .= missing
     v.parent.ALs[i:end] .= missing
     v.parent.ARs[1:i] .= missing
 
     a, b = vec
     if isa(a, MPSBondTensor) #c/ar
-        setindex!(v.parent.CLs, a, i)
+        setindex!(v.parent.Cs, a, i)
         setindex!(v.parent.ARs, b, i)
     elseif isa(b, MPSBondTensor) #al/c
-        setindex!(v.parent.CLs, b, i + 1)
+        setindex!(v.parent.Cs, b, i + 1)
         setindex!(v.parent.ALs, a, i)
     else
         throw(ArgumentError("invalid value types"))

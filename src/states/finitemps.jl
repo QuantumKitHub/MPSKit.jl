@@ -7,13 +7,14 @@ Type that represents a finite Matrix Product State.
 - `ALs` -- left-gauged MPS tensors
 - `ARs` -- right-gauged MPS tensors
 - `ACs` -- center-gauged MPS tensors
-- `CLs` -- gauge tensors
+- `Cs` -- gauge tensors
+- `center` -- index of the center tensor
 
 Where each is entry can be a tensor or `missing`.
 
 ## Notes
 By convention, we have that:
-- `AL[i] * CL[i+1]` = `AC[i]` = `CL[i] * AR[i]`
+- `AL[i] * C[i]` = `AC[i]` = `C[i-1] * AR[i]`
 - `AL[i]' * AL[i] = 1`
 - `AR[i] * AR[i]' = 1`
 
@@ -54,25 +55,27 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing,A}}
     ARs::Vector{Union{Missing,A}}
     ACs::Vector{Union{Missing,A}}
-    CLs::Vector{Union{Missing,B}}
+    Cs::Vector{Union{Missing,B}}
+
+    center::Int
     function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
-                            CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
+                            Cs::Vector{Union{Missing,B}}, center::Int) where {A<:GenericMPSTensor,
                                                                   B<:MPSBondTensor}
-        return new{A,B}(ALs, ARs, ACs, CLs)
+        return new{A,B}(ALs, ARs, ACs, Cs, center)
     end
     function FiniteMPS(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
                        ACs::Vector{Union{Missing,A}},
-                       CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
+                       Cs::Vector{Union{Missing,B}}, center::Int) where {A<:GenericMPSTensor,
                                                              B<:MPSBondTensor}
-        length(ACs) == length(CLs) - 1 == length(ALs) == length(ARs) ||
+        length(ACs) == length(Cs) - 1 == length(ALs) == length(ARs) ||
             throw(DimensionMismatch("length mismatch of tensors"))
-        sum(ismissing.(ACs)) + sum(ismissing.(CLs)) < length(ACs) + length(CLs) ||
+        sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
             throw(ArgumentError("at least one AC/CL should not be missing"))
 
         S = spacetype(A)
-        left_virt_spaces = Vector{Union{Missing,S}}(missing, length(CLs))
-        right_virt_spaces = Vector{Union{Missing,S}}(missing, length(CLs))
+        left_virt_spaces = Vector{Union{Missing,S}}(missing, length(Cs))
+        right_virt_spaces = Vector{Union{Missing,S}}(missing, length(Cs))
 
         for (i, tup) in enumerate(zip(ALs, ARs, ACs))
             non_missing = filter(!ismissing, tup)
@@ -110,7 +113,7 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
             end
         end
 
-        for (i, c) in enumerate(CLs)
+        for (i, c) in enumerate(Cs)
             ismissing(c) && continue
             !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(c) ||
                                                 throw(SpaceMismatch("Left virtual space of CL on site $(i) doesn't match")))
@@ -118,7 +121,7 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
                                                  throw(SpaceMismatch("Right virtual space of CL on site $(i) doesn't match")))
         end
 
-        return new{A,B}(ALs, ARs, ACs, CLs)
+        return new{A,B}(ALs, ARs, ACs, Cs, center)
     end
 end
 
@@ -157,15 +160,15 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=fa
     A = eltype(As)
     B = typeof(C)
 
-    CLs = Vector{Union{Missing,B}}(missing, N + 1)
+    Cs = Vector{Union{Missing,B}}(missing, N + 1)
     ALs = Vector{Union{Missing,A}}(missing, N)
     ARs = Vector{Union{Missing,A}}(missing, N)
     ACs = Vector{Union{Missing,A}}(missing, N)
 
     ALs .= As
-    CLs[end] = C
+    Cs[end] = C
 
-    return FiniteMPS(ALs, ARs, ACs, CLs)
+    return FiniteMPS(ALs, ARs, ACs, Cs, N + 1)
 end
 
 function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
@@ -236,9 +239,9 @@ Utility
 Base.size(ψ::FiniteMPS, args...) = size(ψ.ALs, args...)
 Base.length(ψ::FiniteMPS) = length(ψ.ALs)
 Base.eltype(ψtype::Type{<:FiniteMPS}) = site_type(ψtype) # this might not be true
-Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.CLs))
+Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.Cs))
 function Base.similar(ψ::FiniteMPS{A,B}) where {A,B}
-    return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.CLs))
+    return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
 end
 
 Base.checkbounds(::Type{Bool}, ψ::FiniteMPS, i::Integer) = 1 <= i <= length(ψ)
@@ -334,8 +337,8 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
                 println(io, site == L ? charset.start : charset.mid, charset.dash,
                         " AR[$site]: ", ψ.ARs[site])
                 if site == 1
-                    ismissing(ψ.CLs[site]) && throw(ArgumentError("invalid state"))
-                    println(io, charset.stop, " CL[$site]: ", ψ.CLs[site])
+                    ismissing(ψ.Cs[site]) && throw(ArgumentError("invalid state"))
+                    println(io, charset.stop, " CL[$site]: ", ψ.Cs[site])
                 end
             elseif site == center
                 if !ismissing(ψ.ACs[site])
@@ -346,9 +349,9 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
                             else
                                 charset.mid
                             end, charset.dash, " AC[$site]: ", ψ.ACs[site])
-                elseif !ismissing(ψ.ALs[site]) && !ismissing(ψ.CLs[site + 1])
+                elseif !ismissing(ψ.ALs[site]) && !ismissing(ψ.Cs[site + 1])
                     println(io, site == L ? charset.start : charset.ver, " CL[$(site+1)]: ",
-                            ψ.CLs[site + 1])
+                            ψ.Cs[site + 1])
                     println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
                             " AL[$site]: ", ψ.ALs[site])
                 else
@@ -385,7 +388,7 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS<:FiniteMPS}
     fill!(ψ.ALs, missing)
     fill!(ψ.ARs, missing)
     fill!(ψ.ACs, missing)
-    fill!(ψ.CLs, missing)
+    fill!(ψ.Cs, missing)
 
     halfN = div(length(ψ), 2)
 
@@ -441,7 +444,7 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS<:FiniteMPS}
     # center
     C₁ = C₁ * F₁'
     C₂ = C₂ * F₂'
-    ψ.CLs[halfN + 1] = R * (C₁ + C₂) * L
+    ψ.Cs[halfN + 1] = R * (C₁ + C₂) * L
 
     return ψ
 end
@@ -450,13 +453,13 @@ Base.:-(ψ₁::FiniteMPS, ψ₂::FiniteMPS) = ψ₁ + (-1 * ψ₂)
 
 function TensorKit.lmul!(a::Number, ψ::FiniteMPS)
     ψ.ACs .*= a
-    ψ.CLs .*= a
+    ψ.Cs .*= a
     return ψ
 end
 
 function TensorKit.rmul!(ψ::FiniteMPS, a::Number)
     ψ.ACs .*= a
-    ψ.CLs .*= a
+    ψ.Cs .*= a
     return ψ
 end
 

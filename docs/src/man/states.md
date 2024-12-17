@@ -66,7 +66,7 @@ Behind the scenes, a finite mps has 4 fields
 ALs::Vector{Union{Missing,A}}
 ARs::Vector{Union{Missing,A}}
 ACs::Vector{Union{Missing,A}}
-CLs::Vector{Union{Missing,B}}
+Cs::Vector{Union{Missing,B}}
 ```
 
 calling `state.AC` returns an "orthoview" instance, which is a very simple dummy object.
