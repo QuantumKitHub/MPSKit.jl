@@ -338,7 +338,7 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
                         " AR[$site]: ", ψ.ARs[site])
                 if site == 1
                     ismissing(ψ.Cs[site]) && throw(ArgumentError("invalid state"))
-                    println(io, charset.stop, " CL[$site]: ", ψ.Cs[site])
+                    println(io, charset.stop, " C[$site]: ", ψ.Cs[site])
                 end
             elseif site == center
                 if !ismissing(ψ.ACs[site])
@@ -350,7 +350,7 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
                                 charset.mid
                             end, charset.dash, " AC[$site]: ", ψ.ACs[site])
                 elseif !ismissing(ψ.ALs[site]) && !ismissing(ψ.Cs[site + 1])
-                    println(io, site == L ? charset.start : charset.ver, " CL[$(site+1)]: ",
+                    println(io, site == L ? charset.start : charset.ver, " C[$(site+1)]: ",
                             ψ.Cs[site + 1])
                     println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
                             " AL[$site]: ", ψ.ALs[site])
