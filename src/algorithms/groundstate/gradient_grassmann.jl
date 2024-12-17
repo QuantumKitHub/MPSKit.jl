@@ -7,7 +7,7 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 
 ## Fields
 - `method::OptimKit.OptimizationAlgorithm`: algorithm to perform the gradient search
-- `finalize!::Function`: user-supplied function which is applied after each iteration, with
+- `finalize!`: user-supplied callable which is applied after each iteration, with
     signature `finalize!(x::GrassmannMPS.ManifoldPoint, f, g, numiter) -> x, f, g`
 
 ---
@@ -23,9 +23,9 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: level of information display
 """
-struct GradientGrassmann <: Algorithm
-    method::OptimKit.OptimizationAlgorithm
-    finalize!::Function
+struct GradientGrassmann{O<:OptimKit.OptimizationAlgorithm,F} <: Algorithm
+    method::O
+    finalize!::F
 
     function GradientGrassmann(; method=ConjugateGradient, (finalize!)=OptimKit._finalize!,
                                tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity=2)
@@ -39,7 +39,7 @@ struct GradientGrassmann <: Algorithm
             msg = "method should be either an instance or a subtype of `OptimKit.OptimizationAlgorithm`."
             throw(ArgumentError(msg))
         end
-        return new(m, finalize!)
+        return new{typeof(m),typeof(finalize!)}(m, finalize!)
     end
 end
 
