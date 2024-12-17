@@ -8,9 +8,9 @@ all the sites are represented by an upper triangular block matrix of the followi
 
 ```math
 \\begin{pmatrix}
-1 C D
-0 A B
-0 0 1
+1 & C & D \\\\
+0 & A & B \\\\
+0 & 0 & 1
 \\end{pmatrix}
 ```
 
