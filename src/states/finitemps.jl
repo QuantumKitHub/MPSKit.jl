@@ -238,9 +238,9 @@ Utility
 Base.size(ψ::FiniteMPS, args...) = size(ψ.ALs, args...)
 Base.length(ψ::FiniteMPS) = length(ψ.ALs)
 Base.eltype(ψtype::Type{<:FiniteMPS}) = site_type(ψtype) # this might not be true
-Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.Cs))
+Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.Cs), copy(ψ.center[])) # dereference Ref
 function Base.similar(ψ::FiniteMPS{A,B}) where {A,B}
-    return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
+    return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs), similar(ψ.center))
 end
 
 Base.checkbounds(::Type{Bool}, ψ::FiniteMPS, i::Integer) = 1 <= i <= length(ψ)
