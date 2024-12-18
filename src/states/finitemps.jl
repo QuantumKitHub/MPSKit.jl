@@ -56,17 +56,15 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     ARs::Vector{Union{Missing,A}}
     ACs::Vector{Union{Missing,A}}
     Cs::Vector{Union{Missing,B}}
-
-    center::Ref{Int} # Use Ref to allow for a mutable type in an unmutable struct
     function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
-                            Cs::Vector{Union{Missing,B}}, center::Ref{Int}) where {A<:GenericMPSTensor,
+                            Cs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
                                                                   B<:MPSBondTensor}
-        return new{A,B}(ALs, ARs, ACs, Cs, center)
+        return new{A,B}(ALs, ARs, ACs, Cs)
     end
     function FiniteMPS(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
                        ACs::Vector{Union{Missing,A}},
-                       Cs::Vector{Union{Missing,B}}, center::Int) where {A<:GenericMPSTensor,
+                       Cs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
                                                              B<:MPSBondTensor}
         length(ACs) == length(Cs) - 1 == length(ALs) == length(ARs) ||
             throw(DimensionMismatch("length mismatch of tensors"))
@@ -120,7 +118,7 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
             !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _lastspace(c)' ||
                                                  throw(SpaceMismatch("Right virtual space of C on site $(i-1) doesn't match")))
         end
-        return new{A,B}(ALs, ARs, ACs, Cs, Ref{Int}(center))
+        return new{A,B}(ALs, ARs, ACs, Cs)
     end
 end
 
@@ -164,11 +162,10 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=fa
     ARs = Vector{Union{Missing,A}}(missing, N)
     ACs = Vector{Union{Missing,A}}(missing, N)
 
-    # Initialize center on the last site
-    ALs[1:end-1] .= As[1:end-1]
-    ACs[end] = As[end]*C
+    ALs .= As
+    Cs[end] = C
 
-    return FiniteMPS(ALs, ARs, ACs, Cs, N)
+    return FiniteMPS(ALs, ARs, ACs, Cs)
 end
 
 function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
@@ -239,9 +236,9 @@ Utility
 Base.size(ψ::FiniteMPS, args...) = size(ψ.ALs, args...)
 Base.length(ψ::FiniteMPS) = length(ψ.ALs)
 Base.eltype(ψtype::Type{<:FiniteMPS}) = site_type(ψtype) # this might not be true
-Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.Cs), copy(ψ.center[])) # dereference Ref
+Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.Cs))
 function Base.similar(ψ::FiniteMPS{A,B}) where {A,B}
-    return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs), Ref{Int}(ψ.center[]))
+    return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
 end
 
 Base.checkbounds(::Type{Bool}, ψ::FiniteMPS, i::Integer) = 1 <= i <= length(ψ)
