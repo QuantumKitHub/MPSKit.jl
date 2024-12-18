@@ -272,13 +272,13 @@ function left_virtualspace(ψ::FiniteMPS, n::Integer)
     checkbounds(ψ, n)
     return !ismissing(ψ.ALs[n]) ? left_virtualspace(ψ.ALs[n]) :
            !ismissing(ψ.ARs[n]) ? left_virtualspace(ψ.ARs[n]) :
-           dual(_lastspace(ψ.CR[n - 1]))
+           dual(_lastspace(ψ.C[n - 1]))
 end
 function right_virtualspace(ψ::FiniteMPS, n::Integer)
     checkbounds(ψ, n)
     return !ismissing(ψ.ARs[n]) ? right_virtualspace(ψ.ARs[n]) :
            !ismissing(ψ.ALs[n]) ? right_virtualspace(ψ.ALs[n]) :
-           _firstspace(ψ.CR[n])
+           _firstspace(ψ.C[n])
 end
 
 physicalspace(ψ::FiniteMPS) = physicalspace.(Ref(ψ), 1:length(ψ))
