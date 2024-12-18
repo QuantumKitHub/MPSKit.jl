@@ -226,8 +226,8 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
 
     # construct the virtual spaces
     MissingS = Union{Missing,S}
-    virtualspaces = PeriodicArray([Vector{MissingS}(missing, maximum(last, K; init=1) + 1)
-                                   for K in nonzero_keys])
+    operator_size = maximum(K -> maximum(last, K; init=1) + 1, nonzero_keys)
+    virtualspaces = PeriodicArray([Vector{MissingS}(missing, operator_size) for _ in 1:length(nonzero_keys)])
     for V in virtualspaces
         V[1] = oneunit(S)
         V[end] = oneunit(S)
@@ -237,7 +237,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     for i in 1:length(lattice)
         for j in findall(x -> x isa AbstractTensorMap, nonzero_opps[i])
             key_L, key_R′ = nonzero_keys[i][j]
-            key_R = key_R′ == 0 ? length(virtualspaces[i]) : key_R′
+            key_R = key_R′ == 0 ? operator_size : key_R′
             O = nonzero_opps[i][j]
 
             if ismissing(virtualspaces[i - 1][key_L])
@@ -260,7 +260,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
         for i in 1:length(lattice)
             for j in findall(x -> !(x isa AbstractTensorMap), nonzero_opps[i])
                 key_L, key_R′ = nonzero_keys[i][j]
-                key_R = key_R′ == 0 ? length(virtualspaces[i]) : key_R′
+                key_R = key_R′ == 0 ? operator_size : key_R′
 
                 if !ismissing(virtualspaces[i - 1][key_L]) &&
                    ismissing(virtualspaces[i][key_R])
@@ -276,12 +276,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
         end
     end
 
-    for i in 1:length(lattice)
-        if any(ismissing, virtualspaces[i])
-            @warn "missing virtual spaces at site $i: $(findall(ismissing, virtualspaces[i]))"
-            replace!(virtualspaces[i], missing => oneunit(S))
-        end
-    end
+    foreach(Base.Fix2(replace!, missing => oneunit(S)), virtualspaces)
     virtualsumspaces = map(virtualspaces) do V
         return SumSpace(collect(S, V))
     end
