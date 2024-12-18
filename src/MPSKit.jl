@@ -9,6 +9,7 @@ using Base.Iterators
 using RecipesBase
 using VectorInterface
 using Accessors
+using HalfIntegers
 import TupleTools as TT
 
 using LinearAlgebra: diag, Diagonal
