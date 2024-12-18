@@ -130,11 +130,28 @@ function Base.getproperty(ψ::FiniteMPS, prop::Symbol)
         return ACView(ψ)
     elseif prop == :C
         return CView(ψ)
+    elseif prop == :center
+        return center(ψ)
     else
         return getfield(ψ, prop)
     end
 end
 
+function center(ψ::FiniteMPS)::HalfInt
+    L = length(ψ)
+    center = something(findlast(!ismissing, ψ.ALs), 0)
+    if center != L && !ismissing(ψ.ACs[center + 1])
+        center += 1
+    end
+
+    center = findfirst(!ismissing, ψ.ACs) # give priority to integer values of center
+    if isnothing(center)
+        center = findfirst(!ismissing, ψ.Cs)
+        return (center - 1) + 1//2
+    end
+    isnothing(center) && throw(ArgumentError("No center found, invalid state"))
+    return center
+end
 #===========================================================================================
 Constructors
 ===========================================================================================#
