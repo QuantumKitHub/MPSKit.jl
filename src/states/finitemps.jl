@@ -164,10 +164,11 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=fa
     ARs = Vector{Union{Missing,A}}(missing, N)
     ACs = Vector{Union{Missing,A}}(missing, N)
 
-    ALs .= As
-    Cs[end] = C
+    # Initialize center on the last site
+    ALs[1:end-1] .= As[1:end-1]
+    ACs[end] = As[end]*C
 
-    return FiniteMPS(ALs, ARs, ACs, Cs, N + 1)
+    return FiniteMPS(ALs, ARs, ACs, Cs, N)
 end
 
 function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
