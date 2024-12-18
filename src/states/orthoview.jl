@@ -4,7 +4,7 @@ struct ALView{S,E,N} <: AbstractArray{E,N}
 end
 
 function Base.getindex(v::ALView{<:FiniteMPS,E}, i::Int)::E where {E}
-    ismissing(v.parent.ALs[i]) && v.parent.C[i] # by getting CL[i+1], we are garantueeing that AL[i] exists
+    ismissing(v.parent.ALs[i]) && v.parent.C[i] # by getting C[i], we are garantueeing that AL[i] exists
     return v.parent.ALs[i]
 end
 
