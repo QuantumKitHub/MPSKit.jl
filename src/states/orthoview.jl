@@ -41,12 +41,12 @@ function Base.setindex!(v::ARView{<:Multiline}, vec, i::Int, j::Int)
     return setindex!(v.parent[i].AR, vec, j)
 end
 
-struct CRView{S,E,N} <: AbstractArray{E,N}
+struct CView{S,E,N} <: AbstractArray{E,N}
     parent::S
-    CRView(parent::S) where {S} = new{S,bond_type(S),length(size(parent))}(parent)
+    CView(parent::S) where {S} = new{S,bond_type(S),length(size(parent))}(parent)
 end
 
-function Base.getindex(v::CRView{<:FiniteMPS,E}, i::Int)::E where {E}
+function Base.getindex(v::CView{<:FiniteMPS,E}, i::Int)::E where {E}
     if ismissing(v.parent.Cs[i + 1])
         if i == 0 || !ismissing(v.parent.ALs[i])
             (v.parent.Cs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
@@ -59,7 +59,7 @@ function Base.getindex(v::CRView{<:FiniteMPS,E}, i::Int)::E where {E}
     return v.parent.Cs[i + 1]
 end
 
-function Base.setindex!(v::CRView{<:FiniteMPS}, vec, i::Int)
+function Base.setindex!(v::CView{<:FiniteMPS}, vec, i::Int)
     if ismissing(v.parent.Cs[i + 1])
         if !ismissing(v.parent.ALs[i])
             (v.parent.Cs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
@@ -78,12 +78,12 @@ function Base.setindex!(v::CRView{<:FiniteMPS}, vec, i::Int)
     return setindex!(v.parent.Cs, vec, i + 1)
 end
 
-Base.getindex(v::CRView{<:WindowMPS}, i::Int) = CRView(v.parent.window)[i]
-function Base.setindex!(v::CRView{<:WindowMPS}, vec, i::Int)
-    return setindex!(CRView(v.parent.window), vec, i)
+Base.getindex(v::CView{<:WindowMPS}, i::Int) = CView(v.parent.window)[i]
+function Base.setindex!(v::CView{<:WindowMPS}, vec, i::Int)
+    return setindex!(CView(v.parent.window), vec, i)
 end
-Base.getindex(v::CRView{<:Multiline}, i::Int, j::Int) = v.parent[i].CR[j]
-function Base.setindex!(v::CRView{<:Multiline}, vec, i::Int, j::Int)
+Base.getindex(v::CView{<:Multiline}, i::Int, j::Int) = v.parent[i].CR[j]
+function Base.setindex!(v::CView{<:Multiline}, vec, i::Int, j::Int)
     return setindex!(v.parent[i].CR, vec, j)
 end;
 
@@ -159,16 +159,16 @@ end
 Base.size(psi::Union{ACView,ALView,ARView}) = size(psi.parent)
 
 #=
-CRView is tricky. It starts at 0 for finitemps/WindowMPS, but for multiline Infinitemps objects, it should start at 1.
+CView is tricky. It starts at 0 for finitemps/WindowMPS, but for multiline Infinitemps objects, it should start at 1.
 =#
-Base.size(psi::CRView{<:AbstractFiniteMPS}) = (length(psi.parent) + 1,)
-Base.axes(psi::CRView{<:AbstractFiniteMPS}) = map(n -> 0:(n - 1), size(psi))
+Base.size(psi::CView{<:AbstractFiniteMPS}) = (length(psi.parent) + 1,)
+Base.axes(psi::CView{<:AbstractFiniteMPS}) = map(n -> 0:(n - 1), size(psi))
 
-Base.size(psi::CRView{<:Multiline{<:InfiniteMPS}}) = size(psi.parent)
-function Base.size(psi::CRView{<:Multiline{<:AbstractFiniteMPS}})
+Base.size(psi::CView{<:Multiline{<:InfiniteMPS}}) = size(psi.parent)
+function Base.size(psi::CView{<:Multiline{<:AbstractFiniteMPS}})
     return (length(psi.parent.data), length(first(psi.parent.data)) + 1)
 end
-function Base.axes(psi::CRView{<:Multiline{<:AbstractFiniteMPS}})
+function Base.axes(psi::CView{<:Multiline{<:AbstractFiniteMPS}})
     return (Base.OneTo(length(psi.parent.data)), 0:length(first(psi.parent.data)))
 end
 
@@ -176,10 +176,10 @@ end
 #however if it is a Multiline(Infinitemps), then the second index is also periodic!
 function Base.checkbounds(::Type{Bool},
                           psi::Union{ACView{<:Multiline},ALView{<:Multiline},
-                                     ARView{<:Multiline},CRView{<:Multiline}}, a, b)
+                                     ARView{<:Multiline},CView{<:Multiline}}, a, b)
     return if first(psi.parent.data) isa InfiniteMPS
         true
     else
-        checkbounds(Bool, CRView(first(psi.parent.data)), b)
+        checkbounds(Bool, CView(first(psi.parent.data)), b)
     end
 end

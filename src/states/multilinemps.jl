@@ -51,7 +51,7 @@ function Base.getproperty(psi::MultilineMPS, prop::Symbol)
     elseif prop == :AC
         return ACView(psi)
     elseif prop == :CR
-        return CRView(psi)
+        return CView(psi)
     else
         return getfield(psi, prop)
     end
