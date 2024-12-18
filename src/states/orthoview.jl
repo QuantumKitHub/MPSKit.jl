@@ -25,7 +25,7 @@ struct ARView{S,E,N} <: AbstractArray{E,N}
 end
 
 function Base.getindex(v::ARView{<:FiniteMPS,E}, i::Int)::E where {E}
-    # by getting CL[i], we are garantueeing that AR[i] exists
+    # by getting C[i-1], we are garantueeing that AR[i] exists
     ismissing(v.parent.ARs[i]) && v.parent.C[i - 1]
     return v.parent.ARs[i]
 end
@@ -50,7 +50,7 @@ function Base.getindex(v::CView{<:FiniteMPS,E}, i::Int)::E where {E}
     if ismissing(v.parent.Cs[i + 1])
         if i == 0 || !ismissing(v.parent.ALs[i])
             (v.parent.Cs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
-                                                    alg=LQpos())
+                                                   alg=LQpos())
             v.parent.ARs[i + 1] = _transpose_front(temp)
         else
             (v.parent.ALs[i], v.parent.Cs[i + 1]) = leftorth(v.parent.AC[i]; alg=QRpos())
@@ -63,7 +63,7 @@ function Base.setindex!(v::CView{<:FiniteMPS}, vec, i::Int)
     if ismissing(v.parent.Cs[i + 1])
         if !ismissing(v.parent.ALs[i])
             (v.parent.Cs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
-                                                    alg=LQpos())
+                                                   alg=LQpos())
             v.parent.ARs[i + 1] = _transpose_front(temp)
         else
             (v.parent.ALs[i], v.parent.Cs[i + 1]) = leftorth(v.parent.AC[i]; alg=QRpos())
