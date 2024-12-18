@@ -414,8 +414,8 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS<:FiniteMPS}
         ψ.ALs[i], R = leftorth!(AL)
     end
 
-    C₁ = F₁ * ψ₁.CR[halfN]
-    C₂ = F₂ * ψ₂.CR[halfN]
+    C₁ = F₁ * ψ₁.C[halfN]
+    C₂ = F₂ * ψ₂.C[halfN]
 
     # right half
     F₁ = isometry(storagetype(ψ), _firstspace(ψ₁.AR[end]) ⊕ _firstspace(ψ₂.AR[end]),
