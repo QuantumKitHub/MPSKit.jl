@@ -227,7 +227,8 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     # construct the virtual spaces
     MissingS = Union{Missing,S}
     operator_size = maximum(K -> maximum(last, K; init=1) + 1, nonzero_keys)
-    virtualspaces = PeriodicArray([Vector{MissingS}(missing, operator_size) for _ in 1:length(nonzero_keys)])
+    virtualspaces = PeriodicArray([Vector{MissingS}(missing, operator_size)
+                                   for _ in 1:length(nonzero_keys)])
     for V in virtualspaces
         V[1] = oneunit(S)
         V[end] = oneunit(S)
