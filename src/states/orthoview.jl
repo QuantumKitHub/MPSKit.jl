@@ -4,7 +4,7 @@ struct ALView{S,E,N} <: AbstractArray{E,N}
 end
 
 function Base.getindex(v::ALView{<:FiniteMPS,E}, i::Int)::E where {E}
-    ismissing(v.parent.ALs[i]) && v.parent.CR[i] # by getting CL[i+1], we are garantueeing that AL[i] exists
+    ismissing(v.parent.ALs[i]) && v.parent.C[i] # by getting CL[i+1], we are garantueeing that AL[i] exists
     return v.parent.ALs[i]
 end
 
@@ -26,7 +26,7 @@ end
 
 function Base.getindex(v::ARView{<:FiniteMPS,E}, i::Int)::E where {E}
     # by getting CL[i], we are garantueeing that AR[i] exists
-    ismissing(v.parent.ARs[i]) && v.parent.CR[i - 1]
+    ismissing(v.parent.ARs[i]) && v.parent.C[i - 1]
     return v.parent.ARs[i]
 end
 
@@ -82,9 +82,9 @@ Base.getindex(v::CView{<:WindowMPS}, i::Int) = CView(v.parent.window)[i]
 function Base.setindex!(v::CView{<:WindowMPS}, vec, i::Int)
     return setindex!(CView(v.parent.window), vec, i)
 end
-Base.getindex(v::CView{<:Multiline}, i::Int, j::Int) = v.parent[i].CR[j]
+Base.getindex(v::CView{<:Multiline}, i::Int, j::Int) = v.parent[i].C[j]
 function Base.setindex!(v::CView{<:Multiline}, vec, i::Int, j::Int)
-    return setindex!(v.parent[i].CR, vec, j)
+    return setindex!(v.parent[i].C, vec, j)
 end;
 
 struct ACView{S,E,N} <: AbstractArray{E,N}
@@ -94,11 +94,11 @@ end
 
 function Base.getindex(v::ACView{<:FiniteMPS,E}, i::Int)::E where {E}
     if ismissing(v.parent.ACs[i]) && !ismissing(v.parent.ARs[i])
-        c = v.parent.CR[i - 1]
+        c = v.parent.C[i - 1]
         ar = v.parent.ARs[i]
         v.parent.ACs[i] = _transpose_front(c * _transpose_tail(ar))
     elseif ismissing(v.parent.ACs[i]) && !ismissing(v.parent.ALs[i])
-        c = v.parent.CR[i]
+        c = v.parent.C[i]
         al = v.parent.ALs[i]
         v.parent.ACs[i] = al * c
     end
