@@ -57,10 +57,10 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     ACs::Vector{Union{Missing,A}}
     Cs::Vector{Union{Missing,B}}
 
-    center::Int
+    center::Ref{Int} # Use Ref to allow for a mutable type in an unmutable struct
     function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
-                            Cs::Vector{Union{Missing,B}}, center::Int) where {A<:GenericMPSTensor,
+                            Cs::Vector{Union{Missing,B}}, center::Ref{Int}) where {A<:GenericMPSTensor,
                                                                   B<:MPSBondTensor}
         return new{A,B}(ALs, ARs, ACs, Cs, center)
     end
@@ -120,8 +120,7 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
             !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _lastspace(c)' ||
                                                  throw(SpaceMismatch("Right virtual space of C on site $(i-1) doesn't match")))
         end
-
-        return new{A,B}(ALs, ARs, ACs, Cs, center)
+        return new{A,B}(ALs, ARs, ACs, Cs, Ref{Int}(center))
     end
 end
 
