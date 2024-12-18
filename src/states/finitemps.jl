@@ -8,7 +8,6 @@ Type that represents a finite Matrix Product State.
 - `ARs` -- right-gauged MPS tensors
 - `ACs` -- center-gauged MPS tensors
 - `Cs` -- gauge tensors
-- `center` -- index of the center tensor
 
 Where each is entry can be a tensor or `missing`.
 
