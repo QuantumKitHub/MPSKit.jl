@@ -485,7 +485,7 @@ end
 
 function TensorKit.norm(ψ::FiniteMPS)
     center = ψ.center
-    if denominator(center) == 1 # center is an AC
+    if !ishalfodd(center) # center is an AC
         return norm(ψ.AC[Int(center)])
     else # center is a bond-tensor
         return norm(ψ.C[Int(center - 1/2)])
