@@ -351,6 +351,7 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
         io = IOContext(io, :compact => true)
     end
 
+    L = length(ψ)
     c = center(ψ)
 
     for site in reverse(1:L)
