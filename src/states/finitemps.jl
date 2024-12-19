@@ -371,9 +371,13 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
                                 charset.mid
                             end, charset.dash, " AC[$(Int(site))]: ", ψ.ACs[Int(site)])
                 else # center is a bond-tensor
-                    println(io, site == HalfInt(L + 1 / 2) ? charset.start : charset.ver,
-                            " C[$(Int(site+1/2))]: ",
-                            ψ.Cs[Int(site + 1 / 2)])
+                    println(io, if site == HalfInt(L + 1 / 2)
+                                charset.start
+                            elseif site == HalfInt(1/2)
+                                charset.stop
+                            else
+                                charset.ver
+                            end, " C[$(Int(site-1/2))]: ", ψ.Cs[Int(site + 1 / 2)])
                 end
             else
                 if isinteger(site)
