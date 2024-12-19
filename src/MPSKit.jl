@@ -106,6 +106,7 @@ include("transfermatrix/transfer.jl")
 
 include("environments/abstract_envs.jl")
 include("environments/finite_envs.jl")
+include("environments/infinite_envs.jl")
 include("environments/infinitempo_envs.jl")
 include("environments/infinitempohamiltonian_envs.jl")
 include("environments/qp_envs.jl")
