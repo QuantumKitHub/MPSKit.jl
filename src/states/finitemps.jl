@@ -483,8 +483,14 @@ function TensorKit.dot(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
     return tr(_transpose_front(ψ₁.AC[1])' * _transpose_front(ψ₂.AC[1]) * ρr)
 end
 
-#todo : rewrite this without having to gauge
-TensorKit.norm(ψ::FiniteMPS) = norm(ψ.AC[1])
+function TensorKit.norm(ψ::FiniteMPS)
+    center = ψ.center
+    if denominator(center) == 1 # center is an AC
+        return norm(ψ.AC[Int(center)])
+    else # center is a bond-tensor
+        return norm(ψ.C[Int(center + 1/2)])
+    end
+end
 TensorKit.normalize!(ψ::FiniteMPS) = rmul!(ψ, 1 / norm(ψ))
 TensorKit.normalize(ψ::FiniteMPS) = normalize!(copy(ψ))
 
