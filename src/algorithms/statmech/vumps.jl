@@ -18,10 +18,13 @@ function leading_boundary(ψ::InfiniteMPS, H, alg, envs=environments(ψ, H))
 end
 
 function leading_boundary(ψ::MultilineMPS, H, alg::VUMPS, envs=environments(ψ, H))
-    ϵ::Float64 = calc_galerkin(ψ, envs)
-    temp_ACs = similar.(ψ.AC)
-    scheduler = Defaults.scheduler[]
+    # initialization
     log = IterLog("VUMPS")
+    ϵ::Float64 = calc_galerkin(ψ, H, ψ, envs)
+    scheduler = Defaults.scheduler[]
+    temp_ACs = similar.(ψ.AC)
+    alg_environments = updatetol(alg.alg_environments, 0, ϵ)
+    recalculate!(envs, ψ, H; alg_environments.tol)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
@@ -34,7 +37,7 @@ function leading_boundary(ψ::MultilineMPS, H, alg::VUMPS, envs=environments(ψ,
             ψ = MultilineMPS(temp_ACs, ψ.C[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-            recalculate!(envs, ψ; alg_environments.tol)
+            recalculate!(envs, ψ, H, ψ; alg_environments.tol)
 
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
