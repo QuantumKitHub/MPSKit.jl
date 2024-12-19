@@ -354,37 +354,32 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
     L = length(ψ)
     c = center(ψ)
 
-    for site in reverse(1:L)
+    for site in HalfInt.(reverse((1 / 2):(1 / 2):(L + 1 / 2)))
         if site < half_screen_rows || site > L - half_screen_rows
-            if site > c
-                ismissing(ψ.ARs[site]) && throw(ArgumentError("invalid state"))
-                println(io, site == L ? charset.start : charset.mid, charset.dash,
-                        " AR[$site]: ", ψ.ARs[site])
-                if site == 1
-                    ismissing(ψ.Cs[site]) && throw(ArgumentError("invalid state"))
-                    println(io, charset.stop, " C[$site]: ", ψ.Cs[site])
+            if site > c # ARs
+                if isinteger(site)
+                    println(io, site == L ? charset.start : charset.mid, charset.dash,
+                            " AR[$(Int(site))]: ", ψ.ARs[Int(site)])
                 end
-            elseif site == c
-                if !ismissing(ψ.ACs[site])
+            elseif site == c # AC or C
+                if isinteger(c) # center is an AC
                     println(io, if site == L
                                 charset.start
                             elseif site == 1
                                 charset.stop
                             else
                                 charset.mid
-                            end, charset.dash, " AC[$site]: ", ψ.ACs[site])
-                elseif !ismissing(ψ.ALs[site]) && !ismissing(ψ.Cs[site + 1])
-                    println(io, site == L ? charset.start : charset.ver, " C[$(site+1)]: ",
-                            ψ.Cs[site + 1])
-                    println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
-                            " AL[$site]: ", ψ.ALs[site])
-                else
-                    throw(ArgumentError("invalid state"))
+                            end, charset.dash, " AC[$(Int(site))]: ", ψ.ACs[Int(site)])
+                else # center is a bond-tensor
+                    println(io, site == L ? charset.start : charset.ver,
+                            " C[$(Int(site+1/2))]: ",
+                            ψ.Cs[Int(site + 1 / 2)])
                 end
             else
-                ismissing(ψ.ALs[site]) && throw(ArgumentError("invalid state"))
-                println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
-                        " AL[$site]: ", ψ.ALs[site])
+                if isinteger(site)
+                    println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
+                            " AL[$(Int(site))]: ", ψ.ALs[Int(site)])
+                end
             end
         elseif site == half_screen_rows
             println(io, charset.ver, "⋮")
