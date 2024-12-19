@@ -373,7 +373,7 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
                 else # center is a bond-tensor
                     println(io, if site == HalfInt(L + 1 / 2)
                                 charset.start
-                            elseif site == HalfInt(1/2)
+                            elseif site == HalfInt(1 / 2)
                                 charset.stop
                             else
                                 charset.ver
