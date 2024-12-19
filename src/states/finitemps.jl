@@ -142,7 +142,7 @@ function Base.getproperty(ψ::FiniteMPS, prop::Symbol)
     end
 end
 
-function Base.propertynames(ψ::FiniteMPS)
+function Base.propertynames(::FiniteMPS)
     return (:AL, :AR, :AC, :C, :center)
 end
 

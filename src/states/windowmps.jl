@@ -155,6 +155,10 @@ function Base.getproperty(ψ::WindowMPS, prop::Symbol)
     end
 end
 
+function Base.propertynames(::WindowMPS)
+    return (:AL, :AR, :AC, :C)
+end
+
 max_Ds(ψ::WindowMPS) = max_Ds(ψ.window)
 
 Base.:*(ψ::WindowMPS, a::Number) = rmul!(copy(ψ), a)

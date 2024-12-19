@@ -57,6 +57,10 @@ function Base.getproperty(psi::MultilineMPS, prop::Symbol)
     end
 end
 
+function Base.propertynames(::MultilineMPS)
+    return (:AL, :AR, :AC, :C)
+end
+
 for f in (:l_RR, :l_RL, :l_LL, :l_LR)
     @eval $f(t::MultilineMPS, i, j=1) = $f(t[i], j)
 end
