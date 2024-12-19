@@ -501,11 +501,11 @@ function TensorKit.dot(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
 end
 
 function TensorKit.norm(ψ::FiniteMPS)
-    center = ψ.center
-    if !ishalfodd(center) # center is an AC
-        return norm(ψ.AC[Int(center)])
+    c = center(ψ)
+    if !ishalfodd(c) # center is an AC
+        return norm(ψ.AC[Int(c)])
     else # center is a bond-tensor
-        return norm(ψ.C[Int(center - 1/2)])
+        return norm(ψ.C[Int(c - 1/2)])
     end
 end
 TensorKit.normalize!(ψ::FiniteMPS) = rmul!(ψ, 1 / norm(ψ))
