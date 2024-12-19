@@ -148,7 +148,7 @@ function Base.getproperty(ψ::WindowMPS, prop::Symbol)
         return ARView(ψ)
     elseif prop == :AC
         return ACView(ψ)
-    elseif prop == :CR
+    elseif prop == :C
         return CView(ψ)
     else
         return getfield(ψ, prop)
