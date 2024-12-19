@@ -358,7 +358,7 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
         if site < half_screen_rows || site > L - half_screen_rows
             if site > c # ARs
                 if isinteger(site)
-                    println(io, site == L ? charset.start : charset.mid, charset.dash,
+                    println(io, Int(site) == L ? charset.start : charset.mid, charset.dash,
                             " AR[$(Int(site))]: ", ψ.ARs[Int(site)])
                 end
             elseif site == c # AC or C
@@ -371,7 +371,7 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
                                 charset.mid
                             end, charset.dash, " AC[$(Int(site))]: ", ψ.ACs[Int(site)])
                 else # center is a bond-tensor
-                    println(io, site == L ? charset.start : charset.ver,
+                    println(io, site == HalfInt(L + 1 / 2) ? charset.start : charset.ver,
                             " C[$(Int(site+1/2))]: ",
                             ψ.Cs[Int(site + 1 / 2)])
                 end
