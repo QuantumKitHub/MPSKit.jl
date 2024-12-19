@@ -142,6 +142,10 @@ function Base.getproperty(ψ::FiniteMPS, prop::Symbol)
     end
 end
 
+function Base.propertynames(ψ::FiniteMPS)
+    return (:AL, :AR, :AC, :C, :center)
+end
+
 """
     _gaugecenter(ψ::FiniteMPS)::HalfInt
 
