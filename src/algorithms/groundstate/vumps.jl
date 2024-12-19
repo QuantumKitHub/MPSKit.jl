@@ -28,10 +28,12 @@ end
 
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
     # initialization
-    ϵ::Float64 = calc_galerkin(ψ, envs)
-    temp_ACs = similar.(ψ.AC)
     scheduler = Defaults.scheduler[]
     log = IterLog("VUMPS")
+    ϵ::Float64 = calc_galerkin(ψ, H, ψ, envs)
+    temp_ACs = similar.(ψ.AC)
+    alg_environments = updatetol(alg.alg_environments, 0, ϵ)
+    recalculate!(envs, ψ, H, ψ; alg_environments.tol)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
@@ -45,21 +47,21 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
             ψ = InfiniteMPS(temp_ACs, ψ.C[end]; alg_gauge.tol, alg_gauge.maxiter)
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-            recalculate!(envs, ψ; alg_environments.tol)
+            recalculate!(envs, ψ, H, ψ; alg_environments.tol)
 
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
-            ϵ = calc_galerkin(ψ, envs)
+            ϵ = calc_galerkin(ψ, H, ψ, envs)
 
             # breaking conditions
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
             end
         end
     end
