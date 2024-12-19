@@ -488,7 +488,7 @@ function TensorKit.norm(ψ::FiniteMPS)
     if denominator(center) == 1 # center is an AC
         return norm(ψ.AC[Int(center)])
     else # center is a bond-tensor
-        return norm(ψ.C[Int(center + 1/2)])
+        return norm(ψ.C[Int(center - 1/2)])
     end
 end
 TensorKit.normalize!(ψ::FiniteMPS) = rmul!(ψ, 1 / norm(ψ))
