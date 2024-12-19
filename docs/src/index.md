@@ -136,7 +136,7 @@ mps = InfiniteMPS(d, D) # random MPS
 
 The `InfiniteMPS` object then handles the gauging of the MPS, which is necessary for many of
 the algorithms. This is done automatically upon creation of the object, and the user can
-access the gauged tensors by getting and setting the `AL`, `AR`, `CR`/`CL` and `AC` fields,
+access the gauged tensors by getting and setting the `AL`, `AR`, `AC`, `C` and  fields,
 which each represent a (periodic) vector of these tensors.
 
 ```@example infinitemps
