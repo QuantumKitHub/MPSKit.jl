@@ -283,9 +283,9 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         # test derivatives
         summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
         sum1 = sum(zip(Hs, envs)) do (H, env)
-            return MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
+            return MPSKit.∂∂C(1, ψ, H, env)(ψ.C[1])
         end
-        @test summedhct(ψ.CR[1], 0.0) ≈ sum1
+        @test summedhct(ψ.C[1], 0.0) ≈ sum1
 
         summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
         sum2 = sum(zip(Hs, envs)) do (H, env)
@@ -324,9 +324,9 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
             if f isa Function
                 f = f(t)
             end
-            return f * MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
+            return f * MPSKit.∂∂C(1, ψ, H, env)(ψ.C[1])
         end
-        @test summedhct(ψ.CR[1], t) ≈ sum1
+        @test summedhct(ψ.C[1], t) ≈ sum1
 
         summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
         sum2 = sum(zip(fs, Hs, envs)) do (f, H, env)
@@ -368,9 +368,9 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         # test derivatives
         summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
         sum1 = sum(zip(Hs, envs)) do (H, env)
-            return MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
+            return MPSKit.∂∂C(1, ψ, H, env)(ψ.C[1])
         end
-        @test summedhct(ψ.CR[1], 0.0) ≈ sum1
+        @test summedhct(ψ.C[1], 0.0) ≈ sum1
 
         summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
         sum2 = sum(zip(Hs, envs)) do (H, env)
@@ -409,9 +409,9 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
             if f isa Function
                 f = f(t)
             end
-            return f * MPSKit.∂∂C(1, ψ, H, env)(ψ.CR[1])
+            return f * MPSKit.∂∂C(1, ψ, H, env)(ψ.C[1])
         end
-        @test summedhct(ψ.CR[1], t) ≈ sum1
+        @test summedhct(ψ.C[1], t) ≈ sum1
 
         summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
         sum2 = sum(zip(fs, Hs, envs)) do (f, H, env)

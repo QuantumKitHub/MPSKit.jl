@@ -76,10 +76,10 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
 
     g = Grassmann.project.(al_d, state.AL)
 
-    Rhoreg = Vector{eltype(state.CR)}(undef, length(state))
+    Rhoreg = Vector{eltype(state.C)}(undef, length(state))
     δmin = sqrt(eps(real(scalartype(state))))
     for i in 1:length(state)
-        Rhoreg[i] = regularize(state.CR[i], max(norm(g[i]) / 10, δmin))
+        Rhoreg[i] = regularize(state.C[i], max(norm(g[i]) / 10, δmin))
     end
 
     return ManifoldPoint(state, envs, g, Rhoreg)
@@ -102,7 +102,7 @@ function ManifoldPoint(state::MultilineMPS, envs)
     end
 
     δmin = sqrt(eps(real(scalartype(state))))
-    ρ_regularized = map(state.CR, grad) do ρ, g
+    ρ_regularized = map(state.C, grad) do ρ, g
         return regularize(ρ, max(norm(g) / 10, δmin))
     end
 
@@ -118,7 +118,7 @@ function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
     g_prec = Vector{PrecGrad{eltype(x.g),eltype(x.Rhoreg)}}(undef, length(x.g))
 
     for i in 1:length(x.state)
-        g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.CR[i]'), x.Rhoreg[i])
+        g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.C[i]'), x.Rhoreg[i])
     end
 
     # TODO: the operator really should not be part of the environments, and this should
@@ -132,7 +132,7 @@ function fg(x::ManifoldPoint{<:MultilineMPS})
     @assert length(x.state) == 1 "GradientGrassmann only supports MultilineMPS without unitcells for now"
     # the gradient I want to return is the preconditioned gradient!
     g_prec = map(enumerate(x.g)) do (i, cg)
-        return PrecGrad(rmul!(copy(cg), x.state.CR[i]'), x.Rhoreg[i])
+        return PrecGrad(rmul!(copy(cg), x.state.C[i]'), x.Rhoreg[i])
     end
 
     # TODO: the operator really should not be part of the environments, and this should
@@ -157,7 +157,7 @@ function retract(x::ManifoldPoint{<:MultilineMPS}, tg, alpha)
         h[i] = PrecGrad(th)
     end
 
-    nstate = MPSKit.MultilineMPS(nal, x.state.CR[:, end])
+    nstate = MPSKit.MultilineMPS(nal, x.state.C[:, end])
     newpoint = ManifoldPoint(nstate, x.envs)
 
     return newpoint, h[:]
@@ -176,7 +176,7 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
         h[i] = PrecGrad(th)
     end
 
-    nstate = InfiniteMPS(nal, state.CR[end])
+    nstate = InfiniteMPS(nal, state.C[end])
 
     newpoint = ManifoldPoint(nstate, envs)
 
@@ -195,7 +195,7 @@ function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
     for i in 1:length(g)
         yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
         h[i] = PrecGrad(th)
-        y.AC[i] = (yal, state.CR[i])
+        y.AC[i] = (yal, state.C[i])
     end
     normalize!(y)
 

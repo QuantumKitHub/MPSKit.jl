@@ -35,7 +35,7 @@ function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
                                       SvdCut(; trscheme=truncspace(infimum(D1, D2))), nenvs)
     end
 
-    collapsed = InfiniteMPS([nstate.AL[1]], nstate.CR[1]; tol=alg.tol_gauge)
+    collapsed = InfiniteMPS([nstate.AL[1]], nstate.C[1]; tol=alg.tol_gauge)
 
     return collapsed, envs
 end
@@ -51,7 +51,7 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
         nAC2 = vecs[1]
 
         h_c = ∂∂C(loc + 1, state, H, envs)
-        (vals, vecs, _) = eigsolve(h_c, state.CR[loc + 1], 1, :SR; tol=alg.tol_eigenval,
+        (vals, vecs, _) = eigsolve(h_c, state.C[loc + 1], 1, :SR; tol=alg.tol_eigenval,
                                    ishermitian=false)
         nC2 = vecs[1]
 

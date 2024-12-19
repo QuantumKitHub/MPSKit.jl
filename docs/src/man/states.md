@@ -53,8 +53,8 @@ norm(state) == norm(state.AC[3])
 lastly there is also the CR field, with the following property:
 
 ```julia
-@tensor a[-1 -2;-3] := state.AL[3][-1 -2;1]*state.CR[3][1;-3]
-@tensor b[-1 -2;-3] := state.CR[2][-1;1]*state.AR[3][1 -2;-3]
+@tensor a[-1 -2;-3] := state.AL[3][-1 -2;1]*state.C[3][1;-3]
+@tensor b[-1 -2;-3] := state.C[2][-1;1]*state.AR[3][1 -2;-3]
 a ≈ state.AC[3];
 b ≈ state.AC[3];
 ```
@@ -66,7 +66,7 @@ Behind the scenes, a finite mps has 4 fields
 ALs::Vector{Union{Missing,A}}
 ARs::Vector{Union{Missing,A}}
 ACs::Vector{Union{Missing,A}}
-CLs::Vector{Union{Missing,B}}
+Cs::Vector{Union{Missing,B}}
 ```
 
 calling `state.AC` returns an "orthoview" instance, which is a very simple dummy object.
@@ -97,7 +97,7 @@ InfiniteMPS(data);
 
 The above code would create an infinite mps with an A-B structure (a 2 site unit cell).
 
-much like a finite mps, we can again query the fields state.AL, state.AR, state.AC and state.CR. The implementation is much easier, as they are now just plain fields in the struct
+much like a finite mps, we can again query the fields state.AL, state.AR, state.AC and state.C. The implementation is much easier, as they are now just plain fields in the struct
 
 ```julia
 AL::PeriodicArray{A,1}
@@ -142,7 +142,7 @@ You can access properties by calling
 state.AL[row,collumn]
 state.AC[row,collumn]
 state.AR[row,collumn]
-state.CR[row,collumn]
+state.C[row,collumn]
 ```
 
 Behind the scenes, we have a type called Multiline, defined as:

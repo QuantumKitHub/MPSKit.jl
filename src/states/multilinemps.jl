@@ -50,11 +50,15 @@ function Base.getproperty(psi::MultilineMPS, prop::Symbol)
         return ARView(psi)
     elseif prop == :AC
         return ACView(psi)
-    elseif prop == :CR
-        return CRView(psi)
+    elseif prop == :C
+        return CView(psi)
     else
         return getfield(psi, prop)
     end
+end
+
+function Base.propertynames(::MultilineMPS)
+    return (:AL, :AR, :AC, :C)
 end
 
 for f in (:l_RR, :l_RL, :l_LL, :l_LR)

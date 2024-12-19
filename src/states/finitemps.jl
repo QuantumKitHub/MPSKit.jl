@@ -3,17 +3,22 @@
 
 Type that represents a finite Matrix Product State.
 
-## Fields
-- `ALs` -- left-gauged MPS tensors
-- `ARs` -- right-gauged MPS tensors
-- `ACs` -- center-gauged MPS tensors
-- `CLs` -- gauge tensors
+## Properties
+- `AL` -- left-gauged MPS tensors
+- `AR` -- right-gauged MPS tensors
+- `AC` -- center-gauged MPS tensors
+- `C` -- gauge tensors
+- `center` -- location of the gauge center
 
-Where each is entry can be a tensor or `missing`.
+The center property returns `center::HalfInt` that indicates the location of the MPS center:
+- `isinteger(center)` → `center` is a whole number and indicates the location of the first `AC` tensor present in the underlying `ψ.ACs` field.
+- `ishalfodd(center)` → `center` is a half-odd-integer, meaning that there are no `AC` tensors, and indicating between which sites the bond tensor lives.
+
+e.g `mps.center = 7/2` means that the bond tensor is to the right of the 3rd site and can be accessed via `mps.C[3]`.
 
 ## Notes
 By convention, we have that:
-- `AL[i] * CL[i+1]` = `AC[i]` = `CL[i] * AR[i]`
+- `AL[i] * C[i]` = `AC[i]` = `C[i-1] * AR[i]`
 - `AL[i]' * AL[i] = 1`
 - `AR[i] * AR[i]' = 1`
 
@@ -54,25 +59,25 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing,A}}
     ARs::Vector{Union{Missing,A}}
     ACs::Vector{Union{Missing,A}}
-    CLs::Vector{Union{Missing,B}}
+    Cs::Vector{Union{Missing,B}}
     function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
-                            CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
-                                                                  B<:MPSBondTensor}
-        return new{A,B}(ALs, ARs, ACs, CLs)
+                            Cs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
+                                                                 B<:MPSBondTensor}
+        return new{A,B}(ALs, ARs, ACs, Cs)
     end
     function FiniteMPS(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
                        ACs::Vector{Union{Missing,A}},
-                       CLs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
-                                                             B<:MPSBondTensor}
-        length(ACs) == length(CLs) - 1 == length(ALs) == length(ARs) ||
+                       Cs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
+                                                            B<:MPSBondTensor}
+        length(ACs) == length(Cs) - 1 == length(ALs) == length(ARs) ||
             throw(DimensionMismatch("length mismatch of tensors"))
-        sum(ismissing.(ACs)) + sum(ismissing.(CLs)) < length(ACs) + length(CLs) ||
-            throw(ArgumentError("at least one AC/CL should not be missing"))
+        sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
+            throw(ArgumentError("at least one AC/C should not be missing"))
 
         S = spacetype(A)
-        left_virt_spaces = Vector{Union{Missing,S}}(missing, length(CLs))
-        right_virt_spaces = Vector{Union{Missing,S}}(missing, length(CLs))
+        left_virt_spaces = Vector{Union{Missing,S}}(missing, length(Cs))
+        right_virt_spaces = Vector{Union{Missing,S}}(missing, length(Cs))
 
         for (i, tup) in enumerate(zip(ALs, ARs, ACs))
             non_missing = filter(!ismissing, tup)
@@ -110,15 +115,14 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
             end
         end
 
-        for (i, c) in enumerate(CLs)
+        for (i, c) in enumerate(Cs)
             ismissing(c) && continue
             !ismissing(left_virt_spaces[i]) && (left_virt_spaces[i] == _firstspace(c) ||
-                                                throw(SpaceMismatch("Left virtual space of CL on site $(i) doesn't match")))
+                                                throw(SpaceMismatch("Left virtual space of C on site $(i-1) doesn't match")))
             !ismissing(right_virt_spaces[i]) && (right_virt_spaces[i] == _lastspace(c)' ||
-                                                 throw(SpaceMismatch("Right virtual space of CL on site $(i) doesn't match")))
+                                                 throw(SpaceMismatch("Right virtual space of C on site $(i-1) doesn't match")))
         end
-
-        return new{A,B}(ALs, ARs, ACs, CLs)
+        return new{A,B}(ALs, ARs, ACs, Cs)
     end
 end
 
@@ -129,13 +133,48 @@ function Base.getproperty(ψ::FiniteMPS, prop::Symbol)
         return ARView(ψ)
     elseif prop == :AC
         return ACView(ψ)
-    elseif prop == :CR
-        return CRView(ψ)
+    elseif prop == :C
+        return CView(ψ)
+    elseif prop == :center
+        return _gaugecenter(ψ)
     else
         return getfield(ψ, prop)
     end
 end
 
+function Base.propertynames(::FiniteMPS)
+    return (:AL, :AR, :AC, :C, :center)
+end
+
+"""
+    _gaugecenter(ψ::FiniteMPS)::HalfInt
+
+Return the location of the MPS center.
+
+`center::HalfInt`:
+- `isinteger(center)` → `center` is a whole number and indicates the location of the first `AC` tensor present in `ψ.ACs`
+- `ishalfodd(center)` → `center` is a half-odd-integer, meaning that there are no `AC` tensors, and indicating between which sites the bond tensor lives.
+
+## Example
+```julia
+ψ = FiniteMPS(3, ℂ^2, ℂ^16)
+ψ.center # returns 7/2, bond tensor is to the right of the 3rd site
+ψ.AC[1]   # moves center to first site
+ψ.center # returns 1
+```
+"""
+function _gaugecenter(ψ::FiniteMPS)::HalfInt
+    L = length(ψ)
+
+    center = findfirst(!ismissing, ψ.ACs) # give priority to integer values of center
+    if isnothing(center)
+        center = findfirst(!ismissing, ψ.Cs)
+        isnothing(center) && throw(ArgumentError("No center found, invalid state"))
+        return (center - 1 / 2)
+    end
+    isnothing(center) && throw(ArgumentError("No center found, invalid state"))
+    return center
+end
 #===========================================================================================
 Constructors
 ===========================================================================================#
@@ -157,15 +196,15 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=fa
     A = eltype(As)
     B = typeof(C)
 
-    CLs = Vector{Union{Missing,B}}(missing, N + 1)
+    Cs = Vector{Union{Missing,B}}(missing, N + 1)
     ALs = Vector{Union{Missing,A}}(missing, N)
     ARs = Vector{Union{Missing,A}}(missing, N)
     ACs = Vector{Union{Missing,A}}(missing, N)
 
     ALs .= As
-    CLs[end] = C
+    Cs[end] = C
 
-    return FiniteMPS(ALs, ARs, ACs, CLs)
+    return FiniteMPS(ALs, ARs, ACs, Cs)
 end
 
 function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
@@ -236,9 +275,9 @@ Utility
 Base.size(ψ::FiniteMPS, args...) = size(ψ.ALs, args...)
 Base.length(ψ::FiniteMPS) = length(ψ.ALs)
 Base.eltype(ψtype::Type{<:FiniteMPS}) = site_type(ψtype) # this might not be true
-Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.CLs))
+Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.Cs))
 function Base.similar(ψ::FiniteMPS{A,B}) where {A,B}
-    return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.CLs))
+    return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
 end
 
 Base.checkbounds(::Type{Bool}, ψ::FiniteMPS, i::Integer) = 1 <= i <= length(ψ)
@@ -269,13 +308,13 @@ function left_virtualspace(ψ::FiniteMPS, n::Integer)
     checkbounds(ψ, n)
     return !ismissing(ψ.ALs[n]) ? left_virtualspace(ψ.ALs[n]) :
            !ismissing(ψ.ARs[n]) ? left_virtualspace(ψ.ARs[n]) :
-           dual(_lastspace(ψ.CR[n - 1]))
+           dual(_lastspace(ψ.C[n - 1]))
 end
 function right_virtualspace(ψ::FiniteMPS, n::Integer)
     checkbounds(ψ, n)
     return !ismissing(ψ.ARs[n]) ? right_virtualspace(ψ.ARs[n]) :
            !ismissing(ψ.ALs[n]) ? right_virtualspace(ψ.ALs[n]) :
-           _firstspace(ψ.CR[n])
+           _firstspace(ψ.C[n])
 end
 
 physicalspace(ψ::FiniteMPS) = physicalspace.(Ref(ψ), 1:length(ψ))
@@ -322,42 +361,38 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
     end
 
     L = length(ψ)
-    center = something(findlast(!ismissing, ψ.ALs), 0)
-    if center != L && !ismissing(ψ.ACs[center + 1])
-        center += 1
-    end
+    c = ψ.center
 
-    for site in reverse(1:L)
+    for site in HalfInt.(reverse((1 / 2):(1 / 2):(L + 1 / 2)))
         if site < half_screen_rows || site > L - half_screen_rows
-            if site > center
-                ismissing(ψ.ARs[site]) && throw(ArgumentError("invalid state"))
-                println(io, site == L ? charset.start : charset.mid, charset.dash,
-                        " AR[$site]: ", ψ.ARs[site])
-                if site == 1
-                    ismissing(ψ.CLs[site]) && throw(ArgumentError("invalid state"))
-                    println(io, charset.stop, " CL[$site]: ", ψ.CLs[site])
+            if site > c # ARs
+                if isinteger(site)
+                    println(io, Int(site) == L ? charset.start : charset.mid, charset.dash,
+                            " AR[$(Int(site))]: ", ψ.ARs[Int(site)])
                 end
-            elseif site == center
-                if !ismissing(ψ.ACs[site])
+            elseif site == c # AC or C
+                if isinteger(c) # center is an AC
                     println(io, if site == L
                                 charset.start
                             elseif site == 1
                                 charset.stop
                             else
                                 charset.mid
-                            end, charset.dash, " AC[$site]: ", ψ.ACs[site])
-                elseif !ismissing(ψ.ALs[site]) && !ismissing(ψ.CLs[site + 1])
-                    println(io, site == L ? charset.start : charset.ver, " CL[$(site+1)]: ",
-                            ψ.CLs[site + 1])
-                    println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
-                            " AL[$site]: ", ψ.ALs[site])
-                else
-                    throw(ArgumentError("invalid state"))
+                            end, charset.dash, " AC[$(Int(site))]: ", ψ.ACs[Int(site)])
+                else # center is a bond-tensor
+                    println(io, if site == HalfInt(L + 1 / 2)
+                                charset.start
+                            elseif site == HalfInt(1 / 2)
+                                charset.stop
+                            else
+                                charset.ver
+                            end, " C[$(Int(site-1/2))]: ", ψ.Cs[Int(site + 1 / 2)])
                 end
             else
-                ismissing(ψ.ALs[site]) && throw(ArgumentError("invalid state"))
-                println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
-                        " AL[$site]: ", ψ.ALs[site])
+                if isinteger(site)
+                    println(io, site == 1 ? charset.stop : charset.mid, charset.dash,
+                            " AL[$(Int(site))]: ", ψ.ALs[Int(site)])
+                end
             end
         elseif site == half_screen_rows
             println(io, charset.ver, "⋮")
@@ -385,7 +420,7 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS<:FiniteMPS}
     fill!(ψ.ALs, missing)
     fill!(ψ.ARs, missing)
     fill!(ψ.ACs, missing)
-    fill!(ψ.CLs, missing)
+    fill!(ψ.Cs, missing)
 
     halfN = div(length(ψ), 2)
 
@@ -411,8 +446,8 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS<:FiniteMPS}
         ψ.ALs[i], R = leftorth!(AL)
     end
 
-    C₁ = F₁ * ψ₁.CR[halfN]
-    C₂ = F₂ * ψ₂.CR[halfN]
+    C₁ = F₁ * ψ₁.C[halfN]
+    C₂ = F₂ * ψ₂.C[halfN]
 
     # right half
     F₁ = isometry(storagetype(ψ), _firstspace(ψ₁.AR[end]) ⊕ _firstspace(ψ₂.AR[end]),
@@ -441,7 +476,7 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS<:FiniteMPS}
     # center
     C₁ = C₁ * F₁'
     C₂ = C₂ * F₂'
-    ψ.CLs[halfN + 1] = R * (C₁ + C₂) * L
+    ψ.Cs[halfN + 1] = R * (C₁ + C₂) * L
 
     return ψ
 end
@@ -450,13 +485,13 @@ Base.:-(ψ₁::FiniteMPS, ψ₂::FiniteMPS) = ψ₁ + (-1 * ψ₂)
 
 function TensorKit.lmul!(a::Number, ψ::FiniteMPS)
     ψ.ACs .*= a
-    ψ.CLs .*= a
+    ψ.Cs .*= a
     return ψ
 end
 
 function TensorKit.rmul!(ψ::FiniteMPS, a::Number)
     ψ.ACs .*= a
-    ψ.CLs .*= a
+    ψ.Cs .*= a
     return ψ
 end
 
@@ -467,8 +502,14 @@ function TensorKit.dot(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
     return tr(_transpose_front(ψ₁.AC[1])' * _transpose_front(ψ₂.AC[1]) * ρr)
 end
 
-#todo : rewrite this without having to gauge
-TensorKit.norm(ψ::FiniteMPS) = norm(ψ.AC[1])
+function TensorKit.norm(ψ::FiniteMPS)
+    c = ψ.center
+    if isinteger(c) # center is an AC
+        return norm(ψ.AC[Int(c)])
+    else # center is a bond-tensor
+        return norm(ψ.C[Int(c - 1 / 2)])
+    end
+end
 TensorKit.normalize!(ψ::FiniteMPS) = rmul!(ψ, 1 / norm(ψ))
 TensorKit.normalize(ψ::FiniteMPS) = normalize!(copy(ψ))
 

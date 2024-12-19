@@ -5,9 +5,9 @@ Calculate the Von Neumann entanglement entropy of a given MPS. If an integer `si
 given, the entropy is across the entanglement cut to the right of site `site`. Otherwise, a
 vector of entropies is returned, one for each site.
 """
-entropy(state::InfiniteMPS) = map(c -> -tr(safe_xlogx(c * c')), state.CR);
+entropy(state::InfiniteMPS) = map(c -> -tr(safe_xlogx(c * c')), state.C);
 function entropy(state::Union{FiniteMPS,WindowMPS,InfiniteMPS}, loc::Int)
-    return -tr(safe_xlogx(state.CR[loc] * state.CR[loc]'))
+    return -tr(safe_xlogx(state.C[loc] * state.C[loc]'))
 end;
 
 # function infinite_temperature(H::MPOHamiltonian)
@@ -85,7 +85,7 @@ values.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS}, site::Int=0)
     @assert site <= length(st)
-    _, S, = tsvd(st.CR[site])
+    _, S, = tsvd(st.C[site])
     return TensorKit.SectorDict(c => real(diag(b)) for (c, b) in blocks(S))
 end
 
@@ -212,7 +212,7 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs=environment
     rescaled_envs = environments(gs, H_regularized)
     GL = leftenv(rescaled_envs, 1, gs)
     GR = rightenv(rescaled_envs, 0, gs)
-    E_f = @plansor GL[5 3; 1] * gs.CR[0][1; 4] * conj(gs.CR[0][5; 2]) * GR[4 3; 2]
+    E_f = @plansor GL[5 3; 1] * gs.C[0][1; 4] * conj(gs.C[0][5; 2]) * GR[4 3; 2]
 
     H2 = H_regularized^2
 

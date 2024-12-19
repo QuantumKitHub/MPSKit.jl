@@ -105,7 +105,7 @@ function WindowMPS(ψ::InfiniteMPS{A,B}, L::Int) where {A,B}
     ALs .= ψ.AL[1:L]
     ARs .= ψ.AR[1:L]
     ACs .= ψ.AC[1:L]
-    CLs .= ψ.CR[0:L]
+    CLs .= ψ.C[0:L]
 
     return WindowMPS(ψ, FiniteMPS(ALs, ARs, ACs, CLs), ψ)
 end
@@ -148,11 +148,15 @@ function Base.getproperty(ψ::WindowMPS, prop::Symbol)
         return ARView(ψ)
     elseif prop == :AC
         return ACView(ψ)
-    elseif prop == :CR
-        return CRView(ψ)
+    elseif prop == :C
+        return CView(ψ)
     else
         return getfield(ψ, prop)
     end
+end
+
+function Base.propertynames(::WindowMPS)
+    return (:AL, :AR, :AC, :C)
 end
 
 max_Ds(ψ::WindowMPS) = max_Ds(ψ.window)

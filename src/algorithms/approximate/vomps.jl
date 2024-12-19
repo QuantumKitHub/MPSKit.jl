@@ -38,7 +38,7 @@ function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multilin
             end
 
             alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
-            ψ = MultilineMPS(temp_ACs, ψ.CR[:, end]; alg_gauge.tol, alg_gauge.maxiter)
+            ψ = MultilineMPS(temp_ACs, ψ.C[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
             recalculate!(envs, ψ; alg_environments.tol)

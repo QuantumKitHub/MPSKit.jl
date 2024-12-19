@@ -351,8 +351,8 @@ function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO, ket::FiniteMPS{T}) whe
     ρ_right = T_right * ρ_right
 
     # center
-    return @plansor ρ_left[3 4; 1] * ket.CR[Nhalf][1; 5] * ρ_right[5 4; 2] *
-                    conj(ket.CR[Nhalf][3; 2])
+    return @plansor ρ_left[3 4; 1] * ket.C[Nhalf][1; 5] * ρ_right[5 4; 2] *
+                    conj(ket.C[Nhalf][3; 2])
 end
 function TensorKit.dot(bra::InfiniteMPS, mpo::InfiniteMPO, ket::InfiniteMPS;
                        ishermitian=false, krylovdim=30, kwargs...)

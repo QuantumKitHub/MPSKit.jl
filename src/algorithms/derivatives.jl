@@ -139,11 +139,11 @@ end
 
 #downproject for approximate
 function c_proj(pos, below, envs::FiniteEnvironments)
-    return ∂C(envs.above.CR[pos], leftenv(envs, pos + 1, below), rightenv(envs, pos, below))
+    return ∂C(envs.above.C[pos], leftenv(envs, pos + 1, below), rightenv(envs, pos, below))
 end
 
 function c_proj(row, col, below, envs::InfiniteMPOEnvironments)
-    return ∂C(envs.above.CR[row, col], leftenv(envs, row, col + 1, below),
+    return ∂C(envs.above.C[row, col], leftenv(envs, row, col + 1, below),
               rightenv(envs, row, col, below))
 end
 
