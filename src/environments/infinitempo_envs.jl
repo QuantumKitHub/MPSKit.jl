@@ -175,7 +175,7 @@ function TensorKit.normalize!(envs::InfiniteMPOEnvironments)
 
     for row in 1:size(below, 1)
         # fix normalization
-        CRs_top, CRs_bot = above[row].CR, below[row + 1].CR
+        CRs_top, CRs_bot = above[row].C, below[row + 1].C
         for col in 1:size(below, 2)
             λ = dot(CRs_bot[col],
                     MPO_∂∂C(envs.leftenvs[row, col + 1], envs.rightenvs[row, col]) *

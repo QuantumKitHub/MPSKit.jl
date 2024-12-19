@@ -280,15 +280,15 @@ function environments(exci::Multiline{<:InfiniteQP},
 
         if exci.trivial
             @plansor rvec[-1 -2; -3] := rightenv(lenvs, 0, left_gs)[row][-1 -2; 1] *
-                                        conj(left_below.CR[0][-3; 1])
+                                        conj(left_below.C[0][-3; 1])
             @plansor lvec[-1 -2; -3] := leftenv(lenvs, 1, left_gs)[row][-1 -2; 1] *
-                                        left_above.CR[0][1; -3]
+                                        left_above.C[0][1; -3]
 
             tm_RL = regularize(tm_RL, lvec, rvec)
 
             @plansor rvec[-1 -2; -3] := rightenv(renvs, 0, right_gs)[row][1 -2; -3] *
-                                        right_above.CR[0][-1; 1]
-            @plansor lvec[-1 -2; -3] := conj(right_below.CR[0][-3; 1]) *
+                                        right_above.C[0][-1; 1]
+            @plansor lvec[-1 -2; -3] := conj(right_below.C[0][-3; 1]) *
                                         leftenv(renvs, 1, right_gs)[row][-1 -2; 1]
 
             tm_LR = regularize(tm_LR, lvec, rvec)
@@ -373,15 +373,15 @@ function environments(exci::InfiniteQP,
 
     if exci.trivial
         @plansor rvec[-1 -2; -3] := rightenv(lenvs, 0, left_gs)[-1 -2; 1] *
-                                    conj(left_gs.CR[0][-3; 1])
+                                    conj(left_gs.C[0][-3; 1])
         @plansor lvec[-1 -2; -3] := leftenv(lenvs, 1, left_gs)[-1 -2; 1] *
-                                    left_gs.CR[0][1; -3]
+                                    left_gs.C[0][1; -3]
 
         T_RL = regularize(T_RL, lvec, rvec)
 
         @plansor rvec[-1 -2; -3] := rightenv(renvs, 0, right_gs)[1 -2; -3] *
-                                    right_gs.CR[0][-1; 1]
-        @plansor lvec[-1 -2; -3] := conj(right_gs.CR[0][-3; 1]) *
+                                    right_gs.C[0][-1; 1]
+        @plansor lvec[-1 -2; -3] := conj(right_gs.C[0][-3; 1]) *
                                     leftenv(renvs, 1, right_gs)[-1 -2; 1]
 
         T_LR = regularize(T_LR, lvec, rvec)

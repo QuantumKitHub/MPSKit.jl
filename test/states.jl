@@ -23,8 +23,8 @@ using TensorKit: ℙ
     @test ovl ≈ norm(ψ.AC[1])^2
 
     for i in 1:length(ψ)
-        @test ψ.AC[i] ≈ ψ.AL[i] * ψ.CR[i]
-        @test ψ.AC[i] ≈ _transpose_front(ψ.CR[i - 1] * _transpose_tail(ψ.AR[i]))
+        @test ψ.AC[i] ≈ ψ.AL[i] * ψ.C[i]
+        @test ψ.AC[i] ≈ _transpose_front(ψ.C[i - 1] * _transpose_tail(ψ.AR[i]))
     end
 
     @test elt == scalartype(ψ)
@@ -55,8 +55,8 @@ end
     ψ = InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol)
 
     for i in 1:length(ψ)
-        @plansor difference[-1 -2; -3] := ψ.AL[i][-1 -2; 1] * ψ.CR[i][1; -3] -
-                                          ψ.CR[i - 1][-1; 1] * ψ.AR[i][1 -2; -3]
+        @plansor difference[-1 -2; -3] := ψ.AL[i][-1 -2; 1] * ψ.C[i][1; -3] -
+                                          ψ.C[i - 1][-1; 1] * ψ.AR[i][1 -2; -3]
         @test norm(difference, Inf) < tol * 10
 
         @test l_LL(ψ, i) * TransferMatrix(ψ.AL[i], ψ.AL[i]) ≈ l_LL(ψ, i + 1)
@@ -80,8 +80,8 @@ end
                       rand(elt, D * d, D) rand(elt, D * d, D)]; tol)
 
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
-        @plansor difference[-1 -2; -3] := ψ.AL[i, j][-1 -2; 1] * ψ.CR[i, j][1; -3] -
-                                          ψ.CR[i, j - 1][-1; 1] * ψ.AR[i, j][1 -2; -3]
+        @plansor difference[-1 -2; -3] := ψ.AL[i, j][-1 -2; 1] * ψ.C[i, j][1; -3] -
+                                          ψ.C[i, j - 1][-1; 1] * ψ.AR[i, j][1 -2; -3]
         @test norm(difference, Inf) < tol * 10
 
         @test l_LL(ψ, i, j) * TransferMatrix(ψ.AL[i, j], ψ.AL[i, j]) ≈ l_LL(ψ, i, j + 1)
@@ -122,9 +122,9 @@ end
     normalize!(window)
 
     for i in 1:length(window)
-        @test window.AC[i] ≈ window.AL[i] * window.CR[i]
+        @test window.AC[i] ≈ window.AL[i] * window.C[i]
         @test window.AC[i] ≈
-              _transpose_front(window.CR[i - 1] * _transpose_tail(window.AR[i]))
+              _transpose_front(window.C[i - 1] * _transpose_tail(window.AR[i]))
     end
 
     @test norm(window) ≈ 1

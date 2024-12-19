@@ -15,7 +15,7 @@ function changebonds(ψ::AbstractFiniteMPS, alg::SvdCut; kwargs...)
 end
 function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut; normalize::Bool=true)
     for i in (length(ψ) - 1):-1:1
-        U, S, V, = tsvd(ψ.CR[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
+        U, S, V, = tsvd(ψ.C[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
         AL′ = ψ.AL[i] * U
         ψ.AC[i] = (AL′, complex(S))
         AR′ = _transpose_front(V * _transpose_tail(ψ.AR[i + 1]))
@@ -76,10 +76,10 @@ function changebonds(ψ::MultilineMPS, alg::SvdCut)
 end
 function changebonds(ψ::InfiniteMPS, alg::SvdCut)
     copied = complex.(ψ.AL)
-    ncr = ψ.CR[1]
+    ncr = ψ.C[1]
 
     for i in 1:length(ψ)
-        U, ncr, = tsvd(ψ.CR[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
+        U, ncr, = tsvd(ψ.C[i]; trunc=alg.trscheme, alg=TensorKit.SVD())
         copied[i] = copied[i] * U
         copied[i + 1] = _transpose_front(U' * _transpose_tail(copied[i + 1]))
     end

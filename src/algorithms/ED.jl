@@ -14,7 +14,7 @@ function exact_diagonalization(opp::FiniteMPOHamiltonian;
 
     mpst_type = tensormaptype(spacetype(Ot), 2, 1, storagetype(Ot))
     mpsb_type = tensormaptype(spacetype(Ot), 1, 1, storagetype(Ot))
-    CLs = Vector{Union{Missing,mpsb_type}}(missing, len + 1)
+    Cs = Vector{Union{Missing,mpsb_type}}(missing, len + 1)
     ALs = Vector{Union{Missing,mpst_type}}(missing, len)
     ARs = Vector{Union{Missing,mpst_type}}(missing, len)
     ACs = Vector{Union{Missing,mpst_type}}(missing, len)
@@ -36,7 +36,7 @@ function exact_diagonalization(opp::FiniteMPOHamiltonian;
     normalize!(ACs[middle_site])
 
     #construct the largest possible finite mps of that length
-    state = FiniteMPS(ALs, ARs, ACs, CLs)
+    state = FiniteMPS(ALs, ARs, ACs, Cs)
     envs = environments(state, opp)
 
     #optimize the middle site. Because there is no truncation, this single site captures the entire possible hilbert space

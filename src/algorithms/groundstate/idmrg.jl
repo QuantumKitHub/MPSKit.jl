@@ -33,13 +33,13 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
-            C_current = ψ.CR[0]
+            C_current = ψ.C[0]
 
             # left to right sweep
             for pos in 1:length(ψ)
                 h = ∂∂AC(pos, ψ, H, envs)
                 _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
-                ψ.AL[pos], ψ.CR[pos] = leftorth!(ψ.AC[pos])
+                ψ.AL[pos], ψ.C[pos] = leftorth!(ψ.AC[pos])
                 update_leftenv!(envs, ψ, H, pos + 1)
             end
 
@@ -48,13 +48,13 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
                 h = ∂∂AC(pos, ψ, H, envs)
                 _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
 
-                ψ.CR[pos - 1], temp = rightorth!(_transpose_tail(ψ.AC[pos]))
+                ψ.C[pos - 1], temp = rightorth!(_transpose_tail(ψ.AC[pos]))
                 ψ.AR[pos] = _transpose_front(temp)
 
                 update_rightenv!(envs, ψ, H, pos - 1)
             end
 
-            ϵ = norm(C_current - ψ.CR[0])
+            ϵ = norm(C_current - ψ.C[0])
 
             if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
@@ -113,7 +113,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
         @infov 2 loginit!(log, ϵ)
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
-            C_current = ψ.CR[0]
+            C_current = ψ.C[0]
 
             # sweep from left to right
             for pos in 1:(length(ψ) - 1)
@@ -125,7 +125,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
                 normalize!(c)
 
                 ψ.AL[pos] = al
-                ψ.CR[pos] = complex(c)
+                ψ.C[pos] = complex(c)
                 ψ.AR[pos + 1] = _transpose_front(ar)
                 ψ.AC[pos + 1] = _transpose_front(c * ar)
 
@@ -134,8 +134,8 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             end
 
             # update the edge
-            @plansor ac2[-1 -2; -3 -4] := ψ.AC[end][-1 -2; 1] * inv(ψ.CR[0])[1; 2] *
-                                          ψ.AL[1][2 -4; 3] * ψ.CR[1][3; -3]
+            @plansor ac2[-1 -2; -3 -4] := ψ.AC[end][-1 -2; 1] * inv(ψ.C[0])[1; 2] *
+                                          ψ.AL[1][2 -4; 3] * ψ.C[1][3; -3]
             h_ac2 = ∂∂AC2(0, ψ, H, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
@@ -144,10 +144,10 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
 
             ψ.AC[end] = al * c
             ψ.AL[end] = al
-            ψ.CR[end] = complex(c)
+            ψ.C[end] = complex(c)
             ψ.AR[1] = _transpose_front(ar)
             ψ.AC[1] = _transpose_front(c * ar)
-            ψ.AL[1] = ψ.AC[1] * inv(ψ.CR[1])
+            ψ.AL[1] = ψ.AC[1] * inv(ψ.C[1])
 
             C_current = complex(c)
 
@@ -166,7 +166,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
 
                 ψ.AL[pos] = al
                 ψ.AC[pos] = al * c
-                ψ.CR[pos] = complex(c)
+                ψ.C[pos] = complex(c)
                 ψ.AR[pos + 1] = _transpose_front(ar)
                 ψ.AC[pos + 1] = _transpose_front(c * ar)
 
@@ -175,16 +175,16 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             end
 
             # update the edge
-            @plansor ac2[-1 -2; -3 -4] := ψ.CR[end - 1][-1; 1] * ψ.AR[end][1 -2; 2] *
-                                          inv(ψ.CR[end])[2; 3] * ψ.AC[1][3 -4; -3]
+            @plansor ac2[-1 -2; -3 -4] := ψ.C[end - 1][-1; 1] * ψ.AR[end][1 -2; 2] *
+                                          inv(ψ.C[end])[2; 3] * ψ.AC[1][3 -4; -3]
             h_ac2 = ∂∂AC2(0, ψ, H, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
             al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=TensorKit.SVD())
             normalize!(c)
 
-            ψ.AR[end] = _transpose_front(inv(ψ.CR[end - 1]) * _transpose_tail(al * c))
+            ψ.AR[end] = _transpose_front(inv(ψ.C[end - 1]) * _transpose_tail(al * c))
             ψ.AL[end] = al
-            ψ.CR[end] = complex(c)
+            ψ.C[end] = complex(c)
             ψ.AR[1] = _transpose_front(ar)
             ψ.AC[1] = _transpose_front(c * ar)
 
