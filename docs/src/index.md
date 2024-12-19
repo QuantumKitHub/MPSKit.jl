@@ -84,7 +84,7 @@ tensors. For example, we can set the tensor of the third site to the identity, a
 gauged tensors will be updated accordingly.
 
 ```@example finitemps
-mps.CR[3] = id(domain(mps.CR[3]))
+mps.C[3] = id(domain(mps.C[3]))
 println(mps)
 ```
 

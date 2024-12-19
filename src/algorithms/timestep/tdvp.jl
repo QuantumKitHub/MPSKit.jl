@@ -22,10 +22,10 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
                   envs::AbstractMPSEnvironments=environments(ψ, H);
                   leftorthflag=true)
     temp_ACs = similar(ψ.AC)
-    temp_CRs = similar(ψ.CR)
+    temp_CRs = similar(ψ.C)
 
     @static if Defaults.parallelize_sites
-        @sync for (loc, (ac, c)) in enumerate(zip(ψ.AC, ψ.CR))
+        @sync for (loc, (ac, c)) in enumerate(zip(ψ.AC, ψ.C))
             Threads.@spawn begin
                 h_ac = ∂∂AC(loc, ψ, H, envs)
                 temp_ACs[loc] = integrate(h_ac, ac, t, dt, alg.integrator)
@@ -37,7 +37,7 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
             end
         end
     else
-        for (loc, (ac, c)) in enumerate(zip(ψ.AC, ψ.CR))
+        for (loc, (ac, c)) in enumerate(zip(ψ.AC, ψ.C))
             h_ac = ∂∂AC(loc, ψ, H, envs)
             temp_ACs[loc] = integrate(h_ac, ac, t, dt, alg.integrator)
             h_c = ∂∂C(loc, ψ, H, envs)
@@ -47,11 +47,11 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
 
     if leftorthflag
         regauge!.(temp_ACs, temp_CRs; alg=TensorKit.QRpos())
-        ψ′ = InfiniteMPS(temp_ACs, ψ.CR[end]; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
+        ψ′ = InfiniteMPS(temp_ACs, ψ.C[end]; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
     else
         circshift!(temp_CRs, 1)
         regauge!.(temp_CRs, temp_ACs; alg=TensorKit.LQpos())
-        ψ′ = InfiniteMPS(ψ.CR[0], temp_ACs; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
+        ψ′ = InfiniteMPS(ψ.C[0], temp_ACs; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
     end
 
     recalculate!(envs, ψ′)
@@ -67,7 +67,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         ψ.AC[i] = integrate(h_ac, ψ.AC[i], t, dt / 2, alg.integrator)
 
         h_c = ∂∂C(i, ψ, H, envs)
-        ψ.CR[i] = integrate(h_c, ψ.CR[i], t, -dt / 2, alg.integrator)
+        ψ.C[i] = integrate(h_c, ψ.C[i], t, -dt / 2, alg.integrator)
     end
 
     # edge case
@@ -80,7 +80,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         ψ.AC[i] = integrate(h_ac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
 
         h_c = ∂∂C(i - 1, ψ, H, envs)
-        ψ.CR[i - 1] = integrate(h_c, ψ.CR[i - 1], t + dt / 2, -dt / 2, alg.integrator)
+        ψ.C[i - 1] = integrate(h_c, ψ.C[i - 1], t + dt / 2, -dt / 2, alg.integrator)
     end
 
     # edge case

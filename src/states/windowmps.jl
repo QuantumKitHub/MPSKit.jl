@@ -105,7 +105,7 @@ function WindowMPS(ψ::InfiniteMPS{A,B}, L::Int) where {A,B}
     ALs .= ψ.AL[1:L]
     ARs .= ψ.AR[1:L]
     ACs .= ψ.AC[1:L]
-    CLs .= ψ.CR[0:L]
+    CLs .= ψ.C[0:L]
 
     return WindowMPS(ψ, FiniteMPS(ALs, ARs, ACs, CLs), ψ)
 end

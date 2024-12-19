@@ -80,8 +80,8 @@ function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
         end
 
         # right side
-        E = @plansor M[1 2; 3] * Ut[2] * ψ.CR[sites[end]][3; 4] *
-                     conj(ψ.CR[sites[end]][1; 4])
+        E = @plansor M[1 2; 3] * Ut[2] * ψ.C[sites[end]][3; 4] *
+                     conj(ψ.C[sites[end]][1; 4])
     end
 
     return E / norm(ψ)^2

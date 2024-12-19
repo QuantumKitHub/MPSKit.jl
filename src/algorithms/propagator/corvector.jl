@@ -145,8 +145,8 @@ function propagator(A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
     cb = leftenv(envs1, 1, A) * TransferMatrix(init.AL, H[1:length(A.AL)], A.AL)
     b = zero(a)
     for i in 1:length(cb)
-        b += @plansor cb[i][1 2; 3] * init.CR[end][3; 4] *
-                      rightenv(envs1, length(A), A)[i][4 2; 5] * conj(A.CR[end][1; 5])
+        b += @plansor cb[i][1 2; 3] * init.C[end][3; 4] *
+                      rightenv(envs1, length(A), A)[i][4 2; 5] * conj(A.C[end][1; 5])
     end
 
     v = b / η - ω / η * a + 1im * a
