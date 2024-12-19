@@ -155,14 +155,6 @@ function Base.setindex!(v::ACView{<:Multiline}, vec, i::Int, j::Int)
     return setindex!(v.parent[i].AC, vec, j)
 end
 
-# function Base.getindex(A::AbstractArray, hi::HalfInteger)
-#     if isinteger(hi)
-#         return getindex(A, Int(hi))
-#     else
-#         throw(ArgumentError("Indexing a $(typeof(A)) with half-odd-integer indices is not supported"))
-#     end
-# end
-
 #--- define the rest of the abstractarray interface
 Base.size(psi::Union{ACView,ALView,ARView}) = size(psi.parent)
 
