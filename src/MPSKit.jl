@@ -24,7 +24,6 @@ export PeriodicArray, PeriodicVector, PeriodicMatrix, WindowArray
 export MPSTensor
 export QP, LeftGaugedQP, RightGaugedQP
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # should be properties
-export center
 
 # useful utility functions?
 export add_util_leg, max_Ds, recalculate!

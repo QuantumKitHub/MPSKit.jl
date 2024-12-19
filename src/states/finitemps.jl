@@ -3,13 +3,18 @@
 
 Type that represents a finite Matrix Product State.
 
-## Fields
-- `ALs` -- left-gauged MPS tensors
-- `ARs` -- right-gauged MPS tensors
-- `ACs` -- center-gauged MPS tensors
-- `Cs` -- gauge tensors
+## Properties
+- `AL` -- left-gauged MPS tensors
+- `AR` -- right-gauged MPS tensors
+- `AC` -- center-gauged MPS tensors
+- `C` -- gauge tensors
+- `center` -- location of the gauge center
 
-Where each is entry can be a tensor or `missing`.
+The center property returns `center::HalfInt` that indicates the location of the MPS center:
+- `isinteger(center)` → `center` is a whole number and indicates the location of the first `AC` tensor present in the underlying `ψ.ACs` field.
+- `ishalfodd(center)` → `center` is a half-odd-integer, meaning that there are no `AC` tensors, and indicating between which sites the bond tensor lives.
+
+e.g `mps.center = 7/2` means that the bond tensor is to the right of the 3rd site and can be accessed via `mps.C[3]`.
 
 ## Notes
 By convention, we have that:
@@ -131,14 +136,14 @@ function Base.getproperty(ψ::FiniteMPS, prop::Symbol)
     elseif prop == :C
         return CView(ψ)
     elseif prop == :center
-        return center(ψ)
+        return _gaugecenter(ψ)
     else
         return getfield(ψ, prop)
     end
 end
 
 """
-    center(ψ::FiniteMPS)::HalfInt
+    _gaugecenter(ψ::FiniteMPS)::HalfInt
 
 Return the location of the MPS center.
 
@@ -149,12 +154,12 @@ Return the location of the MPS center.
 ## Example
 ```julia
 ψ = FiniteMPS(3, ℂ^2, ℂ^16)
-center(ψ) # returns 7/2, bond tensor is to the right of the 3rd site
+ψ.center # returns 7/2, bond tensor is to the right of the 3rd site
 ψ.AC[1]   # moves center to first site
-center(ψ) # returns 1
+ψ.center # returns 1
 ```
 """
-function center(ψ::FiniteMPS)::HalfInt
+function _gaugecenter(ψ::FiniteMPS)::HalfInt
     L = length(ψ)
 
     center = findfirst(!ismissing, ψ.ACs) # give priority to integer values of center
@@ -352,7 +357,7 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
     end
 
     L = length(ψ)
-    c = center(ψ)
+    c = ψ.center
 
     for site in HalfInt.(reverse((1 / 2):(1 / 2):(L + 1 / 2)))
         if site < half_screen_rows || site > L - half_screen_rows
@@ -494,7 +499,7 @@ function TensorKit.dot(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
 end
 
 function TensorKit.norm(ψ::FiniteMPS)
-    c = center(ψ)
+    c = ψ.center
     if isinteger(c) # center is an AC
         return norm(ψ.AC[Int(c)])
     else # center is a bond-tensor
