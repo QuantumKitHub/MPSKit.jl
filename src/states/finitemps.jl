@@ -143,7 +143,7 @@ end
 Return the location of the MPS center.
 
 `center::HalfInt`:
-- `!ishalfodd(center)` → `center` is a whole number and indicates the location of the first `AC` tensor present in `ψ.ACs`
+- `isinteger(center)` → `center` is a whole number and indicates the location of the first `AC` tensor present in `ψ.ACs`
 - `ishalfodd(center)` → `center` is a half-odd-integer, meaning that there are no `AC` tensors, and indicating between which sites the bond tensor lives.
 
 ## Example
@@ -496,7 +496,7 @@ end
 
 function TensorKit.norm(ψ::FiniteMPS)
     c = center(ψ)
-    if !ishalfodd(c) # center is an AC
+    if isinteger(c) # center is an AC
         return norm(ψ.AC[Int(c)])
     else # center is a bond-tensor
         return norm(ψ.C[Int(c - 1/2)])
