@@ -52,7 +52,7 @@ struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
                               AR::PeriodicVector{A},
                               C::PeriodicVector{B},
                               AC::PeriodicVector{A}=AL .* C) where {A<:GenericMPSTensor,
-                                                                     B<:MPSBondTensor}
+                                                                    B<:MPSBondTensor}
         # verify lengths are compatible
         L = length(AL)
         L == length(AR) == length(C) == length(AC) ||
@@ -67,7 +67,7 @@ struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
                          AR::PeriodicVector{A},
                          C::PeriodicVector{B},
                          AC::PeriodicVector{A}=AL .* C) where {A<:GenericMPSTensor,
-                                                                B<:MPSBondTensor}
+                                                               B<:MPSBondTensor}
         # verify lengths are compatible
         L = length(AL)
         L == length(AR) == length(C) == length(AC) ||
@@ -109,7 +109,7 @@ Constructors
 
 function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, C::AbstractVector{B},
                      AC::AbstractVector{A}=AL .* C) where {A<:GenericMPSTensor,
-                                                            B<:MPSBondTensor}
+                                                           B<:MPSBondTensor}
     return InfiniteMPS(convert(PeriodicVector{A}, AL), convert(PeriodicVector{A}, AR),
                        convert(PeriodicVector{B}, C), convert(PeriodicVector{A}, AC))
 end

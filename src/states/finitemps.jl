@@ -58,13 +58,13 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
     function FiniteMPS{A,B}(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
                             ACs::Vector{Union{Missing,A}},
                             Cs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
-                                                                  B<:MPSBondTensor}
+                                                                 B<:MPSBondTensor}
         return new{A,B}(ALs, ARs, ACs, Cs)
     end
     function FiniteMPS(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
                        ACs::Vector{Union{Missing,A}},
                        Cs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
-                                                             B<:MPSBondTensor}
+                                                            B<:MPSBondTensor}
         length(ACs) == length(Cs) - 1 == length(ALs) == length(ARs) ||
             throw(DimensionMismatch("length mismatch of tensors"))
         sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
@@ -161,7 +161,7 @@ function center(ψ::FiniteMPS)::HalfInt
     if isnothing(center)
         center = findfirst(!ismissing, ψ.Cs)
         isnothing(center) && throw(ArgumentError("No center found, invalid state"))
-        return (center - 1/2)
+        return (center - 1 / 2)
     end
     isnothing(center) && throw(ArgumentError("No center found, invalid state"))
     return center
@@ -494,7 +494,7 @@ function TensorKit.norm(ψ::FiniteMPS)
     if isinteger(c) # center is an AC
         return norm(ψ.AC[Int(c)])
     else # center is a bond-tensor
-        return norm(ψ.C[Int(c - 1/2)])
+        return norm(ψ.C[Int(c - 1 / 2)])
     end
 end
 TensorKit.normalize!(ψ::FiniteMPS) = rmul!(ψ, 1 / norm(ψ))
