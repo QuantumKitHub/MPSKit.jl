@@ -71,12 +71,12 @@ represent a vector of these tensors.
 ```@example finitemps
 al = mps.AL[3] # left gauged tensor of the third site
 @tensor E[a; b] := al[c, d, b] * conj(al[c, d, a])
-@show isapprox(E, id(left_virtualspace(mps, 3)))
+@show isapprox(E, id(right_virtualspace(mps, 3)))
 ```
 ```@example finitemps
 ar = mps.AR[3] # right gauged tensor of the third site
 @tensor E[a; b] := ar[a, d, c] * conj(ar[b, d, c])
-@show isapprox(E, id(right_virtualspace(mps, 2)))
+@show isapprox(E, id(left_virtualspace(mps, 3)))
 ```
 
 As the mps will be kept in a gauged form, updating a tensor will also update the gauged
@@ -136,16 +136,16 @@ mps = InfiniteMPS(d, D) # random MPS
 
 The `InfiniteMPS` object then handles the gauging of the MPS, which is necessary for many of
 the algorithms. This is done automatically upon creation of the object, and the user can
-access the gauged tensors by getting and setting the `AL`, `AR`, `AC`, `C` and  fields,
+access the gauged tensors by getting and setting the `AL`, `AR`, `C` and `AC` fields,
 which each represent a (periodic) vector of these tensors.
 
 ```@example infinitemps
-al = mps.AL[1] # left gauged tensor of the third site
+al = mps.AL[1] # left gauged tensor of the first site
 @tensor E[a; b] := al[c, d, b] * conj(al[c, d, a])
 @show isapprox(E, id(left_virtualspace(mps, 1)))
 ```
 ```@example infinitemps
-ar = mps.AR[1] # right gauged tensor of the third site
+ar = mps.AR[1] # right gauged tensor of the first site
 @tensor E[a; b] := ar[a, d, c] * conj(ar[b, d, c])
 @show isapprox(E, id(right_virtualspace(mps, 2)))
 ```
