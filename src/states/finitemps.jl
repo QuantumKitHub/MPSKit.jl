@@ -351,15 +351,11 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
         io = IOContext(io, :compact => true)
     end
 
-    L = length(ψ)
-    center = something(findlast(!ismissing, ψ.ALs), 0)
-    if center != L && !ismissing(ψ.ACs[center + 1])
-        center += 1
-    end
+    c = center(ψ)
 
     for site in reverse(1:L)
         if site < half_screen_rows || site > L - half_screen_rows
-            if site > center
+            if site > c
                 ismissing(ψ.ARs[site]) && throw(ArgumentError("invalid state"))
                 println(io, site == L ? charset.start : charset.mid, charset.dash,
                         " AR[$site]: ", ψ.ARs[site])
@@ -367,7 +363,7 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
                     ismissing(ψ.Cs[site]) && throw(ArgumentError("invalid state"))
                     println(io, charset.stop, " C[$site]: ", ψ.Cs[site])
                 end
-            elseif site == center
+            elseif site == c
                 if !ismissing(ψ.ACs[site])
                     println(io, if site == L
                                 charset.start
