@@ -85,7 +85,7 @@ gauged tensors will be updated accordingly.
 
 ```@example finitemps
 mps.C[3] = id(domain(mps.C[3]))
-println(mps)
+mps
 ```
 
 These objects can then be used to compute observables and expectation values. For example,
