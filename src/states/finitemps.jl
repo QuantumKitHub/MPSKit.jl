@@ -137,6 +137,23 @@ function Base.getproperty(ψ::FiniteMPS, prop::Symbol)
     end
 end
 
+"""
+    center(ψ::FiniteMPS)::HalfInt
+
+Return the location of the MPS center.
+
+`center::HalfInt`:
+- `!ishalfodd(center)` → `center` is a whole number and indicates the location of the first `AC` tensor present in `ψ.ACs`
+- `ishalfodd(center)` → `center` is a half-odd-integer, meaning that there are no `AC` tensors, and indicating between which sites the bond tensor lives.
+
+## Example
+```julia
+ψ = FiniteMPS(3, ℂ^2, ℂ^16)
+center(ψ) # returns 7/2, bond tensor is to the right of the 3rd site
+ψ.AC[1]   # moves center to first site
+center(ψ) # returns 1
+```
+"""
 function center(ψ::FiniteMPS)::HalfInt
     L = length(ψ)
     center = something(findlast(!ismissing, ψ.ALs), 0)
