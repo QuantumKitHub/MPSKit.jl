@@ -307,6 +307,11 @@ Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
     end
 end
 
+Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, I::AbstractUnitRange)
+    return Base.getindex.(Ref(ψ), I)
+end
+
+
 function Base.convert(::Type{TensorMap}, ψ::FiniteMPS)
     T = foldl(ψ.AR[2:end]; init=first(ψ.AC)) do x, y
         return _transpose_front(x * _transpose_tail(y))
