@@ -70,21 +70,10 @@ end
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     al_d = similar(state.AL)
     O = envs.operator
-    @static if MPSKit.Defaults.parallelize_sites
-        @sync for i in 1:length(state)
-            Threads.@spawn begin 
-                al_d[i] = MPSKit.∂∂AC(i, state, O, envs) * state.AC[i]
-            end
-        end
-        g = fetch.(map(CartesianIndices(state.AL)) do I
-            return Threads.@spawn Grassmann.project(al_d[I], state.AL[I])
-        end)
-    else
-        for i in 1:length(state)
-            al_d[i] = MPSKit.∂∂AC(i, state, O, envs) * state.AC[i]
-        end
-        g = Grassmann.project.(al_d, state.AL)
+    for i in 1:length(state)
+        al_d[i] = MPSKit.∂∂AC(i, state, O, envs) * state.AC[i]
     end
+    g = Grassmann.project.(al_d, state.AL)
     
     Rhoreg = Vector{eltype(state.C)}(undef, length(state))
     δmin = sqrt(eps(real(scalartype(state))))
