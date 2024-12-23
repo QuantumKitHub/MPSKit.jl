@@ -204,7 +204,6 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
                 h[i] = PrecGrad(th)
             end
         end
-        @show "doing parallel stuff :) "
     else
         for i in 1:length(g)
             nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
@@ -228,20 +227,10 @@ function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
 
     y = copy(state)  # The end-point
     h = similar(g)  # The tangent at the end-point
-    @static if MPSKit.Defaults.parallelize_sites
-        @sync for i in 1:length(g)
-            Threads.@spawn begin
-                yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
-                h[i] = PrecGrad(th)
-                y.AC[i] = (yal, state.C[i])
-            end
-        end
-    else
-        for i in 1:length(g)
-            yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
-            h[i] = PrecGrad(th)
-            y.AC[i] = (yal, state.C[i])
-        end
+    for i in 1:length(g) 
+        yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        h[i] = PrecGrad(th)
+        y.AC[i] = (yal, state.C[i])
     end
     normalize!(y)
 
