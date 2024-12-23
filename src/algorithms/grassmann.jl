@@ -74,7 +74,7 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
         al_d[i] = MPSKit.∂∂AC(i, state, O, envs) * state.AC[i]
     end
     g = Grassmann.project.(al_d, state.AL)
-    
+
     Rhoreg = Vector{eltype(state.C)}(undef, length(state))
     δmin = sqrt(eps(real(scalartype(state))))
     @static if MPSKit.Defaults.parallelize_sites
@@ -86,7 +86,7 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     else
         for i in 1:length(state)
             Rhoreg[i] = regularize(state.C[i], max(norm(g[i]) / 10, δmin))
-        end    
+        end
     end
 
     return ManifoldPoint(state, envs, g, Rhoreg)
@@ -216,7 +216,7 @@ function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
 
     y = copy(state)  # The end-point
     h = similar(g)  # The tangent at the end-point
-    for i in 1:length(g) 
+    for i in 1:length(g)
         yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
         h[i] = PrecGrad(th)
         y.AC[i] = (yal, state.C[i])
@@ -236,13 +236,14 @@ function transport!(h, x, g, alpha, xp)
     @static if MPSKit.Defaults.parallelize_sites
         @sync for i in 1:length(h)
             Threads.@spawn begin
-                h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha, xp.state.AL[i]))
+                h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
+                                                     xp.state.AL[i]))
             end
         end
     else
         for i in 1:length(h)
             h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
-                                                xp.state.AL[i]))
+                                                 xp.state.AL[i]))
         end
     end
     return h
