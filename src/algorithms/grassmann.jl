@@ -70,7 +70,7 @@ end
 function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     al_d = similar(state.AL)
     O = envs.operator
-    @static if Defaults.parallelize_sites
+    @static if MPSKit.Defaults.parallelize_sites
         @sync for i in 1:length(state)
             Threads.@spawn begin 
                 al_d[i] = MPSKit.∂∂AC(i, state, O, envs) * state.AC[i]
@@ -88,7 +88,7 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
     
     Rhoreg = Vector{eltype(state.C)}(undef, length(state))
     δmin = sqrt(eps(real(scalartype(state))))
-    @static if Defaults.parallelize_sites
+    @static if MPSKit.Defaults.parallelize_sites
         @sync for i in 1:length(state)
             Threads.@spawn begin
                 Rhoreg[i] = regularize(state.C[i], max(norm(g[i]) / 10, δmin))
@@ -135,7 +135,7 @@ function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
     # the gradient I want to return is the preconditioned gradient!
     g_prec = Vector{PrecGrad{eltype(x.g),eltype(x.Rhoreg)}}(undef, length(x.g))
 
-    @static if Defaults.parallelize_sites
+    @static if MPSKit.Defaults.parallelize_sites
         @sync for i in 1:length(x.state)
             Threads.@spawn begin
                 g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.C[i]'), x.Rhoreg[i])
@@ -197,13 +197,14 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
     envs = x.envs
     nal = similar(state.AL)
     h = similar(g)  # The tangent at the end-point
-    @static if Defaults.parallelize_sites
+    @static if MPSKit.Defaults.parallelize_sites
         @sync for i in 1:length(g)
             Threads.@spawn begin
                 nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
                 h[i] = PrecGrad(th)
             end
         end
+        @show "doing parallel stuff :) "
     else
         for i in 1:length(g)
             nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
@@ -227,7 +228,7 @@ function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
 
     y = copy(state)  # The end-point
     h = similar(g)  # The tangent at the end-point
-    @static if Defaults.parallelize_sites
+    @static if MPSKit.Defaults.parallelize_sites
         @sync for i in 1:length(g)
             Threads.@spawn begin
                 yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
@@ -254,7 +255,7 @@ Transport a tangent vector `h` along the retraction from `x` in direction `g` by
 `alpha`. `xp` is the end-point of the retraction.
 """
 function transport!(h, x, g, alpha, xp)
-    @static if Defaults.parallelize_sites
+    @static if MPSKit.Defaults.parallelize_sites
         @sync for i in 1:length(h)
             Threads.@spawn begin
                 h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha, xp.state.AL[i]))
