@@ -286,7 +286,7 @@ Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
     c = ψ.center
 
     @boundscheck begin
-        (1 <= i <= length(ψ)) || throw(BoundsError(ψ, i))
+        checkbounds(ψ, i)
     end
 
     if isinteger(c)
