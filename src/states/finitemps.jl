@@ -289,21 +289,16 @@ Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
         checkbounds(ψ, i)
     end
 
-    if isinteger(c)
-        return if i > Int(c)
-            ψ.AR[i]
-        elseif i == Int(c)
-            ψ.AC[i]
-        else
-            ψ.AL[i]
-        end
-    else # There is a bond-tensor at site c - 1/2
-        c = Int(c - 1 / 2)
-        return if i > Int(c)
-            ψ.AR[i]
-        else
-            ψ.AL[i]
-        end
+    if ishalfodd(c)
+        c -= 1 / 2
+    end
+
+    return if i > Int(c)
+        ψ.AR[i]
+    elseif i == Int(c)
+        ψ.AC[i]
+    else
+        ψ.AL[i]
     end
 end
 
