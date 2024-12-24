@@ -307,7 +307,7 @@ Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
     end
 end
 
-Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, I::AbstractUnitRange)
+@inline function Base.getindex(ψ::FiniteMPS, I::AbstractUnitRange)
     return Base.getindex.(Ref(ψ), I)
 end
 
