@@ -57,7 +57,7 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         ψ′ = InfiniteMPS(ψ.C[0], temp_ACs; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
     end
 
-    recalculate!(envs, ψ′)
+    recalculate!(envs, ψ′, H)
     return ψ′, envs
 end
 
