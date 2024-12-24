@@ -25,3 +25,16 @@ of an MPS `ψ₀`.
 - `VOMPS`: Tangent space method for truncating uniform MPS.
 """
 approximate, approximate!
+
+# implementation in terms of Multiline
+function approximate(ψ::InfiniteMPS,
+                     toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS},
+                     algorithm,
+                     envs=environments(ψ, toapprox))
+    envs′ = Multiline([envs])
+    multi, envs = approximate(convert(MultilineMPS, ψ),
+                              (convert(MultilineMPO, toapprox[1]),
+                               convert(MultilineMPS, toapprox[2])), algorithm, envs′)
+    ψ = convert(InfiniteMPS, multi)
+    return ψ, envs
+end
