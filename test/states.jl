@@ -46,6 +46,30 @@ end
     @test dot(ψ_small, ψ_small2) ≈ dot(ψ_small, ψ_small)
 end
 
+@testset "FiniteMPS center + (slice) indexing" begin
+    L = 11
+    ψ = FiniteMPS(L, ℂ^2, ℂ^16)
+
+    ψ.AC[6] # moving the center to site 6
+
+    @test ψ.center == 6
+
+    @test ψ[5] == ψ.ALs[5]
+    @test ψ[6] == ψ.ACs[6]
+    @test ψ[7] == ψ.ARs[7]
+
+    @test ψ[5:7] == [ψ.ALs[5], ψ.ACs[6], ψ.ARs[7]]
+
+    @inferred ψ[5]
+
+    @test_throws BoundsError ψ[0]
+    @test_throws BoundsError ψ[L + 1]
+
+    ψ.C[6] = randn(ComplexF64, space(ψ.C[6])) # setting the center between sites 5 and 6
+    @test ψ.center == 13 / 2
+    @test ψ[5:7] == [ψ.ALs[5], ψ.ACs[6], ψ.ARs[7]]
+end
+
 @testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
                                                     [(ℙ^10, ℙ^2, ComplexF64),
                                                      (Rep[U₁](1 => 3), Rep[U₁](0 => 1),
