@@ -282,6 +282,30 @@ end
 
 Base.checkbounds(::Type{Bool}, ψ::FiniteMPS, i::Integer) = 1 <= i <= length(ψ)
 
+Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
+    c = ψ.center
+
+    @boundscheck begin
+        checkbounds(ψ, i)
+    end
+
+    if ishalfodd(c)
+        c -= 1 / 2
+    end
+
+    return if i > Int(c)
+        ψ.AR[i]
+    elseif i == Int(c)
+        ψ.AC[i]
+    else
+        ψ.AL[i]
+    end
+end
+
+@inline function Base.getindex(ψ::FiniteMPS, I::AbstractUnitRange)
+    return Base.getindex.(Ref(ψ), I)
+end
+
 function Base.convert(::Type{TensorMap}, ψ::FiniteMPS)
     T = foldl(ψ.AR[2:end]; init=first(ψ.AC)) do x, y
         return _transpose_front(x * _transpose_tail(y))
