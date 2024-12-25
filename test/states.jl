@@ -65,7 +65,7 @@ end
     @test_throws BoundsError ψ[0]
     @test_throws BoundsError ψ[L + 1]
 
-    ψ.C[6] = randn(ComplexF64, space(ψ.C[6])) # setting the center between sites 5 and 6
+    ψ.C[6] = randn(ComplexF64, space(ψ.C[6])) # setting the center between sites 6 and 7
     @test ψ.center == 13 / 2
     @test ψ[5:7] == [ψ.ALs[5], ψ.ACs[6], ψ.ARs[7]]
 end
