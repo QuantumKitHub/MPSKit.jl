@@ -7,7 +7,7 @@ Base.@deprecate(approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:M
 
 function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
                      alg::VOMPS, envs=environments(ψ, toapprox))
-    ϵ::Float64 = calc_galerkin(ψ, envs)
+    ϵ::Float64 = calc_galerkin(ψ, toapprox..., envs)
     temp_ACs = similar.(ψ.AC)
     scheduler = Defaults.scheduler[]
     log = IterLog("VOMPS")
@@ -27,7 +27,7 @@ function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multilin
 
             ψ, envs = alg.finalize(iter, ψ, toapprox, envs)::Tuple{typeof(ψ),typeof(envs)}
 
-            ϵ = calc_galerkin(ψ, envs)
+            ϵ = calc_galerkin(ψ, toapprox..., envs)
 
             if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)

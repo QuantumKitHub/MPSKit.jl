@@ -41,7 +41,7 @@ function leading_boundary(ψ::MultilineMPS, H, alg::VUMPS, envs=environments(ψ,
 
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
-            ϵ = calc_galerkin(ψ, envs)
+            ϵ = calc_galerkin(ψ, H, ψ, envs)
 
             if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))

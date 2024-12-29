@@ -26,7 +26,7 @@ function DMRG(; tol=Defaults.tol, maxiter=Defaults.maxiter, eigalg=(;),
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environments(ψ, H))
-    ϵs = map(pos -> calc_galerkin(ψ, pos, envs), 1:length(ψ))
+    ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
     log = IterLog("DMRG")
 
@@ -39,7 +39,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
             for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
                 h = ∂∂AC(pos, ψ, H, envs)
                 _, vec = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
-                ϵs[pos] = max(ϵs[pos], calc_galerkin(ψ, pos, envs))
+                ϵs[pos] = max(ϵs[pos], calc_galerkin(pos, ψ, H, ψ, envs))
                 ψ.AC[pos] = vec
             end
             ϵ = maximum(ϵs)
@@ -93,7 +93,7 @@ function DMRG2(; tol=Defaults.tol, maxiter=Defaults.maxiter, eigalg=(;),
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environments(ψ, H))
-    ϵs = map(pos -> calc_galerkin(ψ, pos, envs), 1:length(ψ))
+    ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
     log = IterLog("DMRG2")
 
