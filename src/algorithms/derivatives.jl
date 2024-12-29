@@ -31,39 +31,33 @@ Base.:*(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, v) = h(v);
 (h::DerivativeOperator)(v, ::Number) = h(v)
 
 # draft operator constructors
-function ∂∂C(pos::Int, mps, operator::AbstractMPO, cache)
-    return MPO_∂∂C(leftenv(cache, pos + 1, mps), rightenv(cache, pos, mps))
-end
-function ∂∂C(col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂C(leftenv(envs, col + 1, mps), rightenv(envs, col, mps))
+function ∂∂C(pos::Int, mps, operator, envs)
+    return MPO_∂∂C(leftenv(envs, pos + 1, mps), rightenv(envs, pos, mps))
 end
 function ∂∂C(row::Int, col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂C(leftenv(envs, row, col + 1, mps), rightenv(envs, row, col, mps))
+    return ∂∂C(col, mps[row], operator[row], envs[row])
 end
 
-function ∂∂AC(pos::Int, mps, operator::AbstractMPO, cache)
-    return MPO_∂∂AC(operator[pos], leftenv(cache, pos, mps), rightenv(cache, pos, mps))
+function ∂∂AC(pos::Int, mps, operator, envs)
+    return MPO_∂∂AC(operator[pos], leftenv(envs, pos, mps), rightenv(envs, pos, mps))
 end
 function ∂∂AC(row::Int, col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂AC(operator[row, col], leftenv(envs, row, col, mps),
-                    rightenv(envs, row, col, mps))
+    return ∂∂AC(col, mps[row], operator[row], envs[row])
 end
 function ∂∂AC(col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂AC(envs.operator[:, col], leftenv(envs, col, mps),
-                    rightenv(envs, col, mps))
-end;
+    return MPO_∂∂AC(operator[:, col], leftenv(envs, col, mps), rightenv(envs, col, mps))
+end
 
-function ∂∂AC2(pos::Int, mps, operator::AbstractMPO, cache)
-    return MPO_∂∂AC2(operator[pos], operator[pos + 1], leftenv(cache, pos, mps),
-                     rightenv(cache, pos + 1, mps))
-end;
+function ∂∂AC2(pos::Int, mps, operator, envs)
+    return MPO_∂∂AC2(operator[pos], operator[pos + 1], leftenv(envs, pos, mps),
+                     rightenv(envs, pos + 1, mps))
+end
 function ∂∂AC2(col::Int, mps, operator::MultilineMPO, envs)
     return MPO_∂∂AC2(operator[:, col], operator[:, col + 1], leftenv(envs, col, mps),
                      rightenv(envs, col + 1, mps))
 end
-function ∂∂AC2(row::Int, col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂AC2(operator[row, col], operator[row, col + 1],
-                     leftenv(envs, row, col, mps), rightenv(envs, row, col + 1, mps))
+function ∂∂AC2(row::Int, col::Int, mps, operator::MultilineMPO, envs::MultilineEnvironments)
+    return ∂∂AC2(col, mps[row], operator[row], envs[row])
 end
 
 #allow calling them with CartesianIndices
@@ -123,8 +117,8 @@ function c_proj(pos, below, envs::FiniteEnvironments)
     return ∂C(envs.above.C[pos], leftenv(envs, pos + 1, below), rightenv(envs, pos, below))
 end
 
-function c_proj(row, col, below, envs::InfiniteMPOEnvironments)
-    return ∂C(envs.above.C[row, col], leftenv(envs, row, col + 1, below),
+function c_proj(row, col, below, envs::InfiniteEnvironments)
+    return ∂C(envs.above.CR[row, col], leftenv(envs, row, col + 1, below),
               rightenv(envs, row, col, below))
 end
 
@@ -135,7 +129,7 @@ function ac_proj(pos, below, envs)
 
     return ∂AC(envs.above.AC[pos], envs.operator[pos], le, re)
 end
-function ac_proj(row, col, below, envs::InfiniteMPOEnvironments)
+function ac_proj(row, col, below, envs::InfiniteEnvironments)
     return ∂AC(envs.above.AC[row, col], envs.operator[row, col],
                leftenv(envs, row, col, below),
                rightenv(envs, row, col, below))
@@ -148,7 +142,7 @@ function ac2_proj(pos, below, envs)
                 envs.operator[pos],
                 envs.operator[pos + 1], le, re)
 end
-function ac2_proj(row, col, below, envs::InfiniteMPOEnvironments)
+function ac2_proj(row, col, below, envs::InfiniteEnvironments)
     @plansor ac2[-1 -2; -3 -4] := envs.above.AC[row, col][-1 -2; 1] *
                                   envs.above.AR[row, col + 1][1 -4; -3]
     return ∂AC2(ac2, leftenv(envs, row, col + 1, below),

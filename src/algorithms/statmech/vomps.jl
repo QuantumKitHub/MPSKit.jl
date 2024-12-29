@@ -26,7 +26,7 @@ end
 
 function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS,
                           envs=environments(ψ, O))
-    ϵ::Float64 = calc_galerkin(ψ, envs)
+    ϵ::Float64 = calc_galerkin(ψ, O, ψ, envs)
     temp_ACs = similar.(ψ.AC)
     scheduler = Defaults.scheduler[]
     log = IterLog("VOMPS")
@@ -46,7 +46,7 @@ function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS,
 
             ψ, envs = alg.finalize(iter, ψ, O, envs)::Tuple{typeof(ψ),typeof(envs)}
 
-            ϵ = calc_galerkin(ψ, envs)
+            ϵ = calc_galerkin(ψ, O, ψ, envs)
 
             if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, O, envs))

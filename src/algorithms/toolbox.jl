@@ -26,38 +26,36 @@ end
 # end
 
 """
-    calc_galerkin(state, envs)
+    calc_galerkin(above, operator, below, envs)
+    calc_galerkin(pos, above, operator, below, envs)
 
-Calculate the galerkin error.
+Calculate the Galerkin error, which is the error between the solution of the original problem, and the solution of the problem projected on the tangent space.
+Concretely, this is the overlap of the current state with the single-site derivative, projected onto the nullspace of the current state:
+
+```math
+\\epsilon = |VL * (VL' * \\frac{above}{\\partial AC_{pos}})|
+```
 """
-function calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS}, loc, envs)::Float64
-    AC´ = ∂∂AC(loc, state, envs.operator, envs) * state.AC[loc]
+function calc_galerkin(pos::Int, above::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
+                       below, envs)
+    AC´ = ∂∂AC(pos, above, operator, envs) * above.AC[pos]
     normalize!(AC´)
-    out = add!(AC´, state.AL[loc] * state.AL[loc]' * AC´, -1)
+    out = add!(AC´, below.AL[pos] * below.AL[pos]' * AC´, -1)
     return norm(out)
 end
-function calc_galerkin(state::Union{InfiniteMPS,FiniteMPS,WindowMPS}, envs)::Float64
-    return maximum([calc_galerkin(state, loc, envs) for loc in 1:length(state)])
+function calc_galerkin(pos::CartesianIndex{2}, above::MultilineMPS, operator::MultilineMPO,
+                       below::MultilineMPS, envs::MultilineEnvironments)
+    row, col = pos.I
+    return calc_galerkin(col, above[row], operator[row], below[row + 1], envs[row])
 end
-function calc_galerkin(state::MultilineMPS, envs::InfiniteMPOEnvironments)::Float64
-    above = isnothing(envs.above) ? state : envs.above
-
-    εs = zeros(Float64, size(state, 1), size(state, 2))
-    for (row, col) in product(1:size(state, 1), 1:size(state, 2))
-        AC´ = ∂∂AC(row, col, state, envs.operator, envs) * above.AC[row, col]
-        normalize!(AC´)
-        out = add!(AC´, state.AL[row + 1, col] * state.AL[row + 1, col]' * AC´, -1)
-        εs[row, col] = norm(out)
-    end
-
-    return maximum(εs[:])
+function calc_galerkin(above::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
+                       below, envs)
+    return maximum(pos -> calc_galerkin(pos, above, operator, below, envs), 1:length(above))
 end
-function calc_galerkin(state::InfiniteMPS, site::Int,
-                       envs::InfiniteMPOHamiltonianEnvironments)
-    AC´ = ∂∂AC(site, state, envs.operator, envs) * state.AC[site]
-    normalize!(AC´)
-    out = add!(AC´, state.AL[site] * (state.AL[site]' * AC´), -1)
-    return norm(out)
+function calc_galerkin(above::MultilineMPS, operator::MultilineMPO, below::MultilineMPS,
+                       envs::MultilineEnvironments)
+    return maximum(pos -> calc_galerkin(pos, above, operator, below, envs),
+                   CartesianIndices(size(above)))
 end
 
 """
@@ -171,11 +169,8 @@ function variance end
 function variance(state::InfiniteMPS, H::InfiniteMPOHamiltonian,
                   envs=environments(state, H))
     e_local = map(1:length(state)) do i
-        return @plansor state.AC[i][3 7; 5] *
-                        leftenv(envs, i, state)[1 2; 3] *
-                        H[i][:, :, :, end][2 4; 7 8] *
-                        rightenv(envs, i, state)[end][5 8; 6] *
-                        conj(state.AC[i][1 4; 6])
+        return contract_mpo_expval(state.AC[i], envs.GLs[i], H[i][:, :, :, end],
+                                   envs.GRs[i][end])
     end
     lattice = physicalspace.(Ref(state), 1:length(state))
     H_renormalized = InfiniteMPOHamiltonian(lattice,
@@ -202,11 +197,8 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs=environment
     gs = state.left_gs
 
     e_local = map(1:length(state)) do i
-        return @plansor gs.AC[i][3 7; 5] *
-                        leftenv(envs.leftenvs, i, gs)[1 2; 3] *
-                        H[i][:, :, :, end][2 4; 7 8] *
-                        rightenv(envs.rightenvs, i, gs)[end][5 8; 6] *
-                        conj(gs.AC[i][1 4; 6])
+        return contract_mpo_expval(gs.AC[i], envs.GLs[i], H[i][:, :, :, end],
+                                   envs.GRs[i][end])
     end
     lattice = physicalspace.(Ref(gs), 1:length(state))
     H_regularized = H - InfiniteMPOHamiltonian(lattice,
