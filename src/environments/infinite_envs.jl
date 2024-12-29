@@ -290,3 +290,18 @@ function TensorKit.normalize!(envs::InfiniteEnvironments, above::InfiniteMPS,
                               operator::InfiniteMPOHamiltonian, below::InfiniteMPS)
     return envs
 end
+
+# Transfer operations
+# -------------------
+
+function transfer_leftenv!(envs::InfiniteEnvironments, above, operator, below, site::Int)
+    T = TransferMatrix(above.AL[site - 1], operator[site - 1], below.AL[site - 1])
+    envs.GLs[site] = envs.GLs[site - 1] * T
+    return envs
+end
+
+function transfer_rightenv!(envs::InfiniteEnvironments, above, operator, below, site::Int)
+    T = TransferMatrix(above.AR[site + 1], operator[site + 1], below.AR[site + 1])
+    envs.GRs[site] = T * envs.GRs[site + 1]
+    return envs
+end
