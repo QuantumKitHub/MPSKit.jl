@@ -23,10 +23,9 @@ function IDMRG1(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),
     return IDMRG1{typeof(eigalg′)}(tol, tol_gauge, eigalg′, maxiter, verbosity)
 end
 
-function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(ost, H))
-    ϵ::Float64 = calc_galerkin(ost, oenvs)
+function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, envs=environments(ost, H))
+    ϵ::Float64 = calc_galerkin(ost, H, ost, envs)
     ψ = copy(ost)
-    envs = IDMRGEnvironments(ost, oenvs)
     log = IterLog("IDMRG")
 
     LoggingExtras.withlevel(; alg.verbosity) do
@@ -40,7 +39,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
                 h = ∂∂AC(pos, ψ, H, envs)
                 _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
                 ψ.AL[pos], ψ.C[pos] = leftorth!(ψ.AC[pos])
-                update_leftenv!(envs, ψ, H, pos + 1)
+                transfer_leftenv!(envs, ψ, H, ψ, pos + 1)
             end
 
             # right to left sweep
@@ -51,7 +50,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
                 ψ.C[pos - 1], temp = rightorth!(_transpose_tail(ψ.AC[pos]))
                 ψ.AR[pos] = _transpose_front(temp)
 
-                update_rightenv!(envs, ψ, H, pos - 1)
+                transfer_rightenv!(envs, ψ, H, ψ, pos - 1)
             end
 
             ϵ = norm(C_current - ψ.C[0])
@@ -69,8 +68,9 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, oenvs=environments(o
     end
 
     nst = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
-    nenvs = environments(nst, H; solver=oenvs.solver)
-    return nst, nenvs, ϵ
+    recalculate!(envs, nst, H, nst)
+
+    return nst, envs, ϵ
 end
 
 """
@@ -101,12 +101,11 @@ function IDMRG2(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),
     return IDMRG2{typeof(eigalg′)}(tol, tol_gauge, eigalg′, maxiter, verbosity, trscheme)
 end
 
-function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(ost, H))
+function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(ost, H))
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
-    ϵ::Float64 = calc_galerkin(ost, oenvs)
+    ϵ::Float64 = calc_galerkin(ost, H, ost, envs)
 
     ψ = copy(ost)
-    envs = IDMRGEnvironments(ost, oenvs)
     log = IterLog("IDMRG2")
 
     LoggingExtras.withlevel(; alg.verbosity) do
@@ -129,8 +128,8 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
                 ψ.AR[pos + 1] = _transpose_front(ar)
                 ψ.AC[pos + 1] = _transpose_front(c * ar)
 
-                update_leftenv!(envs, ψ, H, pos + 1)
-                update_rightenv!(envs, ψ, H, pos)
+                transfer_leftenv!(envs, ψ, H, ψ, pos + 1)
+                transfer_rightenv!(envs, ψ, H, ψ, pos)
             end
 
             # update the edge
@@ -152,8 +151,8 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             C_current = complex(c)
 
             # update environments
-            update_leftenv!(envs, ψ, H, 1)
-            update_rightenv!(envs, ψ, H, 0)
+            transfer_leftenv!(envs, ψ, H, ψ, 1)
+            transfer_rightenv!(envs, ψ, H, ψ, 0)
 
             # sweep from right to left
             for pos in (length(ψ) - 1):-1:1
@@ -170,8 +169,8 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
                 ψ.AR[pos + 1] = _transpose_front(ar)
                 ψ.AC[pos + 1] = _transpose_front(c * ar)
 
-                update_leftenv!(envs, ψ, H, pos + 1)
-                update_rightenv!(envs, ψ, H, pos)
+                transfer_leftenv!(envs, ψ, H, ψ, pos + 1)
+                transfer_rightenv!(envs, ψ, H, ψ, pos)
             end
 
             # update the edge
@@ -188,8 +187,8 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
             ψ.AR[1] = _transpose_front(ar)
             ψ.AC[1] = _transpose_front(c * ar)
 
-            update_leftenv!(envs, ψ, H, 1)
-            update_rightenv!(envs, ψ, H, 0)
+            transfer_leftenv!(envs, ψ, H, ψ, 1)
+            transfer_rightenv!(envs, ψ, H, ψ, 0)
 
             # update error
             smallest = infimum(_firstspace(C_current), _firstspace(c))
@@ -210,6 +209,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, oenvs=environments(o
     end
 
     ψ′ = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
-    nenvs = environments(ψ′, H; solver=oenvs.solver)
-    return ψ′, nenvs, ϵ
+    recalculate!(envs, ψ′, H, ψ′)
+
+    return ψ′, envs, ϵ
 end

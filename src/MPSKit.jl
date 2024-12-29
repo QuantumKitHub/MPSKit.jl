@@ -111,7 +111,7 @@ include("environments/infinitempo_envs.jl")
 include("environments/infinitempohamiltonian_envs.jl")
 include("environments/multiline_envs.jl")
 include("environments/qp_envs.jl")
-include("environments/idmrg_envs.jl")
+# include("environments/idmrg_envs.jl")
 include("environments/multiple_envs.jl")
 include("environments/lazylincocache.jl")
 
