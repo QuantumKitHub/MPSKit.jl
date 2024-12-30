@@ -22,35 +22,38 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
                   envs::AbstractMPSEnvironments=environments(ψ, H);
                   leftorthflag=true)
     temp_ACs = similar(ψ.AC)
-    temp_CRs = similar(ψ.C)
+    temp_Cs = similar(ψ.C)
 
-    @static if Defaults.parallelize_sites
-        @sync for (loc, (ac, c)) in enumerate(zip(ψ.AC, ψ.C))
-            Threads.@spawn begin
-                h_ac = ∂∂AC(loc, ψ, H, envs)
-                temp_ACs[loc] = integrate(h_ac, ac, t, dt, alg.integrator)
-            end
-
-            Threads.@spawn begin
-                h_c = ∂∂C(loc, ψ, H, envs)
-                temp_CRs[loc] = integrate(h_c, c, t, dt, alg.integrator)
-            end
+    scheduler = Defaults.scheduler[]
+    if scheduler isa SerialScheduler
+        temp_ACs = tmap(1:length(ψ); scheduler) do loc
+            return integrate(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], t, dt, alg.integrator)
+        end
+        temp_Cs = tmap(1:length(ψ); scheduler) do loc
+            return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator)
         end
     else
-        for (loc, (ac, c)) in enumerate(zip(ψ.AC, ψ.C))
-            h_ac = ∂∂AC(loc, ψ, H, envs)
-            temp_ACs[loc] = integrate(h_ac, ac, t, dt, alg.integrator)
-            h_c = ∂∂C(loc, ψ, H, envs)
-            temp_CRs[loc] = integrate(h_c, c, t, dt, alg.integrator)
+        @sync begin
+            Threads.@spawn begin
+                temp_ACs = tmap(1:length(ψ); scheduler) do loc
+                    return integrate(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], t, dt,
+                                     alg.integrator)
+                end
+            end
+            Threads.@spawn begin
+                temp_Cs = tmap(1:length(ψ); scheduler) do loc
+                    return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator)
+                end
+            end
         end
     end
 
     if leftorthflag
-        regauge!.(temp_ACs, temp_CRs; alg=TensorKit.QRpos())
+        regauge!.(temp_ACs, temp_Cs; alg=TensorKit.QRpos())
         ψ′ = InfiniteMPS(temp_ACs, ψ.C[end]; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
     else
-        circshift!(temp_CRs, 1)
-        regauge!.(temp_CRs, temp_ACs; alg=TensorKit.LQpos())
+        circshift!(temp_Cs, 1)
+        regauge!.(temp_Cs, temp_ACs; alg=TensorKit.LQpos())
         ψ′ = InfiniteMPS(ψ.C[0], temp_ACs; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
     end
 
