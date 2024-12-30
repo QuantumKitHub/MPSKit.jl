@@ -54,16 +54,16 @@ function find_groundstate(ψ::S, H, alg::GradientGrassmann,
         @warn "This is not fully supported - split the mps up in a sum of mps's and optimize seperately"
     normalize!(ψ)
 
-    #optimtest(GrassmannMPS.fg,(ψ,envs);alpha=-0.01:0.001:0.01,retract=GrassmannMPS.retract,inner=GrassmannMPS.inner)
-    x, _, _, _, normgradhistory = optimize(GrassmannMPS.fg,
-                                           GrassmannMPS.ManifoldPoint(ψ, envs),
+    fg(x) = GrassmannMPS.fg(x, H, envs)
+    x, _, _, _, normgradhistory = optimize(fg, ψ,
                                            alg.method;
-                                           (transport!)=GrassmannMPS.transport!,
-                                           retract=GrassmannMPS.retract,
-                                           inner=GrassmannMPS.inner,
-                                           (scale!)=GrassmannMPS.scale!,
-                                           (add!)=GrassmannMPS.add!,
-                                           (finalize!)=alg.finalize!,
+                                           GrassmannMPS.transport!,
+                                           GrassmannMPS.retract,
+                                           GrassmannMPS.inner,
+                                           GrassmannMPS.scale!,
+                                           GrassmannMPS.add!,
+                                           GrassmannMPS.precondition,
+                                           alg.finalize!,
                                            isometrictransport=true)
-    return x.state, x.envs, normgradhistory[end]
+    return x, envs, normgradhistory[end]
 end
