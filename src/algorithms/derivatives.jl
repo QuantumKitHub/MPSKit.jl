@@ -105,25 +105,6 @@ function ∂AC2(x::Vector, opp1, opp2, leftenv, rightenv)
     return circshift(map(∂AC2, x, opp1, opp2, leftenv, rightenv), 1)
 end
 
-"""
-    Zero-site derivative (the C matrix to the right of pos)
-"""
-function ∂C(x::MPSBondTensor, leftenv::AbstractVector, rightenv::AbstractVector)::typeof(x)
-    if Defaults.parallelize_derivatives
-        @floop WorkStealingEx() for (le, re) in zip(leftenv, rightenv)
-            t = ∂C(x, le, re)
-            @reduce(y = inplace_add!(nothing, t))
-        end
-    else
-        y = ∂C(x, leftenv[1], rightenv[1])
-        for (le, re) in zip(leftenv[2:end], rightenv[2:end])
-            VectorInterface.add!(y, ∂C(x, le, re))
-        end
-    end
-
-    return y
-end
-
 function ∂C(x::MPSBondTensor, leftenv::MPSTensor, rightenv::MPSTensor)
     @plansor y[-1; -2] := leftenv[-1 3; 1] * x[1; 2] * rightenv[2 3; -2]
     return y isa BlockTensorMap ? only(y) : y
