@@ -94,7 +94,7 @@ function recalculate!(envs::AbstractInfiniteEnvironments, state; tol=envs.solver
     end
 
     solver = envs.solver
-    envs.solver = solver.tol == tol ? solver : @set solver.tol = tol
+    envs.solver = solver.tol == tol ? solver : Accessors.@set solver.tol = tol
     envs.dependency = state
 
     @sync begin

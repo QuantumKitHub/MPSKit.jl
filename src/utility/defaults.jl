@@ -5,8 +5,8 @@ Some default values and settings for MPSKit.
 """
 module Defaults
 
-using Preferences
 import KrylovKit: GMRES, Arnoldi, Lanczos
+using OhMyThreads
 using ..MPSKit: DynamicTol
 
 const VERBOSE_NONE = 0
@@ -66,29 +66,30 @@ function alg_expsolve(; tol=tol, maxiter=maxiter, verbosity=0,
            Arnoldi(; tol, maxiter, krylovdim, verbosity)
 end
 
-# Preferences
-# -----------
+"""
+   const scheduler
 
-function set_parallelization(options::Pair{String,Bool}...)
-    for (key, val) in options
-        if !(key in ("sites", "derivatives", "transfers"))
-            throw(ArgumentError("Invalid option: \"$(key)\""))
-        end
+A scoped value that controls the current settings for multi-threading, typically used to parallelize over unitcells.
+This value is best controlled using [`set_scheduler!`](@ref).
+"""
+const scheduler = Ref{Scheduler}()
 
-        @set_preferences!("parallelize_$key" => val)
+"""
+    set_scheduler!([scheduler]; kwargs...)
+
+Set the `OhMyThreads` multi-threading scheduler parameters.
+
+The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or as a symbol where the corresponding parameters are specificed as keyword arguments.
+For a detailed description of all schedulers and their keyword arguments consult the [`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
+"""
+function set_scheduler!(sc=OhMyThreads.Implementation.NotGiven(); kwargs...)
+    if isempty(kwargs) && sc isa OhMyThreads.Implementation.NotGiven
+        # default value: Serial if single-threaded, Dynamic otherwise
+        scheduler[] = Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler()
+    else
+        scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(sc; kwargs...)
     end
-
-    sites = @load_preference("parallelize_sites", nothing)
-    derivatives = @load_preference("parallelize_derivatives", nothing)
-    transfers = @load_preference("parallelize_transfers", nothing)
-    @info "Parallelization changed; restart your Julia session for this change to take effect!" sites derivatives transfers
-    return nothing
+    return scheduler[]
 end
-
-const parallelize_sites = @load_preference("parallelize_sites", Threads.nthreads() > 1)
-const parallelize_derivatives = @load_preference("parallelize_derivatives",
-                                                 Threads.nthreads() > 1)
-const parallelize_transfers = @load_preference("parallelize_transfers",
-                                               Threads.nthreads() > 1)
 
 end
