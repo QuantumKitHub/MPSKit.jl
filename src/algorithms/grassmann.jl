@@ -12,6 +12,7 @@ module GrassmannMPS
 
 using ..MPSKit
 using TensorKit
+using OhMyThreads
 import TensorKitManifolds.Grassmann
 
 function TensorKit.rmul!(a::Grassmann.GrassmannTangent, b::AbstractTensorMap)
@@ -67,7 +68,7 @@ struct ManifoldPoint{T,E,G,C}
     Rhoreg::C # the regularized density matrices
 end
 
-function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
+function ManifoldPoint(state::FiniteMPS, envs)
     al_d = similar(state.AL)
     O = envs.operator
     for i in 1:length(state)
@@ -77,19 +78,21 @@ function ManifoldPoint(state::Union{InfiniteMPS,FiniteMPS}, envs)
 
     Rhoreg = Vector{eltype(state.C)}(undef, length(state))
     δmin = sqrt(eps(real(scalartype(state))))
-    @static if MPSKit.Defaults.parallelize_sites
-        @sync for i in 1:length(state)
-            Threads.@spawn begin
-                Rhoreg[i] = regularize(state.C[i], max(norm(g[i]) / 10, δmin))
-            end
-        end
-    else
-        for i in 1:length(state)
-            Rhoreg[i] = regularize(state.C[i], max(norm(g[i]) / 10, δmin))
-        end
+    tmap!(Rhoreg, 1:length(state)) do i
+        return regularize(state.C[i], max(norm(g[i]) / 10, δmin))
     end
 
     return ManifoldPoint(state, envs, g, Rhoreg)
+end
+function ManifoldPoint(state::InfiniteMPS, envs)
+    δmin = sqrt(eps(real(scalartype(state))))
+    g_and_ρ = tmap(1:length(state); scheduler=MPSKit.Defaults.scheduler[]) do i
+        AC′ = MPSKit.∂∂AC(i, state, envs.operator, envs) * state.AC[i]
+        g = Grassmann.project(AC′, state.AL[i])
+        ρ = regularize(state.C[i], max(norm(g) / 10, δmin))
+        return g, ρ
+    end
+    return ManifoldPoint(state, envs, first.(g_and_ρ), last.(g_and_ρ))
 end
 
 function ManifoldPoint(state::MultilineMPS, envs)
@@ -122,18 +125,8 @@ cell as tangent vectors on Grassmann manifolds.
 """
 function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
     # the gradient I want to return is the preconditioned gradient!
-    g_prec = Vector{PrecGrad{eltype(x.g),eltype(x.Rhoreg)}}(undef, length(x.g))
-
-    @static if MPSKit.Defaults.parallelize_sites
-        @sync for i in 1:length(x.state)
-            Threads.@spawn begin
-                g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.C[i]'), x.Rhoreg[i])
-            end
-        end
-    else
-        for i in 1:length(x.state)
-            g_prec[i] = PrecGrad(rmul!(copy(x.g[i]), x.state.C[i]'), x.Rhoreg[i])
-        end
+    g_prec = tmap(eachindex(x.g); scheduler=MPSKit.Defaults.scheduler[]) do i
+        return PrecGrad(rmul!(copy(x.g[i]), x.state.C[i]'), x.Rhoreg[i])
     end
 
     # TODO: the operator really should not be part of the environments, and this should
@@ -166,10 +159,9 @@ function retract(x::ManifoldPoint{<:MultilineMPS}, tg, alpha)
     g = reshape(tg, size(x.state))
 
     nal = similar(x.state.AL)
-    h = similar(g)
-    for (i, cg) in enumerate(tg)
-        (nal[i], th) = Grassmann.retract(x.state.AL[i], cg.Pg, alpha)
-        h[i] = PrecGrad(th)
+    h = tmap(eachindex(g); scheduler=MPSKit.Defaults.scheduler[]) do i
+        nal[i], th = Grassmann.retract(x.state.AL[i], g[i].Pg, alpha)
+        return PrecGrad(th)
     end
 
     nstate = MPSKit.MultilineMPS(nal, x.state.C[:, end])
@@ -186,18 +178,10 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
     envs = x.envs
     nal = similar(state.AL)
     h = similar(g)  # The tangent at the end-point
-    @static if MPSKit.Defaults.parallelize_sites
-        @sync for i in 1:length(g)
-            Threads.@spawn begin
-                nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
-                h[i] = PrecGrad(th)
-            end
-        end
-    else
-        for i in 1:length(g)
-            nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
-            h[i] = PrecGrad(th)
-        end
+
+    h = tmap(eachindex(g); scheduler=MPSKit.Defaults.scheduler[]) do i
+        nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
+        return PrecGrad(th)
     end
 
     nstate = InfiniteMPS(nal, state.C[end])
@@ -233,20 +217,10 @@ Transport a tangent vector `h` along the retraction from `x` in direction `g` by
 `alpha`. `xp` is the end-point of the retraction.
 """
 function transport!(h, x, g, alpha, xp)
-    @static if MPSKit.Defaults.parallelize_sites
-        @sync for i in 1:length(h)
-            Threads.@spawn begin
-                h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
-                                                     xp.state.AL[i]))
-            end
-        end
-    else
-        for i in 1:length(h)
-            h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
-                                                 xp.state.AL[i]))
-        end
+    return tmap!(h, eachindex(h); scheduler=MPSKit.Defaults.scheduler[]) do i
+        return PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
+                                             xp.state.AL[i]))
     end
-    return h
 end
 
 """
