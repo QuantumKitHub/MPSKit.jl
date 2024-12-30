@@ -103,9 +103,8 @@ end
 function expectation_value(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
                            envs::AbstractMPSEnvironments=environments(ψ, H))
     return sum(1:length(ψ)) do i
-        util = fill_data!(similar(ψ.AL[1], right_virtualspace(H, i)[end]), one)
-        @plansor GR[-1 -2; -3] := r_LL(ψ, i)[-1; -3] * util[-2]
-        return contract_mpo_expval(ψ.AL[i], leftenv(envs, i, ψ), H[i][:, 1, 1, end], GR)
+        return contract_mpo_expval(ψ.AC[i], envs.GLs[i], H[i][:, 1, 1, end],
+                                   envs.GRs[i][end])
     end
 end
 
@@ -120,14 +119,12 @@ end
 function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
     return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), envs...)
 end
-function expectation_value(ψ::MultilineMPS, O::MultilineMPO{<:Union{DenseMPO,SparseMPO}},
-                           envs::InfiniteMPOEnvironments=environments(ψ, O))
+function expectation_value(ψ::MultilineMPS, O::MultilineMPO{<:InfiniteMPO},
+                           envs::MultilineEnvironments=environments(ψ, O))
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
-        GL = leftenv(envs, i, j, ψ)
-        GR = rightenv(envs, i, j, ψ)
-        @plansor GL[1 2; 3] * O[i, j][2 4; 6 5] *
-                 ψ.AC[i, j][3 6; 7] * GR[7 5; 8] *
-                 conj(ψ.AC[i + 1, j][1 4; 8])
+        GL = envs[i].GLs[j]
+        GR = envs[i].GRs[j]
+        return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j])
     end
 end
 function expectation_value(ψ::MultilineMPS, mpo::MultilineMPO, envs...)
