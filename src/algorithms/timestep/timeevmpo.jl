@@ -80,11 +80,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
 
     # loopback step: Algorithm 1
     # constructing the Nth order time evolution MPO
-    if H isa FiniteMPOHamiltonian
-        mpo = FiniteMPO(parent(H_n))
-    else
-        mpo = InfiniteMPO(parent(H_n))
-    end
+    mpo = MPO(parent(H_n))
     for slice in parent(mpo)
         for b in cinds[2:end]
             all(in((1, V)), b.I) || continue
