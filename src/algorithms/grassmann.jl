@@ -78,7 +78,7 @@ function ManifoldPoint(state::FiniteMPS, envs)
 
     Rhoreg = Vector{eltype(state.C)}(undef, length(state))
     δmin = sqrt(eps(real(scalartype(state))))
-    tmap!(Rhoreg, 1:length(state)) do i
+    tmap!(Rhoreg, 1:length(state); scheduler=MPSKit.Defaults.scheduler[]) do i
         return regularize(state.C[i], max(norm(g[i]) / 10, δmin))
     end
 
