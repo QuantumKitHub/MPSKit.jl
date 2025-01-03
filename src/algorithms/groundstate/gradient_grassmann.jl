@@ -28,13 +28,17 @@ struct GradientGrassmann{O<:OptimKit.OptimizationAlgorithm,F} <: Algorithm
     finalize!::F
 
     function GradientGrassmann(; method=ConjugateGradient, (finalize!)=OptimKit._finalize!,
-                               tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity=2)
+                               tol=Defaults.tol, maxiter=Defaults.maxiter,
+                               verbosity=Defaults.verbosity - 1)
         if isa(method, OptimKit.OptimizationAlgorithm)
             # We were given an optimisation method, just use it.
             m = method
         elseif method <: OptimKit.OptimizationAlgorithm
             # We were given an optimisation method type, construct an instance of it.
-            m = method(; maxiter=maxiter, verbosity=verbosity, gradtol=tol)
+            # restrict linesearch maxiter
+            linesearch = OptimKit.HagerZhangLineSearch(; verbosity=verbosity - 2,
+                                                       maxiter=10)
+            m = method(; maxiter, verbosity, gradtol=tol, linesearch)
         else
             msg = "method should be either an instance or a subtype of `OptimKit.OptimizationAlgorithm`."
             throw(ArgumentError(msg))

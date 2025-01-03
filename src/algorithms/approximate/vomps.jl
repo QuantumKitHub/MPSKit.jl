@@ -20,21 +20,14 @@ function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multilin
                      alg::VOMPS, envs=environments(ψ, toapprox))
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
+    scheduler = Defaults.scheduler[]
     log = IterLog("VOMPS")
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
         for iter in 1:(alg.maxiter)
-            @static if Defaults.parallelize_sites
-                @sync for col in 1:size(ψ, 2)
-                    Threads.@spawn begin
-                        temp_ACs[:, col] = _vomps_localupdate(col, ψ, toapprox, envs)
-                    end
-                end
-            else
-                for col in 1:size(ψ, 2)
-                    temp_ACs[:, col] = _vomps_localupdate(col, ψ, toapprox, envs)
-                end
+            tmap!(eachcol(temp_ACs), 1:size(ψ, 2); scheduler) do col
+                return _vomps_localupdate(col, ψ, toapprox, envs)
             end
 
             alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
@@ -64,7 +57,10 @@ end
 
 function _vomps_localupdate(loc, ψ, (O, ψ₀), envs, factalg=QRpos())
     local tmp_AC, tmp_C
-    @static if Defaults.parallelize_sites
+    if Defaults.scheduler[] isa SerialScheduler
+        tmp_AC = circshift([ac_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
+        tmp_C = circshift([c_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
+    else
         @sync begin
             Threads.@spawn begin
                 tmp_AC = circshift([ac_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
@@ -73,9 +69,6 @@ function _vomps_localupdate(loc, ψ, (O, ψ₀), envs, factalg=QRpos())
                 tmp_C = circshift([c_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
             end
         end
-    else
-        tmp_AC = circshift([ac_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
-        tmp_C = circshift([c_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
     end
     return regauge!.(tmp_AC, tmp_C; alg=factalg)
 end

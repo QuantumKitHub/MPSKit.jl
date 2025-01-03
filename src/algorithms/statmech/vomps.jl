@@ -28,39 +28,16 @@ function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS,
                           envs=environments(ψ, O))
     ϵ::Float64 = calc_galerkin(ψ, envs)
     temp_ACs = similar.(ψ.AC)
-    temp_Cs = similar.(ψ.C)
+    scheduler = Defaults.scheduler[]
     log = IterLog("VOMPS")
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, O, envs))
         for iter in 1:(alg.maxiter)
-            @static if Defaults.parallelize_sites
-                @sync for col in 1:size(ψ, 2)
-                    Threads.@spawn begin
-                        H_AC = ∂∂AC(col, ψ, O, envs)
-                        ac = ψ.AC[:, col]
-                        temp_ACs[:, col] .= H_AC(ac)
-                    end
-
-                    Threads.@spawn begin
-                        H_C = ∂∂C(col, ψ, O, envs)
-                        c = ψ.C[:, col]
-                        temp_Cs[:, col] .= H_C(c)
-                    end
-                end
-            else
-                for col in 1:size(ψ, 2)
-                    H_AC = ∂∂AC(col, ψ, O, envs)
-                    ac = ψ.AC[:, col]
-                    temp_ACs[:, col] .= H_AC(ac)
-
-                    H_C = ∂∂C(col, ψ, O, envs)
-                    c = ψ.C[:, col]
-                    temp_Cs[:, col] .= H_C(c)
-                end
+            tmap!(eachcol(temp_ACs), 1:size(ψ, 2); scheduler) do col
+                return _vomps_localupdate(col, ψ, O, envs)
             end
 
-            regauge!.(temp_ACs, temp_Cs; alg=TensorKit.QRpos())
             alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
             ψ = MultilineMPS(temp_ACs, ψ.C[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
@@ -84,4 +61,22 @@ function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS,
     end
 
     return ψ, envs, ϵ
+end
+
+function _vomps_localupdate(col, ψ::MultilineMPS, O::MultilineMPO, envs, factalg=QRpos())
+    local AC′, C′
+    if Defaults.scheduler[] isa SerialScheduler
+        AC′ = ∂∂AC(col, ψ, O, envs) * ψ.AC[:, col]
+        C′ = ∂∂C(col, ψ, O, envs) * ψ.C[:, col]
+    else
+        @sync begin
+            Threads.@spawn begin
+                AC′ = ∂∂AC(col, ψ, O, envs) * ψ.AC[:, col]
+            end
+            Threads.@spawn begin
+                C′ = ∂∂C(col, ψ, O, envs) * ψ.C[:, col]
+            end
+        end
+    end
+    return regauge!.(AC′, C′; alg=factalg)[:]
 end
