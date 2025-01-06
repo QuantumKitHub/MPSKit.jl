@@ -26,22 +26,22 @@ function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
 
     scheduler = Defaults.scheduler[]
     if scheduler isa SerialScheduler
-        temp_ACs = tmap(1:length(ψ); scheduler) do loc
+        temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
             return integrate(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], t, dt, alg.integrator)
         end
-        temp_Cs = tmap(1:length(ψ); scheduler) do loc
+        temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
             return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator)
         end
     else
         @sync begin
             Threads.@spawn begin
-                temp_ACs = tmap(1:length(ψ); scheduler) do loc
+                temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
                     return integrate(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], t, dt,
                                      alg.integrator)
                 end
             end
             Threads.@spawn begin
-                temp_Cs = tmap(1:length(ψ); scheduler) do loc
+                temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
                     return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator)
                 end
             end

@@ -86,13 +86,17 @@ function ManifoldPoint(state::FiniteMPS, envs)
 end
 function ManifoldPoint(state::InfiniteMPS, envs)
     δmin = sqrt(eps(real(scalartype(state))))
-    g_and_ρ = tmap(1:length(state); scheduler=MPSKit.Defaults.scheduler[]) do i
+    Tg = Core.Compiler.return_type(Grassmann.project,
+                                   Tuple{eltype(state.AL),eltype(state.AL)})
+    g = similar(state.AL, Tg)
+    ρ = similar(state.C)
+    tforeach(1:length(state); scheduler=MPSKit.Defaults.scheduler[]) do i
         AC′ = MPSKit.∂∂AC(i, state, envs.operator, envs) * state.AC[i]
-        g = Grassmann.project(AC′, state.AL[i])
-        ρ = regularize(state.C[i], max(norm(g) / 10, δmin))
-        return g, ρ
+        g[i] = Grassmann.project(AC′, state.AL[i])
+        ρ[i] = regularize(state.C[i], max(norm(g[i]) / 10, δmin))
+        return nothing
     end
-    return ManifoldPoint(state, envs, first.(g_and_ρ), last.(g_and_ρ))
+    return ManifoldPoint(state, envs, g, ρ)
 end
 
 function ManifoldPoint(state::MultilineMPS, envs)
@@ -125,7 +129,9 @@ cell as tangent vectors on Grassmann manifolds.
 """
 function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
     # the gradient I want to return is the preconditioned gradient!
-    g_prec = tmap(eachindex(x.g); scheduler=MPSKit.Defaults.scheduler[]) do i
+    Tg = Core.Compiler.return_type(PrecGrad, Tuple{eltype(x.g),eltype(x.Rhoreg)})
+    g_prec = similar(x.g, Tg)
+    tmap!(g_prec, eachindex(x.g); scheduler=MPSKit.Defaults.scheduler[]) do i
         return PrecGrad(rmul!(copy(x.g[i]), x.state.C[i]'), x.Rhoreg[i])
     end
 
@@ -159,7 +165,8 @@ function retract(x::ManifoldPoint{<:MultilineMPS}, tg, alpha)
     g = reshape(tg, size(x.state))
 
     nal = similar(x.state.AL)
-    h = tmap(eachindex(g); scheduler=MPSKit.Defaults.scheduler[]) do i
+    h = similar(tg)
+    tmap!(h, eachindex(g); scheduler=MPSKit.Defaults.scheduler[]) do i
         nal[i], th = Grassmann.retract(x.state.AL[i], g[i].Pg, alpha)
         return PrecGrad(th)
     end
@@ -179,7 +186,7 @@ function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
     nal = similar(state.AL)
     h = similar(g)  # The tangent at the end-point
 
-    h = tmap(eachindex(g); scheduler=MPSKit.Defaults.scheduler[]) do i
+    tmap!(h, eachindex(g); scheduler=MPSKit.Defaults.scheduler[]) do i
         nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
         return PrecGrad(th)
     end
@@ -217,10 +224,11 @@ Transport a tangent vector `h` along the retraction from `x` in direction `g` by
 `alpha`. `xp` is the end-point of the retraction.
 """
 function transport!(h, x, g, alpha, xp)
-    return tmap!(h, eachindex(h); scheduler=MPSKit.Defaults.scheduler[]) do i
-        return PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
-                                             xp.state.AL[i]))
+    tforeach(1:length(h); scheduler=MPSKit.Defaults.scheduler[]) do i
+        return h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
+                                                    xp.state.AL[i]))
     end
+    return h
 end
 
 """
