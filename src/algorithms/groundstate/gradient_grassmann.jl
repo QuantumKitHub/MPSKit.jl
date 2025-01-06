@@ -37,7 +37,7 @@ struct GradientGrassmann{O<:OptimKit.OptimizationAlgorithm,F} <: Algorithm
             # We were given an optimisation method type, construct an instance of it.
             # restrict linesearch maxiter
             linesearch = OptimKit.HagerZhangLineSearch(; verbosity=verbosity - 2,
-                                                       maxiter=10)
+                                                       maxiter=100)
             m = method(; maxiter, verbosity, gradtol=tol, linesearch)
         else
             msg = "method should be either an instance or a subtype of `OptimKit.OptimizationAlgorithm`."
