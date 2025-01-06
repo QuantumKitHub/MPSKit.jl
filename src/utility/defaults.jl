@@ -40,7 +40,7 @@ function alg_gauge(; tol=tolgauge, maxiter=maxiter, verbosity=VERBOSE_WARN,
                    dynamic_tols=dynamic_tols, tol_min=tol_min, tol_max=tol_max,
                    tol_factor=gauge_tolfactor)
     alg = (; tol, maxiter, verbosity)
-    return dynamic_tols ? DynamicTol(alg, tol, tol_max, tol_factor) : alg
+    return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
 function alg_eigsolve(; ishermitian=true, tol=tol, maxiter=maxiter, verbosity=0,
@@ -50,7 +50,7 @@ function alg_eigsolve(; ishermitian=true, tol=tol, maxiter=maxiter, verbosity=0,
                       tol_factor=eigs_tolfactor)
     alg = ishermitian ? Lanczos(; tol, maxiter, eager, krylovdim, verbosity) :
           Arnoldi(; tol, maxiter, eager, krylovdim, verbosity)
-    return dynamic_tols ? DynamicTol(alg, tol, tol_max, tol_factor) : alg
+    return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
 # TODO: make verbosity and maxiter actually do something
@@ -58,7 +58,7 @@ function alg_environments(; tol=tol, maxiter=maxiter, verbosity=0,
                           dynamic_tols=dynamic_tols, tol_min=tol_min, tol_max=tol_max,
                           tol_factor=envs_tolfactor)
     alg = (; tol, maxiter, verbosity)
-    return dynamic_tols ? DynamicTol(alg, tol, tol_max, tol_factor) : alg
+    return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 function alg_expsolve(; tol=tol, maxiter=maxiter, verbosity=0,
                       ishermitian=true, krylovdim=krylovdim)
