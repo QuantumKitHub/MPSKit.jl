@@ -90,6 +90,8 @@ function ManifoldPoint(state::InfiniteMPS, envs)
                                    Tuple{eltype(state.AL),eltype(state.AL)})
     g = similar(state.AL, Tg)
     ρ = similar(state.C)
+
+    MPSKit.check_recalculate!(envs, state)
     tforeach(1:length(state); scheduler=MPSKit.Defaults.scheduler[]) do i
         AC′ = MPSKit.∂∂AC(i, state, envs.operator, envs) * state.AC[i]
         g[i] = Grassmann.project(AC′, state.AL[i])
