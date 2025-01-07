@@ -91,7 +91,7 @@ function changebonds(ψ::InfiniteMPS, alg::SvdCut)
     ψ = if space(ncr, 1) != space(copied[1], 1)
         InfiniteMPS(copied)
     else
-        C₀ = TensorMap(complex(ncr))
+        C₀ = ncr isa TensorMap ? complex(ncr) : TensorMap(complex(ncr))
         InfiniteMPS(copied, C₀)
     end
     return normalize!(ψ)
