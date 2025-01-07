@@ -148,11 +148,6 @@ function randomize!(a::AbstractBlockTensorMap)
     return a
 end
 
-function safe_xlogx(t::AbstractTensorMap, eps=eps(real(scalartype(t))))
-    (U, S, V) = tsvd(t; alg=SVD(), trunc=truncbelow(eps))
-    return U * S * log(S) * V
-end
-
 """
     tensorexpr(name::Symbol, ind_out, [ind_in])
 

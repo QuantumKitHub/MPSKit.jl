@@ -5,10 +5,20 @@ Calculate the Von Neumann entanglement entropy of a given MPS. If an integer `si
 given, the entropy is across the entanglement cut to the right of site `site`. Otherwise, a
 vector of entropies is returned, one for each site.
 """
-entropy(state::InfiniteMPS) = map(c -> -tr(safe_xlogx(c * c')), state.C);
+entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS,WindowMPS,InfiniteMPS}, loc::Int)
-    return -tr(safe_xlogx(state.C[loc] * state.C[loc]'))
-end;
+    S = zero(real(scalartype(state)))
+    tol = eps(typeof(S))
+    for (c, b) in entanglement_spectrum(state, loc)
+        s = zero(S)
+        for x in b
+            x < tol && break
+            s += (x * log(x))^2
+        end
+        S += oftype(S, dim(c) * s)
+    end
+    return S
+end
 
 # function infinite_temperature(H::MPOHamiltonian)
 #     return [permute(isomorphism(storagetype(H[1, 1, 1]), oneunit(sp) * sp,
@@ -84,9 +94,8 @@ matrix to the right of a given site. This is a dictionary mapping the charge to 
 values.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS}, site::Int=0)
-    @assert site <= length(st)
-    _, S, = tsvd(st.C[site])
-    return TensorKit.SectorDict(c => real(diag(b)) for (c, b) in blocks(S))
+    checkbounds(st, site)
+    return LinearAlgebra.svdvals(st.C[site])
 end
 
 """
