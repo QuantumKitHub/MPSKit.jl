@@ -59,6 +59,13 @@ function recalculate!(env::MultipleEnvironments, args...; kwargs...)
     return env
 end
 
+function check_recalculate!(env::MultipleEnvironments, args...; kwargs...)
+    for subenv in env.envs
+        check_recalculate!(subenv, args...; kwargs...)
+    end
+    return env
+end
+
 #maybe this can be used to provide compatibility with existing code?
 function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
     if prop === :solver
