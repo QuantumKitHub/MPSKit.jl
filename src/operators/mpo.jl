@@ -81,7 +81,7 @@ function remove_orphans!(mpo::InfiniteMPO; tol=eps(real(scalartype(mpo)))^(3 / 4
     return mpo
 end
 
-function remove_orphans!(mpo::FiniteMPO, tol=eps(real(scalartype(mpo)))^(3 / 4))
+function remove_orphans!(mpo::FiniteMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
     droptol!.(mpo, tol)
 
     # Forward sweep
