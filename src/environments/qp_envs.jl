@@ -19,51 +19,31 @@ struct QuasiparticleEnvironments{A,B} <: AbstractMPSEnvironments
     rightenvs::B
 end
 
-function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H;
-                      solver=Defaults.linearsolver)
-    # Explicitly define optional arguments as these depend on solver,
-    # which needs to come after these arguments.
-    lenvs = environments(exci.left_gs, H; solver=solver)
-
-    return environments(exci, H, lenvs; solver=solver)
+function leftenv(envs::QuasiparticleEnvironments, site::Int, state)
+    return leftenv(envs.leftenvs, site, state)
+end
+function rightenv(envs::QuasiparticleEnvironments, site::Int, state)
+    return rightenv(envs.rightenvs, site, state)
 end
 
-function environments(exci::Union{InfiniteQP,Multiline{<:InfiniteQP}}, H, lenvs;
-                      solver=Defaults.linearsolver)
-    # Explicitly define optional arguments as these depend on solver,
-    # which needs to come after these arguments.
-    renvs = exci.trivial ? lenvs : environments(exci.right_gs, H; solver=solver)
+# Explicitly define optional arguments as these depend on kwargs,
+# which needs to come after these arguments.
 
-    return environments(exci, H, lenvs, renvs; solver=solver)
+function environments(exci::Union{InfiniteQP,MultilineQP}, H; kwargs...)
+    lenvs = environments(exci.left_gs, H; kwargs...)
+    return environments(exci, H, lenvs; kwargs...)
+end
+function environments(exci::Union{InfiniteQP,MultilineQP}, H, lenvs;
+                      kwargs...)
+    renvs = exci.trivial ? lenvs : environments(exci.right_gs, H; kwargs...)
+    return environments(exci, H, lenvs, renvs; kwargs...)
 end
 
-function gen_exci_lw_rw(left_gs::InfiniteMPS, H::Union{InfiniteMPO,InfiniteMPOHamiltonian},
-                        right_gs,
-                        excileg)
-    B = tensormaptype(spacetype(left_gs), 2, 2, storagetype(eltype(left_gs)))
-    BB = tensormaptype(sumspacetype(spacetype(B)), 2, 2, B)
-
-    GBL = PeriodicVector{BB}(undef, length(left_gs))
-    GBR = PeriodicVector{BB}(undef, length(left_gs))
-
-    for site in 1:length(left_gs)
-        GBL[site] = BB(undef,
-                       left_virtualspace(left_gs, site - 1) ⊗ left_virtualspace(H, site)' ←
-                       excileg' ⊗ left_virtualspace(right_gs, site - 1))
-        fill!(GBL[site], zero(scalartype(B)))
-
-        GBR[site] = BB(undef,
-                       right_virtualspace(left_gs, site)' ⊗ right_virtualspace(H, site)' ←
-                       excileg' ⊗ right_virtualspace(right_gs, site)')
-        fill!(GBR[site], zero(scalartype(B)))
-    end
-
-    return GBL, GBR
-end
-
-function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
-                      solver=Defaults.linearsolver)
+function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian,
+                      lenvs, renvs;
+                      kwargs...)
     ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1))
+    solver = environment_alg(exci, H, exci; kwargs...)
     # ids = collect(Iterators.filter(x -> isidentitylevel(H, x), 2:(H.odim - 1)))
 
     AL = exci.left_gs.AL
@@ -195,9 +175,10 @@ function environments(exci::Multiline{<:InfiniteQP},
                       ham::MultilineMPO,
                       lenvs,
                       renvs;
-                      solver=Defaults.linearsolver)
+                      kwargs...)
     exci.trivial ||
         @warn "there is a phase ambiguity in topologically nontrivial statmech excitations"
+    solver = environment_alg(exci, ham, exci; kwargs...)
 
     left_gs = exci.left_gs
     right_gs = exci.right_gs
@@ -329,9 +310,10 @@ function environments(exci::InfiniteQP,
                       O::InfiniteMPO,
                       lenvs,
                       renvs;
-                      solver=Defaults.linearsolver)
+                      kwargs...)
     exci.trivial ||
         @warn "there is a phase ambiguity in topologically nontrivial statmech excitations"
+    solver = environment_alg(exci, O, exci; kwargs...)
 
     left_gs = exci.left_gs
     right_gs = exci.right_gs

@@ -42,18 +42,6 @@ function issamespace(envs::InfiniteEnvironments, above::InfiniteMPS,
     return true
 end
 
-function environment_alg(above, operator::Union{InfiniteMPO,MultilineMPO}, below;
-                         tol=Defaults.tol, maxiter=Defaults.maxiter,
-                         krylovdim=Defaults.krylovdim, verbosity=Defaults.VERBOSE_NONE,
-                         eager=true)
-    return Arnoldi(; tol, maxiter, krylovdim, verbosity, eager)
-end
-function environment_alg(above, operator::InfiniteMPOHamiltonian, below;
-                         tol=Defaults.tol, maxiter=Defaults.maxiter,
-                         krylovdim=Defaults.krylovdim, verbosity=Defaults.VERBOSE_NONE)
-    return GMRES(; tol, maxiter, krylovdim, verbosity)
-end
-
 function recalculate!(envs::InfiniteEnvironments, above::InfiniteMPS,
                       operator::Union{InfiniteMPO,InfiniteMPOHamiltonian},
                       below::InfiniteMPS=above; kwargs...)
