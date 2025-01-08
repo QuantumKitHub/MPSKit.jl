@@ -54,7 +54,7 @@ end
 
 # default implementation with Accessors.jl, but can be hooked into
 function _updatetol(alg, tol::Real)
-    return @set alg.tol = tol
+    return Accessors.@set alg.tol = tol
 end
 
 end

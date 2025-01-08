@@ -188,7 +188,7 @@ end
 
     # test using XXZ model, Δ > 1 is gapped
     spin = 1
-    local_operators = [S_xx(; spin), S_yy(; spin), 0.7 * S_zz(; spin)]
+    local_operators = [S_xx(; spin), S_yy(; spin), 1.7 * S_zz(; spin)]
     Pspace = space(local_operators[1], 1)
     lattice = fill(Pspace, L)
 
@@ -205,23 +205,24 @@ end
     @testset "DMRG" begin
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
-                                      DMRG(; tol, verbosity=5, maxiter=1))
+                                      DMRG(; tol, verbosity=verbosity_full, maxiter=1))
 
         # compare states
-        alg = DMRG(; tol, verbosity=1)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
+        alg = DMRG(; tol, verbosity=verbosity_conv)
+        ψ, envs, δ = find_groundstate(ψ, H_lazy, alg)
 
-        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
+        @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
     end
 
     @testset "DMRG2" begin
         # test logging passes
         trscheme = truncdim(floor(Int, D * 1.5))
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
-                                      DMRG2(; tol, verbosity=5, maxiter=1, trscheme))
+                                      DMRG2(; tol, verbosity=verbosity_full, maxiter=1,
+                                            trscheme))
 
         # compare states
-        alg = DMRG2(; tol, verbosity=1, trscheme)
+        alg = DMRG2(; tol, verbosity=verbosity_conv, trscheme)
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
@@ -231,10 +232,11 @@ end
     @testset "GradientGrassmann" begin
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
-                                      GradientGrassmann(; tol, verbosity=5, maxiter=2))
+                                      GradientGrassmann(; tol, verbosity=verbosity_full,
+                                                        maxiter=2))
 
         # compare states
-        alg = GradientGrassmann(; tol, verbosity=1)
+        alg = GradientGrassmann(; tol, verbosity=verbosity_conv)
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
@@ -244,12 +246,11 @@ end
 
 @testset "LazySum InfiniteMPS groundstate" verbose = true begin
     tol = 1e-8
-    D = 15
+    D = 16
     atol = 1e-2
 
-    # test using XXZ model, Δ > 1 is gapped
     spin = 1
-    local_operators = [S_xx(; spin), S_yy(; spin), S_zz(; spin)]
+    local_operators = [S_xx(; spin), S_yy(; spin), 0.7 * S_zz(; spin)]
     Pspace = space(local_operators[1], 1)
     lattice = PeriodicVector([Pspace])
     mpo_hamiltonians = map(local_operators) do O
@@ -264,24 +265,26 @@ end
 
     @testset "VUMPS" begin
         # test logging passes
-        ψ, envs, δ = find_groundstate(ψ₀, H_lazy, VUMPS(; tol, verbosity=5, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
+                                      VUMPS(; tol, verbosity=verbosity_full, maxiter=2))
 
         # compare states
-        alg = VUMPS(; tol, verbosity=2)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
+        alg = VUMPS(; tol, verbosity=verbosity_conv)
+        ψ, envs, δ = find_groundstate(ψ, H_lazy, alg)
 
-        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
+        @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
     end
 
     @testset "IDMRG1" begin
         # test logging passes
-        ψ, envs, δ = find_groundstate(ψ₀, H_lazy, IDMRG1(; tol, verbosity=5, maxiter=2))
+        ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
+                                      IDMRG1(; tol, verbosity=verbosity_full, maxiter=2))
 
         # compare states
-        alg = IDMRG1(; tol, verbosity=2)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
+        alg = IDMRG1(; tol, verbosity=verbosity_conv, maxiter=300)
+        ψ, envs, δ = find_groundstate(ψ, H_lazy, alg)
 
-        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
+        @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
     end
 
     @testset "IDMRG2" begin
@@ -292,26 +295,27 @@ end
         trscheme = truncdim(floor(Int, D * 1.5))
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀′, H_lazy′,
-                                      IDMRG2(; tol, verbosity=5, maxiter=2, trscheme))
+                                      IDMRG2(; tol, verbosity=verbosity_full, maxiter=2,
+                                             trscheme))
 
         # compare states
-        alg = IDMRG2(; tol, verbosity=2, trscheme)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀′, H_lazy′, alg)
+        alg = IDMRG2(; tol, verbosity=verbosity_conv, trscheme)
+        ψ, envs, δ = find_groundstate(ψ, H_lazy′, alg)
 
-        @test abs(dot(ψ₀′, ψ_lazy)) ≈ 1 atol = atol
+        @test abs(dot(ψ₀′, ψ)) ≈ 1 atol = atol
     end
 
     @testset "GradientGrassmann" begin
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
-                                      GradientGrassmann(; tol, verbosity=5, maxiter=2))
+                                      GradientGrassmann(; tol, verbosity=verbosity_full,
+                                                        maxiter=2))
 
         # compare states
-        alg = GradientGrassmann(; tol, verbosity=1)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
-        ψ, = find_groundstate(ψ₀, H, alg)
+        alg = GradientGrassmann(; tol, verbosity=verbosity_conv)
+        ψ, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
-        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
+        @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
     end
 end
 
@@ -408,9 +412,9 @@ end
 
 @testset "leading_boundary" verbose = true begin
     tol = 1e-4
-    verbosity = 0
+    verbosity = verbosity_conv
     algs = [VUMPS(; tol, verbosity), VOMPS(; tol, verbosity),
-            GradientGrassmann(; verbosity)]
+            GradientGrassmann(; tol, verbosity)]
     mpo = force_planar(classical_ising())
 
     ψ₀ = InfiniteMPS([ℙ^2], [ℙ^10])
@@ -428,7 +432,8 @@ end
     @testset "infinite (ham)" begin
         H = repeat(force_planar(heisenberg_XXX()), 2)
         ψ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^48, ℙ^48])
-        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbosity=0, tol=1e-11)
+        ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbosity=verbosity_conv,
+                                      tol=1e-10)
         energies, ϕs = excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ, envs)
         @test energies[1] ≈ 0.41047925 atol = 1e-4
         @test variance(ϕs[1], H) < 1e-8
@@ -436,14 +441,16 @@ end
     @testset "infinite (mpo)" begin
         H = repeat(sixvertex(), 2)
         ψ = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^10, ℂ^10])
-        ψ, envs, _ = leading_boundary(ψ, H, VUMPS(; maxiter=400, verbosity=0))
+        ψ, envs, _ = leading_boundary(ψ, H,
+                                      VUMPS(; maxiter=400, verbosity=verbosity_conv,
+                                            tol=1e-10))
         energies, ϕs = excitations(H, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ψ,
                                    envs; verbosity=0)
         @test abs(energies[1]) > abs(energies[2]) # has a minimum at pi/2
     end
 
     @testset "finite" begin
-        verbosity = 0
+        verbosity = verbosity_conv
         H_inf = force_planar(transverse_field_ising())
         ψ_inf = InfiniteMPS([ℙ^2], [ℙ^10])
         ψ_inf, envs, _ = find_groundstate(ψ_inf, H_inf; maxiter=400, verbosity, tol=1e-9)

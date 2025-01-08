@@ -247,19 +247,9 @@ function effective_excitation_hamiltonian(H::Union{InfiniteMPOHamiltonian,
                                                                                              envs.leftenvs,
                                                                                              envs.rightenvs))
     ϕ′ = similar(ϕ)
-    @static if Defaults.parallelize_sites
-        @sync for loc in 1:length(ϕ)
-            Threads.@spawn begin
-                ϕ′[loc] = _effective_excitation_local_apply(loc, ϕ, H, energy[loc],
-                                                            envs)
-            end
-        end
-    else
-        for loc in 1:length(ϕ)
-            ϕ′[loc] = _effective_excitation_local_apply(loc, ϕ, H, energy[loc], envs)
-        end
+    tforeach(1:length(ϕ); scheduler=Defaults.scheduler[]) do loc
+        return ϕ′[loc] = _effective_excitation_local_apply(loc, ϕ, H, energy[loc], envs)
     end
-
     return ϕ′
 end
 
