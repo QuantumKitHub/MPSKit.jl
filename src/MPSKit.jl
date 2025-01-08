@@ -16,6 +16,7 @@ using LinearAlgebra: LinearAlgebra
 using Random
 using Base: @kwdef
 using LoggingExtras
+using OhMyThreads
 
 # bells and whistles for mpses
 export InfiniteMPS, FiniteMPS, WindowMPS, MultilineMPS
@@ -157,5 +158,10 @@ include("algorithms/approximate/idmrg.jl")
 include("algorithms/ED.jl")
 
 include("algorithms/unionalg.jl")
+
+function __init__()
+    Defaults.set_scheduler!()
+    return nothing
+end
 
 end

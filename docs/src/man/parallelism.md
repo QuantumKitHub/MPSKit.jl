@@ -81,31 +81,22 @@ BLAS: libmkl_rt.so
 
 ## MPSKit multithreading
 
-Within MPSKit, when Julia is started with multiple threads, by default the `Threads.@spawn`
-machinery will be used to parallelize the code as much as possible. In particular, there are
-three main places where this is happening, which can be disabled separately through a preference-based system.
+Within MPSKit, when Julia is started with multiple threads, by default the `OhMyThreads.jl`
+machinery will be used to parallelize the code as much as possible. In particular, this mostly
+occurs whenever there is a unitcell and local updates can take place at each site in parallel.
 
-1. During the process of some algorithms (e.g. VUMPS), local updates can take place at each
-   site in parallel. This can be controlled by the `parallelize_sites` preference.
-
-2. During the calculation of the environments, when the MPO is block-sparse, it is possible
-   to parallelize over these blocks. This can be enabled or disabled by the
-   `parallelize_transfers` preference. (Note that left- and right environments will always
-   be computed in parallel)
-
-3. During the calculation of the derivatives, when the MPO is block-sparse, it is possible
-   to parallelize over these blocks. This can be enabled or disabled by the
-   `parallelize_derivatives` preference.
-
-For convenience, these preferences can be set via [`MPSKit.Defaults.set_parallelization`](@ref), which takes as input pairs of preferences and booleans. For example, to disable all parallelization, one can call
+The multithreading behaviour can be controlled through a global `scheduler`, which can be set
+using the `MPSKit.Defaults.set_scheduler!(arg; kwargs...)` function. This function accepts
+either a `Symbol`, an `OhMyThreads.Scheduler` or keywords to determine a scheduler automatically.
 
 ```julia
-Defaults.set_parallelization("sites" => false, "transfers" => false, "derivatives" => false)
+MPSKit.Defaults.set_scheduler!(:serial) # disable multithreading
+MPSKit.Defaults.set_scheduler!(:greedy) # multithreading with greedy load-balancing
+MPSKit.Defaults.set_scheduler!(:dynamic) # default: multithreading with some load-balancing
 ```
 
-!!! warning
-    These settings are statically set at compile-time, and for changes to take
-    effect the Julia session must be restarted.
+For further reference on the available schedulers and finer control, please refer to the 
+[`OhMyThreads.jl` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/)
 
 ## TensorKit multithreading
 
