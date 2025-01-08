@@ -144,6 +144,7 @@ include("algorithms/excitation/dmrgexcitation.jl")
 include("algorithms/excitation/chepigaansatz.jl")
 include("algorithms/excitation/exci_transfer_system.jl")
 
+include("algorithms/statmech/leading_boundary.jl")
 include("algorithms/statmech/vumps.jl")
 include("algorithms/statmech/vomps.jl")
 include("algorithms/statmech/gradient_grassmann.jl")
