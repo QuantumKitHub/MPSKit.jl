@@ -13,7 +13,8 @@ original ψ.
     trscheme::TruncationScheme = truncdim(1)
 end
 
-function changebonds(ψ::InfiniteMPS, H, alg::OptimalExpand, envs=environments(ψ, H))
+function changebonds(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExpand,
+                     envs=environments(ψ, H))
     T = eltype(ψ.AL)
     AL′ = similar(ψ.AL)
     AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
@@ -34,12 +35,6 @@ function changebonds(ψ::InfiniteMPS, H, alg::OptimalExpand, envs=environments(�
 
     newψ = _expand(ψ, AL′, AR′)
     return newψ, envs
-end
-
-function changebonds(ψ::InfiniteMPS, H::DenseMPO, alg::OptimalExpand,
-                     envs=environments(ψ, H))
-    (nmψ, envs) = changebonds(convert(MultilineMPS, ψ), convert(MultilineMPO, H), alg, envs)
-    return (convert(InfiniteMPS, nmψ), envs)
 end
 
 function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs=environments(ψ, H))

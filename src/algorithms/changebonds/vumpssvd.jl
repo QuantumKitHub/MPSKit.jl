@@ -26,8 +26,8 @@ function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
 
     nstate, nenvs = changebonds(nstate, nH, alg)
 
-    D1 = space(nstate.AL[1], 1)
-    D2 = space(nstate.AL[2], 1)
+    D1 = left_virtualspace(nstate, 1)
+    D2 = left_virtualspace(nstate, 2)
 
     # collapse back to 1 site
     if D2 != D1
@@ -36,6 +36,7 @@ function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
     end
 
     collapsed = InfiniteMPS([nstate.AL[1]], nstate.C[1]; tol=alg.tol_gauge)
+    recalculate!(envs, collapsed, H, collapsed)
 
     return collapsed, envs
 end
@@ -72,8 +73,8 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
         copied[loc] = AL1
         copied[loc + 1] = AL2
         state = InfiniteMPS(copied; tol=alg.tol_gauge)
+        recalculate!(envs, state, H, state)
     end
-
     return state, envs
 end
 
