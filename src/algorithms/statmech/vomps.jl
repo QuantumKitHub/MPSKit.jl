@@ -42,7 +42,7 @@ function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS,
             ψ = MultilineMPS(temp_ACs, ψ.C[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-            recalculate!(envs, ψ; alg_environments.tol)
+            recalculate!(envs, ψ, O, ψ; alg_environments.tol)
 
             ψ, envs = alg.finalize(iter, ψ, O, envs)::Tuple{typeof(ψ),typeof(envs)}
 
