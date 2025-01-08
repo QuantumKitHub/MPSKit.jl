@@ -197,8 +197,9 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs=environment
     gs = state.left_gs
 
     e_local = map(1:length(state)) do i
-        return contract_mpo_expval(gs.AC[i], envs.GLs[i], H[i][:, :, :, end],
-                                   envs.GRs[i][end])
+        GL = leftenv(envs, i, gs)
+        GR = rightenv(envs, i, gs)
+        return contract_mpo_expval(gs.AC[i], GL, H[i][:, :, :, end], GR[end])
     end
     lattice = physicalspace.(Ref(gs), 1:length(state))
     H_regularized = H - InfiniteMPOHamiltonian(lattice,

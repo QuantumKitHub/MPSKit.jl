@@ -13,7 +13,6 @@ Base.unlock(envs::AbstractMPSEnvironments) = unlock(envs.lock);
 
 # Allocating tensors
 # ------------------
-
 function allocate_GL(bra::AbstractMPS, mpo::AbstractMPO, ket::AbstractMPS, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
     V = left_virtualspace(bra, i) ⊗ left_virtualspace(mpo, i)' ←
@@ -60,4 +59,32 @@ function allocate_GBR(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
         TT = TensorMap{T}
     end
     return TT(undef, V)
+end
+
+# Environment algorithms
+# ----------------------
+"""
+    environment_alg(above, operator, below; kwargs...)
+
+Determine an appropriate algorithm for computing the environments, based on the given `kwargs...`.
+"""
+function environment_alg(::Union{InfiniteMPS,MultilineMPS},
+                         ::Union{InfiniteMPO,MultilineMPO},
+                         ::Union{InfiniteMPS,MultilineMPS};
+                         tol=Defaults.tol, maxiter=Defaults.maxiter,
+                         krylovdim=Defaults.krylovdim, verbosity=Defaults.VERBOSE_NONE,
+                         eager=true)
+    return Arnoldi(; tol, maxiter, krylovdim, verbosity, eager)
+end
+function environment_alg(above, ::InfiniteMPOHamiltonian, below;
+                         tol=Defaults.tol, maxiter=Defaults.maxiter,
+                         krylovdim=Defaults.krylovdim, verbosity=Defaults.VERBOSE_NONE)
+    return GMRES(; tol, maxiter, krylovdim, verbosity)
+end
+function environment_alg(::Union{InfiniteQP,MultilineQP},
+                         ::Union{InfiniteMPO,MultilineMPO},
+                         ::Union{InfiniteQP,MultilineQP};
+                         tol=Defaults.tol, maxiter=Defaults.maxiter,
+                         krylovdim=Defaults.krylovdim, verbosity=Defaults.VERBOSE_NONE)
+    return GMRES(; tol, maxiter, krylovdim, verbosity)
 end
