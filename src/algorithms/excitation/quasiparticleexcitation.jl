@@ -168,7 +168,7 @@ end
 #                           Statmech Excitations                               #
 ################################################################################
 
-function excitations(H::MultilineMPO, alg::QuasiparticleAnsatz, ϕ₀::Multiline{<:InfiniteQP},
+function excitations(H::MultilineMPO, alg::QuasiparticleAnsatz, ϕ₀::MultilineQP,
                      lenvs, renvs; num=1, kwargs...)
     qp_envs(ϕ) = environments(ϕ, H, lenvs, renvs; kwargs...)
     function H_eff(ϕ′)
@@ -214,13 +214,15 @@ function excitations(H::DenseMPO, alg::QuasiparticleAnsatz, momentum::Real,
                      renvs=lmps === rmps ? lenvs : environments(rmps, H);
                      sector=one(sectortype(lmps)), num=1, kwargs...)
     multiline_lmps = convert(MultilineMPS, lmps)
+    lenvs′ = Multiline([lenvs])
     if lmps === rmps
-        excitations(convert(MultilineMPO, H), alg, momentum, multiline_lmps, lenvs,
+        excitations(convert(MultilineMPO, H), alg, momentum, multiline_lmps, lenvs′,
                     multiline_lmps,
-                    lenvs; sector, num, kwargs...)
+                    lenvs′; sector, num, kwargs...)
     else
-        excitations(convert(MultilineMPO, H), alg, momentum, multiline_lmps, lenvs,
-                    convert(MultilineMPS, rmps), renvs; sector, num, kwargs...)
+        renvs′ = Multiline([renvs])
+        excitations(convert(MultilineMPO, H), alg, momentum, multiline_lmps, lenvs′,
+                    convert(MultilineMPS, rmps), renvs′; sector, num, kwargs...)
     end
 end
 
@@ -254,41 +256,10 @@ function effective_excitation_hamiltonian(H::Union{InfiniteMPOHamiltonian,
     return ϕ′
 end
 
-function effective_excitation_hamiltonian(H::MultilineMPO, ϕ::Multiline{<:InfiniteQP},
+function effective_excitation_hamiltonian(H::MultilineMPO, ϕ::MultilineQP,
                                           envs=environments(ϕ, H))
-    ϕ′ = Multiline(similar.(ϕ.data))
-    left_gs = ϕ.left_gs
-    right_gs = ϕ.right_gs
-
-    for row in 1:size(H, 1)
-        Bs = [ϕ[row][i] for i in 1:size(H, 2)]
-        for col in 1:size(H, 2)
-            en = @plansor conj(left_gs.AC[row, col][2 6; 4]) *
-                          leftenv(envs.lenvs, row, col, left_gs)[2 5; 3] *
-                          left_gs.AC[row + 1, col][3 7; 1] *
-                          H[row, col][5 6; 7 8] *
-                          rightenv(envs.lenvs, row, col, left_gs)[1 8; 4]
-
-            @plansor T[-1 -2; -3 -4] := leftenv(envs.lenvs, row, col, left_gs)[-1 5; 4] *
-                                        Bs[col][4 2; -3 1] *
-                                        H[row, col][5 -2; 2 3] *
-                                        rightenv(envs.renvs, row, col, right_gs)[1 3; -4]
-
-            @plansor T[-1 -2; -3 -4] += envs.lBs[row, col - 1][-1 4; -3 5] *
-                                        right_gs.AR[row, col][5 2; 1] *
-                                        H[row, col][4 -2; 2 3] *
-                                        rightenv(envs.renvs, row, col, right_gs)[1 3; -4]
-
-            @plansor T[-1 -2; -3 -4] += leftenv(envs.lenvs, row, col, left_gs)[-1 2; 1] *
-                                        left_gs.AL[row, col][1 3; 4] *
-                                        H[row, col][2 -2; 3 5] *
-                                        envs.rBs[row, col + 1][4 5; -3 -4]
-
-            ϕ′[row + 1][col] = T / en
-        end
-    end
-
-    return ϕ′
+    return Multiline(map(effective_excitation_hamiltonian,
+                         parent(H), parent(ϕ), parent(envs)))
 end
 
 function effective_excitation_hamiltonian(H::InfiniteMPO, ϕ::InfiniteQP,
