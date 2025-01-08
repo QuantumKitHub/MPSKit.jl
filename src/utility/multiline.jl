@@ -28,6 +28,7 @@ function Base.axes(m::Multiline, i::Int)
     return i == 1 ? axes(parent(m), 1) :
            i == 2 ? axes(parent(m)[1], 1) : throw(ArgumentError("Invalid index $i"))
 end
+Base.eachindex(m::Multiline) = CartesianIndices(size(m))
 
 Base.getindex(m::Multiline, i::Int) = getindex(parent(m), i)
 Base.setindex!(m::Multiline, v, i::Int) = (setindex!(parent(m), v, i); m)
