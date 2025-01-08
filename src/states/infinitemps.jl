@@ -227,6 +227,9 @@ function Base.circshift(ψ::InfiniteMPS, n)
                        circshift(ψ.AC, n))
 end
 
+Base.eachindex(ψ::InfiniteMPS) = eachindex(ψ.AL)
+Base.eachindex(l::IndexStyle, ψ::InfiniteMPS) = eachindex(l, ψ.AL)
+
 Base.checkbounds(::Type{Bool}, ψ::InfiniteMPS, i::Integer) = true
 
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A

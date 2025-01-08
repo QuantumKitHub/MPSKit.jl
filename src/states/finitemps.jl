@@ -280,6 +280,8 @@ function Base.similar(ψ::FiniteMPS{A,B}) where {A,B}
     return FiniteMPS{A,B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
 end
 
+Base.eachindex(ψ::FiniteMPS) = eachindex(ψ.AL)
+Base.eachindex(l::IndexStyle, ψ::FiniteMPS) = eachindex(l, ψ.AL)
 Base.checkbounds(::Type{Bool}, ψ::FiniteMPS, i::Integer) = 1 <= i <= length(ψ)
 
 Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
