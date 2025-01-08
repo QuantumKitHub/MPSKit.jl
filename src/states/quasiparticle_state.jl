@@ -351,7 +351,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
     return FiniteMPS(Ls + Rs + Bs; normalize=false)
 end
 
-function Base.getproperty(exci::Multiline{<:InfiniteQP}, s::Symbol)
+function Base.getproperty(exci::MultilineQP, s::Symbol)
     if s == :momentum
         return first(exci.data).momentum
     elseif s == :left_gs
