@@ -19,8 +19,18 @@ function recalculate!(envs::MultilineEnvironments, above::MultilineMPS,
     end
     return envs
 end
+function recalculate!(envs::MultilineEnvironments, below, (operator, above)::Tuple;
+                      kwargs...)
+    return recalculate!(envs, above, operator, below; kwargs...)
+end
 
 function TensorKit.normalize!(envs::MultilineEnvironments, above, operator, below)
+    for row in 1:size(above, 1)
+        normalize!(envs[row], above[row], operator[row], below[row + 1])
+    end
+    return envs
+end
+function TensorKit.normalize!(envs::MultilineEnvironments, below, (operator, above))
     for row in 1:size(above, 1)
         normalize!(envs[row], above[row], operator[row], below[row + 1])
     end
@@ -40,9 +50,16 @@ function transfer_leftenv!(envs::MultilineEnvironments, above, operator, below, 
     end
     return envs
 end
+function transfer_leftenv!(envs::MultilineEnvironments, below, (O, above)::Tuple, site::Int)
+    return transfer_leftenv!(envs, above, O, below, site)
+end
 function transfer_rightenv!(envs::MultilineEnvironments, above, operator, below, site::Int)
     for row in 1:size(above, 1)
         transfer_rightenv!(envs[row], above[row], operator[row], below[row + 1], site)
     end
     return envs
+end
+function transfer_rightenv!(envs::MultilineEnvironments, below, (O, above)::Tuple,
+                            site::Int)
+    return transfer_rightenv!(envs, above, O, below, site)
 end

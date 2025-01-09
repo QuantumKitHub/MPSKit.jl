@@ -1,15 +1,5 @@
-# dispatch to in-place method
-function approximate(ψ, toapprox, alg::Union{DMRG,DMRG2}, envs...)
-    return approximate!(copy(ψ), toapprox, alg, envs...)
-end
-
-function approximate!(ψ::AbstractFiniteMPS, sq, alg, envs=environments(ψ, sq))
-    tor = approximate!(ψ, [sq], alg, [envs])
-    return (tor[1], tor[2][1], tor[3])
-end
-
-function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
-                      envs=[environments(ψ, sq) for sq in squash])
+function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2,
+                      envs=environments(ψ, Oϕ))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("DMRG2")
 
@@ -18,9 +8,7 @@ function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
         for iter in 1:(alg.maxiter)
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); (length(ψ) - 2):-1:1]
-                AC2′ = sum(zip(squash, envs)) do (sq, pr)
-                    return ac2_proj(pos, ψ, pr)
-                end
+                AC2′ = ac2_proj(pos, ψ, Oϕ, envs)
                 al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme)
 
                 AC2 = ψ.AC[pos] * _transpose_tail(ψ.AR[pos + 1])
@@ -31,7 +19,7 @@ function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
             end
 
             # finalize
-            ψ, envs = alg.finalize(iter, ψ, squash, envs)::Tuple{typeof(ψ),typeof(envs)}
+            ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ),typeof(envs)}
 
             if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
@@ -48,8 +36,7 @@ function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG2,
     return ψ, envs, ϵ
 end
 
-function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG,
-                      envs=[environments(ψ, sq) for sq in squash])
+function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs=environments(ψ, Oϕ))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("DMRG")
 
@@ -58,10 +45,7 @@ function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG,
         for iter in 1:(alg.maxiter)
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
-                AC′ = sum(zip(squash, envs)) do (sq, pr)
-                    return ac_proj(pos, ψ, pr)
-                end
-
+                AC′ = ac_proj(pos, ψ, Oϕ, envs)
                 AC = ψ.AC[pos]
                 ϵ = max(ϵ, norm(AC′ - AC) / norm(AC′))
 
@@ -69,7 +53,7 @@ function approximate!(ψ::AbstractFiniteMPS, squash::Vector, alg::DMRG,
             end
 
             # finalize
-            ψ, envs = alg.finalize(iter, ψ, squash, envs)::Tuple{typeof(ψ),typeof(envs)}
+            ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ),typeof(envs)}
 
             if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)

@@ -1,8 +1,5 @@
-function approximate(ost::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                     alg::IDMRG1, oenvs=environments(ost, toapprox))
-    ψ = copy(ost)
-    mpo, above = toapprox
-    envs = IDMRGEnvironments(ost, oenvs)
+function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
+                      alg::IDMRG1, envs=environments(ψ, toapprox))
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
 
@@ -12,31 +9,27 @@ function approximate(ost::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             C_current = ψ.C[:, 0]
 
             # left to right sweep
-            for col in 1:size(ψ, 2), row in 1:size(ψ, 1)
-                h = MPO_∂∂AC(mpo[row, col], leftenv(envs, row, col),
-                             rightenv(envs, row, col))
-                ψ.AC[row + 1, col] = h * above.AC[row, col]
-                normalize!(ψ.AC[row + 1, col])
-
-                ψ.AL[row + 1, col], ψ.C[row + 1, col] = leftorth(ψ.AC[row + 1, col])
-
-                tm = TransferMatrix(above.AL[row, col], mpo[row, col], ψ.AL[row + 1, col])
-                setleftenv!(envs, row, col + 1, normalize(leftenv(envs, row, col) * tm))
+            for col in 1:size(ψ, 2)
+                for row in 1:size(ψ, 1)
+                    ψ.AC[row + 1, col] = ac_proj(row, col, ψ, toapprox, envs)
+                    normalize!(ψ.AC[row + 1, col])
+                    ψ.AL[row + 1, col], ψ.C[row + 1, col] = leftorth!(ψ.AC[row + 1, col])
+                end
+                transfer_leftenv!(envs, ψ, toapprox, col + 1)
             end
 
             # right to left sweep
-            for col in size(ψ, 2):-1:1, row in 1:size(ψ, 1)
-                h = MPO_∂∂AC(mpo[row, col], leftenv(envs, row, col),
-                             rightenv(envs, row, col))
-                ψ.AC[row + 1, col] = h * above.AC[row, col]
-                normalize!(ψ.AC[row + 1, col])
-
-                ψ.C[row + 1, col - 1], temp = rightorth(_transpose_tail(ψ.AC[row + 1, col]))
-                ψ.AR[row + 1, col] = _transpose_front(temp)
-
-                tm = TransferMatrix(above.AR[row, col], mpo[row, col], ψ.AR[row + 1, col])
-                setrightenv!(envs, row, col - 1, normalize(tm * rightenv(envs, row, col)))
+            for col in size(ψ, 2):-1:1
+                for row in 1:size(ψ, 1)
+                    ψ.AC[row + 1, col] = ac_proj(row, col, ψ, toapprox, envs)
+                    normalize!(ψ.AC[row + 1, col])
+                    ψ.C[row + 1, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row + 1,
+                                                                                  col]))
+                    ψ.AR[row + 1, col] = _transpose_front(temp)
+                end
+                transfer_rightenv!(envs, ψ, toapprox, col - 1)
             end
+            normalize!(envs, ψ, toapprox)
 
             ϵ = norm(C_current - ψ.C[:, 0])
 
@@ -52,19 +45,20 @@ function approximate(ost::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
         end
     end
 
+    # TODO: immediately compute in-place
     nst = MultilineMPS(map(x -> x, ψ.AR); tol=alg.tol_gauge)
-    nenvs = environments(nst, toapprox)
-    return nst, nenvs, ϵ
+    copy!(ψ, nst) # ensure output destination is unchanged
+
+    recalculate!(envs, ψ, toapprox)
+    return ψ, envs, ϵ
 end
 
-function approximate(ost::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                     alg::IDMRG2, oenvs=environments(ost, toapprox))
-    length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
-    mpo, above = toapprox
-    ψ = copy(ost)
-    envs = IDMRGEnvironments(ost, oenvs)
+function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
+                      alg::IDMRG2, envs=environments(ψ, toapprox))
+    size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
+    O, ϕ = toapprox
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
@@ -72,52 +66,41 @@ function approximate(ost::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
-            for col in 1:size(ψ, 2), row in 1:size(ψ, 1)
-                ac2 = above.AC[row, col] * _transpose_tail(above.AR[row, col + 1])
-                h = MPO_∂∂AC2(mpo[row, col], mpo[row, col + 1], leftenv(envs, row, col),
-                              rightenv(envs, row, col + 1))
+            for col in 1:size(ψ, 2)
+                for row in 1:size(ψ, 1)
+                    AC2′ = ac2_proj(row, col, ψ, toapprox, envs)
+                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=TensorKit.SVD())
+                    normalize!(c)
 
-                al, c, ar, = tsvd!(h * ac2; trunc=alg.trscheme, alg=TensorKit.SVD())
-                normalize!(c)
-
-                ψ.AL[row + 1, col] = al
-                ψ.C[row + 1, col] = complex(c)
-                ψ.AR[row + 1, col + 1] = _transpose_front(ar)
-
-                setleftenv!(envs, row, col + 1,
-                            normalize(leftenv(envs, row, col) *
-                                      TransferMatrix(above.AL[row, col], mpo[row, col],
-                                                     ψ.AL[row + 1, col])))
-                setrightenv!(envs, row, col,
-                             normalize(TransferMatrix(above.AR[row, col + 1],
-                                                      mpo[row, col + 1],
-                                                      ψ.AR[row + 1, col + 1]) *
-                                       rightenv(envs, row, col + 1)))
+                    ψ.AL[row + 1, col] = al
+                    ψ.C[row + 1, col] = complex(c)
+                    ψ.AR[row + 1, col + 1] = _transpose_front(ar)
+                    ψ.AC[row + 1, col + 1] = _transpose_front(c * ar)
+                end
+                transfer_leftenv!(envs, ψ, toapprox, col + 1)
+                transfer_rightenv!(envs, ψ, toapprox, col)
             end
+            normalize!(envs, ψ, toapprox)
 
             # sweep from right to left
-            for col in (size(ψ, 2) - 1):-1:0, row in 1:size(ψ, 1)
-                ac2 = above.AL[row, col] * _transpose_tail(above.AC[row, col + 1])
-                h = MPO_∂∂AC2(mpo[row, col], mpo[row, col + 1], leftenv(envs, row, col),
-                              rightenv(envs, row, col + 1))
+            for col in (size(ψ, 2) - 1):-1:0
+                for row in 1:size(ψ, 1)
+                    # TODO: also write this as ac2_proj?
+                    AC2 = ϕ.AL[row, col] * _transpose_tail(ϕ.AC[row, col + 1])
+                    AC2′ = ∂AC2(AC2, O[row, col], O[row, col + 1],
+                                leftenv(envs[row], col, ψ[row]),
+                                rightenv(envs[row], col, ψ[row]))
+                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=TensorKit.SVD())
+                    normalize!(c)
 
-                al, c, ar, = tsvd!(h * ac2; trunc=alg.trscheme, alg=TensorKit.SVD())
-                normalize!(c)
-
-                ψ.AL[row + 1, col] = al
-                ψ.C[row + 1, col] = complex(c)
-                ψ.AR[row + 1, col + 1] = _transpose_front(ar)
-
-                setleftenv!(envs, row, col + 1,
-                            normalize(leftenv(envs, row, col) *
-                                      TransferMatrix(above.AL[row, col], mpo[row, col],
-                                                     ψ.AL[row + 1, col])))
-                setrightenv!(envs, row, col,
-                             normalize(TransferMatrix(above.AR[row, col + 1],
-                                                      mpo[row, col + 1],
-                                                      ψ.AR[row + 1, col + 1]) *
-                                       rightenv(envs, row, col + 1)))
+                    ψ.AL[row + 1, col] = al
+                    ψ.C[row + 1, col] = complex(c)
+                    ψ.AR[row + 1, col + 1] = _transpose_front(ar)
+                end
+                transfer_leftenv!(envs, ψ, toapprox, col + 1)
+                transfer_rightenv!(envs, ψ, toapprox, col)
             end
+            normalize!(envs, ψ, toapprox)
 
             # update error
             ϵ = sum(zip(C_current, ψ.C[:, 0])) do (c1, c2)
@@ -139,7 +122,10 @@ function approximate(ost::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
         end
     end
 
+    # TODO: immediately compute in-place
     nst = MultilineMPS(map(x -> x, ψ.AR); tol=alg.tol_gauge)
-    nenvs = environments(nst, toapprox)
-    return nst, nenvs, ϵ
+    copy!(ψ, nst) # ensure output destination is unchanged
+    recalculate!(envs, ψ, toapprox)
+
+    return ψ, envs, ϵ
 end
