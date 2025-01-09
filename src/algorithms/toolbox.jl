@@ -257,10 +257,10 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},
         F_left = i == 1 ? cup : F_right
         F_right = i == L ? cup :
                   isomorphism(ST, V_right ← V_wrap' * right_virtualspace(mpo, i))
-        @plansor contractcheck = true output[i][-1 -2; -3 -4] = F_left[-1; 1 2] *
-                                                                τ[-3 1; 4 3] *
-                                                                mpo[i][2 -2; 3 5] *
-                                                                conj(F_right[-4; 4 5])
+        @plansor output[i][-1 -2; -3 -4] = F_left[-1; 1 2] *
+                                           τ[-3 1; 4 3] *
+                                           mpo[i][2 -2; 3 5] *
+                                           conj(F_right[-4; 4 5])
     end
 
     mpo isa SparseMPO && dropzeros!.(output) # the above process fills sparse mpos with zeros.

@@ -11,6 +11,8 @@ function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multilin
     temp_ACs = similar.(ψ.AC)
     scheduler = Defaults.scheduler[]
     log = IterLog("VOMPS")
+    alg_environments = updatetol(alg.alg_environments, 0, ϵ)
+    recalculate!(envs, ψ, toapprox...; alg_environments.tol)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
@@ -23,7 +25,7 @@ function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multilin
             ψ = MultilineMPS(temp_ACs, ψ.C[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-            recalculate!(envs, ψ; alg_environments.tol)
+            recalculate!(envs, ψ, toapprox...; alg_environments.tol)
 
             ψ, envs = alg.finalize(iter, ψ, toapprox, envs)::Tuple{typeof(ψ),typeof(envs)}
 
@@ -44,18 +46,20 @@ function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multilin
     return ψ, envs, ϵ
 end
 
-function _vomps_localupdate(loc, ψ, (O, ψ₀), envs, factalg=QRpos())
+function _vomps_localupdate(loc, ψ, Oϕ, envs, factalg=QRpos())
     local tmp_AC, tmp_C
     if Defaults.scheduler[] isa SerialScheduler
-        tmp_AC = circshift([ac_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
-        tmp_C = circshift([c_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
+        tmp_AC = circshift([ac_proj(row, loc, ψ, Oϕ, envs) for row in 1:size(ψ, 1)], 1)
+        tmp_C = circshift([c_proj(row, loc, ψ, Oϕ, envs) for row in 1:size(ψ, 1)], 1)
     else
         @sync begin
             Threads.@spawn begin
-                tmp_AC = circshift([ac_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
+                tmp_AC = circshift([ac_proj(row, loc, ψ, Oϕ, envs)
+                                    for row in 1:size(ψ, 1)], 1)
             end
             Threads.@spawn begin
-                tmp_C = circshift([c_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
+                tmp_C = circshift([c_proj(row, loc, ψ, Oϕ, envs) for row in 1:size(ψ, 1)],
+                                  1)
             end
         end
     end
