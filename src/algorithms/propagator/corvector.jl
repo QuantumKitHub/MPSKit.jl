@@ -61,7 +61,7 @@ function propagator(A::AbstractFiniteMPS, z::Number, H::FiniteMPOHamiltonian,
             ϵ = 0.0
 
             for i in [1:(length(A) - 1); length(A):-1:2]
-                tos = ac_proj(i, init, mixedenvs)
+                tos = ac_proj(i, init, A, mixedenvs)
 
                 H_AC = ∂∂AC(i, init, H, h_envs)
                 AC = init.AC[i]
@@ -116,7 +116,7 @@ function propagator(A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
             ϵ = 0.0
 
             for i in [1:(length(A) - 1); length(A):-1:2]
-                tos = ac_proj(i, init, mixedenvs)
+                tos = ac_proj(i, init, A, mixedenvs)
                 H1_AC = ∂∂AC(i, init, H, envs1)
                 H2_AC = ∂∂AC(i, init, H2, envs2)
                 H_AC = LinearCombination((H1_AC, H2_AC), (-2 * ω, 1))
@@ -141,7 +141,7 @@ function propagator(A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
         end
     end
 
-    a = dot(ac_proj(1, init, mixedenvs), init.AC[1])
+    a = dot(ac_proj(1, init, A, mixedenvs), init.AC[1])
     cb = leftenv(envs1, 1, A) * TransferMatrix(init.AL, H[1:length(A.AL)], A.AL)
     b = zero(a)
     for i in 1:length(cb)
