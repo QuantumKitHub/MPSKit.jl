@@ -220,7 +220,7 @@ function gauge_orth_step!(it::IterativeSolver{LeftCanonical}, state)
     (; AL, C, A_tail, CA_tail) = state
     for i in 1:length(AL)
         mul!(CA_tail[i], C[i - 1], A_tail[i])
-        _repartition!(AL[i], CA_tail[i])
+        repartition!(AL[i], CA_tail[i])
         AL[i], C[i] = leftorth!(AL[i]; alg=it.alg_orth)
     end
     normalize!(C[end])
@@ -277,9 +277,9 @@ function gauge_orth_step!(it::IterativeSolver{RightCanonical}, state)
     (; A, AR, C, AC_tail) = state
     for i in length(AR):-1:1
         AC = mul!(AR[i], A[i], C[i])   # use AR as temporary storage for A * C
-        tmp = _repartition!(AC_tail[i], AC)
+        tmp = repartition!(AC_tail[i], AC)
         C[i - 1], tmp = rightorth!(tmp; alg=it.alg_orth)
-        _repartition!(AR[i], tmp)       # TODO: avoid doing this every iteration
+        repartition!(AR[i], tmp)       # TODO: avoid doing this every iteration
     end
     normalize!(C[end])
     return C[end]
