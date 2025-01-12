@@ -475,6 +475,7 @@ end
 
 Base.:-(H::MPOHamiltonian, λs::AbstractVector{<:Number}) = H + (-λs)
 Base.:-(λs::AbstractVector{<:Number}, H::MPOHamiltonian) = λs + (-H)
+Base.:-(H1::MPOHamiltonian, H2::MPOHamiltonian) = H1 + (-H2)
 
 function VectorInterface.scale!(H::InfiniteMPOHamiltonian, λ::Number)
     foreach(parent(H)) do h

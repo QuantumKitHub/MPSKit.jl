@@ -163,6 +163,8 @@ function regauge!(CL::MPSBondTensor, AC::GenericMPSTensor; alg=LQpos())
     AR_tail = mul!(AC_tail, Q_C', Q_AC)
     return _transpose_front(AR_tail)
 end
+# fix ambiguity + error
+regauge!(::MPSBondTensor, ::MPSBondTensor; alg=QRpos()) = error("method ambiguity")
 
 # Implementation
 # --------------
