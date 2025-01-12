@@ -98,14 +98,6 @@ function _can_unambiguously_braid(sp::VectorSpace)
     return true
 end
 
-function inplace_add!(a::Union{AbstractTensorMap,Nothing},
-                      b::Union{AbstractTensorMap,Nothing})
-    isnothing(a) && isnothing(b) && return nothing
-    isnothing(a) && return b
-    isnothing(b) && return a
-    return axpy!(true, a, b)
-end
-
 #=
 map every element in the tensormap to dfun(E)
 allows us to create random tensormaps for any storagetype
@@ -134,11 +126,6 @@ of the form `name[ind_out...; ind_in]`.
 tensorexpr(name::Symbol, inds) = Expr(:ref, name, inds...)
 function tensorexpr(name::Symbol, indout, indin)
     return Expr(:typed_vcat, name, Expr(:row, indout...), Expr(:row, indin...))
-end
-
-# check all elements are equal -> only defined in 1.8+
-@static if !isdefined(Base, :allequal)
-    allequal(itr) = isempty(itr) ? true : all(isequal(first(itr)), itr)
 end
 
 function check_length(a, b...)
