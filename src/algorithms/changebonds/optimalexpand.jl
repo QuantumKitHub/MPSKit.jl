@@ -1,15 +1,17 @@
 """
-    struct OptimalExpand <: Algorithm end
+$(TYPEDEF)
 
-An algorithm that expands the given mps using the algorithm given in the
+An algorithm that expands the given mps as described in the
 [VUMPS paper](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.97.045145), by
 selecting the dominant contributions of a two-site updated MPS tensor, orthogonal to the
 original ψ.
 
-# Fields
-- `trscheme::TruncationScheme = truncdim(1)` : The truncation scheme to use.
+## Fields
+
+$(TYPEDFIELDS)
 """
 @kwdef struct OptimalExpand <: Algorithm
+    "algorithm used for truncating the expanded space"
     trscheme::TruncationScheme = truncdim(1)
 end
 

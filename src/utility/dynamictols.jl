@@ -2,6 +2,7 @@ module DynamicTols
 
 import ..MPSKit: Algorithm
 using Accessors
+using DocStringExtensions
 
 export updatetol, DynamicTol
 
@@ -17,16 +18,24 @@ updatetol(alg, iter::Integer, ϵ::Real) = alg
 # ----------------------------------------
 
 """
-    DynamicTol{A}(alg, tol_min, tol_max, tol_factor)
+$(TYPEDEF)
 
 Algorithm wrapper with dynamically adjusted tolerances.
+
+## Fields
+
+$(TYPEDFIELDS)
 
 See also [`updatetol`](@ref).
 """
 struct DynamicTol{A} <: Algorithm
+    "parent algorithm"
     alg::A
+    "minimal value of the dynamic tolerance"
     tol_min::Float64
+    "maximal value of the dynamic tolerance"
     tol_max::Float64
+    "tolerance factor for updating relative to current algorithm error"
     tol_factor::Float64
     function DynamicTol(alg::A, tol_min::Real, tol_max::Real,
                         tol_factor::Real) where {A}

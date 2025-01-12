@@ -1,12 +1,14 @@
 """
-    struct SvdCut <: Algorithm end
+$(TYPEDEF)
 
 An algorithm that uses truncated SVD to change the bond dimension of a ψ.
 
-# Fields
-- `trscheme::TruncationScheme = notrunc()` : The truncation scheme to use.
+## Fields
+
+$(TYPEDFIELDS)
 """
 @kwdef struct SvdCut <: Algorithm
+    "algorithm used for truncation of the gauge tensors"
     trscheme::TruncationScheme = notrunc()
 end
 

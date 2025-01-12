@@ -1,30 +1,32 @@
 """
-    abstract type DDMRG_Flavour end
+$(TYPEDEF)
 
 Abstract supertype for the different flavours of dynamical DMRG.
 """
 abstract type DDMRG_Flavour end
 
 """
-    struct DynamicalDMRG{F,S} <: Algorithm end
+$(TYPEDEF)
 
 A dynamical DMRG method for calculating dynamical properties and excited states, based on a
 variational principle for dynamical correlation functions.
 
 The algorithm is described in detail in https://arxiv.org/pdf/cond-mat/0203500.pdf.
 
-# Fields
-- `flavour::F = NaiveInvert` : The flavour of the algorithm to use. Currently only `NaiveInvert` and `Jeckelmann` are implemented.
-- `solver::S = Defaults.linearsolver` : The linear solver to use for the linear systems.
-- `tol::Float64 = Defaults.tol * 10` : The stopping criterium.
-- `maxiter::Int = Defaults.maxiter` : The maximum number of iterations.
-- `verbosity::Int = Defaults.verbosity` : Whether to print information about the progress of the algorithm.
+## Fields
+
+$(TYPEDFIELDS)
 """
 @kwdef struct DynamicalDMRG{F<:DDMRG_Flavour,S} <: Algorithm
-    flavour::F = NaiveInvert
+    "flavour of the algorithm to use, either of type [`NaiveInvert`](@ref) or [`Jeckelmann`](@ref)"
+    flavour::F = NaiveInvert()
+    "algorithm used for the linear solvers"
     solver::S = Defaults.linearsolver
+    "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol * 10
+    "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
+    "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
 end
 
@@ -37,11 +39,10 @@ algorithm.
 function propagator end
 
 """
-    struct NaiveInvert <: DDMRG_Flavour end
+$(TYPEDEF)
 
 An alternative approach to the dynamical DMRG algorithm, without quadratic terms but with a
 less controlled approximation.
-
 This algorithm essentially minimizes ``<ψ|(H - E)|ψ> - <ψ|ψ₀> - <ψ₀|ψ>``, which is
 equivalent to the original approach if ``|ψ₀> = (H - E)|ψ>``.
 """
@@ -90,7 +91,7 @@ function propagator(A::AbstractFiniteMPS, z::Number, H::FiniteMPOHamiltonian,
 end
 
 """
-    struct Jeckelmann <: DDMRG_Flavour end
+$(TYPEDEF)
 
 The original flavour of dynamical DMRG, as described in
 https://arxiv.org/pdf/cond-mat/0203500.pdf. The algorithm minimizes

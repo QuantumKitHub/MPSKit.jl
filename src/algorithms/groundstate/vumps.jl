@@ -1,29 +1,34 @@
 """
-    VUMPS{F} <: Algorithm
+$(TYPEDEF)
 
 Variational optimization algorithm for uniform matrix product states, as introduced in
 https://arxiv.org/abs/1701.07035.
 
-# Fields
-- `tol::Float64`: tolerance for convergence criterium
-- `maxiter::Int`: maximum amount of iterations
-- `finalize::F`: user-supplied function which is applied after each iteration, with
-    signature `finalize(iter, ψ, H, envs) -> ψ, envs`
-- `verbosity::Int`: display progress information
+## Fields
 
-- `alg_gauge=Defaults.alg_gauge()`: algorithm for gauging
-- `alg_eigsolve=Defaults.alg_eigsolve()`: algorithm for eigensolvers
-- `alg_environments=Defaults.alg_environments()`: algorithm for updating environments
+$(TYPEDFIELDS)
 """
 @kwdef struct VUMPS{F} <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
+
+    "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
-    finalize::F = Defaults._finalize
+
+    "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
 
+    "algorithm used for gauging the `InfiniteMPS`"
     alg_gauge = Defaults.alg_gauge()
+
+    "algorithm used for the eigenvalue solvers"
     alg_eigsolve = Defaults.alg_eigsolve()
+
+    "algorithm used for the MPS environments"
     alg_environments = Defaults.alg_environments()
+
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    finalize::F = Defaults._finalize
 end
 
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))

@@ -1,20 +1,22 @@
 """
-    IDMRG1{A} <: Algorithm
+$(TYPEDEF)
 
-Single site infinite DMRG algorithm for finding groundstates.
+Single site infinite DMRG algorithm for finding the dominant eigenvector.
 
-# Fields
-- `tol::Float64`: tolerance for convergence criterium
-- `tol_gauge::Float64`: tolerance for gauging algorithm
-- `eigalg::A`: eigensolver algorithm
-- `maxiter::Int`: maximum number of outer iterations
-- `verbosity::Int`: display progress information
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct IDMRG1{A} <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64
+    "tolerance for gauging algorithm"
     tol_gauge::Float64
+    "algorithm used for the eigenvalue solvers"
     eigalg::A
+    "maximal amount of iterations"
     maxiter::Int
+    "setting for how much information is displayed"
     verbosity::Int
 end
 function IDMRG1(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),
@@ -74,11 +76,13 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, envs=environments(os
 end
 
 """
-    IDMRG2{A} <: Algorithm
+$(TYPEDEF)
 
-2-site infinite DMRG algorithm for finding groundstates.
+Two-site infinite DMRG algorithm for finding the dominant eigenvector.
 
-# Fields
+## Fields
+
+$(TYPEDFIELDS)
 - `tol::Float64`: tolerance for convergence criterium
 - `tol_gauge::Float64`: tolerance for gauging algorithm
 - `eigalg::A`: eigensolver algorithm
@@ -87,11 +91,17 @@ end
 - `trscheme::TruncationScheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
 """
 struct IDMRG2{A} <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64
+    "tolerance for gauging algorithm"
     tol_gauge::Float64
+    "algorithm used for the eigenvalue solvers"
     eigalg::A
+    "maximal amount of iterations"
     maxiter::Int
+    "setting for how much information is displayed"
     verbosity::Int
+    "algorithm used for truncation of the two-site update"
     trscheme::TruncationScheme
 end
 function IDMRG2(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),

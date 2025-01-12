@@ -1,28 +1,29 @@
 """
-    DMRG{A,F} <: Algorithm
+$(TYPEDEF)
 
-Single site DMRG algorithm for finding groundstates.
+Single-site DMRG algorithm for finding the dominant eigenvector.
 
-# Fields
-- `tol::Float64`: tolerance for convergence criterium
-- `eigalg::A`: eigensolver algorithm or a NamedTuple with the eigensolver settings
-- `maxiter::Int`: maximum number of outer iterations
-- `verbosity::Int`: display progress information
-- `finalize::F`: user-supplied function which is applied after each iteration, with
-    signature `finalize(iter, ψ, H, envs) -> ψ, envs`
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct DMRG{A,F} <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64
+    "maximal amount of iterations"
     maxiter::Int
-    eigalg::A
-    verbosity::Int
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs"
     finalize::F
+    "setting for how much information is displayed"
+    verbosity::Int
+    "algorithm used for the eigenvalue solvers"
+    eigalg::A
 end
 function DMRG(; tol=Defaults.tol, maxiter=Defaults.maxiter, eigalg=(;),
               verbosity=Defaults.verbosity, finalize=Defaults._finalize)
     eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
-    return DMRG{typeof(eigalg′),typeof(finalize)}(tol, maxiter, eigalg′, verbosity,
-                                                  finalize)
+    return DMRG{typeof(eigalg′),typeof(finalize)}(tol, maxiter, finalize, verbosity,
+                                                  eigalg′)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environments(ψ, H))
@@ -61,35 +62,36 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
 end
 
 """
-    DMRG2{A,F} <: Algorithm
+$(TYPEDEF)
 
-2-site  DMRG algorithm for finding groundstates.
+Two-site DMRG algorithm for finding the dominant eigenvector.
 
-# Fields
-- `tol::Float64`: tolerance for convergence criterium
-- `eigalg::A`: eigensolver algorithm or a NamedTuple with the eigensolver settings
-- `maxiter::Int`: maximum number of outer iterations
-- `verbosity::Int`: display progress information
-- `finalize::F`: user-supplied function which is applied after each iteration, with
-    signature `finalize(iter, ψ, H, envs) -> ψ, envs`
-- `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct DMRG2{A,F} <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64
+    "maximal amount of iterations"
     maxiter::Int
-    eigalg::A
-    trscheme::TruncationScheme
-    verbosity::Int
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F
+    "setting for how much information is displayed"
+    verbosity::Int
+
+    "algorithm used for the eigenvalue solvers"
+    eigalg::A
+    "algorithm used for truncation of the two-site update"
+    trscheme::TruncationScheme
 end
 # TODO: find better default truncation
 function DMRG2(; tol=Defaults.tol, maxiter=Defaults.maxiter, eigalg=(;),
                trscheme=truncerr(1e-6), verbosity=Defaults.verbosity,
                finalize=Defaults._finalize)
     eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
-    return DMRG2{typeof(eigalg′),typeof(finalize)}(tol, maxiter, eigalg′, trscheme,
-                                                   verbosity,
-                                                   finalize)
+    return DMRG2{typeof(eigalg′),typeof(finalize)}(tol, maxiter, finalize, verbosity,
+                                                   eigalg′, trscheme)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environments(ψ, H))

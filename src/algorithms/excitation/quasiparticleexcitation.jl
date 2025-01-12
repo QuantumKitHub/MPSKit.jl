@@ -3,13 +3,14 @@
     the first and the last are virtual, the second is physical, the third is the utility leg
 =#
 """
-    QuasiparticleAnsatz <: Algorithm
+$(TYPEDEF)
 
 Optimization algorithm for quasiparticle excitations on top of MPS groundstates, as
 introduced in this [paper](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.111.080401).
 
 ## Fields
-- `alg::A = Defaults.eigsolver`: algorithm to use for the eigenvalue problem
+
+$(TYPEDFIELDS)
 
 ## Constructors
     
@@ -21,6 +22,7 @@ Create a `QuasiparticleAnsatz` algorithm with the given algorithm, or by passing
 keyword arguments to `Arnoldi`.
 """
 struct QuasiparticleAnsatz{A} <: Algorithm
+    "algorithm used for the eigenvalue solvers"
     alg::A
 end
 function QuasiparticleAnsatz(; kwargs...)

@@ -11,6 +11,7 @@ using VectorInterface
 using Accessors
 using HalfIntegers
 import TupleTools as TT
+using DocStringExtensions
 
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
@@ -63,6 +64,14 @@ export TransferMatrix
 export transfer_left, transfer_right
 
 # Abstract type defs
+"""
+$(TYPEDEF)
+
+Abstract supertype for all algorithm structs.
+These can be thought of as `NamedTuple`s that hold the settings for a given algorithm,
+which can be used for dispatch.
+Additionally, the constructors can be used to provide default values and input sanitation.
+"""
 abstract type Algorithm end
 
 # submodules

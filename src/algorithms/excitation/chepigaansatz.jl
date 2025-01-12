@@ -1,11 +1,12 @@
-
 """
-    ChepigaAnsatz <: Algorithm
+$(TYPEDEF)
 
 Optimization algorithm for excitations on top of MPS groundstates, as
 introduced in this [paper](https://doi.org/10.1103/PhysRevB.96.054425).
 
 ## Fields
+
+$(TYPEDFIELDS)
 - `alg::A = Defaults.eigsolver`: algorithm to use for the eigenvalue problem.
 
 ## Constructors
@@ -18,6 +19,7 @@ Create a `ChepigaAnsatz` algorithm with the given eigensolver, or by passing the
 keyword arguments to `Arnoldi`.
 """
 struct ChepigaAnsatz{A} <: Algorithm
+    "algorithm used for the eigenvalue solvers"
     alg::A
 end
 function ChepigaAnsatz(; kwargs...)

@@ -1,14 +1,16 @@
 """
-    FiniteExcited{A} <: Algorithm
+$(TYPEDEF)
 
 Variational optimization algorithm for excitations of finite Matrix Product States by minimizing the energy of ``H - λᵢ |ψᵢ><ψᵢ|``.
 
-# Fields
-- `gsalg::A`: optimization algorithm.
-- `weight::Float64`: energy penalty for previous states.
+## Fields
+
+$(TYPEDFIELDS)
 """
 @kwdef struct FiniteExcited{A} <: Algorithm
+    "optimization algorithm"
     gsalg::A = DMRG()
+    "energy penalty for enforcing orthogonality with previous states"
     weight::Float64 = 10.0
 end
 
