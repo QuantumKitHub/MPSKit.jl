@@ -118,9 +118,6 @@ function _can_unambiguously_braid(sp::VectorSpace)
     return true
 end
 
-#needed this; perhaps move to tensorkit?
-TensorKit.fuse(f::T) where {T<:VectorSpace} = f
-
 function inplace_add!(a::Union{AbstractTensorMap,Nothing},
                       b::Union{AbstractTensorMap,Nothing})
     isnothing(a) && isnothing(b) && return nothing
