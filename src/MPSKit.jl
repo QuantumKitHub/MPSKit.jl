@@ -5,8 +5,8 @@ using TensorKit: BraidingTensor
 using BlockTensorKit
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
-using OptimKit, FastClosures
-using Base.Threads, FLoops, Transducers, FoldsThreads
+using OptimKit
+using Base.Threads
 using Base.Iterators
 using RecipesBase
 using VectorInterface

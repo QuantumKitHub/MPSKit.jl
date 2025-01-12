@@ -273,7 +273,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
 
     #step 0 : fuse the utility leg of B with the first leg of B
     orig_Bs = map(i -> v[i], 1:length(v))
-    Bs = @closure map(orig_Bs) do t
+    Bs = map(orig_Bs) do t
         frontmap = isomorphism(storagetype(t), fuse(utl * _firstspace(t)),
                                utl * _firstspace(t))
         @plansor tt[-1 -2; -3] := t[1 -2; 2 -3] * frontmap[-1; 2 1]
