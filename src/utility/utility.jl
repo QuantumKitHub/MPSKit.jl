@@ -1,20 +1,11 @@
 function _transpose_front(t::AbstractTensorMap) # make TensorMap{S,N₁+N₂-1,1}
-    I1 = TensorKit.codomainind(t)
-    I2 = TensorKit.domainind(t)
-    return transpose(t, ((I1..., reverse(Base.tail(I2))...), (I2[1],)))
+    return repartition(t, numind(t) - 1, 1)
 end
 function _transpose_tail(t::AbstractTensorMap) # make TensorMap{S,1,N₁+N₂-1}
-    I1 = TensorKit.codomainind(t)
-    I2 = TensorKit.domainind(t)
-    return transpose(t, ((I1[1],), (I2..., reverse(Base.tail(I1))...)))
+    return repartition(t, 1, numind(t) - 1)
 end
 function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap)
-    I1 = (TensorKit.codomainind(t1)..., reverse(TensorKit.domainind(t1))...)
-
-    A = ntuple(x -> I1[x], numout(t2))
-    B = ntuple(x -> I1[x + numout(t2)], numin(t2))
-
-    return transpose(t1, (A, B))
+    return repartition(t1, numout(t2), numin(t2))
 end
 
 function _similar_tail(A::AbstractTensorMap)
