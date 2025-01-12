@@ -11,11 +11,13 @@ $(TYPEDEF)
 A dynamical DMRG method for calculating dynamical properties and excited states, based on a
 variational principle for dynamical correlation functions.
 
-The algorithm is described in detail in https://arxiv.org/pdf/cond-mat/0203500.pdf.
-
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Jeckelmann. Phys. Rev. B 66 (2002)](@cite jeckelmann2002)
 """
 @kwdef struct DynamicalDMRG{F<:DDMRG_Flavour,S} <: Algorithm
     "flavour of the algorithm to use, either of type [`NaiveInvert`](@ref) or [`Jeckelmann`](@ref)"
@@ -43,8 +45,16 @@ $(TYPEDEF)
 
 An alternative approach to the dynamical DMRG algorithm, without quadratic terms but with a
 less controlled approximation.
-This algorithm essentially minimizes ``<ψ|(H - E)|ψ> - <ψ|ψ₀> - <ψ₀|ψ>``, which is
-equivalent to the original approach if ``|ψ₀> = (H - E)|ψ>``.
+This algorithm minimizes the following cost function
+```math
+<ψ|(H - E)|ψ> - <ψ|ψ₀> - <ψ₀|ψ>
+```
+which is equivalent to the original approach if
+```math
+|ψ₀> = (H - E)|ψ>
+```
+
+See also [`Jeckelmann`](@ref) for the original approach.
 """
 struct NaiveInvert <: DDMRG_Flavour end
 
@@ -93,9 +103,16 @@ end
 """
 $(TYPEDEF)
 
-The original flavour of dynamical DMRG, as described in
-https://arxiv.org/pdf/cond-mat/0203500.pdf. The algorithm minimizes
-``||(H - E)|ψ₀> - |ψ>||``, thus containing quadratic terms in ``H - E``.
+The original flavour of dynamical DMRG, which minimizes the following (quadratic) cost function:
+```math
+|| (H - E) |ψ₀> - |ψ> ||
+```
+
+See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.
+
+## References
+
+* [Jeckelmann. Phys. Rev. B 66 (2002)](@cite jeckelmann2002)
 """
 struct Jeckelmann <: DDMRG_Flavour end
 

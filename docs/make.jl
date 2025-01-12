@@ -9,7 +9,9 @@ end
 
 using MPSKit
 using Documenter
+using DocumenterCitations
 
+# examples
 example_dir = joinpath(@__DIR__, "src", "examples")
 classic_pages = map(readdir(joinpath(example_dir, "classic2d"))) do dir
     return joinpath("examples", "classic2d", dir, "index.md")
@@ -17,6 +19,10 @@ end
 quantum_pages = map(readdir(joinpath(example_dir, "quantum1d"))) do dir
     return joinpath("examples", "quantum1d", dir, "index.md")
 end
+
+# bibliography
+bibpath = joinpath(@__DIR__, "src", "assets", "mpskit.bib")
+bib = CitationBibliography(bibpath; style=:authoryear)
 
 # include MPSKit in all doctests
 DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit, TensorKit); recursive=true)
@@ -41,7 +47,9 @@ makedocs(;
                              "man/parallelism.md",
                              "man/lattices.md"],
                 "Examples" => "examples/index.md",
-                "Library" => "lib/lib.md"],
-         warnonly=true)
+                "Library" => "lib/lib.md",
+                "References" => "references.md"],
+         warnonly=true,
+         plugins=[bib])
 
 deploydocs(; repo="github.com/QuantumKitHub/MPSKit.jl.git")

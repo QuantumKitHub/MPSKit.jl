@@ -4,11 +4,14 @@ $(TYPEDEF)
 Variational gradient-based optimization algorithm that keeps the MPS in left-canonical form,
 as points on a Grassmann manifold. The optimization is then a Riemannian gradient descent 
 with a preconditioner to induce the metric from the Hilbert space inner product.
-https://arxiv.org/abs/2007.03638
 
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Hauru et al. SciPost Phys. 10 (2021)](@cite hauru2021)
 
 ---
 

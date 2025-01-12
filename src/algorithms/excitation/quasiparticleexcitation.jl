@@ -5,8 +5,7 @@
 """
 $(TYPEDEF)
 
-Optimization algorithm for quasiparticle excitations on top of MPS groundstates, as
-introduced in this [paper](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.111.080401).
+Optimization algorithm for quasi-particle excitations on top of MPS groundstates.
 
 ## Fields
 
@@ -20,6 +19,10 @@ $(TYPEDFIELDS)
 
 Create a `QuasiparticleAnsatz` algorithm with the given algorithm, or by passing the 
 keyword arguments to `Arnoldi`.
+
+## References
+
+- [Haegeman et al. Phys. Rev. Let. 111 (2013)](@cite haegeman2013)
 """
 struct QuasiparticleAnsatz{A} <: Algorithm
     "algorithm used for the eigenvalue solvers"

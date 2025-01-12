@@ -1,10 +1,9 @@
 """
 $(TYPEDEF)
 
-An algorithm that expands the given mps as described in the
-[VUMPS paper](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.97.045145), by
-selecting the dominant contributions of a two-site updated MPS tensor, orthogonal to the
-original ψ.
+An algorithm that expands the given mps as described in
+[Zauner-Stauber et al. Phys. Rev. B 97 (2018)](@cite zauner-stauber2018), by selecting the
+dominant contributions of a two-site updated MPS tensor, orthogonal to the original ψ.
 
 ## Fields
 

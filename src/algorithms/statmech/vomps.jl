@@ -1,12 +1,17 @@
 """
 $(TYPEDEF)
     
-Power method algorithm for infinite MPS.
-[SciPost:4.1.004](https://scipost.org/SciPostPhysCore.4.1.004)
-    
+Power method algorithm for finding dominant eigenvectors of infinite MPOs.
+This method works by iteratively approximating the product of an operator and a state
+with a new state of the same bond dimension.
+
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Vanhecke et al. SciPost Phys. Core 4 (2021)](@cite vanhecke2021)
 """
 @kwdef struct VOMPS{F} <: Algorithm
     "tolerance for convergence criterium"

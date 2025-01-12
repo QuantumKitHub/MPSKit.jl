@@ -2,12 +2,15 @@
 $(TYPEDEF)
 
 Generalization of the Euler approximation of the operator exponential for MPOs.
-https://arxiv.org/pdf/1901.05824.pdf
-https://doi.org/10.1103/PhysRevB.91.165112
 
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Zaletel et al. Phys. Rev. B 91 (2015)](@cite zaletel2015)
+* [Paeckel et al. Ann. of Phys. 411 (2019)](@cite paeckel2019)
 """
 @kwdef struct WII <: Algorithm
     "tolerance for convergence criterium"
@@ -19,12 +22,15 @@ end
 """
 $(TYPEDEF)
 
-Algorithm for constructing the Nth order time evolution MPO using the Taylor cluster expansion.
-This is based on the paper [arXiv:2302.14181](https://arxiv.org/abs/2302.14181).
+Algorithm for constructing the `N`th order time evolution MPO using the Taylor cluster expansion.
 
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Van Damme et al. SciPost Phys. 17 (2024)](@cite vandamme2024)
 """
 @kwdef struct TaylorCluster <: Algorithm
     "order of the Taylor expansion"

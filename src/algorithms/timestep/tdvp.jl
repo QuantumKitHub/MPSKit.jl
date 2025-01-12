@@ -1,12 +1,15 @@
 """
 $(TYPEDEF)
 
-Single site [TDVP](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107.070601)
-algorithm for time evolution.
+Single site MPS time-evolution algorithm based on the Time-Dependent Variational Principle.
 
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
 @kwdef struct TDVP{A,F} <: Algorithm
     "algorithm used in the exponential solvers"
@@ -100,12 +103,15 @@ end
 """
 $(TYPEDEF)
 
-Two site [TDVP](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107.070601)
-algorithm for time evolution.
+Two-site MPS time-evolution algorithm based on the Time-Dependent Variational Principle.
 
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
 @kwdef struct TDVP2{A,F} <: Algorithm
     "algorithm used in the exponential solvers"

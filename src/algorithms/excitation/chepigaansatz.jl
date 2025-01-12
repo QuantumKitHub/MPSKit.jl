@@ -1,8 +1,7 @@
 """
 $(TYPEDEF)
 
-Optimization algorithm for excitations on top of MPS groundstates, as
-introduced in this [paper](https://doi.org/10.1103/PhysRevB.96.054425).
+Single-site optimization algorithm for excitations on top of MPS groundstates.
 
 ## Fields
 
@@ -17,6 +16,10 @@ $(TYPEDFIELDS)
 
 Create a `ChepigaAnsatz` algorithm with the given eigensolver, or by passing the
 keyword arguments to `Arnoldi`.
+
+## References
+
+- [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017) 
 """
 struct ChepigaAnsatz{A} <: Algorithm
     "algorithm used for the eigenvalue solvers"
@@ -62,8 +65,7 @@ end
 """
     ChepigaAnsatz2 <: Algorithm
 
-Optimization algorithm for excitations on top of MPS groundstates, as
-introduced in this [paper](https://doi.org/10.1103/PhysRevB.96.054425).
+Two-site optimization algorithm for excitations on top of MPS groundstates.
 
 ## Fields
 - `alg::A = Defaults.eigsolver`: algorithm to use for the eigenvalue problem.
@@ -77,6 +79,10 @@ introduced in this [paper](https://doi.org/10.1103/PhysRevB.96.054425).
 
 Create a `ChepigaAnsatz2` algorithm with the given eigensolver and truncation, or by passing the
 keyword arguments to `Arnoldi`.
+
+## References
+
+- [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017) 
 """
 struct ChepigaAnsatz2{A} <: Algorithm
     alg::A

@@ -1,12 +1,16 @@
 """
 $(TYPEDEF)
 
-Variational optimization algorithm for uniform matrix product states, as introduced in
-https://arxiv.org/abs/1701.07035.
+Variational optimization algorithm for uniform matrix product states, based on the combination of DMRG with matrix product state tangent space concepts.
 
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Zauner-Stauber et al. Phys. Rev. B 97 (2018)](@cite zauner-stauber2018)
+* [Vanderstraeten et al. SciPost Phys. Lect. Notes 7 (2019)](@cite vanderstraeten2019)
 """
 @kwdef struct VUMPS{F} <: Algorithm
     "tolerance for convergence criterium"
