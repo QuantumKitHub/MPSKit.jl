@@ -63,16 +63,7 @@ export exact_diagonalization
 export TransferMatrix
 export transfer_left, transfer_right
 
-# Abstract type defs
-"""
-$(TYPEDEF)
-
-Abstract supertype for all algorithm structs.
-These can be thought of as `NamedTuple`s that hold the settings for a given algorithm,
-which can be used for dispatch.
-Additionally, the constructors can be used to provide default values and input sanitation.
-"""
-abstract type Algorithm end
+include("algorithms/algorithm.jl")
 
 # submodules
 include("utility/dynamictols.jl")
