@@ -52,4 +52,4 @@ makedocs(;
          warnonly=true,
          plugins=[bib])
 
-deploydocs(; repo="github.com/QuantumKitHub/MPSKit.jl.git")
+deploydocs(; repo="github.com/QuantumKitHub/MPSKit.jl.git", push_preview=true)
