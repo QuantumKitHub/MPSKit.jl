@@ -10,6 +10,7 @@ end
 using MPSKit
 using Documenter
 using DocumenterCitations
+using DocumenterInterLinks
 
 # examples
 example_dir = joinpath(@__DIR__, "src", "examples")
@@ -24,6 +25,10 @@ end
 bibpath = joinpath(@__DIR__, "src", "assets", "mpskit.bib")
 bib = CitationBibliography(bibpath; style=:authoryear)
 
+# interlinks
+links = InterLinks("TensorKit" => "https://jutho.github.io/TensorKit.jl/stable/",
+                   "TensorOperations" => "https://jutho.github.io/TensorOperations.jl/stable/")
+
 # include MPSKit in all doctests
 DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit, TensorKit); recursive=true)
 
@@ -32,7 +37,6 @@ mathengine = MathJax3(Dict(:loader => Dict("load" => ["[tex]/physics"]),
                                         "tags" => "ams",
                                         "packages" => ["base", "ams", "autoload", "physics"])))
 makedocs(;
-         modules=[MPSKit],
          sitename="MPSKit.jl",
          format=Documenter.HTML(;
                                 prettyurls=get(ENV, "CI", nothing) == "true",
@@ -49,7 +53,7 @@ makedocs(;
                 "Examples" => "examples/index.md",
                 "Library" => "lib/lib.md",
                 "References" => "references.md"],
-         warnonly=true,
-         plugins=[bib])
+         checkdocs=:exports,
+         plugins=[bib, links])
 
 deploydocs(; repo="github.com/QuantumKitHub/MPSKit.jl.git", push_preview=true)

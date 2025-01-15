@@ -2,6 +2,11 @@
 Tensor types
 ===========================================================================================#
 
+"""
+    MPOTensor{S}
+
+Tensor type for representing local MPO tensors, with the index convention `W ⊗ S ← N ⊗ E`.
+"""
 const MPOTensor{S} = AbstractTensorMap{T,S,2,2} where {T}
 const MPSBondTensor{S} = AbstractTensorMap{T,S,1,1} where {T}
 const GenericMPSTensor{S,N} = AbstractTensorMap{T,S,N,1} where {T} # some functions are also defined for "general mps tensors" (used in peps code)

@@ -1,8 +1,8 @@
 # Prerequisites
 
 The following sections describe the prerequisites for using MPSKit. If you are already
-familiar with the concepts of MPSKit and TensorKit, you can skip to the [Overview](@ref)
-section.
+familiar with the concepts of MPSKit and TensorKit, you can skip to the [Conventions](@ref)
+sections.
 
 ## TensorKit
 

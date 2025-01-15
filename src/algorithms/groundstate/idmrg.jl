@@ -88,7 +88,7 @@ $(TYPEDFIELDS)
 - `eigalg::A`: eigensolver algorithm
 - `maxiter::Int`: maximum number of outer iterations
 - `verbosity::Int`: display progress information
-- `trscheme::TruncationScheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
+- `trscheme::TruncationScheme`: truncation algorithm for [`tsvd`][TensorKit.tsvd](@extref)
 """
 struct IDMRG2{A} <: Algorithm
     "tolerance for convergence criterium"
