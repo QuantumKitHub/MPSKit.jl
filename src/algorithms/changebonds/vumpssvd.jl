@@ -12,7 +12,7 @@ $(TYPEDFIELDS)
     tol_gauge = Defaults.tolgauge
     "tolerance for the eigenvalue solver"
     tol_eigenval = Defaults.tol
-    "algorithm used for truncation of the two-site update"
+    "algorithm used for [truncation][@extref TensorKit.tsvd] of the two-site update"
     trscheme::TruncationScheme = notrunc()
 end
 

@@ -1,7 +1,11 @@
 """
 $(TYPEDEF)
 
-Variational optimization algorithm for excitations of finite Matrix Product States by minimizing the energy of ``H - λᵢ |ψᵢ><ψᵢ|``.
+Variational optimization algorithm for excitations of finite MPS by minimizing the energy of
+
+```math
+H - λᵢ |ψᵢ⟩⟨ψᵢ|
+```
 
 ## Fields
 

@@ -14,7 +14,7 @@ $(TYPEDFIELDS)
     ChepigaAnsatz(alg)
 
 Create a `ChepigaAnsatz` algorithm with the given eigensolver, or by passing the
-keyword arguments to `Arnoldi`.
+keyword arguments to [`Arnoldi`][@extref KrylovKit.Arnoldi].
 
 ## References
 

@@ -83,12 +83,7 @@ Two-site infinite DMRG algorithm for finding the dominant eigenvector.
 ## Fields
 
 $(TYPEDFIELDS)
-- `tol::Float64`: tolerance for convergence criterium
-- `tol_gauge::Float64`: tolerance for gauging algorithm
-- `eigalg::A`: eigensolver algorithm
-- `maxiter::Int`: maximum number of outer iterations
-- `verbosity::Int`: display progress information
-- `trscheme::TruncationScheme`: truncation algorithm for [`tsvd`][TensorKit.tsvd](@extref)
+- `trscheme::TruncationScheme`: truncation algorithm for [`tsvd`](@extref TensorKit.tsvd)
 """
 struct IDMRG2{A} <: Algorithm
     "tolerance for convergence criterium"
@@ -101,7 +96,7 @@ struct IDMRG2{A} <: Algorithm
     maxiter::Int
     "setting for how much information is displayed"
     verbosity::Int
-    "algorithm used for truncation of the two-site update"
+    "algorithm used for [truncation](@extref TensorKit.tsvd) of the two-site update"
     trscheme::TruncationScheme
 end
 function IDMRG2(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),

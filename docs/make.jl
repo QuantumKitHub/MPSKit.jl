@@ -27,7 +27,8 @@ bib = CitationBibliography(bibpath; style=:authoryear)
 
 # interlinks
 links = InterLinks("TensorKit" => "https://jutho.github.io/TensorKit.jl/stable/",
-                   "TensorOperations" => "https://jutho.github.io/TensorOperations.jl/stable/")
+                   "TensorOperations" => "https://jutho.github.io/TensorOperations.jl/stable/",
+                   "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/")
 
 # include MPSKit in all doctests
 DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit, TensorKit); recursive=true)

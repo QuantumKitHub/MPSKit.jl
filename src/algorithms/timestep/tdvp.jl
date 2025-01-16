@@ -21,7 +21,7 @@ $(TYPEDFIELDS)
     "maximal amount of iterations for gauging algorithm"
     gaugemaxiter::Int = Defaults.maxiter
 
-    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs"
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
 end
 
@@ -126,7 +126,7 @@ $(TYPEDFIELDS)
     "algorithm used for truncation of the two-site update"
     trscheme::TruncationScheme = truncerr(1e-3)
 
-    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs"
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
 end
 

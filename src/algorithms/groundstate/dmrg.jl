@@ -12,7 +12,7 @@ struct DMRG{A,F} <: Algorithm
     tol::Float64
     "maximal amount of iterations"
     maxiter::Int
-    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs"
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F
     "setting for how much information is displayed"
     verbosity::Int
@@ -82,7 +82,7 @@ struct DMRG2{A,F} <: Algorithm
 
     "algorithm used for the eigenvalue solvers"
     eigalg::A
-    "algorithm used for truncation of the two-site update"
+    "algorithm used for [truncation](@extref TensorKit.tsvd) of the two-site update"
     trscheme::TruncationScheme
 end
 # TODO: find better default truncation

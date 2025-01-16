@@ -8,7 +8,7 @@ An algorithm that uses truncated SVD to change the bond dimension of a ψ.
 $(TYPEDFIELDS)
 """
 @kwdef struct SvdCut <: Algorithm
-    "algorithm used for truncation of the gauge tensors"
+    "algorithm used for [truncation][@extref TensorKit.tsvd] of the gauge tensors"
     trscheme::TruncationScheme = notrunc()
 end
 
