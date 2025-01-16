@@ -6,7 +6,6 @@ Single-site optimization algorithm for excitations on top of MPS groundstates.
 ## Fields
 
 $(TYPEDFIELDS)
-- `alg::A = Defaults.eigsolver`: algorithm to use for the eigenvalue problem.
 
 ## Constructors
 
@@ -21,7 +20,7 @@ keyword arguments to `Arnoldi`.
 
 - [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017) 
 """
-struct ChepigaAnsatz{A} <: Algorithm
+struct ChepigaAnsatz{A<:KrylovAlgorithm} <: Algorithm
     "algorithm used for the eigenvalue solvers"
     alg::A
 end
@@ -84,7 +83,7 @@ keyword arguments to `Arnoldi`.
 
 - [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017) 
 """
-struct ChepigaAnsatz2{A} <: Algorithm
+struct ChepigaAnsatz2{A<:KrylovAlgorithm} <: Algorithm
     alg::A
     trscheme::Any
 end

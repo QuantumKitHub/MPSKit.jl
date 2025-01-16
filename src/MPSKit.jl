@@ -3,7 +3,9 @@ module MPSKit
 using TensorKit
 using TensorKit: BraidingTensor
 using BlockTensorKit
-using KrylovKit, OptimKit, FastClosures
+using KrylovKit
+using KrylovKit: KrylovAlgorithm
+using OptimKit, FastClosures
 using Base.Threads, FLoops, Transducers, FoldsThreads
 using Base.Iterators
 using RecipesBase
