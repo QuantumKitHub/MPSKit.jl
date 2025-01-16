@@ -10,7 +10,7 @@ two-site MPS tensor, which is made orthogonal to the existing state.
 $(TYPEDFIELDS)
 """
 @kwdef struct RandExpand <: Algorithm
-    "aalgorithm used for truncating the expanded space"
+    "algorithm used for [truncation](@extref TensorKit.tsvd] the expanded space"
     trscheme::TruncationScheme = truncdim(1)
 end
 
