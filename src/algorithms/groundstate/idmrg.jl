@@ -7,33 +7,33 @@ Single site infinite DMRG algorithm for finding the dominant eigenvector.
 
 $(TYPEDFIELDS)
 """
-struct IDMRG1{A} <: Algorithm
+@kwdef struct IDMRG1{A} <: Algorithm
     "tolerance for convergence criterium"
-    tol::Float64
-    "tolerance for gauging algorithm"
-    tol_gauge::Float64
-    "algorithm used for the eigenvalue solvers"
-    eigalg::A
+    tol::Float64 = Defaults.tol
+
     "maximal amount of iterations"
-    maxiter::Int
+    maxiter::Int = Defaults.maxiter
+
     "setting for how much information is displayed"
-    verbosity::Int
-end
-function IDMRG1(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),
-                maxiter=Defaults.maxiter, verbosity=Defaults.verbosity)
-    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
-    return IDMRG1{typeof(eigalg′)}(tol, tol_gauge, eigalg′, maxiter, verbosity)
+    verbosity::Int = Defualts.verbosity
+
+    "algorithm used for gauging the MPS"
+    alg_gauge = Defaults.alg_gauge()
+
+    "algorithm used for the eigenvalue solvers"
+    alg_eigsolve::A = Defaults.alg_eigsolve()
 end
 
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, envs=environments(ost, H))
     ϵ::Float64 = calc_galerkin(ost, H, ost, envs)
     ψ = copy(ost)
     log = IterLog("IDMRG")
+    local iter
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
-        for iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
+        for outer iter in 1:(alg.maxiter)
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             C_current = ψ.C[0]
 
             # left to right sweep
@@ -69,10 +69,11 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG1, envs=environments(os
         end
     end
 
-    nst = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
-    recalculate!(envs, nst, H, nst)
+    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    ψ′ = InfiniteMPS(ψ.AR[1:end]; alg_gauge.tol, alg_gauge.maxiter)
+    recalculate!(envs, ψ′, H, ψ′)
 
-    return nst, envs, ϵ
+    return ψ′, envs, ϵ
 end
 
 """
@@ -83,27 +84,25 @@ Two-site infinite DMRG algorithm for finding the dominant eigenvector.
 ## Fields
 
 $(TYPEDFIELDS)
-- `trscheme::TruncationScheme`: truncation algorithm for [`tsvd`](@extref TensorKit.tsvd)
 """
-struct IDMRG2{A} <: Algorithm
+@kwdef struct IDMRG2{A} <: Algorithm
     "tolerance for convergence criterium"
-    tol::Float64
-    "tolerance for gauging algorithm"
-    tol_gauge::Float64
-    "algorithm used for the eigenvalue solvers"
-    eigalg::A
+    tol::Float64 = Defaults.tol
+
     "maximal amount of iterations"
-    maxiter::Int
+    maxiter::Int = Defaults.maxiter
+
     "setting for how much information is displayed"
-    verbosity::Int
+    verbosity::Int = Defualts.verbosity
+
+    "algorithm used for gauging the MPS"
+    alg_gauge = Defaults.alg_gauge()
+
+    "algorithm used for the eigenvalue solvers"
+    alg_eigsolve::A = Defaults.alg_eigsolve()
+
     "algorithm used for [truncation](@extref TensorKit.tsvd) of the two-site update"
-    trscheme::TruncationScheme
-end
-function IDMRG2(; tol=Defaults.tol, tol_gauge=Defaults.tolgauge, eigalg=(;),
-                maxiter=Defaults.maxiter, verbosity=Defaults.verbosity,
-                trscheme=truncerr(1e-6))
-    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
-    return IDMRG2{typeof(eigalg′)}(tol, tol_gauge, eigalg′, maxiter, verbosity, trscheme)
+    trscheme::TruncationScheme = truncerr(1e-6)
 end
 
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(ost, H))
@@ -112,11 +111,12 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
 
     ψ = copy(ost)
     log = IterLog("IDMRG2")
+    local iter
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
-        for iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
+        for outer iter in 1:(alg.maxiter)
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             C_current = ψ.C[0]
 
             # sweep from left to right
@@ -213,7 +213,8 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
         end
     end
 
-    ψ′ = InfiniteMPS(ψ.AR[1:end]; tol=alg.tol_gauge)
+    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    ψ′ = InfiniteMPS(ψ.AR[1:end]; alg_gauge.tol, alg_gauge.maxiter)
     recalculate!(envs, ψ′, H, ψ′)
 
     return ψ′, envs, ϵ
