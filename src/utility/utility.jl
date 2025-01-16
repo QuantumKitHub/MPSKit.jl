@@ -151,7 +151,7 @@ end
 """
     tensorexpr(name::Symbol, ind_out, [ind_in])
 
-Generates expressions for use within [`@tensor`](@ref TensorOperations.@tensor) environments
+Generates expressions for use within [`@tensor`](@extref TensorOperations.@tensor) environments
 of the form `name[ind_out...; ind_in]`.
 """
 tensorexpr(name::Symbol, inds) = Expr(:ref, name, inds...)

@@ -3,7 +3,9 @@ module MPSKit
 using TensorKit
 using TensorKit: BraidingTensor
 using BlockTensorKit
-using KrylovKit, OptimKit, FastClosures
+using KrylovKit
+using KrylovKit: KrylovAlgorithm
+using OptimKit, FastClosures
 using Base.Threads, FLoops, Transducers, FoldsThreads
 using Base.Iterators
 using RecipesBase
@@ -11,6 +13,7 @@ using VectorInterface
 using Accessors
 using HalfIntegers
 import TupleTools as TT
+using DocStringExtensions
 
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
@@ -62,8 +65,7 @@ export exact_diagonalization
 export TransferMatrix
 export transfer_left, transfer_right
 
-# Abstract type defs
-abstract type Algorithm end
+include("algorithms/algorithm.jl")
 
 # submodules
 include("utility/dynamictols.jl")

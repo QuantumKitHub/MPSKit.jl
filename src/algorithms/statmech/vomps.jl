@@ -1,27 +1,36 @@
 """
-    VOMPS{F} <: Algorithm
+$(TYPEDEF)
     
-Power method algorithm for infinite MPS.
-[SciPost:4.1.004](https://scipost.org/SciPostPhysCore.4.1.004)
-    
-## Fields
-- `tol::Float64`: tolerance for convergence criterium
-- `maxiter::Int`: maximum amount of iterations
-- `finalize::F`: user-supplied function which is applied after each iteration, with
-    signature `finalize(iter, ψ, toapprox, envs) -> ψ, envs`
-- `verbosity::Int`: display progress information
+Power method algorithm for finding dominant eigenvectors of infinite MPOs.
+This method works by iteratively approximating the product of an operator and a state
+with a new state of the same bond dimension.
 
-- `alg_gauge=Defaults.alg_gauge()`: algorithm for gauging
-- `alg_environments=Defaults.alg_environments()`: algorithm for updating environments
+## Fields
+
+$(TYPEDFIELDS)
+
+## References
+
+* [Vanhecke et al. SciPost Phys. Core 4 (2021)](@cite vanhecke2021)
 """
 @kwdef struct VOMPS{F} <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
+
+    "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
-    finalize::F = Defaults._finalize
+
+    "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
 
+    "algorithm used for gauging the `InfiniteMPS`"
     alg_gauge = Defaults.alg_gauge()
+
+    "algorithm used for the MPS environments"
     alg_environments = Defaults.alg_environments()
+
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    finalize::F = Defaults._finalize
 end
 
 function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS,

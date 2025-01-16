@@ -1,20 +1,27 @@
 """
-    TDVP{A} <: Algorithm
+$(TYPEDEF)
 
-Single site [TDVP](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107.070601)
-algorithm for time evolution.
+Single site MPS time-evolution algorithm based on the Time-Dependent Variational Principle.
 
-# Fields
-- `integrator::A`: integration algorithm (defaults to Lanczos exponentiation)
-- `tolgauge::Float64`: tolerance for gauging algorithm
-- `gaugemaxiter::Int`: maximum amount of gauging iterations
-- `finalize::F`: user-supplied function which is applied after each timestep, with
-    signature `finalize(t, Ψ, H, envs) -> Ψ, envs`
+## Fields
+
+$(TYPEDFIELDS)
+
+## References
+
+* [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
 @kwdef struct TDVP{A,F} <: Algorithm
+    "algorithm used in the exponential solvers"
     integrator::A = Defaults.alg_expsolve()
+
+    "tolerance for gauging algorithm"
     tolgauge::Float64 = Defaults.tolgauge
+
+    "maximal amount of iterations for gauging algorithm"
     gaugemaxiter::Int = Defaults.maxiter
+
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
 end
 
@@ -94,24 +101,32 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
 end
 
 """
-    TDVP2{A} <: Algorithm
+$(TYPEDEF)
 
-2-site [TDVP](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107.070601)
-algorithm for time evolution.
+Two-site MPS time-evolution algorithm based on the Time-Dependent Variational Principle.
 
-# Fields
-- `integrator::A`: integrator algorithm (defaults to Lanczos exponentiation)
-- `tolgauge::Float64`: tolerance for gauging algorithm
-- `gaugemaxiter::Int`: maximum amount of gauging iterations
-- `trscheme`: truncation algorithm for [tsvd][TensorKit.tsvd](@ref)
-- `finalize::F`: user-supplied function which is applied after each timestep, with
-    signature `finalize(t, Ψ, H, envs) -> Ψ, envs`
+## Fields
+
+$(TYPEDFIELDS)
+
+## References
+
+* [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
 @kwdef struct TDVP2{A,F} <: Algorithm
+    "algorithm used in the exponential solvers"
     integrator::A = Defaults.alg_expsolve()
+
+    "tolerance for gauging algorithm"
     tolgauge::Float64 = Defaults.tolgauge
+
+    "maximal amount of iterations for gauging algorithm"
     gaugemaxiter::Int = Defaults.maxiter
-    trscheme = truncerr(1e-3)
+
+    "algorithm used for truncation of the two-site update"
+    trscheme::TruncationScheme = truncerr(1e-3)
+
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
 end
 

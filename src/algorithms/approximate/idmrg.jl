@@ -2,10 +2,11 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
                       alg::IDMRG1, envs=environments(ψ, toapprox))
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
+    local iter
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
-        for iter in 1:(alg.maxiter)
+        for outer iter in 1:(alg.maxiter)
             C_current = ψ.C[:, 0]
 
             # left to right sweep
@@ -46,8 +47,9 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
     end
 
     # TODO: immediately compute in-place
-    nst = MultilineMPS(map(x -> x, ψ.AR); tol=alg.tol_gauge)
-    copy!(ψ, nst) # ensure output destination is unchanged
+    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    ψ′ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
+    copy!(ψ, ψ′) # ensure output destination is unchanged
 
     recalculate!(envs, ψ, toapprox)
     return ψ, envs, ϵ
@@ -59,10 +61,11 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
     O, ϕ = toapprox
+    local iter
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
-        for iter in 1:(alg.maxiter)
+        for outer iter in 1:(alg.maxiter)
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
@@ -123,9 +126,10 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
     end
 
     # TODO: immediately compute in-place
-    nst = MultilineMPS(map(x -> x, ψ.AR); tol=alg.tol_gauge)
-    copy!(ψ, nst) # ensure output destination is unchanged
-    recalculate!(envs, ψ, toapprox)
+    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    ψ′ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
+    copy!(ψ, ψ′) # ensure output destination is unchanged
 
+    recalculate!(envs, ψ, toapprox)
     return ψ, envs, ϵ
 end

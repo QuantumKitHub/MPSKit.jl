@@ -1,14 +1,17 @@
 """
-    GradientGrassmann <: Algorithm
+$(TYPEDEF)
 
 Variational gradient-based optimization algorithm that keeps the MPS in left-canonical form,
 as points on a Grassmann manifold. The optimization is then a Riemannian gradient descent 
 with a preconditioner to induce the metric from the Hilbert space inner product.
 
 ## Fields
-- `method::OptimKit.OptimizationAlgorithm`: algorithm to perform the gradient search
-- `finalize!`: user-supplied callable which is applied after each iteration, with
-    signature `finalize!(x::GrassmannMPS.ManifoldPoint, f, g, numiter) -> x, f, g`
+
+$(TYPEDFIELDS)
+
+## References
+
+* [Hauru et al. SciPost Phys. 10 (2021)](@cite hauru2021)
 
 ---
 
@@ -24,7 +27,9 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `verbosity::Int`: level of information display
 """
 struct GradientGrassmann{O<:OptimKit.OptimizationAlgorithm,F} <: Algorithm
+    "optimization algorithm"
     method::O
+    "callback function applied after each iteration, of signature `finalize!(x, f, g, numiter) -> x, f, g`"
     finalize!::F
 
     function GradientGrassmann(; method=ConjugateGradient, (finalize!)=OptimKit._finalize!,

@@ -1,19 +1,43 @@
-#https://arxiv.org/pdf/1901.05824.pdf
+"""
+$(TYPEDEF)
 
+Generalization of the Euler approximation of the operator exponential for MPOs.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## References
+
+* [Zaletel et al. Phys. Rev. B 91 (2015)](@cite zaletel2015)
+* [Paeckel et al. Ann. of Phys. 411 (2019)](@cite paeckel2019)
+"""
 @kwdef struct WII <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
+    "maximal number of iterations"
     maxiter::Int = Defaults.maxiter
 end
 
 """
-    TaylorCluster(; N=2, extension=true, compression=true)
+$(TYPEDEF)
 
-Algorithm for constructing the Nth order time evolution MPO using the Taylor cluster expansion.
-This is based on the paper [arXiv:2302.14181](https://arxiv.org/abs/2302.14181).
+Algorithm for constructing the `N`th order time evolution MPO using the Taylor cluster expansion.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## References
+
+* [Van Damme et al. SciPost Phys. 17 (2024)](@cite vandamme2024)
 """
 @kwdef struct TaylorCluster <: Algorithm
+    "order of the Taylor expansion"
     N::Int = 2
+    "include higher-order corrections"
     extension::Bool = true
+    "approximate compression of corrections, accurate up to order `N`"
     compression::Bool = true
 end
 
