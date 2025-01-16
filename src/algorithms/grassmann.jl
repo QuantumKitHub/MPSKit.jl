@@ -11,7 +11,8 @@ The module exports nothing, and all references to it should be qualified, e.g.
 module GrassmannMPS
 
 using ..MPSKit
-using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, ∂∂AC
+using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, ∂∂AC,
+                recalculate!
 using TensorKit
 using OhMyThreads
 import TensorKitManifolds.Grassmann

@@ -241,7 +241,7 @@ end
 
     ψ = InfiniteMPS([pspace], [ou ⊕ pspace])
 
-    W = DenseMPO(make_time_mpo(ham, 1im * 0.5, WII()))
+    W = MPSKit.DenseMPO(make_time_mpo(ham, 1im * 0.5, WII()))
     @test W * (W * ψ) ≈ (W * W) * ψ atol = 1e-2 # TODO: there is a normalization issue here
 end
 

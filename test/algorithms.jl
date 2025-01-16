@@ -498,7 +498,7 @@ end
         Δt = 0.1
         expH = make_time_mpo(H, Δt, WII())
 
-        O = DenseMPO(expH)
+        O = MPSKit.DenseMPO(expH)
         Op = periodic_boundary_conditions(O, 10)
         Op′ = changebonds(Op, SvdCut(; trscheme=truncdim(5)))
 
@@ -698,8 +698,8 @@ end
         dt = 1e-3
         sW1 = make_time_mpo(H, dt, TaylorCluster(; N=3))
         sW2 = make_time_mpo(H, dt, WII())
-        W1 = DenseMPO(sW1)
-        W2 = DenseMPO(sW2)
+        W1 = MPSKit.DenseMPO(sW1)
+        W2 = MPSKit.DenseMPO(sW2)
 
         ψ1, _ = approximate(ψ, (sW1, ψ), VOMPS(; verbosity))
         ψ2, _ = approximate(ψ, (W2, ψ), VOMPS(; verbosity))

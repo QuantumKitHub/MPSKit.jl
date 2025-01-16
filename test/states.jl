@@ -9,6 +9,7 @@ using ..TestSetup
 using Test, TestExtras
 using MPSKit
 using MPSKit: _transpose_front, _transpose_tail
+using MPSKit: TransferMatrix
 using TensorKit
 using TensorKit: ℙ
 
@@ -185,8 +186,8 @@ end
         normalize!(ψ)
 
         #rand_quasiparticle is a private non-exported function
-        ϕ₁ = MPSKit.LeftGaugedQP(rand, ψ)
-        ϕ₂ = MPSKit.LeftGaugedQP(rand, ψ)
+        ϕ₁ = LeftGaugedQP(rand, ψ)
+        ϕ₂ = LeftGaugedQP(rand, ψ)
 
         @test norm(axpy!(1, ϕ₁, copy(ϕ₂))) ≤ norm(ϕ₁) + norm(ϕ₂)
         @test norm(ϕ₁) * 3 ≈ norm(ϕ₁ * 3)
@@ -200,7 +201,7 @@ end
         @test norm(ϕ₁_f) ≈ norm(ϕ₁) atol = 1e-5
 
         ev_f = expectation_value(ϕ₁_f, H) - expectation_value(ψ, H)
-        ev_q = dot(ϕ₁, effective_excitation_hamiltonian(H, ϕ₁))
+        ev_q = dot(ϕ₁, MPSKit.effective_excitation_hamiltonian(H, ϕ₁))
         @test ev_f ≈ ev_q atol = 1e-5
     end
 
@@ -212,14 +213,14 @@ end
         ψ = InfiniteMPS(fill(d, period), fill(D, period))
 
         #rand_quasiparticle is a private non-exported function
-        ϕ₁ = MPSKit.LeftGaugedQP(rand, ψ)
-        ϕ₂ = MPSKit.LeftGaugedQP(rand, ψ)
+        ϕ₁ = LeftGaugedQP(rand, ψ)
+        ϕ₂ = LeftGaugedQP(rand, ψ)
 
         @test norm(axpy!(1, ϕ₁, copy(ϕ₂))) ≤ norm(ϕ₁) + norm(ϕ₂)
         @test norm(ϕ₁) * 3 ≈ norm(ϕ₁ * 3)
 
         @test dot(ϕ₁,
-                  convert(MPSKit.LeftGaugedQP, convert(MPSKit.RightGaugedQP, ϕ₁))) ≈
+                  convert(LeftGaugedQP, convert(RightGaugedQP, ϕ₁))) ≈
               dot(ϕ₁, ϕ₁) atol = 1e-10
     end
 end
