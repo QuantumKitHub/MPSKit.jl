@@ -2,7 +2,7 @@
 # ----------
 
 const _GAUGE_ALG_EIGSOLVE = DynamicTol(Arnoldi(; krylovdim=30, eager=true),
-                                       Defaults.tolgauge / 10, Inf, 1)
+                                       Defaults.tolgauge / 10, Defaults.tol_max, 1)
 
 """
     struct LeftCanonical <: Algorithm
