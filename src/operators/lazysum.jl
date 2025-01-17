@@ -19,10 +19,10 @@ end
 
 # for the AbstractArray interface
 Base.size(x::LazySum) = size(x.ops)
-Base.getindex(x::LazySum, i) = x.ops[i]
+Base.getindex(x::LazySum, i::Int) = x.ops[i]
 Base.length(x::LazySum) = prod(size(x))
 Base.similar(x::LazySum, ::Type{S}, dims::Dims) where {S} = LazySum(similar(x.ops, S, dims))
-Base.setindex!(A::LazySum, X, i) = setindex!(A.ops, X, i)
+Base.setindex!(A::LazySum, X, i::Int) = (setindex!(A.ops, X, i); A)
 
 # Holy traits
 TimeDependence(x::LazySum) = istimed(x) ? TimeDependent() : NotTimeDependent()

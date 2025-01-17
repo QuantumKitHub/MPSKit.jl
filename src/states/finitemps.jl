@@ -66,10 +66,12 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
                                                                  B<:MPSBondTensor}
         return new{A,B}(ALs, ARs, ACs, Cs)
     end
-    function FiniteMPS(ALs::Vector{Union{Missing,A}}, ARs::Vector{Union{Missing,A}},
-                       ACs::Vector{Union{Missing,A}},
-                       Cs::Vector{Union{Missing,B}}) where {A<:GenericMPSTensor,
-                                                            B<:MPSBondTensor}
+    function FiniteMPS(ALs::Vector{MA}, ARs::Vector{MA},
+                       ACs::Vector{MA},
+                       Cs::Vector{MB}) where {MA<:Union{GenericMPSTensor,Missing},
+                                              MB<:Union{MPSBondTensor,Missing}}
+        A = _not_missing_type(MA)
+        B = _not_missing_type(MB)
         length(ACs) == length(Cs) - 1 == length(ALs) == length(ARs) ||
             throw(DimensionMismatch("length mismatch of tensors"))
         sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
@@ -123,6 +125,16 @@ struct FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
                                                  throw(SpaceMismatch("Right virtual space of C on site $(i-1) doesn't match")))
         end
         return new{A,B}(ALs, ARs, ACs, Cs)
+    end
+end
+
+_not_missing_type(::Type{Missing}) = throw(ArgumentError("Only missing type present"))
+function _not_missing_type(::Type{T}) where {T}
+    if T isa Union
+        return (!(T.a === Missing) && !(T.b === Missing)) ? T :
+               !(T.a === Missing) ? _not_missing_type(T.b) : _not_missing_type(T.b)
+    else
+        return T
     end
 end
 

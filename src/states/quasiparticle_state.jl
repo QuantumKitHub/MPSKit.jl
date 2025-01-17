@@ -216,41 +216,41 @@ LinearAlgebra.normalize!(w::QP) = rmul!(w, 1 / norm(w))
 Base.length(v::QP) = length(v.Xs)
 Base.eltype(::Type{<:QP{<:Any,<:Any,T}}) where {T} = T
 
-function LinearAlgebra.mul!(w::T, a, v::T) where {T<:QP}
+function LinearAlgebra.mul!(w::T, a::Number, v::T) where {T<:QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
         LinearAlgebra.mul!(i, a, j)
     end
     return w
 end
 
-function LinearAlgebra.mul!(w::T, v::T, a) where {T<:QP}
+function LinearAlgebra.mul!(w::T, v::T, a::Number) where {T<:QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
         LinearAlgebra.mul!(i, j, a)
     end
     return w
 end
-function LinearAlgebra.rmul!(v::QP, a)
+function LinearAlgebra.rmul!(v::QP, a::Number)
     for x in v.Xs
         LinearAlgebra.rmul!(x, a)
     end
     return v
 end
 
-function LinearAlgebra.axpy!(a, v::T, w::T) where {T<:QP}
+function LinearAlgebra.axpy!(a::Number, v::T, w::T) where {T<:QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
         LinearAlgebra.axpy!(a, j, i)
     end
     return w
 end
-function LinearAlgebra.axpby!(a, v::T, b, w::T) where {T<:QP}
+function LinearAlgebra.axpby!(a::Number, v::T, b::Number, w::T) where {T<:QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
         LinearAlgebra.axpby!(a, j, b, i)
     end
     return w
 end
 
-Base.:*(v::QP, a) = mul!(similar(v), a, v)
-Base.:*(a, v::QP) = mul!(similar(v), a, v)
+Base.:*(v::QP, a::Number) = mul!(similar(v), a, v)
+Base.:*(a::Number, v::QP) = mul!(similar(v), a, v)
 
 Base.zero(v::QP) = v * 0;
 
@@ -273,7 +273,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
 
     #step 0 : fuse the utility leg of B with the first leg of B
     orig_Bs = map(i -> v[i], 1:length(v))
-    Bs = @closure map(orig_Bs) do t
+    Bs = map(orig_Bs) do t
         frontmap = isomorphism(storagetype(t), fuse(utl * _firstspace(t)),
                                utl * _firstspace(t))
         @plansor tt[-1 -2; -3] := t[1 -2; 2 -3] * frontmap[-1; 2 1]

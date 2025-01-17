@@ -1,12 +1,69 @@
 module MPSKit
 
+# Public API
+# ----------
+# utility:
+export PeriodicArray, PeriodicVector, PeriodicMatrix
+export WindowArray
+export left_virtualspace, right_virtualspace, physicalspace
+export braille
+
+# states:
+export FiniteMPS
+export InfiniteMPS
+export WindowMPS
+export MultilineMPS
+export QP, LeftGaugedQP, RightGaugedQP
+
+# operators:
+export AbstractMPO
+export MPO, FiniteMPO, InfiniteMPO
+export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian
+export MultilineMPO
+export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
+
+# environments:
+export environments
+export leftenv, rightenv
+
+# algorithms:
+export find_groundstate, find_groundstate!
+export leading_boundary
+export approximate, approximate!
+export VUMPS, VOMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
+export excitations
+export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
+export time_evolve, timestep, timestep!, make_time_mpo
+export TDVP, TDVP2, WI, WII, TaylorCluster
+export changebonds, changebonds!
+export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand
+export propagator
+export DynamicalDMRG, NaiveInvert, Jeckelmann
+export exact_diagonalization, fidelity_susceptibility
+
+# toolbox:
+export expectation_value, correlator, variance
+export correlation_length, marek_gap, transfer_spectrum
+export entropy, entanglement_spectrum
+export open_boundary_conditions, periodic_boundary_conditions
+export entanglementplot, transferplot
+export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # TODO: rename
+
+# unexported
+using Compat: @compat
+@compat public DynamicTols
+@compat public VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
+@compat public IterLog, loginit!, logiter!, logfinish!, logcancel!
+
+# Imports
+# -------
 using TensorKit
 using TensorKit: BraidingTensor
 using BlockTensorKit
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
-using OptimKit, FastClosures
-using Base.Threads, FLoops, Transducers, FoldsThreads
+using OptimKit
+using Base.Threads
 using Base.Iterators
 using RecipesBase
 using VectorInterface
@@ -21,49 +78,8 @@ using Base: @kwdef
 using LoggingExtras
 using OhMyThreads
 
-# bells and whistles for mpses
-export InfiniteMPS, FiniteMPS, WindowMPS, MultilineMPS
-export PeriodicArray, PeriodicVector, PeriodicMatrix, WindowArray
-export MPSTensor
-export QP, LeftGaugedQP, RightGaugedQP
-export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # should be properties
-
-# useful utility functions?
-export add_util_leg, max_Ds, recalculate!
-export left_virtualspace, right_virtualspace, physicalspace
-export entanglementplot, transferplot
-export braille
-
-# hamiltonian things
-export AbstractMPO
-export MPO, FiniteMPO, InfiniteMPO
-export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian
-export SparseMPO, DenseMPO, MultilineMPO
-export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
-
-export ∂C, ∂AC, ∂AC2, environments, expectation_value, effective_excitation_hamiltonian
-export leftenv, rightenv
-
-# algos
-export find_groundstate!, find_groundstate, leading_boundary
-export VUMPS, VOMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
-export excitations, FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
-export marek_gap, correlation_length, correlator
-export time_evolve, timestep!, timestep
-export TDVP, TDVP2, make_time_mpo, WI, WII, TaylorCluster
-export entanglement_spectrum, transfer_spectrum, variance
-export changebonds!, changebonds, VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand
-export entropy
-export propagator, NaiveInvert, Jeckelmann, DynamicalDMRG
-export fidelity_susceptibility
-export approximate!, approximate
-export periodic_boundary_conditions, open_boundary_conditions
-export exact_diagonalization
-
-# transfer matrix
-export TransferMatrix
-export transfer_left, transfer_right
-
+# Includes
+# --------
 include("algorithms/algorithm.jl")
 
 # submodules

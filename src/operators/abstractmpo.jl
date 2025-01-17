@@ -14,7 +14,7 @@ const SparseMPO{O<:SparseBlockTensorMap} = AbstractMPO{O}
 Base.size(mpo::AbstractMPO, args...) = size(parent(mpo), args...)
 Base.length(mpo::AbstractMPO) = length(parent(mpo))
 
-@inline Base.getindex(mpo::AbstractMPO, args...) = getindex(parent(mpo), args...)
+@inline Base.getindex(mpo::AbstractMPO, i::Int) = getindex(parent(mpo), i)
 @inline function Base.setindex!(mpo::AbstractMPO, value::MPOTensor, i::Int)
     setindex!(parent(mpo), value, i)
     return mpo

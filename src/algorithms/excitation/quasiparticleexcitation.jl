@@ -41,7 +41,7 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renv
                      num=1, kwargs...)
     qp_envs(ϕ) = environments(ϕ, H, lenvs, renvs; kwargs...)
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
-    H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
+    H_eff(ϕ) = effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E)
 
     Es, ϕs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
     convhist.converged < num &&
@@ -134,7 +134,7 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::FiniteQP,
                      renvs=ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H); num=1)
     qp_envs(ϕ) = environments(ϕ, H, lenvs, renvs)
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
-    H_eff = @closure(ϕ -> effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E))
+    H_eff(ϕ) = effective_excitation_hamiltonian(H, ϕ, qp_envs(ϕ), E)
     Es, ϕs, convhist = eigsolve(H_eff, ϕ₀, num, :SR, alg.alg)
 
     convhist.converged < num &&

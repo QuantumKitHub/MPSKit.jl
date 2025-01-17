@@ -1,31 +1,11 @@
 function _transpose_front(t::AbstractTensorMap) # make TensorMap{S,N₁+N₂-1,1}
-    I1 = TensorKit.codomainind(t)
-    I2 = TensorKit.domainind(t)
-    return transpose(t, ((I1..., reverse(Base.tail(I2))...), (I2[1],)))
+    return repartition(t, numind(t) - 1, 1)
 end
 function _transpose_tail(t::AbstractTensorMap) # make TensorMap{S,1,N₁+N₂-1}
-    I1 = TensorKit.codomainind(t)
-    I2 = TensorKit.domainind(t)
-    return transpose(t, ((I1[1],), (I2..., reverse(Base.tail(I1))...)))
+    return repartition(t, 1, numind(t) - 1)
 end
 function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap)
-    I1 = (TensorKit.codomainind(t1)..., reverse(TensorKit.domainind(t1))...)
-
-    A = ntuple(x -> I1[x], numout(t2))
-    B = ntuple(x -> I1[x + numout(t2)], numin(t2))
-
-    return transpose(t1, (A, B))
-end
-
-function _repartition!(tdst::AbstractTensorMap{<:Any,S,N₁,N₂},
-                       tsrc::AbstractTensorMap{<:Any,S}) where {S,N₁,N₂}
-    numind(tdst) == numind(tsrc) || throw(ArgumentError("number of indices must match"))
-    inds_dst = (TensorKit.codomainind(tdst)..., reverse(TensorKit.domainind(tdst))...)
-    inds_src = (TensorKit.codomainind(tsrc)..., reverse(TensorKit.domainind(tsrc))...)
-    @boundscheck all(space.(Ref(tdst), inds_dst) .== space.(Ref(tsrc), inds_src))
-
-    p = (ntuple(x -> inds_src[x], N₁), reverse(ntuple(x -> inds_src[x + N₁], N₂)))
-    return transpose!(tdst, tsrc, p)
+    return repartition(t1, numout(t2), numin(t2))
 end
 
 function _similar_tail(A::AbstractTensorMap)
@@ -118,17 +98,6 @@ function _can_unambiguously_braid(sp::VectorSpace)
     return true
 end
 
-#needed this; perhaps move to tensorkit?
-TensorKit.fuse(f::T) where {T<:VectorSpace} = f
-
-function inplace_add!(a::Union{AbstractTensorMap,Nothing},
-                      b::Union{AbstractTensorMap,Nothing})
-    isnothing(a) && isnothing(b) && return nothing
-    isnothing(a) && return b
-    isnothing(b) && return a
-    return axpy!(true, a, b)
-end
-
 #=
 map every element in the tensormap to dfun(E)
 allows us to create random tensormaps for any storagetype
@@ -157,11 +126,6 @@ of the form `name[ind_out...; ind_in]`.
 tensorexpr(name::Symbol, inds) = Expr(:ref, name, inds...)
 function tensorexpr(name::Symbol, indout, indin)
     return Expr(:typed_vcat, name, Expr(:row, indout...), Expr(:row, indin...))
-end
-
-# check all elements are equal -> only defined in 1.8+
-@static if !isdefined(Base, :allequal)
-    allequal(itr) = isempty(itr) ? true : all(isequal(first(itr)), itr)
 end
 
 function check_length(a, b...)
