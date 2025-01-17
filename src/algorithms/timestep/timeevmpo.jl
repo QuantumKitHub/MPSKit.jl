@@ -1,25 +1,50 @@
-#https://arxiv.org/pdf/1901.05824.pdf
+"""
+$(TYPEDEF)
 
+Generalization of the Euler approximation of the operator exponential for MPOs.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## References
+
+* [Zaletel et al. Phys. Rev. B 91 (2015)](@cite zaletel2015)
+* [Paeckel et al. Ann. of Phys. 411 (2019)](@cite paeckel2019)
+"""
 @kwdef struct WII <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
+    "maximal number of iterations"
     maxiter::Int = Defaults.maxiter
 end
 
 """
-    TaylorCluster(; N=2, extension=true, compression=true)
+$(TYPEDEF)
 
-Algorithm for constructing the Nth order time evolution MPO using the Taylor cluster expansion.
-This is based on the paper [arXiv:2302.14181](https://arxiv.org/abs/2302.14181).
+Algorithm for constructing the `N`th order time evolution MPO using the Taylor cluster expansion.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## References
+
+* [Van Damme et al. SciPost Phys. 17 (2024)](@cite vandamme2024)
 """
 @kwdef struct TaylorCluster <: Algorithm
+    "order of the Taylor expansion"
     N::Int = 2
+    "include higher-order corrections"
     extension::Bool = true
-    compression::Bool = true
+    "approximate compression of corrections, accurate up to order `N`"
+    compression::Bool = false
 end
 
 const WI = TaylorCluster(; N=1, extension=false, compression=false)
 
-function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
+function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
+                       tol=eps(real(scalartype(H)))^(3 / 4))
     N = alg.N
     τ = -1im * dt
 
@@ -144,7 +169,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster)
         mpo[end] = mpo[end][:, :, :, 1]
     end
 
-    return remove_orphans!(mpo)
+    return remove_orphans!(mpo; tol=tol)
 end
 
 has_prod_elem(slice, t1, t2) = all(map(x -> contains(slice, x...), zip(t1, t2)))
@@ -186,65 +211,6 @@ function interweave(a, b)
         return output
     end
 end
-
-# function make_time_mpo(H::MPOHamiltonian{S,T}, dt, alg::WII) where {S,T}
-#     WA = PeriodicArray{T,3}(undef, H.period, H.odim - 2, H.odim - 2)
-#     WB = PeriodicArray{T,2}(undef, H.period, H.odim - 2)
-#     WC = PeriodicArray{T,2}(undef, H.period, H.odim - 2)
-#     WD = PeriodicArray{T,1}(undef, H.period)
-#
-#     δ = dt * (-1im)
-#
-#     for i in 1:(H.period), j in 2:(H.odim - 1), k in 2:(H.odim - 1)
-#         init_1 = isometry(storagetype(H[i][1, H.odim]), codomain(H[i][1, H.odim]),
-#                           domain(H[i][1, H.odim]))
-#         init = [init_1, zero(H[i][1, k]), zero(H[i][j, H.odim]), zero(H[i][j, k])]
-#
-#         (y, convhist) = exponentiate(1.0, RecursiveVec(init),
-#                                      Arnoldi(; tol=alg.tol, maxiter=alg.maxiter)) do x
-#             out = similar(x.vecs)
-#
-#             @plansor out[1][-1 -2; -3 -4] := δ * x[1][-1 1; -3 -4] *
-#                                              H[i][1, H.odim][2 3; 1 4] * τ[-2 4; 2 3]
-#
-#             @plansor out[2][-1 -2; -3 -4] := δ * x[2][-1 1; -3 -4] *
-#                                              H[i][1, H.odim][2 3; 1 4] * τ[-2 4; 2 3]
-#             @plansor out[2][-1 -2; -3 -4] += sqrt(δ) * x[1][1 2; -3 4] *
-#                                              H[i][1, k][-1 -2; 3 -4] * τ[3 4; 1 2]
-#
-#             @plansor out[3][-1 -2; -3 -4] := δ * x[3][-1 1; -3 -4] *
-#                                              H[i][1, H.odim][2 3; 1 4] * τ[-2 4; 2 3]
-#             @plansor out[3][-1 -2; -3 -4] += sqrt(δ) * x[1][1 2; -3 4] *
-#                                              H[i][j, H.odim][-1 -2; 3 -4] * τ[3 4; 1 2]
-#
-#             @plansor out[4][-1 -2; -3 -4] := δ * x[4][-1 1; -3 -4] *
-#                                              H[i][1, H.odim][2 3; 1 4] * τ[-2 4; 2 3]
-#             @plansor out[4][-1 -2; -3 -4] += x[1][1 2; -3 4] * H[i][j, k][-1 -2; 3 -4] *
-#                                              τ[3 4; 1 2]
-#             @plansor out[4][-1 -2; -3 -4] += sqrt(δ) * x[2][1 2; -3 -4] *
-#                                              H[i][j, H.odim][-1 -2; 3 4] * τ[3 4; 1 2]
-#             @plansor out[4][-1 -2; -3 -4] += sqrt(δ) * x[3][-1 4; -3 3] *
-#                                              H[i][1, k][2 -2; 1 -4] * τ[3 4; 1 2]
-#
-#             return RecursiveVec(out)
-#         end
-#         convhist.converged == 0 &&
-#             @warn "exponentiate failed to converge: normres = $(convhist.normres)"
-#
-#         WA[i, j - 1, k - 1] = y[4]
-#         WB[i, j - 1] = y[3]
-#         WC[i, k - 1] = y[2]
-#         WD[i] = y[1]
-#     end
-#
-#     W2 = PeriodicArray{Union{T,Missing},3}(missing, H.period, H.odim - 1, H.odim - 1)
-#     W2[:, 2:end, 2:end] = WA
-#     W2[:, 2:end, 1] = WB
-#     W2[:, 1, 2:end] = WC
-#     W2[:, 1, 1] = WD
-#
-#     return SparseMPO(W2)
-# end
 
 function make_time_mpo(H::InfiniteMPOHamiltonian{T}, dt, alg::WII) where {T}
     WA = H.A
