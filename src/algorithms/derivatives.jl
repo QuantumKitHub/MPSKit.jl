@@ -31,42 +31,36 @@ Base.:*(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, v) = h(v);
 (h::DerivativeOperator)(v, ::Number) = h(v)
 
 # draft operator constructors
-function ∂∂C(pos::Int, mps, operator::AbstractMPO, cache)
-    return MPO_∂∂C(leftenv(cache, pos + 1, mps), rightenv(cache, pos, mps))
-end
-function ∂∂C(col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂C(leftenv(envs, col + 1, mps), rightenv(envs, col, mps))
+function ∂∂C(pos::Int, mps, operator, envs)
+    return MPO_∂∂C(leftenv(envs, pos + 1, mps), rightenv(envs, pos, mps))
 end
 function ∂∂C(row::Int, col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂C(leftenv(envs, row, col + 1, mps), rightenv(envs, row, col, mps))
+    return ∂∂C(col, mps[row], operator[row], envs[row])
 end
 
-function ∂∂AC(pos::Int, mps, operator::AbstractMPO, cache)
-    return MPO_∂∂AC(operator[pos], leftenv(cache, pos, mps), rightenv(cache, pos, mps))
+function ∂∂AC(pos::Int, mps, operator, envs)
+    return MPO_∂∂AC(operator[pos], leftenv(envs, pos, mps), rightenv(envs, pos, mps))
 end
 function ∂∂AC(row::Int, col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂AC(operator[row, col], leftenv(envs, row, col, mps),
-                    rightenv(envs, row, col, mps))
+    return ∂∂AC(col, mps[row], operator[row], envs[row])
 end
 function ∂∂AC(col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂AC(envs.operator[:, col], leftenv(envs, col, mps),
-                    rightenv(envs, col, mps))
-end;
+    return MPO_∂∂AC(operator[:, col], leftenv(envs, col, mps), rightenv(envs, col, mps))
+end
 
-function ∂∂AC2(pos::Int, mps, operator::AbstractMPO, cache)
-    return MPO_∂∂AC2(operator[pos], operator[pos + 1], leftenv(cache, pos, mps),
-                     rightenv(cache, pos + 1, mps))
-end;
+function ∂∂AC2(pos::Int, mps, operator, envs)
+    return MPO_∂∂AC2(operator[pos], operator[pos + 1], leftenv(envs, pos, mps),
+                     rightenv(envs, pos + 1, mps))
+end
 function ∂∂AC2(col::Int, mps, operator::MultilineMPO, envs)
     return MPO_∂∂AC2(operator[:, col], operator[:, col + 1], leftenv(envs, col, mps),
                      rightenv(envs, col + 1, mps))
 end
-function ∂∂AC2(row::Int, col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂AC2(operator[row, col], operator[row, col + 1],
-                     leftenv(envs, row, col, mps), rightenv(envs, row, col + 1, mps))
+function ∂∂AC2(row::Int, col::Int, mps, operator::MultilineMPO, envs::MultilineEnvironments)
+    return ∂∂AC2(col, mps[row], operator[row], envs[row])
 end
 
-#allow calling them with CartesianIndices
+# allow calling them with CartesianIndices
 ∂∂C(pos::CartesianIndex, mps, operator, envs) = ∂∂C(Tuple(pos)..., mps, operator, envs)
 ∂∂AC(pos::CartesianIndex, mps, operator, envs) = ∂∂AC(Tuple(pos)..., mps, operator, envs)
 ∂∂AC2(pos::CartesianIndex, mps, operator, envs) = ∂∂AC2(Tuple(pos)..., mps, operator, envs)
@@ -93,8 +87,10 @@ function ∂AC(x::MPSTensor, ::Nothing, leftenv, rightenv)
 end
 
 function ∂AC2(x::MPOTensor, operator1::MPOTensor, operator2::MPOTensor, leftenv, rightenv)
-    @plansor toret[-1 -2; -3 -4] := leftenv[-1 7; 6] * x[6 5; 1 3] * operator1[7 -2; 5 4] *
-                                    operator2[4 -4; 3 2] * rightenv[1 2; -3]
+    @plansor toret[-1 -2; -3 -4] := leftenv[-1 7; 6] * x[6 5; 1 3] *
+                                    operator1[7 -2; 5 4] *
+                                    operator2[4 -4; 3 2] *
+                                    rightenv[1 2; -3]
     return toret isa BlockTensorMap ? only(toret) : toret
 end
 function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv, rightenv)
@@ -118,41 +114,47 @@ function ∂C(x::Vector, leftenv, rightenv)
     return circshift(map(t -> ∂C(t...), zip(x, leftenv, rightenv)), 1)
 end
 
-#downproject for approximate
-function c_proj(pos, below, envs::FiniteEnvironments)
-    return ∂C(envs.above.C[pos], leftenv(envs, pos + 1, below), rightenv(envs, pos, below))
+# downproject for approximate
+function c_proj(pos::Int, ψ, (operator, ϕ)::Tuple, envs)
+    return ∂C(ϕ.C[pos], leftenv(envs, pos + 1, ψ), rightenv(envs, pos, ψ))
+end
+function c_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
+    return ∂C(ϕ.C[pos], leftenv(envs, pos + 1, ψ), rightenv(envs, pos, ψ))
+end
+function c_proj(pos::Int, ψ, Oϕs::LazySum, envs)
+    return sum(zip(Oϕs.ops, envs.envs)) do x
+        return c_proj(pos, ψ, x...)
+    end
+end
+function c_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
+    return c_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
-function c_proj(row, col, below, envs::InfiniteMPOEnvironments)
-    return ∂C(envs.above.C[row, col], leftenv(envs, row, col + 1, below),
-              rightenv(envs, row, col, below))
+function ac_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs)
+    return ∂AC(ϕ.AC[pos], O[pos], leftenv(envs, pos, ψ), rightenv(envs, pos, ψ))
+end
+function ac_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
+    return ∂AC(ϕ.AC[pos], nothing, leftenv(envs, pos, ψ), rightenv(envs, pos, ψ))
+end
+function ac_proj(pos::Int, ψ, Oϕs::LazySum, envs)
+    return sum(zip(Oϕs.ops, envs.envs)) do x
+        return ac_proj(pos, ψ, x...)
+    end
+end
+function ac_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
+    return ac_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
-# TODO: rewrite this to not use operator from cache?
-function ac_proj(pos, below, envs)
-    le = leftenv(envs, pos, below)
-    re = rightenv(envs, pos, below)
-
-    return ∂AC(envs.above.AC[pos], envs.operator[pos], le, re)
+function ac2_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs)
+    AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
+    return ∂AC2(AC2, O[pos], O[pos + 1], leftenv(envs, pos, ψ), rightenv(envs, pos + 1, ψ))
 end
-function ac_proj(row, col, below, envs::InfiniteMPOEnvironments)
-    return ∂AC(envs.above.AC[row, col], envs.operator[row, col],
-               leftenv(envs, row, col, below),
-               rightenv(envs, row, col, below))
+function ac2_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
+    AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
+    return ∂AC2(AC2, nothing, nothing, leftenv(envs, pos, ψ), rightenv(envs, pos + 1, ψ))
 end
-function ac2_proj(pos, below, envs)
-    le = leftenv(envs, pos, below)
-    re = rightenv(envs, pos + 1, below)
-
-    return ∂AC2(envs.above.AC[pos] * _transpose_tail(envs.above.AR[pos + 1]),
-                envs.operator[pos],
-                envs.operator[pos + 1], le, re)
-end
-function ac2_proj(row, col, below, envs::InfiniteMPOEnvironments)
-    @plansor ac2[-1 -2; -3 -4] := envs.above.AC[row, col][-1 -2; 1] *
-                                  envs.above.AR[row, col + 1][1 -4; -3]
-    return ∂AC2(ac2, leftenv(envs, row, col + 1, below),
-                rightenv(envs, row, col + 1, below))
+function ac2_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
+    return ac2_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
 function ∂∂C(pos::Int, mps, operator::LinearCombination, cache)

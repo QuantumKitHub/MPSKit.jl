@@ -1,8 +1,16 @@
-"
-    Take the union of 2 algorithms using &
-"
+"""
+$(TYPEDEF)
+
+Algorithm wrapper representing the sequential application of two algorithms.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
 struct UnionAlg{A,B} <: Algorithm
+    "first algorithm"
     alg1::A
+    "second algorithm"
     alg2::B
 end
 

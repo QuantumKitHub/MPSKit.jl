@@ -1,19 +1,21 @@
 """
-    struct OptimalExpand <: Algorithm end
+$(TYPEDEF)
 
-An algorithm that expands the given mps using the algorithm given in the
-[VUMPS paper](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.97.045145), by
-selecting the dominant contributions of a two-site updated MPS tensor, orthogonal to the
-original ψ.
+An algorithm that expands the given mps as described in
+[Zauner-Stauber et al. Phys. Rev. B 97 (2018)](@cite zauner-stauber2018), by selecting the
+dominant contributions of a two-site updated MPS tensor, orthogonal to the original ψ.
 
-# Fields
-- `trscheme::TruncationScheme = truncdim(1)` : The truncation scheme to use.
+## Fields
+
+$(TYPEDFIELDS)
 """
 @kwdef struct OptimalExpand <: Algorithm
+    "algorithm used for truncating the expanded space"
     trscheme::TruncationScheme = truncdim(1)
 end
 
-function changebonds(ψ::InfiniteMPS, H, alg::OptimalExpand, envs=environments(ψ, H))
+function changebonds(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExpand,
+                     envs=environments(ψ, H))
     T = eltype(ψ.AL)
     AL′ = similar(ψ.AL)
     AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
@@ -34,12 +36,6 @@ function changebonds(ψ::InfiniteMPS, H, alg::OptimalExpand, envs=environments(�
 
     newψ = _expand(ψ, AL′, AR′)
     return newψ, envs
-end
-
-function changebonds(ψ::InfiniteMPS, H::DenseMPO, alg::OptimalExpand,
-                     envs=environments(ψ, H))
-    (nmψ, envs) = changebonds(convert(MultilineMPS, ψ), convert(MultilineMPO, H), alg, envs)
-    return (convert(InfiniteMPS, nmψ), envs)
 end
 
 function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs=environments(ψ, H))

@@ -12,8 +12,8 @@ struct FiniteEnvironments{A,B,C,D} <: AbstractMPSEnvironments
     ldependencies::Vector{C} #the data we used to calculate leftenvs/rightenvs
     rdependencies::Vector{C}
 
-    leftenvs::Vector{D}
-    rightenvs::Vector{D}
+    GLs::Vector{D}
+    GRs::Vector{D}
 end
 
 function environments(below, (operator, above)::Tuple, args...; kwargs...)
@@ -53,8 +53,8 @@ function environments(below::WindowMPS, O::Union{InfiniteMPOHamiltonian,Infinite
                       above=nothing;
                       lenvs=environments(below.left_gs, O),
                       renvs=environments(below.right_gs, O))
-    leftstart = copy(leftenv(lenvs, 1, below.left_gs))
-    rightstart = copy(rightenv(renvs, length(below), below.right_gs))
+    leftstart = copy(lenvs.GLs[1])
+    rightstart = copy(renvs.GRs[end])
 
     return environments(below, O, above, leftstart, rightstart)
 end
@@ -93,13 +93,13 @@ function rightenv(ca::FiniteEnvironments, ind, state)
         #we need to recalculate
         for j in a:-1:(ind + 1)
             above = isnothing(ca.above) ? state.AR[j] : ca.above.AR[j]
-            ca.rightenvs[j] = TransferMatrix(above, ca.operator[j], state.AR[j]) *
-                              ca.rightenvs[j + 1]
+            ca.GRs[j] = TransferMatrix(above, ca.operator[j], state.AR[j]) *
+                        ca.GRs[j + 1]
             ca.rdependencies[j] = state.AR[j]
         end
     end
 
-    return ca.rightenvs[ind + 1]
+    return ca.GRs[ind + 1]
 end
 
 function leftenv(ca::FiniteEnvironments, ind, state)
@@ -109,11 +109,11 @@ function leftenv(ca::FiniteEnvironments, ind, state)
         #we need to recalculate
         for j in a:(ind - 1)
             above = isnothing(ca.above) ? state.AL[j] : ca.above.AL[j]
-            ca.leftenvs[j + 1] = ca.leftenvs[j] *
-                                 TransferMatrix(above, ca.operator[j], state.AL[j])
+            ca.GLs[j + 1] = ca.GLs[j] *
+                            TransferMatrix(above, ca.operator[j], state.AL[j])
             ca.ldependencies[j] = state.AL[j]
         end
     end
 
-    return ca.leftenvs[ind]
+    return ca.GLs[ind]
 end

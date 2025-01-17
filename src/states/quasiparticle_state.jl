@@ -174,6 +174,7 @@ end
 const QP{S,T1,T2} = Union{LeftGaugedQP{S,T1,T2},RightGaugedQP{S,T1,T2}}
 const FiniteQP{S<:FiniteMPS,T1,T2} = QP{S,T1,T2}
 const InfiniteQP{S<:InfiniteMPS,T1,T2} = QP{S,T1,T2}
+const MultilineQP{Q<:QP} = Multiline{Q}
 
 TensorKit.spacetype(::Union{QP{S},Type{<:QP{S}}}) where {S} = spacetype(S)
 TensorKit.sectortype(::Union{QP{S},Type{<:QP{S}}}) where {S} = sectortype(S)
@@ -350,7 +351,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
     return FiniteMPS(Ls + Rs + Bs; normalize=false)
 end
 
-function Base.getproperty(exci::Multiline{<:InfiniteQP}, s::Symbol)
+function Base.getproperty(exci::MultilineQP, s::Symbol)
     if s == :momentum
         return first(exci.data).momentum
     elseif s == :left_gs

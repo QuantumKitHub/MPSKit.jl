@@ -1,19 +1,19 @@
 """
-    struct VUMPSSvdCut <: Algorithm end
+$(TYPEDEF)
 
-An algorithm that uses an IDMRG2 step to change the bond dimension of a state.
+An algorithm that uses a two-site update step to change the bond dimension of a state.
 
-# Fields
-- `tol_gauge::Real = Defaults.tolgauge` : The tolerance for the gauge.
-- `tol::Real = Defaults.tol` : The tolerance for the Galerkin truncation.
-- `tol_eigenval::Real = Defaults.tol` : The tolerance for the eigenvalue solver.
-- `trscheme::TruncationScheme = notrunc()` : The truncation scheme to use.
+## Fields
+
+$(TYPEDFIELDS)
 """
 @kwdef struct VUMPSSvdCut <: Algorithm
+    "tolerance for gauging algorithm"
     tol_gauge = Defaults.tolgauge
-    tol = Defaults.tol
+    "tolerance for the eigenvalue solver"
     tol_eigenval = Defaults.tol
-    trscheme = notrunc()
+    "algorithm used for [truncation][@extref TensorKit.tsvd] of the two-site update"
+    trscheme::TruncationScheme = notrunc()
 end
 
 function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
@@ -26,8 +26,8 @@ function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
 
     nstate, nenvs = changebonds(nstate, nH, alg)
 
-    D1 = space(nstate.AL[1], 1)
-    D2 = space(nstate.AL[2], 1)
+    D1 = left_virtualspace(nstate, 1)
+    D2 = left_virtualspace(nstate, 2)
 
     # collapse back to 1 site
     if D2 != D1
@@ -36,6 +36,7 @@ function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
     end
 
     collapsed = InfiniteMPS([nstate.AL[1]], nstate.C[1]; tol=alg.tol_gauge)
+    recalculate!(envs, collapsed, H, collapsed)
 
     return collapsed, envs
 end
@@ -72,8 +73,8 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
         copied[loc] = AL1
         copied[loc + 1] = AL2
         state = InfiniteMPS(copied; tol=alg.tol_gauge)
+        recalculate!(envs, state, H, state)
     end
-
     return state, envs
 end
 

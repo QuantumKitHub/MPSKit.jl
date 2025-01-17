@@ -51,7 +51,7 @@ println("F = $F\tS = $S\tξ = $ξ")
 md"""
 ## The scaling hypothesis
 
-The dominant eigenvector is of course only an approximation. The finite bond dimension enforces a finite correlation length, which effectively introduces a length scale in the system. This can be exploited to formulate a [scaling hypothesis](https://arxiv.org/pdf/0812.2903.pdf), which in turn allows to extract the central charge.
+The dominant eigenvector is of course only an approximation. The finite bond dimension enforces a finite correlation length, which effectively introduces a length scale in the system. This can be exploited to formulate a [pollmann2009](@cite), which in turn allows to extract the central charge.
 
 First we need to know the entropy and correlation length at a bunch of different bond dimensions. Our approach will be to re-use the previous approximated dominant eigenvector, and then expanding its bond dimension and re-running VUMPS.
 According to the scaling hypothesis we should have ``S \propto \frac{c}{6} log(ξ)``. Therefore we should find ``c`` using

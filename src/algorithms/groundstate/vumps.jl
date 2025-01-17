@@ -1,37 +1,48 @@
 """
-    VUMPS{F} <: Algorithm
+$(TYPEDEF)
 
-Variational optimization algorithm for uniform matrix product states, as introduced in
-https://arxiv.org/abs/1701.07035.
+Variational optimization algorithm for uniform matrix product states, based on the combination of DMRG with matrix product state tangent space concepts.
 
-# Fields
-- `tol::Float64`: tolerance for convergence criterium
-- `maxiter::Int`: maximum amount of iterations
-- `finalize::F`: user-supplied function which is applied after each iteration, with
-    signature `finalize(iter, ψ, H, envs) -> ψ, envs`
-- `verbosity::Int`: display progress information
+## Fields
 
-- `alg_gauge=Defaults.alg_gauge()`: algorithm for gauging
-- `alg_eigsolve=Defaults.alg_eigsolve()`: algorithm for eigensolvers
-- `alg_environments=Defaults.alg_environments()`: algorithm for updating environments
+$(TYPEDFIELDS)
+
+## References
+
+* [Zauner-Stauber et al. Phys. Rev. B 97 (2018)](@cite zauner-stauber2018)
+* [Vanderstraeten et al. SciPost Phys. Lect. Notes 7 (2019)](@cite vanderstraeten2019)
 """
 @kwdef struct VUMPS{F} <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
+
+    "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
-    finalize::F = Defaults._finalize
+
+    "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
 
+    "algorithm used for gauging the `InfiniteMPS`"
     alg_gauge = Defaults.alg_gauge()
+
+    "algorithm used for the eigenvalue solvers"
     alg_eigsolve = Defaults.alg_eigsolve()
+
+    "algorithm used for the MPS environments"
     alg_environments = Defaults.alg_environments()
+
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    finalize::F = Defaults._finalize
 end
 
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
     # initialization
-    ϵ::Float64 = calc_galerkin(ψ, envs)
-    temp_ACs = similar.(ψ.AC)
     scheduler = Defaults.scheduler[]
     log = IterLog("VUMPS")
+    ϵ::Float64 = calc_galerkin(ψ, H, ψ, envs)
+    temp_ACs = similar.(ψ.AC)
+    alg_environments = updatetol(alg.alg_environments, 0, ϵ)
+    recalculate!(envs, ψ, H, ψ; alg_environments.tol)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
@@ -45,21 +56,21 @@ function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, 
             ψ = InfiniteMPS(temp_ACs, ψ.C[end]; alg_gauge.tol, alg_gauge.maxiter)
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-            recalculate!(envs, ψ; alg_environments.tol)
+            recalculate!(envs, ψ, H, ψ; alg_environments.tol)
 
             ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
 
-            ϵ = calc_galerkin(ψ, envs)
+            ϵ = calc_galerkin(ψ, H, ψ, envs)
 
             # breaking conditions
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ, sum(expectation_value(ψ, H, envs)))
+                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
             end
         end
     end

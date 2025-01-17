@@ -216,6 +216,14 @@ Base.size(ψ::InfiniteMPS, args...) = size(ψ.AL, args...)
 Base.length(ψ::InfiniteMPS) = length(ψ.AL)
 Base.eltype(ψ::InfiniteMPS) = eltype(ψ.AL)
 Base.copy(ψ::InfiniteMPS) = InfiniteMPS(copy(ψ.AL), copy(ψ.AR), copy(ψ.C), copy(ψ.AC))
+function Base.copy!(ψ::InfiniteMPS, ϕ::InfiniteMPS)
+    copy!.(ψ.AL, ϕ.AL)
+    copy!.(ψ.AR, ϕ.AR)
+    copy!.(ψ.AC, ϕ.AC)
+    copy!.(ψ.C, ϕ.C)
+    return ψ
+end
+
 function Base.repeat(ψ::InfiniteMPS, i::Int)
     return InfiniteMPS(repeat(ψ.AL, i), repeat(ψ.AR, i), repeat(ψ.C, i), repeat(ψ.AC, i))
 end
@@ -226,6 +234,9 @@ function Base.circshift(ψ::InfiniteMPS, n)
     return InfiniteMPS(circshift(ψ.AL, n), circshift(ψ.AR, n), circshift(ψ.C, n),
                        circshift(ψ.AC, n))
 end
+
+Base.eachindex(ψ::InfiniteMPS) = eachindex(ψ.AL)
+Base.eachindex(l::IndexStyle, ψ::InfiniteMPS) = eachindex(l, ψ.AL)
 
 Base.checkbounds(::Type{Bool}, ψ::InfiniteMPS, i::Integer) = true
 

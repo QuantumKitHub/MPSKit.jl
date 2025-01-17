@@ -1,14 +1,3 @@
-function approximate(ψ::InfiniteMPS,
-                     toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS}, algorithm,
-                     envs=environments(ψ, toapprox))
-    # PeriodicMPO's always act on MultilineMPS's. To avoid code duplication, define everything in terms of MultilineMPS's.
-    multi, envs = approximate(convert(MultilineMPS, ψ),
-                              (convert(MultilineMPO, toapprox[1]),
-                               convert(MultilineMPS, toapprox[2])), algorithm, envs)
-    ψ = convert(InfiniteMPS, multi)
-    return ψ, envs
-end
-
 Base.@deprecate(approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
                             alg::VUMPS, envs...; kwargs...),
                 approximate(ψ, toapprox,
@@ -18,10 +7,12 @@ Base.@deprecate(approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:M
 
 function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
                      alg::VOMPS, envs=environments(ψ, toapprox))
-    ϵ::Float64 = calc_galerkin(ψ, envs)
+    ϵ::Float64 = calc_galerkin(ψ, toapprox..., envs)
     temp_ACs = similar.(ψ.AC)
     scheduler = Defaults.scheduler[]
     log = IterLog("VOMPS")
+    alg_environments = updatetol(alg.alg_environments, 0, ϵ)
+    recalculate!(envs, ψ, toapprox...; alg_environments.tol)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
@@ -34,11 +25,11 @@ function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multilin
             ψ = MultilineMPS(temp_ACs, ψ.C[:, end]; alg_gauge.tol, alg_gauge.maxiter)
 
             alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-            recalculate!(envs, ψ; alg_environments.tol)
+            recalculate!(envs, ψ, toapprox...; alg_environments.tol)
 
             ψ, envs = alg.finalize(iter, ψ, toapprox, envs)::Tuple{typeof(ψ),typeof(envs)}
 
-            ϵ = calc_galerkin(ψ, envs)
+            ϵ = calc_galerkin(ψ, toapprox..., envs)
 
             if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
@@ -55,18 +46,20 @@ function approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multilin
     return ψ, envs, ϵ
 end
 
-function _vomps_localupdate(loc, ψ, (O, ψ₀), envs, factalg=QRpos())
+function _vomps_localupdate(loc, ψ, Oϕ, envs, factalg=QRpos())
     local tmp_AC, tmp_C
     if Defaults.scheduler[] isa SerialScheduler
-        tmp_AC = circshift([ac_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
-        tmp_C = circshift([c_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
+        tmp_AC = circshift([ac_proj(row, loc, ψ, Oϕ, envs) for row in 1:size(ψ, 1)], 1)
+        tmp_C = circshift([c_proj(row, loc, ψ, Oϕ, envs) for row in 1:size(ψ, 1)], 1)
     else
         @sync begin
             Threads.@spawn begin
-                tmp_AC = circshift([ac_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
+                tmp_AC = circshift([ac_proj(row, loc, ψ, Oϕ, envs)
+                                    for row in 1:size(ψ, 1)], 1)
             end
             Threads.@spawn begin
-                tmp_C = circshift([c_proj(row, loc, ψ, envs) for row in 1:size(ψ, 1)], 1)
+                tmp_C = circshift([c_proj(row, loc, ψ, Oϕ, envs) for row in 1:size(ψ, 1)],
+                                  1)
             end
         end
     end

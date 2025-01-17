@@ -38,8 +38,21 @@ function PeriodicArray{T,N}(initializer, args...) where {T,N}
     return PeriodicArray(Array{T,N}(initializer, args...))
 end
 
+"""
+    PeriodicVector{T}
+
+One-dimensional dense array with elements of type `T` and periodic boundary conditions.
+Alias for [`PeriodicArray{T,1}`](@ref).
+"""
 const PeriodicVector{T} = PeriodicArray{T,1}
 PeriodicVector(data::AbstractVector{T}) where {T} = PeriodicVector{T}(data)
+
+"""
+    PeriodicMatrix{T}
+
+Two-dimensional dense array with elements of type `T` and periodic boundary conditions.
+Alias for [`PeriodicArray{T,2}`](@ref).
+"""
 const PeriodicMatrix{T} = PeriodicArray{T,2}
 PeriodicMatrix(data::AbstractMatrix{T}) where {T} = PeriodicMatrix{T}(data)
 

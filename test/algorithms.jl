@@ -690,7 +690,7 @@ end
 end
 
 @testset "approximate" verbose = true begin
-    verbosity = 0
+    verbosity = verbosity_conv
     @testset "mpo * infinite ≈ infinite" begin
         ψ = InfiniteMPS([ℙ^2, ℙ^2], [ℙ^10, ℙ^10])
         H = force_planar(repeat(transverse_field_ising(; g=4), 2))

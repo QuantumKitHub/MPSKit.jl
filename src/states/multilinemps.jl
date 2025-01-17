@@ -83,5 +83,8 @@ TensorKit.normalize!(a::MultilineMPS) = (normalize!.(parent(a)); return a)
 Base.convert(::Type{MultilineMPS}, st::InfiniteMPS) = Multiline([st])
 Base.convert(::Type{InfiniteMPS}, st::MultilineMPS) = only(st)
 Base.eltype(t::MultilineMPS) = eltype(t[1])
+Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ));
+                                                ψ)
+
 left_virtualspace(t::MultilineMPS, i::Int, j::Int) = left_virtualspace(t[i], j)
 right_virtualspace(t::MultilineMPS, i::Int, j::Int) = right_virtualspace(t[i], j)

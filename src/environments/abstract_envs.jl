@@ -13,7 +13,6 @@ Base.unlock(envs::AbstractMPSEnvironments) = unlock(envs.lock);
 
 # Allocating tensors
 # ------------------
-
 function allocate_GL(bra::AbstractMPS, mpo::AbstractMPO, ket::AbstractMPS, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
     V = left_virtualspace(bra, i) ⊗ left_virtualspace(mpo, i)' ←
@@ -62,46 +61,30 @@ function allocate_GBR(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
     return TT(undef, V)
 end
 
-# Abstract Infinite Environments
-# ------------------------------
+# Environment algorithms
+# ----------------------
 """
-    AbstractInfiniteEnvironments <: AbstractEnvironments
+    environment_alg(above, operator, below; kwargs...)
 
-Abstract supertype for infinite environment managers.
+Determine an appropriate algorithm for computing the environments, based on the given `kwargs...`.
 """
-abstract type AbstractInfiniteEnvironments <: AbstractMPSEnvironments end
-
-leftenv(envs, pos::CartesianIndex, state) = leftenv(envs, Tuple(pos)..., state)
-rightenv(envs, pos::CartesianIndex, state) = rightenv(envs, Tuple(pos)..., state)
-
-# recalculate logic
-# -----------------
-function check_recalculate!(envs::AbstractInfiniteEnvironments, state)
-    # check if dependency got updated - cheap test to avoid having to lock
-    if !check_dependency(envs, state)
-        # acquire lock and check again (might have updated while waiting)
-        lock(envs) do
-            return check_dependency(envs, state) || recalculate!(envs, state)
-        end
-    end
-    return envs
+function environment_alg(::Union{InfiniteMPS,MultilineMPS},
+                         ::Union{InfiniteMPO,MultilineMPO},
+                         ::Union{InfiniteMPS,MultilineMPS};
+                         tol=Defaults.tol, maxiter=Defaults.maxiter,
+                         krylovdim=Defaults.krylovdim, verbosity=Defaults.VERBOSE_NONE,
+                         eager=true)
+    return Arnoldi(; tol, maxiter, krylovdim, verbosity, eager)
 end
-
-function recalculate!(envs::AbstractInfiniteEnvironments, state; tol=envs.solver.tol)
-    # check if the virtual spaces have changed and reallocate if necessary
-    if !issamespace(envs, state)
-        envs.leftenvs, envs.rightenvs = initialize_environments(state, envs.operator)
-    end
-
-    solver = envs.solver
-    envs.solver = solver.tol == tol ? solver : Accessors.@set solver.tol = tol
-    envs.dependency = state
-
-    @sync begin
-        Threads.@spawn compute_leftenv!(envs)
-        Threads.@spawn compute_rightenv!(envs)
-    end
-    normalize!(envs)
-
-    return envs
+function environment_alg(above, ::InfiniteMPOHamiltonian, below;
+                         tol=Defaults.tol, maxiter=Defaults.maxiter,
+                         krylovdim=Defaults.krylovdim, verbosity=Defaults.VERBOSE_NONE)
+    return GMRES(; tol, maxiter, krylovdim, verbosity)
+end
+function environment_alg(::Union{InfiniteQP,MultilineQP},
+                         ::Union{InfiniteMPO,MultilineMPO},
+                         ::Union{InfiniteQP,MultilineQP};
+                         tol=Defaults.tol, maxiter=Defaults.maxiter,
+                         krylovdim=Defaults.krylovdim, verbosity=Defaults.VERBOSE_NONE)
+    return GMRES(; tol, maxiter, krylovdim, verbosity)
 end

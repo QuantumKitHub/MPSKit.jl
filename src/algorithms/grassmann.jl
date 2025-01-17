@@ -11,260 +11,224 @@ The module exports nothing, and all references to it should be qualified, e.g.
 module GrassmannMPS
 
 using ..MPSKit
+using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, ∂∂AC
 using TensorKit
 using OhMyThreads
 import TensorKitManifolds.Grassmann
+using TensorKitManifolds.Grassmann: GrassmannTangent, checkbase
+using VectorInterface: VectorInterface, One
+using OptimKit: OptimKit
 
-function TensorKit.rmul!(a::Grassmann.GrassmannTangent, b::AbstractTensorMap)
-    #rmul!(a.Z,b);
-    Base.setfield!(a, :Z, a.Z * b)
-    Base.setfield!(a, :U, nothing)
-    Base.setfield!(a, :S, nothing)
-    Base.setfield!(a, :V, nothing)
-    return a
-end
-function Base.:/(a::Grassmann.GrassmannTangent, b::AbstractTensorMap)
-    return Grassmann.GrassmannTangent(a.W, a.Z / b)
+# utility
+# -------
+function rmul(Δ::GrassmannTangent, C::AbstractTensorMap)
+    return GrassmannTangent(Δ.W, Δ.Z * C)
 end
 
-# preconditioned gradient
-struct PrecGrad{A,B}
-    Pg::A
-    g::A
-    rho::B
+# TODO: implement VectorInterface support for TensorKitManifolds
+function add!(x::GrassmannTangent, y::GrassmannTangent, α::Number=One(), β::Number=One())
+    checkbase(x, y)
+    VectorInterface.add!(x.Z, y.Z, α, β)
+    Base.setfield!(x, :U, nothing)
+    Base.setfield!(x, :S, nothing)
+    Base.setfield!(x, :V, nothing)
+    return x
+end
+function add!(x::AbstractArray, y::AbstractArray, α::Number=One(), β::Number=One())
+    return (add!.(x, y, α, β); x)
 end
 
-function PrecGrad(v::Grassmann.GrassmannTangent)
-    return PrecGrad(v, v, isometry(storagetype(v.Z), domain(v.Z), domain(v.Z)))
-end
-PrecGrad(v::Grassmann.GrassmannTangent, rho) = PrecGrad(v / rho, v, rho)
-
-Grassmann.base(g::PrecGrad) = Grassmann.base(g.Pg)
-
-function inner(g1::PrecGrad, g2::PrecGrad, rho=one(g1.rho))
-    Grassmann.base(g1) == Grassmann.base(g2) || throw(ArgumentError("incompatible base"))
-    if g1.rho == rho
-        dot(g1.g.Z, g2.Pg.Z)
-    elseif g2.rho == rho
-        dot(g1.Pg.Z, g2.g.Z)
-    else
-        dot(g1.Pg.Z, g2.Pg.Z * rho)
+function scale!(x::GrassmannTangent, α::Number)
+    VectorInterface.scale!(x.Z, α)
+    if !isnothing(Base.getfield(x, :S))
+        sα = sign(α)
+        if sα != 1
+            VectorInterface.scale!(x.U, sα)
+        end
+        VectorInterface.scale!(x.S, abs(α))
     end
+    return x
 end
+scale!(x::AbstractArray, α::Number) = (scale!.(x, α); x)
 
-Base.:*(g::PrecGrad, alpha::Number) = PrecGrad(g.Pg * alpha, g.g * alpha, g.rho)
-function Base.:+(a::PrecGrad, b::PrecGrad)
-    if a.rho == b.rho
-        PrecGrad(a.Pg + b.Pg, a.g + b.g, a.rho)
-    else
-        PrecGrad(a.Pg + b.Pg)
-    end
-end
+# manifold methods
+# ----------------
+"""
+    inner(state, g1, g2)
 
-struct ManifoldPoint{T,E,G,C}
-    state::T # the state at that point
-    envs::E # the environments
-    g::G # the MPS gradient, which is not equivalent with the grassmann gradient!
-    Rhoreg::C # the regularized density matrices
-end
+The inner product between tangent vectors on the left-canonical MPS manifold.
+This is given by the (Euclidean) inner product between the tangent vectors at each site.
+Because the cost function is assumed holomorphic, we take the twice the real part of the result.
 
-function ManifoldPoint(state::FiniteMPS, envs)
-    al_d = similar(state.AL)
-    O = envs.operator
-    for i in 1:length(state)
-        al_d[i] = MPSKit.∂∂AC(i, state, O, envs) * state.AC[i]
-    end
-    g = Grassmann.project.(al_d, state.AL)
+For the effective inner product lifted from the Hilbert space metric,
+see also [`precondition`](@ref).
+"""
+inner(state, g1, g2) = 2 * real(sum(x -> Grassmann.inner(x...), zip(state.AL, g1, g2)))
 
-    Rhoreg = Vector{eltype(state.C)}(undef, length(state))
-    δmin = sqrt(eps(real(scalartype(state))))
-    tmap!(Rhoreg, 1:length(state); scheduler=MPSKit.Defaults.scheduler[]) do i
-        return regularize(state.C[i], max(norm(g[i]) / 10, δmin))
-    end
+"""
+    precondition(state, g)
 
-    return ManifoldPoint(state, envs, g, Rhoreg)
-end
-function ManifoldPoint(state::InfiniteMPS, envs)
-    δmin = sqrt(eps(real(scalartype(state))))
-    Tg = Core.Compiler.return_type(Grassmann.project,
-                                   Tuple{eltype(state.AL),eltype(state.AL)})
-    g = similar(state.AL, Tg)
-    ρ = similar(state.C)
-
-    MPSKit.check_recalculate!(envs, state)
-    tforeach(1:length(state); scheduler=MPSKit.Defaults.scheduler[]) do i
-        AC′ = MPSKit.∂∂AC(i, state, envs.operator, envs) * state.AC[i]
-        g[i] = Grassmann.project(AC′, state.AL[i])
-        ρ[i] = regularize(state.C[i], max(norm(g[i]) / 10, δmin))
+In order to obtain an effective inner product between tangent vectors that is lifted from
+the inner product of the Hilbert space of the state, we additionally include the inverse
+metric: ``g ↦ g / ρ`` where `ρ` is the (regularised) right fixed point of the MPS transfer
+matrix.
+"""
+function precondition(state, g)
+    g′ = similar(g)
+    rtolmin = eps(real(scalartype(state)))^(3 / 4)
+    tforeach(eachindex(state); scheduler=MPSKit.Defaults.scheduler[]) do i
+        rtol = max(rtolmin, norm(g[i]))
+        ρ = rho_inv_regularized(state.C[i]; rtol)
+        g′[i] = rmul(g[i], ρ)
         return nothing
     end
-    return ManifoldPoint(state, envs, g, ρ)
-end
-
-function ManifoldPoint(state::MultilineMPS, envs)
-    # FIXME: add support for unitcells
-    @assert length(state.AL) == 1 "GradientGrassmann only supports MultilineMPS without unitcells for now"
-
-    # TODO: this really should not use the operator from the environment
-    f = expectation_value(state, envs.operator, envs)
-    imag(f) > MPSKit.Defaults.tol && @warn "MPO might not be Hermitian $f"
-    real(f) > 0 || @warn "MPO might not be positive definite $f"
-
-    grad = map(CartesianIndices(state.AC)) do I
-        AC′ = MPSKit.∂∂AC(I, state, envs.operator, envs) * state.AC[I]
-        # the following formula is wrong when unitcells are involved
-        # actual costfunction should be F = -log(prod(f)) => ∂F = -2 * g / |f|
-        return rmul!(Grassmann.project(AC′, state.AL[I]), -2 / f)
-    end
-
-    δmin = sqrt(eps(real(scalartype(state))))
-    ρ_regularized = map(state.C, grad) do ρ, g
-        return regularize(ρ, max(norm(g) / 10, δmin))
-    end
-
-    return ManifoldPoint(state, envs, grad, ρ_regularized)
+    return g′
 end
 
 """
-Compute the expectation value, and its gradient with respect to the tensors in the unit
-cell as tangent vectors on Grassmann manifolds.
+    retract(state, g, α) -> state′, ξ
+
+Retract a state a distance `α` along a direction `g`, obtaining a new state and the local tangent vector. 
 """
-function fg(x::ManifoldPoint{T}) where {T<:Union{InfiniteMPS,FiniteMPS}}
-    # the gradient I want to return is the preconditioned gradient!
-    Tg = Core.Compiler.return_type(PrecGrad, Tuple{eltype(x.g),eltype(x.Rhoreg)})
-    g_prec = similar(x.g, Tg)
-    tmap!(g_prec, eachindex(x.g); scheduler=MPSKit.Defaults.scheduler[]) do i
-        return PrecGrad(rmul!(copy(x.g[i]), x.state.C[i]'), x.Rhoreg[i])
+function retract(state::FiniteMPS, g, α::Real)
+    state′ = copy(state)
+    h = map(eachindex(state)) do i
+        AL′, ξ = Grassmann.retract(state.AL[i], g[i], α)
+        state′.AC[i] = (AL′, state.C[i])
+        return ξ
     end
-
-    # TODO: the operator really should not be part of the environments, and this should
-    # be passed as an explicit argument
-    f = expectation_value(x.state, x.envs.operator, x.envs)
-    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
-
-    return real(f), g_prec
+    normalize!(state′)
+    return state′, h
 end
-function fg(x::ManifoldPoint{<:MultilineMPS})
-    @assert length(x.state) == 1 "GradientGrassmann only supports MultilineMPS without unitcells for now"
-    # the gradient I want to return is the preconditioned gradient!
-    g_prec = map(enumerate(x.g)) do (i, cg)
-        return PrecGrad(rmul!(copy(cg), x.state.C[i]'), x.Rhoreg[i])
+function retract(state::InfiniteMPS, g, α::Real)
+    AL′ = similar(state.AL)
+    g′ = similar(g)
+    tforeach(eachindex(state); scheduler=MPSKit.Defaults.scheduler[]) do i
+        AL′[i], g′[i] = Grassmann.retract(state.AL[i], g[i], α)
+        return nothing
     end
-
-    # TODO: the operator really should not be part of the environments, and this should
-    # be passed as an explicit argument
-    f = expectation_value(x.state, x.envs.operator, x.envs)
-    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
-    real(f) > 0 || @warn "MPO might not be positive definite: $f"
-
-    return -log(real(f)), g_prec[:]
+    state′ = InfiniteMPS(AL′, state.C[end])
+    return state′, g′
 end
-
-"""
-Retract a left-canonical MultilineMPS along Grassmann tangent `g` by distance `alpha`.
-"""
-function retract(x::ManifoldPoint{<:MultilineMPS}, tg, alpha)
-    g = reshape(tg, size(x.state))
-
-    nal = similar(x.state.AL)
-    h = similar(tg)
-    tmap!(h, eachindex(g); scheduler=MPSKit.Defaults.scheduler[]) do i
-        nal[i], th = Grassmann.retract(x.state.AL[i], g[i].Pg, alpha)
-        return PrecGrad(th)
+function retract(state::MultilineMPS, g, α::Real)
+    AL′ = similar(state.AL)
+    g′ = similar(g)
+    tforeach(eachindex(state); scheduler=MPSKit.Defaults.scheduler[]) do i
+        AL′[i], g′[i] = Grassmann.retract(state.AL[i], g[i], α)
+        return nothing
     end
-
-    nstate = MPSKit.MultilineMPS(nal, x.state.C[:, end])
-    newpoint = ManifoldPoint(nstate, x.envs)
-
-    return newpoint, h[:]
+    state′ = MultilineMPS(AL′, state.C[:, end])
+    return state′, g′
 end
 
 """
-Retract a left-canonical infinite MPS along Grassmann tangent `g` by distance `alpha`.
+    transport!(h, state, g, α, state′) -> h
+
+In-place transport of a tangent vector `g` at a point `state`, to a new point `state′`.
 """
-function retract(x::ManifoldPoint{<:InfiniteMPS}, g, alpha)
-    state = x.state
-    envs = x.envs
-    nal = similar(state.AL)
-    h = similar(g)  # The tangent at the end-point
-
-    tmap!(h, eachindex(g); scheduler=MPSKit.Defaults.scheduler[]) do i
-        nal[i], th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
-        return PrecGrad(th)
-    end
-
-    nstate = InfiniteMPS(nal, state.C[end])
-
-    newpoint = ManifoldPoint(nstate, envs)
-
-    return newpoint, h
-end
-
-"""
-Retract a left-canonical finite MPS along Grassmann tangent `g` by distance `alpha`.
-"""
-function retract(x::ManifoldPoint{<:FiniteMPS}, g, alpha)
-    state = x.state
-    envs = x.envs
-
-    y = copy(state)  # The end-point
-    h = similar(g)  # The tangent at the end-point
-    for i in 1:length(g)
-        yal, th = Grassmann.retract(state.AL[i], g[i].Pg, alpha)
-        h[i] = PrecGrad(th)
-        y.AC[i] = (yal, state.C[i])
-    end
-    normalize!(y)
-
-    n_y = ManifoldPoint(y, envs)
-
-    return n_y, h
-end
-
-"""
-Transport a tangent vector `h` along the retraction from `x` in direction `g` by distance
-`alpha`. `xp` is the end-point of the retraction.
-"""
-function transport!(h, x, g, alpha, xp)
-    tforeach(1:length(h); scheduler=MPSKit.Defaults.scheduler[]) do i
-        return h[i] = PrecGrad(Grassmann.transport!(h[i].Pg, x.state.AL[i], g[i].Pg, alpha,
-                                                    xp.state.AL[i]))
+function transport!(h, state, g, α::Real, state′)
+    tforeach(eachindex(state); scheduler=MPSKit.Defaults.scheduler[]) do i
+        h[i] = Grassmann.transport!(h[i], state.AL[i], g[i], α, state′.AL[i])
+        return nothing
     end
     return h
 end
 
 """
-Euclidean inner product between two Grassmann tangents of an infinite MPS.
+    fg(state, operator, envs=environments(state, operator))
+
+Compute the cost function and the tangent vector with respect to the `AL` parameters of the state.
 """
-function inner(x, g1, g2)
-    return 2 * real(sum(((a, b, c),) -> inner(b, c, a), zip(x.Rhoreg, g1, g2)))
+function fg(state::FiniteMPS, operator::Union{O,LazySum{O}},
+            envs::AbstractMPSEnvironments=environments(state, operator)) where {O<:FiniteMPOHamiltonian}
+    f = expectation_value(state, operator, envs)
+    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
+    gs = map(1:length(state)) do i
+        AC′ = ∂∂AC(i, state, operator, envs) * state.AC[i]
+        g = Grassmann.project(AC′, state.AL[i])
+        return rmul(g, state.C[i]')
+    end
+    return real(f), gs
+end
+function fg(state::InfiniteMPS, operator::Union{O,LazySum{O}},
+            envs::AbstractMPSEnvironments=environments(state, operator)) where {O<:InfiniteMPOHamiltonian}
+    recalculate!(envs, state, operator, state)
+    f = expectation_value(state, operator, envs)
+    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
+
+    A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state),eltype(state)})
+    gs = Vector{A}(undef, length(state))
+    tmap!(gs, 1:length(state); scheduler=MPSKit.Defaults.scheduler[]) do i
+        AC′ = ∂∂AC(i, state, operator, envs) * state.AC[i]
+        g = Grassmann.project(AC′, state.AL[i])
+        return rmul(g, state.C[i]')
+    end
+    return real(f), gs
+end
+function fg(state::InfiniteMPS, operator::Union{O,LazySum{O}},
+            envs::AbstractMPSEnvironments=environments(state, operator)) where {O<:InfiniteMPO}
+    recalculate!(envs, state, operator, state)
+    f = expectation_value(state, operator, envs)
+    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
+
+    A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state),eltype(state)})
+    gs = Vector{A}(undef, length(state))
+    tmap!(gs, eachindex(state); scheduler=MPSKit.Defaults.scheduler[]) do i
+        AC′ = ∂∂AC(i, state, operator, envs) * state.AC[i]
+        g = rmul!(Grassmann.project(AC′, state.AL[i]), -inv(f))
+        return rmul(g, state.C[i]')
+    end
+    return -log(real(f)), gs
+end
+function fg(state::MultilineMPS, operator::MultilineMPO,
+            envs::MultilineEnvironments=environments(state, operator))
+    @assert length(state) == 1 "not implemented"
+    recalculate!(envs, state, operator, state)
+    f = expectation_value(state, operator, envs)
+    isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
+
+    A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state),eltype(state)})
+    gs = Matrix{A}(undef, size(state))
+    tforeach(eachindex(state); scheduler=MPSKit.Defaults.scheduler[]) do i
+        AC′ = ∂∂AC(i, state, operator, envs) * state.AC[i]
+        g = rmul!(Grassmann.project(AC′, state.AL[i]), -inv(f))
+        gs[i] = rmul(g, state.C[i]')
+        return nothing
+    end
+    return -log(real(f)), gs
 end
 
 """
-Scale a tangent vector by scalar `alpha`.
+    rho_inv_regularized(C; rtol=eps(real(scalartype(C)))^(3/4))
+
+Compute the (regularized) inverse of the MPS fixed point `ρ = C * C'`.
+Here we use the Tikhonov regularization, i.e. `inv(ρ) = inv(C * C' + δ²1)`,
+where the regularization parameter is `δ = rtol * norm(C)`.
 """
-scale!(g, alpha) = g .* alpha
+function rho_inv_regularized(C; rtol=eps(real(scalartype(C)))^(3 / 4))
+    U, S, _ = tsvd(C)
+    return U * pinv_tikhonov!!(S; rtol) * U'
+end
 
-"""
-Add two tangents vectors, scaling the latter by `alpha`.
-"""
-add!(g1, g2, alpha) = g1 + g2 .* alpha
+function pinv_tikhonov!!(S::DiagonalTensorMap{<:Real}; rtol=zero(scalartype(S)))
+    δ² = (rtol * maximum(maximum ∘ last, blocks(S); init=zero(scalartype(S))))^2
+    for (_, b) in blocks(S)
+        b.diag .= inv.(b.diag .^ 2 .+ δ²)
+    end
+    return S
+end
+# TensorKit v0.13 still outputs AbstractTensorMap so define fallback
+function pinv_tikhonov!!(S::AbstractTensorMap{<:Real}; rtol=zero(scalartype(S)))
+    δ² = (rtol * norm(S, Inf))^2
+    return inv(S^2 + δ² * one(S))
+end
 
-"""
-Take the L2 Tikhonov regularised of a matrix `m`.
-
-The regularisation parameter is the larger of `delta` (the optional argument that defaults
-to zero) and square root of machine epsilon.
-"""
-function regularize(m, delta=zero(scalartype(m)))
-    U, S, V = tsvd(m)
-
-    #Sreg = real(S*sqrt(one(S) + delta^2*one(S)*norm(S,Inf)^2/S^2));#
-    Sreg = S^2 + (norm(S, Inf) * delta)^2 * one(S)
-
-    Mreg = U * Sreg * U'
-
-    return Mreg
+# utility test function
+function optimtest(ψ, O, envs=environments(ψ, O); alpha=-0.1:0.001:0.1,
+                   retract=retract,
+                   inner=inner)
+    _fg(x) = fg(x, O, envs)
+    return OptimKit.optimtest(_fg, ψ; alpha, retract, inner)
 end
 
 end  # module GrassmannMPS

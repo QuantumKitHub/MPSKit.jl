@@ -2,7 +2,7 @@
 
 In analogy to how we can define matrix product states as a contraction of local tensors, a
 similar construction exist for operators. To that end, a Matrix Product Operator (MPO) is
-nothing more than a collection of local [`MPOTensor`](@ref) objects, contracted along a
+nothing more than a collection of local [`MPOTensor`](@ref MPSKit.MPOTensor) objects, contracted along a
 line. Again, we can distinguish between finite and infinite operators, with the latter being
 represented by a periodic array of MPO tensors.
 
@@ -13,7 +13,7 @@ These objects can be created either directly from a vector of `MPOTensor`s, or s
 a dense operator (a subtype of `AbstractTensorMap{S,N,N}`), which is then decomposed into a
 product of local tensors.
 
-![](mpo.svg)
+![](../assets/mpo.svg)
 
 ```@setup operators
 using TensorKit, MPSKit

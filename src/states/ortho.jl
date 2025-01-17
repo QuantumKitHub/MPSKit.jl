@@ -1,46 +1,73 @@
 # Algorithms
 # ----------
 
-const _GAUGE_ALG_EIGSOLVE = DynamicTol(Arnoldi(; krylovdim=30, eager=true),
-                                       Defaults.tolgauge / 10, Inf, 1)
+const _GAUGE_ALG_EIGSOLVE = Defaults.alg_eigsolve(; ishermitian=false, tol_factor=1)
 
 """
-    struct LeftCanonical <: Algorithm
+$(TYPEDEF)
 
 Algorithm for bringing an `InfiniteMPS` into the left-canonical form.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
 @kwdef struct LeftCanonical <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64 = Defaults.tolgauge
+    "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
+    "setting for how much information is displayed"
     verbosity::Int = VERBOSE_WARN
 
+    "algorithm used for orthogonalization of the tensors"
     alg_orth = QRpos()
+    "algorithm used for the eigensolver"
     alg_eigsolve = _GAUGE_ALG_EIGSOLVE
+    "minimal amount of iterations before using the eigensolver steps"
     eig_miniter::Int = 10
 end
 
 """
-    struct RightCanonical <: Algorithm
+$(TYPEDEF)
 
 Algorithm for bringing an `InfiniteMPS` into the right-canonical form.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
 @kwdef struct RightCanonical <: Algorithm
+    "tolerance for convergence criterium"
     tol::Float64 = Defaults.tolgauge
+    "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
+    "setting for how much information is displayed"
     verbosity::Int = VERBOSE_WARN
 
+    "algorithm used for orthogonalization of the tensors"
     alg_orth = LQpos()
+    "algorithm used for the eigensolver"
     alg_eigsolve = _GAUGE_ALG_EIGSOLVE
+    "minimal amount of iterations before using the eigensolver steps"
     eig_miniter::Int = 10
 end
 
 """
-    struct MixedCanonical <: Algorithm
+$(TYPEDEF)
 
+Algorithm for bringing an `InfiniteMPS` into the mixed-canonical form.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct MixedCanonical <: Algorithm
+    "algorithm for bringing an `InfiniteMPS` into left-canonical form."
     alg_leftcanonical::LeftCanonical
+    "algorithm for bringing an `InfiniteMPS` into right-canonical form."
     alg_rightcanonical::RightCanonical
+    "order in which to apply the canonicalizations, should be `:L`, `:R`, `:LR` or `:RL`"
     order::Symbol
 end
 
