@@ -68,8 +68,8 @@ end
 function initialize_environments(above::InfiniteMPS, operator::InfiniteMPO,
                                  below::InfiniteMPS=above)
     L = check_length(above, operator, below)
-    GLs = PeriodicVector([randomize!(allocate_GL(above, operator, below, i)) for i in 1:L])
-    GRs = PeriodicVector([randomize!(allocate_GR(above, operator, below, i)) for i in 1:L])
+    GLs = PeriodicVector([randomize!(allocate_GL(below, operator, above, i)) for i in 1:L])
+    GRs = PeriodicVector([randomize!(allocate_GR(below, operator, above, i)) for i in 1:L])
     return GLs, GRs
 end
 
@@ -113,8 +113,8 @@ end
 function initialize_environments(above::InfiniteMPS, operator::InfiniteMPOHamiltonian,
                                  below::InfiniteMPS=above)
     L = check_length(above, operator, below)
-    GLs = PeriodicVector([allocate_GL(above, operator, below, i) for i in 1:L])
-    GRs = PeriodicVector([allocate_GR(above, operator, below, i) for i in 1:L])
+    GLs = PeriodicVector([allocate_GL(below, operator, above, i) for i in 1:L])
+    GRs = PeriodicVector([allocate_GR(below, operator, above, i) for i in 1:L])
 
     # GL = (1, 0, 0)
     GL = first(GLs)
