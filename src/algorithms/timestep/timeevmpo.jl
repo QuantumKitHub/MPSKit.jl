@@ -130,13 +130,20 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
             n1 = count(==(1), c.I)
             n3 = count(==(V), c.I)
 
-            if n3 <= n1 && s_c != c
-                slice[linds[s_c], 1, 1, :] += slice[c_lin, 1, 1, :]
-                for I in nonzero_keys(slice)
-                    (I[1] == c_lin || I[4] == c_lin) && delete!(slice, I)
+            if n3 <= n1 && s_c != c || n3 > n1 && s_r != c
+                if n3 <= n1 && s_c != c
+                    for k in 1:size(slice, 4)
+                        if CartesianIndex(c_lin, 1, 1, k) in nonzero_keys(slice)
+                            slice[linds[s_c], 1, 1, k] += slice[c_lin, 1, 1, k]
+                        end
+                    end
+                elseif n3 > n1 && s_r != c
+                    for k in 1:size(slice, 1)
+                        if CartesianIndex(k, 1, 1, c_lin) in nonzero_keys(slice)
+                            slice[k, 1, 1, linds[s_r]] += slice[k, 1, 1, c_lin]
+                        end
+                    end
                 end
-            elseif n3 > n1 && s_r != c
-                slice[:, 1, 1, linds[s_r]] += slice[:, 1, 1, c_lin]
                 for I in nonzero_keys(slice)
                     (I[1] == c_lin || I[4] == c_lin) && delete!(slice, I)
                 end
@@ -154,7 +161,11 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
                 b = CartesianIndex(replace(a.I, V => 1))
                 b_lin = linds[b]
                 factor = τ^n1 * factorial(N - n1) / factorial(N)
-                slice[:, 1, 1, b_lin] += factor * slice[:, 1, 1, a_lin]
+                for k in 1:size(slice, 1)
+                    if CartesianIndex(k, 1, 1, a_lin) in nonzero_keys(slice)
+                        slice[k, 1, 1, b_lin] += factor * slice[k, 1, 1, a_lin]
+                    end
+                end
 
                 for I in nonzero_keys(slice)
                     (I[1] == a_lin || I[4] == a_lin) && delete!(slice, I)
