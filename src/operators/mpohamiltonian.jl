@@ -108,7 +108,7 @@ function _find_channel(nonzero_keys; init=2)
 end
 
 function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
-                              local_operators::Pair...)
+                              local_operators)
     # initialize vectors for storing the data
     # TODO: generalize to weird lattice types
     # nonzero_keys = similar(lattice, Vector{NTuple{2,Int}})
@@ -191,7 +191,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
 end
 
 function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
-                                local_operators::Pair...)
+                                local_operators)
     lattice = PeriodicVector(lattice′)
     # initialize vectors for storing the data
     # TODO: generalize to weird lattice types
@@ -309,13 +309,13 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
 end
 
 function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
-                              local_operators::Union{Base.Generator,AbstractDict})
-    return FiniteMPOHamiltonian(lattice, local_operators...)
+                              local_operators::Pair...)
+    return FiniteMPOHamiltonian(lattice, local_operators)
 end
 
 function InfiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
-                                local_operators::Union{Base.Generator,AbstractDict})
-    return InfiniteMPOHamiltonian(lattice, local_operators...)
+                                local_operators::Pair...)
+    return InfiniteMPOHamiltonian(lattice, local_operators)
 end
 
 function InfiniteMPOHamiltonian(local_operator::TensorMap{E,S,N,N}) where {E,S,N}
