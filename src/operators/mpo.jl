@@ -58,6 +58,7 @@ function Base.similar(mpo::MPO, ::Type{O}, L::Int) where {O<:MPOTensor}
 end
 
 Base.repeat(mpo::MPO, n::Int) = MPO(repeat(parent(mpo), n))
+Base.repeat(mpo::MPO, rows::Int, cols::Int) = MultilineMPO(fill(repeat(mpo, cols), rows))
 
 function remove_orphans!(mpo::InfiniteMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
     droptol!.(mpo, tol)

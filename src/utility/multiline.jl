@@ -45,3 +45,9 @@ function Base.circshift(A::Multiline, shifts::Tuple{Int,Int})
 end
 Base.reverse(A::Multiline) = Multiline(reverse(parent(A)))
 Base.only(A::Multiline) = only(parent(A))
+
+function Base.repeat(A::Multiline, rows::Int, cols::Int)
+    inner = map(Base.Fix2(repeat, cols), A.data)
+    outer = repeat(inner, rows)
+    return Multiline(outer)
+end
