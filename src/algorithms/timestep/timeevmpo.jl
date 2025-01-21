@@ -41,7 +41,18 @@ $(TYPEDFIELDS)
     compression::Bool = false
 end
 
+"""
+    const WI = TaylorCluster(; N=1, extension=false, compression=false)
+
+First order Taylor expansion for a time-evolution MPO.
+"""
 const WI = TaylorCluster(; N=1, extension=false, compression=false)
+
+@doc """
+    make_time_mpo(H::MPOHamiltonian, dt::Number, alg)
+
+Construct an MPO that approximates ``exp(-iHdt)``.
+""" make_time_mpo
 
 function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
                        tol=eps(real(scalartype(H)))^(3 / 4))
