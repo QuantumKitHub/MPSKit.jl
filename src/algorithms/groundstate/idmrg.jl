@@ -15,7 +15,7 @@ $(TYPEDFIELDS)
     maxiter::Int = Defaults.maxiter
 
     "setting for how much information is displayed"
-    verbosity::Int = Defualts.verbosity
+    verbosity::Int = Defaults.verbosity
 
     "algorithm used for gauging the MPS"
     alg_gauge = Defaults.alg_gauge()
