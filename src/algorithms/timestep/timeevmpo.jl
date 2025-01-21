@@ -51,7 +51,7 @@ const WI = TaylorCluster(; N=1, extension=false, compression=false)
 @doc """
     make_time_mpo(H::MPOHamiltonian, dt::Number, alg)
 
-Construct an MPO that approximates ``exp(-iHdt)``.
+Construct an MPO that approximates ``\\exp(-iHdt)``.
 """ make_time_mpo
 
 function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
