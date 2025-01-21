@@ -1,6 +1,6 @@
 @doc """
-    approximate(ψ₀, (O, ψ), algorithm, [environments]; kwargs...)
-    approximate!(ψ₀, (O, ψ), algorithm, [environments]; kwargs...)
+    approximate(ψ₀, (O, ψ), algorithm, [environments]; kwargs...) -> (ψ, environments)
+    approximate!(ψ₀, (O, ψ), algorithm, [environments]; kwargs...) -> (ψ, environments)
 
 Compute an approximation to the application of an operator `O` to the state `ψ` in the form
 of an MPS `ψ₀`.
