@@ -19,10 +19,11 @@ interpreted as a linear map from its domain to its codomain. Additionally, as ge
 symmetries are supported, in general the structure of the indices are not just integers, but
 are given by spaces.
 
-The general syntax for creating a tensor is one of the following equivalent forms:
+The general syntax for creating a tensor is similar to the creation of arrays, where the 
+`axes` or `size` specifiers are replaced with `VectorSpace` objects:
 ```julia
-TensorMap(initializer, scalartype, codomain, domain)
-TensorMap(initializer, scalartype, codomain ← domain) # ← is the `\leftarrow` operator
+zeros(scalartype, codomain, domain)
+rand(scalartype, codomain ← domain) # ← is the `\leftarrow` operator
 ```
 
 For example, the following creates a random tensor with three legs, each of which has
@@ -30,20 +31,23 @@ dimension two, however with different partitions.
 
 ```@example tensorkit
 V1 = ℂ^2 # ℂ is the `\bbC` operator, equivalent to ComplexSpace(10)
-t1 = Tensor(rand, Float64, V1 ⊗ V1 ⊗ V1) # all spaces in codomain
-t2 = TensorMap(rand, Float64, V1, V1 ⊗ V1) # one space in codomain, two in domain
+t1 = rand(Float64, V1 ⊗ V1 ⊗ V1) # all spaces in codomain
+t2 = rand(Float64, V1, V1 ⊗ V1) # one space in codomain, two in domain
+```
 
-try
-    t1 + t2 # incompatible partition
-catch err
-    println(err)
-end
+We can now no longer trivially add them together:
 
-try
-    t1 + permute(t2, (1, 2, 3), ()) # incompatible arrows
-catch err
-    println(err)
-end
+```@example tensorkit
+try #hide
+t1 + t2 # incompatible partition
+catch err; Base.showerror(stderr, err); end #hide
+```
+But this can be resolved by permutation:
+
+```@example tensorkit
+try #hide
+t1 + permute(t2, (1, 2, 3), ()) # incompatible arrows
+catch err; Base.showerror(stderr, err); end #hide
 ```
 
 These abstract objects can represent not only plain arrays but also symmetric tensors. The
@@ -52,7 +56,7 @@ two. However, now the dimension two is now split over even and odd sectors of �
 
 ```@example tensorkit
 V2 = Z2Space(0 => 1, 1 => 1)
-t3 = TensorMap(rand, Float64, V2 ⊗ V2, V2)
+t3 = rand(Float64, V2 ⊗ V2, V2)
 ```
 
 For more information, check out the [TensorKit documentation](https://jutho.github.io/TensorKit.jl/stable/)!

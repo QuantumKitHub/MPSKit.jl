@@ -8,15 +8,15 @@ represented by a periodic array of MPO tensors.
 
 ## FiniteMPO
 
-Starting off with the simplest case, a basic finite MPO is a vector of `MPOTensor` objects.
+Starting off with the simplest case, a basic [`FiniteMPO`](@ref) is a vector of `MPOTensor` objects.
 These objects can be created either directly from a vector of `MPOTensor`s, or starting from
-a dense operator (a subtype of `AbstractTensorMap{S,N,N}`), which is then decomposed into a
+a dense operator (a subtype of `AbstractTensorMap`), which is then decomposed into a
 product of local tensors.
 
 ![](../assets/mpo.svg)
 
 ```@setup operators
-using TensorKit, MPSKit
+using TensorKit, MPSKit, MPSKitModels
 ```
 
 ```@example operators
@@ -71,6 +71,18 @@ O_xzx_sum * FiniteMPS(3, ℂ^2, ℂ^4)
     make sure that the virtual spaces do not increase past the maximal virtual space that
     is dictated by the requirement of being full-rank tensors.
 
+## InfiniteMPO
+
+This construction can again be extended to the infinite case, where the tensors are repeated periodically.
+Therefore, an [`InfiniteMPO`](@ref) is simply a `PeriodicVector` of `MPOTensor` objects.
+These can only be constructed from vectors of `MPOTensor`s, since it is impossible to create the infinite operators directly.
+
+```@example operators
+mpo = InfiniteMPO(O_xzx[1:2])
+```
+
+Otherwise, their behavior is mostly similar to that of their finite counterparts.
+
 ## FiniteMPOHamiltonian
 
 We can also represent quantum Hamiltonians in the same form. This is done by converting a
@@ -103,7 +115,7 @@ h = 0.5
 chain = fill(ℂ^2, 3) # a finite chain of 4 sites, each with a 2-dimensional Hilbert space
 single_site_operators = [1 => -h * S_z, 2 => -h * S_z, 3 => -h * S_z]
 two_site_operators = [(1, 2) => -J * S_x ⊗ S_x, (2, 3) => -J * S_x ⊗ S_x]
-H_ising = FiniteMPOHamiltonian(chain, single_site_operators..., two_site_operators...);
+H_ising = FiniteMPOHamiltonian(chain, single_site_operators..., two_site_operators...)
 ```
 
 Various alternative constructions are possible, such as using a `Dict` with key-value pairs
@@ -118,8 +130,8 @@ isapprox(H_ising, H_ising′; atol=1e-6)
 
 Note that this construction is not limited to nearest-neighbour interactions, or 1D systems.
 In particular, it is possible to construct quasi-1D realisations of 2D systems, by using
-different arrays of `VectorSpace` objects. For example, the 2D Ising model on a square
-lattice can be constructed as follows:
+different arrays of [`VectorSpace`](@extref TensorKit.VectorSpace) objects.
+For example, the 2D Ising model on a square lattice can be constructed as follows:
 
 ```@example operators
 square = fill(ℂ^2, 3, 3) # a 3x3 square lattice
@@ -154,6 +166,19 @@ H_ising_2d = FiniteMPOHamiltonian(square, local_operators) +
 
 There are various utility functions available for constructing more advanced lattices, for
 which the [lattices](@ref) section should be consulted.
+
+## InfiniteMPOHamiltonian
+
+Again, this construction can be extended straightforwardly to the infinite case.
+To that end, we simply need to specify all interactions per unit cell.
+In particular, an [`InfiniteMPOHamiltonian`](@ref) for the Ising model is obtained via
+
+```@example operators
+J = 1.0
+h = 0.5
+infinite_chain = PeriodicVector([ℂ^2]) # an infinite chain of a local 2-dimensional Hilbert space
+H_ising_infinite = InfiniteMPOHamiltonian(infinite_chain, 1 => -h * S_z, (1, 2) => -J * S_x ⊗ S_x)
+```
 
 ### Expert mode
 
@@ -224,33 +249,14 @@ Vᵣ = [0, 0, 1]
 expand(Vₗ * prod(Ws) * Vᵣ)
 ```
 
-The `FiniteMPOHamiltonian` constructor can also be used to construct the operator from this most
-general form, by supplying a 3-dimensional array $W$ to the constructor. Here, the first
-dimension specifies the site in the unit cell, the second dimension specifies the row of the
-matrix, and the third dimension specifies the column of the matrix.
+The [`FiniteMPOHamiltonian`](@ref) constructor can also be used to construct the operator from this most
+general form, by supplying a vector of [`BlockTensorMap`](@extref BlockTensorKit.BlockTensorMap) objects
+to the constructor. Here, the vector specifies the sites in the unit cell, while the blocktensors contain
+the rows and columns of the matrix. We can verify this explicitly:
 
-<!-- TODO: reenable doctest -->
-
-```julia
-data = Array{Any,3}(missing, 1, 3, 3) # missing is interpreted as zero
-data[1, 1, 1] = id(ComplexF64, ℂ^2)
-data[1, 3, 3] = 1 # regular numbers are interpreted as identity operators
-data[1, 1, 2] = -J * S_x
-data[1, 2, 3] = S_x
-data[1, 1, 3] = -h * S_z
-data_range = repeat(data, 4, 1, 1) # make 4 sites long
-H_ising″ = FiniteMPOHamiltonian(data_range)
+```@example operators
+H_ising[2] # print the blocktensor
 ```
-
-MPSKit will then automatically attach the correct boundary vectors to the Hamiltonian whenever this is required.
-
-!!! note
-    While the above example can be constructed from building blocks that are strictly local
-    operators, i.e. TensorMaps with a single ingoing and outgoing index.
-    This is not always the case, especially when symmetries are involved. In
-    those cases, the elements of the matrix $W$ have additional virtual legs that are
-    contracted between different sites. As such, indexing an MPOHamiltonian object will result
-    in a TensorMap with four legs.
 
 ### Working with `MPOHamiltonian` objects
 
@@ -263,5 +269,6 @@ available, such as the virtual spaces, or the individual tensors. However, the b
 structure of the operator means that now the virtual spaces are not just a single space, but
 a collection (direct sum) of spaces, one for each row/column.
 
-<!-- TODO: add examples virtualspace once blocktensors are in place -->
-
+```@example operators
+left_virtualspace(H_ising, 1), right_virtualspace(H_ising, 1), physicalspace(H_ising, 1)
+```

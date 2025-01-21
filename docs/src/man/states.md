@@ -1,67 +1,86 @@
 # [States](@id um_states)
 
+```@setup states
+using MPSKit
+using TensorKit
+using LinearAlgebra: dot
+```
 
 ## FiniteMPS
 
-A FiniteMPS is - at its core - a chain of mps tensors.
+A [`FiniteMPS`](@ref) is - at its core - a chain of mps tensors.
 
 ![](finite_mps_definition.png)
 
 ### Usage
 
-A [`FiniteMPS`](@ref) can be created by passing in a vector of tensormaps:
+A `FiniteMPS` can be created by passing in a vector of tensormaps:
 
-```julia
+```@example states
 L = 10
 data = [rand(ComplexF64, ℂ^1 ⊗ ℂ^2  ← ℂ^1) for _ in 1:L];
-FiniteMPS(data)
+state = FiniteMPS(data)
 ```
 
 Or alternatively by specifying its structure
-```julia
-max_bond_dimension = ℂ^10
+
+```@example states
+max_bond_dimension = ℂ^4
 physical_space = ℂ^2
-FiniteMPS(rand, ComplexF64, L, physical_space, max_bond_dimension)
+state = FiniteMPS(rand, ComplexF64, L, physical_space, max_bond_dimension)
 ```
 
 You can take dot products, renormalize!, expectation values,....
 
-### Gauging
+### Gauging and canonical forms
 
-There is residual gauge freedom in such a finite mps :
+An MPS representation is not unique: for every virtual bond we can insert $C \cdot C^{-1}$ without altering the state.
+Then, by redefining the tensors on both sides of the bond to include one factor each, we can change the representation.
 
 ![](mps_gauge_freedom.png)
 
-which is often exploited in mps algorithms. The gauging logic is handled behind the scenes, if you call
+There are two particularly convenient choices for the gauge at a site, the so-called left and right canonical form.
+For the left canonical form, all tensors to the left of a site are gauged such that they become left-isometries.
+By convention, we call these tensors `AL`.
 
-```julia
-state.AL[3]
+```@example states
+al = state.AL[3]
+al' * al ≈ id(right_virtualspace(al))
 ```
 
-then the state will be gauged such that the third tensor is a left isometry (similarly for state.AR).
+Similarly, the right canonical form turns the tensors into right-isometries.
+By convention, these are called `AR`.
 
-```julia
-state.AC[3]
-```
-gauges the state in such a way that all tensors to the left are left isometries, and to the right will be right isometries.
-As a result you should have
-
-```julia
-norm(state) == norm(state.AC[3])
+```@example states
+ar = state.AR[3]
+repartition(ar, 1, 2) * repartition(ar, 1, 2)' ≈ id(left_virtualspace(ar))
 ```
 
-lastly there is also the CR field, with the following property:
+It is also possible to mix and match these two forms, where all tensors to the left of a given site are in the left gauge, while all tensors to the right are in the right gauge.
+In this case, the final gauge transformation tensor can no longer be absorbed, since that would spoil the gauge either to the left or the right.
+This center-gauged tensor is called `C`, which is also the gauge transformation to relate left- and right-gauged tensors.
+Finally, for convenience it is also possible to leave a single MPS tensor in the center gauge, which we call `AC = AL * C`
 
-```julia
-@tensor a[-1 -2;-3] := state.AL[3][-1 -2;1]*state.C[3][1;-3]
-@tensor b[-1 -2;-3] := state.C[2][-1;1]*state.AR[3][1 -2;-3]
-a ≈ state.AC[3];
-b ≈ state.AC[3];
+```@example states
+c = state.C[3] # to the right of site 3
+c′ = state.C[2] # to the left of site 3
+al * c ≈ state.AC[3] ≈ repartition(c′ * repartition(ar, 1, 2), 2, 1)
+```
+
+These forms are often used throughout MPS algorithms, and the [`FiniteMPS`](@ref) object acts as an automatic manager for this.
+It will automatically compute and cache the different forms, and detect when to recompute whenever needed.
+For example, in order to compute the overlap of an MPS with itself, we can choose any site and bring that into the center gauge.
+Since then both the left and right side simplify to the identity, this simply becomes the overlap of the gauge tensors:
+
+```@example states
+d = dot(state, state)
+all(c -> dot(c, c) ≈ d, state.C)
 ```
 
 ### Implementation details
 
-Behind the scenes, a finite mps has 4 fields
+Behind the scenes, a `FiniteMPS` has 4 fields
+
 ```julia
 ALs::Vector{Union{Missing,A}}
 ARs::Vector{Union{Missing,A}}
@@ -69,91 +88,83 @@ ACs::Vector{Union{Missing,A}}
 Cs::Vector{Union{Missing,B}}
 ```
 
-calling `state.AC` returns an "orthoview" instance, which is a very simple dummy object.
-When you call get/setindex on an orthoview, it will move the gauge for the underlying state, and return the result.
+and calling `AL`, `AR`, `C` or `AC` returns lazy views over these vectors that instantiate the tensors whenever they are requested.
+Similarly, changing a tensor will poison the `ARs` to the left of that tensor, and the `ALs` to the right.
 The idea behind this construction is that one never has to worry about how the state is gauged, as this gets handled automagically.
 
-The following bit of code shows the logic in action:
-
-```julia
-state = FiniteMPS(10, ℂ^2, ℂ^10); # a random initial state
-@show ismissing.(state.ALs) # all AL fields are already calculated
-@show ismissing.(state.ARs) # all AR fields are missing
-
-#if we now query state.AC[2], it should calculate and store all AR fields left of position 2
-state.AC[2];
-@show ismissing.(state.ARs)
-```
+!!! warning
+    While a `FiniteMPS` can automatically detect when to recompute the different gauges, this requires that one of the tensors is set using an indexing operation.
+    In particular, in-place changes to the different tensors will not trigger the recomputation.
 
 ## InfiniteMPS
 
-An infinite mps can be thought of as a finite mps, where the set of tensors is repeated periodically.
+An [`InfiniteMPS`](@ref) can be thought of as being very similar to a finite mps, where the set of tensors is repeated periodically.
 
-It can be created by passing in a vector of tensormaps:
-```julia
-data = fill(TensorMap(rand,ComplexF64,ℂ^10*ℂ^2,ℂ^10),2);
-InfiniteMPS(data);
+It can also be created by passing in a vector of `TensorMap`s:
+
+```@example states
+data = [rand(ComplexF64, ℂ^4 ⊗ ℂ^2  ← ℂ^4) for _ in 1:2]
+state = InfiniteMPS(data)
 ```
 
-The above code would create an infinite mps with an A-B structure (a 2 site unit cell).
+or by initializing it from given spaces
 
-much like a finite mps, we can again query the fields state.AL, state.AR, state.AC and state.C. The implementation is much easier, as they are now just plain fields in the struct
+```@example states
+phys_spaces = fill(ℂ^2, 2)
+virt_spaces = [ℂ^4, ℂ^5] # by convention to the right of a site
+state = InfiniteMPS(phys_spaces, virt_spaces)
+```
+
+Note that the code above creates an `InfiniteMPS` with a two-site unit cell, where the given virtual spaces are located to the right of their respective sites.
+
+### Gauging
+
+Much like for `FiniteMPS`, we can again query the gauged tensors `AL`, `AR`, `C` and `AC`.
+Here however, the implementation is much easier, since they all have to be recomputed whenever a single tensor changes.
+This is a result of periodically repeating the tensors, every `AL` is to the right of the changed site, and every `AR` is to the left.
+As a result, the fields are simply
 
 ```julia
 AL::PeriodicArray{A,1}
 AR::PeriodicArray{A,1}
-CR::PeriodicArray{B,1}
+C::PeriodicArray{B,1}
 AC::PeriodicArray{A,1}
 ```
 
-The periodic array is an array-like type where all indices are repeated periodically.
-
 ## WindowMPS
 
-WindowMPS is a bit of a mix between an infinite mps and a finite mps. It represents a window of mutable tensors embedded in an infinite mps.
+A [`WindowMPS`](@ref) or segment MPS can be seen as a mix between an [`InfiniteMPS`](@ref) and a [`FiniteMPS`](@ref).
+It represents a window of mutable tensors (a finite MPS), embedded in an infinite environment (two infinite MPSs).
+It can therefore be created accordingly, ensuring that the edges match:
 
-It can be created using:
-```julia
-mpco = WindowMPS(left_infinite_mps,window_of_tensors,right_infinite_mps)
+```@example states
+infinite_state = InfiniteMPS(ℂ^2, ℂ^4)
+finite_state = FiniteMPS(5, ℂ^2, ℂ^4; left=ℂ^4, right=ℂ^4)
+window = WindowMPS(infinite_state, finite_state, infinite_state)
 ```
 
-Algorithms will then act on this window of tensors, while leaving the left and right infinite mps's invariant.
+Algorithms will then act on this window of tensors, while leaving the left and right infinite states invariant.
 
-Behind the scenes it uses the same orthoview logic as finitemps.
+## MultilineMPS
 
-## Multiline
+A two-dimensional classical partition function can often be represented by an infinite tensor network.
+There are many ways to evaluate such a network, but here we focus on the so-called boundary MPS methods.
+These first reduce the problem from contracting a two-dimensional network to the contraction of a one-dimensional MPS, by finding the fixed point of the row-to-row (or column-to-column) transfer matrix.
+In these cases however, there might be a non-trivial periodicity in both the horizontal as well as vertical direction.
+Therefore, in MPSKit they are represented by [`MultilineMPS`](@ref), which are simply a repeating set of [`InfiniteMPS`](@ref).
 
-Statistical physics partition functions can be represented by an infinite tensor network which then needs to be contracted.
-This is done by finding approximate fixpoint infinite matrix product states.
-However, there is no good reason why a single mps should suffice and indeed we find in practice that this can require a nontrivial unit cell in both dimensions.
-
-In other words, the fixpoints can be well described by a set of matrix product states.
-
-Such a set can be created by
-
-```julia
-data = fill(TensorMap(rand,ComplexF64,ℂ^10*ℂ^2,ℂ^10),2,2);
-MultilineMPS(data);
+```@example states
+state = MultilineMPS(fill(infinite_state, 2))
 ```
-MultilineMPS is also used extensively in as of yet unreleased peps code.
+
+They offer some convenience functionality for using cartesian indexing (row - column):
 
 You can access properties by calling
-```julia
-state.AL[row,collumn]
-state.AC[row,collumn]
-state.AR[row,collumn]
-state.C[row,collumn]
+```@example states
+row = 2
+col = 2
+al = state.AL[row, col];
 ```
 
-Behind the scenes, we have a type called Multiline, defined as:
+These objects are also used extensively in the context of [PEPSKit.jl](https://github.com/QuantumKitHub/PEPSKit.jl).
 
-```julia
-struct Multiline{T}
-    data::PeriodicArray{T,1}
-end
-```
-
-MultilineMPS/MultilineMPO are then defined as
-```julia
-const MultilineMPS = Multiline{<:InfiniteMPS}
-const MultilineMPO = Multiline{<:DenseMPO}
