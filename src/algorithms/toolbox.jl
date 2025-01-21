@@ -244,7 +244,7 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},
     V_wrap = left_virtualspace(mpo, 1)
     ST = storagetype(O)
 
-    util = fill!(similar(mpo[1], oneunit(V_wrap)), one(scalartype(O)))
+    util = isometry(storagetype(O), oneunit(V_wrap) ← one(V_wrap))
     @plansor cup[-1; -2 -3] := id(ST, V_wrap)[-2; -3] * util[-1]
 
     local F_right
@@ -257,13 +257,13 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},
         F_left = i == 1 ? cup : F_right
         F_right = i == L ? cup :
                   isomorphism(ST, V_right ← V_wrap' * right_virtualspace(mpo, i))
-        @plansor output[i][-1 -2; -3 -4] = F_left[-1; 1 2] *
-                                           τ[-3 1; 4 3] *
-                                           mpo[i][2 -2; 3 5] *
-                                           conj(F_right[-4; 4 5])
+        @plansor contractcheck = true output[i][-1 -2; -3 -4] = F_left[-1; 1 2] *
+                                                                τ[-3 1; 4 3] *
+                                                                mpo[i][2 -2; 3 5] *
+                                                                conj(F_right[-4; 4 5])
     end
 
-    mpo isa SparseMPO && dropzeros!.(output) # the above process fills sparse mpos with zeros.
+    # mpo isa SparseMPO && dropzeros!.(output) # the above process fills sparse mpos with zeros.
 
     return FiniteMPO(output)
 end
@@ -290,7 +290,7 @@ function open_boundary_conditions(mpo::InfiniteMPOHamiltonian,
     # allocate output
     output = Vector(repeat(copy(parent(mpo)), L ÷ length(mpo)))
     output[1] = output[1][1, :, :, :]
-    output[end] = output[end][:, :, :, 1]
+    output[end] = output[end][:, :, :, end]
 
     return FiniteMPOHamiltonian(output)
 end
