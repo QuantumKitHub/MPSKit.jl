@@ -235,7 +235,7 @@ This is supported via the following syntax:
 ```@example excitations
 g = 1.0
 L = 16
-H = transverse_field_ising(; g)
+H = transverse_field_ising(FiniteChain(L); g)
 ψ₀ = FiniteMPS(L, ComplexSpace(2), ComplexSpace(32))
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))

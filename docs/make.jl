@@ -56,7 +56,7 @@ makedocs(;
                 "Library" => "lib/lib.md",
                 "References" => "references.md"],
          checkdocs=:exports,
-         doctests=true,
+         doctest=true,
          plugins=[bib, links])
 
 deploydocs(; repo="github.com/QuantumKitHub/MPSKit.jl.git", push_preview=true)
