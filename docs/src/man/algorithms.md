@@ -5,7 +5,7 @@ DocTestSetup = :(using MPSKit, TensorKit, MPSKitModels)
 # [Algorithms](@id um_algorithms)
 
 Here is a collection of the algorithms that have been added to MPSKit.jl.
-If a particular algorith is missing, feel free to let us know via an issue, or contribute via a PR.
+If a particular algorithm is missing, feel free to let us know via an issue, or contribute via a PR.
 
 ## Groundstates
 
@@ -73,7 +73,7 @@ GradientGrassmann
 ## Time evolution
 
 Given a particular state, it can also often be useful to have the ability to examine the evolution of certain properties over time.
-To that end, there are two main approaches to solving the Schro\"edinger equation in MPSKit.
+To that end, there are two main approaches to solving the Schrödinger equation in MPSKit.
 
 ```math
 i \hbar \frac{d}{dt} \Psi = H \Psi \implies \Psi(t) = \exp{\left(-iH(t - t_0)\right)} \Psi(t_0)
@@ -197,7 +197,7 @@ QuasiparticleAnsatz
 ### Finite excitations
 
 For finite systems we can also do something else - find the groundstate of the hamiltonian +
-``weight \sum_i | psi_i > < psi_i ``. This is also supported by calling
+``\\text{weight} \sum_i | \\psi_i ⟩ ⟨ \\psi_i ``. This is also supported by calling
 
 ```@example excitations
 # Model parameters
@@ -228,7 +228,8 @@ where excitations are distributed throughout the entire system. Consequently, th
 energy spectrum can be extracted by diagonalizing the effective Hamiltonian (without any
 additional DMRG costs!). The states of these excitations are then represented by the ground
 state MPS, with one site substituted by the corresponding eigenvector. This approach is
-often referred to as the 'Chepiga ansatz', named after one of the authors of this paper [chepiga2017](@cite).
+often referred to as the 'Chepiga ansatz', named after one of the authors of this paper
+[chepiga2017](@cite).
 
 This is supported via the following syntax:
 
@@ -299,10 +300,10 @@ disadvantages:
   of both expanding as well as truncating the bond dimension. Here, `trscheme` controls the
   truncation of the full state after the two-site update.
 
-## leading boundary
+## Leading boundary
 
-For statmech partition functions we want to find the approximate leading boundary MPS. Again
-this can be done with VUMPS:
+For statistical mechanics partition functions we want to find the approximate leading
+boundary MPS. Again this can be done with VUMPS:
 
 ```julia
 th = nonsym_ising_mpo()
@@ -310,7 +311,7 @@ ts = InfiniteMPS([ℂ^2],[ℂ^20]);
 (ts,envs,_) = leading_boundary(ts,th,VUMPS(maxiter=400,verbosity=false));
 ```
 
-if the mpo satisfies certain properties (positive and hermitian), it may also be possible to
+If the mpo satisfies certain properties (positive and hermitian), it may also be possible to
 use GradientGrassmann.
 
 ```@docs; canonical=false
@@ -335,8 +336,8 @@ one of the above categories.
 ### Dynamical DMRG
 
 Dynamical DMRG has been described in other papers and is a way to find the propagator. The
-basic idea is that to calculate ``G(z) = < V | (H-z)^{-1} | V > `` , one can variationally
-find ``(H-z) |W > = | V > `` and then the propagator simply equals ``G(z) = < V | W >``.
+basic idea is that to calculate ``G(z) = ⟨ V | (H-z)^{-1} | V ⟩ `` , one can variationally
+find ``(H-z) |W ⟩ = | V ⟩ `` and then the propagator simply equals ``G(z) = ⟨ V | W ⟩``.
 
 ```@docs; canonical=false
 propagator
