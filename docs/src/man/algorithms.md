@@ -1,160 +1,131 @@
 ```@meta
-DocTestSetup = :( using MPSKit, TensorKit)
+DocTestSetup = :(using MPSKit, TensorKit, MPSKitModels)
 ```
 
 # [Algorithms](@id um_algorithms)
 
-## Minimizing the energy
+Here is a collection of the algorithms that have been added to MPSKit.jl.
+If a particular algorithm is missing, feel free to let us know via an issue, or contribute via a PR.
 
-There are a number of different possible energy-minimization algorithms, depending on the
-system size. Exclusive to finite systems are
+## Groundstates
 
-    - DMRG
+One of the most prominent use-cases of MPS is to obtain the groundstate of a given (quasi-) one-dimensional quantum Hamiltonian.
+In MPSKit.jl, this can be achieved through `find_groundstate`:
 
-    - DMRG2
+```@docs; canonical=false
+find_groundstate
+```
 
-Exclusive to infinite systems are
-
-    - IDMRG
-
-    - IDMRG2
-
-    - VUMPS
-
-with a last algorithm - GradientGrassmann - implemented for both finite and infinite
-systems.
-
-WindowMPS, which is a finite patch of mutable tensors embedded in an infinite MPS, is
-handled as a finite system where we only optimize over the patch of mutable tensors.
+There is a variety of algorithms that have been developed over the years, and many of them have been implemented in MPSKit.
+Keep in mind that some of them are exclusive to finite or infinite systems, while others may work for both.
+Many of these algorithms have different advantages and disadvantages, and figuring out the optimal algorithm is not always straightforward, since this may strongly depend on the model.
+Here, we enumerate some of their properties in hopes of pointing you in the right direction.
 
 ### DMRG
 
-```julia
-state = FiniteMPS(20,ℂ^2,ℂ^10);
-operator = nonsym_ising_ham();
-(groundstate,environments,delta) = find_groundstate!(state,operator,DMRG())
+Probably the most widely used algorithm for optimizing groundstates with MPS is [`DMRG`](@ref) and its variants.
+This algorithm sweeps through the system, optimizing a single site while keeping all others fixed.
+Since this local problem can be solved efficiently, the global optimal state follows by alternating through the system.
+However, because of the single-site nature of this algorithm, this can never alter the bond dimension of the state, such that there is no way of dynamically increasing the precision.
+This can become particularly relevant in the cases where symmetries are involved, since then finding a good distribution of charges is also required.
+To circumvent this, it is also possible to optimize over two sites at the same time with [`DMRG2`](@ref), followed by a truncation back to the single site states.
+This can dynamically change the bond dimension but comes at an increase in cost.
+
+```@docs; canonical=false
+DMRG
+DMRG2
 ```
 
-The DMRG algorithm sweeps through the system, optimizing every site. Because of its
-single-site behaviour, this will always keep the bond dimension fixed. If you do want to
-increase the bond dimension dynamically, then there are two options. Either you use the
-two-site variant of DMRG (DMRG2()), or you make use of the finalize option. Finalize is a
-function that gets called at the end of every DMRG iteration. Within that function call one
-can modify the state.
+For infinite systems, a similar approach can be used by dynamically adding new sites to the middle of the system and optimizing over them.
+This gradually increases the system size until the boundary effects are no longer felt.
+However, because of this approach, for critical systems this algorithm can be quite slow to converge, since the number of steps needs to be larger than the correlation length of the system.
+Again, both a single-site and a two-site version are implemented, to have the option to dynamically increase the bonddimension at a higher cost.
 
-```julia
-function my_finalize(iter,state,H,envs)
-    println("Hello from iteration $iter")
-    return state,envs;
-end
-
-(groundstate,environments,delta) = find_groundstate!(state,operator,DMRG(finalize = my_finalize))
+```@docs; canonical=false
+IDMRG
+IDMRG2
 ```
-
-### DMRG2
-
-```julia
-state = FiniteMPS(20,ℂ^2,ℂ^10);
-operator = nonsym_ising_ham();
-(groundstate,environments,delta) = find_groundstate!(state,operator,DMRG2(trscheme=truncbelow(1e-7)));
-```
-
-The twosite variant of DMRG, which optimizes blocks of two sites and then decomposes them
-into 2 MPS tensors using the svd decomposition. By truncating the singular values up to a
-desired precision, one can dynamically grow and shrink the bond dimension as needed.
-However, this truncation in turn introduces an error, which is why a state converged with
-DMRG2 can often be slightly further converged by subsequently using DMRG.
-
-### IDMRG
-
-```julia
-state = InfiniteMPS([ℂ^2],[ℂ^10]);
-operator = nonsym_ising_ham();
-(groundstate,environments,delta) = find_groundstate(state,operator,IDMRG1())
-```
-
-The DMRG algorithm for finite systems can be generalized to infinite MPS. The idea is to
-start with a finite system and grow the system size, while we are sweeping through the
-system. This is again a single site algorithm, and therefore preserves the initial bond
-dimension.
-
-### IDMRG2
-```julia
-state = InfiniteMPS([ℂ^2,ℂ^2],[ℂ^10,ℂ^10]);
-operator = repeat(nonsym_ising_ham(),2);
-(groundstate,environments,delta) = find_groundstate(state,operator,IDMRG2(trscheme=truncbelow(1e-5)))
-```
-
-The generalization of DMRG2 to infinite systems has the same caveats as its finite
-counterpart. We furthermore require a unitcell ≥ 2. As a rule of thumb, a truncation cutoff
-of 1e-5 is already really good.
 
 ### VUMPS
 
-VUMPS is an (I)DMRG inspired algorithm that can be used to find the groundstate of infinite
-matrix product states
-```julia
-state = InfiniteMPS([ℂ^2],[ℂ^10]);
-operator = nonsym_ising_ham();
-(groundstate,environments,delta) = find_groundstate(state,operator,VUMPS())
-```
+[`VUMPS`](@ref) is an (I)DMRG inspired algorithm that can be used to Variationally find the groundstate as a Uniform (infinite) Matrix Product State.
+In particular, a local update is followed by a re-gauging procedure that effectively replaces the entire network with the newly updated tensor.
+Compared to IDMRG, this often achieves a higher rate of convergence, since updates are felt throughout the system immediately.
+Nevertheless, this algorithm only works whenever the state is injective, i.e. there is a unique ground state.
+Since this is a single-site algorithm, this cannot alter the bond dimension.
 
-much like DMRG, it cannot modify the bond dimension, and this has to be done manually in the
-finalize function.
+```@docs; canonical=false
+VUMPS
+```
 
 ### Gradient descent
 
-Both finite and infinite matrix product states can be parametrized by a set of unitary
-matrices, and we can then perform gradient descent on this unitary manifold. Due to some
-technical reasons (gauge freedom), this manifold further restricts to a grassmann manifold.
+Both finite and infinite matrix product states can be parametrized by a set of isometric tensors,
+which we can optimize over.
+Making use of the geometry of the manifold (a Grassmann manifold), we can greatly outperform naive optimization strategies.
+Compared to the other algorithms, quite often the convergence rate in the tail of the optimization procedure is higher, such that often the fastest method combines a different algorithm far from convergence with this algorithm close to convergence.
+Since this is again a single-site algorithm, there is no way to alter the bond dimension.
 
-```julia
-state = InfiniteMPS([ℂ^2],[ℂ^10]);
-operator = nonsym_ising_ham();
-(groundstate,environments,delta) = find_groundstate(state,operator,GradientGrassmann())
+```@docs; canonical=false
+GradientGrassmann
 ```
 
 ## Time evolution
 
-### TDVP
+Given a particular state, it can also often be useful to have the ability to examine the evolution of certain properties over time.
+To that end, there are two main approaches to solving the Schrödinger equation in MPSKit.
 
-There is an implementation of the one-site TDVP scheme for finite and infinite MPS:
-```julia
-(newstate,environments) = timestep(state,operator,dt,TDVP())
+```math
+i \hbar \frac{d}{dt} \Psi = H \Psi \implies \Psi(t) = \exp{\left(-iH(t - t_0)\right)} \Psi(t_0)
 ```
 
-and the two-site scheme for finite MPS (TDVP2()). Similarly to DMRG, the one site scheme
-will preserve the bond dimension, and expansion has to be done manually.
+```@docs; canonical=false
+timestep
+time_evolve
+make_time_mpo
+```
+
+### TDVP
+
+The first is focused around approximately solving the equation for a small timestep, and repeating this until the desired evolution is achieved.
+This can be achieved by projecting the equation onto the tangent space of the MPS, and then solving the results.
+This procedure is commonly referred to as the [`TDVP`](@ref) algorithm, which again has a two-site variant to allow for dynamically altering the bond dimension.
+
+```@docs; canonical=false
+TDVP
+TDVP2
+```
 
 ### Time evolution MPO
 
-We have rudimentary support for turning an MPO hamiltonian into a time evolution MPO.
+The other approach instead tries to first approximately represent the evolution operator, and only then attempts to apply this operator to the initial state.
+Typically the first step happens through [`make_time_mpo`](@ref), while the second can be achieved through [`approximate`](@ref).
+Here, there are several algorithms available
 
-```julia
-make_time_mpo(H,dt,alg::WI)
-make_time_mpo(H,dt,alg::WII)
+```@docs; canonical=false
+WI
+WII
+TaylorCluster
 ```
-
-two algorithms are available, corresponding to different orders of precision. It is possible
-to then multiply a state by this MPO, or to approximate (MPO,state) by a new state
-
-```julia
-state = InfiniteMPS([ℂ^2],[ℂ^10]);
-operator = nonsym_ising_ham();
-mpo = make_time_mpo(operator, 0.1, WII());
-approximate(state, (mpo, state), VUMPS())
-```
-
-This feature is at the moment not very well supported.
 
 ## Excitations
+
+It might also be desirable to obtain information beyond the lowest energy state of a given system, and study the dispersion relation.
+While it is typically not feasible to resolve states in the middle of the energy spectrum, there are several ways to target a few of the lowest-lying energy states.
+
+```@docs; canonical=false
+excitations
+```
+
+```@setup excitations
+using TensorKit, MPSKit, MPSKitModels
+```
 
 ### Quasiparticle Ansatz
 
 The Quasiparticle Ansatz offers an approach to compute low-energy eigenstates in quantum
 systems, playing a key role in both finite and infinite systems. It leverages localized
-perturbations for approximations, as detailed in [this
-paper](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.111.080401).
+perturbations for approximations, as detailed in [haegeman2013](@cite).
 
 #### Finite Systems:
 
@@ -166,13 +137,11 @@ in the transverse field Ising model, we calculate the first excited state as sho
 provided code snippet, amd check the accuracy against theoretical values. Some deviations
 are expected, both due to finite-bond-dimension and finite-size effects.
 
-<!-- TODO: reenable doctest -->
-
-```julia
+```@example excitations
 # Model parameters
 g = 10.0
 L = 16
-H = transverse_field_ising(; g)
+H = transverse_field_ising(FiniteChain(L); g)
 
 # Finding the ground state
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^32)
@@ -181,10 +150,6 @@ H = transverse_field_ising(; g)
 # Computing excitations using the Quasiparticle Ansatz
 Es, ϕs = excitations(H, QuasiparticleAnsatz(), ψ; num=1)
 isapprox(Es[1], 2(g - 1); rtol=1e-2)
-
-# output
-
-true
 ```
 
 #### Infinite Systems:
@@ -194,9 +159,7 @@ in the unit cell in a plane-wave superposition, requiring momentum specification
 [Haldane gap](https://iopscience.iop.org/article/10.1088/0953-8984/1/19/001) computation in
 the Heisenberg model illustrates this approach.
 
-<!-- TODO: reenable doctest -->
-
-```julia
+```@example excitations
 # Setting up the model and momentum
 momentum = π
 H = heisenberg_XXX()
@@ -208,10 +171,6 @@ H = heisenberg_XXX()
 # Excitation calculations
 Es, ϕs = excitations(H, QuasiparticleAnsatz(), momentum, ψ)
 isapprox(Es[1], 0.41047925; atol=1e-4)
-
-# output
-
-true
 ```
 
 #### Charged excitations:
@@ -221,32 +180,41 @@ trivial total charge. However, quasiparticles with different charges can be obta
 the sector keyword. For instance, in the transverse field Ising model, we consider an
 excitation built up of flipping a single spin, aligning with `Z2Irrep(1)`.
 
-<!-- TODO: reenable doctest -->
-
-```julia
+```@example excitations
 g = 10.0
 L = 16
-H = transverse_field_ising(Z2Irrep; g)
+H = transverse_field_ising(Z2Irrep, FiniteChain(L); g)
 ψ₀ = FiniteMPS(L, Z2Space(0 => 1, 1 => 1), Z2Space(0 => 16, 1 => 16))
 ψ, = find_groundstate(ψ₀, H; verbosity=0)
 Es, ϕs = excitations(H, QuasiparticleAnsatz(), ψ; num=1, sector=Z2Irrep(1))
 isapprox(Es[1], 2(g - 1); rtol=1e-2) # infinite analytical result
+```
 
-# output
-
-true
+```@docs; canonical=false
+QuasiparticleAnsatz
 ```
 
 ### Finite excitations
 
 For finite systems we can also do something else - find the groundstate of the hamiltonian +
-``weight \sum_i | psi_i > < psi_i ``. This is also supported by calling
+``\\text{weight} \sum_i | \\psi_i ⟩ ⟨ \\psi_i ``. This is also supported by calling
 
-```julia
-th = nonsym_ising_ham()
-ts = FiniteMPS(10,ℂ^2,ℂ^12);
-(ts,envs,_) = find_groundstate(ts,th,DMRG(verbosity=0));
-(energies,Bs) = excitations(th,FiniteExcited(),ts,envs);
+```@example excitations
+# Model parameters
+g = 10.0
+L = 16
+H = transverse_field_ising(FiniteChain(L); g)
+
+# Finding the ground state
+ψ₀ = FiniteMPS(L, ℂ^2, ℂ^32)
+ψ, = find_groundstate(ψ₀, H; verbosity=0)
+
+Es, ϕs = excitations(H, FiniteExcited(), ψ; num=1)
+isapprox(Es[1], 2(g - 1); rtol=1e-2)
+```
+
+```@docs; canonical=false
+FiniteExcited
 ```
 
 ### "Chepiga Ansatz"
@@ -260,51 +228,29 @@ where excitations are distributed throughout the entire system. Consequently, th
 energy spectrum can be extracted by diagonalizing the effective Hamiltonian (without any
 additional DMRG costs!). The states of these excitations are then represented by the ground
 state MPS, with one site substituted by the corresponding eigenvector. This approach is
-often referred to as the 'Chepiga ansatz', named after one of the authors of this paper.
+often referred to as the 'Chepiga ansatz', named after one of the authors of this paper
+[chepiga2017](@cite).
 
 This is supported via the following syntax:
 
-<!-- TODO: reenable doctest -->
-
-```julia
-g = 1.0
+```@example excitations
+g = 10.0
 L = 16
-H = transverse_field_ising(; g)
+H = transverse_field_ising(FiniteChain(L); g)
 ψ₀ = FiniteMPS(L, ComplexSpace(2), ComplexSpace(32))
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz(), ψ, envs; num=1)
-isapprox(Es[1], 2(g - 1); rtol=1e-2) # infinite analytical result
-
-# output
-
-true
+isapprox(Es[1] - E₀, 2(g - 1); rtol=1e-2) # infinite analytical result
 ```
 
 In order to improve the accuracy, a two-site version also exists, which varies two
 neighbouring sites:
 
-<!-- TODO: reenable doctest -->
-
-```julia
-g = 1.0
-L = 16
-H = transverse_field_ising(; g)
-ψ₀ = FiniteMPS(L, ComplexSpace(2), ComplexSpace(32))
-ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
-E₀ = real(sum(expectation_value(ψ, H, envs)))
+```@example excitations
 Es, ϕs = excitations(H, ChepigaAnsatz2(), ψ, envs; num=1)
-isapprox(Es[1], 2(g - 1); rtol=1e-2) # infinite analytical result
-
-# output
-
-true
+isapprox(Es[1] - E₀, 2(g - 1); rtol=1e-2) # infinite analytical result
 ```
-
-The algorithm is described in more detail in the following paper:
-
-- Chepiga, N., & Mila, F. (2017). Excitation spectrum and density matrix renormalization
-  group iterations. Physical Review B, 96(5), 054425.
 
 ## `changebonds`
 
@@ -354,10 +300,10 @@ disadvantages:
   of both expanding as well as truncating the bond dimension. Here, `trscheme` controls the
   truncation of the full state after the two-site update.
 
-## leading boundary
+## Leading boundary
 
-For statmech partition functions we want to find the approximate leading boundary MPS. Again
-this can be done with VUMPS:
+For statistical mechanics partition functions we want to find the approximate leading
+boundary MPS. Again this can be done with VUMPS:
 
 ```julia
 th = nonsym_ising_mpo()
@@ -365,8 +311,12 @@ ts = InfiniteMPS([ℂ^2],[ℂ^20]);
 (ts,envs,_) = leading_boundary(ts,th,VUMPS(maxiter=400,verbosity=false));
 ```
 
-if the mpo satisfies certain properties (positive and hermitian), it may also be possible to
+If the mpo satisfies certain properties (positive and hermitian), it may also be possible to
 use GradientGrassmann.
+
+```@docs; canonical=false
+leading_boundary
+```
 
 ## `approximate`
 
@@ -386,8 +336,15 @@ one of the above categories.
 ### Dynamical DMRG
 
 Dynamical DMRG has been described in other papers and is a way to find the propagator. The
-basic idea is that to calculate ``G(z) = < V | (H-z)^{-1} | V > `` , one can variationally
-find ``(H-z) |W > = | V > `` and then the propagator simply equals ``G(z) = < V | W >``.
+basic idea is that to calculate ``G(z) = ⟨ V | (H-z)^{-1} | V ⟩ `` , one can variationally
+find ``(H-z) |W ⟩ = | V ⟩ `` and then the propagator simply equals ``G(z) = ⟨ V | W ⟩``.
+
+```@docs; canonical=false
+propagator
+DynamicalDMRG
+NaiveInvert
+Jeckelmann
+```
 
 ### fidelity susceptibility
 
@@ -395,27 +352,28 @@ The fidelity susceptibility measures how much the groundstate changes when tunin
 parameter in your hamiltonian. Divergences occur at phase transitions, making it a valuable
 measure when no order parameter is known.
 
-```julia
-fidelity_susceptibility(groundstate,H_0,perturbing_Hams::AbstractVector)
+```@docs; canonical=false
+fidelity_susceptibility
 ```
 
-### periodic boundary conditions
+### Boundary conditions
 
-You can impose periodic boundary conditions on the hamiltonian itself, while still using a
-normal OBC finite matrix product states. This is straightforward to implement but
-competitive with more advanced PBC MPS algorithms.
+You can impose periodic or open boundary conditions on an infinite Hamiltonian, to generate a finite counterpart.
+In particular, for periodic boundary conditions we still return an MPO that does not form a closed loop, such that it can be used with regular matrix product states.
+This is straightforward to implement but, and while this effectively squares the bond dimension, it is still competitive with more advanced periodic MPS algorithms.
 
-### exact diagonalization
+```@docs; canonical=false
+open_boundary_conditions
+periodic_boundary_conditions
+```
+
+### Exact diagonalization
 
 As a side effect, our code support exact diagonalization. The idea is to construct a finite
 matrix product state with maximal bond dimension, and then optimize the middle site. Because
 we never truncated the bond dimension, this single site effectively parametrizes the entire
 hilbert space.
 
-```julia
-exact_diagonalization(periodic_boundary_conditions(su2_xxx_ham(spin=1),10),which=:SR) # find the groundstate on 10 sites
-```
-
-```@meta
-DocTestSetup = nothing
+```@docs; canonical=false
+exact_diagonalization
 ```

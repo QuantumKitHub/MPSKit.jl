@@ -1,5 +1,13 @@
 """
-Use krylovkit to perform exact diagonalization
+    exact_diagonalization(opp::FiniteMPOHamiltonian;
+                          sector=first(sectors(oneunit(physicalspace(opp, 1)))),
+                          len::Int=length(opp), num::Int=1, which::Symbol=:SR,
+                          alg=Defaults.alg_eigsolve(; dynamic_tols=false))
+                            -> vals, state_vecs, convhist
+
+Use [`KrylovKit.eigsolve`](@extref) to perform exact diagonalization on a
+`FiniteMPOHamiltonian` to find its eigenvectors as `FiniteMPS` of maximal rank, essentially
+equivalent to dense eigenvectors.
 """
 function exact_diagonalization(opp::FiniteMPOHamiltonian;
                                sector=first(sectors(oneunit(physicalspace(opp, 1)))),

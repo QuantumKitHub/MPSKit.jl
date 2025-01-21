@@ -1,5 +1,5 @@
 function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                      alg::IDMRG1, envs=environments(ψ, toapprox))
+                      alg::IDMRG, envs=environments(ψ, toapprox))
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
     local iter

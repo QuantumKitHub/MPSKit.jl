@@ -30,7 +30,7 @@ export leftenv, rightenv
 export find_groundstate, find_groundstate!
 export leading_boundary
 export approximate, approximate!
-export VUMPS, VOMPS, DMRG, DMRG2, IDMRG1, IDMRG2, GradientGrassmann
+export VUMPS, VOMPS, DMRG, DMRG2, IDMRG, IDMRG2, GradientGrassmann
 export excitations
 export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo

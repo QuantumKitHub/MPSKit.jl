@@ -35,7 +35,7 @@ end
 """
     propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init=copy(ψ₀))
 
-Calculate the propagator ``\\frac{1}{E₀ + z - H}|ψ₀>`` using the dynamical DMRG
+Calculate the propagator ``\\frac{1}{E₀ + z - H}|ψ₀⟩`` using the dynamical DMRG
 algorithm.
 """
 function propagator end
@@ -47,11 +47,11 @@ An alternative approach to the dynamical DMRG algorithm, without quadratic terms
 less controlled approximation.
 This algorithm minimizes the following cost function
 ```math
-<ψ|(H - E)|ψ> - <ψ|ψ₀> - <ψ₀|ψ>
+⟨ψ|(H - E)|ψ⟩ - ⟨ψ|ψ₀⟩ - ⟨ψ₀|ψ⟩
 ```
 which is equivalent to the original approach if
 ```math
-|ψ₀> = (H - E)|ψ>
+|ψ₀⟩ = (H - E)|ψ⟩
 ```
 
 See also [`Jeckelmann`](@ref) for the original approach.
@@ -105,7 +105,7 @@ $(TYPEDEF)
 
 The original flavour of dynamical DMRG, which minimizes the following (quadratic) cost function:
 ```math
-|| (H - E) |ψ₀> - |ψ> ||
+|| (H - E) |ψ₀⟩ - |ψ⟩ ||
 ```
 
 See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.

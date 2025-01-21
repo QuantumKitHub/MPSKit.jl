@@ -28,7 +28,8 @@ bib = CitationBibliography(bibpath; style=:authoryear)
 # interlinks
 links = InterLinks("TensorKit" => "https://jutho.github.io/TensorKit.jl/stable/",
                    "TensorOperations" => "https://jutho.github.io/TensorOperations.jl/stable/",
-                   "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/")
+                   "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/",
+                   "BlockTensorKit" => "https://lkdvos.github.io/BlockTensorKit.jl/dev/")
 
 # include MPSKit in all doctests
 DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit, TensorKit); recursive=true)
@@ -48,13 +49,14 @@ makedocs(;
                              "man/states.md",
                              "man/operators.md",
                              "man/algorithms.md",
-                             "man/environments.md",
+                             # "man/environments.md",
                              "man/parallelism.md",
                              "man/lattices.md"],
                 "Examples" => "examples/index.md",
                 "Library" => "lib/lib.md",
                 "References" => "references.md"],
          checkdocs=:exports,
+         doctest=true,
          plugins=[bib, links])
 
 deploydocs(; repo="github.com/QuantumKitHub/MPSKit.jl.git", push_preview=true)

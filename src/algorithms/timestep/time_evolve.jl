@@ -1,6 +1,6 @@
 """
-    time_evolve(ψ₀, H, t_span, [alg], [envs]; kwargs...)
-    time_evolve!(ψ₀, H, t_span, [alg], [envs]; kwargs...)
+    time_evolve(ψ₀, H, t_span, [alg], [envs]; kwargs...) -> (ψ, envs)
+    time_evolve!(ψ₀, H, t_span, [alg], [envs]; kwargs...) -> (ψ₀, envs)
 
 Time-evolve the initial state `ψ₀` with Hamiltonian `H` over a given time span by stepping
 through each of the time points obtained by iterating t_span.
@@ -37,8 +37,8 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
 end
 
 """
-    timestep(ψ₀, H, t, dt, [alg], [envs]; kwargs...)
-    timestep!(ψ₀, H, t, dt, [alg], [envs]; kwargs...)
+    timestep(ψ₀, H, t, dt, [alg], [envs]; kwargs...) -> (ψ, envs)
+    timestep!(ψ₀, H, t, dt, [alg], [envs]; kwargs...) -> (ψ₀, envs)
 
 Time-step the state `ψ₀` with Hamiltonian `H` over a given time step `dt` at time `t`,
 solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
