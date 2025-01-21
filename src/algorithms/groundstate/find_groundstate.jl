@@ -18,7 +18,7 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 ## Returns
 - `ψ::AbstractMPS`: converged groundstate
-- `environments::Int`: environments corresponding to the converged state
+- `environments`: environments corresponding to the converged state
 - `ϵ::Float64`: final convergence error upon terminating the algorithm
 """
 function find_groundstate(ψ::AbstractMPS, H,

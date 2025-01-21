@@ -19,7 +19,7 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 ## Returns
 - `ψ::AbstractMPS`: converged leading boundary MPS
-- `environments::Int`: environments corresponding to the converged boundary
+- `environments`: environments corresponding to the converged boundary
 - `ϵ::Float64`: final convergence error upon terminating the algorithm
 """ leading_boundary
 
