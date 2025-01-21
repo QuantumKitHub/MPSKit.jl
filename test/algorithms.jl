@@ -106,15 +106,15 @@ end
         @test v < 1e-2
     end
 
-    @testset "IDMRG1" for unit_cell_size in [1, 3]
+    @testset "IDMRG" for unit_cell_size in [1, 3]
         ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
         # test logging
         ψ, envs, δ = find_groundstate(ψ, H,
-                                      IDMRG1(; tol, verbosity=verbosity_full, maxiter=2))
+                                      IDMRG(; tol, verbosity=verbosity_full, maxiter=2))
 
-        ψ, envs, δ = find_groundstate(ψ, H, IDMRG1(; tol, verbosity=verbosity_conv))
+        ψ, envs, δ = find_groundstate(ψ, H, IDMRG(; tol, verbosity=verbosity_conv))
         v = variance(ψ, H, envs)
 
         # test using low variance
@@ -275,13 +275,13 @@ end
         @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
     end
 
-    @testset "IDMRG1" begin
+    @testset "IDMRG" begin
         # test logging passes
         ψ, envs, δ = find_groundstate(ψ₀, H_lazy,
-                                      IDMRG1(; tol, verbosity=verbosity_full, maxiter=2))
+                                      IDMRG(; tol, verbosity=verbosity_full, maxiter=2))
 
         # compare states
-        alg = IDMRG1(; tol, verbosity=verbosity_conv, maxiter=300)
+        alg = IDMRG(; tol, verbosity=verbosity_conv, maxiter=300)
         ψ, envs, δ = find_groundstate(ψ, H_lazy, alg)
 
         @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
@@ -703,7 +703,7 @@ end
 
         ψ1, _ = approximate(ψ, (sW1, ψ), VOMPS(; verbosity))
         ψ2, _ = approximate(ψ, (W2, ψ), VOMPS(; verbosity))
-        ψ3, _ = approximate(ψ, (W1, ψ), IDMRG1(; verbosity))
+        ψ3, _ = approximate(ψ, (W1, ψ), IDMRG(; verbosity))
         ψ4, _ = approximate(ψ, (sW2, ψ), IDMRG2(; trscheme=truncdim(20), verbosity))
         ψ5, _ = timestep(ψ, H, 0.0, dt, TDVP())
         ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme=truncdim(10)))

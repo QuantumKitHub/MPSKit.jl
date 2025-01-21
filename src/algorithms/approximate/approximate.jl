@@ -20,7 +20,7 @@ of an MPS `ψ₀`.
 - `DMRG`: Alternating least square method for maximizing the fidelity with a single-site scheme.
 - `DMRG2`: Alternating least square method for maximizing the fidelity with a two-site scheme.
 
-- `IDMRG1`: Variant of `DMRG` for maximizing fidelity density in the thermodynamic limit.
+- `IDMRG`: Variant of `DMRG` for maximizing fidelity density in the thermodynamic limit.
 - `IDMRG2`: Variant of `DMRG2` for maximizing fidelity density in the thermodynamic limit.
 - `VOMPS`: Tangent space method for truncating uniform MPS.
 """
@@ -40,7 +40,7 @@ function approximate(ψ::InfiniteMPS,
 end
 
 # dispatch to in-place method
-function approximate(ψ, toapprox, alg::Union{DMRG,DMRG2,IDMRG1,IDMRG2},
+function approximate(ψ, toapprox, alg::Union{DMRG,DMRG2,IDMRG,IDMRG2},
                      envs=environments(ψ, toapprox))
     return approximate!(copy(ψ), toapprox, alg, envs)
 end
@@ -48,7 +48,7 @@ end
 # disambiguate
 function approximate(ψ::InfiniteMPS,
                      toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS},
-                     algorithm::Union{IDMRG1,IDMRG2},
+                     algorithm::Union{IDMRG,IDMRG2},
                      envs=environments(ψ, toapprox))
     envs′ = Multiline([envs])
     multi, envs = approximate(convert(MultilineMPS, ψ),
