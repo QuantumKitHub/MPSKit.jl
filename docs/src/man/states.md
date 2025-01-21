@@ -117,7 +117,7 @@ state = InfiniteMPS(phys_spaces, virt_spaces)
 
 Note that the code above creates an `InfiniteMPS` with a two-site unit cell, where the given virtual spaces are located to the right of their respective sites.
 
-### Gauging
+### Gauging and canonical forms
 
 Much like for `FiniteMPS`, we can again query the gauged tensors `AL`, `AR`, `C` and `AC`.
 Here however, the implementation is much easier, since they all have to be recomputed whenever a single tensor changes.

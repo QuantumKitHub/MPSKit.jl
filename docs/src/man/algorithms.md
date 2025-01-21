@@ -234,14 +234,14 @@ often referred to as the 'Chepiga ansatz', named after one of the authors of thi
 This is supported via the following syntax:
 
 ```@example excitations
-g = 1.0
+g = 10.0
 L = 16
 H = transverse_field_ising(FiniteChain(L); g)
 ψ₀ = FiniteMPS(L, ComplexSpace(2), ComplexSpace(32))
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))
 Es, ϕs = excitations(H, ChepigaAnsatz(), ψ, envs; num=1)
-isapprox(Es[1], 2(g - 1); rtol=1e-2) # infinite analytical result
+isapprox(Es[1] - E₀, 2(g - 1); rtol=1e-2) # infinite analytical result
 ```
 
 In order to improve the accuracy, a two-site version also exists, which varies two
@@ -249,7 +249,7 @@ neighbouring sites:
 
 ```@example excitations
 Es, ϕs = excitations(H, ChepigaAnsatz2(), ψ, envs; num=1)
-isapprox(Es[1], 2(g - 1); rtol=1e-2) # infinite analytical result
+isapprox(Es[1] - E₀, 2(g - 1); rtol=1e-2) # infinite analytical result
 ```
 
 ## `changebonds`
