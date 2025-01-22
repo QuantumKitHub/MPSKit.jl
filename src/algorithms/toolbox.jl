@@ -238,7 +238,6 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},
                                       L=length(mpo)) where {O}
     mod(L, length(mpo)) == 0 ||
         throw(ArgumentError("length $L is not a multiple of the infinite unitcell"))
-
     # allocate output
     output = Vector{O}(undef, L)
     V_wrap = left_virtualspace(mpo, 1)
@@ -257,21 +256,154 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},
         F_left = i == 1 ? cup : F_right
         F_right = i == L ? cup :
                   isomorphism(ST, V_right ← V_wrap' * right_virtualspace(mpo, i))
-        @plansor contractcheck = true output[i][-1 -2; -3 -4] = F_left[-1; 1 2] *
-                                                                τ[-3 1; 4 3] *
-                                                                mpo[i][2 -2; 3 5] *
-                                                                conj(F_right[-4; 4 5])
+        @plansor output[i][-1 -2; -3 -4] = F_left[-1; 1 2] *
+                                           τ[-3 1; 4 3] *
+                                           mpo[i][2 -2; 3 5] *
+                                           conj(F_right[-4; 4 5])
     end
 
-    # mpo isa SparseMPO && dropzeros!.(output) # the above process fills sparse mpos with zeros.
-
-    return FiniteMPO(output)
+    return remove_orphans!(FiniteMPO(output))
 end
 
-# TODO: check if this is correct?
+function _indmap_pbc(chi)
+    indmap = Dict{NTuple{3,Int},Int}()
+    chi_ = 0
+    for b in reverse(2:chi), c in b:chi
+        chi_ += 1
+        indmap[1, b, c] = chi_
+    end
+    for a in 2:chi, b in reverse(a:chi)
+        chi_ += 1
+        indmap[a, b, chi] = chi_
+    end
+    return indmap, chi_
+end
+
 function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
-    Hmpo = periodic_boundary_conditions(InfiniteMPO(H), L)
-    return FiniteMPOHamiltonian(parent(Hmpo))
+    mod(L, length(H)) == 0 ||
+        throw(ArgumentError("length $L is not a multiple of the infinite unitcell"))
+    # @assert size(H[1], 1) > 2 "Not implemented"
+    O = eltype(H)
+    A = storagetype(O)
+    S = spacetype(O)
+    chi = size(H[1], 1)
+
+    # linearize indices:
+    indmap, chi_ = _indmap_pbc(chi)
+
+    # compute all fusers
+    V_wrap = left_virtualspace(H, 1)
+    fusers = PeriodicVector(map(1:L) do i
+                                V_top = left_virtualspace(H, i)
+                                V_bot = left_virtualspace(H, i)
+                                return map(Iterators.product(V_top.spaces, V_wrap.spaces,
+                                                             V_bot.spaces)) do (v_top,
+                                                                                v_wrap,
+                                                                                v_bot)
+                                    return isomorphism(A, fuse(v_top ⊗ v_wrap' ⊗ v_bot),
+                                                       v_top ⊗ v_wrap' ⊗ v_bot)
+                                end
+                            end)
+
+    # allocate output
+    output = Vector{O}(undef, L)
+    for site in 1:L
+        V_left = if site == 1
+            oneunit(V_wrap)
+        else
+            vs = Vector{S}(undef, chi_)
+            for (k, v) in indmap
+                vs[v] = _firstspace(fusers[site][k...])
+            end
+            SumSpace(vs)
+        end
+        V_right = if site == L
+            oneunit(V_wrap)
+        else
+            vs = Vector{S}(undef, chi_)
+            for (k, v) in indmap
+                vs[v] = _firstspace(fusers[site + 1][k...])
+            end
+            SumSpace(vs)
+        end
+        output[site] = similar(H[site],
+                               V_left ⊗ physicalspace(H, site) ←
+                               physicalspace(H, site) ⊗ V_right)
+    end
+
+    # bulk changes
+    for site in 2:(L - 1)
+        V_left = Vector{S}(undef, chi_)
+        V_right = Vector{S}(undef, chi_)
+
+        for (I, h) in nonzero_pairs(H[site])
+            j, _, _, k = I.I
+            # apply [j, k] above
+            l = chi
+            for i in max(2, k):min(l, chi)
+                F_left = fusers[site][j, i, l]
+                F_right = fusers[site + 1][k, i, l]
+                j′ = indmap[j, i, l]
+                k′ = indmap[k, i, l]
+                @plansor o[-1 -2; -3 -4] := h[1 2; -3 6] *
+                                            F_left[-1; 1 3 5] *
+                                            conj(F_right[-4; 6 7 8]) *
+                                            τ[2 3; 7 4] * τ[4 5; 8 -2]
+                output[site][j′, 1, 1, k′] = o
+            end
+
+            # apply [j, k] below
+            i = 1
+            for l in max(2, i):min(chi - 1, j)
+                F_left = fusers[site][i, l, j]
+                F_right = fusers[site + 1][i, l, k]
+                j′ = indmap[i, l, j]
+                k′ = indmap[i, l, k]
+                @plansor o[-1 -2; -3 -4] := h[1 -2; 3 6] *
+                                            F_left[-1; 4 2 1] *
+                                            conj(F_right[-4; 8 7 6]) *
+                                            τ[5 2; 7 3] * τ[-3 4; 8 5]
+                output[site][j′, 1, 1, k′] = o
+            end
+        end
+    end
+
+    # starter
+    for (I, h) in nonzero_pairs(H[1])
+        j, _, _, k = I.I
+        # apply [j, k] above
+        if j == 1
+            F_right = fusers[2][k, end, end]
+            j′ = indmap[k, chi, chi]
+            @plansor o[-1 -2; -3 -4] := h[-1 -2; -3 2] * conj(F_right[-4; 2 3 3])
+            output[1][1, 1, 1, j′] = o
+        end
+
+        # apply [j, k] below
+        if 1 < j < chi
+            F_right = fusers[2][1, j, k]
+            j′ = indmap[1, j, k]
+            @plansor o[-1 -2; -3 -4] := h[4 -2; 3 1] *
+                                        conj(F_right[-4; 6 2 1]) *
+                                        τ[5 4; 2 3] * τ[-3 -1; 6 5]
+            output[1][1, 1, 1, j′] = o
+        end
+    end
+    output[1][1, 1, 1, 1] = BraidingTensor{scalartype(H)}(eachspace(output[1])[1])
+
+    # ender
+    for (I, h) in nonzero_pairs(H[end])
+        j, _, _, k = I.I
+        if k > 1
+            F_left = fusers[end][j, k, chi]
+            k′ = indmap[j, k, chi]
+            @plansor o[-1 -2; -3 -4] := F_left[-1; 1 2 6] * h[1 3; -3 4] * τ[3 2; 4 5] *
+                                        τ[5 6; -4 -2]
+            output[end][k′, 1, 1, 1] = o
+        end
+    end
+
+    return remove_orphans!(FiniteMPOHamiltonian(output))
 end
 
 """
