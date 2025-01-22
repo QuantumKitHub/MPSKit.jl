@@ -68,7 +68,7 @@ Alternatively, the hamiltonian can be constructed directly on a two-site unitcel
 ## H2 = repeat(H, 2); -- copies the one-site version
 H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin=1 // 2)
 groundstate, envs, delta = find_groundstate(state, H2,
-                                             VUMPS(; maxiter=100, tol=1e-12));
+                                            VUMPS(; maxiter=100, tol=1e-12));
 
 md"""
 We get convergence, but it takes an enormous amount of iterations.
@@ -76,8 +76,8 @@ The reason behind this becomes more obvious at higher bond dimensions:
 """
 
 groundstate, envs, delta = find_groundstate(state, H2,
-                                             IDMRG2(; trscheme=truncdim(50), maxiter=20,
-                                                    tol=1e-12));
+                                            IDMRG2(; trscheme=truncdim(50), maxiter=20,
+                                                   tol=1e-12));
 entanglementplot(groundstate)
 
 md"""

@@ -62,6 +62,15 @@ end
 Base.repeat(mpo::MPO, n::Int) = MPO(repeat(parent(mpo), n))
 Base.repeat(mpo::MPO, rows::Int, cols::Int) = MultilineMPO(fill(repeat(mpo, cols), rows))
 
+function add_physical_charge(mpo::MPO, charges::AbstractVector{<:Sector})
+    O = map(add_physical_charge, parent(mpo), charges)
+    if isfinite(mpo)
+        return FiniteMPO(O)
+    else
+        return InfiniteMPO(O)
+    end
+end
+
 # Converters
 # ----------
 function Base.convert(::Type{<:FiniteMPS}, mpo::FiniteMPO)

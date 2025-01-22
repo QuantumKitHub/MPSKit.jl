@@ -25,7 +25,6 @@ For those ``g`` we expect non-analicities to occur at ``t_n ≈ 2.35 (n + 1/2)``
 First we construct the hamiltonian in mpo form, and obtain the pre-quenched groundstate:
 """
 
-
 L = 20
 H₀ = transverse_field_ising(FiniteChain(L); g=-0.5)
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
@@ -57,7 +56,7 @@ Putting it all together, we get
 
 function finite_sim(L; dt=0.05, finaltime=5.0)
     ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
-    H₀= transverse_field_ising(FiniteChain(L); g=-0.5)
+    H₀ = transverse_field_ising(FiniteChain(L); g=-0.5)
     ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG())
 
     H₁ = transverse_field_ising(FiniteChain(L); g=-2.0)
@@ -85,7 +84,7 @@ Similarly we could start with an initial infinite state and find the pre-quench 
 """
 
 ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
-H₀ = transverse_field_ising(; g=-0.5) 
+H₀ = transverse_field_ising(; g=-0.5)
 ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS());
 
 md"""

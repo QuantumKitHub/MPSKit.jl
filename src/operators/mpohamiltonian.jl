@@ -378,6 +378,15 @@ function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
     return transpose(O, (ntuple(identity, N), ntuple(i -> i + N, N)))
 end
 
+function add_physical_charge(H::MPOHamiltonian, charges::AbstractVector{<:Sector})
+    W = map(add_physical_charge, parent(H), charges)
+    if isfinite(H)
+        return FiniteMPOHamiltonian(W)
+    else
+        return InfiniteMPOHamiltonian(W)
+    end
+end
+
 # Linear Algebra
 # --------------
 

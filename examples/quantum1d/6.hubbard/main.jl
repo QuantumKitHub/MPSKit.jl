@@ -58,9 +58,9 @@ function hubbard_energy(u; rtol=1e-12)
 end
 
 function compute_groundstate(psi, H;
-                             svalue=1e-3,
-                             expansionfactor=(1 / 5),
-                             expansioniter=20)
+                             svalue=5e-3,
+                             expansionfactor=(1 / 3),
+                             expansioniter=10)
     verbosity = 1
     psi, = find_groundstate(psi, H; tol=svalue * 10, verbosity)
     for _ in 1:expansioniter
@@ -83,7 +83,7 @@ function compute_groundstate(psi, H;
 end
 
 H = hubbard_model(InfiniteChain(2); U, t, mu=U / 2)
-psi = InfiniteMPS(H.data.pspaces, H.data.pspaces)
+psi = InfiniteMPS(physicalspace.(Ref(H), 1:2), physicalspace.(Ref(H), 1:2))
 psi = compute_groundstate(psi, H)
 E = real(expectation_value(psi, H)) / 2
 @info """
@@ -109,11 +109,10 @@ H_u1_su2 = hubbard_model(ComplexF64, U1Irrep, SU2Irrep, InfiniteChain(2); U, t, 
 charges = fill(FermionParity(1) ⊠ U1Irrep(1) ⊠ SU2Irrep(0), 2);
 H_u1_su2 = MPSKit.add_physical_charge(H_u1_su2, dual.(charges));
 
-pspaces = H_u1_su2.data.pspaces
+pspaces = physicalspace.(Ref(H_u1_su2), 1:2)
 vspaces = [oneunit(eltype(pspaces)), first(pspaces)]
 psi = InfiniteMPS(pspaces, vspaces)
-psi = compute_groundstate(psi, H_u1_su2; svalue=1e-3, expansionfactor=1 / 3,
-                          expansioniter=20)
+psi = compute_groundstate(psi, H_u1_su2)
 E = real(expectation_value(psi, H_u1_su2)) / 2
 @info """
 Groundstate energy:
