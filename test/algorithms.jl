@@ -689,7 +689,7 @@ end
         H = force_planar(repeat(transverse_field_ising(; g=4), 2))
 
         dt = 1e-3
-        sW1 = make_time_mpo(H, dt, TaylorCluster(; N=3))
+        sW1 = make_time_mpo(H, dt, TaylorCluster(; N=3, compression=true, extension=true))
         sW2 = make_time_mpo(H, dt, WII())
         W1 = MPSKit.DenseMPO(sW1)
         W2 = MPSKit.DenseMPO(sW2)
