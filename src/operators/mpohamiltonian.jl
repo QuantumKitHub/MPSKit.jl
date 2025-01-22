@@ -33,6 +33,7 @@ struct MPOHamiltonian{TO,V<:AbstractVector{TO}} <: AbstractMPO{TO}
 end
 
 const FiniteMPOHamiltonian{O<:MPOTensor} = MPOHamiltonian{O,Vector{O}}
+Base.isfinite(::Type{<:FiniteMPOHamiltonian}) = true
 
 function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Ws)[1:(end - 1)]
@@ -43,6 +44,7 @@ function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
 end
 
 const InfiniteMPOHamiltonian{O<:MPOTensor} = MPOHamiltonian{O,PeriodicVector{O}}
+Base.isfinite(::Type{<:InfiniteMPOHamiltonian}) = false
 
 function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Ws)
