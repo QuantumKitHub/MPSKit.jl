@@ -15,14 +15,13 @@ Then we specify an initial guess, which we then further optimize.
 Working directly in the thermodynamic limit, this is achieved as follows:
 """
 
-H = heisenberg_XXX(; spin=1 // 2);
+H = heisenberg_XXX(; spin=1 // 2)
 
 md"""
 We then need an intial state, which we shall later optimize. In this example we work directly in the thermodynamic limit.
 """
 
-random_data = TensorMap(rand, ComplexF64, ℂ^20 * ℂ^2, ℂ^20);
-state = InfiniteMPS([random_data]);
+state = InfiniteMPS(2, 20)
 
 md"""
 The groundstate can then be found by calling `find_groundstate`.
@@ -58,9 +57,7 @@ md"""
 Let's initialize a different initial state, this time with a 2-site unit cell:
 """
 
-A = TensorMap(rand, ComplexF64, ℂ^20 * ℂ^2, ℂ^20);
-B = TensorMap(rand, ComplexF64, ℂ^20 * ℂ^2, ℂ^20);
-state = InfiniteMPS([A, B]);
+state = InfiniteMPS(fill(2, 2), fill(20, 2))
 
 md"""
 In MPSKit, we require that the periodicity of the hamiltonian equals that of the state it is applied to.
@@ -70,7 +67,7 @@ Alternatively, the hamiltonian can be constructed directly on a two-site unitcel
 
 ## H2 = repeat(H, 2); -- copies the one-site version
 H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin=1 // 2)
-groundstate, cache, delta = find_groundstate(state, H2,
+groundstate, envs, delta = find_groundstate(state, H2,
                                              VUMPS(; maxiter=100, tol=1e-12));
 
 md"""
@@ -78,9 +75,9 @@ We get convergence, but it takes an enormous amount of iterations.
 The reason behind this becomes more obvious at higher bond dimensions:
 """
 
-groundstate, cache, delta = find_groundstate(state, H2,
+groundstate, envs, delta = find_groundstate(state, H2,
                                              IDMRG2(; trscheme=truncdim(50), maxiter=20,
-                                                    tol=1e-12))
+                                                    tol=1e-12));
 entanglementplot(groundstate)
 
 md"""

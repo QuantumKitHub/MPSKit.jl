@@ -37,13 +37,13 @@ casimir(s::SU2Irrep) = s.j * (s.j + 1)
 function heisenberg_hamiltonian(; J=-1.0)
     s = SU2Irrep(1)
     ℋ = SU2Space(1 => 1)
-    SS = TensorMap(zeros, ComplexF64, ℋ ⊗ ℋ ← ℋ ⊗ ℋ)
+    SS = zeros(ComplexF64, ℋ ⊗ ℋ ← ℋ ⊗ ℋ)
     for (S, data) in blocks(SS)
         data .= -0.5J * (casimir(S) - casimir(s) - casimir(s))
     end
-    return MPOHamiltonian(SS)
+    return InfiniteMPOHamiltonian(SS)
 end
-H = heisenberg_hamiltonian();
+H = heisenberg_hamiltonian()
 
 md"""
 ## Symmetry-Protected Topological Order
