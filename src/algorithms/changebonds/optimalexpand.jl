@@ -35,6 +35,7 @@ function changebonds(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExp
     end
 
     newψ = _expand(ψ, AL′, AR′)
+    recalculate!(envs, newψ, H)
     return newψ, envs
 end
 
@@ -59,7 +60,9 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs=environments(
         AR′[i, j + 1] = V * VR
     end
 
-    return _expand(ψ, AL′, AR′), envs
+    newψ = _expand(ψ, AL′, AR′)
+    recalculate!(envs, newψ, H)
+    return newψ, envs
 end
 
 function changebonds(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs=environments(ψ, H))

@@ -17,7 +17,9 @@ H = -J∑_{⟨i,j⟩} (X_i X_j + Y_i Y_j + Z_i Z_j)
 This hamiltonian has an SU(2) symmetry, which we can enforce by using SU(2)-symmetric tensors:
 """
 
-H = heisenberg_XXX(ComplexF64, SU2Irrep; spin=1, J=1);
+symmetry = SU2Irrep
+spin = 1
+J = 1
 
 md"""
 ## Finite size extrapolation
@@ -34,9 +36,12 @@ This can be done as follows.
 """
 
 L = 11
+chain = FiniteChain(L)
+H = heisenberg_XXX(symmetry, chain; J, spin)
+
 physical_space = SU2Space(1 => 1)
 virtual_space = SU2Space(0 => 12, 1 => 12, 2 => 5, 3 => 3)
-ψ₀ = FiniteMPS(rand, ComplexF64, L, physical_space, virtual_space)
+ψ₀ = FiniteMPS(L, physical_space, virtual_space)
 ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity=0))
 E₀ = real(expectation_value(ψ, H))
 En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(1))
@@ -65,7 +70,8 @@ Finally, we can obtain a value for the Haldane gap by extrapolating our results 
 Ls = 12:4:30
 ΔEs = map(Ls) do L
     @info "computing L = $L"
-    ψ₀ = FiniteMPS(rand, ComplexF64, L, physical_space, virtual_space)
+    ψ₀ = FiniteMPS(L, physical_space, virtual_space)
+    H = heisenberg_XXX(symmetry, FiniteChain(L); J, spin)
     ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity=0))
     En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(1))
     En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(2))
@@ -93,6 +99,8 @@ In contrast with the finite size case, we now should specify a momentum label to
 This way, it is possible to scan the dispersion relation over the entire momentum space.
 """
 
+chain = InfiniteChain(1)
+H = heisenberg_XXX(symmetry, chain; J, spin)
 virtual_space_inf = Rep[SU₂](1 // 2 => 16, 3 // 2 => 16, 5 // 2 => 8, 7 // 2 => 4)
 ψ₀_inf = InfiniteMPS([physical_space], [virtual_space_inf])
 ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H; verbosity=0)

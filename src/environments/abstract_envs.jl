@@ -39,8 +39,8 @@ end
 
 function allocate_GBL(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
-    V = left_virtualspace(bra, i) ⊗ left_virtualspace(mpo, i)' ←
-        auxiliaryspace(ket)' ⊗ left_virtualspace(ket, i)
+    V = left_virtualspace(bra.left_gs, i) ⊗ left_virtualspace(mpo, i)' ←
+        auxiliaryspace(ket)' ⊗ left_virtualspace(ket.right_gs, i)
     if V isa BlockTensorKit.TensorMapSumSpace
         TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
     else
@@ -51,8 +51,8 @@ end
 
 function allocate_GBR(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
-    V = right_virtualspace(ket, i) ⊗ right_virtualspace(mpo, i) ←
-        auxiliaryspace(ket)' ⊗ right_virtualspace(bra, i)
+    V = right_virtualspace(ket.left_gs, i) ⊗ right_virtualspace(mpo, i) ←
+        auxiliaryspace(ket)' ⊗ right_virtualspace(bra.right_gs, i)
     if V isa BlockTensorKit.TensorMapSumSpace
         TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
     else

@@ -33,6 +33,7 @@ struct MPOHamiltonian{TO,V<:AbstractVector{TO}} <: AbstractMPO{TO}
 end
 
 const FiniteMPOHamiltonian{O<:MPOTensor} = MPOHamiltonian{O,Vector{O}}
+Base.isfinite(::Type{<:FiniteMPOHamiltonian}) = true
 
 function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Ws)[1:(end - 1)]
@@ -43,6 +44,7 @@ function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
 end
 
 const InfiniteMPOHamiltonian{O<:MPOTensor} = MPOHamiltonian{O,PeriodicVector{O}}
+Base.isfinite(::Type{<:InfiniteMPOHamiltonian}) = false
 
 function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Ws)
@@ -374,6 +376,15 @@ function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
     O = convert(TensorMap, ncon(tensors, indices))
 
     return transpose(O, (ntuple(identity, N), ntuple(i -> i + N, N)))
+end
+
+function add_physical_charge(H::MPOHamiltonian, charges::AbstractVector{<:Sector})
+    W = map(add_physical_charge, parent(H), charges)
+    if isfinite(H)
+        return FiniteMPOHamiltonian(W)
+    else
+        return InfiniteMPOHamiltonian(W)
+    end
 end
 
 # Linear Algebra

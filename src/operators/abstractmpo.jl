@@ -9,6 +9,7 @@ abstract type AbstractMPO{O<:MPOTensor} <: AbstractVector{O} end
 
 # useful union types
 const SparseMPO{O<:SparseBlockTensorMap} = AbstractMPO{O}
+Base.isfinite(O::AbstractMPO) = isfinite(typeof(O))
 
 # By default, define things in terms of parent
 Base.size(mpo::AbstractMPO, args...) = size(parent(mpo), args...)
@@ -37,6 +38,51 @@ end
 function jordanmpotensortype(::Type{S}, ::Type{T}) where {S<:VectorSpace,T<:Number}
     TT = Base.promote_typejoin(tensormaptype(S, 2, 2, T), BraidingTensor{T,S})
     return SparseBlockTensorMap{TT}
+end
+
+remove_orphans!(mpo::AbstractMPO; tol=eps(real(scalartype(mpo)))^(3 / 4)) = mpo
+function remove_orphans!(mpo::SparseMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
+    droptol!.(mpo, tol)
+
+    if isfinite(mpo)
+        # Forward sweep
+        # col j on site i empty -> remove row j on site i + 1
+        for i in 1:(length(mpo) - 1)
+            mask = filter(1:size(mpo[i], 4)) do j
+                return j ∈ getindex.(nonzero_keys(mpo[i]), 4)
+            end
+            mpo[i] = mpo[i][:, :, :, mask]
+            mpo[i + 1] = mpo[i + 1][mask, :, :, :]
+        end
+
+        # Backward sweep
+        # row j on site i empty -> remove col j on site i - 1
+        for i in length(mpo):-1:2
+            mask = filter(1:size(mpo[i], 1)) do j
+                return j ∈ getindex.(nonzero_keys(mpo[i]), 1)
+            end
+            mpo[i] = mpo[i][mask, :, :, :]
+            mpo[i - 1] = mpo[i - 1][:, :, :, mask]
+        end
+    else
+        # drop dead starts/ends
+        changed = true
+        while changed
+            changed = false
+            for i in 1:length(mpo)
+                # slice empty columns on right or empty rows on left
+                mask = filter(1:size(mpo[i], 4)) do j
+                    return j ∈ getindex.(nonzero_keys(mpo[i]), 1) ||
+                           j ∈ getindex.(nonzero_keys(mpo[i + 1]), 4)
+                end
+                changed |= length(mask) == size(mpo[i], 4)
+                mpo[i] = mpo[i][:, :, :, mask]
+                mpo[i + 1] = mpo[i + 1][mask, :, :, :]
+            end
+        end
+    end
+
+    return mpo
 end
 
 # Show

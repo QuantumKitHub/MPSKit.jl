@@ -16,6 +16,7 @@ end
 Matrix Product Operator (MPO) acting on a finite tensor product space with a linear order.
 """
 const FiniteMPO{O<:MPOTensor} = MPO{O,Vector{O}}
+Base.isfinite(::Type{<:FiniteMPO}) = true
 
 function FiniteMPO(Os::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Os)[1:(end - 1)]
@@ -35,6 +36,7 @@ end
 Matrix Product Operator (MPO) acting on an infinite tensor product space with a linear order.
 """
 const InfiniteMPO{O<:MPOTensor} = MPO{O,PeriodicVector{O}}
+Base.isfinite(::Type{<:InfiniteMPO}) = false
 
 function InfiniteMPO(Os::AbstractVector{O}) where {O<:MPOTensor}
     for i in eachindex(Os)
@@ -60,52 +62,13 @@ end
 Base.repeat(mpo::MPO, n::Int) = MPO(repeat(parent(mpo), n))
 Base.repeat(mpo::MPO, rows::Int, cols::Int) = MultilineMPO(fill(repeat(mpo, cols), rows))
 
-function remove_orphans!(mpo::InfiniteMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
-    droptol!.(mpo, tol)
-
-    # drop dead starts/ends
-    changed = true
-    while changed
-        changed = false
-        for i in 1:length(mpo)
-            # slice empty columns on right or empty rows on left
-            mask = filter(1:size(mpo[i], 4)) do j
-                return j ∈ getindex.(nonzero_keys(mpo[i]), 1) ||
-                       j ∈ getindex.(nonzero_keys(mpo[i + 1]), 4)
-            end
-            changed |= length(mask) == size(mpo[i], 4)
-            mpo[i] = mpo[i][:, :, :, mask]
-            mpo[i + 1] = mpo[i + 1][mask, :, :, :]
-        end
+function add_physical_charge(mpo::MPO, charges::AbstractVector{<:Sector})
+    O = map(add_physical_charge, parent(mpo), charges)
+    if isfinite(mpo)
+        return FiniteMPO(O)
+    else
+        return InfiniteMPO(O)
     end
-
-    return mpo
-end
-
-function remove_orphans!(mpo::FiniteMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
-    droptol!.(mpo, tol)
-
-    # Forward sweep
-    # col j on site i empty -> remove row j on site i + 1
-    for i in 1:(length(mpo) - 1)
-        mask = filter(1:size(mpo[i], 4)) do j
-            return j ∈ getindex.(nonzero_keys(mpo[i]), 4)
-        end
-        mpo[i] = mpo[i][:, :, :, mask]
-        mpo[i + 1] = mpo[i + 1][mask, :, :, :]
-    end
-
-    # Backward sweep
-    # row j on site i empty -> remove col j on site i - 1
-    for i in length(mpo):-1:2
-        mask = filter(1:size(mpo[i], 1)) do j
-            return j ∈ getindex.(nonzero_keys(mpo[i]), 1)
-        end
-        mpo[i] = mpo[i][mask, :, :, :]
-        mpo[i - 1] = mpo[i - 1][:, :, :, mask]
-    end
-
-    return mpo
 end
 
 # Converters
