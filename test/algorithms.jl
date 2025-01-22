@@ -596,27 +596,20 @@ end
 end
 
 @testset "Dynamical DMRG" verbose = true begin
-    ham = force_planar(-1.0 * transverse_field_ising(; g=-4.0))
-    gs, = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbosity=0))
-    window = WindowMPS(gs, copy.([gs.AC[1]; [gs.AR[i] for i in 2:10]]), gs)
+    L = 10
+    H = force_planar(-transverse_field_ising(; L, g=-4))
+    gs, = find_groundstate(FiniteMPS(L, ℙ^2, ℙ^10), H; verbosity=verbosity_conv)
+    E₀ = expectation_value(gs, H)
 
-    szd = force_planar(S_z())
-    @test [expectation_value(gs, i => szd) for i in 1:length(window)] ≈
-          [expectation_value(window, i => szd) for i in 1:length(window)] atol = 1e-10
-
-    openham = open_boundary_conditions(ham, length(window.window))
-    polepos = expectation_value(window.window, openham,
-                                environments(window.window, openham))
-
-    vals = (-0.5:0.2:0.5) .+ polepos
+    vals = (-0.5:0.2:0.5) .+ E₀
     eta = 0.3im
 
-    predicted = [1 / (v + eta - polepos) for v in vals]
+    predicted = [1 / (v + eta - E₀) for v in vals]
 
     @testset "Flavour $f" for f in (Jeckelmann(), NaiveInvert())
         alg = DynamicalDMRG(; flavour=f, verbosity=0, tol=1e-8)
         data = map(vals) do v
-            result, = propagator(window.window, v + eta, openham, alg)
+            result, = propagator(gs, v + eta, H, alg)
             return result
         end
         @test data ≈ predicted atol = 1e-8
