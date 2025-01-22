@@ -1,2 +1,5 @@
 [classic2d]
 "1.hard-hexagon" = "b380d99250b1908c03248a569ccb2729891f94ccad2a840dc9866af63ce98d2e"
+
+[quantum1d]
+"1.ising-cft" = "bd1253451973aa73c4fee6b64d81ee52cc2feba5b9632f87ce332eea3a05f460"

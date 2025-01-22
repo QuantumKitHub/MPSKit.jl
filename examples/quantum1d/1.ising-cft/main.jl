@@ -15,7 +15,7 @@ which can be implemented as follows:
 """
 
 L = 12
-H = periodic_boundary_conditions(transverse_field_ising(), L);
+H = periodic_boundary_conditions(transverse_field_ising(), L)
 
 md"""
 ## Exact diagonalisation
@@ -54,7 +54,7 @@ or in the code as:
 
 id = complex(isomorphism(ℂ^2, ℂ^2))
 @tensor O[-1 -2; -3 -4] := id[-1, -3] * id[-2, -4]
-T = periodic_boundary_conditions(DenseMPO(O), L);
+T = periodic_boundary_conditions(InfiniteMPO([O]), L)
 
 md"""
 We can then calculate the momentum of the groundstate as the expectation value of this
@@ -118,11 +118,11 @@ ansatz. This returns quasiparticle states, which can be converted to regular `Fi
 objects.
 """
 
-E_ex, qps = excitations(H, QuasiparticleAnsatz(), ψ, envs; num=16)
+E_ex, qps = excitations(H_mps, QuasiparticleAnsatz(), ψ, envs; num=16)
 states_mps = vcat(ψ, map(qp -> convert(FiniteMPS, qp), qps))
 E_mps = map(x -> expectation_value(x, H_mps), states_mps)
 
-T_mps = periodic_boundary_conditions(DenseMPO(O), L_mps)
+T_mps = periodic_boundary_conditions(InfiniteMPO([O]), L_mps)
 momenta_mps = Float64[]
 append!(momenta_mps, fix_degeneracies(states[1:1]))
 append!(momenta_mps, fix_degeneracies(states[2:2]))
