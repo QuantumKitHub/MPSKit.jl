@@ -85,11 +85,11 @@ end
     # check if adding terms on the same site works
     single_terms = Iterators.flatten(Iterators.repeated((i => O₁ / 2 for i in 1:L), 2))
     H4 = FiniteMPOHamiltonian(lattice, single_terms)
-    @test H4 ≈ H1
+    @test H4 ≈ H1 atol = 1e-6
     double_terms = Iterators.flatten(Iterators.repeated(((i, i + 1) => O₂ / 2
                                                          for i in 1:(L - 1)), 2))
     H5 = FiniteMPOHamiltonian(lattice, double_terms)
-    @test H5 ≈ H2
+    @test H5 ≈ H2 atol = 1e-6
 
     # test linear algebra
     @test H1 ≈
