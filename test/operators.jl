@@ -82,6 +82,15 @@ end
     @test convert(TensorMap, H3) ≈
           O₁ ⊗ E ⊗ E + E ⊗ O₂ + permute(O₂ ⊗ E, ((1, 3, 2), (4, 6, 5)))
 
+    # check if adding terms on the same site works
+    single_terms = Iterators.flatten(Iterators.repeated((i => O₁ / 2 for i in 1:L), 2))
+    H4 = FiniteMPOHamiltonian(lattice, single_terms)
+    @test H4 ≈ H1
+    double_terms = Iterators.flatten(Iterators.repeated(((i, i + 1) => O₂ / 2
+                                                         for i in 1:(L - 1)), 2))
+    H5 = FiniteMPOHamiltonian(lattice, double_terms)
+    @test H5 ≈ H2
+
     # test linear algebra
     @test H1 ≈
           FiniteMPOHamiltonian(lattice, 1 => O₁) +
