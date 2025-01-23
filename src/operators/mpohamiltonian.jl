@@ -177,7 +177,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
         # Fill it
         for ((key_L, key_R), o) in zip(nonzero_keys[site], nonzero_opps[site])
             key_R′ = key_R == 0 ? length(virtualspaces[site + 1]) : key_R
-            O[key_L, 1, 1, key_R′] = if o isa Number
+            O[key_L, 1, 1, key_R′] += if o isa Number
                 iszero(o) && continue
                 τ = BraidingTensor{E}(eachspace(O)[key_L, 1, 1, key_R′])
                 isone(o) ? τ : τ * o
@@ -295,7 +295,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
         # Fill it
         for ((key_L, key_R′), o) in zip(nonzero_keys[site], nonzero_opps[site])
             key_R = key_R′ == 0 ? length(virtualspaces[site]) : key_R′
-            O[key_L, 1, 1, key_R] = if o isa Number
+            O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
                 τ = BraidingTensor{E}(eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
