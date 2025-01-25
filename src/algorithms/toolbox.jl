@@ -13,11 +13,12 @@ function entropy(state::Union{FiniteMPS,WindowMPS,InfiniteMPS}, loc::Int)
         s = zero(S)
         for x in b
             x < tol && break
-            s += (x * log(x))^2
+            x² = x^2
+            s += x² * log(x²)
         end
         S += oftype(S, dim(c) * s)
     end
-    return S
+    return -S
 end
 
 # function infinite_temperature(H::MPOHamiltonian)
