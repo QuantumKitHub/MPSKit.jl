@@ -8,6 +8,9 @@ function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap)
     return repartition(t1, numout(t2), numin(t2))
 end
 
+_mul_front(C, A) = _transpose_front(C * _transpose_tail(A))
+_mul_tail(A, C) = A * C
+
 function _similar_tail(A::AbstractTensorMap)
     cod = _firstspace(A)
     dom = ⊗(dual(_lastspace(A)), dual.(space.(Ref(A), reverse(2:(numind(A) - 1))))...)
