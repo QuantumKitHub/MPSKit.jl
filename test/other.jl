@@ -54,6 +54,13 @@ end
         @test ψ2 isa InfiniteMPS
         @test norm(ψ2) ≈ 1
     end
+
+    @testset "Stackoverflow with gauging" begin
+        ψ = FiniteMPS(10_000, ℂ^2, ℂ^1)
+        @test ψ.AR[1] isa MPSKit.MPSTensor
+        ψ.AC[1] = -ψ.AR[1] # force invalidation of ALs
+        @test ψ.AL[end] isa MPSKit.MPSTensor
+    end
 end
 
 end
