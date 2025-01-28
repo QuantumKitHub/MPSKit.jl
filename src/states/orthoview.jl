@@ -47,15 +47,42 @@ struct CView{S,E,N} <: AbstractArray{E,N}
 end
 
 function Base.getindex(v::CView{<:FiniteMPS,E}, i::Int)::E where {E}
-    if ismissing(v.parent.Cs[i + 1])
-        if i == 0 || !ismissing(v.parent.ALs[i])
-            (v.parent.Cs[i + 1], temp) = rightorth(_transpose_tail(v.parent.AC[i + 1]);
-                                                   alg=LQpos())
-            v.parent.ARs[i + 1] = _transpose_front(temp)
-        else
-            (v.parent.ALs[i], v.parent.Cs[i + 1]) = leftorth(v.parent.AC[i]; alg=QRpos())
+    ismissing(v.parent.Cs[i + 1]) || return v.parent.Cs[i + 1]
+
+    if i == 0 || !ismissing(v.parent.ALs[i]) # center is too far right
+        center = findfirst(!ismissing, v.parent.ACs)
+        if isnothing(center)
+            center = findfirst(!ismissing, v.parent.Cs)
+            @assert !isnothing(center) "Invalid state"
+            center -= 1 # offset in Cs vs C
+            @assert !ismissing(v.parent.ALs[center]) "Invalid state"
+            v.parent.ACs[center] = _mul_tail(v.parent.ALs[center], v.parent.Cs[center + 1])
+        end
+
+        for j in Iterators.reverse((i + 1):center)
+            v.parent.Cs[j], tmp = rightorth(_transpose_tail(v.parent.ACs[j]); alg=LQpos())
+            v.parent.ARs[j] = _transpose_front(tmp)
+            if j != i + 1 # last AC not needed
+                v.parent.ACs[j - 1] = _mul_tail(v.parent.ALs[j - 1], v.parent.Cs[j])
+            end
+        end
+    else # center is too far left
+        center = findlast(!ismissing, v.parent.ACs)
+        if isnothing(center)
+            center = findlast(!ismissing, v.parent.Cs)
+            @assert !isnothing(center) "Invalid state"
+            @assert !ismissing(v.parent.ARs[center]) "Invalid state"
+            v.parent.ACs[center] = _mul_front(v.parent.Cs[center], v.parent.ARs[center])
+        end
+
+        for j in center:i
+            v.parent.ALs[j], v.parent.Cs[j + 1] = leftorth(v.parent.ACs[j]; alg=QRpos())
+            if j != i # last AC not needed
+                v.parent.ACs[j + 1] = _mul_front(v.parent.Cs[j + 1], v.parent.ARs[j + 1])
+            end
         end
     end
+
     return v.parent.Cs[i + 1]
 end
 
@@ -93,15 +120,16 @@ struct ACView{S,E,N} <: AbstractArray{E,N}
 end
 
 function Base.getindex(v::ACView{<:FiniteMPS,E}, i::Int)::E where {E}
-    if ismissing(v.parent.ACs[i]) && !ismissing(v.parent.ARs[i])
-        c = v.parent.C[i - 1]
-        ar = v.parent.ARs[i]
-        v.parent.ACs[i] = _transpose_front(c * _transpose_tail(ar))
-    elseif ismissing(v.parent.ACs[i]) && !ismissing(v.parent.ALs[i])
-        c = v.parent.C[i]
-        al = v.parent.ALs[i]
-        v.parent.ACs[i] = al * c
+    ismissing(v.parent.ACs[i]) || return v.parent.ACs[i]
+
+    if !ismissing(v.parent.ARs[i]) # center is too far left
+        v.parent.ACs[i] = _mul_front(v.parent.C[i - 1], v.parent.ARs[i])
+    elseif !ismissing(v.parent.ALs[i])
+        v.parent.ACs[i] = _mul_tail(v.parent.ALs[i], v.parent.C[i])
+    else
+        error("Invalid state")
     end
+
     return v.parent.ACs[i]
 end
 
