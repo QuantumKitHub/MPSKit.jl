@@ -1,11 +1,11 @@
 # Matrix Product Operators
 # ========================
 """
-    abstract type AbstractMPO{O<:MPOTensor} <: AbstractVector{O} end
+    abstract type AbstractMPO{O} <: AbstractVector{O} end
 
 Abstract supertype for Matrix Product Operators (MPOs).
 """
-abstract type AbstractMPO{O<:MPOTensor} <: AbstractVector{O} end
+abstract type AbstractMPO{O} <: AbstractVector{O} end
 
 # useful union types
 const SparseMPO{O<:SparseBlockTensorMap} = AbstractMPO{O}
@@ -16,7 +16,7 @@ Base.size(mpo::AbstractMPO, args...) = size(parent(mpo), args...)
 Base.length(mpo::AbstractMPO) = length(parent(mpo))
 
 @inline Base.getindex(mpo::AbstractMPO, i::Int) = getindex(parent(mpo), i)
-@inline function Base.setindex!(mpo::AbstractMPO, value::MPOTensor, i::Int)
+@inline function Base.setindex!(mpo::AbstractMPO, value, i::Int)
     setindex!(parent(mpo), value, i)
     return mpo
 end
@@ -194,20 +194,24 @@ end
 # Kernels
 # -------
 # TODO: diagram
+
+function _fuse_mpo_mpo(O1::MPOTensor, O2::MPOTensor, Fₗ, Fᵣ)
+    return @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
+                                        O2[1 3; -3 5] *
+                                        O1[2 -2; 3 4] *
+                                        conj(Fᵣ[-4; 5 4])
+end
+
 """
     fuse_mul_mpo(O1, O2)
 
 Compute the mpo tensor that arises from multiplying MPOs.
 """
-function fuse_mul_mpo(O1::MPOTensor, O2::MPOTensor)
+function fuse_mul_mpo(O1, O2)
     T = promote_type(scalartype(O1), scalartype(O2))
     F_left = fuser(T, left_virtualspace(O2), left_virtualspace(O1))
     F_right = fuser(T, right_virtualspace(O2), right_virtualspace(O1))
-    @plansor O[-1 -2; -3 -4] := F_left[-1; 1 2] *
-                                O2[1 5; -3 3] *
-                                O1[2 -2; 5 4] *
-                                conj(F_right[-4; 3 4])
-    return O
+    return _fuse_mpo_mpo(O1, O2, F_left, F_right)
 end
 function fuse_mul_mpo(O1::BraidingTensor, O2::BraidingTensor)
     T = promote_type(scalartype(O1), scalartype(O2))
