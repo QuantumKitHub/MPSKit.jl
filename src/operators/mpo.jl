@@ -207,6 +207,7 @@ function VectorInterface.scale!(mpo::MPO, α::Number)
     return mpo
 end
 
+# TODO: merge implementation with that of InfiniteMPO
 function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO<:MPOTensor}
     (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
     S = spacetype(TO)
@@ -273,11 +274,7 @@ function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
 end
 
 function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
-    L = check_length(mpo1, mpo2)
-
-    T = promote_type(scalartype(mpo1), scalartype(mpo2))
-    make_fuser(i) = fuser(T, left_virtualspace(mpo2, i), left_virtualspace(mpo1, i))
-
+    check_length(mpo1, mpo2)
     Os = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
     return InfiniteMPO(Os)
 end
