@@ -1,24 +1,24 @@
 """
-    struct MPO{O<:MPOTensor,V<:AbstractVector{O}} <: AbstractMPO{O}
+    struct MPO{O,V<:AbstractVector{O}} <: AbstractMPO{O}
 
 Matrix Product Operator (MPO) acting on a tensor product space with a linear order.
 
 See also: [`FiniteMPO`](@ref), [`InfiniteMPO`](@ref)
 """
-struct MPO{TO<:MPOTensor,V<:AbstractVector{TO}} <: AbstractMPO{TO}
+struct MPO{TO,V<:AbstractVector{TO}} <: AbstractMPO{TO}
     O::V
 end
 
 """
-    FiniteMPO(Os::Vector{<:MPOTensor}) -> FiniteMPO
-    FiniteMPO(O::AbstractTensorMap{S,N,N}) where {S,N} -> FiniteMPO
+    FiniteMPO(Os::Vector{O}) -> FiniteMPO{O}
+    FiniteMPO(O::AbstractTensorMap{S,N,N}) where {S,N} -> FiniteMPO{O<:MPOTensor}
 
 Matrix Product Operator (MPO) acting on a finite tensor product space with a linear order.
 """
-const FiniteMPO{O<:MPOTensor} = MPO{O,Vector{O}}
+const FiniteMPO{O} = MPO{O,Vector{O}}
 Base.isfinite(::Type{<:FiniteMPO}) = true
 
-function FiniteMPO(Os::AbstractVector{O}) where {O<:MPOTensor}
+function FiniteMPO(Os::AbstractVector{O}) where {O}
     for i in eachindex(Os)[1:(end - 1)]
         right_virtualspace(Os[i]) == left_virtualspace(Os[i + 1]) ||
             throw(SpaceMismatch("unmatching virtual spaces at site $i"))
@@ -31,14 +31,14 @@ function FiniteMPO(O::AbstractTensorMap{T,S,N,N}) where {T,S,N}
 end
 
 """
-    InfiniteMPO(Os::PeriodicVector{<:MPOTensor}) -> InfiniteMPO
+    InfiniteMPO(Os::PeriodicVector{O}) -> InfiniteMPO{O}
 
 Matrix Product Operator (MPO) acting on an infinite tensor product space with a linear order.
 """
-const InfiniteMPO{O<:MPOTensor} = MPO{O,PeriodicVector{O}}
+const InfiniteMPO{O} = MPO{O,PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPO}) = false
 
-function InfiniteMPO(Os::AbstractVector{O}) where {O<:MPOTensor}
+function InfiniteMPO(Os::AbstractVector{O}) where {O}
     for i in eachindex(Os)
         right_virtualspace(Os[i]) == left_virtualspace(Os[mod1(i + 1, end)]) ||
             throw(SpaceMismatch("umatching virtual spaces at site $i"))
@@ -55,7 +55,7 @@ DenseMPO(mpo::MPO) = mpo isa DenseMPO ? copy(mpo) : MPO(map(TensorMap, parent(mp
 Base.parent(mpo::MPO) = mpo.O
 Base.copy(mpo::MPO) = MPO(map(copy, mpo))
 
-function Base.similar(mpo::MPO, ::Type{O}, L::Int) where {O<:MPOTensor}
+function Base.similar(mpo::MPO, ::Type{O}, L::Int) where {O}
     return MPO(similar(parent(mpo), O, L))
 end
 
@@ -95,7 +95,7 @@ function _mps_to_mpo(A::GenericMPSTensor{S,3}) where {S}
     return O
 end
 
-function Base.convert(::Type{TensorMap}, mpo::FiniteMPO)
+function Base.convert(::Type{TensorMap}, mpo::FiniteMPO{<:MPOTensor})
     N = length(mpo)
     # add trivial tensors to remove left and right trivial leg.
     V_left = left_virtualspace(mpo, 1)
@@ -120,7 +120,7 @@ end
 # VectorInterface.scalartype(::Type{FiniteMPO{O}}) where {O} = scalartype(O)
 
 Base.:+(mpo::MPO) = MPO(map(+, parent(mpo)))
-function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
+function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO<:MPOTensor}
     (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
     @assert left_virtualspace(mpo1, 1) == left_virtualspace(mpo2, 1) &&
             right_virtualspace(mpo1, N) == right_virtualspace(mpo2, N)
@@ -207,7 +207,7 @@ function VectorInterface.scale!(mpo::MPO, α::Number)
     return mpo
 end
 
-function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO}
+function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO<:MPOTensor}
     (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
     S = spacetype(TO)
     if (left_virtualspace(mpo1, 1) != oneunit(S) ||
@@ -277,25 +277,18 @@ function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
 
     T = promote_type(scalartype(mpo1), scalartype(mpo2))
     make_fuser(i) = fuser(T, left_virtualspace(mpo2, i), left_virtualspace(mpo1, i))
-    fusers = PeriodicArray(map(make_fuser, 1:L))
 
-    Os = map(1:L) do i
-        return _fuse_mpo_mpo(mpo1[i], mpo2[i], fusers[i], fusers[i + 1])
+    Os = map(zip(parent(mpo1), parent(mpo2))) do (O1, O2)
+        return fuse_mul_mpo(O1, O2)
     end
     return InfiniteMPO(Os)
-end
-
-function _fuse_mpo_mpo(O1::MPOTensor, O2::MPOTensor, Fₗ, Fᵣ)
-    return @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 4] *
-                                        O2[1 2; -3 3] *
-                                        O1[4 -2; 2 5] *
-                                        conj(Fᵣ[-4; 3 5])
 end
 
 # TODO: I think the fastest order is to start from both ends, and take the overlap at the
 # largest virtual space cut, but it might be better to just multithread both sides and meet
 # in the middle
-function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO, ket::FiniteMPS{T}) where {T}
+function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO{<:MPOTensor},
+                       ket::FiniteMPS{T}) where {T}
     (N = length(bra)) == length(mpo) == length(ket) ||
         throw(ArgumentError("dimension mismatch"))
     Nhalf = N ÷ 2
@@ -330,7 +323,7 @@ function TensorKit.dot(bra::InfiniteMPS, mpo::InfiniteMPO, ket::InfiniteMPS;
     return val
 end
 
-function TensorKit.dot(mpo₁::FiniteMPO, mpo₂::FiniteMPO)
+function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO<:MPOTensor}
     length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
     N = length(mpo₁)
     Nhalf = N ÷ 2
