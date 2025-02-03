@@ -278,9 +278,7 @@ function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
     T = promote_type(scalartype(mpo1), scalartype(mpo2))
     make_fuser(i) = fuser(T, left_virtualspace(mpo2, i), left_virtualspace(mpo1, i))
 
-    Os = map(zip(parent(mpo1), parent(mpo2))) do (O1, O2)
-        return fuse_mul_mpo(O1, O2)
-    end
+    Os = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
     return InfiniteMPO(Os)
 end
 

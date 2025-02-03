@@ -13,10 +13,10 @@ See also: [`Multiline`](@ref), [`AbstractMPO`](@ref)
 """
 const MultilineMPO = Multiline{<:AbstractMPO}
 
-function MultilineMPO(Os::AbstractMatrix{T}) where {T}
+function MultilineMPO(Os::AbstractMatrix)
     return MultilineMPO(map(FiniteMPO, eachrow(Os)))
 end
-function MultilineMPO(Os::PeriodicMatrix{T}) where {T}
+function MultilineMPO(Os::PeriodicMatrix)
     return MultilineMPO(map(InfiniteMPO, eachrow(Os)))
 end
 MultilineMPO(mpos::AbstractVector{<:AbstractMPO}) = Multiline(mpos)
