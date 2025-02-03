@@ -308,9 +308,7 @@ function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO{<:MPOTensor},
 end
 function TensorKit.dot(bra::InfiniteMPS, mpo::InfiniteMPO, ket::InfiniteMPS;
                        ishermitian=false, krylovdim=30, kwargs...)
-    ρ₀ = similar(bra.AL[1],
-                 left_virtualspace(ket, 1) * left_virtualspace(mpo, 1) ←
-                 left_virtualspace(bra, 1))
+    ρ₀ = allocate_GL(bra, mpo, ket, 1)
     randomize!(ρ₀)
 
     val, = fixedpoint(TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM; ishermitian,
