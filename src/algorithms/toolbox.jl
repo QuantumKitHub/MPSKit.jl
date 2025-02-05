@@ -92,7 +92,11 @@ Compute the entanglement spectrum at a given site, i.e. the singular values of t
 matrix to the right of a given site. This is a dictionary mapping the charge to the singular
 values.
 """
-function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS}, site::Int=0)
+function entanglement_spectrum(st::Union{InfiniteMPS,WindowMPS}, site::Int=0)
+    checkbounds(st, site)
+    return LinearAlgebra.svdvals(st.C[site])
+end
+function entanglement_spectrum(st::Union{FiniteMPS}, site::Int=1)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
