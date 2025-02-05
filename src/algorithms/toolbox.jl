@@ -86,13 +86,21 @@ function transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, nu
 end
 
 """
-    entanglement_spectrum(ψ, [site::Int=0]) -> SectorDict{sectortype(ψ),Vector{<:Real}}
+    entanglement_spectrum(ψ, site::Int) -> SectorDict{sectortype(ψ),Vector{<:Real}}
 
 Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
 matrix to the right of a given site. This is a dictionary mapping the charge to the singular
 values.
+
+For `InfiniteMPS` and `WindowMPS` the default value for `site` is 0.
+
+For `FiniteMPS` no default value for `site` is given, it is up to the user to specify.
 """
-function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS}, site::Int=0)
+function entanglement_spectrum(st::Union{InfiniteMPS,WindowMPS}, site::Int=0)
+    checkbounds(st, site)
+    return LinearAlgebra.svdvals(st.C[site])
+end
+function entanglement_spectrum(st::FiniteMPS, site::Int)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
