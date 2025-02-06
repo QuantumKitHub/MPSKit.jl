@@ -1,15 +1,24 @@
 """
     entanglementplot(state; site=0[, kwargs...])
 
-Plot the entanglement spectrum of a given InfiniteMPS. 
+Plot the [entanglement spectrum](@ref entanglement_spectrum) of a given MPS `state`. 
 
 # Arguments
-- `site::Int=0`: mps index for multisite unit cells. Spectrum is computed for the bond between `site` and `site + 1`.
+- `state`: the MPS for which to compute the entanglement spectrum.
+- `site::Int=0`: MPS index for multisite unit cells. The spectrum is computed for the bond
+  between `site` and `site + 1`.
 - `expand_symmetry::Logical=false`: add quantum dimension degeneracies.
 - `sortby=maximum`: the method of sorting the sectors.
 - `sector_margin=1//10`: the amount of whitespace between sectors.
 - `sector_formatter=string`: how to convert sectors to strings.
 - `kwargs...`: other kwargs are passed on to the plotting backend.
+
+!!! note
+    You will need to manually import [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to
+    be able to use this function. MPSKit.jl defines its plots based on
+    [RecipesBase.jl](https://github.com/JuliaPlots/Plots.jl/tree/v2/RecipesBase), but the
+    user still has to add `using Plots` to be able to actually produce the plots.
+
 """
 function entanglementplot end
 @userplot EntanglementPlot
@@ -17,7 +26,8 @@ function entanglementplot end
 @recipe function f(h::EntanglementPlot; site=0, expand_symmetry=false, sortby=maximum,
                    sector_margin=1 // 10, sector_formatter=string)
     mps = h.args[1]
-    site <= length(mps) || throw(ArgumentError("Not a valid site for the given mps."))
+    (site <= length(mps) && !(site=0 && isa(mps, FiniteMPS))) ||
+        throw(ArgumentError("Invalid site $site for the given mps."))
 
     spectra = entanglement_spectrum(mps, site)
     sectors = []
@@ -81,15 +91,23 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 
 # Arguments
 - `above::InfiniteMPS`: above mps for [`transfer_spectrum`](@ref).
-- `below::InfiniteMPS`: below mps for [`transfer_spectrum`](@ref).
+- `below::InfiniteMPS=above`: below mps for [`transfer_spectrum`](@ref).
 - `sectors=[]`: vector of sectors for which to compute the spectrum.
 - `transferkwargs`: kwargs for call to [`transfer_spectrum`](@ref).
 - `kwargs`: other kwargs are passed on to the plotting backend.
 - `thetaorigin=0`: origin of the angle range.
 - `sector_formatter=string`: how to convert sectors to strings.
+
+!!! note
+    You will need to manually import [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to
+    be able to use this function. MPSKit.jl defines its plots based on
+    [RecipesBase.jl](https://github.com/JuliaPlots/Plots.jl/tree/v2/RecipesBase), but the
+    user still has to add `using Plots` to be able to actually produce the plots.
+
 """
 function transferplot end
 @userplot TransferPlot
+
 @recipe function f(h::TransferPlot; sectors=nothing, transferkwargs=(;), thetaorigin=0,
                    sector_formatter=string)
     if sectors === nothing
