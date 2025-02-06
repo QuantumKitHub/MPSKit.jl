@@ -5,6 +5,8 @@ Plot the [entanglement spectrum](@ref entanglement_spectrum) of a given MPS `sta
 
 # Arguments
 - `state`: the MPS for which to compute the entanglement spectrum.
+
+# Keyword Arguments
 - `site::Int=0`: MPS index for multisite unit cells. The spectrum is computed for the bond
   between `site` and `site + 1`.
 - `expand_symmetry::Logical=false`: add quantum dimension degeneracies.
@@ -85,13 +87,15 @@ function entanglementplot end
 end
 
 """
-    transferplot(above, below[, sectors[, transferkwargs[, kwargs]]])
+    transferplot(above, below=above; sectors=[], transferkwargs=(;)[, kwargs...])
 
 Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 
 # Arguments
 - `above::InfiniteMPS`: above mps for [`transfer_spectrum`](@ref).
 - `below::InfiniteMPS=above`: below mps for [`transfer_spectrum`](@ref).
+
+# Keyword Arguments
 - `sectors=[]`: vector of sectors for which to compute the spectrum.
 - `transferkwargs`: kwargs for call to [`transfer_spectrum`](@ref).
 - `kwargs`: other kwargs are passed on to the plotting backend.
