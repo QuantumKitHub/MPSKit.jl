@@ -26,7 +26,7 @@ function entanglementplot end
 @recipe function f(h::EntanglementPlot; site=0, expand_symmetry=false, sortby=maximum,
                    sector_margin=1 // 10, sector_formatter=string)
     mps = h.args[1]
-    (site <= length(mps) && !(site = 0 && isa(mps, FiniteMPS))) ||
+    (site <= length(mps) && !(isa(mps, FiniteMPS) && site == 0)) ||
         throw(ArgumentError("Invalid site $site for the given mps."))
 
     spectra = entanglement_spectrum(mps, site)
