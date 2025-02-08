@@ -1,15 +1,13 @@
-# using MKL
+using MKL
 using ThreadPinning
 using LinearAlgebra: BLAS
 using BenchmarkTools
 using TensorKit, MPSKit, MPSKitModels
 using CairoMakie
 
-# BLAS.set_num_threads(1)
+BLAS.set_num_threads(1)
 
 ThreadPinning.threadinfo()
-ThreadPinning.threadinfo(; blas=true)
-ThreadPinning.pinthreads(:cores)
 ThreadPinning.threadinfo(; blas=true)
 
 bench_iter = 4 # set <= 0 to use benchmarktools
@@ -17,6 +15,15 @@ check_dense = true
 check_nearestneighbour = true
 check_jordanmpo = true
 
+# settings
+T = ComplexF64
+N = 60
+maxiter = 5 # number of sweeps
+verbosity = MPSKit.VERBOSE_ITER
+sval = 1e-6 # cut in spectrum
+
+# Utility
+# -------
 function double_heisenberg_term(::Type{T}=ComplexF64,
                                 symmetry=SU2Irrep ⊠ SU2Irrep) where {T<:Number}
     P = Vect[symmetry]((1 // 2, 1 // 2) => 1)
@@ -41,16 +48,12 @@ function double_heisenberg_hamiltonian(::Type{T}, symmetry=SU2Irrep ⊠ SU2Irrep
     return @mpoham sum(H{i,j} for (i, j) in nearest_neighbours(lattice))
 end
 
-maxiter = 5 # number of sweeps
-verbosity = MPSKit.VERBOSE_ITER
-sval = 1e-6
-
 alg = DMRG2(; eigalg=(; eager=true, verbosity=1, tol_min=1e-12), maxiter, verbosity,
             trscheme=TensorKit.truncbelow(sval), tol=1e-15);
 sym = SU2Irrep ⊠ SU2Irrep
-N = 60
 
-T = ComplexF64
+# Initialization
+# --------------
 H = double_heisenberg_hamiltonian(T; N)
 
 V = Vect[sym]((0, 0) => 1, (0, 1 // 2) => 1, (1 // 2, 0) => 1)
@@ -58,11 +61,12 @@ V = fuse(V^4)
 P = physicalspace(H, 1)
 MPS_init = FiniteMPS(randn, T, N, P, V; left=Vect[sym]((0, 0) => 1),
                      right=Vect[sym]((0, 0) => 1))
-
-H2 = NN_Hamiltonian(double_heisenberg_term(T, sym))
-
 temp, _ = find_groundstate(MPS_init, H, alg);
+
+# check twosite actually is correct:
+H2 = NN_Hamiltonian(double_heisenberg_term(T, sym))
 temp2, _ = find_groundstate(MPS_init, H2, alg);
+@info "overlap" dot(temp, temp2)
 
 # Baseline
 # --------
@@ -75,10 +79,10 @@ times_sparsempo = let ψ = copy(temp)
         if bench_iter <= 0
             t = @belapsed $h_ac2($ac2)
         else
-            ts = map(1:bench_iter) do
+            ts = map(1:bench_iter) do i
                 return @elapsed h_ac2(ac2)
             end
-            t = minimum(t)
+            t = minimum(ts)
         end
         @info "position: $pos, timing: $t"
         return t
@@ -91,10 +95,13 @@ if check_dense
         times = map(sites) do pos
             h_ac2 = MPSKit.∂∂AC2(pos, ψ, H, envs)
             @plansor ac2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
-            if use_benchmarktools
+            if bench_iter <= 0
                 t = @belapsed $h_ac2($ac2)
             else
-                t = @elapsed h_ac2(ac2)
+                ts = map(1:bench_iter) do i
+                    return @elapsed h_ac2(ac2)
+                end
+                t = minimum(ts)
             end
             @info "position: $pos, timing: $t"
             return t
@@ -113,10 +120,13 @@ if check_jordanmpo
         times = map(sites) do pos
             h_ac2 = MPSKit.∂∂AC2(pos, ψ, H, envs)
             @plansor ac2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
-            if use_benchmarktools
+            if bench_iter <= 0
                 t = @belapsed $h_ac2($ac2)
             else
-                t = @elapsed h_ac2(ac2)
+                ts = map(1:bench_iter) do i
+                    return @elapsed h_ac2(ac2)
+                end
+                t = minimum(ts)
             end
             @info "position: $pos, timing: $t"
             return t
@@ -133,10 +143,13 @@ if check_nearestneighbour
         times = map(sites) do pos
             h_ac2 = MPSKit.∂∂AC2(pos, ψ, H, envs)
             @plansor ac2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
-            if use_benchmarktools
+            if bench_iter <= 0
                 t = @belapsed $h_ac2($ac2)
             else
-                t = @elapsed h_ac2(ac2)
+                ts = map(1:bench_iter) do i
+                    return @elapsed h_ac2(ac2)
+                end
+                t = minimum(ts)
             end
             @info "position: $pos, timing: $t"
             return t
