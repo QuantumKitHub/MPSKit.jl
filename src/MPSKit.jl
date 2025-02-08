@@ -179,6 +179,7 @@ include("algorithms/ED.jl")
 include("algorithms/unionalg.jl")
 
 include("operators/nearest_neighbour.jl")
+include("operators/jordanmpotensor.jl")
 
 function __init__()
     Defaults.set_scheduler!()
