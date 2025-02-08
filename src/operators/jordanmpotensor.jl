@@ -109,3 +109,13 @@ function ∂AC2(x::MPOTensor, O1::JordanMPOTensor, O2::JordanMPOTensor,
     end
     return y isa BlockTensorMap ? only(y) : y
 end
+
+function TensorKit.removeunit(t::SparseBlockTensorMap, i::Int)
+    W = removeunit(space(t), i)
+    tdst = similar(t, W)
+    for (I, v) in nonzero_pairs(t)
+        I′ = CartesianIndex(TensorKit.TupleTools.deleteat(I.I, i))
+        tdst[I′] = removeunit(v, i)
+    end
+    return tdst
+end
