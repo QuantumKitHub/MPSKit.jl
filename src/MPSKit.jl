@@ -21,6 +21,7 @@ export MPO, FiniteMPO, InfiniteMPO
 export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian
 export MultilineMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
+export NN_Hamiltonian
 
 # environments:
 export environments
@@ -176,6 +177,8 @@ include("algorithms/approximate/idmrg.jl")
 include("algorithms/ED.jl")
 
 include("algorithms/unionalg.jl")
+
+include("operators/nearest_neighbour.jl")
 
 function __init__()
     Defaults.set_scheduler!()
