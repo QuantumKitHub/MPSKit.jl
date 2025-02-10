@@ -416,6 +416,27 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
 end
 
 """
+    open_boundary_conditions(mpo::InfiniteMPO, L::Int) -> FiniteMPO
+
+Convert an infinite MPO into a finite MPO of length `L`, by applying open boundary conditions.
+"""
+function open_boundary_conditions(mpo::InfiniteMPO{O},
+                                  L=length(mpo)) where {O<:SparseBlockTensorMap}
+    mod(L, length(mpo)) == 0 ||
+        throw(ArgumentError("length $L is not a multiple of the infinite unitcell"))
+
+    # Make a FiniteMPO, filling it up with the tensors of H
+    # Only keep top row of the first and last column of the last MPO tensor
+
+    # allocate output
+    output = Vector(repeat(copy(parent(mpo)), L ÷ length(mpo)))
+    output[1] = output[1][1, :, :, :]
+    output[end] = output[end][:, :, :, 1]
+
+    return FiniteMPO(output)
+end
+
+"""
     open_boundary_conditions(mpo::InfiniteMPOHamiltonian, L::Int) -> FiniteMPOHamiltonian
 
 Convert an infinite MPO into a finite MPO of length `L`, by applying open boundary conditions.
