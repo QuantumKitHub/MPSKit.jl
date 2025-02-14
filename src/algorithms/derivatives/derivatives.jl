@@ -1,61 +1,39 @@
 # Given a state and it's environments, we can act on it
 
-"""
-    Draft operators
-"""
-struct MPO_∂∂C{L,R}
-    leftenv::L
-    rightenv::R
-end
+const DerivativeOperator = Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2,JordanMPO_∂∂AC}
 
-struct MPO_∂∂AC{O,L,R}
-    o::O
-    leftenv::L
-    rightenv::R
-end
-
-struct MPO_∂∂AC2{O,L,R}
-    o1::O
-    o2::O
-    leftenv::L
-    rightenv::R
-end
-
-const DerivativeOperator = Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}
-
-Base.:*(h::Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2}, v) = h(v);
-
+# TODO: do we still need this?
 (h::MPO_∂∂C)(x) = ∂C(x, h.leftenv, h.rightenv);
 (h::MPO_∂∂AC)(x) = ∂AC(x, h.o, h.leftenv, h.rightenv);
 (h::MPO_∂∂AC2)(x) = ∂AC2(x, h.o1, h.o2, h.leftenv, h.rightenv);
 (h::DerivativeOperator)(v, ::Number) = h(v)
 
 # draft operator constructors
-function ∂∂C(pos::Int, mps, operator, envs)
-    return MPO_∂∂C(leftenv(envs, pos + 1, mps), rightenv(envs, pos, mps))
-end
-function ∂∂C(row::Int, col::Int, mps, operator::MultilineMPO, envs)
-    return ∂∂C(col, mps[row], operator[row], envs[row])
-end
+# function ∂∂C(pos::Int, mps, operator, envs)
+#     return MPO_∂∂C(leftenv(envs, pos + 1, mps), rightenv(envs, pos, mps))
+# end
+# function ∂∂C(row::Int, col::Int, mps, operator::MultilineMPO, envs)
+#     return ∂∂C(col, mps[row], operator[row], envs[row])
+# end
 
-function ∂∂AC(pos::Int, mps, operator, envs)
-    return MPO_∂∂AC(operator[pos], leftenv(envs, pos, mps), rightenv(envs, pos, mps))
-end
+# function ∂∂AC(pos::Int, mps, operator, envs)
+#     return MPO_∂∂AC(operator[pos], leftenv(envs, pos, mps), rightenv(envs, pos, mps))
+# end
 function ∂∂AC(row::Int, col::Int, mps, operator::MultilineMPO, envs)
     return ∂∂AC(col, mps[row], operator[row], envs[row])
 end
-function ∂∂AC(col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂AC(operator[:, col], leftenv(envs, col, mps), rightenv(envs, col, mps))
-end
+# function ∂∂AC(col::Int, mps, operator::MultilineMPO, envs)
+#     return MPO_∂∂AC(operator[:, col], leftenv(envs, col, mps), rightenv(envs, col, mps))
+# end
 
-function ∂∂AC2(pos::Int, mps, operator, envs)
-    return MPO_∂∂AC2(operator[pos], operator[pos + 1], leftenv(envs, pos, mps),
-                     rightenv(envs, pos + 1, mps))
-end
-function ∂∂AC2(col::Int, mps, operator::MultilineMPO, envs)
-    return MPO_∂∂AC2(operator[:, col], operator[:, col + 1], leftenv(envs, col, mps),
-                     rightenv(envs, col + 1, mps))
-end
+# function ∂∂AC2(pos::Int, mps, operator, envs)
+#     return MPO_∂∂AC2(operator[pos], operator[pos + 1], leftenv(envs, pos, mps),
+#                      rightenv(envs, pos + 1, mps))
+# end
+# function ∂∂AC2(col::Int, mps, operator::MultilineMPO, envs)
+#     return MPO_∂∂AC2(operator[:, col], operator[:, col + 1], leftenv(envs, col, mps),
+#                      rightenv(envs, col + 1, mps))
+# end
 function ∂∂AC2(row::Int, col::Int, mps, operator::MultilineMPO, envs::MultilineEnvironments)
     return ∂∂AC2(col, mps[row], operator[row], envs[row])
 end
@@ -65,66 +43,66 @@ end
 ∂∂AC(pos::CartesianIndex, mps, operator, envs) = ∂∂AC(Tuple(pos)..., mps, operator, envs)
 ∂∂AC2(pos::CartesianIndex, mps, operator, envs) = ∂∂AC2(Tuple(pos)..., mps, operator, envs)
 
-function ∂AC(x::MPSTensor{S}, operator::MPOTensor{S}, leftenv::MPSTensor{S},
-             rightenv::MPSTensor{S})::typeof(x) where {S}
-    @plansor y[-1 -2; -3] := leftenv[-1 5; 4] * x[4 2; 1] * operator[5 -2; 2 3] *
-                             rightenv[1 3; -3]
-    return y isa BlockTensorMap ? only(y) : y
-end
-function ∂AC(x::MPSTensor{S}, operator::Number, leftenv::MPSTensor{S},
-             rightenv::MPSTensor{S})::typeof(x) where {S}
-    @plansor y[-1 -2; -3] := operator * (leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] *
-                                         rightenv[1 7; -3])
-end
-function ∂AC(x::GenericMPSTensor{S,3}, operator::MPOTensor{S}, leftenv::MPSTensor{S},
-             rightenv::MPSTensor{S})::typeof(x) where {S}
-    @plansor y[-1 -2 -3; -4] ≔ leftenv[-1 7; 6] * x[6 4 2; 1] * operator[7 -2; 4 5] *
-                               τ[5 -3; 2 3] * rightenv[1 3; -4]
-end
+# function ∂AC(x::MPSTensor{S}, operator::MPOTensor{S}, leftenv::MPSTensor{S},
+#              rightenv::MPSTensor{S})::typeof(x) where {S}
+#     @plansor y[-1 -2; -3] := leftenv[-1 5; 4] * x[4 2; 1] * operator[5 -2; 2 3] *
+#                              rightenv[1 3; -3]
+#     return y isa BlockTensorMap ? only(y) : y
+# end
+# function ∂AC(x::MPSTensor{S}, operator::Number, leftenv::MPSTensor{S},
+#              rightenv::MPSTensor{S})::typeof(x) where {S}
+#     @plansor y[-1 -2; -3] := operator * (leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] *
+#                                          rightenv[1 7; -3])
+# end
+# function ∂AC(x::GenericMPSTensor{S,3}, operator::MPOTensor{S}, leftenv::MPSTensor{S},
+#     rightenv::MPSTensor{S})::typeof(x) where {S}
+# @plansor y[-1 -2 -3; -4] ≔ leftenv[-1 7; 6] * x[6 4 2; 1] * operator[7 -2; 4 5] *
+#                       τ[5 -3; 2 3] * rightenv[1 3; -4]
+# end
 
 # mpo multiline
-function ∂AC(x::AbstractVector, opp, leftenv, rightenv)
-    return circshift(map(∂AC, x, opp, leftenv, rightenv), 1)
-end
+# function ∂AC(x::Vector, opp, leftenv, rightenv)
+#     return circshift(map(∂AC, x, opp, leftenv, rightenv), 1)
+# end
 
-function ∂AC(x::MPSTensor, ::Nothing, leftenv, rightenv)
-    return _transpose_front(leftenv * _transpose_tail(x * rightenv))
-end
+# function ∂AC(x::MPSTensor, ::Nothing, leftenv, rightenv)
+#     return _transpose_front(leftenv * _transpose_tail(x * rightenv))
+# end
 
-function ∂AC2(x::MPOTensor, operator1::MPOTensor, operator2::MPOTensor, leftenv, rightenv)
-    @plansor toret[-1 -2; -3 -4] := leftenv[-1 7; 6] * x[6 5; 1 3] *
-                                    operator1[7 -2; 5 4] *
-                                    operator2[4 -4; 3 2] *
-                                    rightenv[1 2; -3]
-    return toret isa BlockTensorMap ? only(toret) : toret
-end
-function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv, rightenv)
-    @plansor y[-1 -2; -3 -4] := x[1 -2; 2 -4] * leftenv[-1; 1] * rightenv[2; -3]
-end
-function ∂AC2(x::AbstractTensorMap{<:Any,<:Any,3,3}, operator1::MPOTensor,
-              operator2::MPOTensor, leftenv::MPSTensor, rightenv::MPSTensor)::typeof(x)
-    @plansor y[-1 -2 -3; -4 -5 -6] ≔ leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
-                                     rightenv[1 3; -4] *
-                                     operator1[11 -2; 8 9] * τ[9 -3; 6 7] *
-                                     operator2[7 -6; 4 5] * τ[5 -5; 2 3]
-end
+# function ∂AC2(x::MPOTensor, operator1::MPOTensor, operator2::MPOTensor, leftenv, rightenv)
+#     @plansor toret[-1 -2; -3 -4] := leftenv[-1 7; 6] * x[6 5; 1 3] *
+#                                     operator1[7 -2; 5 4] *
+#                                     operator2[4 -4; 3 2] *
+#                                     rightenv[1 2; -3]
+#     return toret isa BlockTensorMap ? only(toret) : toret
+# end
+# function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv, rightenv)
+#     @plansor y[-1 -2; -3 -4] := x[1 -2; 2 -4] * leftenv[-1; 1] * rightenv[2; -3]
+# end
+# function ∂AC2(x::AbstractTensorMap{<:Any,<:Any,3,3}, operator1::MPOTensor,
+#     operator2::MPOTensor, leftenv::MPSTensor, rightenv::MPSTensor)::typeof(x)
+# @plansor y[-1 -2 -3; -4 -5 -6] ≔ leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
+#                            rightenv[1 3; -4] *
+#                            operator1[11 -2; 8 9] * τ[9 -3; 6 7] *
+#                            operator2[7 -6; 4 5] * τ[5 -5; 2 3]
+# end
 
-function ∂AC2(x::AbstractVector, opp1, opp2, leftenv, rightenv)
-    return circshift(map(∂AC2, x, opp1, opp2, leftenv, rightenv), 1)
-end
+# function ∂AC2(x::Vector, opp1, opp2, leftenv, rightenv)
+#     return circshift(map(∂AC2, x, opp1, opp2, leftenv, rightenv), 1)
+# end
 
-function ∂C(x::MPSBondTensor, leftenv::MPSTensor, rightenv::MPSTensor)
-    @plansor y[-1; -2] := leftenv[-1 3; 1] * x[1; 2] * rightenv[2 3; -2]
-    return y isa BlockTensorMap ? only(y) : y
-end
+# function ∂C(x::MPSBondTensor, leftenv::MPSTensor, rightenv::MPSTensor)
+#     @plansor y[-1; -2] := leftenv[-1 3; 1] * x[1; 2] * rightenv[2 3; -2]
+#     return y isa BlockTensorMap ? only(y) : y
+# end
 
-function ∂C(x::MPSBondTensor, leftenv::MPSBondTensor, rightenv::MPSBondTensor)
-    @plansor toret[-1; -2] := leftenv[-1; 1] * x[1; 2] * rightenv[2; -2]
-end
+# function ∂C(x::MPSBondTensor, leftenv::MPSBondTensor, rightenv::MPSBondTensor)
+#     @plansor toret[-1; -2] := leftenv[-1; 1] * x[1; 2] * rightenv[2; -2]
+# end
 
-function ∂C(x::AbstractVector, leftenv, rightenv)
-    return circshift(map(t -> ∂C(t...), zip(x, leftenv, rightenv)), 1)
-end
+# function ∂C(x::Vector, leftenv, rightenv)
+#     return circshift(map(t -> ∂C(t...), zip(x, leftenv, rightenv)), 1)
+# end
 
 # downproject for approximate
 function c_proj(pos::Int, ψ, (operator, ϕ)::Tuple, envs)
