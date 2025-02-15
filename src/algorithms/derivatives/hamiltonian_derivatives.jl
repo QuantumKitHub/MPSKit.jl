@@ -138,3 +138,16 @@ function (H::JordanMPO_∂∂AC)(x::MPSTensor)
 
     return y
 end
+
+struct JordanMPO_∂∂AC2{O1,O2,O3,O4}
+    onsite_left::Union{O1,Missing}
+    onsite_right::Union{O1,Missing}
+    not_started::Union{O1,Missing}
+    finished::Union{O1,Missing}
+    start_end::Union{O2,Missing}
+    starting_left::Union{O3,Missing}
+    starting_right::Union{O2,Missing}
+    ending_left::Union{O2,Missing}
+    ending_right::Union{O3,Missing}
+    continuing::O4
+end
