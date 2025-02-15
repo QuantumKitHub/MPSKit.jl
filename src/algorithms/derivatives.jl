@@ -101,6 +101,13 @@ end
 function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv, rightenv)
     @plansor y[-1 -2; -3 -4] := x[1 -2; 2 -4] * leftenv[-1; 1] * rightenv[2; -3]
 end
+function ∂AC2(x::AbstractTensorMap{<:Any,<:Any,3,3}, operator1::MPOTensor,
+              operator2::MPOTensor, leftenv::MPSTensor, rightenv::MPSTensor)::typeof(x)
+    @plansor y[-1 -2 -3; -4 -5 -6] ≔ leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
+                                     rightenv[1 3; -4] *
+                                     operator1[11 -2; 8 9] * τ[9 -3; 6 7] *
+                                     operator2[7 -6; 4 5] * τ[5 -5; 2 3]
+end
 
 function ∂AC2(x::Vector, opp1, opp2, leftenv, rightenv)
     return circshift(map(∂AC2, x, opp1, opp2, leftenv, rightenv), 1)
