@@ -128,3 +128,15 @@ function transfer_right(v::MPOTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
     @plansor v[-1 -2; -3 -4] := A[-1 4; 5] * O[-2 2; 4 3] *
                                 conj(Ab[-4 2; 1]) * v[5 3; -3 1]
 end
+
+# desity matrix transfer
+function transfer_left(x::MPSTensor, O::MPOTensor, A::GenericMPSTensor{<:Any,3},
+                       Ab::GenericMPSTensor{<:Any,3})
+    @plansor y[-1 -2; -3] ≔ x[1 2; 6] * A[6 7 8; -3] * O[2 3; 7 5] * τ[5 4; 8 -2] *
+                            conj(Ab[1 3 4; -1])
+end
+function transfer_right(x::MPSTensor, O::MPOTensor, A::GenericMPSTensor{<:Any,3},
+                        Ab::GenericMPSTensor{<:Any,3})
+    @plansor y[-1 -2; -3] ≔ A[-1 4 2; 1] * O[-2 6; 4 5] * τ[5 7; 2 3] *
+                            conj(Ab[-3 6 7; 8]) * x[1 3; 8]
+end
