@@ -578,19 +578,12 @@ end
 
 function TensorKit.dot(bra::FiniteMPS, H::FiniteMPOHamiltonian, ket::FiniteMPS=bra,
                        envs=environments(bra, H, ket))
-    # TODO: find where environments are already computed and use that site
     @assert ket === bra "TBA"
-    Nhalf = length(bra) ÷ 2
-
-    h = H[Nhalf]
-    GL = leftenv(envs, Nhalf, bra)
-    GR = rightenv(envs, Nhalf, ket)
-    AC = ket.AC[Nhalf]
-    AC̄ = bra.AC[Nhalf]
-    E = zero(promote_type(scalartype(bra), scalartype(H), scalartype(ket)))
-    E = @plansor GL[1 2; 3] * AC[3 7; 5] * GR[5 8; 6] * conj(AC̄[1 4; 6]) *
-                 h[2 4; 7 8]
-    return E
+    # find where environments had already been computed
+    N = something(findfirst(i -> bra.ARs[i] !== envs.rdependencies[i], 1:length(bra)),
+                  length(bra) ÷ 2)
+    return contract_mpo_expval(ket.AC[N], leftenv(envs, N, bra), H[N],
+                               rightenv(envs, N, bra), bra.AC[N])
 end
 
 function Base.isapprox(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian;

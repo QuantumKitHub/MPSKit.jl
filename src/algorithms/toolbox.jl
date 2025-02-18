@@ -86,13 +86,21 @@ function transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, nu
 end
 
 """
-    entanglement_spectrum(ψ, [site::Int=0]) -> SectorDict{sectortype(ψ),Vector{<:Real}}
+    entanglement_spectrum(ψ, site::Int) -> SectorDict{sectortype(ψ),Vector{<:Real}}
 
 Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
 matrix to the right of a given site. This is a dictionary mapping the charge to the singular
 values.
+
+For `InfiniteMPS` and `WindowMPS` the default value for `site` is 0.
+
+For `FiniteMPS` no default value for `site` is given, it is up to the user to specify.
 """
-function entanglement_spectrum(st::Union{InfiniteMPS,FiniteMPS,WindowMPS}, site::Int=0)
+function entanglement_spectrum(st::Union{InfiniteMPS,WindowMPS}, site::Int=0)
+    checkbounds(st, site)
+    return LinearAlgebra.svdvals(st.C[site])
+end
+function entanglement_spectrum(st::FiniteMPS, site::Int)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
@@ -405,6 +413,27 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
     end
 
     return remove_orphans!(FiniteMPOHamiltonian(output))
+end
+
+"""
+    open_boundary_conditions(mpo::InfiniteMPO, L::Int) -> FiniteMPO
+
+Convert an infinite MPO into a finite MPO of length `L`, by applying open boundary conditions.
+"""
+function open_boundary_conditions(mpo::InfiniteMPO{O},
+                                  L=length(mpo)) where {O<:SparseBlockTensorMap}
+    mod(L, length(mpo)) == 0 ||
+        throw(ArgumentError("length $L is not a multiple of the infinite unitcell"))
+
+    # Make a FiniteMPO, filling it up with the tensors of H
+    # Only keep top row of the first and last column of the last MPO tensor
+
+    # allocate output
+    output = Vector(repeat(copy(parent(mpo)), L ÷ length(mpo)))
+    output[1] = output[1][1, :, :, :]
+    output[end] = output[end][:, :, :, 1]
+
+    return FiniteMPO(output)
 end
 
 """
