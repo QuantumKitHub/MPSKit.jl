@@ -799,4 +799,29 @@ end
         end
     end
 end
+
+@testset "TaylorCluster for non-square Hamiltonians" begin
+    # Make a MPOHamiltonian with very non-square Tensors
+    # Make different orders and kinds of TaylorCluster time-evolution MPOs
+    # Check the virtual dimensions match up between the MPOs
+
+    chain = fill(ℂ^2, 8)
+    O = randn(ComplexF64, ℂ^2 ← ℂ^2)
+
+    ops1 = fill((1, 2) => O ⊗ O, 5)
+    ops2 = [(2, 3) => O ⊗ O ⊗ O for i in 2:(length(chain) - 1)]
+    ops3 = [(3, 5) => O ⊗ O ⊗ O for i in 3:(length(chain) - 2)]
+
+    H = FiniteMPOHamiltonian(chain, ops1..., ops2..., ops3...)
+
+    for N in 1:3
+        for configuration in ((false, false), (false, true), (true, false), (true, true))
+            O = make_time_mpo(H, 0.1, TaylorCluster(N, configuration...))
+            for i in 1:(length(chain) - 1)
+                @test right_virtualspace(O, i) == left_virtualspace(O, i + 1)
+            end
+        end
+    end
+end
+
 end
