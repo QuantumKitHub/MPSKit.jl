@@ -543,6 +543,15 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     return FiniteMPS(A′)
 end
 
+function Base.:*(H::FiniteMPOHamiltonian{<:MPOTensor}, x::AbstractTensorMap)
+    @assert length(H) > 1
+    @assert numout(x) == length(H)
+    L = removeunit(H[1], 1)
+    M = Tuple(H[2:(end - 1)])
+    R = removeunit(H[end], 4)
+    return convert(TensorMap, _apply_finitempo(x, L, M, R))
+end
+
 function TensorKit.dot(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian)
     check_length(H₁, H₂)
 

@@ -266,6 +266,16 @@ function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
     return InfiniteMPO(Os)
 end
 
+function Base.:*(mpo::FiniteMPO{<:MPOTensor}, x::AbstractTensorMap)
+    @assert length(mpo) > 1
+    @assert numout(x) == length(mpo)
+    L = removeunit(mpo[1], 1)
+    M = Tuple(mpo[2:(end - 1)])
+    R = removeunit(mpo[end], 4)
+    y = _apply_finitempo(x, L, M, R)
+    return convert(TensorMap, y)
+end
+
 # TODO: I think the fastest order is to start from both ends, and take the overlap at the
 # largest virtual space cut, but it might be better to just multithread both sides and meet
 # in the middle

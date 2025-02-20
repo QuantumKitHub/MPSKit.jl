@@ -286,3 +286,19 @@ end
     ex = :(@plansor $t_out ≔ *($t_left, $t_right, $(t_mid...)))
     return macroexpand(@__MODULE__, ex)
 end
+
+@generated function _apply_finitempo(x::AbstractTensorMap{<:Any,S,M,A},
+                                     L::AbstractTensorMap{<:Any,S,1,2},
+                                     O::NTuple{N,MPOTensor{S}},
+                                     R::AbstractTensorMap{<:Any,S,2,1}) where {N,M,S,A}
+    M == N + 2 || throw(ArgumentError("Incompatible number of spaces"))
+    t_out = tensorexpr(:y, -(1:M), -(1:A) .- M)
+    t_in = tensorexpr(:x, 1:2:(2M - 1), -(1:A) .- M)
+    t_left = tensorexpr(:L, -1, (1, 2))
+    t_mid = ntuple(N) do n
+        return tensorexpr(:(O[$n]), (2n, -n - 1), (2n + 1, 2n + 2))
+    end
+    t_right = tensorexpr(:R, (2N + 2, -M), 2N + 3)
+    ex = :(@plansor $t_out ≔ *($t_in, $t_left, $t_right, $(t_mid...)))
+    return macroexpand(@__MODULE__, ex)
+end
