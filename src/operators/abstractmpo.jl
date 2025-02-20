@@ -269,3 +269,20 @@ function add_physical_charge(O::AbstractBlockTensorMap{<:Any,<:Any,2,2}, charge:
     end
     return Odst
 end
+
+# Contractions
+# ------------
+# This function usually does not require to be specified for many N, so @generated function is fine?
+@generated function _instantiate_finitempo(L::AbstractTensorMap{<:Any,S,1,2},
+                                           O::NTuple{N,MPOTensor{S}},
+                                           R::AbstractTensorMap{<:Any,S,2,1}) where {N,S}
+    sites = N + 2
+    t_out = tensorexpr(:T, -(1:sites), -(1:sites) .- sites)
+    t_left = tensorexpr(:L, -1, (-1 - sites, 1))
+    t_mid = ntuple(N) do n
+        return tensorexpr(:(O[$n]), (n, -n - 1), (-n - sites - 1, n + 1))
+    end
+    t_right = tensorexpr(:R, (sites - 1, -sites), -2sites)
+    ex = :(@plansor $t_out ≔ *($t_left, $t_right, $(t_mid...)))
+    return macroexpand(@__MODULE__, ex)
+end
