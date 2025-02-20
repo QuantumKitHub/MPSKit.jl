@@ -59,9 +59,30 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
     N = alg.N
     τ = -1im * dt
 
+    # Hack to store FiniteMPOhamiltonians in "square" MPO tensors
+    if H isa FiniteMPOHamiltonian
+        H′ = copy(H)
+        H′[1] = similar(H[2])
+        H′[end] = similar(H[end - 1])
+
+        for i in nonzero_keys(H[1])
+            H′[1][i] = H[1][i]
+        end
+        for i in nonzero_keys(H[end])
+            H′[end][:, 1, 1, end] = H[end][:, 1, 1, 1]
+        end
+        H′[1][end, 1, 1, end] += add_util_leg(id(space(H[1][end, 1, 1, end], 2)))
+        H′[end][1, 1, 1, 1] += add_util_leg(id(space(H[end][1, 1, 1, 1], 2)))
+    else
+        H′ = H
+    end
+
+    # Check if mpo has the same size everywhere. This is assumed in the following.
+    @assert allequal(size.(H′)) "make_time_mpo assumes all mpo tensors to have equal size. A fix for this is yet to be implemented"
+
     # start with H^N
-    H_n = H^N
-    V = size(H[1], 1)
+    H_n = H′^N
+    V = size(H′[1], 1)
     linds = LinearIndices(ntuple(i -> V, N))
     cinds = CartesianIndices(linds)
 
@@ -69,7 +90,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
     # incorporate higher order terms
     # TODO: don't need to fully construct H_next...
     if alg.extension
-        H_next = H_n * H
+        H_next = H_n * H′
         linds_next = LinearIndices(ntuple(i -> V, N + 1))
         for (i, slice) in enumerate(parent(H_n))
             for a in cinds, b in cinds
