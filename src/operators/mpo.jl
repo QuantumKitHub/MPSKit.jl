@@ -96,23 +96,10 @@ function _mps_to_mpo(A::GenericMPSTensor{S,3}) where {S}
 end
 
 function Base.convert(::Type{TensorMap}, mpo::FiniteMPO{<:MPOTensor})
-    N = length(mpo)
-    # add trivial tensors to remove left and right trivial leg.
-    V_left = left_virtualspace(mpo, 1)
-    @assert V_left == oneunit(V_left)
-    U_left = ones(scalartype(mpo), V_left)'
-
-    V_right = right_virtualspace(mpo, length(mpo))
-    @assert V_right == oneunit(V_right)
-    U_right = ones(scalartype(mpo), V_right)
-
-    tensors = vcat(U_left, parent(mpo), U_right)
-    indices = [[i, -i, -(2N - i + 1), i + 1] for i in 1:length(mpo)]
-    pushfirst!(indices, [1])
-    push!(indices, [N + 1])
-    O = ncon(tensors, indices)
-
-    return repartition(O, N, N)
+    L = removeunit(mpo[1], 1)
+    R = removeunit(mpo[end], 4)
+    M = Tuple(mpo[2:(end - 1)])
+    return convert(TensorMap, _instantiate_finitempo(L, M, R))
 end
 
 # Linear Algebra
@@ -277,6 +264,16 @@ function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
     check_length(mpo1, mpo2)
     Os = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
     return InfiniteMPO(Os)
+end
+
+function Base.:*(mpo::FiniteMPO{<:MPOTensor}, x::AbstractTensorMap)
+    @assert length(mpo) > 1
+    @assert numout(x) == length(mpo)
+    L = removeunit(mpo[1], 1)
+    M = Tuple(mpo[2:(end - 1)])
+    R = removeunit(mpo[end], 4)
+    y = _apply_finitempo(x, L, M, R)
+    return convert(TensorMap, y)
 end
 
 # TODO: I think the fastest order is to start from both ends, and take the overlap at the

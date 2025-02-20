@@ -359,23 +359,10 @@ function isemptylevel(H::InfiniteMPOHamiltonian, i::Int)
 end
 
 function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
-    N = length(H)
-    # add trivial tensors to remove left and right trivial leg.
-    V_left = left_virtualspace(H, 1)
-    @assert V_left == oneunit(V_left)
-    U_left = ones(scalartype(H), V_left)'
-
-    V_right = right_virtualspace(H, length(H))
-    @assert V_right == oneunit(V_right)
-    U_right = ones(scalartype(H), V_right)
-
-    tensors = vcat(U_left, parent(H), U_right)
-    indices = [[i, -i, -(i + N), i + 1] for i in 1:length(H)]
-    pushfirst!(indices, [1])
-    push!(indices, [N + 1])
-    O = convert(TensorMap, ncon(tensors, indices))
-
-    return transpose(O, (ntuple(identity, N), ntuple(i -> i + N, N)))
+    L = removeunit(H[1], 1)
+    R = removeunit(H[end], 4)
+    M = Tuple(H[2:(end - 1)])
+    return convert(TensorMap, _instantiate_finitempo(L, M, R))
 end
 
 function add_physical_charge(H::MPOHamiltonian, charges::AbstractVector{<:Sector})
@@ -554,6 +541,15 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     A′[length(mps) ÷ 2 + 1] = convert(TensorMap, a)
 
     return FiniteMPS(A′)
+end
+
+function Base.:*(H::FiniteMPOHamiltonian{<:MPOTensor}, x::AbstractTensorMap)
+    @assert length(H) > 1
+    @assert numout(x) == length(H)
+    L = removeunit(H[1], 1)
+    M = Tuple(H[2:(end - 1)])
+    R = removeunit(H[end], 4)
+    return convert(TensorMap, _apply_finitempo(x, L, M, R))
 end
 
 function TensorKit.dot(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian)

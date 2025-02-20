@@ -120,15 +120,18 @@ function randomize!(a::AbstractBlockTensorMap)
     return a
 end
 
+_totuple(t) = t isa Tuple ? t : Tuple(t)
+
 """
-    tensorexpr(name::Symbol, ind_out, [ind_in])
+    tensorexpr(name, ind_out, [ind_in])
 
 Generates expressions for use within [`@tensor`](@extref TensorOperations.@tensor) environments
 of the form `name[ind_out...; ind_in]`.
 """
-tensorexpr(name::Symbol, inds) = Expr(:ref, name, inds...)
-function tensorexpr(name::Symbol, indout, indin)
-    return Expr(:typed_vcat, name, Expr(:row, indout...), Expr(:row, indin...))
+tensorexpr(name, inds) = Expr(:ref, name, _totuple(inds)...)
+function tensorexpr(name, indout, indin)
+    return Expr(:typed_vcat, name, Expr(:row, _totuple(indout)...),
+                Expr(:row, _totuple(indin)...))
 end
 
 function check_length(a, b...)
