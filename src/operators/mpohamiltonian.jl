@@ -54,7 +54,86 @@ function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
     return InfiniteMPOHamiltonian{O}(Ws)
 end
 
-# TODO: consider if we want MPOHamiltonian(x::AbstractArray{<:Any,3}) constructor
+"""
+    FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+
+Create a `FiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]` represents
+the the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
+either `MPOTensor`, `Missing` or `Number`.
+"""
+function FiniteMPOHamiltonian(W_mats::Vector{Matrix{Union{Missing,T,O}}}) where {T<:Number,
+                                                                                 O<:MPOTensor}
+    L = length(W_mats)
+    # initialize sumspaces
+    S = spacetype(O)
+    Vspaces = Vector{SumSpace{S}}(undef, L + 1)
+    Pspaces = Vector{S}(undef, L)
+
+    # left end
+    nlvls = size(W_mats[1], 1)
+    @assert nlvls == 1 "left boundary should have a single level"
+    Vspaces[1] = SumSpace(oneunit(S))
+    # right end
+    nlvls = size(W_mats[end], 2)
+    @assert nlvls == 1 "right boundary should have a single level"
+    Vspaces[end] = SumSpace(oneunit(S))
+
+    # start filling spaces
+    # note that we assume that the FSA does not contain "dead ends", as this would mess with the
+    # ability to deduce spaces
+    for (site, W_mat) in enumerate(W_mats)
+        # physical space
+        operator_id = findfirst(x -> x isa O, W_mat)
+        @assert !isnothing(operator_id) "could not determine physical space at site $site"
+        Pspaces[site] = physicalspace(W_mat[operator_id])
+
+        Vs_left = Vspaces[site]
+        if site == L
+            Vs_right = Vspaces[site + 1]
+        else
+            # start by assuming trivial spaces everywhere -- replace everything that we know
+            # assume spacecheck errors will happen when filling the BlockTensors
+            nlvls = size(W_mat, 2)
+            Vs_right = SumSpace(fill(oneunit(S), nlvls))
+        end
+
+        for I in eachindex(IndexCartesian(), W_mat)
+            Welem = W_mat[I]
+            ismissing(Welem) && continue
+            row, col = I.I
+            if Welem isa MPOTensor
+                V_left = left_virtualspace(Welem)
+                @assert Vs_left[row] == V_left "incompatible space between sites $(site-1) and $site at level $row"
+                V_right = right_virtualspace(Welem)
+                Vs_right[col] = V_right
+            elseif !iszero(Welem) # Welem isa Number
+                V_left = V_right = Vs_left[row]
+                Vs_right[col] = V_right
+            end
+        end
+
+        Vspaces[site + 1] = Vs_right
+    end
+
+    # instantiate tensors
+    Ws = map(enumerate(W_mats)) do (site, W_mat)
+        W = jordanmpotensortype(S, T)(undef,
+                                      Vspaces[site] ⊗ Pspaces[site] ←
+                                      Pspaces[site] ⊗ Vspaces[site + 1])
+        for (I, v) in enumerate(W_mat)
+            ismissing(v) && continue
+            if v isa MPOTensor
+                W[I] = v
+            elseif !iszero(v)
+                τ = BraidingTensor{T}(eachspace(W)[I])
+                W[I] = isone(v) ? τ : τ * v
+            end
+        end
+        return W
+    end
+
+    return FiniteMPOHamiltonian(Ws)
+end
 
 """
     instantiate_operator(lattice::AbstractArray{<:VectorSpace}, O::Pair)
