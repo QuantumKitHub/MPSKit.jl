@@ -34,7 +34,7 @@ export VUMPS, VOMPS, DMRG, DMRG2, IDMRG, IDMRG2, GradientGrassmann
 export excitations
 export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo
-export TDVP, TDVP2, WI, WII, TaylorCluster
+export TDVP, TDVP2, WI, WII, TaylorCluster, ClusterExpansion
 export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand
 export propagator
@@ -144,6 +144,7 @@ include("algorithms/changebonds/randexpand.jl")
 
 include("algorithms/timestep/tdvp.jl")
 include("algorithms/timestep/timeevmpo.jl")
+include("algorithms/timestep/clusterexpansion.jl")
 include("algorithms/timestep/integrators.jl")
 include("algorithms/timestep/time_evolve.jl")
 
