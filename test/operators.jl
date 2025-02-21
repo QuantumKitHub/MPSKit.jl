@@ -71,6 +71,30 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     end
 end
 
+@testset "FiniteMPOHamiltonian constructors" begin
+    P = ℂ^2
+    T = Float64
+
+    H1 = randn(T, P ← P)
+    H1 += H1'
+    D = FiniteMPO(H1)[1]
+
+    H2 = randn(T, P^2 ← P^2)
+    H2 += H2'
+    C, B = FiniteMPO(H2)[1:2]
+
+    Elt = Union{Missing,typeof(D),scalartype(D)}
+    Wmid = Elt[1.0 C D; 0.0 0.0 B; 0.0 0.0 1.0]
+    Wleft = Wmid[1:1, :]
+    Wright = Wmid[:, end:end]
+
+    H = FiniteMPOHamiltonian([Wleft, Wmid, Wmid, Wright])
+    H′ = FiniteMPOHamiltonian(fill(P, 4),
+                              [(i,) => H1 for i in 1:4]...,
+                              [(i, i + 1) => H2 for i in 1:3]...)
+    @test H ≈ H′
+end
+
 @testset "Finite MPOHamiltonian" begin
     L = 3
     T = ComplexF64
