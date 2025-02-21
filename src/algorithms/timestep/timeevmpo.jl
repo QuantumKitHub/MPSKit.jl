@@ -55,60 +55,73 @@ Construct an MPO that approximates ``\\exp(-iHdt)``.
 """ make_time_mpo
 
 function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
-                       tol=eps(real(scalartype(H)))^(3 / 4))
+                       tol=eps(real(scalartype(H))))
     N = alg.N
     τ = -1im * dt
 
     # Hack to store FiniteMPOhamiltonians in "square" MPO tensors
     if H isa FiniteMPOHamiltonian
         H′ = copy(H)
-        H′[1] = similar(H[2])
-        H′[end] = similar(H[end - 1])
 
-        for i in nonzero_keys(H[1])
-            H′[1][i] = H[1][i]
+        V_left = left_virtualspace(H[1])
+        V_left′ = BlockTensorKit.oplus(V_left, oneunit(V_left), oneunit(V_left))
+        H′[1] = similar(H[1], V_left′ ⊗ space(H[1], 2) ← domain(H[1]))
+        for (I, v) in nonzero_pairs(H[1])
+            H′[1][I] = v
         end
-        for i in nonzero_keys(H[end])
-            H′[end][:, 1, 1, end] = H[end][:, 1, 1, 1]
+
+        V_right = right_virtualspace(H[end])
+        V_right′ = BlockTensorKit.oplus(oneunit(V_right), oneunit(V_right), V_right)
+        H′[end] = similar(H[end], codomain(H[end]) ← space(H[end], 3)' ⊗ V_right′)
+        for (I, v) in nonzero_pairs(H[end])
+            H′[end][I[1], 1, 1, end] = v
         end
-        H′[1][end, 1, 1, end] += add_util_leg(id(space(H[1][end, 1, 1, end], 2)))
-        H′[end][1, 1, 1, 1] += add_util_leg(id(space(H[end][1, 1, 1, 1], 2)))
+
+        H′[1][end, 1, 1, end] = H′[1][1, 1, 1, 1]
+        H′[end][1, 1, 1, 1] = H′[end][end, 1, 1, end]
     else
         H′ = H
     end
 
     # Check if mpo has the same size everywhere. This is assumed in the following.
-    @assert allequal(size.(H′)) "make_time_mpo assumes all mpo tensors to have equal size. A fix for this is yet to be implemented"
+    # @assert allequal(size.(H′)) "make_time_mpo assumes all mpo tensors to have equal size. A fix for this is yet to be implemented"
 
     # start with H^N
     H_n = H′^N
-    V = size(H′[1], 1)
-    linds = LinearIndices(ntuple(i -> V, N))
-    cinds = CartesianIndices(linds)
+    virtual_sz = map(0:length(H′)) do i
+        return i == 0 ? size(H′[1], 1) : size(H′[i], 4)
+    end
 
     # extension step: Algorithm 3
     # incorporate higher order terms
     # TODO: don't need to fully construct H_next...
     if alg.extension
         H_next = H_n * H′
-        linds_next = LinearIndices(ntuple(i -> V, N + 1))
         for (i, slice) in enumerate(parent(H_n))
-            for a in cinds, b in cinds
+            V_left = virtual_sz[i]
+            V_right = virtual_sz[i + 1]
+            linds_left = LinearIndices(ntuple(Returns(V_left), N))
+            linds_right = LinearIndices(ntuple(Returns(V_right), N))
+            linds_next_left = LinearIndices(ntuple(Returns(V_left), N + 1))
+            linds_next_right = LinearIndices(ntuple(Returns(V_right), N + 1))
+
+            for a in CartesianIndices(linds_left), b in CartesianIndices(linds_right)
                 all(>(1), b.I) || continue
-                all(in((1, V)), a.I) && any(==(V), a.I) && continue
+                all(in((1, V_left)), a.I) && any(==(V_left), a.I) && continue
 
                 n1 = count(==(1), a.I) + 1
-                n3 = count(==(V), b.I) + 1
+                n3 = count(==(V_right), b.I) + 1
                 factor = τ * factorial(N) / (factorial(N + 1) * n1 * n3)
 
                 for c in 1:(N + 1), d in 1:(N + 1)
                     aₑ = insert!([a.I...], c, 1)
-                    bₑ = insert!([b.I...], d, V)
+                    bₑ = insert!([b.I...], d, V_right)
 
                     # TODO: use VectorInterface for memory efficiency
-                    slice[linds[a], 1, 1, linds[b]] += factor *
-                                                       H_next[i][linds_next[aₑ...], 1, 1,
-                                                                 linds_next[bₑ...]]
+                    slice[linds_left[a], 1, 1, linds_right[b]] += factor *
+                                                                  H_next[i][linds_next_left[aₑ...],
+                                                                            1, 1,
+                                                                            linds_next_right[bₑ...]]
                 end
             end
         end
@@ -117,12 +130,15 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
     # loopback step: Algorithm 1
     # constructing the Nth order time evolution MPO
     mpo = MPO(parent(H_n))
-    for slice in parent(mpo)
-        for b in cinds[2:end]
-            all(in((1, V)), b.I) || continue
+    for (i, slice) in enumerate(parent(mpo))
+        V_right = virtual_sz[i + 1]
+        linds_right = LinearIndices(ntuple(Returns(V_right), N))
+        cinds_right = CartesianIndices(linds_right)
+        for b in cinds_right[2:end]
+            all(in((1, V_right)), b.I) || continue
 
-            b_lin = linds[b]
-            a = count(==(V), b.I)
+            b_lin = linds_right[b]
+            a = count(==(V_right), b.I)
             factor = τ^a * factorial(N - a) / factorial(N)
             slice[:, 1, 1, 1] = slice[:, 1, 1, 1] + factor * slice[:, 1, 1, b_lin]
             for I in nonzero_keys(slice)
@@ -132,31 +148,43 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
     end
 
     # Remove equivalent rows and columns: Algorithm 2
-    for slice in parent(mpo)
-        for c in cinds
-            c_lin = linds[c]
+    for (i, slice) in enumerate(parent(mpo))
+        V_left = virtual_sz[i]
+        linds_left = LinearIndices(ntuple(Returns(V_left), N))
+        for c in CartesianIndices(linds_left)
+            c_lin = linds_left[c]
             s_c = CartesianIndex(sort(collect(c.I); by=(!=(1)))...)
-            s_r = CartesianIndex(sort(collect(c.I); by=(!=(V)))...)
 
             n1 = count(==(1), c.I)
-            n3 = count(==(V), c.I)
+            n3 = count(==(V_left), c.I)
 
-            if n3 <= n1 && s_c != c || n3 > n1 && s_r != c
-                if n3 <= n1 && s_c != c
-                    for k in 1:size(slice, 4)
-                        if CartesianIndex(c_lin, 1, 1, k) in nonzero_keys(slice)
-                            slice[linds[s_c], 1, 1, k] += slice[c_lin, 1, 1, k]
-                        end
-                    end
-                elseif n3 > n1 && s_r != c
-                    for k in 1:size(slice, 1)
-                        if CartesianIndex(k, 1, 1, c_lin) in nonzero_keys(slice)
-                            slice[k, 1, 1, linds[s_r]] += slice[k, 1, 1, c_lin]
-                        end
+            if n3 <= n1 && s_c != c
+                for k in 1:size(slice, 4)
+                    I = CartesianIndex(c_lin, 1, 1, k)
+                    if I in nonzero_keys(slice)
+                        slice[linds_left[s_c], 1, 1, k] += slice[I]
+                        delete!(slice, I)
                     end
                 end
-                for I in nonzero_keys(slice)
-                    (I[1] == c_lin || I[4] == c_lin) && delete!(slice, I)
+            end
+        end
+
+        V_right = virtual_sz[i + 1]
+        linds_right = LinearIndices(ntuple(Returns(V_right), N))
+        for c in CartesianIndices(linds_right)
+            c_lin = linds_right[c]
+            s_r = CartesianIndex(sort(collect(c.I); by=(!=(V_right)))...)
+
+            n1 = count(==(1), c.I)
+            n3 = count(==(V_right), c.I)
+
+            if n3 > n1 && s_r != c
+                for k in 1:size(slice, 1)
+                    I = CartesianIndex(k, 1, 1, c_lin)
+                    if I in nonzero_keys(slice)
+                        slice[k, 1, 1, linds_right[s_r]] += slice[I]
+                        delete!(slice, I)
+                    end
                 end
             end
         end
@@ -164,22 +192,35 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
 
     # Approximate compression step: Algorithm 4
     if alg.compression
-        for slice in parent(mpo)
-            for a in cinds
+        for (i, slice) in enumerate(parent(mpo))
+            V_right = virtual_sz[i + 1]
+            linds_right = LinearIndices(ntuple(Returns(V_right), N))
+            for a in CartesianIndices(linds_right)
                 all(>(1), a.I) || continue
-                a_lin = linds[a]
-                n1 = count(==(V), a.I)
-                b = CartesianIndex(replace(a.I, V => 1))
-                b_lin = linds[b]
+                a_lin = linds_right[a]
+                n1 = count(==(V_right), a.I)
+                n1 == 0 && continue
+                b = CartesianIndex(replace(a.I, V_right => 1))
+                b_lin = linds_right[b]
                 factor = τ^n1 * factorial(N - n1) / factorial(N)
                 for k in 1:size(slice, 1)
-                    if CartesianIndex(k, 1, 1, a_lin) in nonzero_keys(slice)
-                        slice[k, 1, 1, b_lin] += factor * slice[k, 1, 1, a_lin]
+                    I = CartesianIndex(k, 1, 1, a_lin)
+                    if I in nonzero_keys(slice)
+                        slice[k, 1, 1, b_lin] += factor * slice[I]
+                        delete!(slice, I)
                     end
                 end
-
-                for I in nonzero_keys(slice)
-                    (I[1] == a_lin || I[4] == a_lin) && delete!(slice, I)
+            end
+            V_left = virtual_sz[i]
+            linds_left = LinearIndices(ntuple(Returns(V_left), N))
+            for a in CartesianIndices(linds_left)
+                all(>(1), a.I) || continue
+                a_lin = linds_left[a]
+                n1 = count(==(V_left), a.I)
+                n1 == 0 && continue
+                for k in 1:size(slice, 4)
+                    I = CartesianIndex(a_lin, 1, 1, k)
+                    delete!(slice, I)
                 end
             end
         end
@@ -191,7 +232,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
         mpo[end] = mpo[end][:, :, :, 1]
     end
 
-    return remove_orphans!(mpo; tol=tol)
+    return remove_orphans!(mpo; tol)
 end
 
 has_prod_elem(slice, t1, t2) = all(map(x -> contains(slice, x...), zip(t1, t2)))
