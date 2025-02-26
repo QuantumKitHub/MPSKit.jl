@@ -196,10 +196,23 @@ end
 # TODO: diagram
 
 function _fuse_mpo_mpo(O1::MPOTensor, O2::MPOTensor, Fₗ, Fᵣ)
-    return @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
-                                        O2[1 3; -3 5] *
-                                        O1[2 -2; 3 4] *
-                                        conj(Fᵣ[-4; 5 4])
+    return if O1 isa BraidingTensor && O2 isa BraidingTensor
+    elseif O1 isa BraidingTensor
+        @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
+                                     O2[1 3; -3 5] *
+                                     τ[2 -2; 3 4] *
+                                     conj(Fᵣ[-4; 5 4])
+    elseif O2 isa BraidingTensor
+        @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
+                                     τ[1 3; -3 5] *
+                                     O1[2 -2; 3 4] *
+                                     conj(Fᵣ[-4; 5 4])
+    else
+        @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
+                                     O2[1 3; -3 5] *
+                                     O1[2 -2; 3 4] *
+                                     conj(Fᵣ[-4; 5 4])
+    end
 end
 
 """
