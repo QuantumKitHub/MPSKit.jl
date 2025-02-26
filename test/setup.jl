@@ -8,10 +8,12 @@ using TensorKit
 using TensorKit: PlanarTrivial, ℙ, BraidingTensor
 using BlockTensorKit
 using LinearAlgebra: Diagonal
+using Combinatorics: permutations
 
 # exports
 export S_xx, S_yy, S_zz, S_x, S_y, S_z
 export force_planar
+export symm_mul_mpo
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model
 export classical_ising, finite_classical_ising, sixvertex
 
@@ -57,6 +59,14 @@ function force_planar(x::SparseBlockTensorMap)
 end
 force_planar(mpo::MPOHamiltonian) = MPOHamiltonian(map(force_planar, parent(mpo)))
 force_planar(mpo::MPO) = MPO(map(force_planar, parent(mpo)))
+
+# sum of all permutations: {Os...}
+function symm_mul_mpo(Os::MPSKit.MPOTensor...)
+    N! = factorial(length(Os))
+    return sum(permutations(Os)) do os
+        return foldl(MPSKit.fuse_mul_mpo, os)
+    end / N!
+end
 
 # Toy models
 # ----------------------------
