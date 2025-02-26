@@ -875,7 +875,7 @@ end
                 ψ₁, _ = approximate(ψ₀, (O, ψ₀), DMRG(; verbosity=0))
                 εs[i] = norm(dot(ψ₀, ψ₁) - exp(-im * E₀ * dt))
             end
-            @test (log(εs[2]) - log(εs[1])) / (log(dts[2]) - log(dts[1])) ≈ N atol = 0.1
+            @test (log(εs[2]) - log(εs[1])) / (log(dts[2]) - log(dts[1])) ≈ N + 1 atol = 0.1
         end
     end
 end
