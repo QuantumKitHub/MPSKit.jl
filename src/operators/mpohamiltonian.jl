@@ -340,7 +340,7 @@ function Base.getproperty(H::MPOHamiltonian, sym::Symbol)
     elseif sym === :C
         return map(h -> h[1, 1, 1, 2:(end - 1)], parent(H))
     elseif sym === :D
-        return map(h -> h[1, 1, 1, end], parent(H))
+        return map(h -> h[1:1, 1, 1, end:end], parent(H))
     else
         return getfield(H, sym)
     end
