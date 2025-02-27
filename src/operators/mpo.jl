@@ -225,18 +225,17 @@ end
 
 function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
     length(mpo) == length(mps) || throw(ArgumentError("dimension mismatch"))
-
-    A = [mps.AC[1]; mps.AR[2:end]]
-    TT = storagetype(eltype(A))
+    TT = storagetype(eltype(mps))
 
     local Fᵣ # trick to make Fᵣ defined in the loop
-    for i in 1:length(mps)
+    A2 = map(1:length(mps)) do i
+        A1 = i == 1 ? mps.AC[1] : mps.AR[i]
         Fₗ = i != 1 ? Fᵣ : fuser(TT, left_virtualspace(mps, i), left_virtualspace(mpo, i))
         Fᵣ = fuser(TT, right_virtualspace(mps, i), right_virtualspace(mpo, i))
-        A[i] = _fuse_mpo_mps(mpo[i], A[i], Fₗ, Fᵣ)
+        return _fuse_mpo_mps(mpo[i], A1, Fₗ, Fᵣ)
     end
 
-    return changebonds!(FiniteMPS(A),
+    return changebonds!(FiniteMPS(A2),
                         SvdCut(; trscheme=truncbelow(eps(real(scalartype(TT)))));
                         normalize=false)
 end
