@@ -24,6 +24,8 @@ Base.length(x::LazySum) = prod(size(x))
 Base.similar(x::LazySum, ::Type{S}, dims::Dims) where {S} = LazySum(similar(x.ops, S, dims))
 Base.setindex!(A::LazySum, X, i::Int) = (setindex!(A.ops, X, i); A)
 
+Base.complex(x::LazySum) = LazySum(complex.(x.ops))
+
 # Holy traits
 TimeDependence(x::LazySum) = istimed(x) ? TimeDependent() : NotTimeDependent()
 istimed(x::LazySum) = any(istimed, x)
