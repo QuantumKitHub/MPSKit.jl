@@ -195,10 +195,10 @@ function VectorInterface.scale!(mpo::MPO, α::Number)
     return mpo
 end
 
-# TODO: merge implementation with that of InfiniteMPO
-function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO<:MPOTensor}
-    (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
-    S = spacetype(TO)
+function Base.:*(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
+    check_length(mpo1, mpo2)
+    (S = spacetype(mpo1)) == spacetype(mpo2) || throw(SectorMismatch())
+
     if (left_virtualspace(mpo1, 1) != oneunit(S) ||
         left_virtualspace(mpo2, 1) != oneunit(S)) ||
        (right_virtualspace(mpo1, N) != oneunit(S) ||
@@ -208,31 +208,25 @@ function Base.:*(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO<:MPOTensor}
         # would work and for now I dont feel like figuring out if this is important
     end
 
-    O = similar(parent(mpo1))
-    A = storagetype(TO)
-
-    # note order of mpos: mpo1 * mpo2 * state -> mpo2 on top of mpo1
-    local Fᵣ # trick to make Fᵣ defined in the loop
-    for i in 1:N
-        Fₗ = i != 1 ? Fᵣ : fuser(A, left_virtualspace(mpo2, i), left_virtualspace(mpo1, i))
-        Fᵣ = fuser(A, right_virtualspace(mpo2, i), right_virtualspace(mpo1, i))
-        @plansor O[i][-1 -2; -3 -4] := Fₗ[-1; 1 4] * mpo2[i][1 2; -3 3] *
-                                       mpo1[i][4 -2; 2 5] *
-                                       conj(Fᵣ[-4; 3 5])
-    end
-
+    O = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
     return changebonds!(FiniteMPO(O), SvdCut(; trscheme=notrunc()))
+end
+function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
+    check_length(mpo1, mpo2)
+    Os = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
+    return InfiniteMPO(Os)
 end
 
 function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
-    length(mpo) == length(mps) || throw(ArgumentError("dimension mismatch"))
-    TT = storagetype(eltype(mps))
+    N = check_length(mpo, mps)
+    T = TensorOperations.promote_contract(scalartype(mpo), scalartype(mps))
+    A = TensorKit.similarstoragetype(eltype(mps), T)
 
-    local Fᵣ # trick to make Fᵣ defined in the loop
-    A2 = map(1:length(mps)) do i
+    Fᵣ = fuser(A, left_virtualspace(mps, 1), left_virtualspace(mpo, 1))
+    A2 = map(1:N) do i
         A1 = i == 1 ? mps.AC[1] : mps.AR[i]
-        Fₗ = i != 1 ? Fᵣ : fuser(TT, left_virtualspace(mps, i), left_virtualspace(mpo, i))
-        Fᵣ = fuser(TT, right_virtualspace(mps, i), right_virtualspace(mpo, i))
+        Fₗ = Fᵣ
+        Fᵣ = fuser(A, right_virtualspace(mps, i), right_virtualspace(mpo, i))
         return _fuse_mpo_mps(mpo[i], A1, Fₗ, Fᵣ)
     end
 
@@ -240,11 +234,11 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
                         SvdCut(; trscheme=truncbelow(eps(real(scalartype(TT)))));
                         normalize=false)
 end
-
 function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
     L = check_length(mpo, mps)
     T = promote_type(scalartype(mpo), scalartype(mps))
-    fusers = PeriodicArray(fuser.(T, left_virtualspace.(Ref(mps), 1:L),
+    A = TensorKit.similarstoragetype(eltype(mps), T)
+    fusers = PeriodicArray(fuser.(A, left_virtualspace.(Ref(mps), 1:L),
                                   left_virtualspace.(Ref(mpo), 1:L)))
     As = map(1:L) do i
         return _fuse_mpo_mps(mpo[i], mps.AL[i], fusers[i], fusers[i + 1])
@@ -258,12 +252,6 @@ function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
                               O[3 -2; 2 5] *
                               conj(Fᵣ[-3; 4 5])
     return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
-end
-
-function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
-    check_length(mpo1, mpo2)
-    Os = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
-    return InfiniteMPO(Os)
 end
 
 function Base.:*(mpo::FiniteMPO{<:MPOTensor}, x::AbstractTensorMap)
@@ -281,8 +269,7 @@ end
 # in the middle
 function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO{<:MPOTensor},
                        ket::FiniteMPS{T}) where {T}
-    (N = length(bra)) == length(mpo) == length(ket) ||
-        throw(ArgumentError("dimension mismatch"))
+    N = check_length(bra, mpo, ket)
     Nhalf = N ÷ 2
     # left half
     ρ_left = isomorphism(storagetype(T),
