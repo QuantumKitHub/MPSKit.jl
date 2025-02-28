@@ -194,6 +194,13 @@ function VectorInterface.scale!(mpo::MPO, α::Number)
     scale!(first(mpo), α)
     return mpo
 end
+function VectorInterface.scale!(dst::MPO, src::MPO, α::Number)
+    N = check_length(dst, src)
+    for i in 1:N
+        scale!(dst[i], src[i], i == 1 ? α : One())
+    end
+    return dst
+end
 
 function Base.:*(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     check_length(mpo1, mpo2)

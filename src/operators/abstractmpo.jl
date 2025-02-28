@@ -172,7 +172,11 @@ Base.:*(mpo::AbstractMPO, α::Number) = scale(mpo, α)
 Base.:/(mpo::AbstractMPO, α::Number) = scale(mpo, inv(α))
 Base.:\(α::Number, mpo::AbstractMPO) = scale(mpo, inv(α))
 
-VectorInterface.scale(mpo::AbstractMPO, α::Number) = scale!(copy(mpo), α)
+function VectorInterface.scale(mpo::AbstractMPO, α::Number)
+    T = VectorInterface.promote_scale(scalartype(mpo), scalartype(α))
+    dst = similar(mpo, T)
+    return scale!(dst, mpo, α)
+end
 
 LinearAlgebra.norm(mpo::AbstractMPO) = sqrt(abs(dot(mpo, mpo)))
 
