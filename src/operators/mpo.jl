@@ -105,6 +105,8 @@ function Base.convert(::Type{TensorMap}, mpo::FiniteMPO{<:MPOTensor})
     return convert(TensorMap, _instantiate_finitempo(L, M, R))
 end
 
+Base.complex(mpo::MPO) = MPO(map(complex, parent(mpo)))
+
 # Linear Algebra
 # --------------
 # VectorInterface.scalartype(::Type{FiniteMPO{O}}) where {O} = scalartype(O)

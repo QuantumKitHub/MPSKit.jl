@@ -374,6 +374,32 @@ function add_physical_charge(H::MPOHamiltonian, charges::AbstractVector{<:Sector
     end
 end
 
+# TODO: remove once complex(::BraidingTensor) isa BraidingTensor
+# Base.complex(H::MPOHamiltonian) = MPOHamiltonian(map(complex, parent(H)))
+function Base.complex(H::MPOHamiltonian)
+    scalartype(H) <: Complex && return H
+    Ws = map(parent(H)) do W
+        W′ = jordanmpotensortype(spacetype(W), complex(scalartype(W)))
+        W′[1] = W[1]
+        W′[end] = W[end]
+        for (I, v) in nonzero_pairs(W)
+            if v isa BraidingTensor
+                W′[I] = BraidingTensor{scalartype(W′)}(space(v), v.adjoint)
+            else
+                W′[I] = complex(v)
+            end
+        end
+    end
+    return MPOHamiltonian(H)
+end
+
+function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O<:MPOTensor}
+    return MPOHamiltonian(similar(parent(H), O, L))
+end
+function Base.similar(H::MPOHamiltonian, ::Type{T}) where {T<:Number}
+    return MPOHamiltonian(similar.(parent(H), T))
+end
+
 # Linear Algebra
 # --------------
 
@@ -496,6 +522,23 @@ function VectorInterface.scale!(H::FiniteMPOHamiltonian, λ::Number)
     return H
 end
 
+function VectorInterface.scale!(dst::MPOHamiltonian, src::MPOHamiltonian,
+                                λ::Number)
+    N = check_length(dst, src)
+    for i in 1:N
+        space(dst[i]) == space(src[i]) || throw(SpaceMismatch())
+        zerovector!(dst[i])
+        for (I, v) in nonzero_pairs(src[i])
+            # only scale "starting" terms
+            isstarting = I[1] == 1 &&
+                         ((isfinite(dst) && i == N && I[4] == size(src[i], 4)) ||
+                          ((!isfinite(dst) || i != N) && I[4] > 1))
+            dst[i][I] = scale!(dst[i][I], v, isstarting ? λ : One())
+        end
+    end
+    return dst
+end
+
 function Base.:*(H1::MPOHamiltonian, H2::MPOHamiltonian)
     check_length(H1, H2)
     Ws = fuse_mul_mpo.(parent(H1), parent(H2))
@@ -503,8 +546,8 @@ function Base.:*(H1::MPOHamiltonian, H2::MPOHamiltonian)
 end
 
 function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
-    check_length(H, mps)
-    @assert length(mps) > 2 "MPS should have at least three sites, to be implemented otherwise"
+    N = check_length(H, mps)
+    @assert N > 2 "MPS should have at least three sites, to be implemented otherwise"
     A = convert.(BlockTensorMap, [mps.AC[1]; mps.AR[2:end]])
     A′ = similar(A,
                  tensormaptype(spacetype(mps), numout(eltype(mps)), numin(eltype(mps)),
@@ -515,19 +558,19 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     Q, R = leftorth!(a; alg=QR())
     A′[1] = convert(TensorMap, Q)
 
-    for i in 2:(length(mps) ÷ 2)
+    for i in 2:(N ÷ 2)
         @plansor a[-1 -2; -3 -4] := R[-1; 1 2] * A[i][1 3; -3] * H[i][2 -2; 3 -4]
         Q, R = leftorth!(a; alg=QR())
         A′[i] = convert(TensorMap, Q)
     end
 
     # right to middle
-    U = ones(scalartype(H), right_virtualspace(H, length(H)))
+    U = ones(scalartype(H), right_virtualspace(H, N))
     @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * U[1]
     L, Q = rightorth!(a; alg=LQ())
     A′[end] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
 
-    for i in (length(mps) - 1):-1:(length(mps) ÷ 2 + 2)
+    for i in (N - 1):-1:(N ÷ 2 + 2)
         @plansor a[-1 -2; -3 -4] := A[i][-1 3; 1] * H[i][-2 -4; 3 2] * L[1 2; -3]
         L, Q = rightorth!(a; alg=LQ())
         A′[i] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
@@ -535,10 +578,10 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
 
     # connect pieces
     @plansor a[-1 -2; -3] := R[-1; 1 2] *
-                             A[length(mps) ÷ 2 + 1][1 3; 4] *
-                             H[length(mps) ÷ 2 + 1][2 -2; 3 5] *
+                             A[N ÷ 2 + 1][1 3; 4] *
+                             H[N ÷ 2 + 1][2 -2; 3 5] *
                              L[4 5; -3]
-    A′[length(mps) ÷ 2 + 1] = convert(TensorMap, a)
+    A′[N ÷ 2 + 1] = convert(TensorMap, a)
 
     return FiniteMPS(A′)
 end
@@ -553,9 +596,7 @@ function Base.:*(H::FiniteMPOHamiltonian{<:MPOTensor}, x::AbstractTensorMap)
 end
 
 function TensorKit.dot(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian)
-    check_length(H₁, H₂)
-
-    N = length(H₁)
+    N = check_length(H₁, H₂)
     Nhalf = N ÷ 2
     # left half
     @plansor ρ_left[-1; -2] := conj(H₁[1][1 2; 3 -1]) * H₂[1][1 2; 3 -2]
