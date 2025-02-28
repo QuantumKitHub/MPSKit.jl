@@ -55,8 +55,11 @@ DenseMPO(mpo::MPO) = mpo isa DenseMPO ? copy(mpo) : MPO(map(TensorMap, parent(mp
 Base.parent(mpo::MPO) = mpo.O
 Base.copy(mpo::MPO) = MPO(map(copy, mpo))
 
-function Base.similar(mpo::MPO, ::Type{O}, L::Int) where {O}
+function Base.similar(mpo::MPO{<:MPOTensor}, ::Type{O}, L::Int) where {O<:MPOTensor}
     return MPO(similar(parent(mpo), O, L))
+end
+function Base.similar(mpo::MPO, ::Type{T}) where {T<:Number}
+    return MPO(similar.(parent(mpo), T))
 end
 
 Base.repeat(mpo::MPO, n::Int) = MPO(repeat(parent(mpo), n))
@@ -203,7 +206,7 @@ function VectorInterface.scale!(dst::MPO, src::MPO, α::Number)
 end
 
 function Base.:*(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
-    check_length(mpo1, mpo2)
+    N = check_length(mpo1, mpo2)
     (S = spacetype(mpo1)) == spacetype(mpo2) || throw(SectorMismatch())
 
     if (left_virtualspace(mpo1, 1) != oneunit(S) ||
@@ -228,7 +231,6 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
     N = check_length(mpo, mps)
     T = TensorOperations.promote_contract(scalartype(mpo), scalartype(mps))
     A = TensorKit.similarstoragetype(eltype(mps), T)
-
     Fᵣ = fuser(A, left_virtualspace(mps, 1), left_virtualspace(mpo, 1))
     A2 = map(1:N) do i
         A1 = i == 1 ? mps.AC[1] : mps.AR[i]
@@ -236,10 +238,8 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
         Fᵣ = fuser(A, right_virtualspace(mps, i), right_virtualspace(mpo, i))
         return _fuse_mpo_mps(mpo[i], A1, Fₗ, Fᵣ)
     end
-
-    return changebonds!(FiniteMPS(A2),
-                        SvdCut(; trscheme=truncbelow(eps(real(scalartype(TT)))));
-                        normalize=false)
+    trscheme = truncbelow(eps(real(T)))
+    return changebonds!(FiniteMPS(A2), SvdCut(; trscheme); normalize=false)
 end
 function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
     L = check_length(mpo, mps)
