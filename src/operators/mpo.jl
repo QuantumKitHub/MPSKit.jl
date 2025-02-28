@@ -107,14 +107,13 @@ end
 # VectorInterface.scalartype(::Type{FiniteMPO{O}}) where {O} = scalartype(O)
 
 Base.:+(mpo::MPO) = MPO(map(+, parent(mpo)))
-function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO<:MPOTensor}
-    (N = length(mpo1)) == length(mpo2) || throw(ArgumentError("dimension mismatch"))
+function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
+    N = check_length(mpo1, mpo2)
     @assert left_virtualspace(mpo1, 1) == left_virtualspace(mpo2, 1) &&
             right_virtualspace(mpo1, N) == right_virtualspace(mpo2, N)
 
-    mpo = similar(parent(mpo1))
     halfN = N ÷ 2
-    A = storagetype(TO)
+    A = storagetype(eltype(mpo1))
 
     # left half
     F₁ = isometry(A, (right_virtualspace(mpo1, 1) ⊕ right_virtualspace(mpo2, 1)),
@@ -127,7 +126,9 @@ function Base.:+(mpo1::FiniteMPO{TO}, mpo2::FiniteMPO{TO}) where {TO<:MPOTensor}
 
     # making sure that the new operator is "full rank"
     O, R = leftorth!(O)
-    mpo[1] = transpose(O, ((2, 3), (1, 4)))
+    O′ = transpose(O, ((2, 3), (1, 4)))
+    mpo = similar(mpo1, typeof(O′))
+    mpo[1] = O′
 
     for i in 2:halfN
         # incorporate fusers from left side

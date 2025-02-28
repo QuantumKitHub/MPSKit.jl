@@ -60,6 +60,7 @@ using Compat: @compat
 using TensorKit
 using TensorKit: BraidingTensor
 using BlockTensorKit
+using TensorOperations
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
 using OptimKit
