@@ -46,13 +46,13 @@ end
     ψ_small2 = FiniteMPS(convert(TensorMap, ψ_small))
     @test dot(ψ_small, ψ_small2) ≈ dot(ψ_small, ψ_small)
 
-    ψ′ = @constinferred complex(ψ)
+    ψ′ = @constinferred complex(ψ_small)
     @test scalartype(ψ′) <: Complex
     if elt <: Complex
-        @test ψ === ψ′
+        @test ψ_small === ψ′
     else
-        @test norm(ψ) ≈ norm(ψ′)
-        @test complex(convert(TensorMap, ψ)) ≈ convert(TensorMap, ψ′)
+        @test norm(ψ_small) ≈ norm(ψ′)
+        @test complex(convert(TensorMap, ψ_small)) ≈ convert(TensorMap, ψ′)
     end
 end
 

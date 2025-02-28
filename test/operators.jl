@@ -24,28 +24,40 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
         O₁ = rand(T, V^L, V^L)
         O₂ = rand(T, space(O₁))
+        O₃ = rand(real(T), space(O₁))
 
         # create MPO and convert it back to see if it is the same
         mpo₁ = FiniteMPO(O₁) # type-unstable for now!
         mpo₂ = FiniteMPO(O₂)
+        mpo₃ = FiniteMPO(O₃)
         @test convert(TensorMap, mpo₁) ≈ O₁
         @test convert(TensorMap, -mpo₂) ≈ -O₂
+        @test convert(TensorMap, @constinferred complex(mpo₃)) ≈ complex(O₃)
 
         # test scalar multiplication
         α = rand(T)
         @test convert(TensorMap, α * mpo₁) ≈ α * O₁
         @test convert(TensorMap, mpo₁ * α) ≈ O₁ * α
+        @test α * mpo₃ ≈ α * complex(mpo₃)
 
         # test addition and multiplication
         @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
+        @test convert(TensorMap, mpo₁ + mpo₃) ≈ O₁ + O₃
         @test convert(TensorMap, mpo₁ * mpo₂) ≈ O₁ * O₂
+        @test convert(TensorMap, mpo₁ * mpo₃) ≈ O₁ * O₃
 
         # test application to a state
         ψ₁ = rand(T, domain(O₁))
+        ψ₂ = rand(real(T), domain(O₂))
         mps₁ = FiniteMPS(ψ₁)
+        mps₂ = FiniteMPS(ψ₂)
 
         @test convert(TensorMap, mpo₁ * mps₁) ≈ O₁ * ψ₁
         @test mpo₁ * ψ₁ ≈ O₁ * ψ₁
+        @test convert(TensorMap, mpo₃ * mps₁) ≈ O₃ * ψ₁
+        @test mpo₃ * ψ₁ ≈ O₃ * ψ₁
+        @test convert(TensorMap, mpo₁ * mps₂) ≈ O₁ * ψ₂
+        @test mpo₁ * ψ₂ ≈ O₁ * ψ₂
 
         @test dot(mps₁, mpo₁, mps₁) ≈ dot(ψ₁, O₁, ψ₁)
         @test dot(mps₁, mpo₁, mps₁) ≈ dot(mps₁, mpo₁ * mps₁)
