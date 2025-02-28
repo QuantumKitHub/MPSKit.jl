@@ -52,3 +52,9 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 - `[envs]`: MPS environment manager
 """
 function timestep end, function timestep! end
+
+@doc """
+    make_time_mpo(H::MPOHamiltonian, dt::Number, alg) -> O::MPO
+
+Construct an `MPO` that approximates ``\\exp(-iHdt)``.
+""" make_time_mpo
