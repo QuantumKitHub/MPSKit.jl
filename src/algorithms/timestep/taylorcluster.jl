@@ -205,5 +205,5 @@ function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::TaylorCluster;
     # Impose boundary conditions
     mpo[1] = mpo[1][1, :, :, :]
     mpo[end] = mpo[end][:, :, :, 1]
-    return remove_orphans(mpo; tol)
+    return remove_orphans!(mpo; tol)
 end
