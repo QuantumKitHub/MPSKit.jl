@@ -132,7 +132,7 @@ _not_missing_type(::Type{Missing}) = throw(ArgumentError("Only missing type pres
 function _not_missing_type(::Type{T}) where {T}
     if T isa Union
         return (!(T.a === Missing) && !(T.b === Missing)) ? T :
-               !(T.a === Missing) ? _not_missing_type(T.b) : _not_missing_type(T.b)
+               !(T.a === Missing) ? _not_missing_type(T.a) : _not_missing_type(T.b)
     else
         return T
     end
