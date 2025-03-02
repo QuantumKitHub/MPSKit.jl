@@ -123,7 +123,6 @@ function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::WII)
     mpo = make_time_mpo(InfiniteMPOHamiltonian(H′), dt, alg; tol)
 
     # Impose boundary conditions
-    mpo[1] = mpo[1][1, :, :, :]
-    mpo[end] = mpo[end][:, :, :, 1]
-    return remove_orphans!(mpo; tol)
+    mpo_fin = open_boundary_conditions(mpo, length(H))
+    return remove_orphans!(mpo_fin; tol)
 end
