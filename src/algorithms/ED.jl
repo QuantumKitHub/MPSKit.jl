@@ -25,9 +25,9 @@ equivalent to dense eigenvectors.
     The total charge of the eigenvectors is imposed by adding a charged auxiliary space as
     the leftmost virtualspace of each eigenvector. Specifically, this is achieved by passing
     `left=Vect[typeof(sector)](sector => 1)` to the [`FiniteMPS`](@ref) constructor. As
-    such, the only valid `sector` values (i.e. a `sector` value for which the corresponding
-    eigenstate has valid fusion channels) are those that occur in the dual of the fusion of
-    all the physical spaces in the system.
+    such, the only valid `sector` values (i.e. `sector` values for which the corresponding
+    eigenstates have valid fusion channels) are those that occur in the dual of the fusion
+    of all the physical spaces in the system.
 
 """
 function exact_diagonalization(opp::FiniteMPOHamiltonian;
