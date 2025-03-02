@@ -72,8 +72,8 @@ function remove_orphans!(mpo::SparseMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
             for i in 1:length(mpo)
                 # slice empty columns on right or empty rows on left
                 mask = filter(1:size(mpo[i], 4)) do j
-                    return j ∈ getindex.(nonzero_keys(mpo[i]), 1) &&
-                           j ∈ getindex.(nonzero_keys(mpo[i + 1]), 4)
+                    return j ∈ getindex.(nonzero_keys(mpo[i]), 4) &&
+                           j ∈ getindex.(nonzero_keys(mpo[i + 1]), 1)
                 end
                 changed |= length(mask) == size(mpo[i], 4)
                 mpo[i] = mpo[i][:, :, :, mask]
