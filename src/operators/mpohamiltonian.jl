@@ -61,8 +61,9 @@ Create a `FiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k
 the the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
 either `MPOTensor`, `Missing` or `Number`.
 """
-function FiniteMPOHamiltonian(W_mats::Vector{Matrix{Union{Missing,T,O}}}) where {T<:Number,
-                                                                                 O<:MPOTensor}
+function FiniteMPOHamiltonian(W_mats::Vector{Matrix{MT}}) where {MT<:Union{Missing,Number,
+                                                                           MPOTensor}}
+    O, T = _split_mpoham_types(MT)
     L = length(W_mats)
     # initialize sumspaces
     S = spacetype(O)
@@ -133,6 +134,19 @@ function FiniteMPOHamiltonian(W_mats::Vector{Matrix{Union{Missing,T,O}}}) where 
     end
 
     return FiniteMPOHamiltonian(Ws)
+end
+
+_split_mpoham_types(::Type{T}) where {T<:MPOTensor} = T, scalartype(T)
+function _split_mpoham_types(::Type{T}) where {T}
+    Ts = Base.uniontypes(T)
+
+    iTO = findall(x -> x <: MPOTensor, Ts)
+    @assert !isempty(iTO) "need at least one `<:MPOTensor` type"
+    TO = promote_type(Ts[iTO]...)
+
+    iTE = findall(x -> x <: Number, Ts)
+    TE = promote_type(scalartype(TO), Ts[iTE]...)
+    return TO, TE
 end
 
 """
