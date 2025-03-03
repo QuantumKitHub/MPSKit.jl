@@ -533,7 +533,11 @@ function VectorInterface.scale!(dst::MPOHamiltonian, src::MPOHamiltonian,
             isstarting = I[1] == 1 &&
                          ((isfinite(dst) && i == N && I[4] == size(src[i], 4)) ||
                           ((!isfinite(dst) || i != N) && I[4] > 1))
-            dst[i][I] = scale!(dst[i][I], v, isstarting ? λ : One())
+            if v isa BraidingTensor && !isstarting
+                dst[i][I] = v
+            else
+                dst[i][I] = scale!(dst[i][I], v, isstarting ? λ : One())
+            end
         end
     end
     return dst
