@@ -34,7 +34,9 @@ By convention, we have that:
     FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=false)
 
 Construct an MPS via a specification of physical and virtual spaces, or from a list of
-tensors `As`. All cases reduce to the latter.
+tensors `As`. All cases reduce to the latter. In particular, a state with a non-trivial
+total charge can be constructed by passing a non-trivially charged vector space as the
+`left` or `right` virtual spaces.
 
 ### Arguments
 - `As::Vector{<:GenericMPSTensor}`: vector of site tensors
@@ -50,7 +52,7 @@ tensors `As`. All cases reduce to the latter.
 - `maxvirtualspace::S`: maximum virtual space
 
 ### Keywords
-- `normalize`: normalize the constructed state
+- `normalize=true`: normalize the constructed state
 - `overwrite=false`: overwrite the given input tensors
 - `left=oneunit(S)`: left-most virtual space
 - `right=oneunit(S)`: right-most virtual space
