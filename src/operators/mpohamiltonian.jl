@@ -61,9 +61,12 @@ Create a `FiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k
 the the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
 either `MPOTensor`, `Missing` or `Number`.
 """
-function FiniteMPOHamiltonian(W_mats::Vector{Matrix{MT}}) where {MT<:Union{Missing,Number,
-                                                                           MPOTensor}}
-    O, T = _split_mpoham_types(MT)
+function FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+    T = promote_type(_split_mpoham_types.(Ws)...)
+    return FiniteMPOHamiltonian{T}(Ws)
+end
+function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor}
+    T = scalartype(O)
     L = length(W_mats)
     # initialize sumspaces
     S = spacetype(O)
@@ -136,17 +139,45 @@ function FiniteMPOHamiltonian(W_mats::Vector{Matrix{MT}}) where {MT<:Union{Missi
     return FiniteMPOHamiltonian(Ws)
 end
 
-_split_mpoham_types(::Type{T}) where {T<:MPOTensor} = T, scalartype(T)
-function _split_mpoham_types(::Type{T}) where {T}
-    Ts = Base.uniontypes(T)
 
-    iTO = findall(x -> x <: MPOTensor, Ts)
-    @assert !isempty(iTO) "need at least one `<:MPOTensor` type"
-    TO = promote_type(Ts[iTO]...)
+function _split_mpoham_types(W::Matrix)::Type{<:MPOTensor}
+    # attempt to deduce from eltype -- hopefully type-stable
+    T = eltype(W)
+    if T <: MPOTensor
+        return T
+    elseif T <: Union{Missing,Number,MPOTensor}
+        Ts = collect(DataType, Base.uniontypes(T))
+        # find MPO type
+        iTO = findall(x -> x <: MPOTensor, Ts)
+        @assert !isempty(iTO) "should not happen"
+        TO = promote_type(Ts[iTO]...)
+        # check scalar type
+        iTE = findall(x -> x <: Number, Ts)
+        if !isempty(iTE)
+            all(i -> Ts[i] <: scalartype(TO), iTE) ||
+                throw(ArgumentError("scalar type should be a subtype of the tensor scalar type"))
+        end
+        return TO
+    end
 
-    iTE = findall(x -> x <: Number, Ts)
-    TE = promote_type(scalartype(TO), Ts[iTE]...)
-    return TO, TE
+    # didn't work, so we check all types
+    TO = Base.Bottom # mpotensor type
+    TE = Base.Bottom # scalar type
+    for x in W
+        Tx = typeof(x)
+        if Tx <: MPOTensor
+            TO = promote_type(TO, Tx)
+        elseif Tx <: Number
+            TE = promote_type(TE, Tx)
+        else
+            Tx === Missing || throw(ArgumentError("invalid type $Tx in matrix"))
+        end
+    end
+    TO === Base.Bottom && throw(ArgumentError("no MPOTensor found in matrix"))
+    TE <: scalartype(TO) ||
+        throw(ArgumentError("scalar type should be a subtype of the tensor scalar type"))
+
+    return TO
 end
 
 """
