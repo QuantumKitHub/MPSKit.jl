@@ -71,7 +71,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     end
 end
 
-@testset "FiniteMPOHamiltonian constructors" begin
+@testset "MPOHamiltonian constructors" begin
     P = ℂ^2
     T = Float64
 
@@ -88,11 +88,27 @@ end
     Wleft = Wmid[1:1, :]
     Wright = Wmid[:, end:end]
 
-    H = FiniteMPOHamiltonian([Wleft, Wmid, Wmid, Wright])
-    H′ = FiniteMPOHamiltonian(fill(P, 4),
-                              [(i,) => H1 for i in 1:4]...,
-                              [(i, i + 1) => H2 for i in 1:3]...)
+    # Finite
+    Ws = [Wleft, Wmid, Wmid, Wright]
+    H = FiniteMPOHamiltonian(fill(P, 4),
+                             [(i,) => H1 for i in 1:4]...,
+                             [(i, i + 1) => H2 for i in 1:3]...)
+    H′ = FiniteMPOHamiltonian(Ws)
     @test H ≈ H′
+
+    H′ = FiniteMPOHamiltonian(map(Base.Fix1(collect, Any), Ws)) # without type info
+    @test H ≈ H′
+
+    # Infinite
+    Ws = [Wmid]
+    H = InfiniteMPOHamiltonian(fill(P, 1),
+                               [(i,) => H1 for i in 1:1]...,
+                               [(i, i + 1) => H2 for i in 1:1]...)
+    H′ = InfiniteMPOHamiltonian(Ws)
+    @test all(parent(H) .≈ parent(H′))
+
+    H′ = InfiniteMPOHamiltonian(map(Base.Fix1(collect, Any), Ws)) # without type info
+    @test all(parent(H) .≈ parent(H′))
 end
 
 @testset "Finite MPOHamiltonian" begin
