@@ -19,6 +19,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
+TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 
 [compat]
@@ -26,6 +27,7 @@ Accessors = "0.1"
 Aqua = "0.8.9"
 BlockTensorKit = "0.1.4"
 Compat = "3.47, 4.10"
+Combinatorics = "1"
 DocStringExtensions = "0.9.3"
 HalfIntegers = "1.6.0"
 KrylovKit = "0.8.3, 0.9.2"
@@ -48,11 +50,11 @@ julia = "1.10"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 
 [targets]
-test = ["Aqua", "Pkg", "Test", "TestExtras", "Plots"]
+test = ["Aqua", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics"]

@@ -60,6 +60,7 @@ using Compat: @compat
 using TensorKit
 using TensorKit: BraidingTensor
 using BlockTensorKit
+using TensorOperations
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
 using OptimKit
@@ -143,7 +144,8 @@ include("algorithms/changebonds/svdcut.jl")
 include("algorithms/changebonds/randexpand.jl")
 
 include("algorithms/timestep/tdvp.jl")
-include("algorithms/timestep/timeevmpo.jl")
+include("algorithms/timestep/taylorcluster.jl")
+include("algorithms/timestep/wii.jl")
 include("algorithms/timestep/integrators.jl")
 include("algorithms/timestep/time_evolve.jl")
 

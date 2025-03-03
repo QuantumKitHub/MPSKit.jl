@@ -24,7 +24,9 @@ end
 # Properties
 # ----------
 left_virtualspace(mpo::AbstractMPO, site::Int) = left_virtualspace(mpo[site])
+left_virtualspace(mpo::AbstractMPO) = map(left_virtualspace, parent(mpo))
 right_virtualspace(mpo::AbstractMPO, site::Int) = right_virtualspace(mpo[site])
+right_virtualspace(mpo::AbstractMPO) = map(right_virtualspace, parent(mpo))
 physicalspace(mpo::AbstractMPO, site::Int) = physicalspace(mpo[site])
 physicalspace(mpo::AbstractMPO) = map(physicalspace, mpo)
 
@@ -72,8 +74,8 @@ function remove_orphans!(mpo::SparseMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
             for i in 1:length(mpo)
                 # slice empty columns on right or empty rows on left
                 mask = filter(1:size(mpo[i], 4)) do j
-                    return j ∈ getindex.(nonzero_keys(mpo[i]), 1) ||
-                           j ∈ getindex.(nonzero_keys(mpo[i + 1]), 4)
+                    return j ∈ getindex.(nonzero_keys(mpo[i]), 4) &&
+                           j ∈ getindex.(nonzero_keys(mpo[i + 1]), 1)
                 end
                 changed |= length(mask) == size(mpo[i], 4)
                 mpo[i] = mpo[i][:, :, :, mask]
@@ -170,7 +172,11 @@ Base.:*(mpo::AbstractMPO, α::Number) = scale(mpo, α)
 Base.:/(mpo::AbstractMPO, α::Number) = scale(mpo, inv(α))
 Base.:\(α::Number, mpo::AbstractMPO) = scale(mpo, inv(α))
 
-VectorInterface.scale(mpo::AbstractMPO, α::Number) = scale!(copy(mpo), α)
+function VectorInterface.scale(mpo::AbstractMPO, α::Number)
+    T = VectorInterface.promote_scale(scalartype(mpo), scalartype(α))
+    dst = similar(mpo, T)
+    return scale!(dst, mpo, α)
+end
 
 LinearAlgebra.norm(mpo::AbstractMPO) = sqrt(abs(dot(mpo, mpo)))
 
@@ -196,10 +202,23 @@ end
 # TODO: diagram
 
 function _fuse_mpo_mpo(O1::MPOTensor, O2::MPOTensor, Fₗ, Fᵣ)
-    return @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
-                                        O2[1 3; -3 5] *
-                                        O1[2 -2; 3 4] *
-                                        conj(Fᵣ[-4; 5 4])
+    return if O1 isa BraidingTensor && O2 isa BraidingTensor
+    elseif O1 isa BraidingTensor
+        @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
+                                     O2[1 3; -3 5] *
+                                     τ[2 -2; 3 4] *
+                                     conj(Fᵣ[-4; 5 4])
+    elseif O2 isa BraidingTensor
+        @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
+                                     τ[1 3; -3 5] *
+                                     O1[2 -2; 3 4] *
+                                     conj(Fᵣ[-4; 5 4])
+    else
+        @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
+                                     O2[1 3; -3 5] *
+                                     O1[2 -2; 3 4] *
+                                     conj(Fᵣ[-4; 5 4])
+    end
 end
 
 """
