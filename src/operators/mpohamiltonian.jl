@@ -156,7 +156,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor
         size(W_mat, 1) == size(W_mat, 2) ||
             throw(ArgumentError("matrices should be square"))
     end
-    allequal(Base.Fix1(size, 1), W_mats) ||
+    allequal(Base.Fix2(size, 1), W_mats) ||
         throw(ArgumentError("matrices should have the same size"))
     nlvls = size(W_mats[1], 1)
 
