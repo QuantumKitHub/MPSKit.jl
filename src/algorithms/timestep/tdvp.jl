@@ -25,9 +25,10 @@ $(TYPEDFIELDS)
     finalize::F = Defaults._finalize
 end
 
-function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-                  envs::AbstractMPSEnvironments=environments(ψ, H);
+function timestep(ψ_::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
+                  envs::AbstractMPSEnvironments=environments(ψ_, H);
                   leftorthflag=true)
+    ψ = complex(ψ_)
     temp_ACs = similar(ψ.AC)
     temp_Cs = similar(ψ.C)
 
@@ -172,5 +173,5 @@ end
 function timestep(ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
                   alg::Union{TDVP,TDVP2}, envs::AbstractMPSEnvironments=environments(ψ, H);
                   kwargs...)
-    return timestep!(copy(ψ), H, time, timestep, alg, envs; kwargs...)
+    return timestep!(copy(complex(ψ)), H, time, timestep, alg, envs; kwargs...)
 end

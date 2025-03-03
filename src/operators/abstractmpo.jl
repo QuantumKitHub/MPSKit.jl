@@ -24,7 +24,9 @@ end
 # Properties
 # ----------
 left_virtualspace(mpo::AbstractMPO, site::Int) = left_virtualspace(mpo[site])
+left_virtualspace(mpo::AbstractMPO) = map(left_virtualspace, parent(mpo))
 right_virtualspace(mpo::AbstractMPO, site::Int) = right_virtualspace(mpo[site])
+right_virtualspace(mpo::AbstractMPO) = map(right_virtualspace, parent(mpo))
 physicalspace(mpo::AbstractMPO, site::Int) = physicalspace(mpo[site])
 physicalspace(mpo::AbstractMPO) = map(physicalspace, mpo)
 
@@ -170,7 +172,11 @@ Base.:*(mpo::AbstractMPO, α::Number) = scale(mpo, α)
 Base.:/(mpo::AbstractMPO, α::Number) = scale(mpo, inv(α))
 Base.:\(α::Number, mpo::AbstractMPO) = scale(mpo, inv(α))
 
-VectorInterface.scale(mpo::AbstractMPO, α::Number) = scale!(copy(mpo), α)
+function VectorInterface.scale(mpo::AbstractMPO, α::Number)
+    T = VectorInterface.promote_scale(scalartype(mpo), scalartype(α))
+    dst = similar(mpo, T)
+    return scale!(dst, mpo, α)
+end
 
 LinearAlgebra.norm(mpo::AbstractMPO) = sqrt(abs(dot(mpo, mpo)))
 

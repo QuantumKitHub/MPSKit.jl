@@ -316,6 +316,19 @@ Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
     end
 end
 
+_complex_if_not_missing(x) = ismissing(x) ? x : complex(x)
+function Base.complex(mps::FiniteMPS)
+    scalartype(mps) <: Complex && return mps
+    ALs = _complex_if_not_missing.(mps.ALs)
+    ARs = _complex_if_not_missing.(mps.ARs)
+    Cs = _complex_if_not_missing.(mps.Cs)
+    ACs = _complex_if_not_missing.(mps.ACs)
+    return FiniteMPS(collect(Union{Missing,eltype(ALs)}, ALs),
+                     collect(Union{Missing,eltype(ARs)}, ARs),
+                     collect(Union{Missing,eltype(ACs)}, ACs),
+                     collect(Union{Missing,eltype(Cs)}, Cs))
+end
+
 @inline function Base.getindex(ψ::FiniteMPS, I::AbstractUnitRange)
     return Base.getindex.(Ref(ψ), I)
 end

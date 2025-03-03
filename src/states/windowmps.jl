@@ -118,6 +118,13 @@ function Base.copy(ψ::WindowMPS)
     return WindowMPS(copy(ψ.left_gs), copy(ψ.window), copy(ψ.right_gs))
 end
 
+function Base.complex(ψ::WindowMPS)
+    scalartype(ψ) <: Complex && return ψ
+    left_gs = complex(ψ.left_gs)
+    right_gs = ψ.left_gs === ψ.right_gs ? left_gs : complex(right_gs)
+    return WindowMPS(left_gs, complex(ψ.window), right_gs)
+end
+
 # not sure about the underlying methods...
 Base.length(ψ::WindowMPS) = length(ψ.window)
 Base.size(ψ::WindowMPS, i...) = size(ψ.window, i...)

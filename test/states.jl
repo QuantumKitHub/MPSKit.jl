@@ -45,6 +45,15 @@ end
     ψ_small = FiniteMPS(rand, elt, 4, d, D)
     ψ_small2 = FiniteMPS(convert(TensorMap, ψ_small))
     @test dot(ψ_small, ψ_small2) ≈ dot(ψ_small, ψ_small)
+
+    ψ′ = @constinferred complex(ψ_small)
+    @test scalartype(ψ′) <: Complex
+    if elt <: Complex
+        @test ψ_small === ψ′
+    else
+        @test norm(ψ_small) ≈ norm(ψ′)
+        @test complex(convert(TensorMap, ψ_small)) ≈ convert(TensorMap, ψ′)
+    end
 end
 
 @testset "FiniteMPS center + (slice) indexing" begin

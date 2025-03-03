@@ -224,6 +224,11 @@ function Base.copy!(ψ::InfiniteMPS, ϕ::InfiniteMPS)
     return ψ
 end
 
+function Base.complex(ψ::InfiniteMPS)
+    scalartype(ψ) <: Complex && return ψ
+    return InfiniteMPS(complex.(ψ.AL), complex.(ψ.AR), complex.(ψ.C), complex.(ψ.AC))
+end
+
 function Base.repeat(ψ::InfiniteMPS, i::Int)
     return InfiniteMPS(repeat(ψ.AL, i), repeat(ψ.AR, i), repeat(ψ.C, i), repeat(ψ.AC, i))
 end
