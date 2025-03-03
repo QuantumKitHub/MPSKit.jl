@@ -10,7 +10,7 @@ Use [`KrylovKit.eigsolve`](@extref) to perform exact diagonalization on a
 equivalent to dense eigenvectors.
 
 ### Arguments
-- `opp::FiniteMPOHamiltonian`: the Hamiltonian to diagonalize.
+- `H::FiniteMPOHamiltonian`: the Hamiltonian to diagonalize.
 
 ### Keyword arguments
 - `sector=first(sectors(oneunit(physicalspace(opp, 1))))`: the total charge of the
