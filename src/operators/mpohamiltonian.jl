@@ -139,6 +139,120 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor}
     return FiniteMPOHamiltonian(Ws)
 end
 
+"""
+    InfiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+
+Create a `InfiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]` represents
+the the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
+either `MPOTensor`, `Missing` or `Number`.
+"""
+function InfiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+    T = promote_type(_split_mpoham_types.(Ws)...)
+    return InfiniteMPOHamiltonian{T}(Ws)
+end
+function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor}
+    # InfiniteMPOHamiltonian only works for square matrices:
+    for W_mat in W_mats
+        size(W_mat, 1) == size(W_mat, 2) ||
+            throw(ArgumentError("matrices should be square"))
+    end
+    allequal(Base.Fix1(size, 1), W_mats) ||
+        throw(ArgumentError("matrices should have the same size"))
+    nlvls = size(W_mats[1], 1)
+
+    T = scalartype(O)
+    L = length(W_mats)
+    # initialize sumspaces
+    S = spacetype(O)
+
+    # physical spaces
+    Pspaces = map(W_mats) do W_mat
+        operator_id = findfirst(x -> x isa O, W_mat)
+        @assert !isnothing(operator_id) "could not determine physical space"
+        return physicalspace(W_mat[operator_id])
+    end
+
+    # virtual spaces:
+    # note that we assume that the FSA does not contain "dead ends", as this would mess with the
+    # ability to deduce spaces.
+    # also assume spacecheck errors will happen when filling the BlockTensors
+    MissingS = Union{Missing,S}
+    Vspaces = PeriodicArray([Vector{MissingS}(missing, nlvls) for _ in 1:L])
+    for V in Vspaces
+        V[1] = V[end] = oneunit(S)
+    end
+
+    haschanged = true
+    while haschanged
+        haschanged = false
+        # sweep left-to-right-to-left
+        for site in vcat(1:length(W_mats), reverse(1:(length(W_mats) - 1)))
+            W_mat = W_mats[site]
+            Vs_left = Vspaces[site]
+            Vs_right = Vspaces[site + 1]
+
+            for I in eachindex(IndexCartesian(), W_mat)
+                Welem = W_mat[I]
+                ismissing(Welem) && continue
+                row, col = I.I
+                if Welem isa MPOTensor
+                    V_left = left_virtualspace(Welem)
+                    if ismissing(Vs_left[row])
+                        Vs_left[row] = V_left
+                        haschanged = true
+                    else
+                        @assert Vs_left[row] == V_left "incompatible space between sites $(site-1) and $site at level $row"
+                    end
+
+                    V_right = right_virtualspace(Welem)
+                    if ismissing(Vs_right[col])
+                        Vs_right[col] = V_right
+                        haschanged = true
+                    else
+                        @assert Vs_right[col] == V_right "incompatible space between sites $(site) and $(site+1) at level $col"
+                    end
+                elseif !iszero(Welem) # Welem isa Number
+                    if ismissing(Vs_left[row]) && !ismissing(Vs_right[col])
+                        Vs_left[row] = Vs_right[col]
+                        haschanged = true
+                    elseif !ismissing(Vs_left[row]) && ismissing(Vs_right[col])
+                        Vs_right[col] = Vs_left[row]
+                        haschanged = true
+                    else
+                        @assert Vs_left[row] == Vs_right[col] "incompatible space between sites $(site-1) and $site at level $row"
+                    end
+                end
+            end
+
+            Vspaces[site] = Vs_left
+            Vspaces[site + 1] = Vs_right
+        end
+    end
+
+    foreach(Base.Fix2(replace!, missing => oneunit(S)), Vspaces)
+    Vsumspaces = map(Vspaces) do V
+        return SumSpace(collect(S, V))
+    end
+
+    # instantiate tensors
+    Ws = map(enumerate(W_mats)) do (site, W_mat)
+        W = jordanmpotensortype(S, T)(undef,
+                                      Vsumspaces[site] ⊗ Pspaces[site] ←
+                                      Pspaces[site] ⊗ Vsumspaces[site + 1])
+        for (I, v) in enumerate(W_mat)
+            ismissing(v) && continue
+            if v isa MPOTensor
+                W[I] = v
+            elseif !iszero(v)
+                τ = BraidingTensor{T}(eachspace(W)[I])
+                W[I] = isone(v) ? τ : τ * v
+            end
+        end
+        return W
+    end
+
+    return InfiniteMPOHamiltonian(Ws)
+end
 
 function _split_mpoham_types(W::Matrix)::Type{<:MPOTensor}
     # attempt to deduce from eltype -- hopefully type-stable
