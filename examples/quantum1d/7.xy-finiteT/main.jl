@@ -461,3 +461,9 @@ p_mpo_mul_diff = let
 
     plot(p1, p2)
 end
+
+md"""
+!!! note
+    We could further improve the accuracy of the TDVP approach by evolving with $(H \otimes \mathbb{1} + \mathbb{1} \otimes H^\dagger)$, rather than $H \otimes \mathbb{1}$ which is the current implementation.
+    This is known to improve the stability of the positive semidefinite property of the density matrix, and could lead to more accurate results.
+"""
