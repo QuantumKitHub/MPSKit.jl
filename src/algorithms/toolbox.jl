@@ -21,10 +21,19 @@ function entropy(state::Union{FiniteMPS,WindowMPS,InfiniteMPS}, loc::Int)
     return -S
 end
 
-# function infinite_temperature(H::MPOHamiltonian)
-#     return [permute(isomorphism(storagetype(H[1, 1, 1]), oneunit(sp) * sp,
-#                                 oneunit(sp) * sp), (1, 2, 4), (3,)) for sp in H.pspaces]
-# end
+"""
+    infinite_temperature_density_matrix(H::MPOHamiltonian) -> MPO
+
+Return the density matrix of the infinite temperature state for a given Hamiltonian.
+This is the identity matrix in the physical space, and the identity in the auxiliary space.
+"""
+function infinite_temperature_density_matrix(H::MPOHamiltonian)
+    V = oneunit(spacetype(H))
+    W = map(1:length(H)) do site
+        return BraidingTensor{scalartype(H)}(physicalspace(H, site), V)
+    end
+    return isfinite(H) ? FiniteMPO(W) : InfiniteMPO(W)
+end
 
 """
     calc_galerkin(above, operator, below, envs)
