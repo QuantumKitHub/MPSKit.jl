@@ -43,6 +43,7 @@ md"""
 
 The Hamiltonian can be diagonalized through a Bogoliubov transformation, leading to the following expression for the ground state energy
 The Hamiltonian can be diagonalized in terms of fermionic creation and annihilation operators.
+
 (TODO) Show the diagonalization of the Hamiltonian in terms of fermionic operators.
 
 ```math
@@ -191,16 +192,18 @@ Here we see that for this particular Hamiltonian, all the terms with factors $d\
 As a result, the trace of the time-evolution operator is equal to the trace of the identity, hence the result is always $2$.
 
 ```math
-H = \begin{pmatrix}
+\begin{align}
+H &= \begin{pmatrix}
     1 & C & D \\
     0 & A & B \\
     0 & 0 & 1
-\end{pmatrix}
+\end{pmatrix} \\
 
-e^{\tau H} = \begin{pmatrix}
+e^{\tau H} &= \begin{pmatrix}
     1 + \tau D + \frac{\tau^2}{2} D^2 & C + \frac{\tau}{2} (CD + DC) \\
     \tau (B + \frac{\tau}{2} (BD + DB)) & A + \frac{\tau^2}{2} (AD + DA + CB + BC)
 \end{pmatrix}
+\end{align}
 ```
 
 Therefore, we will exclude the first order approximation from now on.
@@ -211,11 +214,11 @@ p_taylor_diff = let
     labels = reshape(map(expansion_orders[2:end]) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, real.(Z_taylor[:, 2:end]) .- partition_function.(βs, J, N);
+    p1 = plot(βs, abs.(real.(Z_taylor[:, 2:end]) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
               xlabel="β", ylabel="ΔZ(β)")
-    p2 = plot(βs, real.(F_taylor[:, 2:end]) .- free_energy.(βs, J, N); label=labels,
-              xlabel="β", ylabel="ΔF(β)")
+    p2 = plot(βs, abs.(real.(F_taylor[:, 2:end]) .- free_energy.(βs, J, N)); label=labels,
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
     plot(p1, p2)
 end
 
@@ -240,8 +243,7 @@ Otherwise, we could still use the same trick, but we would have to compute the e
 
 function partition_function_taylor2(β, H; expansion_order)
     dτ = im * β / 2
-    expH = make_time_mpo(H, dτ,
-                         TaylorCluster(; N=expansion_order))
+    expH = make_time_mpo(H, dτ, TaylorCluster(; N=expansion_order))
     return real(dot(expH, expH))^(1 / N)
 end
 
@@ -255,11 +257,11 @@ p_taylor2_diff = let
     labels = reshape(map(expansion_orders[2:end]) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, real.(Z_taylor2) .- partition_function.(βs, J, N);
+    p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)", legend=:bottomleft)
-    p2 = plot(βs, real.(F_taylor2) .- free_energy.(βs, J, N); label=labels,
-              xlabel="β", ylabel="ΔF(β)", legend=:bottomright)
+              xlabel="β", ylabel="ΔZ(β)")
+    p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
     plot(p1, p2)
 end
 
@@ -271,9 +273,11 @@ However, inspired by the trick we used to improve the results, we can use MPO mu
 In particular, we can implement the following algorithm to scan over a linear range of $\beta$ values.
 
 ```math
-Z(2\beta) = Z(\beta) \cdot Z(\beta)
-Z(3\beta) = Z(\beta) \cdot Z(\beta) \cdot Z(\beta) = Z(\beta) \cdot Z(2\beta)
-\dots
+\begin{align}
+Z(2\beta) &= Z(\beta) \cdot Z(\beta) \\
+Z(3\beta) &= Z(\beta) \cdot Z(\beta) \cdot Z(\beta) = Z(\beta) \cdot Z(2\beta) \\
+\vdots &= \vdots
+\end{align}
 ```
 
 Multiplying two MPOs exactly would lead to an exponential growth in bond dimensions, but we can make use of standard MPS techniques to keep the bond dimensions under control.
@@ -310,14 +314,14 @@ p_mpo_mul_diff = let
     labels = reshape(map(expansion_orders[2:end]) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, real.(Z_taylor2) .- partition_function.(βs, J, N);
+    p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)", legend=:bottomleft)
-    plot!(p1, βs, real.(Z_mpo_mul) .- partition_function.(βs, J, N);
+              xlabel="β", ylabel="ΔZ(β)")
+    plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
           label="MPO multiplication")
-    p2 = plot(βs, real.(F_taylor2) .- free_energy.(βs, J, N); label=labels,
-              xlabel="β", ylabel="ΔF(β)", legend=:bottomright)
-    plot!(p2, βs, real.(F_mpo_mul) .- free_energy.(βs, J, N);
+    p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
+    plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
           label="MPO multiplication")
     plot(p1, p2)
 end
@@ -379,19 +383,19 @@ p_mpo_mul_exp_diff = let
     labels = reshape(map(expansion_orders[2:end]) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, real.(Z_taylor2) .- partition_function.(βs, J, N);
+    p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)", legend=:bottomleft)
-    plot!(p1, βs, real.(Z_mpo_mul) .- partition_function.(βs, J, N);
+              xlabel="β", ylabel="ΔZ(β)")
+    plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
           label="MPO multiplication")
-    plot!(p1, βs_exp, real.(Z_mpo_mul_exp) .- partition_function.(βs_exp, J, N);
+    plot!(p1, βs_exp, abs.(real.(Z_mpo_mul_exp) .- partition_function.(βs_exp, J, N));
           label="MPO multiplication exp")
 
-    p2 = plot(βs, real.(F_taylor2) .- free_energy.(βs, J, N); label=labels,
-              xlabel="β", ylabel="ΔF(β)", legend=:bottomright)
-    plot!(p2, βs, real.(F_mpo_mul) .- free_energy.(βs, J, N);
+    p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
+    plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
           label="MPO multiplication")
-    plot!(p2, βs_exp, real.(F_mpo_mul_exp) .- free_energy.(βs_exp, J, N);
+    plot!(p2, βs_exp, abs.(real.(F_mpo_mul_exp) .- free_energy.(βs_exp, J, N));
           label="MPO multiplication exp")
     plot(p1, p2)
 end
@@ -442,19 +446,19 @@ p_mpo_mul_diff = let
     labels = reshape(map(expansion_orders[2:end]) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, real.(Z_taylor2) .- partition_function.(βs, J, N);
+    p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)", legend=:bottomleft)
-    plot!(p1, βs, real.(Z_mpo_mul) .- partition_function.(βs, J, N);
+              xlabel="β", ylabel="ΔZ(β)")
+    plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
           label="MPO multiplication")
-    plot!(p1, βs, real.(Z_tdvp) .- partition_function.(βs, J, N);
+    plot!(p1, βs, abs.(real.(Z_tdvp) .- partition_function.(βs, J, N));
           label="TDVP")
 
-    p2 = plot(βs, real.(F_taylor2) .- free_energy.(βs, J, N); label=labels,
-              xlabel="β", ylabel="ΔF(β)", legend=:bottomright)
-    plot!(p2, βs, real.(F_mpo_mul) .- free_energy.(βs, J, N);
+    p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
+    plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
           label="MPO multiplication")
-    plot!(p2, βs, real.(F_tdvp) .- free_energy.(βs, J, N);
+    plot!(p2, βs, abs.(real.(F_tdvp) .- free_energy.(βs, J, N));
           label="TDVP")
 
     plot(p1, p2)
