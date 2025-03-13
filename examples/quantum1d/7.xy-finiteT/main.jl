@@ -69,7 +69,7 @@ vals = eigvals(H_dense)[Trivial()] ./ 6
 groundstate_energy(J, 6)
 
 println("Exact (N=$N):\t", groundstate_energy(J, 6))
-println("Exact (thermodynamic limit):\t", groundstate_energy(J, Inf))
+println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 println("Numerical:\t", minimum(real(vals)))
 
 md"""
@@ -85,7 +85,7 @@ psi, envs, = find_groundstate(psi_init, H, DMRG(; maxiter=10));
 E_0 = expectation_value(psi, H, envs) / N
 
 println("Exact (N=$N):\t", groundstate_energy(J, N))
-println("Exact (thermodynamic limit):\t", groundstate_energy(J, Inf))
+println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 println("Numerical:\t", real(E_0))
 
 md"""
@@ -260,7 +260,6 @@ p_taylor2_diff = let
               xlabel="β", ylabel="ΔZ(β)", legend=:bottomleft)
     p2 = plot(βs, real.(F_taylor2) .- free_energy.(βs, J, N); label=labels,
               xlabel="β", ylabel="ΔF(β)", legend=:bottomright)
-    # TODO: fix axis limits to be the same
     plot(p1, p2)
 end
 
@@ -291,12 +290,12 @@ Then, we have some control over the approximations we make by tuning the maximal
 Z_mpo_mul = zeros(length(βs))
 D_max = 64
 
-# first iteration: start from high order Taylor expansion
+## first iteration: start from high order Taylor expansion
 ρ₀ = make_time_mpo(H, im * βs[2] / 2, TaylorCluster(; N=3))
 Z_mpo_mul[1] = Z_taylor[1]
 Z_mpo_mul[2] = real(dot(ρ₀, ρ₀))^(1 / N)
 
-# subsequent iterations: multiply by ρ₀
+## subsequent iterations: multiply by ρ₀
 ρ_mps = convert(FiniteMPS, ρ₀)
 for i in 3:length(βs)
     global ρ_mps
@@ -320,7 +319,6 @@ p_mpo_mul_diff = let
               xlabel="β", ylabel="ΔF(β)", legend=:bottomright)
     plot!(p2, βs, real.(F_mpo_mul) .- free_energy.(βs, J, N);
           label="MPO multiplication")
-    # TODO: fix axis limits to be the same
     plot(p1, p2)
 end
 
@@ -360,15 +358,15 @@ In other words, we can scan an exponential range of $\beta$ values by squaring t
 βs_exp = 2.0 .^ (-3:3)
 Z_mpo_mul_exp = zeros(length(βs_exp))
 
-# first iteration: start from high order Taylor expansion
+## first iteration: start from high order Taylor expansion
 ρ₀ = make_time_mpo(H, im * first(βs_exp) / 2, TaylorCluster(; N=3))
 Z_mpo_mul_exp[1] = real(dot(ρ₀, ρ₀))^(1 / N)
 
-# subsequent iterations: square
+## subsequent iterations: square
 ρ = ρ₀
 ρ_mps = convert(FiniteMPS, ρ₀)
 for i in 2:length(βs_exp)
-    global ρ_mps
+    global ρ_mps, ρ
     @info "Computing β = $(βs_exp[i])"
     ρ_mps, = approximate(ρ_mps, (ρ, ρ_mps),
                          DMRG2(; trscheme=truncdim(D_max), maxiter=10))
@@ -425,11 +423,11 @@ In particular, this state is given by the identity MPO, and we can evolve this s
 
 Z_tdvp = zeros(length(βs))
 
-# first iteration: start from infinite temperature state
+## first iteration: start from infinite temperature state
 ρ₀ = infinite_temperature_density_matrix(H)
 Z_tdvp[1] = real(dot(ρ₀, ρ₀))^(1 / N)
 
-# subsequent iterations: evolve by H
+## subsequent iterations: evolve by H
 ρ_mps = convert(FiniteMPS, ρ₀)
 for i in 2:length(βs)
     global ρ_mps
