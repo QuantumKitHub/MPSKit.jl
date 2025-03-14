@@ -522,13 +522,14 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
         return SumSpace(collect(S, V))
     end
 
-    # construct the tensors
-    Otype = jordanmpotensortype(S, E)
+    # construct the tensor
+    TW = jordanmpotensortype(S, E)
     Os = map(1:length(lattice)) do site
-        O = Otype(undef, virtualsumspaces[site - 1] * lattice[site],
-                  lattice[site] * virtualsumspaces[site])
-        O[1, 1, 1, 1] = BraidingTensor{E}(eachspace(O)[1, 1, 1, 1])
-        O[end, end, end, end] = BraidingTensor{E}(eachspace(O)[end, end, end, end])
+        V = virtualsumspaces[site - 1] * lattice[site] ←
+            lattice[site] * virtualsumspaces[site]
+        O = TW(undef, V)
+        # O[1, 1, 1, 1] = BraidingTensor{E}(eachspace(O)[1, 1, 1, 1])
+        # O[end, end, end, end] = BraidingTensor{E}(eachspace(O)[end, end, end, end])
 
         # Fill it
         for ((key_L, key_R′), o) in zip(nonzero_keys[site], nonzero_opps[site])

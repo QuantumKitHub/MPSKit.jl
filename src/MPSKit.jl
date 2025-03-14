@@ -60,6 +60,7 @@ using Compat: @compat
 using TensorKit
 using TensorKit: BraidingTensor
 using BlockTensorKit
+using BlockTensorKit: TensorMapSumSpace
 using TensorOperations
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
@@ -75,7 +76,7 @@ using DocStringExtensions
 using LinearAlgebra: diag, Diagonal
 using LinearAlgebra: LinearAlgebra
 using Random
-using Base: @kwdef
+using Base: @kwdef, @propagate_inbounds
 using LoggingExtras
 using OhMyThreads
 
@@ -112,6 +113,7 @@ include("states/ortho.jl")
 
 include("operators/abstractmpo.jl")
 include("operators/mpo.jl")
+include("operators/jordanmpotensor.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
 include("operators/multilinempo.jl")
 include("operators/projection.jl")
