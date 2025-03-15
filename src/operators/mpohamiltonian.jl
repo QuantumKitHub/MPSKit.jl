@@ -528,8 +528,6 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
         V = virtualsumspaces[site - 1] * lattice[site] ←
             lattice[site] * virtualsumspaces[site]
         O = TW(undef, V)
-        # O[1, 1, 1, 1] = BraidingTensor{E}(eachspace(O)[1, 1, 1, 1])
-        # O[end, end, end, end] = BraidingTensor{E}(eachspace(O)[end, end, end, end])
 
         # Fill it
         for ((key_L, key_R′), o) in zip(nonzero_keys[site], nonzero_opps[site])
@@ -591,9 +589,19 @@ function isidentitylevel(H::InfiniteMPOHamiltonian, i::Int)
         return (h[i, 1, 1, i] isa BraidingTensor)
     end
 end
+function isidentitylevel(H::InfiniteMPOHamiltonian{<:JordanMPOTensor}, i::Int)
+    if i == 1 || i == size(H[1], 1)
+        return true
+    else
+        return all(H.A) do A
+            return haskey(A, CartesianIndex(i - 1, 1, 1, i - 1)) &&
+                   A[i - 1, 1, 1, i - 1] isa BraidingTensor
+        end
+    end
+end
 function isemptylevel(H::InfiniteMPOHamiltonian, i::Int)
     return any(parent(H)) do h
-        return !(CartesianIndex(i, 1, 1, i) in nonzero_keys(h))
+        return !haskey(h, CartesianIndex(i, 1, 1, i))
     end
 end
 
@@ -602,6 +610,17 @@ function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
     R = removeunit(H[end], 4)
     M = Tuple(H[2:(end - 1)])
     return convert(TensorMap, _instantiate_finitempo(L, M, R))
+end
+
+function Base.convert(::Type{FiniteMPOHamiltonian{O1}},
+                      H::FiniteMPOHamiltonian{O2}) where {O1,O2}
+    O1 === O2 && return H
+    return FiniteMPOHamiltonian(convert.(O1, parent(H)))
+end
+function Base.convert(::Type{InfiniteMPOHamiltonian{O1}},
+                      H::InfiniteMPOHamiltonian{O2}) where {O1,O2}
+    O1 === O2 && return H
+    return InfiniteMPOHamiltonian(convert.(O1, parent(H)))
 end
 
 function add_physical_charge(H::MPOHamiltonian, charges::AbstractVector{<:Sector})
@@ -716,6 +735,20 @@ function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:MPOHamiltonian}
 
     return H₁ isa FiniteMPOHamiltonian ? FiniteMPOHamiltonian(H) : InfiniteMPOHamiltonian(H)
 end
+function Base.:+(H₁::InfiniteMPOHamiltonian{O},
+                 H₂::InfiniteMPOHamiltonian{O}) where {O<:JordanMPOTensor}
+    N = check_length(H₁, H₂)
+    H = similar(parent(H₁))
+    for i in 1:N
+        A = cat(H₁[i].A, H₂[i].A; dims=(1, 4))
+        B = cat(H₁[i].B, H₂[i].B; dims=1)
+        C = cat(H₁[i].C, H₂[i].C; dims=3)
+        D = H₁[i].D + H₂[i].D
+        H[i] = eltype(H)(A, B, C, D)
+    end
+    return InfiniteMPOHamiltonian(H)
+end
+
 function Base.:+(H::FiniteMPOHamiltonian, λs::AbstractVector{<:Number})
     check_length(H, λs)
     lattice = [physicalspace(H, i) for i in 1:length(H)]
@@ -749,6 +782,14 @@ function VectorInterface.scale!(H::InfiniteMPOHamiltonian, λ::Number)
     end
     return H
 end
+function VectorInterface.scale!(H::InfiniteMPOHamiltonian{O},
+                                λ::Number) where {O<:JordanMPOTensor}
+    for i in 1:length(H)
+        scale!(H[i].C, λ)
+        scale!(H[i].D, λ)
+    end
+    return H
+end
 
 function VectorInterface.scale!(H::FiniteMPOHamiltonian, λ::Number)
     foreach(enumerate(parent(H))) do (i, h)
@@ -778,6 +819,16 @@ function VectorInterface.scale!(dst::MPOHamiltonian, src::MPOHamiltonian,
                 dst[i][I] = scale!(dst[i][I], v, isstarting ? λ : One())
             end
         end
+    end
+    return dst
+end
+
+function VectorInterface.scale!(dst::MPOHamiltonian{<:JordanMPOTensor},
+                                src::MPOHamiltonian{<:JordanMPOTensor}, λ::Number)
+    N = check_length(dst, src)
+    for i in 1:N
+        scale!(dst[i].C, src[i].C, λ)
+        scale!(dst[i].D, src[i].D, λ)
     end
     return dst
 end
