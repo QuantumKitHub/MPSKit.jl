@@ -32,10 +32,9 @@ function ∂∂AC(pos::Int, mps, operator::MPOHamiltonian, envs)
         C = W[1, 1, 1, 2:(end - 1)]
         GR_2 = GR[2:(end - 1)]
         if nonzero_length(C) > 0 && nonzero_length(GR_2) > 0
-            @plansor starting_[-1 -2; -3 -4] ≔ removeunit(C, 1)[-4; -2 1] *
-                                               GR_2[-1 1; -3]
+            @plansor starting_[-1 -2; -3 -4] ≔ removeunit(C, 1)[-1; -3 1] *
+                                               GR_2[-4 1; -2]
             starting = only(starting_)
-            norm(starting)
         else
             starting = missing
         end
@@ -48,8 +47,7 @@ function ∂∂AC(pos::Int, mps, operator::MPOHamiltonian, envs)
         B = W[2:(end - 1), 1, 1, end]
         GL_2 = GL[2:(end - 1)]
         if nonzero_length(B) > 0 && nonzero_length(GL_2) > 0
-            @plansor ending_[-1 -2; -3 -4] ≔ removeunit(B, 4)[1 -2; -4] *
-                                             GL_2[-1 1; -3]
+            @plansor ending_[-1 -2; -3 -4] ≔ GL_2[-1 1; -3] * removeunit(B, 4)[1 -2; -4]
             ending = nonzero_length(ending_) > 0 ? only(ending_) : missing
         else
             ending = missing
@@ -61,12 +59,13 @@ function ∂∂AC(pos::Int, mps, operator::MPOHamiltonian, envs)
     # onsite
     if haskey(W, CartesianIndex(1, 1, 1, lastindex(W, 4)))
         if !ismissing(starting)
-            D = removeunit(W[1, 1, 1, end], 4)
-            @plansor starting[-1 -2; -3 -4] += GL[1][-1 1; -3] * D[1 -2; -4]
+            D = removeunit(W[1, 1, 1, end], 1)
+            @plansor starting[-1 -2; -3 -4] += D[-1; -3 1] * GR[end][-4 1; -2]
             onsite = missing
         elseif !ismissing(ending)
-            D = removeunit(W[1, 1, 1, end], 1)
-            @plansor ending[-1 -2; -3 -4] += D[-4; -2 1] * GR[end][-1 1; -3]
+            error()
+            D = removeunit(W[1, 1, 1, end], 4)
+            @plansor ending[-1 -2; -3 -4] += GL[1][-1 1; -3] * D[1 -2; -4]
             onsite = missing
         else
             onsite = removeunit(removeunit(W[1, 1, 1, end], 4), 1)
@@ -78,7 +77,7 @@ function ∂∂AC(pos::Int, mps, operator::MPOHamiltonian, envs)
     # not_started
     if (!isfinite(operator) || pos > 1) && !ismissing(starting)
         I = id(storagetype(GR[1]), physicalspace(W))
-        @plansor starting[-1 -2; -3 -4] += removeunit(GR[1], 2)[-1; -3] * I[-4; -2]
+        @plansor starting[-1 -2; -3 -4] += I[-1; -3] * removeunit(GR[1], 2)[-4; -2]
         not_started = missing
     else
         not_started = removeunit(GR[1], 2)
@@ -124,7 +123,7 @@ function (H::JordanMPO_∂∂AC)(x::MPSTensor)
     end
 
     if !ismissing(H.starting)
-        @plansor y[-1 -2; -3] += x[-1 2; 1] * H.starting[1 2; -3 -2]
+        @plansor y[-1 -2; -3] += x[-1 2; 1] * H.starting[-2 -3; 2 1]
     end
 
     if !ismissing(H.ending)
