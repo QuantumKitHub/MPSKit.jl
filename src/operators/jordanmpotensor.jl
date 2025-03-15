@@ -59,11 +59,7 @@ end
 
 function JordanMPOTensor{E,S}(::UndefInitializer,
                               V::TensorMapSumSpace{S}) where {E,S}
-    TA = tensormaptype(S, 2, 2, E)
-    TB = tensormaptype(S, 2, 1, E)
-    TC = tensormaptype(S, 1, 2, E)
-    TD = tensormaptype(S, 1, 1, E)
-    return JordanMPOTensor{E,S,TA,TB,TC,TD}(undef, V)
+    return jordanmpotensortype(S, E)(undef, V)
 end
 function JordanMPOTensor{E}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E,S}
     return JordanMPOTensor{E,S}(undef, V)
@@ -97,6 +93,10 @@ function jordanmpotensortype(::Type{S}, ::Type{E}) where {S<:VectorSpace,E<:Numb
     TC = tensormaptype(S, 1, 2, E)
     TD = tensormaptype(S, 1, 1, E)
     return JordanMPOTensor{E,S,TA,TB,TC,TD}
+end
+
+function Base.similar(W::JordanMPOTensor, ::Type{T}) where {T<:Number}
+    return JordanMPOTensor{T}(undef, space(W))
 end
 
 # Properties
@@ -146,7 +146,7 @@ function Base.haskey(W::JordanMPOTensor, I::CartesianIndex{4})
 end
 
 # TODO: avoid this slow fallback wherever possible:
-Base.parent(W::JordanMPOTensor) = (error(); parent(SparseBlockTensorMap(W)))
+Base.parent(W::JordanMPOTensor) = (parent(SparseBlockTensorMap(W)))
 
 BlockTensorKit.issparse(W::JordanMPOTensor) = true
 
@@ -154,7 +154,8 @@ BlockTensorKit.issparse(W::JordanMPOTensor) = true
 # ----------
 function SparseBlockTensorMap(W::JordanMPOTensor)
     τ = BraidingTensor{scalartype(W)}(eachspace(W)[1])
-    W′ = SparseBlockTensorMap{Union{eltype(W.A),typeof(τ)}}(undef_blocks, space(W))
+    W′ = SparseBlockTensorMap{AbstractTensorMap{scalartype(W),spacetype(W),2,2}}(undef_blocks,
+                                                                                 space(W))
     W′[1, 1, 1, 1] = τ
     W′[end, 1, 1, end] = τ
 
@@ -252,7 +253,7 @@ end
     if (i == 1 && j == 1) || (i == size(W, 1) && j == size(W, 4))
         throw(ArgumentError("Cannot set BraidingTensor"))
     elseif i == 1 && j == size(W, 4)
-        W.D = removeunit(removeunit(v, 1), 4)
+        W.D[1] = removeunit(removeunit(v, 4), 1)
     elseif i == 1
         W.C[1, 1, j - 1] = removeunit(v, 1)
     elseif j == size(W, 4)
@@ -268,11 +269,15 @@ end
 # Sparse functionality
 # --------------------
 function BlockTensorKit.nonzero_keys(W::JordanMPOTensor)
+    nrows = size(W, 1)
+    ncols = size(W, 4)
+
+    pτ = (CartesianIndex(1, 1, 1, 1), CartesianIndex(nrows, 1, 1, ncols))
+
     Ia = CartesianIndex(1, 0, 0, 1)
     pA = [I + Ia for I in nonzero_keys(W.A)]
 
     Ib = CartesianIndex(1, 0, 0)
-    ncols = size(W, 4)
     pB = [CartesianIndex((I + Ib).I..., ncols) for I in nonzero_keys(W.B)]
 
     Ic = CartesianIndex(0, 0, 1)
@@ -280,7 +285,6 @@ function BlockTensorKit.nonzero_keys(W::JordanMPOTensor)
 
     pD = [CartesianIndex(1, 1, 1, ncols) for I in nonzero_keys(W.D)]
 
-    pτ = (CartesianIndex(1, 1, 1, 1), CartesianIndex(1, 1, 1, ncols))
     return Iterators.flatten((pτ, pA, pB, pC, pD))
 end
 function BlockTensorKit.nonzero_values(W::JordanMPOTensor)
