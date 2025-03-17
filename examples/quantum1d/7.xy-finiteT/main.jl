@@ -42,7 +42,7 @@ md"""
 ## Diagonalization of the Hamiltonian
 
 The Hamiltonian can be diagonalized through a Bogoliubov transformation, leading to the following expression for the ground state energy
-The Hamiltonian can be diagonalized in terms of fermionic creation and annihilation operators.
+The Hamiltonian can be diagonalized in terms of fermionic creation and annihilation operators, giving
 
 (TODO) Show the diagonalization of the Hamiltonian in terms of fermionic operators.
 
@@ -69,7 +69,7 @@ H_dense = convert(TensorMap, H);
 vals = eigvals(H_dense)[Trivial()] ./ 6
 groundstate_energy(J, 6)
 
-println("Exact (N=$N):\t", groundstate_energy(J, 6))
+println("Exact (N=6):\t", groundstate_energy(J, 6))
 println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 println("Numerical:\t", minimum(real(vals)))
 
@@ -145,7 +145,7 @@ We can numerically compute the partition function by explicitly computing the tr
 To that end, we first need to build the time-evolution operator $e^{-\beta H}$, and then compute its trace.
 
 In order to build the time-evolution operator, we can repurpose the `make_time_mpo` function, which constructs the time-evolution operator for the ground state.
-However, since we are interested in $e^{-\beta H}$, instead of $e^{-iH dt}$, we work with $d\tau = -i \beta$.
+However, since we are interested in $e^{-\beta H}$, instead of $e^{-iH dt}$, we work with $dt = -i \beta$.
 In particular, we can approximate the exponential using a Taylor series through the `TaylorCluster` algorithm.
 """
 
@@ -347,7 +347,7 @@ md"""
 
 If we wish to push the results to even larger $\beta$ values, we can note that taking linear steps in $\beta$ is not the only option.
 To that end, we can use another trick to scan over an exponential range of $\beta$ values: [exponentiating by squaring](https://en.wikipedia.org/wiki/Exponentiation_by_squaring).
-In particular, we note that computing $x^n$ for integer (large) $n$ can typically be done more efficiently than computing $x * x * ... * x$.
+In particular, we note that computing $x^n$ for integer (large) $n$ can typically be done more efficiently than computing $x \cdot x \cdot \dots \cdot x$.
 To do so, we note that multiplication is associative, and regroup the factors in such a way that we can compute the result in a logarithmic number of steps.
 Here, we assume $n = 2^m$ for some integer $m$, and note that this could be generalized to any $n$ by decomposing $n$ into a sum of powers of $2$.
 Then, we can write
@@ -419,7 +419,7 @@ Finally, we can also note that the partition function is characterized by the fo
 \implies Z(\beta) = e^{-\beta H} \cdot Z(0)
 ```
 
-In other words, we can compute the partition function at $\beta$ by evolving the partition function at $0$ for a time $d\tau = -im \beta$.
+In other words, we can compute the partition function at $\beta$ by evolving the partition function at $0$ for a time $d\tau = -i \beta$.
 
 The starting point for this approach could be either achieved through one of the techniques we have already discussed, but we can also start from the infinite temperature state directly.
 In particular, this state is given by the identity MPO, and we can evolve this state to compute the partition function at any $\beta$ value.
