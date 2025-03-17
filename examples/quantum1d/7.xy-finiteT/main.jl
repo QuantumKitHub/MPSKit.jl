@@ -42,14 +42,14 @@ md"""
 ## Diagonalization of the Hamiltonian
 
 The Hamiltonian can be diagonalized through a Bogoliubov transformation, leading to the following expression for the ground state energy
-The Hamiltonian can be diagonalized in terms of fermionic creation and annihilation operators, giving
-
-(TODO) Show the diagonalization of the Hamiltonian in terms of fermionic operators.
+The Hamiltonian can be diagonalized in terms of fermionic creation and annihilation operators, leading to the following expression in terms of [an incomplete elliptic integral of the second kind](https://en.wikipedia.org/wiki/Elliptic_integral).
 
 ```math
     E_0 = -\frac{1}{\pi} \text{EllipticE}\left( \sqrt{1 - \gamma^2} \right)
 ```
 
+!!! todo
+    Show the derivation of the ground state energy by diagonalizing the Hamiltonian in terms of fermionic operators.
 """
 
 single_particle_energy(k, J, N) = J * cos(k * 2π / (N + 0))
@@ -124,11 +124,12 @@ Finally, the specific heat can be computed as
 Luckily, the partition function can be computed analytically for the XY model.
 The resulting expression is
 
-(TODO: show this)
-
 ```math
     Z(\beta) = \prod_{k=1}^{N} \left( 1 + e^{-\beta \epsilon_k} \right)^{1/N}
 ```
+
+!!! todo
+    Show the derivation of the partition function for the XY model.
 """
 
 function partition_function(β::Number, J::Number, N::Number)
@@ -216,9 +217,9 @@ p_taylor_diff = let
                      end, 1, :)
     p1 = plot(βs, abs.(real.(Z_taylor[:, 2:end]) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)")
+              xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
     p2 = plot(βs, abs.(real.(F_taylor[:, 2:end]) .- free_energy.(βs, J, N)); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
     plot(p1, p2)
 end
 
@@ -238,7 +239,8 @@ Z(\beta) =
 In other words, we can compute the partition function at $\beta$ by computing the overlap of two states evolved for $\beta / 2$, as long as the Hamiltonian is Hermitian.
 Otherwise, we could still use the same trick, but we would have to compute the evolved states twice, once for $H$ and once for $H^\dagger$.
 
-(TODO) show figure of this trick.
+!!! todo
+    Add a figure to illustrate this trick.
 """
 
 function partition_function_taylor2(β, H; expansion_order)
@@ -259,9 +261,9 @@ p_taylor2_diff = let
                      end, 1, :)
     p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)")
+              xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
     p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
     plot(p1, p2)
 end
 
@@ -316,11 +318,11 @@ p_mpo_mul_diff = let
                      end, 1, :)
     p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)")
+              xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
     plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
           label="MPO multiplication")
     p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
     plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
           label="MPO multiplication")
     plot(p1, p2)
@@ -356,7 +358,7 @@ Then, we can write
 x^n = x^{2^m} = x^{2^{m-1}} \cdot x^{2^{m-1}} = (x^{2^{m-2}} \cdot x^{2^{m-2}}) \cdot (x^{2^{m-2}} \cdot x^{2^{m-2}}) = \dots
 ```
 
-In other words, we can scan an exponential range of $\beta$ values by squaring the density matrix at each step.
+In other words, we can scan a range of exponentially increasing $\beta$ values by squaring the density matrix at each step.
 """
 
 βs_exp = 2.0 .^ (-3:3)
@@ -385,14 +387,14 @@ p_mpo_mul_exp_diff = let
                      end, 1, :)
     p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)")
+              xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
     plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
           label="MPO multiplication")
     plot!(p1, βs_exp, abs.(real.(Z_mpo_mul_exp) .- partition_function.(βs_exp, J, N));
           label="MPO multiplication exp")
 
     p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
     plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
           label="MPO multiplication")
     plot!(p2, βs_exp, abs.(real.(F_mpo_mul_exp) .- free_energy.(βs_exp, J, N));
@@ -448,14 +450,14 @@ p_mpo_mul_diff = let
                      end, 1, :)
     p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)")
+              xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
     plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
           label="MPO multiplication")
     plot!(p1, βs, abs.(real.(Z_tdvp) .- partition_function.(βs, J, N));
           label="TDVP")
 
     p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error")
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
     plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
           label="MPO multiplication")
     plot!(p2, βs, abs.(real.(F_tdvp) .- free_energy.(βs, J, N));
