@@ -38,7 +38,7 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
         α = rand(T)
         @test convert(TensorMap, α * mpo₁) ≈ α * O₁
         @test convert(TensorMap, mpo₁ * α) ≈ O₁ * α
-        @test α * mpo₃ ≈ α * complex(mpo₃) atol=1e-6
+        @test α * mpo₃ ≈ α * complex(mpo₃) atol = 1e-6
 
         # test addition and multiplication
         @test convert(TensorMap, mpo₁ + mpo₂) ≈ O₁ + O₂
