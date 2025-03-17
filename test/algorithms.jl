@@ -883,33 +883,34 @@ end
 @testset "Finite temperature methods" begin
     L = 6
     H = transverse_field_ising(; L)
-
+    trscheme = truncdim(20)
+    verbosity = 1
     beta = 0.1
 
     # exact diagonalization
     H_dense = convert(TensorMap, H)
-    Z_dense_1 = tr(exp(-beta * H_dense))^(1 / N)
-    Z_dense_2 = tr(exp(-2beta * H_dense))^(1 / N)
+    Z_dense_1 = tr(exp(-beta * H_dense))^(1 / L)
+    Z_dense_2 = tr(exp(-2beta * H_dense))^(1 / L)
 
     # taylor cluster
     rho_taylor_1 = make_time_mpo(H, -im * beta, TaylorCluster(; N=2))
-    Z_taylor_1 = tr(rho_taylor_1)^(1 / N)
+    Z_taylor_1 = tr(rho_taylor_1)^(1 / L)
     @test Z_taylor_1 ≈ Z_dense_1 atol = 1e-2
-    Z_taylor_2 = real(dot(rho_taylor_1, rho_taylor_1))^(1 / N)
+    Z_taylor_2 = real(dot(rho_taylor_1, rho_taylor_1))^(1 / L)
     @test Z_taylor_2 ≈ Z_dense_2 atol = 1e-2
 
     # MPO multiplication
     rho_mps = convert(FiniteMPS, rho_taylor_1)
-    rho_mps, = approximate(rho_taylor_1, (rho_taylor_1, rho_mps), DMRG(; verbosity=0))
-    Z_mpomul = tr(rho_mps)^(1 / N)
+    rho_mps, = approximate(rho_mps, (rho_taylor_1, rho_mps), DMRG2(; trscheme, verbosity))
+    Z_mpomul = tr(convert(FiniteMPO, rho_mps))^(1 / L)
     @test Z_mpomul ≈ Z_dense_2 atol = 1e-2
 
     # TDVP
-    rho_0 = infinite_temperature_density_matrix(H)
+    rho_0 = MPSKit.infinite_temperature_density_matrix(H)
     rho_0_mps = convert(FiniteMPS, rho_0)
-    rho_mps = timestep(rho_0_mps, H, 0.0, -im * beta, TDVP())
-    Z_tdvp = tr(rho_mps)^(1 / N)
-    @test Z_tdvp ≈ Z_dense_1 atol = 1e-2
+    rho_mps, = timestep(rho_0_mps, H, 0.0, im * beta, TDVP2(; trscheme))
+    Z_tdvp = real(dot(rho_mps, rho_mps))^(1 / L)
+    @test Z_tdvp ≈ Z_dense_2 atol = 1e-2
 end
 
 end
