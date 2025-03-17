@@ -11,15 +11,6 @@ using MPSKit
 using Literate
 using TOML, SHA
 
-# Multithreading settings
-using MKL
-using LinearAlgebra.BLAS
-BLAS.set_num_threads(4)
-using ThreadPinning
-ThreadPinning.pinthreads(:cores)
-ThreadPinning.MKL.mkl_set_dynamic(0)
-ThreadPinning.threadinfo()
-
 # ---------------------------------------------------------------------------------------- #
 # Caching
 # ---------------------------------------------------------------------------------------- #
