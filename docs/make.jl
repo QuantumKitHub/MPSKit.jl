@@ -43,7 +43,7 @@ makedocs(;
          format=Documenter.HTML(;
                                 prettyurls=get(ENV, "CI", nothing) == "true",
                                 mathengine,
-                                size_threshold=512000),
+                                size_threshold=1024000),
          pages=["Home" => "index.md",
                 "Manual" => ["man/intro.md",
                              "man/states.md",

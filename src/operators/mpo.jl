@@ -328,6 +328,30 @@ function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO<:
     return @plansor ρ_left[1; 2] * ρ_right[2; 1]
 end
 
+function LinearAlgebra.tr(mpo::MPO)
+    N = length(mpo)
+    # @assert BraidingStyle(sectortype(mpo)) isa SymmetricBraiding
+    Nhalf = N ÷ 2
+
+    # left half
+    @plansor ρ_left[(); -1] := removeunit(mpo[1], 1)[1; 1 -1]
+    for i in 2:Nhalf
+        @plansor tmp[-1; -2 -3] := ρ_left[(); 1] * mpo[i][1 -1; -2 -3]
+        @plansor ρ_left[(); -1] := tmp[1; 1 -1]
+        # @plansor ρ_left[-1; -2] := ρ_left[-1; 1] * mpo[i][1 2; 2 -2]
+    end
+
+    # right half
+    @plansor ρ_right[-1; ()] := removeunit(mpo[N], 4)[-1 1; 1]
+    for i in (N - 1):-1:(Nhalf + 1)
+        @plansor tmp[-1 -2; -3] := mpo[i][-1 -2; -3 1] * ρ_right[1; ()]
+        @plansor ρ_right[-1; ()] := tmp[-1 1; 1]
+        # @plansor ρ_right[-1; -2] := mpo[i][-1 2; 2 1] * ρ_right[1]
+    end
+
+    return @plansor ρ_left[(); 1] * ρ_right[1; ()]
+end
+
 function Base.isapprox(mpo₁::MPO, mpo₂::MPO;
                        atol::Real=0, rtol::Real=atol > 0 ? 0 : √eps(real(scalartype(mpo₁))))
     check_length(mpo₁, mpo₂)

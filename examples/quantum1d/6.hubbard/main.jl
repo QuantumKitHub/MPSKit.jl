@@ -58,7 +58,7 @@ function hubbard_energy(u; rtol=1e-12)
 end
 
 function compute_groundstate(psi, H;
-                             svalue=5e-3,
+                             svalue=1e-3,
                              expansionfactor=(1 / 3),
                              expansioniter=10)
     verbosity = 1
@@ -76,8 +76,8 @@ function compute_groundstate(psi, H;
     ## convergence steps
     psi, = changebonds(psi, H, SvdCut(; trscheme=truncbelow(svalue)))
     psi, = find_groundstate(psi, H,
-                            VUMPS(; tol=svalue, verbosity) &
-                            GradientGrassmann(; tol=svalue / 100, verbosity))
+                            VUMPS(; tol=svalue / 100, verbosity) &
+                            GradientGrassmann(; tol=svalue / 1000, verbosity))
 
     return psi
 end

@@ -76,6 +76,11 @@ function ∂AC(x::MPSTensor{S}, operator::Number, leftenv::MPSTensor{S},
     @plansor y[-1 -2; -3] := operator * (leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] *
                                          rightenv[1 7; -3])
 end
+function ∂AC(x::GenericMPSTensor{S,3}, operator::MPOTensor{S}, leftenv::MPSTensor{S},
+             rightenv::MPSTensor{S})::typeof(x) where {S}
+    @plansor y[-1 -2 -3; -4] ≔ leftenv[-1 7; 6] * x[6 4 2; 1] * operator[7 -2; 4 5] *
+                               τ[5 -3; 2 3] * rightenv[1 3; -4]
+end
 
 # mpo multiline
 function ∂AC(x::Vector, opp, leftenv, rightenv)
@@ -95,6 +100,13 @@ function ∂AC2(x::MPOTensor, operator1::MPOTensor, operator2::MPOTensor, leften
 end
 function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv, rightenv)
     @plansor y[-1 -2; -3 -4] := x[1 -2; 2 -4] * leftenv[-1; 1] * rightenv[2; -3]
+end
+function ∂AC2(x::AbstractTensorMap{<:Any,<:Any,3,3}, operator1::MPOTensor,
+              operator2::MPOTensor, leftenv::MPSTensor, rightenv::MPSTensor)::typeof(x)
+    @plansor y[-1 -2 -3; -4 -5 -6] ≔ leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
+                                     rightenv[1 3; -4] *
+                                     operator1[11 -2; 8 9] * τ[9 -3; 6 7] *
+                                     operator2[7 -6; 4 5] * τ[5 -5; 2 3]
 end
 
 function ∂AC2(x::Vector, opp1, opp2, leftenv, rightenv)
