@@ -36,46 +36,60 @@ $(TYPEDFIELDS)
 end
 
 function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
-    # initialization
-    scheduler = Defaults.scheduler[]
     log = IterLog("VUMPS")
     ϵ::Float64 = calc_galerkin(ψ, H, ψ, envs)
-    temp_ACs = similar.(ψ.AC)
+    ACs = similar.(ψ.AC)
     alg_environments = updatetol(alg.alg_environments, 0, ϵ)
     recalculate!(envs, ψ, H, ψ; alg_environments.tol)
 
-    LoggingExtras.withlevel(; alg.verbosity) do
+    state = (; ψ, H, envs, ACs, iter=0, ϵ)
+    it = IterativeSolver(alg, state)
+
+    return LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
-        for iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
-            tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
-                return _vumps_localupdate(loc, ψ, H, envs, alg_eigsolve)
+
+        for (ψ, envs, ϵ) in it
+            if ϵ ≤ alg.tol
+                @infov 2 logfinish!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
+                return ψ, envs, ϵ
             end
-
-            alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
-            ψ = InfiniteMPS(temp_ACs, ψ.C[end]; alg_gauge.tol, alg_gauge.maxiter)
-
-            alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-            recalculate!(envs, ψ, H, ψ; alg_environments.tol)
-
-            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
-
-            ϵ = calc_galerkin(ψ, H, ψ, envs)
-
-            # breaking conditions
-            if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
-                break
+            if it.iter ≥ alg.maxiter
+                @warnv 1 logcancel!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
+                return ψ, envs, ϵ
             end
-            if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
-            else
-                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
-            end
+            @infov 3 logiter!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
         end
+
+        return it.state.ψ, it.state.envs, it.state.ϵ
+    end
+end
+
+function Base.iterate(it::IterativeSolver{<:VUMPS}, state=it.state)
+    # eigsolver step
+    alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
+    scheduler = Defaults.scheduler[]
+    ACs = tmap!(state.ACs, 1:length(state.ψ); scheduler) do site
+        return _vumps_localupdate(site, state.ψ, state.H, state.envs, alg_eigsolve)
     end
 
-    return ψ, envs, ϵ
+    # gauge step
+    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    ψ = InfiniteMPS(ACs, state.ψ.C[end]; alg_gauge.tol, alg_gauge.maxiter)
+
+    # environment step
+    alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
+    envs = recalculate!(state.envs, ψ, state.H, ψ; alg_environments.tol)
+
+    # finalizer step
+    ψ′, envs′ = it.finalize(state.iter, ψ, state.H, envs)::Tuple{typeof(ψ),typeof(envs)}
+
+    # error criterion
+    ϵ = calc_galerkin(ψ′, state.H, ψ′, envs′)
+
+    # update state
+    it.state = (; ψ=ψ′, H=state.H, envs=envs′, ACs, iter=state.iter + 1, ϵ)
+
+    return (ψ′, envs′, ϵ), it.state
 end
 
 function _vumps_localupdate(loc, ψ, H, envs, eigalg, factalg=QRpos())
