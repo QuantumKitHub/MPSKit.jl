@@ -1,7 +1,7 @@
 # This file contains the definition of the IterativeSolver type and the solve! function.
 # Attempts to remove as much of the boilerplate code as possible from the iterative solvers.
 
-mutable struct IterativeSolver{A,B<:NamedTuple}
+mutable struct IterativeSolver{A,B}
     alg::A
     state::B
 end
