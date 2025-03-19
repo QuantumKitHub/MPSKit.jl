@@ -35,77 +35,124 @@ $(TYPEDFIELDS)
     finalize::F = Defaults._finalize
 end
 
-function find_groundstate(ψ::InfiniteMPS, H, alg::VUMPS, envs=environments(ψ, H))
-    log = IterLog("VUMPS")
-    ϵ::Float64 = calc_galerkin(ψ, H, ψ, envs)
-    ACs = similar.(ψ.AC)
-    alg_environments = updatetol(alg.alg_environments, 0, ϵ)
-    recalculate!(envs, ψ, H, ψ; alg_environments.tol)
+# Internal state of the VUMPS algorithm
+struct VUMPSState{S,O,E}
+    mps::S
+    operator::O
+    envs::E
+    iter::Int
+    ϵ::Float64
+    which::Symbol
+end
 
-    state = (; ψ, H, envs, ACs, iter=0, ϵ)
+function find_groundstate(mps::InfiniteMPS, operator, alg::VUMPS,
+                          envs=environments(mps, operator))
+    return dominant_eigsolve(operator, mps, alg, envs; which=:SR)
+end
+
+function dominant_eigsolve(operator, mps, alg::VUMPS, envs=environments(mps, operator);
+                           which)
+    log = IterLog("VUMPS")
+    iter = 0
+    ϵ = calc_galerkin(mps, operator, mps, envs)
+    alg_environments = updatetol(alg.alg_environments, iter, ϵ)
+    recalculate!(envs, mps, operator, mps; alg_environments.tol)
+
+    state = VUMPSState(mps, operator, envs, iter, ϵ, which)
     it = IterativeSolver(alg, state)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, sum(expectation_value(ψ, H, envs)))
+        @infov 2 loginit!(log, ϵ, sum(expectation_value(mps, operator, envs)))
 
-        for (ψ, envs, ϵ) in it
+        for (mps, envs, ϵ) in it
             if ϵ ≤ alg.tol
-                @infov 2 logfinish!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
-                return ψ, envs, ϵ
+                @infov 2 logfinish!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
+                return mps, envs, ϵ
             end
             if it.iter ≥ alg.maxiter
-                @warnv 1 logcancel!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
-                return ψ, envs, ϵ
+                @warnv 1 logcancel!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
+                return mps, envs, ϵ
             end
-            @infov 3 logiter!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
+            @infov 3 logiter!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
         end
 
-        return it.state.ψ, it.state.envs, it.state.ϵ
+        # this should never be reached
+        return it.state.mps, it.state.envs, it.state.ϵ
     end
 end
 
 function Base.iterate(it::IterativeSolver{<:VUMPS}, state=it.state)
-    # eigsolver step
-    alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
-    scheduler = Defaults.scheduler[]
-    ACs = tmap!(state.ACs, 1:length(state.ψ); scheduler) do site
-        return _vumps_localupdate(site, state.ψ, state.H, state.envs, alg_eigsolve)
-    end
-
-    # gauge step
-    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    ψ = InfiniteMPS(ACs, state.ψ.C[end]; alg_gauge.tol, alg_gauge.maxiter)
-
-    # environment step
-    alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
-    envs = recalculate!(state.envs, ψ, state.H, ψ; alg_environments.tol)
+    ACs = localupdate_step!(it, state)
+    mps = gauge_step!(it, state, ACs)
+    envs = envs_step!(it, state, mps)
 
     # finalizer step
-    ψ′, envs′ = it.finalize(state.iter, ψ, state.H, envs)::Tuple{typeof(ψ),typeof(envs)}
+    mps, envs = it.finalize(state.iter, mps, state.operator, envs)::typeof((mps, envs))
 
     # error criterion
-    ϵ = calc_galerkin(ψ′, state.H, ψ′, envs′)
+    ϵ = calc_galerkin(mps, state.operator, mps, envs)
 
     # update state
-    it.state = (; ψ=ψ′, H=state.H, envs=envs′, ACs, iter=state.iter + 1, ϵ)
+    it.state = VUMPSState(mps, state.operator, envs, state.iter + 1, ϵ, state.which)
 
-    return (ψ′, envs′, ϵ), it.state
+    return (mps, envs, ϵ), it.state
 end
 
-function _vumps_localupdate(loc, ψ, H, envs, eigalg, factalg=QRpos())
-    local AC′, C′
-    if Defaults.scheduler[] isa SerialScheduler
-        _, AC′ = fixedpoint(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], :SR, eigalg)
-        _, C′ = fixedpoint(∂∂C(loc, ψ, H, envs), ψ.C[loc], :SR, eigalg)
-    else
-        @sync begin
-            Threads.@spawn begin
-                _, AC′ = fixedpoint(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], :SR, eigalg)
-            end
-            Threads.@spawn begin
-                _, C′ = fixedpoint(∂∂C(loc, ψ, H, envs), ψ.C[loc], :SR, eigalg)
-            end
+function localupdate_step!(it::IterativeSolver{<:VUMPS}, state,
+                           scheduler=Defaults.scheduler[])
+    alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
+    alg_orth = QRpos()
+
+    mps = state.mps
+    eachsite = 1:length(mps)
+    src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
+    src_ACs = mps isa Multiline ? eachcol(mps.AC) : mps.AC
+    ACs = similar(mps.AC)
+    dst_ACs = mps isa Multiline ? eachcol(ACs) : ACs
+
+    tforeach(eachsite, src_ACs, src_Cs; scheduler) do site, AC₀, C₀
+        dst_ACs[site] = _localupdate_vumps_step!(site, mps, state.operator, state.envs,
+                                                 AC₀, C₀; parallel=false, alg_orth,
+                                                 state.which, alg_eigsolve)
+        return nothing
+    end
+
+    return ACs
+end
+
+function _localupdate_vumps_step!(site, mps, operator, envs, AC₀, C₀;
+                                  parallel::Bool=false, alg_orth=QRpos(),
+                                  alg_eigsolve=Defaults.eigsolver, which)
+    if !parallel
+        _, AC = fixedpoint(∂∂AC(site, mps, operator, envs), AC₀, which, alg_eigsolve)
+        _, C = fixedpoint(∂∂C(site, mps, operator, envs), C₀, which, alg_eigsolve)
+        return regauge!(AC, C; alg=alg_orth)
+    end
+
+    local AC, C
+    @sync begin
+        @spawn begin
+            _, AC = fixedpoint(∂∂AC(site, mps, operator, envs),
+                               AC₀, which, alg_eigsolve)
+        end
+        @spawn begin
+            _, C = fixedpoint(∂∂C(site, mps, operator, envs),
+                              C₀, which, alg_eigsolve)
         end
     end
-    return regauge!(AC′, C′; alg=factalg)
+    return regauge!(AC, C; alg=alg_orth)
+end
+
+function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
+    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    return InfiniteMPS(ACs, state.mps.C[end]; alg_gauge.tol, alg_gauge.maxiter)
+end
+function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractMatrix)
+    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    return MultilineMPS(ACs, @view(state.mps.C[:, end]); alg_gauge.tol, alg_gauge.maxiter)
+end
+
+function envs_step!(it::IterativeSolver{<:VUMPS}, state, mps)
+    alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
+    return recalculate!(state.envs, mps, state.operator, mps; alg_environments.tol)
 end
