@@ -153,8 +153,8 @@ end
 
 βs = 0.0:0.2:8.0
 
-Z_analytic = partition_function.(βs, J, N)
-F_analytic = free_energy.(βs, J, N)
+Z_analytic = partition_function.(βs, J, N);
+F_analytic = free_energy.(βs, J, N);
 
 md"""
 ### MPO approach
@@ -263,10 +263,12 @@ Otherwise, we could still use the same trick, but we would have to compute the e
     Add a figure to illustrate this trick.
 """
 
+double_logpartition(ρ₁, ρ₂=ρ₁) = log(real(dot(ρ₁, ρ₂))) / length(ρ₁)
+
 function logpartition_taylor2(β, H; expansion_order)
     dτ = im * β / 2
     expH = make_time_mpo(H, dτ, TaylorCluster(; N=expansion_order))
-    return log(real(dot(expH, expH))) / N
+    return double_logpartition(expH)
 end
 
 Z_taylor2 = map(Iterators.product(βs, expansion_orders)) do (β, expansion_order)
@@ -321,7 +323,7 @@ D_max = 64
 ## first iteration: start from high order Taylor expansion
 ρ₀ = make_time_mpo(H, im * βs[2] / 2, TaylorCluster(; N=3))
 Z_mpo_mul[1] = Z_taylor[1]
-Z_mpo_mul[2] = log(real(dot(ρ₀, ρ₀))) / N
+Z_mpo_mul[2] = double_logpartition(ρ₀)
 
 ## subsequent iterations: multiply by ρ₀
 ρ_mps = convert(FiniteMPS, ρ₀)
@@ -330,7 +332,7 @@ for i in 3:length(βs)
     @info "Computing β = $(βs[i])"
     ρ_mps, = approximate(ρ_mps, (ρ₀, ρ_mps),
                          DMRG2(; trscheme=truncdim(D_max), maxiter=10))
-    Z_mpo_mul[i] = log(real(dot(ρ_mps, ρ_mps))) / N
+    Z_mpo_mul[i] = double_logpartition(ρ_mps)
 end
 F_mpo_mul = -(1 ./ βs) .* Z_mpo_mul
 
@@ -385,11 +387,14 @@ In other words, we can scan a range of exponentially increasing $\beta$ values b
 """
 
 βs_exp = 2.0 .^ (-3:3)
+Z_analytic_exp = partition_function.(βs_exp, J, N)
+F_analytic_exp = free_energy.(βs_exp, J, N)
+
 Z_mpo_mul_exp = zeros(length(βs_exp))
 
 ## first iteration: start from high order Taylor expansion
 ρ₀ = make_time_mpo(H, im * first(βs_exp) / 2, TaylorCluster(; N=3))
-Z_mpo_mul_exp[1] = log(real(dot(ρ₀, ρ₀))) / N
+Z_mpo_mul_exp[1] = double_logpartition(ρ₀)
 
 ## subsequent iterations: square
 ρ = ρ₀
@@ -399,7 +404,7 @@ for i in 2:length(βs_exp)
     @info "Computing β = $(βs_exp[i])"
     ρ_mps, = approximate(ρ_mps, (ρ, ρ_mps),
                          DMRG2(; trscheme=truncdim(D_max), maxiter=10))
-    Z_mpo_mul_exp[i] = log(real(dot(ρ_mps, ρ_mps))) / N
+    Z_mpo_mul_exp[i] = double_logpartition(ρ_mps)
     ρ = convert(FiniteMPO, ρ_mps)
 end
 F_mpo_mul_exp = -(1 ./ βs_exp) .* Z_mpo_mul_exp
@@ -408,21 +413,16 @@ p_mpo_mul_exp_diff = let
     labels = reshape(map(expansion_orders[2:end]) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
-              label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)", legend=:bottomright, yscale=:log10)
-    plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
-          label="MPO multiplication")
-    plot!(p1, βs_exp, abs.(real.(Z_mpo_mul_exp) .- partition_function.(βs_exp, J, N));
-          label="MPO multiplication exp")
+    p1 = plot(βs, abs.(Z_taylor2 .- Z_analytic);
+              label=labels, title="Partition function error", xlabel="β", ylabel="ΔZ(β)",
+              legend=:bottomright, yscale=:log10)
+    plot!(p1, βs, abs.(Z_mpo_mul .- Z_analytic); label="MPO multiplication")
+    plot!(p1, βs_exp, abs.(Z_mpo_mul_exp .- Z_analytic_exp); label="MPO multiplication exp")
 
-    p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=nothing,
-              yscale=:log10)
-    plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
-          label="MPO multiplication")
-    plot!(p2, βs_exp, abs.(real.(F_mpo_mul_exp) .- free_energy.(βs_exp, J, N));
-          label="MPO multiplication exp")
+    p2 = plot(βs, abs.(F_taylor2 .- F_analytic); label=labels, xlabel="β", ylabel="ΔF(β)",
+              title="Free energy error", legend=nothing, yscale=:log10)
+    plot!(p2, βs, abs.(F_mpo_mul .- F_analytic); label="MPO multiplication")
+    plot!(p2, βs_exp, abs.(F_mpo_mul_exp .- F_analytic_exp); label="MPO multiplication exp")
     plot(p1, p2)
 end
 
@@ -455,7 +455,7 @@ Z_tdvp = zeros(length(βs))
 
 ## first iteration: start from infinite temperature state
 ρ₀ = infinite_temperature_density_matrix(H)
-Z_tdvp[1] = log(real(dot(ρ₀, ρ₀))) / N
+Z_tdvp[1] = double_logpartition(ρ₀)
 
 ## subsequent iterations: evolve by H
 ρ_mps = convert(FiniteMPS, ρ₀)
@@ -464,29 +464,26 @@ for i in 2:length(βs)
     @info "Computing β = $(βs[i])"
     ρ_mps, = timestep(ρ_mps, H, βs[i - 1] / 2, -im * (βs[i] - βs[i - 1]) / 2,
                       TDVP2(; trscheme=truncdim(64)))
-    Z_tdvp[i] = log(real(dot(ρ_mps, ρ_mps))) / N
+    Z_tdvp[i] = double_logpartition(ρ_mps)
 end
 F_tdvp = -(1 ./ βs) .* Z_tdvp
 
 p_mpo_mul_diff = let
-    labels = reshape(map(expansion_orders[2:end]) do N
+    labels = reshape(map(expansion_orders) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, abs.(Z_taylor2 .- Z_analytic);
-              label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)", legend=:bottomright, yscale=:log10)
-    plot!(p1, βs, abs.(Z_mpo_mul .- Z_analytic);
-          label="MPO multiplication")
-    plot!(p1, βs, abs.(Z_tdvp .- Z_analytic);
-          label="TDVP")
+    p1 = plot(βs, abs.(Z_taylor2 .- Z_analytic); label=labels,
+              title="Partition function error", xlabel="β", ylabel="ΔZ(β)",
+              legend=:bottomright, yscale=:log10)
+    plot!(p1, βs, abs.(Z_mpo_mul .- Z_analytic); label="MPO multiplication")
+    plot!(p1, βs_exp, abs.(Z_mpo_mul_exp .- Z_analytic_exp); label="MPO multiplication exp")
+    plot!(p1, βs, abs.(Z_tdvp .- Z_analytic); label="TDVP")
 
-    p2 = plot(βs, abs.(F_taylor2 .- F_analytic); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=nothing,
-              yscale=:log10)
-    plot!(p2, βs, abs.(F_mpo_mul .- F_analytic);
-          label="MPO multiplication")
-    plot!(p2, βs, abs.(F_tdvp .- F_analytic);
-          label="TDVP")
+    p2 = plot(βs, abs.(F_taylor2 .- F_analytic); label=labels, xlabel="β", ylabel="ΔF(β)",
+              title="Free energy error", legend=nothing, yscale=:log10)
+    plot!(p2, βs, abs.(F_mpo_mul .- F_analytic); label="MPO multiplication")
+    plot!(p2, βs_exp, abs.(F_mpo_mul_exp .- F_analytic_exp); label="MPO multiplication exp")
+    plot!(p2, βs, abs.(F_tdvp .- F_analytic); label="TDVP")
 
     plot(p1, p2)
 end
