@@ -79,7 +79,7 @@ function dominant_eigsolve(operator, mps, alg::VOMPS, envs=environments(mps, ope
     end
 end
 
-function Base.iterate(it::IterativeSolver{<:VOMPS}, state=it.state)
+function Base.iterate(it::IterativeSolver{<:VOMPS}, state)
     ACs = localupdate_step!(it, state)
     mps = gauge_step!(it, state, ACs)
     envs = envs_step!(it, state, mps)

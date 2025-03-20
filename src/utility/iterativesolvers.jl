@@ -17,3 +17,5 @@ function Base.getproperty(it::IterativeSolver{A,B}, name::Symbol) where {A,B}
 
     throw(ArgumentError("Field $name not found in IterativeSolver"))
 end
+
+Base.iterate(it::IterativeSolver) = iterate(it, it.state)

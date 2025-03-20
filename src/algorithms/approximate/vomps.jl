@@ -38,8 +38,7 @@ end
 
 # need to specialize a bunch of functions because different arguments are passed with tuples
 # TODO: can we avoid this?
-function Base.iterate(it::IterativeSolver{<:VOMPS},
-                      state::VOMPSState{<:Any,<:Tuple}=it.state)
+function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<:Tuple})
     ACs = localupdate_step!(it, state)
     mps = gauge_step!(it, state, ACs)
     envs = envs_step!(it, state, mps)
