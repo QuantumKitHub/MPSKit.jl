@@ -7,6 +7,7 @@ using QuadGK: quadgk
 using SpecialFunctions: ellipe
 using Plots
 using LinearAlgebra
+using BenchmarkFreeFermions
 
 md"""
 # Finite temperature XY model
@@ -14,6 +15,7 @@ md"""
 This example shows how to simulate the finite temperature behavior of the XY model in 1D.
 Importantly, the Hamiltonian can be diagonalized in terms of fermionic creation and annihilation operators.
 As a result, many properties have analytical expressions that can be used to verify our results.
+Here, we use [BenchmarkFreeFermions.jl](https://github.com/Qiaoyi-Li/BenchmarkFreeFermions.jl/) to compare our results.
 
 ```math
     H = J \sum_{i=1}^{N} \left( \sigma^x_i \sigma^x_{i+1} + \sigma^y_i \sigma^y_{i+1} \right) 
@@ -24,7 +26,8 @@ Here we will consider the anti-ferromagnetic ($J > 0$) chain, and restrict ourse
 
 # Parameters
 J = 1 / 2
-N = 30
+T = ComplexF64
+symmetry = U1Irrep
 
 function XY_hamiltonian(::Type{T}=ComplexF64, ::Type{S}=Trivial; J=1 / 2,
                         N) where {T<:Number,S<:Sector}
@@ -52,10 +55,11 @@ The Hamiltonian can be diagonalized in terms of fermionic creation and annihilat
     Show the derivation of the ground state energy by diagonalizing the Hamiltonian in terms of fermionic operators.
 """
 
-single_particle_energy(k, J, N) = J * cos(k * 2π / (N + 0))
 function groundstate_energy(J, N)
-    return isfinite(N) ?
-           -sum(n -> abs(single_particle_energy(n, J, N)), 1:N) / 2N : -J / π
+    isfinite(N) || return -J / π
+    T = diagm(1 => J / 2 * ones(N - 1), -1 => J / 2 * ones(N - 1))
+    ϵ = SingleParticleSpectrum(T)
+    return Energy(ϵ, Inf, 0) / N
 end
 
 md"""
@@ -64,14 +68,15 @@ md"""
 We can check our results by comparing them to the exact diagonalization of the Hamiltonian.
 """
 
-H = periodic_boundary_conditions(XY_hamiltonian(; J, N=Inf), 6)
+N_exact = 6
+H = open_boundary_conditions(XY_hamiltonian(T, symmetry; J, N=Inf), N_exact)
 H_dense = convert(TensorMap, H);
-vals = eigvals(H_dense)[Trivial()] ./ 6
-groundstate_energy(J, 6)
+vals = eigvals(H_dense)[one(symmetry)] ./ N_exact
+groundstate_energy(J, N_exact)
 
-println("Exact (N=6):\t", groundstate_energy(J, 6))
-println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 println("Numerical:\t", minimum(real(vals)))
+println("Exact (N=$(N_exact)):\t", groundstate_energy(J, N_exact))
+println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 
 md"""
 ### Finite MPS
@@ -79,15 +84,18 @@ md"""
 If we wish to increase the system size, we can use the finite MPS representation.
 """
 
-H = XY_hamiltonian(; J, N)
+N = 32
+H = XY_hamiltonian(T, symmetry; J, N)
 D = 64
-psi_init = FiniteMPS(N, physicalspace(H, 1), ℂ^D)
-psi, envs, = find_groundstate(psi_init, H, DMRG(; maxiter=10));
+V_init = symmetry === Trivial ? ℂ^32 : U1Space(i => 10 for i in -1:(1 // 2):1)
+psi_init = FiniteMPS(N, physicalspace(H, 1), V_init)
+trscheme = truncdim(D)
+psi, envs, = find_groundstate(psi_init, H, DMRG2(; trscheme, maxiter=5));
 E_0 = expectation_value(psi, H, envs) / N
 
+println("Numerical:\t", real(E_0))
 println("Exact (N=$N):\t", groundstate_energy(J, N))
 println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
-println("Numerical:\t", real(E_0))
 
 md"""
 ## Finite temperature properties
@@ -133,11 +141,20 @@ The resulting expression is
 """
 
 function partition_function(β::Number, J::Number, N::Number)
-    return prod(k -> (1 + exp(-β * single_particle_energy(k, J, N))), 1:N)^(1 / N)
+    T = diagm(1 => J / 2 * ones(N - 1), -1 => J / 2 * ones(N - 1))
+    ϵ = SingleParticleSpectrum(T)
+    return LogPartition(ϵ, β, 0) / N
 end
 function free_energy(β, J, N)
-    return -1 / β * log(partition_function(β, J, N))
+    T = diagm(1 => J / 2 * ones(N - 1), -1 => J / 2 * ones(N - 1))
+    ϵ = SingleParticleSpectrum(T)
+    return FreeEnergy(ϵ, β, 0) / N
 end
+
+βs = 0.0:0.2:8.0
+
+Z_analytic = partition_function.(βs, J, N);
+F_analytic = free_energy.(βs, J, N);
 
 md"""
 ### MPO approach
@@ -150,33 +167,32 @@ However, since we are interested in $e^{-\beta H}$, instead of $e^{-iH dt}$, we 
 In particular, we can approximate the exponential using a Taylor series through the `TaylorCluster` algorithm.
 """
 
-βs = 0.0:0.2:8.0
 expansion_orders = 1:3
 
-function partition_function_taylor(β, H; expansion_order)
+function logpartition_taylor(β, H; expansion_order)
     dτ = im * β
     expH = make_time_mpo(H, dτ,
                          TaylorCluster(; N=expansion_order))
-    return real(tr(expH))^(1 / N)
+    return log(real(tr(expH))) / length(H)
 end
 
 Z_taylor = map(Iterators.product(βs, expansion_orders)) do (β, expansion_order)
     @info "Computing β = $β at order $expansion_order"
-    return partition_function_taylor(β, H; expansion_order)
+    return logpartition_taylor(β, H; expansion_order)
 end
-F_taylor = -(1 ./ βs) .* log.(Z_taylor)
+F_taylor = -(1 ./ βs) .* Z_taylor
 
 p_taylor = let
     labels = reshape(map(expansion_orders) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, partition_function.(βs, J, N); label="analytic",
+    p1 = plot(βs, Z_analytic; label="analytic",
               title="Partition function",
               xlabel="β", ylabel="Z(β)")
-    plot!(p1, βs, real.(Z_taylor); label=labels)
-    p2 = plot(βs, free_energy.(βs, J, N); label="analytic", title="Free energy",
+    plot!(p1, βs, Z_taylor; label=labels)
+    p2 = plot(βs, F_analytic; label="analytic", title="Free energy",
               xlabel="β", ylabel="F(β)")
-    plot!(p2, βs, real.(F_taylor); label=labels)
+    plot!(p2, βs, F_taylor; label=labels)
     plot(p1, p2)
 end
 
@@ -211,14 +227,18 @@ Therefore, we will exclude the first order approximation from now on.
 Zooming in on the differences with the analytical result, we find:
 """
 
+expansion_orders = 2:3
+Z_taylor = Z_taylor[:, 2:end]
+F_taylor = F_taylor[:, 2:end]
+
 p_taylor_diff = let
-    labels = reshape(map(expansion_orders[2:end]) do N
+    labels = reshape(map(expansion_orders) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, abs.(real.(Z_taylor[:, 2:end]) .- partition_function.(βs, J, N));
+    p1 = plot(βs, abs.(Z_taylor .- Z_analytic);
               label=labels, title="Partition function error",
               xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
-    p2 = plot(βs, abs.(real.(F_taylor[:, 2:end]) .- free_energy.(βs, J, N)); label=labels,
+    p2 = plot(βs, abs.(F_taylor .- F_analytic); label=labels,
               xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
     plot(p1, p2)
 end
@@ -243,26 +263,28 @@ Otherwise, we could still use the same trick, but we would have to compute the e
     Add a figure to illustrate this trick.
 """
 
-function partition_function_taylor2(β, H; expansion_order)
+double_logpartition(ρ₁, ρ₂=ρ₁) = log(real(dot(ρ₁, ρ₂))) / length(ρ₁)
+
+function logpartition_taylor2(β, H; expansion_order)
     dτ = im * β / 2
     expH = make_time_mpo(H, dτ, TaylorCluster(; N=expansion_order))
-    return real(dot(expH, expH))^(1 / N)
+    return double_logpartition(expH)
 end
 
-Z_taylor2 = map(Iterators.product(βs, expansion_orders[2:end])) do (β, expansion_order)
+Z_taylor2 = map(Iterators.product(βs, expansion_orders)) do (β, expansion_order)
     @info "Computing β = $β at order $expansion_order"
-    return partition_function_taylor2(β, H; expansion_order)
+    return logpartition_taylor2(β, H; expansion_order)
 end
-F_taylor2 = -(1 ./ βs) .* log.(Z_taylor2)
+F_taylor2 = -(1 ./ βs) .* Z_taylor2
 
 p_taylor2_diff = let
     labels = reshape(map(expansion_orders[2:end]) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
+    p1 = plot(βs, abs.(Z_taylor2 .- Z_analytic);
               label=labels, title="Partition function error",
               xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
-    p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
+    p2 = plot(βs, abs.(F_taylor2 .- F_analytic); label=labels,
               xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
     plot(p1, p2)
 end
@@ -286,6 +308,8 @@ Multiplying two MPOs exactly would lead to an exponential growth in bond dimensi
 To achieve this, we can reinterpret the density matrix as an MPS with two physical indices.
 Then, we have some control over the approximations we make by tuning the maximal bond dimension.
 
+Here, we swich to a logarithmic scale for the errors to better illustrate the results.
+
 !!! warning
     Using MPS techniques to approximate the multiplication of density matrices does not necessarily inherit all of the nice properties of approximating MPS.
     In particular, the truncation of the MPO is now happening in the Frobenius norm, rather than the operator norm.
@@ -299,7 +323,7 @@ D_max = 64
 ## first iteration: start from high order Taylor expansion
 ρ₀ = make_time_mpo(H, im * βs[2] / 2, TaylorCluster(; N=3))
 Z_mpo_mul[1] = Z_taylor[1]
-Z_mpo_mul[2] = real(dot(ρ₀, ρ₀))^(1 / N)
+Z_mpo_mul[2] = double_logpartition(ρ₀)
 
 ## subsequent iterations: multiply by ρ₀
 ρ_mps = convert(FiniteMPS, ρ₀)
@@ -308,22 +332,23 @@ for i in 3:length(βs)
     @info "Computing β = $(βs[i])"
     ρ_mps, = approximate(ρ_mps, (ρ₀, ρ_mps),
                          DMRG2(; trscheme=truncdim(D_max), maxiter=10))
-    Z_mpo_mul[i] = real(dot(ρ_mps, ρ_mps))^(1 / N)
+    Z_mpo_mul[i] = double_logpartition(ρ_mps)
 end
-F_mpo_mul = -(1 ./ βs) .* log.(Z_mpo_mul)
+F_mpo_mul = -(1 ./ βs) .* Z_mpo_mul
 
 p_mpo_mul_diff = let
-    labels = reshape(map(expansion_orders[2:end]) do N
+    labels = reshape(map(expansion_orders) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
+    p1 = plot(βs, abs.(Z_taylor2 .- Z_analytic);
               label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
-    plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
+              xlabel="β", ylabel="ΔZ(β)", legend=:bottomright, yscale=:log10)
+    plot!(p1, βs, abs.(Z_mpo_mul .- Z_analytic);
           label="MPO multiplication")
-    p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
-    plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
+    p2 = plot(βs, abs.(F_taylor2 .- F_analytic); label=labels,
+              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=nothing,
+              yscale=:log10)
+    plot!(p2, βs, abs.(F_mpo_mul .- F_analytic);
           label="MPO multiplication")
     plot(p1, p2)
 end
@@ -362,11 +387,14 @@ In other words, we can scan a range of exponentially increasing $\beta$ values b
 """
 
 βs_exp = 2.0 .^ (-3:3)
+Z_analytic_exp = partition_function.(βs_exp, J, N)
+F_analytic_exp = free_energy.(βs_exp, J, N)
+
 Z_mpo_mul_exp = zeros(length(βs_exp))
 
 ## first iteration: start from high order Taylor expansion
 ρ₀ = make_time_mpo(H, im * first(βs_exp) / 2, TaylorCluster(; N=3))
-Z_mpo_mul_exp[1] = real(dot(ρ₀, ρ₀))^(1 / N)
+Z_mpo_mul_exp[1] = double_logpartition(ρ₀)
 
 ## subsequent iterations: square
 ρ = ρ₀
@@ -376,29 +404,25 @@ for i in 2:length(βs_exp)
     @info "Computing β = $(βs_exp[i])"
     ρ_mps, = approximate(ρ_mps, (ρ, ρ_mps),
                          DMRG2(; trscheme=truncdim(D_max), maxiter=10))
-    Z_mpo_mul_exp[i] = real(dot(ρ_mps, ρ_mps))^(1 / N)
+    Z_mpo_mul_exp[i] = double_logpartition(ρ_mps)
     ρ = convert(FiniteMPO, ρ_mps)
 end
-F_mpo_mul_exp = -(1 ./ βs_exp) .* log.(Z_mpo_mul_exp)
+F_mpo_mul_exp = -(1 ./ βs_exp) .* Z_mpo_mul_exp
 
 p_mpo_mul_exp_diff = let
     labels = reshape(map(expansion_orders[2:end]) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
-              label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
-    plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
-          label="MPO multiplication")
-    plot!(p1, βs_exp, abs.(real.(Z_mpo_mul_exp) .- partition_function.(βs_exp, J, N));
-          label="MPO multiplication exp")
+    p1 = plot(βs, abs.(Z_taylor2 .- Z_analytic);
+              label=labels, title="Partition function error", xlabel="β", ylabel="ΔZ(β)",
+              legend=:bottomright, yscale=:log10)
+    plot!(p1, βs, abs.(Z_mpo_mul .- Z_analytic); label="MPO multiplication")
+    plot!(p1, βs_exp, abs.(Z_mpo_mul_exp .- Z_analytic_exp); label="MPO multiplication exp")
 
-    p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
-    plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
-          label="MPO multiplication")
-    plot!(p2, βs_exp, abs.(real.(F_mpo_mul_exp) .- free_energy.(βs_exp, J, N));
-          label="MPO multiplication exp")
+    p2 = plot(βs, abs.(F_taylor2 .- F_analytic); label=labels, xlabel="β", ylabel="ΔF(β)",
+              title="Free energy error", legend=nothing, yscale=:log10)
+    plot!(p2, βs, abs.(F_mpo_mul .- F_analytic); label="MPO multiplication")
+    plot!(p2, βs_exp, abs.(F_mpo_mul_exp .- F_analytic_exp); label="MPO multiplication exp")
     plot(p1, p2)
 end
 
@@ -431,7 +455,7 @@ Z_tdvp = zeros(length(βs))
 
 ## first iteration: start from infinite temperature state
 ρ₀ = infinite_temperature_density_matrix(H)
-Z_tdvp[1] = real(dot(ρ₀, ρ₀))^(1 / N)
+Z_tdvp[1] = double_logpartition(ρ₀)
 
 ## subsequent iterations: evolve by H
 ρ_mps = convert(FiniteMPS, ρ₀)
@@ -439,29 +463,27 @@ for i in 2:length(βs)
     global ρ_mps
     @info "Computing β = $(βs[i])"
     ρ_mps, = timestep(ρ_mps, H, βs[i - 1] / 2, -im * (βs[i] - βs[i - 1]) / 2,
-                      TDVP2(; trscheme=truncdim(D_max)))
-    Z_tdvp[i] = real(dot(ρ_mps, ρ_mps))^(1 / N)
+                      TDVP2(; trscheme=truncdim(64)))
+    Z_tdvp[i] = double_logpartition(ρ_mps)
 end
-F_tdvp = -(1 ./ βs) .* log.(Z_tdvp)
+F_tdvp = -(1 ./ βs) .* Z_tdvp
 
 p_mpo_mul_diff = let
-    labels = reshape(map(expansion_orders[2:end]) do N
+    labels = reshape(map(expansion_orders) do N
                          return "Taylor N=$N"
                      end, 1, :)
-    p1 = plot(βs, abs.(real.(Z_taylor2) .- partition_function.(βs, J, N));
-              label=labels, title="Partition function error",
-              xlabel="β", ylabel="ΔZ(β)", legend=:topleft)
-    plot!(p1, βs, abs.(real.(Z_mpo_mul) .- partition_function.(βs, J, N));
-          label="MPO multiplication")
-    plot!(p1, βs, abs.(real.(Z_tdvp) .- partition_function.(βs, J, N));
-          label="TDVP")
+    p1 = plot(βs, abs.(Z_taylor2 .- Z_analytic); label=labels,
+              title="Partition function error", xlabel="β", ylabel="ΔZ(β)",
+              legend=:bottomright, yscale=:log10)
+    plot!(p1, βs, abs.(Z_mpo_mul .- Z_analytic); label="MPO multiplication")
+    plot!(p1, βs_exp, abs.(Z_mpo_mul_exp .- Z_analytic_exp); label="MPO multiplication exp")
+    plot!(p1, βs, abs.(Z_tdvp .- Z_analytic); label="TDVP")
 
-    p2 = plot(βs, abs.(real.(F_taylor2) .- free_energy.(βs, J, N)); label=labels,
-              xlabel="β", ylabel="ΔF(β)", title="Free energy error", legend=:topleft)
-    plot!(p2, βs, abs.(real.(F_mpo_mul) .- free_energy.(βs, J, N));
-          label="MPO multiplication")
-    plot!(p2, βs, abs.(real.(F_tdvp) .- free_energy.(βs, J, N));
-          label="TDVP")
+    p2 = plot(βs, abs.(F_taylor2 .- F_analytic); label=labels, xlabel="β", ylabel="ΔF(β)",
+              title="Free energy error", legend=nothing, yscale=:log10)
+    plot!(p2, βs, abs.(F_mpo_mul .- F_analytic); label="MPO multiplication")
+    plot!(p2, βs_exp, abs.(F_mpo_mul_exp .- F_analytic_exp); label="MPO multiplication exp")
+    plot!(p2, βs, abs.(F_tdvp .- F_analytic); label="TDVP")
 
     plot(p1, p2)
 end
