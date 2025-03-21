@@ -83,7 +83,7 @@ function ∂AC(x::GenericMPSTensor{S,3}, operator::MPOTensor{S}, leftenv::MPSTen
 end
 
 # mpo multiline
-function ∂AC(x::Vector, opp, leftenv, rightenv)
+function ∂AC(x::AbstractVector, opp, leftenv, rightenv)
     return circshift(map(∂AC, x, opp, leftenv, rightenv), 1)
 end
 
@@ -109,7 +109,7 @@ function ∂AC2(x::AbstractTensorMap{<:Any,<:Any,3,3}, operator1::MPOTensor,
                                      operator2[7 -6; 4 5] * τ[5 -5; 2 3]
 end
 
-function ∂AC2(x::Vector, opp1, opp2, leftenv, rightenv)
+function ∂AC2(x::AbstractVector, opp1, opp2, leftenv, rightenv)
     return circshift(map(∂AC2, x, opp1, opp2, leftenv, rightenv), 1)
 end
 
@@ -122,7 +122,7 @@ function ∂C(x::MPSBondTensor, leftenv::MPSBondTensor, rightenv::MPSBondTensor)
     @plansor toret[-1; -2] := leftenv[-1; 1] * x[1; 2] * rightenv[2; -2]
 end
 
-function ∂C(x::Vector, leftenv, rightenv)
+function ∂C(x::AbstractVector, leftenv, rightenv)
     return circshift(map(t -> ∂C(t...), zip(x, leftenv, rightenv)), 1)
 end
 

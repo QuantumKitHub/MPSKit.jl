@@ -146,8 +146,10 @@ end
 
 Bring updated `AC` and `C` tensors back into a consistent set of left or right canonical
 tensors. This minimizes `∥AC_i - AL_i * C_i∥` or `∥AC_i - C_{i-1} * AR_i∥`. The optimal algorithm uses
-`Polar()` decompositions, but `QR`-based algorithms are typically more performant. Note that
-the first signature is slightly faster, as it avoids an intermediate transposition.
+`Polar()` decompositions, but `QR`-based algorithms are typically more performant.
+
+!!! note
+    Computing `AL` is slightly faster than `AR`, as it avoids an intermediate transposition.
 """
 regauge!
 
@@ -156,15 +158,30 @@ function regauge!(AC::GenericMPSTensor, C::MPSBondTensor; alg=QRpos())
     Q_C, _ = leftorth!(C; alg)
     return mul!(AC, Q_AC, Q_C')
 end
+function regauge!(AC::Vector{<:GenericMPSTensor}, C::Vector{<:MPSBondTensor}; alg=QRpos())
+    for i in 1:length(AC)
+        regauge!(AC[i], C[i]; alg)
+    end
+    return AC
+end
 function regauge!(CL::MPSBondTensor, AC::GenericMPSTensor; alg=LQpos())
     AC_tail = _transpose_tail(AC)
     _, Q_AC = rightorth!(AC_tail; alg)
     _, Q_C = rightorth!(CL; alg)
     AR_tail = mul!(AC_tail, Q_C', Q_AC)
-    return _transpose_front(AR_tail)
+    return repartition!(AC, AR_tail)
+end
+function regauge!(CL::Vector{<:MPSBondTensor}, AC::Vector{<:GenericMPSTensor}; alg=LQpos())
+    for i in length(CL):-1:1
+        regauge!(CL[i], AC[i]; alg)
+    end
+    return CL
 end
 # fix ambiguity + error
 regauge!(::MPSBondTensor, ::MPSBondTensor; alg=QRpos()) = error("method ambiguity")
+function regauge!(::Vector{<:MPSBondTensor}, ::Vector{<:MPSBondTensor}; alg=QRpos())
+    return error("method ambiguity")
+end
 
 # Implementation
 # --------------
