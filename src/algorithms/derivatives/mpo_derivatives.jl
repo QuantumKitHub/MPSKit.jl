@@ -82,10 +82,9 @@ function (H::MPO_∂∂AC2{<:MPSBondTensor,Nothing,Nothing,<:MPSBondTensor})(x::
     @plansor y[-1 -2; -3 -4] ≔ H.leftenv[-1; 1] * x[1 -2; 2 -4] * H.rightenv[2 -3]
 end
 function (H::MPO_∂∂AC2{<:MPSTensor,<:MPOTensor,<:MPOTensor,<:MPSTensor})(x::MPOTensor)
-    @plansor contractcheck = true y[-1 -2; -3 -4] ≔ H.leftenv[-1 7; 6] * x[6 5; 1 3] *
-                                                    H.operators[1][7 -2; 5 4] *
-                                                    H.operators[2][4 -4; 3 2] *
-                                                    H.rightenv[1 2; -3]
+    @plansor y[-1 -2; -3 -4] ≔ H.leftenv[-1 7; 6] * x[6 5; 1 3] *
+                               H.operators[1][7 -2; 5 4] * H.operators[2][4 -4; 3 2] *
+                               H.rightenv[1 2; -3]
 end
 function (H::MPO_∂∂AC2{<:MPSTensor,<:MPOTensor,<:MPOTensor,<:MPSTensor})(x::AbstractTensorMap{<:Any,<:Any,3,3})
     @plansor y[-1 -2 -3; -4 -5 -6] ≔ H.leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
