@@ -63,7 +63,6 @@ function ∂∂AC(pos::Int, mps, operator::MPOHamiltonian, envs)
             @plansor starting[-1 -2; -3 -4] += D[-1; -3 1] * GR[end][-4 1; -2]
             onsite = missing
         elseif !ismissing(ending)
-            error()
             D = removeunit(W[1, 1, 1, end], 4)
             @plansor ending[-1 -2; -3 -4] += GL[1][-1 1; -3] * D[1 -2; -4]
             onsite = missing
