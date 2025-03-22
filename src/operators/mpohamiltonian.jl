@@ -58,7 +58,7 @@ end
     FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
 
 Create a `FiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]` represents
-the the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
+the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
 either `MPOTensor`, `Missing` or `Number`.
 """
 function FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
@@ -380,9 +380,9 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
     E = scalartype(T)
     S = spacetype(T)
 
-    virtualspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
-    virtualspaces[1] = SumSpace(oneunit(S))
-    virtualspaces[end] = SumSpace(oneunit(S))
+    virtualsumspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
+    virtualsumspaces[1] = SumSpace(fill(oneunit(S), 1))
+    virtualsumspaces[end] = SumSpace(fill(oneunit(S), 1))
 
     for i in 1:(length(lattice) - 1)
         n_channels = maximum(last, nonzero_keys[i]; init=1) + 1
@@ -390,34 +390,28 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
         if n_channels > 2
             for ((key_L, key_R), O) in zip(nonzero_keys[i], nonzero_opps[i])
                 V[key_R == 0 ? end : key_R] = if O isa Number
-                    virtualspaces[i][key_L]
+                    virtualsumspaces[i][key_L]
                 else
                     right_virtualspace(O)
                 end
             end
         end
-        virtualspaces[i + 1] = V
+        virtualsumspaces[i + 1] = V
     end
 
-    Otype = jordanmpotensortype(S, E)
+    # construct the tensor
+    TW = jordanmpotensortype(S, E)
     Os = map(1:length(lattice)) do site
-        # Initialize blocktensor 
-        O = Otype(undef, virtualspaces[site] * lattice[site],
-                  lattice[site] * virtualspaces[site + 1])
-        fill!(O, zero(E))
-        if site != length(lattice)
-            O[1, 1, 1, 1] = BraidingTensor{E}(eachspace(O)[1, 1, 1, 1])
-        end
-        if site != 1
-            O[end, end, end, end] = BraidingTensor{E}(eachspace(O)[end, end, end, end])
-        end
+        V = virtualsumspaces[site] * lattice[site] ←
+            lattice[site] * virtualsumspaces[site + 1]
+        O = TW(undef, V)
 
         # Fill it
-        for ((key_L, key_R), o) in zip(nonzero_keys[site], nonzero_opps[site])
-            key_R′ = key_R == 0 ? length(virtualspaces[site + 1]) : key_R
-            O[key_L, 1, 1, key_R′] += if o isa Number
+        for ((key_L, key_R′), o) in zip(nonzero_keys[site], nonzero_opps[site])
+            key_R = key_R′ == 0 ? length(virtualsumspaces[site + 1]) : key_R′
+            O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{E}(eachspace(O)[key_L, 1, 1, key_R′])
+                τ = BraidingTensor{E}(eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -735,16 +729,44 @@ function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:MPOHamiltonian}
 
     return H₁ isa FiniteMPOHamiltonian ? FiniteMPOHamiltonian(H) : InfiniteMPOHamiltonian(H)
 end
-function Base.:+(H₁::InfiniteMPOHamiltonian{O},
-                 H₂::InfiniteMPOHamiltonian{O}) where {O<:JordanMPOTensor}
+function Base.:+(H₁::FiniteMPOHamiltonian{O},
+                 H₂::FiniteMPOHamiltonian{O}) where {O<:JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
+    Vtriv = oneunit(spacetype(H₁))
+
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims=(1, 4))
         B = cat(H₁[i].B, H₂[i].B; dims=1)
         C = cat(H₁[i].C, H₂[i].C; dims=3)
         D = H₁[i].D + H₂[i].D
-        H[i] = eltype(H)(A, B, C, D)
+
+        Vleft = i == 1 ? left_virtualspace(H₁, 1) :
+                BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
+        Vright = i == N ? right_virtualspace(H₁, N) :
+                 BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+        V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
+
+        H[i] = eltype(H)(V, A, B, C, D)
+    end
+    return FiniteMPOHamiltonian(H)
+end
+function Base.:+(H₁::InfiniteMPOHamiltonian{O},
+                 H₂::InfiniteMPOHamiltonian{O}) where {O<:JordanMPOTensor}
+    N = check_length(H₁, H₂)
+    H = similar(parent(H₁))
+    Vtriv = oneunit(spacetype(H₁))
+    for i in 1:N
+        A = cat(H₁[i].A, H₂[i].A; dims=(1, 4))
+        B = cat(H₁[i].B, H₂[i].B; dims=1)
+        C = cat(H₁[i].C, H₂[i].C; dims=3)
+        D = H₁[i].D + H₂[i].D
+
+        Vleft = BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
+        Vright = BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+        V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
+
+        H[i] = eltype(H)(V, A, B, C, D)
     end
     return InfiniteMPOHamiltonian(H)
 end
