@@ -577,6 +577,14 @@ function Base.getproperty(H::MPOHamiltonian, sym::Symbol)
     end
 end
 
+# function Base.getproperty(H::MPOHamiltonian{<:JordanMPOTensor}, sym::Symbol)
+#     if sym in (:A, :B, :C, :D)
+#         return map(Base.Fix2(Base.getproperty, sym), parent(H))
+#     else
+#         return getfield(H, sym)
+#     end
+# end
+
 function isidentitylevel(H::InfiniteMPOHamiltonian, i::Int)
     isemptylevel(H, i) && return false
     return all(parent(H)) do h
@@ -804,13 +812,24 @@ function VectorInterface.scale!(H::InfiniteMPOHamiltonian, λ::Number)
     end
     return H
 end
-function VectorInterface.scale!(H::InfiniteMPOHamiltonian{O},
+function VectorInterface.scale!(H::MPOHamiltonian{O},
                                 λ::Number) where {O<:JordanMPOTensor}
     for i in 1:length(H)
         scale!(H[i].C, λ)
         scale!(H[i].D, λ)
     end
     return H
+end
+function VectorInterface.scale!(Hdst::MPOHamiltonian{<:JordanMPOTensor},
+                                Hsrc::MPOHamiltonian{<:JordanMPOTensor}, λ::Number)
+    N = check_length(Hdst, Hsrc)
+    for i in 1:N
+        scale!(Hdst[i].C, Hsrc[i].C, λ)
+        scale!(Hdst[i].D, Hsrc[i].D, λ)
+        copy!(Hdst[i].A, Hsrc[i].A)
+        copy!(Hdst[i].B, Hsrc[i].B)
+    end
+    return Hdst
 end
 
 function VectorInterface.scale!(H::FiniteMPOHamiltonian, λ::Number)
@@ -841,16 +860,6 @@ function VectorInterface.scale!(dst::MPOHamiltonian, src::MPOHamiltonian,
                 dst[i][I] = scale!(dst[i][I], v, isstarting ? λ : One())
             end
         end
-    end
-    return dst
-end
-
-function VectorInterface.scale!(dst::MPOHamiltonian{<:JordanMPOTensor},
-                                src::MPOHamiltonian{<:JordanMPOTensor}, λ::Number)
-    N = check_length(dst, src)
-    for i in 1:N
-        scale!(dst[i].C, src[i].C, λ)
-        scale!(dst[i].D, src[i].D, λ)
     end
     return dst
 end
