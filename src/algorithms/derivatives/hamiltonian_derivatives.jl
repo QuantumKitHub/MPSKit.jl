@@ -4,7 +4,7 @@
 Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
 In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
 """
-struct JordanMPO_∂∂AC{O1,O2,O3}
+struct JordanMPO_∂∂AC{O1,O2,O3} <: DerivativeOperator
     onsite::Union{O1,Missing}
     not_started::Union{O1,Missing}
     finished::Union{O1,Missing}
@@ -209,7 +209,7 @@ end
 Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
 In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
 """
-struct JordanMPO_∂∂AC2{O1,O2,O3,O4}
+struct JordanMPO_∂∂AC2{O1,O2,O3,O4} <: DerivativeOperator
     II::Union{O1,Missing} # not_started
     IC::Union{O2,Missing} # starting right
     ID::Union{O1,Missing} # onsite right
@@ -220,16 +220,20 @@ struct JordanMPO_∂∂AC2{O1,O2,O3,O4}
     BE::Union{O2,Missing} # ending left
     DE::Union{O1,Missing} # onsite left
     EE::Union{O1,Missing} # finished
-end
-function JordanMPO_∂∂AC2(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-    tensor = coalesce(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-    ismissing(tensor) && throw(ArgumentError("unable to determine type"))
-    S = spacetype(tensor)
-    M = storagetype(tensor)
-    O1 = tensormaptype(S, 1, 1, M)
-    O2 = tensormaptype(S, 2, 2, M)
-    O3 = tensormaptype(S, 3, 3, M)
-    return JordanMPO_∂∂AC2{O1,O2,O3,typeof(AA)}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    function JordanMPO_∂∂AC2(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+        tensor = coalesce(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+        ismissing(tensor) && throw(ArgumentError("unable to determine type"))
+        S = spacetype(tensor)
+        M = storagetype(tensor)
+        O1 = tensormaptype(S, 1, 1, M)
+        O2 = tensormaptype(S, 2, 2, M)
+        O3 = tensormaptype(S, 3, 3, M)
+        return new{O1,O2,O3,typeof(AA)}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    end
+    function JordanMPO_∂∂AC2{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE,
+                                          EE) where {O1,O2,O3,O4}
+        return new{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    end
 end
 
 Base.:*(H::JordanMPO_∂∂AC2, x) = H(x)

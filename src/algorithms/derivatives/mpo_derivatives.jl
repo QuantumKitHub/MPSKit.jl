@@ -3,11 +3,12 @@
 
 Effective local operator obtained from taking the partial derivative of an MPS-MPO-MPS sandwich.
 """
-struct MPO_∂∂ACN{L,O<:Tuple,R}
+struct MPO_∂∂ACN{L,O<:Tuple,R} <: DerivativeOperator
     leftenv::L
     operators::O
     rightenv::R
 end
+Base.length(H::MPO_∂∂ACN) = length(H.operators)
 
 const MPO_∂∂C{L,R} = MPO_∂∂ACN{L,Tuple{},R}
 MPO_∂∂C(GL, GR) = MPO_∂∂ACN(GL, (), GR)
@@ -22,17 +23,18 @@ function ∂∂C(pos::Int, mps, operator, envs)
     return MPO_∂∂C(leftenv(envs, pos + 1, mps), rightenv(envs, pos, mps))
 end
 function ∂∂AC(pos::Int, mps, operator, envs)
-    return MPO_∂∂AC(leftenv(envs, pos, mps), operator[pos], rightenv(envs, pos, mps))
+    O = isnothing(operator) ? nothing : operator[pos]
+    return MPO_∂∂AC(leftenv(envs, pos, mps), O, rightenv(envs, pos, mps))
 end
 function ∂∂AC2(pos::Int, mps, operator, envs)
-    return MPO_∂∂AC2(leftenv(envs, pos, mps), operator[pos], operator[pos + 1],
-                     rightenv(envs, pos + 1, mps))
+    O1, O2 = isnothing(operator) ? (nothing, nothing) : (operator[pos], operator[pos + 1])
+    return MPO_∂∂AC2(leftenv(envs, pos, mps), O1, O2, rightenv(envs, pos + 1, mps))
 end
 
 # Multiline
 for ∂∂_ in (:∂∂C, :∂∂AC, :∂∂AC2)
-    @eval function $∂∂_(pos::Int, mps, operator::MultilineMPO, envs)
-        Hs = map(Base.Fix1($∂∂_, pos), mps, operator, envs)
+    @eval function $∂∂_(site::Int, mps, operator::MultilineMPO, envs)
+        Hs = [$∂∂_(site, mps[row], operator[row], envs[row]) for row in 1:size(operator, 1)]
         return Multiline(Hs)
     end
 end
@@ -54,6 +56,10 @@ end
 
 # Actions
 # -------
+# (h::MPO_∂∂C)(x) = ∂C(x, h.leftenv, h.rightenv);
+# (h::MPO_∂∂AC)(x) = ∂AC(x, h.o, h.leftenv, h.rightenv);
+# (h::MPO_∂∂AC2)(x) = ∂AC2(x, h.o1, h.o2, h.leftenv, h.rightenv);
+
 Base.:*(H::MPO_∂∂ACN, x) = H(x)
 
 # ∂C
@@ -94,6 +100,7 @@ function (H::MPO_∂∂AC2{<:MPSTensor,<:MPOTensor,<:MPOTensor,<:MPSTensor})(x::
 end
 
 # Multiline
-function (H::Multiline{<:MPO_∂∂ACN})(x::Vector)
-    return circshift!(broadcast(parent(H), x), 1)
+function (H::Multiline{<:DerivativeOperator})(x::AbstractVector)
+    return [H[row - 1] * x[mod1(row - 1, end)] for row in 1:size(H, 1)]
 end
+Base.:*(H::Multiline{<:DerivativeOperator}, x::AbstractVector) = H(x)

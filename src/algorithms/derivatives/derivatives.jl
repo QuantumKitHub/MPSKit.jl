@@ -1,11 +1,8 @@
 # Given a state and it's environments, we can act on it
 
-const DerivativeOperator = Union{MPO_∂∂C,MPO_∂∂AC,MPO_∂∂AC2,JordanMPO_∂∂AC}
+abstract type DerivativeOperator end
 
 # TODO: do we still need this?
-(h::MPO_∂∂C)(x) = ∂C(x, h.leftenv, h.rightenv);
-(h::MPO_∂∂AC)(x) = ∂AC(x, h.o, h.leftenv, h.rightenv);
-(h::MPO_∂∂AC2)(x) = ∂AC2(x, h.o1, h.o2, h.leftenv, h.rightenv);
 (h::DerivativeOperator)(v, ::Number) = h(v)
 
 # draft operator constructors
@@ -120,12 +117,9 @@ function c_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
     return c_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
-function ac_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs)
-    return ∂AC(ϕ.AC[pos], O[pos], leftenv(envs, pos, ψ), rightenv(envs, pos, ψ))
-end
-function ac_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
-    return ∂AC(ϕ.AC[pos], nothing, leftenv(envs, pos, ψ), rightenv(envs, pos, ψ))
-end
+ac_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs) = ∂∂AC(pos, ψ, O, envs) * ϕ.AC[pos]
+ac_proj(pos::Int, ψ, ϕ::AbstractMPS, envs) = ∂∂AC(pos, ψ, nothing, envs) * ϕ.AC[pos]
+
 function ac_proj(pos::Int, ψ, Oϕs::LazySum, envs)
     return sum(zip(Oϕs.ops, envs.envs)) do x
         return ac_proj(pos, ψ, x...)
@@ -137,11 +131,11 @@ end
 
 function ac2_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs)
     AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return ∂AC2(AC2, O[pos], O[pos + 1], leftenv(envs, pos, ψ), rightenv(envs, pos + 1, ψ))
+    return ∂∂AC2(pos, ψ, O, envs) * AC2
 end
 function ac2_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
     AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return ∂AC2(AC2, nothing, nothing, leftenv(envs, pos, ψ), rightenv(envs, pos + 1, ψ))
+    return ∂∂AC2(pos, ψ, nothing, envs) * AC2
 end
 function ac2_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
     return ac2_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
@@ -233,10 +227,12 @@ end
 
 function ∂∂AC(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
     suboperators = map((op, openv) -> ∂∂AC(pos, mps, op, openv), operator.ops, cache.envs)
-    return LazySum{Union{MPO_∂∂AC,MultipliedOperator{<:MPO_∂∂AC}}}(suboperators)
+    elT = Union{D,MultipliedOperator{D}} where {D<:Union{MPO_∂∂AC,JordanMPO_∂∂AC}}
+    return LazySum{elT}(suboperators)
 end
 
 function ∂∂AC2(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
     suboperators = map((op, openv) -> ∂∂AC2(pos, mps, op, openv), operator.ops, cache.envs)
-    return LazySum{Union{MPO_∂∂AC2,MultipliedOperator{<:MPO_∂∂AC2}}}(suboperators)
+    elT = Union{D,MultipliedOperator{D}} where {D<:Union{MPO_∂∂AC2,JordanMPO_∂∂AC2}}
+    return LazySum{elT}(suboperators)
 end
