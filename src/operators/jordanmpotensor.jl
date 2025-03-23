@@ -190,12 +190,11 @@ end
     return Base.checkbounds_indices(Bool, axes(W), I)
 end
 
-@inline function Base.getindex(W::JordanMPOTensor, I::Vararg{Int,4})
-    @assert I[2] == I[3] == 1
-    return W[I[1], I[4]]
-end
 @inline Base.getindex(W::JordanMPOTensor, I::CartesianIndex{4}) = W[I.I...]
-@propagate_inbounds function Base.getindex(W::JordanMPOTensor, i::Int, j::Int)
+@propagate_inbounds function Base.getindex(W::JordanMPOTensor, I::Vararg{Int,4})
+    @assert I[2] == I[3] == 1
+    i = I[1]
+    j = I[4]
     if (size(W, 4) > 1 && i == 1 && j == 1) ||
        (size(W, 1) > 1 && i == size(W, 1) && j == size(W, 4))
         return BraidingTensor{scalartype(W)}(eachspace(W)[1])
@@ -234,7 +233,11 @@ end
     V = space(eachspace(W)[inds...])
     dst = similar(W, V)
 
-    Rsrc = CartesianIndices(W)[inds...]
+    # prevent discarding of singleton dimensions
+    inds2 = map(inds) do ind
+        return ind isa Int ? (ind:ind) : ind
+    end
+    Rsrc = CartesianIndices(W)[inds2...]
     Rdst = CartesianIndices(dst)
 
     for I in nonzero_keys(W)
@@ -245,16 +248,14 @@ end
     return dst
 end
 
-@inline function Base.setindex!(W::JordanMPOTensor, v::MPOTensor, I::Vararg{Int,4})
-    @assert I[2] == I[3] == 1
-    W[I[1], I[4]] = v
-    return W
-end
 @inline function Base.setindex!(W::JordanMPOTensor, v::MPOTensor, I::CartesianIndex{4})
     return setindex!(W, v, I.I...)
 end
-@propagate_inbounds function Base.setindex!(W::JordanMPOTensor, v::MPOTensor, i::Int,
-                                            j::Int)
+@propagate_inbounds function Base.setindex!(W::JordanMPOTensor, v::MPOTensor,
+                                            I::Vararg{Int,4})
+    @assert I[2] == I[3] == 1
+    i = I[1]
+    j = I[4]
     if i == 1 && j == size(W, 4)
         W.D[1] = removeunit(removeunit(v, 4), 1)
     elseif i == 1 && 1 < j < size(W, 4)
@@ -280,21 +281,30 @@ end
 function BlockTensorKit.nonzero_keys(W::JordanMPOTensor)
     nrows = size(W, 1)
     ncols = size(W, 4)
-
-    pτ = (CartesianIndex(1, 1, 1, 1), CartesianIndex(nrows, 1, 1, ncols))
+    p = CartesianIndex{4}[]
+    ncols > 1 && push!(p, CartesianIndex(1, 1, 1, 1))
+    nrows > 1 && push!(p, CartesianIndex(nrows, 1, 1, ncols))
 
     Ia = CartesianIndex(1, 0, 0, 1)
-    pA = [I + Ia for I in nonzero_keys(W.A)]
+    for I in nonzero_keys(W.A)
+        push!(p, I + Ia)
+    end
 
     Ib = CartesianIndex(1, 0, 0)
-    pB = [CartesianIndex((I + Ib).I..., ncols) for I in nonzero_keys(W.B)]
+    for I in nonzero_keys(W.B)
+        push!(p, CartesianIndex((I + Ib).I..., ncols))
+    end
 
     Ic = CartesianIndex(0, 0, 1)
-    pC = [CartesianIndex(1, (I + Ic).I...) for I in nonzero_keys(W.C)]
+    for I in nonzero_keys(W.C)
+        push!(p, CartesianIndex(1, (I + Ic).I...))
+    end
 
-    pD = [CartesianIndex(1, 1, 1, ncols) for I in nonzero_keys(W.D)]
+    for I in nonzero_keys(W.D)
+        push!(p, CartesianIndex(1, 1, 1, ncols))
+    end
 
-    return Iterators.flatten((pτ, pA, pB, pC, pD))
+    return p
 end
 function BlockTensorKit.nonzero_values(W::JordanMPOTensor)
     return Iterators.map(I -> W[I], nonzero_keys(W))
