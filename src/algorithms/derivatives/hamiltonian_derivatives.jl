@@ -11,16 +11,20 @@ struct JordanMPO_∂∂AC{O1,O2,O3} <: DerivativeOperator
     starting::Union{O2,Missing}
     ending::Union{O2,Missing}
     continuing::O3
-end
-function JordanMPO_∂∂AC(onsite, not_started, finished, starting, ending, continuing)
-    tensor = coalesce(onsite, not_started, finished, starting, ending)
-    ismissing(tensor) && throw(ArgumentError("unable to determine type"))
-    S = spacetype(tensor)
-    M = storagetype(tensor)
-    O1 = tensormaptype(S, 1, 1, M)
-    O2 = tensormaptype(S, 2, 2, M)
-    return JordanMPO_∂∂AC{O1,O2,typeof(continuing)}(onsite, not_started, finished, starting,
-                                                    ending, continuing)
+    function JordanMPO_∂∂AC(onsite, not_started, finished, starting, ending, continuing)
+        tensor = coalesce(onsite, not_started, finished, starting, ending)
+        ismissing(tensor) && throw(ArgumentError("unable to determine type"))
+        S = spacetype(tensor)
+        M = storagetype(tensor)
+        O1 = tensormaptype(S, 1, 1, M)
+        O2 = tensormaptype(S, 2, 2, M)
+        return new{O1,O2,typeof(continuing)}(onsite, not_started, finished, starting,
+                                             ending, continuing)
+    end
+    function JordanMPO_∂∂AC{O1,O2,O3}(onsite, not_started, finished, starting, ending,
+                                      continuing) where {O1,O2,O3}
+        return new{O1,O2,O3}(onsite, not_started, finished, starting, ending, continuing)
+    end
 end
 
 Base.:*(H::JordanMPO_∂∂AC, x) = H(x)
