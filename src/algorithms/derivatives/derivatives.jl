@@ -102,12 +102,8 @@ end
 # end
 
 # downproject for approximate
-function c_proj(pos::Int, ψ, (operator, ϕ)::Tuple, envs)
-    return ∂C(ϕ.C[pos], leftenv(envs, pos + 1, ψ), rightenv(envs, pos, ψ))
-end
-function c_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
-    return ∂C(ϕ.C[pos], leftenv(envs, pos + 1, ψ), rightenv(envs, pos, ψ))
-end
+c_proj(pos::Int, ψ, (operator, ϕ)::Tuple, envs) = ∂∂C(pos, ψ, operator, envs) * ϕ.C[pos]
+c_proj(pos::Int, ψ, ϕ::AbstractMPS, envs) = ∂∂C(pos, ψ, nothing, envs) * ϕ.C[pos]
 function c_proj(pos::Int, ψ, Oϕs::LazySum, envs)
     return sum(zip(Oϕs.ops, envs.envs)) do x
         return c_proj(pos, ψ, x...)
