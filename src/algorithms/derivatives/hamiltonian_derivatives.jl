@@ -382,7 +382,7 @@ function ∂∂AC2(site::Int, mps, operator::MPOHamiltonian{<:JordanMPOTensor}, 
 end
 
 function (H::JordanMPO_∂∂AC2)(x::MPOTensor)
-    y = zerovector!(similar(x))
+    y = zerovector(x)
 
     if !ismissing(H.II)
         @plansor y[-1 -2; -3 -4] += x[-1 -2; 1 -4] * H.II[-3; 1]

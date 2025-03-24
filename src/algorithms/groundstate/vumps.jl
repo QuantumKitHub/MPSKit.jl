@@ -81,63 +81,19 @@ function dominant_eigsolve(operator, mps, alg::VUMPS, envs=environments(mps, ope
     end
 end
 
-function Base.iterate(it::IterativeSolver{<:VUMPS}, state=it.state)
-    ACs = localupdate_step!(it, state)
-    mps = gauge_step!(it, state, ACs)
-    envs = envs_step!(it, state, mps)
-
-    # finalizer step
-    mps, envs = it.finalize(state.iter, mps, state.operator, envs)::typeof((mps, envs))
-
-    # error criterion
-    ϵ = calc_galerkin(mps, state.operator, mps, envs)
-
-    # update state
-    it.state = VUMPSState(mps, state.operator, envs, state.iter + 1, ϵ, state.which)
-
-    return (mps, envs, ϵ), it.state
-end
-
-function localupdate_step!(it::IterativeSolver{<:VUMPS}, state,
-                           scheduler=Defaults.scheduler[])
-    alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
-    alg_orth = QRpos()
-
-    mps = state.mps
-    eachsite = 1:length(mps)
-    src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
-    src_ACs = mps isa Multiline ? eachcol(mps.AC) : mps.AC
-    ACs = similar(mps.AC)
-    dst_ACs = mps isa Multiline ? eachcol(ACs) : ACs
-
-    tforeach(eachsite, src_ACs, src_Cs; scheduler) do site, AC₀, C₀
-        dst_ACs[site] = _localupdate_vumps_step!(site, mps, state.operator, state.envs,
-                                                 AC₀, C₀; parallel=false, alg_orth,
-                                                 state.which, alg_eigsolve)
-        return nothing
-    end
-
-    return ACs
-end
-
-function _localupdate_vumps_step!(site, mps, operator, envs, AC₀, C₀;
-                                  parallel::Bool=false, alg_orth=QRpos(),
-                                  alg_eigsolve=Defaults.eigsolver, which)
-    if !parallel
-        _, AC = fixedpoint(∂∂AC(site, mps, operator, envs), AC₀, which, alg_eigsolve)
-        _, C = fixedpoint(∂∂C(site, mps, operator, envs), C₀, which, alg_eigsolve)
-        return regauge!(AC, C; alg=alg_orth)
-    end
-
-    local AC, C
-    @sync begin
-        @spawn begin
-            _, AC = fixedpoint(∂∂AC(site, mps, operator, envs),
-                               AC₀, which, alg_eigsolve)
-        end
-        @spawn begin
-            _, C = fixedpoint(∂∂C(site, mps, operator, envs),
-                              C₀, which, alg_eigsolve)
+function _vumps_localupdate(loc, ψ, H, envs, alg_eigsolve, factalg=QRpos())
+    local AC′, C′
+    if Defaults.scheduler[] isa SerialScheduler
+        _, AC′ = fixedpoint(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], :SR, alg_eigsolve)
+        _, C′ = fixedpoint(∂∂C(loc, ψ, H, envs), ψ.C[loc], :SR, alg_eigsolve)
+    else
+        @sync begin
+            Threads.@spawn begin
+                _, AC′ = fixedpoint(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], :SR, alg_eigsolve)
+            end
+            Threads.@spawn begin
+                _, C′ = fixedpoint(∂∂C(loc, ψ, H, envs), ψ.C[loc], :SR, alg_eigsolve)
+            end
         end
     end
     return regauge!(AC, C; alg=alg_orth)

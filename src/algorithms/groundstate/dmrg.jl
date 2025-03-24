@@ -38,7 +38,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
         for iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
 
             zerovector!(ϵs)
             for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
@@ -112,7 +112,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
 
     LoggingExtras.withlevel(; alg.verbosity) do
         for iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             zerovector!(ϵs)
 
             # left to right sweep

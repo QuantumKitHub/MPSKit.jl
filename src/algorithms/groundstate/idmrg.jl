@@ -85,7 +85,7 @@ Two-site infinite DMRG algorithm for finding the dominant eigenvector.
 
 $(TYPEDFIELDS)
 """
-@kwdef struct IDMRG2{A} <: Algorithm
+@kwdef struct IDMRG2{A,S} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
 
@@ -105,7 +105,7 @@ $(TYPEDFIELDS)
     alg_svd::S = Defaults.alg_svd()
 
     "algorithm used for [truncation](@extref TensorKit.tsvd) of the two-site update"
-    trscheme::TruncationScheme = truncerr(1e-6)
+    trscheme::TruncationScheme
 end
 
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(ost, H))
