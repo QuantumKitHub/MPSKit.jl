@@ -114,7 +114,7 @@ $(TYPEDFIELDS)
 
 * [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
-@kwdef struct TDVP2{A,F} <: Algorithm
+@kwdef struct TDVP2{A,S,F} <: Algorithm
     "algorithm used in the exponential solvers"
     integrator::A = Defaults.alg_expsolve()
 
@@ -124,8 +124,11 @@ $(TYPEDFIELDS)
     "maximal amount of iterations for gauging algorithm"
     gaugemaxiter::Int = Defaults.maxiter
 
+    "algorithm used for the singular value decomposition"
+    alg_svd::S = Defaults.alg_svd()
+
     "algorithm used for truncation of the two-site update"
-    trscheme::TruncationScheme = truncerr(1e-3)
+    trscheme::TruncationScheme
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
@@ -140,7 +143,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
         h_ac2 = ∂∂AC2(i, ψ, H, envs)
         nac2 = integrate(h_ac2, ac2, t, dt / 2, alg.integrator)
 
-        nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
+        nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=alg.alg_svd)
         ψ.AC[i] = (nal, complex(nc))
         ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
@@ -156,7 +159,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
         h_ac2 = ∂∂AC2(i - 1, ψ, H, envs)
         nac2 = integrate(h_ac2, ac2, t + dt / 2, dt / 2, alg.integrator)
 
-        nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=TensorKit.SVD())
+        nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=alg.alg_svd)
         ψ.AC[i - 1] = (nal, complex(nc))
         ψ.AC[i] = (complex(nc), _transpose_front(nar))
 

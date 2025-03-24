@@ -101,6 +101,9 @@ $(TYPEDFIELDS)
     "algorithm used for the eigenvalue solvers"
     alg_eigsolve::A = Defaults.alg_eigsolve()
 
+    "algorithm used for the singular value decomposition"
+    alg_svd::S = Defaults.alg_svd()
+
     "algorithm used for [truncation](@extref TensorKit.tsvd) of the two-site update"
     trscheme::TruncationScheme = truncerr(1e-6)
 end
@@ -125,7 +128,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
                 h_ac2 = ∂∂AC2(pos, ψ, H, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=TensorKit.SVD())
+                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -143,7 +146,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
             h_ac2 = ∂∂AC2(0, ψ, H, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=TensorKit.SVD())
+            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
             normalize!(c)
 
             ψ.AC[end] = al * c
@@ -165,7 +168,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
                 h_ac2 = ∂∂AC2(pos, ψ, H, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=TensorKit.SVD())
+                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -183,7 +186,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
                                           inv(ψ.C[end])[2; 3] * ψ.AC[1][3 -4; -3]
             h_ac2 = ∂∂AC2(0, ψ, H, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
-            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=TensorKit.SVD())
+            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
             normalize!(c)
 
             ψ.AR[end] = _transpose_front(inv(ψ.C[end - 1]) * _transpose_tail(al * c))
