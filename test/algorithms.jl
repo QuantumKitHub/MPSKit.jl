@@ -674,7 +674,7 @@ end
 
     @test expectation_value(ψ, H) ≈
           expectation_value(ψ, 1 => -g * S_x()) + expectation_value(ψ, (1, 2) => -S_zz())
-    Z_mpo = MPSKit.add_util_leg(S_z())
+    Z_mpo = MPSKit.add_util_mpoleg(S_z())
     G = correlator(ψ, Z_mpo, Z_mpo, 1, 2:5)
     G2 = correlator(ψ, S_zz(), 1, 3:2:5)
     @test isapprox(G[2], G2[1], atol=1e-2)
