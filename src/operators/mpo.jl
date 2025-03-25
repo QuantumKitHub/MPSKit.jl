@@ -27,7 +27,7 @@ function FiniteMPO(Os::AbstractVector{O}) where {O}
 end
 
 function FiniteMPO(O::AbstractTensorMap{T,S,N,N}) where {T,S,N}
-    return FiniteMPO(decompose_localmpo(add_util_leg(O)))
+    return FiniteMPO(decompose_localmpo(add_util_mpoleg(O)))
 end
 
 """
