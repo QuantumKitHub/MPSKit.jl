@@ -65,6 +65,18 @@ function add_util_leg(tensor::AbstractTensorMap{T,S,N1,N2}) where {T,S,N1,N2}
     return util_front * tensor * util_back
 end
 
+function add_util_mpoleg(tensor::AbstractTensorMap{T,S,N1,N2}) where {T,S,N1,N2} 
+    # separate function for mpo because add_util_leg is also used for mps from tensors
+    # and the additional legs there can be different depending on the fusion tree
+
+    ou = Vect[sectortype(_firstspace(tensor))](one(first(sectors(_firstspace(tensor)))) => 1)
+
+    util_front = isomorphism(storagetype(tensor), ou * codomain(tensor), codomain(tensor))
+    util_back = isomorphism(storagetype(tensor), domain(tensor), domain(tensor) * ou)
+
+    return util_front * tensor * util_back
+end
+
 function union_split(a::AbstractArray)
     T = reduce((a, b) -> Union{a,b}, typeof.(a))
     nA = similar(a, T)
