@@ -314,7 +314,7 @@ function BlockTensorKit.nonzero_pairs(W::JordanMPOTensor)
 end
 function BlockTensorKit.nonzero_length(W::JordanMPOTensor)
     return nonzero_length(W.A) + nonzero_length(W.B) + nonzero_length(W.C) +
-           nonzero_length(W.D) + 2
+           nonzero_length(W.D) + Int(size(W, 1) > 1) + Int(size(W, 4) > 1)
 end
 
 # linalg
