@@ -469,9 +469,11 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     operator_size = maximum(K -> maximum(last, K; init=1) + 1, nonzero_keys)
     virtualspaces = PeriodicArray([Vector{MissingS}(missing, operator_size)
                                    for _ in 1:length(nonzero_keys)])
+
+    __oneunit = _oneunit(local_operators[1])
     for V in virtualspaces
-        V[1] = oneunit(S)
-        V[end] = oneunit(S)
+        V[1] = __oneunit
+        V[end] = __oneunit
     end
 
     # start by filling in tensors -> space information available
@@ -517,7 +519,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
         end
     end
 
-    foreach(Base.Fix2(replace!, missing => oneunit(S)), virtualspaces)
+    foreach(Base.Fix2(replace!, missing => __oneunit), virtualspaces)
     virtualsumspaces = map(virtualspaces) do V
         return SumSpace(collect(S, V))
     end
@@ -546,6 +548,12 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     end
 
     return InfiniteMPOHamiltonian(PeriodicArray(Os))
+end
+
+function _oneunit(localop::LocalOperator) # determine relevant unit without calling oneunit(S)
+    sp = space(localop.opp[1],1)
+    unit = one(collect(sectors(sp))[1]) 
+    return Vect[sectortype(sp)](unit=>1)
 end
 
 function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
