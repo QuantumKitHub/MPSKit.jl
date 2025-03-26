@@ -552,7 +552,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     return InfiniteMPOHamiltonian(PeriodicArray(Os))
 end
 
-function _oneunit(localop::LocalOperator) # determine relevant unit without calling oneunit(S)
+function _oneunit(localop) # determine relevant unit without calling oneunit(S)
     sp = space(localop.opp[1],1)
     unit = one(collect(sectors(sp))[1]) 
     return Vect[sectortype(sp)](unit=>1)
