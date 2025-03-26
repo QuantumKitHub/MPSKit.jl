@@ -380,13 +380,15 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
     E = scalartype(T)
     S = spacetype(T)
 
+    __oneunit = _oneunit(local_operators[1])
+
     virtualspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
-    virtualspaces[1] = SumSpace(oneunit(S))
-    virtualspaces[end] = SumSpace(oneunit(S))
+    virtualspaces[1] = SumSpace(__oneunit)
+    virtualspaces[end] = SumSpace(__oneunit)
 
     for i in 1:(length(lattice) - 1)
         n_channels = maximum(last, nonzero_keys[i]; init=1) + 1
-        V = SumSpace(fill(oneunit(S), n_channels))
+        V = SumSpace(fill(__oneunit, n_channels))
         if n_channels > 2
             for ((key_L, key_R), O) in zip(nonzero_keys[i], nonzero_opps[i])
                 V[key_R == 0 ? end : key_R] = if O isa Number
