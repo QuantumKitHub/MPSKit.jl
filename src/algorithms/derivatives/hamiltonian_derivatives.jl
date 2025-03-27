@@ -28,8 +28,10 @@ struct JordanMPO_∂∂AC{O1,O2,O3} <: DerivativeOperator
 end
 
 Base.:*(H::JordanMPO_∂∂AC, x) = H(x)
+const _HAM_MPS_TYPES = Union{FiniteMPS{<:MPSTensor},WindowMPS{<:MPSTensor},
+                             InfiniteMPS{<:MPSTensor}}
 
-function ∂∂AC(pos::Int, mps, operator::MPOHamiltonian, envs)
+function ∂∂AC(pos::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian, envs)
     GL = leftenv(envs, pos, mps)
     GR = rightenv(envs, pos, mps)
     W = operator[pos]
@@ -105,7 +107,8 @@ function ∂∂AC(pos::Int, mps, operator::MPOHamiltonian, envs)
     return JordanMPO_∂∂AC(onsite, not_started, finished, starting, ending, continuing)
 end
 
-function ∂∂AC(site::Int, mps, operator::MPOHamiltonian{<:JordanMPOTensor}, envs)
+function ∂∂AC(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
+              envs)
     GL = leftenv(envs, site, mps)
     GR = rightenv(envs, site, mps)
     W = operator[site]
@@ -177,7 +180,7 @@ function ∂∂AC(site::Int, mps, operator::MPOHamiltonian{<:JordanMPOTensor}, e
 end
 
 function (H::JordanMPO_∂∂AC)(x::MPSTensor)
-    y = zerovector!(similar(x))
+    y = zerovector(x)
 
     if !ismissing(H.onsite)
         @plansor y[-1 -2; -3] += x[-1 1; -3] * H.onsite[-2; 1]
@@ -242,7 +245,8 @@ end
 
 Base.:*(H::JordanMPO_∂∂AC2, x) = H(x)
 
-function ∂∂AC2(site::Int, mps, operator::MPOHamiltonian{<:JordanMPOTensor}, envs)
+function ∂∂AC2(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
+               envs)
     GL = leftenv(envs, site, mps)
     GR = rightenv(envs, site + 1, mps)
     W1 = operator[site]
