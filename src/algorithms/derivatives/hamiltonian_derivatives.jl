@@ -27,85 +27,43 @@ struct JordanMPO_∂∂AC{O1,O2,O3} <: DerivativeOperator
     end
 end
 
-Base.:*(H::JordanMPO_∂∂AC, x) = H(x)
+"""
+    JordanMPO_∂∂AC2{O1,O2,O3,O4}
+
+Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
+In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
+"""
+struct JordanMPO_∂∂AC2{O1,O2,O3,O4} <: DerivativeOperator
+    II::Union{O1,Missing} # not_started
+    IC::Union{O2,Missing} # starting right
+    ID::Union{O1,Missing} # onsite right
+    CB::Union{O2,Missing} # starting left - ending right
+    CA::Union{O3,Missing} # starting left - continuing right
+    AB::Union{O3,Missing} # continuing left - ending right
+    AA::O4 # continuing left - continuing right
+    BE::Union{O2,Missing} # ending left
+    DE::Union{O1,Missing} # onsite left
+    EE::Union{O1,Missing} # finished
+    function JordanMPO_∂∂AC2(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+        tensor = coalesce(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+        ismissing(tensor) && throw(ArgumentError("unable to determine type"))
+        S = spacetype(tensor)
+        M = storagetype(tensor)
+        O1 = tensormaptype(S, 1, 1, M)
+        O2 = tensormaptype(S, 2, 2, M)
+        O3 = tensormaptype(S, 3, 3, M)
+        return new{O1,O2,O3,typeof(AA)}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    end
+    function JordanMPO_∂∂AC2{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE,
+                                          EE) where {O1,O2,O3,O4}
+        return new{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    end
+end
+
+# Constructors
+# ------------
 const _HAM_MPS_TYPES = Union{FiniteMPS{<:MPSTensor},WindowMPS{<:MPSTensor},
                              InfiniteMPS{<:MPSTensor}}
-
-function ∂∂AC(pos::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian, envs)
-    GL = leftenv(envs, pos, mps)
-    GR = rightenv(envs, pos, mps)
-    W = operator[pos]
-
-    # starting
-    if !isfinite(operator) || pos < length(operator)
-        C = W[1, 1, 1, 2:(end - 1)]
-        GR_2 = GR[2:(end - 1)]
-        if nonzero_length(C) > 0 && nonzero_length(GR_2) > 0
-            @plansor starting_[-1 -2; -3 -4] ≔ removeunit(C, 1)[-1; -3 1] *
-                                               GR_2[-4 1; -2]
-            starting = only(starting_)
-        else
-            starting = missing
-        end
-    else
-        starting = missing
-    end
-
-    # ending
-    if !isfinite(operator) || pos > 1
-        B = W[2:(end - 1), 1, 1, end]
-        GL_2 = GL[2:(end - 1)]
-        if nonzero_length(B) > 0 && nonzero_length(GL_2) > 0
-            @plansor ending_[-1 -2; -3 -4] ≔ GL_2[-1 1; -3] * removeunit(B, 4)[1 -2; -4]
-            ending = nonzero_length(ending_) > 0 ? only(ending_) : missing
-        else
-            ending = missing
-        end
-    else
-        ending = missing
-    end
-
-    # onsite
-    if haskey(W, CartesianIndex(1, 1, 1, lastindex(W, 4)))
-        if !ismissing(starting)
-            D = removeunit(W[1, 1, 1, end], 1)
-            @plansor starting[-1 -2; -3 -4] += D[-1; -3 1] * GR[end][-4 1; -2]
-            onsite = missing
-        elseif !ismissing(ending)
-            D = removeunit(W[1, 1, 1, end], 4)
-            @plansor ending[-1 -2; -3 -4] += GL[1][-1 1; -3] * D[1 -2; -4]
-            onsite = missing
-        else
-            onsite = removeunit(removeunit(W[1, 1, 1, end], 4), 1)
-        end
-    else
-        onsite = missing
-    end
-
-    # not_started
-    if (!isfinite(operator) || pos > 1) && !ismissing(starting)
-        I = id(storagetype(GR[1]), physicalspace(W))
-        @plansor starting[-1 -2; -3 -4] += I[-1; -3] * removeunit(GR[1], 2)[-4; -2]
-        not_started = missing
-    else
-        not_started = removeunit(GR[1], 2)
-    end
-
-    # finished
-    if (!isfinite(operator) || pos < length(operator)) && !ismissing(ending)
-        I = id(storagetype(GL[end]), physicalspace(W))
-        @plansor ending[-1 -2; -3 -4] += removeunit(GL[end], 2)[-1; -3] * I[-2; -4]
-        finished = missing
-    else
-        finished = removeunit(GL[end], 2)
-    end
-
-    # continuing
-    A = W[2:(end - 1), 1, 1, 2:(end - 1)]
-    continuing = (GL[2:(end - 1)], A, GR[2:(end - 1)])
-
-    return JordanMPO_∂∂AC(onsite, not_started, finished, starting, ending, continuing)
-end
 
 function ∂∂AC(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
               envs)
@@ -178,72 +136,6 @@ function ∂∂AC(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:Jor
     return JordanMPO_∂∂AC{O1,O2,typeof(continuing)}(onsite, not_started, finished, starting,
                                                     ending, continuing)
 end
-
-function (H::JordanMPO_∂∂AC)(x::MPSTensor)
-    y = zerovector(x)
-
-    if !ismissing(H.onsite)
-        @plansor y[-1 -2; -3] += x[-1 1; -3] * H.onsite[-2; 1]
-    end
-
-    if !ismissing(H.finished)
-        @plansor y[-1 -2; -3] += H.finished[-1; 1] * x[1 -2; -3]
-    end
-
-    if !ismissing(H.not_started)
-        @plansor y[-1 -2; -3] += x[-1 -2; 1] * H.not_started[1; -3]
-    end
-
-    if !ismissing(H.starting)
-        @plansor y[-1 -2; -3] += x[-1 2; 1] * H.starting[-2 -3; 2 1]
-    end
-
-    if !ismissing(H.ending)
-        @plansor y[-1 -2; -3] += H.ending[-1 -2; 1 2] * x[1 2; -3]
-    end
-
-    GL, A, GR = H.continuing
-    if nonzero_length(A) > 0
-        @plansor y[-1 -2; -3] += GL[-1 5; 4] * x[4 2; 1] * A[5 -2; 2 3] * GR[1 3; -3]
-    end
-
-    return y
-end
-
-"""
-    JordanMPO_∂∂AC2{O1,O2,O3,O4}
-
-Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
-In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
-"""
-struct JordanMPO_∂∂AC2{O1,O2,O3,O4} <: DerivativeOperator
-    II::Union{O1,Missing} # not_started
-    IC::Union{O2,Missing} # starting right
-    ID::Union{O1,Missing} # onsite right
-    CB::Union{O2,Missing} # starting left - ending right
-    CA::Union{O3,Missing} # starting left - continuing right
-    AB::Union{O3,Missing} # continuing left - ending right
-    AA::O4 # continuing left - continuing right
-    BE::Union{O2,Missing} # ending left
-    DE::Union{O1,Missing} # onsite left
-    EE::Union{O1,Missing} # finished
-    function JordanMPO_∂∂AC2(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-        tensor = coalesce(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-        ismissing(tensor) && throw(ArgumentError("unable to determine type"))
-        S = spacetype(tensor)
-        M = storagetype(tensor)
-        O1 = tensormaptype(S, 1, 1, M)
-        O2 = tensormaptype(S, 2, 2, M)
-        O3 = tensormaptype(S, 3, 3, M)
-        return new{O1,O2,O3,typeof(AA)}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-    end
-    function JordanMPO_∂∂AC2{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE,
-                                          EE) where {O1,O2,O3,O4}
-        return new{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-    end
-end
-
-Base.:*(H::JordanMPO_∂∂AC2, x) = H(x)
 
 function ∂∂AC2(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
                envs)
@@ -385,48 +277,40 @@ function ∂∂AC2(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:Jo
     return JordanMPO_∂∂AC2(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
 end
 
-function (H::JordanMPO_∂∂AC2)(x::MPOTensor)
+# Actions
+# -------
+function (H::JordanMPO_∂∂AC)(x::MPSTensor)
     y = zerovector(x)
 
-    if !ismissing(H.II)
-        @plansor y[-1 -2; -3 -4] += x[-1 -2; 1 -4] * H.II[-3; 1]
+    ismissing(H.onsite) || @plansor y[-1 -2; -3] += x[-1 1; -3] * H.onsite[-2; 1]
+    ismissing(H.finished) || @plansor y[-1 -2; -3] += H.finished[-1; 1] * x[1 -2; -3]
+    ismissing(H.not_started) || @plansor y[-1 -2; -3] += x[-1 -2; 1] * H.not_started[1; -3]
+    ismissing(H.starting) || @plansor y[-1 -2; -3] += x[-1 2; 1] * H.starting[-2 -3; 2 1]
+    ismissing(H.ending) || @plansor y[-1 -2; -3] += H.ending[-1 -2; 1 2] * x[1 2; -3]
+
+    GL, A, GR = H.continuing
+    if nonzero_length(A) > 0
+        @plansor y[-1 -2; -3] += GL[-1 5; 4] * x[4 2; 1] * A[5 -2; 2 3] * GR[1 3; -3]
     end
 
-    if !ismissing(H.IC)
-        @plansor y[-1 -2; -3 -4] += x[-1 -2; 1 2] * H.IC[-4 -3; 2 1]
-    end
+    return y
+end
 
-    if !ismissing(H.ID)
-        @plansor y[-1 -2; -3 -4] += x[-1 -2; -3 1] * H.ID[-4; 1]
-    end
-
-    if !ismissing(H.CB)
-        @plansor y[-1 -2; -3 -4] += x[-1 1; -3 2] * H.CB[-2 -4; 1 2]
-    end
-
-    if !ismissing(H.CA)
-        @plansor y[-1 -2; -3 -4] += x[-1 1; 3 2] * H.CA[-2 -4 -3; 1 2 3]
-    end
-
-    if !ismissing(H.AB)
-        @plansor y[-1 -2; -3 -4] += x[1 2; -3 3] * H.AB[-1 -2 -4; 1 2 3]
-    end
-
-    if !ismissing(H.BE)
-        @plansor y[-1 -2; -3 -4] += x[1 2; -3 -4] * H.BE[-1 -2; 1 2]
-    end
-
-    if !ismissing(H.DE)
-        @plansor y[-1 -2; -3 -4] += x[-1 1; -3 -4] * H.DE[-2; 1]
-    end
-
-    if !ismissing(H.EE)
-        @plansor y[-1 -2; -3 -4] += x[1 -2; -3 -4] * H.EE[-1; 1]
-    end
+function (H::JordanMPO_∂∂AC2)(x::MPOTensor)
+    y = zerovector(x)
+    ismissing(H.II) || @plansor y[-1 -2; -3 -4] += x[-1 -2; 1 -4] * H.II[-3; 1]
+    ismissing(H.IC) || @plansor y[-1 -2; -3 -4] += x[-1 -2; 1 2] * H.IC[-4 -3; 2 1]
+    ismissing(H.ID) || @plansor y[-1 -2; -3 -4] += x[-1 -2; -3 1] * H.ID[-4; 1]
+    ismissing(H.CB) || @plansor y[-1 -2; -3 -4] += x[-1 1; -3 2] * H.CB[-2 -4; 1 2]
+    ismissing(H.CA) || @plansor y[-1 -2; -3 -4] += x[-1 1; 3 2] * H.CA[-2 -4 -3; 1 2 3]
+    ismissing(H.AB) || @plansor y[-1 -2; -3 -4] += x[1 2; -3 3] * H.AB[-1 -2 -4; 1 2 3]
+    ismissing(H.BE) || @plansor y[-1 -2; -3 -4] += x[1 2; -3 -4] * H.BE[-1 -2; 1 2]
+    ismissing(H.DE) || @plansor y[-1 -2; -3 -4] += x[-1 1; -3 -4] * H.DE[-2; 1]
+    ismissing(H.EE) || @plansor y[-1 -2; -3 -4] += x[1 -2; -3 -4] * H.EE[-1; 1]
 
     GL, A1, A2, GR = H.AA
     if nonzero_length(A1) > 0 && nonzero_length(A2) > 0
-        # TODO: there are too many entries here!
+        # TODO: there are too many entries here, this could be further optimized
         @plansor y[-1 -2; -3 -4] += GL[-1 7; 6] * x[6 5; 1 3] * A1[7 -2; 5 4] *
                                     A2[4 -4; 3 2] * GR[1 2; -3]
     end
