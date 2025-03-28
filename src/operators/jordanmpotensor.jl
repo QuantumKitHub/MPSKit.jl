@@ -106,21 +106,6 @@ end
 # Properties
 # ----------
 TensorKit.space(W::JordanMPOTensor) = W.V
-
-Base.size(W::JordanMPOTensor) = size(eachspace(W))
-Base.size(W::JordanMPOTensor, i::Int) = i ≤ 4 ? size(W)[i] : 1
-Base.length(W::JordanMPOTensor) = prod(size(W))
-Base.axes(W::JordanMPOTensor) = map(Base.OneTo, size(W))
-
-Base.firstindex(W::JordanMPOTensor) = 1
-Base.firstindex(::JordanMPOTensor, i::Int) = i ≤ 4 ? 1 : 1
-Base.lastindex(W::JordanMPOTensor) = prod(size(W))
-Base.lastindex(W::JordanMPOTensor, i::Int) = i ≤ 4 ? size(W, i) : 1
-
-Base.CartesianIndices(W::JordanMPOTensor) = CartesianIndices(size(W))
-Base.eachindex(W::JordanMPOTensor) = eachindex(size(W))
-
-Base.eltype(W::JordanMPOTensor) = eltype(typeof(W))
 Base.eltype(::Type{JordanMPOTensor{E,S,TA,TB,TC,TD}}) where {E,S,TA,TB,TC,TD} = TA
 
 function Base.haskey(W::JordanMPOTensor, I::CartesianIndex{4})
@@ -146,7 +131,7 @@ function Base.haskey(W::JordanMPOTensor, I::CartesianIndex{4})
 end
 
 # TODO: avoid this slow fallback wherever possible:
-Base.parent(W::JordanMPOTensor) = (parent(SparseBlockTensorMap(W)))
+Base.parent(W::JordanMPOTensor) = parent(SparseBlockTensorMap(W))
 
 BlockTensorKit.issparse(W::JordanMPOTensor) = true
 
@@ -182,13 +167,6 @@ end
 
 # Indexing
 # --------
-@inline function Base.checkbounds(W::JordanMPOTensor, I...)
-    checkbounds(Bool, W, I...) || Base.throw_boundserror(W, I)
-    return nothing
-end
-@inline function Base.checkbounds(::Type{Bool}, W::JordanMPOTensor, I...)
-    return Base.checkbounds_indices(Bool, axes(W), I)
-end
 
 @inline Base.getindex(W::JordanMPOTensor, I::CartesianIndex{4}) = W[I.I...]
 @propagate_inbounds function Base.getindex(W::JordanMPOTensor, I::Vararg{Int,4})
@@ -209,43 +187,6 @@ end
     else
         return zeros(scalartype(W), eachspace(W)[i, 1, 1, j])
     end
-end
-
-# TODO: this is definitely suboptimal, but might not matter?
-@propagate_inbounds function Base.getindex(W::JordanMPOTensor,
-                                           inds::Vararg{BlockTensorKit.SliceIndex,4})
-    V = space(eachspace(W)[inds...])
-    dst = similar(W, V)
-
-    Rsrc = CartesianIndices(W)[inds...]
-    Rdst = CartesianIndices(dst)
-
-    for I in nonzero_keys(W)
-        j = @something findfirst(==(I), Rsrc) continue
-        dst[Rdst[j]] = W[I]
-    end
-
-    return dst
-end
-@propagate_inbounds function Base.getindex(W::JordanMPOTensor,
-                                           inds::Vararg{BlockTensorKit.Strided.SliceIndex,
-                                                        4})
-    V = space(eachspace(W)[inds...])
-    dst = similar(W, V)
-
-    # prevent discarding of singleton dimensions
-    inds2 = map(inds) do ind
-        return ind isa Int ? (ind:ind) : ind
-    end
-    Rsrc = CartesianIndices(W)[inds2...]
-    Rdst = CartesianIndices(dst)
-
-    for I in nonzero_keys(W)
-        j = @something findfirst(==(I), Rsrc) continue
-        dst[Rdst[j]] = W[I]
-    end
-
-    return dst
 end
 
 @inline function Base.setindex!(W::JordanMPOTensor, v::MPOTensor, I::CartesianIndex{4})
