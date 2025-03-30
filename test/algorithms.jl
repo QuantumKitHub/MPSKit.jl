@@ -687,6 +687,8 @@ end
     verbosity = verbosity_conv
     @testset "mpo * infinite ≈ infinite" begin
         ψ = InfiniteMPS([ℙ^2, ℙ^2], [ℙ^10, ℙ^10])
+        ψ0 = InfiniteMPS([ℙ^2, ℙ^2], [ℙ^12, ℙ^12])
+
         H = force_planar(repeat(transverse_field_ising(; g=4), 2))
 
         dt = 1e-3
@@ -695,12 +697,12 @@ end
         W1 = MPSKit.DenseMPO(sW1)
         W2 = MPSKit.DenseMPO(sW2)
 
-        ψ1, _ = approximate(ψ, (sW1, ψ), VOMPS(; verbosity))
-        ψ2, _ = approximate(ψ, (W2, ψ), VOMPS(; verbosity))
-        ψ3, _ = approximate(ψ, (W1, ψ), IDMRG(; verbosity))
-        ψ4, _ = approximate(ψ, (sW2, ψ), IDMRG2(; trscheme=truncdim(20), verbosity))
+        ψ1, _ = approximate(ψ0, (sW1, ψ), VOMPS(; verbosity))
+        ψ2, _ = approximate(ψ0, (W2, ψ), VOMPS(; verbosity))
+        ψ3, _ = approximate(ψ0, (W1, ψ), IDMRG(; verbosity))
+        ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trscheme=truncdim(15), verbosity))
         ψ5, _ = timestep(ψ, H, 0.0, dt, TDVP())
-        ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme=truncdim(10)))
+        ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme=truncdim(15)))
 
         @test abs(dot(ψ1, ψ5)) ≈ 1.0 atol = dt
         @test abs(dot(ψ3, ψ5)) ≈ 1.0 atol = dt
