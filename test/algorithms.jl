@@ -700,9 +700,9 @@ end
         ψ1, _ = approximate(ψ0, (sW1, ψ), VOMPS(; verbosity))
         ψ2, _ = approximate(ψ0, (W2, ψ), VOMPS(; verbosity))
         ψ3, _ = approximate(ψ0, (W1, ψ), IDMRG(; verbosity))
-        ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trscheme=truncdim(15), verbosity))
+        ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trscheme=truncdim(12), verbosity))
         ψ5, _ = timestep(ψ, H, 0.0, dt, TDVP())
-        ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme=truncdim(15)))
+        ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme=truncdim(12)))
 
         @test abs(dot(ψ1, ψ5)) ≈ 1.0 atol = dt
         @test abs(dot(ψ3, ψ5)) ≈ 1.0 atol = dt
