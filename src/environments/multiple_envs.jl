@@ -28,10 +28,10 @@ end
 """
     Recalculate in-place each sub-env in MultipleEnvironments
 """
-function recalculate!(envs::MultipleEnvironments, above, operator::LazySum, below=above;
+function recalculate!(envs::MultipleEnvironments, below, operator::LazySum, above=below;
                       kwargs...)
     for (subenvs, subO) in zip(envs.envs, operator)
-        recalculate!(subenvs, above, subO, below; kwargs...)
+        recalculate!(subenvs, below, subO, above; kwargs...)
     end
     return envs
 end
@@ -46,17 +46,17 @@ function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
 end
 
 function transfer_rightenv!(envs::MultipleEnvironments{<:InfiniteEnvironments},
-                            above, operator, below, pos::Int)
+                            below, operator, above, pos::Int)
     for (subH, subenv) in zip(operator, envs.envs)
-        transfer_rightenv!(subenv, above, subH, below, pos)
+        transfer_rightenv!(subenv, below, subH, above, pos)
     end
     return envs
 end
 
 function transfer_leftenv!(envs::MultipleEnvironments{<:InfiniteEnvironments},
-                           above, operator, below, pos::Int)
+                           below, operator, above, pos::Int)
     for (subH, subenv) in zip(operator, envs.envs)
-        transfer_leftenv!(subenv, above, subH, below, pos)
+        transfer_leftenv!(subenv, below, subH, above, pos)
     end
     return envs
 end
