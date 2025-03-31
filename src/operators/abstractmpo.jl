@@ -203,6 +203,11 @@ end
 
 function _fuse_mpo_mpo(O1::MPOTensor, O2::MPOTensor, Fₗ, Fᵣ)
     return if O1 isa BraidingTensor && O2 isa BraidingTensor
+        # shouldn't happen
+        T = promote_type(scalartype(O1), scalartype(O2))
+        V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
+            physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
+        return BraidingTensor{T}(V)
     elseif O1 isa BraidingTensor
         @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
                                      O2[1 3; -3 5] *
