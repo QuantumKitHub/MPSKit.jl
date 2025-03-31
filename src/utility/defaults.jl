@@ -8,6 +8,7 @@ module Defaults
 import KrylovKit: GMRES, Arnoldi, Lanczos
 using OhMyThreads
 using ..MPSKit: DynamicTol
+using TensorKit: TensorKit
 
 const VERBOSE_NONE = 0
 const VERBOSE_WARN = 1
@@ -53,6 +54,8 @@ function alg_eigsolve(; ishermitian=true, tol=tol, maxiter=maxiter, verbosity=0,
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
+alg_svd() = TensorKit.SDD()
+
 # TODO: make verbosity and maxiter actually do something
 function alg_environments(; tol=tol, maxiter=maxiter, verbosity=0,
                           dynamic_tols=dynamic_tols, tol_min=tol_min, tol_max=tol_max,
@@ -60,6 +63,7 @@ function alg_environments(; tol=tol, maxiter=maxiter, verbosity=0,
     alg = (; tol, maxiter, verbosity)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
+
 function alg_expsolve(; tol=tol, maxiter=maxiter, verbosity=0,
                       ishermitian=true, krylovdim=krylovdim)
     return ishermitian ? Lanczos(; tol, maxiter, krylovdim, verbosity) :

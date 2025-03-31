@@ -363,6 +363,8 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
                 F_right = fusers[site + 1][k, i, l]
                 j′ = indmap[j, i, l]
                 k′ = indmap[k, i, l]
+                ((j′ == 1 && k′ == 1) ||
+                 (j′ == size(output[site], 1) && k′ == size(output[site], 4))) && continue
                 @plansor o[-1 -2; -3 -4] := h[1 2; -3 6] *
                                             F_left[-1; 1 3 5] *
                                             conj(F_right[-4; 6 7 8]) *
@@ -377,6 +379,8 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
                 F_right = fusers[site + 1][i, l, k]
                 j′ = indmap[i, l, j]
                 k′ = indmap[i, l, k]
+                ((j′ == 1 && k′ == 1) ||
+                 (j′ == size(output[site], 1) && k′ == size(output[site], 4))) && continue
                 @plansor o[-1 -2; -3 -4] := h[1 -2; 3 6] *
                                             F_left[-1; 4 2 1] *
                                             conj(F_right[-4; 8 7 6]) *
@@ -393,6 +397,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
         if j == 1
             F_right = fusers[2][k, end, end]
             j′ = indmap[k, chi, chi]
+            j′ == 1 && continue
             @plansor o[-1 -2; -3 -4] := h[-1 -2; -3 2] * conj(F_right[-4; 2 3 3])
             output[1][1, 1, 1, j′] = o
         end
@@ -401,13 +406,13 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
         if 1 < j < chi
             F_right = fusers[2][1, j, k]
             j′ = indmap[1, j, k]
+            j′ == 1 && continue
             @plansor o[-1 -2; -3 -4] := h[4 -2; 3 1] *
                                         conj(F_right[-4; 6 2 1]) *
                                         τ[5 4; 2 3] * τ[-3 -1; 6 5]
             output[1][1, 1, 1, j′] = o
         end
     end
-    output[1][1, 1, 1, 1] = BraidingTensor{scalartype(H)}(eachspace(output[1])[1])
 
     # ender
     for (I, h) in nonzero_pairs(H[end])
@@ -415,6 +420,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
         if k > 1
             F_left = fusers[end][j, k, chi]
             k′ = indmap[j, k, chi]
+            k′ == size(output[end], 1) && continue
             @plansor o[-1 -2; -3 -4] := F_left[-1; 1 2 6] * h[1 3; -3 4] * τ[3 2; 4 5] *
                                         τ[5 6; -4 -2]
             output[end][k′, 1, 1, 1] = o

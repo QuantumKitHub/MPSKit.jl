@@ -176,7 +176,7 @@ end
 
     @test real(e2) ≤ real(e1)
 
-    window, envs = timestep(window, ham, 0.1, 0.0, TDVP2(), envs)
+    window, envs = timestep(window, ham, 0.1, 0.0, TDVP2(; trscheme=truncdim(20)), envs)
     window, envs = timestep(window, ham, 0.1, 0.0, TDVP(), envs)
 
     e3 = expectation_value(window, (1, 2) => O)

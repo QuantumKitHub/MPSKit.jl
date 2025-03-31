@@ -8,12 +8,17 @@ An algorithm that uses a two-site update step to change the bond dimension of a 
 $(TYPEDFIELDS)
 """
 @kwdef struct VUMPSSvdCut <: Algorithm
-    "tolerance for gauging algorithm"
-    tol_gauge = Defaults.tolgauge
-    "tolerance for the eigenvalue solver"
-    tol_eigenval = Defaults.tol
+    "algorithm used for gauging the `InfiniteMPS`"
+    alg_gauge = Defaults.alg_gauge(; dynamic_tols=false)
+
+    "algorithm used for the eigenvalue solvers"
+    alg_eigsolve = Defaults.alg_eigsolve(; dynamic_tols=false)
+
+    "algorithm used for the singular value decomposition"
+    alg_svd = Defaults.alg_svd()
+
     "algorithm used for [truncation][@extref TensorKit.tsvd] of the two-site update"
-    trscheme::TruncationScheme = notrunc()
+    trscheme::TruncationScheme
 end
 
 function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
@@ -31,11 +36,12 @@ function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
 
     # collapse back to 1 site
     if D2 != D1
-        (nstate, nenvs) = changebonds(nstate, nH,
-                                      SvdCut(; trscheme=truncspace(infimum(D1, D2))), nenvs)
+        cut_alg = SvdCut(; alg.alg_svd, trscheme=truncspace(infimum(D1, D2)))
+        nstate, nenvs = changebonds(nstate, nH, cut_alg, nenvs)
     end
 
-    collapsed = InfiniteMPS([nstate.AL[1]], nstate.C[1]; tol=alg.tol_gauge)
+    collapsed = InfiniteMPS([nstate.AL[1]], nstate.C[1]; alg.alg_gauge.tol,
+                            alg.alg_gauge.maxiter)
     recalculate!(envs, collapsed, H, collapsed)
 
     return collapsed, envs
@@ -47,17 +53,13 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
         @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
 
         h_ac2 = ∂∂AC2(loc, state, H, envs)
-        (vals, vecs, _) = eigsolve(h_ac2, AC2, 1, :SR; tol=alg.tol_eigenval,
-                                   ishermitian=false)
-        nAC2 = vecs[1]
+        _, nAC2 = fixedpoint(h_ac2, AC2, :SR, alg.alg_eigsolve)
 
         h_c = ∂∂C(loc + 1, state, H, envs)
-        (vals, vecs, _) = eigsolve(h_c, state.C[loc + 1], 1, :SR; tol=alg.tol_eigenval,
-                                   ishermitian=false)
-        nC2 = vecs[1]
+        _, nC2 = fixedpoint(h_c, state.C[loc + 1], :SR, alg.alg_eigsolve)
 
         #svd ac2, get new AL1 and S,V ---> AC
-        (AL1, S, V, eps) = tsvd(nAC2; trunc=alg.trscheme, alg=TensorKit.SVD())
+        AL1, S, V, eps = tsvd!(nAC2; trunc=alg.trscheme, alg=alg.alg_svd)
         @plansor AC[-1 -2; -3] := S[-1; 1] * V[1; -3 -2]
         meps = max(eps, meps)
 
@@ -72,16 +74,13 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
         copied = copy(state.AL)
         copied[loc] = AL1
         copied[loc + 1] = AL2
-        state = InfiniteMPS(copied; tol=alg.tol_gauge)
+        state = InfiniteMPS(copied; alg.alg_gauge.tol, alg.alg_gauge.maxiter)
         recalculate!(envs, state, H, state)
     end
     return state, envs
 end
 
 function changebonds(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environments(state, H))
-    if (length(state) == 1)
-        return changebonds_1(state, H, alg, envs)
-    else
-        return changebonds_n(state, H, alg, envs)
-    end
+    return length(state) == 1 ? changebonds_1(state, H, alg, envs) :
+           changebonds_n(state, H, alg, envs)
 end
