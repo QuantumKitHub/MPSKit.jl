@@ -242,7 +242,6 @@ function (H::Multiline{<:DerivativeOperator})(x::AbstractVector)
 end
 Base.:*(H::Multiline{<:DerivativeOperator}, x::AbstractVector) = H(x)
 
-
 # time dependent derivative operators
 (h::UntimedOperator{<:DerivativeOperator})(y, args...) = h.f * h.op(y)
 (h::TimedOperator{<:DerivativeOperator})(y, t::Number) = h.f(t) * h.op(y)
