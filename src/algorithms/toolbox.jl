@@ -36,8 +36,8 @@ function infinite_temperature_density_matrix(H::MPOHamiltonian)
 end
 
 """
-    calc_galerkin(above, operator, below, envs)
-    calc_galerkin(pos, above, operator, below, envs)
+    calc_galerkin(below, operator, above, envs)
+    calc_galerkin(pos, below, operator, above, envs)
 
 Calculate the Galerkin error, which is the error between the solution of the original problem, and the solution of the problem projected on the tangent space.
 Concretely, this is the overlap of the current state with the single-site derivative, projected onto the nullspace of the current state:
@@ -46,25 +46,25 @@ Concretely, this is the overlap of the current state with the single-site deriva
 \\epsilon = |VL * (VL' * \\frac{above}{\\partial AC_{pos}})|
 ```
 """
-function calc_galerkin(pos::Int, above::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
-                       below, envs)
-    AC´ = ∂∂AC(pos, above, operator, envs) * above.AC[pos]
+function calc_galerkin(pos::Int, below::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
+                       above, envs)
+    AC´ = ∂∂AC(pos, below, operator, envs) * above.AC[pos]
     normalize!(AC´)
     out = add!(AC´, below.AL[pos] * below.AL[pos]' * AC´, -1)
     return norm(out)
 end
-function calc_galerkin(pos::CartesianIndex{2}, above::MultilineMPS, operator::MultilineMPO,
-                       below::MultilineMPS, envs::MultilineEnvironments)
+function calc_galerkin(pos::CartesianIndex{2}, below::MultilineMPS, operator::MultilineMPO,
+                       above::MultilineMPS, envs::MultilineEnvironments)
     row, col = pos.I
-    return calc_galerkin(col, above[row], operator[row], below[row + 1], envs[row])
+    return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
 end
-function calc_galerkin(above::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
-                       below, envs)
-    return maximum(pos -> calc_galerkin(pos, above, operator, below, envs), 1:length(above))
+function calc_galerkin(below::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
+                       above, envs)
+    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), 1:length(above))
 end
-function calc_galerkin(above::MultilineMPS, operator::MultilineMPO, below::MultilineMPS,
+function calc_galerkin(below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS,
                        envs::MultilineEnvironments)
-    return maximum(pos -> calc_galerkin(pos, above, operator, below, envs),
+    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs),
                    CartesianIndices(size(above)))
 end
 
