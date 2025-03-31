@@ -72,6 +72,19 @@ function JordanMPOTensor(V::TensorMapSumSpace{S,2,2},
                          B::SparseBlockTensorMap{TB,E,S,2,1},
                          C::SparseBlockTensorMap{TC,E,S,1,2},
                          D::SparseBlockTensorMap{TD,E,S,1,1}) where {E,S,TA,TB,TC,TD}
+    allVs = eachspace(V)
+    VA = space(allVs[2:(end - 1), 1, 1, 2:(end - 1)])
+    VA == space(A) || throw(SpaceMismatch())
+
+    VB = removeunit(space(allVs[2:(end - 1), 1, 1, end]), 4)
+    VB == space(B) || throw(SpaceMismatch())
+
+    VC = removeunit(space(allVs[1, 1, 1, 2:(end - 1)]), 1)
+    VC == space(C) || throw(SpaceMismatch())
+
+    VD = removeunit(removeunit(space(allVs[1, 1, 1, end:end]), 4), 1)
+    VD == space(D) || throw(SpaceMismatch())
+
     return JordanMPOTensor{E,S,TA,TB,TC,TD}(V, A, B, C, D)
 end
 
