@@ -78,7 +78,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
 
     # loopback step: Algorithm 1
     # constructing the Nth order time evolution MPO
-    mpo = MPO(parent(H_n))
+    mpo = MPO(map(SparseBlockTensorMap, parent(H_n)))
     for (i, slice) in enumerate(parent(mpo))
         V_right = virtual_sz[i + 1]
         linds_right = linds[i + 1]

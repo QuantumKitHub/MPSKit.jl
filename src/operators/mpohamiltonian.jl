@@ -28,7 +28,7 @@ H = MPOHamiltonian(lattice, (i, i+1) => O for i in 1:length(lattice)-1)
 See also [`instantiate_operator`](@ref), which is responsable for instantiating the local
 operators in a form that is compatible with this constructor.
 """
-struct MPOHamiltonian{TO,V<:AbstractVector{TO}} <: AbstractMPO{TO}
+struct MPOHamiltonian{TO<:JordanMPOTensor,V<:AbstractVector{TO}} <: AbstractMPO{TO}
     W::V
 end
 
@@ -63,9 +63,10 @@ either `MPOTensor`, `Missing` or `Number`.
 """
 function FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
     T = promote_type(_split_mpoham_types.(Ws)...)
-    return FiniteMPOHamiltonian{T}(Ws)
+    W = jordanmpotensortype(T)
+    return FiniteMPOHamiltonian{W}(Ws)
 end
-function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor}
+function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:JordanMPOTensor}
     T = scalartype(O)
     L = length(W_mats)
     # initialize sumspaces
@@ -87,7 +88,7 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor}
     # ability to deduce spaces
     for (site, W_mat) in enumerate(W_mats)
         # physical space
-        operator_id = findfirst(x -> x isa O, W_mat)
+        operator_id = findfirst(x -> x isa MPOTensor, W_mat)
         @assert !isnothing(operator_id) "could not determine physical space at site $site"
         Pspaces[site] = physicalspace(W_mat[operator_id])
 
@@ -148,7 +149,8 @@ either `MPOTensor`, `Missing` or `Number`.
 """
 function InfiniteMPOHamiltonian(Ws::Vector{<:Matrix})
     T = promote_type(_split_mpoham_types.(Ws)...)
-    return InfiniteMPOHamiltonian{T}(Ws)
+    TW = jordanmpotensortype(T)
+    return InfiniteMPOHamiltonian{TW}(Ws)
 end
 function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor}
     # InfiniteMPOHamiltonian only works for square matrices:
@@ -167,7 +169,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor
 
     # physical spaces
     Pspaces = map(W_mats) do W_mat
-        operator_id = findfirst(x -> x isa O, W_mat)
+        operator_id = findfirst(x -> x isa MPOTensor, W_mat)
         @assert !isnothing(operator_id) "could not determine physical space"
         return physicalspace(W_mat[operator_id])
     end
@@ -577,20 +579,6 @@ function Base.getproperty(H::MPOHamiltonian, sym::Symbol)
     end
 end
 
-# function Base.getproperty(H::MPOHamiltonian{<:JordanMPOTensor}, sym::Symbol)
-#     if sym in (:A, :B, :C, :D)
-#         return map(Base.Fix2(Base.getproperty, sym), parent(H))
-#     else
-#         return getfield(H, sym)
-#     end
-# end
-
-function isidentitylevel(H::InfiniteMPOHamiltonian, i::Int)
-    isemptylevel(H, i) && return false
-    return all(parent(H)) do h
-        return (h[i, 1, 1, i] isa BraidingTensor)
-    end
-end
 function isidentitylevel(H::InfiniteMPOHamiltonian{<:JordanMPOTensor}, i::Int)
     if i == 1 || i == size(H[1], 1)
         return true
@@ -662,81 +650,6 @@ end
 
 # Linear Algebra
 # --------------
-
-function Base.:+(H₁::MPOH, H₂::MPOH) where {MPOH<:MPOHamiltonian}
-    check_length(H₁, H₂)
-    @assert all(physicalspace.(parent(H₁)) .== physicalspace.(parent(H₂))) "physical spaces should match"
-    isinf = MPOH <: InfiniteMPOHamiltonian
-
-    H = similar(parent(H₁))
-    for i in 1:length(H)
-        # instantiate new blocktensor
-        Vₗ₁ = left_virtualspace(H₁, i)
-        Vₗ₂ = left_virtualspace(H₂, i)
-        @assert Vₗ₁[1] == Vₗ₂[1] && Vₗ₁[end] == Vₗ₂[end] "trivial spaces should match"
-        Vₗ = (!isinf && i == 1) ? Vₗ₁ : BlockTensorKit.oplus(Vₗ₁[1:(end - 1)], Vₗ₂[2:end])
-
-        Vᵣ₁ = right_virtualspace(H₁, i)
-        Vᵣ₂ = right_virtualspace(H₂, i)
-        @assert Vᵣ₁[1] == Vᵣ₂[1] && Vᵣ₁[end] == Vᵣ₂[end] "trivial spaces should match"
-        Vᵣ = (!isinf && i == length(H)) ? Vᵣ₁ :
-             BlockTensorKit.oplus(Vᵣ₁[1:(end - 1)], Vᵣ₂[2:end])
-
-        W = similar(eltype(H), Vₗ ⊗ physicalspace(H₁, i) ← physicalspace(H₁, i) ⊗ Vᵣ)
-        #=
-        (Direct) sum of two hamiltonians in Jordan form:
-        (1 C₁ D₁)   (1 C₂ D₂)   (1  C₁  C₂  D₁+D₂)
-        (0 A₁ B₁) + (0 A₂ B₂) = (0  A₁  0   B₁   )
-        (0 0  1 )   (0 0  1 )   (0  0   A₂  B₂   )
-                                (0  0   0   1    )
-        =#
-        fill!(W, zero(scalartype(W)))
-        W[1, 1, 1, 1] = BraidingTensor{scalartype(W)}(eachspace(W)[1, 1, 1, 1])
-        W[end, 1, 1, end] = BraidingTensor{scalartype(W)}(eachspace(W)[end, 1, 1, end])
-
-        if H₁ isa InfiniteMPOHamiltonian || i != length(H)
-            C₁ = H₁.C[i]
-            C₁_inds = CartesianIndices((1:1, 1:1, 1:1, 2:(size(H₁[i], 4) - 1)))
-            copyto!(W, C₁_inds, C₁, CartesianIndices(C₁))
-
-            C₂ = H₂.C[i]
-            C₂_inds = CartesianIndices((1:1, 1:1, 1:1, size(H₁[i], 4):(size(W, 4) - 1)))
-            copyto!(W, C₂_inds, C₂, CartesianIndices(C₂))
-        end
-
-        D₁ = H₁.D[i]
-        D₂ = H₂.D[i]
-        W[1, 1, 1, end] = D₁ + D₂
-
-        if H₁ isa InfiniteMPOHamiltonian || i != 1 && i != length(H)
-            A₁ = H₁.A[i]
-            A₁_inds = CartesianIndices((2:(size(H₁[i], 1) - 1), 1:1, 1:1,
-                                        2:(size(H₁[i], 4) - 1)))
-            copyto!(W, A₁_inds, A₁, CartesianIndices(A₁))
-
-            A₂ = H₂.A[i]
-            A₂_inds = CartesianIndices((size(H₁[i], 1):(size(W, 1) - 1), 1:1, 1:1,
-                                        size(H₁[i], 4):(size(W, 4) - 1)))
-            copyto!(W, A₂_inds, A₂, CartesianIndices(A₂))
-        end
-
-        if H₁ isa InfiniteMPOHamiltonian || i != 1
-            B₁ = H₁.B[i]
-            B₁_inds = CartesianIndices((2:(size(H₁[i], 1) - 1), 1:1, 1:1,
-                                        size(W, 4):size(W, 4)))
-            copyto!(W, B₁_inds, B₁, CartesianIndices(B₁))
-
-            B₂ = H₂.B[i]
-            B₂_inds = CartesianIndices((size(H₁[i], 1):(size(W, 1) - 1), 1:1, 1:1,
-                                        size(W, 4):size(W, 4)))
-            copyto!(W, B₂_inds, B₂, CartesianIndices(B₂))
-        end
-
-        H[i] = W
-    end
-
-    return H₁ isa FiniteMPOHamiltonian ? FiniteMPOHamiltonian(H) : InfiniteMPOHamiltonian(H)
-end
 function Base.:+(H₁::FiniteMPOHamiltonian{O},
                  H₂::FiniteMPOHamiltonian{O}) where {O<:JordanMPOTensor}
     N = check_length(H₁, H₂)
@@ -803,15 +716,6 @@ Base.:-(H::MPOHamiltonian, λs::AbstractVector{<:Number}) = H + (-λs)
 Base.:-(λs::AbstractVector{<:Number}, H::MPOHamiltonian) = λs + (-H)
 Base.:-(H1::MPOHamiltonian, H2::MPOHamiltonian) = H1 + (-H2)
 
-function VectorInterface.scale!(H::InfiniteMPOHamiltonian, λ::Number)
-    foreach(parent(H)) do h
-        # multiply scalar with start of every interaction
-        # this avoids double counting
-        # 2:end to avoid multiplying the top left and bottom right corners
-        return scale!(h[1, 1, 1, 2:end], λ)
-    end
-    return H
-end
 function VectorInterface.scale!(H::MPOHamiltonian{O},
                                 λ::Number) where {O<:JordanMPOTensor}
     for i in 1:length(H)
@@ -830,38 +734,6 @@ function VectorInterface.scale!(Hdst::MPOHamiltonian{<:JordanMPOTensor},
         copy!(Hdst[i].B, Hsrc[i].B)
     end
     return Hdst
-end
-
-function VectorInterface.scale!(H::FiniteMPOHamiltonian, λ::Number)
-    foreach(enumerate(parent(H))) do (i, h)
-        if i != length(H)
-            scale!(h[1, 1, 1, 2:end], λ) # multiply top row (except BraidingTensor)
-        else
-            scale!(h[1, 1, 1, end], λ) # multiply right column (except BraidingTensor)
-        end
-    end
-    return H
-end
-
-function VectorInterface.scale!(dst::MPOHamiltonian, src::MPOHamiltonian,
-                                λ::Number)
-    N = check_length(dst, src)
-    for i in 1:N
-        space(dst[i]) == space(src[i]) || throw(SpaceMismatch())
-        zerovector!(dst[i])
-        for (I, v) in nonzero_pairs(src[i])
-            # only scale "starting" terms
-            isstarting = I[1] == 1 &&
-                         ((isfinite(dst) && i == N && I[4] == size(src[i], 4)) ||
-                          ((!isfinite(dst) || i != N) && I[4] > 1))
-            if v isa BraidingTensor && !isstarting
-                dst[i][I] = v
-            else
-                dst[i][I] = scale!(dst[i][I], v, isstarting ? λ : One())
-            end
-        end
-    end
-    return dst
 end
 
 function Base.:*(H1::MPOHamiltonian, H2::MPOHamiltonian)

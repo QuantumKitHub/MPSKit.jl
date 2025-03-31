@@ -111,6 +111,9 @@ function jordanmpotensortype(::Type{S}, ::Type{E}) where {S<:VectorSpace,E<:Numb
     TD = tensormaptype(S, 1, 1, E)
     return JordanMPOTensor{E,S,TA,TB,TC,TD}
 end
+function jordanmpotensortype(::Type{O}) where {O<:MPOTensor}
+    return jordanmpotensortype(spacetype(O), scalartype(O))
+end
 
 function Base.similar(W::JordanMPOTensor, ::Type{T}) where {T<:Number}
     return JordanMPOTensor{T}(undef, space(W))
