@@ -308,6 +308,18 @@ end
 
 # Utility
 # -------
+function Base.copy(W::JordanMPOTensor)
+    return JordanMPOTensor(W.V, copy(W.A), copy(W.B), copy(W.C), copy(W.D))
+end
+function Base.copy!(Wdst::JordanMPOTensor, Wsrc::JordanMPOTensor)
+    space(Wdst) == space(Wsrc) || throw(SpaceMismatch())
+    copy!(Wdst.A, Wsrc.A)
+    copy!(Wdst.B, Wsrc.B)
+    copy!(Wdst.C, Wsrc.C)
+    copy!(Wdst.D, Wsrc.D)
+    return Wdst
+end
+
 # Avoid falling back to `norm(W1 - W2)` which has to convert to SparseBlockTensorMap
 function Base.isapprox(W1::JordanMPOTensor, W2::JordanMPOTensor; kwargs...)
     return isapprox(W1.A, W2.A; kwargs...) &&
