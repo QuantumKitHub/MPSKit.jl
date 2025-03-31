@@ -281,6 +281,31 @@ function Base.:-(W1::JordanMPOTensor, W2::JordanMPOTensor)
     return SparseBlockTensorMap(W1) - SparseBlockTensorMap(W2)
 end
 
+function fuse_mul_mpo(O1::JordanMPOTensor, O2::JordanMPOTensor)
+    TT = promote_type((eltype(O1)), eltype((O2)))
+    V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
+        physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
+    O = jordanmpotensortype(TT)(undef, V)
+    cartesian_inds = reshape(CartesianIndices(O),
+                             size(O2, 1), size(O1, 1),
+                             size(O, 2), size(O, 3),
+                             size(O2, 4), size(O1, 4))
+    for (I, o2) in nonzero_pairs(O2), (J, o1) in nonzero_pairs(O1)
+        K = cartesian_inds[I[1], J[1], I[2], I[3], I[4], J[4]]
+        O[K] = fuse_mul_mpo(o1, o2)
+    end
+    return O
+end
+
+function _conj_mpo(W::JordanMPOTensor)
+    V = left_virtualspace(W)' ⊗ physicalspace(W) ← physicalspace(W) ⊗ right_virtualspace(W)'
+    A = _conj_mpo(W.A)
+    @plansor B[-1 -2; -3] ≔ conj(W.B[-1 -3; -2])
+    @plansor C[-1; -2 -3] ≔ conj(W.C[-2; -1 -3])
+    D = copy(adjoint(W.D))
+    return JordanMPOTensor(V, A, B, C, D)
+end
+
 # Utility
 # -------
 # Avoid falling back to `norm(W1 - W2)` which has to convert to SparseBlockTensorMap
