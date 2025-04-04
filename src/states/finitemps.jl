@@ -234,13 +234,13 @@ function FiniteMPS(f, elt, Pspaces::Vector{<:Union{S,CompositeSpace{S}}},
 
     Vspaces[1] = left
     for k in 2:N
-        Vspaces[k] = infimum(fuse(Vspaces[k - 1], fusedPspaces[k]), maxVspaces[k - 1])
+        Vspaces[k] = infimum(fuse(Vspaces[k - 1], fusedPspaces[k - 1]), maxVspaces[k - 1])
         dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
     end
 
     Vspaces[end] = right
-    for k in N:-1:2
-        Vspaces[k] = infimum(maxVspaces[k - 1], fuse(Vspaces[k + 1], dual(fusedPspaces[k])))
+    for k in reverse(2:N)
+        Vspaces[k] = infimum(Vspaces[k], fuse(Vspaces[k + 1], dual(fusedPspaces[k])))
         dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
     end
 
@@ -384,17 +384,35 @@ function TensorKit.space(ψ::FiniteMPS{<:GenericMPSTensor}, n::Integer)
 end
 
 """
+    max_virtualspaces(ψ::FiniteMPS)
+    max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=oneunit(S), right=oneunit(S))
+
+Compute the maximal virtual spaces of a given MPS or its spaces.
+"""
+function max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=oneunit(S),
+                           right=oneunit(S)) where {S<:ElementarySpace}
+    Vs = similar(Ps, length(Ps) + 1)
+    Vs[1] = left
+    Vs[end] = right
+    for k in 2:length(Ps)
+        Vs[k] = fuse(Vs[k - 1], fuse(Ps[k - 1]))
+    end
+    for k in reverse(2:length(Ps))
+        Vs[k] = infimum(Vs[k], fuse(Vs[k + 1], dual(fuse(Ps[k]))))
+    end
+    return Vs
+end
+function max_virtualspaces(ψ::FiniteMPS)
+    return max_virtualspaces(physicalspace(ψ); left=left_virtualspace(ψ, 1),
+                             right=right_virtualspace(ψ, length(ψ)))
+end
+
+"""
     max_Ds(ψ::FiniteMPS) -> Vector{Float64}
 
 Compute the dimension of the maximal virtual space at a given site.
 """
-function max_Ds(ψ::FiniteMPS)
-    N = length(ψ)
-    physicaldims = dim.(space.(Ref(ψ)), 1:N)
-    D_left = cumprod(vcat(dim(left_virtualspace(ψ, 1)), physicaldims))
-    D_right = cumprod(vcat(dim(right_virtualspace(ψ, N)), reverse(physicaldims)))
-    return min.(D_left, D_right)
-end
+max_Ds(ψ::FiniteMPS) = dim.(max_virtualspaces(ψ))
 
 function Base.summary(io::IO, ψ::FiniteMPS)
     return print(io, "$(length(ψ))-site FiniteMPS ($(scalartype(ψ)), $(spacetype(ψ)))")
