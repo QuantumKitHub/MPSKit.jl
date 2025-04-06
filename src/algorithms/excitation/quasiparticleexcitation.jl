@@ -342,52 +342,18 @@ function _effective_excitation_local_apply(site, ϕ,
     return B′
 end
 
-function effective_excitation_renormalization_energy(H::Union{InfiniteMPO,
-                                                              InfiniteMPOHamiltonian,
-                                                              FiniteMPOHamiltonian}, ϕ,
-                                                     lenvs,
-                                                     renvs)
-    ψ_left = ϕ.left_gs
-    E_left = map(1:length(ϕ)) do site
-        return contract_mpo_expval(ψ_left.AC[site], leftenv(lenvs, site, ψ_left),
-                                   H[site], rightenv(lenvs, site, ψ_left))
-    end
-
-    ϕ.trivial && return E_left
-
-    ψ_right = ϕ.right_gs
-    E_right = map(1:length(ϕ)) do site
-        return contract_mpo_expval(ψ_right.AC[site], leftenv(renvs, site, ψ_right),
-                                   H[site], rightenv(renvs, site, ψ_right))
-    end
-
-    return (E_left .+ E_right) ./ 2
-end
-
 function effective_excitation_renormalization_energy(H, ϕ, lenvs, renvs)
-    E_left = map(1:length(ϕ)) do loc
-        AC = ϕ.left_gs.AC[loc]
-        GL = leftenv(lenvs, loc, ϕ.left_gs)
-        GR = rightenv(lenvs, loc, ϕ.left_gs)
-        return sum(keys(H[loc]); init=zero(scalartype(ϕ))) do (j, k)
-            return @plansor conj(AC[2 6; 4]) * GL[j][2 5; 3] * AC[3 7; 1] *
-                            H[loc][j, k][5 6; 7 8] *
-                            GR[k][1 8; 4]
+    ψ_left = ϕ.left_gs
+    ψ_right = ϕ.right_gs
+    E = Vector{scalartype(ϕ)}(undef, length(ϕ))
+    for i in eachindex(E)
+        E[i] = contract_mpo_expval(ψ_left.AC[i], leftenv(lenvs, i, ψ_left),
+                                   H[i], rightenv(lenvs, i, ψ_left))
+        if !ϕ.trivial
+            E[i] += contract_mpo_expval(ψ_right.AC[i], leftenv(renvs, i, ψ_right),
+                                        H[i], rightenv(renvs, i, ψ_right))
+            E[i] /= 2
         end
     end
-
-    ϕ.trivial && return E_left
-
-    E_right = map(1:length(ϕ)) do loc
-        AC = ϕ.right_gs.AC[loc]
-        GL = leftenv(renvs, loc, ϕ.right_gs)
-        GR = rightenv(renvs, loc, ϕ.right_gs)
-        return sum(keys(H[loc]); init=zero(scalartype(ϕ))) do (j, k)
-            return @plansor conj(AC[2 6; 4]) * GL[j][2 5; 3] * AC[3 7; 1] *
-                            H[loc][j, k][5 6; 7 8] *
-                            GR[k][1 8; 4]
-        end
-    end
-
-    return (E_left .+ E_right) ./ 2
+    return E
 end

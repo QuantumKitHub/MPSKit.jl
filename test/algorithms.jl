@@ -435,7 +435,8 @@ end
         ψ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^48, ℙ^48])
         ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbosity=verbosity_conv,
                                       tol=1e-10)
-        energies, ϕs = excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ, envs)
+        energies, ϕs = @constinferred excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ,
+                                                  envs)
         @test energies[1] ≈ 0.41047925 atol = 1e-4
         @test variance(ϕs[1], H) < 1e-8
     end
@@ -445,8 +446,9 @@ end
         ψ, envs, _ = leading_boundary(ψ, H,
                                       VUMPS(; maxiter=400, verbosity=verbosity_conv,
                                             tol=1e-10))
-        energies, ϕs = excitations(H, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ψ,
-                                   envs; verbosity=0)
+        energies, ϕs = @constinferred excitations(H, QuasiparticleAnsatz(),
+                                                  [0.0, Float64(pi / 2)], ψ,
+                                                  envs; verbosity=0)
         @test abs(energies[1]) > abs(energies[2]) # has a minimum at pi/2
     end
 
@@ -464,20 +466,20 @@ end
             ψ, envs, = find_groundstate(ψ, H; verbosity)
 
             # find energy with quasiparticle ansatz
-            energies_QP, ϕs = excitations(H, QuasiparticleAnsatz(), ψ, envs)
+            energies_QP, ϕs = @constinferred excitations(H, QuasiparticleAnsatz(), ψ, envs)
             @test variance(ϕs[1], H) < 1e-6
 
             # find energy with normal dmrg
             for gsalg in (DMRG(; verbosity, tol=1e-6),
                           DMRG2(; verbosity, tol=1e-6, trscheme=truncbelow(1e-4)))
-                energies_dm, _ = excitations(H, FiniteExcited(; gsalg), ψ)
+                energies_dm, _ = @constinferred excitations(H, FiniteExcited(; gsalg), ψ)
                 @test energies_dm[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
             end
 
             # find energy with Chepiga ansatz
-            energies_ch, _ = excitations(H, ChepigaAnsatz(), ψ, envs)
+            energies_ch, _ = @constinferred excitations(H, ChepigaAnsatz(), ψ, envs)
             @test energies_ch[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
-            energies_ch2, _ = excitations(H, ChepigaAnsatz2(), ψ, envs)
+            energies_ch2, _ = @constinferred excitations(H, ChepigaAnsatz2(), ψ, envs)
             @test energies_ch2[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
             return energies_QP[1]
         end
