@@ -26,21 +26,39 @@ struct RightGaugedQP{S,T1,T2,E<:Number}
     momentum::E
 end
 
+function leftgaugedqptype(::Type{S}, ::Type{E}) where {S,E<:Number}
+    T1 = eltype(S)
+    T2 = tensormaptype(spacetype(T1), 1, 2, storagetype(T1))
+    return LeftGaugedQP{S,T1,T2,E}
+end
+
 #constructors
 function LeftGaugedQP(datfun, left_gs, right_gs=left_gs;
                       sector=one(sectortype(left_gs)), momentum=0.0)
     # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
-    VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
-    Xs = [TensorMap{scalartype(left_gs)}(undef, _lastspace(VLs[loc])',
-                                         excitation_space' *
-                                         right_virtualspace(right_gs, loc))
-          for loc in 1:length(left_gs)]
-    fill_data!.(Xs, datfun)
+    VLs = convert(Vector, map(leftnull, left_gs.AL))
+    Xs = map(enumerate(VLs)) do (loc, vl)
+        x = similar(vl,
+                    right_virtualspace(vl) ←
+                    excitation_space' ⊗ right_virtualspace(right_gs, loc))
+        fill_data!(x, datfun)
+        return x
+    end
     left_gs isa InfiniteMPS ||
         momentum == zero(momentum) ||
         @warn "momentum is ignored for finite quasiparticles"
     return LeftGaugedQP(left_gs, right_gs, VLs, Xs, momentum)
+end
+function LeftGaugedQP(datfun, left_gs::MultilineMPS, right_gs::MultilineMPS=left_gs;
+                      sector=one(sectortype(left_gs)), momentum=0.0)
+    # not sure why this is needed for type stability
+    Tresult = leftgaugedqptype(eltype(parent(left_gs)), typeof(momentum))
+    qp_rows = Vector{Tresult}(undef, size(left_gs, 1))
+    for row in eachindex(qp_rows)
+        qp_rows[row] = LeftGaugedQP(datfun, left_gs, right_gs; sector, momentum)
+    end
+    return Multiline(qp_rows)
 end
 
 function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
