@@ -261,7 +261,7 @@ end
 
 function add_physical_charge(O::MPOTensor, charge::Sector)
     sectortype(O) === typeof(charge) || throw(SectorMismatch())
-    auxspace = Vect[typeof(charge)](charge => 1)
+    auxspace = Vect[typeof(charge)](charge => 1)'
     F = fuser(scalartype(O), physicalspace(O), auxspace)
     @plansor O_charged[-1 -2; -3 -4] := F[-2; 1 2] *
                                         O[-1 1; 4 3] *
@@ -270,16 +270,14 @@ function add_physical_charge(O::MPOTensor, charge::Sector)
 end
 function add_physical_charge(O::BraidingTensor, charge::Sector)
     sectortype(O) === typeof(charge) || throw(SectorMismatch())
-    auxspace = Vect[typeof(charge)](charge => 1)
+    auxspace = Vect[typeof(charge)](charge => 1)'
     V = left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
         fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
     return BraidingTensor{scalartype(O)}(V)
 end
 function add_physical_charge(O::AbstractBlockTensorMap{<:Any,<:Any,2,2}, charge::Sector)
     sectortype(O) == typeof(charge) || throw(SectorMismatch())
-
-    auxspace = Vect[typeof(charge)](charge => 1)
-
+    auxspace = Vect[typeof(charge)](charge => 1)'
     Odst = similar(O,
                    left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
                    fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O))
