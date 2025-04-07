@@ -5,12 +5,12 @@ Efficient operator for representing the single-site derivative of a `MPOHamilton
 In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
 """
 struct JordanMPO_∂∂AC{O1,O2,O3} <: DerivativeOperator
-    onsite::Union{O1,Missing}
-    not_started::Union{O1,Missing}
-    finished::Union{O1,Missing}
-    starting::Union{O2,Missing}
-    ending::Union{O2,Missing}
-    continuing::O3
+    D::Union{O1,Missing} # onsite
+    I::Union{O1,Missing} # not started
+    E::Union{O1,Missing} # finished
+    C::Union{O2,Missing} # starting 
+    B::Union{O2,Missing} # ending
+    A::O3                # continuing
     function JordanMPO_∂∂AC(onsite, not_started, finished, starting, ending, continuing)
         tensor = coalesce(onsite, not_started, finished, starting, ending)
         ismissing(tensor) && throw(ArgumentError("unable to determine type"))
@@ -40,7 +40,7 @@ struct JordanMPO_∂∂AC2{O1,O2,O3,O4} <: DerivativeOperator
     CB::Union{O2,Missing} # starting left - ending right
     CA::Union{O3,Missing} # starting left - continuing right
     AB::Union{O3,Missing} # continuing left - ending right
-    AA::O4 # continuing left - continuing right
+    AA::O4                # continuing left - continuing right
     BE::Union{O2,Missing} # ending left
     DE::Union{O1,Missing} # onsite left
     EE::Union{O1,Missing} # finished
@@ -126,15 +126,7 @@ function ∂∂AC(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:Jor
     A = W.A
     continuing = (GL[2:(end - 1)], A, GR[2:(end - 1)])
 
-    tensor = coalesce(onsite, not_started, finished, starting, ending)
-    ismissing(tensor) && throw(ArgumentError("unable to determine type"))
-    S = spacetype(tensor)
-    M = storagetype(tensor)
-    O1 = tensormaptype(S, 1, 1, M)
-    O2 = tensormaptype(S, 2, 2, M)
-
-    return JordanMPO_∂∂AC{O1,O2,typeof(continuing)}(onsite, not_started, finished, starting,
-                                                    ending, continuing)
+    return JordanMPO_∂∂AC(onsite, not_started, finished, starting, ending, continuing)
 end
 
 function ∂∂AC2(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
@@ -282,13 +274,13 @@ end
 function (H::JordanMPO_∂∂AC)(x::MPSTensor)
     y = zerovector(x)
 
-    ismissing(H.onsite) || @plansor y[-1 -2; -3] += x[-1 1; -3] * H.onsite[-2; 1]
-    ismissing(H.finished) || @plansor y[-1 -2; -3] += H.finished[-1; 1] * x[1 -2; -3]
-    ismissing(H.not_started) || @plansor y[-1 -2; -3] += x[-1 -2; 1] * H.not_started[1; -3]
-    ismissing(H.starting) || @plansor y[-1 -2; -3] += x[-1 2; 1] * H.starting[-2 -3; 2 1]
-    ismissing(H.ending) || @plansor y[-1 -2; -3] += H.ending[-1 -2; 1 2] * x[1 2; -3]
+    ismissing(H.D) || @plansor y[-1 -2; -3] += x[-1 1; -3] * H.D[-2; 1]
+    ismissing(H.E) || @plansor y[-1 -2; -3] += H.E[-1; 1] * x[1 -2; -3]
+    ismissing(H.I) || @plansor y[-1 -2; -3] += x[-1 -2; 1] * H.I[1; -3]
+    ismissing(H.C) || @plansor y[-1 -2; -3] += x[-1 2; 1] * H.C[-2 -3; 2 1]
+    ismissing(H.B) || @plansor y[-1 -2; -3] += H.B[-1 -2; 1 2] * x[1 2; -3]
 
-    GL, A, GR = H.continuing
+    GL, A, GR = H.A
     if nonzero_length(A) > 0
         @plansor y[-1 -2; -3] += GL[-1 5; 4] * x[4 2; 1] * A[5 -2; 2 3] * GR[1 3; -3]
     end
