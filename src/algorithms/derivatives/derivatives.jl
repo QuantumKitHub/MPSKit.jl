@@ -49,7 +49,7 @@ function ∂∂C(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
     return LazySum{Union{MPO_∂∂C,MultipliedOperator{<:MPO_∂∂C}}}(suboperators)
 end
 
-@doc """
+"""
     ∂C(x, leftenv, rightenv)
 
 Application of the effective zero-site local operator on a local tensor `x`.
@@ -66,16 +66,8 @@ Application of the effective zero-site local operator on a local tensor `x`.
 ```
 
 See also [`∂∂C`](@ref).
-""" ∂C
-
-function ∂C(x::MPSBondTensor, leftenv::MPSBondTensor, rightenv::MPSBondTensor)
-    @plansor y[-1; -2] ≔ leftenv[-1; 1] * x[1; 2] * rightenv[2; -2]
-    return y isa AbstractBlockTensorMap ? only(y) : y
-end
-function ∂C(x::MPSBondTensor, leftenv::MPSTensor, rightenv::MPSTensor)
-    @plansor y[-1; -2] ≔ leftenv[-1 3; 1] * x[1; 2] * rightenv[2 3; -2]
-    return y isa AbstractBlockTensorMap ? only(y) : y
-end
+"""
+∂C(x, leftenv, rightenv) = MPO_∂∂C(leftenv, rightenv)(x)
 
 @doc """
     ∂∂AC(site::Int, mps, operator, envs)
@@ -115,7 +107,7 @@ function ∂∂AC(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
     return LazySum{elT}(suboperators)
 end
 
-@doc """
+"""
     ∂AC(x, operator, leftenv, rightenv)
 
 Application of the effective one-site local operator on a local tensor `x`.
@@ -132,27 +124,8 @@ Application of the effective one-site local operator on a local tensor `x`.
 ```
 
 See also [`∂∂AC`](@ref).
-""" ∂AC
-
-function ∂AC(x::MPSTensor, operator::MPOTensor, leftenv::MPSTensor, rightenv::MPSTensor)
-    @plansor y[-1 -2; -3] := leftenv[-1 5; 4] * x[4 2; 1] * operator[5 -2; 2 3] *
-                             rightenv[1 3; -3]
-    return y isa AbstractBlockTensorMap ? only(y) : y
-end
-function ∂AC(x::MPSTensor, operator::Number, leftenv::MPSTensor, rightenv::MPSTensor)
-    @plansor y[-1 -2; -3] := operator * (leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] *
-                                         rightenv[1 7; -3])
-    return y isa AbstractBlockTensorMap ? only(y) : y
-end
-function ∂AC(x::MPSTensor, ::Nothing, leftenv::MPSBondTensor, rightenv::MPSBondTensor)
-    @plansor y[-1 -2; -3] := leftenv[-1; 2] * x[2 -2; 1] * rightenv[1; -3]
-end
-function ∂AC(x::GenericMPSTensor{<:Any,3}, operator::MPOTensor,
-             leftenv::MPSTensor, rightenv::MPSTensor)
-    @plansor y[-1 -2 -3; -4] ≔ leftenv[-1 7; 6] * x[6 4 2; 1] * operator[7 -2; 4 5] *
-                               τ[5 -3; 2 3] * rightenv[1 3; -4]
-    return y isa AbstractBlockTensorMap ? only(y) : y
-end
+"""
+∂AC(x, operator, leftenv, rightenv) = MPO_∂∂AC(leftenv, operator, rightenv)(x)
 
 @doc """
     ∂∂AC2(site::Int, mps, operator, envs)
@@ -193,7 +166,7 @@ function ∂∂AC2(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments
     return LazySum{elT}(suboperators)
 end
 
-@doc """
+"""
     ∂AC2(x, operator1, operator2, leftenv, rightenv)
 
 Application of the effective two-site local operator on a local tensor `x`.
@@ -210,28 +183,8 @@ Application of the effective two-site local operator on a local tensor `x`.
 ```
 
 See also [`∂∂AC2`](@ref).
-""" ∂AC2
-
-function ∂AC2(x::MPOTensor, ::Nothing, ::Nothing, leftenv::MPSBondTensor,
-              rightenv::MPSBondTensor)
-    @plansor y[-1 -2; -3 -4] ≔ leftenv[-1; 1] * x[1 -2; 2 -4] * rightenv[2 -3]
-    return y isa AbstractBlockTensorMap ? only(y) : y
-end
-function ∂AC2(x::MPOTensor, operator1::MPOTensor, operator2::MPOTensor, leftenv::MPSTensor,
-              rightenv::MPSTensor)
-    @plansor y[-1 -2; -3 -4] ≔ leftenv[-1 7; 6] * x[6 5; 1 3] *
-                               operator1[7 -2; 5 4] * operator2[4 -4; 3 2] *
-                               rightenv[1 2; -3]
-    return y isa AbstractBlockTensorMap ? only(y) : y
-end
-function ∂AC2(x::AbstractTensorMap{<:Any,<:Any,3,3}, operator1::MPOTensor,
-              operator2::MPOTensor, leftenv::MPSTensor, rightenv::MPSTensor)
-    @plansor y[-1 -2 -3; -4 -5 -6] ≔ leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
-                                     rightenv[1 3; -4] *
-                                     operator1[11 -2; 8 9] * τ[9 -3; 6 7] *
-                                     operator2[7 -6; 4 5] * τ[5 -5; 2 3]
-    return y isa AbstractBlockTensorMap ? only(y) : y
-end
+"""
+∂AC2(x, O₁, O₂, leftenv, rightenv) = MPO_∂∂AC2(leftenv, O₁, O₂, rightenv)(x)
 
 # Projection operators
 # --------------------

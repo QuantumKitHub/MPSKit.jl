@@ -51,6 +51,52 @@ end
 
 # Actions
 # -------
-(h::MPO_∂∂C)(x) = ∂C(x, h.leftenv, h.rightenv)
-(h::MPO_∂∂AC)(x) = ∂AC(x, h.operators[1], h.leftenv, h.rightenv)
-(h::MPO_∂∂AC2)(x) = ∂AC2(x, h.operators[1], h.operators[2], h.leftenv, h.rightenv)
+function (h::MPO_∂∂C{<:MPSBondTensor,<:MPSBondTensor})(x::MPSBondTensor)
+    @plansor y[-1; -2] ≔ h.leftenv[-1; 1] * x[1; 2] * h.rightenv[2; -2]
+    return y isa AbstractBlockTensorMap ? only(y) : y
+end
+function (h::MPO_∂∂C{<:MPSTensor,<:MPSTensor})(x::MPSBondTensor)
+    @plansor y[-1; -2] ≔ h.leftenv[-1 3; 1] * x[1; 2] * h.rightenv[2 3; -2]
+    return y isa AbstractBlockTensorMap ? only(y) : y
+end
+
+function (h::MPO_∂∂AC{<:MPSTensor,<:MPOTensor,<:MPSTensor})(x::MPSTensor)
+    @plansor y[-1 -2; -3] ≔ h.leftenv[-1 5; 4] * x[4 2; 1] *
+                            h.operators[1][5 -2; 2 3] * h.rightenv[1 3; -3]
+    return y isa AbstractBlockTensorMap ? only(y) : y
+end
+function (h::MPO_∂∂AC{<:MPSTensor,<:Number,<:MPSTensor})(x::MPSTensor)
+    @plansor y[-1 -2; -3] ≔ (h.leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] *
+                             h.rightenv[1 7; -3]) * only(h.operators)
+    return y isa AbstractBlockTensorMap ? only(y) : y
+end
+function (h::MPO_∂∂AC{<:MPSBondTensor,Nothing,<:MPSBondTensor})(x::MPSTensor)
+    @plansor y[-1 -2; -3] ≔ h.leftenv[-1; 2] * x[2 -2; 1] * h.rightenv[1; -3]
+end
+function (h::MPO_∂∂AC{<:MPSTensor,<:MPOTensor,<:MPSTensor})(x::GenericMPSTensor{<:Any,3})
+    @plansor y[-1 -2 -3; -4] ≔ h.leftenv[-1 7; 6] * x[6 4 2; 1] *
+                               h.operators[1][7 -2; 4 5] * τ[5 -3; 2 3] *
+                               h.rightenv[1 3; -4]
+    return y isa AbstractBlockTensorMap ? only(y) : y
+end
+
+function (h::MPO_∂∂AC2{<:MPSBondTensor,Nothing,Nothing,<:MPSBondTensor})(x::MPOTensor)
+    @plansor y[-1 -2; -3 -4] ≔ h.leftenv[-1; 1] * x[1 -2; 2 -4] * h.rightenv[2 -3]
+    return y isa AbstractBlockTensorMap ? only(y) : y
+end
+function (h::MPO_∂∂AC2{<:MPSTensor,<:MPOTensor,<:MPOTensor,<:MPSTensor})(x::MPOTensor)
+    @plansor y[-1 -2; -3 -4] ≔ h.leftenv[-1 7; 6] * x[6 5; 1 3] *
+                               h.operators[1][7 -2; 5 4] * h.operators[2][4 -4; 3 2] *
+                               h.rightenv[1 2; -3]
+    return y isa AbstractBlockTensorMap ? only(y) : y
+end
+function (h::MPO_∂∂AC2{<:MPSTensor,<:MPOTensor,<:MPOTensor,<:MPSTensor})(x::AbstractTensorMap{<:Any,
+                                                                                              <:Any,
+                                                                                              3,
+                                                                                              3})
+    @plansor y[-1 -2 -3; -4 -5 -6] ≔ h.leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
+                                     h.rightenv[1 3; -4] *
+                                     h.operators[1][11 -2; 8 9] * τ[9 -3; 6 7] *
+                                     h.operators[2][7 -6; 4 5] * τ[5 -5; 2 3]
+    return y isa AbstractBlockTensorMap ? only(y) : y
+end
