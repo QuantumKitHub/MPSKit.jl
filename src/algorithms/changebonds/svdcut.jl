@@ -12,7 +12,7 @@ $(TYPEDFIELDS)
     alg_svd::S = Defaults.alg_svd()
 
     "algorithm used for [truncation][@extref TensorKit.tsvd] of the gauge tensors"
-    trscheme::TruncationScheme = notrunc()
+    trscheme::TruncationScheme
 end
 
 function changebonds(ψ::AbstractFiniteMPS, alg::SvdCut; kwargs...)
