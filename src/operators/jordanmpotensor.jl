@@ -307,6 +307,19 @@ function _conj_mpo(W::JordanMPOTensor)
     return JordanMPOTensor(V, A, B, C, D)
 end
 
+function add_physical_charge(O::JordanMPOTensor, charge::Sector)
+    sectortype(O) == typeof(charge) || throw(SectorMismatch())
+    auxspace = Vect[typeof(charge)](charge => 1)'
+    Vdst = left_virtualspace(O) ⊗
+           fuse(physicalspace(O), auxspace) ←
+           fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
+    Odst = JordanMPOTensor{scalartype(O)}(undef, Vdst)
+    for (I, v) in nonzero_pairs(O)
+        Odst[I] = add_physical_charge(v, charge)
+    end
+    return Odst
+end
+
 # Utility
 # -------
 function Base.copy(W::JordanMPOTensor)
