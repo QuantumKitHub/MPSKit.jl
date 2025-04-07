@@ -323,7 +323,7 @@ end
 
 @testset "timestep" verbose = true begin
     dt = 0.1
-    algs = [TDVP(), TDVP2()]
+    algs = [TDVP(), TDVP2(; trscheme=truncdim(10))]
     L = 10
 
     H = force_planar(heisenberg_XXX(; spin=1 // 2, L))
@@ -388,7 +388,7 @@ end
 
 @testset "time_evolve" verbose = true begin
     t_span = 0:0.1:0.1
-    algs = [TDVP(), TDVP2()]
+    algs = [TDVP(), TDVP2(; trscheme=truncdim(10))]
 
     L = 10
     H = force_planar(heisenberg_XXX(; spin=1 // 2, L))

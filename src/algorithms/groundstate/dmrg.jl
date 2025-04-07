@@ -10,20 +10,24 @@ $(TYPEDFIELDS)
 struct DMRG{A,F} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64
+
     "maximal amount of iterations"
     maxiter::Int
-    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
-    finalize::F
+
     "setting for how much information is displayed"
     verbosity::Int
+
     "algorithm used for the eigenvalue solvers"
-    eigalg::A
+    alg_eigsolve::A
+
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    finalize::F
 end
-function DMRG(; tol=Defaults.tol, maxiter=Defaults.maxiter, eigalg=(;),
+function DMRG(; tol=Defaults.tol, maxiter=Defaults.maxiter, alg_eigsolve=(;),
               verbosity=Defaults.verbosity, finalize=Defaults._finalize)
-    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
-    return DMRG{typeof(eigalg′),typeof(finalize)}(tol, maxiter, finalize, verbosity,
-                                                  eigalg′)
+    alg_eigsolve′ = alg_eigsolve isa NamedTuple ? Defaults.alg_eigsolve(; alg_eigsolve...) :
+                    alg_eigsolve
+    return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environments(ψ, H))
@@ -34,7 +38,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
         for iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
 
             zerovector!(ϵs)
             for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
@@ -70,28 +74,35 @@ Two-site DMRG algorithm for finding the dominant eigenvector.
 
 $(TYPEDFIELDS)
 """
-struct DMRG2{A,F} <: Algorithm
+struct DMRG2{A,S,F} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64
+
     "maximal amount of iterations"
     maxiter::Int
-    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
-    finalize::F
+
     "setting for how much information is displayed"
     verbosity::Int
 
     "algorithm used for the eigenvalue solvers"
-    eigalg::A
+    alg_eigsolve::A
+
+    "algorithm used for the singular value decomposition"
+    alg_svd::S
+
     "algorithm used for [truncation](@extref TensorKit.tsvd) of the two-site update"
     trscheme::TruncationScheme
+
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    finalize::F
 end
 # TODO: find better default truncation
-function DMRG2(; tol=Defaults.tol, maxiter=Defaults.maxiter, eigalg=(;),
-               trscheme=truncerr(1e-6), verbosity=Defaults.verbosity,
+function DMRG2(; tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity=Defaults.verbosity,
+               alg_eigsolve=(;), alg_svd=Defaults.alg_svd(), trscheme,
                finalize=Defaults._finalize)
-    eigalg′ = eigalg isa NamedTuple ? Defaults.alg_eigsolve(; eigalg...) : eigalg
-    return DMRG2{typeof(eigalg′),typeof(finalize)}(tol, maxiter, finalize, verbosity,
-                                                   eigalg′, trscheme)
+    alg_eigsolve′ = alg_eigsolve isa NamedTuple ? Defaults.alg_eigsolve(; alg_eigsolve...) :
+                    alg_eigsolve
+    return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_svd, trscheme, finalize)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environments(ψ, H))
@@ -101,7 +112,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
 
     LoggingExtras.withlevel(; alg.verbosity) do
         for iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.eigalg, iter, ϵ)
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             zerovector!(ϵs)
 
             # left to right sweep
@@ -110,7 +121,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
 
                 _, newA2center = fixedpoint(∂∂AC2(pos, ψ, H, envs), ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
+                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
                 v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
                              conj(ar[6; 3 4])
@@ -126,7 +137,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
 
                 _, newA2center = fixedpoint(∂∂AC2(pos, ψ, H, envs), ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=TensorKit.SVD())
+                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
                 v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
                              conj(ar[6; 3 4])
@@ -153,6 +164,6 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
     return ψ, envs, ϵ
 end
 
-function find_groundstate(ψ, H, alg::Union{DMRG,DMRG2}, envs...)
-    return find_groundstate!(copy(ψ), H, alg, envs...)
+function find_groundstate(ψ, H, alg::Union{DMRG,DMRG2}, envs...; kwargs...)
+    return find_groundstate!(copy(ψ), H, alg, envs...; kwargs...)
 end

@@ -4,6 +4,7 @@ module TestSetup
 
 # imports
 using MPSKit
+using MPSKit: JordanMPOTensor
 using TensorKit
 using TensorKit: PlanarTrivial, ℙ, BraidingTensor
 using BlockTensorKit
@@ -56,6 +57,18 @@ end
 function force_planar(x::SparseBlockTensorMap)
     data = Dict(I => force_planar(v) for (I, v) in pairs(x.data))
     return SparseBlockTensorMap{valtype(data)}(data, force_planar(space(x)))
+end
+function force_planar(W::JordanMPOTensor)
+    V = force_planar(space(W))
+    TW = MPSKit.jordanmpotensortype(eltype(V[1]), scalartype(W))
+    dst = TW(undef, V)
+
+    for t in (:A, :B, :C, :D)
+        for (I, v) in nonzero_pairs(getproperty(W, t))
+            getproperty(dst, t)[I] = force_planar(v)
+        end
+    end
+    return dst
 end
 force_planar(mpo::MPOHamiltonian) = MPOHamiltonian(map(force_planar, parent(mpo)))
 force_planar(mpo::MPO) = MPO(map(force_planar, parent(mpo)))
