@@ -436,7 +436,7 @@ end
         ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbosity=verbosity_conv,
                                       tol=1e-10)
         energies, ϕs = @inferred excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ,
-                                                  envs)
+                                             envs)
         @test energies[1] ≈ 0.41047925 atol = 1e-4
         @test variance(ϕs[1], H) < 1e-8
     end
@@ -447,8 +447,8 @@ end
                                       VUMPS(; maxiter=400, verbosity=verbosity_conv,
                                             tol=1e-10))
         energies, ϕs = @inferred excitations(H, QuasiparticleAnsatz(),
-                                                  [0.0, Float64(pi / 2)], ψ,
-                                                  envs; verbosity=0)
+                                             [0.0, Float64(pi / 2)], ψ,
+                                             envs; verbosity=0)
         @test abs(energies[1]) > abs(energies[2]) # has a minimum at pi/2
     end
 

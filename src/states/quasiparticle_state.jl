@@ -56,7 +56,7 @@ function LeftGaugedQP(datfun, left_gs::MultilineMPS, right_gs::MultilineMPS=left
     Tresult = leftgaugedqptype(eltype(parent(left_gs)), typeof(momentum))
     qp_rows = Vector{Tresult}(undef, size(left_gs, 1))
     for row in eachindex(qp_rows)
-        qp_rows[row] = LeftGaugedQP(datfun, left_gs, right_gs; sector, momentum)
+        qp_rows[row] = LeftGaugedQP(datfun, left_gs[row], right_gs[row]; sector, momentum)
     end
     return Multiline(qp_rows)
 end

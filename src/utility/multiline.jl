@@ -93,7 +93,7 @@ VectorInterface.add!!(x::Multiline, y::Multiline, α::Number, β::Number) = add!
 function VectorInterface.inner(x::Multiline, y::Multiline)
     T = VectorInterface.promote_inner(x, y)
     init = zero(T)
-    return sum(inner, parent(parent(x)), parent(parent(y)); init)
+    return sum(splat(inner), zip(parent(parent(x)), parent(parent(y))); init)
 end
 
 LinearAlgebra.norm(x::Multiline) = norm(norm.(parent(x)))

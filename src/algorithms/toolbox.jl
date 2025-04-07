@@ -227,7 +227,10 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs=environment
 
     # I don't remember where the formula came from
     # TODO: this is probably broken
-    E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
+    E₀ = effective_excitation_renormalization_energy(H, state, envs.leftenvs,
+                                                     envs.rightenvs)
+    Heff = EffectiveExcitationHamiltonian(H, envs.leftenvs, envs.rightenvs, E₀)
+    E_ex = dot(state, Heff(state))
 
     rescaled_envs = environments(gs, H_regularized)
     GL = leftenv(rescaled_envs, 1, gs)
@@ -235,9 +238,11 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs=environment
     E_f = @plansor GL[5 3; 1] * gs.C[0][1; 4] * conj(gs.C[0][5; 2]) * GR[4 3; 2]
 
     H2 = H_regularized^2
-
-    return real(dot(state, effective_excitation_hamiltonian(H2, state)) -
-                2 * (E_f + E_ex) * E_ex + E_ex^2)
+    lenvs2 = environments(state.left_gs, H2)
+    renvs2 = state.trivial ? lenvs2 : environments(state.right_gs, H2)
+    E₁ = effective_excitation_renormalization_energy(H2, state, lenvs2, renvs2)
+    Heff2 = EffectiveExcitationHamiltonian(H2, lenvs2, renvs2, E₁)
+    return real(dot(state, Heff2(state)) - 2 * (E_f + E_ex) * E_ex + E_ex^2)
 end
 
 function variance(ψ, H::LazySum, envs=environments(ψ, sum(H)))
