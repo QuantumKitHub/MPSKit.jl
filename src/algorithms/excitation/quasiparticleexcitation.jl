@@ -260,18 +260,35 @@ end
 Base.length(H::EffectiveExcitationHamiltonian) = length(H.operator)
 
 function (H::EffectiveExcitationHamiltonian)(ϕ::QP; kwargs...)
-    ϕ′ = similar(ϕ)
     qp_envs = environments(ϕ, H.operator, H.lenvs, H.renvs; kwargs...)
+    return effective_excitation_hamiltonian(H.operator, ϕ, qp_envs, H.energy)
+end
+function (H::Multiline{<:EffectiveExcitationHamiltonian})(ϕ::MultilineQP; kwargs...)
+    return Multiline(map((x, y) -> x(y; kwargs...), parent(H), parent(ϕ)))
+end
+
+function effective_excitation_hamiltonian(H, ϕ, envs=environments(ϕ, H))
+    E₀ = effective_excitation_renormalization_energy(H, ϕ, envs.leftenvs, envs.rightenvs)
+    return effective_excitation_hamiltonian(H, ϕ, envs, E₀)
+end
+function effective_excitation_hamiltonian(H, ϕ, qp_envs, E)
+    ϕ′ = similar(ϕ)
     tforeach(1:length(ϕ); scheduler=Defaults.scheduler[]) do loc
-        ϕ′[loc] = _effective_excitation_local_apply(loc, ϕ, H.operator,
-                                                    H.energy[loc], qp_envs)
+        ϕ′[loc] = _effective_excitation_local_apply(loc, ϕ, H, E[loc], qp_envs)
         return nothing
     end
     return ϕ′
 end
 
-function (H::Multiline{<:EffectiveExcitationHamiltonian})(ϕ::MultilineQP; kwargs...)
-    return Multiline(map((x, y) -> x(y; kwargs...), parent(H), parent(ϕ)))
+function effective_excitation_hamiltonian(H::MultilineMPO, ϕ::MultilineQP,
+                                          envs=environments(ϕ, H))
+    E₀ = map(effective_excitation_renormalization_energy, parent(H), parent(ϕ),
+             parent(envs).leftenvs, parent(envs).rightenvs)
+    return effective_excitation_hamiltonian(H, ϕ, envs, E₀)
+end
+function effective_excitation_hamiltonian(H::MultilineMPO, ϕ::MultilineQP, envs, E)
+    return Multiline(map(effective_excitation_hamiltonian,
+                         parent(H), parent(ϕ), parent(envs), E))
 end
 
 function _effective_excitation_local_apply(site, ϕ, H::MPOHamiltonian, E::Number, envs)
