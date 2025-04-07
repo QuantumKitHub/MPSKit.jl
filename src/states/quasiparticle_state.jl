@@ -26,21 +26,39 @@ struct RightGaugedQP{S,T1,T2,E<:Number}
     momentum::E
 end
 
+function leftgaugedqptype(::Type{S}, ::Type{E}) where {S,E<:Number}
+    T1 = eltype(S)
+    T2 = tensormaptype(spacetype(T1), 1, 2, storagetype(T1))
+    return LeftGaugedQP{S,T1,T2,E}
+end
+
 #constructors
 function LeftGaugedQP(datfun, left_gs, right_gs=left_gs;
                       sector=one(sectortype(left_gs)), momentum=0.0)
     # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
-    VLs = [adjoint(rightnull(adjoint(v))) for v in left_gs.AL]
-    Xs = [TensorMap{scalartype(left_gs)}(undef, _lastspace(VLs[loc])',
-                                         excitation_space' *
-                                         right_virtualspace(right_gs, loc))
-          for loc in 1:length(left_gs)]
-    fill_data!.(Xs, datfun)
+    VLs = convert(Vector, map(leftnull, left_gs.AL))
+    Xs = map(enumerate(VLs)) do (loc, vl)
+        x = similar(vl,
+                    right_virtualspace(vl) ←
+                    excitation_space' ⊗ right_virtualspace(right_gs, loc))
+        fill_data!(x, datfun)
+        return x
+    end
     left_gs isa InfiniteMPS ||
         momentum == zero(momentum) ||
         @warn "momentum is ignored for finite quasiparticles"
     return LeftGaugedQP(left_gs, right_gs, VLs, Xs, momentum)
+end
+function LeftGaugedQP(datfun, left_gs::MultilineMPS, right_gs::MultilineMPS=left_gs;
+                      sector=one(sectortype(left_gs)), momentum=0.0)
+    # not sure why this is needed for type stability
+    Tresult = leftgaugedqptype(eltype(parent(left_gs)), typeof(momentum))
+    qp_rows = Vector{Tresult}(undef, size(left_gs, 1))
+    for row in eachindex(qp_rows)
+        qp_rows[row] = LeftGaugedQP(datfun, left_gs[row], right_gs[row]; sector, momentum)
+    end
+    return Multiline(qp_rows)
 end
 
 function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
@@ -59,13 +77,11 @@ function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
 end
 
 #gauge dependent code
-function Base.similar(v::LeftGaugedQP, T=scalartype(v))
-    return LeftGaugedQP(v.left_gs, v.right_gs, v.VLs, map(e -> similar(e, T), v.Xs),
-                        v.momentum)
+function Base.similar(v::LeftGaugedQP, ::Type{T}=scalartype(v)) where {T<:Number}
+    return LeftGaugedQP(v.left_gs, v.right_gs, v.VLs, similar.(v.Xs, T), v.momentum)
 end
-function Base.similar(v::RightGaugedQP, T=scalartype(v))
-    return RightGaugedQP(v.left_gs, v.right_gs, map(e -> similar(e, T), v.Xs), v.VRs,
-                         v.momentum)
+function Base.similar(v::RightGaugedQP, ::Type{T}=scalartype(v)) where {T<:Number}
+    return RightGaugedQP(v.left_gs, v.right_gs, similar.(v.Xs, T), v.VRs, v.momentum)
 end
 
 Base.getindex(v::LeftGaugedQP, i::Int) = v.VLs[mod1(i, end)] * v.Xs[mod1(i, end)];
