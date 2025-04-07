@@ -14,7 +14,7 @@ $(TYPEDFIELDS)
     alg_svd::S = Defaults.alg_svd()
 
     "algorithm used for [truncation](@extref TensorKit.tsvd] the expanded space"
-    trscheme::TruncationScheme = truncdim(1)
+    trscheme::TruncationScheme
 end
 
 function changebonds(ψ::InfiniteMPS, alg::RandExpand)
