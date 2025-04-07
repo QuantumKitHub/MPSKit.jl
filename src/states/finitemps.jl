@@ -387,7 +387,7 @@ end
     max_virtualspaces(ψ::FiniteMPS)
     max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=oneunit(S), right=oneunit(S))
 
-Compute the maximal virtual spaces of a given MPS or its spaces.
+Compute the maximal virtual spaces of a given finite MPS or its physical spaces.
 """
 function max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=oneunit(S),
                            right=oneunit(S)) where {S<:ElementarySpace}
