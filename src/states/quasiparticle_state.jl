@@ -41,10 +41,11 @@ function LeftGaugedQP(datfun, left_gs, right_gs=left_gs;
     Xs = map(enumerate(VLs)) do (loc, vl)
         x = similar(vl,
                     right_virtualspace(vl) ←
-                    excitation_space' ⊗ right_virtualspace(right_gs, loc))
+                    excitation_space ⊗ right_virtualspace(right_gs, loc))
         fill_data!(x, datfun)
         return x
     end
+    sum(dim, Xs) == 0 && @warn "LeftGaugedQP: No possible fusion channels"
     left_gs isa InfiniteMPS ||
         momentum == zero(momentum) ||
         @warn "momentum is ignored for finite quasiparticles"
@@ -63,13 +64,15 @@ end
 
 function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
                        sector=one(sectortype(left_gs)), momentum=0.0)
-    #find the left null spaces for the TNS
+    # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
-    VRs = [adjoint(leftnull(adjoint(v))) for v in _transpose_tail.(right_gs.AR)]
-    Xs = [TensorMap{scalartype(left_gs)}(undef, left_virtualspace(right_gs, loc)',
-                                         excitation_space' * _firstspace(VRs[loc]))
-          for loc in 1:length(left_gs)]
-    fill_data!.(Xs, datfun)
+    VRs = convert(Vector, map(rightnull! ∘ _transpose_tail, right_gs.AR))
+    Xs = map(enumerate(VRs)) do (i, vr)
+        x = similar(vr,
+                    left_virtualspace(left_gs, i)' ←
+                    excitation_space ⊗ _firstspace(vr))
+        return fill_data!(x, datfun)
+    end
     left_gs isa InfiniteMPS ||
         momentum == zero(momentum) ||
         @warn "momentum is ignored for finite quasiparticles"
@@ -84,10 +87,10 @@ function Base.similar(v::RightGaugedQP, ::Type{T}=scalartype(v)) where {T<:Numbe
     return RightGaugedQP(v.left_gs, v.right_gs, similar.(v.Xs, T), v.VRs, v.momentum)
 end
 
-Base.getindex(v::LeftGaugedQP, i::Int) = v.VLs[mod1(i, end)] * v.Xs[mod1(i, end)];
+Base.getindex(v::LeftGaugedQP, i::Int) = v.VLs[mod1(i, end)] * v.Xs[mod1(i, end)]
 function Base.getindex(v::RightGaugedQP, i::Int)
     @plansor t[-1 -2; -3 -4] := v.Xs[mod1(i, end)][-1; -3 1] * v.VRs[mod1(i, end)][1; -4 -2]
-end;
+end
 
 function Base.setindex!(v::LeftGaugedQP, B, i::Int)
     v.Xs[mod1(i, end)] = v.VLs[mod1(i, end)]' * B

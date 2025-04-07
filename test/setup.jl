@@ -14,7 +14,7 @@ using Combinatorics: permutations
 export S_xx, S_yy, S_zz, S_x, S_y, S_z
 export force_planar
 export symm_mul_mpo
-export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model
+export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model
 export classical_ising, finite_classical_ising, sixvertex
 
 # using TensorOperations
@@ -170,6 +170,27 @@ function heisenberg_XXX(; spin=1, L=Inf)
     else
         lattice = fill(space(h′, 1), L)
         return FiniteMPOHamiltonian(lattice, (i, i + 1) => h′ for i in 1:(L - 1))
+    end
+end
+
+function XY_model(::Type{U1Irrep}; g=1 / 2, L=Inf)
+    h = zeros(ComplexF64,
+              U1Space(-1 // 2 => 1, 1 // 2 => 1)^2 ← U1Space(-1 // 2 => 1, 1 // 2 => 1)^2)
+    h[U1Irrep.((-1 // 2, 1 // 2, -1 // 2, 1 // 2))] .= 1
+    h[U1Irrep.((1 // 2, -1 // 2, 1 // 2, -1 // 2))] .= 1
+    Sz = zeros(ComplexF64, space(h, 1) ← space(h, 1))
+    Sz[U1Irrep.((-1 // 2, 1 // 2))] .= -1 // 2
+    Sz[U1Irrep.((1 // 2, -1 // 2))] .= 1 // 2
+    if L == Inf
+        lattice = PeriodicArray([space(h, 1)])
+        H = InfiniteMPOHamiltonian(lattice, (i, i + 1) => -h for i in 1:1)
+        iszero(g) && return H
+        return H + g * InfiniteMPOHamiltonian(lattice, (i,) => -Sz for i in 1:1)
+    else
+        lattice = fill(space(h, 1), L)
+        H = FiniteMPOHamiltonian(lattice, (i, i + 1) => -h for i in 1:(L - 1))
+        iszero(g) && return H
+        return H + g * FiniteMPOHamiltonian(lattice, (i,) => -Sz for i in 1:L)
     end
 end
 
