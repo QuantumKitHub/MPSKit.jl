@@ -11,6 +11,7 @@ using MPSKit
 using MPSKit: fuse_mul_mpo
 using TensorKit
 using TensorKit: ℙ
+using LinearAlgebra: eigvals
 
 verbosity_full = 5
 verbosity_conv = 1
@@ -915,6 +916,52 @@ end
     rho_mps, = timestep(rho_0_mps, H, 0.0, im * beta, TDVP2(; trscheme))
     Z_tdvp = real(dot(rho_mps, rho_mps))^(1 / L)
     @test Z_tdvp ≈ Z_dense_2 atol = 1e-2
+end
+
+@testset "Sector conventions" begin
+    L = 4
+    H = TestSetup.XY_model(U1Irrep; L)
+
+    H_dense = convert(TensorMap, H)
+    vals_dense = eigvals(H_dense)
+
+    tol = 1e-18 # tolerance required to separate degenerate eigenvalues
+    alg = MPSKit.Defaults.alg_eigsolve(; dynamic_tols=false, tol)
+
+    maxVspaces = MPSKit.max_virtualspaces(physicalspace(H))
+    gs, = find_groundstate(FiniteMPS(physicalspace(H), maxVspaces[2:(end - 1)]), H;
+                           verbosity=0)
+    E₀ = expectation_value(gs, H)
+    @test E₀ ≈ first(vals_dense[one(U1Irrep)])
+
+    for (sector, vals) in vals_dense
+        # ED tests
+        num = length(vals)
+        E₀s, ψ₀s, info = exact_diagonalization(H; num, sector, alg)
+        @test E₀s[1:num] ≈ vals[1:num]
+        # this is a trick to make the mps full-rank again, which is not guaranteed by ED
+        ψ₀ = changebonds(first(ψ₀s), SvdCut(; trscheme=notrunc()))
+        Vspaces = left_virtualspace.(Ref(ψ₀), 1:L)
+        push!(Vspaces, right_virtualspace(ψ₀, L))
+        @test all(splat(==), zip(Vspaces, MPSKit.max_virtualspaces(ψ₀)))
+
+        # Quasiparticle tests
+        Es, Bs = excitations(H, QuasiparticleAnsatz(; tol), gs; sector, num=1)
+        Es = Es .+ E₀
+        # first excited state is second eigenvalue if sector is trivial
+        @test Es[1] ≈ vals[isone(sector) ? 2 : 1] atol = 1e-8
+    end
+
+    # shifted charges tests
+    # targeting states with Sz = 1 => vals_shift_dense[0] == vals_dense[1]
+    # so effectively shifting the charges by -1
+    H_shift = MPSKit.add_physical_charge(H, U1Irrep.([1, 0, 0, 0]))
+    H_shift_dense = convert(TensorMap, H_shift)
+    vals_shift_dense = eigvals(H_shift_dense)
+    for (sector, vals) in vals_dense
+        sector′ = only(sector ⊗ U1Irrep(-1))
+        @test vals ≈ vals_shift_dense[sector′]
+    end
 end
 
 end
