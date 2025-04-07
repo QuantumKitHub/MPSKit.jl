@@ -145,7 +145,6 @@ function Base.haskey(W::JordanMPOTensor, I::CartesianIndex{4})
     end
 end
 
-# TODO: avoid this slow fallback wherever possible:
 Base.parent(W::JordanMPOTensor) = parent(SparseBlockTensorMap(W))
 
 BlockTensorKit.issparse(W::JordanMPOTensor) = true
