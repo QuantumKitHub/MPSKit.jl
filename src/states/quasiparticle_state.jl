@@ -45,6 +45,7 @@ function LeftGaugedQP(datfun, left_gs, right_gs=left_gs;
         fill_data!(x, datfun)
         return x
     end
+    sum(dim, Xs) == 0 && @warn "LeftGaugedQP: No possible fusion channels"
     left_gs isa InfiniteMPS ||
         momentum == zero(momentum) ||
         @warn "momentum is ignored for finite quasiparticles"
