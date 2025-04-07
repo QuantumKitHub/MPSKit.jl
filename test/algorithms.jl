@@ -920,7 +920,7 @@ end
 
 @testset "Sector conventions" begin
     L = 4
-    H = TestSetup.XY_model(U1Irrep; L)
+    H = XY_model(U1Irrep; L)
 
     H_dense = convert(TensorMap, H)
     vals_dense = eigvals(H_dense)
