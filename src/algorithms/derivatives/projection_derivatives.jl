@@ -36,38 +36,4 @@ function (h::AC2_EffProj)(x::MPOTensor)
     @plansor y[-1 -2; -3 -4] := conj(v[2; 3 5 6]) * h.le[-1; 2 3 4] * h.a1[4 -2; 7] *
                                 h.a2[7 -4; 1] * h.re[1; 5 6 -3]
 end
-
-c_proj(pos::Int, ψ, (operator, ϕ)::Tuple, envs) = ∂∂C(pos, ψ, operator, envs) * ϕ.C[pos]
-c_proj(pos::Int, ψ, ϕ::AbstractMPS, envs) = ∂∂C(pos, ψ, nothing, envs) * ϕ.C[pos]
-function c_proj(pos::Int, ψ, Oϕs::LazySum, envs)
-    return sum(zip(Oϕs.ops, envs.envs)) do x
-        return c_proj(pos, ψ, x...)
-    end
-end
-function c_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return c_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
-end
-
-ac_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs) = ∂∂AC(pos, ψ, O, envs) * ϕ.AC[pos]
-ac_proj(pos::Int, ψ, ϕ::AbstractMPS, envs) = ∂∂AC(pos, ψ, nothing, envs) * ϕ.AC[pos]
-
-function ac_proj(pos::Int, ψ, Oϕs::LazySum, envs)
-    return sum(zip(Oϕs.ops, envs.envs)) do x
-        return ac_proj(pos, ψ, x...)
-    end
-end
-function ac_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return ac_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
-end
-
-function ac2_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs)
-    AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return ∂∂AC2(pos, ψ, O, envs) * AC2
-end
-function ac2_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
-    AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return ∂∂AC2(pos, ψ, nothing, envs) * AC2
-end
-function ac2_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return ac2_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
