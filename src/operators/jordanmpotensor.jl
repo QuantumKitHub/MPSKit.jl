@@ -55,7 +55,6 @@ struct JordanMPOTensor{E,S,
                                                                                           TB,
                                                                                           TC,
                                                                                           TD}
-        # TODO: add space and size checks
         return new{E,S,TA,TB,TC,TD}(V, A, B, C, D)
     end
 end
@@ -74,16 +73,16 @@ function JordanMPOTensor(V::TensorMapSumSpace{S,2,2},
                          D::SparseBlockTensorMap{TD,E,S,1,1}) where {E,S,TA,TB,TC,TD}
     allVs = eachspace(V)
     VA = space(allVs[2:(end - 1), 1, 1, 2:(end - 1)])
-    VA == space(A) || throw(SpaceMismatch())
+    VA == space(A) || throw(SpaceMismatch("A-block has incompatible spaces"))
 
     VB = removeunit(space(allVs[2:(end - 1), 1, 1, end]), 4)
-    VB == space(B) || throw(SpaceMismatch())
+    VB == space(B) || throw(SpaceMismatch("B-block has incompatible spaces"))
 
     VC = removeunit(space(allVs[1, 1, 1, 2:(end - 1)]), 1)
-    VC == space(C) || throw(SpaceMismatch())
+    VC == space(C) || throw(SpaceMismatch("C-block has incompatible spaces"))
 
     VD = removeunit(removeunit(space(allVs[1, 1, 1, end:end]), 4), 1)
-    VD == space(D) || throw(SpaceMismatch())
+    VD == space(D) || throw(SpaceMismatch("D-block has incompatible spaces"))
 
     return JordanMPOTensor{E,S,TA,TB,TC,TD}(V, A, B, C, D)
 end
