@@ -37,11 +37,6 @@ end
 
 # Utility functions
 # -----------------
-# function jordanmpotensortype(::Type{S}, ::Type{T}) where {S<:VectorSpace,T<:Number}
-#     TT = Base.promote_typejoin(tensormaptype(S, 2, 2, T), BraidingTensor{T,S})
-#     return SparseBlockTensorMap{TT}
-# end
-
 remove_orphans!(mpo::AbstractMPO; tol=eps(real(scalartype(mpo)))^(3 / 4)) = mpo
 function remove_orphans!(mpo::SparseMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
     droptol!.(mpo, tol)
