@@ -96,4 +96,4 @@ function VectorInterface.inner(x::Multiline, y::Multiline)
     return sum(splat(inner), zip(parent(parent(x)), parent(parent(y))); init)
 end
 
-LinearAlgebra.norm(x::Multiline) = norm(norm.(parent(x)))
+LinearAlgebra.norm(x::Multiline) = sqrt(real(inner(x, x)))
