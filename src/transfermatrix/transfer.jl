@@ -68,25 +68,21 @@ end
 # the transfer operation of a density matrix with a utility leg in its codomain is ill defined - how should one braid the utility leg?
 # hence the checks - to make sure that this operation is uniquely defined
 function transfer_left(v::MPSTensor{S}, A::MPSTensor{S}, Ab::MPSTensor{S}) where {S}
-    _can_unambiguously_braid(space(v, 2)) ||
-        throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))
+    check_unambiguous_braiding(space(v, 2))
     @plansor v[-1 -2; -3] := v[1 2; 4] * A[4 5; -3] * τ[2 3; 5 -2] * conj(Ab[1 3; -1])
 end
 function transfer_right(v::MPSTensor{S}, A::MPSTensor{S}, Ab::MPSTensor{S}) where {S}
-    _can_unambiguously_braid(space(v, 2)) ||
-        throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))
+    check_unambiguous_braiding(space(v, 2))
     @plansor v[-1 -2; -3] := A[-1 2; 1] * τ[-2 4; 2 3] * conj(Ab[-3 4; 5]) * v[1 3; 5]
 end
 
 # the transfer operation with a utility leg in both the domain and codomain is also ill defined - only due to the codomain utility space
 function transfer_left(v::MPOTensor{S}, A::MPSTensor{S}, Ab::MPSTensor{S}) where {S}
-    _can_unambiguously_braid(space(v, 2)) ||
-        throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))
+    check_unambiguous_braiding(space(v, 2))
     @plansor t[-1 -2; -3 -4] := v[1 2; -3 4] * A[4 5; -4] * τ[2 3; 5 -2] * conj(Ab[1 3; -1])
 end
 function transfer_right(v::MPOTensor{S}, A::MPSTensor{S}, Ab::MPSTensor{S}) where {S}
-    _can_unambiguously_braid(space(v, 2)) ||
-        throw(ArgumentError("transfer is not uniquely defined with utility space $(space(v,2))"))
+    check_unambiguous_braiding(space(v, 2))
     @plansor t[-1 -2; -3 -4] := A[-1 2; 1] * τ[-2 4; 2 3] * conj(Ab[-4 4; 5]) * v[1 3; -3 5]
 end
 
