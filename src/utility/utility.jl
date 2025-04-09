@@ -89,7 +89,6 @@ function _embedders(spaces)
     return maps
 end
 
-
 #=
 map every element in the tensormap to dfun(E)
 allows us to create random tensormaps for any storagetype
@@ -151,5 +150,5 @@ function check_ambiguous_braiding(::Type{Bool}, V::VectorSpace)
 end
 function check_ambiguous_braiding(V::VectorSpace)
     return check_ambiguous_braiding(Bool, V) ||
-        throw(ArgumentError("cannot unambiguously braid $V"))
+           throw(ArgumentError("cannot unambiguously braid $V"))
 end
