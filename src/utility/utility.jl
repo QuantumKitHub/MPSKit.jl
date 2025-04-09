@@ -89,17 +89,6 @@ function _embedders(spaces)
     return maps
 end
 
-function _can_unambiguously_braid(sp::VectorSpace)
-    s = sectortype(sp)
-
-    BraidingStyle(s) isa SymmetricBraiding && return true
-
-    # if it's not symmetric, then we are only really garantueed that this is possible when only one irrep occurs - the trivial one
-    for sect in sectors(sp)
-        sect == one(sect) || return false
-    end
-    return true
-end
 
 #=
 map every element in the tensormap to dfun(E)
@@ -142,4 +131,16 @@ end
 
 function fuser(::Type{T}, V1::S, V2::S) where {T,S<:IndexSpace}
     return isomorphism(T, fuse(V1 ⊗ V2), V1 ⊗ V2)
+end
+
+# Verify that the braiding is unambiguous: either through symmetric braiding or because the
+# sectors are all trivial
+function check_ambiguous_braiding(::Type{Bool}, V::VectorSpace)
+    I = sectortype(V)
+    BraidingStyle(I) isa SymmetricBraiding && return true
+    return all(isone, sectors(V))
+end
+function check_ambiguous_braiding(V::VectorSpace)
+    return check_ambiguous_braiding(Bool, V) ||
+        throw(ArgumentError("cannot unambiguously braid $V"))
 end
