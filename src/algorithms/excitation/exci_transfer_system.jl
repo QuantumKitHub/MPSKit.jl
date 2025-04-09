@@ -157,7 +157,7 @@ function right_excitation_transfer_system(GBR, H::InfiniteMPOHamiltonian, exci;
             @plansor start[-1 -2; -3 -4] -= start[2 1; -3 3] *
                                             conj(util[1]) *
                                             l_LR(exci.right_gs)[3; 2] *
-                                            R_LR(exci.right_gs)[-1; -4] *
+                                            r_LR(exci.right_gs)[-1; -4] *
                                             util[-2]
         end
 
