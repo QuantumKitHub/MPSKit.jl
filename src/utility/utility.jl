@@ -133,6 +133,15 @@ function fuser(::Type{T}, V1::S, V2::S) where {T,S<:IndexSpace}
     return isomorphism(T, fuse(V1 ⊗ V2), V1 ⊗ V2)
 end
 
+# TODO: remove once TensorKit supports this
+_twist(t::AbstractTensorMap, i::Int) = _twist(BraidingStyle(sectortype(t)), t, i)
+_twist(::SymmetricBraiding, t::AbstractTensorMap, i::Int) = t
+function _twist(::NoBraiding, t::AbstractTensorMap, i::Int)
+    check_ambiguous_braiding(space(t, i))
+    return t
+end
+_twist(::BraidingStyle, t::AbstractTensorMap, i::Int) = twist(t, i)
+
 # Verify that the braiding is unambiguous: either through symmetric braiding or because the
 # sectors are all trivial
 function check_ambiguous_braiding(::Type{Bool}, V::VectorSpace)
