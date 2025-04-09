@@ -134,21 +134,21 @@ end
 
 # TODO: remove once TensorKit supports this
 _twist(t::AbstractTensorMap, i::Int) = _twist(BraidingStyle(sectortype(t)), t, i)
-_twist(::SymmetricBraiding, t::AbstractTensorMap, i::Int) = t
+_twist(::Bosonic, t::AbstractTensorMap, i::Int) = t
 function _twist(::NoBraiding, t::AbstractTensorMap, i::Int)
-    check_ambiguous_braiding(space(t, i))
+    check_unambiguous_braiding(space(t, i))
     return t
 end
 _twist(::BraidingStyle, t::AbstractTensorMap, i::Int) = twist(t, i)
 
 # Verify that the braiding is unambiguous: either through symmetric braiding or because the
 # sectors are all trivial
-function check_ambiguous_braiding(::Type{Bool}, V::VectorSpace)
+function check_unambiguous_braiding(::Type{Bool}, V::VectorSpace)
     I = sectortype(V)
     BraidingStyle(I) isa SymmetricBraiding && return true
     return all(isone, sectors(V))
 end
-function check_ambiguous_braiding(V::VectorSpace)
-    return check_ambiguous_braiding(Bool, V) ||
+function check_unambiguous_braiding(V::VectorSpace)
+    return check_unambiguous_braiding(Bool, V) ||
            throw(ArgumentError("cannot unambiguously braid $V"))
 end
