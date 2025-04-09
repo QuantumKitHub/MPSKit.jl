@@ -13,6 +13,8 @@ function left_excitation_transfer_system(lBs, H, exci; mom=exci.momentum,
         T = TransferMatrix(exci.right_gs.AR, H_partial, exci.left_gs.AL)
         start = scale!(last(found[1:i] * T), cis(-mom * len))
         if exci.trivial && isid(H, i)
+            # not sure what H can be here
+            # also, what is isid?
             @plansor start[-1 -2; -3 -4] -= start[1 4; -3 2] *
                                             r_RL(exci.right_gs)[2; 3] *
                                             τ[3 4; 5 1] *
@@ -57,11 +59,14 @@ function left_excitation_transfer_system(GBL, H::InfiniteMPOHamiltonian, exci;
         T = TransferMatrix(exci.right_gs.AR, H_partial, exci.left_gs.AL)
         start = scale!(last(found[1:i] * T), cis(-mom * len))
         if exci.trivial && isidentitylevel(H, i)
-            @plansor start[-1 -2; -3 -4] -= start[1 4; -3 2] *
-                                            r_RL(exci.right_gs)[2; 3] *
-                                            τ[3 4; 5 1] *
-                                            l_RL(exci.right_gs)[-1; 6] *
-                                            τ[5 6; -4 -2]
+            # not using braiding tensors here, leads to extra leg
+            util = similar(exci.left_gs.AL[1], space(parent(H)[1],1)[1])
+            fill_data!(util, one)
+            @plansor start[-1 -2; -3 -4] -= start[2 1; -3 3] *
+                                            util[1] *
+                                            r_RL(exci.right_gs)[3; 2] *
+                                            l_RL(exci.right_gs)[-1; -4] *
+                                            conj(util[-2])
         end
 
         found[i] = add!(start, GBL[i])
@@ -70,7 +75,10 @@ function left_excitation_transfer_system(GBL, H::InfiniteMPOHamiltonian, exci;
             if isidentitylevel(H, i)
                 T = TransferMatrix(exci.right_gs.AR, exci.left_gs.AL)
                 if exci.trivial
-                    T = regularize(T, l_RL(exci.right_gs), r_RL(exci.right_gs))
+                    # deal with extra leg
+                    @plansor lRL_util[-1 -2; -3] := l_RL(exci.right_gs)[-1;-3] * conj(util[-2])
+                    @plansor rRL_util[-1 -2; -3] := r_RL(exci.right_gs)[-1;-3] * util[-2]
+                    T = regularize(T, lRL_util, rRL_util)
                 end
             else
                 T = TransferMatrix(exci.right_gs.AR, map(h -> h[i, 1, 1, i], parent(H)),
@@ -126,6 +134,7 @@ function right_excitation_transfer_system(rBs, H, exci; mom=exci.momentum,
     end
     return found
 end
+#TODO: check that the left/right discrepancies make sense
 function right_excitation_transfer_system(GBR, H::InfiniteMPOHamiltonian, exci;
                                           mom=exci.momentum,
                                           solver=Defaults.linearsolver)
@@ -142,9 +151,14 @@ function right_excitation_transfer_system(GBR, H::InfiniteMPOHamiltonian, exci;
         T = TransferMatrix(exci.left_gs.AL, H_partial, exci.right_gs.AR)
         start = scale!(first(T * found[i:odim]), cis(mom * len))
         if exci.trivial && isidentitylevel(H, i)
-            @plansor start[-1 -2; -3 -4] -= τ[6 2; 3 4] * start[3 4; -3 5] *
-                                            l_LR(exci.right_gs)[5; 2] *
-                                            r_LR(exci.right_gs)[-1; 1] * τ[-2 -4; 1 6]
+            # not using braiding tensors here, leads to extra leg
+            util = similar(exci.right_gs.AL[1], space(parent(H)[1],1)[1])
+            fill_data!(util, one)
+            @plansor start[-1 -2; -3 -4] -= start[2 1; -3 3] *
+                                            conj(util[1]) *
+                                            l_LR(exci.right_gs)[3; 2] *
+                                            R_LR(exci.right_gs)[-1; -4] *
+                                            util[-2]
         end
 
         found[i] = add!(start, GBR[i])
@@ -153,7 +167,10 @@ function right_excitation_transfer_system(GBR, H::InfiniteMPOHamiltonian, exci;
             if isidentitylevel(H, i)
                 tm = TransferMatrix(exci.left_gs.AL, exci.right_gs.AR)
                 if exci.trivial
-                    tm = regularize(tm, l_LR(exci.left_gs), r_LR(exci.right_gs))
+                    # deal with extra leg
+                    @plansor lLR_util[-1 -2; -3] := l_LR(exci.left_gs)[-1;-3] * conj(util[-2])
+                    @plansor rLR_util[-1 -2; -3] := r_LR(exci.right_gs)[-1;-3] * util[-2]
+                    tm = regularize(tm, lLR_util, rLR_util)
                 end
             else
                 tm = TransferMatrix(exci.left_gs.AL, map(h -> h[i, 1, 1, i], parent(H)),
