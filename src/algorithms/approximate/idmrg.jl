@@ -90,7 +90,7 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
                 for row in 1:size(ψ, 1)
                     # TODO: also write this as ac2_proj?
                     AC2 = ϕ.AL[row, col] * _transpose_tail(ϕ.AC[row, col + 1])
-                    AC2′ = ∂∂AC2(row, col, ψ, O, envs) * AC2
+                    AC2′ = AC2_hamiltonian(CartesianIndex(row, col), ψ, O, ϕ, envs) * AC2
                     al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 

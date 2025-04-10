@@ -22,16 +22,16 @@ MPO_∂∂AC2(GL, O1, O2, GR) = MPO_∂∂ACN(GL, (O1, O2), GR)
 
 # Constructors
 # ------------
-function ∂∂C(pos::Int, mps, operator, envs)
-    return MPO_∂∂C(leftenv(envs, pos + 1, mps), rightenv(envs, pos, mps))
+function C_hamiltonian(site::Int, below, operator, above, envs)
+    return MPO_∂∂C(leftenv(envs, site + 1, below), rightenv(envs, site, below))
 end
-function ∂∂AC(pos::Int, mps, operator, envs)
-    O = isnothing(operator) ? nothing : operator[pos]
-    return MPO_∂∂AC(leftenv(envs, pos, mps), O, rightenv(envs, pos, mps))
+function AC_hamiltonian(site::Int, below, operator, above, envs)
+    O = isnothing(operator) ? nothing : operator[site]
+    return MPO_∂∂AC(leftenv(envs, site, below), O, rightenv(envs, site, below))
 end
-function ∂∂AC2(pos::Int, mps, operator, envs)
-    O1, O2 = isnothing(operator) ? (nothing, nothing) : (operator[pos], operator[pos + 1])
-    return MPO_∂∂AC2(leftenv(envs, pos, mps), O1, O2, rightenv(envs, pos + 1, mps))
+function AC2_hamiltonian(site::Int, below, operator, above, envs)
+    O1, O2 = isnothing(operator) ? (nothing, nothing) : (operator[site], operator[site + 1])
+    return MPO_∂∂AC2(leftenv(envs, site, below), O1, O2, rightenv(envs, site + 1, below))
 end
 
 # Properties

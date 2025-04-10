@@ -124,20 +124,22 @@ function _localupdate_vumps_step!(site, mps, operator, envs, AC₀, C₀;
                                   parallel::Bool=false, alg_orth=QRpos(),
                                   alg_eigsolve=Defaults.eigsolver, which)
     if !parallel
-        _, AC = fixedpoint(∂∂AC(site, mps, operator, envs), AC₀, which, alg_eigsolve)
-        _, C = fixedpoint(∂∂C(site, mps, operator, envs), C₀, which, alg_eigsolve)
+        Hac = AC_hamiltonian(site, mps, operator, mps, envs)
+        _, AC = fixedpoint(Hac, AC₀, which, alg_eigsolve)
+        Hc = C_hamiltonian(site, mps, operator, mps, envs)
+        _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
         return regauge!(AC, C; alg=alg_orth)
     end
 
     local AC, C
     @sync begin
         @spawn begin
-            _, AC = fixedpoint(∂∂AC(site, mps, operator, envs),
-                               AC₀, which, alg_eigsolve)
+            Hac = AC_hamiltonian(site, mps, operator, mps, envs)
+            _, AC = fixedpoint(Hac, AC₀, which, alg_eigsolve)
         end
         @spawn begin
-            _, C = fixedpoint(∂∂C(site, mps, operator, envs),
-                              C₀, which, alg_eigsolve)
+            Hc = C_hamiltonian(site, mps, operator, mps, envs)
+            _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
         end
     end
     return regauge!(AC, C; alg=alg_orth)

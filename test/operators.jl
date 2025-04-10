@@ -8,7 +8,8 @@ module TestOperators
 using ..TestSetup
 using Test, TestExtras
 using MPSKit
-using MPSKit: _transpose_front, _transpose_tail
+using MPSKit: _transpose_front, _transpose_tail, C_hamiltonian, AC_hamiltonian,
+              AC2_hamiltonian
 using TensorKit
 using TensorKit: ℙ
 using VectorInterface: One
@@ -347,22 +348,22 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         @test expval ≈ expval3
 
         # test derivatives
-        summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
+        summedhct = C_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum1 = sum(zip(Hs, envs)) do (H, env)
-            return MPSKit.∂∂C(1, ψ, H, env)(ψ.C[1])
+            return C_hamiltonian(1, ψ, H, ψ, env)(ψ.C[1])
         end
         @test summedhct(ψ.C[1], 0.0) ≈ sum1
 
-        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
+        summedhct = AC_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum2 = sum(zip(Hs, envs)) do (H, env)
-            return MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
+            return AC_hamiltonian(1, ψ, H, ψ, env)(ψ.AC[1])
         end
         @test summedhct(ψ.AC[1], 0.0) ≈ sum2
 
         v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
-        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summed_envs)
+        summedhct = AC2_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum3 = sum(zip(Hs, envs)) do (H, env)
-            return MPSKit.∂∂AC2(1, ψ, H, env)(v)
+            return AC2_hamiltonian(1, ψ, H, ψ, env)(v)
         end
         @test summedhct(v, 0.0) ≈ sum3
 
@@ -385,28 +386,28 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         @test expval ≈ expval3
 
         # test derivatives
-        summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
+        summedhct = C_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum1 = sum(zip(fs, Hs, envs)) do (f, H, env)
             if f isa Function
                 f = f(t)
             end
-            return f * MPSKit.∂∂C(1, ψ, H, env)(ψ.C[1])
+            return f * C_hamiltonian(1, ψ, H, ψ, env)(ψ.C[1])
         end
         @test summedhct(ψ.C[1], t) ≈ sum1
 
-        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
+        summedhct = AC_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum2 = sum(zip(fs, Hs, envs)) do (f, H, env)
             if f isa Function
                 f = f(t)
             end
-            return f * MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
+            return f * AC_hamiltonian(1, ψ, H, ψ, env)(ψ.AC[1])
         end
         @test summedhct(ψ.AC[1], t) ≈ sum2
 
         v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
-        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summed_envs)
+        summedhct = AC2_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum3 = sum(zip(fs, Hs, envs)) do (f, H, env)
-            return (f isa Function ? f(t) : f) * MPSKit.∂∂AC2(1, ψ, H, env)(v)
+            return (f isa Function ? f(t) : f) * AC2_hamiltonian(1, ψ, H, ψ, env)(v)
         end
         @test summedhct(v, t) ≈ sum3
     end
@@ -432,22 +433,22 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         @test expval ≈ expval3
 
         # test derivatives
-        summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
+        summedhct = C_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum1 = sum(zip(Hs, envs)) do (H, env)
-            return MPSKit.∂∂C(1, ψ, H, env)(ψ.C[1])
+            return C_hamiltonian(1, ψ, H, ψ, env)(ψ.C[1])
         end
         @test summedhct(ψ.C[1], 0.0) ≈ sum1
 
-        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
+        summedhct = AC_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum2 = sum(zip(Hs, envs)) do (H, env)
-            return MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
+            return AC_hamiltonian(1, ψ, H, ψ, env)(ψ.AC[1])
         end
         @test summedhct(ψ.AC[1], 0.0) ≈ sum2
 
         v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
-        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summed_envs)
+        summedhct = AC2_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum3 = sum(zip(Hs, envs)) do (H, env)
-            return MPSKit.∂∂AC2(1, ψ, H, env)(v)
+            return AC2_hamiltonian(1, ψ, H, ψ, env)(v)
         end
         @test summedhct(v, 0.0) ≈ sum3
 
@@ -470,28 +471,28 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         @test expval ≈ expval3
 
         # test derivatives
-        summedhct = MPSKit.∂∂C(1, ψ, summedH, summed_envs)
+        summedhct = C_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum1 = sum(zip(fs, Hs, envs)) do (f, H, env)
             if f isa Function
                 f = f(t)
             end
-            return f * MPSKit.∂∂C(1, ψ, H, env)(ψ.C[1])
+            return f * C_hamiltonian(1, ψ, H, ψ, env)(ψ.C[1])
         end
         @test summedhct(ψ.C[1], t) ≈ sum1
 
-        summedhct = MPSKit.∂∂AC(1, ψ, summedH, summed_envs)
+        summedhct = AC_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum2 = sum(zip(fs, Hs, envs)) do (f, H, env)
             if f isa Function
                 f = f(t)
             end
-            return f * MPSKit.∂∂AC(1, ψ, H, env)(ψ.AC[1])
+            return f * AC_hamiltonian(1, ψ, H, ψ, env)(ψ.AC[1])
         end
         @test summedhct(ψ.AC[1], t) ≈ sum2
 
         v = _transpose_front(ψ.AC[1]) * _transpose_tail(ψ.AR[2])
-        summedhct = MPSKit.∂∂AC2(1, ψ, summedH, summed_envs)
+        summedhct = AC2_hamiltonian(1, ψ, summedH, ψ, summed_envs)
         sum3 = sum(zip(fs, Hs, envs)) do (f, H, env)
-            return (f isa Function ? f(t) : f) * MPSKit.∂∂AC2(1, ψ, H, env)(v)
+            return (f isa Function ? f(t) : f) * AC2_hamiltonian(1, ψ, H, ψ, env)(v)
         end
         @test summedhct(v, t) ≈ sum3
     end

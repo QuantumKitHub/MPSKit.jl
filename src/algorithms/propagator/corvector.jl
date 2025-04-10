@@ -74,7 +74,7 @@ function propagator(A::AbstractFiniteMPS, z::Number, H::FiniteMPOHamiltonian,
             for i in [1:(length(A) - 1); length(A):-1:2]
                 tos = ac_proj(i, init, A, mixedenvs)
 
-                H_AC = ∂∂AC(i, init, H, h_envs)
+                H_AC = AC_hamiltonian(i, init, H, init, h_envs)
                 AC = init.AC[i]
                 AC′, convhist = linsolve(H_AC, -tos, AC, alg.solver, -z, one(z))
 
@@ -135,8 +135,8 @@ function propagator(A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
 
             for i in [1:(length(A) - 1); length(A):-1:2]
                 tos = ac_proj(i, init, A, mixedenvs)
-                H1_AC = ∂∂AC(i, init, H, envs1)
-                H2_AC = ∂∂AC(i, init, H2, envs2)
+                H1_AC = AC_hamiltonian(i, init, H, init, envs1)
+                H2_AC = AC_hamiltonian(i, init, H2, init, envs2)
                 H_AC = LinearCombination((H1_AC, H2_AC), (-2 * ω, 1))
                 AC′, convhist = linsolve(H_AC, -η * tos, init.AC[i], alg.solver, abs2(z), 1)
 

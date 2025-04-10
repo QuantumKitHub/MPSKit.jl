@@ -10,9 +10,11 @@ abstract type DerivativeOperator end
 Base.:*(h::DerivativeOperator, v) = h(v)
 (h::DerivativeOperator)(v, ::Number) = h(v)
 
+# Generic constructors
+# --------------------
+
 @doc """
-    ∂∂C(site::Int, mps, operator, envs)
-    ∂∂C(row::Int, col::Int, mps, operator, envs)
+    C_hamiltonian(site, above, operator, below, envs)::DerivativeOperator
 
 Effective zero-site local operator acting at `site`.
 
@@ -27,27 +29,79 @@ Effective zero-site local operator acting at `site`.
 ```
 
 See also [`∂C`](@ref).
-""" ∂∂C
+""" C_hamiltonian
 
-∂∂C(pos::CartesianIndex, mps, operator, envs) = ∂∂C(Tuple(pos)..., mps, operator, envs)
-function ∂∂C(row::Int, col::Int, mps::MultilineMPS, operator::MultilineMPO, envs)
-    return ∂∂C(col, mps[row], operator[row], envs[row])
+@doc """
+    AC_hamiltonian(site, mps, operator, mps, envs)::DerivativeOperator
+
+Effective one-site local operator acting at `site`.
+
+```
+ ┌───   ───┐ 
+ │    │    │ 
+┌┴┐ ┌─┴─┐ ┌┴┐
+│ ├─┤   ├─┤ │
+└┬┘ └─┬─┘ └┬┘
+ │    │    │ 
+ └───   ───┘ 
+```
+
+See also [`∂AC`](@ref).
+""" AC_hamiltonian
+
+@doc """
+    AC2_hamiltonian(site, above, operator, below, envs)
+
+Effective two-site local operator acting at `site`.
+
+```
+ ┌──        ──┐ 
+ │   │    │   │ 
+┌┴┐┌─┴─┐┌─┴─┐┌┴┐
+│ ├┤   ├┤   ├┤ │
+└┬┘└─┬─┘└─┬─┘└┬┘
+ │   │    │   │ 
+ └──        ──┘ 
+```
+
+See also [`∂AC2`](@ref).
+""" AC2_hamiltonian
+
+# boilerplate for the derivative operators
+for hamiltonian in (:C_hamiltonian, :AC_hamiltonian, :AC2_hamiltonian)
+    @eval function $hamiltonian(site::CartesianIndex{2}, below, operator::MultilineMPO,
+                                above, envs)
+        row, col = Tuple(site)
+        return $hamiltonian(col, below[row + 1], operator[row], above[row], envs[row])
+    end
+    @eval function $hamiltonian(col::Int, below, operator::MultilineMPO, above, envs)
+        Hs = map(1:size(operator, 1)) do row
+            return $hamiltonian(CartesianIndex(row, col), below, operator, above, envs)
+        end
+        return Multiline(Hs)
+    end
+    @eval function $hamiltonian(site::Int, below, operator::MultipliedOperator, above, envs)
+        H = $hamiltonian(site, below, operator.op, above, envs)
+        return MultipliedOperator(H, operator.f)
+    end
+    @eval function $hamiltonian(site::Int, below, operator::LinearCombination, above, envs)
+        Hs = map(operator.opps, envs.envs) do o, env
+            return $hamiltonian(site, below, o, above, env)
+        end
+        return LinearCombination(Hs, operator.coeffs)
+    end
+    @eval function $hamiltonian(site::Int, below, operator::LazySum, above,
+                                envs::MultipleEnvironments)
+        Hs = map(operator.ops, envs.envs) do o, env
+            return $hamiltonian(site, below, o, above, env)
+        end
+        elT = Union{D,MultipliedOperator{D}} where {D<:DerivativeOperator}
+        return LazySum{elT}(Hs)
+    end
 end
-function ∂∂C(site::Int, mps, operator::MultilineMPO, envs)
-    return Multiline([∂∂C(row, site, mps, operator, envs) for row in 1:size(operator, 1)])
-end
-function ∂∂C(pos::Int, mps, operator::MultipliedOperator, cache)
-    return MultipliedOperator(∂∂C(pos, mps, operator.op, cache), operator.f)
-end
-function ∂∂C(pos::Int, mps, operator::LinearCombination, cache)
-    return LinearCombination(broadcast((h, e) -> ∂∂C(pos, mps, h, e), operator.opps,
-                                       cache.envs),
-                             operator.coeffs)
-end
-function ∂∂C(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
-    suboperators = map((op, openv) -> ∂∂C(pos, mps, op, openv), operator.ops, cache.envs)
-    return LazySum{Union{MPO_∂∂C,MultipliedOperator{<:MPO_∂∂C}}}(suboperators)
-end
+
+# Generic actions
+# ---------------
 
 """
     ∂C(x, leftenv, rightenv)
@@ -69,44 +123,6 @@ See also [`∂∂C`](@ref).
 """
 ∂C(x, leftenv, rightenv) = MPO_∂∂C(leftenv, rightenv)(x)
 
-@doc """
-    ∂∂AC(site::Int, mps, operator, envs)
-    ∂∂AC(row::Int, col::Int, mps, operator, envs)
-
-Effective one-site local operator acting at `site`.
-
-```
- ┌───   ───┐ 
- │    │    │ 
-┌┴┐ ┌─┴─┐ ┌┴┐
-│ ├─┤   ├─┤ │
-└┬┘ └─┬─┘ └┬┘
- │    │    │ 
- └───   ───┘ 
-```
-
-See also [`∂AC`](@ref).
-""" ∂∂AC
-∂∂AC(pos::CartesianIndex, mps, operator, envs) = ∂∂AC(Tuple(pos)..., mps, operator, envs)
-function ∂∂AC(row::Int, col::Int, mps::MultilineMPS, operator::MultilineMPO, envs)
-    return ∂∂AC(col, mps[row], operator[row], envs[row])
-end
-function ∂∂AC(site::Int, mps, operator::MultilineMPO, envs)
-    return Multiline([∂∂AC(row, site, mps, operator, envs) for row in 1:size(operator, 1)])
-end
-function ∂∂AC(pos::Int, mps, operator::MultipliedOperator, cache)
-    return MultipliedOperator(∂∂AC(pos, mps, operator.op, cache), operator.f)
-end
-function ∂∂AC(pos::Int, mps, operator::LinearCombination, cache)
-    return LinearCombination(broadcast((h, e) -> ∂∂AC(pos, mps, h, e), operator.opps,
-                                       cache.envs), operator.coeffs)
-end
-function ∂∂AC(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
-    suboperators = map((op, openv) -> ∂∂AC(pos, mps, op, openv), operator.ops, cache.envs)
-    elT = Union{D,MultipliedOperator{D}} where {D<:Union{MPO_∂∂AC,JordanMPO_∂∂AC}}
-    return LazySum{elT}(suboperators)
-end
-
 """
     ∂AC(x, operator, leftenv, rightenv)
 
@@ -126,45 +142,6 @@ Application of the effective one-site local operator on a local tensor `x`.
 See also [`∂∂AC`](@ref).
 """
 ∂AC(x, operator, leftenv, rightenv) = MPO_∂∂AC(leftenv, operator, rightenv)(x)
-
-@doc """
-    ∂∂AC2(site::Int, mps, operator, envs)
-    ∂∂AC2(row::Int, col::Int, mps, operator, envs)
-
-Effective two-site local operator acting at `site`.
-
-```
- ┌──        ──┐ 
- │   │    │   │ 
-┌┴┐┌─┴─┐┌─┴─┐┌┴┐
-│ ├┤   ├┤   ├┤ │
-└┬┘└─┬─┘└─┬─┘└┬┘
- │   │    │   │ 
- └──        ──┘ 
-```
-
-See also [`∂AC2`](@ref).
-""" ∂∂AC2
-
-∂∂AC2(pos::CartesianIndex, mps, operator, envs) = ∂∂AC2(Tuple(pos)..., mps, operator, envs)
-function ∂∂AC2(row::Int, col::Int, mps::MultilineMPS, operator::MultilineMPO, envs)
-    return ∂∂AC2(col, mps[row], operator[row], envs[row])
-end
-function ∂∂AC2(site::Int, mps, operator::MultilineMPO, envs)
-    return Multiline([∂∂AC2(row, site, mps, operator, envs) for row in 1:size(operator, 1)])
-end
-function ∂∂AC2(pos::Int, mps, operator::MultipliedOperator, cache)
-    return MultipliedOperator(∂∂AC2(pos, mps, operator.op, cache), operator.f)
-end
-function ∂∂AC2(pos::Int, mps, operator::LinearCombination, cache)
-    return LinearCombination(broadcast((h, e) -> ∂∂AC2(pos, mps, h, e), operator.opps,
-                                       cache.envs), operator.coeffs)
-end
-function ∂∂AC2(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
-    suboperators = map((op, openv) -> ∂∂AC2(pos, mps, op, openv), operator.ops, cache.envs)
-    elT = Union{D,MultipliedOperator{D}} where {D<:Union{MPO_∂∂AC2,JordanMPO_∂∂AC2}}
-    return LazySum{elT}(suboperators)
-end
 
 """
     ∂AC2(x, operator1, operator2, leftenv, rightenv)

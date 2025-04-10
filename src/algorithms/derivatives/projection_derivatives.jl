@@ -10,31 +10,16 @@ Projection_∂∂AC(GL, A, GR) = Projection_∂∂ACN(GL, (A,), GR)
 const Projection_∂∂AC2{L,O₁,O₂,R} = Projection_∂∂ACN{L,Tuple{O₁,O₂},R}
 Projection_∂∂AC2(GL, A1, A2, GR) = Projection_∂∂ACN(GL, (A1, A2), GR)
 
-struct AC_EffProj{A,L} <: DerivativeOperator
-    a1::A
-    le::L
-    re::L
-end
-struct AC2_EffProj{A,L} <: DerivativeOperator
-    a1::A
-    a2::A
-    le::L
-    re::L
-end
-
 # Constructors
 # ------------
-function ∂∂AC(pos::Int, state, operator::ProjectionOperator, env)
-    return Projection_∂∂AC(leftenv(env, pos, state), operator.ket.AC[pos],
-                           rightenv(env, pos, state))
+function AC_hamiltonian(site::Int, below, operator::ProjectionOperator, above, envs)
+    return Projection_∂∂AC(leftenv(envs, site, below), operator.ket.AC[site],
+                           rightenv(envs, site, below))
 end
-function ∂∂AC2(pos::Int, state, operator::ProjectionOperator, env)
-    return Projection_∂∂AC2(leftenv(env, pos, state), operator.ket.AC[pos],
-                            operator.ket.AR[pos + 1],
-                            rightenv(env, pos + 1, state))
-    return AC2_EffProj(operator.ket.AC[pos], operator.ket.AR[pos + 1],
-                       leftenv(env, pos, state),
-                       rightenv(env, pos + 1, state))
+function AC2_hamiltonian(site::Int, below, operator::ProjectionOperator, above, envs)
+    return Projection_∂∂AC2(leftenv(envs, site, below), operator.ket.AC[site],
+                            operator.ket.AR[site + 1],
+                            rightenv(envs, site + 1, below))
 end
 
 # Actions

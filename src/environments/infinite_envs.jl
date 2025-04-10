@@ -102,7 +102,8 @@ end
 function TensorKit.normalize!(envs::InfiniteEnvironments, below::InfiniteMPS,
                               operator::InfiniteMPO, above::InfiniteMPS)
     for i in 1:length(operator)
-        λ = dot(below.C[i], MPO_∂∂C(envs.GLs[i + 1], envs.GRs[i]) * above.C[i])
+        Hc = C_hamiltonian(i, below, operator, above, envs)
+        λ = dot(below.C[i], Hc * above.C[i])
         scale!(envs.GLs[i + 1], inv(λ))
     end
     return envs
