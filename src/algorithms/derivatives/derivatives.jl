@@ -100,6 +100,28 @@ for hamiltonian in (:C_hamiltonian, :AC_hamiltonian, :AC2_hamiltonian)
     end
 end
 
+"""
+    site_derivative(nsites, site, below, operator, above, envs)
+
+Effective local `nsite`-derivative operator acting at `site`.
+"""
+Base.@constprop :aggressive function site_derivative(nsites::Int, site, below, operator,
+                                                     above, envs)
+    return site_derivative(Val(nsites), site, below, operator, above, envs)
+end
+function site_derivative(::Val{0}, site, below, operator, above, envs)
+    return C_hamiltonian(site, below, operator, above, envs)
+end
+function site_derivative(::Val{1}, site, below, operator, above, envs)
+    return AC_hamiltonian(site, below, operator, above, envs)
+end
+function site_derivative(::Val{2}, site, below, operator, above, envs)
+    return AC2_hamiltonian(site, below, operator, above, envs)
+end
+function site_derivative(::Val{N}, site, below, operator, above, envs) where {N}
+    throw(ArgumentError("site derivative not implemented for $N sites"))
+end
+
 # Generic actions
 # ---------------
 
@@ -165,8 +187,12 @@ See also [`∂∂AC2`](@ref).
 
 # Projection operators
 # --------------------
-c_proj(pos::Int, ψ, (operator, ϕ)::Tuple, envs) = ∂∂C(pos, ψ, operator, envs) * ϕ.C[pos]
-c_proj(pos::Int, ψ, ϕ::AbstractMPS, envs) = ∂∂C(pos, ψ, nothing, envs) * ϕ.C[pos]
+function c_proj(pos::Int, ψ, (operator, ϕ)::Tuple, envs)
+    return C_hamiltonian(pos, ψ, operator, ϕ, envs) * ϕ.C[pos]
+end
+function c_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
+    return C_hamiltonian(pos, ψ, nothing, ϕ, envs) * ϕ.C[pos]
+end
 function c_proj(pos::Int, ψ, Oϕs::LazySum, envs)
     return sum(zip(Oϕs.ops, envs.envs)) do x
         return c_proj(pos, ψ, x...)
@@ -176,8 +202,10 @@ function c_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
     return c_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
-ac_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs) = ∂∂AC(pos, ψ, O, envs) * ϕ.AC[pos]
-ac_proj(pos::Int, ψ, ϕ::AbstractMPS, envs) = ∂∂AC(pos, ψ, nothing, envs) * ϕ.AC[pos]
+ac_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs) = AC_hamiltonian(pos, ψ, O, ϕ, envs) * ϕ.AC[pos]
+function ac_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
+    return AC_hamiltonian(pos, ψ, nothing, ϕ, envs) * ϕ.AC[pos]
+end
 
 function ac_proj(pos::Int, ψ, Oϕs::LazySum, envs)
     return sum(zip(Oϕs.ops, envs.envs)) do x
@@ -190,11 +218,11 @@ end
 
 function ac2_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs)
     AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return ∂∂AC2(pos, ψ, O, envs) * AC2
+    return AC2_hamiltonian(pos, ψ, O, ϕ, envs) * AC2
 end
 function ac2_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
     AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return ∂∂AC2(pos, ψ, nothing, envs) * AC2
+    return AC2_hamiltonian(pos, ψ, nothing, ϕ, envs) * AC2
 end
 function ac2_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
     return ac2_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
