@@ -380,15 +380,19 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
     E = scalartype(T)
     S = spacetype(T)
 
-    __oneunit = _oneunit(local_operators[1])
+    # avoid using one(S)
+    somempo = local_mpos[1].second[1]
+    sp_oneleg = space(somempo, 1)
+
+    _oneunit = oneunit(sp_oneleg) 
 
     virtualspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
-    virtualspaces[1] = SumSpace(__oneunit)
-    virtualspaces[end] = SumSpace(__oneunit)
+    virtualspaces[1] = SumSpace(_oneunit)
+    virtualspaces[end] = SumSpace(_oneunit)
 
     for i in 1:(length(lattice) - 1)
         n_channels = maximum(last, nonzero_keys[i]; init=1) + 1
-        V = SumSpace(fill(__oneunit, n_channels))
+        V = SumSpace(fill(_oneunit, n_channels))
         if n_channels > 2
             for ((key_L, key_R), O) in zip(nonzero_keys[i], nonzero_opps[i])
                 V[key_R == 0 ? end : key_R] = if O isa Number
@@ -472,10 +476,14 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     virtualspaces = PeriodicArray([Vector{MissingS}(missing, operator_size)
                                    for _ in 1:length(nonzero_keys)])
 
-    __oneunit = _oneunit(local_operators[1])
+
+    somempo = local_mpos[1].second[1]
+    sp_oneleg = space(somempo, 1)
+
+    _oneunit = oneunit(sp_oneleg) 
     for V in virtualspaces
-        V[1] = __oneunit
-        V[end] = __oneunit
+        V[1] = _oneunit
+        V[end] = _oneunit
     end
 
     # start by filling in tensors -> space information available
@@ -521,7 +529,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
         end
     end
 
-    foreach(Base.Fix2(replace!, missing => __oneunit), virtualspaces)
+    foreach(Base.Fix2(replace!, missing => _oneunit), virtualspaces)
     virtualsumspaces = map(virtualspaces) do V
         return SumSpace(collect(S, V))
     end
@@ -550,12 +558,6 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     end
 
     return InfiniteMPOHamiltonian(PeriodicArray(Os))
-end
-
-function _oneunit(localop) # determine relevant unit without calling oneunit(S)
-    sp = space(localop.opp[1],1)
-    unit = one(collect(sectors(sp))[1]) 
-    return Vect[sectortype(sp)](unit=>1)
 end
 
 function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
