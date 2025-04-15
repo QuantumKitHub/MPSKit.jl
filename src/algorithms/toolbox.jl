@@ -274,11 +274,9 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O},
         F_left = i == 1 ? cup : F_right
         F_right = i == L ? cup :
                   isomorphism(ST, V_right ← V_wrap' * right_virtualspace(mpo, i))
-        # account for fermionic boundary conditions
-        o = i == L ? _twist(mpo[i], 4) : mpo[i]
         @plansor output[i][-1 -2; -3 -4] = F_left[-1; 1 2] *
                                            τ[-3 1; 4 3] *
-                                           o[2 -2; 3 5] *
+                                           mpo[i][2 -2; 3 5] *
                                            conj(F_right[-4; 4 5])
     end
 
@@ -423,8 +421,6 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
             F_left = fusers[end][j, k, chi]
             k′ = indmap[j, k, chi]
             k′ == size(output[end], 1) && continue
-            # apply twist for fermionic boundary conditions
-            h = _twist(h, 4)
             @plansor o[-1 -2; -3 -4] := F_left[-1; 1 2 6] * h[1 3; -3 4] * τ[3 2; 4 5] *
                                         τ[5 6; -4 -2]
             output[end][k′, 1, 1, 1] = o
