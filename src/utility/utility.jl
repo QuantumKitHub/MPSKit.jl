@@ -132,17 +132,14 @@ function fuser(::Type{T}, V1::S, V2::S) where {T,S<:IndexSpace}
     return isomorphism(T, fuse(V1 ⊗ V2), V1 ⊗ V2)
 end
 
-# TODO: remove once TensorKit supports this
-_twist(t::AbstractTensorMap, i::Int) = _twist(BraidingStyle(sectortype(t)), t, i)
-_twist(::Bosonic, t::AbstractTensorMap, i::Int) = t
-function _twist(::NoBraiding, t::AbstractTensorMap, i::Int)
-    check_unambiguous_braiding(space(t, i))
-    return t
-end
-_twist(::BraidingStyle, t::AbstractTensorMap, i::Int) = twist(t, i)
+"""
+    check_unambiguous_braiding(::Type{Bool}, V::VectorSpace)::Bool
+    check_unambiguous_braiding(V::VectorSpace)
 
-# Verify that the braiding is unambiguous: either through symmetric braiding or because the
-# sectors are all trivial
+Verify that the braiding of a vector space is unambiguous. This is the case if the braiding
+is symmetric or if all sectors are trivial. The signature with `Type{Bool}` is used to check
+while the signature without is used to throw an error if the braiding is ambiguous.
+"""
 function check_unambiguous_braiding(::Type{Bool}, V::VectorSpace)
     I = sectortype(V)
     BraidingStyle(I) isa SymmetricBraiding && return true
