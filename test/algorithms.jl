@@ -759,7 +759,7 @@ end
 
 @testset "periodic boundary conditions" begin
     Hs = [transverse_field_ising(), heisenberg_XXX(), classical_ising(), sixvertex()]
-    for N in 2:5
+    for N in 2:6
         for H in Hs
             TH = convert(TensorMap, periodic_boundary_conditions(H, N))
             @test TH ≈
@@ -773,7 +773,7 @@ end
         H = InfiniteMPOHamiltonian([space(h, 1)], (1, 2) => h)
         H_periodic = periodic_boundary_conditions(H, N)
         terms = [(i, i + 1) => h for i in 1:(N - 1)]
-        push!(terms, (1, N) => -h)
+        push!(terms, (1, N) => h)
         H_periodic2 = FiniteMPOHamiltonian(physicalspace(H_periodic), terms)
         @test H_periodic ≈ H_periodic2
     end
