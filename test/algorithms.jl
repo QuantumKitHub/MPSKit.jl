@@ -701,7 +701,10 @@ end
         W2 = MPSKit.DenseMPO(sW2)
 
         ψ1, _ = approximate(ψ0, (sW1, ψ), VOMPS(; verbosity))
+        MPSKit.Defaults.set_scheduler!(:serial)
         ψ2, _ = approximate(ψ0, (W2, ψ), VOMPS(; verbosity))
+        MPSKit.Defaults.set_scheduler!()
+
         ψ3, _ = approximate(ψ0, (W1, ψ), IDMRG(; verbosity))
         ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trscheme=truncdim(12), verbosity))
         ψ5, _ = timestep(ψ, H, 0.0, dt, TDVP())
