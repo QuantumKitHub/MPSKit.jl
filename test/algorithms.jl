@@ -776,7 +776,7 @@ end
         H = InfiniteMPOHamiltonian([space(h, 1)], (1, 2) => h)
         H_periodic = periodic_boundary_conditions(H, N)
         terms = [(i, i + 1) => h for i in 1:(N - 1)]
-        push!(terms, (1, N) => h)
+        push!(terms, (1, N) => permute(h, ((2, 1), (4, 3))))
         H_periodic2 = FiniteMPOHamiltonian(physicalspace(H_periodic), terms)
         @test H_periodic ≈ H_periodic2
     end
