@@ -72,7 +72,7 @@ function exact_diagonalization(H::FiniteMPOHamiltonian;
     # optimize the middle site
     # Because the MPS is full rank - this is equivalent to the full Hamiltonian
     AC₀ = state.AC[middle_site]
-    H_ac = ∂∂AC(middle_site, state, H, envs)
+    H_ac = AC_hamiltonian(middle_site, state, H, state, envs)
     vals, vecs, convhist = eigsolve(H_ac, AC₀, num, which, alg)
 
     # repack eigenstates

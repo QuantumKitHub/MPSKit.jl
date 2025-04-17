@@ -118,19 +118,15 @@ end
 function _localupdate_vomps_step!(site, mps, operator, envs, AC₀, C₀; parallel::Bool=false,
                                   alg_orth=QRpos())
     if !parallel
-        AC = ∂∂AC(site, mps, operator, envs) * AC₀
-        C = ∂∂C(site, mps, operator, envs) * C₀
+        AC = AC_hamiltonian(site, mps, operator, mps, envs) * AC₀
+        C = C_hamiltonian(site, mps, operator, mps, envs) * C₀
         return regauge!(AC, C; alg=alg_orth)
     end
 
     local AC, C
     @sync begin
-        @spawn begin
-            AC = ∂∂AC(site, mps, operator, envs) * AC₀
-        end
-        @spawn begin
-            C = ∂∂C(site, mps, operator, envs) * C₀
-        end
+        @spawn AC = AC_hamiltonian(site, mps, operator, mps, envs) * AC₀
+        @spawn C = C_hamiltonian(site, mps, operator, mps, envs) * C₀
     end
     return regauge!(AC, C; alg=alg_orth)
 end

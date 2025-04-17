@@ -52,11 +52,11 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
     for loc in 1:length(state)
         @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
 
-        h_ac2 = ∂∂AC2(loc, state, H, envs)
-        _, nAC2 = fixedpoint(h_ac2, AC2, :SR, alg.alg_eigsolve)
+        Hac2 = AC2_hamiltonian(loc, state, H, state, envs)
+        _, nAC2 = fixedpoint(Hac2, AC2, :SR, alg.alg_eigsolve)
 
-        h_c = ∂∂C(loc + 1, state, H, envs)
-        _, nC2 = fixedpoint(h_c, state.C[loc + 1], :SR, alg.alg_eigsolve)
+        Hc = C_hamiltonian(loc + 1, state, H, state, envs)
+        _, nC2 = fixedpoint(Hc, state.C[loc + 1], :SR, alg.alg_eigsolve)
 
         #svd ac2, get new AL1 and S,V ---> AC
         AL1, S, V, eps = tsvd!(nAC2; trunc=alg.trscheme, alg=alg.alg_svd)

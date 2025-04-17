@@ -65,10 +65,11 @@ end
 const _HAM_MPS_TYPES = Union{FiniteMPS{<:MPSTensor},WindowMPS{<:MPSTensor},
                              InfiniteMPS{<:MPSTensor}}
 
-function ∂∂AC(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
-              envs)
-    GL = leftenv(envs, site, mps)
-    GR = rightenv(envs, site, mps)
+function AC_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
+                        operator::MPOHamiltonian{<:JordanMPOTensor}, above::_HAM_MPS_TYPES,
+                        envs)
+    GL = leftenv(envs, site, below)
+    GR = rightenv(envs, site, below)
     W = operator[site]
 
     # starting
@@ -129,10 +130,11 @@ function ∂∂AC(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:Jor
     return JordanMPO_∂∂AC(onsite, not_started, finished, starting, ending, continuing)
 end
 
-function ∂∂AC2(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
-               envs)
-    GL = leftenv(envs, site, mps)
-    GR = rightenv(envs, site + 1, mps)
+function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
+                         operator::MPOHamiltonian{<:JordanMPOTensor}, above::_HAM_MPS_TYPES,
+                         envs)
+    GL = leftenv(envs, site, below)
+    GR = rightenv(envs, site + 1, below)
     W1 = operator[site]
     W2 = operator[site + 1]
 
