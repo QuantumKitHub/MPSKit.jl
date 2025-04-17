@@ -94,6 +94,8 @@ function contract_mpo_expval(AC::MPSTensor, GL::MPSTensor, O::MPOTensor, GR::MPS
     return @plansor GL[1 2; 3] * AC[3 7; 5] * GR[5 8; 6] *
                     O[2 4; 7 8] * conj(ACbar[1 4; 6])
 end
+# generic fallback
+contract_mpo_expval(AC, GL, O, GR, ACbar=AC) = dot(ACbar, ∂AC(AC, GL, O, GR))
 
 function expectation_value(ψ::FiniteMPS, H::FiniteMPOHamiltonian,
                            envs::AbstractMPSEnvironments=environments(ψ, H))
