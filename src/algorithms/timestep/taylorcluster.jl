@@ -180,7 +180,7 @@ end
 
 # Hack to treat FiniteMPOhamiltonians as Infinite
 function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::TaylorCluster;
-                       tol=eps(real(scalartype(H))); imaginary_evolution::Bool=false)
+                       tol=eps(real(scalartype(H))), imaginary_evolution::Bool=false)
     H′ = copy(parent(H))
 
     V_left = left_virtualspace(H[1])
