@@ -634,19 +634,8 @@ end
 # Base.complex(H::MPOHamiltonian) = MPOHamiltonian(map(complex, parent(H)))
 function Base.complex(H::MPOHamiltonian)
     scalartype(H) <: Complex && return H
-    Ws = map(parent(H)) do W
-        W′ = jordanmpotensortype(spacetype(W), complex(scalartype(W)))
-        W′[1] = W[1]
-        W′[end] = W[end]
-        for (I, v) in nonzero_pairs(W)
-            if v isa BraidingTensor
-                W′[I] = BraidingTensor{scalartype(W′)}(space(v), v.adjoint)
-            else
-                W′[I] = complex(v)
-            end
-        end
-    end
-    return MPOHamiltonian(H)
+    Ws = map(complex, parent(H))
+    return MPOHamiltonian(Ws)
 end
 
 function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O <: MPOTensor}
