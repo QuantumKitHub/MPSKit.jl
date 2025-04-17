@@ -25,32 +25,39 @@ $(TYPEDFIELDS)
     finalize::F = Defaults._finalize
 end
 
-function timestep(ψ_::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
+function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
                   envs::AbstractMPSEnvironments=environments(ψ_, H);
-                  leftorthflag=true)
-    ψ = complex(ψ_)
+                  leftorthflag=true, imaginary_evolution::Bool=false)
+    # convert state to complex if necessary
+    if scalartype(ψ) <: Real && (!imaginary_evolution || !isreal(dt))
+        return timestep(complex(ψ), H, t, dt, alg, envs; leftorthflag, imaginary_evolution)
+    end
+
     temp_ACs = similar(ψ.AC)
     temp_Cs = similar(ψ.C)
 
     scheduler = Defaults.scheduler[]
     if scheduler isa SerialScheduler
         temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
-            return integrate(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], t, dt, alg.integrator)
+            return integrate(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], t, dt, alg.integrator;
+                             imaginary_evolution)
         end
         temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
-            return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator)
+            return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator;
+                             imaginary_evolution)
         end
     else
         @sync begin
             Threads.@spawn begin
                 temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
                     return integrate(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], t, dt,
-                                     alg.integrator)
+                                     alg.integrator; imaginary_evolution)
                 end
             end
             Threads.@spawn begin
                 temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
-                    return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator)
+                    return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator;
+                                     imaginary_evolution)
                 end
             end
         end
@@ -70,33 +77,37 @@ function timestep(ψ_::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
 end
 
 function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-                   envs::AbstractMPSEnvironments=environments(ψ, H))
+                   envs::AbstractMPSEnvironments=environments(ψ, H);
+                   imaginary_evolution::Bool=false)
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         h_ac = ∂∂AC(i, ψ, H, envs)
-        ψ.AC[i] = integrate(h_ac, ψ.AC[i], t, dt / 2, alg.integrator)
+        ψ.AC[i] = integrate(h_ac, ψ.AC[i], t, dt / 2, alg.integrator; imaginary_evolution)
 
         h_c = ∂∂C(i, ψ, H, envs)
-        ψ.C[i] = integrate(h_c, ψ.C[i], t, -dt / 2, alg.integrator)
+        ψ.C[i] = integrate(h_c, ψ.C[i], t, -dt / 2, alg.integrator; imaginary_evolution)
     end
 
     # edge case
     h_ac = ∂∂AC(length(ψ), ψ, H, envs)
-    ψ.AC[end] = integrate(h_ac, ψ.AC[end], t, dt / 2, alg.integrator)
+    ψ.AC[end] = integrate(h_ac, ψ.AC[end], t, dt / 2, alg.integrator; imaginary_evolution)
 
     # sweep right to left
     for i in length(ψ):-1:2
         h_ac = ∂∂AC(i, ψ, H, envs)
-        ψ.AC[i] = integrate(h_ac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
+        ψ.AC[i] = integrate(h_ac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator;
+                            imaginary_evolution)
 
         h_c = ∂∂C(i - 1, ψ, H, envs)
-        ψ.C[i - 1] = integrate(h_c, ψ.C[i - 1], t + dt / 2, -dt / 2, alg.integrator)
+        ψ.C[i - 1] = integrate(h_c, ψ.C[i - 1], t + dt / 2, -dt / 2, alg.integrator;
+                               imaginary_evolution)
     end
 
     # edge case
     h_ac = ∂∂AC(1, ψ, H, envs)
-    ψ.AC[1] = integrate(h_ac, ψ.AC[1], t + dt / 2, dt / 2, alg.integrator)
+    ψ.AC[1] = integrate(h_ac, ψ.AC[1], t + dt / 2, dt / 2, alg.integrator;
+                        imaginary_evolution)
 
     return ψ, envs
 end
@@ -135,13 +146,14 @@ $(TYPEDFIELDS)
 end
 
 function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
-                   envs::AbstractMPSEnvironments=environments(ψ, H))
+                   envs::AbstractMPSEnvironments=environments(ψ, H);
+                   imaginary_evolution::Bool=false)
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         ac2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
         h_ac2 = ∂∂AC2(i, ψ, H, envs)
-        nac2 = integrate(h_ac2, ac2, t, dt / 2, alg.integrator)
+        nac2 = integrate(h_ac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
 
         nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=alg.alg_svd)
         ψ.AC[i] = (nal, complex(nc))
@@ -149,7 +161,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
 
         if i != (length(ψ) - 1)
             ψ.AC[i + 1] = integrate(∂∂AC(i + 1, ψ, H, envs), ψ.AC[i + 1], t, -dt / 2,
-                                    alg.integrator)
+                                    alg.integrator; imaginary_evolution)
         end
     end
 
@@ -157,22 +169,24 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
     for i in length(ψ):-1:2
         ac2 = _transpose_front(ψ.AL[i - 1]) * _transpose_tail(ψ.AC[i])
         h_ac2 = ∂∂AC2(i - 1, ψ, H, envs)
-        nac2 = integrate(h_ac2, ac2, t + dt / 2, dt / 2, alg.integrator)
+        nac2 = integrate(h_ac2, ac2, t + dt / 2, dt / 2, alg.integrator;
+                         imaginary_evolution)
 
         nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=alg.alg_svd)
         ψ.AC[i - 1] = (nal, complex(nc))
         ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
         if i != 2
-            ψ.AC[i - 1] = integrate(∂∂AC(i - 1, ψ, H, envs), ψ.AC[i - 1], t + dt / 2,
-                                    -dt / 2, alg.integrator)
+            ψ.AC[i - 1] = integrate(∂∂AC(i - 1, ψ, H, envs), ψ.AC[i - 1],
+                                    t + dt / 2, -dt / 2, alg.integrator;
+                                    imaginary_evolution)
         end
     end
 
     return ψ, envs
 end
 
-#copying version
+# copying version
 function timestep(ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
                   alg::Union{TDVP,TDVP2}, envs::AbstractMPSEnvironments=environments(ψ, H);
                   kwargs...)

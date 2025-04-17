@@ -28,9 +28,9 @@ First order Taylor expansion for a time-evolution MPO.
 const WI = TaylorCluster(; N=1, extension=false, compression=false)
 
 function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
-                       tol=eps(real(scalartype(H))))
+                       tol=eps(real(scalartype(H))), imaginary_evolution::Bool=false)
     N = alg.N
-    τ = -1im * dt
+    τ = imaginary_evolution ? -dt : -1im * dt
 
     # start with H^N
     H_n = H^N
@@ -180,7 +180,7 @@ end
 
 # Hack to treat FiniteMPOhamiltonians as Infinite
 function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::TaylorCluster;
-                       tol=eps(real(scalartype(H))))
+                       tol=eps(real(scalartype(H))); imaginary_evolution::Bool=false)
     H′ = copy(parent(H))
 
     V_left = left_virtualspace(H[1])
@@ -200,7 +200,7 @@ function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::TaylorCluster;
     H′[1][end, 1, 1, end] = H′[1][1, 1, 1, 1]
     H′[end][1, 1, 1, 1] = H′[end][end, 1, 1, end]
 
-    mpo = make_time_mpo(InfiniteMPOHamiltonian(H′), dt, alg; tol)
+    mpo = make_time_mpo(InfiniteMPOHamiltonian(H′), dt, alg; tol, imaginary_evolution)
 
     # Impose boundary conditions
     mpo_fin = open_boundary_conditions(mpo, length(H))
