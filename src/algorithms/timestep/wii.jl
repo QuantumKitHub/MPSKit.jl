@@ -19,13 +19,14 @@ $(TYPEDFIELDS)
     maxiter::Int = Defaults.maxiter
 end
 
-function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::WII)
+function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::WII;
+                       imaginary_evolution::Bool=false)
     WA = H.A
     WB = H.B
     WC = H.C
     WD = H.D
 
-    δ = dt * (-1im)
+    δ = imaginary_evolution ? -dt : (-1im * dt)
     exp_alg = Arnoldi(; alg.tol, alg.maxiter)
 
     Wnew = map(1:length(H)) do i
@@ -83,7 +84,8 @@ function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::WII)
 end
 
 # Hack to treat FiniteMPOhamiltonians as Infinite
-function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::WII)
+function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::WII;
+                       imaginary_evolution::Bool=false)
     H′ = copy(parent(H))
 
     V_left = left_virtualspace(H[1])
@@ -103,7 +105,7 @@ function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::WII)
     H′[1][end, 1, 1, end] = H′[1][1, 1, 1, 1]
     H′[end][1, 1, 1, 1] = H′[end][end, 1, 1, end]
 
-    mpo = make_time_mpo(InfiniteMPOHamiltonian(H′), dt, alg; tol)
+    mpo = make_time_mpo(InfiniteMPOHamiltonian(H′), dt, alg; tol, imaginary_evolution)
 
     # Impose boundary conditions
     mpo_fin = open_boundary_conditions(mpo, length(H))
