@@ -31,47 +31,51 @@ equivalent to dense eigenvectors.
 
 """
 function exact_diagonalization(H::FiniteMPOHamiltonian;
-                               sector=first(sectors(oneunit(physicalspace(H, 1)))),
-                               len::Int=length(H), num::Int=1, which::Symbol=:SR,
+                               sector=one(sectortype(H)),
+                               num::Int=1, which::Symbol=:SR,
                                alg=Defaults.alg_eigsolve(; dynamic_tols=false))
-    left = ℂ[typeof(sector)](sector => 1)
-    right = oneunit(left)
+    L = length(H)
+    @assert L > 1 "FiniteMPOHamiltonian must have length > 1"
+    middle_site = (L >> 1) + 1
 
-    middle_site = Int(round(len / 2))
+    T = storagetype(eltype(H))
+    TA = tensormaptype(spacetype(H), 2, 1, T)
 
-    Ot = eltype(H[1])
-
-    mpst_type = tensormaptype(spacetype(Ot), 2, 1, storagetype(Ot))
-    mpsb_type = tensormaptype(spacetype(Ot), 1, 1, storagetype(Ot))
-    Cs = Vector{Union{Missing,mpsb_type}}(missing, len + 1)
-    ALs = Vector{Union{Missing,mpst_type}}(missing, len)
-    ARs = Vector{Union{Missing,mpst_type}}(missing, len)
-    ACs = Vector{Union{Missing,mpst_type}}(missing, len)
-
+    # fuse from left to right
+    ALs = Vector{Union{Missing,TA}}(missing, L)
+    left = oneunit(spacetype(H))
     for i in 1:(middle_site - 1)
-        ALs[i] = isomorphism(storagetype(Ot), left * physicalspace(H, i),
-                             fuse(left * physicalspace(H, i)))
-        left = _lastspace(ALs[i])'
+        P = physicalspace(H, i)
+        ALs[i] = isomorphism(T, left ⊗ P ← fuse(left ⊗ P))
+        left = right_virtualspace(ALs[i])
     end
-    for i in len:-1:(middle_site + 1)
-        ARs[i] = _transpose_front(isomorphism(storagetype(Ot),
-                                              fuse(right * physicalspace(H, i)'),
-                                              right * physicalspace(H, i)'))
-        right = _firstspace(ARs[i])
-    end
-    ACs[middle_site] = randomize!(similar(H[1][1, 1, 1, 1],
-                                          left * physicalspace(H, middle_site) ← right))
-    norm(ACs[middle_site]) == 0 && throw(ArgumentError("invalid sector"))
-    normalize!(ACs[middle_site])
 
-    #construct the largest possible finite mps of that length
+    # fuse from right to left
+    ARs = Vector{Union{Missing,TA}}(missing, L)
+    right = spacetype(H)(sector => 1)
+    for i in reverse((middle_site + 1):L)
+        P = physicalspace(H, i)
+        ARs[i] = _transpose_front(isomorphism(T, fuse(right ⊗ P') ← right ⊗ P'))
+        right = left_virtualspace(ARs[i])
+    end
+
+    # center
+    ACs = Vector{Union{Missing,TA}}(missing, L)
+    P = physicalspace(H, middle_site)
+    ACs[middle_site] = rand!(similar(ALs[1], left ⊗ P ← right))
+
+    TB = tensormaptype(spacetype(H), 1, 1, T)
+    Cs = Vector{Union{Missing,TB}}(missing, L + 1)
     state = FiniteMPS(ALs, ARs, ACs, Cs)
     envs = environments(state, H)
 
-    #optimize the middle site. Because there is no truncation, this single site captures the entire possible hilbert space
-    H_ac = ∂∂AC(middle_site, state, H, envs) # this linear operator is now the actual full hamiltonian!
-    (vals, vecs, convhist) = eigsolve(H_ac, state.AC[middle_site], num, which, alg)
+    # optimize the middle site
+    # Because the MPS is full rank - this is equivalent to the full Hamiltonian
+    AC₀ = state.AC[middle_site]
+    H_ac = ∂∂AC(middle_site, state, H, envs)
+    vals, vecs, convhist = eigsolve(H_ac, AC₀, num, which, alg)
 
+    # repack eigenstates
     state_vecs = map(vecs) do v
         cs = copy(state)
         cs.AC[middle_site] = v

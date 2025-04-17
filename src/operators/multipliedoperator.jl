@@ -52,6 +52,6 @@ Base.:*(op::UntimedOperator, g::Function) = MultipliedOperator(op.op, t -> g(t) 
 function environments(st, x::MultipliedOperator, args...; kwargs...)
     return environments(st, x.op, args...; kwargs...)
 end
-function recalculate!(envs, above, x::MultipliedOperator, below=above; kwargs...)
-    return recalculate!(envs, above, x.op, below; kwargs...)
+function recalculate!(envs, below, x::MultipliedOperator, above=below; kwargs...)
+    return recalculate!(envs, below, x.op, above; kwargs...)
 end

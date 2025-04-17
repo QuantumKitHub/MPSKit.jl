@@ -11,6 +11,7 @@ using MPSKit
 using MPSKit: fuse_mul_mpo
 using TensorKit
 using TensorKit: ℙ
+using LinearAlgebra: eigvals
 
 verbosity_full = 5
 verbosity_conv = 1
@@ -322,7 +323,7 @@ end
 
 @testset "timestep" verbose = true begin
     dt = 0.1
-    algs = [TDVP(), TDVP2()]
+    algs = [TDVP(), TDVP2(; trscheme=truncdim(10))]
     L = 10
 
     H = force_planar(heisenberg_XXX(; spin=1 // 2, L))
@@ -387,7 +388,7 @@ end
 
 @testset "time_evolve" verbose = true begin
     t_span = 0:0.1:0.1
-    algs = [TDVP(), TDVP2()]
+    algs = [TDVP(), TDVP2(; trscheme=truncdim(10))]
 
     L = 10
     H = force_planar(heisenberg_XXX(; spin=1 // 2, L))
@@ -435,7 +436,8 @@ end
         ψ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^48, ℙ^48])
         ψ, envs, _ = find_groundstate(ψ, H; maxiter=400, verbosity=verbosity_conv,
                                       tol=1e-10)
-        energies, ϕs = excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ, envs)
+        energies, ϕs = @inferred excitations(H, QuasiparticleAnsatz(), Float64(pi), ψ,
+                                             envs)
         @test energies[1] ≈ 0.41047925 atol = 1e-4
         @test variance(ϕs[1], H) < 1e-8
     end
@@ -445,8 +447,9 @@ end
         ψ, envs, _ = leading_boundary(ψ, H,
                                       VUMPS(; maxiter=400, verbosity=verbosity_conv,
                                             tol=1e-10))
-        energies, ϕs = excitations(H, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ψ,
-                                   envs; verbosity=0)
+        energies, ϕs = @inferred excitations(H, QuasiparticleAnsatz(),
+                                             [0.0, Float64(pi / 2)], ψ,
+                                             envs; verbosity=0)
         @test abs(energies[1]) > abs(energies[2]) # has a minimum at pi/2
     end
 
@@ -455,7 +458,7 @@ end
         H_inf = force_planar(transverse_field_ising())
         ψ_inf = InfiniteMPS([ℙ^2], [ℙ^10])
         ψ_inf, envs, _ = find_groundstate(ψ_inf, H_inf; maxiter=400, verbosity, tol=1e-9)
-        energies, ϕs = excitations(H_inf, QuasiparticleAnsatz(), 0.0, ψ_inf, envs)
+        energies, ϕs = @inferred excitations(H_inf, QuasiparticleAnsatz(), 0.0, ψ_inf, envs)
         inf_en = energies[1]
 
         fin_en = map([20, 10]) do len
@@ -464,20 +467,20 @@ end
             ψ, envs, = find_groundstate(ψ, H; verbosity)
 
             # find energy with quasiparticle ansatz
-            energies_QP, ϕs = excitations(H, QuasiparticleAnsatz(), ψ, envs)
+            energies_QP, ϕs = @inferred excitations(H, QuasiparticleAnsatz(), ψ, envs)
             @test variance(ϕs[1], H) < 1e-6
 
             # find energy with normal dmrg
             for gsalg in (DMRG(; verbosity, tol=1e-6),
                           DMRG2(; verbosity, tol=1e-6, trscheme=truncbelow(1e-4)))
-                energies_dm, _ = excitations(H, FiniteExcited(; gsalg), ψ)
+                energies_dm, _ = @inferred excitations(H, FiniteExcited(; gsalg), ψ)
                 @test energies_dm[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
             end
 
             # find energy with Chepiga ansatz
-            energies_ch, _ = excitations(H, ChepigaAnsatz(), ψ, envs)
+            energies_ch, _ = @inferred excitations(H, ChepigaAnsatz(), ψ, envs)
             @test energies_ch[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
-            energies_ch2, _ = excitations(H, ChepigaAnsatz2(), ψ, envs)
+            energies_ch2, _ = @inferred excitations(H, ChepigaAnsatz2(), ψ, envs)
             @test energies_ch2[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1e-4
             return energies_QP[1]
         end
@@ -687,6 +690,8 @@ end
     verbosity = verbosity_conv
     @testset "mpo * infinite ≈ infinite" begin
         ψ = InfiniteMPS([ℙ^2, ℙ^2], [ℙ^10, ℙ^10])
+        ψ0 = InfiniteMPS([ℙ^2, ℙ^2], [ℙ^12, ℙ^12])
+
         H = force_planar(repeat(transverse_field_ising(; g=4), 2))
 
         dt = 1e-3
@@ -695,12 +700,15 @@ end
         W1 = MPSKit.DenseMPO(sW1)
         W2 = MPSKit.DenseMPO(sW2)
 
-        ψ1, _ = approximate(ψ, (sW1, ψ), VOMPS(; verbosity))
-        ψ2, _ = approximate(ψ, (W2, ψ), VOMPS(; verbosity))
-        ψ3, _ = approximate(ψ, (W1, ψ), IDMRG(; verbosity))
-        ψ4, _ = approximate(ψ, (sW2, ψ), IDMRG2(; trscheme=truncdim(20), verbosity))
+        ψ1, _ = approximate(ψ0, (sW1, ψ), VOMPS(; verbosity))
+        MPSKit.Defaults.set_scheduler!(:serial)
+        ψ2, _ = approximate(ψ0, (W2, ψ), VOMPS(; verbosity))
+        MPSKit.Defaults.set_scheduler!()
+
+        ψ3, _ = approximate(ψ0, (W1, ψ), IDMRG(; verbosity))
+        ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trscheme=truncdim(12), verbosity))
         ψ5, _ = timestep(ψ, H, 0.0, dt, TDVP())
-        ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme=truncdim(10)))
+        ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme=truncdim(12)))
 
         @test abs(dot(ψ1, ψ5)) ≈ 1.0 atol = dt
         @test abs(dot(ψ3, ψ5)) ≈ 1.0 atol = dt
@@ -760,6 +768,17 @@ end
             @test TH ≈
                   permute(TH, ((vcat(N, 1:(N - 1))...,), (vcat(2N, (N + 1):(2N - 1))...,)))
         end
+    end
+
+    # fermionic tests
+    for N in 3:5
+        h = real(c_plusmin() + c_minplus())
+        H = InfiniteMPOHamiltonian([space(h, 1)], (1, 2) => h)
+        H_periodic = periodic_boundary_conditions(H, N)
+        terms = [(i, i + 1) => h for i in 1:(N - 1)]
+        push!(terms, (1, N) => permute(h, ((2, 1), (4, 3))))
+        H_periodic2 = FiniteMPOHamiltonian(physicalspace(H_periodic), terms)
+        @test H_periodic ≈ H_periodic2
     end
 end
 
@@ -911,6 +930,52 @@ end
     rho_mps, = timestep(rho_0_mps, H, 0.0, im * beta, TDVP2(; trscheme))
     Z_tdvp = real(dot(rho_mps, rho_mps))^(1 / L)
     @test Z_tdvp ≈ Z_dense_2 atol = 1e-2
+end
+
+@testset "Sector conventions" begin
+    L = 4
+    H = XY_model(U1Irrep; L)
+
+    H_dense = convert(TensorMap, H)
+    vals_dense = eigvals(H_dense)
+
+    tol = 1e-18 # tolerance required to separate degenerate eigenvalues
+    alg = MPSKit.Defaults.alg_eigsolve(; dynamic_tols=false, tol)
+
+    maxVspaces = MPSKit.max_virtualspaces(physicalspace(H))
+    gs, = find_groundstate(FiniteMPS(physicalspace(H), maxVspaces[2:(end - 1)]), H;
+                           verbosity=0)
+    E₀ = expectation_value(gs, H)
+    @test E₀ ≈ first(vals_dense[one(U1Irrep)])
+
+    for (sector, vals) in vals_dense
+        # ED tests
+        num = length(vals)
+        E₀s, ψ₀s, info = exact_diagonalization(H; num, sector, alg)
+        @test E₀s[1:num] ≈ vals[1:num]
+        # this is a trick to make the mps full-rank again, which is not guaranteed by ED
+        ψ₀ = changebonds(first(ψ₀s), SvdCut(; trscheme=notrunc()))
+        Vspaces = left_virtualspace.(Ref(ψ₀), 1:L)
+        push!(Vspaces, right_virtualspace(ψ₀, L))
+        @test all(splat(==), zip(Vspaces, MPSKit.max_virtualspaces(ψ₀)))
+
+        # Quasiparticle tests
+        Es, Bs = excitations(H, QuasiparticleAnsatz(; tol), gs; sector, num=1)
+        Es = Es .+ E₀
+        # first excited state is second eigenvalue if sector is trivial
+        @test Es[1] ≈ vals[isone(sector) ? 2 : 1] atol = 1e-8
+    end
+
+    # shifted charges tests
+    # targeting states with Sz = 1 => vals_shift_dense[0] == vals_dense[1]
+    # so effectively shifting the charges by -1
+    H_shift = MPSKit.add_physical_charge(H, U1Irrep.([1, 0, 0, 0]))
+    H_shift_dense = convert(TensorMap, H_shift)
+    vals_shift_dense = eigvals(H_shift_dense)
+    for (sector, vals) in vals_dense
+        sector′ = only(sector ⊗ U1Irrep(-1))
+        @test vals ≈ vals_shift_dense[sector′]
+    end
 end
 
 end

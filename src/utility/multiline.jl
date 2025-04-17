@@ -51,3 +51,49 @@ function Base.repeat(A::Multiline, rows::Int, cols::Int)
     outer = repeat(inner, rows)
     return Multiline(outer)
 end
+
+# VectorInterface
+# ---------------
+VectorInterface.scalartype(::Type{Multiline{T}}) where {T} = scalartype(T)
+
+function VectorInterface.zerovector(x::Multiline, ::Type{S}) where {S<:Number}
+    return Multiline(zerovector.(parent(x), S))
+end
+VectorInterface.zerovector!(x::Multiline) = (zerovector!.(parent(x)); x)
+
+function VectorInterface.scale(x::Multiline, α::Number)
+    return scale!(zerovector(x, VectorInterface.promote_scale(x, α)), x, α)
+end
+
+function VectorInterface.scale!(x::Multiline, α::Number)
+    scale!.(parent(x), α)
+    return x
+end
+VectorInterface.scale!!(x::Multiline, α::Number) = scale!(x, α)
+
+function VectorInterface.scale!(x::Multiline, x′::Multiline, α::Number)
+    scale!.(parent(x), parent(x′), α)
+    return x
+end
+
+VectorInterface.scale!!(x::Multiline, x′::Multiline, α::Number) = scale!(x, x′, α)
+
+function VectorInterface.add(x::Multiline, y::Multiline, α::Number, β::Number)
+    z = zerovector(x, VectorInterface.promote_add(x, y, α, β))
+    return add!(scale!(z, x, β), y, α)
+end
+
+function VectorInterface.add!(x::Multiline, y::Multiline, α::Number, β::Number)
+    add!.(parent(x), parent(y), α, β)
+    return x
+end
+
+VectorInterface.add!!(x::Multiline, y::Multiline, α::Number, β::Number) = add!(x, y, α, β)
+
+function VectorInterface.inner(x::Multiline, y::Multiline)
+    T = VectorInterface.promote_inner(x, y)
+    init = zero(T)
+    return sum(splat(inner), zip(parent(parent(x)), parent(parent(y))); init)
+end
+
+LinearAlgebra.norm(x::Multiline) = sqrt(real(inner(x, x)))

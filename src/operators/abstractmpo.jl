@@ -37,11 +37,6 @@ end
 
 # Utility functions
 # -----------------
-function jordanmpotensortype(::Type{S}, ::Type{T}) where {S<:VectorSpace,T<:Number}
-    TT = Base.promote_typejoin(tensormaptype(S, 2, 2, T), BraidingTensor{T,S})
-    return SparseBlockTensorMap{TT}
-end
-
 remove_orphans!(mpo::AbstractMPO; tol=eps(real(scalartype(mpo)))^(3 / 4)) = mpo
 function remove_orphans!(mpo::SparseMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
     droptol!.(mpo, tol)
@@ -203,6 +198,11 @@ end
 
 function _fuse_mpo_mpo(O1::MPOTensor, O2::MPOTensor, Fₗ, Fᵣ)
     return if O1 isa BraidingTensor && O2 isa BraidingTensor
+        # shouldn't happen
+        T = promote_type(scalartype(O1), scalartype(O2))
+        V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
+            physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
+        return BraidingTensor{T}(V)
     elseif O1 isa BraidingTensor
         @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] *
                                      O2[1 3; -3 5] *
@@ -261,7 +261,7 @@ end
 
 function add_physical_charge(O::MPOTensor, charge::Sector)
     sectortype(O) === typeof(charge) || throw(SectorMismatch())
-    auxspace = Vect[typeof(charge)](charge => 1)
+    auxspace = Vect[typeof(charge)](charge => 1)'
     F = fuser(scalartype(O), physicalspace(O), auxspace)
     @plansor O_charged[-1 -2; -3 -4] := F[-2; 1 2] *
                                         O[-1 1; 4 3] *
@@ -270,16 +270,14 @@ function add_physical_charge(O::MPOTensor, charge::Sector)
 end
 function add_physical_charge(O::BraidingTensor, charge::Sector)
     sectortype(O) === typeof(charge) || throw(SectorMismatch())
-    auxspace = Vect[typeof(charge)](charge => 1)
+    auxspace = Vect[typeof(charge)](charge => 1)'
     V = left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
         fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
     return BraidingTensor{scalartype(O)}(V)
 end
 function add_physical_charge(O::AbstractBlockTensorMap{<:Any,<:Any,2,2}, charge::Sector)
     sectortype(O) == typeof(charge) || throw(SectorMismatch())
-
-    auxspace = Vect[typeof(charge)](charge => 1)
-
+    auxspace = Vect[typeof(charge)](charge => 1)'
     Odst = similar(O,
                    left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
                    fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O))

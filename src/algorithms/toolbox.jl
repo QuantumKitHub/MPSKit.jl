@@ -36,8 +36,8 @@ function infinite_temperature_density_matrix(H::MPOHamiltonian)
 end
 
 """
-    calc_galerkin(above, operator, below, envs)
-    calc_galerkin(pos, above, operator, below, envs)
+    calc_galerkin(below, operator, above, envs)
+    calc_galerkin(pos, below, operator, above, envs)
 
 Calculate the Galerkin error, which is the error between the solution of the original problem, and the solution of the problem projected on the tangent space.
 Concretely, this is the overlap of the current state with the single-site derivative, projected onto the nullspace of the current state:
@@ -46,25 +46,25 @@ Concretely, this is the overlap of the current state with the single-site deriva
 \\epsilon = |VL * (VL' * \\frac{above}{\\partial AC_{pos}})|
 ```
 """
-function calc_galerkin(pos::Int, above::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
-                       below, envs)
-    AC´ = ∂∂AC(pos, above, operator, envs) * above.AC[pos]
+function calc_galerkin(pos::Int, below::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
+                       above, envs)
+    AC´ = ∂∂AC(pos, below, operator, envs) * above.AC[pos]
     normalize!(AC´)
     out = add!(AC´, below.AL[pos] * below.AL[pos]' * AC´, -1)
     return norm(out)
 end
-function calc_galerkin(pos::CartesianIndex{2}, above::MultilineMPS, operator::MultilineMPO,
-                       below::MultilineMPS, envs::MultilineEnvironments)
+function calc_galerkin(pos::CartesianIndex{2}, below::MultilineMPS, operator::MultilineMPO,
+                       above::MultilineMPS, envs::MultilineEnvironments)
     row, col = pos.I
-    return calc_galerkin(col, above[row], operator[row], below[row + 1], envs[row])
+    return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
 end
-function calc_galerkin(above::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
-                       below, envs)
-    return maximum(pos -> calc_galerkin(pos, above, operator, below, envs), 1:length(above))
+function calc_galerkin(below::Union{InfiniteMPS,FiniteMPS,WindowMPS}, operator,
+                       above, envs)
+    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), 1:length(above))
 end
-function calc_galerkin(above::MultilineMPS, operator::MultilineMPO, below::MultilineMPS,
+function calc_galerkin(below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS,
                        envs::MultilineEnvironments)
-    return maximum(pos -> calc_galerkin(pos, above, operator, below, envs),
+    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs),
                    CartesianIndices(size(above)))
 end
 
@@ -363,6 +363,8 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
                 F_right = fusers[site + 1][k, i, l]
                 j′ = indmap[j, i, l]
                 k′ = indmap[k, i, l]
+                ((j′ == 1 && k′ == 1) ||
+                 (j′ == size(output[site], 1) && k′ == size(output[site], 4))) && continue
                 @plansor o[-1 -2; -3 -4] := h[1 2; -3 6] *
                                             F_left[-1; 1 3 5] *
                                             conj(F_right[-4; 6 7 8]) *
@@ -377,6 +379,8 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
                 F_right = fusers[site + 1][i, l, k]
                 j′ = indmap[i, l, j]
                 k′ = indmap[i, l, k]
+                ((j′ == 1 && k′ == 1) ||
+                 (j′ == size(output[site], 1) && k′ == size(output[site], 4))) && continue
                 @plansor o[-1 -2; -3 -4] := h[1 -2; 3 6] *
                                             F_left[-1; 4 2 1] *
                                             conj(F_right[-4; 8 7 6]) *
@@ -393,6 +397,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
         if j == 1
             F_right = fusers[2][k, end, end]
             j′ = indmap[k, chi, chi]
+            j′ == 1 && continue
             @plansor o[-1 -2; -3 -4] := h[-1 -2; -3 2] * conj(F_right[-4; 2 3 3])
             output[1][1, 1, 1, j′] = o
         end
@@ -401,13 +406,13 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
         if 1 < j < chi
             F_right = fusers[2][1, j, k]
             j′ = indmap[1, j, k]
+            j′ == 1 && continue
             @plansor o[-1 -2; -3 -4] := h[4 -2; 3 1] *
                                         conj(F_right[-4; 6 2 1]) *
                                         τ[5 4; 2 3] * τ[-3 -1; 6 5]
             output[1][1, 1, 1, j′] = o
         end
     end
-    output[1][1, 1, 1, 1] = BraidingTensor{scalartype(H)}(eachspace(output[1])[1])
 
     # ender
     for (I, h) in nonzero_pairs(H[end])
@@ -415,6 +420,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L=length(H))
         if k > 1
             F_left = fusers[end][j, k, chi]
             k′ = indmap[j, k, chi]
+            k′ == size(output[end], 1) && continue
             @plansor o[-1 -2; -3 -4] := F_left[-1; 1 2 6] * h[1 3; -3 4] * τ[3 2; 4 5] *
                                         τ[5 6; -4 -2]
             output[end][k′, 1, 1, 1] = o

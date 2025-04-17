@@ -64,7 +64,7 @@ end
 # Environment algorithms
 # ----------------------
 """
-    environment_alg(above, operator, below; kwargs...)
+    environment_alg(below, operator, above; kwargs...)
 
 Determine an appropriate algorithm for computing the environments, based on the given `kwargs...`.
 """
@@ -76,7 +76,7 @@ function environment_alg(::Union{InfiniteMPS,MultilineMPS},
                          eager=true)
     return Arnoldi(; tol, maxiter, krylovdim, verbosity, eager)
 end
-function environment_alg(above, ::InfiniteMPOHamiltonian, below;
+function environment_alg(below, ::InfiniteMPOHamiltonian, above;
                          tol=Defaults.tol, maxiter=Defaults.maxiter,
                          krylovdim=Defaults.krylovdim, verbosity=Defaults.VERBOSE_NONE)
     return GMRES(; tol, maxiter, krylovdim, verbosity)

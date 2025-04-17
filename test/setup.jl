@@ -4,6 +4,7 @@ module TestSetup
 
 # imports
 using MPSKit
+using MPSKit: JordanMPOTensor
 using TensorKit
 using TensorKit: PlanarTrivial, ℙ, BraidingTensor
 using BlockTensorKit
@@ -12,9 +13,11 @@ using Combinatorics: permutations
 
 # exports
 export S_xx, S_yy, S_zz, S_x, S_y, S_z
+export c_plusmin, c_minplus, c_number
 export force_planar
 export symm_mul_mpo
-export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model
+export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model,
+       kitaev_model
 export classical_ising, finite_classical_ising, sixvertex
 
 # using TensorOperations
@@ -56,6 +59,18 @@ end
 function force_planar(x::SparseBlockTensorMap)
     data = Dict(I => force_planar(v) for (I, v) in pairs(x.data))
     return SparseBlockTensorMap{valtype(data)}(data, force_planar(space(x)))
+end
+function force_planar(W::JordanMPOTensor)
+    V = force_planar(space(W))
+    TW = MPSKit.jordanmpotensortype(eltype(V[1]), scalartype(W))
+    dst = TW(undef, V)
+
+    for t in (:A, :B, :C, :D)
+        for (I, v) in nonzero_pairs(getproperty(W, t))
+            getproperty(dst, t)[I] = force_planar(v)
+        end
+    end
+    return dst
 end
 force_planar(mpo::MPOHamiltonian) = MPOHamiltonian(map(force_planar, parent(mpo)))
 force_planar(mpo::MPO) = MPO(map(force_planar, parent(mpo)))
@@ -173,6 +188,27 @@ function heisenberg_XXX(; spin=1, L=Inf)
     end
 end
 
+function XY_model(::Type{U1Irrep}; g=1 / 2, L=Inf)
+    h = zeros(ComplexF64,
+              U1Space(-1 // 2 => 1, 1 // 2 => 1)^2 ← U1Space(-1 // 2 => 1, 1 // 2 => 1)^2)
+    h[U1Irrep.((-1 // 2, 1 // 2, -1 // 2, 1 // 2))] .= 1
+    h[U1Irrep.((1 // 2, -1 // 2, 1 // 2, -1 // 2))] .= 1
+    Sz = zeros(ComplexF64, space(h, 1) ← space(h, 1))
+    Sz[U1Irrep.((-1 // 2, 1 // 2))] .= -1 // 2
+    Sz[U1Irrep.((1 // 2, -1 // 2))] .= 1 // 2
+    if L == Inf
+        lattice = PeriodicArray([space(h, 1)])
+        H = InfiniteMPOHamiltonian(lattice, (i, i + 1) => -h for i in 1:1)
+        iszero(g) && return H
+        return H + g * InfiniteMPOHamiltonian(lattice, (i,) => -Sz for i in 1:1)
+    else
+        lattice = fill(space(h, 1), L)
+        H = FiniteMPOHamiltonian(lattice, (i, i + 1) => -h for i in 1:(L - 1))
+        iszero(g) && return H
+        return H + g * FiniteMPOHamiltonian(lattice, (i,) => -Sz for i in 1:L)
+    end
+end
+
 function bilinear_biquadratic_model(::Type{SU2Irrep}; θ=atan(1 / 3), L=Inf)
     h1 = ones(ComplexF64, SU2Space(1 => 1)^2 ← SU2Space(1 => 1)^2)
     for (c, b) in blocks(h1)
@@ -187,6 +223,61 @@ function bilinear_biquadratic_model(::Type{SU2Irrep}; θ=atan(1 / 3), L=Inf)
     else
         lattice = fill(space(h2, 1), L)
         return FiniteMPOHamiltonian(lattice, (i, i + 1) => h for i in 1:(L - 1))
+    end
+end
+
+function c_plusmin()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P^2 ← P^2)
+    I = sectortype(P)
+    t[(I(1), I(0), dual(I(0)), dual(I(1)))] .= 1
+    return t
+end
+
+function c_minplus()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P^2 ← P^2)
+    I = sectortype(t)
+    t[(I(0), I(1), dual(I(1)), dual(I(0)))] .= 1
+    return t
+end
+
+function c_plusplus()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P^2 ← P^2)
+    I = sectortype(t)
+    t[(I(1), I(1), dual(I(0)), dual(I(0)))] .= 1
+    return t
+end
+
+function c_minmin()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P^2 ← P^2)
+    I = sectortype(t)
+    t[(I(0), I(0), dual(I(1)), dual(I(1)))] .= 1
+    return t
+end
+
+function c_number()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P ← P)
+    block(t, fℤ₂(1)) .= 1
+    return t
+end
+
+function kitaev_model(; t=1.0, mu=1.0, Delta=1.0, L=Inf)
+    TB = scale!(c_plusmin() + c_minplus(), -t / 2)     # tight-binding term
+    SC = scale!(c_plusplus() + c_minmin(), Delta / 2)  # superconducting term
+    CP = scale!(c_number(), -mu)                       # chemical potential term
+
+    if L == Inf
+        lattice = PeriodicArray([space(TB, 1)])
+        return InfiniteMPOHamiltonian(lattice, (1, 2) => TB + SC, (1,) => CP)
+    else
+        lattice = fill(space(TB, 1), L)
+        terms = Iterators.flatten((((i, i + 1) => TB + SC for i in 1:(L - 1)),
+                                   (i,) => CP for i in 1:L))
+        return FiniteMPOHamiltonian(lattice, terms)
     end
 end
 

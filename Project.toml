@@ -1,7 +1,7 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
 authors = "Lukas Devos, Maarten Van Damme and contributors"
-version = "0.12.6"
+version = "0.13.0-DEV"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -25,7 +25,7 @@ VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 [compat]
 Accessors = "0.1"
 Aqua = "0.8.9"
-BlockTensorKit = "0.1.4"
+BlockTensorKit = "0.1.6"
 Combinatorics = "1"
 Compat = "3.47, 4.10"
 DocStringExtensions = "0.9.3"

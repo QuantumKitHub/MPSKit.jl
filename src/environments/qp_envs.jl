@@ -150,7 +150,8 @@ end
 function environments(exci::FiniteQP,
                       H::FiniteMPOHamiltonian,
                       lenvs=environments(exci.left_gs, H),
-                      renvs=exci.trivial ? lenvs : environments(exci.right_gs, H))
+                      renvs=exci.trivial ? lenvs : environments(exci.right_gs, H);
+                      kwargs...)
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
 
