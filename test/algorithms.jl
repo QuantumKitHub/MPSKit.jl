@@ -356,9 +356,10 @@ end
         @test E ≈ Et atol = 1e-8
     end
 
-    Ht2 = MultipliedOperator(H, t -> t < 0 ? error("t < 0!") : 4) + MultipliedOperator(H, 1.45)
+    Ht2 = MultipliedOperator(H, t -> t < 0 ? error("t < 0!") : 4) +
+          MultipliedOperator(H, 1.45)
     @testset "Finite TimeDependent LazySum (fix negative t issue) $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in
-                                                                                   algs
+                                                                                                          algs
         ψ, envs = timestep(ψ₀, Ht2, 0.0, dt, alg)
         E = expectation_value(ψ, Ht2(0.0), envs)
 

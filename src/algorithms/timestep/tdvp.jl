@@ -148,7 +148,8 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
         ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
         if i != (length(ψ) - 1)
-            ψ.AC[i + 1] = integrate(∂∂AC(i + 1, ψ, H, envs), ψ.AC[i + 1], t + dt / 2, -dt / 2,
+            ψ.AC[i + 1] = integrate(∂∂AC(i + 1, ψ, H, envs), ψ.AC[i + 1], t + dt / 2,
+                                    -dt / 2,
                                     alg.integrator)
         end
     end
