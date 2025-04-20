@@ -78,7 +78,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         ψ.AC[i] = integrate(h_ac, ψ.AC[i], t, dt / 2, alg.integrator)
 
         h_c = ∂∂C(i, ψ, H, envs)
-        ψ.C[i] = integrate(h_c, ψ.C[i], t, -dt / 2, alg.integrator)
+        ψ.C[i] = integrate(h_c, ψ.C[i], t + dt / 2, -dt / 2, alg.integrator)
     end
 
     # edge case
@@ -91,7 +91,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         ψ.AC[i] = integrate(h_ac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
 
         h_c = ∂∂C(i - 1, ψ, H, envs)
-        ψ.C[i - 1] = integrate(h_c, ψ.C[i - 1], t + dt / 2, -dt / 2, alg.integrator)
+        ψ.C[i - 1] = integrate(h_c, ψ.C[i - 1], t + dt, -dt / 2, alg.integrator)
     end
 
     # edge case

@@ -356,6 +356,17 @@ end
         @test E ≈ Et atol = 1e-8
     end
 
+    Ht2 = MultipliedOperator(H, t -> t < 0 ? error("t < 0!") : 4) + MultipliedOperator(H, 1.45)
+    @testset "Finite TimeDependent LazySum (fix negative t issue) $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in
+                                                                                   algs
+        ψ, envs = timestep(ψ₀, Ht2, 0.0, dt, alg)
+        E = expectation_value(ψ, Ht2(0.0), envs)
+
+        ψt, envst = timestep(ψ₀, Ht2, 0.0, dt, alg)
+        Et = expectation_value(ψt, Ht2(0.0), envst)
+        @test E ≈ Et atol = 1e-8
+    end
+
     H = repeat(force_planar(heisenberg_XXX(; spin=1)), 2)
     ψ₀ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^50, ℙ^50])
     E₀ = expectation_value(ψ₀, H)
