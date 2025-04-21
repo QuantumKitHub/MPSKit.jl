@@ -141,7 +141,7 @@ Application of the effective zero-site local operator on a local tensor `x`.
  └─   ─┘ 
 ```
 
-See also [`∂∂C`](@ref).
+See also [`C_hamiltonian`](@ref).
 """
 ∂C(x, leftenv, rightenv) = MPO_∂∂C(leftenv, rightenv)(x)
 
@@ -161,7 +161,7 @@ Application of the effective one-site local operator on a local tensor `x`.
  └──     ──┘ 
 ```
 
-See also [`∂∂AC`](@ref).
+See also [`AC_hamiltonian`](@ref).
 """
 ∂AC(x, operator, leftenv, rightenv) = MPO_∂∂AC(leftenv, operator, rightenv)(x)
 
@@ -181,7 +181,7 @@ Application of the effective two-site local operator on a local tensor `x`.
  └──        ──┘ 
 ```
 
-See also [`∂∂AC2`](@ref).
+See also [`AC2_hamiltonian`](@ref).
 """
 ∂AC2(x, O₁, O₂, leftenv, rightenv) = MPO_∂∂AC2(leftenv, O₁, O₂, rightenv)(x)
 
