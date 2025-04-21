@@ -498,4 +498,14 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
     end
 end
 
+@testset "ProjectionOperator" begin
+    L = 10
+    psi = FiniteMPS(rand, ComplexF64, L, ℙ^2, ℙ^2)
+    psi2 = FiniteMPS(rand, ComplexF64, L, ℙ^2, ℙ^2)
+    O = MPSKit.ProjectionOperator(psi)
+
+    @test expectation_value(psi, O) / L ≈ 1.0
+    @test expectation_value(psi2, O) / L ≈ dot(psi, psi2) * dot(psi2, psi)
+end
+
 end
