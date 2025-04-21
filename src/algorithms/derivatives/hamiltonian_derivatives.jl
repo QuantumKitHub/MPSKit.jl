@@ -268,7 +268,7 @@ function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
     end
 
     # continuing - continuing
-    # TODO: MPO_∂∂AC2 code reuse + optimization
+    # TODO: MPODerivativeOperator code reuse + optimization
     AA = (GL[2:(end - 1)], W1.A, W2.A, GR[2:(end - 1)])
 
     return JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
