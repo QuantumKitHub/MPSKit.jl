@@ -8,7 +8,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2,
         for iter in 1:(alg.maxiter)
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); (length(ψ) - 2):-1:1]
-                AC2′ = ac2_proj(pos, ψ, Oϕ, envs)
+                AC2′ = AC2_projection(pos, ψ, Oϕ, envs)
                 al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme)
 
                 AC2 = ψ.AC[pos] * _transpose_tail(ψ.AR[pos + 1])
@@ -45,7 +45,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs=environments(�
         for iter in 1:(alg.maxiter)
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
-                AC′ = ac_proj(pos, ψ, Oϕ, envs)
+                AC′ = AC_projection(pos, ψ, Oϕ, envs)
                 AC = ψ.AC[pos]
                 ϵ = max(ϵ, norm(AC′ - AC) / norm(AC′))
 

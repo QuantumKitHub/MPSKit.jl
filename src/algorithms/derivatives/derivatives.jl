@@ -187,45 +187,47 @@ See also [`AC2_hamiltonian`](@ref).
 
 # Projection operators
 # --------------------
-function c_proj(pos::Int, ψ, (operator, ϕ)::Tuple, envs)
+function C_projection(pos::Int, ψ, (operator, ϕ)::Tuple, envs)
     return C_hamiltonian(pos, ψ, operator, ϕ, envs) * ϕ.C[pos]
 end
-function c_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
+function C_projection(pos::Int, ψ, ϕ::AbstractMPS, envs)
     return C_hamiltonian(pos, ψ, nothing, ϕ, envs) * ϕ.C[pos]
 end
-function c_proj(pos::Int, ψ, Oϕs::LazySum, envs)
+function C_projection(pos::Int, ψ, Oϕs::LazySum, envs)
     return sum(zip(Oϕs.ops, envs.envs)) do x
-        return c_proj(pos, ψ, x...)
+        return C_projection(pos, ψ, x...)
     end
 end
-function c_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return c_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
+function C_projection(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
+    return C_projection(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
-ac_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs) = AC_hamiltonian(pos, ψ, O, ϕ, envs) * ϕ.AC[pos]
-function ac_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
+function AC_projection(pos::Int, ψ, (O, ϕ)::Tuple, envs)
+    return AC_hamiltonian(pos, ψ, O, ϕ, envs) * ϕ.AC[pos]
+end
+function AC_projection(pos::Int, ψ, ϕ::AbstractMPS, envs)
     return AC_hamiltonian(pos, ψ, nothing, ϕ, envs) * ϕ.AC[pos]
 end
 
-function ac_proj(pos::Int, ψ, Oϕs::LazySum, envs)
+function AC_projection(pos::Int, ψ, Oϕs::LazySum, envs)
     return sum(zip(Oϕs.ops, envs.envs)) do x
-        return ac_proj(pos, ψ, x...)
+        return AC_projection(pos, ψ, x...)
     end
 end
-function ac_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return ac_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
+function AC_projection(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
+    return AC_projection(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
-function ac2_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs)
+function AC2_projection(pos::Int, ψ, (O, ϕ)::Tuple, envs)
     AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
     return AC2_hamiltonian(pos, ψ, O, ϕ, envs) * AC2
 end
-function ac2_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
+function AC2_projection(pos::Int, ψ, ϕ::AbstractMPS, envs)
     AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
     return AC2_hamiltonian(pos, ψ, nothing, ϕ, envs) * AC2
 end
-function ac2_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return ac2_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
+function AC2_projection(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
+    return AC2_projection(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
 # Varia
