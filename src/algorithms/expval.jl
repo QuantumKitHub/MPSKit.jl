@@ -165,5 +165,5 @@ function expectation_value(ψ::FiniteMPS, O::ProjectionOperator,
         ens[i] = dot(ψ.AC[i], operator * ψ.AC[i])
     end
     n = norm(ψ.AC[end])^2
-    return sum(ens) / n
+    return sum(ens) / (n * length(ψ))
 end
