@@ -164,20 +164,32 @@ for kind in (:C, :AC, :AC2)
     projection = Symbol(kind, "_projection")
     hamiltonian = Symbol(kind, "_hamiltonian")
 
-    @eval function $projection(site, below, operator, above, envs)
-        return $hamiltonian(site, below, operator, above, envs) * above.$kind[site]
-    end
     @eval function $projection(site, below, above::Tuple, envs)
         return $projection(site, below, above..., envs)
     end
     @eval function $projection(site, below, above::AbstractMPS, envs)
         return $projection(site, below, nothing, above, envs)
     end
+    @eval function $projection(site::CartesianIndex{2}, below::MultilineMPS, operator,
+                               above::MultilineMPS, envs)
+        row, col = Tuple(site)
+        return $projection(col, below[row + 1], operator[row], above[row], envs[row])
+    end
     @eval function $projection(site, below, above::LazySum, envs)
         return sum(zip(above.ops, envs.envs)) do x
             return $projection(site, below, x...)
         end
     end
+end
+function C_projection(site, below, operator, above, envs)
+    return C_hamiltonian(site, below, operator, above, envs) * above.C[site]
+end
+function AC_projection(site, below, operator, above, envs)
+    return AC_hamiltonian(site, below, operator, above, envs) * above.AC[site]
+end
+function AC2_projection(site::Int, below, operator, above, envs)
+    AC2 = above.AC[site] * _transpose_tail(above.AR[site + 1])
+    return AC2_hamiltonian(site, below, operator, above, envs) * AC2
 end
 
 # Multiline
