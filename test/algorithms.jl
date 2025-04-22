@@ -356,6 +356,18 @@ end
         @test E ≈ Et atol = 1e-8
     end
 
+    Ht2 = MultipliedOperator(H, t -> t < 0 ? error("t < 0!") : 4) +
+          MultipliedOperator(H, 1.45)
+    @testset "Finite TimeDependent LazySum (fix negative t issue) $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in
+                                                                                                          algs
+        ψ, envs = timestep(ψ₀, Ht2, 0.0, dt, alg)
+        E = expectation_value(ψ, Ht2(0.0), envs)
+
+        ψt, envst = timestep(ψ₀, Ht2, 0.0, dt, alg)
+        Et = expectation_value(ψt, Ht2(0.0), envst)
+        @test E ≈ Et atol = 1e-8
+    end
+
     H = repeat(force_planar(heisenberg_XXX(; spin=1)), 2)
     ψ₀ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^50, ℙ^50])
     E₀ = expectation_value(ψ₀, H)
@@ -701,7 +713,10 @@ end
         W2 = MPSKit.DenseMPO(sW2)
 
         ψ1, _ = approximate(ψ0, (sW1, ψ), VOMPS(; verbosity))
+        MPSKit.Defaults.set_scheduler!(:serial)
         ψ2, _ = approximate(ψ0, (W2, ψ), VOMPS(; verbosity))
+        MPSKit.Defaults.set_scheduler!()
+
         ψ3, _ = approximate(ψ0, (W1, ψ), IDMRG(; verbosity))
         ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trscheme=truncdim(12), verbosity))
         ψ5, _ = timestep(ψ, H, 0.0, dt, TDVP())
@@ -765,6 +780,17 @@ end
             @test TH ≈
                   permute(TH, ((vcat(N, 1:(N - 1))...,), (vcat(2N, (N + 1):(2N - 1))...,)))
         end
+    end
+
+    # fermionic tests
+    for N in 3:5
+        h = real(c_plusmin() + c_minplus())
+        H = InfiniteMPOHamiltonian([space(h, 1)], (1, 2) => h)
+        H_periodic = periodic_boundary_conditions(H, N)
+        terms = [(i, i + 1) => h for i in 1:(N - 1)]
+        push!(terms, (1, N) => permute(h, ((2, 1), (4, 3))))
+        H_periodic2 = FiniteMPOHamiltonian(physicalspace(H_periodic), terms)
+        @test H_periodic ≈ H_periodic2
     end
 end
 

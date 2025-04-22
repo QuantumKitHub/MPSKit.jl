@@ -82,7 +82,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         ψ.AC[i] = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator)
 
         Hc = C_hamiltonian(i, ψ, H, ψ, envs)
-        ψ.C[i] = integrate(Hc, ψ.C[i], t, -dt / 2, alg.integrator)
+        ψ.C[i] = integrate(Hc, ψ.C[i], t + dt / 2, -dt / 2, alg.integrator)
     end
 
     # edge case
@@ -95,7 +95,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         ψ.AC[i] = integrate(Hac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
 
         Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs)
-        ψ.C[i - 1] = integrate(Hc, ψ.C[i - 1], t + dt / 2, -dt / 2, alg.integrator)
+        ψ.C[i - 1] = integrate(Hc, ψ.C[i - 1], t + dt, -dt / 2, alg.integrator)
     end
 
     # edge case
@@ -153,7 +153,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
 
         if i != (length(ψ) - 1)
             Hac = AC_hamiltonian(i + 1, ψ, H, ψ, envs)
-            ψ.AC[i + 1] = integrate(Hac, ψ.AC[i + 1], t, -dt / 2, alg.integrator)
+            ψ.AC[i + 1] = integrate(Hac, ψ.AC[i + 1], t + dt / 2, -dt / 2, alg.integrator)
         end
     end
 
@@ -169,7 +169,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
 
         if i != 2
             Hac = AC_hamiltonian(i - 1, ψ, H, ψ, envs)
-            ψ.AC[i - 1] = integrate(Hac, ψ.AC[i - 1], t + dt / 2, -dt / 2, alg.integrator)
+            ψ.AC[i - 1] = integrate(Hac, ψ.AC[i - 1], t + dt, -dt / 2, alg.integrator)
         end
     end
 

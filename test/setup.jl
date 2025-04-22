@@ -13,9 +13,11 @@ using Combinatorics: permutations
 
 # exports
 export S_xx, S_yy, S_zz, S_x, S_y, S_z
+export c_plusmin, c_minplus, c_number
 export force_planar
 export symm_mul_mpo
-export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model
+export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model,
+       kitaev_model
 export classical_ising, finite_classical_ising, sixvertex
 
 # using TensorOperations
@@ -221,6 +223,61 @@ function bilinear_biquadratic_model(::Type{SU2Irrep}; θ=atan(1 / 3), L=Inf)
     else
         lattice = fill(space(h2, 1), L)
         return FiniteMPOHamiltonian(lattice, (i, i + 1) => h for i in 1:(L - 1))
+    end
+end
+
+function c_plusmin()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P^2 ← P^2)
+    I = sectortype(P)
+    t[(I(1), I(0), dual(I(0)), dual(I(1)))] .= 1
+    return t
+end
+
+function c_minplus()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P^2 ← P^2)
+    I = sectortype(t)
+    t[(I(0), I(1), dual(I(1)), dual(I(0)))] .= 1
+    return t
+end
+
+function c_plusplus()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P^2 ← P^2)
+    I = sectortype(t)
+    t[(I(1), I(1), dual(I(0)), dual(I(0)))] .= 1
+    return t
+end
+
+function c_minmin()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P^2 ← P^2)
+    I = sectortype(t)
+    t[(I(0), I(0), dual(I(1)), dual(I(1)))] .= 1
+    return t
+end
+
+function c_number()
+    P = Vect[FermionParity](0 => 1, 1 => 1)
+    t = zeros(ComplexF64, P ← P)
+    block(t, fℤ₂(1)) .= 1
+    return t
+end
+
+function kitaev_model(; t=1.0, mu=1.0, Delta=1.0, L=Inf)
+    TB = scale!(c_plusmin() + c_minplus(), -t / 2)     # tight-binding term
+    SC = scale!(c_plusplus() + c_minmin(), Delta / 2)  # superconducting term
+    CP = scale!(c_number(), -mu)                       # chemical potential term
+
+    if L == Inf
+        lattice = PeriodicArray([space(TB, 1)])
+        return InfiniteMPOHamiltonian(lattice, (1, 2) => TB + SC, (1,) => CP)
+    else
+        lattice = fill(space(TB, 1), L)
+        terms = Iterators.flatten((((i, i + 1) => TB + SC for i in 1:(L - 1)),
+                                   (i,) => CP for i in 1:L))
+        return FiniteMPOHamiltonian(lattice, terms)
     end
 end
 
