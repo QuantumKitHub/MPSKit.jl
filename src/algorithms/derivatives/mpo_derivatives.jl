@@ -93,9 +93,9 @@ function (h::MPO_AC2_Hamiltonian{<:MPSTensor,<:MPOTensor,<:MPOTensor,<:MPSTensor
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 function (h::MPO_AC2_Hamiltonian{<:MPSTensor,<:MPOTensor,<:MPOTensor,<:MPSTensor})(x::AbstractTensorMap{<:Any,
-                                                                                              <:Any,
-                                                                                              3,
-                                                                                              3})
+                                                                                                        <:Any,
+                                                                                                        3,
+                                                                                                        3})
     @plansor y[-1 -2 -3; -4 -5 -6] ≔ h.leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
                                      h.rightenv[1 3; -4] *
                                      h.operators[1][11 -2; 8 9] * τ[9 -3; 6 7] *

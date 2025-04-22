@@ -23,8 +23,7 @@ struct JordanMPO_AC_Hamiltonian{O1,O2,O3} <: DerivativeOperator
                                              ending, continuing)
     end
     function JordanMPO_AC_Hamiltonian{O1,O2,O3}(onsite, not_started, finished, starting,
-                                                ending,
-                                      continuing) where {O1,O2,O3}
+                                                ending, continuing) where {O1,O2,O3}
         return new{O1,O2,O3}(onsite, not_started, finished, starting, ending, continuing)
     end
 end
@@ -57,7 +56,7 @@ struct JordanMPO_AC2_Hamiltonian{O1,O2,O3,O4} <: DerivativeOperator
         return new{O1,O2,O3,typeof(AA)}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
     end
     function JordanMPO_AC2_Hamiltonian{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE,
-                                          EE) where {O1,O2,O3,O4}
+                                                    EE) where {O1,O2,O3,O4}
         return new{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
     end
 end

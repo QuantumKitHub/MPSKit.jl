@@ -14,12 +14,12 @@ Projection_AC2_Hamiltonian(GL, A1, A2, GR) = ProjectionDerivativeOperator(GL, (A
 # ------------
 function AC_hamiltonian(site::Int, below, operator::ProjectionOperator, above, envs)
     return Projection_AC_Hamiltonian(leftenv(envs, site, below), operator.ket.AC[site],
-                           rightenv(envs, site, below))
+                                     rightenv(envs, site, below))
 end
 function AC2_hamiltonian(site::Int, below, operator::ProjectionOperator, above, envs)
     return Projection_AC2_Hamiltonian(leftenv(envs, site, below), operator.ket.AC[site],
-                            operator.ket.AR[site + 1],
-                            rightenv(envs, site + 1, below))
+                                      operator.ket.AR[site + 1],
+                                      rightenv(envs, site + 1, below))
 end
 
 # Actions
