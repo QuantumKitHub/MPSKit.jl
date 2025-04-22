@@ -12,7 +12,8 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # left to right sweep
             for col in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = ac_proj(row, col, ψ, toapprox, envs)
+                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col), ψ,
+                                                       toapprox, envs)
                     normalize!(ψ.AC[row + 1, col])
                     ψ.AL[row + 1, col], ψ.C[row + 1, col] = leftorth!(ψ.AC[row + 1, col])
                 end
@@ -22,7 +23,8 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # right to left sweep
             for col in size(ψ, 2):-1:1
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = ac_proj(row, col, ψ, toapprox, envs)
+                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col),
+                                                       ψ, toapprox, envs)
                     normalize!(ψ.AC[row + 1, col])
                     ψ.C[row + 1, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row + 1,
                                                                                   col]))
@@ -71,7 +73,7 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # sweep from left to right
             for col in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
-                    AC2′ = ac2_proj(row, col, ψ, toapprox, envs)
+                    AC2′ = AC2_projection(CartesianIndex(row, col), ψ, toapprox, envs)
                     al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
@@ -88,9 +90,9 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # sweep from right to left
             for col in (size(ψ, 2) - 1):-1:0
                 for row in 1:size(ψ, 1)
-                    # TODO: also write this as ac2_proj?
+                    # TODO: also write this as AC2_projection?
                     AC2 = ϕ.AL[row, col] * _transpose_tail(ϕ.AC[row, col + 1])
-                    AC2′ = ∂∂AC2(row, col, ψ, O, envs) * AC2
+                    AC2′ = AC2_hamiltonian(CartesianIndex(row, col), ψ, O, ϕ, envs) * AC2
                     al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
