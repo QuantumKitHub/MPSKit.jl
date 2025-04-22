@@ -55,8 +55,6 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<:Tu
     return (mps, envs, ϵ), it.state
 end
 
-# TODO: AC_projection and C_projection should be rewritten to also be simply ∂AC/∂C functions
-# once these have better support for different above/below mps
 function localupdate_step!(::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<:Tuple},
                            ::SerialScheduler)
     alg_orth = QRpos()
@@ -65,9 +63,11 @@ function localupdate_step!(::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
     foreach(eachsite) do site
-        AC = circshift([AC_projection(row, loc, state.mps, state.toapprox, state.envs)
+        AC = circshift([AC_projection(CartesianIndex(row, loc), state.mps, state.toapprox,
+                                      state.envs)
                         for row in 1:size(state.mps, 1)], 1)
-        C = circshift([C_projection(row, loc, state.mps, state.toapprox, state.envs)
+        C = circshift([C_projection(CartesianIndex(row, loc), state.mps, state.toapprox,
+                                    state.envs)
                        for row in 1:size(state.mps, 1)], 1)
         dst_ACs[site] = regauge!(AC, C; alg=alg_orth)
         return nothing
@@ -87,12 +87,14 @@ function localupdate_step!(::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<
         local AC, C
         @sync begin
             Threads.@spawn begin
-                AC = circshift([AC_projection(row, site, state.mps, state.operator,
+                AC = circshift([AC_projection(CartesianIndex(row, site), state.mps,
+                                              state.operator,
                                               state.envs)
                                 for row in 1:size(state.mps, 1)], 1)
             end
             Threads.@spawn begin
-                C = circshift([C_projection(row, site, state.mps, state.operator,
+                C = circshift([C_projection(CartesianIndex(row, site), state.mps,
+                                            state.operator,
                                             state.envs)
                                for row in 1:size(state.mps, 1)], 1)
             end

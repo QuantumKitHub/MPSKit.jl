@@ -12,7 +12,8 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # left to right sweep
             for col in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = AC_projection(row, col, ψ, toapprox, envs)
+                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col), ψ,
+                                                       toapprox, envs)
                     normalize!(ψ.AC[row + 1, col])
                     ψ.AL[row + 1, col], ψ.C[row + 1, col] = leftorth!(ψ.AC[row + 1, col])
                 end
@@ -22,7 +23,8 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # right to left sweep
             for col in size(ψ, 2):-1:1
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = AC_projection(row, col, ψ, toapprox, envs)
+                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col),
+                                                       ψ, toapprox, envs)
                     normalize!(ψ.AC[row + 1, col])
                     ψ.C[row + 1, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row + 1,
                                                                                   col]))
@@ -71,7 +73,7 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # sweep from left to right
             for col in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
-                    AC2′ = AC2_projection(row, col, ψ, toapprox, envs)
+                    AC2′ = AC2_projection(CartesianIndex(row, col), ψ, toapprox, envs)
                     al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
