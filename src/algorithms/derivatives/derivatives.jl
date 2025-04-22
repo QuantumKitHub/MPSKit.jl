@@ -100,28 +100,6 @@ for hamiltonian in (:C_hamiltonian, :AC_hamiltonian, :AC2_hamiltonian)
     end
 end
 
-"""
-    site_derivative(nsites, site, below, operator, above, envs)
-
-Effective local `nsite`-derivative operator acting at `site`.
-"""
-Base.@constprop :aggressive function site_derivative(nsites::Int, site, below, operator,
-                                                     above, envs)
-    return site_derivative(Val(nsites), site, below, operator, above, envs)
-end
-function site_derivative(::Val{0}, site, below, operator, above, envs)
-    return C_hamiltonian(site, below, operator, above, envs)
-end
-function site_derivative(::Val{1}, site, below, operator, above, envs)
-    return AC_hamiltonian(site, below, operator, above, envs)
-end
-function site_derivative(::Val{2}, site, below, operator, above, envs)
-    return AC2_hamiltonian(site, below, operator, above, envs)
-end
-function site_derivative(::Val{N}, site, below, operator, above, envs) where {N}
-    throw(ArgumentError("site derivative not implemented for $N sites"))
-end
-
 # Projection operators
 # --------------------
 """
