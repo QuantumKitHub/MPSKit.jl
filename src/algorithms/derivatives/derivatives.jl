@@ -14,7 +14,7 @@ Base.:*(h::DerivativeOperator, v) = h(v)
 # --------------------
 
 @doc """
-    C_hamiltonian(site, above, operator, below, envs)::DerivativeOperator
+    C_hamiltonian(site, below, operator, above, envs)::DerivativeOperator
 
 Effective zero-site local operator acting at `site`.
 
@@ -32,7 +32,7 @@ See also [`C_projection`](@ref).
 """ C_hamiltonian
 
 @doc """
-    AC_hamiltonian(site, mps, operator, mps, envs)::DerivativeOperator
+    AC_hamiltonian(site, below, operator, above, envs)::DerivativeOperator
 
 Effective one-site local operator acting at `site`.
 
@@ -50,7 +50,7 @@ See also [`AC_projection`](@ref).
 """ AC_hamiltonian
 
 @doc """
-    AC2_hamiltonian(site, above, operator, below, envs)
+    AC2_hamiltonian(site, below, operator, above, envs)
 
 Effective two-site local operator acting at `site`.
 
@@ -102,8 +102,8 @@ end
 
 # Projection operators
 # --------------------
-"""
-    C_projection(site, above, operator, below, envs)
+@doc """
+    C_projection(site, below, operator, above, envs)
 
 Application of the effective zero-site local operator at a given site.
 
@@ -119,24 +119,10 @@ Application of the effective zero-site local operator at a given site.
 ```
 
 See also [`C_hamiltonian`](@ref).
-"""
-function C_projection(pos::Int, ψ, (operator, ϕ)::Tuple, envs)
-    return C_hamiltonian(pos, ψ, operator, ϕ, envs) * ϕ.C[pos]
-end
-function C_projection(pos::Int, ψ, ϕ::AbstractMPS, envs)
-    return C_hamiltonian(pos, ψ, nothing, ϕ, envs) * ϕ.C[pos]
-end
-function C_projection(pos::Int, ψ, Oϕs::LazySum, envs)
-    return sum(zip(Oϕs.ops, envs.envs)) do x
-        return C_projection(pos, ψ, x...)
-    end
-end
-function C_projection(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return C_projection(col, ψ[row], (O[row], ϕ[row]), envs[row])
-end
+""" C_projection
 
-"""
-    AC_projection(site, above, operator, below, envs)
+@doc """
+    AC_projection(site, below, operator, above, envs)
 
 Application of the effective one-site local operator at a given site.
 
@@ -152,24 +138,9 @@ Application of the effective one-site local operator at a given site.
 ```
 
 See also [`AC_hamiltonian`](@ref).
-"""
-function AC_projection(pos::Int, ψ, (O, ϕ)::Tuple, envs)
-    return AC_hamiltonian(pos, ψ, O, ϕ, envs) * ϕ.AC[pos]
-end
-function AC_projection(pos::Int, ψ, ϕ::AbstractMPS, envs)
-    return AC_hamiltonian(pos, ψ, nothing, ϕ, envs) * ϕ.AC[pos]
-end
+""" AC_projection
 
-function AC_projection(pos::Int, ψ, Oϕs::LazySum, envs)
-    return sum(zip(Oϕs.ops, envs.envs)) do x
-        return AC_projection(pos, ψ, x...)
-    end
-end
-function AC_projection(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return AC_projection(col, ψ[row], (O[row], ϕ[row]), envs[row])
-end
-
-"""
+@doc """
     AC2_projection(site, below, operator, above, envs)
 
 Application of the effective two-site local operator at a given site.
@@ -186,23 +157,31 @@ Application of the effective two-site local operator at a given site.
 ```
 
 See also [`AC2_hamiltonian`](@ref).
-"""
-function AC2_projection(pos::Int, ψ, (O, ϕ)::Tuple, envs)
-    AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return AC2_hamiltonian(pos, ψ, O, ϕ, envs) * AC2
-end
-function AC2_projection(pos::Int, ψ, ϕ::AbstractMPS, envs)
-    AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return AC2_hamiltonian(pos, ψ, nothing, ϕ, envs) * AC2
-end
-function AC2_projection(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return AC2_projection(col, ψ[row], (O[row], ϕ[row]), envs[row])
-end
+""" AC2_projection
 
-# Varia
-# -----
+# boilerplate for the projection actions
+for kind in (:C, :AC, :AC2)
+    projection = Symbol(kind, "_projection")
+    hamiltonian = Symbol(kind, "_hamiltonian")
+
+    @eval function $projection(site, below, operator, above, envs)
+        return $hamiltonian(site, below, operator, above, envs) * above.$kind[site]
+    end
+    @eval function $projection(site, below, above::Tuple, envs)
+        return $projection(site, below, above..., envs)
+    end
+    @eval function $projection(site, below, above::AbstractMPS, envs)
+        return $projection(site, below, nothing, above, envs)
+    end
+    @eval function $projection(site, below, above::LazySum, envs)
+        return sum(zip(above.ops, envs.envs)) do x
+            return $projection(site, below, x...)
+        end
+    end
+end
 
 # Multiline
+# ---------
 function (H::Multiline{<:DerivativeOperator})(x::AbstractVector)
     return [H[row - 1] * x[mod1(row - 1, end)] for row in 1:size(H, 1)]
 end
