@@ -28,7 +28,7 @@ Effective zero-site local operator acting at `site`.
  └─   ─┘ 
 ```
 
-See also [`∂C`](@ref).
+See also [`C_projection`](@ref).
 """ C_hamiltonian
 
 @doc """
@@ -46,7 +46,7 @@ Effective one-site local operator acting at `site`.
  └───   ───┘ 
 ```
 
-See also [`∂AC`](@ref).
+See also [`AC_projection`](@ref).
 """ AC_hamiltonian
 
 @doc """
@@ -64,7 +64,7 @@ Effective two-site local operator acting at `site`.
  └──        ──┘ 
 ```
 
-See also [`∂AC2`](@ref).
+See also [`AC2_projection`](@ref).
 """ AC2_hamiltonian
 
 # boilerplate for the derivative operators
@@ -122,13 +122,12 @@ function site_derivative(::Val{N}, site, below, operator, above, envs) where {N}
     throw(ArgumentError("site derivative not implemented for $N sites"))
 end
 
-# Generic actions
-# ---------------
-
+# Projection operators
+# --------------------
 """
-    ∂C(x, leftenv, rightenv)
+    C_projection(site, above, operator, below, envs)
 
-Application of the effective zero-site local operator on a local tensor `x`.
+Application of the effective zero-site local operator at a given site.
 
 ```
    ┌─┐   
@@ -143,50 +142,6 @@ Application of the effective zero-site local operator on a local tensor `x`.
 
 See also [`C_hamiltonian`](@ref).
 """
-∂C(x, leftenv, rightenv) = MPO_C_Hamiltonian(leftenv, rightenv)(x)
-
-"""
-    ∂AC(x, operator, leftenv, rightenv)
-
-Application of the effective one-site local operator on a local tensor `x`.
-
-```
-    ┌───┐    
- ┌──┤   ├──┐ 
- │  └─┬─┘  │ 
-┌┴┐ ┌─┴─┐ ┌┴┐
-│ ├─┤   ├─┤ │
-└┬┘ └─┬─┘ └┬┘
- │    │    │ 
- └──     ──┘ 
-```
-
-See also [`AC_hamiltonian`](@ref).
-"""
-∂AC(x, operator, leftenv, rightenv) = MPO_AC_Hamiltonian(leftenv, operator, rightenv)(x)
-
-"""
-    ∂AC2(x, operator1, operator2, leftenv, rightenv)
-
-Application of the effective two-site local operator on a local tensor `x`.
-
-```
-    ┌──────┐    
- ┌──┤      ├──┐ 
- │  └┬────┬┘  │ 
-┌┴┐┌─┴─┐┌─┴─┐┌┴┐
-│ ├┤   ├┤   ├┤ │
-└┬┘└─┬─┘└─┬─┘└┬┘
- │   │    │   │ 
- └──        ──┘ 
-```
-
-See also [`AC2_hamiltonian`](@ref).
-"""
-∂AC2(x, O₁, O₂, leftenv, rightenv) = MPO_AC2_Hamiltonian(leftenv, O₁, O₂, rightenv)(x)
-
-# Projection operators
-# --------------------
 function C_projection(pos::Int, ψ, (operator, ϕ)::Tuple, envs)
     return C_hamiltonian(pos, ψ, operator, ϕ, envs) * ϕ.C[pos]
 end
@@ -202,6 +157,24 @@ function C_projection(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs
     return C_projection(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
+"""
+    AC_projection(site, above, operator, below, envs)
+
+Application of the effective one-site local operator at a given site.
+
+```
+    ┌───┐    
+ ┌──┤   ├──┐ 
+ │  └─┬─┘  │ 
+┌┴┐ ┌─┴─┐ ┌┴┐
+│ ├─┤   ├─┤ │
+└┬┘ └─┬─┘ └┬┘
+ │    │    │ 
+ └──     ──┘ 
+```
+
+See also [`AC_hamiltonian`](@ref).
+"""
 function AC_projection(pos::Int, ψ, (O, ϕ)::Tuple, envs)
     return AC_hamiltonian(pos, ψ, O, ϕ, envs) * ϕ.AC[pos]
 end
@@ -218,6 +191,24 @@ function AC_projection(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, env
     return AC_projection(col, ψ[row], (O[row], ϕ[row]), envs[row])
 end
 
+"""
+    AC2_projection(site, below, operator, above, envs)
+
+Application of the effective two-site local operator at a given site.
+
+```
+    ┌──────┐    
+ ┌──┤      ├──┐ 
+ │  └┬────┬┘  │ 
+┌┴┐┌─┴─┐┌─┴─┐┌┴┐
+│ ├┤   ├┤   ├┤ │
+└┬┘└─┬─┘└─┬─┘└┬┘
+ │   │    │   │ 
+ └──        ──┘ 
+```
+
+See also [`AC2_hamiltonian`](@ref).
+"""
 function AC2_projection(pos::Int, ψ, (O, ϕ)::Tuple, envs)
     AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
     return AC2_hamiltonian(pos, ψ, O, ϕ, envs) * AC2
