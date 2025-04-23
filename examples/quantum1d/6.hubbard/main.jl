@@ -59,31 +59,32 @@ end
 
 function compute_groundstate(psi, H;
                              svalue=1e-3,
-                             expansionfactor=(1 / 3),
-                             expansioniter=10)
-    verbosity = 1
+                             expansionfactor=(1 / 10),
+                             expansioniter=20)
+    verbosity = 2
     psi, = find_groundstate(psi, H; tol=svalue * 10, verbosity)
     for _ in 1:expansioniter
         D = maximum(x -> dim(left_virtualspace(psi, x)), 1:length(psi))
-        D′ = max(2, round(Int, D * expansionfactor))
+        D′ = max(5, round(Int, D * expansionfactor))
         trscheme = truncbelow(svalue / 10) & truncdim(D′)
         psi′, = changebonds(psi, H, OptimalExpand(; trscheme=trscheme))
         all(left_virtualspace.(Ref(psi), 1:length(psi)) .==
             left_virtualspace.(Ref(psi′), 1:length(psi))) && break
-        psi, = find_groundstate(psi′, H, VUMPS(; tol=svalue / 5, verbosity))
+        psi, = find_groundstate(psi′, H, VUMPS(; tol=svalue / 5, maxiter=10, verbosity))
     end
 
     ## convergence steps
     psi, = changebonds(psi, H, SvdCut(; trscheme=truncbelow(svalue)))
     psi, = find_groundstate(psi, H,
-                            VUMPS(; tol=svalue / 100, verbosity) &
-                            GradientGrassmann(; tol=svalue / 1000, verbosity))
+                            VUMPS(; tol=svalue / 100, verbosity, maxiter=100) &
+                            GradientGrassmann(; tol=svalue / 1000))
 
     return psi
 end
 
 H = hubbard_model(InfiniteChain(2); U, t, mu=U / 2)
-psi = InfiniteMPS(physicalspace.(Ref(H), 1:2), physicalspace.(Ref(H), 1:2))
+Vspaces = fill(Vect[fℤ₂](0 => 10, 1 => 10), 2)
+psi = InfiniteMPS(physicalspace(H), Vspaces)
 psi = compute_groundstate(psi, H)
 E = real(expectation_value(psi, H)) / 2
 @info """
@@ -107,12 +108,12 @@ In MPSKit, this is achieved by the `add_physical_charge` function, which shifts 
 
 H_u1_su2 = hubbard_model(ComplexF64, U1Irrep, SU2Irrep, InfiniteChain(2); U, t, mu=U / 2);
 charges = fill(FermionParity(1) ⊠ U1Irrep(1) ⊠ SU2Irrep(0), 2);
-H_u1_su2 = MPSKit.add_physical_charge(H_u1_su2, dual.(charges));
+H_u1_su2 = MPSKit.add_physical_charge(H_u1_su2, charges);
 
 pspaces = physicalspace.(Ref(H_u1_su2), 1:2)
 vspaces = [oneunit(eltype(pspaces)), first(pspaces)]
 psi = InfiniteMPS(pspaces, vspaces)
-psi = compute_groundstate(psi, H_u1_su2)
+psi = compute_groundstate(psi, H_u1_su2; expansionfactor=1 / 3)
 E = real(expectation_value(psi, H_u1_su2)) / 2
 @info """
 Groundstate energy:
@@ -144,7 +145,7 @@ E_spinon, ϕ_spinon = excitations(H_u1_su2, alg, momenta,
                                  psi_AB, envs_AB, psi_BA, envs_BA;
                                  sector=spinon_charge, num=1);
 
-holon_charge = FermionParity(1) ⊠ U1Irrep(1) ⊠ SU2Irrep(0)
+holon_charge = FermionParity(1) ⊠ U1Irrep(-1) ⊠ SU2Irrep(0)
 E_holon, ϕ_holon = excitations(H_u1_su2, alg, momenta,
                                psi_AB, envs_AB, psi_BA, envs_BA;
                                sector=holon_charge, num=1);
