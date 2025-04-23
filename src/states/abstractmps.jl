@@ -197,3 +197,10 @@ physicalspace(A::MPSTensor) = space(A, 2)
 physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
 physicalspace(O::MPOTensor) = space(O, 2)
 physicalspace(O::AbstractBlockTensorMap{<:Any,<:Any,2,2}) = only(space(O, 2))
+
+"""
+    eachsite(state::AbstractMPS)
+
+Return an iterator over the sites of the MPS `state`.
+"""
+eachsite(ψ::AbstractMPS) = eachindex(ψ)
