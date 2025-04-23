@@ -100,13 +100,12 @@ function localupdate_step!(::IterativeSolver{<:VOMPS}, state,
                            scheduler=Defaults.scheduler[])
     alg_orth = QRpos()
     mps = state.mps
-    eachsite = 1:length(mps)
     src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
     src_ACs = mps isa Multiline ? eachcol(mps.AC) : mps.AC
     ACs = similar(mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
-    tforeach(eachsite, src_ACs, src_Cs; scheduler) do site, AC₀, C₀
+    tforeach(eachsite(mps), src_ACs, src_Cs; scheduler) do site, AC₀, C₀
         dst_ACs[site] = _localupdate_vomps_step!(site, mps, state.operator, state.envs,
                                                  AC₀, C₀; alg_orth, parallel=false)
         return nothing
