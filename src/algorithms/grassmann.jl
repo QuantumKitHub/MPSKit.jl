@@ -11,8 +11,8 @@ The module exports nothing, and all references to it should be qualified, e.g.
 module GrassmannMPS
 
 using ..MPSKit
-using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, ∂∂AC,
-                recalculate!
+using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments,
+                AC_hamiltonian, recalculate!
 using TensorKit
 using OhMyThreads
 import TensorKitManifolds.Grassmann
@@ -145,7 +145,7 @@ function fg(state::FiniteMPS, operator::Union{O,LazySum{O}},
     f = expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol=eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
     gs = map(1:length(state)) do i
-        AC′ = ∂∂AC(i, state, operator, envs) * state.AC[i]
+        AC′ = AC_hamiltonian(i, state, operator, state, envs) * state.AC[i]
         g = Grassmann.project(AC′, state.AL[i])
         return rmul(g, state.C[i]')
     end
@@ -160,7 +160,7 @@ function fg(state::InfiniteMPS, operator::Union{O,LazySum{O}},
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state),eltype(state)})
     gs = Vector{A}(undef, length(state))
     tmap!(gs, 1:length(state); scheduler=MPSKit.Defaults.scheduler[]) do i
-        AC′ = ∂∂AC(i, state, operator, envs) * state.AC[i]
+        AC′ = AC_hamiltonian(i, state, operator, state, envs) * state.AC[i]
         g = Grassmann.project(AC′, state.AL[i])
         return rmul(g, state.C[i]')
     end
@@ -175,7 +175,7 @@ function fg(state::InfiniteMPS, operator::Union{O,LazySum{O}},
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state),eltype(state)})
     gs = Vector{A}(undef, length(state))
     tmap!(gs, eachindex(state); scheduler=MPSKit.Defaults.scheduler[]) do i
-        AC′ = ∂∂AC(i, state, operator, envs) * state.AC[i]
+        AC′ = AC_hamiltonian(i, state, operator, state, envs) * state.AC[i]
         g = rmul!(Grassmann.project(AC′, state.AL[i]), -inv(f))
         return rmul(g, state.C[i]')
     end
@@ -191,7 +191,7 @@ function fg(state::MultilineMPS, operator::MultilineMPO,
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state),eltype(state)})
     gs = Matrix{A}(undef, size(state))
     tforeach(eachindex(state); scheduler=MPSKit.Defaults.scheduler[]) do i
-        AC′ = ∂∂AC(i, state, operator, envs) * state.AC[i]
+        AC′ = AC_hamiltonian(i, state, operator, state, envs) * state.AC[i]
         g = rmul!(Grassmann.project(AC′, state.AL[i]), -inv(f))
         gs[i] = rmul(g, state.C[i]')
         return nothing

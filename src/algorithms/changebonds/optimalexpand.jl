@@ -25,7 +25,7 @@ function changebonds(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExp
     for i in 1:length(ψ)
         # determine optimal expansion spaces around bond i
         AC2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        AC2 = ∂∂AC2(i, ψ, H, envs) * AC2
+        AC2 = AC2_hamiltonian(i, ψ, H, ψ, envs) * AC2
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = leftnull(ψ.AL[i])
@@ -51,7 +51,7 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs=environments(
     # determine optimal expansion spaces around bond i
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
         AC2 = _transpose_front(ψ.AC[i - 1, j]) * _transpose_tail(ψ.AR[i - 1, j + 1])
-        AC2 = ∂∂AC2(i - 1, j, ψ, H, envs) * AC2
+        AC2 = AC2_hamiltonian(CartesianIndex(i - 1, j), ψ, H, ψ, envs) * AC2
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = leftnull(ψ.AL[i, j])
@@ -80,7 +80,7 @@ function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs=environ
 
     for i in 1:(length(ψ) - 1)
         AC2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        AC2 = ∂∂AC2(i, ψ, H, envs) * AC2
+        AC2 = AC2_hamiltonian(i, ψ, H, ψ, envs) * AC2
 
         #Calculate nullspaces for left and right
         NL = leftnull(ψ.AC[i])

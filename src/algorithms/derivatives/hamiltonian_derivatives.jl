@@ -1,17 +1,18 @@
 """
-    JordanMPO_∂∂AC{O1,O2,O3}
+    JordanMPO_AC_Hamiltonian{O1,O2,O3}
 
 Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
 In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
 """
-struct JordanMPO_∂∂AC{O1,O2,O3} <: DerivativeOperator
+struct JordanMPO_AC_Hamiltonian{O1,O2,O3} <: DerivativeOperator
     D::Union{O1,Missing} # onsite
     I::Union{O1,Missing} # not started
     E::Union{O1,Missing} # finished
     C::Union{O2,Missing} # starting 
     B::Union{O2,Missing} # ending
     A::O3                # continuing
-    function JordanMPO_∂∂AC(onsite, not_started, finished, starting, ending, continuing)
+    function JordanMPO_AC_Hamiltonian(onsite, not_started, finished, starting, ending,
+                                      continuing)
         tensor = coalesce(onsite, not_started, finished, starting, ending)
         ismissing(tensor) && throw(ArgumentError("unable to determine type"))
         S = spacetype(tensor)
@@ -21,19 +22,19 @@ struct JordanMPO_∂∂AC{O1,O2,O3} <: DerivativeOperator
         return new{O1,O2,typeof(continuing)}(onsite, not_started, finished, starting,
                                              ending, continuing)
     end
-    function JordanMPO_∂∂AC{O1,O2,O3}(onsite, not_started, finished, starting, ending,
-                                      continuing) where {O1,O2,O3}
+    function JordanMPO_AC_Hamiltonian{O1,O2,O3}(onsite, not_started, finished, starting,
+                                                ending, continuing) where {O1,O2,O3}
         return new{O1,O2,O3}(onsite, not_started, finished, starting, ending, continuing)
     end
 end
 
 """
-    JordanMPO_∂∂AC2{O1,O2,O3,O4}
+    JordanMPO_AC2_Hamiltonian{O1,O2,O3,O4}
 
 Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
 In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
 """
-struct JordanMPO_∂∂AC2{O1,O2,O3,O4} <: DerivativeOperator
+struct JordanMPO_AC2_Hamiltonian{O1,O2,O3,O4} <: DerivativeOperator
     II::Union{O1,Missing} # not_started
     IC::Union{O2,Missing} # starting right
     ID::Union{O1,Missing} # onsite right
@@ -44,7 +45,7 @@ struct JordanMPO_∂∂AC2{O1,O2,O3,O4} <: DerivativeOperator
     BE::Union{O2,Missing} # ending left
     DE::Union{O1,Missing} # onsite left
     EE::Union{O1,Missing} # finished
-    function JordanMPO_∂∂AC2(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    function JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
         tensor = coalesce(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
         ismissing(tensor) && throw(ArgumentError("unable to determine type"))
         S = spacetype(tensor)
@@ -54,8 +55,8 @@ struct JordanMPO_∂∂AC2{O1,O2,O3,O4} <: DerivativeOperator
         O3 = tensormaptype(S, 3, 3, M)
         return new{O1,O2,O3,typeof(AA)}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
     end
-    function JordanMPO_∂∂AC2{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE,
-                                          EE) where {O1,O2,O3,O4}
+    function JordanMPO_AC2_Hamiltonian{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE,
+                                                    EE) where {O1,O2,O3,O4}
         return new{O1,O2,O3,O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
     end
 end
@@ -65,10 +66,11 @@ end
 const _HAM_MPS_TYPES = Union{FiniteMPS{<:MPSTensor},WindowMPS{<:MPSTensor},
                              InfiniteMPS{<:MPSTensor}}
 
-function ∂∂AC(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
-              envs)
-    GL = leftenv(envs, site, mps)
-    GR = rightenv(envs, site, mps)
+function AC_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
+                        operator::MPOHamiltonian{<:JordanMPOTensor}, above::_HAM_MPS_TYPES,
+                        envs)
+    GL = leftenv(envs, site, below)
+    GR = rightenv(envs, site, below)
     W = operator[site]
 
     # starting
@@ -126,13 +128,15 @@ function ∂∂AC(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:Jor
     A = W.A
     continuing = (GL[2:(end - 1)], A, GR[2:(end - 1)])
 
-    return JordanMPO_∂∂AC(onsite, not_started, finished, starting, ending, continuing)
+    return JordanMPO_AC_Hamiltonian(onsite, not_started, finished, starting, ending,
+                                    continuing)
 end
 
-function ∂∂AC2(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
-               envs)
-    GL = leftenv(envs, site, mps)
-    GR = rightenv(envs, site + 1, mps)
+function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
+                         operator::MPOHamiltonian{<:JordanMPOTensor}, above::_HAM_MPS_TYPES,
+                         envs)
+    GL = leftenv(envs, site, below)
+    GR = rightenv(envs, site + 1, below)
     W1 = operator[site]
     W2 = operator[site + 1]
 
@@ -263,15 +267,15 @@ function ∂∂AC2(site::Int, mps::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:Jo
     end
 
     # continuing - continuing
-    # TODO: MPO_∂∂AC2 code reuse + optimization
+    # TODO: MPODerivativeOperator code reuse + optimization
     AA = (GL[2:(end - 1)], W1.A, W2.A, GR[2:(end - 1)])
 
-    return JordanMPO_∂∂AC2(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    return JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
 end
 
 # Actions
 # -------
-function (H::JordanMPO_∂∂AC)(x::MPSTensor)
+function (H::JordanMPO_AC_Hamiltonian)(x::MPSTensor)
     y = zerovector(x)
 
     ismissing(H.D) || @plansor y[-1 -2; -3] += x[-1 1; -3] * H.D[-2; 1]
@@ -288,7 +292,7 @@ function (H::JordanMPO_∂∂AC)(x::MPSTensor)
     return y
 end
 
-function (H::JordanMPO_∂∂AC2)(x::MPOTensor)
+function (H::JordanMPO_AC2_Hamiltonian)(x::MPOTensor)
     y = zerovector(x)
     ismissing(H.II) || @plansor y[-1 -2; -3 -4] += x[-1 -2; 1 -4] * H.II[-3; 1]
     ismissing(H.IC) || @plansor y[-1 -2; -3 -4] += x[-1 -2; 1 2] * H.IC[-4 -3; 2 1]

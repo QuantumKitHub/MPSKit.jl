@@ -104,13 +104,12 @@ function localupdate_step!(it::IterativeSolver{<:VUMPS}, state,
     alg_orth = QRpos()
 
     mps = state.mps
-    eachsite = 1:length(mps)
     src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
     src_ACs = mps isa Multiline ? eachcol(mps.AC) : mps.AC
     ACs = similar(mps.AC)
     dst_ACs = mps isa Multiline ? eachcol(ACs) : ACs
 
-    tforeach(eachsite, src_ACs, src_Cs; scheduler) do site, AC₀, C₀
+    tforeach(eachsite(mps), src_ACs, src_Cs; scheduler) do site, AC₀, C₀
         dst_ACs[site] = _localupdate_vumps_step!(site, mps, state.operator, state.envs,
                                                  AC₀, C₀; parallel=false, alg_orth,
                                                  state.which, alg_eigsolve)
@@ -124,20 +123,22 @@ function _localupdate_vumps_step!(site, mps, operator, envs, AC₀, C₀;
                                   parallel::Bool=false, alg_orth=QRpos(),
                                   alg_eigsolve=Defaults.eigsolver, which)
     if !parallel
-        _, AC = fixedpoint(∂∂AC(site, mps, operator, envs), AC₀, which, alg_eigsolve)
-        _, C = fixedpoint(∂∂C(site, mps, operator, envs), C₀, which, alg_eigsolve)
+        Hac = AC_hamiltonian(site, mps, operator, mps, envs)
+        _, AC = fixedpoint(Hac, AC₀, which, alg_eigsolve)
+        Hc = C_hamiltonian(site, mps, operator, mps, envs)
+        _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
         return regauge!(AC, C; alg=alg_orth)
     end
 
     local AC, C
     @sync begin
         @spawn begin
-            _, AC = fixedpoint(∂∂AC(site, mps, operator, envs),
-                               AC₀, which, alg_eigsolve)
+            Hac = AC_hamiltonian(site, mps, operator, mps, envs)
+            _, AC = fixedpoint(Hac, AC₀, which, alg_eigsolve)
         end
         @spawn begin
-            _, C = fixedpoint(∂∂C(site, mps, operator, envs),
-                              C₀, which, alg_eigsolve)
+            Hc = C_hamiltonian(site, mps, operator, mps, envs)
+            _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
         end
     end
     return regauge!(AC, C; alg=alg_orth)

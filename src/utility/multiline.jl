@@ -30,6 +30,8 @@ function Base.axes(m::Multiline, i::Int)
 end
 Base.eachindex(m::Multiline) = CartesianIndices(size(m))
 
+eachsite(m::Multiline) = eachsite(first(parent(m)))
+
 Base.getindex(m::Multiline, i::Int) = getindex(parent(m), i)
 Base.setindex!(m::Multiline, v, i::Int) = (setindex!(parent(m), v, i); m)
 

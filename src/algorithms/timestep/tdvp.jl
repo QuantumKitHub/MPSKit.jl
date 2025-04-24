@@ -35,22 +35,26 @@ function timestep(ψ_::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
     scheduler = Defaults.scheduler[]
     if scheduler isa SerialScheduler
         temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
-            return integrate(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], t, dt, alg.integrator)
+            Hac = AC_hamiltonian(loc, ψ, H, ψ, envs)
+            return integrate(Hac, ψ.AC[loc], t, dt, alg.integrator)
         end
         temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
-            return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator)
+            Hc = C_hamiltonian(loc, ψ, H, ψ, envs)
+            return integrate(Hc, ψ.C[loc], t, dt, alg.integrator)
         end
     else
         @sync begin
             Threads.@spawn begin
                 temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
-                    return integrate(∂∂AC(loc, ψ, H, envs), ψ.AC[loc], t, dt,
+                    Hac = AC_hamiltonian(loc, ψ, H, ψ, envs)
+                    return integrate(Hac, ψ.AC[loc], t, dt,
                                      alg.integrator)
                 end
             end
             Threads.@spawn begin
                 temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
-                    return integrate(∂∂C(loc, ψ, H, envs), ψ.C[loc], t, dt, alg.integrator)
+                    Hc = C_hamiltonian(loc, ψ, H, ψ, envs)
+                    return integrate(Hc, ψ.C[loc], t, dt, alg.integrator)
                 end
             end
         end
@@ -74,29 +78,29 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
-        h_ac = ∂∂AC(i, ψ, H, envs)
-        ψ.AC[i] = integrate(h_ac, ψ.AC[i], t, dt / 2, alg.integrator)
+        Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
+        ψ.AC[i] = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator)
 
-        h_c = ∂∂C(i, ψ, H, envs)
-        ψ.C[i] = integrate(h_c, ψ.C[i], t, -dt / 2, alg.integrator)
+        Hc = C_hamiltonian(i, ψ, H, ψ, envs)
+        ψ.C[i] = integrate(Hc, ψ.C[i], t + dt / 2, -dt / 2, alg.integrator)
     end
 
     # edge case
-    h_ac = ∂∂AC(length(ψ), ψ, H, envs)
-    ψ.AC[end] = integrate(h_ac, ψ.AC[end], t, dt / 2, alg.integrator)
+    Hac = AC_hamiltonian(length(ψ), ψ, H, ψ, envs)
+    ψ.AC[end] = integrate(Hac, ψ.AC[end], t, dt / 2, alg.integrator)
 
     # sweep right to left
     for i in length(ψ):-1:2
-        h_ac = ∂∂AC(i, ψ, H, envs)
-        ψ.AC[i] = integrate(h_ac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
+        Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
+        ψ.AC[i] = integrate(Hac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator)
 
-        h_c = ∂∂C(i - 1, ψ, H, envs)
-        ψ.C[i - 1] = integrate(h_c, ψ.C[i - 1], t + dt / 2, -dt / 2, alg.integrator)
+        Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs)
+        ψ.C[i - 1] = integrate(Hc, ψ.C[i - 1], t + dt, -dt / 2, alg.integrator)
     end
 
     # edge case
-    h_ac = ∂∂AC(1, ψ, H, envs)
-    ψ.AC[1] = integrate(h_ac, ψ.AC[1], t + dt / 2, dt / 2, alg.integrator)
+    Hac = AC_hamiltonian(1, ψ, H, ψ, envs)
+    ψ.AC[1] = integrate(Hac, ψ.AC[1], t + dt / 2, dt / 2, alg.integrator)
 
     return ψ, envs
 end
@@ -140,32 +144,32 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         ac2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        h_ac2 = ∂∂AC2(i, ψ, H, envs)
-        nac2 = integrate(h_ac2, ac2, t, dt / 2, alg.integrator)
+        Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs)
+        ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator)
 
-        nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=alg.alg_svd)
+        nal, nc, nar = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
         ψ.AC[i] = (nal, complex(nc))
         ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
         if i != (length(ψ) - 1)
-            ψ.AC[i + 1] = integrate(∂∂AC(i + 1, ψ, H, envs), ψ.AC[i + 1], t, -dt / 2,
-                                    alg.integrator)
+            Hac = AC_hamiltonian(i + 1, ψ, H, ψ, envs)
+            ψ.AC[i + 1] = integrate(Hac, ψ.AC[i + 1], t + dt / 2, -dt / 2, alg.integrator)
         end
     end
 
     # sweep right to left
     for i in length(ψ):-1:2
         ac2 = _transpose_front(ψ.AL[i - 1]) * _transpose_tail(ψ.AC[i])
-        h_ac2 = ∂∂AC2(i - 1, ψ, H, envs)
-        nac2 = integrate(h_ac2, ac2, t + dt / 2, dt / 2, alg.integrator)
+        Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs)
+        ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator)
 
-        nal, nc, nar = tsvd!(nac2; trunc=alg.trscheme, alg=alg.alg_svd)
+        nal, nc, nar = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
         ψ.AC[i - 1] = (nal, complex(nc))
         ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
         if i != 2
-            ψ.AC[i - 1] = integrate(∂∂AC(i - 1, ψ, H, envs), ψ.AC[i - 1], t + dt / 2,
-                                    -dt / 2, alg.integrator)
+            Hac = AC_hamiltonian(i - 1, ψ, H, ψ, envs)
+            ψ.AC[i - 1] = integrate(Hac, ψ.AC[i - 1], t + dt, -dt / 2, alg.integrator)
         end
     end
 

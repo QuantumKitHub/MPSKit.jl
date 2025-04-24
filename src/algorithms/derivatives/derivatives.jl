@@ -10,9 +10,11 @@ abstract type DerivativeOperator end
 Base.:*(h::DerivativeOperator, v) = h(v)
 (h::DerivativeOperator)(v, ::Number) = h(v)
 
+# Generic constructors
+# --------------------
+
 @doc """
-    ∂∂C(site::Int, mps, operator, envs)
-    ∂∂C(row::Int, col::Int, mps, operator, envs)
+    C_hamiltonian(site, below, operator, above, envs)::DerivativeOperator
 
 Effective zero-site local operator acting at `site`.
 
@@ -26,52 +28,11 @@ Effective zero-site local operator acting at `site`.
  └─   ─┘ 
 ```
 
-See also [`∂C`](@ref).
-""" ∂∂C
-
-∂∂C(pos::CartesianIndex, mps, operator, envs) = ∂∂C(Tuple(pos)..., mps, operator, envs)
-function ∂∂C(row::Int, col::Int, mps::MultilineMPS, operator::MultilineMPO, envs)
-    return ∂∂C(col, mps[row], operator[row], envs[row])
-end
-function ∂∂C(site::Int, mps, operator::MultilineMPO, envs)
-    return Multiline([∂∂C(row, site, mps, operator, envs) for row in 1:size(operator, 1)])
-end
-function ∂∂C(pos::Int, mps, operator::MultipliedOperator, cache)
-    return MultipliedOperator(∂∂C(pos, mps, operator.op, cache), operator.f)
-end
-function ∂∂C(pos::Int, mps, operator::LinearCombination, cache)
-    return LinearCombination(broadcast((h, e) -> ∂∂C(pos, mps, h, e), operator.opps,
-                                       cache.envs),
-                             operator.coeffs)
-end
-function ∂∂C(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
-    suboperators = map((op, openv) -> ∂∂C(pos, mps, op, openv), operator.ops, cache.envs)
-    return LazySum{Union{MPO_∂∂C,MultipliedOperator{<:MPO_∂∂C}}}(suboperators)
-end
-
-"""
-    ∂C(x, leftenv, rightenv)
-
-Application of the effective zero-site local operator on a local tensor `x`.
-
-```
-   ┌─┐   
- ┌─┤ ├─┐ 
- │ └─┘ │ 
-┌┴┐   ┌┴┐
-│ ├───┤ │
-└┬┘   └┬┘
- │     │ 
- └─   ─┘ 
-```
-
-See also [`∂∂C`](@ref).
-"""
-∂C(x, leftenv, rightenv) = MPO_∂∂C(leftenv, rightenv)(x)
+See also [`C_projection`](@ref).
+""" C_hamiltonian
 
 @doc """
-    ∂∂AC(site::Int, mps, operator, envs)
-    ∂∂AC(row::Int, col::Int, mps, operator, envs)
+    AC_hamiltonian(site, below, operator, above, envs)::DerivativeOperator
 
 Effective one-site local operator acting at `site`.
 
@@ -85,51 +46,11 @@ Effective one-site local operator acting at `site`.
  └───   ───┘ 
 ```
 
-See also [`∂AC`](@ref).
-""" ∂∂AC
-∂∂AC(pos::CartesianIndex, mps, operator, envs) = ∂∂AC(Tuple(pos)..., mps, operator, envs)
-function ∂∂AC(row::Int, col::Int, mps::MultilineMPS, operator::MultilineMPO, envs)
-    return ∂∂AC(col, mps[row], operator[row], envs[row])
-end
-function ∂∂AC(site::Int, mps, operator::MultilineMPO, envs)
-    return Multiline([∂∂AC(row, site, mps, operator, envs) for row in 1:size(operator, 1)])
-end
-function ∂∂AC(pos::Int, mps, operator::MultipliedOperator, cache)
-    return MultipliedOperator(∂∂AC(pos, mps, operator.op, cache), operator.f)
-end
-function ∂∂AC(pos::Int, mps, operator::LinearCombination, cache)
-    return LinearCombination(broadcast((h, e) -> ∂∂AC(pos, mps, h, e), operator.opps,
-                                       cache.envs), operator.coeffs)
-end
-function ∂∂AC(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
-    suboperators = map((op, openv) -> ∂∂AC(pos, mps, op, openv), operator.ops, cache.envs)
-    elT = Union{D,MultipliedOperator{D}} where {D<:Union{MPO_∂∂AC,JordanMPO_∂∂AC}}
-    return LazySum{elT}(suboperators)
-end
-
-"""
-    ∂AC(x, operator, leftenv, rightenv)
-
-Application of the effective one-site local operator on a local tensor `x`.
-
-```
-    ┌───┐    
- ┌──┤   ├──┐ 
- │  └─┬─┘  │ 
-┌┴┐ ┌─┴─┐ ┌┴┐
-│ ├─┤   ├─┤ │
-└┬┘ └─┬─┘ └┬┘
- │    │    │ 
- └──     ──┘ 
-```
-
-See also [`∂∂AC`](@ref).
-"""
-∂AC(x, operator, leftenv, rightenv) = MPO_∂∂AC(leftenv, operator, rightenv)(x)
+See also [`AC_projection`](@ref).
+""" AC_hamiltonian
 
 @doc """
-    ∂∂AC2(site::Int, mps, operator, envs)
-    ∂∂AC2(row::Int, col::Int, mps, operator, envs)
+    AC2_hamiltonian(site, below, operator, above, envs)
 
 Effective two-site local operator acting at `site`.
 
@@ -143,33 +64,86 @@ Effective two-site local operator acting at `site`.
  └──        ──┘ 
 ```
 
-See also [`∂AC2`](@ref).
-""" ∂∂AC2
+See also [`AC2_projection`](@ref).
+""" AC2_hamiltonian
 
-∂∂AC2(pos::CartesianIndex, mps, operator, envs) = ∂∂AC2(Tuple(pos)..., mps, operator, envs)
-function ∂∂AC2(row::Int, col::Int, mps::MultilineMPS, operator::MultilineMPO, envs)
-    return ∂∂AC2(col, mps[row], operator[row], envs[row])
-end
-function ∂∂AC2(site::Int, mps, operator::MultilineMPO, envs)
-    return Multiline([∂∂AC2(row, site, mps, operator, envs) for row in 1:size(operator, 1)])
-end
-function ∂∂AC2(pos::Int, mps, operator::MultipliedOperator, cache)
-    return MultipliedOperator(∂∂AC2(pos, mps, operator.op, cache), operator.f)
-end
-function ∂∂AC2(pos::Int, mps, operator::LinearCombination, cache)
-    return LinearCombination(broadcast((h, e) -> ∂∂AC2(pos, mps, h, e), operator.opps,
-                                       cache.envs), operator.coeffs)
-end
-function ∂∂AC2(pos::Int, mps, operator::LazySum, cache::MultipleEnvironments)
-    suboperators = map((op, openv) -> ∂∂AC2(pos, mps, op, openv), operator.ops, cache.envs)
-    elT = Union{D,MultipliedOperator{D}} where {D<:Union{MPO_∂∂AC2,JordanMPO_∂∂AC2}}
-    return LazySum{elT}(suboperators)
+# boilerplate for the derivative operators
+for hamiltonian in (:C_hamiltonian, :AC_hamiltonian, :AC2_hamiltonian)
+    @eval function $hamiltonian(site::CartesianIndex{2}, below, operator::MultilineMPO,
+                                above, envs)
+        row, col = Tuple(site)
+        return $hamiltonian(col, below[row + 1], operator[row], above[row], envs[row])
+    end
+    @eval function $hamiltonian(col::Int, below, operator::MultilineMPO, above, envs)
+        Hs = map(1:size(operator, 1)) do row
+            return $hamiltonian(CartesianIndex(row, col), below, operator, above, envs)
+        end
+        return Multiline(Hs)
+    end
+    @eval function $hamiltonian(site::Int, below, operator::MultipliedOperator, above, envs)
+        H = $hamiltonian(site, below, operator.op, above, envs)
+        return MultipliedOperator(H, operator.f)
+    end
+    @eval function $hamiltonian(site::Int, below, operator::LinearCombination, above, envs)
+        Hs = map(operator.opps, envs.envs) do o, env
+            return $hamiltonian(site, below, o, above, env)
+        end
+        return LinearCombination(Hs, operator.coeffs)
+    end
+    @eval function $hamiltonian(site::Int, below, operator::LazySum, above,
+                                envs::MultipleEnvironments)
+        Hs = map(operator.ops, envs.envs) do o, env
+            return $hamiltonian(site, below, o, above, env)
+        end
+        elT = Union{D,MultipliedOperator{D}} where {D<:DerivativeOperator}
+        return LazySum{elT}(Hs)
+    end
 end
 
-"""
-    ∂AC2(x, operator1, operator2, leftenv, rightenv)
+# Projection operators
+# --------------------
+@doc """
+    C_projection(site, below, operator, above, envs)
 
-Application of the effective two-site local operator on a local tensor `x`.
+Application of the effective zero-site local operator at a given site.
+
+```
+   ┌─┐   
+ ┌─┤ ├─┐ 
+ │ └─┘ │ 
+┌┴┐   ┌┴┐
+│ ├───┤ │
+└┬┘   └┬┘
+ │     │ 
+ └─   ─┘ 
+```
+
+See also [`C_hamiltonian`](@ref).
+""" C_projection
+
+@doc """
+    AC_projection(site, below, operator, above, envs)
+
+Application of the effective one-site local operator at a given site.
+
+```
+    ┌───┐    
+ ┌──┤   ├──┐ 
+ │  └─┬─┘  │ 
+┌┴┐ ┌─┴─┐ ┌┴┐
+│ ├─┤   ├─┤ │
+└┬┘ └─┬─┘ └┬┘
+ │    │    │ 
+ └──     ──┘ 
+```
+
+See also [`AC_hamiltonian`](@ref).
+""" AC_projection
+
+@doc """
+    AC2_projection(site, below, operator, above, envs)
+
+Application of the effective two-site local operator at a given site.
 
 ```
     ┌──────┐    
@@ -182,51 +156,44 @@ Application of the effective two-site local operator on a local tensor `x`.
  └──        ──┘ 
 ```
 
-See also [`∂∂AC2`](@ref).
-"""
-∂AC2(x, O₁, O₂, leftenv, rightenv) = MPO_∂∂AC2(leftenv, O₁, O₂, rightenv)(x)
+See also [`AC2_hamiltonian`](@ref).
+""" AC2_projection
 
-# Projection operators
-# --------------------
-c_proj(pos::Int, ψ, (operator, ϕ)::Tuple, envs) = ∂∂C(pos, ψ, operator, envs) * ϕ.C[pos]
-c_proj(pos::Int, ψ, ϕ::AbstractMPS, envs) = ∂∂C(pos, ψ, nothing, envs) * ϕ.C[pos]
-function c_proj(pos::Int, ψ, Oϕs::LazySum, envs)
-    return sum(zip(Oϕs.ops, envs.envs)) do x
-        return c_proj(pos, ψ, x...)
+# boilerplate for the projection actions
+for kind in (:C, :AC, :AC2)
+    projection = Symbol(kind, "_projection")
+    hamiltonian = Symbol(kind, "_hamiltonian")
+
+    @eval function $projection(site, below, above::Tuple, envs)
+        return $projection(site, below, above..., envs)
+    end
+    @eval function $projection(site, below, above::AbstractMPS, envs)
+        return $projection(site, below, nothing, above, envs)
+    end
+    @eval function $projection(site::CartesianIndex{2}, below::MultilineMPS, operator,
+                               above::MultilineMPS, envs)
+        row, col = Tuple(site)
+        return $projection(col, below[row + 1], operator[row], above[row], envs[row])
+    end
+    @eval function $projection(site, below, above::LazySum, envs)
+        return sum(zip(above.ops, envs.envs)) do x
+            return $projection(site, below, x...)
+        end
     end
 end
-function c_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return c_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
+function C_projection(site, below, operator, above, envs)
+    return C_hamiltonian(site, below, operator, above, envs) * above.C[site]
 end
-
-ac_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs) = ∂∂AC(pos, ψ, O, envs) * ϕ.AC[pos]
-ac_proj(pos::Int, ψ, ϕ::AbstractMPS, envs) = ∂∂AC(pos, ψ, nothing, envs) * ϕ.AC[pos]
-
-function ac_proj(pos::Int, ψ, Oϕs::LazySum, envs)
-    return sum(zip(Oϕs.ops, envs.envs)) do x
-        return ac_proj(pos, ψ, x...)
-    end
+function AC_projection(site, below, operator, above, envs)
+    return AC_hamiltonian(site, below, operator, above, envs) * above.AC[site]
 end
-function ac_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return ac_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
+function AC2_projection(site::Int, below, operator, above, envs)
+    AC2 = above.AC[site] * _transpose_tail(above.AR[site + 1])
+    return AC2_hamiltonian(site, below, operator, above, envs) * AC2
 end
-
-function ac2_proj(pos::Int, ψ, (O, ϕ)::Tuple, envs)
-    AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return ∂∂AC2(pos, ψ, O, envs) * AC2
-end
-function ac2_proj(pos::Int, ψ, ϕ::AbstractMPS, envs)
-    AC2 = ϕ.AC[pos] * _transpose_tail(ϕ.AR[pos + 1])
-    return ∂∂AC2(pos, ψ, nothing, envs) * AC2
-end
-function ac2_proj(row::Int, col::Int, ψ::MultilineMPS, (O, ϕ)::Tuple, envs)
-    return ac2_proj(col, ψ[row], (O[row], ϕ[row]), envs[row])
-end
-
-# Varia
-# -----
 
 # Multiline
+# ---------
 function (H::Multiline{<:DerivativeOperator})(x::AbstractVector)
     return [H[row - 1] * x[mod1(row - 1, end)] for row in 1:size(H, 1)]
 end

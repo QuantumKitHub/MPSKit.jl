@@ -100,13 +100,12 @@ function localupdate_step!(::IterativeSolver{<:VOMPS}, state,
                            scheduler=Defaults.scheduler[])
     alg_orth = QRpos()
     mps = state.mps
-    eachsite = 1:length(mps)
     src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
     src_ACs = mps isa Multiline ? eachcol(mps.AC) : mps.AC
     ACs = similar(mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
-    tforeach(eachsite, src_ACs, src_Cs; scheduler) do site, AC₀, C₀
+    tforeach(eachsite(mps), src_ACs, src_Cs; scheduler) do site, AC₀, C₀
         dst_ACs[site] = _localupdate_vomps_step!(site, mps, state.operator, state.envs,
                                                  AC₀, C₀; alg_orth, parallel=false)
         return nothing
@@ -118,19 +117,15 @@ end
 function _localupdate_vomps_step!(site, mps, operator, envs, AC₀, C₀; parallel::Bool=false,
                                   alg_orth=QRpos())
     if !parallel
-        AC = ∂∂AC(site, mps, operator, envs) * AC₀
-        C = ∂∂C(site, mps, operator, envs) * C₀
+        AC = AC_hamiltonian(site, mps, operator, mps, envs) * AC₀
+        C = C_hamiltonian(site, mps, operator, mps, envs) * C₀
         return regauge!(AC, C; alg=alg_orth)
     end
 
     local AC, C
     @sync begin
-        @spawn begin
-            AC = ∂∂AC(site, mps, operator, envs) * AC₀
-        end
-        @spawn begin
-            C = ∂∂C(site, mps, operator, envs) * C₀
-        end
+        @spawn AC = AC_hamiltonian(site, mps, operator, mps, envs) * AC₀
+        @spawn C = C_hamiltonian(site, mps, operator, mps, envs) * C₀
     end
     return regauge!(AC, C; alg=alg_orth)
 end
