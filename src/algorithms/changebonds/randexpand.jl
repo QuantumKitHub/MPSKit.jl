@@ -28,7 +28,7 @@ function changebonds(ψ::InfiniteMPS, alg::RandExpand)
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = leftnull(ψ.AL[i])
         VR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
-        intermediate = adjoint(VL) * AC2 * adjoint(VR)
+        intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
         U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
 
         AL′[i] = VL * U
@@ -52,7 +52,7 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
         NR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
-        intermediate = adjoint(NL) * AC2 * adjoint(NR)
+        intermediate = normalize!(adjoint(NL) * AC2 * adjoint(NR))
         _, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
 
         ar_re = V * NR
