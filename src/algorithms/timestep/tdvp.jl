@@ -26,7 +26,7 @@ $(TYPEDFIELDS)
 end
 
 function timestep(ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-                  envs::AbstractMPSEnvironments=environments(ψ_, H);
+                  envs::AbstractMPSEnvironments=environments(ψ, H);
                   leftorthflag=true, imaginary_evolution::Bool=false)
     # convert state to complex if necessary
     if scalartype(ψ) <: Real && (!imaginary_evolution || !isreal(dt))
