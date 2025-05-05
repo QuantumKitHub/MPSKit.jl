@@ -1,5 +1,7 @@
-function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                      alg::IDMRG, envs=environments(ψ, toapprox))
+function approximate!(
+        ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS},
+        alg::IDMRG, envs = environments(ψ, toapprox)
+    )
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
     local iter
@@ -12,8 +14,10 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # left to right sweep
             for col in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col), ψ,
-                                                       toapprox, envs)
+                    ψ.AC[row + 1, col] = AC_projection(
+                        CartesianIndex(row, col), ψ,
+                        toapprox, envs
+                    )
                     normalize!(ψ.AC[row + 1, col])
                     ψ.AL[row + 1, col], ψ.C[row + 1, col] = leftorth!(ψ.AC[row + 1, col])
                 end
@@ -23,11 +27,19 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # right to left sweep
             for col in reverse(1:size(ψ, 2))
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col),
-                                                       ψ, toapprox, envs)
+                    ψ.AC[row + 1, col] = AC_projection(
+                        CartesianIndex(row, col),
+                        ψ, toapprox, envs
+                    )
                     normalize!(ψ.AC[row + 1, col])
-                    ψ.C[row + 1, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row + 1,
-                                                                                  col]))
+                    ψ.C[row + 1, col - 1], temp = rightorth!(
+                        _transpose_tail(
+                            ψ.AC[
+                                row + 1,
+                                col,
+                            ]
+                        )
+                    )
                     ψ.AR[row + 1, col] = _transpose_front(temp)
                 end
                 transfer_rightenv!(envs, ψ, toapprox, col - 1)
@@ -57,8 +69,10 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
     return ψ, envs, ϵ
 end
 
-function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                      alg::IDMRG2, envs=environments(ψ, toapprox))
+function approximate!(
+        ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS},
+        alg::IDMRG2, envs = environments(ψ, toapprox)
+    )
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
@@ -73,9 +87,11 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # sweep from left to right
             for site in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
-                    AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
-                                          kind=:ACAR)
-                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                    AC2′ = AC2_projection(
+                        CartesianIndex(row, site), ψ, toapprox, envs;
+                        kind = :ACAR
+                    )
+                    al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -90,12 +106,37 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
 
             normalize!(envs, ψ, toapprox)
 
+            # update the edge
+            for row in 1:size(ψ, 1)
+                AC2 = ϕ.AC[row, end] * inv(ϕ.C[row, 0]) *
+                    _transpose_tail(ϕ.AL[row, 1] * ϕ.C[row, 1])
+                h_ac2 = ∂∂AC2(0, ψ[row + 1], O[row], envs[row])
+                AC2′ = normalize!(h_ac2 * AC2)
+                al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                normalize!(c)
+
+                ψ.AC[row + 1, end] = al * c
+                ψ.AL[row + 1, end] = al
+                ψ.C[row + 1, end] = complex(c)
+                ψ.AR[row + 1, 1] = _transpose_front(ar)
+                ψ.AC[row + 1, 1] = _transpose_front(c * ar)
+                ψ.AL[row + 1, 1] = ψ.AC[row + 1, 1] * inv(ψ.C[row + 1, 1])
+
+                C_current[mod1(row + 1, end)] = complex(c)
+            end
+
+            # update environments
+            transfer_leftenv!(envs, ψ, toapprox, 1)
+            transfer_rightenv!(envs, ψ, toapprox, 0)
+
             # sweep from right to left
             for site in reverse(0:(size(ψ, 2) - 1))
                 for row in 1:size(ψ, 1)
-                    AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
-                                          kind=:ALAC)
-                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                    AC2′ = AC2_projection(
+                        CartesianIndex(row, site), ψ, toapprox, envs;
+                        kind = :ALAC
+                    )
+                    al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -108,6 +149,30 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             end
 
             normalize!(envs, ψ, toapprox)
+
+            # update the edge
+            for row in 1:size(ψ, 1)
+                AC2 = _transpose_front(ϕ.C[row, end - 1] * _transpose_tail(ϕ.AR[row, end])) *
+                    (inv(ϕ.C[row, end]) * _transpose_tail(ϕ.AC[row, 1]))
+                h_ac2 = ∂∂AC2(0, ψ[row + 1], O[row], envs[row])
+                AC2′ = normalize!(h_ac2 * AC2)
+                al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                normalize!(c)
+
+                ψ.AR[row + 1, end] = _transpose_front(
+                    inv(ψ.C[row + 1, end - 1]) *
+                        _transpose_tail(al * c)
+                )
+                ψ.AL[row + 1, end] = al
+                ψ.C[row + 1, end] = complex(c)
+                ψ.AR[row + 1, 1] = _transpose_front(ar)
+                ψ.AC[row + 1, 1] = _transpose_front(c * ar)
+
+                C_current[mod1(row + 1, end)] = complex(c)
+            end
+
+            transfer_leftenv!(envs, ψ, toapprox, 1)
+            transfer_rightenv!(envs, ψ, toapprox, 0)
 
             # update error
             ϵ = sum(zip(C_current, ψ.C[:, 0])) do (c1, c2)
