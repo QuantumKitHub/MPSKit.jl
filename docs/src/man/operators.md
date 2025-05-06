@@ -22,7 +22,7 @@ using TensorKit, MPSKit, MPSKitModels
 ```@example operators
 S_x = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
 S_z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
-O_xzx = FiniteMPO(S_x ⊗ S_x ⊗ S_x);
+O_xzx = FiniteMPO(S_x ⊗ S_z ⊗ S_x);
 ```
 
 The individual tensors are accessible via regular indexing. Note that the tensors are
