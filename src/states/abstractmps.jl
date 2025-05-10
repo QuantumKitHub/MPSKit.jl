@@ -126,6 +126,17 @@ function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=QRpos())
     return A
 end
 
+# Tensor accessors
+# ----------------
+@doc """
+    AC2(ψ::AbstractMPS, i; kind=:ACAR)
+
+Obtain the two-site (center) gauge tensor at site `i` of the MPS `ψ`.
+If this hasn't been computed before, this can be computed as:
+- `kind=:ACAR` : AC[i] * AR[i+1]
+- `kind=:ALAC` : AL[i] * AC[i+1]
+""" AC2
+
 #===========================================================================================
 MPS types
 ===========================================================================================#
