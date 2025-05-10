@@ -212,6 +212,16 @@ end
 Utility
 ===========================================================================================#
 
+function AC2(ψ::InfiniteMPS, i::Integer; kind=:ACAR)
+    if kind == :ACAR
+        return ψ.AC[i] * _transpose_tail(ψ.AR[i + 1])
+    elseif kind == :ALAC
+        return ψ.AL[i] * _transpose_tail(ψ.AC[i + 1])
+    else
+        throw(ArgumentError("Invalid kind: $kind"))
+    end
+end
+
 Base.size(ψ::InfiniteMPS, args...) = size(ψ.AL, args...)
 Base.length(ψ::InfiniteMPS) = length(ψ.AL)
 Base.eltype(ψ::InfiniteMPS) = eltype(typeof(ψ))
