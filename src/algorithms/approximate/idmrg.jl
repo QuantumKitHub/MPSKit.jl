@@ -71,39 +71,88 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
-            for col in 1:size(ψ, 2)
+            for site in 1:(size(ψ, 2) - 1)
                 for row in 1:size(ψ, 1)
-                    AC2′ = AC2_projection(CartesianIndex(row, col), ψ, toapprox, envs)
+                    AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
+                                          kind=:ACAR)
                     al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
-                    ψ.AL[row + 1, col] = al
-                    ψ.C[row + 1, col] = complex(c)
-                    ψ.AR[row + 1, col + 1] = _transpose_front(ar)
-                    ψ.AC[row + 1, col + 1] = _transpose_front(c * ar)
+                    ψ.AL[row + 1, site] = al
+                    ψ.C[row + 1, site] = complex(c)
+                    ψ.AR[row + 1, site + 1] = _transpose_front(ar)
+                    ψ.AC[row + 1, site + 1] = _transpose_front(c * ar)
                 end
-                transfer_leftenv!(envs, ψ, toapprox, col + 1)
-                transfer_rightenv!(envs, ψ, toapprox, col)
+
+                transfer_leftenv!(envs, ψ, toapprox, site + 1)
+                transfer_rightenv!(envs, ψ, toapprox, site)
             end
+
             normalize!(envs, ψ, toapprox)
+
+            # update the edge
+            site = size(ψ, 2)
+            for row in 1:size(ψ, 1)
+                ψ.AL[row, site] = ψ.AC[row, site] / ψ.C[row, site]
+                ψ.AC[row, 1] = _mul_tail(ψ.AL[row, 1], ψ.C[row, 1])
+                AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
+                                      kind=:ALAC)
+                al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                normalize!(c)
+
+                ψ.AL[row + 1, site] = al
+                ψ.C[row + 1, site] = complex(c)
+                ψ.AR[row + 1, site + 1] = _transpose_front(ar)
+
+                ψ.AC[row + 1, site] = _mul_tail(al, c)
+                ψ.AC[row + 1, 1] = _transpose_front(c * ar)
+                ψ.AL[row + 1, 1] = ψ.AC[row + 1, 1] / ψ.C[row + 1, 1]
+            end
+
+            C_current = complex(c)
+
+            transfer_leftenv!(envs, ψ, toapprox, 1)
+            transfer_rightenv!(envs, ψ, toapprox, 0)
 
             # sweep from right to left
-            for col in (size(ψ, 2) - 1):-1:0
+            for site in reverse(1:(size(ψ, 2) - 1))
                 for row in 1:size(ψ, 1)
-                    # TODO: also write this as AC2_projection?
-                    AC2 = ϕ.AL[row, col] * _transpose_tail(ϕ.AC[row, col + 1])
-                    AC2′ = AC2_hamiltonian(CartesianIndex(row, col), ψ, O, ϕ, envs) * AC2
+                    AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
+                                          kind=:ALAC)
                     al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
-                    ψ.AL[row + 1, col] = al
-                    ψ.C[row + 1, col] = complex(c)
-                    ψ.AR[row + 1, col + 1] = _transpose_front(ar)
+                    ψ.AL[row + 1, site] = al
+                    ψ.C[row + 1, site] = complex(c)
+                    ψ.AR[row + 1, site + 1] = _transpose_front(ar)
                 end
-                transfer_leftenv!(envs, ψ, toapprox, col + 1)
-                transfer_rightenv!(envs, ψ, toapprox, col)
+
+                transfer_leftenv!(envs, ψ, toapprox, site + 1)
+                transfer_rightenv!(envs, ψ, toapprox, site)
             end
+
             normalize!(envs, ψ, toapprox)
+
+            # update the edge
+            for row in 1:size(ψ, 1)
+                ψ.AC[row, end] = _mul_front(ψ.C[row, end - 1], ψ.AR[row, end])
+                ψ.AR[row, 1] = _transpose_front(ψ.C[row, end] \
+                                                _transpose_tail(ψ.AC[row, 1]))
+                AC2′ = AC2_projection(CartesianIndex(row, 0), ψ, toapprox, envs; kind=:ACAR)
+                al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                normalize!(c)
+
+                ψ.AL[row + 1, end] = al
+                ψ.C[row + 1, end] = complex(c)
+                ψ.AR[row + 1, 1] = _transpose_front(ar)
+
+                ψ.AR[row + 1, end] = _transpose_front(ψ.C[row + 1, end - 1] \
+                                                      _transpose_tail(al * c))
+                ψ.AC[row + 1, 1] = _transpose_front(c * ar)
+            end
+
+            transfer_leftenv!(envs, ψ, H, ψ, 1)
+            transfer_rightenv!(envs, ψ, H, ψ, 0)
 
             # update error
             ϵ = sum(zip(C_current, ψ.C[:, 0])) do (c1, c2)
@@ -127,7 +176,7 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
 
     # TODO: immediately compute in-place
     alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
-    ψ′ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
+    ψ′ = MultilineMPS(map(identity, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
     copy!(ψ, ψ′) # ensure output destination is unchanged
 
     recalculate!(envs, ψ, toapprox)
