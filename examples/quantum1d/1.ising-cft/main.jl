@@ -68,6 +68,7 @@ The resulting energy levels have one-to-one correspondence to the operators in C
 """
     
 function fix_degeneracies(basis)
+    L = length(basis[1])
     M = zeros(ComplexF64, length(basis), length(basis))
     for i in eachindex(basis), j in eachindex(basis)
         M[i, j] = dot(basis[i],O_shift(L)*basis[j])
