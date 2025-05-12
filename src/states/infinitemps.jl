@@ -249,10 +249,12 @@ Base.checkbounds(::Type{Bool}, ψ::InfiniteMPS, i::Integer) = true
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:InfiniteMPS{<:Any,B}}) where {B} = B
 
+left_virtualspace(ψ::InfiniteMPS) = left_virtualspace.(ψ.AL)
 left_virtualspace(ψ::InfiniteMPS, n::Integer) = left_virtualspace(ψ.AL[n])
+right_virtualspace(ψ::InfiniteMPS) = right_virtualspace.(ψ.AL)
 right_virtualspace(ψ::InfiniteMPS, n::Integer) = right_virtualspace(ψ.AL[n])
+physicalspace(ψ::InfiniteMPS) = physicalspace.(ψ.AL)
 physicalspace(ψ::InfiniteMPS, n::Integer) = physicalspace(ψ.AL[n])
-physicalspace(ψ::InfiniteMPS) = PeriodicArray(map(Base.Fix1(physicalspace, ψ), 1:length(ψ)))
 
 # TensorKit.space(ψ::InfiniteMPS{<:MPSTensor}, n::Integer) = space(ψ.AC[n], 2)
 # function TensorKit.space(ψ::InfiniteMPS{<:GenericMPSTensor}, n::Integer)
