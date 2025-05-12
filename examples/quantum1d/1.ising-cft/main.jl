@@ -51,10 +51,12 @@ either diagramatically as
 
 or in the code as:
 """
-
-id = complex(isomorphism(ℂ^2, ℂ^2))
-@tensor O[-1 -2; -3 -4] := id[-1, -3] * id[-2, -4]
-T = periodic_boundary_conditions(InfiniteMPO([O]), L)
+function O_shift(L)
+    id = complex(isomorphism(ℂ^2, ℂ^2))
+    @tensor O[-1 -2; -3 -4] := id[-1, -3] * id[-2, -4]
+    T = periodic_boundary_conditions(InfiniteMPO([O]), L)
+    return T;
+end
 
 md"""
 We can then calculate the momentum of the groundstate as the expectation value of this
@@ -62,21 +64,14 @@ operator. However, there is a subtlety because of the degeneracies in the energy
 eigenvalues. The eigensolver will find an orthonormal basis within each energy subspace, but
 this basis is not necessarily a basis of eigenstates of the translation operator. In order
 to fix this, we diagonalize the translation operator within each energy subspace.
+The resulting energy levels have one-to-one correspondence to the operators in CFT, where the momentum is related to their conformal spin as $P_n = \frac{2\pi}{L}S_n$.
 """
-
-momentum(ψᵢ, ψⱼ=ψᵢ) = angle(dot(ψᵢ, T * ψⱼ))
-
+    
 function fix_degeneracies(basis)
-    N = zeros(ComplexF64, length(basis), length(basis))
     M = zeros(ComplexF64, length(basis), length(basis))
     for i in eachindex(basis), j in eachindex(basis)
-        N[i, j] = dot(basis[i], basis[j])
-        M[i, j] = momentum(basis[i], basis[j])
+        M[i, j] = dot(basis[i],O_shift(L)*basis[j])
     end
-
-    vals, vecs = eigen(Hermitian(N))
-    M = (vecs' * M * vecs)
-    M /= diagm(vals)
 
     vals, vecs = eigen(M)
     return angle.(vals)
@@ -99,7 +94,7 @@ plot(momenta,
      xlabel="momentum",
      ylabel="energy",
      legend=false)
-
+vline!([2π/L*i for i=-3:3],color="gray",linestyle=:dash)
 md"""
 ## Finite bond dimension
 
@@ -122,7 +117,6 @@ E_ex, qps = excitations(H_mps, QuasiparticleAnsatz(), ψ, envs; num=16)
 states_mps = vcat(ψ, map(qp -> convert(FiniteMPS, qp), qps))
 E_mps = map(x -> expectation_value(x, H_mps), states_mps)
 
-T_mps = periodic_boundary_conditions(InfiniteMPO([O]), L_mps)
 momenta_mps = Float64[]
 append!(momenta_mps, fix_degeneracies(states[1:1]))
 append!(momenta_mps, fix_degeneracies(states[2:2]))
@@ -139,3 +133,4 @@ plot(momenta_mps,
      xlabel="momentum",
      ylabel="energy",
      legend=false)
+vline!([2π/L*i for i=-3:3],color="gray",linestyle=:dash)
