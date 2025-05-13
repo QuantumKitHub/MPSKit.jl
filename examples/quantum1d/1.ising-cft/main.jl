@@ -66,7 +66,7 @@ this basis is not necessarily a basis of eigenstates of the translation operator
 to fix this, we diagonalize the translation operator within each energy subspace.
 The resulting energy levels have one-to-one correspondence to the operators in CFT, where the momentum is related to their conformal spin as $P_n = \frac{2\pi}{L}S_n$.
 """
-    
+
 function fix_degeneracies(basis)
     L = length(basis[1])
     M = zeros(ComplexF64, length(basis), length(basis))
