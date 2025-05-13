@@ -53,7 +53,7 @@ DenseMPO(mpo::MPO) = mpo isa DenseMPO ? copy(mpo) : MPO(map(TensorMap, parent(mp
 # Utility
 # -------
 Base.parent(mpo::MPO) = mpo.O
-Base.copy(mpo::MPO) = MPO(map(copy, mpo))
+Base.copy(mpo::MPO) = MPO(copy.(parent(mpo)))
 
 function Base.similar(mpo::MPO{<:MPOTensor}, ::Type{O}, L::Int) where {O<:MPOTensor}
     return MPO(similar(parent(mpo), O, L))
