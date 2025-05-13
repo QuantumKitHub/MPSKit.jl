@@ -55,6 +55,9 @@ DenseMPO(mpo::MPO) = mpo isa DenseMPO ? copy(mpo) : MPO(map(TensorMap, parent(mp
 Base.parent(mpo::MPO) = mpo.O
 Base.copy(mpo::MPO) = MPO(map(copy, mpo))
 
+Base.copy(mpo::FiniteMPO) = FiniteMPO(map(copy, mpo)) # Explicitly split up Finite and Infinite to ensure proper type after copy
+Base.copy(mpo::InfiniteMPO) = InfiniteMPO(map(copy, mpo))
+
 function Base.similar(mpo::MPO{<:MPOTensor}, ::Type{O}, L::Int) where {O<:MPOTensor}
     return MPO(similar(parent(mpo), O, L))
 end
