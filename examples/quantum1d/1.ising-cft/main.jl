@@ -7,7 +7,7 @@ analysis to larger system sizes through the use of MPS techniques.
 """
 
 using MPSKit, MPSKitModels, TensorKit, Plots, KrylovKit
-using LinearAlgebra: eigen, diagm, Hermitian
+using LinearAlgebra: eigvals, diagm, Hermitian
 
 md"""
 The hamiltonian is defined on a finite lattice with periodic boundary conditions,
@@ -51,11 +51,11 @@ either diagramatically as
 
 or in the code as:
 """
+
 function O_shift(L)
     id = complex(isomorphism(ℂ^2, ℂ^2))
     @tensor O[-1 -2; -3 -4] := id[-1, -3] * id[-2, -4]
-    T = periodic_boundary_conditions(InfiniteMPO([O]), L)
-    return T;
+    return periodic_boundary_conditions(InfiniteMPO([O]), L)
 end
 
 md"""
@@ -70,11 +70,12 @@ The resulting energy levels have one-to-one correspondence to the operators in C
 function fix_degeneracies(basis)
     L = length(basis[1])
     M = zeros(ComplexF64, length(basis), length(basis))
-    for i in eachindex(basis), j in eachindex(basis)
-        M[i, j] = dot(basis[i],O_shift(L)*basis[j])
+    T = O_shift(L)
+    for j in eachindex(basis), i in eachindex(basis)
+        M[i, j] = dot(basis[i], T, basis[j])
     end
 
-    vals, vecs = eigen(M)
+    vals = eigvals(M)
     return angle.(vals)
 end
 
@@ -89,13 +90,12 @@ append!(momenta, fix_degeneracies(states[12:12]))
 append!(momenta, fix_degeneracies(states[13:16]))
 append!(momenta, fix_degeneracies(states[17:18]))
 
-plot(momenta,
-     real.(energies[1:18]);
-     seriestype=:scatter,
-     xlabel="momentum",
-     ylabel="energy",
-     legend=false)
-vline!([2π/L*i for i=-3:3],color="gray",linestyle=:dash)
+p = plot(momenta, real.(energies[1:18]);
+         seriestype=:scatter, xlabel="momentum", ylabel="energy", legend=false)
+vline!(p, [2π / L * i for i in -3:3]; color="gray", linestyle=:dash)
+hline!(p, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color="gray", linestyle=:dash)
+p
+
 md"""
 ## Finite bond dimension
 
@@ -128,10 +128,8 @@ append!(momenta_mps, fix_degeneracies(states[10:11]))
 append!(momenta_mps, fix_degeneracies(states[12:12]))
 append!(momenta_mps, fix_degeneracies(states[13:16]))
 
-plot(momenta_mps,
-     real.(energies[1:16]);
-     seriestype=:scatter,
-     xlabel="momentum",
-     ylabel="energy",
-     legend=false)
-vline!([2π/L*i for i=-3:3],color="gray",linestyle=:dash)
+plot(momenta_mps, real.(energies[1:16]);
+     seriestype=:scatter, xlabel="momentum", ylabel="energy", legend=false)
+vline!(p, [2π / L * i for i in -3:3]; color="gray", linestyle=:dash)
+hline!(p, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color="gray", linestyle=:dash)
+p
