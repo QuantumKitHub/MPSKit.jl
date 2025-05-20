@@ -120,6 +120,7 @@ include("operators/projection.jl")
 include("operators/timedependence.jl")
 include("operators/multipliedoperator.jl")
 include("operators/lazysum.jl")
+include("operators/utility.jl") # extra functions that need all of the above structs to be defined and fit nowhere else
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")

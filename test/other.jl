@@ -63,4 +63,20 @@ end
     end
 end
 
+@testset "braille" begin
+    # Infinite Systems
+    H = transverse_field_ising()
+    buffer = IOBuffer()
+    braille(buffer, H)
+    output = String(take!(buffer))
+    check = "... 🭻⎡⠉⢀⎤🭻 ...\n     ⎣⠀⢀⎦ \n"
+    @test output == check
+
+    # Finite Systems
+    H = open_boundary_conditions(H, 4)
+    braille(buffer, H)
+    output = String(take!(buffer))
+    check = " ⎡⠉⠀⎤🭻🭻⎡⠉⢀⎤🭻🭻⎡⠉⢀⎤🭻🭻⎡⡀⠀⎤ \n ⎣⠀⠀⎦  ⎣⠀⢀⎦  ⎣⠀⢀⎦  ⎣⡀⠀⎦ \n"
+    @test output == check
+end
 end
