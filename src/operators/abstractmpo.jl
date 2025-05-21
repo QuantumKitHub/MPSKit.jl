@@ -82,48 +82,6 @@ function remove_orphans!(mpo::SparseMPO; tol=eps(real(scalartype(mpo)))^(3 / 4))
     return mpo
 end
 
-# Show
-# ----
-function Base.show(io::IO, ::MIME"text/plain", W::AbstractMPO)
-    L = length(W)
-    println(io, L == 1 ? "single site " : "$L-site ", typeof(W), ":")
-    context = IOContext(io, :typeinfo => eltype(W), :compact => true)
-    return show(context, W)
-end
-
-Base.show(io::IO, mpo::AbstractMPO) = show(convert(IOContext, io), mpo)
-function Base.show(io::IOContext, mpo::AbstractMPO)
-    charset = (; top="┬", bot="┴", mid="┼", ver="│", dash="──")
-    limit = get(io, :limit, false)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
-    L = length(mpo)
-
-    # used to align all mposite infos regardless of the length of the mpo (100 takes up more space than 5)
-    npad = floor(Int, log10(L))
-    mpoletter = mpo isa MPOHamiltonian ? "W" : "O"
-    isfinite = (mpo isa FiniteMPO) || (mpo isa FiniteMPOHamiltonian)
-
-    !isfinite && println(io, "╷  ⋮")
-    for site in reverse(1:L)
-        if site < half_screen_rows || site > L - half_screen_rows
-            if site == L && isfinite
-                println(io, charset.top, " $mpoletter[$site]: ",
-                        repeat(" ", npad - floor(Int, log10(site))), mpo[site])
-            elseif (site == 1) && isfinite
-                println(io, charset.bot, " $mpoletter[$site]: ",
-                        repeat(" ", npad - floor(Int, log10(site))), mpo[site])
-            else
-                println(io, charset.mid, " $mpoletter[$site]: ",
-                        repeat(" ", npad - floor(Int, log10(site))), mpo[site])
-            end
-        elseif site == half_screen_rows
-            println(io, "   ", "⋮")
-        end
-    end
-    !isfinite && println(io, "╵  ⋮")
-    return nothing
-end
-
 # Linear Algebra
 # --------------
 Base.:+(mpo::AbstractMPO) = scale(mpo, One())
