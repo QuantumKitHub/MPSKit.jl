@@ -120,6 +120,7 @@ include("operators/projection.jl")
 include("operators/timedependence.jl")
 include("operators/multipliedoperator.jl")
 include("operators/lazysum.jl")
+include("operators/show.jl")
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
