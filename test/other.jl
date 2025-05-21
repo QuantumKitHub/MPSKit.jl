@@ -81,7 +81,7 @@ end
 
     # Finite Hamiltonians and MPOs
     # ----------------------------
-    H = open_boundary_conditions(H, 4)
+    H = transverse_field_ising(; L=4)
     braille(buffer, H)
     output = String(take!(buffer))
     check = " ⎡⠉⠀⎤🭻🭻⎡⠉⢀⎤🭻🭻⎡⠉⢀⎤🭻🭻⎡⡀⠀⎤ \n ⎣⠀⠀⎦  ⎣⠀⢀⎦  ⎣⠀⢀⎦  ⎣⡀⠀⎦ \n"
