@@ -53,8 +53,8 @@ or in the code as:
 """
 
 function O_shift(L)
-    id = complex(isomorphism(ℂ^2, ℂ^2))
-    @tensor O[-1 -2; -3 -4] := id[-1, -3] * id[-2, -4]
+    τ = BraidingTensor{ComplexF64}(ℂ^2, ℂ^2)
+    O = TensorMap(τ)
     return periodic_boundary_conditions(InfiniteMPO([O]), L)
 end
 
