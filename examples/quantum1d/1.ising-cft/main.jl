@@ -92,7 +92,7 @@ append!(momenta, fix_degeneracies(states[17:18]))
 
 # Calculating scaling dimensions from the energy gap
 v = 2.0
-Δ = real.(energies[1:18] .- energies[1]) ./ (2π*v/L)
+Δ = real.(energies[1:18] .- energies[1]) ./ (2π * v / L)
 p = plot(momenta, real.(Δ);
          seriestype=:scatter, xlabel="momentum", ylabel="energy", legend=false)
 vline!(p, [2π / L * i for i in -3:3]; color="gray", linestyle=:dash)
@@ -132,7 +132,7 @@ append!(momenta_mps, fix_degeneracies(states[12:12]))
 append!(momenta_mps, fix_degeneracies(states[13:16]))
 
 v = 2.0
-Δ = real.(energies[1:18] .- energies[1]) ./ (2π*v/L)
+Δ = real.(energies[1:18] .- energies[1]) ./ (2π * v / L)
 plot(momenta_mps, Δ;
      seriestype=:scatter, xlabel="momentum", ylabel="energy", legend=false)
 vline!(p, [2π / L * i for i in -3:3]; color="gray", linestyle=:dash)
