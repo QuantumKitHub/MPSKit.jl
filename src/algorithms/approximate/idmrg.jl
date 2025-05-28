@@ -109,7 +109,8 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
                 ψ.AL[row + 1, 1] = ψ.AC[row + 1, 1] / ψ.C[row + 1, 1]
             end
 
-            C_current = complex(c)
+            # TODO: decide if we should compare at the half-sweep level?
+            # C_current = ψ.C[:, site]
 
             transfer_leftenv!(envs, ψ, toapprox, 1)
             transfer_rightenv!(envs, ψ, toapprox, 0)
@@ -151,8 +152,8 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
                 ψ.AC[row + 1, 1] = _transpose_front(c * ar)
             end
 
-            transfer_leftenv!(envs, ψ, H, ψ, 1)
-            transfer_rightenv!(envs, ψ, H, ψ, 0)
+            transfer_leftenv!(envs, ψ, toapprox, 1)
+            transfer_rightenv!(envs, ψ, toapprox, 0)
 
             # update error
             ϵ = sum(zip(C_current, ψ.C[:, 0])) do (c1, c2)
