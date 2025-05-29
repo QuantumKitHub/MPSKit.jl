@@ -1,81 +1,86 @@
-function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                      alg::IDMRG, envs=environments(ψ, toapprox))
+function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG,
+                          envs=environments(ψ, operator))
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
     local iter
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ)
+        @infov 2 loginit!(log, ϵ, expectation_value(ψ, operator, envs))
         for outer iter in 1:(alg.maxiter)
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             C_current = ψ.C[:, 0]
 
             # left to right sweep
             for col in 1:size(ψ, 2)
+                Hac = AC_hamiltonian(col, ψ, operator, ψ, envs)
+                _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
+
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col), ψ,
-                                                       toapprox, envs)
-                    normalize!(ψ.AC[row + 1, col])
-                    ψ.AL[row + 1, col], ψ.C[row + 1, col] = leftorth!(ψ.AC[row + 1, col])
+                    ac = ψ.AC[row, col]
+                    (col == size(ψ, 2)) && (ac = copy(ac)) # needed in next sweep
+                    ψ.AL[row, col], ψ.C[row, col] = leftorth!(ac)
                 end
-                transfer_leftenv!(envs, ψ, toapprox, col + 1)
+
+                transfer_leftenv!(envs, ψ, operator, ψ, col + 1)
             end
 
             # right to left sweep
             for col in size(ψ, 2):-1:1
+                Hac = AC_hamiltonian(col, ψ, operator, ψ, envs)
+                _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
+
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col),
-                                                       ψ, toapprox, envs)
-                    normalize!(ψ.AC[row + 1, col])
-                    ψ.C[row + 1, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row + 1,
-                                                                                  col]))
-                    ψ.AR[row + 1, col] = _transpose_front(temp)
+                    ψ.C[row, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row, col]))
+                    ψ.AR[row, col] = _transpose_front(temp)
                 end
-                transfer_rightenv!(envs, ψ, toapprox, col - 1)
+
+                transfer_rightenv!(envs, ψ, operator, ψ, col - 1)
             end
-            normalize!(envs, ψ, toapprox)
+
+            normalize!(envs, ψ, operator, ψ)
 
             ϵ = norm(C_current - ψ.C[:, 0])
 
             if ϵ < alg.tol
-                @infov 2 logfinish!(log, iter, ϵ)
+                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, operator, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ)
+                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, operator, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ)
+                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, operator, envs))
             end
         end
     end
 
-    # TODO: immediately compute in-place
     alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
-    ψ′ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
-    copy!(ψ, ψ′) # ensure output destination is unchanged
+    ψ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
 
-    recalculate!(envs, ψ, toapprox)
+    recalculate!(envs, ψ, operator, ψ)
     return ψ, envs, ϵ
 end
 
-function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                      alg::IDMRG2, envs=environments(ψ, toapprox))
+function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
+                          envs=environments(ψ, operator))
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
-    O, ϕ = toapprox
     local iter
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
+            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
             for site in 1:(size(ψ, 2) - 1)
+                ac2 = AC2(ψ, site; kind=:ACAR)
+                h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
+                _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
+
                 for row in 1:size(ψ, 1)
-                    AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
-                                          kind=:ACAR)
-                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                    al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -84,20 +89,22 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
                     ψ.AC[row + 1, site + 1] = _transpose_front(c * ar)
                 end
 
-                transfer_leftenv!(envs, ψ, toapprox, site + 1)
-                transfer_rightenv!(envs, ψ, toapprox, site)
+                transfer_leftenv!(envs, ψ, operator, ψ, site + 1)
+                transfer_rightenv!(envs, ψ, operator, ψ, site)
             end
 
-            normalize!(envs, ψ, toapprox)
+            normalize!(envs, ψ, operator, ψ)
 
             # update the edge
             site = size(ψ, 2)
+            ψ.AL[:, end] .= ψ.AC[:, end] ./ ψ.C[:, end]
+            ψ.AC[:, 1] .= _mul_tail.(ψ.AL[:, 1], ψ.C[:, 1])
+            ac2 = AC2(ψ, site; kind=:ALAC)
+            h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
+            _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
+
             for row in 1:size(ψ, 1)
-                ψ.AL[row, site] = ψ.AC[row, site] / ψ.C[row, site]
-                ψ.AC[row, 1] = _mul_tail(ψ.AL[row, 1], ψ.C[row, 1])
-                AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
-                                      kind=:ALAC)
-                al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, site] = al
@@ -112,15 +119,17 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # TODO: decide if we should compare at the half-sweep level?
             # C_current = ψ.C[:, site]
 
-            transfer_leftenv!(envs, ψ, toapprox, 1)
-            transfer_rightenv!(envs, ψ, toapprox, 0)
+            transfer_leftenv!(envs, ψ, operator, ψ, 1)
+            transfer_rightenv!(envs, ψ, operator, ψ, 0)
 
             # sweep from right to left
             for site in reverse(1:(size(ψ, 2) - 1))
+                ac2 = AC2(ψ, site; kind=:ALAC)
+                h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
+                _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
+
                 for row in 1:size(ψ, 1)
-                    AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
-                                          kind=:ALAC)
-                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                    al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -128,19 +137,21 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
                     ψ.AR[row + 1, site + 1] = _transpose_front(ar)
                 end
 
-                transfer_leftenv!(envs, ψ, toapprox, site + 1)
-                transfer_rightenv!(envs, ψ, toapprox, site)
+                transfer_leftenv!(envs, ψ, operator, ψ, site + 1)
+                transfer_rightenv!(envs, ψ, operator, ψ, site)
             end
 
-            normalize!(envs, ψ, toapprox)
+            normalize!(envs, ψ, operator, ψ)
 
             # update the edge
+            ψ.AC[:, end] .= _mul_front.(ψ.C[:, end - 1], ψ.AR[:, end])
+            ψ.AR[:, 1] .= _transpose_front.(ψ.C[:, end] .\ _transpose_tail.(ψ.AC[:, 1]))
+            ac2 = AC2(ψ, 0; kind=:ACAR)
+            h = AC2_hamiltonian(0, ψ, operator, ψ, envs)
+            _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
+
             for row in 1:size(ψ, 1)
-                ψ.AC[row, end] = _mul_front(ψ.C[row, end - 1], ψ.AR[row, end])
-                ψ.AR[row, 1] = _transpose_front(ψ.C[row, end] \
-                                                _transpose_tail(ψ.AC[row, 1]))
-                AC2′ = AC2_projection(CartesianIndex(row, 0), ψ, toapprox, envs; kind=:ACAR)
-                al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al
@@ -152,8 +163,8 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
                 ψ.AC[row + 1, 1] = _transpose_front(c * ar)
             end
 
-            transfer_leftenv!(envs, ψ, toapprox, 1)
-            transfer_rightenv!(envs, ψ, toapprox, 0)
+            transfer_leftenv!(envs, ψ, operator, ψ, 1)
+            transfer_rightenv!(envs, ψ, operator, ψ, 0)
 
             # update error
             ϵ = sum(zip(C_current, ψ.C[:, 0])) do (c1, c2)
@@ -175,11 +186,9 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
         end
     end
 
-    # TODO: immediately compute in-place
     alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
-    ψ′ = MultilineMPS(map(identity, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
-    copy!(ψ, ψ′) # ensure output destination is unchanged
+    ψ = MultilineMPS(map(identity, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
 
-    recalculate!(envs, ψ, toapprox)
+    recalculate!(envs, ψ, operator, ψ)
     return ψ, envs, ϵ
 end
