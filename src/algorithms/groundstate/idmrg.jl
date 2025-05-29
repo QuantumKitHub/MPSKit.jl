@@ -155,7 +155,6 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
             al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
             normalize!(c)
 
-
             ψ.AL[end] = al
             ψ.C[end] = complex(c)
             ψ.AR[1] = _transpose_front(ar)
