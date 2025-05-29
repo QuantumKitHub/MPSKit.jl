@@ -173,6 +173,7 @@ include("algorithms/statmech/leading_boundary.jl")
 include("algorithms/statmech/vumps.jl")
 include("algorithms/statmech/vomps.jl")
 include("algorithms/statmech/gradient_grassmann.jl")
+include("algorithms/statmech/idmrg.jl")
 
 include("algorithms/fidelity_susceptibility.jl")
 
