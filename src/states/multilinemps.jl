@@ -57,6 +57,15 @@ function Base.getproperty(psi::MultilineMPS, prop::Symbol)
     end
 end
 
+function AC2(psi::MultilineMPS, site::CartesianIndex{2}; kwargs...)
+    return AC2(psi[site[1]], site[2]; kwargs...)
+end
+function AC2(psi::MultilineMPS, site::Int; kwargs...)
+    return map(1:size(psi, 1)) do row
+        return AC2(psi, CartesianIndex(row, site); kwargs...)
+    end
+end
+
 function Base.propertynames(::MultilineMPS)
     return (:AL, :AR, :AC, :C)
 end
