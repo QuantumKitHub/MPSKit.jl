@@ -40,6 +40,8 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG, envs=environments(ost
             for pos in 1:length(ψ)
                 h = AC_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
+                ac = ψ.AC[pos]
+                (pos == length(ψ)) && (ac = copy(ac)) # needed in next sweep
                 ψ.AL[pos], ψ.C[pos] = leftorth!(ψ.AC[pos])
                 transfer_leftenv!(envs, ψ, H, ψ, pos + 1)
             end
