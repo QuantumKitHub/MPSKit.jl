@@ -99,9 +99,15 @@ function compute_rightenvs!(envs::InfiniteEnvironments, below::InfiniteMPS,
     return λ, envs
 end
 
+# normalization convention of the environments:
+# - normalize the right environment to have norm 1
+# - normalize the left environment to have overlap 1
+# this avoids catastrophic blow-up of norms, while keeping the total normalized
+# and does not lead to issues for negative overlaps and real entries.
 function TensorKit.normalize!(envs::InfiniteEnvironments, below::InfiniteMPS,
                               operator::InfiniteMPO, above::InfiniteMPS)
     for i in 1:length(operator)
+        normalize!(envs.GRs[i])
         Hc = C_hamiltonian(i, below, operator, above, envs)
         λ = dot(below.C[i], Hc * above.C[i])
         scale!(envs.GLs[i + 1], inv(λ))
