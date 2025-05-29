@@ -430,18 +430,28 @@ end
 @testset "leading_boundary" verbose = true begin
     tol = 1e-4
     verbosity = verbosity_conv
+    D = 10
+    D1 = 13
     algs = [VUMPS(; tol, verbosity), VOMPS(; tol, verbosity),
-            GradientGrassmann(; tol, verbosity)]
+            GradientGrassmann(; tol, verbosity), IDMRG(; tol, verbosity),
+            IDMRG2(; tol, verbosity, trscheme=truncdim(D1))]
     mpo = force_planar(classical_ising())
 
-    ψ₀ = InfiniteMPS([ℙ^2], [ℙ^10])
+    ψ₀ = InfiniteMPS([ℙ^2], [ℙ^D])
     @testset "Infinite $i" for (i, alg) in enumerate(algs)
-        ψ, envs = leading_boundary(ψ₀, mpo, alg)
-        ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme=truncdim(3)), envs)
-        ψ, envs = leading_boundary(ψ, mpo, alg)
-
-        @test dim(space(ψ.AL[1, 1], 1)) == dim(space(ψ₀.AL[1, 1], 1)) + 3
-        @test expectation_value(ψ, mpo, envs) ≈ 2.5337 atol = 1e-3
+        if alg isa IDMRG2
+            ψ2 = repeat(ψ₀, 2)
+            mpo2 = repeat(mpo, 2)
+            ψ, envs = leading_boundary(ψ2, mpo2, alg)
+            @test dim(space(ψ.AL[1, 1], 1)) == dim(space(ψ₀.AL[1, 1], 1)) + (D1 - D)
+            @test expectation_value(ψ, mpo2, envs) ≈ 2.5337^2 atol = 1e-3
+        else
+            ψ, envs = leading_boundary(ψ₀, mpo, alg)
+            ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme=truncdim(D1 - D)), envs)
+            ψ, envs = leading_boundary(ψ, mpo, alg)
+            @test dim(space(ψ.AL[1, 1], 1)) == dim(space(ψ₀.AL[1, 1], 1)) + (D1 - D)
+            @test expectation_value(ψ, mpo, envs) ≈ 2.5337 atol = 1e-3
+        end
     end
 end
 
