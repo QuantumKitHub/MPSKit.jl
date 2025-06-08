@@ -107,7 +107,9 @@ function AC_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
     end
 
     # not_started
-    if (!isfinite(operator) || site < length(operator)) && !ismissing(starting)
+    if isfinite(operator) && site == length(operator)
+        not_started = missing
+    elseif !ismissing(starting)
         I = id(storagetype(GR[1]), physicalspace(W))
         @plansor starting[-1 -2; -3 -4] += I[-1; -3] * removeunit(GR[1], 2)[-4; -2]
         not_started = missing
@@ -116,7 +118,9 @@ function AC_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
     end
 
     # finished
-    if (!isfinite(operator) || site > 1) && !ismissing(ending)
+    if isfinite(operator) && site == 1
+        finished = missing
+    elseif !ismissing(ending)
         I = id(storagetype(GL[end]), physicalspace(W))
         @plansor ending[-1 -2; -3 -4] += removeunit(GL[end], 2)[-1; -3] * I[-2; -4]
         finished = missing
