@@ -178,7 +178,18 @@ end
 
 #copying version
 function timestep(ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
-                  alg::Union{TDVP,TDVP2}, envs::AbstractMPSEnvironments=environments(ψ, H);
+                  alg::Union{TDVP,TDVP2}, envs::AbstractMPSEnvironments...;
                   kwargs...)
-    return timestep!(copy(complex(ψ)), H, time, timestep, alg, envs; kwargs...)
+    isreal = scalartype(ψ) <: Real
+    ψ′ = isreal ? complex(ψ) : copy(ψ)
+    if length(envs) != 0 && isreal
+        @warn "Currently cannot reuse real environments for complex evolution"
+        envs′ = environments(ψ′, H)
+    elseif length(envs) == 1
+        envs′ = only(envs)
+    else
+        @assert length(envs) == 0 "Invalid signature"
+        envs′ = environments(ψ′, H)
+    end
+    return timestep!(ψ′, H, time, timestep, alg, envs′; kwargs...)
 end
