@@ -325,10 +325,12 @@ function Base.complex(mps::FiniteMPS)
     ARs = _complex_if_not_missing.(mps.ARs)
     Cs = _complex_if_not_missing.(mps.Cs)
     ACs = _complex_if_not_missing.(mps.ACs)
-    return FiniteMPS(collect(Union{Missing,eltype(ALs)}, ALs),
-                     collect(Union{Missing,eltype(ARs)}, ARs),
-                     collect(Union{Missing,eltype(ACs)}, ACs),
-                     collect(Union{Missing,eltype(Cs)}, Cs))
+    TA = Base.promote_op(complex, site_type(mps))
+    TB = Base.promote_op(complex, bond_type(mps))
+    return FiniteMPS(collect(Union{Missing,TA}, ALs),
+                     collect(Union{Missing,TA}, ARs),
+                     collect(Union{Missing,TA}, ACs),
+                     collect(Union{Missing,TB}, Cs))
 end
 
 @inline function Base.getindex(ψ::FiniteMPS, I::AbstractUnitRange)
