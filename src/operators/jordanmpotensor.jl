@@ -155,10 +155,10 @@ function SparseBlockTensorMap(W::JordanMPOTensor)
     τ = BraidingTensor{scalartype(W)}(eachspace(W)[1])
     W′ = SparseBlockTensorMap{AbstractTensorMap{scalartype(W),spacetype(W),2,2}}(undef_blocks,
                                                                                  space(W))
-    if size(W, 1) > 1
+    if size(W, 4) > 1
         W′[1, 1, 1, 1] = τ
     end
-    if size(W, 4) > 1
+    if size(W, 1) > 1
         W′[end, 1, 1, end] = τ
     end
 
@@ -174,7 +174,9 @@ function SparseBlockTensorMap(W::JordanMPOTensor)
     for (I, v) in nonzero_pairs(W.C)
         W′[1, I + Ic] = insertleftunit(v, 1)
     end
-    W′[1, 1, 1, end] = insertrightunit(insertleftunit(only(W.D), 1), 3)
+    if nonzero_length(W.D) > 0
+        W′[1, 1, 1, end] = insertrightunit(insertleftunit(only(W.D), 1), 3)
+    end
 
     return W′
 end
