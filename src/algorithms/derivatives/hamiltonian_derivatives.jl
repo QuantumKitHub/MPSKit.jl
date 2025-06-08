@@ -245,7 +245,9 @@ function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
     end
 
     # finished
-    if !ismissing(IC)
+    if isfinite(operator) && site + 1 == length(operator)
+        II = missing
+    elseif !ismissing(IC)
         I = id(storagetype(GR[1]), physicalspace(W2))
         @plansor IC[-1 -2; -3 -4] += I[-1; -3] * removeunit(GR[1], 2)[-4; -2]
         II = missing
@@ -258,7 +260,9 @@ function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
     end
 
     # unstarted
-    if !ismissing(BE)
+    if isfinite(operator) && site == 1
+        EE = missing
+    elseif !ismissing(BE)
         I = id(storagetype(GL[end]), physicalspace(W1))
         @plansor BE[-1 -2; -3 -4] += removeunit(GL[end], 2)[-1; -3] * I[-2; -4]
         EE = missing
