@@ -129,11 +129,11 @@ function transverse_field_ising(::Type{T}=ComplexF64; g=1.0, L=Inf) where {T<:Nu
 
     if L == Inf
         lattice = PeriodicArray([ℂ^2])
-        H₁ = InfiniteMPOHamiltonian(lattice, i => g * X for i in 1:1)
+        H₁ = InfiniteMPOHamiltonian(lattice, i => -g * X for i in 1:1)
         H₂ = InfiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:1)
     else
         lattice = fill(ℂ^2, L)
-        H₁ = FiniteMPOHamiltonian(lattice, i => g * X for i in 1:L)
+        H₁ = FiniteMPOHamiltonian(lattice, i => -g * X for i in 1:L)
         H₂ = FiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:(L - 1))
     end
     return H₁ + H₂

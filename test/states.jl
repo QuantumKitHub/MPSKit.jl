@@ -168,18 +168,18 @@ end
     @test 9 * 9 ≈ norm(window)^2
     normalize!(window)
 
-    e1 = expectation_value(window, (1, 2) => O)
+    e1 = expectation_value(window, (2, 3) => O)
 
     window, envs, _ = find_groundstate(window, ham, DMRG(; verbosity=0))
 
-    e2 = expectation_value(window, (1, 2) => O)
+    e2 = expectation_value(window, (2, 3) => O)
 
     @test real(e2) ≤ real(e1)
 
     window, envs = timestep(window, ham, 0.1, 0.0, TDVP2(; trscheme=truncdim(20)), envs)
     window, envs = timestep(window, ham, 0.1, 0.0, TDVP(), envs)
 
-    e3 = expectation_value(window, (1, 2) => O)
+    e3 = expectation_value(window, (2, 3) => O)
 
     @test e2 ≈ e3 atol = 1e-4
 end
