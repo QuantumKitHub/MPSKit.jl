@@ -13,10 +13,11 @@ struct JordanMPO_AC_Hamiltonian{O1,O2,O3} <: DerivativeOperator
     A::O3                # continuing
     function JordanMPO_AC_Hamiltonian(onsite, not_started, finished, starting, ending,
                                       continuing)
-        tensor = coalesce(onsite, not_started, finished, starting, ending)
-        ismissing(tensor) && throw(ArgumentError("unable to determine type"))
-        S = spacetype(tensor)
-        M = storagetype(tensor)
+        # obtaining storagetype of environments since these should have already mixed
+        # the types of the operator and state
+        gl = continuing[1]
+        S = spacetype(gl)
+        M = storagetype(gl)
         O1 = tensormaptype(S, 1, 1, M)
         O2 = tensormaptype(S, 2, 2, M)
         return new{O1,O2,typeof(continuing)}(onsite, not_started, finished, starting,
@@ -46,10 +47,11 @@ struct JordanMPO_AC2_Hamiltonian{O1,O2,O3,O4} <: DerivativeOperator
     DE::Union{O1,Missing} # onsite left
     EE::Union{O1,Missing} # finished
     function JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-        tensor = coalesce(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-        ismissing(tensor) && throw(ArgumentError("unable to determine type"))
-        S = spacetype(tensor)
-        M = storagetype(tensor)
+        # obtaining storagetype of environments since these should have already mixed
+        # the types of the operator and state
+        gl = AA[1]
+        S = spacetype(gl)
+        M = storagetype(gl)
         O1 = tensormaptype(S, 1, 1, M)
         O2 = tensormaptype(S, 2, 2, M)
         O3 = tensormaptype(S, 3, 3, M)
