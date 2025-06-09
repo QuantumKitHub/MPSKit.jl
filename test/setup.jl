@@ -156,7 +156,7 @@ function heisenberg_XXX(::Type{SU2Irrep}; spin=1, L=Inf)
     end
 end
 
-function heisenberg_XXX(::Type{Trivial}, ::Type{T}=ComplexF64; spin=1,
+function heisenberg_XXX(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1,
                         L=Inf) where {T<:Number}
     h = ones(T, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
     for (c, b) in blocks(h)

@@ -323,8 +323,7 @@ end
 
 @testset "timestep" verbose = true begin
     dt = 0.1
-    algs = [TDVP(; verbosity=verbosity_conv),
-            TDVP2(; trscheme=truncdim(10), verbosity=verbosity_conv)]
+    algs = [TDVP(), TDVP2(; trscheme=truncdim(10))]
     L = 10
 
     H = force_planar(heisenberg_XXX(Trivial, Float64; spin=1 // 2, L))
