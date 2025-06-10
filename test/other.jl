@@ -71,7 +71,7 @@ end
     braille(buffer, H)
     output = String(take!(buffer))
     check = """
-            ... 🭻⎡⢉⢈⎤🭻 ...
+            ... 🭻⎡⠉⢈⎤🭻 ...
                  ⎣⠀⢀⎦ 
             """
     @test output == check
@@ -90,7 +90,7 @@ end
     H = transverse_field_ising(; L=4)
     braille(buffer, H)
     output = String(take!(buffer))
-    check = " ⎡⠉⠈⎤🭻🭻⎡⢉⢈⎤🭻🭻⎡⢉⢈⎤🭻🭻⎡⡁⠀⎤ \n ⎣⠀⠀⎦  ⎣⠀⢀⎦  ⎣⠀⢀⎦  ⎣⡀⠀⎦ \n"
+    check = " ⎡⠉⠈⎤🭻🭻⎡⠉⢈⎤🭻🭻⎡⠉⢈⎤🭻🭻⎡⡁⠀⎤ \n ⎣⠀⠀⎦  ⎣⠀⢀⎦  ⎣⠀⢀⎦  ⎣⡀⠀⎦ \n"
     @test output == check
 
     O = make_time_mpo(H, 1.0, TaylorCluster(3, false, false))
