@@ -13,10 +13,11 @@ struct JordanMPO_AC_Hamiltonian{O1,O2,O3} <: DerivativeOperator
     A::O3                # continuing
     function JordanMPO_AC_Hamiltonian(onsite, not_started, finished, starting, ending,
                                       continuing)
-        tensor = coalesce(onsite, not_started, finished, starting, ending)
-        ismissing(tensor) && throw(ArgumentError("unable to determine type"))
-        S = spacetype(tensor)
-        M = storagetype(tensor)
+        # obtaining storagetype of environments since these should have already mixed
+        # the types of the operator and state
+        gl = continuing[1]
+        S = spacetype(gl)
+        M = storagetype(gl)
         O1 = tensormaptype(S, 1, 1, M)
         O2 = tensormaptype(S, 2, 2, M)
         return new{O1,O2,typeof(continuing)}(onsite, not_started, finished, starting,
@@ -46,10 +47,11 @@ struct JordanMPO_AC2_Hamiltonian{O1,O2,O3,O4} <: DerivativeOperator
     DE::Union{O1,Missing} # onsite left
     EE::Union{O1,Missing} # finished
     function JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-        tensor = coalesce(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-        ismissing(tensor) && throw(ArgumentError("unable to determine type"))
-        S = spacetype(tensor)
-        M = storagetype(tensor)
+        # obtaining storagetype of environments since these should have already mixed
+        # the types of the operator and state
+        gl = AA[1]
+        S = spacetype(gl)
+        M = storagetype(gl)
         O1 = tensormaptype(S, 1, 1, M)
         O2 = tensormaptype(S, 2, 2, M)
         O3 = tensormaptype(S, 3, 3, M)
@@ -107,7 +109,9 @@ function AC_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
     end
 
     # not_started
-    if (!isfinite(operator) || site < length(operator)) && !ismissing(starting)
+    if isfinite(operator) && site == length(operator)
+        not_started = missing
+    elseif !ismissing(starting)
         I = id(storagetype(GR[1]), physicalspace(W))
         @plansor starting[-1 -2; -3 -4] += I[-1; -3] * removeunit(GR[1], 2)[-4; -2]
         not_started = missing
@@ -116,7 +120,9 @@ function AC_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
     end
 
     # finished
-    if (!isfinite(operator) || site > 1) && !ismissing(ending)
+    if isfinite(operator) && site == 1
+        finished = missing
+    elseif !ismissing(ending)
         I = id(storagetype(GL[end]), physicalspace(W))
         @plansor ending[-1 -2; -3 -4] += removeunit(GL[end], 2)[-1; -3] * I[-2; -4]
         finished = missing
@@ -241,7 +247,9 @@ function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
     end
 
     # finished
-    if !ismissing(IC)
+    if isfinite(operator) && site + 1 == length(operator)
+        II = missing
+    elseif !ismissing(IC)
         I = id(storagetype(GR[1]), physicalspace(W2))
         @plansor IC[-1 -2; -3 -4] += I[-1; -3] * removeunit(GR[1], 2)[-4; -2]
         II = missing
@@ -254,7 +262,9 @@ function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES,
     end
 
     # unstarted
-    if !ismissing(BE)
+    if isfinite(operator) && site == 1
+        EE = missing
+    elseif !ismissing(BE)
         I = id(storagetype(GL[end]), physicalspace(W1))
         @plansor BE[-1 -2; -3 -4] += removeunit(GL[end], 2)[-1; -3] * I[-2; -4]
         EE = missing

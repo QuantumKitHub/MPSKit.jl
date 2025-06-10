@@ -326,14 +326,17 @@ end
     algs = [TDVP(), TDVP2(; trscheme=truncdim(10))]
     L = 10
 
-    H = force_planar(heisenberg_XXX(; spin=1 // 2, L))
-    ψ₀ = FiniteMPS(L, ℙ^2, ℙ^1)
+    H = force_planar(heisenberg_XXX(Trivial, Float64; spin=1 // 2, L))
+    ψ = FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4)
+    E = expectation_value(ψ, H)
+    ψ₀, = find_groundstate(ψ, H)
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
-        ψ, envs = timestep(ψ₀, H, 0.0, dt, alg)
-        E = expectation_value(ψ, H, envs)
-        @test E₀ ≈ E atol = 1e-2
+        ψ1, envs = timestep(ψ₀, H, 0.0, dt, alg)
+        E1 = expectation_value(ψ1, H, envs)
+        @test E₀ ≈ E1 atol = 1e-2
+        @test dot(ψ1, ψ₀) ≈ exp(im * dt * E₀) atol = 1e-4
     end
 
     Hlazy = LazySum([3 * H, 1.55 * H, -0.1 * H])

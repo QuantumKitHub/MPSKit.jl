@@ -123,33 +123,20 @@ function S_zz(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where 
     return S_z(Trivial, T; spin) ⊗ S_z(Trivial, T; spin)
 end
 
-function transverse_field_ising(; g=1.0, L=Inf)
-    X = S_x(; spin=1 // 2)
-    ZZ = S_zz(; spin=1 // 2)
-    E = TensorMap(ComplexF64[1 0; 0 1], ℂ^2 ← ℂ^2)
+function transverse_field_ising(::Type{T}=ComplexF64; g=1.0, L=Inf) where {T<:Number}
+    X = S_x(Trivial, T; spin=1 // 2)
+    ZZ = S_zz(Trivial, T; spin=1 // 2)
 
-    # lattice = L == Inf ? PeriodicVector([ℂ^2]) : fill(ℂ^2, L)
     if L == Inf
         lattice = PeriodicArray([ℂ^2])
-        return InfiniteMPOHamiltonian(lattice,
-                                      (i, i + 1) => -(ZZ + (g / 2) * (X ⊗ E + E ⊗ X))
-                                      for i in 1:1)
-        # return MPOHamiltonian(-ZZ - (g / 2) * (X ⊗ E + E ⊗ X))
+        H₁ = InfiniteMPOHamiltonian(lattice, i => -g * X for i in 1:1)
+        H₂ = InfiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:1)
     else
         lattice = fill(ℂ^2, L)
-        return FiniteMPOHamiltonian(lattice,
-                                    (i, i + 1) => -(ZZ + (g / 2) * (X ⊗ E + E ⊗ X))
-                                    for i in 1:(L - 1)) #+
-        # FiniteMPOHamiltonian(lattice, (i,) => -g * X for i in 1:L)
+        H₁ = FiniteMPOHamiltonian(lattice, i => -g * X for i in 1:L)
+        H₂ = FiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:(L - 1))
     end
-
-    H = S_zz(; spin=1 // 2) + (g / 2) * (X ⊗ E + E ⊗ X)
-    return if L == Inf
-        MPOHamiltonian(H)
-    else
-        FiniteMPOHamiltonian(fill(ℂ^2, L), (i, i + 1) => H for i in 1:(L - 1))
-    end
-    return MPOHamiltonian(-H)
+    return H₁ + H₂
 end
 
 function heisenberg_XXX(::Type{SU2Irrep}; spin=1, L=Inf)
@@ -169,8 +156,9 @@ function heisenberg_XXX(::Type{SU2Irrep}; spin=1, L=Inf)
     end
 end
 
-function heisenberg_XXX(; spin=1, L=Inf)
-    h = ones(ComplexF64, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
+function heisenberg_XXX(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1,
+                        L=Inf) where {T<:Number}
+    h = ones(T, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
     for (c, b) in blocks(h)
         S = (dim(c) - 1) / 2
         b .= S * (S + 1) / 2 - spin * (spin + 1)
