@@ -1,7 +1,7 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
 authors = "Lukas Devos, Maarten Van Damme and contributors"
-version = "0.13.2"
+version = "0.13.3"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
