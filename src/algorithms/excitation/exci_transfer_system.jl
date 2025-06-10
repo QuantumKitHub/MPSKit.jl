@@ -13,8 +13,6 @@ function left_excitation_transfer_system(lBs, H, exci; mom=exci.momentum,
         T = TransferMatrix(exci.right_gs.AR, H_partial, exci.left_gs.AL)
         start = scale!(last(found[1:i] * T), cis(-mom * len))
         if exci.trivial && isid(H, i)
-            # not sure what H can be here
-            # also, what is isid?
             @plansor start[-1 -2; -3 -4] -= start[1 4; -3 2] *
                                             r_RL(exci.right_gs)[2; 3] *
                                             τ[3 4; 5 1] *
