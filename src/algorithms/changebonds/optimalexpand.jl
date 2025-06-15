@@ -31,7 +31,7 @@ function changebonds(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExp
         VL = leftnull(ψ.AL[i])
         VR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
         intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
-        U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
+        U, _, V = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
 
         AL′[i] = VL * U
         AR′[i + 1] = V * VR
@@ -57,7 +57,7 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs=environments(
         VL = leftnull(ψ.AL[i, j])
         VR = rightnull!(_transpose_tail(ψ.AR[i, j + 1]))
         intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
-        U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
+        U, _, V = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
 
         AL′[i, j] = VL * U
         AR′[i, j + 1] = V * VR
@@ -88,7 +88,7 @@ function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs=environ
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         intermediate = normalize!(adjoint(NL) * AC2 * adjoint(NR))
-        _, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
+        _, _, V = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
 
         ar_re = V * NR
         ar_le = zerovector!(similar(ar_re, codomain(ψ.AC[i]) ← space(V, 1)))

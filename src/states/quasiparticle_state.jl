@@ -80,10 +80,10 @@ function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
 end
 
 #gauge dependent code
-function Base.similar(v::LeftGaugedQP, ::Type{T}=scalartype(v)) where {T<:Number}
+function Base.similar(v::LeftGaugedQP, (::Type{T})=scalartype(v)) where {T<:Number}
     return LeftGaugedQP(v.left_gs, v.right_gs, v.VLs, similar.(v.Xs, T), v.momentum)
 end
-function Base.similar(v::RightGaugedQP, ::Type{T}=scalartype(v)) where {T<:Number}
+function Base.similar(v::RightGaugedQP, (::Type{T})=scalartype(v)) where {T<:Number}
     return RightGaugedQP(v.left_gs, v.right_gs, similar.(v.Xs, T), v.VRs, v.momentum)
 end
 

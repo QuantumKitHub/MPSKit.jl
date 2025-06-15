@@ -117,7 +117,7 @@ function excitations(H, alg::ChepigaAnsatz2, ψ::FiniteMPS, envs=environments(ψ
     # map back to finitemps
     ψs = map(AC2s) do ac
         ψ′ = copy(ψ)
-        AL, C, AR, = tsvd!(ac; trunc=alg.trscheme)
+        AL, C, AR = tsvd!(ac; trunc=alg.trscheme)
         normalize!(C)
         ψ′.AC[pos] = (AL, complex(C))
         ψ′.AC[pos + 1] = (complex(C), _transpose_front(AR))
