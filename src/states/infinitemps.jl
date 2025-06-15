@@ -89,11 +89,11 @@ struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
 
             # verify that the virtual spaces are compatible
             space(AL[i], 1) == dual(space(AL[i - 1], N)) &&
-                space(AR[i], 1) == dual(space(AR[i - 1], N)) &&
-                space(AC[i], 1) == space(AL[i], 1) &&
-                space(AC[i], N) == space(AR[i], N) &&
-                space(C[i], 1) == dual(space(AL[i], N)) &&
-                space(AR[i], 1) == dual(space(C[i - 1], 2)) ||
+            space(AR[i], 1) == dual(space(AR[i - 1], N)) &&
+            space(AC[i], 1) == space(AL[i], 1) &&
+            space(AC[i], N) == space(AR[i], N) &&
+            space(C[i], 1) == dual(space(AL[i], N)) &&
+            space(AR[i], 1) == dual(space(C[i - 1], 2)) ||
                 throw(SpaceMismatch("incompatible virtual spaces at site $i"))
             # verify that the spaces are non-zero
             dim(space(AL[i])) > 0 && dim(space(C[i])) > 0 ||
