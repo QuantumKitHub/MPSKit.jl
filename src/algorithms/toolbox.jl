@@ -119,7 +119,7 @@ Find the closest fractions of π, differing at most ```tol_angle```
 """
 function approx_angles(spectrum; tol_angle=0.1)
     angles = angle.(spectrum) ./ π                          # ∈ ]-1, 1]
-    angles_approx = rationalize.(angles, tol=tol_angle)     # ∈ [-1, 1]
+    angles_approx = rationalize.(angles; tol=tol_angle)     # ∈ [-1, 1]
 
     # Remove the effects of the branchcut.
     angles_approx[findall(angles_approx .== -1)] .= 1       # ∈ ]-1, 1]

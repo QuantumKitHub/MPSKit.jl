@@ -100,10 +100,10 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian,
 
     @sync begin
         Threads.@spawn $lBs[1] = left_excitation_transfer_system($lBs[1], $H, $exci;
-                                                                 solver=$solver)
+                                                                 solver=($solver))
         Threads.@spawn $rBs[end] = right_excitation_transfer_system($rBs[end], $H,
                                                                     $exci;
-                                                                    solver=$solver)
+                                                                    solver=($solver))
     end
 
     lB_cur = lBs[1]

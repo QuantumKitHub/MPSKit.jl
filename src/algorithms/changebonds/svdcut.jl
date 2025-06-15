@@ -20,7 +20,7 @@ function changebonds(ψ::AbstractFiniteMPS, alg::SvdCut; kwargs...)
 end
 function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut; normalize::Bool=true)
     for i in (length(ψ) - 1):-1:1
-        U, S, V, = tsvd(ψ.C[i]; trunc=alg.trscheme, alg=alg.alg_svd)
+        U, S, V = tsvd(ψ.C[i]; trunc=alg.trscheme, alg=alg.alg_svd)
         AL′ = ψ.AL[i] * U
         ψ.AC[i] = (AL′, complex(S))
         AR′ = _transpose_front(V * _transpose_tail(ψ.AR[i + 1]))
@@ -44,7 +44,7 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
     O_left = transpose(mpo[1], ((3, 1, 2), (4,)))
     local O_right
     for i in 2:length(mpo)
-        U, S, V, = tsvd!(O_left; trunc=alg.trscheme, alg=alg.alg_svd)
+        U, S, V = tsvd!(O_left; trunc=alg.trscheme, alg=alg.alg_svd)
         @inbounds mpo[i - 1] = transpose(U, ((2, 3), (1, 4)))
         if i < length(mpo)
             @plansor O_left[-3 -1 -2; -4] := S[-1; 1] * V[1; 2] * mpo[i][2 -2; -3 -4]
@@ -55,7 +55,7 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
 
     # right to left
     for i in (length(mpo) - 1):-1:1
-        U, S, V, = tsvd!(O_right; trunc=alg.trscheme, alg=alg.alg_svd)
+        U, S, V = tsvd!(O_right; trunc=alg.trscheme, alg=alg.alg_svd)
         @inbounds mpo[i + 1] = transpose(V, ((1, 4), (2, 3)))
         if i > 1
             @plansor O_right[-1; -3 -4 -2] := mpo[i][-1 -2; -3 2] * U[2; 1] * S[1; -4]
@@ -84,7 +84,7 @@ function changebonds(ψ::InfiniteMPS, alg::SvdCut)
     ncr = ψ.C[1]
 
     for i in 1:length(ψ)
-        U, ncr, = tsvd(ψ.C[i]; trunc=alg.trscheme, alg=alg.alg_svd)
+        U, ncr = tsvd(ψ.C[i]; trunc=alg.trscheme, alg=alg.alg_svd)
         copied[i] = copied[i] * U
         copied[i + 1] = _transpose_front(U' * _transpose_tail(copied[i + 1]))
     end

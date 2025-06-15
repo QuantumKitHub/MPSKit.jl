@@ -44,7 +44,7 @@ struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
                        ψᵣ::InfiniteMPS{A,B}=copy(ψₗ)) where {A<:GenericMPSTensor,
                                                              B<:MPSBondTensor}
         left_virtualspace(ψₗ, 1) == left_virtualspace(ψₘ, 1) &&
-            right_virtualspace(ψₘ, length(ψₘ)) == right_virtualspace(ψᵣ, length(ψₘ)) ||
+        right_virtualspace(ψₘ, length(ψₘ)) == right_virtualspace(ψᵣ, length(ψₘ)) ||
             throw(SpaceMismatch("Mismatch between window and environment virtual spaces"))
         return new{A,B}(ψₗ, ψₘ, ψᵣ)
     end
