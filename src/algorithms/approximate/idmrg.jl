@@ -21,7 +21,7 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             end
 
             # right to left sweep
-            for col in size(ψ, 2):-1:1
+            for col in reverse(1:size(ψ, 2))
                 for row in 1:size(ψ, 1)
                     ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col),
                                                        ψ, toapprox, envs)
@@ -71,7 +71,7 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
-            for site in 1:(size(ψ, 2) - 1)
+            for site in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
                                           kind=:ACAR)
@@ -90,33 +90,8 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
 
             normalize!(envs, ψ, toapprox)
 
-            # update the edge
-            site = size(ψ, 2)
-            for row in 1:size(ψ, 1)
-                ψ.AL[row, site] = ψ.AC[row, site] / ψ.C[row, site]
-                ψ.AC[row, 1] = _mul_tail(ψ.AL[row, 1], ψ.C[row, 1])
-                AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
-                                      kind=:ALAC)
-                al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
-                normalize!(c)
-
-                ψ.AL[row + 1, site] = al
-                ψ.C[row + 1, site] = complex(c)
-                ψ.AR[row + 1, site + 1] = _transpose_front(ar)
-
-                ψ.AC[row + 1, site] = _mul_tail(al, c)
-                ψ.AC[row + 1, 1] = _transpose_front(c * ar)
-                ψ.AL[row + 1, 1] = ψ.AC[row + 1, 1] / ψ.C[row + 1, 1]
-            end
-
-            # TODO: decide if we should compare at the half-sweep level?
-            # C_current = ψ.C[:, site]
-
-            transfer_leftenv!(envs, ψ, toapprox, 1)
-            transfer_rightenv!(envs, ψ, toapprox, 0)
-
             # sweep from right to left
-            for site in reverse(1:(size(ψ, 2) - 1))
+            for site in reverse(0:(size(ψ, 2) - 1))
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
                                           kind=:ALAC)
@@ -133,27 +108,6 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             end
 
             normalize!(envs, ψ, toapprox)
-
-            # update the edge
-            for row in 1:size(ψ, 1)
-                ψ.AC[row, end] = _mul_front(ψ.C[row, end - 1], ψ.AR[row, end])
-                ψ.AR[row, 1] = _transpose_front(ψ.C[row, end] \
-                                                _transpose_tail(ψ.AC[row, 1]))
-                AC2′ = AC2_projection(CartesianIndex(row, 0), ψ, toapprox, envs; kind=:ACAR)
-                al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
-                normalize!(c)
-
-                ψ.AL[row + 1, end] = al
-                ψ.C[row + 1, end] = complex(c)
-                ψ.AR[row + 1, 1] = _transpose_front(ar)
-
-                ψ.AR[row + 1, end] = _transpose_front(ψ.C[row + 1, end - 1] \
-                                                      _transpose_tail(al * c))
-                ψ.AC[row + 1, 1] = _transpose_front(c * ar)
-            end
-
-            transfer_leftenv!(envs, ψ, toapprox, 1)
-            transfer_rightenv!(envs, ψ, toapprox, 0)
 
             # update error
             ϵ = sum(zip(C_current, ψ.C[:, 0])) do (c1, c2)
