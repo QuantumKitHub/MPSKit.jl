@@ -121,7 +121,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
                 Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar = tsvd!(newA2center; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
                 v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
                              conj(ar[6; 3 4])
@@ -137,7 +137,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
                 Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar = tsvd!(newA2center; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
                 v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
                              conj(ar[6; 3 4])

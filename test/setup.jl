@@ -86,7 +86,8 @@ end
 # Toy models
 # ----------------------------
 
-function S_x(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_x((::Type{Trivial})=Trivial, (::Type{T})=ComplexF64;
+             spin=1 // 2) where {T<:Number}
     return if spin == 1 // 2
         TensorMap(T[0 1; 1 0], ℂ^2 ← ℂ^2)
     elseif spin == 1
@@ -95,7 +96,8 @@ function S_x(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {
         throw(ArgumentError("spin $spin not supported"))
     end
 end
-function S_y(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_y((::Type{Trivial})=Trivial, (::Type{T})=ComplexF64;
+             spin=1 // 2) where {T<:Number}
     return if spin == 1 // 2
         TensorMap(T[0 -im; im 0], ℂ^2 ← ℂ^2)
     elseif spin == 1
@@ -104,7 +106,8 @@ function S_y(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {
         throw(ArgumentError("spin $spin not supported"))
     end
 end
-function S_z(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_z((::Type{Trivial})=Trivial, (::Type{T})=ComplexF64;
+             spin=1 // 2) where {T<:Number}
     return if spin == 1 // 2
         TensorMap(T[1 0; 0 -1], ℂ^2 ← ℂ^2)
     elseif spin == 1
@@ -113,17 +116,20 @@ function S_z(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {
         throw(ArgumentError("spin $spin not supported"))
     end
 end
-function S_xx(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_xx((::Type{Trivial})=Trivial, (::Type{T})=ComplexF64;
+              spin=1 // 2) where {T<:Number}
     return S_x(Trivial, T; spin) ⊗ S_x(Trivial, T; spin)
 end
-function S_yy(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_yy((::Type{Trivial})=Trivial, (::Type{T})=ComplexF64;
+              spin=1 // 2) where {T<:Number}
     return S_y(Trivial, T; spin) ⊗ S_y(Trivial, T; spin)
 end
-function S_zz(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_zz((::Type{Trivial})=Trivial, (::Type{T})=ComplexF64;
+              spin=1 // 2) where {T<:Number}
     return S_z(Trivial, T; spin) ⊗ S_z(Trivial, T; spin)
 end
 
-function transverse_field_ising(::Type{T}=ComplexF64; g=1.0, L=Inf) where {T<:Number}
+function transverse_field_ising((::Type{T})=ComplexF64; g=1.0, L=Inf) where {T<:Number}
     X = S_x(Trivial, T; spin=1 // 2)
     ZZ = S_zz(Trivial, T; spin=1 // 2)
 
@@ -156,7 +162,7 @@ function heisenberg_XXX(::Type{SU2Irrep}; spin=1, L=Inf)
     end
 end
 
-function heisenberg_XXX(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1,
+function heisenberg_XXX((::Type{Trivial})=Trivial, (::Type{T})=ComplexF64; spin=1,
                         L=Inf) where {T<:Number}
     h = ones(T, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
     for (c, b) in blocks(h)

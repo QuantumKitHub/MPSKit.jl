@@ -29,7 +29,7 @@ J = 1 / 2
 T = ComplexF64
 symmetry = U1Irrep
 
-function XY_hamiltonian(::Type{T}=ComplexF64, ::Type{S}=Trivial; J=1 / 2,
+function XY_hamiltonian((::Type{T})=ComplexF64, (::Type{S})=Trivial; J=1 / 2,
                         N) where {T<:Number,S<:Sector}
     spin = 1 // 2
     term = J * (S_xx(T, S; spin) + S_yy(T, S; spin))
@@ -90,7 +90,7 @@ D = 64
 V_init = symmetry === Trivial ? ℂ^32 : U1Space(i => 10 for i in -1:(1 // 2):1)
 psi_init = FiniteMPS(N, physicalspace(H, 1), V_init)
 trscheme = truncdim(D)
-psi, envs, = find_groundstate(psi_init, H, DMRG2(; trscheme, maxiter=5));
+psi, envs = find_groundstate(psi_init, H, DMRG2(; trscheme, maxiter=5));
 E_0 = expectation_value(psi, H, envs) / N
 
 println("Numerical:\t", real(E_0))

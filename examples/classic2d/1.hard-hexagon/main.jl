@@ -39,10 +39,10 @@ Additionally, we can compute the entanglement entropy as well as the correlation
 D = 10
 V = virtual_space(D)
 ψ₀ = InfiniteMPS([P], [V])
-ψ, envs, = leading_boundary(ψ₀, mpo,
-                            VUMPS(; verbosity=0,
-                                  alg_eigsolve=MPSKit.Defaults.alg_eigsolve(;
-                                                                            ishermitian=false))) # use non-hermitian eigensolver
+ψ, envs = leading_boundary(ψ₀, mpo,
+                           VUMPS(; verbosity=0,
+                                 alg_eigsolve=MPSKit.Defaults.alg_eigsolve(;
+                                                                           ishermitian=false))) # use non-hermitian eigensolver
 F = real(expectation_value(ψ, mpo))
 S = real(first(entropy(ψ)))
 ξ = correlation_length(ψ)
@@ -63,13 +63,13 @@ function scaling_simulations(ψ₀, mpo, Ds; verbosity=0, tol=1e-6,
     correlations = similar(Ds, Float64)
     alg = VUMPS(; verbosity, tol, alg_eigsolve)
 
-    ψ, envs, = leading_boundary(ψ₀, mpo, alg)
+    ψ, envs = leading_boundary(ψ₀, mpo, alg)
     entropies[1] = real(entropy(ψ)[1])
     correlations[1] = correlation_length(ψ)
 
     for (i, d) in enumerate(diff(Ds))
         ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme=truncdim(d)), envs)
-        ψ, envs, = leading_boundary(ψ, mpo, alg, envs)
+        ψ, envs = leading_boundary(ψ, mpo, alg, envs)
         entropies[i + 1] = real(entropy(ψ)[1])
         correlations[i + 1] = correlation_length(ψ)
     end
