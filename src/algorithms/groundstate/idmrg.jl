@@ -40,7 +40,12 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG, envs=environments(ost
             for pos in 1:length(ψ)
                 h = AC_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
-                ψ.AL[pos], ψ.C[pos] = leftorth!(ψ.AC[pos])
+                if pos == length(ψ)
+                    # AC needed in next sweep
+                    ψ.AL[pos], ψ.C[pos] = leftorth(ψ.AC[pos])
+                else
+                    ψ.AL[pos], ψ.C[pos] = leftorth!(ψ.AC[pos])
+                end
                 transfer_leftenv!(envs, ψ, H, ψ, pos + 1)
             end
 
@@ -124,7 +129,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
 
             # sweep from left to right
             for pos in 1:(length(ψ) - 1)
-                ac2 = ψ.AC[pos] * _transpose_tail(ψ.AR[pos + 1])
+                ac2 = AC2(ψ, pos; kind=:ACAR)
                 h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
@@ -141,20 +146,22 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
             end
 
             # update the edge
-            @plansor ac2[-1 -2; -3 -4] := ψ.AC[end][-1 -2; 1] * inv(ψ.C[0])[1; 2] *
-                                          ψ.AL[1][2 -4; 3] * ψ.C[1][3; -3]
+            ψ.AL[end] = ψ.AC[end] / ψ.C[end]
+            ψ.AC[1] = _mul_tail(ψ.AL[1], ψ.C[1])
+            ac2 = AC2(ψ, 0; kind=:ALAC)
             h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
             al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
             normalize!(c)
 
-            ψ.AC[end] = al * c
             ψ.AL[end] = al
             ψ.C[end] = complex(c)
             ψ.AR[1] = _transpose_front(ar)
+
+            ψ.AC[end] = _mul_tail(al, c)
             ψ.AC[1] = _transpose_front(c * ar)
-            ψ.AL[1] = ψ.AC[1] * inv(ψ.C[1])
+            ψ.AL[1] = ψ.AC[1] / ψ.C[1]
 
             C_current = complex(c)
 
@@ -164,7 +171,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
 
             # sweep from right to left
             for pos in (length(ψ) - 1):-1:1
-                ac2 = ψ.AL[pos] * _transpose_tail(ψ.AC[pos + 1])
+                ac2 = AC2(ψ, pos; kind=:ALAC)
                 h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
@@ -172,7 +179,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
                 normalize!(c)
 
                 ψ.AL[pos] = al
-                ψ.AC[pos] = al * c
+                ψ.AC[pos] = _mul_tail(al, c)
                 ψ.C[pos] = complex(c)
                 ψ.AR[pos + 1] = _transpose_front(ar)
                 ψ.AC[pos + 1] = _transpose_front(c * ar)
@@ -182,17 +189,19 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
             end
 
             # update the edge
-            @plansor ac2[-1 -2; -3 -4] := ψ.C[end - 1][-1; 1] * ψ.AR[end][1 -2; 2] *
-                                          inv(ψ.C[end])[2; 3] * ψ.AC[1][3 -4; -3]
+            ψ.AC[end] = _mul_front(ψ.C[end - 1], ψ.AR[end])
+            ψ.AR[1] = _transpose_front(ψ.C[end] \ _transpose_tail(ψ.AC[1]))
+            ac2 = AC2(ψ, 0; kind=:ACAR)
             h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
             al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
             normalize!(c)
 
-            ψ.AR[end] = _transpose_front(inv(ψ.C[end - 1]) * _transpose_tail(al * c))
             ψ.AL[end] = al
             ψ.C[end] = complex(c)
             ψ.AR[1] = _transpose_front(ar)
+
+            ψ.AR[end] = _transpose_front(ψ.C[end - 1] \ _transpose_tail(al * c))
             ψ.AC[1] = _transpose_front(c * ar)
 
             transfer_leftenv!(envs, ψ, H, ψ, 1)

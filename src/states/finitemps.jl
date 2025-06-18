@@ -318,6 +318,9 @@ Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
     end
 end
 
+# TODO: check where gauge center is to determine efficient kind
+AC2(psi::FiniteMPS, site::Int) = psi.AC[site] * _transpose_tail(psi.AR[site + 1])
+
 _complex_if_not_missing(x) = ismissing(x) ? x : complex(x)
 function Base.complex(mps::FiniteMPS)
     scalartype(mps) <: Complex && return mps
