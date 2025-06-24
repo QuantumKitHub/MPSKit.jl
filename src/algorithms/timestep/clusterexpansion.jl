@@ -7,8 +7,8 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::ClusterExpansion)
     lmax = N ÷ 2 # largest level
     τ = -im * dt
     # spaces
-    P = physicalspace(H)[1]
-    D = dim(physicalspace(H)[1]) # physical dimension
+    P = physicalspace(H, 1)
+    D = dim(P) # physical dimension
     V = BlockTensorKit.oplus([ℂ^(D^2l) for l in 0:lmax]...)
 
     TT = tensormaptype(ComplexSpace, 2, 2, ComplexF64)
