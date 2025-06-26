@@ -41,7 +41,7 @@ Base.isfinite(::Type{<:InfiniteMPO}) = false
 function InfiniteMPO(Os::AbstractVector{O}) where {O}
     for i in eachindex(Os)
         right_virtualspace(Os[i]) == left_virtualspace(Os[mod1(i + 1, end)]) ||
-            throw(SpaceMismatch("umatching virtual spaces at site $i"))
+            throw(SpaceMismatch("unmatching virtual spaces at site $i"))
     end
     return InfiniteMPO{O}(Os)
 end
