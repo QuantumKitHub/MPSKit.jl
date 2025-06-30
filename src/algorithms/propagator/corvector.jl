@@ -19,7 +19,7 @@ $(TYPEDFIELDS)
 
 * [Jeckelmann. Phys. Rev. B 66 (2002)](@cite jeckelmann2002)
 """
-@kwdef struct DynamicalDMRG{F<:DDMRG_Flavour,S} <: Algorithm
+@kwdef struct DynamicalDMRG{F <: DDMRG_Flavour, S} <: Algorithm
     "flavour of the algorithm to use, either of type [`NaiveInvert`](@ref) or [`Jeckelmann`](@ref)"
     flavour::F = NaiveInvert()
     "algorithm used for the linear solvers"
@@ -58,8 +58,10 @@ See also [`Jeckelmann`](@ref) for the original approach.
 """
 struct NaiveInvert <: DDMRG_Flavour end
 
-function propagator(A::AbstractFiniteMPS, z::Number, H::FiniteMPOHamiltonian,
-                    alg::DynamicalDMRG{NaiveInvert}; init=copy(A))
+function propagator(
+        A::AbstractFiniteMPS, z::Number, H::FiniteMPOHamiltonian,
+        alg::DynamicalDMRG{NaiveInvert}; init = copy(A)
+    )
     h_envs = environments(init, H) # environments for h
     mixedenvs = environments(init, A) # environments for <init | A>
 
@@ -116,8 +118,10 @@ See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.
 """
 struct Jeckelmann <: DDMRG_Flavour end
 
-function propagator(A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
-                    alg::DynamicalDMRG{Jeckelmann}; init=copy(A))
+function propagator(
+        A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
+        alg::DynamicalDMRG{Jeckelmann}; init = copy(A)
+    )
     ω = real(z)
     η = imag(z)
 
@@ -164,15 +168,16 @@ function propagator(A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
     b = zero(a)
     for i in 1:length(cb)
         b += @plansor cb[i][1 2; 3] * init.C[end][3; 4] *
-                      rightenv(envs1, length(A), A)[i][4 2; 5] * conj(A.C[end][1; 5])
+            rightenv(envs1, length(A), A)[i][4 2; 5] * conj(A.C[end][1; 5])
     end
 
     v = b / η - ω / η * a + 1im * a
     return v, init
 end
 
-function squaredenvs(state::AbstractFiniteMPS, H::FiniteMPOHamiltonian,
-                     envs=environments(state, H))
+function squaredenvs(
+        state::AbstractFiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H)
+    )
     H² = conj(H) * H
     L = length(state)
 

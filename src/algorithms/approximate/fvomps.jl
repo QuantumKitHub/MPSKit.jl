@@ -1,5 +1,4 @@
-function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2,
-                      envs=environments(ψ, Oϕ))
+function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environments(ψ, Oϕ))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("DMRG2")
 
@@ -9,7 +8,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2,
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); (length(ψ) - 2):-1:1]
                 AC2′ = AC2_projection(pos, ψ, Oϕ, envs)
-                al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme)
+                al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme)
 
                 AC2 = ψ.AC[pos] * _transpose_tail(ψ.AR[pos + 1])
                 ϵ = max(ϵ, norm(al * c * ar - AC2) / norm(AC2))
@@ -19,7 +18,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2,
             end
 
             # finalize
-            ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ),typeof(envs)}
+            ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ), typeof(envs)}
 
             if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
@@ -36,7 +35,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2,
     return ψ, envs, ϵ
 end
 
-function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs=environments(ψ, Oϕ))
+function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments(ψ, Oϕ))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("DMRG")
 
@@ -53,7 +52,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs=environments(�
             end
 
             # finalize
-            ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ),typeof(envs)}
+            ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ), typeof(envs)}
 
             if ϵ < alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)

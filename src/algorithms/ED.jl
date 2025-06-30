@@ -30,10 +30,11 @@ equivalent to dense eigenvectors.
     of all the physical spaces in the system.
 
 """
-function exact_diagonalization(H::FiniteMPOHamiltonian;
-                               sector=one(sectortype(H)),
-                               num::Int=1, which::Symbol=:SR,
-                               alg=Defaults.alg_eigsolve(; dynamic_tols=false))
+function exact_diagonalization(
+        H::FiniteMPOHamiltonian;
+        sector = one(sectortype(H)), num::Int = 1, which::Symbol = :SR,
+        alg = Defaults.alg_eigsolve(; dynamic_tols = false)
+    )
     L = length(H)
     @assert L > 1 "FiniteMPOHamiltonian must have length > 1"
     middle_site = (L >> 1) + 1
@@ -42,7 +43,7 @@ function exact_diagonalization(H::FiniteMPOHamiltonian;
     TA = tensormaptype(spacetype(H), 2, 1, T)
 
     # fuse from left to right
-    ALs = Vector{Union{Missing,TA}}(missing, L)
+    ALs = Vector{Union{Missing, TA}}(missing, L)
     left = oneunit(spacetype(H))
     for i in 1:(middle_site - 1)
         P = physicalspace(H, i)
@@ -51,7 +52,7 @@ function exact_diagonalization(H::FiniteMPOHamiltonian;
     end
 
     # fuse from right to left
-    ARs = Vector{Union{Missing,TA}}(missing, L)
+    ARs = Vector{Union{Missing, TA}}(missing, L)
     right = spacetype(H)(sector => 1)
     for i in reverse((middle_site + 1):L)
         P = physicalspace(H, i)
@@ -60,12 +61,12 @@ function exact_diagonalization(H::FiniteMPOHamiltonian;
     end
 
     # center
-    ACs = Vector{Union{Missing,TA}}(missing, L)
+    ACs = Vector{Union{Missing, TA}}(missing, L)
     P = physicalspace(H, middle_site)
     ACs[middle_site] = rand!(similar(ALs[1], left ⊗ P ← right))
 
     TB = tensormaptype(spacetype(H), 1, 1, T)
-    Cs = Vector{Union{Missing,TB}}(missing, L + 1)
+    Cs = Vector{Union{Missing, TB}}(missing, L + 1)
     state = FiniteMPS(ALs, ARs, ACs, Cs)
     envs = environments(state, H)
 

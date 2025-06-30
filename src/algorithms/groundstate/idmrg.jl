@@ -24,7 +24,7 @@ $(TYPEDFIELDS)
     alg_eigsolve::A = Defaults.alg_eigsolve()
 end
 
-function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG, envs=environments(ost, H))
+function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG, envs = environments(ost, H))
     ϵ::Float64 = calc_galerkin(ost, H, ost, envs)
     ψ = copy(ost)
     log = IterLog("IDMRG")
@@ -90,7 +90,7 @@ Two-site infinite DMRG algorithm for finding the dominant eigenvector.
 
 $(TYPEDFIELDS)
 """
-@kwdef struct IDMRG2{A,S} <: Algorithm
+@kwdef struct IDMRG2{A, S} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
 
@@ -113,7 +113,7 @@ $(TYPEDFIELDS)
     trscheme::TruncationScheme
 end
 
-function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(ost, H))
+function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs = environments(ost, H))
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = calc_galerkin(ost, H, ost, envs)
 
@@ -129,11 +129,11 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
 
             # sweep from left to right
             for pos in 1:(length(ψ) - 1)
-                ac2 = AC2(ψ, pos; kind=:ACAR)
+                ac2 = AC2(ψ, pos; kind = :ACAR)
                 h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar, = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -148,11 +148,11 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
             # update the edge
             ψ.AL[end] = ψ.AC[end] / ψ.C[end]
             ψ.AC[1] = _mul_tail(ψ.AL[1], ψ.C[1])
-            ac2 = AC2(ψ, 0; kind=:ALAC)
+            ac2 = AC2(ψ, 0; kind = :ALAC)
             h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+            al, c, ar, = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
             normalize!(c)
 
             ψ.AL[end] = al
@@ -171,11 +171,11 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
 
             # sweep from right to left
             for pos in (length(ψ) - 1):-1:1
-                ac2 = AC2(ψ, pos; kind=:ALAC)
+                ac2 = AC2(ψ, pos; kind = :ALAC)
                 h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar, = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -191,10 +191,10 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
             # update the edge
             ψ.AC[end] = _mul_front(ψ.C[end - 1], ψ.AR[end])
             ψ.AR[1] = _transpose_front(ψ.C[end] \ _transpose_tail(ψ.AC[1]))
-            ac2 = AC2(ψ, 0; kind=:ACAR)
+            ac2 = AC2(ψ, 0; kind = :ACAR)
             h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
-            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+            al, c, ar, = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
             normalize!(c)
 
             ψ.AL[end] = al
