@@ -11,7 +11,7 @@ $(TYPEDFIELDS)
 
 * [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
-@kwdef struct TDVP{A,F} <: Algorithm
+@kwdef struct TDVP{A, F} <: Algorithm
     "algorithm used in the exponential solvers"
     integrator::A = Defaults.alg_expsolve()
 
@@ -25,9 +25,11 @@ $(TYPEDFIELDS)
     finalize::F = Defaults._finalize
 end
 
-function timestep(ψ_::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-                  envs::AbstractMPSEnvironments=environments(ψ_, H);
-                  leftorthflag=true)
+function timestep(
+        ψ_::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
+        envs::AbstractMPSEnvironments = environments(ψ_, H);
+        leftorthflag = true
+    )
     ψ = complex(ψ_)
     temp_ACs = similar(ψ.AC)
     temp_Cs = similar(ψ.C)
@@ -47,8 +49,7 @@ function timestep(ψ_::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
             Threads.@spawn begin
                 temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
                     Hac = AC_hamiltonian(loc, ψ, H, ψ, envs)
-                    return integrate(Hac, ψ.AC[loc], t, dt,
-                                     alg.integrator)
+                    return integrate(Hac, ψ.AC[loc], t, dt, alg.integrator)
                 end
             end
             Threads.@spawn begin
@@ -61,20 +62,22 @@ function timestep(ψ_::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
     end
 
     if leftorthflag
-        regauge!.(temp_ACs, temp_Cs; alg=TensorKit.QRpos())
-        ψ′ = InfiniteMPS(temp_ACs, ψ.C[end]; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
+        regauge!.(temp_ACs, temp_Cs; alg = TensorKit.QRpos())
+        ψ′ = InfiniteMPS(temp_ACs, ψ.C[end]; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
     else
         circshift!(temp_Cs, 1)
-        regauge!.(temp_Cs, temp_ACs; alg=TensorKit.LQpos())
-        ψ′ = InfiniteMPS(ψ.C[0], temp_ACs; tol=alg.tolgauge, maxiter=alg.gaugemaxiter)
+        regauge!.(temp_Cs, temp_ACs; alg = TensorKit.LQpos())
+        ψ′ = InfiniteMPS(ψ.C[0], temp_ACs; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
     end
 
     recalculate!(envs, ψ′, H)
     return ψ′, envs
 end
 
-function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-                   envs::AbstractMPSEnvironments=environments(ψ, H))
+function timestep!(
+        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
+        envs::AbstractMPSEnvironments = environments(ψ, H)
+    )
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
@@ -118,7 +121,7 @@ $(TYPEDFIELDS)
 
 * [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
-@kwdef struct TDVP2{A,S,F} <: Algorithm
+@kwdef struct TDVP2{A, S, F} <: Algorithm
     "algorithm used in the exponential solvers"
     integrator::A = Defaults.alg_expsolve()
 
@@ -138,8 +141,10 @@ $(TYPEDFIELDS)
     finalize::F = Defaults._finalize
 end
 
-function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
-                   envs::AbstractMPSEnvironments=environments(ψ, H))
+function timestep!(
+        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
+        envs::AbstractMPSEnvironments = environments(ψ, H)
+    )
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
@@ -147,7 +152,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
         Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs)
         ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator)
 
-        nal, nc, nar = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+        nal, nc, nar = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
         ψ.AC[i] = (nal, complex(nc))
         ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
@@ -163,7 +168,7 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
         Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs)
         ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator)
 
-        nal, nc, nar = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+        nal, nc, nar = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
         ψ.AC[i - 1] = (nal, complex(nc))
         ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
@@ -177,9 +182,11 @@ function timestep!(ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
 end
 
 #copying version
-function timestep(ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
-                  alg::Union{TDVP,TDVP2}, envs::AbstractMPSEnvironments...;
-                  kwargs...)
+function timestep(
+        ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
+        alg::Union{TDVP, TDVP2}, envs::AbstractMPSEnvironments...;
+        kwargs...
+    )
     isreal = scalartype(ψ) <: Real
     ψ′ = isreal ? complex(ψ) : copy(ψ)
     if length(envs) != 0 && isreal

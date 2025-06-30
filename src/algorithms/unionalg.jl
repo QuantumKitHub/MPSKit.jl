@@ -7,7 +7,7 @@ Algorithm wrapper representing the sequential application of two algorithms.
 
 $(TYPEDFIELDS)
 """
-struct UnionAlg{A,B} <: Algorithm
+struct UnionAlg{A, B} <: Algorithm
     "first algorithm"
     alg1::A
     "second algorithm"
@@ -22,13 +22,13 @@ function changebonds(state, alg::UnionAlg)
     return state
 end
 
-function changebonds(state, H, alg::UnionAlg, envs=environments(state, H))
-    (state, envs) = changebonds(state, H, alg.alg1, envs)
-    (state, envs) = changebonds(state, H, alg.alg2, envs)
-    return (state, envs)
+function changebonds(state, H, alg::UnionAlg, envs = environments(state, H))
+    state, envs = changebonds(state, H, alg.alg1, envs)
+    state, envs = changebonds(state, H, alg.alg2, envs)
+    return state, envs
 end
 
-function find_groundstate(state, H, alg::UnionAlg, envs=environments(state, H))
-    (state, envs) = find_groundstate(state, H, alg.alg1, envs)
-    return (state, envs, delta) = find_groundstate(state, H, alg.alg2, envs)
+function find_groundstate(state, H, alg::UnionAlg, envs = environments(state, H))
+    state, envs = find_groundstate(state, H, alg.alg1, envs)
+    return find_groundstate(state, H, alg.alg2, envs)
 end

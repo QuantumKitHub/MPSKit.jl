@@ -10,10 +10,12 @@ function changebonds end
 function changebonds! end
 
 # write in terms of MultilineMPS
-function changebonds(ψ::InfiniteMPS, operator::InfiniteMPO, alg,
-                     envs=environments(ψ, operator))
-    ψ′, envs′ = changebonds(convert(MultilineMPS, ψ), convert(MultilineMPO, operator), alg,
-                            Multiline([envs]))
+function changebonds(
+        ψ::InfiniteMPS, operator::InfiniteMPO, alg, envs = environments(ψ, operator)
+    )
+    ψ′, envs′ = changebonds(
+        convert(MultilineMPS, ψ), convert(MultilineMPO, operator), alg, Multiline([envs])
+    )
     return convert(InfiniteMPS, ψ′), envs
 end
 

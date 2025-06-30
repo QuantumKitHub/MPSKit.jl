@@ -27,33 +27,41 @@ of an MPS `ψ₀`.
 approximate, approximate!
 
 # implementation in terms of Multiline
-function approximate(ψ::InfiniteMPS,
-                     toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS},
-                     algorithm,
-                     envs=environments(ψ, toapprox))
+function approximate(
+        ψ::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO, <:InfiniteMPS}, algorithm,
+        envs = environments(ψ, toapprox)
+    )
     envs′ = Multiline([envs])
-    multi, envs = approximate(convert(MultilineMPS, ψ),
-                              (convert(MultilineMPO, toapprox[1]),
-                               convert(MultilineMPS, toapprox[2])), algorithm, envs′)
+    multi, envs = approximate(
+        convert(MultilineMPS, ψ),
+        (convert(MultilineMPO, toapprox[1]), convert(MultilineMPS, toapprox[2])),
+        algorithm,
+        envs′
+    )
     ψ = convert(InfiniteMPS, multi)
     return ψ, envs
 end
 
 # dispatch to in-place method
-function approximate(ψ, toapprox, alg::Union{DMRG,DMRG2,IDMRG,IDMRG2},
-                     envs=environments(ψ, toapprox))
+function approximate(
+        ψ, toapprox, alg::Union{DMRG, DMRG2, IDMRG, IDMRG2},
+        envs = environments(ψ, toapprox)
+    )
     return approximate!(copy(ψ), toapprox, alg, envs)
 end
 
 # disambiguate
-function approximate(ψ::InfiniteMPS,
-                     toapprox::Tuple{<:InfiniteMPO,<:InfiniteMPS},
-                     algorithm::Union{IDMRG,IDMRG2},
-                     envs=environments(ψ, toapprox))
+function approximate(
+        ψ::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO, <:InfiniteMPS},
+        algorithm::Union{IDMRG, IDMRG2}, envs = environments(ψ, toapprox)
+    )
     envs′ = Multiline([envs])
-    multi, envs = approximate(convert(MultilineMPS, ψ),
-                              (convert(MultilineMPO, toapprox[1]),
-                               convert(MultilineMPS, toapprox[2])), algorithm, envs′)
+    multi, envs = approximate(
+        convert(MultilineMPS, ψ),
+        (convert(MultilineMPO, toapprox[1]), convert(MultilineMPS, toapprox[2])),
+        algorithm,
+        envs′
+    )
     ψ = convert(InfiniteMPS, multi)
     return ψ, envs
 end

@@ -9,10 +9,10 @@ $(TYPEDFIELDS)
 """
 @kwdef struct VUMPSSvdCut <: Algorithm
     "algorithm used for gauging the `InfiniteMPS`"
-    alg_gauge = Defaults.alg_gauge(; dynamic_tols=false)
+    alg_gauge = Defaults.alg_gauge(; dynamic_tols = false)
 
     "algorithm used for the eigenvalue solvers"
-    alg_eigsolve = Defaults.alg_eigsolve(; dynamic_tols=false)
+    alg_eigsolve = Defaults.alg_eigsolve(; dynamic_tols = false)
 
     "algorithm used for the singular value decomposition"
     alg_svd = Defaults.alg_svd()
@@ -21,8 +21,9 @@ $(TYPEDFIELDS)
     trscheme::TruncationScheme
 end
 
-function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
-                       envs=environments(state, H)) # would be more efficient if we also repeated envs
+function changebonds_1(
+        state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H)
+    ) # would be more efficient if we also repeated envs
     # the unitcell==1 case is unique, because there you have a sef-consistency condition
 
     # expand the one site to two sites
@@ -36,18 +37,19 @@ function changebonds_1(state::InfiniteMPS, H, alg::VUMPSSvdCut,
 
     # collapse back to 1 site
     if D2 != D1
-        cut_alg = SvdCut(; alg.alg_svd, trscheme=truncspace(infimum(D1, D2)))
+        cut_alg = SvdCut(; alg.alg_svd, trscheme = truncspace(infimum(D1, D2)))
         nstate, nenvs = changebonds(nstate, nH, cut_alg, nenvs)
     end
 
-    collapsed = InfiniteMPS([nstate.AL[1]], nstate.C[1]; alg.alg_gauge.tol,
-                            alg.alg_gauge.maxiter)
+    collapsed = InfiniteMPS(
+        [nstate.AL[1]], nstate.C[1]; alg.alg_gauge.tol, alg.alg_gauge.maxiter
+    )
     recalculate!(envs, collapsed, H, collapsed)
 
     return collapsed, envs
 end
 
-function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environments(state, H))
+function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H))
     meps = 0.0
     for loc in 1:length(state)
         @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
@@ -59,13 +61,13 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
         _, nC2 = fixedpoint(Hc, state.C[loc + 1], :SR, alg.alg_eigsolve)
 
         #svd ac2, get new AL1 and S,V ---> AC
-        AL1, S, V, eps = tsvd!(nAC2; trunc=alg.trscheme, alg=alg.alg_svd)
+        AL1, S, V, eps = tsvd!(nAC2; trunc = alg.trscheme, alg = alg.alg_svd)
         @plansor AC[-1 -2; -3] := S[-1; 1] * V[1; -3 -2]
         meps = max(eps, meps)
 
         #find AL2 from AC and C as in vumps paper
-        QAC, _ = leftorth(AC; alg=QRpos())
-        QC, _ = leftorth(nC2; alg=QRpos())
+        QAC, _ = leftorth(AC; alg = QRpos())
+        QC, _ = leftorth(nC2; alg = QRpos())
         dom_map = isometry(domain(QC), domain(QAC))
 
         @plansor AL2[-1 -2; -3] := QAC[-1 -2; 1] * conj(dom_map[2; 1]) * conj(QC[-3; 2])
@@ -80,7 +82,7 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environment
     return state, envs
 end
 
-function changebonds(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs=environments(state, H))
+function changebonds(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H))
     return length(state) == 1 ? changebonds_1(state, H, alg, envs) :
-           changebonds_n(state, H, alg, envs)
+        changebonds_n(state, H, alg, envs)
 end
