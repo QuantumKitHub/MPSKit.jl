@@ -326,7 +326,7 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
         if j == indices[i]
             # TODO: fix this check for density matrices
             if !(eltype(lattice) isa ProductSpace) &&
-               physicalspace(operators[i]) == lattice[j]
+               physicalspace(operators[i]) != lattice[j]
                 throw(SpaceMismatch("physical space does not match at site $j"))
             end
             push!(local_mpo, operators[i])
