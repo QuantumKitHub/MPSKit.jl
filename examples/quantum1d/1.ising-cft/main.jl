@@ -54,7 +54,7 @@ or in the code as:
 
 function O_shift(L)
     I = id(ComplexF64, ℂ^2)
-    @tensor O[-1 -2; -3 -4] := I[-1, -3] * I[-2, -4]
+    @tensor O[-1 -2; -3 -4] := I[-1; -3] * I[-2; -4]
     return periodic_boundary_conditions(InfiniteMPO([O]), L)
 end
 
