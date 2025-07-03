@@ -38,8 +38,8 @@ end
 
 # generate checksum based on path relative to ~/.../MPSKit.jl
 # such that different users do not have to rerun already cached examples
-function checksum(name)
-    example_path = joinpath(@__DIR__, name, "main.jl")
+function checksum(root, name)
+    example_path = joinpath(@__DIR__, root, name, "main.jl")
     @assert isfile(example_path)
     return open(example_path, "r") do io
         return bytes2hex(sha256(io))
