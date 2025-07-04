@@ -139,7 +139,7 @@ append!(momenta_mps, fix_degeneracies(states_mps[12:12]))
 append!(momenta_mps, fix_degeneracies(states_mps[13:16]))
 
 v = 2.0
-Δ = real.(energies_mps[1:18] .- energies_mps[1]) ./ (2π * v / L)
+Δ = real.(energies_mps[1:16] .- energies_mps[1]) ./ (2π * v / L_mps)
 plot(momenta_mps, Δ;
      seriestype=:scatter, xlabel="momentum", ylabel="Δ", legend=false)
 vline!(p, [2π / L * i for i in -3:3]; color="gray", linestyle=:dash)
