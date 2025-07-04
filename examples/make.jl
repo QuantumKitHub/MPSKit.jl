@@ -36,7 +36,15 @@ function setcached(root, name)
     return open(f -> TOML.print(f, cache), CACHEFILE, "w")
 end
 
-checksum(root, name) = bytes2hex(sha256(joinpath(@__DIR__, root, name, "main.jl")))
+# generate checksum based on path relative to ~/.../MPSKit.jl
+# such that different users do not have to rerun already cached examples
+function checksum(root, name)
+    example_path = joinpath(@__DIR__, root, name, "main.jl")
+    @assert isfile(example_path)
+    return open(example_path, "r") do io
+        return bytes2hex(sha256(io))
+    end
+end
 
 # ---------------------------------------------------------------------------------------- #
 # Building

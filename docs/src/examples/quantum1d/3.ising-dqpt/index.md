@@ -39,13 +39,14 @@ H₀ = transverse_field_ising(FiniteChain(L); g=-0.5)
 ````
 
 ````
-[ Info: DMRG init:	obj = +9.627138678740e+00	err = 1.5287e-01
-[ Info: DMRG   1:	obj = -2.040021714898e+01	err = 1.5582585194e-02	time = 0.10 sec
-[ Info: DMRG   2:	obj = -2.040021715175e+01	err = 3.4655395009e-07	time = 0.02 sec
-[ Info: DMRG   3:	obj = -2.040021763026e+01	err = 3.7385206468e-05	time = 0.06 sec
-[ Info: DMRG   4:	obj = -2.040021786702e+01	err = 2.1782648849e-06	time = 0.04 sec
-[ Info: DMRG   5:	obj = -2.040021786703e+01	err = 1.3998187485e-07	time = 0.02 sec
-[ Info: DMRG conv 6:	obj = -2.040021786703e+01	err = 9.0384912069e-11	time = 0.26 sec
+[ Info: DMRG init:	obj = +9.906929661608e+00	err = 1.4654e-01
+[ Info: DMRG   1:	obj = -2.040021714938e+01	err = 9.3181641986e-04	time = 0.05 sec
+[ Info: DMRG   2:	obj = -2.040021715179e+01	err = 2.4688856530e-07	time = 0.03 sec
+[ Info: DMRG   3:	obj = -2.040021786221e+01	err = 4.2747944525e-05	time = 0.08 sec
+[ Info: DMRG   4:	obj = -2.040021786699e+01	err = 1.6446674043e-06	time = 0.04 sec
+[ Info: DMRG   5:	obj = -2.040021786703e+01	err = 2.4678293656e-07	time = 0.03 sec
+[ Info: DMRG   6:	obj = -2.040021786703e+01	err = 2.3749087526e-10	time = 0.03 sec
+[ Info: DMRG conv 7:	obj = -2.040021786703e+01	err = 4.3310784899e-12	time = 0.29 sec
 
 ````
 
@@ -111,14 +112,13 @@ H₀ = transverse_field_ising(; g=-0.5)
 ````
 
 ````
-[ Info: VUMPS init:	obj = +4.981979532800e-01	err = 3.9530e-01
-[ Info: VUMPS   1:	obj = -1.030701827098e+00	err = 1.0340065851e-01	time = 6.72 sec
-[ Info: VUMPS   2:	obj = -1.063544326030e+00	err = 2.9155624606e-04	time = 0.01 sec
-[ Info: VUMPS   3:	obj = -1.063544409971e+00	err = 1.8767724186e-06	time = 0.01 sec
-[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 2.0959736412e-08	time = 0.00 sec
-[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 2.7005924256e-09	time = 0.00 sec
-[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 3.0434524435e-10	time = 0.00 sec
-[ Info: VUMPS conv 7:	obj = -1.063544409973e+00	err = 2.4566755222e-11	time = 6.75 sec
+[ Info: VUMPS init:	obj = +4.937592959715e-01	err = 3.8640e-01
+[ Info: VUMPS   1:	obj = -1.041532472680e+00	err = 1.0207037612e-01	time = 7.91 sec
+[ Info: VUMPS   2:	obj = -1.063544395012e+00	err = 1.0570052184e-04	time = 0.01 sec
+[ Info: VUMPS   3:	obj = -1.063544409972e+00	err = 1.3451291600e-06	time = 0.01 sec
+[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 2.1982905922e-08	time = 0.00 sec
+[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 8.6218866571e-10	time = 0.00 sec
+[ Info: VUMPS conv 6:	obj = -1.063544409973e+00	err = 7.1345139950e-11	time = 7.94 sec
 
 ````
 
@@ -130,7 +130,7 @@ dot(ψ₀, ψ₀)
 ````
 
 ````
-1.0000000000000053 - 8.519001927175606e-17im
+0.9999999999999991 + 5.43344267830843e-16im
 ````
 
 so the loschmidth echo takes on the pleasant form
