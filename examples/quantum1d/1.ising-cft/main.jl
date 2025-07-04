@@ -64,7 +64,8 @@ operator. However, there is a subtlety because of the degeneracies in the energy
 eigenvalues. The eigensolver will find an orthonormal basis within each energy subspace, but
 this basis is not necessarily a basis of eigenstates of the translation operator. In order
 to fix this, we diagonalize the translation operator within each energy subspace.
-The resulting energy levels have one-to-one correspondence to the operators in CFT, where the momentum is related to their conformal spin as $P_n = \frac{2\pi}{L}S_n$.
+The resulting energy levels have one-to-one correspondence to the operators in CFT, where
+the momentum is related to their conformal spin as $P_n = \frac{2\pi}{L}S_n$.
 """
 
 function fix_degeneracies(basis)
@@ -90,11 +91,17 @@ append!(momenta, fix_degeneracies(states[12:12]))
 append!(momenta, fix_degeneracies(states[13:16]))
 append!(momenta, fix_degeneracies(states[17:18]))
 
-# Calculating scaling dimensions from the energy gap
+md"""
+We can compute the scaling dimensions $\Delta_n$ of the operators in the CFT from the
+energy gap of the corresponding excitations as $E_n - E_0 = \frac{2\pi v}{L} \Delta_n$,
+where $v = 2$. If we plot these scaling dimensions against the momenta, we retrieve the
+familiar spectrum of the Ising CFT.
+"""
+
 v = 2.0
 Δ = real.(energies[1:18] .- energies[1]) ./ (2π * v / L)
 p = plot(momenta, real.(Δ);
-         seriestype=:scatter, xlabel="momentum", ylabel="energy", legend=false)
+         seriestype=:scatter, xlabel="momentum", ylabel="Δ", legend=false)
 vline!(p, [2π / L * i for i in -3:3]; color="gray", linestyle=:dash)
 hline!(p, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color="gray", linestyle=:dash)
 p
@@ -119,22 +126,22 @@ objects.
 
 E_ex, qps = excitations(H_mps, QuasiparticleAnsatz(), ψ, envs; num=16)
 states_mps = vcat(ψ, map(qp -> convert(FiniteMPS, qp), qps))
-E_mps = map(x -> expectation_value(x, H_mps), states_mps)
+energies_mps = map(x -> expectation_value(x, H_mps), states_mps)
 
 momenta_mps = Float64[]
-append!(momenta_mps, fix_degeneracies(states[1:1]))
-append!(momenta_mps, fix_degeneracies(states[2:2]))
-append!(momenta_mps, fix_degeneracies(states[3:3]))
-append!(momenta_mps, fix_degeneracies(states[4:5]))
-append!(momenta_mps, fix_degeneracies(states[6:9]))
-append!(momenta_mps, fix_degeneracies(states[10:11]))
-append!(momenta_mps, fix_degeneracies(states[12:12]))
-append!(momenta_mps, fix_degeneracies(states[13:16]))
+append!(momenta_mps, fix_degeneracies(states_mps[1:1]))
+append!(momenta_mps, fix_degeneracies(states_mps[2:2]))
+append!(momenta_mps, fix_degeneracies(states_mps[3:3]))
+append!(momenta_mps, fix_degeneracies(states_mps[4:5]))
+append!(momenta_mps, fix_degeneracies(states_mps[6:9]))
+append!(momenta_mps, fix_degeneracies(states_mps[10:11]))
+append!(momenta_mps, fix_degeneracies(states_mps[12:12]))
+append!(momenta_mps, fix_degeneracies(states_mps[13:16]))
 
 v = 2.0
-Δ = real.(energies[1:18] .- energies[1]) ./ (2π * v / L)
+Δ = real.(energies_mps[1:18] .- energies_mps[1]) ./ (2π * v / L)
 plot(momenta_mps, Δ;
-     seriestype=:scatter, xlabel="momentum", ylabel="energy", legend=false)
+     seriestype=:scatter, xlabel="momentum", ylabel="Δ", legend=false)
 vline!(p, [2π / L * i for i in -3:3]; color="gray", linestyle=:dash)
 hline!(p, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color="gray", linestyle=:dash)
 p
