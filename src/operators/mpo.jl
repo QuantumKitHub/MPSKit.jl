@@ -319,8 +319,8 @@ function TensorKit.dot(
     randomize!(ρ₀)
 
     val, = fixedpoint(
-        TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM; ishermitian,
-        krylovdim, kwargs...
+        TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM;
+        ishermitian, krylovdim, kwargs...
     )
     return val
 end
