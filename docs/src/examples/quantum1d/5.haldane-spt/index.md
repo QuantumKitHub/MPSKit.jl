@@ -1002,7 +1002,9 @@ can obtain an intuitive understanding of $\ket{\psi_+}$ by considering the follo
 diagram. If we denote the MPS tensors that make up the groundstate as $A_-$, we can
 construct a state in the trivial SPT phase that approximates the groundstate as follows:
 
-![spt-tensors.svg](spt-tensors.svg)
+```@raw html
+<img src="./spt-tensors.svg" alt="SPT tensors" class="color-invertible"/>
+```
 
 In other words, we can factorize a purely virtual isomorphism of $S = 1/2$ in order to
 obtain the groundstate. This then also explains the degeneracies in the entanglement

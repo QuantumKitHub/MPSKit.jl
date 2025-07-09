@@ -13,7 +13,9 @@ These objects can be created either directly from a vector of `MPOTensor`s, or s
 a dense operator (a subtype of `AbstractTensorMap`), which is then decomposed into a
 product of local tensors.
 
-![](../assets/mpo.svg)
+```@raw html
+<img src="../../assets/mpo.svg" alt="MPO" width="50%" class="color-invertible"/>
+```
 
 ```@setup operators
 using TensorKit, MPSKit, MPSKitModels

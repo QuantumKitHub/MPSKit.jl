@@ -10,7 +10,9 @@ using LinearAlgebra: dot
 
 A [`FiniteMPS`](@ref) is - at its core - a chain of mps tensors.
 
-![](finite_mps_definition.png)
+```@raw html
+<img src="../finite_mps_definition.png" alt="finite MPS" class="color-invertible"/>
+```
 
 ### Usage
 
@@ -37,7 +39,9 @@ You can take dot products, renormalize!, expectation values,....
 An MPS representation is not unique: for every virtual bond we can insert $C \cdot C^{-1}$ without altering the state.
 Then, by redefining the tensors on both sides of the bond to include one factor each, we can change the representation.
 
-![](mps_gauge_freedom.png)
+```@raw html
+<img src="../mps_gauge_freedom.png" alt="MPS gauge freedom" class="color-invertible"/>
+```
 
 There are two particularly convenient choices for the gauge at a site, the so-called left and right canonical form.
 For the left canonical form, all tensors to the left of a site are gauged such that they become left-isometries.

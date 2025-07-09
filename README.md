@@ -1,4 +1,4 @@
-<img src="https://github.com/QuantumKitHub/MPSKit.jl/blob/master/docs/src/assets/logo.svg" width="150">
+<img src="./docs/src/assets/logo_readme.svg" width="150">
 
 # MPSKit.jl
 

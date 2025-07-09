@@ -138,7 +138,9 @@ Given a state, it is possible to assign a momentum label
 through the use of the translation operator. This operator can be defined in MPO language
 either diagramatically as
 
-![translation operator MPO](translation_mpo.png)
+```@raw html
+<img src="translation_mpo.png" alt="translation operator"/>
+```
 
 or in the code as:
 
