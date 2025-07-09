@@ -139,7 +139,7 @@ through the use of the translation operator. This operator can be defined in MPO
 either diagramatically as
 
 ```@raw html
-<img src="translation_mpo.png" alt="translation operator"/>
+<img src="translation_mpo.png" alt="translation operator" class="color-invertible"/>
 ```
 
 or in the code as:
