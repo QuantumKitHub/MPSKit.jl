@@ -84,7 +84,9 @@ function contract_mpo_expval(
     return @plansor GL[1 2; 3] * AC[3 7; 5] * GR[5 8; 6] * O[2 4; 7 8] * conj(ACbar[1 4; 6])
 end
 # generic fallback
-contract_mpo_expval(AC, GL, O, GR, ACbar=AC) = dot(ACbar, MPO_AC_Hamiltonian(GL, O, GR) * AC)
+function contract_mpo_expval(AC, GL, O, GR, ACbar=AC)
+    return dot(ACbar, MPO_AC_Hamiltonian(GL, O, GR) * AC)
+end
 
 function contract_mpo_expval1(AC::MPSTensor, O::AbstractTensorMap, ACbar::MPSTensor=AC)
     numin(O) == numout(O) == 1 || throw(ArgumentError("O is not a single-site operator"))
