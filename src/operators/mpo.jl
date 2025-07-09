@@ -304,8 +304,8 @@ function TensorKit.dot(bra::InfiniteMPS, mpo::InfiniteMPO, ket::InfiniteMPS;
     ρ₀ = allocate_GL(bra, mpo, ket, 1)
     randomize!(ρ₀)
 
-    val, = fixedpoint(TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM; ishermitian,
-                      krylovdim, kwargs...)
+    val, = fixedpoint(flip(TransferMatrix(ket.AL, parent(mpo), bra.AL)), ρ₀, :LM;
+                      ishermitian, krylovdim, kwargs...)
     return val
 end
 
