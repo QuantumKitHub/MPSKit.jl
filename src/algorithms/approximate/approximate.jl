@@ -32,11 +32,11 @@ function approximate(ψ::InfiniteMPS,
                      algorithm,
                      envs=environments(ψ, toapprox))
     envs′ = Multiline([envs])
-    multi, envs = approximate(convert(MultilineMPS, ψ),
-                              (convert(MultilineMPO, toapprox[1]),
-                               convert(MultilineMPS, toapprox[2])), algorithm, envs′)
+    multi, envs, δ = approximate(convert(MultilineMPS, ψ),
+                                 (convert(MultilineMPO, toapprox[1]),
+                                  convert(MultilineMPS, toapprox[2])), algorithm, envs′)
     ψ = convert(InfiniteMPS, multi)
-    return ψ, envs
+    return ψ, envs, δ
 end
 
 # dispatch to in-place method
@@ -51,9 +51,9 @@ function approximate(ψ::InfiniteMPS,
                      algorithm::Union{IDMRG,IDMRG2},
                      envs=environments(ψ, toapprox))
     envs′ = Multiline([envs])
-    multi, envs = approximate(convert(MultilineMPS, ψ),
-                              (convert(MultilineMPO, toapprox[1]),
-                               convert(MultilineMPS, toapprox[2])), algorithm, envs′)
+    multi, envs, δ = approximate(convert(MultilineMPS, ψ),
+                                 (convert(MultilineMPO, toapprox[1]),
+                                  convert(MultilineMPS, toapprox[2])), algorithm, envs′)
     ψ = convert(InfiniteMPS, multi)
-    return ψ, envs
+    return ψ, envs, δ
 end
