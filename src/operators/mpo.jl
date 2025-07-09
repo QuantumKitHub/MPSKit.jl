@@ -309,7 +309,7 @@ function TensorKit.dot(bra::InfiniteMPS, mpo::InfiniteMPO, ket::InfiniteMPS;
     return val
 end
 
-function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO<:MPOTensor}
+function TensorKit.dot(mpo₁::FiniteMPO{<:MPOTensor}, mpo₂::FiniteMPO{<:MPOTensor})
     length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
     N = length(mpo₁)
     Nhalf = N ÷ 2
