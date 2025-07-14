@@ -1,5 +1,5 @@
 md"""
-# DQPT in the Ising model(@id demo_dqpt)
+# [DQPT in the Ising model](@id demo_dqpt)
 
 In this tutorial we will try to reproduce the results from
 [this paper](https://arxiv.org/pdf/1206.2505.pdf). The needed packages are

@@ -41,9 +41,10 @@ mathengine = MathJax3(Dict(:loader => Dict("load" => ["[tex]/physics"]),
 makedocs(;
          sitename="MPSKit.jl",
          format=Documenter.HTML(;
-                                prettyurls=get(ENV, "CI", nothing) == "true",
+                                prettyurls=true,
                                 mathengine,
-                                size_threshold=1024000),
+                                assets=["assets/custom.css"],
+                                size_threshold=1024000,),
          pages=["Home" => "index.md",
                 "Manual" => ["man/intro.md",
                              "man/states.md",
