@@ -34,7 +34,7 @@ struct GradientGrassmann{O<:OptimKit.OptimizationAlgorithm,F} <: Algorithm
 
     function GradientGrassmann(; method=ConjugateGradient, (finalize!)=OptimKit._finalize!,
                                tol=Defaults.tol, maxiter=Defaults.maxiter,
-                               verbosity=Defaults.verbosity - 1)
+                               verbosity=(Defaults.verbosity - 1))
         if isa(method, OptimKit.OptimizationAlgorithm)
             # We were given an optimisation method, just use it.
             m = method

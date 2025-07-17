@@ -133,7 +133,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
                 h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -152,7 +152,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
             h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+            al, c, ar = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
             normalize!(c)
 
             ψ.AL[end] = al
@@ -175,7 +175,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
                 h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -194,7 +194,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs=environments(os
             ac2 = AC2(ψ, 0; kind=:ACAR)
             h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
-            al, c, ar, = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
+            al, c, ar = tsvd!(ac2′; trunc=alg.trscheme, alg=alg.alg_svd)
             normalize!(c)
 
             ψ.AL[end] = al

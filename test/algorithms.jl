@@ -351,6 +351,7 @@ end
 
     @testset "Finite TimeDependent LazySum $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in
                                                                                    algs
+
         ψ, envs = timestep(ψ₀, Ht(1.0), 0.0, dt, alg)
         E = expectation_value(ψ, Ht(1.0), envs)
 
@@ -363,6 +364,7 @@ end
           MultipliedOperator(H, 1.45)
     @testset "Finite TimeDependent LazySum (fix negative t issue) $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in
                                                                                                           algs
+
         ψ, envs = timestep(ψ₀, Ht2, 0.0, dt, alg)
         E = expectation_value(ψ, Ht2(0.0), envs)
 
@@ -489,7 +491,7 @@ end
         fin_en = map([20, 10]) do len
             H = force_planar(transverse_field_ising(; L=len))
             ψ = FiniteMPS(rand, ComplexF64, len, ℙ^2, ℙ^10)
-            ψ, envs, = find_groundstate(ψ, H; verbosity)
+            ψ, envs = find_groundstate(ψ, H; verbosity)
 
             # find energy with quasiparticle ansatz
             energies_QP, ϕs = @inferred excitations(H, QuasiparticleAnsatz(), ψ, envs)
@@ -658,7 +660,7 @@ end
     for λ in [1.05, 2.0, 4.0]
         H = hamiltonian(λ)
         ψ = InfiniteMPS([ℂ^2], [ℂ^16])
-        ψ, envs, = find_groundstate(ψ, H, VUMPS(; maxiter=100, verbosity=0))
+        ψ, envs = find_groundstate(ψ, H, VUMPS(; maxiter=100, verbosity=0))
 
         numerical_susceptibility = fidelity_susceptibility(ψ, H, [H_X], envs; maxiter=10)
         @test numerical_susceptibility[1, 1] ≈ analytical_susceptibility(λ) atol = 1e-2
@@ -668,7 +670,7 @@ end
             Hfin = open_boundary_conditions(hamiltonian(λ), L)
             H_Xfin = open_boundary_conditions(H_X, L)
             ψ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^16)
-            ψ, envs, = find_groundstate(ψ, Hfin, DMRG(; verbosity=0))
+            ψ, envs = find_groundstate(ψ, Hfin, DMRG(; verbosity=0))
             numerical_susceptibility = fidelity_susceptibility(ψ, Hfin, [H_Xfin], envs;
                                                                maxiter=10)
             return numerical_susceptibility[1, 1] / L

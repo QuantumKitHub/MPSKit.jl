@@ -80,7 +80,7 @@ function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
+                    al, c, ar = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -104,7 +104,7 @@ function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, site] = al
@@ -129,7 +129,7 @@ function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
+                    al, c, ar = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -151,7 +151,7 @@ function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al

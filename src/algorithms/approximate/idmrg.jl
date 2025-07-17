@@ -75,7 +75,7 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
                                           kind=:ACAR)
-                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                    al, c, ar = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -95,7 +95,7 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
                                           kind=:ALAC)
-                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                    al, c, ar = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al

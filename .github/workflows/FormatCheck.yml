@@ -1,32 +1,16 @@
-name: FormatCheck
+name: "Format Check"
 
 on:
   push:
     branches:
+      - 'main'
       - 'master'
     tags: '*'
   pull_request:
-    branches:
-      - 'master'
-jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        version:
-          - '1' # automatically expands to the latest stable 1.x release of Julia
-        os:
-          - ubuntu-latest
-        arch:
-          - x64
-    steps:
-      - uses: julia-actions/setup-julia@latest
-        with:
-          version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
 
-      - uses: actions/checkout@v4
-      - name: Install JuliaFormatter and format
-        run: |
-          julia -e 'using Pkg; Pkg.add(PackageSpec(name="JuliaFormatter"))'
-          julia -e 'using JuliaFormatter; format(".", verbose=true)'
+jobs:
+  format-check:
+    name: "Format Check"
+    uses: "QuantumKitHub/.github/.github/workflows/formatcheck.yml@main"
+    with:
+      juliaformatter-version: "2"
