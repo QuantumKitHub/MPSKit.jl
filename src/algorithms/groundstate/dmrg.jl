@@ -7,7 +7,7 @@ Single-site DMRG algorithm for finding the dominant eigenvector.
 
 $(TYPEDFIELDS)
 """
-struct DMRG{A,F} <: Algorithm
+struct DMRG{A, F} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64
 
@@ -23,14 +23,16 @@ struct DMRG{A,F} <: Algorithm
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F
 end
-function DMRG(; tol=Defaults.tol, maxiter=Defaults.maxiter, alg_eigsolve=(;),
-              verbosity=Defaults.verbosity, finalize=Defaults._finalize)
+function DMRG(;
+        tol = Defaults.tol, maxiter = Defaults.maxiter, alg_eigsolve = (;),
+        verbosity = Defaults.verbosity, finalize = Defaults._finalize
+    )
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ? Defaults.alg_eigsolve(; alg_eigsolve...) :
-                    alg_eigsolve
+        alg_eigsolve
     return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize)
 end
 
-function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environments(ψ, H))
+function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environments(ψ, H))
     ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
     log = IterLog("DMRG")
@@ -49,7 +51,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs=environment
             end
             ϵ = maximum(ϵs)
 
-            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
+            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
 
             if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
@@ -74,7 +76,7 @@ Two-site DMRG algorithm for finding the dominant eigenvector.
 
 $(TYPEDFIELDS)
 """
-struct DMRG2{A,S,F} <: Algorithm
+struct DMRG2{A, S, F} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64
 
@@ -97,15 +99,17 @@ struct DMRG2{A,S,F} <: Algorithm
     finalize::F
 end
 # TODO: find better default truncation
-function DMRG2(; tol=Defaults.tol, maxiter=Defaults.maxiter, verbosity=Defaults.verbosity,
-               alg_eigsolve=(;), alg_svd=Defaults.alg_svd(), trscheme,
-               finalize=Defaults._finalize)
+function DMRG2(;
+        tol = Defaults.tol, maxiter = Defaults.maxiter, verbosity = Defaults.verbosity,
+        alg_eigsolve = (;), alg_svd = Defaults.alg_svd(), trscheme,
+        finalize = Defaults._finalize
+    )
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ? Defaults.alg_eigsolve(; alg_eigsolve...) :
-                    alg_eigsolve
+        alg_eigsolve
     return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_svd, trscheme, finalize)
 end
 
-function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environments(ψ, H))
+function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environments(ψ, H))
     ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
     log = IterLog("DMRG2")
@@ -121,10 +125,10 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
                 Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar, = tsvd!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
                 v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
-                             conj(ar[6; 3 4])
+                    conj(ar[6; 3 4])
                 ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
 
                 ψ.AC[pos] = (al, complex(c))
@@ -137,10 +141,10 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
                 Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(newA2center; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar, = tsvd!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
                 v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
-                             conj(ar[6; 3 4])
+                    conj(ar[6; 3 4])
                 ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
 
                 ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
@@ -148,7 +152,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
             end
 
             ϵ = maximum(ϵs)
-            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
+            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
 
             if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
@@ -164,6 +168,6 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs=environmen
     return ψ, envs, ϵ
 end
 
-function find_groundstate(ψ, H, alg::Union{DMRG,DMRG2}, envs...; kwargs...)
+function find_groundstate(ψ, H, alg::Union{DMRG, DMRG2}, envs...; kwargs...)
     return find_groundstate!(copy(ψ), H, alg, envs...; kwargs...)
 end

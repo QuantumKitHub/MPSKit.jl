@@ -1,12 +1,19 @@
-Base.@deprecate(approximate(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                            alg::VUMPS, envs...; kwargs...),
-                approximate(ψ, toapprox,
-                            VOMPS(; alg.tol, alg.maxiter, alg.finalize,
-                                  alg.verbosity, alg.alg_gauge, alg.alg_environments),
-                            envs...; kwargs...))
+Base.@deprecate(
+    approximate(
+        ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS}, alg::VUMPS, envs...;
+        kwargs...
+    ),
+    approximate(
+        ψ, toapprox,
+        VOMPS(; alg.tol, alg.maxiter, alg.finalize, alg.verbosity, alg.alg_gauge, alg.alg_environments),
+        envs...; kwargs...
+    )
+)
 
-function approximate(mps::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                     alg::VOMPS, envs=environments(mps, toapprox))
+function approximate(
+        mps::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS}, alg::VOMPS,
+        envs = environments(mps, toapprox)
+    )
     log = IterLog("VOMPS")
     iter = 0
     ϵ = calc_galerkin(mps, toapprox..., envs)
@@ -38,7 +45,7 @@ end
 
 # need to specialize a bunch of functions because different arguments are passed with tuples
 # TODO: can we avoid this?
-function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<:Tuple})
+function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple})
     ACs = localupdate_step!(it, state)
     mps = gauge_step!(it, state, ACs)
     envs = envs_step!(it, state, mps)
@@ -55,28 +62,32 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<:Tu
     return (mps, envs, ϵ), it.state
 end
 
-function localupdate_step!(::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<:Tuple},
-                           ::SerialScheduler)
+function localupdate_step!(
+        ::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
+    )
     alg_orth = QRpos()
 
     ACs = similar(state.mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
     foreach(eachsite(state.mps)) do site
-        AC = circshift([AC_projection(CartesianIndex(row, site), state.mps, state.operator,
-                                      state.envs)
-                        for row in 1:size(state.mps, 1)], 1)
-        C = circshift([C_projection(CartesianIndex(row, site), state.mps, state.operator,
-                                    state.envs)
-                       for row in 1:size(state.mps, 1)], 1)
-        dst_ACs[site] = regauge!(AC, C; alg=alg_orth)
+        AC = map(1:size(state.mps, 1)) do row
+            AC_projection(CartesianIndex(row, site), state.mps, state.operator, state.envs)
+        end
+        circshift!(AC, 1)
+        C = map(1:size(state.mps, 1)) do row
+            C_projection(CartesianIndex(row, site), state.mps, state.operator, state.envs)
+        end
+        circshift!(C, 1)
+        dst_ACs[site] = regauge!(AC, C; alg = alg_orth)
         return nothing
     end
 
     return ACs
 end
-function localupdate_step!(::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<:Tuple},
-                           scheduler)
+function localupdate_step!(
+        ::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, scheduler
+    )
     alg_orth = QRpos()
 
     ACs = similar(state.mps.AC)
@@ -86,24 +97,26 @@ function localupdate_step!(::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<
         local AC, C
         @sync begin
             Threads.@spawn begin
-                AC = circshift([AC_projection(CartesianIndex(row, site), state.mps,
-                                              state.operator, state.envs)
-                                for row in 1:size(state.mps, 1)], 1)
+                AC = map(1:size(state.mps, 1)) do row
+                    AC_projection(CartesianIndex(row, site), state.mps, state.operator, state.envs)
+                end
+                circshift!(AC, 1)
             end
             Threads.@spawn begin
-                C = circshift([C_projection(CartesianIndex(row, site), state.mps,
-                                            state.operator, state.envs)
-                               for row in 1:size(state.mps, 1)], 1)
+                C = map(1:size(state.mps, 1)) do row
+                    C_projection(CartesianIndex(row, site), state.mps, state.operator, state.envs)
+                end
+                circshift!(C, 1)
             end
         end
-        dst_ACs[site] = regauge!(AC, C; alg=alg_orth)
+        dst_ACs[site] = regauge!(AC, C; alg = alg_orth)
         return nothing
     end
 
     return ACs
 end
 
-function envs_step!(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any,<:Tuple}, mps)
+function envs_step!(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, mps)
     alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
     return recalculate!(state.envs, mps, state.operator...; alg_environments.tol)
 end

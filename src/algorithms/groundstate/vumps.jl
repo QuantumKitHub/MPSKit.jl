@@ -36,7 +36,7 @@ $(TYPEDFIELDS)
 end
 
 # Internal state of the VUMPS algorithm
-struct VUMPSState{S,O,E}
+struct VUMPSState{S, O, E}
     mps::S
     operator::O
     envs::E
@@ -45,13 +45,16 @@ struct VUMPSState{S,O,E}
     which::Symbol
 end
 
-function find_groundstate(mps::InfiniteMPS, operator, alg::VUMPS,
-                          envs=environments(mps, operator))
-    return dominant_eigsolve(operator, mps, alg, envs; which=:SR)
+function find_groundstate(
+        mps::InfiniteMPS, operator, alg::VUMPS, envs = environments(mps, operator)
+    )
+    return dominant_eigsolve(operator, mps, alg, envs; which = :SR)
 end
 
-function dominant_eigsolve(operator, mps, alg::VUMPS, envs=environments(mps, operator);
-                           which)
+function dominant_eigsolve(
+        operator, mps, alg::VUMPS, envs = environments(mps, operator);
+        which
+    )
     log = IterLog("VUMPS")
     iter = 0
     ϵ = calc_galerkin(mps, operator, mps, envs)
@@ -81,7 +84,7 @@ function dominant_eigsolve(operator, mps, alg::VUMPS, envs=environments(mps, ope
     end
 end
 
-function Base.iterate(it::IterativeSolver{<:VUMPS}, state=it.state)
+function Base.iterate(it::IterativeSolver{<:VUMPS}, state = it.state)
     ACs = localupdate_step!(it, state)
     mps = gauge_step!(it, state, ACs)
     envs = envs_step!(it, state, mps)
@@ -98,8 +101,9 @@ function Base.iterate(it::IterativeSolver{<:VUMPS}, state=it.state)
     return (mps, envs, ϵ), it.state
 end
 
-function localupdate_step!(it::IterativeSolver{<:VUMPS}, state,
-                           scheduler=Defaults.scheduler[])
+function localupdate_step!(
+        it::IterativeSolver{<:VUMPS}, state, scheduler = Defaults.scheduler[]
+    )
     alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
     alg_orth = QRpos()
 
@@ -110,24 +114,26 @@ function localupdate_step!(it::IterativeSolver{<:VUMPS}, state,
     dst_ACs = mps isa Multiline ? eachcol(ACs) : ACs
 
     tforeach(eachsite(mps), src_ACs, src_Cs; scheduler) do site, AC₀, C₀
-        dst_ACs[site] = _localupdate_vumps_step!(site, mps, state.operator, state.envs,
-                                                 AC₀, C₀; parallel=false, alg_orth,
-                                                 state.which, alg_eigsolve)
+        dst_ACs[site] = _localupdate_vumps_step!(
+            site, mps, state.operator, state.envs, AC₀, C₀;
+            parallel = false, alg_orth, state.which, alg_eigsolve
+        )
         return nothing
     end
 
     return ACs
 end
 
-function _localupdate_vumps_step!(site, mps, operator, envs, AC₀, C₀;
-                                  parallel::Bool=false, alg_orth=QRpos(),
-                                  alg_eigsolve=Defaults.eigsolver, which)
+function _localupdate_vumps_step!(
+        site, mps, operator, envs, AC₀, C₀;
+        parallel::Bool = false, alg_orth = QRpos(), alg_eigsolve = Defaults.eigsolver, which
+    )
     if !parallel
         Hac = AC_hamiltonian(site, mps, operator, mps, envs)
         _, AC = fixedpoint(Hac, AC₀, which, alg_eigsolve)
         Hc = C_hamiltonian(site, mps, operator, mps, envs)
         _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
-        return regauge!(AC, C; alg=alg_orth)
+        return regauge!(AC, C; alg = alg_orth)
     end
 
     local AC, C
@@ -141,7 +147,7 @@ function _localupdate_vumps_step!(site, mps, operator, envs, AC₀, C₀;
             _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
         end
     end
-    return regauge!(AC, C; alg=alg_orth)
+    return regauge!(AC, C; alg = alg_orth)
 end
 
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)

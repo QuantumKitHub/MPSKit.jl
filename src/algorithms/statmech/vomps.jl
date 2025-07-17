@@ -34,7 +34,7 @@ $(TYPEDFIELDS)
 end
 
 # Internal state of the VOMPS algorithm
-struct VOMPSState{S,O,E}
+struct VOMPSState{S, O, E}
     mps::S
     operator::O
     envs::E
@@ -42,13 +42,16 @@ struct VOMPSState{S,O,E}
     ϵ::Float64
 end
 
-function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS,
-                          envs=environments(ψ, O))
-    return dominant_eigsolve(O, ψ, alg, envs; which=:LM)
+function leading_boundary(
+        ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS, envs = environments(ψ, O)
+    )
+    return dominant_eigsolve(O, ψ, alg, envs; which = :LM)
 end
 
-function dominant_eigsolve(operator, mps, alg::VOMPS, envs=environments(mps, operator);
-                           which)
+function dominant_eigsolve(
+        operator, mps, alg::VOMPS, envs = environments(mps, operator);
+        which
+    )
     @assert which === :LM "VOMPS only supports the LM eigenvalue problem"
     log = IterLog("VOMPS")
     iter = 0
@@ -96,8 +99,9 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state)
     return (mps, envs, ϵ), it.state
 end
 
-function localupdate_step!(::IterativeSolver{<:VOMPS}, state,
-                           scheduler=Defaults.scheduler[])
+function localupdate_step!(
+        ::IterativeSolver{<:VOMPS}, state, scheduler = Defaults.scheduler[]
+    )
     alg_orth = QRpos()
     mps = state.mps
     src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
@@ -106,20 +110,23 @@ function localupdate_step!(::IterativeSolver{<:VOMPS}, state,
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
     tforeach(eachsite(mps), src_ACs, src_Cs; scheduler) do site, AC₀, C₀
-        dst_ACs[site] = _localupdate_vomps_step!(site, mps, state.operator, state.envs,
-                                                 AC₀, C₀; alg_orth, parallel=false)
+        dst_ACs[site] = _localupdate_vomps_step!(
+            site, mps, state.operator, state.envs,
+            AC₀, C₀; alg_orth, parallel = false
+        )
         return nothing
     end
 
     return ACs
 end
 
-function _localupdate_vomps_step!(site, mps, operator, envs, AC₀, C₀; parallel::Bool=false,
-                                  alg_orth=QRpos())
+function _localupdate_vomps_step!(
+        site, mps, operator, envs, AC₀, C₀; parallel::Bool = false, alg_orth = QRpos()
+    )
     if !parallel
         AC = AC_hamiltonian(site, mps, operator, mps, envs) * AC₀
         C = C_hamiltonian(site, mps, operator, mps, envs) * C₀
-        return regauge!(AC, C; alg=alg_orth)
+        return regauge!(AC, C; alg = alg_orth)
     end
 
     local AC, C
@@ -127,7 +134,7 @@ function _localupdate_vomps_step!(site, mps, operator, envs, AC₀, C₀; parall
         @spawn AC = AC_hamiltonian(site, mps, operator, mps, envs) * AC₀
         @spawn C = C_hamiltonian(site, mps, operator, mps, envs) * C₀
     end
-    return regauge!(AC, C; alg=alg_orth)
+    return regauge!(AC, C; alg = alg_orth)
 end
 
 function gauge_step!(it::IterativeSolver{<:VOMPS}, state, ACs::AbstractVector)

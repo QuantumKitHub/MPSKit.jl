@@ -15,9 +15,10 @@ through each of the time points obtained by iterating t_span.
 function time_evolve end, function time_evolve! end
 
 for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time_evolve!))
-    @eval function $time_evolve(ψ, H, t_span::AbstractVector{<:Number}, alg,
-                                envs=environments(ψ, H);
-                                verbosity::Int=0)
+    @eval function $time_evolve(
+            ψ, H, t_span::AbstractVector{<:Number}, alg, envs = environments(ψ, H);
+            verbosity::Int = 0
+        )
         log = IterLog("TDVP")
         LoggingExtras.withlevel(; verbosity) do
             @infov 2 loginit!(log, 0, t)
@@ -26,7 +27,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
                 dt = t_span[iter + 1] - t
 
                 ψ, envs = $timestep(ψ, H, t, dt, alg, envs)
-                ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ),typeof(envs)}
+                ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
 
                 @infov 3 logiter!(log, iter, 0, t)
             end

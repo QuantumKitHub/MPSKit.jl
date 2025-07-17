@@ -1,5 +1,6 @@
-function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG,
-                          envs=environments(ψ, operator))
+function leading_boundary(
+        ψ::MultilineMPS, operator, alg::IDMRG, envs = environments(ψ, operator)
+    )
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
     local iter
@@ -60,8 +61,9 @@ function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG,
     return ψ, envs, ϵ
 end
 
-function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
-                          envs=environments(ψ, operator))
+function leading_boundary(
+        ψ::MultilineMPS, operator, alg::IDMRG2, envs = environments(ψ, operator)
+    )
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
@@ -75,12 +77,12 @@ function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
 
             # sweep from left to right
             for site in 1:(size(ψ, 2) - 1)
-                ac2 = AC2(ψ, site; kind=:ACAR)
+                ac2 = AC2(ψ, site; kind = :ACAR)
                 h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
+                    al, c, ar, = tsvd!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -99,12 +101,12 @@ function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
             site = size(ψ, 2)
             ψ.AL[:, end] .= ψ.AC[:, end] ./ ψ.C[:, end]
             ψ.AC[:, 1] .= _mul_tail.(ψ.AL[:, 1], ψ.C[:, 1])
-            ac2 = AC2(ψ, site; kind=:ALAC)
+            ac2 = AC2(ψ, site; kind = :ALAC)
             h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar, = tsvd!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, site] = al
@@ -124,12 +126,12 @@ function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
 
             # sweep from right to left
             for site in reverse(1:(size(ψ, 2) - 1))
-                ac2 = AC2(ψ, site; kind=:ALAC)
+                ac2 = AC2(ψ, site; kind = :ALAC)
                 h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
+                    al, c, ar, = tsvd!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -146,20 +148,21 @@ function leading_boundary(ψ::MultilineMPS, operator, alg::IDMRG2,
             # update the edge
             ψ.AC[:, end] .= _mul_front.(ψ.C[:, end - 1], ψ.AR[:, end])
             ψ.AR[:, 1] .= _transpose_front.(ψ.C[:, end] .\ _transpose_tail.(ψ.AC[:, 1]))
-            ac2 = AC2(ψ, 0; kind=:ACAR)
+            ac2 = AC2(ψ, 0; kind = :ACAR)
             h = AC2_hamiltonian(0, ψ, operator, ψ, envs)
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar, = tsvd!(ac2′[row]; trunc=alg.trscheme, alg=alg.alg_svd)
+                al, c, ar, = tsvd!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al
                 ψ.C[row + 1, end] = complex(c)
                 ψ.AR[row + 1, 1] = _transpose_front(ar)
 
-                ψ.AR[row + 1, end] = _transpose_front(ψ.C[row + 1, end - 1] \
-                                                      _transpose_tail(al * c))
+                ψ.AR[row + 1, end] = _transpose_front(
+                    ψ.C[row + 1, end - 1] \ _transpose_tail(al * c)
+                )
                 ψ.AC[row + 1, 1] = _transpose_front(c * ar)
             end
 
