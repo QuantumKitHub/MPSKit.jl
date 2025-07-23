@@ -786,7 +786,7 @@ module TestAlgorithms
             ψ₁ = FiniteMPS(L, ℂ^2, ℂ^20)
             ψ₂ = FiniteMPS(L, ℂ^2, ℂ^10)
 
-            O = finite_classical_ising(L)
+            O = classical_ising(; L)
             ψ₂, = approximate(ψ₂, (O, ψ₁), alg)
 
             @test norm(O * ψ₁ - ψ₂) ≈ 0 atol = 0.001
