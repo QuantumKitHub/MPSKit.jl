@@ -9,7 +9,7 @@ end
 
 Base.show(io::IO, mpo::AbstractMPO) = show(convert(IOContext, io), mpo)
 function Base.show(io::IOContext, mpo::AbstractMPO)
-    charset = (; top="┬", bot="┴", mid="┼", ver="│", dash="──")
+    charset = (; top = "┬", bot = "┴", mid = "┼", ver = "│", dash = "──")
     limit = get(io, :limit, false)::Bool
     half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
     L = length(mpo)
@@ -23,14 +23,20 @@ function Base.show(io::IOContext, mpo::AbstractMPO)
     for site in reverse(1:L)
         if site < half_screen_rows || site > L - half_screen_rows
             if site == L && isfinite
-                println(io, charset.top, " $mpoletter[$site]: ",
-                        repeat(" ", npad - floor(Int, log10(site))), mpo[site])
+                println(
+                    io, charset.top, " $mpoletter[$site]: ",
+                    repeat(" ", npad - floor(Int, log10(site))), mpo[site]
+                )
             elseif (site == 1) && isfinite
-                println(io, charset.bot, " $mpoletter[$site]: ",
-                        repeat(" ", npad - floor(Int, log10(site))), mpo[site])
+                println(
+                    io, charset.bot, " $mpoletter[$site]: ",
+                    repeat(" ", npad - floor(Int, log10(site))), mpo[site]
+                )
             else
-                println(io, charset.mid, " $mpoletter[$site]: ",
-                        repeat(" ", npad - floor(Int, log10(site))), mpo[site])
+                println(
+                    io, charset.mid, " $mpoletter[$site]: ",
+                    repeat(" ", npad - floor(Int, log10(site))), mpo[site]
+                )
             end
         elseif site == half_screen_rows
             println(io, "   ", "⋮")
@@ -56,7 +62,7 @@ This visualization is useful for quickly inspecting the structure and sparsity p
 
 If called without an `io` argument, output is printed to `stdout`.
 """
-function braille(io::IO, H::Union{SparseMPO,MPOHamiltonian})
+function braille(io::IO, H::Union{SparseMPO, MPOHamiltonian})
     dash = "🭻"
     stride = 2 #amount of dashes between braille
     L = length(H)
@@ -75,8 +81,9 @@ function braille(io::IO, H::Union{SparseMPO,MPOHamiltonian})
         line *= ((i == 1 && !isfinite(H)) ? ("... " * dash) : " ")
         line *= (i > 1 && !isfinite(H)) ? "    " : ""
         for (j, braille) in enumerate(brailles)
-            line *= (checkbounds(Bool, braille, i) ? braille[i] :
-                     repeat(" ", length(braille[1])))
+            line *= (
+                checkbounds(Bool, braille, i) ? braille[i] : repeat(" ", length(braille[1]))
+            )
             if j < L
                 line *= repeat(((i == 1) ? dash : " "), stride)
             end
@@ -87,4 +94,4 @@ function braille(io::IO, H::Union{SparseMPO,MPOHamiltonian})
     return nothing
 end
 
-braille(H::Union{SparseMPO,MPOHamiltonian}) = braille(stdout, H)
+braille(H::Union{SparseMPO, MPOHamiltonian}) = braille(stdout, H)

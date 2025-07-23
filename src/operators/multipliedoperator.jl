@@ -3,7 +3,7 @@
         - An operator op (MPO, Hamiltonian, ...)
         - An object f that gets multiplied with the operator (Number, function, ...) 
 """
-struct MultipliedOperator{O,F}
+struct MultipliedOperator{O, F}
     op::O
     f::F
 end
@@ -13,7 +13,7 @@ end
         - An operator op (MPO, Hamiltonian, ...)
         - An function f that gives the time-dependence according to op(t) = f(t)*op
 """
-const TimedOperator{O} = MultipliedOperator{O,<:Function}
+const TimedOperator{O} = MultipliedOperator{O, <:Function}
 TimedOperator(x) = MultipliedOperator(x, t -> One())
 
 """
@@ -21,7 +21,7 @@ TimedOperator(x) = MultipliedOperator(x, t -> One())
         - An operator (MPO, Hamiltonian, ...)
         - A number f that gets multiplied with the operator
 """
-const UntimedOperator{O} = MultipliedOperator{O,<:Number}
+const UntimedOperator{O} = MultipliedOperator{O, <:Number}
 UntimedOperator(x) = MultipliedOperator(x, One())
 
 # Holy traits
@@ -52,6 +52,6 @@ Base.:*(op::UntimedOperator, g::Function) = MultipliedOperator(op.op, t -> g(t) 
 function environments(st, x::MultipliedOperator, args...; kwargs...)
     return environments(st, x.op, args...; kwargs...)
 end
-function recalculate!(envs, below, x::MultipliedOperator, above=below; kwargs...)
+function recalculate!(envs, below, x::MultipliedOperator, above = below; kwargs...)
     return recalculate!(envs, below, x.op, above; kwargs...)
 end

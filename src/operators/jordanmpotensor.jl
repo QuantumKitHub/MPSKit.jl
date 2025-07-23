@@ -11,20 +11,22 @@ A tensor map that represents the upper triangular block form of a matrix product
 \\end{pmatrix}
 ```
 """
-struct JordanMPOTensor{E,S,
-                       TA<:AbstractTensorMap{E,S,2,2},
-                       TB<:AbstractTensorMap{E,S,2,1},
-                       TC<:AbstractTensorMap{E,S,1,2},
-                       TD<:AbstractTensorMap{E,S,1,1}} <: AbstractBlockTensorMap{E,S,2,2}
-    V::TensorMapSumSpace{S,2,2}
-    A::SparseBlockTensorMap{TA,E,S,2,2,4}
-    B::SparseBlockTensorMap{TB,E,S,2,1,3}
-    C::SparseBlockTensorMap{TC,E,S,1,2,3}
-    D::SparseBlockTensorMap{TD,E,S,1,1,2}
+struct JordanMPOTensor{
+        E, S,
+        TA <: AbstractTensorMap{E, S, 2, 2},
+        TB <: AbstractTensorMap{E, S, 2, 1},
+        TC <: AbstractTensorMap{E, S, 1, 2},
+        TD <: AbstractTensorMap{E, S, 1, 1},
+    } <: AbstractBlockTensorMap{E, S, 2, 2}
+    V::TensorMapSumSpace{S, 2, 2}
+    A::SparseBlockTensorMap{TA, E, S, 2, 2, 4}
+    B::SparseBlockTensorMap{TB, E, S, 2, 1, 3}
+    C::SparseBlockTensorMap{TC, E, S, 1, 2, 3}
+    D::SparseBlockTensorMap{TD, E, S, 1, 1, 2}
     # uninitialized constructor
-    function JordanMPOTensor{E,S,TA,TB,TC,TD}(::UndefInitializer,
-                                              V::TensorMapSumSpace{S,2,2}) where {E,S,TA,TB,
-                                                                                  TC,TD}
+    function JordanMPOTensor{E, S, TA, TB, TC, TD}(
+            ::UndefInitializer, V::TensorMapSumSpace{S, 2, 2}
+        ) where {E, S, TA, TB, TC, TD}
         allVs = eachspace(V)
 
         # Note that this is a bit of a hack using end to get the last index:
@@ -41,36 +43,35 @@ struct JordanMPOTensor{E,S,
         VD = removeunit(removeunit(space(allVs[1, 1, 1, end:end]), 4), 1)
         D = SparseBlockTensorMap{TD}(undef, VD)
 
-        return new{E,S,TA,TB,TC,TD}(V, A, B, C, D)
+        return new{E, S, TA, TB, TC, TD}(V, A, B, C, D)
     end
 
     # constructor from data
-    function JordanMPOTensor{E,S,TA,TB,TC,TD}(V::TensorMapSumSpace,
-                                              A::SparseBlockTensorMap{TA,E,S,2,2},
-                                              B::SparseBlockTensorMap{TB,E,S,2,1},
-                                              C::SparseBlockTensorMap{TC,E,S,1,2},
-                                              D::SparseBlockTensorMap{TD,E,S,1,1}) where {E,
-                                                                                          S,
-                                                                                          TA,
-                                                                                          TB,
-                                                                                          TC,
-                                                                                          TD}
-        return new{E,S,TA,TB,TC,TD}(V, A, B, C, D)
+    function JordanMPOTensor{E, S, TA, TB, TC, TD}(
+            V::TensorMapSumSpace,
+            A::SparseBlockTensorMap{TA, E, S, 2, 2},
+            B::SparseBlockTensorMap{TB, E, S, 2, 1},
+            C::SparseBlockTensorMap{TC, E, S, 1, 2},
+            D::SparseBlockTensorMap{TD, E, S, 1, 1}
+        ) where {E, S, TA, TB, TC, TD}
+        return new{E, S, TA, TB, TC, TD}(V, A, B, C, D)
     end
 end
 
-function JordanMPOTensor{E,S}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E,S}
+function JordanMPOTensor{E, S}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E, S}
     return jordanmpotensortype(S, E)(undef, V)
 end
-function JordanMPOTensor{E}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E,S}
-    return JordanMPOTensor{E,S}(undef, V)
+function JordanMPOTensor{E}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E, S}
+    return JordanMPOTensor{E, S}(undef, V)
 end
 
-function JordanMPOTensor(V::TensorMapSumSpace{S,2,2},
-                         A::SparseBlockTensorMap{TA,E,S,2,2},
-                         B::SparseBlockTensorMap{TB,E,S,2,1},
-                         C::SparseBlockTensorMap{TC,E,S,1,2},
-                         D::SparseBlockTensorMap{TD,E,S,1,1}) where {E,S,TA,TB,TC,TD}
+function JordanMPOTensor(
+        V::TensorMapSumSpace{S, 2, 2},
+        A::SparseBlockTensorMap{TA, E, S, 2, 2},
+        B::SparseBlockTensorMap{TB, E, S, 2, 1},
+        C::SparseBlockTensorMap{TC, E, S, 1, 2},
+        D::SparseBlockTensorMap{TD, E, S, 1, 1}
+    ) where {E, S, TA, TB, TC, TD}
     allVs = eachspace(V)
     VA = space(allVs[2:(end - 1), 1, 1, 2:(end - 1)])
     VA == space(A) || throw(SpaceMismatch("A-block has incompatible spaces"))
@@ -84,10 +85,10 @@ function JordanMPOTensor(V::TensorMapSumSpace{S,2,2},
     VD = removeunit(removeunit(space(allVs[1, 1, 1, end:end]), 4), 1)
     VD == space(D) || throw(SpaceMismatch("D-block has incompatible spaces"))
 
-    return JordanMPOTensor{E,S,TA,TB,TC,TD}(V, A, B, C, D)
+    return JordanMPOTensor{E, S, TA, TB, TC, TD}(V, A, B, C, D)
 end
 
-function JordanMPOTensor(W::SparseBlockTensorMap{TT,E,S,2,2}) where {TT,E,S}
+function JordanMPOTensor(W::SparseBlockTensorMap{TT, E, S, 2, 2}) where {TT, E, S}
     @assert W[1, 1, 1, 1] isa BraidingTensor && W[end, 1, 1, end] isa BraidingTensor
     # @assert all(I -> I[1] ≤ I[4], nonzero_keys(W))
 
@@ -96,39 +97,39 @@ function JordanMPOTensor(W::SparseBlockTensorMap{TT,E,S,2,2}) where {TT,E,S}
     C = W[1, 1, 1, 2:(end - 1)]
     D = W[1, 1, 1, end:end] # ensure still blocktensor to allow for sparse
 
-    return JordanMPOTensor(space(W),
-                           A,
-                           removeunit(B, 4),
-                           removeunit(C, 1),
-                           removeunit(removeunit(D, 4), 1))
+    return JordanMPOTensor(
+        space(W), A, removeunit(B, 4), removeunit(C, 1), removeunit(removeunit(D, 4), 1)
+    )
 end
 
-function jordanmpotensortype(::Type{S}, ::Type{E}) where {S<:VectorSpace,E<:Number}
-    TA = Union{tensormaptype(S, 2, 2, E),BraidingTensor{E,S}}
+function jordanmpotensortype(::Type{S}, ::Type{E}) where {S <: VectorSpace, E <: Number}
+    TA = Union{tensormaptype(S, 2, 2, E), BraidingTensor{E, S}}
     TB = tensormaptype(S, 2, 1, E)
     TC = tensormaptype(S, 1, 2, E)
     TD = tensormaptype(S, 1, 1, E)
-    return JordanMPOTensor{E,S,TA,TB,TC,TD}
+    return JordanMPOTensor{E, S, TA, TB, TC, TD}
 end
-function jordanmpotensortype(::Type{O}) where {O<:MPOTensor}
+function jordanmpotensortype(::Type{O}) where {O <: MPOTensor}
     return jordanmpotensortype(spacetype(O), scalartype(O))
 end
 
-function Base.similar(W::JordanMPOTensor, ::Type{T}) where {T<:Number}
+function Base.similar(W::JordanMPOTensor, ::Type{T}) where {T <: Number}
     return JordanMPOTensor{T}(undef, space(W))
 end
 
 # Properties
 # ----------
 TensorKit.space(W::JordanMPOTensor) = W.V
-Base.eltype(::Type{JordanMPOTensor{E,S,TA,TB,TC,TD}}) where {E,S,TA,TB,TC,TD} = TA
+Base.eltype(::Type{JordanMPOTensor{E, S, TA, TB, TC, TD}}) where {E, S, TA, TB, TC, TD} = TA
 
 function Base.haskey(W::JordanMPOTensor, I::CartesianIndex{4})
     Base.checkbounds(W, I.I...)
     # only has braiding tensors if sizes are large enough
     sz = size(W)
-    (sz[1] > 1 && I == CartesianIndex(1, 1, 1, 1) ||
-     sz[4] > 1 && I == CartesianIndex(sz[1], 1, 1, sz[4])) && return true
+    (
+        sz[1] > 1 && I == CartesianIndex(1, 1, 1, 1) ||
+            sz[4] > 1 && I == CartesianIndex(sz[1], 1, 1, sz[4])
+    ) && return true
 
     row, col = I.I[1], I.I[4]
 
@@ -153,8 +154,9 @@ BlockTensorKit.issparse(W::JordanMPOTensor) = true
 # ----------
 function SparseBlockTensorMap(W::JordanMPOTensor)
     τ = BraidingTensor{scalartype(W)}(eachspace(W)[1])
-    W′ = SparseBlockTensorMap{AbstractTensorMap{scalartype(W),spacetype(W),2,2}}(undef_blocks,
-                                                                                 space(W))
+    W′ = SparseBlockTensorMap{AbstractTensorMap{scalartype(W), spacetype(W), 2, 2}}(
+        undef_blocks, space(W)
+    )
     if size(W, 4) > 1
         W′[1, 1, 1, 1] = τ
     end
@@ -185,12 +187,12 @@ end
 # --------
 
 @inline Base.getindex(W::JordanMPOTensor, I::CartesianIndex{4}) = W[I.I...]
-@propagate_inbounds function Base.getindex(W::JordanMPOTensor, I::Vararg{Int,4})
+@propagate_inbounds function Base.getindex(W::JordanMPOTensor, I::Vararg{Int, 4})
     @assert I[2] == I[3] == 1
     i = I[1]
     j = I[4]
     if (size(W, 4) > 1 && i == 1 && j == 1) ||
-       (size(W, 1) > 1 && i == size(W, 1) && j == size(W, 4))
+            (size(W, 1) > 1 && i == size(W, 1) && j == size(W, 4))
         return BraidingTensor{scalartype(W)}(eachspace(W)[1])
     elseif i == 1 && j == size(W, 4)
         return insertrightunit(insertleftunit(only(W.D), 1), 3)
@@ -208,8 +210,9 @@ end
 @inline function Base.setindex!(W::JordanMPOTensor, v::MPOTensor, I::CartesianIndex{4})
     return setindex!(W, v, I.I...)
 end
-@propagate_inbounds function Base.setindex!(W::JordanMPOTensor, v::MPOTensor,
-                                            I::Vararg{Int,4})
+@propagate_inbounds function Base.setindex!(
+        W::JordanMPOTensor, v::MPOTensor, I::Vararg{Int, 4}
+    )
     @assert I[2] == I[3] == 1
     i = I[1]
     j = I[4]
@@ -222,7 +225,7 @@ end
     elseif 1 < i < size(W, 1) && 1 < j < size(W, 4)
         W.A[i - 1, 1, 1, j - 1] = v
     elseif (size(W, 4) > 1 && i == 1 && j == 1) ||
-           (size(W, 1) > 1 && i == size(W, 1) && j == size(W, 4))
+            (size(W, 1) > 1 && i == size(W, 1) && j == size(W, 4))
         v isa BraidingTensor || throw(ArgumentError("Cannot set BraidingTensor"))
     else
         throw(ArgumentError("Cannot set index ($i, 1, 1, $j)"))
@@ -271,7 +274,7 @@ function BlockTensorKit.nonzero_pairs(W::JordanMPOTensor)
 end
 function BlockTensorKit.nonzero_length(W::JordanMPOTensor)
     return nonzero_length(W.A) + nonzero_length(W.B) + nonzero_length(W.C) +
-           nonzero_length(W.D) + Int(size(W, 1) > 1) + Int(size(W, 4) > 1)
+        nonzero_length(W.D) + Int(size(W, 1) > 1) + Int(size(W, 4) > 1)
 end
 
 # linalg
@@ -289,10 +292,10 @@ function fuse_mul_mpo(O1::JordanMPOTensor, O2::JordanMPOTensor)
     V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
         physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
     O = jordanmpotensortype(TT)(undef, V)
-    cartesian_inds = reshape(CartesianIndices(O),
-                             size(O2, 1), size(O1, 1),
-                             size(O, 2), size(O, 3),
-                             size(O2, 4), size(O1, 4))
+    cartesian_inds = reshape(
+        CartesianIndices(O),
+        size(O2, 1), size(O1, 1), size(O, 2), size(O, 3), size(O2, 4), size(O1, 4)
+    )
     for (I, o2) in nonzero_pairs(O2), (J, o1) in nonzero_pairs(O1)
         K = cartesian_inds[I[1], J[1], I[2], I[3], I[4], J[4]]
         O[K] = fuse_mul_mpo(o1, o2)
@@ -313,8 +316,8 @@ function add_physical_charge(O::JordanMPOTensor, charge::Sector)
     sectortype(O) == typeof(charge) || throw(SectorMismatch())
     auxspace = Vect[typeof(charge)](charge => 1)'
     Vdst = left_virtualspace(O) ⊗
-           fuse(physicalspace(O), auxspace) ←
-           fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
+        fuse(physicalspace(O), auxspace) ←
+        fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
     Odst = JordanMPOTensor{scalartype(O)}(undef, Vdst)
     for (I, v) in nonzero_pairs(O)
         Odst[I] = add_physical_charge(v, charge)
@@ -339,9 +342,9 @@ end
 # Avoid falling back to `norm(W1 - W2)` which has to convert to SparseBlockTensorMap
 function Base.isapprox(W1::JordanMPOTensor, W2::JordanMPOTensor; kwargs...)
     return isapprox(W1.A, W2.A; kwargs...) &&
-           isapprox(W1.B, W2.B; kwargs...) &&
-           isapprox(W1.C, W2.C; kwargs...) &&
-           isapprox(W1.D, W2.D; kwargs...)
+        isapprox(W1.B, W2.B; kwargs...) &&
+        isapprox(W1.C, W2.C; kwargs...) &&
+        isapprox(W1.D, W2.D; kwargs...)
 end
 
 function Base.summary(io::IO, W::JordanMPOTensor)
