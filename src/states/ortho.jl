@@ -1,7 +1,7 @@
 # Algorithms
 # ----------
 
-const _GAUGE_ALG_EIGSOLVE = Defaults.alg_eigsolve(; ishermitian=false, tol_factor=1)
+const _GAUGE_ALG_EIGSOLVE = Defaults.alg_eigsolve(; ishermitian = false, tol_factor = 1)
 
 """
 $(TYPEDEF)
@@ -71,10 +71,12 @@ struct MixedCanonical <: Algorithm
     order::Symbol
 end
 
-function MixedCanonical(; tol::Real=Defaults.tolgauge, maxiter::Int=Defaults.maxiter,
-                        verbosity::Int=VERBOSE_WARN, alg_orth=QRpos(),
-                        alg_eigsolve=_GAUGE_ALG_EIGSOLVE,
-                        eig_miniter::Int=10, order::Symbol=:LR)
+function MixedCanonical(;
+        tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter,
+        verbosity::Int = VERBOSE_WARN, alg_orth = QRpos(),
+        alg_eigsolve = _GAUGE_ALG_EIGSOLVE,
+        eig_miniter::Int = 10, order::Symbol = :LR
+    )
     if alg_orth isa QR || alg_orth isa QRpos
         alg_leftorth = alg_orth
         alg_rightorth = alg_orth'
@@ -85,10 +87,12 @@ function MixedCanonical(; tol::Real=Defaults.tolgauge, maxiter::Int=Defaults.max
         throw(ArgumentError("Invalid orthogonalization algorithm: $(typeof(alg_orth))"))
     end
 
-    left = LeftCanonical(; tol, maxiter, verbosity, alg_orth=alg_leftorth,
-                         alg_eigsolve, eig_miniter)
-    right = RightCanonical(; tol, maxiter=maxiter, verbosity, alg_orth=alg_rightorth,
-                           alg_eigsolve, eig_miniter)
+    left = LeftCanonical(;
+        tol, maxiter, verbosity, alg_orth = alg_leftorth, alg_eigsolve, eig_miniter
+    )
+    right = RightCanonical(;
+        tol, maxiter = maxiter, verbosity, alg_orth = alg_rightorth, alg_eigsolve, eig_miniter
+    )
 
     return MixedCanonical(left, right, order)
 end
@@ -104,7 +108,7 @@ Bring an `InfiniteMPS` into a uniform gauge, using the specified algorithm.
 """
 gaugefix!
 
-function gaugefix!(ψ::InfiniteMPS, A, C₀=ψ.C[end]; order=:LR, kwargs...)
+function gaugefix!(ψ::InfiniteMPS, A, C₀ = ψ.C[end]; order = :LR, kwargs...)
     alg = if order === :LR || order === :RL
         MixedCanonical(; order, kwargs...)
     elseif order === :L
@@ -153,33 +157,33 @@ tensors. This minimizes `∥AC_i - AL_i * C_i∥` or `∥AC_i - C_{i-1} * AR_i�
 """
 regauge!
 
-function regauge!(AC::GenericMPSTensor, C::MPSBondTensor; alg=QRpos())
+function regauge!(AC::GenericMPSTensor, C::MPSBondTensor; alg = QRpos())
     Q_AC, _ = leftorth!(AC; alg)
     Q_C, _ = leftorth!(C; alg)
     return mul!(AC, Q_AC, Q_C')
 end
-function regauge!(AC::Vector{<:GenericMPSTensor}, C::Vector{<:MPSBondTensor}; alg=QRpos())
+function regauge!(AC::Vector{<:GenericMPSTensor}, C::Vector{<:MPSBondTensor}; alg = QRpos())
     for i in 1:length(AC)
         regauge!(AC[i], C[i]; alg)
     end
     return AC
 end
-function regauge!(CL::MPSBondTensor, AC::GenericMPSTensor; alg=LQpos())
+function regauge!(CL::MPSBondTensor, AC::GenericMPSTensor; alg = LQpos())
     AC_tail = _transpose_tail(AC)
     _, Q_AC = rightorth!(AC_tail; alg)
     _, Q_C = rightorth!(CL; alg)
     AR_tail = mul!(AC_tail, Q_C', Q_AC)
     return repartition!(AC, AR_tail)
 end
-function regauge!(CL::Vector{<:MPSBondTensor}, AC::Vector{<:GenericMPSTensor}; alg=LQpos())
+function regauge!(CL::Vector{<:MPSBondTensor}, AC::Vector{<:GenericMPSTensor}; alg = LQpos())
     for i in length(CL):-1:1
         regauge!(CL[i], AC[i]; alg)
     end
     return CL
 end
 # fix ambiguity + error
-regauge!(::MPSBondTensor, ::MPSBondTensor; alg=QRpos()) = error("method ambiguity")
-function regauge!(::Vector{<:MPSBondTensor}, ::Vector{<:MPSBondTensor}; alg=QRpos())
+regauge!(::MPSBondTensor, ::MPSBondTensor; alg = QRpos()) = error("method ambiguity")
+function regauge!(::Vector{<:MPSBondTensor}, ::Vector{<:MPSBondTensor}; alg = QRpos())
     return error("method ambiguity")
 end
 
@@ -193,7 +197,7 @@ function uniform_leftorth!((AL, C), A, C₀, alg::LeftCanonical)
         log = IterLog("LC")
         A_tail = _transpose_tail.(A) # pre-transpose A
         CA_tail = similar.(A_tail)  # pre-allocate workspace
-        state = (; AL, C, A, A_tail, CA_tail, iter=0, ϵ=Inf)
+        state = (; AL, C, A, A_tail, CA_tail, iter = 0, ϵ = Inf)
         it = IterativeSolver(alg, state)
         loginit!(log, it.ϵ)
 
@@ -212,7 +216,7 @@ function uniform_leftorth!((AL, C), A, C₀, alg::LeftCanonical)
     end
 end
 
-function Base.iterate(it::IterativeSolver{LeftCanonical}, state=it.state)
+function Base.iterate(it::IterativeSolver{LeftCanonical}, state = it.state)
     C₀ = gauge_eigsolve_step!(it, state)
     C₁ = gauge_orth_step!(it, state)
     ϵ = oftype(state.ϵ, norm(C₀ - C₁))
@@ -228,7 +232,7 @@ function gauge_eigsolve_step!(it::IterativeSolver{LeftCanonical}, state)
     if iter ≥ it.eig_miniter
         alg_eigsolve = updatetol(it.alg_eigsolve, 1, ϵ^2)
         _, vec = fixedpoint(flip(TransferMatrix(A, AL)), C[end], :LM, alg_eigsolve)
-        _, C[end] = leftorth!(vec; alg=it.alg_orth)
+        _, C[end] = leftorth!(vec; alg = it.alg_orth)
     end
     return C[end]
 end
@@ -238,7 +242,7 @@ function gauge_orth_step!(it::IterativeSolver{LeftCanonical}, state)
     for i in 1:length(AL)
         mul!(CA_tail[i], C[i - 1], A_tail[i])
         repartition!(AL[i], CA_tail[i])
-        AL[i], C[i] = leftorth!(AL[i]; alg=it.alg_orth)
+        AL[i], C[i] = leftorth!(AL[i]; alg = it.alg_orth)
     end
     normalize!(C[end])
     return C[end]
@@ -250,7 +254,7 @@ function uniform_rightorth!((AR, C), A, C₀, alg::RightCanonical)
         # initialize algorithm and temporary variables
         log = IterLog("RC")
         AC_tail = _similar_tail.(A) # pre-allocate workspace
-        state = (; AR, C, A, AC_tail, iter=0, ϵ=Inf)
+        state = (; AR, C, A, AC_tail, iter = 0, ϵ = Inf)
         it = IterativeSolver(alg, state)
         loginit!(log, it.ϵ)
 
@@ -269,7 +273,7 @@ function uniform_rightorth!((AR, C), A, C₀, alg::RightCanonical)
     end
 end
 
-function Base.iterate(it::IterativeSolver{RightCanonical}, state=it.state)
+function Base.iterate(it::IterativeSolver{RightCanonical}, state = it.state)
     C₀ = gauge_eigsolve_step!(it, state)
     C₁ = gauge_orth_step!(it, state)
     ϵ = oftype(state.ϵ, norm(C₀ - C₁))
@@ -285,7 +289,7 @@ function gauge_eigsolve_step!(it::IterativeSolver{RightCanonical}, state)
     if iter ≥ it.eig_miniter
         alg_eigsolve = updatetol(it.alg_eigsolve, 1, ϵ^2)
         _, vec = fixedpoint(TransferMatrix(A, AR), C[end], :LM, alg_eigsolve)
-        C[end], _ = rightorth!(vec; alg=it.alg_orth)
+        C[end], _ = rightorth!(vec; alg = it.alg_orth)
     end
     return C[end]
 end
@@ -295,7 +299,7 @@ function gauge_orth_step!(it::IterativeSolver{RightCanonical}, state)
     for i in length(AR):-1:1
         AC = mul!(AR[i], A[i], C[i])   # use AR as temporary storage for A * C
         tmp = repartition!(AC_tail[i], AC)
-        C[i - 1], tmp = rightorth!(tmp; alg=it.alg_orth)
+        C[i - 1], tmp = rightorth!(tmp; alg = it.alg_orth)
         repartition!(AR[i], tmp)       # TODO: avoid doing this every iteration
     end
     normalize!(C[end])

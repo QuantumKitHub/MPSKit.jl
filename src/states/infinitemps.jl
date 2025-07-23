@@ -43,16 +43,15 @@ tensors `As`, or a list of left-gauged tensors `ALs`.
 - `tol`: gauge fixing tolerance
 - `maxiter`: gauge fixing maximum iterations
 """
-struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
+struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractMPS
     AL::PeriodicVector{A}
     AR::PeriodicVector{A}
     C::PeriodicVector{B}
     AC::PeriodicVector{A}
-    function InfiniteMPS{A,B}(AL::PeriodicVector{A},
-                              AR::PeriodicVector{A},
-                              C::PeriodicVector{B},
-                              AC::PeriodicVector{A}=AL .* C) where {A<:GenericMPSTensor,
-                                                                    B<:MPSBondTensor}
+    function InfiniteMPS{A, B}(
+            AL::PeriodicVector{A}, AR::PeriodicVector{A},
+            C::PeriodicVector{B}, AC::PeriodicVector{A} = AL .* C
+        ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
         # verify lengths are compatible
         L = length(AL)
         L == length(AR) == length(C) == length(AC) ||
@@ -61,13 +60,12 @@ struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
         spacetype(A) == spacetype(B) ||
             throw(SpaceMismatch("incompatible space types of AL and C"))
 
-        return new{A,B}(AL, AR, C, AC)
+        return new{A, B}(AL, AR, C, AC)
     end
-    function InfiniteMPS(AL::PeriodicVector{A},
-                         AR::PeriodicVector{A},
-                         C::PeriodicVector{B},
-                         AC::PeriodicVector{A}=AL .* C) where {A<:GenericMPSTensor,
-                                                               B<:MPSBondTensor}
+    function InfiniteMPS(
+            AL::PeriodicVector{A}, AR::PeriodicVector{A},
+            C::PeriodicVector{B}, AC::PeriodicVector{A} = AL .* C
+        ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
         # verify lengths are compatible
         L = length(AL)
         L == length(AR) == length(C) == length(AC) ||
@@ -83,8 +81,10 @@ struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
 
             # verify that the physical spaces are compatible
             phys_ind = 2:(N - 1)
-            all(space.(Ref(AL[i]), phys_ind) .== space.(Ref(AR[i]), phys_ind) .==
-                space.(Ref(AC[i]), phys_ind)) ||
+            all(
+                space.(Ref(AL[i]), phys_ind) .== space.(Ref(AR[i]), phys_ind) .==
+                    space.(Ref(AC[i]), phys_ind)
+            ) ||
                 throw(SpaceMismatch("incompatible physical spaces at site $i"))
 
             # verify that the virtual spaces are compatible
@@ -99,7 +99,7 @@ struct InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractMPS
             dim(space(AL[i])) > 0 && dim(space(C[i])) > 0 ||
                 @warn "no fusion channels available at site $i"
         end
-        return new{A,B}(AL, AR, C, AC)
+        return new{A, B}(AL, AR, C, AC)
     end
 end
 
@@ -107,32 +107,43 @@ end
 Constructors
 ===========================================================================================#
 
-function InfiniteMPS(AL::AbstractVector{A}, AR::AbstractVector{A}, C::AbstractVector{B},
-                     AC::AbstractVector{A}=AL .* C) where {A<:GenericMPSTensor,
-                                                           B<:MPSBondTensor}
-    return InfiniteMPS(convert(PeriodicVector{A}, AL), convert(PeriodicVector{A}, AR),
-                       convert(PeriodicVector{B}, C), convert(PeriodicVector{A}, AC))
+function InfiniteMPS(
+        AL::AbstractVector{A}, AR::AbstractVector{A}, C::AbstractVector{B},
+        AC::AbstractVector{A} = AL .* C
+    ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
+    return InfiniteMPS(
+        convert(PeriodicVector{A}, AL), convert(PeriodicVector{A}, AR),
+        convert(PeriodicVector{B}, C), convert(PeriodicVector{A}, AC)
+    )
 end
 
-function InfiniteMPS(pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
-                     kwargs...) where {S<:IndexSpace}
+function InfiniteMPS(
+        pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
+        kwargs...
+    ) where {S <: IndexSpace}
     return InfiniteMPS(MPSTensor.(pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
 end
-function InfiniteMPS(f, elt::Type{<:Number}, pspaces::AbstractVector{S},
-                     Dspaces::AbstractVector{S}; kwargs...) where {S<:IndexSpace}
-    return InfiniteMPS(MPSTensor.(f, elt, pspaces, circshift(Dspaces, 1), Dspaces);
-                       kwargs...)
+function InfiniteMPS(
+        f, elt::Type{<:Number}, pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
+        kwargs...
+    ) where {S <: IndexSpace}
+    return InfiniteMPS(
+        MPSTensor.(f, elt, pspaces, circshift(Dspaces, 1), Dspaces);
+        kwargs...
+    )
 end
-InfiniteMPS(d::S, D::S) where {S<:Union{Int,<:IndexSpace}} = InfiniteMPS([d], [D])
-function InfiniteMPS(f, elt::Type{<:Number}, d::S,
-                     D::S) where {S<:Union{Int,<:IndexSpace}}
+InfiniteMPS(d::S, D::S) where {S <: Union{Int, <:IndexSpace}} = InfiniteMPS([d], [D])
+function InfiniteMPS(
+        f, elt::Type{<:Number}, d::S, D::S
+    ) where {S <: Union{Int, <:IndexSpace}}
     return InfiniteMPS(f, elt, [d], [D])
 end
 function InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int})
     return InfiniteMPS(ComplexSpace.(ds), ComplexSpace.(Ds))
 end
-function InfiniteMPS(f, elt::Type{<:Number}, ds::AbstractVector{Int},
-                     Ds::AbstractVector{Int}, kwargs...)
+function InfiniteMPS(
+        f, elt::Type{<:Number}, ds::AbstractVector{Int}, Ds::AbstractVector{Int}, kwargs...
+    )
     return InfiniteMPS(f, elt, ComplexSpace.(ds), ComplexSpace.(Ds); kwargs...)
 end
 
@@ -164,7 +175,7 @@ function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
     AL = similar.(AR)
     AC = similar.(AR)
     C = similar(AR, typeof(C₀))
-    ψ = InfiniteMPS{eltype(AL),eltype(C)}(AL, AR, C, AC)
+    ψ = InfiniteMPS{eltype(AL), eltype(C)}(AL, AR, C, AC)
 
     # gaugefix the MPS
     gaugefix!(ψ, A_copy, C₀; kwargs...)
@@ -183,10 +194,10 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
     AC = similar.(AL)
     AR = similar.(AL)
     C = similar(AR, typeof(C₀))
-    ψ = InfiniteMPS{eltype(AL),eltype(C)}(AL, AR, C, AC)
+    ψ = InfiniteMPS{eltype(AL), eltype(C)}(AL, AR, C, AC)
 
     # gaugefix the MPS
-    gaugefix!(ψ, AL, C₀; order=:R, kwargs...)
+    gaugefix!(ψ, AL, C₀; order = :R, kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.C)
 
     return ψ
@@ -199,10 +210,10 @@ function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}
     AC = similar.(AR)
     AL = similar.(AR)
     C = similar(AR, typeof(C₀))
-    ψ = InfiniteMPS{eltype(AL),eltype(C)}(AL, AR, C, AC)
+    ψ = InfiniteMPS{eltype(AL), eltype(C)}(AL, AR, C, AC)
 
     # gaugefix the MPS
-    gaugefix!(ψ, AR, C₀; order=:L, kwargs...)
+    gaugefix!(ψ, AR, C₀; order = :L, kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.C)
 
     return ψ
@@ -212,7 +223,7 @@ end
 Utility
 ===========================================================================================#
 
-function AC2(ψ::InfiniteMPS, i::Integer; kind=:ACAR)
+function AC2(ψ::InfiniteMPS, i::Integer; kind = :ACAR)
     if kind == :ACAR
         return ψ.AC[i] * _transpose_tail(ψ.AR[i + 1])
     elseif kind == :ALAC
@@ -243,12 +254,13 @@ end
 function Base.repeat(ψ::InfiniteMPS, i::Int)
     return InfiniteMPS(repeat(ψ.AL, i), repeat(ψ.AR, i), repeat(ψ.C, i), repeat(ψ.AC, i))
 end
-function Base.similar(ψ::InfiniteMPS{A,B}) where {A,B}
-    return InfiniteMPS{A,B}(similar(ψ.AL), similar(ψ.AR), similar(ψ.C), similar(ψ.AC))
+function Base.similar(ψ::InfiniteMPS{A, B}) where {A, B}
+    return InfiniteMPS{A, B}(similar(ψ.AL), similar(ψ.AR), similar(ψ.C), similar(ψ.AC))
 end
 function Base.circshift(ψ::InfiniteMPS, n)
-    return InfiniteMPS(circshift(ψ.AL, n), circshift(ψ.AR, n), circshift(ψ.C, n),
-                       circshift(ψ.AC, n))
+    return InfiniteMPS(
+        circshift(ψ.AL, n), circshift(ψ.AR, n), circshift(ψ.C, n), circshift(ψ.AC, n)
+    )
 end
 
 Base.eachindex(ψ::InfiniteMPS) = eachindex(ψ.AL)
@@ -257,7 +269,7 @@ Base.eachindex(l::IndexStyle, ψ::InfiniteMPS) = eachindex(l, ψ.AL)
 Base.checkbounds(::Type{Bool}, ψ::InfiniteMPS, i::Integer) = true
 
 site_type(::Type{<:InfiniteMPS{A}}) where {A} = A
-bond_type(::Type{<:InfiniteMPS{<:Any,B}}) where {B} = B
+bond_type(::Type{<:InfiniteMPS{<:Any, B}}) where {B} = B
 
 left_virtualspace(ψ::InfiniteMPS) = left_virtualspace.(ψ.AL)
 left_virtualspace(ψ::InfiniteMPS, n::Integer) = left_virtualspace(ψ.AL[n])
@@ -280,11 +292,12 @@ function TensorKit.normalize!(ψ::InfiniteMPS)
     return ψ
 end
 
-function TensorKit.dot(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; krylovdim=30)
+function TensorKit.dot(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; krylovdim = 30)
     init = similar(ψ₁.AL[1], _firstspace(ψ₂.AL[1]) ← _firstspace(ψ₁.AL[1]))
     randomize!(init)
-    val, = fixedpoint(TransferMatrix(ψ₂.AL, ψ₁.AL), init, :LM,
-                      Arnoldi(; krylovdim=krylovdim))
+    val, = fixedpoint(
+        TransferMatrix(ψ₂.AL, ψ₁.AL), init, :LM, Arnoldi(; krylovdim = krylovdim)
+    )
     return val
 end
 function Base.isapprox(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; kwargs...)
@@ -299,7 +312,7 @@ function Base.show(io::IO, ::MIME"text/plain", ψ::InfiniteMPS)
 end
 Base.show(io::IO, ψ::InfiniteMPS) = show(convert(IOContext, io), ψ)
 function Base.show(io::IOContext, ψ::InfiniteMPS)
-    charset = (; mid="├", ver="│", dash="──")
+    charset = (; mid = "├", ver = "│", dash = "──")
     limit = get(io, :limit, false)::Bool
     half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
     if !haskey(io, :compact)
@@ -330,28 +343,28 @@ Fixedpoints
 
 Left dominant eigenvector of the `AR`-`AR` transfermatrix.
 """
-l_RR(ψ::InfiniteMPS, loc::Int=1) = adjoint(ψ.C[loc - 1]) * ψ.C[loc - 1]
+l_RR(ψ::InfiniteMPS, loc::Int = 1) = adjoint(ψ.C[loc - 1]) * ψ.C[loc - 1]
 
 """
     l_RL(ψ, location)
 
 Left dominant eigenvector of the `AR`-`AL` transfermatrix.
 """
-l_RL(ψ::InfiniteMPS, loc::Int=1) = ψ.C[loc - 1]
+l_RL(ψ::InfiniteMPS, loc::Int = 1) = ψ.C[loc - 1]
 
 """
     l_LR(ψ, location)
 
 Left dominant eigenvector of the `AL`-`AR` transfermatrix.
 """
-l_LR(ψ::InfiniteMPS, loc::Int=1) = ψ.C[loc - 1]'
+l_LR(ψ::InfiniteMPS, loc::Int = 1) = ψ.C[loc - 1]'
 
 """
     l_LL(ψ, location)
 
 Left dominant eigenvector of the `AL`-`AL` transfermatrix.
 """
-function l_LL(ψ::InfiniteMPS{A}, loc::Int=1) where {A}
+function l_LL(ψ::InfiniteMPS{A}, loc::Int = 1) where {A}
     return isomorphism(storagetype(A), left_virtualspace(ψ, loc), left_virtualspace(ψ, loc))
 end
 
@@ -360,9 +373,10 @@ end
 
 Right dominant eigenvector of the `AR`-`AR` transfermatrix.
 """
-function r_RR(ψ::InfiniteMPS{A}, loc::Int=length(ψ)) where {A}
-    return isomorphism(storagetype(A), right_virtualspace(ψ, loc),
-                       right_virtualspace(ψ, loc))
+function r_RR(ψ::InfiniteMPS{A}, loc::Int = length(ψ)) where {A}
+    return isomorphism(
+        storagetype(A), right_virtualspace(ψ, loc), right_virtualspace(ψ, loc)
+    )
 end
 
 """
@@ -370,18 +384,18 @@ end
 
 Right dominant eigenvector of the `AR`-`AL` transfermatrix.
 """
-r_RL(ψ::InfiniteMPS, loc::Int=length(ψ)) = ψ.C[loc]'
+r_RL(ψ::InfiniteMPS, loc::Int = length(ψ)) = ψ.C[loc]'
 
 """
     r_LR(ψ, location)
 
 Right dominant eigenvector of the `AL`-`AR` transfermatrix.
 """
-r_LR(ψ::InfiniteMPS, loc::Int=length(ψ)) = ψ.C[loc]
+r_LR(ψ::InfiniteMPS, loc::Int = length(ψ)) = ψ.C[loc]
 
 """
     r_LL(ψ, location)
 
 Right dominant eigenvector of the `AL`-`AL` transfermatrix.
 """
-r_LL(ψ::InfiniteMPS, loc::Int=length(ψ)) = ψ.C[loc] * adjoint(ψ.C[loc])
+r_LL(ψ::InfiniteMPS, loc::Int = length(ψ)) = ψ.C[loc] * adjoint(ψ.C[loc])
