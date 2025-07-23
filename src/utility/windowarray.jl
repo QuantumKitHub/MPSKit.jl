@@ -14,8 +14,9 @@ struct WindowArray{T} <: AbstractVector{T}
     middle::Vector{T}
     right::PeriodicVector{T}
 end
-function WindowArray(left::PeriodicVector{T}, middle::AbstractVector{T},
-                     right::PeriodicVector{T}) where {T}
+function WindowArray(
+        left::PeriodicVector{T}, middle::AbstractVector{T}, right::PeriodicVector{T}
+    ) where {T}
     return WindowArray{T}(left, convert(Vector{T}, middle), right)
 end
 
@@ -25,16 +26,16 @@ Base.size(window::WindowArray) = size(window.middle)
 Base.axes(window::WindowArray) = axes(window.middle)
 
 function Base.getindex(window::WindowArray, i::Int)
-    if i < 1
-        return window.left[end + i]
+    return if i < 1
+        window.left[end + i]
     elseif i > length(window.middle)
-        return window.right[i - length(window.middle)]
+        window.right[i - length(window.middle)]
     else
-        return window.middle[i]
+        window.middle[i]
     end
 end
 function Base.setindex!(window::WindowArray, value, i::Int)
-    if i < 1
+    return if i < 1
         window.left[end + i] = value
     elseif i > length(window.middle)
         window.right[i - length(window.middle)] = value
@@ -46,17 +47,21 @@ end
 Base.checkbounds(::Type{Bool}, window::WindowArray, i::Int) = true
 
 function Base.similar(window::WindowArray, ::Type{S}, l::Int) where {S}
-    return WindowArray(similar(window.left, S),
-                       similar(window.middle, S, l),
-                       similar(window.right, S))
+    return WindowArray(
+        similar(window.left, S), similar(window.middle, S, l), similar(window.right, S)
+    )
 end
 function Base.LinearIndices(window::WindowArray)
-    return WindowArray(LinearIndices(window.left) .- length(window.left),
-                       LinearIndices(window.middle),
-                       LinearIndices(window.right) .+ length(window.middle))
+    return WindowArray(
+        LinearIndices(window.left) .- length(window.left),
+        LinearIndices(window.middle),
+        LinearIndices(window.right) .+ length(window.middle)
+    )
 end
 function Base.CartesianIndices(window::WindowArray)
-    return WindowArray(CartesianIndices(window.left),
-                       CartesianIndices(window.middle),
-                       CartesianIndices(window.right))
+    return WindowArray(
+        CartesianIndices(window.left),
+        CartesianIndices(window.middle),
+        CartesianIndices(window.right)
+    )
 end

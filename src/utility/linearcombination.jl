@@ -1,4 +1,4 @@
-struct LinearCombination{O<:Tuple,C<:Tuple}
+struct LinearCombination{O <: Tuple, C <: Tuple}
     opps::O
     coeffs::C
 end

@@ -13,7 +13,7 @@ mutable struct IterLog
     name::AbstractString
     iter::Int
     error::Float64
-    objective::Union{Nothing,Number}
+    objective::Union{Nothing, Number}
 
     t_init::Float64
     t_prev::Float64
@@ -21,7 +21,7 @@ mutable struct IterLog
 
     state::LogState
 end
-function IterLog(name="")
+function IterLog(name = "")
     t = Base.time()
     return IterLog(name, 0, NaN, nothing, t, t, t, INIT)
 end
@@ -29,11 +29,12 @@ end
 # Input
 # -----
 
-isapproxreal(x::Number) = isreal(x) || isapprox(imag(x), 0; atol=eps(abs(x))^(3 / 4))
+isapproxreal(x::Number) = isreal(x) || isapprox(imag(x), 0; atol = eps(abs(x))^(3 / 4))
 warnapproxreal(x::Number) = isapproxreal(x) || @warn "Objective has imaginary part: $x"
 
-function loginit!(log::IterLog, error::Float64,
-                  objective::Union{Nothing,Number}=nothing)
+function loginit!(
+        log::IterLog, error::Float64, objective::Union{Nothing, Number} = nothing
+    )
     log.iter = 0
     log.error = error
     log.objective = objective
@@ -44,8 +45,9 @@ function loginit!(log::IterLog, error::Float64,
     return log
 end
 
-function logiter!(log::IterLog, iter::Int, error::Float64,
-                  objective::Union{Nothing,Number}=nothing)
+function logiter!(
+        log::IterLog, iter::Int, error::Float64, objective::Union{Nothing, Number} = nothing
+    )
     log.iter = iter
     log.error = error
     log.objective = objective
@@ -57,8 +59,9 @@ function logiter!(log::IterLog, iter::Int, error::Float64,
     return log
 end
 
-function logfinish!(log::IterLog, iter::Int, error::Float64,
-                    objective::Union{Nothing,Number}=nothing)
+function logfinish!(
+        log::IterLog, iter::Int, error::Float64, objective::Union{Nothing, Number} = nothing
+    )
     log.iter = iter
     log.error = error
     log.objective = objective
@@ -70,8 +73,9 @@ function logfinish!(log::IterLog, iter::Int, error::Float64,
     return log
 end
 
-function logcancel!(log::IterLog, iter::Int, error::Float64,
-                    objective::Union{Nothing,Number}=nothing)
+function logcancel!(
+        log::IterLog, iter::Int, error::Float64, objective::Union{Nothing, Number} = nothing
+    )
     log.iter = iter
     log.error = error
     log.objective = objective
@@ -88,8 +92,8 @@ end
 
 function format_time(t::Float64)
     return t < 60 ? @sprintf("%0.2f sec", t) :
-           t < 2600 ? @sprintf("%0.2f min", t / 60) :
-           @sprintf("%0.2f hr", t / 3600)
+        t < 2600 ? @sprintf("%0.2f min", t / 60) :
+        @sprintf("%0.2f hr", t / 3600)
 end
 
 function format_objective(t::Number)

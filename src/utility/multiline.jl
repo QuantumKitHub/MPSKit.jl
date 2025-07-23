@@ -10,7 +10,7 @@ multiple lines of `InfiniteMPS` (`MultilineMPS`) or MPO (`Multiline{<:AbstractMP
 See also: [`MultilineMPS`](@ref) and [`MultilineMPO`](@ref)
 """
 struct Multiline{T}
-    data::PeriodicArray{T,1}
+    data::PeriodicArray{T, 1}
     function Multiline{T}(data::AbstractVector{T}) where {T}
         @assert allequal(length.(data)) "All lines must have the same length"
         return new{T}(data)
@@ -26,7 +26,7 @@ Base.size(m::Multiline, i::Int) = getindex(size(m), i)
 Base.length(m::Multiline) = prod(size(m))
 function Base.axes(m::Multiline, i::Int)
     return i == 1 ? axes(parent(m), 1) :
-           i == 2 ? axes(parent(m)[1], 1) : throw(ArgumentError("Invalid index $i"))
+        i == 2 ? axes(parent(m)[1], 1) : throw(ArgumentError("Invalid index $i"))
 end
 Base.eachindex(m::Multiline) = CartesianIndices(size(m))
 
@@ -41,7 +41,7 @@ Base.iterate(m::Multiline, args...) = iterate(parent(m), args...)
 # Utility functions
 # -----------------
 Base.circshift(A::Multiline, n::Int) = Multiline(circshift(parent(A), n))
-function Base.circshift(A::Multiline, shifts::Tuple{Int,Int})
+function Base.circshift(A::Multiline, shifts::Tuple{Int, Int})
     data′ = circshift.(parent(A), shifts[2])
     return Multiline(circshift!(data′, shifts[1]))
 end
@@ -58,7 +58,7 @@ end
 # ---------------
 VectorInterface.scalartype(::Type{Multiline{T}}) where {T} = scalartype(T)
 
-function VectorInterface.zerovector(x::Multiline, ::Type{S}) where {S<:Number}
+function VectorInterface.zerovector(x::Multiline, ::Type{S}) where {S <: Number}
     return Multiline(zerovector.(parent(x), S))
 end
 VectorInterface.zerovector!(x::Multiline) = (zerovector!.(parent(x)); x)
