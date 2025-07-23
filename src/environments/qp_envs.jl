@@ -8,7 +8,7 @@ T_BR[i] * GRs[i] + T_LR[i] * GBRs[i] = GBRs[i - 1]
 ```
 where `T_BL`, `T_BR`, `T_RL` and `T_LR` are the (regularized) transfer matrix operators on a given site for `B-O-AL`, `B-O-AR`, `AR-O-AL` and `AL-O-AR` respectively.
 """
-struct InfiniteQPEnvironments{A,B} <: AbstractMPSEnvironments
+struct InfiniteQPEnvironments{A, B} <: AbstractMPSEnvironments
     leftBenvs::PeriodicVector{A}
     rightBenvs::PeriodicVector{A}
 
@@ -28,12 +28,11 @@ end
 # Explicitly define optional arguments as these depend on kwargs,
 # which needs to come after these arguments.
 
-function environments(exci::Union{InfiniteQP,MultilineQP}, H; kwargs...)
+function environments(exci::Union{InfiniteQP, MultilineQP}, H; kwargs...)
     lenvs = environments(exci.left_gs, H; kwargs...)
     return environments(exci, H, lenvs; kwargs...)
 end
-function environments(exci::Union{InfiniteQP,MultilineQP}, H, lenvs;
-                      kwargs...)
+function environments(exci::Union{InfiniteQP, MultilineQP}, H, lenvs; kwargs...)
     renvs = exci.trivial ? lenvs : environments(exci.right_gs, H; kwargs...)
     return environments(exci, H, lenvs, renvs; kwargs...)
 end
@@ -46,9 +45,7 @@ function environments(qp::MultilineQP, operator::MultilineMPO, lenvs, renvs; kwa
     return Multiline(PeriodicVector(envs))
 end
 
-function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian,
-                      lenvs, renvs;
-                      kwargs...)
+function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs; kwargs...)
     ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1))
     solver = environment_alg(exci, H, exci; kwargs...)
 
@@ -61,19 +58,15 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian,
     zerovector!(lBs[1])
     for pos in 1:length(exci)
         lBs[pos + 1] = lBs[pos] * TransferMatrix(AR[pos], H[pos], AL[pos]) /
-                       cis(exci.momentum)
+            cis(exci.momentum)
         lBs[pos + 1] += leftenv(lenvs, pos, exci.left_gs) *
-                        TransferMatrix(exci[pos], H[pos], AL[pos]) /
-                        cis(exci.momentum)
+            TransferMatrix(exci[pos], H[pos], AL[pos]) / cis(exci.momentum)
 
         if exci.trivial # regularization of trivial excitations
             for i in ids
                 @plansor lBs[pos + 1][i][-1 -2; -3 -4] -= lBs[pos + 1][i][1 4; -3 2] *
-                                                          r_RL(exci.left_gs, pos)[2; 3] *
-                                                          τ[3 4; 5 1] *
-                                                          l_RL(exci.left_gs, pos + 1)[-1;
-                                                                                      6] *
-                                                          τ[5 6; -4 -2]
+                    r_RL(exci.left_gs, pos)[2; 3] * τ[3 4; 5 1] *
+                    l_RL(exci.left_gs, pos + 1)[ -1; 6 ] * τ[5 6; -4 -2]
             end
         end
     end
@@ -81,29 +74,27 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian,
     zerovector!(rBs[end])
     for pos in length(exci):-1:1
         rBs[pos - 1] = TransferMatrix(AL[pos], H[pos], AR[pos]) *
-                       rBs[pos] * cis(exci.momentum)
+            rBs[pos] * cis(exci.momentum)
         rBs[pos - 1] += TransferMatrix(exci[pos], H[pos], AR[pos]) *
-                        rightenv(renvs, pos, exci.right_gs) * cis(exci.momentum)
+            rightenv(renvs, pos, exci.right_gs) * cis(exci.momentum)
 
         if exci.trivial
             for i in ids
                 ρ_left = l_LR(exci.left_gs, pos)
                 ρ_right = r_LR(exci.left_gs, pos - 1)
                 @plansor rBs[pos - 1][i][-1 -2; -3 -4] -= τ[6 4; 1 3] *
-                                                          rBs[pos - 1][i][1 3; -3 2] *
-                                                          ρ_left[2; 4] *
-                                                          ρ_right[-1; 5] *
-                                                          τ[-2 -4; 5 6]
+                    rBs[pos - 1][i][1 3; -3 2] * ρ_left[2; 4] * ρ_right[-1; 5] * τ[-2 -4; 5 6]
             end
         end
     end
 
     @sync begin
-        Threads.@spawn $lBs[1] = left_excitation_transfer_system($lBs[1], $H, $exci;
-                                                                 solver=$solver)
-        Threads.@spawn $rBs[end] = right_excitation_transfer_system($rBs[end], $H,
-                                                                    $exci;
-                                                                    solver=$solver)
+        Threads.@spawn $lBs[1] = left_excitation_transfer_system(
+            $lBs[1], $H, $exci; solver = $solver
+        )
+        Threads.@spawn $rBs[end] = right_excitation_transfer_system(
+            $rBs[end], $H, $exci; solver = $solver
+        )
     end
 
     lB_cur = lBs[1]
@@ -115,10 +106,7 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian,
                 ρ_left = l_RL(exci.left_gs, i + 1)
                 ρ_right = r_RL(exci.left_gs, i)
                 @plansor lB_cur[k][-1 -2; -3 -4] -= lB_cur[k][1 4; -3 2] *
-                                                    ρ_right[2; 3] *
-                                                    τ[3 4; 5 1] *
-                                                    ρ_left[-1; 6] *
-                                                    τ[5 6; -4 -2]
+                    ρ_right[2; 3] * τ[3 4; 5 1] * ρ_left[-1; 6] * τ[5 6; -4 -2]
             end
         end
 
@@ -134,10 +122,7 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian,
                 ρ_left = l_LR(exci.left_gs, i)
                 ρ_right = r_LR(exci.left_gs, i - 1)
                 @plansor rB_cur[k][-1 -2; -3 -4] -= τ[6 4; 1 3] *
-                                                    rB_cur[k][1 3; -3 2] *
-                                                    ρ_left[2; 4] *
-                                                    ρ_right[-1; 5] *
-                                                    τ[-2 -4; 5 6]
+                    rB_cur[k][1 3; -3 2] * ρ_left[2; 4] * ρ_right[-1; 5] * τ[-2 -4; 5 6]
             end
         end
 
@@ -147,11 +132,12 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian,
     return InfiniteQPEnvironments(lBs, rBs, lenvs, renvs)
 end
 
-function environments(exci::FiniteQP,
-                      H::FiniteMPOHamiltonian,
-                      lenvs=environments(exci.left_gs, H),
-                      renvs=exci.trivial ? lenvs : environments(exci.right_gs, H);
-                      kwargs...)
+function environments(
+        exci::FiniteQP, H::FiniteMPOHamiltonian,
+        lenvs = environments(exci.left_gs, H),
+        renvs = exci.trivial ? lenvs : environments(exci.right_gs, H);
+        kwargs...
+    )
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
 
@@ -164,14 +150,14 @@ function environments(exci::FiniteQP,
     for pos in 1:(length(exci) - 1)
         lBs[pos + 1] = lBs[pos] * TransferMatrix(AR[pos], H[pos], AL[pos])
         lBs[pos + 1] += leftenv(lenvs, pos, exci.left_gs) *
-                        TransferMatrix(exci[pos], H[pos], AL[pos])
+            TransferMatrix(exci[pos], H[pos], AL[pos])
     end
 
     zerovector!(rBs[end])
     for pos in length(exci):-1:2
         rBs[pos - 1] = TransferMatrix(AL[pos], H[pos], AR[pos]) * rBs[pos]
         rBs[pos - 1] += TransferMatrix(exci[pos], H[pos], AR[pos]) *
-                        rightenv(renvs, pos, exci.right_gs)
+            rightenv(renvs, pos, exci.right_gs)
     end
 
     return InfiniteQPEnvironments(lBs, rBs, lenvs, renvs)
@@ -203,7 +189,7 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
     for col in 1:length(exci)
         gbl = gbl * TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col])
         gbl += leftenv(lenvs, col, left_gs) *
-               TransferMatrix(exci[col], O[col], left_gs.AL[col])
+            TransferMatrix(exci[col], O[col], left_gs.AL[col])
         gbl *= left_regularization[col] * cis(-exci.momentum)
         GBL[col] = gbl
     end
@@ -212,7 +198,7 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
     for col in reverse(1:length(exci))
         gbr = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]) * gbr
         gbr += TransferMatrix(exci[col], O[col], right_gs.AR[col]) *
-               rightenv(renvs, col, right_gs)
+            rightenv(renvs, col, right_gs)
         gbr *= right_regularization[col] * cis(exci.momentum)
         GBR[col] = gbr
     end
@@ -222,30 +208,32 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
 
     if exci.trivial
         @plansor rvec[-1 -2; -3] := rightenv(lenvs, 0, left_gs)[-1 -2; 1] *
-                                    conj(left_gs.C[0][-3; 1])
+            conj(left_gs.C[0][-3; 1])
         @plansor lvec[-1 -2; -3] := leftenv(lenvs, 1, left_gs)[-1 -2; 1] *
-                                    left_gs.C[0][1; -3]
+            left_gs.C[0][1; -3]
 
         T_RL = regularize(T_RL, lvec, rvec)
 
         @plansor rvec[-1 -2; -3] := rightenv(renvs, 0, right_gs)[1 -2; -3] *
-                                    right_gs.C[0][-1; 1]
+            right_gs.C[0][-1; 1]
         @plansor lvec[-1 -2; -3] := conj(right_gs.C[0][-3; 1]) *
-                                    leftenv(renvs, 1, right_gs)[-1 -2; 1]
+            leftenv(renvs, 1, right_gs)[-1 -2; 1]
 
         T_LR = regularize(T_LR, lvec, rvec)
     end
 
-    GBL[end], convhist = linsolve(flip(T_RL), gbl, gbl, solver, 1,
-                                  -cis(-length(exci) * exci.momentum) *
-                                  prod(left_regularization))
+    GBL[end], convhist = linsolve(
+        flip(T_RL), gbl, gbl, solver, 1,
+        -cis(-length(exci) * exci.momentum) * prod(left_regularization)
+    )
 
     convhist.converged == 0 &&
         @warn "GBL failed to converge: normres = $(convhist.normres)"
 
-    GBR[1], convhist = linsolve(T_LR, gbr, gbr, GMRES(), 1,
-                                -cis(length(exci) * exci.momentum) *
-                                prod(right_regularization))
+    GBR[1], convhist = linsolve(
+        T_LR, gbr, gbr, GMRES(), 1,
+        -cis(length(exci) * exci.momentum) * prod(right_regularization)
+    )
     convhist.converged == 0 &&
         @warn "GBR failed to converge: normres = $(convhist.normres)"
 
@@ -253,14 +241,13 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
     right_cur = GBR[1]
     for col in 1:(length(exci) - 1)
         left_cur = left_regularization[col] * left_cur *
-                   TransferMatrix(right_gs.AR[col], O[col],
-                                  left_gs.AL[col]) * cis(-exci.momentum)
+            TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col]) *
+            cis(-exci.momentum)
         GBL[col] += left_cur
 
         col = length(exci) - col + 1
-        right_cur = TransferMatrix(left_gs.AL[col], O[col],
-                                   right_gs.AR[col]) * right_cur *
-                    cis(exci.momentum) * right_regularization[col]
+        right_cur = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]) * right_cur *
+            cis(exci.momentum) * right_regularization[col]
         GBR[col] += right_cur
     end
 
