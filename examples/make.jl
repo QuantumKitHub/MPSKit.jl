@@ -2,7 +2,7 @@
 if Base.active_project() != joinpath(@__DIR__, "Project.toml")
     using Pkg
     Pkg.activate(@__DIR__)
-    Pkg.develop(PackageSpec(; path=(@__DIR__) * "/../"))
+    Pkg.develop(PackageSpec(; path = (@__DIR__) * "/../"))
     Pkg.resolve()
     Pkg.instantiate()
 end
@@ -17,13 +17,13 @@ using TOML, SHA
 
 const CACHEFILE = joinpath(@__DIR__, "Cache.toml")
 
-getcache() = isfile(CACHEFILE) ? TOML.parsefile(CACHEFILE) : Dict{String,Any}()
+getcache() = isfile(CACHEFILE) ? TOML.parsefile(CACHEFILE) : Dict{String, Any}()
 
 function iscached(root, name)
     cache = getcache()
     return haskey(cache, root) &&
-           haskey(cache[root], name) &&
-           cache[root][name] == checksum(root, name)
+        haskey(cache[root], name) &&
+        cache[root][name] == checksum(root, name)
 end
 
 function setcached(root, name)
@@ -31,7 +31,7 @@ function setcached(root, name)
     if haskey(cache, root)
         cache[root][name] = checksum(root, name)
     else
-        cache[root] = Dict{String,Any}(name => checksum(root, name))
+        cache[root] = Dict{String, Any}(name => checksum(root, name))
     end
     return open(f -> TOML.print(f, cache), CACHEFILE, "w")
 end
@@ -68,19 +68,23 @@ function build_example(root, name)
     source_file = joinpath(source_dir, "main.jl")
     target_dir = joinpath(@__DIR__, "..", "docs", "src", "examples", root, name)
 
-    if !iscached(root, name)
-        Literate.markdown(source_file, target_dir; execute=true, name="index",
-                          preprocess=attach_notebook_badge(root, name), mdstrings=true,
-                          nbviewer_root_url="https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev",
-                          binder_root_url="https://mybinder.org/v2/gh/QuantumKitHub/MPSKit.jl/gh-pages?filepath=dev",
-                          credits=false,
-                          repo_root_url="https://github.com/QuantumKitHub/MPSKit.jl")
-        Literate.notebook(source_file, target_dir; execute=false, name="main",
-                          preprocess=str -> replace(str, r"(?<!`)``(?!`)" => "\$"),
-                          mdstrings=true, credits=false)
+    return if !iscached(root, name)
+        Literate.markdown(
+            source_file, target_dir; execute = true, name = "index",
+            preprocess = attach_notebook_badge(root, name), mdstrings = true,
+            nbviewer_root_url = "https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev",
+            binder_root_url = "https://mybinder.org/v2/gh/QuantumKitHub/MPSKit.jl/gh-pages?filepath=dev",
+            credits = false,
+            repo_root_url = "https://github.com/QuantumKitHub/MPSKit.jl"
+        )
+        Literate.notebook(
+            source_file, target_dir; execute = false, name = "main",
+            preprocess = str -> replace(str, r"(?<!`)``(?!`)" => "\$"),
+            mdstrings = true, credits = false
+        )
 
         foreach(filter(!=("main.jl"), readdir(source_dir))) do f
-            return cp(joinpath(source_dir, f), joinpath(target_dir, f); force=true)
+            return cp(joinpath(source_dir, f), joinpath(target_dir, f); force = true)
         end
         setcached(root, name)
     end

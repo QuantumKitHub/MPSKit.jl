@@ -42,26 +42,26 @@ H = heisenberg_XXX(symmetry, chain; J, spin)
 physical_space = SU2Space(1 => 1)
 virtual_space = SU2Space(0 => 12, 1 => 12, 2 => 5, 3 => 3)
 ψ₀ = FiniteMPS(L, physical_space, virtual_space)
-ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity=0))
+ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity = 0))
 E₀ = real(expectation_value(ψ, H))
-En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(1))
-En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(2))
+En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(1))
+En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(2))
 ΔE_finite = real(En_2[1] - En_1[1])
 
 md"""
 We can go even further and doublecheck the claim that ``S = 1`` is an edge excitation, by plotting the energy density.
 """
 
-p_density = plot(; xaxis="position", yaxis="energy density")
+p_density = plot(; xaxis = "position", yaxis = "energy density")
 excited_1 = convert(FiniteMPS, st_1[1])
 excited_2 = convert(FiniteMPS, st_2[1])
-SS = -S_exchange(ComplexF64, SU2Irrep; spin=1)
+SS = -S_exchange(ComplexF64, SU2Irrep; spin = 1)
 e₀ = [real(expectation_value(ψ, (i, i + 1) => SS)) for i in 1:(L - 1)]
 e₁ = [real(expectation_value(excited_1, (i, i + 1) => SS)) for i in 1:(L - 1)]
 e₂ = [real(expectation_value(excited_2, (i, i + 1) => SS)) for i in 1:(L - 1)]
-plot!(p_density, e₀; label="S = 0")
-plot!(p_density, e₁; label="S = 1")
-plot!(p_density, e₂; label="S = 2")
+plot!(p_density, e₀; label = "S = 0")
+plot!(p_density, e₁; label = "S = 1")
+plot!(p_density, e₂; label = "S = 2")
 
 md"""
 Finally, we can obtain a value for the Haldane gap by extrapolating our results for different system sizes.
@@ -72,20 +72,20 @@ Ls = 12:4:30
     @info "computing L = $L"
     ψ₀ = FiniteMPS(L, physical_space, virtual_space)
     H = heisenberg_XXX(symmetry, FiniteChain(L); J, spin)
-    ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity=0))
-    En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(1))
-    En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector=SU2Irrep(2))
+    ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity = 0))
+    En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(1))
+    En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(2))
     return real(En_2[1] - En_1[1])
 end
 
 f = fit(Ls .^ (-2), ΔEs, 1)
 ΔE_extrapolated = f.coeffs[1]
 
-#+ 
+#+
 
-p_size_extrapolation = plot(; xaxis="L^(-2)", yaxis="ΔE", xlims=(0, 0.015))
-plot!(p_size_extrapolation, Ls .^ (-2), ΔEs; seriestype=:scatter, label="numerical")
-plot!(p_size_extrapolation, x -> f(x); label="fit")
+p_size_extrapolation = plot(; xaxis = "L^(-2)", yaxis = "ΔE", xlims = (0, 0.015))
+plot!(p_size_extrapolation, Ls .^ (-2), ΔEs; seriestype = :scatter, label = "numerical")
+plot!(p_size_extrapolation, x -> f(x); label = "fit")
 
 md"""
 ## Thermodynamic limit
@@ -103,14 +103,14 @@ chain = InfiniteChain(1)
 H = heisenberg_XXX(symmetry, chain; J, spin)
 virtual_space_inf = Rep[SU₂](1 // 2 => 16, 3 // 2 => 16, 5 // 2 => 8, 7 // 2 => 4)
 ψ₀_inf = InfiniteMPS([physical_space], [virtual_space_inf])
-ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H; verbosity=0)
+ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H; verbosity = 0)
 
 kspace = range(0, π, 16)
-Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ_inf, envs_inf; sector=SU2Irrep(1))
+Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ_inf, envs_inf; sector = SU2Irrep(1))
 
 ΔE, idx = findmin(real.(Es))
 println("minimum @k = $(kspace[idx]):\t ΔE = $(ΔE)")
 
-#+ 
+#+
 
-plot(kspace, real.(Es); xaxis="momentum", yaxis="ΔE", label="S = 1")
+plot(kspace, real.(Es); xaxis = "momentum", yaxis = "ΔE", label = "S = 1")

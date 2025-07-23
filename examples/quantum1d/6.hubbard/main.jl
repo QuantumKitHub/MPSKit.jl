@@ -51,38 +51,44 @@ e(u) = - u - 4 \int_0^{\infty} \frac{d\omega}{\omega} \frac{J_0(\omega) J_1(\ome
 We can easily verify this by comparing the numerical results to the analytic solution.
 """
 
-function hubbard_energy(u; rtol=1e-12)
+function hubbard_energy(u; rtol = 1.0e-12)
     integrandum(ω) = besselj0(ω) * besselj1(ω) / (1 + exp(2u * ω)) / ω
-    int, err = quadgk(integrandum, 0, Inf; rtol=rtol)
+    int, err = quadgk(integrandum, 0, Inf; rtol = rtol)
     return -u - 4 * int
 end
 
-function compute_groundstate(psi, H;
-                             svalue=1e-3,
-                             expansionfactor=(1 / 10),
-                             expansioniter=20)
+function compute_groundstate(
+        psi, H;
+        svalue = 1.0e-3,
+        expansionfactor = (1 / 10),
+        expansioniter = 20
+    )
     verbosity = 2
-    psi, = find_groundstate(psi, H; tol=svalue * 10, verbosity)
+    psi, = find_groundstate(psi, H; tol = svalue * 10, verbosity)
     for _ in 1:expansioniter
         D = maximum(x -> dim(left_virtualspace(psi, x)), 1:length(psi))
         D′ = max(5, round(Int, D * expansionfactor))
         trscheme = truncbelow(svalue / 10) & truncdim(D′)
-        psi′, = changebonds(psi, H, OptimalExpand(; trscheme=trscheme))
-        all(left_virtualspace.(Ref(psi), 1:length(psi)) .==
-            left_virtualspace.(Ref(psi′), 1:length(psi))) && break
-        psi, = find_groundstate(psi′, H, VUMPS(; tol=svalue / 5, maxiter=10, verbosity))
+        psi′, = changebonds(psi, H, OptimalExpand(; trscheme = trscheme))
+        all(
+            left_virtualspace.(Ref(psi), 1:length(psi)) .==
+                left_virtualspace.(Ref(psi′), 1:length(psi))
+        ) && break
+        psi, = find_groundstate(psi′, H, VUMPS(; tol = svalue / 5, maxiter = 10, verbosity))
     end
 
     ## convergence steps
-    psi, = changebonds(psi, H, SvdCut(; trscheme=truncbelow(svalue)))
-    psi, = find_groundstate(psi, H,
-                            VUMPS(; tol=svalue / 100, verbosity, maxiter=100) &
-                            GradientGrassmann(; tol=svalue / 1000))
+    psi, = changebonds(psi, H, SvdCut(; trscheme = truncbelow(svalue)))
+    psi, = find_groundstate(
+        psi, H,
+        VUMPS(; tol = svalue / 100, verbosity, maxiter = 100) &
+            GradientGrassmann(; tol = svalue / 1000)
+    )
 
     return psi
 end
 
-H = hubbard_model(InfiniteChain(2); U, t, mu=U / 2)
+H = hubbard_model(InfiniteChain(2); U, t, mu = U / 2)
 Vspaces = fill(Vect[fℤ₂](0 => 10, 1 => 10), 2)
 psi = InfiniteMPS(physicalspace(H), Vspaces)
 psi = compute_groundstate(psi, H)
@@ -106,14 +112,14 @@ In order to work at half-filling, we need to effectively inject one particle per
 In MPSKit, this is achieved by the `add_physical_charge` function, which shifts the physical spaces of the tensors to the desired charge sector.
 """
 
-H_u1_su2 = hubbard_model(ComplexF64, U1Irrep, SU2Irrep, InfiniteChain(2); U, t, mu=U / 2);
+H_u1_su2 = hubbard_model(ComplexF64, U1Irrep, SU2Irrep, InfiniteChain(2); U, t, mu = U / 2);
 charges = fill(FermionParity(1) ⊠ U1Irrep(1) ⊠ SU2Irrep(0), 2);
 H_u1_su2 = MPSKit.add_physical_charge(H_u1_su2, charges);
 
 pspaces = physicalspace.(Ref(H_u1_su2), 1:2)
 vspaces = [oneunit(eltype(pspaces)), first(pspaces)]
 psi = InfiniteMPS(pspaces, vspaces)
-psi = compute_groundstate(psi, H_u1_su2; expansionfactor=1 / 3)
+psi = compute_groundstate(psi, H_u1_su2; expansionfactor = 1 / 3)
 E = real(expectation_value(psi, H_u1_su2)) / 2
 @info """
 Groundstate energy:
@@ -133,47 +139,49 @@ In other words, the groundstates are ``\psi_{AB}` and ``\psi_{BA}``, where ``A``
 These excitations can be constructed as follows:
 """
 
-alg = QuasiparticleAnsatz(; tol=1e-3)
-momenta = range(-π, π; length=33)
+alg = QuasiparticleAnsatz(; tol = 1.0e-3)
+momenta = range(-π, π; length = 33)
 psi_AB = psi
 envs_AB = environments(psi_AB, H_u1_su2);
 psi_BA = circshift(psi, 1)
 envs_BA = environments(psi_BA, H_u1_su2);
 
 spinon_charge = FermionParity(0) ⊠ U1Irrep(0) ⊠ SU2Irrep(1 // 2)
-E_spinon, ϕ_spinon = excitations(H_u1_su2, alg, momenta,
-                                 psi_AB, envs_AB, psi_BA, envs_BA;
-                                 sector=spinon_charge, num=1);
+E_spinon, ϕ_spinon = excitations(
+    H_u1_su2, alg, momenta, psi_AB, envs_AB, psi_BA, envs_BA;
+    sector = spinon_charge, num = 1
+);
 
 holon_charge = FermionParity(1) ⊠ U1Irrep(-1) ⊠ SU2Irrep(0)
-E_holon, ϕ_holon = excitations(H_u1_su2, alg, momenta,
-                               psi_AB, envs_AB, psi_BA, envs_BA;
-                               sector=holon_charge, num=1);
+E_holon, ϕ_holon = excitations(
+    H_u1_su2, alg, momenta, psi_AB, envs_AB, psi_BA, envs_BA;
+    sector = holon_charge, num = 1
+);
 
 md"""
 Again, we can compare the numerical results to the analytic solution.
 Here, the formulae for the excitation energies are expressed in terms of dressed momenta:
 """
 
-function spinon_momentum(Λ, u; rtol=1e-12)
+function spinon_momentum(Λ, u; rtol = 1.0e-12)
     integrandum(ω) = besselj0(ω) * sin(ω * Λ) / ω / cosh(ω * u)
-    return π / 2 - quadgk(integrandum, 0, Inf; rtol=rtol)[1]
+    return π / 2 - quadgk(integrandum, 0, Inf; rtol = rtol)[1]
 end
-function spinon_energy(Λ, u; rtol=1e-12)
+function spinon_energy(Λ, u; rtol = 1.0e-12)
     integrandum(ω) = besselj1(ω) * cos(ω * Λ) / ω / cosh(ω * u)
-    return 2 * quadgk(integrandum, 0, Inf; rtol=rtol)[1]
+    return 2 * quadgk(integrandum, 0, Inf; rtol = rtol)[1]
 end
 
-function holon_momentum(k, u; rtol=1e-12)
+function holon_momentum(k, u; rtol = 1.0e-12)
     integrandum(ω) = besselj0(ω) * sin(ω * sin(k)) / ω / (1 + exp(2u * abs(ω)))
-    return π / 2 - k - 2 * quadgk(integrandum, 0, Inf; rtol=rtol)[1]
+    return π / 2 - k - 2 * quadgk(integrandum, 0, Inf; rtol = rtol)[1]
 end
-function holon_energy(k, u; rtol=1e-12)
+function holon_energy(k, u; rtol = 1.0e-12)
     integrandum(ω) = besselj1(ω) * cos(ω * sin(k)) * exp(-ω * u) / ω / cosh(ω * u)
-    return 2 * cos(k) + 2u + 2 * quadgk(integrandum, 0, Inf; rtol=rtol)[1]
+    return 2 * cos(k) + 2u + 2 * quadgk(integrandum, 0, Inf; rtol = rtol)[1]
 end
 
-Λs = range(-10, 10; length=51)
+Λs = range(-10, 10; length = 51)
 P_spinon_analytic = rem2pi.(spinon_momentum.(Λs, U / 4), RoundNearest)
 E_spinon_analytic = spinon_energy.(Λs, U / 4)
 I_spinon = sortperm(P_spinon_analytic)
@@ -182,19 +190,19 @@ E_spinon_analytic = E_spinon_analytic[I_spinon]
 P_spinon_analytic = [reverse(-P_spinon_analytic); P_spinon_analytic]
 E_spinon_analytic = [reverse(E_spinon_analytic); E_spinon_analytic];
 
-ks = range(0, 2π; length=51)
+ks = range(0, 2π; length = 51)
 P_holon_analytic = rem2pi.(holon_momentum.(ks, U / 4), RoundNearest)
 E_holon_analytic = holon_energy.(ks, U / 4)
 I_holon = sortperm(P_holon_analytic)
 P_holon_analytic = P_holon_analytic[I_holon]
 E_holon_analytic = E_holon_analytic[I_holon];
 
-p = let p_excitations = plot(; xaxis="momentum", yaxis="energy")
-    scatter!(p_excitations, momenta, real(E_spinon); label="spinon")
-    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label="spinon (analytic)")
+p = let p_excitations = plot(; xaxis = "momentum", yaxis = "energy")
+    scatter!(p_excitations, momenta, real(E_spinon); label = "spinon")
+    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label = "spinon (analytic)")
 
-    scatter!(p_excitations, momenta, real(E_holon); label="holon")
-    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label="holon (analytic)")
+    scatter!(p_excitations, momenta, real(E_holon); label = "holon")
+    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label = "holon (analytic)")
 
     p_excitations
 end
@@ -207,12 +215,12 @@ Here, we can fix this shift by realizing that our choice of shifting the grounds
 """
 
 momenta_shifted = rem2pi.(momenta .- π / 2, RoundNearest)
-p = let p_excitations = plot(; xaxis="momentum", yaxis="energy", xlims=(-π, π))
-    scatter!(p_excitations, momenta_shifted, real(E_spinon); label="spinon")
-    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label="spinon (analytic)")
+p = let p_excitations = plot(; xaxis = "momentum", yaxis = "energy", xlims = (-π, π))
+    scatter!(p_excitations, momenta_shifted, real(E_spinon); label = "spinon")
+    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label = "spinon (analytic)")
 
-    scatter!(p_excitations, momenta_shifted, real(E_holon); label="holon")
-    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label="holon (analytic)")
+    scatter!(p_excitations, momenta_shifted, real(E_holon); label = "holon")
+    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label = "holon (analytic)")
 
     p_excitations
 end
@@ -225,10 +233,14 @@ If these are truly scattering states, the energy of the scattering state should 
 Thus, we can find the lowest-energy scattering states by minimizing the energy over the combination of momenta for the constituent elementary excitations.
 """
 
-holon_dispersion_itp = linear_interpolation(P_holon_analytic, E_holon_analytic;
-                                            extrapolation_bc=Line())
-spinon_dispersion_itp = linear_interpolation(P_spinon_analytic, E_spinon_analytic;
-                                             extrapolation_bc=Line())
+holon_dispersion_itp = linear_interpolation(
+    P_holon_analytic, E_holon_analytic;
+    extrapolation_bc = Line()
+)
+spinon_dispersion_itp = linear_interpolation(
+    P_spinon_analytic, E_spinon_analytic;
+    extrapolation_bc = Line()
+)
 function scattering_energy(p1, p2, p3)
     p1, p2, p3 = rem2pi.((p1, p2, p3), RoundNearest)
     return holon_dispersion_itp(p1) + spinon_dispersion_itp(p2) + spinon_dispersion_itp(p3)
@@ -259,17 +271,20 @@ E_scattering_max = map(momenta_shifted) do p
     return e
 end;
 
-p = let p_excitations = plot(; xaxis="momentum", yaxis="energy", xlims=(-π, π),
-                             ylims=(-0.1, 5))
-    scatter!(p_excitations, momenta_shifted, real(E_spinon); label="spinon")
-    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label="spinon (analytic)")
+p = let p_excitations = plot(;
+        xaxis = "momentum", yaxis = "energy", xlims = (-π, π), ylims = (-0.1, 5)
+    )
+    scatter!(p_excitations, momenta_shifted, real(E_spinon); label = "spinon")
+    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label = "spinon (analytic)")
 
-    scatter!(p_excitations, momenta_shifted, real(E_holon); label="holon")
-    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label="holon (analytic)")
+    scatter!(p_excitations, momenta_shifted, real(E_holon); label = "holon")
+    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label = "holon (analytic)")
 
     I = sortperm(momenta_shifted)
-    plot!(p_excitations, momenta_shifted[I], E_scattering_min[I]; label="scattering states",
-          fillrange=E_scattering_max[I], fillalpha=0.3, fillstyle=:x)
+    plot!(
+        p_excitations, momenta_shifted[I], E_scattering_min[I]; label = "scattering states",
+        fillrange = E_scattering_max[I], fillalpha = 0.3, fillstyle = :x
+    )
 
     p_excitations
 end

@@ -27,12 +27,11 @@ tensor is equivalent to optimixing a state in the entire Hilbert space, as all o
 are just unitary matrices that mix the basis.
 """
 
-energies, states = exact_diagonalization(H; num=18, alg=Lanczos(; krylovdim=200));
-plot(real.(energies);
-     seriestype=:scatter,
-     legend=false,
-     ylabel="energy",
-     xlabel="#eigenvalue")
+energies, states = exact_diagonalization(H; num = 18, alg = Lanczos(; krylovdim = 200));
+plot(
+    real.(energies);
+    seriestype = :scatter, legend = false, ylabel = "energy", xlabel = "#eigenvalue"
+)
 
 md"""
 !!! note "Krylov dimension"
@@ -104,11 +103,13 @@ v = 2.0
 Δ = real.(energies[1:18] .- energies[1]) ./ (2π * v / L)
 S = momenta ./ (2π / L)
 
-p = plot(S, real.(Δ);
-         seriestype=:scatter, xlabel="conformal spin (S)", ylabel="scaling dimension (Δ)",
-         legend=false)
-vline!(p, -3:3; color="gray", linestyle=:dash)
-hline!(p, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color="gray", linestyle=:dash)
+p = plot(
+    S, real.(Δ);
+    seriestype = :scatter, xlabel = "conformal spin (S)", ylabel = "scaling dimension (Δ)",
+    legend = false
+)
+vline!(p, -3:3; color = "gray", linestyle = :dash)
+hline!(p, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = "gray", linestyle = :dash)
 p
 
 md"""
@@ -129,7 +130,7 @@ ansatz. This returns quasiparticle states, which can be converted to regular `Fi
 objects.
 """
 
-E_ex, qps = excitations(H_mps, QuasiparticleAnsatz(), ψ, envs; num=18)
+E_ex, qps = excitations(H_mps, QuasiparticleAnsatz(), ψ, envs; num = 18)
 states_mps = vcat(ψ, map(qp -> convert(FiniteMPS, qp), qps))
 energies_mps = map(x -> expectation_value(x, H_mps), states_mps)
 
@@ -148,9 +149,11 @@ v = 2.0
 Δ_mps = real.(energies_mps[1:18] .- energies_mps[1]) ./ (2π * v / L_mps)
 S_mps = momenta_mps ./ (2π / L_mps)
 
-p_mps = plot(S_mps, real.(Δ_mps);
-             seriestype=:scatter, xlabel="conformal spin (S)",
-             ylabel="scaling dimension (Δ)", legend=false)
-vline!(p_mps, -3:3; color="gray", linestyle=:dash)
-hline!(p_mps, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color="gray", linestyle=:dash)
+p_mps = plot(
+    S_mps, real.(Δ_mps);
+    seriestype = :scatter, xlabel = "conformal spin (S)",
+    ylabel = "scaling dimension (Δ)", legend = false
+)
+vline!(p_mps, -3:3; color = "gray", linestyle = :dash)
+hline!(p_mps, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = "gray", linestyle = :dash)
 p_mps
