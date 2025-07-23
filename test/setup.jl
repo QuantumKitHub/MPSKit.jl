@@ -17,7 +17,7 @@ export c_plusmin, c_minplus, c_number
 export force_planar
 export symm_mul_mpo
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model,
-       kitaev_model
+    kitaev_model
 export classical_ising, finite_classical_ising, sixvertex
 
 # using TensorOperations
@@ -27,10 +27,9 @@ force_planar(x::Number) = x
 force_planar(c::Sector) = PlanarTrivial() ⊠ c
 
 # convert spaces
-force_planar(V::Union{CartesianSpace,ComplexSpace}) = ℙ^dim(V)
+force_planar(V::Union{CartesianSpace, ComplexSpace}) = ℙ^dim(V)
 function force_planar(V::GradedSpace)
-    return Vect[PlanarTrivial ⊠ sectortype(V)](force_planar(c) => dim(V, c)
-                                               for c in sectors(V))
+    return Vect[PlanarTrivial ⊠ sectortype(V)](force_planar(c) => dim(V, c) for c in sectors(V))
 end
 force_planar(V::SumSpace) = SumSpace(map(force_planar, V.spaces))
 force_planar(V::ProductSpace) = ProductSpace(map(force_planar, V.spaces))
@@ -86,7 +85,7 @@ end
 # Toy models
 # ----------------------------
 
-function S_x(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_x(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     return if spin == 1 // 2
         TensorMap(T[0 1; 1 0], ℂ^2 ← ℂ^2)
     elseif spin == 1
@@ -95,7 +94,7 @@ function S_x(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {
         throw(ArgumentError("spin $spin not supported"))
     end
 end
-function S_y(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_y(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     return if spin == 1 // 2
         TensorMap(T[0 -im; im 0], ℂ^2 ← ℂ^2)
     elseif spin == 1
@@ -104,7 +103,7 @@ function S_y(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {
         throw(ArgumentError("spin $spin not supported"))
     end
 end
-function S_z(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_z(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     return if spin == 1 // 2
         TensorMap(T[1 0; 0 -1], ℂ^2 ← ℂ^2)
     elseif spin == 1
@@ -113,19 +112,19 @@ function S_z(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {
         throw(ArgumentError("spin $spin not supported"))
     end
 end
-function S_xx(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_xx(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     return S_x(Trivial, T; spin) ⊗ S_x(Trivial, T; spin)
 end
-function S_yy(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_yy(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     return S_y(Trivial, T; spin) ⊗ S_y(Trivial, T; spin)
 end
-function S_zz(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1 // 2) where {T<:Number}
+function S_zz(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     return S_z(Trivial, T; spin) ⊗ S_z(Trivial, T; spin)
 end
 
-function transverse_field_ising(::Type{T}=ComplexF64; g=1.0, L=Inf) where {T<:Number}
-    X = S_x(Trivial, T; spin=1 // 2)
-    ZZ = S_zz(Trivial, T; spin=1 // 2)
+function transverse_field_ising(::Type{T} = ComplexF64; g = 1.0, L = Inf) where {T <: Number}
+    X = S_x(Trivial, T; spin = 1 // 2)
+    ZZ = S_zz(Trivial, T; spin = 1 // 2)
 
     if L == Inf
         lattice = PeriodicArray([ℂ^2])
@@ -139,7 +138,7 @@ function transverse_field_ising(::Type{T}=ComplexF64; g=1.0, L=Inf) where {T<:Nu
     return H₁ + H₂
 end
 
-function heisenberg_XXX(::Type{SU2Irrep}; spin=1, L=Inf)
+function heisenberg_XXX(::Type{SU2Irrep}; spin = 1, L = Inf)
     h = ones(ComplexF64, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
     for (c, b) in blocks(h)
         S = (dim(c) - 1) / 2
@@ -156,8 +155,10 @@ function heisenberg_XXX(::Type{SU2Irrep}; spin=1, L=Inf)
     end
 end
 
-function heisenberg_XXX(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1,
-                        L=Inf) where {T<:Number}
+function heisenberg_XXX(
+        ::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1,
+        L = Inf
+    ) where {T <: Number}
     h = ones(T, SU2Space(spin => 1)^2 ← SU2Space(spin => 1)^2)
     for (c, b) in blocks(h)
         S = (dim(c) - 1) / 2
@@ -176,9 +177,11 @@ function heisenberg_XXX(::Type{Trivial}=Trivial, ::Type{T}=ComplexF64; spin=1,
     end
 end
 
-function XY_model(::Type{U1Irrep}; g=1 / 2, L=Inf)
-    h = zeros(ComplexF64,
-              U1Space(-1 // 2 => 1, 1 // 2 => 1)^2 ← U1Space(-1 // 2 => 1, 1 // 2 => 1)^2)
+function XY_model(::Type{U1Irrep}; g = 1 / 2, L = Inf)
+    h = zeros(
+        ComplexF64,
+        U1Space(-1 // 2 => 1, 1 // 2 => 1)^2 ← U1Space(-1 // 2 => 1, 1 // 2 => 1)^2
+    )
     h[U1Irrep.((-1 // 2, 1 // 2, -1 // 2, 1 // 2))] .= 1
     h[U1Irrep.((1 // 2, -1 // 2, 1 // 2, -1 // 2))] .= 1
     Sz = zeros(ComplexF64, space(h, 1) ← space(h, 1))
@@ -197,7 +200,7 @@ function XY_model(::Type{U1Irrep}; g=1 / 2, L=Inf)
     end
 end
 
-function bilinear_biquadratic_model(::Type{SU2Irrep}; θ=atan(1 / 3), L=Inf)
+function bilinear_biquadratic_model(::Type{SU2Irrep}; θ = atan(1 / 3), L = Inf)
     h1 = ones(ComplexF64, SU2Space(1 => 1)^2 ← SU2Space(1 => 1)^2)
     for (c, b) in blocks(h1)
         S = (dim(c) - 1) / 2
@@ -253,7 +256,7 @@ function c_number()
     return t
 end
 
-function kitaev_model(; t=1.0, mu=1.0, Delta=1.0, L=Inf)
+function kitaev_model(; t = 1.0, mu = 1.0, Delta = 1.0, L = Inf)
     TB = scale!(c_plusmin() + c_minplus(), -t / 2)     # tight-binding term
     SC = scale!(c_plusplus() + c_minmin(), Delta / 2)  # superconducting term
     CP = scale!(c_number(), -mu)                       # chemical potential term
@@ -263,8 +266,9 @@ function kitaev_model(; t=1.0, mu=1.0, Delta=1.0, L=Inf)
         return InfiniteMPOHamiltonian(lattice, (1, 2) => TB + SC, (1,) => CP)
     else
         lattice = fill(space(TB, 1), L)
-        terms = Iterators.flatten((((i, i + 1) => TB + SC for i in 1:(L - 1)),
-                                   (i,) => CP for i in 1:L))
+        onsite_terms = ((i,) => CP for i in 1:L)
+        twosite_terms = ((i, i + 1) => TP + SC for i in 1:(L - 1))
+        terms = Iterators.flatten(twosite_terms, onsite_terms)
         return FiniteMPOHamiltonian(lattice, terms)
     end
 end
@@ -276,14 +280,14 @@ function ising_bond_tensor(β)
     return nt
 end
 
-function classical_ising(; β=log(1 + sqrt(2)) / 2, L=Inf)
+function classical_ising(; β = log(1 + sqrt(2)) / 2, L = Inf)
     nt = ising_bond_tensor(β)
 
     δbulk = zeros(ComplexF64, (2, 2, 2, 2))
     δbulk[1, 1, 1, 1] = 1
     δbulk[2, 2, 2, 2] = 1
     @tensor obulk[-1 -2; -3 -4] := δbulk[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] *
-                                   nt[-4; 4]
+        nt[-4; 4]
     Obulk = TensorMap(obulk, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
 
     L == Inf && return InfiniteMPO([Obulk])
@@ -303,40 +307,13 @@ function classical_ising(; β=log(1 + sqrt(2)) / 2, L=Inf)
     return FiniteMPO([Oleft, fill(Obulk, L - 2)..., Oright])
 end
 
-function finite_classical_ising(N)
-    return classical_ising(; L=N)
-    β = log(1 + sqrt(2)) / 2
-    nt = ising_bond_tensor(β)
-
-    # bulk
-    O = zeros(ComplexF64, (2, 2, 2, 2))
-    O[1, 1, 1, 1] = 1
-    O[2, 2, 2, 2] = 1
-    @tensor o[-1 -2; -3 -4] := O[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] * nt[-4; 4]
-    Obulk = TensorMap(o, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
-
-    # left
-    OL = zeros(ComplexF64, (1, 2, 2, 2))
-    OL[1, 1, 1, 1] = 1
-    OL[1, 2, 2, 2] = 1
-    @tensor oL[-1 -2; -3 -4] := OL[-1 1; 2 3] * nt[-2; 1] * nt[-3; 2] * nt[-4; 3]
-    Oleft = TensorMap(oL, ℂ^1 * ℂ^2, ℂ^2 * ℂ^2)
-
-    # right
-    OR = zeros(ComplexF64, (2, 2, 2, 1))
-    OR[1, 1, 1, 1] = 1
-    OR[2, 2, 2, 1] = 1
-    @tensor oR[-1 -2; -3 -4] := OR[1 2; 3 -4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3]
-    Oright = TensorMap(oR, ℂ^2 * ℂ^2, ℂ^2 * ℂ^1)
-
-    return DenseMPO([Oleft, fill(Obulk, N - 2)..., Oright])
-end
-
-function sixvertex(; a=1.0, b=1.0, c=1.0)
-    d = ComplexF64[a 0 0 0
-                   0 c b 0
-                   0 b c 0
-                   0 0 0 a]
+function sixvertex(; a = 1.0, b = 1.0, c = 1.0)
+    d = ComplexF64[
+        a 0 0 0
+        0 c b 0
+        0 b c 0
+        0 0 0 a
+    ]
     return InfiniteMPO([permute(TensorMap(d, ℂ^2 ⊗ ℂ^2, ℂ^2 ⊗ ℂ^2), ((1, 2), (4, 3)))])
 end
 
