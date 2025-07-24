@@ -666,7 +666,7 @@ function Base.:+(H₁::FiniteMPOHamiltonian{O},
                  H₂::FiniteMPOHamiltonian{O}) where {O<:JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
-    Vtriv = oneunit(spacetype(H₁))
+    Vtriv = oneunit(space(first(H₁[1]), 1))
 
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims=(1, 4))
@@ -688,7 +688,7 @@ function Base.:+(H₁::InfiniteMPOHamiltonian{O},
                  H₂::InfiniteMPOHamiltonian{O}) where {O<:JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
-    Vtriv = oneunit(spacetype(H₁))
+    Vtriv = oneunit(space(first(H₁[1]), 1))
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims=(1, 4))
         B = cat(H₁[i].B, H₂[i].B; dims=1)
