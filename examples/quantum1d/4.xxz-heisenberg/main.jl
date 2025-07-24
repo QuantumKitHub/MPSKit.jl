@@ -15,7 +15,7 @@ Then we specify an initial guess, which we then further optimize.
 Working directly in the thermodynamic limit, this is achieved as follows:
 """
 
-H = heisenberg_XXX(; spin=1 // 2)
+H = heisenberg_XXX(; spin = 1 // 2)
 
 md"""
 We then need an intial state, which we shall later optimize. In this example we work directly in the thermodynamic limit.
@@ -35,7 +35,7 @@ On it's own, that is already quite curious.
 Maybe we can do better using another algorithm, such as gradient descent.
 """
 
-groundstate, cache, delta = find_groundstate(state, H, GradientGrassmann(; maxiter=20));
+groundstate, cache, delta = find_groundstate(state, H, GradientGrassmann(; maxiter = 20));
 
 md"""
 Convergence is quite slow and even fails after sufficiently many iterations.
@@ -66,18 +66,19 @@ Alternatively, the hamiltonian can be constructed directly on a two-site unitcel
 """
 
 ## H2 = repeat(H, 2); -- copies the one-site version
-H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin=1 // 2)
-groundstate, envs, delta = find_groundstate(state, H2,
-                                            VUMPS(; maxiter=100, tol=1e-12));
+H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin = 1 // 2)
+groundstate, envs, delta = find_groundstate(
+    state, H2, VUMPS(; maxiter = 100, tol = 1.0e-12)
+);
 
 md"""
 We get convergence, but it takes an enormous amount of iterations.
 The reason behind this becomes more obvious at higher bond dimensions:
 """
 
-groundstate, envs, delta = find_groundstate(state, H2,
-                                            IDMRG2(; trscheme=truncdim(50), maxiter=20,
-                                                   tol=1e-12));
+groundstate, envs, delta = find_groundstate(
+    state, H2, IDMRG2(; trscheme = truncdim(50), maxiter = 20, tol = 1.0e-12)
+);
 entanglementplot(groundstate)
 
 md"""
@@ -97,7 +98,7 @@ The XXZ Heisenberg hamiltonian is SU(2) symmetric and we can exploit this to gre
 It is cumbersome to construct symmetric hamiltonians, but luckily su(2) symmetric XXZ is already implemented:
 """
 
-H2 = heisenberg_XXX(ComplexF64, SU2Irrep, InfiniteChain(2); spin=1 // 2);
+H2 = heisenberg_XXX(ComplexF64, SU2Irrep, InfiniteChain(2); spin = 1 // 2);
 
 md"""
 Our initial state should also be SU(2) symmetric.
@@ -120,5 +121,4 @@ Even though the bond dimension is higher than in the example without symmetry, c
 
 println(dim(V1))
 println(dim(V2))
-groundstate, cache, delta = find_groundstate(state, H2,
-                                             VUMPS(; maxiter=400, tol=1e-12));
+groundstate, cache, delta = find_groundstate(state, H2, VUMPS(; maxiter = 400, tol = 1.0e-12));

@@ -31,20 +31,25 @@ See also [`updatetol`](@ref).
 struct DynamicTol{A} <: Algorithm
     "parent algorithm"
     alg::A
+
     "minimal value of the dynamic tolerance"
     tol_min::Float64
+
     "maximal value of the dynamic tolerance"
     tol_max::Float64
+
     "tolerance factor for updating relative to current algorithm error"
     tol_factor::Float64
-    function DynamicTol(alg::A, tol_min::Real, tol_max::Real,
-                        tol_factor::Real) where {A}
+
+    function DynamicTol(
+            alg::A, tol_min::Real, tol_max::Real, tol_factor::Real
+        ) where {A}
         0 <= tol_min <= tol_max ||
             throw(ArgumentError("tol_min must be between 0 and tol_max"))
         return new{A}(alg, tol_min, tol_max, tol_factor)
     end
 end
-function DynamicTol(alg; tol_min=1e-6, tol_max=1e-2, tol_factor=0.1)
+function DynamicTol(alg; tol_min = 1.0e-6, tol_max = 1.0e-2, tol_factor = 0.1)
     return DynamicTol(alg, tol_min, tol_max, tol_factor)
 end
 

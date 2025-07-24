@@ -20,21 +20,23 @@ keyword arguments to [`Arnoldi`][@extref KrylovKit.Arnoldi].
 
 - [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017) 
 """
-struct ChepigaAnsatz{A<:KrylovAlgorithm} <: Algorithm
+struct ChepigaAnsatz{A <: KrylovAlgorithm} <: Algorithm
     "algorithm used for the eigenvalue solvers"
     alg::A
 end
 function ChepigaAnsatz(; kwargs...)
     if isempty(kwargs)
-        alg = Arnoldi(; krylovdim=30, tol=1e-10, eager=true)
+        alg = Arnoldi(; krylovdim = 30, tol = 1.0e-10, eager = true)
     else
         alg = Arnoldi(; kwargs...)
     end
     return ChepigaAnsatz(alg)
 end
 
-function excitations(H, alg::ChepigaAnsatz, ψ::FiniteMPS, envs=environments(ψ, H);
-                     sector=one(sectortype(ψ)), num::Int=1, pos::Int=length(ψ) ÷ 2)
+function excitations(
+        H, alg::ChepigaAnsatz, ψ::FiniteMPS, envs = environments(ψ, H);
+        sector = one(sectortype(ψ)), num::Int = 1, pos::Int = length(ψ) ÷ 2
+    )
     1 ≤ pos ≤ length(ψ) || throw(ArgumentError("invalid position $pos"))
     sector == one(sector) || error("not yet implemented for charged excitations")
 
@@ -83,21 +85,23 @@ keyword arguments to `Arnoldi`.
 
 - [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017) 
 """
-struct ChepigaAnsatz2{A<:KrylovAlgorithm} <: Algorithm
+struct ChepigaAnsatz2{A <: KrylovAlgorithm} <: Algorithm
     alg::A
     trscheme::Any
 end
-function ChepigaAnsatz2(; trscheme=notrunc(), kwargs...)
+function ChepigaAnsatz2(; trscheme = notrunc(), kwargs...)
     if isempty(kwargs)
-        alg = Arnoldi(; krylovdim=30, tol=1e-10, eager=true)
+        alg = Arnoldi(; krylovdim = 30, tol = 1.0e-10, eager = true)
     else
         alg = Arnoldi(; kwargs...)
     end
     return ChepigaAnsatz2(alg, trscheme)
 end
 
-function excitations(H, alg::ChepigaAnsatz2, ψ::FiniteMPS, envs=environments(ψ, H);
-                     sector=one(sectortype(ψ)), num::Int=1, pos::Int=length(ψ) ÷ 2)
+function excitations(
+        H, alg::ChepigaAnsatz2, ψ::FiniteMPS, envs = environments(ψ, H);
+        sector = one(sectortype(ψ)), num::Int = 1, pos::Int = length(ψ) ÷ 2
+    )
     1 ≤ pos ≤ length(ψ) - 1 || throw(ArgumentError("invalid position $pos"))
     sector == one(sector) || error("not yet implemented for charged excitations")
 
@@ -117,7 +121,7 @@ function excitations(H, alg::ChepigaAnsatz2, ψ::FiniteMPS, envs=environments(ψ
     # map back to finitemps
     ψs = map(AC2s) do ac
         ψ′ = copy(ψ)
-        AL, C, AR, = tsvd!(ac; trunc=alg.trscheme)
+        AL, C, AR, = tsvd!(ac; trunc = alg.trscheme)
         normalize!(C)
         ψ′.AC[pos] = (AL, complex(C))
         ψ′.AC[pos + 1] = (complex(C), _transpose_front(AR))

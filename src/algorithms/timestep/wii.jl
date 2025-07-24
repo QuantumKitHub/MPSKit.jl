@@ -30,46 +30,29 @@ function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::WII)
 
     Wnew = map(1:length(H)) do i
         for j in 2:(size(H[i], 1) - 1), k in 2:(size(H[i], 4) - 1)
-            init = (isometry(storagetype(WD[i]), codomain(WD[i]), domain(WD[i])),
-                    zero(H[i][1, 1, 1, k]),
-                    zero(H[i][j, 1, 1, end]),
-                    zero(H[i][j, 1, 1, k]))
+            init = (
+                isometry(storagetype(WD[i]), codomain(WD[i]), domain(WD[i])),
+                zero(H[i][1, 1, 1, k]), zero(H[i][j, 1, 1, end]), zero(H[i][j, 1, 1, k]),
+            )
 
             y, convhist = exponentiate(1.0, init, exp_alg) do (x1, x2, x3, x4)
                 @plansor y1[-1 -2; -3 -4] := δ * x1[-1 1; -3 -4] *
-                                             H[i][1, 1, 1, end][2 3; 1 4] *
-                                             τ[-2 4; 2 3]
+                    H[i][1, 1, 1, end][2 3; 1 4] * τ[-2 4; 2 3]
 
                 @plansor y2[-1 -2; -3 -4] := δ * x2[-1 1; -3 -4] *
-                                             H[i][1, 1, 1, end][2 3; 1 4] *
-                                             τ[-2 4; 2 3] +
-                                             sqrt(δ) *
-                                             x1[1 2; -3 4] *
-                                             H[i][1, 1, 1, k][-1 -2; 3 -4] *
-                                             τ[3 4; 1 2]
+                    H[i][1, 1, 1, end][2 3; 1 4] * τ[-2 4; 2 3] +
+                    sqrt(δ) * x1[1 2; -3 4] * H[i][1, 1, 1, k][-1 -2; 3 -4] * τ[3 4; 1 2]
 
                 @plansor y3[-1 -2; -3 -4] := δ * x3[-1 1; -3 -4] *
-                                             H[i][1, 1, 1, end][2 3; 1 4] *
-                                             τ[-2 4; 2 3] +
-                                             sqrt(δ) *
-                                             x1[1 2; -3 4] *
-                                             H[i][j, 1, 1, end][-1 -2; 3 -4] *
-                                             τ[3 4; 1 2]
+                    H[i][1, 1, 1, end][2 3; 1 4] * τ[-2 4; 2 3] +
+                    sqrt(δ) * x1[1 2; -3 4] * H[i][j, 1, 1, end][-1 -2; 3 -4] * τ[3 4; 1 2]
 
-                @plansor y4[-1 -2; -3 -4] := (δ * x4[-1 1; -3 -4] *
-                                              H[i][1, 1, 1, end][2 3; 1 4] *
-                                              τ[-2 4; 2 3] +
-                                              x1[1 2; -3 4] *
-                                              H[i][j, 1, 1, k][-1 -2; 3 -4] *
-                                              τ[3 4; 1 2]) +
-                                             (sqrt(δ) *
-                                              x2[1 2; -3 -4] *
-                                              H[i][j, 1, 1, end][-1 -2; 3 4] *
-                                              τ[3 4; 1 2]) +
-                                             (sqrt(δ) *
-                                              x3[-1 4; -3 3] *
-                                              H[i][1, 1, 1, k][2 -2; 1 -4] *
-                                              τ[3 4; 1 2])
+                @plansor y4[-1 -2; -3 -4] := (
+                    δ * x4[-1 1; -3 -4] * H[i][1, 1, 1, end][2 3; 1 4] * τ[-2 4; 2 3] +
+                        x1[1 2; -3 4] * H[i][j, 1, 1, k][-1 -2; 3 -4] * τ[3 4; 1 2]
+                ) + (
+                    sqrt(δ) * x2[1 2; -3 -4] * H[i][j, 1, 1, end][-1 -2; 3 4] * τ[3 4; 1 2]
+                ) + (sqrt(δ) * x3[-1 4; -3 3] * H[i][1, 1, 1, k][2 -2; 1 -4] * τ[3 4; 1 2])
 
                 return y1, y2, y3, y4
             end

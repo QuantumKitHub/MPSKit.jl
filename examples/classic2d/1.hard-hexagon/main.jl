@@ -25,7 +25,7 @@ function virtual_space(D::Integer)
     return Vect[FibonacciAnyon](sector => _D for sector in (:I, :τ))
 end
 
-@assert isapprox(dim(virtual_space(100)), 100; atol=3)
+@assert isapprox(dim(virtual_space(100)), 100; atol = 3)
 
 md"""
 ## The leading boundary
@@ -39,10 +39,10 @@ Additionally, we can compute the entanglement entropy as well as the correlation
 D = 10
 V = virtual_space(D)
 ψ₀ = InfiniteMPS([P], [V])
-ψ, envs, = leading_boundary(ψ₀, mpo,
-                            VUMPS(; verbosity=0,
-                                  alg_eigsolve=MPSKit.Defaults.alg_eigsolve(;
-                                                                            ishermitian=false))) # use non-hermitian eigensolver
+ψ, envs, = leading_boundary(
+    ψ₀, mpo,
+    VUMPS(; verbosity = 0, alg_eigsolve = MPSKit.Defaults.alg_eigsolve(; ishermitian = false))
+) # use non-hermitian eigensolver
 F = real(expectation_value(ψ, mpo))
 S = real(first(entropy(ψ)))
 ξ = correlation_length(ψ)
@@ -57,8 +57,10 @@ First we need to know the entropy and correlation length at a bunch of different
 According to the scaling hypothesis we should have ``S \propto \frac{c}{6} log(ξ)``. Therefore we should find ``c`` using
 """
 
-function scaling_simulations(ψ₀, mpo, Ds; verbosity=0, tol=1e-6,
-                             alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false))
+function scaling_simulations(
+        ψ₀, mpo, Ds; verbosity = 0, tol = 1.0e-6,
+        alg_eigsolve = MPSKit.Defaults.alg_eigsolve(; ishermitian = false)
+    )
     entropies = similar(Ds, Float64)
     correlations = similar(Ds, Float64)
     alg = VUMPS(; verbosity, tol, alg_eigsolve)
@@ -68,7 +70,7 @@ function scaling_simulations(ψ₀, mpo, Ds; verbosity=0, tol=1e-6,
     correlations[1] = correlation_length(ψ)
 
     for (i, d) in enumerate(diff(Ds))
-        ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme=truncdim(d)), envs)
+        ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme = truncdim(d)), envs)
         ψ, envs, = leading_boundary(ψ, mpo, alg, envs)
         entropies[i + 1] = real(entropy(ψ)[1])
         correlations[i + 1] = correlation_length(ψ)
@@ -83,8 +85,8 @@ Ss, ξs = scaling_simulations(ψ₀, mpo, bond_dimensions)
 f = fit(log.(ξs), 6 * Ss, 1)
 c = f.coeffs[2]
 
-#+ 
+#+
 
-p = plot(; xlabel="logarithmic correlation length", ylabel="entanglement entropy")
-p = plot(log.(ξs), Ss; seriestype=:scatter, label=nothing)
-plot!(p, ξ -> f(ξ) / 6; label="fit")
+p = plot(; xlabel = "logarithmic correlation length", ylabel = "entanglement entropy")
+p = plot(log.(ξs), Ss; seriestype = :scatter, label = nothing)
+plot!(p, ξ -> f(ξ) / 6; label = "fit")

@@ -25,8 +25,10 @@ Plot the [entanglement spectrum](@ref entanglement_spectrum) of a given MPS `sta
 function entanglementplot end
 @userplot EntanglementPlot
 
-@recipe function f(h::EntanglementPlot; site=0, expand_symmetry=false, sortby=maximum,
-                   sector_margin=1 // 10, sector_formatter=string)
+@recipe function f(
+        h::EntanglementPlot; site = 0, expand_symmetry = false, sortby = maximum,
+        sector_margin = 1 // 10, sector_formatter = string
+    )
     mps = h.args[1]
     (site <= length(mps) && !(isa(mps, FiniteMPS) && site == 0)) ||
         throw(ArgumentError("Invalid site $site for the given mps."))
@@ -37,7 +39,7 @@ function entanglementplot end
     for (c, b) in spectra
         if expand_symmetry # Duplicate entries according to the quantum dimension.
             b′ = repeat(b, dim(c))
-            sort!(b′; rev=true)
+            sort!(b′; rev = true)
             push!(spectrum, b′)
         else
             push!(spectrum, b)
@@ -46,7 +48,7 @@ function entanglementplot end
     end
 
     if length(spectrum) > 1
-        order = sortperm(spectrum; by=sortby, rev=true)
+        order = sortperm(spectrum; by = sortby, rev = true)
         spectrum = spectrum[order]
         sectors = sectors[order]
     end
@@ -61,7 +63,7 @@ function entanglementplot end
             if n_spectrum == 1
                 x = [i + 1 // 2]
             else
-                x = range(i + sector_margin, i + 1 - sector_margin; length=n_spectrum)
+                x = range(i + sector_margin, i + 1 - sector_margin; length = n_spectrum)
             end
             return x, partial_spectrum
         end
@@ -79,7 +81,7 @@ function entanglementplot end
     xrotation --> 45
     xlims --> (1, length(sectors) + 1)
 
-    ylims --> (-Inf, 1 + 1e-1)
+    ylims --> (-Inf, 1 + 1.0e-1)
     yscale --> :log10
     label := nothing
 
@@ -112,16 +114,20 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 function transferplot end
 @userplot TransferPlot
 
-@recipe function f(h::TransferPlot; sectors=nothing, transferkwargs=(;), thetaorigin=0,
-                   sector_formatter=string)
+@recipe function f(
+        h::TransferPlot; sectors = nothing, transferkwargs = (;), thetaorigin = 0,
+        sector_formatter = string
+    )
     if sectors === nothing
         sectors = [one(sectortype(h.args[1]))]
     end
 
     for sector in sectors
         below = length(h.args) == 1 ? h.args[1] : h.args[2]
-        spectrum = transfer_spectrum(h.args[1]; below=below, sector=sector,
-                                     transferkwargs...)
+        spectrum = transfer_spectrum(
+            h.args[1]; below = below, sector = sector,
+            transferkwargs...
+        )
 
         @series begin
             yguide --> "r"
@@ -129,8 +135,8 @@ function transferplot end
 
             xguide --> "θ"
             xlims --> (thetaorigin, thetaorigin + 2pi)
-            xticks --> range(0, 2pi; length=7)
-            xformatter --> x -> "$(rationalize(x/π, tol=0.05))π"
+            xticks --> range(0, 2pi; length = 7)
+            xformatter --> x -> "$(rationalize(x / π, tol = 0.05))π"
             xwiden --> true
             seriestype := :scatter
             markershape --> :auto

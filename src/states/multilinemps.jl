@@ -21,21 +21,24 @@ See also: [`Multiline`](@ref)
 function MultilineMPS end
 
 MultilineMPS(mpss::AbstractVector{<:InfiniteMPS}) = Multiline(mpss)
-function MultilineMPS(pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S};
-                      kwargs...) where {S<:VectorSpace}
+function MultilineMPS(
+        pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...
+    ) where {S <: VectorSpace}
     data = map(eachrow(pspaces), eachrow(Dspaces)) do p, D
         return InfiniteMPS(p, D; kwargs...)
     end
     return MultilineMPS(data)
 end
-function MultilineMPS(As::AbstractMatrix{T}; kwargs...) where {T<:GenericMPSTensor}
+function MultilineMPS(As::AbstractMatrix{T}; kwargs...) where {T <: GenericMPSTensor}
     data = map(eachrow(As)) do Arow
         return InfiniteMPS(Arow; kwargs...)
     end
     return MultilineMPS(data)
 end
-function MultilineMPS(ALs::AbstractMatrix{<:GenericMPSTensor},
-                      C₀::AbstractVector{<:MPSBondTensor}; kwargs...)
+function MultilineMPS(
+        ALs::AbstractMatrix{<:GenericMPSTensor}, C₀::AbstractVector{<:MPSBondTensor};
+        kwargs...
+    )
     data = map(eachrow(ALs), C₀) do ALrow, C₀row
         return InfiniteMPS(ALrow, C₀row; kwargs...)
     end
@@ -71,11 +74,11 @@ function Base.propertynames(::MultilineMPS)
 end
 
 for f in (:l_RR, :l_RL, :l_LL, :l_LR)
-    @eval $f(t::MultilineMPS, i, j=1) = $f(t[i], j)
+    @eval $f(t::MultilineMPS, i, j = 1) = $f(t[i], j)
 end
 
 for f in (:r_RR, :r_RL, :r_LR, :r_LL)
-    @eval $f(t::MultilineMPS, i, j=size(t, 2)) = $f(t[i], j)
+    @eval $f(t::MultilineMPS, i, j = size(t, 2)) = $f(t[i], j)
 end
 
 site_type(::Type{Multiline{S}}) where {S} = site_type(S)
@@ -96,8 +99,7 @@ TensorKit.normalize!(a::MultilineMPS) = (normalize!.(parent(a)); return a)
 Base.convert(::Type{MultilineMPS}, st::InfiniteMPS) = Multiline([st])
 Base.convert(::Type{InfiniteMPS}, st::MultilineMPS) = only(st)
 Base.eltype(t::MultilineMPS) = eltype(t[1])
-Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ));
-                                                ψ)
+Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ)); ψ)
 
 left_virtualspace(t::MultilineMPS, i::Int, j::Int) = left_virtualspace(t[i], j)
 right_virtualspace(t::MultilineMPS, i::Int, j::Int) = right_virtualspace(t[i], j)

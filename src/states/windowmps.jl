@@ -35,18 +35,18 @@ left (and right) environment to construct the WindowMPS in one step.
 Construct a WindowMPS from an InfiniteMPS, by promoting a region of length `L` to a
 `FiniteMPS`.
 """
-struct WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
-    left_gs::InfiniteMPS{A,B}
-    window::FiniteMPS{A,B}
-    right_gs::InfiniteMPS{A,B}
+struct WindowMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
+    left_gs::InfiniteMPS{A, B}
+    window::FiniteMPS{A, B}
+    right_gs::InfiniteMPS{A, B}
 
-    function WindowMPS(ψₗ::InfiniteMPS{A,B}, ψₘ::FiniteMPS{A,B},
-                       ψᵣ::InfiniteMPS{A,B}=copy(ψₗ)) where {A<:GenericMPSTensor,
-                                                             B<:MPSBondTensor}
+    function WindowMPS(
+            ψₗ::InfiniteMPS{A, B}, ψₘ::FiniteMPS{A, B}, ψᵣ::InfiniteMPS{A, B} = copy(ψₗ)
+        ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
         left_virtualspace(ψₗ, 1) == left_virtualspace(ψₘ, 1) &&
             right_virtualspace(ψₘ, length(ψₘ)) == right_virtualspace(ψᵣ, length(ψₘ)) ||
             throw(SpaceMismatch("Mismatch between window and environment virtual spaces"))
-        return new{A,B}(ψₗ, ψₘ, ψᵣ)
+        return new{A, B}(ψₗ, ψₘ, ψᵣ)
     end
 end
 
@@ -54,31 +54,41 @@ end
 Constructors
 ===========================================================================================#
 
-function WindowMPS(ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor},
-                   ψᵣ::InfiniteMPS=ψₗ)
+function WindowMPS(
+        ψₗ::InfiniteMPS, site_tensors::AbstractVector{<:GenericMPSTensor},
+        ψᵣ::InfiniteMPS = ψₗ
+    )
     return WindowMPS(ψₗ, FiniteMPS(site_tensors), ψᵣ)
 end
 
-function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   maxvirtspace::S, ψₗ::InfiniteMPS,
-                   ψᵣ::InfiniteMPS=ψₗ) where {S<:ElementarySpace}
-    ψₘ = FiniteMPS(f, elt, physspaces, maxvirtspace; left=left_virtualspace(ψₗ, 1),
-                   right=right_virtualspace(ψᵣ, length(physspaces)))
+function WindowMPS(
+        f, elt, physspaces::Vector{<:Union{S, CompositeSpace{S}}},
+        maxvirtspace::S, ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS = ψₗ
+    ) where {S <: ElementarySpace}
+    ψₘ = FiniteMPS(
+        f, elt, physspaces, maxvirtspace; left = left_virtualspace(ψₗ, 1),
+        right = right_virtualspace(ψᵣ, length(physspaces))
+    )
     return WindowMPS(ψₗ, ψₘ, ψᵣ)
 end
-function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, maxvirtspace::S,
-                   ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS=ψₗ) where {S<:ElementarySpace}
+function WindowMPS(
+        physspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxvirtspace::S,
+        ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS = ψₗ
+    ) where {S <: ElementarySpace}
     return WindowMPS(rand, Defaults.eltype, physspaces, maxvirtspace, ψₗ, ψᵣ)
 end
 
-function WindowMPS(f, elt, physspaces::Vector{<:Union{S,CompositeSpace{S}}},
-                   virtspaces::Vector{S}, ψₗ::InfiniteMPS,
-                   ψᵣ::InfiniteMPS=ψₗ) where {S<:ElementarySpace}
+function WindowMPS(
+        f, elt, physspaces::Vector{<:Union{S, CompositeSpace{S}}},
+        virtspaces::Vector{S}, ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS = ψₗ
+    ) where {S <: ElementarySpace}
     ψₘ = FiniteMPS(f, elt, physspaces, virtspaces)
     return WindowMPS(ψₗ, ψₘ, ψᵣ)
 end
-function WindowMPS(physspaces::Vector{<:Union{S,CompositeSpace{S}}}, virtspaces::Vector{S},
-                   ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS=ψₗ) where {S<:ElementarySpace}
+function WindowMPS(
+        physspaces::Vector{<:Union{S, CompositeSpace{S}}}, virtspaces::Vector{S},
+        ψₗ::InfiniteMPS, ψᵣ::InfiniteMPS = ψₗ
+    ) where {S <: ElementarySpace}
     return WindowMPS(rand, Defaults.eltype, physspaces, virtspaces, ψₗ, ψᵣ)
 end
 
@@ -96,11 +106,11 @@ function WindowMPS(N::Int, V::VectorSpace, args...; kwargs...)
     return WindowMPS(fill(V, N), args...; kwargs...)
 end
 
-function WindowMPS(ψ::InfiniteMPS{A,B}, L::Int) where {A,B}
-    CLs = Vector{Union{Missing,B}}(missing, L + 1)
-    ALs = Vector{Union{Missing,A}}(missing, L)
-    ARs = Vector{Union{Missing,A}}(missing, L)
-    ACs = Vector{Union{Missing,A}}(missing, L)
+function WindowMPS(ψ::InfiniteMPS{A, B}, L::Int) where {A, B}
+    CLs = Vector{Union{Missing, B}}(missing, L + 1)
+    ALs = Vector{Union{Missing, A}}(missing, L)
+    ARs = Vector{Union{Missing, A}}(missing, L)
+    ACs = Vector{Union{Missing, A}}(missing, L)
 
     ALs .= ψ.AL[1:L]
     ARs .= ψ.AR[1:L]
@@ -133,17 +143,18 @@ Base.eltype(::Type{<:WindowMPS{A}}) where {A} = A
 Base.checkbounds(::Type{Bool}, ψ::WindowMPS, i::Integer) = true
 
 site_type(::Type{<:WindowMPS{A}}) where {A} = A
-bond_type(::Type{<:WindowMPS{<:Any,B}}) where {B} = B
+bond_type(::Type{<:WindowMPS{<:Any, B}}) where {B} = B
 
 TensorKit.space(ψ::WindowMPS, n::Integer) = space(ψ.AC[n], 2)
 for f in (:physicalspace, :left_virtualspace, :right_virtualspace)
     @eval $f(ψ::WindowMPS, n::Integer) = n < 1 ? $f(ψ.left_gs, n) :
-                                         n > length(ψ) ? $f(ψ.right_gs, n - length(ψ)) :
-                                         $f(ψ.window, n)
+        n > length(ψ) ? $f(ψ.right_gs, n - length(ψ)) :
+        $f(ψ.window, n)
 end
 function physicalspace(ψ::WindowMPS)
-    return WindowArray(physicalspace(ψ.left_gs), physicalspace(ψ.window),
-                       physicalspace(ψ.right_gs))
+    return WindowArray(
+        physicalspace(ψ.left_gs), physicalspace(ψ.window), physicalspace(ψ.right_gs)
+    )
 end
 r_RR(ψ::WindowMPS) = r_RR(ψ.right_gs, length(ψ))
 l_LL(ψ::WindowMPS) = l_LL(ψ.left_gs, 1)

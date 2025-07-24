@@ -1,5 +1,7 @@
-function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                      alg::IDMRG, envs=environments(ψ, toapprox))
+function approximate!(
+        ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS}, alg::IDMRG,
+        envs = environments(ψ, toapprox)
+    )
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
     local iter
@@ -12,8 +14,9 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # left to right sweep
             for col in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col), ψ,
-                                                       toapprox, envs)
+                    ψ.AC[row + 1, col] = AC_projection(
+                        CartesianIndex(row, col), ψ, toapprox, envs
+                    )
                     normalize!(ψ.AC[row + 1, col])
                     ψ.AL[row + 1, col], ψ.C[row + 1, col] = leftorth!(ψ.AC[row + 1, col])
                 end
@@ -23,11 +26,11 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # right to left sweep
             for col in reverse(1:size(ψ, 2))
                 for row in 1:size(ψ, 1)
-                    ψ.AC[row + 1, col] = AC_projection(CartesianIndex(row, col),
-                                                       ψ, toapprox, envs)
+                    ψ.AC[row + 1, col] = AC_projection(
+                        CartesianIndex(row, col), ψ, toapprox, envs
+                    )
                     normalize!(ψ.AC[row + 1, col])
-                    ψ.C[row + 1, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row + 1,
-                                                                                  col]))
+                    ψ.C[row + 1, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row + 1, col]))
                     ψ.AR[row + 1, col] = _transpose_front(temp)
                 end
                 transfer_rightenv!(envs, ψ, toapprox, col - 1)
@@ -57,8 +60,10 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
     return ψ, envs, ϵ
 end
 
-function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:MultilineMPS},
-                      alg::IDMRG2, envs=environments(ψ, toapprox))
+function approximate!(
+        ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS},
+        alg::IDMRG2, envs = environments(ψ, toapprox)
+    )
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
@@ -73,9 +78,11 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # sweep from left to right
             for site in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
-                    AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
-                                          kind=:ACAR)
-                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                    AC2′ = AC2_projection(
+                        CartesianIndex(row, site), ψ, toapprox, envs;
+                        kind = :ACAR
+                    )
+                    al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -93,9 +100,11 @@ function approximate!(ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO,<:Multili
             # sweep from right to left
             for site in reverse(0:(size(ψ, 2) - 1))
                 for row in 1:size(ψ, 1)
-                    AC2′ = AC2_projection(CartesianIndex(row, site), ψ, toapprox, envs;
-                                          kind=:ALAC)
-                    al, c, ar, = tsvd!(AC2′; trunc=alg.trscheme, alg=alg.alg_svd)
+                    AC2′ = AC2_projection(
+                        CartesianIndex(row, site), ψ, toapprox, envs;
+                        kind = :ALAC
+                    )
+                    al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al

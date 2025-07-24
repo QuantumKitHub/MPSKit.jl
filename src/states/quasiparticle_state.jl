@@ -4,7 +4,7 @@ I think it makes sense to see these things as an actual state instead of return 
 This will allow us to plot energy density (finite qp) and measure observeables.
 =#
 
-struct LeftGaugedQP{S,T1,T2,E<:Number}
+struct LeftGaugedQP{S, T1, T2, E <: Number}
     # !(left_gs === right_gs) => domain wall excitation
     left_gs::S
     right_gs::S
@@ -15,7 +15,7 @@ struct LeftGaugedQP{S,T1,T2,E<:Number}
     momentum::E
 end
 
-struct RightGaugedQP{S,T1,T2,E<:Number}
+struct RightGaugedQP{S, T1, T2, E <: Number}
     # !(left_gs === right_gs) => domain wall excitation
     left_gs::S
     right_gs::S
@@ -26,22 +26,25 @@ struct RightGaugedQP{S,T1,T2,E<:Number}
     momentum::E
 end
 
-function leftgaugedqptype(::Type{S}, ::Type{E}) where {S,E<:Number}
+function leftgaugedqptype(::Type{S}, ::Type{E}) where {S, E <: Number}
     T1 = eltype(S)
     T2 = tensormaptype(spacetype(T1), 1, 2, storagetype(T1))
-    return LeftGaugedQP{S,T1,T2,E}
+    return LeftGaugedQP{S, T1, T2, E}
 end
 
 #constructors
-function LeftGaugedQP(datfun, left_gs, right_gs=left_gs;
-                      sector=one(sectortype(left_gs)), momentum=0.0)
+function LeftGaugedQP(
+        datfun, left_gs, right_gs = left_gs;
+        sector = one(sectortype(left_gs)), momentum = 0.0
+    )
     # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
     VLs = convert(Vector, map(leftnull, left_gs.AL))
     Xs = map(enumerate(VLs)) do (loc, vl)
-        x = similar(vl,
-                    right_virtualspace(vl) ←
-                    excitation_space ⊗ right_virtualspace(right_gs, loc))
+        x = similar(
+            vl,
+            right_virtualspace(vl) ← excitation_space ⊗ right_virtualspace(right_gs, loc)
+        )
         fill_data!(x, datfun)
         return x
     end
@@ -51,8 +54,10 @@ function LeftGaugedQP(datfun, left_gs, right_gs=left_gs;
         @warn "momentum is ignored for finite quasiparticles"
     return LeftGaugedQP(left_gs, right_gs, VLs, Xs, momentum)
 end
-function LeftGaugedQP(datfun, left_gs::MultilineMPS, right_gs::MultilineMPS=left_gs;
-                      sector=one(sectortype(left_gs)), momentum=0.0)
+function LeftGaugedQP(
+        datfun, left_gs::MultilineMPS, right_gs::MultilineMPS = left_gs;
+        sector = one(sectortype(left_gs)), momentum = 0.0
+    )
     # not sure why this is needed for type stability
     Tresult = leftgaugedqptype(eltype(parent(left_gs)), typeof(momentum))
     qp_rows = Vector{Tresult}(undef, size(left_gs, 1))
@@ -62,15 +67,18 @@ function LeftGaugedQP(datfun, left_gs::MultilineMPS, right_gs::MultilineMPS=left
     return Multiline(qp_rows)
 end
 
-function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
-                       sector=one(sectortype(left_gs)), momentum=0.0)
+function RightGaugedQP(
+        datfun, left_gs, right_gs = left_gs;
+        sector = one(sectortype(left_gs)), momentum = 0.0
+    )
     # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
     VRs = convert(Vector, map(rightnull! ∘ _transpose_tail, right_gs.AR))
     Xs = map(enumerate(VRs)) do (i, vr)
-        x = similar(vr,
-                    left_virtualspace(left_gs, i)' ←
-                    excitation_space ⊗ _firstspace(vr))
+        x = similar(
+            vr,
+            left_virtualspace(left_gs, i)' ← excitation_space ⊗ _firstspace(vr)
+        )
         return fill_data!(x, datfun)
     end
     left_gs isa InfiniteMPS ||
@@ -80,16 +88,16 @@ function RightGaugedQP(datfun, left_gs, right_gs=left_gs;
 end
 
 #gauge dependent code
-function Base.similar(v::LeftGaugedQP, ::Type{T}=scalartype(v)) where {T<:Number}
+function Base.similar(v::LeftGaugedQP, ::Type{T} = scalartype(v)) where {T <: Number}
     return LeftGaugedQP(v.left_gs, v.right_gs, v.VLs, similar.(v.Xs, T), v.momentum)
 end
-function Base.similar(v::RightGaugedQP, ::Type{T}=scalartype(v)) where {T<:Number}
+function Base.similar(v::RightGaugedQP, ::Type{T} = scalartype(v)) where {T <: Number}
     return RightGaugedQP(v.left_gs, v.right_gs, similar.(v.Xs, T), v.VRs, v.momentum)
 end
 
 Base.getindex(v::LeftGaugedQP, i::Int) = v.VLs[mod1(i, end)] * v.Xs[mod1(i, end)]
 function Base.getindex(v::RightGaugedQP, i::Int)
-    @plansor t[-1 -2; -3 -4] := v.Xs[mod1(i, end)][-1; -3 1] * v.VRs[mod1(i, end)][1; -4 -2]
+    return @plansor t[-1 -2; -3 -4] := v.Xs[mod1(i, end)][-1; -3 1] * v.VRs[mod1(i, end)][1; -4 -2]
 end
 
 function Base.setindex!(v::LeftGaugedQP, B, i::Int)
@@ -97,23 +105,25 @@ function Base.setindex!(v::LeftGaugedQP, B, i::Int)
     return v
 end
 function Base.setindex!(v::RightGaugedQP, B, i::Int)
-    @plansor v.Xs[mod1(i, end)][-1; -2 -3] := B[-1 1; -2 2] *
-                                              conj(v.VRs[mod1(i, end)][-3; 2 1])
+    @plansor v.Xs[mod1(i, end)][-1; -2 -3] := B[-1 1; -2 2] * conj(v.VRs[mod1(i, end)][-3; 2 1])
     return v
 end
 
 #conversion between gauges (partially implemented)
-function Base.convert(::Type{RightGaugedQP},
-                      input::LeftGaugedQP{S}) where {S<:InfiniteMPS}
-    rg = RightGaugedQP(zero, input.left_gs, input.right_gs;
-                       sector=first(sectors(auxiliaryspace(input))),
-                       momentum=input.momentum)
+function Base.convert(
+        ::Type{RightGaugedQP}, input::LeftGaugedQP{S}
+    ) where {S <: InfiniteMPS}
+    rg = RightGaugedQP(
+        zero, input.left_gs, input.right_gs;
+        sector = first(sectors(auxiliaryspace(input))), momentum = input.momentum
+    )
     len = length(input)
 
     #construct environments
-    rBs = [@plansor t[-1; -2 -3] := input[len][-1 2; -2 3] *
-                                    conj(input.right_gs.AR[len][-3 2; 3]) *
-                                    exp(1im * input.momentum)]
+    rBs = [
+        @plansor t[-1; -2 -3] := input[len][-1 2; -2 3] *
+            conj(input.right_gs.AR[len][-3 2; 3]) * exp(1im * input.momentum)
+    ]
     for i in (len - 1):-1:1
         t = TransferMatrix(input.left_gs.AL[i], input.right_gs.AR[i]) * rBs[end]
         @plansor t[-1; -2 -3] += input[i][-1 2; -2 3] * conj(input.right_gs.AR[i][-3 2; 3])
@@ -127,36 +137,42 @@ function Base.convert(::Type{RightGaugedQP},
         tm = regularize(tm, l_LR(input.right_gs), r_LR(input.right_gs))
     end
 
-    rBE, convhist = linsolve(tm, rBs[1], rBs[1], GMRES(), 1,
-                             -exp(1im * input.momentum * len))
+    rBE, convhist = linsolve(
+        tm, rBs[1], rBs[1], GMRES(), 1, -exp(1im * input.momentum * len)
+    )
     convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
 
     rBs[1] = rBE
     for i in len:-1:2
         rBE = TransferMatrix(input.left_gs.AL[i], input.right_gs.AR[i]) * rBE *
-              exp(1im * input.momentum)
+            exp(1im * input.momentum)
         rBs[i] += rBE
     end
 
     #final contraction is now easy
     for i in 1:len
         @plansor T[-1 -2; -3 -4] := input.left_gs.AL[i][-1 -2; 1] *
-                                    rBs[mod1(i + 1, end)][1; -3 -4]
+            rBs[mod1(i + 1, end)][1; -3 -4]
         @plansor T[-1 -2; -3 -4] += input[i][-1 -2; -3 -4]
         rg[i] = T
     end
 
     return rg
 end
-function Base.convert(::Type{LeftGaugedQP},
-                      input::RightGaugedQP{S}) where {S<:InfiniteMPS}
-    lg = LeftGaugedQP(zero, input.left_gs, input.right_gs;
-                      sector=first(sectors(auxiliaryspace(input))), momentum=input.momentum)
+function Base.convert(
+        ::Type{LeftGaugedQP}, input::RightGaugedQP{S}
+    ) where {S <: InfiniteMPS}
+    lg = LeftGaugedQP(
+        zero, input.left_gs, input.right_gs;
+        sector = first(sectors(auxiliaryspace(input))), momentum = input.momentum
+    )
     len = length(input)
 
-    lBs = [@plansor t[-1; -2 -3] := input[1][1 2; -2 -3] *
-                                    conj(input.left_gs.AL[1][1 2; -1])] ./
-          exp(1im * input.momentum)
+    lBs = [
+        @plansor t[-1; -2 -3] := input[1][1 2; -2 -3] *
+            conj(input.left_gs.AL[1][1 2; -1])
+    ] ./
+        exp(1im * input.momentum)
     for i in 2:len
         t = lBs[end] * TransferMatrix(input.right_gs.AR[i], input.left_gs.AL[i])
         @plansor t[-1; -2 -3] += input[i][1 2; -2 -3] * conj(input.left_gs.AL[i][1 2; -1])
@@ -168,20 +184,21 @@ function Base.convert(::Type{LeftGaugedQP},
         tm = regularize(tm, l_RL(input.right_gs), r_RL(input.right_gs))
     end
 
-    lBE, convhist = linsolve(flip(tm), lBs[end], lBs[end], GMRES(), 1,
-                             -1 / exp(1im * input.momentum * len))
+    lBE, convhist = linsolve(
+        flip(tm), lBs[end], lBs[end], GMRES(), 1, -1 / exp(1im * input.momentum * len)
+    )
     convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
 
     lBs[end] = lBE
     for i in 1:(len - 1)
         lBE = lBE * TransferMatrix(input.right_gs.AR[i], input.left_gs.AL[i]) /
-              exp(1im * input.momentum)
+            exp(1im * input.momentum)
         lBs[i] += lBE
     end
 
     for i in 1:len
         @plansor T[-1 -2; -3 -4] := lBs[mod1(i - 1, len)][-1; -3 1] *
-                                    input.right_gs.AR[i][1 -2; -4]
+            input.right_gs.AR[i][1 -2; -4]
         @plansor T[-1 -2; -3 -4] += input[i][-1 -2; -3 -4]
         lg[i] = T
     end
@@ -190,13 +207,13 @@ function Base.convert(::Type{LeftGaugedQP},
 end
 
 # gauge independent code
-const QP{S,T1,T2} = Union{LeftGaugedQP{S,T1,T2},RightGaugedQP{S,T1,T2}}
-const FiniteQP{S<:FiniteMPS,T1,T2} = QP{S,T1,T2}
-const InfiniteQP{S<:InfiniteMPS,T1,T2} = QP{S,T1,T2}
-const MultilineQP{Q<:QP} = Multiline{Q}
+const QP{S, T1, T2} = Union{LeftGaugedQP{S, T1, T2}, RightGaugedQP{S, T1, T2}}
+const FiniteQP{S <: FiniteMPS, T1, T2} = QP{S, T1, T2}
+const InfiniteQP{S <: InfiniteMPS, T1, T2} = QP{S, T1, T2}
+const MultilineQP{Q <: QP} = Multiline{Q}
 
-TensorKit.spacetype(::Union{QP{S},Type{<:QP{S}}}) where {S} = spacetype(S)
-TensorKit.sectortype(::Union{QP{S},Type{<:QP{S}}}) where {S} = sectortype(S)
+TensorKit.spacetype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = spacetype(S)
+TensorKit.sectortype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = sectortype(S)
 
 left_virtualspace(state::QP, i::Int) = left_virtualspace(state.left_gs, i)
 right_virtualspace(state::QP, i::Int) = right_virtualspace(state.right_gs, i)
@@ -204,7 +221,7 @@ auxiliaryspace(state::QP) = space(state.Xs[1], 2)
 
 Base.copy(a::QP) = copy!(similar(a), a)
 Base.copyto!(a::QP, b::QP) = copy!(a, b)
-function Base.copy!(a::T, b::T) where {T<:QP}
+function Base.copy!(a::T, b::T) where {T <: QP}
     for (i, j) in zip(a.Xs, b.Xs)
         copy!(i, j)
     end
@@ -218,31 +235,31 @@ function Base.getproperty(v::QP, s::Symbol)
     end
 end
 
-function Base.:-(v::T, w::T) where {T<:QP}
+function Base.:-(v::T, w::T) where {T <: QP}
     t = similar(v)
     t.Xs[:] = (v.Xs - w.Xs)[:]
     return t
 end
-function Base.:+(v::T, w::T) where {T<:QP}
+function Base.:+(v::T, w::T) where {T <: QP}
     t = similar(v)
     t.Xs[:] = (v.Xs + w.Xs)[:]
     return t
 end
 
-LinearAlgebra.dot(v::T, w::T) where {T<:QP} = sum(dot.(v.Xs, w.Xs))
+LinearAlgebra.dot(v::T, w::T) where {T <: QP} = sum(dot.(v.Xs, w.Xs))
 LinearAlgebra.norm(v::QP) = norm(norm.(v.Xs))
 LinearAlgebra.normalize!(w::QP) = rmul!(w, 1 / norm(w))
 Base.length(v::QP) = length(v.Xs)
-Base.eltype(::Type{<:QP{<:Any,<:Any,T}}) where {T} = T
+Base.eltype(::Type{<:QP{<:Any, <:Any, T}}) where {T} = T
 
-function LinearAlgebra.mul!(w::T, a::Number, v::T) where {T<:QP}
+function LinearAlgebra.mul!(w::T, a::Number, v::T) where {T <: QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
         LinearAlgebra.mul!(i, a, j)
     end
     return w
 end
 
-function LinearAlgebra.mul!(w::T, v::T, a::Number) where {T<:QP}
+function LinearAlgebra.mul!(w::T, v::T, a::Number) where {T <: QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
         LinearAlgebra.mul!(i, j, a)
     end
@@ -255,13 +272,13 @@ function LinearAlgebra.rmul!(v::QP, a::Number)
     return v
 end
 
-function LinearAlgebra.axpy!(a::Number, v::T, w::T) where {T<:QP}
+function LinearAlgebra.axpy!(a::Number, v::T, w::T) where {T <: QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
         LinearAlgebra.axpy!(a, j, i)
     end
     return w
 end
-function LinearAlgebra.axpby!(a::Number, v::T, b::Number, w::T) where {T<:QP}
+function LinearAlgebra.axpby!(a::Number, v::T, b::Number, w::T) where {T <: QP}
     @inbounds for (i, j) in zip(w.Xs, v.Xs)
         LinearAlgebra.axpby!(a, j, b, i)
     end
@@ -273,7 +290,7 @@ Base.:*(a::Number, v::QP) = mul!(similar(v), a, v)
 
 Base.zero(v::QP) = v * 0;
 
-function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
+function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S <: FiniteMPS}
     #very slow and clunky, but shouldn't be performance critical anyway
 
     elt = scalartype(v)
@@ -293,19 +310,24 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
     #step 0 : fuse the utility leg of B with the first leg of B
     orig_Bs = map(i -> v[i], 1:length(v))
     Bs = map(orig_Bs) do t
-        frontmap = isomorphism(storagetype(t), fuse(utl * _firstspace(t)),
-                               utl * _firstspace(t))
+        frontmap = isomorphism(
+            storagetype(t), fuse(utl * _firstspace(t)), utl * _firstspace(t)
+        )
         @plansor tt[-1 -2; -3] := t[1 -2; 2 -3] * frontmap[-1; 2 1]
     end
 
     function simplefuse(temp)
-        frontmap = isomorphism(storagetype(temp), fuse(space(temp, 1) * space(temp, 2)),
-                               space(temp, 1) * space(temp, 2))
-        backmap = isomorphism(storagetype(temp), space(temp, 5)' * space(temp, 4)',
-                              fuse(space(temp, 5)' * space(temp, 4)'))
+        frontmap = isomorphism(
+            storagetype(temp), fuse(space(temp, 1) * space(temp, 2)),
+            space(temp, 1) * space(temp, 2)
+        )
+        backmap = isomorphism(
+            storagetype(temp), space(temp, 5)' * space(temp, 4)',
+            fuse(space(temp, 5)' * space(temp, 4)')
+        )
 
-        @plansor tempp[-1 -2; -3] := frontmap[-1; 1 2] * temp[1 2 -2 3; 4] *
-                                     backmap[4 3; -3]
+        return @plansor tempp[-1 -2; -3] := frontmap[-1; 1 2] * temp[1 2 -2 3; 4] *
+            backmap[4 3; -3]
     end
 
     #step 1 : pass utl through Ls
@@ -322,10 +344,14 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
     push!(superspaces, supremum(_lastspace(Ls[end])', _lastspace(Rs[end])'))
 
     for i in 1:(length(v) + 1)
-        Lf = isometry(storagetype(Ls[i <= length(v) ? i : i - 1]), superspaces[i],
-                      i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i - 1])')
-        Rf = isometry(storagetype(Rs[i <= length(v) ? i : i - 1]), superspaces[i],
-                      i <= length(v) ? _firstspace(Rs[i]) : _lastspace(Rs[i - 1])')
+        Lf = isometry(
+            storagetype(Ls[i <= length(v) ? i : i - 1]), superspaces[i],
+            i <= length(v) ? _firstspace(Ls[i]) : _lastspace(Ls[i - 1])'
+        )
+        Rf = isometry(
+            storagetype(Rs[i <= length(v) ? i : i - 1]), superspaces[i],
+            i <= length(v) ? _firstspace(Rs[i]) : _lastspace(Rs[i - 1])'
+        )
 
         if i <= length(v)
             @plansor Ls[i][-1 -2; -3] := Lf[-1; 1] * Ls[i][1 -2; -3]
@@ -367,7 +393,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S<:FiniteMPS}
         Bs[i] = simplefuse(temp)
     end
 
-    return FiniteMPS(Ls + Rs + Bs; normalize=false)
+    return FiniteMPS(Ls + Rs + Bs; normalize = false)
 end
 
 function Base.getproperty(exci::MultilineQP, s::Symbol)
@@ -378,7 +404,7 @@ function Base.getproperty(exci::MultilineQP, s::Symbol)
     elseif s == :right_gs
         Multiline(map(x -> x.right_gs, exci.data))
     elseif s == :trivial
-        return reduce(&, map(x -> x.trivial, exci.data); init=true)
+        return reduce(&, map(x -> x.trivial, exci.data); init = true)
     else
         return getfield(exci, s)
     end
@@ -389,7 +415,7 @@ end
 
 VectorInterface.scalartype(T::Type{<:QP}) = scalartype(eltype(T))
 
-function VectorInterface.zerovector(ϕ::QP, ::Type{S}) where {S<:Number}
+function VectorInterface.zerovector(ϕ::QP, ::Type{S}) where {S <: Number}
     ϕ = similar(ϕ, S)
     return zerovector!(ϕ)
 end

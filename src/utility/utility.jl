@@ -21,28 +21,32 @@ _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
-function decompose_localmpo(inpmpo::AbstractTensorMap{T,PS,N,N},
-                            trunc=truncbelow(Defaults.tol)) where {T,PS,N}
+function decompose_localmpo(
+        inpmpo::AbstractTensorMap{T, PS, N, N}, trunc = truncbelow(Defaults.tol)
+    ) where {T, PS, N}
     N == 2 && return [inpmpo]
 
     leftind = (N + 1, 1, 2)
     rightind = (ntuple(x -> x + N + 1, N - 1)..., reverse(ntuple(x -> x + 2, N - 2))...)
-    U, S, V = tsvd(transpose(inpmpo, (leftind, rightind)); trunc=trunc)
+    U, S, V = tsvd(transpose(inpmpo, (leftind, rightind)); trunc = trunc)
 
     A = transpose(U * S, ((2, 3), (1, 4)))
-    B = transpose(V,
-                  ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1)))
+    B = transpose(
+        V,
+        ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1))
+    )
     return [A; decompose_localmpo(B)]
 end
 
 # given a state with util legs on the side, decompose using svds to form an array of mpstensors
-function decompose_localmps(state::AbstractTensorMap{T,PS,N,1},
-                            trunc=truncbelow(Defaults.tol)) where {T,PS,N}
+function decompose_localmps(
+        state::AbstractTensorMap{T, PS, N, 1}, trunc = truncbelow(Defaults.tol)
+    ) where {T, PS, N}
     N == 2 && return [state]
 
     leftind = (1, 2)
     rightind = reverse(ntuple(x -> x + 2, N - 1))
-    U, S, V = tsvd(transpose(state, (leftind, rightind)); trunc=trunc)
+    U, S, V = tsvd(transpose(state, (leftind, rightind)); trunc = trunc)
 
     A = U * S
     B = _transpose_front(V)
@@ -56,7 +60,7 @@ end
 Add trivial one-dimensional utility spaces with trivial sector to the left and right of a
 given tensor map, i.e. as the first space of the codomain and the last space of the domain.
 """
-function add_util_leg(tensor::AbstractTensorMap{T,S,N1,N2}) where {T,S,N1,N2}
+function add_util_leg(tensor::AbstractTensorMap{T, S, N1, N2}) where {T, S, N1, N2}
     ou = oneunit(_firstspace(tensor))
 
     util_front = isomorphism(storagetype(tensor), ou * codomain(tensor), codomain(tensor))
@@ -66,7 +70,7 @@ function add_util_leg(tensor::AbstractTensorMap{T,S,N1,N2}) where {T,S,N1,N2}
 end
 
 function union_split(a::AbstractArray)
-    T = reduce((a, b) -> Union{a,b}, typeof.(a))
+    T = reduce((a, b) -> Union{a, b}, typeof.(a))
     nA = similar(a, T)
     return copy!(nA, a)
 end
@@ -118,8 +122,9 @@ of the form `name[ind_out...; ind_in]`.
 """
 tensorexpr(name, inds) = Expr(:ref, name, _totuple(inds)...)
 function tensorexpr(name, indout, indin)
-    return Expr(:typed_vcat, name, Expr(:row, _totuple(indout)...),
-                Expr(:row, _totuple(indin)...))
+    return Expr(
+        :typed_vcat, name, Expr(:row, _totuple(indout)...), Expr(:row, _totuple(indin)...)
+    )
 end
 
 function check_length(a, b...)
@@ -128,7 +133,7 @@ function check_length(a, b...)
     return L
 end
 
-function fuser(::Type{T}, V1::S, V2::S) where {T,S<:IndexSpace}
+function fuser(::Type{T}, V1::S, V2::S) where {T, S <: IndexSpace}
     return isomorphism(T, fuse(V1 ⊗ V2), V1 ⊗ V2)
 end
 
@@ -147,5 +152,5 @@ function check_unambiguous_braiding(::Type{Bool}, V::VectorSpace)
 end
 function check_unambiguous_braiding(V::VectorSpace)
     return check_unambiguous_braiding(Bool, V) ||
-           throw(ArgumentError("cannot unambiguously braid $V"))
+        throw(ArgumentError("cannot unambiguously braid $V"))
 end
