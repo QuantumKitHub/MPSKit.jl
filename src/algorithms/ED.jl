@@ -43,7 +43,7 @@ function exact_diagonalization(
     TA = tensormaptype(spacetype(H), 2, 1, T)
 
     # fuse from left to right
-    ALs = Vector{Union{Missing,TA}}(missing, L)
+    ALs = Vector{Union{Missing, TA}}(missing, L)
     left = spacetype(H)(one(sector) => 1) # might need to be rightone, leave this for now
     for i in 1:(middle_site - 1)
         P = physicalspace(H, i)

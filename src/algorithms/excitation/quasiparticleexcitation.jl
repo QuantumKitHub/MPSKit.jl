@@ -97,22 +97,30 @@ function excitations(
     ϕ₀ = LeftGaugedQP(rand, lmps, rmps; sector, momentum)
     return excitations(H, alg, ϕ₀, lenvs, renvs; kwargs...)
 end
-function excitations(H, alg::QuasiparticleAnsatz, momenta, lmps,
-                     lenvs=environments(lmps, H), rmps=lmps,
-                     renvs=lmps === rmps ? lenvs : environments(rmps, H);
-                     verbosity=Defaults.verbosity, num=1,
-                     sector=one(sectortype(lmps)), parallel=true, kwargs...)
-    # wrapper to evaluate sector as positional argument                 
+function excitations(
+        H, alg::QuasiparticleAnsatz, momenta, lmps,
+        lenvs = environments(lmps, H), rmps = lmps,
+        renvs = lmps === rmps ? lenvs : environments(rmps, H);
+        verbosity = Defaults.verbosity, num = 1,
+        sector = one(sectortype(lmps)), parallel = true, kwargs...
+    )
+    # wrapper to evaluate sector as positional argument
     Toutput = let
         function wrapper(H, alg, p, lmps, lenvs, rmps, renvs, sector; kwargs...)
-            return excitations(H, alg, p, lmps, lenvs, rmps, renvs;
-                               sector, kwargs...)
+            return excitations(
+                H, alg, p, lmps, lenvs, rmps, renvs;
+                sector, kwargs...
+            )
         end
-        Core.Compiler.return_type(wrapper,
-                                  Tuple{typeof(H),typeof(alg),
-                                        eltype(momenta),typeof(lmps),
-                                        typeof(lenvs),
-                                        typeof(rmps),typeof(renvs),typeof(sector)})
+        Core.Compiler.return_type(
+            wrapper,
+            Tuple{
+                typeof(H), typeof(alg),
+                eltype(momenta), typeof(lmps),
+                typeof(lenvs),
+                typeof(rmps), typeof(renvs), typeof(sector),
+            }
+        )
     end
 
     results = similar(momenta, Toutput)

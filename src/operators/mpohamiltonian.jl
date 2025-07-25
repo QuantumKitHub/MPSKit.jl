@@ -388,7 +388,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
     somempo = local_mpos[1].second[1]
     sp_oneleg = space(somempo, 1)
 
-    _oneunit = oneunit(sp_oneleg) 
+    _oneunit = oneunit(sp_oneleg)
 
     virtualsumspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
     virtualsumspaces[1] = SumSpace(fill(_oneunit, 1))
@@ -478,7 +478,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     somempo = local_mpos[1].second[1]
     sp_oneleg = space(somempo, 1)
 
-    _oneunit = oneunit(sp_oneleg) 
+    _oneunit = oneunit(sp_oneleg)
     for V in virtualspaces
         V[1] = _oneunit
         V[end] = _oneunit

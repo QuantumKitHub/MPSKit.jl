@@ -60,13 +60,13 @@ function left_excitation_transfer_system(
         start = scale!(last(found[1:i] * T), cis(-mom * len))
         if exci.trivial && isidentitylevel(H, i)
             # not using braiding tensors here, leads to extra leg
-            util = similar(exci.left_gs.AL[1], space(parent(H)[1],1)[1])
+            util = similar(exci.left_gs.AL[1], space(parent(H)[1], 1)[1])
             fill_data!(util, one)
             @plansor start[-1 -2; -3 -4] -= start[2 1; -3 3] *
-                                            util[1] *
-                                            r_RL(exci.right_gs)[3; 2] *
-                                            l_RL(exci.right_gs)[-1; -4] *
-                                            conj(util[-2])
+                util[1] *
+                r_RL(exci.right_gs)[3; 2] *
+                l_RL(exci.right_gs)[-1; -4] *
+                conj(util[-2])
         end
 
         found[i] = add!(start, GBL[i])
@@ -139,9 +139,11 @@ function right_excitation_transfer_system(
     return found
 end
 #TODO: check that the left/right discrepancies make sense
-function right_excitation_transfer_system(GBR, H::InfiniteMPOHamiltonian, exci;
-                                          mom=exci.momentum,
-                                          solver=Defaults.linearsolver)
+function right_excitation_transfer_system(
+        GBR, H::InfiniteMPOHamiltonian, exci;
+        mom = exci.momentum,
+        solver = Defaults.linearsolver
+    )
     len = length(H)
     found = zerovector(GBR)
     odim = length(GBR)
@@ -156,13 +158,13 @@ function right_excitation_transfer_system(GBR, H::InfiniteMPOHamiltonian, exci;
         start = scale!(first(T * found[i:odim]), cis(mom * len))
         if exci.trivial && isidentitylevel(H, i)
             # not using braiding tensors here, leads to extra leg
-            util = similar(exci.right_gs.AL[1], space(parent(H)[1],1)[1])
+            util = similar(exci.right_gs.AL[1], space(parent(H)[1], 1)[1])
             fill_data!(util, one)
             @plansor start[-1 -2; -3 -4] -= start[2 1; -3 3] *
-                                            conj(util[1]) *
-                                            l_LR(exci.right_gs)[3; 2] *
-                                            r_LR(exci.right_gs)[-1; -4] *
-                                            util[-2]
+                conj(util[1]) *
+                l_LR(exci.right_gs)[3; 2] *
+                r_LR(exci.right_gs)[-1; -4] *
+                util[-2]
         end
 
         found[i] = add!(start, GBR[i])

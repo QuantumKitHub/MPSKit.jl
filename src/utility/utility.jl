@@ -69,7 +69,7 @@ function add_util_leg(tensor::AbstractTensorMap{T, S, N1, N2}) where {T, S, N1, 
     return util_front * tensor * util_back
 end
 
-function add_util_mpoleg(tensor::AbstractTensorMap{T,S,N1,N2}) where {T,S,N1,N2} 
+function add_util_mpoleg(tensor::AbstractTensorMap{T, S, N1, N2}) where {T, S, N1, N2}
     # separate function for mpo because add_util_leg is also used for mps from tensors
     # and the additional legs there can be different depending on the fusion tree
 
