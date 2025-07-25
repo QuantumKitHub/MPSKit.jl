@@ -13,7 +13,9 @@ These objects can be created either directly from a vector of `MPOTensor`s, or s
 a dense operator (a subtype of `AbstractTensorMap`), which is then decomposed into a
 product of local tensors.
 
-![](../assets/mpo.svg)
+```@raw html
+<img src="../../assets/mpo.svg" alt="MPO" width="50%" class="color-invertible"/>
+```
 
 ```@setup operators
 using TensorKit, MPSKit, MPSKitModels
@@ -22,7 +24,7 @@ using TensorKit, MPSKit, MPSKitModels
 ```@example operators
 S_x = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
 S_z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
-O_xzx = FiniteMPO(S_x ⊗ S_x ⊗ S_x);
+O_xzx = FiniteMPO(S_x ⊗ S_z ⊗ S_x);
 ```
 
 The individual tensors are accessible via regular indexing. Note that the tensors are

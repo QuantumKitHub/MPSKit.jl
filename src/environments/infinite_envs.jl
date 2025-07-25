@@ -8,7 +8,7 @@ T_RR[i] * GRs[i] = λ GRs[i - 1]
 ```
 where `T_LL` and `T_RR` are the (regularized) transfer matrix operators on a give site for `AL-O-AL` and `AR-O-AR` respectively.
 """
-struct InfiniteEnvironments{V<:GenericMPSTensor} <: AbstractMPSEnvironments
+struct InfiniteEnvironments{V <: GenericMPSTensor} <: AbstractMPSEnvironments
     GLs::PeriodicVector{V}
     GRs::PeriodicVector{V}
 end
@@ -18,33 +18,41 @@ Base.length(envs::InfiniteEnvironments) = length(envs.GLs)
 leftenv(envs::InfiniteEnvironments, site::Int, state) = envs.GLs[site]
 rightenv(envs::InfiniteEnvironments, site::Int, state) = envs.GRs[site]
 
-function environments(below::InfiniteMPS,
-                      operator::Union{InfiniteMPO,InfiniteMPOHamiltonian},
-                      above::InfiniteMPS=below;
-                      kwargs...)
+function environments(
+        below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
+        above::InfiniteMPS = below; kwargs...
+    )
     GLs, GRs = initialize_environments(below, operator, above)
     envs = InfiniteEnvironments(GLs, GRs)
     return recalculate!(envs, below, operator, above; kwargs...)
 end
 
-function issamespace(envs::InfiniteEnvironments, below::InfiniteMPS,
-                     operator::Union{InfiniteMPO,InfiniteMPOHamiltonian},
-                     above::InfiniteMPS)
+function issamespace(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above::InfiniteMPS
+    )
     L = check_length(below, operator, above)
     for i in 1:L
         space(envs.GLs[i]) ==
-        (left_virtualspace(below, i) ⊗ left_virtualspace(operator, i)' ←
-         left_virtualspace(above, i)) || return false
+            (
+            left_virtualspace(below, i) ⊗ left_virtualspace(operator, i)' ←
+                left_virtualspace(above, i)
+        ) || return false
         space(envs.GRs[i]) ==
-        (right_virtualspace(above, i) ⊗ right_virtualspace(operator, i) ←
-         right_virtualspace(below, i)) || return false
+            (
+            right_virtualspace(above, i) ⊗ right_virtualspace(operator, i) ←
+                right_virtualspace(below, i)
+        ) || return false
     end
     return true
 end
 
-function recalculate!(envs::InfiniteEnvironments, below::InfiniteMPS,
-                      operator::Union{InfiniteMPO,InfiniteMPOHamiltonian},
-                      above::InfiniteMPS=below; kwargs...)
+function recalculate!(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
+        above::InfiniteMPS = below;
+        kwargs...
+    )
     if !issamespace(envs, below, operator, above)
         # TODO: in-place initialization?
         GLs, GRs = initialize_environments(below, operator, above)
@@ -65,43 +73,58 @@ end
 
 # InfiniteMPO environments
 # ------------------------
-function initialize_environments(below::InfiniteMPS, operator::InfiniteMPO,
-                                 above::InfiniteMPS=below)
+function initialize_environments(
+        below::InfiniteMPS, operator::InfiniteMPO, above::InfiniteMPS = below
+    )
     L = check_length(below, operator, above)
     GLs = PeriodicVector([randomize!(allocate_GL(below, operator, above, i)) for i in 1:L])
     GRs = PeriodicVector([randomize!(allocate_GR(below, operator, above, i)) for i in 1:L])
     return GLs, GRs
 end
 
-function compute_leftenvs!(envs::InfiniteEnvironments, below::InfiniteMPS,
-                           operator::InfiniteMPO, above::InfiniteMPS, alg)
+function compute_leftenvs!(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::InfiniteMPO, above::InfiniteMPS, alg
+    )
     # compute eigenvector
     T = TransferMatrix(above.AL, operator, below.AL)
     λ, envs.GLs[1] = fixedpoint(flip(T), envs.GLs[1], :LM, alg)
     # push through unitcell
     for i in 2:length(operator)
         envs.GLs[i] = envs.GLs[i - 1] *
-                      TransferMatrix(above.AL[i - 1], operator[i - 1], below.AL[i - 1])
+            TransferMatrix(above.AL[i - 1], operator[i - 1], below.AL[i - 1])
     end
     return λ, envs
 end
 
-function compute_rightenvs!(envs::InfiniteEnvironments, below::InfiniteMPS,
-                            operator::InfiniteMPO, above::InfiniteMPS, alg)
+function compute_rightenvs!(
+        envs::InfiniteEnvironments, below::InfiniteMPS, operator::InfiniteMPO,
+        above::InfiniteMPS, alg
+    )
     # compute eigenvector
     T = TransferMatrix(above.AR, operator, below.AR)
     λ, envs.GRs[end] = fixedpoint(T, envs.GRs[end], :LM, alg)
     # push through unitcell
     for i in reverse(1:(length(operator) - 1))
-        envs.GRs[i] = TransferMatrix(above.AR[i + 1], operator[i + 1],
-                                     below.AR[i + 1]) * envs.GRs[i + 1]
+        envs.GRs[i] = TransferMatrix(
+            above.AR[i + 1], operator[i + 1],
+            below.AR[i + 1]
+        ) * envs.GRs[i + 1]
     end
     return λ, envs
 end
 
-function TensorKit.normalize!(envs::InfiniteEnvironments, below::InfiniteMPS,
-                              operator::InfiniteMPO, above::InfiniteMPS)
+# normalization convention of the environments:
+# - normalize the right environment to have norm 1
+# - normalize the left environment to have overlap 1
+# this avoids catastrophic blow-up of norms, while keeping the total normalized
+# and does not lead to issues for negative overlaps and real entries.
+function TensorKit.normalize!(
+        envs::InfiniteEnvironments, below::InfiniteMPS, operator::InfiniteMPO,
+        above::InfiniteMPS
+    )
     for i in 1:length(operator)
+        normalize!(envs.GRs[i])
         Hc = C_hamiltonian(i, below, operator, above, envs)
         λ = dot(below.C[i], Hc * above.C[i])
         scale!(envs.GLs[i + 1], inv(λ))
@@ -111,8 +134,10 @@ end
 
 # InfiniteMPOHamiltonian environments
 # -----------------------------------
-function initialize_environments(below::InfiniteMPS, operator::InfiniteMPOHamiltonian,
-                                 above::InfiniteMPS=below)
+function initialize_environments(
+        below::InfiniteMPS, operator::InfiniteMPOHamiltonian,
+        above::InfiniteMPS = below
+    )
     L = check_length(above, operator, below)
     GLs = PeriodicVector([allocate_GL(below, operator, above, i) for i in 1:L])
     GRs = PeriodicVector([allocate_GR(below, operator, above, i) for i in 1:L])
@@ -140,8 +165,10 @@ function initialize_environments(below::InfiniteMPS, operator::InfiniteMPOHamilt
     return GLs, GRs
 end
 
-function compute_leftenvs!(envs::InfiniteEnvironments, below::InfiniteMPS,
-                           operator::InfiniteMPOHamiltonian, above::InfiniteMPS, alg)
+function compute_leftenvs!(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::InfiniteMPOHamiltonian, above::InfiniteMPS, alg
+    )
     L = check_length(below, above, operator)
     GLs = envs.GLs
     vsize = length(first(GLs))
@@ -175,8 +202,7 @@ function compute_leftenvs!(envs::InfiniteEnvironments, below::InfiniteMPS,
             # go through the unitcell, again subtracting fixpoints
             for site in 1:L
                 @plansor GLs[site][i][-1 -2; -3] -= GLs[site][i][1 -2; 2] *
-                                                    r_LL(above, site - 1)[2; 1] *
-                                                    l_LL(above, site)[-1; -3]
+                    r_LL(above, site - 1)[2; 1] * l_LL(above, site)[-1; -3]
             end
 
         else
@@ -194,20 +220,24 @@ function compute_leftenvs!(envs::InfiniteEnvironments, below::InfiniteMPS,
     return GLs
 end
 
-function left_cyclethrough!(index::Int, GL, below::InfiniteMPS, H::InfiniteMPOHamiltonian,
-                            above::InfiniteMPS=below)
+function left_cyclethrough!(
+        index::Int, GL, below::InfiniteMPS, H::InfiniteMPOHamiltonian,
+        above::InfiniteMPS = below
+    )
     # TODO: efficient transfer matrix slicing for large unitcells
     leftinds = 1:index
     for site in eachindex(GL)
-        GL[site + 1][index] = GL[site][leftinds] * TransferMatrix(above.AL[site],
-                                                                  H[site][leftinds, 1, 1, index],
-                                                                  below.AL[site])
+        GL[site + 1][index] = GL[site][leftinds] * TransferMatrix(
+            above.AL[site], H[site][leftinds, 1, 1, index], below.AL[site]
+        )
     end
     return GL
 end
 
-function compute_rightenvs!(envs::InfiniteEnvironments, below::InfiniteMPS,
-                            operator::InfiniteMPOHamiltonian, above::InfiniteMPS, alg)
+function compute_rightenvs!(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::InfiniteMPOHamiltonian, above::InfiniteMPS, alg
+    )
     L = check_length(above, operator, below)
     GRs = envs.GRs
     vsize = length(last(GRs))
@@ -242,8 +272,7 @@ function compute_rightenvs!(envs::InfiniteEnvironments, below::InfiniteMPS,
             # go through the unitcell, again subtracting fixpoints
             for site in 1:L
                 @plansor GRs[site][i][-1 -2; -3] -= GRs[site][i][1 -2; 2] *
-                                                    l_RR(above, site + 1)[2; 1] *
-                                                    r_RR(above, site)[-1; -3]
+                    l_RR(above, site + 1)[2; 1] * r_RR(above, site)[-1; -3]
             end
         else
             if !isemptylevel(operator, i)
@@ -261,22 +290,25 @@ function compute_rightenvs!(envs::InfiniteEnvironments, below::InfiniteMPS,
     return GRs
 end
 
-function right_cyclethrough!(index::Int, GR, below::InfiniteMPS,
-                             operator::InfiniteMPOHamiltonian,
-                             above::InfiniteMPS=below)
+function right_cyclethrough!(
+        index::Int, GR, below::InfiniteMPS, operator::InfiniteMPOHamiltonian,
+        above::InfiniteMPS = below
+    )
     # TODO: efficient transfer matrix slicing for large unitcells
     for site in reverse(eachindex(GR))
         rightinds = index:length(GR[site])
-        GR[site - 1][index] = TransferMatrix(above.AR[site],
-                                             operator[site][index, 1, 1, rightinds],
-                                             below.AR[site]) * GR[site][rightinds]
+        GR[site - 1][index] = TransferMatrix(
+            above.AR[site], operator[site][index, 1, 1, rightinds], below.AR[site]
+        ) * GR[site][rightinds]
     end
     return GR
 end
 
 # no normalization necessary -- for consistant interface
-function TensorKit.normalize!(envs::InfiniteEnvironments, below::InfiniteMPS,
-                              operator::InfiniteMPOHamiltonian, above::InfiniteMPS)
+function TensorKit.normalize!(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::InfiniteMPOHamiltonian, above::InfiniteMPS
+    )
     return envs
 end
 

@@ -28,8 +28,8 @@ function changebonds(ψ::InfiniteMPS, alg::RandExpand)
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = leftnull(ψ.AL[i])
         VR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
-        intermediate = adjoint(VL) * AC2 * adjoint(VR)
-        U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
+        intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
+        U, _, V, = tsvd!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
         AL′[i] = VL * U
         AR′[i + 1] = V * VR
@@ -52,13 +52,13 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
         NR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
-        intermediate = adjoint(NL) * AC2 * adjoint(NR)
-        _, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
+        intermediate = normalize!(adjoint(NL) * AC2 * adjoint(NR))
+        _, _, V, = tsvd!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
         ar_re = V * NR
         ar_le = zerovector!(similar(ar_re, codomain(ψ.AC[i]) ← space(V, 1)))
 
-        (nal, nc) = leftorth!(catdomain(ψ.AC[i], ar_le); alg=QRpos())
+        (nal, nc) = leftorth!(catdomain(ψ.AC[i], ar_le); alg = QRpos())
         nar = _transpose_front(catcodomain(_transpose_tail(ψ.AR[i + 1]), ar_re))
 
         ψ.AC[i] = (nal, nc)

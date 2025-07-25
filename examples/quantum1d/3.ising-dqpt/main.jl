@@ -1,5 +1,5 @@
 md"""
-# DQPT in the Ising model(@id demo_dqpt)
+# [DQPT in the Ising model](@id demo_dqpt)
 
 In this tutorial we will try to reproduce the results from
 [this paper](https://arxiv.org/pdf/1206.2505.pdf). The needed packages are
@@ -26,7 +26,7 @@ First we construct the hamiltonian in mpo form, and obtain the pre-quenched grou
 """
 
 L = 20
-H₀ = transverse_field_ising(FiniteChain(L); g=-0.5)
+H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
 ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG());
 
@@ -37,16 +37,16 @@ We can define a helper function that measures the loschmith echo
 """
 
 echo(ψ₀::FiniteMPS, ψₜ::FiniteMPS) = -2 * log(abs(dot(ψ₀, ψₜ))) / length(ψ₀)
-@assert isapprox(echo(ψ₀, ψ₀), 0, atol=1e-10)
+@assert isapprox(echo(ψ₀, ψ₀), 0, atol = 1.0e-10)
 
 md"""
 We will initially use a two-site TDVP scheme to dynamically increase the bond dimension while time evolving, and later on switch to a faster one-site scheme. A single timestep can be done using
 """
 
-H₁ = transverse_field_ising(FiniteChain(L); g=-2.0)
+H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
 ψₜ = deepcopy(ψ₀)
 dt = 0.01
-ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP2(; trscheme=truncdim(20)));
+ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP2(; trscheme = truncdim(20)));
 
 md"""
 "envs" is a kind of cache object that keeps track of all environments in `ψ`. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
@@ -54,12 +54,12 @@ md"""
 Putting it all together, we get
 """
 
-function finite_sim(L; dt=0.05, finaltime=5.0)
+function finite_sim(L; dt = 0.05, finaltime = 5.0)
     ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
-    H₀ = transverse_field_ising(FiniteChain(L); g=-0.5)
+    H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
     ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG())
 
-    H₁ = transverse_field_ising(FiniteChain(L); g=-2.0)
+    H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
     ψₜ = deepcopy(ψ₀)
     envs = environments(ψₜ, H₁)
 
@@ -67,7 +67,7 @@ function finite_sim(L; dt=0.05, finaltime=5.0)
     times = collect(0:dt:finaltime)
 
     for t in times[2:end]
-        alg = t > 3 * dt ? TDVP() : TDVP2(; trscheme=truncdim(50))
+        alg = t > 3 * dt ? TDVP() : TDVP2(; trscheme = truncdim(50))
         ψₜ, envs = timestep(ψₜ, H₁, 0, dt, alg, envs)
         push!(echos, echo(ψₜ, ψ₀))
     end
@@ -84,7 +84,7 @@ Similarly we could start with an initial infinite state and find the pre-quench 
 """
 
 ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
-H₀ = transverse_field_ising(; g=-0.5)
+H₀ = transverse_field_ising(; g = -0.5)
 ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS());
 
 md"""
@@ -99,7 +99,7 @@ so the loschmidth echo takes on the pleasant form
 """
 
 echo(ψ₀::InfiniteMPS, ψₜ::InfiniteMPS) = -2 * log(abs(dot(ψ₀, ψₜ)))
-@assert isapprox(echo(ψ₀, ψ₀), 0, atol=1e-10)
+@assert isapprox(echo(ψ₀, ψ₀), 0, atol = 1.0e-10)
 
 md"""
 This time we cannot use a two-site scheme to grow the bond dimension, as this isn't implemented (yet).
@@ -109,8 +109,8 @@ Growing the bond dimension by ``5`` can be done by calling:
 """
 
 ψₜ = deepcopy(ψ₀)
-H₁ = transverse_field_ising(; g=-2.0)
-ψₜ, envs = changebonds(ψₜ, H₁, OptimalExpand(; trscheme=truncdim(5)));
+H₁ = transverse_field_ising(; g = -2.0)
+ψₜ, envs = changebonds(ψₜ, H₁, OptimalExpand(; trscheme = truncdim(5)));
 
 # a single timestep is easy
 
@@ -122,7 +122,7 @@ With performance in mind we should once again try to re-use these "envs" cache o
 The final code is
 """
 
-function infinite_sim(dt=0.05, finaltime=5.0)
+function infinite_sim(dt = 0.05, finaltime = 5.0)
     ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
     ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS())
 
@@ -134,7 +134,7 @@ function infinite_sim(dt=0.05, finaltime=5.0)
 
     for t in times[2:end]
         if t < 50dt # if t is sufficiently small, we increase the bond dimension
-            ψₜ, envs = changebonds(ψₜ, H₁, OptimalExpand(; trscheme=truncdim(1)), envs)
+            ψₜ, envs = changebonds(ψₜ, H₁, OptimalExpand(; trscheme = truncdim(1)), envs)
         end
         ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP(), envs)
         push!(echos, echo(ψₜ, ψ₀))

@@ -8,10 +8,10 @@ Tensor types
 Tensor type for representing local MPO tensors, with the index convention `W ⊗ S ← N ⊗ E`,
 where `N`, `E`, `S` and `W` denote the north, east, south and west virtual spaces respectively.
 """
-const MPOTensor{S} = AbstractTensorMap{T,S,2,2} where {T}
-const MPSBondTensor{S} = AbstractTensorMap{T,S,1,1} where {T}
-const GenericMPSTensor{S,N} = AbstractTensorMap{T,S,N,1} where {T} # some functions are also defined for "general mps tensors" (used in peps code)
-const MPSTensor{S} = GenericMPSTensor{S,2} # the usual mps tensors on which we work
+const MPOTensor{S} = AbstractTensorMap{T, S, 2, 2} where {T}
+const MPSBondTensor{S} = AbstractTensorMap{T, S, 1, 1} where {T}
+const GenericMPSTensor{S, N} = AbstractTensorMap{T, S, N, 1} where {T} # some functions are also defined for "general mps tensors" (used in peps code)
+const MPSTensor{S} = GenericMPSTensor{S, 2} # the usual mps tensors on which we work
 
 """
     MPSTensor([f, eltype], d::Int, left_D::Int, [right_D]::Int])
@@ -32,12 +32,14 @@ Construct an `MPSTensor` with given physical and virtual spaces.
 - `left_D::Int`: left virtual dimension
 - `right_D::Int`: right virtual dimension
 """
-function MPSTensor(::UndefInitializer, eltype, P::Union{S,CompositeSpace{S}}, Vₗ::S,
-                   Vᵣ::S=Vₗ) where {S<:ElementarySpace}
+function MPSTensor(
+        ::UndefInitializer, eltype, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
+    ) where {S <: ElementarySpace}
     return TensorMap{eltype}(undef, Vₗ ⊗ P ← Vᵣ)
 end
-function MPSTensor(f, eltype, P::Union{S,CompositeSpace{S}}, Vₗ::S,
-                   Vᵣ::S=Vₗ) where {S<:ElementarySpace}
+function MPSTensor(
+        f, eltype, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
+    ) where {S <: ElementarySpace}
     A = MPSTensor(undef, eltype, P, Vₗ, Vᵣ)
     if f === rand
         return rand!(A)
@@ -50,8 +52,9 @@ function MPSTensor(f, eltype, P::Union{S,CompositeSpace{S}}, Vₗ::S,
     end
 end
 # TODO: reinstate function initializers?
-function MPSTensor(P::Union{S,CompositeSpace{S}}, Vₗ::S,
-                   Vᵣ::S=Vₗ) where {S<:ElementarySpace}
+function MPSTensor(
+        P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
+    ) where {S <: ElementarySpace}
     return MPSTensor(rand, Defaults.eltype, P, Vₗ, Vᵣ)
 end
 
@@ -67,15 +70,15 @@ Construct an `MPSTensor` with given physical and virtual dimensions.
 - `Dₗ::Int`: left virtual dimension
 - `Dᵣ::Int`: right virtual dimension
 """
-MPSTensor(f, eltype, d::Int, Dₗ::Int, Dᵣ::Int=Dₗ) = MPSTensor(f, eltype, ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
-MPSTensor(d::Int, Dₗ::Int; Dᵣ::Int=Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
+MPSTensor(f, eltype, d::Int, Dₗ::Int, Dᵣ::Int = Dₗ) = MPSTensor(f, eltype, ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
+MPSTensor(d::Int, Dₗ::Int; Dᵣ::Int = Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
 
 """
     MPSTensor(A::AbstractArray)
 
 Convert an array to an `MPSTensor`.
 """
-function MPSTensor(A::AbstractArray{T}) where {T<:Number}
+function MPSTensor(A::AbstractArray{T}) where {T <: Number}
     @assert ndims(A) > 2 "MPSTensor should have at least 3 dims, but has $ndims(A)"
     sz = size(A)
     t = TensorMap(undef, T, foldl(⊗, ComplexSpace.(sz[1:(end - 1)])) ← ℂ^sz[end])
@@ -90,7 +93,7 @@ Determine whether the given tensor is full rank, i.e. whether both the map from 
 virtual space and the physical space to the right virtual space, and the map from the right
 virtual space and the physical space to the left virtual space are injective.
 """
-function isfullrank(A::GenericMPSTensor; side=:both)
+function isfullrank(A::GenericMPSTensor; side = :both)
     Vₗ = _firstspace(A)
     Vᵣ = _lastspace(A)
     P = ⊗(space.(Ref(A), 2:(numind(A) - 1))...)
@@ -110,12 +113,12 @@ end
 
 Make the set of MPS tensors full rank by performing a series of orthogonalizations.
 """
-function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=QRpos())
+function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = QRpos())
     while true
         i = findfirst(!isfullrank, A)
         isnothing(i) && break
-        if !isfullrank(A[i]; side=:left)
-            L, Q = rightorth!(_transpose_tail(A[i]); alg=alg')
+        if !isfullrank(A[i]; side = :left)
+            L, Q = rightorth!(_transpose_tail(A[i]); alg = alg')
             A[i] = _transpose_front(Q)
             A[i - 1] = A[i - 1] * L
         else
@@ -125,6 +128,17 @@ function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=QRpos())
     end
     return A
 end
+
+# Tensor accessors
+# ----------------
+@doc """
+    AC2(ψ::AbstractMPS, i; kind=:ACAR)
+
+Obtain the two-site (center) gauge tensor at site `i` of the MPS `ψ`.
+If this hasn't been computed before, this can be computed as:
+- `kind=:ACAR` : AC[i] * AR[i+1]
+- `kind=:ALAC` : AL[i] * AC[i+1]
+""" AC2
 
 #===========================================================================================
 MPS types
@@ -196,7 +210,7 @@ function physicalspace end
 physicalspace(A::MPSTensor) = space(A, 2)
 physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
 physicalspace(O::MPOTensor) = space(O, 2)
-physicalspace(O::AbstractBlockTensorMap{<:Any,<:Any,2,2}) = only(space(O, 2))
+physicalspace(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}) = only(space(O, 2))
 
 """
     eachsite(state::AbstractMPS)

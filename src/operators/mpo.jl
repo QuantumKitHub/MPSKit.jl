@@ -5,7 +5,7 @@ Matrix Product Operator (MPO) acting on a tensor product space with a linear ord
 
 See also: [`FiniteMPO`](@ref), [`InfiniteMPO`](@ref)
 """
-struct MPO{TO,V<:AbstractVector{TO}} <: AbstractMPO{TO}
+struct MPO{TO, V <: AbstractVector{TO}} <: AbstractMPO{TO}
     O::V
 end
 
@@ -15,7 +15,7 @@ end
 
 Matrix Product Operator (MPO) acting on a finite tensor product space with a linear order.
 """
-const FiniteMPO{O} = MPO{O,Vector{O}}
+const FiniteMPO{O} = MPO{O, Vector{O}}
 Base.isfinite(::Type{<:FiniteMPO}) = true
 
 function FiniteMPO(Os::AbstractVector{O}) where {O}
@@ -26,7 +26,7 @@ function FiniteMPO(Os::AbstractVector{O}) where {O}
     return FiniteMPO{O}(Os)
 end
 
-function FiniteMPO(O::AbstractTensorMap{T,S,N,N}) where {T,S,N}
+function FiniteMPO(O::AbstractTensorMap{T, S, N, N}) where {T, S, N}
     return FiniteMPO(decompose_localmpo(add_util_mpoleg(O)))
 end
 
@@ -35,13 +35,13 @@ end
 
 Matrix Product Operator (MPO) acting on an infinite tensor product space with a linear order.
 """
-const InfiniteMPO{O} = MPO{O,PeriodicVector{O}}
+const InfiniteMPO{O} = MPO{O, PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPO}) = false
 
 function InfiniteMPO(Os::AbstractVector{O}) where {O}
     for i in eachindex(Os)
         right_virtualspace(Os[i]) == left_virtualspace(Os[mod1(i + 1, end)]) ||
-            throw(SpaceMismatch("umatching virtual spaces at site $i"))
+            throw(SpaceMismatch("unmatching virtual spaces at site $i"))
     end
     return InfiniteMPO{O}(Os)
 end
@@ -53,12 +53,12 @@ DenseMPO(mpo::MPO) = mpo isa DenseMPO ? copy(mpo) : MPO(map(TensorMap, parent(mp
 # Utility
 # -------
 Base.parent(mpo::MPO) = mpo.O
-Base.copy(mpo::MPO) = MPO(map(copy, mpo))
+Base.copy(mpo::MPO) = MPO(copy.(parent(mpo)))
 
-function Base.similar(mpo::MPO{<:MPOTensor}, ::Type{O}, L::Int) where {O<:MPOTensor}
+function Base.similar(mpo::MPO{<:MPOTensor}, ::Type{O}, L::Int) where {O <: MPOTensor}
     return MPO(similar(parent(mpo), O, L))
 end
-function Base.similar(mpo::MPO, ::Type{T}) where {T<:Number}
+function Base.similar(mpo::MPO, ::Type{T}) where {T <: Number}
     return MPO(similar.(parent(mpo), T))
 end
 
@@ -93,7 +93,7 @@ end
 function Base.convert(::Type{<:InfiniteMPO}, mps::InfiniteMPS)
     return InfiniteMPO(map(_mps_to_mpo, mps.AL))
 end
-function _mps_to_mpo(A::GenericMPSTensor{S,3}) where {S}
+function _mps_to_mpo(A::GenericMPSTensor{S, 3}) where {S}
     @plansor O[-1 -2; -3 -4] := A[-1 -2 1; 2] * τ[-3 2; -4 1]
     return O
 end
@@ -115,19 +115,21 @@ Base.:+(mpo::MPO) = MPO(map(+, parent(mpo)))
 function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     N = check_length(mpo1, mpo2)
     @assert left_virtualspace(mpo1, 1) == left_virtualspace(mpo2, 1) &&
-            right_virtualspace(mpo1, N) == right_virtualspace(mpo2, N)
+        right_virtualspace(mpo1, N) == right_virtualspace(mpo2, N)
 
     halfN = N ÷ 2
     A = storagetype(eltype(mpo1))
 
     # left half
-    F₁ = isometry(A, (right_virtualspace(mpo1, 1) ⊕ right_virtualspace(mpo2, 1)),
-                  right_virtualspace(mpo1, 1))
+    F₁ = isometry(
+        A, (right_virtualspace(mpo1, 1) ⊕ right_virtualspace(mpo2, 1)),
+        right_virtualspace(mpo1, 1)
+    )
     F₂ = leftnull(F₁)
     @assert _lastspace(F₂) == right_virtualspace(mpo2, 1)'
 
     @plansor O[-3 -1 -2; -4] := mpo1[1][-1 -2; -3 1] * conj(F₁[-4; 1]) +
-                                mpo2[1][-1 -2; -3 1] * conj(F₂[-4; 1])
+        mpo2[1][-1 -2; -3 1] * conj(F₂[-4; 1])
 
     # making sure that the new operator is "full rank"
     O, R = leftorth!(O)
@@ -141,12 +143,14 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
         @plansor O₂[-1 -2; -3 -4] := R[-1; 1] * F₂[1; 2] * mpo2[i][2 -2; -3 -4]
 
         # incorporate fusers from right side
-        F₁ = isometry(A, (right_virtualspace(mpo1, i) ⊕ right_virtualspace(mpo2, i)),
-                      right_virtualspace(mpo1, i))
+        F₁ = isometry(
+            A, (right_virtualspace(mpo1, i) ⊕ right_virtualspace(mpo2, i)),
+            right_virtualspace(mpo1, i)
+        )
         F₂ = leftnull(F₁)
         @assert _lastspace(F₂) == right_virtualspace(mpo2, i)'
         @plansor O[-3 -1 -2; -4] := O₁[-1 -2; -3 1] * conj(F₁[-4; 1]) +
-                                    O₂[-1 -2; -3 1] * conj(F₂[-4; 1])
+            O₂[-1 -2; -3 1] * conj(F₂[-4; 1])
 
         # making sure that the new operator is "full rank"
         O, R = leftorth!(O)
@@ -156,13 +160,15 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     C₁, C₂ = F₁, F₂
 
     # right half
-    F₁ = isometry(A, left_virtualspace(mpo1, N) ⊕ left_virtualspace(mpo2, N),
-                  left_virtualspace(mpo1, N))
+    F₁ = isometry(
+        A, left_virtualspace(mpo1, N) ⊕ left_virtualspace(mpo2, N),
+        left_virtualspace(mpo1, N)
+    )
     F₂ = leftnull(F₁)
     @assert _lastspace(F₂) == left_virtualspace(mpo2, N)'
 
     @plansor O[-1; -3 -4 -2] := F₁[-1; 1] * mpo1[N][1 -2; -3 -4] +
-                                F₂[-1; 1] * mpo2[N][1 -2; -3 -4]
+        F₂[-1; 1] * mpo2[N][1 -2; -3 -4]
 
     # making sure that the new operator is "full rank"
     L, O = rightorth!(O)
@@ -174,12 +180,14 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
         @plansor O₂[-1 -2; -3 -4] := mpo2[i][-1 -2; -3 2] * conj(F₂[1; 2]) * L[1; -4]
 
         # incorporate fusers from left side
-        F₁ = isometry(A, left_virtualspace(mpo1, i) ⊕ left_virtualspace(mpo2, i),
-                      left_virtualspace(mpo1, i))
+        F₁ = isometry(
+            A, left_virtualspace(mpo1, i) ⊕ left_virtualspace(mpo2, i),
+            left_virtualspace(mpo1, i)
+        )
         F₂ = leftnull(F₁)
         @assert _lastspace(F₂) == left_virtualspace(mpo2, i)'
         @plansor O[-1; -3 -4 -2] := F₁[-1; 1] * O₁[1 -2; -3 -4] +
-                                    F₂[-1; 1] * O₂[1 -2; -3 -4]
+            F₂[-1; 1] * O₂[1 -2; -3 -4]
 
         # making sure that the new operator is "full rank"
         L, O = rightorth!(O)
@@ -211,17 +219,15 @@ function Base.:*(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     N = check_length(mpo1, mpo2)
     (S = spacetype(mpo1)) == spacetype(mpo2) || throw(SectorMismatch())
 
-    if (left_virtualspace(mpo1, 1) != oneunit(S) ||
-        left_virtualspace(mpo2, 1) != oneunit(S)) ||
-       (right_virtualspace(mpo1, N) != oneunit(S) ||
-        right_virtualspace(mpo2, N) != oneunit(S))
+    if (left_virtualspace(mpo1, 1) != oneunit(S) || left_virtualspace(mpo2, 1) != oneunit(S)) ||
+            (right_virtualspace(mpo1, N) != oneunit(S) || right_virtualspace(mpo2, N) != oneunit(S))
         @warn "left/right virtual space is not trivial, fusion may not be unique"
         # this is a warning because technically any isomorphism that fuses the left/right
         # would work and for now I dont feel like figuring out if this is important
     end
 
     O = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
-    return changebonds!(FiniteMPO(O), SvdCut(; trscheme=notrunc()))
+    return changebonds!(FiniteMPO(O), SvdCut(; trscheme = notrunc()))
 end
 function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
     check_length(mpo1, mpo2)
@@ -241,25 +247,23 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
         return _fuse_mpo_mps(mpo[i], A1, Fₗ, Fᵣ)
     end
     trscheme = truncbelow(eps(real(T)))
-    return changebonds!(FiniteMPS(A2), SvdCut(; trscheme); normalize=false)
+    return changebonds!(FiniteMPS(A2), SvdCut(; trscheme); normalize = false)
 end
 function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
     L = check_length(mpo, mps)
     T = promote_type(scalartype(mpo), scalartype(mps))
     A = TensorKit.similarstoragetype(eltype(mps), T)
-    fusers = PeriodicArray(fuser.(A, left_virtualspace.(Ref(mps), 1:L),
-                                  left_virtualspace.(Ref(mpo), 1:L)))
+    fusers = PeriodicArray(
+        fuser.(A, left_virtualspace.(Ref(mps), 1:L), left_virtualspace.(Ref(mpo), 1:L))
+    )
     As = map(1:L) do i
         return _fuse_mpo_mps(mpo[i], mps.AL[i], fusers[i], fusers[i + 1])
     end
-    return changebonds(InfiniteMPS(As), SvdCut(; trscheme=notrunc()))
+    return changebonds(InfiniteMPS(As), SvdCut(; trscheme = notrunc()))
 end
 
 function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
-    @plansor A′[-1 -2; -3] := Fₗ[-1; 1 3] *
-                              A[1 2; 4] *
-                              O[3 -2; 2 5] *
-                              conj(Fᵣ[-3; 4 5])
+    @plansor A′[-1 -2; -3] := Fₗ[-1; 1 3] * A[1 2; 4] * O[3 -2; 2 5] * conj(Fᵣ[-3; 4 5])
     return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
 end
 
@@ -276,40 +280,51 @@ end
 # TODO: I think the fastest order is to start from both ends, and take the overlap at the
 # largest virtual space cut, but it might be better to just multithread both sides and meet
 # in the middle
-function TensorKit.dot(bra::FiniteMPS{T}, mpo::FiniteMPO{<:MPOTensor},
-                       ket::FiniteMPS{T}) where {T}
+function TensorKit.dot(
+        bra::FiniteMPS{T}, mpo::FiniteMPO{<:MPOTensor}, ket::FiniteMPS{T}
+    ) where {T}
     N = check_length(bra, mpo, ket)
     Nhalf = N ÷ 2
     # left half
-    ρ_left = isomorphism(storagetype(T),
-                         left_virtualspace(bra, 1) ⊗ left_virtualspace(mpo, 1)',
-                         left_virtualspace(ket, 1))
+    ρ_left = isomorphism(
+        storagetype(T),
+        left_virtualspace(bra, 1) ⊗ left_virtualspace(mpo, 1)',
+        left_virtualspace(ket, 1)
+    )
     T_left = TransferMatrix(ket.AL[1:Nhalf], mpo[1:Nhalf], bra.AL[1:Nhalf])
     ρ_left = ρ_left * T_left
 
     # right half
-    ρ_right = isomorphism(storagetype(T),
-                          right_virtualspace(ket, N) ⊗ right_virtualspace(mpo, N),
-                          right_virtualspace(bra, N))
-    T_right = TransferMatrix(ket.AR[(Nhalf + 1):end], mpo[(Nhalf + 1):end],
-                             bra.AR[(Nhalf + 1):end])
+    ρ_right = isomorphism(
+        storagetype(T),
+        right_virtualspace(ket, N) ⊗ right_virtualspace(mpo, N),
+        right_virtualspace(bra, N)
+    )
+    T_right = TransferMatrix(
+        ket.AR[(Nhalf + 1):end], mpo[(Nhalf + 1):end],
+        bra.AR[(Nhalf + 1):end]
+    )
     ρ_right = T_right * ρ_right
 
     # center
     return @plansor ρ_left[3 4; 1] * ket.C[Nhalf][1; 5] * ρ_right[5 4; 2] *
-                    conj(bra.C[Nhalf][3; 2])
+        conj(bra.C[Nhalf][3; 2])
 end
-function TensorKit.dot(bra::InfiniteMPS, mpo::InfiniteMPO, ket::InfiniteMPS;
-                       ishermitian=false, krylovdim=30, kwargs...)
+function TensorKit.dot(
+        bra::InfiniteMPS, mpo::InfiniteMPO, ket::InfiniteMPS;
+        ishermitian = false, krylovdim = 30, kwargs...
+    )
     ρ₀ = allocate_GL(bra, mpo, ket, 1)
     randomize!(ρ₀)
 
-    val, = fixedpoint(TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM; ishermitian,
-                      krylovdim, kwargs...)
+    val, = fixedpoint(
+        TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM; ishermitian,
+        krylovdim, kwargs...
+    )
     return val
 end
 
-function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO<:MPOTensor}
+function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO <: MPOTensor}
     length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
     N = length(mpo₁)
     Nhalf = N ÷ 2
@@ -317,13 +332,13 @@ function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO<:
     @plansor ρ_left[-1; -2] := conj(mpo₁[1][1 2; 3 -1]) * mpo₂[1][1 2; 3 -2]
     for i in 2:Nhalf
         @plansor ρ_left[-1; -2] := ρ_left[1; 2] * conj(mpo₁[i][1 3; 4 -1]) *
-                                   mpo₂[i][2 3; 4 -2]
+            mpo₂[i][2 3; 4 -2]
     end
     # right half
     @plansor ρ_right[-1; -2] := conj(mpo₁[N][-2 1; 2 3]) * mpo₂[N][-1 1; 2 3]
     for i in (N - 1):-1:(Nhalf + 1)
         @plansor ρ_right[-1; -2] := ρ_right[1; 2] * conj(mpo₁[i][-2 4; 3 2]) *
-                                    mpo₂[i][-1 4; 3 1]
+            mpo₂[i][-1 4; 3 1]
     end
     return @plansor ρ_left[1; 2] * ρ_right[2; 1]
 end
@@ -352,8 +367,10 @@ function LinearAlgebra.tr(mpo::MPO)
     return @plansor ρ_left[(); 1] * ρ_right[1; ()]
 end
 
-function Base.isapprox(mpo₁::MPO, mpo₂::MPO;
-                       atol::Real=0, rtol::Real=atol > 0 ? 0 : √eps(real(scalartype(mpo₁))))
+function Base.isapprox(
+        mpo₁::MPO, mpo₂::MPO;
+        atol::Real = 0, rtol::Real = atol > 0 ? 0 : √eps(real(scalartype(mpo₁)))
+    )
     check_length(mpo₁, mpo₂)
     # computing ||mpo₁ - mpo₂|| without constructing mpo₁ - mpo₂
     # ||mpo₁ - mpo₂||² = ||mpo₁||² + ||mpo₂||² - 2 ⟨mpo₁, mpo₂⟩

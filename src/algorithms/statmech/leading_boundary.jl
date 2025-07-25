@@ -1,4 +1,3 @@
-
 @doc """
     leading_boundary(ψ₀, O, [environments]; kwargs...) -> (ψ, environments, ϵ)
     leading_boundary(ψ₀, O, algorithm, environments) -> (ψ, environments, ϵ)
@@ -26,13 +25,16 @@ optimization algorithm will be attempted based on the supplied keywords.
 # TODO: alg selector
 
 # implementation always in terms of Multiline objects
-function leading_boundary(state::InfiniteMPS, operator::InfiniteMPO, alg,
-                          envs=environments(state, operator))
+function leading_boundary(
+        state::InfiniteMPS, operator::InfiniteMPO, alg, envs = environments(state, operator)
+    )
     state_multi = convert(MultilineMPS, state)
     operator_multi = convert(MultilineMPO, operator)
     envs_multi = Multiline([envs])
-    state_multi′, envs_multi′, err = leading_boundary(state_multi, operator_multi, alg,
-                                                      envs_multi)
+    state_multi′, envs_multi′, err = leading_boundary(
+        state_multi, operator_multi, alg,
+        envs_multi
+    )
     state′ = convert(InfiniteMPS, state_multi′)
     return state′, envs, err
 end

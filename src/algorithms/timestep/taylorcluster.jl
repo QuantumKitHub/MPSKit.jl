@@ -25,10 +25,11 @@ end
 
 First order Taylor expansion for a time-evolution MPO.
 """
-const WI = TaylorCluster(; N=1, extension=false, compression=false)
+const WI = TaylorCluster(; N = 1, extension = false, compression = false)
 
-function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
-                       tol=eps(real(scalartype(H))))
+function make_time_mpo(
+        H::MPOHamiltonian, dt::Number, alg::TaylorCluster; tol = eps(real(scalartype(H)))
+    )
     N = alg.N
     τ = -1im * dt
 
@@ -68,9 +69,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
 
                     # TODO: use VectorInterface for memory efficiency
                     slice[linds_left[a], 1, 1, linds_right[b]] += factor *
-                                                                  H_next[i][linds_next_left[aₑ...],
-                                                                            1, 1,
-                                                                            linds_next_right[bₑ...]]
+                        H_next[i][linds_next_left[aₑ...], 1, 1, linds_next_right[bₑ...]]
                 end
             end
         end
@@ -102,7 +101,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
         linds_left = linds[i]
         for c in CartesianIndices(linds_left)
             c_lin = linds_left[c]
-            s_c = CartesianIndex(sort(collect(c.I); by=(!=(1)))...)
+            s_c = CartesianIndex(sort(collect(c.I); by = (!=(1)))...)
 
             n1 = count(==(1), c.I)
             n3 = count(==(V_left), c.I)
@@ -122,7 +121,7 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
         linds_right = linds[i + 1]
         for c in CartesianIndices(linds_right)
             c_lin = linds_right[c]
-            s_r = CartesianIndex(sort(collect(c.I); by=(!=(V_right)))...)
+            s_r = CartesianIndex(sort(collect(c.I); by = (!=(V_right)))...)
 
             n1 = count(==(1), c.I)
             n3 = count(==(V_right), c.I)
@@ -179,8 +178,10 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
 end
 
 # Hack to treat FiniteMPOhamiltonians as Infinite
-function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::TaylorCluster;
-                       tol=eps(real(scalartype(H))))
+function make_time_mpo(
+        H::FiniteMPOHamiltonian, dt::Number, alg::TaylorCluster;
+        tol = eps(real(scalartype(H)))
+    )
     H′ = copy(parent(H))
 
     V_left = left_virtualspace(H[1])

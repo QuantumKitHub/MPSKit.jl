@@ -65,7 +65,9 @@ For more information, check out the [TensorKit documentation](https://jutho.gith
 
 The general definition of an MPS tensor is as follows:
 
-![convention MPSTensor](../assets/mps_tensor_definition.png)
+```@raw html
+<img src="../../assets/mps_tensor_definition.png" alt="convention MPSTensor" class="color-invertible"/>
+```
 
 These tensors are allowed to have an arbitrary number of physical legs, and both `FiniteMPS`
 as well as `InfiniteMPS` will be able to handle the resulting objects. This allows for
@@ -74,12 +76,16 @@ example for the definition of boundary tensors in PEPS code, which have two phys
 Similarly, the definition of a bond tensor, appearing in between two MPS tensors, is as
 follows:
 
-![convention BondTensor](../assets/bond_tensor_definition.png)
+```@raw html
+<img src="../../assets/bond_tensor_definition.png" alt="convention BondTensor" class="color-invertible"/>
+```
 
 Finally, the definition of a MPO tensor, which is used to represent statistical mechanics
 problems as well as quantum hamiltonians, is represented as:
 
-![convention MPOTensor](../assets/mpo_tensor_definition.png)
+```@raw html
+<img src="../../assets/mpo_tensor_definition.png" alt="convention MPOTensor" class="color-invertible"/>
+```
 
 While this results at first glance in the not very intuitive ordering of spaces as $V_l
 \otimes P \leftarrow P \otimes V_r$, this is actually the most natural ordering for keeping

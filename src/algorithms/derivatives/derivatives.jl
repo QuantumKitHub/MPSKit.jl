@@ -69,8 +69,9 @@ See also [`AC2_projection`](@ref).
 
 # boilerplate for the derivative operators
 for hamiltonian in (:C_hamiltonian, :AC_hamiltonian, :AC2_hamiltonian)
-    @eval function $hamiltonian(site::CartesianIndex{2}, below, operator::MultilineMPO,
-                                above, envs)
+    @eval function $hamiltonian(
+            site::CartesianIndex{2}, below, operator::MultilineMPO, above, envs
+        )
         row, col = Tuple(site)
         return $hamiltonian(col, below[row + 1], operator[row], above[row], envs[row])
     end
@@ -90,12 +91,13 @@ for hamiltonian in (:C_hamiltonian, :AC_hamiltonian, :AC2_hamiltonian)
         end
         return LinearCombination(Hs, operator.coeffs)
     end
-    @eval function $hamiltonian(site::Int, below, operator::LazySum, above,
-                                envs::MultipleEnvironments)
+    @eval function $hamiltonian(
+            site::Int, below, operator::LazySum, above, envs::MultipleEnvironments
+        )
         Hs = map(operator.ops, envs.envs) do o, env
             return $hamiltonian(site, below, o, above, env)
         end
-        elT = Union{D,MultipliedOperator{D}} where {D<:DerivativeOperator}
+        elT = Union{D, MultipliedOperator{D}} where {D <: DerivativeOperator}
         return LazySum{elT}(Hs)
     end
 end
@@ -164,20 +166,25 @@ for kind in (:C, :AC, :AC2)
     projection = Symbol(kind, "_projection")
     hamiltonian = Symbol(kind, "_hamiltonian")
 
-    @eval function $projection(site, below, above::Tuple, envs)
-        return $projection(site, below, above..., envs)
+    @eval function $projection(site, below, above::Tuple, envs; kwargs...)
+        return $projection(site, below, above..., envs; kwargs...)
     end
-    @eval function $projection(site, below, above::AbstractMPS, envs)
-        return $projection(site, below, nothing, above, envs)
+    @eval function $projection(site, below, above::AbstractMPS, envs; kwargs...)
+        return $projection(site, below, nothing, above, envs; kwargs...)
     end
-    @eval function $projection(site::CartesianIndex{2}, below::MultilineMPS, operator,
-                               above::MultilineMPS, envs)
+    @eval function $projection(
+            site::CartesianIndex{2}, below::MultilineMPS, operator,
+            above::MultilineMPS, envs; kwargs...
+        )
         row, col = Tuple(site)
-        return $projection(col, below[row + 1], operator[row], above[row], envs[row])
+        return $projection(
+            col, below[row + 1], operator[row], above[row], envs[row];
+            kwargs...
+        )
     end
-    @eval function $projection(site, below, above::LazySum, envs)
+    @eval function $projection(site, below, above::LazySum, envs; kwargs...)
         return sum(zip(above.ops, envs.envs)) do x
-            return $projection(site, below, x...)
+            return $projection(site, below, x...; kwargs...)
         end
     end
 end
@@ -187,9 +194,8 @@ end
 function AC_projection(site, below, operator, above, envs)
     return AC_hamiltonian(site, below, operator, above, envs) * above.AC[site]
 end
-function AC2_projection(site::Int, below, operator, above, envs)
-    AC2 = above.AC[site] * _transpose_tail(above.AR[site + 1])
-    return AC2_hamiltonian(site, below, operator, above, envs) * AC2
+function AC2_projection(site::Int, below, operator, above, envs; kwargs...)
+    return AC2_hamiltonian(site, below, operator, above, envs) * AC2(above, site; kwargs...)
 end
 
 # Multiline
@@ -200,16 +206,10 @@ end
 Base.:*(H::Multiline{<:DerivativeOperator}, x::AbstractVector) = H(x)
 
 # time dependent derivative operators
+const DerivativeOrMultiplied{D <: DerivativeOperator} = Union{MultipliedOperator{D}, D}
+
 (h::UntimedOperator{<:DerivativeOperator})(y, args...) = h.f * h.op(y)
 (h::TimedOperator{<:DerivativeOperator})(y, t::Number) = h.f(t) * h.op(y)
-function (x::LazySum{<:Union{MultipliedOperator{D},D} where {D<:DerivativeOperator}})(y,
-                                                                                      t::Number)
-    return sum(O -> O(y, t), x)
-end
-function (x::LazySum{<:Union{MultipliedOperator{D},D} where {D<:DerivativeOperator}})(y)
-    return sum(O -> O(y), x)
-end
-function Base.:*(h::LazySum{<:Union{D,MultipliedOperator{D}} where {D<:DerivativeOperator}},
-                 v)
-    return h(v)
-end
+(x::LazySum{<:DerivativeOrMultiplied})(y, t::Number) = sum(O -> O(y, t), x)
+(x::LazySum{<:DerivativeOrMultiplied})(y) = sum(O -> O(y), x)
+Base.:*(h::LazySum{<:Union{DerivativeOrMultiplied}}, v) = h(v)

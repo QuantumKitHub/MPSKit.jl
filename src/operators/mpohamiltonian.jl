@@ -28,14 +28,14 @@ H = MPOHamiltonian(lattice, (i, i+1) => O for i in 1:length(lattice)-1)
 See also [`instantiate_operator`](@ref), which is responsable for instantiating the local
 operators in a form that is compatible with this constructor.
 """
-struct MPOHamiltonian{TO<:JordanMPOTensor,V<:AbstractVector{TO}} <: AbstractMPO{TO}
+struct MPOHamiltonian{TO <: JordanMPOTensor, V <: AbstractVector{TO}} <: AbstractMPO{TO}
     W::V
 end
 
-const FiniteMPOHamiltonian{O<:MPOTensor} = MPOHamiltonian{O,Vector{O}}
+const FiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, Vector{O}}
 Base.isfinite(::Type{<:FiniteMPOHamiltonian}) = true
 
-function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
+function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
     for i in eachindex(Ws)[1:(end - 1)]
         right_virtualspace(Ws[i]) == left_virtualspace(Ws[i + 1]) ||
             throw(ArgumentError("The virtual spaces of the MPO tensors at site $i do not match."))
@@ -43,10 +43,10 @@ function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
     return FiniteMPOHamiltonian{O}(Ws)
 end
 
-const InfiniteMPOHamiltonian{O<:MPOTensor} = MPOHamiltonian{O,PeriodicVector{O}}
+const InfiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPOHamiltonian}) = false
 
-function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O<:MPOTensor}
+function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
     for i in eachindex(Ws)
         right_virtualspace(Ws[i]) == left_virtualspace(Ws[mod1(i + 1, end)]) ||
             throw(ArgumentError("The virtual spaces of the MPO tensors at site $i do not match."))
@@ -66,7 +66,7 @@ function FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
     W = jordanmpotensortype(T)
     return FiniteMPOHamiltonian{W}(Ws)
 end
-function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:JordanMPOTensor}
+function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPOTensor}
     T = scalartype(O)
     L = length(W_mats)
     # initialize sumspaces
@@ -108,7 +108,7 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:JordanMPOTe
             row, col = I.I
             if Welem isa MPOTensor
                 V_left = left_virtualspace(Welem)
-                @assert Vs_left[row] == V_left "incompatible space between sites $(site-1) and $site at level $row"
+                @assert Vs_left[row] == V_left "incompatible space between sites $(site - 1) and $site at level $row"
                 V_right = right_virtualspace(Welem)
                 Vs_right[col] = V_right
             elseif !iszero(Welem) # Welem isa Number
@@ -122,9 +122,10 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:JordanMPOTe
 
     # instantiate tensors
     Ws = map(enumerate(W_mats)) do (site, W_mat)
-        W = jordanmpotensortype(S, T)(undef,
-                                      Vspaces[site] ⊗ Pspaces[site] ←
-                                      Pspaces[site] ⊗ Vspaces[site + 1])
+        W = jordanmpotensortype(S, T)(
+            undef,
+            Vspaces[site] ⊗ Pspaces[site] ← Pspaces[site] ⊗ Vspaces[site + 1]
+        )
         for (I, v) in enumerate(W_mat)
             ismissing(v) && continue
             if v isa MPOTensor
@@ -152,7 +153,7 @@ function InfiniteMPOHamiltonian(Ws::Vector{<:Matrix})
     TW = jordanmpotensortype(T)
     return InfiniteMPOHamiltonian{TW}(Ws)
 end
-function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor}
+function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTensor}
     # InfiniteMPOHamiltonian only works for square matrices:
     for W_mat in W_mats
         size(W_mat, 1) == size(W_mat, 2) ||
@@ -178,7 +179,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor
     # note that we assume that the FSA does not contain "dead ends", as this would mess with the
     # ability to deduce spaces.
     # also assume spacecheck errors will happen when filling the BlockTensors
-    MissingS = Union{Missing,S}
+    MissingS = Union{Missing, S}
     Vspaces = PeriodicArray([Vector{MissingS}(missing, nlvls) for _ in 1:L])
     for V in Vspaces
         V[1] = V[end] = oneunit(S)
@@ -203,7 +204,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor
                         Vs_left[row] = V_left
                         haschanged = true
                     else
-                        @assert Vs_left[row] == V_left "incompatible space between sites $(site-1) and $site at level $row"
+                        @assert Vs_left[row] == V_left "incompatible space between sites $(site - 1) and $site at level $row"
                     end
 
                     V_right = right_virtualspace(Welem)
@@ -211,7 +212,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor
                         Vs_right[col] = V_right
                         haschanged = true
                     else
-                        @assert Vs_right[col] == V_right "incompatible space between sites $(site) and $(site+1) at level $col"
+                        @assert Vs_right[col] == V_right "incompatible space between sites $(site) and $(site + 1) at level $col"
                     end
                 elseif !iszero(Welem) # Welem isa Number
                     if ismissing(Vs_left[row]) && !ismissing(Vs_right[col])
@@ -221,7 +222,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor
                         Vs_right[col] = Vs_left[row]
                         haschanged = true
                     else
-                        @assert Vs_left[row] == Vs_right[col] "incompatible space between sites $(site-1) and $site at level $row"
+                        @assert Vs_left[row] == Vs_right[col] "incompatible space between sites $(site - 1) and $site at level $row"
                     end
                 end
             end
@@ -238,9 +239,10 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O<:MPOTensor
 
     # instantiate tensors
     Ws = map(enumerate(W_mats)) do (site, W_mat)
-        W = jordanmpotensortype(S, T)(undef,
-                                      Vsumspaces[site] ⊗ Pspaces[site] ←
-                                      Pspaces[site] ⊗ Vsumspaces[site + 1])
+        W = jordanmpotensortype(S, T)(
+            undef,
+            Vsumspaces[site] ⊗ Pspaces[site] ← Pspaces[site] ⊗ Vsumspaces[site + 1]
+        )
         for (I, v) in enumerate(W_mat)
             ismissing(v) && continue
             if v isa MPOTensor
@@ -261,7 +263,7 @@ function _split_mpoham_types(W::Matrix)::Type{<:MPOTensor}
     T = eltype(W)
     if T <: MPOTensor
         return T
-    elseif T <: Union{Missing,Number,MPOTensor}
+    elseif T <: Union{Missing, Number, MPOTensor}
         Ts = collect(DataType, Base.uniontypes(T))
         # find MPO type
         iTO = findall(x -> x <: MPOTensor, Ts)
@@ -312,7 +314,7 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
         return Base._to_linear_index(lattice, Tuple(I)...) # this should mean all inds are valid...
     end
     T = eltype(mpo)
-    local_mpo = Union{T,scalartype(T)}[]
+    local_mpo = Union{T, scalartype(T)}[]
     sites = Int[]
 
     i = 1
@@ -333,13 +335,13 @@ end
 # yields the promoted tensortype of all tensors
 function _find_tensortype(nonzero_operators::AbstractArray)
     return mapreduce(promote_type, nonzero_operators) do x
-        return mapreduce(promote_type, x; init=Base.Bottom) do y
+        return mapreduce(promote_type, x; init = Base.Bottom) do y
             return y isa AbstractTensorMap ? typeof(y) : Base.Bottom
         end
     end
 end
 
-function _find_channel(nonzero_keys; init=2)
+function _find_channel(nonzero_keys; init = 2)
     init = max(init, 2)
     range = unique!(last.(nonzero_keys))
     isempty(range) && return init
@@ -349,13 +351,12 @@ function _find_channel(nonzero_keys; init=2)
     return max(maximum(range) + 1, init)
 end
 
-function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
-                              local_operators)
+function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators)
     # initialize vectors for storing the data
     # TODO: generalize to weird lattice types
     # nonzero_keys = similar(lattice, Vector{NTuple{2,Int}})
     # nonzero_opps = similar(lattice, Vector{Any})
-    nonzero_keys = Vector{Vector{NTuple{2,Int}}}(undef, length(lattice))
+    nonzero_keys = Vector{Vector{NTuple{2, Int}}}(undef, length(lattice))
     nonzero_opps = Vector{Vector{Any}}(undef, length(lattice))
     for i in eachindex(nonzero_keys)
         nonzero_keys[i] = []
@@ -363,15 +364,16 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
     end
 
     # partial sort by interaction range
-    local_mpos = sort!(map(Base.Fix1(instantiate_operator, lattice),
-                           collect(local_operators)); by=x -> length(x[1]))
+    local_mpos = sort!(
+        map(Base.Fix1(instantiate_operator, lattice), collect(local_operators));
+        by = x -> length(x[1])
+    )
 
     for (sites, local_mpo) in local_mpos
         local key_R # trick to define key_R before the first iteration
         for (i, (site, O)) in enumerate(zip(sites, local_mpo))
             key_L = i == 1 ? 1 : key_R
-            key_R = i == length(local_mpo) ? 0 :
-                    _find_channel(nonzero_keys[site]; init=key_L)
+            key_R = i == length(local_mpo) ? 0 : _find_channel(nonzero_keys[site]; init = key_L)
             push!(nonzero_keys[site], (key_L, key_R))
             push!(nonzero_opps[site], O)
         end
@@ -393,7 +395,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
     virtualsumspaces[end] = SumSpace(fill(_oneunit, 1))
 
     for i in 1:(length(lattice) - 1)
-        n_channels = maximum(last, nonzero_keys[i]; init=1) + 1
+        n_channels = maximum(last, nonzero_keys[i]; init = 1) + 1
         V = SumSpace(fill(_oneunit, n_channels))
         if n_channels > 2
             for ((key_L, key_R), O) in zip(nonzero_keys[i], nonzero_opps[i])
@@ -432,14 +434,13 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
     return FiniteMPOHamiltonian(Os)
 end
 
-function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
-                                local_operators)
+function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_operators)
     lattice = PeriodicVector(lattice′)
     # initialize vectors for storing the data
     # TODO: generalize to weird lattice types
     # nonzero_keys = similar(lattice, Vector{NTuple{2,Int}})
     # nonzero_opps = similar(lattice, Vector{Any})
-    nonzero_keys = PeriodicVector{Vector{NTuple{2,Int}}}(undef, length(lattice))
+    nonzero_keys = PeriodicVector{Vector{NTuple{2, Int}}}(undef, length(lattice))
     nonzero_opps = PeriodicVector{Vector{Any}}(undef, length(lattice))
     for i in eachindex(nonzero_keys)
         nonzero_keys[i] = []
@@ -447,15 +448,16 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     end
 
     # partial sort by interaction range
-    local_mpos = sort!(map(Base.Fix1(instantiate_operator, lattice),
-                           collect(local_operators)); by=x -> length(x[1]))
+    local_mpos = sort!(
+        map(Base.Fix1(instantiate_operator, lattice), collect(local_operators));
+        by = x -> length(x[1])
+    )
 
     for (sites, local_mpo) in local_mpos
         local key_R # trick to define key_R before the first iteration
         for (i, (site, O)) in enumerate(zip(sites, local_mpo))
             key_L = i == 1 ? 1 : key_R
-            key_R = i == length(local_mpo) ? 0 :
-                    _find_channel(nonzero_keys[site]; init=key_L)
+            key_R = i == length(local_mpo) ? 0 : _find_channel(nonzero_keys[site]; init = key_L)
             push!(nonzero_keys[site], (key_L, key_R))
             push!(nonzero_opps[site], O)
         end
@@ -467,12 +469,12 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     S = spacetype(T)
 
     # construct the virtual spaces
-    MissingS = Union{Missing,S}
-    operator_size = maximum(K -> maximum(last, K; init=1) + 1, nonzero_keys)
-    virtualspaces = PeriodicArray([Vector{MissingS}(missing, operator_size)
-                                   for _ in 1:length(nonzero_keys)])
-
-
+    MissingS = Union{Missing, S}
+    operator_size = maximum(K -> maximum(last, K; init = 1) + 1, nonzero_keys)
+    virtualspaces = PeriodicArray(
+        [Vector{MissingS}(missing, operator_size) for _ in 1:length(nonzero_keys)]
+    )
+    # avoid using one(S)
     somempo = local_mpos[1].second[1]
     sp_oneleg = space(somempo, 1)
 
@@ -512,12 +514,12 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
                 key_R = key_R′ == 0 ? operator_size : key_R′
 
                 if !ismissing(virtualspaces[i - 1][key_L]) &&
-                   ismissing(virtualspaces[i][key_R])
+                        ismissing(virtualspaces[i][key_R])
                     virtualspaces[i][key_R] = virtualspaces[i - 1][key_L]
                     ischanged = true
                 end
                 if ismissing(virtualspaces[i - 1][key_L]) &&
-                   !ismissing(virtualspaces[i][key_R])
+                        !ismissing(virtualspaces[i][key_R])
                     virtualspaces[i - 1][key_L] = virtualspaces[i][key_R]
                     ischanged = true
                 end
@@ -555,17 +557,15 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace},
     return InfiniteMPOHamiltonian(PeriodicArray(Os))
 end
 
-function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
-                              local_operators::Pair...)
+function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators::Pair...)
     return FiniteMPOHamiltonian(lattice, local_operators)
 end
 
-function InfiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace},
-                                local_operators::Pair...)
+function InfiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators::Pair...)
     return InfiniteMPOHamiltonian(lattice, local_operators)
 end
 
-function InfiniteMPOHamiltonian(local_operator::TensorMap{E,S,N,N}) where {E,S,N}
+function InfiniteMPOHamiltonian(local_operator::TensorMap{E, S, N, N}) where {E, S, N}
     lattice_space = space(local_operator, 1)
     n_sites = length(domain(local_operator))
     lattice = PeriodicArray([lattice_space])
@@ -597,7 +597,7 @@ function isidentitylevel(H::InfiniteMPOHamiltonian{<:JordanMPOTensor}, i::Int)
     else
         return all(H.A) do A
             return haskey(A, CartesianIndex(i - 1, 1, 1, i - 1)) &&
-                   A[i - 1, 1, 1, i - 1] isa BraidingTensor
+                A[i - 1, 1, 1, i - 1] isa BraidingTensor
         end
     end
 end
@@ -614,13 +614,15 @@ function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
     return convert(TensorMap, _instantiate_finitempo(L, M, R))
 end
 
-function Base.convert(::Type{FiniteMPOHamiltonian{O1}},
-                      H::FiniteMPOHamiltonian{O2}) where {O1,O2}
+function Base.convert(
+        ::Type{FiniteMPOHamiltonian{O1}}, H::FiniteMPOHamiltonian{O2}
+    ) where {O1, O2}
     O1 === O2 && return H
     return FiniteMPOHamiltonian(convert.(O1, parent(H)))
 end
-function Base.convert(::Type{InfiniteMPOHamiltonian{O1}},
-                      H::InfiniteMPOHamiltonian{O2}) where {O1,O2}
+function Base.convert(
+        ::Type{InfiniteMPOHamiltonian{O1}}, H::InfiniteMPOHamiltonian{O2}
+    ) where {O1, O2}
     O1 === O2 && return H
     return InfiniteMPOHamiltonian(convert.(O1, parent(H)))
 end
@@ -653,46 +655,49 @@ function Base.complex(H::MPOHamiltonian)
     return MPOHamiltonian(H)
 end
 
-function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O<:MPOTensor}
+function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O <: MPOTensor}
     return MPOHamiltonian(similar(parent(H), O, L))
 end
-function Base.similar(H::MPOHamiltonian, ::Type{T}) where {T<:Number}
+function Base.similar(H::MPOHamiltonian, ::Type{T}) where {T <: Number}
     return MPOHamiltonian(similar.(parent(H), T))
 end
 
 # Linear Algebra
 # --------------
-function Base.:+(H₁::FiniteMPOHamiltonian{O},
-                 H₂::FiniteMPOHamiltonian{O}) where {O<:JordanMPOTensor}
+function Base.:+(
+        H₁::FiniteMPOHamiltonian{O}, H₂::FiniteMPOHamiltonian{O}
+    ) where {O <: JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
     Vtriv = oneunit(space(first(H₁[1]), 1))
 
     for i in 1:N
-        A = cat(H₁[i].A, H₂[i].A; dims=(1, 4))
-        B = cat(H₁[i].B, H₂[i].B; dims=1)
-        C = cat(H₁[i].C, H₂[i].C; dims=3)
+        A = cat(H₁[i].A, H₂[i].A; dims = (1, 4))
+        B = cat(H₁[i].B, H₂[i].B; dims = 1)
+        C = cat(H₁[i].C, H₂[i].C; dims = 3)
         D = H₁[i].D + H₂[i].D
 
         Vleft = i == 1 ? left_virtualspace(H₁, 1) :
-                BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
+            BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
         Vright = i == N ? right_virtualspace(H₁, N) :
-                 BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+            BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
         H[i] = eltype(H)(V, A, B, C, D)
     end
     return FiniteMPOHamiltonian(H)
 end
-function Base.:+(H₁::InfiniteMPOHamiltonian{O},
-                 H₂::InfiniteMPOHamiltonian{O}) where {O<:JordanMPOTensor}
+function Base.:+(
+        H₁::InfiniteMPOHamiltonian{O},
+        H₂::InfiniteMPOHamiltonian{O}
+    ) where {O <: JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
     Vtriv = oneunit(space(first(H₁[1]), 1))
     for i in 1:N
-        A = cat(H₁[i].A, H₂[i].A; dims=(1, 4))
-        B = cat(H₁[i].B, H₂[i].B; dims=1)
-        C = cat(H₁[i].C, H₂[i].C; dims=3)
+        A = cat(H₁[i].A, H₂[i].A; dims = (1, 4))
+        B = cat(H₁[i].B, H₂[i].B; dims = 1)
+        C = cat(H₁[i].C, H₂[i].C; dims = 3)
         D = H₁[i].D + H₂[i].D
 
         Vleft = BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
@@ -708,16 +713,20 @@ function Base.:+(H::FiniteMPOHamiltonian, λs::AbstractVector{<:Number})
     check_length(H, λs)
     lattice = [physicalspace(H, i) for i in 1:length(H)]
     M = storagetype(H)
-    Hλ = FiniteMPOHamiltonian(lattice,
-                              i => scale!(id(M, lattice[i]), λs[i]) for i in 1:length(H))
+    Hλ = FiniteMPOHamiltonian(
+        lattice,
+        i => scale!(id(M, lattice[i]), λs[i]) for i in 1:length(H)
+    )
     return H + Hλ
 end
 function Base.:+(H::InfiniteMPOHamiltonian, λs::AbstractVector{<:Number})
     check_length(H, λs)
     lattice = [physicalspace(H, i) for i in 1:length(H)]
     M = storagetype(H)
-    Hλ = InfiniteMPOHamiltonian(lattice,
-                                i => scale!(id(M, lattice[i]), λs[i]) for i in 1:length(H))
+    Hλ = InfiniteMPOHamiltonian(
+        lattice,
+        i => scale!(id(M, lattice[i]), λs[i]) for i in 1:length(H)
+    )
     return H + Hλ
 end
 function Base.:+(λs::AbstractVector{<:Number}, H::MPOHamiltonian)
@@ -728,16 +737,19 @@ Base.:-(H::MPOHamiltonian, λs::AbstractVector{<:Number}) = H + (-λs)
 Base.:-(λs::AbstractVector{<:Number}, H::MPOHamiltonian) = λs + (-H)
 Base.:-(H1::MPOHamiltonian, H2::MPOHamiltonian) = H1 + (-H2)
 
-function VectorInterface.scale!(H::MPOHamiltonian{O},
-                                λ::Number) where {O<:JordanMPOTensor}
+function VectorInterface.scale!(
+        H::MPOHamiltonian{O}, λ::Number
+    ) where {O <: JordanMPOTensor}
     for i in 1:length(H)
         scale!(H[i].C, λ)
         scale!(H[i].D, λ)
     end
     return H
 end
-function VectorInterface.scale!(Hdst::MPOHamiltonian{<:JordanMPOTensor},
-                                Hsrc::MPOHamiltonian{<:JordanMPOTensor}, λ::Number)
+function VectorInterface.scale!(
+        Hdst::MPOHamiltonian{<:JordanMPOTensor},
+        Hsrc::MPOHamiltonian{<:JordanMPOTensor}, λ::Number
+    )
     N = check_length(Hdst, Hsrc)
     for i in 1:N
         scale!(Hdst[i].C, Hsrc[i].C, λ)
@@ -758,38 +770,40 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     N = check_length(H, mps)
     @assert N > 2 "MPS should have at least three sites, to be implemented otherwise"
     A = convert.(BlockTensorMap, [mps.AC[1]; mps.AR[2:end]])
-    A′ = similar(A,
-                 tensormaptype(spacetype(mps), numout(eltype(mps)), numin(eltype(mps)),
-                               promote_type(scalartype(H), scalartype(mps))))
+    A′ = similar(
+        A,
+        tensormaptype(
+            spacetype(mps), numout(eltype(mps)), numin(eltype(mps)),
+            promote_type(scalartype(H), scalartype(mps))
+        )
+    )
     # left to middle
     U = ones(scalartype(H), left_virtualspace(H, 1))
     @plansor a[-1 -2; -3 -4] := A[1][-1 2; -3] * H[1][1 -2; 2 -4] * conj(U[1])
-    Q, R = leftorth!(a; alg=QR())
+    Q, R = leftorth!(a; alg = QR())
     A′[1] = convert(TensorMap, Q)
 
     for i in 2:(N ÷ 2)
         @plansor a[-1 -2; -3 -4] := R[-1; 1 2] * A[i][1 3; -3] * H[i][2 -2; 3 -4]
-        Q, R = leftorth!(a; alg=QR())
+        Q, R = leftorth!(a; alg = QR())
         A′[i] = convert(TensorMap, Q)
     end
 
     # right to middle
     U = ones(scalartype(H), right_virtualspace(H, N))
     @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * U[1]
-    L, Q = rightorth!(a; alg=LQ())
+    L, Q = rightorth!(a; alg = LQ())
     A′[end] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
 
     for i in (N - 1):-1:(N ÷ 2 + 2)
         @plansor a[-1 -2; -3 -4] := A[i][-1 3; 1] * H[i][-2 -4; 3 2] * L[1 2; -3]
-        L, Q = rightorth!(a; alg=LQ())
+        L, Q = rightorth!(a; alg = LQ())
         A′[i] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
     end
 
     # connect pieces
-    @plansor a[-1 -2; -3] := R[-1; 1 2] *
-                             A[N ÷ 2 + 1][1 3; 4] *
-                             H[N ÷ 2 + 1][2 -2; 3 5] *
-                             L[4 5; -3]
+    @plansor a[-1 -2; -3] := R[-1; 1 2] * A[N ÷ 2 + 1][1 3; 4] * H[N ÷ 2 + 1][2 -2; 3 5] *
+        L[4 5; -3]
     A′[N ÷ 2 + 1] = convert(TensorMap, a)
 
     return FiniteMPS(A′)
@@ -811,29 +825,37 @@ function TensorKit.dot(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian)
     @plansor ρ_left[-1; -2] := conj(H₁[1][1 2; 3 -1]) * H₂[1][1 2; 3 -2]
     for i in 2:Nhalf
         @plansor ρ_left[-1; -2] := ρ_left[1; 2] * conj(H₁[i][1 3; 4 -1]) *
-                                   H₂[i][2 3; 4 -2]
+            H₂[i][2 3; 4 -2]
     end
     # right half
     @plansor ρ_right[-1; -2] := conj(H₁[N][-2 1; 2 3]) * H₂[N][-1 1; 2 3]
     for i in (N - 1):-1:(Nhalf + 1)
         @plansor ρ_right[-1; -2] := ρ_right[1; 2] * conj(H₁[i][-2 4; 3 2]) *
-                                    H₂[i][-1 4; 3 1]
+            H₂[i][-1 4; 3 1]
     end
     return @plansor ρ_left[1; 2] * ρ_right[2; 1]
 end
 
-function TensorKit.dot(bra::FiniteMPS, H::FiniteMPOHamiltonian, ket::FiniteMPS=bra,
-                       envs=environments(bra, H, ket))
+function TensorKit.dot(
+        bra::FiniteMPS, H::FiniteMPOHamiltonian, ket::FiniteMPS = bra,
+        envs = environments(bra, H, ket)
+    )
     @assert ket === bra "TBA"
     # find where environments had already been computed
-    N = something(findfirst(i -> bra.ARs[i] !== envs.rdependencies[i], 1:length(bra)),
-                  length(bra) ÷ 2)
-    return contract_mpo_expval(ket.AC[N], leftenv(envs, N, bra), H[N],
-                               rightenv(envs, N, bra), bra.AC[N])
+    N = something(
+        findfirst(i -> bra.ARs[i] !== envs.rdependencies[i], 1:length(bra)),
+        length(bra) ÷ 2
+    )
+    return contract_mpo_expval(
+        ket.AC[N], leftenv(envs, N, bra), H[N],
+        rightenv(envs, N, bra), bra.AC[N]
+    )
 end
 
-function Base.isapprox(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian;
-                       atol::Real=0, rtol::Real=atol > 0 ? 0 : √eps(real(scalartype(H₁))))
+function Base.isapprox(
+        H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian;
+        atol::Real = 0, rtol::Real = atol > 0 ? 0 : √eps(real(scalartype(H₁)))
+    )
     check_length(H₁, H₂)
 
     # computing ||H₁ - H₂|| without constructing H₁ - H₂

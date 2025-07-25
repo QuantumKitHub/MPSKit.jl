@@ -4,7 +4,7 @@
 Environment manager for `FiniteMPS` and `WindowMPS`. This structure is responsable for automatically checking
 if the queried environment is still correctly cached and if not recalculates.
 """
-struct FiniteEnvironments{A,B,C,D} <: AbstractMPSEnvironments
+struct FiniteEnvironments{A, B, C, D} <: AbstractMPSEnvironments
     above::A
 
     operator::B #the operator
@@ -28,14 +28,17 @@ function environments(below, operator, above, leftstart, rightstart)
     rightenvs = [i == N ? rightstart : similar(rightstart) for i in 0:length(below)]
 
     t = similar(below.AL[1])
-    return FiniteEnvironments(above, operator, fill(t, length(below)),
-                              fill(t, length(below)),
-                              leftenvs,
-                              rightenvs)
+    return FiniteEnvironments(
+        above, operator, fill(t, length(below)),
+        fill(t, length(below)),
+        leftenvs,
+        rightenvs
+    )
 end
 
-function environments(below::FiniteMPS{S}, O::Union{FiniteMPO,FiniteMPOHamiltonian},
-                      above=nothing) where {S}
+function environments(
+        below::FiniteMPS{S}, O::Union{FiniteMPO, FiniteMPOHamiltonian}, above = nothing
+    ) where {S}
     Vl_bot = left_virtualspace(below, 1)
     Vl_mid = left_virtualspace(O, 1)
     Vl_top = isnothing(above) ? left_virtualspace(below, 1) : left_virtualspace(above, 1)
@@ -49,17 +52,18 @@ function environments(below::FiniteMPS{S}, O::Union{FiniteMPO,FiniteMPOHamiltoni
 
     return environments(below, O, above, leftstart, rightstart)
 end
-function environments(below::WindowMPS, O::Union{InfiniteMPOHamiltonian,InfiniteMPO},
-                      above=nothing;
-                      lenvs=environments(below.left_gs, O),
-                      renvs=environments(below.right_gs, O))
+function environments(
+        below::WindowMPS, O::Union{InfiniteMPOHamiltonian, InfiniteMPO}, above = nothing;
+        lenvs = environments(below.left_gs, O),
+        renvs = environments(below.right_gs, O)
+    )
     leftstart = copy(lenvs.GLs[1])
     rightstart = copy(renvs.GRs[end])
 
     return environments(below, O, above, leftstart, rightstart)
 end
 
-function environments(below::S, above::S) where {S<:Union{FiniteMPS,WindowMPS}}
+function environments(below::S, above::S) where {S <: Union{FiniteMPS, WindowMPS}}
     S isa WindowMPS &&
         (above.left_gs == below.left_gs || throw(ArgumentError("left gs differs")))
     S isa WindowMPS &&
@@ -69,13 +73,15 @@ function environments(below::S, above::S) where {S<:Union{FiniteMPS,WindowMPS}}
     return environments(below, operator, above, l_LL(above), r_RR(above))
 end
 
-function environments(state::Union{FiniteMPS,WindowMPS}, operator::ProjectionOperator)
+function environments(state::Union{FiniteMPS, WindowMPS}, operator::ProjectionOperator)
     @plansor leftstart[-1; -2 -3 -4] := l_LL(operator.ket)[-3; -4] *
-                                        l_LL(operator.ket)[-1; -2]
+        l_LL(operator.ket)[-1; -2]
     @plansor rightstart[-1; -2 -3 -4] := r_RR(operator.ket)[-1; -2] *
-                                         r_RR(operator.ket)[-3; -4]
-    return environments(state, fill(nothing, length(state)), operator.ket, leftstart,
-                        rightstart)
+        r_RR(operator.ket)[-3; -4]
+    return environments(
+        state, fill(nothing, length(state)), operator.ket, leftstart,
+        rightstart
+    )
 end
 
 #notify the cache that we updated in-place, so it should invalidate the dependencies
@@ -94,7 +100,7 @@ function rightenv(ca::FiniteEnvironments, ind, state)
         for j in a:-1:(ind + 1)
             above = isnothing(ca.above) ? state.AR[j] : ca.above.AR[j]
             ca.GRs[j] = TransferMatrix(above, ca.operator[j], state.AR[j]) *
-                        ca.GRs[j + 1]
+                ca.GRs[j + 1]
             ca.rdependencies[j] = state.AR[j]
         end
     end
@@ -110,7 +116,7 @@ function leftenv(ca::FiniteEnvironments, ind, state)
         for j in a:(ind - 1)
             above = isnothing(ca.above) ? state.AL[j] : ca.above.AL[j]
             ca.GLs[j + 1] = ca.GLs[j] *
-                            TransferMatrix(above, ca.operator[j], state.AL[j])
+                TransferMatrix(above, ca.operator[j], state.AL[j])
             ca.ldependencies[j] = state.AL[j]
         end
     end

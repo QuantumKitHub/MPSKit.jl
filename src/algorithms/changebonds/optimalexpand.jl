@@ -17,8 +17,10 @@ $(TYPEDFIELDS)
     trscheme::TruncationScheme
 end
 
-function changebonds(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExpand,
-                     envs=environments(ψ, H))
+function changebonds(
+        ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExpand,
+        envs = environments(ψ, H)
+    )
     T = eltype(ψ.AL)
     AL′ = similar(ψ.AL)
     AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
@@ -30,8 +32,8 @@ function changebonds(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExp
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = leftnull(ψ.AL[i])
         VR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
-        intermediate = adjoint(VL) * AC2 * adjoint(VR)
-        U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
+        intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
+        U, _, V, = tsvd!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
         AL′[i] = VL * U
         AR′[i + 1] = V * VR
@@ -42,7 +44,7 @@ function changebonds(ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExp
     return newψ, envs
 end
 
-function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs=environments(ψ, H))
+function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environments(ψ, H))
     TL = eltype(ψ.AL)
     AL′ = PeriodicMatrix{TL}(undef, size(ψ.AL))
     TR = tensormaptype(spacetype(TL), 1, numind(TL) - 1, storagetype(TL))
@@ -56,8 +58,8 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs=environments(
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = leftnull(ψ.AL[i, j])
         VR = rightnull!(_transpose_tail(ψ.AR[i, j + 1]))
-        intermediate = adjoint(VL) * AC2 * adjoint(VR)
-        U, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
+        intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
+        U, _, V, = tsvd!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
         AL′[i, j] = VL * U
         AR′[i, j + 1] = V * VR
@@ -68,10 +70,10 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs=environments(
     return newψ, envs
 end
 
-function changebonds(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs=environments(ψ, H))
+function changebonds(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H))
     return changebonds!(copy(ψ), H, alg, envs)
 end
-function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs=environments(ψ, H))
+function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H))
     #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
 
     #the idea is that we always want to expand the state in such a way that there are zeros at site i
@@ -87,13 +89,13 @@ function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs=environ
         NR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
-        intermediate = adjoint(NL) * AC2 * adjoint(NR)
-        _, _, V, = tsvd!(intermediate; trunc=alg.trscheme, alg=alg.alg_svd)
+        intermediate = normalize!(adjoint(NL) * AC2 * adjoint(NR))
+        _, _, V, = tsvd!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
         ar_re = V * NR
         ar_le = zerovector!(similar(ar_re, codomain(ψ.AC[i]) ← space(V, 1)))
 
-        (nal, nc) = leftorth!(catdomain(ψ.AC[i], ar_le); alg=QRpos())
+        nal, nc = leftorth!(catdomain(ψ.AC[i], ar_le); alg = QRpos())
         nar = _transpose_front(catcodomain(_transpose_tail(ψ.AR[i + 1]), ar_re))
 
         ψ.AC[i] = (nal, nc)
