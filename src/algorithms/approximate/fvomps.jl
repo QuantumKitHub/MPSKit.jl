@@ -8,7 +8,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environment
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); (length(ψ) - 2):-1:1]
                 AC2′ = AC2_projection(pos, ψ, Oϕ, envs)
-                al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme)
+                al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
 
                 AC2 = ψ.AC[pos] * _transpose_tail(ψ.AR[pos + 1])
                 ϵ = max(ϵ, norm(al * c * ar - AC2) / norm(AC2))
