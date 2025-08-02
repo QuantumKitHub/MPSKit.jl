@@ -23,7 +23,7 @@ module TestStates
         ]
         L = rand(3:20)
         ψ = FiniteMPS(rand, elt, L, d, D)
-        
+
         @test @constinferred physicalspace(ψ) == fill(d, L)
         @test all(x -> x ≾ D, @constinferred left_virtualspace(ψ))
         @test all(x -> x ≾ D, @constinferred right_virtualspace(ψ))
@@ -133,7 +133,7 @@ module TestStates
         @test physicalspace(ψ) == fill(d, 2, 2)
         @test all(x -> x ≾ D, left_virtualspace(ψ))
         @test all(x -> x ≾ D, right_virtualspace(ψ))
-        
+
         for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
             @plansor difference[-1 -2; -3] := ψ.AL[i, j][-1 -2; 1] * ψ.C[i, j][1; -3] -
                 ψ.C[i, j - 1][-1; 1] * ψ.AR[i, j][1 -2; -3]
@@ -228,7 +228,7 @@ module TestStates
             #rand_quasiparticle is a private non-exported function
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
-            
+
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)
             @test @constinferred right_virtualspace(ϕ₁) == right_virtualspace(ψ)
@@ -263,7 +263,7 @@ module TestStates
             #rand_quasiparticle is a private non-exported function
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
-            
+
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)
             @test @constinferred right_virtualspace(ϕ₁) == right_virtualspace(ψ)
