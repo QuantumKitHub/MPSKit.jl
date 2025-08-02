@@ -187,6 +187,7 @@ Return the virtual space of the bond to the left of sites `pos`.
 function left_virtualspace end
 left_virtualspace(A::GenericMPSTensor) = space(A, 1)
 left_virtualspace(O::MPOTensor) = space(O, 1)
+left_virtualspace(ψ::AbstractMPS) = map(Base.Fix1(left_virtualspace, ψ), eachsite(ψ))
 
 """
     right_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
@@ -200,6 +201,7 @@ Return the virtual space of the bond to the right of site(s) `pos`.
 function right_virtualspace end
 right_virtualspace(A::GenericMPSTensor) = space(A, numind(A))'
 right_virtualspace(O::MPOTensor) = space(O, 4)'
+right_virtualspace(ψ::AbstractMPS) = map(Base.Fix1(right_virtualspace, ψ), eachsite(ψ))
 
 """
     physicalspace(ψ::AbstractMPS, [pos=1:length(ψ)])

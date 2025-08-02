@@ -24,9 +24,9 @@ end
 # Properties
 # ----------
 left_virtualspace(mpo::AbstractMPO, site::Int) = left_virtualspace(mpo[site])
-left_virtualspace(mpo::AbstractMPO) = map(left_virtualspace, parent(mpo))
+left_virtualspace(mpo::AbstractMPO) = map(Base.Fix1(left_virtualspace, mpo), eachsite(mpo))
 right_virtualspace(mpo::AbstractMPO, site::Int) = right_virtualspace(mpo[site])
-right_virtualspace(mpo::AbstractMPO) = map(right_virtualspace, parent(mpo))
+right_virtualspace(mpo::AbstractMPO) = map(Base.Fix1(right_virtualspace, mpo), eachsite(mpo))
 physicalspace(mpo::AbstractMPO, site::Int) = physicalspace(mpo[site])
 physicalspace(mpo::AbstractMPO) = map(Base.Fix1(physicalspace, mpo), eachsite(mpo))
 
