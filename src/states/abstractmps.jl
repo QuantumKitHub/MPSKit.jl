@@ -211,6 +211,7 @@ physicalspace(A::MPSTensor) = space(A, 2)
 physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
 physicalspace(O::MPOTensor) = space(O, 2)
 physicalspace(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}) = only(space(O, 2))
+physicalspace(ψ::AbstractMPS) = map(Base.Fix1(physicalspace, ψ), eachsite(ψ))
 
 """
     eachsite(state::AbstractMPS)

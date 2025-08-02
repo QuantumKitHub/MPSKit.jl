@@ -215,6 +215,8 @@ const MultilineQP{Q <: QP} = Multiline{Q}
 TensorKit.spacetype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = spacetype(S)
 TensorKit.sectortype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = sectortype(S)
 
+physicalspace(state::QP, i::Int) = physicalspace(state.left_gs, i)
+physicalspace(state::QP) = physicalspace(state.left_gs)
 left_virtualspace(state::QP, i::Int) = left_virtualspace(state.left_gs, i)
 right_virtualspace(state::QP, i::Int) = right_virtualspace(state.right_gs, i)
 auxiliaryspace(state::QP) = space(state.Xs[1], 2)
