@@ -14,6 +14,7 @@ Base.isfinite(O::AbstractMPO) = isfinite(typeof(O))
 # By default, define things in terms of parent
 Base.size(mpo::AbstractMPO, args...) = size(parent(mpo), args...)
 Base.length(mpo::AbstractMPO) = length(parent(mpo))
+eachsite(mpo::AbstractMPO) = eachindex(mpo)
 
 @inline Base.getindex(mpo::AbstractMPO, i::Int) = getindex(parent(mpo), i)
 @inline function Base.setindex!(mpo::AbstractMPO, value, i::Int)
@@ -24,11 +25,11 @@ end
 # Properties
 # ----------
 left_virtualspace(mpo::AbstractMPO, site::Int) = left_virtualspace(mpo[site])
-left_virtualspace(mpo::AbstractMPO) = map(left_virtualspace, parent(mpo))
+left_virtualspace(mpo::AbstractMPO) = map(Base.Fix1(left_virtualspace, mpo), eachsite(mpo))
 right_virtualspace(mpo::AbstractMPO, site::Int) = right_virtualspace(mpo[site])
-right_virtualspace(mpo::AbstractMPO) = map(right_virtualspace, parent(mpo))
+right_virtualspace(mpo::AbstractMPO) = map(Base.Fix1(right_virtualspace, mpo), eachsite(mpo))
 physicalspace(mpo::AbstractMPO, site::Int) = physicalspace(mpo[site])
-physicalspace(mpo::AbstractMPO) = map(physicalspace, mpo)
+physicalspace(mpo::AbstractMPO) = map(Base.Fix1(physicalspace, mpo), eachsite(mpo))
 
 for ftype in (:spacetype, :sectortype, :storagetype)
     @eval TensorKit.$ftype(mpo::AbstractMPO) = $ftype(typeof(mpo))

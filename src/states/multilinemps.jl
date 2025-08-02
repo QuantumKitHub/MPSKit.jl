@@ -101,5 +101,8 @@ Base.convert(::Type{InfiniteMPS}, st::MultilineMPS) = only(st)
 Base.eltype(t::MultilineMPS) = eltype(t[1])
 Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ)); ψ)
 
-left_virtualspace(t::MultilineMPS, i::Int, j::Int) = left_virtualspace(t[i], j)
-right_virtualspace(t::MultilineMPS, i::Int, j::Int) = right_virtualspace(t[i], j)
+for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
+    @eval $f_space(t::MultilineMPS, i::Int, j::Int) = $f_space(t[i], j)
+    @eval $f_space(t::MultilineMPS, I::CartesianIndex{2}) = $f_space(t, Tuple(I)...)
+    @eval $f_space(t::MultilineMPS) = map(Base.Fix1($f_space, t), eachindex(t))
+end

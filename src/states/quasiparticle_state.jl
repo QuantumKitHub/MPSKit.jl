@@ -215,9 +215,15 @@ const MultilineQP{Q <: QP} = Multiline{Q}
 TensorKit.spacetype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = spacetype(S)
 TensorKit.sectortype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = sectortype(S)
 
+physicalspace(state::QP, i::Int) = physicalspace(state.left_gs, i)
+physicalspace(state::QP) = physicalspace(state.left_gs)
 left_virtualspace(state::QP, i::Int) = left_virtualspace(state.left_gs, i)
+left_virtualspace(state::QP) = map(Base.Fix1(left_virtualspace, state), eachsite(state))
 right_virtualspace(state::QP, i::Int) = right_virtualspace(state.right_gs, i)
+right_virtualspace(state::QP) = map(Base.Fix1(right_virtualspace, state), eachsite(state))
 auxiliaryspace(state::QP) = space(state.Xs[1], 2)
+
+eachsite(state::QP) = eachsite(state.left_gs)
 
 Base.copy(a::QP) = copy!(similar(a), a)
 Base.copyto!(a::QP, b::QP) = copy!(a, b)
