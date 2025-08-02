@@ -14,6 +14,7 @@ Base.isfinite(O::AbstractMPO) = isfinite(typeof(O))
 # By default, define things in terms of parent
 Base.size(mpo::AbstractMPO, args...) = size(parent(mpo), args...)
 Base.length(mpo::AbstractMPO) = length(parent(mpo))
+eachsite(mpo::AbstractMPO) = eachindex(mpo)
 
 @inline Base.getindex(mpo::AbstractMPO, i::Int) = getindex(parent(mpo), i)
 @inline function Base.setindex!(mpo::AbstractMPO, value, i::Int)

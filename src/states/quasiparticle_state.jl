@@ -223,6 +223,8 @@ right_virtualspace(state::QP, i::Int) = right_virtualspace(state.right_gs, i)
 right_virtualspace(state::QP) = map(Base.Fix1(right_virtualspace, state), eachsite(state))
 auxiliaryspace(state::QP) = space(state.Xs[1], 2)
 
+eachsite(state::QP) = eachsite(state.left_gs)
+
 Base.copy(a::QP) = copy!(similar(a), a)
 Base.copyto!(a::QP, b::QP) = copy!(a, b)
 function Base.copy!(a::T, b::T) where {T <: QP}
