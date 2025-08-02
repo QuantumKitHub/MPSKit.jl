@@ -104,5 +104,5 @@ Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ))
 for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
     @eval $f_space(t::MultilineMPS, i::Int, j::Int) = $f_space(t[i], j)
     @eval $f_space(t::MultilineMPS, I::CartesianIndex{2}) = $f_space(t, Tuple(I)...)
-    @eval $f_space(t::MultilineMPS) = map(Base.Fix1($f_space, t), eachsite(t))
+    @eval $f_space(t::MultilineMPS) = map(Base.Fix1($f_space, t), eachindex(t))
 end

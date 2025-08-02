@@ -130,7 +130,7 @@ module TestStates
             ]; tol
         )
 
-        @test physicalspace(ψ) == fill(d, 2)
+        @test physicalspace(ψ) == fill(d, 2, 2)
         @test all(x -> x ≾ D, left_virtualspace(ψ))
         @test all(x -> x ≾ D, right_virtualspace(ψ))
         
