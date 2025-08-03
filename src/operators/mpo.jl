@@ -54,6 +54,7 @@ DenseMPO(mpo::MPO) = mpo isa DenseMPO ? copy(mpo) : MPO(map(TensorMap, parent(mp
 # -------
 Base.parent(mpo::MPO) = mpo.O
 Base.copy(mpo::MPO) = MPO(copy.(parent(mpo)))
+eachsite(mpo::InfiniteMPO) = PeriodicArray(eachindex(mpo))
 
 function Base.similar(mpo::MPO{<:MPOTensor}, ::Type{O}, L::Int) where {O <: MPOTensor}
     return MPO(similar(parent(mpo), O, L))

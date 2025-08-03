@@ -265,6 +265,7 @@ end
 
 Base.eachindex(ψ::InfiniteMPS) = eachindex(ψ.AL)
 Base.eachindex(l::IndexStyle, ψ::InfiniteMPS) = eachindex(l, ψ.AL)
+eachsite(ψ::InfiniteMPS) = PeriodicArray(eachindex(ψ))
 
 Base.checkbounds(::Type{Bool}, ψ::InfiniteMPS, i::Integer) = true
 
