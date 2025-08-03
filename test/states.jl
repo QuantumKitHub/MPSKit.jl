@@ -267,6 +267,11 @@ module TestStates
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)
             @test @constinferred right_virtualspace(ϕ₁) == right_virtualspace(ψ)
+            for i in 1:period
+                @test physicalspace(ψ, i) == physicalspace(ϕ₁, i)
+                @test left_virtualspace(ψ, i) == left_virtualspace(ϕ₁, i)
+                @test right_virtualspace(ψ, i) == right_virtualspace(ϕ₁, i)
+            end
 
             @test norm(axpy!(1, ϕ₁, copy(ϕ₂))) ≤ norm(ϕ₁) + norm(ϕ₂)
             @test norm(ϕ₁) * 3 ≈ norm(ϕ₁ * 3)
