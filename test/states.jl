@@ -21,7 +21,12 @@ module TestStates
                 ComplexF32,
             ),
         ]
-        ψ = FiniteMPS(rand, elt, rand(3:20), d, D)
+        L = rand(3:20)
+        ψ = FiniteMPS(rand, elt, L, d, D)
+
+        @test @constinferred physicalspace(ψ) == fill(d, L)
+        @test all(x -> x ≾ D, @constinferred left_virtualspace(ψ))
+        @test all(x -> x ≾ D, @constinferred right_virtualspace(ψ))
 
         ovl = dot(ψ, ψ)
 
@@ -94,6 +99,10 @@ module TestStates
 
         ψ = InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol)
 
+        @test physicalspace(ψ) == fill(d, 2)
+        @test all(x -> x ≾ D, left_virtualspace(ψ))
+        @test all(x -> x ≾ D, right_virtualspace(ψ))
+
         for i in 1:length(ψ)
             @plansor difference[-1 -2; -3] := ψ.AL[i][-1 -2; 1] * ψ.C[i][1; -3] -
                 ψ.C[i - 1][-1; 1] * ψ.AR[i][1 -2; -3]
@@ -120,6 +129,10 @@ module TestStates
                 rand(elt, D * d, D) rand(elt, D * d, D)
             ]; tol
         )
+
+        @test physicalspace(ψ) == fill(d, 2, 2)
+        @test all(x -> x ≾ D, left_virtualspace(ψ))
+        @test all(x -> x ≾ D, right_virtualspace(ψ))
 
         for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
             @plansor difference[-1 -2; -3] := ψ.AL[i, j][-1 -2; 1] * ψ.C[i, j][1; -3] -
@@ -154,6 +167,16 @@ module TestStates
 
         # constructor 2 - used to take a "slice" from an infinite mps
         window_2 = WindowMPS(gs, 10)
+
+        P = @constinferred physicalspace(window_2)
+        Vleft = @constinferred left_virtualspace(window_2)
+        Vright = @constinferred right_virtualspace(window_2)
+
+        for i in -3:13
+            @test physicalspace(window_2, i) == P[i]
+            @test left_virtualspace(window_2, i) == Vleft[i]
+            @test right_virtualspace(window_2, i) == Vright[i]
+        end
 
         # we should logically have that window_1 approximates window_2
         ovl = dot(window_1, window_2)
@@ -206,6 +229,10 @@ module TestStates
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
 
+            @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
+            @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)
+            @test @constinferred right_virtualspace(ϕ₁) == right_virtualspace(ψ)
+
             @test norm(axpy!(1, ϕ₁, copy(ϕ₂))) ≤ norm(ϕ₁) + norm(ϕ₂)
             @test norm(ϕ₁) * 3 ≈ norm(ϕ₁ * 3)
 
@@ -236,6 +263,15 @@ module TestStates
             #rand_quasiparticle is a private non-exported function
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
+
+            @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
+            @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)
+            @test @constinferred right_virtualspace(ϕ₁) == right_virtualspace(ψ)
+            for i in 1:period
+                @test physicalspace(ψ, i) == physicalspace(ϕ₁, i)
+                @test left_virtualspace(ψ, i) == left_virtualspace(ϕ₁, i)
+                @test right_virtualspace(ψ, i) == right_virtualspace(ϕ₁, i)
+            end
 
             @test norm(axpy!(1, ϕ₁, copy(ϕ₂))) ≤ norm(ϕ₁) + norm(ϕ₂)
             @test norm(ϕ₁) * 3 ≈ norm(ϕ₁ * 3)

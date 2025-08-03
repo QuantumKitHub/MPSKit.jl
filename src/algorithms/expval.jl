@@ -42,7 +42,7 @@ function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
         dual(_lastspace(last(local_mpo)))
     for (site, o) in zip(sites, local_mpo)
         if o isa MPOTensor
-            physicalspace(ψ)[site] == physicalspace(o) ||
+            physicalspace(ψ, site) == physicalspace(o) ||
                 throw(SpaceMismatch("physical space does not match at site $site"))
         end
     end
