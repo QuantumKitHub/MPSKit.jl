@@ -105,3 +105,22 @@ end
 function changebonds(ψ, H, alg::SvdCut, envs = environments(ψ, H))
     return changebonds(ψ, alg), envs
 end
+
+function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
+    # orthogonality center to the left
+    for i in length(H):-1:2
+        H = right_canonicalize!(H, i)
+    end
+
+    # swipe right
+    for i in 1:(length(H) - 1)
+        @info i
+        H = left_canonicalize!(H, i; alg = alg.alg_svd, alg.trscheme)
+    end
+    # swipe left -- TODO: do we really need this double sweep?
+    for i in length(H):-1:2
+        H = right_canonicalize!(H, i; alg = alg.alg_svd, alg.trscheme)
+    end
+
+    return H
+end
