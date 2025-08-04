@@ -88,10 +88,15 @@ function left_canonicalize!(
 
     # absorb into next site
     W′ = H[i + 1]
-    @plansor A′[l p; p' r] := R[l; r'] * W′.A[r' p; p' r]
+    if i != length(H) - 1
+        @plansor A′[l p; p' r] := R[l; r'] * W′.A[r' p; p' r]
+        @plansor C′[l p; p' r] := t[l; r'] * W′.A[r' p; p' r]
+        C′ = add!(removeunit(C′, 1), W′.C)
+    else
+        A′ = similar(W′.A, space(R, 1) ⊗ physicalspace(W′) ← domain(W′.A))
+        C′ = W′.C
+    end
     @plansor B′[l p; p'] := R[l; r] * W′.B[r p; p']
-    @plansor C′[l p; p' r] := t[l; r'] * W′.A[r' p; p' r]
-    C′ = add!(removeunit(C′, 1), W′.C)
     @plansor D′[l p; p'] := t[l; r] * W′.B[r p; p']
     D′ = add!(removeunit(D′, 1), W′.D)
 
@@ -101,7 +106,7 @@ end
 
 function right_canonicalize!(
         H::MPOHamiltonian, i::Int;
-        alg = RQpos(), trscheme::TruncationScheme = notrunc()
+        alg = LQpos(), trscheme::TruncationScheme = notrunc()
     )
     if H isa FiniteMPOHamiltonian
         1 < i ≤ length(H) || throw(ArgumentError("Bounds error in canonicalize"))
@@ -156,9 +161,14 @@ function right_canonicalize!(
 
     # absorb into previous site
     W′ = H[i - 1]
-    @plansor A′[l p; p' r] := W′.A[l p; p' r'] * R[r'; r]
-    @plansor B′[l p; p' r] := W′.A[l p; p' r'] * t[r'; r]
-    B′ = add!(removeunit(B′, 4), W′.B)
+    if i != 2
+        @plansor A′[l p; p' r] := W′.A[l p; p' r'] * R[r'; r]
+        @plansor B′[l p; p' r] := W′.A[l p; p' r'] * t[r'; r]
+        B′ = add!(removeunit(B′, 4), W′.B)
+    else
+        A′ = similar(W′.A, codomain(W′.A) ← physicalspace(W′.A) ⊗ space(R, 2)')
+        B′ = W′.B
+    end
     @plansor C′[p; p' r] := W′.C[p; p' r'] * R[r'; r]
     @plansor D′[p; p' r] := W′.C[p; p' r'] * t[r'; r]
     D′ = add!(removeunit(D′, 3), W′.D)
