@@ -106,6 +106,7 @@ function changebonds(ψ, H, alg::SvdCut, envs = environments(ψ, H))
     return changebonds(ψ, alg), envs
 end
 
+changebonds(mpo::FiniteMPOHamiltonian, alg::SvdCut) = changebonds!(copy(mpo), alg)
 function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
     # orthogonality center to the left
     for i in length(H):-1:2
