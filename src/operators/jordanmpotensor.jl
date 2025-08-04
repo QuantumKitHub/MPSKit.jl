@@ -67,10 +67,8 @@ end
 
 function JordanMPOTensor(
         V::TensorMapSumSpace{S, 2, 2},
-        A::SparseBlockTensorMap{TA, E, S, 2, 2},
-        B::SparseBlockTensorMap{TB, E, S, 2, 1},
-        C::SparseBlockTensorMap{TC, E, S, 1, 2},
-        D::SparseBlockTensorMap{TD, E, S, 1, 1}
+        A::SparseBlockTensorMap{TA, E, S, 2, 2}, B::SparseBlockTensorMap{TB, E, S, 2, 1},
+        C::SparseBlockTensorMap{TC, E, S, 1, 2}, D::SparseBlockTensorMap{TD, E, S, 1, 1}
     ) where {E, S, TA, TB, TC, TD}
     allVs = eachspace(V)
     VA = space(allVs[2:(end - 1), 1, 1, 2:(end - 1)])
@@ -86,6 +84,18 @@ function JordanMPOTensor(
     VD == space(D) || throw(SpaceMismatch("D-block has incompatible spaces"))
 
     return JordanMPOTensor{E, S, TA, TB, TC, TD}(V, A, B, C, D)
+end
+function JordanMPOTensor(
+        V::TensorMapSumSpace{S, 2, 2},
+        A::AbstractTensorMap{E, S, 2, 2}, B::AbstractTensorMap{E, S, 2, 1},
+        C::AbstractTensorMap{E, S, 1, 2}, D::AbstractTensorMap{E, S, 1, 1}
+    ) where {E, S}
+    return JordanMPOTensor(V,
+        A isa SparseBlockTensorMap ? A : SparseBlockTensorMap(A),
+        B isa SparseBlockTensorMap ? B : SparseBlockTensorMap(B),
+        C isa SparseBlockTensorMap ? C : SparseBlockTensorMap(C),
+        D isa SparseBlockTensorMap ? D : SparseBlockTensorMap(D)
+    )
 end
 
 function JordanMPOTensor(W::SparseBlockTensorMap{TT, E, S, 2, 2}) where {TT, E, S}
