@@ -46,7 +46,6 @@ end
 function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renvs; num::Int = 1)
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = EffectiveExcitationHamiltonian(H, lenvs, renvs, E)
-
     Es, ϕs, convhist = eigsolve(ϕ₀, num, :SR, alg.alg) do ϕ
         return H_eff(ϕ; alg.alg_environments...)
     end
@@ -105,13 +104,25 @@ function excitations(
         verbosity = Defaults.verbosity, num = 1,
         sector = one(sectortype(lmps)), parallel = true, kwargs...
     )
-    Toutput = Core.Compiler.return_type(
-        excitations,
-        Tuple{
-            typeof(H), typeof(alg), eltype(momenta), typeof(lmps),
-            typeof(lenvs), typeof(rmps), typeof(renvs),
-        }
-    )
+    # wrapper to evaluate sector as positional argument
+    Toutput = let
+        function wrapper(H, alg, p, lmps, lenvs, rmps, renvs, sector; kwargs...)
+            return excitations(
+                H, alg, p, lmps, lenvs, rmps, renvs;
+                sector, kwargs...
+            )
+        end
+        Core.Compiler.return_type(
+            wrapper,
+            Tuple{
+                typeof(H), typeof(alg),
+                eltype(momenta), typeof(lmps),
+                typeof(lenvs),
+                typeof(rmps), typeof(renvs), typeof(sector),
+            }
+        )
+    end
+
     results = similar(momenta, Toutput)
     scheduler = parallel ? :greedy : :serial
     tmap!(results, momenta; scheduler) do momentum
