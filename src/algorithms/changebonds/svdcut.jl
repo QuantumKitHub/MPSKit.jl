@@ -115,7 +115,6 @@ function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
 
     # swipe right
     for i in 1:(length(H) - 1)
-        @info i
         H = left_canonicalize!(H, i; alg = alg.alg_svd, alg.trscheme)
     end
     # swipe left -- TODO: do we really need this double sweep?
