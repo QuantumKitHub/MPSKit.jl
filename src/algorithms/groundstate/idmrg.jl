@@ -63,13 +63,13 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG, envs = environments(o
             ϵ = norm(C_current - ψ.C[0])
 
             if ϵ < alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
+                @infov 2 logfinish!(log, iter, ϵ)
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
+                @warnv 1 logcancel!(log, iter, ϵ)
             else
-                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
+                @infov 3 logiter!(log, iter, ϵ)
             end
         end
     end
