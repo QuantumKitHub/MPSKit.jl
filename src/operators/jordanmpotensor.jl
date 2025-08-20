@@ -90,7 +90,8 @@ function JordanMPOTensor(
         A::AbstractTensorMap{E, S, 2, 2}, B::AbstractTensorMap{E, S, 2, 1},
         C::AbstractTensorMap{E, S, 1, 2}, D::AbstractTensorMap{E, S, 1, 1}
     ) where {E, S}
-    return JordanMPOTensor(V,
+    return JordanMPOTensor(
+        V,
         A isa SparseBlockTensorMap ? A : SparseBlockTensorMap(A),
         B isa SparseBlockTensorMap ? B : SparseBlockTensorMap(B),
         C isa SparseBlockTensorMap ? C : SparseBlockTensorMap(C),
