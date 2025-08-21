@@ -124,11 +124,13 @@ module TestOperators
     @testset "Finite MPOHamiltonian" begin
         L = 3
         T = ComplexF64
-        for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
+        for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
             lattice = fill(V, L)
-            O₁ = rand(T, V, V)
+            O₁ = randn(T, V, V)
+            O₁ += O₁'
             E = id(storagetype(O₁), domain(O₁))
-            O₂ = rand(T, V^2 ← V^2)
+            O₂ = randn(T, V^2 ← V^2)
+            O₂ += O₂'
 
             H1 = FiniteMPOHamiltonian(lattice, i => O₁ for i in 1:L)
             H2 = FiniteMPOHamiltonian(lattice, (i, i + 1) => O₂ for i in 1:(L - 1))
@@ -164,6 +166,9 @@ module TestOperators
                 FiniteMPOHamiltonian(lattice, 3 => O₁)
             @test 0.8 * H1 + 0.2 * H1 ≈ H1 atol = 1.0e-6
             @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1.0e-6
+            H1_trunc = changebonds(H1, SvdCut(; trscheme=truncdim(0)))
+            @test H1_trunc ≈ H1
+            @test all(left_virtualspace(H1_trunc) .== left_virtualspace(H1))
 
             # test dot and application
             state = rand(T, prod(lattice))
@@ -181,12 +186,21 @@ module TestOperators
             vertical_operators = Dict(
                 (I, I + I_vertical) => O₂ for I in eachindex(IndexCartesian(), square) if I[1] < size(square, 1)
             )
-            operators = merge(local_operators, vertical_operators)
+            I_horizontal = CartesianIndex(0, 1)
+            horizontal_operators = Dict(
+                (I, I + I_horizontal) => O₂ for I in eachindex(IndexCartesian(), square) if I[2] < size(square, 1)
+            )
+            operators = merge(local_operators, vertical_operators, horizontal_operators)
             H4 = FiniteMPOHamiltonian(grid, operators)
 
             @test H4 ≈
                 FiniteMPOHamiltonian(grid, local_operators) +
-                FiniteMPOHamiltonian(grid, vertical_operators)
+                FiniteMPOHamiltonian(grid, vertical_operators) +
+                FiniteMPOHamiltonian(grid, horizontal_operators) atol=1e-4
+
+            H5 = changebonds(H4 / 3 + 2H4 / 3, SvdCut(; trscheme = truncbelow(1.0e-12)))
+            psi = FiniteMPS(physicalspace(H5), V ⊕ oneunit(V))
+            @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)
         end
     end
 
