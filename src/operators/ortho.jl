@@ -15,58 +15,83 @@ function left_canonicalize!(
     @plansor C′[p; p' r] := -WI[p; p' l] * t[l; r]
     add!(C′, W.C)
 
-    # QR of second colum
-    if i == 1
+    # QR of second column
+    if size(W, 1) == 1
         tmp = transpose(C′, ((2, 1), (3,)))
+
         if trscheme == notrunc()
             Q, R = leftorth!(tmp; alg)
         else
             @assert alg == SVD() || alg == SDD()
-            # TODO: truncation might not be using normalized tensors?
             Q, Σ, Vᴴ = tsvd!(tmp; alg, trunc = trscheme)
             R = Σ * Vᴴ
         end
-        scale!(Q, d)
-        scale!(R, inv(d))
 
-        V = BlockTensorKit.oplus(oneunit(S), space(R, 1), oneunit(S))
-
-        Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ space(R, 1))
-        Q2 = transpose(Q, ((2,), (1, 3)))
+        if dim(R) == 0 # fully truncated
+            V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
+            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
+            Q2 = typeof(W.C)(undef, physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
+        else
+            V = BlockTensorKit.oplus(oneunit(S), space(R, 1), oneunit(S))
+            scale!(Q, d)
+            scale!(R, inv(d))
+            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ space(R, 1))
+            Q2 = transpose(Q, ((2,), (1, 3)))
+        end
+        H[i] = JordanMPOTensor(codomain(W) ← physicalspace(W) ⊗ V, Q1, W.B, Q2, W.D)
     else
         tmp = transpose(cat(insertleftunit(C′, 1), W.A; dims = 1), ((3, 1, 2), (4,)))
         if trscheme == notrunc()
             Q, R = leftorth!(tmp; alg)
         else
             @assert alg == SVD() || alg == SDD()
-            # TODO: truncation might not be using normalized tensors?
             Q, Σ, Vᴴ = tsvd!(tmp; alg, trunc = trscheme)
             R = Σ * Vᴴ
         end
-        scale!(Q, d)
-        scale!(R, inv(d))
-        Q′ = transpose(Q, ((2, 3), (1, 4)))
-        Q1 = Q′[2:end, 1, 1, 1]
-        Q2 = removeunit(SparseBlockTensorMap(Q′[1:1, 1, 1, 1]), 1)
-        V = BlockTensorKit.oplus(oneunit(S), right_virtualspace(Q′), oneunit(S))
+        if dim(R) == 0 # fully truncated
+            V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
+            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
+            Q2 = typeof(W.C)(undef, physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
+        else
+            scale!(Q, d)
+            scale!(R, inv(d))
+            Q′ = transpose(Q, ((2, 3), (1, 4)))
+            Q1 = Q′[2:end, 1, 1, 1]
+            Q2 = removeunit(SparseBlockTensorMap(Q′[1:1, 1, 1, 1]), 1)
+            V = BlockTensorKit.oplus(oneunit(S), right_virtualspace(Q′), oneunit(S))
+        end
+        H[i] = JordanMPOTensor(codomain(W) ← physicalspace(W) ⊗ V, Q1, W.B, Q2, W.D)
     end
-    H[i] = JordanMPOTensor(codomain(W) ← physicalspace(W) ⊗ V, Q1, W.B, Q2, W.D)
 
     # absorb into next site
     W′ = H[i + 1]
-    if i != length(H) - 1
+
+    if size(W′, 4) > 1 && dim(R) != 0
         @plansor A′[l p; p' r] := R[l; r'] * W′.A[r' p; p' r]
+    else
+        A′ = similar(W′.A, right_virtualspace(H[i].A) ⊗ physicalspace(W′) ← domain(W′.A))
+    end
+
+    if size(W′, 4) > 1
         @plansor C′[l p; p' r] := t[l; r'] * W′.A[r' p; p' r]
         C′ = add!(removeunit(C′, 1), W′.C)
     else
-        A′ = similar(W′.A, space(R, 1) ⊗ physicalspace(W′) ← domain(W′.A))
-        C′ = W′.C
+        C′ = W′.C # empty
     end
-    @plansor B′[l p; p'] := R[l; r] * W′.B[r p; p']
+
+    if dim(R) != 0
+        @plansor B′[l p; p'] := R[l; r] * W′.B[r p; p']
+    else
+        B′ = similar(W′.B, right_virtualspace(H[i].A) ⊗ physicalspace(W′) ← domain(W′.B))
+    end
+
     @plansor D′[l p; p'] := t[l; r] * W′.B[r p; p']
     D′ = add!(removeunit(D′, 1), W′.D)
 
-    H[i + 1] = JordanMPOTensor(V ⊗ physicalspace(W′) ← domain(W′), A′, B′, C′, D′)
+    H[i + 1] = JordanMPOTensor(
+        right_virtualspace(H[i]) ⊗ physicalspace(W′) ← domain(W′),
+        A′, B′, C′, D′
+    )
     return H
 end
 
@@ -87,56 +112,76 @@ function right_canonicalize!(
     add!(B′, W.B)
 
     # LQ of second row
-    if i == length(H)
+    if size(W, 4) == 1
         tmp = transpose(B′, ((1,), (3, 2)))
         if trscheme == notrunc()
             R, Q = rightorth!(tmp; alg)
         else
             @assert alg == SVD() || alg == SDD()
-            # TODO: truncation might not be using normalized tensors?
             U, Σ, Q = tsvd!(tmp; alg, trunc = trscheme)
             R = U * Σ
         end
-        scale!(Q, d)
-        scale!(R, inv(d))
 
-        R, Q = rightorth!(transpose(B′, ((1,), (3, 2))); alg)
-        V = BlockTensorKit.oplus(oneunit(S), space(Q, 1), oneunit(S))
-        Q1 = typeof(W.A)(undef, space(Q, 1) ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
-        Q2 = transpose(Q, ((1, 3), (2,)))
+        if dim(R) == 0
+            V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
+            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
+            Q2 = typeof(W.B)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W))
+        else
+            V = BlockTensorKit.oplus(oneunit(S), space(Q, 1), oneunit(S))
+            scale!(Q, d)
+            scale!(R, inv(d))
+            Q1 = typeof(W.A)(undef, space(Q, 1) ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
+            Q2 = transpose(Q, ((1, 3), (2,)))
+        end
+        H[i] = JordanMPOTensor(V ⊗ physicalspace(W) ← domain(W), Q1, Q2, W.C, W.D)
     else
         tmp = transpose(cat(insertleftunit(B′, 4), W.A; dims = 4), ((1,), (3, 4, 2)))
         if trscheme == notrunc()
             R, Q = rightorth!(tmp; alg)
         else
             @assert alg == SVD() || alg == SDD()
-            # TODO: truncation might not be using normalized tensors?
             U, Σ, Q = tsvd!(tmp; alg, trunc = trscheme)
             R = U * Σ
         end
-        scale!(Q, d)
-        scale!(R, inv(d))
-        Q′ = transpose(Q, ((1, 4), (2, 3)))
-        Q1 = SparseBlockTensorMap(Q′[1, 1, 1, 2:end])
-        Q2 = removeunit(SparseBlockTensorMap(Q′[1, 1, 1, 1:1]), 4)
-        V = BlockTensorKit.oplus(oneunit(S), left_virtualspace(Q′), oneunit(S))
+        if dim(R) == 0
+            V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
+            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
+            Q2 = typeof(W.B)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W))
+        else
+            scale!(Q, d)
+            scale!(R, inv(d))
+            Q′ = transpose(Q, ((1, 4), (2, 3)))
+            Q1 = SparseBlockTensorMap(Q′[1, 1, 1, 2:end])
+            Q2 = removeunit(SparseBlockTensorMap(Q′[1, 1, 1, 1:1]), 4)
+            V = BlockTensorKit.oplus(oneunit(S), left_virtualspace(Q′), oneunit(S))
+        end
+        H[i] = JordanMPOTensor(V ⊗ physicalspace(W) ← domain(W), Q1, Q2, W.C, W.D)
     end
-    H[i] = JordanMPOTensor(V ⊗ physicalspace(W) ← domain(W), Q1, Q2, W.C, W.D)
 
     # absorb into previous site
     W′ = H[i - 1]
-    if i != 2
+
+    if size(W′, 1) > 1 && dim(R) != 0
         @plansor A′[l p; p' r] := W′.A[l p; p' r'] * R[r'; r]
+    else
+        A′ = similar(W′.A, codomain(W′.A) ← physicalspace(W′.A) ⊗ left_virtualspace(H[i].A))
+    end
+
+    if size(W′, 1) > 1
         @plansor B′[l p; p' r] := W′.A[l p; p' r'] * t[r'; r]
         B′ = add!(removeunit(B′, 4), W′.B)
     else
-        A′ = similar(W′.A, codomain(W′.A) ← physicalspace(W′.A) ⊗ space(R, 2)')
         B′ = W′.B
     end
-    @plansor C′[p; p' r] := W′.C[p; p' r'] * R[r'; r]
+
+    if dim(R) != 0
+        @plansor C′[p; p' r] := W′.C[p; p' r'] * R[r'; r]
+    else
+        C′ = similar(W′.C, codomain(W′.C) ← physicalspace(W′) ⊗ left_virtualspace(H[i].A))
+    end
+
     @plansor D′[p; p' r] := W′.C[p; p' r'] * t[r'; r]
     D′ = add!(removeunit(D′, 3), W′.D)
-
     H[i - 1] = JordanMPOTensor(codomain(W′) ← physicalspace(W′) ⊗ V, A′, B′, C′, D′)
     return H
 end
