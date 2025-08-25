@@ -28,7 +28,7 @@ Return the density matrix of the infinite temperature state for a given Hamilton
 This is the identity matrix in the physical space, and the identity in the auxiliary space.
 """
 function infinite_temperature_density_matrix(H::MPOHamiltonian)
-    V = oneunit(spacetype(H))
+    V = oneunit(space(first(H[1]), 1))
     W = map(1:length(H)) do site
         return BraidingTensor{scalartype(H)}(physicalspace(H, site), V)
     end
