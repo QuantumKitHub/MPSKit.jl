@@ -73,7 +73,8 @@ function add_util_mpoleg(tensor::AbstractTensorMap{T, S, N1, N2}) where {T, S, N
     # separate function for mpo because add_util_leg is also used for mps from tensors
     # and the additional legs there can be different depending on the fusion tree
 
-    ou = Vect[sectortype(_firstspace(tensor))](one(first(sectors(_firstspace(tensor)))) => 1)
+    #TODO?: might need a left and right utility space if MPO has module virtual space (doesn't happen for hamiltonians)
+    ou = S(one(first(blocksectors(tensor))) => 1)
 
     util_front = isomorphism(storagetype(tensor), ou * codomain(tensor), codomain(tensor))
     util_back = isomorphism(storagetype(tensor), domain(tensor), domain(tensor) * ou)
