@@ -388,7 +388,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
     somempo = local_mpos[1].second[1]
     sp_oneleg = space(somempo, 1)
 
-    _oneunit = oneunit(sp_oneleg)
+    _oneunit = oneunit(sp_oneleg) # should be rightoneunit, but MPOHamiltonians are always diagonal for now
 
     virtualsumspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
     virtualsumspaces[1] = SumSpace(fill(_oneunit, 1))
@@ -669,7 +669,7 @@ function Base.:+(
     ) where {O <: JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
-    Vtriv = oneunit(space(first(H₁[1]), 1))
+    Vtriv = oneunit(space(first(H₁[1]), 1)) # should also be rightoneunit, but is currently diagonal
 
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims = (1, 4))
