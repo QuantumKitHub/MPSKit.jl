@@ -122,8 +122,8 @@ end
     
     momentum = 0
     @test_throws ArgumentError("one of Type IsingBimodule doesn't exist") excitations(H, QuasiparticleAnsatz(), momentum, ψ)
-    excC0, qpC0 = excitations(H, QuasiparticleAnsatz(), 0, ψ3; sector=C0); # testing sector kwarg 
-    excC1, qpC1 = excitations(H, QuasiparticleAnsatz(), 0, ψ3; sector=C1);
+    excC0, qpC0 = excitations(H, QuasiparticleAnsatz(), momentum, ψ3; sector=C0) # testing sector kwarg
+    excC1, qpC1 = excitations(H, QuasiparticleAnsatz(), momentum, ψ3; sector=C1)
     @test isapprox(first(excC1), abs(2*(g - 1)); atol=1e-6) # charged excitation higher in energy in symmetric phase
     # @test 0 < variance(qpC0[1], H) < 1e-8 # TODO: fix braiding thing
 
@@ -134,8 +134,8 @@ end
     gsdiag, envsdiag = find_groundstate(initdiag, Hdual, VUMPS())
     Ediag = expectation_value(gsdiag, Hdual, envsdiag)
     # @test isapprox(E2, Ediag; atol=1e-6)
-    excD0, qpD0 = excitations(Hdual, QuasiparticleAnsatz(), 0, gsdiag; sector=D0);
-    excD1, qpD1 = excitations(Hdual, QuasiparticleAnsatz(), 0, gsdiag; sector=D1);
+    excD0, qpD0 = excitations(Hdual, QuasiparticleAnsatz(), momentum, gsdiag; sector=D0)
+    excD1, qpD1 = excitations(Hdual, QuasiparticleAnsatz(), momentum, gsdiag; sector=D1)
     @test isapprox(first(excD1), abs(2*(1/g - 1)); atol=1e-6) # charged excitation higher in energy in symmetric phase
     # @test 0 < variance(qpD0[1], Hdual) < 1e-8 # TODO: fix braiding thing
 end
