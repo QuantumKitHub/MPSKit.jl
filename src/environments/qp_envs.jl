@@ -63,10 +63,14 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
             TransferMatrix(exci[pos], H[pos], AL[pos]) / cis(exci.momentum)
 
         if exci.trivial # regularization of trivial excitations
+            util = similar(exci.left_gs.AL[pos], physicalspace(H[pos]))
+            fill_data!(util, one)
             for i in ids
-                @plansor lBs[pos + 1][i][-1 -2; -3 -4] -= lBs[pos + 1][i][1 4; -3 2] *
-                    r_RL(exci.left_gs, pos)[2; 3] * τ[3 4; 5 1] *
-                    l_RL(exci.left_gs, pos + 1)[ -1; 6 ] * τ[5 6; -4 -2]
+                @plansor lBs[pos + 1][i][-1 -2; -3 -4] -= lBs[pos + 1][i][2 1; -3 3] * 
+                util[1] * 
+                r_RL(exci.left_gs, pos)[3; 2] * 
+                l_RL(exci.left_gs, pos + 1)[-1; -4] * 
+                conj(util[-2])
             end
         end
     end
@@ -79,11 +83,14 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
             rightenv(renvs, pos, exci.right_gs) * cis(exci.momentum)
 
         if exci.trivial
+            util = similar(exci.left_gs.AL[pos], physicalspace(H[pos])) # can these utils be refactored?
+            fill_data!(util, one)
             for i in ids
-                ρ_left = l_LR(exci.left_gs, pos)
-                ρ_right = r_LR(exci.left_gs, pos - 1)
-                @plansor rBs[pos - 1][i][-1 -2; -3 -4] -= τ[6 4; 1 3] *
-                    rBs[pos - 1][i][1 3; -3 2] * ρ_left[2; 4] * ρ_right[-1; 5] * τ[-2 -4; 5 6]
+                @plansor rBs[pos - 1][i][-1 -2; -3 -4] -= rBs[pos - 1][i][2 1; -3 3] *
+                    conj(util[1]) *
+                    l_LR(exci.left_gs, pos)[3; 2] *
+                    r_LR(exci.left_gs, pos - 1)[-1; -4] *
+                    util[-2]
             end
         end
     end
@@ -98,35 +105,41 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
     end
 
     lB_cur = lBs[1]
-    for i in 1:(length(exci) - 1)
-        lB_cur = lB_cur * TransferMatrix(AR[i], H[i], AL[i]) / cis(exci.momentum)
+    for pos in 1:(length(exci) - 1)
+        lB_cur = lB_cur * TransferMatrix(AR[pos], H[pos], AL[pos]) / cis(exci.momentum)
 
         if exci.trivial
-            for k in ids
-                ρ_left = l_RL(exci.left_gs, i + 1)
-                ρ_right = r_RL(exci.left_gs, i)
-                @plansor lB_cur[k][-1 -2; -3 -4] -= lB_cur[k][1 4; -3 2] *
-                    ρ_right[2; 3] * τ[3 4; 5 1] * ρ_left[-1; 6] * τ[5 6; -4 -2]
+            util = similar(exci.left_gs.AL[pos], physicalspace(H[pos]))
+            fill_data!(util, one)
+            for i in ids
+                @plansor lB_cur[i][-1 -2; -3 -4] -= lB_cur[i][2 1; -3 3] *
+                    util[1] *
+                    r_RL(exci.left_gs, pos)[3; 2] *
+                    l_RL(exci.left_gs, pos + 1)[-1; -4] *
+                    conj(util[-2])   
             end
         end
 
-        lBs[i + 1] += lB_cur
+        lBs[pos + 1] += lB_cur
     end
 
     rB_cur = rBs[end]
-    for i in length(exci):-1:2
-        rB_cur = TransferMatrix(AL[i], H[i], AR[i]) * rB_cur * cis(exci.momentum)
+    for pos in length(exci):-1:2
+        rB_cur = TransferMatrix(AL[pos], H[pos], AR[pos]) * rB_cur * cis(exci.momentum)
 
         if exci.trivial
-            for k in ids
-                ρ_left = l_LR(exci.left_gs, i)
-                ρ_right = r_LR(exci.left_gs, i - 1)
-                @plansor rB_cur[k][-1 -2; -3 -4] -= τ[6 4; 1 3] *
-                    rB_cur[k][1 3; -3 2] * ρ_left[2; 4] * ρ_right[-1; 5] * τ[-2 -4; 5 6]
+            util = similar(exci.left_gs.AL[pos], physicalspace(H[pos]))
+            fill_data!(util, one)
+            for i in ids
+                @plansor rB_cur[i][-1 -2; -3 -4] -= rB_cur[i][2 1; -3 3] *
+                    conj(util[1]) *
+                    l_LR(exci.left_gs, pos)[3; 2] *
+                    r_LR(exci.left_gs, pos - 1)[-1; -4] *
+                    util[-2]
             end
         end
 
-        rBs[i - 1] += rB_cur
+        rBs[pos - 1] += rB_cur
     end
 
     return InfiniteQPEnvironments(lBs, rBs, lenvs, renvs)
