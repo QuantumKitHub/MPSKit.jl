@@ -1,3 +1,4 @@
+# is this function ever called? b/c isid no longer exists
 function left_excitation_transfer_system(
         lBs, H, exci; mom = exci.momentum,
         solver = Defaults.linearsolver
@@ -60,7 +61,7 @@ function left_excitation_transfer_system(
         start = scale!(last(found[1:i] * T), cis(-mom * len))
         if exci.trivial && isidentitylevel(H, i)
             # not using braiding tensors here, leads to extra leg
-            util = similar(exci.left_gs.AL[1], space(parent(H)[1], 1)[1])
+            util = similar(exci.left_gs.AL[i], first(left_virtualspace(H[i])))
             fill_data!(util, one)
             @plansor start[-1 -2; -3 -4] -= start[2 1; -3 3] *
                 util[1] *
@@ -95,6 +96,7 @@ function left_excitation_transfer_system(
     end
     return found
 end
+# same with this?
 function right_excitation_transfer_system(
         rBs, H, exci; mom = exci.momentum, solver = Defaults.linearsolver
     )
@@ -138,7 +140,7 @@ function right_excitation_transfer_system(
     end
     return found
 end
-#TODO: check that the left/right discrepancies make sense
+
 function right_excitation_transfer_system(
         GBR, H::InfiniteMPOHamiltonian, exci;
         mom = exci.momentum,
@@ -158,7 +160,7 @@ function right_excitation_transfer_system(
         start = scale!(first(T * found[i:odim]), cis(mom * len))
         if exci.trivial && isidentitylevel(H, i)
             # not using braiding tensors here, leads to extra leg
-            util = similar(exci.right_gs.AL[1], space(parent(H)[1], 1)[1])
+            util = similar(exci.right_gs.AL[i], first(left_virtualspace(H[i])))
             fill_data!(util, one)
             @plansor start[-1 -2; -3 -4] -= start[2 1; -3 3] *
                 conj(util[1]) *
