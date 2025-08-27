@@ -117,6 +117,7 @@ end
 
     @test_throws ArgumentError("sectors of $V are non-diagonal") transfer_spectrum(ψ)
     @test first(transfer_spectrum(ψ2; sector=C0)) ≈ 1 # testing sector kwarg
+    @test !(abs(first(transfer_spectrum(ψ2; sector=C1))) ≈ 1) # testing injectivity
     
     @test only(keys(entanglement_spectrum(ψ2))) == M
     
@@ -133,11 +134,23 @@ end
     initdiag = InfiniteMPS([PD, PD], [Vdiag, Vdiag])
     gsdiag, envsdiag = find_groundstate(initdiag, Hdual, VUMPS())
     Ediag = expectation_value(gsdiag, Hdual, envsdiag)
-    # @test isapprox(E2, Ediag; atol=1e-6)
     excD0, qpD0 = excitations(Hdual, QuasiparticleAnsatz(), momentum, gsdiag; sector=D0)
     excD1, qpD1 = excitations(Hdual, QuasiparticleAnsatz(), momentum, gsdiag; sector=D1)
     @test isapprox(first(excD1), abs(2*(1/g - 1)); atol=1e-6) # charged excitation higher in energy in symmetric phase
     # @test 0 < variance(qpD0[1], Hdual) < 1e-8 # TODO: fix braiding thing
+
+    # comparison to Z2 Ising: injective in symmetric phase
+    HZ2 = transverse_field_ising(Z2Irrep; g = 1 / g, L = Inf, twosite=true)
+    VZ2 = Z2Space(0 => 10, 1 => 10)
+    PZ2 = Z2Space(0 => 1, 1 => 1)
+    initZ2 = InfiniteMPS([PZ2, PZ2], [VZ2, VZ2])
+    gsZ2, envsZ2 = find_groundstate(initZ2, HZ2, VUMPS())
+    EZ2 = expectation_value(gsZ2, HZ2, envsZ2)
+    @test isapprox(EZ2, Ediag; atol=1e-6)
+    excZ2_0, qpZ2_0 = excitations(HZ2, QuasiparticleAnsatz(), momentum, gsZ2; sector=Z2Irrep(0))
+    excZ2_1, qpZ2_1 = excitations(HZ2, QuasiparticleAnsatz(), momentum, gsZ2; sector=Z2Irrep(1))
+    @test isapprox(first(excZ2_1), first(excD1); atol=1e-5)
+    @test isapprox(first(excZ2_0), first(excD0); atol=1e-5)
 end
 
 end # module TestMultifusion
