@@ -94,7 +94,7 @@ function S_x(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) w
         throw(ArgumentError("spin $spin not supported"))
     end
 end
-function S_x(::Type{Z2Irrep} = Z2Irrep, ::Type{T} = ComplexF64; spin=1 // 2) where {T <: Number}
+function S_x(::Type{Z2Irrep}, ::Type{T} = ComplexF64; spin=1 // 2) where {T <: Number}
     spin == 1 // 2 || throw(ArgumentError("spin $spin not supported"))
     pspace = Z2Space(0 => 1, 1 => 1)
     X = zeros(T, pspace, pspace)
@@ -129,7 +129,7 @@ end
 function S_zz(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     return S_z(Trivial, T; spin) ⊗ S_z(Trivial, T; spin)
 end
-function S_zz(::Type{Z2Irrep} = Z2Irrep, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
+function S_zz(::Type{Z2Irrep}, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     P = Z2Space(0 => 1, 1 => 1)
     ZZ = TensorMap(zeros, ComplexF64, P ⊗ P ← P ⊗ P)
     flip_charge(charge::Z2Irrep) = only(charge ⊗ Z2Irrep(1))
