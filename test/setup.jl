@@ -94,7 +94,7 @@ function S_x(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) w
         throw(ArgumentError("spin $spin not supported"))
     end
 end
-function S_x(::Type{Z2Irrep}, ::Type{T} = ComplexF64; spin=1 // 2) where {T <: Number}
+function S_x(::Type{Z2Irrep}, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     spin == 1 // 2 || throw(ArgumentError("spin $spin not supported"))
     pspace = Z2Space(0 => 1, 1 => 1)
     X = zeros(T, pspace, pspace)
@@ -141,7 +141,7 @@ function S_zz(::Type{Z2Irrep}, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <
     return ZZ
 end
 
-function transverse_field_ising(::Type{Z2Irrep}, ::Type{T} = ComplexF64; g = 1.0, L = Inf, twosite=false) where {T <: Number}
+function transverse_field_ising(::Type{Z2Irrep}, ::Type{T} = ComplexF64; g = 1.0, L = Inf, twosite = false) where {T <: Number}
     X = S_x(Z2Irrep, T; spin = 1 // 2)
     ZZ = S_zz(Z2Irrep, T; spin = 1 // 2)
 
