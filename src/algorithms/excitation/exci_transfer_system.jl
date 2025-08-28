@@ -59,8 +59,9 @@ function left_excitation_transfer_system(
         T = TransferMatrix(exci.right_gs.AR, H_partial, exci.left_gs.AL)
         start = scale!(last(found[1:i] * T), cis(-mom * len))
         if exci.trivial && isidentitylevel(H, i)
-            @plansor start[-1 -2; -3 -4] -= start[1 4; -3 2] * r_RL(exci.right_gs)[2; 3] *
-                τ[3 4; 5 1] * l_RL(exci.right_gs)[-1; 6] * τ[5 6; -4 -2]
+            ρ_left = l_RL(exci.right_gs)
+            ρ_right = r_RL(exci.right_gs)
+            regularize!(start, ρ_right, ρ_left)
         end
 
         found[i] = add!(start, GBL[i])
@@ -147,8 +148,9 @@ function right_excitation_transfer_system(
         T = TransferMatrix(exci.left_gs.AL, H_partial, exci.right_gs.AR)
         start = scale!(first(T * found[i:odim]), cis(mom * len))
         if exci.trivial && isidentitylevel(H, i)
-            @plansor start[-1 -2; -3 -4] -= τ[6 2; 3 4] * start[3 4; -3 5] *
-                l_LR(exci.right_gs)[5; 2] * r_LR(exci.right_gs)[-1; 1] * τ[-2 -4; 1 6]
+            ρ_left = l_LR(exci.right_gs)
+            ρ_right = r_LR(exci.right_gs)
+            regularize!(start, ρ_left, ρ_right)
         end
 
         found[i] = add!(start, GBR[i])
