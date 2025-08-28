@@ -46,7 +46,7 @@ function environments(qp::MultilineQP, operator::MultilineMPO, lenvs, renvs; kwa
 end
 
 function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs; kwargs...)
-    ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1))
+    ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1)) .+ 1
     solver = environment_alg(exci, H, exci; kwargs...)
 
     AL = exci.left_gs.AL
