@@ -475,6 +475,21 @@ module TestAlgorithms
             @test energies[1] ≈ 0.41047925 atol = 1.0e-4
             @test variance(ϕs[1], H) < 1.0e-8
         end
+        @testset "infinite sector convention" begin
+            g = 4
+            H = repeat(transverse_field_ising(Z2Irrep; g = g, L = Inf), 2)
+            V = Z2Space(0 => 24, 1 => 24)
+            P = Z2Space(0 => 1, 1 => 1)
+            ψ = InfiniteMPS([P, P], [V, V])
+            ψ, envs = find_groundstate(ψ, H, VUMPS(; tol = 1.0e-10, maxiter = 400))
+
+            # testing istrivial and istopological
+            momentum = 0
+            exc0, qp0 = excitations(H, QuasiparticleAnsatz(), momentum, ψ; sector = Z2Irrep(0))
+            exc1, qp1 = excitations(H, QuasiparticleAnsatz(), momentum, ψ; sector = Z2Irrep(1))
+            @test isapprox(first(exc1), abs(2 * (g - 1)); atol = 1.0e-6) # charged excitation lower in energy
+            @test variance(qp1[1], H) < 1.0e-8
+        end
         @testset "infinite (mpo)" begin
             H = repeat(sixvertex(), 2)
             ψ = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^10, ℂ^10])
