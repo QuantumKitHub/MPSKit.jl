@@ -25,7 +25,7 @@ VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 [compat]
 Accessors = "0.1"
 Aqua = "0.8.9"
-BlockTensorKit = "0.1.6"
+BlockTensorKit = "0.1.6, 0.2"
 Combinatorics = "1"
 Compat = "3.47, 4.10"
 DocStringExtensions = "0.9.3"
