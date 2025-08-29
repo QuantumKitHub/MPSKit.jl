@@ -133,7 +133,7 @@ function Base.convert(
 
     tm = TransferMatrix(input.left_gs.AL, input.right_gs.AR)
 
-    if input.trivial
+    if istrivial(input)
         tm = regularize(tm, l_LR(input.right_gs), r_LR(input.right_gs))
     end
 
@@ -180,7 +180,7 @@ function Base.convert(
     end
 
     tm = TransferMatrix(input.right_gs.AR, input.left_gs.AL)
-    if input.trivial
+    if istrivial(input)
         tm = regularize(tm, l_RL(input.right_gs), r_RL(input.right_gs))
     end
 
@@ -222,8 +222,11 @@ left_virtualspace(state::QP) = map(Base.Fix1(left_virtualspace, state), eachsite
 right_virtualspace(state::QP, i::Int) = right_virtualspace(state.right_gs, i)
 right_virtualspace(state::QP) = map(Base.Fix1(right_virtualspace, state), eachsite(state))
 auxiliaryspace(state::QP) = space(state.Xs[1], 2)
-
+auxiliarysector(state::QP) = only(sectors(auxiliaryspace(state)))
 eachsite(state::QP) = eachsite(state.left_gs)
+
+istopological(qp::QP) = qp.left_gs !== qp.right_gs
+istrivial(qp::QP) = !istopological(qp) && isone(auxiliarysector(qp))
 
 Base.copy(a::QP) = copy!(similar(a), a)
 Base.copyto!(a::QP, b::QP) = copy!(a, b)
@@ -233,11 +236,12 @@ function Base.copy!(a::T, b::T) where {T <: QP}
     end
     return a
 end
-function Base.getproperty(v::QP, s::Symbol)
+Base.@constprop :aggressive function Base.getproperty(qp::QP, s::Symbol)
     if s == :trivial
-        return v.left_gs === v.right_gs
+        Base.depwarn("`qp.trivial` is deprecated in favor of `istrivial` and `istopological`", :trivial)
+        return !istopological(qp)
     else
-        return getfield(v, s)
+        return getfield(qp, s)
     end
 end
 
@@ -402,7 +406,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S <: FiniteMPS}
     return FiniteMPS(Ls + Rs + Bs; normalize = false)
 end
 
-function Base.getproperty(exci::MultilineQP, s::Symbol)
+Base.@constprop :aggressive function Base.getproperty(exci::MultilineQP, s::Symbol)
     if s == :momentum
         return first(exci.data).momentum
     elseif s == :left_gs
@@ -415,6 +419,10 @@ function Base.getproperty(exci::MultilineQP, s::Symbol)
         return getfield(exci, s)
     end
 end
+
+# These should really all be the same, so it might make sense to take the first instead
+istrivial(exci::MultilineQP) = all(istrivial, exci.data)
+istopological(exci::MultilineQP) = all(istopological, exci.data)
 
 # VectorInterface
 # ---------------
