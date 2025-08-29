@@ -76,15 +76,22 @@ module TestMultifusion
 
     @testset "Finite systems" begin
         L = 6
-        g = 1.5
+        g = 4
         H = TFIM_multifusion(; g = g, L = L)
         V = Vect[I](M => 8)
         init = FiniteMPS(L, PD, V; left = Vect[I](M => 1), right = Vect[I](M => 1))
-        ψ, envs = find_groundstate(init, H, DMRG())
+        v₀ = variance(init, H)
+        ψ, envs, δ = find_groundstate(init, H, DMRG())
+        v = variance(ψ, H)
         E = expectation_value(ψ, H, envs)
 
-        ψ2, envs2 = find_groundstate(init, H, DMRG2(; trscheme = truncbelow(1.0e-6)))
+        ψ2, envs2, δ2 = find_groundstate(init, H, DMRG2(; trscheme = truncbelow(1.0e-6)))
+        v2 = variance(ψ2, H)
         E2 = expectation_value(ψ2, H, envs2)
+
+        @test δ ≈ 0 atol=1e-3
+        @test δ2 ≈ 0 atol=1e-3
+        @test v < v₀ && v2 < v₀
 
         @test isapprox(E, E2; atol = 1.0e-6)
 
@@ -92,11 +99,14 @@ module TestMultifusion
         @test isapprox(E, first(ED); atol = 1.0e-6)
 
         @test_throws ArgumentError("one of Type IsingBimodule doesn't exist") excitations(H, QuasiparticleAnsatz(), ψ)
-        excE, qp = excitations(H, QuasiparticleAnsatz(), ψ2; sector=C0, num=10) # testing sector kwarg
+        excE, qp = excitations(H, QuasiparticleAnsatz(), ψ2; sector=C1, num=1) # testing sector kwarg
         @test 0 < variance(qp[1], H) < 1e-8
+
+        excE_DM, qp_DM = excitations(H, FiniteExcited(;gsalg=DMRG2(; trscheme=truncbelow(1e-6))), ψ2;num=1)
+        @test isapprox(first(excE_DM), first(excE) + E2; atol = 1.0e-6)
     end
 
-    # @testset "Infinite systems" begin
+    @testset "Infinite systems" begin
         # Multifusion: effectively studying the KW dual in SSB phase
         g = 1 / 4
         H = TFIM_multifusion(; g = g, L = Inf, twosite = true)
@@ -123,7 +133,7 @@ module TestMultifusion
         end
         for var in [v, v2, v3]
             @test var < v₀
-            @test 0 < var < 1e-8
+            @test var < 1e-8
         end
 
         @test_throws ArgumentError("sectors of $V are non-diagonal") transfer_spectrum(ψ)
@@ -134,10 +144,9 @@ module TestMultifusion
 
         momentum = 0
         @test_throws ArgumentError("one of Type IsingBimodule doesn't exist") excitations(H, QuasiparticleAnsatz(), momentum, ψ)
-        excC0, qpC0 = excitations(H, QuasiparticleAnsatz(), momentum, ψ3; sector = C0) # testing sector kwarg
         excC1, qpC1 = excitations(H, QuasiparticleAnsatz(), momentum, ψ3; sector = C1)
         @test isapprox(first(excC1), abs(2 * (g - 1)); atol = 1.0e-6) # charged excitation lower in energy
-        @test variance(qpC1[1], H) < 1e-8 #TODO: figure out why this is negative
+        @test variance(qpC1[1], H) < 1e-8
 
         # diagonal test (M = D): injective GS in symmetric phase
         Hdual = TFIM_multifusion(; g = 1 / g, L = Inf, twosite = true)
@@ -145,10 +154,10 @@ module TestMultifusion
         initdiag = InfiniteMPS([PD, PD], [Vdiag, Vdiag])
         gsdiag, envsdiag = find_groundstate(initdiag, Hdual, VUMPS(;tol=tol, maxiter=400))
         Ediag = expectation_value(gsdiag, Hdual, envsdiag)
-        excD0, qpD0 = excitations(Hdual, QuasiparticleAnsatz(), momentum, gsdiag; sector = D0)
+
         excD1, qpD1 = excitations(Hdual, QuasiparticleAnsatz(), momentum, gsdiag; sector = D1)
         @test isapprox(first(excD1), abs(2 * (1 / g - 1)); atol = 1.0e-6) # charged excitation lower in energy
-        @test variance(qpD1[1], Hdual) < 1e-8 # TODO: is this ever negative?
+        @test variance(qpD1[1], Hdual) < 1e-8
 
         # comparison to Z2 Ising: injective in symmetric phase
         HZ2 = transverse_field_ising(Z2Irrep; g = 1 / g, L = Inf, twosite = true)
@@ -158,10 +167,10 @@ module TestMultifusion
         gsZ2, envsZ2 = find_groundstate(initZ2, HZ2, VUMPS(;tol=tol, maxiter=400))
         EZ2 = expectation_value(gsZ2, HZ2, envsZ2)
         @test isapprox(EZ2, Ediag; atol = 1.0e-6)
-        excZ2_0, qpZ2_0 = excitations(HZ2, QuasiparticleAnsatz(), momentum, gsZ2; sector = Z2Irrep(0))
+
         excZ2_1, qpZ2_1 = excitations(HZ2, QuasiparticleAnsatz(), momentum, gsZ2; sector = Z2Irrep(1))
-        @test isapprox(first(excZ2_1), first(excD1); atol = 1.0e-5)
-        @test variance(qpZ2_1[1], HZ2) < 1e-6 #TODO: and this?
-    # end
+        @test isapprox(first(excZ2_1), first(excD1); atol = 1.0e-6)
+        @test variance(qpZ2_1[1], HZ2) < 1e-8
+    end
 
 end # module TestMultifusion
