@@ -1,11 +1,18 @@
 """
 $(TYPEDEF)
 
-An algorithm that uses truncated SVD to change the bond dimension of a ψ.
+An algorithm that uses truncated SVD to change the bond dimension of a state or operator.
+This is achieved by a sweeping algorithm that locally performs (optimal) truncations in a gauged basis.
+
+See also [`changebonds(!)`](@ref changebonds)
 
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Parker et al. Phys. Rev. B 102 (2020)](@cite parker2020)
 """
 @kwdef struct SvdCut{S} <: Algorithm
     "algorithm used for the singular value decomposition"
