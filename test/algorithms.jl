@@ -479,8 +479,7 @@ module TestAlgorithms
             g = 4
             H = repeat(transverse_field_ising(Z2Irrep; g = g, L = Inf), 2)
             V = Z2Space(0 => 24, 1 => 24)
-            P = Z2Space(0 => 1, 1 => 1)
-            ψ = InfiniteMPS([P, P], [V, V])
+            ψ = InfiniteMPS(physicalspace(H), [V, V])
             ψ, envs = find_groundstate(ψ, H, VUMPS(; tol = 1.0e-10, maxiter = 400))
 
             # testing istrivial and istopological
@@ -488,6 +487,7 @@ module TestAlgorithms
             exc0, qp0 = excitations(H, QuasiparticleAnsatz(), momentum, ψ; sector = Z2Irrep(0))
             exc1, qp1 = excitations(H, QuasiparticleAnsatz(), momentum, ψ; sector = Z2Irrep(1))
             @test isapprox(first(exc1), abs(2 * (g - 1)); atol = 1.0e-6) # charged excitation lower in energy
+            @test first(exc0) > 2 * first(exc1)
             @test variance(qp1[1], H) < 1.0e-8
         end
         @testset "infinite (mpo)" begin
