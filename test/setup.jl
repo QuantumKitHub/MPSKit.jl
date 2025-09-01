@@ -94,6 +94,14 @@ function S_x(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) w
         throw(ArgumentError("spin $spin not supported"))
     end
 end
+function S_x(::Type{Z2Irrep}, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
+    spin == 1 // 2 || throw(ArgumentError("spin $spin not supported"))
+    pspace = Z2Space(0 => 1, 1 => 1)
+    X = zeros(T, pspace, pspace)
+    block(X, Z2Irrep(0)) .= one(T) # no times 2
+    block(X, Z2Irrep(1)) .= -one(T)
+    return X
+end
 function S_y(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     return if spin == 1 // 2
         TensorMap(T[0 -im; im 0], ℂ^2 ← ℂ^2)
@@ -121,17 +129,29 @@ end
 function S_zz(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
     return S_z(Trivial, T; spin) ⊗ S_z(Trivial, T; spin)
 end
+function S_zz(::Type{Z2Irrep}, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <: Number}
+    spin == 1 // 2 || throw(ArgumentError("spin $spin not supported"))
+    P = Z2Space(0 => 1, 1 => 1)
+    ZZ = zeros(ComplexF64, P ⊗ P ← P ⊗ P)
+    flip_charge(charge::Z2Irrep) = only(charge ⊗ Z2Irrep(1))
+    for (s, f) in fusiontrees(ZZ)
+        if s.uncoupled == map(flip_charge, f.uncoupled)
+            ZZ[s, f] .= 1 # no divide by 4
+        end
+    end
+    return ZZ
+end
 
-function transverse_field_ising(::Type{T} = ComplexF64; g = 1.0, L = Inf) where {T <: Number}
-    X = S_x(Trivial, T; spin = 1 // 2)
-    ZZ = S_zz(Trivial, T; spin = 1 // 2)
+function transverse_field_ising(sym::Type{<:Sector} = Trivial, ::Type{T} = ComplexF64; g = 1.0, L = Inf) where {T <: Number}
+    X = S_x(sym, T; spin = 1 // 2)
+    ZZ = S_zz(sym, T; spin = 1 // 2)
 
     if L == Inf
-        lattice = PeriodicArray([ℂ^2])
+        lattice = PeriodicArray([space(X, 1)])
         H₁ = InfiniteMPOHamiltonian(lattice, i => -g * X for i in 1:1)
         H₂ = InfiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:1)
     else
-        lattice = fill(ℂ^2, L)
+        lattice = fill(space(X, 1), L)
         H₁ = FiniteMPOHamiltonian(lattice, i => -g * X for i in 1:L)
         H₂ = FiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:(L - 1))
     end
