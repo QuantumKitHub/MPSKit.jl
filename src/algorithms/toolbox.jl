@@ -225,7 +225,7 @@ end
 
 function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs = environments(state, H))
     # I remember there being an issue here @gertian?
-    state.trivial ||
+    istopological(state) &&
         throw(ArgumentError("variance of domain wall excitations is not implemented"))
     gs = state.left_gs
 
