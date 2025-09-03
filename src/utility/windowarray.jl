@@ -15,9 +15,9 @@ struct WindowArray{T} <: AbstractVector{T}
     right::PeriodicVector{T}
 end
 function WindowArray(
-        left::AbstractVector{T}, middle::AbstractVector{T}, right::AbstractVector{T}
+        left::PeriodicVector{T}, middle::AbstractVector{T}, right::PeriodicVector{T}
     ) where {T}
-    return WindowArray{T}(left, middle, right)
+    return WindowArray{T}(left, convert(Vector{T}, middle), right)
 end
 
 # these definitions are a bit iffy, but will do for now

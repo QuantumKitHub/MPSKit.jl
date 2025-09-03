@@ -133,7 +133,7 @@ function Base.convert(
 
     tm = TransferMatrix(input.left_gs.AL, input.right_gs.AR)
 
-    if istrivial(input)
+    if input.trivial
         tm = regularize(tm, l_LR(input.right_gs), r_LR(input.right_gs))
     end
 
@@ -180,7 +180,7 @@ function Base.convert(
     end
 
     tm = TransferMatrix(input.right_gs.AR, input.left_gs.AL)
-    if istrivial(input)
+    if input.trivial
         tm = regularize(tm, l_RL(input.right_gs), r_RL(input.right_gs))
     end
 
@@ -215,18 +215,9 @@ const MultilineQP{Q <: QP} = Multiline{Q}
 TensorKit.spacetype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = spacetype(S)
 TensorKit.sectortype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = sectortype(S)
 
-physicalspace(state::QP, i::Int) = physicalspace(state.left_gs, i)
-physicalspace(state::QP) = physicalspace(state.left_gs)
 left_virtualspace(state::QP, i::Int) = left_virtualspace(state.left_gs, i)
-left_virtualspace(state::QP) = map(Base.Fix1(left_virtualspace, state), eachsite(state))
 right_virtualspace(state::QP, i::Int) = right_virtualspace(state.right_gs, i)
-right_virtualspace(state::QP) = map(Base.Fix1(right_virtualspace, state), eachsite(state))
 auxiliaryspace(state::QP) = space(state.Xs[1], 2)
-auxiliarysector(state::QP) = only(sectors(auxiliaryspace(state)))
-eachsite(state::QP) = eachsite(state.left_gs)
-
-istopological(qp::QP) = qp.left_gs !== qp.right_gs
-istrivial(qp::QP) = !istopological(qp) && isone(auxiliarysector(qp))
 
 Base.copy(a::QP) = copy!(similar(a), a)
 Base.copyto!(a::QP, b::QP) = copy!(a, b)
@@ -236,12 +227,11 @@ function Base.copy!(a::T, b::T) where {T <: QP}
     end
     return a
 end
-Base.@constprop :aggressive function Base.getproperty(qp::QP, s::Symbol)
+function Base.getproperty(v::QP, s::Symbol)
     if s == :trivial
-        Base.depwarn("`qp.trivial` is deprecated in favor of `istrivial` and `istopological`", :trivial)
-        return !istopological(qp)
+        return v.left_gs === v.right_gs
     else
-        return getfield(qp, s)
+        return getfield(v, s)
     end
 end
 
@@ -406,7 +396,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S <: FiniteMPS}
     return FiniteMPS(Ls + Rs + Bs; normalize = false)
 end
 
-Base.@constprop :aggressive function Base.getproperty(exci::MultilineQP, s::Symbol)
+function Base.getproperty(exci::MultilineQP, s::Symbol)
     if s == :momentum
         return first(exci.data).momentum
     elseif s == :left_gs
@@ -419,10 +409,6 @@ Base.@constprop :aggressive function Base.getproperty(exci::MultilineQP, s::Symb
         return getfield(exci, s)
     end
 end
-
-# These should really all be the same, so it might make sense to take the first instead
-istrivial(exci::MultilineQP) = all(istrivial, exci.data)
-istopological(exci::MultilineQP) = all(istopological, exci.data)
 
 # VectorInterface
 # ---------------

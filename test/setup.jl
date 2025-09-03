@@ -142,16 +142,32 @@ function S_zz(::Type{Z2Irrep}, ::Type{T} = ComplexF64; spin = 1 // 2) where {T <
     return ZZ
 end
 
-function transverse_field_ising(sym::Type{<:Sector} = Trivial, ::Type{T} = ComplexF64; g = 1.0, L = Inf) where {T <: Number}
-    X = S_x(sym, T; spin = 1 // 2)
-    ZZ = S_zz(sym, T; spin = 1 // 2)
+function transverse_field_ising(::Type{Z2Irrep}, ::Type{T} = ComplexF64; g = 1.0, L = Inf, twosite = false) where {T <: Number}
+    X = S_x(Z2Irrep, T; spin = 1 // 2)
+    ZZ = S_zz(Z2Irrep, T; spin = 1 // 2)
 
     if L == Inf
-        lattice = PeriodicArray([space(X, 1)])
+        lattice = twosite ? PeriodicArray([space(X, 1), space(X, 1)]) : PeriodicArray([space(X, 1)])
+        H₁ = InfiniteMPOHamiltonian(lattice, i => -g * X for i in 1:length(lattice))
+        H₂ = InfiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:length(lattice))
+    else
+        lattice = fill(space(X, 1), L)
+        H₁ = FiniteMPOHamiltonian(lattice, i => -g * X for i in 1:L)
+        H₂ = FiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:(L - 1))
+    end
+    return H₁ + H₂
+end
+
+function transverse_field_ising(::Type{Trivial} = Trivial, ::Type{T} = ComplexF64; g = 1.0, L = Inf) where {T <: Number}
+    X = S_x(Trivial, T; spin = 1 // 2)
+    ZZ = S_zz(Trivial, T; spin = 1 // 2)
+
+    if L == Inf
+        lattice = PeriodicArray([ℂ^2])
         H₁ = InfiniteMPOHamiltonian(lattice, i => -g * X for i in 1:1)
         H₂ = InfiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:1)
     else
-        lattice = fill(space(X, 1), L)
+        lattice = fill(ℂ^2, L)
         H₁ = FiniteMPOHamiltonian(lattice, i => -g * X for i in 1:L)
         H₂ = FiniteMPOHamiltonian(lattice, (i, i + 1) => -ZZ for i in 1:(L - 1))
     end
