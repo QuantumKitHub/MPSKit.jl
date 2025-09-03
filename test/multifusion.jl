@@ -89,8 +89,8 @@ module TestMultifusion
         v2 = variance(ψ2, H)
         E2 = expectation_value(ψ2, H, envs2)
 
-        @test δ ≈ 0 atol=1e-3
-        @test δ2 ≈ 0 atol=1e-3
+        @test δ ≈ 0 atol = 1.0e-3
+        @test δ2 ≈ 0 atol = 1.0e-3
         @test v < v₀ && v2 < v₀
 
         @test isapprox(E, E2; atol = 1.0e-6)
@@ -99,10 +99,10 @@ module TestMultifusion
         @test isapprox(E, first(ED); atol = 1.0e-6)
 
         @test_throws ArgumentError("one of Type IsingBimodule doesn't exist") excitations(H, QuasiparticleAnsatz(), ψ)
-        excE, qp = excitations(H, QuasiparticleAnsatz(), ψ2; sector=C1, num=1) # testing sector kwarg
-        @test 0 < variance(qp[1], H) < 1e-8
+        excE, qp = excitations(H, QuasiparticleAnsatz(), ψ2; sector = C1, num = 1) # testing sector kwarg
+        @test 0 < variance(qp[1], H) < 1.0e-8
 
-        excE_DM, qp_DM = excitations(H, FiniteExcited(;gsalg=DMRG2(; trscheme=truncbelow(1e-6))), ψ2;num=1)
+        excE_DM, qp_DM = excitations(H, FiniteExcited(; gsalg = DMRG2(; trscheme = truncbelow(1.0e-6))), ψ2; num = 1)
         @test isapprox(first(excE_DM), first(excE) + E2; atol = 1.0e-6)
     end
 
@@ -114,26 +114,26 @@ module TestMultifusion
         init = InfiniteMPS([PD, PD], [V, V])
         v₀ = variance(init, H)
         tol = 1.0e-10
-        ψ, envs, δ = find_groundstate(init, H, IDMRG(;tol=tol,maxiter=400))
+        ψ, envs, δ = find_groundstate(init, H, IDMRG(; tol = tol, maxiter = 400))
         E = expectation_value(ψ, H, envs)
         v = variance(ψ, H)
 
-        ψ2, envs2, δ2 = find_groundstate(init, H, IDMRG2(; tol=tol, trscheme = truncbelow(1.0e-6), maxiter=400))
+        ψ2, envs2, δ2 = find_groundstate(init, H, IDMRG2(; tol = tol, trscheme = truncbelow(1.0e-6), maxiter = 400))
         E2 = expectation_value(ψ2, H, envs2)
         v2 = variance(ψ2, H)
 
-        ψ3, envs3, δ3 = find_groundstate(init, H, VUMPS(;tol=tol, maxiter=400))
+        ψ3, envs3, δ3 = find_groundstate(init, H, VUMPS(; tol = tol, maxiter = 400))
         E3 = expectation_value(ψ3, H, envs3)
         v3 = variance(ψ3, H)
 
         @test isapprox(E, E2; atol = 1.0e-6)
         @test isapprox(E, E3; atol = 1.0e-6)
         for delta in [δ, δ2, δ3]
-            @test delta ≈ 0 atol=1e-3
+            @test delta ≈ 0 atol = 1.0e-3
         end
         for var in [v, v2, v3]
             @test var < v₀
-            @test var < 1e-8
+            @test var < 1.0e-8
         end
 
         @test_throws ArgumentError("sectors of $V are non-diagonal") transfer_spectrum(ψ)
@@ -146,31 +146,31 @@ module TestMultifusion
         @test_throws ArgumentError("one of Type IsingBimodule doesn't exist") excitations(H, QuasiparticleAnsatz(), momentum, ψ)
         excC1, qpC1 = excitations(H, QuasiparticleAnsatz(), momentum, ψ3; sector = C1)
         @test isapprox(first(excC1), abs(2 * (g - 1)); atol = 1.0e-6) # charged excitation lower in energy
-        @test variance(qpC1[1], H) < 1e-8
+        @test variance(qpC1[1], H) < 1.0e-8
 
         # diagonal test (M = D): injective GS in symmetric phase
         Hdual = TFIM_multifusion(; g = 1 / g, L = Inf, twosite = true)
         Vdiag = Vect[I](D0 => 24, D1 => 24)
         initdiag = InfiniteMPS([PD, PD], [Vdiag, Vdiag])
-        gsdiag, envsdiag = find_groundstate(initdiag, Hdual, VUMPS(;tol=tol, maxiter=400))
+        gsdiag, envsdiag = find_groundstate(initdiag, Hdual, VUMPS(; tol = tol, maxiter = 400))
         Ediag = expectation_value(gsdiag, Hdual, envsdiag)
 
         excD1, qpD1 = excitations(Hdual, QuasiparticleAnsatz(), momentum, gsdiag; sector = D1)
         @test isapprox(first(excD1), abs(2 * (1 / g - 1)); atol = 1.0e-6) # charged excitation lower in energy
-        @test variance(qpD1[1], Hdual) < 1e-8
+        @test variance(qpD1[1], Hdual) < 1.0e-8
 
         # comparison to Z2 Ising: injective in symmetric phase
         HZ2 = transverse_field_ising(Z2Irrep; g = 1 / g, L = Inf, twosite = true)
         VZ2 = Z2Space(0 => 24, 1 => 24)
         PZ2 = Z2Space(0 => 1, 1 => 1)
         initZ2 = InfiniteMPS([PZ2, PZ2], [VZ2, VZ2])
-        gsZ2, envsZ2 = find_groundstate(initZ2, HZ2, VUMPS(;tol=tol, maxiter=400))
+        gsZ2, envsZ2 = find_groundstate(initZ2, HZ2, VUMPS(; tol = tol, maxiter = 400))
         EZ2 = expectation_value(gsZ2, HZ2, envsZ2)
         @test isapprox(EZ2, Ediag; atol = 1.0e-6)
 
         excZ2_1, qpZ2_1 = excitations(HZ2, QuasiparticleAnsatz(), momentum, gsZ2; sector = Z2Irrep(1))
         @test isapprox(first(excZ2_1), first(excD1); atol = 1.0e-6)
-        @test variance(qpZ2_1[1], HZ2) < 1e-8
+        @test variance(qpZ2_1[1], HZ2) < 1.0e-8
     end
 
 end # module TestMultifusion
