@@ -33,7 +33,7 @@ function environments(exci::Union{InfiniteQP, MultilineQP}, H; kwargs...)
     return environments(exci, H, lenvs; kwargs...)
 end
 function environments(exci::Union{InfiniteQP, MultilineQP}, H, lenvs; kwargs...)
-    renvs = exci.trivial ? lenvs : environments(exci.right_gs, H; kwargs...)
+    renvs = !istopological(exci) ? lenvs : environments(exci.right_gs, H; kwargs...)
     return environments(exci, H, lenvs, renvs; kwargs...)
 end
 
@@ -46,7 +46,7 @@ function environments(qp::MultilineQP, operator::MultilineMPO, lenvs, renvs; kwa
 end
 
 function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs; kwargs...)
-    ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1))
+    ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1)) .+ 1
     solver = environment_alg(exci, H, exci; kwargs...)
 
     AL = exci.left_gs.AL
@@ -62,11 +62,11 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
         lBs[pos + 1] += leftenv(lenvs, pos, exci.left_gs) *
             TransferMatrix(exci[pos], H[pos], AL[pos]) / cis(exci.momentum)
 
-        if exci.trivial # regularization of trivial excitations
+        if istrivial(exci) && !isempty(ids) # regularization of trivial excitations
+            ρ_left = l_RL(exci.left_gs, pos + 1)
+            ρ_right = r_RL(exci.left_gs, pos)
             for i in ids
-                @plansor lBs[pos + 1][i][-1 -2; -3 -4] -= lBs[pos + 1][i][1 4; -3 2] *
-                    r_RL(exci.left_gs, pos)[2; 3] * τ[3 4; 5 1] *
-                    l_RL(exci.left_gs, pos + 1)[ -1; 6 ] * τ[5 6; -4 -2]
+                regularize!(lBs[pos + 1][i], ρ_right, ρ_left)
             end
         end
     end
@@ -78,12 +78,11 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
         rBs[pos - 1] += TransferMatrix(exci[pos], H[pos], AR[pos]) *
             rightenv(renvs, pos, exci.right_gs) * cis(exci.momentum)
 
-        if exci.trivial
+        if istrivial(exci) && !isempty(ids)
+            ρ_left = l_LR(exci.left_gs, pos)
+            ρ_right = r_LR(exci.left_gs, pos - 1)
             for i in ids
-                ρ_left = l_LR(exci.left_gs, pos)
-                ρ_right = r_LR(exci.left_gs, pos - 1)
-                @plansor rBs[pos - 1][i][-1 -2; -3 -4] -= τ[6 4; 1 3] *
-                    rBs[pos - 1][i][1 3; -3 2] * ρ_left[2; 4] * ρ_right[-1; 5] * τ[-2 -4; 5 6]
+                regularize!(rBs[pos - 1][i], ρ_left, ρ_right)
             end
         end
     end
@@ -101,12 +100,11 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
     for i in 1:(length(exci) - 1)
         lB_cur = lB_cur * TransferMatrix(AR[i], H[i], AL[i]) / cis(exci.momentum)
 
-        if exci.trivial
+        if istrivial(exci) && !isempty(ids)
+            ρ_left = l_RL(exci.left_gs, i + 1)
+            ρ_right = r_RL(exci.left_gs, i)
             for k in ids
-                ρ_left = l_RL(exci.left_gs, i + 1)
-                ρ_right = r_RL(exci.left_gs, i)
-                @plansor lB_cur[k][-1 -2; -3 -4] -= lB_cur[k][1 4; -3 2] *
-                    ρ_right[2; 3] * τ[3 4; 5 1] * ρ_left[-1; 6] * τ[5 6; -4 -2]
+                regularize!(lB_cur[k], ρ_right, ρ_left)
             end
         end
 
@@ -117,12 +115,11 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
     for i in length(exci):-1:2
         rB_cur = TransferMatrix(AL[i], H[i], AR[i]) * rB_cur * cis(exci.momentum)
 
-        if exci.trivial
+        if istrivial(exci) && !isempty(ids)
+            ρ_left = l_LR(exci.left_gs, i)
+            ρ_right = r_LR(exci.left_gs, i - 1)
             for k in ids
-                ρ_left = l_LR(exci.left_gs, i)
-                ρ_right = r_LR(exci.left_gs, i - 1)
-                @plansor rB_cur[k][-1 -2; -3 -4] -= τ[6 4; 1 3] *
-                    rB_cur[k][1 3; -3 2] * ρ_left[2; 4] * ρ_right[-1; 5] * τ[-2 -4; 5 6]
+                regularize!(rB_cur[k], ρ_left, ρ_right)
             end
         end
 
@@ -135,7 +132,7 @@ end
 function environments(
         exci::FiniteQP, H::FiniteMPOHamiltonian,
         lenvs = environments(exci.left_gs, H),
-        renvs = exci.trivial ? lenvs : environments(exci.right_gs, H);
+        renvs = !istopological(exci) ? lenvs : environments(exci.right_gs, H);
         kwargs...
     )
     AL = exci.left_gs.AL
@@ -164,7 +161,7 @@ function environments(
 end
 
 function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
-    exci.trivial ||
+    istopological(exci) &&
         @warn "there is a phase ambiguity in topologically nontrivial statmech excitations"
     solver = environment_alg(exci, O, exci; kwargs...)
 
@@ -206,7 +203,7 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
     T_RL = TransferMatrix(right_gs.AR, O, left_gs.AL)
     T_LR = TransferMatrix(left_gs.AL, O, right_gs.AR)
 
-    if exci.trivial
+    if istrivial(exci)
         @plansor rvec[-1 -2; -3] := rightenv(lenvs, 0, left_gs)[-1 -2; 1] *
             conj(left_gs.C[0][-3; 1])
         @plansor lvec[-1 -2; -3] := leftenv(lenvs, 1, left_gs)[-1 -2; 1] *

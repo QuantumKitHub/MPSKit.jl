@@ -1,7 +1,7 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
 authors = "Lukas Devos, Maarten Van Damme and contributors"
-version = "0.13.3"
+version = "0.13.4"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -30,7 +30,7 @@ Combinatorics = "1"
 Compat = "3.47, 4.10"
 DocStringExtensions = "0.9.3"
 HalfIntegers = "1.6.0"
-KrylovKit = "0.8.3, 0.9.2"
+KrylovKit = "0.8.3, 0.9.2, 0.10"
 LinearAlgebra = "1.6"
 LoggingExtras = "~1.0"
 OhMyThreads = "0.7, 0.8"

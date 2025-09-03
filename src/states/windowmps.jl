@@ -150,11 +150,7 @@ for f in (:physicalspace, :left_virtualspace, :right_virtualspace)
     @eval $f(ψ::WindowMPS, n::Integer) = n < 1 ? $f(ψ.left_gs, n) :
         n > length(ψ) ? $f(ψ.right_gs, n - length(ψ)) :
         $f(ψ.window, n)
-end
-function physicalspace(ψ::WindowMPS)
-    return WindowArray(
-        physicalspace(ψ.left_gs), physicalspace(ψ.window), physicalspace(ψ.right_gs)
-    )
+    @eval $f(ψ::WindowMPS) = WindowArray($f(ψ.left_gs), $f(ψ.window), $f(ψ.right_gs))
 end
 r_RR(ψ::WindowMPS) = r_RR(ψ.right_gs, length(ψ))
 l_LL(ψ::WindowMPS) = l_LL(ψ.left_gs, 1)
