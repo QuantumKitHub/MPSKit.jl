@@ -21,9 +21,6 @@ include("setup.jl")
     if GROUP == "ALL" || GROUP == "ALGORITHMS"
         @time include("algorithms.jl")
     end
-    if GROUP == "ALL" || GROUP == "MULTIFUSION"
-        @time include("multifusion.jl")
-    end
     if GROUP == "ALL" || GROUP == "OTHER"
         @time include("other.jl")
     end

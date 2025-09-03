@@ -29,7 +29,6 @@ jobs:
           - states
           - operators
           - algorithms
-          - multifusion
           - other
         os:
           - ubuntu-latest
