@@ -21,6 +21,15 @@ function left_excitation_transfer_system(
         start = scale!(last(found[1:i] * T), cis(-mom * len))
         if istrivial(exci) && isidentitylevel(H, i)
             regularize!(start, ρ_right, ρ_left)
+        if exci.trivial && isidentitylevel(H, i)
+            # not using braiding tensors here, leads to extra leg
+            util = similar(exci.left_gs.AL[i], first(left_virtualspace(H[i])))
+            fill_data!(util, one)
+            @plansor start[-1 -2; -3 -4] -= start[2 1; -3 3] *
+                util[1] *
+                r_RL(exci.right_gs)[3; 2] *
+                l_RL(exci.right_gs)[-1; -4] *
+                conj(util[-2])
         end
 
         found[i] = add!(start, GBL[i])
@@ -71,6 +80,15 @@ function right_excitation_transfer_system(
         start = scale!(first(T * found[i:odim]), cis(mom * len))
         if istrivial(exci) && isidentitylevel(H, i)
             regularize!(start, ρ_left, ρ_right)
+        if exci.trivial && isidentitylevel(H, i)
+            # not using braiding tensors here, leads to extra leg
+            util = similar(exci.right_gs.AL[i], first(left_virtualspace(H[i])))
+            fill_data!(util, one)
+            @plansor start[-1 -2; -3 -4] -= start[2 1; -3 3] *
+                conj(util[1]) *
+                l_LR(exci.right_gs)[3; 2] *
+                r_LR(exci.right_gs)[-1; -4] *
+                util[-2]
         end
 
         found[i] = add!(start, GBR[i])

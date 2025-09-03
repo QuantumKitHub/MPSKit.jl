@@ -44,7 +44,7 @@ function exact_diagonalization(
 
     # fuse from left to right
     ALs = Vector{Union{Missing, TA}}(missing, L)
-    left = oneunit(spacetype(H))
+    left = spacetype(H)(one(sector) => 1) # might need to be rightone, leave this for now
     for i in 1:(middle_site - 1)
         P = physicalspace(H, i)
         ALs[i] = isomorphism(T, left ⊗ P ← fuse(left ⊗ P))
