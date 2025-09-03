@@ -87,6 +87,6 @@ function regularize!(v::MPOTensor, lvec::MPSTensor, rvec::MPSTensor)
 end
 
 function regularize!(v::MPOTensor, lvec::MPSBondTensor, rvec::MPSBondTensor)
-    return @plansor v[-1 -2; -3 -4] -= τ[6 2; 3 4] * v[3 4; -3 5] * lvec[5; 2] * rvec[-1; 1] *
-        τ[-2 -4; 1 6]
+    λ = @plansor lvec[2; 1] * removeunit(removeunit(v, 3), 2)[1; 2]
+    return add!(v, insertleftunit(insertrightunit(rvec, 1; dual = isdual(space(v, 2))), 3), -λ)
 end

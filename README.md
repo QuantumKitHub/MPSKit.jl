@@ -23,14 +23,14 @@ and matrix product operators (MPO), both finite and infinite.
 [doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10654901.svg
 [doi-url]: https://doi.org/10.5281/zenodo.10654901
 
-[codecov-img]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl/graph/badge.svg?token=rmp3bu7qn3
+[codecov-img]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl/branch/master/graph/badge.svg?token=rmp3bu7qn3
 [codecov-url]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl
 
 [ci-img]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/Tests.yml/badge.svg
 [ci-url]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/Tests.yml
 
-[pkgeval-img]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/T/MPSKit.svg
-[pkgeval-url]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/T/MPSKit.html
+[pkgeval-img]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/M/MPSKit.svg
+[pkgeval-url]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/M/MPSKit.html
 
 The framework is built upon
 [TensorKit.jl](https://github.com/jutho/TensorKit.jl), which provides functionality for

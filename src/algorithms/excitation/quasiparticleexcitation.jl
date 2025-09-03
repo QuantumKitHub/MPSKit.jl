@@ -56,7 +56,7 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renv
 end
 function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs; num = 1, kwargs...)
     # Infer `renvs` in function body as it depends on `solver`.
-    renvs = ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H; kwargs...)
+    renvs = !istopological(ϕ₀) ? lenvs : environments(ϕ₀.right_gs, H; kwargs...)
     return excitations(H, alg, ϕ₀, lenvs, renvs; num, kwargs...)
 end
 function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP; num = 1, kwargs...)
@@ -147,7 +147,7 @@ end
 function excitations(
         H, alg::QuasiparticleAnsatz, ϕ₀::FiniteQP,
         lenvs = environments(ϕ₀.left_gs, H),
-        renvs = ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H);
+        renvs = !istopological(ϕ₀) ? lenvs : environments(ϕ₀.right_gs, H);
         num = 1
     )
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
@@ -234,7 +234,7 @@ function excitations(
         kwargs...
     )
     # Infer `renvs` in function body as it depends on `solver`.
-    renvs = ϕ₀.trivial ? lenvs : environments(ϕ₀.right_gs, H; kwargs...)
+    renvs = !istopological(ϕ₀) ? lenvs : environments(ϕ₀.right_gs, H; kwargs...)
     return excitations(H, alg, ϕ₀, lenvs, renvs; kwargs...)
 end
 function excitations(
@@ -383,7 +383,7 @@ function effective_excitation_renormalization_energy(H, ϕ, lenvs, renvs)
         E[i] = contract_mpo_expval(
             ψ_left.AC[i], leftenv(lenvs, i, ψ_left), H[i], rightenv(lenvs, i, ψ_left)
         )
-        if !ϕ.trivial
+        if istopological(ϕ)
             E[i] += contract_mpo_expval(
                 ψ_right.AC[i], leftenv(renvs, i, ψ_right), H[i], rightenv(renvs, i, ψ_right)
             )

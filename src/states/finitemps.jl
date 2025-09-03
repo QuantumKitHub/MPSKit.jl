@@ -394,7 +394,6 @@ function right_virtualspace(ψ::FiniteMPS, n::Integer)
         _firstspace(ψ.C[n])
 end
 
-physicalspace(ψ::FiniteMPS) = physicalspace.(Ref(ψ), 1:length(ψ))
 function physicalspace(ψ::FiniteMPS{<:GenericMPSTensor{<:Any, N}}, n::Integer) where {N}
     N == 1 && return ProductSpace{spacetype(ψ)}()
     return physicalspace(coalesce(ψ.ALs[n], ψ.ARs[n], ψ.ACs[n]))

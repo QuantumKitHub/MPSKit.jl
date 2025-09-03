@@ -31,6 +31,15 @@ module TestOperators
             mpo₁ = FiniteMPO(O₁) # type-unstable for now!
             mpo₂ = FiniteMPO(O₂)
             mpo₃ = FiniteMPO(O₃)
+
+            @test @constinferred physicalspace(mpo₁) == fill(V, L)
+            Vleft = @constinferred left_virtualspace(mpo₁)
+            Vright = @constinferred right_virtualspace(mpo₂)
+            for i in 1:L
+                @test Vleft[i] == left_virtualspace(mpo₁, i)
+                @test Vright[i] == right_virtualspace(mpo₁, i)
+            end
+
             @test convert(TensorMap, mpo₁) ≈ O₁
             @test convert(TensorMap, -mpo₂) ≈ -O₂
             @test convert(TensorMap, @constinferred complex(mpo₃)) ≈ complex(O₃)
