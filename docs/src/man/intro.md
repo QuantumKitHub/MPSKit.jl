@@ -59,7 +59,7 @@ V2 = Z2Space(0 => 1, 1 => 1)
 t3 = rand(Float64, V2 ⊗ V2, V2)
 ```
 
-For more information, check out the [TensorKit documentation](https://jutho.github.io/TensorKit.jl/stable/)!
+For more information, check out the [TensorKit documentation](https://quantumkithub.github.io/TensorKit.jl/stable/)!
 
 ## Conventions
 
