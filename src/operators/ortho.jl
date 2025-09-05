@@ -11,6 +11,7 @@ function left_canonicalize!(
     # orthogonalize second column against first
     WI = removeunit(W[1, 1, 1, 1], 1)
     @tensor t[l; r] := conj(WI[p; p' l]) * W.C[p; p' r]
+    # TODO: the following is currently broken due to a TensorKit bug
     # @plansor C′[p; p' r] := W.C[p; p' r] - WI[p; p' l] * t[l; r]
     @plansor C′[p; p' r] := -WI[p; p' l] * t[l; r]
     add!(C′, W.C)
@@ -108,6 +109,8 @@ function right_canonicalize!(
     # orthogonalize second row against last
     WI = removeunit(W[end, 1, 1, end], 4)
     @plansor t[l; r] := conj(WI[r p; p']) * W.B[l p; p']
+    # TODO: the following is currently broken due to a TensorKit bug
+    # @plansor B′[l p; p'] := W.B[l p; p'] - WI[r p; p'] * t[l; r]
     @plansor B′[l p; p'] := -WI[r p; p'] * t[l; r]
     add!(B′, W.B)
 
