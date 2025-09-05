@@ -67,25 +67,36 @@ end
 
 function JordanMPOTensor(
         V::TensorMapSumSpace{S, 2, 2},
-        A::SparseBlockTensorMap{TA, E, S, 2, 2},
-        B::SparseBlockTensorMap{TB, E, S, 2, 1},
-        C::SparseBlockTensorMap{TC, E, S, 1, 2},
-        D::SparseBlockTensorMap{TD, E, S, 1, 1}
+        A::SparseBlockTensorMap{TA, E, S, 2, 2}, B::SparseBlockTensorMap{TB, E, S, 2, 1},
+        C::SparseBlockTensorMap{TC, E, S, 1, 2}, D::SparseBlockTensorMap{TD, E, S, 1, 1}
     ) where {E, S, TA, TB, TC, TD}
     allVs = eachspace(V)
     VA = space(allVs[2:(end - 1), 1, 1, 2:(end - 1)])
-    VA == space(A) || throw(SpaceMismatch("A-block has incompatible spaces"))
+    VA == space(A) || throw(SpaceMismatch(lazy"A-block has incompatible spaces:\n$VA\n$(space(A))"))
 
     VB = removeunit(space(allVs[2:(end - 1), 1, 1, end]), 4)
-    VB == space(B) || throw(SpaceMismatch("B-block has incompatible spaces"))
+    VB == space(B) || throw(SpaceMismatch(lazy"B-block has incompatible spaces:\n$VB\n$(space(B))"))
 
     VC = removeunit(space(allVs[1, 1, 1, 2:(end - 1)]), 1)
-    VC == space(C) || throw(SpaceMismatch("C-block has incompatible spaces"))
+    VC == space(C) || throw(SpaceMismatch(lazy"C-block has incompatible spaces:\n$VC\n$(space(C))"))
 
     VD = removeunit(removeunit(space(allVs[1, 1, 1, end:end]), 4), 1)
-    VD == space(D) || throw(SpaceMismatch("D-block has incompatible spaces"))
+    VD == space(D) || throw(SpaceMismatch(lazy"D-block has incompatible spaces:\n$VD\n$(space(D))"))
 
     return JordanMPOTensor{E, S, TA, TB, TC, TD}(V, A, B, C, D)
+end
+function JordanMPOTensor(
+        V::TensorMapSumSpace{S, 2, 2},
+        A::AbstractTensorMap{E, S, 2, 2}, B::AbstractTensorMap{E, S, 2, 1},
+        C::AbstractTensorMap{E, S, 1, 2}, D::AbstractTensorMap{E, S, 1, 1}
+    ) where {E, S}
+    return JordanMPOTensor(
+        V,
+        A isa SparseBlockTensorMap ? A : SparseBlockTensorMap(A),
+        B isa SparseBlockTensorMap ? B : SparseBlockTensorMap(B),
+        C isa SparseBlockTensorMap ? C : SparseBlockTensorMap(C),
+        D isa SparseBlockTensorMap ? D : SparseBlockTensorMap(D)
+    )
 end
 
 function JordanMPOTensor(W::SparseBlockTensorMap{TT, E, S, 2, 2}) where {TT, E, S}

@@ -115,6 +115,7 @@ include("operators/abstractmpo.jl")
 include("operators/mpo.jl")
 include("operators/jordanmpotensor.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
+include("operators/ortho.jl")
 include("operators/multilinempo.jl")
 include("operators/projection.jl")
 include("operators/timedependence.jl")
