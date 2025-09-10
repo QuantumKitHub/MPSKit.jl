@@ -313,10 +313,16 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     mpo = O isa FiniteMPO ? O : FiniteMPO(O)
 
     # convert to linear index type
-    operators = parent(mpo)
     indices = map(inds) do I
         return Base._to_linear_index(lattice, Tuple(I)...) # this should mean all inds are valid...
     end
+
+    # sort indices and deduplicate
+    indices, mpo = canonicalize_indices(indices, mpo)
+    operators = parent(mpo)
+
+    @assert allunique(indices) && issorted(indices) "From here on we require unique and ascending indices\n$indices"
+
     T = eltype(mpo)
     local_mpo = Union{T, scalartype(T)}[]
     sites = Int[]
@@ -337,6 +343,16 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     end
 
     return sites => local_mpo
+end
+
+function canonicalize_indices(indices, mpo)
+    issorted(indices) && return indices, mpo
+    mpo = copy(mpo)
+    I = TensorKit.TupleTools.sortperm(indices)
+    for s in TensorKit.permutation2swaps(I)
+        swap!(mpo, s)
+    end
+    return TensorKit.TupleTools.getindices(indices, I), mpo
 end
 
 # yields the promoted tensortype of all tensors
