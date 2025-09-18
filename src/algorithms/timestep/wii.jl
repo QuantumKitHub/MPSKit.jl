@@ -19,8 +19,10 @@ $(TYPEDFIELDS)
     maxiter::Int = Defaults.maxiter
 end
 
-function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::WII;
-                       imaginary_evolution::Bool=false)
+function make_time_mpo(
+        H::InfiniteMPOHamiltonian, dt::Number, alg::WII;
+        imaginary_evolution::Bool = false
+    )
     WA = H.A
     WB = H.B
     WC = H.C
@@ -84,8 +86,10 @@ function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::WII;
 end
 
 # Hack to treat FiniteMPOhamiltonians as Infinite
-function make_time_mpo(H::FiniteMPOHamiltonian, dt::Number, alg::WII;
-                       imaginary_evolution::Bool=false)
+function make_time_mpo(
+        H::FiniteMPOHamiltonian, dt::Number, alg::WII;
+        imaginary_evolution::Bool = false
+    )
     H′ = copy(parent(H))
 
     V_left = left_virtualspace(H[1])
