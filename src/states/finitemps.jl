@@ -626,11 +626,11 @@ TensorKit.normalize(ψ::FiniteMPS) = normalize!(copy(ψ))
 Fixedpoints
 ===========================================================================================#
 
-function r_RR(ψ::FiniteMPS, site::Int=length(ψ))
+function r_RR(ψ::FiniteMPS, site::Int = length(ψ))
     Vr = right_virtualspace(ψ.AR[site])
     return isomorphism(storagetype(site_type(ψ)), Vr ← Vr)
 end
-function l_LL(ψ::FiniteMPS, site::Int=1)
+function l_LL(ψ::FiniteMPS, site::Int = 1)
     Vl = left_virtualspace(ψ.AL[site])
     return isomorphism(storagetype(site_type(ψ)), Vl ← Vl)
 end
