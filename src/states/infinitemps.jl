@@ -237,13 +237,18 @@ Base.size(ψ::InfiniteMPS, args...) = size(ψ.AL, args...)
 Base.length(ψ::InfiniteMPS) = length(ψ.AL)
 Base.eltype(ψ::InfiniteMPS) = eltype(typeof(ψ))
 Base.eltype(::Type{<:InfiniteMPS{A}}) where {A} = A
+
 Base.copy(ψ::InfiniteMPS) = InfiniteMPS(copy(ψ.AL), copy(ψ.AR), copy(ψ.C), copy(ψ.AC))
 function Base.copy!(ψ::InfiniteMPS, ϕ::InfiniteMPS)
-    copy!.(ψ.AL, ϕ.AL)
-    copy!.(ψ.AR, ϕ.AR)
-    copy!.(ψ.AC, ϕ.AC)
-    copy!.(ψ.C, ϕ.C)
+    ψ.AL .= _copy!!.(ψ.AL, ϕ.AL)
+    ψ.AR .= _copy!!.(ψ.AR, ϕ.AR)
+    ψ.AC .= _copy!!.(ψ.AC, ϕ.AC)
+    ψ.C .= _copy!!.(ψ.C, ϕ.C)
     return ψ
+end
+# possible in-place copy
+function _copy!!(dst::AbstractTensorMap, src::AbstractTensorMap)
+    return space(dst) == space(src) ? copy!(dst, src) : copy(src)
 end
 
 function Base.complex(ψ::InfiniteMPS)
