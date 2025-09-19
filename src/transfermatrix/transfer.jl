@@ -81,6 +81,21 @@ function transfer_right(v::MPSTensor{S}, A::MPSTensor{S}, Ab::MPSTensor{S}) wher
     check_unambiguous_braiding(space(v, 2))
     return @plansor v[-1 -2; -3] := A[-1 2; 1] * τ[-2 4; 2 3] * conj(Ab[-3 4; 5]) * v[1 3; 5]
 end
+# similar for Matrix Product Density Operators
+function transfer_left(
+        v::MPSTensor{S}, A::GenericMPSTensor{S, 3}, Ab::GenericMPSTensor{S, 3}
+    ) where {S}
+    check_unambiguous_braiding(space(v, 2))
+    return @plansor v[-1 -2; -3] ≔ v[1 3; 8] * A[8 7 6; -3] * τ[3 2; 7 5] * τ[5 4; 6 -2] *
+        conj(Ab[1 2 4; -1])
+end
+function transfer_right(
+        v::MPSTensor{S}, A::GenericMPSTensor{S, 3}, Ab::GenericMPSTensor{S, 3}
+    ) where {S}
+    check_unambiguous_braiding(space(v, 2))
+    return @plansor v[-1 -2; -3] ≔ A[-1 4 2; 1] * τ[-2 6; 4 5] * τ[5 7; 2 3] *
+        conj(Ab[-3 6 7; 8]) * v[1 3; 8]
+end
 
 # the transfer operation with a utility leg in both the domain and codomain is also ill defined - only due to the codomain utility space
 function transfer_left(v::MPOTensor{S}, A::MPSTensor{S}, Ab::MPSTensor{S}) where {S}

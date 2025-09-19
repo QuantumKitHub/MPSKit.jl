@@ -299,11 +299,15 @@ function _split_mpoham_types(W::Matrix)::Type{<:MPOTensor}
 end
 
 """
+    instantiate_operator(state, O::Pair)
     instantiate_operator(lattice::AbstractArray{<:VectorSpace}, O::Pair)
 
-Instantiate a local operator `O` on a lattice `lattice` as a vector of MPO tensors, and a
-vector of linear site indices.
+Instantiate a local operator `O` for a `state` or `lattice` as a vector of MPO tensors, and
+a vector of linear site indices.
 """
+function instantiate_operator(state::AbstractMPS, O::Pair)
+    return instantiate_operator(physicalspace(state), O)
+end
 function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O)::Pair)
     inds = inds′ isa Int ? tuple(inds′) : inds′
     mpo = O isa FiniteMPO ? O : FiniteMPO(O)
@@ -320,7 +324,10 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     i = 1
     for j in first(indices):last(indices)
         if j == indices[i]
-            @assert space(operators[i], 2) == lattice[j] "operator does not fit into the given Hilbert space: $(space(operators[i], 2)) ≠ $(lattice[j])"
+            # TODO: fix this check for density matrices
+            if !(eltype(lattice) <: ProductSpace) && physicalspace(operators[i]) != lattice[j]
+                throw(SpaceMismatch("physical space does not match at site $j"))
+            end
             push!(local_mpo, operators[i])
             i += 1
         else
@@ -629,19 +636,8 @@ end
 # Base.complex(H::MPOHamiltonian) = MPOHamiltonian(map(complex, parent(H)))
 function Base.complex(H::MPOHamiltonian)
     scalartype(H) <: Complex && return H
-    Ws = map(parent(H)) do W
-        W′ = jordanmpotensortype(spacetype(W), complex(scalartype(W)))
-        W′[1] = W[1]
-        W′[end] = W[end]
-        for (I, v) in nonzero_pairs(W)
-            if v isa BraidingTensor
-                W′[I] = BraidingTensor{scalartype(W′)}(space(v), v.adjoint)
-            else
-                W′[I] = complex(v)
-            end
-        end
-    end
-    return MPOHamiltonian(H)
+    Ws = map(complex, parent(H))
+    return MPOHamiltonian(Ws)
 end
 
 function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O <: MPOTensor}

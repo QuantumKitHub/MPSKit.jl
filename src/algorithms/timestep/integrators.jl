@@ -17,8 +17,12 @@ function integrate end
 _eval_t(f, t::Number) = Base.Fix2(f, t)
 _eval_x(f, x) = Base.Fix1(f, x)
 
-function integrate(f, y₀, t::Number, dt::Number, alg::Union{Arnoldi, Lanczos})
-    y, convhist = exponentiate(_eval_t(f, t + dt / 2), -1im * dt, y₀, alg)
+function integrate(
+        f, y₀, t::Number, dt::Number, alg::Union{Arnoldi, Lanczos};
+        imaginary_evolution::Bool = false
+    )
+    dt′ = imaginary_evolution ? -dt : -1im * dt
+    y, convhist = exponentiate(_eval_t(f, t + dt / 2), dt′, y₀, alg)
     convhist.converged == 0 &&
         @warn "integrator failed to converge: normres = $(convhist.normres)"
     return y
