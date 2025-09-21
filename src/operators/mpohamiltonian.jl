@@ -305,16 +305,17 @@ Instantiate a local operator `O` on a lattice `lattice` as a vector of MPO tenso
 vector of linear site indices.
 """
 function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O)::Pair)
-    inds = inds′ isa Int ? tuple(inds′) : inds′
-    mpo = O isa FiniteMPO ? O : FiniteMPO(O)
+    inds = inds′ isa Int ? [inds′] : inds′
+    mpo = O isa FiniteMPO ? copy(O) : FiniteMPO(O)
 
     # convert to linear index type
-    indices = map(inds) do I
-        return Base._to_linear_index(lattice, Tuple(I)...) # this should mean all inds are valid...
+    indices = Vector{Int}(undef, length(inds))
+    for i in eachindex(indices)
+        indices[i] = Base._to_linear_index(lattice, Tuple(inds[i])...) # this should mean all inds are valid...
     end
 
     # sort indices and deduplicate
-    indices, mpo = canonicalize_indices(indices, mpo)
+    indices, mpo = canonicalize_indices!(indices, mpo)
     operators = parent(mpo)
 
     @assert allunique(indices) && issorted(indices) "From here on we require unique and ascending indices\n$indices"
@@ -338,14 +339,23 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     return sites => local_mpo
 end
 
-function canonicalize_indices(indices, mpo)
-    issorted(indices) && return indices, mpo
-    mpo = copy(mpo)
-    I = TensorKit.TupleTools.sortperm(indices)
-    for s in TensorKit.permutation2swaps(I)
-        swap!(mpo, s)
+function canonicalize_indices!(indices, mpo)
+    # swap non-sorted entries
+    for i in 2:length(indices)
+        for j in reverse(i:length(indices))
+            if indices[j] < indices[j - 1]
+                swap!(mpo, j - 1)
+                indices[j - 1], indices[j] = indices[j], indices[j - 1]
+            end
+        end
     end
-    return TensorKit.TupleTools.getindices(indices, I), mpo
+    for i in length(indices):-1:2
+        if indices[i] == indices[i - 1]
+            multiply_neighbours!(mpo, i - 1)
+            popat!(indices, i)
+        end
+    end
+    return indices, mpo
 end
 
 # yields the promoted tensortype of all tensors
