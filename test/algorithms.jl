@@ -962,11 +962,14 @@ module TestAlgorithms
         Z_dense_2 = tr(exp(-2beta * H_dense))^(1 / L)
 
         # taylor cluster
-        rho_taylor_1 = make_time_mpo(H, -im * beta, TaylorCluster(; N = 2))
+        rho_taylor_1 = make_time_mpo(H, beta, TaylorCluster(; N = 2); imaginary_evolution = true)
         Z_taylor_1 = tr(rho_taylor_1)^(1 / L)
         @test Z_taylor_1 ≈ Z_dense_1 atol = 1.0e-2
         Z_taylor_2 = real(dot(rho_taylor_1, rho_taylor_1))^(1 / L)
         @test Z_taylor_2 ≈ Z_dense_2 atol = 1.0e-2
+
+        E_x_taylor = @constinferred expectation_value(rho_taylor_1, 1 => S_x())
+        E_xx_taylor = @constinferred expectation_value(rho_taylor_1, (1, 2) => S_xx())
 
         # MPO multiplication
         rho_mps = convert(FiniteMPS, rho_taylor_1)
@@ -977,9 +980,14 @@ module TestAlgorithms
         # TDVP
         rho_0 = MPSKit.infinite_temperature_density_matrix(H)
         rho_0_mps = convert(FiniteMPS, rho_0)
-        rho_mps, = timestep(rho_0_mps, H, 0.0, im * beta, TDVP2(; trscheme))
+        rho_mps, = timestep(rho_0_mps, H, 0.0, beta, TDVP2(; trscheme); imaginary_evolution = true)
         Z_tdvp = real(dot(rho_mps, rho_mps))^(1 / L)
         @test Z_tdvp ≈ Z_dense_2 atol = 1.0e-2
+
+        @test expectation_value(rho_0_mps, 1 => S_x()) ≈ 0
+        @test expectation_value(rho_0_mps, (1, 2) => S_xx()) ≈ 0
+        @test expectation_value(rho_mps, 1 => S_x()) ≈ E_x_taylor atol = 1.0e-2
+        @test expectation_value(rho_mps, (1, 2) => S_xx()) ≈ E_xx_taylor atol = 1.0e-2
     end
 
     @testset "Sector conventions" begin

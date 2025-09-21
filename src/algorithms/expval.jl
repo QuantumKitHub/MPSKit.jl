@@ -200,3 +200,12 @@ function expectation_value(
     n = norm(ψ.AC[end])^2
     return sum(ens) / (n * length(ψ))
 end
+
+# Density matrices
+# ----------------
+function expectation_value(ρ::FiniteMPO, args...)
+    return expectation_value(convert(FiniteMPS, ρ), args...)
+end
+function expectation_value(ρ::InfiniteMPO, args...)
+    return expectation_value(convert(InfiniteMPS, ρ), args...)
+end
