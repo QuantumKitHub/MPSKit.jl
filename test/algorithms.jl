@@ -971,6 +971,13 @@ module TestAlgorithms
         E_x_taylor = @constinferred expectation_value(rho_taylor_1, 1 => S_x())
         E_xx_taylor = @constinferred expectation_value(rho_taylor_1, (1, 2) => S_xx())
 
+        # WII
+        rho_wii = make_time_mpo(H, beta, WII(); imaginary_evolution = true)
+        Z_wii = tr(rho_wii)^(1 / L)
+        @test Z_wii ≈ Z_dense_1 atol = 1.0e-2
+        @test expectation_value(rho_wii, 1 => S_x()) ≈ E_x_taylor atol = 1.0e-2
+        @test expectation_value(rho_wii, (1, 2) => S_xx()) ≈ E_xx_taylor atol = 1.0e-2
+
         # MPO multiplication
         rho_mps = convert(FiniteMPS, rho_taylor_1)
         rho_mps, = approximate(rho_mps, (rho_taylor_1, rho_mps), DMRG2(; trscheme, verbosity))
