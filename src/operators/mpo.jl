@@ -422,3 +422,11 @@ function swap!(
     @plansor mpo[i + 1][-1 -2; -3 -4] := sqrtS[-1; 1] * Vᴴ[1; -3 -4 -2]
     return mpo
 end
+
+function multiply_neighbours!(mpo::FiniteMPO{<:MPOTensor}, i::Integer)
+    1 <= i < length(mpo) || throw(BoundsError(mpo, i))
+    O₁ = mpo[i]
+    O₂ = popat!(parent(mpo), i + 1)
+    @plansor mpo[i][-1 -2; -3 -4] := O₁[-1 -2; 1 2] * τ[1 2; 3 4] * O₂[3 4; -3 -4]
+    return mpo
+end
