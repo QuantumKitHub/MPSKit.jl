@@ -28,7 +28,8 @@ function make_time_mpo(
     WC = H.C
     WD = H.D
 
-    δ = imaginary_evolution ? -dt : (-1im * dt)
+    # needs to be complex if negative because of square root
+    δ = imaginary_evolution ? -complex(dt) : (-1im * dt)
     exp_alg = Arnoldi(; alg.tol, alg.maxiter)
 
     Wnew = map(1:length(H)) do i
@@ -109,9 +110,9 @@ function make_time_mpo(
     H′[1][end, 1, 1, end] = H′[1][1, 1, 1, 1]
     H′[end][1, 1, 1, 1] = H′[end][end, 1, 1, end]
 
-    mpo = make_time_mpo(InfiniteMPOHamiltonian(H′), dt, alg; tol, imaginary_evolution)
+    mpo = make_time_mpo(InfiniteMPOHamiltonian(H′), dt, alg; imaginary_evolution)
 
     # Impose boundary conditions
     mpo_fin = open_boundary_conditions(mpo, length(H))
-    return remove_orphans!(mpo_fin; tol)
+    return remove_orphans!(mpo_fin; alg.tol)
 end
