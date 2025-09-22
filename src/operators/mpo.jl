@@ -391,7 +391,7 @@ function Base.isapprox(
     return norm₁₂² ≤ max(atol^2, rtol^2 * max(norm₁², norm₂²))
 end
 
-"""
+@doc """
     swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=SDD(), trscheme)
     swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=SDD(), trscheme)
 
@@ -399,8 +399,9 @@ Compose the mpo with a swap gate applied to indices `i` and `i + 1`, effectively
 operator that acts on the Hilbert spaces with those factors swapped.
 The keyword arguments `alg` and `trscheme` can be used to control how the resulting tensor
 is truncated again.
-"""
-swap(mpo::FiniteMPO{<:MPOTensor}, i::Integer; kwargs...) = swap!(copy(mpo), i; kwargs...)
+""" swap, swap!
+
+swap(mpo::FiniteMPO, i::Integer; kwargs...) = swap!(copy(mpo), i; kwargs...)
 function swap!(
         mpo::FiniteMPO{<:MPOTensor}, i::Integer;
         inv::Bool = false,
@@ -423,6 +424,15 @@ function swap!(
     return mpo
 end
 
+@doc """
+    multiply_neighbours(mpo::FiniteMPO, i::Integer)
+    multiply_neighbours!(mpo::FiniteMPO, i::Integer)
+
+Construct the mpo of length `length(mpo) - 1` which is formed by multiplying the operators
+on site `i` and `i + 1`.
+""" multiply_neighbours, multiply_neighbours!
+
+multiply_neighbours(mpo::FiniteMPO, i::Integer) = multiply_neighbours!(copy(mpo), i)
 function multiply_neighbours!(mpo::FiniteMPO{<:MPOTensor}, i::Integer)
     1 <= i < length(mpo) || throw(BoundsError(mpo, i))
     O₁ = mpo[i]
