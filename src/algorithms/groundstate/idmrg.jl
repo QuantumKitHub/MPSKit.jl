@@ -28,10 +28,13 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG, envs = environments(o
     ϵ::Float64 = calc_galerkin(ost, H, ost, envs)
     ψ = copy(ost)
     log = IterLog("IDMRG")
-    local iter
+    local iter, E_current
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
+        @infov 2 begin
+            E_current = expectation_value(ψ, H, envs)
+            loginit!(log, ϵ, E_current)
+        end
         for outer iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             C_current = ψ.C[0]
@@ -63,13 +66,28 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG, envs = environments(o
             ϵ = norm(C_current - ψ.C[0])
 
             if ϵ < alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
+                @infov 2 begin
+                    E_next = expectation_value(ψ, H, envs)
+                    ΔE = E_next - E_current
+                    E_current = E_next
+                    logfinish!(log, iter, ϵ, ΔE)
+                end
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
+                @warnv 1 begin
+                    E_next = expectation_value(ψ, H, envs)
+                    ΔE = E_next - E_current
+                    E_current = E_next
+                    logcancel!(log, iter, ϵ, ΔE)
+                end
             else
-                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
+                @infov 3 begin
+                    E_next = expectation_value(ψ, H, envs)
+                    ΔE = E_next - E_current
+                    E_current = E_next
+                    logiter!(log, iter, ϵ, ΔE)
+                end
             end
         end
     end

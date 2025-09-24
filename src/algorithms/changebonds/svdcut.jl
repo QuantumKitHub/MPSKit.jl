@@ -1,11 +1,18 @@
 """
 $(TYPEDEF)
 
-An algorithm that uses truncated SVD to change the bond dimension of a ψ.
+An algorithm that uses truncated SVD to change the bond dimension of a state or operator.
+This is achieved by a sweeping algorithm that locally performs (optimal) truncations in a gauged basis.
+
+See also [`changebonds(!)`](@ref changebonds)
 
 ## Fields
 
 $(TYPEDFIELDS)
+
+## References
+
+* [Parker et al. Phys. Rev. B 102 (2020)](@cite parker2020)
 """
 @kwdef struct SvdCut{S} <: Algorithm
     "algorithm used for the singular value decomposition"
@@ -104,4 +111,23 @@ end
 
 function changebonds(ψ, H, alg::SvdCut, envs = environments(ψ, H))
     return changebonds(ψ, alg), envs
+end
+
+changebonds(mpo::FiniteMPOHamiltonian, alg::SvdCut) = changebonds!(copy(mpo), alg)
+function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
+    # orthogonality center to the left
+    for i in length(H):-1:2
+        H = right_canonicalize!(H, i)
+    end
+
+    # swipe right
+    for i in 1:(length(H) - 1)
+        H = left_canonicalize!(H, i; alg = alg.alg_svd, alg.trscheme)
+    end
+    # swipe left -- TODO: do we really need this double sweep?
+    for i in length(H):-1:2
+        H = right_canonicalize!(H, i; alg = alg.alg_svd, alg.trscheme)
+    end
+
+    return H
 end

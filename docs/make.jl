@@ -27,7 +27,7 @@ bib = CitationBibliography(bibpath; style = :authoryear)
 
 # interlinks
 links = InterLinks(
-    "TensorKit" => "https://jutho.github.io/TensorKit.jl/stable/",
+    "TensorKit" => "https://quantumkithub.github.io/TensorKit.jl/stable/",
     "TensorOperations" => "https://quantumkithub.github.io/TensorOperations.jl/stable/",
     "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/",
     "BlockTensorKit" => "https://lkdvos.github.io/BlockTensorKit.jl/dev/"
