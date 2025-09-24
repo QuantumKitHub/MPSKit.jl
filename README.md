@@ -20,8 +20,8 @@ and matrix product operators (MPO), both finite and infinite.
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://QuantumKitHub.github.io/MPSKit.jl/dev
 
-[doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10654901.svg
-[doi-url]: https://doi.org/10.5281/zenodo.10654901
+[doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.17065473.svg
+[doi-url]: https://doi.org/10.5281/zenodo.17065473
 
 [codecov-img]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl/branch/master/graph/badge.svg?token=rmp3bu7qn3
 [codecov-url]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl
