@@ -160,10 +160,18 @@ function Base.setindex!(
 
     a, b = vec
     return if isa(a, MPSBondTensor) #c/ar
-        setindex!(v.parent.Cs, a, i)
+        if !(scalartype(parent(v)) <: Real) && (scalartype(a) <: Real)
+            setindex!(v.parent.Cs, complex(a), i)
+        else
+            setindex!(v.parent.Cs, a, i)
+        end
         setindex!(v.parent.ARs, b, i)
     elseif isa(b, MPSBondTensor) #al/c
-        setindex!(v.parent.Cs, b, i + 1)
+        if !(scalartype(parent(v)) <: Real) && (scalartype(b) <: Real)
+            setindex!(v.parent.Cs, complex(b), i + 1)
+        else
+            setindex!(v.parent.Cs, b, i + 1)
+        end
         setindex!(v.parent.ALs, a, i)
     else
         throw(ArgumentError("invalid value types"))

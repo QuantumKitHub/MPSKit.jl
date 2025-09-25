@@ -194,6 +194,26 @@ function SparseBlockTensorMap(W::JordanMPOTensor)
     return W′
 end
 
+for f in (:real, :complex)
+    @eval function Base.$f(W::JordanMPOTensor)
+        E = $f(scalartype(W))
+        W′ = JordanMPOTensor{E}(undef, space(W))
+        for (I, v) in nonzero_pairs(W.A)
+            W′.A[I] = $f(v)
+        end
+        for (I, v) in nonzero_pairs(W.B)
+            W′.B[I] = $f(v)
+        end
+        for (I, v) in nonzero_pairs(W.C)
+            W′.C[I] = $f(v)
+        end
+        for (I, v) in nonzero_pairs(W.D)
+            W′.D[I] = $f(v)
+        end
+        return W′
+    end
+end
+
 # Indexing
 # --------
 
