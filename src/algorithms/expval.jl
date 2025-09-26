@@ -119,6 +119,26 @@ function local_expectation_value(
     )
 end
 
+# MPO tensor
+#-----------
+function expectation_value(
+        ψ::InfiniteMPS, O::MPOTensor,
+        envs::AbstractMPSEnvironments
+    )
+    return sum(1:length(ψ)) do site
+        return local_expectation_value(ψ, O, envs, site)
+    end
+end
+
+function local_expectation_value(
+        ψ::InfiniteMPS, O::MPOTensor,
+        envs::AbstractMPSEnvironments, site::Int=1
+    )
+    return contract_mpo_expval(
+        ψ.AC[site], envs.GLs[site], O, envs.GRs[site]
+    )
+end
+
 # DenseMPO
 # --------
 function expectation_value(ψ::FiniteMPS, mpo::FiniteMPO)
