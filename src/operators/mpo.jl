@@ -319,7 +319,7 @@ function TensorKit.dot(
     randomize!(ρ₀)
 
     val, = fixedpoint(
-        TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM;
+        flip(TransferMatrix(ket.AL, parent(mpo), bra.AL)), ρ₀, :LM;
         ishermitian, krylovdim, kwargs...
     )
     return val
