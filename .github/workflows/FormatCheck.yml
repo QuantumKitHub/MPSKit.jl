@@ -1,5 +1,11 @@
 name: FormatCheck
 
+permissions:
+  contents: read
+  checks: write
+  issues: write
+  pull-requests: write
+
 on:
   push:
     branches:
