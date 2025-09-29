@@ -124,7 +124,7 @@ module TestOperators
     @testset "Finite MPOHamiltonian" begin
         L = 3
         T = ComplexF64
-        for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+        for T in (Float64, ComplexF64), V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
             lattice = fill(V, L)
             O₁ = randn(T, V, V)
             O₁ += O₁'
@@ -135,6 +135,20 @@ module TestOperators
             H1 = FiniteMPOHamiltonian(lattice, i => O₁ for i in 1:L)
             H2 = FiniteMPOHamiltonian(lattice, (i, i + 1) => O₂ for i in 1:(L - 1))
             H3 = FiniteMPOHamiltonian(lattice, 1 => O₁, (2, 3) => O₂, (1, 3) => O₂)
+
+            @test scalartype(H1) == scalartype(H2) == scalartype(H3) == T
+            if !(T <: Complex)
+                for H in (H1, H2, H3)
+                    Hc = @constinferred complex(H)
+                    @test scalartype(Hc) == complex(T)
+                    # cannot define `real(H)`, so only test elementwise
+                    for (Wc, W) in zip(parent(Hc), parent(H))
+                        Wr = @constinferred real(Wc)
+                        @test scalartype(Wr) == T
+                        @test Wr ≈ W atol = 1.0e-6
+                    end
+                end
+            end
 
             # check if constructor works by converting back to tensormap
             H1_tm = convert(TensorMap, H1)

@@ -319,13 +319,13 @@ function TensorKit.dot(
     randomize!(ρ₀)
 
     val, = fixedpoint(
-        TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM; ishermitian,
-        krylovdim, kwargs...
+        flip(TransferMatrix(ket.AL, parent(mpo), bra.AL)), ρ₀, :LM;
+        ishermitian, krylovdim, kwargs...
     )
     return val
 end
 
-function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO <: MPOTensor}
+function TensorKit.dot(mpo₁::FiniteMPO{<:MPOTensor}, mpo₂::FiniteMPO{<:MPOTensor})
     length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
     N = length(mpo₁)
     Nhalf = N ÷ 2
@@ -344,7 +344,7 @@ function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO <
     return @plansor ρ_left[1; 2] * ρ_right[2; 1]
 end
 
-function LinearAlgebra.tr(mpo::MPO)
+function LinearAlgebra.tr(mpo::FiniteMPO)
     N = length(mpo)
     # @assert BraidingStyle(sectortype(mpo)) isa SymmetricBraiding
     Nhalf = N ÷ 2
@@ -366,6 +366,14 @@ function LinearAlgebra.tr(mpo::MPO)
     end
 
     return @plansor ρ_left[(); 1] * ρ_right[1; ()]
+end
+function LinearAlgebra.tr(mpo::InfiniteMPO; ishermitian = false, kwargs...)
+    T = prod(parent(mpo)) do O
+        @plansor Tᵢ[-1; -2] := O[-1 3; 1 2] * τ[1 2; -2 3]
+    end
+    v₀ = randn(scalartype(mpo), domain(T))
+    val, = fixedpoint(Base.Fix1(*, T), v₀, :LM; kwargs...)
+    return val
 end
 
 function Base.isapprox(

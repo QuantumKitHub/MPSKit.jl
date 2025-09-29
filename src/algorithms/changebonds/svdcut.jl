@@ -29,9 +29,9 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut; normalize::Bool = true
     for i in (length(ψ) - 1):-1:1
         U, S, V, = tsvd(ψ.C[i]; trunc = alg.trscheme, alg = alg.alg_svd)
         AL′ = ψ.AL[i] * U
-        ψ.AC[i] = (AL′, complex(S))
+        ψ.AC[i] = (AL′, S)
         AR′ = _transpose_front(V * _transpose_tail(ψ.AR[i + 1]))
-        ψ.AC[i + 1] = (complex(S), AR′)
+        ψ.AC[i + 1] = (S, AR′)
     end
     return normalize ? normalize!(ψ) : ψ
 end
@@ -87,7 +87,7 @@ function changebonds(ψ::MultilineMPS, alg::SvdCut)
     return Multiline(map(x -> changebonds(x, alg), ψ.data))
 end
 function changebonds(ψ::InfiniteMPS, alg::SvdCut)
-    copied = complex.(ψ.AL)
+    copied = copy.(ψ.AL)
     ncr = ψ.C[1]
 
     for i in 1:length(ψ)
@@ -103,7 +103,7 @@ function changebonds(ψ::InfiniteMPS, alg::SvdCut)
     ψ = if space(ncr, 1) != space(copied[1], 1)
         InfiniteMPS(copied)
     else
-        C₀ = ncr isa TensorMap ? complex(ncr) : TensorMap(complex(ncr))
+        C₀ = ncr isa TensorMap ? ncr : TensorMap(ncr)
         InfiniteMPS(copied, C₀)
     end
     return normalize!(ψ)

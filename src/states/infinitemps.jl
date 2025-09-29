@@ -193,8 +193,10 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
     # initialize tensor storage
     AC = similar.(AL)
     AR = similar.(AL)
-    C = similar(AR, typeof(C₀))
-    ψ = InfiniteMPS{eltype(AL), eltype(C)}(AL, AR, C, AC)
+    T = TensorOperations.promote_contract(scalartype(AL), scalartype(C₀))
+    TC = TensorOperations.tensoradd_type(T, C₀, ((1,), (2,)), false)
+    C = similar(AR, TC)
+    ψ = InfiniteMPS{eltype(AL), TC}(AL, AR, C, AC)
 
     # gaugefix the MPS
     gaugefix!(ψ, AL, C₀; order = :R, kwargs...)
@@ -209,8 +211,10 @@ function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}
     # initialize tensor storage
     AC = similar.(AR)
     AL = similar.(AR)
-    C = similar(AR, typeof(C₀))
-    ψ = InfiniteMPS{eltype(AL), eltype(C)}(AL, AR, C, AC)
+    T = TensorOperations.promote_contract(eltype(AR), eltype(C₀))
+    TC = TensorOperations.tensoradd_type(T, C₀, ((1,), (2,)), false)
+    C = similar(AR, TC)
+    ψ = InfiniteMPS{eltype(AL), TC}(AL, AR, C, AC)
 
     # gaugefix the MPS
     gaugefix!(ψ, AR, C₀; order = :L, kwargs...)
@@ -237,13 +241,18 @@ Base.size(ψ::InfiniteMPS, args...) = size(ψ.AL, args...)
 Base.length(ψ::InfiniteMPS) = length(ψ.AL)
 Base.eltype(ψ::InfiniteMPS) = eltype(typeof(ψ))
 Base.eltype(::Type{<:InfiniteMPS{A}}) where {A} = A
+
 Base.copy(ψ::InfiniteMPS) = InfiniteMPS(copy(ψ.AL), copy(ψ.AR), copy(ψ.C), copy(ψ.AC))
 function Base.copy!(ψ::InfiniteMPS, ϕ::InfiniteMPS)
-    copy!.(ψ.AL, ϕ.AL)
-    copy!.(ψ.AR, ϕ.AR)
-    copy!.(ψ.AC, ϕ.AC)
-    copy!.(ψ.C, ϕ.C)
+    ψ.AL .= _copy!!.(ψ.AL, ϕ.AL)
+    ψ.AR .= _copy!!.(ψ.AR, ϕ.AR)
+    ψ.AC .= _copy!!.(ψ.AC, ϕ.AC)
+    ψ.C .= _copy!!.(ψ.C, ϕ.C)
     return ψ
+end
+# possible in-place copy
+function _copy!!(dst::AbstractTensorMap, src::AbstractTensorMap)
+    return space(dst) == space(src) ? copy!(dst, src) : copy(src)
 end
 
 function Base.complex(ψ::InfiniteMPS)
