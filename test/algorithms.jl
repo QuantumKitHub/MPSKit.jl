@@ -480,7 +480,7 @@ module TestAlgorithms
         O = ising_bulk_tensor(beta)
         denom = expectation_value(ψ, O, envs)
         
-        M = ising_magnetization_tensor(beta)
+        M = ising_magnetisation_tensor(beta)
         m = local_expectation_value(ψ, M, envs) / denom
         @test m ≈ m_th atol = 1.0e-10
 
