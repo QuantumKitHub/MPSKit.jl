@@ -19,7 +19,7 @@ export symm_mul_mpo
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model,
     kitaev_model
 export classical_ising, sixvertex
-export ising_bond_tensor, ising_magnetisation_tensor, ising_energy_tensor
+export ising_bond_tensor, ising_bulk_tensor, ising_magnetisation_tensor, ising_energy_tensor
 
 # using TensorOperations
 
