@@ -18,7 +18,8 @@ export force_planar
 export symm_mul_mpo
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model,
     kitaev_model
-export classical_ising, finite_classical_ising, sixvertex
+export classical_ising, sixvertex
+export ising_bond_tensor, ising_magnetisation_tensor, ising_energy_tensor
 
 # using TensorOperations
 
@@ -300,15 +301,40 @@ function ising_bond_tensor(β)
     return nt
 end
 
-function classical_ising(; β = log(1 + sqrt(2)) / 2, L = Inf)
+function ising_bulk_tensor(β)
     nt = ising_bond_tensor(β)
-
     δbulk = zeros(ComplexF64, (2, 2, 2, 2))
     δbulk[1, 1, 1, 1] = 1
     δbulk[2, 2, 2, 2] = 1
     @tensor obulk[-1 -2; -3 -4] := δbulk[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] *
         nt[-4; 4]
     Obulk = TensorMap(obulk, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
+    return Obulk
+end
+
+function ising_magnetisation_tensor(β)
+    nt = ising_bond_tensor(β)
+    M = zeros(2, 2, 2, 2)
+    M[1, 1, 1, 1] = 1
+    M[2, 2, 2, 2] = -1
+    @tensor m[-1 -2; -3 -4] := M[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] * nt[-4; 4]
+    return TensorMap(m, ℂ^2 * ℂ^2 ← ℂ^2 * ℂ^2)
+end
+
+function ising_energy_tensor(β)
+    nt = ising_bond_tensor(β)
+    J = 1.0
+    e = ComplexF64[-J J; J -J] .* nt
+    @tensor e_hor[-1 -2; -3 -4] :=
+        O[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] * e[-4; 4]
+    @tensor e_vert[-1 -2; -3 -4] :=
+        O[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * e[-3; 3] * nt[-4; 4]
+    e = e_hor + e_vert
+    return TensorMap(e, ℂ^2 * ℂ^2 ← ℂ^2 * ℂ^2)
+end
+
+function classical_ising(; β = log(1 + sqrt(2)) / 2, L = Inf)
+    Obulk = ising_bulk_tensor(β)
 
     L == Inf && return InfiniteMPO([Obulk])
 
