@@ -112,7 +112,7 @@ end
 
 function local_expectation_value(
         ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
-        envs::AbstractMPSEnvironments = environments(ψ, H), site::Int=1
+        envs::AbstractMPSEnvironments = environments(ψ, H), site::Int = 1
     )
     return contract_mpo_expval(
         ψ.AC[site], envs.GLs[site], H[site][:, 1, 1, end], envs.GRs[site][end]
@@ -132,7 +132,7 @@ end
 
 function local_expectation_value(
         ψ::InfiniteMPS, O::MPOTensor,
-        envs::AbstractMPSEnvironments, site::Int=1
+        envs::AbstractMPSEnvironments, site::Int = 1
     )
     return contract_mpo_expval(
         ψ.AC[site], envs.GLs[site], O, envs.GRs[site]
