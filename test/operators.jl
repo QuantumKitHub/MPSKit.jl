@@ -218,6 +218,43 @@ module TestOperators
         end
     end
 
+    @testset "Finite MPOHamiltonian repeated indices" begin
+        X = randn(ComplexF64, ℂ^2, ℂ^2)
+        X += X'
+        Y = randn(ComplexF64, ℂ^2, ℂ^2)
+        Y += Y'
+        L = 4
+        chain = fill(space(X, 1), 4)
+
+        H1 = FiniteMPOHamiltonian(chain, (1,) => (X * X * Y * Y))
+        H2 = FiniteMPOHamiltonian(chain, (1, 1, 1, 1) => (X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2) => ((X * Y) ⊗ (X * Y)))
+        H2 = FiniteMPOHamiltonian(chain, (1, 2, 1, 2) => (X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2) => ((X * X * Y) ⊗ Y))
+        H2 = FiniteMPOHamiltonian(chain, (1, 1, 1, 2) => (X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2) => ((X * Y * Y) ⊗ X))
+        H2 = FiniteMPOHamiltonian(chain, (1, 2, 1, 1) => (X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2, 3) => FiniteMPO((X * X) ⊗ Y ⊗ Y))
+        H2 = FiniteMPOHamiltonian(chain, (1, 1, 2, 3) => FiniteMPO(X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2, 3) => FiniteMPO((Y * Y) ⊗ X ⊗ X))
+        H2 = FiniteMPOHamiltonian(chain, (2, 3, 1, 1) => FiniteMPO(X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2, 3) => FiniteMPO(X ⊗ (X * Y) ⊗ Y))
+        H2 = FiniteMPOHamiltonian(chain, (1, 2, 2, 3) => FiniteMPO(X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+    end
+
     @testset "InfiniteMPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces, vspaces)
         # generate a 1-2-3 body interaction
         operators = ntuple(3) do i

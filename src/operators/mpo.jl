@@ -390,3 +390,53 @@ function Base.isapprox(
     # don't take square roots to avoid precision loss
     return norm₁₂² ≤ max(atol^2, rtol^2 * max(norm₁², norm₂²))
 end
+
+@doc """
+    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=SDD(), trscheme)
+    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=SDD(), trscheme)
+
+Compose the mpo with a swap gate applied to indices `i` and `i + 1`, effectively creating an
+operator that acts on the Hilbert spaces with those factors swapped.
+The keyword arguments `alg` and `trscheme` can be used to control how the resulting tensor
+is truncated again.
+""" swap, swap!
+
+swap(mpo::FiniteMPO, i::Integer; kwargs...) = swap!(copy(mpo), i; kwargs...)
+function swap!(
+        mpo::FiniteMPO{<:MPOTensor}, i::Integer;
+        inv::Bool = false,
+        alg = SDD(), trscheme = truncbelow(eps(real(scalartype(mpo)))^(4 / 5))
+    )
+    O₁, O₂ = mpo[i], mpo[i + 1]
+
+    if inv
+        @plansor O₂₁[-1 -2 -3; -4 -5 -6] :=
+            τ'[-3 -6; 4 5] * O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ[2 3; -1 -4]
+    else
+        @plansor O₂₁[-1 -2 -3; -4 -5 -6] :=
+            τ[-3 -6; 4 5] * O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ'[2 3; -1 -4]
+    end
+
+    U, S, Vᴴ, = tsvd!(O₂₁; alg, trunc = trscheme)
+    sqrtS = sqrt(S)
+    @plansor mpo[i][-1 -2; -3 -4] := U[-3 -1 -2; 1] * sqrtS[1; -4]
+    @plansor mpo[i + 1][-1 -2; -3 -4] := sqrtS[-1; 1] * Vᴴ[1; -3 -4 -2]
+    return mpo
+end
+
+@doc """
+    multiply_neighbours(mpo::FiniteMPO, i::Integer)
+    multiply_neighbours!(mpo::FiniteMPO, i::Integer)
+
+Construct the mpo of length `length(mpo) - 1` which is formed by multiplying the operators
+on site `i` and `i + 1`.
+""" multiply_neighbours, multiply_neighbours!
+
+multiply_neighbours(mpo::FiniteMPO, i::Integer) = multiply_neighbours!(copy(mpo), i)
+function multiply_neighbours!(mpo::FiniteMPO{<:MPOTensor}, i::Integer)
+    1 <= i < length(mpo) || throw(BoundsError(mpo, i))
+    O₁ = mpo[i]
+    O₂ = popat!(parent(mpo), i + 1)
+    @plansor mpo[i][-1 -2; -3 -4] := O₁[-1 -2; 1 2] * τ[1 2; 3 4] * O₂[3 4; -3 -4]
+    return mpo
+end

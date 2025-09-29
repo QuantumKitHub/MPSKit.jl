@@ -309,14 +309,21 @@ function instantiate_operator(state::AbstractMPS, O::Pair)
     return instantiate_operator(physicalspace(state), O)
 end
 function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O)::Pair)
-    inds = inds′ isa Int ? tuple(inds′) : inds′
-    mpo = O isa FiniteMPO ? O : FiniteMPO(O)
+    inds = inds′ isa Int ? [inds′] : inds′
+    mpo = O isa FiniteMPO ? copy(O) : FiniteMPO(O)
 
     # convert to linear index type
-    operators = parent(mpo)
-    indices = map(inds) do I
-        return Base._to_linear_index(lattice, Tuple(I)...) # this should mean all inds are valid...
+    indices = Vector{Int}(undef, length(inds))
+    for i in eachindex(indices)
+        indices[i] = Base._to_linear_index(lattice, Tuple(inds[i])...) # this should mean all inds are valid...
     end
+
+    # sort indices and deduplicate
+    indices, mpo = canonicalize_indices!(indices, mpo)
+    operators = parent(mpo)
+
+    @assert allunique(indices) && issorted(indices) "From here on we require unique and ascending indices\n$indices"
+
     T = eltype(mpo)
     local_mpo = Union{T, scalartype(T)}[]
     sites = Int[]
@@ -337,6 +344,25 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     end
 
     return sites => local_mpo
+end
+
+function canonicalize_indices!(indices, mpo)
+    # swap non-sorted entries
+    for i in 2:length(indices)
+        for j in reverse(i:length(indices))
+            if indices[j] < indices[j - 1]
+                swap!(mpo, j - 1)
+                indices[j - 1], indices[j] = indices[j], indices[j - 1]
+            end
+        end
+    end
+    for i in length(indices):-1:2
+        if indices[i] == indices[i - 1]
+            multiply_neighbours!(mpo, i - 1)
+            popat!(indices, i)
+        end
+    end
+    return indices, mpo
 end
 
 # yields the promoted tensortype of all tensors
