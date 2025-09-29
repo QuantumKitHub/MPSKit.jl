@@ -245,8 +245,11 @@ module TestOperators
 
         e1 = expectation_value(ψ2, H1)
         e3 = expectation_value(ψ2, H3)
+        e3_1 = local_expectation_value(ψ2, H3, environments(ψ2, H3), 1)
+        e3_2 = local_expectation_value(ψ2, H3, environments(ψ2, H3), 2)
 
         @test e1 + e3 ≈ expectation_value(ψ2, H1 + H3) atol = 1.0e-10
+        @test e3 ≈ e3_1 + e3_2 atol = 1.0e-10
 
         H4 = H1 + H3
         h4 = H4 * H4
