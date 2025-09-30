@@ -324,6 +324,7 @@ end
 function ising_energy_tensor(β)
     nt = ising_bond_tensor(β)
     O = ising_bulk_tensor(β).data
+    O = reshape(O, 2, 2, 2, 2)
     J = 1.0
     e = ComplexF64[-J J; J -J] .* nt
     @tensor e_hor[-1 -2; -3 -4] :=

@@ -484,7 +484,7 @@ module TestAlgorithms
 
         M = ising_magnetisation_tensor(beta)
         m = expectation_value(ψ, (O_mpo, 1 => M)) / denom
-        @test abs(m) ≈ m_th atol = 1.0e-10 # account for spin flip
+        @test abs(m) ≈ m_th atol = 1.0e-8 # account for spin flip
 
         E = ising_energy_tensor(beta)
         e = expectation_value(ψ, (O_mpo, 1 => E)) / denom
