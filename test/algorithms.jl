@@ -481,11 +481,11 @@ module TestAlgorithms
         denom = expectation_value(ψ, O, envs)
 
         M = ising_magnetisation_tensor(beta)
-        m = local_expectation_value(ψ, M, envs) / denom
-        @test m ≈ m_th atol = 1.0e-10
+        m = expectation_value(ψ, (O_mpo, 1 => M)) / denom
+        @test abs(m) ≈ m_th atol = 1.0e-10 # account for spin flip
 
         E = ising_energy_tensor(beta)
-        e = local_expectation_value(ψ, E, envs) / denom
+        e = expectation_value(ψ, (O_mpo, 1 => E)) / denom
         @test e ≈ e_th atol = 1.0e-2
     end
 
