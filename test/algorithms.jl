@@ -477,16 +477,15 @@ module TestAlgorithms
         f = -log(λ) / beta
         @test f ≈ f_th atol = 1.0e-10
 
-        O = ising_bulk_tensor(beta)
+        O, M, E = classical_ising_tensors(beta)
+        
         denom = expectation_value(ψ, O_mpo, envs)
         denom2 = expectation_value(ψ, (O_mpo, 1 => O), envs)
         @test denom ≈ denom2 atol = 1.0e-10
 
-        M = ising_magnetisation_tensor(beta)
         m = expectation_value(ψ, (O_mpo, 1 => M)) / denom
         @test abs(m) ≈ m_th atol = 1.0e-8 # account for spin flip
 
-        E = ising_energy_tensor(beta)
         e = expectation_value(ψ, (O_mpo, 1 => E)) / denom
         @test e ≈ e_th atol = 1.0e-2
     end
