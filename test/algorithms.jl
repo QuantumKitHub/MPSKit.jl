@@ -478,7 +478,9 @@ module TestAlgorithms
         @test f ≈ f_th atol = 1.0e-10
 
         O = ising_bulk_tensor(beta)
-        denom = expectation_value(ψ, O, envs)
+        denom = expectation_value(ψ, O_mpo, envs)
+        denom2 = expectation_value(mps, (O_mpo, 1 => O), envs)
+        @test denom ≈ denom2 atol = 1.0e-10
 
         M = ising_magnetisation_tensor(beta)
         m = expectation_value(ψ, (O_mpo, 1 => M)) / denom
