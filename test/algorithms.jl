@@ -478,7 +478,7 @@ module TestAlgorithms
         @test f ≈ f_th atol = 1.0e-10
 
         O, M, E = classical_ising_tensors(beta)
-        
+
         denom = expectation_value(ψ, O_mpo, envs)
         denom2 = expectation_value(ψ, (O_mpo, 1 => O), envs)
         @test denom ≈ denom2 atol = 1.0e-10

@@ -293,14 +293,20 @@ function kitaev_model(; t = 1.0, mu = 1.0, Delta = 1.0, L = Inf)
     end
 end
 
-function classical_ising_tensors(beta)
+function ising_bond_tensor(β)
     J = 1.0
-    K = beta * J
+    K = β * J
 
     # Boltzmann weights
     t = ComplexF64[exp(K) exp(-K); exp(-K) exp(K)]
     r = eigen(t)
     nt = r.vectors * sqrt(Diagonal(r.values)) * r.vectors
+    return nt
+end
+
+function classical_ising_tensors(beta)
+    nt = ising_bond_tensor(beta)
+    J = 1.0
 
     # local partition function tensor
     δbulk = zeros(ComplexF64, (2, 2, 2, 2))
@@ -333,6 +339,7 @@ function classical_ising(; β = log(1 + sqrt(2)) / 2, L = Inf)
 
     L == Inf && return InfiniteMPO([Obulk])
 
+    nt = ising_bond_tensor(β)
     δleft = zeros(ComplexF64, (1, 2, 2, 2))
     δleft[1, 1, 1, 1] = 1
     δleft[1, 2, 2, 2] = 1
