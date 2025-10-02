@@ -112,7 +112,7 @@ function randomize!(a::AbstractBlockTensorMap)
     return a
 end
 
-_totuple(t) = t isa Tuple ? t : tuple(t)
+_totuple(t) = t isa Tuple ? t : (t isa Symbol ? tuple(t) : Tuple(t))
 
 """
     tensorexpr(name, ind_out, [ind_in])
