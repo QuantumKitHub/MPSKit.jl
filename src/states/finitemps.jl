@@ -211,14 +211,13 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize = false, overwrite 
     # vectors anyways, maybe deprecate `overwrite`.
     As = overwrite ? As : copy(As)
     N = length(As)
-    for i in 1:(N - 1)
-        As[i], C = leftorth(As[i]; alg = QRpos())
+    As[1] = MatrixAlgebraKit.copy_input(qr_compact, As[1])
+    local C
+    for i in eachindex(As)
+        As[i], C = qr_compact!(As[i]; positive = true)
         normalize && normalize!(C)
-        As[i + 1] = _transpose_front(C * _transpose_tail(As[i + 1]))
+        i == N || (As[i + 1] = _transpose_front(C * _transpose_tail(As[i + 1])))
     end
-
-    As[end], C = leftorth(As[end]; alg = QRpos())
-    normalize && normalize!(C)
 
     A = eltype(As)
     B = typeof(C)
@@ -533,11 +532,11 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
     F₁ = isometry(
         storagetype(ψ), (_lastspace(ψ₁.AL[1]) ⊕ _lastspace(ψ₂.AL[1]))', _lastspace(ψ₁.AL[1])'
     )
-    F₂ = leftnull(F₁)
+    F₂ = left_null(F₁)
     @assert _lastspace(F₂) == _lastspace(ψ₂.AL[1])
 
     AL = ψ₁.AL[1] * F₁' + ψ₂.AL[1] * F₂'
-    ψ.ALs[1], R = leftorth!(AL)
+    ψ.ALs[1], R = left_orth!(AL)
 
     for i in 2:halfN
         AL₁ = _transpose_front(F₁ * _transpose_tail(ψ₁.AL[i]))
@@ -546,11 +545,11 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
         F₁ = isometry(
             storagetype(ψ), (_lastspace(AL₁) ⊕ _lastspace(ψ₂.AL[i]))', _lastspace(AL₁)'
         )
-        F₂ = leftnull(F₁)
+        F₂ = left_null(F₁)
         @assert _lastspace(F₂) == _lastspace(ψ₂.AL[i])
 
         AL = _transpose_front(R * _transpose_tail(AL₁ * F₁' + AL₂ * F₂'))
-        ψ.ALs[i], R = leftorth!(AL)
+        ψ.ALs[i], R = left_orth!(AL)
     end
 
     C₁ = F₁ * ψ₁.C[halfN]
@@ -560,11 +559,11 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
     F₁ = isometry(
         storagetype(ψ), _firstspace(ψ₁.AR[end]) ⊕ _firstspace(ψ₂.AR[end]), _firstspace(ψ₁.AR[end])
     )
-    F₂ = leftnull(F₁)
+    F₂ = left_null(F₁)
     @assert _lastspace(F₂) == _firstspace(ψ₂.AR[end])'
 
     AR = F₁ * _transpose_tail(ψ₁.AR[end]) + F₂ * _transpose_tail(ψ₂.AR[end])
-    L, AR′ = rightorth!(AR)
+    L, AR′ = right_orth!(AR)
     ψ.ARs[end] = _transpose_front(AR′)
 
     for i in Iterators.reverse((halfN + 1):(length(ψ) - 1))
@@ -574,11 +573,11 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
         F₁ = isometry(
             storagetype(ψ), _firstspace(ψ₁.AR[i]) ⊕ _firstspace(AR₂), _firstspace(ψ₁.AR[i])
         )
-        F₂ = leftnull(F₁)
+        F₂ = left_null(F₁)
         @assert _lastspace(F₂) == _firstspace(AR₂)'
 
         AR = _transpose_tail(_transpose_front(F₁ * AR₁ + F₂ * AR₂) * L)
-        L, AR′ = rightorth!(AR)
+        L, AR′ = right_orth!(AR)
         ψ.ARs[i] = _transpose_front(AR′)
     end
 
