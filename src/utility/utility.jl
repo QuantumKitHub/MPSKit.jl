@@ -22,34 +22,29 @@ _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
 function decompose_localmpo(
-        inpmpo::AbstractTensorMap{T, PS, N, N}, trunc = truncbelow(Defaults.tol)
+        inpmpo::AbstractTensorMap{T, PS, N, N}, trunc = trunctol(; atol = eps(real(T))^(3 / 4))
     ) where {T, PS, N}
     N == 2 && return [inpmpo]
 
     leftind = (N + 1, 1, 2)
     rightind = (ntuple(x -> x + N + 1, N - 1)..., reverse(ntuple(x -> x + 2, N - 2))...)
-    U, S, V = tsvd(transpose(inpmpo, (leftind, rightind)); trunc = trunc)
+    V, C = left_orth!(transpose(inpmpo, (leftind, rightind)); trunc)
 
-    A = transpose(U * S, ((2, 3), (1, 4)))
-    B = transpose(
-        V,
-        ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1))
-    )
+    A = transpose(V, ((2, 3), (1, 4)))
+    B = transpose(C, ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1)))
     return [A; decompose_localmpo(B)]
 end
 
 # given a state with util legs on the side, decompose using svds to form an array of mpstensors
 function decompose_localmps(
-        state::AbstractTensorMap{T, PS, N, 1}, trunc = truncbelow(Defaults.tol)
+        state::AbstractTensorMap{T, PS, N, 1}, trunc = trunctol(; atol = eps(real(T))^(3 / 4))
     ) where {T, PS, N}
     N == 2 && return [state]
 
     leftind = (1, 2)
     rightind = reverse(ntuple(x -> x + 2, N - 1))
-    U, S, V = tsvd(transpose(state, (leftind, rightind)); trunc = trunc)
-
-    A = U * S
-    B = _transpose_front(V)
+    A, C = left_orth!(transpose(state, (leftind, rightind)); trunc)
+    B = _transpose_front(C)
     return [A; decompose_localmps(B)]
 end
 
