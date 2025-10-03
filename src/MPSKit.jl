@@ -59,6 +59,7 @@ using Compat: @compat
 # -------
 using TensorKit
 using TensorKit: BraidingTensor
+using MatrixAlgebraKit
 using BlockTensorKit
 using BlockTensorKit: TensorMapSumSpace
 using TensorOperations
