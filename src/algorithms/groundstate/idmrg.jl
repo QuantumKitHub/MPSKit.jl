@@ -127,8 +127,8 @@ $(TYPEDFIELDS)
     "algorithm used for the singular value decomposition"
     alg_svd::S = Defaults.alg_svd()
 
-    "algorithm used for [truncation](@extref TensorKit.tsvd) of the two-site update"
-    trscheme::TruncationScheme
+    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the two-site update"
+    trscheme::TruncationStrategy
 end
 
 function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs = environments(ost, H))
@@ -151,7 +151,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs = environments(
                 h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -170,7 +170,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs = environments(
             h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-            al, c, ar, = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+            al, c, ar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
             normalize!(c)
 
             ψ.AL[end] = al
@@ -193,7 +193,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs = environments(
                 h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[pos] = al
@@ -212,7 +212,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs = environments(
             ac2 = AC2(ψ, 0; kind = :ACAR)
             h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
-            al, c, ar, = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+            al, c, ar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
             normalize!(c)
 
             ψ.AL[end] = al

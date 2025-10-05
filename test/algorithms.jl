@@ -40,7 +40,8 @@ module TestAlgorithms
 
             # test using low variance
             @test sum(δ) ≈ 0 atol = 1.0e-3
-            @test v < v₀ && v < 1.0e-2
+            @test v < v₀
+            @test v < 1.0e-2
         end
 
         @testset "DMRG2" begin
@@ -59,7 +60,8 @@ module TestAlgorithms
 
             # test using low variance
             @test sum(δ) ≈ 0 atol = 1.0e-3
-            @test v < v₀ && v < 1.0e-2
+            @test v < v₀
+            @test v < 1.0e-2
         end
 
         @testset "GradientGrassmann" begin
@@ -1045,7 +1047,7 @@ module TestAlgorithms
         H = XY_model(U1Irrep; L)
 
         H_dense = convert(TensorMap, H)
-        vals_dense = eigvals(H_dense)
+        vals_dense = TensorKit.SectorDict(c => sort(v; by = real) for (c, v) in eigvals(H_dense))
 
         tol = 1.0e-18 # tolerance required to separate degenerate eigenvalues
         alg = MPSKit.Defaults.alg_eigsolve(; dynamic_tols = false, tol)
@@ -1080,7 +1082,7 @@ module TestAlgorithms
         # so effectively shifting the charges by -1
         H_shift = MPSKit.add_physical_charge(H, U1Irrep.([1, 0, 0, 0]))
         H_shift_dense = convert(TensorMap, H_shift)
-        vals_shift_dense = eigvals(H_shift_dense)
+        vals_shift_dense = TensorKit.SectorDict(c => sort(v; by = real) for (c, v) in eigvals(H_shift_dense))
         for (sector, vals) in vals_dense
             sector′ = only(sector ⊗ U1Irrep(-1))
             @test vals ≈ vals_shift_dense[sector′]

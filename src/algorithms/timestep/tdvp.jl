@@ -72,11 +72,11 @@ function timestep(
     end
 
     if leftorthflag
-        regauge!.(temp_ACs, temp_Cs; alg = TensorKit.QRpos())
+        regauge!.(temp_ACs, temp_Cs)
         ψ′ = InfiniteMPS(temp_ACs, ψ.C[end]; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
     else
         circshift!(temp_Cs, 1)
-        regauge!.(temp_Cs, temp_ACs; alg = TensorKit.LQpos())
+        regauge!.(temp_Cs, temp_ACs)
         ψ′ = InfiniteMPS(ψ.C[0], temp_ACs; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
     end
 
@@ -158,7 +158,7 @@ $(TYPEDFIELDS)
     alg_svd::S = Defaults.alg_svd()
 
     "algorithm used for truncation of the two-site update"
-    trscheme::TruncationScheme
+    trscheme::TruncationStrategy
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
@@ -176,7 +176,7 @@ function timestep!(
         Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs)
         ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
 
-        nal, nc, nar = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+        nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
         ψ.AC[i] = (nal, complex(nc))
         ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
@@ -195,7 +195,7 @@ function timestep!(
         Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs)
         ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator; imaginary_evolution)
 
-        nal, nc, nar = tsvd!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+        nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
         ψ.AC[i - 1] = (nal, complex(nc))
         ψ.AC[i] = (complex(nc), _transpose_front(nar))
 

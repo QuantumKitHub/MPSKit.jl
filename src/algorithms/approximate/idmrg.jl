@@ -82,7 +82,7 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ACAR
                     )
-                    al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -104,7 +104,7 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ALAC
                     )
-                    al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
