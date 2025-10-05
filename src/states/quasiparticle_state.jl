@@ -39,7 +39,7 @@ function LeftGaugedQP(
     )
     # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
-    VLs = convert(Vector, map(leftnull, left_gs.AL))
+    VLs = convert(Vector, map(left_null, left_gs.AL))
     Xs = map(enumerate(VLs)) do (loc, vl)
         x = similar(
             vl,
@@ -73,7 +73,7 @@ function RightGaugedQP(
     )
     # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
-    VRs = convert(Vector, map(rightnull! ∘ _transpose_tail, right_gs.AR))
+    VRs = convert(Vector, map(right_null! ∘ _transpose_tail, right_gs.AR))
     Xs = map(enumerate(VRs)) do (i, vr)
         x = similar(
             vr,
@@ -309,7 +309,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S <: FiniteMPS}
     ou = oneunit(utl)
     utsp = ou ⊕ ou
     upper = isometry(storagetype(site_type(v.left_gs)), utsp, ou)
-    lower = leftnull(upper)
+    lower = left_null(upper)
     upper_I = upper * upper'
     lower_I = lower * lower'
     uplow_I = upper * lower'
