@@ -76,13 +76,13 @@ function _embedders(spaces)
     totalspace = reduce(⊕, spaces)
 
     maps = [isometry(totalspace, first(spaces))]
-    restmap = leftnull(first(maps))
+    restmap = left_null(first(maps))
 
     for sp in spaces[2:end]
         cm = isometry(domain(restmap), sp)
 
         push!(maps, restmap * cm)
-        restmap = restmap * leftnull(cm)
+        restmap = restmap * left_null(cm)
     end
 
     return maps
@@ -151,28 +151,28 @@ function check_unambiguous_braiding(V::VectorSpace)
 end
 
 # temporary workaround for the fact that left_orth and right_orth are poorly designed:
-function _left_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm)
+function _left_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm, trunc::MatrixAlgebraKit.TruncationStrategy = notrunc())
     if alg isa LAPACK_HouseholderQR
-        return left_orth!(t; kind = :qr, alg_qr = alg)
+        return left_orth!(t; kind = :qr, alg_qr = alg, trunc)
     elseif alg isa LAPACK_HouseholderLQ
-        return left_orth!(t; kind = :qr, alg_qr = LAPACK_HouseholderQR(; alg.kwargs...))
+        return left_orth!(t; kind = :qr, alg_qr = LAPACK_HouseholderQR(; alg.kwargs...), trunc)
     elseif alg isa PolarViaSVD
-        return left_orth!(t; kind = :polar, alg_polar = alg)
+        return left_orth!(t; kind = :polar, alg_polar = alg, trunc)
     elseif alg isa LAPACK_SVDAlgorithm
-        return left_orth!(t; kind = :svd, alg_svd = alg)
+        return left_orth!(t; kind = :svd, alg_svd = alg, trunc)
     else
         error(lazy"unkown algorithm $alg")
     end
 end
-function _right_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm)
+function _right_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm, trunc::TruncationStrategy = notrunc())
     if alg isa LAPACK_HouseholderLQ
-        return right_orth!(t; kind = :lq, alg_lq = alg)
-    elseif alg isa LAPACK_HouseholderQr
-        return right_orth!(t; kind = :lq, alg_lq = LAPACK_HouseholderLQ(; alg.kwargs...))
+        return right_orth!(t; kind = :lq, alg_lq = alg, trunc)
+    elseif alg isa LAPACK_HouseholderQR
+        return right_orth!(t; kind = :lq, alg_lq = LAPACK_HouseholderLQ(; alg.kwargs...), trunc)
     elseif alg isa PolarViaSVD
-        return right_orth!(t; kind = :polar, alg_polar = alg)
+        return right_orth!(t; kind = :polar, alg_polar = alg, trunc)
     elseif alg isa LAPACK_SVDAlgorithm
-        return right_orth!(t; kind = :svd, alg_svd = alg)
+        return right_orth!(t; kind = :svd, alg_svd = alg, trunc)
     else
         error(lazy"unkown algorithm $alg")
     end

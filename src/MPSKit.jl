@@ -60,6 +60,7 @@ using Compat: @compat
 using TensorKit
 using TensorKit: BraidingTensor
 using MatrixAlgebraKit
+using MatrixAlgebraKit: TruncationStrategy, PolarViaSVD, LAPACK_SVDAlgorithm
 using BlockTensorKit
 using BlockTensorKit: TensorMapSumSpace
 using TensorOperations
