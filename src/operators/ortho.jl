@@ -1,6 +1,6 @@
 function left_canonicalize!(
         H::FiniteMPOHamiltonian, i::Int;
-        alg = QRpos(), trscheme::TruncationScheme = notrunc()
+        alg = Defaults.alg_qr(), trscheme::TruncationStrategy = notrunc()
     )
     1 ≤ i < length(H) || throw(ArgumentError("Bounds error in canonicalize"))
 
@@ -19,14 +19,7 @@ function left_canonicalize!(
     # QR of second column
     if size(W, 1) == 1
         tmp = transpose(C′, ((2, 1), (3,)))
-
-        if trscheme == notrunc()
-            Q, R = leftorth!(tmp; alg)
-        else
-            @assert alg == SVD() || alg == SDD()
-            Q, Σ, Vᴴ = tsvd!(tmp; alg, trunc = trscheme)
-            R = Σ * Vᴴ
-        end
+        Q, R = _left_orth!(tmp; alg, trunc = trscheme)
 
         if dim(R) == 0 # fully truncated
             V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
@@ -42,13 +35,8 @@ function left_canonicalize!(
         H[i] = JordanMPOTensor(codomain(W) ← physicalspace(W) ⊗ V, Q1, W.B, Q2, W.D)
     else
         tmp = transpose(cat(insertleftunit(C′, 1), W.A; dims = 1), ((3, 1, 2), (4,)))
-        if trscheme == notrunc()
-            Q, R = leftorth!(tmp; alg)
-        else
-            @assert alg == SVD() || alg == SDD()
-            Q, Σ, Vᴴ = tsvd!(tmp; alg, trunc = trscheme)
-            R = Σ * Vᴴ
-        end
+        Q, R = _left_orth!(tmp; alg, trunc = trscheme)
+
         if dim(R) == 0 # fully truncated
             V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
             Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
@@ -98,7 +86,7 @@ end
 
 function right_canonicalize!(
         H::FiniteMPOHamiltonian, i::Int;
-        alg = LQpos(), trscheme::TruncationScheme = notrunc()
+        alg = Defaults.alg_lq(), trscheme::TruncationStrategy = notrunc()
     )
     1 < i ≤ length(H) || throw(ArgumentError("Bounds error in canonicalize"))
 
@@ -117,13 +105,7 @@ function right_canonicalize!(
     # LQ of second row
     if size(W, 4) == 1
         tmp = transpose(B′, ((1,), (3, 2)))
-        if trscheme == notrunc()
-            R, Q = rightorth!(tmp; alg)
-        else
-            @assert alg == SVD() || alg == SDD()
-            U, Σ, Q = tsvd!(tmp; alg, trunc = trscheme)
-            R = U * Σ
-        end
+        R, Q = _right_orth!(tmp; alg, trunc = trscheme)
 
         if dim(R) == 0
             V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
@@ -139,13 +121,7 @@ function right_canonicalize!(
         H[i] = JordanMPOTensor(V ⊗ physicalspace(W) ← domain(W), Q1, Q2, W.C, W.D)
     else
         tmp = transpose(cat(insertleftunit(B′, 4), W.A; dims = 4), ((1,), (3, 4, 2)))
-        if trscheme == notrunc()
-            R, Q = rightorth!(tmp; alg)
-        else
-            @assert alg == SVD() || alg == SDD()
-            U, Σ, Q = tsvd!(tmp; alg, trunc = trscheme)
-            R = U * Σ
-        end
+        R, Q = _right_orth!(tmp; alg, trunc = trscheme)
         if dim(R) == 0
             V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
             Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
