@@ -316,7 +316,7 @@ function (H::JordanMPO_AC_Hamiltonian)(x::MPSTensor)
 
     if !ismissing(H.A)
         GLW, GR = H.A
-        @tensor y[-1 -2; -3] += GLW[-1 -2 4; 3 2] * x[3 2; 1] * GR[4 1; -3]
+        @tensor y[-1 -2; -3] += GLW[-1 -2 3; 1 2] * x[1 2; 4] * GR[3 4; -3]
     end
 
     return y
@@ -336,7 +336,7 @@ function (H::JordanMPO_AC2_Hamiltonian)(x::MPOTensor)
 
     if !ismissing(H.AA)
         GLW, GWR = H.AA
-        @tensor y[-1 -2; -3 -4] += GLW[-1 -2 5; 4 3] * x[4 3; 2 1] * GWR[5 2 1; -3 -4]
+        @tensor y[-1 -2; -3 -4] += GLW[-1 -2 3; 1 2] * x[1 2; 4 5] * GWR[3 4 5; -3 -4]
     end
 
     return y
