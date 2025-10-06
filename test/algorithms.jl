@@ -462,6 +462,34 @@ module TestAlgorithms
         end
     end
 
+    @testset "2D infinite partition functions" verbose = true begin
+        beta = 0.5 # ferromagnetic phase
+        f_th = -2.0515856253898357
+        m_th = 0.911319377877496
+        e_th = -1.7455645753125533
+
+        alg = VOMPS(; tol = 1.0e-8, verbosity = verbosity_conv)
+        O_mpo = classical_ising(; β = beta)
+        ψ₀ = InfiniteMPS(ℂ^2, ℂ^10)
+        ψ, envs = leading_boundary(ψ₀, O_mpo, alg)
+
+        λ = expectation_value(ψ, O_mpo, envs)
+        f = -log(λ) / beta
+        @test f ≈ f_th atol = 1.0e-10
+
+        O, M, E = classical_ising_tensors(beta)
+
+        denom = expectation_value(ψ, O_mpo, envs)
+        denom2 = expectation_value(ψ, (O_mpo, 1 => O), envs)
+        @test denom ≈ denom2 atol = 1.0e-10
+
+        m = expectation_value(ψ, (O_mpo, 1 => M)) / denom
+        @test abs(m) ≈ m_th atol = 1.0e-8 # account for spin flip
+
+        e = expectation_value(ψ, (O_mpo, 1 => E)) / denom
+        @test e ≈ e_th atol = 1.0e-2
+    end
+
     @testset "excitations" verbose = true begin
         @testset "infinite (ham)" begin
             H = repeat(force_planar(heisenberg_XXX()), 2)
