@@ -138,9 +138,12 @@ function AC_hamiltonian(
         finished = removeunit(GL[end], 2)
     end
 
-    # continuing
-    A = W.A
-    continuing = (GL[2:(end - 1)], A, GR[2:(end - 1)])
+    if nonzero_length(W.A) > 0
+        @tensor GLW[-1 -2 -3; -4 -5] ≔ GL[2:(end - 1)][-1 1; -4] * W.A[1 -2; -5 -3]
+        continuing = (GLW, permute(GR[2:(end - 1)], (2, 1), (3,)))
+    else
+        continuing = missing
+    end
 
     return JordanMPO_AC_Hamiltonian(
         onsite, not_started, finished, starting, ending, continuing
@@ -287,7 +290,15 @@ function AC2_hamiltonian(
 
     # continuing - continuing
     # TODO: MPODerivativeOperator code reuse + optimization
-    AA = (GL[2:(end - 1)], W1.A, W2.A, GR[2:(end - 1)])
+    # TODO: One should only calculate these operators if necessary. One can do this by checking nonzero_length(A1) > 0 && nonzero_length(A2) > 0 and then setting AA=missing or as we discussed via bit matrix multiplication.
+    ## TODO: Think about how one could and whether one should store these objects and use them for (a) advancing environments in iDMRG, (b) reuse ind backwards-sweep in IDMRG, (c) subspace expansion
+    if nonzero_length(W1.A) > 0 && nonzero_length(W2.A) > 0
+        @tensor GLW[-1 -2 -3; -4 -5] ≔ GL[2:(end -1)][-1 1; -4] * W1.A[1 -2; -5 -3]
+        @tensor GWR[-1 -2 -3; -4 -5] ≔ W2.A[-1 -5; -3 1] * GR[2:(end -1)][-2 1; -4]
+        AA = (GLW, GWR)
+    else
+        AA = missing
+    end
 
     return JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
 end
@@ -303,9 +314,9 @@ function (H::JordanMPO_AC_Hamiltonian)(x::MPSTensor)
     ismissing(H.C) || @plansor y[-1 -2; -3] += x[-1 2; 1] * H.C[-2 -3; 2 1]
     ismissing(H.B) || @plansor y[-1 -2; -3] += H.B[-1 -2; 1 2] * x[1 2; -3]
 
-    GL, A, GR = H.A
-    if nonzero_length(A) > 0
-        @plansor y[-1 -2; -3] += GL[-1 5; 4] * x[4 2; 1] * A[5 -2; 2 3] * GR[1 3; -3]
+    if !ismissing(H.A)
+        GLW, GR = H.A
+        @tensor y[-1 -2; -3] += GLW[-1 -2 3; 1 2] * x[1 2; 4] * GR[3 4; -3]
     end
 
     return y
@@ -323,11 +334,9 @@ function (H::JordanMPO_AC2_Hamiltonian)(x::MPOTensor)
     ismissing(H.DE) || @plansor y[-1 -2; -3 -4] += x[-1 1; -3 -4] * H.DE[-2; 1]
     ismissing(H.EE) || @plansor y[-1 -2; -3 -4] += x[1 -2; -3 -4] * H.EE[-1; 1]
 
-    GL, A1, A2, GR = H.AA
-    if nonzero_length(A1) > 0 && nonzero_length(A2) > 0
-        # TODO: there are too many entries here, this could be further optimized
-        @plansor y[-1 -2; -3 -4] += GL[-1 7; 6] * x[6 5; 1 3] * A1[7 -2; 5 4] *
-            A2[4 -4; 3 2] * GR[1 2; -3]
+    if !ismissing(H.AA)
+        GLW, GWR = H.AA
+        @tensor y[-1 -2; -3 -4] += GLW[-1 -2 3; 1 2] * x[1 2; 4 5] * GWR[3 4 5; -3 -4]
     end
 
     return y
