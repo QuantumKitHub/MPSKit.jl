@@ -10,26 +10,7 @@ struct JordanMPO_AC_Hamiltonian{O1, O2, O3} <: DerivativeOperator
     E::Union{O1, Missing} # finished
     C::Union{O2, Missing} # starting
     B::Union{O2, Missing} # ending
-    A::O3                # continuing
-    function JordanMPO_AC_Hamiltonian(
-            onsite, not_started, finished, starting, ending, continuing
-        )
-        # obtaining storagetype of environments since these should have already mixed
-        # the types of the operator and state
-        gl = @coalesce(onsite, not_started, finished, starting, ending)
-        S = spacetype(gl)
-        M = storagetype(gl)
-        O1 = tensormaptype(S, 1, 1, M)
-        O2 = tensormaptype(S, 2, 2, M)
-        return new{O1, O2, typeof(continuing)}(
-            onsite, not_started, finished, starting, ending, continuing
-        )
-    end
-    function JordanMPO_AC_Hamiltonian{O1, O2, O3}(
-            onsite, not_started, finished, starting, ending, continuing
-        ) where {O1, O2, O3}
-        return new{O1, O2, O3}(onsite, not_started, finished, starting, ending, continuing)
-    end
+    A::Union{O3, Missing} # continuing
 end
 
 """
@@ -45,26 +26,10 @@ struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4} <: DerivativeOperator
     CB::Union{O2, Missing} # starting left - ending right
     CA::Union{O3, Missing} # starting left - continuing right
     AB::Union{O3, Missing} # continuing left - ending right
-    AA::O4                 # continuing left - continuing right
+    AA::Union{O4, Missing} # continuing left - continuing right
     BE::Union{O2, Missing} # ending left
     DE::Union{O1, Missing} # onsite left
     EE::Union{O1, Missing} # finished
-    function JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-        # obtaining storagetype of environments since these should have already mixed
-        # the types of the operator and state
-        gl = @coalesce(II, IC, ID, CB, CA, AB, BE, DE, EE)
-        S = spacetype(gl)
-        M = storagetype(gl)
-        O1 = tensormaptype(S, 1, 1, M)
-        O2 = tensormaptype(S, 2, 2, M)
-        O3 = tensormaptype(S, 3, 3, M)
-        return new{O1, O2, O3, typeof(AA)}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-    end
-    function JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
-            II, IC, ID, CB, CA, AB, AA, BE, DE, EE
-        ) where {O1, O2, O3, O4}
-        return new{O1, O2, O3, O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
-    end
 end
 
 # Constructors
@@ -139,7 +104,13 @@ function AC_hamiltonian(
         continuing = missing
     end
 
-    return JordanMPO_AC_Hamiltonian(
+    S = spacetype(GL)
+    M = storagetype(GL)
+    O1 = tensormaptype(S, 1, 1, M)
+    O2 = tensormaptype(S, 2, 2, M)
+    O3 = Core.Compiler.return_type(AC_hamiltonian, typeof((GL_2, W.A, GR_2)))
+
+    return JordanMPO_AC_Hamiltonian{O1, O2, O3}(
         onsite, not_started, finished, starting, ending, continuing
     )
 end
@@ -286,7 +257,6 @@ function AC2_hamiltonian(
     end
 
     # continuing - continuing
-    # TODO: MPODerivativeOperator code reuse + optimization
     ## TODO: Think about how one could and whether one should store these objects and use them for (a) advancing environments in iDMRG, (b) reuse ind backwards-sweep in IDMRG, (c) subspace expansion
     if nonzero_length(W1.A) > 0 && nonzero_length(W2.A) > 0
         AA = AC2_hamiltonian(GL_2, W1.A, W2.A, GR_2)
@@ -294,7 +264,14 @@ function AC2_hamiltonian(
         AA = missing
     end
 
-    return JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    S = spacetype(GL)
+    M = storagetype(GL)
+    O1 = tensormaptype(S, 1, 1, M)
+    O2 = tensormaptype(S, 2, 2, M)
+    O3 = tensormaptype(S, 3, 3, M)
+    O4 = Core.Compiler.return_type(AC2_hamiltonian, typeof((GL_2, W1.A, W2.A, GR_2)))
+
+    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
 end
 
 # Actions
