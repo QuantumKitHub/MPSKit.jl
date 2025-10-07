@@ -139,8 +139,8 @@ function AC_hamiltonian(
     end
 
     if nonzero_length(W.A) > 0
-        @tensor GLW[-1 -2 -3; -4 -5] ≔ GL[2:(end - 1)][-1 1; -4] * W.A[1 -2; -5 -3]
-        continuing = (GLW, permute(GR[2:(end - 1)], (2, 1), (3,)))
+        @plansor GLW[-1 -2 -3; -4 -5] ≔ GL[2:(end - 1)][-1 1; -4] * W.A[1 -2; -5 -3]
+        continuing = (GLW, GR[2:(end - 1)])
     else
         continuing = missing
     end
@@ -293,8 +293,8 @@ function AC2_hamiltonian(
     # TODO: One should only calculate these operators if necessary. One can do this by checking nonzero_length(A1) > 0 && nonzero_length(A2) > 0 and then setting AA=missing or as we discussed via bit matrix multiplication.
     ## TODO: Think about how one could and whether one should store these objects and use them for (a) advancing environments in iDMRG, (b) reuse ind backwards-sweep in IDMRG, (c) subspace expansion
     if nonzero_length(W1.A) > 0 && nonzero_length(W2.A) > 0
-        @tensor GLW[-1 -2 -3; -4 -5] ≔ GL[2:(end - 1)][-1 1; -4] * W1.A[1 -2; -5 -3]
-        @tensor GWR[-1 -2 -3; -4 -5] ≔ W2.A[-1 -5; -3 1] * GR[2:(end - 1)][-2 1; -4]
+        @plansor GLW[-1 -2 -3; -4 -5] ≔ GL[2:(end - 1)][-1 1; -4] * W1.A[1 -2; -5 -3]
+        @plansor GWR[-1 -2 -3; -4 -5] ≔ W2.A[-3 -5; -2 1] * GR[2:(end - 1)][-1 1; -4]
         AA = (GLW, GWR)
     else
         AA = missing
@@ -316,7 +316,7 @@ function (H::JordanMPO_AC_Hamiltonian)(x::MPSTensor)
 
     if !ismissing(H.A)
         GLW, GR = H.A
-        @tensor y[-1 -2; -3] += GLW[-1 -2 3; 1 2] * x[1 2; 4] * GR[3 4; -3]
+        @tensor y[-1 -2; -3] += GLW[-1 -2 4; 1 2] * x[1 2; 3] * GR[3 4; -3]
     end
 
     return y
@@ -336,7 +336,7 @@ function (H::JordanMPO_AC2_Hamiltonian)(x::MPOTensor)
 
     if !ismissing(H.AA)
         GLW, GWR = H.AA
-        @tensor y[-1 -2; -3 -4] += GLW[-1 -2 3; 1 2] * x[1 2; 4 5] * GWR[3 4 5; -3 -4]
+        @plansor y[-1 -2; -3 -4] += GLW[-1 -2 5; 1 2] * x[1 2; 3 4] * GWR[3 4 5; -3 -4]
     end
 
     return y
