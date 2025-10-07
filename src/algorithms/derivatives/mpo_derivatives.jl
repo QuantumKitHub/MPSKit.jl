@@ -17,7 +17,7 @@ end
 Base.length(H::MPODerivativeOperator) = length(H.operators)
 Base.length(::MPOContractedDerivativeOperator{L, R, N}) where {L, R, N} = N
 
-const MPO_C_Hamiltonian{L, R} = MPOContractedDerivativeOperator{L, Tuple{}, R}
+const MPO_C_Hamiltonian{L, R} = MPODerivativeOperator{L, Tuple{}, R}
 MPO_C_Hamiltonian(GL, GR) = MPODerivativeOperator(GL, (), GR)
 
 const MPO_AC_Hamiltonian{L, O, R} = MPODerivativeOperator{L, Tuple{O}, R}
@@ -25,9 +25,6 @@ MPO_AC_Hamiltonian(GL, O, GR) = MPODerivativeOperator(GL, (O,), GR)
 
 const MPO_AC2_Hamiltonian{L, O₁, O₂, R} = MPODerivativeOperator{L, Tuple{O₁, O₂}, R}
 MPO_AC2_Hamiltonian(GL, O1, O2, GR) = MPODerivativeOperator(GL, (O1, O2), GR)
-
-const MPO_Contracted_C_Hamiltonian{L, R} = MPOContractedDerivativeOperator{L, R, 0}
-MPO_Contracted_C_Hamiltonian(GL::L, GR::R) where {L, R} = MPOContractedDerivativeOperator{L,R,0}(GL, GR)
 
 const MPO_Contracted_AC_Hamiltonian{L, R} = MPOContractedDerivativeOperator{L, R, 1}
 MPO_Contracted_AC_Hamiltonian(GL::L, GR::R) where {L, R} = MPOContractedDerivativeOperator{L,R,1}(GL,  GR)
@@ -56,19 +53,16 @@ function AC2_hamiltonian(site::Int, below, operator, above, envs)
         leftenv(envs, site, below), O1, O2, rightenv(envs, site + 1, below)
     )
 end
-function C_hamiltonian(site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:MPOTensor}, above::_HAM_MPS_TYPES, envs)
-    return MPO_Contracted_C_Hamiltonian(leftenv(envs, site + 1, below), rightenv(envs, site, below))
-end
-function AC_hamiltonian(site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:MPOTensor}, above::_HAM_MPS_TYPES, envs)
+function AC_hamiltonian(site::Int, below::_HAM_MPS_TYPES, operator::MPO{<:MPOTensor}, above::_HAM_MPS_TYPES, envs)
     O = operator[site]
     GL = leftenv(envs, site, below)
     return AC_hamiltonian(GL, O, rightenv(envs, site, below))
 end
 function AC_hamiltonian(GL::MPSTensor, O::MPOTensor, GR::MPSTensor)
     @plansor GLW[-1 -2 -3; -4 -5] ≔ GL[-1 1; -4] * O[1 -2; -5 -3]
-    return MPO_Contracted_AC_Hamiltonian(GLW, O, GR)
+    return MPO_Contracted_AC_Hamiltonian(GLW, GR)
 end
-function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:MPOTensor}, above::_HAM_MPS_TYPES, envs)
+function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES, operator::MPO{<:MPOTensor}, above::_HAM_MPS_TYPES, envs)
     O1 = operator[site]
     O2 = operator[site + 1]
     GL = leftenv(envs, site, below)
@@ -164,12 +158,8 @@ function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTen
         h.operators[2][7 -6; 4 5] * τ[5 -5; 2 3]
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
-function (h::MPO_Contracted_C_Hamiltonian)(x::MPSBondTensor)
-    @plansor y[-1; -2] ≔ h.leftenv[-1 3; 1] * x[1; 2] * h.rightenv[2 3; -2]
-    return y isa AbstractBlockTensorMap ? only(y) : y
-end
 function (h::MPO_Contracted_AC_Hamiltonian)(
-        x::GenericMPSTensor{<:Any, 3}
+        x::AbstractTensorMap{<:Any, <:Any, 2, 1}
     )
     @plansor y[-1 -2; -3] ≔ h.leftenv[-1 -2 3; 1 2] * x[1 2; 4] * h.rightenv[4 3; -3]
     return y isa AbstractBlockTensorMap ? only(y) : y
@@ -180,4 +170,3 @@ function (h::MPO_Contracted_AC2_Hamiltonian)(
     @plansor y[-1 -2; -3 -4] ≔ h.leftenv[-1 -2 5; 1 2] * x[1 2; 3 4] * h.rightenv[3 4 5; -3 -4]
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
-## TODO: Which interface should we use for an inplace += version to be used in hamiltonian_derivatives.jl?
