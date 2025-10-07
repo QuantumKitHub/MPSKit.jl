@@ -11,6 +11,14 @@ struct JordanMPO_AC_Hamiltonian{O1, O2, O3} <: DerivativeOperator
     C::Union{O2, Missing} # starting
     B::Union{O2, Missing} # ending
     A::Union{O3, Missing} # continuing
+
+    # need inner constructor to prohibit no-type-param constructor with unbound vars
+    function JordanMPO_AC_Hamiltonian{O1, O2, O3}(
+            D::Union{O1, Missing}, I::Union{O1, Missing}, E::Union{O1, Missing},
+            C::Union{O2, Missing}, B::Union{O2, Missing}, A::Union{O3, Missing},
+        ) where {O1, O2, O3}
+        return new{O1, O2, O3}(D, I, E, C, B, A)
+    end
 end
 
 """
@@ -30,6 +38,16 @@ struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4} <: DerivativeOperator
     BE::Union{O2, Missing} # ending left
     DE::Union{O1, Missing} # onsite left
     EE::Union{O1, Missing} # finished
+
+    # need inner constructor to prohibit no-type-param constructor with unbound vars
+    function JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+            II::Union{O1, Missing}, IC::Union{O2, Missing}, ID::Union{O1, Missing},
+            CB::Union{O2, Missing}, CA::Union{O3, Missing}, AB::Union{O3, Missing},
+            AA::Union{O4, Missing}, BE::Union{O2, Missing}, DE::Union{O1, Missing},
+            EE::Union{O1, Missing}
+        ) where {O1, O2, O3, O4}
+        return new{O1, O2, O3, O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    end
 end
 
 # Constructors
@@ -172,6 +190,7 @@ function AC2_hamiltonian(
             IC = missing
         else
             @plansor IC[-1 -2; -3 -4] ≔ W2.C[-1; -3 1] * GR_2[-4 1; -2]
+            IC = only(IC)
         end
     else
         IC = missing
@@ -186,6 +205,7 @@ function AC2_hamiltonian(
             BE = missing
         else
             @plansor BE[-1 -2; -3 -4] ≔ GL_2[-1 2; -3] * W1.B[2 -2; -4]
+            BE = only(BE)
         end
     else
         BE = missing
