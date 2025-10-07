@@ -300,22 +300,18 @@ end
 # Actions
 # -------
 function (H::JordanMPO_AC_Hamiltonian)(x::MPSTensor)
-    y = zerovector(x)
-
+    y = ismissing(H.A) ? zerovector(x) : H.A(x)
     ismissing(H.D) || @plansor y[-1 -2; -3] += x[-1 1; -3] * H.D[-2; 1]
     ismissing(H.E) || @plansor y[-1 -2; -3] += H.E[-1; 1] * x[1 -2; -3]
     ismissing(H.I) || @plansor y[-1 -2; -3] += x[-1 -2; 1] * H.I[1; -3]
     ismissing(H.C) || @plansor y[-1 -2; -3] += x[-1 2; 1] * H.C[-2 -3; 2 1]
     ismissing(H.B) || @plansor y[-1 -2; -3] += H.B[-1 -2; 1 2] * x[1 2; -3]
-    if !ismissing(H.A)
-        y += H.A(x)
-    end
 
     return y
 end
 
 function (H::JordanMPO_AC2_Hamiltonian)(x::MPOTensor)
-    y = zerovector(x)
+    y = ismissing(H.AA) ? zerovector(x) : H.AA(x)
     ismissing(H.II) || @plansor y[-1 -2; -3 -4] += x[-1 -2; 1 -4] * H.II[-3; 1]
     ismissing(H.IC) || @plansor y[-1 -2; -3 -4] += x[-1 -2; 1 2] * H.IC[-4 -3; 2 1]
     ismissing(H.ID) || @plansor y[-1 -2; -3 -4] += x[-1 -2; -3 1] * H.ID[-4; 1]
@@ -325,9 +321,6 @@ function (H::JordanMPO_AC2_Hamiltonian)(x::MPOTensor)
     ismissing(H.BE) || @plansor y[-1 -2; -3 -4] += x[1 2; -3 -4] * H.BE[-1 -2; 1 2]
     ismissing(H.DE) || @plansor y[-1 -2; -3 -4] += x[-1 1; -3 -4] * H.DE[-2; 1]
     ismissing(H.EE) || @plansor y[-1 -2; -3 -4] += x[1 -2; -3 -4] * H.EE[-1; 1]
-    if !ismissing(H.AA)
-        y += H.AA(x)
-    end
 
     return y
 end
