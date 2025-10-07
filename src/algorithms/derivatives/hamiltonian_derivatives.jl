@@ -16,7 +16,7 @@ struct JordanMPO_AC_Hamiltonian{O1, O2, O3} <: DerivativeOperator
         )
         # obtaining storagetype of environments since these should have already mixed
         # the types of the operator and state
-        gl = continuing[1]
+        gl = @coalesce(onsite, not_started, finished, starting, ending)
         S = spacetype(gl)
         M = storagetype(gl)
         O1 = tensormaptype(S, 1, 1, M)
@@ -52,7 +52,7 @@ struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4} <: DerivativeOperator
     function JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
         # obtaining storagetype of environments since these should have already mixed
         # the types of the operator and state
-        gl = AA[1]
+        gl = @coalesce(II, IC, ID, CB, CA, AB, BE, DE, EE)
         S = spacetype(gl)
         M = storagetype(gl)
         O1 = tensormaptype(S, 1, 1, M)
@@ -316,7 +316,7 @@ function (H::JordanMPO_AC_Hamiltonian)(x::MPSTensor)
 
     if !ismissing(H.A)
         GLW, GR = H.A
-        @tensor y[-1 -2; -3] += GLW[-1 -2 4; 1 2] * x[1 2; 3] * GR[3 4; -3]
+        @plansor y[-1 -2; -3] += GLW[-1 -2 3; 1 2] * x[1 2; 4] * GR[4 3; -3]
     end
 
     return y
