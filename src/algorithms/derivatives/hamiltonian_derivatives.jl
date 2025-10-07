@@ -69,12 +69,6 @@ end
 
 # Constructors
 # ------------
-const _HAM_MPS_TYPES = Union{
-    FiniteMPS{<:MPSTensor},
-    WindowMPS{<:MPSTensor},
-    InfiniteMPS{<:MPSTensor},
-}
-
 function AC_hamiltonian(
         site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
         above::_HAM_MPS_TYPES, envs
@@ -83,9 +77,11 @@ function AC_hamiltonian(
     GR = rightenv(envs, site, below)
     W = operator[site]
 
+    GR_2 = GR[2:(end - 1)]
+    GL_2 = GL[2:(end - 1)]
+
     # starting
     if nonzero_length(W.C) > 0
-        GR_2 = GR[2:(end - 1)]
         @plansor starting_[-1 -2; -3 -4] ≔ W.C[-1; -3 1] * GR_2[-4 1; -2]
         starting = only(starting_)
     else
@@ -94,7 +90,6 @@ function AC_hamiltonian(
 
     # ending
     if nonzero_length(W.B) > 0
-        GL_2 = GL[2:(end - 1)]
         @plansor ending_[-1 -2; -3 -4] ≔ GL_2[-1 1; -3] * W.B[1 -2; -4]
         ending = only(ending_)
     else
@@ -139,8 +134,7 @@ function AC_hamiltonian(
     end
 
     if nonzero_length(W.A) > 0
-        @plansor GLW[-1 -2 -3; -4 -5] ≔ GL[2:(end - 1)][-1 1; -4] * W.A[1 -2; -5 -3]
-        continuing = (GLW, GR[2:(end - 1)])
+        continuing = AC_hamiltonian(GL_2, W.A, GR_2)
     else
         continuing = missing
     end
@@ -159,10 +153,13 @@ function AC2_hamiltonian(
     W1 = operator[site]
     W2 = operator[site + 1]
 
+    GR_2 = GR[2:(end - 1)]
+    GL_2 = GL[2:(end - 1)]
+
     # starting left - continuing right
     if nonzero_length(W1.C) > 0 && nonzero_length(W2.A) > 0
         @plansor CA_[-1 -2 -3; -4 -5 -6] ≔ W1.C[-1; -4 2] * W2.A[2 -2; -5 1] *
-            GR[2:(end - 1)][-6 1; -3]
+            GR_2[-6 1; -3]
         CA = only(CA_)
     else
         CA = missing
@@ -170,7 +167,7 @@ function AC2_hamiltonian(
 
     # continuing left - ending right
     if nonzero_length(W1.A) > 0 && nonzero_length(W2.B) > 0
-        @plansor AB_[-1 -2 -3; -4 -5 -6] ≔ GL[2:(end - 1)][-1 2; -4] * W1.A[2 -2; -5 1] *
+        @plansor AB_[-1 -2 -3; -4 -5 -6] ≔ GL_2[-1 2; -4] * W1.A[2 -2; -5 1] *
             W2.B[1 -3; -6]
         AB = only(AB_)
     else
@@ -200,10 +197,10 @@ function AC2_hamiltonian(
         if !ismissing(CA)
             I = id(storagetype(GR[1]), physicalspace(W1))
             @plansor CA[-1 -2 -3; -4 -5 -6] += (I[-1; -4] * W2.C[-2; -5 1]) *
-                GR[2:(end - 1)][-6 1; -3]
+                GR_2[-6 1; -3]
             IC = missing
         else
-            @plansor IC[-1 -2; -3 -4] ≔ W2.C[-1; -3 1] * GR[2:(end - 1)][-4 1; -2]
+            @plansor IC[-1 -2; -3 -4] ≔ W2.C[-1; -3 1] * GR_2[-4 1; -2]
         end
     else
         IC = missing
@@ -213,11 +210,11 @@ function AC2_hamiltonian(
     if nonzero_length(W1.B) > 0
         if !ismissing(AB)
             I = id(storagetype(GL[end]), physicalspace(W2))
-            @plansor AB[-1 -2 -3; -4 -5 -6] += GL[2:(end - 1)][-1 1; -4] *
+            @plansor AB[-1 -2 -3; -4 -5 -6] += GL_2[-1 1; -4] *
                 (W1.B[1 -2; -5] * I[-3; -6])
             BE = missing
         else
-            @plansor BE[-1 -2; -3 -4] ≔ GL[2:(end - 1)][-1 2; -3] * W1.B[2 -2; -4]
+            @plansor BE[-1 -2; -3 -4] ≔ GL_2[-1 2; -3] * W1.B[2 -2; -4]
         end
     else
         BE = missing
@@ -290,12 +287,9 @@ function AC2_hamiltonian(
 
     # continuing - continuing
     # TODO: MPODerivativeOperator code reuse + optimization
-    # TODO: One should only calculate these operators if necessary. One can do this by checking nonzero_length(A1) > 0 && nonzero_length(A2) > 0 and then setting AA=missing or as we discussed via bit matrix multiplication.
     ## TODO: Think about how one could and whether one should store these objects and use them for (a) advancing environments in iDMRG, (b) reuse ind backwards-sweep in IDMRG, (c) subspace expansion
     if nonzero_length(W1.A) > 0 && nonzero_length(W2.A) > 0
-        @plansor GLW[-1 -2 -3; -4 -5] ≔ GL[2:(end - 1)][-1 1; -4] * W1.A[1 -2; -5 -3]
-        @plansor GWR[-1 -2 -3; -4 -5] ≔ W2.A[-3 -5; -2 1] * GR[2:(end - 1)][-1 1; -4]
-        AA = (GLW, GWR)
+        AA = AC2_hamiltonian(GL_2, W1.A, W2.A, GR_2)
     else
         AA = missing
     end
@@ -313,10 +307,8 @@ function (H::JordanMPO_AC_Hamiltonian)(x::MPSTensor)
     ismissing(H.I) || @plansor y[-1 -2; -3] += x[-1 -2; 1] * H.I[1; -3]
     ismissing(H.C) || @plansor y[-1 -2; -3] += x[-1 2; 1] * H.C[-2 -3; 2 1]
     ismissing(H.B) || @plansor y[-1 -2; -3] += H.B[-1 -2; 1 2] * x[1 2; -3]
-
     if !ismissing(H.A)
-        GLW, GR = H.A
-        @plansor y[-1 -2; -3] += GLW[-1 -2 3; 1 2] * x[1 2; 4] * GR[4 3; -3]
+        y += H.A(x)
     end
 
     return y
@@ -333,10 +325,8 @@ function (H::JordanMPO_AC2_Hamiltonian)(x::MPOTensor)
     ismissing(H.BE) || @plansor y[-1 -2; -3 -4] += x[1 2; -3 -4] * H.BE[-1 -2; 1 2]
     ismissing(H.DE) || @plansor y[-1 -2; -3 -4] += x[-1 1; -3 -4] * H.DE[-2; 1]
     ismissing(H.EE) || @plansor y[-1 -2; -3 -4] += x[1 -2; -3 -4] * H.EE[-1; 1]
-
     if !ismissing(H.AA)
-        GLW, GWR = H.AA
-        @plansor y[-1 -2; -3 -4] += GLW[-1 -2 5; 1 2] * x[1 2; 3 4] * GWR[3 4 5; -3 -4]
+        y += H.AA(x)
     end
 
     return y
