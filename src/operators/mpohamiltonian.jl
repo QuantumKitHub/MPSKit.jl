@@ -689,9 +689,9 @@ function Base.:+(
         D = H₁[i].D + H₂[i].D
 
         Vleft = i == 1 ? left_virtualspace(H₁, 1) :
-            BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
+            ⊞(Vtriv, left_virtualspace(A), Vtriv)
         Vright = i == N ? right_virtualspace(H₁, N) :
-            BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+            ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
         H[i] = eltype(H)(V, A, B, C, D)
@@ -711,8 +711,8 @@ function Base.:+(
         C = cat(H₁[i].C, H₂[i].C; dims = 3)
         D = H₁[i].D + H₂[i].D
 
-        Vleft = BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
-        Vright = BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+        Vleft = ⊞(Vtriv, left_virtualspace(A), Vtriv)
+        Vright = ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
         H[i] = eltype(H)(V, A, B, C, D)

@@ -22,11 +22,11 @@ function left_canonicalize!(
         Q, R = _left_orth!(tmp; alg, trunc = trscheme)
 
         if dim(R) == 0 # fully truncated
-            V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
+            V = oneunit(S) ⊞ oneunit(S)
             Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
             Q2 = typeof(W.C)(undef, physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
         else
-            V = BlockTensorKit.oplus(oneunit(S), space(R, 1), oneunit(S))
+            V = ⊞(oneunit(S), space(R, 1), oneunit(S))
             scale!(Q, d)
             scale!(R, inv(d))
             Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ space(R, 1))
@@ -38,7 +38,7 @@ function left_canonicalize!(
         Q, R = _left_orth!(tmp; alg, trunc = trscheme)
 
         if dim(R) == 0 # fully truncated
-            V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
+            V = oneunit(S) ⊞ oneunit(S)
             Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
             Q2 = typeof(W.C)(undef, physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
         else
@@ -47,7 +47,7 @@ function left_canonicalize!(
             Q′ = transpose(Q, ((2, 3), (1, 4)))
             Q1 = Q′[2:end, 1, 1, 1]
             Q2 = removeunit(SparseBlockTensorMap(Q′[1:1, 1, 1, 1]), 1)
-            V = BlockTensorKit.oplus(oneunit(S), right_virtualspace(Q′), oneunit(S))
+            V = ⊞(oneunit(S), right_virtualspace(Q′), oneunit(S))
         end
         H[i] = JordanMPOTensor(codomain(W) ← physicalspace(W) ⊗ V, Q1, W.B, Q2, W.D)
     end
@@ -108,11 +108,11 @@ function right_canonicalize!(
         R, Q = _right_orth!(tmp; alg, trunc = trscheme)
 
         if dim(R) == 0
-            V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
+            V = oneunit(S) ⊞ oneunit(S)
             Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
             Q2 = typeof(W.B)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W))
         else
-            V = BlockTensorKit.oplus(oneunit(S), space(Q, 1), oneunit(S))
+            V = ⊞(oneunit(S), space(Q, 1), oneunit(S))
             scale!(Q, d)
             scale!(R, inv(d))
             Q1 = typeof(W.A)(undef, space(Q, 1) ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
@@ -123,7 +123,7 @@ function right_canonicalize!(
         tmp = transpose(cat(insertleftunit(B′, 4), W.A; dims = 4), ((1,), (3, 4, 2)))
         R, Q = _right_orth!(tmp; alg, trunc = trscheme)
         if dim(R) == 0
-            V = BlockTensorKit.oplus(oneunit(S), oneunit(S))
+            V = oneunit(S) ⊞ oneunit(S)
             Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W) ⊗ SumSpace{S}())
             Q2 = typeof(W.B)(undef, SumSpace{S}() ⊗ physicalspace(W) ← physicalspace(W))
         else
@@ -132,7 +132,7 @@ function right_canonicalize!(
             Q′ = transpose(Q, ((1, 4), (2, 3)))
             Q1 = SparseBlockTensorMap(Q′[1, 1, 1, 2:end])
             Q2 = removeunit(SparseBlockTensorMap(Q′[1, 1, 1, 1:1]), 4)
-            V = BlockTensorKit.oplus(oneunit(S), left_virtualspace(Q′), oneunit(S))
+            V = ⊞(oneunit(S), left_virtualspace(Q′), oneunit(S))
         end
         H[i] = JordanMPOTensor(V ⊗ physicalspace(W) ← domain(W), Q1, Q2, W.C, W.D)
     end
