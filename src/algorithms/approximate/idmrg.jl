@@ -18,7 +18,7 @@ function approximate!(
                         CartesianIndex(row, col), ψ, toapprox, envs
                     )
                     normalize!(ψ.AC[row + 1, col])
-                    ψ.AL[row + 1, col], ψ.C[row + 1, col] = leftorth!(ψ.AC[row + 1, col])
+                    ψ.AL[row + 1, col], ψ.C[row + 1, col] = left_orth!(ψ.AC[row + 1, col])
                 end
                 transfer_leftenv!(envs, ψ, toapprox, col + 1)
             end
@@ -30,7 +30,7 @@ function approximate!(
                         CartesianIndex(row, col), ψ, toapprox, envs
                     )
                     normalize!(ψ.AC[row + 1, col])
-                    ψ.C[row + 1, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row + 1, col]))
+                    ψ.C[row + 1, col - 1], temp = right_orth!(_transpose_tail(ψ.AC[row + 1, col]))
                     ψ.AR[row + 1, col] = _transpose_front(temp)
                 end
                 transfer_rightenv!(envs, ψ, toapprox, col - 1)
