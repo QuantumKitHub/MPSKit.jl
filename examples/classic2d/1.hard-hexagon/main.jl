@@ -70,7 +70,7 @@ function scaling_simulations(
     correlations[1] = correlation_length(ψ)
 
     for (i, d) in enumerate(diff(Ds))
-        ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme = truncdim(d)), envs)
+        ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme = truncrank(d)), envs)
         ψ, envs, = leading_boundary(ψ, mpo, alg, envs)
         entropies[i + 1] = real(entropy(ψ)[1])
         correlations[i + 1] = correlation_length(ψ)
