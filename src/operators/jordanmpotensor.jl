@@ -163,7 +163,7 @@ BlockTensorKit.issparse(W::JordanMPOTensor) = true
 
 # Converters
 # ----------
-function SparseBlockTensorMap(W::JordanMPOTensor)
+function BlockTensorKit.SparseBlockTensorMap(W::JordanMPOTensor)
     τ = BraidingTensor{scalartype(W)}(eachspace(W)[1])
     W′ = SparseBlockTensorMap{AbstractTensorMap{scalartype(W), spacetype(W), 2, 2}}(
         undef_blocks, space(W)
