@@ -60,10 +60,7 @@ struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4} <: DerivativeOperator
 end
 
 function JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
-        II::Union{O1, Missing}, IC::Union{O2, Missing}, ID::Union{O1, Missing},
-        CB::Union{O2, Missing}, CA::Union{O3, Missing}, AB::Union{O3, Missing},
-        AA::Union{O4, Missing}, BE::Union{O2, Missing}, DE::Union{O1, Missing},
-        EE::Union{O1, Missing}
+        II, IC, ID, CB, CA, AB, AA, BE, DE, EE
     ) where {O1, O2, O3, O4}
     return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
         ismissing(II) ? II : convert(O1, II), ismissing(IC) ? IC : convert(O2, IC),
