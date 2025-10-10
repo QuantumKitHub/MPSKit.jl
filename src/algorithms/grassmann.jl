@@ -216,7 +216,7 @@ Here we use the Tikhonov regularization, i.e. `inv(ρ) = inv(C * C' + δ²1)`,
 where the regularization parameter is `δ = rtol * norm(C)`.
 """
 function rho_inv_regularized(C; rtol = eps(real(scalartype(C)))^(3 / 4))
-    U, S, _ = tsvd(C)
+    U, S, _ = svd_compact(C)
     return U * pinv_tikhonov!!(S; rtol) * U'
 end
 

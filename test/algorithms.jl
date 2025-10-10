@@ -40,13 +40,14 @@ module TestAlgorithms
 
             # test using low variance
             @test sum(δ) ≈ 0 atol = 1.0e-3
-            @test v < v₀ && v < 1.0e-2
+            @test v < v₀
+            @test v < 1.0e-2
         end
 
         @testset "DMRG2" begin
             ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
             v₀ = variance(ψ₀, H)
-            trscheme = truncdim(floor(Int, D * 1.5))
+            trscheme = truncrank(floor(Int, D * 1.5))
             # test logging
             ψ, envs, δ = find_groundstate(
                 ψ₀, H, DMRG2(; verbosity = verbosity_full, maxiter = 2, trscheme)
@@ -59,7 +60,8 @@ module TestAlgorithms
 
             # test using low variance
             @test sum(δ) ≈ 0 atol = 1.0e-3
-            @test v < v₀ && v < 1.0e-2
+            @test v < v₀
+            @test v < 1.0e-2
         end
 
         @testset "GradientGrassmann" begin
@@ -131,7 +133,7 @@ module TestAlgorithms
             ψ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
             H = repeat(H_ref, 2)
 
-            trscheme = truncbelow(1.0e-8)
+            trscheme = trunctol(; atol = 1.0e-8)
 
             # test logging
             ψ, envs, δ = find_groundstate(
@@ -223,7 +225,7 @@ module TestAlgorithms
 
         @testset "DMRG2" begin
             # test logging passes
-            trscheme = truncdim(floor(Int, D * 1.5))
+            trscheme = truncrank(floor(Int, D * 1.5))
             ψ, envs, δ = find_groundstate(
                 ψ₀, H_lazy, DMRG2(; tol, verbosity = verbosity_full, maxiter = 1, trscheme)
             )
@@ -301,7 +303,7 @@ module TestAlgorithms
             H_lazy′ = repeat(H_lazy, 2)
             H′ = repeat(H, 2)
 
-            trscheme = truncdim(floor(Int, D * 1.5))
+            trscheme = truncrank(floor(Int, D * 1.5))
             # test logging passes
             ψ, envs, δ = find_groundstate(
                 ψ₀′, H_lazy′, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trscheme)
@@ -330,7 +332,7 @@ module TestAlgorithms
 
     @testset "timestep" verbose = true begin
         dt = 0.1
-        algs = [TDVP(), TDVP2(; trscheme = truncdim(10))]
+        algs = [TDVP(), TDVP2(; trscheme = truncrank(10))]
         L = 10
 
         H = force_planar(heisenberg_XXX(Trivial, Float64; spin = 1 // 2, L))
@@ -408,7 +410,7 @@ module TestAlgorithms
 
     @testset "time_evolve" verbose = true begin
         t_span = 0:0.1:0.1
-        algs = [TDVP(), TDVP2(; trscheme = truncdim(10))]
+        algs = [TDVP(), TDVP2(; trscheme = truncrank(10))]
 
         L = 10
         H = force_planar(heisenberg_XXX(; spin = 1 // 2, L))
@@ -440,7 +442,7 @@ module TestAlgorithms
         algs = [
             VUMPS(; tol, verbosity), VOMPS(; tol, verbosity),
             GradientGrassmann(; tol, verbosity), IDMRG(; tol, verbosity),
-            IDMRG2(; tol, verbosity, trscheme = truncdim(D1)),
+            IDMRG2(; tol, verbosity, trscheme = truncrank(D1)),
         ]
         mpo = force_planar(classical_ising())
 
@@ -454,7 +456,7 @@ module TestAlgorithms
                 @test expectation_value(ψ, mpo2, envs) ≈ 2.5337^2 atol = 1.0e-3
             else
                 ψ, envs = leading_boundary(ψ₀, mpo, alg)
-                ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme = truncdim(D1 - D)), envs)
+                ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme = truncrank(D1 - D)), envs)
                 ψ, envs = leading_boundary(ψ, mpo, alg)
                 @test dim(space(ψ.AL[1, 1], 1)) == dim(space(ψ₀.AL[1, 1], 1)) + (D1 - D)
                 @test expectation_value(ψ, mpo, envs) ≈ 2.5337 atol = 1.0e-3
@@ -522,7 +524,7 @@ module TestAlgorithms
                 # find energy with normal dmrg
                 for gsalg in (
                         DMRG(; verbosity, tol = 1.0e-6),
-                        DMRG2(; verbosity, tol = 1.0e-6, trscheme = truncbelow(1.0e-4)),
+                        DMRG2(; verbosity, tol = 1.0e-6, trscheme = trunctol(; atol = 1.0e-4)),
                     )
                     energies_dm, _ = @inferred excitations(H, FiniteExcited(; gsalg), ψ)
                     @test energies_dm[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1.0e-4
@@ -555,7 +557,7 @@ module TestAlgorithms
 
             O = MPSKit.DenseMPO(expH)
             Op = periodic_boundary_conditions(O, 10)
-            Op′ = changebonds(Op, SvdCut(; trscheme = truncdim(5)))
+            Op′ = changebonds(Op, SvdCut(; trscheme = truncrank(5)))
 
             @test dim(space(Op′[5], 1)) < dim(space(Op[5], 1))
         end
@@ -572,7 +574,7 @@ module TestAlgorithms
                 state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
 
                 state_re = changebonds(
-                    state, RandExpand(; trscheme = truncdim(dim(Dspace) * dim(Dspace)))
+                    state, RandExpand(; trscheme = truncrank(dim(Dspace) * dim(Dspace)))
                 )
                 @test dot(state, state_re) ≈ 1 atol = 1.0e-8
             end
@@ -582,7 +584,7 @@ module TestAlgorithms
                 state = InfiniteMPS(fill(pspace, unit_cell_size), fill(Dspace, unit_cell_size))
 
                 state_oe, _ = changebonds(
-                    state, H, OptimalExpand(; trscheme = truncdim(dim(Dspace) * dim(Dspace)))
+                    state, H, OptimalExpand(; trscheme = truncrank(dim(Dspace) * dim(Dspace)))
                 )
                 @test dot(state, state_oe) ≈ 1 atol = 1.0e-8
             end
@@ -594,7 +596,7 @@ module TestAlgorithms
                 state_vs, _ = changebonds(state, H, VUMPSSvdCut(; trscheme = notrunc()))
                 @test dim(left_virtualspace(state, 1)) < dim(left_virtualspace(state_vs, 1))
 
-                state_vs_tr = changebonds(state_vs, SvdCut(; trscheme = truncdim(dim(Dspace))))
+                state_vs_tr = changebonds(state_vs, SvdCut(; trscheme = truncrank(dim(Dspace))))
                 @test dim(right_virtualspace(state_vs_tr, 1)) < dim(right_virtualspace(state_vs, 1))
             end
         end
@@ -609,16 +611,16 @@ module TestAlgorithms
             state = FiniteMPS(L, pspace, Dspace)
 
             state_re = changebonds(
-                state, RandExpand(; trscheme = truncdim(dim(Dspace) * dim(Dspace)))
+                state, RandExpand(; trscheme = truncrank(dim(Dspace) * dim(Dspace)))
             )
             @test dot(state, state_re) ≈ 1 atol = 1.0e-8
 
             state_oe, _ = changebonds(
-                state, H, OptimalExpand(; trscheme = truncdim(dim(Dspace) * dim(Dspace)))
+                state, H, OptimalExpand(; trscheme = truncrank(dim(Dspace) * dim(Dspace)))
             )
             @test dot(state, state_oe) ≈ 1 atol = 1.0e-8
 
-            state_tr = changebonds(state_oe, SvdCut(; trscheme = truncdim(dim(Dspace))))
+            state_tr = changebonds(state_oe, SvdCut(; trscheme = truncrank(dim(Dspace))))
 
             @test dim(left_virtualspace(state_tr, 5)) < dim(left_virtualspace(state_oe, 5))
         end
@@ -631,16 +633,16 @@ module TestAlgorithms
             state = MultilineMPS(fill(t, 1, 1))
 
             state_re = changebonds(
-                state, RandExpand(; trscheme = truncdim(dim(Dspace) * dim(Dspace)))
+                state, RandExpand(; trscheme = truncrank(dim(Dspace) * dim(Dspace)))
             )
             @test dot(state, state_re) ≈ 1 atol = 1.0e-8
 
             state_oe, _ = changebonds(
-                state, mpo, OptimalExpand(; trscheme = truncdim(dim(Dspace) * dim(Dspace)))
+                state, mpo, OptimalExpand(; trscheme = truncrank(dim(Dspace) * dim(Dspace)))
             )
             @test dot(state, state_oe) ≈ 1 atol = 1.0e-8
 
-            state_tr = changebonds(state_oe, SvdCut(; trscheme = truncdim(dim(Dspace))))
+            state_tr = changebonds(state_oe, SvdCut(; trscheme = truncrank(dim(Dspace))))
 
             @test dim(left_virtualspace(state_tr, 1, 1)) < dim(left_virtualspace(state_oe, 1, 1))
         end
@@ -754,20 +756,20 @@ module TestAlgorithms
             MPSKit.Defaults.set_scheduler!()
 
             ψ3, _ = approximate(ψ0, (W1, ψ), IDMRG(; verbosity))
-            ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trscheme = truncdim(12), verbosity))
+            ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trscheme = truncrank(12), verbosity))
             ψ5, _ = timestep(ψ, H, 0.0, dt, TDVP())
-            ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme = truncdim(12)))
+            ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme = truncrank(12)))
 
             @test abs(dot(ψ1, ψ5)) ≈ 1.0 atol = dt
             @test abs(dot(ψ3, ψ5)) ≈ 1.0 atol = dt
             @test abs(dot(ψ6, ψ5)) ≈ 1.0 atol = dt
             @test abs(dot(ψ2, ψ4)) ≈ 1.0 atol = dt
 
-            nW1 = changebonds(W1, SvdCut(; trscheme = truncbelow(dt))) # this should be a trivial mpo now
+            nW1 = changebonds(W1, SvdCut(; trscheme = trunctol(; atol = dt))) # this should be a trivial mpo now
             @test dim(space(nW1[1], 1)) == 1
         end
 
-        finite_algs = [DMRG(; verbosity), DMRG2(; verbosity, trscheme = truncdim(10))]
+        finite_algs = [DMRG(; verbosity), DMRG2(; verbosity, trscheme = truncrank(10))]
         @testset "finitemps1 ≈ finitemps2" for alg in finite_algs
             a = FiniteMPS(10, ℂ^2, ℂ^10)
             b = FiniteMPS(10, ℂ^2, ℂ^20)
@@ -954,7 +956,7 @@ module TestAlgorithms
         @testset "Finite-size" begin
             L = 6
             H = transverse_field_ising(; L)
-            trscheme = truncdim(20)
+            trscheme = truncrank(20)
             verbosity = 1
             beta = 0.1
 
@@ -1001,7 +1003,7 @@ module TestAlgorithms
 
         @testset "Infinite-size" begin
             H = transverse_field_ising()
-            trscheme = truncdim(20)
+            trscheme = truncrank(20)
             verbosity = 1
             beta = 0.1
 
@@ -1028,7 +1030,7 @@ module TestAlgorithms
 
             # TDVP
             rho_0 = MPSKit.infinite_temperature_density_matrix(H)
-            rho_0_mps, = changebonds(convert(InfiniteMPS, rho_0), H, OptimalExpand(; trscheme = truncdim(20)))
+            rho_0_mps, = changebonds(convert(InfiniteMPS, rho_0), H, OptimalExpand(; trscheme = truncrank(20)))
             rho_mps_tdvp, = timestep(rho_0_mps, H, 0.0, beta, TDVP(); imaginary_evolution)
             E_tdvp = expectation_value(rho_mps_tdvp, H)
             @test E_tdvp ≈ E_taylor atol = 1.0e-2
@@ -1045,7 +1047,7 @@ module TestAlgorithms
         H = XY_model(U1Irrep; L)
 
         H_dense = convert(TensorMap, H)
-        vals_dense = eigvals(H_dense)
+        vals_dense = TensorKit.SectorDict(c => sort(v; by = real) for (c, v) in eigvals(H_dense))
 
         tol = 1.0e-18 # tolerance required to separate degenerate eigenvalues
         alg = MPSKit.Defaults.alg_eigsolve(; dynamic_tols = false, tol)
@@ -1080,7 +1082,7 @@ module TestAlgorithms
         # so effectively shifting the charges by -1
         H_shift = MPSKit.add_physical_charge(H, U1Irrep.([1, 0, 0, 0]))
         H_shift_dense = convert(TensorMap, H_shift)
-        vals_shift_dense = eigvals(H_shift_dense)
+        vals_shift_dense = TensorKit.SectorDict(c => sort(v; by = real) for (c, v) in eigvals(H_shift_dense))
         for (sector, vals) in vals_dense
             sector′ = only(sector ⊗ U1Irrep(-1))
             @test vals ≈ vals_shift_dense[sector′]

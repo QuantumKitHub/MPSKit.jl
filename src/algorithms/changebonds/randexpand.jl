@@ -13,8 +13,8 @@ $(TYPEDFIELDS)
     "algorithm used for the singular value decomposition"
     alg_svd::S = Defaults.alg_svd()
 
-    "algorithm used for [truncation](@extref TensorKit.tsvd] the expanded space"
-    trscheme::TruncationScheme
+    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy] the expanded space"
+    trscheme::TruncationStrategy
 end
 
 function changebonds(ψ::InfiniteMPS, alg::RandExpand)
@@ -26,13 +26,13 @@ function changebonds(ψ::InfiniteMPS, alg::RandExpand)
         AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
-        VL = leftnull(ψ.AL[i])
-        VR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
+        VL = left_null(ψ.AL[i])
+        VR = right_null!(_transpose_tail(ψ.AR[i + 1]))
         intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
-        U, _, V, = tsvd!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
+        U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
         AL′[i] = VL * U
-        AR′[i + 1] = V * VR
+        AR′[i + 1] = Vᴴ * VR
     end
 
     return _expand(ψ, AL′, AR′)
@@ -48,17 +48,17 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
         AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
 
         #Calculate nullspaces for left and right
-        NL = leftnull(ψ.AC[i])
-        NR = rightnull!(_transpose_tail(ψ.AR[i + 1]))
+        NL = left_null(ψ.AC[i])
+        NR = right_null!(_transpose_tail(ψ.AR[i + 1]))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         intermediate = normalize!(adjoint(NL) * AC2 * adjoint(NR))
-        _, _, V, = tsvd!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
+        _, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
-        ar_re = V * NR
-        ar_le = zerovector!(similar(ar_re, codomain(ψ.AC[i]) ← space(V, 1)))
+        ar_re = Vᴴ * NR
+        ar_le = zerovector!(similar(ar_re, codomain(ψ.AC[i]) ← space(Vᴴ, 1)))
 
-        (nal, nc) = leftorth!(catdomain(ψ.AC[i], ar_le); alg = QRpos())
+        nal, nc = qr_compact!(catdomain(ψ.AC[i], ar_le))
         nar = _transpose_front(catcodomain(_transpose_tail(ψ.AR[i + 1]), ar_re))
 
         ψ.AC[i] = (nal, nc)
