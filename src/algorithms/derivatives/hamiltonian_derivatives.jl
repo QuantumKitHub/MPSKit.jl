@@ -20,6 +20,15 @@ struct JordanMPO_AC_Hamiltonian{O1, O2, O3} <: DerivativeOperator
         return new{O1, O2, O3}(D, I, E, C, B, A)
     end
 end
+function JordanMPO_AC_Hamiltonian{O1, O2, O3}(
+        D, I, E, C, B, A,
+    ) where {O1, O2, O3}
+    return JordanMPO_AC_Hamiltonian{O1, O2, O3}(
+        ismissing(D) ? D : convert(O1, D), ismissing(I) ? I : convert(O1, I),
+        ismissing(E) ? E : convert(O1, E), ismissing(C) ? C : convert(O2, C),
+        ismissing(B) ? B : convert(O2, B), ismissing(A) ? A : convert(O3, A)
+    )
+end
 
 """
     JordanMPO_AC2_Hamiltonian{O1,O2,O3,O4}
@@ -48,6 +57,21 @@ struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4} <: DerivativeOperator
         ) where {O1, O2, O3, O4}
         return new{O1, O2, O3, O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
     end
+end
+
+function JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+        II::Union{O1, Missing}, IC::Union{O2, Missing}, ID::Union{O1, Missing},
+        CB::Union{O2, Missing}, CA::Union{O3, Missing}, AB::Union{O3, Missing},
+        AA::Union{O4, Missing}, BE::Union{O2, Missing}, DE::Union{O1, Missing},
+        EE::Union{O1, Missing}
+    ) where {O1, O2, O3, O4}
+    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+        ismissing(II) ? II : convert(O1, II), ismissing(IC) ? IC : convert(O2, IC),
+        ismissing(ID) ? ID : convert(O1, II), ismissing(CB) ? CB : convert(O2, CB),
+        ismissing(CA) ? CA : convert(O3, CA), ismissing(AB) ? AB : convert(O3, AB),
+        ismissing(AA) ? AA : convert(P4, AA), ismissing(BE) ? BE : convert(O2, BE),
+        ismissing(DE) ? DE : convert(O1, DE), ismissing(EE) ? EE : convert(O1, EE)
+    )
 end
 
 # Constructors
