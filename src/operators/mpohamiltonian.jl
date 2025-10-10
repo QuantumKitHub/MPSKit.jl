@@ -689,9 +689,9 @@ function Base.:+(
         D = H₁[i].D + H₂[i].D
 
         Vleft = i == 1 ? left_virtualspace(H₁, 1) :
-            BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
+            ⊞(Vtriv, left_virtualspace(A), Vtriv)
         Vright = i == N ? right_virtualspace(H₁, N) :
-            BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+            ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
         H[i] = eltype(H)(V, A, B, C, D)
@@ -711,8 +711,8 @@ function Base.:+(
         C = cat(H₁[i].C, H₂[i].C; dims = 3)
         D = H₁[i].D + H₂[i].D
 
-        Vleft = BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
-        Vright = BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+        Vleft = ⊞(Vtriv, left_virtualspace(A), Vtriv)
+        Vright = ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
         H[i] = eltype(H)(V, A, B, C, D)
@@ -791,31 +791,31 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     # left to middle
     U = ones(scalartype(H), left_virtualspace(H, 1))
     @plansor a[-1 -2; -3 -4] := A[1][-1 2; -3] * H[1][1 -2; 2 -4] * conj(U[1])
-    Q, R = leftorth!(a; alg = QR())
-    A′[1] = convert(TensorMap, Q)
+    Q, R = qr_compact!(a)
+    A′[1] = TensorMap(Q)
 
     for i in 2:(N ÷ 2)
         @plansor a[-1 -2; -3 -4] := R[-1; 1 2] * A[i][1 3; -3] * H[i][2 -2; 3 -4]
-        Q, R = leftorth!(a; alg = QR())
-        A′[i] = convert(TensorMap, Q)
+        Q, R = qr_compact!(a)
+        A′[i] = TensorMap(Q)
     end
 
     # right to middle
     U = ones(scalartype(H), right_virtualspace(H, N))
     @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * U[1]
-    L, Q = rightorth!(a; alg = LQ())
-    A′[end] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
+    L, Q = lq_compact!(a)
+    A′[end] = transpose(TensorMap(Q), ((1, 3), (2,)))
 
     for i in (N - 1):-1:(N ÷ 2 + 2)
         @plansor a[-1 -2; -3 -4] := A[i][-1 3; 1] * H[i][-2 -4; 3 2] * L[1 2; -3]
-        L, Q = rightorth!(a; alg = LQ())
-        A′[i] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
+        L, Q = lq_compact!(a)
+        A′[i] = transpose(TensorMap(Q), ((1, 3), (2,)))
     end
 
     # connect pieces
     @plansor a[-1 -2; -3] := R[-1; 1 2] * A[N ÷ 2 + 1][1 3; 4] * H[N ÷ 2 + 1][2 -2; 3 5] *
         L[4 5; -3]
-    A′[N ÷ 2 + 1] = convert(TensorMap, a)
+    A′[N ÷ 2 + 1] = TensorMap(a)
 
     return FiniteMPS(A′)
 end
@@ -826,7 +826,7 @@ function Base.:*(H::FiniteMPOHamiltonian{<:MPOTensor}, x::AbstractTensorMap)
     L = removeunit(H[1], 1)
     M = Tuple(H[2:(end - 1)])
     R = removeunit(H[end], 4)
-    return convert(TensorMap, _apply_finitempo(x, L, M, R))
+    return TensorMap(_apply_finitempo(x, L, M, R))
 end
 
 function TensorKit.dot(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian)

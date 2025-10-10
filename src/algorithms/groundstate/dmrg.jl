@@ -92,8 +92,8 @@ struct DMRG2{A, S, F} <: Algorithm
     "algorithm used for the singular value decomposition"
     alg_svd::S
 
-    "algorithm used for [truncation](@extref TensorKit.tsvd) of the two-site update"
-    trscheme::TruncationScheme
+    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the two-site update"
+    trscheme::TruncationStrategy
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F
@@ -125,10 +125,9 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environm
                 Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
-                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
-                    conj(ar[6; 3 4])
+                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
                 ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
 
                 ψ.AC[pos] = (al, complex(c))
@@ -141,10 +140,9 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environm
                 Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
 
-                al, c, ar, = tsvd!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
-                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) *
-                    conj(ar[6; 3 4])
+                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
                 ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
 
                 ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))

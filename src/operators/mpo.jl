@@ -126,14 +126,14 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
         A, (right_virtualspace(mpo1, 1) ⊕ right_virtualspace(mpo2, 1)),
         right_virtualspace(mpo1, 1)
     )
-    F₂ = leftnull(F₁)
+    F₂ = left_null(F₁)
     @assert _lastspace(F₂) == right_virtualspace(mpo2, 1)'
 
     @plansor O[-3 -1 -2; -4] := mpo1[1][-1 -2; -3 1] * conj(F₁[-4; 1]) +
         mpo2[1][-1 -2; -3 1] * conj(F₂[-4; 1])
 
     # making sure that the new operator is "full rank"
-    O, R = leftorth!(O)
+    O, R = qr_compact!(O)
     O′ = transpose(O, ((2, 3), (1, 4)))
     mpo = similar(mpo1, typeof(O′))
     mpo[1] = O′
@@ -148,13 +148,13 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
             A, (right_virtualspace(mpo1, i) ⊕ right_virtualspace(mpo2, i)),
             right_virtualspace(mpo1, i)
         )
-        F₂ = leftnull(F₁)
+        F₂ = left_null(F₁)
         @assert _lastspace(F₂) == right_virtualspace(mpo2, i)'
         @plansor O[-3 -1 -2; -4] := O₁[-1 -2; -3 1] * conj(F₁[-4; 1]) +
             O₂[-1 -2; -3 1] * conj(F₂[-4; 1])
 
         # making sure that the new operator is "full rank"
-        O, R = leftorth!(O)
+        O, R = qr_compact!(O)
         mpo[i] = transpose(O, ((2, 3), (1, 4)))
     end
 
@@ -165,14 +165,14 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
         A, left_virtualspace(mpo1, N) ⊕ left_virtualspace(mpo2, N),
         left_virtualspace(mpo1, N)
     )
-    F₂ = leftnull(F₁)
+    F₂ = left_null(F₁)
     @assert _lastspace(F₂) == left_virtualspace(mpo2, N)'
 
     @plansor O[-1; -3 -4 -2] := F₁[-1; 1] * mpo1[N][1 -2; -3 -4] +
         F₂[-1; 1] * mpo2[N][1 -2; -3 -4]
 
     # making sure that the new operator is "full rank"
-    L, O = rightorth!(O)
+    L, O = lq_compact!(O)
     mpo[end] = transpose(O, ((1, 4), (2, 3)))
 
     for i in (N - 1):-1:(halfN + 1)
@@ -185,13 +185,13 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
             A, left_virtualspace(mpo1, i) ⊕ left_virtualspace(mpo2, i),
             left_virtualspace(mpo1, i)
         )
-        F₂ = leftnull(F₁)
+        F₂ = left_null(F₁)
         @assert _lastspace(F₂) == left_virtualspace(mpo2, i)'
         @plansor O[-1; -3 -4 -2] := F₁[-1; 1] * O₁[1 -2; -3 -4] +
             F₂[-1; 1] * O₂[1 -2; -3 -4]
 
         # making sure that the new operator is "full rank"
-        L, O = rightorth!(O)
+        L, O = lq_compact!(O)
         mpo[i] = transpose(O, ((1, 4), (2, 3)))
     end
 
@@ -247,7 +247,7 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
         Fᵣ = fuser(A, right_virtualspace(mps, i), right_virtualspace(mpo, i))
         return _fuse_mpo_mps(mpo[i], A1, Fₗ, Fᵣ)
     end
-    trscheme = truncbelow(eps(real(T)))
+    trscheme = trunctol(; atol = eps(real(T)))
     return changebonds!(FiniteMPS(A2), SvdCut(; trscheme); normalize = false)
 end
 function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
@@ -392,8 +392,8 @@ function Base.isapprox(
 end
 
 @doc """
-    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=SDD(), trscheme)
-    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=SDD(), trscheme)
+    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trscheme)
+    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trscheme)
 
 Compose the mpo with a swap gate applied to indices `i` and `i + 1`, effectively creating an
 operator that acts on the Hilbert spaces with those factors swapped.
@@ -405,7 +405,7 @@ swap(mpo::FiniteMPO, i::Integer; kwargs...) = swap!(copy(mpo), i; kwargs...)
 function swap!(
         mpo::FiniteMPO{<:MPOTensor}, i::Integer;
         inv::Bool = false,
-        alg = SDD(), trscheme = truncbelow(eps(real(scalartype(mpo)))^(4 / 5))
+        alg = Defaults.alg_svd(), trscheme = trunctol(; atol = eps(real(scalartype(mpo)))^(4 / 5))
     )
     O₁, O₂ = mpo[i], mpo[i + 1]
 
@@ -417,7 +417,7 @@ function swap!(
             τ[-3 -6; 4 5] * O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ'[2 3; -1 -4]
     end
 
-    U, S, Vᴴ, = tsvd!(O₂₁; alg, trunc = trscheme)
+    U, S, Vᴴ = svd_trunc!(O₂₁; alg, trunc = trscheme)
     sqrtS = sqrt(S)
     @plansor mpo[i][-1 -2; -3 -4] := U[-3 -1 -2; 1] * sqrtS[1; -4]
     @plansor mpo[i + 1][-1 -2; -3 -4] := sqrtS[-1; 1] * Vᴴ[1; -3 -4 -2]

@@ -18,7 +18,7 @@ function approximate!(
                         CartesianIndex(row, col), ψ, toapprox, envs
                     )
                     normalize!(ψ.AC[row + 1, col])
-                    ψ.AL[row + 1, col], ψ.C[row + 1, col] = leftorth!(ψ.AC[row + 1, col])
+                    ψ.AL[row + 1, col], ψ.C[row + 1, col] = left_orth!(ψ.AC[row + 1, col])
                 end
                 transfer_leftenv!(envs, ψ, toapprox, col + 1)
             end
@@ -30,7 +30,7 @@ function approximate!(
                         CartesianIndex(row, col), ψ, toapprox, envs
                     )
                     normalize!(ψ.AC[row + 1, col])
-                    ψ.C[row + 1, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row + 1, col]))
+                    ψ.C[row + 1, col - 1], temp = right_orth!(_transpose_tail(ψ.AC[row + 1, col]))
                     ψ.AR[row + 1, col] = _transpose_front(temp)
                 end
                 transfer_rightenv!(envs, ψ, toapprox, col - 1)
@@ -82,7 +82,7 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ACAR
                     )
-                    al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -104,7 +104,7 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ALAC
                     )
-                    al, c, ar, = tsvd!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al

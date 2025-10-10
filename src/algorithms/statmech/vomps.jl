@@ -102,7 +102,7 @@ end
 function localupdate_step!(
         ::IterativeSolver{<:VOMPS}, state, scheduler = Defaults.scheduler[]
     )
-    alg_orth = QRpos()
+    alg_orth = Defaults.alg_qr()
     mps = state.mps
     src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
     src_ACs = mps isa Multiline ? eachcol(mps.AC) : mps.AC
@@ -121,7 +121,7 @@ function localupdate_step!(
 end
 
 function _localupdate_vomps_step!(
-        site, mps, operator, envs, AC₀, C₀; parallel::Bool = false, alg_orth = QRpos()
+        site, mps, operator, envs, AC₀, C₀; parallel::Bool = false, alg_orth = Defaults.alg_qr()
     )
     if !parallel
         AC = AC_hamiltonian(site, mps, operator, mps, envs) * AC₀

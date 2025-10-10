@@ -180,7 +180,7 @@ module TestOperators
                 FiniteMPOHamiltonian(lattice, 3 => O₁)
             @test 0.8 * H1 + 0.2 * H1 ≈ H1 atol = 1.0e-6
             @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1.0e-6
-            H1_trunc = changebonds(H1, SvdCut(; trscheme = truncdim(0)))
+            H1_trunc = changebonds(H1, SvdCut(; trscheme = truncrank(0)))
             @test H1_trunc ≈ H1
             @test all(left_virtualspace(H1_trunc) .== left_virtualspace(H1))
 
@@ -212,7 +212,7 @@ module TestOperators
                 FiniteMPOHamiltonian(grid, vertical_operators) +
                 FiniteMPOHamiltonian(grid, horizontal_operators) atol = 1.0e-4
 
-            H5 = changebonds(H4 / 3 + 2H4 / 3, SvdCut(; trscheme = truncbelow(1.0e-12)))
+            H5 = changebonds(H4 / 3 + 2H4 / 3, SvdCut(; trscheme = trunctol(; atol = 1.0e-12)))
             psi = FiniteMPS(physicalspace(H5), V ⊕ oneunit(V))
             @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)
         end
