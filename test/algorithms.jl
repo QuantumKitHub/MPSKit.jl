@@ -190,7 +190,7 @@ module TestAlgorithms
 
     @testset "LazySum FiniteMPS groundstate" verbose = true begin
         tol = 1.0e-8
-        D = 15
+        D = 32
         atol = 1.0e-2
         L = 10
 
