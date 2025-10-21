@@ -19,16 +19,16 @@ end
 function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
     AL′ = map(ψ.AL) do A
         # find random orthogonal vectors
-        A_perp = randn!(similar(A, codomain(A) ← fuse(codomain(A))))
-        add!(A_perp, A * (A' * A_perp), -1)
+        A_perp = randn!(similar(A, codomain(A) ← fuse(codomain(A)) ⊖ right_virtualspace(A)))
+        normalize!(add!(A_perp, A * (A' * A_perp), -1))
         A′, _, _ = svd_trunc!(A_perp; alg = alg.alg_svd, trunc = alg.trscheme)
         return A′
     end
 
     AR′ = map(ψ.AR) do A
         At = _transpose_tail(A)
-        A_perp = randn!(similar(At, fuse(domain(At)) ← domain(At)))
-        add!(A_perp, (A_perp * At') * At, -1)
+        A_perp = randn!(similar(At, fuse(domain(At)) ⊖ left_virtualspace(A) ← domain(At)))
+        normalize!(add!(A_perp, (A_perp * At') * At, -1))
         _, _, A′ = svd_trunc!(A_perp; alg = alg.alg_svd, trunc = alg.trscheme)
         return A′
     end
