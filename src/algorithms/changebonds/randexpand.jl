@@ -17,32 +17,31 @@ $(TYPEDFIELDS)
     trscheme::TruncationStrategy
 end
 
-function changebonds(ψ::InfiniteMPS, alg::RandExpand)
-    T = eltype(ψ.AL)
-    AL′ = similar(ψ.AL)
-    AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
-    for i in 1:length(ψ)
-        # determine optimal expansion spaces around bond i
-        AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
-
-        # Use the nullspaces and SVD decomposition to determine the optimal expansion space
-        VL = left_null(ψ.AL[i])
-        VR = right_null!(_transpose_tail(ψ.AR[i + 1]; copy = true))
-        intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
-        U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
-
-        AL′[i] = VL * U
-        AR′[i + 1] = Vᴴ * VR
+function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
+    AL′ = map(ψ.AL) do A
+        # find random orthogonal vectors
+        A_perp = randn!(similar(A))
+        add!(A_perp, A * (A' * A_perp), -1)
+        A′, _, _ = svd_trunc!(A_perp; alg = alg.alg_svd, trunc = alg.trscheme)
+        return A′
     end
 
-    return _expand(ψ, AL′, AR′)
+    AR′ = map(ψ.AR) do A
+        At = _transpose_tail(A)
+        A_perp = randn!(similar(At))
+        add!(A_perp, (A_perp * At') * At, -1)
+        _, _, A′ = svd_trunc!(A_perp; alg = alg.alg_svd, trunc = alg.trscheme)
+        return A′
+    end
+
+    return _expand!(ψ, AL′, AR′)
 end
 
-function changebonds(ψ::MultilineMPS, alg::RandExpand)
-    return Multiline(map(x -> changebonds(x, alg), ψ.data))
+function changebonds!(ψ::MultilineMPS, alg::RandExpand)
+    return Multiline(map(x -> changebonds!(x, alg), ψ.data))
 end
 
-changebonds(ψ::AbstractFiniteMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
+changebonds(ψ::AbstractMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
 function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
     for i in 1:(length(ψ) - 1)
         AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
