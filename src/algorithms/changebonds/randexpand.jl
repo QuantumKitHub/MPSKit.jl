@@ -2,8 +2,7 @@
 $(TYPEDEF)
 
 An algorithm that expands the bond dimension by adding random unitary vectors that are
-orthogonal to the existing state. This is achieved by performing a truncated SVD on a random
-two-site MPS tensor, which is made orthogonal to the existing state.
+orthogonal to the existing state.
 
 ## Fields
 
