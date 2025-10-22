@@ -25,11 +25,12 @@ function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
         return A′
     end
 
-    AR′ = map(ψ.AR) do A
+    AR′ = map(enumerate(ψ.AR)) do (i, A)
         At = _transpose_tail(A)
         A_perp = randn!(similar(At, fuse(domain(At)) ⊖ left_virtualspace(A) ← domain(At)))
         normalize!(add!(A_perp, (A_perp * At') * At, -1))
-        _, _, A′ = svd_trunc!(A_perp; alg = alg.alg_svd, trunc = alg.trscheme)
+        trunc = truncspace(right_virtualspace(AL′[i - 1]))
+        _, _, A′ = svd_trunc!(A_perp; alg = alg.alg_svd, trunc)
         return A′
     end
 
