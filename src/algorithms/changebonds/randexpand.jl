@@ -41,6 +41,8 @@ function changebonds!(ψ::MultilineMPS, alg::RandExpand)
 end
 
 changebonds(ψ::AbstractMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
+changebonds(ψ::MultilineMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
+
 function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
     for i in 1:(length(ψ) - 1)
         AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
