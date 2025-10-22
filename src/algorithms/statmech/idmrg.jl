@@ -19,7 +19,7 @@ function leading_boundary(
                 for row in 1:size(ψ, 1)
                     ac = ψ.AC[row, col]
                     (col == size(ψ, 2)) && (ac = copy(ac)) # needed in next sweep
-                    ψ.AL[row, col], ψ.C[row, col] = leftorth!(ac)
+                    ψ.AL[row, col], ψ.C[row, col] = qr_compact!(ac)
                 end
 
                 transfer_leftenv!(envs, ψ, operator, ψ, col + 1)
@@ -31,7 +31,7 @@ function leading_boundary(
                 _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    ψ.C[row, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row, col]))
+                    ψ.C[row, col - 1], temp = lq_compact!(_transpose_tail(ψ.AC[row, col]))
                     ψ.AR[row, col] = _transpose_front(temp)
                 end
 
