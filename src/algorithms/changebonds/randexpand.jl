@@ -2,8 +2,7 @@
 $(TYPEDEF)
 
 An algorithm that expands the bond dimension by adding random unitary vectors that are
-orthogonal to the existing state. This is achieved by performing a truncated SVD on a random
-two-site MPS tensor, which is made orthogonal to the existing state.
+orthogonal to the existing state.
 
 ## Fields
 
@@ -15,34 +14,52 @@ $(TYPEDFIELDS)
 
     "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy] the expanded space"
     trscheme::TruncationStrategy
+
+    "expansion range that is considered for selecting the orthogonal subspace"
+    range::Int = 1
 end
 
-function changebonds(ψ::InfiniteMPS, alg::RandExpand)
-    T = eltype(ψ.AL)
+function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
+    # obtain the spaces for the expanded directions by sampling
+    virtualspaces = PeriodicVector(
+        map(1:length(ψ)) do i
+            Vmax = mapreduce(fuse, reverse(0:alg.range)) do j
+                j == alg.range ? left_virtualspace(ψ, i - j) : physicalspace(ψ, i - j - 1)
+            end ⊖ left_virtualspace(ψ, i)
+            return sample_space(Vmax, alg.trscheme)
+        end
+    )
+
+    # ensure the resulting tensors are full rank (space-wise)
+    makefullrank!(virtualspaces, physicalspace(ψ))
+
+    # add vectors orthogonal to the current state
     AL′ = similar(ψ.AL)
+    T = eltype(AL′)
     AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
+
     for i in 1:length(ψ)
-        # determine optimal expansion spaces around bond i
-        AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
-
-        # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = left_null(ψ.AL[i])
-        VR = right_null!(_transpose_tail(ψ.AR[i + 1]))
-        intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
-        U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
+        XL = similar(VL, right_virtualspace(VL) ← virtualspaces[i + 1])
+        foreach(((c, b),) -> TensorKit.one!(b), blocks(XL))
+        AL′[i] = VL * XL
 
-        AL′[i] = VL * U
-        AR′[i + 1] = Vᴴ * VR
+        VR = right_null!(_transpose_tail(ψ.AR[i]))
+        XR = similar(VR, virtualspaces[i] ← space(VR, 1))
+        foreach(((c, b),) -> TensorKit.one!(b), blocks(XR))
+        AR′[i] = XR * VR
     end
 
-    return _expand(ψ, AL′, AR′)
+    return _expand!(ψ, AL′, AR′)
 end
 
-function changebonds(ψ::MultilineMPS, alg::RandExpand)
-    return Multiline(map(x -> changebonds(x, alg), ψ.data))
+function changebonds!(ψ::MultilineMPS, alg::RandExpand)
+    return Multiline(map(x -> changebonds!(x, alg), ψ.data))
 end
 
-changebonds(ψ::AbstractFiniteMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
+changebonds(ψ::AbstractMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
+changebonds(ψ::MultilineMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
+
 function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
     for i in 1:(length(ψ) - 1)
         AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
@@ -66,4 +83,10 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
     end
 
     return normalize!(ψ)
+end
+
+function sample_space(V, strategy)
+    S = TensorKit.SectorDict(c => Random.randexp(dim(V, c)) for c in sectors(V))
+    ind = MatrixAlgebraKit.findtruncated(S, strategy)
+    return TensorKit.Factorizations.truncate_space(V, ind)
 end
