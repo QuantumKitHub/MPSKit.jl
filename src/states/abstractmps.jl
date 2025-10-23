@@ -135,14 +135,14 @@ function makefullrank!(virtualspaces::PeriodicVector{S}, physicalspaces::Periodi
     while haschanged
         haschanged = false
         for i in 1:length(virtualspaces)
-            Vmax = fuse(physicalspaces[i - 1], virtualspaces[i - 1])
+            Vmax = fuse(virtualspaces[i - 1], physicalspaces[i - 1])
             if !(virtualspaces[i] ≾ Vmax)
                 virtualspaces[i] = infimum(virtualspaces[i], Vmax)
                 haschanged = true
             end
         end
         for i in reverse(1:length(virtualspaces))
-            Vmax = fuse(dual(physicalspaces[i]), virtualspaces[i])
+            Vmax = fuse(dual(physicalspaces[i - 1]), virtualspaces[i])
             if !(virtualspaces[i - 1] ≾ Vmax)
                 virtualspaces[i - 1] = infimum(virtualspaces[i - 1], Vmax)
                 haschanged = true
