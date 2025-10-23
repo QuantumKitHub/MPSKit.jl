@@ -82,7 +82,7 @@ function environment_alg(
         verbosity = Defaults.VERBOSE_NONE
     )
     max_krylovdim = dim(left_virtualspace(above, 1)) * dim(left_virtualspace(below, 1))
-    return GMRES(; tol, maxiter, krylovdim = @show(min(max_krylovdim, krylovdim)), verbosity)
+    return GMRES(; tol, maxiter, krylovdim = min(max_krylovdim, krylovdim), verbosity)
 end
 function environment_alg(
         ::Union{InfiniteQP, MultilineQP}, ::Union{InfiniteMPO, MultilineMPO},
