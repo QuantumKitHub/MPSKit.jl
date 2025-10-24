@@ -39,7 +39,7 @@ mps</code></pre><pre class="documenter-example-output"><code class="nohighlight 
 N2 = expectation_value(mps, 3 =&gt; id(physicalspace(mps, 3)))
 println(&quot;‖mps‖ = $N1&quot;)
 println(&quot;&lt;mps|𝕀₃|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 2.23606797749979
-&lt;mps|𝕀₃|mps&gt; = 1.0000000000000004 - 5.645816632371154e-17im</code></pre><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">J = 1.0
+&lt;mps|𝕀₃|mps&gt; = 0.9999999999999994 + 1.7313202438988084e-17im</code></pre><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">J = 1.0
 g = 0.5
 lattice = fill(ComplexSpace(2), 10)
 X = TensorMap(ComplexF64[0 1; 1 0], ComplexSpace(2), ComplexSpace(2))
@@ -48,17 +48,17 @@ H = FiniteMPOHamiltonian(lattice, (i, i+1) =&gt; -J * X ⊗ X for i in 1:length(
     FiniteMPOHamiltonian(lattice, (i,) =&gt; - g * Z for i in 1:length(lattice))
 find_groundstate!(mps, H, DMRG(; maxiter=10))
 E0 = expectation_value(mps, H)
-println(&quot;&lt;mps|H|mps&gt; = $real(E0)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: DMRG init:	obj = -4.183762959299e+00	err = 3.7880e-01
-[ Info: DMRG   1:	obj = -9.764996630497e+00	err = 1.7409233427e-02	time = 3.37 sec
-[ Info: DMRG   2:	obj = -9.765503494309e+00	err = 8.5021914473e-04	time = 0.30 sec
-[ Info: DMRG   3:	obj = -9.765503497306e+00	err = 3.9826283382e-06	time = 0.01 sec
-[ Info: DMRG   4:	obj = -9.765503497545e+00	err = 1.6476112189e-06	time = 0.01 sec
-[ Info: DMRG   5:	obj = -9.765503497590e+00	err = 7.1887349941e-07	time = 0.01 sec
-[ Info: DMRG   6:	obj = -9.765503497600e+00	err = 3.3564855028e-07	time = 0.01 sec
-[ Info: DMRG   7:	obj = -9.765503497602e+00	err = 1.6659698136e-07	time = 0.01 sec
-[ Info: DMRG   8:	obj = -9.765503497602e+00	err = 8.2997201360e-08	time = 0.01 sec
-[ Info: DMRG   9:	obj = -9.765503497603e+00	err = 4.1409066422e-08	time = 0.01 sec
-┌ Warning: DMRG cancel 10:	obj = -9.765503497603e+00	err = 2.0667611894e-08	time = 3.84 sec
+println(&quot;&lt;mps|H|mps&gt; = $real(E0)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: DMRG init:	obj = -4.060582875212e+00	err = 3.3616e-01
+[ Info: DMRG   1:	obj = -9.765008558327e+00	err = 1.6958463536e-02	time = 3.39 sec
+[ Info: DMRG   2:	obj = -9.765503478751e+00	err = 7.7589602417e-04	time = 0.31 sec
+[ Info: DMRG   3:	obj = -9.765503497303e+00	err = 3.8862131822e-06	time = 0.01 sec
+[ Info: DMRG   4:	obj = -9.765503497540e+00	err = 1.7599356938e-06	time = 0.01 sec
+[ Info: DMRG   5:	obj = -9.765503497589e+00	err = 8.2297295424e-07	time = 0.01 sec
+[ Info: DMRG   6:	obj = -9.765503497600e+00	err = 3.9272036862e-07	time = 0.01 sec
+[ Info: DMRG   7:	obj = -9.765503497602e+00	err = 1.8983631900e-07	time = 0.01 sec
+[ Info: DMRG   8:	obj = -9.765503497602e+00	err = 9.2524391416e-08	time = 0.01 sec
+[ Info: DMRG   9:	obj = -9.765503497603e+00	err = 4.5341560068e-08	time = 0.01 sec
+┌ Warning: DMRG cancel 10:	obj = -9.765503497603e+00	err = 2.2303000685e-08	time = 3.76 sec
 └ @ MPSKit ~/work/MPSKit.jl/MPSKit.jl/src/algorithms/groundstate/dmrg.jl:61
 &lt;mps|H|mps&gt; = real(E0)</code></pre><h3 id="Infinite-Matrix-Product-States"><a class="docs-heading-anchor" href="#Infinite-Matrix-Product-States">Infinite Matrix Product States</a><a id="Infinite-Matrix-Product-States-1"></a><a class="docs-heading-anchor-permalink" href="#Infinite-Matrix-Product-States" title="Permalink"></a></h3><p>Similarly, an infinite MPS can be constructed by specifying the tensors for the unit cell, characterised by the spaces (dimensions) thereof.</p><pre><code class="language-julia hljs">d = 2 # physical dimension
 D = 5 # virtual dimension
@@ -81,7 +81,7 @@ mps = InfiniteMPS(als)</code></pre><pre class="documenter-example-output"><code 
 N2 = expectation_value(mps, 1 =&gt; id(physicalspace(mps, 1)))
 println(&quot;‖mps‖ = $N1&quot;)
 println(&quot;&lt;mps|𝕀₁|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 0.9999999999999999
-&lt;mps|𝕀₁|mps&gt; = 0.9999999999999998 - 1.318389841742373e-16im</code></pre><div class="admonition is-info" id="Normalization-of-infinite-MPS-c60affaedc4242d5"><header class="admonition-header">Normalization of infinite MPS<a class="admonition-anchor" href="#Normalization-of-infinite-MPS-c60affaedc4242d5" title="Permalink"></a></header><div class="admonition-body"><p>Because infinite MPS cannot sensibly be normalized to anything but <span>$1$</span>, the <code>norm</code> of an infinite MPS is always set to be <span>$1$</span> at construction. If this were not the case, any observable computed from the MPS would either blow up to infinity or vanish to zero.</p></div></div><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. There are plenty of pre-defined models in <code>MPSKitModels</code>, but we can also manually construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">J = 1.0
+&lt;mps|𝕀₁|mps&gt; = 0.9999999999999974 + 3.469446951953597e-16im</code></pre><div class="admonition is-info" id="Normalization-of-infinite-MPS-c60affaedc4242d5"><header class="admonition-header">Normalization of infinite MPS<a class="admonition-anchor" href="#Normalization-of-infinite-MPS-c60affaedc4242d5" title="Permalink"></a></header><div class="admonition-body"><p>Because infinite MPS cannot sensibly be normalized to anything but <span>$1$</span>, the <code>norm</code> of an infinite MPS is always set to be <span>$1$</span> at construction. If this were not the case, any observable computed from the MPS would either blow up to infinity or vanish to zero.</p></div></div><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. There are plenty of pre-defined models in <code>MPSKitModels</code>, but we can also manually construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">J = 1.0
 g = 0.5
 lattice = PeriodicVector([ComplexSpace(2)])
 X = TensorMap(ComplexF64[0 1; 1 0], ComplexSpace(2), ComplexSpace(2))
@@ -89,13 +89,13 @@ Z = TensorMap(ComplexF64[1 0; 0 -1], space(X))
 H = InfiniteMPOHamiltonian(lattice, (1, 2) =&gt; -J * X ⊗ X, (1,) =&gt; - g * Z)
 mps, = find_groundstate(mps, H, VUMPS(; maxiter=10))
 E0 = expectation_value(mps, H)
-println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: VUMPS init:	obj = -9.295228055834e-01	err = 2.8668e-01
-[ Info: VUMPS   1:	obj = -1.063534125852e+00	err = 2.8206754746e-03	time = 7.73 sec
-[ Info: VUMPS   2:	obj = -1.063544409653e+00	err = 2.0476430632e-05	time = 0.00 sec
-[ Info: VUMPS   3:	obj = -1.063544409972e+00	err = 1.1278467141e-06	time = 0.00 sec
-[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 1.1869444893e-07	time = 0.00 sec
-[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 1.2178242501e-08	time = 0.00 sec
-[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 1.2902036788e-09	time = 0.00 sec
-[ Info: VUMPS   7:	obj = -1.063544409973e+00	err = 1.3818192661e-10	time = 0.00 sec
-[ Info: VUMPS conv 8:	obj = -1.063544409973e+00	err = 1.4827774137e-11	time = 7.74 sec
-&lt;mps|H|mps&gt; = -1.0635444099732505</code></pre><h3 id="Additional-Resources"><a class="docs-heading-anchor" href="#Additional-Resources">Additional Resources</a><a id="Additional-Resources-1"></a><a class="docs-heading-anchor-permalink" href="#Additional-Resources" title="Permalink"></a></h3><p>For more detailed information on the functionality and capabilities of MPSKit, refer to the Manual section, or have a look at the <a href="examples/#Examples">Examples</a> page.</p><p>Keep in mind that the documentation is still a work in progress, and that some features may not be fully documented yet. If you encounter any issues or have questions, please check the library&#39;s <a href="https://github.com/QuantumKitHub/MPSKit.jl/issues">issue tracker</a> on the GitHub repository and open a new issue.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="man/intro/">Prerequisites »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Wednesday 22 October 2025 12:37">Wednesday 22 October 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: VUMPS init:	obj = -9.997102309874e-01	err = 2.1375e-01
+[ Info: VUMPS   1:	obj = -1.063539244108e+00	err = 2.0826244521e-03	time = 8.24 sec
+[ Info: VUMPS   2:	obj = -1.063544409493e+00	err = 2.1651075267e-05	time = 0.00 sec
+[ Info: VUMPS   3:	obj = -1.063544409972e+00	err = 1.0187399933e-06	time = 0.00 sec
+[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 1.2048209629e-07	time = 0.00 sec
+[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 1.1717598041e-08	time = 0.00 sec
+[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 1.2334265865e-09	time = 0.00 sec
+[ Info: VUMPS   7:	obj = -1.063544409973e+00	err = 1.3204069472e-10	time = 0.00 sec
+[ Info: VUMPS conv 8:	obj = -1.063544409973e+00	err = 1.4164368037e-11	time = 8.25 sec
+&lt;mps|H|mps&gt; = -1.0635444099732512</code></pre><h3 id="Additional-Resources"><a class="docs-heading-anchor" href="#Additional-Resources">Additional Resources</a><a id="Additional-Resources-1"></a><a class="docs-heading-anchor-permalink" href="#Additional-Resources" title="Permalink"></a></h3><p>For more detailed information on the functionality and capabilities of MPSKit, refer to the Manual section, or have a look at the <a href="examples/#Examples">Examples</a> page.</p><p>Keep in mind that the documentation is still a work in progress, and that some features may not be fully documented yet. If you encounter any issues or have questions, please check the library&#39;s <a href="https://github.com/QuantumKitHub/MPSKit.jl/issues">issue tracker</a> on the GitHub repository and open a new issue.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="man/intro/">Prerequisites »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Friday 24 October 2025 22:30">Friday 24 October 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
