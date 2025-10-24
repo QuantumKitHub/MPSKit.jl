@@ -31,7 +31,7 @@ function changebonds(
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = left_null(ψ.AL[i])
-        VR = right_null!(_transpose_tail(ψ.AR[i + 1]))
+        VR = right_null!(_transpose_tail(ψ.AR[i + 1]; copy = true))
         intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
         U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
@@ -57,7 +57,7 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = left_null(ψ.AL[i, j])
-        VR = right_null!(_transpose_tail(ψ.AR[i, j + 1]))
+        VR = right_null!(_transpose_tail(ψ.AR[i, j + 1]; copy = true))
         intermediate = normalize!(adjoint(VL) * AC2 * adjoint(VR))
         U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
@@ -86,7 +86,7 @@ function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = envir
 
         #Calculate nullspaces for left and right
         NL = left_null(ψ.AC[i])
-        NR = right_null!(_transpose_tail(ψ.AR[i + 1]))
+        NR = right_null!(_transpose_tail(ψ.AR[i + 1]; copy = true))
 
         #Use this nullspaces and SVD decomposition to determine the optimal expansion space
         intermediate = normalize!(adjoint(NL) * AC2 * adjoint(NR))
