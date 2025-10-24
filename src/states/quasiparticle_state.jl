@@ -73,7 +73,7 @@ function RightGaugedQP(
     )
     # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
-    VRs = convert(Vector, map(right_null! ∘ _transpose_tail, right_gs.AR))
+    VRs = convert(Vector, map(x -> right_null!(_transpose_tail(x; copy = true)), right_gs.AR))
     Xs = map(enumerate(VRs)) do (i, vr)
         x = similar(
             vr,

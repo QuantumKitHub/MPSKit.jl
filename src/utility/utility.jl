@@ -1,11 +1,11 @@
-function _transpose_front(t::AbstractTensorMap) # make TensorMap{S,N₁+N₂-1,1}
-    return repartition(t, numind(t) - 1, 1)
+function _transpose_front(t::AbstractTensorMap; copy::Bool = false)
+    return repartition(t, numind(t) - 1, 1; copy)
 end
-function _transpose_tail(t::AbstractTensorMap) # make TensorMap{S,1,N₁+N₂-1}
-    return repartition(t, 1, numind(t) - 1)
+function _transpose_tail(t::AbstractTensorMap; copy::Bool = false) # make TensorMap{S,1,N₁+N₂-1}
+    return repartition(t, 1, numind(t) - 1; copy)
 end
-function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap)
-    return repartition(t1, numout(t2), numin(t2))
+function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap; copy::Bool = false)
+    return repartition(t1, numout(t2), numin(t2); copy)
 end
 
 _mul_front(C, A) = _transpose_front(C * _transpose_tail(A))
@@ -28,7 +28,7 @@ function decompose_localmpo(
 
     leftind = (N + 1, 1, 2)
     rightind = (ntuple(x -> x + N + 1, N - 1)..., reverse(ntuple(x -> x + 2, N - 2))...)
-    V, C = left_orth!(transpose(inpmpo, (leftind, rightind)); trunc)
+    V, C = left_orth!(transpose(inpmpo, (leftind, rightind); copy = true); trunc)
 
     A = transpose(V, ((2, 3), (1, 4)))
     B = transpose(C, ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1)))
@@ -43,7 +43,7 @@ function decompose_localmps(
 
     leftind = (1, 2)
     rightind = reverse(ntuple(x -> x + 2, N - 1))
-    A, C = left_orth!(transpose(state, (leftind, rightind)); trunc)
+    A, C = left_orth!(transpose(state, (leftind, rightind); copy = true); trunc)
     B = _transpose_front(C)
     return [A; decompose_localmps(B)]
 end
