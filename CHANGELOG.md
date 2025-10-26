@@ -13,10 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The `changebonds(state, ::RandExpand)` algorithm now no longer projects onto the nullspace
-  on both sides. This ensures that the expanded symmetry sectors can be selected beyond what
-  is allowed by two-site updates, which can be relevant for certain systems that have
-  symmetry-related obstructions.
+- The `changebonds(state, ::RandExpand)` algorithm now no longer has to perform a
+  truncated SVD to obtain the desired spaces, and instead sample the space directly
+  and then generates a random isometry. This should be slightly more performant, but
+  otherwise equivalent.
 
 ### Deprecated
 
