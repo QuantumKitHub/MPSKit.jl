@@ -77,3 +77,60 @@ function sample_space(V, strategy)
     ind = MatrixAlgebraKit.findtruncated(S, strategy)
     return TensorKit.Factorizations.truncate_space(V, ind)
 end
+
+
+"""
+$(TYPEDEF)
+
+An algorithm that expands the bond dimension by adding random unitary vectors that are
+orthogonal to the existing state, in a sweeping fashion. Additionally, some random noise
+is added to the state in order for it to remain gauge-able.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
+@kwdef struct RandPerturbedExpand{S} <: Algorithm
+    "algorithm used for the singular value decomposition"
+    alg_svd::S = Defaults.alg_svd()
+
+    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy] the expanded space"
+    trscheme::TruncationStrategy
+
+    "amount of noise that is added to the current state"
+    noisefactor::Float64 = eps()^(3 / 4)
+
+    "algorithm used for gauging the state"
+    alg_gauge = Defaults.alg_gauge(; dynamic_tols = false)
+end
+
+function changebonds!(ψ::InfiniteMPS, alg::RandPerturbedExpand)
+    for i in 1:length(ψ)
+        # obtain space by sampling the support of left nullspace
+        # add (orthogonal) directions as isometries in that direction
+        VL = left_null(ψ.AL[i])
+        V = sample_space(right_virtualspace(VL), alg.trscheme)
+        XL = randisometry(storagetype(VL), right_virtualspace(VL) ← V)
+        ψ.AL[i] = catdomain(ψ.AL[i], VL * XL)
+
+        # make sure the next site fits, by "absorbing" into a larger tensor
+        # with some random noise to ensure state is still gauge-able
+        AL = ψ.AL[i + 1]
+        AL′ = similar(AL, right_virtualspace(ψ.AL[i]) ⊗ physicalspace(AL) ← right_virtualspace(AL))
+        scale!(randn!(AL′), alg.noisefactor)
+        ψ.AL[i + 1] = TensorKit.absorb!(AL′, AL)
+    end
+
+    # properly regauge the state:
+    ψ.AR .= similar.(ψ.AL)
+    ψ.AC .= similar.(ψ.AL)
+
+    # initial guess for gauge is embedded original C
+    C₀ = similar(ψ.C[0], right_virtualspace(ψ.AL[end]) ← left_virtualspace(ψ.AL[1]))
+    absorb!(id!(C₀), ψ.C[0])
+
+    gaugefix!(ψ, ψ.AL, C₀; order = :LR, alg.alg_gauge.maxiter, alg.alg_gauge.tol)
+    mul!.(ψ.AC, ψ.AL, ψ.C)
+
+    return ψ
+end
