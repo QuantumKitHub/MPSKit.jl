@@ -14,40 +14,24 @@ $(TYPEDFIELDS)
 
     "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy] the expanded space"
     trscheme::TruncationStrategy
-
-    "expansion range that is considered for selecting the orthogonal subspace"
-    range::Int = 1
 end
 
 function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
-    # obtain the spaces for the expanded directions by sampling
-    virtualspaces = PeriodicVector(
-        map(1:length(ψ)) do i
-            Vmax = mapreduce(fuse, reverse(0:alg.range)) do j
-                j == alg.range ? left_virtualspace(ψ, i - j) : physicalspace(ψ, i - j - 1)
-            end ⊖ left_virtualspace(ψ, i)
-            return sample_space(Vmax, alg.trscheme)
-        end
-    )
-
-    # ensure the resulting tensors are full rank (space-wise)
-    makefullrank!(virtualspaces, physicalspace(ψ))
-
-    # add vectors orthogonal to the current state
+    T = eltype(ψ.AL)
     AL′ = similar(ψ.AL)
-    T = eltype(AL′)
     AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
 
     for i in 1:length(ψ)
+        # obtain spaces by sampling the support of both the left and right nullspace
         VL = left_null(ψ.AL[i])
-        XL = similar(VL, right_virtualspace(VL) ← virtualspaces[i + 1])
-        foreach(((c, b),) -> TensorKit.one!(b), blocks(XL))
-        AL′[i] = VL * XL
+        VR = right_null!(_transpose_tail(ψ.AR[i + 1]; copy = true))
+        V = sample_space(infimum(right_virtualspace(VL), space(VR, 1)), alg.trscheme)
 
-        VR = right_null!(_transpose_tail(ψ.AR[i]))
-        XR = similar(VR, virtualspaces[i] ← space(VR, 1))
-        foreach(((c, b),) -> TensorKit.one!(b), blocks(XR))
-        AR′[i] = XR * VR
+        # obtain (orthogonal) directions as isometries in that direction
+        XL = randisometry(storagetype(VL), right_virtualspace(VL) ← V)
+        AL′[i] = VL * XL
+        XR = randisometry(storagetype(VL), space(VR, 1) ← V)
+        AR′[i + 1] = XR * VR
     end
 
     return _expand!(ψ, AL′, AR′)
