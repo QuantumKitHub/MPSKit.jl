@@ -9,7 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `LocalPreferences.toml` file to ensure `TensorOperations` properly precompiles on testing
+  infrastructure
+
 ### Fixed
+
+- Dynamic tolerances yielded `NaN` during the initialization stage due to `1 / sqrt(iter)`
+  where `iter = 0`.
+- `InfiniteMPOHamiltonian` environments with low bond dimension and high Krylov dimension now are properly
+  clamped.
 
 ### Changed
 
