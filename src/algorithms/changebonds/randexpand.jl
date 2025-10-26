@@ -40,7 +40,8 @@ function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
 end
 
 function changebonds!(ψ::MultilineMPS, alg::RandExpand)
-    return Multiline(map(x -> changebonds!(x, alg), ψ.data))
+    foreach(Base.Fix2(changebonds!, alg), ψ.data)
+    return ψ
 end
 
 changebonds(ψ::AbstractMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
