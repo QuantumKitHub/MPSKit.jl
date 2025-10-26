@@ -2,7 +2,9 @@
 $(TYPEDEF)
 
 An algorithm that expands the bond dimension by adding random unitary vectors that are
-orthogonal to the existing state.
+orthogonal to the existing state. This means that additional directions are added to
+`AL` and `AR` that are contained in the nullspace of both. Note that this is happens in
+parallel, and therefore the expansion will never go beyond the local two-site subspace.
 
 ## Fields
 
