@@ -36,7 +36,7 @@ function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
         XL = randisometry(scalartype(VL), right_virtualspace(VL) ← V)
         AL′[i] = VL * XL
         XR = randisometry(scalartype(VR), space(VR, 1) ← V)
-        AR′[i + 1] = XR * VR
+        AR′[i + 1] = XR' * VR
     end
 
     return _expand!(ψ, AL′, AR′)
