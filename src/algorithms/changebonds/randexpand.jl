@@ -33,9 +33,9 @@ function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
         V = sample_space(infimum(right_virtualspace(VL), space(VR, 1)), alg.trscheme)
 
         # obtain (orthogonal) directions as isometries in that direction
-        XL = randisometry(storagetype(VL), right_virtualspace(VL) ← V)
+        XL = randisometry(scalartype(VL), right_virtualspace(VL) ← V)
         AL′[i] = VL * XL
-        XR = randisometry(storagetype(VL), space(VR, 1) ← V)
+        XR = randisometry(scalartype(VR), space(VR, 1) ← V)
         AR′[i + 1] = XR * VR
     end
 
