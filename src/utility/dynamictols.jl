@@ -62,6 +62,7 @@ where the new tolerance is given by
     new_tol = clamp(ϵ * alg.tol_factor / sqrt(iter), alg.tol_min, alg.tol_max)
 """
 function updatetol(alg::DynamicTol, iter::Integer, ϵ::Real)
+    iter = max(iter, one(iter))
     new_tol = clamp(ϵ * alg.tol_factor / sqrt(iter), alg.tol_min, alg.tol_max)
     return _updatetol(alg.alg, new_tol)
 end
