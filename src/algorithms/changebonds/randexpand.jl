@@ -6,6 +6,9 @@ orthogonal to the existing state. This means that additional directions are adde
 `AL` and `AR` that are contained in the nullspace of both. Note that this is happens in
 parallel, and therefore the expansion will never go beyond the local two-site subspace.
 
+The truncation strategy dictates the number of expanded states, by generating uniformly
+distributed weights for each state in the two-site space and truncating that.
+
 ## Fields
 
 $(TYPEDFIELDS)
@@ -72,8 +75,14 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
     return normalize!(ψ)
 end
 
+"""
+    sample_space(V, strategy)
+
+Sample basis states within a given `V::VectorSpace` by creating weights for each state that
+are distributed uniformly, and then truncating according to the given `strategy`.
+"""
 function sample_space(V, strategy)
-    S = TensorKit.SectorDict(c => Random.randexp(dim(V, c)) for c in sectors(V))
+    S = TensorKit.SectorDict(c => Random.rand(dim(V, c)) for c in sectors(V))
     ind = MatrixAlgebraKit.findtruncated(S, strategy)
     return TensorKit.Factorizations.truncate_space(V, ind)
 end
