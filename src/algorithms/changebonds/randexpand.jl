@@ -30,7 +30,7 @@ function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
         V = sample_space(infimum(right_virtualspace(VL), space(VR, 1)), alg.trscheme)
 
         # obtain (orthogonal) directions as isometries in that direction
-        XL = randisometry(storagetype(VL), right_virtualspace(VL) ← V)
+        XL = randisometry(scalartype(VL), right_virtualspace(VL) ← V)
         AL′[i] = VL * XL
         XR = randisometry(storagetype(VL), space(VR, 1) ← V)
         AR′[i + 1] = XR * VR
@@ -73,8 +73,8 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
 end
 
 function sample_space(V, strategy)
-    S = TensorKit.SectorDict(c => Random.randexp(dim(V, c)) for c in sectors(V))
-    ind = MatrixAlgebraKit.findtruncated(S, strategy)
+    S = TensorKit.SectorDict(c => sort!(Random.rand(dim(V, c)); rev = true) for c in sectors(V))
+    ind = MatrixAlgebraKit.findtruncated_svd(S, strategy)
     return TensorKit.Factorizations.truncate_space(V, ind)
 end
 
@@ -110,7 +110,7 @@ function changebonds!(ψ::InfiniteMPS, alg::RandPerturbedExpand)
         # add (orthogonal) directions as isometries in that direction
         VL = left_null(ψ.AL[i])
         V = sample_space(right_virtualspace(VL), alg.trscheme)
-        XL = randisometry(storagetype(VL), right_virtualspace(VL) ← V)
+        XL = randisometry(scalartype(VL), right_virtualspace(VL) ← V)
         ψ.AL[i] = catdomain(ψ.AL[i], VL * XL)
 
         # make sure the next site fits, by "absorbing" into a larger tensor
@@ -122,15 +122,46 @@ function changebonds!(ψ::InfiniteMPS, alg::RandPerturbedExpand)
     end
 
     # properly regauge the state:
+    makefullrank!(ψ.AL)
     ψ.AR .= similar.(ψ.AL)
-    ψ.AC .= similar.(ψ.AL)
+    # ψ.AC .= similar.(ψ.AL)
 
     # initial guess for gauge is embedded original C
     C₀ = similar(ψ.C[0], right_virtualspace(ψ.AL[end]) ← left_virtualspace(ψ.AL[1]))
     absorb!(id!(C₀), ψ.C[0])
 
-    gaugefix!(ψ, ψ.AL, C₀; order = :LR, alg.alg_gauge.maxiter, alg.alg_gauge.tol)
+    gaugefix!(ψ, ψ.AL, C₀; order = :R, alg.alg_gauge.maxiter, alg.alg_gauge.tol)
+
+    for i in reverse(1:length(ψ))
+        # obtain space by sampling the support of left nullspace
+        # add (orthogonal) directions as isometries in that direction
+        AR_tail = _transpose_tail(ψ.AR[i]; copy = true)
+        VR = right_null(AR_tail)
+        V = sample_space(space(VR, 1), alg.trscheme)
+        XR = randisometry(scalartype(VR), space(VR, 1) ← V)
+        ψ.AR[i] = _transpose_front(catcodomain(AR_tail, XR' * VR))
+
+        # make sure the next site fits, by "absorbing" into a larger tensor
+        # with some random noise to ensure state is still gauge-able
+        AR = ψ.AR[i - 1]
+        AR′ = similar(AR, left_virtualspace(AR) ⊗ physicalspace(AR) ← left_virtualspace(ψ.AR[i]))
+        scale!(randn!(AR′), alg.noisefactor)
+        ψ.AR[i - 1] = TensorKit.absorb!(AR′, AR)
+    end
+
+    # properly regauge the state:
+    makefullrank!(ψ.AR)
+    ψ.AL .= similar.(ψ.AR)
+    ψ.AC .= similar.(ψ.AR)
+
+    # initial guess for gauge is embedded original C
+    C₀ = similar(ψ.C[0], right_virtualspace(ψ.AR[end]) ← left_virtualspace(ψ.AR[1]))
+    absorb!(id!(C₀), ψ.C[0])
+
+    gaugefix!(ψ, ψ.AR, C₀; order = :LR, alg.alg_gauge.maxiter, alg.alg_gauge.tol)
     mul!.(ψ.AC, ψ.AL, ψ.C)
 
     return ψ
 end
+
+changebonds(ψ::InfiniteMPS, alg::RandPerturbedExpand) = changebonds!(copy(ψ), alg)
