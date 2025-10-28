@@ -292,7 +292,7 @@ disadvantages:
   and if the bond dimension is grown slow enough, this still obtains a very good expansion
   scheme. Again, The state will remain unchanged and a one-site scheme will now be able to 
   push the optimization further. The subspace used for expansion can be truncated through
-  `trscheme`, which dictates how many singular values will be added.
+  `trscheme`, which dictates how many orthogonal vectors will be added.
 
 * [`VUMPSSvdCut`](@ref): This algorithm is based on the [`VUMPS`](@ref) algorithm, and
   consists of performing a two-site update, and then truncating the state back down. Because
