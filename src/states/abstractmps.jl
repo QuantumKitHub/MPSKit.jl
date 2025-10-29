@@ -86,6 +86,20 @@ function MPSTensor(A::AbstractArray{T}) where {T <: Number}
     return t
 end
 
+# MPS characterization
+# --------------------
+abstract type AbstractMPSManifold{S <: ElementarySpace} end
+
+struct FiniteMPSManifold{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}} <: AbstractMPSManifold{S}
+    pspaces::Vector{S′}
+    vspaces::Vector{S}
+end
+
+struct InfiniteMPSManifold{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}} <: AbstractMPSManifold{S}
+    pspaces::PeriodicVector{S′}
+    vspaces::PeriodicVector{S}
+end
+
 """
     isfullrank(A::GenericMPSTensor; side=:both)
 
