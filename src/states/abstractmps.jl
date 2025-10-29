@@ -92,6 +92,13 @@ abstract type AbstractMPSManifold{S <: ElementarySpace} end
 
 TensorKit.spacetype(::Type{<:AbstractMPSManifold{S}}) where {S} = S
 
+physicalspace(manifold::AbstractMPSManifold, i::Integer) = physicalspace(manifold)[i]
+left_virtualspace(manifold::AbstractMPSManifold, i::Integer) = left_virtualspace(manifold)[i]
+right_virtualspace(manifold::AbstractMPSManifold, i::Integer) = right_virtualspace(manifold)[i]
+
+Base.getindex(manifold::AbstractMPSManifold, site::Integer) =
+    left_virtualspace(manifold, site) ⊗ physicalspace(manifold, site) ← right_virtualspace(manifold, site)
+
 struct FiniteMPSManifold{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}} <: AbstractMPSManifold{S}
     pspaces::Vector{S′}
     vspaces::Vector{S}
@@ -142,6 +149,14 @@ function InfiniteMPSManifold(
     return makefullrank!(manifold)
 end
 
+Base.length(manifold::AbstractMPSManifold) = length(physicalspace(manifold))
+
+physicalspace(manifold::Union{FiniteMPSManifold, InfiniteMPSManifold}) = manifold.pspaces
+left_virtualspace(manifold::FiniteMPSManifold) = manifold.vspaces[1:(end - 1)]
+left_virtualspace(manifold::InfiniteMPSManifold) = manifold.vspaces
+right_virtualspace(manifold::FiniteMPSManifold) = manifold.vspaces[2:end]
+right_virtualspace(manifold::InfiniteMPSManifold) = PeriodicVector(circshift(manifold.vspaces, 1))
+
 """
     isfullrank(A::GenericMPSTensor; side=:both)
 
@@ -164,19 +179,45 @@ function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
         throw(ArgumentError("Invalid side: $side"))
     end
 end
+isfullrank(manifold::AbstractMPSManifold; kwargs...) = all(i -> isfullrank(manifold[i]; kwargs...), 1:length(manifold))
 
 function makefullrank!(manifold::FiniteMPSManifold)
     # left-to-right sweep
-    for site in eachindex(manifold.pspaces)
-        left_maxspace = fuse(manifold.vspaces[i], fuse(manifold.pspaces[i]))
-        manifold.vspaces[i + 1] = infimum(manifold.vspaces[i + 1], left_maxspace)
-        dim(manifold.vspaces[i + 1]) > 0 || @warn "no fusion channels available at site $site"
+    for site in 1:length(manifold)
+        if !isfullrank(manifold[site]; side = :right)
+            maxspace = fuse(left_virtualspace(manifold, i), fuse(physicalspace(manifold, site)))
+            manifold.vspaces[site + 1] = infimum(right_virtualspace(manifold, site), maxspace)
+        end
     end
-    # right-to-sweep
-    for site in reverse(eachindex(manifold.pspaces))
-        right_maxspace = fuse(manifold.vspaces[i + 1], dual(fuse(manifold.pspaces[i])))
-        manifold.vspaces[i] = infimum(manifold.vspaces[i], right_maxspace)
-        dim(manifold.vspaces[i + 1]) > 0 || @warn "no fusion channels available at site $site"
+    # right-to-left sweep
+    for site in reverse(1:length(manifold))
+        if !isfullrank(manifold[site]; side = :left)
+            maxspace = fuse(right_virtualspace(manifold, i), dual(fuse(physicalspace(manifold, site))))
+            manifold.vspaces[site] = infimum(left_virtualspace(manifold, site), maxspace)
+        end
+    end
+    return manifold
+end
+function makefullrank!(manifold::InfiniteMPSManifold)
+    haschanged = true
+    while haschanged
+        haschanged = false
+        # left-to-right sweep
+        for site in 1:length(manifold)
+            if !isfullrank(manifold[site]; side = :right)
+                maxspace = fuse(left_virtualspace(manifold, i), fuse(physicalspace(manifold, site)))
+                manifold.vspaces[site + 1] = infimum(right_virtualspace(manifold, site), maxspace)
+                haschanged = true
+            end
+        end
+        # right-to-left sweep
+        for site in reverse(1:length(manifold))
+            if !isfullrank(manifold[site]; side = :left)
+                maxspace = fuse(right_virtualspace(manifold, i), dual(fuse(physicalspace(manifold, site))))
+                manifold.vspaces[site] = infimum(left_virtualspace(manifold, site), maxspace)
+                haschanged = true
+            end
+        end
     end
     return manifold
 end
@@ -200,29 +241,6 @@ function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg_leftorth = Def
         end
     end
     return A
-end
-
-function makefullrank!(virtualspaces::PeriodicVector{S}, physicalspaces::PeriodicVector{S}) where {S <: ElementarySpace}
-    haschanged = true
-    while haschanged
-        haschanged = false
-        for i in 1:length(virtualspaces)
-            Vmax = fuse(virtualspaces[i - 1], physicalspaces[i - 1])
-            if !(virtualspaces[i] ≾ Vmax)
-                virtualspaces[i] = infimum(virtualspaces[i], Vmax)
-                haschanged = true
-            end
-        end
-        for i in reverse(1:length(virtualspaces))
-            Vmax = fuse(dual(physicalspaces[i - 1]), virtualspaces[i])
-            if !(virtualspaces[i - 1] ≾ Vmax)
-                virtualspaces[i - 1] = infimum(virtualspaces[i - 1], Vmax)
-                haschanged = true
-            end
-        end
-    end
-
-    return virtualspaces
 end
 
 # Tensor accessors
