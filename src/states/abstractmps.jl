@@ -95,9 +95,33 @@ struct FiniteMPSManifold{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S
     vspaces::Vector{S}
 end
 
+function FiniteMPSManifold(
+        physicalspaces::AbstractVector{S′}, virtualspaces::AbstractVector{S}
+    ) where {S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}}
+    L₁ = length(physicalspaces)
+    L₂ = length(virtualspaces)
+    L₁ + 1 == L₂ ||
+        throw(DimensionMismatch(lazy"`|physicalspaces|` ($L₁) should be 1 less than `|virtualspaces|` ($L₂)"))
+
+    # copy to avoid side-effects and get correct array type
+    return FiniteMPSManifold{S, S′}(collect(physicalspaces), collect(virtualspaces))
+end
+
 struct InfiniteMPSManifold{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}} <: AbstractMPSManifold{S}
     pspaces::PeriodicVector{S′}
     vspaces::PeriodicVector{S}
+end
+
+function InfiniteMPSManifold(
+        physicalspaces::AbstractVector{S′}, virtualspaces::AbstractVector{S}
+    ) where {S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}}
+    L₁ = length(physicalspaces)
+    L₂ = length(virtualspaces)
+    L₁ == L₂ ||
+        throw(DimensionMismatch(lazy"`|physicalspaces|` ($L₁) should be equal to `|virtualspaces|` ($L₂)"))
+
+    # copy to avoid side-effects and get correct array type
+    return InfiniteMPSManifold{S, S′}(collect(physicalspaces), collect(virtualspaces))
 end
 
 """
