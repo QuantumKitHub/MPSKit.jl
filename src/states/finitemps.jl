@@ -62,85 +62,85 @@ struct FiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     ARs::Vector{Union{Missing, A}}
     ACs::Vector{Union{Missing, A}}
     Cs::Vector{Union{Missing, B}}
+
+    # constructor from data
     function FiniteMPS{A, B}(
             ALs::Vector{Union{Missing, A}}, ARs::Vector{Union{Missing, A}},
             ACs::Vector{Union{Missing, A}}, Cs::Vector{Union{Missing, B}}
         ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
         return new{A, B}(ALs, ARs, ACs, Cs)
     end
-    function FiniteMPS(
-            ALs::Vector{MA}, ARs::Vector{MA},
-            ACs::Vector{MA},
-            Cs::Vector{MB}
-        ) where {MA <: Union{GenericMPSTensor, Missing}, MB <: Union{MPSBondTensor, Missing}}
-        A = _not_missing_type(MA)
-        B = _not_missing_type(MB)
-        length(ACs) == length(Cs) - 1 == length(ALs) == length(ARs) ||
-            throw(DimensionMismatch("length mismatch of tensors"))
-        sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
-            throw(ArgumentError("at least one AC/C should not be missing"))
 
-        S = spacetype(A)
-        left_virt_spaces = Vector{Union{Missing, S}}(missing, length(Cs))
-        right_virt_spaces = Vector{Union{Missing, S}}(missing, length(Cs))
-
-        for (i, tup) in enumerate(zip(ALs, ARs, ACs))
-            non_missing = filter(!ismissing, tup)
-            isempty(non_missing) && throw(ArgumentError("missing site tensor"))
-            (al, ar, ac) = tup
-
-            if !ismissing(al)
-                !ismissing(left_virt_spaces[i]) &&
-                    (
-                    left_virt_spaces[i] == _firstspace(al) ||
-                        throw(SpaceMismatch("Virtual space of AL on site $(i) doesn't match"))
-                )
-
-                left_virt_spaces[i + 1] = _lastspace(al)'
-                left_virt_spaces[i] = _firstspace(al)
-            end
-
-            if !ismissing(ar)
-                !ismissing(right_virt_spaces[i]) &&
-                    (
-                    right_virt_spaces[i] == _firstspace(ar) ||
-                        throw(SpaceMismatch("Virtual space of AR on site $(i) doesn't match"))
-                )
-
-                right_virt_spaces[i + 1] = _lastspace(ar)'
-                right_virt_spaces[i] = _firstspace(ar)
-            end
-
-            if !ismissing(ac)
-                !ismissing(left_virt_spaces[i]) &&
-                    (
-                    left_virt_spaces[i] == _firstspace(ac) ||
-                        throw(SpaceMismatch("Left virtual space of AC on site $(i) doesn't match"))
-                )
-                !ismissing(right_virt_spaces[i + 1]) &&
-                    (
-                    right_virt_spaces[i + 1] == _lastspace(ac)' ||
-                        throw(SpaceMismatch("Right virtual space of AC on site $(i) doesn't match"))
-                )
-
-                right_virt_spaces[i + 1] = _lastspace(ac)'
-                left_virt_spaces[i] = _firstspace(ac)
-            end
-        end
-
-        for (i, c) in enumerate(Cs)
-            ismissing(c) && continue
-            !ismissing(left_virt_spaces[i]) && (
-                left_virt_spaces[i] == _firstspace(c) ||
-                    throw(SpaceMismatch("Left virtual space of C on site $(i - 1) doesn't match"))
-            )
-            !ismissing(right_virt_spaces[i]) && (
-                right_virt_spaces[i] == _lastspace(c)' ||
-                    throw(SpaceMismatch("Right virtual space of C on site $(i - 1) doesn't match"))
-            )
-        end
+    # constructor from spaces
+    function FiniteMPS{A, B}(
+            ::UndefInitializer, manifold::FiniteMPSManifold
+        ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
+        L = length(manifold)
+        ALs = Union{Missing, A}[A(undef, manifold[i]) for i in 1:L]
+        ARs = Vector{Union{Missing, A}}(missing, L)
+        ACs = Vector{Union{Missing, A}}(missing, L)
+        Cs = Vector{Union{Missing, B}}(missing, L + 1)
+        Cs[end] = B(undef, right_virtualspace(manifold, L) ← right_virtualspace(manifold, L))
         return new{A, B}(ALs, ARs, ACs, Cs)
     end
+end
+
+function FiniteMPS(
+        ALs::Vector{MA}, ARs::Vector{MA}, ACs::Vector{MA}, Cs::Vector{MB}
+    ) where {MA <: Union{GenericMPSTensor, Missing}, MB <: Union{MPSBondTensor, Missing}}
+    (L = length(ACs)) == length(Cs) - 1 == length(ALs) == length(ARs) ||
+        throw(DimensionMismatch("length mismatch of tensors"))
+    sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
+        throw(ArgumentError("at least one AC/C should not be missing"))
+
+    # determine the MPS manifold from the input
+    A = _not_missing_type(MA)
+    B = _not_missing_type(MB)
+    (S = spacetype(A)) == spacetype(B) || throw(SectorMisMatch())
+    S′ = A <: MPSTensor ? S : ProductSpace{S, numout(A) - 1}
+    pspaces = Vector{S′}(undef, L)
+    vspaces = Vector{S}(undef, L + 1)
+    for i in 1:L
+        sitetensor = coalesce(ALs[i], ARs[i], ACs[i])
+        ismissing(sitetensor) && throw(ArgumentError("missing site tensor at site $i"))
+
+        pspaces[i] = physicalspace(sitetensor)
+        vspaces[i] = left_virtualspace(sitetensor)
+        i == L && (vspaces[i + 1] = right_virtualspace(sitetensor))
+    end
+    V_left = popfirst!(vspaces)
+    V_right = pop!(vspaces)
+    manifold = FiniteMPSManifold(pspaces, vspaces; left_virtualspace = V_left, right_virtualspace = V_right)
+
+    # populate the non-missing tensors into the MPS
+    mps = FiniteMPS{A, B}(undef, manifold)
+    for i in 1:L
+        V_mps = manifold[i]
+        if !ismissing(ALs[i])
+            space(ALs[i]) == V_mps || throw(SpaceMismatch("incompatible space for AL[$i]"))
+            getfield(mps, :ALs)[i] = ALs[i]
+        end
+        if !ismissing(ARs[i])
+            space(ARs[i]) == V_mps || throw(SpaceMismatch("incompatible space for AR[$i]"))
+            getfield(mps, :ARs)[i] = ARs[i]
+        end
+        if !ismissing(ACs[i])
+            space(ACs[i]) == V_mps || throw(SpaceMismatch("incompatible space for AC[$i]"))
+            getfield(mps, :ACs)[i] = ACs[i]
+        end
+        if !ismissing(Cs[i])
+            space(Cs[i]) == left_virtualspace(V_mps) ← left_virtualspace(V_mps) ||
+                throw(SpaceMismatch("incompatible space for C[$i]"))
+            getfield(mps, :Cs)[i] = Cs[i]
+        end
+    end
+    if !ismissing(Cs[end])
+        space(Cs[end]) == right_virtualspace(manifold, L) ← right_virtualspace(manifold, L) ||
+            throw(SpaceMismatch("incompatible space for C[$(L + 1)]"))
+        getfield(mps, :Cs)[L + 1] = Cs[L + 1]
+    end
+
+    return mps
 end
 
 _not_missing_type(::Type{Missing}) = throw(ArgumentError("Only missing type present"))
@@ -202,35 +202,58 @@ function _gaugecenter(ψ::FiniteMPS)::HalfInt
     isnothing(center) && throw(ArgumentError("No center found, invalid state"))
     return center
 end
+
 #===========================================================================================
 Constructors
 ===========================================================================================#
 
-function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize = false, overwrite = false)
-    # TODO: copying the input vector is probably not necessary, as we are constructing new
-    # vectors anyways, maybe deprecate `overwrite`.
-    As = overwrite ? As : copy(As)
-    N = length(As)
-    As[1] = MatrixAlgebraKit.copy_input(qr_compact, As[1])
-    local C
-    for i in eachindex(As)
-        As[i], C = qr_compact!(As[i]; positive = true)
+function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize::Bool = false)
+    # left-gauge the input tensors
+    AL1, C = qr_compact(As[i])
+    normalize && normalize!(C)
+    ALs = Vector{Union{Missing, typeof(AL1)}}(undef, length(As))
+    for i in eachindex(ALs)
+        i == 1 && (ALs[i] = AL1; continue)
+
+        ALs[i], C = qr_compact!(_mul_front(C, As[i]))
         normalize && normalize!(C)
-        i == N || (As[i + 1] = _transpose_front(C * _transpose_tail(As[i + 1])))
     end
 
-    A = eltype(As)
-    B = typeof(C)
-
-    Cs = Vector{Union{Missing, B}}(missing, N + 1)
-    ALs = Vector{Union{Missing, A}}(missing, N)
+    # generate the tensor storage
+    A = eltype(ALs)
     ARs = Vector{Union{Missing, A}}(missing, N)
     ACs = Vector{Union{Missing, A}}(missing, N)
+    B = typeof(C)
+    Cs = Vector{Union{Missing, B}}(missing, N + 1)
 
     ALs .= As
     Cs[end] = C
 
     return FiniteMPS(ALs, ARs, ACs, Cs)
+end
+
+for f in (:zeros, :ones)
+    @eval begin
+        Base.$f(manifold::FiniteMPSManifold) = $f(Defaults.eltype, manifold)
+        function Base.$f(::Type{T}, manifold::FiniteMPSManifold) where {T}
+            As = map(i -> $f(T, manifold[i]), 1:length(manifold))
+            return FiniteMPS(As)
+        end
+    end
+end
+
+for randfun in (:rand, :randn)
+    randfun! = Symbol(randf, :!)
+    @eval function $randfun(rng::Random.AbstractRNG, ::Type{T}, manifold::FiniteMPSManifold) where {T}
+        As = map(i -> $randfun(rng, T, manifold[i]), 1:length(manifold))
+        return normalize!(FiniteMPS(As))
+    end
+    @eval function $randfun!(rng::Random.AbstractRNG, mps::FiniteMPS)
+        for i in 1:length(mps)
+            mps.AC[i] = $randfun!(rng, mps.AC[i])
+        end
+        return mps
+    end
 end
 
 function FiniteMPS(
