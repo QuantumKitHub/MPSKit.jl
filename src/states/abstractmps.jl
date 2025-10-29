@@ -90,21 +90,34 @@ end
 # --------------------
 abstract type AbstractMPSManifold{S <: ElementarySpace} end
 
+TensorKit.spacetype(::Type{<:AbstractMPSManifold{S}}) where {S} = S
+
 struct FiniteMPSManifold{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}} <: AbstractMPSManifold{S}
     pspaces::Vector{S′}
     vspaces::Vector{S}
 end
 
 function FiniteMPSManifold(
-        physicalspaces::AbstractVector{S′}, virtualspaces::AbstractVector{S}
+        physicalspaces::AbstractVector{S′}, max_virtualspaces::AbstractVector{S};
+        left_virtualspace::S = oneunit(S), right_virtualspace::S = oneunit(S)
     ) where {S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}}
     L₁ = length(physicalspaces)
-    L₂ = length(virtualspaces)
-    L₁ + 1 == L₂ ||
-        throw(DimensionMismatch(lazy"`|physicalspaces|` ($L₁) should be 1 less than `|virtualspaces|` ($L₂)"))
+    L₂ = length(max_virtualspaces)
+    L₁ == L₂ + 1 ||
+        throw(DimensionMismatch(lazy"`|physicalspaces|` ($L₁) should be 1 more than `|max_virtualspaces|` ($L₂)"))
 
     # copy to avoid side-effects and get correct array type
-    return FiniteMPSManifold{S, S′}(collect(physicalspaces), collect(virtualspaces))
+    pspaces = collect(physicalspaces)
+    vspaces = vcat(left_virtualspace, max_virtualspaces, right_virtualspace)
+    manifold = FiniteMPSManifold{S, S′}(pspaces, vspaces)
+
+    # ensure all spaces are full rank -- use vspaces as maximum
+    return makefullrank!(manifold)
+end
+function FiniteMPSManifold(
+        physicalspaces::AbstractVector{S′}, max_virtualspace::S; kwargs...
+    ) where {S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}}
+    return FiniteMPSManifold(physicalspaces, fill(max_virtualspace, length(physicalspaces) - 1))
 end
 
 struct InfiniteMPSManifold{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}} <: AbstractMPSManifold{S}
@@ -121,7 +134,12 @@ function InfiniteMPSManifold(
         throw(DimensionMismatch(lazy"`|physicalspaces|` ($L₁) should be equal to `|virtualspaces|` ($L₂)"))
 
     # copy to avoid side-effects and get correct array type
-    return InfiniteMPSManifold{S, S′}(collect(physicalspaces), collect(virtualspaces))
+    pspaces = collect(physicalspaces)
+    vspaces = collect(max_virtualspaces)
+    manifold = InfiniteMPSManifold{S, S′}(pspaces, vspaces)
+
+    # ensure all spaces are full rank -- use vspaces as maximum
+    return makefullrank!(manifold)
 end
 
 """
@@ -147,8 +165,24 @@ function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
     end
 end
 
+function makefullrank!(manifold::FiniteMPSManifold)
+    # left-to-right sweep
+    for site in eachindex(manifold.pspaces)
+        left_maxspace = fuse(manifold.vspaces[i], fuse(manifold.pspaces[i]))
+        manifold.vspaces[i + 1] = infimum(manifold.vspaces[i + 1], left_maxspace)
+        dim(manifold.vspaces[i + 1]) > 0 || @warn "no fusion channels available at site $site"
+    end
+    # right-to-sweep
+    for site in reverse(eachindex(manifold.pspaces))
+        right_maxspace = fuse(manifold.vspaces[i + 1], dual(fuse(manifold.pspaces[i])))
+        manifold.vspaces[i] = infimum(manifold.vspaces[i], right_maxspace)
+        dim(manifold.vspaces[i + 1]) > 0 || @warn "no fusion channels available at site $site"
+    end
+    return manifold
+end
+
 """
-    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defalts.alg_qr())
+    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg_leftorth = Defaults.alg_qr(), alg_rightorth = Defaults.alg_lq())
 
 Make the set of MPS tensors full rank by performing a series of orthogonalizations.
 """
