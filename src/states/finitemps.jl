@@ -218,6 +218,16 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize::Bool = false)
     return mps
 end
 
+# construct from dense state
+# TODO: make planar?
+function FiniteMPS(ψ::AbstractTensor)
+    U = ones(scalartype(ψ), oneunit(spacetype(ψ)))
+    A = _transpose_front(
+        U * transpose(ψ * U', ((), reverse(ntuple(identity, numind(ψ) + 1))))
+    )
+    return FiniteMPS(decompose_localmps(A); normalize = false, overwrite = true)
+end
+
 for f in (:zeros, :ones)
     @eval begin
         Base.$f(manifold::FiniteMPSManifold) = $f(Defaults.eltype, manifold)
@@ -242,71 +252,46 @@ for randfun in (:rand, :randn)
     end
 end
 
-function FiniteMPS(
-        f, elt, Pspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxVspaces::Vector{S};
-        normalize = true, left::S = oneunit(S), right::S = oneunit(S)
-    ) where {S <: ElementarySpace}
-    N = length(Pspaces)
-    length(maxVspaces) == N - 1 ||
-        throw(DimensionMismatch("length of physical spaces ($N) and virtual spaces $(length(maxVspaces)) should differ by 1"))
-
-    # limit the maximum virtual dimension such that result is full rank
-    fusedPspaces = fuse.(Pspaces) # for working with multiple physical spaces
-    Vspaces = similar(maxVspaces, N + 1)
-
-    Vspaces[1] = left
-    for k in 2:N
-        Vspaces[k] = infimum(fuse(Vspaces[k - 1], fusedPspaces[k - 1]), maxVspaces[k - 1])
-        dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
-    end
-
-    Vspaces[end] = right
-    for k in reverse(2:N)
-        Vspaces[k] = infimum(Vspaces[k], fuse(Vspaces[k + 1], dual(fusedPspaces[k])))
-        dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
-    end
-
-    # construct MPS
-    tensors = MPSTensor.(f, elt, Pspaces, Vspaces[1:(end - 1)], Vspaces[2:end])
-    return FiniteMPS(tensors; normalize, overwrite = true)
-end
-function FiniteMPS(
-        f, elt, Pspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxVspace::S;
-        kwargs...
-    ) where {S <: ElementarySpace}
-    maxVspaces = fill(maxVspace, length(Pspaces) - 1)
-    return FiniteMPS(f, elt, Pspaces, maxVspaces; kwargs...)
-end
-function FiniteMPS(
-        Pspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxVspaces::Union{S, Vector{S}};
-        kwargs...
-    ) where {S <: ElementarySpace}
-    return FiniteMPS(rand, Defaults.eltype, Pspaces, maxVspaces; kwargs...)
-end
-
-# Also accept single physical space and length
-function FiniteMPS(N::Int, V::VectorSpace, args...; kwargs...)
-    return FiniteMPS(fill(V, N), args...; kwargs...)
-end
-function FiniteMPS(f, elt, N::Int, V::VectorSpace, args...; kwargs...)
-    return FiniteMPS(f, elt, fill(V, N), args...; kwargs...)
-end
-
-# Also accept ProductSpace of physical spaces
-FiniteMPS(P::ProductSpace, args...; kwargs...) = FiniteMPS(collect(P), args...; kwargs...)
-function FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...)
-    return FiniteMPS(f, elt, collect(P), args...; kwargs...)
-end
-
-# construct from dense state
-# TODO: make planar?
-function FiniteMPS(ψ::AbstractTensor)
-    U = ones(scalartype(ψ), oneunit(spacetype(ψ)))
-    A = _transpose_front(
-        U * transpose(ψ * U', ((), reverse(ntuple(identity, numind(ψ) + 1))))
-    )
-    return FiniteMPS(decompose_localmps(A); normalize = false, overwrite = true)
-end
+# Deprecate old constructor syntaxes
+# ----------------------------------
+Base.@deprecate(
+    FiniteMPS(
+        f, elt, Pspaces::Vector{<:TensorSpace{S}}, maxVspaces::Vector{S}; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    f(elt, FiniteMPSManifold(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(
+        f, elt, Pspaces::Vector{<:TensorSpace{S}}, maxVspace::S; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    f(elt, FiniteMPSManifold(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(
+        Pspaces::Vector{<:TensorSpace{S}}, maxVspaces::Union{S, Vector{S}}; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    rand(FiniteMPSManifold(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(
+        f, elt, N::Int, V::VectorSpace, args...; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    f(elt, FiniteMPSManifold(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(
+        N::Int, V::VectorSpace, args...; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    rand(FiniteMPSManifold(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(P::ProductSpace, args...; kwargs...),
+    rand(FiniteMPSManifold(collect(P), args...; kwargs...))
+)
+Base.@deprecate(
+    FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...),
+    f(elt, FiniteMPSManifold(collect(P), args...; kwargs...))
+)
 
 #===========================================================================================
 Utility
