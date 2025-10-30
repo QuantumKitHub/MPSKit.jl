@@ -71,8 +71,7 @@ function AC2_hamiltonian(site::Int, below::_HAM_MPS_TYPES, operator::MPO{<:MPOTe
 end
 function AC2_hamiltonian(GL::MPSTensor, O1::MPOTensor, O2::MPOTensor, GR::MPSTensor)
     @plansor GLW[-1 -2 -3; -4 -5] ≔ GL[-1 1; -4] * O1[1 -2; -5 -3]
-    # @plansor GWR[-1 -2 -3; -4 -5] ≔ O2[-3 -5; -2 1] * GR[-1 1; -4]
-    @tensor GWR[-1 -2 -3; -4 -5] ≔ O2[-1 -5; -3 1] * GR[-2 1; -4]
+    @plansor GWR[-1 -2 -3; -4 -5] ≔ O2[-3 -5; -2 1] * GR[-1 1; -4]
     return MPO_Contracted_AC2_Hamiltonian(GLW, GWR)
 end
 
@@ -168,7 +167,6 @@ end
 function (h::MPO_Contracted_AC2_Hamiltonian)(
         x::MPOTensor
     )
-    # @plansor y[-1 -2; -3 -4] ≔ h.leftenv[-1 -2 5; 1 2] * x[1 2; 3 4] * h.rightenv[3 4 5; -3 -4]
-    @tensor y[-1 -2; -3 -4] ≔ h.leftenv[-1 -2 3; 1 2] * x[1 2; 4 5] * h.rightenv[3 4 5; -3 -4]
+    @plansor y[-1 -2; -3 -4] ≔ h.leftenv[-1 -2 5; 1 2] * x[1 2; 3 4] * h.rightenv[3 4 5; -3 -4]
     return y isa AbstractBlockTensorMap ? only(y) : y
 end

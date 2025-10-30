@@ -36,7 +36,7 @@ export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo
 export TDVP, TDVP2, WI, WII, TaylorCluster
 export changebonds, changebonds!
-export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, RandPerturbedExpand
+export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand
 export propagator
 export DynamicalDMRG, NaiveInvert, Jeckelmann
 export exact_diagonalization, fidelity_susceptibility

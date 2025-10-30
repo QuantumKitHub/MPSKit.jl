@@ -1,6 +1,5 @@
-abstract type AbstractInfiniteMPS <: AbstractMPS end
 """
-    InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractInfiniteMPS
+    InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbtractMPS
 
 Type that represents an infinite Matrix Product State.
 
@@ -44,7 +43,7 @@ tensors `As`, or a list of left-gauged tensors `ALs`.
 - `tol`: gauge fixing tolerance
 - `maxiter`: gauge fixing maximum iterations
 """
-struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractInfiniteMPS
+struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractMPS
     AL::PeriodicVector{A}
     AR::PeriodicVector{A}
     C::PeriodicVector{B}

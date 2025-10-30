@@ -15,7 +15,7 @@ const MPSTensor{S} = GenericMPSTensor{S, 2} # the usual mps tensors on which we 
 
 """
     MPSTensor([f, eltype], d::Int, left_D::Int, [right_D]::Int])
-    MPSTensor([f, eltype], physicalspace::Union{S,CompositeSpace{S}},
+    MPSTensor([f, eltype], physicalspace::Union{S,CompositeSpace{S}}, 
               left_virtualspace::S, [right_virtualspace]::S) where {S<:ElementarySpace}
 
 Construct an `MPSTensor` with given physical and virtual spaces.
@@ -93,11 +93,10 @@ Determine whether the given tensor is full rank, i.e. whether both the map from 
 virtual space and the physical space to the right virtual space, and the map from the right
 virtual space and the physical space to the left virtual space are injective.
 """
-isfullrank(A::GenericMPSTensor; kwargs...) = isfullrank(space(A); kwargs...)
-function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
-    Vₗ = V[1]
-    Vᵣ = V[numind(V)]
-    P = ⊗(getindex.(Ref(V), 2:(numind(V) - 1))...)
+function isfullrank(A::GenericMPSTensor; side = :both)
+    Vₗ = _firstspace(A)
+    Vᵣ = _lastspace(A)
+    P = ⊗(space.(Ref(A), 2:(numind(A) - 1))...)
     return if side === :both
         Vₗ ⊗ P ≿ Vᵣ' && Vₗ' ≾ P ⊗ Vᵣ
     elseif side === :right
@@ -128,29 +127,6 @@ function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = Defaults.alg
         end
     end
     return A
-end
-
-function makefullrank!(virtualspaces::PeriodicVector{S}, physicalspaces::PeriodicVector{S}) where {S <: ElementarySpace}
-    haschanged = true
-    while haschanged
-        haschanged = false
-        for i in 1:length(virtualspaces)
-            Vmax = fuse(virtualspaces[i - 1], physicalspaces[i - 1])
-            if !(virtualspaces[i] ≾ Vmax)
-                virtualspaces[i] = infimum(virtualspaces[i], Vmax)
-                haschanged = true
-            end
-        end
-        for i in reverse(1:length(virtualspaces))
-            Vmax = fuse(dual(physicalspaces[i - 1]), virtualspaces[i])
-            if !(virtualspaces[i - 1] ≾ Vmax)
-                virtualspaces[i - 1] = infimum(virtualspaces[i - 1], Vmax)
-                haschanged = true
-            end
-        end
-    end
-
-    return virtualspaces
 end
 
 # Tensor accessors
@@ -201,7 +177,7 @@ TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype)
 
 """
     left_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
-
+    
 Return the virtual space of the bond to the left of sites `pos`.
 
 !!! warning
