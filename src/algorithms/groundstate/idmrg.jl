@@ -131,7 +131,7 @@ $(TYPEDFIELDS)
     trscheme::TruncationStrategy
 end
 
-function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs = environments(ost, H))
+function find_groundstate(ost::T, H, alg::IDMRG2, envs = environments(ost, H)) where {T <: AbstractInfiniteMPS}
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = calc_galerkin(ost, H, ost, envs)
 
@@ -244,7 +244,7 @@ function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs = environments(
     end
 
     alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
-    ψ′ = InfiniteMPS(ψ.AR[1:end]; alg_gauge.tol, alg_gauge.maxiter)
+    ψ′ = T(ψ.AR[1:end]; alg_gauge.tol, alg_gauge.maxiter)
     recalculate!(envs, ψ′, H, ψ′)
 
     return ψ′, envs, ϵ
