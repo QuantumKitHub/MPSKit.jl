@@ -93,27 +93,18 @@ function FiniteMPS(
     sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
         throw(ArgumentError("at least one AC/C should not be missing"))
 
-    # determine the MPS manifold from the input
+    # determine the MPS manifold from the input and instantiate the MPS
+    mps_tensors = map(ALs, ARs, ACs) do AL, AR, AC
+        mps_tensor = coalesce(AL, AR, AC)
+        ismissing(sitetensor) && throw(ArgumentError("missing site tensor at site $i"))
+        return mps_tensor
+    end
+    manifold = FiniteMPSManifold(mps_tensors)
     A = _not_missing_type(MA)
     B = _not_missing_type(MB)
-    (S = spacetype(A)) == spacetype(B) || throw(SectorMisMatch())
-    S′ = A <: MPSTensor ? S : ProductSpace{S, numout(A) - 1}
-    pspaces = Vector{S′}(undef, L)
-    vspaces = Vector{S}(undef, L + 1)
-    for i in 1:L
-        sitetensor = coalesce(ALs[i], ARs[i], ACs[i])
-        ismissing(sitetensor) && throw(ArgumentError("missing site tensor at site $i"))
-
-        pspaces[i] = physicalspace(sitetensor)
-        vspaces[i] = left_virtualspace(sitetensor)
-        i == L && (vspaces[i + 1] = right_virtualspace(sitetensor))
-    end
-    V_left = popfirst!(vspaces)
-    V_right = pop!(vspaces)
-    manifold = FiniteMPSManifold(pspaces, vspaces; left_virtualspace = V_left, right_virtualspace = V_right)
+    mps = FiniteMPS{A, B}(undef, manifold)
 
     # populate the non-missing tensors into the MPS
-    mps = FiniteMPS{A, B}(undef, manifold)
     for i in 1:L
         V_mps = manifold[i]
         if !ismissing(ALs[i])

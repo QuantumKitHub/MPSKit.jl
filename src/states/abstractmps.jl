@@ -247,6 +247,20 @@ function FiniteMPSManifold(
     ) where {S <: ElementarySpace, S′ <: TensorSpace{S}}
     return FiniteMPSManifold(physicalspaces, fill(max_virtualspace, length(physicalspaces) - 1))
 end
+function FiniteMPSManifold(mps_tensors::AbstractVector{A}) where {A <: GenericMPSTensor}
+    numin(V) == 1 || throw(ArgumentError("Not a valid MPS tensor space"))
+    pspaces = map(physicalspace, mps_tensors)
+    vspaces = Vector{spacetype(A)}(undef, length(mps_tensors) - 1)
+    for (i, mps_tensor) in enumerate(mps_tensors)
+        i == length(mps_tensors) && continue
+        vspaces[i] = right_virtualspace(mps_tensor)
+    end
+    return FiniteMPSManifold(
+        pspaces, vspaces;
+        left_virtualspace = left_virtualspace(first(mps_tensors)),
+        right_virtualspace = right_virtualspace(last(mps_tensors))
+    )
+end
 
 """
     InfiniteMPSManifold(pspaces, vspaces) <: AbstractMPSManifold{S}
