@@ -79,6 +79,10 @@ function AC_hamiltonian(
         site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
         above::_HAM_MPS_TYPES, envs
     )
+    if below !== above
+        O = operator[site]
+        return MPO_AC_Hamiltonian(leftenv(envs, site, below), O, rightenv(envs, site, below))
+    end
     GL = leftenv(envs, site, below)
     GR = rightenv(envs, site, below)
     W = operator[site]
@@ -151,6 +155,13 @@ function AC2_hamiltonian(
         site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
         above::_HAM_MPS_TYPES, envs
     )
+    if below !== above
+        O1, O2 = (operator[site], operator[site + 1])
+        return MPO_AC2_Hamiltonian(
+            leftenv(envs, site, below), O1, O2, rightenv(envs, site + 1, below)
+        )
+    end
+
     GL = leftenv(envs, site, below)
     GR = rightenv(envs, site + 1, below)
     W1 = operator[site]
