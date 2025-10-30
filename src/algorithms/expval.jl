@@ -2,18 +2,18 @@
     expectation_value(ψ, O, [environments])
     expectation_value(ψ, inds => O)
 
-Compute the expectation value of an operator `O` on a state `ψ`. 
+Compute the expectation value of an operator `O` on a state `ψ`.
 Optionally, it is possible to make the computations more efficient by also passing in
 previously calculated `environments`.
 
 In general, the operator `O` may consist of an arbitrary MPO `O <: AbstractMPO` that acts
-on all sites, or a local operator `O = inds => operator` acting on a subset of sites. 
+on all sites, or a local operator `O = inds => operator` acting on a subset of sites.
 In the latter case, `inds` is a tuple of indices that specify the sites on which the operator
 acts, while the operator is either a `AbstractTensorMap` or a `FiniteMPO`.
 
 # Arguments
 * `ψ::AbstractMPS` : the state on which to compute the expectation value
-* `O::Union{AbstractMPO,Pair}` : the operator to compute the expectation value of. 
+* `O::Union{AbstractMPO,Pair}` : the operator to compute the expectation value of.
     This can either be an `AbstractMPO`, or a pair of indices and local operator..
 * `environments::AbstractMPSEnvironments` : the environments to use for the calculation. If not given, they will be calculated.
 
@@ -125,7 +125,7 @@ function expectation_value(
 end
 
 function expectation_value(
-        ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
+        ψ::AbstractInfiniteMPS, H::InfiniteMPOHamiltonian,
         envs::AbstractMPSEnvironments = environments(ψ, H)
     )
     return sum(1:length(ψ)) do i
@@ -143,7 +143,7 @@ end
 function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
-function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
+function expectation_value(ψ::AbstractInfiniteMPS, mpo::InfiniteMPO, envs...)
     return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), envs...)
 end
 function expectation_value(
