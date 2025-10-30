@@ -85,74 +85,6 @@ function MPSTensor(A::AbstractArray{T}) where {T <: Number}
     t[] .= A
     return t
 end
-
-"""
-    isfullrank(A::GenericMPSTensor; side=:both)
-
-Determine whether the given tensor is full rank, i.e. whether both the map from the left
-virtual space and the physical space to the right virtual space, and the map from the right
-virtual space and the physical space to the left virtual space are injective.
-"""
-isfullrank(A::GenericMPSTensor; kwargs...) = isfullrank(space(A); kwargs...)
-function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
-    Vₗ = V[1]
-    Vᵣ = V[numind(V)]
-    P = ⊗(getindex.(Ref(V), 2:(numind(V) - 1))...)
-    return if side === :both
-        Vₗ ⊗ P ≿ Vᵣ' && Vₗ' ≾ P ⊗ Vᵣ
-    elseif side === :right
-        Vₗ ⊗ P ≿ Vᵣ'
-    elseif side === :left
-        Vₗ' ≾ P ⊗ Vᵣ
-    else
-        throw(ArgumentError("Invalid side: $side"))
-    end
-end
-
-"""
-    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defalts.alg_qr())
-
-Make the set of MPS tensors full rank by performing a series of orthogonalizations.
-"""
-function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = Defaults.alg_qr())
-    while true
-        i = findfirst(!isfullrank, A)
-        isnothing(i) && break
-        if !isfullrank(A[i]; side = :left)
-            L, Q = _right_orth!(_transpose_tail(A[i]); alg)
-            A[i] = _transpose_front(Q)
-            A[i - 1] = A[i - 1] * L
-        else
-            A[i], R = _left_orth!(A[i]; alg)
-            A[i + 1] = _transpose_front(R * _transpose_tail(A[i + 1]))
-        end
-    end
-    return A
-end
-
-function makefullrank!(virtualspaces::PeriodicVector{S}, physicalspaces::PeriodicVector{S}) where {S <: ElementarySpace}
-    haschanged = true
-    while haschanged
-        haschanged = false
-        for i in 1:length(virtualspaces)
-            Vmax = fuse(virtualspaces[i - 1], physicalspaces[i - 1])
-            if !(virtualspaces[i] ≾ Vmax)
-                virtualspaces[i] = infimum(virtualspaces[i], Vmax)
-                haschanged = true
-            end
-        end
-        for i in reverse(1:length(virtualspaces))
-            Vmax = fuse(dual(physicalspaces[i - 1]), virtualspaces[i])
-            if !(virtualspaces[i - 1] ≾ Vmax)
-                virtualspaces[i - 1] = infimum(virtualspaces[i - 1], Vmax)
-                haschanged = true
-            end
-        end
-    end
-
-    return virtualspaces
-end
-
 # Tensor accessors
 # ----------------
 @doc """
@@ -164,9 +96,9 @@ If this hasn't been computed before, this can be computed as:
 - `kind=:ALAC` : AL[i] * AC[i+1]
 """ AC2
 
-#===========================================================================================
-MPS types
-===========================================================================================#
+# ===========================================================================================
+# MPS types
+# ===========================================================================================
 
 abstract type AbstractMPS end
 abstract type AbstractFiniteMPS <: AbstractMPS end
@@ -201,7 +133,7 @@ TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype)
 
 """
     left_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
-    
+
 Return the virtual space of the bond to the left of sites `pos`.
 
 !!! warning
@@ -245,3 +177,265 @@ physicalspace(ψ::AbstractMPS) = map(Base.Fix1(physicalspace, ψ), eachsite(ψ))
 Return an iterator over the sites of the MPS `state`.
 """
 eachsite(ψ::AbstractMPS) = eachindex(ψ)
+
+# ===========================================================================================
+# MPS manifolds
+# ===========================================================================================
+"""
+    abstract type AbstractMPSManifold{S <: ElementarySpace}
+
+Abstract supertype for the characterization of an MPS manifold, i.e. the sizes of all tensors that are involved.
+These types are used mostly as convenient dispatch 
+"""
+abstract type AbstractMPSManifold{S <: ElementarySpace} end
+
+TensorKit.spacetype(::Type{<:AbstractMPSManifold{S}}) where {S} = S
+
+physicalspace(manifold::AbstractMPSManifold, i::Integer) = physicalspace(manifold)[i]
+left_virtualspace(manifold::AbstractMPSManifold, i::Integer) = left_virtualspace(manifold)[i]
+right_virtualspace(manifold::AbstractMPSManifold, i::Integer) = right_virtualspace(manifold)[i]
+
+Base.getindex(manifold::AbstractMPSManifold, site::Integer) =
+    left_virtualspace(manifold, site) ⊗ physicalspace(manifold, site) ← right_virtualspace(manifold, site)
+
+"""
+    FiniteMPSManifold(pspaces, vspaces) <: AbstractMPSManifold{S}
+
+Full characterization of all [`FiniteMPS`](@ref) spaces. Both `pspaces` and `vspaces` are `Vector`s that hold the
+local physical and virtual spaces, such that we have `length(pspaces) + 1 == length(vspaces)`.
+These objects can be used to construct MPS for a given space, for example through [`Base.randn`](@ref) or similar functions.
+
+## Constructors
+
+    FiniteMPSManifold(physicalspaces::AbstractVector{<:TensorSpace}, max_virtualspaces; [left_virtualspace], [right_virtualspace])
+
+To construct a `FiniteMPSManifold`, you should provide the `physicalspaces`, along with the maximal desired virtual space.
+This latter can be provided as a single `<:ElementarySpace`, or, if a site-dependent maximum is desired through a vector thereof.
+In that case, `length(physicalspaces) == length(max_virtualspaces) + 1`.
+
+It is also possible to add non-trivial virtual spaces on both the left and the right edge of the MPS.
+This might be useful to construct "charged" MPS, or to work with [`WindowMPS`](@ref) that may be embedded in a larger system.
+
+!!! note
+    As the supplied virtual spaces are interpreted as a maximum, this function will automatically construct "full-rank" spaces.
+    These are chosen such that every MPS tensor that would be generated could have full rank. See also [`makefullrank!](@ref).
+"""
+struct FiniteMPSManifold{S <: ElementarySpace, S′ <: TensorSpace{S}} <: AbstractMPSManifold{S}
+    pspaces::Vector{S′}
+    vspaces::Vector{S}
+end
+
+function FiniteMPSManifold(
+        physicalspaces::AbstractVector{S′}, max_virtualspaces::AbstractVector{S};
+        left_virtualspace::S = oneunit(S), right_virtualspace::S = oneunit(S)
+    ) where {S <: ElementarySpace, S′ <: TensorSpace{S}}
+    L₁ = length(physicalspaces)
+    L₂ = length(max_virtualspaces)
+    L₁ == L₂ + 1 ||
+        throw(DimensionMismatch(lazy"`|physicalspaces|` ($L₁) should be 1 more than `|max_virtualspaces|` ($L₂)"))
+
+    # copy to avoid side-effects and get correct array type
+    pspaces = collect(physicalspaces)
+    vspaces = vcat(left_virtualspace, max_virtualspaces, right_virtualspace)
+    manifold = FiniteMPSManifold{S, S′}(pspaces, vspaces)
+
+    # ensure all spaces are full rank -- use vspaces as maximum
+    return makefullrank!(manifold)
+end
+function FiniteMPSManifold(
+        physicalspaces::AbstractVector{S′}, max_virtualspace::S; kwargs...
+    ) where {S <: ElementarySpace, S′ <: TensorSpace{S}}
+    return FiniteMPSManifold(physicalspaces, fill(max_virtualspace, length(physicalspaces) - 1))
+end
+function FiniteMPSManifold(mps_tensors::AbstractVector{A}) where {A <: GenericMPSTensor}
+    numin(V) == 1 || throw(ArgumentError("Not a valid MPS tensor space"))
+    pspaces = map(physicalspace, mps_tensors)
+    vspaces = Vector{spacetype(A)}(undef, length(mps_tensors) - 1)
+    for (i, mps_tensor) in enumerate(mps_tensors)
+        i == length(mps_tensors) && continue
+        vspaces[i] = right_virtualspace(mps_tensor)
+    end
+    return FiniteMPSManifold(
+        pspaces, vspaces;
+        left_virtualspace = left_virtualspace(first(mps_tensors)),
+        right_virtualspace = right_virtualspace(last(mps_tensors))
+    )
+end
+
+"""
+    InfiniteMPSManifold(pspaces, vspaces) <: AbstractMPSManifold{S}
+
+Full characterization of all [`InfiniteMPS`](@ref) spaces. Both `pspaces` and `vspaces` are `PeriodicVector`s that hold the
+local physical and virtual spaces, such that we must have `length(pspaces) == length(vspaces)`.
+These objects can be used to construct MPS for a given space, for example through [`Base.randn`](@ref) or similar functions.
+
+## Constructors
+
+    FiniteMPSManifold(physicalspaces::AbstractVector{<:TensorSpace}, max_virtualspaces; [left_virtualspace], [right_virtualspace])
+
+To construct a `FiniteMPSManifold`, you should provide the `physicalspaces`, along with the maximal desired virtual space.
+This latter can be provided as a single `<:ElementarySpace`, or, if a site-dependent maximum is desired through a vector thereof.
+In that case, `length(physicalspaces) == length(max_virtualspaces)`.
+
+!!! note
+    As the supplied virtual spaces are interpreted as a maximum, this function will automatically construct "full-rank" spaces.
+    These are chosen such that every MPS tensor that would be generated could have full rank. See also [`makefullrank!](@ref).
+"""
+struct InfiniteMPSManifold{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}} <: AbstractMPSManifold{S}
+    pspaces::PeriodicVector{S′}
+    vspaces::PeriodicVector{S}
+end
+
+function InfiniteMPSManifold(
+        physicalspaces::AbstractVector{S′}, virtualspaces::AbstractVector{S}
+    ) where {S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}}
+    L₁ = length(physicalspaces)
+    L₂ = length(virtualspaces)
+    L₁ == L₂ ||
+        throw(DimensionMismatch(lazy"`|physicalspaces|` ($L₁) should be equal to `|virtualspaces|` ($L₂)"))
+
+    # copy to avoid side-effects and get correct array type
+    pspaces = collect(physicalspaces)
+    vspaces = collect(max_virtualspaces)
+    manifold = InfiniteMPSManifold{S, S′}(pspaces, vspaces)
+
+    # ensure all spaces are full rank -- use vspaces as maximum
+    return makefullrank!(manifold)
+end
+
+Base.length(manifold::AbstractMPSManifold) = length(physicalspace(manifold))
+
+physicalspace(manifold::Union{FiniteMPSManifold, InfiniteMPSManifold}) = manifold.pspaces
+left_virtualspace(manifold::FiniteMPSManifold) = manifold.vspaces[1:(end - 1)]
+left_virtualspace(manifold::InfiniteMPSManifold) = manifold.vspaces
+right_virtualspace(manifold::FiniteMPSManifold) = manifold.vspaces[2:end]
+right_virtualspace(manifold::InfiniteMPSManifold) = PeriodicVector(circshift(manifold.vspaces, 1))
+
+# MPS constructors
+# ----------------
+for randf in (:rand, :randn, :randexp, :randisometry)
+    _docstr = """
+        $randf([rng=default_rng()], [T=Float64], manifold::AbstractMPSManifold) -> mps
+        
+    Generate an `mps` with tensors generated by `$randf`.
+
+    See also [`Random.$(randf)!`](@ref).
+    """
+    _docstr! = """
+        $(randf)!([rng=default_rng()], mps::AbstractMPS) -> mps
+        
+    Fill the tensors of `mps` with entries generated by `$(randf)!`.
+
+    See also [`Random.$(randf)`](@ref).
+    """
+
+    if randf != :randisometry
+        randfun = GlobalRef(Random, randf)
+        randfun! = GlobalRef(Random, Symbol(randf, :!))
+    else
+        randfun = randf
+        randfun! = Symbol(randf, :!)
+    end
+
+    @eval begin
+        @doc $_docstr $randfun(::Type, ::AbstractMPSManifold)
+        @doc $_docstr! $randfun!(::AbstractMPSManifold)
+
+        # filling in default eltype
+        $randfun(manifold::AbstractMPSManifold) = $randfun(Defaults.eltype, manifold)
+        function $randfun(rng::Random.AbstractRNG, manifold::AbstractMPSManifold)
+            return $randfun(rng, Defaults.eltype, manifold)
+        end
+
+        # filling in default rng
+        function $randfun(::Type{T}, manifold::AbstractMPSManifold) where {T}
+            return $randfun(Random.default_rng(), T, manifold)
+        end
+        $randfun!(mps::AbstractMPS) = $randfun!(Random.default_rng(), mps)
+    end
+end
+
+"""
+    isfullrank(A::GenericMPSTensor; side=:both)
+
+Determine whether the given tensor is full rank, i.e. whether both the map from the left
+virtual space and the physical space to the right virtual space, and the map from the right
+virtual space and the physical space to the left virtual space are injective.
+"""
+isfullrank(A::GenericMPSTensor; kwargs...) = isfullrank(space(A); kwargs...)
+function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
+    Vₗ = V[1]
+    Vᵣ = V[numind(V)]
+    P = ⊗(getindex.(Ref(V), 2:(numind(V) - 1))...)
+    return if side === :both
+        Vₗ ⊗ P ≿ Vᵣ' && Vₗ' ≾ P ⊗ Vᵣ
+    elseif side === :right
+        Vₗ ⊗ P ≿ Vᵣ'
+    elseif side === :left
+        Vₗ' ≾ P ⊗ Vᵣ
+    else
+        throw(ArgumentError("Invalid side: $side"))
+    end
+end
+isfullrank(manifold::AbstractMPSManifold; kwargs...) = all(i -> isfullrank(manifold[i]; kwargs...), 1:length(manifold))
+
+"""
+    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defalts.alg_qr())
+
+Make the set of MPS tensors full rank by performing a series of orthogonalizations.
+"""
+function makefullrank!(manifold::FiniteMPSManifold)
+    # left-to-right sweep
+    for site in 1:length(manifold)
+        if !isfullrank(manifold[site]; side = :right)
+            maxspace = fuse(left_virtualspace(manifold, i), fuse(physicalspace(manifold, site)))
+            manifold.vspaces[site + 1] = infimum(right_virtualspace(manifold, site), maxspace)
+        end
+    end
+    # right-to-left sweep
+    for site in reverse(1:length(manifold))
+        if !isfullrank(manifold[site]; side = :left)
+            maxspace = fuse(right_virtualspace(manifold, i), dual(fuse(physicalspace(manifold, site))))
+            manifold.vspaces[site] = infimum(left_virtualspace(manifold, site), maxspace)
+        end
+    end
+    return manifold
+end
+function makefullrank!(manifold::InfiniteMPSManifold)
+    haschanged = true
+    while haschanged
+        haschanged = false
+        # left-to-right sweep
+        for site in 1:length(manifold)
+            if !isfullrank(manifold[site]; side = :right)
+                maxspace = fuse(left_virtualspace(manifold, i), fuse(physicalspace(manifold, site)))
+                manifold.vspaces[site + 1] = infimum(right_virtualspace(manifold, site), maxspace)
+                haschanged = true
+            end
+        end
+        # right-to-left sweep
+        for site in reverse(1:length(manifold))
+            if !isfullrank(manifold[site]; side = :left)
+                maxspace = fuse(right_virtualspace(manifold, i), dual(fuse(physicalspace(manifold, site))))
+                manifold.vspaces[site] = infimum(left_virtualspace(manifold, site), maxspace)
+                haschanged = true
+            end
+        end
+    end
+    return manifold
+end
+function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = Defaults.alg_qr())
+    while true
+        i = findfirst(!isfullrank, A)
+        isnothing(i) && break
+        if !isfullrank(A[i]; side = :left)
+            L, Q = _right_orth!(_transpose_tail(A[i]); alg)
+            A[i] = _transpose_front(Q)
+            A[i - 1] = A[i - 1] * L
+        else
+            A[i], R = _left_orth!(A[i]; alg)
+            A[i + 1] = _transpose_front(R * _transpose_tail(A[i + 1]))
+        end
+    end
+    return A
+end
