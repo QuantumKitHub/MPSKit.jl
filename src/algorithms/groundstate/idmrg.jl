@@ -24,7 +24,7 @@ $(TYPEDFIELDS)
     alg_eigsolve::A = Defaults.alg_eigsolve()
 end
 
-function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG, envs = environments(ost, H))
+function find_groundstate(ost::AbstractInfiniteMPS, H, alg::IDMRG, envs = environments(ost, H))
     ϵ::Float64 = calc_galerkin(ost, H, ost, envs)
     ψ = copy(ost)
     log = IterLog("IDMRG")
@@ -131,7 +131,7 @@ $(TYPEDFIELDS)
     trscheme::TruncationStrategy
 end
 
-function find_groundstate(ost::InfiniteMPS, H, alg::IDMRG2, envs = environments(ost, H))
+function find_groundstate(ost::AbstractInfiniteMPS, H, alg::IDMRG2, envs = environments(ost, H))
     length(ost) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = calc_galerkin(ost, H, ost, envs)
 

@@ -151,7 +151,7 @@ end
 Bring updated `AC` and `C` tensors back into a consistent set of left or right canonical
 tensors. This minimizes `∥AC_i - AL_i * C_i∥` or `∥AC_i - C_{i-1} * AR_i∥`.
 
-The `alg` is passed on to `left_orth!` and `right_orth!`, and can be used to control the kind of 
+The `alg` is passed on to `left_orth!` and `right_orth!`, and can be used to control the kind of
 factorization used. By default, this is set to a (positive) QR/LQ, even though the
 optimal algorithm would use a polar decompositions instead, sacrificing a bit of
 performance for accuracy.
