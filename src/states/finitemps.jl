@@ -71,16 +71,12 @@ struct FiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
         return new{A, B}(ALs, ARs, ACs, Cs)
     end
 
-    # constructor from spaces
-    function FiniteMPS{A, B}(
-            ::UndefInitializer, manifold::FiniteMPSManifold
-        ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
-        L = length(manifold)
-        ALs = Union{Missing, A}[A(undef, manifold[i]) for i in 1:L]
+    # undef constructor
+    function FiniteMPS{A, B}(::UndefInitializer, L::Integer) where {A, B}
+        ALs = Vector{Union{Missing, A}}(missing, L)
         ARs = Vector{Union{Missing, A}}(missing, L)
         ACs = Vector{Union{Missing, A}}(missing, L)
         Cs = Vector{Union{Missing, B}}(missing, L + 1)
-        Cs[end] = B(undef, right_virtualspace(manifold, L) ← right_virtualspace(manifold, L))
         return new{A, B}(ALs, ARs, ACs, Cs)
     end
 end
@@ -199,28 +195,27 @@ Constructors
 ===========================================================================================#
 
 function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize::Bool = false)
-    # left-gauge the input tensors
+    mps = FiniteMPS
+
+    # start with first in case eltype changes
     AL1, C = qr_compact(As[i])
     normalize && normalize!(C)
-    ALs = Vector{Union{Missing, typeof(AL1)}}(undef, length(As))
+
+    # instantiate the destination
+    A = typeof(AL1)
+    B = typeof(C)
+    mps = FiniteMPS{A, B}(undef, length(As))
+
+    # left-gauge and fill the ALs and last C
+    ALs = getfield(mps, :ALs)
     for i in eachindex(ALs)
         i == 1 && (ALs[i] = AL1; continue)
-
         ALs[i], C = qr_compact!(_mul_front(C, As[i]))
         normalize && normalize!(C)
     end
+    getfield(mps, :Cs)[end] = C
 
-    # generate the tensor storage
-    A = eltype(ALs)
-    ARs = Vector{Union{Missing, A}}(missing, N)
-    ACs = Vector{Union{Missing, A}}(missing, N)
-    B = typeof(C)
-    Cs = Vector{Union{Missing, B}}(missing, N + 1)
-
-    ALs .= As
-    Cs[end] = C
-
-    return FiniteMPS(ALs, ARs, ACs, Cs)
+    return mps
 end
 
 for f in (:zeros, :ones)
