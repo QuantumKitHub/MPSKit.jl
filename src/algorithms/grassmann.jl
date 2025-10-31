@@ -90,7 +90,7 @@ end
 """
     retract(state, g, α) -> state′, ξ
 
-Retract a state a distance `α` along a direction `g`, obtaining a new state and the local tangent vector. 
+Retract a state a distance `α` along a direction `g`, obtaining a new state and the local tangent vector.
 """
 function retract(state::FiniteMPS, g, α::Real)
     state′ = copy(state)
@@ -142,9 +142,9 @@ end
 Compute the cost function and the tangent vector with respect to the `AL` parameters of the state.
 """
 function fg(
-        state::FiniteMPS, operator::Union{O, LazySum{O}},
+        state::FiniteMPS, operator,
         envs::AbstractMPSEnvironments = environments(state, operator)
-    ) where {O <: FiniteMPOHamiltonian}
+    )
     f = expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
     gs = map(1:length(state)) do i
@@ -155,7 +155,7 @@ function fg(
     return real(f), gs
 end
 function fg(
-        state::InfiniteMPS, operator::Union{O, LazySum{O}},
+        state::InfiniteMPS, operator::Union{O, LazySum{O}}, ## TODO: Get rid of this typecheck. Issue: How do we differentiate between InfiniteMPO and InfiniteMPOHamiltonian?
         envs::AbstractMPSEnvironments = environments(state, operator)
     ) where {O <: InfiniteMPOHamiltonian}
     recalculate!(envs, state, operator, state)
@@ -172,7 +172,7 @@ function fg(
     return real(f), gs
 end
 function fg(
-        state::InfiniteMPS, operator::Union{O, LazySum{O}},
+        state::InfiniteMPS, operator::Union{O, LazySum{O}}, ## TODO: Get rid of this typecheck. Issue: How do we differentiate between InfiniteMPO and InfiniteMPOHamiltonian?
         envs::AbstractMPSEnvironments = environments(state, operator)
     ) where {O <: InfiniteMPO}
     recalculate!(envs, state, operator, state)
