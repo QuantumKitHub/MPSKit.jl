@@ -311,33 +311,43 @@ function Base.isapprox(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; kwargs...)
     return isapprox(dot(ψ₁, ψ₂), 1; kwargs...)
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ψ::InfiniteMPS)
+function Base.summary(io::IO, ψ::InfiniteMPS)
+    D = maximum(dim, left_virtualspace(ψ))
     L = length(ψ)
-    println(io, L == 1 ? "single site" : "$L-site", " InfiniteMPS:")
-    context = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
-    return show(context, ψ)
+    return print(io, "$L-site InfiniteMPS ($(scalartype(ψ)), $(spacetype(ψ))) with maximal dimension $D")
 end
-Base.show(io::IO, ψ::InfiniteMPS) = show(convert(IOContext, io), ψ)
-function Base.show(io::IOContext, ψ::InfiniteMPS)
-    charset = (; mid = "├", ver = "│", dash = "──")
-    limit = get(io, :limit, false)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
-    if !haskey(io, :compact)
-        io = IOContext(io, :compact => true)
-    end
+
+function Base.show(io::IO, mime::MIME"text/plain", ψ::InfiniteMPS)
+    summary(io, ψ)
+    get(io, :compact, false)::Bool && return nothing
+    println(io, ":")
+    io = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
+
     L = length(ψ)
-    println(io, charset.ver, "   ⋮")
+    charset = (; mid = "├", ver = "│", dash = "──")
+    limit = get(io, :limit, true)::Bool
+    lines_per_tensor = 4
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2 * lines_per_tensor) : typemax(Int)
+
+    println(io, charset.ver, "     ⋮")
+    println(io, charset.ver)
     for site in reverse(1:L)
         if site < half_screen_rows || site > L - half_screen_rows
             if site == L
-                println(io, charset.ver, " C[$site]: ", ψ.C[site])
+                print(io, charset.ver, " C[$site]: ")
+                replace(io, sprint((x, y) -> show(x, mime, y), ψ.C[site]), "\n" => "\n" * charset.ver)
+                println(io)
             end
-            println(io, charset.mid, charset.dash, " AL[$site]: ", ψ.AL[site])
+            print(io, charset.mid, charset.dash, " AL[$site]: ")
+            replace(io, sprint((x, y) -> show(x, mime, y), ψ.AL[site]), "\n" => "\n" * charset.ver)
+            println(io)
         elseif site == half_screen_rows
-            println(io, charset.ver, "⋮")
+            println(io, charset.ver, "     ⋮")
+            println(io, charset.ver)
         end
     end
-    println(io, charset.ver, "   ⋮")
+    println(io, charset.ver, "     ⋮")
+
     return nothing
 end
 
