@@ -1,17 +1,24 @@
 # AbstractMPO
 # -----------
-function Base.show(io::IO, ::MIME"text/plain", W::AbstractMPO)
-    L = length(W)
-    println(io, L == 1 ? "single site " : "$L-site ", typeof(W), ":")
-    context = IOContext(io, :typeinfo => eltype(W), :compact => true)
-    return show(context, W)
+
+function Base.summary(io::IO, mpo::AbstractMPO)
+    L = length(mpo)
+    D = maximum(dim, left_virtualspace(mpo))
+    print(io, "$L-site $(typeof(mpo)) with maximal dimension $D")
+    return nothing
 end
 
-Base.show(io::IO, mpo::AbstractMPO) = show(convert(IOContext, io), mpo)
-function Base.show(io::IOContext, mpo::AbstractMPO)
+function Base.show(io::IO, mime::MIME"text/plain", mpo::AbstractMPO)
+    summary(io, mpo)
+
+    get(io, :compact, false)::Bool && return nothing
+    println(io, ":")
+    io = IOContext(io, :typeinfo => eltype(mpo))
+    context = :compact => (get(io, :compact, false)::Bool)
+
     charset = (; top = "┬", bot = "┴", mid = "┼", ver = "│", dash = "──")
     limit = get(io, :limit, false)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2 * 8) : typemax(Int)
     L = length(mpo)
 
     # used to align all mposite infos regardless of the length of the mpo (100 takes up more space than 5)
@@ -23,23 +30,35 @@ function Base.show(io::IOContext, mpo::AbstractMPO)
     for site in reverse(1:L)
         if site < half_screen_rows || site > L - half_screen_rows
             if site == L && isfinite
-                println(
+                print(
                     io, charset.top, " $mpoletter[$site]: ",
-                    repeat(" ", npad - floor(Int, log10(site))), mpo[site]
+                    repeat(" ", npad - floor(Int, log10(site)))
                 )
+                replace(io, sprint((x, y) -> show(x, mime, y), mpo[site]; context), "\n" => "\n" * charset.ver)
+                println(io)
             elseif (site == 1) && isfinite
-                println(
+                print(
                     io, charset.bot, " $mpoletter[$site]: ",
-                    repeat(" ", npad - floor(Int, log10(site))), mpo[site]
+                    repeat(" ", npad - floor(Int, log10(site)))
                 )
+                replace(io, sprint((x, y) -> show(x, mime, y), mpo[site]; context), "\n" => "\n" * charset.ver)
+                println(io)
             else
-                println(
+                print(
                     io, charset.mid, " $mpoletter[$site]: ",
-                    repeat(" ", npad - floor(Int, log10(site))), mpo[site]
+                    repeat(" ", npad - floor(Int, log10(site)))
                 )
+                if site == 1
+                    show(io, mime, mpo[site])
+                else
+                    replace(io, sprint((x, y) -> show(x, mime, y), mpo[site]; context), "\n" => "\n" * charset.ver)
+                end
+                println(io)
             end
         elseif site == half_screen_rows
-            println(io, "   ", "⋮")
+            println(io, charset.ver)
+            println(io, charset.ver, "    ⋮")
+            println(io, charset.ver)
         end
     end
     !isfinite && println(io, "╵  ⋮")
