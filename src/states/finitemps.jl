@@ -440,18 +440,18 @@ Compute the dimension of the maximal virtual space at a given site.
 max_Ds(ψ::FiniteMPS) = dim.(max_virtualspaces(ψ))
 
 function Base.summary(io::IO, ψ::FiniteMPS)
-    return print(io, "$(length(ψ))-site FiniteMPS ($(scalartype(ψ)), $(spacetype(ψ)))")
+    D = maximum(dim, left_virtualspace(ψ))
+    return print(io, "$(length(ψ))-site FiniteMPS ($(scalartype(ψ)), $(spacetype(ψ))) with maximal dimension $D")
 end
-function Base.show(io::IO, ::MIME"text/plain", ψ::FiniteMPS)
-    println(io, summary(ψ), ":")
-    context = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
-    return show(context, ψ)
-end
-Base.show(io::IO, ψ::FiniteMPS) = show(convert(IOContext, io), ψ)
-function Base.show(io::IOContext, ψ::FiniteMPS)
+function Base.show(io::IO, mime::MIME"text/plain", ψ::FiniteMPS)
+    summary(io, ψ)
+    get(io, :compact, false)::Bool && return nothing
+    println(io, ":")
+    io = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
     charset = (; start = "┌", mid = "├", stop = "└", ver = "│", dash = "──")
-    limit = get(io, :limit, false)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
+    limit = get(io, :limit, true)::Bool
+    lines_per_tensor = 4
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2 * lines_per_tensor) : typemax(Int)
     if !haskey(io, :compact)
         io = IOContext(io, :compact => true)
     end
@@ -463,43 +463,64 @@ function Base.show(io::IOContext, ψ::FiniteMPS)
         if site < half_screen_rows || site > L - half_screen_rows
             if site > c # ARs
                 if isinteger(site)
-                    println(
+                    print(
                         io, Int(site) == L ? charset.start : charset.mid, charset.dash,
-                        " AR[$(Int(site))]: ", ψ.ARs[Int(site)]
+                        " AR[$(Int(site))]: "
                     )
+                    replace(io, sprint((x, y) -> show(x, mime, y), ψ.ARs[Int(site)]), "\n" => "\n" * charset.ver)
+                    site == 1 || println(io)
                 end
             elseif site == c # AC or C
                 if isinteger(c) # center is an AC
-                    println(
+                    print(
                         io, if site == L
                             charset.start
                         elseif site == 1
                             charset.stop
                         else
                             charset.mid
-                        end, charset.dash, " AC[$(Int(site))]: ", ψ.ACs[Int(site)]
+                        end, charset.dash, " AC[$(Int(site))]: "
                     )
+                    if site != 1
+                        replace(io, sprint((x, y) -> show(x, mime, y), ψ.ACs[Int(site)]), "\n" => "\n" * charset.ver)
+                    else
+                        show(io, mime, ψ.ACs[Int(site)])
+                    end
+                    site == 1 || println(io)
                 else # center is a bond-tensor
-                    println(
+                    print(
                         io, if site == HalfInt(L + 1 / 2)
                             charset.start
                         elseif site == HalfInt(1 / 2)
                             charset.stop
                         else
                             charset.ver
-                        end, " C[$(Int(site - 1 / 2))]: ", ψ.Cs[Int(site + 1 / 2)]
+                        end, " C[$(Int(site - 1 / 2))]: "
                     )
+                    if site != 1
+                        replace(io, sprint((x, y) -> show(x, mime, y), ψ.Cs[Int(site + 1 / 2)]), "\n" => "\n" * charset.ver)
+                    else
+                        show(io, mime, ψ.Cs[Int(site + 1 / 2)])
+                    end
+                    site == 1 || println(io)
                 end
             else
                 if isinteger(site)
-                    println(
+                    print(
                         io, site == 1 ? charset.stop : charset.mid, charset.dash,
-                        " AL[$(Int(site))]: ", ψ.ALs[Int(site)]
+                        " AL[$(Int(site))]: ",
                     )
+                    if site != 1
+                        replace(io, sprint((x, y) -> show(x, mime, y), ψ.ALs[Int(site)]), "\n" => "\n" * charset.ver)
+                    else
+                        show(io, mime, ψ.ALs[Int(site)])
+                    end
+                    site == 1 || println(io)
                 end
             end
         elseif site == half_screen_rows
-            println(io, charset.ver, "⋮")
+            println(io, charset.ver, "     ⋮")
+            println(io, charset.ver)
         end
     end
     return nothing
