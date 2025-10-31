@@ -58,7 +58,7 @@ end
 
 
 # Internal state of the IDMRG algorithm
-struct IDMRGState{S, O, E, T<:Number}
+struct IDMRGState{S, O, E, T <: Number}
     mps::S
     operator::O
     envs::E
@@ -67,7 +67,7 @@ struct IDMRGState{S, O, E, T<:Number}
     E_current::T
 end
 
-function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = environments(mps, operator)) where {alg_type<:Union{<:IDMRG, <:IDMRG2}}
+function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = environments(mps, operator)) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
     isfinite(mps) && throw(ArgumentError("mps should be an 'InfiniteMPS'"))
     length(mps) ≤ 1 && alg isa IDMRG2 && throw(ArgumentError("unit cell should be >= w"))
     log = alg isa IDMRG ? IterLog("IDMRG") : IterLog("IDMRG2")
@@ -106,7 +106,7 @@ function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = envi
     end
 end
 
-function Base.iterate(it::IterativeSolver{alg_type}, state = it.state) where {alg_type<:Union{<:IDMRG, <:IDMRG2}}
+function Base.iterate(it::IterativeSolver{alg_type}, state = it.state) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
     mps, envs, C_old = localupdate_step!(it, state)
 
     # error criterion
@@ -127,8 +127,8 @@ function Base.iterate(it::IterativeSolver{alg_type}, state = it.state) where {al
 end
 
 function MPSKit.localupdate_step!(
-    it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state
-)
+        it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state
+    )
     alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
     mps, envs, C_old = _localupdate_sweep_idmrg!(state.mps, state.operator, state.envs, alg_eigsolve, it.alg)
 
