@@ -4,6 +4,8 @@ using BenchmarkTools
 using MPSKit
 using TOML
 
+include("utils/BenchUtils.jl")
+
 BenchmarkTools.DEFAULT_PARAMETERS.seconds = 20.0
 BenchmarkTools.DEFAULT_PARAMETERS.samples = 10000
 BenchmarkTools.DEFAULT_PARAMETERS.time_tolerance = 0.15
