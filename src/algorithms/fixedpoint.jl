@@ -8,26 +8,30 @@ Compute the fixedpoint of a linear operator `A` using the specified eigensolver 
 fixedpoint is assumed to be unique.
 """
 function fixedpoint(A, x₀, which::Symbol, alg::Lanczos)
-    vals, vecs, info = eigsolve(A, x₀, 1, which, alg)
+    A′, x₀′ = prepare_operator!!(A, x₀)
+    vals, vecs, info = eigsolve(A′, x₀′, 1, which, alg)
 
-    if info.converged == 0
+    info.converged == 0 &&
         @warnv 1 "fixedpoint not converged after $(info.numiter) iterations: normres = $(info.normres[1])"
-    end
 
-    return vals[1], vecs[1]
+    λ = vals[1]
+    v = unprepare_operator!!(vecs[1], A′, x₀)
+
+    return λ, v
 end
 
 function fixedpoint(A, x₀, which::Symbol, alg::Arnoldi)
-    TT, vecs, vals, info = schursolve(A, x₀, 1, which, alg)
+    A′, x₀′ = prepare_operator!!(A, x₀)
+    TT, vecs, vals, info = schursolve(A′, x₀′, 1, which, alg)
 
-    if info.converged == 0
+    info.converged == 0 &&
         @warnv 1 "fixedpoint not converged after $(info.numiter) iterations: normres = $(info.normres[1])"
-    end
-    if size(TT, 2) > 1 && TT[2, 1] != 0
-        @warnv 1 "non-unique fixedpoint detected"
-    end
+    size(TT, 2) > 1 && TT[2, 1] != 0 && @warnv 1 "non-unique fixedpoint detected"
 
-    return vals[1], vecs[1]
+    λ = vals[1]
+    v = unprepare_operator!!(vecs[1], A′, x₀)
+
+    return λ, v
 end
 
 function fixedpoint(A, x₀, which::Symbol; kwargs...)
