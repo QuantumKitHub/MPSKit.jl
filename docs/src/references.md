@@ -10,6 +10,8 @@ request or an issue on the [GitHub repository](https://github.com/QuantumKitHub/
 
 ```@bibliography
 Pages = []
+dempsey2025
+kirchner2025
 capponi2025
 mortier2025
 ```
