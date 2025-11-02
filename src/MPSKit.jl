@@ -65,6 +65,7 @@ using MatrixAlgebraKit: TruncationStrategy, PolarViaSVD, LAPACK_SVDAlgorithm
 using BlockTensorKit
 using BlockTensorKit: TensorMapSumSpace
 using TensorOperations
+using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
 using OptimKit
