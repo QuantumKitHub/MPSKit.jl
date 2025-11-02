@@ -75,13 +75,13 @@ const _HAM_MPS_TYPES = Union{
     InfiniteMPS{<:MPSTensor},
 }
 
-function AC_hamiltonian(
-        site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
-        above::_HAM_MPS_TYPES, envs
+function prepare_operator!!(
+        O::MPO_AC_Hamiltonian{<:Any, <:JordanMPOTensor, <:Any}, x::MPSTensor,
+        backend::AbstractBackend, allocator
     )
-    GL = leftenv(envs, site, below)
-    GR = rightenv(envs, site, below)
-    W = operator[site]
+    GL = O.leftenv
+    W = only(O.operators)
+    GR = O.rightenv
 
     # starting
     if nonzero_length(W.C) > 0
@@ -117,7 +117,7 @@ function AC_hamiltonian(
     end
 
     # not_started
-    if isfinite(operator) && site == length(operator)
+    if size(W, 4) == 1
         not_started = missing
     elseif !ismissing(starting)
         I = id(storagetype(GR[1]), physicalspace(W))
@@ -128,7 +128,7 @@ function AC_hamiltonian(
     end
 
     # finished
-    if isfinite(operator) && site == 1
+    if size(W, 1) == 1
         finished = missing
     elseif !ismissing(ending)
         I = id(storagetype(GL[end]), physicalspace(W))
@@ -142,19 +142,20 @@ function AC_hamiltonian(
     A = W.A
     continuing = (GL[2:(end - 1)], A, GR[2:(end - 1)])
 
-    return JordanMPO_AC_Hamiltonian(
+    O′ = JordanMPO_AC_Hamiltonian(
         onsite, not_started, finished, starting, ending, continuing
     )
+
+    return O′, x
 end
 
-function AC2_hamiltonian(
-        site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
-        above::_HAM_MPS_TYPES, envs
+function prepare_operator!!(
+        O::MPO_AC2_Hamiltonian{<:Any, <:JordanMPOTensor, <:JordanMPOTensor, <:Any}, x::MPOTensor,
+        backend::AbstractBackend, allocator
     )
-    GL = leftenv(envs, site, below)
-    GR = rightenv(envs, site + 1, below)
-    W1 = operator[site]
-    W2 = operator[site + 1]
+    GL = O.leftenv
+    W1, W2 = O.operators
+    GR = O.rightenv
 
     # starting left - continuing right
     if nonzero_length(W1.C) > 0 && nonzero_length(W2.A) > 0
@@ -256,7 +257,7 @@ function AC2_hamiltonian(
     end
 
     # finished
-    if isfinite(operator) && site + 1 == length(operator)
+    if size(W2, 4) == 1
         II = missing
     elseif !ismissing(IC)
         I = id(storagetype(GR[1]), physicalspace(W2))
@@ -271,7 +272,7 @@ function AC2_hamiltonian(
     end
 
     # unstarted
-    if isfinite(operator) && site == 1
+    if size(W1, 1) == 1
         EE = missing
     elseif !ismissing(BE)
         I = id(storagetype(GL[end]), physicalspace(W1))
@@ -289,7 +290,8 @@ function AC2_hamiltonian(
     # TODO: MPODerivativeOperator code reuse + optimization
     AA = (GL[2:(end - 1)], W1.A, W2.A, GR[2:(end - 1)])
 
-    return JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    O′ = JordanMPO_AC2_Hamiltonian(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    return O′, x
 end
 
 # Actions
