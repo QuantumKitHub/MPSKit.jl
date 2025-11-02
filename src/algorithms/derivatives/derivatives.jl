@@ -213,3 +213,31 @@ const DerivativeOrMultiplied{D <: DerivativeOperator} = Union{MultipliedOperator
 (x::LazySum{<:DerivativeOrMultiplied})(y, t::Number) = sum(O -> O(y, t), x)
 (x::LazySum{<:DerivativeOrMultiplied})(y) = sum(O -> O(y), x)
 Base.:*(h::LazySum{<:Union{DerivativeOrMultiplied}}, v) = h(v)
+
+# Operator preparation
+# --------------------
+"""
+    prepare_operator!!(O, x, [backend], [allocator]) -> O′, x′
+
+Given an operator and vector, try to construct a more efficient representation of that operator for repeated application.
+This should always be used in conjunction with [`unprepare_operator!!`](@ref).
+"""
+function prepare_operator!!(
+        O, x,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    return O, x
+end
+
+"""
+    unprepare_operator!!(y, O, x, [backend], [allocator]) -> y′
+
+Given the result `y` of applying a prepared operator `O` on vectors like `x`, undo the preparation work on the vector, and clean up the operator.
+This should always be used in conjunction with [`prepare_operator!!`](@ref).
+"""
+function unprepare_operator!!(
+        y, O, x,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    return y
+end
