@@ -1,7 +1,8 @@
 using TensorKit
+using TensorKit: type_repr
 using MPSKit
-using MPSKit.BlockTensorKit: nonzero_keys
-using MPSKit.BlockTensorKit
+using BlockTensorKit
+using BlockTensorKit: nonzero_keys
 using MPSKitModels
 using TOML
 
@@ -51,7 +52,7 @@ D_min = 3
 
 # FiniteChain
 # -----------
-L = 100
+L = 10
 lattice = FiniteChain(L)
 
 symmetry = SU2Irrep
@@ -74,8 +75,14 @@ end
 
 specs = vcat(specs_triv, specs_u1, specs_su2)
 
-output_file = joinpath(@__DIR__, "heisenberg_NN_specs.toml")
+output_file = joinpath(@__DIR__, "..", "derivatives", "heisenberg_NN.toml")
 open(output_file, "w") do io
-    TOML.print(io, Dict("specs" => tomlify.(specs)))
+    TOML.print(
+        io, Dict(
+            type_repr(Trivial) => tomlify.(specs_triv),
+            type_repr(U1Irrep) => tomlify.(specs_u1),
+            type_repr(SU2Irrep) => tomlify.(specs_su2)
+        )
+    )
 end
 @info("Spaces written to $output_file")
