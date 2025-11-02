@@ -16,18 +16,20 @@ function AC2Spec(mps, mpo; site = length(mps) ÷ 2)
     return AC2Spec(physicalspaces, mps_virtualspaces, mpo_virtualspaces, ks)
 end
 
+benchname(spec::AC2Spec) = dim(spec.mps_virtualspaces[1]), dim(spec.mpo_virtualspaces[1])
+
 # Benchmarks
 # ----------
 function MPSKit.MPO_AC2_Hamiltonian(spec::AC2Spec{S}; T::Type = Float64) where {S}
     GL = randn(T, spec.mps_virtualspaces[1] ⊗ spec.mpo_virtualspaces[1]' ← spec.mps_virtualspaces[1])
     GR = randn(T, spec.mps_virtualspaces[3] ⊗ spec.mpo_virtualspaces[3] ← spec.mps_virtualspaces[3])
-    W1 = JordanMPOTensor{T, S}(undef, spec.mpo_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.physicalspaces[1] ⊗ spec.mpo_virtualspaces[2])
+    W1 = MPSKit.JordanMPOTensor{T, S}(undef, spec.mpo_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.physicalspaces[1] ⊗ spec.mpo_virtualspaces[2])
     for (r, c) in spec.nonzero_keys[1]
         r == c == 1 && continue
         r == size(W1, 1) && c == size(W1, 4) && continue
         W1[r, 1, 1, c] = randn!(W1[r, 1, 1, c])
     end
-    W2 = JordanMPOTensor{T, S}(undef, spec.mpo_virtualspaces[2] ⊗ spec.physicalspaces[2] ← spec.physicalspaces[2] ⊗ spec.mpo_virtualspaces[3])
+    W2 = MPSKit.JordanMPOTensor{T, S}(undef, spec.mpo_virtualspaces[2] ⊗ spec.physicalspaces[2] ← spec.physicalspaces[2] ⊗ spec.mpo_virtualspaces[3])
     for (r, c) in spec.nonzero_keys[2]
         r == c == 1 && continue
         r == size(W2, 1) && c == size(W2, 4) && continue
@@ -68,10 +70,11 @@ function tomlify(spec::AC2Spec)
 end
 
 function untomlify(::Type{AC2Spec}, x)
-    physicalspaces = Tuple(map(untomlify, x["physicalspaces"]))
-    mps_virtualspaces = Tuple(map(untomlify, x["mps_virtualspaces"]))
-    mpo_virtualspaces = Tuple(map(untomlify, x["mpo_virtualspaces"]))
-    nonzero_keys = Tuple(map(Base.Fix1(map, Base.Fix1(map, Tuple)), x["nonzero_keys"]))
+    to_space = Base.Fix1(untomlify, VectorSpace)
+    physicalspaces = Tuple(map(to_space, x["physicalspaces"]))
+    mps_virtualspaces = Tuple(map(to_space, x["mps_virtualspaces"]))
+    mpo_virtualspaces = Tuple(map(to_space, x["mpo_virtualspaces"]))
+    nonzero_keys = Tuple(map(Base.Fix1(map, Tuple), x["nonzero_keys"]))
     return AC2Spec(physicalspaces, mps_virtualspaces, mpo_virtualspaces, nonzero_keys)
 end
 
