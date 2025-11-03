@@ -11,7 +11,15 @@ request or an issue on the [GitHub repository](https://github.com/QuantumKitHub/
 ```@bibliography
 Pages = []
 capponi2025
+dempsey2025
+herviou2025
+kirchner2025
+linden2025
 mortier2025
+maertens2025
+shen2025
+ueda2025
+vrancken2025
 ```
 ### 2024
 
