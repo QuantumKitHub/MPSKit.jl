@@ -13,7 +13,10 @@ import ..BenchUtils: tomlify, untomlify
 const SUITE = BenchmarkGroup()
 
 const allparams = Dict(
-    "heisenberg_NN" => TOML.parsefile(joinpath(@__DIR__, "heisenberg_NN.toml"))
+    "heisenberg_nn" => TOML.parsefile(joinpath(@__DIR__, "heisenberg_nn.toml")),
+    "heisenberg_nnn" => TOML.parsefile(joinpath(@__DIR__, "heisenberg_nnn.toml")),
+    "heisenberg_cylinder" => TOML.parsefile(joinpath(@__DIR__, "heisenberg_cylinder.toml")),
+    "heisenberg_coulomb" => TOML.parsefile(joinpath(@__DIR__, "heisenberg_coulomb.toml"))
 )
 
 include("AC2_benchmarks.jl")
