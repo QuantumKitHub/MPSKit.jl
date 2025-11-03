@@ -130,7 +130,12 @@ function prepare_operator!!(
     @plansor backend = backend allocator = allocator begin
         GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
     end
-    return PrecomputedDerivative(TensorMap(GL_O), TensorMap(H.rightenv), backend, allocator), x
+    leftenv = TensorMap(GL_O)
+    rightenv = TensorMap(H.rightenv)
+    BraidingStyle(sectortype(rightenv)) === NoBraiding() ||
+        (rightenv = braid(rightenv, ((2, 1), (3,)), (1, 2, 3)))
+
+    return PrecomputedDerivative(leftenv, rightenv, backend, allocator), x
 end
 
 function prepare_operator!!(
@@ -142,17 +147,59 @@ function prepare_operator!!(
         GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
         O_GR[-1 -2 -3; -4 -5] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
     end
-    return PrecomputedDerivative(TensorMap(GL_O), TensorMap(O_GR), backend, allocator), x
+    leftenv = TensorMap(GL_O)
+    rightenv = TensorMap(O_GR)
+    BraidingStyle(sectortype(rightenv)) === NoBraiding() ||
+        (rightenv = braid(rightenv, ((3, 1, 2), (4, 5)), (1, 2, 3, 4, 5)))
+    return PrecomputedDerivative(leftenv, rightenv, backend, allocator), x
 end
 
 function (H::PrecomputedDerivative)(x::MPSTensor)
-    return @plansor backend = H.backend allocator = H.allocator begin
-        y[-1 -2; -3] ≔ H.leftenv[-1 -2 4; 1 2] * x[1 2; 3] * H.rightenv[3 4; -3]
+    bstyle = BraidingStyle(sectortype(x))
+    return _precontracted_ac_derivative(bstyle, x, H.leftenv, H.rightenv, H.backend, H.allocator)
+end
+
+function _precontracted_ac_derivative(::NoBraiding, x, leftenv, rightenv, backend, allocator)
+    return @planar backend = backend allocator = allocator begin
+        y[-1 -2; -3] ≔ leftenv[-1 -2 4; 1 2] * x[1 2; 3] * rightenv[3 4; -3]
+    end
+end
+function _precontracted_ac_derivative(::Bosonic, x, leftenv, rightenv, backend, allocator)
+    return @tensor backend = backend allocator = allocator begin
+        y[-1 -2; -3] ≔ leftenv[-1 -2 4; 1 2] * x[1 2; 3] * rightenv[4 3; -3]
+    end
+end
+function _precontracted_ac_derivative(::BraidingStyle, x, leftenv, rightenv, backend, allocator)
+    @planar backend = backend allocator = allocator begin
+        tmp[-1 -2 -3; -4] := leftenv[-1 -2 -3; 1 2] * x[1 2; -4]
+    end
+    tmp2 = braid(tmp, ((1, 2), (3, 4)), (1, 2, 4, 3))
+    return @planar backend = backend allocator = allocator begin
+        y[-1 -2; -3] ≔ tmp2[-1 -2; 1 2] * rightenv[1 2; -3]
     end
 end
 
 function (H::PrecomputedAC2Derivative)(x::MPOTensor)
-    return @plansor backend = H.backend allocator = H.allocator begin
-        y[-1 -2; -3 -4] ≔ H.leftenv[-1 -2 5; 1 2] * x[1 2; 3 4] * H.rightenv[3 4 5; -3 -4]
+    bstyle = BraidingStyle(sectortype(x))
+    return _precontracted_ac2_derivative(bstyle, x, H.leftenv, H.rightenv, H.backend, H.allocator)
+end
+
+function _precontracted_ac2_derivative(::NoBraiding, x, leftenv, rightenv, backend, allocator)
+    return @planar backend = backend allocator = allocator begin
+        y[-1 -2; -3 -4] ≔ leftenv[-1 -2 5; 1 2] * x[1 2; 3 4] * rightenv[3 4 5; -3 -4]
+    end
+end
+function _precontracted_ac2_derivative(::Bosonic, x, leftenv, rightenv, backend, allocator)
+    return @tensor backend = backend allocator = allocator begin
+        y[-1 -2; -3 -4] ≔ leftenv[-1 -2 5; 1 2] * x[1 2; 3 4] * rightenv[5 3 4; -3 -4]
+    end
+end
+function _precontracted_ac2_derivative(::BraidingStyle, x, leftenv, rightenv, backend, allocator)
+    @planar backend = backend allocator = allocator begin
+        tmp[-1 -2 -3; -4 -5] := leftenv[-1 -2 -3; 1 2] * x[1 2; -4 -5]
+    end
+    tmp2 = braid(tmp, ((1, 2), (3, 4, 5)), (1, 2, 5, 3, 4))
+    return @planar backend = backend allocator = allocator begin
+        y[-1 -2; -3 -4] := tmp2[-1 -2; 1 2 3] * rightenv[1 2 3; -3 -4]
     end
 end
