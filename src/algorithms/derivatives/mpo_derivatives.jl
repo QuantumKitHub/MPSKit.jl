@@ -105,3 +105,54 @@ function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTen
         h.operators[2][7 -6; 4 5] * τ[5 -5; 2 3]
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
+
+# prepared operators
+# ------------------
+struct PrecomputedDerivative{
+        T <: Number, S <: ElementarySpace, N₁, N₂, N₃, N₄,
+        T1 <: AbstractTensorMap{T, S, N₁, N₂}, T2 <: AbstractTensorMap{T, S, N₃, N₄},
+        B <: AbstractBackend, A,
+    } <: DerivativeOperator
+    leftenv::T1
+    rightenv::T2
+    backend::B
+    allocator::A
+end
+
+const PrecomputedACDerivative{T, S} = PrecomputedDerivative{T, S, 3, 2, 2, 1}
+const PrecomputedAC2Derivative{T, S} = PrecomputedDerivative{T, S, 3, 2, 3, 2}
+
+function prepare_operator!!(
+        H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
+        x::MPSTensor,
+        backend::AbstractBackend, allocator
+    )
+    @plansor backend = backend allocator = allocator begin
+        GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
+    end
+    return PrecomputedDerivative(TensorMap(GL_O), TensorMap(H.rightenv), backend, allocator), x
+end
+
+function prepare_operator!!(
+        H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
+        x::MPOTensor,
+        backend::AbstractBackend, allocator
+    )
+    @plansor backend = backend allocator = allocator begin
+        GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
+        O_GR[-1 -2 -3; -4 -5] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
+    end
+    return PrecomputedDerivative(TensorMap(GL_O), TensorMap(O_GR), backend, allocator), x
+end
+
+function (H::PrecomputedDerivative)(x::MPSTensor)
+    return @plansor backend = H.backend allocator = H.allocator begin
+        y[-1 -2; -3] ≔ H.leftenv[-1 -2 4; 1 2] * x[1 2; 3] * H.rightenv[3 4; -3]
+    end
+end
+
+function (H::PrecomputedAC2Derivative)(x::MPOTensor)
+    return @plansor backend = H.backend allocator = H.allocator begin
+        y[-1 -2; -3 -4] ≔ H.leftenv[-1 -2 5; 1 2] * x[1 2; 3 4] * H.rightenv[3 4 5; -3 -4]
+    end
+end
