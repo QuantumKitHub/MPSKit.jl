@@ -105,7 +105,7 @@ function localupdate_step!(
         it::IterativeSolver{<:VUMPS}, state, scheduler = Defaults.scheduler[]
     )
     alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
-    alg_orth = QRpos()
+    alg_orth = Defaults.alg_qr()
 
     mps = state.mps
     src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
@@ -126,7 +126,8 @@ end
 
 function _localupdate_vumps_step!(
         site, mps, operator, envs, AC₀, C₀;
-        parallel::Bool = false, alg_orth = QRpos(), alg_eigsolve = Defaults.eigsolver, which
+        parallel::Bool = false, alg_orth = Defaults.alg_qr(),
+        alg_eigsolve = Defaults.eigsolver, which
     )
     if !parallel
         Hac = AC_hamiltonian(site, mps, operator, mps, envs)

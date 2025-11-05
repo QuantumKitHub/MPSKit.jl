@@ -17,8 +17,8 @@ $(TYPEDFIELDS)
     "algorithm used for the singular value decomposition"
     alg_svd = Defaults.alg_svd()
 
-    "algorithm used for [truncation][@extref TensorKit.tsvd] of the two-site update"
-    trscheme::TruncationScheme
+    "algorithm used for [truncation][@extref MatrixAlgebraKit.TruncationStrategy] of the two-site update"
+    trscheme::TruncationStrategy
 end
 
 function changebonds_1(
@@ -50,7 +50,6 @@ function changebonds_1(
 end
 
 function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H))
-    meps = 0.0
     for loc in 1:length(state)
         @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
 
@@ -61,13 +60,12 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environme
         _, nC2 = fixedpoint(Hc, state.C[loc + 1], :SR, alg.alg_eigsolve)
 
         #svd ac2, get new AL1 and S,V ---> AC
-        AL1, S, V, eps = tsvd!(nAC2; trunc = alg.trscheme, alg = alg.alg_svd)
+        AL1, S, V = svd_trunc!(nAC2; trunc = alg.trscheme, alg = alg.alg_svd)
         @plansor AC[-1 -2; -3] := S[-1; 1] * V[1; -3 -2]
-        meps = max(eps, meps)
 
         #find AL2 from AC and C as in vumps paper
-        QAC, _ = leftorth(AC; alg = QRpos())
-        QC, _ = leftorth(nC2; alg = QRpos())
+        QAC, _ = qr_compact(AC)
+        QC, _ = qr_compact(nC2; positive = true)
         dom_map = isometry(domain(QC), domain(QAC))
 
         @plansor AL2[-1 -2; -3] := QAC[-1 -2; 1] * conj(dom_map[2; 1]) * conj(QC[-3; 2])

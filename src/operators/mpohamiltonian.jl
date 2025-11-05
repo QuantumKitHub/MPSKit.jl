@@ -299,20 +299,31 @@ function _split_mpoham_types(W::Matrix)::Type{<:MPOTensor}
 end
 
 """
+    instantiate_operator(state, O::Pair)
     instantiate_operator(lattice::AbstractArray{<:VectorSpace}, O::Pair)
 
-Instantiate a local operator `O` on a lattice `lattice` as a vector of MPO tensors, and a
-vector of linear site indices.
+Instantiate a local operator `O` for a `state` or `lattice` as a vector of MPO tensors, and
+a vector of linear site indices.
 """
+function instantiate_operator(state::AbstractMPS, O::Pair)
+    return instantiate_operator(physicalspace(state), O)
+end
 function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O)::Pair)
-    inds = inds′ isa Int ? tuple(inds′) : inds′
-    mpo = O isa FiniteMPO ? O : FiniteMPO(O)
+    inds = inds′ isa Int ? [inds′] : inds′
+    mpo = O isa FiniteMPO ? copy(O) : FiniteMPO(O)
 
     # convert to linear index type
-    operators = parent(mpo)
-    indices = map(inds) do I
-        return Base._to_linear_index(lattice, Tuple(I)...) # this should mean all inds are valid...
+    indices = Vector{Int}(undef, length(inds))
+    for i in eachindex(indices)
+        indices[i] = Base._to_linear_index(lattice, Tuple(inds[i])...) # this should mean all inds are valid...
     end
+
+    # sort indices and deduplicate
+    indices, mpo = canonicalize_indices!(indices, mpo)
+    operators = parent(mpo)
+
+    @assert allunique(indices) && issorted(indices) "From here on we require unique and ascending indices\n$indices"
+
     T = eltype(mpo)
     local_mpo = Union{T, scalartype(T)}[]
     sites = Int[]
@@ -320,7 +331,10 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     i = 1
     for j in first(indices):last(indices)
         if j == indices[i]
-            @assert space(operators[i], 2) == lattice[j] "operator does not fit into the given Hilbert space: $(space(operators[i], 2)) ≠ $(lattice[j])"
+            # TODO: fix this check for density matrices
+            if !(eltype(lattice) <: ProductSpace) && physicalspace(operators[i]) != lattice[j]
+                throw(SpaceMismatch("physical space does not match at site $j"))
+            end
             push!(local_mpo, operators[i])
             i += 1
         else
@@ -330,6 +344,25 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     end
 
     return sites => local_mpo
+end
+
+function canonicalize_indices!(indices, mpo)
+    # swap non-sorted entries
+    for i in 2:length(indices)
+        for j in reverse(i:length(indices))
+            if indices[j] < indices[j - 1]
+                swap!(mpo, j - 1)
+                indices[j - 1], indices[j] = indices[j], indices[j - 1]
+            end
+        end
+    end
+    for i in length(indices):-1:2
+        if indices[i] == indices[i - 1]
+            multiply_neighbours!(mpo, i - 1)
+            popat!(indices, i)
+        end
+    end
+    return indices, mpo
 end
 
 # yields the promoted tensortype of all tensors
@@ -640,19 +673,8 @@ end
 # Base.complex(H::MPOHamiltonian) = MPOHamiltonian(map(complex, parent(H)))
 function Base.complex(H::MPOHamiltonian)
     scalartype(H) <: Complex && return H
-    Ws = map(parent(H)) do W
-        W′ = jordanmpotensortype(spacetype(W), complex(scalartype(W)))
-        W′[1] = W[1]
-        W′[end] = W[end]
-        for (I, v) in nonzero_pairs(W)
-            if v isa BraidingTensor
-                W′[I] = BraidingTensor{scalartype(W′)}(space(v), v.adjoint)
-            else
-                W′[I] = complex(v)
-            end
-        end
-    end
-    return MPOHamiltonian(H)
+    Ws = map(complex, parent(H))
+    return MPOHamiltonian(Ws)
 end
 
 function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O <: MPOTensor}
@@ -678,9 +700,9 @@ function Base.:+(
         D = H₁[i].D + H₂[i].D
 
         Vleft = i == 1 ? left_virtualspace(H₁, 1) :
-            BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
+            ⊞(Vtriv, left_virtualspace(A), Vtriv)
         Vright = i == N ? right_virtualspace(H₁, N) :
-            BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+            ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
         H[i] = eltype(H)(V, A, B, C, D)
@@ -700,8 +722,8 @@ function Base.:+(
         C = cat(H₁[i].C, H₂[i].C; dims = 3)
         D = H₁[i].D + H₂[i].D
 
-        Vleft = BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
-        Vright = BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+        Vleft = ⊞(Vtriv, left_virtualspace(A), Vtriv)
+        Vright = ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
         H[i] = eltype(H)(V, A, B, C, D)
@@ -780,31 +802,31 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     # left to middle
     U = ones(scalartype(H), left_virtualspace(H, 1))
     @plansor a[-1 -2; -3 -4] := A[1][-1 2; -3] * H[1][1 -2; 2 -4] * conj(U[1])
-    Q, R = leftorth!(a; alg = QR())
-    A′[1] = convert(TensorMap, Q)
+    Q, R = qr_compact!(a)
+    A′[1] = TensorMap(Q)
 
     for i in 2:(N ÷ 2)
         @plansor a[-1 -2; -3 -4] := R[-1; 1 2] * A[i][1 3; -3] * H[i][2 -2; 3 -4]
-        Q, R = leftorth!(a; alg = QR())
-        A′[i] = convert(TensorMap, Q)
+        Q, R = qr_compact!(a)
+        A′[i] = TensorMap(Q)
     end
 
     # right to middle
     U = ones(scalartype(H), right_virtualspace(H, N))
     @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * U[1]
-    L, Q = rightorth!(a; alg = LQ())
-    A′[end] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
+    L, Q = lq_compact!(a)
+    A′[end] = transpose(TensorMap(Q), ((1, 3), (2,)))
 
     for i in (N - 1):-1:(N ÷ 2 + 2)
         @plansor a[-1 -2; -3 -4] := A[i][-1 3; 1] * H[i][-2 -4; 3 2] * L[1 2; -3]
-        L, Q = rightorth!(a; alg = LQ())
-        A′[i] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
+        L, Q = lq_compact!(a)
+        A′[i] = transpose(TensorMap(Q), ((1, 3), (2,)))
     end
 
     # connect pieces
     @plansor a[-1 -2; -3] := R[-1; 1 2] * A[N ÷ 2 + 1][1 3; 4] * H[N ÷ 2 + 1][2 -2; 3 5] *
         L[4 5; -3]
-    A′[N ÷ 2 + 1] = convert(TensorMap, a)
+    A′[N ÷ 2 + 1] = TensorMap(a)
 
     return FiniteMPS(A′)
 end
@@ -815,7 +837,7 @@ function Base.:*(H::FiniteMPOHamiltonian{<:MPOTensor}, x::AbstractTensorMap)
     L = removeunit(H[1], 1)
     M = Tuple(H[2:(end - 1)])
     R = removeunit(H[end], 4)
-    return convert(TensorMap, _apply_finitempo(x, L, M, R))
+    return TensorMap(_apply_finitempo(x, L, M, R))
 end
 
 function TensorKit.dot(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian)

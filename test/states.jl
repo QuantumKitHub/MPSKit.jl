@@ -207,7 +207,7 @@ module TestStates
 
         @test real(e2) ≤ real(e1)
 
-        window, envs = timestep(window, ham, 0.1, 0.0, TDVP2(; trscheme = truncdim(20)), envs)
+        window, envs = timestep(window, ham, 0.1, 0.0, TDVP2(; trscheme = truncrank(20)), envs)
         window, envs = timestep(window, ham, 0.1, 0.0, TDVP(), envs)
 
         e3 = expectation_value(window, (2, 3) => O)

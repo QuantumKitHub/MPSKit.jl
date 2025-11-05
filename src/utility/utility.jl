@@ -1,11 +1,11 @@
-function _transpose_front(t::AbstractTensorMap) # make TensorMap{S,N₁+N₂-1,1}
-    return repartition(t, numind(t) - 1, 1)
+function _transpose_front(t::AbstractTensorMap; copy::Bool = false)
+    return repartition(t, numind(t) - 1, 1; copy)
 end
-function _transpose_tail(t::AbstractTensorMap) # make TensorMap{S,1,N₁+N₂-1}
-    return repartition(t, 1, numind(t) - 1)
+function _transpose_tail(t::AbstractTensorMap; copy::Bool = false) # make TensorMap{S,1,N₁+N₂-1}
+    return repartition(t, 1, numind(t) - 1; copy)
 end
-function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap)
-    return repartition(t1, numout(t2), numin(t2))
+function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap; copy::Bool = false)
+    return repartition(t1, numout(t2), numin(t2); copy)
 end
 
 _mul_front(C, A) = _transpose_front(C * _transpose_tail(A))
@@ -22,34 +22,29 @@ _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
 #given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
 function decompose_localmpo(
-        inpmpo::AbstractTensorMap{T, PS, N, N}, trunc = truncbelow(Defaults.tol)
+        inpmpo::AbstractTensorMap{T, PS, N, N}, trunc = trunctol(; atol = eps(real(T))^(3 / 4))
     ) where {T, PS, N}
     N == 2 && return [inpmpo]
 
     leftind = (N + 1, 1, 2)
     rightind = (ntuple(x -> x + N + 1, N - 1)..., reverse(ntuple(x -> x + 2, N - 2))...)
-    U, S, V = tsvd(transpose(inpmpo, (leftind, rightind)); trunc = trunc)
+    V, C = left_orth!(transpose(inpmpo, (leftind, rightind); copy = true); trunc)
 
-    A = transpose(U * S, ((2, 3), (1, 4)))
-    B = transpose(
-        V,
-        ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1))
-    )
+    A = transpose(V, ((2, 3), (1, 4)))
+    B = transpose(C, ((1, reverse(ntuple(x -> x + N, N - 2))...), ntuple(x -> x + 1, N - 1)))
     return [A; decompose_localmpo(B)]
 end
 
 # given a state with util legs on the side, decompose using svds to form an array of mpstensors
 function decompose_localmps(
-        state::AbstractTensorMap{T, PS, N, 1}, trunc = truncbelow(Defaults.tol)
+        state::AbstractTensorMap{T, PS, N, 1}, trunc = trunctol(; atol = eps(real(T))^(3 / 4))
     ) where {T, PS, N}
     N == 2 && return [state]
 
     leftind = (1, 2)
     rightind = reverse(ntuple(x -> x + 2, N - 1))
-    U, S, V = tsvd(transpose(state, (leftind, rightind)); trunc = trunc)
-
-    A = U * S
-    B = _transpose_front(V)
+    A, C = left_orth!(transpose(state, (leftind, rightind); copy = true); trunc)
+    B = _transpose_front(C)
     return [A; decompose_localmps(B)]
 end
 
@@ -94,13 +89,13 @@ function _embedders(spaces)
     totalspace = reduce(⊕, spaces)
 
     maps = [isometry(totalspace, first(spaces))]
-    restmap = leftnull(first(maps))
+    restmap = left_null(first(maps))
 
     for sp in spaces[2:end]
         cm = isometry(domain(restmap), sp)
 
         push!(maps, restmap * cm)
-        restmap = restmap * leftnull(cm)
+        restmap = restmap * left_null(cm)
     end
 
     return maps
@@ -125,7 +120,7 @@ function randomize!(a::AbstractBlockTensorMap)
     return a
 end
 
-_totuple(t) = t isa Tuple ? t : Tuple(t)
+_totuple(t) = t isa Tuple ? t : (t isa Symbol ? tuple(t) : Tuple(t))
 
 """
     tensorexpr(name, ind_out, [ind_in])
@@ -166,4 +161,32 @@ end
 function check_unambiguous_braiding(V::VectorSpace)
     return check_unambiguous_braiding(Bool, V) ||
         throw(ArgumentError("cannot unambiguously braid $V"))
+end
+
+# temporary workaround for the fact that left_orth and right_orth are poorly designed:
+function _left_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm, trunc::MatrixAlgebraKit.TruncationStrategy = notrunc())
+    if alg isa LAPACK_HouseholderQR
+        return left_orth!(t; kind = :qr, alg_qr = alg, trunc)
+    elseif alg isa LAPACK_HouseholderLQ
+        return left_orth!(t; kind = :qr, alg_qr = LAPACK_HouseholderQR(; alg.kwargs...), trunc)
+    elseif alg isa PolarViaSVD
+        return left_orth!(t; kind = :polar, alg_polar = alg, trunc)
+    elseif alg isa LAPACK_SVDAlgorithm
+        return left_orth!(t; kind = :svd, alg_svd = alg, trunc)
+    else
+        error(lazy"unkown algorithm $alg")
+    end
+end
+function _right_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm, trunc::TruncationStrategy = notrunc())
+    if alg isa LAPACK_HouseholderLQ
+        return right_orth!(t; kind = :lq, alg_lq = alg, trunc)
+    elseif alg isa LAPACK_HouseholderQR
+        return right_orth!(t; kind = :lq, alg_lq = LAPACK_HouseholderLQ(; alg.kwargs...), trunc)
+    elseif alg isa PolarViaSVD
+        return right_orth!(t; kind = :polar, alg_polar = alg, trunc)
+    elseif alg isa LAPACK_SVDAlgorithm
+        return right_orth!(t; kind = :svd, alg_svd = alg, trunc)
+    else
+        error(lazy"unkown algorithm $alg")
+    end
 end

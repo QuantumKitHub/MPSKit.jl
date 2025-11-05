@@ -19,7 +19,7 @@ function leading_boundary(
                 for row in 1:size(ψ, 1)
                     ac = ψ.AC[row, col]
                     (col == size(ψ, 2)) && (ac = copy(ac)) # needed in next sweep
-                    ψ.AL[row, col], ψ.C[row, col] = leftorth!(ac)
+                    ψ.AL[row, col], ψ.C[row, col] = left_orth!(ac)
                 end
 
                 transfer_leftenv!(envs, ψ, operator, ψ, col + 1)
@@ -31,7 +31,7 @@ function leading_boundary(
                 _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    ψ.C[row, col - 1], temp = rightorth!(_transpose_tail(ψ.AC[row, col]))
+                    ψ.C[row, col - 1], temp = right_orth!(_transpose_tail(ψ.AC[row, col]; copy = true))
                     ψ.AR[row, col] = _transpose_front(temp)
                 end
 
@@ -82,7 +82,7 @@ function leading_boundary(
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar, = tsvd!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -106,7 +106,7 @@ function leading_boundary(
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar, = tsvd!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, site] = al
@@ -131,7 +131,7 @@ function leading_boundary(
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar, = tsvd!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -153,7 +153,7 @@ function leading_boundary(
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar, = tsvd!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al

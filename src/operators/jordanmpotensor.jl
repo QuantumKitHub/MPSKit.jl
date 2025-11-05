@@ -163,7 +163,7 @@ BlockTensorKit.issparse(W::JordanMPOTensor) = true
 
 # Converters
 # ----------
-function SparseBlockTensorMap(W::JordanMPOTensor)
+function BlockTensorKit.SparseBlockTensorMap(W::JordanMPOTensor)
     τ = BraidingTensor{scalartype(W)}(eachspace(W)[1])
     W′ = SparseBlockTensorMap{AbstractTensorMap{scalartype(W), spacetype(W), 2, 2}}(
         undef_blocks, space(W)
@@ -192,6 +192,26 @@ function SparseBlockTensorMap(W::JordanMPOTensor)
     end
 
     return W′
+end
+
+for f in (:real, :complex)
+    @eval function Base.$f(W::JordanMPOTensor)
+        E = $f(scalartype(W))
+        W′ = JordanMPOTensor{E}(undef, space(W))
+        for (I, v) in nonzero_pairs(W.A)
+            W′.A[I] = $f(v)
+        end
+        for (I, v) in nonzero_pairs(W.B)
+            W′.B[I] = $f(v)
+        end
+        for (I, v) in nonzero_pairs(W.C)
+            W′.C[I] = $f(v)
+        end
+        for (I, v) in nonzero_pairs(W.D)
+            W′.D[I] = $f(v)
+        end
+        return W′
+    end
 end
 
 # Indexing

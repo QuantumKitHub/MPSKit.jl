@@ -92,7 +92,7 @@ end
 
 function format_time(t::Float64)
     return t < 60 ? @sprintf("%0.2f sec", t) :
-        t < 2600 ? @sprintf("%0.2f min", t / 60) :
+        t < 3600 ? @sprintf("%0.2f min", t / 60) :
         @sprintf("%0.2f hr", t / 3600)
 end
 

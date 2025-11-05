@@ -124,7 +124,7 @@ module TestOperators
     @testset "Finite MPOHamiltonian" begin
         L = 3
         T = ComplexF64
-        for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+        for T in (Float64, ComplexF64), V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
             lattice = fill(V, L)
             O₁ = randn(T, V, V)
             O₁ += O₁'
@@ -135,6 +135,20 @@ module TestOperators
             H1 = FiniteMPOHamiltonian(lattice, i => O₁ for i in 1:L)
             H2 = FiniteMPOHamiltonian(lattice, (i, i + 1) => O₂ for i in 1:(L - 1))
             H3 = FiniteMPOHamiltonian(lattice, 1 => O₁, (2, 3) => O₂, (1, 3) => O₂)
+
+            @test scalartype(H1) == scalartype(H2) == scalartype(H3) == T
+            if !(T <: Complex)
+                for H in (H1, H2, H3)
+                    Hc = @constinferred complex(H)
+                    @test scalartype(Hc) == complex(T)
+                    # cannot define `real(H)`, so only test elementwise
+                    for (Wc, W) in zip(parent(Hc), parent(H))
+                        Wr = @constinferred real(Wc)
+                        @test scalartype(Wr) == T
+                        @test Wr ≈ W atol = 1.0e-6
+                    end
+                end
+            end
 
             # check if constructor works by converting back to tensormap
             H1_tm = convert(TensorMap, H1)
@@ -166,7 +180,7 @@ module TestOperators
                 FiniteMPOHamiltonian(lattice, 3 => O₁)
             @test 0.8 * H1 + 0.2 * H1 ≈ H1 atol = 1.0e-6
             @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1.0e-6
-            H1_trunc = changebonds(H1, SvdCut(; trscheme = truncdim(0)))
+            H1_trunc = changebonds(H1, SvdCut(; trscheme = truncrank(0)))
             @test H1_trunc ≈ H1
             @test all(left_virtualspace(H1_trunc) .== left_virtualspace(H1))
 
@@ -198,10 +212,47 @@ module TestOperators
                 FiniteMPOHamiltonian(grid, vertical_operators) +
                 FiniteMPOHamiltonian(grid, horizontal_operators) atol = 1.0e-4
 
-            H5 = changebonds(H4 / 3 + 2H4 / 3, SvdCut(; trscheme = truncbelow(1.0e-12)))
+            H5 = changebonds(H4 / 3 + 2H4 / 3, SvdCut(; trscheme = trunctol(; atol = 1.0e-12)))
             psi = FiniteMPS(physicalspace(H5), V ⊕ oneunit(V))
             @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)
         end
+    end
+
+    @testset "Finite MPOHamiltonian repeated indices" begin
+        X = randn(ComplexF64, ℂ^2, ℂ^2)
+        X += X'
+        Y = randn(ComplexF64, ℂ^2, ℂ^2)
+        Y += Y'
+        L = 4
+        chain = fill(space(X, 1), 4)
+
+        H1 = FiniteMPOHamiltonian(chain, (1,) => (X * X * Y * Y))
+        H2 = FiniteMPOHamiltonian(chain, (1, 1, 1, 1) => (X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2) => ((X * Y) ⊗ (X * Y)))
+        H2 = FiniteMPOHamiltonian(chain, (1, 2, 1, 2) => (X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2) => ((X * X * Y) ⊗ Y))
+        H2 = FiniteMPOHamiltonian(chain, (1, 1, 1, 2) => (X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2) => ((X * Y * Y) ⊗ X))
+        H2 = FiniteMPOHamiltonian(chain, (1, 2, 1, 1) => (X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2, 3) => FiniteMPO((X * X) ⊗ Y ⊗ Y))
+        H2 = FiniteMPOHamiltonian(chain, (1, 1, 2, 3) => FiniteMPO(X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2, 3) => FiniteMPO((Y * Y) ⊗ X ⊗ X))
+        H2 = FiniteMPOHamiltonian(chain, (2, 3, 1, 1) => FiniteMPO(X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+        H1 = FiniteMPOHamiltonian(chain, (1, 2, 3) => FiniteMPO(X ⊗ (X * Y) ⊗ Y))
+        H2 = FiniteMPOHamiltonian(chain, (1, 2, 2, 3) => FiniteMPO(X ⊗ X ⊗ Y ⊗ Y))
+        @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
     end
 
     @testset "InfiniteMPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces, vspaces)

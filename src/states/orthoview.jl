@@ -60,7 +60,7 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in Iterators.reverse((i + 1):center)
-            v.parent.Cs[j], tmp = rightorth(_transpose_tail(v.parent.ACs[j]); alg = LQpos())
+            v.parent.Cs[j], tmp = lq_compact!(_transpose_tail(v.parent.ACs[j]; copy = true); positive = true)
             v.parent.ARs[j] = _transpose_front(tmp)
             if j != i + 1 # last AC not needed
                 v.parent.ACs[j - 1] = _mul_tail(v.parent.ALs[j - 1], v.parent.Cs[j])
@@ -76,7 +76,7 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in center:i
-            v.parent.ALs[j], v.parent.Cs[j + 1] = leftorth(v.parent.ACs[j]; alg = QRpos())
+            v.parent.ALs[j], v.parent.Cs[j + 1] = qr_compact(v.parent.ACs[j]; positive = true)
             if j != i # last AC not needed
                 v.parent.ACs[j + 1] = _mul_front(v.parent.Cs[j + 1], v.parent.ARs[j + 1])
             end
@@ -89,10 +89,10 @@ end
 function Base.setindex!(v::CView{<:FiniteMPS}, vec, i::Int)
     if ismissing(v.parent.Cs[i + 1])
         if !ismissing(v.parent.ALs[i])
-            v.parent.Cs[i + 1], temp = rightorth(_transpose_tail(v.parent.AC[i + 1]); alg = LQpos())
+            v.parent.Cs[i + 1], temp = lq_compact!(_transpose_tail(v.parent.AC[i + 1]; copy = true); positive = true)
             v.parent.ARs[i + 1] = _transpose_front(temp)
         else
-            v.parent.ALs[i], v.parent.Cs[i + 1] = leftorth(v.parent.AC[i]; alg = QRpos())
+            v.parent.ALs[i], v.parent.Cs[i + 1] = qr_compact(v.parent.AC[i]; positive = true)
         end
     end
 
@@ -160,10 +160,18 @@ function Base.setindex!(
 
     a, b = vec
     return if isa(a, MPSBondTensor) #c/ar
-        setindex!(v.parent.Cs, a, i)
+        if !(scalartype(parent(v)) <: Real) && (scalartype(a) <: Real)
+            setindex!(v.parent.Cs, complex(a), i)
+        else
+            setindex!(v.parent.Cs, a, i)
+        end
         setindex!(v.parent.ARs, b, i)
     elseif isa(b, MPSBondTensor) #al/c
-        setindex!(v.parent.Cs, b, i + 1)
+        if !(scalartype(parent(v)) <: Real) && (scalartype(b) <: Real)
+            setindex!(v.parent.Cs, complex(b), i + 1)
+        else
+            setindex!(v.parent.Cs, b, i + 1)
+        end
         setindex!(v.parent.ALs, a, i)
     else
         throw(ArgumentError("invalid value types"))

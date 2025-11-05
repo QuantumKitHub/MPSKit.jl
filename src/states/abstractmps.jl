@@ -93,10 +93,11 @@ Determine whether the given tensor is full rank, i.e. whether both the map from 
 virtual space and the physical space to the right virtual space, and the map from the right
 virtual space and the physical space to the left virtual space are injective.
 """
-function isfullrank(A::GenericMPSTensor; side = :both)
-    Vₗ = _firstspace(A)
-    Vᵣ = _lastspace(A)
-    P = ⊗(space.(Ref(A), 2:(numind(A) - 1))...)
+isfullrank(A::GenericMPSTensor; kwargs...) = isfullrank(space(A); kwargs...)
+function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
+    Vₗ = V[1]
+    Vᵣ = V[numind(V)]
+    P = ⊗(getindex.(Ref(V), 2:(numind(V) - 1))...)
     return if side === :both
         Vₗ ⊗ P ≿ Vᵣ' && Vₗ' ≾ P ⊗ Vᵣ
     elseif side === :right
@@ -109,24 +110,47 @@ function isfullrank(A::GenericMPSTensor; side = :both)
 end
 
 """
-    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=QRpos())
+    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defalts.alg_qr())
 
 Make the set of MPS tensors full rank by performing a series of orthogonalizations.
 """
-function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = QRpos())
+function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = Defaults.alg_qr())
     while true
         i = findfirst(!isfullrank, A)
         isnothing(i) && break
         if !isfullrank(A[i]; side = :left)
-            L, Q = rightorth!(_transpose_tail(A[i]); alg = alg')
+            L, Q = _right_orth!(_transpose_tail(A[i]); alg)
             A[i] = _transpose_front(Q)
             A[i - 1] = A[i - 1] * L
         else
-            A[i], R = leftorth!(A[i]; alg)
+            A[i], R = _left_orth!(A[i]; alg)
             A[i + 1] = _transpose_front(R * _transpose_tail(A[i + 1]))
         end
     end
     return A
+end
+
+function makefullrank!(virtualspaces::PeriodicVector{S}, physicalspaces::PeriodicVector{S}) where {S <: ElementarySpace}
+    haschanged = true
+    while haschanged
+        haschanged = false
+        for i in 1:length(virtualspaces)
+            Vmax = fuse(virtualspaces[i - 1], physicalspaces[i - 1])
+            if !(virtualspaces[i] ≾ Vmax)
+                virtualspaces[i] = infimum(virtualspaces[i], Vmax)
+                haschanged = true
+            end
+        end
+        for i in reverse(1:length(virtualspaces))
+            Vmax = fuse(dual(physicalspaces[i - 1]), virtualspaces[i])
+            if !(virtualspaces[i - 1] ≾ Vmax)
+                virtualspaces[i - 1] = infimum(virtualspaces[i - 1], Vmax)
+                haschanged = true
+            end
+        end
+    end
+
+    return virtualspaces
 end
 
 # Tensor accessors

@@ -1,6 +1,5 @@
 repos:
-
-- repo: https://github.com/qiaojunfeng/pre-commit-julia-format
-  rev: v0.2.0                # use the most recent version
-  hooks:
-  - id: julia-format         # formatter for Julia code
+  - repo: https://github.com/fredrikekre/runic-pre-commit
+    rev: v2.0.1
+    hooks:
+      - id: runic
