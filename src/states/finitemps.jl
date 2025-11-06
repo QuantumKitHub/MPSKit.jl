@@ -450,8 +450,7 @@ function Base.show(io::IO, mime::MIME"text/plain", ψ::FiniteMPS)
     io = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
     charset = (; start = "┌", mid = "├", stop = "└", ver = "│", dash = "──")
     limit = get(io, :limit, true)::Bool
-    lines_per_tensor = 4
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2 * lines_per_tensor) : typemax(Int)
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
     if !haskey(io, :compact)
         io = IOContext(io, :compact => true)
     end
@@ -461,66 +460,33 @@ function Base.show(io::IO, mime::MIME"text/plain", ψ::FiniteMPS)
 
     for site in HalfInt.(reverse((1 / 2):(1 / 2):(L + 1 / 2)))
         if site < half_screen_rows || site > L - half_screen_rows
+            char = if isinteger(site)
+                site == 1 ? charset.stop : (site == L && site > c) ? charset.start : charset.mid
+            else
+                site == HalfInt(L + 1 / 2) ? charset.start : site == HalfInt(1 / 2) ? charset.stop : charset.ver
+            end
             if site > c # ARs
                 if isinteger(site)
-                    print(
-                        io, Int(site) == L ? charset.start : charset.mid, charset.dash,
-                        " AR[$(Int(site))]: "
-                    )
-                    replace(io, sprint((x, y) -> show(x, mime, y), ψ.ARs[Int(site)]), "\n" => "\n" * charset.ver)
+                    print(io, char, charset.dash, " AR[$(Int(site))]: ", space(ψ.ARs[Int(site)]))
                     site == 1 || println(io)
                 end
             elseif site == c # AC or C
                 if isinteger(c) # center is an AC
-                    print(
-                        io, if site == L
-                            charset.start
-                        elseif site == 1
-                            charset.stop
-                        else
-                            charset.mid
-                        end, charset.dash, " AC[$(Int(site))]: "
-                    )
-                    if site != 1
-                        replace(io, sprint((x, y) -> show(x, mime, y), ψ.ACs[Int(site)]), "\n" => "\n" * charset.ver)
-                    else
-                        show(io, mime, ψ.ACs[Int(site)])
-                    end
+                    print(io, char, charset.dash, " AC[$(Int(site))]: ", space(ψ.ACs[Int(site)]))
                     site == 1 || println(io)
                 else # center is a bond-tensor
-                    print(
-                        io, if site == HalfInt(L + 1 / 2)
-                            charset.start
-                        elseif site == HalfInt(1 / 2)
-                            charset.stop
-                        else
-                            charset.ver
-                        end, " C[$(Int(site - 1 / 2))]: "
-                    )
-                    if site != 1
-                        replace(io, sprint((x, y) -> show(x, mime, y), ψ.Cs[Int(site + 1 / 2)]), "\n" => "\n" * charset.ver)
-                    else
-                        show(io, mime, ψ.Cs[Int(site + 1 / 2)])
-                    end
+                    print(io, char, " C[$(Int(site - 1 / 2))]: ", space(ψ.Cs[Int(site + 1 / 2)]))
                     site == 1 || println(io)
                 end
             else
                 if isinteger(site)
-                    print(
-                        io, site == 1 ? charset.stop : charset.mid, charset.dash,
-                        " AL[$(Int(site))]: ",
-                    )
-                    if site != 1
-                        replace(io, sprint((x, y) -> show(x, mime, y), ψ.ALs[Int(site)]), "\n" => "\n" * charset.ver)
-                    else
-                        show(io, mime, ψ.ALs[Int(site)])
-                    end
+                    print(io, char, charset.dash, " AL[$(Int(site))]: ", space(ψ.ALs[Int(site)]))
                     site == 1 || println(io)
                 end
             end
         elseif site == half_screen_rows
-            println(io, charset.ver, "     ⋮")
-            println(io, charset.ver)
+            println(io, charset.ver, "     ⋮\n", charset.ver)
+            site == 1 || println(io)
         end
     end
     return nothing
