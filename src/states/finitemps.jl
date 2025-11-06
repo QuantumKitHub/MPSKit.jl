@@ -441,23 +441,43 @@ max_Ds(ψ::FiniteMPS) = dim.(max_virtualspaces(ψ))
 
 function Base.summary(io::IO, ψ::FiniteMPS)
     D = maximum(dim, left_virtualspace(ψ))
-    return print(io, "$(length(ψ))-site FiniteMPS ($(scalartype(ψ)), $(spacetype(ψ))) with maximal dimension $D")
+    return print(io, "$(length(ψ))-site FiniteMPS ($(scalartype(ψ)), $(TensorKit.type_repr(spacetype(ψ))))")
 end
 function Base.show(io::IO, mime::MIME"text/plain", ψ::FiniteMPS)
     summary(io, ψ)
+    print(io, " with center $(ψ.center)")
     get(io, :compact, false)::Bool && return nothing
     println(io, ":")
-    io = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
+    io = IOContext(io, :typeinfo => spacetype(ψ), :compact => true)
     charset = (; start = "┌", mid = "├", stop = "└", ver = "│", dash = "──")
     limit = get(io, :limit, true)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
-    if !haskey(io, :compact)
-        io = IOContext(io, :compact => true)
-    end
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 4) : typemax(Int)
 
     L = length(ψ)
-    c = ψ.center
+    for i in reverse(1:L)
+        if i < half_screen_rows || i > L - half_screen_rows
+            Vr = right_virtualspace(ψ, i)
+            if i == L && Vr == oneunit(Vr)
+                println(io, "┌─[$i]─ ", physicalspace(ψ, i))
+            elseif i == 1
+                println(io, "│ ", Vr)
+                Vl = left_virtualspace(ψ, 1)
+                if Vl == oneunit(Vr)
+                    println(io, "└─[$i]─ ", physicalspace(ψ, i))
+                else
+                    println(io, "├─[$i]─ ", physicalspace(ψ, i))
+                    println(io, "│ ", Vl)
+                end
+            else
+                println(io, "│ ", Vr)
+                println(io, "├─[$i]─ ", physicalspace(ψ, i))
+            end
+        elseif i == half_screen_rows
+            println(io, "│ ⋮")
+        end
+    end
 
+    return nothing
     for site in HalfInt.(reverse((1 / 2):(1 / 2):(L + 1 / 2)))
         if site < half_screen_rows || site > L - half_screen_rows
             char = if isinteger(site)
