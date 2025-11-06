@@ -7,7 +7,7 @@ mutable struct IterativeSolver{A, B}
 end
 
 function Base.getproperty(it::IterativeSolver{A, B}, name::Symbol) where {A, B}
-    name === :alg || name === :state && return getfield(it, name)
+    (name === :alg || name === :state) && return getfield(it, name)
 
     alg = getfield(it, :alg)
     name in propertynames(alg) && return getproperty(alg, name)
