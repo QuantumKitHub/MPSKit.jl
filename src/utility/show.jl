@@ -1,16 +1,11 @@
-function Base.summary(io::IO, ψ::FiniteMPS)
-    L = length(ψ)
-    D = maximum(dim, left_virtualspace(ψ))
-    return print(io, "$L-site FiniteMPS ($(scalartype(ψ)), $(TensorKit.type_repr(spacetype(ψ)))) maxdim = ", D, "\tcenter = ", ψ.center)
-end
-
-for T in (:InfiniteMPS, :FiniteMPO, :InfiniteMPO, :FiniteMPOHamiltonian, :InfiniteMPOHamiltonian)
-    @eval function Base.summary(io::IO, mpo::$T)
-        L = length(mpo)
-        D = maximum(dim, left_virtualspace(mpo))
-        T = scalartype(mpo)
-        S = TensorKit.type_repr(spacetype(mpo))
-        print(io, L, "-site ", $(string(T)), "(", scalartype(mpo), ", ", S, ") maxdim = ", D)
+for T in (:FiniteMPS, :InfiniteMPS, :FiniteMPO, :InfiniteMPO, :FiniteMPOHamiltonian, :InfiniteMPOHamiltonian)
+    @eval function Base.summary(io::IO, x::$T)
+        L = length(x)
+        D = maximum(dim, left_virtualspace(x))
+        E = scalartype(x)
+        S = TensorKit.type_repr(spacetype(x))
+        print(io, L, "-site ", $(string(T)), "(", E, ", ", S, ") with maximal dimension ", D)
+        $(T === :FiniteMPS) && print(io, " and center ", x.center)
         return nothing
     end
 end
@@ -169,19 +164,6 @@ function Base.show(io::IO, ::MIME"text/plain", mpo::AbstractMPO)
     return nothing
 end
 
-function Base.showarg(io::IO, envs::FiniteEnvironments, toplevel::Bool)
-    print(io, "environments(state, ")
-    Base.showarg(io, envs.operator, false)
-    if isnothing(envs.above)
-        print(io, ")")
-    else
-        print(io, ", ")
-        Base.showarg(io, envs.above, false)
-        print(io, ")")
-    end
-    return nothing
-end
-
 function Base.summary(io::IO, envs::Union{FiniteEnvironments, InfiniteEnvironments})
     print(io, length(envs.GLs), "-site ")
     Base.showarg(io, envs, true)
@@ -193,11 +175,11 @@ function Base.show(io::IO, ::MIME"text/plain", envs::Union{InfiniteEnvironments,
     get(io, :compact, false)::Bool && return nothing
     println(io, ":")
 
-    for (i, gl) in enumerate(envs.GLs)
-        println(io, "GL[$i]: ", space(gl))
+    for i in reverse(eachindex(envs.GLs))
+        println(io, "GL[$i]: ", space(envs.GLs[i]))
     end
-    for (i, gr) in enumerate(envs.GRs)
-        println(io, "GR[$i]: ", space(gr))
+    for i in reverse(eachindex(envs.GRs))
+        println(io, "GR[$i]: ", space(envs.GRs[i]))
     end
 
     return nothing
