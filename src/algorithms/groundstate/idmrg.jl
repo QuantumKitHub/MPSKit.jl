@@ -82,6 +82,7 @@ function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = envi
             loginit!(log, ϵ, E_current)
         end
     end
+    @show E_current
 
     state = IDMRGState(mps, operator, envs, iter, ϵ, E_current)
     it = IterativeSolver(alg, state)
@@ -106,8 +107,8 @@ function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = envi
     end
 end
 
-function Base.iterate(it::IterativeSolver{alg_type}, state = it.state) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
-    mps, envs, C_old = localupdate_step!(it, state)
+function Base.iterate(it::IterativeSolver{alg_type}, state::IDMRGState{S, O, E, T} = it.state) where {alg_type <: Union{<:IDMRG, <:IDMRG2}, S, O, E, T <: Number}
+    mps, envs, C_old, E_new = localupdate_step!(it, state)
 
     # error criterion
     C = mps.C[0]
@@ -117,11 +118,11 @@ function Base.iterate(it::IterativeSolver{alg_type}, state = it.state) where {al
     ϵ = norm(e2' * C * e2 - e1' * C_old * e1)
 
     # New energy
-    E_new = expectation_value(mps, state.operator, envs)
-    ΔE = E_new - state.E_current
-
+    # E_new = expectation_value(mps, state.operator, envs)
+    ΔE = (E_new - state.E_current)/(length(mps))
+    alg_type <: IDMRG2 && (ΔE /= 2)
     # update state
-    it.state = IDMRGState(mps, state.operator, envs, state.iter + 1, ϵ, E_new)
+    it.state = IDMRGState(mps, state.operator, envs, state.iter + 1, ϵ, T(E_new))
 
     return (mps, envs, ϵ, ΔE), it.state
 end
@@ -130,12 +131,13 @@ function MPSKit.localupdate_step!(
         it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state
     )
     alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
-    mps, envs, C_old = _localupdate_sweep_idmrg!(state.mps, state.operator, state.envs, alg_eigsolve, it.alg)
+    mps, envs, C_old, E = _localupdate_sweep_idmrg!(state.mps, state.operator, state.envs, alg_eigsolve, it.alg)
 
-    return mps, envs, C_old
+    return mps, envs, C_old, E
 end
 
 function _localupdate_sweep_idmrg!(ψ::AbstractMPS, H, envs, alg_eigsolve, ::IDMRG)
+    E=0
     C_old = ψ.C[0]
     # left to right sweep
     for pos in 1:length(ψ)
@@ -153,18 +155,19 @@ function _localupdate_sweep_idmrg!(ψ::AbstractMPS, H, envs, alg_eigsolve, ::IDM
     # right to left sweep
     for pos in length(ψ):-1:1
         h = AC_hamiltonian(pos, ψ, H, ψ, envs)
-        _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
+        E, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
 
         ψ.C[pos - 1], temp = right_orth!(_transpose_tail(ψ.AC[pos]; copy = (pos == 1)))
         ψ.AR[pos] = _transpose_front(temp)
 
         transfer_rightenv!(envs, ψ, H, ψ, pos - 1)
     end
-    return ψ, envs, C_old
+    return ψ, envs, C_old, E
 end
 
 
 function _localupdate_sweep_idmrg!(ψ::AbstractMPS, H, envs, alg_eigsolve, alg::IDMRG2)
+    E=0
     # sweep from left to right
     for pos in 1:(length(ψ) - 1)
         ac2 = AC2(ψ, pos; kind = :ACAR)
@@ -231,7 +234,7 @@ function _localupdate_sweep_idmrg!(ψ::AbstractMPS, H, envs, alg_eigsolve, alg::
     ψ.AR[1] = _transpose_front(ψ.C[end] \ _transpose_tail(ψ.AC[1]))
     ac2 = AC2(ψ, 0; kind = :ACAR)
     h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
-    _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
+    E, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
     al, c, ar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
     normalize!(c)
 
@@ -244,6 +247,5 @@ function _localupdate_sweep_idmrg!(ψ::AbstractMPS, H, envs, alg_eigsolve, alg::
 
     transfer_leftenv!(envs, ψ, H, ψ, 1)
     transfer_rightenv!(envs, ψ, H, ψ, 0)
-
-    return ψ, envs, C_old
+    return ψ, envs, C_old, E
 end
