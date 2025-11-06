@@ -439,65 +439,6 @@ Compute the dimension of the maximal virtual space at a given site.
 """
 max_Ds(ψ::FiniteMPS) = dim.(max_virtualspaces(ψ))
 
-function Base.summary(io::IO, ψ::FiniteMPS)
-    L = length(ψ)
-    D = maximum(dim, left_virtualspace(ψ))
-    return print(io, "$L-site FiniteMPS ($(scalartype(ψ)), $(TensorKit.type_repr(spacetype(ψ)))) maxdim: ", D, "\tcenter: ", ψ.center)
-end
-function Base.show(io::IO, ::MIME"text/plain", ψ::FiniteMPS)
-    summary(io, ψ)
-    get(io, :compact, false)::Bool && return nothing
-
-    println(io, ":")
-    io = IOContext(io, :typeinfo => spacetype(ψ))
-
-    limit = get(io, :limit, true)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 2, 4) : typemax(Int)
-    L = length(ψ)
-    if L <= 2 * half_screen_rows # everything fits!
-        half_screen_rows = typemax(Int)
-    end
-
-    # special handling of edge spaces => don't print if trivial
-    Vright = right_virtualspace(ψ, L)
-    right_trivial = Vright == oneunit(Vright)
-    Vleft = left_virtualspace(ψ, 1)
-    left_trivial = Vleft == oneunit(Vleft)
-
-
-    right_trivial || println(io, "│ ", Vright)
-    for i in reverse(1:L)
-        if i > L - half_screen_rows
-            if i == L
-                connector = right_trivial ? "┌" : "├"
-                println(io, connector, "─[$i]─ ", physicalspace(ψ, i))
-            elseif i == 1
-                connector = left_trivial ? "└" : "├"
-                println(io, connector, "─[$i]─ ", physicalspace(ψ, i))
-            else
-                println(io, "├─[$i]─ ", physicalspace(ψ, i))
-            end
-
-            i != 1 && println(io, "│ ", left_virtualspace(ψ, i))
-        elseif i == half_screen_rows
-            println(io, "│ ⋮")
-        elseif i < half_screen_rows
-            i != L && println(io, "│ ", right_virtualspace(ψ, i))
-            if i == L
-                connector = right_trivial ? "┌" : "├"
-                println(io, connector, "─[$i]─ ", physicalspace(ψ, i))
-            elseif i == 1
-                connector = left_trivial ? "└" : "├"
-                println(io, connector, "─[$i]─ ", physicalspace(ψ, i))
-            else
-                println(io, "├─[$i]─ ", physicalspace(ψ, i))
-            end
-        end
-    end
-    left_trivial || println(io, "│ ", Vleft)
-
-    return nothing
-end
 
 #===========================================================================================
 Linear Algebra

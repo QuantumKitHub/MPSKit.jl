@@ -311,42 +311,6 @@ function Base.isapprox(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; kwargs...)
     return isapprox(dot(ψ₁, ψ₂), 1; kwargs...)
 end
 
-function Base.summary(io::IO, ψ::InfiniteMPS)
-    D = maximum(dim, left_virtualspace(ψ))
-    L = length(ψ)
-    return print(io, "$L-site InfiniteMPS ($(scalartype(ψ)), $(TensorKit.type_repr(spacetype(ψ)))) maxdim: ", D)
-end
-
-function Base.show(io::IO, ::MIME"text/plain", ψ::InfiniteMPS)
-    summary(io, ψ)
-    get(io, :compact, false)::Bool && return nothing
-
-    println(io, ":")
-    io = IOContext(io, :typeinfo => eltype(ψ))
-
-    limit = get(io, :limit, true)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 6, 4) : typemax(Int)
-    L = length(ψ)
-    if L <= 2 * half_screen_rows # everything fits!
-        half_screen_rows = typemax(Int)
-    end
-
-    println(io, "| ⋮")
-    println(io, "| ", right_virtualspace(ψ, L))
-    for i in reverse(1:L)
-        if i > L - half_screen_rows || i < half_screen_rows
-            println(io, "├─[$i]─ ", physicalspace(ψ, i))
-            println(io, "│ ", left_virtualspace(ψ, i))
-        elseif i == half_screen_rows
-            println(io, "│ ⋮")
-            println(io, "│ ", left_virtualspace(ψ, i))
-        end
-    end
-    println(io, "| ⋮")
-
-    return nothing
-end
-
 #===========================================================================================
 Fixedpoints
 ===========================================================================================#
