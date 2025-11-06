@@ -440,75 +440,62 @@ Compute the dimension of the maximal virtual space at a given site.
 max_Ds(ψ::FiniteMPS) = dim.(max_virtualspaces(ψ))
 
 function Base.summary(io::IO, ψ::FiniteMPS)
-    D = maximum(dim, left_virtualspace(ψ))
-    return print(io, "$(length(ψ))-site FiniteMPS ($(scalartype(ψ)), $(TensorKit.type_repr(spacetype(ψ))))")
-end
-function Base.show(io::IO, mime::MIME"text/plain", ψ::FiniteMPS)
-    summary(io, ψ)
-    print(io, " with center $(ψ.center)")
-    get(io, :compact, false)::Bool && return nothing
-    println(io, ":")
-    io = IOContext(io, :typeinfo => spacetype(ψ), :compact => true)
-    charset = (; start = "┌", mid = "├", stop = "└", ver = "│", dash = "──")
-    limit = get(io, :limit, true)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 4) : typemax(Int)
-
     L = length(ψ)
+    D = maximum(dim, left_virtualspace(ψ))
+    return print(io, "$L-site FiniteMPS ($(scalartype(ψ)), $(TensorKit.type_repr(spacetype(ψ)))) maxdim: ", D, "\tcenter: ", ψ.center)
+end
+function Base.show(io::IO, ::MIME"text/plain", ψ::FiniteMPS)
+    summary(io, ψ)
+    get(io, :compact, false)::Bool && return nothing
+
+    println(io, ":")
+    io = IOContext(io, :typeinfo => spacetype(ψ))
+
+    limit = get(io, :limit, true)::Bool
+    half_screen_rows = limit ? div(displaysize(io)[1] - 2, 4) : typemax(Int)
+    L = length(ψ)
+    if L <= 2 * half_screen_rows # everything fits!
+        half_screen_rows = typemax(Int)
+    end
+
+    # special handling of edge spaces => don't print if trivial
+    Vright = right_virtualspace(ψ, L)
+    right_trivial = Vright == oneunit(Vright)
+    Vleft = left_virtualspace(ψ, 1)
+    left_trivial = Vleft == oneunit(Vleft)
+
+
+    right_trivial || println(io, "│ ", Vright)
     for i in reverse(1:L)
-        if i < half_screen_rows || i > L - half_screen_rows
-            Vr = right_virtualspace(ψ, i)
-            if i == L && Vr == oneunit(Vr)
-                println(io, "┌─[$i]─ ", physicalspace(ψ, i))
+        if i > L - half_screen_rows
+            if i == L
+                connector = right_trivial ? "┌" : "├"
+                println(io, connector, "─[$i]─ ", physicalspace(ψ, i))
             elseif i == 1
-                println(io, "│ ", Vr)
-                Vl = left_virtualspace(ψ, 1)
-                if Vl == oneunit(Vr)
-                    println(io, "└─[$i]─ ", physicalspace(ψ, i))
-                else
-                    println(io, "├─[$i]─ ", physicalspace(ψ, i))
-                    println(io, "│ ", Vl)
-                end
+                connector = left_trivial ? "└" : "├"
+                println(io, connector, "─[$i]─ ", physicalspace(ψ, i))
             else
-                println(io, "│ ", Vr)
                 println(io, "├─[$i]─ ", physicalspace(ψ, i))
             end
+
+            i != 1 && println(io, "│ ", left_virtualspace(ψ, i))
         elseif i == half_screen_rows
             println(io, "│ ⋮")
+        elseif i < half_screen_rows
+            i != L && println(io, "│ ", right_virtualspace(ψ, i))
+            if i == L
+                connector = right_trivial ? "┌" : "├"
+                println(io, connector, "─[$i]─ ", physicalspace(ψ, i))
+            elseif i == 1
+                connector = left_trivial ? "└" : "├"
+                println(io, connector, "─[$i]─ ", physicalspace(ψ, i))
+            else
+                println(io, "├─[$i]─ ", physicalspace(ψ, i))
+            end
         end
     end
+    left_trivial || println(io, "│ ", Vleft)
 
-    return nothing
-    for site in HalfInt.(reverse((1 / 2):(1 / 2):(L + 1 / 2)))
-        if site < half_screen_rows || site > L - half_screen_rows
-            char = if isinteger(site)
-                site == 1 ? charset.stop : (site == L && site > c) ? charset.start : charset.mid
-            else
-                site == HalfInt(L + 1 / 2) ? charset.start : site == HalfInt(1 / 2) ? charset.stop : charset.ver
-            end
-            if site > c # ARs
-                if isinteger(site)
-                    print(io, char, charset.dash, " AR[$(Int(site))]: ", space(ψ.ARs[Int(site)]))
-                    site == 1 || println(io)
-                end
-            elseif site == c # AC or C
-                if isinteger(c) # center is an AC
-                    print(io, char, charset.dash, " AC[$(Int(site))]: ", space(ψ.ACs[Int(site)]))
-                    site == 1 || println(io)
-                else # center is a bond-tensor
-                    print(io, char, " C[$(Int(site - 1 / 2))]: ", space(ψ.Cs[Int(site + 1 / 2)]))
-                    site == 1 || println(io)
-                end
-            else
-                if isinteger(site)
-                    print(io, char, charset.dash, " AL[$(Int(site))]: ", space(ψ.ALs[Int(site)]))
-                    site == 1 || println(io)
-                end
-            end
-        elseif site == half_screen_rows
-            println(io, charset.ver, "     ⋮\n", charset.ver)
-            site == 1 || println(io)
-        end
-    end
     return nothing
 end
 
