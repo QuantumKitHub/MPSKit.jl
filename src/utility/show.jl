@@ -169,6 +169,40 @@ function Base.show(io::IO, ::MIME"text/plain", mpo::AbstractMPO)
     return nothing
 end
 
+function Base.showarg(io::IO, envs::FiniteEnvironments, toplevel::Bool)
+    print(io, "environments(state, ")
+    Base.showarg(io, envs.operator, false)
+    if isnothing(envs.above)
+        print(io, ")")
+    else
+        print(io, ", ")
+        Base.showarg(io, envs.above, false)
+        print(io, ")")
+    end
+    return nothing
+end
+
+function Base.summary(io::IO, envs::Union{FiniteEnvironments, InfiniteEnvironments})
+    print(io, length(envs.GLs), "-site ")
+    Base.showarg(io, envs, true)
+    return nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", envs::Union{InfiniteEnvironments, FiniteEnvironments})
+    Base.summary(io, envs)
+    get(io, :compact, false)::Bool && return nothing
+    println(io, ":")
+
+    for (i, gl) in enumerate(envs.GLs)
+        println(io, "GL[$i]: ", space(gl))
+    end
+    for (i, gr) in enumerate(envs.GRs)
+        println(io, "GR[$i]: ", space(gr))
+    end
+
+    return nothing
+end
+
 # braille
 # -------
 """
