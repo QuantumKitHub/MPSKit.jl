@@ -314,39 +314,35 @@ end
 function Base.summary(io::IO, ψ::InfiniteMPS)
     D = maximum(dim, left_virtualspace(ψ))
     L = length(ψ)
-    return print(io, "$L-site InfiniteMPS ($(scalartype(ψ)), $(spacetype(ψ))) with maximal dimension $D")
+    return print(io, "$L-site InfiniteMPS ($(scalartype(ψ)), $(TensorKit.type_repr(spacetype(ψ)))) maxdim: ", D)
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", ψ::InfiniteMPS)
+function Base.show(io::IO, ::MIME"text/plain", ψ::InfiniteMPS)
     summary(io, ψ)
     get(io, :compact, false)::Bool && return nothing
+
     println(io, ":")
-    io = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
+    io = IOContext(io, :typeinfo => eltype(ψ))
 
-    L = length(ψ)
-    charset = (; mid = "├", ver = "│", dash = "──")
     limit = get(io, :limit, true)::Bool
-    lines_per_tensor = 4
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2 * lines_per_tensor) : typemax(Int)
+    half_screen_rows = limit ? div(displaysize(io)[1] - 6, 4) : typemax(Int)
+    L = length(ψ)
+    if L <= 2 * half_screen_rows # everything fits!
+        half_screen_rows = typemax(Int)
+    end
 
-    println(io, charset.ver, "     ⋮")
-    println(io, charset.ver)
-    for site in reverse(1:L)
-        if site < half_screen_rows || site > L - half_screen_rows
-            if site == L
-                print(io, charset.ver, " C[$site]: ")
-                replace(io, sprint((x, y) -> show(x, mime, y), ψ.C[site]), "\n" => "\n" * charset.ver)
-                println(io)
-            end
-            print(io, charset.mid, charset.dash, " AL[$site]: ")
-            replace(io, sprint((x, y) -> show(x, mime, y), ψ.AL[site]), "\n" => "\n" * charset.ver)
-            println(io)
-        elseif site == half_screen_rows
-            println(io, charset.ver, "     ⋮")
-            println(io, charset.ver)
+    println(io, "| ⋮")
+    println(io, "| ", right_virtualspace(ψ, L))
+    for i in reverse(1:L)
+        if i > L - half_screen_rows || i < half_screen_rows
+            println(io, "├─[$i]─ ", physicalspace(ψ, i))
+            println(io, "│ ", left_virtualspace(ψ, i))
+        elseif i == half_screen_rows
+            println(io, "│ ⋮")
+            println(io, "│ ", left_virtualspace(ψ, i))
         end
     end
-    println(io, charset.ver, "     ⋮")
+    println(io, "| ⋮")
 
     return nothing
 end
