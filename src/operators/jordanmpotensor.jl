@@ -58,6 +58,14 @@ struct JordanMPOTensor{
     end
 end
 
+const JordanMPOTensorMap{T, S, A <: DenseVector{T}} = JordanMPOTensor{
+    T, S,
+    Union{TensorMap{T, S, 2, 2, A}, BraidingTensor{T, S}},
+    TensorMap{T, S, 2, 1, A},
+    TensorMap{T, S, 1, 2, A},
+    TensorMap{T, S, 1, 1, A},
+}
+
 function JordanMPOTensor{E, S}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E, S}
     return jordanmpotensortype(S, E)(undef, V)
 end
