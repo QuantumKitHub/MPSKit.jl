@@ -26,11 +26,17 @@ A[-1, 1], A[1, 1], A[4, 5]
 
 See also [`PeriodicVector`](@ref), [`PeriodicMatrix`](@ref)
 """
-struct PeriodicArray{T, N} <: AbstractArray{T, N}
-    data::Array{T, N}
+struct PeriodicArray{T, N, A <: AbstractArray{T, N}} <: AbstractArray{T, N}
+    data::A
+    PeriodicArray{T,N}(data::A) where A <: AbstractArray{T,N} where {T,N} = new{T,N,A}(data)
+    PeriodicArray{T,N,A}(data::A) where A <: AbstractArray{T,N} where {T,N} = new{T,N,A}(data)
 end
-PeriodicArray(data::AbstractArray{T, N}) where {T, N} = PeriodicArray{T, N}(data)
-PeriodicArray{T}(data::AbstractArray{T, N}) where {T, N} = PeriodicArray{T, N}(data)
+PeriodicArray(data::AbstractArray{T,N}) where {T,N} = PeriodicArray{T,N}(data)
+PeriodicArray{T}(data::AbstractArray{T,N}) where {T,N} = PeriodicArray{T,N}(data)
+
+
+
+
 function PeriodicArray{T}(initializer, args...) where {T}
     return PeriodicArray(Array{T}(initializer, args...))
 end
