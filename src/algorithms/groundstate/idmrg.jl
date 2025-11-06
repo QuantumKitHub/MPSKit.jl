@@ -58,13 +58,13 @@ end
 
 
 # Internal state of the IDMRG algorithm
-struct IDMRGState{S, O, E, T <: Number}
+struct IDMRGState{S, O, E}
     mps::S
     operator::O
     envs::E
     iter::Int
     ϵ::Float64
-    E_current::T
+    E_current::Number
 end
 
 function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = environments(mps, operator)) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
@@ -82,7 +82,6 @@ function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = envi
             loginit!(log, ϵ, E_current)
         end
     end
-    @show E_current
 
     state = IDMRGState(mps, operator, envs, iter, ϵ, E_current)
     it = IterativeSolver(alg, state)
@@ -107,7 +106,7 @@ function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = envi
     end
 end
 
-function Base.iterate(it::IterativeSolver{alg_type}, state::IDMRGState{S, O, E, T} = it.state) where {alg_type <: Union{<:IDMRG, <:IDMRG2}, S, O, E, T <: Number}
+function Base.iterate(it::IterativeSolver{alg_type}, state= it.state) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
     mps, envs, C_old, E_new = localupdate_step!(it, state)
 
     # error criterion
@@ -118,11 +117,11 @@ function Base.iterate(it::IterativeSolver{alg_type}, state::IDMRGState{S, O, E, 
     ϵ = norm(e2' * C * e2 - e1' * C_old * e1)
 
     # New energy
-    # E_new = expectation_value(mps, state.operator, envs)
-    ΔE = (E_new - state.E_current)/(length(mps))
-    alg_type <: IDMRG2 && (ΔE /= 2)
+    ΔE = (E_new - state.E_current)/2
+    (alg_type <: IDMRG2 && length(mps) == 2) && (ΔE /= 2)
+
     # update state
-    it.state = IDMRGState(mps, state.operator, envs, state.iter + 1, ϵ, T(E_new))
+    it.state = IDMRGState(mps, state.operator, envs, state.iter + 1, ϵ, E_new)
 
     return (mps, envs, ϵ, ΔE), it.state
 end
