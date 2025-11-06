@@ -58,6 +58,14 @@ struct JordanMPOTensor{
     end
 end
 
+const JordanMPOTensorMap{T, S, A <: DenseVector{T}} = JordanMPOTensor{
+    T, S,
+    Union{TensorMap{T, S, 2, 2, A}, BraidingTensor{T, S}},
+    TensorMap{T, S, 2, 1, A},
+    TensorMap{T, S, 1, 2, A},
+    TensorMap{T, S, 1, 1, A},
+}
+
 function JordanMPOTensor{E, S}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E, S}
     return jordanmpotensortype(S, E)(undef, V)
 end
@@ -378,15 +386,12 @@ function Base.isapprox(W1::JordanMPOTensor, W2::JordanMPOTensor; kwargs...)
         isapprox(W1.D, W2.D; kwargs...)
 end
 
-function Base.summary(io::IO, W::JordanMPOTensor)
-    szstring = Base.dims2string(size(W))
-    TT = eltype(W)
-    typeinfo = get(io, :typeinfo, Any)
-    if typeinfo <: typeof(W) || typeinfo <: TT
-        typestring = ""
-    else
-        typestring = "{$TT}"
-    end
-    V = space(W)
-    return print(io, "$szstring JordanMPOTensor$typestring($V)")
+function Base.showarg(io::IO, W::JordanMPOTensor, toplevel::Bool)
+    !toplevel && print(io, "::")
+    print(io, TensorKit.type_repr(typeof(W)))
+    return nothing
+end
+
+function TensorKit.type_repr(::Type{<:JordanMPOTensor{E, S}}) where {E, S}
+    return "JordanMPOTensor{$E, " * TensorKit.type_repr(S) * ", …}"
 end

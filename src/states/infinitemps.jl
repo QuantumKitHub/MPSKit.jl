@@ -311,36 +311,6 @@ function Base.isapprox(ψ₁::InfiniteMPS, ψ₂::InfiniteMPS; kwargs...)
     return isapprox(dot(ψ₁, ψ₂), 1; kwargs...)
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ψ::InfiniteMPS)
-    L = length(ψ)
-    println(io, L == 1 ? "single site" : "$L-site", " InfiniteMPS:")
-    context = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
-    return show(context, ψ)
-end
-Base.show(io::IO, ψ::InfiniteMPS) = show(convert(IOContext, io), ψ)
-function Base.show(io::IOContext, ψ::InfiniteMPS)
-    charset = (; mid = "├", ver = "│", dash = "──")
-    limit = get(io, :limit, false)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
-    if !haskey(io, :compact)
-        io = IOContext(io, :compact => true)
-    end
-    L = length(ψ)
-    println(io, charset.ver, "   ⋮")
-    for site in reverse(1:L)
-        if site < half_screen_rows || site > L - half_screen_rows
-            if site == L
-                println(io, charset.ver, " C[$site]: ", ψ.C[site])
-            end
-            println(io, charset.mid, charset.dash, " AL[$site]: ", ψ.AL[site])
-        elseif site == half_screen_rows
-            println(io, charset.ver, "⋮")
-        end
-    end
-    println(io, charset.ver, "   ⋮")
-    return nothing
-end
-
 #===========================================================================================
 Fixedpoints
 ===========================================================================================#
