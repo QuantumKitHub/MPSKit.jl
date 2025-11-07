@@ -43,7 +43,7 @@ function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
     return FiniteMPOHamiltonian{O}(Ws)
 end
 
-const InfiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, PeriodicVector{O}}
+const InfiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, <:PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPOHamiltonian}) = false
 
 function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}

@@ -94,15 +94,15 @@ end
 Base.BroadcastStyle(::Type{T}) where {T <: PeriodicArray} = Broadcast.ArrayStyle{T}()
 
 function Base.similar(
-        bc::Broadcast.Broadcasted{<:Broadcast.ArrayStyle{<:PeriodicArray}}, ::Type{T}
-    ) where {T}
-    return PeriodicArray(similar(Array{T}, axes(bc)))
+        bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{PeriodicArray{T, N, A}}}, ::Type{ElType}
+    ) where {A <: AbstractArray{T, N}} where {T, N, ElType}
+    return PeriodicArray(similar(convert(Broadcast.Broadcasted{typeof(Broadcast.BroadcastStyle(A))}, bc), ElType))
 end
 
 # Conversion
 # ----------
-Base.convert(::Type{T}, A::AbstractArray) where {T <: PeriodicArray} = T(A)
+Base.convert(::Type{PeriodicArray}, A::AbstractArray) = PeriodicArray(A)
 Base.convert(::Type{T}, A::PeriodicArray) where {T <: AbstractArray} = convert(T, parent(A))
 # fix ambiguities
-Base.convert(::Type{T}, A::PeriodicArray) where {T <: PeriodicArray} = A
-Base.convert(::Type{T}, A::PeriodicArray) where {T <: Array} = parent(A)
+Base.convert(::Type{PeriodicArray}, A::PeriodicArray) = A
+Base.convert(::Type{T}, A::PeriodicArray) where {T <: AbstractArray} = convert(T, parent(A))
