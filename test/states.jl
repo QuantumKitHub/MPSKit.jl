@@ -24,6 +24,7 @@ module TestStates
         L = rand(3:20)
         ψ = FiniteMPS(rand, elt, L, d, D)
 
+        @test isfinite(ψ)
         @test @constinferred physicalspace(ψ) == fill(d, L)
         @test all(x -> x ≾ D, @constinferred left_virtualspace(ψ))
         @test all(x -> x ≾ D, @constinferred right_virtualspace(ψ))
@@ -99,6 +100,7 @@ module TestStates
 
         ψ = InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol)
 
+        @test !isfinite(ψ)
         @test physicalspace(ψ) == fill(d, 2)
         @test all(x -> x ≾ D, left_virtualspace(ψ))
         @test all(x -> x ≾ D, right_virtualspace(ψ))
