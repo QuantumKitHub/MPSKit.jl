@@ -311,6 +311,32 @@ left_virtualspace(manifold::InfiniteMPSManifold) = manifold.vspaces
 right_virtualspace(manifold::FiniteMPSManifold) = manifold.vspaces[2:end]
 right_virtualspace(manifold::InfiniteMPSManifold) = PeriodicVector(circshift(manifold.vspaces, 1))
 
+# Utility
+function Base.repeat(manifold::FiniteMPSManifold, i::Integer)
+    last(manifold.vspaces) == first(manifold.vspaces) || throw(SpaceMismatch())
+    pspaces = repeat(manifold.pspaces, i)
+    vspaces = push!(repeat(left_virtualspace(manifold), i), last(manifold.vspaces))
+    return FiniteMPSManifold(pspaces, vspaces)
+end
+function Base.repeat(manifold::InfiniteMPSManifold, i::Integer)
+    pspaces = repeat(manifold.pspaces, i)
+    vspaces = repeat(manifold.vspaces, i)
+    return InfiniteMPSManifold(pspaces, vspaces)
+end
+
+function Base.vcat(manifold1::FiniteMPSManifold, manifold2::FiniteMPSManifold)
+    last(right_virtualspace(manifold1)) == first(left_virtualspace(manifold2)) || throw(SpaceMismatch())
+    pspaces = vcat(manifold1.pspaces, manifold2.pspaces)
+    vspaces = push!(vcat(left_virtualspace(manifold1), left_virtualspace(manifold2)), last(manifold2.vspaces))
+    return FiniteMPSManifold(pspaces, vspaces)
+end
+Base.vcat(manifold::FiniteMPSManifold, manifolds::FiniteMPSManifold...) = foldl(vcat, (manifold, manifolds...))
+function Base.vcat(manifold::InfiniteMPSManifold, manifolds::InfiniteMPSManifold...)
+    pspaces = vcat(manifold.pspaces, Base.Fix2(getproperty, :pspaces).(manifolds)...)
+    vspaces = vcat(manifold.vspaces, Base.Fix2(getproperty, :vspaces).(manifolds)...)
+    return InfiniteMPSManifold(pspaces, vspaces)
+end
+
 # MPS constructors
 # ----------------
 for randf in (:rand, :randn, :randexp, :randisometry)
