@@ -153,7 +153,7 @@ function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
         @warn "Constructing an MPS from tensors that are not full rank"
     makefullrank!(A_copy)
 
-    manifold = InfiniteMPSManifold(A)
+    manifold = InfiniteMPSManifold(A_copy)
     ψ = InfiniteMPS{eltype(A)}(undef, manifold)
 
     # gaugefix the MPS
@@ -170,6 +170,7 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
 
     all(isfullrank, AL) || @error "Constructing an MPS from tensors that are not full rank"
     ψ = InfiniteMPS{eltype(AL)}(undef, InfiniteMPSManifold(AL))
+    ψ.AL .= AL
 
     # gaugefix the MPS
     gaugefix!(ψ, AL, C₀; order = :R, kwargs...)
@@ -183,6 +184,7 @@ function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}
 
     all(isfullrank, AR) || @error "Constructing an MPS from tensors that are not full rank"
     ψ = InfiniteMPS{eltype(AR)}(undef, InfiniteMPSManifold(AR))
+    ψ.AR .= AR
 
     # gaugefix the MPS
     gaugefix!(ψ, AR, C₀; order = :L, kwargs...)
@@ -192,12 +194,12 @@ function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}
 end
 
 for randfun in (:rand, :randn)
-    randfun! = Symbol(randf, :!)
-    @eval function $randfun(rng::Random.AbstractRNG, T::Type, manifold::InfiniteMPSManifold; kwargs...)
+    randfun! = Symbol(randfun, :!)
+    @eval function Random.$randfun(rng::Random.AbstractRNG, T::Type, manifold::InfiniteMPSManifold; kwargs...)
         As = map(i -> $randfun(rng, T, manifold[i]), 1:length(manifold))
         return InfiniteMPS(As; kwargs...)
     end
-    @eval function $randfun!(rng::Random.AbstractRNG, mps::InfiniteMPS)
+    @eval function Random.$randfun!(rng::Random.AbstractRNG, mps::InfiniteMPS)
         foreach(Base.Fix1(rng, $randfun!), mps.AC)
         C₀ = $randfun!(rng, mps.C[0])
         gaugefix!(mps, mps.AC, C₀)

@@ -223,6 +223,13 @@ This might be useful to construct "charged" MPS, or to work with [`WindowMPS`](@
 struct FiniteMPSManifold{S <: ElementarySpace, S′ <: TensorSpace{S}} <: AbstractMPSManifold{S}
     pspaces::Vector{S′}
     vspaces::Vector{S}
+
+    # disable default constructor
+    function FiniteMPSManifold{S, S′}(
+            pspaces::Vector{S′}, vspaces::Vector{S}
+        ) where {S <: ElementarySpace, S′ <: TensorSpace{S}}
+        return new{S, S′}(pspaces, vspaces)
+    end
 end
 
 function FiniteMPSManifold(
@@ -245,7 +252,7 @@ end
 function FiniteMPSManifold(
         physicalspaces::AbstractVector{S′}, max_virtualspace::S; kwargs...
     ) where {S <: ElementarySpace, S′ <: TensorSpace{S}}
-    return FiniteMPSManifold(physicalspaces, fill(max_virtualspace, length(physicalspaces) - 1))
+    return FiniteMPSManifold(physicalspaces, fill(max_virtualspace, length(physicalspaces) - 1); kwargs...)
 end
 function FiniteMPSManifold(mps_tensors::AbstractVector{A}) where {A <: GenericMPSTensor}
     numin(A) == 1 || throw(ArgumentError("Not a valid MPS tensor space"))
@@ -302,9 +309,9 @@ function InfiniteMPSManifold(
     # ensure all spaces are full rank -- use vspaces as maximum
     return makefullrank!(manifold)
 end
-function InfiniteMPSManifold(mps_tensors::PeriodicVector{A}) where {A <: GenericMPSTensor}
-    pspaces = map(physicalspace, mps_tensors)
-    vspaces = map(left_virtualspace, mps_tensors)
+function InfiniteMPSManifold(mps_tensors::AbstractVector{A}) where {A <: GenericMPSTensor}
+    pspaces = PeriodicVector(map(physicalspace, mps_tensors))
+    vspaces = PeriodicVector(map(left_virtualspace, mps_tensors))
     for i in eachindex(vspaces)
         vspaces[i] == right_virtualspace(mps_tensors[i - 1]) ||
             throw(SpaceMismatch("incompatible spaces between site $(i - 1) and $i"))
@@ -418,14 +425,14 @@ function makefullrank!(manifold::FiniteMPSManifold)
     # left-to-right sweep
     for site in 1:length(manifold)
         if !isfullrank(manifold[site]; side = :right)
-            maxspace = fuse(left_virtualspace(manifold, i), fuse(physicalspace(manifold, site)))
+            maxspace = fuse(left_virtualspace(manifold, site), fuse(physicalspace(manifold, site)))
             manifold.vspaces[site + 1] = infimum(right_virtualspace(manifold, site), maxspace)
         end
     end
     # right-to-left sweep
     for site in reverse(1:length(manifold))
         if !isfullrank(manifold[site]; side = :left)
-            maxspace = fuse(right_virtualspace(manifold, i), dual(fuse(physicalspace(manifold, site))))
+            maxspace = fuse(right_virtualspace(manifold, site), dual(fuse(physicalspace(manifold, site))))
             manifold.vspaces[site] = infimum(left_virtualspace(manifold, site), maxspace)
         end
     end
@@ -438,7 +445,7 @@ function makefullrank!(manifold::InfiniteMPSManifold)
         # left-to-right sweep
         for site in 1:length(manifold)
             if !isfullrank(manifold[site]; side = :right)
-                maxspace = fuse(left_virtualspace(manifold, i), fuse(physicalspace(manifold, site)))
+                maxspace = fuse(left_virtualspace(manifold, site), fuse(physicalspace(manifold, site)))
                 manifold.vspaces[site + 1] = infimum(right_virtualspace(manifold, site), maxspace)
                 haschanged = true
             end
@@ -446,7 +453,7 @@ function makefullrank!(manifold::InfiniteMPSManifold)
         # right-to-left sweep
         for site in reverse(1:length(manifold))
             if !isfullrank(manifold[site]; side = :left)
-                maxspace = fuse(right_virtualspace(manifold, i), dual(fuse(physicalspace(manifold, site))))
+                maxspace = fuse(right_virtualspace(manifold, site), dual(fuse(physicalspace(manifold, site))))
                 manifold.vspaces[site] = infimum(left_virtualspace(manifold, site), maxspace)
                 haschanged = true
             end

@@ -92,13 +92,13 @@ function FiniteMPS(
     # determine the MPS manifold from the input and instantiate the MPS
     mps_tensors = map(ALs, ARs, ACs) do AL, AR, AC
         mps_tensor = coalesce(AL, AR, AC)
-        ismissing(sitetensor) && throw(ArgumentError("missing site tensor at site $i"))
+        ismissing(mps_tensor) && throw(ArgumentError("missing site tensor at site $i"))
         return mps_tensor
     end
     manifold = FiniteMPSManifold(mps_tensors)
     A = _not_missing_type(MA)
     B = _not_missing_type(MB)
-    mps = FiniteMPS{A, B}(undef, manifold)
+    mps = FiniteMPS{A, B}(undef, length(manifold))
 
     # populate the non-missing tensors into the MPS
     for i in 1:L
@@ -116,13 +116,15 @@ function FiniteMPS(
             getfield(mps, :ACs)[i] = ACs[i]
         end
         if !ismissing(Cs[i])
-            space(Cs[i]) == left_virtualspace(V_mps) ← left_virtualspace(V_mps) ||
+            V = left_virtualspace(manifold, i)
+            space(Cs[i]) == (V ← V) ||
                 throw(SpaceMismatch("incompatible space for C[$i]"))
             getfield(mps, :Cs)[i] = Cs[i]
         end
     end
     if !ismissing(Cs[end])
-        space(Cs[end]) == right_virtualspace(manifold, L) ← right_virtualspace(manifold, L) ||
+        V = right_virtualspace(manifold, L)
+        space(Cs[end]) == (V ← V) ||
             throw(SpaceMismatch("incompatible space for C[$(L + 1)]"))
         getfield(mps, :Cs)[L + 1] = Cs[L + 1]
     end
@@ -198,7 +200,7 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize::Bool = false)
     mps = FiniteMPS
 
     # start with first in case eltype changes
-    AL1, C = qr_compact(As[i])
+    AL1, C = qr_compact(first(As))
     normalize && normalize!(C)
 
     # instantiate the destination
@@ -225,7 +227,7 @@ function FiniteMPS(ψ::AbstractTensor)
     A = _transpose_front(
         U * transpose(ψ * U', ((), reverse(ntuple(identity, numind(ψ) + 1))))
     )
-    return FiniteMPS(decompose_localmps(A); normalize = false, overwrite = true)
+    return FiniteMPS(decompose_localmps(A); normalize = false)
 end
 
 for f in (:zeros, :ones)
@@ -239,12 +241,12 @@ for f in (:zeros, :ones)
 end
 
 for randfun in (:rand, :randn)
-    randfun! = Symbol(randf, :!)
-    @eval function $randfun(rng::Random.AbstractRNG, ::Type{T}, manifold::FiniteMPSManifold) where {T}
+    randfun! = Symbol(randfun, :!)
+    @eval function Random.$randfun(rng::Random.AbstractRNG, ::Type{T}, manifold::FiniteMPSManifold) where {T}
         As = map(i -> $randfun(rng, T, manifold[i]), 1:length(manifold))
         return normalize!(FiniteMPS(As))
     end
-    @eval function $randfun!(rng::Random.AbstractRNG, mps::FiniteMPS)
+    @eval function Random.$randfun!(rng::Random.AbstractRNG, mps::FiniteMPS)
         for i in 1:length(mps)
             mps.AC[i] = $randfun!(rng, mps.AC[i])
         end
@@ -264,7 +266,7 @@ Base.@deprecate(
     FiniteMPS(
         f, elt, Pspaces::Vector{<:TensorSpace{S}}, maxVspace::S; left::S = oneunit(S), right::S = oneunit(S)
     ) where {S <: ElementarySpace},
-    f(elt, FiniteMPSManifold(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
+    f(elt, FiniteMPSManifold(Pspaces, maxVspace; left_virtualspace = left, right_virtualspace = right))
 )
 Base.@deprecate(
     FiniteMPS(
@@ -274,13 +276,13 @@ Base.@deprecate(
 )
 Base.@deprecate(
     FiniteMPS(
-        f, elt, N::Int, V::VectorSpace, args...; left::S = oneunit(S), right::S = oneunit(S)
+        f, elt, N::Int, V::TensorSpace{S}, args...; left::S = oneunit(S), right::S = oneunit(S)
     ) where {S <: ElementarySpace},
     f(elt, FiniteMPSManifold(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
 )
 Base.@deprecate(
     FiniteMPS(
-        N::Int, V::VectorSpace, args...; left::S = oneunit(S), right::S = oneunit(S)
+        N::Int, V::TensorSpace{S}, args...; left::S = oneunit(S), right::S = oneunit(S)
     ) where {S <: ElementarySpace},
     rand(FiniteMPSManifold(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
 )
