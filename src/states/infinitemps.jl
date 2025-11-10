@@ -18,30 +18,58 @@ By convention, we have that:
 ---
 
 ## Constructors
-    InfiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}},
-                virtualspaces::Vector{<:Union{S, CompositeSpace{S}};
-                kwargs...) where {S<:ElementarySpace}
-    InfiniteMPS(As::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    InfiniteMPS(ALs::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor;
-                kwargs...)
 
-Construct an MPS via a specification of physical and virtual spaces, or from a list of
-tensors `As`, or a list of left-gauged tensors `ALs`.
+Recommended ways to construct an infinite (periodic unit-cell) MPS are:
 
-### Arguments
-- `As::AbstractVector{<:GenericMPSTensor}`: vector of site tensors
-- `ALs::AbstractVector{<:GenericMPSTensor}`: vector of left-gauged site tensors
-- `C₀::MPSBondTensor`: initial gauge tensor
+- Using an MPS manifold of spaces
 
-- `f::Function=rand`: initializer function for tensor data
-- `eltype::Type{<:Number}=ComplexF64`: scalar type of tensors
+  ```julia
+  rand([rng], [T], manifold::InfiniteMPSManifold; tol, maxiter)
+  randn([rng], [T], manifold::InfiniteMPSManifold; tol, maxiter)
+  ```
 
-- `physicalspaces::AbstractVector{<:Union{S, CompositeSpace{S}}`: list of physical spaces
-- `virtualspaces::AbstractVector{<:Union{S, CompositeSpace{S}}`: list of virtual spaces
+  Build an [`InfiniteMPSManifold`](@ref) with physical spaces and (maximal) virtual spaces for the unit cell.
 
-### Keywords
-- `tol`: gauge fixing tolerance
-- `maxiter`: gauge fixing maximum iterations
+- From unit-cell site tensors
+
+  ```julia
+  InfiniteMPS(As::AbstractVector{<:GenericMPSTensor}; tol, maxiter)
+  ```
+
+  Takes a vector `As` of (full-rank preferred) site tensors defining one unit cell.
+  The tensors are gauge-fixed (left/right) and internal bond tensors `C` are produced.
+  If any tensor isn't full rank, a warning is emitted and `makefullrank!` is applied.
+
+- From left- or right- gauged tensors and an initial gauge tensors
+
+  ```julia
+  InfiniteMPS(ALs::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor; tol, maxiter)
+  InfiniteMPS(C₀::MPSBondTensor, ARs::AbstractVector{<:GenericMPSTensor}; tol, maxiter)
+  ```
+
+  Starts from gauged tensors `ALs` or `ARs` and an initial center bond `C₀` and completes the other gauge.
+
+### Keywords (passed to [`gaugefix!`](@ref))
+- `tol`: convergence tolerance for gauge fixing.
+- `maxiter`: maximum iterations in gauge fixing.
+- Additional keyword arguments accepted by `gaugefix!` (e.g. `order = :L | :R`).
+
+### Examples
+```julia
+using MPSKit, TensorKit
+ps  = PeriodicVector([ℂ^2, ℂ^2, ℂ^2])              # physical spaces, 3-site unit cell
+vs  = PeriodicVector([ℂ^4, ℂ^8, ℂ^4])               # maximal virtual spaces
+m   = InfiniteMPSManifold(ps, vs)
+ψ   = rand(ComplexF64, m; tol=1e-10)
+
+# Construct from pre-built site tensors
+As = map(i -> rand(ComplexF64, m[i]), 1:length(m))
+ψ2 = InfiniteMPS(As; tol=1e-10)
+```
+
+!!! warning "Deprecated constructors"
+    Older constructors like `InfiniteMPS(pspaces, Dspaces)` or with `[f, T]` are deprecated.
+    Use `rand`/`randn` with an [`InfiniteMPSManifold`](@ref) instead.
 """
 struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractMPS
     AL::PeriodicVector{A}
