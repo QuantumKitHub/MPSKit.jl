@@ -25,37 +25,50 @@ By convention, we have that:
 ---
 
 ## Constructors
-    FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
-              maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
-    FiniteMPS([f, eltype], N::Int, physicalspace::Union{S,CompositeSpace{S}},
-              maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
-    FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=false)
 
-Construct an MPS via a specification of physical and virtual spaces, or from a list of
-tensors `As`. All cases reduce to the latter. In particular, a state with a non-trivial
-total charge can be constructed by passing a non-trivially charged vector space as the
-`left` or `right` virtual spaces.
+Recommended ways to construct a finite MPS are:
 
-### Arguments
-- `As::Vector{<:GenericMPSTensor}`: vector of site tensors
+- Using an MPS manifold of spaces
 
-- `f::Function=rand`: initializer function for tensor data
-- `eltype::Type{<:Number}=ComplexF64`: scalar type of tensors
+  ```julia
+  rand([rng], [T], manifold::FiniteMPSManifold)
+  randn([rng], [T], manifold::FiniteMPSManifold)
+  zeros([T], manifold::FiniteMPSManifold)
+  ones([T], manifold::FiniteMPSManifold)
+  ```
 
-- `physicalspaces::Vector{<:Union{S, CompositeSpace{S}}`: list of physical spaces
-- `N::Int`: number of sites
-- `physicalspace::Union{S,CompositeSpace{S}}`: local physical space
+  First build a [`FiniteMPSManifold`](@ref) that fixes the physical and (maximal) virtual spaces, then allocate an MPS on that manifold.
+  See [`FiniteMPSManifold`](@ref) for how to specify site-dependent virtual-space bounds and nontrivial edge charges via `left_virtualspace` and `right_virtualspace`.
 
-- `virtualspaces::Vector{<:Union{S, CompositeSpace{S}}`: list of virtual spaces
-- `maxvirtualspace::S`: maximum virtual space
+- From site tensors
 
-### Keywords
-- `normalize=true`: normalize the constructed state
-- `overwrite=false`: overwrite the given input tensors
-- `left=oneunit(S)`: left-most virtual space
-- `right=oneunit(S)`: right-most virtual space
+  ```julia
+  FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize = false)
+  ```
+
+  Construct an MPS from a vector of already-sized MPS site tensors `As`.
+  When `normalize = true`, the state is normalized during construction.
+
+- From a full state tensor
+
+  ```julia
+  FiniteMPS(ψ::AbstractTensor)
+  ```
+
+  Factorizes a full many-body state `ψ` into a finite MPS (using a left-canonical sweep).
+
+In particular, charged MPS can be created by giving nontrivial left and/or right virtual spaces when constructing the manifold:
+
+```julia
+ps = fill(ℂ^2, N)                       # physical spaces
+m  = FiniteMPSManifold(ps, ℂ^D; left_virtualspace = Qₗ, right_virtualspace = Qᵣ)
+ψ  = rand(ComplexF64, m)                 # normalized random MPS on the manifold
+```
+
+!!! warning "Deprecated constructors"
+    Older constructors of the form `FiniteMPS([f, eltype], physicalspaces, max_virtualspaces; ...)`
+    or `FiniteMPS([f, eltype], N, physicalspace, max_virtualspaces; ...)` are deprecated. Use
+    `rand`/`randn`/`zeros`/`ones` with a [`FiniteMPSManifold`](@ref) instead.
 """
 struct FiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing, A}}
