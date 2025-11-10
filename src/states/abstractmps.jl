@@ -248,7 +248,7 @@ function FiniteMPSManifold(
     return FiniteMPSManifold(physicalspaces, fill(max_virtualspace, length(physicalspaces) - 1))
 end
 function FiniteMPSManifold(mps_tensors::AbstractVector{A}) where {A <: GenericMPSTensor}
-    numin(V) == 1 || throw(ArgumentError("Not a valid MPS tensor space"))
+    numin(A) == 1 || throw(ArgumentError("Not a valid MPS tensor space"))
     pspaces = map(physicalspace, mps_tensors)
     vspaces = Vector{spacetype(A)}(undef, length(mps_tensors) - 1)
     for (i, mps_tensor) in enumerate(mps_tensors)
@@ -296,11 +296,20 @@ function InfiniteMPSManifold(
 
     # copy to avoid side-effects and get correct array type
     pspaces = collect(physicalspaces)
-    vspaces = collect(max_virtualspaces)
+    vspaces = collect(virtualspaces)
     manifold = InfiniteMPSManifold{S, S′}(pspaces, vspaces)
 
     # ensure all spaces are full rank -- use vspaces as maximum
     return makefullrank!(manifold)
+end
+function InfiniteMPSManifold(mps_tensors::PeriodicVector{A}) where {A <: GenericMPSTensor}
+    pspaces = map(physicalspace, mps_tensors)
+    vspaces = map(left_virtualspace, mps_tensors)
+    for i in eachindex(vspaces)
+        vspaces[i] == right_virtualspace(mps_tensors[i - 1]) ||
+            throw(SpaceMismatch("incompatible spaces between site $(i - 1) and $i"))
+    end
+    return InfiniteMPSManifold(pspaces, vspaces)
 end
 
 Base.length(manifold::AbstractMPSManifold) = length(physicalspace(manifold))

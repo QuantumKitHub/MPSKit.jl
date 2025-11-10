@@ -48,6 +48,8 @@ struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractMPS
     AR::PeriodicVector{A}
     C::PeriodicVector{B}
     AC::PeriodicVector{A}
+
+    # constructor from data
     function InfiniteMPS{A, B}(
             AL::PeriodicVector{A}, AR::PeriodicVector{A},
             C::PeriodicVector{B}, AC::PeriodicVector{A} = AL .* C
@@ -62,50 +64,67 @@ struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractMPS
 
         return new{A, B}(AL, AR, C, AC)
     end
-    function InfiniteMPS(
-            AL::PeriodicVector{A}, AR::PeriodicVector{A},
-            C::PeriodicVector{B}, AC::PeriodicVector{A} = AL .* C
+
+    # undef constructors
+    function InfiniteMPS{A, B}(
+            ::UndefInitializer, L::Integer
         ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
-        # verify lengths are compatible
-        L = length(AL)
-        L == length(AR) == length(C) == length(AC) ||
-            throw(ArgumentError("incompatible lengths of AL, AR, C, and AC"))
-        # verify tensors are compatible
-        spacetype(A) == spacetype(B) ||
-            throw(SpaceMismatch("incompatible space types of AL and C"))
-
-        for i in 1:L
-            N = numind(AL[i])
-            N == numind(AR[i]) == numind(AC[i]) ||
-                throw(SpaceMismatch("incompatible spaces at site $i"))
-
-            # verify that the physical spaces are compatible
-            phys_ind = 2:(N - 1)
-            all(
-                space.(Ref(AL[i]), phys_ind) .== space.(Ref(AR[i]), phys_ind) .==
-                    space.(Ref(AC[i]), phys_ind)
-            ) ||
-                throw(SpaceMismatch("incompatible physical spaces at site $i"))
-
-            # verify that the virtual spaces are compatible
-            space(AL[i], 1) == dual(space(AL[i - 1], N)) &&
-                space(AR[i], 1) == dual(space(AR[i - 1], N)) &&
-                space(AC[i], 1) == space(AL[i], 1) &&
-                space(AC[i], N) == space(AR[i], N) &&
-                space(C[i], 1) == dual(space(AL[i], N)) &&
-                space(AR[i], 1) == dual(space(C[i - 1], 2)) ||
-                throw(SpaceMismatch("incompatible virtual spaces at site $i"))
-            # verify that the spaces are non-zero
-            dim(space(AL[i])) > 0 && dim(space(C[i])) > 0 ||
-                @warn "no fusion channels available at site $i"
-        end
+        AL = PeriodicVector(Vector{A}(undef, L))
+        AR = PeriodicVector(Vector{A}(undef, L))
+        C = PeriodicVector(Vector{B}(undef, L))
+        AC = PeriodicVector(Vector{A}(undef, L))
         return new{A, B}(AL, AR, C, AC)
     end
+
 end
 
-#===========================================================================================
-Constructors
-===========================================================================================#
+function InfiniteMPS{A, B}(
+        ::UndefInitializer, manifold::InfiniteMPSManifold
+    ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
+    psi = InfiniteMPS{A, B}(undef, length(manifold))
+    for i in 1:length(manifold)
+        V = manifold[i]
+        psi.AL[i] = A(undef, V)
+        psi.AR[i] = A(undef, V)
+        psi.AC[i] = A(undef, V)
+        Vr = right_virtualspace(manifold, i)
+        psi.C[i] = B(undef, Vr ← Vr)
+    end
+    return psi
+end
+function InfiniteMPS{A}(
+        ::UndefInitializer, manifold::InfiniteMPSManifold
+    ) where {A <: GenericMPSTensor}
+    B = tensormaptype(spacetype(A), 1, 1, storagetype(A))
+    return InfiniteMPS{A, B}(undef, manifold)
+
+end
+function InfiniteMPS(
+        AL::PeriodicVector{A}, AR::PeriodicVector{A},
+        C::PeriodicVector{B}, AC::PeriodicVector{A} = AL .* C
+    ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
+    (L = length(AL)) == length(AR) == length(C) == length(AC) ||
+        throw(ArgumentError("incompatible lengths of AL, AR, C, and AC"))
+    spacetype(A) == spacetype(B) ||
+        throw(SpaceMismatch("incompatible space types of AL and C"))
+
+    for i in 1:L
+        numind(AL[i]) == numind(AR[i]) == numind(AC[i]) ||
+            throw(SpaceMismatch("incompatible spaces at site $i"))
+        space(AL[i]) == space(AR[i]) == space(AC[i]) ||
+            throw(SpaceMismatch("incompatible spaces at site $i"))
+        domain(C[i]) == codomain(C[i]) ||
+            throw(SpaceMismatch("Non-square C at site $i"))
+        right_virtualspace(AL[i]) == left_virtualspace(AR[i + 1]) ||
+            throw(SpaceMismatch("incompatible spaces between site $i and site $(i + 1)"))
+
+        # verify that the spaces are non-zero
+        (dim(space(AL[i])) > 0 && dim(space(C[i])) > 0) ||
+            @warn "no fusion channels available at site $i"
+    end
+
+    return InfiniteMPS{A, B}(AL, AR, C, AC)
+end
 
 function InfiniteMPS(
         AL::AbstractVector{A}, AR::AbstractVector{A}, C::AbstractVector{B},
@@ -117,40 +136,14 @@ function InfiniteMPS(
     )
 end
 
-function InfiniteMPS(
-        pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
-        kwargs...
-    ) where {S <: IndexSpace}
-    return InfiniteMPS(MPSTensor.(pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
-end
-function InfiniteMPS(
-        f, elt::Type{<:Number}, pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
-        kwargs...
-    ) where {S <: IndexSpace}
-    return InfiniteMPS(
-        MPSTensor.(f, elt, pspaces, circshift(Dspaces, 1), Dspaces);
-        kwargs...
-    )
-end
-InfiniteMPS(d::S, D::S) where {S <: Union{Int, <:IndexSpace}} = InfiniteMPS([d], [D])
-function InfiniteMPS(
-        f, elt::Type{<:Number}, d::S, D::S
-    ) where {S <: Union{Int, <:IndexSpace}}
-    return InfiniteMPS(f, elt, [d], [D])
-end
-function InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int})
-    return InfiniteMPS(ComplexSpace.(ds), ComplexSpace.(Ds))
-end
-function InfiniteMPS(
-        f, elt::Type{<:Number}, ds::AbstractVector{Int}, Ds::AbstractVector{Int}, kwargs...
-    )
-    return InfiniteMPS(f, elt, ComplexSpace.(ds), ComplexSpace.(Ds); kwargs...)
-end
+#===========================================================================================
+Constructors
+===========================================================================================#
 
 function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
     # check spaces
-    leftvspaces = circshift(_firstspace.(A), -1)
-    rightvspaces = conj.(_lastspace.(A))
+    leftvspaces = circshift(left_virtualspace.(A), -1)
+    rightvspaces = right_virtualspace.(A)
     isnothing(findfirst(leftvspaces .!= rightvspaces)) ||
         throw(SpaceMismatch("incompatible virtual spaces $leftvspaces and $rightvspaces"))
 
@@ -160,24 +153,12 @@ function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
         @warn "Constructing an MPS from tensors that are not full rank"
     makefullrank!(A_copy)
 
-    AR = A_copy
-
-    leftvspaces = circshift(_firstspace.(AR), -1)
-    rightvspaces = conj.(_lastspace.(AR))
-    isnothing(findfirst(leftvspaces .!= rightvspaces)) ||
-        throw(SpaceMismatch("incompatible virtual spaces $leftvspaces and $rightvspaces"))
-
-    # initial guess for the gauge tensor
-    V = _firstspace(A_copy[1])
-    C₀ = isomorphism(storagetype(eltype(A_copy)), V, V)
-
-    # initialize tensor storage
-    AL = similar.(AR)
-    AC = similar.(AR)
-    C = similar(AR, typeof(C₀))
-    ψ = InfiniteMPS{eltype(AL), eltype(C)}(AL, AR, C, AC)
+    manifold = InfiniteMPSManifold(A)
+    ψ = InfiniteMPS{eltype(A)}(undef, manifold)
 
     # gaugefix the MPS
+    V = left_virtualspace(ψ, 1)
+    C₀ = isomorphism(storagetype(eltype(A_copy)), V, V)
     gaugefix!(ψ, A_copy, C₀; kwargs...)
     mul!.(ψ.AC, ψ.AL, ψ.C)
 
@@ -185,18 +166,10 @@ function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
 end
 
 function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor; kwargs...)
-    AL = PeriodicArray(copy.(AL))
+    AL = PeriodicArray(AL)
 
-    all(isfullrank, AL) ||
-        @warn "Constructing an MPS from tensors that are not full rank"
-
-    # initialize tensor storage
-    AC = similar.(AL)
-    AR = similar.(AL)
-    T = TensorOperations.promote_contract(scalartype(AL), scalartype(C₀))
-    TC = TensorOperations.tensoradd_type(T, C₀, ((1,), (2,)), false)
-    C = similar(AR, TC)
-    ψ = InfiniteMPS{eltype(AL), TC}(AL, AR, C, AC)
+    all(isfullrank, AL) || @error "Constructing an MPS from tensors that are not full rank"
+    ψ = InfiniteMPS{eltype(AL)}(undef, InfiniteMPSManifold(AL))
 
     # gaugefix the MPS
     gaugefix!(ψ, AL, C₀; order = :R, kwargs...)
@@ -206,15 +179,10 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
 end
 
 function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}; kwargs...)
-    AR = PeriodicArray(copy.(AR))
+    AR = PeriodicArray(AR)
 
-    # initialize tensor storage
-    AC = similar.(AR)
-    AL = similar.(AR)
-    T = TensorOperations.promote_contract(eltype(AR), eltype(C₀))
-    TC = TensorOperations.tensoradd_type(T, C₀, ((1,), (2,)), false)
-    C = similar(AR, TC)
-    ψ = InfiniteMPS{eltype(AL), TC}(AL, AR, C, AC)
+    all(isfullrank, AR) || @error "Constructing an MPS from tensors that are not full rank"
+    ψ = InfiniteMPS{eltype(AR)}(undef, InfiniteMPSManifold(AR))
 
     # gaugefix the MPS
     gaugefix!(ψ, AR, C₀; order = :L, kwargs...)
@@ -222,6 +190,49 @@ function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}
 
     return ψ
 end
+
+for randfun in (:rand, :randn)
+    randfun! = Symbol(randf, :!)
+    @eval function $randfun(rng::Random.AbstractRNG, T::Type, manifold::InfiniteMPSManifold; kwargs...)
+        As = map(i -> $randfun(rng, T, manifold[i]), 1:length(manifold))
+        return InfiniteMPS(As; kwargs...)
+    end
+    @eval function $randfun!(rng::Random.AbstractRNG, mps::InfiniteMPS)
+        foreach(Base.Fix1(rng, $randfun!), mps.AC)
+        C₀ = $randfun!(rng, mps.C[0])
+        gaugefix!(mps, mps.AC, C₀)
+        mul!.(mps.AC, mps.AL, mps.C)
+        return mps
+    end
+end
+
+# Deprecate old constructor syntaxes
+# ----------------------------------
+Base.@deprecate(
+    InfiniteMPS(pspace::S, Dspace::S; kwargs...) where {S <: IndexSpace},
+    rand(InfiniteMPSManifold(pspace, Dspace); kwargs...)
+)
+Base.@deprecate(
+    InfiniteMPS(pspaces::AbstractVector{S}, Dspaces::AbstractVector{S}; kwargs...) where {S <: IndexSpace},
+    rand(InfiniteMPSManifold(pspaces, Dspaces); kwargs...)
+)
+Base.@deprecate(
+    InfiniteMPS(f, T::Type, pspace::S, Dspace::S; kwargs...) where {S <: IndexSpace},
+    f(T, InfiniteMPSManifold(pspace, Dspace); kwargs...)
+)
+Base.@deprecate(
+    InfiniteMPS(f, T::Type, pspaces::AbstractVector{S}, Dspaces::AbstractVector{S}; kwargs...) where {S <: IndexSpace},
+    f(T, InfiniteMPSManifold(pspaces, Dspaces); kwargs...)
+)
+
+Base.@deprecate(
+    InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int}),
+    rand(InfiniteMPSManifold(ComplexSpace.(ds), ComplexSpace.(Ds)))
+)
+Base.@deprecate(
+    InfiniteMPS(f, T::Type, ds::AbstractVector{Int}, Ds::AbstractVector{Int}),
+    f(T, InfiniteMPSManifold(ComplexSpace.(ds), ComplexSpace.(Ds)))
+)
 
 #===========================================================================================
 Utility
