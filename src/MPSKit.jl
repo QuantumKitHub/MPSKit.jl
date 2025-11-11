@@ -65,6 +65,7 @@ using MatrixAlgebraKit: TruncationStrategy, PolarViaSVD, LAPACK_SVDAlgorithm
 using BlockTensorKit
 using BlockTensorKit: TensorMapSumSpace
 using TensorOperations
+using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
 using OptimKit
@@ -139,7 +140,6 @@ include("environments/lazylincocache.jl")
 include("algorithms/fixedpoint.jl")
 include("algorithms/derivatives/derivatives.jl")
 include("algorithms/derivatives/mpo_derivatives.jl")
-include("algorithms/derivatives/hamiltonian_derivatives.jl")
 include("algorithms/derivatives/projection_derivatives.jl")
 include("algorithms/expval.jl")
 include("algorithms/toolbox.jl")
