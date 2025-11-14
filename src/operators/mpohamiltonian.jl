@@ -32,7 +32,7 @@ struct MPOHamiltonian{TO <: JordanMPOTensor, V <: AbstractVector{TO}} <: Abstrac
     W::V
 end
 Base.isfinite(mpo::MPOHamiltonian) = isfinite(typeof(mpo))
-OperatorStyle(::MPOHamiltonian) = HamiltonianStyle()
+OperatorStyle(::Type{<:MPOHamiltonian}) = HamiltonianStyle()
 
 const FiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, Vector{O}}
 Base.isfinite(::Type{<:FiniteMPOHamiltonian}) = true
