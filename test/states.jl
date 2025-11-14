@@ -25,7 +25,9 @@ module TestStates
         L = rand(3:20)
         ψ = FiniteMPS(rand, elt, L, d, D)
 
+        @test isfinite(ψ)
         @test isfinite(typeof(ψ))
+        @test GeometryStyle(typeof(ψ)) == FiniteStyle()
         @test GeometryStyle(ψ) == FiniteStyle()
         @test @constinferred physicalspace(ψ) == fill(d, L)
         @test all(x -> x ≾ D, @constinferred left_virtualspace(ψ))
@@ -102,7 +104,9 @@ module TestStates
 
         ψ = InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol)
 
+        @test !isfinite(typeof(ψ))
         @test !isfinite(ψ)
+        @test GeometryStyle(typeof(ψ)) == InfiniteStyle()
         @test GeometryStyle(ψ) == InfiniteStyle()
 
         @test physicalspace(ψ) == fill(d, 2)
@@ -236,6 +240,7 @@ module TestStates
             ϕ₂ = LeftGaugedQP(rand, ψ)
 
             @test GeometryStyle(ϕ₁) == FiniteStyle()
+            @test GeometryStyle(typeof(ϕ₂)) == FiniteStyle()
 
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)
@@ -273,6 +278,7 @@ module TestStates
             ϕ₂ = LeftGaugedQP(rand, ψ)
 
             @test GeometryStyle(ϕ₁) == InfiniteStyle()
+            @test GeometryStyle(typeof(ϕ₂)) == InfiniteStyle()
 
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)

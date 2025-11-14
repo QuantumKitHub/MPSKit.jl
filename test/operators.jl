@@ -34,7 +34,11 @@ module TestOperators
             mpo₂ = FiniteMPO(O₂)
             mpo₃ = FiniteMPO(O₃)
 
+            @test isfinite(mpo₁)
+            @test isfinite(typeof(mpo₁))
+            @test GeometryStyle(typeof(mpo₁)) == FiniteStyle()
             @test GeometryStyle(mpo₁) == FiniteStyle()
+            @test OperatorStyle(typeof(mpo₁)) == MPOStyle()
             @test OperatorStyle(mpo₁) == MPOStyle()
 
 
@@ -95,7 +99,11 @@ module TestOperators
         H1 += H1'
         H = InfiniteMPO([H1])
 
+        @test !isfinite(H)
+        @test !isfinite(typeof(H))
+        @test GeometryStyle(typeof(H)) == InfiniteStyle()
         @test GeometryStyle(H) == InfiniteStyle()
+        @test OperatorStyle(typeof(H)) == MPOStyle()
         @test OperatorStyle(H) == MPOStyle()
     end
 
@@ -127,7 +135,11 @@ module TestOperators
         H′ = FiniteMPOHamiltonian(map(Base.Fix1(collect, Any), Ws)) # without type info
         @test H ≈ H′
 
+        @test isfinite(H)
+        @test isfinite(typeof(H))
+        @test GeometryStyle(typeof(H)) == FiniteStyle()
         @test GeometryStyle(H) == FiniteStyle()
+        @test OperatorStyle(typeof(H)) == HamiltonianStyle()
         @test OperatorStyle(H) == HamiltonianStyle()
 
         # Infinite
@@ -141,7 +153,11 @@ module TestOperators
         H′ = InfiniteMPOHamiltonian(map(Base.Fix1(collect, Any), Ws)) # without type info
         @test all(parent(H) .≈ parent(H′))
 
+        @test !isfinite(H)
+        @test !isfinite(typeof(H))
+        @test GeometryStyle(typeof(H)) == InfiniteStyle()
         @test GeometryStyle(H) == InfiniteStyle()
+        @test OperatorStyle(typeof(H)) == HamiltonianStyle()
         @test OperatorStyle(H) == HamiltonianStyle()
     end
 
