@@ -12,7 +12,6 @@ Type that represents multiple lines of `MPO` objects.
 See also: [`Multiline`](@ref), [`AbstractMPO`](@ref)
 """
 const MultilineMPO = Multiline{<:AbstractMPO}
-OperatorStyle(mpos::MultilineMPO) = OperatorStyle(O)
 
 function MultilineMPO(Os::AbstractMatrix)
     return MultilineMPO(map(FiniteMPO, eachrow(Os)))

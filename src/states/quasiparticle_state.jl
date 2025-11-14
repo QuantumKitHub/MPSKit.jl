@@ -208,6 +208,7 @@ end
 
 # gauge independent code
 const QP{S, T1, T2} = Union{LeftGaugedQP{S, T1, T2}, RightGaugedQP{S, T1, T2}}
+# TODO: Remove FiniteQP and InfiniteQP in favor of styles.
 const FiniteQP{S <: FiniteMPS, T1, T2} = QP{S, T1, T2}
 const InfiniteQP{S <: InfiniteMPS, T1, T2} = QP{S, T1, T2}
 const MultilineQP{Q <: QP} = Multiline{Q}
@@ -227,6 +228,8 @@ eachsite(state::QP) = eachsite(state.left_gs)
 
 istopological(qp::QP) = qp.left_gs !== qp.right_gs
 istrivial(qp::QP) = !istopological(qp) && isone(auxiliarysector(qp))
+
+IsfiniteStyle(qp::QP) = IsfiniteStyle(qp.left_gs)
 
 Base.copy(a::QP) = copy!(similar(a), a)
 Base.copyto!(a::QP, b::QP) = copy!(a, b)
