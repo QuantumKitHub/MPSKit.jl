@@ -16,6 +16,7 @@ end
 Matrix Product Operator (MPO) acting on a finite tensor product space with a linear order.
 """
 const FiniteMPO{O} = MPO{O, Vector{O}}
+Base.isfinite(O::MPO) = isfinite(typeof(O))
 Base.isfinite(::Type{<:FiniteMPO}) = true
 GeometryStyle(::Type{<:FiniteMPO}) = FiniteStyle()
 OperatorStyle(::Type{<:MPO}) = MPOStyle()
