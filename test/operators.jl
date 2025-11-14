@@ -10,7 +10,7 @@ module TestOperators
     using MPSKit
     using MPSKit: _transpose_front, _transpose_tail, C_hamiltonian, AC_hamiltonian,
         AC2_hamiltonian
-    using MPSKit: IsfiniteStyle, FiniteStyle, InfiniteStyle, OperatorStyle, MPOStyle,
+    using MPSKit: GeometryStyle, FiniteStyle, InfiniteStyle, OperatorStyle, MPOStyle,
         HamiltonianStyle
     using TensorKit
     using TensorKit: ℙ
@@ -34,7 +34,7 @@ module TestOperators
             mpo₂ = FiniteMPO(O₂)
             mpo₃ = FiniteMPO(O₃)
 
-            @test IsfiniteStyle(mpo₁) == FiniteStyle()
+            @test GeometryStyle(mpo₁) == FiniteStyle()
             @test OperatorStyle(mpo₁) == MPOStyle()
 
 
@@ -95,7 +95,7 @@ module TestOperators
         H1 += H1'
         H = InfiniteMPO([H1])
 
-        @test IsfiniteStyle(H) == InfiniteStyle()
+        @test GeometryStyle(H) == InfiniteStyle()
         @test OperatorStyle(H) == MPOStyle()
     end
 
@@ -127,7 +127,7 @@ module TestOperators
         H′ = FiniteMPOHamiltonian(map(Base.Fix1(collect, Any), Ws)) # without type info
         @test H ≈ H′
 
-        @test IsfiniteStyle(H) == FiniteStyle()
+        @test GeometryStyle(H) == FiniteStyle()
         @test OperatorStyle(H) == HamiltonianStyle()
 
         # Infinite
@@ -141,7 +141,7 @@ module TestOperators
         H′ = InfiniteMPOHamiltonian(map(Base.Fix1(collect, Any), Ws)) # without type info
         @test all(parent(H) .≈ parent(H′))
 
-        @test IsfiniteStyle(H) == InfiniteStyle()
+        @test GeometryStyle(H) == InfiniteStyle()
         @test OperatorStyle(H) == HamiltonianStyle()
     end
 

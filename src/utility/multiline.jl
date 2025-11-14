@@ -54,6 +54,12 @@ function Base.repeat(A::Multiline, rows::Int, cols::Int)
     return Multiline(outer)
 end
 
+# Style
+# ----------------
+
+OperatorStyle(::Type{Multiline{T}}) where {T} = OperatorStyle(T)
+GeometryStyle(::Type{Multiline{T}}) where {T} = GeometryStyle(T)
+
 # VectorInterface
 # ---------------
 VectorInterface.scalartype(::Type{Multiline{T}}) where {T} = scalartype(T)

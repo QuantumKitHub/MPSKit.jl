@@ -9,7 +9,7 @@ module TestStates
     using Test, TestExtras
     using MPSKit
     using MPSKit: _transpose_front, _transpose_tail
-    using MPSKit: IsfiniteStyle, FiniteStyle, InfiniteStyle
+    using MPSKit: GeometryStyle, FiniteStyle, InfiniteStyle
     using MPSKit: TransferMatrix
     using TensorKit
     using TensorKit: ℙ
@@ -25,8 +25,8 @@ module TestStates
         L = rand(3:20)
         ψ = FiniteMPS(rand, elt, L, d, D)
 
-        @test isfinite(ψ)
-        @test IsfiniteStyle(ψ) == FiniteStyle()
+        @test isfinite(typeof(ψ))
+        @test GeometryStyle(ψ) == FiniteStyle()
         @test @constinferred physicalspace(ψ) == fill(d, L)
         @test all(x -> x ≾ D, @constinferred left_virtualspace(ψ))
         @test all(x -> x ≾ D, @constinferred right_virtualspace(ψ))
@@ -103,7 +103,7 @@ module TestStates
         ψ = InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol)
 
         @test !isfinite(ψ)
-        @test IsfiniteStyle(ψ) == InfiniteStyle()
+        @test GeometryStyle(ψ) == InfiniteStyle()
 
         @test physicalspace(ψ) == fill(d, 2)
         @test all(x -> x ≾ D, left_virtualspace(ψ))
@@ -235,7 +235,7 @@ module TestStates
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
 
-            @test IsfiniteStyle(ϕ₁) == FiniteStyle()
+            @test GeometryStyle(ϕ₁) == FiniteStyle()
 
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)
@@ -272,7 +272,7 @@ module TestStates
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
 
-            @test IsfiniteStyle(ϕ₁) == InfiniteStyle()
+            @test GeometryStyle(ϕ₁) == InfiniteStyle()
 
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)

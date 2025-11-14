@@ -311,8 +311,8 @@ function Base.similar(ψ::FiniteMPS{A, B}) where {A, B}
     return FiniteMPS{A, B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
 end
 
-Base.isfinite(ψ::FiniteMPS) = true
-IsfiniteStyle(::FiniteMPS) = FiniteStyle()
+Base.isfinite(::Type{<:FiniteMPS}) = true
+GeometryStyle(::Type{<:FiniteMPS}) = FiniteStyle()
 
 Base.eachindex(ψ::FiniteMPS) = eachindex(ψ.AL)
 Base.eachindex(l::IndexStyle, ψ::FiniteMPS) = eachindex(l, ψ.AL)
