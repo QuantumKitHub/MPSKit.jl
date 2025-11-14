@@ -40,3 +40,4 @@ GeometryStyle(T::Type) = throw(MethodError(GeometryStyle, T)) # avoid stackoverf
 
 struct FiniteStyle <: GeometryStyle end
 struct InfiniteStyle <: GeometryStyle end
+struct WindowStyle <: GeometryStyle end
