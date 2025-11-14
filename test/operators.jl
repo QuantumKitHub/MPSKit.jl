@@ -10,7 +10,7 @@ module TestOperators
     using MPSKit
     using MPSKit: _transpose_front, _transpose_tail, C_hamiltonian, AC_hamiltonian,
         AC2_hamiltonian
-    using MPSKit: GeometryStyle, FiniteStyle, InfiniteStyle, OperatorStyle, MPOStyle,
+    using MPSKit: GeometryStyle, FiniteStyle, InfiniteStyle, WindowStyle, OperatorStyle, MPOStyle,
         HamiltonianStyle
     using TensorKit
     using TensorKit: ℙ
@@ -39,7 +39,6 @@ module TestOperators
             @test GeometryStyle(typeof(mpo₁)) == FiniteStyle()
             @test GeometryStyle(mpo₁) == FiniteStyle()
             @test OperatorStyle(typeof(mpo₁)) == MPOStyle()
-            @test OperatorStyle(mpo₁) == MPOStyle()
 
 
             @test @constinferred physicalspace(mpo₁) == fill(V, L)

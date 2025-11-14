@@ -105,5 +105,20 @@ module TestMiscellaneous
         @test_throws MethodError OperatorStyle(Float64)
         @test_throws MethodError GeometryStyle("abc")
         @test_throws MethodError GeometryStyle(UInt8)
+
+        @test OperatorStyle(MPO) == MPOStyle()
+        @test OperatorStyle(FiniteMPOHamiltonian) == HamiltonianStyle()
+        @test OperatorStyle(InfiniteMPO) == MPOStyle()
+        @test OperatorStyle(InfiniteMPOHamiltonian) == HamiltonianStyle()
+        @test OperatorStyle(MultilineMPO) == MPOStyle()
+
+        @test GeometryStyle(FiniteMPOHamiltonian) == FiniteStyle()
+        @test GeometryStyle(InfiniteMPS) == InfiniteStyle()
+        @test GeometryStyle(WindowArray) == WindowStyle()
+        @test GeometryStyle(FiniteMPS) == FiniteStyle()
+        @test GeometryStyle(FiniteMPO) == FiniteStyle()
+        @test GeometryStyle(FiniteMPOHamiltonian) == FiniteStyle()
+        @test GeometryStyle(InfiniteMPO) == InfiniteStyle()
+        @test GeometryStyle(InfiniteMPOHamiltonian) == InfiniteStyle()
     end
 end

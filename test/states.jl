@@ -150,6 +150,8 @@ module TestStates
         @test GeometryStyle(typeof(ψ)) == InfiniteStyle()
         @test GeometryStyle(ψ) == InfiniteStyle()
 
+        @test !isfinite(typeof(ψ))
+
         @test physicalspace(ψ) == fill(d, 2, 2)
         @test all(x -> x ≾ D, left_virtualspace(ψ))
         @test all(x -> x ≾ D, right_virtualspace(ψ))
