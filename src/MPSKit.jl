@@ -103,6 +103,7 @@ include("utility/multiline.jl")
 include("utility/utility.jl") # random utility functions
 include("utility/plotting.jl")
 include("utility/linearcombination.jl")
+include("utility/styles.jl")
 
 # maybe we should introduce an abstract state type
 include("states/abstractmps.jl")
