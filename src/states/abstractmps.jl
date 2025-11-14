@@ -15,7 +15,7 @@ const MPSTensor{S} = GenericMPSTensor{S, 2} # the usual mps tensors on which we 
 
 """
     MPSTensor([f, eltype], d::Int, left_D::Int, [right_D]::Int])
-    MPSTensor([f, eltype], physicalspace::Union{S,CompositeSpace{S}}, 
+    MPSTensor([f, eltype], physicalspace::Union{S,CompositeSpace{S}},
               left_virtualspace::S, [right_virtualspace]::S) where {S<:ElementarySpace}
 
 Construct an `MPSTensor` with given physical and virtual spaces.
@@ -201,7 +201,7 @@ TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype)
 
 """
     left_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
-    
+
 Return the virtual space of the bond to the left of sites `pos`.
 
 !!! warning
