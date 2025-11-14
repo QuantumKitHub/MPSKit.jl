@@ -93,7 +93,7 @@ module TestOperators
 
         H1 = randn(T, P ← P)
         H1 += H1'
-        H = InfiniteMPO(H1)
+        H = InfiniteMPO([H1])
 
         @test IsfiniteStyle(H) == InfiniteStyle()
         @test OperatorStyle(H) == MPOStyle()
