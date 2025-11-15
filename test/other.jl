@@ -8,7 +8,7 @@ module TestMiscellaneous
     using ..TestSetup
     using Test, TestExtras
     using MPSKit
-    using MPSKit: GeometryStyle, FiniteStyle, InfiniteStyle, OperatorStyle, MPOStyle,
+    using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, MPOStyle,
         HamiltonianStyle
     using TensorKit
     using TensorKit: ℙ
@@ -109,12 +109,12 @@ module TestMiscellaneous
         @test OperatorStyle(MPO) == MPOStyle()
         @test OperatorStyle(InfiniteMPO) == MPOStyle()
 
-        @test GeometryStyle(FiniteMPOHamiltonian) == FiniteStyle()
-        @test GeometryStyle(InfiniteMPS) == InfiniteStyle()
-        @test GeometryStyle(FiniteMPS) == FiniteStyle()
-        @test GeometryStyle(FiniteMPO) == FiniteStyle()
-        @test GeometryStyle(FiniteMPOHamiltonian) == FiniteStyle()
-        @test GeometryStyle(InfiniteMPO) == InfiniteStyle()
-        @test GeometryStyle(InfiniteMPOHamiltonian) == InfiniteStyle()
+        @test GeometryStyle(FiniteMPOHamiltonian) == FiniteChainStyle()
+        @test GeometryStyle(InfiniteMPS) == InfiniteChainStyle()
+        @test GeometryStyle(FiniteMPS) == FiniteChainStyle()
+        @test GeometryStyle(FiniteMPO) == FiniteChainStyle()
+        @test GeometryStyle(FiniteMPOHamiltonian) == FiniteChainStyle()
+        @test GeometryStyle(InfiniteMPO) == InfiniteChainStyle()
+        @test GeometryStyle(InfiniteMPOHamiltonian) == InfiniteChainStyle()
     end
 end

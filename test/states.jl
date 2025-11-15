@@ -9,7 +9,7 @@ module TestStates
     using Test, TestExtras
     using MPSKit
     using MPSKit: _transpose_front, _transpose_tail
-    using MPSKit: GeometryStyle, FiniteStyle, InfiniteStyle, WindowStyle
+    using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, WindowChainStyle
     using MPSKit: TransferMatrix
     using TensorKit
     using TensorKit: ℙ
@@ -29,8 +29,8 @@ module TestStates
         @test isfinite(ψ)
         @test isfinite(typeof(ψ))
         @test isfinite(ψ) == isfinite(typeof(ψ))
-        @test GeometryStyle(typeof(ψ)) == FiniteStyle()
-        @test GeometryStyle(ψ) == FiniteStyle()
+        @test GeometryStyle(typeof(ψ)) == FiniteChainStyle()
+        @test GeometryStyle(ψ) == FiniteChainStyle()
         @test @constinferred physicalspace(ψ) == fill(d, L)
         @test all(x -> x ≾ D, @constinferred left_virtualspace(ψ))
         @test all(x -> x ≾ D, @constinferred right_virtualspace(ψ))
@@ -111,8 +111,8 @@ module TestStates
         @test !isfinite(typeof(ψ))
         @test !isfinite(ψ)
         @test isfinite(ψ) == isfinite(typeof(ψ))
-        @test GeometryStyle(typeof(ψ)) == InfiniteStyle()
-        @test GeometryStyle(ψ) == InfiniteStyle()
+        @test GeometryStyle(typeof(ψ)) == InfiniteChainStyle()
+        @test GeometryStyle(ψ) == InfiniteChainStyle()
 
         @test eltype(ψ) == eltype(typeof(ψ))
 
@@ -147,8 +147,8 @@ module TestStates
             ]; tol
         )
 
-        @test GeometryStyle(typeof(ψ)) == InfiniteStyle()
-        @test GeometryStyle(ψ) == InfiniteStyle()
+        @test GeometryStyle(typeof(ψ)) == InfiniteChainStyle()
+        @test GeometryStyle(ψ) == InfiniteChainStyle()
 
         @test !isfinite(typeof(ψ))
 
@@ -190,8 +190,8 @@ module TestStates
         # constructor 2 - used to take a "slice" from an infinite mps
         window_2 = WindowMPS(gs, 10)
 
-        @test GeometryStyle(typeof(window_1)) == WindowStyle()
-        @test GeometryStyle(window_1) == WindowStyle()
+        @test GeometryStyle(typeof(window_1)) == WindowChainStyle()
+        @test GeometryStyle(window_1) == WindowChainStyle()
         @test GeometryStyle(window_1) == GeometryStyle(window_2)
 
         @test eltype(window_1) == eltype(typeof(window_1))
@@ -257,8 +257,8 @@ module TestStates
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
 
-            @test GeometryStyle(ϕ₁) == FiniteStyle()
-            @test GeometryStyle(typeof(ϕ₂)) == FiniteStyle()
+            @test GeometryStyle(ϕ₁) == FiniteChainStyle()
+            @test GeometryStyle(typeof(ϕ₂)) == FiniteChainStyle()
 
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)
@@ -298,8 +298,8 @@ module TestStates
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
 
-            @test GeometryStyle(ϕ₁) == InfiniteStyle()
-            @test GeometryStyle(typeof(ϕ₂)) == InfiniteStyle()
+            @test GeometryStyle(ϕ₁) == InfiniteChainStyle()
+            @test GeometryStyle(typeof(ϕ₂)) == InfiniteChainStyle()
 
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)

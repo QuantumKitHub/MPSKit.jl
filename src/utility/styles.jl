@@ -24,9 +24,9 @@ struct HamiltonianStyle <: OperatorStyle end
 `GeometryStyle`
 
 Holy trait used as a dispatch tag to distinguish between different
-geometry (currently finite and infinite). Concrete subtypes
-(`FiniteStyle` and `InfiniteStyle`) indicate whether a system is
-finite or infinite. Use `GeometryStyle` in method signatures to
+geometries Concrete subtypes
+(`FiniteChainStyle`, `InfiniteChainStyle` and `WindowChainStyle`) indicate whether a system is
+finite, infinite or a finite window in an infinite chain. Use `GeometryStyle` in method signatures to
 select implementation-specific code paths for different types.
 
 To opt a custom type into this dispatch scheme implement:
@@ -38,6 +38,6 @@ abstract type GeometryStyle end
 GeometryStyle(x) = GeometryStyle(typeof(x))
 GeometryStyle(T::Type) = throw(MethodError(GeometryStyle, T)) # avoid stackoverflow if not defined
 
-struct FiniteStyle <: GeometryStyle end
-struct InfiniteStyle <: GeometryStyle end
-struct WindowStyle <: GeometryStyle end
+struct FiniteChainStyle <: GeometryStyle end
+struct InfiniteChainStyle <: GeometryStyle end
+struct WindowChainStyle <: GeometryStyle end

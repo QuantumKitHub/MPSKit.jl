@@ -10,7 +10,7 @@ module TestOperators
     using MPSKit
     using MPSKit: _transpose_front, _transpose_tail, C_hamiltonian, AC_hamiltonian,
         AC2_hamiltonian
-    using MPSKit: GeometryStyle, FiniteStyle, InfiniteStyle, WindowStyle, OperatorStyle, MPOStyle,
+    using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, WindowChainStyle, OperatorStyle, MPOStyle,
         HamiltonianStyle
     using TensorKit
     using TensorKit: ℙ
@@ -36,8 +36,8 @@ module TestOperators
 
             @test isfinite(mpo₁)
             @test isfinite(typeof(mpo₁))
-            @test GeometryStyle(typeof(mpo₁)) == FiniteStyle()
-            @test GeometryStyle(mpo₁) == FiniteStyle()
+            @test GeometryStyle(typeof(mpo₁)) == FiniteChainStyle()
+            @test GeometryStyle(mpo₁) == FiniteChainStyle()
             @test OperatorStyle(typeof(mpo₁)) == MPOStyle()
 
 
@@ -100,8 +100,8 @@ module TestOperators
 
         @test !isfinite(H)
         @test !isfinite(typeof(H))
-        @test GeometryStyle(typeof(H)) == InfiniteStyle()
-        @test GeometryStyle(H) == InfiniteStyle()
+        @test GeometryStyle(typeof(H)) == InfiniteChainStyle()
+        @test GeometryStyle(H) == InfiniteChainStyle()
         @test OperatorStyle(typeof(H)) == MPOStyle()
         @test OperatorStyle(H) == MPOStyle()
     end
@@ -136,8 +136,8 @@ module TestOperators
 
         @test isfinite(H)
         @test isfinite(typeof(H))
-        @test GeometryStyle(typeof(H)) == FiniteStyle()
-        @test GeometryStyle(H) == FiniteStyle()
+        @test GeometryStyle(typeof(H)) == FiniteChainStyle()
+        @test GeometryStyle(H) == FiniteChainStyle()
         @test OperatorStyle(typeof(H)) == HamiltonianStyle()
         @test OperatorStyle(H) == HamiltonianStyle()
 
@@ -154,8 +154,8 @@ module TestOperators
 
         @test !isfinite(H)
         @test !isfinite(typeof(H))
-        @test GeometryStyle(typeof(H)) == InfiniteStyle()
-        @test GeometryStyle(H) == InfiniteStyle()
+        @test GeometryStyle(typeof(H)) == InfiniteChainStyle()
+        @test GeometryStyle(H) == InfiniteChainStyle()
         @test OperatorStyle(typeof(H)) == HamiltonianStyle()
         @test OperatorStyle(H) == HamiltonianStyle()
     end
