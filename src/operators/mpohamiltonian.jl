@@ -31,7 +31,6 @@ operators in a form that is compatible with this constructor.
 struct MPOHamiltonian{TO <: JordanMPOTensor, V <: AbstractVector{TO}} <: AbstractMPO{TO}
     W::V
 end
-Base.isfinite(mpo::MPOHamiltonian) = isfinite(typeof(mpo))
 OperatorStyle(::Type{<:MPOHamiltonian}) = HamiltonianStyle()
 
 const FiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, Vector{O}}
