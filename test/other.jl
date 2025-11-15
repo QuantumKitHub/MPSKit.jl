@@ -74,14 +74,20 @@ module TestMiscellaneous
         buffer = IOBuffer()
         braille(buffer, H)
         output = String(take!(buffer))
-        check = "... 🭻⎡⠉⢈⎤🭻 ...\n     ⎣⠀⢀⎦ \n"
+        check = """
+        ... 🭻⎡⠉⢈⎤🭻 ...
+             ⎣⠀⢀⎦
+        """
 
         @test output == check
 
         O = make_time_mpo(H, 1.0, TaylorCluster(3, false, false))
         braille(buffer, O)
         output = String(take!(buffer))
-        check = "... 🭻⎡⡏⠉⠛⠟⎤🭻 ...\n     ⎣⡇⠀⠀⡂⎦ \n"
+        check = """
+        ... 🭻⎡⡏⠉⠛⠟⎤🭻 ...
+             ⎣⡇⠀⠀⡂⎦
+        """
 
         @test output == check
 
