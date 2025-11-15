@@ -10,7 +10,7 @@ module TestOperators
     using MPSKit
     using MPSKit: _transpose_front, _transpose_tail, C_hamiltonian, AC_hamiltonian,
         AC2_hamiltonian
-    using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, WindowChainStyle, OperatorStyle, MPOStyle,
+    using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, MPOStyle,
         HamiltonianStyle
     using TensorKit
     using TensorKit: ℙ

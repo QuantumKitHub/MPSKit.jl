@@ -9,7 +9,7 @@ module TestStates
     using Test, TestExtras
     using MPSKit
     using MPSKit: _transpose_front, _transpose_tail
-    using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, WindowChainStyle
+    using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle
     using MPSKit: TransferMatrix
     using TensorKit
     using TensorKit: ℙ
@@ -189,10 +189,6 @@ module TestStates
 
         # constructor 2 - used to take a "slice" from an infinite mps
         window_2 = WindowMPS(gs, 10)
-
-        @test GeometryStyle(typeof(window_1)) == WindowChainStyle()
-        @test GeometryStyle(window_1) == WindowChainStyle()
-        @test GeometryStyle(window_1) == GeometryStyle(window_2)
 
         @test eltype(window_1) == eltype(typeof(window_1))
 

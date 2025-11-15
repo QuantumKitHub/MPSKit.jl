@@ -1,15 +1,14 @@
 """
-`OperatorStyle`
+    abstract type OperatorStyle end
 
 Holy trait used as a dispatch tag for operator representations.
 Concrete subtypes (`MPOStyle` and `HamiltonianStyle`) indicate
-whether an operator is stored as an MPO or as a Hamiltonian.
-Use `OperatorStyle` in method signatures to select implementation-
-specific code paths for different operator types.
+whether an operator represents a Hamiltonian operator (sum of terms)
+or a transfer matrix (product of factors).
 
 To opt a custom operator type into this dispatch scheme implement:
 ```julia
-OperatorStyle(::T) where {T<:YourOperatorType}
+OperatorStyle(::T) where {T <: YourOperatorType}
 ```
 """
 abstract type OperatorStyle end
@@ -21,17 +20,16 @@ struct HamiltonianStyle <: OperatorStyle end
 
 
 """
-`GeometryStyle`
+    abstract type GeometryStyle end
 
 Holy trait used as a dispatch tag to distinguish between different
 geometries Concrete subtypes
-(`FiniteChainStyle`, `InfiniteChainStyle` and `WindowChainStyle`) indicate whether a system is
-finite, infinite or a finite window in an infinite chain. Use `GeometryStyle` in method signatures to
-select implementation-specific code paths for different types.
+(`FiniteChainStyle`, `InfiniteChainStyle`) indicate whether a system is
+a finite or infinite chain.
 
 To opt a custom type into this dispatch scheme implement:
 ```julia
-GeometryStyle(::T) where {T<:YourType}
+GeometryStyle(::T) where {T <: YourType}
 ```
 """
 abstract type GeometryStyle end
@@ -40,4 +38,3 @@ GeometryStyle(T::Type) = throw(MethodError(GeometryStyle, T)) # avoid stackoverf
 
 struct FiniteChainStyle <: GeometryStyle end
 struct InfiniteChainStyle <: GeometryStyle end
-struct WindowChainStyle <: GeometryStyle end

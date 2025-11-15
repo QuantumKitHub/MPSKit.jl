@@ -29,6 +29,7 @@ function Base.axes(m::Multiline, i::Int)
         i == 2 ? axes(parent(m)[1], 1) : throw(ArgumentError("Invalid index $i"))
 end
 Base.eachindex(m::Multiline) = CartesianIndices(size(m))
+Base.isfinite(m::Multiline) = isfinite(typeof(m))
 
 eachsite(m::Multiline) = eachsite(first(parent(m)))
 

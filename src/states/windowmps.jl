@@ -50,8 +50,6 @@ struct WindowMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     end
 end
 
-GeometryStyle(::Type{<:WindowMPS}) = WindowChainStyle()
-
 #===========================================================================================
 Constructors
 ===========================================================================================#
