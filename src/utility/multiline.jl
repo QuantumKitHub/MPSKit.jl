@@ -29,6 +29,7 @@ function Base.axes(m::Multiline, i::Int)
         i == 2 ? axes(parent(m)[1], 1) : throw(ArgumentError("Invalid index $i"))
 end
 Base.eachindex(m::Multiline) = CartesianIndices(size(m))
+Base.isfinite(m::Multiline) = isfinite(typeof(m))
 
 eachsite(m::Multiline) = eachsite(first(parent(m)))
 
@@ -53,6 +54,12 @@ function Base.repeat(A::Multiline, rows::Int, cols::Int)
     outer = repeat(inner, rows)
     return Multiline(outer)
 end
+
+# Style
+# ----------------
+
+OperatorStyle(::Type{Multiline{T}}) where {T} = OperatorStyle(T)
+GeometryStyle(::Type{Multiline{T}}) where {T} = GeometryStyle(T)
 
 # VectorInterface
 # ---------------

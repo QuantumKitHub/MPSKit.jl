@@ -17,6 +17,8 @@ Matrix Product Operator (MPO) acting on a finite tensor product space with a lin
 """
 const FiniteMPO{O} = MPO{O, Vector{O}}
 Base.isfinite(::Type{<:FiniteMPO}) = true
+GeometryStyle(::Type{<:FiniteMPO}) = FiniteChainStyle()
+OperatorStyle(::Type{<:MPO}) = MPOStyle()
 
 function FiniteMPO(Os::AbstractVector{O}) where {O}
     for i in eachindex(Os)[1:(end - 1)]
@@ -37,6 +39,7 @@ Matrix Product Operator (MPO) acting on an infinite tensor product space with a 
 """
 const InfiniteMPO{O} = MPO{O, PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPO}) = false
+GeometryStyle(::Type{<:InfiniteMPO}) = InfiniteChainStyle()
 
 function InfiniteMPO(Os::AbstractVector{O}) where {O}
     for i in eachindex(Os)

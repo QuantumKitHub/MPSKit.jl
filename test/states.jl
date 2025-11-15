@@ -9,6 +9,7 @@ module TestStates
     using Test, TestExtras
     using MPSKit
     using MPSKit: _transpose_front, _transpose_tail
+    using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle
     using MPSKit: TransferMatrix
     using TensorKit
     using TensorKit: ℙ
@@ -24,10 +25,17 @@ module TestStates
         L = rand(3:20)
         ψ = FiniteMPS(rand, elt, L, d, D)
 
+        @test eachindex(IndexLinear(), ψ) == eachindex(ψ)
         @test isfinite(ψ)
+        @test isfinite(typeof(ψ))
+        @test isfinite(ψ) == isfinite(typeof(ψ))
+        @test GeometryStyle(typeof(ψ)) == FiniteChainStyle()
+        @test GeometryStyle(ψ) == FiniteChainStyle()
         @test @constinferred physicalspace(ψ) == fill(d, L)
         @test all(x -> x ≾ D, @constinferred left_virtualspace(ψ))
         @test all(x -> x ≾ D, @constinferred right_virtualspace(ψ))
+
+        @test eltype(ψ) == eltype(typeof(ψ))
 
         ovl = dot(ψ, ψ)
 
@@ -100,7 +108,14 @@ module TestStates
 
         ψ = InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol)
 
+        @test !isfinite(typeof(ψ))
         @test !isfinite(ψ)
+        @test isfinite(ψ) == isfinite(typeof(ψ))
+        @test GeometryStyle(typeof(ψ)) == InfiniteChainStyle()
+        @test GeometryStyle(ψ) == InfiniteChainStyle()
+
+        @test eltype(ψ) == eltype(typeof(ψ))
+
         @test physicalspace(ψ) == fill(d, 2)
         @test all(x -> x ≾ D, left_virtualspace(ψ))
         @test all(x -> x ≾ D, right_virtualspace(ψ))
@@ -131,6 +146,11 @@ module TestStates
                 rand(elt, D * d, D) rand(elt, D * d, D)
             ]; tol
         )
+
+        @test GeometryStyle(typeof(ψ)) == InfiniteChainStyle()
+        @test GeometryStyle(ψ) == InfiniteChainStyle()
+
+        @test !isfinite(typeof(ψ))
 
         @test physicalspace(ψ) == fill(d, 2, 2)
         @test all(x -> x ≾ D, left_virtualspace(ψ))
@@ -169,6 +189,8 @@ module TestStates
 
         # constructor 2 - used to take a "slice" from an infinite mps
         window_2 = WindowMPS(gs, 10)
+
+        @test eltype(window_1) == eltype(typeof(window_1))
 
         P = @constinferred physicalspace(window_2)
         Vleft = @constinferred left_virtualspace(window_2)
@@ -231,9 +253,13 @@ module TestStates
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
 
+            @test GeometryStyle(ϕ₁) == FiniteChainStyle()
+            @test GeometryStyle(typeof(ϕ₂)) == FiniteChainStyle()
+
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)
             @test @constinferred right_virtualspace(ϕ₁) == right_virtualspace(ψ)
+            @test TensorKit.sectortype(ϕ₁) == TensorKit.sectortype(ψ)
 
             @test norm(axpy!(1, ϕ₁, copy(ϕ₂))) ≤ norm(ϕ₁) + norm(ϕ₂)
             @test norm(ϕ₁) * 3 ≈ norm(ϕ₁ * 3)
@@ -262,9 +288,14 @@ module TestStates
             period = rand(1:4)
             ψ = InfiniteMPS(fill(d, period), fill(D, period))
 
+            @test eltype(ψ) == eltype(typeof(ψ))
+
             #rand_quasiparticle is a private non-exported function
             ϕ₁ = LeftGaugedQP(rand, ψ)
             ϕ₂ = LeftGaugedQP(rand, ψ)
+
+            @test GeometryStyle(ϕ₁) == InfiniteChainStyle()
+            @test GeometryStyle(typeof(ϕ₂)) == InfiniteChainStyle()
 
             @test @constinferred physicalspace(ϕ₁) == physicalspace(ψ)
             @test @constinferred left_virtualspace(ϕ₁) == left_virtualspace(ψ)

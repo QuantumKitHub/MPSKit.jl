@@ -31,9 +31,11 @@ operators in a form that is compatible with this constructor.
 struct MPOHamiltonian{TO <: JordanMPOTensor, V <: AbstractVector{TO}} <: AbstractMPO{TO}
     W::V
 end
+OperatorStyle(::Type{<:MPOHamiltonian}) = HamiltonianStyle()
 
 const FiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, Vector{O}}
 Base.isfinite(::Type{<:FiniteMPOHamiltonian}) = true
+GeometryStyle(::Type{<:FiniteMPOHamiltonian}) = FiniteChainStyle()
 
 function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
     for i in eachindex(Ws)[1:(end - 1)]
@@ -45,6 +47,7 @@ end
 
 const InfiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPOHamiltonian}) = false
+GeometryStyle(::Type{<:InfiniteMPOHamiltonian}) = InfiniteChainStyle()
 
 function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
     for i in eachindex(Ws)
