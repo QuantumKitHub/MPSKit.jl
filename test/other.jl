@@ -78,7 +78,6 @@ module TestMiscellaneous
         ... 🭻⎡⠉⢈⎤🭻 ...
              ⎣⠀⢀⎦ 
         """
-
         @test output == check
 
         O = make_time_mpo(H, 1.0, TaylorCluster(3, false, false))
@@ -88,7 +87,6 @@ module TestMiscellaneous
         ... 🭻⎡⡏⠉⠛⠟⎤🭻 ...
              ⎣⡇⠀⠀⡂⎦ 
         """
-
         @test output == check
 
         # Finite Hamiltonians and MPOs

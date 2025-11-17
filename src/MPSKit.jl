@@ -105,8 +105,6 @@ include("utility/utility.jl") # random utility functions
 include("utility/plotting.jl")
 include("utility/linearcombination.jl")
 
-
-
 # maybe we should introduce an abstract state type
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
