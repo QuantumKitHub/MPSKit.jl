@@ -9,7 +9,7 @@ abstract type AbstractMPO{O} <: AbstractVector{O} end
 
 # useful union types
 const SparseMPO{O <: SparseBlockTensorMap} = AbstractMPO{O}
-Base.isfinite(mpo::AbstractMPO) = isfinite(typeof(mpo))
+Base.isfinite(O::AbstractMPO) = isfinite(typeof(O))
 
 # By default, define things in terms of parent
 Base.size(mpo::AbstractMPO, args...) = size(parent(mpo), args...)
