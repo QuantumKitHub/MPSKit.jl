@@ -355,7 +355,7 @@ end
 
 # MPS constructors
 # ----------------
-for randf in (:rand, :randn, :randexp, :randisometry)
+for randf in (:rand, :randn)
     _docstr = """
         $randf([rng=default_rng()], [T=Float64], manifold::AbstractMPSManifold) -> mps
         
@@ -371,13 +371,8 @@ for randf in (:rand, :randn, :randexp, :randisometry)
     See also [`Random.$(randf)`](@ref).
     """
 
-    if randf != :randisometry
-        randfun = GlobalRef(Random, randf)
-        randfun! = GlobalRef(Random, Symbol(randf, :!))
-    else
-        randfun = randf
-        randfun! = Symbol(randf, :!)
-    end
+    randfun = GlobalRef(Random, randf)
+    randfun! = GlobalRef(Random, Symbol(randf, :!))
 
     @eval begin
         @doc $_docstr $randfun(::Type, ::AbstractMPSManifold)
