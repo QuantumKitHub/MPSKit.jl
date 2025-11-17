@@ -23,7 +23,6 @@ struct HamiltonianStyle <: OperatorStyle end
     GeometryStyle(::Type{T})
 
 Trait to describe the geometry of the input `x` or type `T`, which can be either
-
 *   `FiniteChainStyle()`: object is defined on a finite chain;
 *   `InfiniteChainStyle()`: object is defined on an infinite chain.
 """
