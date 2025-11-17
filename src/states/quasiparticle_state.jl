@@ -208,7 +208,6 @@ end
 
 # gauge independent code
 const QP{S, T1, T2} = Union{LeftGaugedQP{S, T1, T2}, RightGaugedQP{S, T1, T2}}
-# TODO: Remove FiniteQP and InfiniteQP in favor of styles.
 const FiniteQP{S <: FiniteMPS, T1, T2} = QP{S, T1, T2}
 const InfiniteQP{S <: InfiniteMPS, T1, T2} = QP{S, T1, T2}
 const MultilineQP{Q <: QP} = Multiline{Q}

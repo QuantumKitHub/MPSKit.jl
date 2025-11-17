@@ -76,7 +76,7 @@ module TestMiscellaneous
         output = String(take!(buffer))
         check = """
         ... 🭻⎡⠉⢈⎤🭻 ...
-             ⎣⠀⢀⎦
+             ⎣⠀⢀⎦ 
         """
 
         @test output == check
@@ -86,7 +86,7 @@ module TestMiscellaneous
         output = String(take!(buffer))
         check = """
         ... 🭻⎡⡏⠉⠛⠟⎤🭻 ...
-             ⎣⡇⠀⠀⡂⎦
+             ⎣⡇⠀⠀⡂⎦ 
         """
 
         @test output == check
