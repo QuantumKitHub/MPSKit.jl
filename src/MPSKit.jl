@@ -97,6 +97,7 @@ include("utility/logging.jl")
 using .IterativeLoggers
 include("utility/iterativesolvers.jl")
 
+include("utility/styles.jl")
 include("utility/periodicarray.jl")
 include("utility/windowarray.jl")
 include("utility/multiline.jl")

@@ -8,6 +8,8 @@ module TestMiscellaneous
     using ..TestSetup
     using Test, TestExtras
     using MPSKit
+    using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, MPOStyle,
+        HamiltonianStyle
     using TensorKit
     using TensorKit: ℙ
     using Plots
@@ -100,5 +102,23 @@ module TestMiscellaneous
         output = String(take!(buffer))
         check = " ⎡⠉⠉⠉⠉⎤🭻🭻⎡⡏⠉⠛⠟⎤🭻🭻⎡⡏⠉⠛⠟⎤🭻🭻⎡⡇⠀⎤ \n ⎣⠀⠀⠀⠀⎦  ⎣⡇⠀⠀⡂⎦  ⎣⡇⠀⠀⡂⎦  ⎣⡇⠀⎦ \n"
         @test output == check
+    end
+
+    @testset "Styles" begin
+        @test_throws MethodError OperatorStyle(42)
+        @test_throws MethodError OperatorStyle(Float64)
+        @test_throws MethodError GeometryStyle("abc")
+        @test_throws MethodError GeometryStyle(UInt8)
+
+        @test OperatorStyle(MPO) == MPOStyle()
+        @test OperatorStyle(InfiniteMPO) == MPOStyle()
+
+        @test GeometryStyle(FiniteMPOHamiltonian) == FiniteChainStyle()
+        @test GeometryStyle(InfiniteMPS) == InfiniteChainStyle()
+        @test GeometryStyle(FiniteMPS) == FiniteChainStyle()
+        @test GeometryStyle(FiniteMPO) == FiniteChainStyle()
+        @test GeometryStyle(FiniteMPOHamiltonian) == FiniteChainStyle()
+        @test GeometryStyle(InfiniteMPO) == InfiniteChainStyle()
+        @test GeometryStyle(InfiniteMPOHamiltonian) == InfiniteChainStyle()
     end
 end
