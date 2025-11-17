@@ -1,15 +1,11 @@
 """
-    abstract type OperatorStyle end
+    abstract type OperatorStyle
+    OperatorStyle(x)
+    OperatorStyle(::Type{T})
 
-Holy trait used as a dispatch tag for operator representations.
-Concrete subtypes (`MPOStyle` and `HamiltonianStyle`) indicate
-whether an operator represents a Hamiltonian operator (sum of terms)
-or a transfer matrix (product of factors).
-
-To opt a custom operator type into this dispatch scheme implement:
-```julia
-OperatorStyle(::T) where {T <: YourOperatorType}
-```
+Trait to describe the operator behavior of the input `x` or type `T`, which can be either
+*   `MPOStyle()`: product of local factors;
+*   `HamiltonianStyle()`: sum of local terms.
 """
 abstract type OperatorStyle end
 OperatorStyle(x) = OperatorStyle(typeof(x))
@@ -18,19 +14,18 @@ OperatorStyle(T::Type) = throw(MethodError(OperatorStyle, T)) # avoid stackoverf
 struct MPOStyle <: OperatorStyle end
 struct HamiltonianStyle <: OperatorStyle end
 
+@doc (@doc OperatorStyle) MPOStyle
+@doc (@doc OperatorStyle) HamiltonianStyle
 
 """
-    abstract type GeometryStyle end
+    abstract type GeometryStyle
+    GeometryStyle(x)
+    GeometryStyle(::Type{T})
 
-Holy trait used as a dispatch tag to distinguish between different
-geometries Concrete subtypes
-(`FiniteChainStyle`, `InfiniteChainStyle`) indicate whether a system is
-a finite or infinite chain.
+Trait to describe the geometry of the input `x` or type `T`, which can be either
 
-To opt a custom type into this dispatch scheme implement:
-```julia
-GeometryStyle(::T) where {T <: YourType}
-```
+*   `FiniteChainStyle()`: object is defined on a finite chain;
+*   `InfiniteChainStyle()`: object is defined on an infinite chain.
 """
 abstract type GeometryStyle end
 GeometryStyle(x) = GeometryStyle(typeof(x))
@@ -38,3 +33,6 @@ GeometryStyle(T::Type) = throw(MethodError(GeometryStyle, T)) # avoid stackoverf
 
 struct FiniteChainStyle <: GeometryStyle end
 struct InfiniteChainStyle <: GeometryStyle end
+
+@doc (@doc GeometryStyle) FiniteChainStyle
+@doc (@doc GeometryStyle) InfiniteChainStyle
