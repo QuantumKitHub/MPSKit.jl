@@ -123,8 +123,8 @@ module TestMiscellaneous
 
         @test GeometryStyle(GeometryStyle(FiniteMPS)) == GeometryStyle(FiniteMPS)
         @test GeometryStyle(FiniteMPS, FiniteMPO) == FiniteChainStyle()
-        @test_throws MethodError GeometryStyle(FiniteMPS, InfiniteMPO)
+        @test_throws Error GeometryStyle(FiniteMPS, InfiniteMPO)
         @test @constinferred GeometryStyle(InfiniteMPS, InfiniteMPO, InfiniteMPS) == InfiniteChainStyle()
-        @test_throws MethodError GeometryStyle(FiniteMPS, FiniteMPO, InfiniteMPS)
+        @test_throws Error GeometryStyle(FiniteMPS, FiniteMPO, InfiniteMPS)
     end
 end
