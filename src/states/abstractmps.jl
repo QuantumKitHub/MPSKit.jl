@@ -173,6 +173,7 @@ abstract type AbstractFiniteMPS <: AbstractMPS end
 
 Base.eltype(ψ::AbstractMPS) = eltype(typeof(ψ))
 VectorInterface.scalartype(T::Type{<:AbstractMPS}) = scalartype(site_type(T))
+Base.isfinite(ψ::AbstractMPS) = isfinite(typeof(ψ))
 
 function Base.checkbounds(ψ::AbstractMPS, i)
     return Base.checkbounds(Bool, ψ, i) || throw(BoundsError(ψ, i))
