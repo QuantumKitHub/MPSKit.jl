@@ -142,7 +142,7 @@ module TestOperators
         @test GeometryStyle(H) == FiniteChainStyle()
         @test OperatorStyle(typeof(H)) == HamiltonianStyle()
         @test OperatorStyle(H) == HamiltonianStyle()
-        @test OperatorStyle(H, H´) == OperatorStyle(H)
+        @test OperatorStyle(H, H′) == OperatorStyle(H)
 
         # Infinite
         Ws = [Wmid]
