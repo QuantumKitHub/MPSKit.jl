@@ -14,7 +14,7 @@ OperatorStyle(x::OperatorStyle) = x
 
 OperatorStyle(x, y) = OperatorStyle(OperatorStyle(x)::OperatorStyle, OperatorStyle(y)::OperatorStyle)
 OperatorStyle(::T, ::T) where {T <: OperatorStyle} = T()
-OperatorStyle(x::OperatorStyle, y::OperatorStyle) = throw(MethodError(OperatorStyle, (x, y)))
+OperatorStyle(x::OperatorStyle, y::OperatorStyle) = error("Unknown combination of operator styles $x and $y")
 @inline OperatorStyle(x, y, zs...) = OperatorStyle(OperatorStyle(x, y), zs...)
 
 struct MPOStyle <: OperatorStyle end
