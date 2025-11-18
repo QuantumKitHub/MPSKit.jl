@@ -39,7 +39,7 @@ GeometryStyle(x::GeometryStyle) = x
 
 GeometryStyle(x, y) = GeometryStyle(GeometryStyle(x)::GeometryStyle, GeometryStyle(y)::GeometryStyle)
 GeometryStyle(::T, ::T) where {T <: GeometryStyle} = T()
-GeometryStyle(x::GeometryStyle, y::GeometryStyle) = throw(MethodError(GeometryStyle, (x, y)))
+GeometryStyle(x::GeometryStyle, y::GeometryStyle) = error("Unknown combination of geometry styles $x and $y")
 @inline GeometryStyle(x, y, zs...) = GeometryStyle(GeometryStyle(x, y), zs...)
 
 struct FiniteChainStyle <: GeometryStyle end
