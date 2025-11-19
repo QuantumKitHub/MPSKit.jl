@@ -153,19 +153,6 @@ function makefullrank!(virtualspaces::PeriodicVector{S}, physicalspaces::Periodi
     return virtualspaces
 end
 
-# Tensor accessors
-# ----------------
-@doc """
-    AC2(ψ::AbstractMPS, i; kind=:ACAR)
-
-Obtain the two-site (center) gauge tensor at site `i` of the MPS `ψ`.
-If this hasn't been computed before, this can be computed as:
-- `kind=:ACAR` : AC[i] * AR[i+1]
-- `kind=:ALAC` : AL[i] * AC[i+1]
-""" AC2
-
-AC2(psi::AbstractMPS, site::Int; kwargs...) = AC2(GeometryStyle(psi), psi, site; kwargs...)
-
 #===========================================================================================
 MPS types
 ===========================================================================================#
@@ -250,6 +237,19 @@ Return an iterator over the sites of the MPS `state`.
 eachsite(ψ::AbstractMPS) = eachsite(GeometryStyle(ψ), ψ)
 
 eachsite(::GeometryStyle, ψ::AbstractMPS) = eachindex(ψ)
+
+# Tensor accessors
+# ----------------
+@doc """
+    AC2(ψ::AbstractMPS, i; kind=:ACAR)
+
+Obtain the two-site (center) gauge tensor at site `i` of the MPS `ψ`.
+If this hasn't been computed before, this can be computed as:
+- `kind=:ACAR` : AC[i] * AR[i+1]
+- `kind=:ALAC` : AL[i] * AC[i+1]
+""" AC2
+
+AC2(psi::AbstractMPS, site::Int; kwargs...) = AC2(GeometryStyle(psi), psi, site; kwargs...)
 
 #===========================================================================================
 TensorKit utility
