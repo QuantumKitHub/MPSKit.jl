@@ -164,6 +164,8 @@ If this hasn't been computed before, this can be computed as:
 - `kind=:ALAC` : AL[i] * AC[i+1]
 """ AC2
 
+AC2(psi::AbstractMPS, site::Int; kwargs...) = AC2(GeometryStyle(psi), psi, site; kwargs...)
+
 #===========================================================================================
 MPS types
 ===========================================================================================#
@@ -202,7 +204,7 @@ TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype)
 
 """
     left_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
-    
+
 Return the virtual space of the bond to the left of sites `pos`.
 
 !!! warning
@@ -245,4 +247,81 @@ physicalspace(ψ::AbstractMPS) = map(Base.Fix1(physicalspace, ψ), eachsite(ψ))
 
 Return an iterator over the sites of the MPS `state`.
 """
-eachsite(ψ::AbstractMPS) = eachindex(ψ)
+eachsite(ψ::AbstractMPS) = eachsite(GeometryStyle(ψ), ψ)
+
+eachsite(::GeometryStyle, ψ::AbstractMPS) = eachindex(ψ)
+
+#===========================================================================================
+TensorKit utility
+===========================================================================================#
+
+function TensorKit.dot(ψ₁::AbstractMPS, ψ₂::AbstractMPS; kwargs...)
+    geometry_style = GeometryStyle(ψ₁) & GeometryStyle(ψ₂)
+    return TensorKit.dot(geometry_style, ψ₁, ψ₂; kwargs...)
+end
+function Base.isapprox(ψ₁::AbstractMPS, ψ₂::AbstractMPS; kwargs...)
+    return isapprox(dot(ψ₁, ψ₂), 1; kwargs...)
+end
+TensorKit.norm(ψ::AbstractMPS) = TensorKit.norm(GeometryStyle(ψ), ψ)
+TensorKit.normalize!(ψ::AbstractMPS) = TensorKit.normalize!(GeometryStyle(ψ), ψ)
+TensorKit.normalize(ψ::AbstractMPS) = normalize!(copy(ψ))
+
+#===========================================================================================
+Fixedpoints
+===========================================================================================#
+
+"""
+    l_RR(ψ, location)
+
+Left dominant eigenvector of the `AR`-`AR` transfermatrix.
+"""
+l_RR(ψ::AbstractMPS, loc::Int = 1) = l_RR(GeometryStyle(ψ), ψ, loc)
+
+"""
+    l_RL(ψ, location)
+
+Left dominant eigenvector of the `AR`-`AL` transfermatrix.
+"""
+l_RL(ψ::AbstractMPS, loc::Int = 1) = l_RL(GeometryStyle(ψ), ψ, loc)
+
+"""
+    l_LR(ψ, location)
+
+Left dominant eigenvector of the `AL`-`AR` transfermatrix.
+"""
+l_LR(ψ::AbstractMPS, loc::Int = 1) = l_LR(GeometryStyle(ψ), ψ, loc)
+
+"""
+    l_LL(ψ, location)
+
+Left dominant eigenvector of the `AL`-`AL` transfermatrix.
+"""
+l_LL(ψ::AbstractMPS, loc::Int = 1) = l_LL(GeometryStyle(ψ), ψ, loc)
+
+"""
+    r_RR(ψ, location)
+
+Right dominant eigenvector of the `AR`-`AR` transfermatrix.
+"""
+r_RR(ψ::AbstractMPS, loc::Int = length(ψ)) = r_RR(GeometryStyle(ψ), ψ, loc)
+
+"""
+    r_RL(ψ, location)
+
+Right dominant eigenvector of the `AR`-`AL` transfermatrix.
+"""
+r_RL(ψ::AbstractMPS, loc::Int = length(ψ)) = r_RL(GeometryStyle(ψ), ψ, loc)
+
+"""
+    r_LR(ψ, location)
+
+Right dominant eigenvector of the `AL`-`AR` transfermatrix.
+"""
+r_LR(ψ::AbstractMPS, loc::Int = length(ψ)) = r_LR(GeometryStyle(ψ), ψ, loc)
+
+"""
+    r_LL(ψ, location)
+
+Right dominant eigenvector of the `AL`-`AL` transfermatrix.
+"""
+r_LL(ψ::AbstractMPS, loc::Int = length(ψ)) = r_LL(GeometryStyle(ψ), ψ, loc)
