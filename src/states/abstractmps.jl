@@ -256,7 +256,7 @@ TensorKit utility
 ===========================================================================================#
 
 function TensorKit.dot(ψ₁::AbstractMPS, ψ₂::AbstractMPS; kwargs...)
-    geometry_style = GeometryStyle(ψ₁) & GeometryStyle(ψ₂)
+    geometry_style = GeometryStyle(ψ₁, ψ₂)
     return TensorKit.dot(geometry_style, ψ₁, ψ₂; kwargs...)
 end
 function Base.isapprox(ψ₁::AbstractMPS, ψ₂::AbstractMPS; kwargs...)
