@@ -112,6 +112,9 @@ module TestMiscellaneous
 
         @test OperatorStyle(MPO) == MPOStyle()
         @test OperatorStyle(InfiniteMPO) == MPOStyle()
+        @test OperatorStyle(HamiltonianStyle()) == HamiltonianStyle()
+        @test @constinferred OperatorStyle(MPO, InfiniteMPO, MPO) == MPOStyle()
+        @test_throws ErrorException OperatorStyle(MPO, HamiltonianStyle())
 
         @test GeometryStyle(FiniteMPOHamiltonian) == FiniteChainStyle()
         @test GeometryStyle(InfiniteMPS) == InfiniteChainStyle()
