@@ -13,7 +13,7 @@ using matrix product states. For the most part, we replicate the results present
 [**Phys. Rev. B 105,
 134502**](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.105.134502), which can be
 consulted for any statements in this tutorial that are not otherwise cited. The Hamiltonian
-under study is now defined as follows:
+under study is defined as follows:
 
 $$H = -t \sum_{i} (\hat{a}_i^{\dagger} \hat{a}_{i+1} + \hat{a}_{i+1}^{\dagger} \hat{a}_i) + \frac{U}{2} \sum_i \hat{n}_i(\hat{n}_i - 1) - \mu \sum_i \hat{n}_i$$
 
@@ -61,7 +61,7 @@ Typically, such models are studied on a finite chain of $N$ sites with periodic 
 conditions, but this introduces finite-size effects that are rather annoying to deal with.
 In contrast, the MPS framework allows us to work directly in the thermodynamic limit,
 avoiding such artifacts. We will follow this line of exploration in this tutorial and leave
-finite systems for another time.
+finite systems for another example.
 
 In order to work in the thermodynamic limit, we will have to create an
 [`InfiniteMPS`](@ref). A complete specification of the MPS requires us to define the
@@ -99,12 +99,12 @@ md"""
 
 The [] accessor lets us see the underlying array, and indeed the operators are exactly what
 we require. Similarly, the Bose Hubbard model is also predefined in
-[`MPSKitModels.bose_hubbard_model`](@extref) also predefined (although we will construct our
-own variant later on).
+[`MPSKitModels.bose_hubbard_model`](@extref) (although we will construct our own variant
+later on).
 
 """
 
-hamiltonian = bose_hubbard_model(InfiniteChain(1), cutoff = cutoff, U = 1, mu = 0.5, t = 0.2) # It is not strictly required to pass InfiniteChain() and is only included for clarity; one may instead pass FiniteChain(N) as well
+hamiltonian = bose_hubbard_model(InfiniteChain(1); cutoff = cutoff, U = 1, mu = 0.5, t = 0.2) # It is not strictly required to pass InfiniteChain() and is only included for clarity; one may instead pass FiniteChain(N) as well
 
 md"""
 This has created the Hamiltonian operator as a [matrix product operator](@ref
@@ -118,13 +118,13 @@ ground_state, _, _ = find_groundstate(initial_state, hamiltonian, VUMPS(tol = 1.
 println("Energy: ", expectation_value(ground_state, hamiltonian))
 
 md"""
-This automatically runs the algorithm until a certain error [measure](@ref
+This automatically runs the algorithm until a certain [error measure](@ref
 MPSKit.calc_galerkin) falls below the specified tolerance or the maximum iterations is
 reached. Let us wrap all this into a convenient function.
 """
 
 function get_ground_state(mu, t, cutoff, D; kwargs...)
-    hamiltonian = bose_hubbard_model(InfiniteChain(), cutoff = cutoff, U = 1, mu = mu, t = t)
+    hamiltonian = bose_hubbard_model(InfiniteChain(); cutoff = cutoff, U = 1, mu = mu, t = t)
     state = InfiniteMPS(ℂ^(cutoff + 1), ℂ^D)
     state, _, _ = find_groundstate(state, hamiltonian, VUMPS(; kwargs...))
 
@@ -161,10 +161,11 @@ $\lim_{i \to \infty}\langle\hat{a}_i^{\dagger} \hat{a}_j\rangle ≈ \langle \hat
 This is a signature of long-range order and suggests the existence of a Bose-Einstein
 condensate. However, this is a bit odd since at zero temperature, the Bose Hubbard model is
 not expected to break any continuous symmetries ($U(1)$ in this case, corresponding to
-particle number conservation) due to the Mermin-Wagner theorem. The source of this
-contradiction lies in the fact that the true 1D superfluid ground state is an extended
-critical phase exhibiting algebraic decay, however, a finite bond-dimension MPS can only
-capture exponentially decaying correlations. As a result, the finite bond dimension
+particle number conservation) due to the
+[Mermin-Wagner theorem](https://en.wikipedia.org/wiki/Mermin%E2%80%93Wagner_theorem). The
+source of this contradiction lies in the fact that the true 1D superfluid ground state is an
+extended critical phase exhibiting algebraic decay, however, a finite bond-dimension MPS can
+only capture exponentially decaying correlations. As a result, the finite bond dimension
 effectively introduces a length scale into the system in a similar manner as finite-size
 effects. We can see this clearly by increasing the bond dimension. We also see that the
 correlation length seems to depend algebraically on the bond dimension as expected from
@@ -177,7 +178,7 @@ mu, t = 0.5, 0.2
 states = Vector{InfiniteMPS}(undef, length(Ds))
 
 Threads.@threads for idx in eachindex(Ds)
-    states[idx] = get_ground_state(mu, t, cutoff, Ds[idx], tol = 1.0e-7, verbosity = 1, maxiter = 500)
+    states[idx] = get_ground_state(mu, t, cutoff, Ds[idx]; tol = 1.0e-7, verbosity = 1, maxiter = 500)
 end
 
 npoints = 400
@@ -225,7 +226,9 @@ system which vanishes as $D \to \infty$.
 quasicondensate_density = map(state -> abs2(expectation_value(state, (0,) => a_op)), states)
 
 md"""
-We may now also visualize the momentum distribution function, which is obtained as the Fourier transform of the single-particle density matrix. Starting from the definition of the momentum occupation operator:
+We may now also visualize the momentum distribution function, which is obtained as the
+Fourier transform of the single-particle density matrix. Starting from the definition of the
+momentum occupation operators:
 
 ```math
 \hat{a}_k = \frac{1}{\sqrt{L}} \sum_j e^{-ikj} \hat{a}_j, \qquad 
@@ -272,7 +275,6 @@ momentum_distribution = vcat(momentum_distribution...)'
 plot(ks, momentum_distribution, lab = "D = " .* string.(permutedims(Ds)), lw = 1.5, xlabel = "Momentum k", ylabel = L"\langle n_k \rangle", ylim = [0, 50])
 
 md"""
-
 We see that the density seems to peak around $k=0$, this time seemingly becoming more
 prominent as $D \to \infty$ which seems to suggest again that there is a condensate.
 However, going by the Penrose-Onsager criterion, the existence of a condensate can be
@@ -335,9 +337,13 @@ function superfluid_stiffness_profile(t, mu, D, cutoff, ϵ = 1.0e-4, npoints = 1
     energies = zeros(length(phis))
 
     Threads.@threads for idx in eachindex(phis)
-        hamiltonian_twisted = bose_hubbard_model_twisted_bc(cutoff = cutoff, t = t, mu = mu, U = 1, phi = phis[idx])
+        hamiltonian_twisted = bose_hubbard_model_twisted_bc(;
+            cutoff = cutoff, t = t, mu = mu, U = 1, phi = phis[idx]
+        )
         state = InfiniteMPS(ℂ^(cutoff + 1), ℂ^D)
-        state_twisted, _, _ = find_groundstate(state, hamiltonian_twisted, VUMPS(; tol = 1.0e-8, verbosity = 0))
+        state_twisted, _, _ = find_groundstate(
+            state, hamiltonian_twisted, VUMPS(; tol = 1.0e-8, verbosity = 0)
+        )
         energies[idx] = real(expectation_value(state_twisted, hamiltonian_twisted))
     end
 
@@ -367,7 +373,7 @@ a_op = a_min(cutoff = cutoff)
 order_parameters = zeros(length(ts), length(mus))
 
 Threads.@threads for (i, j) in collect(Iterators.product(eachindex(mus), eachindex(ts)))
-    hamiltonian = bose_hubbard_model(InfiniteChain(), cutoff = cutoff, U = 1, mu = mus[i], t = ts[j])
+    hamiltonian = bose_hubbard_model(InfiniteChain(); cutoff = cutoff, U = 1, mu = mus[i], t = ts[j])
     init_state = InfiniteMPS(ℂ^(cutoff + 1), ℂ^D)
     state, _, _ = find_groundstate(init_state, hamiltonian, VUMPS(; tol = 1.0e-8, verbosity = 0))
     order_parameters[i, j] = abs(expectation_value(state, 0 => a_op))
