@@ -112,6 +112,9 @@ module TestMiscellaneous
 
         @test OperatorStyle(MPO) == MPOStyle()
         @test OperatorStyle(InfiniteMPO) == MPOStyle()
+        @test OperatorStyle(HamiltonianStyle()) == HamiltonianStyle()
+        @test @constinferred OperatorStyle(MPO, InfiniteMPO, MPO) == MPOStyle()
+        @test_throws ErrorException OperatorStyle(MPO, HamiltonianStyle())
 
         @test GeometryStyle(FiniteMPOHamiltonian) == FiniteChainStyle()
         @test GeometryStyle(InfiniteMPS) == InfiniteChainStyle()
@@ -120,5 +123,11 @@ module TestMiscellaneous
         @test GeometryStyle(FiniteMPOHamiltonian) == FiniteChainStyle()
         @test GeometryStyle(InfiniteMPO) == InfiniteChainStyle()
         @test GeometryStyle(InfiniteMPOHamiltonian) == InfiniteChainStyle()
+
+        @test GeometryStyle(GeometryStyle(FiniteMPS)) == GeometryStyle(FiniteMPS)
+        @test GeometryStyle(FiniteMPS, FiniteMPO) == FiniteChainStyle()
+        @test_throws ErrorException GeometryStyle(FiniteMPS, InfiniteMPO)
+        @test @constinferred GeometryStyle(InfiniteMPS, InfiniteMPO, InfiniteMPS) == InfiniteChainStyle()
+        @test_throws ErrorException GeometryStyle(FiniteMPS, FiniteMPO, InfiniteMPS)
     end
 end

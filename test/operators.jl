@@ -71,6 +71,8 @@ module TestOperators
             mps₁ = FiniteMPS(ψ₁)
             mps₂ = FiniteMPS(ψ₂)
 
+            @test @constinferred GeometryStyle(mps₁, mpo₁, mps₁) == GeometryStyle(mps₁)
+
             @test convert(TensorMap, mpo₁ * mps₁) ≈ O₁ * ψ₁
             @test mpo₁ * ψ₁ ≈ O₁ * ψ₁
             @test convert(TensorMap, mpo₃ * mps₁) ≈ O₃ * ψ₁
@@ -140,6 +142,7 @@ module TestOperators
         @test GeometryStyle(H) == FiniteChainStyle()
         @test OperatorStyle(typeof(H)) == HamiltonianStyle()
         @test OperatorStyle(H) == HamiltonianStyle()
+        @test OperatorStyle(H, H′) == OperatorStyle(H)
 
         # Infinite
         Ws = [Wmid]
@@ -410,6 +413,8 @@ module TestOperators
         ψ = InfiniteMPS([pspace], [ou ⊕ pspace])
 
         W = MPSKit.DenseMPO(make_time_mpo(ham, 1im * 0.5, WII()))
+
+        @test GeometryStyle(ψ, W) == GeometryStyle(ψ)
         @test W * (W * ψ) ≈ (W * W) * ψ atol = 1.0e-2 # TODO: there is a normalization issue here
     end
 
