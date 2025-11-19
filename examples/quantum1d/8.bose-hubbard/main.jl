@@ -22,9 +22,16 @@ relations (CCR):
 
 $$[\hat{a}_i, \hat{a}_j^{\dagger}] = \delta_{ij}.$$
 
-Each lattice site hosts a local Hilbert space corresponding to bosonic occupation states $|n\rangle$, where $(n = 0, 1, 2, \ldots)$. Since this space is formally infinite-dimensional, numerical simulations typically impose a truncation at some maximum occupation number $(n_{\text{max}})$. Such a treatment is justified since it can be observed that the simulation results quickly converge with the cutoff if the filling fraction is kept sufficiently low.
+Each lattice site hosts a local Hilbert space corresponding to bosonic occupation states
+$|n\rangle$, where $(n = 0, 1, 2, \ldots)$. Since this space is formally
+infinite-dimensional, numerical simulations typically impose a truncation at some maximum
+occupation number $(n_{\text{max}})$. Such a treatment is justified since it can be observed
+that the simulation results quickly converge with the cutoff if the filling fraction is kept
+sufficiently low.
 
-Within this truncated space, the local creation and annihilation operators are represented by finite-dimensional matrices. For example, with cutoff $n_{\text{max}}$, the annihilation operator takes the form
+Within this truncated space, the local creation and annihilation operators are represented
+by finite-dimensional matrices. For example, with cutoff $n_{\text{max}}$, the annihilation
+operator takes the form
 
 ```math
 \hat{a} =
@@ -242,7 +249,8 @@ the momentum distribution is
 = \frac{1}{L} \sum_{j',j} e^{ik(j'-j)} \langle \hat{a}_{j'}^\dagger \hat{a}_j \rangle.
 ```
 
-For a translationally invariant system, the correlation depends only on the distance $r = j' - j$:
+For a translationally invariant system, the correlation depends only on the distance
+$r = j' - j$:
 
 $$\langle \hat{a}_{j'}^\dagger \hat{a}_j \rangle = C(r) = \langle \hat{a}_r^\dagger \hat{a}_0 \rangle.$$
 
