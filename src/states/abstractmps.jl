@@ -249,7 +249,7 @@ If this hasn't been computed before, this can be computed as:
 - `kind=:ALAC` : AL[i] * AC[i+1]
 """ AC2
 
-AC2(psi::AbstractMPS, site::Int; kwargs...) = AC2(GeometryStyle(psi), psi, site; kwargs...)
+AC2(psi::AbstractMPS, site::Integer; kwargs...) = AC2(GeometryStyle(psi), psi, site; kwargs...)
 
 #===========================================================================================
 TensorKit utility
