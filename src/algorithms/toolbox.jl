@@ -43,7 +43,7 @@ Calculate the Galerkin error, which is the error between the solution of the ori
 Concretely, this is the overlap of the current state with the single-site derivative, projected onto the nullspace of the current state:
 
 ```math
-\\epsilon = |VL * (VL' * \\frac{above}{\\partial AC_{pos}})|
+\\epsilon = \\left|VL ⋅ \\left(VL^{\\dagger} ⋅ \\frac{\\partial \\text{above}}{\\partial AC_{\\text{pos}}}\\right)\\right|
 ```
 """
 function calc_galerkin(
