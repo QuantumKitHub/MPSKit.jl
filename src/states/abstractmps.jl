@@ -110,7 +110,7 @@ function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
 end
 
 """
-    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defalts.alg_qr())
+    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defaults.alg_qr())
 
 Make the set of MPS tensors full rank by performing a series of orthogonalizations.
 """
