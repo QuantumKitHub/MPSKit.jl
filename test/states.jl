@@ -11,6 +11,7 @@ module TestStates
     using MPSKit: _transpose_front, _transpose_tail
     using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle
     using MPSKit: TransferMatrix
+    using MPSKit: AC2
     using TensorKit
     using TensorKit: ℙ
 
@@ -120,6 +121,9 @@ module TestStates
         @test all(x -> x ≾ D, left_virtualspace(ψ))
         @test all(x -> x ≾ D, right_virtualspace(ψ))
 
+        normalize!(ψ)
+        @test norm(ψ) ≈ norm(InfiniteChainStyle(), ψ) ≈ 1.0
+
         for i in 1:length(ψ)
             @plansor difference[-1 -2; -3] := ψ.AL[i][-1 -2; 1] * ψ.C[i][1; -3] -
                 ψ.C[i - 1][-1; 1] * ψ.AR[i][1 -2; -3]
@@ -134,6 +138,17 @@ module TestStates
             @test TransferMatrix(ψ.AL[i], ψ.AR[i]) * r_LR(ψ, i) ≈ r_LR(ψ, i + 1)
             @test TransferMatrix(ψ.AR[i], ψ.AL[i]) * r_RL(ψ, i) ≈ r_RL(ψ, i + 1)
             @test TransferMatrix(ψ.AR[i], ψ.AR[i]) * r_RR(ψ, i) ≈ r_RR(ψ, i + 1)
+
+            @test l_LL(ψ, i) ≈ l_LL(InfiniteChainStyle(), ψ, i)
+            @test l_LR(ψ, i) ≈ l_LR(InfiniteChainStyle(), ψ, i)
+            @test l_RL(ψ, i) ≈ l_RL(InfiniteChainStyle(), ψ, i)
+            @test l_RR(ψ, i) ≈ l_RR(InfiniteChainStyle(), ψ, i)
+            @test r_LL(ψ, i) ≈ r_LL(InfiniteChainStyle(), ψ, i)
+            @test r_LR(ψ, i) ≈ r_LR(InfiniteChainStyle(), ψ, i)
+            @test r_RL(ψ, i) ≈ r_RL(InfiniteChainStyle(), ψ, i)
+            @test r_RR(ψ, i) ≈ r_RR(InfiniteChainStyle(), ψ, i)
+
+            @test @constinferred AC2(ψ, i) ≈ AC2(InfiniteChainStyle(), ψ, i)
         end
     end
 

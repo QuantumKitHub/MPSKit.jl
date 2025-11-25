@@ -337,7 +337,7 @@ Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
 end
 
 # TODO: check where gauge center is to determine efficient kind
-AC2(psi::FiniteMPS, site::Int) = psi.AC[site] * _transpose_tail(psi.AR[site + 1])
+AC2(::FiniteChainStyle, psi::AbstractMPS, site::Integer) = psi.AC[site] * _transpose_tail(psi.AR[site + 1])
 
 _complex_if_not_missing(x) = ismissing(x) ? x : complex(x)
 function Base.complex(mps::FiniteMPS)
@@ -541,14 +541,14 @@ function TensorKit.rmul!(ψ::FiniteMPS, a::Number)
     return ψ
 end
 
-function TensorKit.dot(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
+function TensorKit.dot(::FiniteChainStyle, ψ₁::AbstractMPS, ψ₂::AbstractMPS)
     #todo : rewrite this without having to gauge
     length(ψ₁) == length(ψ₂) || throw(ArgumentError("MPS with different length"))
     ρr = TransferMatrix(ψ₂.AR[2:end], ψ₁.AR[2:end]) * r_RR(ψ₂)
     return tr(_transpose_front(ψ₁.AC[1])' * _transpose_front(ψ₂.AC[1]) * ρr)
 end
 
-function TensorKit.norm(ψ::FiniteMPS)
+function TensorKit.norm(::FiniteChainStyle, ψ::AbstractMPS)
     c = ψ.center
     if isinteger(c) # center is an AC
         return norm(ψ.AC[Int(c)])
@@ -556,18 +556,17 @@ function TensorKit.norm(ψ::FiniteMPS)
         return norm(ψ.C[Int(c - 1 / 2)])
     end
 end
-TensorKit.normalize!(ψ::FiniteMPS) = rmul!(ψ, 1 / norm(ψ))
-TensorKit.normalize(ψ::FiniteMPS) = normalize!(copy(ψ))
+TensorKit.normalize!(::FiniteChainStyle, ψ::AbstractMPS) = rmul!(ψ, 1 / norm(ψ))
 
 #===========================================================================================
 Fixedpoints
 ===========================================================================================#
 
-function r_RR(ψ::FiniteMPS, site::Int = length(ψ))
+function r_RR(::FiniteChainStyle, ψ::AbstractMPS, site::Int = length(ψ))
     Vr = right_virtualspace(ψ.AR[site])
     return isomorphism(storagetype(site_type(ψ)), Vr ← Vr)
 end
-function l_LL(ψ::FiniteMPS, site::Int = 1)
+function l_LL(::FiniteChainStyle, ψ::AbstractMPS, site::Int = 1)
     Vl = left_virtualspace(ψ.AL[site])
     return isomorphism(storagetype(site_type(ψ)), Vl ← Vl)
 end
