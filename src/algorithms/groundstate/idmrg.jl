@@ -66,7 +66,7 @@ struct IDMRGState{S, O, E, T}
     ϵ::Float64
     energy::T
 end
-function IDMRGState{T}(mps::S, operator::O, envs::E, iter::Int, ϵ::Float64, energy) where {S, O, E, T} 
+function IDMRGState{T}(mps::S, operator::O, envs::E, iter::Int, ϵ::Float64, energy) where {S, O, E, T}
     return IDMRGState{S, O, E, T}(mps, operator, envs, iter, ϵ, T(energy))
 end
 
@@ -109,7 +109,7 @@ function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps,
 end
 
 function Base.iterate(
-        it::IterativeSolver{alg_type}, state::IDMRGState{<:Any, <:Any, <:Any, T}= it.state
+        it::IterativeSolver{alg_type}, state::IDMRGState{<:Any, <:Any, <:Any, T} = it.state
     ) where {alg_type <: Union{<:IDMRG, <:IDMRG2}, T}
     mps, envs, C_old, E_new = localupdate_step!(it, state)
 
@@ -127,7 +127,7 @@ function Base.iterate(
     end
 
     # New energy
-    ΔE = (E_new - state.energy)/2
+    ΔE = (E_new - state.energy) / 2
     (alg_type <: IDMRG2 && length(mps) == 2) && (ΔE /= 2) # This extra factor gives the correct energy per unit cell. I have no clue why right now.
 
     # update state
