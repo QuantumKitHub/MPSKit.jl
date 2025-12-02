@@ -58,32 +58,34 @@ end
 
 
 # Internal state of the IDMRG algorithm
-struct IDMRGState{S, O, E}
+struct IDMRGState{S, O, E, T}
     mps::S
     operator::O
     envs::E
     iter::Int
     ϵ::Float64
-    E_current::Number
+    energy::T
+end
+function IDMRGState{T}(mps::S, operator::O, envs::E, iter::Int, ϵ::Float64, energy) where {S, O, E, T} 
+    return IDMRGState{S, O, E, T}(mps, operator, envs, iter, ϵ, T(energy))
 end
 
-function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = environments(mps, operator)) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
-    # isfinite(mps) && throw(ArgumentError("mps should be an 'InfiniteMPS'"))
-    (length(mps) ≤ 1 && alg isa IDMRG2) && throw(ArgumentError("unit cell should be >= w"))
+function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps, operator)) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
+    (length(mps) ≤ 1 && alg isa IDMRG2) && throw(ArgumentError("unit cell should be >= 2"))
     log = alg isa IDMRG ? IterLog("IDMRG") : IterLog("IDMRG2")
     mps = copy(mps)
     iter = 0
     ϵ = calc_galerkin(mps, operator, mps, envs)
-    E_current = 0
+    E = zero(Base.promote_type(scalartype(mps), scalartype(operator)))
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 begin
-            E_current = expectation_value(mps, operator, envs)
-            loginit!(log, ϵ, E_current)
+            E = expectation_value(mps, operator, envs)
+            loginit!(log, ϵ, E)
         end
     end
 
-    state = IDMRGState(mps, operator, envs, iter, ϵ, E_current)
+    state = IDMRGState(mps, operator, envs, iter, ϵ, E)
     it = IterativeSolver(alg, state)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
@@ -106,22 +108,30 @@ function find_groundstate(mps::AbstractMPS, operator, alg::alg_type, envs = envi
     end
 end
 
-function Base.iterate(it::IterativeSolver{alg_type}, state= it.state) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
+function Base.iterate(
+        it::IterativeSolver{alg_type}, state::IDMRGState{<:Any, <:Any, <:Any, T}= it.state
+    ) where {alg_type <: Union{<:IDMRG, <:IDMRG2}, T}
     mps, envs, C_old, E_new = localupdate_step!(it, state)
 
     # error criterion
     C = mps.C[0]
-    smallest = infimum(_firstspace(C_old), _firstspace(C))
-    e1 = isometry(_firstspace(C_old), smallest)
-    e2 = isometry(_firstspace(C), smallest)
-    ϵ = norm(e2' * C * e2 - e1' * C_old * e1)
+    space_C_old = _firstspace(C_old)
+    space_C = _firstspace(C)
+    if space_C != space_C_old
+        smallest = infimum(space_C_old, space_C)
+        e1 = isometry(space_C_old, smallest)
+        e2 = isometry(space_C, smallest)
+        ϵ = norm(e2' * C * e2 - e1' * C_old * e1)
+    else
+        ϵ = norm(C - C_old)
+    end
 
     # New energy
-    ΔE = (E_new - state.E_current)/2
-    (alg_type <: IDMRG2 && length(mps) == 2) && (ΔE /= 2)
+    ΔE = (E_new - state.energy)/2
+    (alg_type <: IDMRG2 && length(mps) == 2) && (ΔE /= 2) # This extra factor gives the correct energy per unit cell. I have no clue why right now.
 
     # update state
-    it.state = IDMRGState(mps, state.operator, envs, state.iter + 1, ϵ, E_new)
+    it.state = IDMRGState{T}(mps, state.operator, envs, state.iter + 1, ϵ, E_new)
 
     return (mps, envs, ϵ, ΔE), it.state
 end
@@ -135,8 +145,8 @@ function MPSKit.localupdate_step!(
     return mps, envs, C_old, E
 end
 
-function _localupdate_sweep_idmrg!(ψ::AbstractMPS, H, envs, alg_eigsolve, ::IDMRG)
-    E=0
+function _localupdate_sweep_idmrg!(ψ, H, envs, alg_eigsolve, ::IDMRG)
+    local E
     C_old = ψ.C[0]
     # left to right sweep
     for pos in 1:length(ψ)
@@ -165,8 +175,7 @@ function _localupdate_sweep_idmrg!(ψ::AbstractMPS, H, envs, alg_eigsolve, ::IDM
 end
 
 
-function _localupdate_sweep_idmrg!(ψ::AbstractMPS, H, envs, alg_eigsolve, alg::IDMRG2)
-    E=0
+function _localupdate_sweep_idmrg!(ψ, H, envs, alg_eigsolve, alg::IDMRG2)
     # sweep from left to right
     for pos in 1:(length(ψ) - 1)
         ac2 = AC2(ψ, pos; kind = :ACAR)
