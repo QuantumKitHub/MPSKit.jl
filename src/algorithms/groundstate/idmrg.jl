@@ -72,7 +72,7 @@ end
 
 function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps, operator)) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
     (length(mps) ≤ 1 && alg isa IDMRG2) && throw(ArgumentError("unit cell should be >= 2"))
-    GeometryStyle(operator, mps) == InfiniteChainStyle() && throw(ArgumentError("IDMRG only supports infinite systems."))
+    GeometryStyle(operator, mps) != InfiniteChainStyle() && throw(ArgumentError("IDMRG only supports infinite systems."))
     log = alg isa IDMRG ? IterLog("IDMRG") : IterLog("IDMRG2")
     mps = copy(mps)
     iter = 0
