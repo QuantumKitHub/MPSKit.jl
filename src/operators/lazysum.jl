@@ -30,6 +30,9 @@ Base.complex(x::LazySum) = LazySum(complex.(x.ops))
 TimeDependence(x::LazySum) = istimed(x) ? TimeDependent() : NotTimeDependent()
 istimed(x::LazySum) = any(istimed, x)
 
+OperatorStyle(::Type{LazySum{O}}) where {O} = OperatorStyle(O)
+GeometryStyle(::Type{LazySum{O}}) where {O} = GeometryStyle(O
+
 # constructors
 LazySum(x) = LazySum([x])
 LazySum(ops::AbstractVector, fs::AbstractVector) = LazySum(map(MultipliedOperator, ops, fs))
