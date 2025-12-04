@@ -26,7 +26,7 @@ function find_groundstate(
         tol = Defaults.tol, maxiter = Defaults.maxiter,
         verbosity = Defaults.verbosity, trscheme = nothing
     )
-    if GeometryStyle(ψ) == InfiniteChainStyle() 
+    if GeometryStyle(ψ) == InfiniteChainStyle()
         alg = VUMPS(; tol = max(1.0e-4, tol), verbosity, maxiter)
         if tol < 1.0e-4
             alg = alg & GradientGrassmann(; tol = tol, maxiter, verbosity)

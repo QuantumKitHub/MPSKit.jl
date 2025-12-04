@@ -31,7 +31,7 @@ TimeDependence(x::LazySum) = istimed(x) ? TimeDependent() : NotTimeDependent()
 istimed(x::LazySum) = any(istimed, x)
 
 OperatorStyle(::Type{LazySum{O}}) where {O} = OperatorStyle(O)
-GeometryStyle(::Type{LazySum{O}}) where {O} = GeometryStyle(O
+GeometryStyle(::Type{LazySum{O}}) where {O} = GeometryStyle(O)
 
 # constructors
 LazySum(x) = LazySum([x])
