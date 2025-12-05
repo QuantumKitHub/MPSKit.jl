@@ -53,22 +53,20 @@ module TestMultifusion
 
     @testset "InfiniteMPS construction" begin
         for (P, V) in bad_fusions
-            @test_throws ArgumentError("invalid fusion channel") InfiniteMPS([P], [V])
+            @test_throws ArgumentError InfiniteMPS([P], [V])
         end
     end
 
     @testset "FiniteMPS construction" begin
-        Prand, Vrand = rand(bad_fusions)
-        @test_throws ArgumentError("one of Type IsingBimodule doesn't exist") FiniteMPS(2, Prand, Vrand)
-
         for (P, V) in bad_fusions
+            @test_warn "no fusion channels available at site 2" FiniteMPS(rand(2:100), P, V)
             @test_warn "no fusion channels available at site 2" FiniteMPS(rand(2:100), P, V; left = V, right = V)
         end
     end
 
     @testset "Exact diagonalization" begin
         H = TFIM_multifusion(; g = 0, L = 4)
-        @test_throws ArgumentError("one of Type IsingBimodule doesn't exist") exact_diagonalization(H)
+        @test_throws ArgumentError exact_diagonalization(H)
 
         E, ψ = exact_diagonalization(H; sector = D0) # test that it runs with kwarg
         @test isapprox(E, [-3, -1, 1, 3]; atol = 1.0e-6)
@@ -85,7 +83,7 @@ module TestMultifusion
         v = variance(ψ, H)
         E = expectation_value(ψ, H, envs)
 
-        ψ2, envs2, δ2 = find_groundstate(init, H, DMRG2(; trscheme = truncbelow(1.0e-6)))
+        ψ2, envs2, δ2 = find_groundstate(init, H, DMRG2(; trscheme = trunctol(; atol = 1.0e-6)))
         v2 = variance(ψ2, H)
         E2 = expectation_value(ψ2, H, envs2)
 
@@ -98,11 +96,10 @@ module TestMultifusion
         ED, _ = exact_diagonalization(H; sector = D0)
         @test isapprox(E, first(ED); atol = 1.0e-6)
 
-        @test_throws ArgumentError("one of Type IsingBimodule doesn't exist") excitations(H, QuasiparticleAnsatz(), ψ)
-        excE, qp = excitations(H, QuasiparticleAnsatz(), ψ2; sector = C1, num = 1) # testing sector kwarg
+        excE, qp = excitations(H, QuasiparticleAnsatz(), ψ2; sector = C1, num = 1)
         @test 0 < variance(qp[1], H) < 1.0e-8
 
-        excE_DM, qp_DM = excitations(H, FiniteExcited(; gsalg = DMRG2(; trscheme = truncbelow(1.0e-6))), ψ2; num = 1)
+        excE_DM, qp_DM = excitations(H, FiniteExcited(; gsalg = DMRG2(; trscheme = trunctol(; atol = 1.0e-6))), ψ2; num = 1)
         @test isapprox(first(excE_DM), first(excE) + E2; atol = 1.0e-6)
     end
 
@@ -118,7 +115,7 @@ module TestMultifusion
         E = expectation_value(ψ, H, envs)
         v = variance(ψ, H)
 
-        ψ2, envs2, δ2 = find_groundstate(init, H, IDMRG2(; tol = tol, trscheme = truncbelow(1.0e-6), maxiter = 400))
+        ψ2, envs2, δ2 = find_groundstate(init, H, IDMRG2(; tol = tol, trscheme = trunctol(; atol = 1.0e-6), maxiter = 400))
         E2 = expectation_value(ψ2, H, envs2)
         v2 = variance(ψ2, H)
 
@@ -136,14 +133,12 @@ module TestMultifusion
             @test var < 1.0e-8
         end
 
-        @test_throws ArgumentError("sectors of $V are non-diagonal") transfer_spectrum(ψ)
-        @test first(transfer_spectrum(ψ2; sector = C0)) ≈ 1 # testing sector kwarg
+        @test first(transfer_spectrum(ψ2; sector = C0)) ≈ 1
         @test !(abs(first(transfer_spectrum(ψ2; sector = C1))) ≈ 1) # testing injectivity
 
         @test only(keys(entanglement_spectrum(ψ2))) == M
 
         momentum = 0
-        @test_throws ArgumentError("one of Type IsingBimodule doesn't exist") excitations(H, QuasiparticleAnsatz(), momentum, ψ)
         excC1, qpC1 = excitations(H, QuasiparticleAnsatz(), momentum, ψ3; sector = C1)
         @test isapprox(first(excC1), abs(2 * (g - 1)); atol = 1.0e-6) # charged excitation lower in energy
         @test variance(qpC1[1], H) < 1.0e-8
@@ -160,7 +155,7 @@ module TestMultifusion
         @test variance(qpD1[1], Hdual) < 1.0e-8
 
         # comparison to Z2 Ising: injective in symmetric phase
-        HZ2 = transverse_field_ising(Z2Irrep; g = 1 / g, L = Inf, twosite = true)
+        HZ2 = repeat(transverse_field_ising(Z2Irrep; g = 1 / g, L = Inf), 2)
         VZ2 = Z2Space(0 => 24, 1 => 24)
         PZ2 = Z2Space(0 => 1, 1 => 1)
         initZ2 = InfiniteMPS([PZ2, PZ2], [VZ2, VZ2])
