@@ -85,14 +85,14 @@ Create and optimise infinite quasiparticle states.
 # Keywords
 - `num::Int`: number of excited states to compute
 - `solver`: algorithm for the linear solver of the quasiparticle environments
-- `sector=one(sectortype(left_ψ))`: charge of the quasiparticle state
+- `sector=leftunit(left_ψ)`: charge of the quasiparticle state
 - `parallel=true`: enable multi-threading over different momenta
 """
 function excitations(
         H, alg::QuasiparticleAnsatz, momentum::Number, lmps::InfiniteMPS,
         lenvs = environments(lmps, H), rmps::InfiniteMPS = lmps,
         renvs = lmps === rmps ? lenvs : environments(rmps, H);
-        sector = one(sectortype(lmps)), kwargs...
+        sector = leftunit(lmps), kwargs...
     )
     ϕ₀ = LeftGaugedQP(rand, lmps, rmps; sector, momentum)
     return excitations(H, alg, ϕ₀, lenvs, renvs; kwargs...)
@@ -102,7 +102,7 @@ function excitations(
         lenvs = environments(lmps, H), rmps = lmps,
         renvs = lmps === rmps ? lenvs : environments(rmps, H);
         verbosity = Defaults.verbosity, num = 1,
-        sector = one(sectortype(lmps)), parallel = true, kwargs...
+        sector = leftunit(lmps), parallel = true, kwargs...
     )
     # wrapper to evaluate sector as positional argument
     Toutput = let
@@ -178,13 +178,13 @@ Create and optimise finite quasiparticle states.
 
 # Keywords
 - `num::Int`: number of excited states to compute
-- `sector=one(sectortype(left_ψ))`: charge of the quasiparticle state
+- `sector=leftunit(lmps)`: charge of the quasiparticle state
 """
 function excitations(
         H, alg::QuasiparticleAnsatz, lmps::FiniteMPS,
         lenvs = environments(lmps, H), rmps::FiniteMPS = lmps,
         renvs = lmps === rmps ? lenvs : environments(rmps, H);
-        sector = one(sectortype(lmps)), num = 1
+        sector = leftunit(lmps), num = 1
     )
     ϕ₀ = LeftGaugedQP(rand, lmps, rmps; sector)
     return excitations(H, alg, ϕ₀, lenvs, renvs; num)
@@ -273,7 +273,7 @@ function excitations(
         H::MultilineMPO, alg::QuasiparticleAnsatz, momentum::Real, lmps::MultilineMPS,
         lenvs = environments(lmps, H), rmps = lmps,
         renvs = lmps === rmps ? lenvs : environments(rmps, H);
-        sector = one(sectortype(lmps)), kwargs...
+        sector = leftunit(lmps), kwargs...
     )
     ϕ₀ = LeftGaugedQP(randn, lmps, rmps; sector, momentum)
     return excitations(H, alg, ϕ₀, lenvs, renvs; kwargs...)

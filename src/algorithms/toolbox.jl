@@ -78,7 +78,7 @@ end
 
 """
     transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
-                           sector=first(sectors(oneunit(left_virtualspace(above, 1)))))
+                           sector=leftunit(above))
 
 Calculate the partial spectrum of the left mixed transfer matrix corresponding to the
 overlap of a given `above` state and a `below` state. The `sector` keyword argument can be
@@ -89,7 +89,7 @@ domain of each eigenvector. The `tol` and `num_vals` keyword arguments are passe
 """
 function transfer_spectrum(
         above::InfiniteMPS; below = above, tol = Defaults.tol, num_vals = 20,
-        sector = first(sectors(oneunit(left_virtualspace(above, 1))))
+        sector = leftunit(above)
     )
     init = randomize!(
         similar(

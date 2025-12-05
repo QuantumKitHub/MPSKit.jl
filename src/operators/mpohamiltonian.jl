@@ -419,17 +419,15 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
 
     # avoid using one(S)
     somempo = local_mpos[1].second[1]
-    sp_oneleg = space(somempo, 1)
-
-    _oneunit = oneunit(sp_oneleg) # should be rightoneunit, but MPOHamiltonians are always diagonal for now
+    _rightunit = space(somempo, 1) # should be rightunitspace, but MPOHamiltonians are always diagonal for now
 
     virtualsumspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
-    virtualsumspaces[1] = SumSpace(fill(_oneunit, 1))
-    virtualsumspaces[end] = SumSpace(fill(_oneunit, 1))
+    virtualsumspaces[1] = SumSpace(fill(_rightunit, 1))
+    virtualsumspaces[end] = SumSpace(fill(_rightunit, 1))
 
     for i in 1:(length(lattice) - 1)
         n_channels = maximum(last, nonzero_keys[i]; init = 1) + 1
-        V = SumSpace(fill(_oneunit, n_channels))
+        V = SumSpace(fill(_rightunit, n_channels))
         if n_channels > 2
             for ((key_L, key_R), O) in zip(nonzero_keys[i], nonzero_opps[i])
                 V[key_R == 0 ? end : key_R] = if O isa Number
@@ -509,12 +507,11 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     )
     # avoid using one(S)
     somempo = local_mpos[1].second[1]
-    sp_oneleg = space(somempo, 1)
+    _rightunit = space(somempo, 1) # should be a rightunitspace
 
-    _oneunit = oneunit(sp_oneleg)
     for V in virtualspaces
-        V[1] = _oneunit
-        V[end] = _oneunit
+        V[1] = _rightunit
+        V[end] = _rightunit
     end
 
     # start by filling in tensors -> space information available
@@ -560,7 +557,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
         end
     end
 
-    foreach(Base.Fix2(replace!, missing => _oneunit), virtualspaces)
+    foreach(Base.Fix2(replace!, missing => _rightunit), virtualspaces)
     virtualsumspaces = map(virtualspaces) do V
         return SumSpace(collect(S, V))
     end
@@ -691,7 +688,8 @@ function Base.:+(
     ) where {O <: JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
-    Vtriv = oneunit(space(first(H₁[1]), 1)) # should also be rightoneunit, but is currently diagonal
+    # TODO: check if spaces match
+    Vtriv = rightunitspace(first(physicalspace(H₁)))
 
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims = (1, 4))
@@ -715,7 +713,8 @@ function Base.:+(
     ) where {O <: JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
-    Vtriv = oneunit(space(first(H₁[1]), 1))
+    # TODO: check if spaces match
+    Vtriv = rightunitspace(first(physicalspace(H₁)))
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims = (1, 4))
         B = cat(H₁[i].B, H₂[i].B; dims = 1)

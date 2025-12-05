@@ -306,7 +306,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S <: FiniteMPS}
     elt = scalartype(v)
 
     utl = auxiliaryspace(v)
-    ou = oneunit(utl)
+    ou = leftunitspace(utl)
     utsp = ou ⊕ ou
     upper = isometry(storagetype(site_type(v.left_gs)), utsp, ou)
     lower = left_null(upper)

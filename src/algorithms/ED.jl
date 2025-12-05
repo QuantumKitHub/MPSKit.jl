@@ -32,7 +32,7 @@ equivalent to dense eigenvectors.
 """
 function exact_diagonalization(
         H::FiniteMPOHamiltonian;
-        sector = one(sectortype(H)), num::Int = 1, which::Symbol = :SR,
+        sector = rightunit(H), num::Int = 1, which::Symbol = :SR,
         alg = Defaults.alg_eigsolve(; dynamic_tols = false)
     )
     L = length(H)
@@ -44,7 +44,7 @@ function exact_diagonalization(
 
     # fuse from left to right
     ALs = Vector{Union{Missing, TA}}(missing, L)
-    left = spacetype(H)(one(sector) => 1) # might need to be rightone, leave this for now
+    left = spacetype(H)(rightunit(sector) => 1)
     for i in 1:(middle_site - 1)
         P = physicalspace(H, i)
         ALs[i] = isomorphism(T, left ⊗ P ← fuse(left ⊗ P))
