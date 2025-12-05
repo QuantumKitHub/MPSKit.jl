@@ -245,3 +245,6 @@ physicalspace(ψ::AbstractMPS) = map(Base.Fix1(physicalspace, ψ), eachsite(ψ))
 Return an iterator over the sites of the MPS `state`.
 """
 eachsite(ψ::AbstractMPS) = eachindex(ψ)
+
+TensorKit.leftunit(ψ::AbstractMPS) = only(sectors(leftunitspace(left_virtualspace(ψ, 1))))
+TensorKit.rightunit(ψ::AbstractMPS) = only(sectors(rightunitspace(right_virtualspace(ψ, 1))))

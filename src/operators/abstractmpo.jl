@@ -31,6 +31,9 @@ right_virtualspace(mpo::AbstractMPO) = map(Base.Fix1(right_virtualspace, mpo), e
 physicalspace(mpo::AbstractMPO, site::Int) = physicalspace(mpo[site])
 physicalspace(mpo::AbstractMPO) = map(Base.Fix1(physicalspace, mpo), eachsite(mpo))
 
+TensorKit.leftunit(mpo::AbstractMPO) = only(sectors(leftunitspace(physicalspace(mpo, 1))))
+TensorKit.rightunit(mpo::AbstractMPO) = only(sectors(rightunitspace(physicalspace(mpo, 1))))
+
 for ftype in (:spacetype, :sectortype, :storagetype)
     @eval TensorKit.$ftype(mpo::AbstractMPO) = $ftype(typeof(mpo))
     @eval TensorKit.$ftype(::Type{MPO}) where {MPO <: AbstractMPO} = $ftype(eltype(MPO))
