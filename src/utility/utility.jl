@@ -149,31 +149,3 @@ function check_unambiguous_braiding(V::VectorSpace)
     return check_unambiguous_braiding(Bool, V) ||
         throw(ArgumentError("cannot unambiguously braid $V"))
 end
-
-# temporary workaround for the fact that left_orth and right_orth are poorly designed:
-function _left_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm, trunc::MatrixAlgebraKit.TruncationStrategy = notrunc())
-    if alg isa LAPACK_HouseholderQR
-        return left_orth!(t; kind = :qr, alg_qr = alg, trunc)
-    elseif alg isa LAPACK_HouseholderLQ
-        return left_orth!(t; kind = :qr, alg_qr = LAPACK_HouseholderQR(; alg.kwargs...), trunc)
-    elseif alg isa PolarViaSVD
-        return left_orth!(t; kind = :polar, alg_polar = alg, trunc)
-    elseif alg isa LAPACK_SVDAlgorithm
-        return left_orth!(t; kind = :svd, alg_svd = alg, trunc)
-    else
-        error(lazy"unkown algorithm $alg")
-    end
-end
-function _right_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm, trunc::TruncationStrategy = notrunc())
-    if alg isa LAPACK_HouseholderLQ
-        return right_orth!(t; kind = :lq, alg_lq = alg, trunc)
-    elseif alg isa LAPACK_HouseholderQR
-        return right_orth!(t; kind = :lq, alg_lq = LAPACK_HouseholderLQ(; alg.kwargs...), trunc)
-    elseif alg isa PolarViaSVD
-        return right_orth!(t; kind = :polar, alg_polar = alg, trunc)
-    elseif alg isa LAPACK_SVDAlgorithm
-        return right_orth!(t; kind = :svd, alg_svd = alg, trunc)
-    else
-        error(lazy"unkown algorithm $alg")
-    end
-end
