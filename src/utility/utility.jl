@@ -153,26 +153,34 @@ end
 # temporary workaround for the fact that left_orth and right_orth are poorly designed:
 function _left_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm, trunc::MatrixAlgebraKit.TruncationStrategy = notrunc())
     if alg isa LAPACK_HouseholderQR
-        return left_orth!(t; kind = :qr, alg_qr = alg, trunc)
+        left_orth_alg = MatrixAlgebraKit.select_algorithm(left_orth!, t, Val(:qr); alg.kwargs...)
+        return left_orth!(t, left_orth_alg)
     elseif alg isa LAPACK_HouseholderLQ
-        return left_orth!(t; kind = :qr, alg_qr = LAPACK_HouseholderQR(; alg.kwargs...), trunc)
+        left_orth_alg = MatrixAlgebraKit.select_algorithm(left_orth!, t, Val(:qr); alg.kwargs...)
+        return left_orth!(t, left_orth_alg)
     elseif alg isa PolarViaSVD
-        return left_orth!(t; kind = :polar, alg_polar = alg, trunc)
+        left_orth_alg = MatrixAlgebraKit.select_algorithm(left_orth!, t, Val(:polar); alg.kwargs...)
+        return left_orth!(t, left_orth_alg)
     elseif alg isa LAPACK_SVDAlgorithm
-        return left_orth!(t; kind = :svd, alg_svd = alg, trunc)
+        left_orth_alg = MatrixAlgebraKit.select_algorithm(left_orth!, t, Val(:svd); trunc, alg.kwargs...)
+        return left_orth!(t, left_orth_alg)
     else
         error(lazy"unkown algorithm $alg")
     end
 end
 function _right_orth!(t; alg::MatrixAlgebraKit.AbstractAlgorithm, trunc::TruncationStrategy = notrunc())
     if alg isa LAPACK_HouseholderLQ
-        return right_orth!(t; kind = :lq, alg_lq = alg, trunc)
+        right_orth_alg = MatrixAlgebraKit.select_algorithm(right_orth!, t, Val(:lq); alg.kwargs...)
+        return right_orth!(t, right_orth_alg)
     elseif alg isa LAPACK_HouseholderQR
-        return right_orth!(t; kind = :lq, alg_lq = LAPACK_HouseholderLQ(; alg.kwargs...), trunc)
+        right_orth_alg = MatrixAlgebraKit.select_algorithm(right_orth!, t, Val(:lq); alg.kwargs...)
+        return right_orth!(t, right_orth_alg)
     elseif alg isa PolarViaSVD
-        return right_orth!(t; kind = :polar, alg_polar = alg, trunc)
+        right_orth_alg = MatrixAlgebraKit.select_algorithm(right_orth!, t, Val(:polar); alg.kwargs...)
+        return right_orth!(t, right_orth_alg)
     elseif alg isa LAPACK_SVDAlgorithm
-        return right_orth!(t; kind = :svd, alg_svd = alg, trunc)
+        right_orth_alg = MatrixAlgebraKit.select_algorithm(right_orth!, t, Val(:svd); trunc, alg.kwargs...)
+        return right_orth!(t, right_orth_alg)
     else
         error(lazy"unkown algorithm $alg")
     end
