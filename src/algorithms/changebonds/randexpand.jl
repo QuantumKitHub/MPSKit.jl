@@ -82,7 +82,8 @@ Sample basis states within a given `V::VectorSpace` by creating weights for each
 are distributed uniformly, and then truncating according to the given `strategy`.
 """
 function sample_space(V, strategy)
-    S = TensorKit.SectorDict(c => Random.rand(dim(V, c)) for c in sectors(V))
+    S = TensorKit.SectorVector{Float64}(undef, V)
+    Random.rand!(parent(S))
     ind = MatrixAlgebraKit.findtruncated(S, strategy)
     return TensorKit.Factorizations.truncate_space(V, ind)
 end
