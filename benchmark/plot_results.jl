@@ -8,12 +8,14 @@ using Statistics
 resultdir = joinpath(@__DIR__, "results")
 resultfile(i) = "results_MPSKit@bench$i.json"
 
+versions = [0, 1, 2, 3, 5]
+
 df_contract = let df = DataFrame(
         :version => Int[], :model => String[], :symmetry => String[],
         :D => Int[], :V => Int[], :memory => Int[], :allocs => Int[], :times => Vector{Int}[]
     )
 
-    for version in 0:3
+    for version in versions
         result = JSON.parsefile(joinpath(resultdir, resultfile(version)))
         for (model, model_res) in result.data.derivatives.data.AC2_contraction.data
             for (symmetry, sym_res) in model_res.data
@@ -35,7 +37,7 @@ df_prep = let df = DataFrame(
         :D => Int[], :V => Int[], :memory => Int[], :allocs => Int[], :times => Vector{Int}[]
     )
 
-    for version in 0:3
+    for version in versions
         result = JSON.parsefile(joinpath(resultdir, resultfile(version)))
         for (model, model_res) in result.data.derivatives.data.AC2_preparation.data
             for (symmetry, sym_res) in model_res.data

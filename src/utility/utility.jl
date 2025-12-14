@@ -8,8 +8,8 @@ function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap; copy::Bool 
     return repartition(t1, numout(t2), numin(t2); copy)
 end
 
-_mul_front(C, A) = _transpose_front(C * _transpose_tail(A))
-_mul_tail(A, C) = A * C
+_mul_front(C, A) = matrix_contract(A, C, 1; transpose = true) # _transpose_front(C * _transpose_tail(A))
+_mul_tail(A, C) = matrix_contract(A, C, numind(A)) # A * C
 
 function _similar_tail(A::AbstractTensorMap)
     cod = _firstspace(A)
@@ -143,4 +143,109 @@ end
 function check_unambiguous_braiding(V::VectorSpace)
     return check_unambiguous_braiding(Bool, V) ||
         throw(ArgumentError("cannot unambiguously braid $V"))
+end
+
+"""
+    matrix_contract(
+        A::AbstractTensorMap, B::AbstractTensorMap{T, S, 1, 1}, i::Int,
+        α::Number = One(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator();
+        transpose::Bool = false
+    )
+
+Compute the tensor contraction `α * A * B`, where the (1, 1) - tensor `B` is attached to index `i` of `A`.
+Whenever `transpose = true`, this contraction (lazily) uses `transpose(B)` instead.
+
+See also [`matrix_contract!`](@ref).
+"""
+function matrix_contract(
+        A::AbstractTensorMap, B::AbstractTensorMap{<:Any, <:Any, 1, 1}, i::Int,
+        α::Number = One(), backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator();
+        transpose::Bool = false
+    )
+    if i <= numout(A)
+        cod = ProductSpace(TT.setindex(codomain(A).spaces, space(B, transpose ? 1 : 2), i))
+        dom = domain(A)
+    else
+        cod = codomain(A)
+        dom = ProductSpace(TT.setindex(domain(A).spaces, space(B, transpose ? 1 : 2)', i - numout(A)))
+    end
+    T = TensorOperations.promote_contract(scalartype(A), scalartype(B), scalartype(α))
+    C = similar(A, T, cod ← dom)
+    return matrix_contract!(C, A, B, i, α, Zero(), backend, allocator; transpose)
+end
+
+"""
+    matrix_contract!(
+        C::AbstractTensorMap, A::AbstractTensorMap, B::AbstractTensorMap{T, S, 1, 1}, i::Int,
+        α::Number = One(), β::Number = Zero(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator();
+        transpose::Bool = false
+    )
+
+Compute the tensor contraction `C ← β * C + α * A * B`, where the (1, 1) - tensor `B` is attached to index `i` of `A`,
+and the result is added into `C`. Whenever `transpose = true`, this contraction (lazily) uses `transpose(B)` instead.
+
+See also [`matrix_contract`](@ref).
+"""
+function matrix_contract!(
+        C::AbstractTensorMap, A::AbstractTensorMap, B::AbstractTensorMap{<:Any, <:Any, 1, 1}, i::Int,
+        α::Number = One(), β::Number = Zero(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator();
+        transpose::Bool = false
+    )
+
+    @boundscheck for k in 1:numind(C)
+        numin(C) == numin(A) && numout(C) == numout(A) || throw(ArgumentError("Invalid number of dimensions"))
+        if k == i
+            space(C, k) == space(B, transpose ? 1 : 2) || throw(SpaceMismatch())
+            space(A, k) == space(B, transpose ? 2 : 1)' || throw(SpaceMismatch())
+        else
+            space(C, k) == space(A, k) || throw(SpaceMismatch())
+        end
+    end
+
+    N, N₁ = numind(C), numout(C)
+    pA = (TT.deleteat(ntuple(identity, N), i), (i,))
+    pB = transpose ? ((2,), (1,)) : ((1,), (2,))
+    pAB = TensorKit._canonicalize(TT.insertafter(ntuple(identity, N - 1), i - 1, (N,)), C)
+
+    Bblocks = blocks(B)
+    for ((f₁, f₂), c) in subblocks(C)
+        uncoupled_i = i <= N₁ ? f₁.uncoupled[i] : f₂.uncoupled[i - N₁]
+        transpose && (uncoupled_i = dual(uncoupled_i))
+        if TensorKit.hasblock(B, uncoupled_i)
+            a = A[f₁, f₂]
+            b = Bblocks[uncoupled_i]
+            TensorOperations.tensorcontract!(c, a, pA, false, b, pB, false, pAB, α, β, backend, allocator)
+        else
+            scale!(c, β)
+        end
+    end
+
+    return C
+end
+
+@inline fuse_legs(x::TensorMap, N₁::Int, N₂::Int) = fuse_legs(x, Val(N₁), Val(N₂))
+function fuse_legs(x::TensorMap, ::Val{N₁}, ::Val{N₂}) where {N₁, N₂}
+    ((0 <= N₁ <= numout(x)) && (0 <= N₂ <= numin(x))) || throw(ArgumentError("invalid fusing scheme"))
+    init = one(spacetype(x))
+
+    cod = if N₁ > 1
+        cod_spaces = codomain(x).spaces
+        fuse(prod(TT.getindices(cod_spaces, ntuple(identity, N₁)))) ⊗
+            prod(TT.getindices(cod_spaces, ntuple(i -> i + N₁, numout(x) - N₁)); init)
+    else
+        codomain(x)
+    end
+
+    dom = if N₂ > 1
+        dom_spaces = domain(x).spaces
+        dom = fuse(prod(TT.getindices(dom_spaces, ntuple(identity, N₂)); init)) ⊗
+            prod(TT.getindices(domain(x).spaces, ntuple(i -> i + N₂, numin(x) - N₂)); init)
+    else
+        domain(x)
+    end
+
+    return TensorMap{scalartype(x)}(x.data, cod ← dom)
 end

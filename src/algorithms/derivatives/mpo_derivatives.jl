@@ -119,112 +119,108 @@ struct PrecomputedDerivative{
     allocator::A
 end
 
-const PrecomputedACDerivative{T, S} = PrecomputedDerivative{T, S, 2, 1, 2, 1}
+const PrecomputedACDerivative{T, S} = PrecomputedDerivative{T, S, 3, 2, 2, 1}
+const PrecomputedAC2Derivative{T, S} = PrecomputedDerivative{T, S, 3, 2, 3, 2}
 
 function prepare_operator!!(
-        H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
-        x::MPSTensor,
+        H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor},
         backend::AbstractBackend, allocator
     )
-    F_left = fuser(scalartype(x), codomain(x)...)
-    x′ = F_left * x
-
-    leftenv = left_precontract_derivative(H.leftenv, H.operators[1], F_left, backend, allocator)
-    rightenv = right_precontract_derivative(H.rightenv, backend, allocator)
-
-    return PrecomputedDerivative(leftenv, rightenv, backend, allocator), x′
+    leftenv = _transpose_tail(TensorMap(H.leftenv))
+    rightenv = TensorMap(H.rightenv)
+    return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
 end
+function prepare_operator!!(
+        H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
+        backend::AbstractBackend, allocator
+    )
+    @plansor backend = backend allocator = allocator begin
+        GL_O[-1 -2; -4 -5 -3] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
+    end
+    leftenv = fuse_legs(TensorMap(GL_O), 0, 2)
+    rightenv = TensorMap(H.rightenv)
 
-function unprepare_operator!!(y::MPSBondTensor, ::PrecomputedACDerivative, x::MPSTensor)
-    F_left = fuser(scalartype(x), codomain(x)...)
-    return F_left' * y
+    return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
 end
 
 function prepare_operator!!(
         H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
-        x::MPOTensor,
         backend::AbstractBackend, allocator
     )
-    F_left = fuser(scalartype(x), codomain(x)...)
-    F_right = fuser(scalartype(x), domain(x)...)
-    x′ = F_left * x * F_right'
-
-    leftenv = left_precontract_derivative(H.leftenv, H.operators[1], F_left, backend, allocator)
-    rightenv = right_precontract_derivative(H.rightenv, H.operators[2], F_right, backend, allocator)
-
-    return PrecomputedDerivative(leftenv, rightenv, backend, allocator), x′
+    @plansor backend = backend allocator = allocator begin
+        GL_O[-1 -2; -4 -5 -3] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
+        O_GR[-1 -2 -3; -4 -5] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
+    end
+    leftenv = fuse_legs(GL_O isa TensorMap ? GL_O : TensorMap(GL_O), 0, 2)
+    rightenv = fuse_legs(O_GR isa TensorMap ? O_GR : TensorMap(O_GR), 2, 0)
+    return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
 end
 
-function unprepare_operator!!(y::MPSBondTensor, ::PrecomputedDerivative, x::MPOTensor)
-    F_left = fuser(scalartype(x), codomain(x)...)
-    F_right = fuser(scalartype(x), domain(x)...)
-    return F_left' * y * F_right
+
+function (H::PrecomputedDerivative)(x::AbstractTensorMap)
+    R_fused = fuse_legs(H.rightenv, 0, 2)
+    x_fused = fuse_legs(x, numout(x), numin(x))
+
+    # xR = matrix_contract(R_fused, x_fused, 1, One(), H.backend, H.allocator; transpose = true)
+
+    TC = TensorOperations.promote_contract(scalartype(x_fused), scalartype(R_fused))
+    xR = TensorOperations.tensoralloc_contract(TC, x_fused, ((1,), (2,)), false, R_fused, ((1,), (2, 3)), false, ((1, 2), (3,)), Val(true), H.allocator)
+
+    structure_xR = TensorKit.fusionblockstructure(space(xR))
+    structure_R = TensorKit.fusionblockstructure(space(R_fused))
+
+    xblocks = blocks(x_fused)
+    for ((f₁, f₂), i1) in structure_xR.fusiontreeindices
+        sz, str, offset = structure_xR.fusiontreestructure[i1]
+        xr = TensorKit.Strided.StridedView(xR.data, sz, str, offset)
+
+        u = first(f₁.uncoupled)
+        x = TensorKit.Strided.StridedView(xblocks[u])
+        isempty(x) && (zerovector!(xr); continue)
+
+        if haskey(structure_R.fusiontreeindices, (f₁, f₂))
+            @inbounds i = structure_R.fusiontreeindices[(f₁, f₂)]
+            @inbounds sz, str, offset = structure_R.fusiontreestructure[i]
+            r = TensorKit.Strided.StridedView(R_fused.data, sz, str, offset)
+
+            # if sz[2] < sz[3]
+            #     for k in axes(r, 2)
+            #         C = xr[:, k, :]
+            #         B = r[:, k, :]
+            #         LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
+            #     end
+            # else
+            #     for k in axes(r, 3)
+            #         C = xr[:, :, k]
+            #         B = r[:, :, k]
+            #         LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
+            #     end
+            # end
+
+            TensorOperations.tensorcontract!(
+                xr, x, ((1,), (2,)), false,
+                r, ((1,), (2, 3)), false, ((1, 2), (3,)), One(), Zero(), H.backend, H.allocator
+            )
+        else
+            zerovector!(xr)
+        end
+    end
+
+    LxR = H.leftenv * xR
+    return TensorMap{scalartype(LxR)}(LxR.data, codomain(H.leftenv) ← domain(H.rightenv))
 end
 
-function (H::PrecomputedDerivative)(x::MPSBondTensor)
-    bstyle = BraidingStyle(sectortype(x))
-    return _precontracted_ac_derivative(bstyle, x, H.leftenv, H.rightenv, H.backend, H.allocator)
+const _ToPrepare = Union{
+    MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor},
+    MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
+    MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
+}
+
+function prepare_operator!!(H::Multiline{<:_ToPrepare}, backend::AbstractBackend, allocator)
+    return Multiline(map(x -> prepare_operator!!(x, backend, allocator), parent(H)))
 end
 
-function _precontracted_ac_derivative(::Bosonic, x, leftenv, rightenv, backend, allocator)
-    return @tensor backend = backend allocator = allocator begin
-        y[-1; -2] ≔ leftenv[-1 3; 1] * x[1; 2] * rightenv[3 2; -2]
-    end
-end
-function _precontracted_ac_derivative(::BraidingStyle, x, leftenv, rightenv, backend, allocator)
-    return @planar backend = backend allocator = allocator begin
-        y[-1; -2] := leftenv[-1 2; 1] * x[1; 3] * τ'[3 2; 4 5] * rightenv[4 5; -2]
-    end
-end
-function _precontracted_ac_derivative(::NoBraiding, x, leftenv, rightenv, backend, allocator)
-    return @planar backend = backend allocator = allocator begin
-        y[-1; -2] ≔ leftenv[-1 3; 1] * x[1; 2] * rightenv[2 3; -2]
-    end
-end
-
-left_precontract_derivative(arg, args...) = _left_precontract_derivative(BraidingStyle(sectortype(arg)), arg, args...)
-function _left_precontract_derivative(::BraidingStyle, leftenv, operator, F, backend, allocator)
-    @planar backend = backend allocator = allocator begin
-        GL_O[-1 -2 -3; -4 -5] := leftenv[-1 1; -4] * operator[1 -2; -5 -3]
-    end
-    return @planar backend = backend allocator = allocator begin
-        leftenv[-1 -2; -3] := F[-1; 3 4] * TensorMap(GL_O)[3 4 -2; 1 2] * F'[1 2; -3]
-    end
-end
-
-right_precontract_derivative(arg, args...) = _right_precontract_derivative(BraidingStyle(sectortype(arg)), arg, args...)
-_right_precontract_derivative(::NoBraiding, rightenv, backend, allocator) = TensorMap(rightenv)
-function _right_precontract_derivative(::Bosonic, rightenv, backend, allocator)
-    return @tensor backend = backend allocator = allocator begin
-        rightenv[-2 -1; -3] := TensorMap(rightenv)[-1 -2; -3]
-    end
-end
-function _right_precontract_derivative(::BraidingStyle, rightenv, backend, allocator)
-    return @planar backend = backend allocator = allocator begin
-        rightenv[-1 -2; -3] := τ[-1 -2; 1 2] * TensorMap(rightenv)[1 2; -3]
-    end
-end
-function _right_precontract_derivative(::NoBraiding, rightenv, operator, F, backend, allocator)
-    @planar backend = backend allocator = allocator begin
-        O_GR[-1 -2 -3; -4 -5] := operator[-3 -5; -2 1] * rightenv[-1 1; -4]
-    end
-    return @planar backend = backend allocator = allocator begin
-        rightenv[-1 -2; -3] := F[-1; 3 4] * TensorMap(O_GR)[3 4 -2; 1 2] * F'[1 2; -3]
-    end
-end
-function _right_precontract_derivative(::Bosonic, rightenv, operator, F, backend, allocator)
-    @tensor backend = backend allocator = allocator begin
-        O_GR[-1 -2 -3; -4 -5] := operator[-3 -5; -2 1] * rightenv[-1 1; -4]
-    end
-    return @tensor backend = backend allocator = allocator begin
-        rightenv[-2 -1; -3] := F[-1; 3 4] * TensorMap(O_GR)[3 4 -2; 1 2] * F'[1 2; -3]
-    end
-end
-function _right_precontract_derivative(::BraidingStyle, rightenv, operator, F, backend, allocator)
-    @planar backend = backend allocator = allocator begin
-        O_GR[-1 -2 -3; -4 -5] := operator[-3 -5; -2 1] * rightenv[-1 1; -4]
-    end
-    return @planar backend = backend allocator = allocator begin
-        rightenv[-1 -2; -3] := τ[-1 -2; 5 6] * F[5; 3 4] * TensorMap(O_GR)[3 4 6; 1 2] * F'[1 2; -3]
-    end
-end
+fixedpoint(A::Union{_ToPrepare, Multiline{<:_ToPrepare}}, x₀, which::Symbol, alg::Lanczos) =
+    fixedpoint(prepare_operator!!(A), x₀, which, alg)
+fixedpoint(A::Union{_ToPrepare, Multiline{<:_ToPrepare}}, x₀, which::Symbol, alg::Arnoldi) =
+    fixedpoint(prepare_operator!!(A), x₀, which, alg)
