@@ -60,6 +60,7 @@ using Compat: @compat
 # -------
 using TensorKit
 using TensorKit: BraidingTensor
+using TensorKit: TupleTools as TT
 using MatrixAlgebraKit
 using MatrixAlgebraKit: TruncationStrategy, PolarViaSVD, LAPACK_SVDAlgorithm
 using BlockTensorKit
@@ -141,6 +142,7 @@ include("environments/lazylincocache.jl")
 include("algorithms/fixedpoint.jl")
 include("algorithms/derivatives/derivatives.jl")
 include("algorithms/derivatives/mpo_derivatives.jl")
+include("algorithms/derivatives/hamiltonian_derivatives.jl")
 include("algorithms/derivatives/projection_derivatives.jl")
 include("algorithms/expval.jl")
 include("algorithms/toolbox.jl")
