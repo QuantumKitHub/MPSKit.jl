@@ -51,7 +51,7 @@ function calc_galerkin(
     )
     AC´ = AC_hamiltonian(pos, below, operator, above, envs) * above.AC[pos]
     normalize!(AC´)
-    out = add!(AC´, below.AL[pos] * below.AL[pos]' * AC´, -1)
+    out = mul!(AC´, below.AL[pos], below.AL[pos]' * AC´, -1, +1)
     return norm(out)
 end
 function calc_galerkin(
