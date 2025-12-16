@@ -9,7 +9,7 @@ entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
     S = zero(real(scalartype(state)))
     tol = eps(typeof(S))
-    for (c, b) in entanglement_spectrum(state, loc)
+    for (c, b) in pairs(entanglement_spectrum(state, loc))
         s = zero(S)
         for x in b
             x < tol && break

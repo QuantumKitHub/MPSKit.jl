@@ -120,12 +120,13 @@ function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
     end
 
     # swipe right
+    alg_trunc = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trscheme)
     for i in 1:(length(H) - 1)
-        H = left_canonicalize!(H, i; alg = alg.alg_svd, alg.trscheme)
+        H = left_canonicalize!(H, i; alg = alg_trunc)
     end
     # swipe left -- TODO: do we really need this double sweep?
     for i in length(H):-1:2
-        H = right_canonicalize!(H, i; alg = alg.alg_svd, alg.trscheme)
+        H = right_canonicalize!(H, i; alg = alg_trunc)
     end
 
     return H

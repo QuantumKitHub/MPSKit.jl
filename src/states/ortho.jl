@@ -164,8 +164,8 @@ regauge!
 function regauge!(
         AC::GenericMPSTensor, C::MPSBondTensor; alg = Defaults.alg_qr()
     )
-    Q_AC, _ = _left_orth!(AC; alg)
-    Q_C, _ = _left_orth!(C; alg)
+    Q_AC, _ = left_orth!(AC; alg)
+    Q_C, _ = left_orth!(C; alg)
     return mul!(AC, Q_AC, Q_C')
 end
 function regauge!(AC::Vector{<:GenericMPSTensor}, C::Vector{<:MPSBondTensor}; kwargs...)
@@ -178,8 +178,8 @@ function regauge!(
         CL::MPSBondTensor, AC::GenericMPSTensor; alg = Defaults.alg_lq()
     )
     AC_tail = _transpose_tail(AC)
-    _, Q_AC = _right_orth!(AC_tail; alg)
-    _, Q_C = _right_orth!(CL; alg)
+    _, Q_AC = right_orth!(AC_tail; alg)
+    _, Q_C = right_orth!(CL; alg)
     AR_tail = mul!(AC_tail, Q_C', Q_AC)
     return repartition!(AC, AR_tail)
 end
@@ -240,7 +240,7 @@ function gauge_eigsolve_step!(it::IterativeSolver{LeftCanonical}, state)
     if iter ≥ it.eig_miniter
         alg_eigsolve = updatetol(it.alg_eigsolve, 1, ϵ^2)
         _, vec = fixedpoint(flip(TransferMatrix(A, AL)), C[end], :LM, alg_eigsolve)
-        _, C[end] = _left_orth!(vec; alg = it.alg_orth)
+        _, C[end] = left_orth!(vec; alg = it.alg_orth)
     end
     return C[end]
 end
@@ -251,7 +251,7 @@ function gauge_orth_step!(it::IterativeSolver{LeftCanonical}, state)
         # repartition!(A_tail[i], AL[i])
         mul!(CA_tail[i], C[i - 1], A_tail[i])
         repartition!(AL[i], CA_tail[i])
-        AL[i], C[i] = _left_orth!(AL[i]; alg = it.alg_orth)
+        AL[i], C[i] = left_orth!(AL[i]; alg = it.alg_orth)
     end
     normalize!(C[end])
     return C[end]
@@ -298,7 +298,7 @@ function gauge_eigsolve_step!(it::IterativeSolver{RightCanonical}, state)
     if iter ≥ it.eig_miniter
         alg_eigsolve = updatetol(it.alg_eigsolve, 1, ϵ^2)
         _, vec = fixedpoint(TransferMatrix(A, AR), C[end], :LM, alg_eigsolve)
-        C[end], _ = _right_orth!(vec; alg = it.alg_orth)
+        C[end], _ = right_orth!(vec; alg = it.alg_orth)
     end
     return C[end]
 end
@@ -308,7 +308,7 @@ function gauge_orth_step!(it::IterativeSolver{RightCanonical}, state)
     for i in length(AR):-1:1
         AC = mul!(AR[i], A[i], C[i])   # use AR as temporary storage for A * C
         tmp = repartition!(AC_tail[i], AC)
-        C[i - 1], tmp = _right_orth!(tmp; alg = it.alg_orth)
+        C[i - 1], tmp = right_orth!(tmp; alg = it.alg_orth)
         repartition!(AR[i], tmp)       # TODO: avoid doing this every iteration
     end
     normalize!(C[end])

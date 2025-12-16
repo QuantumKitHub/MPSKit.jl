@@ -1047,7 +1047,10 @@ module TestAlgorithms
         H = XY_model(U1Irrep; L)
 
         H_dense = convert(TensorMap, H)
-        vals_dense = TensorKit.SectorDict(c => sort(v; by = real) for (c, v) in eigvals(H_dense))
+        vals_dense = eigvals(H_dense)
+        for v in values(vals_dense)
+            sort!(v; by = real)
+        end
 
         tol = 1.0e-18 # tolerance required to separate degenerate eigenvalues
         alg = MPSKit.Defaults.alg_eigsolve(; dynamic_tols = false, tol)
@@ -1059,7 +1062,7 @@ module TestAlgorithms
         E₀ = expectation_value(gs, H)
         @test E₀ ≈ first(vals_dense[one(U1Irrep)])
 
-        for (sector, vals) in vals_dense
+        for (sector, vals) in pairs(vals_dense)
             # ED tests
             num = length(vals)
             E₀s, ψ₀s, info = exact_diagonalization(H; num, sector, alg)
@@ -1082,8 +1085,11 @@ module TestAlgorithms
         # so effectively shifting the charges by -1
         H_shift = MPSKit.add_physical_charge(H, U1Irrep.([1, 0, 0, 0]))
         H_shift_dense = convert(TensorMap, H_shift)
-        vals_shift_dense = TensorKit.SectorDict(c => sort(v; by = real) for (c, v) in eigvals(H_shift_dense))
-        for (sector, vals) in vals_dense
+        vals_shift_dense = eigvals(H_shift_dense)
+        for v in values(vals_shift_dense)
+            sort!(v; by = real)
+        end
+        for (sector, vals) in pairs(vals_dense)
             sector′ = only(sector ⊗ U1Irrep(-1))
             @test vals ≈ vals_shift_dense[sector′]
         end
