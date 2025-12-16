@@ -213,7 +213,7 @@ module TestOperators
                 FiniteMPOHamiltonian(grid, horizontal_operators) atol = 1.0e-4
 
             H5 = changebonds(H4 / 3 + 2H4 / 3, SvdCut(; trscheme = trunctol(; atol = 1.0e-12)))
-            psi = FiniteMPS(physicalspace(H5), V ⊕ oneunit(V))
+            psi = FiniteMPS(physicalspace(H5), V ⊕ rightunitspace(V))
             @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)
         end
     end
@@ -366,7 +366,7 @@ module TestOperators
 
     @testset "DenseMPO" for ham in (transverse_field_ising(), heisenberg_XXX(; spin = 1))
         pspace = physicalspace(ham, 1)
-        ou = oneunit(pspace)
+        ou = rightunitspace(pspace)
 
         ψ = InfiniteMPS([pspace], [ou ⊕ pspace])
 
