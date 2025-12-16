@@ -20,9 +20,10 @@ benchname(spec::AC2Spec) = dim(spec.mps_virtualspaces[1]), dim(spec.mpo_virtuals
 
 # Benchmarks
 # ----------
-function MPSKit.MPO_AC2_Hamiltonian(spec::AC2Spec{S}; T::Type = Float64) where {S}
+function MPSKit.AC2_hamiltonian(spec::AC2Spec{S}; T::Type = Float64) where {S}
     GL = randn(T, spec.mps_virtualspaces[1] ⊗ spec.mpo_virtualspaces[1]' ← spec.mps_virtualspaces[1])
     GR = randn(T, spec.mps_virtualspaces[3] ⊗ spec.mpo_virtualspaces[3] ← spec.mps_virtualspaces[3])
+
     W1 = MPSKit.JordanMPOTensor{T, S}(undef, spec.mpo_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.physicalspaces[1] ⊗ spec.mpo_virtualspaces[2])
     for (r, c) in spec.nonzero_keys[1]
         r == c == 1 && continue
@@ -35,27 +36,45 @@ function MPSKit.MPO_AC2_Hamiltonian(spec::AC2Spec{S}; T::Type = Float64) where {
         r == size(W2, 1) && c == size(W2, 4) && continue
         W2[r, 1, 1, c] = randn!(W2[r, 1, 1, c])
     end
+    H = InfiniteMPOHamiltonian(PeriodicVector([W1, W2]))
 
-    return MPSKit.MPO_AC2_Hamiltonian(GL, W1, W2, GR)
+    A = PeriodicVector(
+        [
+            randn(T, spec.mps_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[2]),
+            randn(T, spec.mps_virtualspaces[2] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[3]),
+        ]
+    )
+    C = PeriodicVector(
+        [
+            randn(T, spec.mps_virtualspaces[2] ← spec.mps_virtualspaces[2]),
+            randn(T, spec.mps_virtualspaces[3] ← spec.mps_virtualspaces[3]),
+        ]
+    )
+    psi = InfiniteMPS{eltype(A), eltype(C)}(A, A, C, A)
+
+    GLs, GRs = MPSKit.initialize_environments(psi, H, psi)
+    envs = MPSKit.InfiniteEnvironments(GLs, GRs)
+
+    return MPSKit.AC2_hamiltonian(1, psi, H, psi, envs)
 end
 
 function contraction_benchmark(spec::AC2Spec; T::Type = Float64)
-    AA = randn(T, spec.mps_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[3] ⊗ spec.physicalspaces[2]')
-    H_eff = MPSKit.MPO_AC2_Hamiltonian(spec; T)
-    H_prep, x_prep = MPSKit.prepare_operator!!(H_eff, AA)
-    init() = randn!(similar(x_prep))
-
-    return @benchmarkable $H_prep * x setup = (x = $init())
+    V = spec.mps_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[3] ⊗ spec.physicalspaces[2]'
+    H_eff = MPSKit.AC2_hamiltonian(spec; T)
+    return @benchmarkable $H_eff * x setup = x = randn($T, $V)
 end
 
 function preparation_benchmark(spec::AC2Spec; T::Type = Float64)
-    init() = randn(T, spec.mps_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[3] ⊗ spec.physicalspaces[2]')
-    H_eff = MPSKit.MPO_AC2_Hamiltonian(spec; T)
+    V = spec.mps_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[3] ⊗ spec.physicalspaces[2]'
+    H_eff = MPSKit.AC2_hamiltonian(spec; T)
+    return @benchmarkable MPSKit.prepare_operator!!($H_eff)
+end
 
-    return @benchmarkable begin
-        O′, x′ = MPSKit.prepare_operator!!($H_eff, x)
-        y = MPSKit.unprepare_operator!!(x′, O′, x)
-    end setup = (x = $init())
+function prepared_benchmark(spec::AC2Spec; T::Type = Float64)
+    V = spec.mps_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[3] ⊗ spec.physicalspaces[2]'
+    H_eff = MPSKit.AC2_hamiltonian(spec; T)
+    H_prep = MPSKit.prepare_operator!!(H_eff)
+    return @benchmarkable $H_prep * x setup = x = randn($T, $V)
 end
 
 # Converters
