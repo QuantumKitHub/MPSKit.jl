@@ -16,7 +16,7 @@ function correlator(
     )
     first(js) > i || @error "i should be smaller than j ($i, $(first(js)))"
     S₁ = _firstspace(O₁)
-    S₁ == oneunit(S₁) || throw(ArgumentError("O₁ should start with a trivial leg."))
+    isunitspace(S₁) || throw(ArgumentError("O₁ should start with a trivial leg."))
     S₂ = _lastspace(O₂)
     S₂ == S₁' || throw(ArgumentError("O₂ should end with a trivial leg."))
 

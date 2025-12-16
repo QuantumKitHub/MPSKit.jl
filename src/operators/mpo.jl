@@ -220,8 +220,9 @@ function Base.:*(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     N = check_length(mpo1, mpo2)
     (S = spacetype(mpo1)) == spacetype(mpo2) || throw(SectorMismatch())
 
-    if (left_virtualspace(mpo1, 1) != oneunit(S) || left_virtualspace(mpo2, 1) != oneunit(S)) ||
-            (right_virtualspace(mpo1, N) != oneunit(S) || right_virtualspace(mpo2, N) != oneunit(S))
+
+    if (isunitspace(left_virtualspace(mpo1, 1)) || isunitspace(left_virtualspace(mpo2, 1))) ||
+            (isunitspace(right_virtualspace(mpo1, N)) || isunitspace(right_virtualspace(mpo2, N)))
         @warn "left/right virtual space is not trivial, fusion may not be unique"
         # this is a warning because technically any isomorphism that fuses the left/right
         # would work and for now I dont feel like figuring out if this is important

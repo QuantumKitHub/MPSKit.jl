@@ -56,7 +56,7 @@ Add trivial one-dimensional utility spaces with trivial sector to the left and r
 given tensor map, i.e. as the first space of the codomain and the last space of the domain.
 """
 function add_util_leg(tensor::AbstractTensorMap{T, S, N1, N2}) where {T, S, N1, N2}
-    ou = oneunit(_firstspace(tensor))
+    ou = unitspace(_firstspace(tensor))
 
     util_front = isomorphism(storagetype(tensor), ou * codomain(tensor), codomain(tensor))
     util_back = isomorphism(storagetype(tensor), domain(tensor), domain(tensor) * ou)

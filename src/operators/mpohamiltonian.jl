@@ -77,11 +77,11 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
     # left end
     nlvls = size(W_mats[1], 1)
     @assert nlvls == 1 "left boundary should have a single level"
-    Vspaces[1] = SumSpace(oneunit(S))
+    Vspaces[1] = SumSpace(unitspace(S))
     # right end
     nlvls = size(W_mats[end], 2)
     @assert nlvls == 1 "right boundary should have a single level"
-    Vspaces[end] = SumSpace(oneunit(S))
+    Vspaces[end] = SumSpace(unitspace(S))
 
     # start filling spaces
     # note that we assume that the FSA does not contain "dead ends", as this would mess with the
@@ -99,7 +99,7 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
             # start by assuming trivial spaces everywhere -- replace everything that we know
             # assume spacecheck errors will happen when filling the BlockTensors
             nlvls = size(W_mat, 2)
-            Vs_right = SumSpace(fill(oneunit(S), nlvls))
+            Vs_right = SumSpace(fill(unitspace(S), nlvls))
         end
 
         for I in eachindex(IndexCartesian(), W_mat)
@@ -182,7 +182,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
     MissingS = Union{Missing, S}
     Vspaces = PeriodicArray([Vector{MissingS}(missing, nlvls) for _ in 1:L])
     for V in Vspaces
-        V[1] = V[end] = oneunit(S)
+        V[1] = V[end] = unitspace(S)
     end
 
     haschanged = true
@@ -232,7 +232,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
         end
     end
 
-    foreach(Base.Fix2(replace!, missing => oneunit(S)), Vspaces)
+    foreach(Base.Fix2(replace!, missing => unitspace(S)), Vspaces)
     Vsumspaces = map(Vspaces) do V
         return SumSpace(collect(S, V))
     end
