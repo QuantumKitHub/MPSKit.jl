@@ -113,9 +113,11 @@ function prepare_operator!!(
         H.E
     end
 
-    A = ismissing(H.A) ? H.A : prepare_operator!!(H.A, backend, allocator)
+    # O3′ = Core.Compiler.return_type(prepare_operator!!, Tuple{O3, typeof(backend), typeof(allocator)})
+    # A = ismissing(H.A) ? H.A : prepare_operator!!(H.A, backend, allocator)
+    O3′ = O3
+    A = H.A
 
-    O3′ = Core.Compiler.return_type(prepare_operator!!, Tuple{O3, typeof(backend), typeof(allocator)})
     return JordanMPO_AC_Hamiltonian{O1, O2, O3′}(D, I, E, C, B, A)
 end
 
@@ -328,8 +330,10 @@ function prepare_operator!!(
         H.EE
     end
 
-    O4′ = Core.Compiler.return_type(prepare_operator!!, Tuple{O4, typeof(backend), typeof(allocator)})
-    AA = prepare_operator!!(H.AA, backend, allocator)
+    # O4′ = Core.Compiler.return_type(prepare_operator!!, Tuple{O4, typeof(backend), typeof(allocator)})
+    # AA = ismissing(H.AA) ? H.AA : prepare_operator!!(H.AA, backend, allocator)
+    O4′ = O4
+    AA = H.AA
 
     return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4′}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
 end
