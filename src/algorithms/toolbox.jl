@@ -275,13 +275,13 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O}, L = length(mpo)) wher
     V_wrap = left_virtualspace(mpo, 1)
     ST = storagetype(O)
 
-    util = isometry(storagetype(O), oneunit(V_wrap) ← one(V_wrap))
+    util = isometry(storagetype(O), rightunitspace(V_wrap) ← one(V_wrap))
     @plansor cup[-1; -2 -3] := id(ST, V_wrap)[-2; -3] * util[-1]
 
     local F_right
     for i in 1:L
-        V_left = i == 1 ? oneunit(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
-        V_right = i == L ? oneunit(V_wrap) : fuse(V_wrap ⊗ right_virtualspace(mpo, i))
+        V_left = i == 1 ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
+        V_right = i == L ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ right_virtualspace(mpo, i))
         output[i] = similar(
             mpo[i], V_left * physicalspace(mpo, i) ← physicalspace(mpo, i) * V_right
         )
@@ -336,7 +336,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L = length(H))
     output = Vector{O}(undef, L)
     for site in 1:L
         V_left = if site == 1
-            oneunit(V_wrap)
+            rightunitspace(V_wrap)
         else
             vs = Vector{S}(undef, chi_)
             for (k, v) in indmap
@@ -345,7 +345,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L = length(H))
             SumSpace(vs)
         end
         V_right = if site == L
-            oneunit(V_wrap)
+            rightunitspace(V_wrap)
         else
             vs = Vector{S}(undef, chi_)
             for (k, v) in indmap
