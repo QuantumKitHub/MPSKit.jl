@@ -25,18 +25,22 @@ T = Float64
 
 suite_init = addgroup!(SUITE, "AC2_preparation")
 suite_apply = addgroup!(SUITE, "AC2_contraction")
+suite_prepped = addgroup!(SUITE, "AC2_prepared")
 
 for (model, params) in allparams
     g_prep = addgroup!(suite_init, model)
+    g_prepped = addgroup!(suite_prepped, model)
     g_contract = addgroup!(suite_apply, model)
     for (symmetry, specs) in params
         g_prep_sym = addgroup!(g_prep, symmetry)
         g_contract_sym = addgroup!(g_contract, symmetry)
+        g_prepped_sym = addgroup!(g_prepped, symmetry)
         for spec_dict in specs
             spec = untomlify(AC2Spec, spec_dict)
             name = benchname(spec)
-            g_prep_sym[name] = preparation_benchmark(spec; T)
             g_contract_sym[name] = contraction_benchmark(spec; T)
+            g_prep_sym[name] = preparation_benchmark(spec; T)
+            g_prepped_sym[name] = prepared_benchmark(spec; T)
         end
     end
 end
