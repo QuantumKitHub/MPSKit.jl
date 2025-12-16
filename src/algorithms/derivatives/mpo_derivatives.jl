@@ -183,24 +183,24 @@ function (H::PrecomputedDerivative)(x::AbstractTensorMap)
             @inbounds sz, str, offset = structure_R.fusiontreestructure[i]
             r = TensorKit.Strided.StridedView(R_fused.data, sz, str, offset)
 
-            # if sz[2] < sz[3]
-            #     for k in axes(r, 2)
-            #         C = xr[:, k, :]
-            #         B = r[:, k, :]
-            #         LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
-            #     end
-            # else
-            #     for k in axes(r, 3)
-            #         C = xr[:, :, k]
-            #         B = r[:, :, k]
-            #         LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
-            #     end
-            # end
-
-            TensorOperations.tensorcontract!(
-                xr, x, ((1,), (2,)), false,
-                r, ((1,), (2, 3)), false, ((1, 2), (3,)), One(), Zero(), H.backend, H.allocator
-            )
+            if TensorOperations.isblascontractable(r, ((1,), (2, 3))) &&
+                    TensorOperations.isblasdestination(xr, ((1,), (2, 3)))
+                C = TensorKit.Strided.sreshape(xr, size(xr, 1), size(xr, 2) * size(xr, 3))
+                B = TensorKit.Strided.sreshape(r, size(r, 1), size(r, 2) * size(r, 3))
+                LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
+            elseif sz[2] < sz[3]
+                for k in axes(r, 2)
+                    C = xr[:, k, :]
+                    B = r[:, k, :]
+                    LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
+                end
+            else
+                for k in axes(r, 3)
+                    C = xr[:, :, k]
+                    B = r[:, :, k]
+                    LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
+                end
+            end
         else
             zerovector!(xr)
         end
