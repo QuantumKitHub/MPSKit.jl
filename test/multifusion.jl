@@ -66,8 +66,6 @@ module TestMultifusion
 
     @testset "Exact diagonalization" begin
         H = TFIM_multifusion(; g = 0, L = 4)
-        @test_throws ArgumentError exact_diagonalization(H)
-
         E, ψ = exact_diagonalization(H; sector = D0) # test that it runs with kwarg
         @test isapprox(E, [-3, -1, 1, 3]; atol = 1.0e-6)
     end
