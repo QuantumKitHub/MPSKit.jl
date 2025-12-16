@@ -94,7 +94,7 @@ function transfer_spectrum(
     init = randomize!(
         similar(
             above.AL[1], left_virtualspace(below, 1),
-            ℂ[typeof(sector)](sector => 1)' * left_virtualspace(above, 1)
+            spacetype(above)(sector => 1)' * left_virtualspace(above, 1)
         )
     )
 
