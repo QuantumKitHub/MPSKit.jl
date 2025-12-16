@@ -151,7 +151,7 @@ function marek_gap(above::InfiniteMPS; tol_angle = 0.1, kwargs...)
     return marek_gap(spectrum; tol_angle)
 end
 
-function marek_gap(spectrum; tol_angle = 0.1)
+function marek_gap(spectrum::Vector{T}; tol_angle = 0.1) where {T <: Number}
     # Remove 1s from the spectrum
     inds = findall(abs.(spectrum) .< 1 - 1.0e-12)
     length(spectrum) - length(inds) < 2 || @warn "Non-injective mps?"
@@ -187,7 +187,7 @@ function correlation_length(above::InfiniteMPS; kwargs...)
     return 1 / ϵ
 end
 
-function correlation_length(spectrum; kwargs...)
+function correlation_length(spectrum::Vector{T}; kwargs...) where {T <: Number}
     ϵ, = marek_gap(spectrum; kwargs...)
     return 1 / ϵ
 end
