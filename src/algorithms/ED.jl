@@ -1,6 +1,6 @@
 """
     exact_diagonalization(H::FiniteMPOHamiltonian;
-                          sector=first(sectors(oneunit(physicalspace(H, 1)))),
+                          sector=rightunit(H),
                           len::Int=length(H), num::Int=1, which::Symbol=:SR,
                           alg=Defaults.alg_eigsolve(; dynamic_tols=false))
                             -> vals, state_vecs, convhist
@@ -13,7 +13,7 @@ equivalent to dense eigenvectors.
 - `H::FiniteMPOHamiltonian`: the Hamiltonian to diagonalize.
 
 ### Keyword arguments
-- `sector=first(sectors(oneunit(physicalspace(H, 1))))`: the total charge of the
+- `sector=rightunit(H)`: the total charge of the
   eigenvectors, which is chosen trivial by default.
 - `len::Int=length(H)`: the length of the system.
 - `num::Int=1`: the number of eigenvectors to find.
