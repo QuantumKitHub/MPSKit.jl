@@ -32,7 +32,7 @@ module TestMultifusion
         P = Vect[I](D0 => 1, D1 => 1)
         X = zeros(T, P ← P)
         for (s, f) in fusiontrees(X)
-            isone(only(f.uncoupled)) ? X[s, f] .= g : X[s, f] .= -g
+            isunit(only(f.uncoupled)) ? X[s, f] .= g : X[s, f] .= -g
         end
         ZZ = zeros(T, P^2 ← P^2)
         for (s, f) in fusiontrees(ZZ)

@@ -1057,7 +1057,7 @@ module TestAlgorithms
             FiniteMPS(physicalspace(H), maxVspaces[2:(end - 1)]), H; verbosity = 0
         )
         E₀ = expectation_value(gs, H)
-        @test E₀ ≈ first(vals_dense[one(U1Irrep)])
+        @test E₀ ≈ first(vals_dense[unit(U1Irrep)])
 
         for (sector, vals) in vals_dense
             # ED tests
@@ -1074,7 +1074,7 @@ module TestAlgorithms
             Es, Bs = excitations(H, QuasiparticleAnsatz(; tol), gs; sector, num = 1)
             Es = Es .+ E₀
             # first excited state is second eigenvalue if sector is trivial
-            @test Es[1] ≈ vals[isone(sector) ? 2 : 1] atol = 1.0e-8
+            @test Es[1] ≈ vals[isunit(sector) ? 2 : 1] atol = 1.0e-8
         end
 
         # shifted charges tests
