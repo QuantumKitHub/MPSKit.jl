@@ -171,7 +171,9 @@ function (H::PrecomputedDerivative)(x::AbstractTensorMap)
 
 
     TC = TensorOperations.promote_contract(scalartype(x_fused), scalartype(R_fused))
-    xR = TensorOperations.tensoralloc_contract(TC, x_fused, ((1,), (2,)), false, R_fused, ((1,), (2, 3)), false, ((1, 2), (3,)), Val(true), H.allocator)
+    xR = TensorOperations.tensoralloc_contract(
+        TC, x_fused, ((1,), (2,)), false, R_fused, ((1,), (2, 3)), false, ((1, 2), (3,)), Val(true), H.allocator
+    )
 
     mul_front!(xR, x_fused, R_fused, One(), Zero(), H.backend, H.allocator)
 

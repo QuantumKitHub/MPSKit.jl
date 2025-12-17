@@ -228,7 +228,7 @@ end
 
 function mul_front(
         A::AbstractTensorMap, B::AbstractTensorMap,
-        α::Number,
+        α::Number = One(),
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     cod = prod(i -> i == 1 ? space(A, 1) : space(B, i), 1:numout(B))
@@ -240,7 +240,7 @@ end
 
 function mul_front!(
         C::AbstractTensorMap, A::AbstractTensorMap, B::AbstractTensorMap,
-        α::Number, β::Number,
+        α::Number = One(), β::Number = Zero(),
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     (numin(C) == numin(B) && numout(C) == numout(B) && numin(A) == numout(A) == 1) ||
@@ -276,7 +276,7 @@ end
 
 function mul_tail(
         A::AbstractTensorMap, B::AbstractTensorMap,
-        α::Number,
+        α::Number = One(),
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     cod = codomain(A)
@@ -288,7 +288,7 @@ end
 
 function mul_tail!(
         C::AbstractTensorMap, A::AbstractTensorMap, B::AbstractTensorMap,
-        α::Number, β::Number,
+        α::Number = One(), β::Number = Zero(),
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     (numin(C) == numin(A) && numout(C) == numout(A) && numin(B) == numout(B) == 1) ||
