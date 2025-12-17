@@ -173,47 +173,7 @@ function (H::PrecomputedDerivative)(x::AbstractTensorMap)
     TC = TensorOperations.promote_contract(scalartype(x_fused), scalartype(R_fused))
     xR = TensorOperations.tensoralloc_contract(TC, x_fused, ((1,), (2,)), false, R_fused, ((1,), (2, 3)), false, ((1, 2), (3,)), Val(true), H.allocator)
 
-    matrix_contract!(xR, R_fused, x_fused, 1, One(), Zero(), H.backend, H.allocator; transpose = true)
-
-    # structure_xR = TensorKit.fusionblockstructure(space(xR))
-    # structure_R = TensorKit.fusionblockstructure(space(R_fused))
-
-    # xblocks = blocks(x_fused)
-    # for ((f₁, f₂), i1) in structure_xR.fusiontreeindices
-    #     sz, str, offset = structure_xR.fusiontreestructure[i1]
-    #     xr = TensorKit.Strided.StridedView(xR.data, sz, str, offset)
-
-    #     u = first(f₁.uncoupled)
-    #     x = TensorKit.Strided.StridedView(xblocks[u])
-    #     isempty(x) && (zerovector!(xr); continue)
-
-    #     if haskey(structure_R.fusiontreeindices, (f₁, f₂))
-    #         @inbounds i = structure_R.fusiontreeindices[(f₁, f₂)]
-    #         @inbounds sz, str, offset = structure_R.fusiontreestructure[i]
-    #         r = TensorKit.Strided.StridedView(R_fused.data, sz, str, offset)
-
-    #         if TensorOperations.isblascontractable(r, ((1,), (2, 3))) &&
-    #                 TensorOperations.isblasdestination(xr, ((1,), (2, 3)))
-    #             C = TensorKit.Strided.sreshape(xr, size(xr, 1), size(xr, 2) * size(xr, 3))
-    #             B = TensorKit.Strided.sreshape(r, size(r, 1), size(r, 2) * size(r, 3))
-    #             LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
-    #         elseif sz[2] < sz[3]
-    #             for k in axes(r, 2)
-    #                 C = xr[:, k, :]
-    #                 B = r[:, k, :]
-    #                 LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
-    #             end
-    #         else
-    #             for k in axes(r, 3)
-    #                 C = xr[:, :, k]
-    #                 B = r[:, :, k]
-    #                 LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
-    #             end
-    #         end
-    #     else
-    #         zerovector!(xr)
-    #     end
-    # end
+    mul_front!(xR, x_fused, R_fused, One(), Zero(), H.backend, H.allocator)
 
     LxR = H.leftenv * xR
     TensorOperations.tensorfree!(xR, H.allocator)
