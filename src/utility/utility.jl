@@ -8,8 +8,8 @@ function _transpose_as(t1::AbstractTensorMap, t2::AbstractTensorMap; copy::Bool 
     return repartition(t1, numout(t2), numin(t2); copy)
 end
 
-_mul_front(C, A) = matrix_contract(A, C, 1; transpose = true) # _transpose_front(C * _transpose_tail(A))
-_mul_tail(A, C) = matrix_contract(A, C, numind(A)) # A * C
+_mul_front(C, A) = mul_front(C, A) # _transpose_front(C * _transpose_tail(A))
+_mul_tail(A, C) = mul_tail(A, C) # A * C
 
 function _similar_tail(A::AbstractTensorMap)
     cod = _firstspace(A)
@@ -224,6 +224,102 @@ function matrix_contract!(
     end
 
     return C
+end
+
+function mul_front(
+        A::AbstractTensorMap, B::AbstractTensorMap,
+        α::Number,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    cod = prod(i -> i == 1 ? space(A, 1) : space(B, i), 1:numout(B))
+    dom = domain(B)
+    T = TensorOperations.promote_contract(scalartype(A), scalartype(B), scalartype(α))
+    C = similar(A, T, cod ← dom)
+    return mul_front!(C, A, B, α, Zero(), backend, allocator)
+end
+
+function mul_front!(
+        C::AbstractTensorMap, A::AbstractTensorMap, B::AbstractTensorMap,
+        α::Number, β::Number,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    (numin(C) == numin(B) && numout(C) == numout(B) && numin(A) == numout(A) == 1) ||
+        throw(SpaceMismatch())
+
+    numout(B) == 1 && return mul!(C, A, B, α, β)
+
+    cp = checkpoint(allocator)
+
+    Ablocks = blocks(A)
+    Bstructure = TensorKit.fusionblockstructure(space(B))
+    for ((f₁, f₂), c) in subblocks(C)
+        # fetch A block
+        u = first(f₁.uncoupled)
+        a = Ablocks[u]
+        isempty(a) && (scale!(c, β); continue)
+
+        # fetch B block
+        haskey(Bstructure.fusiontreeindices, (f₁, f₂)) || (scale!(c, β); continue)
+        b = B[f₁, f₂]
+
+        tensorcontract!(
+            c,
+            a, ((1,), (2,)), false,
+            b, ((1,), ntuple(i -> i + 1, numind(B) - 1)), false,
+            (ntuple(identity, numout(C)), ntuple(i -> i + numout(C), numin(C))),
+            α, β, backend, allocator
+        )
+    end
+
+    return reset!(allocator, cp)
+end
+
+function mul_tail(
+        A::AbstractTensorMap, B::AbstractTensorMap,
+        α::Number,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    cod = codomain(A)
+    dom = prod(i -> i == 1 ? domain(B)[1] : domain(A)[i], 1:numin(A))
+    T = TensorOperations.promote_contract(scalartype(A), scalartype(B), scalartype(α))
+    C = similar(A, T, cod ← dom)
+    return mul_tail!(C, A, B, α, Zero(), backend, allocator)
+end
+
+function mul_tail!(
+        C::AbstractTensorMap, A::AbstractTensorMap, B::AbstractTensorMap,
+        α::Number, β::Number,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    (numin(C) == numin(A) && numout(C) == numout(A) && numin(B) == numout(B) == 1) ||
+        throw(SpaceMismatch())
+
+    numin(A) == 1 && return mul!(C, A, B, α, β)
+
+    cp = checkpoint(allocator)
+
+    Astructure = TensorKit.fusionblockstructure(space(A))
+    Bblocks = blocks(B)
+    for ((f₁, f₂), c) in subblocks(C)
+        # fetch B block
+        u = first(f₂.uncoupled)
+        b = Bblocks[u]
+        isempty(b) && (scale!(c, β); continue)
+
+        # fetch A block
+        haskey(Astructure.fusiontreeindices, (f₁, f₂)) || (scale!(c, β); continue)
+        a = A[f₁, f₂]
+
+        tensorcontract!(
+            c,
+            a, (ntuple(identity, numind(A) - 1), (1,)), false,
+            b, ((1,), (2,)), false,
+            (ntuple(identity, numout(C)), ntuple(i -> i + numout(C), numin(C))),
+            α, β, backend, allocator
+        )
+    end
+
+    return reset!(allocator, cp)
 end
 
 @inline fuse_legs(x::TensorMap, N₁::Int, N₂::Int) = fuse_legs(x, Val(N₁), Val(N₂))
