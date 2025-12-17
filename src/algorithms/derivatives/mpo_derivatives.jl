@@ -134,9 +134,11 @@ function prepare_operator!!(
         H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
         backend::AbstractBackend, allocator
     )
+    cp = checkpoint(allocator)
     @plansor backend = backend allocator = allocator begin
         GL_O[-1 -2; -4 -5 -3] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
     end
+    reset!(allocator, cp)
     leftenv = fuse_legs(TensorMap(GL_O), 0, 2)
     rightenv = TensorMap(H.rightenv)
 
@@ -147,10 +149,13 @@ function prepare_operator!!(
         H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
         backend::AbstractBackend, allocator
     )
+    cp = checkpoint(allocator)
     @plansor backend = backend allocator = allocator begin
         GL_O[-1 -2; -4 -5 -3] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
         O_GR[-1 -2 -3; -4 -5] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
     end
+    reset!(allocator, cp)
+
     leftenv = fuse_legs(GL_O isa TensorMap ? GL_O : TensorMap(GL_O), 0, 2)
     rightenv = fuse_legs(O_GR isa TensorMap ? O_GR : TensorMap(O_GR), 2, 0)
     return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
@@ -158,55 +163,62 @@ end
 
 
 function (H::PrecomputedDerivative)(x::AbstractTensorMap)
-    R_fused = fuse_legs(H.rightenv, 0, 2)
+    allocator = H.allocator
+    cp = checkpoint(allocator)
+
+    R_fused = fuse_legs(H.rightenv, 0, numin(x))
     x_fused = fuse_legs(x, numout(x), numin(x))
 
-    # xR = matrix_contract(R_fused, x_fused, 1, One(), H.backend, H.allocator; transpose = true)
 
     TC = TensorOperations.promote_contract(scalartype(x_fused), scalartype(R_fused))
     xR = TensorOperations.tensoralloc_contract(TC, x_fused, ((1,), (2,)), false, R_fused, ((1,), (2, 3)), false, ((1, 2), (3,)), Val(true), H.allocator)
 
-    structure_xR = TensorKit.fusionblockstructure(space(xR))
-    structure_R = TensorKit.fusionblockstructure(space(R_fused))
+    matrix_contract!(xR, R_fused, x_fused, 1, One(), Zero(), H.backend, H.allocator; transpose = true)
 
-    xblocks = blocks(x_fused)
-    for ((f₁, f₂), i1) in structure_xR.fusiontreeindices
-        sz, str, offset = structure_xR.fusiontreestructure[i1]
-        xr = TensorKit.Strided.StridedView(xR.data, sz, str, offset)
+    # structure_xR = TensorKit.fusionblockstructure(space(xR))
+    # structure_R = TensorKit.fusionblockstructure(space(R_fused))
 
-        u = first(f₁.uncoupled)
-        x = TensorKit.Strided.StridedView(xblocks[u])
-        isempty(x) && (zerovector!(xr); continue)
+    # xblocks = blocks(x_fused)
+    # for ((f₁, f₂), i1) in structure_xR.fusiontreeindices
+    #     sz, str, offset = structure_xR.fusiontreestructure[i1]
+    #     xr = TensorKit.Strided.StridedView(xR.data, sz, str, offset)
 
-        if haskey(structure_R.fusiontreeindices, (f₁, f₂))
-            @inbounds i = structure_R.fusiontreeindices[(f₁, f₂)]
-            @inbounds sz, str, offset = structure_R.fusiontreestructure[i]
-            r = TensorKit.Strided.StridedView(R_fused.data, sz, str, offset)
+    #     u = first(f₁.uncoupled)
+    #     x = TensorKit.Strided.StridedView(xblocks[u])
+    #     isempty(x) && (zerovector!(xr); continue)
 
-            if TensorOperations.isblascontractable(r, ((1,), (2, 3))) &&
-                    TensorOperations.isblasdestination(xr, ((1,), (2, 3)))
-                C = TensorKit.Strided.sreshape(xr, size(xr, 1), size(xr, 2) * size(xr, 3))
-                B = TensorKit.Strided.sreshape(r, size(r, 1), size(r, 2) * size(r, 3))
-                LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
-            elseif sz[2] < sz[3]
-                for k in axes(r, 2)
-                    C = xr[:, k, :]
-                    B = r[:, k, :]
-                    LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
-                end
-            else
-                for k in axes(r, 3)
-                    C = xr[:, :, k]
-                    B = r[:, :, k]
-                    LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
-                end
-            end
-        else
-            zerovector!(xr)
-        end
-    end
+    #     if haskey(structure_R.fusiontreeindices, (f₁, f₂))
+    #         @inbounds i = structure_R.fusiontreeindices[(f₁, f₂)]
+    #         @inbounds sz, str, offset = structure_R.fusiontreestructure[i]
+    #         r = TensorKit.Strided.StridedView(R_fused.data, sz, str, offset)
+
+    #         if TensorOperations.isblascontractable(r, ((1,), (2, 3))) &&
+    #                 TensorOperations.isblasdestination(xr, ((1,), (2, 3)))
+    #             C = TensorKit.Strided.sreshape(xr, size(xr, 1), size(xr, 2) * size(xr, 3))
+    #             B = TensorKit.Strided.sreshape(r, size(r, 1), size(r, 2) * size(r, 3))
+    #             LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
+    #         elseif sz[2] < sz[3]
+    #             for k in axes(r, 2)
+    #                 C = xr[:, k, :]
+    #                 B = r[:, k, :]
+    #                 LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
+    #             end
+    #         else
+    #             for k in axes(r, 3)
+    #                 C = xr[:, :, k]
+    #                 B = r[:, :, k]
+    #                 LinearAlgebra.BLAS.gemm!('N', 'N', one(TC), x, B, zero(TC), C)
+    #             end
+    #         end
+    #     else
+    #         zerovector!(xr)
+    #     end
+    # end
 
     LxR = H.leftenv * xR
+    TensorOperations.tensorfree!(xR, H.allocator)
+
+    reset!(allocator, cp)
     return TensorMap{scalartype(LxR)}(LxR.data, codomain(H.leftenv) ← domain(H.rightenv))
 end
 
@@ -219,8 +231,3 @@ const _ToPrepare = Union{
 function prepare_operator!!(H::Multiline{<:_ToPrepare}, backend::AbstractBackend, allocator)
     return Multiline(map(x -> prepare_operator!!(x, backend, allocator), parent(H)))
 end
-
-fixedpoint(A::Union{_ToPrepare, Multiline{<:_ToPrepare}}, x₀, which::Symbol, alg::Lanczos) =
-    fixedpoint(prepare_operator!!(A), x₀, which, alg)
-fixedpoint(A::Union{_ToPrepare, Multiline{<:_ToPrepare}}, x₀, which::Symbol, alg::Arnoldi) =
-    fixedpoint(prepare_operator!!(A), x₀, which, alg)
