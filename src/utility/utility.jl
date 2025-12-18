@@ -275,8 +275,9 @@ function mul_front!(
             α, β, backend, allocator
         )
     end
+    reset!(allocator, cp)
 
-    return reset!(allocator, cp)
+    return C
 end
 
 function mul_tail(
@@ -324,7 +325,8 @@ function mul_tail!(
         )
     end
 
-    return reset!(allocator, cp)
+    reset!(allocator, cp)
+    return C
 end
 
 @inline fuse_legs(x::TensorMap, N₁::Int, N₂::Int) = fuse_legs(x, Val(N₁), Val(N₂))
