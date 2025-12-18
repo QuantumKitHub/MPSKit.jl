@@ -60,11 +60,13 @@ using Compat: @compat
 # -------
 using TensorKit
 using TensorKit: BraidingTensor
+using TensorKit: TupleTools as TT
 using MatrixAlgebraKit
 using MatrixAlgebraKit: TruncationStrategy, PolarViaSVD, LAPACK_SVDAlgorithm
 using BlockTensorKit
 using BlockTensorKit: TensorMapSumSpace
 using TensorOperations
+using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
 using OptimKit
@@ -97,6 +99,7 @@ include("utility/logging.jl")
 using .IterativeLoggers
 include("utility/iterativesolvers.jl")
 
+include("utility/allocator.jl")
 include("utility/styles.jl")
 include("utility/periodicarray.jl")
 include("utility/windowarray.jl")

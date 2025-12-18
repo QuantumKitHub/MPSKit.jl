@@ -338,7 +338,7 @@ module TestAlgorithms
         H = force_planar(heisenberg_XXX(Trivial, Float64; spin = 1 // 2, L))
         ψ = FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4)
         E = expectation_value(ψ, H)
-        ψ₀, = find_groundstate(ψ, H)
+        ψ₀, = find_groundstate(ψ, H; verbosity = verbosity_conv)
         E₀ = expectation_value(ψ₀, H)
 
         @testset "Finite $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
