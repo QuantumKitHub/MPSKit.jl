@@ -169,16 +169,15 @@ function (H::PrecomputedDerivative)(x::AbstractTensorMap)
     R_fused = fuse_legs(H.rightenv, 0, numin(x))
     x_fused = fuse_legs(x, numout(x), numin(x))
 
-
     TC = TensorOperations.promote_contract(scalartype(x_fused), scalartype(R_fused))
     xR = TensorOperations.tensoralloc_contract(
-        TC, x_fused, ((1,), (2,)), false, R_fused, ((1,), (2, 3)), false, ((1, 2), (3,)), Val(true), H.allocator
+        TC, x_fused, ((1,), (2,)), false, R_fused, ((1,), (2, 3)), false, ((1, 2), (3,)), Val(true), allocator
     )
 
-    mul_front!(xR, x_fused, R_fused, One(), Zero(), H.backend, H.allocator)
+    mul_front!(xR, x_fused, R_fused, One(), Zero(), H.backend, allocator)
 
     LxR = H.leftenv * xR
-    TensorOperations.tensorfree!(xR, H.allocator)
+    TensorOperations.tensorfree!(xR, allocator)
 
     reset!(allocator, cp)
     return TensorMap{scalartype(LxR)}(LxR.data, codomain(H.leftenv) ← domain(H.rightenv))
