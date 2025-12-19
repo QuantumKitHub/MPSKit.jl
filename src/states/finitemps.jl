@@ -311,6 +311,9 @@ function Base.similar(ψ::FiniteMPS{A, B}) where {A, B}
     return FiniteMPS{A, B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
 end
 
+Base.isfinite(::Type{<:FiniteMPS}) = true
+GeometryStyle(::Type{<:FiniteMPS}) = FiniteChainStyle()
+
 Base.eachindex(ψ::FiniteMPS) = eachindex(ψ.AL)
 Base.eachindex(l::IndexStyle, ψ::FiniteMPS) = eachindex(l, ψ.AL)
 Base.checkbounds(::Type{Bool}, ψ::FiniteMPS, i::Integer) = 1 <= i <= length(ψ)
@@ -439,71 +442,6 @@ Compute the dimension of the maximal virtual space at a given site.
 """
 max_Ds(ψ::FiniteMPS) = dim.(max_virtualspaces(ψ))
 
-function Base.summary(io::IO, ψ::FiniteMPS)
-    return print(io, "$(length(ψ))-site FiniteMPS ($(scalartype(ψ)), $(spacetype(ψ)))")
-end
-function Base.show(io::IO, ::MIME"text/plain", ψ::FiniteMPS)
-    println(io, summary(ψ), ":")
-    context = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
-    return show(context, ψ)
-end
-Base.show(io::IO, ψ::FiniteMPS) = show(convert(IOContext, io), ψ)
-function Base.show(io::IOContext, ψ::FiniteMPS)
-    charset = (; start = "┌", mid = "├", stop = "└", ver = "│", dash = "──")
-    limit = get(io, :limit, false)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
-    if !haskey(io, :compact)
-        io = IOContext(io, :compact => true)
-    end
-
-    L = length(ψ)
-    c = ψ.center
-
-    for site in HalfInt.(reverse((1 / 2):(1 / 2):(L + 1 / 2)))
-        if site < half_screen_rows || site > L - half_screen_rows
-            if site > c # ARs
-                if isinteger(site)
-                    println(
-                        io, Int(site) == L ? charset.start : charset.mid, charset.dash,
-                        " AR[$(Int(site))]: ", ψ.ARs[Int(site)]
-                    )
-                end
-            elseif site == c # AC or C
-                if isinteger(c) # center is an AC
-                    println(
-                        io, if site == L
-                            charset.start
-                        elseif site == 1
-                            charset.stop
-                        else
-                            charset.mid
-                        end, charset.dash, " AC[$(Int(site))]: ", ψ.ACs[Int(site)]
-                    )
-                else # center is a bond-tensor
-                    println(
-                        io, if site == HalfInt(L + 1 / 2)
-                            charset.start
-                        elseif site == HalfInt(1 / 2)
-                            charset.stop
-                        else
-                            charset.ver
-                        end, " C[$(Int(site - 1 / 2))]: ", ψ.Cs[Int(site + 1 / 2)]
-                    )
-                end
-            else
-                if isinteger(site)
-                    println(
-                        io, site == 1 ? charset.stop : charset.mid, charset.dash,
-                        " AL[$(Int(site))]: ", ψ.ALs[Int(site)]
-                    )
-                end
-            end
-        elseif site == half_screen_rows
-            println(io, charset.ver, "⋮")
-        end
-    end
-    return nothing
-end
 
 #===========================================================================================
 Linear Algebra

@@ -1,7 +1,7 @@
 """
     struct FiniteEnvironments <: AbstractMPSEnvironments
 
-Environment manager for `FiniteMPS` and `WindowMPS`. This structure is responsable for automatically checking
+Environment manager for `FiniteMPS` and `WindowMPS`. This structure is responsible for automatically checking
 if the queried environment is still correctly cached and if not recalculates.
 """
 struct FiniteEnvironments{A, B, C, D} <: AbstractMPSEnvironments

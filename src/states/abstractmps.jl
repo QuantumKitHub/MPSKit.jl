@@ -119,11 +119,11 @@ function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = Defaults.alg
         i = findfirst(!isfullrank, A)
         isnothing(i) && break
         if !isfullrank(A[i]; side = :left)
-            L, Q = _right_orth!(_transpose_tail(A[i]); alg)
+            L, Q = right_orth!(_transpose_tail(A[i]); alg)
             A[i] = _transpose_front(Q)
             A[i - 1] = A[i - 1] * L
         else
-            A[i], R = _left_orth!(A[i]; alg)
+            A[i], R = left_orth!(A[i]; alg)
             A[i + 1] = _transpose_front(R * _transpose_tail(A[i + 1]))
         end
     end
@@ -173,6 +173,7 @@ abstract type AbstractFiniteMPS <: AbstractMPS end
 
 Base.eltype(ψ::AbstractMPS) = eltype(typeof(ψ))
 VectorInterface.scalartype(T::Type{<:AbstractMPS}) = scalartype(site_type(T))
+Base.isfinite(ψ::AbstractMPS) = isfinite(typeof(ψ))
 
 function Base.checkbounds(ψ::AbstractMPS, i)
     return Base.checkbounds(Bool, ψ, i) || throw(BoundsError(ψ, i))

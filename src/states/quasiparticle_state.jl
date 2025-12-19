@@ -212,6 +212,8 @@ const FiniteQP{S <: FiniteMPS, T1, T2} = QP{S, T1, T2}
 const InfiniteQP{S <: InfiniteMPS, T1, T2} = QP{S, T1, T2}
 const MultilineQP{Q <: QP} = Multiline{Q}
 
+GeometryStyle(::Type{<:QP{S, T1, T2}}) where {S, T1, T2} = GeometryStyle(S)
+
 TensorKit.spacetype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = spacetype(S)
 TensorKit.sectortype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = sectortype(S)
 

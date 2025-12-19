@@ -9,7 +9,7 @@ entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
     S = zero(real(scalartype(state)))
     tol = eps(typeof(S))
-    for (c, b) in entanglement_spectrum(state, loc)
+    for (c, b) in pairs(entanglement_spectrum(state, loc))
         s = zero(S)
         for x in b
             x < tol && break
@@ -43,7 +43,7 @@ Calculate the Galerkin error, which is the error between the solution of the ori
 Concretely, this is the overlap of the current state with the single-site derivative, projected onto the nullspace of the current state:
 
 ```math
-\\epsilon = |VL * (VL' * \\frac{above}{\\partial AC_{pos}})|
+\\epsilon = \\left|VL ⋅ \\left(VL^{\\dagger} ⋅ \\frac{\\partial \\text{above}}{\\partial AC_{\\text{pos}}}\\right)\\right|
 ```
 """
 function calc_galerkin(
@@ -51,7 +51,7 @@ function calc_galerkin(
     )
     AC´ = AC_hamiltonian(pos, below, operator, above, envs) * above.AC[pos]
     normalize!(AC´)
-    out = add!(AC´, below.AL[pos] * below.AL[pos]' * AC´, -1)
+    out = mul!(AC´, below.AL[pos], below.AL[pos]' * AC´, -1, +1)
     return norm(out)
 end
 function calc_galerkin(
@@ -94,7 +94,7 @@ function transfer_spectrum(
     init = randomize!(
         similar(
             above.AL[1], left_virtualspace(below, 1),
-            ℂ[typeof(sector)](sector => 1)' * left_virtualspace(above, 1)
+            spacetype(above)(sector => 1)' * left_virtualspace(above, 1)
         )
     )
 
@@ -151,7 +151,7 @@ function marek_gap(above::InfiniteMPS; tol_angle = 0.1, kwargs...)
     return marek_gap(spectrum; tol_angle)
 end
 
-function marek_gap(spectrum; tol_angle = 0.1)
+function marek_gap(spectrum::AbstractVector{T}; tol_angle = 0.1) where {T <: Number}
     # Remove 1s from the spectrum
     inds = findall(abs.(spectrum) .< 1 - 1.0e-12)
     length(spectrum) - length(inds) < 2 || @warn "Non-injective mps?"
@@ -187,7 +187,7 @@ function correlation_length(above::InfiniteMPS; kwargs...)
     return 1 / ϵ
 end
 
-function correlation_length(spectrum; kwargs...)
+function correlation_length(spectrum::AbstractVector{T}; kwargs...) where {T <: Number}
     ϵ, = marek_gap(spectrum; kwargs...)
     return 1 / ϵ
 end

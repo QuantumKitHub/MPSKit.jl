@@ -2,8 +2,8 @@ using MPSKit, MPSKitModels, TensorKit, Plots
 
 let
     #defining the hamiltonian
-    th = nonsym_ising_ham(; lambda = 0.3)
-    sx, sy, sz = nonsym_spintensors(1 // 2)
+    th = transverse_field_ising(; g = 0.3)
+    sx, sy, sz = σˣ(ComplexF64), σʸ(ComplexF64), σᶻ(ComplexF64)
 
     #initilizing a random mps
     ts = InfiniteMPS([ℂ^2], [ℂ^12])
@@ -23,11 +23,12 @@ let
 
     envs = environments(mpco, th)
 
-    szdat = [expectation_value(mpco, sz)]
+    szdat = [expectation_value(mpco, i => sz) for i in 1:length(mpco)]
+    szdat = [szdat]
 
     for i in 1:(totaltime / deltat)
-        mpco, envs = timestep(mpco, th, deltat, TDVP2(; trscheme = truncrank(20)), envs)
-        push!(szdat, expectation_value(mpco, sz))
+        mpco, envs = timestep(mpco, th, 0, deltat, TDVP2(; trscheme = truncbelow(10^(-8)) & truncdim(25)), envs)
+        push!(szdat, [expectation_value(mpco, i => sz) for i in 1:length(mpco)])
     end
 
     display(heatmap(real.(reduce((a, b) -> [a b], szdat))))

@@ -64,7 +64,7 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environme
         @plansor AC[-1 -2; -3] := S[-1; 1] * V[1; -3 -2]
 
         #find AL2 from AC and C as in vumps paper
-        QAC, _ = qr_compact(AC)
+        QAC, _ = qr_compact(AC; positive = true)
         QC, _ = qr_compact(nC2; positive = true)
         dom_map = isometry(domain(QC), domain(QAC))
 
