@@ -16,7 +16,7 @@ function correlator(
     )
     first(js) > i || @error "i should be smaller than j ($i, $(first(js)))"
     S₁ = _firstspace(O₁)
-    S₁ == oneunit(S₁) || throw(ArgumentError("O₁ should start with a trivial leg."))
+    isunitspace(S₁) || throw(ArgumentError("O₁ should start with a trivial leg."))
     S₂ = _lastspace(O₂)
     S₂ == S₁' || throw(ArgumentError("O₂ should end with a trivial leg."))
 
@@ -39,8 +39,9 @@ function correlator(
 end
 
 function correlator(
-        state::AbstractMPS, O₁₂::AbstractTensorMap{<:Any, S, 2, 2}, i::Int, j
+        state::AbstractMPS, O₁₂::AbstractTensorMap{<:Any, S, 2, 2}, i::Int,
+        j
     ) where {S}
-    O₁, O₂ = decompose_localmpo(add_util_leg(O₁₂))
+    O₁, O₂ = decompose_localmpo(add_util_mpoleg(O₁₂))
     return correlator(state, O₁, O₂, i, j)
 end

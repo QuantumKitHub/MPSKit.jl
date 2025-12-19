@@ -35,10 +35,10 @@ end
 
 function excitations(
         H, alg::ChepigaAnsatz, ψ::FiniteMPS, envs = environments(ψ, H);
-        sector = one(sectortype(ψ)), num::Int = 1, pos::Int = length(ψ) ÷ 2
+        sector = leftunit(ψ), num::Int = 1, pos::Int = length(ψ) ÷ 2
     )
     1 ≤ pos ≤ length(ψ) || throw(ArgumentError("invalid position $pos"))
-    sector == one(sector) || error("not yet implemented for charged excitations")
+    isunit(sector) || error("not yet implemented for charged excitations")
 
     # add random offset to kickstart Krylov process:
     AC = ψ.AC[pos]
@@ -100,10 +100,10 @@ end
 
 function excitations(
         H, alg::ChepigaAnsatz2, ψ::FiniteMPS, envs = environments(ψ, H);
-        sector = one(sectortype(ψ)), num::Int = 1, pos::Int = length(ψ) ÷ 2
+        sector = leftunit(ψ), num::Int = 1, pos::Int = length(ψ) ÷ 2
     )
     1 ≤ pos ≤ length(ψ) - 1 || throw(ArgumentError("invalid position $pos"))
-    sector == one(sector) || error("not yet implemented for charged excitations")
+    isunit(sector) || error("not yet implemented for charged excitations")
 
     # add random offset to kickstart Krylov process:
     @plansor AC2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]

@@ -1,6 +1,6 @@
 """
     exact_diagonalization(H::FiniteMPOHamiltonian;
-                          sector=first(sectors(oneunit(physicalspace(H, 1)))),
+                          sector=rightunit(H),
                           len::Int=length(H), num::Int=1, which::Symbol=:SR,
                           alg=Defaults.alg_eigsolve(; dynamic_tols=false))
                             -> vals, state_vecs, convhist
@@ -13,7 +13,7 @@ equivalent to dense eigenvectors.
 - `H::FiniteMPOHamiltonian`: the Hamiltonian to diagonalize.
 
 ### Keyword arguments
-- `sector=first(sectors(oneunit(physicalspace(H, 1))))`: the total charge of the
+- `sector=rightunit(H)`: the total charge of the
   eigenvectors, which is chosen trivial by default.
 - `len::Int=length(H)`: the length of the system.
 - `num::Int=1`: the number of eigenvectors to find.
@@ -32,7 +32,7 @@ equivalent to dense eigenvectors.
 """
 function exact_diagonalization(
         H::FiniteMPOHamiltonian;
-        sector = one(sectortype(H)), num::Int = 1, which::Symbol = :SR,
+        sector = rightunit(H), num::Int = 1, which::Symbol = :SR,
         alg = Defaults.alg_eigsolve(; dynamic_tols = false)
     )
     L = length(H)
@@ -44,7 +44,7 @@ function exact_diagonalization(
 
     # fuse from left to right
     ALs = Vector{Union{Missing, TA}}(missing, L)
-    left = oneunit(spacetype(H))
+    left = spacetype(H)(rightunit(sector) => 1)
     for i in 1:(middle_site - 1)
         P = physicalspace(H, i)
         ALs[i] = isomorphism(T, left ⊗ P ← fuse(left ⊗ P))

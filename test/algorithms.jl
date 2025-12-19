@@ -727,7 +727,7 @@ module TestAlgorithms
 
         @test expectation_value(ψ, H) ≈
             expectation_value(ψ, 1 => -g * S_x()) + expectation_value(ψ, (1, 2) => -S_zz())
-        Z_mpo = MPSKit.add_util_leg(S_z())
+        Z_mpo = MPSKit.add_util_mpoleg(S_z())
         G = correlator(ψ, Z_mpo, Z_mpo, 1, 2:5)
         G2 = correlator(ψ, S_zz(), 1, 3:2:5)
         @test isapprox(G[2], G2[1], atol = 1.0e-2)
@@ -1060,7 +1060,7 @@ module TestAlgorithms
             FiniteMPS(physicalspace(H), maxVspaces[2:(end - 1)]), H; verbosity = 0
         )
         E₀ = expectation_value(gs, H)
-        @test E₀ ≈ first(vals_dense[one(U1Irrep)])
+        @test E₀ ≈ first(vals_dense[unit(U1Irrep)])
 
         for (sector, vals) in pairs(vals_dense)
             # ED tests
@@ -1077,7 +1077,7 @@ module TestAlgorithms
             Es, Bs = excitations(H, QuasiparticleAnsatz(; tol), gs; sector, num = 1)
             Es = Es .+ E₀
             # first excited state is second eigenvalue if sector is trivial
-            @test Es[1] ≈ vals[isone(sector) ? 2 : 1] atol = 1.0e-8
+            @test Es[1] ≈ vals[isunit(sector) ? 2 : 1] atol = 1.0e-8
         end
 
         # shifted charges tests
