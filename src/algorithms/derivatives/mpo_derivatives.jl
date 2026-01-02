@@ -126,8 +126,8 @@ function prepare_operator!!(
         H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor},
         backend::AbstractBackend, allocator
     )
-    leftenv = _transpose_tail(TensorMap(H.leftenv))
-    rightenv = TensorMap(H.rightenv)
+    leftenv = _transpose_tail(H.leftenv isa TensorMap ? H.leftenv : TensorMap(H.leftenv))
+    rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
     return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
 end
 function prepare_operator!!(
@@ -139,8 +139,8 @@ function prepare_operator!!(
         GL_O[-1 -2; -4 -5 -3] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
     end
     reset!(allocator, cp)
-    leftenv = fuse_legs(TensorMap(GL_O), 0, 2)
-    rightenv = TensorMap(H.rightenv)
+    leftenv = fuse_legs(GL_O isa TensorMap ? GL_O : TensorMap(GL_O), 0, 2)
+    rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
 
     return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
 end
