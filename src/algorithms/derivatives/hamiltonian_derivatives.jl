@@ -197,7 +197,8 @@ function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::Jorda
     # starting left - ending right
     CB = if nonzero_length(W1.C) > 0 && nonzero_length(W2.B) > 0
         @plansor CB_[-1 -2; -3 -4] ≔ W1.C[-1; -3 1] * W2.B[1 -2; -4]
-        only(CB_)
+        # have to convert to complex if hamiltonian is real but states are complex
+        scalartype(GL) <: Complex ? complex(only(CB_)) : only(CB_)
     else
         missing
     end
@@ -258,8 +259,7 @@ function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::Jorda
 
     return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
         II, IC, ID,
-        convert(O2, CB), # might have real eltype
-        CA,
+        CB, CA,
         AB, AA,
         BE, DE, EE
     )
