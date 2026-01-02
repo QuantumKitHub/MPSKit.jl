@@ -219,13 +219,6 @@ Base.:*(h::LazySum{<:Union{DerivativeOrMultiplied}}, v) = h(v)
 """
     prepare_operator!!(O, [backend], [allocator]) -> O′
 
-Given an operator and vector, try to construct a more efficient representation of that operator for repeated application.
-This should always be used in conjunction with [`unprepare_operator!!`](@ref).
+Given an operator, try to construct a more efficient representation of that operator for repeated application.
 """
 prepare_operator!!(O, backend::AbstractBackend = DefaultBackend(), allocator = GrowingBuffer()) = O
-
-# to make benchmark scripts run
-prepare_operator!!(O, x::AbstractTensorMap, backend::AbstractBackend = DefaultBackend(), allocator = GrowingBuffer()) =
-    prepare_operator!!(O, backend, allocator), x
-unprepare_operator!!(y, O, x, backend::AbstractBackend = DefaultBackend(), allocator = GrowingBuffer()) =
-    y
