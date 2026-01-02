@@ -90,30 +90,36 @@ function prepare_operator!!(
     B = H.B
 
     # onsite
-    D = if !ismissing(C)
-        Id = TensorKit.id(storagetype(W.D), space(C, 2))
-        @plansor C[-1 -2; -3 -4] += W.D[-1; -3] * Id[-4; -2]
+    D = if ismissing(H.D)
+        missing
+    elseif !ismissing(C)
+        Id = TensorKit.id(storagetype(C), space(C, 2))
+        @plansor C[-1 -2; -3 -4] += H.D[-1; -3] * Id[-2; -4]
         missing
     elseif !ismissing(B)
-        Id = TensorKit.id(storagetype(W.D), space(B, 1))
-        @plansor B[-1 -2; -3 -4] += Id[-1; -3] * W.D[-2; -4]
+        Id = TensorKit.id(storagetype(B), space(B, 1))
+        @plansor B[-1 -2; -3 -4] += Id[-1; -3] * H.D[-2; -4]
         missing
     else
         W.D
     end
 
     # not_started
-    I = if !ismissing(C)
-        Id = id(storagetype(W.I), space(C, 1))
-        @plansor C[-1 -2; -3 -4] += I[-1; -3] * H.I[-4; -2]
+    I = if ismissing(H.I)
+        missing
+    elseif !ismissing(C)
+        Id = id(storagetype(C), space(C, 1))
+        @plansor C[-1 -2; -3 -4] += Id[-1; -3] * H.I[-4; -2]
         missing
     else
         H.I
     end
 
     # finished
-    E = if !ismissing(B)
-        Id = id(storagetype(W.I), space(B, 2))
+    E = if ismissing(H.E)
+        missing
+    elseif !ismissing(B)
+        Id = id(storagetype(B), space(B, 2))
         @plansor B[-1 -2; -3 -4] += H.E[-1; -3] * Id[-2; -4]
         missing
     else
