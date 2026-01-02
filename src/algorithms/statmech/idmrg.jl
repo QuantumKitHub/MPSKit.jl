@@ -13,7 +13,7 @@ function leading_boundary(
 
             # left to right sweep
             for col in 1:size(ψ, 2)
-                Hac = AC_hamiltonian(col, ψ, operator, ψ, envs)
+                Hac = prepare_operator!!(AC_hamiltonian(col, ψ, operator, ψ, envs))
                 _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
@@ -27,7 +27,7 @@ function leading_boundary(
 
             # right to left sweep
             for col in size(ψ, 2):-1:1
-                Hac = AC_hamiltonian(col, ψ, operator, ψ, envs)
+                Hac = prepare_operator!!(AC_hamiltonian(col, ψ, operator, ψ, envs))
                 _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
@@ -78,7 +78,7 @@ function leading_boundary(
             # sweep from left to right
             for site in 1:(size(ψ, 2) - 1)
                 ac2 = AC2(ψ, site; kind = :ACAR)
-                h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
+                h = prepare_operator!!(AC2_hamiltonian(site, ψ, operator, ψ, envs))
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
@@ -102,7 +102,7 @@ function leading_boundary(
             ψ.AL[:, end] .= ψ.AC[:, end] ./ ψ.C[:, end]
             ψ.AC[:, 1] .= _mul_tail.(ψ.AL[:, 1], ψ.C[:, 1])
             ac2 = AC2(ψ, site; kind = :ALAC)
-            h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
+            h = prepare_operator!!(AC2_hamiltonian(site, ψ, operator, ψ, envs))
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
@@ -127,7 +127,7 @@ function leading_boundary(
             # sweep from right to left
             for site in reverse(1:(size(ψ, 2) - 1))
                 ac2 = AC2(ψ, site; kind = :ALAC)
-                h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
+                h = prepare_operator!!(AC2_hamiltonian(site, ψ, operator, ψ, envs))
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
@@ -149,7 +149,7 @@ function leading_boundary(
             ψ.AC[:, end] .= _mul_front.(ψ.C[:, end - 1], ψ.AR[:, end])
             ψ.AR[:, 1] .= _transpose_front.(ψ.C[:, end] .\ _transpose_tail.(ψ.AC[:, 1]))
             ac2 = AC2(ψ, 0; kind = :ACAR)
-            h = AC2_hamiltonian(0, ψ, operator, ψ, envs)
+            h = prepare_operator!!(AC2_hamiltonian(0, ψ, operator, ψ, envs))
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
