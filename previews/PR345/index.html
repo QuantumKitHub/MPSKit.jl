@@ -6,40 +6,56 @@ using LinearAlgebra: norm</code></pre><h3 id="Finite-Matrix-Product-States"><a c
 D = 5 # virtual dimension
 L = 10 # number of sites
 
-mps = FiniteMPS(L, ComplexSpace(d), ComplexSpace(D)) # random MPS with maximal bond dimension D</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-site FiniteMPS (ComplexF64, TensorKit.ComplexSpace):
-┌ C[10]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 1, Vector{ComplexF64}}(ComplexF64[1.0+0.0im], ℂ^1 ← ℂ^1)
-├── AL[10]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.644173+0.152862im, 0.0533094+0.000856535im, 0.568234+0.485538im, 0.0128853+0.0054061im], (ℂ^2 ⊗ ℂ^2) ← ℂ^1)
-├── AL[9]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.665371+0.398123im, 0.0218867+0.0265291im, -0.00186618+0.0144203im, 0.000850051+0.00310341im, 0.597174+0.198598im, -0.00196753+0.0345668im, 0.00750143+0.00773213im, 0.000854083+0.00111409im, -0.239008+0.572745im, 0.0116536+0.0494129im, 0.0310116+0.00835439im, 0.0106401+0.000498288im, 0.139311-0.746678im, 0.0995825-0.154843im, -0.0112701+0.0120165im, -0.000863248+0.00382431im], (ℂ^4 ⊗ ℂ^2) ← ℂ^2)
-├── AL[8]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.341909+0.399886im, -0.0182375+0.0421665im, 0.0287464+0.0150722im, 0.00284685+0.00202246im, 0.000508696+0.00132687im, 0.364727+0.761928im, -0.0501847+0.0134645im, 0.0416563+0.0438296im, 0.00568875-0.00104396im, 0.0044151+0.00648739im  …  0.136597-0.112068im, 0.171541-0.0957098im, 0.234654+0.483517im, -0.0984303+0.228499im, -0.210566-0.130735im, -0.148763+0.030782im, -0.356621+0.251234im, 0.372878-0.358929im, 0.0805383+0.0680234im, -0.0630906+0.147232im], (ℂ^5 ⊗ ℂ^2) ← ℂ^4)
-├── AL[7]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.391795+0.494436im, 0.0525544+0.133363im, 0.0184727+0.0244272im, 0.0075688+0.00572491im, 0.000218114+0.00173446im, 0.516495+0.531838im, 0.0991168+0.142122im, 0.0223745+0.0161822im, 0.004906+0.00448829im, 0.00123262+0.000547917im  …  -0.158696+0.0465253im, 0.555149-0.0106747im, 0.131625+0.327981im, 0.144715+0.0957785im, -0.0479703-0.0121406im, 0.071999+0.051829im, -0.108108-0.335824im, -0.294358-0.140881im, -0.0685736+0.500402im, -0.0370826+0.107593im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-├── AL[6]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.560597+0.61288im, 0.031262+0.0383832im, 0.0152169+0.000316929im, 0.00211358+0.000575652im, 0.0047689+0.00512754im, 0.349165+0.429947im, -0.006182+0.017846im, 0.0134669+0.00541912im, 0.00349985-0.000994799im, 0.00220812+0.0042304im  …  0.00457674+0.00978808im, -0.0688669-0.042519im, -0.721105-0.0128522im, -0.0968211+0.057295im, 0.229993-0.0510923im, 0.018229-0.00794927im, -0.146644+0.0823492im, -0.274455+0.403931im, 0.0490626-0.112781im, 0.298638+0.183116im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-├── AL[5]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.600798+0.368539im, 0.0442756+0.0195385im, 0.0967248+0.00814472im, 0.0271653+0.00799804im, 0.00275026+0.00138759im, 0.524887+0.447659im, 0.0422798+0.0294168im, 0.100983+0.03339im, 0.0234846+0.0148077im, 0.00158779+0.00101266im  …  -0.0231268-0.0387163im, 0.140967+0.134899im, 0.409708+0.188998im, -0.595392+0.0768067im, -0.125332-0.00366491im, -0.0117629-0.0832789im, -0.0149584+0.301594im, 0.267158+0.295097im, -0.115477-0.331438im, 0.0101135+0.0142642im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-├── AL[4]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.479003+0.571214im, 0.196612+0.0746697im, 0.0292029+0.0391822im, 0.00392781+0.00868902im, 0.00261925+0.00685225im, 0.491625+0.36506im, 0.137745+0.0516644im, 0.0250467+0.0107826im, 0.00546955+0.00978511im, 0.00544725+9.21782e-6im  …  -0.0710356+0.0087653im, 0.089658-0.0303611im, 0.408322-0.325044im, -0.125313-0.144528im, 0.0341848+0.10145im, 0.0562948+0.0170942im, -0.153269-0.056518im, -0.112083+0.213155im, 0.437083+0.540747im, -0.297941-0.0715666im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-├── AL[3]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.715365+0.222814im, 0.146315-0.0593381im, 0.0290633+0.0631504im, 0.0243586+0.0461303im, 0.577912+0.226703im, 0.0945015-0.0819393im, 0.0502758+0.0475133im, 0.0102112+0.0146122im, -0.38435-0.441746im, -0.189359-0.129214im  …  -0.177706+0.395586im, -0.196483+0.187165im, -0.00719666-0.0131107im, -0.0911711-0.222908im, 0.477142+0.148595im, -0.394838-0.0492278im, -0.0972024+0.0925786im, 0.106505-0.270091im, 0.135579+0.0873362im, -0.262258-0.580181im], (ℂ^4 ⊗ ℂ^2) ← ℂ^5)
-├── AL[2]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.123169+0.745301im, 0.146068+0.257254im, 0.120108+0.455011im, 0.129079+0.322054im, 0.399595-0.162455im, -0.177904-0.443659im, -0.556975+0.497787im, -0.0071011+0.165485im, 0.143905+0.093126im, 0.112875-0.0892913im, 0.242167+0.260637im, -0.82469-0.378438im, -0.078654-0.455764im, 0.733921+0.353055im, -0.151268+0.266585im, -0.0390001+0.165331im], (ℂ^2 ⊗ ℂ^2) ← ℂ^4)
-└── AL[1]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.255605+0.205458im, 0.84115+0.430022im, 0.881081+0.340808im, -0.32351-0.0537406im], (ℂ^1 ⊗ ℂ^2) ← ℂ^2)
+mps = FiniteMPS(L, ComplexSpace(d), ComplexSpace(D)) # random MPS with maximal bond dimension D</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-site FiniteMPS(ComplexF64, TensorKit.ComplexSpace) with maximal dimension 5 and center 21/2:
+┌─[10]─ ℂ^2
+│ ℂ^2
+├─[9]─ ℂ^2
+│ ℂ^4
+├─[8]─ ℂ^2
+│ ℂ^5
+├─[7]─ ℂ^2
+│ ℂ^5
+├─[6]─ ℂ^2
+│ ℂ^5
+├─[5]─ ℂ^2
+│ ℂ^5
+├─[4]─ ℂ^2
+│ ℂ^5
+├─[3]─ ℂ^2
+│ ℂ^4
+├─[2]─ ℂ^2
+│ ℂ^2
+└─[1]─ ℂ^2
 </code></pre><p>The <code>FiniteMPS</code> object then handles the gauging of the MPS, which is necessary for many of the algorithms. This is done automatically when needed, and the user can access the gauged tensors by getting and setting the <code>AL</code>, <code>AR</code>, <code>CR</code>/<code>CL</code> and <code>AC</code> fields, which each represent a vector of these tensors.</p><pre><code class="language-julia hljs">al = mps.AL[3] # left gauged tensor of the third site
 @tensor E[a; b] := al[c, d, b] * conj(al[c, d, a])
 @show isapprox(E, id(right_virtualspace(mps, 3)))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><pre><code class="language-julia hljs">ar = mps.AR[3] # right gauged tensor of the third site
 @tensor E[a; b] := ar[a, d, c] * conj(ar[b, d, c])
 @show isapprox(E, id(left_virtualspace(mps, 3)))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><p>As the mps will be kept in a gauged form, updating a tensor will also update the gauged tensors. For example, we can set the tensor of the third site to the identity, and the gauged tensors will be updated accordingly.</p><pre><code class="language-julia hljs">mps.C[3] = id(domain(mps.C[3]))
-mps</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-site FiniteMPS (ComplexF64, TensorKit.ComplexSpace):
-┌── AR[10]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.645154+0.153094im, 0.747831+0.0329796im, 0.569099+0.486277im, -0.576028-0.328409im], (ℂ^2 ⊗ ℂ^2) ← ℂ^1)
-├── AR[9]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.660713+0.426094im, 0.590953-0.0770052im, -0.0392909+0.0838962im, 0.134111+0.0133408im, 0.595123+0.163774im, -0.697426+0.315872im, 0.00713816-0.0795651im, -0.1517+0.0586002im, -0.00734574+0.0176029im, 0.0501449+0.0549802im, 0.934233+0.215031im, -0.0954883+0.256809im, 0.00428161-0.0229486im, 0.114197-0.200218im, -0.220719-0.131488im, -0.618906+0.705178im], (ℂ^4 ⊗ ℂ^2) ← ℂ^2)
-├── AR[8]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.354247+0.43241im, 0.736594+0.156425im, -0.0727128-0.0365283im, 0.255217-0.135294im, 0.12201+0.0107099im, 0.364134+0.744675im, -0.455106-0.213138im, 0.0439789+0.0556309im, -0.193126+0.0531617im, -0.0824438-0.0270111im  …  3.23548e-5-2.65447e-5im, 0.0027328-0.00171015im, 0.0652688+0.110215im, -0.0519007+0.0801569im, -0.0359267-0.173672im, -3.52364e-5+7.29114e-6im, -0.00587716+0.00430372im, 0.0749093-0.0633017im, 0.0232106+0.0359036im, 0.0125002+0.406543im], (ℂ^5 ⊗ ℂ^2) ← ℂ^4)
-├── AR[7]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.421645+0.552582im, 0.244027-0.666575im, 0.0918007+0.0497185im, 0.0155928-0.0337547im, 0.00905606+0.0138093im, 0.504498+0.511981im, -0.150313+0.669293im, -0.0874489-0.0527603im, -0.00791088+0.0386228im, -0.00680268-0.0129712im  …  -8.47758e-6+2.48539e-6im, 0.00173824-4.92138e-5im, 0.00398385+0.0380063im, -0.000991204-0.0133271im, 0.0375009-0.145019im, 3.8462e-6+2.76871e-6im, -0.000364314-0.00102115im, -0.0322494-0.00942562im, 0.0130716+0.107674im, 0.0992279+0.303504im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-├── AR[6]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.509998+0.441481im, 0.422954-0.534706im, -0.0280748-0.278525im, 0.0268824-0.0287517im, 0.002823+0.00211545im, 0.366916+0.640345im, -0.530372+0.338778im, -0.0610156+0.234016im, -0.0239548+0.00120618im, -0.00520324-0.00297786im  …  9.77312e-8+2.09013e-7im, -0.000231572-0.000145149im, -0.0126079-0.000503275im, 0.00888644+0.0171506im, 0.0406925+0.111103im, 3.8926e-7-1.69748e-7im, -0.000496502+0.000277196im, -0.00504165+0.00628215im, 0.0196213-0.0193501im, 0.165054+0.0992864im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-├── AR[5]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.62478+0.323907im, 0.648126-0.185651im, -0.154413+0.0770985im, 0.0688138+0.0587209im, -0.0506263+0.0972658im, 0.506226+0.498427im, -0.666699-0.0158568im, 0.168554-0.0338937im, -0.0512418-0.0780158im, 0.0751517-0.0805032im  …  -1.48864e-6-2.49212e-6im, 0.00317512+0.0030579im, 0.0206996-0.00591377im, -0.114087+0.0199622im, 0.0159202+0.103435im, -7.57161e-7-5.36054e-6im, -0.000300579+0.00683665im, 0.03055+0.0054097im, -0.0300507-0.0299228im, -0.00898344+0.115969im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-├── AR[4]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.532918+0.499436im, -0.452163+0.480252im, 0.100589-0.11936im, -0.0264485-0.0718899im, 0.00651255-0.00930205im, 0.472513+0.493195im, 0.511517-0.487576im, -0.114779+0.118177im, 0.0278299+0.0702626im, -0.00523902+0.00991696im  …  -6.53556e-6+8.06443e-7im, 0.000686518-0.000266922im, 0.0678195-0.0538082im, -0.0731309+0.183236im, -0.0757227+0.0975783im, 5.17934e-6+1.57274e-6im, -0.00110672-0.000355761im, -0.0202389+0.0348527im, 0.0627191+0.0207719im, -0.115539+0.0369603im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-│ C[3]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 1, Vector{ComplexF64}}(ComplexF64[1.0+0.0im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 1.0+0.0im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im  …  0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 1.0+0.0im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 1.0+0.0im], ℂ^5 ← ℂ^5)
-├── AL[3]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.715365+0.222814im, 0.146315-0.0593381im, 0.0290633+0.0631504im, 0.0243586+0.0461303im, 0.577912+0.226703im, 0.0945015-0.0819393im, 0.0502758+0.0475133im, 0.0102112+0.0146122im, -0.38435-0.441746im, -0.189359-0.129214im  …  -0.177706+0.395586im, -0.196483+0.187165im, -0.00719666-0.0131107im, -0.0911711-0.222908im, 0.477142+0.148595im, -0.394838-0.0492278im, -0.0972024+0.0925786im, 0.106505-0.270091im, 0.135579+0.0873362im, -0.262258-0.580181im], (ℂ^4 ⊗ ℂ^2) ← ℂ^5)
-├── AL[2]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.123169+0.745301im, 0.146068+0.257254im, 0.120108+0.455011im, 0.129079+0.322054im, 0.399595-0.162455im, -0.177904-0.443659im, -0.556975+0.497787im, -0.0071011+0.165485im, 0.143905+0.093126im, 0.112875-0.0892913im, 0.242167+0.260637im, -0.82469-0.378438im, -0.078654-0.455764im, 0.733921+0.353055im, -0.151268+0.266585im, -0.0390001+0.165331im], (ℂ^2 ⊗ ℂ^2) ← ℂ^4)
-└── AL[1]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.255605+0.205458im, 0.84115+0.430022im, 0.881081+0.340808im, -0.32351-0.0537406im], (ℂ^1 ⊗ ℂ^2) ← ℂ^2)
+mps</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-site FiniteMPS(ComplexF64, TensorKit.ComplexSpace) with maximal dimension 5 and center 7/2:
+┌─[10]─ ℂ^2
+│ ℂ^2
+├─[9]─ ℂ^2
+│ ℂ^4
+├─[8]─ ℂ^2
+│ ℂ^5
+├─[7]─ ℂ^2
+│ ℂ^5
+├─[6]─ ℂ^2
+│ ℂ^5
+├─[5]─ ℂ^2
+│ ℂ^5
+├─[4]─ ℂ^2
+│ ℂ^5
+├─[3]─ ℂ^2
+│ ℂ^4
+├─[2]─ ℂ^2
+│ ℂ^2
+└─[1]─ ℂ^2
 </code></pre><p>These objects can then be used to compute observables and expectation values. For example, the expectation value of the identity operator at the third site, which is equal to the norm of the MPS, can be computed as:</p><pre><code class="language-julia hljs">N1 = LinearAlgebra.norm(mps)
 N2 = expectation_value(mps, 3 =&gt; id(physicalspace(mps, 3)))
 println(&quot;‖mps‖ = $N1&quot;)
 println(&quot;&lt;mps|𝕀₃|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 2.23606797749979
-&lt;mps|𝕀₃|mps&gt; = 1.0 - 4.608084160446295e-17im</code></pre><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">J = 1.0
+&lt;mps|𝕀₃|mps&gt; = 1.0000000000000009 + 0.0im</code></pre><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">J = 1.0
 g = 0.5
 lattice = fill(ComplexSpace(2), 10)
 X = TensorMap(ComplexF64[0 1; 1 0], ComplexSpace(2), ComplexSpace(2))
@@ -48,40 +64,42 @@ H = FiniteMPOHamiltonian(lattice, (i, i+1) =&gt; -J * X ⊗ X for i in 1:length(
     FiniteMPOHamiltonian(lattice, (i,) =&gt; - g * Z for i in 1:length(lattice))
 find_groundstate!(mps, H, DMRG(; maxiter=10))
 E0 = expectation_value(mps, H)
-println(&quot;&lt;mps|H|mps&gt; = $real(E0)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: DMRG init:	obj = -3.074153763120e+00	err = 4.4467e-01
-[ Info: DMRG   1:	obj = -9.765078714927e+00	err = 1.5564483218e-02	time = 17.35 sec
-[ Info: DMRG   2:	obj = -9.765503495008e+00	err = 9.9033416506e-04	time = 0.32 sec
-[ Info: DMRG   3:	obj = -9.765503497245e+00	err = 4.2101061017e-06	time = 0.01 sec
-[ Info: DMRG   4:	obj = -9.765503497528e+00	err = 1.9468737887e-06	time = 0.01 sec
-[ Info: DMRG   5:	obj = -9.765503497586e+00	err = 9.3175735493e-07	time = 0.01 sec
-[ Info: DMRG   6:	obj = -9.765503497599e+00	err = 4.5546065928e-07	time = 0.01 sec
-[ Info: DMRG   7:	obj = -9.765503497602e+00	err = 2.2510874083e-07	time = 0.01 sec
-[ Info: DMRG   8:	obj = -9.765503497602e+00	err = 1.1184897003e-07	time = 0.01 sec
-[ Info: DMRG   9:	obj = -9.765503497603e+00	err = 5.5704107712e-08	time = 0.01 sec
-┌ Warning: DMRG cancel 10:	obj = -9.765503497603e+00	err = 2.7766371434e-08	time = 17.73 sec
+println(&quot;&lt;mps|H|mps&gt; = $real(E0)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: DMRG init:	obj = -3.473758531464e+00	err = 4.4318e-01
+[ Info: DMRG   1:	obj = -9.765429374536e+00	err = 1.5357847092e-02	time = 19.52 sec
+[ Info: DMRG   2:	obj = -9.765503496076e+00	err = 9.1309845004e-04	time = 0.33 sec
+[ Info: DMRG   3:	obj = -9.765503497269e+00	err = 4.3162065897e-06	time = 0.01 sec
+[ Info: DMRG   4:	obj = -9.765503497545e+00	err = 1.8183272119e-06	time = 0.01 sec
+[ Info: DMRG   5:	obj = -9.765503497590e+00	err = 7.8828719828e-07	time = 0.01 sec
+[ Info: DMRG   6:	obj = -9.765503497600e+00	err = 3.4520687023e-07	time = 0.01 sec
+[ Info: DMRG   7:	obj = -9.765503497602e+00	err = 1.5662807779e-07	time = 0.01 sec
+[ Info: DMRG   8:	obj = -9.765503497602e+00	err = 7.8139724789e-08	time = 0.01 sec
+[ Info: DMRG   9:	obj = -9.765503497603e+00	err = 3.9028335537e-08	time = 0.10 sec
+┌ Warning: DMRG cancel 10:	obj = -9.765503497603e+00	err = 1.9496749087e-08	time = 20.01 sec
 └ @ MPSKit ~/work/MPSKit.jl/MPSKit.jl/src/algorithms/groundstate/dmrg.jl:61
 &lt;mps|H|mps&gt; = real(E0)</code></pre><h3 id="Infinite-Matrix-Product-States"><a class="docs-heading-anchor" href="#Infinite-Matrix-Product-States">Infinite Matrix Product States</a><a id="Infinite-Matrix-Product-States-1"></a><a class="docs-heading-anchor-permalink" href="#Infinite-Matrix-Product-States" title="Permalink"></a></h3><p>Similarly, an infinite MPS can be constructed by specifying the tensors for the unit cell, characterised by the spaces (dimensions) thereof.</p><pre><code class="language-julia hljs">d = 2 # physical dimension
 D = 5 # virtual dimension
-mps = InfiniteMPS(d, D) # random MPS</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">single site InfiniteMPS:
-│   ⋮
-│ C[1]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 1, Vector{ComplexF64}}(ComplexF64[0.97833+0.0im, 0.0705987-0.142033im, 0.132823+0.00599138im, 0.00173921-0.00289135im, 0.00203515-0.000198627im, 0.0+0.0im, 0.00270388+0.0im, 0.00256707+0.00183331im, -0.00034016-0.000143478im, 6.05461e-5-0.000285943im  …  0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 2.40697e-5+0.0im, 1.22199e-5+1.03843e-5im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 5.70984e-6+0.0im], ℂ^5 ← ℂ^5)
-├── AL[1]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.556387+0.543748im, 0.151899-0.0444956im, 0.0793578+0.101099im, 0.00262293+0.00023539im, 0.000713918+0.000835715im, 0.439696+0.382872im, 0.0806905-0.0349399im, 0.0531162+0.0520041im, 0.00280855-0.000767315im, 0.000816413+0.00147607im  …  -0.0598084-0.137559im, 0.0148787-0.243259im, -0.0827684+0.728027im, -0.11443+0.0689245im, -0.0527835+0.0129678im, -0.0682847-0.0106627im, 0.452801-0.127013im, 0.33195+0.0773872im, -0.0064059+0.0265254im, -0.0397228-0.126458im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-│   ⋮
+mps = InfiniteMPS(d, D) # random MPS</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1-site InfiniteMPS(ComplexF64, TensorKit.ComplexSpace) with maximal dimension 5:
+| ⋮
+| ℂ^5
+├─[1]─ ℂ^2
+│ ℂ^5
+| ⋮
 </code></pre><p>The <code>InfiniteMPS</code> object then handles the gauging of the MPS, which is necessary for many of the algorithms. This is done automatically upon creation of the object, and the user can access the gauged tensors by getting and setting the <code>AL</code>, <code>AR</code>, <code>C</code> and <code>AC</code> fields, which each represent a (periodic) vector of these tensors.</p><pre><code class="language-julia hljs">al = mps.AL[1] # left gauged tensor of the first site
 @tensor E[a; b] := al[c, d, b] * conj(al[c, d, a])
 @show isapprox(E, id(left_virtualspace(mps, 1)))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><pre><code class="language-julia hljs">ar = mps.AR[1] # right gauged tensor of the first site
 @tensor E[a; b] := ar[a, d, c] * conj(ar[b, d, c])
 @show isapprox(E, id(right_virtualspace(mps, 2)))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><p>As regauging the MPS is not possible without recomputing all the tensors, setting a single tensor is not supported. Instead, the user should construct a new mps object with the desired tensor, which will then be gauged upon construction.</p><pre><code class="language-julia hljs">als = 3 .* mps.AL
-mps = InfiniteMPS(als)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">single site InfiniteMPS:
-│   ⋮
-│ C[1]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 1, Vector{ComplexF64}}(ComplexF64[0.97833+0.0im, 0.0705987-0.142033im, 0.132823+0.00599138im, 0.00173921-0.00289135im, 0.00203515-0.000198627im, 0.0+0.0im, 0.00270388+0.0im, 0.00256707+0.00183331im, -0.00034016-0.000143478im, 6.05461e-5-0.000285943im  …  0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 2.40697e-5+0.0im, 1.22199e-5+1.03843e-5im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 0.0+0.0im, 5.70984e-6+0.0im], ℂ^5 ← ℂ^5)
-├── AL[1]: TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 1, Vector{ComplexF64}}(ComplexF64[0.556387+0.543748im, 0.151899-0.0444956im, 0.0793578+0.101099im, 0.00262293+0.00023539im, 0.000713918+0.000835715im, 0.439696+0.382872im, 0.0806905-0.0349399im, 0.0531162+0.0520041im, 0.00280855-0.000767315im, 0.000816413+0.00147607im  …  -0.0598084-0.137559im, 0.0148787-0.243259im, -0.0827684+0.728027im, -0.11443+0.0689245im, -0.0527835+0.0129678im, -0.0682847-0.0106627im, 0.452801-0.127013im, 0.33195+0.0773872im, -0.0064059+0.0265254im, -0.0397228-0.126458im], (ℂ^5 ⊗ ℂ^2) ← ℂ^5)
-│   ⋮
+mps = InfiniteMPS(als)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1-site InfiniteMPS(ComplexF64, TensorKit.ComplexSpace) with maximal dimension 5:
+| ⋮
+| ℂ^5
+├─[1]─ ℂ^2
+│ ℂ^5
+| ⋮
 </code></pre><p>These objects can then be used to compute observables and expectation values. For example, the norm of the MPS, which is equal to the expectation value of the identity operator can be computed by:</p><pre><code class="language-julia hljs">N1 = norm(mps)
 N2 = expectation_value(mps, 1 =&gt; id(physicalspace(mps, 1)))
 println(&quot;‖mps‖ = $N1&quot;)
-println(&quot;&lt;mps|𝕀₁|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 0.9999999999999999
-&lt;mps|𝕀₁|mps&gt; = 1.0000000000000007 - 2.8080302381581244e-16im</code></pre><div class="admonition is-info" id="Normalization-of-infinite-MPS-c60affaedc4242d5"><header class="admonition-header">Normalization of infinite MPS<a class="admonition-anchor" href="#Normalization-of-infinite-MPS-c60affaedc4242d5" title="Permalink"></a></header><div class="admonition-body"><p>Because infinite MPS cannot sensibly be normalized to anything but <span>$1$</span>, the <code>norm</code> of an infinite MPS is always set to be <span>$1$</span> at construction. If this were not the case, any observable computed from the MPS would either blow up to infinity or vanish to zero.</p></div></div><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. There are plenty of pre-defined models in <code>MPSKitModels</code>, but we can also manually construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">J = 1.0
+println(&quot;&lt;mps|𝕀₁|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 1.0
+&lt;mps|𝕀₁|mps&gt; = 0.9999999999999984 + 8.500145032286324e-17im</code></pre><div class="admonition is-info" id="Normalization-of-infinite-MPS-b985b97f5477809f"><header class="admonition-header">Normalization of infinite MPS<a class="admonition-anchor" href="#Normalization-of-infinite-MPS-b985b97f5477809f" title="Permalink"></a></header><div class="admonition-body"><p>Because infinite MPS cannot sensibly be normalized to anything but <span>$1$</span>, the <code>norm</code> of an infinite MPS is always set to be <span>$1$</span> at construction. If this were not the case, any observable computed from the MPS would either blow up to infinity or vanish to zero.</p></div></div><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. There are plenty of pre-defined models in <code>MPSKitModels</code>, but we can also manually construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">J = 1.0
 g = 0.5
 lattice = PeriodicVector([ComplexSpace(2)])
 X = TensorMap(ComplexF64[0 1; 1 0], ComplexSpace(2), ComplexSpace(2))
@@ -89,13 +107,13 @@ Z = TensorMap(ComplexF64[1 0; 0 -1], space(X))
 H = InfiniteMPOHamiltonian(lattice, (1, 2) =&gt; -J * X ⊗ X, (1,) =&gt; - g * Z)
 mps, = find_groundstate(mps, H, VUMPS(; maxiter=10))
 E0 = expectation_value(mps, H)
-println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: VUMPS init:	obj = -9.419801070042e-01	err = 2.7982e-01
-[ Info: VUMPS   1:	obj = -1.063543097178e+00	err = 9.8352306604e-04	time = 10.26 sec
-[ Info: VUMPS   2:	obj = -1.063544409403e+00	err = 2.0343168093e-05	time = 0.00 sec
-[ Info: VUMPS   3:	obj = -1.063544409972e+00	err = 1.1204612271e-06	time = 0.00 sec
-[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 1.1796502943e-07	time = 0.00 sec
-[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 1.2288871601e-08	time = 0.00 sec
-[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 1.3058267421e-09	time = 0.00 sec
-[ Info: VUMPS   7:	obj = -1.063544409973e+00	err = 1.3987932440e-10	time = 0.00 sec
-[ Info: VUMPS conv 8:	obj = -1.063544409973e+00	err = 1.5006280142e-11	time = 10.27 sec
-&lt;mps|H|mps&gt; = -1.0635444099732505</code></pre><h3 id="Additional-Resources"><a class="docs-heading-anchor" href="#Additional-Resources">Additional Resources</a><a id="Additional-Resources-1"></a><a class="docs-heading-anchor-permalink" href="#Additional-Resources" title="Permalink"></a></h3><p>For more detailed information on the functionality and capabilities of MPSKit, refer to the Manual section, or have a look at the <a href="examples/#Examples">Examples</a> page.</p><p>Keep in mind that the documentation is still a work in progress, and that some features may not be fully documented yet. If you encounter any issues or have questions, please check the library&#39;s <a href="https://github.com/QuantumKitHub/MPSKit.jl/issues">issue tracker</a> on the GitHub repository and open a new issue.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="man/intro/">Prerequisites »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Tuesday 4 November 2025 16:19">Tuesday 4 November 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: VUMPS init:	obj = -1.001592766596e+00	err = 2.1475e-01
+[ Info: VUMPS   1:	obj = -1.063535523204e+00	err = 2.5067534103e-03	time = 1.69 sec
+[ Info: VUMPS   2:	obj = -1.063544409828e+00	err = 1.0568054128e-05	time = 0.00 sec
+[ Info: VUMPS   3:	obj = -1.063544409972e+00	err = 9.6718110902e-07	time = 0.00 sec
+[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 9.2564239172e-08	time = 0.00 sec
+[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 8.9837467040e-09	time = 0.00 sec
+[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 9.4832672322e-10	time = 0.00 sec
+[ Info: VUMPS   7:	obj = -1.063544409973e+00	err = 1.0153807643e-10	time = 0.00 sec
+[ Info: VUMPS conv 8:	obj = -1.063544409973e+00	err = 1.0893127500e-11	time = 1.71 sec
+&lt;mps|H|mps&gt; = -1.0635444099732516</code></pre><h3 id="Additional-Resources"><a class="docs-heading-anchor" href="#Additional-Resources">Additional Resources</a><a id="Additional-Resources-1"></a><a class="docs-heading-anchor-permalink" href="#Additional-Resources" title="Permalink"></a></h3><p>For more detailed information on the functionality and capabilities of MPSKit, refer to the Manual section, or have a look at the <a href="examples/#Examples">Examples</a> page.</p><p>Keep in mind that the documentation is still a work in progress, and that some features may not be fully documented yet. If you encounter any issues or have questions, please check the library&#39;s <a href="https://github.com/QuantumKitHub/MPSKit.jl/issues">issue tracker</a> on the GitHub repository and open a new issue.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="man/intro/">Prerequisites »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 2 January 2026 09:35">Friday 2 January 2026</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
