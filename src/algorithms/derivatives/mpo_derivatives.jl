@@ -105,3 +105,90 @@ function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTen
         h.operators[2][7 -6; 4 5] * τ[5 -5; 2 3]
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
+
+# prepared operators
+# ------------------
+struct PrecomputedDerivative{
+        T <: Number, S <: ElementarySpace, N₁, N₂, N₃, N₄,
+        T1 <: AbstractTensorMap{T, S, N₁, N₂}, T2 <: AbstractTensorMap{T, S, N₃, N₄},
+        B <: AbstractBackend, A,
+    } <: DerivativeOperator
+    leftenv::T1
+    rightenv::T2
+    backend::B
+    allocator::A
+end
+
+const PrecomputedACDerivative{T, S} = PrecomputedDerivative{T, S, 3, 2, 2, 1}
+const PrecomputedAC2Derivative{T, S} = PrecomputedDerivative{T, S, 3, 2, 3, 2}
+
+function prepare_operator!!(
+        H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor},
+        backend::AbstractBackend, allocator
+    )
+    leftenv = _transpose_tail(H.leftenv isa TensorMap ? H.leftenv : TensorMap(H.leftenv))
+    rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
+    return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
+end
+function prepare_operator!!(
+        H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
+        backend::AbstractBackend, allocator
+    )
+    cp = checkpoint(allocator)
+    @plansor backend = backend allocator = allocator begin
+        GL_O[-1 -2; -4 -5 -3] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
+    end
+    reset!(allocator, cp)
+    leftenv = fuse_legs(GL_O isa TensorMap ? GL_O : TensorMap(GL_O), 0, 2)
+    rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
+
+    return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
+end
+
+function prepare_operator!!(
+        H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
+        backend::AbstractBackend, allocator
+    )
+    cp = checkpoint(allocator)
+    @plansor backend = backend allocator = allocator begin
+        GL_O[-1 -2; -4 -5 -3] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
+        O_GR[-1 -2 -3; -4 -5] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
+    end
+    reset!(allocator, cp)
+
+    leftenv = fuse_legs(GL_O isa TensorMap ? GL_O : TensorMap(GL_O), 0, 2)
+    rightenv = fuse_legs(O_GR isa TensorMap ? O_GR : TensorMap(O_GR), 2, 0)
+    return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
+end
+
+
+function (H::PrecomputedDerivative)(x::AbstractTensorMap)
+    allocator = H.allocator
+    cp = checkpoint(allocator)
+
+    R_fused = fuse_legs(H.rightenv, 0, numin(x))
+    x_fused = fuse_legs(x, numout(x), numin(x))
+
+    TC = TensorOperations.promote_contract(scalartype(x_fused), scalartype(R_fused))
+    xR = TensorOperations.tensoralloc_contract(
+        TC, x_fused, ((1,), (2,)), false, R_fused, ((1,), (2, 3)), false, ((1, 2), (3,)), Val(true), allocator
+    )
+
+    mul_front!(xR, x_fused, R_fused, One(), Zero(), H.backend, allocator)
+
+    LxR = H.leftenv * xR
+    TensorOperations.tensorfree!(xR, allocator)
+
+    reset!(allocator, cp)
+    return TensorMap{scalartype(LxR)}(LxR.data, codomain(H.leftenv) ← domain(H.rightenv))
+end
+
+const _ToPrepare = Union{
+    MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor},
+    MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
+    MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
+}
+
+function prepare_operator!!(H::Multiline{<:_ToPrepare}, backend::AbstractBackend, allocator)
+    return Multiline(map(x -> prepare_operator!!(x, backend, allocator), parent(H)))
+end
