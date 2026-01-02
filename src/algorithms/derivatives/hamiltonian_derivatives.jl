@@ -19,6 +19,13 @@ struct JordanMPO_AC_Hamiltonian{O1, O2, O3} <: DerivativeOperator
     C::Union{O2, Missing} # starting
     B::Union{O2, Missing} # ending
     A::Union{O3, Missing} # continuing
+
+    function JordanMPO_AC_Hamiltonian{O1, O2, O3}(
+            D::Union{O1, Missing}, I::Union{O1, Missing}, E::Union{O1, Missing},
+            C::Union{O2, Missing}, B::Union{O2, Missing}, A::Union{O3, Missing}
+        ) where {O1, O2, O3}
+        return new{O1, O2, O3}(D, I, E, C, B, A)
+    end
 end
 
 function AC_hamiltonian(
@@ -139,6 +146,15 @@ struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4} <: DerivativeOperator
     BE::Union{O2, Missing} # ending left
     DE::Union{O1, Missing} # onsite left
     EE::Union{O1, Missing} # finished
+
+    function JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+            II::Union{O1, Missing}, IC::Union{O2, Missing}, ID::Union{O1, Missing},
+            CB::Union{O2, Missing}, CA::Union{O3, Missing},
+            AB::Union{O3, Missing}, AA::Union{O4, Missing},
+            BE::Union{O2, Missing}, DE::Union{O1, Missing}, EE::Union{O1, Missing}
+        ) where {O1, O2, O3, O4}
+        return new{O1, O2, O3, O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    end
 end
 
 function AC2_hamiltonian(
