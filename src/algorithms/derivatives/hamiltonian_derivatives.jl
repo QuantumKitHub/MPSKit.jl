@@ -256,7 +256,13 @@ function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::Jorda
         all(iszero, mask_left .* mask_right) && (AA = missing)
     end
 
-    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
+    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+        II, IC, ID,
+        convert(O2, CB), # might have real eltype
+        CA,
+        AB, AA,
+        BE, DE, EE
+    )
 
 end
 
