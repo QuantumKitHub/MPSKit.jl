@@ -1,15 +1,14 @@
-@static if isdefined(Core, :Memory)
-    BufType = Memory{UInt8}
-else
-    BufType = Vector{UInt8}
-end
+const BufType = @static isdefined(Core, :Memory) ? Memory{UInt8} : Vector{UInt8}
 
-const DEFAULT_SIZEHINT = 2^20 # 1MB
+# Note: due to OS memory paging, we are only taking up virtual memory address space
+# and not necessarily asking for physical memory here - it should therefore make sense
+# to have a somewhat large default value
+const DEFAULT_SIZEHINT = Ref(2^30) # 1GB
 
 mutable struct GrowingBuffer
     buffer::BufType
     offset::UInt
-    function GrowingBuffer(; sizehint = DEFAULT_SIZEHINT)
+    function GrowingBuffer(; sizehint = DEFAULT_SIZEHINT[])
         buffer = BufType(undef, sizehint)
         return new(buffer, zero(UInt))
     end
