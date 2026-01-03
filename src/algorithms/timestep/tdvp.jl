@@ -41,18 +41,18 @@ function timestep(
     scheduler = Defaults.scheduler[]
     if scheduler isa SerialScheduler
         temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
-            Hac = AC_hamiltonian(loc, ψ, H, ψ, envs)
+            Hac = prepare_operator!!(AC_hamiltonian(loc, ψ, H, ψ, envs))
             return integrate(Hac, ψ.AC[loc], t, dt, alg.integrator; imaginary_evolution)
         end
         temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
-            Hc = C_hamiltonian(loc, ψ, H, ψ, envs)
+            Hc = prepare_operator!!(C_hamiltonian(loc, ψ, H, ψ, envs))
             return integrate(Hc, ψ.C[loc], t, dt, alg.integrator; imaginary_evolution)
         end
     else
         @sync begin
             Threads.@spawn begin
                 temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
-                    Hac = AC_hamiltonian(loc, ψ, H, ψ, envs)
+                    Hac = prepare_operator!!(AC_hamiltonian(loc, ψ, H, ψ, envs))
                     return integrate(
                         Hac, ψ.AC[loc], t, dt, alg.integrator;
                         imaginary_evolution
@@ -61,7 +61,7 @@ function timestep(
             end
             Threads.@spawn begin
                 temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
-                    Hc = C_hamiltonian(loc, ψ, H, ψ, envs)
+                    Hc = prepare_operator!!(C_hamiltonian(loc, ψ, H, ψ, envs))
                     return integrate(
                         Hc, ψ.C[loc], t, dt, alg.integrator;
                         imaginary_evolution
@@ -92,10 +92,10 @@ function timestep!(
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
-        Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
+        Hac = prepare_operator!!(AC_hamiltonian(i, ψ, H, ψ, envs))
         ψ.AC[i] = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator; imaginary_evolution)
 
-        Hc = C_hamiltonian(i, ψ, H, ψ, envs)
+        Hc = prepare_operator!!(C_hamiltonian(i, ψ, H, ψ, envs))
         ψ.C[i] = integrate(
             Hc, ψ.C[i], t + dt / 2, -dt / 2, alg.integrator;
             imaginary_evolution
@@ -103,18 +103,18 @@ function timestep!(
     end
 
     # edge case
-    Hac = AC_hamiltonian(length(ψ), ψ, H, ψ, envs)
+    Hac = prepare_operator!!(AC_hamiltonian(length(ψ), ψ, H, ψ, envs))
     ψ.AC[end] = integrate(Hac, ψ.AC[end], t, dt / 2, alg.integrator; imaginary_evolution)
 
     # sweep right to left
     for i in length(ψ):-1:2
-        Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
+        Hac = prepare_operator!!(AC_hamiltonian(i, ψ, H, ψ, envs))
         ψ.AC[i] = integrate(
             Hac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator;
             imaginary_evolution
         )
 
-        Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs)
+        Hc = prepare_operator!!(C_hamiltonian(i - 1, ψ, H, ψ, envs))
         ψ.C[i - 1] = integrate(
             Hc, ψ.C[i - 1], t + dt, -dt / 2, alg.integrator;
             imaginary_evolution
@@ -122,7 +122,7 @@ function timestep!(
     end
 
     # edge case
-    Hac = AC_hamiltonian(1, ψ, H, ψ, envs)
+    Hac = prepare_operator!!(AC_hamiltonian(1, ψ, H, ψ, envs))
     ψ.AC[1] = integrate(
         Hac, ψ.AC[1], t + dt / 2, dt / 2, alg.integrator;
         imaginary_evolution
@@ -173,7 +173,7 @@ function timestep!(
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         ac2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs)
+        Hac2 = prepare_operator!!(AC2_hamiltonian(i, ψ, H, ψ, envs))
         ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
 
         nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
@@ -181,7 +181,7 @@ function timestep!(
         ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
         if i != (length(ψ) - 1)
-            Hac = AC_hamiltonian(i + 1, ψ, H, ψ, envs)
+            Hac = prepare_operator!!(AC_hamiltonian(i + 1, ψ, H, ψ, envs))
             ψ.AC[i + 1] = integrate(
                 Hac, ψ.AC[i + 1], t + dt / 2, -dt / 2, alg.integrator;
                 imaginary_evolution
@@ -192,7 +192,7 @@ function timestep!(
     # sweep right to left
     for i in length(ψ):-1:2
         ac2 = _transpose_front(ψ.AL[i - 1]) * _transpose_tail(ψ.AC[i])
-        Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs)
+        Hac2 = prepare_operator!!(AC2_hamiltonian(i - 1, ψ, H, ψ, envs))
         ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator; imaginary_evolution)
 
         nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
@@ -200,7 +200,7 @@ function timestep!(
         ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
         if i != 2
-            Hac = AC_hamiltonian(i - 1, ψ, H, ψ, envs)
+            Hac = prepare_operator!!(AC_hamiltonian(i - 1, ψ, H, ψ, envs))
             ψ.AC[i - 1] = integrate(
                 Hac, ψ.AC[i - 1], t + dt, -dt / 2, alg.integrator;
                 imaginary_evolution
