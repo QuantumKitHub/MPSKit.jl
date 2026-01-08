@@ -130,9 +130,9 @@ function _localupdate_vumps_step!(
         alg_eigsolve = Defaults.eigsolver, which
     )
     if !parallel
-        Hac = AC_hamiltonian(site, mps, operator, mps, envs)
+        Hac = prepare_operator!!(AC_hamiltonian(site, mps, operator, mps, envs))
         _, AC = fixedpoint(Hac, AC₀, which, alg_eigsolve)
-        Hc = C_hamiltonian(site, mps, operator, mps, envs)
+        Hc = prepare_operator!!(C_hamiltonian(site, mps, operator, mps, envs))
         _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
         return regauge!(AC, C; alg = alg_orth)
     end
@@ -140,11 +140,11 @@ function _localupdate_vumps_step!(
     local AC, C
     @sync begin
         @spawn begin
-            Hac = AC_hamiltonian(site, mps, operator, mps, envs)
+            Hac = prepare_operator!!(AC_hamiltonian(site, mps, operator, mps, envs))
             _, AC = fixedpoint(Hac, AC₀, which, alg_eigsolve)
         end
         @spawn begin
-            Hc = C_hamiltonian(site, mps, operator, mps, envs)
+            Hc = prepare_operator!!(C_hamiltonian(site, mps, operator, mps, envs))
             _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
         end
     end
