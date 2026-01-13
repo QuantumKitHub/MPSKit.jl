@@ -8,7 +8,7 @@ let
     #initilizing a random mps
     ts = InfiniteMPS([ℂ^2], [ℂ^12])
 
-    #Finding the groundstate
+    #Finding the ground state
     ts, envs, _ = find_groundstate(ts, th, VUMPS(; maxiter = 400))
 
     len = 20

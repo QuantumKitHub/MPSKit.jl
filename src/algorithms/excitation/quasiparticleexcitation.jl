@@ -78,10 +78,10 @@ Create and optimize infinite quasiparticle states.
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm::QuasiparticleAnsatz`: optimization algorithm
 - `momentum::Union{Number, Vector{<:Number}}`: momentum or list of momenta
-- `left_ψ::InfiniteMPS`: left groundstate
-- `[left_environment]`: left groundstate environment
-- `[right_ψ::InfiniteMPS]`: right groundstate
-- `[right_environment]`: right groundstate environment
+- `left_ψ::InfiniteMPS`: left ground state
+- `[left_environment]`: left ground state environment
+- `[right_ψ::InfiniteMPS]`: right ground state
+- `[right_environment]`: right ground state environment
 
 # Keywords
 - `num::Int`: number of excited states to compute
@@ -160,10 +160,10 @@ Create and optimize finite quasiparticle states.
 # Arguments
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm::QuasiparticleAnsatz`: optimization algorithm
-- `left_ψ::FiniteMPS`: left groundstate
-- `[left_environment]`: left groundstate environment
-- `[right_ψ::FiniteMPS]`: right groundstate
-- `[right_environment]`: right groundstate environment
+- `left_ψ::FiniteMPS`: left ground state
+- `[left_environment]`: left ground state environment
+- `[right_ψ::FiniteMPS]`: right ground state
+- `[right_environment]`: right ground state environment
 
 # Keywords
 - `num::Int`: number of excited states to compute

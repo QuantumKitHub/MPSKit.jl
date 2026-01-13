@@ -25,7 +25,7 @@ md"""
 ## Finite size extrapolation
 
 We can start the analysis using finite-size methods.
-The groundstate of this model can be approximated using finite MPS through the use of DMRG.
+The ground state of this model can be approximated using finite MPS through the use of DMRG.
 
 The typical way to find excited states is to minimize the energy while adding an error term
 $$λ \left|gs\right> \left< gs\right|$$
@@ -93,7 +93,7 @@ md"""
 A much nicer way of obtaining the Haldane gap is by working directly in the thermodynamic limit.
 As was already hinted at by the edge modes, this model is in a non-trivial SPT phase.
 Thus, care must be taken when selecting the symmetry sectors.
-The groundstate has half-integer edge modes, thus the virtual spaces must also all carry half-integer charges.
+The ground state has half-integer edge modes, thus the virtual spaces must also all carry half-integer charges.
 
 In contrast with the finite size case, we now should specify a momentum label to the excitations.
 This way, it is possible to scan the dispersion relation over the entire momentum space.

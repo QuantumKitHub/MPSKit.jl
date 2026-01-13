@@ -24,7 +24,7 @@ We then need an intial state, which we shall later optimize. In this example we 
 state = InfiniteMPS(2, 20)
 
 md"""
-The groundstate can then be found by calling `find_groundstate`.
+The ground state can then be found by calling `find_groundstate`.
 """
 
 groundstate, cache, delta = find_groundstate(state, H, VUMPS());

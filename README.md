@@ -72,7 +72,7 @@ pkg> add MPSKitModels
 ## Quickstart
 
 After following the installation process, it should now be possible to load the packages and
-start simulating. For example, to obtain the groundstate of the 1D Ising model, we can use
+start simulating. For example, to obtain the ground state of the 1D Ising model, we can use
 the following code:
 
 ```julia

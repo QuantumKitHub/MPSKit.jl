@@ -49,7 +49,7 @@ function excitations(
     info.converged < num &&
         @warn "excitation failed to converge: normres = $(info.normres)"
 
-    # discard groundstate
+    # discard ground state
     popfirst!(Es)
     popfirst!(ACs)
 
@@ -114,7 +114,7 @@ function excitations(
     info.converged < num &&
         @warn "excitation failed to converge: normres = $(info.normres)"
 
-    # discard groundstate
+    # discard ground state
     popfirst!(Es)
     popfirst!(AC2s)
 

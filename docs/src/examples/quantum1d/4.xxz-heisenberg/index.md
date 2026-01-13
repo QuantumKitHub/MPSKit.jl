@@ -48,7 +48,7 @@ single site InfiniteMPS:
 
 ````
 
-The groundstate can then be found by calling `find_groundstate`.
+The ground state can then be found by calling `find_groundstate`.
 
 ````julia
 groundstate, cache, delta = find_groundstate(state, H, VUMPS());
