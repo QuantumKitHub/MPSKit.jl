@@ -102,9 +102,8 @@ echo(ψ₀::InfiniteMPS, ψₜ::InfiniteMPS) = -2 * log(abs(dot(ψ₀, ψₜ)))
 @assert isapprox(echo(ψ₀, ψ₀), 0, atol = 1.0e-10)
 
 md"""
-This time we cannot use a two-site scheme to grow the bond dimension, as this isn't implemented (yet).
-Instead, we have to make use of the changebonds machinery.
-Multiple algorithms are available, but we will only focus on `OptimalEpand()`.
+We make use of the `changebonds` machinery to grow the bond dimension. This can also be achieved through a two-site scheme.
+Multiple algorithms are available, but we will only focus on `OptimalExpand()`.
 Growing the bond dimension by ``5`` can be done by calling:
 """
 
