@@ -9,7 +9,7 @@ If a particular algorithm is missing, feel free to let us know via an issue, or 
 
 ## Groundstates
 
-One of the most prominent use-cases of MPS is to obtain the groundstate of a given (quasi-) one-dimensional quantum Hamiltonian.
+One of the most prominent use-cases of MPS is to obtain the ground state of a given (quasi-) one-dimensional quantum Hamiltonian.
 In MPSKit.jl, this can be achieved through `find_groundstate`:
 
 ```@docs; canonical=false
@@ -58,7 +58,7 @@ IDMRG2
 
 ### VUMPS
 
-[`VUMPS`](@ref) is an (I)DMRG inspired algorithm that can be used to variationally find the groundstate as a Uniform (infinite) Matrix Product State.
+[`VUMPS`](@ref) is an (I)DMRG inspired algorithm that can be used to variationally find the ground state as a Uniform (infinite) Matrix Product State.
 In particular, a local update is followed by a re-gauging procedure that effectively replaces the entire network with the newly updated tensor.
 Compared to IDMRG, this often achieves a higher rate of convergence, since updates are felt throughout the system immediately.
 Nevertheless, this algorithm only works whenever the state is injective, i.e. there is a unique ground state.
@@ -206,7 +206,7 @@ QuasiparticleAnsatz
 
 ### Finite excitations
 
-For finite systems we can also do something else - find the groundstate of the hamiltonian +
+For finite systems we can also do something else - find the ground state of the Hamiltonian +
 ``\\text{weight} \sum_i | \\psi_i ⟩ ⟨ \\psi_i ``. This is also supported by calling
 
 ```@example excitations
@@ -358,8 +358,8 @@ Jeckelmann
 
 ### fidelity susceptibility
 
-The fidelity susceptibility measures how much the groundstate changes when tuning a
-parameter in your hamiltonian. Divergences occur at phase transitions, making it a valuable
+The fidelity susceptibility measures how much the ground state changes when tuning a
+parameter in your Hamiltonian. Divergences occur at phase transitions, making it a valuable
 measure when no order parameter is known.
 
 ```@docs; canonical=false

@@ -10,7 +10,7 @@ using MPSKit, MPSKitModels, TensorKit, Plots, KrylovKit
 using LinearAlgebra: eigvals, diagm, Hermitian
 
 md"""
-The hamiltonian is defined on a finite lattice with periodic boundary conditions,
+The Hamiltonian is defined on a finite lattice with periodic boundary conditions,
 which can be implemented as follows:
 """
 
@@ -21,8 +21,8 @@ md"""
 ## Exact diagonalisation
 
 In MPSKit, there is support for exact diagonalisation by leveraging the fact that applying
-the hamiltonian to an untruncated MPS will result in an effective hamiltonian on the center
-site which implements the action of the entire hamiltonian. Thus, optimizing the middle
+the Hamiltonian to an untruncated MPS will result in an effective Hamiltonian on the center
+site which implements the action of the entire Hamiltonian. Thus, optimizing the middle
 tensor is equivalent to optimixing a state in the entire Hilbert space, as all other tensors
 are just unitary matrices that mix the basis.
 """
@@ -60,7 +60,7 @@ function O_shift(L)
 end
 
 md"""
-We can then calculate the momentum of the groundstate as the expectation value of this
+We can then calculate the momentum of the ground state as the expectation value of this
 operator. However, there is a subtlety because of the degeneracies in the energy
 eigenvalues. The eigensolver will find an orthonormal basis within each energy subspace, but
 this basis is not necessarily a basis of eigenstates of the translation operator. In order
@@ -125,7 +125,7 @@ D = 64
 ψ, envs, δ = find_groundstate(FiniteMPS(L_mps, ℂ^2, ℂ^D), H_mps, DMRG());
 
 md"""
-Excitations on top of the groundstate can be found through the use of the quasiparticle
+Excitations on top of the ground state can be found through the use of the quasiparticle
 ansatz. This returns quasiparticle states, which can be converted to regular `FiniteMPS`
 objects.
 """

@@ -86,8 +86,8 @@ transferplot(ψ; sectors, title = "Transfer matrix spectrum", legend = :outertop
 
 md"""
 Nevertheless, using the symmetry, this can be remedied rather easily, by imposing the
-groundstate to belong to a single class, and comparing the results. We can readily obtain 3
-different criteria for determining the SPT phase of the groundstate.
+ground state to belong to a single class, and comparing the results. We can readily obtain 3
+different criteria for determining the SPT phase of the ground state.
 
 Firstly, we can compare variational energies for states of similar bond dimensions. As we
 expect the state of the wrong SPT phase to have to expend some of its expressiveness in
@@ -134,19 +134,19 @@ plot(entanglementp_plus, entanglementp_minus; layout = (1, 2), size = (800, 400)
 
 md"""
 
-As we can see, the groundstate can be found in the non-trivial SPT phase, $\ket{\psi_-}$. We
+As we can see, the ground state can be found in the non-trivial SPT phase, $\ket{\psi_-}$. We
 can obtain an intuitive understanding of $\ket{\psi_+}$ by considering the following
-diagram. If we denote the MPS tensors that make up the groundstate as $A_-$, we can
-construct a state in the trivial SPT phase that approximates the groundstate as follows:
+diagram. If we denote the MPS tensors that make up the ground state as $A_-$, we can
+construct a state in the trivial SPT phase that approximates the ground state as follows:
 
 ```@raw html
 <img src="./spt-tensors.svg" alt="SPT tensors" class="color-invertible"/>
 ```
 
 In other words, we can factorize a purely virtual isomorphism of $S = 1/2$ in order to
-obtain the groundstate. This then also explains the degeneracies in the entanglement
+obtain the ground state. This then also explains the degeneracies in the entanglement
 spectrum as well as in the transfer matrix spectrum. Finally, we can further confirm this
-intuition by looking at the entanglement entropy of the groundstate. As we can see, the
+intuition by looking at the entanglement entropy of the ground state. As we can see, the
 entanglement entropy of the state in the wrong SPT phase is exactly $log(2)$ higher than the
 one in the right SPT phase, which is exactly what we would expect from the diagram above.
 """

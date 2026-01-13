@@ -20,7 +20,7 @@ end
 _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
-#given a hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
+#given a Hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
 function decompose_localmpo(
         inpmpo::AbstractTensorMap{T, PS, N, N}, trunc = trunctol(; atol = eps(real(T))^(3 / 4))
     ) where {T, PS, N}

@@ -16,7 +16,7 @@ module TestAlgorithms
     verbosity_full = 5
     verbosity_conv = 1
 
-    @testset "FiniteMPS groundstate" verbose = true begin
+    @testset "FiniteMPS ground state" verbose = true begin
         tol = 1.0e-8
         g = 4.0
         D = 6
@@ -84,7 +84,7 @@ module TestAlgorithms
         end
     end
 
-    @testset "InfiniteMPS groundstate" verbose = true begin
+    @testset "InfiniteMPS ground state" verbose = true begin
         tol = 1.0e-8
         g = 4.0
         D = 6
@@ -188,7 +188,7 @@ module TestAlgorithms
         end
     end
 
-    @testset "LazySum FiniteMPS groundstate" verbose = true begin
+    @testset "LazySum FiniteMPS ground state" verbose = true begin
         tol = 1.0e-8
         D = 15
         atol = 1.0e-2
@@ -253,7 +253,7 @@ module TestAlgorithms
         end
     end
 
-    @testset "LazySum InfiniteMPS groundstate" verbose = true begin
+    @testset "LazySum InfiniteMPS ground state" verbose = true begin
         tol = 1.0e-8
         D = 16
         atol = 1.0e-2
