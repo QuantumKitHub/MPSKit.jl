@@ -72,7 +72,7 @@ end
                 [right_ψ::InfiniteMPS], [right_environment];
                 kwargs...)
 
-Create and optimise infinite quasiparticle states.
+Create and optimize infinite quasiparticle states.
 
 # Arguments
 - `H::AbstractMPO`: operator for which to find the excitations
@@ -152,10 +152,10 @@ function excitations(
 end
 
 """
-    excitations(H, algorithm::QuasiparticleAnsatz, left_ψ::InfiniteMPS, [left_environment],
-                [right_ψ::InfiniteMPS], [right_environment]; kwargs...)
+    excitations(H, algorithm::QuasiparticleAnsatz, left_ψ::FiniteMPS, [left_environment],
+                [right_ψ::FiniteMPS], [right_environment]; kwargs...)
 
-Create and optimise finite quasiparticle states.
+Create and optimize finite quasiparticle states.
 
 # Arguments
 - `H::AbstractMPO`: operator for which to find the excitations
