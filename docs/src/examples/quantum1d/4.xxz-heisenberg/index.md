@@ -33,7 +33,7 @@ single site InfiniteMPOHamiltonian{MPSKit.JordanMPOTensor{ComplexF64, TensorKit.
 
 ````
 
-We then need an intial state, which we shall later optimize. In this example we work directly in the thermodynamic limit.
+We then need an initial state, which we shall later optimize. In this example we work directly in the thermodynamic limit.
 
 ````julia
 state = InfiniteMPS(2, 20)
@@ -261,7 +261,7 @@ groundstate, cache, delta = find_groundstate(state, H, VUMPS());
 ````
 
 As you can see, VUMPS struggles to converge.
-On it's own, that is already quite curious.
+On its own, that is already quite curious.
 Maybe we can do better using another algorithm, such as gradient descent.
 
 ````julia
