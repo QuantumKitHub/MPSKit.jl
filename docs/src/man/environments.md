@@ -1,8 +1,8 @@
 # [Environments](@id um_environments)
 
 In many tensor network algorithms we encounter partially contracted tensor networks.
-In DMRG for example, one needs to know the sum of all the hamiltonian contributions left and right of the site that we want to optimize.
-If you then optimize the neighboring site to the right, you only need to add one new contribution to the previous sum of hamiltonian contributions.
+In DMRG for example, one needs to know the sum of all the Hamiltonian contributions left and right of the site that we want to optimize.
+If you then optimize the neighboring site to the right, you only need to add one new contribution to the previous sum of Hamiltonian contributions.
 
 This kind of information is stored in the environment objects.
 The goal is that the user should preferably never have to deal with these objects, but being aware of the inner workings may allow you to write more efficient code.
@@ -10,7 +10,7 @@ That is why they are nonetheless included in the manual.
 
 ## Finite Environments
 
-When you create a state and a hamiltonian:
+When you create a state and a Hamiltonian:
 
 ```julia
 state = FiniteMPS(rand, ComplexF64, 20, ℂ^2, ℂ^10);

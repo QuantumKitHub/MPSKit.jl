@@ -196,7 +196,7 @@ end
 """
     variance(state, hamiltonian, [envs=environments(state, hamiltonian)])
 
-Compute the variance of the energy of the state with respect to the hamiltonian.
+Compute the variance of the energy of the state with respect to the Hamiltonian.
 """
 function variance end
 

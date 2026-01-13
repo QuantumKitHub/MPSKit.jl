@@ -81,7 +81,7 @@ follows:
 ```
 
 Finally, the definition of a MPO tensor, which is used to represent statistical mechanics
-problems as well as quantum hamiltonians, is represented as:
+problems as well as quantum Hamiltonians, is represented as:
 
 ```@raw html
 <img src="../../assets/mpo_tensor_definition.png" alt="convention MPOTensor" class="color-invertible"/>

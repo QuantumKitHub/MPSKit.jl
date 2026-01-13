@@ -10,7 +10,7 @@ using MPSKit, MPSKitModels, TensorKit
 md"""
 Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the loschmidth echo.
 This quantity is given by ``L(t) = \frac{-2}{N} ln(| < \psi(t) | \psi(0) > |) `` where ``N`` is the system size.
-One typically starts from a ground state and then quenches the hamiltonian to a different point.
+One typically starts from a ground state and then quenches the Hamiltonian to a different point.
 Non analycities in the loschmidth echo are called 'dynamical quantum phase transitions'.
 
 In the mentioned paper they work with
@@ -22,7 +22,7 @@ and show that divergences occur when quenching across the critical point (g₀ �
 The outline of the tutorial is as follows. We will pick ``g₀ = 0.5``, ``g₁ = 2.0``, and perform the time evolution at different system sizes and compare with the thermodynamic limit.
 For those ``g`` we expect non-analicities to occur at ``t_n ≈ 2.35 (n + 1/2)``.
 
-First we construct the hamiltonian in mpo form, and obtain the pre-quenched ground state:
+First we construct the Hamiltonian in MPO form, and obtain the pre-quenched ground state:
 """
 
 L = 20

@@ -206,7 +206,7 @@ QuasiparticleAnsatz
 
 ### Finite excitations
 
-For finite systems we can also do something else - find the ground state of the hamiltonian +
+For finite systems we can also do something else - find the ground state of the Hamiltonian +
 ``\\text{weight} \sum_i | \\psi_i ⟩ ⟨ \\psi_i ``. This is also supported by calling
 
 ```@example excitations
@@ -359,7 +359,7 @@ Jeckelmann
 ### fidelity susceptibility
 
 The fidelity susceptibility measures how much the ground state changes when tuning a
-parameter in your hamiltonian. Divergences occur at phase transitions, making it a valuable
+parameter in your Hamiltonian. Divergences occur at phase transitions, making it a valuable
 measure when no order parameter is known.
 
 ```@docs; canonical=false

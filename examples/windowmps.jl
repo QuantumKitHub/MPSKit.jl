@@ -1,7 +1,7 @@
 using MPSKit, MPSKitModels, TensorKit, Plots
 
 let
-    #defining the hamiltonian
+    #defining the Hamiltonian
     th = transverse_field_ising(; g = 0.3)
     sx, sy, sz = σˣ(ComplexF64), σʸ(ComplexF64), σᶻ(ComplexF64)
 

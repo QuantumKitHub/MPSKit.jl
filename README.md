@@ -63,7 +63,7 @@ with MPSKit. For example, to install the package with support for SU(N) symmetri
 pkg> add TensorKit
 ```
 
-Finally, several pre-defined operators, hamiltonians and statistical mechanics models are available in [MPSKitModels.jl](https://github.com/QuantumKitHub/MPSKitModels.jl). It is recommended to install this package too.
+Finally, several pre-defined operators, Hamiltonians and statistical mechanics models are available in [MPSKitModels.jl](https://github.com/QuantumKitHub/MPSKitModels.jl). It is recommended to install this package too.
 
 ```julia-repl
 pkg> add MPSKitModels

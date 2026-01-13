@@ -15,13 +15,13 @@ To follow the tutorial you need the following packages:
 using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
 ````
 
-The Heisenberg model is defined by the following hamiltonian:
+The Heisenberg model is defined by the following Hamiltonian:
 
 ```math
 H = -J∑_{⟨i,j⟩} (X_i X_j + Y_i Y_j + Z_i Z_j)
 ```
 
-This hamiltonian has an SU(2) symmetry, which we can enforce by using SU(2)-symmetric tensors:
+This Hamiltonian has an SU(2) symmetry, which we can enforce by using SU(2)-symmetric tensors:
 
 ````julia
 symmetry = SU2Irrep

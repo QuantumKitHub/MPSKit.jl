@@ -10,7 +10,7 @@ using MPSKit, MPSKitModels, TensorKit, Plots, KrylovKit
 using LinearAlgebra: eigvals, diagm, Hermitian
 
 md"""
-The hamiltonian is defined on a finite lattice with periodic boundary conditions,
+The Hamiltonian is defined on a finite lattice with periodic boundary conditions,
 which can be implemented as follows:
 """
 
@@ -21,8 +21,8 @@ md"""
 ## Exact diagonalisation
 
 In MPSKit, there is support for exact diagonalisation by leveraging the fact that applying
-the hamiltonian to an untruncated MPS will result in an effective hamiltonian on the center
-site which implements the action of the entire hamiltonian. Thus, optimizing the middle
+the Hamiltonian to an untruncated MPS will result in an effective Hamiltonian on the center
+site which implements the action of the entire Hamiltonian. Thus, optimizing the middle
 tensor is equivalent to optimixing a state in the entire Hilbert space, as all other tensors
 are just unitary matrices that mix the basis.
 """
