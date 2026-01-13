@@ -8,10 +8,10 @@ In this tutorial we will try to reproduce the results from
 using MPSKit, MPSKitModels, TensorKit
 
 md"""
-Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the loschmidth echo.
+Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the Loschmidt echo.
 This quantity is given by ``L(t) = \frac{-2}{N} ln(| < \psi(t) | \psi(0) > |) `` where ``N`` is the system size.
 One typically starts from a ground state and then quenches the Hamiltonian to a different point.
-Non analycities in the loschmidth echo are called 'dynamical quantum phase transitions'.
+Non analycities in the Loschmidt echo are called 'dynamical quantum phase transitions'.
 
 In the mentioned paper they work with
 
@@ -95,7 +95,7 @@ It is this ``α`` that is returned when calling
 dot(ψ₀, ψ₀)
 
 md"""
-so the loschmidth echo takes on the pleasant form
+so the Loschmidt echo takes on the pleasant form
 """
 
 echo(ψ₀::InfiniteMPS, ψₜ::InfiniteMPS) = -2 * log(abs(dot(ψ₀, ψₜ)))
