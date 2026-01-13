@@ -27,7 +27,7 @@ In the mentioned paper they work with
 and show that divergences occur when quenching across the critical point (g₀ → g₁) for ``t^*_n = t^*(n+\frac{1}{2})`` with ``t^* = \pi/e(g_1,k^*)``, ``cos(k^*) = (1+g_0 g_1) / (g_0 + g_1)``, `` e(g,k) = \sqrt{(g-cos k)^2 + sin^2 k}``.
 
 The outline of the tutorial is as follows. We will pick ``g₀ = 0.5``, ``g₁ = 2.0``, and perform the time evolution at different system sizes and compare with the thermodynamic limit.
-For those ``g`` we expect non-analicities to occur at ``t_n ≈ 2.35 (n + 1/2)``.
+For those ``g`` we expect non-analyticities to occur at ``t_n ≈ 2.35 (n + 1/2)``.
 
 First we construct the Hamiltonian in MPO form, and obtain the pre-quenched ground state:
 
@@ -67,7 +67,7 @@ dt = 0.01
 ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP2(; trscheme = truncrank(20)));
 ````
 
-"envs" is a kind of cache object that keeps track of all environments in `ψ`. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
+"envs" is a kind of cache object that keeps track of all environments in `ψ`. It is often advantageous to re-use the environment, so that MPSKit doesn't need to recalculate everything.
 
 Putting it all together, we get
 
