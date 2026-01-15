@@ -125,8 +125,7 @@ function TensorKit.normalize!(
     )
     for i in 1:length(operator)
         normalize!(envs.GRs[i])
-        Hc = C_hamiltonian(i, below, operator, above, envs)
-        λ = dot(below.C[i], Hc * above.C[i])
+        λ = dot(below.C[i], C_projection(i, below, operator, above, envs))
         scale!(envs.GLs[i + 1], inv(λ))
     end
     return envs

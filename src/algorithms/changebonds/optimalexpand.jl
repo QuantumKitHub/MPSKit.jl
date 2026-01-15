@@ -26,8 +26,7 @@ function changebonds(
     AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
     for i in 1:length(ψ)
         # determine optimal expansion spaces around bond i
-        AC2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        AC2 = AC2_hamiltonian(i, ψ, H, ψ, envs) * AC2
+        AC2 = AC2_projection(i, ψ, H, ψ, envs; kind = :ACAR)
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = left_null(ψ.AL[i])
@@ -52,8 +51,7 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
 
     # determine optimal expansion spaces around bond i
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
-        AC2 = _transpose_front(ψ.AC[i - 1, j]) * _transpose_tail(ψ.AR[i - 1, j + 1])
-        AC2 = AC2_hamiltonian(CartesianIndex(i - 1, j), ψ, H, ψ, envs) * AC2
+        AC2 = AC2_projection(CartesianIndex(i - 1, j), ψ, H, ψ, envs; kind = :ACAR)
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = left_null(ψ.AL[i, j])
@@ -81,8 +79,7 @@ function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = envir
     #so during optimization of site i, you have access to these optimal vectors :)
 
     for i in 1:(length(ψ) - 1)
-        AC2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        AC2 = AC2_hamiltonian(i, ψ, H, ψ, envs) * AC2
+        AC2 = AC2_projection(i, ψ, H, ψ, envs)
 
         #Calculate nullspaces for left and right
         NL = left_null(ψ.AC[i])
