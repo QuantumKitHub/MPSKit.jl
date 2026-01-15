@@ -188,11 +188,14 @@ for kind in (:C, :AC, :AC2)
         end
     end
 end
+
 function C_projection(site, below, operator, above, envs)
-    return C_hamiltonian(site, below, operator, above, envs) * above.C[site]
+    C = above isa Multiline ? above.C[:, site] : above.C[site]
+    return C_hamiltonian(site, below, operator, above, envs) * C
 end
 function AC_projection(site, below, operator, above, envs)
-    return AC_hamiltonian(site, below, operator, above, envs) * above.AC[site]
+    AC = above isa Multiline ? above.AC[:, site] : above.AC[site]
+    return AC_hamiltonian(site, below, operator, above, envs) * AC
 end
 function AC2_projection(site::Int, below, operator, above, envs; kwargs...)
     return AC2_hamiltonian(site, below, operator, above, envs) * AC2(above, site; kwargs...)
