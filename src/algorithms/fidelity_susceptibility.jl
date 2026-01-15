@@ -22,7 +22,7 @@ function fidelity_susceptibility(
 
         Tos = LeftGaugedQP(rand, state)
         for (i, ac) in enumerate(state.AC)
-            temp = AC_hamiltonian(i, state, V, state, venvs) * ac
+            temp = AC_projection(i, state, V, state, venvs)
             help = fill_data!(similar(ac, auxiliaryspace(Tos)), one)
             @plansor Tos[i][-1 -2; -3 -4] := temp[-1 -2; -4] * help[-3]
         end

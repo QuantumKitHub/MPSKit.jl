@@ -155,7 +155,7 @@ function _localupdate_sweep_idmrg!(ψ, H, envs, alg_eigsolve)
     C_old = ψ.C[0]
     # left to right sweep
     for pos in 1:length(ψ)
-        h = prepare_operator!!(AC_hamiltonian(pos, ψ, H, ψ, envs))
+        h = AC_hamiltonian(pos, ψ, H, ψ, envs)
         _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
         if pos == length(ψ)
             # AC needed in next sweep
@@ -168,7 +168,7 @@ function _localupdate_sweep_idmrg!(ψ, H, envs, alg_eigsolve)
 
     # right to left sweep
     for pos in length(ψ):-1:1
-        h = prepare_operator!!(AC_hamiltonian(pos, ψ, H, ψ, envs))
+        h = AC_hamiltonian(pos, ψ, H, ψ, envs)
         E, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
 
         ψ.C[pos - 1], temp = right_orth!(_transpose_tail(ψ.AC[pos]; copy = (pos == 1)); positive = true)
@@ -184,7 +184,7 @@ function _localupdate_sweep_idmrg2!(ψ, H, envs, alg_eigsolve, alg_trscheme, alg
     # sweep from left to right
     for pos in 1:(length(ψ) - 1)
         ac2 = AC2(ψ, pos; kind = :ACAR)
-        h_ac2 = prepare_operator!!(AC2_hamiltonian(pos, ψ, H, ψ, envs))
+        h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
         _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
         al, c, ar = svd_trunc!(ac2′; trunc = alg_trscheme, alg = alg_svd)
@@ -203,7 +203,7 @@ function _localupdate_sweep_idmrg2!(ψ, H, envs, alg_eigsolve, alg_trscheme, alg
     ψ.AL[end] = ψ.AC[end] / ψ.C[end]
     ψ.AC[1] = _mul_tail(ψ.AL[1], ψ.C[1])
     ac2 = AC2(ψ, 0; kind = :ALAC)
-    h_ac2 = prepare_operator!!(AC2_hamiltonian(0, ψ, H, ψ, envs))
+    h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
     _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
     al, c, ar = svd_trunc!(ac2′; trunc = alg_trscheme, alg = alg_svd)
@@ -226,7 +226,7 @@ function _localupdate_sweep_idmrg2!(ψ, H, envs, alg_eigsolve, alg_trscheme, alg
     # sweep from right to left
     for pos in (length(ψ) - 1):-1:1
         ac2 = AC2(ψ, pos; kind = :ALAC)
-        h_ac2 = prepare_operator!!(AC2_hamiltonian(pos, ψ, H, ψ, envs))
+        h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
         _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
         al, c, ar = svd_trunc!(ac2′; trunc = alg_trscheme, alg = alg_svd)
@@ -246,7 +246,7 @@ function _localupdate_sweep_idmrg2!(ψ, H, envs, alg_eigsolve, alg_trscheme, alg
     ψ.AC[end] = _mul_front(ψ.C[end - 1], ψ.AR[end])
     ψ.AR[1] = _transpose_front(ψ.C[end] \ _transpose_tail(ψ.AC[1]))
     ac2 = AC2(ψ, 0; kind = :ACAR)
-    h_ac2 = prepare_operator!!(AC2_hamiltonian(0, ψ, H, ψ, envs))
+    h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
     E, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
     al, c, ar = svd_trunc!(ac2′; trunc = alg_trscheme, alg = alg_svd)
     normalize!(c)

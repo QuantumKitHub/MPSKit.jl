@@ -104,15 +104,13 @@ function localupdate_step!(
     )
     alg_orth = Defaults.alg_qr()
     mps = state.mps
-    src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
-    src_ACs = mps isa Multiline ? eachcol(mps.AC) : mps.AC
     ACs = similar(mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
-    tforeach(eachsite(mps), src_ACs, src_Cs; scheduler) do site, AC₀, C₀
+    tforeach(eachsite(mps); scheduler) do site
         dst_ACs[site] = _localupdate_vomps_step!(
-            site, mps, state.operator, state.envs,
-            AC₀, C₀; alg_orth, parallel = false
+            site, mps, state.operator, state.envs;
+            alg_orth, parallel = false
         )
         return nothing
     end
@@ -121,18 +119,18 @@ function localupdate_step!(
 end
 
 function _localupdate_vomps_step!(
-        site, mps, operator, envs, AC₀, C₀; parallel::Bool = false, alg_orth = Defaults.alg_qr()
+        site, mps, operator, envs; parallel::Bool = false, alg_orth = Defaults.alg_qr()
     )
     if !parallel
-        AC = AC_hamiltonian(site, mps, operator, mps, envs) * AC₀
-        C = C_hamiltonian(site, mps, operator, mps, envs) * C₀
+        AC = AC_projection(site, mps, operator, mps, envs)
+        C = C_projection(site, mps, operator, mps, envs)
         return regauge!(AC, C; alg = alg_orth)
     end
 
     local AC, C
     @sync begin
-        @spawn AC = AC_hamiltonian(site, mps, operator, mps, envs) * AC₀
-        @spawn C = C_hamiltonian(site, mps, operator, mps, envs) * C₀
+        @spawn AC = AC_projection(site, mps, operator, mps, envs)
+        @spawn C = C_projection(site, mps, operator, mps, envs)
     end
     return regauge!(AC, C; alg = alg_orth)
 end

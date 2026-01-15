@@ -10,3 +10,6 @@ MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
+
+[sources]
+MPSKit = {path = ".."}

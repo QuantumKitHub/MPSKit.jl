@@ -58,7 +58,7 @@ Concretely, this is the overlap of the current state with the single-site deriva
 function calc_galerkin(
         pos::Int, below::Union{InfiniteMPS, FiniteMPS, WindowMPS}, operator, above, envs
     )
-    AC´ = AC_hamiltonian(pos, below, operator, above, envs) * above.AC[pos]
+    AC´ = AC_projection(pos, below, operator, above, envs)
     normalize!(AC´)
     out = mul!(AC´, below.AL[pos], below.AL[pos]' * AC´, -1, +1)
     return norm(out)
