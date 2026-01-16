@@ -421,8 +421,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
     S = spacetype(T)
 
     # avoid using one(S)
-    somempo = local_mpos[1].second[1]
-    _rightunit = space(somempo, 1) # should be rightunitspace, but MPOHamiltonians are always diagonal for now
+    _rightunit = rightunitspace(first(lattice))
 
     virtualsumspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
     virtualsumspaces[1] = SumSpace(fill(_rightunit, 1))
@@ -509,8 +508,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
         [Vector{MissingS}(missing, operator_size) for _ in 1:length(nonzero_keys)]
     )
     # avoid using one(S)
-    somempo = local_mpos[1].second[1]
-    _rightunit = space(somempo, 1) # should be a rightunitspace
+    _rightunit = rightunitspace(first(lattice))
 
     for V in virtualspaces
         V[1] = _rightunit
