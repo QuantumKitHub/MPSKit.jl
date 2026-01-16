@@ -49,32 +49,14 @@ function decompose_localmps(
 end
 
 """
-    add_util_leg(tensor::AbstractTensorMap{S,N1,N2}) where {S,N1,N2}
-        -> AbstractTensorMap{S,N1+1,N2+1}
+    add_util_leg(tensor::AbstractTensorMap{T, S, N1, N2}) where {T, S, N1, N2}
+        -> AbstractTensorMap{T, S, N1+1, N2+1}
 
 Add trivial one-dimensional utility spaces with trivial sector to the left and right of a
 given tensor map, i.e. as the first space of the codomain and the last space of the domain.
 """
 function add_util_leg(tensor::AbstractTensorMap{T, S, N1, N2}) where {T, S, N1, N2}
-    ou = unitspace(_firstspace(tensor))
-
-    util_front = isomorphism(storagetype(tensor), ou * codomain(tensor), codomain(tensor))
-    util_back = isomorphism(storagetype(tensor), domain(tensor), domain(tensor) * ou)
-
-    return util_front * tensor * util_back
-end
-
-function add_util_mpoleg(tensor::AbstractTensorMap{T, S, N1, N2}) where {T, S, N1, N2}
-    # separate function for mpo because add_util_leg is also used for mps from tensors
-    # and the additional legs there can be different depending on the fusion tree
-
-    #TODO?: might need a left and right utility space if MPO has module virtual space (doesn't happen for hamiltonians)
-    ou = S(rightunit(first(blocksectors(tensor))) => 1)
-
-    util_front = isomorphism(storagetype(tensor), ou * codomain(tensor), codomain(tensor))
-    util_back = isomorphism(storagetype(tensor), domain(tensor), domain(tensor) * ou)
-
-    return util_front * tensor * util_back
+    return insertrightunit(insertleftunit(tensor, 1), numind(tensor) + 1)
 end
 
 function union_split(a::AbstractArray)
