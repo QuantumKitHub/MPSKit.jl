@@ -15,10 +15,10 @@ In this tutorial we will try to reproduce the results from
 using MPSKit, MPSKitModels, TensorKit
 ````
 
-Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the loschmidth echo.
+Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the Loschmidt echo.
 This quantity is given by ``L(t) = \frac{-2}{N} ln(| < \psi(t) | \psi(0) > |) `` where ``N`` is the system size.
-One typically starts from a groundstate and then quenches the hamiltonian to a different point.
-Non analycities in the loschmidth echo are called 'dynamical quantum phase transitions'.
+One typically starts from a ground state and then quenches the Hamiltonian to a different point.
+Non analycities in the Loschmidt echo are called 'dynamical quantum phase transitions'.
 
 In the mentioned paper they work with
 
@@ -27,9 +27,9 @@ In the mentioned paper they work with
 and show that divergences occur when quenching across the critical point (g₀ → g₁) for ``t^*_n = t^*(n+\frac{1}{2})`` with ``t^* = \pi/e(g_1,k^*)``, ``cos(k^*) = (1+g_0 g_1) / (g_0 + g_1)``, `` e(g,k) = \sqrt{(g-cos k)^2 + sin^2 k}``.
 
 The outline of the tutorial is as follows. We will pick ``g₀ = 0.5``, ``g₁ = 2.0``, and perform the time evolution at different system sizes and compare with the thermodynamic limit.
-For those ``g`` we expect non-analicities to occur at ``t_n ≈ 2.35 (n + 1/2)``.
+For those ``g`` we expect non-analyticities to occur at ``t_n ≈ 2.35 (n + 1/2)``.
 
-First we construct the hamiltonian in mpo form, and obtain the pre-quenched groundstate:
+First we construct the Hamiltonian in MPO form, and obtain the pre-quenched ground state:
 
 ````julia
 L = 20
@@ -67,7 +67,7 @@ dt = 0.01
 ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP2(; trscheme = truncrank(20)));
 ````
 
-"envs" is a kind of cache object that keeps track of all environments in `ψ`. It is often advantageous to re-use the environment, so that mpskit doesn't need to recalculate everything.
+"envs" is a kind of cache object that keeps track of all environments in `ψ`. It is often advantageous to re-use the environment, so that MPSKit doesn't need to recalculate everything.
 
 Putting it all together, we get
 
@@ -102,7 +102,7 @@ finite_sim (generic function with 1 method)
 
 ## Infinite MPS quenching
 
-Similarly we could start with an initial infinite state and find the pre-quench groundstate:
+Similarly we could start with an initial infinite state and find the pre-quench ground state:
 
 ````julia
 ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
@@ -133,16 +133,15 @@ dot(ψ₀, ψ₀)
 1.000000000000001 - 2.1950801504054652e-16im
 ````
 
-so the loschmidth echo takes on the pleasant form
+so the Loschmidt echo takes on the pleasant form
 
 ````julia
 echo(ψ₀::InfiniteMPS, ψₜ::InfiniteMPS) = -2 * log(abs(dot(ψ₀, ψₜ)))
 @assert isapprox(echo(ψ₀, ψ₀), 0, atol = 1.0e-10)
 ````
 
-This time we cannot use a two-site scheme to grow the bond dimension, as this isn't implemented (yet).
-Instead, we have to make use of the changebonds machinery.
-Multiple algorithms are available, but we will only focus on `OptimalEpand()`.
+We make use of the `changebonds` machinery to grow the bond dimension. This can also be achieved through a two-site scheme.
+Multiple algorithms are available, but we will only focus on `OptimalExpand()`.
 Growing the bond dimension by ``5`` can be done by calling:
 
 ````julia

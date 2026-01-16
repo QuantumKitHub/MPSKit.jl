@@ -54,7 +54,7 @@ const U = 3.0
 3.0
 ````
 
-For this case, the groundstate energy has an analytic solution, which can be used to benchmark the numerical results.
+For this case, the ground state energy has an analytic solution, which can be used to benchmark the numerical results.
 It follows from Eq. (6.82) in []().
 
 ```math

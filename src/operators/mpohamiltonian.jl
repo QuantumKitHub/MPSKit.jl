@@ -3,7 +3,7 @@
     MPOHamiltonian(lattice::AbstractArray{<:VectorSpace})
     MPOHamiltonian(x::AbstractArray{<:Any,3})
 
-MPO representation of a hamiltonian. This is a specific form of an [`AbstractMPO`](@ref), where
+MPO representation of a Hamiltonian. This is a specific form of an [`AbstractMPO`](@ref), where
 all the sites are represented by an upper triangular block matrix of the following form:
 
 ```math

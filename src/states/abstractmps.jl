@@ -114,16 +114,16 @@ end
 
 Make the set of MPS tensors full rank by performing a series of orthogonalizations.
 """
-function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = Defaults.alg_qr())
+function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg_leftorth = Defaults.alg_qr(), alg_rightorth = Defaults.alg_lq())
     while true
         i = findfirst(!isfullrank, A)
         isnothing(i) && break
         if !isfullrank(A[i]; side = :left)
-            L, Q = right_orth!(_transpose_tail(A[i]); alg)
+            L, Q = right_orth!(_transpose_tail(A[i]); alg = alg_rightorth)
             A[i] = _transpose_front(Q)
             A[i - 1] = A[i - 1] * L
         else
-            A[i], R = left_orth!(A[i]; alg)
+            A[i], R = left_orth!(A[i]; alg = alg_leftorth)
             A[i + 1] = _transpose_front(R * _transpose_tail(A[i + 1]))
         end
     end

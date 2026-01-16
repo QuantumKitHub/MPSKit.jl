@@ -1,7 +1,7 @@
 """
     entropy(state, [site::Int])
 
-Calculate the Von Neumann entanglement entropy of a given MPS. If an integer `site` is
+Calculate the von Neumann entanglement entropy of a given MPS. If an integer `site` is
 given, the entropy is across the entanglement cut to the right of site `site`. Otherwise, a
 vector of entropies is returned, one for each site.
 """
@@ -85,7 +85,7 @@ overlap of a given `above` state and a `below` state. The `sector` keyword argum
 used to specify a non-trivial total charge for the transfer matrix eigenvectors.
 Specifically, an auxiliary space `ℂ[typeof(sector)](sector => 1)'` will be added to the
 domain of each eigenvector. The `tol` and `num_vals` keyword arguments are passed to
-`KrylovKit.eigolve`
+`KrylovKit.eigsolve`
 """
 function transfer_spectrum(
         above::InfiniteMPS; below = above, tol = Defaults.tol, num_vals = 20,
@@ -110,15 +110,16 @@ function transfer_spectrum(
 end
 
 """
-    entanglement_spectrum(ψ, site::Int) -> SectorDict{sectortype(ψ),Vector{<:Real}}
+    entanglement_spectrum(ψ, site::Int) -> SectorVector{T, sectortype(ψ), AbstractVector{T}}
 
 Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
-matrix to the right of a given site. This is a dictionary mapping the charge to the singular
-values.
+matrix to the right of a given site. This is a vector containing the singular
+values. The contributions from specific sectors can be viewed by indexing accordingly, i.e.
+`entanglement_spectrum(ψ, site)[sector]`.
 
 For `InfiniteMPS` and `WindowMPS` the default value for `site` is 0.
 
-For `FiniteMPS` no default value for `site` is given, it is up to the user to specify.
+For `FiniteMPS` no default value for `site` is given; it is up to the user to specify.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS, WindowMPS}, site::Int = 0)
     checkbounds(st, site)
@@ -195,7 +196,7 @@ end
 """
     variance(state, hamiltonian, [envs=environments(state, hamiltonian)])
 
-Compute the variance of the energy of the state with respect to the hamiltonian.
+Compute the variance of the energy of the state with respect to the Hamiltonian.
 """
 function variance end
 

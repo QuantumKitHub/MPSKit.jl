@@ -10,7 +10,7 @@ using MPSKit, MPSKitModels, TensorKit, Plots
 md"""
 ## Failure
 
-First we should define the hamiltonian we want to work with.
+First we should define the Hamiltonian we want to work with.
 Then we specify an initial guess, which we then further optimize.
 Working directly in the thermodynamic limit, this is achieved as follows:
 """
@@ -18,20 +18,20 @@ Working directly in the thermodynamic limit, this is achieved as follows:
 H = heisenberg_XXX(; spin = 1 // 2)
 
 md"""
-We then need an intial state, which we shall later optimize. In this example we work directly in the thermodynamic limit.
+We then need an initial state, which we shall later optimize. In this example we work directly in the thermodynamic limit.
 """
 
 state = InfiniteMPS(2, 20)
 
 md"""
-The groundstate can then be found by calling `find_groundstate`.
+The ground state can then be found by calling `find_groundstate`.
 """
 
 groundstate, cache, delta = find_groundstate(state, H, VUMPS());
 
 md"""
 As you can see, VUMPS struggles to converge.
-On it's own, that is already quite curious.
+On its own, that is already quite curious.
 Maybe we can do better using another algorithm, such as gradient descent.
 """
 
@@ -60,9 +60,9 @@ Let's initialize a different initial state, this time with a 2-site unit cell:
 state = InfiniteMPS(fill(2, 2), fill(20, 2))
 
 md"""
-In MPSKit, we require that the periodicity of the hamiltonian equals that of the state it is applied to.
-This is not a big obstacle, you can simply repeat the original hamiltonian.
-Alternatively, the hamiltonian can be constructed directly on a two-site unitcell by making use of MPSKitModels.jl's `@mpoham`.
+In MPSKit, we require that the periodicity of the Hamiltonian equals that of the state it is applied to.
+This is not a big obstacle, you can simply repeat the original Hamiltonian.
+Alternatively, the Hamiltonian can be constructed directly on a two-site unit cell by making use of MPSKitModels.jl's `@mpoham`.
 """
 
 ## H2 = repeat(H, 2); -- copies the one-site version
@@ -93,9 +93,9 @@ It are precisely those problems that we can solve by using symmetries.
 md"""
 ## Symmetries
 
-The XXZ Heisenberg hamiltonian is SU(2) symmetric and we can exploit this to greatly speed up the simulation.
+The XXZ Heisenberg Hamiltonian is SU(2) symmetric and we can exploit this to greatly speed up the simulation.
 
-It is cumbersome to construct symmetric hamiltonians, but luckily su(2) symmetric XXZ is already implemented:
+It is cumbersome to construct symmetric Hamiltonians, but luckily SU(2) symmetric XXZ is already implemented:
 """
 
 H2 = heisenberg_XXX(ComplexF64, SU2Irrep, InfiniteChain(2); spin = 1 // 2);

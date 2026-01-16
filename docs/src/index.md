@@ -100,7 +100,7 @@ println("<mps|𝕀₃|mps> = $N2")
 ```
 
 Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians.
-Using the pre-defined models in `MPSKitModels`, we can construct the groundstate for the
+Using the pre-defined models in `MPSKitModels`, we can construct the ground state for the
 transverse field Ising model:
 
 ```@example finitemps
@@ -177,7 +177,7 @@ println("<mps|𝕀₁|mps> = $N2")
 
 Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians.
 There are plenty of pre-defined models in `MPSKitModels`, but we can also manually construct
-the groundstate for the transverse field Ising model:
+the ground state for the transverse field Ising model:
 
 ```@example infinitemps
 J = 1.0
