@@ -247,5 +247,5 @@ Return an iterator over the sites of the MPS `state`.
 """
 eachsite(ψ::AbstractMPS) = eachindex(ψ)
 
-TensorKit.leftunit(ψ::AbstractMPS) = leftunit(only(sectors(left_virtualspace(ψ, 1))))
-TensorKit.rightunit(ψ::AbstractMPS) = rightunit(only(sectors(right_virtualspace(ψ, 1))))
+TensorKit.leftunit(ψ::AbstractMPS) = leftunit(first(sectors(left_virtualspace(ψ, 1))))
+TensorKit.rightunit(ψ::AbstractMPS) = rightunit(first(sectors(right_virtualspace(ψ, 1))))
