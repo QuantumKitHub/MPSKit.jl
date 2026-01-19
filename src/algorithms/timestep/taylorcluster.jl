@@ -186,7 +186,7 @@ function make_time_mpo(
     H′ = copy(parent(H))
 
     V_left = left_virtualspace(H[1])
-    V_left′ = ⊞(V_left, rightunitspace(V_left), rightunitspace(V_left))
+    V_left′ = ⊞(V_left, leftunitspace(V_left), leftunitspace(V_left))
     H′[1] = similar(H[1], V_left′ ⊗ space(H[1], 2) ← domain(H[1]))
     for (I, v) in nonzero_pairs(H[1])
         H′[1][I] = v

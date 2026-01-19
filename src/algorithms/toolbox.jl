@@ -281,6 +281,7 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O}, L = length(mpo)) wher
 
     local F_right
     for i in 1:L
+        # kept as rightunitspace, but might need to change if we consider off-diagonal MPOs
         V_left = i == 1 ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
         V_right = i == L ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ right_virtualspace(mpo, i))
         output[i] = similar(
@@ -337,7 +338,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L = length(H))
     output = Vector{O}(undef, L)
     for site in 1:L
         V_left = if site == 1
-            rightunitspace(V_wrap)
+            leftunitspace(V_wrap)
         else
             vs = Vector{S}(undef, chi_)
             for (k, v) in indmap
