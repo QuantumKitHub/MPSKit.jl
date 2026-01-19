@@ -421,7 +421,9 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
     S = spacetype(T)
 
     # avoid using one(S)
-    _rightunit = rightunitspace(first(lattice))
+    P = first(lattice)
+    _rightunit = rightunitspace(P)
+    @assert _rightunit == leftunitspace(P) "currently only support diagonal hamiltonians"
 
     virtualsumspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
     virtualsumspaces[1] = SumSpace(fill(_rightunit, 1))
@@ -508,7 +510,9 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
         [Vector{MissingS}(missing, operator_size) for _ in 1:length(nonzero_keys)]
     )
     # avoid using one(S)
-    _rightunit = rightunitspace(first(lattice))
+    P = first(lattice)
+    _rightunit = rightunitspace(P)
+    @assert _rightunit == leftunitspace(P) "currently only support diagonal hamiltonians"
 
     for V in virtualspaces
         V[1] = _rightunit
@@ -689,8 +693,8 @@ function Base.:+(
     ) where {O <: JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
-    # TODO: check if spaces match
-    Vtriv = rightunitspace(first(physicalspace(H₁)))
+    # same as rightunitspace (asserted within construction FiniteMPOHamiltonian)
+    Vtriv = leftunitspace(first(physicalspace(H₁)))
 
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims = (1, 4))
@@ -714,8 +718,8 @@ function Base.:+(
     ) where {O <: JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
-    # TODO: check if spaces match
-    Vtriv = rightunitspace(first(physicalspace(H₁)))
+    # same as rightunitspace (asserted within construction of InfiniteMPOHamiltonian)
+    Vtriv = leftunitspace(first(physicalspace(H₁)))
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims = (1, 4))
         B = cat(H₁[i].B, H₂[i].B; dims = 1)
