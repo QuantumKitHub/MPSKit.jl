@@ -80,11 +80,16 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
     # left end
     nlvls = size(W_mats[1], 1)
     @assert nlvls == 1 "left boundary should have a single level"
-    Vspaces[1] = SumSpace(unitspace(S))
+    tm = _find_first_mpotensor(W_mats)
+    sp = space(tm, 1)
+    _rightunit = rightunitspace(sp)
+    @assert _rightunit == leftunitspace(sp) "only diagonal hamiltonians allowed"
+
+    Vspaces[1] = SumSpace(_rightunit)
     # right end
     nlvls = size(W_mats[end], 2)
     @assert nlvls == 1 "right boundary should have a single level"
-    Vspaces[end] = SumSpace(unitspace(S))
+    Vspaces[end] = SumSpace(_rightunit)
 
     # start filling spaces
     # note that we assume that the FSA does not contain "dead ends", as this would mess with the
@@ -102,7 +107,7 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
             # start by assuming trivial spaces everywhere -- replace everything that we know
             # assume spacecheck errors will happen when filling the BlockTensors
             nlvls = size(W_mat, 2)
-            Vs_right = SumSpace(fill(unitspace(S), nlvls))
+            Vs_right = SumSpace(fill(_rightunit, nlvls))
         end
 
         for I in eachindex(IndexCartesian(), W_mat)
@@ -184,8 +189,12 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
     # also assume spacecheck errors will happen when filling the BlockTensors
     MissingS = Union{Missing, S}
     Vspaces = PeriodicArray([Vector{MissingS}(missing, nlvls) for _ in 1:L])
+    tm = _find_first_mpotensor(W_mats)
+    sp = space(tm, 1)
+    _rightunit = rightunitspace(sp)
+    @assert _rightunit == leftunitspace(sp) "only diagonal hamiltonians allowed"
     for V in Vspaces
-        V[1] = V[end] = unitspace(S)
+        V[1] = V[end] = _rightunit
     end
 
     haschanged = true
@@ -235,7 +244,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
         end
     end
 
-    foreach(Base.Fix2(replace!, missing => unitspace(S)), Vspaces)
+    foreach(Base.Fix2(replace!, missing => _rightunit), Vspaces)
     Vsumspaces = map(Vspaces) do V
         return SumSpace(collect(S, V))
     end
@@ -387,6 +396,17 @@ function _find_channel(nonzero_keys; init = 2)
     return max(maximum(range) + 1, init)
 end
 
+function _find_first_mpotensor(Ws)
+    @inbounds for W in Ws
+        for x in W
+            if x isa MPOTensor
+                return x
+            end
+        end
+    end
+    return nothing
+end
+
 function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators)
     # initialize vectors for storing the data
     # TODO: generalize to weird lattice types
@@ -423,7 +443,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
     # avoid using one(S)
     P = first(lattice)
     _rightunit = rightunitspace(P)
-    @assert _rightunit == leftunitspace(P) "currently only support diagonal hamiltonians"
+    @assert _rightunit == leftunitspace(P) "only diagonal hamiltonians allowed"
 
     virtualsumspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
     virtualsumspaces[1] = SumSpace(fill(_rightunit, 1))
@@ -512,7 +532,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     # avoid using one(S)
     P = first(lattice)
     _rightunit = rightunitspace(P)
-    @assert _rightunit == leftunitspace(P) "currently only support diagonal hamiltonians"
+    @assert _rightunit == leftunitspace(P) "only diagonal hamiltonians allowed"
 
     for V in virtualspaces
         V[1] = _rightunit
