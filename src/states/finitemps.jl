@@ -292,9 +292,8 @@ end
 # construct from dense state
 # TODO: make planar?
 function FiniteMPS(ψ::AbstractTensor)
-    U = ones(scalartype(ψ), unitspace(spacetype(ψ)))
     A = _transpose_front(
-        U * transpose(ψ * U', ((), reverse(ntuple(identity, numind(ψ) + 1))))
+        insertrightunit(transpose(insertrightunit(ψ, numind(ψ); dual = true)), numind(ψ) + 1; dual = true)
     )
     return FiniteMPS(decompose_localmps(A); normalize = false, overwrite = true)
 end
@@ -366,12 +365,10 @@ function Base.convert(::Type{TensorMap}, ψ::FiniteMPS)
     end
 
     # remove utility legs
-    space(T, 1) == unitspace(spacetype(T)) || throw(ArgumentError("utility leg not trivial"))
-    space(T, numind(T)) == unitspace(spacetype(T))' ||
-        throw(ArgumentError("utility leg not trivial"))
-    U = ones(scalartype(ψ), unitspace(spacetype(ψ)))
+    isunitspace(space(T, 1)) || throw(ArgumentError("utility leg not trivial"))
+    isunitspace(space(T, numind(T))') || throw(ArgumentError("utility leg not trivial"))
     UTU = transpose(
-        U' * _transpose_tail(T * U), (reverse(ntuple(identity, numind(T) - 2)), ())
+        removeunit(_transpose_tail(removeunit(T, numind(T))), 1), (reverse(ntuple(identity, numind(T) - 2)), ())
     )
 
     return UTU
