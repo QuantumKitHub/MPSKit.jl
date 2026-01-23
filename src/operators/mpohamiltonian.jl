@@ -81,7 +81,7 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
     nlvls = size(W_mats[1], 1)
     @assert nlvls == 1 "left boundary should have a single level"
     tm = _find_first_mpotensor(W_mats)
-    sp = space(tm, 1)
+    sp = left_virtualspace(tm)
     _rightunit = rightunitspace(sp)
     @assert _rightunit == leftunitspace(sp) "only diagonal hamiltonians allowed"
 
@@ -190,7 +190,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
     MissingS = Union{Missing, S}
     Vspaces = PeriodicArray([Vector{MissingS}(missing, nlvls) for _ in 1:L])
     tm = _find_first_mpotensor(W_mats)
-    sp = space(tm, 1)
+    sp = left_virtualspace(tm)
     _rightunit = rightunitspace(sp)
     @assert _rightunit == leftunitspace(sp) "only diagonal hamiltonians allowed"
     for V in Vspaces
@@ -397,7 +397,7 @@ function _find_channel(nonzero_keys; init = 2)
 end
 
 function _find_first_mpotensor(Ws)
-    @inbounds for W in Ws
+    for W in Ws
         for x in W
             if x isa MPOTensor
                 return x
