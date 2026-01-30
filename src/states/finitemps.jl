@@ -28,17 +28,17 @@ By convention, we have that:
 
 Recommended ways to construct a finite MPS are:
 
-- Using an MPS manifold of spaces
+- Using an MPS structure of spaces
 
   ```julia
-  rand([rng], [T], manifold::FiniteMPSManifold)
-  randn([rng], [T], manifold::FiniteMPSManifold)
-  zeros([T], manifold::FiniteMPSManifold)
-  ones([T], manifold::FiniteMPSManifold)
+  rand([rng], [T], structure::FiniteMPSStructure)
+  randn([rng], [T], structure::FiniteMPSStructure)
+  zeros([T], structure::FiniteMPSStructure)
+  ones([T], structure::FiniteMPSStructure)
   ```
 
-  First build a [`FiniteMPSManifold`](@ref) that fixes the physical and (maximal) virtual spaces, then allocate an MPS on that manifold.
-  See [`FiniteMPSManifold`](@ref) for how to specify site-dependent virtual-space bounds and nontrivial edge charges via `left_virtualspace` and `right_virtualspace`.
+  First build a [`FiniteMPSStructure`](@ref) that fixes the physical and (maximal) virtual spaces, then allocate an MPS on that structure.
+  See [`FiniteMPSStructure`](@ref) for how to specify site-dependent virtual-space bounds and nontrivial edge charges via `left_virtualspace` and `right_virtualspace`.
 
 - From site tensors
 
@@ -57,18 +57,18 @@ Recommended ways to construct a finite MPS are:
 
   Factorizes a full many-body state `ψ` into a finite MPS (using a left-canonical sweep).
 
-In particular, charged MPS can be created by giving nontrivial left and/or right virtual spaces when constructing the manifold:
+In particular, charged MPS can be created by giving nontrivial left and/or right virtual spaces when constructing the structure:
 
 ```julia
 ps = fill(ℂ^2, N)                       # physical spaces
-m  = FiniteMPSManifold(ps, ℂ^D; left_virtualspace = Qₗ, right_virtualspace = Qᵣ)
-ψ  = rand(ComplexF64, m)                 # normalized random MPS on the manifold
+m  = FiniteMPSStructure(ps, ℂ^D; left_virtualspace = Qₗ, right_virtualspace = Qᵣ)
+ψ  = rand(ComplexF64, m)                 # normalized random MPS on the structure
 ```
 
 !!! warning "Deprecated constructors"
     Older constructors of the form `FiniteMPS([f, eltype], physicalspaces, max_virtualspaces; ...)`
     or `FiniteMPS([f, eltype], N, physicalspace, max_virtualspaces; ...)` are deprecated. Use
-    `rand`/`randn`/`zeros`/`ones` with a [`FiniteMPSManifold`](@ref) instead.
+    `rand`/`randn`/`zeros`/`ones` with a [`FiniteMPSStructure`](@ref) instead.
 """
 struct FiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing, A}}
@@ -102,20 +102,20 @@ function FiniteMPS(
     sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
         throw(ArgumentError("at least one AC/C should not be missing"))
 
-    # determine the MPS manifold from the input and instantiate the MPS
+    # determine the MPS structure from the input and instantiate the MPS
     mps_tensors = map(ALs, ARs, ACs) do AL, AR, AC
         mps_tensor = coalesce(AL, AR, AC)
         ismissing(mps_tensor) && throw(ArgumentError("missing site tensor at site $i"))
         return mps_tensor
     end
-    manifold = FiniteMPSManifold(mps_tensors)
+    structure = FiniteMPSStructure(mps_tensors)
     A = _not_missing_type(MA)
     B = _not_missing_type(MB)
-    mps = FiniteMPS{A, B}(undef, length(manifold))
+    mps = FiniteMPS{A, B}(undef, length(structure))
 
     # populate the non-missing tensors into the MPS
     for i in 1:L
-        V_mps = manifold[i]
+        V_mps = structure[i]
         if !ismissing(ALs[i])
             space(ALs[i]) == V_mps || throw(SpaceMismatch("incompatible space for AL[$i]"))
             getfield(mps, :ALs)[i] = ALs[i]
@@ -129,14 +129,14 @@ function FiniteMPS(
             getfield(mps, :ACs)[i] = ACs[i]
         end
         if !ismissing(Cs[i])
-            V = left_virtualspace(manifold, i)
+            V = left_virtualspace(structure, i)
             space(Cs[i]) == (V ← V) ||
                 throw(SpaceMismatch("incompatible space for C[$i]"))
             getfield(mps, :Cs)[i] = Cs[i]
         end
     end
     if !ismissing(Cs[end])
-        V = right_virtualspace(manifold, L)
+        V = right_virtualspace(structure, L)
         space(Cs[end]) == (V ← V) ||
             throw(SpaceMismatch("incompatible space for C[$(L + 1)]"))
         getfield(mps, :Cs)[L + 1] = Cs[L + 1]
@@ -245,9 +245,9 @@ end
 
 for f in (:zeros, :ones)
     @eval begin
-        Base.$f(manifold::FiniteMPSManifold) = $f(Defaults.eltype, manifold)
-        function Base.$f(::Type{T}, manifold::FiniteMPSManifold) where {T}
-            As = map(i -> $f(T, manifold[i]), 1:length(manifold))
+        Base.$f(structure::FiniteMPSStructure) = $f(Defaults.eltype, structure)
+        function Base.$f(::Type{T}, structure::FiniteMPSStructure) where {T}
+            As = map(i -> $f(T, structure[i]), 1:length(structure))
             return FiniteMPS(As)
         end
     end
@@ -255,8 +255,8 @@ end
 
 for randfun in (:rand, :randn)
     randfun! = Symbol(randfun, :!)
-    @eval function Random.$randfun(rng::Random.AbstractRNG, ::Type{T}, manifold::FiniteMPSManifold) where {T}
-        As = map(i -> $randfun(rng, T, manifold[i]), 1:length(manifold))
+    @eval function Random.$randfun(rng::Random.AbstractRNG, ::Type{T}, structure::FiniteMPSStructure) where {T}
+        As = map(i -> $randfun(rng, T, structure[i]), 1:length(structure))
         return normalize!(FiniteMPS(As))
     end
     @eval function Random.$randfun!(rng::Random.AbstractRNG, mps::FiniteMPS)
@@ -273,39 +273,39 @@ Base.@deprecate(
     FiniteMPS(
         f, elt, Pspaces::Vector{<:TensorSpace{S}}, maxVspaces::Vector{S}; left::S = oneunit(S), right::S = oneunit(S)
     ) where {S <: ElementarySpace},
-    f(elt, FiniteMPSManifold(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
+    f(elt, FiniteMPSStructure(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
 )
 Base.@deprecate(
     FiniteMPS(
         f, elt, Pspaces::Vector{<:TensorSpace{S}}, maxVspace::S; left::S = oneunit(S), right::S = oneunit(S)
     ) where {S <: ElementarySpace},
-    f(elt, FiniteMPSManifold(Pspaces, maxVspace; left_virtualspace = left, right_virtualspace = right))
+    f(elt, FiniteMPSStructure(Pspaces, maxVspace; left_virtualspace = left, right_virtualspace = right))
 )
 Base.@deprecate(
     FiniteMPS(
         Pspaces::Vector{<:TensorSpace{S}}, maxVspaces::Union{S, Vector{S}}; left::S = oneunit(S), right::S = oneunit(S)
     ) where {S <: ElementarySpace},
-    rand(FiniteMPSManifold(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
+    rand(FiniteMPSStructure(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
 )
 Base.@deprecate(
     FiniteMPS(
         f, elt, N::Int, V::TensorSpace{S}, args...; left::S = oneunit(S), right::S = oneunit(S)
     ) where {S <: ElementarySpace},
-    f(elt, FiniteMPSManifold(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
+    f(elt, FiniteMPSStructure(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
 )
 Base.@deprecate(
     FiniteMPS(
         N::Int, V::TensorSpace{S}, args...; left::S = oneunit(S), right::S = oneunit(S)
     ) where {S <: ElementarySpace},
-    rand(FiniteMPSManifold(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
+    rand(FiniteMPSStructure(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
 )
 Base.@deprecate(
     FiniteMPS(P::ProductSpace, args...; kwargs...),
-    rand(FiniteMPSManifold(collect(P), args...; kwargs...))
+    rand(FiniteMPSStructure(collect(P), args...; kwargs...))
 )
 Base.@deprecate(
     FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...),
-    f(elt, FiniteMPSManifold(collect(P), args...; kwargs...))
+    f(elt, FiniteMPSStructure(collect(P), args...; kwargs...))
 )
 
 #===========================================================================================

@@ -1,5 +1,5 @@
 """
-    InfiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbtractMPS
+    InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbtractMPS
 
 Type that represents an infinite Matrix Product State.
 
@@ -21,14 +21,14 @@ By convention, we have that:
 
 Recommended ways to construct an infinite (periodic unit-cell) MPS are:
 
-- Using an MPS manifold of spaces
+- Using an MPS structure of spaces
 
   ```julia
-  rand([rng], [T], manifold::InfiniteMPSManifold; tol, maxiter)
-  randn([rng], [T], manifold::InfiniteMPSManifold; tol, maxiter)
+  rand([rng], [T], structure::InfiniteMPSStructure; tol, maxiter)
+  randn([rng], [T], structure::InfiniteMPSStructure; tol, maxiter)
   ```
 
-  Build an [`InfiniteMPSManifold`](@ref) with physical spaces and (maximal) virtual spaces for the unit cell.
+  Build an [`InfiniteMPSStructure`](@ref) with physical spaces and (maximal) virtual spaces for the unit cell.
 
 - From unit-cell site tensors
 
@@ -59,7 +59,7 @@ Recommended ways to construct an infinite (periodic unit-cell) MPS are:
 using MPSKit, TensorKit
 ps  = PeriodicVector([ℂ^2, ℂ^2, ℂ^2])              # physical spaces, 3-site unit cell
 vs  = PeriodicVector([ℂ^4, ℂ^8, ℂ^4])               # maximal virtual spaces
-m   = InfiniteMPSManifold(ps, vs)
+m   = InfiniteMPSStructure(ps, vs)
 ψ   = rand(ComplexF64, m; tol=1e-10)
 
 # Construct from pre-built site tensors
@@ -69,7 +69,7 @@ As = map(i -> rand(ComplexF64, m[i]), 1:length(m))
 
 !!! warning "Deprecated constructors"
     Older constructors like `InfiniteMPS(pspaces, Dspaces)` or with `[f, T]` are deprecated.
-    Use `rand`/`randn` with an [`InfiniteMPSManifold`](@ref) instead.
+    Use `rand`/`randn` with an [`InfiniteMPSStructure`](@ref) instead.
 """
 struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractMPS
     AL::PeriodicVector{A}
@@ -107,24 +107,24 @@ struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractMPS
 end
 
 function InfiniteMPS{A, B}(
-        ::UndefInitializer, manifold::InfiniteMPSManifold
+        ::UndefInitializer, structure::InfiniteMPSStructure
     ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
-    psi = InfiniteMPS{A, B}(undef, length(manifold))
-    for i in 1:length(manifold)
-        V = manifold[i]
+    psi = InfiniteMPS{A, B}(undef, length(structure))
+    for i in 1:length(structure)
+        V = structure[i]
         psi.AL[i] = A(undef, V)
         psi.AR[i] = A(undef, V)
         psi.AC[i] = A(undef, V)
-        Vr = right_virtualspace(manifold, i)
+        Vr = right_virtualspace(structure, i)
         psi.C[i] = B(undef, Vr ← Vr)
     end
     return psi
 end
 function InfiniteMPS{A}(
-        ::UndefInitializer, manifold::InfiniteMPSManifold
+        ::UndefInitializer, structure::InfiniteMPSStructure
     ) where {A <: GenericMPSTensor}
     B = tensormaptype(spacetype(A), 1, 1, storagetype(A))
-    return InfiniteMPS{A, B}(undef, manifold)
+    return InfiniteMPS{A, B}(undef, structure)
 
 end
 function InfiniteMPS(
@@ -181,8 +181,8 @@ function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
         @warn "Constructing an MPS from tensors that are not full rank"
     makefullrank!(A_copy)
 
-    manifold = InfiniteMPSManifold(A_copy)
-    ψ = InfiniteMPS{eltype(A)}(undef, manifold)
+    structure = InfiniteMPSStructure(A_copy)
+    ψ = InfiniteMPS{eltype(A)}(undef, structure)
 
     # gaugefix the MPS
     V = left_virtualspace(ψ, 1)
@@ -197,7 +197,7 @@ function InfiniteMPS(AL::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor
     AL = PeriodicArray(AL)
 
     all(isfullrank, AL) || @error "Constructing an MPS from tensors that are not full rank"
-    ψ = InfiniteMPS{eltype(AL)}(undef, InfiniteMPSManifold(AL))
+    ψ = InfiniteMPS{eltype(AL)}(undef, InfiniteMPSStructure(AL))
     ψ.AL .= AL
 
     # gaugefix the MPS
@@ -211,7 +211,7 @@ function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}
     AR = PeriodicArray(AR)
 
     all(isfullrank, AR) || @error "Constructing an MPS from tensors that are not full rank"
-    ψ = InfiniteMPS{eltype(AR)}(undef, InfiniteMPSManifold(AR))
+    ψ = InfiniteMPS{eltype(AR)}(undef, InfiniteMPSStructure(AR))
     ψ.AR .= AR
 
     # gaugefix the MPS
@@ -223,8 +223,8 @@ end
 
 for randfun in (:rand, :randn)
     randfun! = Symbol(randfun, :!)
-    @eval function Random.$randfun(rng::Random.AbstractRNG, T::Type, manifold::InfiniteMPSManifold; kwargs...)
-        As = map(i -> $randfun(rng, T, manifold[i]), 1:length(manifold))
+    @eval function Random.$randfun(rng::Random.AbstractRNG, T::Type, structure::InfiniteMPSStructure; kwargs...)
+        As = map(i -> $randfun(rng, T, structure[i]), 1:length(structure))
         return InfiniteMPS(As; kwargs...)
     end
     @eval function Random.$randfun!(rng::Random.AbstractRNG, mps::InfiniteMPS)
@@ -240,28 +240,28 @@ end
 # ----------------------------------
 Base.@deprecate(
     InfiniteMPS(pspace::S, Dspace::S; kwargs...) where {S <: IndexSpace},
-    rand(InfiniteMPSManifold(pspace, Dspace); kwargs...)
+    rand(InfiniteMPSStructure(pspace, Dspace); kwargs...)
 )
 Base.@deprecate(
     InfiniteMPS(pspaces::AbstractVector{S}, Dspaces::AbstractVector{S}; kwargs...) where {S <: IndexSpace},
-    rand(InfiniteMPSManifold(pspaces, Dspaces); kwargs...)
+    rand(InfiniteMPSStructure(pspaces, Dspaces); kwargs...)
 )
 Base.@deprecate(
     InfiniteMPS(f, T::Type, pspace::S, Dspace::S; kwargs...) where {S <: IndexSpace},
-    f(T, InfiniteMPSManifold(pspace, Dspace); kwargs...)
+    f(T, InfiniteMPSStructure(pspace, Dspace); kwargs...)
 )
 Base.@deprecate(
     InfiniteMPS(f, T::Type, pspaces::AbstractVector{S}, Dspaces::AbstractVector{S}; kwargs...) where {S <: IndexSpace},
-    f(T, InfiniteMPSManifold(pspaces, Dspaces); kwargs...)
+    f(T, InfiniteMPSStructure(pspaces, Dspaces); kwargs...)
 )
 
 Base.@deprecate(
     InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int}),
-    rand(InfiniteMPSManifold(ComplexSpace.(ds), ComplexSpace.(Ds)))
+    rand(InfiniteMPSStructure(ComplexSpace.(ds), ComplexSpace.(Ds)))
 )
 Base.@deprecate(
     InfiniteMPS(f, T::Type, ds::AbstractVector{Int}, Ds::AbstractVector{Int}),
-    f(T, InfiniteMPSManifold(ComplexSpace.(ds), ComplexSpace.(Ds)))
+    f(T, InfiniteMPSStructure(ComplexSpace.(ds), ComplexSpace.(Ds)))
 )
 
 #===========================================================================================

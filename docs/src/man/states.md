@@ -24,13 +24,13 @@ If you already have the state of interest, it is straightforward to convert it t
 ```
 
 However, typically this is not the case, as storing the full state becomes expensive rather quickly.
-Then, `FiniteMPS` are best constructed by first specifying a [`FiniteMPSManifold`](@ref) that encodes the physical and (maximal) virtual spaces:
+Then, `FiniteMPS` are best constructed by first specifying a [`FiniteMPSStructure`](@ref) that encodes the physical and (maximal) virtual spaces:
 
 ```@example states
 pspaces = fill(ℂ^2, 10)         # physical spaces (Vector)
 max_virtualspace = ℂ^4          # single max virtual space
-manifold = FiniteMPSManifold(pspaces, max_virtualspace)
-ψ = rand(manifold)              # random normalized FiniteMPS
+structure = FiniteMPSStructure(pspaces, max_virtualspace)
+ψ = rand(structure)              # random normalized FiniteMPS
 ```
 
 Finally, it is also possible to build them from explicit MPS tensors, by passing them directly.
@@ -128,19 +128,19 @@ An [`InfiniteMPS`](@ref) represents a periodically repeating unit cell of MPS te
 
 ### Construction
 
-Similar to `FiniteMPS`, the easiest way of constructing an `InfiniteMPS` is by specifying an [`InfiniteMPSManifold`](@ref) describing one unit cell:
+Similar to `FiniteMPS`, the easiest way of constructing an `InfiniteMPS` is by specifying an [`InfiniteMPSStructure`](@ref) describing one unit cell:
 
 ```@example states
 pspaces = [ℂ^2, ℂ^2]       # 2-site unit cell
 vspaces = [ℂ^4, ℂ^5]       # virtual space to the left of each site
-manifold = InfiniteMPSManifold(pspaces, vspaces)
-ψinf = rand(manifold)
+structure = InfiniteMPSStructure(pspaces, vspaces)
+ψinf = rand(structure)
 ```
 
 Alternatively, we may also start from explicit site tensors:
 
 ```@example states
-As = [rand(ComplexF64, imanifold[i]) for i in 1:length(imanifold)]
+As = [rand(ComplexF64, structure[i]) for i in 1:length(structure)]
 ψinf2 = InfiniteMPS(As)
 ```
 
@@ -165,9 +165,9 @@ It represents a window of mutable tensors (a finite MPS), embedded in an infinit
 It can therefore be created accordingly, ensuring that the edges match:
 
 ```@example states
-infinite_state = rand(InfiniteMPSManifold(ℂ^2, ℂ^4))
-finite_manifold = FiniteMPSManifold(fill(ℂ^2, 5), ℂ^4; left_virtualspace=ℂ^4, right_virtualspace=ℂ^4)
-finite_state = rand(ComplexF64, finite_manifold)
+infinite_state = rand(InfiniteMPSStructure(ℂ^2, ℂ^4))
+finite_structure = FiniteMPSStructure(fill(ℂ^2, 5), ℂ^4; left_virtualspace=ℂ^4, right_virtualspace=ℂ^4)
+finite_state = rand(ComplexF64, finite_structure)
 window = WindowMPS(infinite_state, finite_state, infinite_state)
 ```
 

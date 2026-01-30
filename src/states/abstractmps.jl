@@ -179,27 +179,29 @@ Return an iterator over the sites of the MPS `state`.
 eachsite(ψ::AbstractMPS) = eachindex(ψ)
 
 # ===========================================================================================
-# MPS manifolds
+# MPS structure
 # ===========================================================================================
 """
-    abstract type AbstractMPSManifold{S <: ElementarySpace}
+    abstract type AbstractMPSStructure{S <: ElementarySpace}
 
-Abstract supertype for the characterization of an MPS manifold, i.e. the sizes of all tensors that are involved.
-These types are used mostly as convenient dispatch 
+Abstract supertype for the structure of an MPS, i.e. the sizes of all tensors that are involved.
+These types are used mostly as convenient dispatch hooks.
+
+See also [`FiniteMPSStructure`](@ref) and [`InfiniteMPSStructure`](@ref).
 """
-abstract type AbstractMPSManifold{S <: ElementarySpace} end
+abstract type AbstractMPSStructure{S <: ElementarySpace} end
 
-TensorKit.spacetype(::Type{<:AbstractMPSManifold{S}}) where {S} = S
+TensorKit.spacetype(::Type{<:AbstractMPSStructure{S}}) where {S} = S
 
-physicalspace(manifold::AbstractMPSManifold, i::Integer) = physicalspace(manifold)[i]
-left_virtualspace(manifold::AbstractMPSManifold, i::Integer) = left_virtualspace(manifold)[i]
-right_virtualspace(manifold::AbstractMPSManifold, i::Integer) = right_virtualspace(manifold)[i]
+physicalspace(structure::AbstractMPSStructure, i::Integer) = physicalspace(structure)[i]
+left_virtualspace(structure::AbstractMPSStructure, i::Integer) = left_virtualspace(structure)[i]
+right_virtualspace(structure::AbstractMPSStructure, i::Integer) = right_virtualspace(structure)[i]
 
-Base.getindex(manifold::AbstractMPSManifold, site::Integer) =
-    left_virtualspace(manifold, site) ⊗ physicalspace(manifold, site) ← right_virtualspace(manifold, site)
+Base.getindex(structure::AbstractMPSStructure, site::Integer) =
+    left_virtualspace(structure, site) ⊗ physicalspace(structure, site) ← right_virtualspace(structure, site)
 
 """
-    FiniteMPSManifold(pspaces, vspaces) <: AbstractMPSManifold{S}
+    FiniteMPSStructure(pspaces, vspaces) <: AbstractMPSStructure{S}
 
 Full characterization of all [`FiniteMPS`](@ref) spaces. Both `pspaces` and `vspaces` are `Vector`s that hold the
 local physical and virtual spaces, such that we have `length(pspaces) + 1 == length(vspaces)`.
@@ -207,9 +209,9 @@ These objects can be used to construct MPS for a given space, for example throug
 
 ## Constructors
 
-    FiniteMPSManifold(physicalspaces::AbstractVector{<:TensorSpace}, max_virtualspaces; [left_virtualspace], [right_virtualspace])
+    FiniteMPSStructure(physicalspaces::AbstractVector{<:TensorSpace}, max_virtualspaces; [left_virtualspace], [right_virtualspace])
 
-To construct a `FiniteMPSManifold`, you should provide the `physicalspaces`, along with the maximal desired virtual space.
+To construct a `FiniteMPSStructure`, you should provide the `physicalspaces`, along with the maximal desired virtual space.
 This latter can be provided as a single `<:ElementarySpace`, or, if a site-dependent maximum is desired through a vector thereof.
 In that case, `length(physicalspaces) == length(max_virtualspaces) + 1`.
 
@@ -220,19 +222,19 @@ This might be useful to construct "charged" MPS, or to work with [`WindowMPS`](@
     As the supplied virtual spaces are interpreted as a maximum, this function will automatically construct "full-rank" spaces.
     These are chosen such that every MPS tensor that would be generated could have full rank. See also [`makefullrank!](@ref).
 """
-struct FiniteMPSManifold{S <: ElementarySpace, S′ <: TensorSpace{S}} <: AbstractMPSManifold{S}
+struct FiniteMPSStructure{S <: ElementarySpace, S′ <: TensorSpace{S}} <: AbstractMPSStructure{S}
     pspaces::Vector{S′}
     vspaces::Vector{S}
 
     # disable default constructor
-    function FiniteMPSManifold{S, S′}(
+    function FiniteMPSStructure{S, S′}(
             pspaces::Vector{S′}, vspaces::Vector{S}
         ) where {S <: ElementarySpace, S′ <: TensorSpace{S}}
         return new{S, S′}(pspaces, vspaces)
     end
 end
 
-function FiniteMPSManifold(
+function FiniteMPSStructure(
         physicalspaces::AbstractVector{S′}, max_virtualspaces::AbstractVector{S};
         left_virtualspace::S = oneunit(S), right_virtualspace::S = oneunit(S)
     ) where {S <: ElementarySpace, S′ <: TensorSpace{S}}
@@ -244,17 +246,17 @@ function FiniteMPSManifold(
     # copy to avoid side-effects and get correct array type
     pspaces = collect(physicalspaces)
     vspaces = vcat(left_virtualspace, max_virtualspaces, right_virtualspace)
-    manifold = FiniteMPSManifold{S, S′}(pspaces, vspaces)
+    structure = FiniteMPSStructure{S, S′}(pspaces, vspaces)
 
     # ensure all spaces are full rank -- use vspaces as maximum
-    return makefullrank!(manifold)
+    return makefullrank!(structure)
 end
-function FiniteMPSManifold(
+function FiniteMPSStructure(
         physicalspaces::AbstractVector{S′}, max_virtualspace::S; kwargs...
     ) where {S <: ElementarySpace, S′ <: TensorSpace{S}}
-    return FiniteMPSManifold(physicalspaces, fill(max_virtualspace, length(physicalspaces) - 1); kwargs...)
+    return FiniteMPSStructure(physicalspaces, fill(max_virtualspace, length(physicalspaces) - 1); kwargs...)
 end
-function FiniteMPSManifold(mps_tensors::AbstractVector{A}) where {A <: GenericMPSTensor}
+function FiniteMPSStructure(mps_tensors::AbstractVector{A}) where {A <: GenericMPSTensor}
     numin(A) == 1 || throw(ArgumentError("Not a valid MPS tensor space"))
     pspaces = map(physicalspace, mps_tensors)
     vspaces = Vector{spacetype(A)}(undef, length(mps_tensors) - 1)
@@ -262,7 +264,7 @@ function FiniteMPSManifold(mps_tensors::AbstractVector{A}) where {A <: GenericMP
         i == length(mps_tensors) && continue
         vspaces[i] = right_virtualspace(mps_tensor)
     end
-    return FiniteMPSManifold(
+    return FiniteMPSStructure(
         pspaces, vspaces;
         left_virtualspace = left_virtualspace(first(mps_tensors)),
         right_virtualspace = right_virtualspace(last(mps_tensors))
@@ -270,7 +272,7 @@ function FiniteMPSManifold(mps_tensors::AbstractVector{A}) where {A <: GenericMP
 end
 
 """
-    InfiniteMPSManifold(pspaces, vspaces) <: AbstractMPSManifold{S}
+    InfiniteMPSStructure(pspaces, vspaces) <: AbstractMPSStructure{S}
 
 Full characterization of all [`InfiniteMPS`](@ref) spaces. Both `pspaces` and `vspaces` are `PeriodicVector`s that hold the
 local physical and virtual spaces, such that we must have `length(pspaces) == length(vspaces)`.
@@ -278,9 +280,9 @@ These objects can be used to construct MPS for a given space, for example throug
 
 ## Constructors
 
-    FiniteMPSManifold(physicalspaces::AbstractVector{<:TensorSpace}, max_virtualspaces; [left_virtualspace], [right_virtualspace])
+    FiniteMPSStructure(physicalspaces::AbstractVector{<:TensorSpace}, max_virtualspaces; [left_virtualspace], [right_virtualspace])
 
-To construct a `FiniteMPSManifold`, you should provide the `physicalspaces`, along with the maximal desired virtual space.
+To construct a `FiniteMPSStructure`, you should provide the `physicalspaces`, along with the maximal desired virtual space.
 This latter can be provided as a single `<:ElementarySpace`, or, if a site-dependent maximum is desired through a vector thereof.
 In that case, `length(physicalspaces) == length(max_virtualspaces)`.
 
@@ -288,12 +290,12 @@ In that case, `length(physicalspaces) == length(max_virtualspaces)`.
     As the supplied virtual spaces are interpreted as a maximum, this function will automatically construct "full-rank" spaces.
     These are chosen such that every MPS tensor that would be generated could have full rank. See also [`makefullrank!](@ref).
 """
-struct InfiniteMPSManifold{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}} <: AbstractMPSManifold{S}
+struct InfiniteMPSStructure{S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}} <: AbstractMPSStructure{S}
     pspaces::PeriodicVector{S′}
     vspaces::PeriodicVector{S}
 end
 
-function InfiniteMPSManifold(
+function InfiniteMPSStructure(
         physicalspaces::AbstractVector{S′}, virtualspaces::AbstractVector{S}
     ) where {S <: ElementarySpace, S′ <: Union{S, CompositeSpace{S}}}
     L₁ = length(physicalspaces)
@@ -304,60 +306,60 @@ function InfiniteMPSManifold(
     # copy to avoid side-effects and get correct array type
     pspaces = collect(physicalspaces)
     vspaces = collect(virtualspaces)
-    manifold = InfiniteMPSManifold{S, S′}(pspaces, vspaces)
+    structure = InfiniteMPSStructure{S, S′}(pspaces, vspaces)
 
     # ensure all spaces are full rank -- use vspaces as maximum
-    return makefullrank!(manifold)
+    return makefullrank!(structure)
 end
-function InfiniteMPSManifold(mps_tensors::AbstractVector{A}) where {A <: GenericMPSTensor}
+function InfiniteMPSStructure(mps_tensors::AbstractVector{A}) where {A <: GenericMPSTensor}
     pspaces = PeriodicVector(map(physicalspace, mps_tensors))
     vspaces = PeriodicVector(map(left_virtualspace, mps_tensors))
     for i in eachindex(vspaces)
         vspaces[i] == right_virtualspace(mps_tensors[i - 1]) ||
             throw(SpaceMismatch("incompatible spaces between site $(i - 1) and $i"))
     end
-    return InfiniteMPSManifold(pspaces, vspaces)
+    return InfiniteMPSStructure(pspaces, vspaces)
 end
 
-Base.length(manifold::AbstractMPSManifold) = length(physicalspace(manifold))
+Base.length(structure::AbstractMPSStructure) = length(physicalspace(structure))
 
-physicalspace(manifold::Union{FiniteMPSManifold, InfiniteMPSManifold}) = manifold.pspaces
-left_virtualspace(manifold::FiniteMPSManifold) = manifold.vspaces[1:(end - 1)]
-left_virtualspace(manifold::InfiniteMPSManifold) = manifold.vspaces
-right_virtualspace(manifold::FiniteMPSManifold) = manifold.vspaces[2:end]
-right_virtualspace(manifold::InfiniteMPSManifold) = PeriodicVector(circshift(manifold.vspaces, 1))
+physicalspace(structure::Union{FiniteMPSStructure, InfiniteMPSStructure}) = structure.pspaces
+left_virtualspace(structure::FiniteMPSStructure) = structure.vspaces[1:(end - 1)]
+left_virtualspace(structure::InfiniteMPSStructure) = structure.vspaces
+right_virtualspace(structure::FiniteMPSStructure) = structure.vspaces[2:end]
+right_virtualspace(structure::InfiniteMPSStructure) = PeriodicVector(circshift(structure.vspaces, 1))
 
 # Utility
-function Base.repeat(manifold::FiniteMPSManifold, i::Integer)
-    last(manifold.vspaces) == first(manifold.vspaces) || throw(SpaceMismatch())
-    pspaces = repeat(manifold.pspaces, i)
-    vspaces = push!(repeat(left_virtualspace(manifold), i), last(manifold.vspaces))
-    return FiniteMPSManifold(pspaces, vspaces)
+function Base.repeat(structure::FiniteMPSStructure, i::Integer)
+    last(structure.vspaces) == first(structure.vspaces) || throw(SpaceMismatch())
+    pspaces = repeat(structure.pspaces, i)
+    vspaces = push!(repeat(left_virtualspace(structure), i), last(structure.vspaces))
+    return FiniteMPSStructure(pspaces, vspaces)
 end
-function Base.repeat(manifold::InfiniteMPSManifold, i::Integer)
-    pspaces = repeat(manifold.pspaces, i)
-    vspaces = repeat(manifold.vspaces, i)
-    return InfiniteMPSManifold(pspaces, vspaces)
+function Base.repeat(structure::InfiniteMPSStructure, i::Integer)
+    pspaces = repeat(structure.pspaces, i)
+    vspaces = repeat(structure.vspaces, i)
+    return InfiniteMPSStructure(pspaces, vspaces)
 end
 
-function Base.vcat(manifold1::FiniteMPSManifold, manifold2::FiniteMPSManifold)
-    last(right_virtualspace(manifold1)) == first(left_virtualspace(manifold2)) || throw(SpaceMismatch())
-    pspaces = vcat(manifold1.pspaces, manifold2.pspaces)
-    vspaces = push!(vcat(left_virtualspace(manifold1), left_virtualspace(manifold2)), last(manifold2.vspaces))
-    return FiniteMPSManifold(pspaces, vspaces)
+function Base.vcat(structure1::FiniteMPSStructure, structure2::FiniteMPSStructure)
+    last(right_virtualspace(structure1)) == first(left_virtualspace(structure2)) || throw(SpaceMismatch())
+    pspaces = vcat(structure1.pspaces, structure2.pspaces)
+    vspaces = push!(vcat(left_virtualspace(structure1), left_virtualspace(structure2)), last(structure2.vspaces))
+    return FiniteMPSStructure(pspaces, vspaces)
 end
-Base.vcat(manifold::FiniteMPSManifold, manifolds::FiniteMPSManifold...) = foldl(vcat, (manifold, manifolds...))
-function Base.vcat(manifold::InfiniteMPSManifold, manifolds::InfiniteMPSManifold...)
-    pspaces = vcat(manifold.pspaces, Base.Fix2(getproperty, :pspaces).(manifolds)...)
-    vspaces = vcat(manifold.vspaces, Base.Fix2(getproperty, :vspaces).(manifolds)...)
-    return InfiniteMPSManifold(pspaces, vspaces)
+Base.vcat(structure::FiniteMPSStructure, structures::FiniteMPSStructure...) = foldl(vcat, (structure, structures...))
+function Base.vcat(structure::InfiniteMPSStructure, structures::InfiniteMPSStructure...)
+    pspaces = vcat(structure.pspaces, Base.Fix2(getproperty, :pspaces).(structures)...)
+    vspaces = vcat(structure.vspaces, Base.Fix2(getproperty, :vspaces).(structures)...)
+    return InfiniteMPSStructure(pspaces, vspaces)
 end
 
 # MPS constructors
 # ----------------
 for randf in (:rand, :randn)
     _docstr = """
-        $randf([rng=default_rng()], [T=Float64], manifold::AbstractMPSManifold) -> mps
+        $randf([rng=default_rng()], [T=Float64], structure::AbstractMPSStructure) -> mps
         
     Generate an `mps` with tensors generated by `$randf`.
 
@@ -375,18 +377,18 @@ for randf in (:rand, :randn)
     randfun! = GlobalRef(Random, Symbol(randf, :!))
 
     @eval begin
-        @doc $_docstr $randfun(::Type, ::AbstractMPSManifold)
-        @doc $_docstr! $randfun!(::AbstractMPSManifold)
+        @doc $_docstr $randfun(::Type, ::AbstractMPSStructure)
+        @doc $_docstr! $randfun!(::AbstractMPSStructure)
 
         # filling in default eltype
-        $randfun(manifold::AbstractMPSManifold) = $randfun(Defaults.eltype, manifold)
-        function $randfun(rng::Random.AbstractRNG, manifold::AbstractMPSManifold)
-            return $randfun(rng, Defaults.eltype, manifold)
+        $randfun(structure::AbstractMPSStructure) = $randfun(Defaults.eltype, structure)
+        function $randfun(rng::Random.AbstractRNG, structure::AbstractMPSStructure)
+            return $randfun(rng, Defaults.eltype, structure)
         end
 
         # filling in default rng
-        function $randfun(::Type{T}, manifold::AbstractMPSManifold) where {T}
-            return $randfun(Random.default_rng(), T, manifold)
+        function $randfun(::Type{T}, structure::AbstractMPSStructure) where {T}
+            return $randfun(Random.default_rng(), T, structure)
         end
         $randfun!(mps::AbstractMPS) = $randfun!(Random.default_rng(), mps)
     end
@@ -414,47 +416,48 @@ function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
         throw(ArgumentError("Invalid side: $side"))
     end
 end
-isfullrank(manifold::AbstractMPSManifold; kwargs...) = all(i -> isfullrank(manifold[i]; kwargs...), 1:length(manifold))
+isfullrank(structure::AbstractMPSStructure; kwargs...) =
+    all(i -> isfullrank(structure[i]; kwargs...), 1:length(structure))
 
-function makefullrank!(manifold::FiniteMPSManifold)
+function makefullrank!(structure::FiniteMPSStructure)
     # left-to-right sweep
-    for site in 1:length(manifold)
-        if !isfullrank(manifold[site]; side = :right)
-            maxspace = fuse(left_virtualspace(manifold, site), fuse(physicalspace(manifold, site)))
-            manifold.vspaces[site + 1] = infimum(right_virtualspace(manifold, site), maxspace)
+    for site in 1:length(structure)
+        if !isfullrank(structure[site]; side = :right)
+            maxspace = fuse(left_virtualspace(structure, site), fuse(physicalspace(structure, site)))
+            structure.vspaces[site + 1] = infimum(right_virtualspace(structure, site), maxspace)
         end
     end
     # right-to-left sweep
-    for site in reverse(1:length(manifold))
-        if !isfullrank(manifold[site]; side = :left)
-            maxspace = fuse(right_virtualspace(manifold, site), dual(fuse(physicalspace(manifold, site))))
-            manifold.vspaces[site] = infimum(left_virtualspace(manifold, site), maxspace)
+    for site in reverse(1:length(structure))
+        if !isfullrank(structure[site]; side = :left)
+            maxspace = fuse(right_virtualspace(structure, site), dual(fuse(physicalspace(structure, site))))
+            structure.vspaces[site] = infimum(left_virtualspace(structure, site), maxspace)
         end
     end
-    return manifold
+    return structure
 end
-function makefullrank!(manifold::InfiniteMPSManifold)
+function makefullrank!(structure::InfiniteMPSStructure)
     haschanged = true
     while haschanged
         haschanged = false
         # left-to-right sweep
-        for site in 1:length(manifold)
-            if !isfullrank(manifold[site]; side = :right)
-                maxspace = fuse(left_virtualspace(manifold, site), fuse(physicalspace(manifold, site)))
-                manifold.vspaces[site + 1] = infimum(right_virtualspace(manifold, site), maxspace)
+        for site in 1:length(structure)
+            if !isfullrank(structure[site]; side = :right)
+                maxspace = fuse(left_virtualspace(structure, site), fuse(physicalspace(structure, site)))
+                structure.vspaces[site + 1] = infimum(right_virtualspace(structure, site), maxspace)
                 haschanged = true
             end
         end
         # right-to-left sweep
-        for site in reverse(1:length(manifold))
-            if !isfullrank(manifold[site]; side = :left)
-                maxspace = fuse(right_virtualspace(manifold, site), dual(fuse(physicalspace(manifold, site))))
-                manifold.vspaces[site] = infimum(left_virtualspace(manifold, site), maxspace)
+        for site in reverse(1:length(structure))
+            if !isfullrank(structure[site]; side = :left)
+                maxspace = fuse(right_virtualspace(structure, site), dual(fuse(physicalspace(structure, site))))
+                structure.vspaces[site] = infimum(left_virtualspace(structure, site), maxspace)
                 haschanged = true
             end
         end
     end
-    return manifold
+    return structure
 end
 
 """
