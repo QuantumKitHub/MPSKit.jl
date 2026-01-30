@@ -8,31 +8,53 @@ using LinearAlgebra: dot
 
 ## FiniteMPS
 
-A [`FiniteMPS`](@ref) is - at its core - a chain of mps tensors.
+A [`FiniteMPS`](@ref) is - at its core - a chain of MPS tensors.
 
 ```@raw html
 <img src="../finite_mps_definition.png" alt="finite MPS" class="color-invertible"/>
 ```
 
-### Usage
+### Construction
 
-A `FiniteMPS` can be created by passing in a vector of tensormaps:
-
-```@example states
-L = 10
-data = [rand(ComplexF64, ℂ^1 ⊗ ℂ^2  ← ℂ^1) for _ in 1:L];
-state = FiniteMPS(data)
-```
-
-Or alternatively by specifying its structure
+If you already have the state of interest, it is straightforward to convert it to an MPS as follows:
 
 ```@example states
-max_bond_dimension = ℂ^4
-physical_space = ℂ^2
-state = FiniteMPS(rand, ComplexF64, L, physical_space, max_bond_dimension)
+ψ_dense = rand((ℂ^2)^4)
+ψ_mps = FiniteMPS(ψ_dense)
 ```
 
-You can take dot products, renormalize!, expectation values,....
+However, typically this is not the case, as storing the full state becomes expensive rather quickly.
+Then, `FiniteMPS` are best constructed by first specifying a [`FiniteMPSStructure`](@ref) that encodes the physical and (maximal) virtual spaces:
+
+```@example states
+pspaces = fill(ℂ^2, 10)         # physical spaces (Vector)
+max_virtualspace = ℂ^4          # single max virtual space
+structure = FiniteMPSStructure(pspaces, max_virtualspace)
+ψ = rand(structure)              # random normalized FiniteMPS
+```
+
+Finally, it is also possible to build them from explicit MPS tensors, by passing them directly.
+Here we construct the
+
+```@example states
+As = [rand(ComplexF64, ℂ^1 ⊗ ℂ^2  ← ℂ^1) for _ in 1:L];
+ψ_from_As = FiniteMPS(As)
+```
+
+!!! warning "Full rank spaces"
+
+    As the `FiniteMPS` object handles tensors in well-chosen gauges, the virtualspaces, as well as the associated tensors might reduce in size.
+    This can be achieved in a lossless manner whenever the spaces are not full rank, in the following sense:
+    ```julia
+    left_virtualspace(A) ⊗ physicalspace(A) ≿ right_virtualspace(A) &&
+        left_virtualspace(A)' ≾ physicalspace(A) ⊗ right_virtualspace(A)'
+    ```
+
+!!! warning "Edge spaces"
+
+    It is possible for a `FiniteMPS` object to have non-trivial left- and/or right edge spaces.
+    This can be convenient whenever the state is embedded in a larger system (e.g. as part of a [`WindowMPS`](@ref)), or to allow for non-trivially charged symmetric states.
+    Therefore, be mindful that when constructing a `FiniteMPS` from tensors directly, you need to handle the edges separately.
 
 ### Gauging and canonical forms
 
@@ -102,24 +124,25 @@ The idea behind this construction is that one never has to worry about how the s
 
 ## InfiniteMPS
 
-An [`InfiniteMPS`](@ref) can be thought of as being very similar to a finite mps, where the set of tensors is repeated periodically.
+An [`InfiniteMPS`](@ref) represents a periodically repeating unit cell of MPS tensors.
 
-It can also be created by passing in a vector of `TensorMap`s:
+### Construction
 
-```@example states
-data = [rand(ComplexF64, ℂ^4 ⊗ ℂ^2  ← ℂ^4) for _ in 1:2]
-state = InfiniteMPS(data)
-```
-
-or by initializing it from given spaces
+Similar to `FiniteMPS`, the easiest way of constructing an `InfiniteMPS` is by specifying an [`InfiniteMPSStructure`](@ref) describing one unit cell:
 
 ```@example states
-phys_spaces = fill(ℂ^2, 2)
-virt_spaces = [ℂ^4, ℂ^5] # by convention to the right of a site
-state = InfiniteMPS(phys_spaces, virt_spaces)
+pspaces = [ℂ^2, ℂ^2]       # 2-site unit cell
+vspaces = [ℂ^4, ℂ^5]       # virtual space to the left of each site
+structure = InfiniteMPSStructure(pspaces, vspaces)
+ψinf = rand(structure)
 ```
 
-Note that the code above creates an `InfiniteMPS` with a two-site unit cell, where the given virtual spaces are located to the right of their respective sites.
+Alternatively, we may also start from explicit site tensors:
+
+```@example states
+As = [rand(ComplexF64, structure[i]) for i in 1:length(structure)]
+ψinf2 = InfiniteMPS(As)
+```
 
 ### Gauging and canonical forms
 
@@ -142,8 +165,9 @@ It represents a window of mutable tensors (a finite MPS), embedded in an infinit
 It can therefore be created accordingly, ensuring that the edges match:
 
 ```@example states
-infinite_state = InfiniteMPS(ℂ^2, ℂ^4)
-finite_state = FiniteMPS(5, ℂ^2, ℂ^4; left=ℂ^4, right=ℂ^4)
+infinite_state = rand(InfiniteMPSStructure(ℂ^2, ℂ^4))
+finite_structure = FiniteMPSStructure(fill(ℂ^2, 5), ℂ^4; left_virtualspace=ℂ^4, right_virtualspace=ℂ^4)
+finite_state = rand(ComplexF64, finite_structure)
 window = WindowMPS(infinite_state, finite_state, infinite_state)
 ```
 

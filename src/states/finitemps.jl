@@ -25,122 +25,124 @@ By convention, we have that:
 ---
 
 ## Constructors
-    FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
-              maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
-    FiniteMPS([f, eltype], N::Int, physicalspace::Union{S,CompositeSpace{S}},
-              maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
-    FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=false)
 
-Construct an MPS via a specification of physical and virtual spaces, or from a list of
-tensors `As`. All cases reduce to the latter. In particular, a state with a non-trivial
-total charge can be constructed by passing a non-trivially charged vector space as the
-`left` or `right` virtual spaces.
+Recommended ways to construct a finite MPS are:
 
-### Arguments
-- `As::Vector{<:GenericMPSTensor}`: vector of site tensors
+- Using an MPS structure of spaces
 
-- `f::Function=rand`: initializer function for tensor data
-- `eltype::Type{<:Number}=ComplexF64`: scalar type of tensors
+  ```julia
+  rand([rng], [T], structure::FiniteMPSStructure)
+  randn([rng], [T], structure::FiniteMPSStructure)
+  zeros([T], structure::FiniteMPSStructure)
+  ones([T], structure::FiniteMPSStructure)
+  ```
 
-- `physicalspaces::Vector{<:Union{S, CompositeSpace{S}}`: list of physical spaces
-- `N::Int`: number of sites
-- `physicalspace::Union{S,CompositeSpace{S}}`: local physical space
+  First build a [`FiniteMPSStructure`](@ref) that fixes the physical and (maximal) virtual spaces, then allocate an MPS on that structure.
+  See [`FiniteMPSStructure`](@ref) for how to specify site-dependent virtual-space bounds and nontrivial edge charges via `left_virtualspace` and `right_virtualspace`.
 
-- `virtualspaces::Vector{<:Union{S, CompositeSpace{S}}`: list of virtual spaces
-- `maxvirtualspace::S`: maximum virtual space
+- From site tensors
 
-### Keywords
-- `normalize=true`: normalize the constructed state
-- `overwrite=false`: overwrite the given input tensors
-- `left=oneunit(S)`: left-most virtual space
-- `right=oneunit(S)`: right-most virtual space
+  ```julia
+  FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize = false)
+  ```
+
+  Construct an MPS from a vector of already-sized MPS site tensors `As`.
+  When `normalize = true`, the state is normalized during construction.
+
+- From a full state tensor
+
+  ```julia
+  FiniteMPS(ψ::AbstractTensor)
+  ```
+
+  Factorizes a full many-body state `ψ` into a finite MPS (using a left-canonical sweep).
+
+In particular, charged MPS can be created by giving nontrivial left and/or right virtual spaces when constructing the structure:
+
+```julia
+ps = fill(ℂ^2, N)                       # physical spaces
+m  = FiniteMPSStructure(ps, ℂ^D; left_virtualspace = Qₗ, right_virtualspace = Qᵣ)
+ψ  = rand(ComplexF64, m)                 # normalized random MPS on the structure
+```
+
+!!! warning "Deprecated constructors"
+    Older constructors of the form `FiniteMPS([f, eltype], physicalspaces, max_virtualspaces; ...)`
+    or `FiniteMPS([f, eltype], N, physicalspace, max_virtualspaces; ...)` are deprecated. Use
+    `rand`/`randn`/`zeros`/`ones` with a [`FiniteMPSStructure`](@ref) instead.
 """
 struct FiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing, A}}
     ARs::Vector{Union{Missing, A}}
     ACs::Vector{Union{Missing, A}}
     Cs::Vector{Union{Missing, B}}
+
+    # constructor from data
     function FiniteMPS{A, B}(
             ALs::Vector{Union{Missing, A}}, ARs::Vector{Union{Missing, A}},
             ACs::Vector{Union{Missing, A}}, Cs::Vector{Union{Missing, B}}
         ) where {A <: GenericMPSTensor, B <: MPSBondTensor}
         return new{A, B}(ALs, ARs, ACs, Cs)
     end
-    function FiniteMPS(
-            ALs::Vector{MA}, ARs::Vector{MA},
-            ACs::Vector{MA},
-            Cs::Vector{MB}
-        ) where {MA <: Union{GenericMPSTensor, Missing}, MB <: Union{MPSBondTensor, Missing}}
-        A = _not_missing_type(MA)
-        B = _not_missing_type(MB)
-        length(ACs) == length(Cs) - 1 == length(ALs) == length(ARs) ||
-            throw(DimensionMismatch("length mismatch of tensors"))
-        sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
-            throw(ArgumentError("at least one AC/C should not be missing"))
 
-        S = spacetype(A)
-        left_virt_spaces = Vector{Union{Missing, S}}(missing, length(Cs))
-        right_virt_spaces = Vector{Union{Missing, S}}(missing, length(Cs))
-
-        for (i, tup) in enumerate(zip(ALs, ARs, ACs))
-            non_missing = filter(!ismissing, tup)
-            isempty(non_missing) && throw(ArgumentError("missing site tensor"))
-            (al, ar, ac) = tup
-
-            if !ismissing(al)
-                !ismissing(left_virt_spaces[i]) &&
-                    (
-                    left_virt_spaces[i] == _firstspace(al) ||
-                        throw(SpaceMismatch("Virtual space of AL on site $(i) doesn't match"))
-                )
-
-                left_virt_spaces[i + 1] = _lastspace(al)'
-                left_virt_spaces[i] = _firstspace(al)
-            end
-
-            if !ismissing(ar)
-                !ismissing(right_virt_spaces[i]) &&
-                    (
-                    right_virt_spaces[i] == _firstspace(ar) ||
-                        throw(SpaceMismatch("Virtual space of AR on site $(i) doesn't match"))
-                )
-
-                right_virt_spaces[i + 1] = _lastspace(ar)'
-                right_virt_spaces[i] = _firstspace(ar)
-            end
-
-            if !ismissing(ac)
-                !ismissing(left_virt_spaces[i]) &&
-                    (
-                    left_virt_spaces[i] == _firstspace(ac) ||
-                        throw(SpaceMismatch("Left virtual space of AC on site $(i) doesn't match"))
-                )
-                !ismissing(right_virt_spaces[i + 1]) &&
-                    (
-                    right_virt_spaces[i + 1] == _lastspace(ac)' ||
-                        throw(SpaceMismatch("Right virtual space of AC on site $(i) doesn't match"))
-                )
-
-                right_virt_spaces[i + 1] = _lastspace(ac)'
-                left_virt_spaces[i] = _firstspace(ac)
-            end
-        end
-
-        for (i, c) in enumerate(Cs)
-            ismissing(c) && continue
-            !ismissing(left_virt_spaces[i]) && (
-                left_virt_spaces[i] == _firstspace(c) ||
-                    throw(SpaceMismatch("Left virtual space of C on site $(i - 1) doesn't match"))
-            )
-            !ismissing(right_virt_spaces[i]) && (
-                right_virt_spaces[i] == _lastspace(c)' ||
-                    throw(SpaceMismatch("Right virtual space of C on site $(i - 1) doesn't match"))
-            )
-        end
+    # undef constructor
+    function FiniteMPS{A, B}(::UndefInitializer, L::Integer) where {A, B}
+        ALs = Vector{Union{Missing, A}}(missing, L)
+        ARs = Vector{Union{Missing, A}}(missing, L)
+        ACs = Vector{Union{Missing, A}}(missing, L)
+        Cs = Vector{Union{Missing, B}}(missing, L + 1)
         return new{A, B}(ALs, ARs, ACs, Cs)
     end
+end
+
+function FiniteMPS(
+        ALs::Vector{MA}, ARs::Vector{MA}, ACs::Vector{MA}, Cs::Vector{MB}
+    ) where {MA <: Union{GenericMPSTensor, Missing}, MB <: Union{MPSBondTensor, Missing}}
+    (L = length(ACs)) == length(Cs) - 1 == length(ALs) == length(ARs) ||
+        throw(DimensionMismatch("length mismatch of tensors"))
+    sum(ismissing.(ACs)) + sum(ismissing.(Cs)) < length(ACs) + length(Cs) ||
+        throw(ArgumentError("at least one AC/C should not be missing"))
+
+    # determine the MPS structure from the input and instantiate the MPS
+    mps_tensors = map(ALs, ARs, ACs) do AL, AR, AC
+        mps_tensor = coalesce(AL, AR, AC)
+        ismissing(mps_tensor) && throw(ArgumentError("missing site tensor at site $i"))
+        return mps_tensor
+    end
+    structure = FiniteMPSStructure(mps_tensors)
+    A = _not_missing_type(MA)
+    B = _not_missing_type(MB)
+    mps = FiniteMPS{A, B}(undef, length(structure))
+
+    # populate the non-missing tensors into the MPS
+    for i in 1:L
+        V_mps = structure[i]
+        if !ismissing(ALs[i])
+            space(ALs[i]) == V_mps || throw(SpaceMismatch("incompatible space for AL[$i]"))
+            getfield(mps, :ALs)[i] = ALs[i]
+        end
+        if !ismissing(ARs[i])
+            space(ARs[i]) == V_mps || throw(SpaceMismatch("incompatible space for AR[$i]"))
+            getfield(mps, :ARs)[i] = ARs[i]
+        end
+        if !ismissing(ACs[i])
+            space(ACs[i]) == V_mps || throw(SpaceMismatch("incompatible space for AC[$i]"))
+            getfield(mps, :ACs)[i] = ACs[i]
+        end
+        if !ismissing(Cs[i])
+            V = left_virtualspace(structure, i)
+            space(Cs[i]) == (V ← V) ||
+                throw(SpaceMismatch("incompatible space for C[$i]"))
+            getfield(mps, :Cs)[i] = Cs[i]
+        end
+    end
+    if !ismissing(Cs[end])
+        V = right_virtualspace(structure, L)
+        space(Cs[end]) == (V ← V) ||
+            throw(SpaceMismatch("incompatible space for C[$(L + 1)]"))
+        getfield(mps, :Cs)[L + 1] = Cs[L + 1]
+    end
+
+    return mps
 end
 
 _not_missing_type(::Type{Missing}) = throw(ArgumentError("Only missing type present"))
@@ -202,91 +204,33 @@ function _gaugecenter(ψ::FiniteMPS)::HalfInt
     isnothing(center) && throw(ArgumentError("No center found, invalid state"))
     return center
 end
+
 #===========================================================================================
 Constructors
 ===========================================================================================#
 
-function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize = false, overwrite = false)
-    # TODO: copying the input vector is probably not necessary, as we are constructing new
-    # vectors anyways, maybe deprecate `overwrite`.
-    As = overwrite ? As : copy(As)
-    N = length(As)
-    As[1] = MatrixAlgebraKit.copy_input(qr_compact, As[1])
-    local C
-    for i in eachindex(As)
-        As[i], C = qr_compact!(As[i]; positive = true)
-        normalize && normalize!(C)
-        i == N || (As[i + 1] = _transpose_front(C * _transpose_tail(As[i + 1])))
-    end
+function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize::Bool = false)
+    mps = FiniteMPS
 
-    A = eltype(As)
+    # start with first in case eltype changes
+    AL1, C = qr_compact(first(As))
+    normalize && normalize!(C)
+
+    # instantiate the destination
+    A = typeof(AL1)
     B = typeof(C)
+    mps = FiniteMPS{A, B}(undef, length(As))
 
-    Cs = Vector{Union{Missing, B}}(missing, N + 1)
-    ALs = Vector{Union{Missing, A}}(missing, N)
-    ARs = Vector{Union{Missing, A}}(missing, N)
-    ACs = Vector{Union{Missing, A}}(missing, N)
-
-    ALs .= As
-    Cs[end] = C
-
-    return FiniteMPS(ALs, ARs, ACs, Cs)
-end
-
-function FiniteMPS(
-        f, elt, Pspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxVspaces::Vector{S};
-        normalize = true, left::S = oneunit(S), right::S = oneunit(S)
-    ) where {S <: ElementarySpace}
-    N = length(Pspaces)
-    length(maxVspaces) == N - 1 ||
-        throw(DimensionMismatch("length of physical spaces ($N) and virtual spaces $(length(maxVspaces)) should differ by 1"))
-
-    # limit the maximum virtual dimension such that result is full rank
-    fusedPspaces = fuse.(Pspaces) # for working with multiple physical spaces
-    Vspaces = similar(maxVspaces, N + 1)
-
-    Vspaces[1] = left
-    for k in 2:N
-        Vspaces[k] = infimum(fuse(Vspaces[k - 1], fusedPspaces[k - 1]), maxVspaces[k - 1])
-        dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
+    # left-gauge and fill the ALs and last C
+    ALs = getfield(mps, :ALs)
+    for i in eachindex(ALs)
+        i == 1 && (ALs[i] = AL1; continue)
+        ALs[i], C = qr_compact!(_mul_front(C, As[i]))
+        normalize && normalize!(C)
     end
+    getfield(mps, :Cs)[end] = C
 
-    Vspaces[end] = right
-    for k in reverse(2:N)
-        Vspaces[k] = infimum(Vspaces[k], fuse(Vspaces[k + 1], dual(fusedPspaces[k])))
-        dim(Vspaces[k]) > 0 || @warn "no fusion channels available at site $k"
-    end
-
-    # construct MPS
-    tensors = MPSTensor.(f, elt, Pspaces, Vspaces[1:(end - 1)], Vspaces[2:end])
-    return FiniteMPS(tensors; normalize, overwrite = true)
-end
-function FiniteMPS(
-        f, elt, Pspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxVspace::S;
-        kwargs...
-    ) where {S <: ElementarySpace}
-    maxVspaces = fill(maxVspace, length(Pspaces) - 1)
-    return FiniteMPS(f, elt, Pspaces, maxVspaces; kwargs...)
-end
-function FiniteMPS(
-        Pspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxVspaces::Union{S, Vector{S}};
-        kwargs...
-    ) where {S <: ElementarySpace}
-    return FiniteMPS(rand, Defaults.eltype, Pspaces, maxVspaces; kwargs...)
-end
-
-# Also accept single physical space and length
-function FiniteMPS(N::Int, V::VectorSpace, args...; kwargs...)
-    return FiniteMPS(fill(V, N), args...; kwargs...)
-end
-function FiniteMPS(f, elt, N::Int, V::VectorSpace, args...; kwargs...)
-    return FiniteMPS(f, elt, fill(V, N), args...; kwargs...)
-end
-
-# Also accept ProductSpace of physical spaces
-FiniteMPS(P::ProductSpace, args...; kwargs...) = FiniteMPS(collect(P), args...; kwargs...)
-function FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...)
-    return FiniteMPS(f, elt, collect(P), args...; kwargs...)
+    return mps
 end
 
 # construct from dense state
@@ -296,8 +240,73 @@ function FiniteMPS(ψ::AbstractTensor)
     A = _transpose_front(
         U * transpose(ψ * U', ((), reverse(ntuple(identity, numind(ψ) + 1))))
     )
-    return FiniteMPS(decompose_localmps(A); normalize = false, overwrite = true)
+    return FiniteMPS(decompose_localmps(A); normalize = false)
 end
+
+for f in (:zeros, :ones)
+    @eval begin
+        Base.$f(structure::FiniteMPSStructure) = $f(Defaults.eltype, structure)
+        function Base.$f(::Type{T}, structure::FiniteMPSStructure) where {T}
+            As = map(i -> $f(T, structure[i]), 1:length(structure))
+            return FiniteMPS(As)
+        end
+    end
+end
+
+for randfun in (:rand, :randn)
+    randfun! = Symbol(randfun, :!)
+    @eval function Random.$randfun(rng::Random.AbstractRNG, ::Type{T}, structure::FiniteMPSStructure) where {T}
+        As = map(i -> $randfun(rng, T, structure[i]), 1:length(structure))
+        return normalize!(FiniteMPS(As))
+    end
+    @eval function Random.$randfun!(rng::Random.AbstractRNG, mps::FiniteMPS)
+        for i in 1:length(mps)
+            mps.AC[i] = $randfun!(rng, mps.AC[i])
+        end
+        return mps
+    end
+end
+
+# Deprecate old constructor syntaxes
+# ----------------------------------
+Base.@deprecate(
+    FiniteMPS(
+        f, elt, Pspaces::Vector{<:TensorSpace{S}}, maxVspaces::Vector{S}; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    f(elt, FiniteMPSStructure(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(
+        f, elt, Pspaces::Vector{<:TensorSpace{S}}, maxVspace::S; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    f(elt, FiniteMPSStructure(Pspaces, maxVspace; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(
+        Pspaces::Vector{<:TensorSpace{S}}, maxVspaces::Union{S, Vector{S}}; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    rand(FiniteMPSStructure(Pspaces, maxVspaces; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(
+        f, elt, N::Int, V::TensorSpace{S}, args...; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    f(elt, FiniteMPSStructure(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(
+        N::Int, V::TensorSpace{S}, args...; left::S = oneunit(S), right::S = oneunit(S)
+    ) where {S <: ElementarySpace},
+    rand(FiniteMPSStructure(fill(V, N), args...; left_virtualspace = left, right_virtualspace = right))
+)
+Base.@deprecate(
+    FiniteMPS(P::ProductSpace, args...; kwargs...),
+    rand(FiniteMPSStructure(collect(P), args...; kwargs...))
+)
+Base.@deprecate(
+    FiniteMPS(f, elt, P::ProductSpace, args...; kwargs...),
+    f(elt, FiniteMPSStructure(collect(P), args...; kwargs...))
+)
 
 #===========================================================================================
 Utility
