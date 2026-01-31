@@ -119,7 +119,7 @@ function transferplot end
         sector_formatter = string
     )
     if sectors === nothing
-        sectors = [one(sectortype(h.args[1]))]
+        sectors = [leftunit(h.args[1])]
     end
 
     for sector in sectors

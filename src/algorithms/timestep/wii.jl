@@ -94,14 +94,14 @@ function make_time_mpo(
     H′ = copy(parent(H))
 
     V_left = left_virtualspace(H[1])
-    V_left′ = ⊞(V_left, oneunit(V_left), oneunit(V_left))
+    V_left′ = ⊞(V_left, leftunitspace(V_left), leftunitspace(V_left))
     H′[1] = similar(H[1], V_left′ ⊗ space(H[1], 2) ← domain(H[1]))
     for (I, v) in nonzero_pairs(H[1])
         H′[1][I] = v
     end
 
     V_right = right_virtualspace(H[end])
-    V_right′ = ⊞(oneunit(V_right), oneunit(V_right), V_right)
+    V_right′ = ⊞(rightunitspace(V_right), rightunitspace(V_right), V_right)
     H′[end] = similar(H[end], codomain(H[end]) ← space(H[end], 3)' ⊗ V_right′)
     for (I, v) in nonzero_pairs(H[end])
         H′[end][I[1], 1, 1, end] = v

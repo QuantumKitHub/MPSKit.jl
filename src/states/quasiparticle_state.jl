@@ -35,7 +35,7 @@ end
 #constructors
 function LeftGaugedQP(
         datfun, left_gs, right_gs = left_gs;
-        sector = one(sectortype(left_gs)), momentum = 0.0
+        sector = leftunit(left_gs), momentum = 0.0
     )
     # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
@@ -56,7 +56,7 @@ function LeftGaugedQP(
 end
 function LeftGaugedQP(
         datfun, left_gs::MultilineMPS, right_gs::MultilineMPS = left_gs;
-        sector = one(sectortype(left_gs)), momentum = 0.0
+        sector = leftunit(left_gs), momentum = 0.0
     )
     # not sure why this is needed for type stability
     Tresult = leftgaugedqptype(eltype(parent(left_gs)), typeof(momentum))
@@ -69,7 +69,7 @@ end
 
 function RightGaugedQP(
         datfun, left_gs, right_gs = left_gs;
-        sector = one(sectortype(left_gs)), momentum = 0.0
+        sector = leftunit(left_gs), momentum = 0.0
     )
     # find the left null spaces for the TNS
     excitation_space = Vect[typeof(sector)](sector => 1)
@@ -228,7 +228,7 @@ auxiliarysector(state::QP) = only(sectors(auxiliaryspace(state)))
 eachsite(state::QP) = eachsite(state.left_gs)
 
 istopological(qp::QP) = qp.left_gs !== qp.right_gs
-istrivial(qp::QP) = !istopological(qp) && isone(auxiliarysector(qp))
+istrivial(qp::QP) = !istopological(qp) && isunit(auxiliarysector(qp))
 
 Base.copy(a::QP) = copy!(similar(a), a)
 Base.copyto!(a::QP, b::QP) = copy!(a, b)
@@ -308,7 +308,7 @@ function Base.convert(::Type{<:FiniteMPS}, v::QP{S}) where {S <: FiniteMPS}
     elt = scalartype(v)
 
     utl = auxiliaryspace(v)
-    ou = oneunit(utl)
+    ou = leftunitspace(utl)
     utsp = ou ⊕ ou
     upper = isometry(storagetype(site_type(v.left_gs)), utsp, ou)
     lower = left_null(upper)

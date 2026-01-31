@@ -28,7 +28,7 @@ Return the density matrix of the infinite temperature state for a given Hamilton
 This is the identity matrix in the physical space, and the identity in the auxiliary space.
 """
 function infinite_temperature_density_matrix(H::MPOHamiltonian)
-    V = oneunit(spacetype(H))
+    V = first(left_virtualspace(H[1]))
     W = map(1:length(H)) do site
         return BraidingTensor{scalartype(H)}(physicalspace(H, site), V)
     end
@@ -78,7 +78,7 @@ end
 
 """
     transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
-                           sector=first(sectors(oneunit(left_virtualspace(above, 1)))))
+                           sector=leftunit(above))
 
 Calculate the partial spectrum of the left mixed transfer matrix corresponding to the
 overlap of a given `above` state and a `below` state. The `sector` keyword argument can be
@@ -89,7 +89,7 @@ domain of each eigenvector. The `tol` and `num_vals` keyword arguments are passe
 """
 function transfer_spectrum(
         above::InfiniteMPS; below = above, tol = Defaults.tol, num_vals = 20,
-        sector = first(sectors(oneunit(left_virtualspace(above, 1))))
+        sector = leftunit(above)
     )
     init = randomize!(
         similar(
@@ -276,13 +276,14 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O}, L = length(mpo)) wher
     V_wrap = left_virtualspace(mpo, 1)
     ST = storagetype(O)
 
-    util = isometry(storagetype(O), oneunit(V_wrap) ← one(V_wrap))
+    util = isometry(storagetype(O), rightunitspace(V_wrap) ← one(V_wrap))
     @plansor cup[-1; -2 -3] := id(ST, V_wrap)[-2; -3] * util[-1]
 
     local F_right
     for i in 1:L
-        V_left = i == 1 ? oneunit(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
-        V_right = i == L ? oneunit(V_wrap) : fuse(V_wrap ⊗ right_virtualspace(mpo, i))
+        # kept as rightunitspace, but might need to change if we consider off-diagonal MPOs
+        V_left = i == 1 ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
+        V_right = i == L ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ right_virtualspace(mpo, i))
         output[i] = similar(
             mpo[i], V_left * physicalspace(mpo, i) ← physicalspace(mpo, i) * V_right
         )
@@ -337,7 +338,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L = length(H))
     output = Vector{O}(undef, L)
     for site in 1:L
         V_left = if site == 1
-            oneunit(V_wrap)
+            leftunitspace(V_wrap)
         else
             vs = Vector{S}(undef, chi_)
             for (k, v) in indmap
@@ -346,7 +347,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L = length(H))
             SumSpace(vs)
         end
         V_right = if site == L
-            oneunit(V_wrap)
+            rightunitspace(V_wrap)
         else
             vs = Vector{S}(undef, chi_)
             for (k, v) in indmap

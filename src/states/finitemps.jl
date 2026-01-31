@@ -27,10 +27,10 @@ By convention, we have that:
 ## Constructors
     FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
               maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
+              normalize=true, left=unitspace(S), right=unitspace(S)) where {S<:ElementarySpace}
     FiniteMPS([f, eltype], N::Int, physicalspace::Union{S,CompositeSpace{S}},
               maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
+              normalize=true, left=unitspace(S), right=unitspace(S)) where {S<:ElementarySpace}
     FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=false)
 
 Construct an MPS via a specification of physical and virtual spaces, or from a list of
@@ -54,8 +54,8 @@ total charge can be constructed by passing a non-trivially charged vector space 
 ### Keywords
 - `normalize=true`: normalize the constructed state
 - `overwrite=false`: overwrite the given input tensors
-- `left=oneunit(S)`: left-most virtual space
-- `right=oneunit(S)`: right-most virtual space
+- `left=unitspace(S)`: left-most virtual space
+- `right=unitspace(S)`: right-most virtual space
 """
 struct FiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing, A}}
@@ -235,7 +235,7 @@ end
 
 function FiniteMPS(
         f, elt, Pspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxVspaces::Vector{S};
-        normalize = true, left::S = oneunit(S), right::S = oneunit(S)
+        normalize = true, left::S = unitspace(S), right::S = unitspace(S)
     ) where {S <: ElementarySpace}
     N = length(Pspaces)
     length(maxVspaces) == N - 1 ||
@@ -292,9 +292,8 @@ end
 # construct from dense state
 # TODO: make planar?
 function FiniteMPS(ψ::AbstractTensor)
-    U = ones(scalartype(ψ), oneunit(spacetype(ψ)))
     A = _transpose_front(
-        U * transpose(ψ * U', ((), reverse(ntuple(identity, numind(ψ) + 1))))
+        insertrightunit(transpose(insertrightunit(ψ, numind(ψ); dual = true)), numind(ψ) + 1; dual = true)
     )
     return FiniteMPS(decompose_localmps(A); normalize = false, overwrite = true)
 end
@@ -366,12 +365,10 @@ function Base.convert(::Type{TensorMap}, ψ::FiniteMPS)
     end
 
     # remove utility legs
-    space(T, 1) == oneunit(spacetype(T)) || throw(ArgumentError("utility leg not trivial"))
-    space(T, numind(T)) == oneunit(spacetype(T))' ||
-        throw(ArgumentError("utility leg not trivial"))
-    U = ones(scalartype(ψ), oneunit(spacetype(ψ)))
+    isunitspace(space(T, 1)) || throw(ArgumentError("utility leg not trivial"))
+    isunitspace(space(T, numind(T))') || throw(ArgumentError("utility leg not trivial"))
     UTU = transpose(
-        U' * _transpose_tail(T * U), (reverse(ntuple(identity, numind(T) - 2)), ())
+        removeunit(_transpose_tail(removeunit(T, numind(T))), 1), (reverse(ntuple(identity, numind(T) - 2)), ())
     )
 
     return UTU
@@ -410,12 +407,12 @@ end
 
 """
     max_virtualspaces(ψ::FiniteMPS)
-    max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=oneunit(S), right=oneunit(S))
+    max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=unitspace(S), right=unitspace(S))
 
 Compute the maximal virtual spaces of a given finite MPS or its physical spaces.
 """
 function max_virtualspaces(
-        Ps::Vector{<:Union{S, CompositeSpace{S}}}; left = oneunit(S), right = oneunit(S)
+        Ps::Vector{<:Union{S, CompositeSpace{S}}}; left = unitspace(S), right = unitspace(S)
     ) where {S <: ElementarySpace}
     Vs = similar(Ps, length(Ps) + 1)
     Vs[1] = left
