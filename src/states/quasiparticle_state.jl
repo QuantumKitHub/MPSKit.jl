@@ -1,7 +1,7 @@
 #=
 Should not be constructed by the user - acts like a vector (used in eigsolve)
 I think it makes sense to see these things as an actual state instead of return an array of B tensors (what we used to do)
-This will allow us to plot energy density (finite qp) and measure observeables.
+This will allow us to plot energy density (finite qp) and measure observables.
 =#
 
 struct LeftGaugedQP{S, T1, T2, E <: Number}
@@ -216,6 +216,7 @@ GeometryStyle(::Type{<:QP{S, T1, T2}}) where {S, T1, T2} = GeometryStyle(S)
 
 TensorKit.spacetype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = spacetype(S)
 TensorKit.sectortype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = sectortype(S)
+TensorKit.storagetype(qp::QP{S, T1, T2}) where {S, T1, T2} = storagetype(T2)
 TensorKit.storagetype(::Type{<:QP{S, T1, T2}}) where {S, T1, T2} = storagetype(T2)
 
 physicalspace(state::QP, i::Int) = physicalspace(state.left_gs, i)

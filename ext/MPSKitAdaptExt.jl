@@ -36,4 +36,6 @@ end
 @inline Adapt.adapt_structure(to, mpo::MPOHamiltonian) =
     MPOHamiltonian(map(x -> adapt(to, x), mpo.W))
 
+Adapt.adapt_structure(to, x::MPSKit.PeriodicArray) = MPSKit.PeriodicArray(map(x_ -> adapt(to, x_), x.data))
+
 end
