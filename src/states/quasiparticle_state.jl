@@ -1,7 +1,7 @@
 #=
 Should not be constructed by the user - acts like a vector (used in eigsolve)
 I think it makes sense to see these things as an actual state instead of return an array of B tensors (what we used to do)
-This will allow us to plot energy density (finite qp) and measure observeables.
+This will allow us to plot energy density (finite qp) and measure observables.
 =#
 
 struct LeftGaugedQP{S, T1, T2, E <: Number}

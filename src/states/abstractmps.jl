@@ -33,15 +33,15 @@ Construct an `MPSTensor` with given physical and virtual spaces.
 - `right_D::Int`: right virtual dimension
 """
 function MPSTensor(
-        ::UndefInitializer, eltype, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
+        ::UndefInitializer, T, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
     ) where {S <: ElementarySpace}
-    TT = tensormaptype(S, 1 + (P isa S ? 1 : length(P)), 1, eltype)
+    TT = tensormaptype(S, 1 + (P isa S ? 1 : length(P)), 1, T)
     return TT(undef, Vₗ ⊗ P ← Vᵣ)
 end
 function MPSTensor(
-        f, eltype, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
+        f, T, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
     ) where {S <: ElementarySpace}
-    A = MPSTensor(undef, eltype, P, Vₗ, Vᵣ)
+    A = MPSTensor(undef, T, P, Vₗ, Vᵣ)
     if f === rand
         return rand!(A)
     elseif f === randn
@@ -71,7 +71,7 @@ Construct an `MPSTensor` with given physical and virtual dimensions.
 - `Dₗ::Int`: left virtual dimension
 - `Dᵣ::Int`: right virtual dimension
 """
-MPSTensor(f, eltype, d::Int, Dₗ::Int, Dᵣ::Int = Dₗ) = MPSTensor(f, eltype, ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
+MPSTensor(f, T, d::Int, Dₗ::Int, Dᵣ::Int = Dₗ) = MPSTensor(f, T, ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
 MPSTensor(d::Int, Dₗ::Int; Dᵣ::Int = Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
 
 """
@@ -79,7 +79,7 @@ MPSTensor(d::Int, Dₗ::Int; Dᵣ::Int = Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^
 
 Convert an array to an `MPSTensor`.
 """
-function MPSTensor(A::AbstractArray{T}) where {T <: Number}
+function MPSTensor(A::AbstractArray{<:Number})
     @assert ndims(A) > 2 "MPSTensor should have at least 3 dims, but has $ndims(A)"
     sz = size(A)
     V = foldl(⊗, ComplexSpace.(sz[1:(end - 1)])) ← ℂ^sz[end]
