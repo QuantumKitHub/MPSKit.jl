@@ -14,6 +14,8 @@ struct LeftGaugedQP{S, T1, T2, E <: Number}
 
     momentum::E
 end
+TensorKit.storagetype(l::LeftGaugedQP{S, T1, T2, E}) where {S, T1, T2, E} = storagetype(S)
+TensorKit.storagetype(::Type{LeftGaugedQP{S, T1, T2, E}}) where {S, T1, T2, E} = storagetype(S)
 
 struct RightGaugedQP{S, T1, T2, E <: Number}
     # !(left_gs === right_gs) => domain wall excitation
@@ -25,6 +27,8 @@ struct RightGaugedQP{S, T1, T2, E <: Number}
 
     momentum::E
 end
+TensorKit.storagetype(l::RightGaugedQP{S, T1, T2, E}) where {S, T1, T2, E} = storagetype(S)
+TensorKit.storagetype(::Type{RightGaugedQP{S, T1, T2, E}}) where {S, T1, T2, E} = storagetype(S)
 
 function leftgaugedqptype(::Type{S}, ::Type{E}) where {S, E <: Number}
     T1 = eltype(S)
