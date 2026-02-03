@@ -9,6 +9,10 @@ using Plots
 using LinearAlgebra
 using BenchmarkFreeFermions
 
+#src # for reproducibility:
+#src using Random
+#src Random.seed!(123)
+
 md"""
 # Finite temperature XY model
 

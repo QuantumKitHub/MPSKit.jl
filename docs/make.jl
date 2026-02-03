@@ -70,6 +70,7 @@ makedocs(;
         "Examples" => "examples/index.md",
         "Library" => "lib/lib.md",
         "References" => "references.md",
+        "Changelog" => "changelog.md",
     ],
     checkdocs = :exports,
     doctest = true,

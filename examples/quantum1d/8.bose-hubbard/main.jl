@@ -2,6 +2,10 @@ using Markdown
 using MPSKit, MPSKitModels, TensorKit
 using Plots, LaTeXStrings
 
+#src # for reproducibility:
+#src using Random
+#src Random.seed!(123)
+
 theme(:wong)
 default(fontfamily = "Computer Modern", label = nothing, dpi = 100, framestyle = :box)
 

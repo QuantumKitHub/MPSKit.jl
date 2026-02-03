@@ -12,6 +12,10 @@ To follow the tutorial you need the following packages.
 
 using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
 
+#src # for reproducibility:
+#src using Random
+#src Random.seed!(123)
+
 md"""
 The [hard hexagon model](https://en.wikipedia.org/wiki/Hard_hexagon_model) is a 2-dimensional lattice model of a gas, where particles are allowed to be on the vertices of a triangular lattice, but no two particles may be adjacent.
 This can be encoded in a transfer matrix with a local MPO tensor using anyonic symmetries, and the resulting MPO has been implemented in MPSKitModels.
