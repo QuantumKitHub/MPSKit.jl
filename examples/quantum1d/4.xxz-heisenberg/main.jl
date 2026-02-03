@@ -7,6 +7,10 @@ The necessary packages to follow this tutorial are:
 
 using MPSKit, MPSKitModels, TensorKit, Plots
 
+#src # for reproducibility:
+#src using Random
+#src Random.seed!(123)
+
 md"""
 ## Failure
 

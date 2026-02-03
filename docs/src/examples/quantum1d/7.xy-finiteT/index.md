@@ -125,11 +125,11 @@ println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 ````
 
 ````
-[ Info: DMRG2   1:	obj = -5.004084850990e+00	err = 9.7717634223e-01	time = 1.69 min
-[ Info: DMRG2   2:	obj = -5.004096939452e+00	err = 1.1654525568e-06	time = 0.49 sec
-[ Info: DMRG2   3:	obj = -5.004096975044e+00	err = 2.4907168550e-09	time = 0.61 sec
-[ Info: DMRG2 conv 4:	obj = -5.004096975044e+00	err = 1.1812772982e-13	time = 1.71 min
-Numerical:	-0.15637803047010954
+[ Info: DMRG2   1:	obj = -5.004084801485e+00	err = 9.7485774328e-01	time = 1.43 min
+[ Info: DMRG2   2:	obj = -5.004096940647e+00	err = 1.1899230994e-06	time = 1.27 sec
+[ Info: DMRG2   3:	obj = -5.004096975044e+00	err = 2.2262868216e-09	time = 0.80 sec
+[ Info: DMRG2 conv 4:	obj = -5.004096975044e+00	err = 1.1612932838e-13	time = 1.47 min
+Numerical:	-0.15637803047010942
 Exact (N=32):	-0.15637803047254015
 Exact (N=Inf):	-0.15915494309189535
 
