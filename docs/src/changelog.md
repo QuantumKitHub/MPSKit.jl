@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Guidelines for updating this changelog
+
+When making changes to this project, please update the "Unreleased" section with your changes under the appropriate category:
+
+- **Added** for new features.
+- **Changed** for changes in existing functionality.
+- **Deprecated** for soon-to-be removed features.
+- **Removed** for now removed features.
+- **Fixed** for any bug fixes.
+
+When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
+
+## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.8...HEAD)
 
 ### Added
 
@@ -50,4 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-[unreleased]: https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.8...HEAD
+## [0.13.8](https://github.com/QuantumKitHub/MPSKit.jl/releases/tag/v0.13.8) - 2024-10-31
+
+See full history and previous releases on [GitHub](https://github.com/QuantumKitHub/MPSKit.jl/releases).
