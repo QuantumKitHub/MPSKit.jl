@@ -74,7 +74,7 @@ end
 
 @testset "Adapt" begin
     for (d, D) in [(ℂ^2, ℂ^4), (ℙ^2, ℙ^4)]
-        mps1 = InfiniteMPS(rand, Float32, d, D)
+        mps1 = InfiniteMPS(Float32, d, D)
         for T in (Float64, ComplexF64)
             mps2 = @testinferred adapt(Vector{T}, mps1)
             @test mps2 isa InfiniteMPS
@@ -108,7 +108,7 @@ end
 end
 
 @testset "InfiniteMPS copying" begin
-    mps1 = InfiniteMPS(rand, ComplexF64, ℂ^2, ℂ^5)
+    mps1 = InfiniteMPS(2, 5)
     mps2 = copy(mps1)
 
     @test mps1 !== mps2

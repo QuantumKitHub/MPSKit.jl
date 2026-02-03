@@ -50,6 +50,8 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     @test OperatorStyle(typeof(H)) == HamiltonianStyle()
     @test OperatorStyle(H) == HamiltonianStyle()
     @test OperatorStyle(H, H′) == OperatorStyle(H)
+    @test TensorKit.storagetype(H) == Vector{T}
+    @test TensorKit.storagetype(typeof(H)) == Vector{T}
 
     # Infinite
     Ws = [Wmid]
@@ -68,6 +70,8 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5
     @test GeometryStyle(H) == InfiniteChainStyle()
     @test OperatorStyle(typeof(H)) == HamiltonianStyle()
     @test OperatorStyle(H) == HamiltonianStyle()
+    @test TensorKit.storagetype(H′) == Vector{T}
+    @test TensorKit.storagetype(typeof(H′)) == Vector{T}
 end
 
 @testset "Finite MPOHamiltonian" begin
@@ -278,6 +282,7 @@ end
         @test H4 isa InfiniteMPOHamiltonian
         @test scalartype(H4) == T
         @test storagetype(H4) == Vector{T}
+        @test storagetype(typeof(H4)) == Vector{T}
         @test expectation_value(mps2, H3) ≈ expectation_value(mps2, H4)
     end
 end

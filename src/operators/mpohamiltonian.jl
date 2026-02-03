@@ -32,6 +32,8 @@ struct MPOHamiltonian{TO <: JordanMPOTensor, V <: AbstractVector{TO}} <: Abstrac
     W::V
 end
 OperatorStyle(::Type{<:MPOHamiltonian}) = HamiltonianStyle()
+TensorKit.storagetype(mpo::MPOHamiltonian{O, V}) where {O, V} = storagetype(O)
+TensorKit.storagetype(::Type{MPOHamiltonian{O, V}}) where {O, V} = storagetype(O)
 
 const FiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, Vector{O}}
 Base.isfinite(::Type{<:FiniteMPOHamiltonian}) = true

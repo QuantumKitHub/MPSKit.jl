@@ -23,6 +23,7 @@ using TensorKit: ℙ
 
     @test GeometryStyle(typeof(ψ)) == InfiniteChainStyle()
     @test GeometryStyle(ψ) == InfiniteChainStyle()
+    @test TensorKit.storagetype(ψ) == Vector{elt}
 
     @test !isfinite(typeof(ψ))
 
