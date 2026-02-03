@@ -17,7 +17,19 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.8...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.9...HEAD)
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+## [0.13.9](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.8...v0.13.9) - 2026-02-03
 
 ### Added
 
