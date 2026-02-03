@@ -30,7 +30,7 @@ jobs:
           - operators
           - algorithms
           - multifusion
-          - other
+          - misc
         os:
           - ubuntu-latest
           - macOS-latest
