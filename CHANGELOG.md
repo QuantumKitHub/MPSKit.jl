@@ -11,23 +11,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `LocalPreferences.toml` file to ensure `TensorOperations` properly precompiles on testing
   infrastructure
+- `GeometryStyle` and `OperatorStyle` traits for dispatching on finite/infinite geometry and
+  operator types ([#352](https://github.com/QuantumKitHub/MPSKit.jl/pull/352), [#354](https://github.com/QuantumKitHub/MPSKit.jl/pull/354))
+- `Base.isfinite` methods for MPS types ([#347](https://github.com/QuantumKitHub/MPSKit.jl/pull/347))
+- Bose-Hubbard example ([#342](https://github.com/QuantumKitHub/MPSKit.jl/pull/342))
+- WindowMPS example update ([#350](https://github.com/QuantumKitHub/MPSKit.jl/pull/350))
+- Multifusion category compatibility ([#297](https://github.com/QuantumKitHub/MPSKit.jl/pull/297))
 
 ### Fixed
 
 - Dynamic tolerances yielded `NaN` during the initialization stage due to `1 / sqrt(iter)`
-  where `iter = 0`.
+  where `iter = 0` ([#335](https://github.com/QuantumKitHub/MPSKit.jl/pull/335))
 - `InfiniteMPOHamiltonian` environments with low bond dimension and high Krylov dimension now are properly
-  clamped.
+  clamped ([#335](https://github.com/QuantumKitHub/MPSKit.jl/pull/335))
+- Logical operator precedence in `getproperty` function ([#346](https://github.com/QuantumKitHub/MPSKit.jl/pull/346))
+- Typo in `VUMPSSvdCut` ([#361](https://github.com/QuantumKitHub/MPSKit.jl/pull/361))
+- Typo in time formatting for logs ([#336](https://github.com/QuantumKitHub/MPSKit.jl/pull/336))
+- Domain/codomain of `MPODerivativeOperator` ([#370](https://github.com/QuantumKitHub/MPSKit.jl/pull/370))
+- In-place operations handled more carefully ([#337](https://github.com/QuantumKitHub/MPSKit.jl/pull/337))
+- Orthogonalization algorithms now use correct methods ([#373](https://github.com/QuantumKitHub/MPSKit.jl/pull/373))
 
 ### Changed
 
 - The `changebonds(state, ::RandExpand)` algorithm now no longer has to perform a
   truncated SVD to obtain the desired spaces, and instead sample the space directly
   and then generates a random isometry. This should be slightly more performant, but
-  otherwise equivalent.
+  otherwise equivalent ([#335](https://github.com/QuantumKitHub/MPSKit.jl/pull/335))
+- `IDMRG` refactored to follow the `IterativeSolver` interface and share code between
+  `IDMRG` and `IDMRG2` ([#348](https://github.com/QuantumKitHub/MPSKit.jl/pull/348))
+- Bumped compatibility for TensorKit 0.16 and MatrixAlgebraKit 0.6 ([#365](https://github.com/QuantumKitHub/MPSKit.jl/pull/365))
+- Removed `_left_orth` and `_right_orth` workarounds in favor of new orthogonalization methods
+- Reduced allocation while computing Galerkin error ([#366](https://github.com/QuantumKitHub/MPSKit.jl/pull/366))
+- Updated `show` methods to reflect new TensorKit printing ([#341](https://github.com/QuantumKitHub/MPSKit.jl/pull/341))
+- More informative errors for finite MPS ([#367](https://github.com/QuantumKitHub/MPSKit.jl/pull/367))
+- Minor documentation and docstring improvements ([#363](https://github.com/QuantumKitHub/MPSKit.jl/pull/363), [#372](https://github.com/QuantumKitHub/MPSKit.jl/pull/372), [#371](https://github.com/QuantumKitHub/MPSKit.jl/pull/371))
 
 ### Deprecated
 
 ### Removed
 
-[unreleased]: https://github.com/quantumkithub/pepskit.jl/compare/v0.13.8...HEAD
+[unreleased]: https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.8...HEAD
