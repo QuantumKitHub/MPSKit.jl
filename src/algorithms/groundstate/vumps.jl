@@ -46,7 +46,7 @@ struct VUMPSState{S, O, E}
 end
 
 function find_groundstate(
-        mps::InfiniteMPS, operator, alg::VUMPS, envs = environments(mps, operator)
+        mps, operator, alg::VUMPS, envs = environments(mps, operator)
     )
     return dominant_eigsolve(operator, mps, alg, envs; which = :SR)
 end
@@ -55,6 +55,7 @@ function dominant_eigsolve(
         operator, mps, alg::VUMPS, envs = environments(mps, operator);
         which
     )
+    GeometryStyle(operator, mps) != InfiniteChainStyle() && throw(ArgumentError("VUMPS only supports infinite systems."))
     log = IterLog("VUMPS")
     iter = 0
     ϵ = calc_galerkin(mps, operator, mps, envs)
