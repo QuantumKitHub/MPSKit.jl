@@ -21,9 +21,9 @@ using TensorKit: ℙ
     end
 
     # fermionic tests
+    h = f_plus_f_min(Float64, Trivial) + f_min_f_plus(Float64, Trivial)
+    H = InfiniteMPOHamiltonian([space(h, 1)], (1, 2) => h)
     for N in 3:5
-        h = real(c_plusmin() + c_minplus())
-        H = InfiniteMPOHamiltonian([space(h, 1)], (1, 2) => h)
         H_periodic = periodic_boundary_conditions(H, N)
         terms = [(i, i + 1) => h for i in 1:(N - 1)]
         push!(terms, (1, N) => permute(h, ((2, 1), (4, 3))))

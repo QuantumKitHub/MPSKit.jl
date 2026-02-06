@@ -11,7 +11,7 @@ using TensorKit, MPSKit
 @testset "Old bugs" verbose = true begin
     @testset "IDMRG2 space mismatch" begin
         N = 6
-        H = repeat(bilinear_biquadratic_model(SU2Irrep; θ = atan(1 / 3)), N)
+        H = repeat(bilinear_biquadratic_model(ComplexF64, SU2Irrep; θ = atan(1 / 3)), N)
         ψ₀ = InfiniteMPS(
             fill(SU2Space(1 => 1), N),
             fill(SU2Space(1 // 2 => 2, 3 // 2 => 1), N)

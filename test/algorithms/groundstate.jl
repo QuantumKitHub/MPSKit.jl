@@ -193,7 +193,7 @@ end
 
     # test using XXZ model, Δ > 1 is gapped
     spin = 1
-    local_operators = [S_xx(; spin), S_yy(; spin), 1.7 * S_zz(; spin)]
+    local_operators = [S_x_S_x(; spin), S_y_S_y(; spin), 1.7 * S_z_S_z(; spin)]
     Pspace = space(local_operators[1], 1)
     lattice = fill(Pspace, L)
 
@@ -256,7 +256,7 @@ end
     atol = 1.0e-2
 
     spin = 1
-    local_operators = [S_xx(; spin), S_yy(; spin), 0.7 * S_zz(; spin)]
+    local_operators = [S_x_S_x(; spin), S_y_S_y(; spin), 0.7 * S_z_S_z(; spin)]
     Pspace = space(local_operators[1], 1)
     lattice = PeriodicVector([Pspace])
     mpo_hamiltonians = map(local_operators) do O

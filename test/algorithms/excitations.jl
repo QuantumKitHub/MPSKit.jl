@@ -27,7 +27,7 @@ verbosity_conv = 1
     end
     @testset "infinite sector convention" begin
         g = 4
-        H = repeat(transverse_field_ising(Z2Irrep; g = g, L = Inf), 2)
+        H = repeat(transverse_field_ising(ComplexF64, Z2Irrep; g), 2)
         V = Z2Space(0 => 24, 1 => 24)
         ψ = InfiniteMPS(physicalspace(H), [V, V])
         ψ, envs = find_groundstate(ψ, H, VUMPS(; tol = 1.0e-10, maxiter = 400))

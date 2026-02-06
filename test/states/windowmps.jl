@@ -18,7 +18,7 @@ using TensorKit: ℙ
     # operator for testing expectation_value
     X = S_x(; spin = 1 // 2)
     E = TensorMap(ComplexF64[1 0; 0 1], ℂ^2 ← ℂ^2)
-    O = force_planar(-(S_zz(; spin = 1 // 2) + (g / 2) * (X ⊗ E + E ⊗ X)))
+    O = force_planar(-(S_z_S_z(; spin = 1 // 2) + (g / 2) * (X ⊗ E + E ⊗ X)))
 
     gs, = find_groundstate(InfiniteMPS([ℙ^2], [ℙ^10]), ham, VUMPS(; verbosity = 0))
 

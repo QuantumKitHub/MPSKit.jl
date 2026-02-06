@@ -45,6 +45,7 @@ Random = "1"
 RecipesBase = "1.1"
 TensorKit = "0.16"
 TensorKitManifolds = "0.7"
+TensorKitTensors = "0.2"
 TensorOperations = "5"
 Test = "1"
 TestExtras = "0.3"
@@ -57,8 +58,9 @@ Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 ParallelTestRunner = "d3525ed8-44d0-4b2c-a655-542cee43accc"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+TensorKitTensors = "41b62e7d-e9d1-4e23-942c-79a97adf954b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 
 [targets]
-test = ["Aqua", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner"]
+test = ["Aqua", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]

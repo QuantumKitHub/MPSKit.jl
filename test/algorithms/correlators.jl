@@ -33,12 +33,12 @@ end
     ψ, = find_groundstate(ψ, H, VUMPS(; verbosity = 0))
 
     @test expectation_value(ψ, H) ≈
-        expectation_value(ψ, 1 => -g * S_x()) + expectation_value(ψ, (1, 2) => -S_zz())
+        expectation_value(ψ, 1 => -g * S_x()) + expectation_value(ψ, (1, 2) => -S_z_S_z())
     Z_mpo = MPSKit.add_util_leg(S_z())
     G = correlator(ψ, Z_mpo, Z_mpo, 1, 2:5)
-    G2 = correlator(ψ, S_zz(), 1, 3:2:5)
+    G2 = correlator(ψ, S_z_S_z(), 1, 3:2:5)
     @test isapprox(G[2], G2[1], atol = 1.0e-2)
     @test isapprox(last(G), last(G2), atol = 1.0e-2)
-    @test isapprox(G[1], expectation_value(ψ, (1, 2) => S_zz()), atol = 1.0e-2)
-    @test isapprox(G[2], expectation_value(ψ, (1, 3) => S_zz()), atol = 1.0e-2)
+    @test isapprox(G[1], expectation_value(ψ, (1, 2) => S_z_S_z()), atol = 1.0e-2)
+    @test isapprox(G[2], expectation_value(ψ, (1, 3) => S_z_S_z()), atol = 1.0e-2)
 end

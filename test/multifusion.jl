@@ -153,7 +153,7 @@ module TestMultifusion
         @test variance(qpD1[1], Hdual) < 1.0e-8
 
         # comparison to Z2 Ising: injective in symmetric phase
-        HZ2 = repeat(transverse_field_ising(Z2Irrep; g = 1 / g, L = Inf), 2)
+        HZ2 = repeat(transverse_field_ising(ComplexF64, Z2Irrep; g = 1 / g, L = Inf), 2)
         VZ2 = Z2Space(0 => 24, 1 => 24)
         PZ2 = Z2Space(0 => 1, 1 => 1)
         initZ2 = InfiniteMPS([PZ2, PZ2], [VZ2, VZ2])

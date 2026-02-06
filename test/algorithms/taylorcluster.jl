@@ -94,7 +94,7 @@ using TensorKit: ℙ
     end
 
     L = 4
-    Hs = [transverse_field_ising(; L = L), heisenberg_XXX(; L = L)]
+    Hs = [transverse_field_ising(; L), heisenberg_XXX(; L)]
 
     Ns = [1, 2, 3]
     dts = [1.0e-2, 1.0e-3]

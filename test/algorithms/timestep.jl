@@ -18,7 +18,7 @@ verbosity_conv = 1
     algs = [TDVP(), TDVP2(; trscheme = truncrank(10))]
     L = 10
 
-    H = force_planar(heisenberg_XXX(Trivial, Float64; spin = 1 // 2, L))
+    H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
     ψ = FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4)
     E = expectation_value(ψ, H)
     ψ₀, = find_groundstate(ψ, H)

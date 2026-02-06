@@ -13,7 +13,7 @@ using LinearAlgebra: eigvals
 
 @testset "Sector conventions" begin
     L = 4
-    H = XY_model(U1Irrep; L)
+    H = XY_model(ComplexF64, U1Irrep; L)
 
     H_dense = convert(TensorMap, H)
     vals_dense = eigvals(H_dense)

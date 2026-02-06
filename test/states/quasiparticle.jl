@@ -16,7 +16,7 @@ using TensorKit: ℙ
     @testset "Finite" verbose = true for (H, D, d) in
         [
             (force_planar(transverse_field_ising(; L)), ℙ^10, ℙ^2),
-            (heisenberg_XXX(SU2Irrep; spin = 1, L), Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1)),
+            (heisenberg_XXX(ComplexF64, SU2Irrep; spin = 1, L), Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1)),
         ]
         ψ = FiniteMPS(rand, ComplexF64, L, d, D)
         normalize!(ψ)
@@ -53,7 +53,7 @@ using TensorKit: ℙ
         [
             (force_planar(transverse_field_ising()), ℙ^10, ℙ^2),
             (
-                heisenberg_XXX(SU2Irrep; spin = 1), Rep[SU₂](1 => 3, 0 => 2),
+                heisenberg_XXX(ComplexF64, SU2Irrep; spin = 1), Rep[SU₂](1 => 3, 0 => 2),
                 Rep[SU₂](1 => 1),
             ),
         ]
