@@ -9,7 +9,7 @@ entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
     return entropy(entanglement_spectrum(state, loc))
 end
-function entropy(spectrum::AbstractVector{T}) where {T}
+function entropy(spectrum::TensorKit.SectorVector{T}) where {T}
     S = zero(T)
     tol = eps(T)
     for (c, b) in pairs(spectrum)

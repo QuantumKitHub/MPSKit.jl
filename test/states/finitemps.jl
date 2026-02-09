@@ -127,3 +127,34 @@ end
     @test (ismissing(mps1.Cs[end]) && ismissing(mps2.Cs[end])) ||
         mps1.Cs[end] !== mps2.Cs[end]
 end
+
+@testset "FiniteMPS entropy ($(sectortype(D)), $elt)" for (D, d, elt) in [
+        (ℙ^10, ℙ^2, ComplexF64),
+        (
+            Rep[U₁](-1 => 3, 0 => 3, 1 => 3),
+            Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
+            ComplexF64,
+        ),
+    ]
+    L = 6
+    ψ = FiniteMPS(rand, elt, L, d, D)
+
+    # entropy is non-negative at all sites
+    for site in 1:L
+        @test real(entropy(ψ, site)) >= 0
+    end
+
+    # entropy is consistent with entanglement_spectrum
+    for site in 1:L
+        @test entropy(ψ, site) ≈ entropy(entanglement_spectrum(ψ, site))
+    end
+
+    # entropy is zero at the right boundary (trivial bond)
+    @test entropy(ψ, L) ≈ 0 atol = 1.0e-10
+
+    # product state has zero entropy everywhere
+    ψ_product = FiniteMPS(rand, elt, L, d, oneunit(D))
+    for site in 1:L
+        @test entropy(ψ_product, site) ≈ 0 atol = 1.0e-10
+    end
+end
