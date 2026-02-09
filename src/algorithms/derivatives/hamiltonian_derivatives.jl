@@ -69,15 +69,8 @@ end
 
 # Constructors
 # ------------
-const _HAM_MPS_TYPES = Union{
-    FiniteMPS{<:MPSTensor},
-    WindowMPS{<:MPSTensor},
-    InfiniteMPS{<:MPSTensor},
-}
-
-function AC_hamiltonian(
-        site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
-        above::_HAM_MPS_TYPES, envs
+function AC_hamiltonian(::GeometryStyle, ::HamiltonianStyle,
+        site::Int, below, operator, above, envs
     )
     GL = leftenv(envs, site, below)
     GR = rightenv(envs, site, below)
@@ -147,9 +140,8 @@ function AC_hamiltonian(
     )
 end
 
-function AC2_hamiltonian(
-        site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian{<:JordanMPOTensor},
-        above::_HAM_MPS_TYPES, envs
+function AC2_hamiltonian(::GeometryStyle, ::HamiltonianStyle,
+        site::Int, below, operator, above, envs
     )
     GL = leftenv(envs, site, below)
     GR = rightenv(envs, site + 1, below)

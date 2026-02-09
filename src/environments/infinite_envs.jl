@@ -14,9 +14,10 @@ struct InfiniteEnvironments{V <: GenericMPSTensor} <: AbstractMPSEnvironments
 end
 
 Base.length(envs::InfiniteEnvironments) = length(envs.GLs)
+GeometryStyle(::Type{InfiniteEnvironments}) = InfiniteChainStyle()
 
-leftenv(envs::InfiniteEnvironments, site::Int, state) = envs.GLs[site]
-rightenv(envs::InfiniteEnvironments, site::Int, state) = envs.GRs[site]
+leftenv(::InfiniteChainStyle, envs::AbstractMPSEnvironments, site::Int, state) = envs.GLs[site]
+rightenv(::InfiniteChainStyle, envs::AbstractMPSEnvironments, site::Int, state) = envs.GRs[site]
 
 function environments(
         below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
@@ -27,9 +28,17 @@ function environments(
     return recalculate!(envs, below, operator, above; kwargs...)
 end
 
+function issamespace(envs::AbstractMPSEnvironments,
+        below::AbstractMPS, operator::AbstractMPO, above::AbstractMPS
+    )
+    return issamespace(
+        GeometryStyle(envs, below, operator, above), OperatorStyle(operator), 
+        envs, below, operator, above
+    )
+end
 function issamespace(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above::InfiniteMPS
+        ::InfiniteChainStyle, ::OperatorStyle, envs::AbstractMPSEnvironments,
+        below::AbstractMPS, operator::AbstractMPO, above::AbstractMPS
     )
     L = check_length(below, operator, above)
     for i in 1:L
@@ -47,10 +56,10 @@ function issamespace(
     return true
 end
 
-function recalculate!(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
-        above::InfiniteMPS = below;
+function recalculate!(::InfiniteChainStyle, ::OperatorStyle,
+        envs::AbstractMPSEnvironments, below::AbstractMPS,
+        operator::AbstractMPO,
+        above::AbstractMPS = below;
         kwargs...
     )
     if !issamespace(envs, below, operator, above)
@@ -74,7 +83,16 @@ end
 # InfiniteMPO environments
 # ------------------------
 function initialize_environments(
-        below::InfiniteMPS, operator::InfiniteMPO, above::InfiniteMPS = below
+        below::AbstractMPS, operator::AbstractMPO, above::AbstractMPS = below
+    )
+    return initialize_environments(
+        GeometryStyle(below, operator, above), OperatorStyle(operator), 
+        below, operator, above
+    )
+end
+function initialize_environments(
+        ::InfiniteChainStyle, ::MPOStyle,
+        below::AbstractMPS, operator::AbstractMPO, above::AbstractMPS = below
     )
     L = check_length(below, operator, above)
     GLs = PeriodicVector([randomize!(allocate_GL(below, operator, above, i)) for i in 1:L])
@@ -83,8 +101,18 @@ function initialize_environments(
 end
 
 function compute_leftenvs!(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::InfiniteMPO, above::InfiniteMPS, alg
+        envs::AbstractMPSEnvironments, below::AbstractMPS,
+        operator::AbstractMPO, above::AbstractMPS, alg
+    )
+    return compute_leftenvs!(
+        GeometryStyle(envs, below, operator, above), OperatorStyle(operator), 
+        envs, below, operator, above, alg
+    )
+end
+
+function compute_leftenvs!(::InfiniteChainStyle, ::MPOStyle,
+        envs::AbstractMPSEnvironments, below::AbstractMPS,
+        operator::AbstractMPO, above::AbstractMPS, alg
     )
     # compute eigenvector
     T = TransferMatrix(above.AL, operator, below.AL)
@@ -98,8 +126,18 @@ function compute_leftenvs!(
 end
 
 function compute_rightenvs!(
-        envs::InfiniteEnvironments, below::InfiniteMPS, operator::InfiniteMPO,
-        above::InfiniteMPS, alg
+        envs::AbstractMPSEnvironments, below::AbstractMPS,
+        operator::AbstractMPO, above::AbstractMPS, alg
+    )
+    return compute_rightenvs!(
+        GeometryStyle(envs, below, operator, above), OperatorStyle(operator), 
+        envs, below, operator, above, alg
+    )
+end
+
+function compute_rightenvs!(::InfiniteChainStyle, ::MPOStyle,
+        envs::AbstractMPSEnvironments, below::AbstractMPS,
+        operator::AbstractMPO, above::AbstractMPS, alg
     )
     # compute eigenvector
     T = TransferMatrix(above.AR, operator, below.AR)
@@ -119,9 +157,9 @@ end
 # - normalize the left environment to have overlap 1
 # this avoids catastrophic blow-up of norms, while keeping the total normalized
 # and does not lead to issues for negative overlaps and real entries.
-function TensorKit.normalize!(
-        envs::InfiniteEnvironments, below::InfiniteMPS, operator::InfiniteMPO,
-        above::InfiniteMPS
+
+function TensorKit.normalize!(::InfiniteChainStyle, ::MPOStyle,
+        envs::AbstractMPSEnvironments, below, operator, above
     )
     for i in 1:length(operator)
         normalize!(envs.GRs[i])
@@ -134,9 +172,8 @@ end
 
 # InfiniteMPOHamiltonian environments
 # -----------------------------------
-function initialize_environments(
-        below::InfiniteMPS, operator::InfiniteMPOHamiltonian,
-        above::InfiniteMPS = below
+function initialize_environments(::InfiniteChainStyle, ::HamiltonianStyle,
+        below, operator, above = below
     )
     L = check_length(above, operator, below)
     GLs = PeriodicVector([allocate_GL(below, operator, above, i) for i in 1:L])
@@ -165,9 +202,8 @@ function initialize_environments(
     return GLs, GRs
 end
 
-function compute_leftenvs!(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::InfiniteMPOHamiltonian, above::InfiniteMPS, alg
+function compute_leftenvs!(::InfiniteChainStyle, ::HamiltonianStyle,
+        envs, below, operator, above, alg
     )
     L = check_length(below, above, operator)
     GLs = envs.GLs
@@ -221,8 +257,16 @@ function compute_leftenvs!(
 end
 
 function left_cyclethrough!(
-        index::Int, GL, below::InfiniteMPS, H::InfiniteMPOHamiltonian,
-        above::InfiniteMPS = below
+        index::Int, GL, below::AbstractMPS, operator::AbstractMPO,
+        above::AbstractMPS = below
+    )
+    return left_cyclethrough!(GeometryStyle(below, operator, above), OperatorStyle(operator), index, GL,
+        below, operator, above)
+end
+function left_cyclethrough!(
+        ::InfiniteChainStyle, ::HamiltonianStyle,
+        index::Int, GL, below::AbstractMPS, H::AbstractMPO,
+        above::AbstractMPS = below
     )
     # TODO: efficient transfer matrix slicing for large unitcells
     leftinds = 1:index
@@ -235,8 +279,8 @@ function left_cyclethrough!(
 end
 
 function compute_rightenvs!(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::InfiniteMPOHamiltonian, above::InfiniteMPS, alg
+        ::InfiniteChainStyle, ::HamiltonianStyle,
+        envs, below, operator, above, alg
     )
     L = check_length(above, operator, below)
     GRs = envs.GRs
@@ -291,8 +335,17 @@ function compute_rightenvs!(
 end
 
 function right_cyclethrough!(
-        index::Int, GR, below::InfiniteMPS, operator::InfiniteMPOHamiltonian,
-        above::InfiniteMPS = below
+        index::Int, GR, below::AbstractMPS, operator::AbstractMPO,
+        above::AbstractMPS = below
+    )
+    return right_cyclethrough!(
+        GeometryStyle(below, operator, above), OperatorStyle(operator), 
+        index, GR, below, operator, above
+    )
+end
+function right_cyclethrough!(
+        ::InfiniteChainStyle, ::HamiltonianStyle,
+        index::Int, GR, below, operator, above = below
     )
     # TODO: efficient transfer matrix slicing for large unitcells
     for site in reverse(eachindex(GR))
@@ -306,22 +359,43 @@ end
 
 # no normalization necessary -- for consistant interface
 function TensorKit.normalize!(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::InfiniteMPOHamiltonian, above::InfiniteMPS
+        ::InfiniteChainStyle, ::HamiltonianStyle,
+        envs::AbstractMPSEnvironments, below, operator, above
     )
     return envs
 end
 
 # Transfer operations
 # -------------------
-
-function transfer_leftenv!(envs::InfiniteEnvironments, below, operator, above, site::Int)
+function transfer_leftenv!(
+        envs::AbstractMPSEnvironments, below::AbstractMPS,
+        operator::AbstractMPO, above::AbstractMPS, site::Int
+    )
+    return transfer_leftenv!(GeometryStyle(envs, below, operator, above), OperatorStyle(operator), 
+        envs, below, operator, above, site
+    )
+end
+function transfer_leftenv!(
+        ::InfiniteChainStyle, ::OperatorStyle,
+        envs::AbstractMPSEnvironments, below, operator, above, site::Int
+    )
     T = TransferMatrix(above.AL[site - 1], operator[site - 1], below.AL[site - 1])
     envs.GLs[site] = envs.GLs[site - 1] * T
     return envs
 end
 
-function transfer_rightenv!(envs::InfiniteEnvironments, below, operator, above, site::Int)
+function transfer_rightenv!(
+        envs::AbstractMPSEnvironments, below::AbstractMPS,
+        operator::AbstractMPO, above::AbstractMPS, site::Int
+    )
+    return transfer_rightenv!(GeometryStyle(envs, below, operator, above), OperatorStyle(operator), 
+        envs, below, operator, above, site
+    )
+end
+function transfer_rightenv!(
+        ::InfiniteChainStyle, ::OperatorStyle,
+        envs::AbstractMPSEnvironments, below, operator, above, site::Int
+    )
     T = TransferMatrix(above.AR[site + 1], operator[site + 1], below.AR[site + 1])
     envs.GRs[site] = T * envs.GRs[site + 1]
     return envs

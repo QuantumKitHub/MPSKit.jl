@@ -5,8 +5,8 @@ Calculate the Von Neumann entanglement entropy of a given MPS. If an integer `si
 given, the entropy is across the entanglement cut to the right of site `site`. Otherwise, a
 vector of entropies is returned, one for each site.
 """
-entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
-function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
+entropy(state::AbstractMPS) = map(Base.Fix1(entropy, state), 1:length(state))
+function entropy(state::AbstractMPS, loc::Int)
     S = zero(real(scalartype(state)))
     tol = eps(typeof(S))
     for (c, b) in entanglement_spectrum(state, loc)
@@ -47,7 +47,7 @@ Concretely, this is the overlap of the current state with the single-site deriva
 ```
 """
 function calc_galerkin(
-        pos::Int, below::Union{InfiniteMPS, FiniteMPS, WindowMPS}, operator, above, envs
+        pos::Integer, below, operator, above, envs
     )
     AC´ = AC_hamiltonian(pos, below, operator, above, envs) * above.AC[pos]
     normalize!(AC´)
@@ -62,7 +62,7 @@ function calc_galerkin(
     return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
 end
 function calc_galerkin(
-        below::Union{InfiniteMPS, FiniteMPS, WindowMPS}, operator, above, envs
+        below, operator, above, envs
     )
     return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), 1:length(above))
 end
@@ -77,7 +77,7 @@ function calc_galerkin(
 end
 
 """
-    transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
+    transfer_spectrum(above::AbstractMPS; below=above, tol=Defaults.tol, num_vals=20,
                            sector=first(sectors(oneunit(left_virtualspace(above, 1)))))
 
 Calculate the partial spectrum of the left mixed transfer matrix corresponding to the
@@ -87,8 +87,12 @@ Specifically, an auxiliary space `ℂ[typeof(sector)](sector => 1)'` will be add
 domain of each eigenvector. The `tol` and `num_vals` keyword arguments are passed to
 `KrylovKit.eigolve`
 """
+function transfer_spectrum(above::AbstractMPS; kwargs...)
+    return transfer_spectrum(GeometryStyle(above), above; kwargs...)
+end
 function transfer_spectrum(
-        above::InfiniteMPS; below = above, tol = Defaults.tol, num_vals = 20,
+        ::InfiniteChainStyle, above::AbstractMPS; 
+        below = above, tol = Defaults.tol, num_vals = 20,
         sector = first(sectors(oneunit(left_virtualspace(above, 1))))
     )
     init = randomize!(
@@ -120,11 +124,18 @@ For `InfiniteMPS` and `WindowMPS` the default value for `site` is 0.
 
 For `FiniteMPS` no default value for `site` is given, it is up to the user to specify.
 """
-function entanglement_spectrum(st::Union{InfiniteMPS, WindowMPS}, site::Int = 0)
+function entanglement_spectrum(st::AbstractMPS, args...)
+    return entanglement_spectrum(GeometryStyle(st), st, args...)
+end
+function entanglement_spectrum(::InfiniteChainStyle, st::AbstractMPS, site::Int = 0)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
-function entanglement_spectrum(st::FiniteMPS, site::Int)
+function entanglement_spectrum(st::WindowMPS, site::Int = 0) ## TODO: Remove this workaround once we have decided on the GeometryStyle of WindowMPS
+    checkbounds(st, site)
+    return LinearAlgebra.svdvals(st.C[site])
+end
+function entanglement_spectrum(::FiniteChainStyle, st::AbstractMPS, site::Int)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
@@ -146,7 +157,7 @@ end
 Given an InfiniteMPS, compute the gap ```ϵ``` for the asymptotics of the transfer matrix, as
 well as the Marek gap ```δ``` as a scaling measure of the bond dimension.
 """
-function marek_gap(above::InfiniteMPS; tol_angle = 0.1, kwargs...)
+function marek_gap(above::AbstractMPS; tol_angle = 0.1, kwargs...)
     spectrum = transfer_spectrum(above; kwargs...)
     return marek_gap(spectrum; tol_angle)
 end
@@ -182,7 +193,7 @@ Compute the correlation length of a given InfiniteMPS based on the next-to-leadi
 eigenvalue of the transfer matrix. The `kwargs` are passed to [`transfer_spectrum`](@ref),
 and can for example be used to target the correlation length in a specific sector. 
 """
-function correlation_length(above::InfiniteMPS; kwargs...)
+function correlation_length(above::AbstractMPS; kwargs...)
     ϵ, = marek_gap(above; kwargs...)
     return 1 / ϵ
 end
@@ -199,8 +210,12 @@ Compute the variance of the energy of the state with respect to the hamiltonian.
 """
 function variance end
 
-function variance(
-        state::InfiniteMPS, H::InfiniteMPOHamiltonian, envs = environments(state, H)
+function variance(state::AbstractMPS, H::AbstractMPO, envs = environments(state, H))
+    return variance(GeometryStyle(state, H), OperatorStyle(H), state, H, envs)
+end
+
+function variance(::InfiniteChainStyle, ::HamiltonianStyle,
+        state::AbstractMPS, H::AbstractMPO, envs = environments(state, H)
     )
     e_local = map(1:length(state)) do i
         return contract_mpo_expval(
@@ -214,7 +229,9 @@ function variance(
     return real(expectation_value(state, (H - H_renormalized)^2))
 end
 
-function variance(state::FiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H))
+function variance(::FiniteChainStyle, ::HamiltonianStyle,
+        state::AbstractMPS, H::AbstractMPO, envs = environments(state, H)
+    )
     H2 = H * H
     return real(expectation_value(state, H2) - expectation_value(state, H, envs)^2)
 end

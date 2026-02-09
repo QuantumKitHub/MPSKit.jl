@@ -23,13 +23,27 @@ MPO_AC2_Hamiltonian(GL, O1, O2, GR) = MPODerivativeOperator(GL, (O1, O2), GR)
 # Constructors
 # ------------
 function C_hamiltonian(site::Int, below, operator, above, envs)
+    return C_hamiltonian(GeometryStyle(below, operator, above), OperatorStyle(operator), 
+        site, below, operator, above, envs)
+end
+function C_hamiltonian(::GeometryStyle, ::OperatorStyle, site::Int, below, operator, above, envs)
     return MPO_C_Hamiltonian(leftenv(envs, site + 1, below), rightenv(envs, site, below))
 end
 function AC_hamiltonian(site::Int, below, operator, above, envs)
+    return AC_hamiltonian(
+        GeometryStyle(below, operator, above), OperatorStyle(operator), site, below, operator, above, envs
+    )
+end
+function AC_hamiltonian(::GeometryStyle, ::OperatorStyle, site::Int, below, operator, above, envs)
     O = isnothing(operator) ? nothing : operator[site]
     return MPO_AC_Hamiltonian(leftenv(envs, site, below), O, rightenv(envs, site, below))
 end
 function AC2_hamiltonian(site::Int, below, operator, above, envs)
+    return AC2_hamiltonian(
+        GeometryStyle(below, operator, above), OperatorStyle(operator), site, below, operator, above, envs
+    )
+end
+function AC2_hamiltonian(::GeometryStyle, ::OperatorStyle, site::Int, below, operator, above, envs)
     O1, O2 = isnothing(operator) ? (nothing, nothing) : (operator[site], operator[site + 1])
     return MPO_AC2_Hamiltonian(
         leftenv(envs, site, below), O1, O2, rightenv(envs, site + 1, below)

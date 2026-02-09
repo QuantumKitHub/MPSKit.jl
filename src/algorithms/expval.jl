@@ -32,6 +32,10 @@ julia> round(expectation_value(ψ, (2, 3) => S_x ⊗ S_x))
 """
 function expectation_value end
 
+function expectation_value(ψ::AbstractMPS, H::AbstractMPO, args...)
+    return expectation_value(GeometryStyle(ψ, H), OperatorStyle(H), ψ, H, args...)
+end
+
 # Local operators
 # ---------------
 function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
@@ -117,16 +121,14 @@ function contract_mpo_expval2(
         τ[3 4; 9 10] * A1[8 1 2; 5] * A2[5 7 13; 14] * O[10 12; 6 7]
 end
 
-function expectation_value(
-        ψ::FiniteMPS, H::FiniteMPOHamiltonian,
-        envs::AbstractMPSEnvironments = environments(ψ, H)
+function expectation_value(::FiniteChainStyle, ::HamiltonianStyle,
+        ψ, H, envs = environments(ψ, H)
     )
     return dot(ψ, H, ψ, envs) / dot(ψ, ψ)
 end
 
-function expectation_value(
-        ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
-        envs::AbstractMPSEnvironments = environments(ψ, H)
+function expectation_value(::InfiniteChainStyle, ::HamiltonianStyle,
+        ψ, H, envs = environments(ψ, H)
     )
     return sum(1:length(ψ)) do i
         return contract_mpo_expval(
@@ -137,17 +139,17 @@ end
 
 # DenseMPO
 # --------
-function expectation_value(ψ::FiniteMPS, mpo::FiniteMPO)
+function expectation_value(::FiniteChainStyle, ::MPOStyle, ψ, mpo)
     return dot(ψ, mpo, ψ) / dot(ψ, ψ)
 end
 function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
-function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
+function expectation_value(::InfiniteChainStyle, ::MPOStyle, ψ, mpo, envs...)
     return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), envs...)
 end
-function expectation_value(
-        ψ::MultilineMPS, O::MultilineMPO{<:InfiniteMPO},
+function expectation_value(::InfiniteChainStyle, ::MPOStyle,
+        ψ::Multiline, O::Multiline,
         envs::MultilineEnvironments = environments(ψ, O)
     )
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
@@ -161,7 +163,7 @@ function expectation_value(ψ::MultilineMPS, mpo::MultilineMPO, envs...)
     return prod(x -> expectation_value(x...), zip(parent(ψ), parent(mpo)))
 end
 # fallback
-function expectation_value(ψ::AbstractMPS, mpo::AbstractMPO, envs...)
+function expectation_value(::GeometryStyle, ::MPOStyle, ψ, mpo, envs...)
     return dot(ψ, mpo, ψ) / dot(ψ, ψ)
 end
 
