@@ -7,9 +7,12 @@ vector of entropies is returned, one for each site.
 """
 entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
-    S = zero(real(scalartype(state)))
-    tol = eps(typeof(S))
-    for (c, b) in pairs(entanglement_spectrum(state, loc))
+    return entropy(entanglement_spectrum(state, loc))
+end
+function entropy(spectrum::AbstractVector{T}) where {T}
+    S = zero(T)
+    tol = eps(T)
+    for (c, b) in pairs(spectrum)
         s = zero(S)
         for x in b
             x < tol && break
