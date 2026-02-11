@@ -17,7 +17,30 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
+  tests-draft:
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
+    name: "Tests - draft mode"
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - states
+          - operators
+          - algorithms
+          - multifusion
+          - misc
+    uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/Tests.yml@main"
+    with:
+      group: "${{ matrix.group }}"
+      nthreads: 4
+      # julia-version: "${{ matrix.version }}"
+      # os: "${{ matrix.os }}"
+      timeout-minutes: 120
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   tests:
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     name: "Tests"
     strategy:
       fail-fast: false
@@ -32,9 +55,9 @@ jobs:
           - multifusion
           - misc
         os:
-          - ubuntu-latest
           - macOS-latest
           - windows-latest
+          - ubuntu-latest
     uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/Tests.yml@main"
     with:
       group: "${{ matrix.group }}"
