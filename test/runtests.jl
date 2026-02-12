@@ -11,11 +11,5 @@ init_code = quote
     using .TestSetup
 end
 
-# Parse arguments
-# ensure backwards compatibility by filtering out `--group=`
-pat = r"(?:--group=)(\w+)"
-arg_id = findfirst(contains(pat), ARGS)
-!isnothing(arg_id) && (ARGS[arg_id] = lowercase(only(match(pat, ARGS[arg_id]).captures)))
-
 args = parse_args(ARGS)
 runtests(MPSKit, args; testsuite, init_code)
