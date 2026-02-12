@@ -18,25 +18,31 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.mk.outputs.matrix }}
+    steps:
+      - id: mk
+        shell: bash
+        run: |
+          # Draft PR: only run ubuntu-latest + version=1 (all groups)
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.draft }}" == "true" ]]; then
+            cat >> "$GITHUB_OUTPUT" <<'EOF'
+          matrix={"version":["1"],"os":["ubuntu-latest"],"group":["states","operators","algorithms","multifusion","misc"]}
+          EOF
+          else
+            cat >> "$GITHUB_OUTPUT" <<'EOF'
+          matrix={"version":["lts","1"],"os":["ubuntu-latest","windows-latest","macOS-latest"],"group":["states","operators","algorithms","multifusion","misc"]}
+          EOF
+          fi
+
   tests:
     name: "Tests"
+    needs: setup-matrix
     strategy:
       fail-fast: false
-      matrix:
-        version: ['lts', '1']
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        group:
-          - states
-          - operators
-          - algorithms
-          - multifusion
-          - misc
-    if: >
-      ${{
-        github.event_name != 'pull_request' ||
-        github.event.pull_request.draft == false ||
-        (matrix.os == 'ubuntu-latest' && matrix.version == '1')
-      }}
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
 
     runs-on: ${{ matrix.os }}
     steps:
