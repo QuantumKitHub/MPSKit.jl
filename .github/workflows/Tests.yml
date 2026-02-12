@@ -18,40 +18,7 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  tests-draft:
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
-    name: "Draft"
-    strategy:
-      fail-fast: false
-      matrix:
-        group:
-          - states
-          - operators
-          - algorithms
-          - multifusion
-          - misc
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: 1
-      - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-        with:
-          test_args: ${{ matrix.group }}
-      - uses: julia-actions/julia-processcoverage@v1
-        with:
-          directories: 'src,ext'
-      - uses: codecov/codecov-action@v5
-        with:
-          files: lcov.info
-          token: "${{ secrets.CODECOV_TOKEN }}"
-          fail_ci_if_error: true
-
   tests:
-    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     name: "Tests"
     strategy:
       fail-fast: false
@@ -64,6 +31,13 @@ jobs:
           - algorithms
           - multifusion
           - misc
+    if: >
+      ${{
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false ||
+        (matrix.os == 'ubuntu-latest' && matrix.version == '1')
+      }}
+
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
