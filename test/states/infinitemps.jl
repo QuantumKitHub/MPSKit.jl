@@ -4,8 +4,8 @@ println("
 ------------------------
 ")
 
-using .TestSetup
 using Test, TestExtras
+using Adapt
 using MPSKit
 using MPSKit: GeometryStyle, InfiniteChainStyle, TransferMatrix
 using TensorKit
@@ -43,5 +43,18 @@ using TensorKit: ℙ
         @test TransferMatrix(ψ.AL[i], ψ.AR[i]) * r_LR(ψ, i) ≈ r_LR(ψ, i + 1)
         @test TransferMatrix(ψ.AR[i], ψ.AL[i]) * r_RL(ψ, i) ≈ r_RL(ψ, i + 1)
         @test TransferMatrix(ψ.AR[i], ψ.AR[i]) * r_RR(ψ, i) ≈ r_RR(ψ, i + 1)
+    end
+end
+
+@testset "Adapt" begin
+    for (d, D) in [(ℂ^2, ℂ^4), (ℙ^2, ℙ^4)]
+        mps1 = InfiniteMPS(rand, Float32, d, D)
+        for T in (Float64, ComplexF64)
+            mps2 = @testinferred adapt(Vector{T}, mps1)
+            @test mps2 isa InfiniteMPS
+            @test scalartype(mps2) == T
+            @test storagetype(mps2) == Vector{T}
+            @test dot(mps1, mps2) ≈ 1 atol = 1.0e-4
+        end
     end
 end
