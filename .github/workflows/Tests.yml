@@ -54,7 +54,6 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         timeout-minutes: 120
-        nthreads: 4
         with:
           test_args: '--jobs=1 ${{ matrix.group }}'
       - uses: julia-actions/julia-processcoverage@v1
