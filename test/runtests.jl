@@ -1,30 +1,15 @@
-using Test
+using ParallelTestRunner
+using MPSKit
 
-# check if user supplied args
-pat = r"(?:--group=)(\w+)"
-arg_id = findfirst(contains(pat), ARGS)
-const GROUP = if isnothing(arg_id)
-    uppercase(get(ENV, "GROUP", "ALL"))
-else
-    uppercase(only(match(pat, ARGS[arg_id]).captures))
+# Start with autodiscovered tests
+testsuite = find_tests(@__DIR__)
+
+# remove setup code and add as init
+filter!(!(startswith("utilities") ∘ first), testsuite)
+init_code = quote
+    include($(joinpath(@__DIR__, "utilities", "testsetup.jl")))
+    using .TestSetup
 end
 
-include("setup.jl")
-
-@time begin
-    if GROUP == "ALL" || GROUP == "STATES"
-        @time include("states.jl")
-    end
-    if GROUP == "ALL" || GROUP == "OPERATORS"
-        @time include("operators.jl")
-    end
-    if GROUP == "ALL" || GROUP == "ALGORITHMS"
-        @time include("algorithms.jl")
-    end
-    if GROUP == "ALL" || GROUP == "MULTIFUSION"
-        @time include("multifusion.jl")
-    end
-    if GROUP == "ALL" || GROUP == "OTHER"
-        @time include("other.jl")
-    end
-end
+args = parse_args(ARGS)
+runtests(MPSKit, args; testsuite, init_code)

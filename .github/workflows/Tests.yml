@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - 'docs/**'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   workflow_dispatch:
 
 concurrency:
@@ -17,30 +18,49 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.mk.outputs.matrix }}
+    steps:
+      - id: mk
+        shell: bash
+        run: |
+          # Draft PR: only run ubuntu-latest + version=1 (all groups)
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.draft }}" == "true" ]]; then
+            cat >> "$GITHUB_OUTPUT" <<'EOF'
+          matrix={"version":["1"],"os":["ubuntu-latest"],"group":["states","operators","algorithms","multifusion","misc"]}
+          EOF
+          else
+            cat >> "$GITHUB_OUTPUT" <<'EOF'
+          matrix={"version":["lts","1"],"os":["ubuntu-latest","windows-latest","macOS-latest"],"group":["states","operators","algorithms","multifusion","misc"]}
+          EOF
+          fi
+
   tests:
     name: "Tests"
+    needs: setup-matrix
     strategy:
       fail-fast: false
-      matrix:
-        version:
-          - 'lts' # minimal supported version
-          - '1' # latest released Julia version
-        group:
-          - states
-          - operators
-          - algorithms
-          - multifusion
-          - other
-        os:
-          - ubuntu-latest
-          - macOS-latest
-          - windows-latest
-    uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/Tests.yml@main"
-    with:
-      group: "${{ matrix.group }}"
-      nthreads: 4
-      julia-version: "${{ matrix.version }}"
-      os: "${{ matrix.os }}"
-      timeout-minutes: 120
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
+        timeout-minutes: 120
+        with:
+          test_args: '--jobs=1 ${{ matrix.group }}'
+      - uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: 'src,ext'
+      - uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          token: "${{ secrets.CODECOV_TOKEN }}"
+          fail_ci_if_error: true
