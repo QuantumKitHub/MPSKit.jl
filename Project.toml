@@ -25,11 +25,10 @@ VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 [weakdeps]
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [extensions]
 MPSKitMakieExt = "Makie"
-MPSKitPlotsExt = "Plots"
+MPSKitPlotsExt = "RecipesBase"
 
 [compat]
 Accessors = "0.1"
