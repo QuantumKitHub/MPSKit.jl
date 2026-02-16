@@ -70,7 +70,6 @@ using KrylovKit: KrylovAlgorithm
 using OptimKit
 using Base.Threads
 using Base.Iterators
-using RecipesBase
 using VectorInterface
 using Accessors
 using HalfIntegers

@@ -1,7 +1,7 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
-version = "0.13.9"
 authors = "Lukas Devos, Maarten Van Damme and contributors"
+version = "0.13.9"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -17,11 +17,18 @@ OhMyThreads = "67456a42-1dca-4109-a031-0a68de7e3ad5"
 OptimKit = "77e91f04-9b3b-57a6-a776-40b61faaebe0"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
+
+[weakdeps]
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+
+[extensions]
+MPSKitMakieExt = "Makie"
+MPSKitPlotsExt = "Plots"
 
 [compat]
 Accessors = "0.1"
@@ -42,7 +49,6 @@ Pkg = "1"
 Plots = "1.40"
 Printf = "1"
 Random = "1"
-RecipesBase = "1.1"
 TensorKit = "0.16"
 TensorKitManifolds = "0.7"
 TensorKitTensors = "0.2"
