@@ -265,7 +265,7 @@ end
     mps2 = InfiniteMPS(physicalspace(H3), [oneunit(V)])
     for T in (Float64, ComplexF64)
         H4 = @testinferred adapt(Vector{T}, H3)
-        @test mpo4 isa InfiniteMPOHamiltonian
+        @test H4 isa InfiniteMPOHamiltonian
         @test scalartype(H4) == T
         @test storagetype(H4) == Vector{T}
         @test expectation_value(mps2, H3) ≈ expectation_value(mps2, H4)

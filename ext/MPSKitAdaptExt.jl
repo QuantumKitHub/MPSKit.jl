@@ -1,7 +1,8 @@
 module MPSKitAdaptExt
 
-using TensorKit: space
+using TensorKit: space, spacetype
 using MPSKit
+using BlockTensorKit: nonzero_pairs
 using Adapt
 
 function Adapt.adapt_structure(to, mps::FiniteMPS)
