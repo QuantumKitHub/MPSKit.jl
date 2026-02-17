@@ -99,3 +99,15 @@ end
     @test ψ.center == 13 / 2
     @test ψ[5:7] == [ψ.ALs[5], ψ.ACs[6], ψ.ARs[7]]
 end
+
+@testset "FiniteMPS copying" begin
+    mps = FiniteMPS(rand, ComplexF64, 10, ℂ^2, ℂ^5)
+
+    mps_shallow = copy(mps1)
+    @test mps1 !== mps_shallow
+    @test pointer(mps1[1][]) == pointer(mps_shallow[1][])
+
+    mps_deep = deepcopy(mps1)
+    @test mps1 !== mps_deep
+    @test pointer(mps1[1][]) != pointer(mps_deep[1][])
+end
