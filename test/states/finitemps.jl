@@ -103,11 +103,11 @@ end
 @testset "FiniteMPS copying" begin
     mps = FiniteMPS(rand, ComplexF64, 10, ℂ^2, ℂ^5)
 
-    mps_shallow = copy(mps1)
-    @test mps1 !== mps_shallow
-    @test pointer(mps1[1][]) == pointer(mps_shallow[1][])
+    mps_shallow = copy(mps)
+    @test mps !== mps_shallow
+    @test pointer(mps[1][]) == pointer(mps_shallow[1][])
 
-    mps_deep = deepcopy(mps1)
-    @test mps1 !== mps_deep
-    @test pointer(mps1[1][]) != pointer(mps_deep[1][])
+    mps_deep = deepcopy(mps)
+    @test mps !== mps_deep
+    @test pointer(mps[1][]) != pointer(mps_deep[1][])
 end

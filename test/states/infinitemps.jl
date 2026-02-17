@@ -12,7 +12,7 @@ using TensorKit
 using TensorKit: ℙ
 
 @testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
-    [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
+                                                    [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
     tol = Float64(eps(real(elt)) * 100)
 
     ψ = InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol)
@@ -31,7 +31,7 @@ using TensorKit: ℙ
 
     for i in 1:length(ψ)
         @plansor difference[-1 -2; -3] := ψ.AL[i][-1 -2; 1] * ψ.C[i][1; -3] -
-            ψ.C[i - 1][-1; 1] * ψ.AR[i][1 -2; -3]
+                                          ψ.C[i-1][-1; 1] * ψ.AR[i][1 -2; -3]
         @test norm(difference, Inf) < tol * 10
 
         @test l_LL(ψ, i) * TransferMatrix(ψ.AL[i], ψ.AL[i]) ≈ l_LL(ψ, i + 1)
