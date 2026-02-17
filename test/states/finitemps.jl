@@ -4,8 +4,8 @@ println("
 ----------------------
 ")
 
-using .TestSetup
 using Test, TestExtras
+using Adapt
 using MPSKit
 using MPSKit: _transpose_front, _transpose_tail
 using MPSKit: GeometryStyle, FiniteChainStyle
@@ -73,6 +73,20 @@ end
     else
         @test norm(ψ_small) ≈ norm(ψ′)
         @test complex(convert(TensorMap, ψ_small)) ≈ convert(TensorMap, ψ′)
+    end
+end
+
+@testset "Adapt" begin
+    for (d, D) in [(ℂ^2, ℂ^4), (ℙ^2, ℙ^4)]
+        mps1 = FiniteMPS(rand, Float32, 3, d, D)
+        t1 = convert(TensorMap, mps1)
+        for T in (Float64, ComplexF64)
+            mps2 = @testinferred adapt(Vector{T}, mps1)
+            @test mps2 isa FiniteMPS
+            @test scalartype(mps2) == T
+            @test storagetype(mps2) == Vector{T}
+            @test convert(TensorMap, mps2) ≈ t1
+        end
     end
 end
 
