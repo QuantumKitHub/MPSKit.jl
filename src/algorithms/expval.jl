@@ -145,10 +145,10 @@ function expectation_value(
         ψ::InfiniteMPS, mpo_pair::Tuple{InfiniteMPO, Pair{Int, <:MPOTensor}},
         envs::AbstractMPSEnvironments = environments(ψ, first(mpo_pair))
     )
-    site, O = mpo_pair[2]
+    (O_mpo, (site, O)) = mpo_pair
     return contract_mpo_expval(
         ψ.AC[site], envs.GLs[site], O, envs.GRs[site]
-    ) / norm(ψ)^2
+    ) / expectation_value(ψ, O_mpo, envs)
 end
 
 # DenseMPO
