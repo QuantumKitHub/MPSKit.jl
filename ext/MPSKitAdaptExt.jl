@@ -26,15 +26,14 @@ function Adapt.adapt_structure(to, mps::InfiniteMPS)
     AR = map(ad, mps.AR)
     C = map(ad, mps.C)
     AC = map(ad, mps.AC)
-
     return InfiniteMPS{eltype(AL), eltype(C)}(AL, AR, C, AC)
 end
 
-Adapt.adapt_structure(to, mpo::MPO) = MPO(map(adapt(to), mpo.O))
-
-Adapt.adapt_structure(to, W::MPSKit.JordanMPOTensor) =
+# inline to improve type stability with closures
+@inline Adapt.adapt_structure(to, mpo::MPO) = MPO(map(adapt(to), mpo.O))
+@inline Adapt.adapt_structure(to, W::MPSKit.JordanMPOTensor) =
     MPSKit.JordanMPOTensor(space(W), adapt(to, W.A), adapt(to, W.B), adapt(to, W.C), adapt(to, W.D))
-
-Adapt.adapt_structure(to, mpo::MPOHamiltonian) = MPOHamiltonian(map(adapt(to), mpo.W))
+@inline Adapt.adapt_structure(to, mpo::MPOHamiltonian) =
+    MPOHamiltonian(map(adapt(to), mpo.W))
 
 end
