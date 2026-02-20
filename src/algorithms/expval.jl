@@ -109,30 +109,23 @@ function expectation_value(
         ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
         envs::AbstractMPSEnvironments = environments(ψ, H)
     )
-    return sum(1:length(ψ)) do i
-        return _local_expectation_value(ψ, H, envs, i)
-    end
-end
-
-function _local_expectation_value(
-        ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
-        envs::AbstractMPSEnvironments = environments(ψ, H), site::Int = 1
-    )
-    return contract_mpo_expval(
-        ψ.AC[site], envs.GLs[site], H[site][:, 1, 1, end], envs.GRs[site][end]
-    )
+    return sum(1:length(ψ)) do site
+        return contract_mpo_expval(
+            ψ.AC[site], envs.GLs[site], H[site][:, 1, 1, end], envs.GRs[site][end]
+        )
+    end / norm(ψ)^2
 end
 
 # MPO tensor
 #-----------
 function expectation_value(
-        ψ::InfiniteMPS, mpo_pair::Tuple{InfiniteMPO, Pair},
+        ψ::InfiniteMPS, mpo_pair::Tuple{InfiniteMPO, Pair{Int, <:MPOTensor}},
         envs::AbstractMPSEnvironments = environments(ψ, first(mpo_pair))
     )
     site, O = mpo_pair[2]
     return contract_mpo_expval(
         ψ.AC[site], envs.GLs[site], O, envs.GRs[site]
-    )
+    ) / norm(ψ)^2
 end
 
 # DenseMPO
@@ -151,17 +144,10 @@ function expectation_value(
         envs::MultilineEnvironments = environments(ψ, O)
     )
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
-        return _local_expectation_value(ψ, O, envs, (i, j))
+        GL = envs[i].GLs[j]
+        GR = envs[i].GRs[j]
+        return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j]) / norm(ψ)^2
     end
-end
-function _local_expectation_value(
-        ψ::MultilineMPS, O::MultilineMPO{<:InfiniteMPO},
-        envs::MultilineEnvironments = environments(ψ, O),
-        (i, j)::Tuple{Int, Int} = size(ψ)
-    )
-    GL = envs[i].GLs[j]
-    GR = envs[i].GRs[j]
-    return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j])
 end
 function expectation_value(ψ::MultilineMPS, mpo::MultilineMPO, envs...)
     # TODO: fix environments
