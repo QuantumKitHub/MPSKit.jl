@@ -101,13 +101,29 @@ end
 end
 
 @testset "FiniteMPS copying" begin
-    mps = FiniteMPS(rand, ComplexF64, 10, ℂ^2, ℂ^5)
+    L = 10
+    mps1 = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^5)
+    mps2 = copy(mps1)
 
-    mps_shallow = copy(mps)
-    @test mps !== mps_shallow
-    @test pointer(mps[1][]) == pointer(mps_shallow[1][])
+    @test mps1 !== mps2
 
-    mps_deep = deepcopy(mps)
-    @test mps !== mps_deep
-    @test pointer(mps[1][]) != pointer(mps_deep[1][])
+    # arrays are distinct
+    @test mps1.ALs !== mps2.ALs
+    @test mps1.ARs !== mps2.ARs
+    @test mps1.ACs !== mps2.ACs
+    @test mps1.Cs !== mps2.Cs
+
+    # tensors are distinct but equal
+    for i in 1:L
+        @test (ismissing(mps1.ALs[i]) && ismissing(mps2.ALs[i])) ||
+            (mps1.ALs[i] !== mps2.ALs[i] && mps1.ALs[i] == mps2.ALs[i])
+        @test (ismissing(mps1.ARs[i]) && ismissing(mps2.ARs[i])) ||
+            (mps1.ARs[i] !== mps2.ARs[i] && mps1.ARs[i] == mps2.ARs[i])
+        @test (ismissing(mps1.ACs[i]) && ismissing(mps2.ACs[i])) ||
+            (mps1.ACs[i] !== mps2.ACs[i] && mps1.ACs[i] == mps2.ACs[i])
+        @test (ismissing(mps1.Cs[i]) && ismissing(mps2.Cs[i])) ||
+            (mps1.Cs[i] !== mps2.Cs[i] && mps1.Cs[i] == mps2.Cs[i])
+    end
+    @test (ismissing(mps1.Cs[end]) && ismissing(mps2.Cs[end])) ||
+        mps1.Cs[end] !== mps2.Cs[end]
 end
