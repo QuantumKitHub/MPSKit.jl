@@ -121,12 +121,12 @@ function JordanMPOTensor(W::SparseBlockTensorMap{TT, E, S, 2, 2}) where {TT, E, 
     )
 end
 
-function jordanmpotensortype(::Type{S}, ::Type{TorA}) where {S <: VectorSpace, TorA}
-    TA = Union{tensormaptype(S, 2, 2, TorA), BraidingTensor{scalartype(TorA), S}}
-    TB = tensormaptype(S, 2, 1, TorA)
-    TC = tensormaptype(S, 1, 2, TorA)
-    TD = tensormaptype(S, 1, 1, TorA)
-    return JordanMPOTensor{scalartype(TorA), S, TA, TB, TC, TD}
+function jordanmpotensortype(::Type{S}, ::Type{E}) where {S <: VectorSpace, E <: Number}
+    TA = Union{tensormaptype(S, 2, 2, E), BraidingTensor{E, S}}
+    TB = tensormaptype(S, 2, 1, E)
+    TC = tensormaptype(S, 1, 2, E)
+    TD = tensormaptype(S, 1, 1, E)
+    return JordanMPOTensor{E, S, TA, TB, TC, TD}
 end
 function jordanmpotensortype(::Type{O}) where {O <: MPOTensor}
     return jordanmpotensortype(spacetype(O), scalartype(O))
