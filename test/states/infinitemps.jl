@@ -83,3 +83,25 @@ end
         end
     end
 end
+
+@testset "InfiniteMPS entropy ($(sectortype(D)), $elt)" for (D, d, elt) in
+    [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
+    ψ = InfiniteMPS([d, d], [D, D])
+
+    # entropy(ψ) returns one value per site, all non-negative
+    Ss = entropy(ψ)
+    @test length(Ss) == length(ψ)
+    @test all(isreal, Ss)
+    @test all(>=(0), Ss)
+
+    # entropy(ψ, site) is non-negative and consistent with entropy(ψ)
+    for site in 1:length(ψ)
+        @test entropy(ψ, site) ≈ Ss[site]
+        @test entropy(ψ, site) ≈ entropy(entanglement_spectrum(ψ, site))
+    end
+
+    # product state has zero entropy everywhere
+    ψ_product = InfiniteMPS([d, d], [oneunit(D), oneunit(D)])
+    Ss_product = entropy(ψ_product)
+    @test all(S -> isapprox(S, 0; atol = 1.0e-10), Ss_product)
+end
