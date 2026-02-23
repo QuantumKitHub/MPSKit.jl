@@ -1,9 +1,15 @@
 """
     entropy(state, [site::Int])
+    entropy(spectrum::SectorVector)
 
-Calculate the von Neumann entanglement entropy of a given MPS. If an integer `site` is
-given, the entropy is across the entanglement cut to the right of site `site`. Otherwise, a
-vector of entropies is returned, one for each site.
+Calculate the von Neumann entanglement entropy. The entropy can be computed from either an
+MPS state or directly from an entanglement spectrum as obtained from
+[`entanglement_spectrum`](@ref).
+
+When called on an MPS with an integer `site`, the entropy is computed across the
+entanglement cut to the right of site `site`. For `InfiniteMPS`, omitting `site` returns a
+vector of entropies, one for each site. For `FiniteMPS` and `WindowMPS`, `site` is
+required.
 """
 entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
