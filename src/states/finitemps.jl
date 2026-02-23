@@ -305,7 +305,6 @@ Utility
 Base.size(ψ::FiniteMPS, args...) = size(ψ.ALs, args...)
 Base.length(ψ::FiniteMPS) = length(ψ.ALs)
 Base.eltype(ψtype::Type{<:FiniteMPS}) = site_type(ψtype) # this might not be true
-Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.Cs))
 function Base.similar(ψ::FiniteMPS{A, B}) where {A, B}
     return FiniteMPS{A, B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
 end
@@ -338,7 +337,19 @@ end
 # TODO: check where gauge center is to determine efficient kind
 AC2(psi::FiniteMPS, site::Int) = psi.AC[site] * _transpose_tail(psi.AR[site + 1])
 
-_complex_if_not_missing(x) = ismissing(x) ? x : complex(x)
+f_if_not_missing(f, x) = ismissing(x) ? x : f(x)
+_copy_if_not_missing(x) = f_if_not_missing(copy, x)
+_complex_if_not_missing(x) = f_if_not_missing(complex, x)
+
+function Base.copy(mps::FiniteMPS)
+    mps2 = similar(mps)
+    mps2.ALs .= _copy_if_not_missing.(mps.ALs)
+    mps2.ARs .= _copy_if_not_missing.(mps.ARs)
+    mps2.ACs .= _copy_if_not_missing.(mps.ACs)
+    mps2.Cs .= _copy_if_not_missing.(mps.Cs)
+    return mps2
+end
+
 function Base.complex(mps::FiniteMPS)
     scalartype(mps) <: Complex && return mps
     ALs = _complex_if_not_missing.(mps.ALs)

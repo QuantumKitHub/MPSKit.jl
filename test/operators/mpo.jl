@@ -10,6 +10,7 @@ using MPSKit
 using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, MPOStyle
 using TensorKit
 using TensorKit: ℙ
+using Adapt
 
 @testset "FiniteMPO" begin
     # start from random operators

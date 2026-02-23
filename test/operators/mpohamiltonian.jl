@@ -10,6 +10,7 @@ using MPSKit
 using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, HamiltonianStyle
 using TensorKit
 using TensorKit: ℙ
+using Adapt
 
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
 vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))

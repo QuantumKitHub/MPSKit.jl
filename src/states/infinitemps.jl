@@ -244,7 +244,7 @@ Base.eltype(::Type{<:InfiniteMPS{A}}) where {A} = A
 Base.isfinite(::Type{<:InfiniteMPS}) = false
 GeometryStyle(::Type{<:InfiniteMPS}) = InfiniteChainStyle()
 
-Base.copy(ψ::InfiniteMPS) = InfiniteMPS(copy(ψ.AL), copy(ψ.AR), copy(ψ.C), copy(ψ.AC))
+Base.copy(ψ::InfiniteMPS) = InfiniteMPS(copy.(ψ.AL), copy.(ψ.AR), copy.(ψ.C), copy.(ψ.AC))
 function Base.copy!(ψ::InfiniteMPS, ϕ::InfiniteMPS)
     ψ.AL .= _copy!!.(ψ.AL, ϕ.AL)
     ψ.AR .= _copy!!.(ψ.AR, ϕ.AR)

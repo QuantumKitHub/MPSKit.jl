@@ -5,12 +5,12 @@ println("
 ")
 
 using Test, TestExtras
-using Adapt
 using MPSKit
 using MPSKit: _transpose_front, _transpose_tail
 using MPSKit: GeometryStyle, FiniteChainStyle
 using TensorKit
 using TensorKit: ℙ
+using Adapt
 
 @testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
         (ℙ^10, ℙ^2, ComplexF64),
@@ -112,4 +112,32 @@ end
     ψ.C[6] = randn(ComplexF64, space(ψ.C[6])) # setting the center between sites 6 and 7
     @test ψ.center == 13 / 2
     @test ψ[5:7] == [ψ.ALs[5], ψ.ACs[6], ψ.ARs[7]]
+end
+
+@testset "FiniteMPS copying" begin
+    L = 10
+    mps1 = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^5)
+    mps2 = copy(mps1)
+
+    @test mps1 !== mps2
+
+    # arrays are distinct
+    @test mps1.ALs !== mps2.ALs
+    @test mps1.ARs !== mps2.ARs
+    @test mps1.ACs !== mps2.ACs
+    @test mps1.Cs !== mps2.Cs
+
+    # tensors are distinct but equal
+    for i in 1:L
+        @test (ismissing(mps1.ALs[i]) && ismissing(mps2.ALs[i])) ||
+            (mps1.ALs[i] !== mps2.ALs[i] && mps1.ALs[i] == mps2.ALs[i])
+        @test (ismissing(mps1.ARs[i]) && ismissing(mps2.ARs[i])) ||
+            (mps1.ARs[i] !== mps2.ARs[i] && mps1.ARs[i] == mps2.ARs[i])
+        @test (ismissing(mps1.ACs[i]) && ismissing(mps2.ACs[i])) ||
+            (mps1.ACs[i] !== mps2.ACs[i] && mps1.ACs[i] == mps2.ACs[i])
+        @test (ismissing(mps1.Cs[i]) && ismissing(mps2.Cs[i])) ||
+            (mps1.Cs[i] !== mps2.Cs[i] && mps1.Cs[i] == mps2.Cs[i])
+    end
+    @test (ismissing(mps1.Cs[end]) && ismissing(mps2.Cs[end])) ||
+        mps1.Cs[end] !== mps2.Cs[end]
 end
