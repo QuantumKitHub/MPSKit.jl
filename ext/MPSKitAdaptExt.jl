@@ -34,6 +34,6 @@ end
 @inline Adapt.adapt_structure(to, W::MPSKit.JordanMPOTensor) =
     MPSKit.JordanMPOTensor(space(W), adapt(to, W.A), adapt(to, W.B), adapt(to, W.C), adapt(to, W.D))
 @inline Adapt.adapt_structure(to, mpo::MPOHamiltonian) =
-    MPOHamiltonian(map(adapt(to), mpo.W))
+    MPOHamiltonian(map(x -> adapt(to, x), mpo.W))
 
 end
