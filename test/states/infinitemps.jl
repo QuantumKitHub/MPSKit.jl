@@ -105,3 +105,28 @@ end
     Ss_product = entropy(ψ_product)
     @test all(S -> isapprox(S, 0; atol = 1.0e-10), Ss_product)
 end
+
+@testset "InfiniteMPS copying" begin
+    mps1 = InfiniteMPS(rand, ComplexF64, ℂ^2, ℂ^5)
+    mps2 = copy(mps1)
+
+    @test mps1 !== mps2
+
+    # elements are equal
+    @test mps1.AL[1] == mps2.AL[1]
+    @test mps1.AR[1] == mps2.AR[1]
+    @test mps1.AC[1] == mps2.AC[1]
+    @test mps1.C[1] == mps2.C[1]
+
+    # arrays are distinct
+    @test mps1.AL !== mps2.AL
+    @test mps1.AR !== mps2.AR
+    @test mps1.AC !== mps2.AC
+    @test mps1.C !== mps2.C
+
+    # tensors are distinct
+    @test mps1.AL[1] !== mps2.AL[1]
+    @test mps1.AR[1] !== mps2.AR[1]
+    @test mps1.AC[1] !== mps2.AC[1]
+    @test mps1.C[1] !== mps2.C[1]
+end
