@@ -106,7 +106,7 @@ using TensorKit: ℙ
         m_th = 0.911319377877496
         e_th = -1.7455645753125533
 
-        alg = VOMPS(; tol = 1.0e-8, verbosity = verbosity_conv)
+        alg = VOMPS(; tol = 1.0e-8, verbosity = 1)
         O_mpo = classical_ising(; β = beta)
         ψ₀ = InfiniteMPS(ℂ^2, ℂ^10)
         ψ, envs = leading_boundary(ψ₀, O_mpo, alg)
