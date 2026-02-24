@@ -4,6 +4,7 @@ println("
 ------------------------
 ")
 
+using .TestSetup
 using Test, TestExtras
 using MPSKit
 using MPSKit: GeometryStyle, InfiniteChainStyle, TransferMatrix

@@ -4,8 +4,8 @@ println("
 ----------------------------
 ")
 
+using .TestSetup
 using Test, TestExtras
-using Adapt
 using MPSKit
 using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, HamiltonianStyle
 using TensorKit
