@@ -41,53 +41,42 @@ function expectation_value end
 function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
     @boundscheck foreach(Base.Fix1(Base.checkbounds, ψ), inds)
 
-    sites, local_mpo = instantiate_operator(physicalspace(ψ), inds => O)
-    @assert _firstspace(first(local_mpo)) == oneunit(_firstspace(first(local_mpo))) ==
-        dual(_lastspace(last(local_mpo)))
-    for (site, o) in zip(sites, local_mpo)
-        if o isa MPOTensor
-            physicalspace(ψ, site) == physicalspace(o) ||
-                throw(SpaceMismatch("physical space does not match at site $site"))
+    # special cases that can be handled more efficiently
+    if length(inds) == 1
+        return local_expectation_value1(ψ, inds[1], O)
+    elseif length(inds) == 2 && eltype(inds) <: Integer && inds[1] + 1 == inds[2]
+        return local_expectation_value2(ψ, inds[1], O)
+    end
+
+    # generic case: convert to MPO and write as Vl * T^N * Vr
+    sites, local_mpo = instantiate_operator(ψ, inds => O)
+
+    # left side
+    Vl = insertrightunit(l_LL(ψ, sites[1]), 1; dual = true)
+
+    # middle
+    M = foldl(zip(sites, local_mpo); init = Vl) do v, (site, o)
+        if o isa Number
+            return scale!(v * TransferMatrix(ψ.AL[site], ψ.AL[site]), o)
+        else
+            return v * TransferMatrix(ψ.AL[site], o, ψ.AL[site])
         end
     end
 
-    Ut = fill_data!(similar(local_mpo[1], _firstspace(first(local_mpo))), one)
+    # right side
+    E = @plansor removeunit(M, 2)[1; 2] * ψ.C[sites[end]][2; 3] * conj(ψ.C[sites[end]][1; 3])
+    return E / dot(ψ, ψ)
+end
 
-    # some special cases that avoid using transfer matrices
-    if length(sites) == 1
-        AC = ψ.AC[sites[1]]
-        E = @plansor conj(AC[4 5; 6]) * conj(Ut[1]) * local_mpo[1][1 5; 3 2] * Ut[2] *
-            AC[4 3; 6]
-    elseif length(sites) == 2 && (sites[1] + 1 == sites[2])
-        AC = ψ.AC[sites[1]]
-        AR = ψ.AR[sites[2]]
-        O1, O2 = local_mpo
-        E = @plansor conj(AC[4 5; 10]) * conj(Ut[1]) * O1[1 5; 3 8] * AC[4 3; 6] *
-            conj(AR[10 9; 11]) * Ut[2] * O2[8 9; 7 2] * AR[6 7; 11]
-    else
-        # generic case: write as Vl * T^N * Vr
-        # left side
-        T = storagetype(site_type(ψ))
-        @plansor Vl[-1 -2; -3] := isomorphism(
-            T, left_virtualspace(ψ, sites[1]), left_virtualspace(ψ, sites[1])
-        )[-1; -3] *
-            conj(Ut[-2])
-
-        # middle
-        M = foldl(zip(sites, local_mpo); init = Vl) do v, (site, o)
-            if o isa Number
-                return scale!(v * TransferMatrix(ψ.AL[site], ψ.AL[site]), o)
-            else
-                return v * TransferMatrix(ψ.AL[site], o, ψ.AL[site])
-            end
-        end
-
-        # right side
-        E = @plansor M[1 2; 3] * Ut[2] * ψ.C[sites[end]][3; 4] *
-            conj(ψ.C[sites[end]][1; 4])
-    end
-
-    return E / norm(ψ)^2
+function local_expectation_value1(ψ::AbstractMPS, site, O)
+    E = contract_mpo_expval1(ψ.AC[site], O, ψ.AC[site])
+    return E / dot(ψ, ψ)
+end
+function local_expectation_value2(ψ::AbstractMPS, site, O)
+    AC = ψ.AC[site]
+    AR = ψ.AR[site + 1]
+    E = contract_mpo_expval2(AC, AR, O, AC, AR)
+    return E / dot(ψ, ψ)
 end
 
 # MPOHamiltonian
@@ -96,6 +85,40 @@ function contract_mpo_expval(
         AC::MPSTensor, GL::MPSTensor, O::MPOTensor, GR::MPSTensor, ACbar::MPSTensor = AC
     )
     return @plansor GL[1 2; 3] * AC[3 7; 5] * GR[5 8; 6] * O[2 4; 7 8] * conj(ACbar[1 4; 6])
+end
+# generic fallback
+function contract_mpo_expval(AC, GL, O, GR, ACbar = AC)
+    return dot(ACbar, MPO_AC_Hamiltonian(GL, O, GR) * AC)
+end
+
+function contract_mpo_expval1(AC::MPSTensor, O::AbstractTensorMap, ACbar::MPSTensor = AC)
+    numin(O) == numout(O) == 1 || throw(ArgumentError("O is not a single-site operator"))
+    return @plansor conj(ACbar[2 3; 4]) * O[3; 1] * AC[2 1; 4]
+end
+function contract_mpo_expval1(
+        AC::GenericMPSTensor{S, 3}, O::AbstractTensorMap{<:Any, S},
+        ACbar::GenericMPSTensor{S, 3} = AC
+    ) where {S}
+    numin(O) == numout(O) == 1 || throw(ArgumentError("O is not a single-site operator"))
+    return @plansor conj(ACbar[2 3 4; 5]) * O[3; 1] * AC[2 1 4; 5]
+end
+
+function contract_mpo_expval2(
+        A1::MPSTensor, A2::MPSTensor, O::AbstractTensorMap,
+        A1bar::MPSTensor = A1, A2bar::MPSTensor = A2
+    )
+    numin(O) == numout(O) == 2 || throw(ArgumentError("O is not a two-site operator"))
+    return @plansor conj(A1bar[4 5; 6]) * conj(A2bar[6 7; 8]) * O[5 7; 2 3] * A1[4 2; 1] *
+        A2[1 3; 8]
+end
+function contract_mpo_expval2(
+        A1::GenericMPSTensor{S, 3}, A2::GenericMPSTensor{S, 3},
+        O::AbstractTensorMap{<:Any, S},
+        A1bar::GenericMPSTensor{S, 3} = A1, A2bar::GenericMPSTensor{S, 3} = A2
+    ) where {S}
+    numin(O) == numout(O) == 2 || throw(ArgumentError("O is not a two-site operator"))
+    return @plansor conj(A1bar[8 3 4; 11]) * conj(A2bar[11 12 13; 14]) * τ[9 6; 1 2] *
+        τ[3 4; 9 10] * A1[8 1 2; 5] * A2[5 7 13; 14] * O[10 12; 6 7]
 end
 
 function expectation_value(
@@ -192,4 +215,13 @@ function expectation_value(
     end
     n = norm(ψ.AC[end])^2
     return sum(ens) / (n * length(ψ))
+end
+
+# Density matrices
+# ----------------
+function expectation_value(ρ::FiniteMPO, args...)
+    return expectation_value(convert(FiniteMPS, ρ), args...)
+end
+function expectation_value(ρ::InfiniteMPO, args...)
+    return expectation_value(convert(InfiniteMPS, ρ), args...)
 end

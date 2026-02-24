@@ -9,22 +9,32 @@ If a particular algorithm is missing, feel free to let us know via an issue, or 
 
 ## Groundstates
 
-One of the most prominent use-cases of MPS is to obtain the groundstate of a given (quasi-) one-dimensional quantum Hamiltonian.
+One of the most prominent use-cases of MPS is to obtain the ground state of a given (quasi-) one-dimensional quantum Hamiltonian.
 In MPSKit.jl, this can be achieved through `find_groundstate`:
 
 ```@docs; canonical=false
 find_groundstate
 ```
 
-There is a variety of algorithms that have been developed over the years, and many of them have been implemented in MPSKit.
+There are a variety of algorithms that have been developed over the years, and many of them have been implemented in MPSKit.
 Keep in mind that some of them are exclusive to finite or infinite systems, while others may work for both.
 Many of these algorithms have different advantages and disadvantages, and figuring out the optimal algorithm is not always straightforward, since this may strongly depend on the model.
-Here, we enumerate some of their properties in hopes of pointing you in the right direction.
+Here, we enumerate some of their properties in hopes of pointing you in the right direction. For convenience, the full list of algorithms is:
+
+- [DMRG](@ref)
+- [DMRG2](@ref)
+- [VUMPS](@ref)
+- [Gradient descent](@ref)
+- [TDVP](@ref)
+- [Time evolution MPO](@ref)
+- [Quasiparticle Ansatz](@ref)
+- [Finite excitations](@ref)
+- ["Chepiga Ansatz"](@ref)
 
 ### DMRG
 
 Probably the most widely used algorithm for optimizing groundstates with MPS is [`DMRG`](@ref) and its variants.
-This algorithm sweeps through the system, optimizing a single site while keeping all others fixed.
+This algorithm sweeps through the system, optimizing a single site or pair of sites while keeping all others fixed.
 Since this local problem can be solved efficiently, the global optimal state follows by alternating through the system.
 However, because of the single-site nature of this algorithm, this can never alter the bond dimension of the state, such that there is no way of dynamically increasing the precision.
 This can become particularly relevant in the cases where symmetries are involved, since then finding a good distribution of charges is also required.
@@ -48,11 +58,11 @@ IDMRG2
 
 ### VUMPS
 
-[`VUMPS`](@ref) is an (I)DMRG inspired algorithm that can be used to Variationally find the groundstate as a Uniform (infinite) Matrix Product State.
+[`VUMPS`](@ref) is an (I)DMRG inspired algorithm that can be used to variationally find the ground state as a Uniform (infinite) Matrix Product State.
 In particular, a local update is followed by a re-gauging procedure that effectively replaces the entire network with the newly updated tensor.
 Compared to IDMRG, this often achieves a higher rate of convergence, since updates are felt throughout the system immediately.
 Nevertheless, this algorithm only works whenever the state is injective, i.e. there is a unique ground state.
-Since this is a single-site algorithm, this cannot alter the bond dimension.
+Since VUMPS is a single-site algorithm, it cannot alter the bond dimension.
 
 ```@docs; canonical=false
 VUMPS
@@ -72,7 +82,7 @@ GradientGrassmann
 
 ## Time evolution
 
-Given a particular state, it can also often be useful to have the ability to examine the evolution of certain properties over time.
+Given a particular state, it can also often be useful to examine the evolution of certain properties over time.
 To that end, there are two main approaches to solving the Schrödinger equation in MPSKit.
 
 ```math
@@ -134,7 +144,7 @@ Matrix Product State (MPS) for each site, and summing these across all sites. Th
 introduces additional gauge freedoms, utilized to ensure orthogonality to the ground state.
 Optimizing within this framework translates to solving an eigenvalue problem. For example,
 in the transverse field Ising model, we calculate the first excited state as shown in the
-provided code snippet, amd check the accuracy against theoretical values. Some deviations
+provided code snippet, and check the accuracy against theoretical values. Some deviations
 are expected, both due to finite-bond-dimension and finite-size effects.
 
 ```@example excitations
@@ -196,7 +206,7 @@ QuasiparticleAnsatz
 
 ### Finite excitations
 
-For finite systems we can also do something else - find the groundstate of the hamiltonian +
+For finite systems we can also do something else - find the ground state of the Hamiltonian +
 ``\\text{weight} \sum_i | \\psi_i ⟩ ⟨ \\psi_i ``. This is also supported by calling
 
 ```@example excitations
@@ -292,7 +302,7 @@ disadvantages:
   and if the bond dimension is grown slow enough, this still obtains a very good expansion
   scheme. Again, The state will remain unchanged and a one-site scheme will now be able to 
   push the optimization further. The subspace used for expansion can be truncated through
-  `trscheme`, which dictates how many singular values will be added.
+  `trscheme`, which dictates how many orthogonal vectors will be added.
 
 * [`VUMPSSvdCut`](@ref): This algorithm is based on the [`VUMPS`](@ref) algorithm, and
   consists of performing a two-site update, and then truncating the state back down. Because
@@ -348,8 +358,8 @@ Jeckelmann
 
 ### fidelity susceptibility
 
-The fidelity susceptibility measures how much the groundstate changes when tuning a
-parameter in your hamiltonian. Divergences occur at phase transitions, making it a valuable
+The fidelity susceptibility measures how much the ground state changes when tuning a
+parameter in your Hamiltonian. Divergences occur at phase transitions, making it a valuable
 measure when no order parameter is known.
 
 ```@docs; canonical=false
@@ -369,10 +379,10 @@ periodic_boundary_conditions
 
 ### Exact diagonalization
 
-As a side effect, our code support exact diagonalization. The idea is to construct a finite
+As a side effect, our code supports exact diagonalization. The idea is to construct a finite
 matrix product state with maximal bond dimension, and then optimize the middle site. Because
-we never truncated the bond dimension, this single site effectively parametrizes the entire
-hilbert space.
+we never truncate the bond dimension, this single site effectively parametrizes the entire
+Hilbert space.
 
 ```@docs; canonical=false
 exact_diagonalization

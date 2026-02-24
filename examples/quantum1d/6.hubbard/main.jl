@@ -36,12 +36,16 @@ using Plots
 using Interpolations
 using Optim
 
+#src # for reproducibility:
+#src using Random
+#src Random.seed!(123)
+
 const t = 1.0
 const mu = 0.0
 const U = 3.0
 
 md"""
-For this case, the groundstate energy has an analytic solution, which can be used to benchmark the numerical results.
+For this case, the ground state energy has an analytic solution, which can be used to benchmark the numerical results.
 It follows from Eq. (6.82) in []().
 
 ```math
@@ -68,7 +72,7 @@ function compute_groundstate(
     for _ in 1:expansioniter
         D = maximum(x -> dim(left_virtualspace(psi, x)), 1:length(psi))
         D′ = max(5, round(Int, D * expansionfactor))
-        trscheme = truncbelow(svalue / 10) & truncdim(D′)
+        trscheme = trunctol(; atol = svalue / 10) & truncrank(D′)
         psi′, = changebonds(psi, H, OptimalExpand(; trscheme = trscheme))
         all(
             left_virtualspace.(Ref(psi), 1:length(psi)) .==
@@ -78,7 +82,7 @@ function compute_groundstate(
     end
 
     ## convergence steps
-    psi, = changebonds(psi, H, SvdCut(; trscheme = truncbelow(svalue)))
+    psi, = changebonds(psi, H, SvdCut(; trscheme = trunctol(; atol = svalue)))
     psi, = find_groundstate(
         psi, H,
         VUMPS(; tol = svalue / 100, verbosity, maxiter = 100) &

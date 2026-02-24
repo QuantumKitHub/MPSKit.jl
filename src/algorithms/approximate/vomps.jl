@@ -65,7 +65,7 @@ end
 function localupdate_step!(
         ::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
     )
-    alg_orth = QRpos()
+    alg_orth = Defaults.alg_qr()
 
     ACs = similar(state.mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
@@ -88,7 +88,7 @@ end
 function localupdate_step!(
         ::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, scheduler
     )
-    alg_orth = QRpos()
+    alg_orth = Defaults.alg_qr()
 
     ACs = similar(state.mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs

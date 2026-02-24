@@ -58,6 +58,14 @@ struct JordanMPOTensor{
     end
 end
 
+const JordanMPOTensorMap{T, S, A <: DenseVector{T}} = JordanMPOTensor{
+    T, S,
+    Union{TensorMap{T, S, 2, 2, A}, BraidingTensor{T, S}},
+    TensorMap{T, S, 2, 1, A},
+    TensorMap{T, S, 1, 2, A},
+    TensorMap{T, S, 1, 1, A},
+}
+
 function JordanMPOTensor{E, S}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E, S}
     return jordanmpotensortype(S, E)(undef, V)
 end
@@ -163,7 +171,7 @@ BlockTensorKit.issparse(W::JordanMPOTensor) = true
 
 # Converters
 # ----------
-function SparseBlockTensorMap(W::JordanMPOTensor)
+function BlockTensorKit.SparseBlockTensorMap(W::JordanMPOTensor)
     τ = BraidingTensor{scalartype(W)}(eachspace(W)[1])
     W′ = SparseBlockTensorMap{AbstractTensorMap{scalartype(W), spacetype(W), 2, 2}}(
         undef_blocks, space(W)
@@ -192,6 +200,26 @@ function SparseBlockTensorMap(W::JordanMPOTensor)
     end
 
     return W′
+end
+
+for f in (:real, :complex)
+    @eval function Base.$f(W::JordanMPOTensor)
+        E = $f(scalartype(W))
+        W′ = JordanMPOTensor{E}(undef, space(W))
+        for (I, v) in nonzero_pairs(W.A)
+            W′.A[I] = $f(v)
+        end
+        for (I, v) in nonzero_pairs(W.B)
+            W′.B[I] = $f(v)
+        end
+        for (I, v) in nonzero_pairs(W.C)
+            W′.C[I] = $f(v)
+        end
+        for (I, v) in nonzero_pairs(W.D)
+            W′.D[I] = $f(v)
+        end
+        return W′
+    end
 end
 
 # Indexing
@@ -358,15 +386,12 @@ function Base.isapprox(W1::JordanMPOTensor, W2::JordanMPOTensor; kwargs...)
         isapprox(W1.D, W2.D; kwargs...)
 end
 
-function Base.summary(io::IO, W::JordanMPOTensor)
-    szstring = Base.dims2string(size(W))
-    TT = eltype(W)
-    typeinfo = get(io, :typeinfo, Any)
-    if typeinfo <: typeof(W) || typeinfo <: TT
-        typestring = ""
-    else
-        typestring = "{$TT}"
-    end
-    V = space(W)
-    return print(io, "$szstring JordanMPOTensor$typestring($V)")
+function Base.showarg(io::IO, W::JordanMPOTensor, toplevel::Bool)
+    !toplevel && print(io, "::")
+    print(io, TensorKit.type_repr(typeof(W)))
+    return nothing
+end
+
+function TensorKit.type_repr(::Type{<:JordanMPOTensor{E, S}}) where {E, S}
+    return "JordanMPOTensor{$E, " * TensorKit.type_repr(S) * ", …}"
 end

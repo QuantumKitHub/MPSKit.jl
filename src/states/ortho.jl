@@ -21,7 +21,7 @@ $(TYPEDFIELDS)
     verbosity::Int = VERBOSE_WARN
 
     "algorithm used for orthogonalization of the tensors"
-    alg_orth = QRpos()
+    alg_orth = LAPACK_HouseholderQR(; positive = true)
     "algorithm used for the eigensolver"
     alg_eigsolve = _GAUGE_ALG_EIGSOLVE
     "minimal amount of iterations before using the eigensolver steps"
@@ -46,7 +46,7 @@ $(TYPEDFIELDS)
     verbosity::Int = VERBOSE_WARN
 
     "algorithm used for orthogonalization of the tensors"
-    alg_orth = LQpos()
+    alg_orth = LAPACK_HouseholderLQ(; positive = true)
     "algorithm used for the eigensolver"
     alg_eigsolve = _GAUGE_ALG_EIGSOLVE
     "minimal amount of iterations before using the eigensolver steps"
@@ -73,18 +73,18 @@ end
 
 function MixedCanonical(;
         tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter,
-        verbosity::Int = VERBOSE_WARN, alg_orth = QRpos(),
+        verbosity::Int = VERBOSE_WARN, alg_orth = LAPACK_HouseholderQR(; positive = true),
         alg_eigsolve = _GAUGE_ALG_EIGSOLVE,
         eig_miniter::Int = 10, order::Symbol = :LR
     )
-    if alg_orth isa QR || alg_orth isa QRpos
+    if alg_orth isa LAPACK_HouseholderQR
         alg_leftorth = alg_orth
-        alg_rightorth = alg_orth'
-    elseif alg_orth isa LQ || alg_orth isa LQpos
-        alg_leftorth = alg_orth'
+        alg_rightorth = LAPACK_HouseholderLQ(; alg_orth.kwargs...)
+    elseif alg_orth isa LAPACK_HouseholderLQ
+        alg_leftorth = LAPACK_HouseholderQR(; alg_orth.kwargs...)
         alg_rightorth = alg_orth
     else
-        throw(ArgumentError("Invalid orthogonalization algorithm: $(typeof(alg_orth))"))
+        alg_leftorth = alg_rightorth = alg_orth
     end
 
     left = LeftCanonical(;
@@ -145,45 +145,53 @@ function gaugefix!(ψ::InfiniteMPS, A, C₀, alg::RightCanonical)
 end
 
 @doc """
-    regauge!(AC::GenericMPSTensor, C::MPSBondTensor; alg=QRpos()) -> AL
-    regauge!(CL::MPSBondTensor, AC::GenericMPSTensor; alg=LQpos()) -> AR
+    regauge!(AC::GenericMPSTensor, C::MPSBondTensor; alg) -> AL
+    regauge!(CL::MPSBondTensor, AC::GenericMPSTensor; alg) -> AR
 
 Bring updated `AC` and `C` tensors back into a consistent set of left or right canonical
-tensors. This minimizes `∥AC_i - AL_i * C_i∥` or `∥AC_i - C_{i-1} * AR_i∥`. The optimal algorithm uses
-`Polar()` decompositions, but `QR`-based algorithms are typically more performant.
+tensors. This minimizes `∥AC_i - AL_i * C_i∥` or `∥AC_i - C_{i-1} * AR_i∥`.
+
+The `alg` is passed on to `left_orth!` and `right_orth!`, and can be used to control the kind of 
+factorization used. By default, this is set to a (positive) QR/LQ, even though the
+optimal algorithm would use a polar decompositions instead, sacrificing a bit of
+performance for accuracy.
 
 !!! note
     Computing `AL` is slightly faster than `AR`, as it avoids an intermediate transposition.
 """
 regauge!
 
-function regauge!(AC::GenericMPSTensor, C::MPSBondTensor; alg = QRpos())
-    Q_AC, _ = leftorth!(AC; alg)
-    Q_C, _ = leftorth!(C; alg)
+function regauge!(
+        AC::GenericMPSTensor, C::MPSBondTensor; alg = Defaults.alg_qr()
+    )
+    Q_AC, _ = left_orth!(AC; alg)
+    Q_C, _ = left_orth!(C; alg)
     return mul!(AC, Q_AC, Q_C')
 end
-function regauge!(AC::Vector{<:GenericMPSTensor}, C::Vector{<:MPSBondTensor}; alg = QRpos())
+function regauge!(AC::Vector{<:GenericMPSTensor}, C::Vector{<:MPSBondTensor}; kwargs...)
     for i in 1:length(AC)
-        regauge!(AC[i], C[i]; alg)
+        regauge!(AC[i], C[i]; kwargs...)
     end
     return AC
 end
-function regauge!(CL::MPSBondTensor, AC::GenericMPSTensor; alg = LQpos())
+function regauge!(
+        CL::MPSBondTensor, AC::GenericMPSTensor; alg = Defaults.alg_lq()
+    )
     AC_tail = _transpose_tail(AC)
-    _, Q_AC = rightorth!(AC_tail; alg)
-    _, Q_C = rightorth!(CL; alg)
+    _, Q_AC = right_orth!(AC_tail; alg)
+    _, Q_C = right_orth!(CL; alg)
     AR_tail = mul!(AC_tail, Q_C', Q_AC)
     return repartition!(AC, AR_tail)
 end
-function regauge!(CL::Vector{<:MPSBondTensor}, AC::Vector{<:GenericMPSTensor}; alg = LQpos())
+function regauge!(CL::Vector{<:MPSBondTensor}, AC::Vector{<:GenericMPSTensor}; kwargs...)
     for i in length(CL):-1:1
-        regauge!(CL[i], AC[i]; alg)
+        regauge!(CL[i], AC[i]; kwargs...)
     end
     return CL
 end
 # fix ambiguity + error
-regauge!(::MPSBondTensor, ::MPSBondTensor; alg = QRpos()) = error("method ambiguity")
-function regauge!(::Vector{<:MPSBondTensor}, ::Vector{<:MPSBondTensor}; alg = QRpos())
+regauge!(::MPSBondTensor, ::MPSBondTensor; kwargs...) = error("method ambiguity")
+function regauge!(::Vector{<:MPSBondTensor}, ::Vector{<:MPSBondTensor}; kwargs...)
     return error("method ambiguity")
 end
 
@@ -232,7 +240,7 @@ function gauge_eigsolve_step!(it::IterativeSolver{LeftCanonical}, state)
     if iter ≥ it.eig_miniter
         alg_eigsolve = updatetol(it.alg_eigsolve, 1, ϵ^2)
         _, vec = fixedpoint(flip(TransferMatrix(A, AL)), C[end], :LM, alg_eigsolve)
-        _, C[end] = leftorth!(vec; alg = it.alg_orth)
+        _, C[end] = left_orth!(vec; alg = it.alg_orth)
     end
     return C[end]
 end
@@ -240,9 +248,10 @@ end
 function gauge_orth_step!(it::IterativeSolver{LeftCanonical}, state)
     (; AL, C, A_tail, CA_tail) = state
     for i in 1:length(AL)
+        # repartition!(A_tail[i], AL[i])
         mul!(CA_tail[i], C[i - 1], A_tail[i])
         repartition!(AL[i], CA_tail[i])
-        AL[i], C[i] = leftorth!(AL[i]; alg = it.alg_orth)
+        AL[i], C[i] = left_orth!(AL[i]; alg = it.alg_orth)
     end
     normalize!(C[end])
     return C[end]
@@ -289,7 +298,7 @@ function gauge_eigsolve_step!(it::IterativeSolver{RightCanonical}, state)
     if iter ≥ it.eig_miniter
         alg_eigsolve = updatetol(it.alg_eigsolve, 1, ϵ^2)
         _, vec = fixedpoint(TransferMatrix(A, AR), C[end], :LM, alg_eigsolve)
-        C[end], _ = rightorth!(vec; alg = it.alg_orth)
+        C[end], _ = right_orth!(vec; alg = it.alg_orth)
     end
     return C[end]
 end
@@ -299,7 +308,7 @@ function gauge_orth_step!(it::IterativeSolver{RightCanonical}, state)
     for i in length(AR):-1:1
         AC = mul!(AR[i], A[i], C[i])   # use AR as temporary storage for A * C
         tmp = repartition!(AC_tail[i], AC)
-        C[i - 1], tmp = rightorth!(tmp; alg = it.alg_orth)
+        C[i - 1], tmp = right_orth!(tmp; alg = it.alg_orth)
         repartition!(AR[i], tmp)       # TODO: avoid doing this every iteration
     end
     normalize!(C[end])

@@ -1,15 +1,24 @@
 """
     entropy(state, [site::Int])
+    entropy(spectrum::SectorVector)
 
-Calculate the Von Neumann entanglement entropy of a given MPS. If an integer `site` is
-given, the entropy is across the entanglement cut to the right of site `site`. Otherwise, a
-vector of entropies is returned, one for each site.
+Calculate the von Neumann entanglement entropy. The entropy can be computed from either an
+MPS state or directly from an entanglement spectrum as obtained from
+[`entanglement_spectrum`](@ref).
+
+When called on an MPS with an integer `site`, the entropy is computed across the
+entanglement cut to the right of site `site`. For `InfiniteMPS`, omitting `site` returns a
+vector of entropies, one for each site. For `FiniteMPS` and `WindowMPS`, `site` is
+required.
 """
 entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
-    S = zero(real(scalartype(state)))
-    tol = eps(typeof(S))
-    for (c, b) in entanglement_spectrum(state, loc)
+    return entropy(entanglement_spectrum(state, loc))
+end
+function entropy(spectrum::TensorKit.SectorVector{T}) where {T}
+    S = zero(T)
+    tol = eps(T)
+    for (c, b) in pairs(spectrum)
         s = zero(S)
         for x in b
             x < tol && break
@@ -28,7 +37,7 @@ Return the density matrix of the infinite temperature state for a given Hamilton
 This is the identity matrix in the physical space, and the identity in the auxiliary space.
 """
 function infinite_temperature_density_matrix(H::MPOHamiltonian)
-    V = oneunit(spacetype(H))
+    V = first(left_virtualspace(H[1]))
     W = map(1:length(H)) do site
         return BraidingTensor{scalartype(H)}(physicalspace(H, site), V)
     end
@@ -43,7 +52,7 @@ Calculate the Galerkin error, which is the error between the solution of the ori
 Concretely, this is the overlap of the current state with the single-site derivative, projected onto the nullspace of the current state:
 
 ```math
-\\epsilon = |VL * (VL' * \\frac{above}{\\partial AC_{pos}})|
+\\epsilon = \\left|VL ⋅ \\left(VL^{\\dagger} ⋅ \\frac{\\partial \\text{above}}{\\partial AC_{\\text{pos}}}\\right)\\right|
 ```
 """
 function calc_galerkin(
@@ -51,7 +60,7 @@ function calc_galerkin(
     )
     AC´ = AC_hamiltonian(pos, below, operator, above, envs) * above.AC[pos]
     normalize!(AC´)
-    out = add!(AC´, below.AL[pos] * below.AL[pos]' * AC´, -1)
+    out = mul!(AC´, below.AL[pos], below.AL[pos]' * AC´, -1, +1)
     return norm(out)
 end
 function calc_galerkin(
@@ -78,23 +87,23 @@ end
 
 """
     transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
-                           sector=first(sectors(oneunit(left_virtualspace(above, 1)))))
+                           sector=leftunit(above))
 
 Calculate the partial spectrum of the left mixed transfer matrix corresponding to the
 overlap of a given `above` state and a `below` state. The `sector` keyword argument can be
 used to specify a non-trivial total charge for the transfer matrix eigenvectors.
 Specifically, an auxiliary space `ℂ[typeof(sector)](sector => 1)'` will be added to the
 domain of each eigenvector. The `tol` and `num_vals` keyword arguments are passed to
-`KrylovKit.eigolve`
+`KrylovKit.eigsolve`
 """
 function transfer_spectrum(
         above::InfiniteMPS; below = above, tol = Defaults.tol, num_vals = 20,
-        sector = first(sectors(oneunit(left_virtualspace(above, 1))))
+        sector = leftunit(above)
     )
     init = randomize!(
         similar(
             above.AL[1], left_virtualspace(below, 1),
-            ℂ[typeof(sector)](sector => 1)' * left_virtualspace(above, 1)
+            spacetype(above)(sector => 1)' * left_virtualspace(above, 1)
         )
     )
 
@@ -110,15 +119,16 @@ function transfer_spectrum(
 end
 
 """
-    entanglement_spectrum(ψ, site::Int) -> SectorDict{sectortype(ψ),Vector{<:Real}}
+    entanglement_spectrum(ψ, site::Int) -> SectorVector{T, sectortype(ψ), AbstractVector{T}}
 
 Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
-matrix to the right of a given site. This is a dictionary mapping the charge to the singular
-values.
+matrix to the right of a given site. This is a vector containing the singular
+values. The contributions from specific sectors can be viewed by indexing accordingly, i.e.
+`entanglement_spectrum(ψ, site)[sector]`.
 
 For `InfiniteMPS` and `WindowMPS` the default value for `site` is 0.
 
-For `FiniteMPS` no default value for `site` is given, it is up to the user to specify.
+For `FiniteMPS` no default value for `site` is given; it is up to the user to specify.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS, WindowMPS}, site::Int = 0)
     checkbounds(st, site)
@@ -151,7 +161,7 @@ function marek_gap(above::InfiniteMPS; tol_angle = 0.1, kwargs...)
     return marek_gap(spectrum; tol_angle)
 end
 
-function marek_gap(spectrum; tol_angle = 0.1)
+function marek_gap(spectrum::AbstractVector{T}; tol_angle = 0.1) where {T <: Number}
     # Remove 1s from the spectrum
     inds = findall(abs.(spectrum) .< 1 - 1.0e-12)
     length(spectrum) - length(inds) < 2 || @warn "Non-injective mps?"
@@ -187,7 +197,7 @@ function correlation_length(above::InfiniteMPS; kwargs...)
     return 1 / ϵ
 end
 
-function correlation_length(spectrum; kwargs...)
+function correlation_length(spectrum::AbstractVector{T}; kwargs...) where {T <: Number}
     ϵ, = marek_gap(spectrum; kwargs...)
     return 1 / ϵ
 end
@@ -195,7 +205,7 @@ end
 """
     variance(state, hamiltonian, [envs=environments(state, hamiltonian)])
 
-Compute the variance of the energy of the state with respect to the hamiltonian.
+Compute the variance of the energy of the state with respect to the Hamiltonian.
 """
 function variance end
 
@@ -275,13 +285,14 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O}, L = length(mpo)) wher
     V_wrap = left_virtualspace(mpo, 1)
     ST = storagetype(O)
 
-    util = isometry(storagetype(O), oneunit(V_wrap) ← one(V_wrap))
+    util = isometry(storagetype(O), rightunitspace(V_wrap) ← one(V_wrap))
     @plansor cup[-1; -2 -3] := id(ST, V_wrap)[-2; -3] * util[-1]
 
     local F_right
     for i in 1:L
-        V_left = i == 1 ? oneunit(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
-        V_right = i == L ? oneunit(V_wrap) : fuse(V_wrap ⊗ right_virtualspace(mpo, i))
+        # kept as rightunitspace, but might need to change if we consider off-diagonal MPOs
+        V_left = i == 1 ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
+        V_right = i == L ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ right_virtualspace(mpo, i))
         output[i] = similar(
             mpo[i], V_left * physicalspace(mpo, i) ← physicalspace(mpo, i) * V_right
         )
@@ -336,7 +347,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L = length(H))
     output = Vector{O}(undef, L)
     for site in 1:L
         V_left = if site == 1
-            oneunit(V_wrap)
+            leftunitspace(V_wrap)
         else
             vs = Vector{S}(undef, chi_)
             for (k, v) in indmap
@@ -345,7 +356,7 @@ function periodic_boundary_conditions(H::InfiniteMPOHamiltonian, L = length(H))
             SumSpace(vs)
         end
         V_right = if site == L
-            oneunit(V_wrap)
+            rightunitspace(V_wrap)
         else
             vs = Vector{S}(undef, chi_)
             for (k, v) in indmap

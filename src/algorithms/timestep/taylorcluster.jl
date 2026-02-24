@@ -28,10 +28,11 @@ First order Taylor expansion for a time-evolution MPO.
 const WI = TaylorCluster(; N = 1, extension = false, compression = false)
 
 function make_time_mpo(
-        H::MPOHamiltonian, dt::Number, alg::TaylorCluster; tol = eps(real(scalartype(H)))
+        H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
+        tol = eps(real(scalartype(H))), imaginary_evolution::Bool = false
     )
     N = alg.N
-    τ = -1im * dt
+    τ = imaginary_evolution ? -dt : -1im * dt
 
     # start with H^N
     H_n = H^N
@@ -180,19 +181,19 @@ end
 # Hack to treat FiniteMPOhamiltonians as Infinite
 function make_time_mpo(
         H::FiniteMPOHamiltonian, dt::Number, alg::TaylorCluster;
-        tol = eps(real(scalartype(H)))
+        tol = eps(real(scalartype(H))), imaginary_evolution::Bool = false
     )
     H′ = copy(parent(H))
 
     V_left = left_virtualspace(H[1])
-    V_left′ = BlockTensorKit.oplus(V_left, oneunit(V_left), oneunit(V_left))
+    V_left′ = ⊞(V_left, leftunitspace(V_left), leftunitspace(V_left))
     H′[1] = similar(H[1], V_left′ ⊗ space(H[1], 2) ← domain(H[1]))
     for (I, v) in nonzero_pairs(H[1])
         H′[1][I] = v
     end
 
     V_right = right_virtualspace(H[end])
-    V_right′ = BlockTensorKit.oplus(oneunit(V_right), oneunit(V_right), V_right)
+    V_right′ = ⊞(rightunitspace(V_right), rightunitspace(V_right), V_right)
     H′[end] = similar(H[end], codomain(H[end]) ← space(H[end], 3)' ⊗ V_right′)
     for (I, v) in nonzero_pairs(H[end])
         H′[end][I[1], 1, 1, end] = v
@@ -201,7 +202,7 @@ function make_time_mpo(
     H′[1][end, 1, 1, end] = H′[1][1, 1, 1, 1]
     H′[end][1, 1, 1, 1] = H′[end][end, 1, 1, end]
 
-    mpo = make_time_mpo(InfiniteMPOHamiltonian(H′), dt, alg; tol)
+    mpo = make_time_mpo(InfiniteMPOHamiltonian(H′), dt, alg; tol, imaginary_evolution)
 
     # Impose boundary conditions
     mpo_fin = open_boundary_conditions(mpo, length(H))

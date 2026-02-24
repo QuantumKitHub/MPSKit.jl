@@ -9,6 +9,7 @@ import KrylovKit: GMRES, Arnoldi, Lanczos
 using OhMyThreads
 using ..MPSKit: DynamicTol
 using TensorKit: TensorKit
+using MatrixAlgebraKit: LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_DivideAndConquer
 
 const VERBOSE_NONE = 0
 const VERBOSE_WARN = 1
@@ -56,7 +57,9 @@ function alg_eigsolve(;
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
-alg_svd() = TensorKit.SDD()
+alg_svd() = LAPACK_DivideAndConquer()
+alg_qr() = LAPACK_HouseholderQR(; positive = true)
+alg_lq() = LAPACK_HouseholderLQ(; positive = true)
 
 # TODO: make verbosity and maxiter actually do something
 function alg_environments(;

@@ -17,6 +17,8 @@ Matrix Product Operator (MPO) acting on a finite tensor product space with a lin
 """
 const FiniteMPO{O} = MPO{O, Vector{O}}
 Base.isfinite(::Type{<:FiniteMPO}) = true
+GeometryStyle(::Type{<:FiniteMPO}) = FiniteChainStyle()
+OperatorStyle(::Type{<:MPO}) = MPOStyle()
 
 function FiniteMPO(Os::AbstractVector{O}) where {O}
     for i in eachindex(Os)[1:(end - 1)]
@@ -37,6 +39,7 @@ Matrix Product Operator (MPO) acting on an infinite tensor product space with a 
 """
 const InfiniteMPO{O} = MPO{O, PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPO}) = false
+GeometryStyle(::Type{<:InfiniteMPO}) = InfiniteChainStyle()
 
 function InfiniteMPO(Os::AbstractVector{O}) where {O}
     for i in eachindex(Os)
@@ -126,14 +129,14 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
         A, (right_virtualspace(mpo1, 1) ⊕ right_virtualspace(mpo2, 1)),
         right_virtualspace(mpo1, 1)
     )
-    F₂ = leftnull(F₁)
+    F₂ = left_null(F₁)
     @assert _lastspace(F₂) == right_virtualspace(mpo2, 1)'
 
     @plansor O[-3 -1 -2; -4] := mpo1[1][-1 -2; -3 1] * conj(F₁[-4; 1]) +
         mpo2[1][-1 -2; -3 1] * conj(F₂[-4; 1])
 
     # making sure that the new operator is "full rank"
-    O, R = leftorth!(O)
+    O, R = qr_compact!(O)
     O′ = transpose(O, ((2, 3), (1, 4)))
     mpo = similar(mpo1, typeof(O′))
     mpo[1] = O′
@@ -148,13 +151,13 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
             A, (right_virtualspace(mpo1, i) ⊕ right_virtualspace(mpo2, i)),
             right_virtualspace(mpo1, i)
         )
-        F₂ = leftnull(F₁)
+        F₂ = left_null(F₁)
         @assert _lastspace(F₂) == right_virtualspace(mpo2, i)'
         @plansor O[-3 -1 -2; -4] := O₁[-1 -2; -3 1] * conj(F₁[-4; 1]) +
             O₂[-1 -2; -3 1] * conj(F₂[-4; 1])
 
         # making sure that the new operator is "full rank"
-        O, R = leftorth!(O)
+        O, R = qr_compact!(O)
         mpo[i] = transpose(O, ((2, 3), (1, 4)))
     end
 
@@ -165,14 +168,14 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
         A, left_virtualspace(mpo1, N) ⊕ left_virtualspace(mpo2, N),
         left_virtualspace(mpo1, N)
     )
-    F₂ = leftnull(F₁)
+    F₂ = left_null(F₁)
     @assert _lastspace(F₂) == left_virtualspace(mpo2, N)'
 
     @plansor O[-1; -3 -4 -2] := F₁[-1; 1] * mpo1[N][1 -2; -3 -4] +
         F₂[-1; 1] * mpo2[N][1 -2; -3 -4]
 
     # making sure that the new operator is "full rank"
-    L, O = rightorth!(O)
+    L, O = lq_compact!(O)
     mpo[end] = transpose(O, ((1, 4), (2, 3)))
 
     for i in (N - 1):-1:(halfN + 1)
@@ -185,13 +188,13 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
             A, left_virtualspace(mpo1, i) ⊕ left_virtualspace(mpo2, i),
             left_virtualspace(mpo1, i)
         )
-        F₂ = leftnull(F₁)
+        F₂ = left_null(F₁)
         @assert _lastspace(F₂) == left_virtualspace(mpo2, i)'
         @plansor O[-1; -3 -4 -2] := F₁[-1; 1] * O₁[1 -2; -3 -4] +
             F₂[-1; 1] * O₂[1 -2; -3 -4]
 
         # making sure that the new operator is "full rank"
-        L, O = rightorth!(O)
+        L, O = lq_compact!(O)
         mpo[i] = transpose(O, ((1, 4), (2, 3)))
     end
 
@@ -220,8 +223,9 @@ function Base.:*(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     N = check_length(mpo1, mpo2)
     (S = spacetype(mpo1)) == spacetype(mpo2) || throw(SectorMismatch())
 
-    if (left_virtualspace(mpo1, 1) != oneunit(S) || left_virtualspace(mpo2, 1) != oneunit(S)) ||
-            (right_virtualspace(mpo1, N) != oneunit(S) || right_virtualspace(mpo2, N) != oneunit(S))
+
+    if (!isunitspace(left_virtualspace(mpo1, 1)) || !isunitspace(left_virtualspace(mpo2, 1))) ||
+            (!isunitspace(right_virtualspace(mpo1, N)) || !isunitspace(right_virtualspace(mpo2, N)))
         @warn "left/right virtual space is not trivial, fusion may not be unique"
         # this is a warning because technically any isomorphism that fuses the left/right
         # would work and for now I dont feel like figuring out if this is important
@@ -247,7 +251,7 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
         Fᵣ = fuser(A, right_virtualspace(mps, i), right_virtualspace(mpo, i))
         return _fuse_mpo_mps(mpo[i], A1, Fₗ, Fᵣ)
     end
-    trscheme = truncbelow(eps(real(T)))
+    trscheme = trunctol(; atol = eps(real(T)))
     return changebonds!(FiniteMPS(A2), SvdCut(; trscheme); normalize = false)
 end
 function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
@@ -319,13 +323,13 @@ function TensorKit.dot(
     randomize!(ρ₀)
 
     val, = fixedpoint(
-        TransferMatrix(ket.AL, parent(mpo), bra.AL), ρ₀, :LM; ishermitian,
-        krylovdim, kwargs...
+        flip(TransferMatrix(ket.AL, parent(mpo), bra.AL)), ρ₀, :LM;
+        ishermitian, krylovdim, kwargs...
     )
     return val
 end
 
-function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO <: MPOTensor}
+function TensorKit.dot(mpo₁::FiniteMPO{<:MPOTensor}, mpo₂::FiniteMPO{<:MPOTensor})
     length(mpo₁) == length(mpo₂) || throw(ArgumentError("dimension mismatch"))
     N = length(mpo₁)
     Nhalf = N ÷ 2
@@ -344,7 +348,7 @@ function TensorKit.dot(mpo₁::FiniteMPO{TO}, mpo₂::FiniteMPO{TO}) where {TO <
     return @plansor ρ_left[1; 2] * ρ_right[2; 1]
 end
 
-function LinearAlgebra.tr(mpo::MPO)
+function LinearAlgebra.tr(mpo::FiniteMPO)
     N = length(mpo)
     # @assert BraidingStyle(sectortype(mpo)) isa SymmetricBraiding
     Nhalf = N ÷ 2
@@ -367,6 +371,14 @@ function LinearAlgebra.tr(mpo::MPO)
 
     return @plansor ρ_left[(); 1] * ρ_right[1; ()]
 end
+function LinearAlgebra.tr(mpo::InfiniteMPO; ishermitian = false, kwargs...)
+    T = prod(parent(mpo)) do O
+        @plansor Tᵢ[-1; -2] := O[-1 3; 1 2] * τ[1 2; -2 3]
+    end
+    v₀ = randn(scalartype(mpo), domain(T))
+    val, = fixedpoint(Base.Fix1(*, T), v₀, :LM; kwargs...)
+    return val
+end
 
 function Base.isapprox(
         mpo₁::MPO, mpo₂::MPO;
@@ -381,4 +393,54 @@ function Base.isapprox(
 
     # don't take square roots to avoid precision loss
     return norm₁₂² ≤ max(atol^2, rtol^2 * max(norm₁², norm₂²))
+end
+
+@doc """
+    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trscheme)
+    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trscheme)
+
+Compose the mpo with a swap gate applied to indices `i` and `i + 1`, effectively creating an
+operator that acts on the Hilbert spaces with those factors swapped.
+The keyword arguments `alg` and `trscheme` can be used to control how the resulting tensor
+is truncated again.
+""" swap, swap!
+
+swap(mpo::FiniteMPO, i::Integer; kwargs...) = swap!(copy(mpo), i; kwargs...)
+function swap!(
+        mpo::FiniteMPO{<:MPOTensor}, i::Integer;
+        inv::Bool = false,
+        alg = Defaults.alg_svd(), trscheme = trunctol(; atol = eps(real(scalartype(mpo)))^(4 / 5))
+    )
+    O₁, O₂ = mpo[i], mpo[i + 1]
+
+    if inv
+        @plansor O₂₁[-1 -2 -3; -4 -5 -6] :=
+            τ'[-3 -6; 4 5] * O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ[2 3; -1 -4]
+    else
+        @plansor O₂₁[-1 -2 -3; -4 -5 -6] :=
+            τ[-3 -6; 4 5] * O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ'[2 3; -1 -4]
+    end
+
+    U, S, Vᴴ = svd_trunc!(O₂₁; alg, trunc = trscheme)
+    sqrtS = sqrt(S)
+    @plansor mpo[i][-1 -2; -3 -4] := U[-3 -1 -2; 1] * sqrtS[1; -4]
+    @plansor mpo[i + 1][-1 -2; -3 -4] := sqrtS[-1; 1] * Vᴴ[1; -3 -4 -2]
+    return mpo
+end
+
+@doc """
+    multiply_neighbours(mpo::FiniteMPO, i::Integer)
+    multiply_neighbours!(mpo::FiniteMPO, i::Integer)
+
+Construct the mpo of length `length(mpo) - 1` which is formed by multiplying the operators
+on site `i` and `i + 1`.
+""" multiply_neighbours, multiply_neighbours!
+
+multiply_neighbours(mpo::FiniteMPO, i::Integer) = multiply_neighbours!(copy(mpo), i)
+function multiply_neighbours!(mpo::FiniteMPO{<:MPOTensor}, i::Integer)
+    1 <= i < length(mpo) || throw(BoundsError(mpo, i))
+    O₁ = mpo[i]
+    O₂ = popat!(parent(mpo), i + 1)
+    @plansor mpo[i][-1 -2; -3 -4] := O₁[-1 -2; 1 2] * τ[1 2; 3 4] * O₂[3 4; -3 -4]
+    return mpo
 end

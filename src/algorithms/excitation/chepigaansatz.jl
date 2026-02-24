@@ -35,10 +35,10 @@ end
 
 function excitations(
         H, alg::ChepigaAnsatz, ψ::FiniteMPS, envs = environments(ψ, H);
-        sector = one(sectortype(ψ)), num::Int = 1, pos::Int = length(ψ) ÷ 2
+        sector = leftunit(ψ), num::Int = 1, pos::Int = length(ψ) ÷ 2
     )
     1 ≤ pos ≤ length(ψ) || throw(ArgumentError("invalid position $pos"))
-    sector == one(sector) || error("not yet implemented for charged excitations")
+    isunit(sector) || error("not yet implemented for charged excitations")
 
     # add random offset to kickstart Krylov process:
     AC = ψ.AC[pos]
@@ -49,7 +49,7 @@ function excitations(
     info.converged < num &&
         @warn "excitation failed to converge: normres = $(info.normres)"
 
-    # discard groundstate
+    # discard ground state
     popfirst!(Es)
     popfirst!(ACs)
 
@@ -100,10 +100,10 @@ end
 
 function excitations(
         H, alg::ChepigaAnsatz2, ψ::FiniteMPS, envs = environments(ψ, H);
-        sector = one(sectortype(ψ)), num::Int = 1, pos::Int = length(ψ) ÷ 2
+        sector = leftunit(ψ), num::Int = 1, pos::Int = length(ψ) ÷ 2
     )
     1 ≤ pos ≤ length(ψ) - 1 || throw(ArgumentError("invalid position $pos"))
-    sector == one(sector) || error("not yet implemented for charged excitations")
+    isunit(sector) || error("not yet implemented for charged excitations")
 
     # add random offset to kickstart Krylov process:
     @plansor AC2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
@@ -114,14 +114,14 @@ function excitations(
     info.converged < num &&
         @warn "excitation failed to converge: normres = $(info.normres)"
 
-    # discard groundstate
+    # discard ground state
     popfirst!(Es)
     popfirst!(AC2s)
 
     # map back to finitemps
     ψs = map(AC2s) do ac
         ψ′ = copy(ψ)
-        AL, C, AR, = tsvd!(ac; trunc = alg.trscheme)
+        AL, C, AR = svd_trunc!(ac; trunc = alg.trscheme)
         normalize!(C)
         ψ′.AC[pos] = (AL, complex(C))
         ψ′.AC[pos + 1] = (complex(C), _transpose_front(AR))

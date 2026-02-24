@@ -3,7 +3,7 @@
     MPOHamiltonian(lattice::AbstractArray{<:VectorSpace})
     MPOHamiltonian(x::AbstractArray{<:Any,3})
 
-MPO representation of a hamiltonian. This is a specific form of an [`AbstractMPO`](@ref), where
+MPO representation of a Hamiltonian. This is a specific form of an [`AbstractMPO`](@ref), where
 all the sites are represented by an upper triangular block matrix of the following form:
 
 ```math
@@ -31,9 +31,11 @@ operators in a form that is compatible with this constructor.
 struct MPOHamiltonian{TO <: JordanMPOTensor, V <: AbstractVector{TO}} <: AbstractMPO{TO}
     W::V
 end
+OperatorStyle(::Type{<:MPOHamiltonian}) = HamiltonianStyle()
 
 const FiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, Vector{O}}
 Base.isfinite(::Type{<:FiniteMPOHamiltonian}) = true
+GeometryStyle(::Type{<:FiniteMPOHamiltonian}) = FiniteChainStyle()
 
 function FiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
     for i in eachindex(Ws)[1:(end - 1)]
@@ -45,6 +47,7 @@ end
 
 const InfiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPOHamiltonian}) = false
+GeometryStyle(::Type{<:InfiniteMPOHamiltonian}) = InfiniteChainStyle()
 
 function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
     for i in eachindex(Ws)
@@ -77,11 +80,16 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
     # left end
     nlvls = size(W_mats[1], 1)
     @assert nlvls == 1 "left boundary should have a single level"
-    Vspaces[1] = SumSpace(oneunit(S))
+    tm = _find_first_mpotensor(W_mats)
+    sp = left_virtualspace(tm)
+    _rightunit = rightunitspace(sp)
+    @assert _rightunit == leftunitspace(sp) "only diagonal hamiltonians allowed"
+
+    Vspaces[1] = SumSpace(_rightunit)
     # right end
     nlvls = size(W_mats[end], 2)
     @assert nlvls == 1 "right boundary should have a single level"
-    Vspaces[end] = SumSpace(oneunit(S))
+    Vspaces[end] = SumSpace(_rightunit)
 
     # start filling spaces
     # note that we assume that the FSA does not contain "dead ends", as this would mess with the
@@ -99,7 +107,7 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
             # start by assuming trivial spaces everywhere -- replace everything that we know
             # assume spacecheck errors will happen when filling the BlockTensors
             nlvls = size(W_mat, 2)
-            Vs_right = SumSpace(fill(oneunit(S), nlvls))
+            Vs_right = SumSpace(fill(_rightunit, nlvls))
         end
 
         for I in eachindex(IndexCartesian(), W_mat)
@@ -181,8 +189,12 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
     # also assume spacecheck errors will happen when filling the BlockTensors
     MissingS = Union{Missing, S}
     Vspaces = PeriodicArray([Vector{MissingS}(missing, nlvls) for _ in 1:L])
+    tm = _find_first_mpotensor(W_mats)
+    sp = left_virtualspace(tm)
+    _rightunit = rightunitspace(sp)
+    @assert _rightunit == leftunitspace(sp) "only diagonal hamiltonians allowed"
     for V in Vspaces
-        V[1] = V[end] = oneunit(S)
+        V[1] = V[end] = _rightunit
     end
 
     haschanged = true
@@ -232,7 +244,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
         end
     end
 
-    foreach(Base.Fix2(replace!, missing => oneunit(S)), Vspaces)
+    foreach(Base.Fix2(replace!, missing => _rightunit), Vspaces)
     Vsumspaces = map(Vspaces) do V
         return SumSpace(collect(S, V))
     end
@@ -299,20 +311,31 @@ function _split_mpoham_types(W::Matrix)::Type{<:MPOTensor}
 end
 
 """
+    instantiate_operator(state, O::Pair)
     instantiate_operator(lattice::AbstractArray{<:VectorSpace}, O::Pair)
 
-Instantiate a local operator `O` on a lattice `lattice` as a vector of MPO tensors, and a
-vector of linear site indices.
+Instantiate a local operator `O` for a `state` or `lattice` as a vector of MPO tensors, and
+a vector of linear site indices.
 """
+function instantiate_operator(state::AbstractMPS, O::Pair)
+    return instantiate_operator(physicalspace(state), O)
+end
 function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O)::Pair)
-    inds = inds′ isa Int ? tuple(inds′) : inds′
-    mpo = O isa FiniteMPO ? O : FiniteMPO(O)
+    inds = inds′ isa Int ? [inds′] : inds′
+    mpo = O isa FiniteMPO ? copy(O) : FiniteMPO(O)
 
     # convert to linear index type
-    operators = parent(mpo)
-    indices = map(inds) do I
-        return Base._to_linear_index(lattice, Tuple(I)...) # this should mean all inds are valid...
+    indices = Vector{Int}(undef, length(inds))
+    for i in eachindex(indices)
+        indices[i] = Base._to_linear_index(lattice, Tuple(inds[i])...) # this should mean all inds are valid...
     end
+
+    # sort indices and deduplicate
+    indices, mpo = canonicalize_indices!(indices, mpo)
+    operators = parent(mpo)
+
+    @assert allunique(indices) && issorted(indices) "From here on we require unique and ascending indices\n$indices"
+
     T = eltype(mpo)
     local_mpo = Union{T, scalartype(T)}[]
     sites = Int[]
@@ -320,7 +343,10 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     i = 1
     for j in first(indices):last(indices)
         if j == indices[i]
-            @assert space(operators[i], 2) == lattice[j] "operator does not fit into the given Hilbert space: $(space(operators[i], 2)) ≠ $(lattice[j])"
+            # TODO: fix this check for density matrices
+            if !(eltype(lattice) <: ProductSpace) && physicalspace(operators[i]) != lattice[j]
+                throw(SpaceMismatch("physical space does not match at site $j"))
+            end
             push!(local_mpo, operators[i])
             i += 1
         else
@@ -330,6 +356,25 @@ function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O
     end
 
     return sites => local_mpo
+end
+
+function canonicalize_indices!(indices, mpo)
+    # swap non-sorted entries
+    for i in 2:length(indices)
+        for j in reverse(i:length(indices))
+            if indices[j] < indices[j - 1]
+                swap!(mpo, j - 1)
+                indices[j - 1], indices[j] = indices[j], indices[j - 1]
+            end
+        end
+    end
+    for i in length(indices):-1:2
+        if indices[i] == indices[i - 1]
+            multiply_neighbours!(mpo, i - 1)
+            popat!(indices, i)
+        end
+    end
+    return indices, mpo
 end
 
 # yields the promoted tensortype of all tensors
@@ -349,6 +394,17 @@ function _find_channel(nonzero_keys; init = 2)
         i ∉ range && return i
     end
     return max(maximum(range) + 1, init)
+end
+
+function _find_first_mpotensor(Ws)
+    for W in Ws
+        for x in W
+            if x isa MPOTensor
+                return x
+            end
+        end
+    end
+    return nothing
 end
 
 function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators)
@@ -384,13 +440,18 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
     E = scalartype(T)
     S = spacetype(T)
 
+    # avoid using one(S)
+    P = first(lattice)
+    _rightunit = rightunitspace(P)
+    @assert _rightunit == leftunitspace(P) "only diagonal hamiltonians allowed"
+
     virtualsumspaces = Vector{SumSpace{S}}(undef, length(lattice) + 1)
-    virtualsumspaces[1] = SumSpace(fill(oneunit(S), 1))
-    virtualsumspaces[end] = SumSpace(fill(oneunit(S), 1))
+    virtualsumspaces[1] = SumSpace(fill(_rightunit, 1))
+    virtualsumspaces[end] = SumSpace(fill(_rightunit, 1))
 
     for i in 1:(length(lattice) - 1)
         n_channels = maximum(last, nonzero_keys[i]; init = 1) + 1
-        V = SumSpace(fill(oneunit(S), n_channels))
+        V = SumSpace(fill(_rightunit, n_channels))
         if n_channels > 2
             for ((key_L, key_R), O) in zip(nonzero_keys[i], nonzero_opps[i])
                 V[key_R == 0 ? end : key_R] = if O isa Number
@@ -468,9 +529,14 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     virtualspaces = PeriodicArray(
         [Vector{MissingS}(missing, operator_size) for _ in 1:length(nonzero_keys)]
     )
+    # avoid using one(S)
+    P = first(lattice)
+    _rightunit = rightunitspace(P)
+    @assert _rightunit == leftunitspace(P) "only diagonal hamiltonians allowed"
+
     for V in virtualspaces
-        V[1] = oneunit(S)
-        V[end] = oneunit(S)
+        V[1] = _rightunit
+        V[end] = _rightunit
     end
 
     # start by filling in tensors -> space information available
@@ -516,7 +582,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
         end
     end
 
-    foreach(Base.Fix2(replace!, missing => oneunit(S)), virtualspaces)
+    foreach(Base.Fix2(replace!, missing => _rightunit), virtualspaces)
     virtualsumspaces = map(virtualspaces) do V
         return SumSpace(collect(S, V))
     end
@@ -629,19 +695,8 @@ end
 # Base.complex(H::MPOHamiltonian) = MPOHamiltonian(map(complex, parent(H)))
 function Base.complex(H::MPOHamiltonian)
     scalartype(H) <: Complex && return H
-    Ws = map(parent(H)) do W
-        W′ = jordanmpotensortype(spacetype(W), complex(scalartype(W)))
-        W′[1] = W[1]
-        W′[end] = W[end]
-        for (I, v) in nonzero_pairs(W)
-            if v isa BraidingTensor
-                W′[I] = BraidingTensor{scalartype(W′)}(space(v), v.adjoint)
-            else
-                W′[I] = complex(v)
-            end
-        end
-    end
-    return MPOHamiltonian(H)
+    Ws = map(complex, parent(H))
+    return MPOHamiltonian(Ws)
 end
 
 function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O <: MPOTensor}
@@ -658,7 +713,8 @@ function Base.:+(
     ) where {O <: JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
-    Vtriv = oneunit(spacetype(H₁))
+    # same as rightunitspace (asserted within construction FiniteMPOHamiltonian)
+    Vtriv = leftunitspace(first(physicalspace(H₁)))
 
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims = (1, 4))
@@ -667,9 +723,9 @@ function Base.:+(
         D = H₁[i].D + H₂[i].D
 
         Vleft = i == 1 ? left_virtualspace(H₁, 1) :
-            BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
+            ⊞(Vtriv, left_virtualspace(A), Vtriv)
         Vright = i == N ? right_virtualspace(H₁, N) :
-            BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+            ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
         H[i] = eltype(H)(V, A, B, C, D)
@@ -682,15 +738,16 @@ function Base.:+(
     ) where {O <: JordanMPOTensor}
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
-    Vtriv = oneunit(spacetype(H₁))
+    # same as rightunitspace (asserted within construction of InfiniteMPOHamiltonian)
+    Vtriv = leftunitspace(first(physicalspace(H₁)))
     for i in 1:N
         A = cat(H₁[i].A, H₂[i].A; dims = (1, 4))
         B = cat(H₁[i].B, H₂[i].B; dims = 1)
         C = cat(H₁[i].C, H₂[i].C; dims = 3)
         D = H₁[i].D + H₂[i].D
 
-        Vleft = BlockTensorKit.oplus(Vtriv, left_virtualspace(A), Vtriv)
-        Vright = BlockTensorKit.oplus(Vtriv, right_virtualspace(A), Vtriv)
+        Vleft = ⊞(Vtriv, left_virtualspace(A), Vtriv)
+        Vright = ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
         H[i] = eltype(H)(V, A, B, C, D)
@@ -769,31 +826,31 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     # left to middle
     U = ones(scalartype(H), left_virtualspace(H, 1))
     @plansor a[-1 -2; -3 -4] := A[1][-1 2; -3] * H[1][1 -2; 2 -4] * conj(U[1])
-    Q, R = leftorth!(a; alg = QR())
-    A′[1] = convert(TensorMap, Q)
+    Q, R = qr_compact!(a)
+    A′[1] = TensorMap(Q)
 
     for i in 2:(N ÷ 2)
         @plansor a[-1 -2; -3 -4] := R[-1; 1 2] * A[i][1 3; -3] * H[i][2 -2; 3 -4]
-        Q, R = leftorth!(a; alg = QR())
-        A′[i] = convert(TensorMap, Q)
+        Q, R = qr_compact!(a)
+        A′[i] = TensorMap(Q)
     end
 
     # right to middle
     U = ones(scalartype(H), right_virtualspace(H, N))
     @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * U[1]
-    L, Q = rightorth!(a; alg = LQ())
-    A′[end] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
+    L, Q = lq_compact!(a)
+    A′[end] = transpose(TensorMap(Q), ((1, 3), (2,)))
 
     for i in (N - 1):-1:(N ÷ 2 + 2)
         @plansor a[-1 -2; -3 -4] := A[i][-1 3; 1] * H[i][-2 -4; 3 2] * L[1 2; -3]
-        L, Q = rightorth!(a; alg = LQ())
-        A′[i] = transpose(convert(TensorMap, Q), ((1, 3), (2,)))
+        L, Q = lq_compact!(a)
+        A′[i] = transpose(TensorMap(Q), ((1, 3), (2,)))
     end
 
     # connect pieces
     @plansor a[-1 -2; -3] := R[-1; 1 2] * A[N ÷ 2 + 1][1 3; 4] * H[N ÷ 2 + 1][2 -2; 3 5] *
         L[4 5; -3]
-    A′[N ÷ 2 + 1] = convert(TensorMap, a)
+    A′[N ÷ 2 + 1] = TensorMap(a)
 
     return FiniteMPS(A′)
 end
@@ -804,7 +861,7 @@ function Base.:*(H::FiniteMPOHamiltonian{<:MPOTensor}, x::AbstractTensorMap)
     L = removeunit(H[1], 1)
     M = Tuple(H[2:(end - 1)])
     R = removeunit(H[end], 4)
-    return convert(TensorMap, _apply_finitempo(x, L, M, R))
+    return TensorMap(_apply_finitempo(x, L, M, R))
 end
 
 function TensorKit.dot(H₁::FiniteMPOHamiltonian, H₂::FiniteMPOHamiltonian)

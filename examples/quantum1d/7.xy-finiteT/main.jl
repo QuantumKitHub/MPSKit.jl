@@ -9,6 +9,10 @@ using Plots
 using LinearAlgebra
 using BenchmarkFreeFermions
 
+#src # for reproducibility:
+#src using Random
+#src Random.seed!(123)
+
 md"""
 # Finite temperature XY model
 
@@ -90,7 +94,7 @@ H = XY_hamiltonian(T, symmetry; J, N)
 D = 64
 V_init = symmetry === Trivial ? ℂ^32 : U1Space(i => 10 for i in -1:(1 // 2):1)
 psi_init = FiniteMPS(N, physicalspace(H, 1), V_init)
-trscheme = truncdim(D)
+trscheme = truncrank(D)
 psi, envs, = find_groundstate(psi_init, H, DMRG2(; trscheme, maxiter = 5));
 E_0 = expectation_value(psi, H, envs) / N
 
@@ -348,7 +352,7 @@ for i in 3:length(βs)
     global ρ_mps
     @info "Computing β = $(βs[i])"
     ρ_mps, = approximate(
-        ρ_mps, (ρ₀, ρ_mps), DMRG2(; trscheme = truncdim(D_max), maxiter = 10)
+        ρ_mps, (ρ₀, ρ_mps), DMRG2(; trscheme = truncrank(D_max), maxiter = 10)
     )
     Z_mpo_mul[i] = double_logpartition(ρ_mps)
 end
@@ -431,7 +435,7 @@ for i in 2:length(βs_exp)
     global ρ_mps, ρ
     @info "Computing β = $(βs_exp[i])"
     ρ_mps, = approximate(
-        ρ_mps, (ρ, ρ_mps), DMRG2(; trscheme = truncdim(D_max), maxiter = 10)
+        ρ_mps, (ρ, ρ_mps), DMRG2(; trscheme = truncrank(D_max), maxiter = 10)
     )
     Z_mpo_mul_exp[i] = double_logpartition(ρ_mps)
     ρ = convert(FiniteMPO, ρ_mps)
@@ -499,7 +503,7 @@ for i in 2:length(βs)
     @info "Computing β = $(βs[i])"
     ρ_mps, = timestep(
         ρ_mps, H, βs[i - 1] / 2, -im * (βs[i] - βs[i - 1]) / 2,
-        TDVP2(; trscheme = truncdim(64))
+        TDVP2(; trscheme = truncrank(64))
     )
     Z_tdvp[i] = double_logpartition(ρ_mps)
 end

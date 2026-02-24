@@ -41,13 +41,13 @@ end
 function TensorKit.domain(H::MPODerivativeOperator)
     V_l = right_virtualspace(H.leftenv)
     V_r = left_virtualspace(H.rightenv)
-    V_o = prod(physicalspace, H.O; init = one(V_l))
+    V_o = prod(physicalspace, H.operators; init = one(V_l))
     return V_l ⊗ V_o ⊗ V_r
 end
 function TensorKit.codomain(H::MPODerivativeOperator)
     V_l = left_virtualspace(H.leftenv)
     V_r = right_virtualspace(H.rightenv)
-    V_o = prod(physicalspace, H.O; init = one(V_l))
+    V_o = prod(physicalspace, H.operators; init = one(V_l))
     return V_l ⊗ V_o ⊗ V_r
 end
 

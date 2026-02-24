@@ -46,7 +46,6 @@ end
 function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renvs; num::Int = 1)
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = EffectiveExcitationHamiltonian(H, lenvs, renvs, E)
-
     Es, ϕs, convhist = eigsolve(ϕ₀, num, :SR, alg.alg) do ϕ
         return H_eff(ϕ; alg.alg_environments...)
     end
@@ -72,28 +71,28 @@ end
                 [right_ψ::InfiniteMPS], [right_environment];
                 kwargs...)
 
-Create and optimise infinite quasiparticle states.
+Create and optimize infinite quasiparticle states.
 
 # Arguments
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm::QuasiparticleAnsatz`: optimization algorithm
 - `momentum::Union{Number, Vector{<:Number}}`: momentum or list of momenta
-- `left_ψ::InfiniteMPS`: left groundstate
-- `[left_environment]`: left groundstate environment
-- `[right_ψ::InfiniteMPS]`: right groundstate
-- `[right_environment]`: right groundstate environment
+- `left_ψ::InfiniteMPS`: left ground state
+- `[left_environment]`: left ground state environment
+- `[right_ψ::InfiniteMPS]`: right ground state
+- `[right_environment]`: right ground state environment
 
 # Keywords
 - `num::Int`: number of excited states to compute
 - `solver`: algorithm for the linear solver of the quasiparticle environments
-- `sector=one(sectortype(left_ψ))`: charge of the quasiparticle state
+- `sector=leftunit(left_ψ)`: charge of the quasiparticle state
 - `parallel=true`: enable multi-threading over different momenta
 """
 function excitations(
         H, alg::QuasiparticleAnsatz, momentum::Number, lmps::InfiniteMPS,
         lenvs = environments(lmps, H), rmps::InfiniteMPS = lmps,
         renvs = lmps === rmps ? lenvs : environments(rmps, H);
-        sector = one(sectortype(lmps)), kwargs...
+        sector = leftunit(lmps), kwargs...
     )
     ϕ₀ = LeftGaugedQP(rand, lmps, rmps; sector, momentum)
     return excitations(H, alg, ϕ₀, lenvs, renvs; kwargs...)
@@ -103,15 +102,23 @@ function excitations(
         lenvs = environments(lmps, H), rmps = lmps,
         renvs = lmps === rmps ? lenvs : environments(rmps, H);
         verbosity = Defaults.verbosity, num = 1,
-        sector = one(sectortype(lmps)), parallel = true, kwargs...
+        sector = leftunit(lmps), parallel = true, kwargs...
     )
-    Toutput = Core.Compiler.return_type(
-        excitations,
-        Tuple{
-            typeof(H), typeof(alg), eltype(momenta), typeof(lmps),
-            typeof(lenvs), typeof(rmps), typeof(renvs),
-        }
-    )
+    # wrapper to evaluate sector as positional argument
+    Toutput = let
+        function wrapper(H, alg, p, lmps, lenvs, rmps, renvs, sector; kwargs...)
+            return excitations(
+                H, alg, p, lmps, lenvs, rmps, renvs; sector, kwargs...
+            )
+        end
+        Core.Compiler.return_type(
+            wrapper, Tuple{
+                typeof(H), typeof(alg), eltype(momenta), typeof(lmps),
+                typeof(lenvs), typeof(rmps), typeof(renvs), typeof(sector),
+            }
+        )
+    end
+
     results = similar(momenta, Toutput)
     scheduler = parallel ? :greedy : :serial
     tmap!(results, momenta; scheduler) do momentum
@@ -152,28 +159,28 @@ function excitations(
 end
 
 """
-    excitations(H, algorithm::QuasiparticleAnsatz, left_ψ::InfiniteMPS, [left_environment],
-                [right_ψ::InfiniteMPS], [right_environment]; kwargs...)
+    excitations(H, algorithm::QuasiparticleAnsatz, left_ψ::FiniteMPS, [left_environment],
+                [right_ψ::FiniteMPS], [right_environment]; kwargs...)
 
-Create and optimise finite quasiparticle states.
+Create and optimize finite quasiparticle states.
 
 # Arguments
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm::QuasiparticleAnsatz`: optimization algorithm
-- `left_ψ::FiniteMPS`: left groundstate
-- `[left_environment]`: left groundstate environment
-- `[right_ψ::FiniteMPS]`: right groundstate
-- `[right_environment]`: right groundstate environment
+- `left_ψ::FiniteMPS`: left ground state
+- `[left_environment]`: left ground state environment
+- `[right_ψ::FiniteMPS]`: right ground state
+- `[right_environment]`: right ground state environment
 
 # Keywords
 - `num::Int`: number of excited states to compute
-- `sector=one(sectortype(left_ψ))`: charge of the quasiparticle state
+- `sector=leftunit(lmps)`: charge of the quasiparticle state
 """
 function excitations(
         H, alg::QuasiparticleAnsatz, lmps::FiniteMPS,
         lenvs = environments(lmps, H), rmps::FiniteMPS = lmps,
         renvs = lmps === rmps ? lenvs : environments(rmps, H);
-        sector = one(sectortype(lmps)), num = 1
+        sector = leftunit(lmps), num = 1
     )
     ϕ₀ = LeftGaugedQP(rand, lmps, rmps; sector)
     return excitations(H, alg, ϕ₀, lenvs, renvs; num)
@@ -262,7 +269,7 @@ function excitations(
         H::MultilineMPO, alg::QuasiparticleAnsatz, momentum::Real, lmps::MultilineMPS,
         lenvs = environments(lmps, H), rmps = lmps,
         renvs = lmps === rmps ? lenvs : environments(rmps, H);
-        sector = one(sectortype(lmps)), kwargs...
+        sector = leftunit(lmps), kwargs...
     )
     ϕ₀ = LeftGaugedQP(randn, lmps, rmps; sector, momentum)
     return excitations(H, alg, ϕ₀, lenvs, renvs; kwargs...)

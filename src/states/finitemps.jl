@@ -27,10 +27,10 @@ By convention, we have that:
 ## Constructors
     FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
               maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
+              normalize=true, left=unitspace(S), right=unitspace(S)) where {S<:ElementarySpace}
     FiniteMPS([f, eltype], N::Int, physicalspace::Union{S,CompositeSpace{S}},
               maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=oneunit(S), right=oneunit(S)) where {S<:ElementarySpace}
+              normalize=true, left=unitspace(S), right=unitspace(S)) where {S<:ElementarySpace}
     FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=false)
 
 Construct an MPS via a specification of physical and virtual spaces, or from a list of
@@ -54,8 +54,8 @@ total charge can be constructed by passing a non-trivially charged vector space 
 ### Keywords
 - `normalize=true`: normalize the constructed state
 - `overwrite=false`: overwrite the given input tensors
-- `left=oneunit(S)`: left-most virtual space
-- `right=oneunit(S)`: right-most virtual space
+- `left=unitspace(S)`: left-most virtual space
+- `right=unitspace(S)`: right-most virtual space
 """
 struct FiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing, A}}
@@ -211,14 +211,13 @@ function FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize = false, overwrite 
     # vectors anyways, maybe deprecate `overwrite`.
     As = overwrite ? As : copy(As)
     N = length(As)
-    for i in 1:(N - 1)
-        As[i], C = leftorth(As[i]; alg = QRpos())
+    As[1] = MatrixAlgebraKit.copy_input(qr_compact, As[1])
+    local C
+    for i in eachindex(As)
+        As[i], C = qr_compact!(As[i]; positive = true)
         normalize && normalize!(C)
-        As[i + 1] = _transpose_front(C * _transpose_tail(As[i + 1]))
+        i == N || (As[i + 1] = _transpose_front(C * _transpose_tail(As[i + 1])))
     end
-
-    As[end], C = leftorth(As[end]; alg = QRpos())
-    normalize && normalize!(C)
 
     A = eltype(As)
     B = typeof(C)
@@ -236,7 +235,7 @@ end
 
 function FiniteMPS(
         f, elt, Pspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxVspaces::Vector{S};
-        normalize = true, left::S = oneunit(S), right::S = oneunit(S)
+        normalize = true, left::S = unitspace(S), right::S = unitspace(S)
     ) where {S <: ElementarySpace}
     N = length(Pspaces)
     length(maxVspaces) == N - 1 ||
@@ -293,9 +292,8 @@ end
 # construct from dense state
 # TODO: make planar?
 function FiniteMPS(ψ::AbstractTensor)
-    U = ones(scalartype(ψ), oneunit(spacetype(ψ)))
     A = _transpose_front(
-        U * transpose(ψ * U', ((), reverse(ntuple(identity, numind(ψ) + 1))))
+        insertrightunit(transpose(insertrightunit(ψ, numind(ψ); dual = true)), numind(ψ) + 1; dual = true)
     )
     return FiniteMPS(decompose_localmps(A); normalize = false, overwrite = true)
 end
@@ -307,10 +305,12 @@ Utility
 Base.size(ψ::FiniteMPS, args...) = size(ψ.ALs, args...)
 Base.length(ψ::FiniteMPS) = length(ψ.ALs)
 Base.eltype(ψtype::Type{<:FiniteMPS}) = site_type(ψtype) # this might not be true
-Base.copy(ψ::FiniteMPS) = FiniteMPS(copy(ψ.ALs), copy(ψ.ARs), copy(ψ.ACs), copy(ψ.Cs))
 function Base.similar(ψ::FiniteMPS{A, B}) where {A, B}
     return FiniteMPS{A, B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
 end
+
+Base.isfinite(::Type{<:FiniteMPS}) = true
+GeometryStyle(::Type{<:FiniteMPS}) = FiniteChainStyle()
 
 Base.eachindex(ψ::FiniteMPS) = eachindex(ψ.AL)
 Base.eachindex(l::IndexStyle, ψ::FiniteMPS) = eachindex(l, ψ.AL)
@@ -337,7 +337,19 @@ end
 # TODO: check where gauge center is to determine efficient kind
 AC2(psi::FiniteMPS, site::Int) = psi.AC[site] * _transpose_tail(psi.AR[site + 1])
 
-_complex_if_not_missing(x) = ismissing(x) ? x : complex(x)
+f_if_not_missing(f, x) = ismissing(x) ? x : f(x)
+_copy_if_not_missing(x) = f_if_not_missing(copy, x)
+_complex_if_not_missing(x) = f_if_not_missing(complex, x)
+
+function Base.copy(mps::FiniteMPS)
+    mps2 = similar(mps)
+    mps2.ALs .= _copy_if_not_missing.(mps.ALs)
+    mps2.ARs .= _copy_if_not_missing.(mps.ARs)
+    mps2.ACs .= _copy_if_not_missing.(mps.ACs)
+    mps2.Cs .= _copy_if_not_missing.(mps.Cs)
+    return mps2
+end
+
 function Base.complex(mps::FiniteMPS)
     scalartype(mps) <: Complex && return mps
     ALs = _complex_if_not_missing.(mps.ALs)
@@ -364,12 +376,10 @@ function Base.convert(::Type{TensorMap}, ψ::FiniteMPS)
     end
 
     # remove utility legs
-    space(T, 1) == oneunit(spacetype(T)) || throw(ArgumentError("utility leg not trivial"))
-    space(T, numind(T)) == oneunit(spacetype(T))' ||
-        throw(ArgumentError("utility leg not trivial"))
-    U = ones(scalartype(ψ), oneunit(spacetype(ψ)))
+    isunitspace(space(T, 1)) || throw(ArgumentError("utility leg not trivial"))
+    isunitspace(space(T, numind(T))') || throw(ArgumentError("utility leg not trivial"))
     UTU = transpose(
-        U' * _transpose_tail(T * U), (reverse(ntuple(identity, numind(T) - 2)), ())
+        removeunit(_transpose_tail(removeunit(T, numind(T))), 1), (reverse(ntuple(identity, numind(T) - 2)), ())
     )
 
     return UTU
@@ -377,9 +387,6 @@ end
 
 site_type(::Type{<:FiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:FiniteMPS{<:Any, B}}) where {B} = B
-function TensorKit.storagetype(::Union{MPS, Type{MPS}}) where {A, MPS <: FiniteMPS{A}}
-    return storagetype(A)
-end
 
 function left_virtualspace(ψ::FiniteMPS, n::Integer)
     checkbounds(ψ, n)
@@ -408,12 +415,12 @@ end
 
 """
     max_virtualspaces(ψ::FiniteMPS)
-    max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=oneunit(S), right=oneunit(S))
+    max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=unitspace(S), right=unitspace(S))
 
 Compute the maximal virtual spaces of a given finite MPS or its physical spaces.
 """
 function max_virtualspaces(
-        Ps::Vector{<:Union{S, CompositeSpace{S}}}; left = oneunit(S), right = oneunit(S)
+        Ps::Vector{<:Union{S, CompositeSpace{S}}}; left = unitspace(S), right = unitspace(S)
     ) where {S <: ElementarySpace}
     Vs = similar(Ps, length(Ps) + 1)
     Vs[1] = left
@@ -440,71 +447,6 @@ Compute the dimension of the maximal virtual space at a given site.
 """
 max_Ds(ψ::FiniteMPS) = dim.(max_virtualspaces(ψ))
 
-function Base.summary(io::IO, ψ::FiniteMPS)
-    return print(io, "$(length(ψ))-site FiniteMPS ($(scalartype(ψ)), $(spacetype(ψ)))")
-end
-function Base.show(io::IO, ::MIME"text/plain", ψ::FiniteMPS)
-    println(io, summary(ψ), ":")
-    context = IOContext(io, :typeinfo => eltype(ψ), :compact => true)
-    return show(context, ψ)
-end
-Base.show(io::IO, ψ::FiniteMPS) = show(convert(IOContext, io), ψ)
-function Base.show(io::IOContext, ψ::FiniteMPS)
-    charset = (; start = "┌", mid = "├", stop = "└", ver = "│", dash = "──")
-    limit = get(io, :limit, false)::Bool
-    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
-    if !haskey(io, :compact)
-        io = IOContext(io, :compact => true)
-    end
-
-    L = length(ψ)
-    c = ψ.center
-
-    for site in HalfInt.(reverse((1 / 2):(1 / 2):(L + 1 / 2)))
-        if site < half_screen_rows || site > L - half_screen_rows
-            if site > c # ARs
-                if isinteger(site)
-                    println(
-                        io, Int(site) == L ? charset.start : charset.mid, charset.dash,
-                        " AR[$(Int(site))]: ", ψ.ARs[Int(site)]
-                    )
-                end
-            elseif site == c # AC or C
-                if isinteger(c) # center is an AC
-                    println(
-                        io, if site == L
-                            charset.start
-                        elseif site == 1
-                            charset.stop
-                        else
-                            charset.mid
-                        end, charset.dash, " AC[$(Int(site))]: ", ψ.ACs[Int(site)]
-                    )
-                else # center is a bond-tensor
-                    println(
-                        io, if site == HalfInt(L + 1 / 2)
-                            charset.start
-                        elseif site == HalfInt(1 / 2)
-                            charset.stop
-                        else
-                            charset.ver
-                        end, " C[$(Int(site - 1 / 2))]: ", ψ.Cs[Int(site + 1 / 2)]
-                    )
-                end
-            else
-                if isinteger(site)
-                    println(
-                        io, site == 1 ? charset.stop : charset.mid, charset.dash,
-                        " AL[$(Int(site))]: ", ψ.ALs[Int(site)]
-                    )
-                end
-            end
-        elseif site == half_screen_rows
-            println(io, charset.ver, "⋮")
-        end
-    end
-    return nothing
-end
 
 #===========================================================================================
 Linear Algebra
@@ -533,11 +475,11 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
     F₁ = isometry(
         storagetype(ψ), (_lastspace(ψ₁.AL[1]) ⊕ _lastspace(ψ₂.AL[1]))', _lastspace(ψ₁.AL[1])'
     )
-    F₂ = leftnull(F₁)
+    F₂ = left_null(F₁)
     @assert _lastspace(F₂) == _lastspace(ψ₂.AL[1])
 
     AL = ψ₁.AL[1] * F₁' + ψ₂.AL[1] * F₂'
-    ψ.ALs[1], R = leftorth!(AL)
+    ψ.ALs[1], R = left_orth!(AL)
 
     for i in 2:halfN
         AL₁ = _transpose_front(F₁ * _transpose_tail(ψ₁.AL[i]))
@@ -546,11 +488,11 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
         F₁ = isometry(
             storagetype(ψ), (_lastspace(AL₁) ⊕ _lastspace(ψ₂.AL[i]))', _lastspace(AL₁)'
         )
-        F₂ = leftnull(F₁)
+        F₂ = left_null(F₁)
         @assert _lastspace(F₂) == _lastspace(ψ₂.AL[i])
 
         AL = _transpose_front(R * _transpose_tail(AL₁ * F₁' + AL₂ * F₂'))
-        ψ.ALs[i], R = leftorth!(AL)
+        ψ.ALs[i], R = left_orth!(AL)
     end
 
     C₁ = F₁ * ψ₁.C[halfN]
@@ -560,11 +502,11 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
     F₁ = isometry(
         storagetype(ψ), _firstspace(ψ₁.AR[end]) ⊕ _firstspace(ψ₂.AR[end]), _firstspace(ψ₁.AR[end])
     )
-    F₂ = leftnull(F₁)
+    F₂ = left_null(F₁)
     @assert _lastspace(F₂) == _firstspace(ψ₂.AR[end])'
 
     AR = F₁ * _transpose_tail(ψ₁.AR[end]) + F₂ * _transpose_tail(ψ₂.AR[end])
-    L, AR′ = rightorth!(AR)
+    L, AR′ = right_orth!(AR)
     ψ.ARs[end] = _transpose_front(AR′)
 
     for i in Iterators.reverse((halfN + 1):(length(ψ) - 1))
@@ -574,11 +516,11 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
         F₁ = isometry(
             storagetype(ψ), _firstspace(ψ₁.AR[i]) ⊕ _firstspace(AR₂), _firstspace(ψ₁.AR[i])
         )
-        F₂ = leftnull(F₁)
+        F₂ = left_null(F₁)
         @assert _lastspace(F₂) == _firstspace(AR₂)'
 
         AR = _transpose_tail(_transpose_front(F₁ * AR₁ + F₂ * AR₂) * L)
-        L, AR′ = rightorth!(AR)
+        L, AR′ = right_orth!(AR)
         ψ.ARs[i] = _transpose_front(AR′)
     end
 
@@ -626,9 +568,11 @@ TensorKit.normalize(ψ::FiniteMPS) = normalize!(copy(ψ))
 Fixedpoints
 ===========================================================================================#
 
-function r_RR(ψ::FiniteMPS{T}) where {T}
-    return isomorphism(storagetype(T), domain(ψ.AR[end]), domain(ψ.AR[end]))
+function r_RR(ψ::FiniteMPS, site::Int = length(ψ))
+    Vr = right_virtualspace(ψ.AR[site])
+    return isomorphism(storagetype(site_type(ψ)), Vr ← Vr)
 end
-function l_LL(ψ::FiniteMPS{T}) where {T}
-    return isomorphism(storagetype(T), space(ψ.AL[1], 1), space(ψ.AL[1], 1))
+function l_LL(ψ::FiniteMPS, site::Int = 1)
+    Vl = left_virtualspace(ψ.AL[site])
+    return isomorphism(storagetype(site_type(ψ)), Vl ← Vl)
 end
