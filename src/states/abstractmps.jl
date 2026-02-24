@@ -200,6 +200,8 @@ TensorKit.spacetype(ψtype::Type{<:AbstractMPS}) = spacetype(site_type(ψtype))
 TensorKit.sectortype(ψ::AbstractMPS) = sectortype(typeof(ψ))
 TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype))
 
+TensorKit.storagetype(ψtype::Type{<:AbstractMPS}) = storagetype(site_type(ψtype))
+
 """
     left_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
     
