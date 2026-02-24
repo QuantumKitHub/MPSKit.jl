@@ -255,7 +255,11 @@ end
     mps1 = FiniteMPS(physicalspace(H1), oneunit(V))
 
     for T in (Float64, ComplexF64)
-        H2 = @testinferred adapt(Vector{T}, H1)
+        H2 = if VERSION <= v"1.12"
+            adapt(Vector{T}, H1)
+        else
+            @testinferred adapt(Vector{T}, H1)
+        end
         @test H2 isa FiniteMPOHamiltonian
         @test scalartype(H2) == T
         @test storagetype(H2) == Vector{T}
@@ -265,7 +269,12 @@ end
     H3 = InfiniteMPOHamiltonian(fill(V, L), (1, 2) => h, (1, 3) => h, (1, 4) => h)
     mps2 = InfiniteMPS(physicalspace(H3), [oneunit(V)])
     for T in (Float64, ComplexF64)
-        H4 = @testinferred adapt(Vector{T}, H3)
+        H4 = if VERSION <= v"1.12"
+            # this is type unstable for LTS for some reason
+            adapt(Vector{T}, H3)
+        else
+            @testinferred adapt(Vector{T}, H3)
+        end
         @test H4 isa InfiniteMPOHamiltonian
         @test scalartype(H4) == T
         @test storagetype(H4) == Vector{T}
