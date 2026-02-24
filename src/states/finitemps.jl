@@ -387,9 +387,6 @@ end
 
 site_type(::Type{<:FiniteMPS{A}}) where {A} = A
 bond_type(::Type{<:FiniteMPS{<:Any, B}}) where {B} = B
-function TensorKit.storagetype(::Union{MPS, Type{MPS}}) where {A, MPS <: FiniteMPS{A}}
-    return storagetype(A)
-end
 
 function left_virtualspace(ψ::FiniteMPS, n::Integer)
     checkbounds(ψ, n)

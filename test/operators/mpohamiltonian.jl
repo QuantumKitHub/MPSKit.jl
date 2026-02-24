@@ -10,6 +10,7 @@ using MPSKit
 using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, HamiltonianStyle
 using TensorKit
 using TensorKit: ℙ
+using Adapt
 
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
 vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
@@ -238,4 +239,45 @@ end
     H4 = H1 + H3
     h4 = H4 * H4
     @test real(expectation_value(ψ2, H4)) >= 0
+end
+
+@testset "Adapt" for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+    h = rand(Float32, V^2 ← V^2)
+    h += h'
+
+    L = 4
+    H1 = FiniteMPOHamiltonian(
+        fill(V, L),
+        ((i, i + 1) => h for i in 1:(L - 1))...,
+        ((i, i + 2) => h for i in 1:(L - 2))...,
+        ((i, i + 3) => h for i in 1:(L - 3))...,
+    )
+    mps1 = FiniteMPS(physicalspace(H1), oneunit(V))
+
+    for T in (Float64, ComplexF64)
+        H2 = if VERSION <= v"1.12"
+            adapt(Vector{T}, H1)
+        else
+            @testinferred adapt(Vector{T}, H1)
+        end
+        @test H2 isa FiniteMPOHamiltonian
+        @test scalartype(H2) == T
+        @test storagetype(H2) == Vector{T}
+        @test expectation_value(mps1, H1) ≈ expectation_value(mps1, H2)
+    end
+
+    H3 = InfiniteMPOHamiltonian(fill(V, L), (1, 2) => h, (1, 3) => h, (1, 4) => h)
+    mps2 = InfiniteMPS(physicalspace(H3), [oneunit(V)])
+    for T in (Float64, ComplexF64)
+        H4 = if VERSION <= v"1.12"
+            # this is type unstable for LTS for some reason
+            adapt(Vector{T}, H3)
+        else
+            @testinferred adapt(Vector{T}, H3)
+        end
+        @test H4 isa InfiniteMPOHamiltonian
+        @test scalartype(H4) == T
+        @test storagetype(H4) == Vector{T}
+        @test expectation_value(mps2, H3) ≈ expectation_value(mps2, H4)
+    end
 end

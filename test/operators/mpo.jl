@@ -10,6 +10,7 @@ using MPSKit
 using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, MPOStyle
 using TensorKit
 using TensorKit: ℙ
+using Adapt
 
 @testset "FiniteMPO" begin
     # start from random operators
@@ -97,4 +98,26 @@ end
     @test GeometryStyle(H) == InfiniteChainStyle()
     @test OperatorStyle(typeof(H)) == MPOStyle()
     @test OperatorStyle(H) == MPOStyle()
+end
+
+@testset "Adapt" for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+    L = 3
+    o = rand(Float32, V^L ← V^L)
+    mpo1 = FiniteMPO(o)
+    for T in (Float64, ComplexF64)
+        mpo2 = @testinferred adapt(Vector{T}, mpo1)
+        @test mpo2 isa FiniteMPO
+        @test scalartype(mpo2) == T
+        @test storagetype(mpo2) == Vector{T}
+        @test convert(TensorMap, mpo2) ≈ o
+    end
+
+    mpo3 = InfiniteMPO(mpo1[2:2])
+    for T in (Float64, ComplexF64)
+        mpo4 = @testinferred adapt(Vector{T}, mpo3)
+        @test mpo4 isa InfiniteMPO
+        @test scalartype(mpo4) == T
+        @test storagetype(mpo4) == Vector{T}
+        @test dot(mpo3, mpo4) ≈ norm(mpo3)^2 atol = 1.0e-4
+    end
 end

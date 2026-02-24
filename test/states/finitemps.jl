@@ -11,6 +11,7 @@ using MPSKit: _transpose_front, _transpose_tail
 using MPSKit: GeometryStyle, FiniteChainStyle
 using TensorKit
 using TensorKit: ℙ
+using Adapt
 
 @testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
         (ℙ^10, ℙ^2, ComplexF64),
