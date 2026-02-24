@@ -218,7 +218,7 @@ function classical_ising_tensors(beta)
     TMS = ℂ^2 ⊗ ℂ^2 ← ℂ^2 ⊗ ℂ^2
 
     return TensorMap(obulk, TMS), TensorMap(m, TMS), TensorMap(e, TMS)
-end;
+end
 
 function classical_ising(; β = log(1 + sqrt(2)) / 2, L = Inf)
     Obulk, _, _ = classical_ising_tensors(β)
