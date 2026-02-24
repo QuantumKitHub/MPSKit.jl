@@ -136,19 +136,17 @@ function expectation_value(
         return contract_mpo_expval(
             ψ.AC[site], envs.GLs[site], H[site][:, 1, 1, end], envs.GRs[site][end]
         )
-    end / norm(ψ)^2
+    end
 end
 
 # MPO tensor
 #-----------
 function expectation_value(
-        ψ::InfiniteMPS, mpo_pair::Tuple{InfiniteMPO, Pair{Int, <:MPOTensor}},
+        ψ::InfiniteMPS, (O_mpo, (site, O))::Tuple{InfiniteMPO, Pair{Int, <:MPOTensor}},
         envs::AbstractMPSEnvironments = environments(ψ, first(mpo_pair))
     )
-    (O_mpo, (site, O)) = mpo_pair
-    return contract_mpo_expval(
-        ψ.AC[site], envs.GLs[site], O, envs.GRs[site]
-    ) / expectation_value(ψ, O_mpo, envs)
+    return contract_mpo_expval(ψ.AC[site], envs.GLs[site], O, envs.GRs[site]) /
+        expectation_value(ψ, O_mpo, envs)
 end
 
 # DenseMPO
@@ -169,7 +167,7 @@ function expectation_value(
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
         GL = envs[i].GLs[j]
         GR = envs[i].GRs[j]
-        return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j]) / norm(ψ)^2
+        return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j])
     end
 end
 function expectation_value(ψ::MultilineMPS, mpo::MultilineMPO, envs...)
