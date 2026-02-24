@@ -120,5 +120,4 @@ end
         @test storagetype(mpo4) == Vector{T}
         @test dot(mpo3, mpo4) ≈ norm(mpo3)^2 atol = 1.0e-4
     end
-
 end
