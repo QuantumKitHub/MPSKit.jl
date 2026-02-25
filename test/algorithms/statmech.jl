@@ -99,4 +99,28 @@ using TensorKit: ℙ
         vals_mps = @constinferred(transfer_spectrum(rho_mps; num_vals))
         @test vals_taylor[1:num_vals] ≈ vals_mps[1:num_vals]
     end
+
+    @testset "2D infinite partition functions with boundary MPS" verbose = true begin
+        beta = 0.5 # ferromagnetic phase
+        f_th = -2.0515856253898357
+        m_th = 0.911319377877496
+        e_th = -1.7455645753125533
+
+        alg = VOMPS(; tol = 1.0e-8, verbosity = 1)
+        O_mpo = classical_ising(; β = beta)
+        ψ₀ = InfiniteMPS(ℂ^2, ℂ^10)
+        ψ, envs = leading_boundary(ψ₀, O_mpo, alg)
+
+        λ = expectation_value(ψ, O_mpo, envs)
+        f = -log(λ) / beta
+        @test f ≈ f_th atol = 1.0e-10
+
+        O, M, E = classical_ising_tensors(beta)
+
+        m = expectation_value(ψ, (O_mpo, 1 => M)) # normalised to give density
+        @test abs(m) ≈ m_th atol = 1.0e-8 # account for spin flip
+
+        e = expectation_value(ψ, (O_mpo, 1 => E))
+        @test e ≈ e_th atol = 1.0e-2
+    end
 end

@@ -21,7 +21,7 @@ export force_planar
 export symm_mul_mpo
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model,
     kitaev_model
-export classical_ising, sixvertex
+export classical_ising_tensors, classical_ising, sixvertex
 
 # using TensorOperations
 
@@ -180,24 +180,52 @@ function kitaev_model(
 end
 
 function ising_bond_tensor(β)
-    t = [exp(β) exp(-β); exp(-β) exp(β)]
+    J = 1.0
+    K = β * J
+
+    # Boltzmann weights
+    t = ComplexF64[exp(K) exp(-K); exp(-K) exp(K)]
     r = eigen(t)
     nt = r.vectors * sqrt(Diagonal(r.values)) * r.vectors
     return nt
 end
 
-function classical_ising(; β = log(1 + sqrt(2)) / 2, L = Inf)
-    nt = ising_bond_tensor(β)
+function classical_ising_tensors(beta)
+    nt = ising_bond_tensor(beta)
+    J = 1.0
 
+    # local partition function tensor
     δbulk = zeros(ComplexF64, (2, 2, 2, 2))
     δbulk[1, 1, 1, 1] = 1
     δbulk[2, 2, 2, 2] = 1
     @tensor obulk[-1 -2; -3 -4] := δbulk[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] *
         nt[-4; 4]
-    Obulk = TensorMap(obulk, ℂ^2 * ℂ^2, ℂ^2 * ℂ^2)
+
+    # magnetization tensor
+    M = copy(δbulk)
+    M[2, 2, 2, 2] *= -1
+    @tensor m[-1 -2; -3 -4] := M[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] * nt[-4; 4]
+
+    # bond interaction tensor and energy-per-site tensor
+    e = ComplexF64[-J J; J -J] .* nt
+    @tensor e_hor[-1 -2; -3 -4] :=
+        δbulk[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] * e[-4; 4]
+    @tensor e_vert[-1 -2; -3 -4] :=
+        δbulk[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * e[-3; 3] * nt[-4; 4]
+    e = e_hor + e_vert
+
+    # fixed tensor map space for all three
+    TMS = ℂ^2 ⊗ ℂ^2 ← ℂ^2 ⊗ ℂ^2
+
+    return TensorMap(obulk, TMS), TensorMap(m, TMS), TensorMap(e, TMS)
+end
+
+function classical_ising(; β = log(1 + sqrt(2)) / 2, L = Inf)
+    Obulk, _, _ = classical_ising_tensors(β)
 
     L == Inf && return InfiniteMPO([Obulk])
 
+    nt = ising_bond_tensor(β)
     δleft = zeros(ComplexF64, (1, 2, 2, 2))
     δleft[1, 1, 1, 1] = 1
     δleft[1, 2, 2, 2] = 1
