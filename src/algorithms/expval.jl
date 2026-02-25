@@ -142,9 +142,10 @@ end
 # MPO tensor
 #-----------
 function expectation_value(
-        ψ::InfiniteMPS, (O_mpo, (site, O))::Tuple{InfiniteMPO, Pair{Int, <:MPOTensor}},
+        ψ::InfiniteMPS, mpo_pair::Tuple{InfiniteMPO, Pair{Int, <:MPOTensor}},
         envs::AbstractMPSEnvironments = environments(ψ, first(mpo_pair))
     )
+    O_mpo, (site, O) = mpo_pair
     return contract_mpo_expval(ψ.AC[site], envs.GLs[site], O, envs.GRs[site]) /
         expectation_value(ψ, O_mpo, envs)
 end
