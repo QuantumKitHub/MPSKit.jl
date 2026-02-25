@@ -12,4 +12,12 @@ init_code = quote
 end
 
 args = parse_args(ARGS)
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
+if is_buildkite
+    empty!(testsuite)
+    gpu_testsuite = find_tests(joinpath(@__DIR__, "cuda"))
+    append!(testsuite, gpu_testsuite)
+else
+    filter!(!(startswith("cuda") ∘ first), testsuite)
+end
 runtests(MPSKit, args; testsuite, init_code)

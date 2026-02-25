@@ -1,0 +1,33 @@
+env:
+  SECRET_CODECOV_TOKEN: ""
+
+steps:
+  - label: "Julia v1 -- CUDA"
+    plugins:
+      - JuliaCI/julia#v1:
+          version: "1"
+      - JuliaCI/julia-test#v1: ~
+      - JuliaCI/julia-coverage#v1:
+          dirs:
+            - src
+            - ext
+    agents:
+      queue: "juliagpu"
+      cuda: "*"
+    if: build.message !~ /\[skip tests\]/
+    timeout_in_minutes: 30
+
+  - label: "Julia LTS -- CUDA"
+    plugins:
+      - JuliaCI/julia#v1:
+          version: "1.10" # "lts" isn't valid
+      - JuliaCI/julia-test#v1: ~
+      - JuliaCI/julia-coverage#v1:
+          dirs:
+            - src
+            - ext
+    agents:
+      queue: "juliagpu"
+      cuda: "*"
+    if: build.message !~ /\[skip tests\]/
+    timeout_in_minutes: 30
