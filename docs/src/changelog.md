@@ -17,7 +17,19 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.9...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.10...HEAD)
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+## [0.13.10](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.9...v0.13.10) - 2026-02-26
 
 ### Added
 
@@ -31,10 +43,6 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `entropy` can now also be called directly on a spectrum (singular value vector)
   ([#377](https://github.com/QuantumKitHub/MPSKit.jl/pull/377))
 - Updated compat bounds to remove broken package versions
-
-### Deprecated
-
-### Removed
 
 ### Fixed
 
