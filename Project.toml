@@ -75,4 +75,3 @@ test = ["Aqua", "Adapt", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", 
 
 [sources]
 TensorKit = {url="https://github.com/QuantumKitHub/TensorKit.jl", rev="ksh/cuda_tweaks"}
-BlockTensorKit = {url="https://github.com/kshyatt/BlockTensorKit.jl", rev="main"}
