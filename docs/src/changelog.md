@@ -21,13 +21,25 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- `expectation_value` for local MPO tensors
+  ([#327](https://github.com/QuantumKitHub/MPSKit.jl/pull/327))
+- `Base.copy` for MPS types now performs a deep copy
+  ([#387](https://github.com/QuantumKitHub/MPSKit.jl/pull/387))
+
 ### Changed
+
+- `entropy` can now also be called directly on a spectrum (singular value vector)
+  ([#377](https://github.com/QuantumKitHub/MPSKit.jl/pull/377))
+- Updated compat bounds to remove broken package versions
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Fixed `Adapt` extension for GPU support
+  ([#389](https://github.com/QuantumKitHub/MPSKit.jl/pull/389))
 
 ## [0.13.9](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.8...v0.13.9) - 2026-02-03
 
