@@ -121,14 +121,8 @@ function contract_mpo_expval2(
         τ[3 4; 9 10] * A1[8 1 2; 5] * A2[5 7 13; 14] * O[10 12; 6 7]
 end
 
-function expectation_value(ψ::AbstractMPS, H::AbstractMPO)
-    return expectation_value(GeometryStyle(ψ, H), OperatorStyle(H), ψ, H)
-end
-function expectation_value(
-        ψ::AbstractMPS, H::AbstractMPO,
-        envs::AbstractMPSEnvironments
-    )
-    return expectation_value(GeometryStyle(ψ, H), OperatorStyle(H), ψ, H, envs)
+function expectation_value(ψ::AbstractMPS, H::AbstractMPO, envs...)
+    return expectation_value(GeometryStyle(ψ, H), OperatorStyle(H), ψ, H, envs...)
 end
 
 function expectation_value(
@@ -168,7 +162,10 @@ end
 function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
-function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...) # TODO: Discuss style convention for multiline!
+function expectation_value(
+        ::InfiniteChainStyle, ::MPOStyle, 
+        ψ::InfiniteMPS, mpo::InfiniteMPO, envs...
+    ) # TODO: Discuss style convention for multiline!
     return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), envs...)
 end
 function expectation_value(
