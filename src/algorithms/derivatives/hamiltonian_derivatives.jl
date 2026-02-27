@@ -27,15 +27,24 @@ struct JordanMPO_AC_Hamiltonian{O1, O2, O3} <: DerivativeOperator
         return new{O1, O2, O3}(D, I, E, C, B, A)
     end
 end
+function JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, I, E, C, B, A) where {O1, O2, O3}
+    return JordanMPO_AC_Hamiltonian{O1, O2, O3}(
+        ismissing(D) ? D : convert(O1, D), ismissing(I) ? I : convert(O1, I),
+        ismissing(E) ? E : convert(O1, E), ismissing(C) ? C : convert(O2, C),
+        ismissing(B) ? E : convert(O2, B), ismissing(A) ? A : convert(O3, A)
+    )
+end
 
 function AC_hamiltonian(
-        site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian, above::_HAM_MPS_TYPES, envs
+        site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian, above::_HAM_MPS_TYPES, envs;
+        prepare::Bool = true
     )
     @assert below === above "JordanMPO assumptions break"
     GL = leftenv(envs, site, below)
     GR = rightenv(envs, site, below)
     W = operator[site]
-    return JordanMPO_AC_Hamiltonian(GL, W, GR)
+    H_AC = JordanMPO_AC_Hamiltonian(GL, W, GR)
+    return prepare ? prepare_operator!!(H_AC) : H_AC
 end
 
 function JordanMPO_AC_Hamiltonian(GL::MPSTensor, W::JordanMPOTensor, GR::MPSTensor)
@@ -162,15 +171,28 @@ struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4} <: DerivativeOperator
         return new{O1, O2, O3, O4}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
     end
 end
+function JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+        II, IC, ID, CB, CA, AB, AA, BE, DE, EE
+    ) where {O1, O2, O3, O4}
+    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+        ismissing(II) ? II : convert(O1, II), ismissing(IC) ? IC : convert(O2, IC),
+        ismissing(ID) ? ID : convert(O1, ID), ismissing(CB) ? CB : convert(O2, CB),
+        ismissing(CA) ? CA : convert(O3, CA), ismissing(AB) ? AB : convert(O3, AB),
+        ismissing(AA) ? AA : convert(O4, AA), ismissing(BE) ? BE : convert(O2, BE),
+        ismissing(DE) ? DE : convert(O1, DE), ismissing(EE) ? EE : convert(O1, EE)
+    )
+end
 
 function AC2_hamiltonian(
-        site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian, above::_HAM_MPS_TYPES, envs
+        site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian, above::_HAM_MPS_TYPES, envs;
+        prepare::Bool = true
     )
     @assert below === above "JordanMPO assumptions break"
     GL = leftenv(envs, site, below)
     GR = rightenv(envs, site + 1, below)
     W1, W2 = operator[site], operator[site + 1]
-    return JordanMPO_AC2_Hamiltonian(GL, W1, W2, GR)
+    H_AC2 = JordanMPO_AC2_Hamiltonian(GL, W1, W2, GR)
+    return prepare ? prepare_operator!!(H_AC2) : H_AC2
 end
 
 function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::JordanMPOTensor, GR::MPSTensor)

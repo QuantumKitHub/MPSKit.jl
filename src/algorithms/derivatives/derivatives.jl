@@ -70,32 +70,34 @@ See also [`AC2_projection`](@ref).
 # boilerplate for the derivative operators
 for hamiltonian in (:C_hamiltonian, :AC_hamiltonian, :AC2_hamiltonian)
     @eval function $hamiltonian(
-            site::CartesianIndex{2}, below, operator::MultilineMPO, above, envs
+            site::CartesianIndex{2}, below, operator::MultilineMPO, above, envs;
+            kwargs...
         )
         row, col = Tuple(site)
-        return $hamiltonian(col, below[row + 1], operator[row], above[row], envs[row])
+        return $hamiltonian(col, below[row + 1], operator[row], above[row], envs[row]; kwargs...)
     end
-    @eval function $hamiltonian(col::Int, below, operator::MultilineMPO, above, envs)
+    @eval function $hamiltonian(col::Int, below, operator::MultilineMPO, above, envs; kwargs...)
         Hs = map(1:size(operator, 1)) do row
-            return $hamiltonian(CartesianIndex(row, col), below, operator, above, envs)
+            return $hamiltonian(CartesianIndex(row, col), below, operator, above, envs; kwargs...)
         end
         return Multiline(Hs)
     end
-    @eval function $hamiltonian(site::Int, below, operator::MultipliedOperator, above, envs)
-        H = $hamiltonian(site, below, operator.op, above, envs)
+    @eval function $hamiltonian(site::Int, below, operator::MultipliedOperator, above, envs; kwargs...)
+        H = $hamiltonian(site, below, operator.op, above, envs; kwargs...)
         return MultipliedOperator(H, operator.f)
     end
-    @eval function $hamiltonian(site::Int, below, operator::LinearCombination, above, envs)
+    @eval function $hamiltonian(site::Int, below, operator::LinearCombination, above, envs; kwargs...)
         Hs = map(operator.opps, envs.envs) do o, env
-            return $hamiltonian(site, below, o, above, env)
+            return $hamiltonian(site, below, o, above, env; kwargs...)
         end
         return LinearCombination(Hs, operator.coeffs)
     end
     @eval function $hamiltonian(
-            site::Int, below, operator::LazySum, above, envs::MultipleEnvironments
+            site::Int, below, operator::LazySum, above, envs::MultipleEnvironments;
+            kwargs...
         )
         Hs = map(operator.ops, envs.envs) do o, env
-            return $hamiltonian(site, below, o, above, env)
+            return $hamiltonian(site, below, o, above, env; kwargs...)
         end
         elT = Union{D, MultipliedOperator{D}} where {D <: DerivativeOperator}
         return LazySum{elT}(Hs)
@@ -191,14 +193,15 @@ end
 
 function C_projection(site, below, operator, above, envs)
     C = above isa Multiline ? above.C[:, site] : above.C[site]
-    return C_hamiltonian(site, below, operator, above, envs) * C
+    return C_hamiltonian(site, below, operator, above, envs; prepare = false) * C
 end
 function AC_projection(site, below, operator, above, envs)
     AC = above isa Multiline ? above.AC[:, site] : above.AC[site]
-    return AC_hamiltonian(site, below, operator, above, envs) * AC
+    return AC_hamiltonian(site, below, operator, above, envs; prepare = false) * AC
 end
 function AC2_projection(site::Int, below, operator, above, envs; kwargs...)
-    return AC2_hamiltonian(site, below, operator, above, envs) * AC2(above, site; kwargs...)
+    return AC2_hamiltonian(site, below, operator, above, envs; prepare = false) *
+        AC2(above, site; kwargs...)
 end
 
 # Multiline
