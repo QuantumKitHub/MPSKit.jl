@@ -10,6 +10,7 @@ using OhMyThreads
 using ..MPSKit: DynamicTol
 using TensorKit: TensorKit
 using MatrixAlgebraKit: LAPACK_HouseholderQR, LAPACK_HouseholderLQ, LAPACK_DivideAndConquer
+using MatrixAlgebraKit: CUSOLVER_HouseholderQR, LQViaTransposedQR, CUSOLVER_Jacobi
 
 const VERBOSE_NONE = 0
 const VERBOSE_WARN = 1

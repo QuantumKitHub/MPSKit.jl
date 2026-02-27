@@ -2,6 +2,7 @@ using Test
 using MPSKit
 using TensorKit
 using CUDA, cuTENSOR, Adapt
+using MPSKit: GeometryStyle, OperatorStyle, MPOStyle, FiniteChainStyle
 
 @testset "Adapting to CuArray" begin
     # start from random operators
@@ -23,8 +24,8 @@ using CUDA, cuTENSOR, Adapt
         @test GeometryStyle(typeof(mpo₁)) == FiniteChainStyle()
         @test GeometryStyle(mpo₁) == FiniteChainStyle()
         @test OperatorStyle(typeof(mpo₁)) == MPOStyle()
-        @test TensorKit.storagetype(mpo₁) == CuVector{T, 1, CUDA.DeviceMemory}
-        @test TensorKit.storagetype(mpo₂) == CuVector{T, 1, CUDA.DeviceMemory}
-        @test TensorKit.storagetype(mpo₃) == CuVector{T, 1, CUDA.DeviceMemory}
+        @test TensorKit.storagetype(mpo₁) == CuVector{T, CUDA.DeviceMemory}
+        @test TensorKit.storagetype(mpo₂) == CuVector{T, CUDA.DeviceMemory}
+        @test TensorKit.storagetype(mpo₃) == CuVector{real(T), CUDA.DeviceMemory}
     end
 end

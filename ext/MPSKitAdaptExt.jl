@@ -1,6 +1,6 @@
 module MPSKitAdaptExt
 
-using TensorKit: space, spacetype
+using TensorKit: space, spacetype, similarstoragetype, scalartype
 using MPSKit
 using BlockTensorKit: nonzero_pairs
 using Adapt
@@ -34,6 +34,24 @@ end
 @inline Adapt.adapt_structure(to, W::MPSKit.JordanMPOTensor) =
     MPSKit.JordanMPOTensor(space(W), adapt(to, W.A), adapt(to, W.B), adapt(to, W.C), adapt(to, W.D))
 @inline Adapt.adapt_structure(to, mpo::MPOHamiltonian) =
+
     MPOHamiltonian(map(x -> adapt(to, x), mpo.W))
+
+function Adapt.adapt_structure(to, x::MPSKit.MPOHamiltonian{TO}) where {TO}
+    terms′ = map(w -> adapt(to, w), x.W)
+    return MPSKit.MPOHamiltonian(terms′)
+end
+
+function Adapt.adapt_structure(to, x::MPSKit.PeriodicArray)
+    return MPSKit.PeriodicArray(map(x_ -> adapt(to, x_), x.data))
+end
+
+function Adapt.adapt_structure(to, x::MPSKit.InfiniteMPS{A, B}) where {A, S, B <: MPSKit.MPSBondTensor{S}}
+    AL′ = adapt(to, x.AL)
+    AR′ = adapt(to, x.AR)
+    AC′ = adapt(to, x.AC)
+    C′ = adapt(to, x.C)
+    return MPSKit.InfiniteMPS(AL′, AR′, C′, AC′)
+end
 
 end

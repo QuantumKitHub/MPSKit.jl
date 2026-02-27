@@ -65,6 +65,9 @@ const JordanMPOTensorMap{T, S, A <: DenseVector{T}} = JordanMPOTensor{
     TensorMap{T, S, 1, 2, A},
     TensorMap{T, S, 1, 1, A},
 }
+# TODO FIX ME
+TensorKit.storagetype(jmpo::JordanMPOTensorMap{E, S, TA}) where {E, S, TA} = TA
+TensorKit.storagetype(::Type{JordanMPOTensorMap{E, S, TA}}) where {E, S, TA} = TA
 
 function JordanMPOTensor{E, S}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E, S}
     return jordanmpotensortype(S, E)(undef, V)
@@ -90,7 +93,6 @@ function JordanMPOTensor(
 
     VD = removeunit(removeunit(space(allVs[1, 1, 1, end:end]), 4), 1)
     VD == space(D) || throw(SpaceMismatch(lazy"D-block has incompatible spaces:\n$VD\n$(space(D))"))
-
     return JordanMPOTensor{E, S, TA, TB, TC, TD}(V, A, B, C, D)
 end
 function JordanMPOTensor(
@@ -121,12 +123,13 @@ function JordanMPOTensor(W::SparseBlockTensorMap{TT, E, S, 2, 2}) where {TT, E, 
     )
 end
 
-function jordanmpotensortype(::Type{S}, ::Type{E}) where {S <: VectorSpace, E <: Number}
-    TA = Union{tensormaptype(S, 2, 2, E), BraidingTensor{E, S}}
-    TB = tensormaptype(S, 2, 1, E)
-    TC = tensormaptype(S, 1, 2, E)
-    TD = tensormaptype(S, 1, 1, E)
-    return JordanMPOTensor{E, S, TA, TB, TC, TD}
+function jordanmpotensortype(::Type{S}, ::Type{TorA}) where {S <: VectorSpace, TorA}
+    BT = BraidingTensor{eltype(TorA), S}
+    TA = Union{tensormaptype(S, 2, 2, TorA), BT}
+    TB = tensormaptype(S, 2, 1, TorA)
+    TC = tensormaptype(S, 1, 2, TorA)
+    TD = tensormaptype(S, 1, 1, TorA)
+    return JordanMPOTensor{eltype(TorA), S, TA, TB, TC, TD}
 end
 function jordanmpotensortype(::Type{O}) where {O <: MPOTensor}
     return jordanmpotensortype(spacetype(O), scalartype(O))

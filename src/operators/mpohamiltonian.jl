@@ -48,6 +48,8 @@ end
 const InfiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPOHamiltonian}) = false
 GeometryStyle(::Type{<:InfiniteMPOHamiltonian}) = InfiniteChainStyle()
+TensorKit.storagetype(impo::InfiniteMPOHamiltonian{O}) where {O} = storagetype(O)
+TensorKit.storagetype(::Type{InfiniteMPOHamiltonian{O}}) where {O} = storagetype(O)
 
 function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
     for i in eachindex(Ws)
@@ -522,6 +524,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     T = _find_tensortype(nonzero_opps)
     E = scalartype(T)
     S = spacetype(T)
+    TA = storagetype(T)
 
     # construct the virtual spaces
     MissingS = Union{Missing, S}
@@ -588,7 +591,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     end
 
     # construct the tensor
-    TW = jordanmpotensortype(S, E)
+    TW = jordanmpotensortype(S, TA)
     Os = map(1:length(lattice)) do site
         V = virtualsumspaces[site - 1] * lattice[site] ←
             lattice[site] * virtualsumspaces[site]
@@ -824,7 +827,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
         )
     )
     # left to middle
-    U = ones(scalartype(H), left_virtualspace(H, 1))
+    U = ones(storagetype(H), left_virtualspace(H, 1))
     @plansor a[-1 -2; -3 -4] := A[1][-1 2; -3] * H[1][1 -2; 2 -4] * conj(U[1])
     Q, R = qr_compact!(a)
     A′[1] = TensorMap(Q)
@@ -836,7 +839,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     end
 
     # right to middle
-    U = ones(scalartype(H), right_virtualspace(H, N))
+    U = ones(storagetype(H), right_virtualspace(H, N))
     @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * U[1]
     L, Q = lq_compact!(a)
     A′[end] = transpose(TensorMap(Q), ((1, 3), (2,)))

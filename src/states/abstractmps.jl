@@ -33,14 +33,19 @@ Construct an `MPSTensor` with given physical and virtual spaces.
 - `right_D::Int`: right virtual dimension
 """
 function MPSTensor(
-        ::UndefInitializer, eltype, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
-    ) where {S <: ElementarySpace}
-    return TensorMap{eltype}(undef, Vₗ ⊗ P ← Vᵣ)
+        ::UndefInitializer, ::Type{TorA}, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
+    ) where {S <: ElementarySpace, TorA <: Number}
+    return TensorKit.TensorMap{TorA}(undef, Vₗ ⊗ P ← Vᵣ)
 end
 function MPSTensor(
-        f, eltype, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
-    ) where {S <: ElementarySpace}
-    A = MPSTensor(undef, eltype, P, Vₗ, Vᵣ)
+        ::UndefInitializer, ::Type{TorA}, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
+    ) where {S <: ElementarySpace, TorA <: DenseVector}
+    return TensorKit.TensorMapWithStorage{eltype(TorA), TorA}(undef, Vₗ ⊗ P ← Vᵣ)
+end
+function MPSTensor(
+        f, ::Type{TorA}, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
+    ) where {S <: ElementarySpace, TorA}
+    A = MPSTensor(undef, TorA, P, Vₗ, Vᵣ)
     if f === rand
         return rand!(A)
     elseif f === randn
@@ -50,6 +55,12 @@ function MPSTensor(
     else
         throw(ArgumentError("Unsupported initializer function: $f"))
     end
+end
+function MPSTensor(
+        ::Type{TorA},
+        P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
+    ) where {S <: ElementarySpace, TorA}
+    return MPSTensor(rand, TorA, P, Vₗ, Vᵣ)
 end
 # TODO: reinstate function initializers?
 function MPSTensor(
@@ -70,7 +81,7 @@ Construct an `MPSTensor` with given physical and virtual dimensions.
 - `Dₗ::Int`: left virtual dimension
 - `Dᵣ::Int`: right virtual dimension
 """
-MPSTensor(f, eltype, d::Int, Dₗ::Int, Dᵣ::Int = Dₗ) = MPSTensor(f, eltype, ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
+MPSTensor(f, ::Type{TorA}, d::Int, Dₗ::Int, Dᵣ::Int = Dₗ) where {TorA} = MPSTensor(f, TorA, ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
 MPSTensor(d::Int, Dₗ::Int; Dᵣ::Int = Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
 
 """
@@ -78,11 +89,11 @@ MPSTensor(d::Int, Dₗ::Int; Dᵣ::Int = Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^
 
 Convert an array to an `MPSTensor`.
 """
-function MPSTensor(A::AbstractArray{T}) where {T <: Number}
+function MPSTensor(A::AbstractArray{<:Number})
     @assert ndims(A) > 2 "MPSTensor should have at least 3 dims, but has $ndims(A)"
     sz = size(A)
-    t = TensorMap(undef, T, foldl(⊗, ComplexSpace.(sz[1:(end - 1)])) ← ℂ^sz[end])
-    t[] .= A
+    V = foldl(⊗, ComplexSpace.(sz[1:(end - 1)])) ← ℂ^sz[end]
+    t = TensorMap(A, V)
     return t
 end
 

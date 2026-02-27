@@ -60,7 +60,7 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in Iterators.reverse((i + 1):center)
-            v.parent.Cs[j], tmp = lq_compact!(_transpose_tail(v.parent.ACs[j]; copy = true); positive = true)
+            v.parent.Cs[j], tmp = lq_compact!(_transpose_tail(v.parent.ACs[j]; copy = true), Defaults.alg_lq())
             v.parent.ARs[j] = _transpose_front(tmp)
             if j != i + 1 # last AC not needed
                 v.parent.ACs[j - 1] = _mul_tail(v.parent.ALs[j - 1], v.parent.Cs[j])
@@ -76,7 +76,7 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in center:i
-            v.parent.ALs[j], v.parent.Cs[j + 1] = qr_compact(v.parent.ACs[j]; positive = true)
+            v.parent.ALs[j], v.parent.Cs[j + 1] = qr_compact(v.parent.ACs[j], Defaults.alg_qr())
             if j != i # last AC not needed
                 v.parent.ACs[j + 1] = _mul_front(v.parent.Cs[j + 1], v.parent.ARs[j + 1])
             end

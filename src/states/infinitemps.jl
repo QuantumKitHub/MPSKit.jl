@@ -102,6 +102,8 @@ struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractMPS
         return new{A, B}(AL, AR, C, AC)
     end
 end
+TensorKit.storagetype(imps::InfiniteMPS{A, B}) where {A, B} = storagetype(A)
+TensorKit.storagetype(::Type{InfiniteMPS{A, B}}) where {A, B} = storagetype(A)
 
 #===========================================================================================
 Constructors
@@ -116,35 +118,42 @@ function InfiniteMPS(
         convert(PeriodicVector{B}, C), convert(PeriodicVector{A}, AC)
     )
 end
-
+function InfiniteMPS(
+        T::Type,
+        pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
+        kwargs...
+    ) where {S <: IndexSpace}
+    return InfiniteMPS(MPSTensor.(T, pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
+end
 function InfiniteMPS(
         pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
         kwargs...
     ) where {S <: IndexSpace}
-    return InfiniteMPS(MPSTensor.(pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
+    return InfiniteMPS(MPSTensor.(ComplexF64, pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
 end
 function InfiniteMPS(
-        f, elt::Type{<:Number}, pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
+        f, T::Type, pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
         kwargs...
     ) where {S <: IndexSpace}
     return InfiniteMPS(
-        MPSTensor.(f, elt, pspaces, circshift(Dspaces, 1), Dspaces);
+        MPSTensor.(f, T, pspaces, circshift(Dspaces, 1), Dspaces);
         kwargs...
     )
 end
-InfiniteMPS(d::S, D::S) where {S <: Union{Int, <:IndexSpace}} = InfiniteMPS([d], [D])
+InfiniteMPS(T::Type, d::S, D::S; kwargs...) where {S <: Union{Int, <:IndexSpace}} = InfiniteMPS(T, [d], [D]; kwargs...)
+InfiniteMPS(d::S, D::S; kwargs...) where {S <: Union{Int, <:IndexSpace}} = InfiniteMPS([d], [D]; kwargs...)
 function InfiniteMPS(
-        f, elt::Type{<:Number}, d::S, D::S
+        f, T::Type, d::S, D::S; kwargs...
     ) where {S <: Union{Int, <:IndexSpace}}
-    return InfiniteMPS(f, elt, [d], [D])
+    return InfiniteMPS(f, T, [d], [D]; kwargs...)
 end
-function InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int})
-    return InfiniteMPS(ComplexSpace.(ds), ComplexSpace.(Ds))
+function InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int}; kwargs...)
+    return InfiniteMPS(ComplexSpace.(ds), ComplexSpace.(Ds); kwargs...)
 end
 function InfiniteMPS(
-        f, elt::Type{<:Number}, ds::AbstractVector{Int}, Ds::AbstractVector{Int}, kwargs...
+        f, T::Type, ds::AbstractVector{Int}, Ds::AbstractVector{Int}, kwargs...
     )
-    return InfiniteMPS(f, elt, ComplexSpace.(ds), ComplexSpace.(Ds); kwargs...)
+    return InfiniteMPS(f, T, ComplexSpace.(ds), ComplexSpace.(Ds); kwargs...)
 end
 
 function InfiniteMPS(A::AbstractVector{<:GenericMPSTensor}; kwargs...)
