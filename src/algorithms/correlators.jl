@@ -21,18 +21,17 @@ function correlator(
     S₂ == S₁' || throw(ArgumentError("O₂ should end with a trivial leg."))
 
     G = similar(js, scalartype(state))
-    U = ones(scalartype(state), S₁)
 
-    @plansor Vₗ[-1 -2; -3] := state.AC[i][3 4; -3] * conj(U[1]) * O₁[1 2; 4 -2] *
-        conj(state.AC[i][3 2; -1])
+    @plansor Vₗ[-1 -2; -3] := state.AC[i][2 3; -3] * removeunit(O₁, 1)[1; 3 -2] *
+        conj(state.AC[i][2 1; -1])
     ctr = i + 1
 
     for (k, j) in enumerate(js)
         if j > ctr
             Vₗ = Vₗ * TransferMatrix(state.AR[ctr:(j - 1)])
         end
-        G[k] = @plansor Vₗ[2 3; 5] * state.AR[j][5 6; 7] * O₂[3 4; 6 1] * U[1] *
-            conj(state.AR[j][2 4; 7])
+        G[k] = @plansor Vₗ[1 2; 4] * state.AR[j][4 5; 6] * removeunit(O₂, 4)[2 3; 5] *
+            conj(state.AR[j][1 3; 6])
         ctr = j
     end
     return G

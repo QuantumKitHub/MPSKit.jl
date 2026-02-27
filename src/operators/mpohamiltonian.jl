@@ -824,8 +824,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
         )
     )
     # left to middle
-    U = ones(scalartype(H), left_virtualspace(H, 1))
-    @plansor a[-1 -2; -3 -4] := A[1][-1 2; -3] * H[1][1 -2; 2 -4] * conj(U[1])
+    @plansor a[-1 -2; -3 -4] := A[1][-1 1; -3] * removeunit(H[1], 1)[-2; 1 -4]
     Q, R = qr_compact!(a)
     A′[1] = TensorMap(Q)
 
@@ -836,8 +835,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     end
 
     # right to middle
-    U = ones(scalartype(H), right_virtualspace(H, N))
-    @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * U[1]
+    @plansor a[-1 -2; -3 -4] := A[end][-1 1; -3] * removeunit(H[end], 4)[-2 -4; 1]
     L, Q = lq_compact!(a)
     A′[end] = transpose(TensorMap(Q), ((1, 3), (2,)))
 
