@@ -26,6 +26,6 @@ using MPSKit: GeometryStyle, OperatorStyle, MPOStyle, FiniteChainStyle
         @test OperatorStyle(typeof(mpo₁)) == MPOStyle()
         @test TensorKit.storagetype(mpo₁) == CuVector{T, CUDA.DeviceMemory}
         @test TensorKit.storagetype(mpo₂) == CuVector{T, CUDA.DeviceMemory}
-        @test TensorKit.storagetype(mpo₃) == CuVector{T, CUDA.DeviceMemory}
+        @test TensorKit.storagetype(mpo₃) == CuVector{real(T), CUDA.DeviceMemory}
     end
 end
