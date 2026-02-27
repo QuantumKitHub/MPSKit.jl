@@ -44,7 +44,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environme
 
             zerovector!(ϵs)
             for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
-                h = prepare_operator!!(AC_hamiltonian(pos, ψ, H, ψ, envs))
+                h = AC_hamiltonian(pos, ψ, H, ψ, envs)
                 _, vec = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
                 ϵs[pos] = max(ϵs[pos], calc_galerkin(pos, ψ, H, ψ, envs))
                 ψ.AC[pos] = vec
@@ -122,7 +122,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environm
             # left to right sweep
             for pos in 1:(length(ψ) - 1)
                 @plansor ac2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
-                Hac2 = prepare_operator!!(AC2_hamiltonian(pos, ψ, H, ψ, envs))
+                Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
 
                 al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
@@ -137,7 +137,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environm
             # right to left sweep
             for pos in (length(ψ) - 2):-1:1
                 @plansor ac2[-1 -2; -3 -4] := ψ.AL[pos][-1 -2; 1] * ψ.AC[pos + 1][1 -4; -3]
-                Hac2 = prepare_operator!!(AC2_hamiltonian(pos, ψ, H, ψ, envs))
+                Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
                 _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
 
                 al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)

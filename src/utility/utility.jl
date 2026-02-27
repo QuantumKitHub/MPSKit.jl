@@ -248,7 +248,7 @@ function mul_front!(
 
     numout(B) == 1 && return mul!(C, A, B, α, β)
 
-    cp = checkpoint(allocator)
+    cp = allocator_checkpoint!(allocator)
 
     Ablocks = blocks(A)
     Bstructure = TensorKit.fusionblockstructure(space(B))
@@ -270,7 +270,7 @@ function mul_front!(
             α, β, backend, allocator
         )
     end
-    reset!(allocator, cp)
+    allocator_reset!(allocator, cp)
 
     return C
 end
@@ -297,7 +297,7 @@ function mul_tail!(
 
     numin(A) == 1 && return mul!(C, A, B, α, β)
 
-    cp = checkpoint(allocator)
+    cp = allocator_checkpoint!(allocator)
 
     Astructure = TensorKit.fusionblockstructure(space(A))
     Bblocks = blocks(B)
@@ -320,13 +320,14 @@ function mul_tail!(
         )
     end
 
-    reset!(allocator, cp)
+    allocator_reset!(allocator, cp)
     return C
 end
 
 @inline fuse_legs(x::TensorMap, N₁::Int, N₂::Int) = fuse_legs(x, Val(N₁), Val(N₂))
 function fuse_legs(x::TensorMap, ::Val{N₁}, ::Val{N₂}) where {N₁, N₂}
-    ((0 <= N₁ <= numout(x)) && (0 <= N₂ <= numin(x))) || throw(ArgumentError("invalid fusing scheme"))
+    ((0 <= N₁ <= numout(x)) && (0 <= N₂ <= numin(x))) ||
+        throw(ArgumentError("invalid fusing scheme: ($N₁, $N₂) for $(typeof(x))"))
     init = one(spacetype(x))
 
     cod = if N₁ > 1
@@ -347,3 +348,8 @@ function fuse_legs(x::TensorMap, ::Val{N₁}, ::Val{N₂}) where {N₁, N₂}
 
     return TensorMap{scalartype(x)}(x.data, cod ← dom)
 end
+
+# piracy until fixed
+
+TensorOperations.allocation_size(::Type{T}, n::Int) where {T} =
+    TensorOperations.allocation_size(T, (n,))
