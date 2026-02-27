@@ -23,8 +23,8 @@ using CUDA, cuTENSOR, Adapt
         @test GeometryStyle(typeof(mpo₁)) == FiniteChainStyle()
         @test GeometryStyle(mpo₁) == FiniteChainStyle()
         @test OperatorStyle(typeof(mpo₁)) == MPOStyle()
-        @test TensorKit.storagetype(mpo₁) == CuVector{T, 1, CUDA.DeviceMemory}
-        @test TensorKit.storagetype(mpo₂) == CuVector{T, 1, CUDA.DeviceMemory}
-        @test TensorKit.storagetype(mpo₃) == CuVector{T, 1, CUDA.DeviceMemory}
+        @test TensorKit.storagetype(mpo₁) == CuVector{T, CUDA.DeviceMemory}
+        @test TensorKit.storagetype(mpo₂) == CuVector{T, CUDA.DeviceMemory}
+        @test TensorKit.storagetype(mpo₃) == CuVector{T, CUDA.DeviceMemory}
     end
 end
