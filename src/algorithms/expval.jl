@@ -128,7 +128,7 @@ function expectation_value(
         ψ::AbstractMPS, H::AbstractMPO,
         envs::AbstractMPSEnvironments
     )
-    return expectation_value(GeometryStyle(ψ, H, envs), OperatorStyle(H), ψ, H, envs)
+    return expectation_value(GeometryStyle(ψ, H), OperatorStyle(H), ψ, H, envs)
 end
 
 function expectation_value(::FiniteChainStyle, ::HamiltonianStyle,
