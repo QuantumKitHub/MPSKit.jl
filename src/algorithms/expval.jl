@@ -163,7 +163,7 @@ function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
 function expectation_value(
-        ::InfiniteChainStyle, ::MPOStyle, 
+        ::InfiniteChainStyle, ::MPOStyle,
         ψ::InfiniteMPS, mpo::InfiniteMPO, envs...
     ) # TODO: Discuss style convention for multiline!
     return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), envs...)
