@@ -131,13 +131,15 @@ function expectation_value(
     return expectation_value(GeometryStyle(ψ, H), OperatorStyle(H), ψ, H, envs)
 end
 
-function expectation_value(::FiniteChainStyle, ::HamiltonianStyle,
+function expectation_value(
+        ::FiniteChainStyle, ::HamiltonianStyle,
         ψ, H, envs = environments(ψ, H)
     )
     return dot(ψ, H, ψ, envs) / dot(ψ, ψ)
 end
 
-function expectation_value(::InfiniteChainStyle, ::HamiltonianStyle,
+function expectation_value(
+        ::InfiniteChainStyle, ::HamiltonianStyle,
         ψ, H, envs = environments(ψ, H)
     )
     return sum(1:length(ψ)) do site
@@ -184,7 +186,8 @@ function expectation_value(ψ::MultilineMPS, mpo::MultilineMPO, envs...)
     return prod(x -> expectation_value(x...), zip(parent(ψ), parent(mpo)))
 end
 # fallback
-function expectation_value(::GeometryStyle, ::OperatorStyle, 
+function expectation_value(
+        ::GeometryStyle, ::OperatorStyle,
         ψ::AbstractMPS, mpo::AbstractMPO, envs...
     )
     return dot(ψ, mpo, ψ) / dot(ψ, ψ)
