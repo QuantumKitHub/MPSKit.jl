@@ -2,6 +2,7 @@ using Test
 using MPSKit
 using TensorKit
 using CUDA, cuTENSOR, Adapt
+using MPSKit: GeometryStyle, OperatorStyle
 
 @testset "Adapting to CuArray" begin
     # start from random operators
