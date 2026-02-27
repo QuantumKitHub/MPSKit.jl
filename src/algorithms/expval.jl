@@ -121,16 +121,24 @@ function contract_mpo_expval2(
         τ[3 4; 9 10] * A1[8 1 2; 5] * A2[5 7 13; 14] * O[10 12; 6 7]
 end
 
+function expectation_value(ψ::AbstractMPS, H::AbstractMPO)
+    return expectation_value(GeometryStyle(ψ, H), OperatorStyle(H), ψ, H)
+end
 function expectation_value(
-        ψ::FiniteMPS, H::FiniteMPOHamiltonian,
-        envs::AbstractMPSEnvironments = environments(ψ, H)
+        ψ::AbstractMPS, H::AbstractMPO,
+        envs::AbstractMPSEnvironments
+    )
+    return expectation_value(GeometryStyle(ψ, H, envs), OperatorStyle(H), ψ, H, envs)
+end
+
+function expectation_value(::FiniteChainStyle, ::HamiltonianStyle,
+        ψ, H, envs = environments(ψ, H)
     )
     return dot(ψ, H, ψ, envs) / dot(ψ, ψ)
 end
 
-function expectation_value(
-        ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
-        envs::AbstractMPSEnvironments = environments(ψ, H)
+function expectation_value(::InfiniteChainStyle, ::HamiltonianStyle,
+        ψ, H, envs = environments(ψ, H)
     )
     return sum(1:length(ψ)) do site
         return contract_mpo_expval(
@@ -152,13 +160,13 @@ end
 
 # DenseMPO
 # --------
-function expectation_value(ψ::FiniteMPS, mpo::FiniteMPO)
+function expectation_value(::FiniteChainStyle, ::MPOStyle, ψ, mpo)
     return dot(ψ, mpo, ψ) / dot(ψ, ψ)
 end
 function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
-function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
+function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...) # TODO: Discuss style convention for multiline!
     return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), envs...)
 end
 function expectation_value(
@@ -176,7 +184,9 @@ function expectation_value(ψ::MultilineMPS, mpo::MultilineMPO, envs...)
     return prod(x -> expectation_value(x...), zip(parent(ψ), parent(mpo)))
 end
 # fallback
-function expectation_value(ψ::AbstractMPS, mpo::AbstractMPO, envs...)
+function expectation_value(::GeometryStyle, ::OperatorStyle, 
+        ψ::AbstractMPS, mpo::AbstractMPO, envs...
+    )
     return dot(ψ, mpo, ψ) / dot(ψ, ψ)
 end
 
