@@ -6,25 +6,32 @@ using Statistics
 # Loading in the data
 # -------------------
 resultdir = joinpath(@__DIR__, "results")
-resultfile(i) = "results_MPSKit@bench$i.json"
 
-versions = [0, 1, 2, 3, 5]
+result_files = Dict(
+    "main" => joinpath(resultdir, "results_MPSKit@main.json"),
+    "dirty" => joinpath(resultdir, "results_MPSKit@dirty.json")
+)
 
-df_contract = let df = DataFrame(
-        :version => Int[], :model => String[], :symmetry => String[],
-        :D => Int[], :V => Int[], :memory => Int[], :allocs => Int[], :times => Vector{Int}[]
+
+df = let df = DataFrame(
+        :version => String[], :model => String[], :symmetry => String[],
+        :D => Int[], :V => Int[], :memory => Tuple{Int, Int}[], :allocs => Tuple{Int, Int}[], :times => Tuple{Vector{Int}, Vector{Int}}[]
     )
-
-    for version in versions
-        result = JSON.parsefile(joinpath(resultdir, resultfile(version)))
+    for (version, result_file) in pairs(result_files)
+        result = JSON.parsefile(result_file)
         for (model, model_res) in result.data.derivatives.data.AC2_contraction.data
             for (symmetry, sym_res) in model_res.data
-                for (DV, bench) in sym_res.data
+                for (DV, contract_bench) in sym_res.data
+                    prep_bench = result.data.derivatives.data.AC2_preparation.data[model].data[symmetry].data[DV]
                     D, V = eval(Meta.parse(DV))::Tuple{Int, Int}
-
                     push!(
                         df,
-                        (version, model, symmetry, D, V, bench.memory, bench.allocs, collect(Int, bench.times))
+                        (
+                            version, model, symmetry, D, V,
+                            (prep_bench.memory, contract_bench.memory),
+                            (prep_bench.allocs, contract_bench.allocs),
+                            (collect(Int, prep_bench.times), collect(Int, contract_bench.times)),
+                        )
                     )
                 end
             end
@@ -32,13 +39,13 @@ df_contract = let df = DataFrame(
     end
     df
 end
+
 df_prep = let df = DataFrame(
-        :version => Int[], :model => String[], :symmetry => String[],
+        :version => String[], :model => String[], :symmetry => String[],
         :D => Int[], :V => Int[], :memory => Int[], :allocs => Int[], :times => Vector{Int}[]
     )
-
-    for version in versions
-        result = JSON.parsefile(joinpath(resultdir, resultfile(version)))
+    for (version, result_file) in pairs(result_files)
+        result = JSON.parsefile(result_file)
         for (model, model_res) in result.data.derivatives.data.AC2_preparation.data
             for (symmetry, sym_res) in model_res.data
                 for (DV, bench) in sym_res.data
@@ -60,243 +67,47 @@ end
 fontsize = 20
 estimator = median
 
-f_times = let f = Figure(; size = (1400, 1400))
+function plot_result(df, num_applications, choice = :times)
+    f = Figure(; size = (1400, 1400))
     models = ["heisenberg_nn", "heisenberg_nnn", "heisenberg_cylinder", "heisenberg_coulomb"]
     symmetries = ["Trivial", "Irrep[U₁]", "Irrep[SU₂]"]
 
 
-    df_model = groupby(df_contract, [:model, :symmetry])
+    df_model = groupby(df, [:model, :symmetry])
     for row in eachindex(models), col in eachindex(symmetries)
         df_data = get(df_model, (; model = models[row], symmetry = symmetries[col]), nothing)
-        ax = Axis(f[row, col], xscale = log10, xlabel = "D", ylabel = "Δt (μs)", yscale = log10)
+        ylabel_ = choice === :times ? "Δt (μs)" : string(choice)
+        ax = Axis(f[row, col], xscale = log10, xlabel = "D", ylabel = ylabel_, yscale = log10)
         @assert !isnothing(df_data)
         for (k, v) in pairs(groupby(df_data, :version))
             Ds = v[!, :D]
-            times = estimator.(v[!, :times]) ./ 1.0e3
-            I = sortperm(Ds)
-            scatterlines!(ax, Ds[I], times[I]; label = "v$(k.version)")
-        end
-        axislegend(ax, position = :lt)
-    end
-
-    Label(f[0, 0], "times"; fontsize)
-    for (row, model) in enumerate(models)
-        Label(f[row, 0], model; rotation = pi / 2, fontsize, tellheight = false, tellwidth = false)
-    end
-    for (col, symmetry) in enumerate(symmetries)
-        Label(f[0, col], symmetry; fontsize, tellheight = false, tellwidth = false)
-    end
-
-    f
-end
-save(joinpath(resultdir, "bench_times.png"), f_times)
-
-f_times_relative = let f = Figure(; size = (1400, 1400))
-    models = ["heisenberg_nn", "heisenberg_nnn", "heisenberg_cylinder", "heisenberg_coulomb"]
-    symmetries = ["Trivial", "Irrep[U₁]", "Irrep[SU₂]"]
-
-
-    df_model = groupby(df_contract, [:model, :symmetry])
-    for row in eachindex(models), col in eachindex(symmetries)
-        df_data = get(df_model, (; model = models[row], symmetry = symmetries[col]), nothing)
-        ax = Axis(f[row, col], xscale = log10, xlabel = "D", ylabel = "Δt / Δt₀")
-        hlines!([1], color = :red)
-        @assert !isnothing(df_data)
-
-        df_v = groupby(df_data, :version)
-
-        v = get(df_v, (; version = 0), nothing)
-        Ds = v[!, :D]
-        times = estimator.(v[!, :times])
-        I = sortperm(Ds)
-        times₀ = times[I]
-
-        for (k, v) in pairs(groupby(df_data, :version))
-            k.version == 0 && continue
-            Ds = v[!, :D]
-            I = sortperm(Ds)
-            times = estimator.(v[!, :times])[I]
-            scatterlines!(ax, Ds[I], times ./ times₀; label = "v$(k.version)")
-        end
-        axislegend(ax, position = :lt)
-    end
-
-    Label(f[0, 0], "times"; fontsize)
-    for (row, model) in enumerate(models)
-        Label(f[row, 0], model; rotation = pi / 2, fontsize, tellheight = false, tellwidth = false)
-    end
-    for (col, symmetry) in enumerate(symmetries)
-        Label(f[0, col], symmetry; fontsize, tellheight = false, tellwidth = false)
-    end
-
-    f
-end
-save(joinpath(resultdir, "bench_times_relative.png"), f_times_relative)
-
-f_allocs = let f = Figure(; size = (1400, 1400))
-    models = ["heisenberg_nn", "heisenberg_nnn", "heisenberg_cylinder", "heisenberg_coulomb"]
-    symmetries = ["Trivial", "Irrep[U₁]", "Irrep[SU₂]"]
-
-
-    df_model = groupby(df_contract, [:model, :symmetry])
-    for row in eachindex(models), col in eachindex(symmetries)
-        df_data = get(df_model, (; model = models[row], symmetry = symmetries[col]), nothing)
-        ax = Axis(f[row, col], xscale = log10, xlabel = "D", ylabel = "allocs", yscale = log10)
-        @assert !isnothing(df_data)
-        for (k, v) in pairs(groupby(df_data, :version))
-            Ds = v[!, :D]
-            allocs = estimator.(v[!, :allocs])
-            I = sortperm(Ds)
-            scatterlines!(ax, Ds[I], allocs[I]; label = "v$(k.version)")
-        end
-        axislegend(ax, position = :lt)
-    end
-
-    Label(f[0, 0], "allocs"; fontsize)
-    for (row, model) in enumerate(models)
-        Label(f[row, 0], model; rotation = pi / 2, fontsize, tellheight = false, tellwidth = false)
-    end
-    for (col, symmetry) in enumerate(symmetries)
-        Label(f[0, col], symmetry; fontsize, tellheight = false, tellwidth = false)
-    end
-
-    f
-end
-save(joinpath(resultdir, "bench_allocs.png"), f_allocs)
-
-f_memory = let f = Figure(; size = (1400, 1400))
-    models = ["heisenberg_nn", "heisenberg_nnn", "heisenberg_cylinder", "heisenberg_coulomb"]
-    symmetries = ["Trivial", "Irrep[U₁]", "Irrep[SU₂]"]
-
-
-    df_model = groupby(df_contract, [:model, :symmetry])
-    for row in eachindex(models), col in eachindex(symmetries)
-        df_data = get(df_model, (; model = models[row], symmetry = symmetries[col]), nothing)
-        ax = Axis(f[row, col], xscale = log10, xlabel = "D", ylabel = "memory (KiB)", yscale = log10)
-        @assert !isnothing(df_data)
-        for (k, v) in pairs(groupby(df_data, :version))
-            Ds = v[!, :D]
-            memory = estimator.(v[!, :memory]) ./ (2^10)
-            I = sortperm(Ds)
-            scatterlines!(ax, Ds[I], memory[I]; label = "v$(k.version)")
-        end
-        axislegend(ax, position = :lt)
-    end
-
-    Label(f[0, 0], "memory"; fontsize)
-    for (row, model) in enumerate(models)
-        Label(f[row, 0], model; rotation = pi / 2, fontsize, tellheight = false, tellwidth = false)
-    end
-    for (col, symmetry) in enumerate(symmetries)
-        Label(f[0, col], symmetry; fontsize, tellheight = false, tellwidth = false)
-    end
-
-    f
-end
-save(joinpath(resultdir, "bench_memory.png"), f_allocs)
-
-f_memory_relative = let f = Figure(; size = (1400, 1400))
-    models = ["heisenberg_nn", "heisenberg_nnn", "heisenberg_cylinder", "heisenberg_coulomb"]
-    symmetries = ["Trivial", "Irrep[U₁]", "Irrep[SU₂]"]
-
-
-    df_model = groupby(df_contract, [:model, :symmetry])
-    for row in eachindex(models), col in eachindex(symmetries)
-        df_data = get(df_model, (; model = models[row], symmetry = symmetries[col]), nothing)
-        ax = Axis(f[row, col], xscale = log10, xlabel = "D", ylabel = "memory / memory₀")
-        hlines!([1], color = :red)
-        @assert !isnothing(df_data)
-
-        df_v = groupby(df_data, :version)
-
-        v = get(df_v, (; version = 0), nothing)
-        Ds = v[!, :D]
-        times = estimator.(v[!, :memory])
-        I = sortperm(Ds)
-        times₀ = times[I]
-
-        for (k, v) in pairs(groupby(df_data, :version))
-            k.version == 0 && continue
-            Ds = v[!, :D]
-            I = sortperm(Ds)
-            times = estimator.(v[!, :memory])[I]
-            scatterlines!(ax, Ds[I], times ./ times₀; label = "v$(k.version)")
-        end
-        axislegend(ax, position = :lt)
-    end
-
-    Label(f[0, 0], "memory (relative)"; fontsize)
-    for (row, model) in enumerate(models)
-        Label(f[row, 0], model; rotation = pi / 2, fontsize, tellheight = false, tellwidth = false)
-    end
-    for (col, symmetry) in enumerate(symmetries)
-        Label(f[0, col], symmetry; fontsize, tellheight = false, tellwidth = false)
-    end
-
-    f
-end
-save(joinpath(resultdir, "bench_memory_relative.png"), f_memory_relative)
-
-
-# Including preparation times
-# ---------------------------
-for n_applications in [3, 10, 30]
-    f_times_relative = let f = Figure(; size = (1400, 1400))
-        models = ["heisenberg_nn", "heisenberg_nnn", "heisenberg_cylinder", "heisenberg_coulomb"]
-        symmetries = ["Trivial", "Irrep[U₁]", "Irrep[SU₂]"]
-
-
-        df_model = groupby(df_contract, [:model, :symmetry])
-        dfp_model = groupby(df_prep, [:model, :symmetry])
-        for row in eachindex(models), col in eachindex(symmetries)
-            df_data = get(df_model, (; model = models[row], symmetry = symmetries[col]), nothing)
-            dfp_data = get(dfp_model, (; model = models[row], symmetry = symmetries[col]), nothing)
-            ax = Axis(f[row, col], xscale = log10, xlabel = "D", ylabel = "Δt / Δt₀")
-            hlines!([1], color = :red)
-            @assert !isnothing(df_data) && !isnothing(dfp_data)
-
-            df_v = groupby(df_data, :version)
-            dfp_v = groupby(dfp_data, :version)
-
-            v = get(df_v, (; version = 0), nothing)
-            Ds = v[!, :D]
-            times = estimator.(v[!, :times])
-            I = sortperm(Ds)
-            times₀ = n_applications .* times[I]
-
-            vp = get(dfp_v, (; version = 0), nothing)
-            Ds = vp[!, :D]
-            times = estimator.(vp[!, :times])
-            I = sortperm(Ds)
-            times₀ .+= times[I]
-
-            df_data_v = groupby(dfp_data, :version)
-            for (k, v) in pairs(groupby(df_data, :version))
-                k.version == 0 && continue
-                Ds = v[!, :D]
-                I = sortperm(Ds)
-                times = n_applications .* estimator.(v[!, :times])[I]
-
-                vp = get(df_data_v, (; k.version), nothing)
-                @assert !isnothing(vp)
-                Ds = vp[!, :D]
-                I = sortperm(Ds)
-                times .+= estimator.(vp[!, :times][I])
-
-                scatterlines!(ax, Ds[I], times ./ times₀; label = "v$(k.version)")
+            if choice === :times
+                times_prep = estimator.(first.(v[!, :times])) ./ 1.0e3
+                times_contract = estimator.(last.(v[!, :times])) ./ 1.0e3
+                data = times_prep .+ (num_applications .* times_contract)
+            else
+                allocs_prep = first.(v[!, choice]) ./ 1.0e3
+                allocs_contract = last.(v[!, choice]) ./ 1.0e3
+                data = allocs_prep .+ (num_applications .* allocs_contract)
             end
-            axislegend(ax, position = :lt)
+            I = sortperm(Ds)
+            scatterlines!(ax, Ds[I], data[I]; label = "$(k.version)")
         end
-
-        Label(f[0, 0], "times"; fontsize)
-        for (row, model) in enumerate(models)
-            Label(f[row, 0], model; rotation = pi / 2, fontsize, tellheight = false, tellwidth = false)
-        end
-        for (col, symmetry) in enumerate(symmetries)
-            Label(f[0, col], symmetry; fontsize, tellheight = false, tellwidth = false)
-        end
-
-        f
+        axislegend(ax, position = :lt)
     end
-    save(joinpath(resultdir, "bench_prep_times_relative_n=$n_applications.png"), f_times_relative)
+
+    Label(f[0, 0], "times"; fontsize)
+    for (row, model) in enumerate(models)
+        Label(f[row, 0], model; rotation = pi / 2, fontsize, tellheight = false, tellwidth = false)
+    end
+    for (col, symmetry) in enumerate(symmetries)
+        Label(f[0, col], symmetry; fontsize, tellheight = false, tellwidth = false)
+    end
+
+    return f
+end
+for choice in (:allocs, :memory, :times), n in [1, 3, 10]
+    f = plot_result(df, n, choice)
+    save(joinpath(resultdir, "bench_$(choice)_$n.png"), f)
+    save(joinpath(resultdir, "bench_$(choice)_$n.svg"), f)
 end

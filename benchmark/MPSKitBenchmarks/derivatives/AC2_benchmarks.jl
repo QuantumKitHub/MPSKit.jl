@@ -20,7 +20,8 @@ benchname(spec::AC2Spec) = dim(spec.mps_virtualspaces[1]), dim(spec.mpo_virtuals
 
 # Benchmarks
 # ----------
-function MPSKit.AC2_hamiltonian(spec::AC2Spec{S}; T::Type = Float64) where {S}
+
+function prepare_state(spec::AC2Spec{S}; T::Type = Float64) where {S}
     GL = randn(T, spec.mps_virtualspaces[1] ⊗ spec.mpo_virtualspaces[1]' ← spec.mps_virtualspaces[1])
     GR = randn(T, spec.mps_virtualspaces[3] ⊗ spec.mpo_virtualspaces[3] ← spec.mps_virtualspaces[3])
 
@@ -55,26 +56,19 @@ function MPSKit.AC2_hamiltonian(spec::AC2Spec{S}; T::Type = Float64) where {S}
     GLs, GRs = MPSKit.initialize_environments(psi, H, psi)
     envs = MPSKit.InfiniteEnvironments(GLs, GRs)
 
-    return MPSKit.AC2_hamiltonian(1, psi, H, psi, envs)
+    return psi, H, envs
 end
 
 function contraction_benchmark(spec::AC2Spec; T::Type = Float64)
+    psi, H, envs = prepare_state(spec; T)
+    H_eff = MPSKit.AC2_hamiltonian(1, psi, H, psi, envs)
     V = spec.mps_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[3] ⊗ spec.physicalspaces[2]'
-    H_eff = MPSKit.AC2_hamiltonian(spec; T)
     return @benchmarkable $H_eff * x setup = x = randn($T, $V)
 end
 
 function preparation_benchmark(spec::AC2Spec; T::Type = Float64)
-    V = spec.mps_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[3] ⊗ spec.physicalspaces[2]'
-    H_eff = MPSKit.AC2_hamiltonian(spec; T)
-    return @benchmarkable MPSKit.prepare_operator!!($H_eff)
-end
-
-function prepared_benchmark(spec::AC2Spec; T::Type = Float64)
-    V = spec.mps_virtualspaces[1] ⊗ spec.physicalspaces[1] ← spec.mps_virtualspaces[3] ⊗ spec.physicalspaces[2]'
-    H_eff = MPSKit.AC2_hamiltonian(spec; T)
-    H_prep = MPSKit.prepare_operator!!(H_eff)
-    return @benchmarkable $H_prep * x setup = x = randn($T, $V)
+    psi, H, envs = prepare_state(spec; T)
+    return @benchmarkable MPSKit.AC2_hamiltonian(1, $psi, $H, $psi, $envs)
 end
 
 # Converters
