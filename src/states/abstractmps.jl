@@ -35,7 +35,8 @@ Construct an `MPSTensor` with given physical and virtual spaces.
 function MPSTensor(
         ::UndefInitializer, eltype, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
     ) where {S <: ElementarySpace}
-    return TensorMap{eltype}(undef, Vₗ ⊗ P ← Vᵣ)
+    TT = tensormaptype(S, 1 + (P isa S ? 1 : length(P)), 1, eltype)
+    return TT(undef, Vₗ ⊗ P ← Vᵣ)
 end
 function MPSTensor(
         f, eltype, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
@@ -81,9 +82,8 @@ Convert an array to an `MPSTensor`.
 function MPSTensor(A::AbstractArray{T}) where {T <: Number}
     @assert ndims(A) > 2 "MPSTensor should have at least 3 dims, but has $ndims(A)"
     sz = size(A)
-    t = TensorMap(undef, T, foldl(⊗, ComplexSpace.(sz[1:(end - 1)])) ← ℂ^sz[end])
-    t[] .= A
-    return t
+    V = foldl(⊗, ComplexSpace.(sz[1:(end - 1)])) ← ℂ^sz[end]
+    return TensorMap(A, V)
 end
 
 """
