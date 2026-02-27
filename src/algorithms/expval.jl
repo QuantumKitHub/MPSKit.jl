@@ -188,7 +188,7 @@ end
 # fallback
 function expectation_value(
         ::GeometryStyle, ::OperatorStyle,
-        ψ::AbstractMPS, mpo::AbstractMPO, envs...
+        ψ, mpo, envs...
     )
     return dot(ψ, mpo, ψ) / dot(ψ, ψ)
 end
