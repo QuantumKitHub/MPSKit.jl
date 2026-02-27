@@ -12,16 +12,20 @@ Projection_AC2_Hamiltonian(GL, A1, A2, GR) = ProjectionDerivativeOperator(GL, (A
 
 # Constructors
 # ------------
-function AC_hamiltonian(site::Int, below, operator::ProjectionOperator, above, envs)
-    return Projection_AC_Hamiltonian(
-        leftenv(envs, site, below), operator.ket.AC[site], rightenv(envs, site, below)
+function AC_hamiltonian(
+        site::Int, below, operator::ProjectionOperator, above, envs;
+        prepare::Bool = true
     )
+    GL = leftenv(envs, site, below)
+    GR = rightenv(envs, site, below)
+    H_AC = Projection_AC_Hamiltonian(GL, operator.ket.AC[site], GR)
+    return prepare ? prepare_operator!!(H_AC) : H_AC
 end
-function AC2_hamiltonian(site::Int, below, operator::ProjectionOperator, above, envs)
-    return Projection_AC2_Hamiltonian(
-        leftenv(envs, site, below), operator.ket.AC[site],
-        operator.ket.AR[site + 1], rightenv(envs, site + 1, below)
-    )
+function AC2_hamiltonian(site::Int, below, operator::ProjectionOperator, above, envs; prepare::Bool = true)
+    GL = leftenv(envs, site, below)
+    GR = rightenv(envs, site + 1, below)
+    H_AC2 = Projection_AC2_Hamiltonian(GL, operator.ket.AC[site], operator.ket.AR[site + 1], GR)
+    return prepare ? prepare_operator!!(H_AC2) : H_AC2
 end
 
 # Actions
