@@ -32,7 +32,7 @@ function DMRG(;
     return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize)
 end
 
-function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environments(ψ, H))
+function find_groundstate!(ψ, H, alg::DMRG, envs = environments(ψ, H))
     ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
     log = IterLog("DMRG")
@@ -109,7 +109,7 @@ function DMRG2(;
     return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_svd, trscheme, finalize)
 end
 
-function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environments(ψ, H))
+function find_groundstate!(ψ, H, alg::DMRG2, envs = environments(ψ, H))
     ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
     log = IterLog("DMRG2")
@@ -166,6 +166,6 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environm
     return ψ, envs, ϵ
 end
 
-function find_groundstate(ψ, H, alg::Union{DMRG, DMRG2}, envs...; kwargs...)
+function find_groundstate(::FiniteChainStyle, ψ, H, alg::Union{DMRG, DMRG2}, envs...; kwargs...)
     return find_groundstate!(copy(ψ), H, alg, envs...; kwargs...)
 end
