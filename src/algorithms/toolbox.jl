@@ -74,7 +74,7 @@ function calc_galerkin(
         below::AbstractMPS, operator, above, envs
     )
     return maximum(
-        pos -> calc_galerkin(pos, below, operator, above, envs), 
+        pos -> calc_galerkin(pos, below, operator, above, envs),
         CartesianIndices(size(above))
     )
 end
