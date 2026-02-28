@@ -46,7 +46,7 @@ function find_groundstate(
 end
 
 function find_groundstate(
-        ψ::AbstractMPS, H::AbstractMPO, alg::Algorithm, 
+        ψ::AbstractMPS, H::AbstractMPO, alg::Algorithm,
         envs = environments(ψ, H)
     )
     return find_groundstate(GeometryStyle(ψ, H), ψ, H, alg, envs)

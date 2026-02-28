@@ -56,7 +56,7 @@ struct GradientGrassmann{O <: OptimKit.OptimizationAlgorithm, F} <: Algorithm
 end
 
 function find_groundstate(
-        style::GeometryStyle, ψ::S, H, alg::GradientGrassmann, 
+        style::GeometryStyle, ψ::S, H, alg::GradientGrassmann,
         envs::P = environments(ψ, H)
     )::Tuple{S, P, Float64} where {S, P}
     !(style isa FiniteChainStyle) || dim(ψ.C[end]) == 1 ||
