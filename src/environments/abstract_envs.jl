@@ -69,15 +69,22 @@ end
 Determine an appropriate algorithm for computing the environments, based on the given `kwargs...`.
 """
 function environment_alg(
-        ::Union{InfiniteMPS, MultilineMPS}, ::Union{InfiniteMPO, MultilineMPO},
-        ::Union{InfiniteMPS, MultilineMPS};
+        below::AbstractMPS, operator, above::AbstractMPS; kwargs...
+    )
+    return environment_alg(
+        GeometryStyle(below, operator, above), OperatorStyle(operator), 
+        below, operator, above; kwargs...
+    )
+end
+function environment_alg(
+        ::InfiniteChainStyle, ::MPOStyle, below, operator, above; 
         tol = Defaults.tol, maxiter = Defaults.maxiter, krylovdim = Defaults.krylovdim,
-        verbosity = Defaults.VERBOSE_NONE, eager = true
+        verbosity = Defaults.VERBOSE_NONE, eager = true,
     )
     return Arnoldi(; tol, maxiter, krylovdim, verbosity, eager)
 end
 function environment_alg(
-        below, ::InfiniteMPOHamiltonian, above;
+        ::InfiniteChainStyle, ::HamiltonianStyle, below, operator, above; 
         tol = Defaults.tol, maxiter = Defaults.maxiter, krylovdim = Defaults.krylovdim,
         verbosity = Defaults.VERBOSE_NONE
     )
@@ -85,6 +92,7 @@ function environment_alg(
     return GMRES(; tol, maxiter, krylovdim = min(max_krylovdim, krylovdim), verbosity)
 end
 function environment_alg(
+        ::InfiniteChainStyle, ::MPOStyle,
         ::Union{InfiniteQP, MultilineQP}, ::Union{InfiniteMPO, MultilineMPO},
         ::Union{InfiniteQP, MultilineQP};
         tol = Defaults.tol, maxiter = Defaults.maxiter, krylovdim = Defaults.krylovdim,
