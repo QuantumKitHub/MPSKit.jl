@@ -151,9 +151,11 @@ function _localupdate_vumps_step!(
     return regauge!(AC, C; alg = alg_orth)
 end
 
-function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
+function gauge_step!(
+        it::IterativeSolver{<:VUMPS,VUMPSState{S}}, state, ACs::AbstractVector
+    ) where {S}
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    return InfiniteMPS(ACs, state.mps.C[end]; alg_gauge.tol, alg_gauge.maxiter)
+    return S(ACs, state.mps.C[end]; alg_gauge.tol, alg_gauge.maxiter)
 end
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractMatrix)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
