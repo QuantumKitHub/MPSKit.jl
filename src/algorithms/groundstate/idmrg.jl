@@ -102,7 +102,7 @@ function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps,
         end
 
         alg_gauge = updatetol(alg.alg_gauge, it.state.iter, it.state.ϵ)
-        ψ′ = InfiniteMPS(it.state.mps.AR[1:end]; alg_gauge.tol, alg_gauge.maxiter)
+        ψ′ = typeof(mps)(it.state.mps.AR; alg_gauge.tol, alg_gauge.maxiter)
         envs = recalculate!(it.state.envs, ψ′, it.state.operator, ψ′)
         return ψ′, envs, it.state.ϵ
     end
