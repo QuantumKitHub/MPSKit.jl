@@ -72,19 +72,19 @@ function environment_alg(
         below::AbstractMPS, operator, above::AbstractMPS; kwargs...
     )
     return environment_alg(
-        GeometryStyle(below, operator, above), OperatorStyle(operator), 
+        GeometryStyle(below, operator, above), OperatorStyle(operator),
         below, operator, above; kwargs...
     )
 end
 function environment_alg(
-        ::InfiniteChainStyle, ::MPOStyle, below, operator, above; 
+        ::InfiniteChainStyle, ::MPOStyle, below, operator, above;
         tol = Defaults.tol, maxiter = Defaults.maxiter, krylovdim = Defaults.krylovdim,
         verbosity = Defaults.VERBOSE_NONE, eager = true,
     )
     return Arnoldi(; tol, maxiter, krylovdim, verbosity, eager)
 end
 function environment_alg(
-        ::InfiniteChainStyle, ::HamiltonianStyle, below, operator, above; 
+        ::InfiniteChainStyle, ::HamiltonianStyle, below, operator, above;
         tol = Defaults.tol, maxiter = Defaults.maxiter, krylovdim = Defaults.krylovdim,
         verbosity = Defaults.VERBOSE_NONE
     )
