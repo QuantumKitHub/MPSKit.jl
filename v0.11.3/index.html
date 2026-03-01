@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · MPSKit.jl</title><meta name="title" content="Home · MPSKit.jl"/><meta property="og:title" content="Home · MPSKit.jl"/><meta property="twitter:title" content="Home · MPSKit.jl"/><meta name="description" content="Documentation for MPSKit.jl."/><meta property="og:description" content="Documentation for MPSKit.jl."/><meta property="twitter:description" content="Documentation for MPSKit.jl."/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.svg" alt="MPSKit.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>MPSKit.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Home</a><ul class="internal"><li><a class="tocitem" href="#Table-of-contents"><span>Table of contents</span></a></li><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Key-Features"><span>Key Features</span></a></li><li><a class="tocitem" href="#Usage"><span>Usage</span></a></li><li><a class="tocitem" href="#Publications-using-MPSKit"><span>Publications using MPSKit</span></a></li></ul></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="man/intro/">Prerequisites</a></li><li><a class="tocitem" href="man/states/">States</a></li><li><a class="tocitem" href="man/operators/">Operators</a></li><li><a class="tocitem" href="man/algorithms/">Algorithms</a></li><li><a class="tocitem" href="man/environments/">Environments</a></li><li><a class="tocitem" href="man/parallelism/">Parallelism in julia</a></li><li><a class="tocitem" href="man/lattices/">Lattices</a></li></ul></li><li><a class="tocitem" href="examples/">Examples</a></li><li><a class="tocitem" href="lib/lib/">Library</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Home</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Home</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/MPSKit.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/MPSKit.jl/blob/master/docs/src/index.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="MPSKit.jl"><a class="docs-heading-anchor" href="#MPSKit.jl">MPSKit.jl</a><a id="MPSKit.jl-1"></a><a class="docs-heading-anchor-permalink" href="#MPSKit.jl" title="Permalink"></a></h1><p><strong>Efficient and versatile tools for working with matrix product states</strong></p><h2 id="Table-of-contents"><a class="docs-heading-anchor" href="#Table-of-contents">Table of contents</a><a id="Table-of-contents-1"></a><a class="docs-heading-anchor-permalink" href="#Table-of-contents" title="Permalink"></a></h2><ul><li><a href="man/intro/#Prerequisites">Prerequisites</a></li><li><a href="man/states/#um_states">States</a></li><li><a href="man/operators/#um_operators">Operators</a></li><li><a href="man/algorithms/#um_algorithms">Algorithms</a></li><li><a href="man/parallelism/#Parallelism-in-julia">Parallelism in julia</a></li><li><a href="man/lattices/#lattices">Lattices</a></li></ul><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>MPSKit.jl is a part of the general registry, and can be installed via the package manager as:</p><pre><code class="nohighlight hljs">pkg&gt; add MPSKit</code></pre><h2 id="Key-Features"><a class="docs-heading-anchor" href="#Key-Features">Key Features</a><a id="Key-Features-1"></a><a class="docs-heading-anchor-permalink" href="#Key-Features" title="Permalink"></a></h2><ul><li>Construction and manipulation of Matrix Product States (MPS)</li><li>Calculation of observables and expectation values</li><li>Various optimization methods for obtaining MPS fixed points</li><li>Support for both finite and infinite MPS</li><li>Support for wide variety of symmetries, including Abelian, non-Abelian, fermionic and anyonic symmetries</li></ul><h2 id="Usage"><a class="docs-heading-anchor" href="#Usage">Usage</a><a id="Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Usage" title="Permalink"></a></h2><p>To get started with MPSKit, we recommend also including <a href="https://github.com/Jutho/TensorKit.jl">TensorKit.jl</a> and <a href="https://github.com/QuantumKitHub/MPSKitModels.jl">MPSKitModels.jl</a>. The former defines the tensor backend which is used throughout MPSKit, while the latter includes some common operators and models.</p><pre><code class="language-julia hljs">using TensorOperations
+using TensorKit
+using MPSKit
+using MPSKitModels
+using LinearAlgebra: norm</code></pre><h3 id="Finite-Matrix-Product-States"><a class="docs-heading-anchor" href="#Finite-Matrix-Product-States">Finite Matrix Product States</a><a id="Finite-Matrix-Product-States-1"></a><a class="docs-heading-anchor-permalink" href="#Finite-Matrix-Product-States" title="Permalink"></a></h3><p>Finite MPS are characterised by a set of tensors, one for each site, which each have 3 legs. They can be constructed by specifying the virtual spaces and the physical spaces, i.e. the dimensions of each of the legs. These are then contracted to form the MPS. In MPSKit, they are represented by <code>FiniteMPS</code>, which can be constructed either by passing in the tensors directly, or by specifying the dimensions of the legs.</p><pre><code class="language-julia hljs">d = 2 # physical dimension
+D = 5 # virtual dimension
+L = 10 # number of sites
+
+mps = FiniteMPS(L, ComplexSpace(d), ComplexSpace(D)) # random MPS with maximal bond dimension D</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-site FiniteMPS (ComplexF64, TensorKit.ComplexSpace):
+┌ CL[11]: TensorMap(ℂ^1 ← ℂ^1)
+├── AL[10]: TensorMap((ℂ^2 ⊗ ℂ^2) ← ℂ^1)
+├── AL[9]: TensorMap((ℂ^4 ⊗ ℂ^2) ← ℂ^2)
+├── AL[8]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^4)
+├── AL[7]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+├── AL[6]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+├── AL[5]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+├── AL[4]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+├── AL[3]: TensorMap((ℂ^4 ⊗ ℂ^2) ← ℂ^5)
+├── AL[2]: TensorMap((ℂ^2 ⊗ ℂ^2) ← ℂ^4)
+└── AL[1]: TensorMap((ℂ^1 ⊗ ℂ^2) ← ℂ^2)
+</code></pre><p>The <code>FiniteMPS</code> object then handles the gauging of the MPS, which is necessary for many of the algorithms. This is done automatically when needed, and the user can access the gauged tensors by getting and setting the <code>AL</code>, <code>AR</code>, <code>CR</code>/<code>CL</code> and <code>AC</code> fields, which each represent a vector of these tensors.</p><pre><code class="language-julia hljs">al = mps.AL[3] # left gauged tensor of the third site
+@tensor E[a; b] := al[c, d, b] * conj(al[c, d, a])
+@show isapprox(E, id(left_virtualspace(mps, 3)))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><pre><code class="language-julia hljs">ar = mps.AR[3] # right gauged tensor of the third site
+@tensor E[a; b] := ar[a, d, c] * conj(ar[b, d, c])
+@show isapprox(E, id(right_virtualspace(mps, 2)))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><p>As the mps will be kept in a gauged form, updating a tensor will also update the gauged tensors. For example, we can set the tensor of the third site to the identity, and the gauged tensors will be updated accordingly.</p><pre><code class="language-julia hljs">mps.CR[3] = id(domain(mps.CR[3]))
+println(mps)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌── AR[10]: TensorMap((ℂ^2 ⊗ ℂ^2) ← ℂ^1)
+├── AR[9]: TensorMap((ℂ^4 ⊗ ℂ^2) ← ℂ^2)
+├── AR[8]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^4)
+├── AR[7]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+├── AR[6]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+├── AR[5]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+├── AR[4]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+│ CL[4]: TensorMap(ℂ^5 ← ℂ^5)
+├── AL[3]: TensorMap((ℂ^4 ⊗ ℂ^2) ← ℂ^5)
+├── AL[2]: TensorMap((ℂ^2 ⊗ ℂ^2) ← ℂ^4)
+└── AL[1]: TensorMap((ℂ^1 ⊗ ℂ^2) ← ℂ^2)</code></pre><p>These objects can then be used to compute observables and expectation values. For example, the expectation value of the identity operator at the third site, which is equal to the norm of the MPS, can be computed as:</p><pre><code class="language-julia hljs">N1 = LinearAlgebra.norm(mps)
+N2 = expectation_value(mps, 3 =&gt; id(physicalspace(mps, 3)))
+println(&quot;‖mps‖ = $N1&quot;)
+println(&quot;&lt;mps|𝕀₃|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 2.2360679774997907
+&lt;mps|𝕀₃|mps&gt; = 5.0 + 0.0im</code></pre><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">H = transverse_field_ising(; J=1.0, g=0.5)
+find_groundstate!(mps, H, DMRG(; maxiter=10))
+E0 = expectation_value(mps, H)
+println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: DMRG init:	obj = -2.383944828784e+00	err = 4.7743e-01
+[ Info: DMRG   1:	obj = -9.765501087891e+00	err = 1.9979671393e-02	time = 0.47 sec
+[ Info: DMRG   2:	obj = -9.765503487465e+00	err = 1.4637421640e-04	time = 0.32 sec
+[ Info: DMRG   3:	obj = -9.765503492258e+00	err = 1.0184723078e-05	time = 0.01 sec
+[ Info: DMRG   4:	obj = -9.765503493077e+00	err = 5.1912625491e-06	time = 0.01 sec
+[ Info: DMRG   5:	obj = -9.765503493258e+00	err = 2.4184805872e-06	time = 0.01 sec
+[ Info: DMRG   6:	obj = -9.765503493297e+00	err = 1.1003272474e-06	time = 0.01 sec
+[ Info: DMRG   7:	obj = -9.765503493306e+00	err = 4.9768607026e-07	time = 0.01 sec
+[ Info: DMRG   8:	obj = -9.765503493308e+00	err = 2.2485244829e-07	time = 0.01 sec
+[ Info: DMRG   9:	obj = -9.765503493309e+00	err = 1.0161306226e-07	time = 0.04 sec
+┌ Warning: DMRG cancel 10:	obj = -9.765503493309e+00	err = 5.2034509085e-08	time = 0.92 sec
+└ @ MPSKit ~/work/MPSKit.jl/MPSKit.jl/src/algorithms/groundstate/dmrg.jl:54
+&lt;mps|H|mps&gt; = -0.9765503493309108</code></pre><h3 id="Infinite-Matrix-Product-States"><a class="docs-heading-anchor" href="#Infinite-Matrix-Product-States">Infinite Matrix Product States</a><a id="Infinite-Matrix-Product-States-1"></a><a class="docs-heading-anchor-permalink" href="#Infinite-Matrix-Product-States" title="Permalink"></a></h3><p>Similarly, an infinite MPS can be constructed by specifying the tensors for the unit cell, characterised by the spaces (dimensions) thereof.</p><pre><code class="language-julia hljs">d = 2 # physical dimension
+D = 5 # virtual dimension
+mps = InfiniteMPS(d, D) # random MPS</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">single site InfiniteMPS:
+│   ⋮
+│ CR[1]: TensorMap(ℂ^5 ← ℂ^5)
+├── AL[1]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+│   ⋮
+</code></pre><p>The <code>InfiniteMPS</code> object then handles the gauging of the MPS, which is necessary for many of the algorithms. This is done automatically upon creation of the object, and the user can access the gauged tensors by getting and setting the <code>AL</code>, <code>AR</code>, <code>CR</code>/<code>CL</code> and <code>AC</code> fields, which each represent a (periodic) vector of these tensors.</p><pre><code class="language-julia hljs">al = mps.AL[1] # left gauged tensor of the third site
+@tensor E[a; b] := al[c, d, b] * conj(al[c, d, a])
+@show isapprox(E, id(left_virtualspace(mps, 1)))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><pre><code class="language-julia hljs">ar = mps.AR[1] # right gauged tensor of the third site
+@tensor E[a; b] := ar[a, d, c] * conj(ar[b, d, c])
+@show isapprox(E, id(right_virtualspace(mps, 2)))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><p>As regauging the MPS is not possible without recomputing all the tensors, setting a single tensor is not supported. Instead, the user should construct a new mps object with the desired tensor, which will then be gauged upon construction.</p><pre><code class="language-julia hljs">als = 3 .* mps.AL
+mps = InfiniteMPS(als)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">single site InfiniteMPS:
+│   ⋮
+│ CR[1]: TensorMap(ℂ^5 ← ℂ^5)
+├── AL[1]: TensorMap((ℂ^5 ⊗ ℂ^2) ← ℂ^5)
+│   ⋮
+</code></pre><p>These objects can then be used to compute observables and expectation values. For example, the norm of the MPS, which is equal to the expectation value of the identity operator can be computed by:</p><pre><code class="language-julia hljs">N1 = norm(mps)
+N2 = expectation_value(mps, 1 =&gt; id(physicalspace(mps, 1)))
+println(&quot;‖mps‖ = $N1&quot;)
+println(&quot;&lt;mps|𝕀₁|mps&gt; = $N2&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">‖mps‖ = 1.0000000000000002
+&lt;mps|𝕀₁|mps&gt; = 0.9999999999999998 + 0.0im</code></pre><div class="admonition is-info"><header class="admonition-header">Normalization of infinite MPS</header><div class="admonition-body"><p>Because infinite MPS cannot sensibly be normalized to anything but <span>$1$</span>, the <code>norm</code> of an infinite MPS is always set to be <span>$1$</span> at construction. If this were not the case, any observable computed from the MPS would either blow up to infinity or vanish to zero.</p></div></div><p>Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians. Using the pre-defined models in <code>MPSKitModels</code>, we can construct the groundstate for the transverse field Ising model:</p><pre><code class="language-julia hljs">H = transverse_field_ising(; J=1.0, g=0.5)
+mps, = find_groundstate(mps, H, VUMPS(; maxiter=10))
+E0 = expectation_value(mps, H)
+println(&quot;&lt;mps|H|mps&gt; = $(sum(real(E0)) / length(mps))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[ Info: VUMPS init:	obj = -4.838339744025e-01	err = 4.4293e-01
+[ Info: VUMPS   1:	obj = -1.063250443790e+00	err = 1.6915933915e-02	time = 0.00 sec
+┌ Warning: ignoring imaginary component -3.6573653910618176e-6 from total weight 2.208664245784296: operator might not be hermitian?
+│   α = 1.8820712564142164 - 3.6573653910618176e-6im
+│   β₁ = 0.07562373530574491
+│   β₂ = 1.1533805040099983
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -2.6179462249212304e-6 from total weight 2.8987707425006968: operator might not be hermitian?
+│   α = 2.2348779570867516 - 2.6179462249212304e-6im
+│   β₁ = 1.1533805040099983
+│   β₂ = 1.4414942759055878
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -3.3103317413629707e-6 from total weight 4.20524460155265: operator might not be hermitian?
+│   α = 3.5534709848173067 - 3.3103317413629707e-6im
+│   β₁ = 1.4414942759055878
+│   β₂ = 1.7259838850550409
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -3.610752312118229e-6 from total weight 4.153011965715137: operator might not be hermitian?
+│   α = 3.3505235597293175 - 3.610752312118229e-6im
+│   β₁ = 1.7259838850550409
+│   β₂ = 1.7442705901290558
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -6.518699110764567e-6 from total weight 5.950488348422702: operator might not be hermitian?
+│   α = 4.915587941691586 - 6.518699110764567e-6im
+│   β₁ = 1.7442705901290558
+│   β₂ = 2.8640577648816645
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -7.419204805292345e-6 from total weight 6.402208432739453: operator might not be hermitian?
+│   α = 5.297662502298645 - 7.419204805292345e-6im
+│   β₁ = 2.8640577648816645
+│   β₂ = 2.172606256859496
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -6.763939392136903e-6 from total weight 5.48130644887094: operator might not be hermitian?
+│   α = 4.587925810745237 - 6.763939392136903e-6im
+│   β₁ = 2.172606256859496
+│   β₂ = 2.067713518392004
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -9.189121068078898e-6 from total weight 4.916659615869496: operator might not be hermitian?
+│   α = 4.093755505435068 - 9.189121068078898e-6im
+│   β₁ = 2.067713518392004
+│   β₂ = 1.7717980826879147
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -7.264872443971115e-6 from total weight 4.90853100285771: operator might not be hermitian?
+│   α = 4.1723748267470375 - 7.264872443971115e-6im
+│   β₁ = 1.7717980826879147
+│   β₂ = 1.883001982280845
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -4.574333781030837e-6 from total weight 3.0537970290278627: operator might not be hermitian?
+│   α = 2.8409282356436303 - 4.574333781030837e-6im
+│   β₁ = 0.06757421670824855
+│   β₂ = 1.1181398748088325
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -3.769812059819383e-6 from total weight 3.6951949475797146: operator might not be hermitian?
+│   α = 3.250149602076084 - 3.769812059819383e-6im
+│   β₁ = 1.1181398748088325
+│   β₂ = 1.3567448120746954
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -4.1913820438589655e-6 from total weight 4.92024908670127: operator might not be hermitian?
+│   α = 4.4474039482305825 - 4.1913820438589655e-6im
+│   β₁ = 1.3567448120746954
+│   β₂ = 1.6089414878542179
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -5.793979218779444e-6 from total weight 4.516445927581113: operator might not be hermitian?
+│   α = 4.029165566241623 - 5.793979218779444e-6im
+│   β₁ = 1.6089414878542179
+│   β₂ = 1.2551557453976483
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -6.804519171031698e-6 from total weight 4.386078161825735: operator might not be hermitian?
+│   α = 3.899614024010319 - 6.804519171031698e-6im
+│   β₁ = 1.2551557453976483
+│   β₂ = 1.5669320853615964
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -8.289150855406158e-6 from total weight 5.5928098482180175: operator might not be hermitian?
+│   α = 5.140757228111611 - 8.289150855406158e-6im
+│   β₁ = 1.5669320853615964
+│   β₂ = 1.5481798861044234
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -5.607679795406953e-6 from total weight 4.406208602367963: operator might not be hermitian?
+│   α = 3.9647740796945876 - 5.607679795406953e-6im
+│   β₁ = 1.5481798861044234
+│   β₂ = 1.139464692210173
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+┌ Warning: ignoring imaginary component -6.31637443790356e-6 from total weight 4.386902484346704: operator might not be hermitian?
+│   α = 3.9580271505476365 - 6.31637443790356e-6im
+│   β₁ = 1.139464692210173
+│   β₂ = 1.5101505547002665
+└ @ KrylovKit ~/.julia/packages/KrylovKit/Y0zG7/src/factorizations/lanczos.jl:170
+[ Info: VUMPS   2:	obj = -1.063544409007e+00	err = 2.7533079235e-05	time = 0.08 sec
+[ Info: VUMPS   3:	obj = -1.063544409973e+00	err = 3.3287194116e-07	time = 0.00 sec
+[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 3.1001388386e-08	time = 0.00 sec
+[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 3.2469024113e-09	time = 0.00 sec
+[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 3.4798274691e-10	time = 0.00 sec
+[ Info: VUMPS conv 7:	obj = -1.063544409973e+00	err = 5.0299717421e-11	time = 0.09 sec
+&lt;mps|H|mps&gt; = -1.0635444099732512</code></pre><h3 id="Additional-Resources"><a class="docs-heading-anchor" href="#Additional-Resources">Additional Resources</a><a id="Additional-Resources-1"></a><a class="docs-heading-anchor-permalink" href="#Additional-Resources" title="Permalink"></a></h3><p>For more detailed information on the functionality and capabilities of MPSKit, refer to the Manual section, or have a look at the <a href="examples/#Examples">Examples</a> page.</p><p>Keep in mind that the documentation is still a work in progress, and that some features may not be fully documented yet. If you encounter any issues or have questions, please check the library&#39;s <a href="https://github.com/QuantumKitHub/MPSKit.jl/issues">issue tracker</a> on the GitHub repository and open a new issue.</p><h2 id="Publications-using-MPSKit"><a class="docs-heading-anchor" href="#Publications-using-MPSKit">Publications using MPSKit</a><a id="Publications-using-MPSKit-1"></a><a class="docs-heading-anchor-permalink" href="#Publications-using-MPSKit" title="Permalink"></a></h2><p>Below you can find a list of publications that have made use of MPSKit. If you have used this package and wish to have your publication added to this list, please open a pull request or an issue on the <a href="https://github.com/QuantumKitHub/MPSKit.jl/">GitHub repository</a>.</p><ul><li>R. Belyansky et al., <em>“High-Energy Collision of Quarks and Hadrons in the Schwinger Model: From Tensor Networks to Circuit QED,”</em> 2023, doi: 10.48550/ARXIV.2307.02522.</li><li>L. Devos, L. Vanderstraeten, and F. Verstraete, <em>“Haldane gap in the SU(3) [3 0 0] Heisenberg chain,”</em> Phys. Rev. B, vol. 106, no. 15, p. 155103, Oct. 2022, doi: 10.1103/PhysRevB.106.155103.</li><li>J. C. Halimeh, M. V. Damme, T. V. Zache, D. Banerjee, and P. Hauke, <em>“Achieving the quantum field theory limit in far-from-equilibrium quantum link models,”</em> Quantum, vol. 6, p. 878, Dec. 2022, doi: 10.22331/q-2022-12-19-878.</li><li>J. C. Halimeh, D. Trapin, M. Van Damme, and M. Heyl, <em>“Local measures of dynamical quantum phase transitions,”</em> Phys. Rev. B, vol. 104, no. 7, p. 075130, Aug. 2021, doi: 10.1103/PhysRevB.104.075130.</li><li>M. Hauru, M. Van Damme, and J. Haegeman, <em>“Riemannian optimization of isometric tensor networks,”</em> SciPost Physics, vol. 10, no. 2, p. 040, Feb. 2021, doi: 10.21468/SciPostPhys.10.2.040.</li><li>M. Van Damme, R. Vanhove, J. Haegeman, F. Verstraete, and L. Vanderstraeten, <em>“Efficient matrix product state methods for extracting spectral information on rings and cylinders,”</em> Phys. Rev. B, vol. 104, no. 11, p. 115142, Sep. 2021, doi: 10.1103/PhysRevB.104.115142.</li><li>M. Van Damme, T. V. Zache, D. Banerjee, P. Hauke, and J. C. Halimeh, <em>“Dynamical quantum phase transitions in spin-<span>$S$</span> <span>$\text{U}(1)$</span> quantum link models,”</em> Phys. Rev. B, vol. 106, no. 24, p. 245110, Dec. 2022, doi: 10.1103/PhysRevB.106.245110.</li><li>E. L. Weerda and M. Rizzi, <em>“Fractional quantum Hall states with variational Projected Entangled-Pair States: a study of the bosonic Harper-Hofstadter model,”</em> 2023, doi: 10.48550/ARXIV.2309.12811.</li><li>C. Yu and J.-W. Lee, <em>“Closing of the Haldane gap in a spin-1 XXZ chain,”</em> J. Korean Phys. Soc., vol. 79, no. 9, pp. 841–845, Nov. 2021, doi: 10.1007/s40042-021-00283-z.</li><li>Y. Zhang, A. Hulsch, H.-C. Zhang, W. Tang, L. Wang, and H.-H. Tu, <em>“Universal Scaling of Klein Bottle Entropy near Conformal Critical Points,”</em> Phys. Rev. Lett., vol. 130, no. 15, p. 151602, Apr. 2023, doi: 10.1103/PhysRevLett.130.151602.</li><li>Gertian Roose, Laurens Vanderstraeten, Jutho Haegeman, and Nick Bultinck. Anomalous domain wall condensation in a modified ising chain. Phys. Rev. B, 99: 195132, May 2019. 10.1103/​PhysRevB.99.195132.</li></ul><p>https:/​/​doi.org/​10.1103/​PhysRevB.99.195132</p><ul><li>Roose, G., Bultinck, N., Vanderstraeten, L. et al. Lattice regularisation and entanglement structure of the Gross-Neveu model. J. High Energ. Phys. 2021, 207 (2021). https://doi.org/10.1007/JHEP07(2021)207</li><li>Roose, G., Haegeman, J., Van Acoleyen, K. et al. The chiral Gross-Neveu model on the lattice via a Landau-forbidden phase transition. J. High Energ. Phys. 2022, 19 (2022). https://doi.org/10.1007/JHEP06(2022)019</li></ul></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="man/intro/">Prerequisites »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 12 November 2024 14:54">Tuesday 12 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
