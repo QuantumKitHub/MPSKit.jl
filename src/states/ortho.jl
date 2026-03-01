@@ -168,7 +168,7 @@ function regauge!(
     Q_C, _ = left_orth!(C; alg)
     return mul!(AC, Q_AC, Q_C')
 end
-function regauge!(AC::Vector{<:GenericMPSTensor}, C::Vector{<:MPSBondTensor}; kwargs...)
+function regauge!(AC::AbstractVector{<:GenericMPSTensor}, C::AbstractVector{<:MPSBondTensor}; kwargs...)
     for i in 1:length(AC)
         regauge!(AC[i], C[i]; kwargs...)
     end
@@ -183,7 +183,7 @@ function regauge!(
     AR_tail = mul!(AC_tail, Q_C', Q_AC)
     return repartition!(AC, AR_tail)
 end
-function regauge!(CL::Vector{<:MPSBondTensor}, AC::Vector{<:GenericMPSTensor}; kwargs...)
+function regauge!(CL::AbstractVector{<:MPSBondTensor}, AC::AbstractVector{<:GenericMPSTensor}; kwargs...)
     for i in length(CL):-1:1
         regauge!(CL[i], AC[i]; kwargs...)
     end
@@ -191,7 +191,7 @@ function regauge!(CL::Vector{<:MPSBondTensor}, AC::Vector{<:GenericMPSTensor}; k
 end
 # fix ambiguity + error
 regauge!(::MPSBondTensor, ::MPSBondTensor; kwargs...) = error("method ambiguity")
-function regauge!(::Vector{<:MPSBondTensor}, ::Vector{<:MPSBondTensor}; kwargs...)
+function regauge!(::AbstractVector{<:MPSBondTensor}, ::AbstractVector{<:MPSBondTensor}; kwargs...)
     return error("method ambiguity")
 end
 
