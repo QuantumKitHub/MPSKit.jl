@@ -10,9 +10,8 @@ fixedpoint is assumed to be unique.
 function fixedpoint(A, x₀, which::Symbol, alg::Lanczos)
     vals, vecs, info = eigsolve(A, x₀, 1, which, alg)
 
-    if info.converged == 0
+    info.converged == 0 &&
         @warnv 1 "fixed point not converged after $(info.numiter) iterations: normres = $(info.normres[1])"
-    end
 
     return vals[1], vecs[1]
 end
@@ -20,12 +19,9 @@ end
 function fixedpoint(A, x₀, which::Symbol, alg::Arnoldi)
     TT, vecs, vals, info = schursolve(A, x₀, 1, which, alg)
 
-    if info.converged == 0
+    info.converged == 0 &&
         @warnv 1 "fixed point not converged after $(info.numiter) iterations: normres = $(info.normres[1])"
-    end
-    if size(TT, 2) > 1 && TT[2, 1] != 0
-        @warnv 1 "non-unique fixed point detected"
-    end
+    size(TT, 2) > 1 && TT[2, 1] != 0 && @warnv 1 "non-unique fixed point detected"
 
     return vals[1], vecs[1]
 end
