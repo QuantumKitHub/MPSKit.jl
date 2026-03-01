@@ -42,7 +42,7 @@ function excitations(
 
     # add random offset to kickstart Krylov process:
     AC = ψ.AC[pos]
-    AC₀ = add(AC, randn(scalartype(AC), space(AC)), eps(real(scalartype(AC)))^(1 / 4))
+    AC₀ = add(AC, randn!(similar(AC)), eps(real(scalartype(AC)))^(1 / 4))
 
     H_eff = AC_hamiltonian(pos, ψ, H, ψ, envs)
     Es, ACs, info = eigsolve(H_eff, AC₀, num + 1, :SR, alg.alg)
@@ -107,7 +107,7 @@ function excitations(
 
     # add random offset to kickstart Krylov process:
     @plansor AC2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
-    AC2₀ = add(AC2, randn(scalartype(AC2), space(AC2)), eps(real(scalartype(AC2)))^(1 / 4))
+    AC2₀ = add(AC2, randn!(similar(AC2)), eps(real(scalartype(AC2)))^(1 / 4))
 
     H_eff = AC2_hamiltonian(pos, ψ, H, ψ, envs)
     Es, AC2s, info = eigsolve(H_eff, AC2₀, num + 1, :SR, alg.alg)

@@ -437,7 +437,6 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
 
     # construct the sparse MPO
     T = _find_tensortype(nonzero_opps)
-    E = scalartype(T)
     S = spacetype(T)
 
     # avoid using one(S)
@@ -465,7 +464,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
     end
 
     # construct the tensor
-    TW = jordanmpotensortype(S, E)
+    TW = jordanmpotensortype(T)
     Os = map(1:length(lattice)) do site
         V = virtualsumspaces[site] * lattice[site] ←
             lattice[site] * virtualsumspaces[site + 1]
@@ -476,7 +475,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
             key_R = key_R′ == 0 ? length(virtualsumspaces[site + 1]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{E}(eachspace(O)[key_L, 1, 1, key_R])
+                τ = BraidingTensor{scalartype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -520,7 +519,6 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
 
     # construct the sparse MPO
     T = _find_tensortype(nonzero_opps)
-    E = scalartype(T)
     S = spacetype(T)
 
     # construct the virtual spaces
@@ -588,7 +586,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     end
 
     # construct the tensor
-    TW = jordanmpotensortype(S, E)
+    TW = jordanmpotensortype(T)
     Os = map(1:length(lattice)) do site
         V = virtualsumspaces[site - 1] * lattice[site] ←
             lattice[site] * virtualsumspaces[site]
@@ -599,7 +597,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
             key_R = key_R′ == 0 ? length(virtualspaces[site]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{E}(eachspace(O)[key_L, 1, 1, key_R])
+                τ = BraidingTensor{scalartype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -824,8 +822,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
         )
     )
     # left to middle
-    U = ones(scalartype(H), left_virtualspace(H, 1))
-    @plansor a[-1 -2; -3 -4] := A[1][-1 2; -3] * H[1][1 -2; 2 -4] * conj(U[1])
+    @plansor a[-1 -2; -3 -4] := A[1][-1 1; -3] * removeunit(H[1], 1)[-2; 1 -4]
     Q, R = qr_compact!(a)
     A′[1] = TensorMap(Q)
 
@@ -836,8 +833,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
     end
 
     # right to middle
-    U = ones(scalartype(H), right_virtualspace(H, N))
-    @plansor a[-1 -2; -3 -4] := A[end][-1 2; -3] * H[end][-2 -4; 2 1] * U[1]
+    @plansor a[-1 -2; -3 -4] := A[end][-1 1; -3] * removeunit(H[end], 4)[-2 -4; 1]
     L, Q = lq_compact!(a)
     A′[end] = transpose(TensorMap(Q), ((1, 3), (2,)))
 

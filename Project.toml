@@ -34,6 +34,7 @@ Accessors = "0.1"
 Adapt = "4"
 Aqua = "0.8.9"
 BlockTensorKit = "0.3.8"
+CUDA = "5.9"
 Combinatorics = "1"
 Compat = "3.47, 4.10"
 DocStringExtensions = "0.9.3"
@@ -57,11 +58,13 @@ TensorOperations = "5"
 Test = "1"
 TestExtras = "0.3"
 VectorInterface = "0.2, 0.3, 0.4, 0.5"
+cuTENSOR = "2.3"
 julia = "1.10"
 
 [extras]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 ParallelTestRunner = "d3525ed8-44d0-4b2c-a655-542cee43accc"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
@@ -69,6 +72,7 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 TensorKitTensors = "41b62e7d-e9d1-4e23-942c-79a97adf954b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
+cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 
 [targets]
-test = ["Aqua", "Adapt", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]
+test = ["Aqua", "Adapt", "CUDA", "cuTENSOR", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]

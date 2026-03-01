@@ -11,13 +11,15 @@ init_code = quote
     using .TestSetup
 end
 
-args = parse_args(ARGS)
+# only run CUDA if on buildkite
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
-if is_buildkite
-    empty!(testsuite)
-    gpu_testsuite = find_tests(joinpath(@__DIR__, "cuda"))
-    append!(testsuite, gpu_testsuite)
-else
+is_buildkite && filter!(startswith("cuda") ∘ first, testsuite)
+
+# only run CUDA/cuTENSOR if available
+using CUDA, cuTENSOR
+(CUDA.functional() && cuTENSOR.has_cutensor()) ||
     filter!(!(startswith("cuda") ∘ first), testsuite)
-end
+
+# run tests
+args = parse_args(ARGS)
 runtests(MPSKit, args; testsuite, init_code)

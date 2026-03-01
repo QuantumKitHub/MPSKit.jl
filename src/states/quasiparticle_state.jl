@@ -216,6 +216,7 @@ GeometryStyle(::Type{<:QP{S, T1, T2}}) where {S, T1, T2} = GeometryStyle(S)
 
 TensorKit.spacetype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = spacetype(S)
 TensorKit.sectortype(::Union{QP{S}, Type{<:QP{S}}}) where {S} = sectortype(S)
+TensorKit.storagetype(::Type{<:QP{S, T1, T2}}) where {S, T1, T2} = storagetype(T2)
 
 physicalspace(state::QP, i::Int) = physicalspace(state.left_gs, i)
 physicalspace(state::QP) = physicalspace(state.left_gs)
