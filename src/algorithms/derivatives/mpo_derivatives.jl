@@ -112,21 +112,52 @@ end
 # prepared operators
 # ------------------
 struct PrecomputedDerivative{
-        T <: Number, S <: ElementarySpace, N₁, N₂, N₃, N₄,
-        T1 <: AbstractTensorMap{T, S, N₁, N₂}, T2 <: AbstractTensorMap{T, S, N₃, N₄},
-        B <: AbstractBackend, A,
+        T <: Number, S <: ElementarySpace, M <: DenseVector{T},
+        N₁, N₂, N₃, N₄, B <: AbstractBackend, A,
     } <: DerivativeOperator
-    leftenv::T1
-    rightenv::T2
+    leftenv::TensorMap{T, S, N₁, N₂, M}
+    rightenv::TensorMap{T, S, N₃, N₄, M}
     backend::B
     allocator::A
 end
+function PrecomputedDerivative(L::AbstractTensorMap, R::AbstractTensorMap, backend, allocator)
+    S = TensorKit.check_spacetype(L, R)
+    T = TensorOperations.promote_contract(scalartype(L), scalartype(R))
+    M = TensorKit.promote_storagetype(T, L, R)
+    return PrecomputedDerivative{T, S, M, numout(L), numin(L), numout(R), numin(R), typeof(backend), typeof(allocator)}(L, R, backend, allocator)
+end
 
-const PrecomputedCDerivative{T, S} = PrecomputedDerivative{T, S, 1, 2, 2, 1}
-const PrecomputedACDerivative{T, S} = PrecomputedDerivative{T, S, 2, 3, 2, 1}
-const PrecomputedAC2Derivative{T, S} = PrecomputedDerivative{T, S, 2, 3, 3, 2}
+const PrecomputedCDerivative{T, S, M, B, A} = PrecomputedDerivative{T, S, M, 1, 2, 2, 1, B, A}
+const PrecomputedACDerivative{T, S, M, B, A} = PrecomputedDerivative{T, S, M, 2, 3, 2, 1, B, A}
+const PrecomputedAC2Derivative{T, S, M, B, A} = PrecomputedDerivative{T, S, M, 2, 3, 3, 2, B, A}
 
 VectorInterface.scalartype(::Type{<:PrecomputedDerivative{T}}) where {T} = T
+TensorKit.storagetype(::Type{<:PrecomputedDerivative{T, S, M}}) where {T, S, M} = M
+
+Base.@assume_effects :foldable function prepared_operator_type(
+        ::Type{MPO_C_Hamiltonian{L, R}}, ::Type{B}, ::Type{A}
+    ) where {L, R, B, A}
+    T = TensorOperations.promote_contract(scalartype(L), scalartype(R))
+    S = TensorKit.check_spacetype(L, R)
+    M = TensorKit.promote_storagetype(T, L, R)
+    return PrecomputedCDerivative{T, S, M, B, A}
+end
+Base.@assume_effects :foldable function prepared_operator_type(
+        ::Type{MPO_AC_Hamiltonian{L, O, R}}, ::Type{B}, ::Type{A}
+    ) where {L, O, R, B, A}
+    T = TensorOperations.promote_contract(scalartype(L), scalartype(O), scalartype(R))
+    S = TensorKit.check_spacetype(L, O, R)
+    M = TensorKit.promote_storagetype(T, L, O, R)
+    return PrecomputedACDerivative{T, S, M, B, A}
+end
+Base.@assume_effects :foldable function prepared_operator_type(
+        ::Type{MPO_AC2_Hamiltonian{L, O₁, O₂, R}}, ::Type{B}, ::Type{A}
+    ) where {L, O₁, O₂, R, B, A}
+    T = TensorOperations.promote_contract(scalartype(L), scalartype(O₁), scalartype(O₂), scalartype(R))
+    S = TensorKit.check_spacetype(L, O₁, O₂, R)
+    M = TensorKit.promote_storagetype(T, L, O₁, O₂, R)
+    return PrecomputedAC2Derivative{T, S, M, B, A}
+end
 
 function prepare_operator!!(
         H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor},
@@ -134,7 +165,9 @@ function prepare_operator!!(
     )
     leftenv = _transpose_tail(H.leftenv isa TensorMap ? H.leftenv : TensorMap(H.leftenv))
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
-    return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
+    return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
+        leftenv, rightenv, backend, allocator
+    )
 end
 function prepare_operator!!(
         H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
@@ -146,7 +179,9 @@ function prepare_operator!!(
     leftenv = GL_O isa TensorMap ? GL_O : TensorMap(GL_O)
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
 
-    return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
+    return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
+        leftenv, rightenv, backend, allocator
+    )
 end
 
 function prepare_operator!!(
@@ -160,7 +195,9 @@ function prepare_operator!!(
 
     leftenv = GL_O isa TensorMap ? GL_O : TensorMap(GL_O)
     rightenv = O_GR isa TensorMap ? O_GR : TensorMap(O_GR)
-    return PrecomputedDerivative(leftenv, rightenv, backend, allocator)
+    return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
+        leftenv, rightenv, backend, allocator
+    )
 end
 
 function (H::PrecomputedCDerivative)(x::MPSBondTensor)

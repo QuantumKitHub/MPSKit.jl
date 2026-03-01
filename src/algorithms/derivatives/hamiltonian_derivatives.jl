@@ -95,11 +95,11 @@ end
 function prepare_operator!!(
         H::JordanMPO_AC_Hamiltonian{O1, O2, O3}, backend::AbstractBackend, allocator
     ) where {O1, O2, O3}
-    C = H.C
-    B = H.B
+    C::Union{Missing, O2} = H.C
+    B::Union{Missing, O2} = H.B
 
     # onsite
-    D = if ismissing(H.D)
+    D::Union{Missing, O1} = if ismissing(H.D)
         missing
     elseif !ismissing(C)
         Id = TensorKit.id(storagetype(C), space(C, 2))
@@ -110,11 +110,11 @@ function prepare_operator!!(
         @plansor B[-1 -2; -3 -4] += Id[-1; -3] * H.D[-2; -4]
         missing
     else
-        W.D
+        H.D
     end
 
     # not_started
-    I = if ismissing(H.I)
+    I::Union{Missing, O1} = if ismissing(H.I)
         missing
     elseif !ismissing(C)
         Id = id(storagetype(C), space(C, 1))
@@ -125,7 +125,7 @@ function prepare_operator!!(
     end
 
     # finished
-    E = if ismissing(H.E)
+    E::Union{Missing, O1} = if ismissing(H.E)
         missing
     elseif !ismissing(B)
         Id = id(storagetype(B), space(B, 2))
@@ -135,10 +135,10 @@ function prepare_operator!!(
         H.E
     end
 
-    O3′ = Core.Compiler.return_type(prepare_operator!!, Tuple{O3, typeof(backend), typeof(allocator)})
+    O3′ = prepared_operator_type(O3, typeof(backend), typeof(allocator))
     A = ismissing(H.A) ? H.A : prepare_operator!!(H.A, backend, allocator)
 
-    return JordanMPO_AC_Hamiltonian{O1, O2, O3′}(D, I, E, C, B, A)
+    return JordanMPO_AC_Hamiltonian{O1, O2, O3′}(D, I, E, C, B, A)::JordanMPO_AC_Hamiltonian{O1, O2, O3′}
 end
 
 
@@ -292,21 +292,23 @@ function prepare_operator!!(
         H::JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}, backend::AbstractBackend, allocator
     ) where {O1, O2, O3, O4}
 
-    CA = H.CA
-    AB = H.AB
+    CA::Union{Missing, O3} = H.CA
+    AB::Union{Missing, O3} = H.AB
 
-    CB = if !ismissing(CA) && !ismissing(H.CB)
+    CB::Union{Missing, O2} = if !ismissing(CA) && !ismissing(H.CB)
         Id = TensorKit.id(storagetype(H.CB), space(CA, 3))
         @plansor CA[-1 -2 -3; -4 -5 -6] += H.CB[-1 -2; -4 -5] * Id[-3; -6]
         missing
     elseif !ismissing(AB) && !ismissing(H.CB)
-
+        Id = TensorKit.id(storagetype(H.CB), space(AB, 3))
+        @plansor CA[-1 -2 -3; -4 -5 -6] += H.CB[-2 -3; -5 -6] * Id[-1; -4]
+        missing
     else
         H.CB
     end
 
     # starting right
-    IC = if !ismissing(CA) && !ismissing(H.IC)
+    IC::Union{Missing, O2} = if !ismissing(CA) && !ismissing(H.IC)
         Id = TensorKit.id(storagetype(H.IC), space(CA, 1))
         @plansor CA[-1 -2 -3; -4 -5 -6] += Id[-1; -4] * H.IC[ -2 -3; -5 -6]
         missing
@@ -315,7 +317,7 @@ function prepare_operator!!(
     end
 
     # ending left
-    BE = if !ismissing(AB) && !ismissing(H.BE)
+    BE::Union{Missing, O2} = if !ismissing(AB) && !ismissing(H.BE)
         Id = TensorKit.id(storagetype(H.BE), space(AB, 3))
         @plansor AB[-1 -2 -3; -4 -5 -6] += H.BE[-1 -2; -4 -5] * Id[-3; -6]
         missing
@@ -324,7 +326,7 @@ function prepare_operator!!(
     end
 
     # onsite left
-    DE = if !ismissing(BE) && !ismissing(H.DE)
+    DE::Union{Missing, O1} = if !ismissing(BE) && !ismissing(H.DE)
         Id = TensorKit.id(storagetype(H.DE), space(BE, 1))
         @plansor BE[-1 -2; -3 -4] += Id[-1; -3] * H.DE[-2; -4]
         missing
@@ -339,7 +341,7 @@ function prepare_operator!!(
     end
 
     # onsite right
-    ID = if !ismissing(IC) && !ismissing(H.ID)
+    ID::Union{Missing, O1} = if !ismissing(IC) && !ismissing(H.ID)
         Id = TensorKit.id(storagetype(H.ID), space(IC, 2))
         @plansor IC[-1 -2; -3 -4] += H.ID[-1; -3] * Id[-2; -4]
         missing
@@ -353,7 +355,7 @@ function prepare_operator!!(
     end
 
     # finished
-    II = if !ismissing(IC) && !ismissing(H.II)
+    II::Union{Missing, O1} = if !ismissing(IC) && !ismissing(H.II)
         I = id(storagetype(H.II), space(IC, 1))
         @plansor IC[-1 -2; -3 -4] += I[-1; -3] * H.II[-2; -4]
         II = missing
@@ -366,7 +368,7 @@ function prepare_operator!!(
     end
 
     # unstarted
-    EE = if !ismissing(BE) && !ismissing(H.EE)
+    EE::Union{Missing, O1} = if !ismissing(BE) && !ismissing(H.EE)
         I = id(storagetype(H.EE), space(BE, 2))
         @plansor BE[-1 -2; -3 -4] += H.EE[-1; -3] * I[-2; -4]
         EE = missing
@@ -378,7 +380,7 @@ function prepare_operator!!(
         H.EE
     end
 
-    O4′ = Core.Compiler.return_type(prepare_operator!!, Tuple{O4, typeof(backend), typeof(allocator)})
+    O4′ = prepared_operator_type(O4, typeof(backend), typeof(allocator))
     AA = prepare_operator!!(H.AA, backend, allocator)
 
     return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4′}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE)
