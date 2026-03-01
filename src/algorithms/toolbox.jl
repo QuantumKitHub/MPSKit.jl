@@ -56,7 +56,7 @@ Concretely, this is the overlap of the current state with the single-site deriva
 ```
 """
 function calc_galerkin(
-        pos::Int, below::Union{InfiniteMPS, FiniteMPS, WindowMPS}, operator, above, envs
+        pos, below::AbstractMPS, operator, above, envs
     )
     AC´ = AC_hamiltonian(pos, below, operator, above, envs) * above.AC[pos]
     normalize!(AC´)
@@ -71,13 +71,7 @@ function calc_galerkin(
     return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
 end
 function calc_galerkin(
-        below::Union{InfiniteMPS, FiniteMPS, WindowMPS}, operator, above, envs
-    )
-    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), 1:length(above))
-end
-function calc_galerkin(
-        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS,
-        envs::MultilineEnvironments
+        below::AbstractMPS, operator, above, envs
     )
     return maximum(
         pos -> calc_galerkin(pos, below, operator, above, envs),
