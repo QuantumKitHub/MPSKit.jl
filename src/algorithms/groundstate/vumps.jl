@@ -57,11 +57,12 @@ function dominant_eigsolve(
     )
     log = IterLog("VUMPS")
     iter = 0
+    mps = copy(mps)
     ϵ = calc_galerkin(mps, operator, mps, envs)
     alg_environments = updatetol(alg.alg_environments, iter, ϵ)
     recalculate!(envs, mps, operator, mps; alg_environments.tol)
 
-    state = VUMPSState(copy(mps), operator, envs, iter, ϵ, which)
+    state = VUMPSState(mps, operator, envs, iter, ϵ, which)
     it = IterativeSolver(alg, state)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
