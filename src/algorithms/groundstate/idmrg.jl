@@ -103,7 +103,7 @@ function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps,
 
         alg_gauge = updatetol(alg.alg_gauge, it.state.iter, it.state.ϵ)
         ψ′ = gaugefix!(
-            copy(it.state.mps), copy(it.state.mps.AR);
+            it.state.mps, copy(it.state.mps.AR);
             tol = alg_gauge.tol, maxiter = alg_gauge.maxiter
         )
         envs = recalculate!(it.state.envs, ψ′, it.state.operator, ψ′)
