@@ -154,7 +154,7 @@ end
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
     return gaugefix!(
-        state.mps, ACs, state.mps.C[end]; 
+        state.mps, ACs, state.mps.C[end];
         alg_gauge.tol, alg_gauge.maxiter
     )
 end
