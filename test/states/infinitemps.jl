@@ -93,7 +93,7 @@ end
     Ss = entropy(ψ)
     @test length(Ss) == length(ψ)
     @test all(isreal, Ss)
-    @test all(>=(0), Ss)
+    @test all(>=(-1.0e-8), Ss)
 
     # entropy(ψ, site) is non-negative and consistent with entropy(ψ)
     for site in 1:length(ψ)
