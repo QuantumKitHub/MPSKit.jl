@@ -69,7 +69,7 @@ end
 Determine an appropriate algorithm for computing the environments, based on the given `kwargs...`.
 """
 function environment_alg(
-        below::AbstractMPS, operator, above::AbstractMPS; kwargs...
+        below, operator, above; kwargs...
     )
     return environment_alg(
         GeometryStyle(below, operator, above), OperatorStyle(operator),
