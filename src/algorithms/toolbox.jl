@@ -71,7 +71,7 @@ function calc_galerkin(
     return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
 end
 function calc_galerkin(
-        below::AbstractMPS, operator, above, envs
+        below::Union{AbstractMPS, MultilineMPS}, operator, above, envs
     )
     return maximum(
         pos -> calc_galerkin(pos, below, operator, above, envs),
