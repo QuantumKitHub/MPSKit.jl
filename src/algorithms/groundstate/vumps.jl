@@ -57,6 +57,7 @@ function dominant_eigsolve(
     )
     log = IterLog("VUMPS")
     iter = 0
+    mps = copy(mps)
     ϵ = calc_galerkin(mps, operator, mps, envs)
     alg_environments = updatetol(alg.alg_environments, iter, ϵ)
     recalculate!(envs, mps, operator, mps; alg_environments.tol)
@@ -153,7 +154,10 @@ end
 
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    return InfiniteMPS(ACs, state.mps.C[end]; alg_gauge.tol, alg_gauge.maxiter)
+    return gaugefix!(
+        state.mps, ACs, state.mps.C[end];
+        alg_gauge.tol, alg_gauge.maxiter
+    )
 end
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractMatrix)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
