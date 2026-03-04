@@ -73,6 +73,12 @@ end
 function calc_galerkin(
         below::AbstractMPS, operator, above, envs
     )
+    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), 1:length(above))
+end
+function calc_galerkin(
+        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS,Expand commentComment on line L79Resolved
+        envs::MultilineEnvironments
+    )
     return maximum(
         pos -> calc_galerkin(pos, below, operator, above, envs),
         CartesianIndices(size(above))
