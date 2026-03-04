@@ -76,7 +76,7 @@ function calc_galerkin(
     return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), 1:length(above))
 end
 function calc_galerkin(
-        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS,Expand commentComment on line L79Resolved
+        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS,
         envs::MultilineEnvironments
     )
     return maximum(
