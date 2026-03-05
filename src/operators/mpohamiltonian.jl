@@ -48,6 +48,8 @@ end
 const InfiniteMPOHamiltonian{O <: MPOTensor} = MPOHamiltonian{O, PeriodicVector{O}}
 Base.isfinite(::Type{<:InfiniteMPOHamiltonian}) = false
 GeometryStyle(::Type{<:InfiniteMPOHamiltonian}) = InfiniteChainStyle()
+TensorKit.storagetype(impo::InfiniteMPOHamiltonian{O}) where {O} = storagetype(O)
+TensorKit.storagetype(::Type{InfiniteMPOHamiltonian{O}}) where {O} = storagetype(O)
 
 function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
     for i in eachindex(Ws)
