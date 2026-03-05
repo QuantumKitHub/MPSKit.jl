@@ -127,7 +127,7 @@ function InfiniteMPS(
         pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
         kwargs...
     ) where {S <: IndexSpace}
-    return InfiniteMPS(MPSTensor.(ComplexF64, pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
+    return InfiniteMPS(MPSTensor.(pspaces, circshift(Dspaces, 1), Dspaces); kwargs...)
 end
 function InfiniteMPS(
         f, T::Type, pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
