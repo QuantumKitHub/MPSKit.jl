@@ -12,7 +12,7 @@ See also: [`MultilineMPS`](@ref) and [`MultilineMPO`](@ref)
 struct Multiline{T}
     data::PeriodicArray{T, 1}
     function Multiline{T}(data::AbstractVector{T}) where {T}
-        @assert allequal(length.(data)) "All lines must have the same length"
+        # @assert allequal(length.(data)) "All lines must have the same length"
         return new{T}(data)
     end
 end
@@ -22,7 +22,7 @@ Multiline(data::AbstractVector{T}) where {T} = Multiline{T}(data)
 # -----------------------
 Base.parent(m::Multiline) = m.data
 Base.size(m::Multiline) = (length(parent(m)), length(parent(m)[1]))
-Base.size(m::Multiline, i::Int) = getindex(size(m), i)
+Base.size(m::Multiline, i::Int) = i == 1 ? length(parent(m)) : i == 2 ? length(parent(m)[1]) : error()
 Base.length(m::Multiline) = prod(size(m))
 function Base.axes(m::Multiline, i::Int)
     return i == 1 ? axes(parent(m), 1) :

@@ -209,8 +209,7 @@ function expectation_value(
     )
     ens = zeros(scalartype(ψ), length(ψ))
     for i in 1:length(ψ)
-        operator = AC_hamiltonian(i, ψ, O, ψ, envs)
-        ens[i] = dot(ψ.AC[i], operator * ψ.AC[i])
+        ens[i] = dot(ψ.AC[i], AC_projection(i, ψ, O, ψ, envs))
     end
     n = norm(ψ.AC[end])^2
     return sum(ens) / (n * length(ψ))

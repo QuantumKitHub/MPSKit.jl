@@ -19,7 +19,7 @@ verbosity_conv = 1
         ψ, envs, _ = find_groundstate(
             ψ, H; maxiter = 400, verbosity = verbosity_conv, tol = 1.0e-10
         )
-        energies, ϕs = @inferred excitations(
+        energies, ϕs = @testinferred excitations(
             H, QuasiparticleAnsatz(), Float64(pi), ψ, envs
         )
         @test energies[1] ≈ 0.41047925 atol = 1.0e-4
@@ -46,7 +46,7 @@ verbosity_conv = 1
         ψ, envs, _ = leading_boundary(
             ψ, H, VUMPS(; maxiter = 400, verbosity = verbosity_conv, tol = 1.0e-10)
         )
-        energies, ϕs = @inferred excitations(
+        energies, ϕs = @testinferred excitations(
             H, QuasiparticleAnsatz(), [0.0, Float64(pi / 2)], ψ, envs; verbosity = 0
         )
         @test abs(energies[1]) > abs(energies[2]) # has a minimum at pi/2
@@ -66,7 +66,7 @@ verbosity_conv = 1
             ψ, envs, = find_groundstate(ψ, H; verbosity)
 
             # find energy with quasiparticle ansatz
-            energies_QP, ϕs = @inferred excitations(H, QuasiparticleAnsatz(), ψ, envs)
+            energies_QP, ϕs = @testinferred excitations(H, QuasiparticleAnsatz(), ψ, envs)
             @test variance(ϕs[1], H) < 1.0e-6
 
             # find energy with normal dmrg
@@ -74,14 +74,14 @@ verbosity_conv = 1
                     DMRG(; verbosity, tol = 1.0e-6),
                     DMRG2(; verbosity, tol = 1.0e-6, trscheme = trunctol(; atol = 1.0e-4)),
                 )
-                energies_dm, _ = @inferred excitations(H, FiniteExcited(; gsalg), ψ)
+                energies_dm, _ = @testinferred excitations(H, FiniteExcited(; gsalg), ψ)
                 @test energies_dm[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1.0e-4
             end
 
             # find energy with Chepiga ansatz
-            energies_ch, _ = @inferred excitations(H, ChepigaAnsatz(), ψ, envs)
+            energies_ch, _ = @testinferred excitations(H, ChepigaAnsatz(), ψ, envs)
             @test energies_ch[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1.0e-4
-            energies_ch2, _ = @inferred excitations(H, ChepigaAnsatz2(), ψ, envs)
+            energies_ch2, _ = @testinferred excitations(H, ChepigaAnsatz2(), ψ, envs)
             @test energies_ch2[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1.0e-4
             return energies_QP[1]
         end
