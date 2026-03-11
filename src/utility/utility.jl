@@ -348,8 +348,3 @@ function fuse_legs(x::TensorMap, ::Val{N₁}, ::Val{N₂}) where {N₁, N₂}
 
     return TensorMap{scalartype(x)}(x.data, cod ← dom)
 end
-
-# piracy until fixed
-
-TensorOperations.allocation_size(::Type{T}, n::Int) where {T} =
-    TensorOperations.allocation_size(T, (n,))
