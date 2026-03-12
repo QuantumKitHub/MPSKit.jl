@@ -249,8 +249,11 @@ function (H::PrecomputedACDerivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 1})
     L, R = H.leftenv, H.rightenv
 
     @plansor backend = backend allocator = allocator begin
-        y[-1 -2 -3; -4] ≔
-            L[-1 -2; 4 5 2] * x[4 5 3; 1] * τ[2 -3; 3 6] * R[1 6; -4]
+        xR[-1 -2; -4 -5 -3] := x[-1 -2 3; 1] * R[1 2; -4] * τ[2 3; -5 -3]
+    end
+    xR_fused = fuse_legs(xR, 2, 1)
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2 -3; -4] := L[-1 -2; 1 2] * xR_fused[1; -4 -3 2]
     end
     return y
 end
@@ -258,12 +261,16 @@ function (H::PrecomputedAC2Derivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 3})
     backend, allocator = H.backend, H.allocator
     L, R = H.leftenv, H.rightenv
 
-    x_braided = braid(x, ((5, 3, 1, 2), (4, 6)), (1, 2, 3, 4, 5, 6))
+    x_braided = fuse_legs(braid(x, ((1, 2, 3, 5), (4, 6)), (1, 2, 3, 4, 5, 6)), 1, 2)
+
     @plansor backend = backend allocator = allocator begin
-        y_braided[-5 -3 -1 -2; -4 -6] ≔
-            L[-1 -2; 3 4 5] * x_braided[-5 -3 3 4; 1 2] * R[1 2 5; -4 -6]
+        xR[-1 -2; -4 -6 -7 -5 -3] := x_braided[-1 -2 -3 -5; 1] * R[1 -7; -4 -6]
     end
-    return braid(y_braided, ((3, 4, 2), (5, 1, 6)), (5, 3, 1, 2, 4, 6))
+    @notensor xR_braided = braid(fuse_legs(xR, 2, 1), ((1, 4), (2, 3, 5, 6)), (1, 4, 6, 7, 5, 3))
+    @plansor backend = backend allocator = allocator begin
+        y_braided[-1 -2; -4 -6 -5 -3] := L[-1 -2; 1 2] * xR_braided[1 2; -4 -6 -5 -3]
+    end
+    return braid(y_braided, ((1, 2, 6), (3, 5, 4)), (1, 2, 4, 5, 5, 3))
 end
 
 const _ToPrepare = Union{
