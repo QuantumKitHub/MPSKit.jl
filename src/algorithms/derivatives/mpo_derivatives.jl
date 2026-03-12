@@ -128,8 +128,8 @@ function PrecomputedDerivative(L::AbstractTensorMap, R::AbstractTensorMap, backe
 end
 
 const PrecomputedCDerivative{T, S, M, B, A} = PrecomputedDerivative{T, S, M, 1, 2, 2, 1, B, A}
-const PrecomputedACDerivative{T, S, M, B, A} = PrecomputedDerivative{T, S, M, 2, 3, 2, 1, B, A}
-const PrecomputedAC2Derivative{T, S, M, B, A} = PrecomputedDerivative{T, S, M, 2, 3, 3, 2, B, A}
+const PrecomputedACDerivative{T, S, M, B, A} = PrecomputedDerivative{T, S, M, 2, 2, 2, 1, B, A}
+const PrecomputedAC2Derivative{T, S, M, B, A} = PrecomputedDerivative{T, S, M, 2, 2, 2, 2, B, A}
 
 VectorInterface.scalartype(::Type{<:PrecomputedDerivative{T}}) where {T} = T
 TensorKit.storagetype(::Type{<:PrecomputedDerivative{T, S, M}}) where {T, S, M} = M
@@ -174,9 +174,10 @@ function prepare_operator!!(
         backend::AbstractBackend, allocator
     )
     @plansor backend = backend allocator = allocator begin
-        GL_O[-1 -2; -4 -5 -3] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
+        GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
     end
     leftenv = GL_O isa TensorMap ? GL_O : TensorMap(GL_O)
+    leftenv = repartition(fuse_legs(leftenv, 1, 2), 2, 2)
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
 
     return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
@@ -189,12 +190,14 @@ function prepare_operator!!(
         backend::AbstractBackend, allocator
     )
     @plansor backend = backend allocator = allocator begin
-        GL_O[-1 -2; -4 -5 -3] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
-        O_GR[-1 -2 -3; -4 -5] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
+        GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
+        O_GR[-1 -2; -4 -5 -3] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
     end
-
     leftenv = GL_O isa TensorMap ? GL_O : TensorMap(GL_O)
+    leftenv = repartition(fuse_legs(leftenv, 1, 2), 2, 2)
+
     rightenv = O_GR isa TensorMap ? O_GR : TensorMap(O_GR)
+    rightenv = repartition(fuse_legs(rightenv, 2, 1), 2, 2)
     return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
         leftenv, rightenv, backend, allocator
     )
@@ -221,7 +224,7 @@ function (H::PrecomputedACDerivative)(x::MPSTensor)
     backend, allocator = H.backend, H.allocator
     L, R = H.leftenv, H.rightenv
 
-    L_fused = fuse_legs(L, 2, 2)
+    L_fused = fuse_legs(L, 2, 1)
     x_fused = fuse_legs(x, 2, 1)
     LxR_fused = PrecomputedDerivative(L_fused, R, backend, allocator)(x_fused)
 
@@ -231,9 +234,9 @@ function (H::PrecomputedAC2Derivative)(x::MPOTensor)
     backend, allocator = H.backend, H.allocator
     L, R = H.leftenv, H.rightenv
 
-    L_fused = fuse_legs(L, 2, 2)
+    L_fused = fuse_legs(L, 2, 1)
     x_fused = fuse_legs(x, 2, 2)
-    R_fused = fuse_legs(R, 2, 2)
+    R_fused = fuse_legs(R, 1, 2)
     LxR_fused = PrecomputedDerivative(L_fused, R_fused, backend, allocator)(x_fused)
 
     return TensorMap{scalartype(LxR_fused)}(LxR_fused.data, codomain(L) ← domain(R))
@@ -246,8 +249,11 @@ function (H::PrecomputedACDerivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 1})
     L, R = H.leftenv, H.rightenv
 
     @plansor backend = backend allocator = allocator begin
-        y[-1 -2 -3; -4] ≔
-            L[-1 -2; 4 5 2] * x[4 5 3; 1] * τ[2 -3; 3 6] * R[1 6; -4]
+        xR[-1 -2; -4 -5 -3] := x[-1 -2 3; 1] * R[1 2; -4] * τ[2 3; -5 -3]
+    end
+    xR_fused = fuse_legs(xR, 2, 1)
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2 -3; -4] := L[-1 -2; 1 2] * xR_fused[1; -4 -3 2]
     end
     return y
 end
@@ -255,12 +261,16 @@ function (H::PrecomputedAC2Derivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 3})
     backend, allocator = H.backend, H.allocator
     L, R = H.leftenv, H.rightenv
 
-    x_braided = braid(x, ((5, 3, 1, 2), (4, 6)), (1, 2, 3, 4, 5, 6))
+    x_braided = fuse_legs(braid(x, ((1, 2, 3, 5), (4, 6)), (1, 2, 3, 4, 5, 6)), 1, 2)
+
     @plansor backend = backend allocator = allocator begin
-        y_braided[-5 -3 -1 -2; -4 -6] ≔
-            L[-1 -2; 3 4 5] * x_braided[-5 -3 3 4; 1 2] * R[1 2 5; -4 -6]
+        xR[-1 -2; -4 -6 -7 -5 -3] := x_braided[-1 -2 -3 -5; 1] * R[1 -7; -4 -6]
     end
-    return braid(y_braided, ((3, 4, 2), (5, 1, 6)), (5, 3, 1, 2, 4, 6))
+    @notensor xR_braided = braid(fuse_legs(xR, 2, 1), ((1, 4), (2, 3, 5, 6)), (1, 4, 6, 7, 5, 3))
+    @plansor backend = backend allocator = allocator begin
+        y_braided[-1 -2; -4 -6 -5 -3] := L[-1 -2; 1 2] * xR_braided[1 2; -4 -6 -5 -3]
+    end
+    return braid(y_braided, ((1, 2, 6), (3, 5, 4)), (1, 2, 4, 5, 5, 3))
 end
 
 const _ToPrepare = Union{
