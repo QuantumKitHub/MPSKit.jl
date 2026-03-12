@@ -48,7 +48,7 @@ using Adapt
 end
 
 @testset "InfiniteMPS copying" begin
-    mps1 = InfiniteMPS(rand, ComplexF64, ℂ^2, ℂ^5)
+    mps1 = InfiniteMPS(rand, ComplexF64, [2], [5])
     mps2 = copy(mps1)
 
     @test mps1 !== mps2
