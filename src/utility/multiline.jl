@@ -18,6 +18,8 @@ struct Multiline{T}
 end
 Multiline(data::AbstractVector{T}) where {T} = Multiline{T}(data)
 
+TensorKit.storagetype(M::Multiline{T}) where {T} = storagetype(T)
+
 # AbstractArray interface
 # -----------------------
 Base.parent(m::Multiline) = m.data
