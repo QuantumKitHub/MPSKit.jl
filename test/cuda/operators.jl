@@ -3,8 +3,11 @@ using Test, TestExtras
 using MPSKit
 using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, MPOStyle
 using TensorKit
+using MatrixAlgebraKit
 using TensorKit: ℙ, tensormaptype, TensorMapWithStorage
 using Adapt, CUDA, cuTENSOR
+
+MPSKit.Defaults.alg_svd() = CUSOLVER_QRIteration()
 
 @testset "CuFiniteMPO" for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
     # start from random operators
@@ -15,15 +18,18 @@ using Adapt, CUDA, cuTENSOR
     O₂ = rand(T, space(O₁))
     O₃ = rand(real(T), space(O₁))
 
-    mpo₁ = adapt(CuArray, FiniteMPO(O₁))
-    mpo₂ = adapt(CuArray, FiniteMPO(O₂))
-    mpo₃ = adapt(CuArray, FiniteMPO(O₃))
+    mpo₁ = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPO(O₁))
+    mpo₂ = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPO(O₂))
+    mpo₃ = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPO(O₃))
 
     @test isfinite(mpo₁)
     @test isfinite(typeof(mpo₁))
     @test GeometryStyle(typeof(mpo₁)) == FiniteChainStyle()
     @test GeometryStyle(mpo₁) == FiniteChainStyle()
     @test OperatorStyle(typeof(mpo₁)) == MPOStyle()
+    @test TensorKit.storagetype(mpo₁) == CuVector{T, CUDA.DeviceMemory}
+    @test TensorKit.storagetype(mpo₂) == CuVector{T, CUDA.DeviceMemory}
+    @test TensorKit.storagetype(mpo₃) == CuVector{T, CUDA.DeviceMemory}
 
     @test @constinferred physicalspace(mpo₁) == fill(V, L)
     Vleft = @constinferred left_virtualspace(mpo₁)
