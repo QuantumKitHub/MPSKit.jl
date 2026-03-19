@@ -17,6 +17,10 @@ MPSKit.Defaults.alg_svd() = CUSOLVER_QRIteration()
     O₁ = rand(T, V^L, V^L)
     O₂ = rand(T, space(O₁))
     O₃ = rand(real(T), space(O₁))
+    
+    dO₁ = adapt(CuArray, O₁)
+    dO₂ = adapt(CuArray, O₂)
+    dO₃ = adapt(CuArray, O₃)
 
     mpo₁ = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPO(O₁))
     mpo₂ = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPO(O₂))
@@ -65,14 +69,14 @@ MPSKit.Defaults.alg_svd() = CUSOLVER_QRIteration()
 
     @test @constinferred GeometryStyle(mps₁, mpo₁, mps₁) == GeometryStyle(mps₁)
 
-    #@test convert(TM, mpo₁ * mps₁) ≈ O₁ * ψ₁
-    @test mpo₁ * ψ₁ ≈ O₁ * ψ₁
-    #@test convert(TM, mpo₃ * mps₁) ≈ O₃ * ψ₁
-    @test mpo₃ * ψ₁ ≈ O₃ * ψ₁
-    #@test convert(TM, mpo₁ * mps₂) ≈ O₁ * ψ₂
-    #@test mpo₁ * ψ₂ ≈ O₁ * ψ₂
+    #@test convert(TM, mpo₁ * mps₁) ≈ dO₁ * ψ₁
+    @test mpo₁ * ψ₁ ≈ dO₁ * ψ₁
+    #@test convert(TM, mpo₃ * mps₁) ≈ dO₃ * ψ₁
+    @test mpo₃ * ψ₁ ≈ dO₃ * ψ₁
+    #@test convert(TM, mpo₁ * mps₂) ≈ dO₁ * ψ₂
+    #@test mpo₁ * ψ₂ ≈ dO₁ * ψ₂
 
-    @test dot(mps₁, mpo₁, mps₁) ≈ dot(ψ₁, O₁, ψ₁)
+    @test dot(mps₁, mpo₁, mps₁) ≈ dot(ψ₁, dO₁, ψ₁)
     @test dot(mps₁, mpo₁, mps₁) ≈ dot(mps₁, mpo₁ * mps₁)
     # test conversion to and from mps
     mpomps₁ = convert(FiniteMPS, mpo₁)
