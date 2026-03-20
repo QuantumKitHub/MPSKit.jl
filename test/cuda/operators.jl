@@ -7,6 +7,8 @@ using MatrixAlgebraKit
 using TensorKit: ℙ, tensormaptype, TensorMapWithStorage
 using Adapt, CUDA, cuTENSOR
 
+# TODO revisit this once https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/issues/176
+# is resolved
 MPSKit.Defaults.alg_svd() = CUSOLVER_QRIteration()
 
 @testset "CuFiniteMPO" for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
