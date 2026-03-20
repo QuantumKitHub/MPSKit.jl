@@ -111,7 +111,7 @@ function localupdate_step!(
     mps = state.mps
     src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
     src_ACs = mps isa Multiline ? eachcol(mps.AC) : mps.AC
-    ACs = similar(mps.AC)
+    ACs = mps.AL
     dst_ACs = mps isa Multiline ? eachcol(ACs) : ACs
 
     tforeach(eachsite(mps), src_ACs, src_Cs; scheduler) do site, AC₀, C₀
@@ -154,10 +154,12 @@ end
 
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    return gaugefix!(
+    mps = gaugefix!(
         state.mps, ACs, state.mps.C[end];
-        alg_gauge.tol, alg_gauge.maxiter
+        alg_gauge.tol, alg_gauge.maxiter, order = :R
     )
+    mul!.(mps.AC, mps.AL, mps.C)
+    return mps
 end
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractMatrix)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
