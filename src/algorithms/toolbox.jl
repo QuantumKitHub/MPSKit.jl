@@ -55,34 +55,18 @@ Concretely, this is the overlap of the current state with the single-site deriva
 \\epsilon = \\left|VL ⋅ \\left(VL^{\\dagger} ⋅ \\frac{\\partial \\text{above}}{\\partial AC_{\\text{pos}}}\\right)\\right|
 ```
 """
-function calc_galerkin(
-        pos::Int, below::Union{InfiniteMPS, FiniteMPS, WindowMPS}, operator, above, envs
-    )
+function calc_galerkin(pos::Int, below, operator, above, envs)
     AC´ = AC_projection(pos, below, operator, above, envs)
     normalize!(AC´)
     out = mul!(AC´, below.AL[pos], below.AL[pos]' * AC´, -1, +1)
     return norm(out)
 end
-function calc_galerkin(
-        pos::CartesianIndex{2}, below::MultilineMPS, operator::MultilineMPO,
-        above::MultilineMPS, envs::MultilineEnvironments
-    )
-    row, col = pos.I
+function calc_galerkin(pos::CartesianIndex{2}, below, operator, above, envs)
+    row, col = Tuple(pos)
     return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
 end
-function calc_galerkin(
-        below::Union{InfiniteMPS, FiniteMPS, WindowMPS}, operator, above, envs
-    )
-    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), 1:length(above))
-end
-function calc_galerkin(
-        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS,
-        envs::MultilineEnvironments
-    )
-    return maximum(
-        pos -> calc_galerkin(pos, below, operator, above, envs),
-        CartesianIndices(size(above))
-    )
+function calc_galerkin(below, operator, above, envs)
+    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), eachindex(below))
 end
 
 """
