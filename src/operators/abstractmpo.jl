@@ -151,7 +151,8 @@ end
 Compute the mpo tensor that arises from multiplying MPOs.
 """
 function fuse_mul_mpo(O1, O2)
-    T = TensorKit.promote_storagetype(storagetype(O1), storagetype(O2))
+    TT = promote_type(scalartype(O1), scalartype(O2))
+    T = TensorKit.similarstoragetype(storagetype(O1), TT)
     F_left = fuser(T, left_virtualspace(O2), left_virtualspace(O1))
     F_right = fuser(T, right_virtualspace(O2), right_virtualspace(O1))
     return _fuse_mpo_mpo(O1, O2, F_left, F_right)
