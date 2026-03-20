@@ -76,6 +76,3 @@ cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 
 [targets]
 test = ["Aqua", "Adapt", "CUDA", "cuTENSOR", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]
-
-[sources]
-TensorKit = {url="https://github.com/QuantumKitHub/TensorKit.jl", rev="ksh/cuda_tweaks"}

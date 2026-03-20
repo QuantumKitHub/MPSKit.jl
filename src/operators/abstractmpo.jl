@@ -157,7 +157,7 @@ function fuse_mul_mpo(O1, O2)
     return _fuse_mpo_mpo(O1, O2, F_left, F_right)
 end
 function fuse_mul_mpo(O1::BraidingTensor, O2::BraidingTensor)
-    T = TensorKit.promote_storagetype(storagetype(O1), storagetype(O2))
+    T = promote_type(scalartype(O1), scalartype(O2))
     V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
         physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
     return BraidingTensor{T}(V)
