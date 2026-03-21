@@ -81,16 +81,6 @@ for f in (:r_RR, :r_RL, :r_LR, :r_LL)
     @eval $f(t::MultilineMPS, i, j = size(t, 2)) = $f(t[i], j)
 end
 
-site_type(::Type{Multiline{S}}) where {S} = site_type(S)
-bond_type(::Type{Multiline{S}}) where {S} = bond_type(S)
-site_type(st::Multiline) = site_type(typeof(st))
-bond_type(st::Multiline) = bond_type(typeof(st))
-VectorInterface.scalartype(::Multiline{T}) where {T} = scalartype(T)
-TensorKit.sectortype(t::Multiline) = sectortype(typeof(t))
-TensorKit.sectortype(::Type{Multiline{T}}) where {T} = sectortype(T)
-TensorKit.spacetype(t::Multiline) = spacetype(typeof(t))
-TensorKit.spacetype(::Type{Multiline{T}}) where {T} = spacetype(T)
-
 function TensorKit.dot(a::MultilineMPS, b::MultilineMPS; kwargs...)
     return sum(dot.(parent(a), parent(b); kwargs...))
 end

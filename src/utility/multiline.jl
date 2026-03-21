@@ -106,3 +106,14 @@ function VectorInterface.inner(x::Multiline, y::Multiline)
 end
 
 LinearAlgebra.norm(x::Multiline) = sqrt(real(inner(x, x)))
+
+# TensorKit
+#----------
+
+site_type(::Type{Multiline{S}}) where {S} = site_type(S)
+bond_type(::Type{Multiline{S}}) where {S} = bond_type(S)
+site_type(st::Multiline) = site_type(typeof(st))
+bond_type(st::Multiline) = bond_type(typeof(st))
+TensorKit.sectortype(::Type{Multiline{T}}) where {T} = sectortype(T)
+TensorKit.spacetype(::Type{Multiline{T}}) where {T} = spacetype(T)
+TensorKit.storagetype(::Type{Multiline{T}}) where {T} = storagetype(T)
