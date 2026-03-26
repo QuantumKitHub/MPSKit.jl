@@ -205,7 +205,8 @@ end
 for f in (:real, :complex)
     @eval function Base.$f(W::JordanMPOTensor)
         E = $f(scalartype(W))
-        W′ = JordanMPOTensor{E}(undef, space(W))
+        TE = TensorKit.similarstoragetype(TensorKit.storagetype(W), E)
+        W′ = similar(W, TE)
         for (I, v) in nonzero_pairs(W.A)
             W′.A[I] = $f(v)
         end
@@ -242,7 +243,7 @@ end
     elseif 1 < i < size(W, 1) && 1 < j < size(W, 4)
         return W.A[i - 1, 1, 1, j - 1]
     else
-        return zeros(scalartype(W), eachspace(W)[i, 1, 1, j])
+        return zeros(storagetype(W), eachspace(W)[i, 1, 1, j])
     end
 end
 

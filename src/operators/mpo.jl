@@ -62,7 +62,7 @@ eachsite(mpo::InfiniteMPO) = PeriodicArray(eachindex(mpo))
 function Base.similar(mpo::MPO{<:MPOTensor}, ::Type{O}, L::Int) where {O <: MPOTensor}
     return MPO(similar(parent(mpo), O, L))
 end
-function Base.similar(mpo::MPO, ::Type{T}) where {T <: Number}
+function Base.similar(mpo::MPO, ::Type{T}) where {T <: Union{Number, DenseVector}}
     return MPO(similar.(parent(mpo), T))
 end
 
