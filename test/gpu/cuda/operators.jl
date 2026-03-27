@@ -103,13 +103,13 @@ end
         @test TensorKit.storagetype(H3) == CuVector{T, CUDA.DeviceMemory}
 
         @test scalartype(H1) == scalartype(H2) == scalartype(H3) == T
-        #=if !(T <: Complex)
+        if !(T <: Complex)
             for H in (H1, H2, H3)
                 Hc = @constinferred complex(H)
                 @test scalartype(Hc) == complex(T)
                 @test TensorKit.storagetype(Hc) == CuVector{complex(T), CUDA.DeviceMemory}
             end
-        end=# # TODO
+        end
 
         # check if constructor works by converting back to tensormap
         #= H1_tm = convert(TensorMap, H1)
