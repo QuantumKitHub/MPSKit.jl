@@ -86,10 +86,10 @@ end
 
 @testset "InfiniteMPO" begin
     P = ℂ^2
+    V = ℂ^2
     T = Float64
 
-    H1 = randn(T, P ← P)
-    H1 += H1'
+    H1 = randn(T, V ⊗ P ← P ⊗ V)
     H = InfiniteMPO([H1])
 
     @test !isfinite(H)
@@ -98,6 +98,16 @@ end
     @test GeometryStyle(H) == InfiniteChainStyle()
     @test OperatorStyle(typeof(H)) == MPOStyle()
     @test OperatorStyle(H) == MPOStyle()
+
+    @test physicalspace(H, 1) == P
+    @test left_virtualspace(H, 1) == V
+    @test left_virtualspace(H, 4) == V
+    @test right_virtualspace(H, 1) == V
+
+    multiH = MultilineMPO([H, H])
+    @test physicalspace(multiH, 1, 1) == P
+    @test left_virtualspace(multiH, 1, 1) == left_virtualspace(multiH, 2, 1) == V
+    @test right_virtualspace(multiH, CartesianIndex(1, 2)) == V
 end
 
 @testset "Adapt" for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
