@@ -144,7 +144,7 @@ end
             adapt(CuArray, FiniteMPOHamiltonian(lattice, 2 => O₁)) +
             adapt(CuArray, FiniteMPOHamiltonian(lattice, 3 => O₁))
         @test TensorKit.storagetype(H1) == CuVector{T, CUDA.DeviceMemory}
-        #=
+
         H1′a = 0.8 * H1
         @test TensorKit.storagetype(H1′a) == CuVector{T, CUDA.DeviceMemory}
         H1′b = 0.2 * H1
@@ -164,7 +164,7 @@ end
         @test convert(TensorMap, H1 * mps) ≈ H1_tm * state
         @test H1 * state ≈ H1_tm * state
         @test dot(mps, H2, mps) ≈ dot(mps, H2 * mps)
-        =#
+
         # test constructor from dictionary with mixed linear and Cartesian lattice indices as keys
         grid = square = fill(V, 3, 3)
 
@@ -187,12 +187,12 @@ end
             adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPOHamiltonian(grid, horizontal_operators)) atol = 1.0e-4
         @test TensorKit.storagetype(H4) == CuVector{T, CUDA.DeviceMemory}
 
-        #H4′= H4 / 3 + 2H4 / 3 # trouble here with cat_t
-        #=@test TensorKit.storagetype(H4′) == CuVector{T, CUDA.DeviceMemory}
+        H4′= H4 / 3 + 2H4 / 3
+        @test TensorKit.storagetype(H4′) == CuVector{T, CUDA.DeviceMemory}
         H5 = changebonds(H4′, SvdCut(; trscheme = trunctol(; atol = 1.0e-12)))
         @test TensorKit.storagetype(H5) == CuVector{T, CUDA.DeviceMemory}
         psi = adapt(CuArray, FiniteMPS(physicalspace(H5), V ⊕ rightunitspace(V)))
-        @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)=#
+        @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)
     end
 end
 
