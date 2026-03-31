@@ -99,7 +99,7 @@ Base.:\(α::Number, mpo::AbstractMPO) = scale(mpo, inv(α))
 
 function VectorInterface.scale(mpo::AbstractMPO, α::Number)
     T = VectorInterface.promote_scale(scalartype(mpo), scalartype(α))
-    dst = similar(mpo, T)
+    dst = similar(mpo, TensorKit.similarstoragetype(storagetype(mpo), T))
     return scale!(dst, mpo, α)
 end
 

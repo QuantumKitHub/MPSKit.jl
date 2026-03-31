@@ -11,7 +11,7 @@ function left_canonicalize!(
     d = sqrt(dim(P))
 
     # orthogonalize second column against first
-    WI = removeunit(W[1, 1, 1, 1], 1)
+    WI = removeunit(W[1, 1, 1, 1], 1; storage_type = TensorKit.storagetype(H))
     @plansor t[l; r] := conj(WI[p; p' l]) * W.C[p; p' r]
     # TODO: the following is currently broken due to a TensorKit bug
     # @plansor C′[p; p' r] := W.C[p; p' r] - WI[p; p' l] * t[l; r]
@@ -36,7 +36,7 @@ function left_canonicalize!(
         end
         H[i] = JordanMPOTensor(codomain(W) ← physicalspace(W) ⊗ V, Q1, W.B, Q2, W.D)
     else
-        tmp = transpose(cat(insertleftunit(C′, 1), W.A; dims = 1), ((3, 1, 2), (4,)))
+        tmp = transpose(cat(insertleftunit(C′, 1; storage_type = TensorKit.storagetype(H)), W.A; dims = 1), ((3, 1, 2), (4,)))
         Q, R = left_orth!(tmp; alg)
 
         if dim(R) == 0 # fully truncated
@@ -65,7 +65,7 @@ function left_canonicalize!(
 
     if size(W′, 4) > 1
         @plansor C′[l p; p' r] := t[l; r'] * W′.A[r' p; p' r]
-        C′ = add!(removeunit(C′, 1), W′.C)
+        C′ = add!(removeunit(C′, 1; storage_type = TensorKit.storagetype(H)), W′.C)
     else
         C′ = W′.C # empty
     end
@@ -77,7 +77,7 @@ function left_canonicalize!(
     end
 
     @plansor D′[l p; p'] := t[l; r] * W′.B[r p; p']
-    D′ = add!(removeunit(D′, 1), W′.D)
+    D′ = add!(removeunit(D′, 1; storage_type = TensorKit.storagetype(H)), W′.D)
 
     H[i + 1] = JordanMPOTensor(
         right_virtualspace(H[i]) ⊗ physicalspace(W′) ← domain(W′),
@@ -99,7 +99,7 @@ function right_canonicalize!(
     d = sqrt(dim(P))
 
     # orthogonalize second row against last
-    WI = removeunit(W[end, 1, 1, end], 4)
+    WI = removeunit(W[end, 1, 1, end], 4; storage_type = TensorKit.storagetype(H))
     @plansor t[l; r] := conj(WI[r p; p']) * W.B[l p; p']
     # TODO: the following is currently broken due to a TensorKit bug
     # @plansor B′[l p; p'] := W.B[l p; p'] - WI[r p; p'] * t[l; r]
@@ -124,7 +124,8 @@ function right_canonicalize!(
         end
         H[i] = JordanMPOTensor(V ⊗ P ← domain(W), Q1, Q2, W.C, W.D)
     else
-        tmp = transpose(cat(insertleftunit(B′, 4), W.A; dims = 4), ((1,), (3, 4, 2)))
+        B′′ = insertleftunit(B′, 4; storage_type = TensorKit.storagetype(H))
+        tmp = transpose(cat(B′′, W.A; dims = 4), ((1,), (3, 4, 2)))
         R, Q = right_orth!(tmp; alg)
         if dim(R) == 0
             V = _rightunit ⊞ _rightunit
@@ -152,7 +153,7 @@ function right_canonicalize!(
 
     if size(W′, 1) > 1
         @plansor B′[l p; p' r] := W′.A[l p; p' r'] * t[r'; r]
-        B′ = add!(removeunit(B′, 4), W′.B)
+        B′ = add!(removeunit(B′, 4; storage_type = TensorKit.storagetype(H)), W′.B)
     else
         B′ = W′.B
     end
@@ -164,7 +165,7 @@ function right_canonicalize!(
     end
 
     @plansor D′[p; p' r] := W′.C[p; p' r'] * t[r'; r]
-    D′ = add!(removeunit(D′, 3), W′.D)
+    D′ = add!(removeunit(D′, 3; storage_type = TensorKit.storagetype(H)), W′.D)
     H[i - 1] = JordanMPOTensor(codomain(W′) ← physicalspace(W′) ⊗ V, A′, B′, C′, D′)
     return H
 end

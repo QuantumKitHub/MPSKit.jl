@@ -504,10 +504,8 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     end
 
     # partial sort by interaction range
-    local_mpos = sort!(
-        map(Base.Fix1(instantiate_operator, lattice), collect(local_operators));
-        by = x -> length(x[1])
-    )
+    unsorted_mpos = map(Base.Fix1(instantiate_operator, lattice), [local_operators...])
+    local_mpos = sort!(unsorted_mpos; by = x -> length(x[1]))
 
     for (sites, local_mpo) in local_mpos
         local key_R # trick to define key_R before the first iteration
@@ -703,8 +701,8 @@ end
 function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O <: MPOTensor}
     return MPOHamiltonian(similar(parent(H), O, L))
 end
-function Base.similar(H::MPOHamiltonian, ::Type{T}) where {T <: Number}
-    return MPOHamiltonian(similar.(parent(H), T))
+function Base.similar(H::MPOHamiltonian, ::Type{TorA}) where {TorA <: Union{Number, DenseVector}}
+    return MPOHamiltonian(similar.(parent(H), TorA))
 end
 
 # Linear Algebra
@@ -729,7 +727,7 @@ function Base.:+(
             ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
-        H[i] = eltype(H)(V, A, B, C, D)
+        H[i] = JordanMPOTensor(V, A, B, C, D)
     end
     return FiniteMPOHamiltonian(H)
 end
@@ -751,7 +749,7 @@ function Base.:+(
         Vright = ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
-        H[i] = eltype(H)(V, A, B, C, D)
+        H[i] = JordanMPOTensor(V, A, B, C, D)
     end
     return InfiniteMPOHamiltonian(H)
 end

@@ -135,6 +135,10 @@ function jordanmpotensortype(::Type{O}) where {O <: AbstractTensorMap}
 end
 Base.similar(W::JordanMPOTensor, ::Type{TorA}) where {TorA} =
     jordanmpotensortype(spacetype(W), TorA)(undef, space(W))
+Base.similar(W::JordanMPOTensor, V::VectorSpace) =
+    jordanmpotensortype(spacetype(V), storagetype(W))(undef, V)
+Base.similar(W::JordanMPOTensor, V::VectorSpace, ::Type{TorA}) where {TorA} =
+    jordanmpotensortype(spacetype(V), TorA)(undef, V)
 
 # Properties
 # ----------
@@ -219,7 +223,6 @@ for f in (:real, :complex)
         for (I, v) in nonzero_pairs(W.D)
             W′.D[I] = $f(v)
         end
-        @show TensorKit.storagetype(W), TensorKit.storagetype(W′)
         return W′
     end
 end
@@ -244,7 +247,7 @@ end
     elseif 1 < i < size(W, 1) && 1 < j < size(W, 4)
         return W.A[i - 1, 1, 1, j - 1]
     else
-        return zeros(scalartype(W), eachspace(W)[i, 1, 1, j])
+        return zeros(storagetype(W), eachspace(W)[i, 1, 1, j])
     end
 end
 
@@ -359,7 +362,7 @@ function add_physical_charge(O::JordanMPOTensor, charge::Sector)
     Vdst = left_virtualspace(O) ⊗
         fuse(physicalspace(O), auxspace) ←
         fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
-    Odst = JordanMPOTensor{scalartype(O)}(undef, Vdst)
+    Odst = similar(O, Vdst)
     for (I, v) in nonzero_pairs(O)
         Odst[I] = add_physical_charge(v, charge)
     end
