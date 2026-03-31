@@ -53,3 +53,7 @@ TensorKitManifolds = "0.7, 0.8"
 TensorOperations = "5.5.1"
 VectorInterface = "0.2, 0.3, 0.4, 0.5"
 julia = "1.10"
+
+[sources]
+TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "ksh/cuda_tweaks"}
+BlockTensorKit = {url = "https://github.com/lkdvos/BlockTensorKit.jl", rev = "ksh/gpu"}
