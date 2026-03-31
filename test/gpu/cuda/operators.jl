@@ -91,10 +91,12 @@ end
         lattice = fill(V, L)
         O₁ = randn(T, V, V)
         O₁ += O₁'
-        E = id(storagetype(O₁), domain(O₁))
+        E = id(CuVector{T, CUDA.DeviceMemory}, domain(O₁))
         O₂ = randn(T, V^2 ← V^2)
         O₂ += O₂'
 
+        dO₁ = adapt(CuVector{T, CUDA.DeviceMemory}, O₁)
+        dO₂ = adapt(CuVector{T, CUDA.DeviceMemory}, O₂)
         H1 = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPOHamiltonian(lattice, i => O₁ for i in 1:L))
         H2 = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPOHamiltonian(lattice, (i, i + 1) => O₂ for i in 1:(L - 1)))
         H3 = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPOHamiltonian(lattice, 1 => O₁, (2, 3) => O₂, (1, 3) => O₂))
@@ -112,17 +114,17 @@ end
         end
 
         # check if constructor works by converting back to tensormap
-        #= H1_tm = convert(TensorMap, H1)
-        operators = vcat(fill(E, L - 1), O₁)
+        H1_tm = convert(TensorMap, H1)
+        operators = vcat(fill(E, L - 1), dO₁)
         @test H1_tm ≈ mapreduce(+, 1:L) do i
             return reduce(⊗, circshift(operators, i))
         end
-        operators = vcat(fill(E, L - 2), O₂)
+        operators = vcat(fill(E, L - 2), dO₂)
         @test convert(TensorMap, H2) ≈ mapreduce(+, 1:(L - 1)) do i
             return reduce(⊗, circshift(operators, i))
         end
         @test convert(TensorMap, H3) ≈
-            O₁ ⊗ E ⊗ E + E ⊗ O₂ + permute(O₂ ⊗ E, ((1, 3, 2), (4, 6, 5))) =# # needs a fix in BlockTensorKit
+            dO₁ ⊗ E ⊗ E + E ⊗ dO₂ + permute(dO₂ ⊗ E, ((1, 3, 2), (4, 6, 5)))
 
         # check if adding terms on the same site works
         single_terms = Iterators.flatten(Iterators.repeated((i => O₁ / 2 for i in 1:L), 2))
@@ -142,20 +144,27 @@ end
             adapt(CuArray, FiniteMPOHamiltonian(lattice, 2 => O₁)) +
             adapt(CuArray, FiniteMPOHamiltonian(lattice, 3 => O₁))
         @test TensorKit.storagetype(H1) == CuVector{T, CUDA.DeviceMemory}
-        #@test 0.8 * H1 + 0.2 * H1 ≈ H1 atol = 1.0e-6 # broken due to JordanMPOTensorMap
-        #=@test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1.0e-6
+        #=
+        H1′a = 0.8 * H1
+        @test TensorKit.storagetype(H1′a) == CuVector{T, CUDA.DeviceMemory}
+        H1′b = 0.2 * H1
+        @test TensorKit.storagetype(H1′b) == CuVector{T, CUDA.DeviceMemory}
+        H1′ = H1′a + H1′b
+        @test TensorKit.storagetype(H1′) == CuVector{T, CUDA.DeviceMemory}
+        @test H1′ ≈ H1 atol = 1.0e-6
+        @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1.0e-6
         H1_trunc = changebonds(H1, SvdCut(; trscheme = truncrank(0)))
         @test H1_trunc ≈ H1
-        @test all(left_virtualspace(H1_trunc) .== left_virtualspace(H1))=# # needs fix in BlockTensorKit
+        @test all(left_virtualspace(H1_trunc) .== left_virtualspace(H1))
 
         # test dot and application
         state = rand(T, prod(lattice))
         mps = adapt(CuArray, FiniteMPS(state))
 
-        #=@test convert(TensorMap, H1 * mps) ≈ H1_tm * state # needs fix in BlockTensorKit
+        @test convert(TensorMap, H1 * mps) ≈ H1_tm * state
         @test H1 * state ≈ H1_tm * state
-        @test dot(mps, H2, mps) ≈ dot(mps, H2 * mps)=#
-
+        @test dot(mps, H2, mps) ≈ dot(mps, H2 * mps)
+        =#
         # test constructor from dictionary with mixed linear and Cartesian lattice indices as keys
         grid = square = fill(V, 3, 3)
 
@@ -173,17 +182,17 @@ end
         @test TensorKit.storagetype(H4) == CuVector{T, CUDA.DeviceMemory}
 
         @test H4 ≈
-            adapt(CuArray, FiniteMPOHamiltonian(grid, local_operators)) +
-            adapt(CuArray, FiniteMPOHamiltonian(grid, vertical_operators)) +
-            adapt(CuArray, FiniteMPOHamiltonian(grid, horizontal_operators)) atol = 1.0e-4
+            adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPOHamiltonian(grid, local_operators)) +
+            adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPOHamiltonian(grid, vertical_operators)) +
+            adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPOHamiltonian(grid, horizontal_operators)) atol = 1.0e-4
         @test TensorKit.storagetype(H4) == CuVector{T, CUDA.DeviceMemory}
 
-        #H4′= H4 / 3 + 2H4 / 3
-        #@test TensorKit.storagetype(H4′) == CuVector{T, CUDA.DeviceMemory}
-        #H5 = changebonds(H4′, SvdCut(; trscheme = trunctol(; atol = 1.0e-12)))
-        #@test TensorKit.storagetype(H5) == CuVector{T, CUDA.DeviceMemory} # more problems with arithmetic operations...
-        #psi = adapt(CuArray, FiniteMPS(physicalspace(H5), V ⊕ rightunitspace(V)))
-        #@test expectation_value(psi, H4) ≈ expectation_value(psi, H5)
+        #H4′= H4 / 3 + 2H4 / 3 # trouble here with cat_t
+        #=@test TensorKit.storagetype(H4′) == CuVector{T, CUDA.DeviceMemory}
+        H5 = changebonds(H4′, SvdCut(; trscheme = trunctol(; atol = 1.0e-12)))
+        @test TensorKit.storagetype(H5) == CuVector{T, CUDA.DeviceMemory}
+        psi = adapt(CuArray, FiniteMPS(physicalspace(H5), V ⊕ rightunitspace(V)))
+        @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)=#
     end
 end
 
@@ -207,31 +216,30 @@ end
     @test TensorKit.storagetype(ψ1) == CuVector{ComplexF64, CUDA.DeviceMemory}
     @test TensorKit.storagetype(ψ2) == CuVector{ComplexF64, CUDA.DeviceMemory}
 
-    #=
     e1 = expectation_value(ψ1, H1)
     e2 = expectation_value(ψ1, H2)
-    =# # broken due to BraidingTensor
 
-    # H1 = 2 * H1 - CuArray([1]) # scalar indexing
-    # @test TensorKit.storagetype(H1) == CuVector{ComplexF64, CUDA.DeviceMemory}
-    # @test e1 * 2 - 1 ≈ expectation_value(ψ1, H1) atol = 1.0e-10 # broken due to BraidingTensor
+    H1 = 2 * H1
+    @test TensorKit.storagetype(H1) == CuVector{ComplexF64, CUDA.DeviceMemory}
+    H1 -= [1]
+    @test TensorKit.storagetype(H1) == CuVector{ComplexF64, CUDA.DeviceMemory}
+    @test e1 * 2 - 1 ≈ expectation_value(ψ1, H1) atol = 1.0e-10
 
     H1 = H1 + H2
     @test TensorKit.storagetype(H1) == CuVector{ComplexF64, CUDA.DeviceMemory}
-
-    # @test e1 * 2 + e2 - 1 ≈ expectation_value(ψ1, H1) atol = 1.0e-10 # broken due to BraidingTensor
+    @test e1 * 2 + e2 - 1 ≈ expectation_value(ψ1, H1) atol = 1.0e-10
 
     H1 = repeat(H1, 2)
     @test TensorKit.storagetype(H1) == CuVector{ComplexF64, CUDA.DeviceMemory}
 
-    #=e1 = expectation_value(ψ2, H1)
+    e1 = expectation_value(ψ2, H1)
     e3 = expectation_value(ψ2, H3)
 
-    @test e1 + e3 ≈ expectation_value(ψ2, H1 + H3) atol = 1.0e-10=# # broken due to BraidingTensor
+    @test e1 + e3 ≈ expectation_value(ψ2, H1 + H3) atol = 1.0e-10
 
-    #H4 = H1 + H3 # broken due to BraidingTensor
-    #@test TensorKit.storagetype(H4) == CuVector{ComplexF64, CUDA.DeviceMemory}
-    #h4 = H4 * H4
-    #@test TensorKit.storagetype(h4) == CuVector{ComplexF64, CUDA.DeviceMemory}
-    #@test real(expectation_value(ψ2, H4)) >= 0 # broken due to BraidingTensor
+    H4 = H1 + H3
+    @test TensorKit.storagetype(H4) == CuVector{ComplexF64, CUDA.DeviceMemory}
+    h4 = H4 * H4
+    @test TensorKit.storagetype(h4) == CuVector{ComplexF64, CUDA.DeviceMemory}
+    @test real(expectation_value(ψ2, H4)) >= 0
 end

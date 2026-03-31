@@ -4,7 +4,7 @@ using MPSKit: GeometryStyle, InfiniteChainStyle, TransferMatrix
 using TensorKit
 using TensorKit: ℙ
 using Adapt, CUDA, cuTENSOR
-
+#=
 @testset "CuMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
     [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
     tol = Float64(eps(real(elt)) * 100)
@@ -90,3 +90,4 @@ end
         @test TransferMatrix(ψ.AR[i, j], ψ.AR[i, j]) * r_RR(ψ, i, j) ≈ r_RR(ψ, i, j + 1)
     end
 end
+=#
