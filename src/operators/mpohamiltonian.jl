@@ -662,6 +662,8 @@ function isemptylevel(H::InfiniteMPOHamiltonian, i::Int)
 end
 
 function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
+    # TODO this FORCES the output tensor to have Vector storage
+    # in an uncontrollable way, should be fixed
     L = removeunit(H[1], 1)
     R = removeunit(H[end], 4)
     M = Tuple(H[2:(end - 1)])
@@ -855,7 +857,13 @@ end
 function Base.:*(H::FiniteMPOHamiltonian{<:MPOTensor}, x::AbstractTensorMap)
     @assert length(H) > 1
     @assert numout(x) == length(H)
-    L = removeunit(H[1], 1)
+    if H[1] isa BraidingTensor
+        L′ = removeunit(H[1], 1)
+        L = similar(L′, TensorKit.storagetype(H))
+        copy!(L, L′)
+    else
+        L = removeunit(H[1], 1)
+    end
     M = Tuple(H[2:(end - 1)])
     R = removeunit(H[end], 4)
     return TensorMap(_apply_finitempo(x, L, M, R))
