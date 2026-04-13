@@ -442,6 +442,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
 
     # avoid using one(S)
     P = first(lattice)
+    P = P isa ProductSpace ? P[length(P)] : P
     _rightunit = rightunitspace(P)
     @assert _rightunit == leftunitspace(P) "only diagonal hamiltonians allowed"
 
@@ -530,6 +531,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     )
     # avoid using one(S)
     P = first(lattice)
+    P = P isa ProductSpace ? P[length(P)] : P
     _rightunit = rightunitspace(P)
     @assert _rightunit == leftunitspace(P) "only diagonal hamiltonians allowed"
 
