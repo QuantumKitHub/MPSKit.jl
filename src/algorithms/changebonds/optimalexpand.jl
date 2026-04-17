@@ -17,6 +17,17 @@ $(TYPEDFIELDS)
     trscheme::TruncationStrategy
 end
 
+##= This is only useful for OptimalExpand
+function changebonds(
+        ψ::InfiniteMPS, operator::InfiniteMPO, alg::OptimalExpand, envs = environments(ψ, operator)
+    )
+    ψ′, envs′ = changebonds(
+        convert(MultilineMPS, ψ), convert(MultilineMPO, operator), alg, Multiline([envs])
+    )
+    return convert(InfiniteMPS, ψ′), envs #This does not sound safe, it relies on the onsite modification of the environments, and the compatibility of the conversion
+end
+# =#
+
 function changebonds(
         ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExpand,
         envs = environments(ψ, H)
