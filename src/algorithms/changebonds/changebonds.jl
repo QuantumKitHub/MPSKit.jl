@@ -9,19 +9,6 @@ See also: [`SvdCut`](@ref), [`RandExpand`](@ref), [`VUMPSSvdCut`](@ref), [`Optim
 function changebonds end
 function changebonds! end
 
-
-##= This is never useful
-# write in terms of MultilineMPS
-function changebonds(
-        ψ::InfiniteMPS, operator::InfiniteMPO, alg::OptimalExpand, envs = environments(ψ, operator)
-    )
-    ψ′, envs′ = changebonds(
-        convert(MultilineMPS, ψ), convert(MultilineMPO, operator), alg, Multiline([envs])
-    )
-    return convert(InfiniteMPS, ψ′), envs
-end
-# =#
-
 _expand(ψ, AL′, AR′) = _expand!(copy(ψ), AL′, AR′)
 function _expand!(ψ::InfiniteMPS, AL′::PeriodicVector, AR′::PeriodicVector)
     for i in 1:length(ψ)
