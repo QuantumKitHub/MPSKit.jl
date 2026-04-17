@@ -109,8 +109,8 @@ function changebonds(ψ::InfiniteMPS, alg::SvdCut)
 end
 
 function changebonds(ψ, H, alg::SvdCut, envs)
-  newψ = changebonds(ψ, alg)
-  return newψ, environments(newψ, H)
+    newψ = changebonds(ψ, alg)
+    return newψ, environments(newψ, H)
 end
 
 changebonds(mpo::FiniteMPOHamiltonian, alg::SvdCut) = changebonds!(copy(mpo), alg)

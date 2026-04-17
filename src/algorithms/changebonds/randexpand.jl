@@ -51,8 +51,8 @@ changebonds(ψ::AbstractMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
 changebonds(ψ::MultilineMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
 
 function changebonds(ψ, H, alg::RandExpand, envs)
-  newψ = changebonds(ψ, alg)    
-  return newψ, environments(newψ, H)
+    newψ = changebonds(ψ, alg)
+    return newψ, environments(newψ, H)
 end
 
 
