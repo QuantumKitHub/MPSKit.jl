@@ -24,7 +24,7 @@ function changebonds(
     ψ′, envs′ = changebonds(
         convert(MultilineMPS, ψ), convert(MultilineMPO, operator), alg, Multiline([envs])
     )
-    return convert(InfiniteMPS, ψ′), envs #This does not sound safe, it relies on the onsite modification of the environments, and the compatibility of the conversion
+    return convert(InfiniteMPS, ψ′), only(parent(envs′))
 end
 # =#
 
