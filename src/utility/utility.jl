@@ -251,7 +251,7 @@ function mul_front!(
     cp = allocator_checkpoint!(allocator)
 
     Ablocks = blocks(A)
-    Bstructure = TensorKit.fusionblockstructure(space(B))
+    Bstructure = TensorKit.subblockstructure(space(B))
     for ((f₁, f₂), c) in subblocks(C)
         # fetch A block
         u = first(f₁.uncoupled)
@@ -259,7 +259,7 @@ function mul_front!(
         isempty(a) && (scale!(c, β); continue)
 
         # fetch B block
-        haskey(Bstructure.fusiontreeindices, (f₁, f₂)) || (scale!(c, β); continue)
+        haskey(Bstructure, (f₁, f₂)) || (scale!(c, β); continue)
         b = B[f₁, f₂]
 
         tensorcontract!(
@@ -299,7 +299,7 @@ function mul_tail!(
 
     cp = allocator_checkpoint!(allocator)
 
-    Astructure = TensorKit.fusionblockstructure(space(A))
+    Astructure = TensorKit.subblockstructure(space(A))
     Bblocks = blocks(B)
     for ((f₁, f₂), c) in subblocks(C)
         # fetch B block
@@ -308,7 +308,7 @@ function mul_tail!(
         isempty(b) && (scale!(c, β); continue)
 
         # fetch A block
-        haskey(Astructure.fusiontreeindices, (f₁, f₂)) || (scale!(c, β); continue)
+        haskey(Astructure, (f₁, f₂)) || (scale!(c, β); continue)
         a = A[f₁, f₂]
 
         tensorcontract!(
