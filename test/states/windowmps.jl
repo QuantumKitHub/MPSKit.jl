@@ -63,14 +63,15 @@ using TensorKit: ℙ
 
     e1 = expectation_value(window, (2, 3) => O)
 
-    window, envs, _ = find_groundstate(window, ham, DMRG(; verbosity = 0))
+    w_ham = WindowMPOHamiltonian(ham,1:length(window))
+    window, envs, _ = find_groundstate(window, w_ham, DMRG(; verbosity = 0))
 
     e2 = expectation_value(window, (2, 3) => O)
 
     @test real(e2) ≤ real(e1)
 
-    window, envs = timestep(window, ham, 0.1, 0.0, TDVP2(; trscheme = truncrank(20)), envs)
-    window, envs = timestep(window, ham, 0.1, 0.0, TDVP(), envs)
+    window, envs = timestep(window, w_ham, 0.1, 0.0, TDVP2(; trscheme = truncrank(20)), envs)
+    window, envs = timestep(window, w_ham, 0.1, 0.0, TDVP(), envs)
 
     e3 = expectation_value(window, (2, 3) => O)
 

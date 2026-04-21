@@ -59,7 +59,7 @@ See also [`Jeckelmann`](@ref) for the original approach.
 struct NaiveInvert <: DDMRG_Flavour end
 
 function propagator(
-        A::AbstractFiniteMPS, z::Number, H::FiniteMPOHamiltonian,
+        A::AbstractFiniteMPS, z::Number, H,
         alg::DynamicalDMRG{NaiveInvert}; init = copy(A)
     )
     h_envs = environments(init, H) # environments for h
@@ -119,7 +119,7 @@ See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.
 struct Jeckelmann <: DDMRG_Flavour end
 
 function propagator(
-        A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
+        A::AbstractFiniteMPS, z, H,
         alg::DynamicalDMRG{Jeckelmann}; init = copy(A)
     )
     ω = real(z)
@@ -176,7 +176,7 @@ function propagator(
 end
 
 function squaredenvs(
-        state::AbstractFiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H)
+        state::AbstractFiniteMPS, H, envs = environments(state, H)
     )
     H² = conj(H) * H
     L = length(state)
