@@ -58,7 +58,7 @@ function alg_eigsolve(;
 end
 
 alg_svd() = DefaultAlgorithm()
-alg_qr() = Householder(; positive = true)
+alg_orth() = Householder(; positive = true)
 
 # TODO: make verbosity and maxiter actually do something
 function alg_environments(;

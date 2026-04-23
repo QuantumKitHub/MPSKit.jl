@@ -102,7 +102,7 @@ end
 function localupdate_step!(
         ::IterativeSolver{<:VOMPS}, state, scheduler = Defaults.scheduler[]
     )
-    alg_orth = Defaults.alg_qr()
+    alg_orth = Defaults.alg_orth()
     mps = state.mps
     ACs = similar(mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
@@ -119,7 +119,7 @@ function localupdate_step!(
 end
 
 function _localupdate_vomps_step!(
-        site, mps, operator, envs; parallel::Bool = false, alg_orth = Defaults.alg_qr()
+        site, mps, operator, envs; parallel::Bool = false, alg_orth = Defaults.alg_orth()
     )
     if !parallel
         AC = AC_projection(site, mps, operator, mps, envs)
