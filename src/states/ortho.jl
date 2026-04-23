@@ -77,27 +77,11 @@ function MixedCanonical(;
         alg_eigsolve = _GAUGE_ALG_EIGSOLVE,
         eig_miniter::Int = 10, order::Symbol = :LR
     )
-    if alg_orth isa LAPACK_HouseholderQR
-        alg_leftorth = alg_orth
-        alg_rightorth = LAPACK_HouseholderLQ(; alg_orth.kwargs...)
-    elseif alg_orth isa CUSOLVER_HouseholderQR
-        alg_leftorth = alg_orth
-        alg_rightorth = LQViaTransposedQR(CUSOLVER_HouseholderQR(; alg_orth.kwargs...))
-    elseif alg_orth isa LAPACK_HouseholderLQ
-        alg_leftorth = LAPACK_HouseholderQR(; alg_orth.kwargs...)
-        alg_rightorth = alg_orth
-    elseif alg_orth isa LQViaTransposedQR
-        alg_leftorth = alg_orth
-        alg_rightorth = alg_orth.qr_alg
-    else
-        alg_leftorth = alg_rightorth = alg_orth
-    end
-
     left = LeftCanonical(;
-        tol, maxiter, verbosity, alg_orth = alg_leftorth, alg_eigsolve, eig_miniter
+        tol, maxiter, verbosity, alg_orth, alg_eigsolve, eig_miniter
     )
     right = RightCanonical(;
-        tol, maxiter = maxiter, verbosity, alg_orth = alg_rightorth, alg_eigsolve, eig_miniter
+        tol, maxiter = maxiter, verbosity, alg_orth, alg_eigsolve, eig_miniter
     )
 
     return MixedCanonical(left, right, order)
