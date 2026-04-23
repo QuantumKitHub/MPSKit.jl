@@ -9,7 +9,7 @@ import KrylovKit: GMRES, Arnoldi, Lanczos
 using OhMyThreads
 using ..MPSKit: DynamicTol
 using TensorKit: TensorKit
-using MatrixAlgebraKit: HouseHolder, SafeDivideAndConquer
+using MatrixAlgebraKit: DefaultAlgorithm, HouseHolder
 
 const VERBOSE_NONE = 0
 const VERBOSE_WARN = 1
@@ -57,7 +57,7 @@ function alg_eigsolve(;
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
-alg_svd() = SafeDivideAndConquer()
+alg_svd() = DefaultAlgorithm()
 alg_qr() = HouseHolder(; positive = true)
 
 # TODO: make verbosity and maxiter actually do something
