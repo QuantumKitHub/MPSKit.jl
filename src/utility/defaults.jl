@@ -9,7 +9,7 @@ import KrylovKit: GMRES, Arnoldi, Lanczos
 using OhMyThreads
 using ..MPSKit: DynamicTol
 using TensorKit: TensorKit
-using MatrixAlgebraKit: DefaultAlgorithm, HouseHolder
+using MatrixAlgebraKit: DefaultAlgorithm, Householder
 
 const VERBOSE_NONE = 0
 const VERBOSE_WARN = 1
@@ -58,7 +58,7 @@ function alg_eigsolve(;
 end
 
 alg_svd() = DefaultAlgorithm()
-alg_qr() = HouseHolder(; positive = true)
+alg_qr() = Householder(; positive = true)
 
 # TODO: make verbosity and maxiter actually do something
 function alg_environments(;
