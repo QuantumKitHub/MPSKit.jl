@@ -59,19 +59,19 @@ function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
 end
 
 """
-    FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+    FiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
 
 Create a `FiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]` represents
 the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
 either `MPOTensor`, `Missing` or `Number`.
 """
-function FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+function FiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
     T = promote_type(_split_mpoham_types.(Ws)...)
     W = jordanmpotensortype(T)
     return FiniteMPOHamiltonian{W}(Ws)
 end
-function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPOTensor}
-    T = scalartype(O)
+function FiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: JordanMPOTensor}
+    T = storagetype(O)
     L = length(W_mats)
     # initialize sumspaces
     S = spacetype(O)
@@ -140,7 +140,8 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                τ = BraidingTensor{T}(eachspace(W)[I])
+                A = similarstoragetype(T, eltype(T))
+                τ = BraidingTensor{eltype(T), typeof(eachspace(W)[I]), A}(eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
@@ -157,12 +158,12 @@ Create a `InfiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j,
 the the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
 either `MPOTensor`, `Missing` or `Number`.
 """
-function InfiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+function InfiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
     T = promote_type(_split_mpoham_types.(Ws)...)
     TW = jordanmpotensortype(T)
     return InfiniteMPOHamiltonian{TW}(Ws)
 end
-function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTensor}
+function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: MPOTensor}
     # InfiniteMPOHamiltonian only works for square matrices:
     for W_mat in W_mats
         size(W_mat, 1) == size(W_mat, 2) ||
@@ -172,7 +173,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
         throw(ArgumentError("matrices should have the same size"))
     nlvls = size(W_mats[1], 1)
 
-    T = scalartype(O)
+    T = storagetype(O)
     L = length(W_mats)
     # initialize sumspaces
     S = spacetype(O)
@@ -261,7 +262,8 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                τ = BraidingTensor{T}(eachspace(W)[I])
+                A = similarstoragetype(T, eltype(T))
+                τ = BraidingTensor{eltype(T), typeof(eachspace(W)[I]), A}(eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
@@ -477,7 +479,8 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
             key_R = key_R′ == 0 ? length(virtualsumspaces[site + 1]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{scalartype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
+                S = spacetype(eachspace(O)[key_L, 1, 1, key_R])
+                τ = BraidingTensor{scalartype(TW), S, storagetype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -598,7 +601,8 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
             key_R = key_R′ == 0 ? length(virtualspaces[site]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{scalartype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
+                S = typeof(eachspace(O)[key_L, 1, 1, key_R])
+                τ = BraidingTensor{scalartype(TW), S, storagetype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -857,13 +861,7 @@ end
 function Base.:*(H::FiniteMPOHamiltonian{<:MPOTensor}, x::AbstractTensorMap)
     @assert length(H) > 1
     @assert numout(x) == length(H)
-    if H[1] isa BraidingTensor
-        L′ = removeunit(H[1], 1)
-        L = similar(L′, TensorKit.storagetype(H))
-        copy!(L, L′)
-    else
-        L = removeunit(H[1], 1)
-    end
+    L = removeunit(H[1], 1)
     M = Tuple(H[2:(end - 1)])
     R = removeunit(H[end], 4)
     return TensorMap(_apply_finitempo(x, L, M, R))

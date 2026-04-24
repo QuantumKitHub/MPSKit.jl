@@ -132,7 +132,8 @@ function _fuse_mpo_mpo(O1::MPOTensor, O2::MPOTensor, Fₗ, Fᵣ)
         T = promote_type(scalartype(O1), scalartype(O2))
         V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
             physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
-        return BraidingTensor{T}(V)
+        A = promote_storagetype(storagetype(O1), storagetype(O2), T)
+        return BraidingTensor{T, typeof(V), A}(V)
     elseif O1 isa BraidingTensor
         @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] * O2[1 3; -3 5] *
             τ[2 -2; 3 4] * conj(Fᵣ[-4; 5 4])
@@ -161,11 +162,12 @@ function fuse_mul_mpo(O1, O2)
     F_right = fuser(T, right_virtualspace(O2), right_virtualspace(O1))
     return _fuse_mpo_mpo(O1, O2, F_left, F_right)
 end
-function fuse_mul_mpo(O1::BraidingTensor, O2::BraidingTensor)
-    T = promote_type(scalartype(O1), scalartype(O2))
+function fuse_mul_mpo(O1::BraidingTensor{T1, S1, A1}, O2::BraidingTensor{T2, S2, A2}) where {T1, T2, S1, S2, A1, A2}
+    T = promote_type(T1, T2)
+    A = TensorKit.promote_storagetype(A1, A2)
     V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
         physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
-    return BraidingTensor{T}(V)
+    return BraidingTensor{T, spacetype(V), A}(V)
 end
 function fuse_mul_mpo(
         O1::AbstractBlockTensorMap{T₁, S, 2, 2}, O2::AbstractBlockTensorMap{T₂, S, 2, 2}
@@ -202,7 +204,7 @@ function add_physical_charge(O::BraidingTensor, charge::Sector)
     auxspace = Vect[typeof(charge)](charge => 1)'
     V = left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
         fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
-    return BraidingTensor{scalartype(O)}(V)
+    return BraidingTensor{scalartype(O), typeof(V), storagetype(O)}(V)
 end
 function add_physical_charge(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}, charge::Sector)
     sectortype(O) == typeof(charge) || throw(SectorMismatch())
