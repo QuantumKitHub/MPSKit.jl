@@ -49,10 +49,10 @@ struct JordanMPOTensor{
     # constructor from data
     function JordanMPOTensor{E, S, TA, TB, TC, TD}(
             V::TensorMapSumSpace,
-            A::SparseBlockTensorMap{TA, E, S, 2, 2},
-            B::SparseBlockTensorMap{TB, E, S, 2, 1},
-            C::SparseBlockTensorMap{TC, E, S, 1, 2},
-            D::SparseBlockTensorMap{TD, E, S, 1, 1}
+            A::SparseBlockTensorMap{<:Any, <:Any, S, 2, 2},
+            B::SparseBlockTensorMap{<:Any, <:Any, S, 2, 1},
+            C::SparseBlockTensorMap{<:Any, <:Any, S, 1, 2},
+            D::SparseBlockTensorMap{<:Any, <:Any, S, 1, 1}
         ) where {E, S, TA, TB, TC, TD}
         return new{E, S, TA, TB, TC, TD}(V, A, B, C, D)
     end
