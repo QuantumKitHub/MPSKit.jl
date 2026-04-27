@@ -12,7 +12,7 @@ authors:
   orcid: "https://orcid.org/0000-0002-0858-291X"
 
 title: "MPSKit"
-version: 0.13.9
+version: 0.13.10
 doi: 10.5281/zenodo.10654900
-date-released: 2026-02-03
+date-released: 2026-02-26
 url: "https://github.com/QuantumKitHub/MPSKit.jl"

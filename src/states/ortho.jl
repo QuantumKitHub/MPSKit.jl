@@ -21,7 +21,7 @@ $(TYPEDFIELDS)
     verbosity::Int = VERBOSE_WARN
 
     "algorithm used for orthogonalization of the tensors"
-    alg_orth = LAPACK_HouseholderQR(; positive = true)
+    alg_orth = Defaults.alg_qr()
     "algorithm used for the eigensolver"
     alg_eigsolve = _GAUGE_ALG_EIGSOLVE
     "minimal amount of iterations before using the eigensolver steps"
@@ -46,7 +46,7 @@ $(TYPEDFIELDS)
     verbosity::Int = VERBOSE_WARN
 
     "algorithm used for orthogonalization of the tensors"
-    alg_orth = LAPACK_HouseholderLQ(; positive = true)
+    alg_orth = Defaults.alg_lq()
     "algorithm used for the eigensolver"
     alg_eigsolve = _GAUGE_ALG_EIGSOLVE
     "minimal amount of iterations before using the eigensolver steps"
@@ -73,16 +73,22 @@ end
 
 function MixedCanonical(;
         tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter,
-        verbosity::Int = VERBOSE_WARN, alg_orth = LAPACK_HouseholderQR(; positive = true),
+        verbosity::Int = VERBOSE_WARN, alg_orth = Defaults.alg_qr(),
         alg_eigsolve = _GAUGE_ALG_EIGSOLVE,
         eig_miniter::Int = 10, order::Symbol = :LR
     )
     if alg_orth isa LAPACK_HouseholderQR
         alg_leftorth = alg_orth
         alg_rightorth = LAPACK_HouseholderLQ(; alg_orth.kwargs...)
+    elseif alg_orth isa CUSOLVER_HouseholderQR
+        alg_leftorth = alg_orth
+        alg_rightorth = LQViaTransposedQR(CUSOLVER_HouseholderQR(; alg_orth.kwargs...))
     elseif alg_orth isa LAPACK_HouseholderLQ
         alg_leftorth = LAPACK_HouseholderQR(; alg_orth.kwargs...)
         alg_rightorth = alg_orth
+    elseif alg_orth isa LQViaTransposedQR
+        alg_leftorth = alg_orth
+        alg_rightorth = alg_orth.qr_alg
     else
         alg_leftorth = alg_rightorth = alg_orth
     end
@@ -168,7 +174,7 @@ function regauge!(
     Q_C, _ = left_orth!(C; alg)
     return mul!(AC, Q_AC, Q_C')
 end
-function regauge!(AC::Vector{<:GenericMPSTensor}, C::Vector{<:MPSBondTensor}; kwargs...)
+function regauge!(AC::AbstractVector{<:GenericMPSTensor}, C::AbstractVector{<:MPSBondTensor}; kwargs...)
     for i in 1:length(AC)
         regauge!(AC[i], C[i]; kwargs...)
     end
@@ -183,7 +189,7 @@ function regauge!(
     AR_tail = mul!(AC_tail, Q_C', Q_AC)
     return repartition!(AC, AR_tail)
 end
-function regauge!(CL::Vector{<:MPSBondTensor}, AC::Vector{<:GenericMPSTensor}; kwargs...)
+function regauge!(CL::AbstractVector{<:MPSBondTensor}, AC::AbstractVector{<:GenericMPSTensor}; kwargs...)
     for i in length(CL):-1:1
         regauge!(CL[i], AC[i]; kwargs...)
     end
@@ -191,7 +197,7 @@ function regauge!(CL::Vector{<:MPSBondTensor}, AC::Vector{<:GenericMPSTensor}; k
 end
 # fix ambiguity + error
 regauge!(::MPSBondTensor, ::MPSBondTensor; kwargs...) = error("method ambiguity")
-function regauge!(::Vector{<:MPSBondTensor}, ::Vector{<:MPSBondTensor}; kwargs...)
+function regauge!(::AbstractVector{<:MPSBondTensor}, ::AbstractVector{<:MPSBondTensor}; kwargs...)
     return error("method ambiguity")
 end
 

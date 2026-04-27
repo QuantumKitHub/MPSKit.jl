@@ -10,6 +10,7 @@ using MPSKit
 using MPSKit: GeometryStyle, InfiniteChainStyle, TransferMatrix
 using TensorKit
 using TensorKit: ℙ
+using Adapt
 
 @testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
     [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
@@ -44,4 +45,89 @@ using TensorKit: ℙ
         @test TransferMatrix(ψ.AR[i], ψ.AL[i]) * r_RL(ψ, i) ≈ r_RL(ψ, i + 1)
         @test TransferMatrix(ψ.AR[i], ψ.AR[i]) * r_RR(ψ, i) ≈ r_RR(ψ, i + 1)
     end
+end
+
+@testset "InfiniteMPS copying" begin
+    mps1 = InfiniteMPS(rand, ComplexF64, [2], [5])
+    mps2 = copy(mps1)
+
+    @test mps1 !== mps2
+
+    # elements are equal
+    @test mps1.AL[1] == mps2.AL[1]
+    @test mps1.AR[1] == mps2.AR[1]
+    @test mps1.AC[1] == mps2.AC[1]
+    @test mps1.C[1] == mps2.C[1]
+
+    # arrays are distinct
+    @test mps1.AL !== mps2.AL
+    @test mps1.AR !== mps2.AR
+    @test mps1.AC !== mps2.AC
+    @test mps1.C !== mps2.C
+
+    # tensors are distinct
+    @test mps1.AL[1] !== mps2.AL[1]
+    @test mps1.AR[1] !== mps2.AR[1]
+    @test mps1.AC[1] !== mps2.AC[1]
+    @test mps1.C[1] !== mps2.C[1]
+end
+
+@testset "Adapt" begin
+    for (d, D) in [(ℂ^2, ℂ^4), (ℙ^2, ℙ^4)]
+        mps1 = InfiniteMPS(Float32, d, D)
+        for T in (Float64, ComplexF64)
+            mps2 = @testinferred adapt(Vector{T}, mps1)
+            @test mps2 isa InfiniteMPS
+            @test scalartype(mps2) == T
+            @test storagetype(mps2) == Vector{T}
+            @test dot(mps1, mps2) ≈ 1 atol = 1.0e-4
+        end
+    end
+end
+
+@testset "InfiniteMPS entropy ($(sectortype(D)), $elt)" for (D, d, elt) in
+    [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
+    ψ = InfiniteMPS([d, d], [D, D])
+
+    # entropy(ψ) returns one value per site, all non-negative
+    Ss = entropy(ψ)
+    @test length(Ss) == length(ψ)
+    @test all(isreal, Ss)
+    @test all(>=(-1.0e-8), Ss)
+
+    # entropy(ψ, site) is non-negative and consistent with entropy(ψ)
+    for site in 1:length(ψ)
+        @test entropy(ψ, site) ≈ Ss[site]
+        @test entropy(ψ, site) ≈ entropy(entanglement_spectrum(ψ, site))
+    end
+
+    # product state has zero entropy everywhere
+    ψ_product = InfiniteMPS([d, d], [oneunit(D), oneunit(D)])
+    Ss_product = entropy(ψ_product)
+    @test all(S -> isapprox(S, 0; atol = 1.0e-10), Ss_product)
+end
+
+@testset "InfiniteMPS copying" begin
+    mps1 = InfiniteMPS(2, 5)
+    mps2 = copy(mps1)
+
+    @test mps1 !== mps2
+
+    # elements are equal
+    @test mps1.AL[1] == mps2.AL[1]
+    @test mps1.AR[1] == mps2.AR[1]
+    @test mps1.AC[1] == mps2.AC[1]
+    @test mps1.C[1] == mps2.C[1]
+
+    # arrays are distinct
+    @test mps1.AL !== mps2.AL
+    @test mps1.AR !== mps2.AR
+    @test mps1.AC !== mps2.AC
+    @test mps1.C !== mps2.C
+
+    # tensors are distinct
+    @test mps1.AL[1] !== mps2.AL[1]
+    @test mps1.AR[1] !== mps2.AR[1]
+    @test mps1.AC[1] !== mps2.AC[1]
+    @test mps1.C[1] !== mps2.C[1]
 end

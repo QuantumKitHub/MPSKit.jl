@@ -1,20 +1,27 @@
 """
     entropy(state, [site::Int])
+    entropy(spectrum::SectorVector)
 
-Calculate the von Neumann entanglement entropy of a given MPS. If an integer `site` is
-given, the entropy is across the entanglement cut to the right of site `site`. Otherwise, a
-vector of entropies is returned, one for each site.
+Calculate the von Neumann entanglement entropy. The entropy can be computed from either an
+MPS state or directly from an entanglement spectrum as obtained from
+[`entanglement_spectrum`](@ref).
+
+When called on an MPS with an integer `site`, the entropy is computed across the
+entanglement cut to the right of site `site`. For `InfiniteMPS`, omitting `site` returns a
+vector of entropies, one for each site. For `FiniteMPS` and `WindowMPS`, `site` is
+required.
 """
 entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
-    S = zero(real(scalartype(state)))
-    tol = eps(typeof(S))
-    for (c, b) in pairs(entanglement_spectrum(state, loc))
-        s = zero(S)
-        for x in b
-            x < tol && break
+    return entropy(entanglement_spectrum(state, loc))
+end
+function entropy(spectrum::TensorKit.SectorVector{T}) where {T}
+    S = zero(T)
+    tol = eps(T)
+    for (c, b) in pairs(spectrum)
+        s = sum(b; init = zero(S)) do x
             x² = x^2
-            s += x² * log(x²)
+            return x < tol ? zero(x) : x² * log(x²)
         end
         S += oftype(S, dim(c) * s)
     end
@@ -46,34 +53,18 @@ Concretely, this is the overlap of the current state with the single-site deriva
 \\epsilon = \\left|VL ⋅ \\left(VL^{\\dagger} ⋅ \\frac{\\partial \\text{above}}{\\partial AC_{\\text{pos}}}\\right)\\right|
 ```
 """
-function calc_galerkin(
-        pos::Int, below::Union{InfiniteMPS, FiniteMPS, WindowMPS}, operator, above, envs
-    )
-    AC´ = AC_hamiltonian(pos, below, operator, above, envs) * above.AC[pos]
+function calc_galerkin(pos::Int, below, operator, above, envs)
+    AC´ = AC_projection(pos, below, operator, above, envs)
     normalize!(AC´)
     out = mul!(AC´, below.AL[pos], below.AL[pos]' * AC´, -1, +1)
     return norm(out)
 end
-function calc_galerkin(
-        pos::CartesianIndex{2}, below::MultilineMPS, operator::MultilineMPO,
-        above::MultilineMPS, envs::MultilineEnvironments
-    )
-    row, col = pos.I
+function calc_galerkin(pos::CartesianIndex{2}, below, operator, above, envs)
+    row, col = Tuple(pos)
     return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
 end
-function calc_galerkin(
-        below::Union{InfiniteMPS, FiniteMPS, WindowMPS}, operator, above, envs
-    )
-    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), 1:length(above))
-end
-function calc_galerkin(
-        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS,
-        envs::MultilineEnvironments
-    )
-    return maximum(
-        pos -> calc_galerkin(pos, below, operator, above, envs),
-        CartesianIndices(size(above))
-    )
+function calc_galerkin(below, operator, above, envs)
+    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), eachindex(below))
 end
 
 """
@@ -208,7 +199,7 @@ function variance(
             state.AC[i], envs.GLs[i], H[i][:, :, :, end], envs.GRs[i][end]
         )
     end
-    lattice = physicalspace(state)
+    lattice = physicalspace(H)
     H_renormalized = InfiniteMPOHamiltonian(
         lattice, i => e * id(storagetype(eltype(H)), lattice[i]) for (i, e) in enumerate(e_local)
     )
@@ -235,7 +226,7 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs = environme
         GR = rightenv(envs, i, gs)
         return contract_mpo_expval(gs.AC[i], GL, H[i][:, :, :, end], GR[end])
     end
-    lattice = physicalspace(gs)
+    lattice = physicalspace(H)
     H_regularized = H - InfiniteMPOHamiltonian(
         lattice, i => e * id(storagetype(eltype(H)), lattice[i]) for (i, e) in enumerate(e_local)
     )

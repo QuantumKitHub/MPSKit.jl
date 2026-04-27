@@ -24,6 +24,10 @@ using TensorKit: ℙ
         #rand_quasiparticle is a private non-exported function
         ϕ₁ = LeftGaugedQP(rand, ψ)
         ϕ₂ = LeftGaugedQP(rand, ψ)
+        @test TensorKit.storagetype(ϕ₁) == TensorKit.storagetype(ψ)
+        @test TensorKit.storagetype(typeof(ϕ₁)) == TensorKit.storagetype(ψ)
+        @test TensorKit.storagetype(ϕ₂) == TensorKit.storagetype(ψ)
+        @test TensorKit.storagetype(typeof(ϕ₂)) == TensorKit.storagetype(ψ)
 
         @test GeometryStyle(ϕ₁) == FiniteChainStyle()
         @test GeometryStyle(typeof(ϕ₂)) == FiniteChainStyle()

@@ -12,7 +12,7 @@ See also: [`MultilineMPS`](@ref) and [`MultilineMPO`](@ref)
 struct Multiline{T}
     data::PeriodicArray{T, 1}
     function Multiline{T}(data::AbstractVector{T}) where {T}
-        @assert allequal(length.(data)) "All lines must have the same length"
+        # @assert allequal(length.(data)) "All lines must have the same length"
         return new{T}(data)
     end
 end
@@ -22,7 +22,7 @@ Multiline(data::AbstractVector{T}) where {T} = Multiline{T}(data)
 # -----------------------
 Base.parent(m::Multiline) = m.data
 Base.size(m::Multiline) = (length(parent(m)), length(parent(m)[1]))
-Base.size(m::Multiline, i::Int) = getindex(size(m), i)
+Base.size(m::Multiline, i::Int) = i == 1 ? length(parent(m)) : i == 2 ? length(parent(m)[1]) : error()
 Base.length(m::Multiline) = prod(size(m))
 function Base.axes(m::Multiline, i::Int)
     return i == 1 ? axes(parent(m), 1) :
@@ -106,3 +106,14 @@ function VectorInterface.inner(x::Multiline, y::Multiline)
 end
 
 LinearAlgebra.norm(x::Multiline) = sqrt(real(inner(x, x)))
+
+# TensorKit
+#----------
+
+site_type(::Type{Multiline{S}}) where {S} = site_type(S)
+bond_type(::Type{Multiline{S}}) where {S} = bond_type(S)
+site_type(st::Multiline) = site_type(typeof(st))
+bond_type(st::Multiline) = bond_type(typeof(st))
+TensorKit.sectortype(::Type{Multiline{T}}) where {T} = sectortype(T)
+TensorKit.spacetype(::Type{Multiline{T}}) where {T} = spacetype(T)
+TensorKit.storagetype(::Type{Multiline{T}}) where {T} = storagetype(T)

@@ -43,3 +43,9 @@ function Base.:*(mpo1::MultilineMPO, mpo2::MultilineMPO)
     size(mpo1) == size(mpo2) || throw(ArgumentError("dimension mismatch"))
     return Multiline(map(*, zip(mpo1, mpo2)))
 end
+
+for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
+    @eval $f_space(t::MultilineMPO, i::Int, j::Int) = $f_space(t[i], j)
+    @eval $f_space(t::MultilineMPO, I::CartesianIndex{2}) = $f_space(t, Tuple(I)...)
+    @eval $f_space(t::MultilineMPO) = map(Base.Fix1($f_space, t), eachindex(t))
+end

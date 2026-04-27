@@ -15,48 +15,56 @@ Base.unlock(envs::AbstractMPSEnvironments) = unlock(envs.lock);
 # ------------------
 function allocate_GL(bra::AbstractMPS, mpo::AbstractMPO, ket::AbstractMPS, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
+    M = TensorKit.promote_storagetype(T, eltype(mpo), eltype(bra), eltype(ket))
+    S = TensorKit.check_spacetype(bra, mpo, ket)
     V = left_virtualspace(bra, i) ⊗ left_virtualspace(mpo, i)' ←
         left_virtualspace(ket, i)
     if V isa BlockTensorKit.TensorMapSumSpace
-        TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
+        TT = blocktensormaptype(S, numout(V), numin(V), M)
     else
-        TT = TensorMap{T}
+        TT = tensormaptype(S, numout(V), numin(V), M)
     end
     return TT(undef, V)
 end
 
 function allocate_GR(bra::AbstractMPS, mpo::AbstractMPO, ket::AbstractMPS, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
+    M = TensorKit.promote_storagetype(T, eltype(mpo), eltype(bra), eltype(ket))
+    S = TensorKit.check_spacetype(bra, mpo, ket)
     V = right_virtualspace(ket, i) ⊗ right_virtualspace(mpo, i) ←
         right_virtualspace(bra, i)
     if V isa BlockTensorKit.TensorMapSumSpace
-        TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
+        TT = blocktensormaptype(S, numout(V), numin(V), M)
     else
-        TT = TensorMap{T}
+        TT = tensormaptype(S, numout(V), numin(V), M)
     end
     return TT(undef, V)
 end
 
 function allocate_GBL(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
+    M = TensorKit.promote_storagetype(T, eltype(mpo), eltype(bra), eltype(ket))
+    S = TensorKit.check_spacetype(bra, mpo, ket)
     V = left_virtualspace(bra.left_gs, i) ⊗ left_virtualspace(mpo, i)' ←
         auxiliaryspace(ket)' ⊗ left_virtualspace(ket.right_gs, i)
     if V isa BlockTensorKit.TensorMapSumSpace
-        TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
+        TT = blocktensormaptype(S, numout(V), numin(V), M)
     else
-        TT = TensorMap{T}
+        TT = tensormaptype(S, numout(V), numin(V), M)
     end
     return TT(undef, V)
 end
 
 function allocate_GBR(bra::QP, mpo::AbstractMPO, ket::QP, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
+    M = TensorKit.promote_storagetype(T, eltype(mpo), eltype(bra), eltype(ket))
+    S = TensorKit.check_spacetype(bra, mpo, ket)
     V = right_virtualspace(ket.left_gs, i) ⊗ right_virtualspace(mpo, i) ←
         auxiliaryspace(ket)' ⊗ right_virtualspace(bra.right_gs, i)
     if V isa BlockTensorKit.TensorMapSumSpace
-        TT = blocktensormaptype(spacetype(bra), numout(V), numin(V), T)
+        TT = blocktensormaptype(S, numout(V), numin(V), M)
     else
-        TT = TensorMap{T}
+        TT = tensormaptype(S, numout(V), numin(V), M)
     end
     return TT(undef, V)
 end

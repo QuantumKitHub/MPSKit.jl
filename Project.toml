@@ -1,7 +1,7 @@
 name = "MPSKit"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
+version = "0.13.10"
 authors = "Lukas Devos, Maarten Van Damme and contributors"
-version = "0.13.9"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -23,17 +23,22 @@ TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 
 [weakdeps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 
 [extensions]
+MPSKitAdaptExt = "Adapt"
 MPSKitMakieExt = "Makie"
 MPSKitPlotsExt = "RecipesBase"
 
+
 [compat]
 Accessors = "0.1"
+Adapt = "4"
 Aqua = "0.8.9"
-BlockTensorKit = "0.3.4"
+BlockTensorKit = "0.3.8"
+CUDA = "5.9"
 Combinatorics = "1"
 Compat = "3.47, 4.10"
 DocStringExtensions = "0.9.3"
@@ -49,17 +54,21 @@ Pkg = "1"
 Plots = "1.40"
 Printf = "1"
 Random = "1"
-TensorKit = "0.16"
+RecipesBase = "1.1"
+TensorKit = "0.16.3"
 TensorKitManifolds = "0.7"
 TensorKitTensors = "0.2"
-TensorOperations = "5"
+TensorOperations = "5.5.1"
 Test = "1"
 TestExtras = "0.3"
 VectorInterface = "0.2, 0.3, 0.4, 0.5"
+cuTENSOR = "2.3"
 julia = "1.10"
 
 [extras]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 ParallelTestRunner = "d3525ed8-44d0-4b2c-a655-542cee43accc"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
@@ -67,6 +76,7 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 TensorKitTensors = "41b62e7d-e9d1-4e23-942c-79a97adf954b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
+cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 
 [targets]
-test = ["Aqua", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]
+test = ["Aqua", "Adapt", "CUDA", "cuTENSOR", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]

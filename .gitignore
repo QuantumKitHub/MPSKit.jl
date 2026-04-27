@@ -3,3 +3,4 @@ Manifest.toml
 .vscode
 .DS_Store
 **/dev/
+benchmark/results
