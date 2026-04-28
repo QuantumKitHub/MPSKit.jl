@@ -110,20 +110,20 @@ function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
 end
 
 """
-    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defaults.alg_qr())
+    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defaults.alg_orth())
 
 Make the set of MPS tensors full rank by performing a series of orthogonalizations.
 """
-function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg_leftorth = Defaults.alg_qr(), alg_rightorth = Defaults.alg_lq())
+function makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg_orth = Defaults.alg_orth())
     while true
         i = findfirst(!isfullrank, A)
         isnothing(i) && break
         if !isfullrank(A[i]; side = :left)
-            L, Q = right_orth!(_transpose_tail(A[i]); alg = alg_rightorth)
+            L, Q = right_orth!(_transpose_tail(A[i]); alg = alg_orth)
             A[i] = _transpose_front(Q)
             A[i - 1] = A[i - 1] * L
         else
-            A[i], R = left_orth!(A[i]; alg = alg_leftorth)
+            A[i], R = left_orth!(A[i]; alg = alg_orth)
             A[i + 1] = _transpose_front(R * _transpose_tail(A[i + 1]))
         end
     end
