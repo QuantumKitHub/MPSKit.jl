@@ -129,6 +129,13 @@ function expectation_value(
 end
 
 function expectation_value(
+        ψ::WindowMPS, H::WindowMPOHamiltonian,
+        envs::AbstractMPSEnvironments = environments(ψ, H)
+    )
+    return dot(ψ, H, ψ, envs) / dot(ψ, ψ)
+end
+
+function expectation_value(
         ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ)
     )

@@ -34,3 +34,8 @@ Base.copy(h::WindowMPOHamiltonian) = WindowMPOHamiltonian(copy(h.left_ham), copy
 for fun in (:(Base.:+), :(Base.:-), :(Base.:*))
     @eval $fun(a::WindowMPOHamiltonian,b::WindowMPOHamiltonian) = WindowMPOHamiltonian($fun(a.left_ham,b.left_ham),$fun(a.finite_ham,b.finite_ham),$fun(a.right_ham,b.right_ham))
 end
+
+TensorKit.dot(
+        bra::WindowMPS, H::WindowMPOHamiltonian, ket::WindowMPS = bra,
+        envs = environments(bra, H, ket)
+        ) = dot(bra.window, H.finite_ham, ket.window,envs)
