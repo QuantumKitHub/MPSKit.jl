@@ -63,7 +63,7 @@ using TensorKit: ℙ
 
     e1 = expectation_value(window, (2, 3) => O)
 
-    w_ham = WindowMPOHamiltonian(ham,1:length(window))
+    w_ham = WindowMPOHamiltonian(ham, 1:length(window))
     window, envs, _ = find_groundstate(window, w_ham, DMRG(; verbosity = 0))
 
     e2 = expectation_value(window, (2, 3) => O)
