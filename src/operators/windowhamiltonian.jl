@@ -25,8 +25,7 @@ function WindowMPOHamiltonian(ham::InfiniteMPOHamiltonian, interval::UnitRange)
     finite_ham = FiniteMPOHamiltonian([ham[i] for i in  interval])
     WindowMPOHamiltonian(left_ham, finite_ham, right_ham)
 end
-#
-Base.parent(h::WindowMPOHamiltonian) = h.finite_ham
+
 
 Base.copy(h::WindowMPOHamiltonian) = WindowMPOHamiltonian(copy(h.left_ham), copy(h.finite_ham), copy(h.right_ham))
 
