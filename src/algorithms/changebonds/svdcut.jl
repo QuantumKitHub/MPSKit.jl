@@ -4,6 +4,8 @@ $(TYPEDEF)
 An algorithm that uses truncated SVD to change the bond dimension of a state or operator.
 This is achieved by a sweeping algorithm that locally performs (optimal) truncations in a gauged basis.
 
+changedbonds! is only defined for FiniteMPS and FiniteMPO.
+
 See also [`changebonds(!)`](@ref changebonds)
 
 ## Fields
@@ -34,6 +36,12 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut; normalize::Bool = true
         ψ.AC[i + 1] = (S, AR′)
     end
     return normalize ? normalize!(ψ) : ψ
+end
+
+function changebonds!(ψ::AbstractFiniteMPS, H, alg::SvdCut, envs)
+    ψ = changebonds!(ψ, alg)
+    recalculate!(envs, ψ, H)
+    return ψ, envs
 end
 
 # Note: it might be better to go to an MPS representation first
