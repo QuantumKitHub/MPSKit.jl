@@ -119,7 +119,7 @@ See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.
 struct Jeckelmann <: DDMRG_Flavour end
 
 function propagator(
-        A::AbstractFiniteMPS, z, H,
+        A::AbstractFiniteMPS, z::Number, H,
         alg::DynamicalDMRG{Jeckelmann}; init = copy(A)
     )
     ω = real(z)
