@@ -32,9 +32,6 @@ MPSKitAdaptExt = "Adapt"
 [workspace]
 projects = ["test", "docs"]
 
-[sources]
-TensorKit = {url="https://github.com/QuantumKitHub/TensorKit.jl.git", rev="bump-0.16.5"}
-
 [compat]
 Accessors = "0.1"
 Adapt = "4"
