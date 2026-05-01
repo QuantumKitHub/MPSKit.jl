@@ -54,17 +54,13 @@ function _make_time_mpo(
 
     H_n, virtual_sz, linds = _taylor_setup(H, Val(N))
 
-    if extension
-        _taylor_extension!(H_n, H, virtual_sz, linds, Val(N), τ)
-    end
+    extension && _taylor_extension!(H_n, H, virtual_sz, linds, Val(N), τ)
 
     mpo = MPO(map(SparseBlockTensorMap, parent(H_n)))
     _taylor_loopback!(mpo, virtual_sz, linds, Val(N), τ)
     _taylor_remove_equivalents!(mpo, virtual_sz, linds)
 
-    if compression
-        _taylor_compression!(mpo, virtual_sz, linds, Val(N), τ)
-    end
+    compression && _taylor_compression!(mpo, virtual_sz, linds, Val(N), τ)
 
     return remove_orphans!(mpo; tol)
 end
@@ -76,13 +72,6 @@ end
 @inline function _pow(H, ::Val{N}) where {N}
     half = _pow(H, Val(N ÷ 2))
     return iseven(N) ? half * half : half * half * H
-end
-
-# Insert `v` at position `i` of tuple `t`, preserving rank in the result type.
-@inline function _insert(t::NTuple{M, T}, i::Integer, v::T) where {M, T}
-    return ntuple(Val(M + 1)) do j
-        j < i ? t[j] : (j == i ? v : t[j - 1])
-    end
 end
 
 # Stable partition: elements equal to `sentinel` first, others after,
@@ -144,8 +133,8 @@ function _taylor_extension!(H_n, H, virtual_sz, linds, ::Val{N}, τ::Number) whe
             factor = τ * factorial(N) / (factorial(N + 1) * n1 * n3)
 
             for c in 1:(N + 1), d in 1:(N + 1)
-                aₑ = _insert(a.I, c, 1)
-                bₑ = _insert(b.I, d, V_right)
+                aₑ = TT.insertafter(a.I, c - 1, (1,))
+                bₑ = TT.insertafter(b.I, d - 1, (V_right,))
 
                 # TODO: use VectorInterface for memory efficiency
                 slice[linds_left[a], 1, 1, linds_right[b]] += factor *
