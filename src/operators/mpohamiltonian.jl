@@ -706,7 +706,7 @@ end
 function Base.similar(H::MPOHamiltonian, ::Type{T}) where {T <: Number}
     return MPOHamiltonian(similar.(parent(H), T))
 end
-
+Base.circshift(H::InfiniteMPOHamiltonian, shift::Integer) = InfiniteMPOHamiltonian(circshift(parent(copy(H)), shift))
 # Linear Algebra
 # --------------
 function Base.:+(

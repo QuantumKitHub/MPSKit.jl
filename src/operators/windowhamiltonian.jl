@@ -18,15 +18,15 @@ function WindowMPOHamiltonian(ham::InfiniteMPOHamiltonian, interval::UnitRange)
 
     # to make sure the interval corresponds with finite_ham, it is important that the unitcell of the left/right hamiltonians is circshifted correctly
     left_edge = (interval.start - 1) % length(ham)
-    left_ham = InfiniteMPOHamiltonian([ham[i] for i in (left_edge - length(ham) + 1):left_edge])
+    left_ham = circshift(ham, -left_edge)
     right_edge = (interval.stop + 1) % length(ham)
-    right_ham = InfiniteMPOHamiltonian([ham[i] for i in right_edge:(right_edge + length(ham) - 1)])
+    right_ham = circshift(ham, -right_edge + 1)
 
     finite_ham = FiniteMPOHamiltonian([ham[i] for i in interval])
     return WindowMPOHamiltonian(left_ham, finite_ham, right_ham)
 end
 
-
+Base.parent(h::WindowMPOHamiltonian) = h.finite_ham
 Base.copy(h::WindowMPOHamiltonian) = WindowMPOHamiltonian(copy(h.left_ham), copy(h.finite_ham), copy(h.right_ham))
 
 # some basic linalg
