@@ -1,3 +1,5 @@
+name = "MPSKitDocs"
+
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
@@ -12,5 +14,9 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
+[sources]
+MPSKit = {path = ".."}
+
 [compat]
 Documenter = "1.0"
+DocumenterInterLinks = "1"
