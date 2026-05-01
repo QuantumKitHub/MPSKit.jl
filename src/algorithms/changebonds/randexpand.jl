@@ -9,8 +9,9 @@ parallel, and therefore the expansion will never go beyond the local two-site su
 The truncation strategy dictates the number of expanded states, by generating uniformly
 distributed weights for each state in the two-site space and truncating that.
 
-The environments are not used here.
-changebonds! modify both the provided state and environments.
+!!! note
+    The environments are not used here, but [`changebonds!`](@ref) modifies both the state
+    and environment so they remain consistent.
 
 ## Fields
 

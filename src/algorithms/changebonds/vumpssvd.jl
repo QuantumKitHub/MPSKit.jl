@@ -3,7 +3,8 @@ $(TYPEDEF)
 
 An algorithm that uses a two-site update step to change the bond dimension of a state.
 
-changedbonds! is not defined.
+!!! note
+    [`changebonds!`](@ref) is not defined.
 
 ## Fields
 

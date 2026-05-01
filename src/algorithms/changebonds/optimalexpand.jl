@@ -5,7 +5,8 @@ An algorithm that expands the given mps as described in
 [Zauner-Stauber et al. Phys. Rev. B 97 (2018)](@cite zauner-stauber2018), by selecting the
 dominant contributions of a two-site updated MPS tensor, orthogonal to the original ψ.
 
-changedbonds! is only defined for FiniteMPS, and modify its environment.
+!!! note
+    [`changebonds!`](@ref) is only defined for `FiniteMPS`, and modifies both the state and its environment.
 
 ## Fields
 
@@ -19,8 +20,7 @@ $(TYPEDFIELDS)
     trscheme::TruncationStrategy
 end
 
-##= This is only useful for OptimalExpand
-### Simple wrapper to convert between diffrent type of InifniteMPS.
+# Simple wrapper to convert between diffrent type of InifniteMPS.
 function changebonds(
         ψ::InfiniteMPS, operator::InfiniteMPO, alg::OptimalExpand, envs = environments(ψ, operator)
     )
@@ -29,7 +29,6 @@ function changebonds(
     )
     return convert(InfiniteMPS, ψ′), only(parent(envs′))
 end
-# =#
 
 function changebonds(
         ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExpand,
