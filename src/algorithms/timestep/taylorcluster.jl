@@ -31,9 +31,15 @@ function make_time_mpo(
         H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
         tol = eps(real(scalartype(H))), imaginary_evolution::Bool = false
     )
-    return _make_time_mpo(
-        H, dt, Val(alg.N), alg.extension, alg.compression;
-        tol, imaginary_evolution
+    # Manual union-split for typical small N: emits a direct call into the specialised
+    # `_make_time_mpo(H, dt, ::Val{N}, ...)` instead of paying a dynamic dispatch on `Val(alg.N)`.
+    # Falls back to the generic path for N > 4.
+    n = alg.N
+    return Base.Cartesian.@nif(
+        4,
+        d -> n == d,
+        d -> _make_time_mpo(H, dt, Val(d), alg.extension, alg.compression; tol, imaginary_evolution),
+        d -> _make_time_mpo(H, dt, Val(n), alg.extension, alg.compression; tol, imaginary_evolution),
     )
 end
 
