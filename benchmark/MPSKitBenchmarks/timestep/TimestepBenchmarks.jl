@@ -12,8 +12,6 @@ const HAMILTONIANS = (
     "heis_xxx" => heisenberg_XXX(),
 )
 
-# Steady-state benchmark: time `make_time_mpo` after compilation has settled.
-# Keep the matrix small — we want a stable baseline, not an exhaustive sweep.
 let g_top = addgroup!(SUITE, "make_time_mpo")
     for (Hname, H) in HAMILTONIANS
         g = addgroup!(g_top, Hname)
@@ -21,7 +19,7 @@ let g_top = addgroup!(SUITE, "make_time_mpo")
             alg = TaylorCluster(; N)
             g["N=$N"] = @benchmarkable make_time_mpo($H, $dt, $alg)
         end
-        g["WI"] = @benchmarkable make_time_mpo($H, $dt, $(MPSKit.WI))
+        g["WII"] = @benchmarkable make_time_mpo($H, $dt, $(MPSKit.WII()))
     end
 end
 
