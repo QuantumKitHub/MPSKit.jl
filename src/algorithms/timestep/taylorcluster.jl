@@ -27,13 +27,14 @@ First order Taylor expansion for a time-evolution MPO.
 """
 const WI = TaylorCluster(; N = 1, extension = false, compression = false)
 
+# For type stability reasons, we add a function barrier here and dispatch on Val(N).
+# `LinearIndices` and `CartesianIndex{N}` are otherwise abstract.
+# However, to not incur a dynamic dispatch for typical cases (N ≤ 4), we manually union-split
+
 function make_time_mpo(
         H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
         tol = eps(real(scalartype(H))), imaginary_evolution::Bool = false
     )
-    # Manual union-split for typical small N: emits a direct call into the specialised
-    # `_make_time_mpo(H, dt, ::Val{N}, ...)` instead of paying a dynamic dispatch on `Val(alg.N)`.
-    # Falls back to the generic path for N > 4.
     n = alg.N
     return Base.Cartesian.@nif(
         4,
@@ -43,8 +44,6 @@ function make_time_mpo(
     )
 end
 
-# Function-barrier body: `N` is now a type parameter, so every `ntuple(_, N)`,
-# `LinearIndices`, and `CartesianIndex` downstream has a statically-known rank.
 function _make_time_mpo(
         H::MPOHamiltonian, dt::Number, ::Val{N},
         extension::Bool, compression::Bool;
@@ -65,19 +64,15 @@ function _make_time_mpo(
     return remove_orphans!(mpo; tol)
 end
 
-# `H^N` unrolled with `Val(N)` so the result type of `H_n` is statically known.
-# Mirrors `Base.power_by_squaring`'s tree (and copy-on-N=1 behaviour) so the
-# bond dimensions match `H^N` exactly.
+# `H^N` unrolled with `Val(N)`.
+# Mirrors `Base.power_by_squaring`'s tree (and copy-on-N=1 behaviour) so the bond dimensions match `H^N` exactly.
 @inline _pow(H, ::Val{1}) = copy(H)
 @inline function _pow(H, ::Val{N}) where {N}
     half = _pow(H, Val(N ÷ 2))
     return iseven(N) ? half * half : half * half * H
 end
 
-# Stable partition: elements equal to `sentinel` first, others after,
-# preserving relative order within each group. Tuple-in / tuple-out so the
-# resulting `CartesianIndex` keeps a known rank — this replaces
-# `CartesianIndex(sort(collect(t); by = (!=(sentinel)))...)`.
+# Stable partition: elements equal to `sentinel` first, others after, preserving relative order within each group.
 @inline function _partition_first(t::NTuple{M, Int}, sentinel::Int) where {M}
     n_match = count(==(sentinel), t)
     return ntuple(Val(M)) do j
