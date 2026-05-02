@@ -9,6 +9,10 @@ parallel, and therefore the expansion will never go beyond the local two-site su
 The truncation strategy dictates the number of expanded states, by generating uniformly
 distributed weights for each state in the two-site space and truncating that.
 
+!!! note
+    The environments are not used here, but [`changebonds!`](@ref) modifies both the state
+    and environment so they remain consistent.
+
 ## Fields
 
 $(TYPEDFIELDS)
@@ -49,6 +53,19 @@ end
 
 changebonds(ψ::AbstractMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
 changebonds(ψ::MultilineMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
+
+function changebonds(ψ, H, alg::RandExpand, envs)
+    newψ = changebonds(ψ, alg)
+    return newψ, environments(newψ, H)
+end
+
+
+function changebonds!(ψ, H, alg::RandExpand, envs)
+    ψ = changebonds!(ψ, alg)
+    recalculate!(envs, ψ, H)
+    return ψ, envs
+end
+
 
 function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
     for i in 1:(length(ψ) - 1)
