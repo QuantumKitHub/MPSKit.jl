@@ -23,67 +23,82 @@ function make_time_mpo(
         H::InfiniteMPOHamiltonian, dt::Number, alg::WII;
         imaginary_evolution::Bool = false
     )
-    WA = H.A
-    WB = H.B
-    WC = H.C
-    WD = H.D
-
-    # needs to be complex if negative because of square root
-    δ = imaginary_evolution ? -complex(dt) : (-1im * dt)
+    T = complex(promote_type(scalartype(H), typeof(dt)))
+    δ = imaginary_evolution ? T(-dt) : T(-im * dt)
     exp_alg = Arnoldi(; alg.tol, alg.maxiter)
 
-    Wnew = map(1:length(H)) do i
-        for j in 2:(size(H[i], 1) - 1), k in 2:(size(H[i], 4) - 1)
-            init = (
-                isometry(storagetype(WD[i]), codomain(WD[i]), domain(WD[i])),
-                zero(H[i][1, 1, 1, k]), zero(H[i][j, 1, 1, end]), zero(H[i][j, 1, 1, k]),
-            )
+    O = tmap(parent(parent(H)); scheduler = Defaults.scheduler[]) do W
+        return _make_time_mpo(W, δ, exp_alg)
+    end
+    return InfiniteMPO(PeriodicArray(O))
+end
 
-            y, convhist = exponentiate(1.0, init, exp_alg) do (x1, x2, x3, x4)
-                @plansor y1[-1 -2; -3 -4] := δ * x1[-1 1; -3 -4] *
-                    H[i][1, 1, 1, end][2 3; 1 4] * τ[-2 4; 2 3]
+function _make_time_mpo(W::JordanMPOTensor, δ, exp_alg)
+    # Allocate output
+    Vₗ = left_virtualspace(W)[1:(end - 1)]
+    Vᵣ = right_virtualspace(W)[1:(end - 1)]
+    P = physicalspace(W)
+    O = similar(W, storagetype(W), Vₗ ⊗ P ← P ⊗ Vᵣ)
 
-                @plansor y2[-1 -2; -3 -4] := δ * x2[-1 1; -3 -4] *
-                    H[i][1, 1, 1, end][2 3; 1 4] * τ[-2 4; 2 3] +
-                    sqrt(δ) * x1[1 2; -3 4] * H[i][1, 1, 1, k][-1 -2; 3 -4] * τ[3 4; 1 2]
+    # fill onsite first: treated exactly
+    expD = exp!(scale(only(W.D), δ))
+    O[1, 1, 1, 1] = insertrightunit(insertleftunit(expD, 1), 3)
 
-                @plansor y3[-1 -2; -3 -4] := δ * x3[-1 1; -3 -4] *
-                    H[i][1, 1, 1, end][2 3; 1 4] * τ[-2 4; 2 3] +
-                    sqrt(δ) * x1[1 2; -3 4] * H[i][j, 1, 1, end][-1 -2; 3 -4] * τ[3 4; 1 2]
-
-                @plansor y4[-1 -2; -3 -4] := (
-                    δ * x4[-1 1; -3 -4] * H[i][1, 1, 1, end][2 3; 1 4] * τ[-2 4; 2 3] +
-                        x1[1 2; -3 4] * H[i][j, 1, 1, k][-1 -2; 3 -4] * τ[3 4; 1 2]
-                ) + (
-                    sqrt(δ) * x2[1 2; -3 -4] * H[i][j, 1, 1, end][-1 -2; 3 4] * τ[3 4; 1 2]
-                ) + (sqrt(δ) * x3[-1 4; -3 3] * H[i][1, 1, 1, k][2 -2; 1 -4] * τ[3 4; 1 2])
-
-                return y1, y2, y3, y4
-            end
-
-            convhist.converged == 0 &&
-                @warn "failed to exponentiate $(convhist.normres)"
-
-            WA[i][j - 1, 1, 1, k - 1] = y[4]
-            WB[i][j - 1, 1, 1, 1] = y[3]
-            WC[i][1, 1, 1, k - 1] = y[2]
-            WD[i] = y[1]
-        end
-
-        Vₗ = left_virtualspace(H, i)[1:(end - 1)]
-        Vᵣ = right_virtualspace(H, i)[1:(end - 1)]
-        P = physicalspace(H, i)
-
-        h′ = similar(H[i], Vₗ ⊗ P ← P ⊗ Vᵣ)
-        h′[2:end, 1, 1, 2:end] = WA[i]
-        h′[2:end, 1, 1, 1] = WB[i]
-        h′[1, 1, 1, 2:end] = WC[i]
-        h′[1, 1, 1, 1] = WD[i]
-
-        return h′
+    # remaining entries:
+    D = W[1, 1, 1, end]
+    for j in 2:(size(W, 1) - 1), k in 2:(size(W, 4) - 1)
+        B = W[j, 1, 1, end]
+        C = W[1, 1, 1, k]
+        A = W[j, 1, 1, k]
+        O[j, 1, 1, k], O[j, 1, 1, 1], O[1, 1, 1, k], _ =
+            wii_solve_block!(W, A, B, C, D, δ, exp_alg)
     end
 
-    return InfiniteMPO(PeriodicArray(Wnew))
+    return O
+end
+
+function wii_solve_block!(
+        W, A, B, C, D, δ::T, exp_alg
+    ) where {T <: Number}
+    init = (zero(A), zero(B), zero(C), isometry(storagetype(D), space(D)))
+    op = WIIStep(A, B, C, D, δ)
+    (yᴬ, yᴮ, yᶜ, yᴰ), convhist = exponentiate(op, one(real(scalartype(W))), init, exp_alg)
+    convhist.converged == 0 && @warn "failed to exponentiate $(convhist.normres)"
+    return yᴬ, yᴮ, yᶜ, yᴰ
+end
+
+# Replaces the `do`-block closure passed to `exponentiate`.
+struct WIIStep{HA, HB, HC, HD, T <: Number}
+    A::HA  # interior  / propagation block
+    B::HB  # right boundary / operator end
+    C::HC  # left boundary  / operator start
+    D::HD  # onsite / diagonal
+    δ::T
+end
+
+function (op::WIIStep)((xᴬ, xᴮ, xᶜ, xᴰ))
+    δ = op.δ
+    sqrtδ = sqrt(δ)
+
+    @plansor yᴰ[-1 -2; -3 -4] := δ * xᴰ[-1 1; -3 -4] *
+        op.D[2 3; 1 4] * τ[-2 4; 2 3]
+
+    @plansor yᶜ[-1 -2; -3 -4] := δ * xᶜ[-1 1; -3 -4] *
+        op.D[2 3; 1 4] * τ[-2 4; 2 3] +
+        sqrtδ * xᴰ[1 2; -3 4] * op.C[-1 -2; 3 -4] * τ[3 4; 1 2]
+
+    @plansor yᴮ[-1 -2; -3 -4] := δ * xᴮ[-1 1; -3 -4] *
+        op.D[2 3; 1 4] * τ[-2 4; 2 3] +
+        sqrtδ * xᴰ[1 2; -3 4] * op.B[-1 -2; 3 -4] * τ[3 4; 1 2]
+
+    @plansor yᴬ[-1 -2; -3 -4] := (
+        δ * xᴬ[-1 1; -3 -4] * op.D[2 3; 1 4] * τ[-2 4; 2 3] +
+            xᴰ[1 2; -3 4] * op.A[-1 -2; 3 -4] * τ[3 4; 1 2]
+    ) + (
+        sqrtδ * xᶜ[1 2; -3 -4] * op.B[-1 -2; 3 4] * τ[3 4; 1 2]
+    ) + (sqrtδ * xᴮ[-1 4; -3 3] * op.C[2 -2; 1 -4] * τ[3 4; 1 2])
+
+    return yᴬ, yᴮ, yᶜ, yᴰ
 end
 
 # Hack to treat FiniteMPOhamiltonians as Infinite

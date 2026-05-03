@@ -14,10 +14,12 @@ BenchmarkTools.DEFAULT_PARAMETERS.memory_tolerance = 0.01
 const PARAMS_PATH = joinpath(@__DIR__, "etc", "params.json")
 const SUITE = BenchmarkGroup()
 const MODULES = Dict{String, Symbol}(
-    "derivatives" => :DerivativesBenchmarks
+    "derivatives" => :DerivativesBenchmarks,
+    "timestep" => :TimestepBenchmarks,
 )
 
 include("derivatives/DerivativesBenchmarks.jl")
+include("timestep/TimestepBenchmarks.jl")
 
 load!(id::AbstractString; kwargs...) = load!(SUITE, id; kwargs...)
 
