@@ -1,4 +1,4 @@
-"""
+@doc """
     changebonds(ψ::AbstractMPS, H, alg, envs) -> ψ′, envs′
     changebonds(ψ::AbstractMPS, alg) -> ψ′
 
@@ -8,7 +8,7 @@ changedbonds! can modifiy both the provided state and environments, depending on
 For FiniteMPS, changebonds also modifies the environments.
 
 See also: [`SvdCut`](@ref), [`RandExpand`](@ref), [`VUMPSSvdCut`](@ref), [`OptimalExpand`](@ref)
-"""
+""" changebonds, changebonds!
 function changebonds end
 function changebonds! end
 
