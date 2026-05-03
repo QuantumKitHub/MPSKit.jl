@@ -29,29 +29,27 @@ const WI = TaylorCluster(; N = 1, extension = false, compression = false)
 
 # For type stability reasons, we add a function barrier here and dispatch on Val(N).
 # `LinearIndices` and `CartesianIndex{N}` are otherwise abstract.
-# However, to not incur a dynamic dispatch for typical cases (N ≤ 4), we manually union-split
 
 function make_time_mpo(
         H::MPOHamiltonian, dt::Number, alg::TaylorCluster;
         tol = eps(real(scalartype(H))), imaginary_evolution::Bool = false
     )
-    n = alg.N
-    return Base.Cartesian.@nif(
-        4,
-        d -> n == d,
-        d -> _make_time_mpo(H, dt, Val(d), alg.extension, alg.compression; tol, imaginary_evolution),
-        d -> _make_time_mpo(H, dt, Val(n), alg.extension, alg.compression; tol, imaginary_evolution),
-    )
+    τ = imaginary_evolution ? -dt : -1im * dt
+    return _make_time_mpo(H, τ, Val(alg.N), alg.extension, alg.compression; tol, imaginary_evolution)
 end
 
 function _make_time_mpo(
-        H::MPOHamiltonian, dt::Number, ::Val{N},
+        H::MPOHamiltonian, τ::Number, ::Val{N},
         extension::Bool, compression::Bool;
         tol, imaginary_evolution::Bool
     ) where {N}
-    τ = imaginary_evolution ? -dt : -1im * dt
-
-    H_n, virtual_sz, linds = _taylor_setup(H, Val(N))
+    H_n = H^N
+    virtual_sz = map(0:length(H)) do i
+        return i == 0 ? size(H[1], 1) : size(H[i], 4)
+    end
+    linds = map(virtual_sz) do sz
+        return LinearIndices(ntuple(Returns(sz), Val(N)))
+    end
 
     extension && _taylor_extension!(H_n, H, virtual_sz, linds, Val(N), τ)
 
@@ -62,14 +60,6 @@ function _make_time_mpo(
     compression && _taylor_compression!(mpo, virtual_sz, linds, Val(N), τ)
 
     return remove_orphans!(mpo; tol)
-end
-
-# `H^N` unrolled with `Val(N)`.
-# Mirrors `Base.power_by_squaring`'s tree (and copy-on-N=1 behaviour) so the bond dimensions match `H^N` exactly.
-@inline _pow(H, ::Val{1}) = copy(H)
-@inline function _pow(H, ::Val{N}) where {N}
-    half = _pow(H, Val(N ÷ 2))
-    return iseven(N) ? half * half : half * half * H
 end
 
 # Stable partition: elements equal to `sentinel` first, others after, preserving relative order within each group.
@@ -93,17 +83,6 @@ end
         end
     end
     return 0
-end
-
-function _taylor_setup(H::MPOHamiltonian, ::Val{N}) where {N}
-    H_n = _pow(H, Val(N))
-    virtual_sz = map(0:length(H)) do i
-        return i == 0 ? size(H[1], 1) : size(H[i], 4)
-    end
-    linds = map(virtual_sz) do sz
-        return LinearIndices(ntuple(Returns(sz), Val(N)))
-    end
-    return H_n, virtual_sz, linds
 end
 
 # Algorithm 3 of Van Damme et al. (2024): incorporate higher-order corrections
