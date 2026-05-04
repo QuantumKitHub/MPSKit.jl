@@ -52,8 +52,6 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - Various fixes for compatibility with latest TensorKit versions ([#416](https://github.com/QuantumKitHub/MPSKit.jl/pull/416))
 - `changebonds` inconsistencies ([#415](https://github.com/QuantumKitHub/MPSKit.jl/pull/415))
 - Small fixes for density operators ([#409](https://github.com/QuantumKitHub/MPSKit.jl/pull/409))
-- Issue with wrong leg fusers ([#405](https://github.com/QuantumKitHub/MPSKit.jl/pull/405))
-- Type piracy issue
 - Tolerance on positivity test ([#398](https://github.com/QuantumKitHub/MPSKit.jl/pull/398))
 
 ### Performance
