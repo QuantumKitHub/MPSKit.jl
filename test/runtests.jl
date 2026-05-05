@@ -1,5 +1,8 @@
 using ParallelTestRunner
 using MPSKit
+using Pkg
+
+Pkg.precompile()
 
 # Start with autodiscovered tests
 testsuite = find_tests(@__DIR__)
