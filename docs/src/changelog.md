@@ -17,7 +17,7 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.10...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.11...HEAD)
 
 ### Added
 
@@ -28,6 +28,35 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Removed
 
 ### Fixed
+
+### Performance
+
+## [0.13.11](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.10...v0.13.11) - 2026-05-04
+
+### Added
+
+- `MultilineMPO` space getters ([#407](https://github.com/QuantumKitHub/MPSKit.jl/pull/407))
+
+### Changed
+
+- Refactored time-evolution MPO construction ([#422](https://github.com/QuantumKitHub/MPSKit.jl/pull/422))
+- Updated `TensorKitManifolds` compat to 0.8 ([#421](https://github.com/QuantumKitHub/MPSKit.jl/pull/421))
+- Updated MatrixAlgebraKit algorithm specification ([#418](https://github.com/QuantumKitHub/MPSKit.jl/pull/418))
+- Preparations for GPU / non-CPU array support ([#375](https://github.com/QuantumKitHub/MPSKit.jl/pull/375), [#392](https://github.com/QuantumKitHub/MPSKit.jl/pull/392))
+- Generalized `calc_galerkin` to `AbstractMPS` ([#395](https://github.com/QuantumKitHub/MPSKit.jl/pull/395))
+- Removed explicit call to `InfiniteMPS` in VUMPS ([#396](https://github.com/QuantumKitHub/MPSKit.jl/pull/396))
+- Generalized `regauge!` to `AbstractVector` ([#393](https://github.com/QuantumKitHub/MPSKit.jl/pull/393))
+
+### Fixed
+
+- Various fixes for compatibility with latest TensorKit versions ([#416](https://github.com/QuantumKitHub/MPSKit.jl/pull/416))
+- `changebonds` inconsistencies ([#415](https://github.com/QuantumKitHub/MPSKit.jl/pull/415))
+- Small fixes for density operators ([#409](https://github.com/QuantumKitHub/MPSKit.jl/pull/409))
+- Tolerance on positivity test ([#398](https://github.com/QuantumKitHub/MPSKit.jl/pull/398))
+
+### Performance
+
+- Benchmarks and AC/AC2 contraction improvements ([#345](https://github.com/QuantumKitHub/MPSKit.jl/pull/345))
 
 ## [0.13.10](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.9...v0.13.10) - 2026-02-26
 
