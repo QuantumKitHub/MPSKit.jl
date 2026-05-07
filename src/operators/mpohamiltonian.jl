@@ -666,8 +666,6 @@ function isemptylevel(H::InfiniteMPOHamiltonian, i::Int)
 end
 
 function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
-    # TODO this FORCES the output tensor to have Vector storage
-    # in an uncontrollable way, should be fixed
     L = removeunit(H[1], 1)
     R = removeunit(H[end], 4)
     M = Tuple(H[2:(end - 1)])
@@ -825,7 +823,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
         A,
         tensormaptype(
             spacetype(mps), numout(eltype(mps)), numin(eltype(mps)),
-            promote_type(scalartype(H), scalartype(mps))
+            promote_type(storagetype(H), storagetype(mps))
         )
     )
     # left to middle
