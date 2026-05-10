@@ -176,7 +176,7 @@ end
     H1mps = H1 * mps
     @test TensorKit.storagetype(H1mps) == CuVector{T, CUDA.DeviceMemory}
     hH1tmstate = hH1_tm * hstate
-    H1tmstate = H1_tm * state 
+    H1tmstate = H1_tm * state
     @test TensorKit.storagetype(H1tmstate) == CuVector{T, CUDA.DeviceMemory}
     @test norm(H1mps) ≈ norm(H1tmstate)
 

@@ -238,10 +238,10 @@ end
     j = I[4]
     if (size(W, 4) > 1 && i == 1 && j == 1) ||
             (size(W, 1) > 1 && i == size(W, 1) && j == size(W, 4))
-            T = scalartype(W)
-            TA = storagetype(W)
-            S = spacetype(eachspace(W)[1])
-            return BraidingTensor{T, S, TA}(eachspace(W)[1])
+        T = scalartype(W)
+        TA = storagetype(W)
+        S = spacetype(eachspace(W)[1])
+        return BraidingTensor{T, S, TA}(eachspace(W)[1])
     elseif i == 1 && j == size(W, 4)
         return insertrightunit(insertleftunit(only(W.D), 1), 3)
     elseif i == 1
