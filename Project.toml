@@ -12,6 +12,7 @@ HalfIntegers = "f0d1745a-41c9-11e9-1dd9-e5d34d218721"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
+MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
 MatrixAlgebraKit = "6c742aac-3347-4629-af66-fc926824e5e4"
 OhMyThreads = "67456a42-1dca-4109-a031-0a68de7e3ad5"
 OptimKit = "77e91f04-9b3b-57a6-a776-40b61faaebe0"
@@ -20,6 +21,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
+TensorKitTensors = "41b62e7d-e9d1-4e23-942c-79a97adf954b"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 
@@ -35,9 +37,7 @@ projects = ["test", "docs"]
 [compat]
 Accessors = "0.1"
 Adapt = "4"
-Aqua = "0.8.9"
-BlockTensorKit = "0.3.11"
-Combinatorics = "1"
+BlockTensorKit = "0.3"
 Compat = "3.47, 4.10"
 DocStringExtensions = "0.9.3"
 HalfIntegers = "1.6.0"
@@ -45,16 +45,21 @@ KrylovKit = "0.8.3, 0.9.2, 0.10"
 LinearAlgebra = "1.6"
 LoggingExtras = "~1.0"
 MatrixAlgebraKit = "0.6.5"
+MPSKitModels = "0.4"
 OhMyThreads = "0.7, 0.8"
 OptimKit = "0.3.1, 0.4"
 Printf = "1"
 Random = "1"
 RecipesBase = "1.1"
-TensorKit = "0.17.0"
+TensorKit = "0.16, 0.17"
 TensorKitManifolds = "0.7, 0.8"
 TensorOperations = "5.5.1"
 VectorInterface = "0.2, 0.3, 0.4, 0.5"
 julia = "1.10"
 
 [sources]
+MPSKitModels = {url = "https://github.com/QuantumKitHub/MPSKitModels.jl", rev = "ksh/bump"}
+TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "main"}
+TensorKitManifolds = {url = "https://github.com/QuantumKitHub/TensorKitManifolds.jl", rev = "ksh/bump"}
+TensorKitTensors = {url = "https://github.com/QuantumKitHub/TensorKitTensors.jl", rev = "ksh/compat"}
 BlockTensorKit = {url = "https://github.com/QuantumKitHub/BlockTensorKit.jl", rev = "ksh/mps"}
