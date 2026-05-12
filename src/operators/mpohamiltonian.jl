@@ -140,8 +140,8 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: J
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                A = similarstoragetype(T, eltype(T))
-                τ = BraidingTensor{eltype(T), typeof(eachspace(W)[I]), A}(eachspace(W)[I])
+                A = TensorKit.similarstoragetype(T, eltype(T))
+                τ = BraidingTensor{eltype(T), spacetype(eachspace(W)[I]), A}(eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
