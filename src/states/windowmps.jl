@@ -106,18 +106,27 @@ function WindowMPS(N::Int, V::VectorSpace, args...; kwargs...)
     return WindowMPS(fill(V, N), args...; kwargs...)
 end
 
-function WindowMPS(ψ::InfiniteMPS{A, B}, L::Int) where {A, B}
+
+WindowMPS(ψ::InfiniteMPS, L::Int) = WindowMPS(ψ, 1:L)
+
+function WindowMPS(ψ::InfiniteMPS{A, B}, interval::UnitRange) where {A, B}
+
+    # to make sure the interval corresponds with finite_ham, it is important that the unitcell of the left/right hamiltonians is circshifted correctly
+    left_edge = (interval.start - 1) % length(ψ)
+    right_edge = (interval.stop + 1) % length(ψ)
+
+    L = length(interval)
     CLs = Vector{Union{Missing, B}}(missing, L + 1)
     ALs = Vector{Union{Missing, A}}(missing, L)
     ARs = Vector{Union{Missing, A}}(missing, L)
     ACs = Vector{Union{Missing, A}}(missing, L)
 
-    ALs .= ψ.AL[1:L]
-    ARs .= ψ.AR[1:L]
-    ACs .= ψ.AC[1:L]
-    CLs .= ψ.C[0:L]
+    ALs .= ψ.AL[interval]
+    ARs .= ψ.AR[interval]
+    ACs .= ψ.AC[interval]
+    CLs .= ψ.C[(interval.start - 1):interval.stop]
 
-    return WindowMPS(ψ, FiniteMPS(ALs, ARs, ACs, CLs), ψ)
+    return WindowMPS(circshift(ψ, -left_edge), FiniteMPS(ALs, ARs, ACs, CLs), circshift(ψ, -right_edge + 1))
 end
 
 #===========================================================================================
