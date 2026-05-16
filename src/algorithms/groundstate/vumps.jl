@@ -45,8 +45,9 @@ struct VUMPSState{S, O, E}
     which::Symbol
 end
 
-function find_groundstate(
-        mps::InfiniteMPS, operator, alg::VUMPS, envs = environments(mps, operator)
+function find_groundstate!(
+        ::InfiniteChainStyle, mps, operator, alg::VUMPS,
+        envs = environments(mps, operator)
     )
     return dominant_eigsolve(operator, mps, alg, envs; which = :SR)
 end
@@ -57,7 +58,6 @@ function dominant_eigsolve(
     )
     log = IterLog("VUMPS")
     iter = 0
-    mps = copy(mps)
     ϵ = calc_galerkin(mps, operator, mps, envs)
     alg_environments = updatetol(alg.alg_environments, iter, ϵ)
     recalculate!(envs, mps, operator, mps; alg_environments.tol)
