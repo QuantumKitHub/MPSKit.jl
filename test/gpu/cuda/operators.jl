@@ -156,11 +156,9 @@ end
     @test TensorKit.storagetype(H1′) == CuVector{T, CUDA.DeviceMemory}
     @test H1′ ≈ H1 atol = 1.0e-6
     @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1.0e-6
-    # failing due to truncation problem in TensorKit?
-    # H1_trunc = changebonds(H1, SvdCut(; trscheme = truncrank(0)))
-    # @test H1_trunc ≈ H1
-    # @test all(left_virtualspace(H1_trunc) .== left_virtualspace(H1))
-
+    H1_trunc = changebonds(H1, SvdCut(; trscheme = truncrank(0)))
+    @test H1_trunc ≈ H1
+    @test all(left_virtualspace(H1_trunc) .== left_virtualspace(H1))
     # test dot and application
     hstate = rand(T, prod(lattice))
     state = adapt(CuVector{T, CUDA.DeviceMemory}, hstate)
@@ -191,7 +189,6 @@ end
     @test dot(mps, H2, mps) ≈ dot(mps, H2mps)
     @test dot(hmps, hH2mps) ≈ dot(mps, H2mps)
     @test dot(mps, H2, mps) ≈ dot(hmps, hH2mps)
-
     # test constructor from dictionary with mixed linear and Cartesian lattice indices as keys
     grid = square = fill(V, 3, 3)
 
@@ -218,9 +215,13 @@ end
     @test TensorKit.storagetype(H4′) == CuVector{T, CUDA.DeviceMemory}
     H5 = changebonds(H4′, SvdCut(; trscheme = trunctol(; atol = 1.0e-12)))
     @test TensorKit.storagetype(H5) == CuVector{T, CUDA.DeviceMemory}
-    psi = adapt(CuArray, FiniteMPS(physicalspace(H5), V ⊕ rightunitspace(V)))
+    # needed here to avoid real * complex multiplication in cuTENSOR, which isn't supported
+    psi = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPS(T, physicalspace(H5), V ⊕ rightunitspace(V)))
     @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)
 end
+
+pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
+vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
 
 @testset "CuInfiniteMPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces, vspaces)
     # generate a 1-2-3 body interaction

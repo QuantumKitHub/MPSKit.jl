@@ -12,7 +12,6 @@ HalfIntegers = "f0d1745a-41c9-11e9-1dd9-e5d34d218721"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
-MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
 MatrixAlgebraKit = "6c742aac-3347-4629-af66-fc926824e5e4"
 OhMyThreads = "67456a42-1dca-4109-a031-0a68de7e3ad5"
 OptimKit = "77e91f04-9b3b-57a6-a776-40b61faaebe0"
@@ -45,7 +44,6 @@ KrylovKit = "0.8.3, 0.9.2, 0.10"
 LinearAlgebra = "1.6"
 LoggingExtras = "~1.0"
 MatrixAlgebraKit = "0.6.5"
-MPSKitModels = "0.4"
 OhMyThreads = "0.7, 0.8"
 OptimKit = "0.3.1, 0.4"
 Printf = "1"
@@ -53,13 +51,13 @@ Random = "1"
 RecipesBase = "1.1"
 TensorKit = "0.16, 0.17"
 TensorKitManifolds = "0.7, 0.8"
+TensorKitTensors = "0.2"
 TensorOperations = "5.5.1"
 VectorInterface = "0.2, 0.3, 0.4, 0.5"
 julia = "1.10"
 
 [sources]
-MPSKitModels = {url = "https://github.com/QuantumKitHub/MPSKitModels.jl", rev = "ksh/bump"}
-TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "main"}
+TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "ksh/cuda_tweaks"}
 TensorKitManifolds = {url = "https://github.com/QuantumKitHub/TensorKitManifolds.jl", rev = "ksh/bump"}
 TensorKitTensors = {url = "https://github.com/QuantumKitHub/TensorKitTensors.jl", rev = "ksh/compat"}
 BlockTensorKit = {url = "https://github.com/QuantumKitHub/BlockTensorKit.jl", rev = "ksh/mps"}
