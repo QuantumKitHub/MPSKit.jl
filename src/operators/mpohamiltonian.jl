@@ -262,7 +262,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <:
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                A = similarstoragetype(T, eltype(T))
+                A = TensorKit.similarstoragetype(T, eltype(T))
                 τ = BraidingTensor{eltype(T), typeof(eachspace(W)[I]), A}(eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
