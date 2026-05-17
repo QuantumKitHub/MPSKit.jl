@@ -263,7 +263,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <:
                 W[I] = v
             elseif !iszero(v)
                 A = TensorKit.similarstoragetype(T, eltype(T))
-                τ = BraidingTensor{eltype(T), typeof(eachspace(W)[I]), A}(eachspace(W)[I])
+                τ = BraidingTensor{eltype(T), spacetype(eachspace(W)[I]), A}(eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
@@ -601,7 +601,7 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
             key_R = key_R′ == 0 ? length(virtualspaces[site]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                S = typeof(eachspace(O)[key_L, 1, 1, key_R])
+                S = spacetype(eachspace(O)[key_L, 1, 1, key_R])
                 τ = BraidingTensor{scalartype(TW), S, storagetype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
