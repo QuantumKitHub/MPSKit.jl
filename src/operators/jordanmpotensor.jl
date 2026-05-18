@@ -366,7 +366,7 @@ function add_physical_charge(O::JordanMPOTensor, charge::Sector)
     Vdst = left_virtualspace(O) ⊗
         fuse(physicalspace(O), auxspace) ←
         fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
-    Odst = similar(O, Vdst)
+    Odst = JordanMPOTensor{scalartype(O)}(undef, Vdst)
     for (I, v) in nonzero_pairs(O)
         Odst[I] = add_physical_charge(v, charge)
     end
