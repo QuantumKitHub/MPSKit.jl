@@ -35,5 +35,7 @@ end
     MPSKit.JordanMPOTensor(space(W), adapt(to, W.A), adapt(to, W.B), adapt(to, W.C), adapt(to, W.D))
 @inline Adapt.adapt_structure(to, mpo::MPOHamiltonian) =
     MPOHamiltonian(map(x -> adapt(to, x), mpo.W))
+@inline Adapt.adapt_structure(to, ml::MPSKit.Multiline) = MPSKit.Multiline(map(adapt(to), ml.data))
+@inline Adapt.adapt_structure(to, pa::MPSKit.PeriodicArray) = MPSKit.PeriodicArray(map(adapt(to), pa.data))
 
 end

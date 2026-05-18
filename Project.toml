@@ -20,6 +20,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 TensorKitManifolds = "11fa318c-39cb-4a83-b1ed-cdc7ba1e3684"
+TensorKitTensors = "41b62e7d-e9d1-4e23-942c-79a97adf954b"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 
@@ -35,7 +36,7 @@ projects = ["test", "docs"]
 [compat]
 Accessors = "0.1"
 Adapt = "4"
-BlockTensorKit = "0.3.11"
+BlockTensorKit = "0.3"
 Compat = "3.47, 4.10"
 DocStringExtensions = "0.9.3"
 HalfIntegers = "1.6.0"
@@ -48,8 +49,15 @@ OptimKit = "0.3.1, 0.4"
 Printf = "1"
 Random = "1"
 RecipesBase = "1.1"
-TensorKit = "0.16.5"
+TensorKit = "0.16, 0.17"
 TensorKitManifolds = "0.7, 0.8"
+TensorKitTensors = "0.2"
 TensorOperations = "5.5.1"
 VectorInterface = "0.2, 0.3, 0.4, 0.5"
 julia = "1.10"
+
+[sources]
+TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "ksh/cuda_tweaks"}
+TensorKitManifolds = {url = "https://github.com/QuantumKitHub/TensorKitManifolds.jl", rev = "ksh/bump"}
+TensorKitTensors = {url = "https://github.com/QuantumKitHub/TensorKitTensors.jl", rev = "ksh/compat"}
+BlockTensorKit = {url = "https://github.com/QuantumKitHub/BlockTensorKit.jl", rev = "ksh/mps"}

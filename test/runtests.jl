@@ -16,7 +16,7 @@ is_buildkite && filter!(startswith("gpu") ∘ first, testsuite)
 
 # only run CUDA/cuTENSOR if available
 using CUDA, cuTENSOR
-(CUDA.functional() && cuTENSOR.has_cutensor()) ||
+(CUDA.functional() && cuTENSOR.functional()) ||
     filter!(!(startswith("gpu/cuda") ∘ first), testsuite)
 
 # parse arguments
