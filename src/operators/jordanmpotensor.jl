@@ -136,10 +136,6 @@ function jordanmpotensortype(::Type{O}) where {O <: AbstractTensorMap}
 end
 Base.similar(W::JordanMPOTensor, ::Type{TorA}) where {TorA} =
     jordanmpotensortype(spacetype(W), TorA)(undef, space(W))
-Base.similar(W::JordanMPOTensor, V::VectorSpace) =
-    jordanmpotensortype(spacetype(V), storagetype(W))(undef, V)
-Base.similar(W::JordanMPOTensor, V::VectorSpace, ::Type{TorA}) where {TorA} =
-    jordanmpotensortype(spacetype(V), TorA)(undef, V)
 
 # Properties
 # ----------
