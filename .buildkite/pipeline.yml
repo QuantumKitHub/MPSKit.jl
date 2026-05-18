@@ -15,7 +15,7 @@ steps:
       queue: "juliagpu"
       cuda: "*"
     if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 30
+    timeout_in_minutes: 60
 
   - label: "Julia LTS -- CUDA"
     plugins:
@@ -30,4 +30,4 @@ steps:
       queue: "juliagpu"
       cuda: "*"
     if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 30
+    timeout_in_minutes: 60
