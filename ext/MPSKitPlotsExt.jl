@@ -1,7 +1,7 @@
 module MPSKitPlotsExt
 
-using RecipesBase
-using MPSKit
+using RecipesBase, LaTeXStrings
+using MPSKit, TensorKit
 
 @userplot EntanglementPlot
 
@@ -10,12 +10,12 @@ using MPSKit
         sector_margin = 1 // 10, sector_formatter = string
     )
     mps = h.args[1]
-    (site <= length(mps) && !(isa(mps, FiniteMPS) && site == 0)) ||
+    (isa(mps, FiniteMPS) && (site == 0 || site > length(mps))) &&
         throw(ArgumentError("Invalid site $site for the given mps."))
 
     spectra = entanglement_spectrum(mps, site)
-    sectors = []
-    spectrum = []
+    sectors = sectortype(mps)[]
+    spectrum = Vector{Vector{Float64}}()
     for (c, b) in pairs(spectra)
         if expand_symmetry # Duplicate entries according to the quantum dimension.
             b′ = repeat(b, dim(c))
@@ -35,6 +35,21 @@ using MPSKit
 
     for (i, (partial_spectrum, sector)) in enumerate(zip(spectrum, sectors))
         @series begin
+            title --> "Entanglement Spectrum"
+            legend --> false
+            grid --> :xy
+            widen --> true
+            bottom_margin -->(10, :mm)
+
+            xguide --> latexstring("\$\\chi\$ = $(round(Int, dim(left_virtualspace(mps, site))))")
+            xticks --> (1:length(sectors), sector_formatter.(sectors))
+            xtickfonthalign --> :center
+            xtick_direction --> :out
+            xrotation --> 45
+            xlims --> (1, length(sectors) + 1)
+
+            ylims --> (-Inf, 1 + 1.0e-1)
+            yscale --> :log10
             seriestype := :scatter
             label := sector_formatter(sector)
             n_spectrum = length(partial_spectrum)
@@ -49,24 +64,10 @@ using MPSKit
         end
     end
 
-    title --> "Entanglement Spectrum"
-    legend --> false
-    grid --> :xy
-    widen --> true
-
-    xguide --> "χ = $(dim(left_virtualspace(mps, site)))"
-    xticks --> (1:length(sectors), sector_formatter.(sectors))
-    xtickfonthalign --> :center
-    xtick_direction --> :out
-    xrotation --> 45
-    xlims --> (1, length(sectors) + 1)
-
-    ylims --> (-Inf, 1 + 1.0e-1)
-    yscale --> :log10
-    label := nothing
-
-    return []
+    return nothing
 end
+
+MPSKit.entanglementplot(args...; kwargs...) = entanglementplot(args...; kwargs...)
 
 #-----------------------------------------------------------------------------
 
@@ -80,6 +81,7 @@ end
         sectors = [leftunit(h.args[1])]
     end
 
+    ticks, ticklabels = pitick(0, 2pi, 4; mode = :latex)
     for sector in sectors
         below = length(h.args) == 1 ? h.args[1] : h.args[2]
         spectrum = transfer_spectrum(
@@ -88,13 +90,13 @@ end
         )
 
         @series begin
-            yguide --> "r"
+            yguide --> L"r"
             ylims --> (-Inf, 1.05)
 
-            xguide --> "θ"
+            xguide --> L"\theta"
             xlims --> (thetaorigin, thetaorigin + 2pi)
-            xticks --> range(0, 2pi; length = 7)
-            xformatter --> x -> "$(rationalize(x / π, tol = 0.05))π"
+            xticks --> ticks
+            xformatter --> x -> ticklabels[findfirst(==(x), ticks)]
             xwiden --> true
             seriestype := :scatter
             markershape --> :auto
@@ -109,6 +111,36 @@ end
     framestyle --> :zerolines
 
     return nothing
+end
+
+MPSKit.transferplot(args...; kwargs...) = transferplot(args...; kwargs...)
+
+# utility for plotting
+
+function pitick(start, stop, denom; mode = :latex)
+    a = Int(cld(start, π / denom))
+    b = Int(fld(stop, π / denom))
+    tick = range(a * π / denom, b * π / denom; step = π / denom)
+    ticklabel = piticklabel.((a:b) .// denom, Val(mode))
+    return tick, ticklabel
+end
+
+function piticklabel(x::Rational, ::Val{:text})
+    iszero(x) && return "0"
+    S = x < 0 ? "-" : ""
+    n, d = abs(numerator(x)), denominator(x)
+    N = n == 1 ? "" : repr(n)
+    d == 1 && return S * N * "π"
+    return S * N * "π/" * repr(d)
+end
+
+function piticklabel(x::Rational, ::Val{:latex})
+    iszero(x) && return L"0"
+    S = x < 0 ? "-" : ""
+    n, d = abs(numerator(x)), denominator(x)
+    N = n == 1 ? "" : repr(n)
+    d == 1 && return L"%$S%$N\pi"
+    return L"%$S\frac{%$N\pi}{%$d}"
 end
 
 end

@@ -10,6 +10,7 @@ Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 HalfIntegers = "f0d1745a-41c9-11e9-1dd9-e5d34d218721"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 MatrixAlgebraKit = "6c742aac-3347-4629-af66-fc926824e5e4"
@@ -26,12 +27,11 @@ VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 
 [extensions]
 MPSKitAdaptExt = "Adapt"
-MPSKitMakieExt = ["Makie", "LaTeXStrings"]
-MPSKitPlotsExt = ["RecipesBase", "LaTeXStrings"]
+MPSKitMakieExt = "Makie"
+MPSKitPlotsExt = "RecipesBase"
 
 [compat]
 Accessors = "0.1"
@@ -55,7 +55,7 @@ ParallelTestRunner = "2"
 Pkg = "1"
 Printf = "1"
 Random = "1"
-RecipesBase = "~1.1"
+RecipesBase = "1"
 TensorKit = "0.16.3"
 TensorKitManifolds = "0.7"
 TensorKitTensors = "0.2"
@@ -69,6 +69,7 @@ julia = "1.10"
 [extras]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 ParallelTestRunner = "d3525ed8-44d0-4b2c-a655-542cee43accc"
@@ -80,4 +81,4 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 
 [targets]
-test = ["Aqua", "Adapt", "CUDA", "cuTENSOR", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]
+test = ["Aqua", "Adapt", "CairoMakie", "CUDA", "cuTENSOR", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]
