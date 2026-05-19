@@ -54,7 +54,7 @@ function Makie.plot!(ep::EntanglementPlot)
     ax.title = L"\text{Entanglement Spectrum}"
     ax.titlesize = 24
 
-    ax.xlabel = latexstring("\$\\chi\$ = $(round(Int, dim(left_virtualspace(mps, site))))") #TODO: still want this?
+    ax.xlabel = latexstring("\$\\chi\$ = $(round(Int, dim(left_virtualspace(mps, site))))") # still want this?
     ax.xlabelsize = 24
     ax.xticks = (1:length(sectors), ep.sector_formatter[].(sectors))
     ax.xticklabelsize = 16
@@ -127,7 +127,6 @@ function Makie.plot!(tp::TransferPlot)
     ax.rightspinevisible = false
     ax.bottomspinevisible = true
     ax.topspinevisible = false
-    @show transferkwargs
 
     for (i, sector) in enumerate(sectors)
         spectrum = transfer_spectrum(mps; below = below, sector = sector, transferkwargs...)
