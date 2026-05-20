@@ -40,5 +40,3 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's.
     [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to be able to use this function. 
 """
 function transferplot end
-
-#TODO: expand on the docstring
