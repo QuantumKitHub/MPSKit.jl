@@ -275,6 +275,15 @@ function FiniteMPS(
     return FiniteMPS(rand, Defaults.eltype, Pspaces, maxVspaces; kwargs...)
 end
 
+
+function FiniteMPS(
+        elt::Type, Pspaces::Vector{<:Union{S, CompositeSpace{S}}}, maxVspaces::Union{S, Vector{S}};
+        kwargs...
+    ) where {S <: ElementarySpace}
+    return FiniteMPS(rand, elt, Pspaces, maxVspaces; kwargs...)
+end
+
+
 # Also accept single physical space and length
 function FiniteMPS(N::Int, V::VectorSpace, args...; kwargs...)
     return FiniteMPS(fill(V, N), args...; kwargs...)

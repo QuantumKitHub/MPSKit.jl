@@ -5,6 +5,9 @@ An algorithm that expands the given mps as described in
 [Zauner-Stauber et al. Phys. Rev. B 97 (2018)](@cite zauner-stauber2018), by selecting the
 dominant contributions of a two-site updated MPS tensor, orthogonal to the original ψ.
 
+!!! note
+    [`changebonds!`](@ref) is only defined for `FiniteMPS`, and modifies both the state and its environment.
+
 ## Fields
 
 $(TYPEDFIELDS)
@@ -15,6 +18,16 @@ $(TYPEDFIELDS)
 
     "algorithm used for truncating the expanded space"
     trscheme::TruncationStrategy
+end
+
+# Simple wrapper to convert between diffrent type of InifniteMPS.
+function changebonds(
+        ψ::InfiniteMPS, operator::InfiniteMPO, alg::OptimalExpand, envs = environments(ψ, operator)
+    )
+    ψ′, envs′ = changebonds(
+        convert(MultilineMPS, ψ), convert(MultilineMPO, operator), alg, Multiline([envs])
+    )
+    return convert(InfiniteMPS, ψ′), only(parent(envs′))
 end
 
 function changebonds(
@@ -39,7 +52,7 @@ function changebonds(
     end
 
     newψ = _expand(ψ, AL′, AR′)
-    recalculate!(envs, newψ, H)
+    envs = environments(newψ, H)
     return newψ, envs
 end
 
@@ -64,13 +77,14 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
     end
 
     newψ = _expand(ψ, AL′, AR′)
-    recalculate!(envs, newψ, H)
+    envs = environments(newψ, H) #  recalculate!(envs, newψ, H)
     return newψ, envs
 end
 
 function changebonds(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H))
     return changebonds!(copy(ψ), H, alg, envs)
 end
+
 function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H))
     #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
 

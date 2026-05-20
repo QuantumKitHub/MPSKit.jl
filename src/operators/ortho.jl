@@ -1,6 +1,6 @@
 function left_canonicalize!(
         H::FiniteMPOHamiltonian, i::Int;
-        alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_qr()
+        alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
     )
     1 ≤ i < length(H) || throw(ArgumentError("Bounds error in canonicalize"))
 
@@ -88,7 +88,7 @@ end
 
 function right_canonicalize!(
         H::FiniteMPOHamiltonian, i::Int;
-        alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_lq()
+        alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
     )
     1 < i ≤ length(H) || throw(ArgumentError("Bounds error in canonicalize"))
 

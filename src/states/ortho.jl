@@ -21,7 +21,7 @@ $(TYPEDFIELDS)
     verbosity::Int = VERBOSE_WARN
 
     "algorithm used for orthogonalization of the tensors"
-    alg_orth = Defaults.alg_qr()
+    alg_orth = Defaults.alg_orth()
     "algorithm used for the eigensolver"
     alg_eigsolve = _GAUGE_ALG_EIGSOLVE
     "minimal amount of iterations before using the eigensolver steps"
@@ -46,7 +46,7 @@ $(TYPEDFIELDS)
     verbosity::Int = VERBOSE_WARN
 
     "algorithm used for orthogonalization of the tensors"
-    alg_orth = Defaults.alg_lq()
+    alg_orth = Defaults.alg_orth()
     "algorithm used for the eigensolver"
     alg_eigsolve = _GAUGE_ALG_EIGSOLVE
     "minimal amount of iterations before using the eigensolver steps"
@@ -73,31 +73,15 @@ end
 
 function MixedCanonical(;
         tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter,
-        verbosity::Int = VERBOSE_WARN, alg_orth = Defaults.alg_qr(),
+        verbosity::Int = VERBOSE_WARN, alg_orth = Defaults.alg_orth(),
         alg_eigsolve = _GAUGE_ALG_EIGSOLVE,
         eig_miniter::Int = 10, order::Symbol = :LR
     )
-    if alg_orth isa LAPACK_HouseholderQR
-        alg_leftorth = alg_orth
-        alg_rightorth = LAPACK_HouseholderLQ(; alg_orth.kwargs...)
-    elseif alg_orth isa CUSOLVER_HouseholderQR
-        alg_leftorth = alg_orth
-        alg_rightorth = LQViaTransposedQR(CUSOLVER_HouseholderQR(; alg_orth.kwargs...))
-    elseif alg_orth isa LAPACK_HouseholderLQ
-        alg_leftorth = LAPACK_HouseholderQR(; alg_orth.kwargs...)
-        alg_rightorth = alg_orth
-    elseif alg_orth isa LQViaTransposedQR
-        alg_leftorth = alg_orth
-        alg_rightorth = alg_orth.qr_alg
-    else
-        alg_leftorth = alg_rightorth = alg_orth
-    end
-
     left = LeftCanonical(;
-        tol, maxiter, verbosity, alg_orth = alg_leftorth, alg_eigsolve, eig_miniter
+        tol, maxiter, verbosity, alg_orth, alg_eigsolve, eig_miniter
     )
     right = RightCanonical(;
-        tol, maxiter = maxiter, verbosity, alg_orth = alg_rightorth, alg_eigsolve, eig_miniter
+        tol, maxiter = maxiter, verbosity, alg_orth, alg_eigsolve, eig_miniter
     )
 
     return MixedCanonical(left, right, order)
@@ -168,7 +152,7 @@ performance for accuracy.
 regauge!
 
 function regauge!(
-        AC::GenericMPSTensor, C::MPSBondTensor; alg = Defaults.alg_qr()
+        AC::GenericMPSTensor, C::MPSBondTensor; alg = Defaults.alg_orth()
     )
     Q_AC, _ = left_orth!(AC; alg)
     Q_C, _ = left_orth!(C; alg)
@@ -181,7 +165,7 @@ function regauge!(AC::AbstractVector{<:GenericMPSTensor}, C::AbstractVector{<:MP
     return AC
 end
 function regauge!(
-        CL::MPSBondTensor, AC::GenericMPSTensor; alg = Defaults.alg_lq()
+        CL::MPSBondTensor, AC::GenericMPSTensor; alg = Defaults.alg_orth()
     )
     AC_tail = _transpose_tail(AC)
     _, Q_AC = right_orth!(AC_tail; alg)

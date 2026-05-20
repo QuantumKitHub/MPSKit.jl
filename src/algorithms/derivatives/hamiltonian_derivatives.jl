@@ -301,7 +301,7 @@ function prepare_operator!!(
         missing
     elseif !ismissing(AB) && !ismissing(H.CB)
         Id = TensorKit.id(storagetype(H.CB), space(AB, 3))
-        @plansor CA[-1 -2 -3; -4 -5 -6] += H.CB[-2 -3; -5 -6] * Id[-1; -4]
+        @plansor AB[-1 -2 -3; -4 -5 -6] += H.CB[-2 -3; -5 -6] * Id[-1; -4]
         missing
     else
         H.CB

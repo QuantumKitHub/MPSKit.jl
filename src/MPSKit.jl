@@ -62,7 +62,7 @@ using TensorKit
 using TensorKit: BraidingTensor
 using TensorKit: TupleTools as TT
 using MatrixAlgebraKit
-using MatrixAlgebraKit: TruncationStrategy, PolarViaSVD, LAPACK_SVDAlgorithm
+using MatrixAlgebraKit: TruncationStrategy
 using BlockTensorKit
 using BlockTensorKit: TensorMapSumSpace
 using TensorOperations

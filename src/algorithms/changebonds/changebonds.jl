@@ -1,23 +1,16 @@
-"""
+@doc """
     changebonds(ψ::AbstractMPS, H, alg, envs) -> ψ′, envs′
     changebonds(ψ::AbstractMPS, alg) -> ψ′
 
 Change the bond dimension of `ψ` using the algorithm `alg`, and return the new `ψ` and the new `envs`.
+For AbstractInfiniteMPS, changebonds returns new environments without modifying the one provided.
+changedbonds! can modifiy both the provided state and environments, depending on the algorithm.
+For FiniteMPS, changebonds also modifies the environments.
 
 See also: [`SvdCut`](@ref), [`RandExpand`](@ref), [`VUMPSSvdCut`](@ref), [`OptimalExpand`](@ref)
-"""
+""" changebonds, changebonds!
 function changebonds end
 function changebonds! end
-
-# write in terms of MultilineMPS
-function changebonds(
-        ψ::InfiniteMPS, operator::InfiniteMPO, alg, envs = environments(ψ, operator)
-    )
-    ψ′, envs′ = changebonds(
-        convert(MultilineMPS, ψ), convert(MultilineMPO, operator), alg, Multiline([envs])
-    )
-    return convert(InfiniteMPS, ψ′), envs
-end
 
 _expand(ψ, AL′, AR′) = _expand!(copy(ψ), AL′, AR′)
 function _expand!(ψ::InfiniteMPS, AL′::PeriodicVector, AR′::PeriodicVector)

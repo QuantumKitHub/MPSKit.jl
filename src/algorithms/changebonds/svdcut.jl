@@ -4,6 +4,8 @@ $(TYPEDEF)
 An algorithm that uses truncated SVD to change the bond dimension of a state or operator.
 This is achieved by a sweeping algorithm that locally performs (optimal) truncations in a gauged basis.
 
+changedbonds! is only defined for FiniteMPS and FiniteMPO.
+
 See also [`changebonds(!)`](@ref changebonds)
 
 ## Fields
@@ -34,6 +36,12 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::SvdCut; normalize::Bool = true
         ψ.AC[i + 1] = (S, AR′)
     end
     return normalize ? normalize!(ψ) : ψ
+end
+
+function changebonds!(ψ::AbstractFiniteMPS, H, alg::SvdCut, envs)
+    ψ = changebonds!(ψ, alg)
+    recalculate!(envs, ψ, H)
+    return ψ, envs
 end
 
 # Note: it might be better to go to an MPS representation first
@@ -108,8 +116,9 @@ function changebonds(ψ::InfiniteMPS, alg::SvdCut)
     return normalize!(ψ)
 end
 
-function changebonds(ψ, H, alg::SvdCut, envs = environments(ψ, H))
-    return changebonds(ψ, alg), envs
+function changebonds(ψ, H, alg::SvdCut, envs)
+    newψ = changebonds(ψ, alg)
+    return newψ, environments(newψ, H)
 end
 
 changebonds(mpo::FiniteMPOHamiltonian, alg::SvdCut) = changebonds!(copy(mpo), alg)
@@ -122,11 +131,11 @@ function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
     # swipe right
     alg_trunc = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trscheme)
     for i in 1:(length(H) - 1)
-        H = left_canonicalize!(H, i; alg = alg_trunc)
+        H = left_canonicalize!(H, i; alg = MatrixAlgebraKit.LeftOrthViaSVD(alg_trunc))
     end
     # swipe left -- TODO: do we really need this double sweep?
     for i in length(H):-1:2
-        H = right_canonicalize!(H, i; alg = alg_trunc)
+        H = right_canonicalize!(H, i; alg = MatrixAlgebraKit.RightOrthViaSVD(alg_trunc))
     end
 
     return H

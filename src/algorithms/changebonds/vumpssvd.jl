@@ -3,6 +3,9 @@ $(TYPEDEF)
 
 An algorithm that uses a two-site update step to change the bond dimension of a state.
 
+!!! note
+    [`changebonds!`](@ref) is not defined.
+
 ## Fields
 
 $(TYPEDFIELDS)
@@ -44,9 +47,8 @@ function changebonds_1(
     collapsed = InfiniteMPS(
         [nstate.AL[1]], nstate.C[1]; alg.alg_gauge.tol, alg.alg_gauge.maxiter
     )
-    recalculate!(envs, collapsed, H, collapsed)
 
-    return collapsed, envs
+    return collapsed, environments(collapsed, H)
 end
 
 function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H))
@@ -75,7 +77,7 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environme
         copied[loc] = AL1
         copied[loc + 1] = AL2
         state = InfiniteMPS(copied; alg.alg_gauge.tol, alg.alg_gauge.maxiter)
-        recalculate!(envs, state, H, state)
+        envs = environments(state, H)
     end
     return state, envs
 end

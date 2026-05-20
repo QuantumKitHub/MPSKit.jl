@@ -132,11 +132,14 @@ function expectation_value(
         ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
         envs::AbstractMPSEnvironments = environments(ψ, H)
     )
-    return sum(1:length(ψ)) do site
-        return contract_mpo_expval(
+    T = TensorOperations.promote_contract(scalartype(ψ), scalartype(H))
+    s = zero(T)
+    for site in 1:length(ψ)
+        s += contract_mpo_expval(
             ψ.AC[site], envs.GLs[site], H[site][:, 1, 1, end], envs.GRs[site][end]
-        )
+        )::T
     end
+    return s
 end
 
 # MPO tensor
