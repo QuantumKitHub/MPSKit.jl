@@ -76,7 +76,7 @@ function approximate!(
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
-            for site in 1:size(ψ, 2)
+            for site in 1:(size(ψ, 2) - 1)
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(
                         CartesianIndex(row, site), ψ, toapprox, envs;
@@ -95,10 +95,31 @@ function approximate!(
                 transfer_rightenv!(envs, ψ, toapprox, site)
             end
 
+            # update the edge
+            ψ.AL[1, end] = ψ.AC[1, end] / ψ.C[1, end]
+            ψ.AC[1, 1] = _mul_tail(ψ.AL[1, 1], ψ.C[1, 1])
+            for row in 1:size(ψ, 1)
+                AC2′ = AC2_projection(CartesianIndex(row, size(ψ, 2)), ψ, toapprox, envs; kind = :ALAC)
+                al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                normalize!(c)
+
+                ψ.AL[row + 1, end] = al
+                ψ.C[row + 1, end] = complex(c)
+                ψ.AR[row + 1, 1] = _transpose_front(ar)
+
+                ψ.AC[row + 1, end] = _mul_tail(al, c)
+                ψ.AC[row + 1, 1] = _transpose_front(c * ar)
+                ψ.AL[row + 1, 1] = ψ.AC[row + 1, 1] / ψ.C[row + 1, 1]
+
+            end
+            # update environments
+            transfer_leftenv!(envs, ψ, toapprox, 1)
+            transfer_rightenv!(envs, ψ, toapprox, 0)
+
             normalize!(envs, ψ, toapprox)
 
             # sweep from right to left
-            for site in reverse(0:(size(ψ, 2) - 1))
+            for site in reverse(1:(size(ψ, 2) - 1))
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(
                         CartesianIndex(row, site), ψ, toapprox, envs;
@@ -115,6 +136,25 @@ function approximate!(
                 transfer_leftenv!(envs, ψ, toapprox, site + 1)
                 transfer_rightenv!(envs, ψ, toapprox, site)
             end
+
+            # update the edge
+            ψ.AC[1, end] = _mul_front(ψ.C[1, end - 1], ψ.AR[1, end])
+            ψ.AR[1, 1] = _transpose_front(ψ.C[1, end] \ _transpose_tail(ψ.AC[1, 1]))
+            for row in 1:size(ψ, 1)
+                AC2′ = AC2_projection(CartesianIndex(row, 0), ψ, toapprox, envs; kind = :ACAR)
+                al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                normalize!(c)
+
+                ψ.AL[row, end] = al
+                ψ.C[row, end] = complex(c)
+                ψ.AR[row, 1] = _transpose_front(ar)
+
+                ψ.AR[row, end] = _transpose_front(ψ.C[row, end - 1] \ _transpose_tail(al * c))
+                ψ.AC[row, 1] = _transpose_front(c * ar)
+            end
+            transfer_leftenv!(envs, ψ, toapprox, 1)
+            transfer_rightenv!(envs, ψ, toapprox, 0)
+
 
             normalize!(envs, ψ, toapprox)
 
