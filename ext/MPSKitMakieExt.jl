@@ -83,7 +83,16 @@ function Makie.plot!(ep::EntanglementPlot)
     return ep
 end
 
-MPSKit.entanglementplot(args...; kwargs...) = entanglementplot(args...; kwargs...)
+function MPSKit.entanglementplot(args...; plotkwargs = (;), kwargs...)
+    p = entanglementplot(args...; kwargs...)
+    ax = p.axis
+
+    # overwrite user-provided axis attributes
+    for (k, v) in pairs(plotkwargs)
+        setproperty!(ax, k, v)
+    end
+    return p
+end
 
 #------------------------------------------------------------
 
@@ -141,7 +150,16 @@ function Makie.plot!(tp::TransferPlot)
     return tp
 end
 
-MPSKit.transferplot(args...; kwargs...) = transferplot(args...; kwargs...)
+function MPSKit.transferplot(args...; plotkwargs = (;), kwargs...)
+    p = transferplot(args...; kwargs...)
+    ax = p.axis
+
+    # overwrite user-provided axis attributes
+    for (k, v) in pairs(plotkwargs)
+        setproperty!(ax, k, v)
+    end
+    return p
+end
 
 # utility for plotting
 
