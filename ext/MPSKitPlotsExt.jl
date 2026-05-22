@@ -1,6 +1,6 @@
 module MPSKitPlotsExt
 
-using RecipesBase, LaTeXStrings
+using RecipesBase
 using MPSKit, TensorKit
 
 @userplot EntanglementPlot
@@ -41,7 +41,7 @@ using MPSKit, TensorKit
             widen --> true
             bottom_margin -->(10, :mm)
 
-            xguide --> latexstring("\$\\chi\$ = $(round(Int, dim(left_virtualspace(mps, site))))")
+            xguide --> "χ = $(round(Int, dim(left_virtualspace(mps, site))))"
             xticks --> (1:length(sectors), sector_formatter.(sectors))
             xtickfonthalign --> :center
             xtick_direction --> :out
@@ -81,7 +81,6 @@ MPSKit.entanglementplot(args...; kwargs...) = entanglementplot(args...; kwargs..
         sectors = [leftunit(h.args[1])]
     end
 
-    ticks, ticklabels = pitick(0, 2pi, 4; mode = :latex)
     for sector in sectors
         below = length(h.args) == 1 ? h.args[1] : h.args[2]
         spectrum = transfer_spectrum(
@@ -90,13 +89,13 @@ MPSKit.entanglementplot(args...; kwargs...) = entanglementplot(args...; kwargs..
         )
 
         @series begin
-            yguide --> L"r"
+            yguide --> "r"
             ylims --> (-Inf, 1.05)
 
-            xguide --> L"\theta"
+            xguide --> "θ"
             xlims --> (thetaorigin, thetaorigin + 2pi)
-            xticks --> ticks
-            xformatter --> x -> ticklabels[findfirst(==(x), ticks)]
+            xticks --> range(0, 2pi; length = 7)
+            xformatter --> x -> "$(rationalize(x / π, tol = 0.05))π"
             xwiden --> true
             seriestype := :scatter
             markershape --> :auto
@@ -114,33 +113,5 @@ MPSKit.entanglementplot(args...; kwargs...) = entanglementplot(args...; kwargs..
 end
 
 MPSKit.transferplot(args...; kwargs...) = transferplot(args...; kwargs...)
-
-# utility for plotting
-
-function pitick(start, stop, denom; mode = :latex)
-    a = Int(cld(start, π / denom))
-    b = Int(fld(stop, π / denom))
-    tick = range(a * π / denom, b * π / denom; step = π / denom)
-    ticklabel = piticklabel.((a:b) .// denom, Val(mode))
-    return tick, ticklabel
-end
-
-function piticklabel(x::Rational, ::Val{:text})
-    iszero(x) && return "0"
-    S = x < 0 ? "-" : ""
-    n, d = abs(numerator(x)), denominator(x)
-    N = n == 1 ? "" : repr(n)
-    d == 1 && return S * N * "π"
-    return S * N * "π/" * repr(d)
-end
-
-function piticklabel(x::Rational, ::Val{:latex})
-    iszero(x) && return L"0"
-    S = x < 0 ? "-" : ""
-    n, d = abs(numerator(x)), denominator(x)
-    N = n == 1 ? "" : repr(n)
-    d == 1 && return L"%$S%$N\pi"
-    return L"%$S\frac{%$N\pi}{%$d}"
-end
 
 end
