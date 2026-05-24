@@ -300,7 +300,7 @@ function prepare_operator!!(
         @plansor CA[-1 -2 -3; -4 -5 -6] += H.CB[-1 -2; -4 -5] * Id[-3; -6]
         missing
     elseif !ismissing(AB) && !ismissing(H.CB)
-        Id = TensorKit.id(storagetype(H.CB), space(AB, 3))
+        Id = TensorKit.id(storagetype(H.CB), space(AB, 1))
         @plansor AB[-1 -2 -3; -4 -5 -6] += H.CB[-2 -3; -5 -6] * Id[-1; -4]
         missing
     else
