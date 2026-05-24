@@ -13,6 +13,6 @@ using CairoMakie
 
 @testset "plot tests" begin
     ψ = InfiniteMPS([ℙ^2], [ℙ^5])
-    @test transferplot(ψ) isa CairoMakie.Plot
-    @test entanglementplot(ψ) isa CairoMakie.Plot
+    @test transferplot(ψ) isa Makie.FigureAxisPlot
+    @test entanglementplot(ψ) isa Makie.FigureAxisPlot
 end
