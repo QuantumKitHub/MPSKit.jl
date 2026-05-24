@@ -7,6 +7,7 @@ BlockTensorKit = "5f87ffc2-9cf1-4a46-8172-465d160bd8cd"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MPSKit = "bb1c41ca-d63c-52ed-829e-0820dda26502"
 MatrixAlgebraKit = "6c742aac-3347-4629-af66-fc926824e5e4"
@@ -20,14 +21,12 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 
-[weakdeps]
-CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-
 [sources]
 MPSKit = {path = ".."}
 
 [compat]
 Aqua = "0.8.9"
+CairoMakie = "0.15"
 CUDA = "5.9"
 Combinatorics = "1"
 Makie = "0.24, 0.25"

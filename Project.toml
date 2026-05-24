@@ -63,6 +63,8 @@ julia = "1.10"
 [extras]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 ParallelTestRunner = "d3525ed8-44d0-4b2c-a655-542cee43accc"
@@ -74,4 +76,4 @@ TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 
 [targets]
-test = ["Aqua", "Adapt", "CUDA", "cuTENSOR", "Pkg", "Test", "TestExtras", "Plots", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]
+test = ["Aqua", "Adapt", "CUDA", "cuTENSOR", "Pkg", "Test", "TestExtras", "Plots", "Makie", "CairoMakie", "Combinatorics", "ParallelTestRunner", "TensorKitTensors"]
