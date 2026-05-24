@@ -1,9 +1,13 @@
 """
     find_groundstate(ψ₀, H, [environments]; kwargs...) -> (ψ, environments, ϵ)
-    find_groundstate(ψ₀, H, algorithm, environments) -> (ψ, environments, ϵ)
+    find_groundstate(ψ₀, H, algorithm, [environments]) -> (ψ, environments, ϵ)
+    find_groundstate!(ψ₀, H, [environments]; kwargs...) -> (ψ, environments, ϵ)
+    find_groundstate!(ψ₀, H, algorithm, [environments]) -> (ψ, environments, ϵ)
 
 Compute the ground state for Hamiltonian `H` with initial guess `ψ`. If not specified, an
 optimization algorithm will be attempted based on the supplied keywords.
+The `!` variant updates `ψ` in-place, reusing its storage; the non-mutating variant 
+operates on a copy.
 
 ## Arguments
 - `ψ₀::AbstractMPS`: initial guess
@@ -23,10 +27,22 @@ optimization algorithm will be attempted based on the supplied keywords.
 """
 function find_groundstate(
         ψ::AbstractMPS, H, envs::AbstractMPSEnvironments = environments(ψ, H);
+        kwargs...
+    )
+    return find_groundstate!(copy(ψ), H, envs; kwargs...)
+end
+function find_groundstate(
+        ψ::AbstractMPS, H, alg,
+        envs::AbstractMPSEnvironments = environments(ψ, H)
+    )
+    return find_groundstate!(copy(ψ), H, alg, envs)
+end
+function find_groundstate!(
+        ψ::AbstractMPS, H, envs::AbstractMPSEnvironments = environments(ψ, H);
         tol = Defaults.tol, maxiter = Defaults.maxiter,
         verbosity = Defaults.verbosity, trscheme = nothing
     )
-    if isa(ψ, InfiniteMPS)
+    if GeometryStyle(ψ, H) isa InfiniteChainStyle
         alg = VUMPS(; tol = max(1.0e-4, tol), verbosity, maxiter)
         if tol < 1.0e-4
             alg = alg & GradientGrassmann(; tol = tol, maxiter, verbosity)
@@ -34,7 +50,7 @@ function find_groundstate(
         if !isnothing(trscheme)
             alg = IDMRG2(; tol = min(1.0e-2, 100tol), verbosity, trscheme) & alg
         end
-    elseif isa(ψ, AbstractFiniteMPS)
+    elseif GeometryStyle(ψ, H) isa FiniteChainStyle
         alg = DMRG(; tol, maxiter, verbosity)
         if !isnothing(trscheme)
             alg = DMRG2(; tol = min(1.0e-2, 100tol), verbosity, trscheme) & alg
@@ -42,5 +58,11 @@ function find_groundstate(
     else
         throw(ArgumentError("Unknown input state type"))
     end
-    return find_groundstate(ψ, H, alg, envs)
+    return find_groundstate!(ψ, H, alg, envs)
+end
+function find_groundstate!(
+        ψ::AbstractMPS, H, alg::Algorithm,
+        envs::AbstractMPSEnvironments = environments(ψ, H)
+    )
+    return find_groundstate!(GeometryStyle(ψ, H), ψ, H, alg, envs)
 end

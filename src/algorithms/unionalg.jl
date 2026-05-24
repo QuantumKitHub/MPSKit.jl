@@ -32,3 +32,8 @@ function find_groundstate(state, H, alg::UnionAlg, envs = environments(state, H)
     state, envs = find_groundstate(state, H, alg.alg1, envs)
     return find_groundstate(state, H, alg.alg2, envs)
 end
+
+function find_groundstate!(state, H, alg::UnionAlg, envs = environments(state, H))
+    state, envs = find_groundstate!(state, H, alg.alg1, envs)
+    return find_groundstate!(state, H, alg.alg2, envs)
+end
