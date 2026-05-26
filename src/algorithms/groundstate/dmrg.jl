@@ -36,6 +36,8 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environme
     ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
     log = IterLog("DMRG")
+    timeroutput = TimerOutput("DMRG")
+    alg.verbosity > 3 || disable_timer!(timeroutput)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
@@ -43,21 +45,30 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environme
             alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
 
             zerovector!(ϵs)
-            for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
-                h = AC_hamiltonian(pos, ψ, H, ψ, envs)
-                _, vec = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
-                ϵs[pos] = max(ϵs[pos], calc_galerkin(pos, ψ, H, ψ, envs))
-                ψ.AC[pos] = vec
+            @timeit timeroutput "sweep" begin
+                for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
+                    local vec
+                    @timeit timeroutput "AC_eigsolve" begin
+                        h = AC_hamiltonian(pos, ψ, H, ψ, envs)
+                        _, vec = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
+                    end
+                    ϵs[pos] = max(ϵs[pos], calc_galerkin(pos, ψ, H, ψ, envs))
+                    @timeit timeroutput "AC_update" ψ.AC[pos] = vec
+                end
             end
             ϵ = maximum(ϵs)
 
-            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
+            ψ, envs = @timeit timeroutput "finalize" alg.finalize(
+                iter, ψ, H, envs
+            )::Tuple{typeof(ψ), typeof(envs)}
 
             if ϵ <= alg.tol
+                @infov 4 timeroutput
                 @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
+                @infov 4 timeroutput
                 @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
             else
                 @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
@@ -113,50 +124,68 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environm
     ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
     log = IterLog("DMRG2")
+    timeroutput = TimerOutput("DMRG2")
+    alg.verbosity > 3 || disable_timer!(timeroutput)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         for iter in 1:(alg.maxiter)
             alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
             zerovector!(ϵs)
 
-            # left to right sweep
-            for pos in 1:(length(ψ) - 1)
-                @plansor ac2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
-                Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
-                _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
+            @timeit timeroutput "sweep" begin
+                # left to right sweep
+                for pos in 1:(length(ψ) - 1)
+                    local ac2, newA2center, al, c, ar
+                    @timeit timeroutput "AC2_eigsolve" begin
+                        @plansor ac2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
+                        Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
+                        _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
+                    end
+                    @timeit timeroutput "svd_trunc" begin
+                        al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
+                        normalize!(c)
+                        v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
+                        ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
+                    end
+                    @timeit timeroutput "update_AC" begin
+                        ψ.AC[pos] = (al, complex(c))
+                        ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
+                    end
+                end
 
-                al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
-                normalize!(c)
-                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
-                ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
-
-                ψ.AC[pos] = (al, complex(c))
-                ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
-            end
-
-            # right to left sweep
-            for pos in (length(ψ) - 2):-1:1
-                @plansor ac2[-1 -2; -3 -4] := ψ.AL[pos][-1 -2; 1] * ψ.AC[pos + 1][1 -4; -3]
-                Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
-                _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
-
-                al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
-                normalize!(c)
-                v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
-                ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
-
-                ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
-                ψ.AC[pos] = (al, complex(c))
+                # right to left sweep
+                for pos in (length(ψ) - 2):-1:1
+                    local ac2, newA2center, al, c, ar
+                    @timeit timeroutput "AC2_eigsolve" begin
+                        @plansor ac2[-1 -2; -3 -4] := ψ.AL[pos][-1 -2; 1] * ψ.AC[pos + 1][1 -4; -3]
+                        Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
+                        _, newA2center = fixedpoint(Hac2, ac2, :SR, alg_eigsolve)
+                    end
+                    @timeit timeroutput "svd_trunc" begin
+                        al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
+                        normalize!(c)
+                        v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
+                        ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
+                    end
+                    @timeit timeroutput "update_AC" begin
+                        ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
+                        ψ.AC[pos] = (al, complex(c))
+                    end
+                end
             end
 
             ϵ = maximum(ϵs)
-            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
+            ψ, envs = @timeit timeroutput "finalize" alg.finalize(
+                iter, ψ, H, envs
+            )::Tuple{typeof(ψ), typeof(envs)}
 
             if ϵ <= alg.tol
+                @infov 4 timeroutput
                 @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
+                @infov 4 timeroutput
                 @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
             else
                 @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
