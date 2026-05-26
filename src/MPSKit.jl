@@ -85,7 +85,7 @@ using Random
 using Base: @kwdef, @propagate_inbounds
 using LoggingExtras
 using OhMyThreads
-using TimerOutputs: TimerOutput, @timeit, reset_timer!, disable_timer!, enable_timer!
+using TimerOutputs: TimerOutput, @timeit, timeit, reset_timer!, disable_timer!, enable_timer!
 
 # Includes
 # --------

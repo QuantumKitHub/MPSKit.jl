@@ -62,17 +62,34 @@ function find_groundstate(
         @warn "This is not fully supported - split the mps up in a sum of mps's and optimize separately"
     normalize!(ψ)
 
-    fg(x) = GrassmannMPS.fg(x, H, envs)
+    timeroutput = TimerOutput("GradientGrassmann")
+    method_verbosity = hasproperty(alg.method, :verbosity) ? alg.method.verbosity : 0
+    method_verbosity > 3 || disable_timer!(timeroutput)
+
+    fg(x) = timeit(() -> GrassmannMPS.fg(x, H, envs; timeroutput), timeroutput, "fg")
+    retract(state, g, α) = timeit(
+        () -> GrassmannMPS.retract(state, g, α), timeroutput, "retract",
+    )
+    transport!(h, state, g, α, state′) = timeit(
+        () -> GrassmannMPS.transport!(h, state, g, α, state′), timeroutput, "transport!",
+    )
+    precondition(state, g) = timeit(
+        () -> GrassmannMPS.precondition(state, g), timeroutput, "precondition",
+    )
+
     x, _, _, _, normgradhistory = optimize(
         fg, ψ, alg.method;
-        GrassmannMPS.transport!,
-        GrassmannMPS.retract,
+        retract, transport!, precondition,
         GrassmannMPS.inner,
         GrassmannMPS.scale!,
         GrassmannMPS.add!,
-        GrassmannMPS.precondition,
         alg.finalize!,
-        isometrictransport = true
+        isometrictransport = true,
     )
+
+    LoggingExtras.withlevel(; verbosity = method_verbosity) do
+        @infov 4 timeroutput
+    end
+
     return x, envs, normgradhistory[end]
 end
