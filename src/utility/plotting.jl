@@ -1,5 +1,5 @@
 """
-    entanglementplot(state; site=0[, kwargs...])
+    entanglementplot(state; site = 0[, kwargs...])
 
 Plot the [entanglement spectrum](@ref entanglement_spectrum) of a given MPS `state`. 
 
@@ -7,148 +7,38 @@ Plot the [entanglement spectrum](@ref entanglement_spectrum) of a given MPS `sta
 - `state`: the MPS for which to compute the entanglement spectrum.
 
 # Keyword Arguments
-- `site::Int=0`: MPS index for multisite unit cells. The spectrum is computed for the bond
+- `site::Int = 0`: MPS index for multisite unit cells. The spectrum is computed for the bond
   between `site` and `site + 1`.
-- `expand_symmetry::Logical=false`: add quantum dimension degeneracies.
-- `sortby=maximum`: the method of sorting the sectors.
-- `sector_margin=1//10`: the amount of whitespace between sectors.
-- `sector_formatter=string`: how to convert sectors to strings.
-- `kwargs...`: other kwargs are passed on to the plotting backend.
+- `expand_symmetry::Bool = false`: add quantum dimension degeneracies.
+- `sortby = maximum`: the method of sorting the sectors.
+- `sector_margin = 1//10`: the amount of whitespace between sectors.
+- `sector_formatter = string`: how to convert sectors to strings.
+- `plotkwargs = (; )`: Relevant to Makie. Kwargs for the underlying plot, e.g. `plotkwargs = (; title = "custom title", xlabel = L"latexstring", xticks = (1:2, ["a", "b"]))`. For Plots, these kwargs can be passed directly to `entanglementplot` instead of via `plotkwargs`.
 
 !!! note
-    You will need to manually import [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to
-    be able to use this function. MPSKit.jl defines its plots based on
-    [RecipesBase.jl](https://github.com/JuliaPlots/Plots.jl/tree/v2/RecipesBase), but the
-    user still has to add `using Plots` to be able to actually produce the plots.
-
+    You will need to manually import any plotting backend of [Makie.jl](https://github.com/MakieOrg/Makie.jl) or
+    [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to be able to use this function. 
 """
 function entanglementplot end
-@userplot EntanglementPlot
-
-@recipe function f(
-        h::EntanglementPlot; site = 0, expand_symmetry = false, sortby = maximum,
-        sector_margin = 1 // 10, sector_formatter = string
-    )
-    mps = h.args[1]
-    (site <= length(mps) && !(isa(mps, FiniteMPS) && site == 0)) ||
-        throw(ArgumentError("Invalid site $site for the given mps."))
-
-    spectra = entanglement_spectrum(mps, site)
-    sectors = []
-    spectrum = []
-    for (c, b) in pairs(spectra)
-        if expand_symmetry # Duplicate entries according to the quantum dimension.
-            b′ = repeat(b, dim(c))
-            sort!(b′; rev = true)
-            push!(spectrum, b′)
-        else
-            push!(spectrum, b)
-        end
-        push!(sectors, c)
-    end
-
-    if length(spectrum) > 1
-        order = sortperm(spectrum; by = sortby, rev = true)
-        spectrum = spectrum[order]
-        sectors = sectors[order]
-    end
-
-    for (i, (partial_spectrum, sector)) in enumerate(zip(spectrum, sectors))
-        @series begin
-            seriestype := :scatter
-            label := sector_formatter(sector)
-            n_spectrum = length(partial_spectrum)
-
-            # Put single dot in the middle, or a linear range with padding.
-            if n_spectrum == 1
-                x = [i + 1 // 2]
-            else
-                x = range(i + sector_margin, i + 1 - sector_margin; length = n_spectrum)
-            end
-            return x, partial_spectrum
-        end
-    end
-
-    title --> "Entanglement Spectrum"
-    legend --> false
-    grid --> :xy
-    widen --> true
-
-    xguide --> "χ = $(dim(left_virtualspace(mps, site)))"
-    xticks --> (1:length(sectors), sector_formatter.(sectors))
-    xtickfonthalign --> :center
-    xtick_direction --> :out
-    xrotation --> 45
-    xlims --> (1, length(sectors) + 1)
-
-    ylims --> (-Inf, 1 + 1.0e-1)
-    yscale --> :log10
-    label := nothing
-
-    return []
-end
 
 """
-    transferplot(above, below=above; sectors=[], transferkwargs=(;)[, kwargs...])
+    transferplot(above, below = above; sectors = [], transferkwargs = (;), plotkwargs = (;))
 
 Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 
 # Arguments
 - `above::InfiniteMPS`: above mps for [`transfer_spectrum`](@ref).
-- `below::InfiniteMPS=above`: below mps for [`transfer_spectrum`](@ref).
+- `below::InfiniteMPS = above`: below mps for [`transfer_spectrum`](@ref).
 
 # Keyword Arguments
-- `sectors=[]`: vector of sectors for which to compute the spectrum.
-- `transferkwargs`: kwargs for call to [`transfer_spectrum`](@ref).
-- `kwargs`: other kwargs are passed on to the plotting backend.
-- `thetaorigin=0`: origin of the angle range.
-- `sector_formatter=string`: how to convert sectors to strings.
+- `sectors = []`: vector of sectors for which to compute the spectrum. If nothing is passed, the spectrum is computed for the trivial sector.
+- `transferkwargs`: kwargs for call to [`transfer_spectrum`](@ref). This needs to be passed as e.g. `transferkwargs = (; num_vals = 10)`.
+- `plotkwargs = (; )`: Relevant to Makie. Kwargs for the underlying plot, e.g. `plotkwargs = (; title = "custom title", xlabel = L"latexstring", xticks = (1:2, ["a", "b"]))`. For Plots, these kwargs can be passed directly to `transferplot` instead of via `plotkwargs`.
+- `thetaorigin = 0`: origin of the angle range.
+- `sector_formatter = string`: how to convert sectors to strings.
 
 !!! note
-    You will need to manually import [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to
-    be able to use this function. MPSKit.jl defines its plots based on
-    [RecipesBase.jl](https://github.com/JuliaPlots/Plots.jl/tree/v2/RecipesBase), but the
-    user still has to add `using Plots` to be able to actually produce the plots.
-
+    You will need to manually import any plotting backend of [Makie.jl](https://github.com/MakieOrg/Makie.jl) or
+    [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to be able to use this function. 
 """
 function transferplot end
-@userplot TransferPlot
-
-@recipe function f(
-        h::TransferPlot; sectors = nothing, transferkwargs = (;), thetaorigin = 0,
-        sector_formatter = string
-    )
-    if sectors === nothing
-        sectors = [leftunit(h.args[1])]
-    end
-
-    for sector in sectors
-        below = length(h.args) == 1 ? h.args[1] : h.args[2]
-        spectrum = transfer_spectrum(
-            h.args[1]; below = below, sector = sector,
-            transferkwargs...
-        )
-
-        @series begin
-            yguide --> "r"
-            ylims --> (-Inf, 1.05)
-
-            xguide --> "θ"
-            xlims --> (thetaorigin, thetaorigin + 2pi)
-            xticks --> range(0, 2pi; length = 7)
-            xformatter --> x -> "$(rationalize(x / π, tol = 0.05))π"
-            xwiden --> true
-            seriestype := :scatter
-            markershape --> :auto
-            label := sector_formatter(sector)
-            return mod2pi.(angle.(spectrum) .+ thetaorigin) .- thetaorigin, abs.(spectrum)
-        end
-    end
-
-    title --> "Transfer Spectrum"
-    legend --> false
-    grid --> :xy
-    framestyle --> :zerolines
-
-    return nothing
-end
