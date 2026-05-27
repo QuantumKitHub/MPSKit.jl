@@ -160,7 +160,7 @@ function fg(
         envs::AbstractMPSEnvironments = environments(state, operator);
         timeroutput::TimerOutput = DISABLED_TIMER,
     ) where {O <: InfiniteMPOHamiltonian}
-    @timeit timeroutput "envs" recalculate!(envs, state, operator, state; timeroutput)
+    @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
     f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
@@ -180,7 +180,7 @@ function fg(
         envs::AbstractMPSEnvironments = environments(state, operator);
         timeroutput::TimerOutput = DISABLED_TIMER,
     ) where {O <: InfiniteMPO}
-    @timeit timeroutput "envs" recalculate!(envs, state, operator, state; timeroutput)
+    @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
     f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
@@ -201,7 +201,7 @@ function fg(
         timeroutput::TimerOutput = DISABLED_TIMER,
     )
     @assert length(state) == 1 "not implemented"
-    @timeit timeroutput "envs" recalculate!(envs, state, operator, state; timeroutput)
+    @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
     f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 

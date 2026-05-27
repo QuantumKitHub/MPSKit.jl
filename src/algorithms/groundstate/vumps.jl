@@ -95,9 +95,9 @@ end
 
 function Base.iterate(it::IterativeSolver{<:VUMPS}, state = it.state)
     timeroutput = state.timeroutput
-    ACs = @timeit timeroutput "localupdate" localupdate_step!(it, state)
+    ACs = @timeit timeroutput "localupdate (parallel)" localupdate_step!(it, state)
     mps = @timeit timeroutput "gauge" gauge_step!(it, state, ACs)
-    envs = @timeit timeroutput "envs" envs_step!(it, state, mps)
+    envs = @timeit timeroutput "envs (parallel)" envs_step!(it, state, mps)
 
     # finalizer step
     mps, envs = @timeit timeroutput "finalize" it.finalize(
