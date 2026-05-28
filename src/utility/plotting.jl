@@ -16,10 +16,8 @@ Plot the [entanglement spectrum](@ref entanglement_spectrum) of a given MPS `sta
 - `kwargs...`: other kwargs are passed on to the plotting backend.
 
 !!! note
-    You will need to manually import [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to
-    be able to use this function. MPSKit.jl defines its plots based on
-    [RecipesBase.jl](https://github.com/JuliaPlots/Plots.jl/tree/v2/RecipesBase), but the
-    user still has to add `using Plots` to be able to actually produce the plots.
+    The plotting recipe is provided by package extensions: load either Plots.jl
+    (RecipesBase) or Makie.jl alongside MPSKit to be able to actually produce the plots.
 
 """
 function entanglementplot end
@@ -41,10 +39,10 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 - `sector_formatter=string`: how to convert sectors to strings.
 
 !!! note
-    You will need to manually import [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to
-    be able to use this function. MPSKit.jl defines its plots based on
-    [RecipesBase.jl](https://github.com/JuliaPlots/Plots.jl/tree/v2/RecipesBase), but the
-    user still has to add `using Plots` to be able to actually produce the plots.
+    The plotting recipe is provided by package extensions: load either Plots.jl
+    (RecipesBase) or Makie.jl alongside MPSKit to be able to actually produce the plots.
 
 """
 function transferplot end
+
+transferplot(above; kwargs...) = transferplot(above, above; kwargs...)
