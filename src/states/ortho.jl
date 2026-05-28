@@ -98,7 +98,10 @@ Bring an `InfiniteMPS` into a uniform gauge, using the specified algorithm.
 """
 gaugefix!
 
-function gaugefix!(ψ::InfiniteMPS, A, C₀ = ψ.C[end]; order = :LR, kwargs...)
+function gaugefix!(
+        ψ::InfiniteMPS, A, C₀ = ψ.C[end];
+        order = :LR, timeroutput::TimerOutput = DISABLED_TIMER, kwargs...
+    )
     alg = if order === :LR || order === :RL
         MixedCanonical(; order, kwargs...)
     elseif order === :L
@@ -109,28 +112,37 @@ function gaugefix!(ψ::InfiniteMPS, A, C₀ = ψ.C[end]; order = :LR, kwargs...)
         throw(ArgumentError("Invalid order: $order"))
     end
 
-    return gaugefix!(ψ, A, C₀, alg)
+    return gaugefix!(ψ, A, C₀, alg; timeroutput)
 end
 
 # expert mode: actual implementation
-function gaugefix!(ψ::InfiniteMPS, A, C₀, alg::MixedCanonical)
+function gaugefix!(
+        ψ::InfiniteMPS, A, C₀, alg::MixedCanonical;
+        timeroutput::TimerOutput = DISABLED_TIMER
+    )
     if alg.order === :LR
-        gaugefix!(ψ, A, C₀, alg.alg_leftcanonical)
-        gaugefix!(ψ, ψ.AL, ψ.C[end], alg.alg_rightcanonical)
+        gaugefix!(ψ, A, C₀, alg.alg_leftcanonical; timeroutput)
+        gaugefix!(ψ, ψ.AL, ψ.C[end], alg.alg_rightcanonical; timeroutput)
     elseif alg.order === :RL
-        gaugefix!(ψ, A, C₀, alg.alg_rightcanonical)
-        gaugefix!(ψ, ψ.AR, ψ.C[end], alg.alg_leftcanonical)
+        gaugefix!(ψ, A, C₀, alg.alg_rightcanonical; timeroutput)
+        gaugefix!(ψ, ψ.AR, ψ.C[end], alg.alg_leftcanonical; timeroutput)
     else
         throw(ArgumentError("Invalid order: $(alg.order)"))
     end
     return ψ
 end
-function gaugefix!(ψ::InfiniteMPS, A, C₀, alg::LeftCanonical)
-    uniform_leftorth!((ψ.AL, ψ.C), A, C₀, alg)
+function gaugefix!(
+        ψ::InfiniteMPS, A, C₀, alg::LeftCanonical;
+        timeroutput::TimerOutput = DISABLED_TIMER
+    )
+    uniform_leftorth!((ψ.AL, ψ.C), A, C₀, alg; timeroutput)
     return ψ
 end
-function gaugefix!(ψ::InfiniteMPS, A, C₀, alg::RightCanonical)
-    uniform_rightorth!((ψ.AR, ψ.C), A, C₀, alg)
+function gaugefix!(
+        ψ::InfiniteMPS, A, C₀, alg::RightCanonical;
+        timeroutput::TimerOutput = DISABLED_TIMER
+    )
+    uniform_rightorth!((ψ.AR, ψ.C), A, C₀, alg; timeroutput)
     return ψ
 end
 
@@ -188,14 +200,17 @@ end
 # Implementation
 # --------------
 
-function uniform_leftorth!((AL, C), A, C₀, alg::LeftCanonical)
+function uniform_leftorth!(
+        (AL, C), A, C₀, alg::LeftCanonical;
+        timeroutput::TimerOutput = DISABLED_TIMER
+    )
     C[end] = normalize!(C₀)
     return LoggingExtras.withlevel(; alg.verbosity) do
         # initialize algorithm and temporary variables
         log = IterLog("LC")
         A_tail = _transpose_tail.(A) # pre-transpose A
         CA_tail = similar.(A_tail)  # pre-allocate workspace
-        state = (; AL, C, A, A_tail, CA_tail, iter = 0, ϵ = Inf)
+        state = (; AL, C, A, A_tail, CA_tail, iter = 0, ϵ = Inf, timeroutput)
         it = IterativeSolver(alg, state)
         loginit!(log, it.ϵ)
 
@@ -215,12 +230,15 @@ function uniform_leftorth!((AL, C), A, C₀, alg::LeftCanonical)
 end
 
 function Base.iterate(it::IterativeSolver{LeftCanonical}, state = it.state)
-    C₀ = gauge_eigsolve_step!(it, state)
-    C₁ = gauge_orth_step!(it, state)
+    timeroutput = state.timeroutput
+    C₀ = @timeit timeroutput "gauge_eigsolve" gauge_eigsolve_step!(it, state)
+    C₁ = @timeit timeroutput "gauge_orth" gauge_orth_step!(it, state)
     ϵ = oftype(state.ϵ, norm(C₀ - C₁))
 
     iter = state.iter + 1
-    it.state = (; state.AL, state.C, state.A, state.A_tail, state.CA_tail, iter, ϵ)
+    it.state = (;
+        state.AL, state.C, state.A, state.A_tail, state.CA_tail, iter, ϵ, timeroutput,
+    )
 
     return (it.state.AL, it.state.C), it.state
 end
@@ -247,13 +265,16 @@ function gauge_orth_step!(it::IterativeSolver{LeftCanonical}, state)
     return C[end]
 end
 
-function uniform_rightorth!((AR, C), A, C₀, alg::RightCanonical)
+function uniform_rightorth!(
+        (AR, C), A, C₀, alg::RightCanonical;
+        timeroutput::TimerOutput = DISABLED_TIMER
+    )
     C[end] = normalize!(C₀)
     return LoggingExtras.withlevel(; alg.verbosity) do
         # initialize algorithm and temporary variables
         log = IterLog("RC")
         AC_tail = _similar_tail.(A) # pre-allocate workspace
-        state = (; AR, C, A, AC_tail, iter = 0, ϵ = Inf)
+        state = (; AR, C, A, AC_tail, iter = 0, ϵ = Inf, timeroutput)
         it = IterativeSolver(alg, state)
         loginit!(log, it.ϵ)
 
@@ -273,12 +294,13 @@ function uniform_rightorth!((AR, C), A, C₀, alg::RightCanonical)
 end
 
 function Base.iterate(it::IterativeSolver{RightCanonical}, state = it.state)
-    C₀ = gauge_eigsolve_step!(it, state)
-    C₁ = gauge_orth_step!(it, state)
+    timeroutput = state.timeroutput
+    C₀ = @timeit timeroutput "gauge_eigsolve" gauge_eigsolve_step!(it, state)
+    C₁ = @timeit timeroutput "gauge_orth" gauge_orth_step!(it, state)
     ϵ = oftype(state.ϵ, norm(C₀ - C₁))
 
     iter = state.iter + 1
-    it.state = (; state.AR, state.C, state.A, state.AC_tail, iter, ϵ)
+    it.state = (; state.AR, state.C, state.A, state.AC_tail, iter, ϵ, timeroutput)
 
     return (it.state.AR, it.state.C), it.state
 end

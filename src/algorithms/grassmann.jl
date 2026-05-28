@@ -12,7 +12,7 @@ module GrassmannMPS
 
 using ..MPSKit
 using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments,
-    AC_projection, recalculate!
+    AC_projection, recalculate!, TimerOutput, DISABLED_TIMER, @timeit
 using TensorKit
 using OhMyThreads
 import TensorKitManifolds.Grassmann
@@ -143,11 +143,12 @@ Compute the cost function and the tangent vector with respect to the `AL` parame
 """
 function fg(
         state::FiniteMPS, operator::Union{O, LazySum{O}},
-        envs::AbstractMPSEnvironments = environments(state, operator)
+        envs::AbstractMPSEnvironments = environments(state, operator);
+        timeroutput::TimerOutput = DISABLED_TIMER,
     ) where {O <: FiniteMPOHamiltonian}
-    f = expectation_value(state, operator, envs)
+    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
-    gs = map(1:length(state)) do i
+    gs = @timeit timeroutput "gradient" map(1:length(state)) do i
         AC′ = AC_projection(i, state, operator, state, envs)
         g = Grassmann.project(AC′, state.AL[i])
         return rmul(g, state.C[i]')
@@ -156,15 +157,18 @@ function fg(
 end
 function fg(
         state::InfiniteMPS, operator::Union{O, LazySum{O}},
-        envs::AbstractMPSEnvironments = environments(state, operator)
+        envs::AbstractMPSEnvironments = environments(state, operator);
+        timeroutput::TimerOutput = DISABLED_TIMER,
     ) where {O <: InfiniteMPOHamiltonian}
-    recalculate!(envs, state, operator, state)
-    f = expectation_value(state, operator, envs)
+    @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
+    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state), eltype(state)})
     gs = Vector{A}(undef, length(state))
-    tmap!(gs, 1:length(state); scheduler = MPSKit.Defaults.scheduler[]) do i
+    @timeit timeroutput "gradient" tmap!(
+        gs, 1:length(state); scheduler = MPSKit.Defaults.scheduler[]
+    ) do i
         AC′ = AC_projection(i, state, operator, state, envs)
         g = Grassmann.project(AC′, state.AL[i])
         return rmul(g, state.C[i]')
@@ -173,15 +177,18 @@ function fg(
 end
 function fg(
         state::InfiniteMPS, operator::Union{O, LazySum{O}},
-        envs::AbstractMPSEnvironments = environments(state, operator)
+        envs::AbstractMPSEnvironments = environments(state, operator);
+        timeroutput::TimerOutput = DISABLED_TIMER,
     ) where {O <: InfiniteMPO}
-    recalculate!(envs, state, operator, state)
-    f = expectation_value(state, operator, envs)
+    @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
+    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state), eltype(state)})
     gs = Vector{A}(undef, length(state))
-    tmap!(gs, eachindex(state); scheduler = MPSKit.Defaults.scheduler[]) do i
+    @timeit timeroutput "gradient" tmap!(
+        gs, eachindex(state); scheduler = MPSKit.Defaults.scheduler[]
+    ) do i
         AC′ = AC_projection(i, state, operator, state, envs)
         g = rmul!(Grassmann.project(AC′, state.AL[i]), -inv(f))
         return rmul(g, state.C[i]')
@@ -190,16 +197,19 @@ function fg(
 end
 function fg(
         state::MultilineMPS, operator::MultilineMPO,
-        envs::MultilineEnvironments = environments(state, operator)
+        envs::MultilineEnvironments = environments(state, operator);
+        timeroutput::TimerOutput = DISABLED_TIMER,
     )
     @assert length(state) == 1 "not implemented"
-    recalculate!(envs, state, operator, state)
-    f = expectation_value(state, operator, envs)
+    @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
+    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state), eltype(state)})
     gs = Matrix{A}(undef, size(state))
-    tforeach(eachindex(state); scheduler = MPSKit.Defaults.scheduler[]) do i
+    @timeit timeroutput "gradient" tforeach(
+        eachindex(state); scheduler = MPSKit.Defaults.scheduler[]
+    ) do i
         AC′ = AC_projection(i, state, operator, state, envs)
         g = rmul!(Grassmann.project(AC′, state.AL[i]), -inv(f))
         gs[i] = rmul(g, state.C[i]')

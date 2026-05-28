@@ -20,3 +20,13 @@ function Base.show(io::IO, ::MIME"text/plain", alg::Algorithm)
     end
     return nothing
 end
+
+# TIMEROUTPUT utility
+# -------------------
+# Shared sentinel passed as the default `timeroutput` kwarg by functions that optionally accept a timer.
+# `@timeit` is a no-op when the destination timer is disabled, so unrelated callers pay no instrumentation cost.
+# The merge sites that mutate `timeroutput` must gate on `timeroutput.enabled` so they don't pollute this shared object.
+const DISABLED_TIMER = let t = TimerOutput("DISABLED")
+    disable_timer!(t)
+    t
+end
