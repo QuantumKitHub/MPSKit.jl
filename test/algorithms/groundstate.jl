@@ -61,6 +61,31 @@ verbosity_conv = 1
         @test v < 1.0e-2
     end
 
+    @testset "CBEDMRG" begin
+        # start from a small bond so the bond expansion is exercised
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+        v₀ = variance(ψ₀, H)
+        expand = OptimalExpand(; trscheme = truncrank(D ÷ 2))
+        trscheme = truncrank(D)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H, CBEDMRG(; verbosity = verbosity_full, maxiter = 2, expand, trscheme)
+        )
+
+        ψ, envs, δ = find_groundstate(
+            ψ, H, CBEDMRG(; verbosity = verbosity_conv, maxiter = 10, expand, trscheme), envs
+        )
+        v = variance(ψ, H)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test v < v₀
+        @test v < 1.0e-2
+        # the bond should have grown to the truncation target
+        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+    end
+
     @testset "GradientGrassmann" begin
         ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
         v₀ = variance(ψ₀, H)
