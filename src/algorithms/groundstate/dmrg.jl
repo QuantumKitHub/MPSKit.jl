@@ -78,7 +78,21 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environme
     return ψ, envs, ϵ
 end
 
-struct CBEDMRG{A, F} <: Algorithm
+"""
+$(TYPEDEF)
+
+Single-site DMRG algorithm with Controlled Bond Expansion (CBE): before each single-site
+optimization the bond is enriched with directions orthogonal to the current state, so the
+optimization can grow the bond dimension while only ever diagonalizing a single-site effective
+Hamiltonian. The expansion is delegated to a pluggable bond-expansion sub-algorithm,
+allowing different selection strategies (e.g. [`OptimalExpand`](@ref),
+[`RandExpand`](@ref)) to be swapped in.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
+struct CBEDMRG{A, F, E <: Algorithm} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64
 
@@ -94,10 +108,81 @@ struct CBEDMRG{A, F} <: Algorithm
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F
 
-    selection::TruncationStrategy
+    "algorithm used to expand the bond dimension ahead of each single-site optimization"
+    expand::E
 
     "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the two-site update"
     trscheme::TruncationStrategy
+end
+function CBEDMRG(;
+        tol = Defaults.tol, maxiter = Defaults.maxiter, verbosity = Defaults.verbosity,
+        alg_eigsolve = (;), finalize = Defaults._finalize, expand, trscheme
+    )
+    alg_eigsolve′ = alg_eigsolve isa NamedTuple ? Defaults.alg_eigsolve(; alg_eigsolve...) :
+        alg_eigsolve
+    return CBEDMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize, expand, trscheme)
+end
+
+# One CBEDMRG half-sweep: for each bond in the sweep direction, expand the bond with directions
+# orthogonal to ψ, optimize the single-site tensor in the enlarged space, then truncate back down
+# and move the center. The expansion is shared with `changebonds` via `changebond!`; the
+# eigensolve + truncation + fidelity error are CBEDMRG-specific. The extra error measures
+# (ϵs_galerkin/ϵs_trunc/ϵs_2site) are diagnostics and do not drive convergence; ϵs is the
+# two-site fidelity that does.
+function cbe_sweep!(
+        ψ, H, envs, alg::CBEDMRG, alg_eigsolve, dir::Val{D},
+        ϵs, ϵs_galerkin, ϵs_trunc, ϵs_2site
+    ) where {D}
+    positions = D === :right ? (1:(length(ψ) - 1)) : (length(ψ):-1:2)
+    for pos in positions
+        # the two MPS tensors of the pre-update two-site state, kept by reference (the expansion
+        # builds new tensors rather than mutating these) for the DMRG2-style fidelity error
+        # below, so the dense two-site tensor is never formed
+        if D === :right
+            bra_left, bra_right = ψ.AC[pos], ψ.AR[pos + 1]
+            bond = pos
+        else
+            bra_left, bra_right = ψ.AL[pos - 1], ψ.AC[pos]
+            bond = pos - 1
+        end
+
+        # enrich the bond ahead of the optimization with directions orthogonal to ψ
+        _, info = changebond!(pos, dir, ψ, H, alg.expand, envs)
+        ϵs_2site[bond] = max(ϵs_2site[bond], info.ϵ_2site)
+        # the expanded neighbour tensor, kept for the fidelity contraction below
+        neighbor = D === :right ? ψ.AR[pos + 1] : ψ.AL[pos - 1]
+
+        # single-site optimization in the enlarged space
+        Hac = AC_hamiltonian(pos, ψ, H, ψ, envs)
+        _, AC′ = fixedpoint(Hac, ψ.AC[pos], :SR, alg_eigsolve)
+
+        # explicit truncated SVD: ϵ_trunc is the 2-norm of the discarded singular values,
+        # computed directly from the spectrum (no 1 - ‖C‖² cancellation). `v` is the overlap of
+        # the pre-update two-site state with the truncated, optimized one, contracted directly
+        # from the MPS factors in zipper order (peak intermediate is a single 3-leg tensor) so
+        # neither dense two-site tensor is formed; the truncated bond is internal, so the
+        # fidelity 1 - |v| -> 0 at convergence.
+        if D === :right
+            U, S, Vᴴ, ϵ_trunc = svd_trunc!(AC′; trunc = alg.trscheme, alg = Defaults.alg_svd())
+            AL′ = U
+            C = normalize!(S * Vᴴ)
+            v = @plansor bra_left[1 2; 7] * conj(AL′[1 2; 5]) * conj(C[5; 6]) *
+                bra_right[7 4; 3] * conj(neighbor[6 4; 3])
+            ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
+            ψ.AC[pos] = (AL′, C)
+        else
+            U, S, AR′, ϵ_trunc = svd_trunc!(_transpose_tail(AC′); trunc = alg.trscheme, alg = Defaults.alg_svd())
+            C = normalize!(U * S)
+            AR_mps = _transpose_front(AR′)
+            v = @plansor bra_left[1 2; 7] * conj(neighbor[1 2; 5]) * conj(C[5; 6]) *
+                bra_right[7 4; 3] * conj(AR_mps[6 4; 3])
+            ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
+            ψ.AC[pos] = (C, AR_mps)
+        end
+        ϵs_trunc[pos] = max(ϵs_trunc[pos], ϵ_trunc)
+        ϵs_galerkin[pos] = max(ϵs_galerkin[pos], calc_galerkin(pos, ψ, H, ψ, envs))
+    end
+    return ψ
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H::FiniteMPOHamiltonian, alg::CBEDMRG, envs = environments(ψ, H))
@@ -118,93 +203,9 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H::FiniteMPOHamiltonian, alg::
             zerovector!(ϵs_galerkin)
             zerovector!(ϵs_trunc)
             zerovector!(ϵs_2site)
-            for pos in 1:(length(ψ) - 1)
-                @plansor ac2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
 
-                # exact two-site update at bond (pos, pos+1), projected onto the complement
-                # of the current state (this is the exact analog of the randomized SVD)
-                AC2 = AC2_projection(pos, ψ, H, ψ, envs)
-                NL = left_null(ψ.AC[pos])
-                NR = right_null!(_transpose_tail(ψ.AR[pos + 1]; copy = true))
-                g2 = adjoint(NL) * AC2 * adjoint(NR)
-                # two-site Galerkin: norm of the two-site gradient in the complement, normalized
-                ϵs_2site[pos] = max(ϵs_2site[pos], norm(g2) / norm(AC2))
-                intermediate = normalize!(g2)
-                _, _, V = svd_trunc!(intermediate; trunc = alg.selection, alg = Defaults.alg_svd())
-
-                # expand the bond: optimal vectors at pos+1, zero weight at pos
-                ar_re = V * NR
-                ar_le = zerovector!(similar(ψ.AC[pos], codomain(ψ.AC[pos]) ← space(V, 1)))
-                Ql, C = qr_compact!(catdomain(ψ.AC[pos], ar_le))
-                AR_exp = _transpose_front(catcodomain(_transpose_tail(ψ.AR[pos + 1]), ar_re))
-                ψ.AC[pos] = (Ql, normalize!(C))
-                ψ.AC[pos + 1] = (C, AR_exp)
-
-                Hac = AC_hamiltonian(pos, ψ, H, ψ, envs)
-                _, AC′ = fixedpoint(Hac, ψ.AC[pos], :SR, alg_eigsolve)
-                # explicit truncated SVD: ϵ_trunc is the 2-norm of the discarded singular
-                # values, computed directly from the spectrum (no 1 - ‖C‖² cancellation)
-                U, S, Vᴴ, ϵ_trunc = svd_trunc!(AC′; trunc = alg.trscheme, alg = Defaults.alg_svd())
-                ϵs_trunc[pos] = max(ϵs_trunc[pos], ϵ_trunc)
-                AL′ = U
-                C = S * Vᴴ
-                normalize!(C)
-
-                # DMRG2-style error: 1 - fidelity between the two-site state before the
-                # eigensolver and the truncated, optimized two-site state after it. The
-                # truncated bond is internal, so this -> 0 at convergence.
-                @plansor ac2′[-1 -2; -3 -4] := AL′[-1 -2; 1] * C[1; 2] * AR_exp[2 -4; -3]
-                ϵs[pos] = max(ϵs[pos], abs(1 - abs(dot(ac2, ac2′))))
-
-                ψ.AC[pos] = (AL′, C)
-                ϵs_galerkin[pos] = max(ϵs_galerkin[pos], calc_galerkin(pos, ψ, H, ψ, envs))
-                # @debug "CBEDMRG L→R" pos ϵ = ϵs[pos]
-            end
-
-            for pos in length(ψ):-1:2
-                @plansor ac2[-1 -2; -3 -4] := ψ.AL[pos - 1][-1 -2; 1] * ψ.AC[pos][1 -4; -3]
-
-                # exact two-site update at bond (pos-1, pos), projected onto the complement
-                AC2 = AC2_projection(pos - 1, ψ, H, ψ, envs)
-                NL = left_null(ψ.AL[pos - 1])
-                NR = right_null!(_transpose_tail(ψ.AC[pos]; copy = true))
-                g2 = adjoint(NL) * AC2 * adjoint(NR)
-                # two-site Galerkin: norm of the two-site gradient in the complement, normalized
-                ϵs_2site[pos - 1] = max(ϵs_2site[pos - 1], norm(g2) / norm(AC2))
-                intermediate = normalize!(g2)
-                U, _, _ = svd_trunc!(intermediate; trunc = alg.selection, alg = Defaults.alg_svd())
-
-                # optimal new left vectors for AL[pos-1]; zero padding for AC[pos]'s left virtual
-                Q = NL * U
-                AL = ψ.AL[pos - 1]
-                al_le = zerovector!(
-                    similar(ψ.AC[pos], space(Q, 3)' ⊗ physicalspace(ψ.AC[pos]) ← right_virtualspace(ψ.AC[pos]))
-                )
-                C, Qr = lq_compact!(catcodomain(_transpose_tail(ψ.AC[pos]), _transpose_tail(al_le)))
-                AL_exp = catdomain(AL, Q)
-                ψ.AC[pos] = (normalize!(C), _transpose_front(Qr))
-                ψ.AC[pos - 1] = (AL_exp, C)
-
-                Hac = AC_hamiltonian(pos, ψ, H, ψ, envs)
-                _, AC′ = fixedpoint(Hac, ψ.AC[pos], :SR, alg_eigsolve)
-                # explicit truncated SVD: ϵ_trunc is the 2-norm of the discarded singular
-                # values, computed directly from the spectrum (no 1 - ‖C‖² cancellation)
-                U, S, AR′, ϵ_trunc = svd_trunc!(_transpose_tail(AC′); trunc = alg.trscheme, alg = Defaults.alg_svd())
-                ϵs_trunc[pos] = max(ϵs_trunc[pos], ϵ_trunc)
-                C = U * S
-                normalize!(C)
-                AR_mps = _transpose_front(AR′)
-
-                # DMRG2-style error: 1 - fidelity between the two-site state before the
-                # eigensolver and the truncated, optimized two-site state after it. The
-                # truncated bond is internal, so this -> 0 at convergence. AR_mps is in MPS
-                # form (physical in codomain) so the overlap with ac2 stays planar.
-                @plansor ac2′[-1 -2; -3 -4] := AL_exp[-1 -2; 1] * C[1; 2] * AR_mps[2 -4; -3]
-                ϵs[pos] = max(ϵs[pos], abs(1 - abs(dot(ac2, ac2′))))
-                # @debug "CBEDMRG R→L" pos ϵ = ϵs[pos]
-                ψ.AC[pos] = (C, AR_mps)
-                ϵs_galerkin[pos] = max(ϵs_galerkin[pos], calc_galerkin(pos, ψ, H, ψ, envs))
-            end
+            cbe_sweep!(ψ, H, envs, alg, alg_eigsolve, Val(:right), ϵs, ϵs_galerkin, ϵs_trunc, ϵs_2site)
+            cbe_sweep!(ψ, H, envs, alg, alg_eigsolve, Val(:left), ϵs, ϵs_galerkin, ϵs_trunc, ϵs_2site)
 
             ϵ = maximum(ϵs)
             @infov 2 "CBEDMRG errors" iter fidelity = ϵ local_galerkin = maximum(ϵs_galerkin) twosite_galerkin = maximum(ϵs_2site) truncation = maximum(ϵs_trunc)
