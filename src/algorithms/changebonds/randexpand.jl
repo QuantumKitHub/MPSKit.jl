@@ -68,28 +68,67 @@ end
 
 
 function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
+    # the expansion directions are sampled from a randomized two-site update, so no Hamiltonian
+    # or environments are required
     for i in 1:(length(ψ) - 1)
-        AC2 = randomize!(_transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1]))
-
-        #Calculate nullspaces for left and right
-        NL = left_null(ψ.AC[i])
-        NR = right_null!(_transpose_tail(ψ.AR[i + 1]; copy = true))
-
-        #Use this nullspaces and SVD decomposition to determine the optimal expansion space
-        intermediate = normalize!(adjoint(NL) * AC2 * adjoint(NR))
-        _, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
-
-        ar_re = Vᴴ * NR
-        ar_le = zerovector!(similar(ar_re, codomain(ψ.AC[i]) ← space(Vᴴ, 1)))
-
-        nal, nc = qr_compact!(catdomain(ψ.AC[i], ar_le))
-        nar = _transpose_front(catcodomain(_transpose_tail(ψ.AR[i + 1]), ar_re))
-
-        ψ.AC[i] = (nal, nc)
-        ψ.AC[i + 1] = (nc, nar)
+        changebond!(i, Val(:right), ψ, nothing, alg, nothing)
     end
 
     return normalize!(ψ)
+end
+
+function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::RandExpand, envs)
+    bond = site
+    left = ψ.AC[site]
+    right = ψ.AR[site + 1]
+    NL = left_null(left)
+    NR = right_null!(_transpose_tail(right; copy = true))
+
+    # randomized two-site update; H and envs are unused
+    ac2 = randomize!(AC2(ψ, bond))
+
+    # select the dominant directions in the complement of the current state
+    g2 = adjoint(NL) * ac2 * adjoint(NR)
+    ϵ_2site = norm(g2) / norm(ac2)
+    _, _, Vᴴ, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+
+    # optimal vectors at site+1, zero weight at site
+    ar_re = Vᴴ * NR
+    # embed `left` into the enlarged domain (zero weight in the new directions)
+    nal_space = codomain(left) ← (only(domain(left)) ⊕ space(Vᴴ, 1))
+    nal, nc = qr_compact!(absorb!(zerovector!(similar(left, nal_space)), left))
+    nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
+
+    ψ.AC[site] = (nal, normalize!(nc))
+    ψ.AC[site + 1] = (nc, nar)
+    return ψ, (; ϵ_select, ϵ_2site)
+end
+function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::RandExpand, envs)
+    bond = site - 1
+    left = ψ.AL[site - 1]
+    right = ψ.AC[site]
+    NL = left_null(left)
+    NR = right_null!(_transpose_tail(right; copy = true))
+
+    # randomized two-site update; H and envs are unused
+    ac2 = randomize!(AC2(ψ, bond))
+
+    # select the dominant directions in the complement of the current state
+    g2 = adjoint(NL) * ac2 * adjoint(NR)
+    ϵ_2site = norm(g2) / norm(ac2)
+    U, _, _, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+
+    # optimal vectors at site-1, zero weight at site
+    Q = NL * U
+    # embed `_transpose_tail(right)` into the enlarged codomain (zero weight in the new directions)
+    right_tail = _transpose_tail(right)
+    nc_space = (codomain(right_tail)[1] ⊕ space(Q, 3)') ← domain(right_tail)
+    nc, Qr = lq_compact!(absorb!(zerovector!(similar(right_tail, nc_space)), right_tail))
+    AL_exp = catdomain(left, Q)
+
+    ψ.AC[site] = (normalize!(nc), _transpose_front(Qr))
+    ψ.AC[site - 1] = (AL_exp, nc)
+    return ψ, (; ϵ_select, ϵ_2site)
 end
 
 """

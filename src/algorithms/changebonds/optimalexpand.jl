@@ -81,37 +81,69 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
     return newψ, envs
 end
 
-function changebonds(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ))
-    return changebonds!(copy(ψ), H, alg, envs)
+
+# Finite system
+# -------------
+function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs)
+    bond = site
+    left = ψ.AC[site]
+    right = ψ.AR[site + 1]
+    NL = left_null(left)
+    NR = right_null!(_transpose_tail(right; copy = true))
+
+    # two-site update from the projected effective Hamiltonian
+    AC2 = AC2_projection(bond, ψ, H, ψ, envs)
+
+    # select the dominant directions in the complement of the current state
+    g2 = adjoint(NL) * AC2 * adjoint(NR)
+    ϵ_2site = norm(g2) / norm(AC2)
+    _, _, Vᴴ, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+
+    # optimal vectors at site+1, zero weight at site
+    ar_re = Vᴴ * NR
+    # embed `left` into the enlarged domain (zero weight in the new directions)
+    nal_space = codomain(left) ← (only(domain(left)) ⊕ space(Vᴴ, 1))
+    nal, nc = qr_compact!(absorb!(zerovector!(similar(left, nal_space)), left))
+    nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
+
+    ψ.AC[site] = (nal, normalize!(nc))
+    ψ.AC[site + 1] = (nc, nar)
+    return ψ, (; ϵ_select, ϵ_2site)
+end
+function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs)
+    bond = site - 1
+    left = ψ.AL[site - 1]
+    right = ψ.AC[site]
+    NL = left_null(left)
+    NR = right_null!(_transpose_tail(right; copy = true))
+
+    # two-site update from the projected effective Hamiltonian
+    AC2 = AC2_projection(bond, ψ, H, ψ, envs)
+
+    # select the dominant directions in the complement of the current state
+    g2 = adjoint(NL) * AC2 * adjoint(NR)
+    ϵ_2site = norm(g2) / norm(AC2)
+    U, _, _, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+
+    # optimal vectors at site-1, zero weight at site
+    Q = NL * U
+    # embed `_transpose_tail(right)` into the enlarged codomain (zero weight in the new directions)
+    right_tail = _transpose_tail(right)
+    nc_space = (codomain(right_tail)[1] ⊕ space(Q, 3)') ← domain(right_tail)
+    nc, Qr = lq_compact!(absorb!(zerovector!(similar(right_tail, nc_space)), right_tail))
+    AL_exp = catdomain(left, Q)
+
+    ψ.AC[site] = (normalize!(nc), _transpose_front(Qr))
+    ψ.AC[site - 1] = (AL_exp, nc)
+    return ψ, (; ϵ_select, ϵ_2site)
 end
 
+changebonds(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ)) =
+    changebonds!(copy(ψ), H, alg, envs)
+
 function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ))
-    #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
-
-    #the idea is that we always want to expand the state in such a way that there are zeros at site i
-    #but "optimal vectors" at site i+1
-    #so during optimization of site i, you have access to these optimal vectors :)
-
     for i in 1:(length(ψ) - 1)
-        AC2 = AC2_projection(i, ψ, H, ψ, envs)
-
-        #Calculate nullspaces for left and right
-        NL = left_null(ψ.AC[i])
-        NR = right_null!(_transpose_tail(ψ.AR[i + 1]; copy = true))
-
-        #Use this nullspaces and SVD decomposition to determine the optimal expansion space
-        intermediate = normalize!(adjoint(NL) * AC2 * adjoint(NR))
-        _, _, V, = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
-
-        ar_re = V * NR
-        ar_le = zerovector!(similar(ar_re, codomain(ψ.AC[i]) ← space(V, 1)))
-
-        nal, nc = qr_compact!(catdomain(ψ.AC[i], ar_le))
-        nar = _transpose_front(catcodomain(_transpose_tail(ψ.AR[i + 1]), ar_re))
-
-        ψ.AC[i] = (nal, nc)
-        ψ.AC[i + 1] = (nc, nar)
+        changebond!(i, Val(:right), ψ, H, alg, envs)
     end
-
-    return (ψ, envs)
+    return ψ, envs
 end
