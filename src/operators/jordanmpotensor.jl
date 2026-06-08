@@ -60,7 +60,7 @@ end
 
 const JordanMPOTensorMap{T, S, A <: DenseVector{T}} = JordanMPOTensor{
     T, S,
-    Union{TensorMap{T, S, 2, 2, A}, BraidingTensor{T, S}},
+    Union{TensorMap{T, S, 2, 2, A}, BraidingTensor{T, S, A}},
     TensorMap{T, S, 2, 1, A},
     TensorMap{T, S, 1, 2, A},
     TensorMap{T, S, 1, 1, A},
@@ -124,7 +124,7 @@ end
 function jordanmpotensortype(::Type{S}, ::Type{E}) where {S <: VectorSpace, E}
     TA = tensormaptype(S, 2, 2, E)
     T = scalartype(TA)
-    Tτ = BraidingTensor{T, S}
+    Tτ = BraidingTensor{T, S, storagetype(TA)}
     TB = tensormaptype(S, 2, 1, E)
     TC = tensormaptype(S, 1, 2, E)
     TD = tensormaptype(S, 1, 1, E)
@@ -172,7 +172,7 @@ BlockTensorKit.issparse(W::JordanMPOTensor) = true
 # Converters
 # ----------
 function BlockTensorKit.SparseBlockTensorMap(W::JordanMPOTensor)
-    τ = BraidingTensor{scalartype(W)}(eachspace(W)[1])
+    τ = BraidingTensor{scalartype(W), spacetype(W), storagetype(W)}(eachspace(W)[1])
     W′ = SparseBlockTensorMap{AbstractTensorMap{scalartype(W), spacetype(W), 2, 2}}(
         undef_blocks, space(W)
     )
@@ -232,7 +232,7 @@ end
     j = I[4]
     if (size(W, 4) > 1 && i == 1 && j == 1) ||
             (size(W, 1) > 1 && i == size(W, 1) && j == size(W, 4))
-        return BraidingTensor{scalartype(W)}(eachspace(W)[1])
+        return BraidingTensor{scalartype(W), spacetype(W), storagetype(W)}(eachspace(W)[1])
     elseif i == 1 && j == size(W, 4)
         return insertrightunit(insertleftunit(only(W.D), 1), 3)
     elseif i == 1
