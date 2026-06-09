@@ -59,7 +59,7 @@ using Compat: @compat
 # Imports
 # -------
 using TensorKit
-using TensorKit: BraidingTensor
+using TensorKit: BraidingTensor, promote_storagetype
 using TensorKit: TupleTools as TT
 using MatrixAlgebraKit
 using MatrixAlgebraKit: TruncationStrategy
