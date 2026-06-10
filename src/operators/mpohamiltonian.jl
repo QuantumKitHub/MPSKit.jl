@@ -71,7 +71,7 @@ function FiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
     return FiniteMPOHamiltonian{W}(Ws)
 end
 function FiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: JordanMPOTensor}
-    T = storagetype(O)
+    T = scalartype(O)
     L = length(W_mats)
     # initialize sumspaces
     S = spacetype(O)
