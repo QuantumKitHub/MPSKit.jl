@@ -172,7 +172,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <:
         throw(ArgumentError("matrices should have the same size"))
     nlvls = size(W_mats[1], 1)
 
-    T = storagetype(O)
+    T = scalartype(O)
     L = length(W_mats)
     # initialize sumspaces
     S = spacetype(O)
