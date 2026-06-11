@@ -12,13 +12,7 @@ function left_canonicalize!(
 
     # orthogonalize second column against first
     Wi = W[1, 1, 1, 1]
-    if Wi isa BraidingTensor
-        Wi′ = removeunit(Wi, 1)
-        WI = similar(Wi′, TensorKit.storagetype(H))
-        copy!(WI, Wi′)
-    else
-        WI = removeunit(Wi, 1)
-    end
+    WI = removeunit(Wi, 1)
     @plansor t[l; r] := conj(WI[p; p' l]) * W.C[p; p' r]
     # TODO: the following is currently broken due to a TensorKit bug
     # @plansor C′[p; p' r] := W.C[p; p' r] - WI[p; p' l] * t[l; r]
@@ -107,13 +101,7 @@ function right_canonicalize!(
 
     # orthogonalize second row against last
     Wi = W[end, 1, 1, end]
-    if Wi isa BraidingTensor
-        Wi′ = removeunit(Wi, 4)
-        WI = similar(Wi′, TensorKit.storagetype(H))
-        copy!(WI, Wi′)
-    else
-        WI = removeunit(Wi, 4)
-    end
+    WI = removeunit(Wi, 4)
     @plansor t[l; r] := conj(WI[r p; p']) * W.B[l p; p']
     # TODO: the following is currently broken due to a TensorKit bug
     # @plansor B′[l p; p'] := W.B[l p; p'] - WI[r p; p'] * t[l; r]

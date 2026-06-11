@@ -87,11 +87,9 @@ end
 @testset "Finite CuMPOHamiltonian T ($T), V ($(spacetype(V)))" for T in (Float64, ComplexF64), V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
     L = 3
     lattice = fill(V, L)
-    O₁ = randn(T, V, V)
-    O₁ += O₁'
+    O₁ = project_hermitian!(randn(T, V ← V))
     E = id(CuVector{T, CUDA.DeviceMemory}, domain(O₁))
-    O₂ = randn(T, V^2 ← V^2)
-    O₂ += O₂'
+    O₂ = project_hermitian!(randn(T, V^2 ← V^2))
 
     dO₁ = adapt(CuVector{T, CUDA.DeviceMemory}, O₁)
     dO₂ = adapt(CuVector{T, CUDA.DeviceMemory}, O₂)
