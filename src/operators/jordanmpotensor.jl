@@ -205,8 +205,7 @@ end
 for f in (:real, :complex)
     @eval function Base.$f(W::JordanMPOTensor)
         E = $f(scalartype(W))
-        TE = TensorKit.similarstoragetype(TensorKit.storagetype(W), E)
-        W′ = similar(W, TE)
+        W′ = similar(W, E)
         for (I, v) in nonzero_pairs(W.A)
             W′.A[I] = $f(v)
         end
