@@ -59,18 +59,18 @@ function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
 end
 
 """
-    FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+    FiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
 
 Create a `FiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]` represents
 the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
 either `MPOTensor`, `Missing` or `Number`.
 """
-function FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+function FiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
     T = promote_type(_split_mpoham_types.(Ws)...)
     W = jordanmpotensortype(T)
     return FiniteMPOHamiltonian{W}(Ws)
 end
-function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPOTensor}
+function FiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: JordanMPOTensor}
     T = scalartype(O)
     L = length(W_mats)
     # initialize sumspaces
@@ -157,12 +157,12 @@ Create a `InfiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j,
 the the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
 either `MPOTensor`, `Missing` or `Number`.
 """
-function InfiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+function InfiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
     T = promote_type(_split_mpoham_types.(Ws)...)
     TW = jordanmpotensortype(T)
     return InfiniteMPOHamiltonian{TW}(Ws)
 end
-function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTensor}
+function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: MPOTensor}
     # InfiniteMPOHamiltonian only works for square matrices:
     for W_mat in W_mats
         size(W_mat, 1) == size(W_mat, 2) ||
@@ -504,10 +504,8 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     end
 
     # partial sort by interaction range
-    local_mpos = sort!(
-        map(Base.Fix1(instantiate_operator, lattice), collect(local_operators));
-        by = x -> length(x[1])
-    )
+    unsorted_mpos = map(Base.Fix1(instantiate_operator, lattice), [local_operators...])
+    local_mpos = sort!(unsorted_mpos; by = x -> length(x[1]))
 
     for (sites, local_mpo) in local_mpos
         local key_R # trick to define key_R before the first iteration
@@ -703,8 +701,8 @@ end
 function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O <: MPOTensor}
     return MPOHamiltonian(similar(parent(H), O, L))
 end
-function Base.similar(H::MPOHamiltonian, ::Type{T}) where {T <: Number}
-    return MPOHamiltonian(similar.(parent(H), T))
+function Base.similar(H::MPOHamiltonian, ::Type{TorA}) where {TorA <: Union{Number, DenseVector}}
+    return MPOHamiltonian(similar.(parent(H), TorA))
 end
 
 # Linear Algebra
@@ -729,7 +727,7 @@ function Base.:+(
             ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
-        H[i] = eltype(H)(V, A, B, C, D)
+        H[i] = JordanMPOTensor(V, A, B, C, D)
     end
     return FiniteMPOHamiltonian(H)
 end
@@ -751,7 +749,7 @@ function Base.:+(
         Vright = ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
-        H[i] = eltype(H)(V, A, B, C, D)
+        H[i] = JordanMPOTensor(V, A, B, C, D)
     end
     return InfiniteMPOHamiltonian(H)
 end
@@ -821,7 +819,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
         A,
         tensormaptype(
             spacetype(mps), numout(eltype(mps)), numin(eltype(mps)),
-            promote_type(scalartype(H), scalartype(mps))
+            promote_type(storagetype(H), storagetype(mps))
         )
     )
     # left to middle

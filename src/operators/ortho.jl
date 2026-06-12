@@ -11,7 +11,8 @@ function left_canonicalize!(
     d = sqrt(dim(P))
 
     # orthogonalize second column against first
-    WI = removeunit(W[1, 1, 1, 1], 1)
+    Wi = W[1, 1, 1, 1]
+    WI = removeunit(Wi, 1)
     @plansor t[l; r] := conj(WI[p; p' l]) * W.C[p; p' r]
     # TODO: the following is currently broken due to a TensorKit bug
     # @plansor C′[p; p' r] := W.C[p; p' r] - WI[p; p' l] * t[l; r]
@@ -99,7 +100,8 @@ function right_canonicalize!(
     d = sqrt(dim(P))
 
     # orthogonalize second row against last
-    WI = removeunit(W[end, 1, 1, end], 4)
+    Wi = W[end, 1, 1, end]
+    WI = removeunit(Wi, 4)
     @plansor t[l; r] := conj(WI[r p; p']) * W.B[l p; p']
     # TODO: the following is currently broken due to a TensorKit bug
     # @plansor B′[l p; p'] := W.B[l p; p'] - WI[r p; p'] * t[l; r]
@@ -124,7 +126,8 @@ function right_canonicalize!(
         end
         H[i] = JordanMPOTensor(V ⊗ P ← domain(W), Q1, Q2, W.C, W.D)
     else
-        tmp = transpose(cat(insertleftunit(B′, 4), W.A; dims = 4), ((1,), (3, 4, 2)))
+        B′′ = insertleftunit(B′, 4)
+        tmp = transpose(cat(B′′, W.A; dims = 4), ((1,), (3, 4, 2)))
         R, Q = right_orth!(tmp; alg)
         if dim(R) == 0
             V = _rightunit ⊞ _rightunit

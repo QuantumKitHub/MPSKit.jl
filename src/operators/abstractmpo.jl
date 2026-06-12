@@ -153,7 +153,7 @@ Compute the mpo tensor that arises from multiplying MPOs.
 """
 function fuse_mul_mpo(O1, O2)
     TT = promote_type(scalartype(O1), scalartype(O2))
-    T = TensorKit.similarstoragetype(storagetype(O1), TT)
+    T = TensorKit.promote_storagetype(TT, O1, O2)
     F_left = fuser(T, left_virtualspace(O2), left_virtualspace(O1))
     F_right = fuser(T, right_virtualspace(O2), right_virtualspace(O1))
     return _fuse_mpo_mpo(O1, O2, F_left, F_right)
@@ -190,7 +190,7 @@ end
 function add_physical_charge(O::MPOTensor, charge::Sector)
     sectortype(O) === typeof(charge) || throw(SectorMismatch())
     auxspace = Vect[typeof(charge)](charge => 1)'
-    F = fuser(scalartype(O), physicalspace(O), auxspace)
+    F = fuser(storagetype(O), physicalspace(O), auxspace)
     @plansor O_charged[-1 -2; -3 -4] := F[-2; 1 2] *
         O[-1 1; 4 3] * τ[3 2; 5 -4] * conj(F[-3; 4 5])
     return O_charged

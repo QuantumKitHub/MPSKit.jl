@@ -133,8 +133,10 @@ end
 function jordanmpotensortype(::Type{O}) where {O <: AbstractTensorMap}
     return jordanmpotensortype(spacetype(O), storagetype(O))
 end
-Base.similar(W::JordanMPOTensor, ::Type{TorA}) where {TorA} =
-    jordanmpotensortype(spacetype(W), TorA)(undef, space(W))
+function Base.similar(W::JordanMPOTensor, ::Type{T}) where {T <: Number}
+    TE = TensorKit.similarstoragetype(TensorKit.storagetype(W), T)
+    return jordanmpotensortype(spacetype(W), TE)(undef, space(W))
+end
 
 # Properties
 # ----------
@@ -205,7 +207,7 @@ end
 for f in (:real, :complex)
     @eval function Base.$f(W::JordanMPOTensor)
         E = $f(scalartype(W))
-        W′ = JordanMPOTensor{E}(undef, space(W))
+        W′ = similar(W, E)
         for (I, v) in nonzero_pairs(W.A)
             W′.A[I] = $f(v)
         end
@@ -242,7 +244,7 @@ end
     elseif 1 < i < size(W, 1) && 1 < j < size(W, 4)
         return W.A[i - 1, 1, 1, j - 1]
     else
-        return zeros(scalartype(W), eachspace(W)[i, 1, 1, j])
+        return zeros(storagetype(W), eachspace(W)[i, 1, 1, j])
     end
 end
 
