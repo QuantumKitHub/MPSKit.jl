@@ -704,7 +704,7 @@ end
 function Base.similar(H::MPOHamiltonian, ::Type{TorA}) where {TorA <: Union{Number, DenseVector}}
     return MPOHamiltonian(similar.(parent(H), TorA))
 end
-
+Base.circshift(H::InfiniteMPOHamiltonian, shift::Integer) = InfiniteMPOHamiltonian(circshift(parent(copy(H)), shift))
 # Linear Algebra
 # --------------
 function Base.:+(

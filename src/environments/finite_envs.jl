@@ -53,14 +53,14 @@ function environments(
     return environments(below, O, above, leftstart, rightstart)
 end
 function environments(
-        below::WindowMPS, O::Union{InfiniteMPOHamiltonian, InfiniteMPO}, above = nothing;
-        lenvs = environments(below.left_gs, O),
-        renvs = environments(below.right_gs, O)
+        below::WindowMPS, O::WindowMPOHamiltonian, above = nothing;
+        lenvs = environments(below.left_gs, O.left_ham),
+        renvs = environments(below.right_gs, O.right_ham)
     )
     leftstart = copy(lenvs.GLs[1])
     rightstart = copy(renvs.GRs[end])
 
-    return environments(below, O, above, leftstart, rightstart)
+    return environments(below, O.finite_ham, above, leftstart, rightstart)
 end
 
 function environments(below::S, above::S) where {S <: Union{FiniteMPS, WindowMPS}}
