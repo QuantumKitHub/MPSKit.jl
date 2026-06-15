@@ -63,7 +63,7 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:T
 end
 
 function localupdate_step!(
-        ::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
+        it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
     )
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
     alg_orth = alg_gauge.alg_orth
