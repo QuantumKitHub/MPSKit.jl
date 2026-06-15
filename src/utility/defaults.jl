@@ -38,12 +38,16 @@ const eigsolver = Arnoldi(; tol, maxiter, eager = true)
 # Default algorithms
 # ------------------
 
+alg_svd() = DefaultAlgorithm()
+alg_orth() = Householder(; positive = true)
+
 function alg_gauge(;
         tol = tolgauge, maxiter = maxiter, verbosity = VERBOSE_WARN,
+        alg_orth = alg_orth(),
         dynamic_tols = dynamic_tols, tol_min = tol_min, tol_max = tol_max,
         tol_factor = gauge_tolfactor
     )
-    alg = (; tol, maxiter, verbosity)
+    alg = (; tol, maxiter, verbosity, alg_orth)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
@@ -57,16 +61,12 @@ function alg_eigsolve(;
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
-alg_svd() = DefaultAlgorithm()
-alg_orth() = Householder(; positive = true)
-
-# TODO: make verbosity and maxiter actually do something
 function alg_environments(;
-        tol = tol, maxiter = maxiter, verbosity = 0,
+        tol = tol, maxiter = maxiter, verbosity = 0, krylovdim = krylovdim, eager = true,
         dynamic_tols = dynamic_tols, tol_min = tol_min, tol_max = tol_max,
         tol_factor = envs_tolfactor
     )
-    alg = (; tol, maxiter, verbosity)
+    alg = (; tol, maxiter, verbosity, eager, krylovdim)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 

@@ -57,7 +57,7 @@ function dominant_eigsolve(
     iter = 0
     ϵ = calc_galerkin(mps, operator, mps, envs)
     alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-    recalculate!(envs, mps, operator, mps; alg_environments.tol)
+    recalculate!(envs, mps, operator, mps; alg_environments...)
 
     state = VOMPSState(mps, operator, envs, iter, ϵ)
     it = IterativeSolver(alg, state)
@@ -100,9 +100,10 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state)
 end
 
 function localupdate_step!(
-        ::IterativeSolver{<:VOMPS}, state, scheduler = Defaults.scheduler[]
+        it::IterativeSolver{<:VOMPS}, state, scheduler = Defaults.scheduler[]
     )
-    alg_orth = Defaults.alg_orth()
+    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    alg_orth = alg_gauge.alg_orth
     mps = state.mps
     ACs = similar(mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
@@ -137,14 +138,14 @@ end
 
 function gauge_step!(it::IterativeSolver{<:VOMPS}, state, ACs::AbstractVector)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    return InfiniteMPS(ACs, state.mps.C[end]; alg_gauge.tol, alg_gauge.maxiter)
+    return InfiniteMPS(ACs, state.mps.C[end]; alg_gauge...)
 end
 function gauge_step!(it::IterativeSolver{<:VOMPS}, state, ACs::AbstractMatrix)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    return MultilineMPS(ACs, @view(state.mps.C[:, end]); alg_gauge.tol, alg_gauge.maxiter)
+    return MultilineMPS(ACs, @view(state.mps.C[:, end]); alg_gauge...)
 end
 
 function envs_step!(it::IterativeSolver{<:VOMPS}, state, mps)
     alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
-    return recalculate!(state.envs, mps, state.operator, mps; alg_environments.tol)
+    return recalculate!(state.envs, mps, state.operator, mps; alg_environments...)
 end
