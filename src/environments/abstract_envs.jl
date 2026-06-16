@@ -87,7 +87,7 @@ end
 function environment_alg(
         below, ::InfiniteMPOHamiltonian, above;
         tol = Defaults.tol, maxiter = Defaults.maxiter, krylovdim = Defaults.krylovdim,
-        verbosity = Defaults.VERBOSE_NONE
+        verbosity = Defaults.VERBOSE_NONE, kwargs...
     )
     max_krylovdim = ceil(Int, dim(left_virtualspace(above, 1)) * dim(left_virtualspace(below, 1)))
     return GMRES(; tol, maxiter, krylovdim = min(max_krylovdim, krylovdim), verbosity)
@@ -96,7 +96,7 @@ function environment_alg(
         ::Union{InfiniteQP, MultilineQP}, ::Union{InfiniteMPO, MultilineMPO},
         ::Union{InfiniteQP, MultilineQP};
         tol = Defaults.tol, maxiter = Defaults.maxiter, krylovdim = Defaults.krylovdim,
-        verbosity = Defaults.VERBOSE_NONE
+        verbosity = Defaults.VERBOSE_NONE, kwargs...
     )
     return GMRES(; tol, maxiter, krylovdim, verbosity)
 end
