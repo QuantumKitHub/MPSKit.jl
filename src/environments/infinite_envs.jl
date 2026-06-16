@@ -19,12 +19,19 @@ leftenv(envs::InfiniteEnvironments, site::Int, state) = envs.GLs[site]
 rightenv(envs::InfiniteEnvironments, site::Int, state) = envs.GRs[site]
 
 function environments(
-        below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
-        above::InfiniteMPS = below; kwargs...
+        below::InfiniteMPS, operator, above = below;
+        timeroutput::TimerOutput = DISABLED_TIMER, kwargs...
+    )
+    alg = environment_alg(below, operator, above; kwargs...)
+    return environments(below, operator, above, alg; timeroutput)
+end
+function environments(
+        below::InfiniteMPS, operator, above, alg;
+        timeroutput::TimerOutput = DISABLED_TIMER
     )
     GLs, GRs = initialize_environments(below, operator, above)
     envs = InfiniteEnvironments(GLs, GRs)
-    return recalculate!(envs, below, operator, above; kwargs...)
+    return recalculate!(envs, below, operator, above, alg; timeroutput)
 end
 
 function issamespace(
@@ -48,11 +55,34 @@ function issamespace(
 end
 
 function recalculate!(
+        envs::InfiniteEnvironments, below, operator, above = below;
+        timeroutput::TimerOutput = DISABLED_TIMER, kwargs...
+    )
+    alg = environment_alg(below, operator, above; kwargs...)
+    return recalculate!(envs, below, operator, above, alg; timeroutput)
+end
+function recalculate!(
         envs::InfiniteEnvironments, below::InfiniteMPS,
         operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
-        above::InfiniteMPS = below;
-        timeroutput::TimerOutput = DISABLED_TIMER,
+        above::InfiniteMPS, alg::DefaultAlgorithm;
         kwargs...
+    )
+    alg = environment_alg(below, operator, above; alg.kwargs...)
+    return recalculate!(envs, below, operator, above, alg; kwargs...)
+end
+function recalculate!(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
+        above::InfiniteMPS, alg::DynamicTol;
+        kwargs...
+    )
+    return recalculate!(envs, below, operator, above, alg.alg; kwargs...)
+end
+function recalculate!(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
+        above::InfiniteMPS, alg;
+        timeroutput::TimerOutput = DISABLED_TIMER,
     )
     if !issamespace(envs, below, operator, above)
         # TODO: in-place initialization?
@@ -60,8 +90,6 @@ function recalculate!(
         copy!(envs.GLs, GLs)
         copy!(envs.GRs, GRs)
     end
-
-    alg = environment_alg(below, operator, above; kwargs...)
 
     tree_point = String[section.name for section in timeroutput.timer_stack]
     @sync begin
@@ -117,8 +145,7 @@ function compute_rightenvs!(
     # push through unitcell
     for i in reverse(1:(length(operator) - 1))
         envs.GRs[i] = TransferMatrix(
-            above.AR[i + 1], operator[i + 1],
-            below.AR[i + 1]
+            above.AR[i + 1], operator[i + 1], below.AR[i + 1]
         ) * envs.GRs[i + 1]
     end
     return λ, envs

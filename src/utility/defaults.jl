@@ -66,7 +66,7 @@ function alg_environments(;
         dynamic_tols = dynamic_tols, tol_min = tol_min, tol_max = tol_max,
         tol_factor = envs_tolfactor
     )
-    alg = (; tol, maxiter, verbosity, eager, krylovdim)
+    alg = DefaultAlgorithm(; tol, maxiter, verbosity, eager, krylovdim)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 

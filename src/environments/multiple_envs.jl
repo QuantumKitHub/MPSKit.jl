@@ -10,8 +10,18 @@ Base.iterate(x::MultipleEnvironments) = iterate(x.envs)
 Base.iterate(x::MultipleEnvironments, i) = iterate(x.envs, i)
 
 # we need constructor, agnostic of particular MPS
-function environments(state, H::LazySum; kwargs...)
-    return MultipleEnvironments(map(Base.Fix1(environments, state), H.ops))
+function environments(below, H::LazySum, above = below; kwargs...)
+    return MultipleEnvironments(map(x -> environments(below, x, above; kwargs...), H.ops))
+end
+function environments(below, H::LazySum, above, alg; kwargs...)
+    return MultipleEnvironments(map(x -> environments(below, x, above, alg; kwargs...), H.ops))
+end
+# disambiguate:
+function environments(below::InfiniteMPS, H::LazySum, above = below; kwargs...)
+    return MultipleEnvironments(map(x -> environments(below, x, above; kwargs...), H.ops))
+end
+function environments(below::InfiniteMPS, H::LazySum, above, alg; kwargs...)
+    return MultipleEnvironments(map(x -> environments(below, x, above, alg; kwargs...), H.ops))
 end
 
 function environments(
@@ -26,15 +36,19 @@ function environments(
     )
 end
 
-# we need to define how to recalculate
-"""
-    Recalculate in-place each sub-env in MultipleEnvironments
-"""
 function recalculate!(
         envs::MultipleEnvironments, below, operator::LazySum, above = below; kwargs...
     )
     for (subenvs, subO) in zip(envs.envs, operator)
         recalculate!(subenvs, below, subO, above; kwargs...)
+    end
+    return envs
+end
+function recalculate!(
+        envs::MultipleEnvironments, below, operator::LazySum, above, alg; kwargs...
+    )
+    for (subenvs, subO) in zip(envs.envs, operator)
+        recalculate!(subenvs, below, subO, above, alg; kwargs...)
     end
     return envs
 end

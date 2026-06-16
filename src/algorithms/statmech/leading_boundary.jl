@@ -25,9 +25,16 @@ optimization algorithm will be attempted based on the supplied keywords.
 # TODO: alg selector
 
 # implementation always in terms of Multiline objects
-function leading_boundary(
-        state::InfiniteMPS, operator::InfiniteMPO, alg, envs = environments(state, operator)
+function leading_boundary(state::InfiniteMPS, operator::InfiniteMPO, alg)
+    state_multi = convert(MultilineMPS, state)
+    operator_multi = convert(MultilineMPO, operator)
+    state_multi′, envs_multi′, err = leading_boundary(
+        state_multi, operator_multi, alg,
     )
+    state′ = convert(InfiniteMPS, state_multi′)
+    return state′, only(envs_multi′), err
+end
+function leading_boundary(state::InfiniteMPS, operator::InfiniteMPO, alg, envs)
     state_multi = convert(MultilineMPS, state)
     operator_multi = convert(MultilineMPO, operator)
     envs_multi = Multiline([envs])
@@ -36,5 +43,5 @@ function leading_boundary(
         envs_multi
     )
     state′ = convert(InfiniteMPS, state_multi′)
-    return state′, envs, err
+    return state′, only(envs_multi′), err
 end

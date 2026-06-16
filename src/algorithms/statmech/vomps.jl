@@ -42,14 +42,12 @@ struct VOMPSState{S, O, E}
     ϵ::Float64
 end
 
-function leading_boundary(
-        ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS, envs = environments(ψ, O)
-    )
-    return dominant_eigsolve(O, ψ, alg, envs; which = :LM)
+function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::Union{VOMPS, VUMPS}, envs...)
+    return dominant_eigsolve(O, ψ, alg, envs...; which = :LM)
 end
 
 function dominant_eigsolve(
-        operator, mps, alg::VOMPS, envs = environments(mps, operator);
+        operator, mps, alg::VOMPS, envs = environments(mps, operator, mps, alg.alg_environments);
         which
     )
     @assert which === :LM "VOMPS only supports the LM eigenvalue problem"
@@ -57,7 +55,7 @@ function dominant_eigsolve(
     iter = 0
     ϵ = calc_galerkin(mps, operator, mps, envs)
     alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-    recalculate!(envs, mps, operator, mps; alg_environments...)
+    recalculate!(envs, mps, operator, mps, alg_environments)
 
     state = VOMPSState(mps, operator, envs, iter, ϵ)
     it = IterativeSolver(alg, state)
@@ -147,5 +145,5 @@ end
 
 function envs_step!(it::IterativeSolver{<:VOMPS}, state, mps)
     alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
-    return recalculate!(state.envs, mps, state.operator, mps; alg_environments...)
+    return recalculate!(state.envs, mps, state.operator, mps, alg_environments)
 end

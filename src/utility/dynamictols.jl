@@ -3,6 +3,7 @@ module DynamicTols
 import ..MPSKit: Algorithm
 using Accessors
 using DocStringExtensions
+using MatrixAlgebraKit: DefaultAlgorithm
 
 export updatetol, DynamicTol
 
@@ -70,6 +71,10 @@ end
 # default implementation with Accessors.jl, but can be hooked into
 function _updatetol(alg, tol::Real)
     return Accessors.@set alg.tol = tol
+end
+function _updatetol(alg::DefaultAlgorithm, tol::Real)
+    kwargs = merge(alg.kwargs, (; tol = tol))
+    return DefaultAlgorithm(; kwargs...)
 end
 
 end

@@ -47,13 +47,13 @@ struct VUMPSState{S, O, E}
 end
 
 function find_groundstate(
-        mps::InfiniteMPS, operator, alg::VUMPS, envs = environments(mps, operator)
+        mps::InfiniteMPS, operator, alg::VUMPS, envs...
     )
-    return dominant_eigsolve(operator, mps, alg, envs; which = :SR)
+    return dominant_eigsolve(operator, mps, alg, envs...; which = :SR)
 end
 
 function dominant_eigsolve(
-        operator, mps, alg::VUMPS, envs = environments(mps, operator);
+        operator, mps, alg::VUMPS, envs = environments(mps, operator, mps, alg.alg_environments);
         which
     )
     log = IterLog("VUMPS")
@@ -64,7 +64,7 @@ function dominant_eigsolve(
     mps = copy(mps)
     ϵ = calc_galerkin(mps, operator, mps, envs)
     alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-    recalculate!(envs, mps, operator, mps; alg_environments...)
+    recalculate!(envs, mps, operator, mps, alg_environments; timeroutput)
 
     state = VUMPSState(mps, operator, envs, iter, ϵ, which, timeroutput)
     it = IterativeSolver(alg, state)
@@ -201,8 +201,5 @@ end
 
 function envs_step!(it::IterativeSolver{<:VUMPS}, state, mps)
     alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
-    return recalculate!(
-        state.envs, mps, state.operator, mps;
-        state.timeroutput, alg_environments...,
-    )
+    return recalculate!(state.envs, mps, state.operator, mps, alg_environments; state.timeroutput)
 end
