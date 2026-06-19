@@ -9,6 +9,7 @@ using Test, TestExtras
 using MPSKit
 using TensorKit
 using TensorKit: ℙ
+using Random
 
 verbosity_full = 5
 verbosity_conv = 1
@@ -83,6 +84,47 @@ verbosity_conv = 1
         @test v < v₀
         @test v < 1.0e-2
         # the bond should have grown to the truncation target
+        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+    end
+
+    @testset "CBEDMRG (SketchedExpand)" begin
+        # randomized bond expansion at single-site cost
+        Random.seed!(1234)
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+        v₀ = variance(ψ₀, H)
+        expand = SketchedExpand(; trscheme = truncrank(D ÷ 2), oversampling = 4)
+        trscheme = truncrank(D)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H, CBEDMRG(; verbosity = verbosity_full, maxiter = 2, expand, trscheme)
+        )
+
+        ψ, envs, δ = find_groundstate(
+            ψ, H, CBEDMRG(; verbosity = verbosity_conv, maxiter = 15, expand, trscheme), envs
+        )
+        v = variance(ψ, H)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test v < v₀
+        @test v < 1.0e-2
+        # the bond should have grown to the truncation target
+        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+    end
+
+    @testset "CBEDMRG warmstart $(nameof(Exp))" for (Exp, kw) in
+            ((OptimalExpand, (;)), (SketchedExpand, (; oversampling = 4)))
+        # warmstart seeds the expansion with the two-site gradient (alters the state); the
+        # ground-state search should still converge to the correct low-variance state
+        Random.seed!(2025)
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+        expand = Exp(; trscheme = truncrank(D ÷ 2), warmstart = true, kw...)
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H, CBEDMRG(; verbosity = verbosity_conv, maxiter = 15, expand, trscheme = truncrank(D))
+        )
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test variance(ψ, H) < 1.0e-2
         @test dim(left_virtualspace(ψ, L ÷ 2)) == D
     end
 

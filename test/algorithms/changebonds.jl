@@ -84,6 +84,22 @@ end
     )
     @test dot(state, state_oe) ≈ 1 atol = 1.0e-8
 
+    state_se, _ = changebonds(
+        state, H,
+        SketchedExpand(; trscheme = truncrank(dim(Dspace) * dim(Dspace)), oversampling = 4)
+    )
+    @test dot(state, state_se) ≈ 1 atol = 1.0e-8
+
+    # `warmstart` seeds the new directions with the two-site gradient: the expansion is no longer
+    # norm-preserving, but the resulting state is still normalized
+    for (Exp, kw) in ((OptimalExpand, (;)), (SketchedExpand, (; oversampling = 4)))
+        state_ws, _ = changebonds(
+            state, H, Exp(; trscheme = truncrank(dim(Dspace) * dim(Dspace)), warmstart = true, kw...)
+        )
+        @test dot(state_ws, state_ws) ≈ 1 atol = 1.0e-8
+        @test !isapprox(abs(dot(state, state_ws)), 1; atol = 1.0e-4)
+    end
+
     state_tr = changebonds(state_oe, SvdCut(; trscheme = truncrank(dim(Dspace))))
 
     @test dim(left_virtualspace(state_tr, 5)) < dim(left_virtualspace(state_oe, 5))

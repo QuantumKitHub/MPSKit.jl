@@ -126,35 +126,35 @@ end
 # One CBEDMRG half-sweep: for each bond in the sweep direction, expand the bond with directions
 # orthogonal to ψ, optimize the single-site tensor in the enlarged space, then truncate back down
 # and move the center. The expansion is shared with `changebonds` via `changebond!`; the
-# eigensolve + truncation + fidelity error are CBEDMRG-specific. The extra error measures
-# (ϵs_galerkin/ϵs_trunc/ϵs_2site) are diagnostics and do not drive convergence; ϵs is the
-# two-site fidelity that does.
+# eigensolve + truncation + fidelity error are CBEDMRG-specific. Only `ϵs` (the two-site
+# fidelity) is threaded back to drive convergence; the per-bond diagnostics (truncation,
+# local Galerkin, and the expansion's own ϵ_select/ϵ_2site) are emitted via `@infov 4`.
 function cbe_sweep!(
-        ψ, H, envs, alg::CBEDMRG, alg_eigsolve, dir::Val{D},
-        ϵs, ϵs_galerkin, ϵs_trunc, ϵs_2site
+        ψ, H, envs, alg::CBEDMRG, alg_eigsolve, dir::Val{D}, ϵs, timeroutput
     ) where {D}
     positions = D === :right ? (1:(length(ψ) - 1)) : (length(ψ):-1:2)
     for pos in positions
+        local AC′, ϵ_trunc, v
         # the two MPS tensors of the pre-update two-site state, kept by reference (the expansion
         # builds new tensors rather than mutating these) for the DMRG2-style fidelity error
         # below, so the dense two-site tensor is never formed
         if D === :right
             bra_left, bra_right = ψ.AC[pos], ψ.AR[pos + 1]
-            bond = pos
         else
             bra_left, bra_right = ψ.AL[pos - 1], ψ.AC[pos]
-            bond = pos - 1
         end
 
         # enrich the bond ahead of the optimization with directions orthogonal to ψ
-        _, info = changebond!(pos, dir, ψ, H, alg.expand, envs)
-        ϵs_2site[bond] = max(ϵs_2site[bond], info.ϵ_2site)
+        # (the expansion logs its own ϵ_select/ϵ_2site diagnostics at @infov 4)
+        @timeit timeroutput "expand" changebond!(pos, dir, ψ, H, alg.expand, envs)
         # the expanded neighbour tensor, kept for the fidelity contraction below
         neighbor = D === :right ? ψ.AR[pos + 1] : ψ.AL[pos - 1]
 
         # single-site optimization in the enlarged space
-        Hac = AC_hamiltonian(pos, ψ, H, ψ, envs)
-        _, AC′ = fixedpoint(Hac, ψ.AC[pos], :SR, alg_eigsolve)
+        @timeit timeroutput "AC_eigsolve" begin
+            Hac = AC_hamiltonian(pos, ψ, H, ψ, envs)
+            _, AC′ = fixedpoint(Hac, ψ.AC[pos], :SR, alg_eigsolve)
+        end
 
         # explicit truncated SVD: ϵ_trunc is the 2-norm of the discarded singular values,
         # computed directly from the spectrum (no 1 - ‖C‖² cancellation). `v` is the overlap of
@@ -162,37 +162,36 @@ function cbe_sweep!(
         # from the MPS factors in zipper order (peak intermediate is a single 3-leg tensor) so
         # neither dense two-site tensor is formed; the truncated bond is internal, so the
         # fidelity 1 - |v| -> 0 at convergence.
-        if D === :right
-            U, S, Vᴴ, ϵ_trunc = svd_trunc!(AC′; trunc = alg.trscheme, alg = Defaults.alg_svd())
-            AL′ = U
-            C = normalize!(S * Vᴴ)
-            v = @plansor bra_left[1 2; 7] * conj(AL′[1 2; 5]) * conj(C[5; 6]) *
-                bra_right[7 4; 3] * conj(neighbor[6 4; 3])
-            ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
-            ψ.AC[pos] = (AL′, C)
-        else
-            U, S, AR′, ϵ_trunc = svd_trunc!(_transpose_tail(AC′); trunc = alg.trscheme, alg = Defaults.alg_svd())
-            C = normalize!(U * S)
-            AR_mps = _transpose_front(AR′)
-            v = @plansor bra_left[1 2; 7] * conj(neighbor[1 2; 5]) * conj(C[5; 6]) *
-                bra_right[7 4; 3] * conj(AR_mps[6 4; 3])
-            ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
-            ψ.AC[pos] = (C, AR_mps)
+        @timeit timeroutput "svd_trunc" begin
+            if D === :right
+                U, S, Vᴴ, ϵ_trunc = svd_trunc!(AC′; trunc = alg.trscheme, alg = Defaults.alg_svd())
+                AL′ = U
+                C = normalize!(S * Vᴴ)
+                v = @plansor bra_left[1 2; 7] * conj(AL′[1 2; 5]) * conj(C[5; 6]) *
+                    bra_right[7 4; 3] * conj(neighbor[6 4; 3])
+                ψ.AC[pos] = (AL′, C)
+            else
+                U, S, AR′, ϵ_trunc = svd_trunc!(_transpose_tail(AC′); trunc = alg.trscheme, alg = Defaults.alg_svd())
+                C = normalize!(U * S)
+                AR_mps = _transpose_front(AR′)
+                v = @plansor bra_left[1 2; 7] * conj(neighbor[1 2; 5]) * conj(C[5; 6]) *
+                    bra_right[7 4; 3] * conj(AR_mps[6 4; 3])
+                ψ.AC[pos] = (C, AR_mps)
+            end
         end
-        ϵs_trunc[pos] = max(ϵs_trunc[pos], ϵ_trunc)
-        ϵs_galerkin[pos] = max(ϵs_galerkin[pos], calc_galerkin(pos, ψ, H, ψ, envs))
+        fid = abs(1 - abs(v))
+        ϵs[pos] = max(ϵs[pos], fid)
+        @infov 4 "CBEDMRG bond" pos fidelity = fid truncation = ϵ_trunc galerkin = calc_galerkin(pos, ψ, H, ψ, envs)
     end
     return ψ
 end
 
-function find_groundstate!(ψ::AbstractFiniteMPS, H::FiniteMPOHamiltonian, alg::CBEDMRG, envs = environments(ψ, H))
+function find_groundstate!(ψ::AbstractFiniteMPS, H::FiniteMPOHamiltonian, alg::CBEDMRG, envs = environments(ψ, H, ψ))
     ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
-    # extra debug error measures (do not drive convergence; ϵ remains the two-site fidelity)
-    ϵs_galerkin = zero(ϵs)   # local (one-site) Galerkin error
-    ϵs_trunc = zero(ϵs)      # bond-truncation error (discarded weight)
-    ϵs_2site = zero(ϵs)      # two-site Galerkin error (complement-projected two-site gradient)
-    log = IterLog("DMRG")
+    log = IterLog("CBEDMRG")
+    timeroutput = TimerOutput("CBEDMRG")
+    alg.verbosity > 3 || disable_timer!(timeroutput)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, H, envs))
@@ -200,23 +199,25 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H::FiniteMPOHamiltonian, alg::
             alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
 
             zerovector!(ϵs)
-            zerovector!(ϵs_galerkin)
-            zerovector!(ϵs_trunc)
-            zerovector!(ϵs_2site)
 
-            cbe_sweep!(ψ, H, envs, alg, alg_eigsolve, Val(:right), ϵs, ϵs_galerkin, ϵs_trunc, ϵs_2site)
-            cbe_sweep!(ψ, H, envs, alg, alg_eigsolve, Val(:left), ϵs, ϵs_galerkin, ϵs_trunc, ϵs_2site)
+            @timeit timeroutput "sweep" begin
+                cbe_sweep!(ψ, H, envs, alg, alg_eigsolve, Val(:right), ϵs, timeroutput)
+                cbe_sweep!(ψ, H, envs, alg, alg_eigsolve, Val(:left), ϵs, timeroutput)
+            end
 
             ϵ = maximum(ϵs)
-            @infov 2 "CBEDMRG errors" iter fidelity = ϵ local_galerkin = maximum(ϵs_galerkin) twosite_galerkin = maximum(ϵs_2site) truncation = maximum(ϵs_trunc)
 
-            ψ, envs = alg.finalize(iter, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
+            ψ, envs = @timeit timeroutput "finalize" alg.finalize(
+                iter, ψ, H, envs
+            )::Tuple{typeof(ψ), typeof(envs)}
 
             if ϵ <= alg.tol
+                @infov 4 timeroutput
                 @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
+                @infov 4 timeroutput
                 @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
             else
                 @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
@@ -321,6 +322,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environm
                         ψ.AC[pos] = (al, complex(c))
                     end
                 end
+            end
 
             ϵ = maximum(ϵs)
             ψ, envs = @timeit timeroutput "finalize" alg.finalize(

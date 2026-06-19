@@ -23,6 +23,9 @@ $(TYPEDFIELDS)
 
     "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy] the expanded space"
     trscheme::TruncationStrategy
+
+    "setting for how much information is displayed"
+    verbosity::Int = Defaults.verbosity
 end
 
 function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
@@ -70,8 +73,10 @@ end
 function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
     # the expansion directions are sampled from a randomized two-site update, so no Hamiltonian
     # or environments are required
-    for i in 1:(length(ψ) - 1)
-        changebond!(i, Val(:right), ψ, nothing, alg, nothing)
+    LoggingExtras.withlevel(; alg.verbosity) do
+        for i in 1:(length(ψ) - 1)
+            changebond!(i, Val(:right), ψ, nothing, alg, nothing)
+        end
     end
 
     return normalize!(ψ)
@@ -89,8 +94,9 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Ra
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * ac2 * adjoint(NR)
-    ϵ_2site = norm(g2) / norm(ac2)
+    gradnorm = norm(g2)
     _, _, Vᴴ, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+    @infov 4 "bond expansion" site dir = :right ϵ_select ϵ_2site = gradnorm / norm(ac2)
 
     # optimal vectors at site+1, zero weight at site
     ar_re = Vᴴ * NR
@@ -101,7 +107,7 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Ra
 
     ψ.AC[site] = (nal, normalize!(nc))
     ψ.AC[site + 1] = (nc, nar)
-    return ψ, (; ϵ_select, ϵ_2site)
+    return ψ
 end
 function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::RandExpand, envs)
     bond = site - 1
@@ -115,8 +121,9 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ran
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * ac2 * adjoint(NR)
-    ϵ_2site = norm(g2) / norm(ac2)
+    gradnorm = norm(g2)
     U, _, _, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+    @infov 4 "bond expansion" site dir = :left ϵ_select ϵ_2site = gradnorm / norm(ac2)
 
     # optimal vectors at site-1, zero weight at site
     Q = NL * U
@@ -128,7 +135,7 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ran
 
     ψ.AC[site] = (normalize!(nc), _transpose_front(Qr))
     ψ.AC[site - 1] = (AL_exp, nc)
-    return ψ, (; ϵ_select, ϵ_2site)
+    return ψ
 end
 
 """

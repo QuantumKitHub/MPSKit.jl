@@ -37,7 +37,7 @@ export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo
 export TDVP, TDVP2, WI, WII, TaylorCluster
 export changebonds, changebonds!
-export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand
+export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
 export propagator
 export DynamicalDMRG, NaiveInvert, Jeckelmann
 export exact_diagonalization, fidelity_susceptibility
@@ -156,6 +156,7 @@ include("algorithms/changebonds/optimalexpand.jl")
 include("algorithms/changebonds/vumpssvd.jl")
 include("algorithms/changebonds/svdcut.jl")
 include("algorithms/changebonds/randexpand.jl")
+include("algorithms/changebonds/sketchedexpand.jl")
 
 include("algorithms/timestep/tdvp.jl")
 include("algorithms/timestep/taylorcluster.jl")
