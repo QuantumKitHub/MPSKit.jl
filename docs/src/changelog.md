@@ -23,9 +23,18 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- `environments` now follows a single positional contract for every state and operator kind:
+  `environments(below, operator, above = below, alg)`, where `alg` is the environment
+  algorithm (slot 4). Auxiliary inputs are keyword-only: `leftstart`/`rightstart` for finite
+  and window environments, and `lenvs`/`renvs` for window and quasiparticle environments.
+
 ### Deprecated
 
 ### Removed
+
+- The positional boundary forms `environments(below, operator, leftstart, rightstart)` and
+  `environments(below, operator, above, leftstart, rightstart)` for finite environments. Pass
+  the boundary tensors as the `leftstart`/`rightstart` keyword arguments instead.
 
 ### Fixed
 
