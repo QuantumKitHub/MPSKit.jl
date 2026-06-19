@@ -56,9 +56,10 @@ struct GradientGrassmann{O <: OptimKit.OptimizationAlgorithm, F} <: Algorithm
 end
 
 function find_groundstate(
-        ψ::S, H, alg::GradientGrassmann, envs::P = environments(ψ, H)
+        style::GeometryStyle, ψ::S, H, alg::GradientGrassmann,
+        envs::P = environments(ψ, H)
     )::Tuple{S, P, Float64} where {S, P}
-    !isa(ψ, FiniteMPS) || dim(ψ.C[end]) == 1 ||
+    !(style isa FiniteChainStyle) || dim(ψ.C[end]) == 1 ||
         @warn "This is not fully supported - split the mps up in a sum of mps's and optimize separately"
     normalize!(ψ)
 
