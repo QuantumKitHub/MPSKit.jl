@@ -28,7 +28,7 @@ function fidelity_susceptibility(
         end
 
         vec, convhist = linsolve(Tos, Tos, GMRES(; maxiter = maxiter, tol = tol)) do x
-            return effective_excitation_hamiltonian(H₀, x, environments(x, H₀, henvs))
+            return effective_excitation_hamiltonian(H₀, x, environments(x, H₀, x; lenvs = henvs))
         end
         convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
 

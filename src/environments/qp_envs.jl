@@ -35,7 +35,7 @@ function environments(
 end
 
 function environments(
-        qp::MultilineQP, operator::MultilineMPO, above, alg; lenvs, renvs
+        qp::MultilineQP, operator::MultilineMPO, above, alg; lenvs, renvs = lenvs
     )
     (rows = size(qp, 1)) == size(operator, 1) || throw(ArgumentError("Incompatible sizes"))
     envs = map(1:rows) do row
@@ -47,7 +47,7 @@ function environments(
 end
 
 function environments(
-        exci::InfiniteQP, H::InfiniteMPOHamiltonian, above, alg; lenvs, renvs
+        exci::InfiniteQP, H::InfiniteMPOHamiltonian, above, alg; lenvs, renvs = lenvs
     )
     ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1)) .+ 1
     solver = resolve_environment_solver(alg, exci, H, exci)

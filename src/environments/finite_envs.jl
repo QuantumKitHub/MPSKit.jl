@@ -16,7 +16,7 @@ struct FiniteEnvironments{A, B, C, D} <: AbstractMPSEnvironments
     GRs::Vector{D}
 end
 
-function initialize_environments(below::FiniteMPS, operator, above, leftstart, rightstart)
+function initialize_environments(below::AbstractFiniteMPS, operator, above, leftstart, rightstart)
     N = length(below)
     leftenvs = [i == 0 ? leftstart : similar(leftstart) for i in 0:N]
     rightenvs = [i == N ? rightstart : similar(rightstart) for i in 0:N]

@@ -29,7 +29,7 @@ approximate, approximate!
 # implementation in terms of Multiline
 function approximate(
         ψ::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO, <:InfiniteMPS}, algorithm,
-        envs = environments(ψ, toapprox)
+        envs = environments(ψ, toapprox...)
     )
     envs′ = Multiline([envs])
     multi, envs, δ = approximate(
@@ -43,16 +43,15 @@ end
 
 # dispatch to in-place method
 function approximate(
-        ψ, toapprox, alg::Union{DMRG, DMRG2, IDMRG, IDMRG2},
-        envs = environments(ψ, toapprox)
+        ψ, toapprox, alg::Union{DMRG, DMRG2, IDMRG, IDMRG2}, envs...
     )
-    return approximate!(copy(ψ), toapprox, alg, envs)
+    return approximate!(copy(ψ), toapprox, alg, envs...)
 end
 
 # disambiguate
 function approximate(
         ψ::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO, <:InfiniteMPS},
-        algorithm::Union{IDMRG, IDMRG2}, envs = environments(ψ, toapprox)
+        algorithm::Union{IDMRG, IDMRG2}, envs = environments(ψ, toapprox...)
     )
     envs′ = Multiline([envs])
     multi, envs, δ = approximate(
