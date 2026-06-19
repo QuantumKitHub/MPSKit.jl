@@ -16,71 +16,65 @@ struct FiniteEnvironments{A, B, C, D} <: AbstractMPSEnvironments
     GRs::Vector{D}
 end
 
-function environments(below, (operator, above)::Tuple, args...; kwargs...)
-    return environments(below, operator, above, args...; kwargs...)
-end
-function environments(below, operator, leftstart, rightstart)
-    return environments(below, operator, nothing, leftstart, rightstart)
-end
-function environments(below, operator, above, leftstart, rightstart)
-    leftenvs = [i == 0 ? leftstart : similar(leftstart) for i in 0:length(below)]
+function initialize_environments(below::FiniteMPS, operator, above, leftstart, rightstart)
     N = length(below)
-    rightenvs = [i == N ? rightstart : similar(rightstart) for i in 0:length(below)]
+    leftenvs = [i == 0 ? leftstart : similar(leftstart) for i in 0:N]
+    rightenvs = [i == N ? rightstart : similar(rightstart) for i in 0:N]
 
     t = similar(below.AL[1])
     return FiniteEnvironments(
-        above, operator, fill(t, length(below)),
-        fill(t, length(below)),
-        leftenvs,
-        rightenvs
+        above, operator, fill(t, N), fill(t, N), leftenvs, rightenvs
     )
 end
 
 function environments(
-        below::FiniteMPS{S}, O::Union{FiniteMPO, FiniteMPOHamiltonian}, above = nothing
+        below::FiniteMPS{S}, operator::Union{FiniteMPO, FiniteMPOHamiltonian}, above = nothing;
+        leftstart = nothing, rightstart = nothing
     ) where {S}
-    Vl_bot = left_virtualspace(below, 1)
-    Vl_mid = left_virtualspace(O, 1)
-    Vl_top = isnothing(above) ? left_virtualspace(below, 1) : left_virtualspace(above, 1)
-    leftstart = isomorphism(storagetype(S), Vl_bot ⊗ Vl_mid' ← Vl_top)
-
     N = length(below)
-    Vr_bot = right_virtualspace(below, N)
-    Vr_mid = right_virtualspace(O, N)
-    Vr_top = isnothing(above) ? right_virtualspace(below, N) : right_virtualspace(above, N)
-    rightstart = isomorphism(storagetype(S), Vr_top ⊗ Vr_mid ← Vr_bot)
-
-    return environments(below, O, above, leftstart, rightstart)
+    if isnothing(leftstart)
+        Vl_bot = left_virtualspace(below, 1)
+        Vl_mid = left_virtualspace(operator, 1)
+        Vl_top = isnothing(above) ? left_virtualspace(below, 1) : left_virtualspace(above, 1)
+        leftstart = isomorphism(storagetype(S), Vl_bot ⊗ Vl_mid' ← Vl_top)
+    end
+    if isnothing(rightstart)
+        Vr_bot = right_virtualspace(below, N)
+        Vr_mid = right_virtualspace(operator, N)
+        Vr_top = isnothing(above) ? right_virtualspace(below, N) : right_virtualspace(above, N)
+        rightstart = isomorphism(storagetype(S), Vr_top ⊗ Vr_mid ← Vr_bot)
+    end
+    return initialize_environments(below, operator, above, leftstart, rightstart)
 end
 function environments(
-        below::WindowMPS, O::Union{InfiniteMPOHamiltonian, InfiniteMPO}, above = nothing;
-        lenvs = environments(below.left_gs, O),
-        renvs = environments(below.right_gs, O)
+        below::WindowMPS, operator::Union{InfiniteMPOHamiltonian, InfiniteMPO}, above = nothing;
+        lenvs = environments(below.left_gs, operator),
+        renvs = environments(below.right_gs, operator),
+        leftstart = copy(lenvs.GLs[1]),
+        rightstart = copy(renvs.GRs[end])
     )
-    leftstart = copy(lenvs.GLs[1])
-    rightstart = copy(renvs.GRs[end])
-
-    return environments(below, O, above, leftstart, rightstart)
+    return initialize_environments(below, operator, above, leftstart, rightstart)
 end
 
-function environments(below::S, above::S) where {S <: Union{FiniteMPS, WindowMPS}}
+environments(below::S, above::S) where {S <: Union{FiniteMPS, WindowMPS}} =
+    environments(below, nothing, above)
+function environments(below::S, ::Nothing, above::S) where {S <: Union{FiniteMPS, WindowMPS}}
     S isa WindowMPS &&
         (above.left_gs == below.left_gs || throw(ArgumentError("left gs differs")))
     S isa WindowMPS &&
         (above.right_gs == below.right_gs || throw(ArgumentError("right gs differs")))
 
-    operator = fill(nothing, length(below))
-    return environments(below, operator, above, l_LL(above), r_RR(above))
+    ops = fill(nothing, length(below))
+    return initialize_environments(below, ops, above, l_LL(above), r_RR(above))
 end
 
-function environments(state::Union{FiniteMPS, WindowMPS}, operator::ProjectionOperator)
-    @plansor leftstart[-1; -2 -3 -4] := l_LL(operator.ket)[-3; -4] *
-        l_LL(operator.ket)[-1; -2]
-    @plansor rightstart[-1; -2 -3 -4] := r_RR(operator.ket)[-1; -2] *
-        r_RR(operator.ket)[-3; -4]
-    return environments(
-        state, fill(nothing, length(state)), operator.ket, leftstart,
-        rightstart
+function environments(
+        state::Union{FiniteMPS, WindowMPS}, operator::ProjectionOperator, above = nothing
+    )
+    @plansor leftstart[-1; -2 -3 -4] := l_LL(operator.ket)[-3; -4] * l_LL(operator.ket)[-1; -2]
+    @plansor rightstart[-1; -2 -3 -4] := r_RR(operator.ket)[-1; -2] * r_RR(operator.ket)[-3; -4]
+    return initialize_environments(
+        state, fill(nothing, length(state)), operator.ket, leftstart, rightstart
     )
 end
 

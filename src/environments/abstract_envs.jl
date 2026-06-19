@@ -5,6 +5,13 @@ Abstract supertype for all environment types.
 """
 abstract type AbstractMPSEnvironments end
 
+@doc """
+    environments(below, operator, [above], [alg]; kwargs...)
+
+Construct the environments for the combination of `operator` sandwiched between the states `below` (bra) and `above` (ket).
+The keyword arguments or `alg` struct can be used to control the settings needed for computing the environments.
+""" environments
+
 # Locking
 # -------
 Base.lock(f::Function, envs::AbstractMPSEnvironments) = lock(f, envs.lock)
@@ -99,4 +106,19 @@ function environment_alg(
         verbosity = Defaults.VERBOSE_NONE, kwargs...
     )
     return GMRES(; tol, maxiter, krylovdim, verbosity)
+end
+
+"""
+    resolve_environment_solver(alg, below, operator, above)
+
+Resolve an environment algorithm `alg` into a concrete iterative solver for the given problem.
+A `KrylovKit` algorithm is returned as-is; the `DefaultAlgorithm`/`DynamicTol` configuration
+wrappers are translated via [`environment_alg`](@ref).
+"""
+resolve_environment_solver(alg, below, operator, above) = alg
+function resolve_environment_solver(alg::DefaultAlgorithm, below, operator, above)
+    return environment_alg(below, operator, above; alg.kwargs...)
+end
+function resolve_environment_solver(alg::DynamicTol, below, operator, above)
+    return resolve_environment_solver(alg.alg, below, operator, above)
 end

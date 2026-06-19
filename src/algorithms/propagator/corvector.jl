@@ -187,7 +187,7 @@ function squaredenvs(
 
     # to construct the squared caches we will first initialize environments
     # then make all data invalid so it will be recalculated
-    envs² = environments(state, H², leftstart, rightstart)
+    envs² = environments(state, H²; leftstart, rightstart)
     for i in 1:L
         poison!(envs², i)
     end

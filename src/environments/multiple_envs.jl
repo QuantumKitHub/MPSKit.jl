@@ -16,13 +16,6 @@ end
 function environments(below, H::LazySum, above, alg; kwargs...)
     return MultipleEnvironments(map(x -> environments(below, x, above, alg; kwargs...), H.ops))
 end
-# disambiguate:
-function environments(below::InfiniteMPS, H::LazySum, above = below; kwargs...)
-    return MultipleEnvironments(map(x -> environments(below, x, above; kwargs...), H.ops))
-end
-function environments(below::InfiniteMPS, H::LazySum, above, alg; kwargs...)
-    return MultipleEnvironments(map(x -> environments(below, x, above, alg; kwargs...), H.ops))
-end
 
 function environments(
         st::WindowMPS, H::LazySum;

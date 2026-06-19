@@ -47,7 +47,7 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renv
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = EffectiveExcitationHamiltonian(H, lenvs, renvs, E)
     Es, ϕs, convhist = eigsolve(ϕ₀, num, :SR, alg.alg) do ϕ
-        return H_eff(ϕ; alg.alg_environments...)
+        return H_eff(ϕ, alg.alg_environments)
     end
     convhist.converged < num &&
         @warn "excitation failed to converge: normres = $(convhist.normres)"
@@ -149,7 +149,7 @@ function excitations(
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = EffectiveExcitationHamiltonian(H, lenvs, renvs, E)
     Es, ϕs, convhist = eigsolve(ϕ₀, num, :SR, alg.alg) do ϕ
-        return H_eff(ϕ; alg.alg_environments...)
+        return H_eff(ϕ, alg.alg_environments)
     end
 
     convhist.converged < num &&
@@ -201,7 +201,7 @@ function excitations(
     H_eff = Multiline(H_effs)
 
     Es, ϕs, convhist = eigsolve(ϕ₀, num, :LM, alg.alg) do ϕ
-        return H_eff(ϕ; alg.alg_environments...)
+        return H_eff(ϕ, alg.alg_environments)
     end
     convhist.converged < num &&
         @warn "excitation failed to converge: normres = $(convhist.normres)"
@@ -217,7 +217,7 @@ function excitations(
     H_eff = EffectiveExcitationHamiltonian(H_eff, lenvs, renvs, E)
 
     Es, ϕs, convhist = eigsolve(ϕ₀, num, :LM, alg.alg) do ϕ
-        return H_eff(ϕ; alg.alg_environments...)
+        return H_eff(ϕ, alg.alg_environments)
     end
     convhist.converged < num &&
         @warn "excitation failed to converge: normres = $(convhist.normres)"
@@ -288,12 +288,14 @@ end
 # to allow Multiline checks
 Base.length(H::EffectiveExcitationHamiltonian) = length(H.operator)
 
-function (H::EffectiveExcitationHamiltonian)(ϕ::QP; kwargs...)
-    qp_envs = environments(ϕ, H.operator, H.lenvs, H.renvs; kwargs...)
+function (H::EffectiveExcitationHamiltonian)(ϕ::QP, alg_environments = DefaultAlgorithm())
+    qp_envs = environments(ϕ, H.operator, ϕ, alg_environments; lenvs = H.lenvs, renvs = H.renvs)
     return effective_excitation_hamiltonian(H.operator, ϕ, qp_envs, H.energy)
 end
-function (H::Multiline{<:EffectiveExcitationHamiltonian})(ϕ::MultilineQP; kwargs...)
-    return Multiline(map((x, y) -> x(y; kwargs...), parent(H), parent(ϕ)))
+function (H::Multiline{<:EffectiveExcitationHamiltonian})(
+        ϕ::MultilineQP, alg_environments = DefaultAlgorithm()
+    )
+    return Multiline(map((x, y) -> x(y, alg_environments), parent(H), parent(ϕ)))
 end
 
 function effective_excitation_hamiltonian(H, ϕ, envs = environments(ϕ, H))
