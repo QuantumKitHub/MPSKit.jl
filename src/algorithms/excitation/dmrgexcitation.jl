@@ -4,7 +4,7 @@ $(TYPEDEF)
 Variational optimization algorithm for excitations of finite MPS by minimizing the energy of
 
 ```math
-H - λᵢ |ψᵢ⟩⟨ψᵢ|
+H + λᵢ |ψᵢ⟩⟨ψᵢ|
 ```
 
 ## Fields
