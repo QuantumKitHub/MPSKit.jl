@@ -37,8 +37,8 @@ function excitations(
     nstates = (states..., ne)
     ens, excis = excitations(H, alg, nstates; init = init, num = num - 1)
 
-    push!(ens, expectation_value(ne, H))
-    push!(excis, ne)
+    pushfirst!(ens, expectation_value(ne, H))
+    pushfirst!(excis, ne)
 
     return ens, excis
 end
