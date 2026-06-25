@@ -22,7 +22,7 @@ end
 
 # Simple wrapper to convert between diffrent type of InifniteMPS.
 function changebonds(
-        ψ::InfiniteMPS, operator::InfiniteMPO, alg::OptimalExpand, envs = environments(ψ, operator)
+        ψ::InfiniteMPS, operator::InfiniteMPO, alg::OptimalExpand, envs = environments(ψ, operator, ψ)
     )
     ψ′, envs′ = changebonds(
         convert(MultilineMPS, ψ), convert(MultilineMPO, operator), alg, Multiline([envs])
@@ -32,7 +32,7 @@ end
 
 function changebonds(
         ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExpand,
-        envs = environments(ψ, H)
+        envs = environments(ψ, H, ψ)
     )
     T = eltype(ψ.AL)
     AL′ = similar(ψ.AL)
@@ -52,11 +52,11 @@ function changebonds(
     end
 
     newψ = _expand(ψ, AL′, AR′)
-    envs = environments(newψ, H)
+    envs = environments(newψ, H, newψ)
     return newψ, envs
 end
 
-function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environments(ψ, H))
+function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ))
     TL = eltype(ψ.AL)
     AL′ = PeriodicMatrix{TL}(undef, size(ψ.AL))
     TR = tensormaptype(spacetype(TL), 1, numind(TL) - 1, storagetype(TL))
@@ -77,15 +77,15 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
     end
 
     newψ = _expand(ψ, AL′, AR′)
-    envs = environments(newψ, H) #  recalculate!(envs, newψ, H)
+    envs = environments(newψ, H, newψ) #  recalculate!(envs, newψ, H)
     return newψ, envs
 end
 
-function changebonds(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H))
+function changebonds(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ))
     return changebonds!(copy(ψ), H, alg, envs)
 end
 
-function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H))
+function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ))
     #inspired by the infinite mps algorithm, alternative is to use https://arxiv.org/pdf/1501.05504.pdf
 
     #the idea is that we always want to expand the state in such a way that there are zeros at site i

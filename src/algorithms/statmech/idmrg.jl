@@ -1,5 +1,5 @@
 function leading_boundary(
-        ψ::MultilineMPS, operator, alg::IDMRG, envs = environments(ψ, operator)
+        ψ::MultilineMPS, operator, alg::IDMRG, envs = environments(ψ, operator, ψ)
     )
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
@@ -62,7 +62,7 @@ function leading_boundary(
 end
 
 function leading_boundary(
-        ψ::MultilineMPS, operator, alg::IDMRG2, envs = environments(ψ, operator)
+        ψ::MultilineMPS, operator, alg::IDMRG2, envs = environments(ψ, operator, ψ)
     )
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol

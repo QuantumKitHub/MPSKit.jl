@@ -3,6 +3,6 @@ struct LazyLincoCache{A <: LinearCombination, C <: Tuple} <: AbstractMPSEnvironm
     envs::C
 end
 
-function environments(state, H::LinearCombination)
-    return LazyLincoCache(H, broadcast(o -> environments(state, o), H.opps))
+function environments(below, H::LinearCombination, above = below)
+    return LazyLincoCache(H, broadcast(o -> environments(below, o, above), H.opps))
 end

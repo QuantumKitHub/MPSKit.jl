@@ -74,7 +74,7 @@ function IDMRGState{T}(
     return IDMRGState{S, O, E, T}(mps, operator, envs, iter, ϵ, T(energy), timeroutput)
 end
 
-function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps, operator)) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
+function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps, operator, mps)) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
     (length(mps) ≤ 1 && alg isa IDMRG2) && throw(ArgumentError("unit cell should be >= 2"))
     name = alg isa IDMRG ? "IDMRG" : "IDMRG2"
     log = IterLog(name)

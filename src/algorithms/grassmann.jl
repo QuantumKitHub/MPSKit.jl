@@ -137,13 +137,13 @@ function transport!(h, state, g, α::Real, state′)
 end
 
 """
-    fg(state, operator, envs=environments(state, operator))
+    fg(state, operator, envs=environments(state, operator, state))
 
 Compute the cost function and the tangent vector with respect to the `AL` parameters of the state.
 """
 function fg(
         state::FiniteMPS, operator::Union{O, LazySum{O}},
-        envs::AbstractMPSEnvironments = environments(state, operator);
+        envs::AbstractMPSEnvironments = environments(state, operator, state);
         timeroutput::TimerOutput = DISABLED_TIMER,
     ) where {O <: FiniteMPOHamiltonian}
     f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
@@ -157,7 +157,7 @@ function fg(
 end
 function fg(
         state::InfiniteMPS, operator::Union{O, LazySum{O}},
-        envs::AbstractMPSEnvironments = environments(state, operator);
+        envs::AbstractMPSEnvironments = environments(state, operator, state);
         timeroutput::TimerOutput = DISABLED_TIMER,
     ) where {O <: InfiniteMPOHamiltonian}
     @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
@@ -177,7 +177,7 @@ function fg(
 end
 function fg(
         state::InfiniteMPS, operator::Union{O, LazySum{O}},
-        envs::AbstractMPSEnvironments = environments(state, operator);
+        envs::AbstractMPSEnvironments = environments(state, operator, state);
         timeroutput::TimerOutput = DISABLED_TIMER,
     ) where {O <: InfiniteMPO}
     @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
@@ -197,7 +197,7 @@ function fg(
 end
 function fg(
         state::MultilineMPS, operator::MultilineMPO,
-        envs::MultilineEnvironments = environments(state, operator);
+        envs::MultilineEnvironments = environments(state, operator, state);
         timeroutput::TimerOutput = DISABLED_TIMER,
     )
     @assert length(state) == 1 "not implemented"
@@ -245,7 +245,7 @@ end
 
 # utility test function
 function optimtest(
-        ψ, O, envs = environments(ψ, O);
+        ψ, O, envs = environments(ψ, O, ψ);
         alpha = -0.1:0.001:0.1, retract = retract, inner = inner
     )
     _fg(x) = fg(x, O, envs)

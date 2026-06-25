@@ -12,7 +12,7 @@ Base.@deprecate(
 
 function approximate(
         mps::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS}, alg::VOMPS,
-        envs = environments(mps, toapprox)
+        envs = environments(mps, toapprox...)
     )
     log = IterLog("VOMPS")
     iter = 0

@@ -68,7 +68,7 @@ function exact_diagonalization(
     TB = tensormaptype(spacetype(H), 1, 1, T)
     Cs = Vector{Union{Missing, TB}}(missing, L + 1)
     state = FiniteMPS(ALs, ARs, ACs, Cs)
-    envs = environments(state, H)
+    envs = environments(state, H, state)
 
     # optimize the middle site
     # Because the MPS is full rank - this is equivalent to the full Hamiltonian

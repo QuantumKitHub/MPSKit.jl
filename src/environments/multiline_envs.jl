@@ -1,7 +1,7 @@
 const MultilineEnvironments{E <: AbstractMPSEnvironments} = Multiline{E}
 
 function environments(
-        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS = below;
+        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS;
         kwargs...
     )
     (rows = size(above, 1)) == size(operator, 1) == size(below, 1) ||

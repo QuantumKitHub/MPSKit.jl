@@ -27,7 +27,7 @@ end
 
 function environments(
         exci::Union{InfiniteQP, MultilineQP}, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian, MultilineMPO}, above = exci;
-        lenvs = environments(exci.left_gs, operator), renvs = istopological(exci) ? environments(exci.right_gs, operator) : lenvs,
+        lenvs = environments(exci.left_gs, operator, exci.left_gs), renvs = istopological(exci) ? environments(exci.right_gs, operator, exci.right_gs) : lenvs,
         kwargs...
     )
     alg = environment_alg(exci, operator, above; kwargs...)
@@ -134,8 +134,8 @@ end
 
 function environments(
         exci::FiniteQP, H::FiniteMPOHamiltonian, above = exci, alg = nothing;
-        lenvs = environments(exci.left_gs, H),
-        renvs = istopological(exci) ? environments(exci.right_gs, H) : lenvs
+        lenvs = environments(exci.left_gs, H, exci.left_gs),
+        renvs = istopological(exci) ? environments(exci.right_gs, H, exci.right_gs) : lenvs
     )
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR

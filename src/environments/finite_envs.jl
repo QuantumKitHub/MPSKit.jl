@@ -28,7 +28,7 @@ function initialize_environments(below::AbstractFiniteMPS, operator, above, left
 end
 
 function environments(
-        below::FiniteMPS{S}, operator::Union{FiniteMPO, FiniteMPOHamiltonian}, above = nothing;
+        below::FiniteMPS{S}, operator::Union{FiniteMPO, FiniteMPOHamiltonian}, above;
         leftstart = nothing, rightstart = nothing
     ) where {S}
     N = length(below)
@@ -47,9 +47,9 @@ function environments(
     return initialize_environments(below, operator, above, leftstart, rightstart)
 end
 function environments(
-        below::WindowMPS, operator::Union{InfiniteMPOHamiltonian, InfiniteMPO}, above = nothing;
-        lenvs = environments(below.left_gs, operator),
-        renvs = environments(below.right_gs, operator),
+        below::WindowMPS, operator::Union{InfiniteMPOHamiltonian, InfiniteMPO}, above;
+        lenvs = environments(below.left_gs, operator, below.left_gs),
+        renvs = environments(below.right_gs, operator, below.right_gs),
         leftstart = copy(lenvs.GLs[1]),
         rightstart = copy(renvs.GRs[end])
     )

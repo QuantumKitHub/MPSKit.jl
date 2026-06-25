@@ -56,12 +56,12 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renv
 end
 function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs; num = 1, kwargs...)
     # Infer `renvs` in function body as it depends on `solver`.
-    renvs = !istopological(ϕ₀) ? lenvs : environments(ϕ₀.right_gs, H; kwargs...)
+    renvs = !istopological(ϕ₀) ? lenvs : environments(ϕ₀.right_gs, H, ϕ₀.right_gs; kwargs...)
     return excitations(H, alg, ϕ₀, lenvs, renvs; num, kwargs...)
 end
 function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP; num = 1, kwargs...)
     # Infer `lenvs` in function body as it depends on `solver`.
-    lenvs = environments(ϕ₀.left_gs, H; kwargs...)
+    lenvs = environments(ϕ₀.left_gs, H, ϕ₀.left_gs; kwargs...)
     return excitations(H, alg, ϕ₀, lenvs; num, kwargs...)
 end
 
@@ -90,8 +90,8 @@ Create and optimize infinite quasiparticle states.
 """
 function excitations(
         H, alg::QuasiparticleAnsatz, momentum::Number, lmps::InfiniteMPS,
-        lenvs = environments(lmps, H), rmps::InfiniteMPS = lmps,
-        renvs = lmps === rmps ? lenvs : environments(rmps, H);
+        lenvs = environments(lmps, H, lmps), rmps::InfiniteMPS = lmps,
+        renvs = lmps === rmps ? lenvs : environments(rmps, H, rmps);
         sector = leftunit(lmps), kwargs...
     )
     ϕ₀ = LeftGaugedQP(rand, lmps, rmps; sector, momentum)
@@ -99,8 +99,8 @@ function excitations(
 end
 function excitations(
         H, alg::QuasiparticleAnsatz, momenta, lmps,
-        lenvs = environments(lmps, H), rmps = lmps,
-        renvs = lmps === rmps ? lenvs : environments(rmps, H);
+        lenvs = environments(lmps, H, lmps), rmps = lmps,
+        renvs = lmps === rmps ? lenvs : environments(rmps, H, rmps);
         verbosity = Defaults.verbosity, num = 1,
         sector = leftunit(lmps), parallel = true, kwargs...
     )
@@ -142,8 +142,8 @@ end
 
 function excitations(
         H, alg::QuasiparticleAnsatz, ϕ₀::FiniteQP,
-        lenvs = environments(ϕ₀.left_gs, H),
-        renvs = !istopological(ϕ₀) ? lenvs : environments(ϕ₀.right_gs, H);
+        lenvs = environments(ϕ₀.left_gs, H, ϕ₀.left_gs),
+        renvs = !istopological(ϕ₀) ? lenvs : environments(ϕ₀.right_gs, H, ϕ₀.right_gs);
         num = 1
     )
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
@@ -178,8 +178,8 @@ Create and optimize finite quasiparticle states.
 """
 function excitations(
         H, alg::QuasiparticleAnsatz, lmps::FiniteMPS,
-        lenvs = environments(lmps, H), rmps::FiniteMPS = lmps,
-        renvs = lmps === rmps ? lenvs : environments(rmps, H);
+        lenvs = environments(lmps, H, lmps), rmps::FiniteMPS = lmps,
+        renvs = lmps === rmps ? lenvs : environments(rmps, H, rmps);
         sector = leftunit(lmps), num = 1
     )
     ϕ₀ = LeftGaugedQP(rand, lmps, rmps; sector)
@@ -230,7 +230,7 @@ function excitations(
         kwargs...
     )
     # Infer `renvs` in function body as it depends on `solver`.
-    renvs = !istopological(ϕ₀) ? lenvs : environments(ϕ₀.right_gs, H; kwargs...)
+    renvs = !istopological(ϕ₀) ? lenvs : environments(ϕ₀.right_gs, H, ϕ₀.right_gs; kwargs...)
     return excitations(H, alg, ϕ₀, lenvs, renvs; kwargs...)
 end
 function excitations(
@@ -238,14 +238,14 @@ function excitations(
         num = 1, kwargs...
     )
     # Infer `lenvs` in function body as it depends on `solver`.
-    lenvs = environments(ϕ₀.left_gs, H; kwargs...)
+    lenvs = environments(ϕ₀.left_gs, H, ϕ₀.left_gs; kwargs...)
     return excitations(H, alg, ϕ₀, lenvs; num, kwargs...)
 end
 
 function excitations(
         H::MPO, alg::QuasiparticleAnsatz, momentum::Real, lmps::InfiniteMPS,
-        lenvs = environments(lmps, H), rmps::InfiniteMPS = lmps,
-        renvs = lmps === rmps ? lenvs : environments(rmps, H);
+        lenvs = environments(lmps, H, lmps), rmps::InfiniteMPS = lmps,
+        renvs = lmps === rmps ? lenvs : environments(rmps, H, rmps);
         kwargs...
     )
     multiline_H = convert(MultilineMPO, H)
@@ -267,8 +267,8 @@ end
 
 function excitations(
         H::MultilineMPO, alg::QuasiparticleAnsatz, momentum::Real, lmps::MultilineMPS,
-        lenvs = environments(lmps, H), rmps = lmps,
-        renvs = lmps === rmps ? lenvs : environments(rmps, H);
+        lenvs = environments(lmps, H, lmps), rmps = lmps,
+        renvs = lmps === rmps ? lenvs : environments(rmps, H, rmps);
         sector = leftunit(lmps), kwargs...
     )
     ϕ₀ = LeftGaugedQP(randn, lmps, rmps; sector, momentum)

@@ -26,7 +26,7 @@ function time_evolve end, function time_evolve! end
 for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time_evolve!))
     @eval function $time_evolve(
             ψ, H, t_span::AbstractVector{<:Number}, alg,
-            envs = environments(ψ, H);
+            envs = environments(ψ, H, ψ);
             verbosity::Int = 0, imaginary_evolution::Bool = false
         )
         log = IterLog("TDVP")

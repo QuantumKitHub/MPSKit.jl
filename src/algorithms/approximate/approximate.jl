@@ -1,13 +1,17 @@
 @doc """
     approximate(ψ₀, (O, ψ), algorithm, [environments]; kwargs...) -> (ψ, environments)
     approximate!(ψ₀, (O, ψ), algorithm, [environments]; kwargs...) -> (ψ, environments)
+    approximate(ψ₀, ψ, algorithm, [environments]; kwargs...) -> (ψ, environments)
+    approximate!(ψ₀, ψ, algorithm, [environments]; kwargs...) -> (ψ, environments)
 
 Compute an approximation to the application of an operator `O` to the state `ψ` in the form
-of an MPS `ψ₀`.
+of an MPS `ψ₀`. If only a state `ψ` is supplied instead of the `(O, ψ)` pair, `ψ₀` is
+approximated directly to `ψ` (i.e. `O` is taken to be the identity).
 
 ## Arguments
 - `ψ₀::AbstractMPS`: initial guess of the approximated state
 - `(O::AbstractMPO, ψ::AbstractMPS)`: operator `O` and state `ψ` to be approximated
+- `ψ::AbstractMPS`: state to be approximated directly (without an operator)
 - `algorithm`: approximation algorithm. See below for a list of available algorithms.
 - `[environments]`: MPS environment manager
 
@@ -25,6 +29,11 @@ of an MPS `ψ₀`.
 - `VOMPS`: Tangent space method for truncating uniform MPS.
 """
 approximate, approximate!
+
+# the trailing `environments` arguments for an operator/ket bundle:
+# a tuple carries an explicit operator (3-argument form), a bare state means overlap (2-argument form).
+_environment_args(Oϕ::Tuple) = Oϕ
+_environment_args(ϕ) = (ϕ,)
 
 # implementation in terms of Multiline
 function approximate(

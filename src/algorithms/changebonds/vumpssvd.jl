@@ -25,7 +25,7 @@ $(TYPEDFIELDS)
 end
 
 function changebonds_1(
-        state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H)
+        state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H, state)
     ) # would be more efficient if we also repeated envs
     # the unitcell==1 case is unique, because there you have a sef-consistency condition
 
@@ -48,10 +48,10 @@ function changebonds_1(
         [nstate.AL[1]], nstate.C[1]; alg.alg_gauge.tol, alg.alg_gauge.maxiter
     )
 
-    return collapsed, environments(collapsed, H)
+    return collapsed, environments(collapsed, H, collapsed)
 end
 
-function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H))
+function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H, state))
     for loc in 1:length(state)
         @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
 
@@ -77,12 +77,12 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environme
         copied[loc] = AL1
         copied[loc + 1] = AL2
         state = InfiniteMPS(copied; alg.alg_gauge.tol, alg.alg_gauge.maxiter)
-        envs = environments(state, H)
+        envs = environments(state, H, state)
     end
     return state, envs
 end
 
-function changebonds(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H))
+function changebonds(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H, state))
     return length(state) == 1 ? changebonds_1(state, H, alg, envs) :
         changebonds_n(state, H, alg, envs)
 end

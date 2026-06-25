@@ -6,10 +6,19 @@ Abstract supertype for all environment types.
 abstract type AbstractMPSEnvironments end
 
 @doc """
-    environments(below, operator, [above], [alg]; kwargs...)
+    environments(below, operator, above, [alg]; kwargs...)
+    environments(below, above)
 
-Construct the environments for the combination of `operator` sandwiched between the states `below` (bra) and `above` (ket).
+Construct the environments for the `operator` sandwiched between the states `below` (bra) and `above` (ket).
 The keyword arguments or `alg` struct can be used to control the settings needed for computing the environments.
+
+The two-argument form `environments(below, above)` (with two states) constructs the overlap environments, i.e. the operator-free environments between the bra `below` and the ket `above`.
+
+!!! note
+    The operator form requires an explicit `above`; there is no two-argument
+    `environments(below, operator)` shorthand. Because a two-argument call is the overlap form,
+    the second argument cannot be disambiguated between a ket (overlap) and an operator — this is
+    genuinely undecidable for density matrices, where states and operators share a representation.
 """ environments
 
 # Locking

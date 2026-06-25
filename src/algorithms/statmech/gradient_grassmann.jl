@@ -2,7 +2,7 @@ function leading_boundary(
         state::MultilineMPS,
         operator::MultilineMPO,
         alg::GradientGrassmann,
-        envs::MultilineEnvironments = environments(state, operator)
+        envs::MultilineEnvironments = environments(state, operator, state)
     )
     fg(x) = GrassmannMPS.fg(x, operator, envs)
     x, _, _, _, normgradhistory = optimize(

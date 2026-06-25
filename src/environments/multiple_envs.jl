@@ -18,12 +18,12 @@ function environments(below, H::LazySum, above, alg; kwargs...)
 end
 
 function environments(
-        st::WindowMPS, H::LazySum;
+        st::WindowMPS, H::LazySum, above = st;
         lenvs = environments(st.left_gs, H), renvs = environments(st.right_gs, H)
     )
     return MultipleEnvironments(
         map(
-            (op, sublenv, subrenv) -> environments(st, op; lenvs = sublenv, renvs = subrenv),
+            (op, sublenv, subrenv) -> environments(st, op, above; lenvs = sublenv, renvs = subrenv),
             H.ops, lenvs, renvs
         )
     )

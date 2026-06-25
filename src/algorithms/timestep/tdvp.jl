@@ -27,7 +27,7 @@ end
 
 function timestep(
         ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-        envs::AbstractMPSEnvironments = environments(ψ, H);
+        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         leftorthflag = true, imaginary_evolution::Bool = false
     )
     # convert state to complex if necessary
@@ -86,7 +86,7 @@ end
 
 function timestep!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-        envs::AbstractMPSEnvironments = environments(ψ, H);
+        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         imaginary_evolution::Bool = false
     )
 
@@ -166,7 +166,7 @@ end
 
 function timestep!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
-        envs::AbstractMPSEnvironments = environments(ψ, H);
+        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         imaginary_evolution::Bool = false
     )
 
@@ -221,12 +221,12 @@ function timestep(
     ψ′ = isreal ? complex(ψ) : copy(ψ)
     if length(envs) != 0 && isreal
         @warn "Currently cannot reuse real environments for complex evolution"
-        envs′ = environments(ψ′, H)
+        envs′ = environments(ψ′, H, ψ′)
     elseif length(envs) == 1
         envs′ = only(envs)
     else
         @assert length(envs) == 0 "Invalid signature"
-        envs′ = environments(ψ′, H)
+        envs′ = environments(ψ′, H, ψ′)
     end
     return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, kwargs...)
 end

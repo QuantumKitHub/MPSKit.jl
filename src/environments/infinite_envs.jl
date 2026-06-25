@@ -19,7 +19,7 @@ leftenv(envs::InfiniteEnvironments, site::Int, state) = envs.GLs[site]
 rightenv(envs::InfiniteEnvironments, site::Int, state) = envs.GRs[site]
 
 function environments(
-        below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above = below;
+        below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above;
         timeroutput::TimerOutput = DISABLED_TIMER, kwargs...
     )
     alg = environment_alg(below, operator, above; kwargs...)
