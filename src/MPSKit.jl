@@ -18,7 +18,7 @@ export QP, LeftGaugedQP, RightGaugedQP
 # operators:
 export AbstractMPO
 export MPO, FiniteMPO, InfiniteMPO
-export JordanMPOTensor, JordanMPOTensorMap
+export JordanMPOTensor
 export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian
 export MultilineMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
