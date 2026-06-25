@@ -194,19 +194,16 @@ end
 # reduced-leg blocks reconstructed from `tensors` and `scalars`
 function _jordan_A(W::JordanMPOTensor)
     rows, cols = size(W, 1), size(W, 4)
-    Tτ = BraidingTensor{scalartype(W), spacetype(W), storagetype(W)}
     TA = tensormaptype(spacetype(W), 2, 2, storagetype(W))
     VA = space(eachspace(W.tensors)[2:(end - 1), 1, 1, 2:(end - 1)])
-    A = SparseBlockTensorMap{Union{TA, Tτ}}(undef, VA)
+    A = SparseBlockTensorMap{TA}(undef, VA)
     for (I, v) in nonzero_pairs(W.tensors)
         (1 < I[1] < rows && 1 < I[4] < cols) || continue
         A[I[1] - 1, 1, 1, I[4] - 1] = v
     end
     for (K, c) in W.scalars
-        i, j = K[1], K[4]
-        (1 < i < rows && 1 < j < cols) || continue
-        τ = Tτ(eachspace(A)[i - 1, 1, 1, j - 1])
-        A[i - 1, 1, 1, j - 1] = isone(c) ? τ : scale!(TensorMap(τ), c)
+        (1 < K[1] < rows && 1 < K[4] < cols) || continue
+        A[K[1] - 1, 1, 1, K[4] - 1] = _identity_tensor(W, K, c)
     end
     return A
 end
@@ -291,40 +288,39 @@ end
 # Indexing
 # --------
 
-@inline Base.getindex(W::JordanMPOTensor, I::CartesianIndex{4}) = W[I.I...]
-@propagate_inbounds function Base.getindex(W::JordanMPOTensor, I::Vararg{Int, 4})
+@inline Base.getindex(W::JordanMPOTensor, I::Vararg{Int, 4}) = W[CartesianIndex(I)]
+@propagate_inbounds function Base.getindex(W::JordanMPOTensor, I::CartesianIndex{4})
     @assert I[2] == I[3] == 1
-    i, j = I[1], I[4]
-    K = CartesianIndex(i, 1, 1, j)
-    c = get(W.scalars, K, nothing)
+    c = get(W.scalars, I, nothing)
     if c !== nothing
-        return _identity_tensor(W, K, c)
-    elseif haskey(W.tensors, CartesianIndex(i, 1, 1, j))
-        return W.tensors[i, 1, 1, j]
+        return _identity_tensor(W, I, c)
+    elseif haskey(W.tensors, I)
+        return W.tensors[I]
     else
-        return zeros(storagetype(W), eachspace(W)[i, 1, 1, j])
+        return zeros(storagetype(W), eachspace(W)[I])
     end
 end
 
-@inline function Base.setindex!(W::JordanMPOTensor, v::MPOTensor, I::CartesianIndex{4})
-    return setindex!(W, v, I.I...)
+@inline function Base.setindex!(W::JordanMPOTensor, v::Union{MPOTensor, Number}, I::Vararg{Int, 4})
+    return setindex!(W, v, CartesianIndex(I))
 end
+@inline function Base.setindex!(W::JordanMPOTensor, v::Union{MPOTensor, Number}, I::Int)
+    return setindex!(W, v, CartesianIndices(W)[I])
+end
+# a scalar or a `BraidingTensor` is stored as a scalar identity; any other tensor is stored
+# in `tensors`
 @propagate_inbounds function Base.setindex!(
-        W::JordanMPOTensor, v::MPOTensor, I::Vararg{Int, 4}
+        W::JordanMPOTensor, v::Union{MPOTensor, Number}, I::CartesianIndex{4}
     )
     @assert I[2] == I[3] == 1
-    i, j = I[1], I[4]
-    if v isa BraidingTensor
-        haskey(W.tensors, CartesianIndex(i, 1, 1, j)) && delete!(W.tensors, CartesianIndex(i, 1, 1, j))
-        W.scalars[CartesianIndex(i, 1, 1, j)] = one(scalartype(W))
+    if v isa Number || v isa BraidingTensor
+        haskey(W.tensors, I) && delete!(W.tensors, I)
+        W.scalars[I] = v isa Number ? convert(scalartype(W), v) : one(scalartype(W))
     else
-        delete!(W.scalars, CartesianIndex(i, 1, 1, j))
-        W.tensors[i, 1, 1, j] = v
+        delete!(W.scalars, I)
+        W.tensors[I] = v
     end
     return W
-end
-@inline function Base.setindex!(W::JordanMPOTensor, v::MPOTensor, I::Int)
-    return setindex!(W, v, CartesianIndices(W)[I])
 end
 
 # Sparse functionality
