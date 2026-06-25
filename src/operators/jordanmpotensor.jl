@@ -134,8 +134,18 @@ function JordanMPOTensor(
     )
 end
 
+# whether `t` is (approximately) an identity braiding tensor, so it can be folded back
+# into a scalar identity
+function _isbraiding(t::AbstractTensorMap)
+    t isa BraidingTensor && return true
+    τ = BraidingTensor{scalartype(t), spacetype(t), storagetype(t)}(space(t))
+    return isapprox(t, τ)
+end
+
 function JordanMPOTensor(W::SparseBlockTensorMap{TT, E, S, 2, 2}) where {TT, E, S}
-    @assert W[1, 1, 1, 1] isa BraidingTensor && W[end, 1, 1, end] isa BraidingTensor
+    # the diagonal corners must be (close to) identity braidings; the constructor below
+    # folds them back into scalar identities
+    @assert _isbraiding(W[1, 1, 1, 1]) && _isbraiding(W[end, 1, 1, end])
     # @assert all(I -> I[1] ≤ I[4], nonzero_keys(W))
 
     A = W[2:(end - 1), 1, 1, 2:(end - 1)]
