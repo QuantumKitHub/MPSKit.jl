@@ -18,7 +18,7 @@ function approximate(
     iter = 0
     ϵ = calc_galerkin(mps, toapprox..., envs)
     alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-    recalculate!(envs, mps, toapprox...; alg_environments...)
+    recalculate!(envs, mps, toapprox..., alg_environments)
 
     state = VOMPSState(mps, toapprox, envs, iter, ϵ)
     it = IterativeSolver(alg, state)
@@ -120,5 +120,5 @@ end
 
 function envs_step!(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, mps)
     alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
-    return recalculate!(state.envs, mps, state.operator...; alg_environments...)
+    return recalculate!(state.envs, mps, state.operator..., alg_environments)
 end
