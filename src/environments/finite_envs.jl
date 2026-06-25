@@ -17,6 +17,7 @@ struct FiniteEnvironments{A, B, C, D} <: AbstractMPSEnvironments
 end
 
 function initialize_environments(below::AbstractFiniteMPS, operator, above, leftstart, rightstart)
+    above = above === below ? nothing : above
     N = length(below)
     leftenvs = [i == 0 ? leftstart : similar(leftstart) for i in 0:N]
     rightenvs = [i == N ? rightstart : similar(rightstart) for i in 0:N]
