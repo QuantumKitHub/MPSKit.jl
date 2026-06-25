@@ -12,38 +12,21 @@ A tensor map that represents the upper triangular block form of a matrix product
 ```
 """
 struct JordanMPOTensor{
-        E, S,
-        TA <: AbstractTensorMap{E, S, 2, 2},
-        TB <: AbstractTensorMap{E, S, 2, 1},
-        TC <: AbstractTensorMap{E, S, 1, 2},
-        TD <: AbstractTensorMap{E, S, 1, 1},
-    } <: AbstractBlockTensorMap{E, S, 2, 2}
-    V::TensorMapSumSpace{S, 2, 2}
-    A::SparseBlockTensorMap{TA, E, S, 2, 2, 4}
-    B::SparseBlockTensorMap{TB, E, S, 2, 1, 3}
-    C::SparseBlockTensorMap{TC, E, S, 1, 2, 3}
-    D::SparseBlockTensorMap{TD, E, S, 1, 1, 2}
+        T <: Number, S, A <: DenseVector{T},
+    } <: AbstractBlockTensorMap{T, S, 2, 2}
+    tensors::SparseBlockTensorMap{TensorMap{T, S, 2, 2, A}, T, S, 2, 2, 4}
+    scalars::Dict{CartesianIndex{2}, T}
+
     # uninitialized constructor
-    function JordanMPOTensor{E, S, TA, TB, TC, TD}(
+    function JordanMPOTensor{T, S, A}(
             ::UndefInitializer, V::TensorMapSumSpace{S, 2, 2}
-        ) where {E, S, TA, TB, TC, TD}
-        allVs = eachspace(V)
-
-        # Note that this is a bit of a hack using end to get the last index:
-        # it should be 1 or end depending on this being an "edge" tensor or a "bulk" tensor
-        VA = space(allVs[2:(end - 1), 1, 1, 2:(end - 1)])
-        A = SparseBlockTensorMap{TA}(undef, VA)
-
-        VB = removeunit(space(allVs[2:(end - 1), 1, 1, end]), 4)
-        B = SparseBlockTensorMap{TB}(undef, VB)
-
-        VC = removeunit(space(allVs[1, 1, 1, 2:(end - 1)]), 1)
-        C = SparseBlockTensorMap{TC}(undef, VC)
-
-        VD = removeunit(removeunit(space(allVs[1, 1, 1, end:end]), 4), 1)
-        D = SparseBlockTensorMap{TD}(undef, VD)
-
-        return new{E, S, TA, TB, TC, TD}(V, A, B, C, D)
+        ) where {T, S, A}
+        tensors = SparseBlockTensorMap{tensormaptype(S, 2, 2, A)}(undef, V)
+        scalars = Dict{CartesianIndex{2}, T}()
+        rows, cols = size(tensors, 1), size(tensors, 4)
+        cols > 1 && (scalars[CartesianIndex(1, 1)] = one(T))
+        rows > 1 && (scalars[CartesianIndex(rows, cols)] = one(T))
+        return new{T, S, A}(tensors, scalars)
     end
 
     # constructor from data
