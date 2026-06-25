@@ -63,16 +63,7 @@ function force_planar(x::SparseBlockTensorMap)
     return SparseBlockTensorMap{valtype(data)}(data, force_planar(space(x)))
 end
 function force_planar(W::JordanMPOTensor)
-    V = force_planar(space(W))
-    TW = MPSKit.jordanmpotensortype(eltype(V[1]), scalartype(W))
-    dst = TW(undef, V)
-
-    for t in (:A, :B, :C, :D)
-        for (I, v) in nonzero_pairs(getproperty(W, t))
-            getproperty(dst, t)[I] = force_planar(v)
-        end
-    end
-    return dst
+    return JordanMPOTensor(force_planar(W.tensors), copy(W.scalars))
 end
 force_planar(mpo::MPOHamiltonian) = MPOHamiltonian(map(force_planar, parent(mpo)))
 force_planar(mpo::MPO) = MPO(map(force_planar, parent(mpo)))

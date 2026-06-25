@@ -42,6 +42,13 @@ struct JordanMPOTensor{
     end
 end
 
+function JordanMPOTensor(
+        tensors::SparseBlockTensorMap{TensorMap{T, S, 2, 2, A}, T, S, 2, 2, 4},
+        scalars::Dict{CartesianIndex{2}, T}
+    ) where {T, S, A}
+    return JordanMPOTensor{T, S, A}(tensors, scalars)
+end
+
 function JordanMPOTensor{E, S}(::UndefInitializer, V::TensorMapSumSpace{S}) where {E, S}
     return jordanmpotensortype(S, E)(undef, V)
 end

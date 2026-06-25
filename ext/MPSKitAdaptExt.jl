@@ -32,7 +32,7 @@ end
 # inline to improve type stability with closures
 @inline Adapt.adapt_structure(to, mpo::MPO) = MPO(map(adapt(to), mpo.O))
 @inline Adapt.adapt_structure(to, W::MPSKit.JordanMPOTensor) =
-    MPSKit.JordanMPOTensor(space(W), adapt(to, W.A), adapt(to, W.B), adapt(to, W.C), adapt(to, W.D))
+    MPSKit.JordanMPOTensor(adapt(to, W.tensors), copy(W.scalars))
 @inline Adapt.adapt_structure(to, mpo::MPOHamiltonian) =
     MPOHamiltonian(map(x -> adapt(to, x), mpo.W))
 @inline Adapt.adapt_structure(to, ml::MPSKit.Multiline) = MPSKit.Multiline(map(adapt(to), ml.data))
