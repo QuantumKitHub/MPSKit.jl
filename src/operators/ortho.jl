@@ -10,14 +10,18 @@ function left_canonicalize!(
     S = spacetype(W)
     d = sqrt(dim(P))
 
+    # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
+    # them once and reuse the locals throughout
+    WA, WB, WC, WD = W.A, W.B, W.C, W.D
+
     # orthogonalize second column against first
     Wi = W[1, 1, 1, 1]
     WI = removeunit(Wi, 1)
-    @plansor t[l; r] := conj(WI[p; p' l]) * W.C[p; p' r]
+    @plansor t[l; r] := conj(WI[p; p' l]) * WC[p; p' r]
     # TODO: the following is currently broken due to a TensorKit bug
-    # @plansor C′[p; p' r] := W.C[p; p' r] - WI[p; p' l] * t[l; r]
+    # @plansor C′[p; p' r] := WC[p; p' r] - WI[p; p' l] * t[l; r]
     @plansor C′[p; p' r] := -WI[p; p' l] * t[l; r]
-    add!(C′, W.C)
+    add!(C′, WC)
 
     # QR of second column
     if size(W, 1) == 1
@@ -26,24 +30,24 @@ function left_canonicalize!(
 
         if dim(R) == 0 # fully truncated
             V = _rightunit ⊞ _rightunit
-            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
-            Q2 = typeof(W.C)(undef, P ← P ⊗ SumSpace{S}())
+            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
+            Q2 = typeof(WC)(undef, P ← P ⊗ SumSpace{S}())
         else
             V = ⊞(_rightunit, space(R, 1), _rightunit)
             scale!(Q, d)
             scale!(R, inv(d))
-            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ P ← P ⊗ space(R, 1))
+            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ space(R, 1))
             Q2 = transpose(Q, ((2,), (1, 3)))
         end
-        H[i] = JordanMPOTensor(codomain(W) ← physicalspace(W) ⊗ V, Q1, W.B, Q2, W.D)
+        H[i] = JordanMPOTensor(codomain(W) ← physicalspace(W) ⊗ V, Q1, WB, Q2, WD)
     else
-        tmp = transpose(cat(insertleftunit(C′, 1), W.A; dims = 1), ((3, 1, 2), (4,)))
+        tmp = transpose(cat(insertleftunit(C′, 1), WA; dims = 1), ((3, 1, 2), (4,)))
         Q, R = left_orth!(tmp; alg)
 
         if dim(R) == 0 # fully truncated
             V = _rightunit ⊞ _rightunit
-            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
-            Q2 = typeof(W.C)(undef, P ← P ⊗ SumSpace{S}())
+            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
+            Q2 = typeof(WC)(undef, P ← P ⊗ SumSpace{S}())
         else
             scale!(Q, d)
             scale!(R, inv(d))
@@ -52,33 +56,34 @@ function left_canonicalize!(
             Q2 = removeunit(SparseBlockTensorMap(Q′[1:1, 1, 1, 1]), 1)
             V = ⊞(_rightunit, right_virtualspace(Q′), _rightunit)
         end
-        H[i] = JordanMPOTensor(codomain(W) ← P ⊗ V, Q1, W.B, Q2, W.D)
+        H[i] = JordanMPOTensor(codomain(W) ← P ⊗ V, Q1, WB, Q2, WD)
     end
 
     # absorb into next site
     W′ = H[i + 1]
+    W′A, W′B, W′C, W′D = W′.A, W′.B, W′.C, W′.D
 
     if size(W′, 4) > 1 && dim(R) != 0
-        @plansor A′[l p; p' r] := R[l; r'] * W′.A[r' p; p' r]
+        @plansor A′[l p; p' r] := R[l; r'] * W′A[r' p; p' r]
     else
-        A′ = similar(W′.A, right_virtualspace(H[i].A) ⊗ physicalspace(W′) ← domain(W′.A))
+        A′ = similar(W′A, right_virtualspace(H[i].A) ⊗ physicalspace(W′) ← domain(W′A))
     end
 
     if size(W′, 4) > 1
-        @plansor C′[l p; p' r] := t[l; r'] * W′.A[r' p; p' r]
-        C′ = add!(removeunit(C′, 1), W′.C)
+        @plansor C′[l p; p' r] := t[l; r'] * W′A[r' p; p' r]
+        C′ = add!(removeunit(C′, 1), W′C)
     else
-        C′ = W′.C # empty
+        C′ = W′C # empty
     end
 
     if dim(R) != 0
-        @plansor B′[l p; p'] := R[l; r] * W′.B[r p; p']
+        @plansor B′[l p; p'] := R[l; r] * W′B[r p; p']
     else
-        B′ = similar(W′.B, right_virtualspace(H[i].A) ⊗ physicalspace(W′) ← domain(W′.B))
+        B′ = similar(W′B, right_virtualspace(H[i].A) ⊗ physicalspace(W′) ← domain(W′B))
     end
 
-    @plansor D′[l p; p'] := t[l; r] * W′.B[r p; p']
-    D′ = add!(removeunit(D′, 1), W′.D)
+    @plansor D′[l p; p'] := t[l; r] * W′B[r p; p']
+    D′ = add!(removeunit(D′, 1), W′D)
 
     H[i + 1] = JordanMPOTensor(
         right_virtualspace(H[i]) ⊗ physicalspace(W′) ← domain(W′),
@@ -99,14 +104,18 @@ function right_canonicalize!(
     S = spacetype(W)
     d = sqrt(dim(P))
 
+    # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
+    # them once and reuse the locals throughout
+    WA, WB, WC, WD = W.A, W.B, W.C, W.D
+
     # orthogonalize second row against last
     Wi = W[end, 1, 1, end]
     WI = removeunit(Wi, 4)
-    @plansor t[l; r] := conj(WI[r p; p']) * W.B[l p; p']
+    @plansor t[l; r] := conj(WI[r p; p']) * WB[l p; p']
     # TODO: the following is currently broken due to a TensorKit bug
-    # @plansor B′[l p; p'] := W.B[l p; p'] - WI[r p; p'] * t[l; r]
+    # @plansor B′[l p; p'] := WB[l p; p'] - WI[r p; p'] * t[l; r]
     @plansor B′[l p; p'] := -WI[r p; p'] * t[l; r]
-    add!(B′, W.B)
+    add!(B′, WB)
 
     # LQ of second row
     if size(W, 4) == 1
@@ -115,24 +124,24 @@ function right_canonicalize!(
 
         if dim(R) == 0
             V = _rightunit ⊞ _rightunit
-            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
-            Q2 = typeof(W.B)(undef, SumSpace{S}() ⊗ P ← P)
+            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
+            Q2 = typeof(WB)(undef, SumSpace{S}() ⊗ P ← P)
         else
             V = ⊞(_rightunit, space(Q, 1), _rightunit)
             scale!(Q, d)
             scale!(R, inv(d))
-            Q1 = typeof(W.A)(undef, space(Q, 1) ⊗ P ← P ⊗ SumSpace{S}())
+            Q1 = typeof(WA)(undef, space(Q, 1) ⊗ P ← P ⊗ SumSpace{S}())
             Q2 = transpose(Q, ((1, 3), (2,)))
         end
-        H[i] = JordanMPOTensor(V ⊗ P ← domain(W), Q1, Q2, W.C, W.D)
+        H[i] = JordanMPOTensor(V ⊗ P ← domain(W), Q1, Q2, WC, WD)
     else
         B′′ = insertleftunit(B′, 4)
-        tmp = transpose(cat(B′′, W.A; dims = 4), ((1,), (3, 4, 2)))
+        tmp = transpose(cat(B′′, WA; dims = 4), ((1,), (3, 4, 2)))
         R, Q = right_orth!(tmp; alg)
         if dim(R) == 0
             V = _rightunit ⊞ _rightunit
-            Q1 = typeof(W.A)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
-            Q2 = typeof(W.B)(undef, SumSpace{S}() ⊗ P ← P)
+            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
+            Q2 = typeof(WB)(undef, SumSpace{S}() ⊗ P ← P)
         else
             scale!(Q, d)
             scale!(R, inv(d))
@@ -141,33 +150,34 @@ function right_canonicalize!(
             Q2 = removeunit(SparseBlockTensorMap(Q′[1, 1, 1, 1:1]), 4)
             V = ⊞(_rightunit, left_virtualspace(Q′), _rightunit)
         end
-        H[i] = JordanMPOTensor(V ⊗ P ← domain(W), Q1, Q2, W.C, W.D)
+        H[i] = JordanMPOTensor(V ⊗ P ← domain(W), Q1, Q2, WC, WD)
     end
 
     # absorb into previous site
     W′ = H[i - 1]
+    W′A, W′B, W′C, W′D = W′.A, W′.B, W′.C, W′.D
 
     if size(W′, 1) > 1 && dim(R) != 0
-        @plansor A′[l p; p' r] := W′.A[l p; p' r'] * R[r'; r]
+        @plansor A′[l p; p' r] := W′A[l p; p' r'] * R[r'; r]
     else
-        A′ = similar(W′.A, codomain(W′.A) ← physicalspace(W′.A) ⊗ left_virtualspace(H[i].A))
+        A′ = similar(W′A, codomain(W′A) ← physicalspace(W′A) ⊗ left_virtualspace(H[i].A))
     end
 
     if size(W′, 1) > 1
-        @plansor B′[l p; p' r] := W′.A[l p; p' r'] * t[r'; r]
-        B′ = add!(removeunit(B′, 4), W′.B)
+        @plansor B′[l p; p' r] := W′A[l p; p' r'] * t[r'; r]
+        B′ = add!(removeunit(B′, 4), W′B)
     else
-        B′ = W′.B
+        B′ = W′B
     end
 
     if dim(R) != 0
-        @plansor C′[p; p' r] := W′.C[p; p' r'] * R[r'; r]
+        @plansor C′[p; p' r] := W′C[p; p' r'] * R[r'; r]
     else
-        C′ = similar(W′.C, codomain(W′.C) ← physicalspace(W′) ⊗ left_virtualspace(H[i].A))
+        C′ = similar(W′C, codomain(W′C) ← physicalspace(W′) ⊗ left_virtualspace(H[i].A))
     end
 
-    @plansor D′[p; p' r] := W′.C[p; p' r'] * t[r'; r]
-    D′ = add!(removeunit(D′, 3), W′.D)
+    @plansor D′[p; p' r] := W′C[p; p' r'] * t[r'; r]
+    D′ = add!(removeunit(D′, 3), W′D)
     H[i - 1] = JordanMPOTensor(codomain(W′) ← physicalspace(W′) ⊗ V, A′, B′, C′, D′)
     return H
 end

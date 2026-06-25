@@ -48,8 +48,12 @@ function AC_hamiltonian(
 end
 
 function JordanMPO_AC_Hamiltonian(GL::MPSTensor, W::JordanMPOTensor, GR::MPSTensor)
+    # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
+    # them once and reuse the locals throughout
+    WA, WB, WC, WD = W.A, W.B, W.C, W.D
+
     # onsite
-    D = nonzero_length(W.D) > 0 ? only(W.D) : missing
+    D = nonzero_length(WD) > 0 ? only(WD) : missing
 
     # not started
     I = size(W, 4) == 1 ? missing : removeunit(GR[1], 2)
@@ -58,25 +62,25 @@ function JordanMPO_AC_Hamiltonian(GL::MPSTensor, W::JordanMPOTensor, GR::MPSTens
     E = size(W, 1) == 1 ? missing : removeunit(GL[end], 2)
 
     # starting
-    C = if nonzero_length(W.C) > 0
+    C = if nonzero_length(WC) > 0
         GR_2 = GR[2:(end - 1)]
-        @plansor starting[-1 -2; -3 -4] ≔ W.C[-1; -3 1] * GR_2[-4 1; -2]
+        @plansor starting[-1 -2; -3 -4] ≔ WC[-1; -3 1] * GR_2[-4 1; -2]
         only(starting)
     else
         missing
     end
 
     # ending
-    B = if nonzero_length(W.B) > 0
+    B = if nonzero_length(WB) > 0
         GL_2 = GL[2:(end - 1)]
-        @plansor ending[-1 -2; -3 -4] ≔ GL_2[-1 1; -3] * W.B[1 -2; -4]
+        @plansor ending[-1 -2; -3 -4] ≔ GL_2[-1 1; -3] * WB[1 -2; -4]
         only(ending)
     else
         missing
     end
 
     # continuing
-    A = MPO_AC_Hamiltonian(GL[2:(end - 1)], W.A, GR[2:(end - 1)])
+    A = MPO_AC_Hamiltonian(GL[2:(end - 1)], WA, GR[2:(end - 1)])
 
     # obtaining storagetype of environments since these should have already mixed
     # the types of the operator and state
@@ -87,7 +91,7 @@ function JordanMPO_AC_Hamiltonian(GL::MPSTensor, W::JordanMPOTensor, GR::MPSTens
     O3 = typeof(A)
 
     # specialization for nearest neighbours
-    nonzero_length(W.A) == 0 && (A = missing)
+    nonzero_length(WA) == 0 && (A = missing)
 
     return JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, I, E, C, B, A)
 end
@@ -196,6 +200,11 @@ function AC2_hamiltonian(
 end
 
 function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::JordanMPOTensor, GR::MPSTensor)
+    # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
+    # them once and reuse the locals throughout
+    A1, B1, C1, D1 = W1.A, W1.B, W1.C, W1.D
+    A2, B2, C2, D2 = W2.A, W2.B, W2.C, W2.D
+
     # not started
     II = size(W2, 4) == 1 ? missing : transpose(removeunit(GR[1], 2))
 
@@ -203,22 +212,22 @@ function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::Jorda
     EE = size(W1, 1) == 1 ? missing : removeunit(GL[end], 2)
 
     # starting right
-    IC = if nonzero_length(W2.C) > 0
-        @plansor IC_[-1 -2; -3 -4] ≔ W2.C[-1; -3 1] * GR[2:(end - 1)][-4 1; -2]
+    IC = if nonzero_length(C2) > 0
+        @plansor IC_[-1 -2; -3 -4] ≔ C2[-1; -3 1] * GR[2:(end - 1)][-4 1; -2]
         only(IC_)
     else
         missing
     end
 
     # onsite left
-    DE = nonzero_length(W1.D) > 0 ? only(W1.D) : missing
+    DE = nonzero_length(D1) > 0 ? only(D1) : missing
 
     # onsite right
-    ID = nonzero_length(W2.D) > 0 ? only(W2.D) : missing
+    ID = nonzero_length(D2) > 0 ? only(D2) : missing
 
     # starting left - ending right
-    CB = if nonzero_length(W1.C) > 0 && nonzero_length(W2.B) > 0
-        @plansor CB_[-1 -2; -3 -4] ≔ W1.C[-1; -3 1] * W2.B[1 -2; -4]
+    CB = if nonzero_length(C1) > 0 && nonzero_length(B2) > 0
+        @plansor CB_[-1 -2; -3 -4] ≔ C1[-1; -3 1] * B2[1 -2; -4]
         # have to convert to complex if hamiltonian is real but states are complex
         scalartype(GL) <: Complex ? complex(only(CB_)) : only(CB_)
     else
@@ -226,8 +235,8 @@ function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::Jorda
     end
 
     # starting left - continuing right
-    CA = if nonzero_length(W1.C) > 0 && nonzero_length(W2.A) > 0
-        @plansor CA_[-1 -2 -3; -4 -5 -6] ≔ W1.C[-1; -4 2] * W2.A[2 -2; -5 1] *
+    CA = if nonzero_length(C1) > 0 && nonzero_length(A2) > 0
+        @plansor CA_[-1 -2 -3; -4 -5 -6] ≔ C1[-1; -4 2] * A2[2 -2; -5 1] *
             GR[2:(end - 1)][-6 1; -3]
         only(CA_)
     else
@@ -235,24 +244,24 @@ function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::Jorda
     end
 
     # continuing left - ending right
-    AB = if nonzero_length(W1.A) > 0 && nonzero_length(W2.B) > 0
-        @plansor AB_[-1 -2 -3; -4 -5 -6] ≔ GL[2:(end - 1)][-1 2; -4] * W1.A[2 -2; -5 1] *
-            W2.B[1 -3; -6]
+    AB = if nonzero_length(A1) > 0 && nonzero_length(B2) > 0
+        @plansor AB_[-1 -2 -3; -4 -5 -6] ≔ GL[2:(end - 1)][-1 2; -4] * A1[2 -2; -5 1] *
+            B2[1 -3; -6]
         only(AB_)
     else
         missing
     end
 
     # ending left
-    BE = if nonzero_length(W1.B) > 0
-        @plansor BE_[-1 -2; -3 -4] ≔ GL[2:(end - 1)][-1 2; -3] * W1.B[2 -2; -4]
+    BE = if nonzero_length(B1) > 0
+        @plansor BE_[-1 -2; -3 -4] ≔ GL[2:(end - 1)][-1 2; -3] * B1[2 -2; -4]
         only(BE_)
     else
         missing
     end
 
     # continuing - continuing
-    AA = MPO_AC2_Hamiltonian(GL[2:(end - 1)], W1.A, W2.A, GR[2:(end - 1)])
+    AA = MPO_AC2_Hamiltonian(GL[2:(end - 1)], A1, A2, GR[2:(end - 1)])
 
     S = spacetype(GL)
     M = storagetype(GL)
@@ -261,16 +270,16 @@ function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::Jorda
     O3 = tensormaptype(S, 3, 3, M)
     O4 = typeof(AA)
 
-    if nonzero_length(W1.A) == 0 && nonzero_length(W2.A) == 0
+    if nonzero_length(A1) == 0 && nonzero_length(A2) == 0
         AA = missing
     else
-        mask1 = falses(size(W1.A, 1), size(W1.A, 4))
-        for I in nonzero_keys(W1.A)
+        mask1 = falses(size(A1, 1), size(A1, 4))
+        for I in nonzero_keys(A1)
             mask1[I[1], I[4]] = true
         end
 
-        mask2 = falses(size(W2.A, 1), size(W2.A, 4))
-        for I in nonzero_keys(W2.A)
+        mask2 = falses(size(A2, 1), size(A2, 4))
+        for I in nonzero_keys(A2)
             mask2[I[1], I[4]] = true
         end
 

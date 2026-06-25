@@ -649,9 +649,11 @@ function isidentitylevel(H::InfiniteMPOHamiltonian{<:JordanMPOTensor}, i::Int)
     if i == 1 || i == size(H[1], 1)
         return true
     else
-        return all(H.A) do A
-            return haskey(A, CartesianIndex(i - 1, 1, 1, i - 1)) &&
-                A[i - 1, 1, 1, i - 1] isa BraidingTensor
+        # a diagonal level is an identity level iff every site stores a unit identity
+        # scalar there; pure identities live in `scalars` (genuine/scaled operators do not)
+        return all(parent(H)) do W
+            c = get(W.scalars, CartesianIndex(i, i), nothing)
+            return c !== nothing && isone(c)
         end
     end
 end
