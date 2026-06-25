@@ -34,7 +34,7 @@ end
 @inline function Adapt.adapt_structure(to, W::MPSKit.JordanMPOTensor)
     tensors = adapt(to, W.tensors)
     T = scalartype(tensors)
-    scalars = Dict{CartesianIndex{2}, T}(K => convert(T, c) for (K, c) in W.scalars)
+    scalars = Dict{CartesianIndex{4}, T}(K => convert(T, c) for (K, c) in W.scalars)
     return MPSKit.JordanMPOTensor(tensors, scalars)
 end
 @inline Adapt.adapt_structure(to, mpo::MPOHamiltonian) =

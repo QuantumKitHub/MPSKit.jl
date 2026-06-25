@@ -652,7 +652,7 @@ function isidentitylevel(H::InfiniteMPOHamiltonian{<:JordanMPOTensor}, i::Int)
         # a diagonal level is an identity level iff every site stores a unit identity
         # scalar there; pure identities live in `scalars` (genuine/scaled operators do not)
         return all(parent(H)) do W
-            c = get(W.scalars, CartesianIndex(i, i), nothing)
+            c = get(W.scalars, CartesianIndex(i, 1, 1, i), nothing)
             return c !== nothing && isone(c)
         end
     end
@@ -794,7 +794,7 @@ function VectorInterface.scale!(
             I[1] == 1 && scale!(v, λ)
         end
         for K in collect(keys(W.scalars))
-            (K[1] == 1 && K[2] != 1) && (W.scalars[K] *= λ)
+            (K[1] == 1 && K[4] != 1) && (W.scalars[K] *= λ)
         end
     end
     return H
@@ -810,7 +810,7 @@ function VectorInterface.scale!(
         end
         empty!(Wd.scalars)
         for (K, c) in Ws.scalars
-            Wd.scalars[K] = (K[1] == 1 && K[2] != 1) ? c * λ : c
+            Wd.scalars[K] = (K[1] == 1 && K[4] != 1) ? c * λ : c
         end
     end
     return Hdst

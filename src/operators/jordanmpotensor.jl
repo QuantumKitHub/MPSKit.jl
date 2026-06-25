@@ -22,8 +22,8 @@ Rather than storing the dense block matrix, the genuine operators and the identi
 
 - `tensors::SparseBlockTensorMap` holds the non-identity operators over the *full* virtual
   space (so `A`, `B`, `C` and `D` all live at their `(row, 1, 1, col)` position).
-- `scalars::Dict{CartesianIndex{2},T}` holds the scalar multiples of the identity, keyed by
-  their `(row, col)` virtual position; the diagonal corner `1`s are stored here as well.
+- `scalars::Dict{CartesianIndex{4},T}` holds the scalar multiples of the identity, keyed by
+  their `(row, 1, 1, col)` virtual position; the diagonal corner `1`s are stored here as well.
 
 An index is never present in both `tensors` and `scalars`.
 This keeps the ubiquitous identity blocks free of dense storage and lets identities be materialized lazily only when needed.
@@ -43,12 +43,12 @@ struct JordanMPOTensor{
         T <: Number, S, A <: DenseVector{T},
     } <: AbstractBlockTensorMap{T, S, 2, 2}
     tensors::SparseBlockTensorMap{TensorMap{T, S, 2, 2, A}, T, S, 2, 2, 4}
-    scalars::Dict{CartesianIndex{2}, T}
+    scalars::Dict{CartesianIndex{4}, T}
 
     # constructor from fields
     function JordanMPOTensor{T, S, A}(
             tensors::SparseBlockTensorMap{TensorMap{T, S, 2, 2, A}, T, S, 2, 2, 4},
-            scalars::Dict{CartesianIndex{2}, T}
+            scalars::Dict{CartesianIndex{4}, T}
         ) where {T, S, A}
         return new{T, S, A}(tensors, scalars)
     end
@@ -58,17 +58,17 @@ struct JordanMPOTensor{
             ::UndefInitializer, V::TensorMapSumSpace{S, 2, 2}
         ) where {T, S, A}
         tensors = SparseBlockTensorMap{tensormaptype(S, 2, 2, A)}(undef, V)
-        scalars = Dict{CartesianIndex{2}, T}()
+        scalars = Dict{CartesianIndex{4}, T}()
         rows, cols = size(tensors, 1), size(tensors, 4)
-        cols > 1 && (scalars[CartesianIndex(1, 1)] = one(T))
-        rows > 1 && (scalars[CartesianIndex(rows, cols)] = one(T))
+        cols > 1 && (scalars[CartesianIndex(1, 1, 1, 1)] = one(T))
+        rows > 1 && (scalars[CartesianIndex(rows, 1, 1, cols)] = one(T))
         return new{T, S, A}(tensors, scalars)
     end
 end
 
 function JordanMPOTensor(
         tensors::SparseBlockTensorMap{TensorMap{T, S, 2, 2, A}, T, S, 2, 2, 4},
-        scalars::Dict{CartesianIndex{2}, T}
+        scalars::Dict{CartesianIndex{4}, T}
     ) where {T, S, A}
     return JordanMPOTensor{T, S, A}(tensors, scalars)
 end
@@ -175,9 +175,9 @@ function Base.getproperty(W::JordanMPOTensor, sym::Symbol)
     return getfield(W, sym)
 end
 
-# materialize an identity scalar at virtual position `(i, j)` as a dense `TensorMap`
-@inline function _identity_tensor(W::JordanMPOTensor, i::Int, j::Int, c = one(scalartype(W)))
-    τ = BraidingTensor{scalartype(W), spacetype(W), storagetype(W)}(eachspace(W)[i, 1, 1, j])
+# materialize an identity scalar at virtual position `K` as a dense `TensorMap`
+@inline function _identity_tensor(W::JordanMPOTensor, K::CartesianIndex{4}, c = one(scalartype(W)))
+    τ = BraidingTensor{scalartype(W), spacetype(W), storagetype(W)}(eachspace(W)[K])
     return isone(c) ? TensorMap(τ) : scale!(TensorMap(τ), c)
 end
 
@@ -193,7 +193,7 @@ function _jordan_A(W::JordanMPOTensor)
         A[I[1] - 1, 1, 1, I[4] - 1] = v
     end
     for (K, c) in W.scalars
-        i, j = K[1], K[2]
+        i, j = K[1], K[4]
         (1 < i < rows && 1 < j < cols) || continue
         τ = Tτ(eachspace(A)[i - 1, 1, 1, j - 1])
         A[i - 1, 1, 1, j - 1] = isone(c) ? τ : scale!(TensorMap(τ), c)
@@ -210,8 +210,8 @@ function _jordan_B(W::JordanMPOTensor)
         B[I[1] - 1, 1, 1] = removeunit(v, 4)
     end
     for (K, c) in W.scalars
-        (1 < K[1] < rows && K[2] == cols) || continue
-        B[K[1] - 1, 1, 1] = removeunit(_identity_tensor(W, K[1], K[2], c), 4)
+        (1 < K[1] < rows && K[4] == cols) || continue
+        B[K[1] - 1, 1, 1] = removeunit(_identity_tensor(W, K, c), 4)
     end
     return B
 end
@@ -225,8 +225,8 @@ function _jordan_C(W::JordanMPOTensor)
         C[1, 1, I[4] - 1] = removeunit(v, 1)
     end
     for (K, c) in W.scalars
-        (K[1] == 1 && 1 < K[2] < cols) || continue
-        C[1, 1, K[2] - 1] = removeunit(_identity_tensor(W, K[1], K[2], c), 1)
+        (K[1] == 1 && 1 < K[4] < cols) || continue
+        C[1, 1, K[4] - 1] = removeunit(_identity_tensor(W, K, c), 1)
     end
     return C
 end
@@ -244,7 +244,7 @@ end
 
 function Base.haskey(W::JordanMPOTensor, I::CartesianIndex{4})
     Base.checkbounds(W, I.I...)
-    return haskey(W.scalars, CartesianIndex(I[1], I[4])) || haskey(W.tensors, I)
+    return haskey(W.scalars, I) || haskey(W.tensors, I)
 end
 
 Base.parent(W::JordanMPOTensor) = parent(SparseBlockTensorMap(W))
@@ -254,17 +254,12 @@ BlockTensorKit.issparse(W::JordanMPOTensor) = true
 # Converters
 # ----------
 function BlockTensorKit.SparseBlockTensorMap(W::JordanMPOTensor)
-    W′ = SparseBlockTensorMap{AbstractTensorMap{scalartype(W), spacetype(W), 2, 2}}(
-        undef_blocks, space(W)
-    )
+    W′ = SparseBlockTensorMap{eltype(W)}(undef_blocks, space(W))
     for (I, v) in nonzero_pairs(W.tensors)
         W′[I] = v
     end
     for (K, c) in W.scalars
-        τ = BraidingTensor{scalartype(W), spacetype(W), storagetype(W)}(
-            eachspace(W)[K[1], 1, 1, K[2]]
-        )
-        W′[K[1], 1, 1, K[2]] = isone(c) ? τ : scale!(TensorMap(τ), c)
+        W′[K] = _identity_tensor(W, K, c)
     end
     return W′
 end
@@ -290,9 +285,10 @@ end
 @propagate_inbounds function Base.getindex(W::JordanMPOTensor, I::Vararg{Int, 4})
     @assert I[2] == I[3] == 1
     i, j = I[1], I[4]
-    c = get(W.scalars, CartesianIndex(i, j), nothing)
+    K = CartesianIndex(i, 1, 1, j)
+    c = get(W.scalars, K, nothing)
     if c !== nothing
-        return _identity_tensor(W, i, j, c)
+        return _identity_tensor(W, K, c)
     elseif haskey(W.tensors, CartesianIndex(i, 1, 1, j))
         return W.tensors[i, 1, 1, j]
     else
@@ -310,9 +306,9 @@ end
     i, j = I[1], I[4]
     if v isa BraidingTensor
         haskey(W.tensors, CartesianIndex(i, 1, 1, j)) && delete!(W.tensors, CartesianIndex(i, 1, 1, j))
-        W.scalars[CartesianIndex(i, j)] = one(scalartype(W))
+        W.scalars[CartesianIndex(i, 1, 1, j)] = one(scalartype(W))
     else
-        delete!(W.scalars, CartesianIndex(i, j))
+        delete!(W.scalars, CartesianIndex(i, 1, 1, j))
         W.tensors[i, 1, 1, j] = v
     end
     return W
@@ -326,7 +322,7 @@ end
 function BlockTensorKit.nonzero_keys(W::JordanMPOTensor)
     p = collect(CartesianIndex{4}, nonzero_keys(W.tensors))
     for K in keys(W.scalars)
-        push!(p, CartesianIndex(K[1], 1, 1, K[2]))
+        push!(p, K)
     end
     return p
 end
@@ -334,7 +330,7 @@ function BlockTensorKit.nonzero_values(W::JordanMPOTensor)
     return Iterators.flatten(
         (
             nonzero_values(W.tensors),
-            (_identity_tensor(W, K[1], K[2], c) for (K, c) in W.scalars),
+            (_identity_tensor(W, K, c) for (K, c) in W.scalars),
         )
     )
 end
@@ -342,10 +338,7 @@ function BlockTensorKit.nonzero_pairs(W::JordanMPOTensor)
     return Iterators.flatten(
         (
             nonzero_pairs(W.tensors),
-            (
-                CartesianIndex(K[1], 1, 1, K[2]) => _identity_tensor(W, K[1], K[2], c)
-                    for (K, c) in W.scalars
-            ),
+            (K => _identity_tensor(W, K, c) for (K, c) in W.scalars),
         )
     )
 end
