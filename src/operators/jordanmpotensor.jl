@@ -134,8 +134,6 @@ function JordanMPOTensor(
     )
 end
 
-# whether `t` is (approximately) an identity braiding tensor, so it can be folded back
-# into a scalar identity
 function _isbraiding(t::AbstractTensorMap)
     t isa BraidingTensor && return true
     τ = BraidingTensor{scalartype(t), spacetype(t), storagetype(t)}(space(t))
@@ -143,19 +141,17 @@ function _isbraiding(t::AbstractTensorMap)
 end
 
 function JordanMPOTensor(W::SparseBlockTensorMap{TT, E, S, 2, 2}) where {TT, E, S}
-    # the diagonal corners must be (close to) identity braidings; the constructor below
-    # folds them back into scalar identities
+    # the diagonal corners must be (close to) identity braidings
     @assert _isbraiding(W[1, 1, 1, 1]) && _isbraiding(W[end, 1, 1, end])
     # @assert all(I -> I[1] ≤ I[4], nonzero_keys(W))
 
-    A = W[2:(end - 1), 1, 1, 2:(end - 1)]
-    B = W[2:(end - 1), 1, 1, end]
-    C = W[1, 1, 1, 2:(end - 1)]
-    D = W[1, 1, 1, end:end] # ensure still blocktensor to allow for sparse
-
-    return JordanMPOTensor(
-        space(W), A, removeunit(B, 4), removeunit(C, 1), removeunit(removeunit(D, 4), 1)
-    )
+    O = jordanmpotensortype(S, storagetype(W))(undef, space(W))
+    corners = (CartesianIndex(1, 1, 1, 1), CartesianIndex(size(W, 1), 1, 1, size(W, 4)))
+    for (I, v) in nonzero_pairs(W)
+        I in corners && continue # already set as identity scalars by the constructor
+        O[I] = v
+    end
+    return O
 end
 
 function jordanmpotensortype(::Type{S}, ::Type{E}) where {S <: VectorSpace, E}
@@ -380,11 +376,15 @@ end
 
 function _conj_mpo(W::JordanMPOTensor)
     V = left_virtualspace(W)' ⊗ physicalspace(W) ← physicalspace(W) ⊗ right_virtualspace(W)'
-    A = _conj_mpo(W.A)
-    @plansor B[-1 -2; -3] ≔ conj(W.B[-1 -3; -2])
-    @plansor C[-1; -2 -3] ≔ conj(W.C[-2; -1 -3])
-    D = copy(adjoint(W.D))
-    return JordanMPOTensor(V, A, B, C, D)
+    O = jordanmpotensortype(spacetype(W), storagetype(W))(undef, V)
+    for (I, v) in nonzero_pairs(W.tensors)
+        O.tensors[I] = _conj_mpo(v)
+    end
+    empty!(O.scalars)
+    for (K, c) in W.scalars
+        O.scalars[K] = conj(c)
+    end
+    return O
 end
 
 function add_physical_charge(O::JordanMPOTensor, charge::Sector)
@@ -427,6 +427,6 @@ function Base.showarg(io::IO, W::JordanMPOTensor, toplevel::Bool)
     return nothing
 end
 
-function TensorKit.type_repr(::Type{<:JordanMPOTensor{E, S}}) where {E, S}
-    return "JordanMPOTensor{$E, " * TensorKit.type_repr(S) * ", …}"
+function TensorKit.type_repr(::Type{JordanMPOTensor{E, S, A}}) where {E, S, A}
+    return "JordanMPOTensor{$E, " * TensorKit.type_repr(S) * ", $A}"
 end
