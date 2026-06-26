@@ -4,7 +4,7 @@ $(TYPEDEF)
 Variational optimization algorithm for excitations of finite MPS by minimizing the energy of
 
 ```math
-H - λᵢ |ψᵢ⟩⟨ψᵢ|
+H + λᵢ |ψᵢ⟩⟨ψᵢ|
 ```
 
 ## Fields
@@ -37,8 +37,8 @@ function excitations(
     nstates = (states..., ne)
     ens, excis = excitations(H, alg, nstates; init = init, num = num - 1)
 
-    push!(ens, expectation_value(ne, H))
-    push!(excis, ne)
+    pushfirst!(ens, expectation_value(ne, H))
+    pushfirst!(excis, ne)
 
     return ens, excis
 end
