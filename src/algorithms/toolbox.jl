@@ -185,14 +185,14 @@ function correlation_length(spectrum::AbstractVector{T}; kwargs...) where {T <: 
 end
 
 """
-    variance(state, hamiltonian, [envs=environments(state, hamiltonian)])
+    variance(state, hamiltonian, [envs=environments(state, hamiltonian, state)])
 
 Compute the variance of the energy of the state with respect to the Hamiltonian.
 """
 function variance end
 
 function variance(
-        state::InfiniteMPS, H::InfiniteMPOHamiltonian, envs = environments(state, H)
+        state::InfiniteMPS, H::InfiniteMPOHamiltonian, envs = environments(state, H, state)
     )
     e_local = map(1:length(state)) do i
         return contract_mpo_expval(
@@ -206,7 +206,7 @@ function variance(
     return real(expectation_value(state, (H - H_renormalized)^2))
 end
 
-function variance(state::FiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H))
+function variance(state::FiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H, state))
     H2 = H * H
     return real(expectation_value(state, H2) - expectation_value(state, H, envs)^2)
 end
@@ -235,7 +235,7 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs = environme
     # TODO: this is probably broken
     E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
 
-    rescaled_envs = environments(gs, H_regularized)
+    rescaled_envs = environments(gs, H_regularized, gs)
     GL = leftenv(rescaled_envs, 1, gs)
     GR = rightenv(rescaled_envs, 0, gs)
     E_f = @plansor GL[5 3; 1] * gs.C[0][1; 4] * conj(gs.C[0][5; 2]) * GR[4 3; 2]
@@ -247,7 +247,7 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs = environme
     )
 end
 
-function variance(ψ, H::LazySum, envs = environments(ψ, sum(H)))
+function variance(ψ, H::LazySum, envs = environments(ψ, sum(H), ψ))
     # TODO: avoid throwing error and just compute correct environments
     envs isa MultipleEnvironments &&
         throw(ArgumentError("The environment cannot be Lazy i.e. use environments of sum(H)"))

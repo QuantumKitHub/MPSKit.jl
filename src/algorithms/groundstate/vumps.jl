@@ -47,13 +47,13 @@ struct VUMPSState{S, O, E}
 end
 
 function find_groundstate(
-        mps::InfiniteMPS, operator, alg::VUMPS, envs = environments(mps, operator)
+        mps::InfiniteMPS, operator, alg::VUMPS, envs...
     )
-    return dominant_eigsolve(operator, mps, alg, envs; which = :SR)
+    return dominant_eigsolve(operator, mps, alg, envs...; which = :SR)
 end
 
 function dominant_eigsolve(
-        operator, mps, alg::VUMPS, envs = environments(mps, operator);
+        operator, mps, alg::VUMPS, envs = environments(mps, operator, mps, alg.alg_environments);
         which
     )
     log = IterLog("VUMPS")
@@ -64,7 +64,7 @@ function dominant_eigsolve(
     mps = copy(mps)
     ϵ = calc_galerkin(mps, operator, mps, envs)
     alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-    recalculate!(envs, mps, operator, mps; alg_environments.tol)
+    recalculate!(envs, mps, operator, mps, alg_environments; timeroutput)
 
     state = VUMPSState(mps, operator, envs, iter, ϵ, which, timeroutput)
     it = IterativeSolver(alg, state)
@@ -118,8 +118,9 @@ end
 function localupdate_step!(
         it::IterativeSolver{<:VUMPS}, state, scheduler = Defaults.scheduler[]
     )
+    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
     alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
-    alg_orth = Defaults.alg_orth()
+    alg_orth = alg_gauge.alg_orth
 
     mps = state.mps
     src_Cs = mps isa Multiline ? eachcol(mps.C) : mps.C
@@ -188,20 +189,17 @@ function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
     mps = gaugefix!(
         state.mps, ACs, state.mps.C[end];
-        alg_gauge.tol, alg_gauge.maxiter, order = :R, timeroutput = state.timeroutput,
+        order = :R, timeroutput = state.timeroutput, alg_gauge...,
     )
     mul!.(mps.AC, mps.AL, mps.C)
     return mps
 end
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractMatrix)
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    return MultilineMPS(ACs, @view(state.mps.C[:, end]); alg_gauge.tol, alg_gauge.maxiter)
+    return MultilineMPS(ACs, @view(state.mps.C[:, end]); alg_gauge.tol, alg_gauge.maxiter, alg_gauge.alg_orth)
 end
 
 function envs_step!(it::IterativeSolver{<:VUMPS}, state, mps)
     alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
-    return recalculate!(
-        state.envs, mps, state.operator, mps;
-        alg_environments.tol, state.timeroutput,
-    )
+    return recalculate!(state.envs, mps, state.operator, mps, alg_environments; state.timeroutput)
 end

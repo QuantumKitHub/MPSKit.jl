@@ -62,7 +62,7 @@ function propagator(
         A::AbstractFiniteMPS, z::Number, H::FiniteMPOHamiltonian,
         alg::DynamicalDMRG{NaiveInvert}; init = copy(A)
     )
-    h_envs = environments(init, H) # environments for h
+    h_envs = environments(init, H, init) # environments for h
     mixedenvs = environments(init, A) # environments for <init | A>
 
     ϵ = 2 * alg.tol
@@ -125,7 +125,7 @@ function propagator(
     ω = real(z)
     η = imag(z)
 
-    envs1 = environments(init, H) # environments for h
+    envs1 = environments(init, H, init) # environments for h
     H2, envs2 = squaredenvs(init, H, envs1) # environments for h^2
     mixedenvs = environments(init, A) # environments for <init | A>
 
@@ -176,7 +176,7 @@ function propagator(
 end
 
 function squaredenvs(
-        state::AbstractFiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H)
+        state::AbstractFiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H, state)
     )
     H² = conj(H) * H
     L = length(state)
@@ -187,7 +187,7 @@ function squaredenvs(
 
     # to construct the squared caches we will first initialize environments
     # then make all data invalid so it will be recalculated
-    envs² = environments(state, H², leftstart, rightstart)
+    envs² = environments(state, H², state; leftstart, rightstart)
     for i in 1:L
         poison!(envs², i)
     end

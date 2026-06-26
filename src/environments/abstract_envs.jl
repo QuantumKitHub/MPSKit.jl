@@ -5,6 +5,22 @@ Abstract supertype for all environment types.
 """
 abstract type AbstractMPSEnvironments end
 
+@doc """
+    environments(below, operator, above, [alg]; kwargs...)
+    environments(below, above)
+
+Construct the environments for the `operator` sandwiched between the states `below` (bra) and `above` (ket).
+The keyword arguments or `alg` struct can be used to control the settings needed for computing the environments.
+
+The two-argument form `environments(below, above)` (with two states) constructs the overlap environments, i.e. the operator-free environments between the bra `below` and the ket `above`.
+
+!!! note
+    The operator form requires an explicit `above`; there is no two-argument
+    `environments(below, operator)` shorthand. Because a two-argument call is the overlap form,
+    the second argument cannot be disambiguated between a ket (overlap) and an operator — this is
+    genuinely undecidable for density matrices, where states and operators share a representation.
+""" environments
+
 # Locking
 # -------
 Base.lock(f::Function, envs::AbstractMPSEnvironments) = lock(f, envs.lock)
@@ -87,7 +103,7 @@ end
 function environment_alg(
         below, ::InfiniteMPOHamiltonian, above;
         tol = Defaults.tol, maxiter = Defaults.maxiter, krylovdim = Defaults.krylovdim,
-        verbosity = Defaults.VERBOSE_NONE
+        verbosity = Defaults.VERBOSE_NONE, kwargs...
     )
     max_krylovdim = ceil(Int, dim(left_virtualspace(above, 1)) * dim(left_virtualspace(below, 1)))
     return GMRES(; tol, maxiter, krylovdim = min(max_krylovdim, krylovdim), verbosity)
@@ -96,7 +112,22 @@ function environment_alg(
         ::Union{InfiniteQP, MultilineQP}, ::Union{InfiniteMPO, MultilineMPO},
         ::Union{InfiniteQP, MultilineQP};
         tol = Defaults.tol, maxiter = Defaults.maxiter, krylovdim = Defaults.krylovdim,
-        verbosity = Defaults.VERBOSE_NONE
+        verbosity = Defaults.VERBOSE_NONE, kwargs...
     )
     return GMRES(; tol, maxiter, krylovdim, verbosity)
+end
+
+"""
+    resolve_environment_solver(alg, below, operator, above)
+
+Resolve an environment algorithm `alg` into a concrete iterative solver for the given problem.
+A `KrylovKit` algorithm is returned as-is; the `DefaultAlgorithm`/`DynamicTol` configuration
+wrappers are translated via [`environment_alg`](@ref).
+"""
+resolve_environment_solver(alg, below, operator, above) = alg
+function resolve_environment_solver(alg::DefaultAlgorithm, below, operator, above)
+    return environment_alg(below, operator, above; alg.kwargs...)
+end
+function resolve_environment_solver(alg::DynamicTol, below, operator, above)
+    return resolve_environment_solver(alg.alg, below, operator, above)
 end

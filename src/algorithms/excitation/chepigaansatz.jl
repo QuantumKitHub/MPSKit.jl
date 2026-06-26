@@ -34,7 +34,7 @@ function ChepigaAnsatz(; kwargs...)
 end
 
 function excitations(
-        H, alg::ChepigaAnsatz, ψ::FiniteMPS, envs = environments(ψ, H);
+        H, alg::ChepigaAnsatz, ψ::FiniteMPS, envs = environments(ψ, H, ψ);
         sector = leftunit(ψ), num::Int = 1, pos::Int = length(ψ) ÷ 2
     )
     1 ≤ pos ≤ length(ψ) || throw(ArgumentError("invalid position $pos"))
@@ -99,7 +99,7 @@ function ChepigaAnsatz2(; trscheme = notrunc(), kwargs...)
 end
 
 function excitations(
-        H, alg::ChepigaAnsatz2, ψ::FiniteMPS, envs = environments(ψ, H);
+        H, alg::ChepigaAnsatz2, ψ::FiniteMPS, envs = environments(ψ, H, ψ);
         sector = leftunit(ψ), num::Int = 1, pos::Int = length(ψ) ÷ 2
     )
     1 ≤ pos ≤ length(ψ) - 1 || throw(ArgumentError("invalid position $pos"))

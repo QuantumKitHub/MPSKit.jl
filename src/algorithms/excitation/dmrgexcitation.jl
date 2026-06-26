@@ -31,7 +31,7 @@ function excitations(
         tuple(H, ProjectionOperator.(states)...),
         tuple(1.0, broadcast(x -> alg.weight, states)...)
     )
-    envs = environments(init, super_op)
+    envs = environments(init, super_op, init)
     ne, _ = find_groundstate(init, super_op, alg.gsalg, envs)
 
     nstates = (states..., ne)

@@ -1,6 +1,6 @@
 function approximate!(
         ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS}, alg::IDMRG,
-        envs = environments(ψ, toapprox)
+        envs = environments(ψ, toapprox...)
     )
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
@@ -62,7 +62,7 @@ end
 
 function approximate!(
         ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS},
-        alg::IDMRG2, envs = environments(ψ, toapprox)
+        alg::IDMRG2, envs = environments(ψ, toapprox...)
     )
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol

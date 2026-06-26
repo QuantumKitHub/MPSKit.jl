@@ -1,13 +1,17 @@
 @doc """
     approximate(ψ₀, (O, ψ), algorithm, [environments]; kwargs...) -> (ψ, environments)
     approximate!(ψ₀, (O, ψ), algorithm, [environments]; kwargs...) -> (ψ, environments)
+    approximate(ψ₀, ψ, algorithm, [environments]; kwargs...) -> (ψ, environments)
+    approximate!(ψ₀, ψ, algorithm, [environments]; kwargs...) -> (ψ, environments)
 
 Compute an approximation to the application of an operator `O` to the state `ψ` in the form
-of an MPS `ψ₀`.
+of an MPS `ψ₀`. If only a state `ψ` is supplied instead of the `(O, ψ)` pair, `ψ₀` is
+approximated directly to `ψ` (i.e. `O` is taken to be the identity).
 
 ## Arguments
 - `ψ₀::AbstractMPS`: initial guess of the approximated state
 - `(O::AbstractMPO, ψ::AbstractMPS)`: operator `O` and state `ψ` to be approximated
+- `ψ::AbstractMPS`: state to be approximated directly (without an operator)
 - `algorithm`: approximation algorithm. See below for a list of available algorithms.
 - `[environments]`: MPS environment manager
 
@@ -26,10 +30,15 @@ of an MPS `ψ₀`.
 """
 approximate, approximate!
 
+# the trailing `environments` arguments for an operator/ket bundle:
+# a tuple carries an explicit operator (3-argument form), a bare state means overlap (2-argument form).
+_environment_args(Oϕ::Tuple) = Oϕ
+_environment_args(ϕ) = (ϕ,)
+
 # implementation in terms of Multiline
 function approximate(
         ψ::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO, <:InfiniteMPS}, algorithm,
-        envs = environments(ψ, toapprox)
+        envs = environments(ψ, toapprox...)
     )
     envs′ = Multiline([envs])
     multi, envs, δ = approximate(
@@ -43,16 +52,15 @@ end
 
 # dispatch to in-place method
 function approximate(
-        ψ, toapprox, alg::Union{DMRG, DMRG2, IDMRG, IDMRG2},
-        envs = environments(ψ, toapprox)
+        ψ, toapprox, alg::Union{DMRG, DMRG2, IDMRG, IDMRG2}, envs...
     )
-    return approximate!(copy(ψ), toapprox, alg, envs)
+    return approximate!(copy(ψ), toapprox, alg, envs...)
 end
 
 # disambiguate
 function approximate(
         ψ::InfiniteMPS, toapprox::Tuple{<:InfiniteMPO, <:InfiniteMPS},
-        algorithm::Union{IDMRG, IDMRG2}, envs = environments(ψ, toapprox)
+        algorithm::Union{IDMRG, IDMRG2}, envs = environments(ψ, toapprox...)
     )
     envs′ = Multiline([envs])
     multi, envs, δ = approximate(

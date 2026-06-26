@@ -25,29 +25,32 @@ function rightenv(envs::InfiniteQPEnvironments, site::Int, state)
     return rightenv(envs.rightenvs, site, state)
 end
 
-# Explicitly define optional arguments as these depend on kwargs,
-# which needs to come after these arguments.
-
-function environments(exci::Union{InfiniteQP, MultilineQP}, H; kwargs...)
-    lenvs = environments(exci.left_gs, H; kwargs...)
-    return environments(exci, H, lenvs; kwargs...)
-end
-function environments(exci::Union{InfiniteQP, MultilineQP}, H, lenvs; kwargs...)
-    renvs = !istopological(exci) ? lenvs : environments(exci.right_gs, H; kwargs...)
-    return environments(exci, H, lenvs, renvs; kwargs...)
+function environments(
+        exci::Union{InfiniteQP, MultilineQP}, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian, MultilineMPO}, above = exci;
+        lenvs = environments(exci.left_gs, operator, exci.left_gs), renvs = istopological(exci) ? environments(exci.right_gs, operator, exci.right_gs) : lenvs,
+        kwargs...
+    )
+    alg = environment_alg(exci, operator, above; kwargs...)
+    return environments(exci, operator, above, alg; lenvs, renvs)
 end
 
-function environments(qp::MultilineQP, operator::MultilineMPO, lenvs, renvs; kwargs...)
+function environments(
+        qp::MultilineQP, operator::MultilineMPO, above, alg; lenvs, renvs = lenvs
+    )
     (rows = size(qp, 1)) == size(operator, 1) || throw(ArgumentError("Incompatible sizes"))
     envs = map(1:rows) do row
-        return environments(qp[row], operator[row], lenvs[row], renvs[row]; kwargs...)
+        return environments(
+            qp[row], operator[row], qp[row], alg; lenvs = lenvs[row], renvs = renvs[row]
+        )
     end
     return Multiline(PeriodicVector(envs))
 end
 
-function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs; kwargs...)
+function environments(
+        exci::InfiniteQP, H::InfiniteMPOHamiltonian, above, alg; lenvs, renvs = lenvs
+    )
     ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1)) .+ 1
-    solver = environment_alg(exci, H, exci; kwargs...)
+    solver = resolve_environment_solver(alg, exci, H, exci)
 
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
@@ -130,10 +133,9 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
 end
 
 function environments(
-        exci::FiniteQP, H::FiniteMPOHamiltonian,
-        lenvs = environments(exci.left_gs, H),
-        renvs = !istopological(exci) ? lenvs : environments(exci.right_gs, H);
-        kwargs...
+        exci::FiniteQP, H::FiniteMPOHamiltonian, above = exci, alg = nothing;
+        lenvs = environments(exci.left_gs, H, exci.left_gs),
+        renvs = istopological(exci) ? environments(exci.right_gs, H, exci.right_gs) : lenvs
     )
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
@@ -160,10 +162,10 @@ function environments(
     return InfiniteQPEnvironments(lBs, rBs, lenvs, renvs)
 end
 
-function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
+function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs)
     istopological(exci) &&
         @warn "there is a phase ambiguity in topologically nontrivial statmech excitations"
-    solver = environment_alg(exci, O, exci; kwargs...)
+    solver = resolve_environment_solver(alg, exci, O, exci)
 
     left_gs = exci.left_gs
     right_gs = exci.right_gs

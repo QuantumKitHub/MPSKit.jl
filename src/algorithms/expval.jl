@@ -123,14 +123,14 @@ end
 
 function expectation_value(
         ψ::FiniteMPS, H::FiniteMPOHamiltonian,
-        envs::AbstractMPSEnvironments = environments(ψ, H)
+        envs::AbstractMPSEnvironments = environments(ψ, H, ψ)
     )
     return dot(ψ, H, ψ, envs) / dot(ψ, ψ)
 end
 
 function expectation_value(
         ψ::InfiniteMPS, H::InfiniteMPOHamiltonian,
-        envs::AbstractMPSEnvironments = environments(ψ, H)
+        envs::AbstractMPSEnvironments = environments(ψ, H, ψ)
     )
     T = TensorOperations.promote_contract(scalartype(ψ), scalartype(H))
     s = zero(T)
@@ -146,7 +146,7 @@ end
 #-----------
 function expectation_value(
         ψ::InfiniteMPS, mpo_pair::Tuple{InfiniteMPO, Pair{Int, <:MPOTensor}},
-        envs::AbstractMPSEnvironments = environments(ψ, first(mpo_pair))
+        envs::AbstractMPSEnvironments = environments(ψ, first(mpo_pair), ψ)
     )
     O_mpo, (site, O) = mpo_pair
     return contract_mpo_expval(ψ.AC[site], envs.GLs[site], O, envs.GRs[site]) /
@@ -166,7 +166,7 @@ function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
 end
 function expectation_value(
         ψ::MultilineMPS, O::MultilineMPO{<:InfiniteMPO},
-        envs::MultilineEnvironments = environments(ψ, O)
+        envs::MultilineEnvironments = environments(ψ, O, ψ)
     )
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
         GL = envs[i].GLs[j]
@@ -208,7 +208,7 @@ end
 # ------------------
 function expectation_value(
         ψ::FiniteMPS, O::ProjectionOperator,
-        envs::FiniteEnvironments = environments(ψ, O)
+        envs::FiniteEnvironments = environments(ψ, O, ψ)
     )
     ens = zeros(scalartype(ψ), length(ψ))
     for i in 1:length(ψ)

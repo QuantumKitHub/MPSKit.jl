@@ -1,7 +1,7 @@
 const MultilineEnvironments{E <: AbstractMPSEnvironments} = Multiline{E}
 
 function environments(
-        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS = below;
+        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS;
         kwargs...
     )
     (rows = size(above, 1)) == size(operator, 1) == size(below, 1) ||
@@ -11,10 +11,21 @@ function environments(
     end
     return Multiline(PeriodicVector(envs))
 end
+function environments(
+        below::MultilineMPS, operator::MultilineMPO, above::MultilineMPS, alg;
+        kwargs...
+    )
+    (rows = size(above, 1)) == size(operator, 1) == size(below, 1) ||
+        throw(ArgumentError("Incompatible sizes"))
+    envs = map(1:rows) do row
+        return environments(below[row + 1], operator[row], above[row], alg; kwargs...)
+    end
+    return Multiline(PeriodicVector(envs))
+end
 
 function recalculate!(
         envs::MultilineEnvironments, below::MultilineMPS,
-        operator::MultilineMPO, above::MultilineMPS = below;
+        operator::MultilineMPO, above::MultilineMPS;
         kwargs...
     )
     (rows = size(above, 1)) == size(operator, 1) == size(below, 1) ||
@@ -25,9 +36,26 @@ function recalculate!(
     return envs
 end
 function recalculate!(
+        envs::MultilineEnvironments, below::MultilineMPS,
+        operator::MultilineMPO, above::MultilineMPS, alg;
+        kwargs...
+    )
+    (rows = size(above, 1)) == size(operator, 1) == size(below, 1) ||
+        throw(ArgumentError("Incompatible sizes"))
+    @threads for row in 1:rows
+        recalculate!(envs[row], below[row + 1], operator[row], above[row], alg; kwargs...)
+    end
+    return envs
+end
+function recalculate!(
         envs::MultilineEnvironments, below, (operator, above)::Tuple; kwargs...
     )
     return recalculate!(envs, below, operator, above; kwargs...)
+end
+function recalculate!(
+        envs::MultilineEnvironments, below, (operator, above)::Tuple, alg; kwargs...
+    )
+    return recalculate!(envs, below, operator, above, alg; kwargs...)
 end
 
 function TensorKit.normalize!(envs::MultilineEnvironments, below, operator, above)

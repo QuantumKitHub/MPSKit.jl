@@ -19,17 +19,25 @@ leftenv(envs::InfiniteEnvironments, site::Int, state) = envs.GLs[site]
 rightenv(envs::InfiniteEnvironments, site::Int, state) = envs.GRs[site]
 
 function environments(
-        below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
-        above::InfiniteMPS = below; kwargs...
+        below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above;
+        timeroutput::TimerOutput = DISABLED_TIMER, kwargs...
+    )
+    alg = environment_alg(below, operator, above; kwargs...)
+    return environments(below, operator, above, alg; timeroutput)
+end
+function environments(
+        below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above,
+        alg;
+        timeroutput::TimerOutput = DISABLED_TIMER
     )
     GLs, GRs = initialize_environments(below, operator, above)
     envs = InfiniteEnvironments(GLs, GRs)
-    return recalculate!(envs, below, operator, above; kwargs...)
+    return recalculate!(envs, below, operator, above, alg; timeroutput)
 end
 
 function issamespace(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above::InfiniteMPS
+        envs::InfiniteEnvironments,
+        below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above::InfiniteMPS
     )
     L = check_length(below, operator, above)
     for i in 1:L
@@ -48,11 +56,35 @@ function issamespace(
 end
 
 function recalculate!(
+        envs::InfiniteEnvironments, below,
+        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above = below;
+        timeroutput::TimerOutput = DISABLED_TIMER, kwargs...
+    )
+    alg = environment_alg(below, operator, above; kwargs...)
+    return recalculate!(envs, below, operator, above, alg; timeroutput)
+end
+function recalculate!(
         envs::InfiniteEnvironments, below::InfiniteMPS,
         operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
-        above::InfiniteMPS = below;
-        timeroutput::TimerOutput = DISABLED_TIMER,
+        above::InfiniteMPS, alg::DefaultAlgorithm;
         kwargs...
+    )
+    alg = environment_alg(below, operator, above; alg.kwargs...)
+    return recalculate!(envs, below, operator, above, alg; kwargs...)
+end
+function recalculate!(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
+        above::InfiniteMPS, alg::DynamicTol;
+        kwargs...
+    )
+    return recalculate!(envs, below, operator, above, alg.alg; kwargs...)
+end
+function recalculate!(
+        envs::InfiniteEnvironments, below::InfiniteMPS,
+        operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
+        above::InfiniteMPS, alg;
+        timeroutput::TimerOutput = DISABLED_TIMER,
     )
     if !issamespace(envs, below, operator, above)
         # TODO: in-place initialization?
@@ -60,8 +92,6 @@ function recalculate!(
         copy!(envs.GLs, GLs)
         copy!(envs.GRs, GRs)
     end
-
-    alg = environment_alg(below, operator, above; kwargs...)
 
     tree_point = String[section.name for section in timeroutput.timer_stack]
     @sync begin
@@ -93,8 +123,9 @@ function initialize_environments(
 end
 
 function compute_leftenvs!(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::InfiniteMPO, above::InfiniteMPS, alg
+        envs::InfiniteEnvironments,
+        below::InfiniteMPS, operator::InfiniteMPO, above::InfiniteMPS,
+        alg
     )
     # compute eigenvector
     T = TransferMatrix(above.AL, operator, below.AL)
@@ -108,8 +139,9 @@ function compute_leftenvs!(
 end
 
 function compute_rightenvs!(
-        envs::InfiniteEnvironments, below::InfiniteMPS, operator::InfiniteMPO,
-        above::InfiniteMPS, alg
+        envs::InfiniteEnvironments,
+        below::InfiniteMPS, operator::InfiniteMPO, above::InfiniteMPS,
+        alg
     )
     # compute eigenvector
     T = TransferMatrix(above.AR, operator, below.AR)
@@ -117,8 +149,7 @@ function compute_rightenvs!(
     # push through unitcell
     for i in reverse(1:(length(operator) - 1))
         envs.GRs[i] = TransferMatrix(
-            above.AR[i + 1], operator[i + 1],
-            below.AR[i + 1]
+            above.AR[i + 1], operator[i + 1], below.AR[i + 1]
         ) * envs.GRs[i + 1]
     end
     return λ, envs
@@ -130,8 +161,8 @@ end
 # this avoids catastrophic blow-up of norms, while keeping the total normalized
 # and does not lead to issues for negative overlaps and real entries.
 function TensorKit.normalize!(
-        envs::InfiniteEnvironments, below::InfiniteMPS, operator::InfiniteMPO,
-        above::InfiniteMPS
+        envs::InfiniteEnvironments,
+        below::InfiniteMPS, operator::InfiniteMPO, above::InfiniteMPS
     )
     for i in 1:length(operator)
         normalize!(envs.GRs[i])
@@ -144,8 +175,7 @@ end
 # InfiniteMPOHamiltonian environments
 # -----------------------------------
 function initialize_environments(
-        below::InfiniteMPS, operator::InfiniteMPOHamiltonian,
-        above::InfiniteMPS = below
+        below::InfiniteMPS, operator::InfiniteMPOHamiltonian, above::InfiniteMPS = below
     )
     L = check_length(above, operator, below)
     GLs = PeriodicVector([allocate_GL(below, operator, above, i) for i in 1:L])
@@ -175,8 +205,9 @@ function initialize_environments(
 end
 
 function compute_leftenvs!(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::InfiniteMPOHamiltonian, above::InfiniteMPS, alg
+        envs::InfiniteEnvironments,
+        below::InfiniteMPS, operator::InfiniteMPOHamiltonian, above::InfiniteMPS,
+        alg
     )
     L = check_length(below, above, operator)
     GLs = envs.GLs
@@ -230,8 +261,8 @@ function compute_leftenvs!(
 end
 
 function left_cyclethrough!(
-        index::Int, GL, below::InfiniteMPS, H::InfiniteMPOHamiltonian,
-        above::InfiniteMPS = below
+        index::Int, GL,
+        below::InfiniteMPS, H::InfiniteMPOHamiltonian, above::InfiniteMPS = below
     )
     # TODO: efficient transfer matrix slicing for large unitcells
     leftinds = 1:index
@@ -244,8 +275,9 @@ function left_cyclethrough!(
 end
 
 function compute_rightenvs!(
-        envs::InfiniteEnvironments, below::InfiniteMPS,
-        operator::InfiniteMPOHamiltonian, above::InfiniteMPS, alg
+        envs::InfiniteEnvironments,
+        below::InfiniteMPS, operator::InfiniteMPOHamiltonian, above::InfiniteMPS,
+        alg
     )
     L = check_length(above, operator, below)
     GRs = envs.GRs
@@ -300,8 +332,8 @@ function compute_rightenvs!(
 end
 
 function right_cyclethrough!(
-        index::Int, GR, below::InfiniteMPS, operator::InfiniteMPOHamiltonian,
-        above::InfiniteMPS = below
+        index::Int, GR,
+        below::InfiniteMPS, operator::InfiniteMPOHamiltonian, above::InfiniteMPS = below
     )
     # TODO: efficient transfer matrix slicing for large unitcells
     for site in reverse(eachindex(GR))

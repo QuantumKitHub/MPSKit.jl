@@ -23,6 +23,17 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- `environments` now follows a single positional contract for every state and operator kind:
+  `environments(below, operator, above, alg)`, where `alg` is the environment algorithm
+  (slot 4). The operator form requires an explicit `above`. Auxiliary inputs are keyword-only:
+  `leftstart`/`rightstart` for finite and window environments, and `lenvs`/`renvs` for window
+  and quasiparticle environments.
+  The two-argument form `environments(below, above)` (with two states) is reserved for the
+  operator-free overlap environments. There is no two-argument `environments(below, operator)`
+  shorthand: a two-argument call is always the overlap, since the second argument cannot be
+  disambiguated between a ket and an operator (undecidable for density matrices, where states
+  and operators share a representation). ([#436](https://github.com/QuantumKitHub/MPSKit.jl/pull/436))
+
 ### Deprecated
 
 ### Removed

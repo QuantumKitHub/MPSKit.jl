@@ -1,4 +1,4 @@
-function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environments(ψ, Oϕ))
+function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environments(ψ, _environment_args(Oϕ)...))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("DMRG2")
 
@@ -35,7 +35,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environment
     return ψ, envs, ϵ
 end
 
-function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments(ψ, Oϕ))
+function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments(ψ, _environment_args(Oϕ)...))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("DMRG")
 

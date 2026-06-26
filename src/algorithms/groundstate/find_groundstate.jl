@@ -22,7 +22,7 @@ optimization algorithm will be attempted based on the supplied keywords.
 - `ϵ::Float64`: final convergence error upon terminating the algorithm
 """
 function find_groundstate(
-        ψ::AbstractMPS, H, envs::AbstractMPSEnvironments = environments(ψ, H);
+        ψ::AbstractMPS, H, envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         tol = Defaults.tol, maxiter = Defaults.maxiter,
         verbosity = Defaults.verbosity, trscheme = nothing
     )

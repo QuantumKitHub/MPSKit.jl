@@ -12,13 +12,13 @@ Base.@deprecate(
 
 function approximate(
         mps::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS}, alg::VOMPS,
-        envs = environments(mps, toapprox)
+        envs = environments(mps, toapprox...)
     )
     log = IterLog("VOMPS")
     iter = 0
     ϵ = calc_galerkin(mps, toapprox..., envs)
     alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-    recalculate!(envs, mps, toapprox...; alg_environments.tol)
+    recalculate!(envs, mps, toapprox..., alg_environments)
 
     state = VOMPSState(mps, toapprox, envs, iter, ϵ)
     it = IterativeSolver(alg, state)
@@ -63,9 +63,10 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:T
 end
 
 function localupdate_step!(
-        ::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
+        it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
     )
-    alg_orth = Defaults.alg_orth()
+    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    alg_orth = alg_gauge.alg_orth
 
     ACs = similar(state.mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
@@ -86,9 +87,10 @@ function localupdate_step!(
     return ACs
 end
 function localupdate_step!(
-        ::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, scheduler
+        it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, scheduler
     )
-    alg_orth = Defaults.alg_orth()
+    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    alg_orth = alg_gauge.alg_orth
 
     ACs = similar(state.mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
@@ -118,5 +120,5 @@ end
 
 function envs_step!(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, mps)
     alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
-    return recalculate!(state.envs, mps, state.operator...; alg_environments.tol)
+    return recalculate!(state.envs, mps, state.operator..., alg_environments)
 end
