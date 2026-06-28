@@ -1,5 +1,6 @@
 [deps]
 BenchmarkFreeFermions = "5b68a00d-ca4d-4b58-ab0c-dc082ade624e"
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
@@ -13,4 +14,5 @@ Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
+TensorKitTensors = "41b62e7d-e9d1-4e23-942c-79a97adf954b"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
