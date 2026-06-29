@@ -114,7 +114,7 @@ verbosity_conv = 1
     end
 
     @testset "CBEDMRG warmstart $(nameof(Exp))" for (Exp, kw) in
-            ((OptimalExpand, (;)), (SketchedExpand, (; oversampling = 4)))
+        ((OptimalExpand, (;)), (SketchedExpand, (; oversampling = 4)))
         # warmstart seeds the expansion with the two-site gradient (alters the state); the
         # ground-state search should still converge to the correct low-variance state
         Random.seed!(2025)
