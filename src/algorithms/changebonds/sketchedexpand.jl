@@ -14,13 +14,13 @@ a small singular value decomposition of the sketched gradient.
 
 !!! note
     This strategy is only defined for `FiniteMPS` (through [`changebond!`](@ref)), so that it
-    can be used both standalone and as the `expand` strategy of [`CBEDMRG`](@ref).
+    can be used both standalone and as the `alg_expand` strategy of [`DMRG`](@ref).
 
 Like [`OptimalExpand`](@ref), the expansion is by default state-preserving (the added
 directions are connected through a zero block, as required for e.g. TDVP). When
 `warmstart = true`, the new directions are instead seeded with the (physically scaled) sketched
 two-site gradient, warm-starting the subsequent single-site optimization in ground-state search
-(e.g. as the `expand` strategy of [`CBEDMRG`](@ref)); this alters the state, and the injected
+(e.g. as the `alg_expand` strategy of [`DMRG`](@ref)); this alters the state, and the injected
 amplitude scales with the gradient norm so that it vanishes automatically at convergence.
 
 !!! note
@@ -86,7 +86,7 @@ end
 # we use the complement projector of the *isometric* MPS tensor `A`: `I - A A'` (left-iso) and
 # `I - A' A` (right-iso). The isometric tensor is obtained from the center tensor by a local
 # `left_orth`/`right_orth!`, which leaves the MPS gauge (and any environments a caller maintains
-# incrementally, e.g. `CBEDMRG`) untouched. On the sketch side this turns the range-finder into a
+# incrementally, e.g. CBE `DMRG`) untouched. On the sketch side this turns the range-finder into a
 # narrow random draw projected into the complement; on the selection side the gradient is projected
 # and its dominant directions read off directly from the SVD (its singular vectors land in the
 # complement automatically). The kept rank is capped at the complement dimension: the projected

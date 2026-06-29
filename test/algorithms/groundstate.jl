@@ -71,11 +71,11 @@ verbosity_conv = 1
 
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ₀, H, CBEDMRG(; verbosity = verbosity_full, maxiter = 2, expand, trscheme)
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trscheme)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, CBEDMRG(; verbosity = verbosity_conv, maxiter = 10, expand, trscheme), envs
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_expand = expand, trscheme), envs
         )
         v = variance(ψ, H)
 
@@ -97,11 +97,11 @@ verbosity_conv = 1
 
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ₀, H, CBEDMRG(; verbosity = verbosity_full, maxiter = 2, expand, trscheme)
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trscheme)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, CBEDMRG(; verbosity = verbosity_conv, maxiter = 15, expand, trscheme), envs
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 15, alg_expand = expand, trscheme), envs
         )
         v = variance(ψ, H)
 
@@ -121,7 +121,7 @@ verbosity_conv = 1
         ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
         expand = Exp(; trscheme = truncrank(D ÷ 2), warmstart = true, kw...)
         ψ, envs, δ = find_groundstate(
-            ψ₀, H, CBEDMRG(; verbosity = verbosity_conv, maxiter = 15, expand, trscheme = truncrank(D))
+            ψ₀, H, DMRG(; verbosity = verbosity_conv, maxiter = 15, alg_expand = expand, trscheme = truncrank(D))
         )
         @test sum(δ) ≈ 0 atol = 1.0e-3
         @test variance(ψ, H) < 1.0e-2

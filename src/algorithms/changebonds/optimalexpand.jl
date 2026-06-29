@@ -10,7 +10,7 @@ zero block, so that the expanded state is identical to the original one (as requ
 TDVP). When `warmstart = true`, the new directions are instead seeded with the (physically
 scaled) two-site gradient itself, so the expanded state already moves toward the optimal
 two-site update. This changes the state and is therefore only useful for ground-state search
-(e.g. as the `expand` strategy of [`CBEDMRG`](@ref)), where it warm-starts the subsequent
+(e.g. as the `alg_expand` strategy of [`DMRG`](@ref)), where it warm-starts the subsequent
 single-site optimization; the injected amplitude scales with the gradient norm and so vanishes
 automatically at convergence.
 
