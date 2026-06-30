@@ -8,7 +8,7 @@ single-site cost using the randomized "shrewd selection" of Controlled Bond Expa
 is folded into the effective environment, collapsing the large bond before the two-site update is
 ever formed, and the dominant directions are read off a small singular value decomposition.
 
-The `warmstart` and state-preserving behaviour match [`OptimalExpand`](@ref).
+The state-preserving behaviour matches [`OptimalExpand`](@ref).
 
 !!! note
     Only defined for `FiniteMPS` (through [`changebond!`](@ref)), so it can be used standalone or
@@ -28,9 +28,6 @@ $(TYPEDFIELDS)
 
     "number of extra sketch columns drawn beyond the target rank (range-finder oversampling)"
     oversampling::Int = 0
-
-    "whether to seed the new directions with the sketched two-site gradient (warm start, alters the state) instead of a zero block"
-    warmstart::Bool = false
 
     "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
@@ -91,21 +88,16 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Sk
     # orthonormalize the sketched right complement, truncating away the oversampling padding
     B = project_complement_right!(_transpose_tail(Y), ARtt)
     if dim(Vℓ) == dim(Vk)        # no oversampling: a plain QR/LQ suffices
-        L, ar_re = right_orth!(B; alg = alg.alg_orth)
+        _, ar_re = right_orth!(B; alg = alg.alg_orth)
     else
-        L, ar_re = right_orth!(B; trunc = truncspace(Vk), alg = alg.alg_orth)
+        _, ar_re = right_orth!(B; trunc = truncspace(Vk), alg = alg.alg_orth)
     end
 
     # optimal vectors at site+1
-    if alg.warmstart
-        # seed the new left directions with the (physically scaled) gradient instead of a zero
-        # block, warm-starting the subsequent optimization (alters the state)
-        nal, nc = left_gauge(catdomain(left, Q * L))
-    else
-        # embed `left` into the enlarged domain (zero weight in the new directions)
-        nal_space = codomain(left) ← (only(domain(left)) ⊕ space(ar_re, 1))
-        nal, nc = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
-    end
+    # embed `left` into the enlarged domain (zero weight in the new directions), leaving the state
+    # unchanged
+    nal_space = codomain(left) ← (only(domain(left)) ⊕ space(ar_re, 1))
+    nal, nc = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
     nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
 
     normalize && normalize!(nc)
@@ -135,22 +127,17 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ske
     # orthonormalize the sketched left complement, truncating away the oversampling padding
     B = project_complement!(Y, left)
     if dim(Vℓ) == dim(Vk)        # no oversampling: a plain QR/LQ suffices
-        Q, R = left_orth!(B; alg = alg.alg_orth)
+        Q, _ = left_orth!(B; alg = alg.alg_orth)
     else
-        Q, R = left_orth!(B; trunc = truncspace(Vk), alg = alg.alg_orth)
+        Q, _ = left_orth!(B; trunc = truncspace(Vk), alg = alg.alg_orth)
     end
 
     # optimal vectors at site-1
     right_tail = _transpose_tail(right)
-    if alg.warmstart
-        # seed the new right directions with the (physically scaled) gradient instead of a zero
-        # block, warm-starting the subsequent optimization (alters the state)
-        nc, Qr2 = lq_compact!(catcodomain(right_tail, R * Qr_o))
-    else
-        # embed `_transpose_tail(right)` into the enlarged codomain (zero weight in the new directions)
-        nc_space = (codomain(right_tail)[1] ⊕ space(Q, 3)') ← domain(right_tail)
-        nc, Qr2 = lq_compact!(absorb!(zerovector!(similar(right_tail, nc_space)), right_tail))
-    end
+    # embed `_transpose_tail(right)` into the enlarged codomain (zero weight in the new
+    # directions), leaving the state unchanged
+    nc_space = (codomain(right_tail)[1] ⊕ space(Q, 3)') ← domain(right_tail)
+    nc, Qr2 = lq_compact!(absorb!(zerovector!(similar(right_tail, nc_space)), right_tail))
     AL_exp = catdomain(left, Q)
 
     normalize && normalize!(nc)

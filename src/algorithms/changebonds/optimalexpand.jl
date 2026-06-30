@@ -5,14 +5,8 @@ An algorithm that expands the given mps as described in
 [Zauner-Stauber et al. Phys. Rev. B 97 (2018)](@cite zauner-stauber2018), by selecting the
 dominant contributions of a two-site updated MPS tensor, orthogonal to the original ψ.
 
-By default the expansion does not alter the state: the added directions are connected through a
-zero block, so that the expanded state is identical to the original one (as required for e.g.
-TDVP). When `warmstart = true`, the new directions are instead seeded with the (physically
-scaled) two-site gradient itself, so the expanded state already moves toward the optimal
-two-site update. This changes the state and is therefore only useful for ground-state search
-(e.g. as the `alg_expand` strategy of [`DMRG`](@ref)), where it warm-starts the subsequent
-single-site optimization; the injected amplitude scales with the gradient norm and so vanishes
-automatically at convergence.
+The expansion does not alter the state: the added directions are connected through a zero block,
+so that the expanded state is identical to the original one (as required for e.g. TDVP).
 
 !!! note
     [`changebonds!`](@ref) is only defined for `FiniteMPS`, and modifies both the state and its environment.
@@ -27,9 +21,6 @@ $(TYPEDFIELDS)
 
     "algorithm used for truncating the expanded space"
     trscheme::TruncationStrategy
-
-    "whether to seed the new directions with the two-site gradient (warm start, alters the state) instead of a zero block"
-    warmstart::Bool = false
 
     "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
@@ -112,20 +103,15 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Op
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)
     gradnorm = norm(g2)
-    U, S, Vᴴ, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+    _, _, Vᴴ, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
     @infov 4 "bond expansion" site dir = :right ϵ_select ϵ_2site = gradnorm / norm(AC2)
 
     # optimal vectors at site+1
     ar_re = Vᴴ * NR
-    if alg.warmstart
-        # seed the new left directions with the (physically scaled) gradient instead of a zero
-        # block, warm-starting the subsequent optimization (alters the state)
-        nal, nc = left_gauge(catdomain(left, gradnorm * (NL * U * S)))
-    else
-        # embed `left` into the enlarged domain (zero weight in the new directions)
-        nal_space = codomain(left) ← (only(domain(left)) ⊕ space(Vᴴ, 1))
-        nal, nc = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
-    end
+    # embed `left` into the enlarged domain (zero weight in the new directions), leaving the state
+    # unchanged
+    nal_space = codomain(left) ← (only(domain(left)) ⊕ space(Vᴴ, 1))
+    nal, nc = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
     nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
 
     normalize && normalize!(nc)
@@ -146,21 +132,16 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Opt
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)
     gradnorm = norm(g2)
-    U, S, Vᴴ, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+    U, _, _, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
     @infov 4 "bond expansion" site dir = :left ϵ_select ϵ_2site = gradnorm / norm(AC2)
 
     # optimal vectors at site-1
     Q = NL * U
     right_tail = _transpose_tail(right)
-    if alg.warmstart
-        # seed the new right directions with the (physically scaled) gradient instead of a zero
-        # block, warm-starting the subsequent optimization (alters the state)
-        nc, Qr = lq_compact!(catcodomain(right_tail, gradnorm * (S * Vᴴ * NR)))
-    else
-        # embed `_transpose_tail(right)` into the enlarged codomain (zero weight in the new directions)
-        nc_space = (codomain(right_tail)[1] ⊕ space(Q, 3)') ← domain(right_tail)
-        nc, Qr = lq_compact!(absorb!(zerovector!(similar(right_tail, nc_space)), right_tail))
-    end
+    # embed `_transpose_tail(right)` into the enlarged codomain (zero weight in the new
+    # directions), leaving the state unchanged
+    nc_space = (codomain(right_tail)[1] ⊕ space(Q, 3)') ← domain(right_tail)
+    nc, Qr = lq_compact!(absorb!(zerovector!(similar(right_tail, nc_space)), right_tail))
     AL_exp = catdomain(left, Q)
 
     normalize && normalize!(nc)

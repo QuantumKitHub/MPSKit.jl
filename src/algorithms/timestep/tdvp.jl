@@ -7,9 +7,8 @@ For finite MPS, setting `alg_expand` to a bond-expansion algorithm (e.g. [`Optim
 [`SketchedExpand`](@ref)) enriches the bond with directions orthogonal to the current state
 ahead of each local integration, recovering Controlled Bond Expansion (CBE) TDVP and lifting the
 fixed-bond limitation of plain single-site TDVP. A truncating `trscheme` is then required to cut
-the enlarged bond back down (selecting the truncated-SVD gauge). The expansion must be
-state-preserving, so leave the expander's `warmstart = false` (the default); `warmstart = true`
-injects a gradient and corrupts the evolution.
+the enlarged bond back down (selecting the truncated-SVD gauge). The expansion is
+state-preserving, as required for a consistent time evolution.
 
 !!! note
     Real-time evolution preserves the norm: neither the bond expansion nor the truncation
