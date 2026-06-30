@@ -231,16 +231,8 @@ Factor an updated center MPS tensor `AC` into left- or right-canonical form, `AC
 modifying `AC`. `right_gauge` handles the MPS leg permutation internally, so `AR` is returned in
 standard MPS-tensor form.
 
-`alg` selects the factorization and defaults to a (positive) QR/LQ center-move that preserves
-the virtual bond ([`Defaults.alg_orth`](@ref)). Passing a
-[`TruncatedAlgorithm`](@extref MatrixAlgebraKit.TruncatedAlgorithm) instead performs a truncated
-SVD that shrinks the bond, e.g. to cut an expanded bond back down in controlled bond expansion
-[`DMRG`](@ref).
-
-!!! note
-    A `TruncatedAlgorithm` built from the default SVD placeholder (`Defaults.alg_svd()`) has no
-    registered `left_orth_alg`/`right_orth_alg`, so it is wrapped explicitly in
-    `LeftOrthViaSVD`/`RightOrthViaSVD`; the inner default SVD is resolved by `svd_trunc!`.
+`alg` selects the factorization and defaults to a (positive) QR/LQ center-move that preserves the virtual bond.
+Passing a [`TruncatedAlgorithm`](@extref MatrixAlgebraKit.TruncatedAlgorithm) instead performs a truncated SVD may shrink the bond.
 """
 left_gauge
 @doc (@doc left_gauge) right_gauge
