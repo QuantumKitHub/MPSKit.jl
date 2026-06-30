@@ -1,7 +1,7 @@
 # [Operators](@id lib_operators)
 
-Reference for matrix product operators and Hamiltonians. The full, canonical
-docstrings for the whole package live in the [Library](@ref lib_index) index.
+Reference for matrix product operators and Hamiltonians.
+The full, canonical docstrings for the whole package live in the [Library](@ref lib_index) index.
 
 ## Matrix product operators
 

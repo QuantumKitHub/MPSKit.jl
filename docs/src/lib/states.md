@@ -1,7 +1,7 @@
 # [States](@id lib_states)
 
-Reference for the matrix product state types. The full, canonical docstrings for
-the whole package live in the [Library](@ref lib_index) index.
+Reference for the matrix product state types.
+The full, canonical docstrings for the whole package live in the [Library](@ref lib_index) index.
 
 ## Matrix product states
 
