@@ -20,8 +20,8 @@ The `warmstart` and state-preserving behaviour match [`OptimalExpand`](@ref).
 $(TYPEDFIELDS)
 """
 @kwdef struct SketchedExpand{S} <: Algorithm
-    "algorithm used for the singular value decomposition"
-    alg_svd::S = Defaults.alg_svd()
+    "algorithm used to orthonormalize the sketched complement (passed as the `alg` of `left_orth!`/`right_orth!`); `nothing` selects QR without oversampling and an SVD-based decomposition otherwise"
+    alg_orth::S = nothing
 
     "algorithm used for truncating the expanded space"
     trscheme::TruncationStrategy
@@ -91,9 +91,9 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Sk
     # orthonormalize the sketched right complement, truncating away the oversampling padding
     B = project_complement_right!(_transpose_tail(Y), ARtt)
     if dim(Vℓ) == dim(Vk)        # no oversampling: a plain QR/LQ suffices
-        L, ar_re = right_orth!(B)
+        L, ar_re = right_orth!(B; alg = alg.alg_orth)
     else
-        L, ar_re = right_orth!(B; trunc = truncspace(Vk))
+        L, ar_re = right_orth!(B; trunc = truncspace(Vk), alg = alg.alg_orth)
     end
 
     # optimal vectors at site+1
@@ -135,9 +135,9 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ske
     # orthonormalize the sketched left complement, truncating away the oversampling padding
     B = project_complement!(Y, left)
     if dim(Vℓ) == dim(Vk)        # no oversampling: a plain QR/LQ suffices
-        Q, R = left_orth!(B)
+        Q, R = left_orth!(B; alg = alg.alg_orth)
     else
-        Q, R = left_orth!(B; trunc = truncspace(Vk))
+        Q, R = left_orth!(B; trunc = truncspace(Vk), alg = alg.alg_orth)
     end
 
     # optimal vectors at site-1
