@@ -107,7 +107,7 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Sk
     # by a narrow QR into a proper randomized range-finder basis (no full complement basis is formed)
     Vℓ = sketch_space(compL, alg)
     Ω = randisometry(scalartype(left), codomain(AL) ← Vℓ)
-    Q, _ = qr_compact!(Ω - AL * (AL' * Ω))
+    Q, _ = qr_compact!(project_complement!(Ω, AL))
 
     # fold the sketch into the left environment (bra-leg becomes the sketch leg), then apply the
     # existing single-site effective Hamiltonian on site+1: this reconstructs `Q† AC2_projection`
@@ -164,7 +164,7 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ske
     Y = Hac * left
 
     # project onto the left complement with (I - AL AL'): the SVD left-vectors lie in the complement
-    B = Y - left * (left' * Y)
+    B = project_complement!(Y, left)
     nrm = norm(B)
     trunc = alg.trscheme & MatrixAlgebraKit.truncrank(dim(compL))
     U, S, Vᴴ, ϵ_select = svd_trunc!(normalize!(B); trunc, alg = alg.alg_svd)
