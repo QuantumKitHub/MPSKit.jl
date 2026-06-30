@@ -39,10 +39,12 @@ features:
 
 ## Table of contents
 
-```@contents
-Pages = ["man/intro.md","man/conventions.md","man/states.md","man/operators.md","man/algorithms.md","man/parallelism.md", "man/lattices.md"]
-Depth = 1
-```
+- [Prerequisites](@ref)
+- [States](@ref um_states)
+- [Operators](@ref um_operators)
+- [Algorithms](@ref um_algorithms)
+- [Parallelism in julia](@ref)
+- [Lattices](@ref lattices)
 
 ## Installation
 
