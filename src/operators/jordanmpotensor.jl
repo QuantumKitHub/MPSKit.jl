@@ -136,11 +136,8 @@ end
 
 similar_braidingtensor(t, V = space(t)) = BraidingTensor{scalartype(t), spacetype(V), storagetype(t)}(V)
 
-function _isbraiding(t::AbstractTensorMap)
-    t isa BraidingTensor && return true
-    τ = similar_braidingtensor(t)
-    return isapprox(t, τ)
-end
+_isbraiding(t::BraidingTensor) = true
+_isbraiding(t::AbstractTensorMap) = isapprox(t, similar_braidingtensor(t))
 
 function JordanMPOTensor(W::SparseBlockTensorMap{TT, E, S, 2, 2}) where {TT, E, S}
     # the diagonal corners must be (close to) identity braidings
