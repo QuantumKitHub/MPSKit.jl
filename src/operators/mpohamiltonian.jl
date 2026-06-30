@@ -140,7 +140,7 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: J
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                τ = BraidingTensor{T, spacetype(W), storagetype(W)}(eachspace(W)[I])
+                τ = similar_braidingtensor(W, eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
@@ -261,7 +261,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <:
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                τ = BraidingTensor{T, spacetype(W), storagetype(W)}(eachspace(W)[I])
+                τ = similar_braidingtensor(W, eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
@@ -477,7 +477,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
             key_R = key_R′ == 0 ? length(virtualsumspaces[site + 1]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{scalartype(TW), spacetype(TW), storagetype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
+                τ = similar_braidingtensor(TW, eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -598,7 +598,8 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
             key_R = key_R′ == 0 ? length(virtualspaces[site]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{scalartype(TW), spacetype(TW), storagetype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
+
+                τ = similar_braidingtensor(TW, eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o

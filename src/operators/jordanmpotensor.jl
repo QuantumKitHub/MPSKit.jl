@@ -134,9 +134,11 @@ function JordanMPOTensor(
     )
 end
 
+similar_braidingtensor(t, V = space(t)) = BraidingTensor{scalartype(t), spacetype(V), storagetype(t)}(V)
+
 function _isbraiding(t::AbstractTensorMap)
     t isa BraidingTensor && return true
-    τ = BraidingTensor{scalartype(t), spacetype(t), storagetype(t)}(space(t))
+    τ = similar_braidingtensor(t)
     return isapprox(t, τ)
 end
 
@@ -181,7 +183,7 @@ end
 
 # materialize an identity scalar at virtual position `K` as a dense `TensorMap`
 @inline function _identity_tensor(W::JordanMPOTensor, K::CartesianIndex{4}, c = one(scalartype(W)))
-    τ = BraidingTensor{scalartype(W), spacetype(W), storagetype(W)}(eachspace(W)[K])
+    τ = similar_braidingtensor(W, eachspace(W)[K])
     return isone(c) ? TensorMap(τ) : scale!(TensorMap(τ), c)
 end
 

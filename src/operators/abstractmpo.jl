@@ -200,7 +200,7 @@ function add_physical_charge(O::BraidingTensor, charge::Sector)
     auxspace = Vect[typeof(charge)](charge => 1)'
     V = left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
         fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
-    return BraidingTensor{scalartype(O), spacetype(O), storagetype(O)}(V)
+    return similar_braidingtensor(O, V)
 end
 function add_physical_charge(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}, charge::Sector)
     sectortype(O) == typeof(charge) || throw(SectorMismatch())
