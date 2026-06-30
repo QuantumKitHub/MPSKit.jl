@@ -1,4 +1,6 @@
+```@raw html
 ---
+# https://vitepress.dev/reference/default-theme-home-page
 layout: home
 
 hero:
@@ -20,15 +22,20 @@ hero:
       link: https://github.com/QuantumKitHub/MPSKit.jl
 
 features:
-  - title: States
+  - icon: 🔗
+    title: States
     details: Construction and manipulation of finite and infinite Matrix Product States (MPS).
-  - title: Observables
+  - icon: 📏
+    title: Observables
     details: Calculation of observables and expectation values.
-  - title: Optimization
+  - icon: 🎯
+    title: Optimization
     details: Various optimization methods for obtaining MPS fixed points.
-  - title: Symmetries
+  - icon: ⚛️
+    title: Symmetries
     details: Support for a wide variety of symmetries, including Abelian, non-Abelian, fermionic and anyonic symmetries.
 ---
+```
 
 ## Table of contents
 
