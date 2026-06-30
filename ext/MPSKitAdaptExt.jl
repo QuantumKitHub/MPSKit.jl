@@ -1,6 +1,6 @@
 module MPSKitAdaptExt
 
-using TensorKit: space, spacetype
+using TensorKit: space, spacetype, scalartype
 using MPSKit
 using BlockTensorKit: nonzero_pairs
 using Adapt
@@ -31,8 +31,12 @@ end
 
 # inline to improve type stability with closures
 @inline Adapt.adapt_structure(to, mpo::MPO) = MPO(map(adapt(to), mpo.O))
-@inline Adapt.adapt_structure(to, W::MPSKit.JordanMPOTensor) =
-    MPSKit.JordanMPOTensor(space(W), adapt(to, W.A), adapt(to, W.B), adapt(to, W.C), adapt(to, W.D))
+@inline function Adapt.adapt_structure(to, W::MPSKit.JordanMPOTensor)
+    tensors = adapt(to, W.tensors)
+    T = scalartype(tensors)
+    scalars = Dict{CartesianIndex{4}, T}(K => convert(T, c) for (K, c) in W.scalars)
+    return MPSKit.JordanMPOTensor(tensors, scalars)
+end
 @inline Adapt.adapt_structure(to, mpo::MPOHamiltonian) =
     MPOHamiltonian(map(x -> adapt(to, x), mpo.W))
 @inline Adapt.adapt_structure(to, ml::MPSKit.Multiline) = MPSKit.Multiline(map(adapt(to), ml.data))

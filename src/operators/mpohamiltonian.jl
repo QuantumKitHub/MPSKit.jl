@@ -140,7 +140,7 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: J
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                τ = BraidingTensor{T, spacetype(W), storagetype(W)}(eachspace(W)[I])
+                τ = similar_braidingtensor(W, eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
@@ -261,7 +261,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <:
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                τ = BraidingTensor{T, spacetype(W), storagetype(W)}(eachspace(W)[I])
+                τ = similar_braidingtensor(W, eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
@@ -477,7 +477,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
             key_R = key_R′ == 0 ? length(virtualsumspaces[site + 1]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{scalartype(TW), spacetype(TW), storagetype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
+                τ = similar_braidingtensor(TW, eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -598,7 +598,8 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
             key_R = key_R′ == 0 ? length(virtualspaces[site]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{scalartype(TW), spacetype(TW), storagetype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
+
+                τ = similar_braidingtensor(TW, eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -633,7 +634,7 @@ Base.copy(H::MPOHamiltonian) = MPOHamiltonian(map(copy, parent(H)))
 
 function Base.getproperty(H::MPOHamiltonian, sym::Symbol)
     if sym === :A
-        return map(h -> h[2:(end - 1), 1, 1, 2:(end - 1)], parent(H))
+        return map(h -> h.A, parent(H))
     elseif sym === :B
         return map(h -> h[2:(end - 1), 1, 1, end], parent(H))
     elseif sym === :C
@@ -649,9 +650,11 @@ function isidentitylevel(H::InfiniteMPOHamiltonian{<:JordanMPOTensor}, i::Int)
     if i == 1 || i == size(H[1], 1)
         return true
     else
-        return all(H.A) do A
-            return haskey(A, CartesianIndex(i - 1, 1, 1, i - 1)) &&
-                A[i - 1, 1, 1, i - 1] isa BraidingTensor
+        # a diagonal level is an identity level iff every site stores a unit identity
+        # scalar there; pure identities live in `scalars` (genuine/scaled operators do not)
+        return all(parent(H)) do W
+            c = get(W.scalars, CartesianIndex(i, 1, 1, i), nothing)
+            return c !== nothing && isone(c)
         end
     end
 end
@@ -782,12 +785,18 @@ Base.:-(H::MPOHamiltonian, λs::AbstractVector{<:Number}) = H + (-λs)
 Base.:-(λs::AbstractVector{<:Number}, H::MPOHamiltonian) = λs + (-H)
 Base.:-(H1::MPOHamiltonian, H2::MPOHamiltonian) = H1 + (-H2)
 
+# scaling a Jordan MPO Hamiltonian scales every path exactly once, by scaling the
+# transitions out of the starting level (the top row, excluding the identity corner)
 function VectorInterface.scale!(
         H::MPOHamiltonian{O}, λ::Number
     ) where {O <: JordanMPOTensor}
-    for i in 1:length(H)
-        scale!(H[i].C, λ)
-        scale!(H[i].D, λ)
+    for W in parent(H)
+        for (I, v) in nonzero_pairs(W.tensors)
+            I[1] == 1 && scale!(v, λ)
+        end
+        for K in collect(keys(W.scalars))
+            (K[1] == 1 && K[4] != 1) && (W.scalars[K] *= λ)
+        end
     end
     return H
 end
@@ -795,12 +804,15 @@ function VectorInterface.scale!(
         Hdst::MPOHamiltonian{<:JordanMPOTensor},
         Hsrc::MPOHamiltonian{<:JordanMPOTensor}, λ::Number
     )
-    N = check_length(Hdst, Hsrc)
-    for i in 1:N
-        scale!(Hdst[i].C, Hsrc[i].C, λ)
-        scale!(Hdst[i].D, Hsrc[i].D, λ)
-        copy!(Hdst[i].A, Hsrc[i].A)
-        copy!(Hdst[i].B, Hsrc[i].B)
+    check_length(Hdst, Hsrc)
+    for (Wd, Ws) in zip(parent(Hdst), parent(Hsrc))
+        for (I, v) in nonzero_pairs(Ws.tensors)
+            Wd.tensors[I] = I[1] == 1 ? scale(v, λ) : copy(v)
+        end
+        empty!(Wd.scalars)
+        for (K, c) in Ws.scalars
+            Wd.scalars[K] = (K[1] == 1 && K[4] != 1) ? c * λ : c
+        end
     end
     return Hdst
 end
