@@ -21,9 +21,6 @@ $(TYPEDFIELDS)
 
     "algorithm used for truncating the expanded space"
     trscheme::TruncationStrategy
-
-    "setting for how much information is displayed"
-    verbosity::Int = Defaults.verbosity
 end
 
 # Simple wrapper to convert between diffrent type of InifniteMPS.
@@ -102,9 +99,7 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Op
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)
-    gradnorm = norm(g2)
-    _, _, Vᴴ, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
-    @infov 4 "bond expansion" site dir = :right ϵ_select ϵ_2site = gradnorm / norm(AC2)
+    _, _, Vᴴ = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
 
     # optimal vectors at site+1
     ar_re = Vᴴ * NR
@@ -131,9 +126,7 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Opt
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)
-    gradnorm = norm(g2)
-    U, _, _, ϵ_select = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
-    @infov 4 "bond expansion" site dir = :left ϵ_select ϵ_2site = gradnorm / norm(AC2)
+    U, _, _ = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
 
     # optimal vectors at site-1
     Q = NL * U
@@ -154,10 +147,8 @@ changebonds(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ
     changebonds!(copy(ψ), H, alg, envs)
 
 function changebonds!(ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ))
-    LoggingExtras.withlevel(; alg.verbosity) do
-        for i in 1:(length(ψ) - 1)
-            changebond!(i, Val(:right), ψ, H, alg, envs)
-        end
+    for i in 1:(length(ψ) - 1)
+        changebond!(i, Val(:right), ψ, H, alg, envs)
     end
     return ψ, envs
 end

@@ -28,9 +28,6 @@ $(TYPEDFIELDS)
 
     "number of extra sketch columns drawn beyond the target rank (range-finder oversampling)"
     oversampling::Int = 0
-
-    "setting for how much information is displayed"
-    verbosity::Int = Defaults.verbosity
 end
 
 """
@@ -47,19 +44,6 @@ function sketch_space(V, alg::SketchedExpand)
     return infimum(V, Vk ⊕ Vp), Vk
 end
 
-"""
-    complement_space(Vfull::ElementarySpace, image::ElementarySpace)
-
-The orthogonal complement `Vfull ⊖ image`, computed sector-wise from the spaces alone (no
-factorization). Used to size and cap the random sketch.
-"""
-function complement_space(Vfull::ElementarySpace, image::ElementarySpace)
-    @assert !isdual(Vfull)
-    pairs = [c => (dim(Vfull, c) - dim(image, c)) for c in sectors(Vfull)]
-    filter!(p -> last(p) > 0, pairs)
-    return typeof(Vfull)(pairs)
-end
-
 # Finite system
 # -------------
 # Rather than forming the two-site update, a random sketch of the orthogonal complement is folded
@@ -73,8 +57,8 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Sk
     ARtt = _transpose_tail(right)   # AR is already right-isometric
 
     # nothing to add when either complement is empty (e.g. edge bonds)
-    compL = complement_space(fuse(codomain(AL)), only(domain(AL)))
-    compR = complement_space(fuse(domain(ARtt)), only(codomain(ARtt)))
+    compL = fuse(codomain(AL)) ⊖ only(domain(AL))
+    compR = fuse(domain(ARtt)) ⊖ only(codomain(ARtt))
     (dim(compL) == 0 || dim(compR) == 0) && return ψ
 
     # random sketch of the left complement, folded into the left environment
@@ -111,8 +95,8 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ske
     _, ARtt = right_orth!(_transpose_tail(right; copy = true); trunc = notrunc())  # local right-isometric form
 
     # nothing to add when either complement is empty (e.g. edge bonds)
-    compL = complement_space(fuse(codomain(left)), only(domain(left)))
-    compR = complement_space(fuse(domain(ARtt)), only(codomain(ARtt)))
+    compL = fuse(codomain(left)) ⊖ only(domain(left))
+    compR = fuse(domain(ARtt)) ⊖ only(codomain(ARtt))
     (dim(compL) == 0 || dim(compR) == 0) && return ψ
 
     # random sketch of the right complement, folded into the right environment
@@ -150,10 +134,8 @@ changebonds(ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs = environments(�
     changebonds!(copy(ψ), H, alg, envs)
 
 function changebonds!(ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs = environments(ψ, H, ψ))
-    LoggingExtras.withlevel(; alg.verbosity) do
-        for i in 1:(length(ψ) - 1)
-            changebond!(i, Val(:right), ψ, H, alg, envs)
-        end
+    for i in 1:(length(ψ) - 1)
+        changebond!(i, Val(:right), ψ, H, alg, envs)
     end
     return ψ, envs
 end
