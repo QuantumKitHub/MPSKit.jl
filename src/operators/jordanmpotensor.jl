@@ -169,9 +169,7 @@ end
 # Properties
 # ----------
 TensorKit.space(W::JordanMPOTensor) = space(W.tensors)
-function Base.eltype(::Type{<:JordanMPOTensor{T, S, A}}) where {T, S, A}
-    return tensormaptype(S, 2, 2, A)
-end
+Base.eltype(::Type{T}) where {T <: JordanMPOTensor} = eltype(fieldtype(T, :tensors))
 
 function Base.getproperty(W::JordanMPOTensor, sym::Symbol)
     sym === :A && return _jordan_A(W)
