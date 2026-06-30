@@ -59,12 +59,11 @@ end
 function environments(
         below::WindowMPS, O::WindowMPOHamiltonian, above = nothing;
         lenvs = environments(below.left_gs, O.left_ham, below.left_gs),
-        renvs = environments(below.right_gs, O.right_ham, below.right_gs)
+        renvs = environments(below.right_gs, O.right_ham, below.right_gs),
+        leftstart = copy(lenvs.GLs[1]),
+        rightstart = copy(renvs.GRs[end])
     )
-    leftstart = copy(lenvs.GLs[1])
-    rightstart = copy(renvs.GRs[end])
-
-    return environments(below, O.finite_ham, above; leftstart, rightstart)
+    return initialize_environments(below, O.finite_ham, above, leftstart, rightstart)
 end
 
 environments(below::S, above::S) where {S <: Union{FiniteMPS, WindowMPS}} =
