@@ -60,7 +60,7 @@ by `V`). Reuses [`sample_space`](@ref) so the result is sector-correct for grade
 function sketch_space(V, alg::SketchedExpand)
     Vk = sample_space(V, alg.trscheme)
     alg.oversampling == 0 && return Vk
-    Vp = sample_space(V, MatrixAlgebraKit.truncrank(alg.oversampling))
+    Vp = typeof(V)(c => min(dim(V, c), alg.oversampling) for c in sectors(V))
     return infimum(V, Vk ⊕ Vp)
 end
 
@@ -92,7 +92,7 @@ end
 # complement automatically). The kept rank is capped at the complement dimension: the projected
 # object has only that many genuine singular values, and at edge bonds the complement may be empty,
 # where an uncapped `svd_trunc` would otherwise pad the selection with non-orthogonal noise.
-function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs)
+function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs; normalize::Bool = true)
     left = ψ.AC[site]
     right = ψ.AR[site + 1]
     AL, _ = left_orth(left)            # local left-isometric form (range(AL) = range(left))
@@ -118,7 +118,7 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Sk
 
     # project onto the right complement with (I - AR' AR): the SVD right-vectors lie in the complement
     Ytt = _transpose_tail(Y)
-    B = Ytt - (Ytt * ARtt') * ARtt
+    B = project_complement_right!(Ytt, ARtt)
     nrm = norm(B)
     trunc = alg.trscheme & MatrixAlgebraKit.truncrank(dim(compR))
     U, S, Vᴴ, ϵ_select = svd_trunc!(normalize!(B); trunc, alg = alg.alg_svd)
@@ -136,11 +136,12 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Sk
     end
     nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
 
-    ψ.AC[site] = (nal, normalize!(nc))
+    normalize && normalize!(nc)
+    ψ.AC[site] = (nal, nc)
     ψ.AC[site + 1] = (nc, nar)
     return ψ
 end
-function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs)
+function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs; normalize::Bool = true)
     left = ψ.AL[site - 1]              # left-isometric, left of center (valid)
     right = ψ.AC[site]
     _, ARtt = right_orth!(_transpose_tail(right; copy = true); trunc = notrunc())  # local right-iso
@@ -154,7 +155,7 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ske
     # orthonormal rows recovered by a narrow LQ (the randomized range-finder basis)
     Vℓ = sketch_space(compR, alg)
     Ω = adjoint(randisometry(scalartype(right), domain(ARtt) ← Vℓ))
-    _, Qr_o = lq_compact!(Ω - (Ω * ARtt') * ARtt)
+    _, Qr_o = lq_compact!(project_complement_right!(Ω, ARtt))
     Qr = _transpose_front(Qr_o)
 
     # fold the sketch into the right environment, then apply the single-site effective
@@ -183,7 +184,8 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ske
     end
     AL_exp = catdomain(left, Q)
 
-    ψ.AC[site] = (normalize!(nc), _transpose_front(Qr2))
+    normalize && normalize!(nc)
+    ψ.AC[site] = (nc, _transpose_front(Qr2))
     ψ.AC[site - 1] = (AL_exp, nc)
     return ψ
 end

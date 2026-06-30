@@ -9,6 +9,7 @@ using Test, TestExtras
 using MPSKit
 using TensorKit
 using TensorKit: ℙ
+using Random
 
 spacelist = [(ℙ^4, ℙ^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))]
 
@@ -103,6 +104,33 @@ end
     state_tr = changebonds(state_oe, SvdCut(; trscheme = truncrank(dim(Dspace))))
 
     @test dim(left_virtualspace(state_tr, 5)) < dim(left_virtualspace(state_oe, 5))
+end
+
+# density-matrix-style MPS: each site carries two physical legs (ket ⊗ bra). The operator-free
+# bond-change algorithms (`RandExpand` expansion, `SvdCut` truncation) must handle the extra
+# physical leg. Operator-based expanders (`OptimalExpand`/`SketchedExpand`) are not covered here
+# because `FiniteMPOHamiltonian`/`FiniteMPO` only support a single physical leg per site.
+@testset "Density-matrix FiniteMPS $(spacetype(pcomp))" for (pcomp, Dspace) in [
+        (ℙ^2 ⊗ (ℙ^2)', ℙ^6),
+        (Rep[SU₂](1 // 2 => 1) ⊗ Rep[SU₂](1 // 2 => 1)', Rep[SU₂](0 => 4, 1 => 3)),
+    ]
+    Random.seed!(2468)
+    L = 8
+    maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 2:length(ψ))
+
+    ψ = FiniteMPS(rand, ComplexF64, fill(pcomp, L), Dspace)
+    @test numind(ψ.AC[L ÷ 2]) == 4    # two physical legs + two virtual legs
+
+    # RandExpand grows the bond while preserving the state (norm-preserving expansion)
+    ψ_re = changebonds(ψ, RandExpand(; trscheme = truncrank(dim(Dspace) * 2)))
+    @test numind(ψ_re.AC[L ÷ 2]) == 4
+    @test abs(dot(ψ, ψ_re)) ≈ 1 atol = 1.0e-8
+    @test maxbond(ψ_re) > maxbond(ψ)
+
+    # SvdCut truncates the enlarged bond back down, leaving a normalized state
+    ψ_tr = changebonds(ψ_re, SvdCut(; trscheme = truncrank(dim(Dspace))))
+    @test maxbond(ψ_tr) < maxbond(ψ_re)
+    @test abs(dot(ψ_tr, ψ_tr)) ≈ 1 atol = 1.0e-8
 end
 
 @testset "MultilineMPS $(spacetype(pspace))" for (pspace, Dspace) in spacelist

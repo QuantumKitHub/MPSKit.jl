@@ -12,8 +12,9 @@ state-preserving, so leave the expander's `warmstart = false` (the default); `wa
 injects a gradient and corrupts the evolution.
 
 !!! note
-    The expansion renormalizes the bond tensor, which is a no-op for the norm-1 states of
-    real-time evolution but renormalizes imaginary-time evolution at each expansion. CBE is only
+    Real-time evolution preserves the norm: neither the bond expansion nor the truncation
+    renormalizes, so the state norm reflects the accumulated truncation error. Imaginary-time
+    evolution instead renormalizes at every step, like a ground-state search. CBE is only
     available for finite MPS.
 
 ## Fields
@@ -128,7 +129,7 @@ function timestep!(
         # 1. optionally expand the bond ahead of the local update (CBE)
         isnothing(alg.alg_expand) ||
             LoggingExtras.withlevel(; alg.alg_expand.verbosity) do
-            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs)
+            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
         end
 
         # 2. evolve the (possibly expanded) center tensor forward
@@ -136,8 +137,9 @@ function timestep!(
         AC = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator; imaginary_evolution)
 
         # 3. gauge: split AC -> AL[i], C[i] (QR center-move, or truncated SVD cutting the
-        #    enlarged bond back down) and move the center to i+1
-        left_gauge!(ψ, i, AC, alg.alg_gauge)
+        #    enlarged bond back down) and move the center to i+1. Real-time evolution preserves
+        #    the norm; imaginary-time evolution renormalizes.
+        left_gauge!(ψ, i, AC, alg.alg_gauge; normalize = imaginary_evolution)
 
         # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i, ψ, H, ψ, envs)
@@ -156,7 +158,7 @@ function timestep!(
         # 1. optionally expand the bond ahead of the local update (CBE)
         isnothing(alg.alg_expand) ||
             LoggingExtras.withlevel(; alg.alg_expand.verbosity) do
-            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs)
+            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
         end
 
         # 2. evolve the (possibly expanded) center tensor forward
@@ -166,8 +168,9 @@ function timestep!(
             imaginary_evolution
         )
 
-        # 3. gauge: split AC -> C[i-1], AR[i] and move the center to i-1
-        right_gauge!(ψ, i, AC, alg.alg_gauge)
+        # 3. gauge: split AC -> C[i-1], AR[i] and move the center to i-1 (real-time preserves the
+        #    norm; imaginary-time renormalizes)
+        right_gauge!(ψ, i, AC, alg.alg_gauge; normalize = imaginary_evolution)
 
         # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs)

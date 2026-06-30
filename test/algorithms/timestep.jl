@@ -115,11 +115,32 @@ end
             plain, = timestep(plain, H, 0.0, dt, TDVP())   # stuck at Dstart
         end
 
-        @test norm(cbe) ≈ 1 atol = 1.0e-8
+        @test norm(cbe) ≈ 1 atol = 1.0e-6
         @test real(expectation_value(cbe, H)) ≈ E₀ atol = 1.0e-2
         @test dim(left_virtualspace(cbe, L ÷ 2)) > Dstart
         @test dim(left_virtualspace(plain, L ÷ 2)) == Dstart
         @test abs(dot(ref, cbe)) > abs(dot(ref, plain))
+    end
+
+    # the bond truncation must preserve the norm for real-time evolution (the norm reflects the
+    # discarded weight) and only renormalize for imaginary-time evolution
+    @testset "norm handling" begin
+        Random.seed!(6)
+        ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
+        # a deliberately lossy cap so the truncation discards weight every step
+        lossy = TDVP(; alg_expand = OptimalExpand(; trscheme = truncrank(2)), trscheme = truncrank(2))
+
+        ψrt = ψ₀
+        for _ in 1:12
+            ψrt, = timestep(ψrt, H, 0.0, 0.5, lossy)            # real time
+        end
+        @test norm(ψrt) < 1 - 1.0e-3                            # truncation loss is not renormalized away
+
+        ψit = ψ₀
+        for _ in 1:12
+            ψit, = timestep(ψit, H, 0.0, 0.5, lossy; imaginary_evolution = true)  # no external normalize!
+        end
+        @test norm(ψit) ≈ 1 atol = 1.0e-6                       # imaginary-time renormalizes each step
     end
 
     @testset "imaginary-time lowers energy" begin
@@ -129,8 +150,7 @@ end
         E₀ = real(expectation_value(ψ₀, H))
         ψ = ψ₀
         for _ in 1:8
-            ψ, = timestep(ψ, H, 0.0, 0.1, alg; imaginary_evolution = true)
-            normalize!(ψ)
+            ψ, = timestep(ψ, H, 0.0, 0.1, alg; imaginary_evolution = true)  # gauge renormalizes
         end
         @test real(expectation_value(ψ, H)) < E₀
         @test dim(left_virtualspace(ψ, L ÷ 2)) > Dstart

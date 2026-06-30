@@ -99,7 +99,7 @@ end
 
 # Finite system
 # -------------
-function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs)
+function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs; normalize::Bool = true)
     bond = site
     left = ψ.AC[site]
     right = ψ.AR[site + 1]
@@ -128,11 +128,12 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Op
     end
     nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
 
-    ψ.AC[site] = (nal, normalize!(nc))
+    normalize && normalize!(nc)
+    ψ.AC[site] = (nal, nc)
     ψ.AC[site + 1] = (nc, nar)
     return ψ
 end
-function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs)
+function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs; normalize::Bool = true)
     bond = site - 1
     left = ψ.AL[site - 1]
     right = ψ.AC[site]
@@ -162,7 +163,8 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Opt
     end
     AL_exp = catdomain(left, Q)
 
-    ψ.AC[site] = (normalize!(nc), _transpose_front(Qr))
+    normalize && normalize!(nc)
+    ψ.AC[site] = (nc, _transpose_front(Qr))
     ψ.AC[site - 1] = (AL_exp, nc)
     return ψ
 end
