@@ -14,7 +14,7 @@ a dense operator (a subtype of `AbstractTensorMap`), which is then decomposed in
 product of local tensors.
 
 ```@raw html
-<img src="../../assets/mpo.svg" alt="MPO" width="50%" class="color-invertible"/>
+<img src="../assets/mpo.svg" alt="MPO" width="50%" class="color-invertible"/>
 ```
 
 ```@setup operators

@@ -8,6 +8,7 @@ end
 
 using MPSKit
 using Documenter
+using DocumenterVitepress
 using DocumenterCitations
 using DocumenterInterLinks
 
@@ -37,23 +38,12 @@ links = InterLinks(
 # include MPSKit in all doctests
 DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit, TensorKit); recursive = true)
 
-mathengine = MathJax3(
-    Dict(
-        :loader => Dict("load" => ["[tex]/physics"]),
-        :tex => Dict(
-            "inlineMath" => [["\$", "\$"], ["\\(", "\\)"]],
-            "tags" => "ams",
-            "packages" => ["base", "ams", "autoload", "physics"]
-        )
-    )
-)
 makedocs(;
     sitename = "MPSKit.jl",
-    format = Documenter.HTML(;
-        prettyurls = true,
-        mathengine,
-        assets = ["assets/custom.css"],
-        size_threshold = 1024000,
+    format = DocumenterVitepress.MarkdownVitepress(;
+        repo = "github.com/QuantumKitHub/MPSKit.jl",
+        devbranch = "main",
+        devurl = "dev",
     ),
     pages = [
         "Home" => "index.md",
@@ -76,4 +66,10 @@ makedocs(;
     plugins = [bib, links]
 )
 
-deploydocs(; repo = "github.com/QuantumKitHub/MPSKit.jl.git", push_preview = true)
+DocumenterVitepress.deploydocs(;
+    repo = "github.com/QuantumKitHub/MPSKit.jl.git",
+    target = joinpath(@__DIR__, "build"),
+    branch = "gh-pages",
+    devbranch = "main",
+    push_preview = true,
+)

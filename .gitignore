@@ -4,3 +4,9 @@ Manifest.toml
 .DS_Store
 **/dev/
 benchmark/results
+
+# DocumenterVitepress / Node build artifacts
+**/node_modules/
+**/.vitepress/cache/
+**/.vitepress/dist/
+package-lock.json
