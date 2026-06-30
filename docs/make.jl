@@ -59,6 +59,7 @@ makedocs(;
         "How-to" => [
             "howto/states.md",
             "howto/bond_dimension.md",
+            "howto/observables.md",
         ],
         "Examples" => "examples/index.md",
         "Library" => [
