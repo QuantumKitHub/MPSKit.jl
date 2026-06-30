@@ -102,7 +102,7 @@ end
     # unitary (norm-preserving) and energy-conserving while tracking the bond-adaptive TDVP2
     # reference better than fixed-bond single-site TDVP
     @testset "$(nameof(Exp))" for (Exp, kw) in
-            ((OptimalExpand, (;)), (SketchedExpand, (; oversampling = 4)))
+        ((OptimalExpand, (;)), (SketchedExpand, (; oversampling = 4)))
         Random.seed!(4)
         ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
         alg = TDVP(; alg_expand = Exp(; trscheme = truncrank(Dstart), kw...), trscheme = truncrank(Dcap))

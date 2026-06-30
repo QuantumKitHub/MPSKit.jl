@@ -6,7 +6,7 @@ _truncates(::MatrixAlgebraKit.TruncatedAlgorithm) = true
 """
 $(TYPEDEF)
 
-Single-site DMRG algorithm for finding the dominant eigenvector.
+Density Matrix Renormalization Group algorithm for finding the dominant eigenvector.
 
 Each site update is, in order: (1) an optional bond expansion (`alg_expand`), (2) a single-site
 eigensolve, and (3) a gauge step (`alg_gauge`). With the defaults (`alg_expand = nothing` and a

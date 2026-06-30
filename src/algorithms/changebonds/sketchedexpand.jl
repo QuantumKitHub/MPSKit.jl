@@ -88,22 +88,22 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Sk
     Hac = MPO_AC_Hamiltonian(GL, H[site + 1], rightenv(envs, site + 1, ψ))
     Y = Hac * right
 
-    # select the dominant directions in the right complement, dropping the oversampling padding
+    # orthonormalize the sketched right complement, truncating away the oversampling padding
     B = project_complement_right!(_transpose_tail(Y), ARtt)
-    gradnorm = norm(B)
-    trunc = alg.trscheme & MatrixAlgebraKit.truncrank(dim(Vk))
-    U, S, Vᴴ, ϵ_select = svd_trunc!(normalize!(B); trunc, alg = alg.alg_svd)
-    @infov 4 "bond expansion (sketched)" site dir = :right ϵ_select ϵ_2site = gradnorm
+    if dim(Vℓ) == dim(Vk)        # no oversampling: a plain QR/LQ suffices
+        L, ar_re = right_orth!(B)
+    else
+        L, ar_re = right_orth!(B; trunc = truncspace(Vk))
+    end
 
     # optimal vectors at site+1
-    ar_re = Vᴴ
     if alg.warmstart
         # seed the new left directions with the (physically scaled) gradient instead of a zero
         # block, warm-starting the subsequent optimization (alters the state)
-        nal, nc = left_gauge(catdomain(left, gradnorm * (Q * U * S)))
+        nal, nc = left_gauge(catdomain(left, Q * L))
     else
         # embed `left` into the enlarged domain (zero weight in the new directions)
-        nal_space = codomain(left) ← (only(domain(left)) ⊕ space(Vᴴ, 1))
+        nal_space = codomain(left) ← (only(domain(left)) ⊕ space(ar_re, 1))
         nal, nc = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
     end
     nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
@@ -132,20 +132,20 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ske
     Hac = MPO_AC_Hamiltonian(leftenv(envs, site - 1, ψ), H[site - 1], GR)
     Y = Hac * left
 
-    # select the dominant directions in the left complement, dropping the oversampling padding
+    # orthonormalize the sketched left complement, truncating away the oversampling padding
     B = project_complement!(Y, left)
-    gradnorm = norm(B)
-    trunc = alg.trscheme & MatrixAlgebraKit.truncrank(dim(Vk))
-    U, S, Vᴴ, ϵ_select = svd_trunc!(normalize!(B); trunc, alg = alg.alg_svd)
-    @infov 4 "bond expansion (sketched)" site dir = :left ϵ_select ϵ_2site = gradnorm
+    if dim(Vℓ) == dim(Vk)        # no oversampling: a plain QR/LQ suffices
+        Q, R = left_orth!(B)
+    else
+        Q, R = left_orth!(B; trunc = truncspace(Vk))
+    end
 
     # optimal vectors at site-1
-    Q = U
     right_tail = _transpose_tail(right)
     if alg.warmstart
         # seed the new right directions with the (physically scaled) gradient instead of a zero
         # block, warm-starting the subsequent optimization (alters the state)
-        nc, Qr2 = lq_compact!(catcodomain(right_tail, gradnorm * (S * Vᴴ * Qr_o)))
+        nc, Qr2 = lq_compact!(catcodomain(right_tail, R * Qr_o))
     else
         # embed `_transpose_tail(right)` into the enlarged codomain (zero weight in the new directions)
         nc_space = (codomain(right_tail)[1] ⊕ space(Q, 3)') ← domain(right_tail)
