@@ -120,11 +120,11 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Op
     if alg.warmstart
         # seed the new left directions with the (physically scaled) gradient instead of a zero
         # block, warm-starting the subsequent optimization (alters the state)
-        nal, nc = qr_compact!(catdomain(left, gradnorm * (NL * U * S)))
+        nal, nc = left_gauge(catdomain(left, gradnorm * (NL * U * S)))
     else
         # embed `left` into the enlarged domain (zero weight in the new directions)
         nal_space = codomain(left) ← (only(domain(left)) ⊕ space(Vᴴ, 1))
-        nal, nc = qr_compact!(absorb!(zerovector!(similar(left, nal_space)), left))
+        nal, nc = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
     end
     nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
 
