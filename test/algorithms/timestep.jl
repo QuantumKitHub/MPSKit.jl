@@ -9,6 +9,8 @@ using Test, TestExtras
 using MPSKit
 using TensorKit
 using TensorKit: ℙ
+using LinearAlgebra: norm
+using Random
 
 verbosity_full = 5
 verbosity_conv = 1
@@ -88,6 +90,50 @@ verbosity_conv = 1
         ψt, envst = timestep(ψ₀, Ht, 1.0, dt, TDVP())
         Et = expectation_value(ψt, Ht(1.0), envst)
         @test E ≈ Et atol = 1.0e-8
+    end
+end
+
+@testset "Finite CBE-TDVP" verbose = true begin
+    L = 10
+    H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
+    Dstart, Dcap, dt = 2, 16, 0.05
+
+    # controlled bond expansion lets single-site TDVP grow the bond; the evolution should stay
+    # unitary (norm-preserving) and energy-conserving while tracking the bond-adaptive TDVP2
+    # reference better than fixed-bond single-site TDVP
+    @testset "$(nameof(Exp))" for (Exp, kw) in
+            ((OptimalExpand, (;)), (SketchedExpand, (; oversampling = 4)))
+        Random.seed!(4)
+        ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
+        alg = TDVP(; alg_expand = Exp(; trscheme = truncrank(Dstart), kw...), trscheme = truncrank(Dcap))
+        E₀ = real(expectation_value(ψ₀, H))
+
+        ref, cbe, plain = ψ₀, ψ₀, ψ₀
+        for _ in 1:6
+            ref, = timestep(ref, H, 0.0, dt, TDVP2(; trscheme = truncrank(Dcap)))
+            cbe, = timestep(cbe, H, 0.0, dt, alg)
+            plain, = timestep(plain, H, 0.0, dt, TDVP())   # stuck at Dstart
+        end
+
+        @test norm(cbe) ≈ 1 atol = 1.0e-8
+        @test real(expectation_value(cbe, H)) ≈ E₀ atol = 1.0e-2
+        @test dim(left_virtualspace(cbe, L ÷ 2)) > Dstart
+        @test dim(left_virtualspace(plain, L ÷ 2)) == Dstart
+        @test abs(dot(ref, cbe)) > abs(dot(ref, plain))
+    end
+
+    @testset "imaginary-time lowers energy" begin
+        Random.seed!(5)
+        ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
+        alg = TDVP(; alg_expand = OptimalExpand(; trscheme = truncrank(Dstart)), trscheme = truncrank(Dcap))
+        E₀ = real(expectation_value(ψ₀, H))
+        ψ = ψ₀
+        for _ in 1:8
+            ψ, = timestep(ψ, H, 0.0, 0.1, alg; imaginary_evolution = true)
+            normalize!(ψ)
+        end
+        @test real(expectation_value(ψ, H)) < E₀
+        @test dim(left_virtualspace(ψ, L ÷ 2)) > Dstart
     end
 end
 
