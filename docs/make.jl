@@ -56,6 +56,9 @@ makedocs(;
             "man/parallelism.md",
             "man/lattices.md",
         ],
+        "How-to" => [
+            "howto/states.md",
+        ],
         "Examples" => "examples/index.md",
         "Library" => [
             "lib/public.md",
