@@ -1,9 +1,7 @@
 # [Controlling bond dimension](@id howto_bond_dimension)
 
-Bond dimension is the key knob in every MPS calculation: too small and the ansatz
-cannot represent the state, too large and computation slows to a crawl.
-This page gives concrete recipes for inspecting, growing, and shrinking bond dimension
-in MPSKit.jl.
+Bond dimension is the key knob in every MPS calculation: too small and the ansatz cannot represent the state, too large and computation slows to a crawl.
+This page gives concrete recipes for inspecting, growing, and shrinking bond dimension in MPSKit.jl.
 All examples share a single namespace:
 
 ```@example bond_dim
@@ -14,8 +12,7 @@ using MPSKit, TensorKit
 
 ## 1. Inspecting the current bond dimension
 
-MPSKit exposes the virtual spaces through `left_virtualspace` and
-`right_virtualspace`.
+MPSKit exposes the virtual spaces through `left_virtualspace` and `right_virtualspace`.
 There is **no** `bond_dimension` function; use `dim` on the space:
 
 ```@example bond_dim
@@ -50,13 +47,11 @@ dim(left_virtualspace(ψ_inf, 1))
 
 ### 2a. Random expansion (no Hamiltonian required)
 
-[`RandExpand`](@ref) pads the MPS with orthogonal random vectors drawn from the
-two-site null space.
+[`RandExpand`](@ref) pads the MPS with orthogonal random vectors drawn from the two-site null space.
 It does **not** need the Hamiltonian, so it is cheap and works for any MPS type.
 
 `trscheme` is **mandatory** and controls how many new directions are added.
-Use `truncrank(n)` from MatrixAlgebraKit (re-exported by MPSKit) to add at most `n`
-extra singular values:
+Use `truncrank(n)` from MatrixAlgebraKit (re-exported by MPSKit) to add at most `n` extra singular values:
 
 ```@example bond_dim
 ψ_small = FiniteMPS(L, ℂ^2, ℂ^4)       # start with D = 4
@@ -68,8 +63,7 @@ dim(left_virtualspace(ψ_small, 5))
 dim(left_virtualspace(ψ_grown, 5))      # expanded, but ≤ 4 + 8 = 12
 ```
 
-The new vectors are orthogonal to the original state, so the physical content is
-unchanged but the variational manifold is larger.
+The new vectors are orthogonal to the original state, so the physical content is unchanged but the variational manifold is larger.
 <!-- REVIEW: the statement "physical content is unchanged" is approximately true
      (overlap is 1 by construction) but the MPS tensor entries do change — verify
      that this phrasing is not misleading to the reader. -->
@@ -84,8 +78,7 @@ dim(left_virtualspace(ψ_inf_grown, 1))
 
 ### 2b. Optimal expansion (requires Hamiltonian)
 
-[`OptimalExpand`](@ref) selects expansion directions that have the largest overlap
-with the two-site Hamiltonian action on the current state.
+[`OptimalExpand`](@ref) selects expansion directions that have the largest overlap with the two-site Hamiltonian action on the current state.
 <!-- REVIEW: the physical claim here is that the expansion directions correspond to
      the dominant components of the two-site residual — verify against the
      Zauner-Stauber et al. Phys. Rev. B 97 (2018) paper. -->
@@ -97,7 +90,7 @@ J = 1.0; g = 0.5
 lattice = fill(ℂ^2, L)
 X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2, ℂ^2)
 Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
-H = FiniteMPOHamiltonian(lattice, (i, i+1) => -J * X ⊗ X for i in 1:L-1) +
+H = FiniteMPOHamiltonian(lattice, (i, i + 1) => -J * X ⊗ X for i in 1:(L - 1)) +
     FiniteMPOHamiltonian(lattice, (i,) => -g * Z for i in 1:L)
 
 ψ_opt, envs_opt = changebonds(ψ_small, H, OptimalExpand(; trscheme = truncrank(8)))
@@ -134,8 +127,7 @@ It does **not** need the Hamiltonian and is the standard tool for compression.
 dim(left_virtualspace(ψ_cut, 5))
 ```
 
-An in-place variant, `changebonds!`, exists for `FiniteMPS` and avoids allocating
-a copy.
+An in-place variant, `changebonds!`, exists for `FiniteMPS` and avoids allocating a copy.
 It also accepts a `normalize` keyword (default `true`):
 
 ```@example bond_dim
@@ -155,8 +147,7 @@ dim(left_virtualspace(ψ_inf_cut, 1))
 
 ## 4. Truncation schemes
 
-Every bond-change algorithm takes a mandatory `trscheme` keyword drawn from
-**MatrixAlgebraKit** (re-exported by MPSKit).
+Every bond-change algorithm takes a mandatory `trscheme` keyword drawn from **MatrixAlgebraKit** (re-exported by MPSKit).
 The main schemes are:
 
 | Scheme | Meaning |
@@ -168,11 +159,10 @@ The main schemes are:
 | `truncspace(V)` | Keep only singular values whose index fits in the given space `V` |
 
 Schemes compose with `&` to apply multiple criteria simultaneously.
-For example, to keep at most 16 singular values **and** also drop anything below
-`1e-8`:
+For example, to keep at most 16 singular values **and** also drop anything below `1e-8`:
 
 ```@example bond_dim
-trscheme_combined = trunctol(; atol = 1e-8) & truncrank(16)
+trscheme_combined = trunctol(; atol = 1.0e-8) & truncrank(16)
 ψ_combined = changebonds(ψ_grown, SvdCut(; trscheme = trscheme_combined))
 dim(left_virtualspace(ψ_combined, 5))
 ```
@@ -185,8 +175,7 @@ dim(left_virtualspace(ψ_combined, 5))
 
 ## 5. Growing during finite MPS optimization
 
-The two-site DMRG variant, [`DMRG2`](@ref), performs a bond expansion at every sweep
-step by keeping both sites together in the update.
+The two-site DMRG variant, [`DMRG2`](@ref), performs a bond expansion at every sweep step by keeping both sites together in the update.
 Pass `trscheme` to control which singular values are retained:
 
 ```@example bond_dim
@@ -199,20 +188,18 @@ Pass `trscheme` to control which singular values are retained:
 dim(left_virtualspace(ψ_dmrg2, 5))
 ```
 
-A common pattern is to warm up with `DMRG2` to grow the bond dimension, then
-refine with single-site `DMRG` for efficiency.
+A common pattern is to warm up with `DMRG2` to grow the bond dimension, then refine with single-site `DMRG` for efficiency.
 The algorithm chaining operator `&` makes this easy (see [§7](#7-chaining-algorithms)):
 
 ```@example bond_dim
 warmup_then_refine = DMRG2(; trscheme = truncrank(16), maxiter = 3) &
-                     DMRG(; maxiter = 20)
+    DMRG(; maxiter = 20)
 
 ψ_dmrg2, envs_dmrg2, _ = find_groundstate(ψ_dmrg2_start, H, warmup_then_refine)
 dim(left_virtualspace(ψ_dmrg2, 5))
 ```
 
-The `find_groundstate` convenience function also accepts a `trscheme` keyword that
-triggers the same warm-up automatically:
+The `find_groundstate` convenience function also accepts a `trscheme` keyword that triggers the same warm-up automatically:
 
 ```@example bond_dim
 ψ_conv, envs_conv, _ = find_groundstate(
@@ -222,14 +209,12 @@ triggers the same warm-up automatically:
 dim(left_virtualspace(ψ_conv, 5))
 ```
 
-The `trscheme` keyword makes `find_groundstate` prepend a `DMRG2` pass before
-switching to the default `DMRG`.
+The `trscheme` keyword makes `find_groundstate` prepend a `DMRG2` pass before switching to the default `DMRG`.
 <!-- REVIEW: confirm exact internal algorithm sequencing when trscheme is given to
      find_groundstate for finite MPS (currently reads as DMRG2 then DMRG from the
      source, with tol for DMRG2 capped at min(1e-2, 100*tol)). -->
 
-TDVP2 also supports `trscheme` for two-site real- or imaginary-time evolution,
-but that is covered in the time-evolution documentation rather than here.
+TDVP2 also supports `trscheme` for two-site real- or imaginary-time evolution, but that is covered in the time-evolution documentation rather than here.
 
 ---
 
@@ -250,8 +235,8 @@ H_inf_2 = InfiniteMPOHamiltonian(
     lattice_2,
     (1, 2) => -J * X ⊗ X,
     (2, 3) => -J * X ⊗ X,
-    (1,)   => -g * Z,
-    (2,)   => -g * Z,
+    (1,) => -g * Z,
+    (2,) => -g * Z,
 )
 # <!-- REVIEW: verify InfiniteMPOHamiltonian 2-site construction with (2,3) wrap-around -->
 
@@ -266,8 +251,7 @@ dim(left_virtualspace(ψ_idmrg2, 1))
 
 ### VUMPSSvdCut
 
-[`VUMPSSvdCut`](@ref) grows the bond dimension of an `InfiniteMPS` by performing a
-two-site VUMPS update followed by an SVD truncation.
+[`VUMPSSvdCut`](@ref) grows the bond dimension of an `InfiniteMPS` by performing a two-site VUMPS update followed by an SVD truncation.
 It requires the Hamiltonian and returns a new state with updated environments:
 
 ```@example bond_dim
@@ -275,9 +259,7 @@ It requires the Hamiltonian and returns a new state with updated environments:
 dim(left_virtualspace(ψ_vs, 1))
 ```
 
-The typical workflow for infinite systems is to grow the bond dimension first
-(with `VUMPSSvdCut` or `IDMRG2`), then converge with [`VUMPS`](@ref) as a separate
-step, reusing the expanded state `ψ_vs` from above:
+The typical workflow for infinite systems is to grow the bond dimension first (with `VUMPSSvdCut` or `IDMRG2`), then converge with [`VUMPS`](@ref) as a separate step, reusing the expanded state `ψ_vs` from above:
 
 ```@example bond_dim
 ψ_vc, = find_groundstate(ψ_vs, H_inf, VUMPS(; maxiter = 10))
@@ -297,14 +279,13 @@ dim(left_virtualspace(ψ_vc, 1))
 
 ## 7. Chaining algorithms
 
-The `&` operator chains any two algorithms that share the same interface, applying
-them in sequence.
+The `&` operator chains any two algorithms that share the same interface, applying them in sequence.
 This works for both ground-state algorithms and `changebonds` algorithms:
 
 ```@example bond_dim
 # Expand with random vectors, then compress to a target rank
 grow_and_cut = RandExpand(; trscheme = truncrank(12)) &
-               SvdCut(; trscheme = truncrank(6))
+    SvdCut(; trscheme = truncrank(6))
 
 ψ_final = changebonds(ψ_small, grow_and_cut)
 dim(left_virtualspace(ψ_final, 5))
@@ -319,8 +300,7 @@ dim(left_virtualspace(ψ_final, 5))
 dim(left_virtualspace(ψ_gs, 5))
 ```
 
-For background on when each algorithm is appropriate and how convergence is
-assessed, see [Ground-state algorithms](@ref lib_groundstate).
+For background on when each algorithm is appropriate and how convergence is assessed, see [Ground-state algorithms](@ref lib_groundstate).
 For constructing MPS objects from scratch, see [Constructing states](@ref howto_states).
 
 ---
