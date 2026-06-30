@@ -126,7 +126,8 @@ function timestep!(
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         # 1. optionally expand the bond ahead of the local update (CBE)
-        changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
+        isnothing(alg.alg_expand) ||
+            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
 
         # 2. evolve the (possibly expanded) center tensor forward
         Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
@@ -152,7 +153,8 @@ function timestep!(
     # sweep right to left
     for i in length(ψ):-1:2
         # 1. optionally expand the bond ahead of the local update (CBE)
-        changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
+        isnothing(alg.alg_expand) ||
+            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
 
         # 2. evolve the (possibly expanded) center tensor forward
         Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
