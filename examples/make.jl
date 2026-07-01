@@ -11,6 +11,8 @@ using MPSKit
 using Literate
 using TOML, SHA
 
+include(joinpath(@__DIR__, "figure_externalization.jl"))
+
 # ---------------------------------------------------------------------------------------- #
 # Caching
 # ---------------------------------------------------------------------------------------- #
@@ -71,7 +73,9 @@ function build_example(root, name)
     return if !iscached(root, name)
         Literate.markdown(
             source_file, target_dir; execute = true, name = "index",
-            preprocess = attach_notebook_badge(root, name), mdstrings = true,
+            preprocess = attach_notebook_badge(root, name),
+            postprocess = content -> externalize_figures(content, target_dir),
+            mdstrings = true,
             nbviewer_root_url = "https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev",
             binder_root_url = "https://mybinder.org/v2/gh/QuantumKitHub/MPSKit.jl/gh-pages?filepath=dev",
             credits = false,
