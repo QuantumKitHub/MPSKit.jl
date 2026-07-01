@@ -21,7 +21,7 @@ $(TYPEDFIELDS)
     "algorithm used for the singular value decomposition"
     alg_svd::S = Defaults.alg_svd()
 
-    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy] the expanded space"
+    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the expanded space"
     trscheme::TruncationStrategy
 end
 

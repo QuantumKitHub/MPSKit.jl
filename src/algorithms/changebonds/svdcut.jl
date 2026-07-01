@@ -20,7 +20,7 @@ $(TYPEDFIELDS)
     "algorithm used for the singular value decomposition"
     alg_svd::S = Defaults.alg_svd()
 
-    "algorithm used for [truncation][@extref MatrixAlgebraKit.TruncationStrategy] of the gauge tensors"
+    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the gauge tensors"
     trscheme::TruncationStrategy
 end
 
