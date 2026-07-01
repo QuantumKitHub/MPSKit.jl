@@ -44,4 +44,20 @@ using TensorKit: ℙ
         @test expectation_value(ψ, Hw * 3) ≈ 3 * e atol = 1.0e-8
         @test expectation_value(ψ, -Hw) ≈ -e atol = 1.0e-8
     end
+
+    @testset "distinct summands" begin
+        # add two genuinely different Hamiltonians: the ZZ Ising string has a single bulk
+        # level while the XY hopping needs two, so the boundary/bulk virtual spaces of the
+        # two summands differ and have to be block-diagonalized consistently.
+        ψ = WindowMPS(gs1, 1:L)
+        Ha = WindowMPOHamiltonian(H1, 1:L)
+        Hb = WindowMPOHamiltonian(force_planar(XY_model(; g = 0.7)), 1:L)
+        @test right_virtualspace(Ha.finite_ham, 3) != right_virtualspace(Hb.finite_ham, 3)
+
+        ea = expectation_value(ψ, Ha)
+        eb = expectation_value(ψ, Hb)
+        @test expectation_value(ψ, Ha + Hb) ≈ ea + eb atol = 1.0e-8
+        @test expectation_value(ψ, Hb + Ha) ≈ ea + eb atol = 1.0e-8
+        @test expectation_value(ψ, Ha - Hb) ≈ ea - eb atol = 1.0e-8
+    end
 end
