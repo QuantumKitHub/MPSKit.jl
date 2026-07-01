@@ -58,10 +58,12 @@ function environments(
 end
 function environments(
         below::WindowMPS, O::WindowMPOHamiltonian, above = nothing;
-        lenvs = environments(below.left_gs, O.left_ham, below.left_gs),
-        renvs = environments(below.right_gs, O.right_ham, below.right_gs),
-        leftstart = copy(lenvs.GLs[1]),
-        rightstart = copy(renvs.GRs[end])
+        # NOTE: the defaults are deliberately inlined rather than shared via `lenvs`/`renvs`
+        # kwargs: when explicit boundaries are passed (e.g. the squared environments in
+        # `squaredenvs`), we must not trigger the infinite fixed-point solve, which need not
+        # converge for e.g. `conj(H) * H`.
+        leftstart = copy(environments(below.left_gs, O.left_ham, below.left_gs).GLs[1]),
+        rightstart = copy(environments(below.right_gs, O.right_ham, below.right_gs).GRs[end])
     )
     return initialize_environments(below, O.finite_ham, above, leftstart, rightstart)
 end

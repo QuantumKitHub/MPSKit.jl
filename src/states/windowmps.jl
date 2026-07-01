@@ -106,7 +106,14 @@ function WindowMPS(N::Int, V::VectorSpace, args...; kwargs...)
     return WindowMPS(fill(V, N), args...; kwargs...)
 end
 
+"""
+    WindowMPS(ψ::InfiniteMPS, L::Int)
+    WindowMPS(ψ::InfiniteMPS, interval::UnitRange)
 
+Construct a [`WindowMPS`](@ref) from an infinite MPS `ψ` by promoting the sites in `interval`
+(or `1:L`) to the finite window while keeping `ψ` as the left and right infinite environments.
+The environment unit cells are circshifted so that they line up with the window boundaries.
+"""
 WindowMPS(ψ::InfiniteMPS, L::Int) = WindowMPS(ψ, 1:L)
 
 function WindowMPS(ψ::InfiniteMPS{A, B}, interval::UnitRange) where {A, B}
