@@ -2,6 +2,7 @@ name = "MPSKitTests"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 BlockTensorKit = "5f87ffc2-9cf1-4a46-8172-465d160bd8cd"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
@@ -24,6 +25,7 @@ cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 MPSKit = {path = ".."}
 
 [compat]
+AMDGPU = "2"
 Aqua = "0.8.9"
 CUDA = "6"
 Combinatorics = "1"
