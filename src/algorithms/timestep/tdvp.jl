@@ -3,6 +3,19 @@ $(TYPEDEF)
 
 Single site MPS time-evolution algorithm based on the Time-Dependent Variational Principle.
 
+For finite MPS, setting `alg_expand` to a bond-expansion algorithm (e.g. [`OptimalExpand`](@ref),
+[`SketchedExpand`](@ref)) enriches the bond with directions orthogonal to the current state
+ahead of each local integration, recovering Controlled Bond Expansion (CBE) TDVP and lifting the
+fixed-bond limitation of plain single-site TDVP. A truncating `trscheme` is then required to cut
+the enlarged bond back down (selecting the truncated-SVD gauge). The expansion is
+state-preserving, as required for a consistent time evolution.
+
+!!! note
+    Real-time evolution preserves the norm: neither the bond expansion nor the truncation
+    renormalizes, so the state norm reflects the accumulated truncation error. Imaginary-time
+    evolution instead renormalizes at every step, like a ground-state search. CBE is only
+    available for finite MPS.
+
 ## Fields
 
 $(TYPEDFIELDS)
@@ -11,18 +24,38 @@ $(TYPEDFIELDS)
 
 * [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
-@kwdef struct TDVP{A, F} <: Algorithm
+struct TDVP{A, E, G, F} <: Algorithm
     "algorithm used in the exponential solvers"
-    integrator::A = Defaults.alg_expsolve()
+    integrator::A
 
     "tolerance for gauging algorithm"
-    tolgauge::Float64 = Defaults.tolgauge
+    tolgauge::Float64
 
     "maximal amount of iterations for gauging algorithm"
-    gaugemaxiter::Int = Defaults.maxiter
+    gaugemaxiter::Int
+
+    "algorithm used to expand the bond ahead of each local update, or `nothing` for none (finite CBE-TDVP)"
+    alg_expand::E
+
+    "factorization used for the post-update gauge: a QR algorithm (no truncation) or a truncated SVD"
+    alg_gauge::G
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
-    finalize::F = Defaults._finalize
+    finalize::F
+end
+function TDVP(;
+        integrator = Defaults.alg_expsolve(), tolgauge = Defaults.tolgauge,
+        gaugemaxiter = Defaults.maxiter, finalize = Defaults._finalize,
+        alg_expand = nothing, trscheme = notrunc(),
+        alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth()
+    )
+    # a no-truncation `trscheme` selects a (bond-preserving) QR gauge, anything else a truncated SVD
+    alg_gauge = trscheme isa MatrixAlgebraKit.NoTruncation ? alg_orth :
+        MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+    if !isnothing(alg_expand) && !_truncates(alg_gauge)
+        @warn "TDVP with `alg_expand` but no truncation (`trscheme = notrunc()`): the bond dimension will grow unboundedly each sweep."
+    end
+    return TDVP(integrator, tolgauge, gaugemaxiter, alg_expand, alg_gauge, finalize)
 end
 
 function timestep(
@@ -92,9 +125,20 @@ function timestep!(
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
-        Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
-        ψ.AC[i] = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator; imaginary_evolution)
+        # 1. optionally expand the bond ahead of the local update (CBE)
+        isnothing(alg.alg_expand) ||
+            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
 
+        # 2. evolve the (possibly expanded) center tensor forward
+        Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
+        AC = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator; imaginary_evolution)
+
+        # 3. gauge: split AC -> AL[i], C[i] (QR center-move, or truncated SVD cutting the
+        #    enlarged bond back down) and move the center to i+1. Real-time evolution preserves
+        #    the norm; imaginary-time evolution renormalizes.
+        left_gauge!(ψ, i, AC, alg.alg_gauge; normalize = imaginary_evolution)
+
+        # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i, ψ, H, ψ, envs)
         ψ.C[i] = integrate(
             Hc, ψ.C[i], t + dt / 2, -dt / 2, alg.integrator;
@@ -108,12 +152,22 @@ function timestep!(
 
     # sweep right to left
     for i in length(ψ):-1:2
+        # 1. optionally expand the bond ahead of the local update (CBE)
+        isnothing(alg.alg_expand) ||
+            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
+
+        # 2. evolve the (possibly expanded) center tensor forward
         Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
-        ψ.AC[i] = integrate(
+        AC = integrate(
             Hac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator;
             imaginary_evolution
         )
 
+        # 3. gauge: split AC -> C[i-1], AR[i] and move the center to i-1 (real-time preserves the
+        #    norm; imaginary-time renormalizes)
+        right_gauge!(ψ, i, AC, alg.alg_gauge; normalize = imaginary_evolution)
+
+        # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs)
         ψ.C[i - 1] = integrate(
             Hc, ψ.C[i - 1], t + dt, -dt / 2, alg.integrator;

@@ -60,8 +60,7 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in Iterators.reverse((i + 1):center)
-            v.parent.Cs[j], tmp = lq_compact!(_transpose_tail(v.parent.ACs[j]; copy = true); positive = true)
-            v.parent.ARs[j] = _transpose_front(tmp)
+            v.parent.Cs[j], v.parent.ARs[j] = right_gauge(v.parent.ACs[j])
             if j != i + 1 # last AC not needed
                 v.parent.ACs[j - 1] = _mul_tail(v.parent.ALs[j - 1], v.parent.Cs[j])
             end
@@ -76,7 +75,7 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in center:i
-            v.parent.ALs[j], v.parent.Cs[j + 1] = qr_compact(v.parent.ACs[j]; positive = true)
+            v.parent.ALs[j], v.parent.Cs[j + 1] = left_gauge(v.parent.ACs[j])
             if j != i # last AC not needed
                 v.parent.ACs[j + 1] = _mul_front(v.parent.Cs[j + 1], v.parent.ARs[j + 1])
             end
@@ -89,10 +88,9 @@ end
 function Base.setindex!(v::CView{<:FiniteMPS}, vec, i::Int)
     if ismissing(v.parent.Cs[i + 1])
         if !ismissing(v.parent.ALs[i])
-            v.parent.Cs[i + 1], temp = lq_compact!(_transpose_tail(v.parent.AC[i + 1]; copy = true); positive = true)
-            v.parent.ARs[i + 1] = _transpose_front(temp)
+            v.parent.Cs[i + 1], v.parent.ARs[i + 1] = right_gauge(v.parent.AC[i + 1])
         else
-            v.parent.ALs[i], v.parent.Cs[i + 1] = qr_compact(v.parent.AC[i]; positive = true)
+            v.parent.ALs[i], v.parent.Cs[i + 1] = left_gauge(v.parent.AC[i])
         end
     end
 
@@ -220,4 +218,65 @@ function Base.checkbounds(
     else
         checkbounds(Bool, CView(first(psi.parent.data)), b)
     end
+end
+
+# Gauging routines
+# ----------------
+@doc """
+    left_gauge(AC, [alg]) -> AL, C
+    right_gauge(AC, [alg]) -> C, AR
+
+Factor an updated center MPS tensor `AC` into left- or right-canonical form, `AC ≈ AL * C`
+(left, with `AL` left-isometric) or `AC ≈ C * AR` (right, with `AR` right-isometric), without
+modifying `AC`. `right_gauge` handles the MPS leg permutation internally, so `AR` is returned in
+standard MPS-tensor form.
+
+`alg` selects the factorization and defaults to a (positive) QR/LQ center-move that preserves the virtual bond.
+Passing a [`TruncatedAlgorithm`](@extref MatrixAlgebraKit.TruncatedAlgorithm) instead performs a truncated SVD may shrink the bond.
+"""
+left_gauge
+@doc (@doc left_gauge) right_gauge
+
+left_gauge(AC) = left_gauge(AC, Defaults.alg_orth())
+left_gauge(AC, alg) = left_orth(AC; alg)
+left_gauge(AC, alg::MatrixAlgebraKit.TruncatedAlgorithm) =
+    left_orth(AC; alg = MatrixAlgebraKit.LeftOrthViaSVD(alg))
+
+right_gauge(AC) = right_gauge(AC, Defaults.alg_orth())
+function right_gauge(AC, alg)
+    C, AR = right_orth(_transpose_tail(AC); alg)
+    return C, _transpose_front(AR)
+end
+function right_gauge(AC, alg::MatrixAlgebraKit.TruncatedAlgorithm)
+    C, AR = right_orth(_transpose_tail(AC); alg = MatrixAlgebraKit.RightOrthViaSVD(alg))
+    return C, _transpose_front(AR)
+end
+
+@doc """
+    left_gauge!(ψ, pos, AC, [alg]; normalize = false) -> ψ
+    right_gauge!(ψ, pos, AC, [alg]; normalize = false) -> ψ
+
+Gauge an updated center tensor `AC` at site `pos` and install it into `ψ` in one step: factor
+`AC` with [`left_gauge`](@ref) / [`right_gauge`](@ref) and write the canonical tensors back,
+shifting the gauge center past `pos` (to the right for `left_gauge!`, to the left for
+`right_gauge!`). `alg` is forwarded to [`left_gauge`](@ref) / [`right_gauge`](@ref) and hence may
+be a [`TruncatedAlgorithm`](@extref MatrixAlgebraKit.TruncatedAlgorithm) to truncate the bond.
+
+By default the factors are installed as-is. Pass `normalize = true` to renormalize the bond
+tensor, so `ψ` stays normalized after a local update that changed its norm.
+"""
+left_gauge!
+@doc (@doc left_gauge!) right_gauge!
+
+function left_gauge!(ψ::AbstractFiniteMPS, pos::Int, AC, alg = Defaults.alg_orth(); normalize::Bool = false)
+    AL, C = left_gauge(AC, alg)
+    normalize && normalize!(C)
+    ψ.AC[pos] = (AL, C)
+    return ψ
+end
+function right_gauge!(ψ::AbstractFiniteMPS, pos::Int, AC, alg = Defaults.alg_orth(); normalize::Bool = false)
+    C, AR = right_gauge(AC, alg)
+    normalize && normalize!(C)
+    ψ.AC[pos] = (C, AR)
+    return ψ
 end

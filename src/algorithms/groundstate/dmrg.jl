@@ -1,13 +1,31 @@
+# whether the gauge algorithm truncates the bond (SVD-based) or preserves it (QR-based, a plain
+# center-move as in textbook single-site DMRG)
+_truncates(::MatrixAlgebraKit.AbstractAlgorithm) = false
+_truncates(::MatrixAlgebraKit.TruncatedAlgorithm) = true
+
 """
 $(TYPEDEF)
 
-Single-site DMRG algorithm for finding the dominant eigenvector.
+Density Matrix Renormalization Group algorithm for finding the dominant eigenvector.
+
+Each site update is, in order: (1) an optional bond expansion (`alg_expand`), (2) a single-site
+eigensolve, and (3) a gauge step (`alg_gauge`). With the defaults (`alg_expand = nothing` and a
+non-truncating QR `alg_gauge`) this is textbook single-site DMRG, which cannot change the bond
+dimension. Setting `alg_expand` to a bond-expansion algorithm (e.g. [`OptimalExpand`](@ref),
+[`RandExpand`](@ref), [`SketchedExpand`](@ref)) enriches the bond with directions orthogonal to
+the current state ahead of each eigensolve, recovering Controlled Bond Expansion (CBE) DMRG; a
+truncating `alg_gauge` is then desirable to cut the enlarged bond back down.
+
+The gauge algorithm is selected in the keyword constructor from the `trscheme` argument: when it
+is `notrunc()` the gauge is a QR decomposition (`alg_orth`, [`Householder`](@extref
+MatrixAlgebraKit.Householder) by default), otherwise it is a truncated SVD (`alg_svd` with the
+given `trscheme`).
 
 ## Fields
 
 $(TYPEDFIELDS)
 """
-struct DMRG{A, F} <: Algorithm
+struct DMRG{A, F, E, G} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64
 
@@ -22,14 +40,28 @@ struct DMRG{A, F} <: Algorithm
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F
+
+    "algorithm used to expand the bond ahead of each local update, or `nothing` for none"
+    alg_expand::E
+
+    "factorization used for the post-update gauge: a QR algorithm (no truncation) or a truncated SVD"
+    alg_gauge::G
 end
 function DMRG(;
         tol = Defaults.tol, maxiter = Defaults.maxiter, alg_eigsolve = (;),
-        verbosity = Defaults.verbosity, finalize = Defaults._finalize
+        verbosity = Defaults.verbosity, finalize = Defaults._finalize,
+        alg_expand = nothing, trscheme = notrunc(),
+        alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth()
     )
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ? Defaults.alg_eigsolve(; alg_eigsolve...) :
         alg_eigsolve
-    return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize)
+    # a no-truncation `trscheme` selects a (bond-preserving) QR gauge, anything else a truncated SVD
+    alg_gauge = trscheme isa MatrixAlgebraKit.NoTruncation ? alg_orth :
+        MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+    if !isnothing(alg_expand) && !_truncates(alg_gauge)
+        @warn "DMRG with `alg_expand` but no truncation (`trscheme = notrunc()`): the bond dimension will grow unboundedly each sweep."
+    end
+    return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize, alg_expand, alg_gauge)
 end
 
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environments(ψ, H, ψ))
@@ -46,14 +78,44 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environme
 
             zerovector!(ϵs)
             @timeit timeroutput "sweep" begin
-                for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
-                    local vec
-                    @timeit timeroutput "AC_eigsolve" begin
-                        h = AC_hamiltonian(pos, ψ, H, ψ, envs)
-                        _, vec = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
-                    end
+                # left-to-right
+                for pos in 1:(length(ψ) - 1)
+                    local AC′
+                    # convergence: pre-expansion single-site Galerkin error
                     ϵs[pos] = max(ϵs[pos], calc_galerkin(pos, ψ, H, ψ, envs))
-                    @timeit timeroutput "AC_update" ψ.AC[pos] = vec
+
+                    # 1. expand
+                    isnothing(alg.alg_expand) ||
+                        @timeit timeroutput "expand" changebond!(pos, Val(:right), ψ, H, alg.alg_expand, envs)
+
+                    # 2. local update
+                    @timeit timeroutput "AC_eigsolve" begin
+                        Hac = AC_hamiltonian(pos, ψ, H, ψ, envs)
+                        _, AC′ = fixedpoint(Hac, ψ.AC[pos], :SR, alg_eigsolve)
+                    end
+
+                    # 3. gauge (QR center-move or truncated SVD, selected by `alg_gauge`)
+                    @timeit timeroutput "gauge" left_gauge!(ψ, pos, AC′, alg.alg_gauge; normalize = true)
+                end
+
+                # right-to-left
+                for pos in length(ψ):-1:2
+                    local AC′
+                    # convergence: pre-expansion single-site Galerkin error
+                    ϵs[pos] = max(ϵs[pos], calc_galerkin(pos, ψ, H, ψ, envs))
+
+                    # 1. expand
+                    isnothing(alg.alg_expand) ||
+                        @timeit timeroutput "expand" changebond!(pos, Val(:left), ψ, H, alg.alg_expand, envs)
+
+                    # 2. local update
+                    @timeit timeroutput "AC_eigsolve" begin
+                        Hac = AC_hamiltonian(pos, ψ, H, ψ, envs)
+                        _, AC′ = fixedpoint(Hac, ψ.AC[pos], :SR, alg_eigsolve)
+                    end
+
+                    # 3. gauge (QR center-move or truncated SVD, selected by `alg_gauge`)
+                    @timeit timeroutput "gauge" right_gauge!(ψ, pos, AC′, alg.alg_gauge; normalize = true)
                 end
             end
             ϵ = maximum(ϵs)
@@ -77,6 +139,7 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environme
     end
     return ψ, envs, ϵ
 end
+
 
 """
 $(TYPEDEF)

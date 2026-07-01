@@ -9,6 +9,7 @@ using Test, TestExtras
 using MPSKit
 using TensorKit
 using TensorKit: ℙ
+using Random
 
 verbosity_full = 5
 verbosity_conv = 1
@@ -59,6 +60,59 @@ verbosity_conv = 1
         @test sum(δ) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
+    end
+
+    @testset "CBEDMRG" begin
+        # start from a small bond so the bond expansion is exercised
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+        v₀ = variance(ψ₀, H)
+        expand = OptimalExpand(; trscheme = truncrank(D ÷ 2))
+        trscheme = truncrank(D)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trscheme)
+        )
+
+        ψ, envs, δ = find_groundstate(
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_expand = expand, trscheme), envs
+        )
+        v = variance(ψ, H)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test v < v₀
+        @test v < 1.0e-2
+        # the bond should have grown to the truncation target
+        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+    end
+
+    @testset "CBEDMRG (SketchedExpand)" begin
+        # randomized bond expansion at single-site cost. The sketch is redrawn every sweep, so an
+        # aggressive expansion (a large fraction of the bond) keeps the single-site Galerkin error
+        # noisy; a gentle per-sweep increment lets it converge like the deterministic expanders.
+        Random.seed!(1234)
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+        v₀ = variance(ψ₀, H)
+        expand = SketchedExpand(; trscheme = truncrank(2), oversampling = 4)
+        trscheme = truncrank(D)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trscheme)
+        )
+
+        ψ, envs, δ = find_groundstate(
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 15, alg_expand = expand, trscheme), envs
+        )
+        v = variance(ψ, H)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test v < v₀
+        @test v < 1.0e-2
+        # the bond should have grown to the truncation target
+        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
     end
 
     @testset "GradientGrassmann" begin

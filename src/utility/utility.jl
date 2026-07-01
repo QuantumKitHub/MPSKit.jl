@@ -11,6 +11,26 @@ end
 _mul_front(C, A) = mul_front(C, A) # _transpose_front(C * _transpose_tail(A))
 _mul_tail(A, C) = mul_tail(A, C) # A * C
 
+"""
+    project_complement!(Y, X) -> Y
+
+In-place projection of `Y` onto the orthogonal complement of the range of the left-isometry `X`
+(`X' X = I`): `Y ← (I - X X') Y = Y - X (X' Y)`. `Y` is overwritten and returned.
+
+See also [`project_complement_right!`](@ref).
+"""
+project_complement!(Y, X) = mul!(Y, X, X' * Y, -1, +1)
+
+"""
+    project_complement_right!(Y, X) -> Y
+
+In-place projection of `Y` onto the orthogonal complement of the co-range of the right-isometry
+`X` (`X X' = I`): `Y ← Y (I - X' X) = Y - (Y X') X`. `Y` is overwritten and returned.
+
+See also [`project_complement!`](@ref).
+"""
+project_complement_right!(Y, X) = mul!(Y, Y * X', X, -1, +1)
+
 function _similar_tail(A::AbstractTensorMap)
     cod = _firstspace(A)
     dom = ⊗(dual(_lastspace(A)), dual.(space.(Ref(A), reverse(2:(numind(A) - 1))))...)
