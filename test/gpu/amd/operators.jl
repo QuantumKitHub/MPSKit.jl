@@ -7,7 +7,7 @@ using MatrixAlgebraKit
 using TensorKit: ℙ, tensormaptype, TensorMapWithStorage
 using Adapt, AMDGPU
 
-@testset "CuFiniteMPO" for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
+@testset "ROCFiniteMPO" for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
     # start from random operators
     L = 4
     T = ComplexF64
