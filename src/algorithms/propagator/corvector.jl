@@ -35,8 +35,11 @@ end
 """
     propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init=copy(ψ₀))
 
-Calculate the propagator ``\\frac{1}{E₀ + z - H}|ψ₀⟩`` using the dynamical DMRG
+Calculate the action of the propagator ``\\frac{1}{z - H}|ψ₀⟩`` using the dynamical DMRG
 algorithm.
+
+Returns a tuple `(g, ψ)` where `g` is the approximation of the propagator matrix element
+``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and `ψ` is the MPS approximation of ``\\frac{1}{z - H}|ψ₀⟩``.
 """
 function propagator end
 
@@ -47,19 +50,17 @@ An alternative approach to the dynamical DMRG algorithm, without quadratic terms
 less controlled approximation.
 This algorithm minimizes the following cost function
 ```math
-⟨ψ|(H - E)|ψ⟩ - ⟨ψ|ψ₀⟩ - ⟨ψ₀|ψ⟩
+⟨ψ|(z - H)|ψ⟩ - ⟨ψ|ψ₀⟩ - ⟨ψ₀|ψ⟩
 ```
-which is equivalent to the original approach if
-```math
-|ψ₀⟩ = (H - E)|ψ⟩
-```
+
+Returns the approximation of ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and ``\\frac{1}{z - H}|ψ₀⟩``.
 
 See also [`Jeckelmann`](@ref) for the original approach.
 """
 struct NaiveInvert <: DDMRG_Flavour end
 
 function propagator(
-        A::AbstractFiniteMPS, z::Number, H::FiniteMPOHamiltonian,
+        A::AbstractFiniteMPS, z::Number, H,
         alg::DynamicalDMRG{NaiveInvert}; init = copy(A)
     )
     h_envs = environments(init, H, init) # environments for h
@@ -105,10 +106,20 @@ end
 """
 $(TYPEDEF)
 
-The original flavour of dynamical DMRG, which minimizes the following (quadratic) cost function:
+The original flavour of dynamical DMRG, which minimizes functional (14) from Jeckelmann2002.
+Writing ``ω = \\mathrm{Re}(z)`` and ``η = \\mathrm{Im}(z)``, this is
 ```math
-|| (H - E) |ψ₀⟩ - |ψ⟩ ||
+W(ψ) = ⟨ψ|(ω - H)^2 + η^2|ψ⟩ + η(⟨ψ₀|ψ⟩ + ⟨ψ|ψ₀⟩)
 ```
+which attains its minimum at
+```math
+((ω - H)^2 + η^2)|ψ⟩ = -η|ψ₀⟩
+```
+
+Together with equation (11) from that same paper we can determine the full propagator
+``\\frac{1}{z - H}|ψ₀⟩``.
+
+Returns the approximation of ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and ``\\frac{1}{z - H}|ψ₀⟩``.
 
 See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.
 
@@ -119,7 +130,7 @@ See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.
 struct Jeckelmann <: DDMRG_Flavour end
 
 function propagator(
-        A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
+        A::AbstractFiniteMPS, z::Number, H,
         alg::DynamicalDMRG{Jeckelmann}; init = copy(A)
     )
     ω = real(z)
@@ -176,7 +187,7 @@ function propagator(
 end
 
 function squaredenvs(
-        state::AbstractFiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H, state)
+        state::AbstractFiniteMPS, H, envs = environments(state, H, state)
     )
     H² = conj(H) * H
     L = length(state)

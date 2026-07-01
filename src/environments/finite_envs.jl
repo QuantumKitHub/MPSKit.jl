@@ -56,6 +56,17 @@ function environments(
     )
     return initialize_environments(below, operator, above, leftstart, rightstart)
 end
+function environments(
+        below::WindowMPS, O::WindowMPOHamiltonian, above = nothing;
+        # NOTE: the defaults are deliberately inlined rather than shared via `lenvs`/`renvs`
+        # kwargs: when explicit boundaries are passed (e.g. the squared environments in
+        # `squaredenvs`), we must not trigger the infinite fixed-point solve, which need not
+        # converge for e.g. `conj(H) * H`.
+        leftstart = copy(environments(below.left_gs, O.left_ham, below.left_gs).GLs[1]),
+        rightstart = copy(environments(below.right_gs, O.right_ham, below.right_gs).GRs[end])
+    )
+    return initialize_environments(below, O.finite_ham, above, leftstart, rightstart)
+end
 
 environments(below::S, above::S) where {S <: Union{FiniteMPS, WindowMPS}} =
     environments(below, nothing, above)

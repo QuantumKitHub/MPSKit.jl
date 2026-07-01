@@ -19,7 +19,7 @@ export QP, LeftGaugedQP, RightGaugedQP
 export AbstractMPO
 export MPO, FiniteMPO, InfiniteMPO
 export JordanMPOTensor
-export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian
+export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, WindowMPOHamiltonian
 export MultilineMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
@@ -123,6 +123,7 @@ include("operators/abstractmpo.jl")
 include("operators/mpo.jl")
 include("operators/jordanmpotensor.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
+include("operators/windowhamiltonian.jl")
 include("operators/ortho.jl")
 include("operators/multilinempo.jl")
 include("operators/projection.jl")
