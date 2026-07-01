@@ -1,5 +1,5 @@
 md"""
-# [The Haldane gap](@id demo_haldane)
+# The Haldane gap
 
 In this tutorial we will calculate the Haldane gap (the energy gap in the ``S = 1`` Heisenberg model) in two different ways.
 To follow the tutorial you need the following packages:

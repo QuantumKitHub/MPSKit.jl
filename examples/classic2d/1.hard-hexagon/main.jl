@@ -1,5 +1,5 @@
 md"""
-# [The Hard Hexagon model](@id demo_hardhexagon)
+# The Hard Hexagon model
 
 ![logo](hexagon.svg)
 
