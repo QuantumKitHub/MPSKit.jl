@@ -6,7 +6,7 @@ EditURL = "../../../../../examples/quantum1d/2.haldane/main.jl"
 [![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev/examples/quantum1d/2.haldane/main.ipynb)
 [![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/MPSKit.jl/examples/tree/gh-pages/dev/examples/quantum1d/2.haldane)
 
-# [The Haldane gap](@id demo_haldane)
+# The Haldane gap
 
 In this tutorial we will calculate the Haldane gap (the energy gap in the ``S = 1`` Heisenberg model) in two different ways.
 To follow the tutorial you need the following packages:

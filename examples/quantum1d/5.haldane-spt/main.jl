@@ -1,5 +1,5 @@
 md"""
-# [Spin 1 Heisenberg model](@id spin1heisenberg)
+# Spin 1 Heisenberg model
 
 The quantum Heisenberg model is a model often used in the study of critical points and phase
 transitions of magnetic systems, in which the spins are treated quantum mechanically. It
