@@ -6,7 +6,7 @@ EditURL = "../../../../../examples/quantum1d/5.haldane-spt/main.jl"
 [![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev/examples/quantum1d/5.haldane-spt/main.ipynb)
 [![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/MPSKit.jl/examples/tree/gh-pages/dev/examples/quantum1d/5.haldane-spt)
 
-# [Spin 1 Heisenberg model](@id spin1heisenberg)
+# Spin 1 Heisenberg model
 
 The quantum Heisenberg model is a model often used in the study of critical points and phase
 transitions of magnetic systems, in which the spins are treated quantum mechanically. It

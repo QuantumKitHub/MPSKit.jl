@@ -6,7 +6,7 @@ EditURL = "../../../../../examples/classic2d/1.hard-hexagon/main.jl"
 [![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev/examples/classic2d/1.hard-hexagon/main.ipynb)
 [![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/MPSKit.jl/examples/tree/gh-pages/dev/examples/classic2d/1.hard-hexagon)
 
-# [The Hard Hexagon model](@id demo_hardhexagon)
+# The Hard Hexagon model
 
 ![logo](hexagon.svg)
 

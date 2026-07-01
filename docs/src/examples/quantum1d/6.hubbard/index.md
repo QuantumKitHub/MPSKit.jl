@@ -10,7 +10,7 @@ EditURL = "../../../../../examples/quantum1d/6.hubbard/main.jl"
 using Markdown
 ````
 
-# [Hubbard chain at half filling](@id hubbard)
+# Hubbard chain at half filling
 
 The Hubbard model is a model of interacting fermions on a lattice, which is often used as a somewhat realistic model for electrons in a solid.
 The Hamiltonian consists of two terms that describe competing forces of each electron:
