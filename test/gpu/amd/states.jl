@@ -3,14 +3,14 @@ using MPSKit: _transpose_front, _transpose_tail
 using MPSKit: GeometryStyle, InfiniteChainStyle, TransferMatrix
 using TensorKit
 using TensorKit: ℙ
-using Adapt, CUDA, cuTENSOR
+using Adapt, AMDGPU
 
 @testset "CuMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
     [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
     tol = Float64(eps(real(elt)) * 100)
 
-    ψ = adapt(CuArray, InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol))
-    @test TensorKit.storagetype(ψ) == CuVector{ComplexF64, CUDA.DeviceMemory}
+    ψ = adapt(ROCArray, InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol))
+    @test TensorKit.storagetype(ψ) == ROCVector{ComplexF64, AMDGPU.Mem.HIPBuffer}
     @test eltype(ψ) == eltype(typeof(ψ))
 
     for i in 1:length(ψ)
@@ -30,8 +30,8 @@ using Adapt, CUDA, cuTENSOR
     end
 
     L = rand(3:20)
-    ψ = adapt(CuArray, FiniteMPS(rand, elt, L, d, D))
-    @test TensorKit.storagetype(ψ) == CuVector{ComplexF64, CUDA.DeviceMemory}
+    ψ = adapt(ROCArray, FiniteMPS(rand, elt, L, d, D))
+    @test TensorKit.storagetype(ψ) == ROCVector{ComplexF64, AMDGPU.Mem.HIPBuffer}
     @test eltype(ψ) == eltype(typeof(ψ))
     ovl = dot(ψ, ψ)
 
@@ -55,7 +55,7 @@ end
     [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF32)]
     tol = Float64(eps(real(elt)) * 100)
     ψ = adapt(
-        CuVector{elt, CUDA.DeviceMemory}, MultilineMPS(
+        ROCVector{elt, AMDGPU.Mem.HIPBuffer}, MultilineMPS(
             [
                 rand(elt, D * d, D) rand(elt, D * d, D)
                 rand(elt, D * d, D) rand(elt, D * d, D)
@@ -65,7 +65,7 @@ end
 
     @test GeometryStyle(typeof(ψ)) == InfiniteChainStyle()
     @test GeometryStyle(ψ) == InfiniteChainStyle()
-    @test TensorKit.storagetype(ψ) == CuVector{elt, CUDA.DeviceMemory}
+    @test TensorKit.storagetype(ψ) == ROCVector{elt, AMDGPU.Mem.HIPBuffer}
     @test TensorKit.sectortype(ψ) == sectortype(D)
 
     @test !isfinite(typeof(ψ))
