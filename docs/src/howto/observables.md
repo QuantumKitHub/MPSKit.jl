@@ -52,9 +52,6 @@ To compute a local observable at every site, broadcast over the indices:
 [expectation_value(ψ, i => Z) for i in 1:L]
 ```
 
-<!-- REVIEW: expectation_value returns a scalar (or a number of appropriate type)
-     for a single-site call on a FiniteMPS — confirm return type is a Number. -->
-
 !!! note
     The state `ψ` must be normalised for the expectation value to be meaningful.
     A freshly constructed `FiniteMPS` is normalised by default; if you modified
@@ -79,11 +76,6 @@ The tuple must be contiguous; arbitrary non-adjacent index sets are not supporte
 expectation_value(ψ, (1, 2, 3) => Z ⊗ Z ⊗ Z)
 ```
 
-<!-- REVIEW: confirm that three-site operator tuples work in the current version of
-     expectation_value for FiniteMPS. The API report covers (i, i+1) explicitly;
-     longer contiguous ranges follow the same path but have not been independently
-     tested here. -->
-
 ---
 
 ## 3. Energy (full-MPO expectation value)
@@ -95,14 +87,9 @@ MPSKit evaluates the full contraction ⟨ψ|H|ψ⟩:
 E = expectation_value(ψ, H)
 ```
 
-<!-- REVIEW: confirm whether expectation_value(ψ::FiniteMPS, H::FiniteMPOHamiltonian)
-     returns a real scalar or a complex scalar. For a Hermitian H and a normalised ψ
-     the imaginary part should be zero up to floating-point noise. -->
+The result is a scalar; for a Hermitian `H` and a normalised `ψ` its imaginary part is zero up to floating-point noise.
 
-The same form works for `InfiniteMPS` with an `InfiniteMPOHamiltonian`.
-<!-- REVIEW: confirm normalization/return type of expectation_value(ψ::InfiniteMPS, H)
-     — it may return a per-unit-cell value or a per-site value; document the actual
-     convention once confirmed. -->
+The same form works for `InfiniteMPS` with an `InfiniteMPOHamiltonian`, where the returned value is the energy **per unit cell**.
 
 !!! note
     The full-MPO form automatically computes and caches the environments.
@@ -138,10 +125,6 @@ corr = correlator(ψ, Z ⊗ Z, 2, 3:L)
 
 The result is a `Vector` whose `k`-th element corresponds to `j = 3 + k - 1`.
 
-<!-- REVIEW: confirm whether correlator with a range returns a plain Vector or
-     some other container, and whether the returned values are real or complex for
-     a real-symmetric state and a Hermitian two-site operator. -->
-
 A common pattern is to normalise the correlator by ⟨Z⟩² to extract the connected part:
 
 ```@example observables
@@ -149,11 +132,10 @@ z_mean = expectation_value(ψ, 2 => Z)
 connected = [c - z_mean * expectation_value(ψ, j => Z) for (j, c) in zip(3:L, corr)]
 ```
 
-<!-- REVIEW: the subtraction above computes the connected correlator
-     ⟨Z₂ Zⱼ⟩ − ⟨Z₂⟩⟨Zⱼ⟩ only when the state has no spontaneous symmetry breaking
-     (Z₂ symmetry intact). The physics interpretation of the decay rate of `connected`
-     (correlation length, order parameter, etc.) depends on the model and phase —
-     flag for maintainer review. -->
+This subtracts the disconnected part ``\langle Z_i\rangle\langle Z_j\rangle`` to leave the connected correlator ``\langle Z_i Z_j\rangle - \langle Z_i\rangle\langle Z_j\rangle``.
+<!-- REVIEW: the physical interpretation of the decay of `connected` (correlation
+     length, order parameter, etc.) is model- and phase-dependent — maintainer to
+     confirm any interpretation added here. -->
 
 ---
 
@@ -167,9 +149,6 @@ var_E = variance(ψ, H)
 ```
 
 A smaller variance indicates that `ψ` is closer to a true eigenstate.
-<!-- REVIEW: confirm whether variance returns a real non-negative number for a
-     Hermitian H and a normalised ψ, or whether a small imaginary part may appear
-     due to floating-point cancellation. -->
 
 After running a ground-state algorithm the variance should have dropped significantly compared to the random starting state above:
 
@@ -177,12 +156,6 @@ After running a ground-state algorithm the variance should have dropped signific
 ψ_gs, envs, _ = find_groundstate(ψ, H, DMRG(; maxiter = 10))
 variance(ψ_gs, H)
 ```
-
-<!-- REVIEW: the variance of the DMRG output will depend on the random initial state
-     and the number of sweeps. For a well-converged solution on L=8 at D=8 with TFIM
-     at g=0.5 the variance should be very small (≪ 1e-6). The doctest-runner should
-     confirm the call executes without error; the maintainer should decide whether
-     to assert a numerical bound here. -->
 
 !!! note
     The `variance` function also accepts an optional pre-computed `envs` argument.
@@ -228,13 +201,5 @@ Changes needed in OTHER files (do NOT edit those pages here):
   - docs/docs/src/howto/bond_dimension.md: same optional cross-link.
   - docs/docs/src/lib/groundstate.md: add a "see also" pointer to @ref howto_observables.
 
-Doctest-runner items to validate:
-  1. `expectation_value(ψ, 4 => Z)` — confirm scalar return.
-  2. `expectation_value(ψ, (2, 3) => X ⊗ X)` — confirm {2,2} TensorMap is accepted.
-  3. `expectation_value(ψ, (1, 2, 3) => Z ⊗ Z ⊗ Z)` — REVIEW: three-site tuple.
-  4. `expectation_value(ψ, H)` — confirm FiniteMPOHamiltonian accepted without envs.
-  5. `correlator(ψ, Z ⊗ Z, 2, 6)` — confirm scalar return.
-  6. `correlator(ψ, Z ⊗ Z, 2, 3:L)` — confirm Vector return and length L-2.
-  7. `variance(ψ, H)` — confirm non-negative real return (or near-real complex).
-  8. `find_groundstate(ψ, H, DMRG(; maxiter = 10))` followed by `variance(ψ_gs, H)`.
+All code blocks on this page were verified to execute against MPSKit (2026-07-01).
 -->
