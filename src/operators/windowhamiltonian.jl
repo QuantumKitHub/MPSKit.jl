@@ -44,6 +44,7 @@ end
 
 Base.parent(h::WindowMPOHamiltonian) = h.finite_ham
 Base.copy(h::WindowMPOHamiltonian) = WindowMPOHamiltonian(copy(h.left_ham), copy(h.finite_ham), copy(h.right_ham))
+Base.conj(h::WindowMPOHamiltonian) = WindowMPOHamiltonian(conj(h.left_ham), conj(h.finite_ham), conj(h.right_ham))
 
 function Base.:+(a::WindowMPOHamiltonian, b::WindowMPOHamiltonian)
     # the finite window carries full Jordan virtual spaces at its boundaries, so it has to be
