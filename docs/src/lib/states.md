@@ -12,8 +12,14 @@ WindowMPS
 MultilineMPS
 ```
 
-<!-- REVIEW: the exported quasiparticle-state types `QP`, `LeftGaugedQP`, and
-`RightGaugedQP` are part of the public API but currently have NO docstrings, so
-they cannot be listed here. Add docstrings in src/states/quasiparticle_state.jl,
-then add a "Quasiparticle states" @docs block here. -->
+## Quasiparticle states
+
+Excitation ansätze produced by [`excitations`](@ref).
+These behave as vectors and are normally obtained from `excitations` rather than constructed directly.
+
+```@docs; canonical=false
+QP
+LeftGaugedQP
+RightGaugedQP
+```
 

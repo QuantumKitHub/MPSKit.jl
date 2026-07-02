@@ -4,6 +4,33 @@ I think it makes sense to see these things as an actual state instead of return 
 This will allow us to plot energy density (finite qp) and measure observables.
 =#
 
+"""
+    LeftGaugedQP{S,T1,T2,E}
+    LeftGaugedQP(datfun, left_gs, right_gs=left_gs; sector, momentum=0.0)
+
+Left-gauged quasiparticle excitation ansatz on top of a matrix product state ground state.
+The excitation is parametrized through the left-gauge nullspace of the ground-state tensors,
+and the object behaves as a vector so it can be handed directly to the iterative eigensolvers
+used by [`excitations`](@ref).
+
+For a `FiniteMPS` ground state this represents a finite (localized) quasiparticle; for an
+`InfiniteMPS` ground state it represents a momentum eigenstate with the given `momentum`.
+When `left_gs !== right_gs` the ansatz describes a domain wall between the two ground states.
+
+These states are normally produced by [`excitations`](@ref) with a
+[`QuasiparticleAnsatz`](@ref) rather than constructed directly. When constructing manually,
+`datfun` initializes the variational tensors (e.g. `rand`/`randn`), `sector` selects the
+charge sector of the excitation, and `momentum` sets the momentum for infinite ground states.
+
+## Fields
+
+- `left_gs`, `right_gs`: the ground state(s) the excitation lives on; distinct values yield a domain wall.
+- `VLs`: left-nullspace tensors of the ground-state `AL` (satisfying `AL' * VL == 0`).
+- `Xs`: the variational parameters of the ansatz.
+- `momentum`: the excitation momentum (used for infinite ground states).
+
+See also [`RightGaugedQP`](@ref), [`QP`](@ref).
+"""
 struct LeftGaugedQP{S, T1, T2, E <: Number}
     # !(left_gs === right_gs) => domain wall excitation
     left_gs::S
@@ -15,6 +42,24 @@ struct LeftGaugedQP{S, T1, T2, E <: Number}
     momentum::E
 end
 
+"""
+    RightGaugedQP{S,T1,T2,E}
+    RightGaugedQP(datfun, left_gs, right_gs=left_gs; sector, momentum=0.0)
+
+Right-gauged counterpart of [`LeftGaugedQP`](@ref): the same quasiparticle excitation ansatz,
+but parametrized through the right-gauge nullspace of the ground-state tensors. It is most
+often obtained via `convert(RightGaugedQP, ϕ)` from a `LeftGaugedQP` rather than constructed
+directly.
+
+## Fields
+
+- `left_gs`, `right_gs`: the ground state(s) the excitation lives on; distinct values yield a domain wall.
+- `Xs`: the variational parameters of the ansatz.
+- `VRs`: right-nullspace tensors of the ground-state `AR`.
+- `momentum`: the excitation momentum (used for infinite ground states).
+
+See also [`LeftGaugedQP`](@ref), [`QP`](@ref).
+"""
 struct RightGaugedQP{S, T1, T2, E <: Number}
     # !(left_gs === right_gs) => domain wall excitation
     left_gs::S
@@ -207,6 +252,15 @@ function Base.convert(
 end
 
 # gauge independent code
+"""
+    QP{S,T1,T2}
+
+Union of the quasiparticle excitation ansätze [`LeftGaugedQP`](@ref) and
+[`RightGaugedQP`](@ref). It is used for dispatch and to share their gauge-independent
+interface; it is not a concrete type and cannot be constructed on its own. The internal
+aliases `FiniteQP` and `InfiniteQP` further restrict the ground-state type to `FiniteMPS`
+or `InfiniteMPS` respectively.
+"""
 const QP{S, T1, T2} = Union{LeftGaugedQP{S, T1, T2}, RightGaugedQP{S, T1, T2}}
 const FiniteQP{S <: FiniteMPS, T1, T2} = QP{S, T1, T2}
 const InfiniteQP{S <: InfiniteMPS, T1, T2} = QP{S, T1, T2}

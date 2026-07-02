@@ -27,10 +27,6 @@ InfiniteMPOHamiltonian
 JordanMPOTensor
 ```
 
-<!-- REVIEW: the exported `JordanMPOTensorMap` is public API but has no docstring;
-add one in src/operators/jordanmpotensor.jl, then list it above. -->
-
-
 ## Operator algebra
 
 ```@docs; canonical=false
