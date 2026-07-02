@@ -116,7 +116,7 @@ function changebonds(ψ::InfiniteMPS, alg::SvdCut)
     return normalize!(ψ)
 end
 
-function changebonds(ψ, H, alg::SvdCut, envs)
+function changebonds(ψ, H, alg::SvdCut, envs = nothing)
     newψ = changebonds(ψ, alg)
     return newψ, environments(newψ, H, newψ)
 end
