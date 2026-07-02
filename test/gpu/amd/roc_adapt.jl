@@ -23,8 +23,8 @@ using AMDGPU, Adapt
         @test MPSKit.GeometryStyle(typeof(mpo₁)) == MPSKit.FiniteChainStyle()
         @test MPSKit.GeometryStyle(mpo₁) == MPSKit.FiniteChainStyle()
         @test MPSKit.OperatorStyle(typeof(mpo₁)) == MPSKit.MPOStyle()
-        @test TensorKit.storagetype(mpo₁) == ROCVector{T, AMD.Mem.HIPBuffer}
-        @test TensorKit.storagetype(mpo₂) == ROCVector{T, AMD.Mem.HIPBuffer}
-        @test TensorKit.storagetype(mpo₃) == ROCVector{real(T), AMD.Mem.HIPBuffer}
+        @test TensorKit.storagetype(mpo₁) == ROCVector{T, AMDGPU.Mem.HIPBuffer}
+        @test TensorKit.storagetype(mpo₂) == ROCVector{T, AMDGPU.Mem.HIPBuffer}
+        @test TensorKit.storagetype(mpo₃) == ROCVector{real(T), AMDGPU.Mem.HIPBuffer}
     end
 end
