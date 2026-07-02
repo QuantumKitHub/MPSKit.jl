@@ -126,24 +126,24 @@ append!(momenta, fix_degeneracies(states[17:18]))
 
 ````
 18-element Vector{Float64}:
- -3.369480642089346e-17
-  3.9966961823263104e-17
- -2.4201642794270328e-17
+  1.0963150642957372e-17
+ -2.4157081442786943e-17
+  9.150251499481629e-18
+ -0.523598775598299
   0.5235987755982987
- -0.5235987755982985
-  1.0471975511965979
- -1.047197551196598
- -0.5235987755982991
-  0.5235987755982989
- -1.0471975511965974
-  1.0471975511965979
- -1.4167067287245392e-18
- -1.570796326794897
-  1.5707963267948968
  -1.0471975511965979
-  1.0471975511965979
-  1.5707963267948966
+  1.0471975511965976
+  0.5235987755982989
+ -0.5235987755982993
+  1.047197551196598
+ -1.0471975511965976
+  1.4597368636872088e-17
  -1.5707963267948966
+  1.5707963267948963
+  1.0471975511965976
+ -1.0471975511965976
+ -1.570796326794897
+  1.5707963267948963
 ````
 
 We can compute the scaling dimensions $\Delta_n$ of the operators in the CFT from the
@@ -181,34 +181,48 @@ D = 64
 ````
 
 ````
-[ Info: DMRG init:	obj = -1.947519345847e+01	err = 7.5797e-02
-[ Info: DMRG   1:	obj = -2.549098874118e+01	err = 9.1376055611e-03	time = 3.54 sec
-[ Info: DMRG   2:	obj = -2.549098968631e+01	err = 1.1687746206e-06	time = 0.99 sec
-[ Info: DMRG   3:	obj = -2.549098968636e+01	err = 1.5592263716e-07	time = 1.21 sec
-[ Info: DMRG   4:	obj = -2.549098968636e+01	err = 1.3434579843e-08	time = 0.62 sec
-[ Info: DMRG   5:	obj = -2.549098968636e+01	err = 5.9955426595e-09	time = 0.69 sec
-[ Info: DMRG   6:	obj = -2.549098968636e+01	err = 4.4303868458e-09	time = 0.62 sec
-[ Info: DMRG   7:	obj = -2.549098968636e+01	err = 3.2709219988e-09	time = 0.62 sec
-[ Info: DMRG   8:	obj = -2.549098968636e+01	err = 2.3764855423e-09	time = 0.63 sec
-[ Info: DMRG   9:	obj = -2.549098968636e+01	err = 1.7190997617e-09	time = 0.55 sec
-[ Info: DMRG  10:	obj = -2.549098968636e+01	err = 1.2467309044e-09	time = 0.55 sec
-[ Info: DMRG  11:	obj = -2.549098968636e+01	err = 9.1015412118e-10	time = 0.59 sec
-[ Info: DMRG  12:	obj = -2.549098968636e+01	err = 7.7947998405e-10	time = 0.61 sec
-[ Info: DMRG  13:	obj = -2.549098968636e+01	err = 6.8300434048e-10	time = 0.61 sec
-[ Info: DMRG  14:	obj = -2.549098968636e+01	err = 5.9682764775e-10	time = 0.67 sec
-[ Info: DMRG  15:	obj = -2.549098968636e+01	err = 5.2006815587e-10	time = 0.75 sec
-[ Info: DMRG  16:	obj = -2.549098968636e+01	err = 4.5212003413e-10	time = 1.13 sec
-[ Info: DMRG  17:	obj = -2.549098968636e+01	err = 3.9234738860e-10	time = 0.67 sec
-[ Info: DMRG  18:	obj = -2.549098968636e+01	err = 3.4004240572e-10	time = 0.56 sec
-[ Info: DMRG  19:	obj = -2.549098968636e+01	err = 2.9445818985e-10	time = 0.59 sec
-[ Info: DMRG  20:	obj = -2.549098968636e+01	err = 2.5485045197e-10	time = 0.62 sec
-[ Info: DMRG  21:	obj = -2.549098968636e+01	err = 2.2050912081e-10	time = 0.59 sec
-[ Info: DMRG  22:	obj = -2.549098968636e+01	err = 1.9077747364e-10	time = 0.60 sec
-[ Info: DMRG  23:	obj = -2.549098968636e+01	err = 1.6506123889e-10	time = 0.59 sec
-[ Info: DMRG  24:	obj = -2.549098968636e+01	err = 1.4283083882e-10	time = 0.59 sec
-[ Info: DMRG  25:	obj = -2.549098968636e+01	err = 1.2361940779e-10	time = 0.65 sec
-[ Info: DMRG  26:	obj = -2.549098968636e+01	err = 1.0701848483e-10	time = 0.59 sec
-[ Info: DMRG conv 27:	obj = -2.549098968636e+01	err = 9.2672581484e-11	time = 21.17 sec
+[ Info: DMRG init:	obj = -1.946908612087e+01	err = 7.7434e-02
+[ Info: DMRG   1:	obj = -2.549098951719e+01	err = 8.0439536934e-03	time = 2.57 sec
+[ Info: DMRG   2:	obj = -2.549098968635e+01	err = 1.0703227324e-06	time = 0.80 sec
+[ Info: DMRG   3:	obj = -2.549098968636e+01	err = 1.4373447563e-07	time = 0.98 sec
+[ Info: DMRG   4:	obj = -2.549098968636e+01	err = 1.4665972881e-08	time = 0.42 sec
+[ Info: DMRG   5:	obj = -2.549098968636e+01	err = 6.8081026722e-09	time = 0.44 sec
+[ Info: DMRG   6:	obj = -2.549098968636e+01	err = 3.7573810815e-09	time = 0.43 sec
+[ Info: DMRG   7:	obj = -2.549098968636e+01	err = 2.5698292651e-09	time = 0.43 sec
+[ Info: DMRG   8:	obj = -2.549098968636e+01	err = 2.0113551709e-09	time = 0.43 sec
+[ Info: DMRG   9:	obj = -2.549098968636e+01	err = 1.6427286008e-09	time = 0.89 sec
+[ Info: DMRG  10:	obj = -2.549098968636e+01	err = 1.3479784013e-09	time = 0.55 sec
+[ Info: DMRG  11:	obj = -2.549098968636e+01	err = 1.2769471445e-09	time = 0.44 sec
+[ Info: DMRG  12:	obj = -2.549098968636e+01	err = 1.4168057275e-09	time = 0.48 sec
+[ Info: DMRG  13:	obj = -2.549098968636e+01	err = 1.5595217750e-09	time = 0.42 sec
+[ Info: DMRG  14:	obj = -2.549098968636e+01	err = 1.6950091915e-09	time = 0.41 sec
+[ Info: DMRG  15:	obj = -2.549098968636e+01	err = 1.8105744613e-09	time = 0.40 sec
+[ Info: DMRG  16:	obj = -2.549098968636e+01	err = 1.8924908787e-09	time = 0.96 sec
+[ Info: DMRG  17:	obj = -2.549098968636e+01	err = 1.9288336151e-09	time = 0.49 sec
+[ Info: DMRG  18:	obj = -2.549098968636e+01	err = 1.9133807885e-09	time = 0.31 sec
+[ Info: DMRG  19:	obj = -2.549098968636e+01	err = 1.8713994972e-09	time = 0.38 sec
+[ Info: DMRG  20:	obj = -2.549098968636e+01	err = 1.7813737815e-09	time = 0.41 sec
+[ Info: DMRG  21:	obj = -2.549098968636e+01	err = 1.6542099689e-09	time = 0.40 sec
+[ Info: DMRG  22:	obj = -2.549098968636e+01	err = 1.5039369007e-09	time = 0.40 sec
+[ Info: DMRG  23:	obj = -2.549098968636e+01	err = 1.3441838671e-09	time = 0.90 sec
+[ Info: DMRG  24:	obj = -2.549098968636e+01	err = 1.1858446625e-09	time = 0.28 sec
+[ Info: DMRG  25:	obj = -2.549098968636e+01	err = 1.0362811206e-09	time = 0.34 sec
+[ Info: DMRG  26:	obj = -2.549098968636e+01	err = 8.9963099646e-10	time = 0.35 sec
+[ Info: DMRG  27:	obj = -2.549098968636e+01	err = 7.7760121034e-10	time = 0.41 sec
+[ Info: DMRG  28:	obj = -2.549098968636e+01	err = 6.7030150822e-10	time = 0.40 sec
+[ Info: DMRG  29:	obj = -2.549098968636e+01	err = 5.7691780289e-10	time = 0.41 sec
+[ Info: DMRG  30:	obj = -2.549098968636e+01	err = 4.9618146296e-10	time = 0.91 sec
+[ Info: DMRG  31:	obj = -2.549098968636e+01	err = 4.2666435281e-10	time = 0.36 sec
+[ Info: DMRG  32:	obj = -2.549098968636e+01	err = 3.6694816435e-10	time = 0.40 sec
+[ Info: DMRG  33:	obj = -2.549098968636e+01	err = 3.1571200436e-10	time = 0.36 sec
+[ Info: DMRG  34:	obj = -2.549098968636e+01	err = 2.7176974363e-10	time = 0.38 sec
+[ Info: DMRG  35:	obj = -2.549098968636e+01	err = 2.3407977700e-10	time = 0.40 sec
+[ Info: DMRG  36:	obj = -2.549098968636e+01	err = 2.0173966270e-10	time = 0.40 sec
+[ Info: DMRG  37:	obj = -2.549098968636e+01	err = 1.7397391951e-10	time = 0.40 sec
+[ Info: DMRG  38:	obj = -2.549098968636e+01	err = 1.5011934910e-10	time = 0.87 sec
+[ Info: DMRG  39:	obj = -2.549098968636e+01	err = 1.2961022917e-10	time = 0.35 sec
+[ Info: DMRG  40:	obj = -2.549098968636e+01	err = 1.1196457020e-10	time = 0.38 sec
+[ Info: DMRG conv 41:	obj = -2.549098968636e+01	err = 9.6771723038e-11	time = 22.14 sec
 
 ````
 
