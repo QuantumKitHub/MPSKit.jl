@@ -21,7 +21,7 @@ let
     @tensor mpco.AC[middle][-1 -2; -3] := mpco.AC[middle][-1, 1, -3] * sx[-2, 1]
     normalize!(mpco)
 
-    envs = environments(mpco, th)
+    envs = environments(mpco, th, mpco)
 
     szdat = [expectation_value(mpco, i => sz) for i in 1:length(mpco)]
     szdat = [szdat]

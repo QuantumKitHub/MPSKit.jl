@@ -61,7 +61,7 @@ function finite_sim(L; dt = 0.05, finaltime = 5.0)
 
     H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
     ψₜ = deepcopy(ψ₀)
-    envs = environments(ψₜ, H₁)
+    envs = environments(ψₜ, H₁, ψₜ)
 
     echos = [echo(ψₜ, ψ₀)]
     times = collect(0:dt:finaltime)
@@ -126,7 +126,7 @@ function infinite_sim(dt = 0.05, finaltime = 5.0)
     ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS())
 
     ψₜ = deepcopy(ψ₀)
-    envs = environments(ψₜ, H₁)
+    envs = environments(ψₜ, H₁, ψₜ)
 
     echos = [echo(ψₜ, ψ₀)]
     times = collect(0:dt:finaltime)
