@@ -70,7 +70,7 @@ physicalspace(ψ_het, 2)   # ℂ^3
 
 ## 4. A product state (trivial virtual space)
 
-A product (bond-dimension-1) state has no entanglement.
+A product (bond-dimension-1) state has no entanglement: each site carries its own single-site state, independent of the others (with `rand`, a random such state per site).
 Achieve this by passing `oneunit(d)` — the one-dimensional unit space of the same symmetry sector — as the maximum virtual space:
 
 ```@example howto_states
@@ -79,12 +79,8 @@ dim(left_virtualspace(ψ_prod, 5))   # should be 1
 ```
 
 !!! note
-    `oneunit(V)` returns the one-dimensional trivial space matching the symmetry
-    type of `V`.
+    `oneunit(V)` returns the one-dimensional trivial space matching the symmetry type of `V`.
     For plain complex spaces, `oneunit(ℂ^2) == ℂ^1`.
-
-<!-- REVIEW: a random product state is an unentangled superposition of on-site
-configurations — is there a cleaner physics description worth giving here? -->
 
 ---
 
@@ -99,7 +95,7 @@ site_tensors = [rand(ComplexF64, ℂ^1 ⊗ ℂ^2 ← ℂ^1) for _ in 1:L]
 ψ_from_tensors = FiniteMPS(site_tensors)
 ```
 
-Set `normalize=true` to also normalise the state during construction (the default is `false` when passing raw tensors):
+Set `normalize = true` to also normalize the state during construction (the default is `false` when passing raw tensors):
 
 ```@example howto_states
 ψ_normed = FiniteMPS(site_tensors; normalize = true)
@@ -240,14 +236,13 @@ Pass a `Rep[G]` physical space and a `Rep[G]` maximum virtual space; the constru
 
 ### Finite MPS with U(1) symmetry
 
-<!-- REVIEW: verify that the U(1) graded spaces below produce a non-empty
-full-rank MPS with the given `left`/`right` defaults. The doctest-runner will
-confirm execution. -->
-
 ```@example howto_states
 # U(1) spin-1/2: physical space = spin up (charge +1/2) + spin down (charge -1/2)
 d_u1 = Rep[U₁](1 // 2 => 1, -1 // 2 => 1)   # dim 2 total
-D_u1 = Rep[U₁](1 // 2 => 4, -1 // 2 => 4, 3 // 2 => 2, -3 // 2 => 2)
+# the virtual space must span both charge parities (integer and half-integer):
+# with only ±1/2 on each site, the total charge alternates parity bond to bond,
+# so a purely half-integer virtual space would starve every even bond
+D_u1 = Rep[U₁](0 => 2, 1 // 2 => 2, -1 // 2 => 2, 1 => 1, -1 => 1)
 
 ψ_u1 = FiniteMPS(rand, ComplexF64, L, d_u1, D_u1)
 physicalspace(ψ_u1, 1)
@@ -258,8 +253,7 @@ dim(left_virtualspace(ψ_u1, 5))   # actual trimmed bond dimension ≤ dim(D_u1)
 ```
 
 !!! note
-    The boundary virtual spaces default to `oneunit(spacetype(d_u1))`, i.e. the
-    charge-0 sector.
+    The boundary virtual spaces default to `oneunit(spacetype(d_u1))`, i.e. the charge-0 sector.
     Use the `left` and `right` keywords to target a different total charge:
 
     ```julia
@@ -274,37 +268,3 @@ dim(left_virtualspace(ψ_u1, 5))   # actual trimmed bond dimension ≤ dim(D_u1)
 ψ_inf_u1 = InfiniteMPS(d_u1, D_u1)
 physicalspace(ψ_inf_u1, 1)
 ```
-
-<!-- REVIEW: confirm that InfiniteMPS with graded spaces using the scalar
-convenience form `InfiniteMPS(d_u1, D_u1)` is valid and gauge-fixes without error. -->
-
----
-
-<!--
-CLOSING NOTES FOR MAINTAINERS / DOCTEST-RUNNER
-================================================
-
-Cross-references used on this page:
-  - [States](@ref lib_states)   → anchor defined in docs/docs/src/lib/states.md
-  - [@ref](@ref FiniteMPS)      → type docstring
-  - [@ref](@ref InfiniteMPS)    → type docstring
-  - [@ref](@ref WindowMPS)      → type docstring
-  - [@ref](@ref MultilineMPS)   → type docstring
-
-Symbols NOT in the verified list that were wanted but deliberately omitted:
-  - `bond_dimension` — does not exist; we use `dim(left_virtualspace(...))` instead.
-  - `normalize!` — not verified for this page; only `normalize` keyword used.
-  - `copy` — stdlib; no MPSKit-specific concerns.
-
-Symmetric-space choice made for doctest-runner to validate:
-  - U(1) physical: `Rep[U₁](1//2 => 1, -1//2 => 1)` (standard spin-1/2)
-  - U(1) virtual:  `Rep[U₁](1//2 => 4, -1//2 => 4, 3//2 => 2, -3//2 => 2)`
-    This should yield a non-trivial full-rank bond. If it turns out to be
-    empty at some bond, reduce to `Rep[U₁](1//2 => 2, -1//2 => 2)` instead.
-
-Pages that should eventually cross-link here (changes needed elsewhere):
-  - docs/docs/src/lib/states.md — add a "see also" pointer to howto_states.
-  - docs/docs/src/man/states.md — could link here for construction recipes.
-  - docs/docs/make.jl           — add "howto/states.md" to the `pages` tree once
-    the howto/ section is introduced in the plan.
--->

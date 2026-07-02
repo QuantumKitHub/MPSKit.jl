@@ -13,7 +13,7 @@ using MPSKit, TensorKit
 ## 1. Inspecting the current bond dimension
 
 MPSKit exposes the virtual spaces through `left_virtualspace` and `right_virtualspace`.
-There is **no** `bond_dimension` function; use `dim` on the space:
+This returns the raw vector spaces, which carry the information about the different sectors, but we can obtain a single number using `dim`:
 
 ```@example bond_dim
 L = 10
@@ -30,9 +30,8 @@ dim(left_virtualspace(ψ, 5))   # bond to the left of site 5
 ```
 
 !!! note
-    For a `FiniteMPS` the leftmost and rightmost virtual spaces are always
-    one-dimensional (the trivial boundary space), so `left_virtualspace(ψ, 1)`
-    and `left_virtualspace(ψ, L+1)` have dimension 1.
+    For a `FiniteMPS` the leftmost and rightmost virtual spaces are typically one-dimensional (the trivial boundary space),
+    so `left_virtualspace(ψ, 1)` and `left_virtualspace(ψ, L+1)` have dimension 1.
 
 For an `InfiniteMPS` the same call works per unit-cell site:
 
@@ -63,10 +62,7 @@ dim(left_virtualspace(ψ_small, 5))
 dim(left_virtualspace(ψ_grown, 5))      # expanded, but ≤ 4 + 8 = 12
 ```
 
-The new vectors are orthogonal to the original state, so the physical content is unchanged but the variational manifold is larger.
-<!-- REVIEW: the statement "physical content is unchanged" is approximately true
-     (overlap is 1 by construction) but the MPS tensor entries do change — verify
-     that this phrasing is not misleading to the reader. -->
+The new vectors are orthogonal to the original state, so the state it represents is unchanged (its overlap with the original is 1) while the variational manifold grows.
 
 For an `InfiniteMPS` the call is identical:
 
@@ -78,10 +74,7 @@ dim(left_virtualspace(ψ_inf_grown, 1))
 
 ### 2b. Optimal expansion (requires Hamiltonian)
 
-[`OptimalExpand`](@ref) selects expansion directions that have the largest overlap with the two-site Hamiltonian action on the current state.
-<!-- REVIEW: the physical claim here is that the expansion directions correspond to
-     the dominant components of the two-site residual — verify against the
-     Zauner-Stauber et al. Phys. Rev. B 97 (2018) paper. -->
+[`OptimalExpand`](@ref) selects the dominant contributions of the two-site-updated MPS tensor that are orthogonal to the current state, as described by [Zauner-Stauber et al., Phys. Rev. B 97, 045145 (2018)](https://doi.org/10.1103/PhysRevB.97.045145).
 It needs both the state and the Hamiltonian:
 
 ```@example bond_dim
@@ -210,9 +203,6 @@ dim(left_virtualspace(ψ_conv, 5))
 ```
 
 The `trscheme` keyword makes `find_groundstate` prepend a `DMRG2` pass before switching to the default `DMRG`.
-<!-- REVIEW: confirm exact internal algorithm sequencing when trscheme is given to
-     find_groundstate for finite MPS (currently reads as DMRG2 then DMRG from the
-     source, with tol for DMRG2 capped at min(1e-2, 100*tol)). -->
 
 TDVP2 also supports `trscheme` for two-site real- or imaginary-time evolution, but that is covered in the time-evolution documentation rather than here.
 
@@ -238,7 +228,6 @@ H_inf_2 = InfiniteMPOHamiltonian(
     (1,) => -g * Z,
     (2,) => -g * Z,
 )
-# <!-- REVIEW: verify InfiniteMPOHamiltonian 2-site construction with (2,3) wrap-around -->
 
 ψ_idmrg2_start = InfiniteMPS([ℂ^2, ℂ^2], [ℂ^2, ℂ^2])
 
@@ -271,10 +260,6 @@ dim(left_virtualspace(ψ_vc, 1))
     [`changebonds`](@ref), not `find_groundstate`. Grow the state first, then pass
     the result to a ground-state algorithm.
 
-<!-- REVIEW: VUMPSSvdCut on a unit-cell-1 InfiniteMPS internally doubles the cell
-     to 2 and then collapses back; confirm this does not surprise users who check
-     the unit cell length after the call. -->
-
 ---
 
 ## 7. Chaining algorithms
@@ -303,37 +288,3 @@ dim(left_virtualspace(ψ_gs, 5))
 For background on when each algorithm is appropriate and how convergence is assessed, see [Ground-state algorithms](@ref lib_groundstate).
 For constructing MPS objects from scratch, see [Constructing states](@ref howto_states).
 
----
-
-<!--
-CLOSING NOTES FOR MAINTAINERS / DOCTEST-RUNNER
-================================================
-
-Cross-references used on this page:
-  @ref howto_states      → docs/docs/src/howto/states.md (EXISTS)
-  @ref lib_groundstate   → docs/docs/src/lib/groundstate.md (EXISTS)
-  @ref RandExpand        → type docstring in src/algorithms/changebonds/randexpand.jl
-  @ref OptimalExpand     → type docstring in src/algorithms/changebonds/optimalexpand.jl
-  @ref SvdCut            → type docstring in src/algorithms/changebonds/svdcut.jl
-  @ref VUMPSSvdCut       → type docstring in src/algorithms/changebonds/vumpssvd.jl
-  @ref DMRG2             → type docstring in src/algorithms/groundstate/dmrg.jl
-  @ref IDMRG2            → type docstring in src/algorithms/groundstate/idmrg.jl
-  @ref VUMPS             → type docstring (exists in groundstate lib page)
-
-Hamiltonian-construction choices that need doctest-runner validation:
-  1. Finite TFIM: exactly the pattern from docs/docs/src/index.md (already verified).
-  2. Single-site InfiniteMPOHamiltonian with PeriodicVector([ℂ^2]): already verified in index.md.
-  3. Two-site InfiniteMPOHamiltonian with PeriodicVector([ℂ^2, ℂ^2]) and interactions
-     (1,2), (2,3), (1,), (2,): the (2,3) pair wraps around the unit cell boundary —
-     this is the main item needing doctest-runner confirmation. If it fails, the fallback
-     is to use `repeat(H_inf, 2)` on the single-site H_inf.
-
-Symbols wanted but not in the verified API list (not used on this page):
-  - `truncdim` — mentioned in the API report but semantics vs truncrank unclear; omitted.
-  - TDVP2 — present in src but not in the API report's explicit list; only mentioned in
-    prose, not used in code examples.
-
-Changes needed elsewhere (do NOT edit those pages here):
-  - docs/docs/make.jl: add "howto/bond_dimension.md" to the "How-to" section in `pages`.
-  - docs/docs/src/lib/groundstate.md: could add a "see also" pointer to @ref howto_bond_dimension.
--->
