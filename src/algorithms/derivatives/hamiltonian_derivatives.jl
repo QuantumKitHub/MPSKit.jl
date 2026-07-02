@@ -199,6 +199,15 @@ function AC2_hamiltonian(
     return prepare ? prepare_operator!!(H_AC2) : H_AC2
 end
 
+for f in (:AC_hamiltonian, :AC2_hamiltonian)
+    @eval function $f(
+            site::Int, below::WindowMPS, operator::WindowMPOHamiltonian, above::WindowMPS,
+            envs; kwargs...
+        )
+        return $f(site, below, operator.finite_ham, above, envs; kwargs...)
+    end
+end
+
 function JordanMPO_AC2_Hamiltonian(GL::MPSTensor, W1::JordanMPOTensor, W2::JordanMPOTensor, GR::MPSTensor)
     # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
     # them once and reuse the locals throughout
