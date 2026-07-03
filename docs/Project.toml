@@ -4,6 +4,7 @@ name = "MPSKitDocs"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
 DocumenterInterLinks = "d12716ef-a0f6-4df4-a9f1-a5a34e75c656"
+DocumenterVitepress = "4710194d-e776-4893-9690-8d956a29c365"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MPSKit = "bb1c41ca-d63c-52ed-829e-0820dda26502"
@@ -18,5 +19,6 @@ TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 MPSKit = {path = ".."}
 
 [compat]
-Documenter = "1.0"
+Documenter = "1.11"
 DocumenterInterLinks = "1"
+DocumenterVitepress = "0.3"

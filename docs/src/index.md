@@ -1,13 +1,50 @@
-# MPSKit.jl
+```@raw html
+---
+# https://vitepress.dev/reference/default-theme-home-page
+layout: home
 
-**Efficient and versatile tools for working with matrix product states**
+hero:
+  name: MPSKit.jl
+  text: Matrix product states in Julia
+  tagline: Efficient and versatile tools for working with matrix product states
+  image:
+    src: /logo.svg
+    alt: MPSKit.jl
+  actions:
+    - theme: brand
+      text: Manual
+      link: /man/intro
+    - theme: alt
+      text: Examples
+      link: /examples/
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/QuantumKitHub/MPSKit.jl
+
+features:
+  - icon: 🔗
+    title: States
+    details: Construction and manipulation of finite and infinite Matrix Product States (MPS).
+  - icon: 📏
+    title: Observables
+    details: Calculation of observables and expectation values.
+  - icon: 🎯
+    title: Optimization
+    details: Various optimization methods for obtaining MPS fixed points.
+  - icon: ⚛️
+    title: Symmetries
+    details: Support for a wide variety of symmetries, including Abelian, non-Abelian, fermionic and anyonic symmetries.
+---
+```
 
 ## Table of contents
 
-```@contents
-Pages = ["man/intro.md","man/conventions.md","man/states.md","man/operators.md","man/algorithms.md","man/parallelism.md", "man/lattices.md"]
-Depth = 1
-```
+- [Prerequisites](@ref)
+- [States](@ref um_states)
+- [Operators](@ref um_operators)
+- [Algorithms](@ref um_algorithms)
+- [Parallelism in julia](@ref)
+- [Lattices](@ref lattices)
 
 ## Installation
 
@@ -16,14 +53,6 @@ as:
 ```
 pkg> add MPSKit
 ```
-
-## Key Features
-
-- Construction and manipulation of Matrix Product States (MPS)
-- Calculation of observables and expectation values
-- Various optimization methods for obtaining MPS fixed points
-- Support for both finite and infinite MPS
-- Support for wide variety of symmetries, including Abelian, non-Abelian, fermionic and anyonic symmetries
 
 ## Usage
 

@@ -11,7 +11,7 @@ using LinearAlgebra: dot
 A [`FiniteMPS`](@ref) is - at its core - a chain of mps tensors.
 
 ```@raw html
-<img src="../finite_mps_definition.png" alt="finite MPS" class="color-invertible"/>
+<img src="./finite_mps_definition.png" alt="finite MPS" class="color-invertible"/>
 ```
 
 ### Usage
@@ -40,7 +40,7 @@ An MPS representation is not unique: for every virtual bond we can insert $C \cd
 Then, by redefining the tensors on both sides of the bond to include one factor each, we can change the representation.
 
 ```@raw html
-<img src="../mps_gauge_freedom.png" alt="MPS gauge freedom" class="color-invertible"/>
+<img src="./mps_gauge_freedom.png" alt="MPS gauge freedom" class="color-invertible"/>
 ```
 
 There are two particularly convenient choices for the gauge at a site, the so-called left and right canonical form.

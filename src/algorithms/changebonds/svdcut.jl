@@ -20,7 +20,7 @@ $(TYPEDFIELDS)
     "algorithm used for the singular value decomposition"
     alg_svd::S = Defaults.alg_svd()
 
-    "algorithm used for [truncation][@extref MatrixAlgebraKit.TruncationStrategy] of the gauge tensors"
+    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the gauge tensors"
     trscheme::TruncationStrategy
 end
 
@@ -116,7 +116,7 @@ function changebonds(ψ::InfiniteMPS, alg::SvdCut)
     return normalize!(ψ)
 end
 
-function changebonds(ψ, H, alg::SvdCut, envs)
+function changebonds(ψ, H, alg::SvdCut, envs = nothing)
     newψ = changebonds(ψ, alg)
     return newψ, environments(newψ, H, newψ)
 end
