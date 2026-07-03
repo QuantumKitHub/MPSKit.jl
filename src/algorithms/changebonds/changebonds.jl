@@ -16,9 +16,9 @@ function changebonds! end
     changebond(site, dir, ψ, [H], alg, [envs]) -> ψ
     changebond!(site, dir, ψ, [H], alg, [envs]) -> ψ
 
-Expand a single bond of `ψ` in place by adding directions orthogonal to the current state, keeping the state in mixed-canonical form around the enriched bond.
+Expand a single bond of `ψ` by adding directions orthogonal to the current state, keeping the state in mixed-canonical form around the expanded bond.
 The sweep direction `dir` is a `Val(:right)` or `Val(:left)` used for dispatch.
-For `Val(:right)` the bond `(site, site + 1)` is enriched on the right tensor (`ψ.AR[site + 1]`) with zero weight added at `ψ.AC[site]`, so that a subsequent single-site optimization of `site` sees the new directions;
+For `Val(:right)` the bond `(site, site + 1)` is expanded on the right tensor (`ψ.AR[site + 1]`) with zero weight added at `ψ.AC[site]`, so that a subsequent single-site optimization of `site` sees the new directions;
 for `Val(:left)` the mirror is applied to bond `(site - 1, site)`.
 
 See also [`changebonds`](@ref), [`changebonds!`](@ref).

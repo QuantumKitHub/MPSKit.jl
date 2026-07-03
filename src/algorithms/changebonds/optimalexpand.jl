@@ -5,8 +5,9 @@ An algorithm that expands the given mps as described in
 [Zauner-Stauber et al. Phys. Rev. B 97 (2018)](@cite zauner-stauber2018), by selecting the
 dominant contributions of a two-site updated MPS tensor, orthogonal to the original ψ.
 
-The expansion does not alter the state: the added directions are connected through a zero block,
-so that the expanded state is identical to the original one (as required for e.g. TDVP).
+The expansion is state-preserving: the added directions are connected through a zero block,
+so that the expanded state represents the same physical state as the original one (as required
+for e.g. TDVP).
 
 !!! note
     [`changebonds!`](@ref) is only defined for `FiniteMPS`, and modifies both the state and its environment.
