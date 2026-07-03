@@ -58,8 +58,10 @@ makedocs(;
         ],
         "How-to" => [
             "howto/states.md",
+            "howto/hamiltonians.md",
             "howto/bond_dimension.md",
             "howto/observables.md",
+            "howto/entanglement.md",
         ],
         "Examples" => "examples/index.md",
         "Library" => [
@@ -67,6 +69,10 @@ makedocs(;
             "lib/states.md",
             "lib/operators.md",
             "lib/groundstate.md",
+            "lib/bond_dimension.md",
+            "lib/time_evolution.md",
+            "lib/excitations.md",
+            "lib/observables.md",
             "lib/lib.md",
         ],
         "References" => "references.md",
