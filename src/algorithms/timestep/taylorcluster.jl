@@ -3,11 +3,15 @@ $(TYPEDEF)
 
 Algorithm for constructing the `N`th order time evolution MPO using the Taylor cluster expansion.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`make_time_mpo`](@ref).
+
+# References
 
 * [Van Damme et al. SciPost Phys. 17 (2024)](@cite vandamme2024)
 """
@@ -21,7 +25,7 @@ $(TYPEDFIELDS)
 end
 
 """
-    const WI = TaylorCluster(; N=1, extension=false, compression=false)
+    const WI = TaylorCluster(; N = 1, extension = false, compression = false)
 
 First order Taylor expansion for a time-evolution MPO.
 """

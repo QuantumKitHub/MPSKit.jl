@@ -23,11 +23,13 @@ $(TYPEDEF)
 
 Algorithm wrapper with dynamically adjusted tolerances.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-See also [`updatetol`](@ref).
+# See also
+
+[`updatetol`](@ref)
 """
 struct DynamicTol{A} <: Algorithm
     "parent algorithm"

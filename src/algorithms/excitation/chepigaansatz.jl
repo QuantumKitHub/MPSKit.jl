@@ -3,11 +3,7 @@ $(TYPEDEF)
 
 Single-site optimization algorithm for excitations on top of MPS groundstates.
 
-## Fields
-
-$(TYPEDFIELDS)
-
-## Constructors
+# Constructors
 
     ChepigaAnsatz()
     ChepigaAnsatz(; kwargs...)
@@ -16,9 +12,17 @@ $(TYPEDFIELDS)
 Create a `ChepigaAnsatz` algorithm with the given eigensolver, or by passing the
 keyword arguments to [`Arnoldi`](@extref KrylovKit.Arnoldi).
 
-## References
+# Fields
 
-- [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017) 
+$(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`excitations`](@ref).
+
+# References
+
+* [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017)
 """
 struct ChepigaAnsatz{A <: KrylovAlgorithm} <: Algorithm
     "algorithm used for the eigenvalue solvers"
@@ -64,26 +68,32 @@ function excitations(
 end
 
 """
-    ChepigaAnsatz2 <: Algorithm
+$(TYPEDEF)
 
 Two-site optimization algorithm for excitations on top of MPS groundstates.
 
-## Fields
-- `alg::A = Defaults.eigsolver`: algorithm to use for the eigenvalue problem.
-- `trscheme = Defaults.trscheme`: algorithm to use for truncation.
-
-## Constructors
+# Constructors
 
     ChepigaAnsatz2()
     ChepigaAnsatz2(; kwargs...)
     ChepigaAnsatz2(alg, trscheme)
 
 Create a `ChepigaAnsatz2` algorithm with the given eigensolver and truncation, or by passing the
-keyword arguments to `Arnoldi`.
+keyword arguments to [`Arnoldi`](@extref KrylovKit.Arnoldi).
 
-## References
+# Fields
+- `alg`: algorithm used for the eigenvalue problem
+- `trscheme`: truncation scheme used when splitting the optimized two-site tensor
 
-- [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017) 
+<!-- REVIEW: the previous field list gave defaults `Defaults.eigsolver` and `Defaults.trscheme`, but `Defaults.trscheme` does not exist and this struct is not `@kwdef`; its constructor defaults to `Arnoldi(; krylovdim = 30, tol = 1.0e-10, eager = true)` and `notrunc()`. Confirm the intended defaults. -->
+
+# See also
+
+Used as the `algorithm` argument of [`excitations`](@ref).
+
+# References
+
+* [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017)
 """
 struct ChepigaAnsatz2{A <: KrylovAlgorithm} <: Algorithm
     alg::A

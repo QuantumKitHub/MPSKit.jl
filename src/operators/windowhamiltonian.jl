@@ -10,12 +10,7 @@ an infinite Hamiltonian to the right.
 
 Acts similar to just a finite Hamiltonian, but we "remember" the boundary Hamiltonians.
 
-## Fields
-
-$(TYPEDFIELDS)
-
-## Constructors
-
+# Constructors
     WindowMPOHamiltonian(ham::InfiniteMPOHamiltonian, interval::UnitRange)
 
 Construct a `WindowMPOHamiltonian` by carving a finite `interval` out of an infinite
@@ -23,6 +18,9 @@ Hamiltonian `ham`.
 The finite window consists of the sites in `interval`, while the left and right environments
 are copies of `ham` whose unit cells are circshifted so that they line up with the window
 boundaries.
+
+# Fields
+$(TYPEDFIELDS)
 """
 struct WindowMPOHamiltonian{O} <: AbstractMPO{O}
     "Hamiltonian acting on the infinite environment to the left of the window"

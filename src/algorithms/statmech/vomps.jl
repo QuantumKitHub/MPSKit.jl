@@ -1,15 +1,19 @@
 """
 $(TYPEDEF)
-    
+
 Power method algorithm for finding dominant eigenvectors of infinite MPOs.
 This method works by iteratively approximating the product of an operator and a state
 with a new state of the same bond dimension.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`leading_boundary`](@ref) and [`approximate`](@ref).
+
+# References
 
 * [Vanhecke et al. SciPost Phys. Core 4 (2021)](@cite vanhecke2021)
 """

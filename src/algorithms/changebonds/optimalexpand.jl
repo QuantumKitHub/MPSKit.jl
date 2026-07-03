@@ -12,9 +12,13 @@ for e.g. TDVP).
 !!! note
     [`changebonds!`](@ref) is only defined for `FiniteMPS`, and modifies both the state and its environment.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`changebonds`](@ref) and [`changebonds!`](@ref).
 """
 @kwdef struct OptimalExpand{S} <: Algorithm
     "algorithm used for the singular value decomposition"

@@ -1,7 +1,7 @@
 """
-    integrate(f, y₀, t, dt, alg)
+    integrate(f, y₀, t, dt, alg) -> y
 
-Integrate the differential equation ``i dy/dt = f(y, t)`` over a time step 'dt' starting from
+Integrate the differential equation ``i dy/dt = f(y, t)`` over a time step `dt` starting from
 ``y(t₀)=y₀``, using the provided algorithm.
 
 # Arguments

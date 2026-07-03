@@ -97,6 +97,19 @@ function poison!(ca::FiniteEnvironments, ind)
 end
 
 #rightenv[ind] will be contracteable with the tensor on site [ind]
+"""
+    rightenv(envs, site, state)
+
+Return the right environment stored in `envs` at `site` for the given `state`: the contraction
+of everything to the right of `site` in the network the environments were built for.
+The result is gauge-compatible with the tensor of `state` at `site` and can be contracted onto
+it directly.
+
+<!-- REVIEW: verify the description of what the right environment contracts (everything to the
+right of `site`) and the site-indexing convention. -->
+
+See also [`leftenv`](@ref) and [`environments`](@ref).
+"""
 function rightenv(ca::FiniteEnvironments, ind, state)
     a = findfirst(i -> !(state.AR[i] === ca.rdependencies[i]), length(state):-1:(ind + 1))
     a = isnothing(a) ? nothing : length(state) - a + 1
@@ -114,6 +127,19 @@ function rightenv(ca::FiniteEnvironments, ind, state)
     return ca.GRs[ind + 1]
 end
 
+"""
+    leftenv(envs, site, state)
+
+Return the left environment stored in `envs` at `site` for the given `state`: the contraction
+of everything to the left of `site` in the network the environments were built for.
+The result is gauge-compatible with the tensor of `state` at `site` and can be contracted onto
+it directly.
+
+<!-- REVIEW: verify the description of what the left environment contracts (everything to the
+left of `site`) and the site-indexing convention. -->
+
+See also [`rightenv`](@ref) and [`environments`](@ref).
+"""
 function leftenv(ca::FiniteEnvironments, ind, state)
     a = findfirst(i -> !(state.AL[i] === ca.ldependencies[i]), 1:(ind - 1))
 

@@ -8,19 +8,19 @@ Compute an approximation to the application of an operator `O` to the state `ψ`
 of an MPS `ψ₀`. If only a state `ψ` is supplied instead of the `(O, ψ)` pair, `ψ₀` is
 approximated directly to `ψ` (i.e. `O` is taken to be the identity).
 
-## Arguments
+# Arguments
 - `ψ₀::AbstractMPS`: initial guess of the approximated state
 - `(O::AbstractMPO, ψ::AbstractMPS)`: operator `O` and state `ψ` to be approximated
 - `ψ::AbstractMPS`: state to be approximated directly (without an operator)
 - `algorithm`: approximation algorithm. See below for a list of available algorithms.
 - `[environments]`: MPS environment manager
 
-## Keywords
+# Keyword Arguments
 - `tol::Float64`: tolerance for convergence criterium
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 
-## Algorithms
+# Algorithms
 - `DMRG`: Alternating least square method for maximizing the fidelity with a single-site scheme.
 - `DMRG2`: Alternating least square method for maximizing the fidelity with a two-site scheme.
 

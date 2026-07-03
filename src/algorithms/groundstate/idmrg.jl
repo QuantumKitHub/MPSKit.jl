@@ -3,9 +3,13 @@ $(TYPEDEF)
 
 Single site infinite DMRG algorithm for finding the dominant eigenvector.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
 @kwdef struct IDMRG{A} <: Algorithm
     "tolerance for convergence criterium"
@@ -29,9 +33,13 @@ $(TYPEDEF)
 
 Two-site infinite DMRG algorithm for finding the dominant eigenvector.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
 @kwdef struct IDMRG2{A, S} <: Algorithm
     "tolerance for convergence criterium"

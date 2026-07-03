@@ -21,9 +21,13 @@ is `notrunc()` the gauge is a QR decomposition (`alg_orth`, [`Householder`](@ext
 MatrixAlgebraKit.Householder) by default), otherwise it is a truncated SVD (`alg_svd` with the
 given `trscheme`).
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG{A, F, E, G} <: Algorithm
     "tolerance for convergence criterium"
@@ -64,6 +68,24 @@ function DMRG(;
     return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize, alg_expand, alg_gauge)
 end
 
+"""
+    find_groundstate!(ψ, H, algorithm, [environments]) -> (ψ, environments, ϵ)
+
+In-place version of [`find_groundstate`](@ref): optimize the finite MPS `ψ` for the
+Hamiltonian `H`, overwriting the input state instead of working on a copy.
+Currently supported for the finite-system algorithms [`DMRG`](@ref) and [`DMRG2`](@ref).
+
+# Arguments
+- `ψ::AbstractFiniteMPS`: initial guess, mutated in place
+- `H`: operator for which to find the ground state
+- `algorithm`: optimization algorithm
+- `[environments]`: MPS environment manager
+
+# Returns
+- `ψ::AbstractFiniteMPS`: converged ground state
+- `environments`: environments corresponding to the converged state
+- `ϵ::Float64`: final convergence error upon terminating the algorithm
+"""
 function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environments(ψ, H, ψ))
     ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
     ϵ = maximum(ϵs)
@@ -146,9 +168,13 @@ $(TYPEDEF)
 
 Two-site DMRG algorithm for finding the dominant eigenvector.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG2{A, S, F} <: Algorithm
     "tolerance for convergence criterium"

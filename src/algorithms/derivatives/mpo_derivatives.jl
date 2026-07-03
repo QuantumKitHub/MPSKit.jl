@@ -1,5 +1,5 @@
 """
-    struct MPODerivativeOperator{L,O<:Tuple,R}
+    struct MPODerivativeOperator{L, O <: Tuple, R}
 
 Effective local operator obtained from taking the partial derivative of an MPS-MPO-MPS sandwich.
 """

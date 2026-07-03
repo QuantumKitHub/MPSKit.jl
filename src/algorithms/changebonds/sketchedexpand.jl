@@ -15,9 +15,13 @@ The state-preserving behaviour matches [`OptimalExpand`](@ref).
     as the `alg_expand` strategy of [`DMRG`](@ref). The reported `ϵ_2site` is a randomized
     estimate, and the folded application does not exploit `JordanMPO` sparsity.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`changebonds`](@ref) and [`changebonds!`](@ref).
 """
 @kwdef struct SketchedExpand{S} <: Algorithm
     "algorithm used to orthonormalize the sketched complement (passed as the `alg` of `left_orth!`/`right_orth!`); `nothing` selects QR without oversampling and an SVD-based decomposition otherwise"

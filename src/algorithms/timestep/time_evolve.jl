@@ -5,21 +5,26 @@
 Time-evolve the initial state `ψ₀` with Hamiltonian `H` over a given time span by stepping
 through each of the time points obtained by iterating t_span.
 
-## Arguments
+# Arguments
 
 - `ψ₀::AbstractMPS`: initial state
 - `H::AbstractMPO`: operator that generates the time evolution (can be time-dependent).
 - `t_span::AbstractVector{<:Number}`: time points over which the time evolution is stepped
-- `[alg]`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
-- `[envs]`: MPS environment manager
+- `alg`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
+- `envs`: MPS environment manager
 
-## Keyword Arguments
+# Keyword Arguments
 
-- `verbosity::Int=0`: verbosity level for logging
-- `imaginary_evolution::Bool=false`: if true, the time evolution is done with an imaginary time step
+- `verbosity::Int = 0`: verbosity level for logging
+- `imaginary_evolution::Bool = false`: if true, the time evolution is done with an imaginary time step
     instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful for using this
     function to compute the ground state of a Hamiltonian, or to compute finite-temperature
     properties of a system.
+
+# Returns
+
+- `ψ`: the time-evolved state
+- `envs`: the updated environment manager
 """
 function time_evolve end, function time_evolve! end
 
@@ -54,21 +59,26 @@ end
 Time-step the state `ψ₀` with Hamiltonian `H` over a given time step `dt` at time `t`,
 solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 
-## Arguments
+# Arguments
 
 - `ψ₀::AbstractMPS`: initial state
 - `H::AbstractMPO`: operator that generates the time evolution (can be time-dependent).
 - `t::Number`: starting time of time-step
 - `dt::Number`: time-step magnitude
-- `[alg]`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
-- `[envs]`: MPS environment manager
+- `alg`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
+- `envs`: MPS environment manager
 
-## Keyword Arguments
+# Keyword Arguments
 
-- `imaginary_evolution::Bool=false`: if true, the time evolution is done with an imaginary time step
+- `imaginary_evolution::Bool = false`: if true, the time evolution is done with an imaginary time step
     instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful for using this
     function to compute the ground state of a Hamiltonian, or to compute finite-temperature
     properties of a system.
+
+# Returns
+
+- `ψ`: the time-stepped state
+- `envs`: the updated environment manager
 """
 function timestep end, function timestep! end
 
@@ -77,9 +87,9 @@ function timestep end, function timestep! end
 
 Construct an `MPO` that approximates ``\\exp(-iHdt)``.
 
-## Keyword Arguments
+# Keyword Arguments
 
-- `imaginary_evolution::Bool=false`: if true, the time evolution operator is constructed
+- `imaginary_evolution::Bool = false`: if true, the time evolution operator is constructed
     with an imaginary time step instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``).
     This can be useful for using this function to compute the ground state of a Hamiltonian,
     or to compute finite-temperature properties of a system.

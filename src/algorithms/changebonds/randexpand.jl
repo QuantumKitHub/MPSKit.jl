@@ -13,9 +13,13 @@ distributed weights for each state in the two-site space and truncating that.
     The environments are not used here, but [`changebonds!`](@ref) modifies both the state
     and environment so they remain consistent.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`changebonds`](@ref) and [`changebonds!`](@ref).
 """
 @kwdef struct RandExpand{S} <: Algorithm
     "algorithm used for the singular value decomposition"

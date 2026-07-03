@@ -6,9 +6,13 @@ An algorithm that uses a two-site update step to change the bond dimension of a 
 !!! note
     [`changebonds!`](@ref) is not defined.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`changebonds`](@ref).
 """
 @kwdef struct VUMPSSvdCut <: Algorithm
     "algorithm used for gauging the `InfiniteMPS`"
