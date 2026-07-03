@@ -4,7 +4,7 @@ $(TYPEDEF)
 Single site MPS time-evolution algorithm based on the Time-Dependent Variational Principle.
 
 For finite MPS, setting `alg_expand` to a bond-expansion algorithm (e.g. [`OptimalExpand`](@ref),
-[`SketchedExpand`](@ref)) enriches the bond with directions orthogonal to the current state
+[`SketchedExpand`](@ref)) expands the bond with directions orthogonal to the current state
 ahead of each local integration, recovering Controlled Bond Expansion (CBE) TDVP and lifting the
 fixed-bond limitation of plain single-site TDVP. A truncating `trscheme` is then required to cut
 the enlarged bond back down (selecting the truncated-SVD gauge). The expansion is
