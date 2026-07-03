@@ -20,7 +20,7 @@ $(TYPEDFIELDS)
     "algorithm used for the singular value decomposition"
     alg_svd = Defaults.alg_svd()
 
-    "algorithm used for [truncation][@extref MatrixAlgebraKit.TruncationStrategy] of the two-site update"
+    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the two-site update"
     trscheme::TruncationStrategy
 end
 

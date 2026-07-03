@@ -21,7 +21,7 @@ $(TYPEDFIELDS)
     "algorithm used for the singular value decomposition"
     alg_svd::S = Defaults.alg_svd()
 
-    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy] the expanded space"
+    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the expanded space"
     trscheme::TruncationStrategy
 end
 
@@ -54,7 +54,7 @@ end
 changebonds(ψ::AbstractMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
 changebonds(ψ::MultilineMPS, alg::RandExpand) = changebonds!(copy(ψ), alg)
 
-function changebonds(ψ, H, alg::RandExpand, envs)
+function changebonds(ψ, H, alg::RandExpand, envs = nothing)
     newψ = changebonds(ψ, alg)
     return newψ, environments(newψ, H, newψ)
 end
