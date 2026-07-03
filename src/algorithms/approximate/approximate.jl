@@ -12,14 +12,14 @@ approximated directly to `ψ` (i.e. `O` is taken to be the identity).
 **Not every algorithm supports every combination of arguments below** — see the per-algorithm
 notes at the end of this docstring before picking one.
 
-## Arguments
+# Arguments
 - `ψ₀::AbstractMPS`: initial guess of the approximated state
 - `(O::AbstractMPO, ψ::AbstractMPS)`: operator `O` and state `ψ` to be approximated
 - `ψ::AbstractMPS`: state to be approximated directly (without an operator)
 - `algorithm`: approximation algorithm. See below for a list of available algorithms.
 - `[environments]`: MPS environment manager
 
-## Keywords
+# Keyword Arguments
 The keyword-based call (no explicit `algorithm`) is a convenience method that picks an
 algorithm for you based on the type of `ψ₀` (`DMRG`/`DMRG2` for a finite MPS, `VOMPS`/`IDMRG`/
 `IDMRG2` for an infinite MPS) and only accepts the `(O, ψ)` tuple form of `toapprox`. Once you
@@ -31,7 +31,7 @@ struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
 - `trscheme`: if supplied, a truncated two-site sweep (`DMRG2`/`IDMRG2`) is prepended to
   refine the bond dimension before the single-site algorithm polishes the result.
 
-## Algorithms
+# Algorithms
 Each algorithm below only supports a subset of the general interface. Check this table before
 picking one — in particular, note that **only `DMRG`/`DMRG2` accept a bare state `ψ`**; the
 infinite algorithms always require an explicit `(O, ψ)` tuple, and **`VOMPS` has no in-place

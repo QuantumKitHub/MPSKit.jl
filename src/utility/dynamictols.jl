@@ -44,11 +44,13 @@ Algorithm wrapper with dynamically adjusted tolerances. Only the wrapped solver'
 retuned; its Krylov budget (if any) is left fixed — this is the simpler counterpart to
 [`AdaptiveKrylov`](@ref).
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-See also [`adapt_solver`](@ref).
+# See also
+
+[`adapt_solver`](@ref)
 """
 struct DynamicTol{A} <: Algorithm
     "parent algorithm"

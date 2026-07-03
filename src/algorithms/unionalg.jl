@@ -1,11 +1,16 @@
 """
 $(TYPEDEF)
 
-Algorithm wrapper representing the sequential application of two algorithms.
+Algorithm wrapper representing the sequential application of two algorithms, as produced by
+`alg1 & alg2`.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`changebonds`](@ref).
 """
 struct UnionAlg{A, B} <: Algorithm
     "first algorithm"

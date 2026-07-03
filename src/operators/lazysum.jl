@@ -1,19 +1,19 @@
 """
-    LazySum{O} <: AbstractVector{O}
+$(TYPEDEF)
 
-Type that represents a lazy sum i.e explicit summation is only done when needed.
-This type is basically an `AbstractVector` with some extra functionality to calculate things efficiently.
+Type that represents a lazy sum, i.e. explicit summation is only done when needed.
+This type is basically an `AbstractVector` with some extra functionality to calculate things
+efficiently.
 
-## Fields
-- ops -- Vector of summable objects
-
----
-
-## Constructors
+# Constructors
     LazySum(x::Vector)
+    LazySum(ops::AbstractVector, fs::AbstractVector)
 
+# Fields
+$(TYPEDFIELDS)
 """
 struct LazySum{O} <: AbstractVector{O}
+    "vector of summable objects"
     ops::Vector{O}
 end
 

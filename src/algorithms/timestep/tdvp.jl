@@ -16,11 +16,15 @@ state-preserving, as required for a consistent time evolution.
     evolution instead renormalizes at every step, like a ground-state search. CBE is only
     available for finite MPS.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`timestep`](@ref), [`timestep!`](@ref) and [`time_evolve`](@ref).
+
+# References
 
 * [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
@@ -190,11 +194,15 @@ $(TYPEDEF)
 
 Two-site MPS time-evolution algorithm based on the Time-Dependent Variational Principle.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`timestep`](@ref), [`timestep!`](@ref) and [`time_evolve`](@ref).
+
+# References
 
 * [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """

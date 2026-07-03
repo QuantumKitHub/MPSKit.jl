@@ -7,9 +7,13 @@ Variational optimization algorithm for excitations of finite MPS by minimizing t
 H + λᵢ |ψᵢ⟩⟨ψᵢ|
 ```
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`excitations`](@ref).
 """
 @kwdef struct FiniteExcited{A} <: Algorithm
     "optimization algorithm"

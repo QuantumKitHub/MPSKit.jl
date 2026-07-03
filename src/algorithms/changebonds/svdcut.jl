@@ -6,13 +6,15 @@ This is achieved by a sweeping algorithm that locally performs (optimal) truncat
 
 changedbonds! is only defined for FiniteMPS and FiniteMPO.
 
-See also [`changebonds(!)`](@ref changebonds)
-
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`changebonds`](@ref) and [`changebonds!`](@ref).
+
+# References
 
 * [Parker et al. Phys. Rev. B 102 (2020)](@cite parker2020)
 """

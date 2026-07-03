@@ -5,18 +5,18 @@
 Compute the ground state for Hamiltonian `H` with initial guess `ψ`. If not specified, an
 optimization algorithm will be attempted based on the supplied keywords.
 
-## Arguments
+# Arguments
 - `ψ₀::AbstractMPS`: initial guess
 - `H::AbstractMPO`: operator for which to find the ground state
 - `[environments]`: MPS environment manager
 - `algorithm`: optimization algorithm
 
-## Keywords
+# Keyword Arguments
 - `tol::Float64`: tolerance for convergence criterium
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 
-## Returns
+# Returns
 - `ψ::AbstractMPS`: converged ground state
 - `environments`: environments corresponding to the converged state
 - `ϵ::Float64`: final convergence error upon terminating the algorithm
