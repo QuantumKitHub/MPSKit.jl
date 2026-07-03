@@ -228,7 +228,7 @@ scatter!(
 
 md"""
 This shows that any finite bond dimension MPS necessarily breaks the symmetry of the system,
-forming a Bose-Einstein condensate which introduces erraneous long-distance behaviour of
+forming a Bose-Einstein condensate which introduces erroneous long-distance behaviour of
 correlation functions. In case of finite bond dimension, it is thus reasonable to associate
 the finite expectation value of the field operator to the 'quasicondensate' density of the
 system which vanishes as $D \to \infty$.
@@ -242,14 +242,14 @@ Fourier transform of the single-particle density matrix. Starting from the defin
 momentum occupation operators:
 
 ```math
-\hat{a}_k = \frac{1}{\sqrt{L}} \sum_j e^{-ikj} \hat{a}_j, \qquad 
+\hat{a}_k = \frac{1}{\sqrt{L}} \sum_j e^{-ikj} \hat{a}_j, \qquad
 \hat{a}_k^\dagger = \frac{1}{\sqrt{L}} \sum_{j'} e^{ikj'} \hat{a}_{j'}^\dagger
 ```
 
 the momentum distribution is
 
 ```math
-\langle \hat{n}_k \rangle = \langle \hat{a}_k^\dagger \hat{a}_k \rangle 
+\langle \hat{n}_k \rangle = \langle \hat{a}_k^\dagger \hat{a}_k \rangle
 = \frac{1}{L} \sum_{j',j} e^{ik(j'-j)} \langle \hat{a}_{j'}^\dagger \hat{a}_j \rangle.
 ```
 
@@ -310,7 +310,7 @@ insulating phase would not. In the thermodynamic limit, one could show that the 
 conditions may be considered as periodic and instead uniformly distribute the phase across
 the chain as $\hat{a}_i \to \hat{a}_i e^{i\Phi/L}$. Concretely, in the limit of
 $\Phi/L \to 0$, we have:
-    
+
 $$\frac{E[\Phi] - E[0]}{L} \approx \frac{1}{2} \Upsilon(L) \bigg (\frac{\Phi}{L}\bigg)^2 + \cdots$$
 
 In order to find the ground state under these twisted boundary conditions, we must construct

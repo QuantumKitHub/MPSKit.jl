@@ -274,7 +274,7 @@ scatter!(
 ![](figure-3.png)
 
 This shows that any finite bond dimension MPS necessarily breaks the symmetry of the system,
-forming a Bose-Einstein condensate which introduces erraneous long-distance behaviour of
+forming a Bose-Einstein condensate which introduces erroneous long-distance behaviour of
 correlation functions. In case of finite bond dimension, it is thus reasonable to associate
 the finite expectation value of the field operator to the 'quasicondensate' density of the
 system which vanishes as $D \to \infty$.
@@ -466,4 +466,3 @@ using what we have learnt in this tutorial.
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
-

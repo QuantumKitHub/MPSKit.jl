@@ -117,7 +117,7 @@ SPT phase has a dominant value that is not in the trivial sector, which leads to
 non-injective MPS.
 
 Finally, the entanglement spectrum of the wrong SPT phase will show degeneracies of all
-singular values, which can again be attributed to an attempt to mimick the spectrum of the
+singular values, which can again be attributed to an attempt to mimic the spectrum of the
 right SPT phase.
 
 ````julia
@@ -196,4 +196,3 @@ S_plus = 1.5450323530571919
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
-

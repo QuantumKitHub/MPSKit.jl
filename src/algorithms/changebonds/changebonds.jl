@@ -4,7 +4,7 @@
 
 Change the bond dimension of `ψ` using the algorithm `alg`, and return the new `ψ` and the new `envs`.
 For AbstractInfiniteMPS, changebonds returns new environments without modifying the one provided.
-changedbonds! can modifiy both the provided state and environments, depending on the algorithm.
+changedbonds! can modify both the provided state and environments, depending on the algorithm.
 For FiniteMPS, changebonds also modifies the environments.
 
 See also: [`SvdCut`](@ref), [`RandExpand`](@ref), [`VUMPSSvdCut`](@ref), [`OptimalExpand`](@ref)

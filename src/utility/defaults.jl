@@ -91,7 +91,7 @@ const scheduler = Ref{Scheduler}()
 
 Set the `OhMyThreads` multi-threading scheduler parameters.
 
-The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or as a symbol where the corresponding parameters are specificed as keyword arguments.
+The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or as a symbol where the corresponding parameters are specified as keyword arguments.
 For a detailed description of all schedulers and their keyword arguments consult the [`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
 """
 function set_scheduler!(sc = OhMyThreads.Implementation.NotGiven(); kwargs...)

@@ -13,7 +13,7 @@ overall performance.
 A lot of the confusion stems from the fact that the BLAS threading behaviour is not
 consistent between different vendors. Additionally, performance behaviour is severely
 dependent on hardware, the specifics of the problem, and the availability of other resources
-such as total memory, or memory bandwith. This means that there is no one size fits all
+such as total memory, or memory bandwidth. This means that there is no one size fits all
 solution, and that you will have to experiment with the settings to get optimal performance.
 Nevertheless, there are some general guidelines that can be followed, which seem to at least
 work well in most cases.
@@ -45,9 +45,9 @@ julia> using ThreadPinning; threadinfo(; blas=true, hints=true)
 
 System: 8 cores (2-way SMT), 1 sockets, 1 NUMA domains
 
-| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 | 
+| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 |
 
-# = Julia thread, # = HT, # = Julia thread on HT, | = Socket seperator
+# = Julia thread, # = HT, # = Julia thread on HT, | = Socket separator
 
 Julia threads: 4
 ├ Occupied CPU-threads: 4
@@ -62,9 +62,9 @@ julia> using MKL; threadinfo(; blas=true, hints=true)
 
 System: 8 cores (2-way SMT), 1 sockets, 1 NUMA domains
 
-| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 | 
+| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 |
 
-# = Julia thread, # = HT, # = Julia thread on HT, | = Socket seperator
+# = Julia thread, # = HT, # = Julia thread on HT, | = Socket separator
 
 Julia threads: 4
 ├ Occupied CPU-threads: 4
@@ -95,7 +95,7 @@ MPSKit.Defaults.set_scheduler!(:greedy) # multithreading with greedy load-balanc
 MPSKit.Defaults.set_scheduler!(:dynamic) # default: multithreading with some load-balancing
 ```
 
-For further reference on the available schedulers and finer control, please refer to the 
+For further reference on the available schedulers and finer control, please refer to the
 [`OhMyThreads.jl` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/)
 
 ## TensorKit multithreading

@@ -25,7 +25,7 @@ lattice = fill(ℂ^2, 10)
 H = MPOHamiltonian(lattice, (i, i+1) => O for i in 1:length(lattice)-1)
 ```
 
-See also [`instantiate_operator`](@ref), which is responsable for instantiating the local
+See also [`instantiate_operator`](@ref), which is responsible for instantiating the local
 operators in a form that is compatible with this constructor.
 """
 struct MPOHamiltonian{TO <: JordanMPOTensor, V <: AbstractVector{TO}} <: AbstractMPO{TO}
