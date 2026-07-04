@@ -40,6 +40,8 @@ function WindowMPOHamiltonian(ham::InfiniteMPOHamiltonian, interval::UnitRange)
     return WindowMPOHamiltonian(left_ham, finite_ham, right_ham)
 end
 
+Base.isfinite(::Type{<:WindowMPOHamiltonian}) = true
+
 Base.parent(h::WindowMPOHamiltonian) = h.finite_ham
 Base.copy(h::WindowMPOHamiltonian) = WindowMPOHamiltonian(copy(h.left_ham), copy(h.finite_ham), copy(h.right_ham))
 Base.conj(h::WindowMPOHamiltonian) = WindowMPOHamiltonian(conj(h.left_ham), conj(h.finite_ham), conj(h.right_ham))
