@@ -4,7 +4,7 @@ version = "0.13.13"
 authors = "Lukas Devos, Maarten Van Damme and contributors"
 
 [workspace]
-projects = ["test", "docs", "examples"]
+projects = ["test", "docs", "examples", "benchmark"]
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"

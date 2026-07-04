@@ -3,7 +3,8 @@ Manifest.toml
 .vscode
 .DS_Store
 **/dev/
-benchmark/results
+benchmark/results/*
+!benchmark/results/.gitkeep
 
 # DocumenterVitepress / Node build artifacts
 **/node_modules/

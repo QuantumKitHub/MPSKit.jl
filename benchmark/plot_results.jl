@@ -7,13 +7,18 @@ using Statistics
 # -------------------
 resultdir = joinpath(@__DIR__, "results")
 
-result_files = Dict(
-    "main" => joinpath(resultdir, "results_MPSKit@main.json"),
-    "dirty" => joinpath(resultdir, "results_MPSKit@dirty.json")
-)
+# ============================================================================
+# Legacy AC2-contraction / timestep regression plots (BenchmarkTools-based,
+# `benchmark/MPSKitBenchmarks/`, see `benchmark/benchmarks.jl`). Unrelated to the
+# time-to-accuracy suites below; only runs if its expected result files exist.
+# ============================================================================
+function plot_legacy_regression_results(resultdir)
+    result_files = Dict(
+        "main" => joinpath(resultdir, "results_MPSKit@main.json"),
+        "dirty" => joinpath(resultdir, "results_MPSKit@dirty.json")
+    )
 
-
-df = let df = DataFrame(
+    df = let df = DataFrame(
         :version => String[], :model => String[], :symmetry => String[],
         :D => Int[], :V => Int[], :memory => Tuple{Int, Int}[], :allocs => Tuple{Int, Int}[], :times => Tuple{Vector{Int}, Vector{Int}}[]
     )
@@ -106,8 +111,86 @@ function plot_result(df, num_applications, choice = :times)
 
     return f
 end
-for choice in (:allocs, :memory, :times), n in [1, 3, 10]
-    f = plot_result(df, n, choice)
-    save(joinpath(resultdir, "bench_$(choice)_$n.png"), f)
-    save(joinpath(resultdir, "bench_$(choice)_$n.svg"), f)
+    for choice in (:allocs, :memory, :times), n in [1, 3, 10]
+        f = plot_result(df, n, choice)
+        save(joinpath(resultdir, "bench_$(choice)_$n.png"), f)
+        save(joinpath(resultdir, "bench_$(choice)_$n.svg"), f)
+    end
+    return nothing
 end
+
+if isfile(joinpath(resultdir, "results_MPSKit@main.json")) && isfile(joinpath(resultdir, "results_MPSKit@dirty.json"))
+    plot_legacy_regression_results(resultdir)
+else
+    @info "Skipping legacy AC2-contraction regression plots: expected result files not found in $resultdir (these come from the separate BenchmarkTools workflow in benchmark/benchmarks.jl, not from benchmark/run.jl)."
+end
+
+# ============================================================================
+# Suite 1-2 time-to-accuracy plots (docs/IMPROVEMENT_PLAN.md §4.2, items 1-2).
+# Reads the JSON result files produced by `benchmark/run.jl` (one file per suite run,
+# named `suite1_dmrg_trivial_*.json` / `suite2_dmrg_u1_*.json`) and, for each, plots
+# |E - E_best| vs wall time on log-log axes, one line per χ. `E_best` is the lowest
+# energy observed anywhere in that result file's batch of χ runs (methodology guardrail
+# §4.3: never publish a "ground truth" energy the suite itself did not produce).
+# ============================================================================
+
+"""
+    plot_suite_trajectories(result_file; title) -> Figure
+
+Plot the energy-error-vs-walltime trajectories (one line per χ) stored in a suite 1/2
+JSON result file.
+"""
+function plot_suite_trajectories(result_file::AbstractString; title::AbstractString = basename(result_file))
+    result = JSON.parsefile(result_file)
+    best_energy = result["best_energy"]
+    trials = result["trials"]
+
+    f = Figure(; size = (700, 500))
+    ax = Axis(
+        f[1, 1];
+        xlabel = "wall time (s)", ylabel = "|E - E_best|",
+        xscale = log10, yscale = log10, title = title
+    )
+    for trial in sort(trials; by = t -> t["chi_actual"])
+        energies = Float64.(trial["energies"])
+        walltimes = Float64.(trial["walltimes"])
+        err = max.(abs.(energies .- best_energy), eps(Float64))
+        # the last point typically has err == 0 (it *is* the best energy in its own run,
+        # or ties another run's) and would vanish on a log scale; keep it visible at eps.
+        scatterlines!(ax, walltimes, err; label = "χ = $(trial["chi_actual"])")
+    end
+    axislegend(ax, position = :rt)
+    return f
+end
+
+"""
+    plot_all_suite_results(resultsdir = joinpath(@__DIR__, "results"))
+
+For each of suite 1 and suite 2, find the most recent result file in `resultsdir` and
+save a `<name>.png` / `<name>.svg` trajectory plot next to it. No-ops for suites with no
+result files yet (e.g. before `benchmark/run.jl` has been run).
+"""
+function plot_all_suite_results(resultsdir::AbstractString = joinpath(@__DIR__, "results"))
+    suites = (
+        ("suite1_dmrg_trivial", "Suite 1: finite DMRG, no symmetry"),
+        ("suite2_dmrg_u1", "Suite 2: finite DMRG, U(1) symmetry"),
+    )
+    for (prefix, label) in suites
+        files = filter(readdir(resultsdir)) do fname
+            startswith(fname, prefix) && endswith(fname, ".json")
+        end
+        if isempty(files)
+            @info "No result files found for $label (expected $(prefix)_*.json in $resultsdir); skipping."
+            continue
+        end
+        file = joinpath(resultsdir, sort(files)[end]) # most recent by the embedded timestamp
+        f = plot_suite_trajectories(file; title = label)
+        outbase = joinpath(resultsdir, replace(basename(file), ".json" => ""))
+        save(outbase * ".png", f)
+        save(outbase * ".svg", f)
+        println("Wrote plot for $label -> $(outbase).{png,svg}")
+    end
+    return nothing
+end
+
+plot_all_suite_results(resultdir)
