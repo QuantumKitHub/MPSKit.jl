@@ -7,6 +7,14 @@ Within each physics grouping below, the examples are listed roughly in order of 
 
 ## Quantum (1+1)d
 
+### [The transverse-field Ising model: a complete ground-state study](quantum1d/0.tfim-groundstate/index.md)
+
+![](quantum1d/0.tfim-groundstate/figure-1.png)
+
+Assembles the tools from the tutorials into one case study of the TFIM phase transition: finite-ring `DMRG` versus infinite-chain `VUMPS` magnetization curves in a single figure, plus the entanglement entropy and correlation length of the infinite state across the transition.
+The natural first example after finishing the tutorial track.
+**Level: introductory.**
+
 ### [The Ising CFT spectrum](quantum1d/1.ising-cft/index.md)
 
 ![](quantum1d/1.ising-cft/figure-2.png)
