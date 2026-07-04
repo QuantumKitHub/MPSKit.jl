@@ -154,9 +154,9 @@ println("Energy: ", expectation_value(ground_state, hamiltonian))
 ````
 
 ````
-[ Info: VUMPS init:	obj = +3.450895756898e-01	err = 6.6224e-01
-[ Info: VUMPS conv 72:	obj = -6.756981551609e-01	err = 9.5394492271e-07	time = 2.91 sec
-Energy: -0.6756981551608794 - 1.967768893425733e-17im
+[ Info: VUMPS init:	obj = +5.514844342897e-01	err = 5.9161e-01
+[ Info: VUMPS conv 41:	obj = -6.757777651163e-01	err = 8.1024260014e-07	time = 0.83 sec
+Energy: -0.6757777651162759 + 9.071218207774581e-17im
 
 ````
 
@@ -257,7 +257,7 @@ plot!(
 )
 
 scatter!(
-    p, Ds, map(ψ -> correlation_length(ψ; sector = leftunit(ψ)), states),
+    p, Ds, correlation_length.(states),
     ylabel = "Correlation length", xlabel = "Bond dimension",
     xscale = :log10, yscale = :log10,
     inset = bbox(0.2, 0.51, 0.25, 0.25),
@@ -285,13 +285,13 @@ quasicondensate_density = map(state -> abs2(expectation_value(state, (0,) => a_o
 
 ````
 7-element Vector{Float64}:
- 0.31098779070601257
- 0.2881478589434881
- 0.2702000230423913
- 0.25712728516508654
- 0.24685385948652017
- 0.23539753899204166
- 0.22799654088348645
+ 0.3097427792977986
+ 0.2881478005839194
+ 0.27020015650045337
+ 0.257127287055965
+ 0.24685385184650885
+ 0.23539786293063855
+ 0.22799664604968056
 ````
 
 We may now also visualize the momentum distribution function, which is obtained as the
