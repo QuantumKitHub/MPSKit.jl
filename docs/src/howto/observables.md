@@ -5,6 +5,7 @@ All examples share a single namespace and build on state and operator objects yo
 
 ```@example observables
 using MPSKit, TensorKit
+using TensorKitTensors.SpinOperators: σˣ, σᶻ
 ```
 
 For building MPS objects see [Constructing states](@ref howto_states).
@@ -15,16 +16,16 @@ The reference page for ground-state algorithms is [Ground-state algorithms](@ref
 
 ## Setup: state and operators
 
-The examples below use a spin-1/2 `FiniteMPS` together with the Pauli matrices built directly from `TensorMap`.
-All operators use `ComplexF64` to match the default element type of the state.
+The examples below use a spin-1/2 `FiniteMPS` together with the Pauli operators from [TensorKitTensors.jl](https://github.com/QuantumKitHub/TensorKitTensors.jl).
+These are `ComplexF64` `TensorMap`s, matching the default element type of the state.
 
 ```@example observables
 L = 8
 ψ = FiniteMPS(L, ℂ^2, ℂ^8)   # random finite MPS, bond dim ≤ 8
 
 # single-site Pauli operators
-X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2, ℂ^2)
-Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
+X = σˣ()
+Z = σᶻ()
 ```
 
 The finite TFIM Hamiltonian used in recipes 3 and 5 is built from these:

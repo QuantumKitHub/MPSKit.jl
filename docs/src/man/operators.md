@@ -19,12 +19,13 @@ product of local tensors.
 
 ```@setup operators
 using TensorKit, MPSKit, MPSKitModels
+using TensorKitTensors.SpinOperators: σˣ, σᶻ
 ```
 
 ```@example operators
-S_x = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
-S_z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
-O_xzx = FiniteMPO(S_x ⊗ S_z ⊗ S_x);
+X = σˣ()
+Z = σᶻ()
+O_xzx = FiniteMPO(X ⊗ Z ⊗ X);
 ```
 
 The individual tensors are accessible via regular indexing. Note that the tensors are
@@ -115,8 +116,8 @@ H = -J \sum_{\langle i, j \rangle} X_i X_j - h \sum_j Z_j
 J = 1.0
 h = 0.5
 chain = fill(ℂ^2, 3) # a finite chain of 4 sites, each with a 2-dimensional Hilbert space
-single_site_operators = [1 => -h * S_z, 2 => -h * S_z, 3 => -h * S_z]
-two_site_operators = [(1, 2) => -J * S_x ⊗ S_x, (2, 3) => -J * S_x ⊗ S_x]
+single_site_operators = [1 => -h * Z, 2 => -h * Z, 3 => -h * Z]
+two_site_operators = [(1, 2) => -J * X ⊗ X, (2, 3) => -J * X ⊗ X]
 H_ising = FiniteMPOHamiltonian(chain, single_site_operators..., two_site_operators...)
 ```
 
@@ -125,8 +126,8 @@ that specify the operators, or using generator expressions to simplify the const
 
 ```@example operators
 H_ising′ = -J * FiniteMPOHamiltonian(chain,
-                               (i, i + 1) => S_x ⊗ S_x for i in 1:(length(chain) - 1)) -
-            h * FiniteMPOHamiltonian(chain, i => S_z for i in 1:length(chain))
+                               (i, i + 1) => X ⊗ X for i in 1:(length(chain) - 1)) -
+            h * FiniteMPOHamiltonian(chain, i => Z for i in 1:length(chain))
 isapprox(H_ising, H_ising′; atol=1e-6)
 ```
 
@@ -141,7 +142,7 @@ operators = Dict()
 
 local_operators = Dict()
 for I in eachindex(square)
-    local_operators[(I,)] = -h * S_z # single site operators still require tuples of indices
+    local_operators[(I,)] = -h * Z # single site operators still require tuples of indices
 end
 
 # horizontal and vertical interactions are easier using Cartesian indices
@@ -149,7 +150,7 @@ horizontal_operators = Dict()
 I_horizontal = CartesianIndex(0, 1)
 for I in eachindex(IndexCartesian(), square)
     if I[2] < size(square, 2)
-        horizontal_operators[(I, I + I_horizontal)] = -J * S_x ⊗ S_x
+        horizontal_operators[(I, I + I_horizontal)] = -J * X ⊗ X
     end
 end
 
@@ -157,7 +158,7 @@ vertical_operators = Dict()
 I_vertical = CartesianIndex(1, 0)
 for I in eachindex(IndexCartesian(), square)
     if I[1] < size(square, 1)
-        vertical_operators[(I, I + I_vertical)] = -J * S_x ⊗ S_x
+        vertical_operators[(I, I + I_vertical)] = -J * X ⊗ X
     end
 end
 
@@ -179,7 +180,7 @@ In particular, an [`InfiniteMPOHamiltonian`](@ref) for the Ising model is obtain
 J = 1.0
 h = 0.5
 infinite_chain = PeriodicVector([ℂ^2]) # an infinite chain of a local 2-dimensional Hilbert space
-H_ising_infinite = InfiniteMPOHamiltonian(infinite_chain, 1 => -h * S_z, (1, 2) => -J * S_x ⊗ S_x)
+H_ising_infinite = InfiniteMPOHamiltonian(infinite_chain, 1 => -h * Z, (1, 2) => -J * X ⊗ X)
 ```
 
 ### Expert mode

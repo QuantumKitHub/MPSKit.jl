@@ -76,6 +76,7 @@ using LinearAlgebra
 using TensorOperations
 using TensorKit
 using MPSKit
+using TensorKitTensors.SpinOperators: σˣ, σᶻ
 ```
 
 Finite MPS are characterised by a set of tensors, one for each site, which each have 3 legs.
@@ -136,8 +137,8 @@ transverse field Ising model:
 J = 1.0
 g = 0.5
 lattice = fill(ComplexSpace(2), 10)
-X = TensorMap(ComplexF64[0 1; 1 0], ComplexSpace(2), ComplexSpace(2))
-Z = TensorMap(ComplexF64[1 0; 0 -1], space(X))
+X = σˣ()
+Z = σᶻ()
 H = FiniteMPOHamiltonian(lattice, (i, i+1) => -J * X ⊗ X for i in 1:length(lattice)-1) +
     FiniteMPOHamiltonian(lattice, (i,) => - g * Z for i in 1:length(lattice))
 find_groundstate!(mps, H, DMRG(; maxiter=10))
@@ -152,6 +153,7 @@ using LinearAlgebra
 using TensorOperations
 using TensorKit
 using MPSKit
+using TensorKitTensors.SpinOperators: σˣ, σᶻ
 ```
 
 Similarly, an infinite MPS can be constructed by specifying the tensors for the unit cell,
@@ -212,8 +214,8 @@ the ground state for the transverse field Ising model:
 J = 1.0
 g = 0.5
 lattice = PeriodicVector([ComplexSpace(2)])
-X = TensorMap(ComplexF64[0 1; 1 0], ComplexSpace(2), ComplexSpace(2))
-Z = TensorMap(ComplexF64[1 0; 0 -1], space(X))
+X = σˣ()
+Z = σᶻ()
 H = InfiniteMPOHamiltonian(lattice, (1, 2) => -J * X ⊗ X, (1,) => - g * Z)
 mps, = find_groundstate(mps, H, VUMPS(; maxiter=10))
 E0 = expectation_value(mps, H)
