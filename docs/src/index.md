@@ -48,11 +48,23 @@ features:
 
 ## Installation
 
-MPSKit.jl is a part of the general registry, and can be installed via the package manager
-as:
+MPSKit.jl is a part of the general registry.
+Together with the packages used throughout this documentation, it can be installed via the
+package manager as:
 ```
-pkg> add MPSKit
+pkg> add MPSKit TensorKit TensorOperations MPSKitModels TensorKitTensors Plots
 ```
+- `MPSKit` provides the matrix product state and operator types, together with the
+  ground-state, time-evolution, and bond-dimension algorithms.
+- `TensorKit` supplies the tensor backend (`TensorMap`s and vector spaces) that MPSKit is
+  built on; installing it alongside MPSKit also gives access to truncation-scheme
+  constructors such as `truncrank`, which TensorKit re-exports from MatrixAlgebraKit.
+- `TensorOperations` provides the `@tensor` macro used below to contract tensors by hand.
+- `MPSKitModels` collects pre-defined Hamiltonians and local operators for common physical
+  models.
+- `TensorKitTensors` provides ready-made local operators, such as the Pauli operators used
+  in the examples below.
+- `Plots` is used to visualize results in several of the how-to guides and examples.
 
 ## Usage
 

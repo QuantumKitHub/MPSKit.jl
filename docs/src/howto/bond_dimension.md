@@ -1,5 +1,8 @@
 # [Controlling bond dimension](@id howto_bond_dimension)
 
+The examples on this page use MPSKit.jl, TensorKit.jl, and TensorKitTensors.jl.
+See [Installation](@ref tutorial_installation) for how to add these packages to your environment.
+
 Bond dimension is the key knob in every MPS calculation: too small and the ansatz cannot represent the state, too large and computation slows to a crawl.
 This page gives concrete recipes for inspecting, growing, and shrinking bond dimension in MPSKit.jl.
 All examples share a single namespace:
