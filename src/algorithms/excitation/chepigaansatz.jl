@@ -82,10 +82,8 @@ Create a `ChepigaAnsatz2` algorithm with the given eigensolver and truncation, o
 keyword arguments to [`Arnoldi`](@extref KrylovKit.Arnoldi).
 
 # Fields
-- `alg`: algorithm used for the eigenvalue problem
-- `trscheme`: truncation scheme used when splitting the optimized two-site tensor
-
-<!-- REVIEW: the previous field list gave defaults `Defaults.eigsolver` and `Defaults.trscheme`, but `Defaults.trscheme` does not exist and this struct is not `@kwdef`; its constructor defaults to `Arnoldi(; krylovdim = 30, tol = 1.0e-10, eager = true)` and `notrunc()`. Confirm the intended defaults. -->
+- `alg`: algorithm used for the eigenvalue problem, defaults to `Arnoldi(; krylovdim = 30, tol = 1.0e-10, eager = true)`
+- `trscheme`: truncation scheme used when splitting the optimized two-site tensor, defaults to `notrunc()`
 
 # See also
 

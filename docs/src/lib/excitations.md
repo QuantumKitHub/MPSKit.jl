@@ -30,16 +30,8 @@ RightGaugedQP
 ```
 
 <!--
-Maintainer notes (REVIEW):
+Maintainer notes:
 
 Symbols documented on this page: `excitations`, `QuasiparticleAnsatz`, `FiniteExcited`,
 `ChepigaAnsatz`, `ChepigaAnsatz2`, `QP`, `LeftGaugedQP`, `RightGaugedQP`.
-
-- REVIEW: the `excitations(H::InfiniteMPO, alg::QuasiparticleAnsatz, ...)` method at
-  src/algorithms/excitation/quasiparticleexcitation.jl:212 appears to reference `H_eff`
-  before it is assigned. This looks like a source bug rather than a docs issue; this page
-  does not present that call path as reliable pending a fix.
-- REVIEW: `FiniteExcited`'s umbrella docstring gives a simplified default for `init`
-  that does not match the algorithm's actual default in the source. Worth reconciling
-  the docstring with the real default rather than relying on this page to paper over it.
 -->

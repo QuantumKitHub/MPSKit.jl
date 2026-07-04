@@ -10,6 +10,13 @@ The full, canonical docstrings for the whole package live in the [Library](@ref 
 expectation_value
 ```
 
+!!! warning "Multiline environments"
+    The `expectation_value(::MultilineMPS, ::MultilineMPO, envs...)` method reuses the
+    passed environments without recomputing them for the operator (see the `# TODO: fix
+    environments` note in `src/algorithms/expval.jl`).
+    Results along this code path should be cross-checked against an independent calculation
+    until the environment handling is finalized.
+
 ## Correlators
 
 ```@docs; canonical=false
@@ -21,6 +28,11 @@ correlator
 ```@docs; canonical=false
 variance
 ```
+
+!!! warning "Variance of infinite quasiparticle states"
+    The `variance(::InfiniteQP, ::InfiniteMPOHamiltonian, envs)` method carries an
+    unresolved implementation note in `src/algorithms/toolbox.jl` and may be unreliable.
+    Verify its output before using it as a convergence diagnostic for quasiparticle states.
 
 ## Transfer matrix and correlation length
 
@@ -47,12 +59,9 @@ Maintainer notes:
 - Symbols included: `expectation_value`, `correlator`, `variance`, `correlation_length`,
   `marek_gap`, `transfer_spectrum`, `transferplot`, `entropy`, `entanglement_spectrum`,
   `entanglementplot`.
-- REVIEW: `expectation_value(::MultilineMPS, ::MultilineMPO, envs...)` in
-  `src/algorithms/expval.jl` carries a `# TODO: fix environments` comment in the source;
-  the docstring surfaces as-is here, but the method's correctness/status should be
-  confirmed before calling this reference page complete.
-- REVIEW: `variance(::InfiniteQP, ::InfiniteMPOHamiltonian, envs)` in
-  `src/algorithms/toolbox.jl` carries a `# I remember there being an issue here @gertian?`
-  comment, suggesting the method may be unreliable; flagging for maintainer judgment on
-  whether it needs a caveat note or an `!!! warning` admonition on this page.
+- The `# TODO: fix environments` concern on `expectation_value(::MultilineMPS, ::MultilineMPO)`
+  (`src/algorithms/expval.jl`) and the unresolved-issue comment on
+  `variance(::InfiniteQP, ::InfiniteMPOHamiltonian)` (`src/algorithms/toolbox.jl`) are now
+  surfaced to readers via `!!! warning` admonitions above. Remove those warnings once the
+  underlying source issues are resolved.
 -->
