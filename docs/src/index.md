@@ -12,8 +12,8 @@ hero:
     alt: MPSKit.jl
   actions:
     - theme: brand
-      text: Manual
-      link: /man/intro
+      text: Get started
+      link: /tutorials/installation
     - theme: alt
       text: Examples
       link: /examples/
@@ -24,27 +24,22 @@ hero:
 features:
   - icon: 🔗
     title: States
-    details: Construction and manipulation of finite and infinite Matrix Product States (MPS).
+    details: Construct and manipulate finite and infinite matrix product states (MPS).
   - icon: 📏
     title: Observables
-    details: Calculation of observables and expectation values.
+    details: Measure expectation values, correlations, and other observables.
   - icon: 🎯
     title: Optimization
-    details: Various optimization methods for obtaining MPS fixed points.
+    details: Ground states, time evolution, and excitations via DMRG, VUMPS, and more.
   - icon: ⚛️
     title: Symmetries
-    details: Support for a wide variety of symmetries, including Abelian, non-Abelian, fermionic and anyonic symmetries.
+    details: Abelian, non-Abelian, fermionic, and anyonic symmetries out of the box.
 ---
 ```
 
-## Table of contents
-
-- [Prerequisites](@ref)
-- [States](@ref um_states)
-- [Operators](@ref um_operators)
-- [Algorithms](@ref um_algorithms)
-- [Parallelism in julia](@ref)
-- [Lattices](@ref lattices)
+MPSKit.jl is a Julia library for simulating one-dimensional quantum many-body systems with matrix product states and operators.
+It provides both finite and infinite MPS, a range of ground-state, time-evolution, and excitation algorithms, and support for arbitrary symmetries through the [TensorKit.jl](https://github.com/Jutho/TensorKit.jl) tensor backend.
+It is aimed at researchers and students who want to run tensor-network calculations without reimplementing the underlying machinery.
 
 ## Installation
 
@@ -59,188 +54,49 @@ pkg> add MPSKit TensorKit TensorOperations MPSKitModels TensorKitTensors Plots
 - `TensorKit` supplies the tensor backend (`TensorMap`s and vector spaces) that MPSKit is
   built on; installing it alongside MPSKit also gives access to truncation-scheme
   constructors such as `truncrank`, which TensorKit re-exports from MatrixAlgebraKit.
-- `TensorOperations` provides the `@tensor` macro used below to contract tensors by hand.
+- `TensorOperations` provides the `@tensor` macro for contracting tensors by hand.
 - `MPSKitModels` collects pre-defined Hamiltonians and local operators for common physical
   models.
-- `TensorKitTensors` provides ready-made local operators, such as the Pauli operators used
-  in the examples below.
+- `TensorKitTensors` provides ready-made local operators, such as the Pauli operators used throughout the documentation.
 - `Plots` is used to visualize results in several of the how-to guides and examples.
 
-## Usage
+For a step-by-step walkthrough that sets up a dedicated environment and verifies the installation, see [Installation](@ref tutorial_installation).
 
-To get started with MPSKit, we recommend also including
-[TensorKit.jl](https://github.com/Jutho/TensorKit.jl) and
-[MPSKitModels.jl](https://github.com/QuantumKitHub/MPSKitModels.jl). The former defines the
-tensor backend which is used throughout MPSKit, while the latter includes some common
-operators and models.
+## A 30-second example
 
-```julia
-using TensorOperations
-using TensorKit
-using MPSKit
-using LinearAlgebra: norm
+Finding the ground state of the transverse-field Ising chain takes a handful of lines.
+
+```@example index
+using MPSKit, MPSKitModels, TensorKit
+H = transverse_field_ising(FiniteChain(16); g = 0.5)
+ψ₀ = FiniteMPS(16, ℂ^2, ℂ^4)
+ψ, envs, ϵ = find_groundstate(ψ₀, H, DMRG(; verbosity = 0))
+E = expectation_value(ψ, H)
 ```
 
-### Finite Matrix Product States
+For a guided version of this calculation that explains each step and measures more observables, see [Your first ground state](@ref tutorial_first_groundstate).
 
-```@setup finitemps
-using LinearAlgebra
-using TensorOperations
-using TensorKit
-using MPSKit
-using TensorKitTensors.SpinOperators: σˣ, σᶻ
-```
+## Where next
 
-Finite MPS are characterised by a set of tensors, one for each site, which each have 3 legs.
-They can be constructed by specifying the virtual spaces and the physical spaces, i.e. the
-dimensions of each of the legs. These are then contracted to form the MPS. In MPSKit, they
-are represented by `FiniteMPS`, which can be constructed either by passing in the tensors
-directly, or by specifying the dimensions of the legs.
+**Tutorials** walk you through complete calculations from scratch.
+Start with [Installation](@ref tutorial_installation), then run [Your first ground state](@ref tutorial_first_groundstate), and continue to [The thermodynamic limit](@ref tutorial_thermodynamic_limit) to work directly at infinite system size.
 
-```@example finitemps
-d = 2 # physical dimension
-D = 5 # virtual dimension
-L = 10 # number of sites
+**How-to guides** are focused task recipes for when you already know what you want to do.
+See [Constructing states](@ref howto_states), [Building Hamiltonians](@ref howto_hamiltonians), and [Computing observables](@ref howto_observables), among others.
 
-mps = FiniteMPS(L, ComplexSpace(d), ComplexSpace(D)) # random MPS with maximal bond dimension D
-```
+**The manual** explains the concepts behind the library — the [States](@ref um_states), [Operators](@ref um_operators), and [Algorithms](@ref um_algorithms) that make up MPSKit.
 
-The `FiniteMPS` object then handles the gauging of the MPS, which is necessary for many of
-the algorithms. This is done automatically when needed, and the user can access the gauged
-tensors by getting and setting the `AL`, `AR`, `CR`/`CL` and `AC` fields, which each
-represent a vector of these tensors.
+**The examples** gallery collects longer, fully worked scripts covering symmetries, infinite systems, and less common algorithms; browse it at [Examples](@ref).
 
-```@example finitemps
-al = mps.AL[3] # left gauged tensor of the third site
-@tensor E[a; b] := al[c, d, b] * conj(al[c, d, a])
-@show isapprox(E, id(right_virtualspace(mps, 3)))
-```
-```@example finitemps
-ar = mps.AR[3] # right gauged tensor of the third site
-@tensor E[a; b] := ar[a, d, c] * conj(ar[b, d, c])
-@show isapprox(E, id(left_virtualspace(mps, 3)))
-```
+**The library** is the API reference; the curated, stable entry point is the [Public API](@ref public_api).
 
-As the mps will be kept in a gauged form, updating a tensor will also update the gauged
-tensors. For example, we can set the tensor of the third site to the identity, and the
-gauged tensors will be updated accordingly.
+## Ecosystem
 
-```@example finitemps
-mps.C[3] = id(domain(mps.C[3]))
-mps
-```
+MPSKit builds on [TensorKit.jl](https://github.com/Jutho/TensorKit.jl), which supplies the tensors and vector spaces and handles the symmetries.
+Models and ready-made operators come from [MPSKitModels.jl](https://github.com/QuantumKitHub/MPSKitModels.jl) and [TensorKitTensors.jl](https://github.com/QuantumKitHub/TensorKitTensors.jl).
+All of these are part of the [QuantumKitHub](https://github.com/QuantumKitHub) organization; the TensorKit documentation is available [here](https://quantumkithub.github.io/TensorKit.jl/stable/).
 
-These objects can then be used to compute observables and expectation values. For example,
-the expectation value of the identity operator at the third site, which is equal to the norm
-of the MPS, can be computed as:
+## Community and support
 
-```@example finitemps
-N1 = LinearAlgebra.norm(mps)
-N2 = expectation_value(mps, 3 => id(physicalspace(mps, 3)))
-println("‖mps‖ = $N1")
-println("<mps|𝕀₃|mps> = $N2")
-```
-
-Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians.
-Using the pre-defined models in `MPSKitModels`, we can construct the ground state for the
-transverse field Ising model:
-
-```@example finitemps
-J = 1.0
-g = 0.5
-lattice = fill(ComplexSpace(2), 10)
-X = σˣ()
-Z = σᶻ()
-H = FiniteMPOHamiltonian(lattice, (i, i+1) => -J * X ⊗ X for i in 1:length(lattice)-1) +
-    FiniteMPOHamiltonian(lattice, (i,) => - g * Z for i in 1:length(lattice))
-find_groundstate!(mps, H, DMRG(; maxiter=10))
-E0 = expectation_value(mps, H)
-println("<mps|H|mps> = $(real(E0))")
-```
-
-### Infinite Matrix Product States
-
-```@setup infinitemps
-using LinearAlgebra
-using TensorOperations
-using TensorKit
-using MPSKit
-using TensorKitTensors.SpinOperators: σˣ, σᶻ
-```
-
-Similarly, an infinite MPS can be constructed by specifying the tensors for the unit cell,
-characterised by the spaces (dimensions) thereof.
-
-```@example infinitemps
-d = 2 # physical dimension
-D = 5 # virtual dimension
-mps = InfiniteMPS(d, D) # random MPS
-```
-
-The `InfiniteMPS` object then handles the gauging of the MPS, which is necessary for many of
-the algorithms. This is done automatically upon creation of the object, and the user can
-access the gauged tensors by getting and setting the `AL`, `AR`, `C` and `AC` fields,
-which each represent a (periodic) vector of these tensors.
-
-```@example infinitemps
-al = mps.AL[1] # left gauged tensor of the first site
-@tensor E[a; b] := al[c, d, b] * conj(al[c, d, a])
-@show isapprox(E, id(left_virtualspace(mps, 1)))
-```
-```@example infinitemps
-ar = mps.AR[1] # right gauged tensor of the first site
-@tensor E[a; b] := ar[a, d, c] * conj(ar[b, d, c])
-@show isapprox(E, id(right_virtualspace(mps, 2)))
-```
-
-As regauging the MPS is not possible without recomputing all the tensors, setting a single
-tensor is not supported. Instead, the user should construct a new mps object with the
-desired tensor, which will then be gauged upon construction.
-
-```@example infinitemps
-als = 3 .* mps.AL
-mps = InfiniteMPS(als)
-```
-
-These objects can then be used to compute observables and expectation values. For example,
-the norm of the MPS, which is equal to the expectation value of the identity operator can be
-computed by:
-
-```@example infinitemps
-N1 = norm(mps)
-N2 = expectation_value(mps, 1 => id(physicalspace(mps, 1)))
-println("‖mps‖ = $N1")
-println("<mps|𝕀₁|mps> = $N2")
-```
-
-!!! note "Normalization of infinite MPS"
-    Because infinite MPS cannot sensibly be normalized to anything but $1$, the `norm` of
-    an infinite MPS is always set to be $1$ at construction. If this were not the case, any
-    observable computed from the MPS would either blow up to infinity or vanish to zero.
-
-Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians.
-There are plenty of pre-defined models in `MPSKitModels`, but we can also manually construct
-the ground state for the transverse field Ising model:
-
-```@example infinitemps
-J = 1.0
-g = 0.5
-lattice = PeriodicVector([ComplexSpace(2)])
-X = σˣ()
-Z = σᶻ()
-H = InfiniteMPOHamiltonian(lattice, (1, 2) => -J * X ⊗ X, (1,) => - g * Z)
-mps, = find_groundstate(mps, H, VUMPS(; maxiter=10))
-E0 = expectation_value(mps, H)
-println("<mps|H|mps> = $(sum(real(E0)) / length(mps))")
-```
-
-### Additional Resources
-
-For more detailed information on the functionality and capabilities of MPSKit, refer to the
-Manual section, or have a look at the [Examples](@ref) page.
-
-Keep in mind that the documentation is still a work in progress, and that some features may
-not be fully documented yet. If you encounter any issues or have questions, please check the
-library's [issue tracker](https://github.com/QuantumKitHub/MPSKit.jl/issues) on the GitHub
-repository and open a new issue.
-
+Questions and bug reports are welcome on the [issue tracker](https://github.com/QuantumKitHub/MPSKit.jl/issues).
+If you would like to contribute, see [CONTRIBUTING.md](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/CONTRIBUTING.md) on GitHub.

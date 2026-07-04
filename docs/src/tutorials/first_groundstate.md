@@ -152,8 +152,6 @@ The plot should show the magnetization large on the ordered side (small `g`) and
 ## Where to go next
 
 You have run a full MPSKit workflow: build a model, optimize an MPS ground state, measure observables, and scan a parameter.
-A natural next step is to perform the same calculation directly in the thermodynamic limit, working with an `InfiniteMPS` instead of a finite chain, which removes the finite-size effects seen above and lets you locate the critical point more cleanly.
-
-<!-- TODO(link): thermodynamic_limit -->
+A natural next step is [The thermodynamic limit](@ref tutorial_thermodynamic_limit): the same calculation performed directly at infinite system size with an `InfiniteMPS`, which removes the finite-size effects seen above and lets you locate the critical point more cleanly.
 
 To go deeper on the individual steps, see [Constructing states](@ref howto_states), [Building Hamiltonians](@ref howto_hamiltonians), [Computing observables](@ref howto_observables), [Controlling bond dimension](@ref howto_bond_dimension), and [Entanglement entropy and spectrum](@ref howto_entanglement); the algorithm reference is [Ground-state algorithms](@ref lib_groundstate).
