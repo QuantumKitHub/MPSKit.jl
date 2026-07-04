@@ -25,6 +25,7 @@ with a set of `inds => operator` pairs describing the local terms:
     InfiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
 
 # Properties
+
 - `A`: bulk block of interacting operators at each site
 - `B`: operators that finish an interaction
 - `C`: operators that start an interaction

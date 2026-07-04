@@ -41,10 +41,6 @@ For a `FiniteMPS` the site is a required argument:
 entropy(ψ, L ÷ 2)   # entropy across the central cut
 ```
 
-<!-- REVIEW: no claim is made here about the numeric value in relation to an area
-     law, criticality, or the TFIM phase diagram at this field strength — maintainer
-     to add any such interpretation. -->
-
 ---
 
 ## 2. Entropy profile across every cut
@@ -103,12 +99,6 @@ For the plain (no explicit symmetry) `FiniteMPS` built above there is a single s
 collect(pairs(spectrum))
 ```
 
-<!-- REVIEW: for symmetric states (e.g. built with a `Rep[G]` physical space, see
-     howto_states recipe 9) the sector-resolved spectrum reflects the symmetry
-     content of the entangled degrees of freedom across the cut; the maintainer
-     should confirm any stronger physical statement (e.g. relating sector
-     multiplicities to symmetry-protected degeneracies) before it is added here. -->
-
 ---
 
 ## 5. Entanglement of an infinite MPS
@@ -124,13 +114,12 @@ entropy(ψ∞)
 entanglement_spectrum(ψ∞)   # site defaults to 0
 ```
 
-<!-- REVIEW: ψ∞ here is a random InfiniteMPS, not a converged fixed point (e.g. via
-     VUMPS); the maintainer may want a converged example if this page should also
-     illustrate the entropy of an actual infinite ground state. -->
+!!! note
+    `ψ∞` here is a random `InfiniteMPS`, not a converged ground state, so the values above illustrate the interface rather than any physical entanglement profile.
+    For a physically meaningful result, compute the entropy of a state obtained from [`find_groundstate`](@ref) (for example via VUMPS).
 
 !!! note
     `WindowMPS` also supports `entropy(ψ, site)` with a required site argument, mirroring the `FiniteMPS` form.
-    <!-- REVIEW: WindowMPS entanglement path is not covered by tests -->
 
 ---
 

@@ -134,9 +134,6 @@ connected = [c - z_mean * expectation_value(ψ, j => Z) for (j, c) in zip(3:L, c
 ```
 
 This subtracts the disconnected part ``\langle Z_i\rangle\langle Z_j\rangle`` to leave the connected correlator ``\langle Z_i Z_j\rangle - \langle Z_i\rangle\langle Z_j\rangle``.
-<!-- REVIEW: the physical interpretation of the decay of `connected` (correlation
-     length, order parameter, etc.) is model- and phase-dependent — maintainer to
-     confirm any interpretation added here. -->
 
 ---
 
