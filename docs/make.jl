@@ -50,6 +50,9 @@ makedocs(;
     ),
     pages = [
         "Home" => "index.md",
+        "Tutorials" => [
+            "tutorials/installation.md",
+        ],
         "Manual" => [
             "man/intro.md",
             "man/states.md",
