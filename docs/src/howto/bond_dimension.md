@@ -54,7 +54,7 @@ dim(left_virtualspace(ψ_inf, 1))
 It does **not** need the Hamiltonian, so it is cheap and works for any MPS type.
 
 `trscheme` is **mandatory** and controls how many new directions are added.
-Use `truncrank(n)` from MatrixAlgebraKit (re-exported by MPSKit) to add at most `n` extra singular values:
+Use `truncrank(n)` from MatrixAlgebraKit (re-exported by TensorKit) to add at most `n` extra singular values:
 
 ```@example bond_dim
 ψ_small = FiniteMPS(L, ℂ^2, ℂ^4)       # start with D = 4
@@ -144,13 +144,12 @@ dim(left_virtualspace(ψ_inf_cut, 1))
 
 ## 4. Truncation schemes
 
-Every bond-change algorithm takes a mandatory `trscheme` keyword drawn from **MatrixAlgebraKit** (re-exported by MPSKit).
+Every bond-change algorithm takes a mandatory `trscheme` keyword drawn from **MatrixAlgebraKit** (re-exported by TensorKit).
 The main schemes are:
 
 | Scheme | Meaning |
 |:-------|:--------|
 | `truncrank(n)` | Keep at most `n` singular values |
-| `truncbelow(x)` | Drop singular values below the absolute value `x` |
 | `trunctol(; atol)` | Drop singular values below `atol` times the largest |
 | `notrunc()` | Keep all singular values (no truncation) |
 | `truncspace(V)` | Keep only singular values whose index fits in the given space `V` |
