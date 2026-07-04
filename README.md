@@ -118,3 +118,19 @@ scatter(g_values, M, xlabel="g", ylabel="M", label="D=$D", title="Magnetization"
 ```
 
 ![Magnetization](docs/src/assets/README_ising_infinite.png)
+
+## Citing
+
+If you use MPSKit.jl in your research, please cite it.
+See [`CITATION.cff`](CITATION.cff) for the up-to-date citation metadata, or use the BibTeX entry below.
+
+```bibtex
+@software{mpskitjl,
+  author  = {Devos, Lukas and Van Damme, Maarten and Haegeman, Jutho},
+  title   = {{MPSKit.jl}},
+  version = {v0.13.13},
+  doi     = {10.5281/zenodo.10654900},
+  url     = {https://github.com/QuantumKitHub/MPSKit.jl},
+  year    = {2026}
+}
+```
