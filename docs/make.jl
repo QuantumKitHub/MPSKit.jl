@@ -53,6 +53,7 @@ makedocs(;
         "Tutorials" => [
             "tutorials/installation.md",
             "tutorials/first_groundstate.md",
+            "tutorials/thermodynamic_limit.md",
         ],
         "Manual" => [
             "man/intro.md",
