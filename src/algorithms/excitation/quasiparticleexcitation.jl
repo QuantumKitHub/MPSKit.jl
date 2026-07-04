@@ -218,7 +218,7 @@ function excitations(
         num = 1
     )
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
-    H_eff = EffectiveExcitationHamiltonian(H_eff, lenvs, renvs, E)
+    H_eff = EffectiveExcitationHamiltonian(H, lenvs, renvs, E)
 
     Es, ϕs, convhist = eigsolve(ϕ₀, num, :LM, alg.alg) do ϕ
         return H_eff(ϕ, alg.alg_environments)

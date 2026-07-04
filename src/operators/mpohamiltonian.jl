@@ -16,13 +16,13 @@ upper triangular block matrix of the following form:
 where `A`, `B`, `C`, and `D` are `MPOTensor`s, or (sparse) blocks thereof.
 
 # Constructors
-    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
-    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace})
-    MPOHamiltonian(x::AbstractArray{<:Any, 3})
 
-<!-- REVIEW: these constructor signatures do not correspond to concrete methods; the actual
-public entry points are `FiniteMPOHamiltonian` and `InfiniteMPOHamiltonian`. Retarget the
-signatures and the example below to those variants? -->
+The finite and infinite variants, [`FiniteMPOHamiltonian`](@ref) and
+[`InfiniteMPOHamiltonian`](@ref), are constructed from a lattice of physical spaces together
+with a set of `inds => operator` pairs describing the local terms:
+
+    FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
+    InfiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
 
 # Properties
 - `A`: bulk block of interacting operators at each site
@@ -35,7 +35,7 @@ For example, constructing a nearest-neighbour Hamiltonian would look like this:
 
 ```julia
 lattice = fill(ℂ^2, 10)
-H = MPOHamiltonian(lattice, (i, i+1) => O for i in 1:length(lattice)-1)
+H = FiniteMPOHamiltonian(lattice, (i, i+1) => O for i in 1:length(lattice)-1)
 ```
 
 # See also

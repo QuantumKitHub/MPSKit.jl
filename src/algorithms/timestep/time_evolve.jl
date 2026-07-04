@@ -1,6 +1,6 @@
 """
-    time_evolve(ψ₀, H, t_span, [alg], [envs]; kwargs...) -> (ψ, envs)
-    time_evolve!(ψ₀, H, t_span, [alg], [envs]; kwargs...) -> (ψ₀, envs)
+    time_evolve(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ, envs)
+    time_evolve!(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ₀, envs)
 
 Time-evolve the initial state `ψ₀` with Hamiltonian `H` over a given time span by stepping
 through each of the time points obtained by iterating t_span.
@@ -10,7 +10,7 @@ through each of the time points obtained by iterating t_span.
 - `ψ₀::AbstractMPS`: initial state
 - `H::AbstractMPO`: operator that generates the time evolution (can be time-dependent).
 - `t_span::AbstractVector{<:Number}`: time points over which the time evolution is stepped
-- `alg`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
+- `alg`: algorithm to use for the time evolution, e.g. [`TDVP`](@ref) or [`TDVP2`](@ref).
 - `envs`: MPS environment manager
 
 # Keyword Arguments
@@ -53,8 +53,8 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
 end
 
 """
-    timestep(ψ₀, H, t, dt, [alg], [envs]; kwargs...) -> (ψ, envs)
-    timestep!(ψ₀, H, t, dt, [alg], [envs]; kwargs...) -> (ψ₀, envs)
+    timestep(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ, envs)
+    timestep!(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ₀, envs)
 
 Time-step the state `ψ₀` with Hamiltonian `H` over a given time step `dt` at time `t`,
 solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
@@ -65,7 +65,7 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 - `H::AbstractMPO`: operator that generates the time evolution (can be time-dependent).
 - `t::Number`: starting time of time-step
 - `dt::Number`: time-step magnitude
-- `alg`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
+- `alg`: algorithm to use for the time evolution, e.g. [`TDVP`](@ref) or [`TDVP2`](@ref).
 - `envs`: MPS environment manager
 
 # Keyword Arguments
