@@ -55,8 +55,7 @@ H = transverse_field_ising(FiniteChain(8); J = 1.0, g = 0.5)
 
 If this runs without error and prints a `FiniteMPS`, your environment is ready.
 
-<!-- TODO(link): first_groundstate -->
-From here, continue with the first ground state tutorial, which uses this same Hamiltonian and initial state to find the ground state of the transverse-field Ising model with DMRG.
+From here, continue with [Your first ground state](@ref tutorial_first_groundstate), which uses this same Hamiltonian and initial state to find the ground state of the transverse-field Ising model with DMRG.
 
 ## Troubleshooting
 
