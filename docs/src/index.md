@@ -143,7 +143,7 @@ H = FiniteMPOHamiltonian(lattice, (i, i+1) => -J * X ⊗ X for i in 1:length(lat
     FiniteMPOHamiltonian(lattice, (i,) => - g * Z for i in 1:length(lattice))
 find_groundstate!(mps, H, DMRG(; maxiter=10))
 E0 = expectation_value(mps, H)
-println("<mps|H|mps> = $real(E0)")
+println("<mps|H|mps> = $(real(E0))")
 ```
 
 ### Infinite Matrix Product States
