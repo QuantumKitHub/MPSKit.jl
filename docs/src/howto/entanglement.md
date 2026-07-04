@@ -6,6 +6,7 @@ The reference page for these and related functions is [Observables and analysis]
 
 ```@example entanglement
 using MPSKit, TensorKit
+using TensorKitTensors.SpinOperators: σˣ, σᶻ
 ```
 
 ---
@@ -19,8 +20,8 @@ L = 8
 ψ0 = FiniteMPS(L, ℂ^2, ℂ^8)
 
 # single-site Pauli operators
-X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2, ℂ^2)
-Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
+X = σˣ()
+Z = σᶻ()
 
 lattice = fill(ℂ^2, L)
 H = FiniteMPOHamiltonian(lattice, (i, i + 1) => -(X ⊗ X) for i in 1:(L - 1)) +

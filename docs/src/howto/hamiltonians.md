@@ -7,6 +7,7 @@ The reference page for the underlying MPO structure is [Operators](@ref lib_oper
 
 ```@example hamiltonians
 using MPSKit, TensorKit
+using TensorKitTensors.SpinOperators: σˣ, σᶻ
 ```
 
 ---
@@ -15,11 +16,11 @@ using MPSKit, TensorKit
 
 The examples below build the transverse-field Ising model (TFIM), the same flagship model used elsewhere in these docs.
 <!-- REVIEW: brief physics description of TFIM (nearest-neighbour ZZ/XX coupling plus transverse field, critical point at g=1) — maintainer to confirm phrasing and any claims about criticality. -->
-All operators are `ComplexF64` `TensorMap`s on the spin-1/2 physical space `ℂ^2`:
+The single-site Pauli operators come from [TensorKitTensors.jl](https://github.com/QuantumKitHub/TensorKitTensors.jl), which returns `ComplexF64` `TensorMap`s on the spin-1/2 physical space `ℂ^2`:
 
 ```@example hamiltonians
-X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2, ℂ^2)
-Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
+X = σˣ()
+Z = σᶻ()
 g = 0.5
 ```
 

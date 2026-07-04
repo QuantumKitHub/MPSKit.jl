@@ -6,6 +6,7 @@ All examples share a single namespace:
 
 ```@example bond_dim
 using MPSKit, TensorKit
+using TensorKitTensors.SpinOperators: σˣ, σᶻ
 ```
 
 ---
@@ -81,8 +82,8 @@ It needs both the state and the Hamiltonian:
 # Build a finite TFIM Hamiltonian manually
 J = 1.0; g = 0.5
 lattice = fill(ℂ^2, L)
-X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2, ℂ^2)
-Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
+X = σˣ()
+Z = σᶻ()
 H = FiniteMPOHamiltonian(lattice, (i, i + 1) => -J * X ⊗ X for i in 1:(L - 1)) +
     FiniteMPOHamiltonian(lattice, (i,) => -g * Z for i in 1:L)
 
