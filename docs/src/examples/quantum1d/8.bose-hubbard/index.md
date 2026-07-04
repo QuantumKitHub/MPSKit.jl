@@ -154,9 +154,9 @@ println("Energy: ", expectation_value(ground_state, hamiltonian))
 ````
 
 ````
-[ Info: VUMPS init:	obj = +4.962471958690e-01	err = 5.8876e-01
-[ Info: VUMPS conv 50:	obj = -6.757777651150e-01	err = 9.9482617748e-07	time = 6.72 sec
-Energy: -0.6757777651149999 - 6.246015340721835e-17im
+[ Info: VUMPS init:	obj = +5.514844342897e-01	err = 5.9161e-01
+[ Info: VUMPS conv 41:	obj = -6.757777651163e-01	err = 8.1024260014e-07	time = 0.83 sec
+Energy: -0.6757777651162759 + 9.071218207774581e-17im
 
 ````
 
@@ -285,13 +285,13 @@ quasicondensate_density = map(state -> abs2(expectation_value(state, (0,) => a_o
 
 ````
 7-element Vector{Float64}:
- 0.30974277207656425
- 0.28814775930068737
- 0.2702000951730164
- 0.25712728156142256
- 0.2468538617129866
- 0.2353979140629328
- 0.2279965552408022
+ 0.3097427792977986
+ 0.2881478005839194
+ 0.27020015650045337
+ 0.257127287055965
+ 0.24685385184650885
+ 0.23539786293063855
+ 0.22799664604968056
 ````
 
 We may now also visualize the momentum distribution function, which is obtained as the
@@ -466,3 +466,4 @@ using what we have learnt in this tutorial.
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

@@ -128,7 +128,7 @@ E_plus = expectation_value(ψ_plus, H)
 ````
 
 ````
--1.4014193313393009 - 5.2545708620134027e-17im
+-1.4014193313393004 - 2.2233521403023605e-17im
 ````
 
 ````julia
@@ -139,7 +139,7 @@ E_minus = expectation_value(ψ_minus, H)
 ````
 
 ````
--1.401483973963084 - 2.875923408269285e-17im
+-1.4014839739630827 + 6.744598315147384e-17im
 ````
 
 ````julia
@@ -188,11 +188,12 @@ println("S_plus = $S_plus")
 ````
 
 ````
-S_minus + log(2) = 1.5486227235421324
-S_plus = 1.5450323530571919
+S_minus + log(2) = 1.5486227235423025
+S_plus = 1.545032353055433
 
 ````
 
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+
