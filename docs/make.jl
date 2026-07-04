@@ -52,6 +52,7 @@ makedocs(;
         "Home" => "index.md",
         "Tutorials" => [
             "tutorials/installation.md",
+            "tutorials/first_groundstate.md",
         ],
         "Manual" => [
             "man/intro.md",
