@@ -1,5 +1,8 @@
 # [Building Hamiltonians](@id howto_hamiltonians)
 
+The examples on this page use MPSKit.jl, TensorKit.jl, and TensorKitTensors.jl.
+See [Installation](@ref tutorial_installation) for how to add these packages to your environment.
+
 This page collects recipes for constructing MPO Hamiltonians from local operators, for both finite and infinite (translation-invariant) lattices.
 It also covers converting an infinite Hamiltonian to finite open or periodic boundary conditions, and carving a finite window out of an infinite Hamiltonian.
 For building the matching state objects see [Constructing states](@ref howto_states); for evaluating a Hamiltonian's energy on a state see [Computing observables](@ref howto_observables).

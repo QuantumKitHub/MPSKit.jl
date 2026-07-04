@@ -60,7 +60,6 @@ makedocs(;
             "man/algorithms.md",
             # "man/environments.md",
             "man/parallelism.md",
-            "man/lattices.md",
         ],
         "How-to" => [
             "howto/states.md",

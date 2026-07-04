@@ -206,8 +206,18 @@ QuasiparticleAnsatz
 
 ### Finite excitations
 
-For finite systems we can also do something else - find the ground state of the Hamiltonian +
-``\\text{weight} \sum_i | \\psi_i ⟩ ⟨ \\psi_i ``. This is also supported by calling
+For finite systems we can also do something else - find the state that minimizes the energy of a
+modified Hamiltonian
+
+```math
+H_n = H + \text{weight} \sum_{i < n} | \psi_i ⟩ ⟨ \psi_i |
+```
+
+which adds an energy penalty for overlapping with the ground state and all previously found
+excited states ``\psi_i``, ``i < n``.
+This pushes the optimization towards higher excited states while enforcing (approximate)
+orthogonality with the ones already found.
+This is also supported by calling
 
 ```@example excitations
 # Model parameters
@@ -318,7 +328,7 @@ boundary MPS. Again this can be done with VUMPS:
 ```julia
 th = nonsym_ising_mpo()
 ts = InfiniteMPS([ℂ^2],[ℂ^20]);
-(ts,envs,_) = leading_boundary(ts,th,VUMPS(maxiter=400,verbosity=false));
+(ts,envs,_) = leading_boundary(ts,th,VUMPS(maxiter=400,verbosity=0));
 ```
 
 If the mpo satisfies certain properties (positive and hermitian), it may also be possible to
