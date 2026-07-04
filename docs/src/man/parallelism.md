@@ -26,7 +26,7 @@ using `BLAS.set_num_threads(1)`, OpenBLAS will now utilize the julia threads to 
 jobs. Thus, for OpenBLAS, very often setting the number of BLAS threads to 1 is the best
 option, which will then maximally utilize the julia threading infrastructure of MPSKit.
 
-In the case of [MKL.jl](), which often outperforms OpenBLAS, the situation is a bit
+In the case of [MKL.jl](https://github.com/JuliaLinearAlgebra/MKL.jl), which often outperforms OpenBLAS, the situation is a bit
 different. Here, the number of BLAS threads corresponds to the number of threads that are
 spawned by **each** julia thread. Thus, if you have 4 julia threads and 4 BLAS threads, then
 each julia thread will spawn 4 BLAS threads, for a total of 16 BLAS threads. As such, it

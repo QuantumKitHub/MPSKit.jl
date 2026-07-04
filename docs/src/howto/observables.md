@@ -1,5 +1,8 @@
 # [Computing observables](@id howto_observables)
 
+The examples on this page use MPSKit.jl, TensorKit.jl, and TensorKitTensors.jl.
+See [Installation](@ref tutorial_installation) for how to add these packages to your environment.
+
 This page collects recipes for extracting physical quantities from an MPS: local and multi-site expectation values, the energy of a Hamiltonian, two-point correlators, and the energy variance as a convergence diagnostic.
 All examples share a single namespace and build on state and operator objects you would have in hand after a ground-state calculation.
 

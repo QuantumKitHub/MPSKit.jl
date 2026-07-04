@@ -17,12 +17,10 @@ product of local tensors.
 <img src="../assets/mpo.svg" alt="MPO" width="50%" class="color-invertible"/>
 ```
 
-```@setup operators
+```@example operators
 using TensorKit, MPSKit, MPSKitModels
 using TensorKitTensors.SpinOperators: σˣ, σᶻ
-```
 
-```@example operators
 X = σˣ()
 Z = σᶻ()
 O_xzx = FiniteMPO(X ⊗ Z ⊗ X);
@@ -115,7 +113,7 @@ H = -J \sum_{\langle i, j \rangle} X_i X_j - h \sum_j Z_j
 ```@example operators
 J = 1.0
 h = 0.5
-chain = fill(ℂ^2, 3) # a finite chain of 4 sites, each with a 2-dimensional Hilbert space
+chain = fill(ℂ^2, 3) # a finite chain of 3 sites, each with a 2-dimensional Hilbert space
 single_site_operators = [1 => -h * Z, 2 => -h * Z, 3 => -h * Z]
 two_site_operators = [(1, 2) => -J * X ⊗ X, (2, 3) => -J * X ⊗ X]
 H_ising = FiniteMPOHamiltonian(chain, single_site_operators..., two_site_operators...)
@@ -168,7 +166,8 @@ H_ising_2d = FiniteMPOHamiltonian(square, local_operators) +
 ```
 
 There are various utility functions available for constructing more advanced lattices, for
-which the [lattices](@ref) section should be consulted.
+which the [MPSKitModels.jl](https://quantumkithub.github.io/MPSKitModels.jl/dev/)
+documentation should be consulted.
 
 ## InfiniteMPOHamiltonian
 

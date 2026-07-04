@@ -1,5 +1,8 @@
 # [Entanglement entropy and spectrum](@id howto_entanglement)
 
+The examples on this page use MPSKit.jl, TensorKit.jl, and TensorKitTensors.jl.
+See [Installation](@ref tutorial_installation) for how to add these packages to your environment.
+
 This page collects recipes for extracting the entanglement entropy and the entanglement spectrum from the gauge (bond) tensors of an MPS.
 For general expectation values and correlators see [Computing observables](@ref howto_observables); for building the state objects used below see [Constructing states](@ref howto_states).
 The reference page for these and related functions is [Observables and analysis](@ref lib_observables).
