@@ -15,7 +15,8 @@ using TensorKitTensors.SpinOperators: σˣ, σᶻ
 ## Setup: local operators
 
 The examples below build the transverse-field Ising model (TFIM), the same flagship model used elsewhere in these docs.
-<!-- REVIEW: brief physics description of TFIM (nearest-neighbour ZZ/XX coupling plus transverse field, critical point at g=1) — maintainer to confirm phrasing and any claims about criticality. -->
+It couples neighbouring spins through `X ⊗ X` and applies a transverse field of strength `g` along `Z`.
+The model has a quantum phase transition at `g = 1`, separating an ordered (ferromagnetic) phase at small `g` from a disordered (paramagnetic) phase at large `g`.
 The single-site Pauli operators come from [TensorKitTensors.jl](https://github.com/QuantumKitHub/TensorKitTensors.jl), which returns `ComplexF64` `TensorMap`s on the spin-1/2 physical space `ℂ^2`:
 
 ```@example hamiltonians

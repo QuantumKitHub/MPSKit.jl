@@ -105,9 +105,6 @@ of everything to the right of `site` in the network the environments were built 
 The result is gauge-compatible with the tensor of `state` at `site` and can be contracted onto
 it directly.
 
-<!-- REVIEW: verify the description of what the right environment contracts (everything to the
-right of `site`) and the site-indexing convention. -->
-
 See also [`leftenv`](@ref) and [`environments`](@ref).
 """
 function rightenv(ca::FiniteEnvironments, ind, state)
@@ -134,9 +131,6 @@ Return the left environment stored in `envs` at `site` for the given `state`: th
 of everything to the left of `site` in the network the environments were built for.
 The result is gauge-compatible with the tensor of `state` at `site` and can be contracted onto
 it directly.
-
-<!-- REVIEW: verify the description of what the left environment contracts (everything to the
-left of `site`) and the site-indexing convention. -->
 
 See also [`rightenv`](@ref) and [`environments`](@ref).
 """
