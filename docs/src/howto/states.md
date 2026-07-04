@@ -1,5 +1,8 @@
 # [Constructing states](@id howto_states)
 
+The examples on this page use MPSKit.jl and TensorKit.jl.
+See [Installation](@ref tutorial_installation) for how to add these packages to your environment.
+
 This page collects recipes for building [`FiniteMPS`](@ref), [`InfiniteMPS`](@ref), [`WindowMPS`](@ref), and [`MultilineMPS`](@ref) objects.
 All constructors live in the `MPSKit` namespace; the examples below assume
 

@@ -1,4 +1,4 @@
-# Installation
+# [Installation](@id tutorial_installation)
 
 This page walks you through setting up a Julia environment for working with MPSKit.jl, and ends with a small snippet you can run to check that everything works.
 
