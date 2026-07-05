@@ -98,5 +98,5 @@ All of these are part of the [QuantumKitHub](https://github.com/QuantumKitHub) o
 
 ## Community and support
 
-Questions and bug reports are welcome on the [issue tracker](https://github.com/QuantumKitHub/MPSKit.jl/issues).
+Questions and general discussion are welcome on [GitHub Discussions](https://github.com/QuantumKitHub/MPSKit.jl/discussions); bug reports belong on the [issue tracker](https://github.com/QuantumKitHub/MPSKit.jl/issues).
 If you would like to contribute, see [CONTRIBUTING.md](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/CONTRIBUTING.md) on GitHub.
