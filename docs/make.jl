@@ -66,6 +66,7 @@ makedocs(;
         "How-to" => [
             "howto/states.md",
             "howto/hamiltonians.md",
+            "howto/groundstate_algorithms.md",
             "howto/bond_dimension.md",
             "howto/observables.md",
             "howto/entanglement.md",
