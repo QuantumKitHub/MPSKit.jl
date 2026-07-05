@@ -35,18 +35,7 @@ First we construct the Hamiltonian in MPO form, and obtain the pre-quenched grou
 L = 20
 H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
-ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG());
-````
-
-````
-[ Info: DMRG init:	obj = +9.979013604153e+00	err = 1.4988e-01
-[ Info: DMRG   1:	obj = -2.040021714911e+01	err = 6.6274818897e-04	time = 4.21 sec
-[ Info: DMRG   2:	obj = -2.040021715179e+01	err = 4.7025708686e-07	time = 0.30 sec
-[ Info: DMRG   3:	obj = -2.040021786572e+01	err = 3.1050733385e-05	time = 0.09 sec
-[ Info: DMRG   4:	obj = -2.040021786702e+01	err = 1.7208246127e-06	time = 0.04 sec
-[ Info: DMRG   5:	obj = -2.040021786703e+01	err = 3.5080300899e-08	time = 0.04 sec
-[ Info: DMRG conv 6:	obj = -2.040021786703e+01	err = 3.6868374475e-11	time = 4.71 sec
-
+ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG(; verbosity = 0));
 ````
 
 ## Finite MPS quenching
@@ -75,7 +64,7 @@ Putting it all together, we get
 function finite_sim(L; dt = 0.05, finaltime = 5.0)
     ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
     H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
-    ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG())
+    ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG(; verbosity = 0))
 
     H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
     ψₜ = deepcopy(ψ₀)
@@ -107,19 +96,7 @@ Similarly we could start with an initial infinite state and find the pre-quench 
 ````julia
 ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
 H₀ = transverse_field_ising(; g = -0.5)
-ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS());
-````
-
-````
-[ Info: VUMPS init:	obj = +4.970192050239e-01	err = 3.8858e-01
-[ Info: VUMPS   1:	obj = -1.049521519045e+00	err = 9.6762771022e-02	time = 1.62 sec
-[ Info: VUMPS   2:	obj = -1.063544398670e+00	err = 1.0462983506e-04	time = 0.02 sec
-[ Info: VUMPS   3:	obj = -1.063544409966e+00	err = 3.0128180222e-06	time = 0.01 sec
-[ Info: VUMPS   4:	obj = -1.063544409973e+00	err = 5.4785900416e-08	time = 0.01 sec
-[ Info: VUMPS   5:	obj = -1.063544409973e+00	err = 3.5329191510e-09	time = 0.01 sec
-[ Info: VUMPS   6:	obj = -1.063544409973e+00	err = 3.7796484550e-10	time = 0.01 sec
-[ Info: VUMPS conv 7:	obj = -1.063544409973e+00	err = 2.9001138645e-11	time = 1.69 sec
-
+ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS(; verbosity = 0));
 ````
 
 The dot product of two infinite matrix product states scales as  ``\alpha ^N`` where ``α`` is the dominant eigenvalue of the transfer matrix.
@@ -130,7 +107,7 @@ dot(ψ₀, ψ₀)
 ````
 
 ````
-0.9999999999999996 + 3.8955006105253705e-16im
+1.0000000000000029 + 1.5212645660908792e-16im
 ````
 
 so the Loschmidt echo takes on the pleasant form
@@ -163,7 +140,7 @@ The final code is
 ````julia
 function infinite_sim(dt = 0.05, finaltime = 5.0)
     ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
-    ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS())
+    ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS(; verbosity = 0))
 
     ψₜ = deepcopy(ψ₀)
     envs = environments(ψₜ, H₁, ψₜ)

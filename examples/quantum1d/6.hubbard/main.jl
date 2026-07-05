@@ -36,9 +36,10 @@ using Plots
 using Interpolations
 using Optim
 
-#src # for reproducibility:
-#src using Random
-#src Random.seed!(123)
+# For reproducibility of this page, we fix the seed of the random number generator:
+
+using Random
+Random.seed!(123);
 
 const t = 1.0
 const mu = 0.0

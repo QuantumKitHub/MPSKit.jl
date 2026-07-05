@@ -7,9 +7,10 @@ The necessary packages to follow this tutorial are:
 
 using MPSKit, MPSKitModels, TensorKit, Plots
 
-#src # for reproducibility:
-#src using Random
-#src Random.seed!(123)
+# For reproducibility of this page, we fix the seed of the random number generator:
+
+using Random
+Random.seed!(123);
 
 md"""
 ## Failure

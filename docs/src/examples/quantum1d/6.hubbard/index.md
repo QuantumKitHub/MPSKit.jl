@@ -44,7 +44,13 @@ using QuadGK: quadgk
 using Plots
 using Interpolations
 using Optim
+````
 
+For reproducibility of this page, we fix the seed of the random number generator:
+
+````julia
+using Random
+Random.seed!(123);
 
 const t = 1.0
 const mu = 0.0
@@ -56,7 +62,7 @@ const U = 3.0
 ````
 
 For this case, the ground state energy has an analytic solution, which can be used to benchmark the numerical results.
-It follows from Eq. (6.82) in []().
+It follows from Eq. (6.82) in [Essler, Frahm, Göhmann, Klümper & Korepin, The One-Dimensional Hubbard Model](https://doi.org/10.1017/CBO9780511534843).
 
 ```math
 e(u) = - u - 4 \int_0^{\infty} \frac{d\omega}{\omega} \frac{J_0(\omega) J_1(\omega)}{1 + \exp(2u \omega)}
@@ -77,7 +83,7 @@ function compute_groundstate(
         expansionfactor = (1 / 10),
         expansioniter = 20
     )
-    verbosity = 2
+    verbosity = 0
     psi, = find_groundstate(psi, H; tol = svalue * 10, verbosity)
     for _ in 1:expansioniter
         D = maximum(x -> dim(left_virtualspace(psi, x)), 1:length(psi))
@@ -115,54 +121,10 @@ Groundstate energy:
 ````
 
 ````
-[ Info: VUMPS init:	obj = -1.450454615857e+00	err = 5.5193e-01
-[ Info: VUMPS conv 7:	obj = -4.377048688339e+00	err = 8.8092806195e-03	time = 4.49 sec
-[ Info: VUMPS init:	obj = -4.377048688339e+00	err = 1.6440e-02
-[ Info: VUMPS conv 6:	obj = -4.378747269347e+00	err = 1.3129004135e-04	time = 0.25 sec
-[ Info: VUMPS init:	obj = -4.378747269347e+00	err = 7.9951e-03
-[ Info: VUMPS conv 6:	obj = -4.379161081627e+00	err = 1.5539751336e-04	time = 0.37 sec
-[ Info: VUMPS init:	obj = -4.379161081627e+00	err = 6.1111e-03
-[ Info: VUMPS conv 5:	obj = -4.379452169384e+00	err = 1.6927654674e-04	time = 0.27 sec
-[ Info: VUMPS init:	obj = -4.379452169384e+00	err = 5.6959e-03
-[ Info: VUMPS conv 4:	obj = -4.379651733231e+00	err = 1.8162083040e-04	time = 0.26 sec
-[ Info: VUMPS init:	obj = -4.379651733231e+00	err = 4.1039e-03
-[ Info: VUMPS conv 4:	obj = -4.379735601762e+00	err = 1.3801495045e-04	time = 0.42 sec
-[ Info: VUMPS init:	obj = -4.379735601762e+00	err = 3.5769e-03
-[ Info: VUMPS conv 3:	obj = -4.379797886653e+00	err = 1.3472741143e-04	time = 0.39 sec
-[ Info: VUMPS init:	obj = -4.379797886653e+00	err = 2.7707e-03
-[ Info: VUMPS conv 2:	obj = -4.379838526805e+00	err = 1.7752552389e-04	time = 0.33 sec
-[ Info: VUMPS init:	obj = -4.379838526805e+00	err = 2.7291e-03
-[ Info: VUMPS conv 3:	obj = -4.379878849406e+00	err = 1.9781894590e-04	time = 0.74 sec
-[ Info: VUMPS init:	obj = -4.379878849406e+00	err = 2.6911e-03
-[ Info: VUMPS conv 3:	obj = -4.379929229387e+00	err = 1.7761427615e-04	time = 0.82 sec
-[ Info: VUMPS init:	obj = -4.379929229387e+00	err = 2.5553e-03
-[ Info: VUMPS conv 3:	obj = -4.379968040382e+00	err = 1.8461546636e-04	time = 2.21 sec
-[ Info: VUMPS init:	obj = -4.379968040382e+00	err = 1.7682e-03
-[ Info: VUMPS conv 2:	obj = -4.379986877757e+00	err = 1.9131369028e-04	time = 0.98 sec
-[ Info: VUMPS init:	obj = -4.379986877757e+00	err = 1.5838e-03
-[ Info: VUMPS conv 2:	obj = -4.380001005486e+00	err = 1.9231335759e-04	time = 1.05 sec
-[ Info: VUMPS init:	obj = -4.380001005486e+00	err = 1.5109e-03
-[ Info: VUMPS conv 2:	obj = -4.380013169634e+00	err = 1.5225084116e-04	time = 1.32 sec
-[ Info: VUMPS init:	obj = -4.380013169634e+00	err = 1.4234e-03
-[ Info: VUMPS conv 2:	obj = -4.380024401012e+00	err = 1.7737882775e-04	time = 1.59 sec
-[ Info: VUMPS init:	obj = -4.380024401012e+00	err = 1.3330e-03
-[ Info: VUMPS conv 2:	obj = -4.380038158990e+00	err = 1.5757417636e-04	time = 2.60 sec
-[ Info: VUMPS init:	obj = -4.380038158990e+00	err = 1.0032e-03
-[ Info: VUMPS conv 1:	obj = -4.380043682260e+00	err = 1.6736593859e-04	time = 0.89 sec
-[ Info: VUMPS init:	obj = -4.380043682260e+00	err = 9.0999e-04
-[ Info: VUMPS conv 1:	obj = -4.380048641018e+00	err = 1.8573996574e-04	time = 1.19 sec
-[ Info: VUMPS init:	obj = -4.380048641018e+00	err = 8.3081e-04
-[ Info: VUMPS conv 1:	obj = -4.380053199895e+00	err = 1.8060836975e-04	time = 2.30 sec
-[ Info: VUMPS init:	obj = -4.380053199895e+00	err = 6.8144e-04
-[ Info: VUMPS conv 1:	obj = -4.380057143242e+00	err = 1.8854132138e-04	time = 1.71 sec
-[ Info: VUMPS init:	obj = -4.380057143242e+00	err = 6.0293e-04
-[ Info: VUMPS conv 1:	obj = -4.380060551312e+00	err = 1.8083344266e-04	time = 2.45 sec
-[ Info: VUMPS init:	obj = -4.379609468445e+00	err = 4.0958e-03
-[ Info: VUMPS conv 19:	obj = -4.379763157256e+00	err = 9.9415625365e-06	time = 8.41 sec
-[ Info: CG: initializing with f = -4.379763156901e+00, ‖∇f‖ = 3.1520e-05
-[ Info: CG: converged after 158 iterations and time  1.36 m: f = -4.379763361376e+00, ‖∇f‖ = 9.9957e-07
+[ Info: CG: initializing with f = -4.379763091095e+00, ‖∇f‖ = 3.1534e-05
+[ Info: CG: converged after 167 iterations and time  1.66 m: f = -4.379763081900e+00, ‖∇f‖ = 9.7406e-07
 ┌ Info: Groundstate energy:
-│     * numerical: -2.1899960609769664
+│     * numerical: -2.189996060974577
 └     * analytic: -2.190038374277775
 
 ````
@@ -196,56 +158,10 @@ Groundstate energy:
 ````
 
 ````
-[ Info: VUMPS init:	obj = +2.092499297284e-01	err = 8.6283e-01
-[ Info: VUMPS conv 1:	obj = -4.000000000000e+00	err = 1.4030299342e-15	time = 2.40 sec
-[ Info: VUMPS init:	obj = -4.000000000000e+00	err = 3.3634e-01
-[ Info: VUMPS conv 4:	obj = -4.289650419749e+00	err = 1.8514003381e-04	time = 0.09 sec
-[ Info: VUMPS init:	obj = -4.289650419749e+00	err = 1.1203e-01
-[ Info: VUMPS conv 6:	obj = -4.359865567620e+00	err = 1.0046942911e-04	time = 0.29 sec
-[ Info: VUMPS init:	obj = -4.359865567619e+00	err = 4.3643e-02
-[ Info: VUMPS conv 6:	obj = -4.372880928482e+00	err = 1.3025843115e-04	time = 2.61 sec
-[ Info: VUMPS init:	obj = -4.372880928482e+00	err = 3.2693e-02
-[ Info: VUMPS conv 4:	obj = -4.375236954488e+00	err = 1.1814239608e-04	time = 0.20 sec
-[ Info: VUMPS init:	obj = -4.375236954488e+00	err = 2.9487e-02
-[ Info: VUMPS conv 7:	obj = -4.378159084364e+00	err = 1.1896740056e-04	time = 0.60 sec
-[ Info: VUMPS init:	obj = -4.378159084364e+00	err = 1.9312e-02
-[ Info: VUMPS conv 5:	obj = -4.379272966040e+00	err = 1.5785413165e-04	time = 0.50 sec
-[ Info: VUMPS init:	obj = -4.379272966040e+00	err = 9.9128e-03
-[ Info: VUMPS conv 4:	obj = -4.379592229143e+00	err = 1.5550378745e-04	time = 0.51 sec
-[ Info: VUMPS init:	obj = -4.379592229143e+00	err = 6.4841e-03
-[ Info: VUMPS conv 4:	obj = -4.379819377264e+00	err = 1.7492038571e-04	time = 0.56 sec
-[ Info: VUMPS init:	obj = -4.379819377264e+00	err = 3.8754e-03
-┌ Warning: VUMPS cancel 10:	obj = -4.379964033305e+00	err = 2.1228930049e-04	time = 1.76 sec
-└ @ MPSKit ~/Projects/MPSKit.jl/docs/src/algorithms/groundstate/vumps.jl:83
-[ Info: VUMPS init:	obj = -4.379964033305e+00	err = 2.8978e-03
-[ Info: VUMPS conv 3:	obj = -4.380010384710e+00	err = 1.4775284542e-04	time = 0.88 sec
-[ Info: VUMPS init:	obj = -4.380010384710e+00	err = 2.0609e-03
-[ Info: VUMPS conv 3:	obj = -4.380041751503e+00	err = 1.6327798118e-04	time = 1.81 sec
-[ Info: VUMPS init:	obj = -4.380041751502e+00	err = 1.2364e-03
-[ Info: VUMPS conv 2:	obj = -4.380055778759e+00	err = 1.8366845284e-04	time = 0.83 sec
-[ Info: VUMPS init:	obj = -4.380055778759e+00	err = 8.5857e-04
-[ Info: VUMPS conv 2:	obj = -4.380064749427e+00	err = 1.3905442267e-04	time = 1.14 sec
-[ Info: VUMPS init:	obj = -4.380064749427e+00	err = 5.2502e-04
-[ Info: VUMPS conv 1:	obj = -4.380067974777e+00	err = 1.5646700070e-04	time = 0.79 sec
-[ Info: VUMPS init:	obj = -4.380067974777e+00	err = 3.3275e-04
-[ Info: VUMPS conv 1:	obj = -4.380070351418e+00	err = 1.3123916502e-04	time = 1.05 sec
-[ Info: VUMPS init:	obj = -4.380070351418e+00	err = 2.0348e-04
-[ Info: VUMPS conv 1:	obj = -4.380072125256e+00	err = 1.1119707628e-04	time = 2.15 sec
-[ Info: VUMPS init:	obj = -4.380072125256e+00	err = 1.3635e-04
-[ Info: VUMPS conv 1:	obj = -4.380073467831e+00	err = 8.5045032311e-05	time = 2.22 sec
-[ Info: VUMPS init:	obj = -4.380073467830e+00	err = 9.7226e-05
-[ Info: VUMPS conv 1:	obj = -4.380074455763e+00	err = 6.4430026631e-05	time = 3.60 sec
-[ Info: VUMPS init:	obj = -4.380074455763e+00	err = 7.3787e-05
-[ Info: VUMPS conv 1:	obj = -4.380075159887e+00	err = 6.2144398833e-05	time = 8.05 sec
-[ Info: VUMPS init:	obj = -4.380075159887e+00	err = 5.9899e-05
-[ Info: VUMPS conv 1:	obj = -4.380075661721e+00	err = 4.2515939994e-05	time = 12.11 sec
-[ Info: VUMPS init:	obj = -4.379308795201e+00	err = 7.9930e-03
-┌ Warning: VUMPS cancel 100:	obj = -4.379692711472e+00	err = 1.5979764572e-05	time = 27.91 sec
-└ @ MPSKit ~/Projects/MPSKit.jl/docs/src/algorithms/groundstate/vumps.jl:83
 [ Info: CG: initializing with f = -4.379692711472e+00, ‖∇f‖ = 5.7923e-05
-[ Info: CG: converged after 13 iterations and time  7.22 s: f = -4.379692712393e+00, ‖∇f‖ = 6.2087e-07
+[ Info: CG: converged after 13 iterations and time 14.39 s: f = -4.379692712393e+00, ‖∇f‖ = 6.2087e-07
 ┌ Info: Groundstate energy:
-│     * numerical: -2.1900153475144695
+│     * numerical: -2.190015347514472
 └     * analytic: -2.190038374277775
 
 ````
@@ -288,37 +204,37 @@ E_holon, ϕ_holon = excitations(
 [ Info: Found excitations for momentum = -2.552544031041707
 [ Info: Found excitations for momentum = -2.356194490192345
 [ Info: Found excitations for momentum = -2.1598449493429825
-[ Info: Found excitations for momentum = -1.7671458676442586
 [ Info: Found excitations for momentum = -1.9634954084936207
+[ Info: Found excitations for momentum = -1.7671458676442586
 [ Info: Found excitations for momentum = -1.5707963267948966
 [ Info: Found excitations for momentum = -1.3744467859455345
-[ Info: Found excitations for momentum = -0.9817477042468103
 [ Info: Found excitations for momentum = -1.1780972450961724
+[ Info: Found excitations for momentum = -0.9817477042468103
 [ Info: Found excitations for momentum = -0.7853981633974483
 [ Info: Found excitations for momentum = -0.5890486225480862
-[ Info: Found excitations for momentum = -0.19634954084936207
 [ Info: Found excitations for momentum = -0.39269908169872414
+[ Info: Found excitations for momentum = -0.19634954084936207
 [ Info: Found excitations for momentum = 0.0
 [ Info: Found excitations for momentum = 0.19634954084936207
 [ Info: Found excitations for momentum = 0.39269908169872414
 [ Info: Found excitations for momentum = 0.5890486225480862
 [ Info: Found excitations for momentum = 0.7853981633974483
 [ Info: Found excitations for momentum = 0.9817477042468103
-[ Info: Found excitations for momentum = 1.3744467859455345
 [ Info: Found excitations for momentum = 1.1780972450961724
+[ Info: Found excitations for momentum = 1.3744467859455345
 [ Info: Found excitations for momentum = 1.5707963267948966
 [ Info: Found excitations for momentum = 1.7671458676442586
-[ Info: Found excitations for momentum = 2.356194490192345
 [ Info: Found excitations for momentum = 1.9634954084936207
 [ Info: Found excitations for momentum = 2.1598449493429825
+[ Info: Found excitations for momentum = 2.356194490192345
 [ Info: Found excitations for momentum = 2.552544031041707
 [ Info: Found excitations for momentum = 2.748893571891069
 [ Info: Found excitations for momentum = 2.945243112740431
 [ Info: Found excitations for momentum = 3.141592653589793
 [ Info: Found excitations for momentum = -3.141592653589793
+[ Info: Found excitations for momentum = -2.945243112740431
 [ Info: Found excitations for momentum = -2.748893571891069
 [ Info: Found excitations for momentum = -2.552544031041707
-[ Info: Found excitations for momentum = -2.945243112740431
 [ Info: Found excitations for momentum = -2.356194490192345
 [ Info: Found excitations for momentum = -2.1598449493429825
 [ Info: Found excitations for momentum = -1.9634954084936207
@@ -346,8 +262,8 @@ E_holon, ϕ_holon = excitations(
 [ Info: Found excitations for momentum = 2.356194490192345
 [ Info: Found excitations for momentum = 2.552544031041707
 [ Info: Found excitations for momentum = 2.748893571891069
-[ Info: Found excitations for momentum = 3.141592653589793
 [ Info: Found excitations for momentum = 2.945243112740431
+[ Info: Found excitations for momentum = 3.141592653589793
 
 ````
 
