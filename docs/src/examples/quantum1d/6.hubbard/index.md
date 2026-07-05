@@ -18,7 +18,7 @@ a kinetic term that allows electrons to hop between neighboring sites, and a pot
 Often, a third term is included which serves as a chemical potential to control the number of electrons in the system.
 
 ```math
-H = -t \sum_{\langle i, j \rangle, \sigma} c^{\dagger}_{i,\sigma} c_{j,\sigma} + U \sum_i n_{i,\uparrow} n_{i,\downarrow} - \mu \sum_{i,\sigma} n_{i,\sigma}
+H = -t ∑_{⟨i, j⟩, σ} c^{†}_{i,σ} c_{j,σ} + U ∑_i n_{i,↑} n_{i,↓} - μ ∑_{i,σ} n_{i,σ}
 ```
 
 At half-filling, the system exhibits particle-hole symmetry, which can be made explicit by rewriting the Hamiltonian slightly.
@@ -26,13 +26,13 @@ First, we fix the overall energy scale by setting `t = 1`, and then shift the to
 This results in the following Hamiltonian:
 
 ```math
-H = - \sum_{\langle i, j \rangle, \sigma} c^{\dagger}_{i,\sigma} c_{j,\sigma} + U / 4 \sum_i (1 - 2 n_{i,\uparrow}) (1 - 2 n_{i,\downarrow}) - \mu \sum_{i,\sigma} n_{i,\sigma}
+H = - ∑_{⟨i, j⟩, σ} c^{†}_{i,σ} c_{j,σ} + U / 4 ∑_i (1 - 2 n_{i,↑}) (1 - 2 n_{i,↓}) - μ ∑_{i,σ} n_{i,σ}
 ```
 
 Finally, setting `\mu = 0` and defining `u = U / 4` we obtain the Hubbard model at half-filling.
 
 ```math
-H = - \sum_{\langle i, j \rangle, \sigma} c^{\dagger}_{i,\sigma} c_{j,\sigma} + u \sum_i (1 - 2 n_{i,\uparrow}) (1 - 2 n_{i,\downarrow})
+H = - ∑_{⟨i, j⟩, σ} c^{†}_{i,σ} c_{j,σ} + u ∑_i (1 - 2 n_{i,↑}) (1 - 2 n_{i,↓})
 ```
 
 ````julia
@@ -65,7 +65,7 @@ For this case, the ground state energy has an analytic solution, which can be us
 It follows from Eq. (6.82) in [Essler, Frahm, Göhmann, Klümper & Korepin, The One-Dimensional Hubbard Model](https://doi.org/10.1017/CBO9780511534843).
 
 ```math
-e(u) = - u - 4 \int_0^{\infty} \frac{d\omega}{\omega} \frac{J_0(\omega) J_1(\omega)}{1 + \exp(2u \omega)}
+e(u) = - u - 4 ∫₀^{∞} \frac{dω}{ω} \frac{J₀(ω) J₁(ω)}{1 + \exp(2u ω)}
 ```
 
 We can easily verify this by comparing the numerical results to the analytic solution.
@@ -73,7 +73,7 @@ We can easily verify this by comparing the numerical results to the analytic sol
 ````julia
 function hubbard_energy(u; rtol = 1.0e-12)
     integrandum(ω) = besselj0(ω) * besselj1(ω) / (1 + exp(2u * ω)) / ω
-    int, err = quadgk(integrandum, 0, Inf; rtol = rtol)
+    int, err = quadgk(integrandum, 0, Inf; rtol)
     return -u - 4 * int
 end
 
@@ -122,7 +122,7 @@ Groundstate energy:
 
 ````
 [ Info: CG: initializing with f = -4.379763091095e+00, ‖∇f‖ = 3.1534e-05
-[ Info: CG: converged after 167 iterations and time  1.66 m: f = -4.379763081900e+00, ‖∇f‖ = 9.7406e-07
+[ Info: CG: converged after 167 iterations and time  1.75 m: f = -4.379763081900e+00, ‖∇f‖ = 9.7406e-07
 ┌ Info: Groundstate energy:
 │     * numerical: -2.189996060974577
 └     * analytic: -2.190038374277775
@@ -132,7 +132,7 @@ Groundstate energy:
 ## Symmetries
 
 The Hubbard model has a rich symmetry structure, which can be exploited to speed up simulations.
-Apart from the fermionic parity, the model also has a $U(1)$ particle number symmetry, along with a $SU(2)$ spin symmetry.
+Apart from the fermionic parity, the model also has a ``U(1)`` particle number symmetry, along with a ``SU(2)`` spin symmetry.
 Explicitly imposing these symmetries on the tensors can greatly reduce the computational cost of the simulation.
 
 Naively imposing these symmetries however, is not compatible with our desire to work at half-filling.
@@ -159,7 +159,7 @@ Groundstate energy:
 
 ````
 [ Info: CG: initializing with f = -4.379692711472e+00, ‖∇f‖ = 5.7923e-05
-[ Info: CG: converged after 13 iterations and time 14.39 s: f = -4.379692712393e+00, ‖∇f‖ = 6.2087e-07
+[ Info: CG: converged after 13 iterations and time 14.35 s: f = -4.379692712393e+00, ‖∇f‖ = 6.2087e-07
 ┌ Info: Groundstate energy:
 │     * numerical: -2.190015347514472
 └     * analytic: -2.190038374277775
@@ -173,7 +173,7 @@ The elementary excitations are known as spinons and holons, which are domain wal
 The fact that the spin and charge sectors are separate is a phenomenon known as spin-charge separation.
 
 The domain walls can be constructed by noticing that there are two equivalent groundstates, which differ by a translation over a single site.
-In other words, the groundstates are ``\psi_{AB}` and ``\psi_{BA}``, where ``A`` and ``B`` are the two sites.
+In other words, the groundstates are ``\psi_{AB}`` and ``\psi_{BA}``, where ``A`` and ``B`` are the two sites.
 These excitations can be constructed as follows:
 
 ````julia
@@ -321,7 +321,7 @@ end
 The plot shows some discrepancies between the numerical and analytic results.
 First and foremost, we must realize that in the thermodynamic limit, the momentum of a domain wall is actually not well-defined.
 Concretely, only the difference in momentum between the two groundstates is well-defined, as we can always shift the momentum by multiplying one of the groundstates by a phase.
-Here, we can fix this shift by realizing that our choice of shifting the groundstates by a single site, differs from the formula by a factor ``\pi/2``.
+Here, we can fix this shift by realizing that our choice of shifting the groundstates by a single site, differs from the formula by a factor ``π/2``.
 
 ````julia
 momenta_shifted = rem2pi.(momenta .- π / 2, RoundNearest)
