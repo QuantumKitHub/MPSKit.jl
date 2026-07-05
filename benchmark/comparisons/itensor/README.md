@@ -7,7 +7,7 @@ finite DMRG **time-to-accuracy** for the spin-1 Heisenberg chain, no symmetry (s
 with U(1) Sz conservation (suite 2); **TDVP throughput** for a global quench (suite 5, see
 the parity notes in `suite5_tdvp.jl`, including the matched Krylov-exponentiation
 tolerance); and **thread scaling** of the suite-1 workload (suite 7, one process per
-thread-grid point — see `benchmark/slurm/threads_*.sbatch`).
+thread-grid point — see `benchmark/slurm/run_all.sbatch`).
 
 Everything here uses the **official, documented ITensorMPS idiom** so that a reader from the
 ITensor community cannot call it a strawman. Every nontrivial API call carries a comment
@@ -39,7 +39,8 @@ From the repository root:
 JULIA_NUM_THREADS=1 julia --project=benchmark/comparisons/itensor \
     benchmark/comparisons/itensor/run.jl --smoke
 
-# full run (N=100, χ∈[64,128,256,512,1024], 10 sweeps)
+# full run (N=100, χ∈[64,128,256,512]; suite 1: 6 sweeps, suite 2: 10) — full runs
+# belong in the single-node cluster job, benchmark/slurm/run_all.sbatch
 JULIA_NUM_THREADS=1 julia --project=benchmark/comparisons/itensor \
     benchmark/comparisons/itensor/run.jl
 

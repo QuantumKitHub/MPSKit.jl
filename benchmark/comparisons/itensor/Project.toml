@@ -1,16 +1,9 @@
-# Standalone environment for the ITensorMPS.jl side of the MPSKit competitive benchmark.
-#
-# This directory is deliberately NOT a member of the MPSKit root workspace: the root
-# Project.toml lists `[workspace] projects = ["test", "docs", "examples", "benchmark"]`
-# explicitly, and `benchmark/comparisons/itensor` is not among them, so this env resolves
-# independently and never drags ITensors into the MPSKit manifest (or vice versa).
 [deps]
 ITensorMPS = "0d1a4710-d33b-49a5-8f18-73bdf49b47e2"
 ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+ThreadPinning = "811555cd-349b-4f26-b7bc-1f208b848042"
 
-# Pinned to the versions used for the recorded runs (also captured per-run in each result
-# file's metadata). Loosen deliberately, re-instantiate, and re-verify the sanity gate.
 [compat]
 ITensorMPS = "0.4"
 ITensors = "0.9"

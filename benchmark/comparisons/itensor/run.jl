@@ -20,6 +20,7 @@
 const HERE = @__DIR__
 
 using LinearAlgebra
+using ThreadPinning
 
 function parse_cli(args)
     smoke = "--smoke" in args
@@ -36,10 +37,40 @@ function parse_cli(args)
     return (; smoke, suites, blas_threads)
 end
 
+"""
+    pin_cores(blas_threads)
+
+Pin Julia threads 1:1 to distinct cores inside the affinity mask this process was
+launched with (`taskset` in `benchmark/slurm/run_all.sbatch`, or Slurm's cpu mask), via
+ThreadPinning's `:affinitymask` policy. When the OpenBLAS pool has real workers
+(`blas_threads > 1`), pin those to mask cores disjoint from the Julia threads.
+No-oversubscription is the launcher's job: every concurrent process gets a disjoint mask.
+Pinning failure is a warning, not an error, so smoke runs on unsupported platforms still
+work — but cluster timings must never run unpinned, so check the log.
+"""
+function pin_cores(blas_threads::Int)
+    try
+        pinthreads(:affinitymask)
+        if blas_threads > 1
+            mask_ids = findall(==(1), getaffinity(; cutoff = nothing)) .- 1
+            free_ids = setdiff(mask_ids, getcpuids())
+            if length(free_ids) < blas_threads
+                @warn "affinity mask too small to give OpenBLAS workers their own cores; they will share with Julia threads" mask_ids blas_threads
+                free_ids = vcat(free_ids, mask_ids)
+            end
+            openblas_pinthreads(free_ids[1:blas_threads])
+        end
+    catch err
+        @warn "thread pinning failed; timings from this run are not publishable" err
+    end
+    return nothing
+end
+
 opts = parse_cli(ARGS)
 resultsdir = normpath(joinpath(HERE, "..", "..", "results"))
 mkpath(resultsdir)
 BLAS.set_num_threads(opts.blas_threads)
+pin_cores(opts.blas_threads)
 
 println(
     "ITensorMPS benchmark harness — mode: ", opts.smoke ? "smoke" : "full",

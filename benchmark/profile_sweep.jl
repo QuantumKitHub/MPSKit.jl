@@ -17,6 +17,7 @@
 using LinearAlgebra
 using Profile
 using Random
+using ThreadPinning
 
 const HERE = @__DIR__
 
@@ -29,6 +30,11 @@ chi = parse_flag(ARGS, "chi", 256)
 N = parse_flag(ARGS, "N", 100)
 maxdepth = parse_flag(ARGS, "maxdepth", 30)
 BLAS.set_num_threads(parse_flag(ARGS, "blas-threads", 1))
+try
+    pinthreads(:affinitymask)   # same placement policy as benchmark/run.jl
+catch err
+    @warn "thread pinning failed" err
+end
 
 include(joinpath(HERE, "suites", "common.jl"))
 using .BenchCommon
