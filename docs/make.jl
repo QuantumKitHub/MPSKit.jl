@@ -64,6 +64,7 @@ makedocs(;
             "man/parallelism.md",
         ],
         "How-to" => [
+            "howto/index.md",
             "howto/states.md",
             "howto/hamiltonians.md",
             "howto/groundstate_algorithms.md",
@@ -71,6 +72,7 @@ makedocs(;
             "howto/time_evolution.md",
             "howto/observables.md",
             "howto/entanglement.md",
+            "howto/excitations.md",
         ],
         "Examples" => [
             "Overview" => "examples/index.md",
