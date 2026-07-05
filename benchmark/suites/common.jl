@@ -1,8 +1,9 @@
 # Shared utilities for the MPSKit competitive-benchmark suites (docs/IMPROVEMENT_PLAN.md §4).
 #
-# These suites measure *time-to-accuracy* for `find_groundstate` with `DMRG`: for a fixed
-# bond dimension χ, run a fixed number of sweeps and record the energy and elapsed wall
-# time after every sweep via the algorithm's `finalize` callback (see
+# These suites measure *time-to-accuracy* for `find_groundstate` with two-site `DMRG2`
+# (the update scheme matched to ITensorMPS, which exposes only two-site `dmrg`): for a
+# bond-dimension cap χ, run a fixed number of sweeps and record the energy and elapsed
+# wall time after every sweep via the algorithm's `finalize` callback (see
 # `src/algorithms/groundstate/dmrg.jl`, field `finalize`, signature
 # `finalize(iter, ψ, H, envs) -> (ψ, envs)`). Accuracy is reported downstream (in
 # `plot_results.jl`) relative to the lowest energy reached across the whole batch of runs
@@ -76,21 +77,33 @@ Galerkin-error convergence check practically never fires early — see
 `find_groundstate!(::AbstractFiniteMPS, H, ::DMRG, envs)`), recording the energy and
 elapsed wall time after every sweep via the `finalize` hook.
 
+Not used by the comparison suites (ITensorMPS exposes only two-site `dmrg`, so there is
+no single-site counterpart to compare against); kept for MPSKit-internal diagnostics
+such as `benchmark/profile_sweep.jl`.
+
 Returns `(; ψ, envs, ϵ, energies, walltimes)` where `energies[i]`/`walltimes[i]` are the
 real part of the energy and the elapsed wall time (seconds) after sweep `i`.
 """
 function dmrg_trajectory(ψ₀, H; nsweeps::Int, tol::Real = 0.0, verbosity::Int = 0)
     energies = Float64[]
     walltimes = Float64[]
+    gctimes = Float64[]
+    allocd = Int[]
     t0 = time_ns()
+    gc_prev = Ref(Base.gc_num())
     finalize = function (iter, ψ, H′, envs)
         push!(energies, real(expectation_value(ψ, H′, envs)))
         push!(walltimes, (time_ns() - t0) / 1.0e9)
+        gc_now = Base.gc_num()
+        diff = Base.GC_Diff(gc_now, gc_prev[])
+        push!(gctimes, diff.total_time / 1.0e9)   # GC seconds spent during this sweep
+        push!(allocd, diff.allocd)                # bytes allocated during this sweep
+        gc_prev[] = gc_now
         return ψ, envs
     end
     alg = DMRG(; tol = tol, maxiter = nsweeps, verbosity = verbosity, finalize = finalize)
     ψ, envs, ϵ = find_groundstate(ψ₀, H, alg)
-    return (; ψ, envs, ϵ, energies, walltimes)
+    return (; ψ, envs, ϵ, energies, walltimes, gctimes, allocd)
 end
 
 """
@@ -108,10 +121,18 @@ Returns `(; ψ, envs, ϵ, energies, walltimes)`, same fields as [`dmrg_trajector
 function dmrg2_trajectory(ψ₀, H; nsweeps::Int, χ::Int, tol::Real = 0.0, verbosity::Int = 0)
     energies = Float64[]
     walltimes = Float64[]
+    gctimes = Float64[]
+    allocd = Int[]
     t0 = time_ns()
+    gc_prev = Ref(Base.gc_num())
     finalize = function (iter, ψ, H′, envs)
         push!(energies, real(expectation_value(ψ, H′, envs)))
         push!(walltimes, (time_ns() - t0) / 1.0e9)
+        gc_now = Base.gc_num()
+        diff = Base.GC_Diff(gc_now, gc_prev[])
+        push!(gctimes, diff.total_time / 1.0e9)   # GC seconds spent during this sweep
+        push!(allocd, diff.allocd)                # bytes allocated during this sweep
+        gc_prev[] = gc_now
         return ψ, envs
     end
     alg = DMRG2(;
@@ -119,7 +140,7 @@ function dmrg2_trajectory(ψ₀, H; nsweeps::Int, χ::Int, tol::Real = 0.0, verb
         trscheme = truncrank(χ), finalize = finalize
     )
     ψ, envs, ϵ = find_groundstate(ψ₀, H, alg)
-    return (; ψ, envs, ϵ, energies, walltimes)
+    return (; ψ, envs, ϵ, energies, walltimes, gctimes, allocd)
 end
 
 """

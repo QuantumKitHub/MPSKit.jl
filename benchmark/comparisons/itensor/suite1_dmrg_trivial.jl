@@ -10,14 +10,16 @@
 #     H = MPO(os, sites)
 #     psi0 = random_mps(sites; linkdims = χ)
 # This builds H = J * Σ_j S_i·S_j, identical to MPSKit's
-# `heisenberg_XXX(ComplexF64, Trivial, FiniteChain(N); J, spin = 1)`.
+# `heisenberg_XXX(Float64, Trivial, FiniteChain(N); J, spin = 1)`.
 #
-# PARITY NOTE (element type): ITensor uses its native *real* (Float64) arithmetic here,
-# which is the documented idiom (`random_mps` "by default has element type Float64") and
-# is the correct choice for this real-symmetric Hamiltonian. MPSKit runs its default
-# ComplexF64. Real arithmetic is strictly FASTER, so this favors ITensor — forcing complex
-# would only slow ITensor down and is not its idiom, so we keep real. Flagged here so the
-# choice is explicit.
+# PARITY NOTE (element type): both sides use Float64. `random_mps` "by default has element
+# type Float64" (documented idiom, correct for this real-symmetric Hamiltonian), and the
+# MPSKit side passes Float64 explicitly for exact parity (maintainer decision, 2026-07-05 —
+# previously MPSKit ran its ComplexF64 default, a 2-4x BLAS handicap).
+#
+# PARITY NOTE (update scheme): both sides use two-site DMRG — ITensor's default `dmrg`
+# here, `DMRG2(trscheme = truncrank(χ))` on the MPSKit side. ITensorMPS exposes no
+# single-site `dmrg`, so this is the only matched comparison.
 module ITensorSuite1DMRGTrivial
 
 using ITensors
@@ -81,6 +83,8 @@ function run(;
                 "chi_actual" => chi_actual,
                 "energies" => result.energies,
                 "walltimes" => result.walltimes,
+                "gctimes" => result.gctimes,
+                "allocd_bytes" => result.allocd,
                 # ITensor has no direct analogue of MPSKit's Galerkin (subspace) error;
                 # kept as null so the schema matches and plotting code stays shared.
                 "final_galerkin_error" => nothing,
@@ -92,9 +96,11 @@ function run(;
 
     data = collect_metadata()
     data["suite"] = "1-dmrg-trivial"
-    data["description"] = "finite DMRG time-to-accuracy, spin-1 Heisenberg chain, no symmetry (ITensorMPS)"
+    data["description"] = "finite two-site DMRG time-to-accuracy, spin-1 Heisenberg chain, no symmetry (ITensorMPS)"
     data["model"] = "heisenberg_XXX"
     data["symmetry"] = "Trivial"
+    data["algorithm"] = "dmrg (two-site), maxdim = mindim = chi, cutoff = 0, noise = 0"
+    data["eltype"] = "Float64"
     data["N"] = N
     data["J"] = J
     data["spin"] = 1

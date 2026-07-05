@@ -14,12 +14,14 @@
 # uses the alternating "Up"/"Dn" state array for S=1 sites, so this is the documented idiom.
 #
 # PARITY / SECTOR NOTE: the AF spin-1 Heisenberg ground state lives in total Sz = 0, which
-# the alternating state selects (`flux(psi0) == QN("Sz", 0)`; logged below). Unlike the
-# MPSKit side — which must *hand-pick* how to spread χ across U(1) charge sectors (its
-# `u1_virtualspace`/`qmax` REVIEW note) — ITensor's `random_mps(sites, state; linkdims)`
-# distributes the bond dimension across sectors automatically for the given flux. So the
-# per-sector split here is ITensor's own default, chosen by the library, not by us; this is
-# the fair, idiomatic choice and cannot be called a strawman.
+# the alternating state selects (`flux(psi0) == QN("Sz", 0)`; logged below). Neither side
+# hand-picks the per-sector split of χ: ITensor's `random_mps(sites, state; linkdims)`
+# distributes the bond dimension across sectors automatically for the given flux, and the
+# MPSKit side's two-site `DMRG2` redistributes χ across sectors at every update starting
+# from a small sector-diverse seed. Each library chooses its own split — the fair,
+# idiomatic setting on both sides. (Residual asymmetry: ITensor starts at full χ, MPSKit
+# grows from the seed within the first sweeps; documented in the README, symmetric in
+# spirit since both follow their library's natural protocol.)
 module ITensorSuite2DMRGU1
 
 using ITensors
@@ -95,6 +97,8 @@ function run(;
                 "chi_actual" => chi_actual,
                 "energies" => result.energies,
                 "walltimes" => result.walltimes,
+                "gctimes" => result.gctimes,
+                "allocd_bytes" => result.allocd,
                 "final_galerkin_error" => nothing,
             )
         )
@@ -104,9 +108,11 @@ function run(;
 
     data = collect_metadata()
     data["suite"] = "2-dmrg-u1"
-    data["description"] = "finite DMRG time-to-accuracy, spin-1 Heisenberg chain, U(1) symmetry (ITensorMPS)"
+    data["description"] = "finite two-site DMRG time-to-accuracy, spin-1 Heisenberg chain, U(1) symmetry (ITensorMPS)"
     data["model"] = "heisenberg_XXX"
     data["symmetry"] = "U1 (conserve_sz)"
+    data["algorithm"] = "dmrg (two-site), maxdim = mindim = chi, cutoff = 0, noise = 0"
+    data["eltype"] = "Float64"
     data["N"] = N
     data["J"] = J
     data["spin"] = 1

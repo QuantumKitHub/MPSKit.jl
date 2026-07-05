@@ -1,7 +1,7 @@
-# Suite 2 (docs/IMPROVEMENT_PLAN.md §4.2, item 2): same recording protocol as suite 1,
-# with U(1) (Sz-conservation) symmetry enforced on the spin-1 Heisenberg chain, and
-# two-site DMRG (`DMRG2`) instead of single-site so the bond dimension is distributed
-# across symmetry sectors automatically (see the sector-allocation note below).
+# Suite 2 (docs/IMPROVEMENT_PLAN.md §4.2, item 2): same protocol and algorithm as suite 1
+# (two-site `DMRG2`), with U(1) (Sz-conservation) symmetry enforced on the spin-1
+# Heisenberg chain. The two-site update also distributes the bond dimension across
+# symmetry sectors automatically (see the sector-allocation note below).
 #
 # API verified against the installed MPSKitModels source
 # (`~/.julia/packages/MPSKitModels/*/src/models/hamiltonians.jl` and
@@ -23,9 +23,8 @@ using Dates
 include(joinpath(@__DIR__, "common.jl"))
 using .BenchCommon
 
-# Sector allocation: unlike suite 1 (fixed full-χ space, single-site DMRG), this suite
-# uses two-site DMRG (`DMRG2` with `trscheme = truncrank(χ)`), which redistributes the
-# bond dimension across U(1) sectors automatically at every two-site update. This mirrors
+# Sector allocation: two-site DMRG (`DMRG2` with `trscheme = truncrank(χ)`) redistributes
+# the bond dimension across U(1) sectors automatically at every two-site update. This mirrors
 # ITensor's behavior, whose two-site `dmrg` likewise chooses the per-sector block sizes
 # itself; a hand-picked static split (tried first) was demonstrably suboptimal
 # (−26.4027 vs ITensor's −26.8188 at χ = 8 on the N = 20 smoke check). The initial state
@@ -44,20 +43,20 @@ function run(;
         seed::Int = 1234, J::Real = 1.0, spin::Real = 1,
         resultsdir::AbstractString = BenchCommon.results_dir()
     )
-    H = heisenberg_XXX(ComplexF64, U1Irrep, FiniteChain(N); J = J, spin = spin)
+    H = heisenberg_XXX(Float64, U1Irrep, FiniteChain(N); J = J, spin = spin)
     pspaces = physicalspace(H)
 
     # warmup: run the full pipeline once at a tiny size so JIT compilation does not
     # pollute the first timed trajectory (methodology guardrail §4.3: wall times must
     # reflect the algorithm, not the compiler)
-    let Hw = heisenberg_XXX(ComplexF64, U1Irrep, FiniteChain(6); J = J, spin = spin)
-        dmrg2_trajectory(FiniteMPS(physicalspace(Hw), u1_seedspace()), Hw; nsweeps = 2, χ = 4)
+    let Hw = heisenberg_XXX(Float64, U1Irrep, FiniteChain(6); J = J, spin = spin)
+        dmrg2_trajectory(FiniteMPS(Float64, physicalspace(Hw), u1_seedspace()), Hw; nsweeps = 2, χ = 4)
     end
 
     trials = Vector{Dict{String, Any}}()
     for χ in chis
         Random.seed!(seed)
-        ψ₀ = FiniteMPS(pspaces, u1_seedspace())
+        ψ₀ = FiniteMPS(Float64, pspaces, u1_seedspace())
         elapsed = @elapsed result = dmrg2_trajectory(ψ₀, H; nsweeps = nsweeps, χ = χ)
         chi_actual = maximum(dim(left_virtualspace(result.ψ, n)) for n in 2:N)
 
@@ -69,6 +68,8 @@ function run(;
                 "chi_actual" => chi_actual,
                 "energies" => result.energies,
                 "walltimes" => result.walltimes,
+                "gctimes" => result.gctimes,
+                "allocd_bytes" => result.allocd,
                 "final_galerkin_error" => result.ϵ,
             )
         )
@@ -82,6 +83,7 @@ function run(;
     data["model"] = "heisenberg_XXX"
     data["symmetry"] = "U1Irrep"
     data["algorithm"] = "DMRG2(trscheme = truncrank(chi))"
+    data["eltype"] = "Float64"
     data["N"] = N
     data["J"] = J
     data["spin"] = spin

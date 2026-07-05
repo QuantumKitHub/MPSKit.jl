@@ -17,7 +17,7 @@ meaningful.** Time-to-accuracy is only comparable if both libraries are solving 
 variational problem to the *same* energy. Before trusting a single wall-time number:
 
 1. Run the MPSKit side and this side at the same N and χ schedule.
-2. Compare the converged (final-sweep, largest-χ, full 30-sweep) energies. They must match
+2. Compare the converged (final-sweep, largest-χ, full-run) energies. They must match
    to ~1e-8. If they do not, the Hamiltonian, the symmetry sector, or the χ convention is
    mismatched and **no timing from that run may be published.**
 
@@ -36,7 +36,7 @@ From the repository root:
 JULIA_NUM_THREADS=1 julia --project=benchmark/comparisons/itensor \
     benchmark/comparisons/itensor/run.jl --smoke
 
-# full run (N=100, χ∈[64,128,256,512,1024], 30 sweeps)
+# full run (N=100, χ∈[64,128,256,512,1024], 10 sweeps)
 JULIA_NUM_THREADS=1 julia --project=benchmark/comparisons/itensor \
     benchmark/comparisons/itensor/run.jl
 
@@ -71,10 +71,10 @@ the two result files' metadata before comparing, and document the hardware.
 | # | Aspect | MPSKit side | ITensor side | Exact parity? | Favors |
 |---|--------|-------------|--------------|---------------|--------|
 | 1 | Model | `heisenberg_XXX(…; J=1, spin=1)` = J·Σ Sᵢ·Sⱼ | official `OpSum` with `"Sz"`,`"S+"`,`"S-"` (DMRG tutorial), same H | **exact** | neither |
-| 2 | Fixed χ | random full-χ `FiniteMPS`, `alg_expand=nothing`, non-truncating gauge | `random_mps(...; linkdims=χ)` + `maxdim=mindim=χ`, `cutoff=0`, `noise=0` | **exact** | neither |
-| 3 | Truncation cutoff | none (fixed χ) | `cutoff=0.0` | **exact** | neither (0 = most favorable to ITensor anyway: never discards weight) |
-| 4 | Element type | `ComplexF64` (MPSKit default) | `Float64` (ITensor default / documented idiom) | no | **ITensor** (real is faster; forcing complex would only slow ITensor and isn't its idiom) |
-| 5 | DMRG update | suite 1: **single-site** (`DMRG`); suite 2: **two-site** (`DMRG2`, `trscheme=truncrank(χ)`) | **two-site** (ITensor's default `dmrg`, the recommended idiom) | suite 1: no; suite 2: **matched** | suite 1: **ITensor** (two-site is more robust against local minima); suite 2: neither |
+| 2 | Fixed χ | `DMRG2` with `trscheme=truncrank(χ)`: every two-site update truncates back to ≤ χ | `random_mps(...; linkdims=χ)` + `maxdim=mindim=χ`, `cutoff=0`, `noise=0` | **matched** | neither |
+| 3 | Truncation cutoff | none (`truncrank` is rank-only) | `cutoff=0.0` | **exact** | neither (0 = most favorable to ITensor anyway: never discards weight) |
+| 4 | Element type | `Float64` (explicit) | `Float64` (ITensor default / documented idiom) | **exact** | neither |
+| 5 | DMRG update | **two-site** (`DMRG2`, `trscheme=truncrank(χ)`), both suites | **two-site** (ITensor's default `dmrg`, the recommended idiom; no single-site `dmrg` exists) | **matched** | neither |
 | 6 | Subspace expansion / noise | none | `noise=0.0` (matches MPSKit) | **exact** | conservative for ITensor — see note |
 | 7 | Sweeps | `maxiter=nsweeps`, `tol=0` (runs all sweeps) | `nsweeps` identical, no early stop in observer | **exact** | neither |
 | 8 | U(1) sector | Sz = 0 sector; small sector-diverse seed, **`DMRG2` distributes χ across sectors itself** | `random_mps(sites, state; linkdims=χ)` with alternating Néel state; **ITensor distributes χ across sectors itself** | **matched** (both libraries choose the split) | neither |
@@ -85,19 +85,25 @@ the two result files' metadata before comparing, and document the hardware.
 
 - **Element type (row 4).** ITensorMPS's `random_mps` is `Float64` by default and that is
   the correct, documented choice for this real-symmetric Hamiltonian. MPSKit's constructors
-  default to `ComplexF64`. Real arithmetic is strictly cheaper, so this **favors ITensor**.
-  We keep it: forcing ITensor into complex would slow it down and depart from its idiom.
+  default to `ComplexF64`, so the MPSKit side passes `Float64` explicitly. Earlier
+  revisions ran MPSKit at its complex default — a 2-4x BLAS handicap that muddied the
+  algorithmic comparison; matched real arithmetic on both sides was a maintainer decision
+  (2026-07-05).
 
-- **Single- vs two-site DMRG (row 5).** Suite 1's MPSKit protocol uses single-site DMRG;
-  ITensor's default `dmrg` is two-site, which is also what its DMRG tutorial and FAQ
-  recommend, so for suite 1 this **favors ITensor** (two-site is generally *more robust*
-  against fixed-χ local minima). Suite 2 instead uses MPSKit's two-site `DMRG2`, matching
-  the update scheme on both sides — this replaced an earlier hand-picked static U(1)
-  sector split that was demonstrably suboptimal (−26.4027 vs −26.8188 at the χ = 8 smoke
-  point). The two updates have different
-  per-sweep cost and semantics — precisely why §4.3 mandates comparing **time-to-accuracy,
-  not time-per-sweep**. `nsweeps` is matched on both sides only as a loop bound, not as a
-  claim that a sweep costs the same.
+- **Update scheme (row 5).** Both suites now use two-site DMRG on both sides: ITensorMPS
+  exposes only the two-site `dmrg` (its tutorial/FAQ-recommended idiom), so no single-site
+  comparison exists, and the earlier single-site suite-1 variant was dropped (maintainer
+  decision, 2026-07-05). Suite 2's `DMRG2` also replaced an earlier hand-picked static
+  U(1) sector split that was demonstrably suboptimal (−26.4027 vs −26.8188 at the χ = 8
+  smoke point). Sweep costs still differ in implementation detail —
+  §4.3 mandates comparing **time-to-accuracy, not time-per-sweep**; `nsweeps` is matched
+  on both sides only as a loop bound.
+
+- **Initial state (rows 2/8).** Both sides start from a random state seeded identically
+  per χ. Trivial suite: both start at full χ. U(1) suite: ITensor's `random_mps` starts
+  at full χ with its own per-sector split, MPSKit grows from a small sector-diverse seed
+  within the first sweeps (`DMRG2` redistributes χ per update). Each library follows its
+  natural protocol; neither split is hand-picked.
 
 - **Noise / subspace expansion (row 6).** ITensor's DMRG FAQ recommends a small, decreasing
   `noise` schedule to help two-site DMRG escape local minima at fixed χ. We set `noise=0.0`
@@ -128,7 +134,7 @@ no-noise, two-site run **plateaued in a local minimum** by sweep 2 (trajectory:
 −26.8188. This is exactly the fixed-χ local-minimum behavior ITensor's FAQ recommends
 `noise` for (row 6), amplified by only 4 sweeps. It is a smoke-scale convergence artifact,
 **not** a Hamiltonian/sector mismatch — note the U(1) χ=8 run reaches −26.8188 (matching the
-MPSKit reference) from its Néel-seeded start. The full 30-sweep run at large χ is where the
+MPSKit reference) from its Néel-seeded start. The full run at large χ is where the
 1e-8 sanity gate must hold; verify it there before publishing any timing.
 
 ## Do not publish numbers from an unverified run

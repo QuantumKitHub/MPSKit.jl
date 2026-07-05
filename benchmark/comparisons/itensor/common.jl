@@ -43,18 +43,29 @@ end
 # (see `benchmark/suites/common.jl`, `dmrg_trajectory`).
 mutable struct TrajectoryObserver <: AbstractObserver
     t0::UInt64
+    gc_prev::Base.GC_Num
     energies::Vector{Float64}
     walltimes::Vector{Float64}
-    TrajectoryObserver() = new(time_ns(), Float64[], Float64[])
+    gctimes::Vector{Float64}
+    allocd::Vector{Int}
+    TrajectoryObserver() = new(time_ns(), Base.gc_num(), Float64[], Float64[], Float64[], Int[])
 end
 
 # `measure!` is passed `energy`, `sweep`, `bond`, `sweep_is_done`, `half_sweep`, ...
 # per the Observer docs. `energy` is real for a real-symmetric Hamiltonian; `real(...)`
-# is defensive and matches the MPSKit side, which also stores `real(...)`.
+# is defensive and matches the MPSKit side, which also stores `real(...)`. Per-sweep GC
+# seconds and allocated bytes are recorded the same way as the MPSKit side
+# (`Base.GC_Diff` between sweeps) — a diagnostic for the investigation, not a published
+# metric.
 function ITensorMPS.measure!(o::TrajectoryObserver; kwargs...)
     if get(kwargs, :sweep_is_done, false)
         push!(o.energies, real(kwargs[:energy]))
         push!(o.walltimes, (time_ns() - o.t0) / 1.0e9)
+        gc_now = Base.gc_num()
+        diff = Base.GC_Diff(gc_now, o.gc_prev)
+        push!(o.gctimes, diff.total_time / 1.0e9)
+        push!(o.allocd, diff.allocd)
+        o.gc_prev = gc_now
     end
     return nothing
 end
@@ -66,18 +77,18 @@ Run ITensorMPS `dmrg` for exactly `nsweeps` sweeps at *fixed* bond dimension `χ
 the energy and elapsed wall time after every sweep. Returns
 `(; psi, energy, energies, walltimes)`.
 
-Fixed-χ protocol (parity with the MPSKit run, which uses a random full-χ `FiniteMPS`,
-`alg_expand = nothing`, and a non-truncating gauge so χ never changes):
+Fixed-χ protocol (parity with the MPSKit run, which uses two-site `DMRG2` with
+`trscheme = truncrank(χ)` so every two-site update truncates back to at most χ):
   * `maxdim = fill(χ, nsweeps)` pins the ceiling to χ on every sweep.
   * `mindim = fill(χ, nsweeps)` pins the floor to χ, so the bond dimension stays at χ
     from the first sweep (the initial `psi0` is already a random full-χ MPS) instead of
     growing adaptively. This is what makes the ITensor trajectory a genuine fixed-χ
     trajectory comparable to MPSKit's. Both floors are capped by the local Hilbert-space
     dimension near the chain ends exactly as MPSKit's are.
-  * `cutoff = 0.0`: no discarded-weight truncation, matching MPSKit's no-cutoff fixed-χ
-    run. This is also the setting most favorable to ITensor — it never throws away weight
-    to save time. (Docs: cutoff is "a float ... specifying the truncation error cutoff",
-    https://docs.itensor.org/ITensorMPS/stable/DMRG.html.)
+  * `cutoff = 0.0`: no discarded-weight truncation, matching MPSKit's `truncrank(χ)`
+    (rank-only, no weight threshold). This is also the setting most favorable to ITensor —
+    it never throws away weight to save time. (Docs: cutoff is "a float ... specifying the
+    truncation error cutoff", https://docs.itensor.org/ITensorMPS/stable/DMRG.html.)
   * `noise = 0.0`: no noise term, matching MPSKit (no subspace expansion).
 
 The clock (`t0`) is reset immediately before the `dmrg` call so the recorded wall times
@@ -89,6 +100,7 @@ function dmrg_trajectory(H, psi0, χ::Int; nsweeps::Int, outputlevel::Int = 0)
     maxdim = fill(χ, nsweeps)
     mindim = fill(χ, nsweeps)
     observer.t0 = time_ns()
+    observer.gc_prev = Base.gc_num()
     # dmrg(H, psi0; nsweeps, maxdim, cutoff, observer, ...) per
     # https://docs.itensor.org/ITensorMPS/stable/DMRG.html
     energy, psi = dmrg(
@@ -96,7 +108,11 @@ function dmrg_trajectory(H, psi0, χ::Int; nsweeps::Int, outputlevel::Int = 0)
         nsweeps = nsweeps, maxdim = maxdim, mindim = mindim,
         cutoff = 0.0, noise = 0.0, outputlevel = outputlevel, observer = observer,
     )
-    return (; psi, energy, energies = observer.energies, walltimes = observer.walltimes)
+    return (;
+        psi, energy,
+        energies = observer.energies, walltimes = observer.walltimes,
+        gctimes = observer.gctimes, allocd = observer.allocd,
+    )
 end
 
 """
