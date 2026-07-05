@@ -14,7 +14,9 @@ For background on what these types represent and how gauging works, see the [Sta
 
 ---
 
-## 1. A finite MPS from length, physical space, and maximum bond dimension
+## 1. A finite MPS
+
+### From length, physical space, and maximum bond dimension
 
 The most common starting point: give the chain length `N`, the local physical `VectorSpace`, and the maximum allowed virtual space.
 The constructor fills the tensors with random `ComplexF64` entries and trims the actual bond dimensions to full rank, so passing an over-large `maxVspace` is safe.
@@ -38,9 +40,7 @@ dim(left_virtualspace(ψ, 3))   # bond dimension between sites 2 and 3
 physicalspace(ψ, 1)             # local Hilbert space at site 1
 ```
 
----
-
-## 2. Choosing the initializer and element type
+### Choosing the initializer and element type
 
 Pass an initializer function (`rand` or `randn`) and an element type as the first two arguments:
 
@@ -51,9 +51,7 @@ Pass an initializer function (`rand` or `randn`) and an element type as the firs
 
 The element type sets the scalar type of the tensors, e.g. `ComplexF64` (the default) or `Float64` for a real-valued state.
 
----
-
-## 3. Per-site physical and virtual spaces
+### Per-site physical and virtual spaces
 
 When the physical space varies from site to site — or you want fine control over which bond gets which maximum dimension — pass vectors instead of scalars.
 The `maxVspaces` vector must have length `N - 1` (one entry per bond):
@@ -69,9 +67,7 @@ maxVspaces = [ℂ^8, ℂ^8, ℂ^8, ℂ^8]        # one per bond (length N-1)
 physicalspace(ψ_het, 2)   # ℂ^3
 ```
 
----
-
-## 4. A product state (trivial virtual space)
+### A product state (trivial virtual space)
 
 A product (bond-dimension-1) state has no entanglement: each site carries its own single-site state, independent of the others (with `rand`, a random such state per site).
 Achieve this by passing `oneunit(d)` — the one-dimensional unit space of the same symmetry sector — as the maximum virtual space:
@@ -85,9 +81,7 @@ dim(left_virtualspace(ψ_prod, 5))   # should be 1
     `oneunit(V)` returns the one-dimensional trivial space matching the symmetry type of `V`.
     For plain complex spaces, `oneunit(ℂ^2) == ℂ^1`.
 
----
-
-## 5. From your own site tensors
+### From your own site tensors
 
 If you already have a vector of `TensorMap` objects with the correct index structure (virtual ⊗ physical ← virtual), pass them directly.
 The constructor performs a left-to-right QR sweep to bring the state into a canonical form:
@@ -106,7 +100,7 @@ Set `normalize = true` to also normalize the state during construction (the defa
 
 ---
 
-## 6. An infinite MPS
+## 2. An infinite MPS
 
 ### Scalar convenience form
 
@@ -154,7 +148,7 @@ inf_tensors = [rand(ComplexF64, ℂ^4 ⊗ ℂ^2 ← ℂ^4)]
 
 ---
 
-## 7. A window MPS
+## 3. A window MPS
 
 A [`WindowMPS`](@ref) embeds a mutable finite window inside two infinite environments.
 
@@ -202,7 +196,7 @@ finite_part = FiniteMPS(6, ℂ^2, ℂ^8; left = ℂ^8, right = ℂ^8)
 
 ---
 
-## 8. A multiline MPS
+## 4. A multiline MPS
 
 [`MultilineMPS`](@ref) stacks several [`InfiniteMPS`](@ref) rows and is used in boundary-MPS methods for 2D classical partition functions.
 
@@ -232,7 +226,7 @@ Dspaces = fill(ℂ^8, 2, 2)
 
 ---
 
-## 9. States with symmetries
+## 5. States with symmetries
 
 All constructors accept TensorKit graded spaces.
 Pass a `Rep[G]` physical space and a `Rep[G]` maximum virtual space; the constructor automatically selects the consistent fusion channels.
