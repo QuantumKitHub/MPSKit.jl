@@ -1,10 +1,13 @@
-# ITensorMPS.jl parity benchmarks (suites 1 & 2)
+# ITensorMPS.jl parity benchmarks (suites 1, 2, 5, 7)
 
 The ITensorMPS.jl side of the MPSKit competitive benchmark described in
 `docs/IMPROVEMENT_PLAN.md` §4. These scripts reproduce, as closely as the two libraries
 allow, the exact protocol of the MPSKit side (`benchmark/suites/`, `benchmark/run.jl`):
 finite DMRG **time-to-accuracy** for the spin-1 Heisenberg chain, no symmetry (suite 1) and
-with U(1) Sz conservation (suite 2).
+with U(1) Sz conservation (suite 2); **TDVP throughput** for a global quench (suite 5, see
+the parity notes in `suite5_tdvp.jl`, including the matched Krylov-exponentiation
+tolerance); and **thread scaling** of the suite-1 workload (suite 7, one process per
+thread-grid point — see `benchmark/slurm/threads_*.sbatch`).
 
 Everything here uses the **official, documented ITensorMPS idiom** so that a reader from the
 ITensor community cannot call it a strawman. Every nontrivial API call carries a comment
@@ -22,8 +25,8 @@ variational problem to the *same* energy. Before trusting a single wall-time num
    mismatched and **no timing from that run may be published.**
 
 At the *smoke* scale (N = 20, χ ∈ {8, 16}, only 4 sweeps) exact agreement is **not**
-expected — 4 sweeps is far from convergence, and fixed-χ variational optima differ slightly
-across gauges, truncation policy, and single- vs two-site updates. Leading-digit agreement
+expected — 4 sweeps is far from convergence, and fixed-χ variational optima depend on the
+random start and can plateau in distinct local minima. Leading-digit agreement
 (all energies ≈ −26.8) is the smoke-scale bar. The 1e-8 gate applies to the full,
 converged run only.
 
@@ -114,28 +117,31 @@ the two result files' metadata before comparing, and document the hardware.
   documented here rather than hidden. This mainly matters at very small χ and few sweeps;
   see the smoke observation below.
 
-## Smoke verification (recorded 2026-07-04, this machine)
+## Smoke verification (recorded 2026-07-05, workstation)
 
-`--smoke` (N=20, χ∈{8,16}, 4 sweeps), `JULIA_NUM_THREADS=1`, OpenBLAS, 16 BLAS threads,
-Julia 1.12.6, ITensorMPS 0.4.1 / ITensors 0.9.30. Final-sweep energies vs the MPSKit smoke
-reference:
+`--smoke` (N=20, χ∈{8,16}, 4 sweeps / 4 TDVP measure steps), `JULIA_NUM_THREADS=1`,
+BLAS threads = 1, OpenBLAS, Julia 1.12.6, ITensorMPS 0.4.1 / ITensors 0.9.30, both sides
+Float64 + two-site DMRG. Final-sweep energies vs the MPSKit smoke reference:
 
 | suite | χ | ITensorMPS | MPSKit reference | |Δ| |
 |-------|---|-----------|------------------|-----|
-| 1 (trivial) | 8  | −26.8048 | −26.8188 | 0.0140 ⚑ |
-| 1 (trivial) | 16 | −26.8280 | −26.8334 | 0.0053 |
-| 2 (U(1))    | 8  | −26.8188 | — | — |
-| 2 (U(1))    | 16 | −26.8313 | — | — |
+| 1 (trivial) | 8  | −26.8048 | −26.8188 | 0.0139 ⚑ |
+| 1 (trivial) | 16 | −26.8280 | −26.8373 | 0.0093 |
+| 2 (U(1))    | 8  | −26.8188 | −26.8188 | 6.0e−5 |
+| 2 (U(1))    | 16 | −26.8313 | −26.8373 | 0.0060 |
 
-All energies agree to leading digits (≈ −26.8), as expected at smoke scale. ⚑ The suite-1
-χ=8 point is 0.014 off — just over the ~1e-2 flag threshold — because that fixed-χ=8,
-no-noise, two-site run **plateaued in a local minimum** by sweep 2 (trajectory:
-−26.7983 → −26.8048 → −26.8048 → −26.8048) while MPSKit's single-site run kept improving to
-−26.8188. This is exactly the fixed-χ local-minimum behavior ITensor's FAQ recommends
-`noise` for (row 6), amplified by only 4 sweeps. It is a smoke-scale convergence artifact,
-**not** a Hamiltonian/sector mismatch — note the U(1) χ=8 run reaches −26.8188 (matching the
-MPSKit reference) from its Néel-seeded start. The full run at large χ is where the
-1e-8 sanity gate must hold; verify it there before publishing any timing.
+All energies agree to leading digits (≈ −26.8), the smoke-scale bar. ⚑ The suite-1 χ=8
+point: the ITensor run **plateaued in a fixed-χ local minimum** by sweep 2 while MPSKit's
+run kept improving to −26.8188 from its different random start. This is exactly the
+fixed-χ local-minimum behavior ITensor's FAQ recommends `noise` for (row 6), amplified by
+only 4 sweeps — a smoke-scale convergence artifact, **not** a Hamiltonian/sector mismatch
+(the U(1) χ=8 pair agrees to 6e−5 on the same Hamiltonian). The full run at large χ is
+where the 1e-8 sanity gate must hold; verify it there before publishing any timing.
+
+**Suite 5 (TDVP) smoke gate**: the mid-chain ⟨Sz⟩ after the full grow+measure trajectory
+agrees between the libraries to ~1e−13 at both χ (χ=8: −0.722010909330507 vs
+−0.722010909330496; χ=16: −0.660446916466855 vs −0.660446916466839) — the two sides
+demonstrably integrate the same quench with the same protocol.
 
 ## Do not publish numbers from an unverified run
 
