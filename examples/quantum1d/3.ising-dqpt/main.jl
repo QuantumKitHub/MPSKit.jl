@@ -28,7 +28,7 @@ First we construct the Hamiltonian in MPO form, and obtain the pre-quenched grou
 L = 20
 H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
-ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG());
+ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG(; verbosity = 0));
 
 md"""
 ## Finite MPS quenching
@@ -57,7 +57,7 @@ Putting it all together, we get
 function finite_sim(L; dt = 0.05, finaltime = 5.0)
     ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
     H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
-    ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG())
+    ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG(; verbosity = 0))
 
     H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
     ψₜ = deepcopy(ψ₀)
@@ -85,7 +85,7 @@ Similarly we could start with an initial infinite state and find the pre-quench 
 
 ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
 H₀ = transverse_field_ising(; g = -0.5)
-ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS());
+ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS(; verbosity = 0));
 
 md"""
 The dot product of two infinite matrix product states scales as  ``\alpha ^N`` where ``α`` is the dominant eigenvalue of the transfer matrix.
@@ -123,7 +123,7 @@ The final code is
 
 function infinite_sim(dt = 0.05, finaltime = 5.0)
     ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
-    ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS())
+    ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS(; verbosity = 0))
 
     ψₜ = deepcopy(ψ₀)
     envs = environments(ψₜ, H₁, ψₜ)

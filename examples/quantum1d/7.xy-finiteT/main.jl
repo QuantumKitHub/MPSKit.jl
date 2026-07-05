@@ -56,8 +56,7 @@ The Hamiltonian can be diagonalized in terms of fermionic creation and annihilat
     E_0 = -\frac{1}{\pi} \text{EllipticE}\left( \sqrt{1 - \gamma^2} \right)
 ```
 
-!!! todo
-    Show the derivation of the ground state energy by diagonalizing the Hamiltonian in terms of fermionic operators.
+The derivation, via a Jordan-Wigner transformation to free fermions followed by a Bogoliubov rotation, can be found in [Lieb, Schultz & Mattis, Ann. Phys. 16, 407 (1961)](https://doi.org/10.1016/0003-4916(61)90115-4).
 """
 
 function groundstate_energy(J, N)
@@ -141,8 +140,7 @@ The resulting expression is
     Z(\beta) = \prod_{k=1}^{N} \left( 1 + e^{-\beta \epsilon_k} \right)^{1/N}
 ```
 
-!!! todo
-    Show the derivation of the partition function for the XY model.
+This expression follows from the same free-fermion diagonalization as the ground-state energy above: each single-particle mode $\epsilon_k$ is independently occupied or empty, giving the usual free-fermion partition function (see again [Lieb, Schultz & Mattis (1961)](https://doi.org/10.1016/0003-4916(61)90115-4)).
 """
 
 function partition_function(β::Number, J::Number, N::Number)
@@ -274,8 +272,6 @@ Z(\beta) =
 In other words, we can compute the partition function at $\beta$ by computing the overlap of two states evolved for $\beta / 2$, as long as the Hamiltonian is Hermitian.
 Otherwise, we could still use the same trick, but we would have to compute the evolved states twice, once for $H$ and once for $H^\dagger$.
 
-!!! todo
-    Add a figure to illustrate this trick.
 """
 
 double_logpartition(ρ₁, ρ₂ = ρ₁) = log(real(dot(ρ₁, ρ₂))) / length(ρ₁)

@@ -31,7 +31,7 @@ md"""
 The ground state can then be found by calling `find_groundstate`.
 """
 
-groundstate, cache, delta = find_groundstate(state, H, VUMPS());
+groundstate, cache, delta = find_groundstate(state, H, VUMPS(; verbosity = 1));
 
 md"""
 As you can see, VUMPS struggles to converge.
@@ -39,7 +39,7 @@ On its own, that is already quite curious.
 Maybe we can do better using another algorithm, such as gradient descent.
 """
 
-groundstate, cache, delta = find_groundstate(state, H, GradientGrassmann(; maxiter = 20));
+groundstate, cache, delta = find_groundstate(state, H, GradientGrassmann(; maxiter = 20, verbosity = 1));
 
 md"""
 Convergence is quite slow and even fails after sufficiently many iterations.
@@ -72,7 +72,7 @@ Alternatively, the Hamiltonian can be constructed directly on a two-site unit ce
 ## H2 = repeat(H, 2); -- copies the one-site version
 H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin = 1 // 2)
 groundstate, envs, delta = find_groundstate(
-    state, H2, VUMPS(; maxiter = 100, tol = 1.0e-12)
+    state, H2, VUMPS(; maxiter = 100, tol = 1.0e-12, verbosity = 1)
 );
 
 md"""
@@ -81,7 +81,7 @@ The reason behind this becomes more obvious at higher bond dimensions:
 """
 
 groundstate, envs, delta = find_groundstate(
-    state, H2, IDMRG2(; trscheme = truncrank(50), maxiter = 20, tol = 1.0e-12)
+    state, H2, IDMRG2(; trscheme = truncrank(50), maxiter = 20, tol = 1.0e-12, verbosity = 1)
 );
 entanglementplot(groundstate)
 
@@ -125,4 +125,4 @@ Even though the bond dimension is higher than in the example without symmetry, c
 
 println(dim(V1))
 println(dim(V2))
-groundstate, cache, delta = find_groundstate(state, H2, VUMPS(; maxiter = 400, tol = 1.0e-12));
+groundstate, cache, delta = find_groundstate(state, H2, VUMPS(; maxiter = 400, tol = 1.0e-12, verbosity = 1));

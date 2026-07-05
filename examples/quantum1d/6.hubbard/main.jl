@@ -46,7 +46,7 @@ const U = 3.0
 
 md"""
 For this case, the ground state energy has an analytic solution, which can be used to benchmark the numerical results.
-It follows from Eq. (6.82) in []().
+It follows from Eq. (6.82) in [Essler, Frahm, Göhmann, Klümper & Korepin, The One-Dimensional Hubbard Model](https://doi.org/10.1017/CBO9780511534843).
 
 ```math
 e(u) = - u - 4 \int_0^{\infty} \frac{d\omega}{\omega} \frac{J_0(\omega) J_1(\omega)}{1 + \exp(2u \omega)}
@@ -67,7 +67,7 @@ function compute_groundstate(
         expansionfactor = (1 / 10),
         expansioniter = 20
     )
-    verbosity = 2
+    verbosity = 0
     psi, = find_groundstate(psi, H; tol = svalue * 10, verbosity)
     for _ in 1:expansioniter
         D = maximum(x -> dim(left_virtualspace(psi, x)), 1:length(psi))
