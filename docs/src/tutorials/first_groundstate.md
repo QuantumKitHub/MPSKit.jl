@@ -138,8 +138,8 @@ Which sign it lands on is arbitrary — it can differ from run to run and betwee
 The plot shows the magnetization close to 1 deep on the ordered side, then dropping to zero — noticeably *below* the thermodynamic critical point `g = 1` (around `g ≈ 0.6` at these parameters).
 Both features follow from how the state is computed rather than from the physics of the transition:
 on the ordered side DMRG sits on one symmetry-broken branch, and past the drop it recovers the exactly symmetric ground state, whose magnetization vanishes.
-Exactly where the drop lands depends on `L`, and `D`, so its location by itself is *not yet* a measurement of the critical point.
-The honest way to locate the transition is by performing scaling analasys, taking the limit of infinite size and bond dimension.
+Exactly where the drop lands depends on `L` and `D`, so its location by itself is *not yet* a measurement of the critical point.
+The honest way to locate the transition is by performing a scaling analysis, taking the limit of infinite size and bond dimension.
 
 ## Where to go next
 
