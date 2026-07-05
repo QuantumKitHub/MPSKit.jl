@@ -17,8 +17,6 @@ The ground state of ``H`` lives in a Hilbert space of dimension ``2^L``, which i
 A *matrix product state* (MPS) sidesteps this by storing the state as a chain of small tensors, one per site, whose sizes we control directly; this is what makes the calculation below tractable.
 The details of that compression are the subject of the concept pages — here we simply use it.
 
-<!-- REVIEW: physics framing — is it accurate to call the sigma^z sigma^z term "ferromagnetic" given the -J sign convention, and to describe g as tuning interaction-vs-field competition? -->
-
 ## Loading the packages
 
 Every code block on this page shares one Julia session, so we only need to load packages once.
@@ -43,8 +41,6 @@ H = transverse_field_ising(FiniteChain(L); g = 0.5)
 The returned object is an `MPOHamiltonian`: the Hamiltonian written in matrix-product-operator form, i.e. as a chain of small tensors just like the state it acts on.
 You do not need to know its internals to use it — MPSKit's algorithms consume it directly.
 For other ways to build Hamiltonians see [Building Hamiltonians](@ref howto_hamiltonians).
-
-<!-- REVIEW: at g = 0.5 the finite chain is on the ordered (ferromagnetic) side of the transition (critical point g = 1 in the thermodynamic limit). Please confirm this characterization. -->
 
 ## 2. Build the initial state
 
@@ -78,9 +74,7 @@ Now we run the calculation.
 ```
 
 DMRG (the density-matrix renormalization group) sweeps back and forth along the chain, locally optimizing each tensor while holding the others fixed, and repeats until the state stops changing.
-The lines printed above are the per-iteration convergence log (shown at the default `verbosity`); each reports how much the state improved on that sweep.
-
-<!-- REVIEW: is it correct to describe the printed iteration log as "how much the state improved on that sweep", and to say DMRG optimizes one tensor locally while holding the others fixed? -->
+The lines printed above are the per-iteration convergence log (shown at the default `verbosity`); each reports the sweep number, the current energy, and a convergence measure (the same Galerkin residual returned as `ϵ` below).
 
 !!! note "The algorithm is optional"
     Calling `find_groundstate(ψ₀, H)` with no algorithm argument selects DMRG automatically for a finite input, so the explicit `DMRG()` above is only for clarity.
@@ -119,21 +113,17 @@ variance(ψ, H)
 A small variance indicates the state is close to an eigenstate of `H`.
 More recipes for observables live in [Computing observables](@ref howto_observables).
 
-<!-- REVIEW: please confirm langle sigma^z_i rangle is the appropriate order parameter for this ZZ-coupling / X-field convention, and that "variance small ⇒ close to eigenstate" is stated correctly. -->
-
 ## 5. Magnetization across the transition
 
 The payoff: we sweep the field `g` from 0 to 2 and, for each value, find the ground state and record its average magnetization.
 This traces out the phase transition.
 
-For this sweep we place the chain on a ring rather than an open segment: `transverse_field_ising()` with no lattice argument builds the Hamiltonian for an infinite chain, and [`periodic_boundary_conditions`](@ref) wraps it onto a finite ring of `L` sites.
-
-<!-- REVIEW: the README uses periodic boundary conditions for this magnetization sweep (Sections 1–4 above used the open FiniteChain). Is periodic preferred here to reduce boundary/finite-size effects and give a sharper-looking transition, or is another reason more accurate? Please confirm or correct. -->
+Each step of the sweep repeats the workflow of Sections 1–4 on the same open chain — only the value of `g` changes.
 
 ```@example first-groundstate
 g_values = 0:0.1:2
 M = map(g_values) do g
-    Hg = periodic_boundary_conditions(transverse_field_ising(; g = g), L)
+    Hg = transverse_field_ising(FiniteChain(L); g = g)
     ψg, = find_groundstate(ψ₀, Hg; verbosity = 0)
     return abs(sum(expectation_value(ψg, i => σᶻ()) for i in 1:L)) / L
 end
@@ -141,13 +131,15 @@ scatter(g_values, M; xlabel = "g", ylabel = "M", label = "D = $D", title = "TFIM
 ```
 
 Here we take the **absolute value** of the mean magnetization.
-A finite chain does not spontaneously break its symmetry, so the raw ``\sum_i\langle\sigma^z_i\rangle`` can land on either sign (or average toward zero); taking `abs` collapses the two symmetry-related ground states onto a single, well-defined order-parameter curve.
+At finite `L` the exact ground state does not break the symmetry: it is the symmetric combination of the two oppositely magnetized states, and its raw magnetization ``\sum_i\langle\sigma^z_i\rangle`` is exactly zero.
+DMRG at finite bond dimension, however, converges to one of the two symmetry-broken states instead, because either one carries far less entanglement than their symmetric superposition.
+Which sign it lands on is arbitrary — it can differ from run to run and between values of `g` — so taking `abs` makes the order-parameter curve well-defined regardless of the branch.
 
-<!-- REVIEW: this is the crucial physics point. Please verify the justification for abs(...): spontaneous symmetry breaking does not literally occur at finite L, so the sign is not fixed; is "abs collapses the two symmetry-related sectors" the right way to explain it here? -->
-
-The plot should show the magnetization large on the ordered side (small `g`) and dropping toward zero on the disordered side (large `g`), with the crossover near `g = 1`.
-
-<!-- REVIEW: at finite L = 16 and small D = 4 the crossover is a smooth crossover, not a sharp transition, and its apparent location may be shifted from the thermodynamic critical point g = 1. Please confirm the expected qualitative shape and that we should not claim a sharp transition or an exact critical point at this size/bond dimension. -->
+The plot shows the magnetization close to 1 deep on the ordered side, then dropping abruptly to zero — noticeably *below* the thermodynamic critical point `g = 1` (around `g ≈ 0.6` at these parameters).
+Both features follow from how the state is computed rather than from the physics of the transition: on the ordered side DMRG sits on one symmetry-broken branch, and past the drop it recovers the exactly symmetric ground state, whose magnetization vanishes.
+Exactly where the drop lands depends on `L`, `D`, and even the random starting state, so its location is *not* a measurement of the critical point.
+<!-- REVIEW: the step location in the verified OBC run (L = 16, D = 4) sits at g ≈ 0.6–0.7; the prose explains it as the point where DMRG stops favoring the symmetry-broken branch and finds the symmetric ground state. Please confirm this reading. -->
+The honest way to locate the transition is the subject of the next tutorial, which performs this sweep directly in the thermodynamic limit.
 
 ## Where to go next
 

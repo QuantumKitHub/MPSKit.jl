@@ -60,8 +60,6 @@ We optimize with [`VUMPS`](@ref), the infinite-chain workhorse, passing it expli
 The lines printed above are VUMPS's per-iteration convergence log, shown at the default `verbosity`.
 VUMPS (the variational uniform matrix product state algorithm) optimizes the single repeated tensor directly in the thermodynamic limit, iterating until it reaches a fixed point.
 
-<!-- REVIEW: please confirm the one-line characterization of VUMPS as a fixed-point optimization of the single uniform (repeated) MPS tensor, and that "iterates until it reaches a fixed point" is an accurate description of its convergence at the flagship's level of detail. -->
-
 The return value has the same shape as on the finite chain: the optimized state `ψ`, the reusable `envs`, and a convergence-error measure `ϵ`.
 
 !!! note "The algorithm is optional here too"
@@ -91,9 +89,7 @@ The infinite setting also unlocks an observable with no finite-chain analogue: t
 correlation_length(ψ)
 ```
 
-<!-- REVIEW: please confirm/correct the description of `correlation_length` as being extracted from the transfer-matrix spectrum, and add the units (lattice spacings?) if you want them stated. -->
-
-The correlation length tells us how far apart two spins can still "feel" each other.
+The correlation length tells us how far apart two spins can still "feel" each other; it is measured in units of the lattice spacing.
 It grows as we approach the critical point `g = 1`, where correlations become long-ranged.
 We can see this by optimizing a second state right at criticality and comparing:
 
@@ -103,11 +99,7 @@ H_crit = transverse_field_ising(; g = 1.0)
 correlation_length(ψ_crit)
 ```
 
-<!-- REVIEW: expected-behavior claim — is the correlation length at g = 1.0 larger than at g = 0.5, i.e. does it grow toward criticality? -->
-
 At a genuine critical point the correlation length diverges, but a finite bond dimension `D` can only capture correlations out to a finite range, so what we measure is large but capped rather than infinite.
-
-<!-- REVIEW: please confirm that finite bond dimension D caps the correlation length (finite-entanglement scaling), so the measured value near g = 1 is finite rather than divergent. -->
 
 ## 4. Magnetization across the transition
 
@@ -124,15 +116,13 @@ end
 scatter(g_values, M; xlabel = "g", ylabel = "M", label = "D = $D", title = "TFIM magnetization (L = ∞)")
 ```
 
-Compared with the finite-chain curve, the transition here should look sharper and its crossover should sit closer to the thermodynamic critical point `g = 1`, because we have removed the finite-size rounding.
-
-<!-- REVIEW: please confirm the qualitative comparison — infinite (VUMPS, finite D) magnetization curve is sharper and its crossover nearer g = 1 than the finite L = 16 curve. -->
+Compare this with the finite-chain sweep of the previous tutorial, where the magnetization dropped to zero well before `g = 1`, at a point set by the algorithm rather than by the physics.
+The infinite curve instead tracks the transition itself: the magnetization stays on its ordered branch all the way up to the critical point and collapses to zero right at `g = 1`.
+What little smearing remains around the critical point is a finite-bond-dimension effect, and it shrinks as `D` grows.
 
 We still take the **absolute value** of the magnetization, but for a subtly different reason than on the finite chain.
-A finite chain cannot spontaneously break its symmetry, so there `abs` merely collapsed a sign that averaged toward zero.
-An infinite MPS at finite bond dimension, by contrast, *can* settle into one of the two symmetry-broken ground states on the ordered side, landing on a definite nonzero magnetization of either sign; `abs` again puts both branches onto a single order-parameter curve.
-
-<!-- REVIEW: this is the key physics subtlety and I am not confident of the exact statement. Please verify: does an InfiniteMPS at finite D genuinely break the Z2 symmetry spontaneously on the ordered side (g < 1), unlike the finite chain, and is "abs collapses the two symmetry-broken branches" the right framing? -->
+On the finite chain the nonzero magnetization was an artifact of the algorithm: the exact ground state there is symmetric, and DMRG landed on a symmetry-broken state only because it carries less entanglement.
+In the thermodynamic limit the symmetry breaking is genuine — the two oppositely magnetized states become true ground states — and an infinite MPS at finite bond dimension settles into one of them on the ordered side, landing on a definite nonzero magnetization of either sign; `abs` again puts both branches onto a single order-parameter curve.
 
 ## Where to go next
 
