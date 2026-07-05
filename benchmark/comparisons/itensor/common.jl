@@ -24,8 +24,8 @@ export TrajectoryObserver, collect_metadata, dmrg_trajectory, write_results, res
 """
     results_dir() -> String
 
-Absolute path to `benchmark/results/` (shared with the MPSKit side), creating it if
-necessary. This directory is two levels up from `benchmark/comparisons/itensor/`.
+Absolute path to `benchmark/results/` (shared with the MPSKit side), creating it if necessary.
+This directory is two levels up from `benchmark/comparisons/itensor/`.
 """
 function results_dir()
     dir = normpath(joinpath(@__DIR__, "..", "..", "results"))
