@@ -5,6 +5,7 @@ Manifest.toml
 **/dev/
 benchmark/results/*
 !benchmark/results/.gitkeep
+benchmark/slurm/logs/
 
 # DocumenterVitepress / Node build artifacts
 **/node_modules/
