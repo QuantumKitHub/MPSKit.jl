@@ -66,8 +66,7 @@ The Hamiltonian can be diagonalized in terms of fermionic creation and annihilat
     E_0 = -\frac{1}{\pi} \text{EllipticE}\left( \sqrt{1 - \gamma^2} \right)
 ```
 
-!!! todo
-    Show the derivation of the ground state energy by diagonalizing the Hamiltonian in terms of fermionic operators.
+The derivation, via a Jordan-Wigner transformation to free fermions followed by a Bogoliubov rotation, can be found in [Lieb, Schultz & Mattis, Ann. Phys. 16, 407 (1961)](https://doi.org/10.1016/0003-4916(61)90115-4).
 
 ````julia
 function groundstate_energy(J, N)
@@ -125,11 +124,11 @@ println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 ````
 
 ````
-[ Info: DMRG2   1:	obj = -5.004084801485e+00	err = 9.7485774328e-01	time = 1.43 min
-[ Info: DMRG2   2:	obj = -5.004096940647e+00	err = 1.1899230994e-06	time = 1.27 sec
-[ Info: DMRG2   3:	obj = -5.004096975044e+00	err = 2.2262868216e-09	time = 0.80 sec
-[ Info: DMRG2 conv 4:	obj = -5.004096975044e+00	err = 1.1612932838e-13	time = 1.47 min
-Numerical:	-0.15637803047010942
+[ Info: DMRG2   1:	obj = -5.004084869795e+00	err = 9.8826020061e-01	time = 1.04 min
+[ Info: DMRG2   2:	obj = -5.004096937587e+00	err = 1.1541480959e-06	time = 0.42 sec
+[ Info: DMRG2   3:	obj = -5.004096975044e+00	err = 2.5015824967e-09	time = 0.72 sec
+[ Info: DMRG2 conv 4:	obj = -5.004096975044e+00	err = 1.8118839762e-13	time = 1.07 min
+Numerical:	-0.15637803047010948
 Exact (N=32):	-0.15637803047254015
 Exact (N=Inf):	-0.15915494309189535
 
@@ -173,8 +172,7 @@ The resulting expression is
     Z(\beta) = \prod_{k=1}^{N} \left( 1 + e^{-\beta \epsilon_k} \right)^{1/N}
 ```
 
-!!! todo
-    Show the derivation of the partition function for the XY model.
+This expression follows from the same free-fermion diagonalization as the ground-state energy above: each single-particle mode $\epsilon_k$ is independently occupied or empty, giving the usual free-fermion partition function (see again [Lieb, Schultz & Mattis (1961)](https://doi.org/10.1016/0003-4916(61)90115-4)).
 
 ````julia
 function partition_function(β::Number, J::Number, N::Number)
@@ -307,9 +305,6 @@ Z(\beta) =
 
 In other words, we can compute the partition function at $\beta$ by computing the overlap of two states evolved for $\beta / 2$, as long as the Hamiltonian is Hermitian.
 Otherwise, we could still use the same trick, but we would have to compute the evolved states twice, once for $H$ and once for $H^\dagger$.
-
-!!! todo
-    Add a figure to illustrate this trick.
 
 ````julia
 double_logpartition(ρ₁, ρ₂ = ρ₁) = log(real(dot(ρ₁, ρ₂))) / length(ρ₁)
