@@ -68,6 +68,7 @@ makedocs(;
             "howto/hamiltonians.md",
             "howto/groundstate_algorithms.md",
             "howto/bond_dimension.md",
+            "howto/time_evolution.md",
             "howto/observables.md",
             "howto/entanglement.md",
         ],
