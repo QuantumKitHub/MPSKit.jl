@@ -74,6 +74,9 @@ makedocs(;
             "howto/entanglement.md",
             "howto/excitations.md",
         ],
+        "Concepts" => [
+            "concepts/algorithm_landscape.md",
+        ],
         "Examples" => "examples/index.md",
         "Library" => [
             "lib/public.md",
