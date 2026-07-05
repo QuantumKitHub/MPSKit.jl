@@ -70,7 +70,11 @@ makedocs(;
             "howto/observables.md",
             "howto/entanglement.md",
         ],
-        "Examples" => "examples/index.md",
+        "Examples" => [
+            "Overview" => "examples/index.md",
+            "Quantum (1+1)d" => quantum_pages,
+            "Classical (2+0)d" => classic_pages,
+        ],
         "Library" => [
             "lib/public.md",
             "lib/states.md",
