@@ -27,13 +27,11 @@ dimensionless field ``g`` tunes the competition between the ``\sigma^z\sigma^z``
 interaction and the transverse ``\sigma^x`` field.
 The model has a quantum critical point at ``g = 1``.
 
-<!-- REVIEW: physics framing — critical point at g = 1 for this J(ZZ) + Jg(X) convention, and the "competition between interaction and field" description. Please confirm (mirrors the framing already used in the tutorials). -->
-
 Rather than looking at a single field value, we will scan ``g`` across the transition and
 diagnose it three independent ways, comparing a *finite* chain against a calculation
 performed *directly in the thermodynamic limit*:
 
-1. the order parameter ``|\langle\sigma^z\rangle|``, computed both for a finite ring and
+1. the order parameter ``|\langle\sigma^z\rangle|``, computed both for a finite chain and
    for an infinite chain, in one figure;
 2. the entanglement entropy of the infinite state;
 3. the correlation length of the infinite state.
@@ -53,9 +51,8 @@ We fix a finite chain length `L`, a bond dimension `D` (the accuracy knob, see
 [Controlling bond dimension](@ref howto_bond_dimension)), and the set of field values to
 scan.
 `D` is kept modest so the whole page runs in a couple of minutes; increasing it sharpens
-every curve below.
-
-<!-- REVIEW: expected-behavior claim — increasing the bond dimension D sharpens the transition in all three diagnostics (magnetization, entropy, correlation length). Please confirm this qualitative statement. -->
+the infinite-state diagnostics below (the finite-chain curve responds to `D` in a less
+obvious way, as we will see).
 
 ````julia
 L = 16
@@ -71,17 +68,17 @@ g_values = 0.1:0.1:2.0
 
 We compute the order parameter ``|\langle\sigma^z\rangle|`` two ways at every field value.
 
-For the **finite** calculation we place the chain on a ring with
-[`periodic_boundary_conditions`](@ref) — this removes the open-end boundary effects and
-gives a cleaner curve at fixed `L` — and optimize with [`DMRG`](@ref).
-We average ``\langle\sigma^z_i\rangle`` over the sites and take the absolute value, because
-a finite chain does not spontaneously break its symmetry and the raw sum can land on either
-sign (see the discussion in [Your first ground state](@ref tutorial_first_groundstate)).
+For the **finite** calculation we use an open chain of `L` sites, exactly as in the
+tutorial, and optimize with [`DMRG`](@ref).
+We average ``\langle\sigma^z_i\rangle`` over the sites and take the absolute value: the
+exact finite-`L` ground state is symmetric, but DMRG lands on one of the two
+symmetry-broken states with an arbitrary sign (see the discussion in
+[Your first ground state](@ref tutorial_first_groundstate)).
 
 ````julia
 ψ₀_finite = FiniteMPS(L, ℂ^2, ℂ^D)
 M_finite = map(g_values) do g
-    H = periodic_boundary_conditions(transverse_field_ising(; g = g), L)
+    H = transverse_field_ising(FiniteChain(L); g = g)
     ψ, = find_groundstate(ψ₀_finite, H, DMRG(; verbosity = 0))
     return abs(sum(expectation_value(ψ, i => σᶻ()) for i in 1:L)) / L
 end;
@@ -102,9 +99,9 @@ end;
 ````
 
 The order parameter of a translation-invariant state is just ``\langle\sigma^z\rangle`` on
-a single site of the unit cell; we again take the absolute value.
-
-<!-- REVIEW: for the infinite state on the ordered side (g < 1) the finite-D MPS can settle into one of the two symmetry-broken ground states, so abs collapses the two branches onto one curve. This is the same subtlety flagged in the thermodynamic-limit tutorial; please confirm. -->
+a single site of the unit cell; we again take the absolute value, because on the ordered
+side the infinite state settles into one of the two symmetry-broken ground states (see
+[The thermodynamic limit](@ref tutorial_thermodynamic_limit)).
 
 ````julia
 M_infinite = [abs(expectation_value(ψ, 1 => σᶻ())) for ψ in states_infinite];
@@ -116,7 +113,7 @@ Plotting both curves in a single figure lets us compare them directly.
 p_magnetization = plot(;
     xlabel = "g", ylabel = "|⟨σᶻ⟩|", title = "TFIM order parameter", legend = :bottomleft
 )
-scatter!(p_magnetization, g_values, M_finite; label = "finite ring, L = $L, D = $D")
+scatter!(p_magnetization, g_values, M_finite; label = "finite chain, L = $L, D = $D")
 scatter!(p_magnetization, g_values, M_infinite; label = "infinite, D = $D")
 vline!(p_magnetization, [1.0]; color = "gray", linestyle = :dash, label = "g = 1")
 p_magnetization
@@ -124,13 +121,21 @@ p_magnetization
 
 ![](figure-1.png)
 
-Both curves are large on the ordered side (small `g`) and fall toward zero on the
-disordered side (large `g`), with the crossover near `g = 1`.
-The finite ring rounds the transition off into a smooth crossover whose apparent location
-is shifted away from `g = 1`, while the infinite calculation drops much more steeply near
-the critical point because there is no finite size to smear it out.
+Both calculations agree deep in either phase, but near the transition they tell very
+different stories.
+The infinite curve stays on its ordered branch essentially up to `g = 1` and then
+collapses: it locates the critical point cleanly.
+The finite-chain curve instead drops to zero far earlier — at this `L` and `D` the
+variational optimum on the open chain switches from the symmetry-broken branch to the
+exactly symmetric ground state, whose magnetization vanishes.
+Where that switch happens is set by `L`, `D`, and even the random starting state, not by
+the physics; the same sweep at `D = 4` in
+[Your first ground state](@ref tutorial_first_groundstate) puts it elsewhere.
+That is the real lesson of this panel: the finite-chain order parameter is dominated by
+which state the algorithm selects, while the calculation performed directly in the
+thermodynamic limit pins the transition at `g = 1`.
 
-<!-- REVIEW: expected-behavior claim — the finite (L = 16) curve is a rounded crossover shifted from g = 1, while the infinite (VUMPS, finite D) curve is sharper and sits closer to g = 1. Neither is a true sharp transition at these finite L / finite D. Please confirm. -->
+<!-- REVIEW: empirical behavior after the switch to the open chain — at D = 8 the finite curve collapses to the symmetric state already around g ≈ 0.25 (at D = 4 in the tutorial: around g ≈ 0.65). The paragraph frames the finite curve as an algorithm-selection effect rather than a rounded transition. Please confirm this framing. -->
 
 ## 2. Entanglement entropy across the transition
 
@@ -139,8 +144,6 @@ grows sharply as we approach it.
 For an [`InfiniteMPS`](@ref), [`entropy`](@ref) returns the von Neumann entanglement entropy
 per bond, one value for each site of the unit cell.
 Our unit cell has a single site, so we take the one entry with `only`.
-
-<!-- REVIEW: assumes entropy(::InfiniteMPS) returns a vector with one entry per unit-cell site, hence length 1 for a single-site cell; only(...) then extracts the scalar. Please confirm the return shape. -->
 
 ````julia
 S_infinite = [real(only(entropy(ψ))) for ψ in states_infinite]
@@ -157,10 +160,8 @@ p_entropy
 
 The entropy peaks near `g = 1`.
 That peak is the entanglement signature of the phase transition: at criticality
-correlations become long-ranged and the ground state is maximally entangled, whereas deep
+correlations become long-ranged and the ground state is at its most entangled, whereas deep
 in either phase the state is closer to a simple product and the entropy is small.
-
-<!-- REVIEW: physics claim — the entanglement entropy peaks at/near the critical point g = 1, and this peak is the entanglement signature of the transition. Please confirm the location and interpretation. -->
 
 ## 3. Correlation length across the transition
 
@@ -188,16 +189,12 @@ At a genuine critical point it would diverge, but a finite bond dimension `D` ca
 capture correlations out to a finite range, so what we measure is large-but-capped rather
 than infinite — the peak grows and sharpens as `D` is increased.
 
-<!-- REVIEW: physics claim — the correlation length peaks near g = 1 and would diverge at the true critical point, but finite bond dimension D caps it (finite-entanglement scaling), so the measured value near g = 1 is finite. Please confirm. -->
-
 ## What you now have
 
 Three independent diagnostics — the order parameter, the entanglement entropy, and the
 correlation length — all locate the transition of the transverse-field Ising model near
-`g = 1`, and the finite-versus-infinite comparison shows concretely how working directly in
-the thermodynamic limit removes the finite-size rounding.
-
-<!-- REVIEW: summary claim — all three diagnostics agree on a transition near g = 1. Please confirm this is a fair takeaway at these finite L / finite D. -->
+`g = 1`, and the finite-versus-infinite comparison shows concretely why the thermodynamic
+limit is the right place to measure it.
 
 From here the gallery goes further.
 The Ising CFT example extracts the momentum-resolved excitation spectrum right at

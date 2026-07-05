@@ -54,7 +54,6 @@ A useful, diagnostic-driven example for recognizing and debugging convergence fa
 
 Distinguishes the two symmetry-protected topological phases of the SU(2)-symmetric spin-1 Heisenberg chain by restricting the virtual `SU2Space` to integer or half-integer charges, then compares the two resulting ground states through their energy, transfer-matrix spectrum (`transferplot`), entanglement spectrum (`entanglementplot`), and entanglement entropy (`entropy`).
 Builds directly on the symmetry machinery introduced in the Haldane gap example.
-<!-- REVIEW: double-check that "symmetry-protected topological order" and the integer/half-integer grading argument are presented with the right level of rigor for a non-specialist reader. -->
 **Level: intermediate/advanced.**
 
 ### [Hubbard chain at half filling](quantum1d/6.hubbard/index.md)
@@ -79,7 +78,6 @@ A technical, comparison-heavy example built around `MPSKit.infinite_temperature_
 
 The most comprehensive example in the gallery: works directly in the thermodynamic limit with a truncated bosonic local Hilbert space, extracts correlation functions and the correlation length as a function of bond dimension, computes the momentum distribution, and maps out the Mott-insulator/superfluid structure of the phase diagram from the ground-state response to an applied phase twist.
 Touches most of the ground-state toolbox (`InfiniteMPS`, `find_groundstate`, bond-dimension control, `expectation_value`-based observables) in a single, longer study.
-<!-- REVIEW: confirm that describing the final heatmap as mapping out "Mott-insulator/superfluid structure" is an accurate summary of what the order-parameter plot shows. -->
 **Level: advanced.**
 
 ## Classical (2+0)d
