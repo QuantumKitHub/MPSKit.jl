@@ -25,6 +25,11 @@ the operator is a `AbstractTensorMap` that acts on the physical space of a singl
 # Returns
 - `val::Number`: the (normalized) expectation value `⟨ψ|O|ψ⟩ / ⟨ψ|ψ⟩`.
 
+!!! note "Infinite operators"
+    For an infinite state and an infinite operator (e.g. an `InfiniteMPOHamiltonian`), the
+    return value is the total over one unit cell; divide by `length(ψ)` to obtain a
+    per-site value.
+
 # Examples
 ```jldoctest
 julia> ψ = FiniteMPS(ones(Float64, (ℂ^2)^4));
