@@ -135,15 +135,16 @@ At finite `L` the exact ground state does not break the symmetry: it is the symm
 DMRG at finite bond dimension, however, converges to one of the two symmetry-broken states instead, because either one carries far less entanglement than their symmetric superposition.
 Which sign it lands on is arbitrary — it can differ from run to run and between values of `g` — so taking `abs` makes the order-parameter curve well-defined regardless of the branch.
 
-The plot shows the magnetization close to 1 deep on the ordered side, then dropping abruptly to zero — noticeably *below* the thermodynamic critical point `g = 1` (around `g ≈ 0.6` at these parameters).
-Both features follow from how the state is computed rather than from the physics of the transition: on the ordered side DMRG sits on one symmetry-broken branch, and past the drop it recovers the exactly symmetric ground state, whose magnetization vanishes.
-Exactly where the drop lands depends on `L`, `D`, and even the random starting state, so its location is *not* a measurement of the critical point.
-<!-- REVIEW: the step location in the verified OBC run (L = 16, D = 4) sits at g ≈ 0.6–0.7; the prose explains it as the point where DMRG stops favoring the symmetry-broken branch and finds the symmetric ground state. Please confirm this reading. -->
-The honest way to locate the transition is the subject of the next tutorial, which performs this sweep directly in the thermodynamic limit.
+The plot shows the magnetization close to 1 deep on the ordered side, then dropping to zero — noticeably *below* the thermodynamic critical point `g = 1` (around `g ≈ 0.6` at these parameters).
+Both features follow from how the state is computed rather than from the physics of the transition:
+on the ordered side DMRG sits on one symmetry-broken branch, and past the drop it recovers the exactly symmetric ground state, whose magnetization vanishes.
+Exactly where the drop lands depends on `L`, and `D`, so its location by itself is *not yet* a measurement of the critical point.
+The honest way to locate the transition is by performing scaling analasys, taking the limit of infinite size and bond dimension.
 
 ## Where to go next
 
 You have run a full MPSKit workflow: build a model, optimize an MPS ground state, measure observables, and scan a parameter.
-A natural next step is [The thermodynamic limit](@ref tutorial_thermodynamic_limit): the same calculation performed directly at infinite system size with an `InfiniteMPS`, which removes the finite-size effects seen above and lets you locate the critical point more cleanly.
+A natural next step is [The thermodynamic limit](@ref tutorial_thermodynamic_limit):
+the same calculation performed directly at infinite system size with an `InfiniteMPS`, which removes the finite-size effects seen above and lets you locate the critical point more cleanly.
 
 To go deeper on the individual steps, see [Constructing states](@ref howto_states), [Building Hamiltonians](@ref howto_hamiltonians), [Computing observables](@ref howto_observables), [Controlling bond dimension](@ref howto_bond_dimension), and [Entanglement entropy and spectrum](@ref howto_entanglement); the algorithm reference is [Ground-state algorithms](@ref lib_groundstate).

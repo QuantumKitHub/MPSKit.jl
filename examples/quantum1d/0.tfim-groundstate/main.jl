@@ -108,21 +108,12 @@ vline!(p_magnetization, [1.0]; color = "gray", linestyle = :dash, label = "g = 1
 p_magnetization
 
 md"""
-Both calculations agree deep in either phase, but near the transition they tell very
-different stories.
-The infinite curve stays on its ordered branch essentially up to `g = 1` and then
-collapses: it locates the critical point cleanly.
-The finite-chain curve instead drops to zero far earlier — at this `L` and `D` the
-variational optimum on the open chain switches from the symmetry-broken branch to the
-exactly symmetric ground state, whose magnetization vanishes.
-Where that switch happens is set by `L`, `D`, and even the random starting state, not by
-the physics; the same sweep at `D = 4` in
-[Your first ground state](@ref tutorial_first_groundstate) puts it elsewhere.
-That is the real lesson of this panel: the finite-chain order parameter is dominated by
-which state the algorithm selects, while the calculation performed directly in the
-thermodynamic limit pins the transition at `g = 1`.
+Both calculations agree deep in either phase, but near the transition they tell very different stories.
+The infinite curve stays on its ordered branch essentially up to `g = 1` and then collapses: it locates the critical point cleanly.
+The finite-chain curve instead drops to zero far earlier — at this `L` and `D` the variational optimum on the open chain switches from the symmetry-broken branch to the exactly symmetric ground state, whose magnetization vanishes.
+Where that switch happens is set by `L`, `D`, not by the physics; the same sweep at `D = 4` in [Your first ground state](@ref tutorial_first_groundstate) puts it elsewhere.
+That is the real lesson of this panel: the finite-chain order parameter is dominated by which state the algorithm selects, while the calculation performed directly in the thermodynamic limit pins the transition at `g = 1`.
 
-<!-- REVIEW: empirical behavior after the switch to the open chain — at D = 8 the finite curve collapses to the symmetric state already around g ≈ 0.25 (at D = 4 in the tutorial: around g ≈ 0.65). The paragraph frames the finite curve as an algorithm-selection effect rather than a rounded transition. Please confirm this framing. -->
 """
 
 md"""
