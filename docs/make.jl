@@ -74,6 +74,9 @@ makedocs(;
             "howto/entanglement.md",
             "howto/excitations.md",
         ],
+        "Concepts" => [
+            "concepts/algorithm_landscape.md",
+        ],
         "Examples" => [
             "Overview" => "examples/index.md",
             "Quantum (1+1)d" => quantum_pages,
