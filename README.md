@@ -42,8 +42,9 @@ out the [examples](https://QuantumKitHub.github.io/MPSKit.jl/dev/examples/) for 
 use-cases.
 
 This package is under active development and new algorithms are added regularly.
-Nevertheless, the documentation is quite terse, so feel free to open an issue if you have
-any questions.
+Questions and general discussion are welcome on [GitHub
+Discussions](https://github.com/QuantumKitHub/MPSKit.jl/discussions); if you think you have
+found a bug, please open an issue.
 
 ## Installation
 
