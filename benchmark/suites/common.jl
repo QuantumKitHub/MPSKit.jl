@@ -18,7 +18,7 @@ using Pkg
 using LinearAlgebra
 using JSON
 
-export collect_metadata, dmrg_trajectory, write_results, results_dir
+export collect_metadata, dmrg_trajectory, dmrg2_trajectory, write_results, results_dir
 
 """
     results_dir() -> String
@@ -89,6 +89,35 @@ function dmrg_trajectory(ψ₀, H; nsweeps::Int, tol::Real = 0.0, verbosity::Int
         return ψ, envs
     end
     alg = DMRG(; tol = tol, maxiter = nsweeps, verbosity = verbosity, finalize = finalize)
+    ψ, envs, ϵ = find_groundstate(ψ₀, H, alg)
+    return (; ψ, envs, ϵ, energies, walltimes)
+end
+
+"""
+    dmrg2_trajectory(ψ₀, H; nsweeps, χ, tol = 0.0, verbosity = 0) -> NamedTuple
+
+Two-site (`DMRG2`) counterpart of [`dmrg_trajectory`](@ref): run exactly `nsweeps` sweeps
+(`tol = 0.0` so the convergence check practically never fires early), truncating every
+two-site update back to at most `χ` states per bond via `trscheme = truncrank(χ)`.
+The two-site update lets the algorithm redistribute the bond dimension across symmetry
+sectors on its own, so `ψ₀` only needs to seed the run with a small sector-diverse virtual
+space rather than a hand-picked full-χ split.
+
+Returns `(; ψ, envs, ϵ, energies, walltimes)`, same fields as [`dmrg_trajectory`](@ref).
+"""
+function dmrg2_trajectory(ψ₀, H; nsweeps::Int, χ::Int, tol::Real = 0.0, verbosity::Int = 0)
+    energies = Float64[]
+    walltimes = Float64[]
+    t0 = time_ns()
+    finalize = function (iter, ψ, H′, envs)
+        push!(energies, real(expectation_value(ψ, H′, envs)))
+        push!(walltimes, (time_ns() - t0) / 1.0e9)
+        return ψ, envs
+    end
+    alg = DMRG2(;
+        tol = tol, maxiter = nsweeps, verbosity = verbosity,
+        trscheme = truncrank(χ), finalize = finalize
+    )
     ψ, envs, ϵ = find_groundstate(ψ₀, H, alg)
     return (; ψ, envs, ϵ, energies, walltimes)
 end

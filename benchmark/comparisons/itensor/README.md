@@ -74,10 +74,10 @@ the two result files' metadata before comparing, and document the hardware.
 | 2 | Fixed χ | random full-χ `FiniteMPS`, `alg_expand=nothing`, non-truncating gauge | `random_mps(...; linkdims=χ)` + `maxdim=mindim=χ`, `cutoff=0`, `noise=0` | **exact** | neither |
 | 3 | Truncation cutoff | none (fixed χ) | `cutoff=0.0` | **exact** | neither (0 = most favorable to ITensor anyway: never discards weight) |
 | 4 | Element type | `ComplexF64` (MPSKit default) | `Float64` (ITensor default / documented idiom) | no | **ITensor** (real is faster; forcing complex would only slow ITensor and isn't its idiom) |
-| 5 | DMRG update | **single-site** (`DMRG`) | **two-site** (ITensor's default `dmrg`, the recommended idiom) | no | **ITensor** (two-site is more robust against local minima) |
+| 5 | DMRG update | suite 1: **single-site** (`DMRG`); suite 2: **two-site** (`DMRG2`, `trscheme=truncrank(χ)`) | **two-site** (ITensor's default `dmrg`, the recommended idiom) | suite 1: no; suite 2: **matched** | suite 1: **ITensor** (two-site is more robust against local minima); suite 2: neither |
 | 6 | Subspace expansion / noise | none | `noise=0.0` (matches MPSKit) | **exact** | conservative for ITensor — see note |
 | 7 | Sweeps | `maxiter=nsweeps`, `tol=0` (runs all sweeps) | `nsweeps` identical, no early stop in observer | **exact** | neither |
-| 8 | U(1) sector | Sz = 0 sector; interior bond split hand-picked (`qmax`, a flagged REVIEW guess) | `random_mps(sites, state; linkdims=χ)` with alternating Néel state; **ITensor distributes χ across sectors itself** | protocol-equivalent | **ITensor** (no hand-tuning of the sector split — the library chooses) |
+| 8 | U(1) sector | Sz = 0 sector; small sector-diverse seed, **`DMRG2` distributes χ across sectors itself** | `random_mps(sites, state; linkdims=χ)` with alternating Néel state; **ITensor distributes χ across sectors itself** | **matched** (both libraries choose the split) | neither |
 | 9 | Warmup | N=6, χ=4, 2 sweeps before timing | identical warmup | **exact** | neither |
 | 10 | Per-sweep recording | `finalize` hook, one (E, t) per sweep; `t0` set just before solve | `AbstractObserver.measure!` on `sweep_is_done`; `t0` reset just before `dmrg` | **exact** | neither |
 
@@ -88,10 +88,13 @@ the two result files' metadata before comparing, and document the hardware.
   default to `ComplexF64`. Real arithmetic is strictly cheaper, so this **favors ITensor**.
   We keep it: forcing ITensor into complex would slow it down and depart from its idiom.
 
-- **Single- vs two-site DMRG (row 5).** The MPSKit protocol uses single-site DMRG; ITensor's
-  default `dmrg` is two-site, which is also what its DMRG tutorial and FAQ recommend. We use
-  ITensor's recommended two-site update. Because two-site DMRG is generally *more robust*
-  against fixed-χ local minima, this **favors ITensor**. The two updates have different
+- **Single- vs two-site DMRG (row 5).** Suite 1's MPSKit protocol uses single-site DMRG;
+  ITensor's default `dmrg` is two-site, which is also what its DMRG tutorial and FAQ
+  recommend, so for suite 1 this **favors ITensor** (two-site is generally *more robust*
+  against fixed-χ local minima). Suite 2 instead uses MPSKit's two-site `DMRG2`, matching
+  the update scheme on both sides — this replaced an earlier hand-picked static U(1)
+  sector split that was demonstrably suboptimal (−26.4027 vs −26.8188 at the χ = 8 smoke
+  point). The two updates have different
   per-sweep cost and semantics — precisely why §4.3 mandates comparing **time-to-accuracy,
   not time-per-sweep**. `nsweeps` is matched on both sides only as a loop bound, not as a
   claim that a sweep costs the same.

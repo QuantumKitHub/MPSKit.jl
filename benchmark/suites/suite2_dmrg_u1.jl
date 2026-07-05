@@ -1,5 +1,7 @@
-# Suite 2 (docs/IMPROVEMENT_PLAN.md §4.2, item 2): same protocol as suite 1, with U(1)
-# (Sz-conservation) symmetry enforced on the spin-1 Heisenberg chain.
+# Suite 2 (docs/IMPROVEMENT_PLAN.md §4.2, item 2): same recording protocol as suite 1,
+# with U(1) (Sz-conservation) symmetry enforced on the spin-1 Heisenberg chain, and
+# two-site DMRG (`DMRG2`) instead of single-site so the bond dimension is distributed
+# across symmetry sectors automatically (see the sector-allocation note below).
 #
 # API verified against the installed MPSKitModels source
 # (`~/.julia/packages/MPSKitModels/*/src/models/hamiltonians.jl` and
@@ -21,32 +23,25 @@ using Dates
 include(joinpath(@__DIR__, "common.jl"))
 using .BenchCommon
 
-# REVIEW: choice of U(1) virtual-space shape. The ground state of the antiferromagnetic
-# spin-1 Heisenberg chain lives in the total-Sz = 0 sector, so the boundary (leftmost /
-# rightmost) virtual spaces are left at the default trivial charge (`unitspace`, via
-# `FiniteMPS`'s `left`/`right` keywords), which is standard and not in question. What *is*
-# a judgment call is the interior bond structure: how many U(1) sectors `-qmax:qmax` to
-# allow and how to spread the requested bond dimension χ across them (here: uniformly).
-# This has not been checked against a known-good Sz-sector weight distribution for this
-# model, and a poor choice could make the U(1) run converge slower than an equally-sized
-# unconstrained run purely from a bad sector split rather than from symmetry overhead.
-# `qmax = 4` is a reasonable guess (spin-1 chains rarely need |Sz| > a handful of units in
-# the bulk truncated space) but is otherwise arbitrary.
-function u1_virtualspace(χ::Int; qmax::Int = 4)
-    qs = (-qmax):qmax
-    d = max(1, cld(χ, length(qs)))
-    return U1Space(q => d for q in qs)
-end
+# Sector allocation: unlike suite 1 (fixed full-χ space, single-site DMRG), this suite
+# uses two-site DMRG (`DMRG2` with `trscheme = truncrank(χ)`), which redistributes the
+# bond dimension across U(1) sectors automatically at every two-site update. This mirrors
+# ITensor's behavior, whose two-site `dmrg` likewise chooses the per-sector block sizes
+# itself; a hand-picked static split (tried first) was demonstrably suboptimal
+# (−26.4027 vs ITensor's −26.8188 at χ = 8 on the N = 20 smoke check). The initial state
+# only needs a small sector-diverse seed for the growth to start from; the boundary
+# virtual spaces stay at the default trivial charge, targeting the total-Sz = 0 sector.
+u1_seedspace() = U1Space(q => 1 for q in -1:1)
 
 """
-    run(; N, chis, nsweeps, seed = 1234, J = 1.0, spin = 1, qmax = 4, resultsdir = BenchCommon.results_dir())
+    run(; N, chis, nsweeps, seed = 1234, J = 1.0, spin = 1, resultsdir = BenchCommon.results_dir())
 
-Run the suite-2 protocol (U(1)-symmetric DMRG) and write a timestamped JSON result file
-to `resultsdir`. Returns the path to the written file.
+Run the suite-2 protocol (U(1)-symmetric two-site DMRG) and write a timestamped JSON
+result file to `resultsdir`. Returns the path to the written file.
 """
 function run(;
         N::Int, chis::AbstractVector{<:Int}, nsweeps::Int,
-        seed::Int = 1234, J::Real = 1.0, spin::Real = 1, qmax::Int = 4,
+        seed::Int = 1234, J::Real = 1.0, spin::Real = 1,
         resultsdir::AbstractString = BenchCommon.results_dir()
     )
     H = heisenberg_XXX(ComplexF64, U1Irrep, FiniteChain(N); J = J, spin = spin)
@@ -56,15 +51,14 @@ function run(;
     # pollute the first timed trajectory (methodology guardrail §4.3: wall times must
     # reflect the algorithm, not the compiler)
     let Hw = heisenberg_XXX(ComplexF64, U1Irrep, FiniteChain(6); J = J, spin = spin)
-        dmrg_trajectory(FiniteMPS(physicalspace(Hw), u1_virtualspace(4; qmax = 2)), Hw; nsweeps = 2)
+        dmrg2_trajectory(FiniteMPS(physicalspace(Hw), u1_seedspace()), Hw; nsweeps = 2, χ = 4)
     end
 
     trials = Vector{Dict{String, Any}}()
     for χ in chis
         Random.seed!(seed)
-        vspace = u1_virtualspace(χ; qmax = qmax)
-        ψ₀ = FiniteMPS(pspaces, vspace)
-        elapsed = @elapsed result = dmrg_trajectory(ψ₀, H; nsweeps = nsweeps)
+        ψ₀ = FiniteMPS(pspaces, u1_seedspace())
+        elapsed = @elapsed result = dmrg2_trajectory(ψ₀, H; nsweeps = nsweeps, χ = χ)
         chi_actual = maximum(dim(left_virtualspace(result.ψ, n)) for n in 2:N)
 
         @info "suite 2: χ = $χ done" chi_actual final_energy = last(result.energies) total_time = elapsed final_galerkin_error = result.ϵ
@@ -84,15 +78,15 @@ function run(;
 
     data = collect_metadata()
     data["suite"] = "2-dmrg-u1"
-    data["description"] = "finite DMRG time-to-accuracy, spin-1 Heisenberg chain, U(1) symmetry"
+    data["description"] = "finite two-site DMRG time-to-accuracy, spin-1 Heisenberg chain, U(1) symmetry"
     data["model"] = "heisenberg_XXX"
     data["symmetry"] = "U1Irrep"
+    data["algorithm"] = "DMRG2(trscheme = truncrank(chi))"
     data["N"] = N
     data["J"] = J
     data["spin"] = spin
     data["nsweeps"] = nsweeps
     data["seed"] = seed
-    data["qmax"] = qmax
     data["chi_schedule"] = collect(chis)
     data["best_energy"] = best_energy
     data["trials"] = trials
