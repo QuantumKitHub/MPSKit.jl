@@ -56,6 +56,7 @@ makedocs(;
             "tutorials/thermodynamic_limit.md",
             "tutorials/time_evolution.md",
             "tutorials/excitations.md",
+            "tutorials/using_symmetries.md",
         ],
         "Manual" => [
             "man/intro.md",

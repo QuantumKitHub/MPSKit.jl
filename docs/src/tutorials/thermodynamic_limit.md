@@ -129,9 +129,6 @@ In the thermodynamic limit the symmetry breaking is genuine — the two opposite
 You have now run the same TFIM calculation twice — once at finite size, once directly at `L = ∞` — and seen how little the code had to change.
 
 From here you can go beyond ground states.
-A natural next step is to compute the excitations above this infinite ground state (the model's quasiparticle spectrum), or to exploit the symmetries of the model to make the calculation cheaper and more accurate.
-
-<!-- TODO(link): excitations tutorial -->
-<!-- TODO(link): using_symmetries tutorial -->
+A natural next step is to [compute the excitations above this infinite ground state](@ref tutorial_excitations) (the model's quasiparticle spectrum), or to [exploit the symmetries of the model](@ref tutorial_using_symmetries) to make the calculation cheaper and more accurate.
 
 To go deeper on the individual steps used here, see [Constructing states](@ref howto_states), [Controlling bond dimension](@ref howto_bond_dimension), and [Entanglement entropy and spectrum](@ref howto_entanglement); the algorithm reference is [Ground-state algorithms](@ref lib_groundstate).
