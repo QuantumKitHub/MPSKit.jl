@@ -24,18 +24,24 @@ submitted **manually by the maintainer** — nothing here self-submits.
 Nothing depends on anything else; submit all six whenever. The DMRG pair is the priority:
 
 ```bash
-sbatch benchmark/slurm/dmrg_mpskit.sbatch      # suites 1-2, ~hours (chi up to 1024)
+sbatch benchmark/slurm/dmrg_mpskit.sbatch      # suites 1-2, chi up to 512 (48 h limit)
 sbatch benchmark/slurm/dmrg_itensor.sbatch
-sbatch benchmark/slurm/tdvp_mpskit.sbatch      # suite 5
+sbatch benchmark/slurm/tdvp_mpskit.sbatch      # suite 5 (24 h limit)
 sbatch benchmark/slurm/tdvp_itensor.sbatch
-sbatch benchmark/slurm/threads_mpskit.sbatch   # suite 7, 7 grid points sequentially
+sbatch benchmark/slurm/threads_mpskit.sbatch   # suite 7, 7 grid points sequentially (24 h limit)
 sbatch benchmark/slurm/threads_itensor.sbatch
 ```
 
+Walltime calibration: the 2026-07-05 MPSKit pilot (χ = 256, N = 100, two-site, 8
+workstation threads) averaged ≈ 4.5 min/sweep; single-threaded χ = 512 extrapolates to a
+few hours per sweep, which sizes the 48 h DMRG limit. χ = 1024 is deliberately out of the
+default schedule (days of single-threaded node-time; extend later if the 512 numbers
+justify it).
+
 Results accumulate in `benchmark/results/` (one JSON per run/grid point); logs in
-`benchmark/slurm/logs/`. Time limits are generous guesses — if a job times out, the χ
-points already completed are still lost (one JSON per *suite*, written at the end), so
-bump `--time` rather than resubmitting blindly.
+`benchmark/slurm/logs/`. If a job times out, the χ points already completed are still
+lost (one JSON per *suite*, written at the end), so bump `--time` rather than
+resubmitting blindly.
 
 ## Sanity-gate checklist before reading any timing
 

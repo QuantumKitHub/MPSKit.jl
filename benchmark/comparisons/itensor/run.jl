@@ -51,8 +51,8 @@ println(
 if 1 in opts.suites
     include(joinpath(HERE, "suite1_dmrg_trivial.jl"))
     N = opts.smoke ? 20 : 100
-    chis = opts.smoke ? [8, 16] : [64, 128, 256, 512, 1024]
-    nsweeps = opts.smoke ? 4 : 10
+    chis = opts.smoke ? [8, 16] : [64, 128, 256, 512]
+    nsweeps = opts.smoke ? 4 : 6
     println("\n--- Suite 1: finite DMRG, no symmetry (N=$N, χ ∈ $chis, $nsweeps sweeps) ---")
     path1 = ITensorSuite1DMRGTrivial.run(; N = N, chis = chis, nsweeps = nsweeps, resultsdir = resultsdir)
     println("Suite 1 results written to: ", path1)
@@ -61,7 +61,7 @@ end
 if 2 in opts.suites
     include(joinpath(HERE, "suite2_dmrg_u1.jl"))
     N = opts.smoke ? 20 : 100
-    chis = opts.smoke ? [8, 16] : [64, 128, 256, 512, 1024]
+    chis = opts.smoke ? [8, 16] : [64, 128, 256, 512]
     nsweeps = opts.smoke ? 4 : 10
     println("\n--- Suite 2: finite DMRG, U(1) symmetry (N=$N, χ ∈ $chis, $nsweeps sweeps) ---")
     path2 = ITensorSuite2DMRGU1.run(; N = N, chis = chis, nsweeps = nsweeps, resultsdir = resultsdir)
@@ -73,7 +73,7 @@ if 5 in opts.suites
     N = opts.smoke ? 20 : 100
     chis = opts.smoke ? [8, 16] : [64, 128, 256]
     dt = 0.05
-    nsteps_measure = opts.smoke ? 4 : 40
+    nsteps_measure = opts.smoke ? 4 : 20
     println("\n--- Suite 5: TDVP throughput (N=$N, χ ∈ $chis, dt=$dt, $nsteps_measure measure steps) ---")
     path5 = ITensorSuite5TDVP.run(; N = N, chis = chis, dt = dt, nsteps_measure = nsteps_measure, resultsdir = resultsdir)
     println("Suite 5 results written to: ", path5)
@@ -82,8 +82,8 @@ end
 if 7 in opts.suites
     include(joinpath(HERE, "suite7_threads.jl"))
     N = opts.smoke ? 20 : 100
-    chi = opts.smoke ? 16 : 512
-    nsweeps = opts.smoke ? 2 : 5
+    chi = opts.smoke ? 16 : 256
+    nsweeps = opts.smoke ? 2 : 3
     println("\n--- Suite 7: thread scaling (N=$N, χ=$chi, $nsweeps sweeps, julia=$(Threads.nthreads()), blas=$(opts.blas_threads)) ---")
     path7 = ITensorSuite7Threads.run(; N = N, chi = chi, nsweeps = nsweeps, blas_threads = opts.blas_threads, resultsdir = resultsdir)
     println("Suite 7 results written to: ", path7)

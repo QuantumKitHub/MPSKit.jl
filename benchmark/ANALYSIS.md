@@ -43,6 +43,11 @@ must cite the result file(s) it comes from.
       `allocd_bytes` fields). Is either side GC-bound at any χ?
 - [ ] `profile_sweep.jl` on the interesting χ points (pick after Q2): what fraction of a
       sweep is BLAS / SVD / eigsolve vs MPSKit's own environment and permutation code?
+- [ ] Odd/even sweep-cost alternation: the χ = 256 MPSKit pilot (2026-07-05, workstation,
+      8 threads) showed alternating expensive/cheap sweeps (≈450 s vs ≈50 s). Convergence
+      of the local Krylov solves after the state has converged is the likely cause
+      (cheap sweeps do almost no eigsolve work); confirm with `gctimes`/profile on the
+      cluster runs and check whether ITensor shows the same pattern.
 
 ## Findings
 

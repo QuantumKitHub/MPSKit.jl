@@ -18,10 +18,12 @@ julia --project=benchmark benchmark/profile_sweep.jl --chi=256  # diagnostic: wh
 
 Suites (defined in `docs/IMPROVEMENT_PLAN.md` §4.2; numbering follows the plan):
 
-- **Suite 1** — finite two-site DMRG time-to-accuracy: spin-1 Heisenberg chain, N = 100, no symmetry, χ ∈ {64, 128, 256, 512, 1024}; per-sweep (energy, walltime, GC, allocations) trajectories.
+- **Suite 1** — finite two-site DMRG time-to-accuracy: spin-1 Heisenberg chain, N = 100, no symmetry, χ ∈ {64, 128, 256, 512}; per-sweep (energy, walltime, GC, allocations) trajectories.
 - **Suite 2** — same with U(1) (Sz conservation).
 - **Suite 5** — TDVP throughput: global quench from the Néel state, same chain; two-site growth phase then single-site measure phase, per-step (⟨Sz⟩, χ, walltime) trajectories, wall seconds per unit physical time at χ ∈ {64, 128, 256}.
-- **Suite 7** — thread scaling: the suite-1 workload at χ = 512, one process per (JULIA_NUM_THREADS × BLAS-threads) grid point (see `slurm/threads_*.sbatch` for the grid driver).
+- **Suite 7** — thread scaling: the suite-1 workload at χ = 256, one process per (JULIA_NUM_THREADS × BLAS-threads) grid point (see `slurm/threads_*.sbatch` for the grid driver).
+
+χ = 1024 is deliberately absent from the default schedule: extrapolating the χ = 256 pilot (below), a single-threaded χ = 1024 point runs for days. Extend the schedule after the χ ≤ 512 numbers justify the node-time.
 
 Results land in `results/` as one JSON per run, carrying full metadata (Julia and package versions, thread counts, BLAS vendor/threads, hostname, timestamp) plus the trajectory. `slurm/` holds the Rusty submission scripts (manual submission; see its README). `ANALYSIS.md` is the investigation log — skeleton until real cluster results exist.
 
@@ -30,7 +32,7 @@ Results land in `results/` as one JSON per run, carrying full metadata (Julia an
 - **Investigation first**: this round is about understanding where MPSKit is faster or slower and why; populating `docs/src/benchmarks.md` is a later round.
 - **Two-site DMRG on both sides**: ITensorMPS exposes only two-site `dmrg`, so both suites use MPSKit `DMRG2` with `trscheme = truncrank(χ)` against it. No single-site comparison exists.
 - **Float64 on both sides**: the Hamiltonian is real-symmetric; matching real arithmetic removes a 2-4x BLAS confound (MPSKit's constructor default is ComplexF64, passed explicitly as Float64 here).
-- **Sweep budget 10** (was a 30-sweep placeholder); to be confirmed by a χ = 256 pilot so every χ point plateaus. Per-sweep trajectories are recorded, so time-to-accuracy extraction does not need long post-convergence tails.
+- **Sweep budget: 6 (suite 1) / 10 (suite 2)**, pilot-backed. The χ = 256, N = 100 pilot (2026-07-05, 12 sweeps, MPSKit side) crossed the 1e-8 relative gate **on sweep 1** from a random full-χ start and changed by < 5e-9 absolute over the remaining 11 sweeps, so 6 sweeps carries a large margin for the trivial suite. Suite 2 keeps 10 because its bond dimension grows from a small seed (reaching χ = 512 takes ~6 two-site sweeps at d = 3) before convergence proper starts. Per-sweep trajectories are recorded, so time-to-accuracy extraction does not need long post-convergence tails.
 - **Fresh random start per χ** (seeded identically): symmetric across libraries and per-χ independent; χ-ramp warm-start protocols are future work.
 - **Full runs happen on the Rusty cluster** via the scripts in `slurm/`, submitted manually by the maintainer; local runs are smoke/plumbing only.
 
