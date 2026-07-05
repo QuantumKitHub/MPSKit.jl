@@ -111,7 +111,7 @@ md"""
 Both calculations agree deep in either phase, but near the transition they tell very different stories.
 The infinite curve stays on its ordered branch essentially up to `g = 1` and then collapses: it locates the critical point cleanly.
 The finite-chain curve instead drops to zero far earlier — at this `L` and `D` the variational optimum on the open chain switches from the symmetry-broken branch to the exactly symmetric ground state, whose magnetization vanishes.
-Where that switch happens is set by `L`, `D`, not by the physics; the same sweep at `D = 4` in [Your first ground state](@ref tutorial_first_groundstate) puts it elsewhere.
+Where that switch happens is set by `L` and `D`, not by the physics; the same sweep at `D = 4` in [Your first ground state](@ref tutorial_first_groundstate) puts it elsewhere.
 That is the real lesson of this panel: the finite-chain order parameter is dominated by which state the algorithm selects, while the calculation performed directly in the thermodynamic limit pins the transition at `g = 1`.
 
 """
