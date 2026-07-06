@@ -7,11 +7,7 @@ Each recipe below stands on its own, so feel free to jump straight to the one yo
 ## States and operators
 
 **[Constructing states](@ref howto_states)** — building `FiniteMPS`, `InfiniteMPS`, `WindowMPS`, and `MultilineMPS` objects.
-- A finite MPS from length, physical space, and maximum bond dimension — the default random-state constructor.
-- Choosing the initializer and element type — `rand`/`randn` and real vs. complex tensors.
-- Per-site physical and virtual spaces — heterogeneous lattices via vectors of spaces.
-- A product state (trivial virtual space) — an unentangled bond-dimension-1 state.
-- From your own site tensors — wrap existing `TensorMap`s into a canonical-form MPS.
+- A finite MPS — random states, initializers and element types, per-site spaces, product states, and wrapping your own site tensors.
 - An infinite MPS — single- and multi-site unit cells, from spaces or from tensors.
 - A window MPS — a mutable finite region embedded in infinite environments.
 - A multiline MPS — stacking `InfiniteMPS` rows for boundary-MPS methods.
