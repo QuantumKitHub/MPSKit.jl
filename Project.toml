@@ -30,6 +30,9 @@ VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 [weakdeps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 
+[sources]
+TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "main"}
+
 [extensions]
 MPSKitAdaptExt = "Adapt"
 
