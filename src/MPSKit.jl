@@ -149,6 +149,7 @@ include("algorithms/derivatives/hamiltonian_derivatives.jl")
 include("algorithms/derivatives/projection_derivatives.jl")
 include("algorithms/expval.jl")
 include("algorithms/toolbox.jl")
+include("algorithms/transfer_spectrum.jl")
 include("algorithms/grassmann.jl")
 include("algorithms/correlators.jl")
 
