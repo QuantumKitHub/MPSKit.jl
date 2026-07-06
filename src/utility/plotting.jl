@@ -89,7 +89,7 @@ function entanglementplot end
 end
 
 """
-    transferplot(above, below=above; sectors=[], transferkwargs=(;)[, kwargs...])
+    transferplot(above, below=above; sectors=nothing, transferkwargs=(;)[, kwargs...])
 
 Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 
@@ -98,7 +98,8 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 - `below::InfiniteMPS=above`: below mps for [`transfer_spectrum`](@ref).
 
 # Keyword Arguments
-- `sectors=[]`: vector of sectors for which to compute the spectrum.
+- `sectors=nothing`: restrict the spectrum to the given sectors; by default all sectors of
+  the transfer space are included.
 - `transferkwargs`: kwargs for call to [`transfer_spectrum`](@ref).
 - `kwargs`: other kwargs are passed on to the plotting backend.
 - `thetaorigin=0`: origin of the angle range.
@@ -118,16 +119,17 @@ function transferplot end
         h::TransferPlot; sectors = nothing, transferkwargs = (;), thetaorigin = 0,
         sector_formatter = string
     )
-    if sectors === nothing
-        sectors = [leftunit(h.args[1])]
+    below = length(h.args) == 1 ? h.args[1] : h.args[2]
+    kwargs = (; transferkwargs...)
+    if sectors !== nothing && get(kwargs, :num_vals, 20) isa Int
+        # restrict the computation to the requested sectors
+        num_vals = Dict(c => get(kwargs, :num_vals, 20) for c in sectors)
+        kwargs = (; kwargs..., num_vals)
     end
+    spectra = transfer_spectrum(h.args[1], below; kwargs...)
 
-    for sector in sectors
-        below = length(h.args) == 1 ? h.args[1] : h.args[2]
-        spectrum = transfer_spectrum(
-            h.args[1]; below = below, sector = sector,
-            transferkwargs...
-        )
+    for (sector, spectrum) in pairs(spectra)
+        sectors === nothing || sector in sectors || continue
 
         @series begin
             yguide --> "r"
