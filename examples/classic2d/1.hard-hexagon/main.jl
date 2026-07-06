@@ -49,7 +49,7 @@ V = virtual_space(D)
 ) # use non-hermitian eigensolver
 F = real(expectation_value(ψ, mpo))
 S = real(first(entropy(ψ)))
-ξ = correlation_length(ψ)
+ξ = correlation_length(ψ; sector = leftunit(ψ))
 println("F = $F\tS = $S\tξ = $ξ")
 
 md"""
@@ -71,13 +71,13 @@ function scaling_simulations(
 
     ψ, envs, = leading_boundary(ψ₀, mpo, alg)
     entropies[1] = real(entropy(ψ)[1])
-    correlations[1] = correlation_length(ψ)
+    correlations[1] = correlation_length(ψ; sector = leftunit(ψ))
 
     for (i, d) in enumerate(diff(Ds))
         ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme = truncrank(d)), envs)
         ψ, envs, = leading_boundary(ψ, mpo, alg, envs)
         entropies[i + 1] = real(entropy(ψ)[1])
-        correlations[i + 1] = correlation_length(ψ)
+        correlations[i + 1] = correlation_length(ψ; sector = leftunit(ψ))
     end
     return entropies, correlations
 end
