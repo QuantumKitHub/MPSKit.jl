@@ -14,7 +14,8 @@
 #     julia --project=benchmark -e 'using Pkg; Pkg.instantiate()'
 #     julia --project=benchmark/comparisons/itensor -e 'using Pkg; Pkg.instantiate()'
 #
-# Core discipline (96-core node, nothing else running: --exclusive):
+# Core discipline (node sizes vary, e.g. 64-96 cores — the script adapts via nproc;
+# nothing else running: --exclusive):
 #   * Phase 1 (DMRG) and phase 2 (TDVP) run the MPSKit and ITensorMPS sides
 #     CONCURRENTLY, one single-threaded process per SOCKET (disjoint `taskset` masks, so
 #     2 of 96 cores are active and the two sides never share a core, an L3, or a memory
@@ -29,7 +30,7 @@
 #SBATCH --nodes=1
 #SBATCH --exclusive
 #SBATCH --time=96:00:00
-#SBATCH --partition=ccq            # EDIT if needed
+#SBATCH --partition=gen
 #SBATCH --constraint=icelake       # EDIT: pin ONE CPU generation (any single one)
 #SBATCH --output=benchmark/slurm/logs/%x-%j.out
 
@@ -38,6 +39,24 @@ cd "${SLURM_SUBMIT_DIR:-$PWD}"
 LOGDIR="benchmark/slurm/logs"
 mkdir -p "${LOGDIR}"
 TAG="${SLURM_JOB_ID:-local}"
+trap 'echo ">>> FAILED — check ${LOGDIR}/${TAG}-*.log for the per-process error"' ERR
+
+# --- Julia resolution -----------------------------------------------------------------
+# Julia >= 1.12 is REQUIRED: benchmark/ is a Pkg [workspace] member of the repo root, and
+# older julia ignores [workspace] entirely — the symptom is a bogus
+# "Package X ... does not seem to be installed: Run Pkg.instantiate()" (seen with
+# `module load julia` = 1.11.2, job 6579944). Do NOT `module load julia` here; batch
+# shells also lack the interactive PATH (job 6579930: "taskset: failed to execute
+# julia"). Instead: honor an explicit $JULIA, else pick the newest 1.12+ binary in the
+# shared-home juliaup depot (~/.julia/juliaup — GPFS, so identical on workstations and
+# cluster nodes, and the same install that resolved the manifests), else fall back to
+# PATH and let the version gate below catch it.
+if [[ -z "${JULIA:-}" ]]; then
+    JULIA=$(ls -d "${HOME}"/.julia/juliaup/julia-1.1[2-9]*/bin/julia 2>/dev/null | sort -V | tail -1 || true)
+    [[ -n "${JULIA}" && -x "${JULIA}" ]] || JULIA=julia
+fi
+echo ">>> julia: $("${JULIA}" --version) ($(command -v "${JULIA}" || echo "${JULIA}"))"
+"${JULIA}" -e 'VERSION >= v"1.12" || (println(stderr, "ERROR: julia >= 1.12 required (benchmark/ is a Pkg workspace member; older julia cannot resolve it)"); exit(1))'
 
 SMOKE_FLAG=""
 if [[ "${SMOKE:-0}" == "1" ]]; then
@@ -45,8 +64,8 @@ if [[ "${SMOKE:-0}" == "1" ]]; then
     echo ">>> SMOKE mode: pipeline check only, timings meaningless"
 fi
 
-MPSKIT=(julia --project=benchmark benchmark/run.jl)
-ITENSOR=(julia --project=benchmark/comparisons/itensor benchmark/comparisons/itensor/run.jl)
+MPSKIT=("${JULIA}" --project=benchmark benchmark/run.jl)
+ITENSOR=("${JULIA}" --project=benchmark/comparisons/itensor benchmark/comparisons/itensor/run.jl)
 
 # One core per socket for the concurrent single-threaded pairs. Assumes the common
 # contiguous numbering (socket 0 = cores 0..N/2-1, socket 1 = cores N/2..N-1); verify

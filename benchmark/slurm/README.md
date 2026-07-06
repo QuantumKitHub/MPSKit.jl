@@ -25,16 +25,29 @@ self-submits.
 
 1. Edit `--partition` / `--constraint` in `run_all.sbatch` (any single CPU generation).
 2. Check the socket→core numbering assumption (`lscpu -e` on the target node): the script
-   assumes socket 0 = cores 0..47, socket 1 = cores 48..95 and pins the concurrent pair
-   to cores 0 and 48. Edit `CORE_MPSKIT` / `CORE_ITENSOR` if the numbering interleaves.
-3. Instantiate both environments on a login node:
+   assumes contiguous numbering (socket 0 = first half, socket 1 = second half) and pins
+   the concurrent pair to cores 0 and `nproc/2`. Edit `CORE_MPSKIT` / `CORE_ITENSOR` if
+   the numbering interleaves.
+3. **Julia ≥ 1.12 is required** (`benchmark/` is a Pkg `[workspace]` member; 1.11 and
+   older silently ignore `[workspace]` and then claim the packages are "not installed").
+   Do **not** rely on `module load julia` (currently 1.11.2) or on the batch shell's
+   PATH (it lacks your interactive PATH entirely). The script resolves julia by itself:
+   `$JULIA` env var if set, else the newest 1.12+ binary in the shared-home juliaup
+   depot (`~/.julia/juliaup/julia-1.1x*/bin/julia`, visible from all nodes), else PATH —
+   and fail-fasts with a version check. To pin explicitly:
+
+   ```bash
+   JULIA=~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/bin/julia sbatch --export=ALL benchmark/slurm/run_all.sbatch
+   ```
+
+4. Instantiate both environments on a login node **with that same julia**:
 
    ```bash
    julia --project=benchmark -e 'using Pkg; Pkg.instantiate()'
    julia --project=benchmark/comparisons/itensor -e 'using Pkg; Pkg.instantiate()'
    ```
 
-4. Optional local rehearsal (same phases at smoke scale, plain bash, no Slurm):
+5. Optional local rehearsal (same phases at smoke scale, plain bash, no Slurm):
 
    ```bash
    SMOKE=1 bash benchmark/slurm/run_all.sbatch
