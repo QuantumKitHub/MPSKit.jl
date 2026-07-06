@@ -5,7 +5,7 @@ using TensorKit
 using TensorKit: ℙ
 using Adapt, AMDGPU
 
-@testset "CuMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
+@testset "ROCMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
     [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
     tol = Float64(eps(real(elt)) * 100)
 
@@ -51,7 +51,7 @@ using Adapt, AMDGPU
     @test norm(2 * ψ + ψ - 3 * ψ) ≈ 0.0 atol = sqrt(eps(real(ComplexF64)))
 end
 
-@testset "CuMultilineMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
+@testset "ROCMultilineMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
     [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF32)]
     tol = Float64(eps(real(elt)) * 100)
     ψ = adapt(

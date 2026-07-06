@@ -3,7 +3,7 @@ using MPSKit
 using TensorKit
 using AMDGPU, Adapt
 
-@testset "Adapting to CuArray" begin
+@testset "Adapting to ROCArray" begin
     # start from random operators
     L = 4
     T = ComplexF64

@@ -84,7 +84,7 @@ using Adapt, AMDGPU
     @test dot(mpomps₁, mpomps₁) ≈ dot(mpo₁, mpo₁)
 end
 
-@testset "Finite CuMPOHamiltonian T ($T), V ($(spacetype(V)))" for T in (Float64, ComplexF64), V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+@testset "Finite ROCMPOHamiltonian T ($T), V ($(spacetype(V)))" for T in (Float64, ComplexF64), V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
     L = 3
     lattice = fill(V, L)
     O₁ = project_hermitian!(randn(T, V ← V))
@@ -220,7 +220,7 @@ end
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
 vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
 
-@testset "CuInfiniteMPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces, vspaces)
+@testset "ROCInfiniteMPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces, vspaces)
     # generate a 1-2-3 body interaction
     operators = ntuple(3) do i
         O = rand(ComplexF64, pspace^i, pspace^i)
