@@ -14,12 +14,12 @@ using TensorKit: ℙ
     ψ = InfiniteMPS([ℙ^2], [ℙ^10])
     H = force_planar(transverse_field_ising())
     ψ, = find_groundstate(ψ, H, VUMPS(; verbosity = 0))
-    len_crit = correlation_length(ψ)[1]
+    len_crit = correlation_length(ψ; sector = leftunit(ψ))
     entrop_crit = entropy(ψ)
 
     H = force_planar(transverse_field_ising(; g = 4))
     ψ, = find_groundstate(ψ, H, VUMPS(; verbosity = 0))
-    len_gapped = correlation_length(ψ)[1]
+    len_gapped = correlation_length(ψ; sector = leftunit(ψ))
     entrop_gapped = entropy(ψ)
 
     @test len_crit > len_gapped

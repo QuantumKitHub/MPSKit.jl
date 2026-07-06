@@ -97,7 +97,7 @@ using TensorKit: ℙ
         num_vals = 2
         vals_taylor = @constinferred(transfer_spectrum(convert(InfiniteMPS, rho_taylor); num_vals))
         vals_mps = @constinferred(transfer_spectrum(rho_mps; num_vals))
-        @test vals_taylor[1:num_vals] ≈ vals_mps[1:num_vals]
+        @test all(c -> vals_taylor[c] ≈ vals_mps[c], keys(vals_taylor))
     end
 
     @testset "2D infinite partition functions with boundary MPS" verbose = true begin
