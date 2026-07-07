@@ -21,6 +21,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- `BUG` time-evolution algorithm: a Basis-Update & Galerkin integrator for finite MPS
+
 ### Changed
 
 - `environments` now follows a single positional contract for every state and operator kind:

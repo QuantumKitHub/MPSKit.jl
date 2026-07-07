@@ -104,6 +104,7 @@ This procedure is commonly referred to as the [`TDVP`](@ref) algorithm, which ag
 ```@docs; canonical=false
 TDVP
 TDVP2
+BUG
 ```
 
 ### Time evolution MPO
