@@ -94,6 +94,59 @@ function _bug_transport_left(AL_old, AL_new, T)
     return Tnew
 end
 
+# Basis augmentation (Stage 2 building block; NOT yet wired into `timestep!`).
+#
+# `_bug_augment_left` augments the RIGHT virtual bond of a site for the left→right sweep.
+# Given the OLD left-isometry `U₀` (an MPS tensor `Vl ⊗ P ← Vr₀`, i.e. `AL_old`) and the evolved
+# single-site candidate `K₁` (same leg structure `Vl ⊗ P ← Vr_K`, the K-step / Galerkin output),
+# it builds an augmented left-isometry `Û` (`Vl ⊗ P ← V̂`) whose column space contains both
+# `range(U₀)` and `range(K₁)`, keeping the OLD basis as the leading per-sector block
+# (`V̂ = Vr₀ ⊕ Vr_new`). This is the "old-basis-first" augmentation `[U₀ │ Ũ₁]` of the
+# rank-adaptive BUG papers, which makes the reprojection `Ŝ₀ = Û* Y₀ = Y₀` exact.
+#
+# The appended directions come from the *single-site* candidate `K₁` (not a two-site
+# `AC2_projection` as in `OptimalExpand`): take the component of `K₁` in the orthogonal complement
+# of `U₀` (`left_null`), orthonormalize its column space, and `catdomain` it after `U₀`. This does
+# NOT truncate — the appended block has the full rank of that complement (so `dim(V̂) ≤ 2·dim(Vr₀)`).
+#
+# Returns `(Û, M)`:
+#   * `Û` — the augmented left-isometry (`Û' Û = 𝟙`, `Vl ⊗ P ← V̂`),
+#   * `M = Û' * U₀` — the old bond's coordinates in the augmented basis (`V̂ ← Vr₀`), equal to
+#     `[𝟙; 0]` per sector, ready to embed the old transport/core into the enlarged bond.
+function _bug_augment_left(U₀, K₁, alg_orth = Defaults.alg_orth())
+    N = left_null(U₀)                       # Vl⊗P ← Vc, orthonormal complement of range(U₀)
+    g = N' * K₁                             # Vc ← Vr_K, the part of K₁ orthogonal to U₀
+    Q, _ = left_orth(g; alg = alg_orth)     # Vc ← Vr_new, orthonormal new directions
+    Ũ₁ = N * Q                              # Vl⊗P ← Vr_new
+    Û = catdomain(U₀, Ũ₁)                   # Vl⊗P ← (Vr₀ ⊕ Vr_new), old-first
+    M = Û' * U₀                             # V̂ ← Vr₀, = [𝟙; 0] per sector
+    return Û, M
+end
+
+# `_bug_augment_right` is the mirror for the right→left sweep: it augments the LEFT virtual bond,
+# working on the `_transpose_tail` form (`Vl ← P ⊗ Vr`, in which a right-isometry has orthonormal
+# rows) and using `right_null!`/`catcodomain`, exactly as `changebond!(:left)` and `right_gauge` do.
+# Given the OLD right-isometry `U₀` (`Vl₀ ⊗ P ← Vr`, i.e. `AR_old`) and the evolved candidate `K₁`
+# (`Vl_K ⊗ P ← Vr`), it returns an augmented right-isometry `Û` (`V̂ ⊗ P ← Vr`) whose left bond is
+# `V̂ = Vl₀ ⊕ Vl_new` (old-first) with row space containing both `U₀` and `K₁`.
+#
+# Returns `(Û, M)`:
+#   * `Û` — the augmented right-isometry (`Û` is right-canonical, its tail satisfies `û û' = 𝟙`),
+#   * `M = û * u₀'` (with `û = _transpose_tail(Û)`, `u₀ = _transpose_tail(U₀)`) — the old bond's
+#     coordinates in the augmented left bond (`V̂ ← Vl₀`), equal to `[𝟙; 0]` per sector.
+function _bug_augment_right(U₀, K₁, alg_orth = Defaults.alg_orth())
+    u₀ = _transpose_tail(U₀)                          # Vl₀ ← P⊗Vr, right-isometric (u₀ u₀' = 𝟙)
+    k₁ = _transpose_tail(K₁)                          # Vl_K ← P⊗Vr
+    N = right_null!(_transpose_tail(U₀; copy = true)) # Vc ← P⊗Vr, complement of U₀'s row space
+    g = k₁ * N'                                       # Vl_K ← Vc, the part of K₁ orthogonal to U₀
+    _, Q = right_orth(g; alg = alg_orth)              # Q: Vl_new ← Vc, orthonormal new directions
+    Ũ₁ = Q * N                                        # Vl_new ← P⊗Vr
+    û = catcodomain(u₀, Ũ₁)                           # (Vl₀ ⊕ Vl_new) ← P⊗Vr, old-first
+    Û = _transpose_front(û)                           # V̂ ⊗ P ← Vr
+    M = û * u₀'                                        # V̂ ← Vl₀, = [𝟙; 0] per sector
+    return Û, M
+end
+
 # Left→right half-sweep (root = last site, leaf = site 1): center ends at the last site.
 function _bug_sweep_right!(ψ, H, t, τ, alg, envs; imaginary_evolution::Bool = false)
     L = length(ψ)
