@@ -48,15 +48,30 @@ work — but cluster timings must never run unpinned, so check the log.
 """
 function pin_cores(blas_threads::Int)
     try
+        # Read the launch mask BEFORE pinning: pinthreads narrows the calling thread's
+        # affinity, and with JULIA_NUM_THREADS=1 a later getaffinity() would see only
+        # that single core (bug found in cluster job 6581850, grid points (1,4)/(1,8):
+        # the readback returned [0] and BLAS pinning crashed out).
+        mask_ids = findall(==(1), getaffinity(; cutoff = nothing)) .- 1
         pinthreads(:affinitymask)
         if blas_threads > 1
-            mask_ids = findall(==(1), getaffinity(; cutoff = nothing)) .- 1
-            free_ids = setdiff(mask_ids, getcpuids())
-            if length(free_ids) < blas_threads
-                @warn "affinity mask too small to give OpenBLAS workers their own cores; they will share with Julia threads" mask_ids blas_threads
-                free_ids = vcat(free_ids, mask_ids)
+            julia_ids = getcpuids()
+            free_ids = setdiff(mask_ids, julia_ids)
+            if length(free_ids) >= blas_threads
+                openblas_pinthreads(free_ids[1:blas_threads])
+            else
+                # Not enough mask cores to give BLAS workers their own: leave them
+                # unpinned. They still inherit the process affinity mask, so they float
+                # within it (no oversubscription of anything outside the mask) — noted
+                # as placement noise, not a disqualifying failure.
+                @warn "mask has too few free cores to pin OpenBLAS workers; they float within the mask" mask_ids blas_threads
             end
-            openblas_pinthreads(free_ids[1:blas_threads])
+            # When Julia runs single-threaded, OpenBLAS counts the CALLING thread as one
+            # of its pool slots, so openblas_pinthreads just moved the main Julia thread
+            # onto a BLAS core. Re-pin the Julia threads to the placement chosen above
+            # (explicit-cpuid variant; a second :affinitymask call would re-read the
+            # already-narrowed mask).
+            pinthreads(julia_ids)
         end
     catch err
         @warn "thread pinning failed; timings from this run are not publishable" err
