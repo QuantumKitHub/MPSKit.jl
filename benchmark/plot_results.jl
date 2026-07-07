@@ -206,13 +206,15 @@ plot_all_suite_results(resultdir)
     latest_result(resultsdir, prefix) -> Union{String, Nothing}
 
 Path of the most recent result file starting with `prefix` (exact prefix match, so
-`"suite1"` does not match `"itensor_suite1"`), or `nothing`.
+`"suite1"` does not match `"itensor_suite1"`), or `nothing`. "Most recent" is by file
+mtime, NOT by name: filenames embed N before the timestamp, and lexically "N100..." sorts
+before "N20...", which once made this function silently compare stale smoke files.
 """
 function latest_result(resultsdir::AbstractString, prefix::AbstractString)
-    files = filter(readdir(resultsdir)) do fname
-        startswith(fname, prefix) && endswith(fname, ".json")
+    files = filter(readdir(resultsdir; join = true)) do path
+        startswith(basename(path), prefix) && endswith(path, ".json")
     end
-    return isempty(files) ? nothing : joinpath(resultsdir, sort(files)[end])
+    return isempty(files) ? nothing : argmax(mtime, files)
 end
 
 """
