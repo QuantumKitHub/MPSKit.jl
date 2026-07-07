@@ -115,6 +115,142 @@ using Random
     end
 end
 
+# Rank-adaptive BUG (Stage 2): a truncating `trscheme` enables basis augmentation + truncation, so
+# the bond dimension grows and shrinks to track the entanglement of the evolving state. Trivial
+# tensors only (symmetry stress is Chunk 2.3). The default `notrunc()` regression is covered by the
+# fixed-rank testsets above (they must all still pass unchanged).
+@testset "BUG rank-adaptive" verbose = true begin
+    # 1. bond growth: a tight tolerance grows a low-bond-dim state, a looser tolerance keeps it
+    #    smaller.
+    @testset "bond growth" begin
+        Random.seed!(101)
+        L = 6
+        H = force_planar(transverse_field_ising(ComplexF64, Trivial; L))
+        ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^2))   # low bond dim (2)
+        normalize!(ψ₀)
+        Dstart = maximum(dim(left_virtualspace(ψ₀, k)) for k in 1:L)
+
+        ψtight = ψ₀
+        for k in 0:2
+            ψtight, = timestep(ψtight, H, k * 0.05, 0.05, BUG(; trscheme = truncerror(; atol = 1.0e-10)))
+        end
+        Dtight = maximum(dim(left_virtualspace(ψtight, k)) for k in 1:L)
+
+        ψloose = ψ₀
+        for k in 0:2
+            ψloose, = timestep(ψloose, H, k * 0.05, 0.05, BUG(; trscheme = truncerror(; atol = 1.0e-2)))
+        end
+        Dloose = maximum(dim(left_virtualspace(ψloose, k)) for k in 1:L)
+
+        @info "BUG rank-adaptive bond growth" Dstart Dloose Dtight
+        @test Dtight > Dstart          # rank-adaptivity grows the bond
+        @test Dloose < Dtight          # a looser tolerance keeps a smaller bond
+    end
+
+    # 2. THE HARD GATE: overlap-error vs the dense exp(-iHT) reference decreases (monotonically, up
+    #    to the plateau at the fixed-dt floor) as the truncation tolerance ϑ shrinks. This proves the
+    #    augmentation actually captures the true dynamics.
+    @testset "accuracy improves as ϑ decreases" begin
+        Random.seed!(202)
+        L = 6
+        H = force_planar(transverse_field_ising(ComplexF64, Trivial; L))
+        ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^2))   # low-rank start the dynamics grows
+        normalize!(ψ₀)
+
+        Hmat = convert(TensorMap, H)
+        ψvec = convert(TensorMap, ψ₀)
+        ψvec /= norm(ψvec)
+
+        T = 0.2
+        dt = 0.05
+        n = round(Int, T / dt)
+        ref = exp(-im * Hmat * (n * dt)) * ψvec
+
+        ϑs = [1.0e-2, 1.0e-4, 1.0e-6]
+        errs = map(ϑs) do ϑ
+            alg = BUG(; trscheme = truncerror(; atol = ϑ))
+            ψ = copy(ψ₀)
+            envs = environments(ψ, H, ψ)
+            for k in 0:(n - 1)
+                timestep!(ψ, H, k * dt, dt, alg, envs)
+            end
+            ψout = convert(TensorMap, ψ)
+            ψout /= norm(ψout)
+            return 1 - abs(dot(ψout, ref))
+        end
+
+        @info "BUG rank-adaptive accuracy vs ϑ" ϑs errs
+        for i in 1:(length(ϑs) - 1)
+            @test errs[i + 1] ≤ 1.5 * errs[i]   # monotone within plateau noise near the dt-floor
+        end
+        @test errs[end] < errs[1] / 10          # clear net improvement toward the dt-floor
+    end
+
+    # 3. CBE-style comparison: from a low-rank state, rank-adaptive BUG tracks a bond-adaptive TDVP2
+    #    reference better than fixed-rank `BUG()` does (mirrors the CBE-TDVP test).
+    @testset "tracks TDVP2 better than fixed-rank BUG" begin
+        Random.seed!(303)
+        L = 8
+        H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
+        Dstart, Dcap, dt = 2, 16, 0.05
+        ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
+
+        ref, adaptive, fixed = ψ₀, ψ₀, ψ₀
+        for _ in 1:6
+            ref, = timestep(ref, H, 0.0, dt, TDVP2(; trscheme = truncrank(Dcap)))
+            adaptive, = timestep(adaptive, H, 0.0, dt, BUG(; trscheme = truncerror(; atol = 1.0e-8)))
+            fixed, = timestep(fixed, H, 0.0, dt, BUG())
+        end
+
+        @test dim(left_virtualspace(adaptive, L ÷ 2)) > Dstart   # adaptive grew the bond
+        @test dim(left_virtualspace(fixed, L ÷ 2)) == Dstart     # fixed-rank stuck at Dstart
+        @test abs(dot(ref, adaptive)) > abs(dot(ref, fixed))     # and tracks the reference better
+    end
+
+    # 4. imaginary-time ground-state search: from a low bond dim, rank-adaptive imaginary-time BUG
+    #    grows the bond and lowers the energy toward the true ground state.
+    @testset "imaginary-time grows bond and lowers energy" begin
+        Random.seed!(404)
+        L = 8
+        H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
+        ψgs, = find_groundstate(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^16), H; verbosity = 0)
+        Egs = real(expectation_value(ψgs, H))
+
+        ψ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^2))   # low bond dim
+        Dstart = maximum(dim(left_virtualspace(ψ, k)) for k in 1:L)
+        E_start = real(expectation_value(ψ, H))
+        for _ in 1:30
+            ψ, = timestep(ψ, H, 0.0, 0.1, BUG(; trscheme = truncerror(; atol = 1.0e-8)); imaginary_evolution = true)
+        end
+        Dend = maximum(dim(left_virtualspace(ψ, k)) for k in 1:L)
+        E_end = real(expectation_value(ψ, H))
+
+        @info "BUG rank-adaptive imaginary-time" Dstart Dend E_start E_end Egs
+        @test Dend > Dstart              # the bond grew as entanglement built up
+        @test E_end < E_start - 1.0      # substantial lowering
+        @test E_end ≈ Egs atol = 0.6     # toward the true ground state (loose)
+        @test norm(ψ) ≈ 1 atol = 1.0e-6  # imaginary-time renormalizes each step
+    end
+
+    # 5. real-time energy conservation with truncation (loose atol) and norm behaviour: for a small
+    #    tolerance the truncation is negligible, so the norm stays ≈ 1.
+    @testset "real-time energy conservation and norm" begin
+        Random.seed!(505)
+        L = 6
+        H = force_planar(transverse_field_ising(ComplexF64, Trivial; L))
+        ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4))
+        normalize!(ψ₀)
+        E₀ = real(expectation_value(ψ₀, H))
+
+        ψ = ψ₀
+        for k in 0:4
+            ψ, = timestep(ψ, H, k * 0.05, 0.05, BUG(; trscheme = truncerror(; atol = 1.0e-8)))
+        end
+        @test real(expectation_value(ψ, H)) ≈ E₀ atol = 1.0e-2   # energy conserved (loose)
+        @test norm(ψ) ≈ 1 atol = 1.0e-6                          # tiny ϑ ⇒ norm preserved
+    end
+end
+
 # Charge-sector (symmetric-tensor) coverage for the fixed-rank BUG. These use *genuine*
 # symmetric tensors (no `force_planar`), exercising the graded-bond paths flagged in the design
 # doc's hsector risk register (H1/H6/H7): the transport-tensor seed `isomorphism(V ← V)`, the

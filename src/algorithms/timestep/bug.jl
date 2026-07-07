@@ -7,8 +7,19 @@ an unconventional robust integrator for dynamical low-rank approximation.
 Unlike [`TDVP`](@ref), BUG advances both the basis-carrying (K-step) and the core (Galerkin C-step)
 tensors *forward* in time and never inverts the bond tensor. In particular it has no backward-in-time
 substep, which makes it a natural choice for imaginary-time / dissipative evolution where the
-backward core step of projector-splitting integrators can become unstable. A truncating `trscheme`
-enables later rank-adaptivity.
+backward core step of projector-splitting integrators can become unstable.
+
+Passing a truncating `trscheme` (anything other than the default `notrunc()`) switches on
+**rank-adaptivity**: each half-sweep augments every bond with the new directions discovered by the
+evolved connecting tensor (keeping the old basis as the leading block, `[U₀ │ K₁]`) and then
+truncates the enlarged bonds back down to the tolerance of `trscheme` by an optimal SVD sweep. The
+bond dimension therefore grows and shrinks automatically to track the entanglement of the evolving
+state. The default `notrunc()` recovers the fixed-rank integrator exactly.
+
+!!! note
+    Real-time evolution does not renormalize: neither the augmentation nor the truncation
+    renormalizes, so the state norm reflects the accumulated truncation error. Imaginary-time
+    evolution renormalizes after every half-sweep, like a ground-state search.
 
 ## Fields
 
@@ -76,9 +87,36 @@ function timestep!(
     end
 
     h = dt / 2
-    _bug_sweep_right!(ψ, H, t, h, alg, envs; imaginary_evolution)       # left → right
-    _bug_sweep_left!(ψ, H, t + h, h, alg, envs; imaginary_evolution)    # right → left
+    if _bug_truncates(alg)
+        # Rank-adaptive BUG: each half-sweep *augments* every bond with the new directions
+        # discovered by the (Galerkin-)evolved connecting tensor, evolving the core on the
+        # enlarged (old-first) basis, and is followed by an optimal SVD truncation back down to
+        # the `trscheme` tolerance (Ceruti–Lubich–Walach 2022). Real-time evolution does not
+        # renormalize, so the truncation error is reflected in the norm; imaginary-time
+        # evolution renormalizes each half-sweep.
+        _bug_sweep_right_adaptive!(ψ, H, t, h, alg, envs; imaginary_evolution)       # left → right
+        _bug_truncate!(ψ, alg; normalize = imaginary_evolution)
+        _bug_sweep_left_adaptive!(ψ, H, t + h, h, alg, envs; imaginary_evolution)    # right → left
+        _bug_truncate!(ψ, alg; normalize = imaginary_evolution)
+    else
+        _bug_sweep_right!(ψ, H, t, h, alg, envs; imaginary_evolution)       # left → right
+        _bug_sweep_left!(ψ, H, t + h, h, alg, envs; imaginary_evolution)    # right → left
+    end
     return ψ, envs
+end
+
+# Rank-adaptivity is enabled by any truncating `trscheme` (the default `notrunc()` selects the
+# byte-for-byte fixed-rank path). Mirrors the `_truncates` gate used by `TDVP`/`DMRG`.
+_bug_truncates(alg::BUG) = !(alg.trscheme isa MatrixAlgebraKit.NoTruncation)
+
+# Truncate every internal bond back down to the `trscheme` tolerance with an optimal
+# (canonical-form) SVD sweep. This is the "discard the singular-value tail whose Frobenius norm
+# ≤ ϑ" step of the rank-adaptive integrator, applied to the exact augmented-Galerkin state
+# produced by a half-sweep. The effective environments passed to the next half-sweep are keyed on
+# tensor identity, so they recompute lazily for the changed bonds — no explicit refresh needed.
+function _bug_truncate!(ψ, alg::BUG; normalize::Bool = false)
+    changebonds!(ψ, SvdCut(; trscheme = alg.trscheme, alg_svd = alg.alg_svd); normalize)
+    return ψ
 end
 
 # Transport of the old→new basis overlap across one bond.
@@ -202,6 +240,87 @@ function _bug_sweep_left!(ψ, H, t, τ, alg, envs; imaginary_evolution::Bool = f
             C_new, AR_new = right_gauge(ACi, alg.alg_orth)
             T = _bug_transport_right(ψ_old.AR[i], AR_new, T)
             ψ.AC[i] = (C_new, AR_new)
+        end
+    end
+    return ψ
+end
+
+# Rank-adaptive half-sweeps
+# -------------------------
+# These mirror `_bug_sweep_right!`/`_bug_sweep_left!` exactly, except that at every internal node
+# the fixed-rank `left_gauge`/`right_gauge` is replaced by an *augmentation*: the evolved
+# connecting tensor `ACᵢ` is used as the candidate `K₁` and its directions orthogonal to the
+# (transported) old isometry are appended, keeping the old basis as the leading per-sector block
+# (`_bug_augment_left`/`_bug_augment_right`). The augmented isometry `Û` (rank up to 2r) is
+# installed as the new left/right basis *without in-sweep truncation*: the enlarged bond is then
+# seen by the next node's Galerkin evolution (which fills the new directions), exactly the
+# augmented-basis Galerkin of the rank-adaptive matrix/TTN integrator. The bond factor
+# `C_new = Û* ACᵢ` reconstructs `ACᵢ` exactly (`range(ACᵢ) ⊆ range(Û)`), so the embedding of the
+# half-sweep state is exact; the subsequent `_bug_truncate!` performs the SVD-tail truncation.
+#
+# NOTE (deviation from the "core = Û* ACᵢ; svd_trunc!" recipe): truncating that core in place
+# cannot grow the bond — it is a `(≤2r ← r)` matrix of rank ≤ r, so its SVD keeps ≤ r directions
+# and the bond never exceeds the old rank. Growth requires evolving the *next* node on the
+# enlarged bond before cutting, which is why truncation is deferred to `_bug_truncate!` (an
+# optimal compression of the exact augmented-Galerkin state — equivalent to SVD-truncating the
+# augmented core, but globally optimal).
+function _bug_sweep_right_adaptive!(ψ, H, t, τ, alg, envs; imaginary_evolution::Bool = false)
+    L = length(ψ)
+    ψ.AC[1]
+    ψ_old = copy(ψ)
+    envs_old = environments(ψ_old, H, ψ_old)
+
+    # leaf (site 1): K-step, then augment the outgoing (right) bond
+    AC1 = integrate(AC_hamiltonian(1, ψ_old, H, ψ_old, envs_old), ψ_old.AC[1], t, τ, alg.integrator; imaginary_evolution)
+    Û, _ = _bug_augment_left(ψ_old.AL[1], AC1, alg.alg_orth)   # Vl⊗P ← V̂₁ (old-first, up to 2r)
+    C_new = Û' * AC1                                           # V̂₁ ← old_bond_1 (exact: Û·C_new = AC1)
+    T = isomorphism(scalartype(ψ_old), left_virtualspace(ψ_old, 1) ← left_virtualspace(ψ_old, 1))
+    T = _bug_transport_left(ψ_old.AL[1], Û, T)                # V̂₁ ← old_bond_1
+    ψ.AC[1] = (Û, C_new)
+
+    for i in 2:L
+        Ĉ = _mul_front(T, ψ_old.AC[i])                        # V̂_{i-1} ⊗ P ← old_bond_i
+        ACi = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t, τ, alg.integrator; imaginary_evolution)
+        if i == L
+            imaginary_evolution && normalize!(ACi)
+            ψ.AC[L] = ACi
+        else
+            U₀ = _mul_front(T, ψ_old.AL[i])                   # old isometry in the new left frame
+            Û, _ = _bug_augment_left(U₀, ACi, alg.alg_orth)   # V̂_{i-1} ⊗ P ← V̂_i (grows bond i)
+            C_new = Û' * ACi                                  # V̂_i ← old_bond_i
+            T = _bug_transport_left(ψ_old.AL[i], Û, T)        # V̂_i ← old_bond_i
+            ψ.AC[i] = (Û, C_new)
+        end
+    end
+    return ψ
+end
+
+function _bug_sweep_left_adaptive!(ψ, H, t, τ, alg, envs; imaginary_evolution::Bool = false)
+    L = length(ψ)
+    ψ.AC[L]
+    ψ_old = copy(ψ)
+    envs_old = environments(ψ_old, H, ψ_old)
+
+    # leaf (site L): K-step, then augment the outgoing (left) bond
+    ACL = integrate(AC_hamiltonian(L, ψ_old, H, ψ_old, envs_old), ψ_old.AC[L], t, τ, alg.integrator; imaginary_evolution)
+    Û, _ = _bug_augment_right(ψ_old.AR[L], ACL, alg.alg_orth)  # V̂_{L-1} ⊗ P ← Vr (old-first, up to 2r)
+    C_new = _transpose_tail(ACL) * _transpose_tail(Û)'         # old_bond_{L-1} ← V̂_{L-1} (exact)
+    T = isomorphism(scalartype(ψ_old), right_virtualspace(ψ_old, L) ← right_virtualspace(ψ_old, L))
+    T = _bug_transport_right(ψ_old.AR[L], Û, T)               # old_bond_{L-1} ← V̂_{L-1}
+    ψ.AC[L] = (C_new, Û)
+
+    for i in (L - 1):-1:1
+        Ĉ = ψ_old.AC[i] * T                                   # old_bond_{i-1} ⊗ P ← V̂_i
+        ACi = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t, τ, alg.integrator; imaginary_evolution)
+        if i == 1
+            imaginary_evolution && normalize!(ACi)
+            ψ.AC[1] = ACi
+        else
+            U₀ = ψ_old.AR[i] * T                              # old isometry in the new right frame
+            Û, _ = _bug_augment_right(U₀, ACi, alg.alg_orth)  # V̂_{i-1} ⊗ P ← V̂_i (grows bond i-1)
+            C_new = _transpose_tail(ACi) * _transpose_tail(Û)' # old_bond_{i-1} ← V̂_{i-1}
+            T = _bug_transport_right(ψ_old.AR[i], Û, T)       # old_bond_{i-1} ← V̂_{i-1}
+            ψ.AC[i] = (C_new, Û)
         end
     end
     return ψ
