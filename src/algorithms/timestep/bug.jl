@@ -10,10 +10,6 @@ substep, which makes it a natural choice for imaginary-time / dissipative evolut
 backward core step of projector-splitting integrators can become unstable. A truncating `trscheme`
 enables later rank-adaptivity.
 
-!!! note
-    This is currently a scaffold: the algorithm is registered and dispatches, but `timestep!` is not
-    yet implemented.
-
 ## Fields
 
 $(TYPEDFIELDS)
@@ -55,8 +51,125 @@ end
 
 function timestep!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::BUG,
-        envs = environments(ψ, H, ψ);
+        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         imaginary_evolution::Bool = false
     )
-    throw(ArgumentError("BUG timestep! not yet implemented"))
+    # Symmetric (2nd-order) fixed-rank BUG. Following the rooted TTN recursion (source of
+    # truth for the MPS caterpillar), one *first-order* BUG sweep evolves every site tensor
+    # exactly once: a K-step (basis update) at the leaf boundary and a forward Galerkin
+    # AC-step at every internal node, where the *un-evolved* old connecting tensor is first
+    # reprojected onto the already-updated child bases. A single symmetrized time step is a
+    # left→right half-sweep with step `dt/2` composed with its mirror right→left half-sweep,
+    # which lifts the sequential first-order sweep to second order.
+    #
+    # This deliberately does *not* mirror TDVP's per-site "evolve AC / split / evolve the
+    # split-off core backward" substep, nor a naive per-site "K-step + separate forward
+    # Galerkin C-step": the latter re-evolves the moving core once per bond and is only
+    # first-order-consistent to the wrong ODE (the state converges to the wrong direction as
+    # `dt → 0`). BUG has no backward substep, so imaginary-time evolution stays stable; the
+    # state is renormalized after each half-sweep when `imaginary_evolution = true`.
+    if length(ψ) == 1
+        Hac = AC_hamiltonian(1, ψ, H, ψ, envs)
+        ψ.AC[1] = integrate(Hac, ψ.AC[1], t, dt, alg.integrator; imaginary_evolution)
+        imaginary_evolution && normalize!(ψ)
+        return ψ, envs
+    end
+
+    h = dt / 2
+    _bug_sweep_right!(ψ, H, t, h, alg, envs; imaginary_evolution)       # left → right
+    _bug_sweep_left!(ψ, H, t + h, h, alg, envs; imaginary_evolution)    # right → left
+    return ψ, envs
+end
+
+# Transport of the old→new basis overlap across one bond.
+# `transport_right`: given the overlap `T` on bond `i` (mapping the new child bond to the old
+# child bond, `old ← new`) and the old/new right-isometries at site `i`, returns the overlap on
+# bond `i-1`. `transport_left` is the mirror (`new ← old`) for the left-to-right sweep.
+function _bug_transport_right(AR_old, AR_new, T)
+    @plansor Tnew[-1; -2] := AR_old[-1 1; 2] * T[2; 3] * conj(AR_new[-2 1; 3])
+    return Tnew
+end
+function _bug_transport_left(AL_old, AL_new, T)
+    @plansor Tnew[-1; -2] := conj(AL_new[1 2; -1]) * T[1; 3] * AL_old[3 2; -2]
+    return Tnew
+end
+
+# Left→right half-sweep (root = last site, leaf = site 1): center ends at the last site.
+function _bug_sweep_right!(ψ, H, t, τ, alg, envs; imaginary_evolution::Bool = false)
+    L = length(ψ)
+    ψ.AC[1]                                      # gauge center to site 1 (materialize AR[2..L])
+    ψ_old = copy(ψ)                              # frozen "t₀" state for K-step inputs / old bases
+    envs_old = environments(ψ_old, H, ψ_old)
+    # `ψ` is mutated in place: its left bases become new (as installed), its right bases stay
+    # `ψ_old`'s, so `envs` yields new-left / old-right effective Hamiltonians for the Galerkin.
+
+    # leaf (site 1): K-step, keep only the new left isometry
+    AC1 = integrate(AC_hamiltonian(1, ψ_old, H, ψ_old, envs_old), ψ_old.AC[1], t, τ, alg.integrator; imaginary_evolution)
+    AL_new, C_new = left_gauge(AC1, alg.alg_orth)
+    T = isomorphism(scalartype(ψ_old), left_virtualspace(ψ_old, 1) ← left_virtualspace(ψ_old, 1))
+    T = _bug_transport_left(ψ_old.AL[1], AL_new, T)          # overlap on bond 1 (new ← old)
+    ψ.AC[1] = (AL_new, C_new)
+
+    for i in 2:L
+        Ĉ = _mul_front(T, ψ_old.AC[i])                       # reproject old connecting tensor
+        ACi = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t, τ, alg.integrator; imaginary_evolution)
+        if i == L
+            imaginary_evolution && normalize!(ACi)
+            ψ.AC[L] = ACi
+        else
+            AL_new, C_new = left_gauge(ACi, alg.alg_orth)
+            T = _bug_transport_left(ψ_old.AL[i], AL_new, T)
+            ψ.AC[i] = (AL_new, C_new)
+        end
+    end
+    return ψ
+end
+
+# Right→left half-sweep (root = first site, leaf = last site): center ends at the first site.
+function _bug_sweep_left!(ψ, H, t, τ, alg, envs; imaginary_evolution::Bool = false)
+    L = length(ψ)
+    ψ.AC[L]                                      # gauge center to last site (materialize AL[1..L-1])
+    ψ_old = copy(ψ)
+    envs_old = environments(ψ_old, H, ψ_old)
+
+    # leaf (site L): K-step, keep only the new right isometry
+    ACL = integrate(AC_hamiltonian(L, ψ_old, H, ψ_old, envs_old), ψ_old.AC[L], t, τ, alg.integrator; imaginary_evolution)
+    C_new, AR_new = right_gauge(ACL, alg.alg_orth)
+    T = isomorphism(scalartype(ψ_old), right_virtualspace(ψ_old, L) ← right_virtualspace(ψ_old, L))
+    T = _bug_transport_right(ψ_old.AR[L], AR_new, T)         # overlap on bond L-1 (old ← new)
+    ψ.AC[L] = (C_new, AR_new)
+
+    for i in (L - 1):-1:1
+        Ĉ = ψ_old.AC[i] * T                                  # reproject old connecting tensor
+        ACi = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t, τ, alg.integrator; imaginary_evolution)
+        if i == 1
+            imaginary_evolution && normalize!(ACi)
+            ψ.AC[1] = ACi
+        else
+            C_new, AR_new = right_gauge(ACi, alg.alg_orth)
+            T = _bug_transport_right(ψ_old.AR[i], AR_new, T)
+            ψ.AC[i] = (C_new, AR_new)
+        end
+    end
+    return ψ
+end
+
+# copying version
+function timestep(
+        ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
+        alg::BUG, envs::AbstractMPSEnvironments...;
+        imaginary_evolution::Bool = false, kwargs...
+    )
+    isreal = (scalartype(ψ) <: Real && !imaginary_evolution)
+    ψ′ = isreal ? complex(ψ) : copy(ψ)
+    if length(envs) != 0 && isreal
+        @warn "Currently cannot reuse real environments for complex evolution"
+        envs′ = environments(ψ′, H, ψ′)
+    elseif length(envs) == 1
+        envs′ = only(envs)
+    else
+        @assert length(envs) == 0 "Invalid signature"
+        envs′ = environments(ψ′, H, ψ′)
+    end
+    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, kwargs...)
 end
