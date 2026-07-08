@@ -146,7 +146,7 @@ The same three steps carry over to harder problems, usually by changing only the
 
 - [**Installation**](@ref tutorial_installation) and [**Your first ground state**](@ref tutorial_first_groundstate) open the tutorial track, walking through complete calculations from scratch.
 - [**How-to guides**](@ref howto_index) are focused recipes for a known task, such as [constructing states](@ref howto_states), [building Hamiltonians](@ref howto_hamiltonians), and [computing observables](@ref howto_observables).
-- [**The manual**](man/intro.md) explains the concepts behind the library, including [States](@ref um_states), [Operators](@ref um_operators), and [Algorithms](@ref um_algorithms).
+- [**Concepts**](@ref concept_vector_spaces) explain the ideas behind the library, from [vector spaces and TensorKit](@ref concept_vector_spaces) through [matrix product states](@ref concept_matrix_product_states), [operators and Hamiltonians](@ref concept_operators_and_hamiltonians), and [the algorithm landscape](@ref concept_algorithm_landscape).
 - [**The examples gallery**](examples/index.md) collects longer, fully worked case studies across symmetries, infinite systems, and less common algorithms.
 - [**The public API**](@ref public_api) is the curated, stable entry point to the full library reference.
 

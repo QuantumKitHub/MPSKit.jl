@@ -58,13 +58,6 @@ makedocs(;
             "tutorials/excitations.md",
             "tutorials/using_symmetries.md",
         ],
-        "Manual" => [
-            "man/intro.md",
-            "man/states.md",
-            "man/operators.md",
-            "man/algorithms.md",
-            # "man/environments.md",
-        ],
         "How-to" => [
             "howto/index.md",
             "howto/states.md",
