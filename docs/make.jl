@@ -78,6 +78,7 @@ makedocs(;
             "howto/parallelism_gpu.md",
         ],
         "Concepts" => [
+            "concepts/matrix_product_states.md",
             "concepts/algorithm_landscape.md",
             "concepts/environments.md",
             "concepts/parallelism_model.md",
