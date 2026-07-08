@@ -79,6 +79,7 @@ makedocs(;
         ],
         "Concepts" => [
             "concepts/algorithm_landscape.md",
+            "concepts/environments.md",
             "concepts/parallelism_model.md",
         ],
         "Examples" => [
