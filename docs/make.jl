@@ -79,6 +79,7 @@ makedocs(;
         ],
         "Concepts" => [
             "concepts/matrix_product_states.md",
+            "concepts/operators_and_hamiltonians.md",
             "concepts/algorithm_landscape.md",
             "concepts/environments.md",
             "concepts/parallelism_model.md",
