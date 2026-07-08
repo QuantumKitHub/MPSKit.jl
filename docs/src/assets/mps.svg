@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="130" viewBox="0 0 420 130">
+  <g stroke="#8a8f8a" stroke-width="2.6" stroke-linecap="round" fill="none">
+    <line x1="18" y1="52" x2="28" y2="52"/>
+    <line x1="62" y1="52" x2="110.5" y2="52"/>
+    <line x1="144.5" y1="52" x2="193" y2="52"/>
+    <line x1="227" y1="52" x2="275.5" y2="52"/>
+    <line x1="309.5" y1="52" x2="358" y2="52"/>
+    <line x1="392" y1="52" x2="404" y2="52"/>
+    <line x1="45" y1="69" x2="45" y2="104"/>
+    <line x1="127.5" y1="69" x2="127.5" y2="104"/>
+    <line x1="210" y1="69" x2="210" y2="104"/>
+    <line x1="292.5" y1="69" x2="292.5" y2="104"/>
+    <line x1="375" y1="69" x2="375" y2="104"/>
+  </g>
+  <g fill="#389723">
+    <rect x="28" y="35" width="34" height="34" rx="7"/>
+    <rect x="110.5" y="35" width="34" height="34" rx="7"/>
+    <rect x="193" y="35" width="34" height="34" rx="7"/>
+    <rect x="275.5" y="35" width="34" height="34" rx="7"/>
+    <rect x="358" y="35" width="34" height="34" rx="7"/>
+  </g>
+</svg>
