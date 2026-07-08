@@ -74,6 +74,15 @@ Each recipe below stands on its own, so feel free to jump straight to the one yo
 - Check excitation quality — `variance` on a quasiparticle state.
 - Domain-wall excitations — quasiparticles interpolating between two distinct ground states.
 
+## Performance and hardware
+
+**[Parallelism and GPU support](@ref howto_parallelism_gpu)** — tuning how MPSKit uses the hardware.
+- Setting BLAS threads — `BLAS.set_num_threads` and the OpenBLAS/MKL difference.
+- Setting the MPSKit scheduler — `MPSKit.Defaults.set_scheduler!` with `:serial`/`:greedy`/`:dynamic`.
+- Diagnosing the thread layout — ThreadPinning.jl `threadinfo`.
+- Reducing memory usage — disabling multithreading to avoid `OutOfMemory`.
+- GPU support — the experimental Adapt-based path for moving states onto a GPU.
+
 ## Missing a recipe?
 
 If the task you're after isn't listed here, please open an issue at [QuantumKitHub/MPSKit.jl](https://github.com/QuantumKitHub/MPSKit.jl/issues) describing what you're trying to do.

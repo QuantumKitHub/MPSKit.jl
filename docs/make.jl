@@ -64,7 +64,6 @@ makedocs(;
             "man/operators.md",
             "man/algorithms.md",
             # "man/environments.md",
-            "man/parallelism.md",
         ],
         "How-to" => [
             "howto/index.md",
@@ -76,9 +75,11 @@ makedocs(;
             "howto/observables.md",
             "howto/entanglement.md",
             "howto/excitations.md",
+            "howto/parallelism_gpu.md",
         ],
         "Concepts" => [
             "concepts/algorithm_landscape.md",
+            "concepts/parallelism_model.md",
         ],
         "Examples" => [
             "Overview" => "examples/index.md",
