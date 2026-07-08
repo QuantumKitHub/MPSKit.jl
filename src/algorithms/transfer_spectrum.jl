@@ -15,10 +15,10 @@ The result is returned as a `TensorKit.SectorVector`, whose values can be inspec
 
 # Keyword arguments
 
-- `num_vals=20`: the number of eigenvalues to compute. This can either be a single `Int`, which is used for every sector of the transfer space,
+- `num_vals = 20`: the number of eigenvalues to compute. This can either be a single `Int`, which is used for every sector of the transfer space,
   or an `AbstractDict`/iterable of `sector => count` pairs to restrict the computation to specific sectors and request a different number of values per sector.
-- `oversampling=10`: additive margin on the Krylov dimension beyond the number of values requested in a sector (see `krylovdim` below).
-- `oversampling_factor=1`: proportionality factor between the Krylov dimension and the number of values requested in a sector (see `krylovdim` below).
+- `oversampling = 10`: additive margin on the Krylov dimension beyond the number of values requested in a sector (see `krylovdim` below).
+- `oversampling_factor = 1`: proportionality factor between the Krylov dimension and the number of values requested in a sector (see `krylovdim` below).
 - `krylovdim`: the Krylov dimension of the eigensolver. Unless given explicitly, this is chosen adaptively per sector as
   `max(Defaults.krylovdim, ceil(Int, oversampling_factor * num_vals) + oversampling)`, where `num_vals` is the number of values requested in that sector.
 - `kwargs...`: further keyword arguments (e.g. `tol`, `maxiter`) are forwarded to `MatrixAlgebraKit.default_algorithm` to build the eigensolver.
@@ -28,11 +28,11 @@ function transfer_spectrum(
         above::InfiniteMPS, below::InfiniteMPS = above, alg = nothing;
         num_vals = 20, kwargs...
     )
+    S = TensorKit.check_spacetype(above, below)
     transferspace = fuse(left_virtualspace(above, 1) * left_virtualspace(below, 1)')
     howmany = _transfer_howmany(num_vals, transferspace)
 
     T = complex(scalartype(above))
-    S = spacetype(above)
     Vsp = S(c => n for (c, n) in howmany)
     spectrum = TensorKit.SectorVector{T}(undef, Vsp)
 
@@ -63,7 +63,7 @@ _transfer_howmany(num_vals::Int, V) =
     TensorKit.SectorDict(c => min(num_vals, dim(V, c)) for c in sectors(V))
 function _transfer_howmany(num_vals, V)
     return TensorKit.SectorDict(
-        c => min(n, dim(V, c)) for (c, n) in pairs(num_vals) if dim(V, c) > 0
+        c => min(n, dim(V, c)) for (c, n) in num_vals if dim(V, c) > 0
     )
 end
 
