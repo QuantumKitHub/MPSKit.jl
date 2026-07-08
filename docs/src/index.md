@@ -75,7 +75,7 @@ Almost every MPSKit calculation follows the same three steps: build a Hamiltonia
 The transverse-field Ising chain (TFIM) makes each step concrete in a few lines.
 
 ```@raw html
-<img src="assets/mps.svg" alt="A matrix product state: a chain of tensors joined by virtual bonds, each with a physical leg" style="display:block; width:min(440px,100%); height:auto; margin:1.75rem auto 0.5rem;"/>
+<img src="./assets/mps.svg" alt="A matrix product state: a chain of tensors joined by virtual bonds, each with a physical leg" style="display:block; width:min(440px,100%); height:auto; margin:1.75rem auto 0.5rem;"/>
 ```
 
 A matrix product state is a chain of tensors: the horizontal bonds carry the virtual indices, and the leg hanging off each site is its physical index.
