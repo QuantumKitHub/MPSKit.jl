@@ -21,7 +21,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
-- `BUG` time-evolution algorithm: a Basis-Update & Galerkin integrator for finite MPS
+- `BUG` time-evolution algorithm: a symmetric second-order Basis-Update & Galerkin integrator for
+  finite MPS. Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
+  and passing a truncating `trscheme` enables rank-adaptivity (the bond dimension grows and shrinks
+  automatically to track entanglement).
 
 ### Changed
 
