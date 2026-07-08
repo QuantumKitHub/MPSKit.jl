@@ -8,6 +8,26 @@ changedbonds! can modify both the provided state and environments, depending on 
 For FiniteMPS, changebonds also modifies the environments.
 
 See also: [`SvdCut`](@ref), [`RandExpand`](@ref), [`VUMPSSvdCut`](@ref), [`OptimalExpand`](@ref)
+
+# Examples
+Growing the bond dimension of a product state with [`OptimalExpand`](@ref), which enriches
+each bond with directions orthogonal to the current state (using the environments of `H`):
+
+```jldoctest
+julia> X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2);
+
+julia> ψ = FiniteMPS(ones(Float64, (ℂ^2)^4));
+
+julia> H = FiniteMPOHamiltonian(fill(ℂ^2, 4), ((i, i + 1) => X ⊗ X for i in 1:3));
+
+julia> dim(left_virtualspace(ψ, 3))
+1
+
+julia> ψ′, envs = changebonds(ψ, H, OptimalExpand(; trscheme = truncrank(4)));
+
+julia> dim(left_virtualspace(ψ′, 3))
+2
+```
 """ changebonds, changebonds!
 function changebonds end
 function changebonds! end

@@ -50,6 +50,21 @@ By convention, we have that:
 - `AL[i] * C[i]` = `AC[i]` = `C[i-1] * AR[i]`
 - `AL[i]' * AL[i] = 1`
 - `AR[i] * AR[i]' = 1`
+
+# Examples
+Building a 3-site spin-1/2 MPS from a dense array and checking that its left-gauged tensors
+are isometries (the state is kept in canonical form even though the raw data is not
+normalized):
+
+```jldoctest
+julia> ψ = FiniteMPS(ones(Float64, (ℂ^2)^3));
+
+julia> length(ψ)
+3
+
+julia> ψ.AL[1]' * ψ.AL[1] ≈ id(left_virtualspace(ψ, 2))
+true
+```
 """
 struct FiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing, A}}

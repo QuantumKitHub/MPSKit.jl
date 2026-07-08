@@ -37,6 +37,24 @@ By convention, we have that:
 - `AL[i] * C[i]` = `AC[i]` = `C[i-1] * AR[i]`
 - `AL[i]' * AL[i] = 1`
 - `AR[i] * AR[i]' = 1`
+
+# Examples
+A one-site unit cell built from an explicit `(V_left ⊗ P ← V_right)` tensor. Here the bond
+dimension is one, so this is the `|+⟩` product state, for which `⟨X⟩ = 1`:
+
+```jldoctest
+julia> A = TensorMap(ones(Float64, 2, 1), ℂ^1 ⊗ ℂ^2, ℂ^1);
+
+julia> ψ = InfiniteMPS([A]);
+
+julia> length(ψ)
+1
+
+julia> X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2);
+
+julia> round(real(expectation_value(ψ, 1 => X)); digits = 6)
+1.0
+```
 """
 struct InfiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractMPS
     AL::PeriodicVector{A}

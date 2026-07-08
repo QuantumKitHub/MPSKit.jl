@@ -32,11 +32,22 @@ with a set of `inds => operator` pairs describing the local terms:
 - `D`: on-site terms
 
 # Examples
-For example, constructing a nearest-neighbour Hamiltonian would look like this:
+A nearest-neighbour term is a two-element index tuple `(i, i + 1) => O₁₂`; an on-site term
+is a one-element tuple `(i,) => O`. For the finite variant the lattice lists every site; for
+the infinite variant it is a single unit cell and indices wrap around it periodically.
 
-```julia
-lattice = fill(ℂ^2, 10)
-H = FiniteMPOHamiltonian(lattice, (i, i+1) => O for i in 1:length(lattice)-1)
+```jldoctest
+julia> X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2);
+
+julia> Hf = FiniteMPOHamiltonian(fill(ℂ^2, 3), ((i, i + 1) => X ⊗ X for i in 1:2));
+
+julia> Hf isa FiniteMPOHamiltonian, length(Hf)
+(true, 3)
+
+julia> Hi = InfiniteMPOHamiltonian(fill(ℂ^2, 1), (1, 2) => X ⊗ X, (1,) => X);
+
+julia> Hi isa InfiniteMPOHamiltonian, length(Hi)
+(true, 1)
 ```
 
 # See also

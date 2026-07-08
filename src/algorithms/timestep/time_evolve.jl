@@ -79,6 +79,27 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 
 - `ψ`: the time-stepped state
 - `envs`: the updated environment manager
+
+# Examples
+Real-time evolution of the `|+···+⟩` product state under a transverse field `H = ∑ Zₖ`.
+Each spin precesses independently, so `⟨Xₖ(t)⟩ = cos(2t)`; after a step `dt = 0.1` this is
+`cos(0.2) ≈ 0.980067`. The initial state must be complex, since real-time evolution
+multiplies by `-i`:
+
+```jldoctest
+julia> X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2, ℂ^2);
+
+julia> Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2);
+
+julia> ψ₀ = FiniteMPS(ones(ComplexF64, (ℂ^2)^4));
+
+julia> H = FiniteMPOHamiltonian(fill(ℂ^2, 4), ((i,) => Z for i in 1:4));
+
+julia> ψ, envs = timestep(ψ₀, H, 0.0, 0.1, TDVP());
+
+julia> round(real(expectation_value(ψ, 2 => X)); digits = 6)
+0.980067
+```
 """
 function timestep end, function timestep! end
 
