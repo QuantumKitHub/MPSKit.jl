@@ -343,3 +343,185 @@ end
         @test right_virtualspace.(Ref(ψi), 1:L) == Vr₀
     end
 end
+
+# Charge-sector RANK-ADAPTIVE coverage (Chunk 2.3): the "sector-adaptivity" path — genuine
+# symmetric tensors under a *truncating* `trscheme`, so bonds grow and shrink per sector. This is
+# the hardest part of the design doc; it stresses the H2–H5/H10 pitfalls of the risk register:
+# augmentation as a per-sector direct sum (H2/H10), the "old basis first" invariant per sector
+# (H3), a global-ϑ truncation dropping a sector to dimension 0 ⇒ dynamic bond grading (H4), and
+# total-boundary-charge conservation through the zero-block embeddings (H5). All states start
+# genuinely low-rank so the dynamics *must* grow the bonds; no `force_planar`.
+@testset "BUG rank-adaptive symmetric" verbose = true begin
+    # A genuinely low-rank U(1) start. For spin-1/2 the virtual bonds alternate integer /
+    # half-integer parity, so a single-sector cap collapses the state (no fusion channels); use a
+    # mixed-parity cap with multiplicity 1 per sector. The full-rank Sz=0 profile is [1,2,4,8,4,2];
+    # this cap gives [1,2,3,2,3,2], leaving room (esp. on the middle bond) for per-sector growth.
+    u1cap = U1Space(-1 // 2 => 1, 1 // 2 => 1, 0 => 1, 1 => 1, -1 => 1)
+    function low_rank_u1(L; seed = 2718, right = U1Space(0 => 1))
+        Random.seed!(seed)
+        H = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L)
+        ψ = FiniteMPS(physicalspace(H), u1cap; right)
+        normalize!(ψ)
+        return H, ψ
+    end
+    maxbond(ψ) = maximum(dim(left_virtualspace(ψ, k)) for k in 1:length(ψ))
+    secmults(V) = [c => dim(V, c) for c in sectors(V)]
+
+    # 1. THE CORE GATE: rank-adaptivity under symmetry grows the bond per sector for a tight ϑ and
+    #    keeps it small for a loose ϑ, without any `SpaceMismatch`, while the total boundary charge
+    #    (the fixed `right` virtual space) is preserved. Checked in the natural total-Sz=0 sector and
+    #    in a fixed nonzero-charge (Sz=1) sector.
+    @testset "rank-adaptivity + total-charge preservation (Sz = $label)" for (label, right) in
+        (("0", U1Space(0 => 1)), ("1", U1Space(1 => 1)))
+        L = 6
+        H, ψ₀ = low_rank_u1(L; right)
+        Rtot = right_virtualspace(ψ₀, L)
+        Dstart = maxbond(ψ₀)
+
+        ψtight = ψ₀
+        for k in 0:2
+            ψtight, = timestep(ψtight, H, k * 0.05, 0.05, BUG(; trscheme = truncerror(; atol = 1.0e-10)))
+        end
+        Dtight = maxbond(ψtight)
+
+        ψloose = ψ₀
+        for k in 0:2
+            ψloose, = timestep(ψloose, H, k * 0.05, 0.05, BUG(; trscheme = truncerror(; atol = 1.0e-2)))
+        end
+        Dloose = maxbond(ψloose)
+
+        @info "BUG rank-adaptive symmetric bond growth (Sz=$label)" Dstart Dloose Dtight
+        @test Dtight > Dstart                            # per-sector augmentation grows the bond
+        @test Dloose < Dtight                            # a looser tolerance keeps a smaller bond
+        @test right_virtualspace(ψtight, L) == Rtot      # H5: total boundary charge preserved
+        @test right_virtualspace(ψloose, L) == Rtot
+        @test norm(ψtight) ≈ 1 atol = 1.0e-6             # tiny ϑ ⇒ negligible truncation
+    end
+
+    # 2. THE HARD GATE: overlap-error vs a *dense* `exp(-iH·T)` reference decreases as ϑ shrinks
+    #    (monotonically up to the fixed-dt plateau). This proves per-sector augmentation+truncation
+    #    actually captures the true dynamics under symmetry, not just that some bond grows.
+    @testset "accuracy improves as ϑ decreases (U(1))" begin
+        L = 6
+        H, ψ₀ = low_rank_u1(L; seed = 202)
+
+        Hmat = convert(TensorMap, H)
+        ψvec = convert(TensorMap, ψ₀)
+        ψvec /= norm(ψvec)
+
+        T = 0.2
+        dt = 0.05
+        n = round(Int, T / dt)
+        ref = exp(-im * Hmat * (n * dt)) * ψvec
+
+        ϑs = [1.0e-2, 1.0e-4, 1.0e-6]
+        errs = map(ϑs) do ϑ
+            ψ = copy(ψ₀)
+            for k in 0:(n - 1)
+                ψ, = timestep(ψ, H, k * dt, dt, BUG(; trscheme = truncerror(; atol = ϑ)))
+            end
+            ψout = convert(TensorMap, ψ)
+            ψout /= norm(ψout)
+            return 1 - abs(dot(ψout, ref))
+        end
+
+        @info "BUG rank-adaptive symmetric accuracy vs ϑ" ϑs errs
+        for i in 1:(length(ϑs) - 1)
+            @test errs[i + 1] ≤ 1.5 * errs[i]   # monotone within plateau noise near the dt-floor
+        end
+        # Clear net improvement toward the dt-floor. This charge-capped low-rank system saturates
+        # its (small) per-sector bonds quickly: at ϑ ≲ 1e-4 no directions are truncated, so the two
+        # tightest tolerances land on the *identical* pure-dt-discretization floor (the ϑ=1e-4 and
+        # 1e-6 errors coincide to the digit). The net truncation-limited improvement is therefore
+        # modest (≈2.5×) rather than the orders of magnitude a full-rank trivial system shows.
+        @test errs[end] < errs[1] / 2
+    end
+
+    # 3. DYNAMIC BOND GRADING: an interior bond's per-sector multiplicities
+    #    `[dim(V, c) for c in sectors(V)]` are time-dependent — they change across a single
+    #    rank-adaptive step (the graded structure is not fixed), while the total charge is.
+    @testset "dynamic bond grading (per-sector multiplicities are time-dependent)" begin
+        L = 6
+        H, ψ₀ = low_rank_u1(L)
+        mid = 4
+        before = secmults(left_virtualspace(ψ₀, mid))
+        ψ, = timestep(ψ₀, H, 0.0, 0.05, BUG(; trscheme = truncerror(; atol = 1.0e-10)))
+        after = secmults(left_virtualspace(ψ, mid))
+        @info "BUG rank-adaptive symmetric dynamic grading" before after
+        @test before != after                                            # graded structure evolved
+        @test right_virtualspace(ψ, L) == right_virtualspace(ψ₀, L)      # ... at fixed total charge
+    end
+
+    # 4. H4 — a global-ϑ cut can truncate a whole sector to dimension 0 (removing it from the bond),
+    #    and downstream rank-adaptive steps must tolerate the changed / asymmetric grading.
+    #
+    #    NOTE on the sharpest H4 test (deterministic *drop-and-re-add* in one run): this is NOT
+    #    achievable with single-site BUG, and asserting it would be wrong. The augmentation candidate
+    #    `ACᵢ` in each half-sweep always carries the (already-truncated) bond as its *domain*, so
+    #    `_bug_augment_left`/`_bug_augment_right` can only append directions whose charge sectors are
+    #    already present on that bond — they grow multiplicity within existing sectors but can never
+    #    re-introduce a sector that was truncated away (the graded analog of single-site TDVP's
+    #    inability to change bond quantum numbers; re-adding a sector needs a two-site / CBE-style
+    #    candidate, cf. `OptimalExpand`). We verified empirically that a sector dropped from an
+    #    interior bond does not reappear over many subsequent tight steps. We therefore assert the
+    #    deterministic *drop* and the H4 tolerance requirement (subsequent steps run without
+    #    `SpaceMismatch`, yield a valid normalizable state, and preserve the total charge).
+    @testset "sector drop-to-zero + dynamic-grading tolerance (H4)" begin
+        L = 6
+        H, ψ₀ = low_rank_u1(L)
+        # grow a rich interior bond that carries the subdominant ±1 sectors
+        ψrich = ψ₀
+        for k in 0:5
+            ψrich, = timestep(ψrich, H, k * 0.05, 0.05, BUG(; trscheme = truncerror(; atol = 1.0e-10)))
+        end
+        mid = 3
+        Rtot = right_virtualspace(ψrich, L)
+        @test U1Irrep(-1) in sectors(left_virtualspace(ψrich, mid))       # subdominant sector present
+
+        # a global rank cut pools singular values across all sectors under one threshold, so the
+        # subdominant sector is truncated to dimension 0 and removed from the bond (H4).
+        ψdrop, = timestep(ψrich, H, 0.0, 0.05, BUG(; trscheme = truncrank(2)))
+        @test !(U1Irrep(-1) in sectors(left_virtualspace(ψdrop, mid)))    # dropped to dim 0
+        @test right_virtualspace(ψdrop, L) == Rtot                        # ... charge still preserved
+
+        # subsequent rank-adaptive steps must tolerate the reduced / asymmetric grading: no
+        # SpaceMismatch, a valid normalizable state, and a conserved total charge.
+        ψcont = ψdrop
+        for k in 0:3
+            ψcont, = timestep(ψcont, H, k * 0.05, 0.05, BUG(; trscheme = truncerror(; atol = 1.0e-10)))
+        end
+        @info "BUG rank-adaptive symmetric H4" dropped = sectors(left_virtualspace(ψdrop, mid)) continued = sectors(left_virtualspace(ψcont, mid))
+        @test isfinite(real(expectation_value(ψcont, H)))
+        @test norm(ψcont) > 0
+        @test right_virtualspace(ψcont, L) == Rtot
+    end
+
+    # 5. IMAGINARY-TIME symmetric rank-adaptive ground-state search: from a low bond dim it grows the
+    #    per-sector bonds, lowers the energy toward `find_groundstate`, and preserves both the total
+    #    charge and the (renormalized) norm.
+    @testset "imaginary-time symmetric grows bond and lowers energy" begin
+        L = 6
+        H, ψ₀ = low_rank_u1(L)
+        maxV = MPSKit.max_virtualspaces(physicalspace(H))
+        ψgs, = find_groundstate(FiniteMPS(physicalspace(H), maxV[2:(end - 1)]), H; verbosity = 0)
+        Egs = real(expectation_value(ψgs, H))
+
+        Rtot = right_virtualspace(ψ₀, L)
+        Dstart = maxbond(ψ₀)
+        E_start = real(expectation_value(ψ₀, H))
+
+        ψ = ψ₀
+        for _ in 1:30
+            ψ, = timestep(ψ, H, 0.0, 0.1, BUG(; trscheme = truncerror(; atol = 1.0e-8)); imaginary_evolution = true)
+        end
+        Dend = maxbond(ψ)
+        E_end = real(expectation_value(ψ, H))
+
+        @info "BUG rank-adaptive symmetric imaginary-time" Dstart Dend E_start E_end Egs
+        @test Dend > Dstart                          # per-sector bonds grew as entanglement built up
+        @test E_end < E_start - 1.0                  # substantial lowering
+        @test E_end ≈ Egs atol = 0.1                 # toward the true ground state
+        @test norm(ψ) ≈ 1 atol = 1.0e-6             # imaginary-time renormalizes each step
+        @test right_virtualspace(ψ, L) == Rtot       # total charge preserved throughout
+    end
+end
