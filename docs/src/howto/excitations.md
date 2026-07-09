@@ -103,7 +103,6 @@ Es_fe
 ```
 
 Unlike `QuasiparticleAnsatz`, the values in `Es_fe` are total energies of the excited states, directly comparable to `expectation_value(ψ_fin, H_fin)` on the ground state.
-<!-- REVIEW: confirm that running a full ground-state search (with its own maxiter/tol) once per requested state makes FiniteExcited noticeably more expensive per excitation than QuasiparticleAnsatz, and that this cost grows with `num` since each new state is optimized against all previous ones. -->
 Because each call to `FiniteExcited` reruns a full ground-state optimization under the hood, it scales worse with `num` than the other methods here; reach for it when you need excited states of a genuinely different character than the ground state (so the projector penalty, rather than a local perturbation, is what finds them).
 
 [`ChepigaAnsatz`](@ref) is a cheaper alternative for excitations that are qualitatively similar to the ground state: it diagonalizes the effective Hamiltonian at a single site `pos` (default the middle of the chain) using the ground-state environments, with no extra sweeping:
@@ -121,7 +120,6 @@ Es_ch2[1]
 ```
 
 Like `FiniteExcited`, the energies returned by both Chepiga variants are total energies, not gaps.
-<!-- REVIEW: confirm the recommendation that ChepigaAnsatz/ChepigaAnsatz2 are specifically well-suited to critical (long correlation length) systems, where growing the bond dimension enough to resolve excitations directly becomes expensive, per the "Chepiga ansatz" discussion in man/algorithms.md. -->
 
 ---
 

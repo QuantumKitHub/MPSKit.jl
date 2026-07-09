@@ -64,7 +64,6 @@ There is no exported `time_evolve!`; use `time_evolve` and rebind the result.
 
 Single-site `TDVP` cannot change the bond dimension: whatever `ψ₀` starts with is what it keeps.
 After a quench, entanglement typically grows and a fixed bond dimension eventually becomes insufficient.
-<!-- REVIEW: confirm that entanglement growth after a quench is generic enough to state as a blanket recipe motivation, versus being model/quench-dependent. -->
 [`TDVP2`](@ref) updates two sites at a time and truncates back down, so it can grow (or shrink) the bond dimension as it evolves.
 Unlike `TDVP`, `TDVP2` requires `trscheme` — there is no default:
 
@@ -108,7 +107,6 @@ norm(ψ_im)
 
 Imaginary-time evolution renormalizes the state at every step, so `norm(ψ_im)` stays `1` regardless of how the un-normalized weight would otherwise change.
 Repeated imaginary-time steps damp excited-state components faster than the ground state, so this is often used as a (slower) alternative to `find_groundstate` for driving a state towards the ground state of `H₁`.
-<!-- REVIEW: confirm this "cooling towards the ground state" framing and its relative merits/use cases versus find_groundstate — beyond the norm-renormalization behavior, which is docstring-backed, the rest is my inference. -->
 `time_evolve` accepts the same `imaginary_evolution` keyword for a span of imaginary-time steps.
 
 ---
@@ -116,7 +114,6 @@ Repeated imaginary-time steps damp excited-state components faster than the grou
 ## 6. Build a time-evolution MPO
 
 When `H` is time-independent and `dt` is fixed, an alternative to repeated `timestep` calls is to build the evolution operator once as an MPO with [`make_time_mpo`](@ref), then apply it repeatedly with [`approximate`](@ref).
-<!-- REVIEW: confirm when this MPO route is actually preferable to TDVP in practice (e.g. amortizing the one-time MPO construction cost over many reuses at fixed dt, versus TDVP's per-step tangent-space projection cost) — flagging since I cannot benchmark this. -->
 
 [`WII`](@ref) builds a low-order MPO approximation and works for both finite and infinite Hamiltonians:
 
