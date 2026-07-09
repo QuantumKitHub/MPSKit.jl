@@ -156,6 +156,7 @@ V_\ell \leftarrow V_r,
 ```
 
 i.e. the left virtual space is the codomain and the right virtual space is the domain.
+
 ### The MPO tensor
 
 ```@raw html
@@ -169,6 +170,7 @@ V_\ell \otimes P \leftarrow P \otimes V_r.
 ```
 
 The picture labels these `virtual (1)` and `physical (2)` in the codomain, and `physical (3)` and `virtual (4)` in the domain.
+
 ## Where to go next
 
 - To see these tensors assembled into states and gauged into canonical form, read [Matrix product states](@ref concept_matrix_product_states).

@@ -37,7 +37,6 @@ The **quasiparticle ansatz** builds an excited state directly on top of the unif
 The idea is simple to picture: take the converged ground state and perturb it locally, replacing the tensor at one site with a new one that we get to optimize.
 Because the chain is infinite and translation invariant, we do not place this perturbation at any particular site; instead we superpose it across *all* sites with a plane-wave phase, which gives the excitation a definite momentum ``k``.
 Optimizing the perturbation then yields the lowest excited state at that momentum.
-<!-- REVIEW: quasiparticle-ansatz framing — "local perturbation of the uniform ground state, momentum-superposed over all sites, then variationally optimized" — please confirm this hand-held description does not oversimplify in a misleading way. -->
 
 The call is [`excitations`](@ref) with the [`QuasiparticleAnsatz`](@ref) algorithm, a momentum (a real number, in radians per site), and the ground state with its environments.
 Let us ask for the excitation at the edge of the Brillouin zone, ``k = \pi``:
@@ -96,6 +95,7 @@ real(Es[1, 1]), 2 * (g - 1)
 ```
 
 A ground state at bond dimension 12 plus a variational quasiparticle on top reproduces the exact gap of the model — that is the quasiparticle ansatz working as intended.
+
 ## Where to go next
 
 You have computed a full dispersion relation on top of an infinite ground state and read off the energy gap.
