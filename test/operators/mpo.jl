@@ -108,6 +108,8 @@ end
     @test physicalspace(multiH, 1, 1) == P
     @test left_virtualspace(multiH, 1, 1) == left_virtualspace(multiH, 2, 1) == V
     @test right_virtualspace(multiH, CartesianIndex(1, 2)) == V
+    @test leftunit(multiH) == leftunit(H) == unit(sectortype(P))
+    @test rightunit(multiH) == rightunit(H) == unit(sectortype(P))
 end
 
 @testset "Adapt" for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
