@@ -7,7 +7,7 @@ module Defaults
 
 import KrylovKit: GMRES, Arnoldi, Lanczos
 using OhMyThreads
-using ..MPSKit: DynamicTol
+using ..MPSKit: DynamicTol, AdaptiveKrylov
 using TensorKit: TensorKit
 using MatrixAlgebraKit: DefaultAlgorithm, Householder
 
@@ -54,8 +54,11 @@ end
 function alg_eigsolve(;
         ishermitian = true, tol = tol, maxiter = maxiter, verbosity = 0,
         eager = true, krylovdim = krylovdim, dynamic_tols = dynamic_tols, tol_min = tol_min,
-        tol_max = tol_max, tol_factor = eigs_tolfactor
+        tol_max = tol_max, tol_factor = eigs_tolfactor, adaptive = false, adaptive_kwargs...
     )
+    # the per-bond adaptive controller (`AdaptiveKrylov`) retunes krylovdim/maxiter/tol per site
+    # and supersedes the (global, tol-only) `DynamicTol` wrapper; it is the default for `DMRG`.
+    adaptive && return AdaptiveKrylov(; ishermitian, adaptive_kwargs...)
     alg = ishermitian ? Lanczos(; tol, maxiter, eager, krylovdim, verbosity) :
         Arnoldi(; tol, maxiter, eager, krylovdim, verbosity)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg

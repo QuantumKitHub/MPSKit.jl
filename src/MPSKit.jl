@@ -52,7 +52,7 @@ export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # TODO: rename
 
 # unexported
 using Compat: @compat
-@compat public DynamicTols
+@compat public DynamicTols, DynamicTol, AdaptiveKrylov
 @compat public VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
 @compat public IterLog, loginit!, logiter!, logfinish!, logcancel!
 
