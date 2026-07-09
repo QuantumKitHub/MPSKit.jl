@@ -14,8 +14,6 @@ The physical indices carry the local degrees of freedom, while the virtual bonds
 ```
 
 *The diagram shows a finite MPS as a row of site tensors, each carrying a physical index and linked to its neighbours through virtual bonds; the two ends carry trivial (dimension-one) boundary bonds.*
-<!-- REVIEW: the description of the diagram's leg convention (physical leg per site, virtual bonds between neighbours, trivial boundary bonds at the ends) is inferred from the legacy man/states.md prose and the general MPS picture; confirm the exact leg ordering the image depicts. -->
-
 This page explains the *gauge freedom* inherent in that representation and the *canonical forms* MPSKit uses to fix it, so that the `AL`, `AR`, `C`, and `AC` you see throughout the API stop looking like arbitrary labels.
 It is about understanding rather than construction: for how to *build* a state see [Constructing states](@ref howto_states), and for the full type signatures see the [States](@ref lib_states) reference.
 

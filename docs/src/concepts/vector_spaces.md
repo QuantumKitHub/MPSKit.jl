@@ -108,8 +108,6 @@ t + t2 # partitions do not match
 catch err; Base.showerror(stderr, err); end #hide
 ```
 
-<!-- REVIEW: the exact wording of this error message is TensorKit-version-dependent and shown only for illustration; the point is that the mismatch is reported in terms of the domain/codomain, not the shape. -->
-
 The fix is [`permute`](https://quantumkithub.github.io/TensorKit.jl/stable/), which regroups the legs into a chosen partition.
 Bringing `t2` back to the partition of `t` makes the addition well-defined again:
 
@@ -142,8 +140,6 @@ V_\ell \otimes P_1 \otimes \cdots \otimes P_{k} \leftarrow V_r,
 ```
 
 i.e. leg 1 is the left virtual space, the physical spaces come next (the picture labels them `physical (2:N-1)`), and the final leg is the right virtual space.
-<!-- REVIEW: leg-order fallback read from mps_tensor_definition.png (left virtual as leg 1 in the codomain, physical legs 2..N-1, right virtual as the last leg in the domain); confirm against the intended convention. -->
-
 Crucially, an MPS tensor may carry an **arbitrary number of physical legs**, and both [`FiniteMPS`](@ref) and [`InfiniteMPS`](@ref) handle the resulting objects.
 This is what allows, for example, boundary tensors in PEPS code, which carry two physical legs.
 
@@ -160,8 +156,6 @@ V_\ell \leftarrow V_r,
 ```
 
 i.e. the left virtual space is the codomain and the right virtual space is the domain.
-<!-- REVIEW: leg-order fallback read from bond_tensor_definition.png (virtual leg 1 on the left in the codomain, virtual leg 2 on the right in the domain); confirm against the intended convention. -->
-
 ### The MPO tensor
 
 ```@raw html
@@ -175,8 +169,6 @@ V_\ell \otimes P \leftarrow P \otimes V_r.
 ```
 
 The picture labels these `virtual (1)` and `physical (2)` in the codomain, and `physical (3)` and `virtual (4)` in the domain.
-<!-- REVIEW: leg-order fallback read from mpo_tensor_definition.png (leg 1 left virtual, leg 2 outgoing physical, leg 3 incoming physical, leg 4 right virtual); confirm against the intended convention. -->
-
 ## Where to go next
 
 - To see these tensors assembled into states and gauged into canonical form, read [Matrix product states](@ref concept_matrix_product_states).

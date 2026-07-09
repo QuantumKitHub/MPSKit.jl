@@ -49,9 +49,7 @@ What they also do, uniformly, is accept an *optional* environments argument and 
 
 That return value is the reason to care about environments even when you never construct one.
 Handing the environments from one call into the next lets the algorithm reuse the cached blocks instead of rebuilding them from nothing.
-For iterated procedures such as time evolution — where each step starts from a state only slightly different from the last — feeding the updated environments back in every step avoids repeating work that the previous step already did.
-<!-- REVIEW: the efficiency claim that threading returned environments back into successive time-evolution steps saves meaningful work versus letting each call rebuild them; conceptually follows from the caching model but the size of the saving is not quantified here. -->
-The [Time evolution](@ref howto_time_evolution) how-to shows this threading pattern in a concrete recipe.
+For iterated procedures such as time evolution — where each step starts from a state only slightly different from the last — feeding the updated environments back in every step avoids repeating work that the previous step already did.The [Time evolution](@ref howto_time_evolution) how-to shows this threading pattern in a concrete recipe.
 
 ## Finite environments and the `===` cache
 
@@ -76,8 +74,6 @@ Because algorithms that use the public API replace tensors rather than mutating 
     site `i` as stale so the next query recomputes them; needing it is a sign that a tensor
     was mutated in place rather than replaced.
 
-<!-- REVIEW: usage form of the internal helper `MPSKit.poison!(envs, i)` — verified signature is `poison!(envs::FiniteEnvironments, ind)` in src/environments/finite_envs.jl; confirm `i` is the intended site index and that this is still the sanctioned way to invalidate after in-place mutation. -->
-
 ## Infinite environments
 
 Infinite environments serve the same role but are computed differently, and the difference matters for how you use them.
@@ -88,15 +84,13 @@ Its environments are instead the fixed points of the transfer operator — the o
 Those problems are solved *iteratively*, to a finite tolerance, rather than by an exact finite contraction.
 Building an infinite environment is therefore a small numerical solve, and its result is only as accurate as the tolerance of that solve.
 
-The precision of that solve is a setting of the environment computation, controlled through the arguments passed to [`environments`](@ref) rather than being read or written on the environment object afterwards.
-<!-- REVIEW: the current mechanism for setting infinite-environment precision. The legacy man page showed `cache.tol`/`cache.maxiter` property access and `cache.tol = 1e-8` mutation; those properties are not part of the current struct and appear stale. The keyword path (tol/maxiter/krylovdim flowing into the iterative solver) is visible in `environment_alg` in src/environments/abstract_envs.jl, but I could not confirm the sanctioned user-facing way to set or inspect the precision of an existing infinite environment. -->
+The precision of that solve is controlled by the `tol`, `maxiter`, and `krylovdim` keyword arguments to [`environments`](@ref), which configure the underlying iterative solver — an Arnoldi eigensolver for a transfer-matrix fixed point, or GMRES for the linear problem that arises with an `InfiniteMPOHamiltonian`.
+It is fixed when the environments are built, rather than read from or written to the environment object afterwards.
 
 The second difference is that infinite environments are **not** recomputed automatically.
 The finite cache re-validates itself against the current state on every query; the infinite one does not.
 If the state changes, the stored fixed points no longer correspond to it, and there is no automatic re-solve.
-Bringing an infinite environment up to date for a changed state is an explicit step, handled internally by the non-exported `MPSKit.recalculate!`.
-<!-- REVIEW: verified signature is `recalculate!(envs, below, operator, above, alg; ...)` (and a keyword-driven method) in src/environments/infinite_envs.jl — note this is NOT the legacy `recalculate!(cache, state)` form, which is stale. Confirm this internal helper is the right thing to name here and that no exported wrapper is preferred. -->
-In practice the high-level algorithms perform this recomputation for you as part of their own iteration, which is again why threading the returned environments through successive calls is the efficient pattern.
+Bringing an infinite environment up to date for a changed state is an explicit step, handled internally by the non-exported `MPSKit.recalculate!`.In practice the high-level algorithms perform this recomputation for you as part of their own iteration, which is again why threading the returned environments through successive calls is the efficient pattern.
 
 ## Where to go next
 

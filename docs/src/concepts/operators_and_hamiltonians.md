@@ -34,9 +34,7 @@ The individual site tensors are therefore defined only up to this virtual-space 
 
 MPOs support the usual linear-algebra operations — addition, subtraction, and multiplication, either among themselves or acting on an MPS.
 Each such operation combines the virtual spaces of its operands, so the virtual dimension of the result is (generically) the *product* or *sum* of the input dimensions rather than staying fixed.
-Composing operators naively therefore makes the representation grow, and the growth compounds under repeated multiplication.
-<!-- REVIEW: the claim that MPO×MPO multiplies virtual dimensions and MPO+MPO adds them (so repeated products grow the bond, up to the rank ceiling set by full-rank tensors) is the standard MPO-arithmetic picture carried over from the legacy man/operators.md; confirm the exact growth law and the full-rank cap MPSKit enforces. -->
-This growth is precisely what motivates the *approximate* algorithms that re-express a product or sum within a bounded virtual dimension; see the [algorithm landscape](@ref concept_algorithm_landscape) for where those methods fit.
+Composing operators naively therefore makes the representation grow, and the growth compounds under repeated multiplication.This growth is precisely what motivates the *approximate* algorithms that re-express a product or sum within a bounded virtual dimension; see the [algorithm landscape](@ref concept_algorithm_landscape) for where those methods fit.
 
 ## MPO Hamiltonians and the Jordan-block form
 
@@ -75,8 +73,6 @@ Every complete left-to-right path through the block matrix contributes one term 
 - ``C \cdot B`` generates the two-site terms,
 - ``C \cdot A \cdot B`` generates the three-site terms,
 - and in general ``C \cdot A^{k} \cdot B`` generates a term spanning ``k+2`` sites.
-
-<!-- REVIEW: the finite-state-automaton reading of W (v_L enters the identity state; D emits a 1-site term; C starts / A propagates / B closes an interaction so that C·A^k·B spans k+2 sites) is the standard interpretation carried over from the legacy page; confirm it matches MPSKit's index/row-column convention. -->
 
 The repeated ``A`` block is what makes longer-range interactions possible at fixed virtual dimension: choosing ``A`` to be (a multiple of) the identity gives every additional site the same weight, while a decaying ``A`` gives geometrically decaying couplings.
 A sum of such geometric series can approximate a power-law interaction to any desired accuracy, which is how (exponentially decaying) infinite-range and approximate power-law couplings are represented.

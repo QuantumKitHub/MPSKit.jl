@@ -41,9 +41,7 @@ When Julia is started with more than one thread, MPSKit uses
 algorithms wherever possible.
 In practice this happens where a unit cell (or a chain of sites) lets local updates run
 independently: the work is distributed across the sites of the system, with the tensor at
-each site updated in parallel.
-<!-- REVIEW: the claim that MPSKit's parallelism is primarily over unit-cell sites / independent local updates; verified structurally (OhMyThreads tforeach/tmap over eachindex(state) in grassmann.jl, tdvp.jl, quasiparticleexcitation.jl, wii.jl), but confirm this is the right level of description and that these are the parallel hotspots that actually scale. -->
-This is exactly why setting the BLAS thread count to `1` on OpenBLAS tends to help: it keeps
+each site updated in parallel.This is exactly why setting the BLAS thread count to `1` on OpenBLAS tends to help: it keeps
 the Julia threads free to work through the sites, rather than contending with a shared BLAS
 pool.
 

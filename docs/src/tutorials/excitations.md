@@ -81,8 +81,6 @@ This particular model is exactly solvable, so we can plot our numerical dispersi
 \Delta E(k) = 2\sqrt{1 + g^2 - 2 g \cos k}.
 ```
 
-<!-- REVIEW: exact dispersion — the single-particle dispersion of the TFIM in the Pauli-matrix convention H = -(Σ σᶻσᶻ + g Σ σˣ) used by transverse_field_ising, obtained from its free-fermion (Jordan-Wigner) solution; at k = 0 it gives the gap 2(g − 1) for g > 1. Please verify formula and convention. -->
-
 For this Hermitian problem the computed energies come back as real numbers; the `real.(...)` below is a harmless safeguard for the general case, where the eigenvalue solver may return a complex number type with numerically vanishing imaginary parts.
 
 ```@example excitations
@@ -101,8 +99,6 @@ real(Es[1, 1]), 2 * (g - 1)
 ```
 
 A ground state at bond dimension 12 plus a variational quasiparticle on top reproduces the exact gap of the model — that is the quasiparticle ansatz working as intended.
-<!-- REVIEW: convergence claim — please confirm that D = 12 is ample for the TFIM quasiparticle gap at g = 2 to the displayed precision, so promising agreement here is safe. -->
-
 ## Where to go next
 
 You have computed a full dispersion relation on top of an infinite ground state and read off the energy gap.
