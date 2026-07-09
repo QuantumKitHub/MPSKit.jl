@@ -34,7 +34,8 @@ The individual site tensors are therefore defined only up to this virtual-space 
 
 MPOs support the usual linear-algebra operations — addition, subtraction, and multiplication, either among themselves or acting on an MPS.
 Each such operation combines the virtual spaces of its operands, so the virtual dimension of the result is (generically) the *product* or *sum* of the input dimensions rather than staying fixed.
-Composing operators naively therefore makes the representation grow, and the growth compounds under repeated multiplication.This growth is precisely what motivates the *approximate* algorithms that re-express a product or sum within a bounded virtual dimension; see the [algorithm landscape](@ref concept_algorithm_landscape) for where those methods fit.
+Composing operators naively therefore makes the representation grow, and the growth compounds under repeated multiplication.
+This growth is precisely what motivates the *approximate* algorithms that re-express a product or sum within a bounded virtual dimension; see the [algorithm landscape](@ref concept_algorithm_landscape) for where those methods fit.
 
 ## MPO Hamiltonians and the Jordan-block form
 

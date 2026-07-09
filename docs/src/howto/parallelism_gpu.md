@@ -31,14 +31,12 @@ threads held in a shared pool across all Julia threads.
 When Julia is started with multiple threads, setting this to `1` lets MPSKit drive the
 parallelism through its own (Julia-thread) machinery instead, which is often the best
 option for OpenBLAS.
-<!-- REVIEW: "often the best option" for OpenBLAS set_num_threads(1) is a performance recommendation inherited from man/parallelism.md; confirm it is still the house guidance. -->
 
 With [MKL.jl](https://github.com/JuliaLinearAlgebra/MKL.jl) the semantics differ: the BLAS
 thread count applies **per Julia thread**, so 4 Julia threads with 4 BLAS threads each spawn
 16 BLAS threads in total.
 In that case you typically want to lower the BLAS thread count to avoid oversubscribing the
 physical cores.
-<!-- REVIEW: MKL per-Julia-thread thread semantics and the oversubscription guidance, inherited from man/parallelism.md; confirm against current MKL.jl behavior. -->
 
 ## Setting the MPSKit scheduler
 
@@ -122,7 +120,6 @@ MPSKit's multithreading spawns tasks in a nested fashion, each allocating and de
 memory in a tight loop.
 This can put enough pressure on the garbage collector that memory usage climbs and, in the
 worst case, an `OutOfMemory` error occurs before the garbage can be cleared.
-<!-- REVIEW: the mechanism (nested tasks + GC unable to keep up leading to OutOfMemory) is described in man/parallelism.md as observed behaviour under investigation; confirm it still holds. -->
 
 If you hit this, the most effective remedy is usually to disable MPSKit's multithreading,
 by setting the scheduler to serial:
@@ -133,7 +130,6 @@ MPSKit.Defaults.set_scheduler!(:serial)
 
 The `derivatives` (the effective local operators applied during the sweeps) are reported to
 be the most memory-intensive part, so this is where switching off multithreading helps most.
-<!-- REVIEW: claim that the `derivatives` are the most memory-intensive part is inherited from man/parallelism.md; confirm. -->
 
 For why this pressure arises, see
 [Why memory pressure arises](@ref concept_parallelism_model).
@@ -158,4 +154,3 @@ using Adapt, CUDA
 ψ_gpu = adapt(CuArray, ψ)
 ```
 
-<!-- REVIEW: the GPU path is preparatory ("preparations for GPU / non-CPU array support" per the changelog); the CuArray snippet above is illustrative only and is NOT CI-verified. -->

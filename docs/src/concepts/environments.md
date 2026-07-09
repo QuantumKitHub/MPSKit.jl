@@ -49,7 +49,8 @@ What they also do, uniformly, is accept an *optional* environments argument and 
 
 That return value is the reason to care about environments even when you never construct one.
 Handing the environments from one call into the next lets the algorithm reuse the cached blocks instead of rebuilding them from nothing.
-For iterated procedures such as time evolution — where each step starts from a state only slightly different from the last — feeding the updated environments back in every step avoids repeating work that the previous step already did.The [Time evolution](@ref howto_time_evolution) how-to shows this threading pattern in a concrete recipe.
+For iterated procedures such as time evolution — where each step starts from a state only slightly different from the last — feeding the updated environments back in every step avoids repeating work that the previous step already did.
+The [Time evolution](@ref howto_time_evolution) how-to shows this threading pattern in a concrete recipe.
 
 ## Finite environments and the `===` cache
 
