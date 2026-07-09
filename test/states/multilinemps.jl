@@ -31,6 +31,7 @@ using TensorKit: ℙ
     @test physicalspace(ψ) == fill(d, 2, 2)
     @test all(x -> x ≾ D, left_virtualspace(ψ))
     @test all(x -> x ≾ D, right_virtualspace(ψ))
+    @test leftunit(ψ) == unit(sectortype(D))
 
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
         @plansor difference[-1 -2; -3] := ψ.AL[i, j][-1 -2; 1] * ψ.C[i, j][1; -3] -

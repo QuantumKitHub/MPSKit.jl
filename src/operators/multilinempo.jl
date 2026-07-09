@@ -49,3 +49,6 @@ for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
     @eval $f_space(t::MultilineMPO, I::CartesianIndex{2}) = $f_space(t, Tuple(I)...)
     @eval $f_space(t::MultilineMPO) = map(Base.Fix1($f_space, t), eachindex(t))
 end
+
+TensorKit.leftunit(t::MultilineMPO) = TensorKit.leftunit(t[1]) # same for every line
+TensorKit.rightunit(t::MultilineMPO) = TensorKit.rightunit(t[1])
