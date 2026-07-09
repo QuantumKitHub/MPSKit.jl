@@ -162,7 +162,6 @@ include("algorithms/changebonds/sketchedexpand.jl")
 
 include("algorithms/timestep/tdvp.jl")
 include("algorithms/timestep/bug.jl")
-include("algorithms/timestep/parallelbug.jl")
 include("algorithms/timestep/taylorcluster.jl")
 include("algorithms/timestep/wii.jl")
 include("algorithms/timestep/integrators.jl")

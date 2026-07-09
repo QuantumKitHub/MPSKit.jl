@@ -7,7 +7,7 @@ local solves are still executed serially and step rejection is not implemented.
 ## What is implemented (branch `ld-parallelbug`)
 
 * `ParallelBUG <: Algorithm` struct + kw-constructor + docstring, registered and exported
-  (`src/algorithms/timestep/parallelbug.jl`).
+  (`src/algorithms/timestep/bug.jl`, which holds both BUG integrators).
 * A `timestep!` + copying `timestep` implementing Ceruti et al. 2024 (arXiv:2412.00858) Alg. 1–4
   specialized to the caterpillar tree rooted at site `L`, in two phases:
   1. **Frozen-snapshot Galerkin evolutions** (Alg. 2/3): one frozen `ψ₀ = copy(ψ)` + `envs₀`; the
