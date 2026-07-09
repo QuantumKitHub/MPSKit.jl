@@ -23,23 +23,23 @@ hero:
 
 features:
   - icon:
-      src: /assets/icons/finite-infinite.svg
+      src: /icons/finite-infinite.svg
       alt: A finite chain above an infinite one
     title: Finite & infinite, one interface
     details: Run the same calculation on a finite chain or directly in the thermodynamic limit. FiniteMPS and InfiniteMPS share an API, so switching between them is a one-line change.
   - icon:
-      src: /assets/icons/symmetry.svg
+      src: /icons/symmetry.svg
       alt: A symmetric hexagon
     title: Every symmetry
     details: Abelian, non-Abelian, fermionic, and anyonic symmetries out of the box via the TensorKit backend — smaller bond dimensions and exact quantum numbers.
   - icon:
-      src: /assets/icons/algorithms.svg
+      src: /icons/algorithms.svg
       alt: An energy minimum
     title: A complete algorithm suite
     details: Ground states with DMRG, VUMPS, and IDMRG; real- and imaginary-time evolution with TDVP; and momentum-resolved excitations via the quasiparticle ansatz.
   # REVIEW: make the "faster than ITensors" comparison explicit here once the benchmark results are published.
   - icon:
-      src: /assets/icons/fast.svg
+      src: /icons/fast.svg
       alt: A lightning bolt
     title: Fast by design
     details: Type-stable code paths and deliberate allocation strategies keep calculations quick out of the box, and non-Abelian symmetries such as SU(2) shrink the tensors you store and contract.
