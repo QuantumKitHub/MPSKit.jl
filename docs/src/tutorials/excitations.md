@@ -4,7 +4,6 @@ The previous tutorials ended with a ground state: the lowest-energy state of the
 The natural next question is what lies *above* it: how much energy does it cost to excite the system?
 For a translation-invariant chain the answer is organized by momentum — for each momentum ``k`` there is a lowest excitation energy ``\Delta E(k)``, and the resulting curve is the **dispersion relation** of the model.
 Its minimum over all momenta is the **energy gap**, one of the most basic characterizations of a quantum phase.
-<!-- REVIEW: physics framing — "lowest excitation energy at each momentum defines the dispersion relation, whose minimum is the gap" is standard for translation-invariant systems, but please confirm this phrasing is acceptable as stated. -->
 
 In this tutorial we compute the dispersion relation of the infinite transverse-field Ising chain with MPSKit's quasiparticle ansatz, and finish with a plot of ``\Delta E(k)`` across the Brillouin zone — compared against the exact solution.
 
@@ -22,7 +21,6 @@ using Plots
 Excitations are computed *on top of* a ground state, so the first step is the calculation you already know from [The thermodynamic limit](@ref tutorial_thermodynamic_limit): build the infinite Hamiltonian, make a random `InfiniteMPS`, and converge it with `VUMPS`.
 
 This time we set the field to `g = 2.0`, deep in the paramagnetic phase, where the model is **gapped**: the lowest excitation costs a finite amount of energy, which is exactly what we want to measure.
-<!-- REVIEW: physics claim — TFIM at g = 2 is in the gapped paramagnetic (disordered) phase; the transition is at g = 1. -->
 
 ```@example excitations
 g = 2.0
@@ -60,7 +58,6 @@ The second return value `ϕ` holds the corresponding quasiparticle states, which
 
 To trace out the whole dispersion relation we simply pass a *range* of momenta instead of a single number.
 By symmetry it is enough to scan from ``0`` to ``\pi``, and we use 16 points to keep the runtime modest.
-<!-- REVIEW: physics claim — restricting the scan to [0, π] uses the k → −k symmetry of the TFIM dispersion. -->
 
 ```@example excitations
 momenta = range(0, π, 16)

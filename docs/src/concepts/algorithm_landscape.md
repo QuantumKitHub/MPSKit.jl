@@ -28,32 +28,22 @@ Finally, algorithms compose: the `&` operator chains two algorithms into one, ru
 
 ## Ground states
 
-The classic approach is alternating local optimization: [`DMRG`](@ref) sweeps through a finite chain, optimizing one site while all others are held fixed.
-<!-- REVIEW: man/algorithms.md calls DMRG "probably the most widely used algorithm for optimizing groundstates with MPS", and claims the global optimum "follows by alternating through the system"; both are convergence/consensus claims — confirm the phrasing. -->
+The classic approach is alternating local optimization: [`DMRG`](@ref) sweeps back and forth through a finite chain, optimizing one site while all others are held fixed, which in practice converges to the ground state.
 The catch is the fixed bond dimension: a single-site update can never enlarge the virtual spaces, so the precision of the calculation is locked in by the initial state.
 This bites hardest when symmetries are involved, because then not just the total bond dimension but its distribution over charge sectors is frozen, and a poor initial distribution cannot be repaired.
-<!-- REVIEW: the claim that single-site DMRG cannot repair a bad charge distribution across symmetry sectors (from man/algorithms.md "finding a good distribution of charges is also required") — confirm. -->
 [`DMRG2`](@ref) fixes this by optimizing two neighbouring sites jointly and truncating back down, which lets the bond dimension (and its sector distribution) adapt, at a higher cost per sweep.
-<!-- REVIEW: "at a higher cost per sweep" — confirm the cost comparison between single-site and two-site DMRG as stated. -->
 
 For infinite systems, two philosophies compete.
 [`IDMRG`](@ref) grows the system from the middle outwards, repeatedly inserting and optimizing new sites until the boundary is no longer felt; [`IDMRG2`](@ref) is its two-site, bond-growing variant.
-<!-- REVIEW: the middle-insertion description of IDMRG — confirm this matches the implementation's actual iteration scheme. -->
 Because convergence requires the effective system to outgrow the correlation length, IDMRG can be slow to converge for critical systems, where that length diverges.
-<!-- REVIEW: "the number of steps needs to be larger than the correlation length" claim for IDMRG on critical systems, from man/algorithms.md — confirm. -->
 [`VUMPS`](@ref) instead works with a genuinely uniform state: each local update is followed by a re-gauging step that replaces *every* tensor in the infinite chain with the updated one, so the effect of an update is felt throughout the system immediately.
-<!-- REVIEW: the mechanism claim that re-gauging propagates the update globally and that this is why VUMPS converges faster — confirm. -->
 This often gives VUMPS a higher convergence rate than IDMRG, which is why it is the default infinite-system workhorse.
-<!-- REVIEW: "often achieves a higher rate of convergence" (VUMPS vs IDMRG), from man/algorithms.md — confirm. -->
 The price is an injectivity requirement: VUMPS assumes a unique ground state, and it is not the right tool when the state it should converge to is non-injective.
-<!-- REVIEW: the injectivity caveat for VUMPS ("only works whenever the state is injective, i.e. there is a unique ground state") — confirm the precise condition, and whether degenerate/symmetry-broken ground states should be explicitly called out here as the failure mode. -->
 Like DMRG, VUMPS is single-site and cannot alter the bond dimension.
 
 [`GradientGrassmann`](@ref) approaches the problem from a third direction: the MPS tensors form a Riemannian manifold (a Grassmann manifold), and one can run gradient descent directly on it, for finite and infinite states alike.
 Its niche is the tail of the optimization: close to convergence its rate is often the best of the lot, while far from convergence the sweeping algorithms tend to make faster progress.
-<!-- REVIEW: the "gradient descent shines in the tail" claim ("quite often the convergence rate in the tail of the optimization procedure is higher"), from man/algorithms.md — confirm. -->
 The practical consequence is the chaining pattern: run a cheap workhorse first, then hand over to gradient descent, e.g. `VUMPS(...) & GradientGrassmann(...)`.
-<!-- REVIEW: "often the fastest method combines a different algorithm far from convergence with this algorithm close to convergence" — confirm this combined strategy is still the recommended default. -->
 This pattern is baked into `find_groundstate` itself: called with only keywords, it picks `DMRG` for a finite state and `VUMPS` for an infinite one, appends a `GradientGrassmann` stage on infinite states when the requested tolerance is tighter than `1e-4`, and prepends a two-site pass (`DMRG2` or `IDMRG2`) whenever you supply a `trscheme`.
 Since gradient descent is also a single-site method, growing the bond dimension remains the job of that two-site pre-pass or of [`changebonds`](@ref).
 

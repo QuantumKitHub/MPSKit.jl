@@ -69,7 +69,6 @@ Pass a [`DMRG`](@ref) struct explicitly to set `tol`, `maxiter`, and `verbosity`
 ```
 
 `DMRG` updates one site at a time, so with its defaults it cannot change the bond dimension: whatever bond dimension `ψ₀` starts with is what it keeps.
-<!-- REVIEW: confirm the claim that single-site optimization also makes it harder for DMRG to find a good distribution of (symmetric) charges across the bond, versus DMRG2's two-site update. -->
 [`DMRG2`](@ref) optimizes two sites at once and truncates back down, which lets it grow (or shrink) the bond dimension as it sweeps, at extra cost per step.
 Unlike `DMRG`, `DMRG2` has no default truncation scheme, so `trscheme` is required:
 
@@ -108,7 +107,6 @@ For more on choosing `trscheme` and growing bond dimension in general, see [Cont
 ϵ_v
 ```
 
-<!-- REVIEW: confirm that VUMPS only works when the target state is injective (unique ground state), and that it should not be used when the ground state is degenerate/symmetry-broken at the given bond dimension. -->
 [`IDMRG`](@ref) is the infinite analogue of `DMRG`: it grows the system by repeatedly inserting sites in the middle and re-optimizing, until boundary effects wash out.
 
 ```@example groundstate_algs
@@ -119,8 +117,6 @@ For more on choosing `trscheme` and growing bond dimension in general, see [Cont
 ϵ_i
 ```
 
-<!-- REVIEW: confirm that IDMRG can converge slowly for critical (long correlation-length) systems, since the number of inserted sites needs to exceed the correlation length before boundary effects disappear. -->
-<!-- REVIEW: confirm that VUMPS typically converges faster than IDMRG because a local update is immediately felt throughout the whole (infinite) system via the re-gauging step, rather than only at the newly inserted sites. -->
 In practice, prefer `VUMPS` unless you specifically need `IDMRG`'s ability to change the bond dimension one site at a time.
 
 [`IDMRG2`](@ref) is the two-site, bond-dimension-changing variant, and mirrors `DMRG2`: `trscheme` is required, and it needs a unit cell of at least two sites.
@@ -157,7 +153,6 @@ H_inf_2 = InfiniteMPOHamiltonian(
 ## 4. Refine convergence with GradientGrassmann
 
 [`GradientGrassmann`](@ref) performs Riemannian gradient descent directly on the manifold of (finite or infinite) MPS, using an optimizer from OptimKit (`ConjugateGradient` by default via the `method` keyword).
-<!-- REVIEW: confirm the claim that gradient descent tends to have the best convergence rate close to the optimum ("in the tail"), so the fastest overall strategy is often a cheaper algorithm (DMRG/VUMPS/IDMRG) far from convergence, switched to GradientGrassmann once close. -->
 Chain it after `VUMPS` (or `DMRG`) with `&` to combine both regimes in one call — this is exactly what `find_groundstate`'s heuristic does once `tol` is tighter than `1e-4`:
 
 ```@example groundstate_algs
