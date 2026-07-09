@@ -121,10 +121,10 @@ function transferplot end
     )
     below = length(h.args) == 1 ? h.args[1] : h.args[2]
     kwargs = (; transferkwargs...)
-    if sectors !== nothing && get(kwargs, :num_vals, 20) isa Int
+    if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
         # restrict the computation to the requested sectors
-        num_vals = Dict(c => get(kwargs, :num_vals, 20) for c in sectors)
-        kwargs = (; kwargs..., num_vals)
+        howmany = Dict(c => get(kwargs, :howmany, 20) for c in sectors)
+        kwargs = (; kwargs..., howmany)
     end
     spectra = transfer_spectrum(h.args[1], below; kwargs...)
 
