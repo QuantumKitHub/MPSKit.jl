@@ -67,10 +67,13 @@ function timestep!(
     )
     # symmetric 2nd-order: a dt/2 left→right half-sweep composed with its dt/2 mirror. Each
     # half-sweep reprojects the frozen old connecting tensor onto the already-updated bases, evolves
-    # it forward, and installs the new basis; a truncating `trscheme` then cuts the augmented state
-    # back down (rank-adaptive BUG).
+    # it forward, and installs the new basis; a truncating `trscheme` (rank-adaptive BUG) then cuts
+    # the augmented state back down with an optimal SVD sweep. Fixed-rank keeps the evolved isometry,
+    # rank-adaptive augments it old-first (`[U₀ │ K₁]`, deferring the cut to `changebonds!`).
     L = length(ψ)
     h = dt / 2
+    truncates = !(alg.trscheme isa MatrixAlgebraKit.NoTruncation)
+    svdcut = SvdCut(; trscheme = alg.trscheme, alg_svd = alg.alg_svd)
 
     # sweep left to right (root = last site)
     ψ.AC[1]                       # gauge center to site 1
@@ -79,8 +82,14 @@ function timestep!(
     for i in 1:(L - 1)
         Ĉ = _mul_front(T, ψ_old.AC[i])                       # reproject old connecting tensor
         AC = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t, h, alg.integrator; imaginary_evolution)
-        U, C = _bug_leftbasis(alg, _mul_front(T, ψ_old.AL[i]), AC)
-        T = _bug_transport_left(ψ_old.AL[i], U, T)
+        U₀ = _mul_front(T, ψ_old.AL[i])                      # old left isometry in the new frame
+        if truncates
+            U, _ = _bug_augment_left(U₀, AC, alg.alg_orth)
+            C = U' * AC
+        else
+            U, C = left_gauge(AC, alg.alg_orth)
+        end
+        T = U' * U₀                                          # transport (new ← old)
         ψ.AC[i] = (U, C)
     end
     AC = integrate(
@@ -89,7 +98,7 @@ function timestep!(
     )
     imaginary_evolution && normalize!(AC)
     ψ.AC[L] = AC
-    _bug_truncates(alg) && _bug_truncate!(ψ, alg; normalize = imaginary_evolution)
+    truncates && changebonds!(ψ, svdcut; normalize = imaginary_evolution)
 
     # sweep right to left (root = first site), the mirror
     ψ.AC[L]                       # gauge center to site L
@@ -98,8 +107,14 @@ function timestep!(
     for i in L:-1:2
         Ĉ = ψ_old.AC[i] * T                                  # reproject old connecting tensor
         AC = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t + h, h, alg.integrator; imaginary_evolution)
-        C, U = _bug_rightbasis(alg, ψ_old.AR[i] * T, AC)
-        T = _bug_transport_right(ψ_old.AR[i], U, T)
+        U₀ = ψ_old.AR[i] * T                                 # old right isometry in the new frame
+        if truncates
+            U, _ = _bug_augment_right(U₀, AC, alg.alg_orth)
+            C = _transpose_tail(AC) * _transpose_tail(U)'
+        else
+            C, U = right_gauge(AC, alg.alg_orth)
+        end
+        T = _transpose_tail(U₀) * _transpose_tail(U)'        # transport (old ← new)
         ψ.AC[i] = (C, U)
     end
     AC = integrate(
@@ -108,42 +123,9 @@ function timestep!(
     )
     imaginary_evolution && normalize!(AC)
     ψ.AC[1] = AC
-    _bug_truncates(alg) && _bug_truncate!(ψ, alg; normalize = imaginary_evolution)
+    truncates && changebonds!(ψ, svdcut; normalize = imaginary_evolution)
 
     return ψ, envs
-end
-
-# Rank-adaptivity is enabled by any truncating `trscheme` (the default `notrunc()` selects the
-# fixed-rank path). Mirrors the `_truncates` gate used by `TDVP`/`DMRG`.
-_bug_truncates(alg::BUG) = !(alg.trscheme isa MatrixAlgebraKit.NoTruncation)
-
-# Truncate every internal bond back down to the `trscheme` tolerance with an optimal SVD sweep,
-# discarding the singular-value tail of the augmented-Galerkin state. Environments are keyed on
-# tensor identity, so they recompute lazily for the changed bonds — no explicit refresh needed.
-function _bug_truncate!(ψ, alg::BUG; normalize::Bool = false)
-    changebonds!(ψ, SvdCut(; trscheme = alg.trscheme, alg_svd = alg.alg_svd); normalize)
-    return ψ
-end
-
-# Transport the old→new bond overlap across one site, contracting the front bond + all physical
-# legs. `_bug_transport_left` propagates `T` (new ← old) rightward, `_bug_transport_right` the
-# mirror (old ← new). Partition-based, so any number of physical legs is supported.
-_bug_transport_left(AL_old, AL_new, T) = AL_new' * _mul_front(T, AL_old)
-_bug_transport_right(AR_old, AR_new, T) =
-    _transpose_tail(AR_old * T) * _transpose_tail(AR_new)'
-
-# New basis + core for one internal node. Fixed-rank keeps the evolved isometry; rank-adaptive
-# augments it old-first (`[U₀ │ K₁]`), deferring the cut to `_bug_truncate!`. The tuple order
-# matches `ψ.AC[i]`: `(AL, C)` for a left→right sweep, `(C, AR)` for a right→left sweep.
-function _bug_leftbasis(alg::BUG, U₀, AC)
-    _bug_truncates(alg) || return left_gauge(AC, alg.alg_orth)
-    Û, _ = _bug_augment_left(U₀, AC, alg.alg_orth)
-    return Û, Û' * AC
-end
-function _bug_rightbasis(alg::BUG, U₀, AC)
-    _bug_truncates(alg) || return right_gauge(AC, alg.alg_orth)
-    Û, _ = _bug_augment_right(U₀, AC, alg.alg_orth)
-    return _transpose_tail(AC) * _transpose_tail(Û)', Û
 end
 
 # Augment the RIGHT bond for the left→right sweep: given the old left-isometry `U₀` (`AL_old`) and

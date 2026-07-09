@@ -254,8 +254,8 @@ end
 # Charge-sector (symmetric-tensor) coverage for the fixed-rank BUG. These use *genuine*
 # symmetric tensors (no `force_planar`), exercising the graded-bond paths flagged in the design
 # doc's hsector risk register (H1/H6/H7): the transport-tensor seed `isomorphism(V ← V)`, the
-# `@plansor` (co)domain/dual conventions in `_bug_transport_*`, and the adjoints carrying sector
-# duals. A fixed-rank step must preserve the total charge and the graded structure of every bond.
+# (co)domain/dual conventions of the inlined transport contractions, and the adjoints carrying
+# sector duals. A fixed-rank step must preserve the total charge and the graded structure of every bond.
 @testset "BUG symmetric tensors" verbose = true begin
     dt = 0.1
     L = 6
