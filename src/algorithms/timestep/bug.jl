@@ -84,7 +84,7 @@ function timestep!(
         AC = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t, h, alg.integrator; imaginary_evolution)
         U₀ = _mul_front(T, ψ_old.AL[i])                      # old left isometry in the new frame
         if truncates
-            U, _ = _bug_augment_left(U₀, AC, alg.alg_orth)
+            U = _bug_augment_left(U₀, AC, alg.alg_orth)
             C = U' * AC
         else
             U, C = left_gauge(AC, alg.alg_orth)
@@ -109,7 +109,7 @@ function timestep!(
         AC = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t + h, h, alg.integrator; imaginary_evolution)
         U₀ = ψ_old.AR[i] * T                                 # old right isometry in the new frame
         if truncates
-            U, _ = _bug_augment_right(U₀, AC, alg.alg_orth)
+            U = _bug_augment_right(U₀, AC, alg.alg_orth)
             C = _transpose_tail(AC) * _transpose_tail(U)'
         else
             C, U = right_gauge(AC, alg.alg_orth)
@@ -128,35 +128,22 @@ function timestep!(
     return ψ, envs
 end
 
-# Augment the RIGHT bond for the left→right sweep: given the old left-isometry `U₀` (`AL_old`) and
-# the evolved candidate `K₁`, build `Û = [U₀ │ Ũ₁]` (`Vl⊗P ← Vr₀ ⊕ Vr_new`) whose column space
-# contains both `range(U₀)` and `range(K₁)`, keeping the old basis as the leading per-sector block
-# (no truncation). Returns `(Û, M)` with `M = Û' U₀ = [𝟙; 0]` the old bond's coordinates in `Û`.
+# Augment the RIGHT bond for the left→right sweep: orthonormalize the stacked `[U₀ │ K₁]` (the old
+# left-isometry `U₀` first, then the evolved candidate `K₁`) with a single QR. This keeps `U₀` as
+# the leading per-sector block and appends only the directions of `K₁` orthogonal to it, while the
+# QR caps each charge sector at `dim(Vl⊗P, c)` so no direction outside `Vl⊗P` is ever added.
 function _bug_augment_left(U₀, K₁, alg_orth = Defaults.alg_orth())
-    N = left_null(U₀)                       # Vl⊗P ← Vc, orthonormal complement of range(U₀)
-    g = N' * K₁                             # Vc ← Vr_K, the part of K₁ orthogonal to U₀
-    Q, _ = left_orth(g; alg = alg_orth)     # Vc ← Vr_new, orthonormal new directions
-    Ũ₁ = N * Q                              # Vl⊗P ← Vr_new
-    Û = catdomain(U₀, Ũ₁)                   # Vl⊗P ← (Vr₀ ⊕ Vr_new), old-first
-    M = Û' * U₀                             # V̂ ← Vr₀, = [𝟙; 0] per sector
-    return Û, M
+    Û, _ = left_orth(catdomain(U₀, K₁); alg = alg_orth)   # Vl⊗P ← (Vr₀ ⊕ Vr_new), old-first
+    return Û
 end
 
-# Mirror of `_bug_augment_left` for the right→left sweep: augment the LEFT bond on the
-# `_transpose_tail` form (`Vl ← P⊗Vr`, in which a right-isometry has orthonormal rows). Given the
-# old right-isometry `U₀` (`AR_old`) and candidate `K₁`, returns `(Û, M)` with `Û` right-canonical
-# on `V̂ = Vl₀ ⊕ Vl_new` (old-first) and `M = û u₀' = [𝟙; 0]` per sector.
+# Mirror of `_bug_augment_left` for the right→left sweep, on the `_transpose_tail` form
+# (`Vl ← P⊗Vr`, in which a right-isometry has orthonormal rows): a single LQ orthonormalizes the
+# stacked rows `[U₀; K₁]`, keeping `U₀` as the leading block.
 function _bug_augment_right(U₀, K₁, alg_orth = Defaults.alg_orth())
-    u₀ = _transpose_tail(U₀)                          # Vl₀ ← P⊗Vr, right-isometric (u₀ u₀' = 𝟙)
-    k₁ = _transpose_tail(K₁)                          # Vl_K ← P⊗Vr
-    N = right_null!(_transpose_tail(U₀; copy = true)) # Vc ← P⊗Vr, complement of U₀'s row space
-    g = k₁ * N'                                       # Vl_K ← Vc, the part of K₁ orthogonal to U₀
-    _, Q = right_orth(g; alg = alg_orth)              # Q: Vl_new ← Vc, orthonormal new directions
-    Ũ₁ = Q * N                                        # Vl_new ← P⊗Vr
-    û = catcodomain(u₀, Ũ₁)                           # (Vl₀ ⊕ Vl_new) ← P⊗Vr, old-first
-    Û = _transpose_front(û)                           # V̂ ⊗ P ← Vr
-    M = û * u₀'                                        # V̂ ← Vl₀, = [𝟙; 0] per sector
-    return Û, M
+    stacked = catcodomain(_transpose_tail(U₀), _transpose_tail(K₁))  # (Vl₀ ⊕ Vl_K) ← P⊗Vr
+    _, Û = right_orth(stacked; alg = alg_orth)                       # V̂ ← P⊗Vr, old-first
+    return _transpose_front(Û)
 end
 
 # copying version

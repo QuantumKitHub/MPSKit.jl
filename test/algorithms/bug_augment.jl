@@ -39,7 +39,8 @@ function _check_old_first(M, V_old; tol = 1.0e-10)
 end
 
 function check_augment_left(U₀, K₁; tol = 1.0e-10)
-    Û, M = _bug_augment_left(U₀, K₁)
+    Û = _bug_augment_left(U₀, K₁)
+    M = Û' * U₀                      # old bond's coordinates in the augmented basis (V̂ ← Vr₀)
     # 1. isometry
     @test Û' * Û ≈ one(Û' * Û)
     # 2. old-first, per sector (M : V̂ ← Vr₀)
@@ -55,10 +56,11 @@ function check_augment_left(U₀, K₁; tol = 1.0e-10)
 end
 
 function check_augment_right(U₀, K₁; tol = 1.0e-10)
-    Û, M = _bug_augment_right(U₀, K₁)
+    Û = _bug_augment_right(U₀, K₁)
     ût = _transpose_tail(Û)          # V̂ ← P ⊗ Vr, right-isometric (row space)
     u0t = _transpose_tail(U₀)
     k1t = _transpose_tail(K₁)
+    M = ût * u0t'                    # old bond's coordinates in the augmented basis (V̂ ← Vl₀)
     # 1. isometry (right-canonical ⇒ tail has orthonormal rows)
     @test ût * ût' ≈ one(ût * ût')
     # 2. old-first, per sector (M : V̂ ← Vl₀)
