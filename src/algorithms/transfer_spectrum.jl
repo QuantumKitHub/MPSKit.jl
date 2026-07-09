@@ -22,7 +22,7 @@ The result is returned as a `TensorKit.SectorVector`, whose values can be inspec
 - `krylovdim`: the Krylov dimension of the eigensolver. Unless given explicitly, this is chosen adaptively per sector as
   `max(Defaults.krylovdim, ceil(Int, oversampling_factor * num_vals) + oversampling)`, where `num_vals` is the number of values requested in that sector.
 - `kwargs...`: further keyword arguments (e.g. `tol`, `maxiter`) are forwarded to `MatrixAlgebraKit.default_algorithm` to build the eigensolver.
-  It is an error to pass eigensolver keyword arguments when `alg` is an algorithm instance.
+  Passing eigensolver keyword arguments when `alg` is an algorithm instance is not allowed, and will result in an error.
 """
 function transfer_spectrum(
         above::InfiniteMPS, below::InfiniteMPS = above, alg = nothing;
@@ -117,11 +117,11 @@ end
 """
     marek_gap(above::InfiniteMPS; sector=nothing, kwargs...)
 
-Compute the gap ```ϵ``` for the asymptotics of the transfer matrix, as well as the Marek gap
-```δ``` as a scaling measure of the bond dimension, along with the associated angle ```θ```.
+Compute the gap `ϵ` for the asymptotics of the transfer matrix, as well as the Marek gap
+`δ` as a scaling measure of the bond dimension, along with the associated angle `θ`.
 
 By default this returns a `TensorKit.SectorDict` mapping each sector of the transfer spectrum
-to its `(ϵ, δ, θ)` triple. Passing a specific `sector` returns only that sector's triple. The
+to its `(ϵ, δ, θ)` triplet. Passing a specific `sector` returns only that sector's triplet. The
 remaining `kwargs` are passed on to [`transfer_spectrum`](@ref).
 """
 function marek_gap(above::InfiniteMPS; sector = nothing, tol_angle = 0.1, num_vals = 20, kwargs...)

@@ -21,7 +21,7 @@ The [hard hexagon model](https://en.wikipedia.org/wiki/Hard_hexagon_model) is a 
 This can be encoded in a transfer matrix with a local MPO tensor using anyonic symmetries, and the resulting MPO has been implemented in MPSKitModels.
 
 In order to use these anyonic symmetries, we need to generalise the notion of the bond dimension and define how it interacts with the symmetry.
-Thus, we implement away of converting integers to symmetric spaces of the given dimension, which provides a crude guess for how the final MPS would distribute its Schmidt spectrum.
+Thus, we implement a way of converting integers to symmetric spaces of the given dimension, which provides a crude guess for how the final MPS would distribute its Schmidt spectrum.
 """
 mpo = hard_hexagon()
 P = physicalspace(mpo, 1)
@@ -60,7 +60,7 @@ The dominant eigenvector is of course only an approximation.
 The finite bond dimension enforces a finite correlation length, which effectively introduces a length scale in the system.
 This can be exploited to formulate a scaling hypothesis [pollmann2009](@cite), which in turn allows to extract the central charge.
 
-First we need to know the entropy and correlation length at a bunch of different bond dimensions.
+First we need to know the entropy and correlation length at several different bond dimensions.
 Our approach will be to re-use the previous approximated dominant eigenvector, and then expanding its bond dimension and re-running VUMPS.
 According to the scaling hypothesis we should have ``S ∝ \frac{c}{6} log(ξ)``. Therefore we should find ``c`` using
 """
@@ -72,7 +72,7 @@ function scaling_simulations(
     entropies = similar(Ds, Float64)
     correlations = similar(Ds, Float64)
     alg = VUMPS(; verbosity, tol, alg_eigsolve)
-    sector = unit(sectortype(mpo)) # dominant correlation functions are in the trivial sector
+    sector = unit(sectortype(mpo)) # in this example the dominant correlation functions are in the trivial sector
 
     ψ, envs, = leading_boundary(ψ₀, mpo, alg)
     entropies[1] = real(entropy(ψ)[1])
