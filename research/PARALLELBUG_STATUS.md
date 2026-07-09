@@ -1,71 +1,65 @@
 # `ParallelBUG` implementation status
 
-Companion to `PARALLELBUG_design.md`. Records what is implemented, what works, the one open
-problem, and the recommended path to close it. **The integrator is experimental (WIP).**
+Companion to `PARALLELBUG_design.md`. Records what is implemented and what remains.
+**The integrator works** (first-order gates pass); it remains marked experimental because the
+local solves are still executed serially and step rejection is not implemented.
 
 ## What is implemented (branch `ld-parallelbug`)
 
 * `ParallelBUG <: Algorithm` struct + kw-constructor + docstring, registered and exported
   (`src/algorithms/timestep/parallelbug.jl`).
-* A `timestep!` + copying `timestep` implementing the **frozen-`t₀` assembly** (the paper's
-  Alg. 1–4 specialized to the caterpillar): one frozen snapshot `ψ₀ = copy(ψ)` + `envs₀`; the root
-  center `AC[L]` and the interior isometries `AL[i]` are each evolved forward from that snapshot;
-  bonds are augmented old-first with the new directions the interior evolutions discover, coupled by
-  first-order blocks with zeroed multi-new corners; then an `SvdCut` sweep truncates.
-* `test/algorithms/parallelbug.jl` covering the behaviours below.
+* A `timestep!` + copying `timestep` implementing Ceruti et al. 2024 (arXiv:2412.00858) Alg. 1–4
+  specialized to the caterpillar tree rooted at site `L`, in two phases:
+  1. **Frozen-snapshot Galerkin evolutions** (Alg. 2/3): one frozen `ψ₀ = copy(ψ)` + `envs₀`; the
+     interior amplitude-weighted centers `AC[i]` (the paper's `Y_τ⁰ = U_τ⁰S_τ⁰`) and the root
+     center `AC[L]` are each evolved forward from that snapshot. These `L` local solves are
+     mutually independent — the parallel-in-time structure (currently executed serially).
+  2. **Leaves→root augmentation** (Alg. 4): at bond `i` the new directions `Ũᵢ` are orthonormalized
+     against the zero-padded old isometry `[AL⁰ᵢ; 0]` from the evolved center *stacked with the
+     first-order coupling block* `C̃ᵢ` on the new rows of bond `i-1`. The couplings are one-site
+     effective derivatives with the **mixed** left environment `⟨Ũ-chain|H|AL⁰-chain⟩` (maintained
+     with two `TransferMatrix` applications per site) and the frozen old right environment. The
+     interior site tensors of the augmented state are the isometries `[old │ Ũᵢ]`; the root tensor
+     is `[C̄_L(t₁); C̃_L]` — the amplitude and all first-order content enter exactly once, at the
+     root. A final `SvdCut` sweep truncates; `notrunc()` restores the pre-step virtual space of
+     every bond (per-bond `truncspace`, fixed-rank parallel BUG).
+* `test/algorithms/parallelbug.jl` (40 tests, all passing): 2-site dense exactness, energy +
+  eigenstate-phase conservation, TDVP agreement, imaginary-time monotone lowering + norm,
+  bond growth under tight/loose `trscheme`, LazySum, **convergence order ≥ 1** (measured slope
+  ≈ 1.95–1.98 at these bond dimensions), **accuracy improves with ϑ** (vs a ϑ→0 run of the same
+  integrator, isolating the `c·n·ϑ` term: 5e-4 → 2.5e-6 → 1e-15), U(1)/Z2 charge + graded-structure
+  preservation.
 
-## What works (asserted in the tests)
+## What closed the first-order gap (was the open problem)
 
-* **2-site: exact.** Reproduces the dense `exp(-iH·dt)` step to ~1e-12 (the matrix parallel-BUG
-  formulas are exact here — this locks the block conventions / adjoints).
-* **Energy + eigenstate phase: exact.** `angle⟨ψ₁|ψ₀⟩/(dt·E₀) = 1` for `L = 2,3,4` (amplitude is
-  carried once, at the root), `|E₁−E₀| ~ 1e-15`.
-* **Rank adaptivity: bonds grow.** A low-bond-dim start under a tight `truncerror` grows the bond
-  (e.g. 2 → 8) via the augment-then-`SvdCut` mechanism.
-* Imaginary-time renormalization and symmetric-tensor (U(1)) total-charge preservation — see the
-  test file for the exact assertions that hold.
+Two changes relative to the first WIP driver:
 
-## The one open problem (marked `@test_broken`)
+1. **The coupling blocks participate in the orthonormalization** (the `M = Û'U₀` reconciliation of
+   Alg. 4): the earlier driver placed the coupling in the `(new-row, old-col)` block of each
+   interior site tensor, which routes it through the amplitude-carrying root block and multiplies
+   it by the old bond matrix (σ-suppressed) — the interior first-order terms effectively vanished
+   (measured slope ≈ 0). In the correct assembly the interior tensors are *pure isometries*
+   `[old │ Ũᵢ]` and the coupling data enters `Ũᵢ`'s span via the stacked `Ĉ¹ᵢ = [C̄¹ᵢ; C̃ᵢ]`, so
+   deep new directions propagate to the root, where the single coupling row
+   `C̃_L = dt′·⟨Ũ¹_{L-1}|H|ψ₀⟩` captures every first-order component in one exact projection.
+   (Rank counting is fine: the needed new subspace at bond `b` is the range of the *summed*
+   tangent components, ≤ r_b-dimensional, not one r-dim family per site.)
+2. **Amplitude-weighted kets**: the interior Galerkin solves and couplings act on `AC⁰[i]`
+   (`= AL⁰[i]·C⁰ᵢ`), not the bare isometry `AL⁰[i]`. With bare-`AL` kets the spans miss the needed
+   directions (H_eff and the bond matrix do not commute through the parent leg; measured slope
+   stayed ≈ 0). The amplitude these objects carry is discarded with the R-factor in the
+   orthonormalization, so no phase/energy overcounting occurs — this resolves the earlier
+   "full-environment effective Hamiltonian trilemma" (`assembly A/B/C`): the phase only ever
+   enters the state through the root blocks.
 
-For `L > 2` the integrator does **not** yet attain the documented **first-order** accuracy: the
-error does not decrease cleanly `∝ dt`, and tightening `ϑ` does not monotonically improve the
-overlap with the dense reference. Root cause and analysis:
+## Remaining work (why still experimental)
 
-MPSKit's `AC_hamiltonian`/`C_hamiltonian` are **full-environment** effective Hamiltonians (each
-carries the full energy `E₀`). This forces a trilemma when mapping the caterpillar (verified
-numerically across three assemblies):
-
-| assembly | interior "old" block | phase ratio | order |
-|---|---|---|---|
-| A: keep evolved connecting tensor as a block | evolved `C̄¹_i` (amplitude kept) | ≈ `L` (overcounts) | — |
-| B: freeze the basis, couple new dirs | frozen `AL[i]` (phase stripped) | **1** ✓ | ~0 (shipped) |
-| C: symmetric `AC`+`C` regauge | evolved `AC`+`C` daggered | **1** ✓, exact @ L=2 | 2 (parallel-TDVP, not BUG) |
-
-The shipped driver is **assembly B**: it strips the interior phase correctly (ratio 1) and grows
-bonds, but the first-order dynamics are not fully captured because the coupling-block
-**reconciliation** is incomplete. Specifically, the paper's Alg. 4 builds the augmented basis from
-the range of *both* the reprojected old connecting tensor `Ĉ⁰ = C⁰ ×_child Û'U⁰` **and** the
-Galerkin-evolved `Ĉ¹`, and threads the overlap `M = Û'U₀` up toward the root. The shipped assembly
-places the coupling directly in the new-child rows without that `M`-reconciliation, so the retained
-subspace after `SvdCut` is not rotated by the correct `O(dt)` amount — hence the loss of clean first
-order. (The `AC2_hamiltonian`-based coupling used for `C̃_i` is also a first suspect; the correct
-one-site term is `dt·(AC_hamiltonian(i)·AC[i])` projected onto the new directions.)
-
-## Recommended path to close it
-
-1. Implement the leaves→root **`M = Û'U₀` reconciliation** (design doc §2b / paper Alg. 4A.2–A.4):
-   at each interior node reproject the *old* connecting tensor onto the already-augmented child
-   basis and build the parent-bond basis from the range of `[Mat₀(Ĉ⁰); Mat₀(Ĉ¹)]`, threading the
-   overlap upward — rather than the direct block placement used now.
-2. Replace the two-site `AC2_hamiltonian` coupling with the one-site `dt·(AC_hamiltonian(i)·AC[i])`
-   projected onto `Ũ₁` (matrix eq. 3.1a analog).
-3. Re-run `research/`'s gate harness (2-site exact / phase ratio / **slope ≈ 1** / **accuracy
-   improves with ϑ** / bond growth / symmetric preservation). The scaffolding and tests are ready;
-   flip the `@test_broken`s to `@test` once slope ≈ 1 holds.
-4. Only then add step rejection (`η = ‖Ũ₁*F₀Ṽ₁‖`, `hη>cϑ`) and the `@sync`/`tmap!` threading (the
-   K-steps already read from one frozen snapshot, so threading is a localized change).
-
-Nothing here requires new MPSKit primitives — the earlier "need partial-energy node operators"
-hypothesis is not necessary: the tree algorithm handles the full-energy operators by
-*orthonormalizing* the interior evolved tensors (stripping their phase), which assembly B already
-does; the remaining work is the coupling reconciliation, not the effective operators.
+1. **Threading**: phase 1's `L` local exponential solves all read from the frozen snapshot and are
+   mutually independent — swap the `map` onto `@sync`/`Threads.@spawn` gated on
+   `Defaults.scheduler[]` (mirror `tdvp.jl`'s `InfiniteMPS` branch). Phase 2 is a cheap sequential
+   sweep (QRs + one derivative apply per site), as in the paper.
+2. **Step rejection** (paper §3.3): `η = ‖Ũ₁'F₀Ṽ₁‖`, reject & recompute on the augmented bases if
+   `h·η > c·ϑ` or the truncation saturates the doubling cap; needs fields `c` (default 10) and
+   `maxiter_rejection`.
+3. Minor: `timestep!`'s `envs` argument is currently only used for `L == 1`; the frozen snapshot
+   environments are recomputed each step (could be reused when the caller's `envs` are current).

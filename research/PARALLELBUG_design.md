@@ -99,18 +99,27 @@ The per-bond matrix-DLRA mapping in §2 (an S-step via `C_hamiltonian(b)` on **e
 **The correct MPS mapping is the literal tree recursion, not L−1 independent matrix problems:**
 
 * The caterpillar rooted at `L` is **one** tree. Only the **root** connecting tensor (`AC[L]`)
-  carries amplitude/phase; every interior connecting tensor is an **isometry** (`AL[i]`). So there is
-  **no per-bond `C_hamiltonian` S-step at all** — the amplitude is evolved **once**, at the root.
-* Interior nodes `i<L` Galerkin-evolve the **isometry**: `C̄¹_i = integrate(AC_hamiltonian(i, ψ₀, H,
-  ψ₀, envs₀), ψ₀.AL[i], t, dt)` — note `AL[i]`, *not* `AC[i]`. The evolved isometry leaves its old
-  range (`g = N'·C̄¹_i ≠ 0`), so `_bug_augment_left(AL[i], C̄¹_i)` yields genuine new bond directions
-  → bonds grow. The root evolves the amplitude: `C̄¹_L = integrate(AC_hamiltonian(L,…), ψ₀.AC[L],…)`.
+  carries amplitude/phase in the *assembled* state; every interior site tensor of the augmented
+  state is an **isometry**. So there is **no per-bond `C_hamiltonian` S-step at all** — the
+  amplitude enters the assembled state **once**, at the root.
 * First order comes from the **explicit-Euler coupling blocks with zeroed multi-new corners**
   (Alg. 4B), assembled by the leaves→root recursion — *not* from transporting fully-evolved tensors
   (that accidentally recovers 2nd order, as observed).
 
-This is the single hardest part and is the crux still to land; §2's table is retained only for the
-matrix/2-site base case (which is exact).
+### 2c. SECOND CORRECTION (supersedes parts of §2b; this is what landed)
+
+§2b's further conclusion that the interior nodes must Galerkin-evolve the bare **isometry**
+`AL[i]` was **also falsified**: the paper's subflows act on the amplitude-weighted subtree objects
+`Y_τ⁰ = U_τ⁰S_τ⁰` (locally `AC[i] = AL[i]·C[i]`, cf. Alg. 2's leaf K-step `K(t₀) = U⁰S⁰`), and
+with bare-`AL` kets the augmented spans miss the needed first-order directions (the effective
+Hamiltonian does not commute with the bond matrix on the parent leg; measured slope stayed ≈ 0).
+The phase/energy overcounting §2b worried about does not occur because the evolved interior
+tensors and the coupling blocks only contribute their **range** — the amplitude/phase they carry
+is discarded with the R-factor in the leaves→root orthonormalization (`Q̂ᵢ = orth([Ĉ⁰ᵢ | Ĉ¹ᵢ])`,
+old-first), which is precisely Alg. 4's `M = Û'U₀` reconciliation. The couplings must be stacked
+into `Ĉ¹ᵢ = [C̄¹ᵢ; C̃ᵢ]` *before* orthonormalizing, so that deep new directions propagate to the
+root; the root tensor `[C̄_L(t₁); C̃_L]` then carries all amplitude and first-order content.
+See `PARALLELBUG_STATUS.md` for the implemented recipe and the numerical gates.
 
 ## 3. Key design decisions (recorded)
 
