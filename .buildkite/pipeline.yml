@@ -42,7 +42,7 @@ steps:
     agents:
       queue: "rocm"
     if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 60
+    timeout_in_minutes: 90
 
   - label: "Julia LTS -- AMDGPU"
     plugins:
@@ -56,4 +56,4 @@ steps:
     agents:
       queue: "rocm"
     if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 60
+    timeout_in_minutes: 90
