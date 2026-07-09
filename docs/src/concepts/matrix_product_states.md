@@ -14,6 +14,7 @@ The physical indices carry the local degrees of freedom, while the virtual bonds
 ```
 
 *The diagram shows a finite MPS as a row of site tensors, each carrying a physical index and linked to its neighbours through virtual bonds; the two ends carry trivial (dimension-one) boundary bonds.*
+
 This page explains the *gauge freedom* inherent in that representation and the *canonical forms* MPSKit uses to fix it, so that the `AL`, `AR`, `C`, and `AC` you see throughout the API stop looking like arbitrary labels.
 It is about understanding rather than construction: for how to *build* a state see [Constructing states](@ref howto_states), and for the full type signatures see the [States](@ref lib_states) reference.
 
@@ -114,7 +115,6 @@ The gauge machinery is shared between finite and infinite states, but the way th
 
 A [`FiniteMPS`](@ref) has genuine boundaries and mutable per-site tensors, so it gauges *lazily*: each form is recomputed only for the tensors it actually depends on, and invalidation is decided by object identity (`===`) — replacing a tensor marks the left-gauged tensors to its right and the right-gauged tensors to its left as stale, leaving the rest cached.
 An [`InfiniteMPS`](@ref) instead repeats a finite unit cell periodically, so there is no left or right end to anchor a partial recompute: every tensor lies both to the right and to the left of any change, and all forms are recomputed together whenever a tensor changes.
-<!-- REVIEW: the finite-vs-infinite characterization (finite = lazy per-tensor recompute keyed on ===; infinite = all forms recomputed together because tensors repeat periodically) is taken from the legacy man/states.md prose; confirm it still matches the current implementation. -->
 
 ## Variants
 

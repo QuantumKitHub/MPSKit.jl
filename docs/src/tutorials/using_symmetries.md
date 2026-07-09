@@ -40,9 +40,6 @@ using MPSKit, MPSKitModels, TensorKit
 We start from the workflow of the first tutorial: a chain of `L = 16` sites, a random `FiniteMPS`, and a DMRG ground-state search.
 Two small changes from before: we set the field to `g = 2.0`, and we use a total bond dimension of 16.
 
-<!-- REVIEW: the claim that at g = 2.0 (paramagnetic phase) the finite-chain ground state
-is the symmetric (even-parity) state, with no symmetry-breaking complication — chosen
-deliberately so the symmetric-MPS run below converges to the same state. -->
 Why `g = 2.0`?
 This puts us deep in the paramagnetic phase, where the ground state respects the spin-flip symmetry.
 That matters for what comes next: an MPS built from symmetric tensors lives in exactly one parity sector and *cannot* spontaneously break the symmetry, so a fair comparison needs a point where the true ground state is symmetric to begin with.
@@ -77,8 +74,6 @@ For the state, the plain spaces `ℂ^2` and `ℂ^16` are replaced by *graded* sp
 The syntax reads as a list of `sector => dimension` pairs, where sector `0` is the even (``P = +1``) irrep of ``\mathbb{Z}_2`` and sector `1` is the odd (``P = -1``) one:
 
 - The physical space `Z2Space(0 => 1, 1 => 1)` is the familiar two-dimensional spin-1/2 site, now split into its symmetry content: one even state and one odd state.
-  <!-- REVIEW: identification of the even/odd physical basis states with the σˣ
-  eigenstates |+⟩ and |−⟩ under MPSKitModels' Z2 TFIM convention. -->
 - The virtual space `Z2Space(0 => 8, 1 => 8)` says the bond carries 8 states of even parity and 8 of odd parity — 16 in total, matching the `ℂ^16` of the plain run, so the two calculations have exactly the same variational power.
 
 From here the workflow is unchanged:
@@ -128,10 +123,6 @@ Iterating `pairs` gives each sector together with its singular values:
 collect(pairs(spectrum))
 ```
 
-<!-- REVIEW: the cost claim — with the 16-dimensional bond split as 8 ⊕ 8, the dense
-blocks entering each tensor contraction are roughly half the linear size of the
-unsymmetric ones, and this block-sparsity is the source of the speedup of
-symmetric tensor computations at equal total bond dimension. -->
 This block structure is where the speedup comes from: instead of multiplying one dense 16-dimensional bond index, the computer multiplies two independent blocks of roughly half that size, and the forbidden matrix elements between the sectors are never stored or touched at all.
 At bond dimension 16 the difference is negligible, but the saving grows with the bond dimension and with the size of the symmetry group.
 
@@ -139,10 +130,6 @@ At bond dimension 16 the difference is negligible, but the saving grows with the
 
 The sector labels are not just an implementation detail — they classify the eigenstates of ``H``, and MPSKit lets you target a sector directly.
 
-<!-- REVIEW: physics framing — in the paramagnetic phase the elementary excitation of
-the TFIM is a single flipped spin (dressed by the field), which is odd under the global
-flip and hence lives in the Z2Irrep(1) sector, while the lowest excitation of even
-parity is essentially a two-flip state at roughly twice the energy. -->
 In the paramagnetic phase the lowest excitation of the TFIM is, roughly speaking, a single flipped spin.
 Flipping one spin changes the parity of the state, so this excitation lives in the *odd* sector — a different sector than the (even) ground state.
 
@@ -179,9 +166,6 @@ You have run the flagship TFIM calculation with its ``\mathbb{Z}_2`` symmetry ma
 
 The same syntax scales up to larger symmetry groups, where the payoff grows.
 For a U(1) symmetry (particle number, magnetization) the graded spaces list integer or half-integer charges instead of parities — worked constructions are in [Constructing states](@ref howto_states), Section 9.
-<!-- REVIEW: "dramatic gains" phrasing — for non-abelian symmetries such as SU(2), one
-symmetric multiplet stands for several states, so the effective bond dimension exceeds
-the stored one and the gains are substantially larger than in the abelian case. -->
 For non-abelian symmetries such as SU(2) the gains are more dramatic still, because each symmetric block then represents an entire multiplet of states; the spin-1 Haldane chain and XXZ Heisenberg pages in the examples gallery show this in action.
 
 To continue the tutorial track, [Quasiparticle excitations](@ref tutorial_excitations) develops the excitation calculation of Section 4 into a full dispersion relation; the recipe collection for excited states is [Excited states](@ref howto_excitations), and the one for building symmetric states is [Constructing states](@ref howto_states).

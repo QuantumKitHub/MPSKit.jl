@@ -3,7 +3,6 @@
 MPSKit deliberately separates *what* you want to compute from *how* it gets computed.
 Entry points such as [`find_groundstate`](@ref), [`timestep`](@ref), [`excitations`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref) each accept several interchangeable algorithm structs, and the package ships more than a dozen of them.
 That flexibility exists because no single algorithm wins everywhere: some only apply to finite or only to infinite systems, some can grow the bond dimension while others cannot, and their relative performance depends on the model at hand.
-<!-- REVIEW: "their relative performance depends on the model at hand" — this is the framing claim inherited from man/algorithms.md ("figuring out the optimal algorithm is not always straightforward, since this may strongly depend on the model"); please confirm it is the message we want to lead with. -->
 
 This page is the decision guide.
 It starts from a table that maps each task onto the algorithm(s) of choice, and then walks through the reasoning behind each row.

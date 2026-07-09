@@ -77,7 +77,6 @@ Every complete left-to-right path through the block matrix contributes one term 
 
 The repeated ``A`` block is what makes longer-range interactions possible at fixed virtual dimension: choosing ``A`` to be (a multiple of) the identity gives every additional site the same weight, while a decaying ``A`` gives geometrically decaying couplings.
 A sum of such geometric series can approximate a power-law interaction to any desired accuracy, which is how (exponentially decaying) infinite-range and approximate power-law couplings are represented.
-<!-- REVIEW: the statement that A = c·(identity) yields exponentially/geometrically decaying couplings and that sums of geometric decays approximate power laws is a physics claim taken from the legacy page; the maintainer should confirm the precise decay law and the power-law fitting scheme. -->
 
 ### The transverse-field Ising Hamiltonian
 

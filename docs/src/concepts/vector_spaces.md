@@ -125,7 +125,6 @@ An MPS site tensor has a left virtual space `Vₗ`, one or more physical spaces 
 At first glance this ordering looks arbitrary, but it is chosen to keep the tensor networks **planar**: the legs run left-to-right without any lines having to cross.
 Planarity is what lets the algorithms be written without spurious crossings, and this matters most for **fermionic systems**, where every extra line crossing carries a sign and unnecessary crossings would reintroduce a sign problem.
 
-<!-- REVIEW: the claim that this leg ordering keeps the networks planar, and that avoiding line crossings is what prevents fermionic sign problems, is a physics/design rationale carried over from the legacy man/intro.md — please confirm the reasoning is stated correctly. -->
 
 ### The MPS tensor
 

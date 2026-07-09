@@ -40,7 +40,6 @@ nothing # hide
 ```
 
 The observable we will track through the evolution is the transverse magnetization ``\langle\sigma^x\rangle`` at the middle of the chain, away from the open ends.
-<!-- REVIEW: I track ⟨σˣ⟩ rather than ⟨σᶻ⟩ because on a finite chain of this size the ground state respects the model's spin-flip symmetry, so ⟨σᶻ⟩ vanishes identically both before and after the quench and carries no dynamics to show; ⟨σˣ⟩ does not rely on symmetry breaking and is set directly by the transverse-field term. Please confirm this framing is the right one to give a reader. -->
 We measure its baseline value in the pre-quench ground state:
 
 ```@example time-evolution
@@ -60,7 +59,6 @@ g₁ = 2.0
 H₁ = transverse_field_ising(FiniteChain(L); g = g₁)
 ```
 
-<!-- REVIEW: physics expectation for this quench — since H₁ sits deep in the disordered phase, I state below (Section 5) that the transverse magnetization relaxes towards a new value with oscillations. Please confirm this description of the post-quench dynamics. -->
 
 ## 3. A single time step
 
@@ -121,12 +119,10 @@ plot(times, m;
 ```
 
 The curve shows how the observable responds to the sudden change in the field: starting from its pre-quench value, ``\langle\sigma^x\rangle`` relaxes towards a new value set by `H₁`, with oscillations along the way.
-<!-- REVIEW: same physics claim as flagged in Section 2 — relaxation towards a new value with oscillations for this g = 0.5 → 2.0 quench at L = 12; please verify against the actual curve the build produces. -->
 
 !!! warning "Fixed bond dimension means finite reach in time"
     Single-site TDVP keeps the bond dimension fixed at whatever the initial state has.
     After a quench, however, the entanglement of the evolving state grows with time, so a fixed bond dimension can only follow the true dynamics faithfully up to some finite time — beyond it, the simulation quietly loses accuracy rather than failing loudly.
-    <!-- REVIEW: entanglement growth after a global quench (often stated as linear growth) and the resulting finite time window at fixed bond dimension — please confirm this framing. -->
     The practical checks and remedies — two-site [`TDVP2`](@ref), which grows the bond dimension as it truncates, and bond-expansion options for single-site TDVP — are collected in [Time evolution](@ref howto_time_evolution).
 
 ## Where to go next
