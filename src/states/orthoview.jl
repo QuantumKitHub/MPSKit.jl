@@ -60,7 +60,7 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in Iterators.reverse((i + 1):center)
-            v.parent.Cs[j], v.parent.ARs[j] = right_gauge(v.parent.ACs[j])
+            v.parent.Cs[j], v.parent.ARs[j], _ = right_gauge(v.parent.ACs[j])
             if j != i + 1 # last AC not needed
                 v.parent.ACs[j - 1] = _mul_tail(v.parent.ALs[j - 1], v.parent.Cs[j])
             end
@@ -75,7 +75,7 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in center:i
-            v.parent.ALs[j], v.parent.Cs[j + 1] = left_gauge(v.parent.ACs[j])
+            v.parent.ALs[j], v.parent.Cs[j + 1], _ = left_gauge(v.parent.ACs[j])
             if j != i # last AC not needed
                 v.parent.ACs[j + 1] = _mul_front(v.parent.Cs[j + 1], v.parent.ARs[j + 1])
             end
@@ -88,9 +88,9 @@ end
 function Base.setindex!(v::CView{<:FiniteMPS}, vec, i::Int)
     if ismissing(v.parent.Cs[i + 1])
         if !ismissing(v.parent.ALs[i])
-            v.parent.Cs[i + 1], v.parent.ARs[i + 1] = right_gauge(v.parent.AC[i + 1])
+            v.parent.Cs[i + 1], v.parent.ARs[i + 1], _ = right_gauge(v.parent.AC[i + 1])
         else
-            v.parent.ALs[i], v.parent.Cs[i + 1] = left_gauge(v.parent.AC[i])
+            v.parent.ALs[i], v.parent.Cs[i + 1], _ = left_gauge(v.parent.AC[i])
         end
     end
 
@@ -223,8 +223,8 @@ end
 # Gauging routines
 # ----------------
 @doc """
-    left_gauge(AC, [alg]) -> AL, C
-    right_gauge(AC, [alg]) -> C, AR
+    left_gauge(AC, [alg]) -> AL, C, ϵ
+    right_gauge(AC, [alg]) -> C, AR, ϵ
 
 Factor an updated center MPS tensor `AC` into left- or right-canonical form, `AC ≈ AL * C`
 (left, with `AL` left-isometric) or `AC ≈ C * AR` (right, with `AR` right-isometric), without
@@ -233,28 +233,38 @@ standard MPS-tensor form.
 
 `alg` selects the factorization and defaults to a (positive) QR/LQ center-move that preserves the virtual bond.
 Passing a [`TruncatedAlgorithm`](@extref MatrixAlgebraKit.TruncatedAlgorithm) instead performs a truncated SVD may shrink the bond.
+
+Also returns the truncation error `ϵ`: the 2-norm of the discarded singular values from the
+truncated SVD, or `0` for a norm-preserving QR/LQ gauge.
 """
 left_gauge
 @doc (@doc left_gauge) right_gauge
 
 left_gauge(AC) = left_gauge(AC, Defaults.alg_orth())
-left_gauge(AC, alg) = left_orth(AC; alg)
-left_gauge(AC, alg::MatrixAlgebraKit.TruncatedAlgorithm) =
-    left_orth(AC; alg = MatrixAlgebraKit.LeftOrthViaSVD(alg))
+function left_gauge(AC, alg)
+    AL, C = left_orth(AC; alg)
+    return AL, C, zero(real(scalartype(AC)))
+end
+function left_gauge(AC, alg::MatrixAlgebraKit.TruncatedAlgorithm)
+    U, S, Vᴴ, ϵ = svd_trunc(AC, alg)
+    C = LinearAlgebra.lmul!(S, Vᴴ) # C = S * Vᴴ, matching `LeftOrthViaSVD`
+    return U, C, ϵ
+end
 
 right_gauge(AC) = right_gauge(AC, Defaults.alg_orth())
 function right_gauge(AC, alg)
     C, AR = right_orth(_transpose_tail(AC); alg)
-    return C, _transpose_front(AR)
+    return C, _transpose_front(AR), zero(real(scalartype(AC)))
 end
 function right_gauge(AC, alg::MatrixAlgebraKit.TruncatedAlgorithm)
-    C, AR = right_orth(_transpose_tail(AC); alg = MatrixAlgebraKit.RightOrthViaSVD(alg))
-    return C, _transpose_front(AR)
+    U, S, Vᴴ, ϵ = svd_trunc(_transpose_tail(AC), alg)
+    C = LinearAlgebra.rmul!(U, S) # C = U * S, matching `RightOrthViaSVD`
+    return C, _transpose_front(Vᴴ), ϵ
 end
 
 @doc """
-    left_gauge!(ψ, pos, AC, [alg]; normalize = false) -> ψ
-    right_gauge!(ψ, pos, AC, [alg]; normalize = false) -> ψ
+    left_gauge!(ψ, pos, AC, [alg]; normalize = false) -> ψ, ϵ
+    right_gauge!(ψ, pos, AC, [alg]; normalize = false) -> ψ, ϵ
 
 Gauge an updated center tensor `AC` at site `pos` and install it into `ψ` in one step: factor
 `AC` with [`left_gauge`](@ref) / [`right_gauge`](@ref) and write the canonical tensors back,
@@ -264,19 +274,28 @@ be a [`TruncatedAlgorithm`](@extref MatrixAlgebraKit.TruncatedAlgorithm) to trun
 
 By default the factors are installed as-is. Pass `normalize = true` to renormalize the bond
 tensor, so `ψ` stays normalized after a local update that changed its norm.
+
+Also returns the truncation error `ϵ` of the factorization: the 2-norm of the discarded singular
+values from a truncated SVD gauge, or `0` for a norm-preserving QR gauge.
 """
 left_gauge!
 @doc (@doc left_gauge!) right_gauge!
 
 function left_gauge!(ψ::AbstractFiniteMPS, pos::Int, AC, alg = Defaults.alg_orth(); normalize::Bool = false)
-    AL, C = left_gauge(AC, alg)
+    AL, C, ϵ = left_gauge(AC, alg)
     normalize && normalize!(C)
     ψ.AC[pos] = (AL, C)
-    return ψ
+    return ψ, ϵ
 end
 function right_gauge!(ψ::AbstractFiniteMPS, pos::Int, AC, alg = Defaults.alg_orth(); normalize::Bool = false)
-    C, AR = right_gauge(AC, alg)
+    C, AR, ϵ = right_gauge(AC, alg)
     normalize && normalize!(C)
     ψ.AC[pos] = (C, AR)
-    return ψ
+    return ψ, ϵ
+end
+
+function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{Dir}, AC, alg = Defaults.alg_orth(); kwargs...) where {Dir}
+    Dir === :right && return left_gauge!(ψ, pos, AC, alg; kwargs...)
+    Dir === :left && return right_gauge!(ψ, pos, AC, alg; kwargs...)
+    return throw(ArgumentError(lazy"invalid direction `$Dir`"))
 end
