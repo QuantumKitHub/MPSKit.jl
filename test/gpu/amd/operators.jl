@@ -213,7 +213,7 @@ end
     @test TensorKit.storagetype(H4′) == ROCVector{T, AMDGPU.Mem.HIPBuffer}
     H5 = changebonds(H4′, SvdCut(; trscheme = trunctol(; atol = 1.0e-12)))
     @test TensorKit.storagetype(H5) == ROCVector{T, AMDGPU.Mem.HIPBuffer}
-    psi = adapt(ROCVector{real(T), AMDGPU.Mem.HIPBuffer}, FiniteMPS(real(T), physicalspace(H5), V ⊕ rightunitspace(V)))
+    psi = adapt(ROCVector{T, AMDGPU.Mem.HIPBuffer}, FiniteMPS(T, physicalspace(H5), V ⊕ rightunitspace(V)))
     @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)
 end
 
