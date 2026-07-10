@@ -153,8 +153,21 @@ amplitude, so the assembled state must be re-gauged (`FiniteMPS` from the raw te
 **Implementation status / risk**: this is a genuine cross-framework port — the reference is a
 Tucker-tree (cell arrays, `tenmat`/`ttm`, explicit `Mi`/`Q0_i`), MPSKit is `TensorMap` MPS. Validation
 has no cheap oracle (the caterpillar 2-site step is exact; dropped corners appear only at `L ≥ 3`),
-so it must be validated behaviourally: in a **rank-limited** regime `err(order=2) < err(order=1)` at
-matched `dt`/`ϑ`, and the log–log `dt`-slope ≈ 2. Expose via an `order::Int` field (default 1).
+so it must be validated behaviourally by the **local one-step error order**: `‖step − exact‖ ∝ dt²`
+for first order, `∝ dt³` for a genuine second order.
+
+**2026-07-10 attempt + NEGATIVE RESULT (not landed).** Implemented the tractable route — build the
+first-order `2r` augmented basis `Û = [old | Ũ]`, then a Galerkin evolution of the *root* center on
+the augmented state's own environments `⟨Û|H|Û⟩` (embedding `ψ₀` via a chain-transport `T`, evolving
+with `AC_hamiltonian` from `t₀`). It is **exact at 2 sites** and consistently **~2× more accurate**
+than first order in a rank-limited regime — but the measured **local slope is ≈ 2, not 3** (o1:
+1.98/1.99/1.97; o2: 1.97/1.96/1.88 at `dt = 0.04→0.005`). So it is only a better-constant *first*-order
+scheme, **not** second order, and was reverted rather than shipped mislabeled. Diagnosis: a Galerkin
+core on the *frozen* first-order `2r` basis caps the local error at `O(dt²)` — the basis misses the
+`O(dt²)` corner directions. Genuine second order needs the reference's **`3r` augmentation that adds
+the `Ci` (new–new corner) directions to the basis and keeps their amplitude** (step 4 above), i.e. a
+second family of new directions beyond `Ũ`, re-gauged. That is the remaining work for a true
+second-order `ParallelBUG`; the sequential [`BUG`] already provides a second-order option meanwhile.
 
 ## 3. Key design decisions (recorded)
 
