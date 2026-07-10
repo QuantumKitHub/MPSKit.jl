@@ -67,9 +67,9 @@ function DMRG(;
 end
 
 
-function dmrg_update!(
+function local_update!(
         site, direction,
-        ψ, O, alg, envs,
+        ψ, O, alg::DMRG, envs,
         ϵ_global, ϵ_trunc, decay_rate,
         timeroutput
     )
@@ -97,43 +97,132 @@ function dmrg_update!(
     return ψ, ϵ_local, ϵ_trunc, decay_rate
 end
 
+"""
+$(TYPEDEF)
 
-function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environments(ψ, H, ψ))
-    log = IterLog("DMRG")
-    timeroutput = TimerOutput("DMRG")
+Two-site DMRG algorithm for finding the dominant eigenvector.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
+struct DMRG2{A, G, F} <: Algorithm
+    "tolerance for convergence criterium"
+    tol::Float64
+
+    "maximal amount of iterations"
+    maxiter::Int
+
+    "setting for how much information is displayed"
+    verbosity::Int
+
+    "algorithm used for the eigenvalue solvers"
+    alg_eigsolve::A
+
+    "factorization used for the post-update gauge: a truncated SVD (`alg_svd` with `trscheme`)"
+    alg_gauge::G
+
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    finalize::F
+end
+# TODO: find better default truncation
+function DMRG2(;
+        tol = Defaults.tol, maxiter = Defaults.maxiter, verbosity = Defaults.verbosity,
+        alg_eigsolve = (;), alg_svd = Defaults.alg_svd(), trscheme,
+        finalize = Defaults._finalize
+    )
+    # two-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
+    # `alg_eigsolve = (; adaptive = false, ...)` to opt out (the splat overrides the default).
+    alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
+        Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
+    # two-site DMRG always truncates the enlarged bond back down, so the gauge is a truncated SVD
+    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+    return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_gauge, finalize)
+end
+
+function local_update!(
+        pos, direction,
+        ψ, O, alg::DMRG2, envs,
+        ϵ_global, ϵ_trunc, decay_rate,
+        timeroutput
+    )
+    Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs)
+
+    kind = direction === Val(:right) ? :ACAR : :ALAC
+    HAC2 = normalize!(Heff * AC2(ψ, pos; kind))
+    AC2′ = copy(HAC2)
+    project_complement!(AC2′, ψ.AL[pos])
+    project_complement_right!(AC2′, _transpose_tail(ψ.AR[pos + 1]))
+    ϵ_local = norm(AC2′)
+
+    # 1. local two-site update
+    alg_eigsolve = instantiate_algorithm(alg.alg_eigsolve, decay_rate, ϵ_local, ϵ_global, ϵ_trunc)
+    newA2center, info = @timeit timeroutput "AC2_eigsolve" begin
+        _, newA2center, info = fixedpoint(Heff, HAC2, :SR, alg_eigsolve)
+        (newA2center, info)
+    end
+
+    # 2. gauge: truncated SVD split back into single-site tensors and install;
+    #           the discarded weight is the truncation error
+    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge2!(ψ, pos, direction, newA2center, alg.alg_gauge; normalize = true)
+
+    # 3. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
+    decay_rate = clamp((first(info.normres) / ϵ_local)^(1 / max(1, info.numops)), 1.0e-3, 0.999)
+
+    @debug "DMRG2 local update" pos direction numops = info.numops normres = first(info.normres) krylovdim = alg_eigsolve.krylovdim maxiter = alg_eigsolve.maxiter tol = alg_eigsolve.tol decay_rate ϵ_local ϵ_trunc
+
+    return ψ, ϵ_local, ϵ_trunc, decay_rate
+end
+
+# Per-algorithm sweep geometry: single-site DMRG updates all `length(ψ)` sites (endpoints once,
+# interior twice), whereas two-site DMRG2 updates the `length(ψ) - 1` bonds. `_num_updates`
+# gives the number of per-update bookkeeping slots and `_sweep_ranges` the forward/backward
+# index ranges; everything else in the sweep is shared.
+_num_updates(::DMRG, ψ) = length(ψ)
+_num_updates(::DMRG2, ψ) = length(ψ) - 1
+
+_sweep_ranges(::DMRG, ψ) = (1:(length(ψ) - 1), length(ψ):-1:2)
+_sweep_ranges(::DMRG2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 2):-1:1)
+
+function find_groundstate!(
+        ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs = environments(ψ, H, ψ)
+    )
+    name = string(nameof(typeof(alg)))
+    log = IterLog(name)
+    timeroutput = TimerOutput(name)
     alg.verbosity > 3 || disable_timer!(timeroutput)
 
     Tr = real(scalartype(ψ))
-    ϵ_locals = ones(Tr, length(ψ)) # local gradient norms
+    n = _num_updates(alg, ψ)
+    ϵ_locals = ones(Tr, n)      # local gradient norms
     ϵ_global = maximum(ϵ_locals)
-    ϵ_truncs = zeros(Tr, length(ψ)) # local truncation error
-    decay_rates = zeros(length(ψ))  # local observed decay rate of eigensolver
+    ϵ_truncs = zeros(Tr, n)     # local truncation error
+    decay_rates = zeros(n)      # local observed decay rate of eigensolver
+    fwd, bwd = _sweep_ranges(alg, ψ)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ_global, expectation_value(ψ, H, envs))
         for iter in 1:(alg.maxiter)
             @timeit timeroutput "sweep" begin
                 # left-to-right
-                direction = Val(:right)
-                for site in 1:(length(ψ) - 1)
-                    ψ, ϵ_locals[site], ϵ_truncs[site], decay_rates[site] =
-                        dmrg_update!(
-                        site, direction,
+                for pos in fwd
+                    ψ, ϵ_locals[pos], ϵ_truncs[pos], decay_rates[pos] =
+                        local_update!(
+                        pos, Val(:right),
                         ψ, H, alg, envs,
-                        ϵ_global, ϵ_truncs[site], decay_rates[site],
+                        ϵ_global, ϵ_truncs[pos], decay_rates[pos],
                         timeroutput
                     )
                     ϵ_global = maximum(ϵ_locals)
                 end
 
                 # right-to-left
-                direction = Val(:left)
-                for site in length(ψ):-1:2
-                    ψ, ϵ_locals[site], ϵ_truncs[site], decay_rates[site] =
-                        dmrg_update!(
-                        site, direction,
+                for pos in bwd
+                    ψ, ϵ_locals[pos], ϵ_truncs[pos], decay_rates[pos] =
+                        local_update!(
+                        pos, Val(:left),
                         ψ, H, alg, envs,
-                        ϵ_global, ϵ_truncs[site], decay_rates[site],
+                        ϵ_global, ϵ_truncs[pos], decay_rates[pos],
                         timeroutput
                     )
                     ϵ_global = maximum(ϵ_locals)
@@ -158,127 +247,6 @@ function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG, envs = environme
         end
     end
     return ψ, envs, ϵ_global
-end
-
-"""
-$(TYPEDEF)
-
-Two-site DMRG algorithm for finding the dominant eigenvector.
-
-## Fields
-
-$(TYPEDFIELDS)
-"""
-struct DMRG2{A, S, F} <: Algorithm
-    "tolerance for convergence criterium"
-    tol::Float64
-
-    "maximal amount of iterations"
-    maxiter::Int
-
-    "setting for how much information is displayed"
-    verbosity::Int
-
-    "algorithm used for the eigenvalue solvers"
-    alg_eigsolve::A
-
-    "algorithm used for the singular value decomposition"
-    alg_svd::S
-
-    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the two-site update"
-    trscheme::TruncationStrategy
-
-    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
-    finalize::F
-end
-# TODO: find better default truncation
-function DMRG2(;
-        tol = Defaults.tol, maxiter = Defaults.maxiter, verbosity = Defaults.verbosity,
-        alg_eigsolve = (;), alg_svd = Defaults.alg_svd(), trscheme,
-        finalize = Defaults._finalize
-    )
-    alg_eigsolve′ = alg_eigsolve isa NamedTuple ? Defaults.alg_eigsolve(; alg_eigsolve...) :
-        alg_eigsolve
-    return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_svd, trscheme, finalize)
-end
-
-function find_groundstate!(ψ::AbstractFiniteMPS, H, alg::DMRG2, envs = environments(ψ, H, ψ))
-    ϵs = map(pos -> calc_galerkin(pos, ψ, H, ψ, envs), 1:length(ψ))
-    ϵ = maximum(ϵs)
-    log = IterLog("DMRG2")
-    timeroutput = TimerOutput("DMRG2")
-    alg.verbosity > 3 || disable_timer!(timeroutput)
-
-    LoggingExtras.withlevel(; alg.verbosity) do
-        for iter in 1:(alg.maxiter)
-            zerovector!(ϵs)
-            # two-site DMRG uses a plain (non-adaptive) local eigensolver whose tolerance is
-            # tightened per sweep with the current global error via `updatetol`.
-            eig_alg = updatetol(alg.alg_eigsolve, iter, ϵ)
-
-            @timeit timeroutput "sweep" begin
-                # left to right sweep
-                for pos in 1:(length(ψ) - 1)
-                    local ac2, newA2center, al, c, ar
-                    @timeit timeroutput "AC2_eigsolve" begin
-                        @plansor ac2[-1 -2; -3 -4] := ψ.AC[pos][-1 -2; 1] * ψ.AR[pos + 1][1 -4; -3]
-                        Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
-                        _, newA2center, info = fixedpoint(Hac2, ac2, :SR, eig_alg)
-                        @debug "DMRG2 local update" pos numops = info.numops normres = first(info.normres)
-                    end
-                    @timeit timeroutput "svd_trunc" begin
-                        al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
-                        normalize!(c)
-                        v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
-                        ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
-                    end
-                    @timeit timeroutput "update_AC" begin
-                        ψ.AC[pos] = (al, complex(c))
-                        ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
-                    end
-                end
-
-                # right to left sweep
-                for pos in (length(ψ) - 2):-1:1
-                    local ac2, newA2center, al, c, ar
-                    @timeit timeroutput "AC2_eigsolve" begin
-                        @plansor ac2[-1 -2; -3 -4] := ψ.AL[pos][-1 -2; 1] * ψ.AC[pos + 1][1 -4; -3]
-                        Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
-                        _, newA2center, info = fixedpoint(Hac2, ac2, :SR, eig_alg)
-                        @debug "DMRG2 local update" pos numops = info.numops normres = first(info.normres)
-                    end
-                    @timeit timeroutput "svd_trunc" begin
-                        al, c, ar = svd_trunc!(newA2center; trunc = alg.trscheme, alg = alg.alg_svd)
-                        normalize!(c)
-                        v = @plansor ac2[1 2; 3 4] * conj(al[1 2; 5]) * conj(c[5; 6]) * conj(ar[6; 3 4])
-                        ϵs[pos] = max(ϵs[pos], abs(1 - abs(v)))
-                    end
-                    @timeit timeroutput "update_AC" begin
-                        ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
-                        ψ.AC[pos] = (al, complex(c))
-                    end
-                end
-            end
-
-            ϵ = maximum(ϵs)
-            ψ, envs = @timeit timeroutput "finalize" alg.finalize(
-                iter, ψ, H, envs
-            )::Tuple{typeof(ψ), typeof(envs)}
-
-            if ϵ <= alg.tol
-                @infov 4 timeroutput
-                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, H, envs))
-                break
-            end
-            if iter == alg.maxiter
-                @infov 4 timeroutput
-                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, H, envs))
-            else
-                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, H, envs))
-            end
-        end
-    end
-    return ψ, envs, ϵ
 end
 
 function find_groundstate(ψ, H, alg::Union{DMRG, DMRG2}, envs...; kwargs...)

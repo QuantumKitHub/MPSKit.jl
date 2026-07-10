@@ -343,8 +343,15 @@ Base.@propagate_inbounds function Base.getindex(ψ::FiniteMPS, i::Int)
     end
 end
 
-# TODO: check where gauge center is to determine efficient kind
-AC2(psi::FiniteMPS, site::Int) = psi.AC[site] * _transpose_tail(psi.AR[site + 1])
+function AC2(psi::FiniteMPS, site::Int; kind = :ACAR)
+    if kind == :ACAR
+        return psi.AC[site] * _transpose_tail(psi.AR[site + 1])
+    elseif kind == :ALAC
+        return psi.AL[site] * _transpose_tail(psi.AC[site + 1])
+    else
+        throw(ArgumentError("Invalid kind: $kind"))
+    end
+end
 
 f_if_not_missing(f, x) = ismissing(x) ? x : f(x)
 _copy_if_not_missing(x) = f_if_not_missing(copy, x)

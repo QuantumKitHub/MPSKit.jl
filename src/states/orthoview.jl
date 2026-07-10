@@ -299,3 +299,34 @@ function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{Dir}, AC, alg = Defaults.
     Dir === :left && return right_gauge!(ψ, pos, AC, alg; kwargs...)
     return throw(ArgumentError(lazy"invalid direction `$Dir`"))
 end
+
+@doc """
+    gauge2!(ψ, pos, direction, AC2, alg; normalize = false) -> ψ, ϵ
+
+Two-site analogue of [`gauge!`](@ref): factor an updated two-site center tensor `AC2` spanning
+sites `pos` and `pos+1` with the truncated SVD `alg` and install the resulting canonical tensors
+into `ψ` in one step, shifting the gauge center past the bond.
+(To the right for `direction = Val(:right)`, to the left for `Val(:left)`).
+
+Returns the truncation error `ϵ`, the 2-norm of the discarded singular values. Pass
+`normalize = true` to renormalize the bond tensor, so `ψ` stays normalized after a local update
+that changed its norm.
+"""
+function gauge2!(
+        ψ::AbstractFiniteMPS, pos::Int, ::Val{Dir}, AC2,
+        alg::MatrixAlgebraKit.TruncatedAlgorithm; normalize::Bool = false
+    ) where {Dir}
+    al, c, ar, ϵ = svd_trunc!(AC2, alg)
+    normalize && normalize!(c)
+    C = complex(c)
+    if Dir === :right
+        ψ.AC[pos] = (al, C)
+        ψ.AC[pos + 1] = (C, _transpose_front(ar))
+    elseif Dir === :left
+        ψ.AC[pos + 1] = (C, _transpose_front(ar))
+        ψ.AC[pos] = (al, C)
+    else
+        throw(ArgumentError(lazy"invalid direction `$Dir`"))
+    end
+    return ψ, ϵ
+end
