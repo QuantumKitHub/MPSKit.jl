@@ -180,11 +180,17 @@ steps, scale `ϑ` with `dt` for a fixed target accuracy. Any truncating `trschem
 state; the default `notrunc()` restores the pre-step virtual spaces after every step (fixed-rank
 parallel BUG).
 
+Setting `maxiter_rejection > 0` enables **step rejection**: when a truncating step keeps the *full*
+augmented (doubled) space on some bond — a single doubling was not enough to resolve `trscheme` —
+the step is recomputed as two half-steps, so a smaller per-step normal component `η` fits within one
+doubling per sub-step (cf. `rejection_check` of Ceruti et al. 2024). The local error estimator
+`η = ‖C̃‖/dt` (the frozen derivative projected onto the new directions, their eq. 6) is logged at
+`@debug` level each step.
+
 !!! warning "Experimental"
-    This integrator is **work in progress**: the parallel-in-time structure is implemented (all
-    local solves read from one frozen snapshot), but the local solves are currently executed
-    serially, and the step-rejection criterion of Ceruti et al. (2024) is not yet implemented.
-    The API and behaviour may change.
+    This integrator is **work in progress**. The API and behaviour may change. The step-rejection
+    trigger is the rank-saturation criterion; the `η`-threshold trigger `dt·η > c·ϑ` and the
+    second-order augmented-Galerkin variant of Ceruti et al. (2024) are not yet implemented.
 
 !!! note
     Real-time evolution does not normalize the resulting state: neither the augmentation nor the
@@ -221,6 +227,12 @@ struct ParallelBUG{A, O, T, S, F} <: Algorithm
     "algorithm used for the singular value decomposition"
     alg_svd::S
 
+    "safety constant `c` in the step-rejection threshold `h·η > c·ϑ` (paper value ≈ 10)"
+    c::Float64
+
+    "maximum number of rejection recomputes per step (0 disables step rejection)"
+    maxiter_rejection::Int
+
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F
 end
@@ -228,9 +240,13 @@ function ParallelBUG(;
         integrator = Defaults.alg_expsolve(), tolgauge = Defaults.tolgauge,
         gaugemaxiter = Defaults.maxiter, alg_orth = Defaults.alg_orth(),
         trscheme = notrunc(), alg_svd = Defaults.alg_svd(),
+        c = 10.0, maxiter_rejection = 0,
         finalize = Defaults._finalize
     )
-    return ParallelBUG(integrator, tolgauge, gaugemaxiter, alg_orth, trscheme, alg_svd, finalize)
+    return ParallelBUG(
+        integrator, tolgauge, gaugemaxiter, alg_orth, trscheme, alg_svd,
+        c, maxiter_rejection, finalize
+    )
 end
 
 function timestep!(
@@ -248,15 +264,43 @@ function timestep!(
         return ψ, envs
     end
 
+    truncates = !(alg.trscheme isa MatrixAlgebraKit.NoTruncation)
     # remember the pre-step virtual spaces for the fixed-rank (`notrunc`) restore
     Vs = [right_virtualspace(ψ, b) for b in 1:(L - 1)]
 
-    ϕ = _pbug_assemble(ψ, H, t, dt, alg; imaginary_evolution)
+    ϕ, ηh = _pbug_assemble(ψ, H, t, dt, alg; imaginary_evolution)
+    augVs = [right_virtualspace(ϕ, b) for b in 1:(L - 1)]   # the (doubled) augmented spaces
     _pbug_truncate!(ϕ, alg, Vs; normalize = imaginary_evolution)
+
+    # step rejection (opt-in via `maxiter_rejection > 0`): if the truncation kept the *full* augmented
+    # space on some bond (a single doubling was not enough to resolve `trscheme`), the step is
+    # under-resolved (Ceruti et al. 2024; cf. `rejection_check.m`). Recompute it as two half-steps —
+    # sub-stepping lowers the per-step normal component `η = ηh/dt`, so one doubling per sub-step
+    # suffices. Bounded by `maxiter_rejection`, after which the saturated step is accepted.
+    if truncates && alg.maxiter_rejection > 0
+        saturated = any(1:(L - 1)) do b
+            return right_virtualspace(ϕ, b) == augVs[b] && augVs[b] != Vs[b]
+        end
+        @debug "ParallelBUG step" ηh saturated
+        if saturated
+            alg′ = _pbug_with_rejections(alg, alg.maxiter_rejection - 1)
+            timestep!(ψ, H, t, dt / 2, alg′; imaginary_evolution)
+            timestep!(ψ, H, t + dt / 2, dt / 2, alg′; imaginary_evolution)
+            return ψ, environments(ψ, H, ψ)
+        end
+    end
 
     # mutate `ψ` in place to become the assembled state (the generic loop reuses the object)
     _pbug_overwrite!(ψ, ϕ)
     return ψ, environments(ψ, H, ψ)
+end
+
+# rebuild a `ParallelBUG` with a reduced rejection budget (the struct is immutable)
+function _pbug_with_rejections(alg::ParallelBUG, n::Int)
+    return ParallelBUG(
+        alg.integrator, alg.tolgauge, alg.gaugemaxiter, alg.alg_orth,
+        alg.trscheme, alg.alg_svd, alg.c, n, alg.finalize
+    )
 end
 
 # Assemble the augmented (pre-truncation) parallel-BUG state from a single frozen `t₀` snapshot,
@@ -283,29 +327,43 @@ function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG; imaginary_evolution::Boo
     envs₀ = environments(ψ₀, H, ψ₀)
     dt′ = imaginary_evolution ? -dt : -im * dt
 
+    # Pre-populate the frozen environments serially: `leftenv`/`rightenv` on `FiniteEnvironments`
+    # lazily *mutate* their cache (finite_envs.jl), so the parallel phase-1 solves below must only
+    # ever read them. After this pass every `AC_hamiltonian(i)` reads a warm, read-only cache.
+    _pbug_warmup_envs!(envs₀, L, ψ₀)
+
     # phase 1: frozen-snapshot Galerkin evolutions (independent local solves). The interior
     # K-steps evolve the amplitude-weighted centers `AC[i]` (the paper's `Y_τ⁰ = U_τ⁰S_τ⁰`); only
-    # their range is kept, so the amplitude they carry is discarded in the orthonormalization.
-    Cevo = map(1:(L - 1)) do i
+    # their range is kept, so the amplitude they carry is discarded in the orthonormalization. All
+    # `L` solves read the read-only snapshot and are mutually independent — the parallel-in-time
+    # structure; `tmap!` threads them according to `Defaults.scheduler[]` (as in `tdvp.jl`).
+    scheduler = Defaults.scheduler[]
+    Cevo = Vector{typeof(ψ₀.AC[1])}(undef, L)
+    tmap!(Cevo, 1:L; scheduler) do i
         return integrate(
             AC_hamiltonian(i, ψ₀, H, ψ₀, envs₀), ψ₀.AC[i], t, dt, alg.integrator;
             imaginary_evolution
         )
     end
-    C̄L = integrate(
-        AC_hamiltonian(L, ψ₀, H, ψ₀, envs₀), ψ₀.AC[L], t, dt, alg.integrator; imaginary_evolution
-    )
+    C̄L = Cevo[L]
 
-    # phase 2: leaves→root augmentation sweep, threading the mixed ⟨augmented|H|old⟩ environments
-    As = Vector{Any}(undef, L)
+    # phase 2: leaves→root augmentation sweep, threading the mixed ⟨augmented|H|old⟩ environments.
+    # Alongside, accumulate `ηh = max‖C̃ᵢ‖ = h·η`: each coupling block `C̃ᵢ` is the frozen derivative
+    # projected onto the new directions (the normal component the old basis misses), so its norm is
+    # the local error estimator of Ceruti-Kusch-Lubich (2024, eq. 6), specialized to the caterpillar.
+    As = Vector{typeof(ψ₀.AL[1])}(undef, L)
+    ηh = zero(real(scalartype(ψ₀)))
     GLmix = _pbug_mixedenv_init(H, envs₀, ψ₀)   # full augmented rows (trivial at the left edge)
     local GLnew                                 # new-direction rows only
     for i in 1:(L - 1)
         if i == 1
             C⁰, Ĉ¹ = ψ₀.AL[1], Cevo[1]
         else
-            # first-order coupling block on the new rows of bond i-1
-            C̃ = scale(_pbug_coupling_hamiltonian(GLnew, H, i, envs₀, ψ₀)(ψ₀.AC[i]), dt′)
+            # first-order coupling block on the new rows of bond i-1. Applied with the two-arg
+            # (time-dependent) form at the midpoint `t + dt/2`, matching the anchor `integrate`
+            # freezes the coefficients at (integrators.jl); a `TimedOperator` has no one-arg apply.
+            C̃ = scale(_pbug_coupling_hamiltonian(GLnew, H, i, envs₀, ψ₀)(ψ₀.AC[i], t + dt / 2), dt′)
+            ηh = max(ηh, norm(C̃))
             C⁰ = _pbug_stack_child(ψ₀.AL[i], zerovector!(similar(C̃)))
             Ĉ¹ = _pbug_stack_child(Cevo[i], C̃)
         end
@@ -316,12 +374,26 @@ function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG; imaginary_evolution::Boo
         GLmix = _pbug_mixedenv_step(GLmix, H, i, ψ₀.AL[i], As[i])
     end
     # root: the amplitude is carried once, by the evolved center and its coupling row
-    C̃L = scale(_pbug_coupling_hamiltonian(GLnew, H, L, envs₀, ψ₀)(ψ₀.AC[L]), dt′)
+    C̃L = scale(_pbug_coupling_hamiltonian(GLnew, H, L, envs₀, ψ₀)(ψ₀.AC[L], t + dt / 2), dt′)
+    ηh = max(ηh, norm(C̃L))
     As[L] = _pbug_stack_child(C̄L, C̃L)
 
-    return FiniteMPS(
-        convert(Vector{typeof(As[1])}, As); overwrite = true, normalize = imaginary_evolution
-    )
+    return FiniteMPS(As; overwrite = true, normalize = imaginary_evolution), ηh
+end
+
+# Warm the lazily-cached frozen environments serially so the parallel phase-1 solves only read
+# them: `leftenv`/`rightenv` on `FiniteEnvironments` mutate their cache. A `LazySum` yields a
+# `MultipleEnvironments`, so recurse into its per-summand `FiniteEnvironments`.
+function _pbug_warmup_envs!(envs::FiniteEnvironments, L, ψ₀)
+    for i in 1:L
+        leftenv(envs, i, ψ₀)
+        rightenv(envs, i, ψ₀)
+    end
+    return envs
+end
+function _pbug_warmup_envs!(envs::MultipleEnvironments, L, ψ₀)
+    foreach(e -> _pbug_warmup_envs!(e, L, ψ₀), envs.envs)
+    return envs
 end
 
 # Mixed ⟨augmented|H|old⟩ left environments: initial (trivial-bond) environment and one-site

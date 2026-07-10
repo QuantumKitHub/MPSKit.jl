@@ -52,14 +52,47 @@ Two changes relative to the first WIP driver:
    "full-environment effective Hamiltonian trilemma" (`assembly A/B/C`): the phase only ever
    enters the state through the root blocks.
 
+## Reconciliation with the reference (2026-07-10)
+
+Compared against the authors' reference `github.com/JonasKu/Publication-Parallel-BUG-for-TTNs`
+(MATLAB `Section5.1`, Julia `Section5.2/5.3`). The core assembly matches on every load-bearing
+point (frozen-`t₀` independent solves; old-first `[U₀│Ũ]` QR augmentation; first-order coupling with
+zeroed new–new corners; amplitude carried once at the root; SVD truncation). Changes landed this
+session (all 41 tests green, incl. threaded 4-thread run):
+
+* **Threading (done)**: phase-1's `L` solves swapped from `map` onto `tmap!` gated on
+  `Defaults.scheduler[]` (mirrors `tdvp.jl`). Finite envs mutate on lazy recompute, so they are
+  warmed serially (`_pbug_warmup_envs!`, dispatching through `MultipleEnvironments`) before the
+  parallel region.
+* **Time-dependent coupling (fixed)**: `_pbug_coupling_hamiltonian(...)` was applied with the
+  one-arg form — a `MethodError` for a genuine `TimedOperator` (no one-arg apply). Now applied at the
+  midpoint `t + dt/2` (the anchor `integrate` freezes coefficients at). New `TimedOperator` smoke test.
+* **Error estimator (done)**: `η = ‖C̃‖/dt` accumulated in `_pbug_assemble` — the coupling blocks
+  `C̃ᵢ` ARE the frozen derivative projected onto the new directions (Ceruti et al. 2024, eq. 6;
+  cf. `eta_check.m`, whose `ttm(F_root, {Ũ-projectors})` is exactly this projection). Logged `@debug`.
+* **Step rejection (partial, opt-in `maxiter_rejection > 0`)**: the **rank-saturation** trigger
+  (`rejection_check.m`) — if a truncating step keeps the full doubled space on a bond, recompute as
+  two half-steps (sub-stepping lowers the per-step normal component so one doubling suffices).
+  Bounded recursion. Fields `c` (default 10.0) and `maxiter_rejection` (default 0) added.
+* **Type stability / cleanups (done)**: `Vector{Any}`→concrete `As`/`Cevo`.
+
 ## Remaining work (why still experimental)
 
-1. **Threading**: phase 1's `L` local exponential solves all read from the frozen snapshot and are
-   mutually independent — swap the `map` onto `@sync`/`Threads.@spawn` gated on
-   `Defaults.scheduler[]` (mirror `tdvp.jl`'s `InfiniteMPS` branch). Phase 2 is a cheap sequential
-   sweep (QRs + one derivative apply per site), as in the paper.
-2. **Step rejection** (paper §3.3): `η = ‖Ũ₁'F₀Ṽ₁‖`, reject & recompute on the augmented bases if
-   `h·η > c·ϑ` or the truncation saturates the doubling cap; needs fields `c` (default 10) and
-   `maxiter_rejection`.
-3. Minor: `timestep!`'s `envs` argument is currently only used for `L == 1`; the frozen snapshot
-   environments are recomputed each step (could be reused when the caller's `envs` are current).
+1. **η-threshold rejection trigger**: `η` is computed but only the rank-saturation trigger drives
+   the retry. Wiring `dt·η > c·ϑ` needs a scheme-generic way to extract the tolerance `ϑ` from an
+   arbitrary `trscheme` (trivial for `truncerror`, unclear in general). The current retry also uses
+   sub-stepping rather than the reference's **basis-enrichment** recompute (re-embed `ψ₀` in the
+   augmented 2r basis, re-assemble → 4r); enrichment keeps the same `dt` and is the true
+   rank-adaptive mechanism, but needs the matrix-paper [4] retry semantics + numerical validation
+   (the caterpillar has no dropped corner until `L ≥ 3`, so there is no cheap 2-site oracle).
+2. **Second-order variant** (`TTN_integrator_parallel_2nd_order_nonglobal.m` + `RK_2`): the reference
+   is **NOT** a Strang composition — it is an **augmented-Galerkin** scheme that *keeps* the new–new
+   coupling corners (a `3r` core: old block, new–old coupling `C̄`, and the new–new block `Cᵢ`),
+   solving the enlarged core ODE. For MPS this means retaining (not discarding via the R-factor) the
+   new–new corner amplitude at interior nodes — effectively a parallel analogue of the sequential
+   `BUG`'s second order. Substantial; recommend as a focused follow-up. Same subtle corner
+   machinery as (1)'s enrichment, so validate them together against an `L ≥ 3` reference.
+3. Minor: `timestep!`'s `envs` argument is still only used for `L == 1`; the frozen-snapshot
+   environments are recomputed each step. Reusing the caller's `envs` is blocked by the frozen-copy
+   design (`ψ₀ = copy(ψ)` ⇒ identity-keyed envs cannot match); evolving from `ψ` directly (it is not
+   mutated before the final overwrite) would enable reuse but trades away the copy's isolation.

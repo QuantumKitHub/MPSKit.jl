@@ -115,6 +115,20 @@ using Random
         @test (3 + 1.55 - 0.1) * E₀ ≈ E atol = 1.0e-2
     end
 
+    # 6b. TimeDependent operator smoke test: exercises the `TimedOperator` coupling path (which
+    #     has no one-arg apply). A constant-in-`t` coefficient makes midpoint-freezing exact, so
+    #     evolving the time-dependent `Ht` at `t=1.0` must match evolving the pre-evaluated `Ht(1.0)`.
+    @testset "TimeDependent LazySum" begin
+        Ht = MultipliedOperator(H, t -> 4) + MultipliedOperator(H, 1.45)
+        alg = ParallelBUG(; trscheme = truncerror(; atol = 1.0e-12))
+        ψa, envsa = timestep(ψ₀, Ht(1.0), 0.0, dt, alg)
+        Ea = expectation_value(ψa, Ht(1.0), envsa)
+
+        ψt, envst = timestep(ψ₀, Ht, 1.0, dt, alg)
+        Et = expectation_value(ψt, Ht(1.0), envst)
+        @test Ea ≈ Et atol = 1.0e-8
+    end
+
     # 7. convergence order: the integrator is documented as (globally) first order in dt; assert at
     #    least that. (At these bond dimensions the augmented spans are near-exact and the measured
     #    slope is ≈ 2, so only a lower bound is imposed.)
@@ -168,6 +182,62 @@ using Random
         @info "ParallelBUG accuracy vs ϑ" ϑs errs
         @test issorted(errs; rev = true)
         @test errs[end] < errs[1] / 10
+    end
+
+    # 9. step rejection: a small-bond start under a tight tolerance + a large `dt` can saturate the
+    #    doubling cap; `maxiter_rejection > 0` then recomputes the step as half-steps. The recompute
+    #    path must run cleanly, keep a normalized state, and never worsen the overlap with the dense
+    #    reference (sub-stepping only refines it).
+    @testset "step rejection" begin
+        Random.seed!(7)
+        Lr = 4
+        Hr = force_planar(transverse_field_ising(ComplexF64, Trivial; L = Lr))
+        Hmat = convert(TensorMap, Hr)
+        ψr = normalize!(complex(FiniteMPS(rand, Float64, Lr, ℙ^2, ℙ^2)))   # bond dim 2 (small)
+        ψvec = convert(TensorMap, ψr); ψvec /= norm(ψvec)
+        dtbig = 0.3
+        ref = exp(-im * Hmat * dtbig) * ψvec
+
+        tol = truncerror(; atol = 1.0e-6)
+        ψno, = timestep(ψr, Hr, 0.0, dtbig, ParallelBUG(; trscheme = tol, maxiter_rejection = 0))
+        ψrej, = timestep(ψr, Hr, 0.0, dtbig, ParallelBUG(; trscheme = tol, maxiter_rejection = 4))
+        outno = convert(TensorMap, ψno); outno /= norm(outno)
+        outrej = convert(TensorMap, ψrej); outrej /= norm(outrej)
+        errno = 1 - abs(dot(outno, ref))
+        errrej = 1 - abs(dot(outrej, ref))
+        @info "ParallelBUG step rejection" errno errrej
+        @test errrej ≤ errno + 1.0e-12     # sub-stepping never worsens the accuracy
+        @test isfinite(errrej)
+    end
+
+    # 10. first-order error accumulation (Ceruti et al. 2024, Thm 4.5: `‖error‖ ≲ c·n·ϑ`). At fixed
+    #     `dt` and `ϑ` the global error grows ~linearly in the number of steps `n`. (A `dt`-refinement
+    #     slope is ill-posed here: at fixed `ϑ`, halving `dt` doubles `n` and thus the accumulated
+    #     truncation error, so refining `dt` need not converge — hence this per-`n` test instead.)
+    @testset "linear error accumulation" begin
+        Random.seed!(13)
+        Le = 6
+        He = force_planar(transverse_field_ising(ComplexF64, Trivial; L = Le))
+        Hmat = convert(TensorMap, He)
+        ψe = normalize!(complex(FiniteMPS(rand, Float64, Le, ℙ^2, ℙ^2)))
+        ψvec = convert(TensorMap, ψe); ψvec /= norm(ψvec)
+        δt = 0.02
+        alg = ParallelBUG(; trscheme = truncerror(; atol = 1.0e-4))
+        ns = [5, 10, 20]
+        # state 2-norm error (phase-aligned), the quantity the `c·n·ϑ` bound controls — the overlap
+        # *infidelity* `1-|⟨·⟩|` is its square, so it would grow ~n² and must not be used here.
+        errs = map(ns) do n
+            ref = exp(-im * Hmat * (n * δt)) * ψvec
+            ψc = copy(ψe)
+            for k in 0:(n - 1)
+                ψc, = timestep(ψc, He, k * δt, δt, alg)
+            end
+            out = convert(TensorMap, ψc); out /= norm(out)
+            return sqrt(2 * (1 - abs(dot(out, ref))))
+        end
+        @info "ParallelBUG error accumulation" ns errs
+        @test issorted(errs)                        # error grows monotonically with the step count
+        @test 2.5 * errs[1] < errs[3] < 6 * errs[1]   # ~linear in n (5→20 = 4×), not saturating/quadratic
     end
 end
 
