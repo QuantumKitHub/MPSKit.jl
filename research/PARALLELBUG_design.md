@@ -121,6 +121,41 @@ into `Ĉ¹ᵢ = [C̄¹ᵢ; C̃ᵢ]` *before* orthonormalizing, so that deep new 
 root; the root tensor `[C̄_L(t₁); C̃_L]` then carries all amplitude and first-order content.
 See `PARALLELBUG_STATUS.md` for the implemented recipe and the numerical gates.
 
+## 2d. SECOND-ORDER variant (from the reference `TTN_integrator_parallel_2nd_order_nonglobal.m`)
+
+The reference achieves second order **not** by Strang composition but by an **augmented-Galerkin**
+scheme that *keeps the new–new coupling corner* the first-order method drops. Exact recipe (verbatim
+from the MATLAB, per node with `m` children):
+
+1. **Pre-step**: build the augmented child bases `U0_hat{jj}` (same QR construction as first order)
+   and overlap matrices `Mi{jj} = Q0ᵢ' (⊗_{i≠jj} Y0ᵢ'U0_hat_i) Q0ᵢ`.
+2. **Subflow Φᵢ** (per child, parallel): K-step evolves `Y0ᵢ·Mi{i}` (leaf: `RK_4`; subtree: recurse);
+   augment the child basis old-first `[Y0{i}  Y1_i]` via QR, then **zero-pad to `3·r`** and take
+   `U_tilde{i} = ` columns `r+1:end` (the ≤ `2r` new directions).
+3. **Subflow Ψ** (core): `C0 = ttm(Y0{end}, Mi, 1:m)`; evolve the core `C1_bar =
+   RK_4_tensor(C0, func_ODE, U0_hat, …)` where `func_ODE` = `F` projected onto the **old** bases `U0`
+   (a Galerkin K-step of the core).
+4. **Augmentation** (the second-order piece): `F{end} ← (t1-t0)·F{end}`; for each mode `jj`,
+   `Ci = ttm(F{end}, dum, 1:m)` with `dum{i} = Mat0Mat0(U_tilde{i}, F{i})` for `i=jj` and
+   `Mat0Mat0(U0_hat{i}, F{i})` otherwise — i.e. `Δt·F` projected onto the **new** directions on mode
+   `jj` and the augmented bases elsewhere. This `Ci` is placed into rows `r+1:3r` of the core:
+   `tmp(rr(jj)+1:3*rr(jj), :) = tenmat(Ci,jj,vv)`, `ss(jj)=3*ss(jj)`. **The block the first-order
+   method leaves at 0 is now filled by `Ci`.** (`Ci` is exactly the quantity whose norm is the
+   estimator `η`; keeping it is what raises the order.)
+5. Truncate the `3r` bonds back down (elsewhere).
+
+**MPS caterpillar mapping (`m = 1` per node → the loops collapse):** each interior connecting tensor
+`AC[i]` gets a **`3r`** child bond — old `r`, plus the ≤`2r` new directions from `[old | K-step | Ci]`
+— with the coupling `Ci = dt·⟨Ũᵢ₋₁|H|ψ₀⟩` **kept in the core** instead of only informing `Ũ`'s range.
+Concretely this means the interior tensors are no longer pure isometries: the new–new block carries
+amplitude, so the assembled state must be re-gauged (`FiniteMPS` from the raw tensors handles this).
+
+**Implementation status / risk**: this is a genuine cross-framework port — the reference is a
+Tucker-tree (cell arrays, `tenmat`/`ttm`, explicit `Mi`/`Q0_i`), MPSKit is `TensorMap` MPS. Validation
+has no cheap oracle (the caterpillar 2-site step is exact; dropped corners appear only at `L ≥ 3`),
+so it must be validated behaviourally: in a **rank-limited** regime `err(order=2) < err(order=1)` at
+matched `dt`/`ϑ`, and the log–log `dt`-slope ≈ 2. Expose via an `order::Int` field (default 1).
+
 ## 3. Key design decisions (recorded)
 
 1. **New name, not a flag on `BUG`.** A separate `ParallelBUG <: Algorithm` struct rather than
