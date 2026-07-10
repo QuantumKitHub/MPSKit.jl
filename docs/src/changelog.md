@@ -33,6 +33,15 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   shorthand: a two-argument call is always the overlap, since the second argument cannot be
   disambiguated between a ket and an operator (undecidable for density matrices, where states
   and operators share a representation). ([#436](https://github.com/QuantumKitHub/MPSKit.jl/pull/436))
+- `transfer_spectrum` now computes the spectrum for all sectors of the transfer space at once,
+  returning a `TensorKit.SectorVector` that can be indexed per sector.
+  The `sector` keyword is removed; a specific selection of sectors (with per-sector counts) can be
+  requested by passing `howmany` as an `AbstractDict`/iterable of `sector => count` pairs.
+  The `below` state and the eigensolver algorithm are optional positional arguments, and the
+  algorithm can be resolved per sector. The Krylov dimension adapts to the number of values requested
+  in each sector, controlled by the new `oversampling` and `oversampling_factor` keywords.
+  Accordingly, `marek_gap` and `correlation_length` now return a `TensorKit.SectorDict` of
+  per-sector results by default; pass `sector = ...` to obtain a single sector's result as before.
 
 ### Deprecated
 

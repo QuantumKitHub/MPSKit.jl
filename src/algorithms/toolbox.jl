@@ -67,39 +67,6 @@ function calc_galerkin(below, operator, above, envs)
 end
 
 """
-    transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
-                           sector=leftunit(above))
-
-Calculate the partial spectrum of the left mixed transfer matrix corresponding to the
-overlap of a given `above` state and a `below` state. The `sector` keyword argument can be
-used to specify a non-trivial total charge for the transfer matrix eigenvectors.
-Specifically, an auxiliary space `ℂ[typeof(sector)](sector => 1)'` will be added to the
-domain of each eigenvector. The `tol` and `num_vals` keyword arguments are passed to
-`KrylovKit.eigsolve`
-"""
-function transfer_spectrum(
-        above::InfiniteMPS; below = above, tol = Defaults.tol, num_vals = 20,
-        sector = leftunit(above)
-    )
-    init = randomize!(
-        similar(
-            above.AL[1], left_virtualspace(below, 1),
-            spacetype(above)(sector => 1)' * left_virtualspace(above, 1)
-        )
-    )
-
-    transferspace = fuse(left_virtualspace(above, 1) * left_virtualspace(below, 1)')
-    num_vals = min(dim(transferspace, sector), num_vals) # we can ask at most this many values
-    eigenvals, eigenvecs, convhist = eigsolve(
-        flip(TransferMatrix(above.AL, below.AL)), init, num_vals, :LM; tol = tol
-    )
-    convhist.converged < num_vals &&
-        @warn "correlation length failed to converge: normres = $(convhist.normres)"
-
-    return eigenvals
-end
-
-"""
     entanglement_spectrum(ψ, site::Int) -> SectorVector{T, sectortype(ψ), AbstractVector{T}}
 
 Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
@@ -118,69 +85,6 @@ end
 function entanglement_spectrum(st::FiniteMPS, site::Int)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
-end
-
-"""
-Find the closest fractions of π, differing at most ```tol_angle```
-"""
-function approx_angles(spectrum; tol_angle = 0.1)
-    angles = angle.(spectrum) ./ π                          # ∈ ]-1, 1]
-    angles_approx = rationalize.(angles, tol = tol_angle)     # ∈ [-1, 1]
-
-    # Remove the effects of the branchcut.
-    angles_approx[findall(angles_approx .== -1)] .= 1       # ∈ ]-1, 1]
-
-    return angles_approx .* π                               # ∈ ]-π, π]
-end
-
-"""
-Given an InfiniteMPS, compute the gap ```ϵ``` for the asymptotics of the transfer matrix, as
-well as the Marek gap ```δ``` as a scaling measure of the bond dimension.
-"""
-function marek_gap(above::InfiniteMPS; tol_angle = 0.1, kwargs...)
-    spectrum = transfer_spectrum(above; kwargs...)
-    return marek_gap(spectrum; tol_angle)
-end
-
-function marek_gap(spectrum::AbstractVector{T}; tol_angle = 0.1) where {T <: Number}
-    # Remove 1s from the spectrum
-    inds = findall(abs.(spectrum) .< 1 - 1.0e-12)
-    length(spectrum) - length(inds) < 2 || @warn "Non-injective mps?"
-
-    spectrum = spectrum[inds]
-
-    angles = approx_angles(spectrum; tol_angle = tol_angle)
-    θ = first(angles)
-
-    spectrum_at_angle = spectrum[findall(angles .== θ)]
-
-    lambdas = -log.(abs.(spectrum_at_angle))
-
-    ϵ = first(lambdas)
-
-    δ = Inf
-    if length(lambdas) > 2
-        δ = lambdas[2] - lambdas[1]
-    end
-
-    return ϵ, δ, θ
-end
-
-"""
-    correlation_length(above::InfiniteMPS; kwargs...)
-
-Compute the correlation length of a given InfiniteMPS based on the next-to-leading
-eigenvalue of the transfer matrix. The `kwargs` are passed to [`transfer_spectrum`](@ref),
-and can for example be used to target the correlation length in a specific sector. 
-"""
-function correlation_length(above::InfiniteMPS; kwargs...)
-    ϵ, = marek_gap(above; kwargs...)
-    return 1 / ϵ
-end
-
-function correlation_length(spectrum::AbstractVector{T}; kwargs...) where {T <: Number}
-    ϵ, = marek_gap(spectrum; kwargs...)
-    return 1 / ϵ
 end
 
 """

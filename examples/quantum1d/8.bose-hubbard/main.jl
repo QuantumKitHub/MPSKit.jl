@@ -213,7 +213,7 @@ plot!(
 )
 
 scatter!(
-    p, Ds, correlation_length.(states),
+    p, Ds, map(ψ -> correlation_length(ψ; sector = leftunit(ψ)), states),
     ylabel = "Correlation length", xlabel = "Bond dimension",
     xscale = :log10, yscale = :log10,
     inset = bbox(0.2, 0.51, 0.25, 0.25),

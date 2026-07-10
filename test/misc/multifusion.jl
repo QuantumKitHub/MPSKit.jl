@@ -131,8 +131,9 @@ module TestMultifusion
             @test var < 1.0e-8
         end
 
-        @test first(transfer_spectrum(ψ2; sector = C0)) ≈ 1
-        @test !(abs(first(transfer_spectrum(ψ2; sector = C1))) ≈ 1) # testing injectivity
+        spec = transfer_spectrum(ψ2)
+        @test first(spec[C0]) ≈ 1
+        @test !(abs(first(spec[C1])) ≈ 1) # testing injectivity
 
         @test only(keys(entanglement_spectrum(ψ2))) == M
 

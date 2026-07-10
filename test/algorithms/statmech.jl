@@ -94,10 +94,10 @@ using TensorKit: ℙ
         E_tdvp = expectation_value(rho_mps_tdvp, H)
         @test E_tdvp ≈ E_taylor atol = 1.0e-2
 
-        num_vals = 2
-        vals_taylor = @constinferred(transfer_spectrum(convert(InfiniteMPS, rho_taylor); num_vals))
-        vals_mps = @constinferred(transfer_spectrum(rho_mps; num_vals))
-        @test vals_taylor[1:num_vals] ≈ vals_mps[1:num_vals]
+        howmany = 2
+        vals_taylor = @constinferred(transfer_spectrum(convert(InfiniteMPS, rho_taylor); howmany))
+        vals_mps = @constinferred(transfer_spectrum(rho_mps; howmany))
+        @test all(c -> vals_taylor[c] ≈ vals_mps[c], keys(vals_taylor))
     end
 
     @testset "2D infinite partition functions with boundary MPS" verbose = true begin

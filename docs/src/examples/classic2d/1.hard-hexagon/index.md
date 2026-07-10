@@ -12,7 +12,7 @@ EditURL = "../../../../../examples/classic2d/1.hard-hexagon/main.jl"
 
 Tensor networks are a natural way to do statistical mechanics on a lattice.
 As an example of this we will extract the central charge of the hard hexagon model.
-This model is known to have central charge 0.8, and has very peculiar non-local (anyonic) symmetries.
+This model is known to have central charge ``0.8``, and has very peculiar non-local (anyonic) symmetries.
 Because TensorKit supports anyonic symmetries, so does MPSKit.
 To follow the tutorial you need the following packages.
 
@@ -23,7 +23,8 @@ using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
 The [hard hexagon model](https://en.wikipedia.org/wiki/Hard_hexagon_model) is a 2-dimensional lattice model of a gas, where particles are allowed to be on the vertices of a triangular lattice, but no two particles may be adjacent.
 This can be encoded in a transfer matrix with a local MPO tensor using anyonic symmetries, and the resulting MPO has been implemented in MPSKitModels.
 
-In order to use these anyonic symmetries, we need to generalise the notion of the bond dimension and define how it interacts with the symmetry. Thus, we implement away of converting integers to symmetric spaces of the given dimension, which provides a crude guess for how the final MPS would distribute its Schmidt spectrum.
+In order to use these anyonic symmetries, we need to generalise the notion of the bond dimension and define how it interacts with the symmetry.
+Thus, we implement away of converting integers to symmetric spaces of the given dimension, which provides a crude guess for how the final MPS would distribute its Schmidt spectrum.
 
 ````julia
 mpo = hard_hexagon()
@@ -53,21 +54,24 @@ V = virtual_space(D)
 ) # use non-hermitian eigensolver
 F = real(expectation_value(ψ, mpo))
 S = real(first(entropy(ψ)))
-ξ = correlation_length(ψ)
+ξ = correlation_length(ψ; sector = leftunit(ψ))
 println("F = $F\tS = $S\tξ = $ξ")
 ````
 
 ````
-F = 0.8839037051703849	S = 1.280782962202701	ξ = 13.849682582739709
+F = 0.8839037051703852	S = 1.2807829621826905	ξ = 13.849682581482702
 
 ````
 
 ## The scaling hypothesis
 
-The dominant eigenvector is of course only an approximation. The finite bond dimension enforces a finite correlation length, which effectively introduces a length scale in the system. This can be exploited to formulate a scaling hypothesis [pollmann2009](@cite), which in turn allows to extract the central charge.
+The dominant eigenvector is of course only an approximation.
+The finite bond dimension enforces a finite correlation length, which effectively introduces a length scale in the system.
+This can be exploited to formulate a scaling hypothesis [pollmann2009](@cite), which in turn allows to extract the central charge.
 
-First we need to know the entropy and correlation length at a bunch of different bond dimensions. Our approach will be to re-use the previous approximated dominant eigenvector, and then expanding its bond dimension and re-running VUMPS.
-According to the scaling hypothesis we should have ``S \propto \frac{c}{6} log(ξ)``. Therefore we should find ``c`` using
+First we need to know the entropy and correlation length at a bunch of different bond dimensions.
+Our approach will be to re-use the previous approximated dominant eigenvector, and then expanding its bond dimension and re-running VUMPS.
+According to the scaling hypothesis we should have ``S ∝ \frac{c}{6} log(ξ)``. Therefore we should find ``c`` using
 
 ````julia
 function scaling_simulations(
@@ -77,16 +81,17 @@ function scaling_simulations(
     entropies = similar(Ds, Float64)
     correlations = similar(Ds, Float64)
     alg = VUMPS(; verbosity, tol, alg_eigsolve)
+    sector = unit(sectortype(mpo)) # dominant correlation functions are in the trivial sector
 
     ψ, envs, = leading_boundary(ψ₀, mpo, alg)
     entropies[1] = real(entropy(ψ)[1])
-    correlations[1] = correlation_length(ψ)
+    correlations[1] = correlation_length(ψ; sector)
 
     for (i, d) in enumerate(diff(Ds))
         ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme = truncrank(d)), envs)
         ψ, envs, = leading_boundary(ψ, mpo, alg, envs)
         entropies[i + 1] = real(entropy(ψ)[1])
-        correlations[i + 1] = correlation_length(ψ)
+        correlations[i + 1] = correlation_length(ψ; sector)
     end
     return entropies, correlations
 end
@@ -100,7 +105,7 @@ c = f.coeffs[2]
 ````
 
 ````
-0.8025237309498792
+0.802524639544328
 ````
 
 ````julia
