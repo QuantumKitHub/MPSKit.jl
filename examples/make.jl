@@ -103,5 +103,9 @@ end
 # Scripts
 # ---------------------------------------------------------------------------------------- #
 
-build("classic2d")
-build("quantum1d")
+# build every topic group: each subdirectory of examples/ is one group
+for group in readdir(@__DIR__)
+    startswith(group, '.') && continue
+    isdir(joinpath(@__DIR__, group)) || continue
+    build(group)
+end

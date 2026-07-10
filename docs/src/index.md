@@ -139,8 +139,8 @@ See [Computing observables](@ref howto_observables) and [Entanglement entropy an
 The same three steps carry over to harder problems, usually by changing only the vector spaces or the state type:
 
 - [**The thermodynamic limit**](@ref tutorial_thermodynamic_limit) works at infinite system size: replace `FiniteMPS` with an [`InfiniteMPS`](@ref) and `DMRG` with [`VUMPS`](@ref), and the rest of the code is unchanged.
-- [**Using symmetries**](@ref tutorial_using_symmetries) imposes abelian or non-abelian symmetries by swapping the plain `ℂ^2` spaces for symmetric ones (for example an `SU2Space`), which also shrinks the bond dimension; see also the [Haldane gap](examples/quantum1d/2.haldane/index.md) example.
-- [**The Hubbard model**](examples/quantum1d/6.hubbard/index.md) treats fermions with the same machinery, through TensorKit's graded vector spaces.
+- [**Using symmetries**](@ref tutorial_using_symmetries) imposes abelian or non-abelian symmetries by swapping the plain `ℂ^2` spaces for symmetric ones (for example an `SU2Space`), which also shrinks the bond dimension; see also the [Haldane gap](examples/excitations/0.haldane/index.md) example.
+- [**The Hubbard model**](examples/groundstates/2.hubbard/index.md) treats fermions with the same machinery, through TensorKit's graded vector spaces.
 
 ## Where next
 
