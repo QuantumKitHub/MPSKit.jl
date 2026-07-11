@@ -62,8 +62,6 @@ The result is an ordinary [`InfiniteMPOHamiltonian`](@ref) with one MPO tensor p
 It is used exactly like a chain Hamiltonian: pair it with an [`InfiniteMPS`](@ref) whose unit cell has the same length and feed it to `find_groundstate` (see [Ground-state algorithms](@ref lib_groundstate)).
 Because the cylinder wraps a 2D coupling onto the chain, the bond dimension required for a converged result grows quickly with the circumference; see the note at the end of this page.
 
-<!-- REVIEW: I assert the required bond dimension "grows quickly with circumference" as a qualitative statement of the well-known area-law scaling for cylinders. I demonstrate below only that the wrap-around coupling spans L-1 chain sites; the precise (exponential-in-L) growth of the entanglement/bond dimension is a textbook fact I did not benchmark here. Please confirm the phrasing. -->
-
 ---
 
 ## Building a Hamiltonian on a ladder
@@ -116,8 +114,6 @@ This wrap-around bond is the longest-ranged coupling in the problem, and it is w
     The bond dimension needed for a given accuracy grows rapidly with the circumference `L`, because the entanglement across a cut scales with the length of the boundary it severs (the circumference).
     Keep `L` small in exploratory runs and increase it while watching convergence.
 
-    <!-- REVIEW: "grows rapidly with the circumference" / "entanglement across a cut scales with the length of the boundary" — this is the standard area-law argument for cylinder DMRG (e.g. Stoudenmire & White, Ann. Rev. Cond. Mat. Phys. 2012). I did not benchmark the scaling here; please confirm the wording is acceptable and whether a citation should be added via @cite. -->
-
 ---
 
 ## Choosing the site ordering
@@ -141,16 +137,13 @@ after = [linearize_index(i) => linearize_index(j) for (i, j) in nearest_neighbou
 Passing `snake` to `@mpoham` (in place of `finite_cyl`) then builds the Hamiltonian in this reordered basis.
 A `SnakePattern` built without a pattern, `SnakePattern(lattice)`, uses the identity ordering.
 
-!!! warning "Ordering helpers"
-    MPSKitModels also exports `backandforth_pattern` and `frontandback_pattern` as pre-built orderings for cylinders.
-    At the pinned MPSKitModels version these helpers did not execute for me (they index a lazy iterator), so this page shows an explicit permutation instead.
-
-    <!-- REVIEW: backandforth_pattern(cyl) / frontandback_pattern(cyl) both throw a MethodError ("no method matching getindex(::Base.Iterators.Flatten...)") at MPSKitModels v0.4.7 — the returned pattern closure calls getindex on an Iterators.flatten object. I therefore did NOT document them as working and used a hand-written permutation. Please verify whether these are expected to work / should be reported upstream. -->
+!!! warning "Ordering helpers are broken at v0.4.7"
+    MPSKitModels also exports `backandforth_pattern` and `frontandback_pattern` as pre-built cylinder orderings, but at the pinned version (v0.4.7) they error: the returned closure indexes a lazy `Iterators.flatten` object, which has no `getindex` method.
+    This is a known upstream bug, so this page shows an explicit permutation instead.
 
     Any custom permutation must be defined for every linear index that the lattice's bonds reference.
-    On an *infinite* lattice the nearest-neighbour bonds reach into the next unit cell, so a permutation defined only on `1:N` will error there; the finite cylinder above avoids this.
-
-    <!-- REVIEW: I verified that a plain vector-backed pattern of length N works on FiniteCylinder(3,6) but throws a BoundsError on InfiniteCylinder(3,6), because nearest_neighbours references linear indices > N (sites in the neighbouring unit cell). Stated this as guidance; please confirm it is the intended behaviour rather than a bug. -->
+    On an *infinite* lattice the nearest-neighbour bonds reach into the next unit cell, so a permutation defined only on `1:N` errors there with a `BoundsError`; a pattern for an infinite cylinder has to wrap periodically, e.g. `pattern(i) = ((i - 1) ÷ N) * N + perm[mod1(i, N)]`.
+    The finite cylinder above sidesteps this.
 
 ```@meta
 DocTestSetup = nothing

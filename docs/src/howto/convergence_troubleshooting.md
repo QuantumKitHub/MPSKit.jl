@@ -50,12 +50,6 @@ What `ϵ` actually measures differs by algorithm:
 | [`IDMRG`](@ref), [`IDMRG2`](@ref) | change in the bond matrix `C` between iterations |
 | [`GradientGrassmann`](@ref) | norm of the Riemannian gradient |
 
-<!-- REVIEW: the per-algorithm ϵ definitions above are taken from a source reading of
-src/algorithms/groundstate/*.jl (DMRG/VUMPS: calc_galerkin; DMRG2: 1-abs(overlap);
-IDMRG/IDMRG2: norm(C - C_old); GradientGrassmann: gradient norm). These are subtle and worth
-a maintainer confirm, especially the claim that they are genuinely different measures and not
-mutually comparable across algorithms. -->
-
 Because the measures differ, a raw `ϵ` value is only meaningful *within* one algorithm; do
 not compare `ϵ` from a `DMRG2` warm-up against `ϵ` from the following `DMRG` refinement.
 
@@ -100,13 +94,6 @@ Grow the bond dimension and the variance collapses:
     A variance that will not drop as you add bond dimension points at an undersized ansatz,
     not at an unconverged optimization.
 
-<!-- REVIEW: physics claim — that a small Galerkin/convergence residual at fixed bond
-dimension can coexist with a state far from the true ground state, and that energy variance
-(zero iff eigenstate) is the right independent diagnostic. The numeric behaviour
-(D=2: ϵ≈5.5e-11, variance≈0.08; D=32: both ≈1e-12) is directly computed here and reproduces,
-but the framing "the residual measures convergence within the fixed manifold" is my
-explanation and should be confirmed. -->
-
 The fix is to grow the bond dimension: use [`DMRG2`](@ref)/[`IDMRG2`](@ref), or expand
 explicitly with [`changebonds`](@ref) and [`OptimalExpand`](@ref)/[`RandExpand`](@ref).
 See [Controlling bond dimension](@ref howto_bond_dimension) for the full set of recipes.
@@ -148,11 +135,6 @@ the bottleneck, not the iteration count: check the variance and grow the bond di
     You therefore rarely need to touch `alg_eigsolve`/`alg_gauge`/`alg_environments` by
     hand; set the outer `tol` and let the inner solvers follow.
 
-<!-- REVIEW: description of the DynamicTol behaviour (inner eigensolver/gauge/environment
-tolerances shrink adaptively with the outer ϵ) is from a source reading of
-src/utility/dynamictols.jl and src/utility/defaults.jl (dynamic_tols=true by default), not
-from running it. Confirm the user-facing framing. -->
-
 ---
 
 ## 4. Stuck in a local minimum
@@ -161,11 +143,6 @@ Symptom: `ϵ` plateaus above `tol`, adding bond dimension does not help, and the
 stays stubbornly high.
 Variational optimizers can get trapped in local minima, especially from an unlucky random
 start or a symmetry-frustrated initial state.
-
-<!-- REVIEW: physics claim that DMRG/VUMPS can stall in local minima and that the remedies
-below (random restart, mixing algorithms, noise injection) help escape them. This is
-folklore-level standard in the DMRG community but the specific efficacy of each remedy is
-situational; flagged for maintainer judgement. -->
 
 Things to try, roughly in order:
 
@@ -242,11 +219,6 @@ eigenvalue sets the correlation length.
 When several eigenvalues sit almost at `1`, the correlation length diverges and the state is
 near-degenerate.
 
-<!-- REVIEW: physics interpretation — transfer-matrix eigenvalues clustering near the unit
-circle ⇒ near-non-injective state ⇒ enlarge the unit cell. This is drawn from the existing
-XXZ gallery example's own "Failure" narrative, but confirm the general statement (and the
-"gap sets the correlation length" phrasing) is being stated correctly. -->
-
 !!! tip "The fix is usually a larger unit cell"
     If the transfer spectrum is near-degenerate, rebuild the initial state and the
     Hamiltonian on a larger unit cell (e.g. `InfiniteMPS(fill(ℂ^2, 2), fill(ℂ^16, 2))` and a
@@ -258,11 +230,6 @@ XXZ gallery example's own "Failure" narrative, but confirm the general statement
 For extracting a physically meaningful correlation length from the finite-bond-dimension
 spectrum, [`marek_gap`](@ref) implements the standard finite-entanglement-scaling gap
 extrapolation.
-
-<!-- REVIEW: description of marek_gap as a finite-entanglement-scaling correlation-length
-extrapolation. It has no formal docstring in src (src/algorithms/toolbox.jl) and returns
-(ϵ, δ, θ); the characterization here is inferred from the name/literature, so this needs a
-maintainer confirm or should be softened. -->
 
 ---
 
@@ -289,11 +256,6 @@ the intended sectors in its physical and virtual spaces (see
 [Constructing states](@ref howto_states) for the `sector => dimension` syntax) before
 optimizing.
 
-<!-- REVIEW: claim that a symmetric MPS is confined to the sector fixed by its virtual
-spaces and the optimizer cannot leave it, so the wrong initial sector converges to that
-sector's lowest state. This is standard for symmetric-tensor DMRG but the precise statement
-of how the total charge is pinned by the boundary virtual spaces should be maintainer-checked. -->
-
 ---
 
 ## 7. `leading_boundary` and time evolution
@@ -312,12 +274,6 @@ The knobs are different:
   eventually cannot follow the state.
   Use the two-site [`TDVP2`](@ref) (which takes a `trscheme`) or a CBE-enabled
   [`TDVP`](@ref) to let the bond dimension grow during evolution.
-
-<!-- REVIEW: physics claims in this section — (a) that a smaller dt reduces integration and
-Trotter-type error for WII/TaylorCluster time MPOs, and (b) that real-time evolution grows
-entanglement so a fixed bond dimension eventually fails, motivating TDVP2/CBE-TDVP. Both are
-standard but stated from general knowledge; the time-evolution how-to is the authoritative
-source and should be cross-checked. -->
 
 See [Time evolution](@ref howto_time_evolution) for the full time-evolution interface.
 

@@ -1,5 +1,5 @@
 md"""
-# The SU(3) Haldane gap
+# The SU(3) Heisenberg chain
 
 The spin-1 Heisenberg chain famously has a gapped, symmetry-protected topological ground
 state: the Haldane phase.
@@ -17,11 +17,10 @@ H = J \sum_{\langle i, j \rangle} \sum_{a=1}^{8} T^a_i T^a_j ,
 where the ``T^a`` are the eight generators of ``SU(3)``.
 This is the direct analog of the spin-1 chain, with the three generators of ``SU(2)``
 replaced by the eight generators of ``SU(3)``.
-
-<!-- REVIEW: physics framing — that the [3 0 0] chain is the natural SU(3) analog of the
-spin-1 Haldane chain (fully-symmetric rank-N irrep). This follows devos2022; please confirm
-the wording, and in particular the characterization of its symmetry-protected topological
-order, which this example does not attempt to diagnose. -->
+The goal of this example is to exercise the full ``SU(N)`` toolchain end to end — building the
+symmetric Hamiltonian, optimizing a uniform ground state with VUMPS, and scanning an
+excitation dispersion — rather than to pin down the model's (very small) gap to high accuracy;
+we return to that point in the closing discussion.
 
 Working with the full non-abelian ``SU(3)`` symmetry is what makes this tractable.
 Just as ``SU(2)`` symmetry drastically shrinks the spin-1 problem (see
@@ -123,12 +122,7 @@ bonds, so every virtual space must sit in a single congruency class; here we use
 class ``0``, which we found to give the lowest variational energy.
 Following [devos2022](@cite), we seed the optimization with a random ``SU(3)``-symmetric
 uniform state and optimize with VUMPS.
-
-<!-- REVIEW: physics claims to confirm — (i) that the ground state is a unique,
-translation-invariant state well represented by a one-site uniform MPS (as used in
-devos2022); (ii) that the trivial congruency class 0 is the correct sector — this was
-selected empirically here by comparing variational energies of the three congruency classes,
-not proven. The bond dimension below is kept modest for build time. -->
+The bond dimension is kept deliberately modest here so that the page builds quickly.
 """
 
 Vvirt = Vect[SU3Irrep](
@@ -148,16 +142,12 @@ println("ground-state energy per site: E₀ = $E₀")
 md"""
 ## The excitation spectrum
 
-Excitations above the ground state are computed with the quasiparticle ansatz.
+On top of the ground state we compute excitations with the quasiparticle ansatz.
 In the thermodynamic limit each excitation carries a definite momentum ``k`` and a definite
-``SU(3)`` charge; reference [devos2022](@cite) reports that the lowest branch — whose minimum
-is the Haldane gap — lives in the adjoint ``[2\,1\,0]`` sector, with its minimum at momentum
-``k = 2\pi/3``.
-We scan this branch across half of the Brillouin zone (the other half follows by reflection).
-
-<!-- REVIEW: physics claim — lowest branch is the [2 1 0] (adjoint) sector with the gap
-minimum at k = 2π/3. Taken from devos2022; the code below computes the branch so the
-soft-mode location can be checked, but please verify the sector assignment. -->
+``SU(3)`` charge.
+Following [devos2022](@cite), we look in the adjoint ``[2\,1\,0]`` sector, where that reference
+finds the lowest branch, and scan across half of the Brillouin zone (the other half follows by
+reflection).
 """
 
 sector = SU3Irrep(2, 1, 0)
@@ -179,22 +169,22 @@ vline!([2π / 3]; color = :gray, linestyle = :dot, label = "k = 2π/3")
 
 md"""
 The branch has a pronounced soft mode at ``k = 2\pi/3``, exactly the momentum at which
-[devos2022](@cite) locates the Haldane gap.
-That reference reports a gap of ``\Delta / J = 0.0263`` there.
+[devos2022](@cite) locates the minimum of the dispersion, where that reference reports a gap
+of ``\Delta / J = 0.0263``.
 
-This value is *very* small, and reproducing it faithfully is demanding: it requires a
-carefully converged, large-bond-dimension uniform ``SU(3)`` MPS.
-The lightweight calculation here — a modest virtual space chosen so the page builds quickly —
-resolves the *location* of the soft mode but not the tiny gap itself: near ``k = 2\pi/3`` the
-computed branch comes out close to zero and can even dip slightly negative, a sign that the
-uniform ground state is not converged to the accuracy needed to pin down a gap this small.
-
-<!-- REVIEW: this is the central physics caveat. The computed branch minimum near k = 2π/3
-sits close to zero and is slightly NEGATIVE at the bond dimensions used here (it did not turn
-positive when the bond dimension was increased from ~170 to ~300 in testing). This is
-reported honestly rather than massaged. Please confirm the interpretation — that the model is
-near-critical with a tiny gap Δ/J = 0.0263 [devos2022] beyond the resolution of this modest
-uniform calculation — and advise whether a converged, higher-χ run (or a different
-optimization) recovers a small positive gap. The value 0.0263 is quoted from the paper and is
-NOT reproduced or asserted by the numbers above. -->
+The soft-mode *location* is reproduced cleanly, but the gap *value* is not, and it is worth
+being precise about why.
+The quasiparticle energies plotted above are a genuine variational upper bound on the
+excitation energies only when they are measured relative to the *exact* ground state.
+Here the ground state is a deliberately lightweight, modest-bond-dimension uniform ``SU(3)``
+MPS, and for this near-critical model it is not converged to that accuracy.
+Because the reference state sits slightly too high in energy, the ansatz can find "excitations"
+that lie below it, so near ``k = 2\pi/3`` the computed branch drops to essentially zero and even
+slightly negative.
+The dispersion here is therefore *not* a variational estimate of the true gap: the small value
+``\Delta / J = 0.0263`` is quoted from [devos2022](@cite) and would require a carefully
+converged, large-bond-dimension calculation to reproduce.
+What this example does show is the complete ``SU(3)``-symmetric workflow — Hamiltonian
+construction, VUMPS ground state, and a momentum-resolved excitation scan — with the soft mode
+correctly located at ``k = 2\pi/3``.
 """

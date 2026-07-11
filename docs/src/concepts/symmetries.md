@@ -94,7 +94,6 @@ At the far end of this spectrum, `quantum_chemistry_hamiltonian` does not expose
 The generality goes further than groups.
 Sectors such as `FibonacciAnyon` or `IsingAnyon` are not group representations at all — their fusion rules come from a modular tensor category — yet because every MPSKit algorithm is written against the abstract `Sector` interface, they are handled by exactly the same code paths, with no special-casing.
 The [hard-hexagon model](@ref "The Hard Hexagon model") example puts this to work: its transfer matrix is built from `FibonacciAnyon`-graded tensors (`Vect[FibonacciAnyon](:I => …, :τ => …)`), and the standard statistical-mechanics workflow computes its partition function just as it would for an ordinary symmetry.
-<!-- REVIEW: the hard-hexagon example encodes the model's non-local symmetry via a FibonacciAnyon-graded transfer matrix; I've described it as a partition-function/statistical-mechanics computation based on its page text — maintainer to confirm the one-line characterization matches what that example actually does. -->
 
 ## When does SU(2) pay off
 
@@ -120,15 +119,10 @@ The total dimension `dim(V_SU2)` is `10`, because each spin-``j`` sector contrib
 But `dim(V_SU2, c)` returns the *stored* multiplicity of each sector — here `[2, 4]`, just six numbers in total — because the ``(2j+1)`` internal structure of every multiplet is fixed by representation theory and never stored.
 For an abelian symmetry the two coincide (every irrep is one-dimensional, so the multiplicities and the total dimension agree, as with the U(1) space above); it is precisely for a non-abelian group that the stored count falls below the physical dimension.
 
-<!-- REVIEW: numbers verified by execution against TensorKit v0.17.0 — dim(V_SU2) == 10 and [dim(V_SU2, c)] == [2, 4]. Note dim(V) != sum(dim(V, c)) for non-abelian sectors (10 != 6 here): dim(V, c) is the degeneracy/multiplicity, and the total dimension weights each by the quantum dimension (2j+1). The (2j+1) = quantum-dimension statement is standard SU(2) representation theory; maintainer to confirm the phrasing reads correctly. -->
-
 The gap between the physical dimension (`10`) and the six numbers actually stored is the source of SU(2)'s reputation for letting DMRG reach much larger effective bond dimensions at the same computational cost — the same principle used to push non-abelian symmetric uniform MPS to large SU(3) bond dimensions in practice [devos2022](@cite).
-
-<!-- REVIEW: [devos2022](@cite) demonstrates the payoff for an SU(3), not SU(2), symmetric uniform MPS; I am treating it as an existence proof of the general mechanism (non-abelian multiplet reduction lets variational tensor networks reach otherwise inaccessible effective bond dimensions), not as a quantitative SU(2) benchmark. I could not find a canonical citation for the classic SU(2)-specific "non-abelian DMRG" scaling argument (e.g. McCulloch/White-style symmetric-DMRG papers) in mpskit.bib; the maintainer may want to add one rather than rely on the SU(3) example alone. -->
 
 None of this is free.
 Every symmetric block carries the overhead of tracking fusion trees and recombining Clebsch–Gordan coefficients whenever legs are permuted or contracted, and for a non-abelian group this bookkeeping is genuinely more expensive per block than for an abelian one.
-<!-- REVIEW: I am not aware of a measured crossover bond dimension below which this overhead outweighs the multiplet-reduction saving for MPSKit specifically; this is stated as a qualitative tradeoff (worth imposing once blocks are "large enough," at a size that is model- and implementation-dependent) rather than a quantified threshold, and should be checked against any benchmark data the maintainer has before being asserted more strongly. -->
 In practice this means SU(2) (or any non-abelian symmetry) is worth reaching for when the physics genuinely has that symmetry — a spin chain with full rotational invariance, for instance — and when the bond dimension is large enough that the multiplet-reduction saving dominates the per-block overhead; for small bond dimensions, or for a symmetry the Hamiltonian does not actually have, the abelian or even trivial case is often simpler and just as fast.
 
 ## Fixing the total charge

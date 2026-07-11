@@ -118,8 +118,6 @@ envs = environments(ψ_loaded, H, ψ_loaded)   # rebuilt from the reloaded state
 nothing # hide
 ```
 
-<!-- REVIEW: physics/perf claim — asserting that recomputing environments is "cheap compared to the optimization" and that saving them is "usually not worth it". True for a converged ground state (one sweep of environment builds vs. many optimization sweeps), but I have not benchmarked the crossover; for very large bond dimensions or expensive contractions a maintainer may want to soften or qualify this. -->
-
 If you do have a reason to persist environments (e.g. to resume an expensive iterative build), `serialize`/`deserialize` them just like a state.
 
 ## [Caveats](@id howto_saving_loading_caveats)
@@ -127,7 +125,6 @@ If you do have a reason to persist environments (e.g. to resume an expensive ite
 - **Version compatibility.**
   `Serialization` files are **not** guaranteed to be readable by a different Julia version, nor after MPSKit or TensorKit change their internal type layout.
   Treat `Serialization` output as a scratch artifact within one environment; use **JLD2** for anything you need to reopen weeks later or on another machine.
-  <!-- REVIEW: this restates the documented behavior of the stdlib Serialization module (its own docs warn the format is not stable across versions); please confirm the phrasing matches what you want to promise about JLD2's cross-version robustness, which is strong but also not unconditional. -->
 
 - **Symmetric tensors are self-describing.**
   A saved state carries the vector spaces and symmetry sectors of every tensor, so you do not need to record the symmetry separately — loading reconstructs the full space structure.

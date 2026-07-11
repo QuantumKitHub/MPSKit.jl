@@ -67,7 +67,7 @@ Computes the Haldane gap of the spin-1 Heisenberg antiferromagnet in two complem
 Introduces `SU2Irrep`/`SU2Space` symmetric tensors for both `FiniteMPS` and `InfiniteMPS`.
 **Level: intermediate.**
 
-### [The SU(3) Haldane gap](excitations/1.su3-heisenberg/index.md)
+### [The SU(3) Heisenberg chain](excitations/1.su3-heisenberg/index.md)
 
 ![](excitations/1.su3-heisenberg/figure-1.png)
 

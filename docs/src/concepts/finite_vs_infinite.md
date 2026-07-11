@@ -43,7 +43,6 @@ length(ψ_cell)
 
 The unit-cell length is not a free accuracy knob like the bond dimension; it is a physical statement about the *period* of the state you intend to represent.
 A translation-invariant ansatz of period `L` can only capture states whose own spatial period divides `L`.
-<!-- REVIEW: commensurability claim. A one-site InfiniteMPS is invariant under single-site translation, so it cannot represent a state that spontaneously breaks translation down to period 2 (e.g. an antiferromagnetic / dimerized / period-2 ordered ground state); such a state needs a unit cell whose length is a multiple of its period. Please confirm this framing (and the "divides L" phrasing) is stated the way you'd want physically. -->
 Choosing a cell that is commensurate with the physical period of the model — the magnetic period of an ordered phase, or a period imposed by the Hamiltonian's own unit cell — is therefore a modelling decision, not a numerical one, and picking too small a cell forces the algorithm to approximate a state it structurally cannot represent.
 A [`FiniteMPS`](@ref), by contrast, has no notion of a unit cell at all: its `length` is simply the number of physical sites, and each of those sites carries its own independent tensor.
 
@@ -66,7 +65,6 @@ norm(3 * ψ_finite)
 For an [`InfiniteMPS`](@ref) that same quantity does not exist.
 The overlap `⟨ψ|ψ⟩` of an infinite state is, formally, a product of one transfer-matrix factor per unit cell, so for a chain of `n` cells it grows (or decays) like `λⁿ`, where `λ` is the leading eigenvalue of the transfer matrix.
 As `n → ∞` this is `0` if `λ < 1` and `∞` if `λ > 1`, and the *only* value that yields a finite, well-defined state is `λ = 1`.
-<!-- REVIEW: the ⟨ψ|ψ⟩ = λⁿ scaling argument and the "only λ = 1 is finite" conclusion are the standard textbook justification for per-site normalization of an iMPS, but the source contains no docstring stating it (the api-explorer found only the per-tensor normalize!(C)/normalize!(AC) construction steps and the isapprox(dot, 1) equality convention). The transfer_spectrum ≈ 1 example below is real evidence, but please check the physical wording of the λⁿ argument. -->
 MPSKit therefore fixes the gauge so that the transfer matrix has leading eigenvalue exactly one, which we can read straight off its spectrum:
 
 ```@example finite-infinite

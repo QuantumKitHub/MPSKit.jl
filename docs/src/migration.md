@@ -30,12 +30,6 @@ If you previously relied on a two-argument operator call, pass the operator expl
 `above` state.
 See [#436](https://github.com/QuantumKitHub/MPSKit.jl/pull/436).
 
-<!-- REVIEW: The upgrade note above is transcribed from the `[Unreleased]` "Changed" entry
-     in CHANGELOG.md (PR #436). Please confirm the recommended old -> new user action is
-     accurate (in particular, what the pre-#436 call site looked like and the exact
-     replacement), since the changelog documents the new contract but not an explicit
-     before/after example. -->
-
 ## Earlier releases
 
 The [Changelog](@ref) records further changes across the 0.13.x series, including a refactor
@@ -44,8 +38,3 @@ of the `IDMRG` implementation to the `IterativeSolver` interface
 consistency ([#415](https://github.com/QuantumKitHub/MPSKit.jl/pull/415)), and a refactor of
 time-evolution MPO construction
 ([#422](https://github.com/QuantumKitHub/MPSKit.jl/pull/422)).
-
-<!-- REVIEW: The changelog for the 0.13.x releases lists changes but does not spell out
-     user-facing migration steps (old -> new API usage) for most of them. If any of these
-     require action from users upgrading across versions, please add explicit upgrade notes
-     here. Otherwise this section can stay as a pointer to the changelog. -->

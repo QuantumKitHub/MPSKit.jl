@@ -40,8 +40,6 @@ P = physicalspace(mpo, 1)
 
 By default `classical_ising` uses the inverse temperature `beta = log(1 + sqrt(2)) / 2`.
 
-<!-- REVIEW: this default `beta = log(1+√2)/2` is the exact 2D-Ising critical inverse temperature βc (Onsager / Kramers–Wannier self-dual point). I state it as textbook fact; maintainer to confirm the one-line characterization. -->
-
 ---
 
 ## 2. Find the leading boundary MPS
@@ -87,8 +85,6 @@ The free energy per site follows from ``f = -\tfrac{1}{\beta}\log\Lambda``:
 f = -1 / β * log(real(Λ))
 ```
 
-<!-- REVIEW: `f` is computed here from this MPO's normalization; I have NOT cross-checked its value against Onsager's exact free energy per site, and sign/normalization conventions of `classical_ising` may differ. Maintainer to verify the physical value. -->
-
 ---
 
 ## 4. Correlation length and entanglement entropy
@@ -106,8 +102,6 @@ S = real(first(entropy(ψ)))
 
 At a critical point the true correlation length diverges; the finite bond dimension of the boundary MPS cuts it off at a finite value that grows with `D`.
 This finite-entanglement scaling of `S` against `log(ξ)` is exactly what the gallery example [The Hard Hexagon model](@ref "The Hard Hexagon model") exploits to extract a central charge.
-
-<!-- REVIEW: statement that at criticality the exact ξ diverges and the finite-D boundary MPS cuts it off (growing with D) is standard finite-entanglement-scaling lore; maintainer to confirm phrasing. -->
 
 ---
 
@@ -152,8 +146,6 @@ real(expectation_value(mψ, mmpo))
 ```
 
 The `expectation_value` of a multi-row transfer matrix is the product of the per-site weights over the rows of the unit cell; divide `log` of it by the number of rows to recover the per-site free energy.
-
-<!-- REVIEW: I verified numerically that the 2-row expectation value ≈ (single-row value)^2, consistent with "product over rows"; maintainer to confirm the free-energy-per-site normalization statement (divide log by number of rows). -->
 
 ---
 

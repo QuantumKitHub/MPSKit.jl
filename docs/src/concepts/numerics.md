@@ -48,11 +48,9 @@ Performing that truncation with [`SvdCut`](@ref) through [`changebonds`](@ref) a
 ```
 
 The bond dimension is thus a genuine accuracy/cost dial: a larger bond dimension lowers the discarded weight and the truncation error, at the price of more expensive tensor contractions.
-<!-- REVIEW: I deliberately do not state a computational-cost scaling law (the textbook "cost per site ~ D^3" for the dominant tensor contractions, D^2 memory). It is standard but I have not benchmarked it here; if the maintainer wants the scaling stated explicitly it should be sourced (e.g. a Schollwöck-style DMRG review) or measured, not asserted. There is currently no Schollwöck/Orús review key in docs/src/assets/mpskit.bib. -->
 
 How much bond dimension a state actually *needs* is set by its entanglement.
 Ground states of gapped, local one-dimensional Hamiltonians obey an entanglement *area law* — their bipartite entanglement entropy saturates to a constant as the system grows — which is precisely why a finite bond dimension can represent them efficiently; at a critical point the entropy instead grows without bound and no fixed bond dimension suffices.
-<!-- REVIEW: The area-law statement (gapped ⇒ bounded entanglement entropy ⇒ efficient MPS; critical ⇒ logarithmically growing entropy S ~ (c/6) log L, unbounded) is standard textbook material (Hastings 2007 for the 1D area law; Calabrese–Cardy for the critical log scaling) but I could NOT find a corresponding citation key in docs/src/assets/mpskit.bib. I stated it as established fact WITHOUT a specific numerical coefficient. Maintainer: please either add an area-law / Schollwöck review reference or confirm the unsourced textbook claim is acceptable. I did not state the c/6 log-scaling coefficient in the page body precisely because I cannot source it here. -->
 
 ### Choosing what to truncate
 
@@ -67,8 +65,6 @@ The ones you will meet most often are:
 - `notrunc()` — keep everything; this is the default `trscheme` of the bond-preserving single-site algorithms.
 
 These schemes compose with `&`, so `trunctol(; atol = 1e-8) & truncrank(16)` applies both bounds at once.
-
-<!-- REVIEW: I describe `truncerror` as bounding the "discarded weight" and `trunctol` as thresholding coefficients. The MatrixAlgebraKit constructors take `atol`/`rtol` and a norm order `p` (default p=2); whether "discarded weight" (sum of squared discarded singular values) coincides exactly with what `truncerror(; atol)` targets depends on that p-norm convention. I have not verified the exact norm semantics against the MatrixAlgebraKit source; the qualitative description (bound the truncation error) is safe but the precise definition of the bounded quantity should be checked. -->
 
 Every bond-growing algorithm — [`DMRG2`](@ref), [`IDMRG2`](@ref), [`TDVP2`](@ref) — and every explicit bond-surgery tool — [`SvdCut`](@ref), [`OptimalExpand`](@ref) — requires a `trscheme` keyword, because their whole job is to decide a new bond dimension.
 The single-site workhorses ([`DMRG`](@ref), [`VUMPS`](@ref), [`TDVP`](@ref)) default to `notrunc()` and keep the bond dimension fixed.
@@ -95,14 +91,11 @@ MPSKit.Defaults.tol
 Not every algorithm reports the same measure, and the differences matter when comparing runs:
 
 - The two-site [`DMRG2`](@ref) does not use the Galerkin error during its sweep; it monitors instead the local infidelity between each two-site tensor before and after truncation, which is a different — and generally less directly interpretable — proxy for convergence.
-  <!-- REVIEW: This is read off the source (dmrg.jl computes `ϵ = max(ϵ, abs(1 - abs(v)))` where v is the overlap of the two-site block before/after truncation), not from a textbook. The characterization "less directly interpretable proxy" is my own editorializing about the two quantities; the maintainer should confirm the framing is fair, since a two-site truncation infidelity and a single-site Galerkin error are not on the same footing and I do not want to overstate the distinction. -->
 - [`IDMRG`](@ref) and [`IDMRG2`](@ref) judge convergence by the change in the bond matrix between successive iterations, ``\lVert C - C_\text{old}\rVert``, rather than by a gradient norm.
-  <!-- REVIEW: Sourced from idmrg.jl (the per-iteration criterion is `norm(C - C_old)` with a space-matching fallback), but I have not verified how this scale compares to a Galerkin `tol` — i.e. whether passing the same `tol` to IDMRG and VUMPS enforces a comparable accuracy. Flagging because a reader might assume `tol` means the same thing across algorithms and it does not. -->
 - [`GradientGrassmann`](@ref) converges on the Riemannian gradient norm reported by its underlying optimizer, with `tol` passed through as the gradient tolerance.
 
 A subtlety worth knowing is that these tolerances are, by default, *dynamic*: MPSKit tightens the tolerances of the inner linear and eigenvalue solvers as the outer iteration converges, so that early iterations are not over-solved and late ones are not under-solved.
 This adaptive behavior is on by default (`dynamic_tols = true` in `Defaults`) and is why the inner solvers do not simply run at the outer `tol` from the first sweep.
-<!-- REVIEW: The dynamic-tolerance description (inner eigen/linear-solver tolerances scaled per outer iteration via DynamicTol, clamped between tol_min = 1e-14 and tol_max = 1e-4) is read from src/utility/defaults.jl and src/utility/dynamictols.jl. I described the intent ("don't over-solve early iterations") in my own words; that rationale is my interpretation of the mechanism, not a sourced statement, so the maintainer should confirm the motivation is stated correctly. -->
 
 The Galerkin error certifies that the algorithm reached a fixed point of *its own* update, which is necessary but not sufficient for the state to be a good eigenstate.
 An independent check is the energy [`variance`](@ref) ``\langle H^2\rangle - \langle H\rangle^2``, which vanishes exactly for a true eigenstate and does not rely on the ansatz's tangent space:
@@ -110,8 +103,6 @@ An independent check is the energy [`variance`](@ref) ``\langle H^2\rangle - \la
 ```@example numerics
 variance(ψ, H, envs)
 ```
-
-<!-- REVIEW: I present energy variance as an "independent" quality measure that is zero for an exact eigenstate. That the variance vanishes iff the state is an exact eigenstate is standard, and MPSKit's `variance` docstring computes ⟨H²⟩−⟨H⟩² directly, so the definition is confirmed. What I have NOT sourced is any quantitative statement relating the magnitude of the variance to the energy error (e.g. that energy error scales like the variance divided by the gap); I deliberately avoided stating such a relation. Maintainer: confirm the qualitative "variance = 0 for eigenstate, use it as an independent check" framing is what you want here. -->
 
 ## Precision and the element type
 
@@ -123,12 +114,10 @@ scalartype(FiniteMPS(16, ℂ^2, ℂ^24))
 ```
 
 Double precision is the right default: at `Float64` the relative rounding error is about ``10^{-16}``, comfortably below the `1e-10` convergence tolerance, so floating-point noise is rarely what limits an MPSKit result — truncation and incomplete convergence dominate long before precision does.
-<!-- REVIEW: The value ~1e-16 for Float64 machine epsilon (eps(Float64) ≈ 2.2e-16) is a hard fact about the format. The comparison "comfortably below 1e-10, so precision is rarely the bottleneck" is a reasonable engineering statement but is my own claim, not benchmarked; there are regimes (very high bond dimension, ill-conditioned transfer matrices, near-degenerate spectra) where accumulated rounding does matter, and I have not delimited them. Maintainer should sanity-check the "rarely the limiting factor" assertion. -->
 
 The choice between a real and a complex element type is occasionally load-bearing rather than cosmetic.
 Real-time evolution and the ``W^{II}`` time-evolution MPO intrinsically require complex arithmetic, so a real-valued state must be promoted before it can be evolved; MPSKit provides `Base.complex` on an MPS for exactly this, and it is a no-op when the state is already complex.
 Conversely, a purely real problem — a real Hamiltonian with a real ground state — can in principle be run in `Float64` to save memory and time, but this is an optimization to reach for deliberately, not the default.
-<!-- REVIEW: Two claims here need maintainer eyes. (1) "Real element type saves memory and time" — plausible (real storage is half the bytes, real BLAS is faster) but I have not benchmarked the factor and deliberately gave none. (2) I assert real-time evolution and W^{II} "intrinsically require complex arithmetic"; the W^{II} point is backed by project memory (make_time_mpo(::WII) uses sqrt(δ), forcing complex dt even for imaginary-time evolution), but I have not re-derived it from src here — treat as a flagged claim. The `Base.complex(::FiniteMPS)` promotion helper was confirmed to exist in src/states/finitemps.jl. -->
 
 ## Common pitfalls
 
@@ -141,25 +130,21 @@ This is aggravated by the single-site algorithms, which cannot enlarge the bond 
 **Local minima.**
 The variational optimization is non-convex, and an algorithm can settle into a state that is a fixed point of its update but not the global ground state.
 The single-site methods are more prone to this than bond-growing ones, which is part of why a two-site warm-up (or a gradient-descent polishing stage, chained with `&`) is often used before or after a single-site run.
-<!-- REVIEW: "Single-site methods are more prone to local minima than two-site methods" is a widely-repeated piece of DMRG folklore and is consistent with the reasoning on concepts/algorithm_landscape.md, but I have neither a citation in the bib nor a computation here. Flagging as an uncertain physics/numerics claim. -->
 
 **Symmetry-sector trapping.**
 When the state carries a conserved quantum number, the optimization runs within a fixed set of symmetry sectors on each bond.
 If the true ground state lives in a sector distribution the initial state does not span, the algorithm converges — cleanly, by its own criterion — to the best state in the *wrong* variational space.
 This is a sharper, symmetry-specific version of the too-small-bond-dimension trap, and it is why the sector structure of the initial state matters.
-<!-- REVIEW: Conceptual claim assembled from how single-site symmetric MPS work (sector distribution is frozen; see concepts/symmetries.md and algorithm_landscape.md) rather than from a single sourced statement. The mechanism is sound but the framing ("converges to the best state in the wrong sector space") is mine; maintainer should confirm it is not overstated, especially the implicit claim that the algorithm gives no warning that the sector space is wrong. -->
 
 **Non-injectivity and a near-degenerate transfer matrix (infinite systems).**
 [`VUMPS`](@ref) assumes a unique, injective fixed point.
 When the state it should converge to is non-injective — for instance a cat state superposing symmetry-broken sectors, or a genuinely degenerate ground space — the transfer matrix has more than one eigenvalue of magnitude one, and the algorithm has no well-defined single fixed point to find.
 MPSKit's [`correlation_length`](@ref) machinery detects this: it is computed from the gap between the leading and next-to-leading transfer-matrix eigenvalues (the correlation length is the inverse of that gap), and [`transfer_spectrum`](@ref) exposes the spectrum directly.
 Internally the routine emits a `"Non-injective mps?"` warning when it finds more than one eigenvalue near magnitude one at the same complex angle — a heuristic flag, not a hard error, so it is worth watching for.
-<!-- REVIEW: Multiple points to check. (1) "correlation length = 1/gap of the transfer matrix" is confirmed from src (correlation_length returns 1/ϵ where ϵ = -log|λ₂| via marek_gap). (2) The "Non-injective mps?" warning and its trigger (more than one eigenvalue near |λ|=1 at the same angle) are read from marek_gap in src/algorithms/toolbox.jl. (3) The physics interpretation — that a non-injective/degenerate fixed point (cat state, degenerate ground space) is what produces multiple unit-magnitude transfer eigenvalues, and that this breaks VUMPS's injectivity assumption — is standard uniform-MPS lore but stated here from my own understanding, not a citation. Maintainer: verify the cat-state / degeneracy example is accurate and not misleading. -->
 
 **Finite-entanglement effects at criticality.**
 At or near a critical point the true correlation length diverges, but a finite bond dimension can only support a finite correlation length, so the simulated correlation length saturates at a value set by the bond dimension rather than by the physics.
 Extracting critical data therefore requires studying how results drift as the bond dimension grows, rather than trusting any single bond dimension.
-<!-- REVIEW: This is finite-entanglement scaling (the effective correlation length ξ grows as a power of the bond dimension D, ξ ~ D^κ with a model-dependent exponent). The qualitative statement (finite D caps the correlation length; must scale in D near criticality) is standard and consistent with concepts/algorithm_landscape.md's remark that IDMRG "can be slow to converge for critical systems," but I have NOT stated the scaling exponent and have NOT cited it. Candidate references that exist in mpskit.bib and touch uniform-MPS scaling/optimization: vanderstraeten2019 (tangent-space lecture notes) and zauner-stauber2018 (VUMPS); the maintainer may want to cite one, or add a dedicated finite-entanglement-scaling reference (Tagliacozzo et al. / Pollmann et al.). I left the claim unsourced-but-flagged rather than attach a citation I am not certain covers the specific quantitative statement. -->
 
 ## Where to go next
 
