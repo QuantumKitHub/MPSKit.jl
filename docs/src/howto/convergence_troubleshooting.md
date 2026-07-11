@@ -207,11 +207,11 @@ distilled form [`correlation_length`](@ref):
     InfiniteMPS(ℂ^2, ℂ^16), transverse_field_ising(; g = 2.0),
     VUMPS(; tol = 1.0e-10, maxiter = 100, verbosity = 0)
 )
-correlation_length(ψ_gs)
+maximum(values(correlation_length(ψ_gs)))
 ```
 
 ```@example conv
-abs.(transfer_spectrum(ψ_gs; num_vals = 5))
+abs.(transfer_spectrum(ψ_gs; howmany = 5))
 ```
 
 The leading eigenvalue is `1` (a normalized state); the *gap* between it and the next

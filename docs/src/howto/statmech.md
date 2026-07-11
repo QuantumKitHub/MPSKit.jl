@@ -93,7 +93,7 @@ The boundary MPS encodes the correlations of the two-dimensional system.
 [`correlation_length`](@ref) returns the (largest) correlation length of the transfer matrix, and [`entropy`](@ref) the entanglement entropy of the boundary MPS across a virtual bond:
 
 ```@example statmech
-ξ = correlation_length(ψ)
+ξ = maximum(values(correlation_length(ψ)))
 ```
 
 ```@example statmech
