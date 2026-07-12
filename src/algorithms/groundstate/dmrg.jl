@@ -81,10 +81,14 @@ function local_update!(
 
     # 2. local update
     alg_eigsolve = instantiate_algorithm(alg.alg_eigsolve, decay_rate, ϵ_local, ϵ_global, ϵ_trunc)
+    ac_old = ψ.AC[site]
     λ, AC′, info = @timeit timeroutput "AC_eigsolve" begin
         H_effective = AC_hamiltonian(site, ψ, O, ψ, envs)
-        fixedpoint(H_effective, ψ.AC[site], :SR, alg_eigsolve)
+        fixedpoint(H_effective, ac_old, :SR, alg_eigsolve)
     end
+
+    # convergence error: how much the eigensolve moved the center, `1 - |⟨old|new⟩|`.
+    ϵ_conv = abs(1 - abs(dot(ac_old, AC′)) / (norm(ac_old) * norm(AC′)))
 
     # 3. gauge
     ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge!(ψ, site, direction, AC′, alg.alg_gauge; normalize = true)
@@ -92,9 +96,9 @@ function local_update!(
     # 4. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
     decay_rate = clamp((first(info.normres) / ϵ_local)^(1 / max(1, info.numops)), 1.0e-3, 0.999)
 
-    @debug "DMRG local update" site direction numops = info.numops normres = first(info.normres) krylovdim = alg_eigsolve.krylovdim maxiter = alg_eigsolve.maxiter tol = alg_eigsolve.tol decay_rate ϵ_local
+    @debug "DMRG local update" site direction numops = info.numops normres = first(info.normres) krylovdim = alg_eigsolve.krylovdim maxiter = alg_eigsolve.maxiter tol = alg_eigsolve.tol decay_rate ϵ_local ϵ_conv
 
-    return ψ, ϵ_local, ϵ_trunc, decay_rate
+    return ψ, ϵ_local, ϵ_trunc, decay_rate, ϵ_conv
 end
 
 """
@@ -149,7 +153,8 @@ function local_update!(
     Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs)
 
     kind = direction === Val(:right) ? :ACAR : :ALAC
-    HAC2 = normalize!(Heff * AC2(ψ, pos; kind))
+    ac2 = normalize!(AC2(ψ, pos; kind))
+    HAC2 = normalize!(Heff * ac2)
     AC2′ = copy(HAC2)
     project_complement!(AC2′, ψ.AL[pos])
     project_complement_right!(AC2′, _transpose_tail(ψ.AR[pos + 1]))
@@ -162,6 +167,9 @@ function local_update!(
         (newA2center, info)
     end
 
+    # convergence error: how much the eigensolve moved the two-site center, `1 - |⟨old|new⟩|`.
+    ϵ_conv = abs(1 - abs(dot(ac2, newA2center)) / norm(newA2center))
+
     # 2. gauge: truncated SVD split back into single-site tensors and install;
     #           the discarded weight is the truncation error
     ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge2!(ψ, pos, direction, newA2center, alg.alg_gauge; normalize = true)
@@ -169,9 +177,9 @@ function local_update!(
     # 3. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
     decay_rate = clamp((first(info.normres) / ϵ_local)^(1 / max(1, info.numops)), 1.0e-3, 0.999)
 
-    @debug "DMRG2 local update" pos direction numops = info.numops normres = first(info.normres) krylovdim = alg_eigsolve.krylovdim maxiter = alg_eigsolve.maxiter tol = alg_eigsolve.tol decay_rate ϵ_local ϵ_trunc
+    @debug "DMRG2 local update" pos direction numops = info.numops normres = first(info.normres) krylovdim = alg_eigsolve.krylovdim maxiter = alg_eigsolve.maxiter tol = alg_eigsolve.tol decay_rate ϵ_local ϵ_trunc ϵ_conv
 
-    return ψ, ϵ_local, ϵ_trunc, decay_rate
+    return ψ, ϵ_local, ϵ_trunc, decay_rate, ϵ_conv
 end
 
 # Per-algorithm sweep geometry: single-site DMRG updates all `length(ψ)` sites (endpoints once,
@@ -194,19 +202,21 @@ function find_groundstate!(
 
     Tr = real(scalartype(ψ))
     n = _num_updates(alg, ψ)
-    ϵ_locals = ones(Tr, n)      # local gradient norms
+    ϵ_locals = ones(Tr, n)      # local gradient norms (drive the adaptive eigensolver tolerance)
     ϵ_global = maximum(ϵ_locals)
+    ϵ_convs = ones(Tr, n)       # local convergence errors (update magnitude; drive the stop test)
+    ϵ_conv = maximum(ϵ_convs)
     ϵ_truncs = zeros(Tr, n)     # local truncation error
     decay_rates = zeros(n)      # local observed decay rate of eigensolver
     fwd, bwd = _sweep_ranges(alg, ψ)
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ_global, expectation_value(ψ, H, envs))
+        @infov 2 loginit!(log, ϵ_conv, expectation_value(ψ, H, envs))
         for iter in 1:(alg.maxiter)
             @timeit timeroutput "sweep" begin
                 # left-to-right
                 for pos in fwd
-                    ψ, ϵ_locals[pos], ϵ_truncs[pos], decay_rates[pos] =
+                    ψ, ϵ_locals[pos], ϵ_truncs[pos], decay_rates[pos], ϵ_convs[pos] =
                         local_update!(
                         pos, Val(:right),
                         ψ, H, alg, envs,
@@ -218,7 +228,7 @@ function find_groundstate!(
 
                 # right-to-left
                 for pos in bwd
-                    ψ, ϵ_locals[pos], ϵ_truncs[pos], decay_rates[pos] =
+                    ψ, ϵ_locals[pos], ϵ_truncs[pos], decay_rates[pos], ϵ_convs[pos] =
                         local_update!(
                         pos, Val(:left),
                         ψ, H, alg, envs,
@@ -228,25 +238,26 @@ function find_groundstate!(
                     ϵ_global = maximum(ϵ_locals)
                 end
             end
+            ϵ_conv = maximum(ϵ_convs)
 
             ψ, envs = @timeit timeroutput "finalize" alg.finalize(
                 iter, ψ, H, envs
             )::Tuple{typeof(ψ), typeof(envs)}
 
-            if ϵ_global <= alg.tol
+            if ϵ_conv <= alg.tol
                 @infov 4 timeroutput
-                @infov 2 logfinish!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
+                @infov 2 logfinish!(log, iter, ϵ_conv, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
                 @infov 4 timeroutput
-                @warnv 1 logcancel!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
+                @warnv 1 logcancel!(log, iter, ϵ_conv, expectation_value(ψ, H, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
+                @infov 3 logiter!(log, iter, ϵ_conv, expectation_value(ψ, H, envs))
             end
         end
     end
-    return ψ, envs, ϵ_global
+    return ψ, envs, ϵ_conv
 end
 
 function find_groundstate(ψ, H, alg::Union{DMRG, DMRG2}, envs...; kwargs...)
