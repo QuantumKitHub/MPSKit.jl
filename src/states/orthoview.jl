@@ -294,6 +294,14 @@ function right_gauge!(ψ::AbstractFiniteMPS, pos::Int, AC, alg = Defaults.alg_or
     return ψ, ϵ
 end
 
+@doc """
+    gauge!(ψ, pos, direction, AC, [alg]; normalize = false) -> ψ, ϵ
+
+Direction-dispatching wrapper around [`left_gauge!`](@ref) / [`right_gauge!`](@ref): gauge an
+updated center tensor `AC` at site `pos` and install it into `ψ`, shifting the gauge center past
+`pos` to the right for `direction = Val(:right)` and to the left for `Val(:left)`. `alg` and
+`normalize` are forwarded unchanged, and the truncation error `ϵ` is returned as-is.
+"""
 function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{Dir}, AC, alg = Defaults.alg_orth(); kwargs...) where {Dir}
     Dir === :right && return left_gauge!(ψ, pos, AC, alg; kwargs...)
     Dir === :left && return right_gauge!(ψ, pos, AC, alg; kwargs...)
@@ -313,8 +321,8 @@ Returns the truncation error `ϵ`, the 2-norm of the discarded singular values. 
 that changed its norm.
 """
 function gauge2!(
-        ψ::AbstractFiniteMPS, pos::Int, ::Val{Dir}, AC2,
-        alg::MatrixAlgebraKit.TruncatedAlgorithm; normalize::Bool = false
+        ψ::AbstractFiniteMPS, pos::Int, ::Val{Dir}, AC2, alg;
+        normalize::Bool = false
     ) where {Dir}
     al, c, ar, ϵ = svd_trunc!(AC2, alg)
     normalize && normalize!(c)
