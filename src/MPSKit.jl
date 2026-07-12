@@ -35,7 +35,7 @@ export VUMPS, VOMPS, DMRG, DMRG2, IDMRG, IDMRG2, GradientGrassmann
 export excitations
 export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo
-export TDVP, TDVP2, BUG, ParallelBUG, WI, WII, TaylorCluster
+export TDVP, TDVP2, BUG, ParallelBUG, ParallelBUG2, WI, WII, TaylorCluster
 export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
 export propagator

@@ -161,6 +161,35 @@ using Random
         @test all(s -> s > 0.8, slopes)
     end
 
+    # 7b. THE decisive local-order gate (Ceruti et al. 2024; MPSKit design §8): the single-step local
+    #     error ‖step(dt) − exp(−iH·dt)ψ₀‖ against the dense propagator, log–log slope vs dt, at
+    #     L = 3 and L = 4 (2-site is exact and does NOT exercise the dropped "new–new" corner, so
+    #     L ≥ 3 is required). A first-order method has local error O(dt²) ⇒ slope ≈ 2; this is the gate
+    #     that separates genuine second order (slope ≈ 3, see `ParallelBUG2`) from a better-constant
+    #     first-order scheme. Full bonds (ℙ^8) isolate the time-discretization error.
+    @testset "local order slope L=$Lc" for Lc in (3, 4)
+        Random.seed!(2)
+        Hc = force_planar(transverse_field_ising(ComplexF64, Trivial; L = Lc))
+        ψf = normalize!(FiniteMPS(rand, ComplexF64, Lc, ℙ^2, ℙ^8))
+        Hmat = convert(TensorMap, Hc)
+        ψvec = convert(TensorMap, ψf); ψvec /= norm(ψvec)
+        dts = [0.04, 0.02, 0.01, 0.005]
+        errs = map(dts) do δt
+            ref = exp(-im * Hmat * δt) * ψvec
+            ϕ, = timestep(ψf, Hc, 0.0, δt, ParallelBUG(; trscheme = truncerror(; atol = 1.0e-12)))
+            out = convert(TensorMap, ϕ)
+            return norm(out - ref)
+        end
+        slopes = [
+            (log(errs[i + 1]) - log(errs[i])) / (log(dts[i + 1]) - log(dts[i]))
+                for i in 1:(length(dts) - 1)
+        ]
+        @info "ParallelBUG local order" Lc errs slopes
+        for s in slopes
+            @test s ≈ 2 atol = 0.3
+        end
+    end
+
     # 8. the truncation tolerance ϑ maps onto the accumulating `c·n·ϑ` error term: tightening ϑ
     #    improves the overlap with a ϑ → 0 run of the same integrator (which shares the time
     #    discretization error, so the comparison isolates the truncation term).
@@ -277,5 +306,141 @@ end
         E1 = expectation_value(ψ1, H, envs)
         @test E₀ ≈ E1 atol = 1.0e-2
         @test dot(ψ1, ψ₀) ≈ exp(im * dt * E₀) atol = 1.0e-4
+    end
+end
+
+# `ParallelBUG2` (second-order parallel BUG, Kusch 2024 Variant 2 / `4r`, EXPERIMENTAL). The genuine
+# second-order assembly enriches every bond basis with one `H·ψ₀` application (`Û0`/`V̂0`), runs the
+# `2r` Galerkin K-steps freezing the enriched right basis, and transports the EVOLVED-amplitude
+# coupling to the root through the frozen right isometries, keeping the "new–new" corner zero (O(dt³)).
+# It reproduces the exact two-site step, conserves energy / the eigenstate phase, agrees with `TDVP`,
+# lowers the energy monotonically in imaginary time, preserves the charge sectors, and — the decisive
+# gate — has a local error one order higher than the first-order `ParallelBUG`: slope ≥ 3 (vs ≈ 2).
+@testset "ParallelBUG2 (second order)" verbose = true begin
+    dt = 0.1
+    L = 6
+    H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
+    ψ = FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4)
+    ψ₀, = find_groundstate(ψ, H; verbosity = 0)
+    E₀ = expectation_value(ψ₀, H)
+
+    # 1. two sites: exact reproduction of the dense exp(-iH·dt) step
+    @testset "two-site exactness vs dense reference" begin
+        Random.seed!(2)
+        Hc = force_planar(transverse_field_ising(ComplexF64, Trivial; L = 2))
+        ψc = FiniteMPS(rand, ComplexF64, 2, ℙ^2, ℙ^4)
+        Hmat = convert(TensorMap, Hc)
+        ψvec = convert(TensorMap, ψc); ψvec /= norm(ψvec)
+        ref = exp(-im * Hmat * 0.05) * ψvec
+        ψ1, = timestep(ψc, Hc, 0.0, 0.05, ParallelBUG2(; trscheme = truncerror(; atol = 1.0e-12)))
+        out = convert(TensorMap, ψ1); out /= norm(out)
+        @test 1 - abs(dot(out, ref)) < 1.0e-10
+    end
+
+    # 2. energy conservation + eigenstate phase (amplitude carried exactly once, at the root)
+    @testset "energy conservation + eigenstate phase" begin
+        ψ1, envs = timestep(ψ₀, H, 0.0, dt, ParallelBUG2(; trscheme = truncerror(; atol = 1.0e-12)))
+        E1 = expectation_value(ψ1, H, envs)
+        @test E₀ ≈ E1 atol = 1.0e-2
+        @test dot(ψ1, ψ₀) ≈ exp(im * dt * E₀) atol = 1.0e-4
+    end
+
+    # 3. THE decisive local-order gate (mirror of the first-order testset above). The single-step
+    #    local error ‖step(dt) − exp(−iH·dt)ψ₀‖ has slope ≈ 2 for first order and slope ≈ 3 for genuine
+    #    second order (local `O(dt³)`). Full bonds (ℙ^8) isolate the time-discretization error.
+    @testset "local order slope ≈ 3 (full, L=$Lc)" for Lc in (4, 5)
+        Random.seed!(2)
+        Hc = force_planar(transverse_field_ising(ComplexF64, Trivial; L = Lc))
+        ψf = normalize!(FiniteMPS(rand, ComplexF64, Lc, ℙ^2, ℙ^8))
+        Hmat = convert(TensorMap, Hc)
+        ψvec = convert(TensorMap, ψf); ψvec /= norm(ψvec)
+        dts = [0.04, 0.02, 0.01, 0.005]
+        errs = map(dts) do δt
+            ref = exp(-im * Hmat * δt) * ψvec
+            ϕ, = timestep(ψf, Hc, 0.0, δt, ParallelBUG2(; trscheme = truncerror(; atol = 1.0e-12)))
+            return norm(convert(TensorMap, ϕ) - ref)
+        end
+        slopes = [
+            (log(errs[i + 1]) - log(errs[i])) / (log(dts[i + 1]) - log(dts[i]))
+                for i in 1:(length(dts) - 1)
+        ]
+        @info "ParallelBUG2 local order (full)" Lc errs slopes
+        for s in slopes
+            @test s ≈ 3 atol = 0.4      # genuine second order (vs the first-order value 2)
+        end
+    end
+
+    # the second-order slope must persist as the chain grows past a single interior bond; L = 6 with
+    # a reduced bond dimension ℙ^4 has an unsaturated interior bond (a genuine dropped corner).
+    @testset "local order slope ≈ 3 (reduced bond, L=6)" begin
+        Random.seed!(2)
+        Lc = 6
+        Hc = force_planar(transverse_field_ising(ComplexF64, Trivial; L = Lc))
+        ψf = normalize!(FiniteMPS(rand, ComplexF64, Lc, ℙ^2, ℙ^4))
+        Hmat = convert(TensorMap, Hc)
+        ψvec = convert(TensorMap, ψf); ψvec /= norm(ψvec)
+        dts = [0.04, 0.02, 0.01, 0.005]
+        errs = map(dts) do δt
+            ref = exp(-im * Hmat * δt) * ψvec
+            ϕ, = timestep(ψf, Hc, 0.0, δt, ParallelBUG2(; trscheme = truncerror(; atol = 1.0e-12)))
+            return norm(convert(TensorMap, ϕ) - ref)
+        end
+        slopes = [
+            (log(errs[i + 1]) - log(errs[i])) / (log(dts[i + 1]) - log(dts[i]))
+                for i in 1:(length(dts) - 1)
+        ]
+        @info "ParallelBUG2 local order (reduced)" errs slopes
+        for s in slopes
+            @test s ≈ 3 atol = 0.4
+        end
+    end
+
+    # 4. agreement with TDVP over a few short real-time steps of a random MPS
+    @testset "agreement with TDVP" begin
+        Random.seed!(1234)
+        ψr = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4))
+        δt = 0.01
+        ψ_p, ψ_tdvp = ψr, ψr
+        for k in 0:4
+            ψ_p, = timestep(ψ_p, H, k * δt, δt, ParallelBUG2(; trscheme = truncerror(; atol = 1.0e-12)))
+            ψ_tdvp, = timestep(ψ_tdvp, H, k * δt, δt, TDVP())
+        end
+        @test expectation_value(ψ_p, H) ≈ expectation_value(ψ_tdvp, H) atol = 1.0e-3
+        @test abs(dot(ψ_p, ψ_tdvp)) ≈ 1 atol = 1.0e-3
+    end
+
+    # 5. imaginary-time evolution lowers the energy monotonically and stays normalized
+    @testset "imaginary-time lowers energy" begin
+        Random.seed!(5)
+        ψi = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4))
+        E_start = real(expectation_value(ψi, H))
+        E_prev = E_start
+        for _ in 1:20
+            ψi, = timestep(
+                ψi, H, 0.0, 0.1, ParallelBUG2(; trscheme = truncerror(; atol = 1.0e-10));
+                imaginary_evolution = true
+            )
+            E_now = real(expectation_value(ψi, H))
+            @test E_now ≤ E_prev + 1.0e-6      # monotone (non-increasing) energy
+            E_prev = E_now
+        end
+        @test E_prev < E_start - 1.0           # substantial lowering toward the ground state
+        @test norm(ψi) ≈ 1 atol = 1.0e-6       # imaginary-time renormalizes each step
+    end
+
+    # 6. charge-sector coverage: a fixed-rank (notrunc) Z2 step preserves the total boundary charge
+    @testset "Z2 symmetry preservation" begin
+        Random.seed!(161803)
+        Hz = transverse_field_ising(ComplexF64, Z2Irrep; g = 1.0, L)
+        ψz = FiniteMPS(physicalspace(Hz), Z2Space(0 => 4, 1 => 4))
+        ψz0, = find_groundstate(ψz, Hz; verbosity = 0)
+        Ez = expectation_value(ψz0, Hz)
+        Rtot = right_virtualspace(ψz0, L)
+
+        ψ1, envs = timestep(ψz0, Hz, 0.0, dt, ParallelBUG2())   # fixed-rank (notrunc)
+        E1 = expectation_value(ψ1, Hz, envs)
+        @test Ez ≈ E1 atol = 1.0e-2
+        @test dot(ψ1, ψz0) ≈ exp(im * dt * Ez) atol = 1.0e-4
+        @test right_virtualspace(ψ1, L) == Rtot                # total boundary charge preserved
     end
 end

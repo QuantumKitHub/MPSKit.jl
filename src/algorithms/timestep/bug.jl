@@ -149,6 +149,12 @@ end
 # Parallel BUG
 # ------------
 
+# Shared supertype for the parallel-BUG integrators (`ParallelBUG` first order, `ParallelBUG2`
+# second order). The assembly/truncation/rejection helpers below dispatch on it, and the
+# second-order assembly reuses the first-order core (`_pbug_assemble_core`) on an `H·ψ₀`-enriched
+# snapshot, so almost all machinery is shared.
+abstract type AbstractParallelBUG <: Algorithm end
+
 """
 $(TYPEDEF)
 
@@ -208,7 +214,7 @@ $(TYPEDFIELDS)
 * Ceruti, Kusch, Lubich & Sulz, *A parallel Basis Update and Galerkin integrator for tree tensor
   networks*, arXiv:2412.00858 (2024).
 """
-struct ParallelBUG{A, O, T, S, F} <: Algorithm
+struct ParallelBUG{A, O, T, S, F} <: AbstractParallelBUG
     "algorithm used in the exponential solvers"
     integrator::A
 
@@ -249,8 +255,100 @@ function ParallelBUG(;
     )
 end
 
+"""
+$(TYPEDEF)
+
+Single site MPS time-evolution algorithm based on the *second-order* variant of the *parallel*
+Basis-Update & Galerkin (BUG) integrator for tree tensor networks (Kusch 2024), specialized to the
+linear (`FiniteMPS`) tree. It is to [`ParallelBUG`](@ref) what [`TDVP2`](@ref) is to [`TDVP`](@ref):
+a separate, more accurate integrator sharing the same interface.
+
+The genuine second order comes from **pre-augmenting every bond basis to rank `2r` with one
+`H·ψ₀` application *before* evolving** (Kusch 2024, "Variant 2" / `4r`). Concretely each left/right
+bond isometry is enlarged to `Û₀ = orth([AL⁰ │ (H·ψ₀)])` / `V̂₀ = orth([AR⁰ │ (H·ψ₀)])` (the
+directions opened by a single effective-Hamiltonian application to the frozen center), the rank-`2r`
+Galerkin K-steps are evolved on those enriched environments *freezing the enriched right basis*
+`V̂₀`, and the bonds are augmented to at most `4r`. The `O(dt²)` content that the first-order scheme
+discards is transported to the root as the **evolved-amplitude** coupling `R = Ũ₂ᵀĈ` (propagated
+through the frozen right isometries). The root core is then assembled exactly as in the matrix
+recipe — the rank-`2r` Galerkin `S̄₁` in the `Û₀` rows, the transported coupling (the `Ũ₂ᵀK` block)
+in the `Ũ₂` rows, and the "new–new" corner kept **zero** — so the discarded content is `O(dt³)`
+rather than the first-order `O(dt²)`, which lifts the local order from `2` to `3`. The interior
+tensors stay isometries. A final SVD sweep truncates the (at most quadrupled) bonds back down to
+`trscheme`.
+
+Everything else matches [`ParallelBUG`](@ref): the local problems are solved from a single frozen
+`t₀` snapshot (mutually independent, parallelizable), the amplitude and phase enter exactly once at
+the root, `notrunc()` gives the fixed-rank integrator, and it advances every tensor *forward* in
+time (no backward substep), which suits imaginary-time / dissipative evolution.
+
+!!! warning "Experimental"
+    This integrator is **work in progress**. The API and behaviour may change. Its local error is
+    one order higher than the first-order [`ParallelBUG`](@ref): the single-step error scales as
+    `O(dt³)` (log–log slope `≈ 3`) versus `O(dt²)` (slope `≈ 2`). Only plain Hamiltonians are
+    supported so far (no `LazySum`/time-dependent operators). See
+    `research/PARALLEL_BUG_second_order_status.md` for the construction and its relation to the
+    reference tree-tensor-network algorithm.
+
+!!! note
+    Real-time evolution does not normalize the resulting state: neither the augmentation nor the
+    truncation normalizes, so the state norm reflects the accumulated truncation error.
+    Imaginary-time evolution renormalizes after every step, similar to a ground-state search.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## References
+
+* Kusch, *Second-order robust parallel integrators for dynamical low-rank approximation*,
+  arXiv:2403.02834 (2024).
+* Ceruti, Kusch, Lubich & Sulz, *A parallel Basis Update and Galerkin integrator for tree tensor
+  networks*, arXiv:2412.00858 (2024).
+"""
+struct ParallelBUG2{A, O, T, S, F} <: AbstractParallelBUG
+    "algorithm used in the exponential solvers"
+    integrator::A
+
+    "tolerance for gauging algorithm"
+    tolgauge::Float64
+
+    "maximal amount of iterations for gauging algorithm"
+    gaugemaxiter::Int
+
+    "algorithm used to re-orthonormalize the basis after each local update"
+    alg_orth::O
+
+    "truncation scheme used to cut the augmented bonds back down"
+    trscheme::T
+
+    "algorithm used for the singular value decomposition"
+    alg_svd::S
+
+    "safety constant `c` in the step-rejection threshold `h·η > c·ϑ` (paper value ≈ 10)"
+    c::Float64
+
+    "maximum number of rejection recomputes per step (0 disables step rejection)"
+    maxiter_rejection::Int
+
+    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    finalize::F
+end
+function ParallelBUG2(;
+        integrator = Defaults.alg_expsolve(), tolgauge = Defaults.tolgauge,
+        gaugemaxiter = Defaults.maxiter, alg_orth = Defaults.alg_orth(),
+        trscheme = notrunc(), alg_svd = Defaults.alg_svd(),
+        c = 10.0, maxiter_rejection = 0,
+        finalize = Defaults._finalize
+    )
+    return ParallelBUG2(
+        integrator, tolgauge, gaugemaxiter, alg_orth, trscheme, alg_svd,
+        c, maxiter_rejection, finalize
+    )
+end
+
 function timestep!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::ParallelBUG,
+        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::AbstractParallelBUG,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         imaginary_evolution::Bool = false
     )
@@ -295,17 +393,188 @@ function timestep!(
     return ψ, environments(ψ, H, ψ)
 end
 
-# rebuild a `ParallelBUG` with a reduced rejection budget (the struct is immutable)
+# rebuild a parallel-BUG algorithm with a reduced rejection budget (the structs are immutable)
 function _pbug_with_rejections(alg::ParallelBUG, n::Int)
     return ParallelBUG(
         alg.integrator, alg.tolgauge, alg.gaugemaxiter, alg.alg_orth,
         alg.trscheme, alg.alg_svd, alg.c, n, alg.finalize
     )
 end
+function _pbug_with_rejections(alg::ParallelBUG2, n::Int)
+    return ParallelBUG2(
+        alg.integrator, alg.tolgauge, alg.gaugemaxiter, alg.alg_orth,
+        alg.trscheme, alg.alg_svd, alg.c, n, alg.finalize
+    )
+end
 
-# Assemble the augmented (pre-truncation) parallel-BUG state from a single frozen `t₀` snapshot,
-# following Ceruti et al. 2024 (arXiv:2412.00858) Alg. 1-4 specialized to the caterpillar tree
-# rooted at site `L`. Two phases:
+# Dispatch the assembly on the integrator order. First order assembles directly from the frozen
+# snapshot; second order first pre-augments every bond basis to rank `2r` with one `H·ψ₀`
+# application, then runs the SAME first-order assembly core on that enriched snapshot — which turns
+# the rank-`r` Galerkin into the rank-`2r` Galerkin of Kusch (2024, Variant 2), lifting the local
+# order from `2` to `3` while keeping the "new–new" corner zero.
+function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG; imaginary_evolution::Bool = false)
+    return _pbug_assemble_core(ψ, H, t, dt, alg; imaginary_evolution)
+end
+function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG2; imaginary_evolution::Bool = false)
+    return _pbug2_assemble_core(ψ, H, t, dt, alg; imaginary_evolution)
+end
+
+# ---- second-order (Variant 2) building blocks --------------------------------------------------
+
+# old-first LEFT enrichment `Û0[1..L-1]` (rank `2r`) plus the enriched left-environment chain
+# `GLhat[1..L]` (`⟨Û0|H|Û0⟩`). This is the frozen `H·ψ₀` pre-augmentation of Kusch (2024, §3.1): at
+# bond `i` the old isometry `AL⁰[i]` is enlarged with the range of the frozen derivative image
+# `W[i] = (H·ψ₀)ᵢ`, stacked leaves→root with the same mixed `⟨new|H|old⟩` coupling as the first-order
+# assembly (span only ⇒ unscaled) so directions opened deep in the chain reach the root. `GLhat` is
+# folded by explicit transfer matrices (NO `FiniteMPS` round-trip ⇒ the zero-weight enriched
+# directions do not collapse under canonicalization).
+function _pbug2_left_enrich(ψ₀, H, envs₀, W, alg_orth)
+    L = length(ψ₀)
+    Û0 = Vector{typeof(ψ₀.AL[1])}(undef, L - 1)
+    GLhat = Vector{Any}(undef, L)
+    GLhat[1] = leftenv(envs₀, 1, ψ₀)
+    GLmix = leftenv(envs₀, 1, ψ₀)               # mixed ⟨new|H|old⟩ chain (span only, unscaled)
+    local GLnew
+    for i in 1:(L - 1)
+        if i == 1
+            C⁰, Ĉ = ψ₀.AL[1], W[1]
+        else
+            C̃ = MPO_AC_Hamiltonian(GLnew, H[i], rightenv(envs₀, i, ψ₀))(ψ₀.AC[i])
+            C⁰ = _pbug_stack_child(ψ₀.AL[i], zerovector!(similar(C̃)))
+            Ĉ = _pbug_stack_child(W[i], C̃)
+        end
+        Ũ, = _pbug_newdirs(C⁰, Ĉ, alg_orth)
+        Û0[i] = catdomain(C⁰, Ũ)
+        GLhat[i + 1] = GLhat[i] * TransferMatrix(Û0[i], H[i], Û0[i])
+        GLnew = GLmix * TransferMatrix(ψ₀.AL[i], H[i], Ũ)      # ket=old, bra=new
+        i == L - 1 && break
+        GLmix = GLmix * TransferMatrix(ψ₀.AL[i], H[i], Û0[i])  # ket=old, bra=enriched
+    end
+    return Û0, GLhat
+end
+
+# old-first RIGHT enrichment `V̂0[2..L]` (rank `2r`) plus the enriched right-environment chain
+# `GRhat[1..L]` (`⟨V̂0|H|V̂0⟩`), the mirror of `_pbug2_left_enrich`. The interior K-step freezes this
+# enriched right basis (freezing the *old* right basis instead only yields local slope 2).
+function _pbug2_right_enrich(ψ₀, H, envs₀, W, alg_orth)
+    L = length(ψ₀)
+    V̂0 = Vector{typeof(ψ₀.AR[1])}(undef, L)
+    GRhat = Vector{Any}(undef, L)
+    GRhat[L] = rightenv(envs₀, L, ψ₀)
+    GRmix = rightenv(envs₀, L, ψ₀)
+    local GRnew
+    for i in L:-1:2
+        if i == L
+            C⁰, Ĉ = ψ₀.AR[L], W[L]
+        else
+            C̃ = MPO_AC_Hamiltonian(leftenv(envs₀, i, ψ₀), H[i], GRnew)(ψ₀.AC[i])
+            C⁰ = catdomain(ψ₀.AR[i], zerovector!(similar(C̃)))
+            Ĉ = catdomain(W[i], C̃)
+        end
+        V̂, = _pbug2_newdirs_right(C⁰, Ĉ, alg_orth)
+        V̂0[i] = _transpose_front(catcodomain(_transpose_tail(C⁰), V̂))
+        GRhat[i - 1] = TransferMatrix(V̂0[i], H[i], V̂0[i]) * GRhat[i]
+        GRnew = TransferMatrix(ψ₀.AR[i], H[i], _transpose_front(V̂)) * GRmix  # ket=old, bra=new
+        i == 2 && break
+        GRmix = TransferMatrix(ψ₀.AR[i], H[i], V̂0[i]) * GRmix                # ket=old, bra=enriched
+    end
+    return V̂0, GRhat
+end
+
+# right-side analogue of `_pbug_newdirs`: new LEFT-bond (codomain) directions the candidate `cand`
+# opens beyond the right-isometry `AR`, returned in the `_transpose_tail` form `r_new ← (P⊗Vr)`.
+function _pbug2_newdirs_right(AR, cand, alg_orth = Defaults.alg_orth())
+    N = right_null!(_transpose_tail(AR; copy = true))       # Vcomp ← (P⊗Vr)
+    g = _transpose_tail(cand) * N'                          # Vl_cand ← Vcomp
+    _, Q = right_orth(g; alg = alg_orth)                    # Q: r_new ← Vcomp
+    return Q * N, nothing                                   # r_new ← (P⊗Vr)
+end
+
+# embed the old center `AC` into the enriched `(VlL ⊗ P) ← Vr` bond spaces with zero weight in the
+# new directions (`absorb!` into a larger-space zero tensor handles the old-first block + duals).
+function _pbug2_embed(AC, VlL, Vp, Vr)
+    return absorb!(zerovector!(similar(AC, (VlL ⊗ Vp) ← Vr)), AC)
+end
+
+# Genuine second-order parallel-BUG assembly (Kusch 2024, Variant 2 / `4r`), specialized to the
+# caterpillar rooted at site `L`. One frozen `t₀` snapshot drives everything:
+#
+# 1. Pre-augment the left/right bond bases to rank `2r` with one `H·ψ₀` application (`Û0`, `V̂0`) and
+#    fold the enriched environments `GLhat`/`GRhat` by explicit transfer (Kusch's O(h²)-capturing
+#    predictor bases; the `⟨…⟩` collapse of a `FiniteMPS` round-trip is thereby avoided).
+# 2. K-step every center on the enriched environments, freezing the enriched right basis `V̂0`
+#    (mutually independent ⇒ threaded like the first-order phase-1 solves) → `Kevo`.
+# 3. A leaves→root sweep builds the interior `4r` isometries `[Û0 | Ũ2]` (new directions from `Kevo`)
+#    and transports the EVOLVED-amplitude coupling `R = Ũ2ᵀĈ` one site at a time through the frozen
+#    right isometry `V̂0` — this is what carries the genuine O(h²) content between interior bonds
+#    (the first-order frozen-derivative coupling is ≈0 against the enriched basis, giving only slope 2).
+# 4. The root core is a Galerkin step on the assembled `4r` left basis, which now spans the enriched,
+#    K-evolved and transported-coupling directions; the "new–new" corner stays implicitly zero (O(h³)).
+# The final tensors carry genuine weight, so a `FiniteMPS` is materialized only here (no collapse).
+function _pbug2_assemble_core(ψ, H, t, dt, alg::ParallelBUG2; imaginary_evolution::Bool = false)
+    L = length(ψ)
+    ψ.AC[L]                                     # gauge to the root
+    ψ₀ = copy(ψ)
+    envs₀ = environments(ψ₀, H, ψ₀)
+    _pbug_warmup_envs!(envs₀, L, ψ₀)
+    scheduler = Defaults.scheduler[]
+
+    # frozen `H·ψ₀` images (independent, threaded)
+    W = Vector{typeof(ψ₀.AC[1])}(undef, L)
+    tmap!(W, 1:L; scheduler) do i
+        return AC_hamiltonian(i, ψ₀, H, ψ₀, envs₀)(ψ₀.AC[i])
+    end
+
+    Û0, GLhat = _pbug2_left_enrich(ψ₀, H, envs₀, W, alg.alg_orth)
+    V̂0, GRhat = _pbug2_right_enrich(ψ₀, H, envs₀, W, alg.alg_orth)
+
+    GRof(i) = i < L ? GRhat[i] : rightenv(envs₀, L, ψ₀)
+    enrL(i) = i == 1 ? left_virtualspace(ψ₀, 1) :
+        (i <= L - 1 ? space(Û0[i], 1) : only(domain(Û0[L - 1])))
+    enrR(i) = i == L ? right_virtualspace(ψ₀, L) : space(V̂0[i + 1], 1)
+    embed(i) = _pbug2_embed(ψ₀.AC[i], enrL(i), physicalspace(ψ₀, i), enrR(i))
+
+    # K/S steps on the enriched environments (freeze `V̂0`); independent ⇒ threaded
+    Kevo = Vector{typeof(ψ₀.AC[1])}(undef, L)
+    tmap!(Kevo, 1:L; scheduler) do i
+        return integrate(
+            MPO_AC_Hamiltonian(GLhat[i], H[i], GRof(i)), embed(i), t, dt, alg.integrator;
+            imaginary_evolution
+        )
+    end
+
+    # leaves→root assembly with the transported evolved-amplitude coupling
+    As = Vector{typeof(ψ₀.AL[1])}(undef, L)
+    ηh = zero(real(scalartype(ψ₀)))
+    local R
+    for i in 1:(L - 1)
+        if i == 1
+            C⁰, Ĉ¹ = Û0[1], Kevo[1]
+        else
+            C̃ = _transpose_front(R * _transpose_tail(V̂0[i]))   # transport R through frozen V̂0[i]
+            ηh = max(ηh, norm(C̃))
+            zc0 = zerovector!(similar(C̃, codomain(C̃) ← domain(Û0[i])))
+            C⁰ = _pbug_stack_child(Û0[i], zc0)
+            Ĉ¹ = _pbug_stack_child(Kevo[i], C̃)
+        end
+        Ũ2, = _pbug_newdirs(C⁰, Ĉ¹, alg.alg_orth)
+        As[i] = catdomain(C⁰, Ũ2)
+        R = Ũ2' * Ĉ¹                                            # evolved amplitude in the new dirs
+    end
+    # root (Kusch 2024, Variant 2): the `2r` Galerkin `S̄1 = Kevo[L]` in the `Û0` rows, stacked with
+    # the transported coupling (the `Ũ2ᵀK` analogue) in the `Ũ2` rows; the "new–new" corner is ZERO
+    # (right bond trivial at the root ⇒ no `LᵀṼ2` block either), so the local error is O(dt³).
+    C̃L = _transpose_front(R * _transpose_tail(V̂0[L]))
+    ηh = max(ηh, norm(C̃L))
+    As[L] = _pbug_stack_child(Kevo[L], C̃L)
+
+    return FiniteMPS(As; overwrite = true, normalize = imaginary_evolution), ηh
+end
+
+# Assemble the augmented (pre-truncation) FIRST-ORDER parallel-BUG state from a single frozen `t₀`
+# snapshot, following Ceruti et al. 2024 (arXiv:2412.00858) Alg. 1-4 specialized to the caterpillar
+# tree rooted at site `L` (the second-order `ParallelBUG2` has its own `_pbug2_assemble_core`).
+# Two phases:
 #
 # 1. Galerkin-evolve every local center `AC[i]` from the frozen snapshot (the K-steps of
 #    Alg. 2/3, on the amplitude-weighted subtree objects `Y_τ⁰ = U_τ⁰S_τ⁰`). These `L` local
@@ -320,7 +589,7 @@ end
 #    tensor `[C̄_L(t₁); C̃_L]`, whose coupling row projects the full derivative of `ψ₀` onto the
 #    new directions. The "new-new" corners are implicitly zero, which is what makes the integrator
 #    first order.
-function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG; imaginary_evolution::Bool = false)
+function _pbug_assemble_core(ψ, H, t, dt, alg::AbstractParallelBUG; imaginary_evolution::Bool = false)
     L = length(ψ)
     ψ.AC[L]                                     # gauge to the root
     ψ₀ = copy(ψ)
@@ -446,7 +715,7 @@ _pbug_stack_child(top, bot) =
 # Cut the augmented bonds back down. A truncating `trscheme` selects rank-adaptivity; the default
 # `notrunc()` restores the pre-step virtual space of every bond (fixed-rank parallel BUG).
 # Environments self-heal lazily for the changed bonds.
-function _pbug_truncate!(ϕ, alg::ParallelBUG, Vs; normalize::Bool = false)
+function _pbug_truncate!(ϕ, alg::AbstractParallelBUG, Vs; normalize::Bool = false)
     if !(alg.trscheme isa MatrixAlgebraKit.NoTruncation)
         changebonds!(ϕ, SvdCut(; trscheme = alg.trscheme, alg_svd = alg.alg_svd); normalize)
     else
@@ -472,7 +741,7 @@ end
 # copying version, shared by both BUG integrators
 function timestep(
         ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
-        alg::Union{BUG, ParallelBUG}, envs::AbstractMPSEnvironments...;
+        alg::Union{BUG, ParallelBUG, ParallelBUG2}, envs::AbstractMPSEnvironments...;
         imaginary_evolution::Bool = false, kwargs...
     )
     isreal = (scalartype(ψ) <: Real && !imaginary_evolution)
