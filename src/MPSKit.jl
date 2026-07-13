@@ -49,6 +49,7 @@ export entropy, entanglement_spectrum
 export open_boundary_conditions, periodic_boundary_conditions
 export entanglementplot, transferplot
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # TODO: rename
+export mpo_compression
 
 # unexported
 using Compat: @compat
@@ -79,13 +80,14 @@ using Accessors
 using HalfIntegers
 using DocStringExtensions
 
-using LinearAlgebra: diag, Diagonal
+using LinearAlgebra: diag, Diagonal, diagm
 using LinearAlgebra: LinearAlgebra
 using Random
 using Base: @kwdef, @propagate_inbounds
 using LoggingExtras
 using OhMyThreads
 using TimerOutputs: TimerOutput, @timeit, timeit, reset_timer!, disable_timer!, enable_timer!
+using Dictionaries # TODO: change mpocompression to not use Dictionaries
 
 # Includes
 # --------
@@ -130,6 +132,7 @@ include("operators/projection.jl")
 include("operators/timedependence.jl")
 include("operators/multipliedoperator.jl")
 include("operators/lazysum.jl")
+include("operators/mpocompression.jl")
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
