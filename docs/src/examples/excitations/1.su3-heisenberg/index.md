@@ -202,16 +202,6 @@ println("branch minimum ΔE/J = $Δ at k = $(kspace[idx])")
 ````
 
 ````
-[ Info: Found excitations for momentum = 0.0
-[ Info: Found excitations for momentum = 0.3490658503988659
-[ Info: Found excitations for momentum = 0.6981317007977318
-[ Info: Found excitations for momentum = 1.0471975511965976
-[ Info: Found excitations for momentum = 1.3962634015954636
-[ Info: Found excitations for momentum = 1.7453292519943295
-[ Info: Found excitations for momentum = 2.0943951023931953
-[ Info: Found excitations for momentum = 2.443460952792061
-[ Info: Found excitations for momentum = 2.792526803190927
-[ Info: Found excitations for momentum = 3.141592653589793
 branch minimum ΔE/J = -0.041856660250392086 at k = 2.0943951023931953
 
 ````

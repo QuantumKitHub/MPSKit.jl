@@ -121,8 +121,6 @@ Groundstate energy:
 ````
 
 ````
-[ Info: CG: initializing with f = -4.379763091095e+00, ‖∇f‖ = 3.1534e-05
-[ Info: CG: converged after 167 iterations and time  1.75 m: f = -4.379763081900e+00, ‖∇f‖ = 9.7406e-07
 ┌ Info: Groundstate energy:
 │     * numerical: -2.189996060974577
 └     * analytic: -2.190038374277775
@@ -158,8 +156,6 @@ Groundstate energy:
 ````
 
 ````
-[ Info: CG: initializing with f = -4.379692711472e+00, ‖∇f‖ = 5.7923e-05
-[ Info: CG: converged after 13 iterations and time 14.35 s: f = -4.379692712393e+00, ‖∇f‖ = 6.2087e-07
 ┌ Info: Groundstate energy:
 │     * numerical: -2.190015347514472
 └     * analytic: -2.190038374277775
@@ -195,76 +191,6 @@ E_holon, ϕ_holon = excitations(
     H_u1_su2, alg, momenta, psi_AB, envs_AB, psi_BA, envs_BA;
     sector = holon_charge, num = 1
 );
-````
-
-````
-[ Info: Found excitations for momentum = -3.141592653589793
-[ Info: Found excitations for momentum = -2.945243112740431
-[ Info: Found excitations for momentum = -2.748893571891069
-[ Info: Found excitations for momentum = -2.552544031041707
-[ Info: Found excitations for momentum = -2.356194490192345
-[ Info: Found excitations for momentum = -2.1598449493429825
-[ Info: Found excitations for momentum = -1.9634954084936207
-[ Info: Found excitations for momentum = -1.7671458676442586
-[ Info: Found excitations for momentum = -1.5707963267948966
-[ Info: Found excitations for momentum = -1.3744467859455345
-[ Info: Found excitations for momentum = -1.1780972450961724
-[ Info: Found excitations for momentum = -0.9817477042468103
-[ Info: Found excitations for momentum = -0.7853981633974483
-[ Info: Found excitations for momentum = -0.5890486225480862
-[ Info: Found excitations for momentum = -0.39269908169872414
-[ Info: Found excitations for momentum = -0.19634954084936207
-[ Info: Found excitations for momentum = 0.0
-[ Info: Found excitations for momentum = 0.19634954084936207
-[ Info: Found excitations for momentum = 0.39269908169872414
-[ Info: Found excitations for momentum = 0.5890486225480862
-[ Info: Found excitations for momentum = 0.7853981633974483
-[ Info: Found excitations for momentum = 0.9817477042468103
-[ Info: Found excitations for momentum = 1.1780972450961724
-[ Info: Found excitations for momentum = 1.3744467859455345
-[ Info: Found excitations for momentum = 1.5707963267948966
-[ Info: Found excitations for momentum = 1.7671458676442586
-[ Info: Found excitations for momentum = 1.9634954084936207
-[ Info: Found excitations for momentum = 2.1598449493429825
-[ Info: Found excitations for momentum = 2.356194490192345
-[ Info: Found excitations for momentum = 2.552544031041707
-[ Info: Found excitations for momentum = 2.748893571891069
-[ Info: Found excitations for momentum = 2.945243112740431
-[ Info: Found excitations for momentum = 3.141592653589793
-[ Info: Found excitations for momentum = -3.141592653589793
-[ Info: Found excitations for momentum = -2.945243112740431
-[ Info: Found excitations for momentum = -2.748893571891069
-[ Info: Found excitations for momentum = -2.552544031041707
-[ Info: Found excitations for momentum = -2.356194490192345
-[ Info: Found excitations for momentum = -2.1598449493429825
-[ Info: Found excitations for momentum = -1.9634954084936207
-[ Info: Found excitations for momentum = -1.7671458676442586
-[ Info: Found excitations for momentum = -1.5707963267948966
-[ Info: Found excitations for momentum = -1.3744467859455345
-[ Info: Found excitations for momentum = -1.1780972450961724
-[ Info: Found excitations for momentum = -0.9817477042468103
-[ Info: Found excitations for momentum = -0.7853981633974483
-[ Info: Found excitations for momentum = -0.5890486225480862
-[ Info: Found excitations for momentum = -0.39269908169872414
-[ Info: Found excitations for momentum = -0.19634954084936207
-[ Info: Found excitations for momentum = 0.0
-[ Info: Found excitations for momentum = 0.19634954084936207
-[ Info: Found excitations for momentum = 0.39269908169872414
-[ Info: Found excitations for momentum = 0.5890486225480862
-[ Info: Found excitations for momentum = 0.7853981633974483
-[ Info: Found excitations for momentum = 0.9817477042468103
-[ Info: Found excitations for momentum = 1.1780972450961724
-[ Info: Found excitations for momentum = 1.3744467859455345
-[ Info: Found excitations for momentum = 1.5707963267948966
-[ Info: Found excitations for momentum = 1.7671458676442586
-[ Info: Found excitations for momentum = 1.9634954084936207
-[ Info: Found excitations for momentum = 2.1598449493429825
-[ Info: Found excitations for momentum = 2.356194490192345
-[ Info: Found excitations for momentum = 2.552544031041707
-[ Info: Found excitations for momentum = 2.748893571891069
-[ Info: Found excitations for momentum = 2.945243112740431
-[ Info: Found excitations for momentum = 3.141592653589793
-
 ````
 
 Again, we can compare the numerical results to the analytic solution.

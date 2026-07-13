@@ -152,7 +152,7 @@ reflection).
 
 sector = SU3Irrep(2, 1, 0)
 kspace = range(0, π, 10)
-Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ, envs; sector)
+Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ, envs; sector, verbosity = 0)
 
 Δ, idx = findmin(real.(Es))
 println("branch minimum ΔE/J = $Δ at k = $(kspace[idx])")

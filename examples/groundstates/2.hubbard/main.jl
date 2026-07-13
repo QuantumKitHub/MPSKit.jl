@@ -87,7 +87,7 @@ function compute_groundstate(
     psi, = find_groundstate(
         psi, H,
         VUMPS(; tol = svalue / 100, verbosity, maxiter = 100) &
-            GradientGrassmann(; tol = svalue / 1000)
+            GradientGrassmann(; tol = svalue / 1000, verbosity)
     )
 
     return psi
@@ -154,13 +154,13 @@ envs_BA = environments(psi_BA, H_u1_su2, psi_BA);
 spinon_charge = FermionParity(0) ⊠ U1Irrep(0) ⊠ SU2Irrep(1 // 2)
 E_spinon, ϕ_spinon = excitations(
     H_u1_su2, alg, momenta, psi_AB, envs_AB, psi_BA, envs_BA;
-    sector = spinon_charge, num = 1
+    sector = spinon_charge, num = 1, verbosity = 0
 );
 
 holon_charge = FermionParity(1) ⊠ U1Irrep(-1) ⊠ SU2Irrep(0)
 E_holon, ϕ_holon = excitations(
     H_u1_su2, alg, momenta, psi_AB, envs_AB, psi_BA, envs_BA;
-    sector = holon_charge, num = 1
+    sector = holon_charge, num = 1, verbosity = 0
 );
 
 md"""

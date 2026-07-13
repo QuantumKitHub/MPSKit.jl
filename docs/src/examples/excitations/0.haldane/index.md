@@ -136,22 +136,6 @@ println("minimum @k = $(kspace[idx]):\t ΔE = $(ΔE)")
 ````
 
 ````
-[ Info: Found excitations for momentum = 0.0
-[ Info: Found excitations for momentum = 0.20943951023931953
-[ Info: Found excitations for momentum = 0.41887902047863906
-[ Info: Found excitations for momentum = 0.6283185307179586
-[ Info: Found excitations for momentum = 1.4660765716752369
-[ Info: Found excitations for momentum = 1.2566370614359172
-[ Info: Found excitations for momentum = 0.8377580409572781
-[ Info: Found excitations for momentum = 1.0471975511965976
-[ Info: Found excitations for momentum = 1.6755160819145563
-[ Info: Found excitations for momentum = 1.8849555921538759
-[ Info: Found excitations for momentum = 2.0943951023931953
-[ Info: Found excitations for momentum = 2.303834612632515
-[ Info: Found excitations for momentum = 2.5132741228718345
-[ Info: Found excitations for momentum = 2.9321531433504737
-[ Info: Found excitations for momentum = 2.722713633111154
-[ Info: Found excitations for momentum = 3.141592653589793
 minimum @k = 3.141592653589793:	 ΔE = 0.41047924848831047
 
 ````

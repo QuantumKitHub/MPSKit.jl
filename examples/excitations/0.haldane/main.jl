@@ -106,7 +106,7 @@ virtual_space_inf = Rep[SU₂](1 // 2 => 16, 3 // 2 => 16, 5 // 2 => 8, 7 // 2 =
 ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H; verbosity = 0)
 
 kspace = range(0, π, 16)
-Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ_inf, envs_inf; sector = SU2Irrep(1))
+Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ_inf, envs_inf; sector = SU2Irrep(1), verbosity = 0)
 
 ΔE, idx = findmin(real.(Es))
 println("minimum @k = $(kspace[idx]):\t ΔE = $(ΔE)")

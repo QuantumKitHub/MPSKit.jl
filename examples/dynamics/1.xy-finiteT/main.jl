@@ -94,7 +94,7 @@ D = 64
 V_init = symmetry === Trivial ? ℂ^32 : U1Space(i => 10 for i in -1:(1 // 2):1)
 psi_init = FiniteMPS(N, physicalspace(H, 1), V_init)
 trscheme = truncrank(D)
-psi, envs, = find_groundstate(psi_init, H, DMRG2(; trscheme, maxiter = 5));
+psi, envs, = find_groundstate(psi_init, H, DMRG2(; trscheme, maxiter = 5, verbosity = 0));
 E_0 = expectation_value(psi, H, envs) / N
 
 println("Numerical:\t", real(E_0))
