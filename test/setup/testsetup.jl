@@ -11,7 +11,7 @@ using BlockTensorKit
 using LinearAlgebra: Diagonal
 using Combinatorics: permutations
 using TensorKitTensors.SpinOperators: S_x, S_y, S_z, S_x_S_x, S_y_S_y, S_z_S_z, S_exchange, S_plus_S_min, S_min_S_plus
-using TensorKitTensors.FermionOperators: f_plus_f_min, f_min_f_plus, f_plus_f_plus, f_min_f_min, f_num
+using TensorKitTensors.FermionOperators: f_plus_f_min, f_min_f_plus, f_plus_f_plus, f_min_f_min, f_num, f_hopping
 
 # exports
 export S_x, S_y, S_z
@@ -154,8 +154,8 @@ function kitaev_model(
         T::Type{<:Number} = ComplexF64, sym::Type{<:Sector} = Trivial;
         t = 1.0, mu = 1.0, Delta = 1.0, L = Inf
     )
-    TB = scale!(f_plus_f_min(T, sym) + f_min_f_plus(T, sym), -t / 2)     # tight-binding term
-    SC = scale!(f_plus_f_plus(T, sym) + f_min_f_min(T, sym), Delta / 2)  # superconducting term
+    TB = scale!(f_hopping(T, sym), -t / 2)     # tight-binding term
+    SC = scale!(f_min_f_min(T, sym) - f_plus_f_plus(T, sym), Delta / 2)  # superconducting term
     CP = scale!(f_num(T, sym), -mu)                       # chemical potential term
 
     if L == Inf
