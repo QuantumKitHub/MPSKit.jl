@@ -122,8 +122,9 @@ end
         @test abs(dot(ref, cbe)) > abs(dot(ref, plain))
     end
 
-    # the bond truncation must preserve the norm for real-time evolution (the norm reflects the
-    # discarded weight) and only renormalize for imaginary-time evolution
+    # by default (`normalize = false`) the bond truncation preserves the norm, so it reflects the
+    # discarded weight; `normalize = true` renormalizes each step. This is independent of
+    # `imaginary_evolution`.
     @testset "norm handling" begin
         Random.seed!(6)
         ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
@@ -132,15 +133,24 @@ end
 
         ψrt = ψ₀
         for _ in 1:12
-            ψrt, = timestep(ψrt, H, 0.0, 0.5, lossy)            # real time
+            ψrt, = timestep(ψrt, H, 0.0, 0.5, lossy)            # real time, norm preserved by default
         end
         @test norm(ψrt) < 1 - 1.0e-3                            # truncation loss is not renormalized away
 
+        # imaginary-time, norm preserved by default: the weight is *not* pinned to unit norm
+        # (imaginary-time evolution rescales the state, so the norm drifts away from 1)
         ψit = ψ₀
         for _ in 1:12
-            ψit, = timestep(ψit, H, 0.0, 0.5, lossy; imaginary_evolution = true)  # no external normalize!
+            ψit, = timestep(ψit, H, 0.0, 0.5, lossy; imaginary_evolution = true)
         end
-        @test norm(ψit) ≈ 1 atol = 1.0e-6                       # imaginary-time renormalizes each step
+        @test abs(norm(ψit) - 1) > 1.0e-3
+
+        # imaginary-time with `normalize = true`: renormalized to unit norm each step
+        ψn = ψ₀
+        for _ in 1:12
+            ψn, = timestep(ψn, H, 0.0, 0.5, lossy; imaginary_evolution = true, normalize = true)
+        end
+        @test norm(ψn) ≈ 1 atol = 1.0e-6
     end
 
     @testset "imaginary-time lowers energy" begin
@@ -150,7 +160,7 @@ end
         E₀ = real(expectation_value(ψ₀, H))
         ψ = ψ₀
         for _ in 1:8
-            ψ, = timestep(ψ, H, 0.0, 0.1, alg; imaginary_evolution = true)  # gauge renormalizes
+            ψ, = timestep(ψ, H, 0.0, 0.1, alg; imaginary_evolution = true, normalize = true)  # gauge renormalizes
         end
         @test real(expectation_value(ψ, H)) < E₀
         @test dim(left_virtualspace(ψ, L ÷ 2)) > Dstart

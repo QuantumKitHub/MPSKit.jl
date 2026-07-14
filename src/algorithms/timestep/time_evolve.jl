@@ -17,13 +17,14 @@ through each of the time points obtained by iterating t_span.
 
 - `verbosity::Int = 0`: verbosity level for logging
 - `imaginary_evolution::Bool = false`: if true, the time evolution is done with an imaginary time step
-    instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful for using this
-    function to compute the ground state of a Hamiltonian, or to compute finite-temperature
-    properties of a system.
+    instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful to compute the
+    ground state of a Hamiltonian, or to compute finite-temperature properties of a system.
+- `normalize::Bool = false`: if true, the state is renormalized after every step, which can be useful
+    to retain numerical stability when the norm loss is not information that is needed.
 
 # Returns
 
-- `ψ`: the time-evolved state
+- `ψ`: the time-stepped state
 - `envs`: the updated environment manager
 """
 function time_evolve end, function time_evolve! end
@@ -32,7 +33,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
     @eval function $time_evolve(
             ψ, H, t_span::AbstractVector{<:Number}, alg,
             envs = environments(ψ, H, ψ);
-            verbosity::Int = 0, imaginary_evolution::Bool = false
+            verbosity::Int = 0, imaginary_evolution::Bool = false, normalize::Bool = false
         )
         log = IterLog("TDVP")
         LoggingExtras.withlevel(; verbosity) do
@@ -41,7 +42,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
                 t = t_span[iter]
                 dt = t_span[iter + 1] - t
 
-                ψ, envs = $timestep(ψ, H, t, dt, alg, envs; imaginary_evolution)
+                ψ, envs = $timestep(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
                 ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
 
                 @infov 3 logiter!(log, iter, 0, t)
@@ -71,9 +72,10 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 # Keyword Arguments
 
 - `imaginary_evolution::Bool = false`: if true, the time evolution is done with an imaginary time step
-    instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful for using this
-    function to compute the ground state of a Hamiltonian, or to compute finite-temperature
-    properties of a system.
+    instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful to compute the
+    ground state of a Hamiltonian, or to compute finite-temperature properties of a system.
+- `normalize::Bool = false`: if true, the state is renormalized after every step, which can be useful
+    to retain numerical stability when the norm loss is not information that is needed.
 
 # Returns
 
@@ -111,8 +113,7 @@ Construct an `MPO` that approximates ``\\exp(-iHdt)``.
 
 # Keyword Arguments
 
-- `imaginary_evolution::Bool = false`: if true, the time evolution operator is constructed
-    with an imaginary time step instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``).
-    This can be useful for using this function to compute the ground state of a Hamiltonian,
-    or to compute finite-temperature properties of a system.
+- `imaginary_evolution::Bool = false`: if true, the time evolution is done with an imaginary time step
+    instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful to compute the
+    ground state of a Hamiltonian, or to compute finite-temperature properties of a system.
 """ make_time_mpo
