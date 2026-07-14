@@ -103,7 +103,3 @@ You have computed a full dispersion relation on top of an infinite ground state 
 The [`excitations`](@ref) entry point can do considerably more than what we used here: it can target excitations carrying a nontrivial symmetry charge, build topological (domain-wall) excitations that interpolate between two different ground states, and compute excited states of *finite* chains, where momentum is no longer a good quantum number and different algorithms take over.
 All of these are recipes in [Excited states](@ref howto_excitations).
 For what each excitation algorithm actually does and when to choose it, see the library reference [Excitations](@ref lib_excitations).
-
-<!-- NOTE(other pages, do not edit here): tutorials/thermodynamic_limit.md line 134 has
-"TODO(link): excitations tutorial" which can now point to (@ref tutorial_excitations);
-the orchestrator wires that separately. This page also needs a nav entry in docs/make.jl. -->

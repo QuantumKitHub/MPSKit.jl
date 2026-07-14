@@ -46,6 +46,20 @@ Questions and general discussion are welcome on [GitHub
 Discussions](https://github.com/QuantumKitHub/MPSKit.jl/discussions); if you think you have
 found a bug, please open an issue.
 
+## How MPSKit compares
+
+Finite and infinite systems are one interface, not two.
+`FiniteMPS` and `InfiniteMPS` share the same algorithms, so a calculation moves from a
+finite chain to the thermodynamic limit with a one-line change, as the two examples below
+show.
+Symmetries are first-class rather than an add-on: abelian, non-abelian, fermionic, and
+anyonic symmetries are all available through the [TensorKit.jl](https://github.com/jutho/TensorKit.jl)
+backend, including symmetry groups that most tensor-network codebases do not support at
+all.
+The whole toolbox — states, operators, and algorithms — is native Julia and composes
+directly with the TensorKit ecosystem, so extending it does not mean dropping into a
+different language.
+
 ## Installation
 
 The package can be installed through the Julia general registry, via the package manager:

@@ -1,4 +1,4 @@
-# Examples
+# [Examples](@id examples_index)
 
 This gallery collects the full worked examples that ship with MPSKit.jl.
 Each one is a complete, runnable script (also available as a Jupyter notebook, linked from the example page itself) that goes well beyond the short snippets in the how-to guides.

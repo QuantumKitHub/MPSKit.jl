@@ -166,16 +166,11 @@ You have run the flagship TFIM calculation with its ``\mathbb{Z}_2`` symmetry ma
 
 The same syntax scales up to larger symmetry groups, where the payoff grows.
 For a U(1) symmetry (particle number, magnetization) the graded spaces list integer or half-integer charges instead of parities — worked constructions are in [Constructing states](@ref howto_states), Section 9.
-For non-abelian symmetries such as SU(2) the gains are more dramatic still, because each symmetric block then represents an entire multiplet of states; the spin-1 Haldane chain and XXZ Heisenberg pages in the examples gallery show this in action.
+For non-abelian symmetries such as SU(2) the gains are more dramatic still, because each symmetric block then represents an entire multiplet of states; the spin-1 Haldane chain and XXZ Heisenberg pages in the [examples gallery](@ref examples_index) show this in action.
 
 To continue the tutorial track, [Quasiparticle excitations](@ref tutorial_excitations) develops the excitation calculation of Section 4 into a full dispersion relation; the recipe collection for excited states is [Excited states](@ref howto_excitations), and the one for building symmetric states is [Constructing states](@ref howto_states).
 
 <!-- Maintainer notes (not rendered):
-- tutorials/thermodynamic_limit.md still carries "TODO(link): using_symmetries tutorial"
-  (and one for the excitations tutorial); those can now point at
-  (@ref tutorial_using_symmetries) / (@ref tutorial_excitations).
-- docs/src/examples/index.md has no @id anchor, so the examples-gallery mention above is
-  plain text; adding an anchor there would let this page (and others) link it properly.
 - Plan deviation from RESTRUCTURE_PLAN.md recorded in the comment at the top of this
   file: Z2Irrep instead of U(1), because transverse_field_ising rejects U1Irrep.
 -->
