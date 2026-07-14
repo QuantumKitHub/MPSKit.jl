@@ -244,3 +244,53 @@ end
     # the correlator retains the un-normalized amplitude: real-time evolution preserves the norm
     @test norm(ϕ) ≈ norm(ϕ_bra[m]) atol = 1.0e-6
 end
+
+# The same free-particle benchmark with an explicitly fermionic (fℤ₂-graded) model: a single
+# fermion on the tight-binding chain (`kitaev_model` with `mu = Delta = 0`) is a free particle, so
+# the single-particle Green's function is the closed-form propagator
+#     G_nm(t) = ⟨0| c_n e^{-iHt} c_m† |0⟩ = [exp(-i h t)]_{nm},  h_{i,i±1} = -t/2,
+# with `ε_k = -t cos(kπ/(L+1))` and `φ_k(n) = √(2/(L+1)) sin(nkπ/(L+1))`. This exercises the graded
+# fermionic tensors (Jordan-Wigner strings handled by the fℤ₂ braiding): from the empty vacuum,
+# `c_m†|0⟩` is just the localised single-particle basis state (the string acts trivially on the
+# vacuum), built here as a bond-1 MPS with a fermion-parity charge kink at site m. It relies on the
+# hopping being Hermitian (`f_hopping`, not `f_plus_f_min + f_min_f_plus`), else the norm drifts.
+@testset "fermionic dynamical correlator vs free-particle analytics" begin
+    L = 12
+    m = 6
+    ns = 4:8
+    dt = 0.05
+    ts = 0.0:dt:1.2
+
+    H = kitaev_model(ComplexF64, Trivial; t = 1.0, mu = 0, Delta = 0, L = L)
+    P = physicalspace(H)[1]                       # fermion_space = Vect[fℤ₂](0 => 1, 1 => 1)
+    S = typeof(P)
+    Vtriv = oneunit(P)
+    Vodd = S(c => dim(P, c) for c in sectors(P) if !isone(c))
+
+    # single-particle basis state |j⟩ = c_j†|0⟩: empty except occupied at j, with the fermion-parity
+    # kink even→odd at site j (even bond to the left, odd bond to the right, odd right boundary)
+    onepart(j) = FiniteMPS([
+            isometry(ComplexF64, (k <= j ? Vtriv : Vodd) ⊗ P, (k < j ? Vtriv : Vodd)) for k in 1:L
+        ])
+    @test norm(H * onepart(m)) ≈ sqrt(2) * 0.5 atol = 1.0e-8   # hops to both neighbours, amp t/2
+
+    ϕ_bra = Dict(n => onepart(n) for n in ns)
+    ϕ = onepart(m)
+
+    ks = 1:L
+    ε = [-cos(k * π / (L + 1)) for k in ks]        # -t cos(kπ/(L+1)) with t = 1
+    φ = [sqrt(2 / (L + 1)) * sin(n * k * π / (L + 1)) for n in 1:L, k in ks]
+    Uref(t) = φ * Diagonal(cis.(-ε .* t)) * transpose(φ)
+
+    alg = TDVP2(; trscheme = truncrank(6))
+    t_prev = 0.0
+    maxerr = 0.0
+    for t in ts
+        t > 0 && ((ϕ, _) = timestep(ϕ, H, t_prev, t - t_prev, alg); t_prev = t)
+        for n in ns
+            maxerr = max(maxerr, abs(dot(ϕ_bra[n], ϕ) - Uref(t)[n, m]))
+        end
+    end
+    @test maxerr < 1.0e-3
+    @test norm(ϕ) ≈ 1 atol = 1.0e-8               # real-time evolution preserves the norm
+end
