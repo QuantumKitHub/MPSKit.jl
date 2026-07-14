@@ -71,7 +71,7 @@ using Random
         for _ in 1:20
             ψi, = timestep(
                 ψi, H, 0.0, 0.1, ParallelBUG(; trscheme = truncerror(; atol = 1.0e-10));
-                imaginary_evolution = true
+                imaginary_evolution = true, normalize = true
             )
             E_now = real(expectation_value(ψi, H))
             @test E_now ≤ E_prev + 1.0e-6      # monotone (non-increasing) energy
@@ -418,7 +418,7 @@ end
         for _ in 1:20
             ψi, = timestep(
                 ψi, H, 0.0, 0.1, ParallelBUG2(; trscheme = truncerror(; atol = 1.0e-10));
-                imaginary_evolution = true
+                imaginary_evolution = true, normalize = true
             )
             E_now = real(expectation_value(ψi, H))
             @test E_now ≤ E_prev + 1.0e-6      # monotone (non-increasing) energy

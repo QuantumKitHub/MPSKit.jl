@@ -20,6 +20,11 @@ through each of the time points obtained by iterating t_span.
     instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful for using this
     function to compute the ground state of a Hamiltonian, or to compute finite-temperature
     properties of a system.
+- `normalize::Bool=false`: if true, the state is renormalized after every step. This is
+    independent of `imaginary_evolution`: by default the norm is preserved, so it retains
+    useful information (the accumulated truncation error in real time, or the decaying weight
+    in imaginary time). Pass `true` to renormalize each step, e.g. when computing a ground
+    state or thermal state via imaginary-time evolution.
 """
 function time_evolve end, function time_evolve! end
 
@@ -27,7 +32,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
     @eval function $time_evolve(
             ψ, H, t_span::AbstractVector{<:Number}, alg,
             envs = environments(ψ, H, ψ);
-            verbosity::Int = 0, imaginary_evolution::Bool = false
+            verbosity::Int = 0, imaginary_evolution::Bool = false, normalize::Bool = false
         )
         log = IterLog("TDVP")
         LoggingExtras.withlevel(; verbosity) do
@@ -36,7 +41,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
                 t = t_span[iter]
                 dt = t_span[iter + 1] - t
 
-                ψ, envs = $timestep(ψ, H, t, dt, alg, envs; imaginary_evolution)
+                ψ, envs = $timestep(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
                 ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
 
                 @infov 3 logiter!(log, iter, 0, t)
@@ -69,6 +74,11 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
     instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful for using this
     function to compute the ground state of a Hamiltonian, or to compute finite-temperature
     properties of a system.
+- `normalize::Bool=false`: if true, the state is renormalized after the step. This is
+    independent of `imaginary_evolution`: by default the norm is preserved, so it retains
+    useful information (the accumulated truncation error in real time, or the decaying weight
+    in imaginary time). Pass `true` to renormalize, e.g. when computing a ground state or
+    thermal state via imaginary-time evolution.
 """
 function timestep end, function timestep! end
 

@@ -15,8 +15,10 @@ The bond dimension grows and shrinks automatically to track the entanglement; `n
 the fixed-rank integrator.
 
 !!! note
-    Real-time evolution does not normalize the resulting state, so the state norm reflects the
-    accumulated truncation error. Imaginary-time evolution renormalizes after every half-sweep.
+    By default the state is not renormalized, so the norm keeps useful information (the
+    accumulated truncation error in real time, or the decaying weight in imaginary time).
+    Pass `normalize = true` to `timestep`/`time_evolve` to renormalize after every half-sweep
+    instead. This is independent of `imaginary_evolution`.
 
 ## Fields
 
@@ -60,7 +62,7 @@ end
 function timestep!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::BUG,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        imaginary_evolution::Bool = false
+        imaginary_evolution::Bool = false, normalize::Bool = false
     )
     # symmetric 2nd-order: a dt/2 left→right half-sweep composed with its dt/2 mirror
     L = length(ψ)
@@ -89,9 +91,9 @@ function timestep!(
         AC_hamiltonian(L, ψ, H, ψ, envs), _mul_front(T, ψ_old.AC[L]),
         t, h, alg.integrator; imaginary_evolution
     )
-    imaginary_evolution && normalize!(AC)
+    normalize && normalize!(AC)
     ψ.AC[L] = AC
-    truncates && changebonds!(ψ, svdcut; normalize = imaginary_evolution)
+    truncates && changebonds!(ψ, svdcut; normalize)
 
     # right→left half-sweep (root = first site), the mirror
     ψ.AC[L]                       # gauge center to site L
@@ -114,9 +116,9 @@ function timestep!(
         AC_hamiltonian(1, ψ, H, ψ, envs), ψ_old.AC[1] * T,
         t + h, h, alg.integrator; imaginary_evolution
     )
-    imaginary_evolution && normalize!(AC)
+    normalize && normalize!(AC)
     ψ.AC[1] = AC
-    truncates && changebonds!(ψ, svdcut; normalize = imaginary_evolution)
+    truncates && changebonds!(ψ, svdcut; normalize)
 
     return ψ, envs
 end
@@ -165,8 +167,10 @@ saturates the doubling on some bond is recomputed as two half-steps (cf. Ceruti 
     This integrator is **work in progress**; the API and behaviour may change.
 
 !!! note
-    Real-time evolution does not normalize the resulting state, so the state norm reflects the
-    accumulated truncation error. Imaginary-time evolution renormalizes after every step.
+    By default the state is not renormalized, so the norm keeps useful information (the
+    accumulated truncation error in real time, or the decaying weight in imaginary time).
+    Pass `normalize = true` to `timestep`/`time_evolve` to renormalize after every step
+    instead. This is independent of `imaginary_evolution`.
 
 ## Fields
 
@@ -243,8 +247,10 @@ evolution (no backward substep).
     are supported (no `LazySum` / time-dependent operators).
 
 !!! note
-    Real-time evolution does not normalize the resulting state, so the state norm reflects the
-    accumulated truncation error. Imaginary-time evolution renormalizes after every step.
+    By default the state is not renormalized, so the norm keeps useful information (the
+    accumulated truncation error in real time, or the decaying weight in imaginary time).
+    Pass `normalize = true` to `timestep`/`time_evolve` to renormalize after every step
+    instead. This is independent of `imaginary_evolution`.
 
 ## Fields
 
@@ -301,14 +307,14 @@ end
 function timestep!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::AbstractParallelBUG,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        imaginary_evolution::Bool = false
+        imaginary_evolution::Bool = false, normalize::Bool = false
     )
     L = length(ψ)
     if L == 1                                   # single site: a plain forward center step
         AC = integrate(
             AC_hamiltonian(1, ψ, H, ψ, envs), ψ.AC[1], t, dt, alg.integrator; imaginary_evolution
         )
-        imaginary_evolution && normalize!(AC)
+        normalize && normalize!(AC)
         ψ.AC[1] = AC
         return ψ, envs
     end
@@ -316,9 +322,9 @@ function timestep!(
     truncates = !(alg.trscheme isa MatrixAlgebraKit.NoTruncation)
     Vs = [right_virtualspace(ψ, b) for b in 1:(L - 1)]   # pre-step spaces, for the fixed-rank restore
 
-    ϕ, ηh = _pbug_assemble(ψ, H, t, dt, alg; imaginary_evolution)
+    ϕ, ηh = _pbug_assemble(ψ, H, t, dt, alg; imaginary_evolution, normalize)
     augVs = [right_virtualspace(ϕ, b) for b in 1:(L - 1)]   # the (doubled) augmented spaces
-    _pbug_truncate!(ϕ, alg, Vs; normalize = imaginary_evolution)
+    _pbug_truncate!(ϕ, alg, Vs; normalize)
 
     # step rejection (opt-in): a bond that kept its full augmented space was under-resolved by a
     # single doubling; recompute as two half-steps so one doubling per sub-step suffices.
@@ -329,8 +335,8 @@ function timestep!(
         @debug "ParallelBUG step" ηh saturated
         if saturated
             alg′ = _pbug_with_rejections(alg, alg.maxiter_rejection - 1)
-            timestep!(ψ, H, t, dt / 2, alg′; imaginary_evolution)
-            timestep!(ψ, H, t + dt / 2, dt / 2, alg′; imaginary_evolution)
+            timestep!(ψ, H, t, dt / 2, alg′; imaginary_evolution, normalize)
+            timestep!(ψ, H, t + dt / 2, dt / 2, alg′; imaginary_evolution, normalize)
             return ψ, environments(ψ, H, ψ)
         end
     end
@@ -419,7 +425,7 @@ end
 # envs, freezing `V̂0`; (3) a leaves→root sweep builds the `4r` isometries `[Û0 | Ũ2]` and transports
 # the evolved-amplitude coupling `R = Ũ2ᵀĈ` through the frozen `V̂0`; (4) the root stacks the `2r`
 # Galerkin `Kevo[L]` with the transported coupling, keeping the "new–new" corner zero (local `O(dt³)`).
-function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG2; imaginary_evolution::Bool = false)
+function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG2; imaginary_evolution::Bool = false, normalize::Bool = false)
     L = length(ψ)
     ψ.AC[L]                                     # gauge to the root
     ψ₀ = copy(ψ)
@@ -478,7 +484,7 @@ function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG2; imaginary_evolution::Bo
     ηh = max(ηh, norm(C̃L))
     As[L] = _pbug_stack_child(Kevo[L], C̃L)
 
-    return FiniteMPS(As; overwrite = true, normalize = imaginary_evolution), ηh
+    return FiniteMPS(As; overwrite = true, normalize), ηh
 end
 
 # First-order parallel-BUG assembly (Ceruti et al. 2024, arXiv:2412.00858, Alg. 1-4) rooted at site
@@ -487,7 +493,7 @@ end
 # block* `C̃ᵢ` on the previous bond's new rows (`[old │ Ũᵢ]`), propagating deep new directions to the
 # root. Interior tensors are pure isometries (amplitude/phase discarded); all first-order + amplitude
 # content enters once, at the root `[C̄_L; C̃_L]`. The zero "new–new" corners make it first order.
-function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG; imaginary_evolution::Bool = false)
+function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG; imaginary_evolution::Bool = false, normalize::Bool = false)
     L = length(ψ)
     ψ.AC[L]                                     # gauge to the root
     ψ₀ = copy(ψ)
@@ -537,7 +543,7 @@ function _pbug_assemble(ψ, H, t, dt, alg::ParallelBUG; imaginary_evolution::Boo
     ηh = max(ηh, norm(C̃L))
     As[L] = _pbug_stack_child(C̄L, C̃L)
 
-    return FiniteMPS(As; overwrite = true, normalize = imaginary_evolution), ηh
+    return FiniteMPS(As; overwrite = true, normalize), ηh
 end
 
 # warm the lazily-cached frozen environments serially (leftenv/rightenv on `FiniteEnvironments` mutate
@@ -616,7 +622,7 @@ end
 function timestep(
         ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
         alg::Union{BUG, ParallelBUG, ParallelBUG2}, envs::AbstractMPSEnvironments...;
-        imaginary_evolution::Bool = false, kwargs...
+        imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
     )
     isreal = (scalartype(ψ) <: Real && !imaginary_evolution)
     ψ′ = isreal ? complex(ψ) : copy(ψ)
@@ -629,5 +635,5 @@ function timestep(
         @assert length(envs) == 0 "Invalid signature"
         envs′ = environments(ψ′, H, ψ′)
     end
-    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, kwargs...)
+    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, normalize, kwargs...)
 end

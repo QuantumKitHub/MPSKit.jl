@@ -87,7 +87,7 @@ using Random
         E_start = real(expectation_value(ψi, H))
         E_prev = E_start
         for _ in 1:20
-            ψi, = timestep(ψi, H, 0.0, 0.1, BUG(); imaginary_evolution = true)
+            ψi, = timestep(ψi, H, 0.0, 0.1, BUG(); imaginary_evolution = true, normalize = true)
             E_now = real(expectation_value(ψi, H))
             @test E_now ≤ E_prev + 1.0e-6   # monotone (non-increasing) energy
             E_prev = E_now
@@ -220,7 +220,7 @@ end
         Dstart = maximum(dim(left_virtualspace(ψ, k)) for k in 1:L)
         E_start = real(expectation_value(ψ, H))
         for _ in 1:30
-            ψ, = timestep(ψ, H, 0.0, 0.1, BUG(; trscheme = truncerror(; atol = 1.0e-8)); imaginary_evolution = true)
+            ψ, = timestep(ψ, H, 0.0, 0.1, BUG(; trscheme = truncerror(; atol = 1.0e-8)); imaginary_evolution = true, normalize = true)
         end
         Dend = maximum(dim(left_virtualspace(ψ, k)) for k in 1:L)
         E_end = real(expectation_value(ψ, H))
@@ -331,7 +331,7 @@ end
         E_start = real(expectation_value(ψi, H))
         E_prev = E_start
         for _ in 1:15
-            ψi, = timestep(ψi, H, 0.0, 0.1, BUG(); imaginary_evolution = true)
+            ψi, = timestep(ψi, H, 0.0, 0.1, BUG(); imaginary_evolution = true, normalize = true)
             E_now = real(expectation_value(ψi, H))
             @test E_now ≤ E_prev + 1.0e-6            # monotone (non-increasing) energy
             E_prev = E_now
@@ -512,7 +512,7 @@ end
 
         ψ = ψ₀
         for _ in 1:30
-            ψ, = timestep(ψ, H, 0.0, 0.1, BUG(; trscheme = truncerror(; atol = 1.0e-8)); imaginary_evolution = true)
+            ψ, = timestep(ψ, H, 0.0, 0.1, BUG(; trscheme = truncerror(; atol = 1.0e-8)); imaginary_evolution = true, normalize = true)
         end
         Dend = maxbond(ψ)
         E_end = real(expectation_value(ψ, H))
