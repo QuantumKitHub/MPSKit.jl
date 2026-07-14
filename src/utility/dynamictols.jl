@@ -161,8 +161,8 @@ end
 
 function AdaptiveKrylov(;
         ishermitian::Bool = true, orth::KrylovKit.Orthogonalizer = KrylovKit.KrylovDefaults.orth,
-        krylovdim_min::Int = 3, krylovdim_max::Int = 8,
-        iter_min::Int = 1, iter_max::Int = 2,
+        krylovdim_min::Int = 3, krylovdim_max::Int = 16,
+        iter_min::Int = 1, iter_max::Int = 1,
         tol_min::Real = 1.0e-12, tol_max::Real = 1.0e-2,
         truncation_factor::Real = 1.0e-1, tol_factor::Real = 1.0e-1,
         eager::Bool = true, verbosity::Int = 0
