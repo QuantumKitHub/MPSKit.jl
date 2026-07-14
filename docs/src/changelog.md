@@ -35,6 +35,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
+  `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
+  norm is preserved, so it retains useful information (the accumulated truncation error in real time,
+  or the decaying weight in imaginary time). Previously imaginary-time evolution always renormalized
+  every step; **to recover that behavior, pass `normalize = true`** (e.g. for ground-state or
+  thermal-state search via imaginary-time evolution).
 - `environments` now follows a single positional contract for every state and operator kind:
   `environments(below, operator, above, alg)`, where `alg` is the environment algorithm
   (slot 4). The operator form requires an explicit `above`. Auxiliary inputs are keyword-only:

@@ -1,8 +1,9 @@
 """
 $(TYPEDEF)
 
-Single site MPS time-evolution algorithm based on the Basis-Update & Galerkin (BUG) integrator,
-an unconventional robust integrator for dynamical low-rank approximation.
+Single-site, symmetric second-order time-evolution algorithm for **finite** MPS, based on the
+Basis-Update & Galerkin (BUG) integrator, an unconventional robust integrator for dynamical low-rank
+approximation.
 
 Unlike [`TDVP`](@ref), BUG advances both the basis (K-step) and the core (Galerkin C-step) tensors
 *forward* in time, with no backward-in-time substep. This makes it a natural choice for
@@ -32,12 +33,6 @@ struct BUG{A, O, T, S, F} <: Algorithm
     "algorithm used in the exponential solvers"
     integrator::A
 
-    "tolerance for gauging algorithm"
-    tolgauge::Float64
-
-    "maximal amount of iterations for gauging algorithm"
-    gaugemaxiter::Int
-
     "algorithm used to re-orthonormalize the basis after each local update"
     alg_orth::O
 
@@ -47,16 +42,15 @@ struct BUG{A, O, T, S, F} <: Algorithm
     "algorithm used for the singular value decomposition"
     alg_svd::S
 
-    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    "callback function applied after each iteration, of signature `finalize(t, ψ, H, envs) -> ψ, envs`"
     finalize::F
 end
 function BUG(;
-        integrator = Defaults.alg_expsolve(), tolgauge = Defaults.tolgauge,
-        gaugemaxiter = Defaults.maxiter, alg_orth = Defaults.alg_orth(),
+        integrator = Defaults.alg_expsolve(), alg_orth = Defaults.alg_orth(),
         trscheme = notrunc(), alg_svd = Defaults.alg_svd(),
         finalize = Defaults._finalize
     )
-    return BUG(integrator, tolgauge, gaugemaxiter, alg_orth, trscheme, alg_svd, finalize)
+    return BUG(integrator, alg_orth, trscheme, alg_svd, finalize)
 end
 
 function timestep!(

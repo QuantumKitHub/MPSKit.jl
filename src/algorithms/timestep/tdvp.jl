@@ -45,7 +45,7 @@ struct TDVP{A, E, G, F} <: Algorithm
     "factorization used for the post-update gauge: a QR algorithm (no truncation) or a truncated SVD"
     alg_gauge::G
 
-    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    "callback function applied after each iteration, of signature `finalize(t, ψ, H, envs) -> ψ, envs`"
     finalize::F
 end
 function TDVP(;
@@ -226,7 +226,7 @@ Used as the `algorithm` argument of [`timestep`](@ref), [`timestep!`](@ref) and 
     "algorithm used for truncation of the two-site update"
     trunc::TruncationStrategy
 
-    "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
+    "callback function applied after each iteration, of signature `finalize(t, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
 end
 
