@@ -31,7 +31,7 @@ using TensorKit: ℙ
     end
 
     # fermionic tests
-    h = f_plus_f_min(Float64, Trivial) + f_min_f_plus(Float64, Trivial)
+    h = f_hopping(Float64, Trivial)
     H = InfiniteMPOHamiltonian([space(h, 1)], (1, 2) => h)
     for N in 3:5
         H_periodic = periodic_boundary_conditions(H, N)
