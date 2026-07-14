@@ -39,7 +39,7 @@ export TDVP, TDVP2, WI, WII, TaylorCluster
 export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
 export post_expand!, NoExpand
-export NoiseSchedule, ExponentialDecay, Warmup, DMRG3S
+export NoiseSchedule, FunctionalSchedule, ExponentialDecay, Warmup, DMRG3S
 export propagator
 export DynamicalDMRG, NaiveInvert, Jeckelmann
 export exact_diagonalization, fidelity_susceptibility

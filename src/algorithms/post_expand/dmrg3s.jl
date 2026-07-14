@@ -1,14 +1,52 @@
 abstract type NoiseSchedule end
 
-struct ExponentialDecay <: NoiseSchedule
-    decay_rate::Float64
+"""
+    FunctionalSchedule(f) <: NoiseSchedule
+
+Wrap an arbitrary callable `f(noise, iter, ϵ) -> noise` as a [`NoiseSchedule`](@ref).
+Used internally by `∘` to compose schedules, but can also be constructed directly for
+ad hoc schedules that don't warrant their own named type.
+"""
+struct FunctionalSchedule{F} <: NoiseSchedule
+    f::F
+end
+(s::FunctionalSchedule)(noise, iter, ϵ) = s.f(noise, iter, ϵ)
+
+"""
+    s1::NoiseSchedule ∘ s2::NoiseSchedule
+
+Compose two noise schedules: `s2` is applied first, and its result is fed through `s1`,
+i.e. `(s1 ∘ s2)(noise, iter, ϵ) == s1(s2(noise, iter, ϵ), iter, ϵ)` — the same convention
+as function composition in `Base`.
+"""
+Base.:∘(s1::NoiseSchedule, s2::NoiseSchedule) =
+    FunctionalSchedule((noise, iter, ϵ) -> s1(s2(noise, iter, ϵ), iter, ϵ))
+
+"""
+    ExponentialDecay(decay_rate; threshold = 0.0)
+
+Noise schedule that shrinks geometrically: `noise -> noise * decay_rate^iter`, snapped
+to exactly zero once it falls below `threshold`. Use `decay_rate < 1` for a standalone
+[`DMRG3S`](@ref) run that gradually turns enrichment off as the state converges; a
+nonzero `threshold` avoids running the (cheap, but non-free) expansion step
+indefinitely on a noise amplitude too small to matter.
+"""
+struct ExponentialDecay{T<:Real} <: NoiseSchedule
+    decay_rate::T
+    threshold::T
+end
+ExponentialDecay(decay_rate, threshold) = ExponentialDecay(promote(decay_rate, threshold)...)
+ExponentialDecay(decay_rate; threshold = zero(decay_rate)) = ExponentialDecay(decay_rate, threshold)
+
+function (s::ExponentialDecay)(noise, iter, ϵ)
+    decayed = noise * s.decay_rate^iter
+    return decayed < s.threshold ? zero(decayed) : decayed
 end
 
 struct Warmup <: NoiseSchedule
     iters::Int
 end
 
-(s::ExponentialDecay)(noise, iter, ϵ) = noise * s.decay_rate^iter
 (s::Warmup)(noise, iter, ϵ) = iter ≤ s.iters ? noise : zero(noise)
 
 struct DMRG3S{N, S <: NoiseSchedule} <: Algorithm
