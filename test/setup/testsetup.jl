@@ -165,7 +165,7 @@ function kitaev_model(
         lattice = fill(space(TB, 1), L)
         onsite_terms = ((i,) => CP for i in 1:L)
         twosite_terms = ((i, i + 1) => TB + SC for i in 1:(L - 1))
-        terms = Iterators.flatten(twosite_terms, onsite_terms)
+        terms = Iterators.flatten((twosite_terms, onsite_terms))
         return FiniteMPOHamiltonian(lattice, terms)
     end
 end
