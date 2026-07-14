@@ -11,10 +11,11 @@ the enlarged bond back down (selecting the truncated-SVD gauge). The expansion i
 state-preserving, as required for a consistent time evolution.
 
 !!! note
-    Real-time evolution preserves the norm: neither the bond expansion nor the truncation
-    renormalizes, so the state norm reflects the accumulated truncation error. Imaginary-time
-    evolution instead renormalizes at every step, like a ground-state search. CBE is only
-    available for finite MPS.
+    By default the norm is preserved: neither the bond expansion nor the truncation
+    renormalizes, so the state norm keeps useful information (the accumulated truncation
+    error in real time, or the decaying weight in imaginary time). Pass `normalize = true`
+    to `timestep`/`time_evolve` to renormalize at every step instead, like a ground-state
+    search. This is independent of `imaginary_evolution`. CBE is only available for finite MPS.
 
 ## Fields
 
@@ -61,11 +62,14 @@ end
 function timestep(
         ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        leftorthflag = true, imaginary_evolution::Bool = false
+        leftorthflag = true, imaginary_evolution::Bool = false, normalize::Bool = false
     )
+    # `normalize` is accepted for signature uniformity with the finite integrators, but an
+    # `InfiniteMPS` is always normalized to norm-1-per-site by the gauge/reconstruction below
+    # (a structural gauge requirement, not information erasure), so the flag has no effect here.
     # convert state to complex if necessary
     if scalartype(ψ) <: Real && (!imaginary_evolution || !isreal(dt))
-        return timestep(complex(ψ), H, t, dt, alg, envs; leftorthflag, imaginary_evolution)
+        return timestep(complex(ψ), H, t, dt, alg, envs; leftorthflag, imaginary_evolution, normalize)
     end
 
     temp_ACs = similar(ψ.AC)
@@ -120,23 +124,23 @@ end
 function timestep!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        imaginary_evolution::Bool = false
+        imaginary_evolution::Bool = false, normalize::Bool = false
     )
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         # 1. optionally expand the bond ahead of the local update (CBE)
         isnothing(alg.alg_expand) ||
-            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
+            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize)
 
         # 2. evolve the (possibly expanded) center tensor forward
         Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
         AC = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator; imaginary_evolution)
 
         # 3. gauge: split AC -> AL[i], C[i] (QR center-move, or truncated SVD cutting the
-        #    enlarged bond back down) and move the center to i+1. Real-time evolution preserves
-        #    the norm; imaginary-time evolution renormalizes.
-        left_gauge!(ψ, i, AC, alg.alg_gauge; normalize = imaginary_evolution)
+        #    enlarged bond back down) and move the center to i+1. By default the norm is
+        #    preserved; `normalize` renormalizes.
+        left_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
 
         # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i, ψ, H, ψ, envs)
@@ -154,7 +158,7 @@ function timestep!(
     for i in length(ψ):-1:2
         # 1. optionally expand the bond ahead of the local update (CBE)
         isnothing(alg.alg_expand) ||
-            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize = imaginary_evolution)
+            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize)
 
         # 2. evolve the (possibly expanded) center tensor forward
         Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
@@ -163,9 +167,9 @@ function timestep!(
             imaginary_evolution
         )
 
-        # 3. gauge: split AC -> C[i-1], AR[i] and move the center to i-1 (real-time preserves the
-        #    norm; imaginary-time renormalizes)
-        right_gauge!(ψ, i, AC, alg.alg_gauge; normalize = imaginary_evolution)
+        # 3. gauge: split AC -> C[i-1], AR[i] and move the center to i-1 (norm preserved by
+        #    default; `normalize` renormalizes)
+        right_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
 
         # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs)
@@ -221,7 +225,7 @@ end
 function timestep!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        imaginary_evolution::Bool = false
+        imaginary_evolution::Bool = false, normalize::Bool = false
     )
 
     # sweep left to right
@@ -231,6 +235,9 @@ function timestep!(
         ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
 
         nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+        # `nc` is the norm-carrying bond tensor (`nal`/`nar` are isometries), so normalizing it
+        # normalizes the whole state, mirroring single-site TDVP's per-gauge renormalization
+        normalize && normalize!(nc)
         ψ.AC[i] = (nal, complex(nc))
         ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
@@ -250,6 +257,7 @@ function timestep!(
         ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator; imaginary_evolution)
 
         nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+        normalize && normalize!(nc)
         ψ.AC[i - 1] = (nal, complex(nc))
         ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
@@ -269,7 +277,7 @@ end
 function timestep(
         ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
         alg::Union{TDVP, TDVP2}, envs::AbstractMPSEnvironments...;
-        imaginary_evolution::Bool = false, kwargs...
+        imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
     )
     isreal = (scalartype(ψ) <: Real && !imaginary_evolution)
     ψ′ = isreal ? complex(ψ) : copy(ψ)
@@ -282,5 +290,5 @@ function timestep(
         @assert length(envs) == 0 "Invalid signature"
         envs′ = environments(ψ′, H, ψ′)
     end
-    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, kwargs...)
+    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, normalize, kwargs...)
 end

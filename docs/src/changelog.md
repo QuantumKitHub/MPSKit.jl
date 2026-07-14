@@ -21,6 +21,16 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- `BUG` time-evolution algorithm: a symmetric second-order Basis-Update & Galerkin integrator for
+  finite MPS. Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
+  and passing a truncating `trscheme` enables rank-adaptivity (the bond dimension grows and shrinks
+  automatically to track entanglement).
+- `ParallelBUG` time-evolution algorithm (experimental): the first-order *parallel* Basis-Update &
+  Galerkin integrator for finite MPS, in which every local problem is solved from the same frozen
+  snapshot of the state — there is no sweep, so the local integrations are mutually independent.
+  It is intrinsically rank-adaptive (every bond is augmented and then truncated back down); the
+  default `notrunc()` restores the pre-step virtual spaces (fixed-rank variant).
+
 ### Changed
 
 - `environments` now follows a single positional contract for every state and operator kind:

@@ -9,7 +9,7 @@ using Test, TestExtras
 using MPSKit
 using TensorKit
 using TensorKit: ℙ
-using LinearAlgebra: norm
+using LinearAlgebra: norm, Diagonal
 using Random
 
 verbosity_full = 5
@@ -122,8 +122,9 @@ end
         @test abs(dot(ref, cbe)) > abs(dot(ref, plain))
     end
 
-    # the bond truncation must preserve the norm for real-time evolution (the norm reflects the
-    # discarded weight) and only renormalize for imaginary-time evolution
+    # by default (`normalize = false`) the bond truncation preserves the norm, so it reflects the
+    # discarded weight; `normalize = true` renormalizes each step. This is independent of
+    # `imaginary_evolution`.
     @testset "norm handling" begin
         Random.seed!(6)
         ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
@@ -132,15 +133,24 @@ end
 
         ψrt = ψ₀
         for _ in 1:12
-            ψrt, = timestep(ψrt, H, 0.0, 0.5, lossy)            # real time
+            ψrt, = timestep(ψrt, H, 0.0, 0.5, lossy)            # real time, norm preserved by default
         end
         @test norm(ψrt) < 1 - 1.0e-3                            # truncation loss is not renormalized away
 
+        # imaginary-time, norm preserved by default: the weight is *not* pinned to unit norm
+        # (imaginary-time evolution rescales the state, so the norm drifts away from 1)
         ψit = ψ₀
         for _ in 1:12
-            ψit, = timestep(ψit, H, 0.0, 0.5, lossy; imaginary_evolution = true)  # no external normalize!
+            ψit, = timestep(ψit, H, 0.0, 0.5, lossy; imaginary_evolution = true)
         end
-        @test norm(ψit) ≈ 1 atol = 1.0e-6                       # imaginary-time renormalizes each step
+        @test abs(norm(ψit) - 1) > 1.0e-3
+
+        # imaginary-time with `normalize = true`: renormalized to unit norm each step
+        ψn = ψ₀
+        for _ in 1:12
+            ψn, = timestep(ψn, H, 0.0, 0.5, lossy; imaginary_evolution = true, normalize = true)
+        end
+        @test norm(ψn) ≈ 1 atol = 1.0e-6
     end
 
     @testset "imaginary-time lowers energy" begin
@@ -150,7 +160,7 @@ end
         E₀ = real(expectation_value(ψ₀, H))
         ψ = ψ₀
         for _ in 1:8
-            ψ, = timestep(ψ, H, 0.0, 0.1, alg; imaginary_evolution = true)  # gauge renormalizes
+            ψ, = timestep(ψ, H, 0.0, 0.1, alg; imaginary_evolution = true, normalize = true)
         end
         @test real(expectation_value(ψ, H)) < E₀
         @test dim(left_virtualspace(ψ, L ÷ 2)) > Dstart
@@ -181,4 +191,106 @@ end
         E = expectation_value(ψ, H, envs)
         @test E₀ ≈ E atol = 1.0e-2
     end
+end
+
+# A single spin flip on the fully polarized vacuum of the XX chain (`XY_model` with `g = 0`)
+# propagates as a free particle hopping on the open L-site chain, so the real-time correlator
+# has a closed form:
+#     C_nm(t) = ⟨vac| S^x_n e^{-iHt} S^x_m |vac⟩ = ¼ [exp(-i h t)]_{nm},
+# where the single-particle hopping matrix `h` is tridiagonal (`h_{i,i±1} = -1`) and diagonalizes
+# analytically on the open chain: eigenvalues `ε_k = -2 cos(kπ/(L+1))` with eigenvectors
+# `φ_k(n) = √(2/(L+1)) sin(nkπ/(L+1))`. Being a genuine two-time correlator, this also exercises
+# the norm-preserving `normalize = false` default: the evolving state must NOT be renormalized.
+@testset "dynamical correlator vs free-particle analytics" begin
+    L = 16
+    m = 8                            # source site (chain centre)
+    ns = 5:11                        # measured sink sites
+    dt = 0.05
+    ts = 0.0:dt:1.5
+
+    H = force_planar(XY_model(ComplexF64, Trivial; g = 0, L = L))
+
+    # fully polarized product state |↑…↑⟩ (basis index 1 on every site): a zero-energy eigenstate
+    Vp = ℙ^2
+    Vl = oneunit(Vp)
+    ψvac = FiniteMPS([isometry(ComplexF64, Vl ⊗ Vp, Vl) for _ in 1:L])
+    @test norm(H * ψvac) < 1.0e-10   # H annihilates the polarized vacuum ⇒ E₀ = 0, no bra phase
+
+    # apply S^x at a single site (S^x = ½σ^x flips one spin ⇒ a single free particle)
+    Sx = force_planar(S_x())
+    apply_Sx(i) = FiniteMPOHamiltonian(physicalspace(ψvac), i => Sx) * ψvac
+    ϕ_bra = Dict(n => apply_Sx(n) for n in ns)   # static ½|n⟩
+    ϕ = apply_Sx(m)                               # ½|m⟩, evolved below
+
+    # analytic single-particle propagator exp(-i h t) on the open chain
+    ks = 1:L
+    ε = [-2 * cos(k * π / (L + 1)) for k in ks]
+    φ = [sqrt(2 / (L + 1)) * sin(n * k * π / (L + 1)) for n in 1:L, k in ks]
+    Uref(t) = φ * Diagonal(cis.(-ε .* t)) * transpose(φ)
+    Cref(n, t) = 0.25 * Uref(t)[n, m]
+
+    # single-particle physics stays rank ≤ 2, so TDVP2 with a generous cap is essentially exact
+    alg = TDVP2(; trscheme = truncrank(6))
+    t_prev = 0.0
+    maxerr = 0.0
+    for t in ts
+        t > 0 && ((ϕ, _) = timestep(ϕ, H, t_prev, t - t_prev, alg); t_prev = t)
+        for n in ns
+            maxerr = max(maxerr, abs(dot(ϕ_bra[n], ϕ) - Cref(n, t)))
+        end
+    end
+    @test maxerr < 1.0e-3
+
+    # the correlator retains the un-normalized amplitude: real-time evolution preserves the norm
+    @test norm(ϕ) ≈ norm(ϕ_bra[m]) atol = 1.0e-6
+end
+
+# The same free-particle benchmark with an explicitly fermionic (fℤ₂-graded) model: a single
+# fermion on the tight-binding chain (`kitaev_model` with `mu = Delta = 0`) is a free particle, so
+# the single-particle Green's function is the closed-form propagator
+#     G_nm(t) = ⟨0| c_n e^{-iHt} c_m† |0⟩ = [exp(-i h t)]_{nm},  h_{i,i±1} = -t/2,
+# with `ε_k = -t cos(kπ/(L+1))` and `φ_k(n) = √(2/(L+1)) sin(nkπ/(L+1))`. This exercises the graded
+# fermionic tensors (Jordan-Wigner strings handled by the fℤ₂ braiding): from the empty vacuum,
+# `c_m†|0⟩` is just the localised single-particle basis state (the string acts trivially on the
+# vacuum), built here as a bond-1 MPS with a fermion-parity charge kink at site m. It relies on the
+# hopping being Hermitian (`f_hopping`, not `f_plus_f_min + f_min_f_plus`), else the norm drifts.
+@testset "fermionic dynamical correlator vs free-particle analytics" begin
+    L = 12
+    m = 6
+    ns = 4:8
+    dt = 0.05
+    ts = 0.0:dt:1.2
+
+    H = kitaev_model(ComplexF64, Trivial; t = 1.0, mu = 0, Delta = 0, L = L)
+    P = physicalspace(H)[1]                       # fermion_space = Vect[fℤ₂](0 => 1, 1 => 1)
+    S = typeof(P)
+    Vtriv = oneunit(P)
+    Vodd = S(c => dim(P, c) for c in sectors(P) if !isone(c))
+
+    # single-particle basis state |j⟩ = c_j†|0⟩: empty except occupied at j, with the fermion-parity
+    # kink even→odd at site j (even bond to the left, odd bond to the right, odd right boundary)
+    onepart(j) = FiniteMPS([
+            isometry(ComplexF64, (k <= j ? Vtriv : Vodd) ⊗ P, (k < j ? Vtriv : Vodd)) for k in 1:L
+        ])
+    @test norm(H * onepart(m)) ≈ sqrt(2) * 0.5 atol = 1.0e-8   # hops to both neighbours, amp t/2
+
+    ϕ_bra = Dict(n => onepart(n) for n in ns)
+    ϕ = onepart(m)
+
+    ks = 1:L
+    ε = [-cos(k * π / (L + 1)) for k in ks]        # -t cos(kπ/(L+1)) with t = 1
+    φ = [sqrt(2 / (L + 1)) * sin(n * k * π / (L + 1)) for n in 1:L, k in ks]
+    Uref(t) = φ * Diagonal(cis.(-ε .* t)) * transpose(φ)
+
+    alg = TDVP2(; trscheme = truncrank(6))
+    t_prev = 0.0
+    maxerr = 0.0
+    for t in ts
+        t > 0 && ((ϕ, _) = timestep(ϕ, H, t_prev, t - t_prev, alg); t_prev = t)
+        for n in ns
+            maxerr = max(maxerr, abs(dot(ϕ_bra[n], ϕ) - Uref(t)[n, m]))
+        end
+    end
+    @test maxerr < 1.0e-3
+    @test norm(ϕ) ≈ 1 atol = 1.0e-8               # real-time evolution preserves the norm
 end
