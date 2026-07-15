@@ -11,16 +11,15 @@ using BlockTensorKit
 using LinearAlgebra: Diagonal
 using Combinatorics: permutations
 using TensorKitTensors.SpinOperators: S_x, S_y, S_z, S_x_S_x, S_y_S_y, S_z_S_z, S_exchange, S_plus_S_min, S_min_S_plus
-using TensorKitTensors.FermionOperators: f_plus_f_min, f_min_f_plus, f_plus_f_plus, f_min_f_min, f_num
+using TensorKitTensors.FermionOperators: f_plus_f_min, f_min_f_plus, f_plus_f_plus, f_min_f_min, f_num, f_hopping
 
 # exports
 export S_x, S_y, S_z
 export S_x_S_x, S_y_S_y, S_z_S_z
-export f_plus_f_min, f_min_f_plus, f_num
+export f_plus_f_min, f_min_f_plus, f_num, f_hopping
 export force_planar
 export symm_mul_mpo
-export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model,
-    kitaev_model
+export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model, kitaev_model
 export classical_ising_tensors, classical_ising, sixvertex
 
 # using TensorOperations
@@ -154,9 +153,9 @@ function kitaev_model(
         T::Type{<:Number} = ComplexF64, sym::Type{<:Sector} = Trivial;
         t = 1.0, mu = 1.0, Delta = 1.0, L = Inf
     )
-    TB = scale!(f_plus_f_min(T, sym) + f_min_f_plus(T, sym), -t / 2)     # tight-binding term
-    SC = scale!(f_plus_f_plus(T, sym) + f_min_f_min(T, sym), Delta / 2)  # superconducting term
-    CP = scale!(f_num(T, sym), -mu)                       # chemical potential term
+    TB = scale!(f_hopping(T, sym), -t / 2)                               # tight-binding term
+    SC = scale!(f_min_f_min(T, sym) - f_plus_f_plus(T, sym), Delta / 2)  # superconducting term
+    CP = scale!(f_num(T, sym), -mu)                                      # chemical potential term
 
     if L == Inf
         lattice = PeriodicArray([space(TB, 1)])
@@ -165,7 +164,7 @@ function kitaev_model(
         lattice = fill(space(TB, 1), L)
         onsite_terms = ((i,) => CP for i in 1:L)
         twosite_terms = ((i, i + 1) => TB + SC for i in 1:(L - 1))
-        terms = Iterators.flatten(twosite_terms, onsite_terms)
+        terms = Iterators.flatten((twosite_terms, onsite_terms))
         return FiniteMPOHamiltonian(lattice, terms)
     end
 end
