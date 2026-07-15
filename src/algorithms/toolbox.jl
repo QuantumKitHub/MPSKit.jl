@@ -176,8 +176,8 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O}, L = length(mpo)) wher
     local F_right
     for i in 1:L
         # kept as rightunitspace, but might need to change if we consider off-diagonal MPOs
-        V_left = i == 1 ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
-        V_right = i == L ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ right_virtualspace(mpo, i))
+        V_left = i == 1 ? rightunitspace(V_wrap) : fuse(V_wrap' ⊗ left_virtualspace(mpo, i))
+        V_right = i == L ? rightunitspace(V_wrap) : fuse(V_wrap' ⊗ right_virtualspace(mpo, i))
         output[i] = similar(
             mpo[i], V_left * physicalspace(mpo, i) ← physicalspace(mpo, i) * V_right
         )
