@@ -48,10 +48,9 @@ function changebonds(
         VL = left_null(ψ.AL[i])
         VR = right_null!(_transpose_tail(ψ.AR[i + 1]; copy = true))
         intermediate = adjoint(VL) * AC2 * adjoint(VR)
-        # only normalize when there is expansion content: `normalize!` of a zero tensor produces
-        # NaNs that crash the SVD (see the finite `changebond!` methods below).
         nrm = norm(intermediate)
-        nrm > eps(real(scalartype(intermediate)))^(3 / 4) && normalize!(intermediate)
+        # skip empty-content bonds; normalizing zero would NaN the SVD
+        nrm > eps(real(scalartype(intermediate)))^(3 / 4) && scale!(intermediate, inv(nrm))
         U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
         AL′[i] = VL * U
@@ -77,9 +76,8 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
         VL = left_null(ψ.AL[i, j])
         VR = right_null!(_transpose_tail(ψ.AR[i, j + 1]; copy = true))
         intermediate = adjoint(VL) * AC2 * adjoint(VR)
-        # only normalize when there is expansion content (see the single-line variant above).
         nrm = norm(intermediate)
-        nrm > eps(real(scalartype(intermediate)))^(3 / 4) && normalize!(intermediate)
+        nrm > eps(real(scalartype(intermediate)))^(3 / 4) && scale!(intermediate, inv(nrm))
         U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
 
         AL′[i, j] = VL * U
@@ -106,11 +104,10 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Op
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)
-    # no expansion content at this bond (e.g. a product-state region, or a symmetry sector the
-    # Hamiltonian does not couple into yet): `normalize!` of a zero tensor would produce NaNs and
-    # crash the SVD, so leave the state untouched here instead.
-    norm(g2) ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
-    _, _, Vᴴ = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+    nrm = norm(g2)
+    # nothing to expand here; normalizing a zero g2 would NaN the SVD
+    nrm ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
+    _, _, Vᴴ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trscheme, alg = alg.alg_svd)
 
     # optimal vectors at site+1
     ar_re = Vᴴ * NR
@@ -137,9 +134,9 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Opt
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)
-    # no expansion content at this bond: skip (see the `:right` method for the rationale).
-    norm(g2) ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
-    U, _, _ = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
+    nrm = norm(g2)
+    nrm ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
+    U, _, _ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trscheme, alg = alg.alg_svd)
 
     # optimal vectors at site-1
     Q = NL * U
