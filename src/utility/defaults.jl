@@ -54,13 +54,12 @@ end
 function alg_eigsolve(;
         ishermitian = true, tol = tol, maxiter = maxiter, verbosity = 0,
         eager = true, krylovdim = krylovdim, dynamic_tols = dynamic_tols, tol_min = tol_min,
-        tol_max = tol_max, tol_factor = eigs_tolfactor, truncation_factor = 0.0,
-        adaptive = false, adaptive_kwargs...
+        tol_max = tol_max, tol_factor = eigs_tolfactor, adaptive = false, adaptive_kwargs...
     )
     adaptive && return AdaptiveKrylov(; ishermitian, adaptive_kwargs...)
     alg = ishermitian ? Lanczos(; tol, maxiter, eager, krylovdim, verbosity) :
         Arnoldi(; tol, maxiter, eager, krylovdim, verbosity)
-    return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor, truncation_factor) : alg
+    return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
 function alg_environments(;
