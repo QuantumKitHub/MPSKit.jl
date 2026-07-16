@@ -6,16 +6,33 @@ using DocStringExtensions
 using MatrixAlgebraKit: DefaultAlgorithm
 using KrylovKit: KrylovKit, Lanczos, Arnoldi
 
-export updatetol, DynamicTol
-export AdaptiveKrylov, instantiate_algorithm
+export adapt_solver, DynamicTol, AdaptiveKrylov
+# deprecated, kept for backwards compatibility (see the bottom of this file)
+export updatetol
+
+# ============================================================
+# Unified solver-adaptation interface
+# ============================================================
 
 @doc """
-    updatetol(alg, iter, ϵ)
+    adapt_solver(alg; iter, decay_rate, g_local, g_global, eps_trunc)
 
-Update the tolerance of the algorithm `alg` based on the current iteration `iter` and the current error `ϵ`.
-""" updatetol
+Resolve a (possibly adaptive) solver specification `alg` into a concrete solver, using
+whichever adaptation signals are supplied as keyword arguments. Numeric signals default to
+`0.0` (and `iter` to `1`) — i.e. "no contribution" — so each caller passes only what it has in
+scope:
 
-updatetol(alg, iter::Integer, ϵ::Real) = alg
+  - `iter`       — outer iteration count (drives the `1/√iter` damping)
+  - `decay_rate` — measured per-matvec contraction factor of the previous solve
+  - `g_local`    — local (per-bond) gradient / Galerkin norm
+  - `g_global`   — global (sweep-wide) gradient / convergence-error scalar
+  - `eps_trunc`  — local truncation error
+
+The generic fallback returns `alg` unchanged (for plain `Lanczos`/`Arnoldi`/… solvers, which
+are not adapted). `DynamicTol` and `AdaptiveKrylov` provide the adaptive implementations.
+""" adapt_solver
+
+adapt_solver(alg; kwargs...) = alg
 
 # Wrapper for dynamic tolerance adjustment
 # ----------------------------------------
@@ -23,13 +40,15 @@ updatetol(alg, iter::Integer, ϵ::Real) = alg
 """
 $(TYPEDEF)
 
-Algorithm wrapper with dynamically adjusted tolerances.
+Algorithm wrapper with dynamically adjusted tolerances. Only the wrapped solver's tolerance is
+retuned; its Krylov budget (if any) is left fixed — this is the simpler counterpart to
+[`AdaptiveKrylov`](@ref).
 
 ## Fields
 
 $(TYPEDFIELDS)
 
-See also [`updatetol`](@ref).
+See also [`adapt_solver`](@ref).
 """
 struct DynamicTol{A} <: Algorithm
     "parent algorithm"
@@ -41,33 +60,48 @@ struct DynamicTol{A} <: Algorithm
     "maximal value of the dynamic tolerance"
     tol_max::Float64
 
-    "tolerance factor for updating relative to current algorithm error"
+    "tolerance factor for updating relative to the current (global) gradient norm"
     tol_factor::Float64
 
+    "factor on the local truncation error, sets an inner-solve tolerance floor (`0` ⇒ truncation-agnostic)"
+    truncation_factor::Float64
+
     function DynamicTol(
-            alg::A, tol_min::Real, tol_max::Real, tol_factor::Real
+            alg::A, tol_min::Real, tol_max::Real, tol_factor::Real, truncation_factor::Real = 0.0
         ) where {A}
         0 <= tol_min <= tol_max ||
             throw(ArgumentError("tol_min must be between 0 and tol_max"))
-        return new{A}(alg, tol_min, tol_max, tol_factor)
+        truncation_factor >= 0 ||
+            throw(ArgumentError("truncation_factor must be non-negative, got $truncation_factor"))
+        return new{A}(alg, tol_min, tol_max, tol_factor, truncation_factor)
     end
 end
-function DynamicTol(alg; tol_min = 1.0e-6, tol_max = 1.0e-2, tol_factor = 0.1)
-    return DynamicTol(alg, tol_min, tol_max, tol_factor)
+function DynamicTol(alg; tol_min = 1.0e-6, tol_max = 1.0e-2, tol_factor = 0.1, truncation_factor = 0.0)
+    return DynamicTol(alg, tol_min, tol_max, tol_factor, truncation_factor)
 end
 
 """
-    updatetol(alg::DynamicTol, iter, ϵ)
+    adapt_solver(alg::DynamicTol; iter, g_global, eps_trunc, ...)
 
-Update the tolerance of the algorithm `alg` based on the current iteration `iter` and the current error `ϵ`,
-where the new tolerance is given by
-    
-    new_tol = clamp(ϵ * alg.tol_factor / sqrt(iter), alg.tol_min, alg.tol_max)
+Tighten only the wrapped solver's tolerance (its Krylov budget, if any, is left fixed). The
+target combines the truncation-error floor with the global-gradient-driven convergence target,
+optionally damped by the iteration count:
+
+    tol = clamp(max(truncation_factor·eps_trunc, tol_factor·g_global) / √iter, tol_min, tol_max)
+
+Per-bond callers (finite DMRG) supply `g_global`/`eps_trunc` and leave `iter = 1` (no damping);
+per-sweep/global callers (VUMPS/iDMRG/…) supply the global error as `g_global` together with
+`iter`, and `eps_trunc` defaults to `0`.
 """
-function updatetol(alg::DynamicTol, iter::Integer, ϵ::Real)
-    iter = max(iter, one(iter))
-    new_tol = clamp(ϵ * alg.tol_factor / sqrt(iter), alg.tol_min, alg.tol_max)
-    return _updatetol(alg.alg, new_tol)
+function adapt_solver(
+        alg::DynamicTol;
+        iter::Integer = 1, g_global::Real = 0.0, eps_trunc::Real = 0.0, kwargs...
+    )
+    trunc_tol = alg.truncation_factor * eps_trunc
+    conv_tol = alg.tol_factor * g_global
+    tol = clamp(max(trunc_tol, conv_tol) / sqrt(max(iter, 1)), alg.tol_min, alg.tol_max)
+
+    return _updatetol(alg.alg, tol)
 end
 
 # default implementation with Accessors.jl, but can be hooked into
@@ -105,7 +139,7 @@ while avoiding stagnation for gapless ones.
 
 $(TYPEDFIELDS)
 
-See also [`instantiate_algorithm`](@ref).
+See also [`adapt_solver`](@ref).
 """
 struct AdaptiveKrylov{T, O <: KrylovKit.Orthogonalizer} <: Algorithm
     "orthogonalizer passed to the instantiated `Lanczos`/`Arnoldi`"
@@ -174,32 +208,22 @@ function AdaptiveKrylov(;
 end
 
 """
-    instantiate_algorithm(alg, decay_rate, g_local, g_global, eps_trunc)
+    adapt_solver(alg::AdaptiveKrylov; decay_rate, g_local, g_global, eps_trunc, ...)
 
-Turn a (possibly adaptive) local-eigensolver specification `alg` into a concrete KrylovKit
-algorithm for the current site, using the measured `decay_rate` of the previous solve, the
-local gradient norm `g_local`, the global gradient norm `g_global` and the local truncation
-error `eps_trunc`. The generic fallback returns `alg` unchanged (for plain `Lanczos`/`Arnoldi`).
+Build a concrete `Lanczos`/`Arnoldi` for the current site. The target tolerance is the same as
+[`DynamicTol`](@ref)'s per-bond tolerance, but the Krylov `krylovdim`/`maxiter` are additionally
+predicted from the measured `decay_rate` and the local gradient norm `g_local`. A `decay_rate`
+of `0` (the default) signals a cold start and falls back to the minimal budget.
 """
-instantiate_algorithm(alg, args...) = alg
-
-# a `DynamicTol` wrapper is resolved to a concrete solver by tightening its tolerance with the
-# global gradient norm (the per-sweep, tol-only "legacy" behaviour, now driven per site).
-function instantiate_algorithm(
-        alg::DynamicTol, decay_rate::Real, g_local::Real, g_global::Real, eps_trunc::Real
-    )
-    tol = clamp(g_global * alg.tol_factor, alg.tol_min, alg.tol_max)
-    return _updatetol(alg.alg, tol)
-end
-
-function instantiate_algorithm(
-        alg::AdaptiveKrylov{T}, decay_rate::Real, g_local::Real, g_global::Real, eps_trunc::Real
+function adapt_solver(
+        alg::AdaptiveKrylov{T}; decay_rate::Real = 0.0, g_local::Real = 0.0,
+        g_global::Real = 0.0, eps_trunc::Real = 0.0, kwargs...
     ) where {T}
     # 1. target tolerance: inexact inner solve depending on outer convergence,
     #    never below the truncation error we already incur.
-    trunc_tol = alg.truncation_factor * eps_trunc
-    conv_tol = alg.tol_factor * g_global
-    tol = clamp(max(trunc_tol, conv_tol), alg.tol_min, alg.tol_max)
+    tol = clamp(
+        max(alg.truncation_factor * eps_trunc, alg.tol_factor * g_global), alg.tol_min, alg.tol_max
+    )
 
     # the measured decay rate must be a genuine contraction in (0, 1); a non-positive or ≥ 1
     # rate signals an uninitialized or hard/stalling bond → fall back to the largest budget.
@@ -223,5 +247,11 @@ function instantiate_algorithm(
 
     return (T ? Lanczos : Arnoldi)(; alg.orth, krylovdim, maxiter, tol, alg.eager, alg.verbosity)
 end
+
+# ============================================================
+# Deprecated entry points (subsumed by `adapt_solver`)
+# ============================================================
+
+Base.@deprecate updatetol(alg, iter::Integer, ϵ::Real) adapt_solver(alg; iter = iter, g_global = ϵ)
 
 end

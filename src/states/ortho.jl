@@ -246,7 +246,7 @@ end
 function gauge_eigsolve_step!(it::IterativeSolver{LeftCanonical}, state)
     (; AL, C, A, iter, ϵ) = state
     if iter ≥ it.eig_miniter
-        alg_eigsolve = updatetol(it.alg_eigsolve, 1, ϵ^2)
+        alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = 1, g_global = ϵ^2)
         _, vec = fixedpoint(flip(TransferMatrix(A, AL)), C[end], :LM, alg_eigsolve)
         _, C[end] = left_orth!(vec; alg = it.alg_orth)
     end
@@ -308,7 +308,7 @@ end
 function gauge_eigsolve_step!(it::IterativeSolver{RightCanonical}, state)
     (; AR, C, A, iter, ϵ) = state
     if iter ≥ it.eig_miniter
-        alg_eigsolve = updatetol(it.alg_eigsolve, 1, ϵ^2)
+        alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = 1, g_global = ϵ^2)
         _, vec = fixedpoint(TransferMatrix(A, AR), C[end], :LM, alg_eigsolve)
         C[end], _ = right_orth!(vec; alg = it.alg_orth)
     end

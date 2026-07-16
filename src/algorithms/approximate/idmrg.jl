@@ -52,7 +52,7 @@ function approximate!(
     end
 
     # TODO: immediately compute in-place
-    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    alg_gauge = adapt_solver(alg.alg_gauge; iter, g_global = ϵ)
     ψ′ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
     copy!(ψ, ψ′) # ensure output destination is unchanged
 
@@ -179,7 +179,7 @@ function approximate!(
     end
 
     # TODO: immediately compute in-place
-    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    alg_gauge = adapt_solver(alg.alg_gauge; iter, g_global = ϵ)
     ψ′ = MultilineMPS(map(identity, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
     copy!(ψ, ψ′) # ensure output destination is unchanged
 

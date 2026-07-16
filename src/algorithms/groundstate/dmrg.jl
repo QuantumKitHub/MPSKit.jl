@@ -80,7 +80,7 @@ function local_update!(
         @timeit timeroutput "expand" changebond!(site, direction, ψ, O, alg.alg_expand, envs)
 
     # 2. local update
-    alg_eigsolve = instantiate_algorithm(alg.alg_eigsolve, decay_rate, ϵ_local, ϵ_global, ϵ_trunc)
+    alg_eigsolve = adapt_solver(alg.alg_eigsolve; decay_rate, g_local = ϵ_local, g_global = ϵ_global, eps_trunc = ϵ_trunc)
     ac_old = ψ.AC[site]
     λ, AC′, info = @timeit timeroutput "AC_eigsolve" begin
         H_effective = AC_hamiltonian(site, ψ, O, ψ, envs)
@@ -164,7 +164,7 @@ function local_update!(
     ϵ_local = norm(AC2′)
 
     # 1. local two-site update
-    alg_eigsolve = instantiate_algorithm(alg.alg_eigsolve, decay_rate, ϵ_local, ϵ_global, ϵ_trunc)
+    alg_eigsolve = adapt_solver(alg.alg_eigsolve; decay_rate, g_local = ϵ_local, g_global = ϵ_global, eps_trunc = ϵ_trunc)
     newA2center, info = @timeit timeroutput "AC2_eigsolve" begin
         _, newA2center, info = fixedpoint(Heff, ac2, :SR, alg_eigsolve)
         (newA2center, info)
