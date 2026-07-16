@@ -89,6 +89,9 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Ra
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * ac2 * adjoint(NR)
+    # no expansion content at this bond: `normalize!` of a zero tensor would produce NaNs and
+    # crash the SVD, so leave the state untouched here instead.
+    norm(g2) ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
     _, _, Vᴴ = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
 
     # optimal vectors at site+1, zero weight at site
@@ -115,6 +118,8 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ran
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * ac2 * adjoint(NR)
+    # no expansion content at this bond: skip (see the `:right` method for the rationale).
+    norm(g2) ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
     U, _, _ = svd_trunc!(normalize!(g2); trunc = alg.trscheme, alg = alg.alg_svd)
 
     # optimal vectors at site-1, zero weight at site
