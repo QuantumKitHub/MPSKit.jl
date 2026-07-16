@@ -151,6 +151,12 @@ function local_update!(
 
     kind = direction === Val(:right) ? :ACAR : :ALAC
     ac2 = normalize!(AC2(ψ, pos; kind))
+    # `HAC2 = Heff * ac2` only feeds the Galerkin gradient `ϵ_local` below; it must NOT seed the
+    # eigensolver. Seeding with `Heff * ac2` is power-iteration intuition (amplifies the
+    # largest-magnitude eigenvector), which is wrong for `:SR` (smallest algebraic): it de-weights
+    # the ground state and, when the effective ground eigenvalue is 0, annihilates it exactly so
+    # `:SR` converges to the smallest nonzero eigenvalue. Seed with the plain center `ac2` instead
+    # (consistent with single-site DMRG's `ac_old`).
     HAC2 = normalize!(Heff * ac2)
     AC2′ = copy(HAC2)
     project_complement!(AC2′, ψ.AL[pos])
@@ -160,7 +166,7 @@ function local_update!(
     # 1. local two-site update
     alg_eigsolve = instantiate_algorithm(alg.alg_eigsolve, decay_rate, ϵ_local, ϵ_global, ϵ_trunc)
     newA2center, info = @timeit timeroutput "AC2_eigsolve" begin
-        _, newA2center, info = fixedpoint(Heff, HAC2, :SR, alg_eigsolve)
+        _, newA2center, info = fixedpoint(Heff, ac2, :SR, alg_eigsolve)
         (newA2center, info)
     end
 
