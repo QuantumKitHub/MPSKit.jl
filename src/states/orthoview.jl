@@ -326,7 +326,9 @@ function gauge2!(
     ) where {Dir}
     al, c, ar, ϵ = svd_trunc!(AC2, alg)
     normalize && normalize!(c)
-    C = complex(c)
+    # the SVD center `c` (singular values) is real-valued; promote it to the state's scalartype so
+    # the installed tensors stay consistent, without needlessly forcing a real-valued state complex.
+    C = scalartype(ψ) <: Complex ? complex(c) : c
     if Dir === :right
         ψ.AC[pos] = (al, C)
         ψ.AC[pos + 1] = (C, _transpose_front(ar))
