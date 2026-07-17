@@ -96,6 +96,32 @@ end
     @test dim(left_virtualspace(state_tr, 5)) < dim(left_virtualspace(state_oe, 5))
 end
 
+# Regression: CBE expanders must not crash on bonds with no expansion content. A charged
+# single-particle fermionic (fℤ₂-graded) state carries only one parity sector on the bonds away
+# from the particle, so the projected two-site update `adjoint(NL) * AC2 * adjoint(NR)` is
+# *structurally exactly zero* there. `OptimalExpand`/`RandExpand` used to `normalize!` that zero
+# tensor, producing NaNs that crashed the SVD (`ArgumentError: invalid argument #4 to LAPACK
+# call`); they must instead skip such bonds, leaving the state unchanged.
+@testset "CBE zero-content bonds (graded)" begin
+    L = 6
+    H = kitaev_model(ComplexF64, Trivial; t = 1.0, mu = 0, Delta = 0, L = L)
+    P = physicalspace(H)[1]
+    S = typeof(P)
+    Vtriv = oneunit(P)
+    Vodd = S(c => dim(P, c) for c in sectors(P) if !isone(c))
+    # single particle created on the last site: interior bonds carry only the even sector, so
+    # the expansion content on them is exactly zero
+    state = FiniteMPS(
+        [isometry(ComplexF64, (k <= L ? Vtriv : Vodd) ⊗ P, (k < L ? Vtriv : Vodd)) for k in 1:L]
+    )
+
+    state_oe, _ = changebonds(state, H, OptimalExpand(; trscheme = truncrank(2)))
+    @test abs(dot(state, state_oe)) ≈ 1 atol = 1.0e-8
+
+    state_re = changebonds(state, RandExpand(; trscheme = truncrank(2)))
+    @test abs(dot(state, state_re)) ≈ 1 atol = 1.0e-8
+end
+
 # density-matrix-style MPS: each site carries two physical legs (ket ⊗ bra). The operator-free
 # bond-change algorithms (`RandExpand` expansion, `SvdCut` truncation) must handle the extra
 # physical leg. Operator-based expanders (`OptimalExpand`/`SketchedExpand`) are not covered here
