@@ -24,12 +24,15 @@ cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 MPSKit = {path = ".."}
 
 [compat]
+Adapt = "4.7.0"
 Aqua = "0.8.9"
 CUDA = "6"
 Combinatorics = "1"
+MatrixAlgebraKit = "0.6.9"
 ParallelTestRunner = "2"
 Plots = "1.40"
 Pkg = "1"
+TensorKit = "0.17.1"
 TensorKitTensors = "0.2"
 Test = "1"
 TestExtras = "0.3"
