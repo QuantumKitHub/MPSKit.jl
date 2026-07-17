@@ -151,16 +151,20 @@ function local_update!(
 
     kind = direction === Val(:right) ? :ACAR : :ALAC
     ac2 = normalize!(AC2(ψ, pos; kind))
-    # `HAC2 = Heff * ac2` only feeds the Galerkin gradient `ϵ_local` below; it must NOT seed the
-    # eigensolver. Seeding with `Heff * ac2` is power-iteration intuition (amplifies the
-    # largest-magnitude eigenvector), which is wrong for `:SR` (smallest algebraic): it de-weights
-    # the ground state and, when the effective ground eigenvalue is 0, annihilates it exactly so
-    # `:SR` converges to the smallest nonzero eigenvalue. Seed with the plain center `ac2` instead
-    # (consistent with single-site DMRG's `ac_old`).
-    HAC2 = normalize!(Heff * ac2)
-    AC2′ = copy(HAC2)
+    # Two-site Galerkin gradient `ϵ_local`, the direct analogue of single-site `calc_galerkin`: the
+    # part of `Heff * ac2` that points off the current left-canonical manifold, obtained by
+    # projecting onto the LEFT null space of `AL[pos]` only. Projecting onto BOTH the left and right
+    # null spaces would keep only the (null, null) bond-expansion corner — the directions a
+    # truncated SVD discards — which collapses to the truncation floor after each local solve and
+    # so spuriously signals convergence after a single sweep.
+    #
+    # `Heff * ac2` only feeds this gradient; it must NOT seed the eigensolver. Seeding with
+    # `Heff * ac2` is power-iteration intuition (amplifies the largest-magnitude eigenvector), which
+    # is wrong for `:SR` (smallest algebraic): it de-weights the ground state and, when the
+    # effective ground eigenvalue is 0, annihilates it exactly so `:SR` converges to the smallest
+    # nonzero eigenvalue. Seed with the plain center `ac2` instead (as single-site DMRG's `ac_old`).
+    AC2′ = normalize!(Heff * ac2)
     project_complement!(AC2′, ψ.AL[pos])
-    project_complement_right!(AC2′, _transpose_tail(ψ.AR[pos + 1]))
     ϵ_local = norm(AC2′)
 
     # 1. local two-site update
@@ -242,7 +246,11 @@ function find_groundstate!(
                 iter, ψ, H, envs
             )::Tuple{typeof(ψ), typeof(envs)}
 
-            if ϵ_global <= alg.tol
+            # Truncation-aware convergence: the Galerkin gradient cannot drop below the level set by
+            # the discarded weight, so a truncating scheme converges once `ϵ_global` reaches the
+            # truncation error rather than the (unreachable) bare `tol`. With no truncation
+            # (`ϵ_truncs .= 0`, e.g. single-site/QR gauge) this reduces to the plain `ϵ_global ≤ tol`.
+            if ϵ_global <= max(alg.tol, maximum(ϵ_truncs))
                 @infov 4 timeroutput
                 @infov 2 logfinish!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
                 break
