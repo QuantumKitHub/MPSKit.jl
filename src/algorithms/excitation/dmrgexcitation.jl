@@ -18,18 +18,13 @@ $(TYPEDFIELDS)
     weight::Float64 = 10.0
 end
 
-# Default initial guess for the next excited state: the previous state's center tensors with a
-# small random perturbation added per site. Without the perturbation the guess can already be
-# (near) an eigenvector of the shifted operator, so the Galerkin convergence measure is tiny on
-# the first sweep and the optimizer returns immediately instead of climbing to the excited state.
-# The perturbation preserves the physical/virtual spaces (hence the symmetry sector) and bond
-# dimensions; `FiniteMPS` re-gauges and normalizes the result.
-function _perturbed_state(ψ::FiniteMPS; ϵ = 1.0e-2)
+# Initialize excited state by perturbing the current eigenvector to avoid local minima
+function _perturbed_state(ψ::FiniteMPS; atol = 1.0e-2)
     return FiniteMPS(
         map(1:length(ψ)) do i
-            A = ψ.AC[i]
+            A = i == length(ψ) ? ψ.AC[i] : ψ.AL[i]
             noise = randomize!(similar(A))
-            return A + (ϵ / norm(noise)) * noise
+            return add!(noise, A, 1, atol / norm(noise))
         end
     )
 end

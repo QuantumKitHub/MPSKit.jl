@@ -150,19 +150,7 @@ function local_update!(
     Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs)
 
     kind = direction === Val(:right) ? :ACAR : :ALAC
-    ac2 = normalize!(AC2(ψ, pos; kind))
-    # Two-site Galerkin gradient `ϵ_local`, the direct analogue of single-site `calc_galerkin`: the
-    # part of `Heff * ac2` that points off the current left-canonical manifold, obtained by
-    # projecting onto the LEFT null space of `AL[pos]` only. Projecting onto BOTH the left and right
-    # null spaces would keep only the (null, null) bond-expansion corner — the directions a
-    # truncated SVD discards — which collapses to the truncation floor after each local solve and
-    # so spuriously signals convergence after a single sweep.
-    #
-    # `Heff * ac2` only feeds this gradient; it must NOT seed the eigensolver. Seeding with
-    # `Heff * ac2` is power-iteration intuition (amplifies the largest-magnitude eigenvector), which
-    # is wrong for `:SR` (smallest algebraic): it de-weights the ground state and, when the
-    # effective ground eigenvalue is 0, annihilates it exactly so `:SR` converges to the smallest
-    # nonzero eigenvalue. Seed with the plain center `ac2` instead (as single-site DMRG's `ac_old`).
+    ac2 = AC2(ψ, pos; kind)
     AC2′ = normalize!(Heff * ac2)
     project_complement!(AC2′, ψ.AL[pos])
     ϵ_local = norm(AC2′)
