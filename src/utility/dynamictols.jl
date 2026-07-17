@@ -236,4 +236,11 @@ end
 
 Base.@deprecate updatetol(alg, iter::Integer, ϵ::Real) adapt_solver(alg; iter = iter, g_global = ϵ)
 
+@doc """
+    updatetol(alg, iter, ϵ)
+
+Deprecated: superseded by [`adapt_solver`](@ref). Equivalent to
+`adapt_solver(alg; iter, g_global = ϵ)`.
+""" updatetol
+
 end
