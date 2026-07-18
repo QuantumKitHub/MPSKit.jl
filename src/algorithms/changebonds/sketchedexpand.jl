@@ -53,7 +53,7 @@ end
 function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs; normalize::Bool = true)
     left = ψ.AC[site]
     right = ψ.AR[site + 1]
-    AL, _ = left_gauge(left)        # local left-isometric form
+    AL, _, _ = left_gauge(left)        # local left-isometric form
     ARtt = _transpose_tail(right)   # AR is already right-isometric
 
     # nothing to add when either complement is empty (e.g. edge bonds)
@@ -81,7 +81,7 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Sk
     # embed `left` into the enlarged domain (zero weight in the new directions), leaving the state
     # unchanged
     nal_space = codomain(left) ← (only(domain(left)) ⊕ space(ar_re, 1))
-    nal, nc = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
+    nal, nc, _ = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
     nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
 
     normalize && normalize!(nc)

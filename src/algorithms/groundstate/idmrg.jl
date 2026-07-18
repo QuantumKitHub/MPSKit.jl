@@ -110,7 +110,7 @@ function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps,
             @infov 3 logiter!(log, it.iter, ϵ, ΔE)
         end
 
-        alg_gauge = updatetol(alg.alg_gauge, it.state.iter, it.state.ϵ)
+        alg_gauge = adapt_solver(alg.alg_gauge; iter = it.state.iter, g_global = it.state.ϵ)
         ψ′ = InfiniteMPS(it.state.mps.AR; alg_gauge.tol, alg_gauge.maxiter)
         envs = recalculate!(it.state.envs, ψ′, it.state.operator, ψ′)
         return ψ′, envs, it.state.ϵ
@@ -151,7 +151,7 @@ end
 function localupdate_step!(
         it::IterativeSolver{<:IDMRG}, state
     )
-    alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
+    alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
     return _localupdate_sweep_idmrg!(
         state.mps, state.operator, state.envs, alg_eigsolve, state.timeroutput,
     )
@@ -160,7 +160,7 @@ end
 function localupdate_step!(
         it::IterativeSolver{<:IDMRG2}, state
     )
-    alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
+    alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
     return _localupdate_sweep_idmrg2!(
         state.mps, state.operator, state.envs, alg_eigsolve,
         it.trscheme, it.alg_svd, state.timeroutput,

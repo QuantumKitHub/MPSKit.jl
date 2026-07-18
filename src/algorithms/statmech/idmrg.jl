@@ -8,7 +8,7 @@ function leading_boundary(
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, operator, envs))
         for outer iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
+            alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = ϵ)
             C_current = ψ.C[:, 0]
 
             # left to right sweep
@@ -54,7 +54,7 @@ function leading_boundary(
         end
     end
 
-    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    alg_gauge = adapt_solver(alg.alg_gauge; iter, g_global = ϵ)
     ψ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
 
     recalculate!(envs, ψ, operator, ψ)
@@ -72,7 +72,7 @@ function leading_boundary(
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
+            alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = ϵ)
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
@@ -189,7 +189,7 @@ function leading_boundary(
         end
     end
 
-    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    alg_gauge = adapt_solver(alg.alg_gauge; iter, g_global = ϵ)
     ψ = MultilineMPS(map(identity, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
 
     recalculate!(envs, ψ, operator, ψ)

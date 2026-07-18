@@ -98,7 +98,7 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Ra
     ar_re = Vᴴ * NR
     # embed `left` into the enlarged domain (zero weight in the new directions)
     nal_space = codomain(left) ← (only(domain(left)) ⊕ space(Vᴴ, 1))
-    nal, nc = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
+    nal, nc, _ = left_gauge(absorb!(zerovector!(similar(left, nal_space)), left))
     nar = _transpose_front(catcodomain(_transpose_tail(right), ar_re))
 
     normalize && normalize!(nc)

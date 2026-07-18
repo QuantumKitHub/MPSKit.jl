@@ -170,7 +170,11 @@ end
 TensorKit.space(W::JordanMPOTensor) = space(W.tensors)
 Base.eltype(::Type{T}) where {T <: JordanMPOTensor} = eltype(fieldtype(T, :tensors))
 
-function Base.getproperty(W::JordanMPOTensor, sym::Symbol)
+Base.size(W::JordanMPOTensor) = size(W.tensors)
+Base.size(W::JordanMPOTensor, i::Int) = size(W.tensors, i)
+BlockTensorKit.eachspace(W::JordanMPOTensor) = eachspace(W.tensors)
+
+Base.@constprop :aggressive function Base.getproperty(W::JordanMPOTensor, sym::Symbol)
     sym === :A && return _jordan_A(W)
     sym === :B && return _jordan_B(W)
     sym === :C && return _jordan_C(W)

@@ -63,7 +63,7 @@ function dominant_eigsolve(
 
     mps = copy(mps)
     ϵ = calc_galerkin(mps, operator, mps, envs)
-    alg_environments = updatetol(alg.alg_environments, iter, ϵ)
+    alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)
     recalculate!(envs, mps, operator, mps, alg_environments; timeroutput)
 
     state = VUMPSState(mps, operator, envs, iter, ϵ, which, timeroutput)
@@ -118,8 +118,8 @@ end
 function localupdate_step!(
         it::IterativeSolver{<:VUMPS}, state, scheduler = Defaults.scheduler[]
     )
-    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
+    alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
     alg_orth = alg_gauge.alg_orth
 
     mps = state.mps
@@ -186,7 +186,7 @@ function _localupdate_vumps_step!(
 end
 
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
-    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
     mps = gaugefix!(
         state.mps, ACs, state.mps.C[end];
         order = :R, timeroutput = state.timeroutput, alg_gauge...,
@@ -195,11 +195,11 @@ function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
     return mps
 end
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractMatrix)
-    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
     return MultilineMPS(ACs, @view(state.mps.C[:, end]); alg_gauge.tol, alg_gauge.maxiter, alg_gauge.alg_orth)
 end
 
 function envs_step!(it::IterativeSolver{<:VUMPS}, state, mps)
-    alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
+    alg_environments = adapt_solver(it.alg_environments; iter = state.iter, g_global = state.ϵ)
     return recalculate!(state.envs, mps, state.operator, mps, alg_environments; state.timeroutput)
 end

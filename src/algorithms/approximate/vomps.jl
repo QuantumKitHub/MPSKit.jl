@@ -17,7 +17,7 @@ function approximate(
     log = IterLog("VOMPS")
     iter = 0
     ϵ = calc_galerkin(mps, toapprox..., envs)
-    alg_environments = updatetol(alg.alg_environments, iter, ϵ)
+    alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)
     recalculate!(envs, mps, toapprox..., alg_environments)
 
     state = VOMPSState(mps, toapprox, envs, iter, ϵ)
@@ -65,7 +65,7 @@ end
 function localupdate_step!(
         it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
     )
-    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
     alg_orth = alg_gauge.alg_orth
 
     ACs = similar(state.mps.AC)
@@ -89,7 +89,7 @@ end
 function localupdate_step!(
         it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, scheduler
     )
-    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
     alg_orth = alg_gauge.alg_orth
 
     ACs = similar(state.mps.AC)
@@ -119,6 +119,6 @@ function localupdate_step!(
 end
 
 function envs_step!(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, mps)
-    alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
+    alg_environments = adapt_solver(it.alg_environments; iter = state.iter, g_global = state.ϵ)
     return recalculate!(state.envs, mps, state.operator..., alg_environments)
 end
