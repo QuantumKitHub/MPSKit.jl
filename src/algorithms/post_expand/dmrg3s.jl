@@ -31,7 +31,7 @@ to exactly zero once it falls below `threshold`. Use `decay_rate < 1` for a stan
 nonzero `threshold` avoids running the (cheap, but non-free) expansion step
 indefinitely on a noise amplitude too small to matter.
 """
-struct ExponentialDecay{T<:Real} <: NoiseSchedule
+struct ExponentialDecay{T <: Real} <: NoiseSchedule
     decay_rate::T
     threshold::T
 end
