@@ -38,6 +38,8 @@ export time_evolve, timestep, timestep!, make_time_mpo
 export TDVP, TDVP2, WI, WII, TaylorCluster
 export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
+export post_expand!, NoExpand
+export NoiseSchedule, ExponentialDecay, Warmup, DMRG3S
 export propagator
 export DynamicalDMRG, NaiveInvert, Jeckelmann
 export exact_diagonalization, fidelity_susceptibility
@@ -159,6 +161,9 @@ include("algorithms/changebonds/vumpssvd.jl")
 include("algorithms/changebonds/svdcut.jl")
 include("algorithms/changebonds/randexpand.jl")
 include("algorithms/changebonds/sketchedexpand.jl")
+
+include("algorithms/post_expand/post_expand.jl")
+include("algorithms/post_expand/dmrg3s.jl")
 
 include("algorithms/timestep/tdvp.jl")
 include("algorithms/timestep/taylorcluster.jl")
