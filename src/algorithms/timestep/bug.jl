@@ -9,11 +9,20 @@ Unlike [`TDVP`](@ref), BUG advances both the basis (K-step) and the core (Galerk
 *forward* in time, with no backward-in-time substep. This makes it a natural choice for
 imaginary-time / dissipative evolution, where the backward core step of TDVP can become unstable.
 
-Passing a truncating `trscheme` (anything other than `notrunc()`) switches on **rank-adaptivity**:
-each half-sweep augments every bond with the new directions discovered by the evolved connecting
-tensor (old basis first, `[U₀ │ K₁]`) and then truncates back down to the tolerance of `trscheme`.
-The bond dimension grows and shrinks automatically to track the entanglement; `notrunc()` recovers
-the fixed-rank integrator.
+Each half-sweep augments every bond with the new directions discovered by the evolved connecting
+tensor (old basis first, `[U₀ │ K₁]`) and truncates back down to the tolerance of `trscheme` in the
+same orthonormalization step. The truncation is folded into the augment orth (a truncated SVD of the
+stacked basis), so the old directions — whose orthonormal columns carry singular value `≥ 1` — are
+always kept and only newly-appended directions are cut. The bond therefore *grows* to track the
+entanglement under a `truncerror` tolerance; a hard rank cap (`truncrank`) can additionally shrink it.
+
+!!! warning
+    With `trscheme = notrunc()` the augmented basis is kept at full rank every half-sweep, so the
+    bond grows unboundedly (up to the local Hilbert-space dimension) — this is **not** a fixed-rank
+    integrator. To cap the bond dimension at `D`, pass `trscheme = truncrank(D)`: because the old
+    directions carry singular value `≥ 1`, a rank-`D` cut keeps them and drops the newly appended
+    directions, so a bond already at `D` stays there (a fixed-rank-`D` step). A bond currently below
+    `D` can still grow up to `D` as new directions are admitted.
 
 !!! note
     By default the state is not renormalized, so the norm keeps useful information (the
@@ -29,18 +38,15 @@ $(TYPEDFIELDS)
 
 * [Ceruti et al. BIT Numer. Math. 62 (2022)](@cite ceruti2022)
 """
-struct BUG{A, O, T, S, F} <: Algorithm
+struct BUG{A, O, G, F} <: Algorithm
     "algorithm used in the exponential solvers"
     integrator::A
 
     "algorithm used to re-orthonormalize the basis after each local update"
     alg_orth::O
 
-    "truncation scheme used to cut the bond back down for rank-adaptive BUG"
-    trscheme::T
-
-    "algorithm used for the singular value decomposition"
-    alg_svd::S
+    "factorization used for the in-sweep augment gauge: a truncated SVD (`alg_svd` with `trscheme`)"
+    alg_gauge::G
 
     "callback function applied after each iteration, of signature `finalize(t, ψ, H, envs) -> ψ, envs`"
     finalize::F
@@ -50,7 +56,79 @@ function BUG(;
         trscheme = notrunc(), alg_svd = Defaults.alg_svd(),
         finalize = Defaults._finalize
     )
-    return BUG(integrator, alg_orth, trscheme, alg_svd, finalize)
+    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+    return BUG(integrator, alg_orth, alg_gauge, finalize)
+end
+
+# left→right BUG update at `site`: evolve the connecting tensor, old-first augment + truncate the
+# basis, and return the `transport` and center `AC_old` advanced to `site + 1` (root = last site).
+function local_update!(
+        site, ::Val{:right}, ψ, H, alg::BUG, envs, t, h, transport, AC_old, ARs;
+        imaginary_evolution, normalize
+    )
+    # 1. Transport the old AC to the new frame and evolve
+    AC₀ = _mul_front(transport, AC_old)
+    AC = integrate(
+        AC_hamiltonian(site, ψ, H, ψ, envs), AC₀,
+        t, h, alg.integrator; imaginary_evolution
+    )
+
+    # If end of chain, finalize
+    if site == length(ψ)
+        normalize && normalize!(AC)
+        ψ.AC[site] = AC
+        return ψ, transport, AC_old
+    end
+
+    # 2. move gauge right
+    oldbasis, C₀ = left_gauge(AC₀, alg.alg_orth)                        # old AL - C in new frame
+    AC_next = _mul_front(C₀, ARs[site + 1])
+
+
+    # 3. reproject onto new basis
+    newbasis, _ = left_gauge(catdomain(oldbasis, AC), alg.alg_gauge)    # augmented basis
+    newbond = newbasis' * AC
+    ψ.AC[site] = (newbasis, newbond)
+    new_transport = newbasis' * oldbasis
+
+    return ψ, new_transport, AC_next
+end
+
+# mirror of the left→right update on the `_transpose_tail` form; `transport` and `AC_old` are returned
+# advanced to `site - 1` (root = first site).
+function local_update!(
+        site, ::Val{:left}, ψ, H, alg::BUG, envs, t, h, transport, AC_old, ALs;
+        imaginary_evolution, normalize
+    )
+    # 1. Transport the old AC to the new frame and evolve
+    AC₀ = AC_old * transport
+    AC = integrate(
+        AC_hamiltonian(site, ψ, H, ψ, envs), AC₀,
+        t, h, alg.integrator; imaginary_evolution
+    )
+
+    # If start of chain, finalize
+    if site == 1
+        normalize && normalize!(AC)
+        ψ.AC[site] = AC
+        return ψ, transport, AC_old
+    end
+
+    # 2. move gauge left
+    C₀, oldbasis = right_gauge(AC₀, alg.alg_orth)              # old C - AR in new frame
+    AC_next = _mul_tail(ALs[site - 1], C₀)
+
+    # 3. reproject onto new basis
+    _, newbasis_tail = right_orth(
+        catcodomain(_transpose_tail(oldbasis), _transpose_tail(AC));
+        alg = MatrixAlgebraKit.RightOrthViaSVD(alg.alg_gauge)   # augmented basis
+    )
+    newbasis = _transpose_front(newbasis_tail)
+    newbond = _transpose_tail(AC) * _transpose_tail(newbasis)'
+    ψ.AC[site] = (newbond, newbasis)
+    new_transport = _transpose_tail(oldbasis) * _transpose_tail(newbasis)'
+
+    return ψ, new_transport, AC_next
 end
 
 function timestep!(
@@ -61,75 +139,34 @@ function timestep!(
     # symmetric 2nd-order: a dt/2 left→right half-sweep composed with its dt/2 mirror
     L = length(ψ)
     h = dt / 2
-    truncates = !(alg.trscheme isa MatrixAlgebraKit.NoTruncation)
-    svdcut = SvdCut(; trscheme = alg.trscheme, alg_svd = alg.alg_svd)
 
-    # left→right half-sweep (root = last site)
-    ψ.AC[1]                       # gauge center to site 1
-    ψ_old = copy(ψ)               # frozen bases / reprojection inputs
-    T = isomorphism(scalartype(ψ), left_virtualspace(ψ_old, 1) ← left_virtualspace(ψ_old, 1))
-    for i in 1:(L - 1)
-        Ĉ = _mul_front(T, ψ_old.AC[i])                       # reproject old connecting tensor
-        AC = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t, h, alg.integrator; imaginary_evolution)
-        U₀ = _mul_front(T, ψ_old.AL[i])                      # old left isometry in the new frame
-        if truncates
-            U = _bug_augment_left(U₀, AC, alg.alg_orth)      # old-first augment; cut deferred to changebonds!
-            C = U' * AC
-        else
-            U, C = left_gauge(AC, alg.alg_orth)
-        end
-        T = U' * U₀                                          # transport (new ← old)
-        ψ.AC[i] = (U, C)
+    # left→right half-sweep (root = last site): freeze the bases as `[AC[1], AR[2], …, AR[L]]` and
+    # carry `AC_old`/`transport` forward
+    ARs = ψ.AR[2:end]
+    pushfirst!(ARs, ψ.AC[1])
+    transport = isomorphism(scalartype(ψ), left_virtualspace(ψ, 1) ← left_virtualspace(ψ, 1))
+    AC_old = ARs[1]
+    for site in 1:L
+        ψ, transport, AC_old = local_update!(
+            site, Val(:right), ψ, H, alg, envs, t, h, transport, AC_old, ARs;
+            imaginary_evolution, normalize
+        )
     end
-    AC = integrate(
-        AC_hamiltonian(L, ψ, H, ψ, envs), _mul_front(T, ψ_old.AC[L]),
-        t, h, alg.integrator; imaginary_evolution
-    )
-    normalize && normalize!(AC)
-    ψ.AC[L] = AC
-    truncates && changebonds!(ψ, svdcut; normalize)
 
-    # right→left half-sweep (root = first site), the mirror
-    ψ.AC[L]                       # gauge center to site L
-    ψ_old = copy(ψ)
-    T = isomorphism(scalartype(ψ), right_virtualspace(ψ_old, L) ← right_virtualspace(ψ_old, L))
-    for i in L:-1:2
-        Ĉ = ψ_old.AC[i] * T                                  # reproject old connecting tensor
-        AC = integrate(AC_hamiltonian(i, ψ, H, ψ, envs), Ĉ, t + h, h, alg.integrator; imaginary_evolution)
-        U₀ = ψ_old.AR[i] * T                                 # old right isometry in the new frame
-        if truncates
-            U = _bug_augment_right(U₀, AC, alg.alg_orth)
-            C = _transpose_tail(AC) * _transpose_tail(U)'
-        else
-            C, U = right_gauge(AC, alg.alg_orth)
-        end
-        T = _transpose_tail(U₀) * _transpose_tail(U)'        # transport (old ← new)
-        ψ.AC[i] = (C, U)
+    # right→left half-sweep (root = first site), the mirror: freeze `[AL[1], …, AL[L-1], AC[L]]` and
+    # carry `AC_old`/`transport` backward (starting from `t + h`)
+    ALs = ψ.AL[1:(L - 1)]
+    push!(ALs, ψ.AC[L])
+    transport = isomorphism(scalartype(ψ), right_virtualspace(ψ, L) ← right_virtualspace(ψ, L))
+    AC_old = ALs[L]
+    for site in L:-1:1
+        ψ, transport, AC_old = local_update!(
+            site, Val(:left), ψ, H, alg, envs, t + h, h, transport, AC_old, ALs;
+            imaginary_evolution, normalize
+        )
     end
-    AC = integrate(
-        AC_hamiltonian(1, ψ, H, ψ, envs), ψ_old.AC[1] * T,
-        t + h, h, alg.integrator; imaginary_evolution
-    )
-    normalize && normalize!(AC)
-    ψ.AC[1] = AC
-    truncates && changebonds!(ψ, svdcut; normalize)
 
     return ψ, envs
-end
-
-# augment the RIGHT bond (left→right sweep): orthonormalize the stacked `[U₀ │ K₁]` (old isometry
-# first) so `U₀` stays the leading per-sector block and only the new directions of `K₁` are appended.
-function _bug_augment_left(U₀, K₁, alg_orth = Defaults.alg_orth())
-    Û, _ = left_orth(catdomain(U₀, K₁); alg = alg_orth)
-    return Û
-end
-
-# mirror of `_bug_augment_left` for the right→left sweep, on the `_transpose_tail` form (right-isometry
-# with orthonormal rows): an LQ orthonormalizes the stacked rows `[U₀; K₁]`, keeping `U₀` leading.
-function _bug_augment_right(U₀, K₁, alg_orth = Defaults.alg_orth())
-    stacked = catcodomain(_transpose_tail(U₀), _transpose_tail(K₁))
-    _, Û = right_orth(stacked; alg = alg_orth)
-    return _transpose_front(Û)
 end
 
 # copying version
