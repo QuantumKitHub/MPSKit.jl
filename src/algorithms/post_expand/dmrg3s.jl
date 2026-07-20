@@ -49,14 +49,17 @@ end
 
 (s::Warmup)(noise, iter, ϵ) = iter ≤ s.iters ? noise : zero(noise)
 
-struct DMRG3S{N, S <: NoiseSchedule} <: Algorithm
+struct DMRG3S{N, S <: NoiseSchedule, A} <: Algorithm
     noise::N
     schedule::S
+    alg_gauge::A
 end
 
-function _update_post_expand(alg::DMRG3S, iter, ϵ)
+DMRG3S(noise, schedule) = DMRG3S(noise, schedule, nothing)
+
+function _update_alg_gauge(alg::DMRG3S, iter, ϵ)
     noise = alg.schedule(alg.noise, iter, ϵ)
-    return iszero(noise) ? NoExpand() : DMRG3S(noise, alg.schedule)
+    return iszero(noise) ? NoExpand(alg.alg_gauge) : DMRG3S(noise, alg.schedule, alg.alg_gauge)
 end
 
 function _get_combiner(::Type{T}, V1, V2) where {T}
@@ -64,7 +67,7 @@ function _get_combiner(::Type{T}, V1, V2) where {T}
     return isomorphism(T, (V1 ⊗ V2) ← Vf), Vf
 end
 
-function post_expand!(pos::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::DMRG3S, envs, AC, alg_gauge; normalize = true)
+function gauge!(pos::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, envs, AC, alg::DMRG3S; normalize = true)
     El = leftenv(envs, pos, ψ)
     Hi = H[pos]
     α = alg.noise
@@ -76,17 +79,17 @@ function post_expand!(pos::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::DM
 
     AC_expanded = catdomain(AC, pert)
 
-    AL, C = left_gauge(AC_expanded, alg_gauge)
+    AL, C, ϵ = left_gauge(AC_expanded, alg.alg_gauge)
     B = _transpose_tail(ψ.AR[pos + 1])
     AR = _transpose_front(catcodomain(B, zeros(T, Vpert ← domain(B))))
 
     normalize && normalize!(C)
     ψ.AC[pos] = (AL, C)
     ψ.AC[pos + 1] = (C, AR)
-    return ψ
+    return ψ, ϵ
 end
 
-function post_expand!(pos::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::DMRG3S, envs, AC, alg_gauge; normalize = true)
+function gauge!(pos::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, envs, AC, alg::DMRG3S; normalize = true)
     Er = rightenv(envs, pos, ψ)
     Hi = H[pos]
     α = alg.noise
@@ -99,12 +102,12 @@ function post_expand!(pos::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::DMR
     AC = _transpose_tail(AC)
     AC_expanded = catcodomain(AC, pert)
 
-    C, AR = right_gauge(AC_expanded, alg_gauge)
+    C, AR, ϵ = right_gauge(AC_expanded, alg.alg_gauge)
     B = ψ.AL[pos - 1]
     AL = catdomain(B, zeros(T, codomain(B) ← Vpert))
 
     normalize && normalize!(C)
     ψ.AC[pos] = (C, AR)
     ψ.AC[pos - 1] = (AL, C)
-    return ψ
+    return ψ, ϵ
 end

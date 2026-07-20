@@ -1,11 +1,10 @@
-struct NoExpand <: Algorithm end
-
-_update_post_expand(::NoExpand, iter, ϵ) = NoExpand()
-
-function post_expand!(pos::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, ::NoExpand, envs, AC, alg_gauge; normalize::Bool = false)
-    return left_gauge!(ψ, pos, AC, alg_gauge; normalize)
+struct NoExpand{A} <: Algorithm
+    alg_gauge::A
 end
 
-function post_expand!(pos::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, ::NoExpand, envs, AC, alg_gauge; normalize::Bool = false)
-    return right_gauge!(ψ, pos, AC, alg_gauge; normalize)
-end
+_update_alg_gauge(alg::NoExpand, iter, ϵ) = alg
+
+gauge!(pos::Int, direction, ψ::AbstractFiniteMPS, H, envs, AC, alg::NoExpand; normalize::Bool = false) = 
+    gauge!(ψ, pos, direction, AC, alg.alg_gauge; normalize)
+gauge2!(pos::Int, direction, ψ::AbstractFiniteMPS, H, envs, AC2, alg::NoExpand; normalize::Bool = false) = 
+    gauge2!(ψ, pos, direction, AC2, alg.alg_gauge; normalize)

@@ -38,7 +38,7 @@ export time_evolve, timestep, timestep!, make_time_mpo
 export TDVP, TDVP2, WI, WII, TaylorCluster
 export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
-export post_expand!, NoExpand
+export NoExpand
 export NoiseSchedule, FunctionalSchedule, ExponentialDecay, Warmup, DMRG3S
 export propagator
 export DynamicalDMRG, NaiveInvert, Jeckelmann

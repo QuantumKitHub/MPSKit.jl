@@ -71,7 +71,7 @@ function local_update!(
         site, direction,
         ψ, O, alg::DMRG, envs,
         ϵ_global, ϵ_trunc, decay_rate,
-        timeroutput
+        alg_gauge, timeroutput
     )
     ϵ_local = calc_galerkin(site, ψ, O, ψ, envs)
 
@@ -88,7 +88,7 @@ function local_update!(
     end
 
     # 3. gauge
-    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge!(ψ, site, direction, AC′, alg.alg_gauge; normalize = true)
+    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge!(site, direction, ψ, O, envs, AC′, alg_gauge; normalize = true)
 
     # 4. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
     decay_rate = clamp((first(info.normres) / ϵ_local)^(1 / max(1, info.numops)), 1.0e-3, 0.999)
@@ -137,7 +137,7 @@ function DMRG2(;
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
         Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
     # two-site DMRG always truncates the enlarged bond back down, so the gauge is a truncated SVD
-    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+    alg_gauge = NoExpand(MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme))
     return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_gauge, finalize)
 end
 
@@ -145,7 +145,7 @@ function local_update!(
         pos, direction,
         ψ, O, alg::DMRG2, envs,
         ϵ_global, ϵ_trunc, decay_rate,
-        timeroutput
+        alg_gauge, timeroutput
     )
     Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs)
 
@@ -164,7 +164,7 @@ function local_update!(
 
     # 2. gauge: truncated SVD split back into single-site tensors and install;
     #           the discarded weight is the truncation error
-    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge2!(ψ, pos, direction, newA2center, alg.alg_gauge; normalize = true)
+    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge2!(site, direction, ψ, O, envs, newA2center, alg_gauge; normalize = true)
 
     # 3. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
     decay_rate = clamp((first(info.normres) / ϵ_local)^(1 / max(1, info.numops)), 1.0e-3, 0.999)
@@ -203,6 +203,7 @@ function find_groundstate!(
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ_global, expectation_value(ψ, H, envs))
         for iter in 1:(alg.maxiter)
+            alg_gauge = _update_alg_gauge(alg.alg_gauge, iter, ϵ_global)
             @timeit timeroutput "sweep" begin
                 # left-to-right
                 for pos in fwd
@@ -211,7 +212,7 @@ function find_groundstate!(
                         pos, Val(:right),
                         ψ, H, alg, envs,
                         ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        timeroutput
+                        alg_gauge, timeroutput
                     )
                     ϵ_global = maximum(ϵ_locals)
                 end
@@ -223,7 +224,7 @@ function find_groundstate!(
                         pos, Val(:left),
                         ψ, H, alg, envs,
                         ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        timeroutput
+                        alg_gauge, timeroutput
                     )
                     ϵ_global = maximum(ϵ_locals)
                 end
