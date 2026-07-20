@@ -120,16 +120,16 @@ verbosity_conv = 1
         Random.seed!(1234)
         ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
         v₀ = variance(ψ₀, H)
-        alg_post_expand = DMRG3S(0.1, ExponentialDecay(0.7))  # TODO: match final constructor API
+        alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7))  # TODO: match final constructor API
         trscheme = truncrank(D)
 
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_post_expand, trscheme)
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_gauge, trscheme)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_post_expand, trscheme), envs
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_gauge, trscheme), envs
         )
         v = variance(ψ, H)
 
@@ -153,11 +153,11 @@ verbosity_conv = 1
         )
         E_stuck = real(expectation_value(ψ_stuck, H_heis, envs_stuck))
 
-        alg_post_expand = DMRG3S(0.1, ExponentialDecay(0.8))
+        alg_gauge = DMRG3S(0.1, ExponentialDecay(0.8))
         ψ_escape, envs_escape, δ_escape = find_groundstate(
             ψ_bad, H_heis, DMRG(;
                 verbosity = verbosity_conv, maxiter = 30,
-                alg_post_expand, trscheme = truncrank(20),
+                alg_gauge, trscheme = truncrank(20),
             )
         )
         E_escape = real(expectation_value(ψ_escape, H_heis, envs_escape))
