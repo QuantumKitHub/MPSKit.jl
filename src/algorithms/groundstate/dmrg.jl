@@ -8,7 +8,7 @@ _truncates(alg::DMRG3S) = _truncates(alg.alg_gauge)
 # a no-truncation `trscheme` selects a (bond-preserving) QR gauge, anything else a truncated SVD
 _build_inner_gauge(trscheme, alg_svd, alg_orth) =
     trscheme isa MatrixAlgebraKit.NoTruncation ? alg_orth :
-        MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+    MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
 
 _expands(::NoExpand) = false
 _expands(::DMRG3S) = true
@@ -89,18 +89,20 @@ function DMRG(;
     # `alg_eigsolve = (; adaptive = false, ...)` to opt out (the splat overrides the default).
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
         Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
-    
+
     inner_gauge = alg_gauge.alg_gauge
     if isnothing(inner_gauge)
         trscheme = something(trscheme, notrunc()) # enforce trscheme default here
         inner_gauge = _build_inner_gauge(trscheme, alg_svd, alg_orth)
         alg_gauge = set_alg_gauge(alg_gauge, inner_gauge)
     else
-        isnothing(trscheme) || throw(ArgumentError(
-            "`trscheme` was given together with an `alg_gauge` that already carries its own " *
-            "gauge algorithm (e.g. `DMRG3S(noise, schedule, some_gauge)`); set the truncation " *
-            "via one or the other, not both."
-        ))
+        isnothing(trscheme) || throw(
+            ArgumentError(
+                "`trscheme` was given together with an `alg_gauge` that already carries its own " *
+                    "gauge algorithm (e.g. `DMRG3S(noise, schedule, some_gauge)`); set the truncation " *
+                    "via one or the other, not both."
+            )
+        )
     end
 
     if (!isnothing(alg_expand) || _expands(alg_gauge)) && !_truncates(alg_gauge)
@@ -226,6 +228,8 @@ _num_updates(::DMRG2, ψ) = length(ψ) - 1
 
 _sweep_ranges(::DMRG, ψ) = (1:(length(ψ) - 1), length(ψ):-1:2)
 _sweep_ranges(::DMRG2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 2):-1:1)
+
+inner_alg_gauge(alg::Union{DMRG, DMRG2}) = alg.alg_gauge.alg_gauge
 
 function find_groundstate!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs = environments(ψ, H, ψ)
