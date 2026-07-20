@@ -1,3 +1,12 @@
+"""
+    NoiseSchedule
+
+Supertype for controlling how a bond-expansion algorithm's noise/perturbation amplitude
+evolves across DMRG sweeps. A schedule `s` is called as `s(noise, iter, ϵ) -> noise`, given
+the current noise amplitude, the outer iteration count, and the current global convergence
+error, and returns the amplitude to use for the next iteration. Schedules can be composed
+with `∘`; see [`ExponentialDecay`](@ref), [`Warmup`](@ref), [`FunctionalSchedule`](@ref).
+"""
 abstract type NoiseSchedule end
 
 """
@@ -43,12 +52,44 @@ function (s::ExponentialDecay)(noise, iter, ϵ)
     return decayed < s.threshold ? zero(decayed) : decayed
 end
 
+"""
+    Warmup(iters::Int)
+
+Noise schedule that keeps the noise amplitude constant for the first `iters` outer
+iterations, then drops it to exactly zero. Useful composed with a decaying schedule (e.g.
+`ExponentialDecay(0.7) ∘ Warmup(5)`) to hold the perturbation at full strength for a few
+sweeps before starting to taper it off.
+"""
 struct Warmup <: NoiseSchedule
     iters::Int
 end
 
 (s::Warmup)(noise, iter, ϵ) = iter ≤ s.iters ? noise : zero(noise)
 
+"""
+    DMRG3S(noise, schedule::NoiseSchedule)
+
+Gauge algorithm wrapper that, at every site update, injects a Hamiltonian-derived
+perturbation of the just-optimized tensor before gauging — the "strictly single-site DMRG with
+subspace expansion" scheme of Hubig, McCulloch, Schollwöck & Wolf,
+[Phys. Rev. B 91, 155115 (2015)](https://doi.org/10.1103/PhysRevB.91.155115). This lets
+single-site DMRG introduce basis states/quantum-number sectors absent from the initial
+state, helping it escape local minima that plain single-site DMRG can get stuck in.
+
+`noise` is the initial perturbation amplitude; `schedule` (see [`ExponentialDecay`](@ref),
+[`Warmup`](@ref)) controls how it evolves across outer iterations, and once it decays to
+exactly zero the gauge step reverts to a plain [`NoExpand`](@ref) for the remainder of the
+run. As with [`NoExpand`](@ref), the actual factorization used to gauge the enriched tensor
+is filled in by `DMRG`'s constructor, not supplied here directly — see `DMRG`'s docstring
+for the calling convention:
+
+```julia
+DMRG(; alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7)), trscheme = truncdim(50))
+```
+
+A truncating `trscheme` is strongly recommended alongside `DMRG3S`, to cut the perturbed
+bond back down each sweep — `DMRG`'s constructor warns if none is given.
+"""
 struct DMRG3S{N, S <: NoiseSchedule, A} <: Algorithm
     noise::N
     schedule::S
@@ -56,6 +97,8 @@ struct DMRG3S{N, S <: NoiseSchedule, A} <: Algorithm
 end
 
 DMRG3S(noise, schedule) = DMRG3S(noise, schedule, nothing)
+
+set_alg_gauge(alg::DMRG3S, inner_gauge) = DMRG3S(alg.noise, alg.schedule, inner_gauge)
 
 function _update_alg_gauge(alg::DMRG3S, iter, ϵ)
     noise = alg.schedule(alg.noise, iter, ϵ)
