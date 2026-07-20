@@ -7,12 +7,20 @@ println("
 using .TestSetup
 using Test, TestExtras
 using MPSKit
-using MPSKit: _bug_augment_left, _bug_augment_right, _transpose_tail, _transpose_front,
-    left_orth, right_gauge
+using MPSKit: _transpose_tail, _transpose_front, left_orth, right_orth, right_gauge, Defaults
 using TensorKit
-using TensorKit: ℙ
+using TensorKit: ℙ, catdomain, catcodomain
 using LinearAlgebra: I, norm
 using Random
+
+# The basis-augmentation step is inlined into `timestep!`; these local one-liners mirror it so the
+# invariants can be exercised directly. Left: orthonormalize the stacked `[U₀ │ K₁]` (old first);
+# right: the `_transpose_tail` mirror (LQ on the stacked rows `[U₀; K₁]`).
+_bug_augment_left(U₀, K₁) = first(left_orth(catdomain(U₀, K₁); alg = Defaults.alg_orth()))
+function _bug_augment_right(U₀, K₁)
+    _, Û = right_orth(catcodomain(_transpose_tail(U₀), _transpose_tail(K₁)); alg = Defaults.alg_orth())
+    return _transpose_front(Û)
+end
 
 # The augment helpers keep the OLD isometry `U₀` as the leading per-sector block and append the
 # component of the evolved candidate `K₁` that is orthogonal to it (no truncation). The four core
