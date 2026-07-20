@@ -143,7 +143,7 @@ verbosity_conv = 1
 
     @testset "DMRG3S escapes local minimum (Hubig et al. 2015, Sec. VII A)" begin
         L_heis = 20
-        H_heis = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L=L_heis)
+        H_heis = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L = L_heis)
 
         Random.seed!(1234)
         ψ_bad = bad_initial_state(H_heis, L_heis)
