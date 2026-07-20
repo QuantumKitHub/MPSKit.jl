@@ -164,7 +164,7 @@ function local_update!(
 
     # 2. gauge: truncated SVD split back into single-site tensors and install;
     #           the discarded weight is the truncation error
-    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge2!(site, direction, ψ, O, envs, newA2center, alg_gauge; normalize = true)
+    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge2!(pos, direction, ψ, O, envs, newA2center, alg_gauge; normalize = true)
 
     # 3. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
     decay_rate = clamp((first(info.normres) / ϵ_local)^(1 / max(1, info.numops)), 1.0e-3, 0.999)
