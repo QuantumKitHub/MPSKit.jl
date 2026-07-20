@@ -115,6 +115,58 @@ verbosity_conv = 1
         @test dim(left_virtualspace(ψ, L ÷ 2)) == D
     end
 
+    @testset "DMRG3S" begin
+        # start from a small bond so the post-expansion is exercised, mirroring CBEDMRG above
+        Random.seed!(1234)
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+        v₀ = variance(ψ₀, H)
+        alg_post_expand = DMRG3S(0.1, ExponentialDecay(0.7))  # TODO: match final constructor API
+        trscheme = truncrank(D)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_post_expand, trscheme)
+        )
+
+        ψ, envs, δ = find_groundstate(
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_post_expand, trscheme), envs
+        )
+        v = variance(ψ, H)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test v < v₀
+        @test v < 1.0e-2
+        # the bond should have grown to the truncation target
+        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+    end
+
+    @testset "DMRG3S escapes local minimum (Hubig et al. 2015, Sec. VII A)" begin
+        L_heis = 20
+        H_heis = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L=L_heis)
+
+        Random.seed!(1234)
+        ψ_bad = bad_initial_state(H_heis, L_heis)
+
+        ψ_stuck, envs_stuck, δ_stuck = find_groundstate(
+            ψ_bad, H_heis, DMRG(; verbosity = verbosity_conv, maxiter = 30)
+        )
+        E_stuck = real(expectation_value(ψ_stuck, H_heis, envs_stuck))
+
+        alg_post_expand = DMRG3S(0.1, ExponentialDecay(0.8))
+        ψ_escape, envs_escape, δ_escape = find_groundstate(
+            ψ_bad, H_heis, DMRG(;
+                verbosity = verbosity_conv, maxiter = 30,
+                alg_post_expand, trscheme = truncrank(20),
+            )
+        )
+        E_escape = real(expectation_value(ψ_escape, H_heis, envs_escape))
+
+        # paper reports E(α=0) = -6.35479, E(α≠0) = -8.6824724 for this L_heis = 20, S = 1/2 AFM setup
+        @test E_escape < E_stuck - 1.0
+        @test isapprox(E_escape, -8.6824724; atol = 1.0e-4)
+    end
+
     @testset "GradientGrassmann" begin
         ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
         v₀ = variance(ψ₀, H)
