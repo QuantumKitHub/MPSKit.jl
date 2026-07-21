@@ -62,10 +62,7 @@ function approximate(
         verbosity = Defaults.verbosity, trscheme = nothing
     )
     if isa(ψ, InfiniteMPS)
-        alg = VOMPS(; tol = max(1.0e-4, tol), verbosity, maxiter)
-        if tol < 1.0e-4
-            alg = alg & IDMRG(; tol = tol, maxiter, verbosity)
-        end
+        alg = VOMPS(; tol, verbosity, maxiter)
         if !isnothing(trscheme)
             alg = IDMRG2(; tol = min(1.0e-2, 100tol), verbosity, trscheme) & alg
         end
