@@ -33,7 +33,7 @@ function find_groundstate(state, H, alg::UnionAlg, envs = environments(state, H,
     return find_groundstate(state, H, alg.alg2, envs)
 end
 
-function approximate(state, toapprox, alg::UnionAlg, envs=enviroments(state, toapprox...))
+function approximate(state, toapprox, alg::UnionAlg, envs = enviroments(state, toapprox...))
     state, envs = approximate(state, toapprox, alg.alg1, envs)
     return approximate(state, toapprox, alg.alg2, envs)
 end

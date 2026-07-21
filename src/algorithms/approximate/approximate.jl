@@ -56,10 +56,10 @@ _environment_args(Oϕ::Tuple) = Oϕ
 _environment_args(ϕ) = (ϕ,)
 
 function approximate(
-        ψ::AbstractMPS, toapprox::Tuple{<:AbstractMPO, <:AbstractMPS}, 
+        ψ::AbstractMPS, toapprox::Tuple{<:AbstractMPO, <:AbstractMPS},
         envs = environments(ψ, toapprox...),
-        tol = Defaults.tol, maxiter=Defaults.maxiter,
-        verbosity=Defaults.verbosity, trscheme=nothing
+        tol = Defaults.tol, maxiter = Defaults.maxiter,
+        verbosity = Defaults.verbosity, trscheme = nothing
     )
     if isa(ψ, InfiniteMPS)
         alg = VOMPS(; tol = max(1.0e-4, tol), verbosity, maxiter)
