@@ -57,7 +57,7 @@ _environment_args(ϕ) = (ϕ,)
 
 function approximate(
         ψ::AbstractMPS, toapprox::Tuple{<:AbstractMPO, <:AbstractMPS},
-        envs = environments(ψ, toapprox...),
+        envs::AbstractMPSEnvironments = environments(ψ, toapprox...);
         tol = Defaults.tol, maxiter = Defaults.maxiter,
         verbosity = Defaults.verbosity, trscheme = nothing
     )
@@ -78,7 +78,7 @@ function approximate(
         throw(ArgumentError("Unknown input state type"))
     end
 
-    return approximate(ψ, H, alg, envs)
+    return approximate(ψ, toapprox, alg, envs)
 end
 
 
