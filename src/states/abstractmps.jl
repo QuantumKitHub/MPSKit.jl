@@ -3,12 +3,22 @@ Tensor types
 ===========================================================================================#
 
 """
+    GenericMPOTensor{S,N}
+
+Tensor type for representing local MPO tensors with matching numbers of codomain
+and domain legs. The first codomain leg is the left virtual leg, the last domain
+leg is the right virtual leg, the remaining codomain legs are output physical
+legs, and the remaining domain legs are input physical legs.
+"""
+const GenericMPOTensor{S, N} = AbstractTensorMap{T, S, N, N} where {T}
+"""
     MPOTensor{S}
 
-Tensor type for representing local MPO tensors, with the index convention `W ⊗ S ← N ⊗ E`,
-where `N`, `E`, `S` and `W` denote the north, east, south and west virtual spaces respectively.
+Tensor type for representing single-physical-leg local MPO tensors, with the
+index convention `W ⊗ S ← N ⊗ E`, where `N`, `E`, `S` and `W` denote the north,
+east, south and west virtual spaces respectively.
 """
-const MPOTensor{S} = AbstractTensorMap{T, S, 2, 2} where {T}
+const MPOTensor{S} = GenericMPOTensor{S, 2}
 const MPSBondTensor{S} = AbstractTensorMap{T, S, 1, 1} where {T}
 const GenericMPSTensor{S, N} = AbstractTensorMap{T, S, N, 1} where {T} # some functions are also defined for "general mps tensors" (used in peps code)
 const MPSTensor{S} = GenericMPSTensor{S, 2} # the usual mps tensors on which we work
@@ -214,6 +224,7 @@ Return the virtual space of the bond to the left of sites `pos`.
 function left_virtualspace end
 left_virtualspace(A::GenericMPSTensor) = space(A, 1)
 left_virtualspace(O::MPOTensor) = space(O, 1)
+left_virtualspace(O::GenericMPOTensor) = space(O, 1)
 left_virtualspace(ψ::AbstractMPS) = map(Base.Fix1(left_virtualspace, ψ), eachsite(ψ))
 
 """
@@ -228,6 +239,7 @@ Return the virtual space of the bond to the right of site(s) `pos`.
 function right_virtualspace end
 right_virtualspace(A::GenericMPSTensor) = space(A, numind(A))'
 right_virtualspace(O::MPOTensor) = space(O, 4)'
+right_virtualspace(O::GenericMPOTensor) = space(O, numind(O))'
 right_virtualspace(ψ::AbstractMPS) = map(Base.Fix1(right_virtualspace, ψ), eachsite(ψ))
 
 """
@@ -240,6 +252,7 @@ physicalspace(A::MPSTensor) = space(A, 2)
 physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
 physicalspace(O::MPOTensor) = space(O, 2)
 physicalspace(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}) = only(space(O, 2))
+physicalspace(O::GenericMPOTensor) = prod(x -> space(O, x), 2:numout(O))
 physicalspace(ψ::AbstractMPS) = map(Base.Fix1(physicalspace, ψ), eachsite(ψ))
 
 """
