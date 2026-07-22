@@ -271,35 +271,6 @@ function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
     @plansor A′[-1 -2; -3] := Fₗ[-1; 1 3] * A[1 2; 4] * O[3 -2; 2 5] * conj(Fᵣ[-3; 4 5])
     return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
 end
-@generated function _fuse_mpo_mps(
-        O::GenericMPOTensor{S, Nₒ}, A::GenericMPSTensor{S, Nₐ}, Fₗ, Fᵣ
-    ) where {S, Nₒ, Nₐ}
-    Nₒ == Nₐ ||
-        return :(throw(ArgumentError("MPO input physical legs should match MPS physical legs")))
-
-    mps_left = 1
-    mpo_left = 2
-    mps_right = 3
-    mpo_right = 4
-    phys_in = 5:(Nₐ + 3)
-
-    out_phys = -(2:Nₒ)
-    out_right = -(Nₒ + 1)
-
-    t_out = tensorexpr(:A′, (-(1:Nₒ)...,), out_right)
-    t_left = tensorexpr(:Fₗ, -1, (mps_left, mpo_left))
-    t_mps = tensorexpr(:A, (mps_left, phys_in...), mps_right)
-    t_mpo = tensorexpr(:O, (mpo_left, out_phys...), (phys_in..., mpo_right))
-    t_right = tensorexpr(:Fᵣ, out_right, (mps_right, mpo_right))
-    ex = macroexpand(
-        @__MODULE__, :(@plansor $t_out ≔ $t_left * $t_mps * $t_mpo * conj($t_right))
-    )
-
-    return quote
-        $ex
-        return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
-    end
-end
 
 function Base.:*(mpo::FiniteMPO{<:MPOTensor}, x::AbstractTensorMap)
     @assert length(mpo) > 1

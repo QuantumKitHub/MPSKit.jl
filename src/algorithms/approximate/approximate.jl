@@ -4,10 +4,11 @@
     approximate!(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, ϵ)
     approximate(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, ϵ)
     approximate!(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, ϵ)
+    approximate((O, ψ), algorithm) -> ψ′
 
 Compute an approximation to the application of an operator `O` to the state `ψ` in the form
-of an MPS `ψ₀`. If only a state `ψ` is supplied instead of the `(O, ψ)` pair, `ψ₀` is
-approximated directly to `ψ` (i.e. `O` is taken to be the identity).
+of an MPS, using initial guess `ψ₀`. If only a state `ψ` is supplied instead of the `(O, ψ)` pair,
+`ψ₀` is approximated directly to `ψ` (i.e. `O` is taken to be the identity).
 
 **Not every algorithm supports every combination of arguments below** — see the per-algorithm
 notes at the end of this docstring before picking one.
@@ -41,6 +42,7 @@ infinite algorithms always require an explicit `(O, ψ)` tuple, and **`VOMPS` ha
 |:--------- |:----------------------------- |:---------------------------------- |:------------------:|:--------------:|
 | `DMRG`    | single-site, fixes bond dim    | `AbstractFiniteMPS`                | ✅                  | ✅              |
 | `DMRG2`   | two-site, truncates via `trscheme` | `AbstractFiniteMPS`            | ✅                  | ✅              |
+| `Zipper`  | right-to-left streaming MPO-MPS compression | none, uses `(O, ψ)` directly | ❌                  | ❌              |
 | `IDMRG`   | single-site, thermodynamic limit | `InfiniteMPS` / `MultilineMPS`  | ❌ (tuple only)     | ✅              |
 | `IDMRG2`  | two-site, thermodynamic limit, needs unit cell ≥ 2 | `InfiniteMPS` / `MultilineMPS` | ❌ (tuple only) | ✅ |
 | `VOMPS`   | tangent-space truncation       | `InfiniteMPS` / `MultilineMPS`     | ❌ (tuple only)     | ❌ (out-of-place only) |

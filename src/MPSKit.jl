@@ -36,8 +36,9 @@ export excitations
 export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo
 export TDVP, TDVP2, WI, WII, TaylorCluster
-export changebonds, changebonds!, zipper
+export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
+export Zipper
 export propagator
 export DynamicalDMRG, NaiveInvert, Jeckelmann
 export exact_diagonalization, fidelity_susceptibility
@@ -157,7 +158,6 @@ include("algorithms/changebonds/changebonds.jl")
 include("algorithms/changebonds/optimalexpand.jl")
 include("algorithms/changebonds/vumpssvd.jl")
 include("algorithms/changebonds/svdcut.jl")
-include("algorithms/changebonds/zipper.jl")
 include("algorithms/changebonds/randexpand.jl")
 include("algorithms/changebonds/sketchedexpand.jl")
 
@@ -189,6 +189,7 @@ include("algorithms/statmech/idmrg.jl")
 include("algorithms/fidelity_susceptibility.jl")
 
 include("algorithms/approximate/approximate.jl")
+include("algorithms/approximate/zipper.jl")
 include("algorithms/approximate/vomps.jl")
 include("algorithms/approximate/fvomps.jl")
 include("algorithms/approximate/idmrg.jl")
