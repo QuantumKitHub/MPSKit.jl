@@ -60,4 +60,3 @@ end
         @test data ≈ predicted atol = 1.0e-8
     end
 end
-
