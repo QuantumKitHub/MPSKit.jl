@@ -1,17 +1,17 @@
 """
-    Zipper(; alg_svd=Defaults.alg_svd(), trscheme)
+$(TYPEDEF)
 
 Algorithm that approximates an open-boundary finite MPO-MPS product using a left-to-right
 zipper sweep. The MPO and MPS are contracted one site at a time, and the enlarged virtual
 bond is truncated immediately using `trscheme`.
 
-Use as:
+## Fields
 
-    approximate((O, ψ), Zipper(; trscheme))
+$(TYPEDFIELDS)
 
-This returns an unnormalized compression of `O * ψ`, comparable to
-`changebonds(O * ψ, SvdCut(; trscheme); normalize=false)`, but without storing
-the fully enlarged product on every site.
+## References
+
+* [Sinha et al. Phys. Rev. B 109 (2024)](@cite sinha2024)
 """
 @kwdef struct Zipper{S} <: Algorithm
     "algorithm used for the singular value decomposition"
