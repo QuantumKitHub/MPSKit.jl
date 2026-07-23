@@ -9,16 +9,25 @@ bond is truncated immediately using `trscheme`.
 
 $(TYPEDFIELDS)
 
+## Constructors
+
+    Zipper(; trscheme, alg_svd=Defaults.alg_svd())
+    Zipper(alg_gauge)
+
+Create a `Zipper` algorithm with the given truncated gauge algorithm, or by passing a
+truncation scheme and singular value decomposition algorithm.
+
 ## References
 
-* [Sinha et al. Phys. Rev. B 109 (2024)](@cite sinha2024)
+- [Sinha et al. Phys. Rev. B 109 (2024)](@cite sinha2024)
 """
-@kwdef struct Zipper{S} <: Algorithm
-    "algorithm used for the singular value decomposition"
-    alg_svd::S = Defaults.alg_svd()
+struct Zipper{G} <: Algorithm
+    "algorithm used for gauging and truncating the local tensors"
+    alg_gauge::G
+end
 
-    "algorithm used for truncation of the local gauge tensors"
-    trscheme::TruncationStrategy
+function Zipper(; trscheme::TruncationStrategy, alg_svd = Defaults.alg_svd())
+    return Zipper(MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme))
 end
 
 function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipper)
@@ -32,7 +41,6 @@ function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipper)
 
     Fₗ = fuser(A, left_virtualspace(ψ, 1), left_virtualspace(O, 1))
     local carry
-    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trscheme)
 
     As = map(1:N) do i
         Aψ = i == 1 ? ψ.AC[1] : ψ.AR[i]
@@ -45,7 +53,7 @@ function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipper)
         if i == N
             return Aᶻ
         else
-            AL, C, _ = left_gauge(Aᶻ, alg_gauge)
+            AL, C, _ = left_gauge(Aᶻ, alg.alg_gauge)
             carry = C
             Fₗ = Fᵣ
             return AL
