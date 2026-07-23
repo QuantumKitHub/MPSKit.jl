@@ -116,7 +116,7 @@ function local_update!(
         site, direction,
         ψ, O, alg::DMRG, envs,
         ϵ_global, ϵ_trunc, decay_rate,
-        alg_gauge, timeroutput
+        iter, timeroutput
     )
     ϵ_local = calc_galerkin(site, ψ, O, ψ, envs)
 
@@ -131,6 +131,8 @@ function local_update!(
         H_effective = AC_hamiltonian(site, ψ, O, ψ, envs)
         fixedpoint(H_effective, ac_old, :SR, alg_eigsolve)
     end
+
+    alg_gauge = _update_alg_gauge(alg.alg_gauge, iter, ϵ_global)
 
     # 3. gauge
     ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge!(site, direction, ψ, O, envs, AC′, alg_gauge; normalize = true)
@@ -190,7 +192,7 @@ function local_update!(
         pos, direction,
         ψ, O, alg::DMRG2, envs,
         ϵ_global, ϵ_trunc, decay_rate,
-        alg_gauge, timeroutput
+        iter, timeroutput
     )
     Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs)
 
@@ -206,6 +208,8 @@ function local_update!(
         _, newA2center, info = fixedpoint(Heff, ac2, :SR, alg_eigsolve)
         (newA2center, info)
     end
+
+    alg_gauge = _update_alg_gauge(alg.alg_gauge, iter, ϵ_global)
 
     # 2. gauge: truncated SVD split back into single-site tensors and install;
     #           the discarded weight is the truncation error
@@ -250,7 +254,6 @@ function find_groundstate!(
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ_global, expectation_value(ψ, H, envs))
         for iter in 1:(alg.maxiter)
-            alg_gauge = _update_alg_gauge(alg.alg_gauge, iter, ϵ_global)
             @timeit timeroutput "sweep" begin
                 # left-to-right
                 for pos in fwd
@@ -259,7 +262,7 @@ function find_groundstate!(
                         pos, Val(:right),
                         ψ, H, alg, envs,
                         ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        alg_gauge, timeroutput
+                        iter, timeroutput
                     )
                     ϵ_global = maximum(ϵ_locals)
                 end
@@ -271,7 +274,7 @@ function find_groundstate!(
                         pos, Val(:left),
                         ψ, H, alg, envs,
                         ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        alg_gauge, timeroutput
+                        iter, timeroutput
                     )
                     ϵ_global = maximum(ϵ_locals)
                 end
