@@ -105,6 +105,12 @@ function _update_alg_gauge(alg::DMRG3S, iter, ϵ)
     return iszero(noise) ? NoExpand(alg.alg_gauge) : DMRG3S(noise, alg.schedule, alg.alg_gauge)
 end
 
+# similar to `fuser` but the contracted leg is flattened
+function _get_combiner(::Type{TorA}, V1, V2) where {TorA}
+    Vprod = V1 ⊗ V2
+    return isomorphism(TorA, oplus(fuse(Vprod)), Vprod)
+end
+
 function gauge!(pos::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, envs, AC, alg::DMRG3S; normalize = true)
     El = leftenv(envs, pos, ψ)
     Hi = H[pos]
@@ -112,10 +118,11 @@ function gauge!(pos::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, envs, AC, alg
     T = promote_type(scalartype(ψ), scalartype(Hi))
     V = right_virtualspace(AC)
 
-    combiner = fuser(T, V, right_virtualspace(Hi))'
+    combiner = _get_combiner(T, V, right_virtualspace(Hi))'
     Vpert = only(domain(combiner))
 
-    @plansor pert[-1 -2; -3] := α * El[-1 5; 4] * AC[4 2; 1] * Hi[5 -2; 2 3] * combiner[1 3; -3]
+    mpo_ac = MPO_AC_Hamiltonian(El, Hi, combiner)
+    pert = α * mpo_ac(AC)
 
     AC_expanded = catdomain(AC, pert)
 
@@ -136,11 +143,12 @@ function gauge!(pos::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, envs, AC, alg:
     T = promote_type(scalartype(ψ), scalartype(Hi))
     V = left_virtualspace(AC)
 
-    combiner = fuser(T, V, left_virtualspace(Hi))
+    combiner = _get_combiner(T, V, left_virtualspace(Hi))
     Vpert = only(codomain(combiner))
     combiner = _transpose_front(combiner)
 
-    @plansor pert[-1 -2; -3] := α * combiner[-1 5; 4] * AC[4 2; 1] * Hi[5 -2; 2 3] * Er[1 3; -3]
+    mpo_ac = MPO_AC_Hamiltonian(combiner, Hi, Er)
+    pert = α * mpo_ac(AC)
     AC = _transpose_tail(AC)
     pert = _transpose_tail(pert)
 
