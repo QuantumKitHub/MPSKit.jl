@@ -77,8 +77,8 @@ state, helping it escape local minima that plain single-site DMRG can get stuck 
 
 `noise` is the initial perturbation amplitude; `schedule` (see [`ExponentialDecay`](@ref),
 [`Warmup`](@ref)) controls how it evolves across outer iterations, and once it decays to
-exactly zero the gauge step reverts to a plain [`NoExpand`](@ref) for the remainder of the
-run. As with [`NoExpand`](@ref), the actual factorization used to gauge the enriched tensor
+exactly zero the gauge step reverts to a plain gauge shift for the remainder of the
+run. The actual factorization used to gauge the enriched tensor
 is filled in by `DMRG`'s constructor, not supplied here directly — see `DMRG`'s docstring
 for the calling convention:
 
@@ -102,10 +102,11 @@ end
 DMRG3S(noise, schedule) = DMRG3S(noise, schedule, nothing)
 
 set_alg_gauge(alg::DMRG3S, inner_gauge) = DMRG3S(alg.noise, alg.schedule, inner_gauge)
+alg_gauge(alg) = alg.alg_gauge
 
 function _update_alg_gauge(alg::DMRG3S, iter, ϵ)
     noise = alg.schedule(alg.noise, iter, ϵ)
-    return iszero(noise) ? NoExpand(alg.alg_gauge) : DMRG3S(noise, alg.schedule, alg.alg_gauge)
+    return iszero(noise) ? alg.alg_gauge : DMRG3S(noise, alg.schedule, alg.alg_gauge)
 end
 
 # similar to `fuser` but the contracted leg is flattened

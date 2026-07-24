@@ -2,7 +2,6 @@
 # center-move as in textbook single-site DMRG)
 _truncates(::MatrixAlgebraKit.AbstractAlgorithm) = false
 _truncates(::MatrixAlgebraKit.TruncatedAlgorithm) = true
-_truncates(alg::NoExpand) = _truncates(alg.alg_gauge)
 _truncates(alg::DMRG3S) = _truncates(alg.alg_gauge)
 
 # a no-truncation `trscheme` selects a (bond-preserving) QR gauge, anything else a truncated SVD
@@ -10,7 +9,7 @@ _build_inner_gauge(trscheme, alg_svd, alg_orth) =
     trscheme isa MatrixAlgebraKit.NoTruncation ? alg_orth :
     MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
 
-_expands(::NoExpand) = false
+_expands(alg) = false
 _expands(::DMRG3S) = true
 
 """
@@ -20,13 +19,14 @@ Density Matrix Renormalization Group algorithm for finding the dominant eigenvec
 
 Each site update is, in order: (1) an optional bond expansion (`alg_expand`), (2) a single-site
 eigensolve, and (3) a gauge step (`alg_gauge`). With the defaults (`alg_expand = nothing` and
-`alg_gauge = NoExpand()`, a non-truncating QR gauge) this is textbook single-site DMRG, which
-cannot change the bond dimension. Setting `alg_expand` to a bond-expansion algorithm (e.g.
-[`OptimalExpand`](@ref), [`RandExpand`](@ref), [`SketchedExpand`](@ref)) enriches the bond with
-directions orthogonal to the current state ahead of each eigensolve, recovering Controlled Bond
-Expansion (CBE) DMRG. Setting `alg_gauge` to a bond-expanding gauge algorithm (e.g. [`DMRG3S`](@ref))
-instead enriches the bond as part of the gauge step, after the eigensolve. Either way, a
-truncating gauge (see below) is then desirable to cut the enlarged bond back down.
+`alg_gauge = nothing`, a non-truncating QR gauge derived from `trscheme = notrunc()`) this is
+textbook single-site DMRG, which cannot change the bond dimension. Setting `alg_expand` to a
+bond-expansion algorithm (e.g. [`OptimalExpand`](@ref), [`RandExpand`](@ref), [`SketchedExpand`](@ref))
+enriches the bond with directions orthogonal to the current state ahead of each eigensolve,
+recovering Controlled Bond Expansion (CBE) DMRG. Setting `alg_gauge` to a bond-expanding gauge
+algorithm (e.g. [`DMRG3S`](@ref)) instead enriches the bond as part of the gauge step, after the
+eigensolve. Either way, a truncating gauge (see below) is then desirable to cut the enlarged
+bond back down.
 
 # Choosing the gauge
 
@@ -82,7 +82,7 @@ end
 function DMRG(;
         tol = Defaults.tol, maxiter = Defaults.maxiter, alg_eigsolve = (;),
         verbosity = Defaults.verbosity, finalize = Defaults._finalize,
-        alg_expand = nothing, alg_gauge = NoExpand(), trscheme = nothing,
+        alg_expand = nothing, alg_gauge = nothing, trscheme = nothing,
         alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth()
     )
     # single-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
@@ -90,8 +90,7 @@ function DMRG(;
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
         Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
 
-    inner_gauge = alg_gauge.alg_gauge
-    if isnothing(inner_gauge)
+    if isnothing(alg_gauge) || isnothing(alg_gauge.alg_gauge)
         trscheme = something(trscheme, notrunc()) # enforce trscheme default here
         inner_gauge = _build_inner_gauge(trscheme, alg_svd, alg_orth)
         alg_gauge = set_alg_gauge(alg_gauge, inner_gauge)
@@ -184,7 +183,7 @@ function DMRG2(;
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
         Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
     # two-site DMRG always truncates the enlarged bond back down, so the gauge is a truncated SVD
-    alg_gauge = NoExpand(MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme))
+    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
     return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_gauge, finalize)
 end
 
@@ -233,7 +232,7 @@ _num_updates(::DMRG2, ψ) = length(ψ) - 1
 _sweep_ranges(::DMRG, ψ) = (1:(length(ψ) - 1), length(ψ):-1:2)
 _sweep_ranges(::DMRG2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 2):-1:1)
 
-inner_alg_gauge(alg::Union{DMRG, DMRG2}) = alg.alg_gauge.alg_gauge
+inner_alg_gauge(alg::Union{DMRG, DMRG2}) = alg_gauge(alg.alg_gauge)
 
 function find_groundstate!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs = environments(ψ, H, ψ)
