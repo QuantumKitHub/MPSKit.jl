@@ -111,7 +111,7 @@ function _get_combiner(::Type{TorA}, V1, V2) where {TorA}
     return isomorphism(TorA, oplus(fuse(Vprod)), Vprod)
 end
 
-function gauge!(pos::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, envs, AC, alg::DMRG3S; normalize = true)
+function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{:right}, H, envs, AC, alg::DMRG3S; normalize = true)
     El = leftenv(envs, pos, ψ)
     Hi = H[pos]
     α = alg.noise
@@ -136,7 +136,7 @@ function gauge!(pos::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, envs, AC, alg
     return ψ, ϵ
 end
 
-function gauge!(pos::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, envs, AC, alg::DMRG3S; normalize = true)
+function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{:left}, H, envs, AC, alg::DMRG3S; normalize = true)
     Er = rightenv(envs, pos, ψ)
     Hi = H[pos]
     α = alg.noise
