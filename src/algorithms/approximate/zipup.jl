@@ -2,7 +2,7 @@
 $(TYPEDEF)
 
 Algorithm that approximates an open-boundary finite MPO-MPS product using a left-to-right
-zipper sweep. The MPO and MPS are contracted one site at a time, and the enlarged virtual
+zip-up sweep. The MPO and MPS are contracted one site at a time, and the enlarged virtual
 bond is truncated immediately using `trscheme`.
 
 ## Fields
@@ -11,29 +11,29 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-    Zipper(; trscheme, alg_svd=Defaults.alg_svd())
-    Zipper(alg_gauge)
+    Zipup(; trscheme, alg_svd=Defaults.alg_svd())
+    Zipup(alg_gauge)
 
-Create a `Zipper` algorithm with the given truncated gauge algorithm, or by passing a
+Create a `Zipup` algorithm with the given truncated gauge algorithm, or by passing a
 truncation scheme and singular value decomposition algorithm.
 
 ## References
 
-- [Sinha et al. Phys. Rev. B 109 (2024)](@cite sinha2024)
+- [Stoudenmire and White New J. Phys. 12 (2010)](@cite stoudenmire2010)
 """
-struct Zipper{G} <: Algorithm
+struct Zipup{G} <: Algorithm
     "algorithm used for gauging and truncating the local tensors"
     alg_gauge::G
 end
 
-function Zipper(; trscheme::TruncationStrategy, alg_svd = Defaults.alg_svd())
-    return Zipper(MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme))
+function Zipup(; trscheme::TruncationStrategy, alg_svd = Defaults.alg_svd())
+    return Zipup(MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme))
 end
 
-function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipper)
+function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipup)
     N = check_length(O, ψ)
     if !isunitspace(left_virtualspace(O, 1)) || !isunitspace(right_virtualspace(O, N))
-        throw(ArgumentError("Zipper is only implemented for open-boundary MPOs"))
+        throw(ArgumentError("Zipup is only implemented for open-boundary MPOs"))
     end
 
     T = TensorOperations.promote_contract(scalartype(O), scalartype(ψ))
