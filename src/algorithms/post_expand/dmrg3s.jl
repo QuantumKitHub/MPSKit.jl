@@ -102,7 +102,7 @@ end
 DMRG3S(noise, schedule) = DMRG3S(noise, schedule, nothing)
 
 set_alg_gauge(alg::DMRG3S, inner_gauge) = DMRG3S(alg.noise, alg.schedule, inner_gauge)
-alg_gauge(alg) = alg.alg_gauge
+alg_gauge(alg::DMRG3S) = alg.alg_gauge
 
 function _update_alg_gauge(alg::DMRG3S, iter, ϵ)
     noise = alg.schedule(alg.noise, iter, ϵ)
