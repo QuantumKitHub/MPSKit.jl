@@ -13,77 +13,22 @@ const MPSBondTensor{S} = AbstractTensorMap{T, S, 1, 1} where {T}
 const GenericMPSTensor{S, N} = AbstractTensorMap{T, S, N, 1} where {T} # some functions are also defined for "general mps tensors" (used in peps code)
 const MPSTensor{S} = GenericMPSTensor{S, 2} # the usual mps tensors on which we work
 
-"""
-    MPSTensor([f, eltype], d::Int, left_D::Int, [right_D]::Int])
-    MPSTensor([f, eltype], physicalspace::Union{S,CompositeSpace{S}}, 
-              left_virtualspace::S, [right_virtualspace]::S) where {S<:ElementarySpace}
-
-Construct an `MPSTensor` with given physical and virtual spaces.
-
-### Arguments
-- `f::Function=rand`: initializer function for tensor data
-- `eltype::Type{<:Number}=ComplexF64`: scalar type of tensors
-
-- `physicalspace::Union{S,CompositeSpace{S}}`: physical space
-- `left_virtualspace::S`: left virtual space
-- `right_virtualspace::S`: right virtual space, defaults to equal left
-
-- `d::Int`: physical dimension
-- `left_D::Int`: left virtual dimension
-- `right_D::Int`: right virtual dimension
-"""
-function MPSTensor(
-        ::UndefInitializer, T, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
-    ) where {S <: ElementarySpace}
-    TT = tensormaptype(S, 1 + (P isa S ? 1 : length(P)), 1, T)
-    return TT(undef, Vₗ ⊗ P ← Vᵣ)
+struct MPSMapSpace{S <: ElementarySpace, Sₚ <: Union{S, CompositeSpace{S}}}
+    Vₗ::S
+    P::Sₚ
+    Vᵣ::S
 end
-function MPSTensor(
-        f, T, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
-    ) where {S <: ElementarySpace}
-    A = MPSTensor(undef, T, P, Vₗ, Vᵣ)
-    if f === rand
-        return rand!(A)
-    elseif f === randn
-        return randn!(A)
-    elseif f === zeros
-        return zeros!(A)
-    else
-        throw(ArgumentError("Unsupported initializer function: $f"))
+
+MPSMapSpace(Vₗ::S, P::Sₚ) where {S <: ElementarySpace, Sₚ <: Union{S, CompositeSpace{S}}} =
+    MPSMapSpace(Vₗ, P, Vₗ)
+
+MPSMapSpace(d::Int, Dₗ::Int, Dᵣ::Int = Dₗ) = MPSMapSpace(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
+
+for f in (:rand, :randn, :zeros)
+    @eval function Base.$f(::Type{T}, A::MPSMapSpace) where {T}
+        return $f(T, A.Vₗ ⊗ A.P ← A.Vᵣ)
     end
-end
-# TODO: reinstate function initializers?
-function MPSTensor(
-        P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
-    ) where {S <: ElementarySpace}
-    return MPSTensor(rand, Defaults.eltype, P, Vₗ, Vᵣ)
-end
-
-"""
-    MPSTensor([f, eltype], d::Int, Dₗ::Int, [Dᵣ]::Int])
-
-Construct an `MPSTensor` with given physical and virtual dimensions.
-
-### Arguments
-- `f::Function=rand`: initializer function for tensor data
-- `eltype::Type{<:Number}=ComplexF64`: scalar type of tensors
-- `d::Int`: physical dimension
-- `Dₗ::Int`: left virtual dimension
-- `Dᵣ::Int`: right virtual dimension
-"""
-MPSTensor(f, T, d::Int, Dₗ::Int, Dᵣ::Int = Dₗ) = MPSTensor(f, T, ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
-MPSTensor(d::Int, Dₗ::Int; Dᵣ::Int = Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
-
-"""
-    MPSTensor(A::AbstractArray)
-
-Convert an array to an `MPSTensor`.
-"""
-function MPSTensor(A::AbstractArray{<:Number})
-    @assert ndims(A) > 2 "MPSTensor should have at least 3 dims, but has $ndims(A)"
-    sz = size(A)
-    V = foldl(⊗, ComplexSpace.(sz[1:(end - 1)])) ← ℂ^sz[end]
-    return TensorMap(A, V)
+    @eval Base.$f(A::MPSMapSpace) = $f(Defaults.eltype, A)
 end
 
 """
