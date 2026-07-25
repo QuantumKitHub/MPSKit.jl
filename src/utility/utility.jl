@@ -143,7 +143,7 @@ function check_length(a, b...)
     return L
 end
 
-function fuser(::Type{TorA}, V1::S, V2::S) where {TorA, S <: IndexSpace}
+function fuser(::Type{TorA}, V1, V2) where {TorA}
     return isomorphism(TorA, fuse(V1 ⊗ V2), V1 ⊗ V2)
 end
 
