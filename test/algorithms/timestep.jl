@@ -33,6 +33,14 @@ verbosity_conv = 1
         @test dot(ψ1, ψ₀) ≈ exp(im * dt * E₀) atol = 1.0e-4
     end
 
+    @testset "Finite TEBD" begin
+        dt_tebd = dt / 10 # decrease due to trotter error
+        ψ1, = timestep(ψ₀, H, 0.0, dt_tebd, TEBD())
+        E1 = expectation_value(ψ1, H)
+        @test E₀ ≈ E1 atol = 1.0e-2
+        @test dot(ψ1, ψ₀) ≈ exp(im * dt_tebd * E₀) atol = 1.0e-4
+    end
+
     Hlazy = LazySum([3 * H, 1.55 * H, -0.1 * H])
 
     @testset "Finite LazySum $(alg isa TDVP ? "TDVP" : "TDVP2")" for alg in algs
