@@ -22,6 +22,7 @@ export JordanMPOTensor
 export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, WindowMPOHamiltonian
 export MultilineMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
+export ClusterTerm, cluster_hamiltonians
 
 # environments:
 export environments
@@ -131,6 +132,7 @@ include("operators/projection.jl")
 include("operators/timedependence.jl")
 include("operators/multipliedoperator.jl")
 include("operators/lazysum.jl")
+include("operators/clusterterms.jl")
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
