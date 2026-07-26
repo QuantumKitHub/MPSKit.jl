@@ -37,7 +37,7 @@ function left_excitation_transfer_system(
                 )
             end
 
-            found[i], convhist = linsolve(
+            found[i], convhist = KrylovKit.linsolve(
                 flip(T), found[i], found[i], solver, 1, -cis(-mom * len)
             )
             convhist.converged == 0 &&
@@ -87,7 +87,7 @@ function right_excitation_transfer_system(
                 )
             end
 
-            found[i], convhist = linsolve(
+            found[i], convhist = KrylovKit.linsolve(
                 tm, found[i], found[i], solver, 1, -cis(mom * len)
             )
             convhist.converged < 1 &&
