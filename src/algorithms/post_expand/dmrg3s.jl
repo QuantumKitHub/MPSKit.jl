@@ -103,7 +103,7 @@ Used as the `alg_gauge` argument of [`DMRG`](@ref).
 
 # References
 
-* [Hubig et al. Phys. Rev. B 91, 155115 (2015)](@cite Hubig2015)
+* [Hubig et al. Phys. Rev. B 91, 155115 (2015)](@cite hubig2015)
 """
 struct DMRG3S{N, S <: NoiseSchedule, A} <: Algorithm
     "initial perturbation amplitude, before `schedule` is applied"
