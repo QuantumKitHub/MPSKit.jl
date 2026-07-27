@@ -32,6 +32,16 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
   and passing a truncating `trunc` enables rank-adaptivity (the bond dimension grows and shrinks
   automatically to track entanglement).
+- `linsolve`/`linsolve!` solve the linear system `(a₀ + a₁·A)·x = b` for a finite MPS `x`, with `A`
+  an MPO/MPOHamiltonian and `b` an MPS.
+  The shift follows the convention of `KrylovKit.linsolve` and is applied implicitly.
+  Algorithms are the DMRG-style sweeps `DMRGSolve` (single-site) and `DMRGSolve2` (two-site,
+  rank-adaptive), each parameterized by a local formulation — `Galerkin` (solve the effective system
+  directly) or `LeastSquares` (normal equations via squared environments).
+  Convergence is the local Galerkin residual `‖(a₀ + a₁·A)·x − b‖ / ‖b‖`, and the local solves use
+  adaptive tolerances by default.
+- `DynamicalDMRG` gained a `trunc` field: when supplied, a truncated two-site sweep is prepended,
+  making `propagator` bond-adaptive instead of fixing the bond dimension of the initial guess.
 
 ### Changed
 
@@ -41,6 +51,22 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   or the decaying weight in imaginary time). Previously imaginary-time evolution always renormalized
   every step; **to recover that behavior, pass `normalize = true`** (e.g. for ground-state or
   thermal-state search via imaginary-time evolution).
+- `propagator`/`DynamicalDMRG` are now implemented on top of `linsolve`.
+  Both flavours keep their variational problem unchanged — `NaiveInvert` is a `Galerkin` solve of
+  `(z − H)·x = |ψ₀⟩`, and `Jeckelmann` still minimizes functional (14) of Jeckelmann2002 and
+  reconstructs `G(z)` through equation (11) of that paper.
+  Three defaults changed as a consequence: convergence is measured by the relative residual of the
+  linear system rather than by the per-site update norm, `tol` defaults to `Defaults.tol` rather than
+  `10·Defaults.tol`, and the local solver defaults to `Defaults.alg_linsolve()` (adaptive tolerances)
+  rather than a fixed-tolerance `GMRES`.
+  Iteration logs are labelled `linsolve` instead of `DDMRG`.
+  `propagator` with the `Jeckelmann` flavour now throws for real `z` instead of returning `NaN`
+  (the equation-(11) reconstruction divides by `imag(z)`).
+- The `LeastSquares` formulation of `linsolve` now forms the `A†b` term of the normal equations from
+  the mixed sandwich `⟨x|A|b⟩` instead of materializing `A·b` as an MPS.
+  This avoids building a state of bond dimension `χ_A·χ_b` together with its environments, and makes
+  the formulation applicable to `WindowMPS`, for which no `*(::WindowMPOHamiltonian, ::WindowMPS)`
+  exists.
 - `environments` now follows a single positional contract for every state and operator kind:
   `environments(below, operator, above, alg)`, where `alg` is the environment algorithm
   (slot 4). The operator form requires an explicit `above`. Auxiliary inputs are keyword-only:
@@ -90,6 +116,13 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   and the right virtual leg of `mpo[end]` and contracted the two — which at length 1 is the *same*
   tensor, so it returned `O * O` on twice the physical space instead of `O`.
   ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- `Defaults.alg_linsolve(; ishermitian = true)` returned a `MINRES` solver, for which KrylovKit has no
+  `linsolve` method, so the hermitian-indefinite path of `linsolve(…; ishermitian = true)` threw a
+  `MethodError`. It now falls back to `GMRES`, mirroring KrylovKit's own auto-selection.
+- A local `linsolve` solve no longer warns about non-convergence when it undershot its own adaptive
+  tolerance but still reached the accuracy the outer sweep needs.
+  Adaptive tolerances routinely dip below the round-off floor of the local problem, which made the
+  warning fire on nearly every tightly-converged sweep.
 
 ### Performance
 

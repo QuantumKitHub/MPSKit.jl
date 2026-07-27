@@ -31,6 +31,20 @@ verbosity_conv = 1
         end
         @test data ≈ predicted atol = 1.0e-8
     end
+
+    # `trunc` prepends a two-site sweep, so the bond dimension of the initial guess need not
+    # already be large enough: start from χ = 2 and let it grow back to the χ = 10 of the solution
+    @testset "trunc (adaptive χ), flavour $f" for f in (Jeckelmann(), NaiveInvert())
+        alg = DynamicalDMRG(;
+            flavour = f, verbosity = 0, tol = 1.0e-8, trunc = truncrank(16)
+        )
+        init = FiniteMPS(L, ℙ^2, ℙ^2)
+        data = map(vals) do v
+            result, = propagator(gs, v + eta, H, alg; init)
+            return result
+        end
+        @test data ≈ predicted atol = 1.0e-6
+    end
 end
 
 
