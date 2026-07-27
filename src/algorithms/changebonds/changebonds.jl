@@ -14,11 +14,11 @@ Growing the bond dimension of a product state with [`OptimalExpand`](@ref), whic
 each bond with directions orthogonal to the current state (using the environments of `H`):
 
 ```jldoctest
-julia> X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2);
+julia> Z = TensorMap(Float64[1 0; 0 -1], ℂ^2, ℂ^2);
 
 julia> ψ = FiniteMPS(ones(Float64, (ℂ^2)^4));
 
-julia> H = FiniteMPOHamiltonian(fill(ℂ^2, 4), ((i, i + 1) => X ⊗ X for i in 1:3));
+julia> H = FiniteMPOHamiltonian(fill(ℂ^2, 4), ((i, i + 1) => Z ⊗ Z for i in 1:3));
 
 julia> dim(left_virtualspace(ψ, 3))
 1
@@ -28,6 +28,14 @@ julia> ψ′, envs = changebonds(ψ, H, OptimalExpand(; trscheme = truncrank(4))
 julia> dim(left_virtualspace(ψ′, 3))
 2
 ```
+
+!!! note
+    A bond is only enriched if there is something to enrich it with.
+    If the projection of the two-site update onto the orthogonal complement of the current state
+    vanishes — for instance when the state is already an exact eigenstate of the local terms, or
+    when the operator does not couple into a symmetry sector yet — that bond is left untouched.
+    Replacing `Z ⊗ Z` by `X ⊗ X` above illustrates this: `ones(Float64, (ℂ^2)^4)` is an eigenstate
+    of every `X ⊗ X` term, so every bond stays at dimension 1.
 """ changebonds, changebonds!
 function changebonds end
 function changebonds! end
