@@ -5,6 +5,7 @@ Integrate the differential equation ``i dy/dt = f(y, t)`` over a time step `dt` 
 ``y(t₀)=y₀``, using the provided algorithm.
 
 # Arguments
+
 - `f`: driving function
 - `y₀`: object to integrate
 - `t::Number`: starting time of time-step

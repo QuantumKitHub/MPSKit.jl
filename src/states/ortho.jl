@@ -11,6 +11,10 @@ Algorithm for bringing an `InfiniteMPS` into the left-canonical form.
 # Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `alg` argument of [`gaugefix!`](@ref).
 """
 @kwdef struct LeftCanonical <: Algorithm
     "tolerance for convergence criterium"
@@ -36,6 +40,10 @@ Algorithm for bringing an `InfiniteMPS` into the right-canonical form.
 # Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `alg` argument of [`gaugefix!`](@ref).
 """
 @kwdef struct RightCanonical <: Algorithm
     "tolerance for convergence criterium"
@@ -61,6 +69,10 @@ Algorithm for bringing an `InfiniteMPS` into the mixed-canonical form.
 # Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `alg` argument of [`gaugefix!`](@ref).
 """
 struct MixedCanonical <: Algorithm
     "algorithm for bringing an `InfiniteMPS` into left-canonical form."

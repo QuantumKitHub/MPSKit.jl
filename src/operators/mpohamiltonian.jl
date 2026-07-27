@@ -32,6 +32,7 @@ with a set of `inds => operator` pairs describing the local terms:
 - `D`: on-site terms
 
 # Examples
+
 A nearest-neighbour term is a two-element index tuple `(i, i + 1) => O₁₂`; an on-site term
 is a one-element tuple `(i,) => O`. For the finite variant the lattice lists every site; for
 the infinite variant it is a single unit cell and indices wrap around it periodically.
@@ -51,6 +52,7 @@ julia> Hi isa InfiniteMPOHamiltonian, length(Hi)
 ```
 
 # See also
+
 [`instantiate_operator`](@ref) is responsible for instantiating the local operators in a form
 that is compatible with this constructor.
 """

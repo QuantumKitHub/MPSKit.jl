@@ -7,19 +7,22 @@ specified, one is selected automatically from the type of `ψ₀` and the suppli
 (see the automatic-selection notes below).
 
 # Arguments
+
 - `ψ₀::AbstractMPS`: initial guess
 - `H::AbstractMPO`: operator for which to find the ground state
 - `[environments]`: MPS environment manager
 - `algorithm`: optimization algorithm
 
 # Keyword Arguments
-- `tol::Float64=$(Defaults.tol)`: tolerance for the convergence criterion
-- `maxiter::Int=$(Defaults.maxiter)`: maximum number of iterations
-- `verbosity::Int=$(Defaults.verbosity)`: display progress information
-- `trscheme=nothing`: if supplied, a truncation scheme that enables bond-dimension growth
+
+- `tol::Float64 = $(Defaults.tol)`: tolerance for the convergence criterion
+- `maxiter::Int = $(Defaults.maxiter)`: maximum number of iterations
+- `verbosity::Int = $(Defaults.verbosity)`: display progress information
+- `trscheme = nothing`: if supplied, a truncation scheme that enables bond-dimension growth
   through a two-site algorithm (see below)
 
 # Automatic algorithm selection
+
 When no `algorithm` is passed, the choice depends on the type of `ψ₀`:
 - `InfiniteMPS`: [`VUMPS`](@ref) (with its tolerance floored at `1e-4`), refined by
   [`GradientGrassmann`](@ref) when `tol < 1e-4`. If `trscheme` is given, an [`IDMRG2`](@ref)
@@ -32,11 +35,13 @@ Because single-site [`DMRG`](@ref) preserves the bond dimension of `ψ₀`, pass
 low-bond-dimension initial guess such as a product state.
 
 # Returns
+
 - `ψ::AbstractMPS`: converged ground state
 - `environments`: environments corresponding to the converged state
 - `ϵ::Float64`: final convergence error upon terminating the algorithm
 
 # Examples
+
 Ground state of a 4-site transverse-field Ising chain, `H = -∑ XₖXₖ₊₁ - ∑ Zₖ`, starting
 from a product state and letting `DMRG2` grow the bond dimension:
 

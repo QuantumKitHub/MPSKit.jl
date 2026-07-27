@@ -137,7 +137,7 @@ function transport!(h, state, g, α::Real, state′)
 end
 
 """
-    fg(state, operator, envs=environments(state, operator, state))
+    fg(state, operator, envs = environments(state, operator, state))
 
 Compute the cost function and the tangent vector with respect to the `AL` parameters of the state.
 """
@@ -219,7 +219,7 @@ function fg(
 end
 
 """
-    rho_inv_regularized(C; rtol=eps(real(scalartype(C)))^(3/4))
+    rho_inv_regularized(C; rtol = eps(real(scalartype(C)))^(3 / 4))
 
 Compute the (regularized) inverse of the MPS fixed point `ρ = C * C'`.
 Here we use the Tikhonov regularization, i.e. `inv(ρ) = inv(C * C' + δ²1)`,

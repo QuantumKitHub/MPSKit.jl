@@ -6,10 +6,12 @@ This type is basically an `AbstractVector` with some extra functionality to calc
 efficiently.
 
 # Constructors
+
     LazySum(x::Vector)
     LazySum(ops::AbstractVector, fs::AbstractVector)
 
 # Fields
+
 $(TYPEDFIELDS)
 """
 struct LazySum{O} <: AbstractVector{O}

@@ -13,6 +13,7 @@
 Compute the first excited states and their energy gap above a ground state.
 
 # Arguments
+
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm`: optimization algorithm
 - `ψ::QP`: initial quasiparticle guess
@@ -21,6 +22,7 @@ Compute the first excited states and their energy gap above a ground state.
 - `[right_environments]`: right ground state environment
 
 # Keyword Arguments
+
 - `num::Int`: number of excited states to compute
 - `solver`: algorithm for the linear solver of the quasiparticle environments
 - `init`: initial excited state guess; defaults to a copy of the first state in `ψs`

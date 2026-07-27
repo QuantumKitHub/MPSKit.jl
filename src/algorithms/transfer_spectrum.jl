@@ -8,12 +8,12 @@ The result is returned as a `TensorKit.SectorVector`, whose values can be inspec
 # Arguments
 
 - `above::InfiniteMPS`: the state for the "above" leg of the mixed transfer matrix.
-- `below::InfiniteMPS=above`: the state for the "below" leg; defaults to the pure transfer matrix of `above`.
+- `below::InfiniteMPS = above`: the state for the "below" leg; defaults to the pure transfer matrix of `above`.
 - `alg`: the eigensolver algorithm specification, resolved per sector via [`MatrixAlgebraKit.select_algorithm`](@extref MatrixAlgebraKit.select_algorithm).
   This can be a KrylovKit algorithm instance (used verbatim for every sector), a `MatrixAlgebraKit.DefaultAlgorithm` or `NamedTuple` bundling keyword arguments,
   or `nothing` (the default) to construct the eigensolver from the keyword arguments below.
 
-# Keyword arguments
+# Keyword Arguments
 
 - `howmany = 20`: the number of eigenvalues to compute. This can either be a single `Int`, which is used for every sector of the transfer space,
   or an `AbstractDict`/iterable of `sector => count` pairs to restrict the computation to specific sectors and request a different number of values per sector.
@@ -115,7 +115,7 @@ function approx_angles(spectrum; tol_angle = 0.1)
 end
 
 """
-    marek_gap(above::InfiniteMPS; sector=nothing, kwargs...)
+    marek_gap(above::InfiniteMPS; sector = nothing, kwargs...)
 
 Compute the gap `ϵ` for the asymptotics of the transfer matrix, as well as the Marek gap
 `δ` as a scaling measure of the bond dimension, along with the associated angle `θ`.
@@ -158,7 +158,7 @@ function marek_gap(spectrum::AbstractVector{T}; tol_angle = 0.1) where {T <: Num
 end
 
 """
-    correlation_length(above::InfiniteMPS; sector=nothing, kwargs...)
+    correlation_length(above::InfiniteMPS; sector = nothing, kwargs...)
 
 Compute the correlation length of a given InfiniteMPS based on the next-to-leading
 eigenvalue of the transfer matrix.

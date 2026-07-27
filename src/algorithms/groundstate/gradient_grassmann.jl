@@ -6,9 +6,11 @@ as points on a Grassmann manifold. The optimization is then a Riemannian gradien
 with a preconditioner to induce the metric from the Hilbert space inner product.
 
 # Constructors
+
     GradientGrassmann(; kwargs...)
 
 # Keyword Arguments
+
 - `method = ConjugateGradient`: instance of optimization algorithm, or type of optimization
     algorithm to construct
 - `finalize!`: finalizer algorithm

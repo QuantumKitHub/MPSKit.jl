@@ -15,6 +15,7 @@ acts, while the operator is either a `AbstractTensorMap` or a `FiniteMPO`. In th
 the operator is a `AbstractTensorMap` that acts on the physical space of a single site.
 
 # Arguments
+
 - `ψ::AbstractMPS`: the state on which to compute the expectation value
 - `O::Union{AbstractMPO, Pair, AbstractTensorMap}`: the operator to compute the expectation value of.
     This can either be an `AbstractMPO`, a pair of indices and local operator, or a local MPO tensor
@@ -23,6 +24,7 @@ the operator is a `AbstractTensorMap` that acts on the physical space of a singl
     Depending on the type of `O`, these will be the environments of the operator `O` or the MPO `mpo`.
 
 # Returns
+
 - `val::Number`: the (normalized) expectation value `⟨ψ|O|ψ⟩ / ⟨ψ|ψ⟩`.
 
 !!! note "Infinite operators"
@@ -31,6 +33,7 @@ the operator is a `AbstractTensorMap` that acts on the physical space of a singl
     per-site value.
 
 # Examples
+
 ```jldoctest
 julia> ψ = FiniteMPS(ones(Float64, (ℂ^2)^4));
 

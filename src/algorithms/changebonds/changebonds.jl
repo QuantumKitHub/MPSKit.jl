@@ -10,6 +10,7 @@ For FiniteMPS, changebonds also modifies the environments.
 See also: [`SvdCut`](@ref), [`RandExpand`](@ref), [`VUMPSSvdCut`](@ref), [`OptimalExpand`](@ref)
 
 # Examples
+
 Growing the bond dimension of a product state with [`OptimalExpand`](@ref), which enriches
 each bond with directions orthogonal to the current state (using the environments of `H`):
 

@@ -119,11 +119,13 @@ This is driven by the local and global gradient norm, the truncation error and t
 decay rate of previous iterations in an attempt to obtain fast convergence for gapped systems
 while avoiding stagnation for gapless ones.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-See also [`adapt_solver`](@ref).
+# See also
+
+[`adapt_solver`](@ref)
 """
 struct AdaptiveKrylov{T, O <: KrylovKit.Orthogonalizer} <: Algorithm
     "orthogonalizer passed to the instantiated `Lanczos`/`Arnoldi`"

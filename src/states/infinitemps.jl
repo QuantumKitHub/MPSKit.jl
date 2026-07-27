@@ -4,6 +4,7 @@ $(TYPEDEF)
 Type that represents an infinite Matrix Product State.
 
 # Constructors
+
     InfiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
                 virtualspaces::Vector{<:Union{S, CompositeSpace{S}}};
                 kwargs...) where {S <: ElementarySpace}
@@ -14,6 +15,7 @@ Construct an MPS via a specification of physical and virtual spaces, or from a l
 tensors `As`, or a list of left-gauged tensors `ALs`.
 
 # Arguments
+
 - `As`: vector of site tensors
 - `ALs`: vector of left-gauged site tensors
 - `C₀`: initial gauge tensor
@@ -23,22 +25,26 @@ tensors `As`, or a list of left-gauged tensors `ALs`.
 - `virtualspaces`: list of virtual spaces
 
 # Keyword Arguments
+
 - `tol`: gauge fixing tolerance
 - `maxiter`: gauge fixing maximum iterations
 
 # Properties
+
 - `AL`: left-gauged MPS tensors
 - `AR`: right-gauged MPS tensors
 - `AC`: center-gauged MPS tensors
 - `C`: gauge (bond) tensors
 
 # Notes
+
 By convention, we have that:
 - `AL[i] * C[i]` = `AC[i]` = `C[i-1] * AR[i]`
 - `AL[i]' * AL[i] = 1`
 - `AR[i] * AR[i]' = 1`
 
 # Examples
+
 A one-site unit cell built from an explicit `(V_left ⊗ P ← V_right)` tensor. Here the bond
 dimension is one, so this is the `|+⟩` product state, for which `⟨X⟩ = 1`:
 

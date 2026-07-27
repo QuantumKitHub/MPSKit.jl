@@ -4,6 +4,7 @@ $(TYPEDEF)
 Type that represents a finite Matrix Product State.
 
 # Constructors
+
     FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
               maxvirtualspaces::Union{S, Vector{S}};
               normalize = true, left = unitspace(S), right = unitspace(S)) where {S <: ElementarySpace}
@@ -18,6 +19,7 @@ total charge can be constructed by passing a non-trivially charged vector space 
 `left` or `right` virtual spaces.
 
 # Arguments
+
 - `As`: vector of site tensors
 - `f = rand`: initializer function for the tensor data
 - `eltype = ComplexF64`: scalar type of the tensors
@@ -27,12 +29,14 @@ total charge can be constructed by passing a non-trivially charged vector space 
 - `maxvirtualspaces`: maximal virtual space(s), truncated to what symmetry allows
 
 # Keyword Arguments
+
 - `normalize`: normalize the constructed state
 - `overwrite = false`: overwrite the given input tensors
 - `left = unitspace(S)`: left-most virtual space
 - `right = unitspace(S)`: right-most virtual space
 
 # Properties
+
 - `AL`: left-gauged MPS tensors
 - `AR`: right-gauged MPS tensors
 - `AC`: center-gauged MPS tensors
@@ -46,12 +50,14 @@ The `center` property returns a `center::HalfInt` that indicates the location of
 For example, `mps.center = 7/2` means that the bond tensor is to the right of the 3rd site and can be accessed via `mps.C[3]`.
 
 # Notes
+
 By convention, we have that:
 - `AL[i] * C[i]` = `AC[i]` = `C[i-1] * AR[i]`
 - `AL[i]' * AL[i] = 1`
 - `AR[i] * AR[i]' = 1`
 
 # Examples
+
 Building a 3-site spin-1/2 MPS from a dense array and checking that its left-gauged tensors
 are isometries (the state is kept in canonical form even though the raw data is not
 normalized):
@@ -192,6 +198,7 @@ Return the location of the MPS center.
 - `ishalfodd(center)` → `center` is a half-odd-integer, meaning that there are no `AC` tensors, and indicating between which sites the bond tensor lives.
 
 # Examples
+
 ```julia
 ψ = FiniteMPS(3, ℂ^2, ℂ^16)
 ψ.center # returns 7/2, bond tensor is to the right of the 3rd site
@@ -440,7 +447,7 @@ end
 
 """
     max_virtualspaces(ψ::FiniteMPS)
-    max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=unitspace(S), right=unitspace(S))
+    max_virtualspaces(Ps::Vector{<:Union{S, CompositeSpace{S}}}; left = unitspace(S), right = unitspace(S))
 
 Compute the maximal virtual spaces of a given finite MPS or its physical spaces.
 """

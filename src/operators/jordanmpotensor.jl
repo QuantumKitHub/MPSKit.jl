@@ -17,15 +17,18 @@ where `A` is the bulk of interacting operators, `C`/`B` are the operators that s
 an interaction, `D` is the on-site term, and the diagonal `1`s are identities.
 
 # Type parameters
+
 - `T <: Number`: the `scalartype` of the tensors.
 - `S`: the `spacetype` of the tensors.
 - `A <: DenseVector{T}`: the storage type of the underlying tensors.
 
 # Properties
+
 The reduced-leg `A`, `B`, `C` and `D` blocks are exposed as properties (`W.A`, `W.B`, `W.C`,
 `W.D`), reconstructed on demand from the stored `tensors` and `scalars`.
 
 # Notes
+
 Rather than storing the dense block matrix, the genuine operators and the identities are kept
 separately:
 

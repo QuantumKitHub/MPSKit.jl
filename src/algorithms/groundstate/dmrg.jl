@@ -250,12 +250,14 @@ Hamiltonian `H`, overwriting the input state instead of working on a copy.
 Currently supported for the finite-system algorithms [`DMRG`](@ref) and [`DMRG2`](@ref).
 
 # Arguments
+
 - `ψ::AbstractFiniteMPS`: initial guess, mutated in place
 - `H`: operator for which to find the ground state
 - `algorithm`: optimization algorithm
 - `[environments]`: MPS environment manager
 
 # Returns
+
 - `ψ::AbstractFiniteMPS`: converged ground state
 - `environments`: environments corresponding to the converged state
 - `ϵ::Float64`: final convergence error upon terminating the algorithm

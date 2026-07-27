@@ -5,6 +5,7 @@ Object that represents multiple lines of objects of type `T`. Typically used to 
 multiple lines of `InfiniteMPS` (`MultilineMPS`) or MPO (`Multiline{<:AbstractMPO}`).
 
 # Fields
+
 - `data::PeriodicArray{T, 1}`: the data of the multiline object
 
 # See also

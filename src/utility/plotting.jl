@@ -4,9 +4,11 @@
 Plot the [entanglement spectrum](@ref entanglement_spectrum) of a given MPS `state`.
 
 # Arguments
+
 - `state`: the MPS for which to compute the entanglement spectrum.
 
 # Keyword Arguments
+
 - `site::Int = 0`: MPS index for multisite unit cells. The spectrum is computed for the bond
   between `site` and `site + 1`.
 - `expand_symmetry = false`: add quantum dimension degeneracies.
@@ -94,10 +96,12 @@ end
 Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 
 # Arguments
+
 - `above::InfiniteMPS`: above mps for [`transfer_spectrum`](@ref).
 - `below::InfiniteMPS = above`: below mps for [`transfer_spectrum`](@ref).
 
 # Keyword Arguments
+
 - `sectors = nothing`: restrict the spectrum to the given sectors; by default all sectors of
   the transfer space are included.
 - `transferkwargs`: kwargs for call to [`transfer_spectrum`](@ref).

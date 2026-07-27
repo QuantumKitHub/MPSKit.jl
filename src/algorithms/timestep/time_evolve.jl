@@ -81,6 +81,7 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 - `envs`: the updated environment manager
 
 # Examples
+
 Real-time evolution of the `|+···+⟩` product state under a transverse field `H = ∑ Zₖ`.
 Each spin precesses independently, so `⟨Xₖ(t)⟩ = cos(2t)`; after a step `dt = 0.1` this is
 `cos(0.2) ≈ 0.980067`. The initial state must be complex, since real-time evolution

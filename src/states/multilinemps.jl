@@ -8,6 +8,7 @@ const MultilineMPS = Multiline{<:InfiniteMPS}
 Type that represents multiple lines of [`InfiniteMPS`](@ref) objects.
 
 # Constructors
+
     MultilineMPS(mpss::AbstractVector{<:InfiniteMPS})
     MultilineMPS([f, eltype], physicalspaces::Matrix{<:Union{S, CompositeSpace{S}}},
                  virtualspaces::Matrix{<:Union{S, CompositeSpace{S}}}) where {S <: ElementarySpace}
@@ -16,12 +17,14 @@ Type that represents multiple lines of [`InfiniteMPS`](@ref) objects.
                  C₀::AbstractVector{<:MPSBondTensor}; kwargs...)
 
 # Properties
+
 - `AL`: left-gauged MPS tensors
 - `AR`: right-gauged MPS tensors
 - `AC`: center-gauged MPS tensors
 - `C`: gauge (bond) tensors
 
 # See also
+
 [`Multiline`](@ref)
 """
 function MultilineMPS end

@@ -4,9 +4,11 @@ $(TYPEDEF)
 Array wrapper with periodic boundary conditions.
 
 # Fields
+
 - `data::Array{T, N}`: the data of the array
 
 # Examples
+
 ```jldoctest
 A = PeriodicArray([1, 2, 3])
 A[0], A[2], A[4]

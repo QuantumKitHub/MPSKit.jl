@@ -11,6 +11,7 @@ an infinite Hamiltonian to the right.
 Acts similar to just a finite Hamiltonian, but we "remember" the boundary Hamiltonians.
 
 # Constructors
+
     WindowMPOHamiltonian(ham::InfiniteMPOHamiltonian, interval::UnitRange)
 
 Construct a `WindowMPOHamiltonian` by carving a finite `interval` out of an infinite
@@ -20,6 +21,7 @@ are copies of `ham` whose unit cells are circshifted so that they line up with t
 boundaries.
 
 # Fields
+
 $(TYPEDFIELDS)
 """
 struct WindowMPOHamiltonian{O} <: AbstractMPO{O}

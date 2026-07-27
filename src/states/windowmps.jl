@@ -4,6 +4,7 @@ $(TYPEDEF)
 Type that represents a finite Matrix Product State embedded in an infinite Matrix Product State.
 
 # Constructors
+
     WindowMPS(left_gs::InfiniteMPS, window_state::FiniteMPS, [right_gs::InfiniteMPS])
     WindowMPS(left_gs::InfiniteMPS, window_tensors::AbstractVector, [right_gs::InfiniteMPS])
     WindowMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
@@ -24,6 +25,7 @@ be constructed from an `InfiniteMPS` by promoting a region of length `L` to a `F
     made. In this case, changing the left state will also affect the right state.
 
 # Properties
+
 - `left_gs::InfiniteMPS`: left infinite environment
 - `window::FiniteMPS`: finite window Matrix Product State
 - `right_gs::InfiniteMPS`: right infinite environment

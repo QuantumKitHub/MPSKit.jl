@@ -82,6 +82,7 @@ Create a `ChepigaAnsatz2` algorithm with the given eigensolver and truncation, o
 keyword arguments to [`Arnoldi`](@extref KrylovKit.Arnoldi).
 
 # Fields
+
 - `alg`: algorithm used for the eigenvalue problem, defaults to `Arnoldi(; krylovdim = 30, tol = 1.0e-10, eager = true)`
 - `trscheme`: truncation scheme used when splitting the optimized two-site tensor, defaults to `notrunc()`
 

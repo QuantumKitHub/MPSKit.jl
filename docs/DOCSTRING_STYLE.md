@@ -9,6 +9,7 @@ Not every symbol needs every section — pick the template that fits (see [Templ
 ## Quick rules
 
 - **Section headers use a single hash** (`# Arguments`, `# Returns`), matching Julia Base.
+- **Leave a blank line after every section header**, before the bullets, prose, or signature block that follows.
 - **Bullet entries** are `` - `name`: description `` — a dash, the name in backticks, a colon, one space, then the description. Add the type (`` `name::Type` ``) only when it is helpful.
 - **Cross-references** use `[`name`](@ref)` for internal symbols and `[`name`](@extref Pkg.name)` for symbols in other packages.
 - **Type parameter lists** put a space after each comma: `Array{T, N}`, `Union{A, B, C}` — never `Array{T,N}`.
@@ -35,6 +36,14 @@ The canonical section names, in the order they should appear, are:
 
 Omit any section that does not apply.
 Do not use `## Arguments` (double hash), `# Keywords`, or other spellings.
+Always follow a section header with a blank line, so every section reads the same way:
+
+```
+# Keyword Arguments
+
+- `tol = 1e-10`: convergence tolerance
+```
+
 For docstrings long enough to warrant it, split off detail into a `# Extended help` section (a Julia Base convention) so the summary line and first paragraph stay terse.
 
 ## Bullet format
@@ -120,6 +129,7 @@ $(TYPEDEF)
 Type that represents a finite Matrix Product State.
 
 # Constructors
+
     FiniteMPS([f, eltype], physicalspaces, maxvirtualspaces; kwargs...)
     FiniteMPS([f, eltype], N, physicalspace, maxvirtualspaces; kwargs...)
     FiniteMPS(As::Vector{<:GenericMPSTensor}; kwargs...)
@@ -127,21 +137,25 @@ Type that represents a finite Matrix Product State.
 Construct an MPS from physical and virtual spaces, or from a list of tensors `As`.
 
 # Arguments
+
 - `As`: vector of site tensors
 - `f = rand`: initializer for tensor data
 - `physicalspaces`: list of physical spaces
 
 # Keyword Arguments
+
 - `normalize = true`: normalize the constructed state
 - `left`: left-most virtual space
 
 # Properties
+
 - `AL`: left-gauged MPS tensors
 - `AR`: right-gauged MPS tensors
 - `AC`: center-gauged MPS tensors
 - `C`: gauge (bond) tensors
 
 # Notes
+
 By convention, `AL[i] * C[i] == AC[i] == C[i-1] * AR[i]`.
 """
 ```
@@ -160,22 +174,27 @@ Use for the user-facing verbs: `find_groundstate`, `leading_boundary`, `timestep
 One paragraph describing the operation.
 
 # Arguments
+
 - `ψ₀::AbstractMPS`: initial guess
 - `H::AbstractMPO`: the operator
 
 # Keyword Arguments
+
 - `tol::Float64 = 1e-10`: convergence tolerance
 
 # Returns
+
 - `ψ::AbstractMPS`: the converged state
 - `ϵ::Float64`: final error estimate
 
 # Examples
+
 ```jldoctest
 julia> # runnable example
 ```
 
 # References
+
 * [...](@cite key)
 """
 ```

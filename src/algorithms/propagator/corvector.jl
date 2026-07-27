@@ -43,6 +43,7 @@ Calculate the action of the propagator ``\\frac{1}{z - H}|ψ₀⟩`` using the d
 algorithm.
 
 # Returns
+
 - `g`: approximation of the propagator matrix element ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩``
 - `ψ`: MPS approximation of ``\\frac{1}{z - H}|ψ₀⟩``
 """

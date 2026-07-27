@@ -17,6 +17,7 @@ For a `FiniteMPS` ground state this represents a finite (localized) quasiparticl
 When `left_gs !== right_gs` the ansatz describes a domain wall between the two ground states.
 
 # Constructors
+
     LeftGaugedQP(datfun, left_gs, right_gs = left_gs; sector, momentum = 0.0)
 
 These states are normally produced by [`excitations`](@ref) with a
@@ -25,12 +26,14 @@ These states are normally produced by [`excitations`](@ref) with a
 charge sector of the excitation, and `momentum` sets the momentum for infinite ground states.
 
 # Fields
+
 - `left_gs`, `right_gs`: the ground state(s) the excitation lives on; distinct values yield a domain wall.
 - `VLs`: left-nullspace tensors of the ground-state `AL` (satisfying `AL' * VL == 0`).
 - `Xs`: the variational parameters of the ansatz.
 - `momentum`: the excitation momentum (used for infinite ground states).
 
 # See also
+
 [`RightGaugedQP`](@ref), [`QP`](@ref)
 """
 struct LeftGaugedQP{S, T1, T2, E <: Number}
@@ -53,15 +56,18 @@ often obtained via `convert(RightGaugedQP, ϕ)` from a `LeftGaugedQP` rather tha
 directly.
 
 # Constructors
+
     RightGaugedQP(datfun, left_gs, right_gs = left_gs; sector, momentum = 0.0)
 
 # Fields
+
 - `left_gs`, `right_gs`: the ground state(s) the excitation lives on; distinct values yield a domain wall.
 - `Xs`: the variational parameters of the ansatz.
 - `VRs`: right-nullspace tensors of the ground-state `AR`.
 - `momentum`: the excitation momentum (used for infinite ground states).
 
 # See also
+
 [`LeftGaugedQP`](@ref), [`QP`](@ref)
 """
 struct RightGaugedQP{S, T1, T2, E <: Number}
