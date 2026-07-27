@@ -24,16 +24,40 @@
 _rhs_context(::Galerkin, x, A, b, openvs) = (; openvs, rhsenvs = environments(x, b))
 function _rhs_context(::LeastSquares, x, A, b, openvs)
     Asq, sqenvs = squaredenvs(x, A, openvs)
-    # the JordanMPO effective operator requires `below === above`, so the `A·b` term of the
-    # normal-equation right-hand side is precomputed as an MPS and projected via the overlap form
-    Ab = A * b
-    return (;
-        openvs, rhsenvs = environments(x, b), Asq, sqenvs, Ab, abenvs = environments(x, Ab),
-    )
+    # the `A·b` term of the normal-equation right-hand side comes from the mixed sandwich
+    # `⟨x|A|b⟩`, so `A·b` is never materialized as an MPS
+    return (; openvs, rhsenvs = environments(x, b), Asq, sqenvs, abenvs = environments(x, A, b))
 end
 
-function _warn_unconverged(info, pos)
-    return info.converged == 0 &&
+# `⟨∂x|A|b⟩`, the mixed-sandwich projection supplying the `A†b` term of the normal equations.
+# `AC_hamiltonian(pos, x, A, b, envs)` cannot be used for an `MPOHamiltonian`: the JordanMPO
+# effective operator assumes `below === above`, and teaching it to branch would make the return type
+# of that hot function a union. The generic sparse MPO derivative handles the mixed case, and one
+# application per bond makes its cost irrelevant. Window operators store the finite part in the
+# environments, so unwrap them the same way the derivative constructors do.
+_finite_operator(A) = A
+_finite_operator(A::WindowMPOHamiltonian) = A.finite_ham
+
+function _mixed_projection(::Val{1}, pos, x, A, b, envs)
+    W = _finite_operator(A)
+    H = MPO_AC_Hamiltonian(leftenv(envs, pos, x), W[pos], rightenv(envs, pos, x))
+    return H * b.AC[pos]
+end
+function _mixed_projection(::Val{2}, pos, x, A, b, envs)
+    W = _finite_operator(A)
+    H = MPO_AC2_Hamiltonian(
+        leftenv(envs, pos, x), W[pos], W[pos + 1], rightenv(envs, pos + 1, x)
+    )
+    return H * AC2(b, pos)
+end
+
+# KrylovKit's `linsolve` is silent on non-convergence, so check it here. `warn_tol` is the absolute
+# residual the outer sweep actually needs (`alg.tol · ‖b‖`): an inner solve that undershoots its own
+# adaptive tolerance but still beats that has done its job, and warning about it would fire on nearly
+# every tightly-converged sweep (adaptive tolerances routinely dip below the round-off floor of the
+# local problem).
+function _warn_unconverged(info, pos, warn_tol)
+    return info.converged == 0 && info.normres > warn_tol &&
         @warn "linsolve: local solve at $pos did not converge (normres = $(info.normres))"
 end
 
@@ -43,53 +67,53 @@ _rhs_norm(b) = (n = norm(b); iszero(n) ? one(n) : n)
 # Local single-site solves. Each returns the updated center tensor and the local residual of the
 # *original* system (relative-residual convergence uses `res/‖b‖`; adaptation uses the previous
 # sweep's residual via `g_global`).
-function _local_linsolve(::Galerkin, ::Val{1}, pos, x, A, b, ctx, solver, a₀, a₁; iter = 1, g_global = 0.0)
+function _local_linsolve(::Galerkin, ::Val{1}, pos, x, A, b, ctx, solver, a₀, a₁; iter = 1, g_global = 0.0, warn_tol = 0.0)
     A_eff = AC_hamiltonian(pos, x, A, x, ctx.openvs)
     b_eff = AC_projection(pos, x, b, ctx.rhsenvs)
     AC = x.AC[pos]
     res = norm(a₀ * AC + a₁ * (A_eff * AC) - b_eff)
     AC′, info = KrylovKit.linsolve(A_eff, b_eff, AC, adapt_solver(solver; iter, g_global), a₀, a₁)
-    _warn_unconverged(info, "site $pos")
+    _warn_unconverged(info, "site $pos", warn_tol)
     return AC′, res
 end
-function _local_linsolve(::LeastSquares, ::Val{1}, pos, x, A, b, ctx, solver, a₀, a₁; iter = 1, g_global = 0.0)
+function _local_linsolve(::LeastSquares, ::Val{1}, pos, x, A, b, ctx, solver, a₀, a₁; iter = 1, g_global = 0.0, warn_tol = 0.0)
     A_eff = AC_hamiltonian(pos, x, A, x, ctx.openvs)
     Asq_eff = AC_hamiltonian(pos, x, ctx.Asq, x, ctx.sqenvs)
     N_eff = LinearCombination((A_eff, Asq_eff), (2 * real(conj(a₀) * a₁), abs2(a₁)))
     b_eff = AC_projection(pos, x, b, ctx.rhsenvs)
-    Ab_eff = AC_projection(pos, x, ctx.Ab, ctx.abenvs)
+    Ab_eff = _mixed_projection(Val(1), pos, x, A, b, ctx.abenvs)
     AC = x.AC[pos]
     # convergence uses the ORIGINAL-system residual, not the normal-equation residual
     res = norm(a₀ * AC + a₁ * (A_eff * AC) - b_eff)
     rhs = conj(a₀) * b_eff + conj(a₁) * Ab_eff
     AC′, info = KrylovKit.linsolve(N_eff, rhs, AC, adapt_solver(solver; iter, g_global), abs2(a₀), one(a₁))
-    _warn_unconverged(info, "site $pos")
+    _warn_unconverged(info, "site $pos", warn_tol)
     return AC′, res
 end
 
 # Local two-site solves. Return the updated two-site tensor and the original-system residual.
 # `eps_trunc` (the previous discarded weight at this bond) floors the adaptive tolerance so the
 # local solve is not driven far below what the SVD truncation will discard.
-function _local_linsolve(::Galerkin, ::Val{2}, pos, x, A, b, ctx, solver, a₀, a₁, kind; iter = 1, g_global = 0.0, eps_trunc = 0.0)
+function _local_linsolve(::Galerkin, ::Val{2}, pos, x, A, b, ctx, solver, a₀, a₁, kind; iter = 1, g_global = 0.0, eps_trunc = 0.0, warn_tol = 0.0)
     A_eff = AC2_hamiltonian(pos, x, A, x, ctx.openvs)
     b_eff = AC2_projection(pos, x, b, ctx.rhsenvs)
     ac2 = AC2(x, pos; kind)
     res = norm(a₀ * ac2 + a₁ * (A_eff * ac2) - b_eff)
     AC2′, info = KrylovKit.linsolve(A_eff, b_eff, ac2, adapt_solver(solver; iter, g_global, eps_trunc), a₀, a₁)
-    _warn_unconverged(info, "bond $pos")
+    _warn_unconverged(info, "bond $pos", warn_tol)
     return AC2′, res
 end
-function _local_linsolve(::LeastSquares, ::Val{2}, pos, x, A, b, ctx, solver, a₀, a₁, kind; iter = 1, g_global = 0.0, eps_trunc = 0.0)
+function _local_linsolve(::LeastSquares, ::Val{2}, pos, x, A, b, ctx, solver, a₀, a₁, kind; iter = 1, g_global = 0.0, eps_trunc = 0.0, warn_tol = 0.0)
     A_eff = AC2_hamiltonian(pos, x, A, x, ctx.openvs)
     Asq_eff = AC2_hamiltonian(pos, x, ctx.Asq, x, ctx.sqenvs)
     N_eff = LinearCombination((A_eff, Asq_eff), (2 * real(conj(a₀) * a₁), abs2(a₁)))
     b_eff = AC2_projection(pos, x, b, ctx.rhsenvs)
-    Ab_eff = AC2_projection(pos, x, ctx.Ab, ctx.abenvs)
+    Ab_eff = _mixed_projection(Val(2), pos, x, A, b, ctx.abenvs)
     ac2 = AC2(x, pos; kind)
     res = norm(a₀ * ac2 + a₁ * (A_eff * ac2) - b_eff)
     rhs = conj(a₀) * b_eff + conj(a₁) * Ab_eff
     AC2′, info = KrylovKit.linsolve(N_eff, rhs, ac2, adapt_solver(solver; iter, g_global, eps_trunc), abs2(a₀), one(a₁))
-    _warn_unconverged(info, "bond $pos")
+    _warn_unconverged(info, "bond $pos", warn_tol)
     return AC2′, res
 end
 
@@ -101,6 +125,7 @@ function linsolve!(
     )
     ctx = _rhs_context(alg.formulation, x, A, b, envs)
     normb = _rhs_norm(b)
+    warn_tol = alg.tol * normb   # accuracy the outer sweep actually needs
     ϵ::Float64 = 2 * alg.tol   # relative residual, for the stop test
     ϵ_global = Inf             # previous-sweep absolute residual, drives the adaptive tolerance
     log = IterLog("linsolve")
@@ -113,7 +138,7 @@ function linsolve!(
             for pos in [1:(length(x) - 1); length(x):-1:2]
                 AC′, res = _local_linsolve(
                     alg.formulation, Val(1), pos, x, A, b, ctx, alg.solver, a₀, a₁;
-                    iter, g_global = ϵ_global
+                    iter, g_global = ϵ_global, warn_tol
                 )
                 ϵ = max(ϵ, res / normb)
                 res_max = max(res_max, res)
@@ -146,6 +171,7 @@ function linsolve!(
     )
     ctx = _rhs_context(alg.formulation, x, A, b, envs)
     normb = _rhs_norm(b)
+    warn_tol = alg.tol * normb   # accuracy the outer sweep actually needs
     ϵ_truncs = zeros(length(x) - 1)   # per-bond discarded weight
     ϵ::Float64 = 2 * alg.tol
     ϵ_global = Inf
@@ -159,7 +185,7 @@ function linsolve!(
             for pos in 1:(length(x) - 1)
                 AC2′, res = _local_linsolve(
                     alg.formulation, Val(2), pos, x, A, b, ctx, alg.solver, a₀, a₁, :ACAR;
-                    iter, g_global = ϵ_global, eps_trunc = ϵ_truncs[pos]
+                    iter, g_global = ϵ_global, eps_trunc = ϵ_truncs[pos], warn_tol
                 )
                 ϵ = max(ϵ, res / normb)
                 res_max = max(res_max, res)
@@ -169,7 +195,7 @@ function linsolve!(
             for pos in (length(x) - 2):-1:1
                 AC2′, res = _local_linsolve(
                     alg.formulation, Val(2), pos, x, A, b, ctx, alg.solver, a₀, a₁, :ALAC;
-                    iter, g_global = ϵ_global, eps_trunc = ϵ_truncs[pos]
+                    iter, g_global = ϵ_global, eps_trunc = ϵ_truncs[pos], warn_tol
                 )
                 ϵ = max(ϵ, res / normb)
                 res_max = max(res_max, res)

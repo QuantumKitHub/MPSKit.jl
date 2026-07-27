@@ -45,10 +45,11 @@ end
         @test rel_residual(H, x, gs, z, -1) < 1.0e-6
     end
 
-    @testset "resolvent, two-site (adaptive χ)" begin
+    @testset "resolvent, two-site (adaptive χ), formulation $flav" for flav in
+        (Galerkin(), LeastSquares())
+        solver = flav isa LeastSquares ? CG(; tol = 1.0e-12) : GMRES(; tol = 1.0e-12)
         alg = DMRGSolve2(;
-            formulation = Galerkin(), solver = GMRES(; tol = 1.0e-12),
-            trunc = truncrank(16), tol = 1.0e-10, verbosity = 0
+            formulation = flav, solver, trunc = truncrank(16), tol = 1.0e-10, verbosity = 0
         )
         x, = linsolve(complex(copy(gs)), H, gs, alg; a₀ = z, a₁ = -1)
         @test dot(gs, x) ≈ predicted atol = 1.0e-5
@@ -98,5 +99,26 @@ end
         ) & DMRGSolve(; solver = CG(; tol = 1.0e-12), tol = 1.0e-9, verbosity = 0)
         x, = linsolve(complex(copy(b)), H, b, alg; a₀ = s, a₁ = -1)
         @test rel_residual(H, x, b, s, -1) < 1.0e-4
+    end
+end
+
+@testset "linsolve WindowMPS" verbose = true begin
+    # `LeastSquares` builds the `A†b` term from the mixed sandwich ⟨x|A|b⟩, which is the only way to
+    # reach it for a window operator (there is no `*(::WindowMPOHamiltonian, ::WindowMPS)`)
+    N = 10
+    H = transverse_field_ising(; g = -4)
+    Ω, = find_groundstate(InfiniteMPS(ℂ^2, ℂ^10), H, VUMPS(; verbosity = 0))
+    XΩ = WindowMPS(Ω, N)
+    H_w = WindowMPOHamiltonian(H, 1:N)
+
+    E₀ = expectation_value(XΩ, H_w)
+    z = E₀ + 0.5 + 0.3im
+    predicted = 1 / (z - E₀)
+
+    @testset "resolvent, formulation $flav" for flav in (Galerkin(), LeastSquares())
+        solver = flav isa LeastSquares ? CG(; tol = 1.0e-12) : GMRES(; tol = 1.0e-12)
+        alg = DMRGSolve(; formulation = flav, solver, tol = 1.0e-10, verbosity = 0)
+        x, = linsolve(XΩ, H_w, XΩ, alg; a₀ = z, a₁ = -1)
+        @test dot(XΩ, x) ≈ predicted atol = 1.0e-6
     end
 end

@@ -39,6 +39,10 @@ function AC_hamiltonian(
         site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian, above::_HAM_MPS_TYPES, envs;
         prepare::Bool = true
     )
+    # NOTE: the JordanMPO fast path genuinely assumes a single state. A mixed sandwich
+    # ⟨below|H|above⟩ has to go through the generic sparse contraction, but branching on it here
+    # would make the return type of this (hot) function a union; see `_mixed_projection` in
+    # `algorithms/linsolve/flinsolve.jl` for the mixed-sandwich path.
     @assert below === above "JordanMPO assumptions break"
     GL = leftenv(envs, site, below)
     GR = rightenv(envs, site, below)
@@ -191,7 +195,7 @@ function AC2_hamiltonian(
         site::Int, below::_HAM_MPS_TYPES, operator::MPOHamiltonian, above::_HAM_MPS_TYPES, envs;
         prepare::Bool = true
     )
-    @assert below === above "JordanMPO assumptions break"
+    @assert below === above "JordanMPO assumptions break"  # see `AC_hamiltonian`
     GL = leftenv(envs, site, below)
     GR = rightenv(envs, site + 1, below)
     W1, W2 = operator[site], operator[site + 1]

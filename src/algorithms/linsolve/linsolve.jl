@@ -48,7 +48,7 @@ $(TYPEDFIELDS)
 @kwdef struct DMRGSolve{F <: LinsolveFormulation, S, FIN} <: Algorithm
     "formulation of the local subproblem, either [`Galerkin`](@ref) or [`LeastSquares`](@ref)"
     formulation::F = Galerkin()
-    "local linear solver; a plain KrylovKit solver, or one wrapped in [`DynamicTol`](@ref) for per-bond adaptive tolerances (the default)"
+    "local linear solver; a plain KrylovKit solver, or one wrapped in `DynamicTol` for per-bond adaptive tolerances (the default)"
     solver::S = Defaults.alg_linsolve()
     "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
@@ -75,7 +75,7 @@ $(TYPEDFIELDS)
 struct DMRGSolve2{F <: LinsolveFormulation, S, G, FIN} <: Algorithm
     "formulation of the local subproblem, either [`Galerkin`](@ref) or [`LeastSquares`](@ref)"
     formulation::F
-    "local linear solver; a plain KrylovKit solver, or one wrapped in [`DynamicTol`](@ref) for per-bond adaptive tolerances"
+    "local linear solver; a plain KrylovKit solver, or one wrapped in `DynamicTol` for per-bond adaptive tolerances"
     solver::S
     "tolerance for convergence criterium"
     tol::Float64
@@ -128,8 +128,7 @@ The keyword-based call (no explicit `algorithm`) selects an algorithm from the s
 - `verbosity::Int`: display progress information
 - `a₀`, `a₁`: shift/scale scalars of the system `(a₀ + a₁·A)·x = b`
 - `ishermitian::Bool`, `isposdef::Bool`: declare structure of `(a₀ + a₁·A)` so the default local
-  solver is chosen accordingly (`CG` for positive-definite, `MINRES` for hermitian-indefinite,
-  `GMRES` otherwise)
+  solver is chosen accordingly (`CG` for positive-definite, `GMRES` otherwise)
 - `trunc`: if supplied, a truncated two-site sweep ([`DMRGSolve2`](@ref)) is prepended to
   adapt the bond dimension before the single-site algorithm polishes the result
 
@@ -139,7 +138,10 @@ The keyword-based call (no explicit `algorithm`) selects an algorithm from the s
 - `ϵ::Float64`: final convergence error — the largest local residual `‖(a₀ + a₁·A)·x − b‖`
   over the sweep, relative to `‖b‖` (the linear-solve analogue of the Galerkin error used by
   [`find_groundstate`](@ref))
-""" linsolve, linsolve!
+""" linsolve
+
+# NOTE: `@doc str a, b` attaches only to the last binding, so share it explicitly
+@doc (@doc linsolve) linsolve!
 
 # scalar-promote an initial state so it can hold a complex solution when the shift is complex
 function _promote_state(x::AbstractMPS, a₀, a₁)
@@ -185,4 +187,8 @@ end
 function linsolve(x₀, A, b, alg::UnionAlg, envs...; a₀ = 0, a₁ = 1)
     x, newenvs, = linsolve(x₀, A, b, alg.alg1, envs...; a₀, a₁)
     return linsolve(x, A, b, alg.alg2, newenvs; a₀, a₁)
+end
+function linsolve!(x₀, A, b, alg::UnionAlg, envs...; a₀ = 0, a₁ = 1)
+    x, newenvs, = linsolve!(x₀, A, b, alg.alg1, envs...; a₀, a₁)
+    return linsolve!(x, A, b, alg.alg2, newenvs; a₀, a₁)
 end
