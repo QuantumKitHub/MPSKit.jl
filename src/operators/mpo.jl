@@ -122,7 +122,9 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
         right_virtualspace(mpo1, N) == right_virtualspace(mpo2, N)
 
     halfN = N ÷ 2
-    A = storagetype(eltype(mpo1))
+    # the fusers carry the promoted scalar type, so every contraction below follows suit
+    T = promote_type(scalartype(mpo1), scalartype(mpo2))
+    A = TensorKit.similarstoragetype(storagetype(eltype(mpo1)), T)
 
     # left half
     F₁ = isometry(

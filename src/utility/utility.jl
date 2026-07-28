@@ -40,6 +40,16 @@ end
 _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
+"""
+    similar_scalartype(T::Type{<:AbstractTensorMap}, S::Type{<:Number})
+
+Tensor map type with the same space type and rank as `T`, but with scalar type `S`.
+"""
+function similar_scalartype(::Type{T}, ::Type{S}) where {T <: AbstractTensorMap, S <: Number}
+    E = TensorKit.similarstoragetype(TensorKit.storagetype(T), S)
+    return tensormaptype(spacetype(T), numout(T), numin(T), E)
+end
+
 #given a Hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
 function decompose_localmpo(
         inpmpo::AbstractTensorMap{T, PS, N, N}, trunc = trunctol(; atol = eps(real(T))^(3 / 4))

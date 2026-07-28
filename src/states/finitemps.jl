@@ -317,6 +317,16 @@ Base.eltype(ψtype::Type{<:FiniteMPS}) = site_type(ψtype) # this might not be t
 function Base.similar(ψ::FiniteMPS{A, B}) where {A, B}
     return FiniteMPS{A, B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
 end
+# an empty state with promoted scalar type: no tensor is materialised yet
+function Base.similar(ψ::FiniteMPS, ::Type{S}) where {S <: Number}
+    A = similar_scalartype(site_type(ψ), S)
+    B = similar_scalartype(bond_type(ψ), S)
+    N = length(ψ)
+    return FiniteMPS{A, B}(
+        Vector{Union{Missing, A}}(missing, N), Vector{Union{Missing, A}}(missing, N),
+        Vector{Union{Missing, A}}(missing, N), Vector{Union{Missing, B}}(missing, N + 1)
+    )
+end
 
 Base.isfinite(::Type{<:FiniteMPS}) = true
 GeometryStyle(::Type{<:FiniteMPS}) = FiniteChainStyle()
@@ -469,12 +479,13 @@ Linear Algebra
 ===========================================================================================#
 
 #=
-No support yet for converting the scalar type, also no in-place operations
+Scaling is in-place on a copy, so it cannot convert the scalar type: use `complex(ψ)` first if
+`a` is complex and `ψ` is not. Addition does promote, through `similar(ψ, ::Type{S})`.
 =#
 Base.:*(ψ::FiniteMPS, a::Number) = rmul!(copy(ψ), a)
 Base.:*(a::Number, ψ::FiniteMPS) = lmul!(a, copy(ψ))
 
-function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
+function Base.:+(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
     N = length(ψ₁)
     N == length(ψ₂) ||
         throw(DimensionMismatch("Cannot add states of length $N and $(length(ψ₂))"))
@@ -493,11 +504,7 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
     AR₁, AR₂ = ψ₁.AR[(halfN + 1):N], ψ₂.AR[(halfN + 1):N] # indexed as `AR[i - halfN]`
     Cmid₁, Cmid₂ = ψ₁.C[halfN], ψ₂.C[halfN]
 
-    ψ = similar(ψ₁)
-    fill!(ψ.ALs, missing)
-    fill!(ψ.ARs, missing)
-    fill!(ψ.ACs, missing)
-    fill!(ψ.Cs, missing)
+    ψ = similar(ψ₁, promote_type(scalartype(ψ₁), scalartype(ψ₂)))
 
     # left half
     F₁ = isometry(

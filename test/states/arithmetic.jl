@@ -155,3 +155,30 @@ end
     # a non-trivial linear combination is still correct
     @test norm(3 * (E₀ * gs) - H * gs) ≈ 2 * abs(E₀) * norm(gs) atol = atol
 end
+
+@testset "scalar-type promotion" begin
+    L = 4
+
+    ψᵣ = FiniteMPS(rand, Float64, L, ℂ^2, ℂ^4)
+    ψᶜ = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^4)
+    tᵣ, tᶜ = convert(TensorMap, ψᵣ), convert(TensorMap, ψᶜ)
+
+    @test scalartype(ψᵣ + ψᶜ) == ComplexF64
+    @test scalartype(ψᶜ + ψᵣ) == ComplexF64
+    @test convert(TensorMap, ψᵣ + ψᶜ) ≈ tᵣ + tᶜ
+    @test convert(TensorMap, ψᶜ + ψᵣ) ≈ tᶜ + tᵣ
+    @test scalartype(ψᵣ - ψᶜ) == ComplexF64
+    @test convert(TensorMap, ψᵣ - ψᶜ) ≈ tᵣ - tᶜ
+    # both operands real stays real
+    @test scalartype(ψᵣ + ψᵣ) == Float64
+
+    Oᵣ = FiniteMPO(rand(Float64, (ℂ^2)^L ← (ℂ^2)^L))
+    Oᶜ = FiniteMPO(rand(ComplexF64, (ℂ^2)^L ← (ℂ^2)^L))
+    oᵣ, oᶜ = convert(TensorMap, Oᵣ), convert(TensorMap, Oᶜ)
+
+    @test scalartype(Oᵣ + Oᶜ) == ComplexF64
+    @test scalartype(Oᶜ + Oᵣ) == ComplexF64
+    @test convert(TensorMap, Oᵣ + Oᶜ) ≈ oᵣ + oᶜ
+    @test convert(TensorMap, Oᶜ + Oᵣ) ≈ oᶜ + oᵣ
+    @test scalartype(Oᵣ + Oᵣ) == Float64
+end
