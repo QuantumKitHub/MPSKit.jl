@@ -6,8 +6,9 @@ Basis-Update & Galerkin (BUG) integrator, an unconventional robust integrator fo
 approximation.
 
 Unlike [`TDVP`](@ref), BUG advances both the basis (K-step) and the core (Galerkin C-step) tensors
-*forward* in time, with no backward-in-time substep. This makes it a natural choice for
-imaginary-time / dissipative evolution, where the backward core step of TDVP can become unstable.
+*forward* in time, with no backward-in-time substep. This makes it a more natural choice for
+imaginary-time / dissipative evolution, where the backward core step of the conventional projector-splitting
+[`TDVP`](@ref) can become unstable for large timesteps.
 
 Each half-sweep augments every bond with the new directions discovered by the evolved connecting
 tensor (old basis first, `[U₀ │ K₁]`) and truncates back down to the tolerance of `trscheme` in the
@@ -144,8 +145,8 @@ function timestep!(
     # carry `AC_old`/`transport` forward
     ARs = ψ.AR[2:end]
     pushfirst!(ARs, ψ.AC[1])
-    transport = isomorphism(scalartype(ψ), left_virtualspace(ψ, 1) ← left_virtualspace(ψ, 1))
     AC_old = ARs[1]
+    transport = id!(similar(AC_old, left_virtualspace(ψ, 1) ← left_virtualspace(ψ, 1)))
     for site in 1:L
         ψ, transport, AC_old = local_update!(
             site, Val(:right), ψ, H, alg, envs, t, h, transport, AC_old, ARs;
@@ -175,7 +176,7 @@ function timestep(
         alg::BUG, envs::AbstractMPSEnvironments...;
         imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
     )
-    isreal = (scalartype(ψ) <: Real && !imaginary_evolution)
+    isreal = (scalartype(ψ) <: Real && !(imaginary_evolution && scalartype(H) <: Real))
     ψ′ = isreal ? complex(ψ) : copy(ψ)
     if length(envs) != 0 && isreal
         @warn "Currently cannot reuse real environments for complex evolution"

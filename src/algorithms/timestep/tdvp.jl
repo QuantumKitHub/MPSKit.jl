@@ -11,7 +11,7 @@ the enlarged bond back down (selecting the truncated-SVD gauge). The expansion i
 state-preserving, as required for a consistent time evolution.
 
 !!! note
-    By default the norm is preserved: neither the bond expansion nor the truncation
+    By default the norm is not preserved: neither the bond expansion nor the truncation
     renormalizes, so the state norm keeps useful information (the accumulated truncation
     error in real time, or the decaying weight in imaginary time). Pass `normalize = true`
     to `timestep`/`time_evolve` to renormalize at every step instead, like a ground-state
