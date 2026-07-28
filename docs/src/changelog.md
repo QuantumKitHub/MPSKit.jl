@@ -60,6 +60,15 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   combined tensors belonging to two different gauges. The same staleness was latent in every
   consumer that reads several gauge tensors across a center move, `dot` included.
   ([#473](https://github.com/QuantumKitHub/MPSKit.jl/issues/473), [#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- Addition of single-site operands. `FiniteMPS + FiniteMPS` asserted `length > 1`, and
+  `FiniteMPO + FiniteMPO` threw a space error, because both split the chain into a left and a
+  right block and fuse them at the seam — of which there is none at length 1. Such an operand has
+  no internal bond to fuse, so the sum is now simply the sum of the two tensors.
+  ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- `convert(TensorMap, ::FiniteMPO)` on a single-site MPO stripped the left virtual leg of `mpo[1]`
+  and the right virtual leg of `mpo[end]` and contracted the two — which at length 1 is the *same*
+  tensor, so it returned `O * O` on twice the physical space instead of `O`.
+  ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
 
 ### Performance
 

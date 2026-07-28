@@ -82,8 +82,9 @@ end
 
 @testset "FiniteMPS ± dense cross-check ($(sectortype(D)), L=$L)" for (D, D₂, d, elt) in
         arithmetic_spaces,
-        # `convert(TensorMap, ψ)` compiles per (sectortype, length), so only sweep `L` once
-        L in (sectortype(D) === PlanarTrivial ? (2, 3, 4, 5) : (4,))
+        # `convert(TensorMap, ψ)` compiles per (sectortype, length), so only sweep `L` once.
+        # `L = 1` is only swept for the trivial sector: a single spin-1 site carries no singlet.
+        L in (sectortype(D) === PlanarTrivial ? (1, 2, 3, 4, 5) : (4,))
 
     ψ₁ = FiniteMPS(rand, elt, L, d, D)
     ψ₂ = FiniteMPS(rand, elt, L, d, D)
@@ -105,8 +106,12 @@ end
 @testset "FiniteMPS argument checks" begin
     @test_throws DimensionMismatch FiniteMPS(rand, ComplexF64, 4, ℂ^2, ℂ^4) +
         FiniteMPS(rand, ComplexF64, 5, ℂ^2, ℂ^4)
-    @test_throws Exception FiniteMPS(rand, ComplexF64, 1, ℂ^2, ℂ^4) +
-        FiniteMPS(rand, ComplexF64, 1, ℂ^2, ℂ^4)
+    # mismatched boundary virtual spaces, at length 1 and beyond
+    onesite(V₁, V₂) = FiniteMPS(
+        rand, ComplexF64, [ℂ^2], ComplexSpace[]; left = V₁, right = V₂, normalize = false
+    )
+    @test_throws SpaceMismatch onesite(ℂ^3, ℂ^1) + onesite(ℂ^2, ℂ^1)
+    @test_throws SpaceMismatch onesite(ℂ^1, ℂ^3) + onesite(ℂ^1, ℂ^2)
 end
 
 @testset "FiniteMPS cancellation across gauges ($(sectortype(D)))" for (D, _, d, elt) in
@@ -154,6 +159,58 @@ end
 
     # a non-trivial linear combination is still correct
     @test norm(3 * (E₀ * gs) - H * gs) ≈ 2 * abs(E₀) * norm(gs) atol = atol
+end
+
+@testset "single-site addition" begin
+    atol = sqrt(eps(Float64))
+
+    # trivial boundaries: cross-check against the dense state
+    ψ₁ = FiniteMPS(rand, ComplexF64, 1, ℂ^3, ℂ^4)
+    ψ₂ = FiniteMPS(rand, ComplexF64, 1, ℂ^3, ℂ^4)
+    t₁, t₂ = convert(TensorMap, ψ₁), convert(TensorMap, ψ₂)
+    @test length(ψ₁ + ψ₂) == 1
+    @test convert(TensorMap, ψ₁ + ψ₂) ≈ t₁ + t₂ atol = atol
+    @test convert(TensorMap, ψ₁ - ψ₂) ≈ t₁ - t₂ atol = atol
+    @test norm(ψ₁ + ψ₂) ≈ norm(t₁ + t₂) atol = atol
+    @test norm(ψ₁ - ψ₁) ≈ 0 atol = atol
+    @test gauge_error(ψ₁ + ψ₂) ≤ atol
+
+    # non-trivial boundaries, e.g. a single-site window carved out of a larger chain. There is no
+    # dense state to compare against, but the whole state *is* the one center tensor.
+    onesite(V₁, V₂) = FiniteMPS(
+        rand, ComplexF64, [ℂ^2], ComplexSpace[]; left = V₁, right = V₂, normalize = false
+    )
+    ϕ₁, ϕ₂ = onesite(ℂ^3, ℂ^4), onesite(ℂ^3, ℂ^4)
+    AC₁, AC₂ = copy(ϕ₁.AC[1]), copy(ϕ₂.AC[1])
+    @test (ϕ₁ + ϕ₂).AC[1] ≈ AC₁ + AC₂ atol = atol
+    @test (ϕ₁ - ϕ₂).AC[1] ≈ AC₁ - AC₂ atol = atol
+    @test left_virtualspace(ϕ₁ + ϕ₂, 1) == ℂ^3
+    @test right_virtualspace(ϕ₁ + ϕ₂, 1) == ℂ^4
+    @test norm(ϕ₁ + ϕ₂) ≈ norm(AC₁ + AC₂) atol = atol
+    @test gauge_error(ϕ₁ + ϕ₂) ≤ atol
+
+    # the operands are left untouched
+    @test ϕ₁.AC[1] ≈ AC₁ && ϕ₂.AC[1] ≈ AC₂
+
+    # ... and the same for a single-site `FiniteMPO`
+    o₁, o₂ = rand(ComplexF64, ℂ^3 ← ℂ^3), rand(ComplexF64, ℂ^3 ← ℂ^3)
+    O₁, O₂ = FiniteMPO(o₁), FiniteMPO(o₂)
+    @test length(O₁) == 1
+    # `convert` on a single-site MPO used to contract `mpo[1]` with `mpo[end]`, the same tensor
+    @test convert(TensorMap, O₁) ≈ o₁ atol = atol
+    @test length(O₁ + O₂) == 1
+    @test (O₁ + O₂)[1] ≈ O₁[1] + O₂[1] atol = atol
+    @test (O₁ - O₂)[1] ≈ O₁[1] - O₂[1] atol = atol
+    @test convert(TensorMap, O₁ + O₂) ≈ o₁ + o₂ atol = atol
+    @test convert(TensorMap, O₁ - O₂) ≈ o₁ - o₂ atol = atol
+
+    # scalar types promote at length 1 too
+    @test scalartype(
+        FiniteMPS(rand, Float64, 1, ℂ^3, ℂ^4) + FiniteMPS(rand, ComplexF64, 1, ℂ^3, ℂ^4)
+    ) ==
+        ComplexF64
+    @test scalartype(FiniteMPO(rand(Float64, ℂ^3 ← ℂ^3)) + FiniteMPO(rand(ComplexF64, ℂ^3 ← ℂ^3))) ==
+        ComplexF64
 end
 
 @testset "scalar-type promotion" begin

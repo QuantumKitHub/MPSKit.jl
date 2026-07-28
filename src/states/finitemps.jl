@@ -489,10 +489,15 @@ function Base.:+(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
     N = length(ψ₁)
     N == length(ψ₂) ||
         throw(DimensionMismatch("Cannot add states of length $N and $(length(ψ₂))"))
-    @assert N > 1 "not implemented for length < 2"
     left_virtualspace(ψ₁, 1) == left_virtualspace(ψ₂, 1) &&
         right_virtualspace(ψ₁, N) == right_virtualspace(ψ₂, N) ||
         throw(SpaceMismatch("Cannot add states with different boundary virtual spaces"))
+
+    # A single site has no internal bond to fuse -- the boundary virtual spaces are fixed by the
+    # check above -- so the sum is simply the sum of the two center tensors. The generic branch
+    # below cannot express this: it splits the chain into a left and a right block and fuses them
+    # at the seam, and for `N == 1` there is no seam.
+    N == 1 && return FiniteMPS([ψ₁.AC[1] + ψ₂.AC[1]])
 
     halfN = div(N, 2)
 
