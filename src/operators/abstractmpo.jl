@@ -76,7 +76,7 @@ function remove_orphans!(mpo::SparseMPO; tol = eps(real(scalartype(mpo)))^(3 / 4
                     return j ∈ getindex.(nonzero_keys(mpo[i]), 4) &&
                         j ∈ getindex.(nonzero_keys(mpo[i + 1]), 1)
                 end
-                changed |= length(mask) == size(mpo[i], 4)
+                changed |= length(mask) != size(mpo[i], 4)
                 mpo[i] = mpo[i][:, :, :, mask]
                 mpo[i + 1] = mpo[i + 1][mask, :, :, :]
             end
