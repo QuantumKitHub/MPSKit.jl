@@ -60,7 +60,10 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in Iterators.reverse((i + 1):center)
-            v.parent.Cs[j], v.parent.ARs[j], _ = right_gauge(v.parent.ACs[j])
+            # only factorize what is not cached yet
+            if ismissing(v.parent.Cs[j]) || ismissing(v.parent.ARs[j])
+                v.parent.Cs[j], v.parent.ARs[j], _ = right_gauge(v.parent.ACs[j])
+            end
             if j != i + 1 # last AC not needed
                 v.parent.ACs[j - 1] = _mul_tail(v.parent.ALs[j - 1], v.parent.Cs[j])
             end
@@ -75,7 +78,10 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in center:i
-            v.parent.ALs[j], v.parent.Cs[j + 1], _ = left_gauge(v.parent.ACs[j])
+            # only factorize what is not cached yet
+            if ismissing(v.parent.ALs[j]) || ismissing(v.parent.Cs[j + 1])
+                v.parent.ALs[j], v.parent.Cs[j + 1], _ = left_gauge(v.parent.ACs[j])
+            end
             if j != i # last AC not needed
                 v.parent.ACs[j + 1] = _mul_front(v.parent.Cs[j + 1], v.parent.ARs[j + 1])
             end

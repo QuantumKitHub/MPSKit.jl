@@ -475,9 +475,23 @@ Base.:*(ψ::FiniteMPS, a::Number) = rmul!(copy(ψ), a)
 Base.:*(a::Number, ψ::FiniteMPS) = lmul!(a, copy(ψ))
 
 function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
-    length(ψ₁) == length(ψ₂) ||
-        throw(DimensionMismatch("Cannot add states of length $(length(ψ₁)) and $(length(ψ₂))"))
-    @assert length(ψ₁) > 1 "not implemented for length < 2"
+    N = length(ψ₁)
+    N == length(ψ₂) ||
+        throw(DimensionMismatch("Cannot add states of length $N and $(length(ψ₂))"))
+    @assert N > 1 "not implemented for length < 2"
+    left_virtualspace(ψ₁, 1) == left_virtualspace(ψ₂, 1) &&
+        right_virtualspace(ψ₁, N) == right_virtualspace(ψ₂, N) ||
+        throw(SpaceMismatch("Cannot add states with different boundary virtual spaces"))
+
+    halfN = div(N, 2)
+
+    # Take a snapshot of the tensors that make up the two states, in a single canonical form:
+    # `AL[1] ⋯ AL[halfN] C[halfN] AR[halfN + 1] ⋯ AR[N]`. Gauging is lazy, so every read may
+    # move the gauge center; only tensors that belong to the same gauge may be combined.
+    ψ₁.C[halfN], ψ₂.C[halfN] # settle both gauge centers at the seam first
+    AL₁, AL₂ = ψ₁.AL[1:halfN], ψ₂.AL[1:halfN]
+    AR₁, AR₂ = ψ₁.AR[(halfN + 1):N], ψ₂.AR[(halfN + 1):N] # indexed as `AR[i - halfN]`
+    Cmid₁, Cmid₂ = ψ₁.C[halfN], ψ₂.C[halfN]
 
     ψ = similar(ψ₁)
     fill!(ψ.ALs, missing)
@@ -485,57 +499,55 @@ function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
     fill!(ψ.ACs, missing)
     fill!(ψ.Cs, missing)
 
-    halfN = div(length(ψ), 2)
-
     # left half
     F₁ = isometry(
-        storagetype(ψ), (_lastspace(ψ₁.AL[1]) ⊕ _lastspace(ψ₂.AL[1]))', _lastspace(ψ₁.AL[1])'
+        storagetype(ψ), (_lastspace(AL₁[1]) ⊕ _lastspace(AL₂[1]))', _lastspace(AL₁[1])'
     )
     F₂ = left_null(F₁)
-    @assert _lastspace(F₂) == _lastspace(ψ₂.AL[1])
+    @assert _lastspace(F₂) == _lastspace(AL₂[1])
 
-    AL = ψ₁.AL[1] * F₁' + ψ₂.AL[1] * F₂'
+    AL = AL₁[1] * F₁' + AL₂[1] * F₂'
     ψ.ALs[1], R = left_orth!(AL)
 
     for i in 2:halfN
-        AL₁ = _transpose_front(F₁ * _transpose_tail(ψ₁.AL[i]))
-        AL₂ = _transpose_front(F₂ * _transpose_tail(ψ₂.AL[i]))
+        A₁ = _transpose_front(F₁ * _transpose_tail(AL₁[i]))
+        A₂ = _transpose_front(F₂ * _transpose_tail(AL₂[i]))
 
         F₁ = isometry(
-            storagetype(ψ), (_lastspace(AL₁) ⊕ _lastspace(ψ₂.AL[i]))', _lastspace(AL₁)'
+            storagetype(ψ), (_lastspace(A₁) ⊕ _lastspace(AL₂[i]))', _lastspace(A₁)'
         )
         F₂ = left_null(F₁)
-        @assert _lastspace(F₂) == _lastspace(ψ₂.AL[i])
+        @assert _lastspace(F₂) == _lastspace(AL₂[i])
 
-        AL = _transpose_front(R * _transpose_tail(AL₁ * F₁' + AL₂ * F₂'))
+        AL = _transpose_front(R * _transpose_tail(A₁ * F₁' + A₂ * F₂'))
         ψ.ALs[i], R = left_orth!(AL)
     end
 
-    C₁ = F₁ * ψ₁.C[halfN]
-    C₂ = F₂ * ψ₂.C[halfN]
+    C₁ = F₁ * Cmid₁
+    C₂ = F₂ * Cmid₂
 
     # right half
     F₁ = isometry(
-        storagetype(ψ), _firstspace(ψ₁.AR[end]) ⊕ _firstspace(ψ₂.AR[end]), _firstspace(ψ₁.AR[end])
+        storagetype(ψ), _firstspace(AR₁[end]) ⊕ _firstspace(AR₂[end]), _firstspace(AR₁[end])
     )
     F₂ = left_null(F₁)
-    @assert _lastspace(F₂) == _firstspace(ψ₂.AR[end])'
+    @assert _lastspace(F₂) == _firstspace(AR₂[end])'
 
-    AR = F₁ * _transpose_tail(ψ₁.AR[end]) + F₂ * _transpose_tail(ψ₂.AR[end])
+    AR = F₁ * _transpose_tail(AR₁[end]) + F₂ * _transpose_tail(AR₂[end])
     L, AR′ = right_orth!(AR)
     ψ.ARs[end] = _transpose_front(AR′)
 
-    for i in Iterators.reverse((halfN + 1):(length(ψ) - 1))
-        AR₁ = _transpose_tail(ψ₁.AR[i] * F₁')
-        AR₂ = _transpose_tail(ψ₂.AR[i] * F₂')
+    for i in Iterators.reverse((halfN + 1):(N - 1))
+        A₁ = _transpose_tail(AR₁[i - halfN] * F₁')
+        A₂ = _transpose_tail(AR₂[i - halfN] * F₂')
 
         F₁ = isometry(
-            storagetype(ψ), _firstspace(ψ₁.AR[i]) ⊕ _firstspace(AR₂), _firstspace(ψ₁.AR[i])
+            storagetype(ψ), _firstspace(A₁) ⊕ _firstspace(A₂), _firstspace(A₁)
         )
         F₂ = left_null(F₁)
-        @assert _lastspace(F₂) == _firstspace(AR₂)'
+        @assert _lastspace(F₂) == _firstspace(A₂)'
 
-        AR = _transpose_tail(_transpose_front(F₁ * AR₁ + F₂ * AR₂) * L)
+        AR = _transpose_tail(_transpose_front(F₁ * A₁ + F₂ * A₂) * L)
         L, AR′ = right_orth!(AR)
         ψ.ARs[i] = _transpose_front(AR′)
     end
