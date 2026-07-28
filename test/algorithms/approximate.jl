@@ -32,20 +32,20 @@ verbosity_conv = 1
         MPSKit.Defaults.set_scheduler!()
 
         ψ3, _ = approximate(ψ0, (W1, ψ), IDMRG(; verbosity))
-        ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trscheme = truncrank(12), verbosity))
+        ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trunc = truncrank(12), verbosity))
         ψ5, _ = timestep(ψ, H, 0.0, dt, TDVP())
-        ψ6 = changebonds(W1 * ψ, SvdCut(; trscheme = truncrank(12)))
+        ψ6 = changebonds(W1 * ψ, SvdCut(; trunc = truncrank(12)))
 
         @test abs(dot(ψ1, ψ5)) ≈ 1.0 atol = dt
         @test abs(dot(ψ3, ψ5)) ≈ 1.0 atol = dt
         @test abs(dot(ψ6, ψ5)) ≈ 1.0 atol = dt
         @test abs(dot(ψ2, ψ4)) ≈ 1.0 atol = dt
 
-        nW1 = changebonds(W1, SvdCut(; trscheme = trunctol(; atol = dt))) # this should be a trivial mpo now
+        nW1 = changebonds(W1, SvdCut(; trunc = trunctol(; atol = dt))) # this should be a trivial mpo now
         @test dim(space(nW1[1], 1)) == 1
     end
 
-    finite_algs = [DMRG(; verbosity), DMRG2(; verbosity, trscheme = truncrank(10))]
+    finite_algs = [DMRG(; verbosity), DMRG2(; verbosity, trunc = truncrank(10))]
     @testset "finitemps1 ≈ finitemps2" for alg in finite_algs
         a = FiniteMPS(10, ℂ^2, ℂ^10)
         b = FiniteMPS(10, ℂ^2, ℂ^20)

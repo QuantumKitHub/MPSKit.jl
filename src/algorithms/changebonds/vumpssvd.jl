@@ -21,7 +21,7 @@ $(TYPEDFIELDS)
     alg_svd = Defaults.alg_svd()
 
     "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the two-site update"
-    trscheme::TruncationStrategy
+    trunc::TruncationStrategy
 end
 
 function changebonds_1(
@@ -40,7 +40,7 @@ function changebonds_1(
 
     # collapse back to 1 site
     if D2 != D1
-        cut_alg = SvdCut(; alg.alg_svd, trscheme = truncspace(infimum(D1, D2)))
+        cut_alg = SvdCut(; alg.alg_svd, trunc = truncspace(infimum(D1, D2)))
         nstate, nenvs = changebonds(nstate, nH, cut_alg, nenvs)
     end
 
@@ -62,7 +62,7 @@ function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environme
         _, nC2 = fixedpoint(Hc, state.C[loc + 1], :SR, alg.alg_eigsolve)
 
         #svd ac2, get new AL1 and S,V ---> AC
-        AL1, S, V = svd_trunc!(nAC2; trunc = alg.trscheme, alg = alg.alg_svd)
+        AL1, S, V = svd_trunc!(nAC2; trunc = alg.trunc, alg = alg.alg_svd)
         @plansor AC[-1 -2; -3] := S[-1; 1] * V[1; -3 -2]
 
         #find AL2 from AC and C as in vumps paper

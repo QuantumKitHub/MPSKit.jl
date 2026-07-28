@@ -232,7 +232,7 @@ function Base.:*(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     end
 
     O = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
-    return changebonds!(FiniteMPO(O), SvdCut(; trscheme = notrunc()))
+    return changebonds!(FiniteMPO(O), SvdCut(; trunc = notrunc()))
 end
 function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
     check_length(mpo1, mpo2)
@@ -251,8 +251,8 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
         Fᵣ = fuser(A, right_virtualspace(mps, i), right_virtualspace(mpo, i))
         return _fuse_mpo_mps(mpo[i], A1, Fₗ, Fᵣ)
     end
-    trscheme = trunctol(; atol = eps(real(T)))
-    return changebonds!(FiniteMPS(A2), SvdCut(; trscheme); normalize = false)
+    trunc = trunctol(; atol = eps(real(T)))
+    return changebonds!(FiniteMPS(A2), SvdCut(; trunc); normalize = false)
 end
 function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
     L = check_length(mpo, mps)
@@ -264,7 +264,7 @@ function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
     As = map(1:L) do i
         return _fuse_mpo_mps(mpo[i], mps.AL[i], fusers[i], fusers[i + 1])
     end
-    return changebonds(InfiniteMPS(As), SvdCut(; trscheme = notrunc()))
+    return changebonds(InfiniteMPS(As), SvdCut(; trunc = notrunc()))
 end
 
 function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
@@ -396,12 +396,12 @@ function Base.isapprox(
 end
 
 @doc """
-    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trscheme)
-    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trscheme)
+    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trunc)
+    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trunc)
 
 Compose the mpo with a swap gate applied to indices `i` and `i + 1`, effectively creating an
 operator that acts on the Hilbert spaces with those factors swapped.
-The keyword arguments `alg` and `trscheme` can be used to control how the resulting tensor
+The keyword arguments `alg` and `trunc` can be used to control how the resulting tensor
 is truncated again.
 """ swap, swap!
 
@@ -409,7 +409,7 @@ swap(mpo::FiniteMPO, i::Integer; kwargs...) = swap!(copy(mpo), i; kwargs...)
 function swap!(
         mpo::FiniteMPO{<:MPOTensor}, i::Integer;
         inv::Bool = false,
-        alg = Defaults.alg_svd(), trscheme = trunctol(; atol = eps(real(scalartype(mpo)))^(4 / 5))
+        alg = Defaults.alg_svd(), trunc = trunctol(; atol = eps(real(scalartype(mpo)))^(4 / 5))
     )
     O₁, O₂ = mpo[i], mpo[i + 1]
 
@@ -421,7 +421,7 @@ function swap!(
             τ[-3 -6; 4 5] * O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ'[2 3; -1 -4]
     end
 
-    U, S, Vᴴ = svd_trunc!(O₂₁; alg, trunc = trscheme)
+    U, S, Vᴴ = svd_trunc!(O₂₁; alg, trunc = trunc)
     sqrtS = sqrt(S)
     @plansor mpo[i][-1 -2; -3 -4] := U[-3 -1 -2; 1] * sqrtS[1; -4]
     @plansor mpo[i + 1][-1 -2; -3 -4] := sqrtS[-1; 1] * Vᴴ[1; -3 -4 -2]

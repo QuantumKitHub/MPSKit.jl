@@ -283,7 +283,7 @@ disadvantages:
   globally optimal truncation can be obtained by using the [`SvdCut`](@ref) algorithm in
   combination with [`approximate`](@ref). Since the output of this method might have a
   truncated bonddimension, the new state might not be identical to the input state.
-  The truncation is controlled through `trscheme`, which dictates how the singular values of
+  The truncation is controlled through `trunc`, which dictates how the singular values of
   the original state are truncated.
 
 
@@ -293,7 +293,7 @@ disadvantages:
   update, this procedure is *optimal*, but it requires to evaluate a two-site derivative,
   which can be costly when the physical space is large. The state will remain unchanged, but
   a one-site scheme will now be able to push the optimization further. The subspace used for
-  expansion can be truncated through `trscheme`, which dictates how many singular values will
+  expansion can be truncated through `trunc`, which dictates how many singular values will
   be added.
 
 * [`RandExpand`](@ref): This algorithm similarly adds blocks orthogonal to the current
@@ -302,12 +302,12 @@ disadvantages:
   and if the bond dimension is grown slow enough, this still obtains a very good expansion
   scheme. Again, The state will remain unchanged and a one-site scheme will now be able to 
   push the optimization further. The subspace used for expansion can be truncated through
-  `trscheme`, which dictates how many orthogonal vectors will be added.
+  `trunc`, which dictates how many orthogonal vectors will be added.
 
 * [`VUMPSSvdCut`](@ref): This algorithm is based on the [`VUMPS`](@ref) algorithm, and
   consists of performing a two-site update, and then truncating the state back down. Because
   of the two-site update, this can again become expensive, but the algorithm has the option
-  of both expanding as well as truncating the bond dimension. Here, `trscheme` controls the
+  of both expanding as well as truncating the bond dimension. Here, `trunc` controls the
   truncation of the full state after the two-site update.
 
 ## Leading boundary

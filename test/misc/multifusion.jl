@@ -81,7 +81,7 @@ module TestMultifusion
         v = variance(ψ, H)
         E = expectation_value(ψ, H, envs)
 
-        ψ2, envs2, δ2 = find_groundstate(init, H, DMRG2(; trscheme = trunctol(; atol = 1.0e-6)))
+        ψ2, envs2, δ2 = find_groundstate(init, H, DMRG2(; trunc = trunctol(; atol = 1.0e-6)))
         v2 = variance(ψ2, H)
         E2 = expectation_value(ψ2, H, envs2)
 
@@ -97,7 +97,7 @@ module TestMultifusion
         excE, qp = excitations(H, QuasiparticleAnsatz(), ψ2; sector = C1, num = 1)
         @test 0 < variance(qp[1], H) < 1.0e-8
 
-        excE_DM, qp_DM = excitations(H, FiniteExcited(; gsalg = DMRG2(; trscheme = trunctol(; atol = 1.0e-6))), ψ2; num = 1)
+        excE_DM, qp_DM = excitations(H, FiniteExcited(; gsalg = DMRG2(; trunc = trunctol(; atol = 1.0e-6))), ψ2; num = 1)
         @test isapprox(first(excE_DM), first(excE) + E2; atol = 1.0e-6)
     end
 
@@ -113,7 +113,7 @@ module TestMultifusion
         E = expectation_value(ψ, H, envs)
         v = variance(ψ, H)
 
-        ψ2, envs2, δ2 = find_groundstate(init, H, IDMRG2(; tol = tol, trscheme = trunctol(; atol = 1.0e-6), maxiter = 400))
+        ψ2, envs2, δ2 = find_groundstate(init, H, IDMRG2(; tol = tol, trunc = trunctol(; atol = 1.0e-6), maxiter = 400))
         E2 = expectation_value(ψ2, H, envs2)
         v2 = variance(ψ2, H)
 

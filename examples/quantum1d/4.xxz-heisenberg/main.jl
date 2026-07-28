@@ -81,7 +81,7 @@ The reason behind this becomes more obvious at higher bond dimensions:
 """
 
 groundstate, envs, delta = find_groundstate(
-    state, H2, IDMRG2(; trscheme = truncrank(50), maxiter = 20, tol = 1.0e-12)
+    state, H2, IDMRG2(; trunc = truncrank(50), maxiter = 20, tol = 1.0e-12)
 );
 entanglementplot(groundstate)
 

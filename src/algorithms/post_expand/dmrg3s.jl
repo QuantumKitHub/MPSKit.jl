@@ -83,10 +83,10 @@ is filled in by `DMRG`'s constructor, not supplied here directly — see `DMRG`'
 for the calling convention:
 
 ```julia
-DMRG(; alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7)), trscheme = truncdim(50))
+DMRG(; alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7)), trunc = truncdim(50))
 ```
 
-A truncating `trscheme` is strongly recommended alongside `DMRG3S`, to cut the perturbed
+A truncating `trunc` is strongly recommended alongside `DMRG3S`, to cut the perturbed
 bond back down each sweep — `DMRG`'s constructor warns if none is given.
 
 ## References

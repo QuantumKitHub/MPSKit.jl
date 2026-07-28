@@ -22,7 +22,7 @@ $(TYPEDFIELDS)
     alg_svd::S = Defaults.alg_svd()
 
     "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the expanded space"
-    trscheme::TruncationStrategy
+    trunc::TruncationStrategy
 end
 
 function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
@@ -34,7 +34,7 @@ function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
         # obtain spaces by sampling the support of both the left and right nullspace
         VL = left_null(ψ.AL[i])
         VR = right_null!(_transpose_tail(ψ.AR[i + 1]; copy = true))
-        V = sample_space(infimum(right_virtualspace(VL), space(VR, 1)), alg.trscheme)
+        V = sample_space(infimum(right_virtualspace(VL), space(VR, 1)), alg.trunc)
 
         # obtain (orthogonal) directions as isometries in that direction
         XL = randisometry(scalartype(VL), right_virtualspace(VL) ← V)
@@ -92,7 +92,7 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Ra
     nrm = norm(g2)
     # nothing to expand here; normalizing a zero g2 would NaN the SVD
     nrm ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
-    _, _, Vᴴ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trscheme, alg = alg.alg_svd)
+    _, _, Vᴴ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trunc, alg = alg.alg_svd)
 
     # optimal vectors at site+1, zero weight at site
     ar_re = Vᴴ * NR
@@ -120,7 +120,7 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Ran
     g2 = adjoint(NL) * ac2 * adjoint(NR)
     nrm = norm(g2)
     nrm ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
-    U, _, _ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trscheme, alg = alg.alg_svd)
+    U, _, _ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trunc, alg = alg.alg_svd)
 
     # optimal vectors at site-1, zero weight at site
     Q = NL * U
