@@ -2,8 +2,8 @@
 $(TYPEDEF)
 
 Algorithm that approximates an open-boundary finite MPO-MPS product using a left-to-right
-zip-up sweep. The MPO and MPS are contracted one site at a time, and the enlarged virtual
-bond is truncated immediately using `trscheme`.
+zip-up sweep, optionally followed by a second `changebonds` sweep. The MPO and MPS are
+contracted one site at a time, and the enlarged virtual bond is truncated immediately.
 
 ## Fields
 
@@ -12,22 +12,34 @@ $(TYPEDFIELDS)
 ## Constructors
 
     Zipup(; trscheme, alg_svd=Defaults.alg_svd())
-    Zipup(alg_gauge)
+    Zipup(alg_zipup, [alg_finalize])
 
-Create a `Zipup` algorithm with the given truncated gauge algorithm, or by passing a
-truncation scheme and singular value decomposition algorithm.
+Create a `Zipup` algorithm with the given [`SvdCut`](@ref), or by passing a truncation scheme
+and singular value decomposition algorithm. If `alg_finalize` is provided, the state obtained
+after the zip-up sweep is further compressed with `changebonds!`.
+
+Following Paeckel et al., if the desired final bond dimension is `D`, one can use a more
+permissive zip-up truncation, e.g. rank `2D` with stricter tolerances, and use `alg_finalize`
+to impose the final truncation.
 
 ## References
 
 - [Stoudenmire and White New J. Phys. 12 (2010)](@cite stoudenmire2010)
+- [Paeckel et al. Ann. of Phys. 411 (2019)](@cite paeckel2019)
 """
-struct Zipup{G} <: Algorithm
-    "algorithm used for gauging and truncating the local tensors"
-    alg_gauge::G
+struct Zipup{G <: SvdCut, F} <: Algorithm
+    "algorithm used for gauging and truncating the local tensors during the zip-up sweep"
+    alg_zipup::G
+    "algorithm used for the final locally gauged truncation pass; `nothing` skips this pass"
+    alg_finalize::F
 end
 
-function Zipup(; trscheme::TruncationStrategy, alg_svd = Defaults.alg_svd())
-    return Zipup(MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme))
+Zipup(alg_zipup) = Zipup(alg_zipup, nothing)
+
+function Zipup(;
+        trscheme::TruncationStrategy, alg_svd = Defaults.alg_svd()
+    )
+    return Zipup(SvdCut(; alg_svd, trscheme))
 end
 
 function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipup)
@@ -41,6 +53,9 @@ function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipup)
 
     Fₗ = fuser(A, left_virtualspace(ψ, 1), left_virtualspace(O, 1))
     local carry
+    alg_zipup = MatrixAlgebraKit.TruncatedAlgorithm(
+        alg.alg_zipup.alg_svd, alg.alg_zipup.trscheme
+    )
 
     As = map(1:N) do i
         Aψ = i == 1 ? ψ.AC[1] : ψ.AR[i]
@@ -53,12 +68,14 @@ function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipup)
         if i == N
             return Aᶻ
         else
-            AL, C, _ = left_gauge(Aᶻ, alg.alg_gauge)
+            AL, C, _ = left_gauge(Aᶻ, alg_zipup)
             carry = C
             Fₗ = Fᵣ
             return AL
         end
     end
 
-    return FiniteMPS(As; normalize = false, overwrite = true)
+    ψ′ = FiniteMPS(As; normalize = false, overwrite = true)
+    return isnothing(alg.alg_finalize) ?
+        ψ′ : changebonds!(ψ′, alg.alg_finalize; normalize = false)
 end
