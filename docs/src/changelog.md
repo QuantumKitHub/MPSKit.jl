@@ -42,6 +42,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   in each sector, controlled by the new `oversampling` and `oversampling_factor` keywords.
   Accordingly, `marek_gap` and `correlation_length` now return a `TensorKit.SectorDict` of
   per-sector results by default; pass `sector = ...` to obtain a single sector's result as before.
+- All `trscheme` keyword arguments are renamed to `trunc` ([#482](https://github.com/QuantumKitHub/MPSKit.jl/pull/482)).
 
 ### Deprecated
 
