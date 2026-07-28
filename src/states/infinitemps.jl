@@ -121,20 +121,20 @@ function InfiniteMPS(
         pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
         kwargs...
     ) where {S <: IndexSpace}
-    return InfiniteMPS(@. rand(T, MPSMapSpace($circshift(Dspaces, 1), pspaces, Dspaces)); kwargs...)
+    return InfiniteMPS(@. rand(T, $circshift(Dspaces, 1) ⊗ pspaces ← Dspaces); kwargs...)
 end
 function InfiniteMPS(
         pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
         kwargs...
     ) where {S <: IndexSpace}
-    return InfiniteMPS(@. rand(ComplexF64, MPSMapSpace($circshift(Dspaces, 1), pspaces, Dspaces)); kwargs...)
+    return InfiniteMPS(@. rand(ComplexF64, $circshift(Dspaces, 1) ⊗ pspaces ← Dspaces); kwargs...)
 end
 function InfiniteMPS(
         f, T::Type, pspaces::AbstractVector{S}, Dspaces::AbstractVector{S};
         kwargs...
     ) where {S <: IndexSpace}
     return InfiniteMPS(
-        @. f(T, MPSMapSpace($circshift(Dspaces, 1), pspaces, Dspaces));
+        @. f(T, $circshift(Dspaces, 1) ⊗ pspaces ← Dspaces);
         kwargs...
     )
 end

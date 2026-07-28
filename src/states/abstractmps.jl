@@ -14,69 +14,6 @@ const GenericMPSTensor{S, N} = AbstractTensorMap{T, S, N, 1} where {T} # some fu
 const MPSTensor{S} = GenericMPSTensor{S, 2} # the usual mps tensors on which we work
 
 """
-    $(TYPEDEF)
-
-Helper type that stores the spaces of an `AbstractTensorMap` following the `GenericMPSTensor`
-leg convention `Vₗ ⊗ P ← Vᵣ`, i.e. left virtual space and physical space(s) in the codomain,
-right virtual space in the domain. Centralizing this convention here avoids having to define
-constructors directly on `MPSTensor`/`GenericMPSTensor` (which are aliases for
-`AbstractTensorMap` and thus not owned by this package).
-
-### Fields
-$(TYPEDFIELDS)
-"""
-struct MPSMapSpace{S <: ElementarySpace, Sₚ <: Union{S, CompositeSpace{S}}}
-    "left virtual space"
-    Vₗ::S
-    "physical space; either a single `ElementarySpace` (one physical leg, as in `MPSTensor`) or a `CompositeSpace{S}` (several physical legs, as in `GenericMPSTensor`)"
-    P::Sₚ
-    "right virtual space"
-    Vᵣ::S
-end
-
-"""
-    MPSMapSpace(Vₗ::S, P::Sₚ)
-
-Construct an `MPSMapSpace` with `Vᵣ` defaulting to `Vₗ`.
-"""
-MPSMapSpace(Vₗ::S, P::Sₚ) where {S <: ElementarySpace, Sₚ <: Union{S, CompositeSpace{S}}} =
-    MPSMapSpace(Vₗ, P, Vₗ)
-
-"""
-    MPSMapSpace(d::Int, Dₗ::Int, [Dᵣ]::Int)
-
-Construct an `MPSMapSpace` with given physical and virtual dimensions, using `ComplexSpace`
-(`ℂ`) for all three spaces. `Dᵣ` defaults to `Dₗ`.
-
-### Arguments
-- `d::Int`: physical dimension
-- `Dₗ::Int`: left virtual dimension
-- `Dᵣ::Int`: right virtual dimension, defaults to `Dₗ`
-"""
-MPSMapSpace(d::Int, Dₗ::Int, Dᵣ::Int = Dₗ) = MPSMapSpace(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
-
-const _MPSMAPSPACE_FILL_DESCRIPTIONS = Dict(
-    :rand => "filled with uniformly distributed random entries",
-    :randn => "filled with normally distributed random entries",
-    :zeros => "filled with zeros",
-)
-
-for f in (:rand, :randn, :zeros)
-    fill_description = _MPSMAPSPACE_FILL_DESCRIPTIONS[f]
-    @eval begin
-        @doc """
-            $($f)([T::Type=Defaults.eltype], A::MPSMapSpace)
-
-        Construct a tensor with `eltype` `T` and spaces `A.Vₗ ⊗ A.P ← A.Vᵣ`, $($fill_description).
-        """
-        function Base.$f(::Type{T}, A::MPSMapSpace) where {T}
-            return $f(T, A.Vₗ ⊗ A.P ← A.Vᵣ)
-        end
-        Base.$f(A::MPSMapSpace) = $f(Defaults.eltype, A)
-    end
-end
-
-"""
     isfullrank(A::GenericMPSTensor; side=:both)
 
 Determine whether the given tensor is full rank, i.e. whether both the map from the left
