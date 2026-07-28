@@ -19,6 +19,13 @@ using CUDA, cuTENSOR
 (CUDA.functional() && cuTENSOR.functional()) ||
     filter!(!(startswith("gpu/cuda") ∘ first), testsuite)
 
+# only run AMDGPU if available
+using AMDGPU
+
+AMDGPU.functional() ||
+    filter!(!(startswith("gpu/amd") ∘ first), testsuite)
+
+
 # parse arguments
 args = parse_args(ARGS; custom = ["fast"])
 fast = !isnothing(args.custom["fast"])

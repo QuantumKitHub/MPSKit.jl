@@ -2,6 +2,15 @@
 # center-move as in textbook single-site DMRG)
 _truncates(::MatrixAlgebraKit.AbstractAlgorithm) = false
 _truncates(::MatrixAlgebraKit.TruncatedAlgorithm) = true
+_truncates(alg::DMRG3S) = _truncates(alg.alg_gauge)
+
+# a no-truncation `trscheme` selects a (bond-preserving) QR gauge, anything else a truncated SVD
+_build_inner_gauge(trscheme, alg_svd, alg_orth) =
+    trscheme isa MatrixAlgebraKit.NoTruncation ? alg_orth :
+    MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+
+_expands(alg) = false
+_expands(::DMRG3S) = true
 
 """
 $(TYPEDEF)
@@ -9,17 +18,38 @@ $(TYPEDEF)
 Density Matrix Renormalization Group algorithm for finding the dominant eigenvector.
 
 Each site update is, in order: (1) an optional bond expansion (`alg_expand`), (2) a single-site
-eigensolve, and (3) a gauge step (`alg_gauge`). With the defaults (`alg_expand = nothing` and a
-non-truncating QR `alg_gauge`) this is textbook single-site DMRG, which cannot change the bond
-dimension. Setting `alg_expand` to a bond-expansion algorithm (e.g. [`OptimalExpand`](@ref),
-[`RandExpand`](@ref), [`SketchedExpand`](@ref)) enriches the bond with directions orthogonal to
-the current state ahead of each eigensolve, recovering Controlled Bond Expansion (CBE) DMRG; a
-truncating `alg_gauge` is then desirable to cut the enlarged bond back down.
+eigensolve, and (3) a gauge step (`alg_gauge`). With the defaults (`alg_expand = nothing` and
+`alg_gauge = nothing`, a non-truncating QR gauge derived from `trscheme = notrunc()`) this is
+textbook single-site DMRG, which cannot change the bond dimension. Setting `alg_expand` to a
+bond-expansion algorithm (e.g. [`OptimalExpand`](@ref), [`RandExpand`](@ref), [`SketchedExpand`](@ref))
+enriches the bond with directions orthogonal to the current state ahead of each eigensolve,
+recovering Controlled Bond Expansion (CBE) DMRG. Setting `alg_gauge` to a bond-expanding gauge
+algorithm (e.g. [`DMRG3S`](@ref)) instead enriches the bond as part of the gauge step, after the
+eigensolve. Either way, a truncating gauge (see below) is then desirable to cut the enlarged
+bond back down.
 
-The gauge algorithm is selected in the keyword constructor from the `trscheme` argument: when it
-is `notrunc()` the gauge is a QR decomposition (`alg_orth`, [`Householder`](@extref
-MatrixAlgebraKit.Householder) by default), otherwise it is a truncated SVD (`alg_svd` with the
-given `trscheme`).
+# Choosing the gauge
+
+By default, `alg_gauge` is built for you from `trscheme`/`alg_svd`/`alg_orth`: `trscheme =
+notrunc()` (the default) gives a QR decomposition (`alg_orth`, [`Householder`](@extref
+MatrixAlgebraKit.Householder) by default), any other `trscheme` gives a truncated SVD (`alg_svd`
+with that `trscheme`).
+
+```julia
+DMRG()                            # QR gauge, no truncation
+DMRG(; trscheme = truncdim(50))   # truncated SVD gauge
+```
+
+To use a bond-expanding gauge such as [`DMRG3S`](@ref), pass it directly as `alg_gauge`; `trscheme`
+etc. are still routed through to build the *inner* gauge it wraps, exactly as above:
+
+```julia
+DMRG(; alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7)), trscheme = truncdim(50))
+```
+
+If `alg_gauge` is instead given with its inner gauge already set (e.g. `DMRG3S(0.1, sched,
+some_gauge)`), `trscheme`/`alg_svd`/`alg_orth` must be left at their defaults — passing both is an
+error, since it leaves two conflicting sources for the same setting.
 
 ## Fields
 
@@ -44,24 +74,38 @@ struct DMRG{A, F, E, G} <: Algorithm
     "algorithm used to expand the bond ahead of each local update, or `nothing` for none"
     alg_expand::E
 
-    "factorization used for the post-update gauge: a QR algorithm (no truncation) or a truncated SVD"
+    "gauge algorithm applied after each local update: `NoExpand` for a plain gauge step (a QR
+    algorithm with no truncation, or a truncated SVD), or an algorithm that additionally expands
+    the bond beforehand (e.g. [`DMRG3S`](@ref))"
     alg_gauge::G
 end
 function DMRG(;
         tol = Defaults.tol, maxiter = Defaults.maxiter, alg_eigsolve = (;),
         verbosity = Defaults.verbosity, finalize = Defaults._finalize,
-        alg_expand = nothing, trscheme = notrunc(),
+        alg_expand = nothing, alg_gauge = nothing, trscheme = nothing,
         alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth()
     )
     # single-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
     # `alg_eigsolve = (; adaptive = false, ...)` to opt out (the splat overrides the default).
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
         Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
-    # a no-truncation `trscheme` selects a (bond-preserving) QR gauge, anything else a truncated SVD
-    alg_gauge = trscheme isa MatrixAlgebraKit.NoTruncation ? alg_orth :
-        MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
-    if !isnothing(alg_expand) && !_truncates(alg_gauge)
-        @warn "DMRG with `alg_expand` but no truncation (`trscheme = notrunc()`): the bond dimension will grow unboundedly each sweep."
+
+    if isnothing(alg_gauge) || isnothing(alg_gauge.alg_gauge)
+        trscheme = something(trscheme, notrunc()) # enforce trscheme default here
+        inner_gauge = _build_inner_gauge(trscheme, alg_svd, alg_orth)
+        alg_gauge = set_alg_gauge(alg_gauge, inner_gauge)
+    else
+        isnothing(trscheme) || throw(
+            ArgumentError(
+                "`trscheme` was given together with an `alg_gauge` that already carries its own " *
+                    "gauge algorithm (e.g. `DMRG3S(noise, schedule, some_gauge)`); set the truncation " *
+                    "via one or the other, not both."
+            )
+        )
+    end
+
+    if (!isnothing(alg_expand) || _expands(alg_gauge)) && !_truncates(alg_gauge)
+        @warn "DMRG with a bond-expanding `alg_expand` and/or `alg_gauge` but no truncation (`trscheme = notrunc()`): the bond dimension will grow unboundedly each sweep."
     end
     return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize, alg_expand, alg_gauge)
 end
@@ -71,7 +115,7 @@ function local_update!(
         site, direction,
         ψ, O, alg::DMRG, envs,
         ϵ_global, ϵ_trunc, decay_rate,
-        timeroutput
+        iter, timeroutput
     )
     ϵ_local = calc_galerkin(site, ψ, O, ψ, envs)
 
@@ -87,8 +131,10 @@ function local_update!(
         fixedpoint(H_effective, ac_old, :SR, alg_eigsolve)
     end
 
+    alg_gauge = _update_alg_gauge(alg.alg_gauge, iter, ϵ_global)
+
     # 3. gauge
-    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge!(ψ, site, direction, AC′, alg.alg_gauge; normalize = true)
+    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge!(ψ, site, direction, O, envs, AC′, alg_gauge; normalize = true)
 
     # 4. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
     decay_rate = clamp((first(info.normres) / ϵ_local)^(1 / max(1, info.numops)), 1.0e-3, 0.999)
@@ -145,7 +191,7 @@ function local_update!(
         pos, direction,
         ψ, O, alg::DMRG2, envs,
         ϵ_global, ϵ_trunc, decay_rate,
-        timeroutput
+        iter, timeroutput
     )
     Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs)
 
@@ -162,9 +208,11 @@ function local_update!(
         (newA2center, info)
     end
 
+    alg_gauge = _update_alg_gauge(alg.alg_gauge, iter, ϵ_global)
+
     # 2. gauge: truncated SVD split back into single-site tensors and install;
     #           the discarded weight is the truncation error
-    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge2!(ψ, pos, direction, newA2center, alg.alg_gauge; normalize = true)
+    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge2!(ψ, pos, direction, O, envs, newA2center, alg_gauge; normalize = true)
 
     # 3. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
     decay_rate = clamp((first(info.normres) / ϵ_local)^(1 / max(1, info.numops)), 1.0e-3, 0.999)
@@ -183,6 +231,8 @@ _num_updates(::DMRG2, ψ) = length(ψ) - 1
 
 _sweep_ranges(::DMRG, ψ) = (1:(length(ψ) - 1), length(ψ):-1:2)
 _sweep_ranges(::DMRG2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 2):-1:1)
+
+inner_alg_gauge(alg::Union{DMRG, DMRG2}) = alg_gauge(alg.alg_gauge)
 
 function find_groundstate!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs = environments(ψ, H, ψ)
@@ -211,7 +261,7 @@ function find_groundstate!(
                         pos, Val(:right),
                         ψ, H, alg, envs,
                         ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        timeroutput
+                        iter, timeroutput
                     )
                     ϵ_global = maximum(ϵ_locals)
                 end
@@ -223,7 +273,7 @@ function find_groundstate!(
                         pos, Val(:left),
                         ψ, H, alg, envs,
                         ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        timeroutput
+                        iter, timeroutput
                     )
                     ϵ_global = maximum(ϵ_locals)
                 end

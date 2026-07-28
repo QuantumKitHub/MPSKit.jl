@@ -12,6 +12,7 @@ using LinearAlgebra: Diagonal
 using Combinatorics: permutations
 using TensorKitTensors.SpinOperators: S_x, S_y, S_z, S_x_S_x, S_y_S_y, S_z_S_z, S_exchange, S_plus_S_min, S_min_S_plus
 using TensorKitTensors.FermionOperators: f_plus_f_min, f_min_f_plus, f_plus_f_plus, f_min_f_min, f_num, f_hopping
+using Random: shuffle
 
 # exports
 export S_x, S_y, S_z
@@ -21,6 +22,7 @@ export force_planar
 export symm_mul_mpo
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model, kitaev_model
 export classical_ising_tensors, classical_ising, sixvertex
+export bad_initial_state
 
 # using TensorOperations
 
@@ -239,6 +241,35 @@ function sixvertex(; a = 1.0, b = 1.0, c = 1.0)
         0 0 0 a
     ]
     return InfiniteMPO([permute(TensorMap(d, ℂ^2 ⊗ ℂ^2, ℂ^2 ⊗ ℂ^2), ((1, 2), (4, 3)))])
+end
+
+# Functions for testing DMRG3S
+function distinct_bitstrings(n::Int, n_up::Int, n_states::Int)
+    trivial_state = vcat(ones(Int, n_up), zeros(Int, n - n_up))
+    results = Set{Vector{Int}}()
+    while length(results) < n_states
+        push!(results, shuffle(trivial_state))
+    end
+    return collect(results)
+end
+
+function bad_initial_state(H, L; T = ComplexF64, n_states = 20, n_fixed = 3)
+    physd = U1Space(-1 // 2 => 1, 1 // 2 => 1)
+    n_free = L - n_fixed
+    n_up = (n_free - n_fixed) ÷ 2  # 7 of 17 up, so the fixed +3/2 tail nets to Sz_total = 0
+
+    configs = distinct_bitstrings(n_free, n_up, n_states)
+
+    return sum(configs) do bits
+        charges = [b == 1 ? 1 // 2 : -1 // 2 for b in bits]
+        append!(charges, fill(1 // 2, n_fixed))  # the 3 fixed, all-up sites
+
+        q = cumsum(charges)
+        @assert q[end] == 0 "configuration doesn't land in the Sz_total = 0 sector"
+        Vs = [U1Space(qi => 1) for qi in q[1:(end - 1)]]  # L-1 internal bonds only;
+
+        return normalize!(FiniteMPS(T, fill(physd, L), Vs))
+    end
 end
 
 end
