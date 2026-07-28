@@ -21,6 +21,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- Addition of `FiniteMPS`/`FiniteMPO` with different scalar types, through a new
+  `Base.similar(ψ, ::Type{S})` for `S <: Number` on `FiniteMPS`. ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+
 ### Changed
 
 - `environments` now follows a single positional contract for every state and operator kind:
@@ -48,6 +51,15 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Removed
 
 ### Fixed
+
+- `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
+  different tensor networks, e.g. `norm(E₀ * gs - H * gs)` coming out as `2 * norm(gs) * E₀`
+  instead of ~0. The lazy gauge sweep in `CView.getindex` re-derived `AL`/`C` entries that were
+  already cached, and since different code paths install different factorizations (a truncated SVD
+  from DMRG vs. a positive QR from the sweep) the replacement differed by a bond unitary, so `+`
+  combined tensors belonging to two different gauges. The same staleness was latent in every
+  consumer that reads several gauge tensors across a center move, `dot` included.
+  ([#473](https://github.com/QuantumKitHub/MPSKit.jl/issues/473), [#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
 
 ### Performance
 
