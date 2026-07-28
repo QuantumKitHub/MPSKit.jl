@@ -258,7 +258,7 @@ function FiniteMPS(
     end
 
     # construct MPS
-    tensors = MPSTensor.(f, elt, Pspaces, Vspaces[1:(end - 1)], Vspaces[2:end])
+    tensors = @. f(elt, Vspaces[1:(end - 1)] ⊗ Pspaces ← Vspaces[2:end])
     return FiniteMPS(tensors; normalize, overwrite = true)
 end
 function FiniteMPS(
