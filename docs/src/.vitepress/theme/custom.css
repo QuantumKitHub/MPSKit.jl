@@ -1,3 +1,36 @@
+/* ===== Typography =====
+   The DocumenterVitepress template puts "Barlow" and "Inter var" at the head of
+   `--vp-font-family-base` but never loads either as a webfont. macOS and Windows
+   quietly fall through to `-apple-system` / `Segoe UI`, which have real semibold
+   faces; on Linux the request is resolved by fontconfig to a substitute whose
+   weight 600 is barely distinguishable from regular, which is why bold text in
+   docstrings read as plain text there (QuantumKitHub/MPSKit.jl#477).
+   Same stack as upstream, minus the three families that are never available. */
+:root {
+  --vp-font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+}
+
+/* ===== Docstring section headings =====
+   Documenter rewrites markdown headings inside docstrings into bold-only
+   paragraphs (`recursive_heading_to_bold!`), so there is no <h*> to style. The
+   markdown-it rule in `.vitepress/config.mts` tags exactly those paragraphs;
+   give them heading-like treatment that does not rely on font weight alone. */
+.jldocstring.custom-block p.jldocstring-heading {
+  margin: 1.5rem 0 0.6rem;
+  padding-bottom: 0.25rem;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--vp-c-text-1);
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.jldocstring.custom-block p.jldocstring-heading strong {
+  font-weight: inherit;
+}
+
 /* ===== MPSKit branding ===== */
 /* Accent color matching the (green) MPSKit logo in light mode.
    Dark mode already uses the green palette defined by the DVP template. */
