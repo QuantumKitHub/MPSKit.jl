@@ -4,10 +4,10 @@ _truncates(::MatrixAlgebraKit.AbstractAlgorithm) = false
 _truncates(::MatrixAlgebraKit.TruncatedAlgorithm) = true
 _truncates(alg::DMRG3S) = _truncates(alg.alg_gauge)
 
-# a no-truncation `trscheme` selects a (bond-preserving) QR gauge, anything else a truncated SVD
-_build_inner_gauge(trscheme, alg_svd, alg_orth) =
-    trscheme isa MatrixAlgebraKit.NoTruncation ? alg_orth :
-    MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+# a no-truncation `trunc` selects a (bond-preserving) QR gauge, anything else a truncated SVD
+_build_inner_gauge(trunc, alg_svd, alg_orth) =
+    trunc isa MatrixAlgebraKit.NoTruncation ? alg_orth :
+    MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trunc)
 
 _expands(alg) = false
 _expands(::DMRG3S) = true
@@ -19,7 +19,7 @@ Density Matrix Renormalization Group algorithm for finding the dominant eigenvec
 
 Each site update is, in order: (1) an optional bond expansion (`alg_expand`), (2) a single-site
 eigensolve, and (3) a gauge step (`alg_gauge`). With the defaults (`alg_expand = nothing` and
-`alg_gauge = nothing`, a non-truncating QR gauge derived from `trscheme = notrunc()`) this is
+`alg_gauge = nothing`, a non-truncating QR gauge derived from `trunc = notrunc()`) this is
 textbook single-site DMRG, which cannot change the bond dimension. Setting `alg_expand` to a
 bond-expansion algorithm (e.g. [`OptimalExpand`](@ref), [`RandExpand`](@ref), [`SketchedExpand`](@ref))
 enriches the bond with directions orthogonal to the current state ahead of each eigensolve,
@@ -30,25 +30,25 @@ bond back down.
 
 # Choosing the gauge
 
-By default, `alg_gauge` is built for you from `trscheme`/`alg_svd`/`alg_orth`: `trscheme =
+By default, `alg_gauge` is built for you from `trunc`/`alg_svd`/`alg_orth`: `trunc =
 notrunc()` (the default) gives a QR decomposition (`alg_orth`, [`Householder`](@extref
-MatrixAlgebraKit.Householder) by default), any other `trscheme` gives a truncated SVD (`alg_svd`
-with that `trscheme`).
+MatrixAlgebraKit.Householder) by default), any other `trunc` gives a truncated SVD (`alg_svd`
+with that `trunc`).
 
 ```julia
 DMRG()                            # QR gauge, no truncation
-DMRG(; trscheme = truncdim(50))   # truncated SVD gauge
+DMRG(; trunc = truncdim(50))   # truncated SVD gauge
 ```
 
-To use a bond-expanding gauge such as [`DMRG3S`](@ref), pass it directly as `alg_gauge`; `trscheme`
+To use a bond-expanding gauge such as [`DMRG3S`](@ref), pass it directly as `alg_gauge`; `trunc`
 etc. are still routed through to build the *inner* gauge it wraps, exactly as above:
 
 ```julia
-DMRG(; alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7)), trscheme = truncdim(50))
+DMRG(; alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7)), trunc = truncdim(50))
 ```
 
 If `alg_gauge` is instead given with its inner gauge already set (e.g. `DMRG3S(0.1, sched,
-some_gauge)`), `trscheme`/`alg_svd`/`alg_orth` must be left at their defaults — passing both is an
+some_gauge)`), `trunc`/`alg_svd`/`alg_orth` must be left at their defaults — passing both is an
 error, since it leaves two conflicting sources for the same setting.
 
 ## Fields
@@ -82,7 +82,7 @@ end
 function DMRG(;
         tol = Defaults.tol, maxiter = Defaults.maxiter, alg_eigsolve = (;),
         verbosity = Defaults.verbosity, finalize = Defaults._finalize,
-        alg_expand = nothing, alg_gauge = nothing, trscheme = nothing,
+        alg_expand = nothing, alg_gauge = nothing, trunc = nothing,
         alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth()
     )
     # single-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
@@ -91,13 +91,13 @@ function DMRG(;
         Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
 
     if isnothing(alg_gauge) || isnothing(alg_gauge.alg_gauge)
-        trscheme = something(trscheme, notrunc()) # enforce trscheme default here
-        inner_gauge = _build_inner_gauge(trscheme, alg_svd, alg_orth)
+        trunc = something(trunc, notrunc()) # enforce trunc default here
+        inner_gauge = _build_inner_gauge(trunc, alg_svd, alg_orth)
         alg_gauge = set_alg_gauge(alg_gauge, inner_gauge)
     else
-        isnothing(trscheme) || throw(
+        isnothing(trunc) || throw(
             ArgumentError(
-                "`trscheme` was given together with an `alg_gauge` that already carries its own " *
+                "`trunc` was given together with an `alg_gauge` that already carries its own " *
                     "gauge algorithm (e.g. `DMRG3S(noise, schedule, some_gauge)`); set the truncation " *
                     "via one or the other, not both."
             )
@@ -105,7 +105,7 @@ function DMRG(;
     end
 
     if (!isnothing(alg_expand) || _expands(alg_gauge)) && !_truncates(alg_gauge)
-        @warn "DMRG with a bond-expanding `alg_expand` and/or `alg_gauge` but no truncation (`trscheme = notrunc()`): the bond dimension will grow unboundedly each sweep."
+        @warn "DMRG with a bond-expanding `alg_expand` and/or `alg_gauge` but no truncation (`trunc = notrunc()`): the bond dimension will grow unboundedly each sweep."
     end
     return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize, alg_expand, alg_gauge)
 end
@@ -166,7 +166,7 @@ struct DMRG2{A, G, F} <: Algorithm
     "algorithm used for the eigenvalue solvers"
     alg_eigsolve::A
 
-    "factorization used for the post-update gauge: a truncated SVD (`alg_svd` with `trscheme`)"
+    "factorization used for the post-update gauge: a truncated SVD (`alg_svd` with `trunc`)"
     alg_gauge::G
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
@@ -175,7 +175,7 @@ end
 # TODO: find better default truncation
 function DMRG2(;
         tol = Defaults.tol, maxiter = Defaults.maxiter, verbosity = Defaults.verbosity,
-        alg_eigsolve = (;), alg_svd = Defaults.alg_svd(), trscheme,
+        alg_eigsolve = (;), alg_svd = Defaults.alg_svd(), trunc,
         finalize = Defaults._finalize
     )
     # two-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
@@ -183,7 +183,7 @@ function DMRG2(;
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
         Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
     # two-site DMRG always truncates the enlarged bond back down, so the gauge is a truncated SVD
-    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trunc)
     return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_gauge, finalize)
 end
 

@@ -154,7 +154,7 @@ end
     @test TensorKit.storagetype(H1′) == CuVector{T, CUDA.DeviceMemory}
     @test H1′ ≈ H1 atol = 1.0e-6
     @test convert(TensorMap, H1 + H2) ≈ convert(TensorMap, H1) + convert(TensorMap, H2) atol = 1.0e-6
-    H1_trunc = changebonds(H1, SvdCut(; trscheme = truncrank(0)))
+    H1_trunc = changebonds(H1, SvdCut(; trunc = truncrank(0)))
     @test H1_trunc ≈ H1
     @test all(left_virtualspace(H1_trunc) .== left_virtualspace(H1))
     # test dot and application
@@ -211,7 +211,7 @@ end
 
     H4′ = H4 / 3 + 2H4 / 3
     @test TensorKit.storagetype(H4′) == CuVector{T, CUDA.DeviceMemory}
-    H5 = changebonds(H4′, SvdCut(; trscheme = trunctol(; atol = 1.0e-12)))
+    H5 = changebonds(H4′, SvdCut(; trunc = trunctol(; atol = 1.0e-12)))
     @test TensorKit.storagetype(H5) == CuVector{T, CUDA.DeviceMemory}
     # needed here to avoid real * complex multiplication in cuTENSOR, which isn't supported
     psi = adapt(CuVector{T, CUDA.DeviceMemory}, FiniteMPS(T, physicalspace(H5), V ⊕ rightunitspace(V)))

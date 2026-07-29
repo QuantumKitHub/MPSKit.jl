@@ -37,7 +37,7 @@ using LinearAlgebra: eigvals
         E₀s, ψ₀s, info = exact_diagonalization(H; num, sector, alg)
         @test E₀s[1:num] ≈ vals[1:num]
         # this is a trick to make the mps full-rank again, which is not guaranteed by ED
-        ψ₀ = changebonds(first(ψ₀s), SvdCut(; trscheme = notrunc()))
+        ψ₀ = changebonds(first(ψ₀s), SvdCut(; trunc = notrunc()))
         Vspaces = left_virtualspace.(Ref(ψ₀), 1:L)
         push!(Vspaces, right_virtualspace(ψ₀, L))
         @test all(splat(==), zip(Vspaces, MPSKit.max_virtualspaces(ψ₀)))

@@ -45,14 +45,14 @@ verbosity_conv = 1
     @testset "DMRG2" begin
         ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
         v₀ = variance(ψ₀, H)
-        trscheme = truncrank(floor(Int, D * 1.5))
+        trunc = truncrank(floor(Int, D * 1.5))
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG2(; verbosity = verbosity_full, maxiter = 2, trscheme)
+            ψ₀, H, DMRG2(; verbosity = verbosity_full, maxiter = 2, trunc)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG2(; verbosity = verbosity_conv, maxiter = 10, trscheme), envs
+            ψ, H, DMRG2(; verbosity = verbosity_conv, maxiter = 10, trunc), envs
         )
         v = variance(ψ, H)
 
@@ -66,16 +66,16 @@ verbosity_conv = 1
         # start from a small bond so the bond expansion is exercised
         ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
         v₀ = variance(ψ₀, H)
-        expand = OptimalExpand(; trscheme = truncrank(D ÷ 2))
-        trscheme = truncrank(D)
+        expand = OptimalExpand(; trunc = truncrank(D ÷ 2))
+        trunc = truncrank(D)
 
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trscheme)
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_expand = expand, trscheme), envs
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_expand = expand, trunc), envs
         )
         v = variance(ψ, H)
 
@@ -94,16 +94,16 @@ verbosity_conv = 1
         Random.seed!(1234)
         ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
         v₀ = variance(ψ₀, H)
-        expand = SketchedExpand(; trscheme = truncrank(2), oversampling = 4)
-        trscheme = truncrank(D)
+        expand = SketchedExpand(; trunc = truncrank(2), oversampling = 4)
+        trunc = truncrank(D)
 
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trscheme)
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 15, alg_expand = expand, trscheme), envs
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 15, alg_expand = expand, trunc), envs
         )
         v = variance(ψ, H)
 
@@ -121,15 +121,15 @@ verbosity_conv = 1
         ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
         v₀ = variance(ψ₀, H)
         alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7))  # TODO: match final constructor API
-        trscheme = truncrank(D)
+        trunc = truncrank(D)
 
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_gauge, trscheme)
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_gauge, trunc)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_gauge, trscheme), envs
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_gauge, trunc), envs
         )
         v = variance(ψ, H)
 
@@ -157,7 +157,7 @@ verbosity_conv = 1
         ψ_escape, envs_escape, δ_escape = find_groundstate(
             ψ_bad, H_heis, DMRG(;
                 verbosity = verbosity_conv, maxiter = 30,
-                alg_gauge, trscheme = truncrank(20),
+                alg_gauge, trunc = truncrank(20),
             )
         )
         E_escape = real(expectation_value(ψ_escape, H_heis, envs_escape))
@@ -236,15 +236,15 @@ end
         ψ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
         H = repeat(H_ref, 2)
 
-        trscheme = trunctol(; atol = 1.0e-8)
+        trunc = trunctol(; atol = 1.0e-8)
 
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ, H, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trscheme)
+            ψ, H, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trunc)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, IDMRG2(; tol, verbosity = verbosity_conv, trscheme)
+            ψ, H, IDMRG2(; tol, verbosity = verbosity_conv, trunc)
         )
         v = variance(ψ, H, envs)
 
@@ -328,13 +328,13 @@ end
 
     @testset "DMRG2" begin
         # test logging passes
-        trscheme = truncrank(floor(Int, D * 1.5))
+        trunc = truncrank(floor(Int, D * 1.5))
         ψ, envs, δ = find_groundstate(
-            ψ₀, H_lazy, DMRG2(; tol, verbosity = verbosity_full, maxiter = 1, trscheme)
+            ψ₀, H_lazy, DMRG2(; tol, verbosity = verbosity_full, maxiter = 1, trunc)
         )
 
         # compare states
-        alg = DMRG2(; tol, verbosity = verbosity_conv, trscheme)
+        alg = DMRG2(; tol, verbosity = verbosity_conv, trunc)
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
@@ -406,14 +406,14 @@ end
         H_lazy′ = repeat(H_lazy, 2)
         H′ = repeat(H, 2)
 
-        trscheme = truncrank(floor(Int, D * 1.5))
+        trunc = truncrank(floor(Int, D * 1.5))
         # test logging passes
         ψ, envs, δ = find_groundstate(
-            ψ₀′, H_lazy′, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trscheme)
+            ψ₀′, H_lazy′, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trunc)
         )
 
         # compare states
-        alg = IDMRG2(; tol, verbosity = verbosity_conv, trscheme)
+        alg = IDMRG2(; tol, verbosity = verbosity_conv, trunc)
         ψ, envs, δ = find_groundstate(ψ, H_lazy′, alg)
 
         @test abs(dot(ψ₀′, ψ)) ≈ 1 atol = atol
@@ -441,7 +441,7 @@ end
     algs = [
         VUMPS(; tol, verbosity), VOMPS(; tol, verbosity),
         GradientGrassmann(; tol, verbosity), IDMRG(; tol, verbosity),
-        IDMRG2(; tol, verbosity, trscheme = truncrank(D1)),
+        IDMRG2(; tol, verbosity, trunc = truncrank(D1)),
     ]
     mpo = force_planar(classical_ising())
 
@@ -455,7 +455,7 @@ end
             @test expectation_value(ψ, mpo2, envs) ≈ 2.5337^2 atol = 1.0e-3
         else
             ψ, envs = leading_boundary(ψ₀, mpo, alg)
-            ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme = truncrank(D1 - D)), envs)
+            ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trunc = truncrank(D1 - D)), envs)
             ψ, envs = leading_boundary(ψ, mpo, alg)
             @test dim(space(ψ.AL[1, 1], 1)) == dim(space(ψ₀.AL[1, 1], 1)) + (D1 - D)
             @test expectation_value(ψ, mpo, envs) ≈ 2.5337 atol = 1.0e-3

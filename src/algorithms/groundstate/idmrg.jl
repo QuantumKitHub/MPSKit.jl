@@ -53,7 +53,7 @@ $(TYPEDFIELDS)
     alg_svd::S = Defaults.alg_svd()
 
     "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the two-site update"
-    trscheme::TruncationStrategy
+    trunc::TruncationStrategy
 end
 
 
@@ -163,7 +163,7 @@ function localupdate_step!(
     alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
     return _localupdate_sweep_idmrg2!(
         state.mps, state.operator, state.envs, alg_eigsolve,
-        it.trscheme, it.alg_svd, state.timeroutput,
+        it.trunc, it.alg_svd, state.timeroutput,
     )
 end
 
@@ -204,7 +204,7 @@ end
 
 
 function _localupdate_sweep_idmrg2!(
-        ψ, H, envs, alg_eigsolve, alg_trscheme, alg_svd, timeroutput::TimerOutput,
+        ψ, H, envs, alg_eigsolve, alg_trunc, alg_svd, timeroutput::TimerOutput,
     )
     # @timeit wraps its body in try-finally, which is a new lexical scope: declare locals
     # at function scope so values can flow between consecutive @timeit blocks.
@@ -217,7 +217,7 @@ function _localupdate_sweep_idmrg2!(
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
         end
         @timeit timeroutput "svd_trunc" begin
-            al, c, ar = svd_trunc!(ac2′; trunc = alg_trscheme, alg = alg_svd)
+            al, c, ar = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
             normalize!(c)
 
             ψ.AL[pos] = al
@@ -240,7 +240,7 @@ function _localupdate_sweep_idmrg2!(
         _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
     end
     @timeit timeroutput "svd_trunc" begin
-        al, c, ar = svd_trunc!(ac2′; trunc = alg_trscheme, alg = alg_svd)
+        al, c, ar = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
         normalize!(c)
 
         ψ.AL[end] = al
@@ -268,7 +268,7 @@ function _localupdate_sweep_idmrg2!(
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
         end
         @timeit timeroutput "svd_trunc" begin
-            al, c, ar = svd_trunc!(ac2′; trunc = alg_trscheme, alg = alg_svd)
+            al, c, ar = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
             normalize!(c)
 
             ψ.AL[pos] = al
@@ -292,7 +292,7 @@ function _localupdate_sweep_idmrg2!(
         E, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
     end
     @timeit timeroutput "svd_trunc" begin
-        al, c, ar = svd_trunc!(ac2′; trunc = alg_trscheme, alg = alg_svd)
+        al, c, ar = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
         normalize!(c)
 
         ψ.AL[end] = al
