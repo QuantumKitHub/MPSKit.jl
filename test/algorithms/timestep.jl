@@ -17,7 +17,7 @@ verbosity_conv = 1
 
 @testset "timestep" verbose = true begin
     dt = 0.1
-    algs = [TDVP(), TDVP2(; trscheme = truncrank(10))]
+    algs = [TDVP(), TDVP2(; trunc = truncrank(10))]
     L = 10
 
     H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
@@ -105,12 +105,12 @@ end
         ((OptimalExpand, (;)), (SketchedExpand, (; oversampling = 4)))
         Random.seed!(4)
         ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
-        alg = TDVP(; alg_expand = Exp(; trscheme = truncrank(Dstart), kw...), trscheme = truncrank(Dcap))
+        alg = TDVP(; alg_expand = Exp(; trunc = truncrank(Dstart), kw...), trunc = truncrank(Dcap))
         E₀ = real(expectation_value(ψ₀, H))
 
         ref, cbe, plain = ψ₀, ψ₀, ψ₀
         for _ in 1:6
-            ref, = timestep(ref, H, 0.0, dt, TDVP2(; trscheme = truncrank(Dcap)))
+            ref, = timestep(ref, H, 0.0, dt, TDVP2(; trunc = truncrank(Dcap)))
             cbe, = timestep(cbe, H, 0.0, dt, alg)
             plain, = timestep(plain, H, 0.0, dt, TDVP())   # stuck at Dstart
         end
@@ -128,7 +128,7 @@ end
         Random.seed!(6)
         ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
         # a deliberately lossy cap so the truncation discards weight every step
-        lossy = TDVP(; alg_expand = OptimalExpand(; trscheme = truncrank(2)), trscheme = truncrank(2))
+        lossy = TDVP(; alg_expand = OptimalExpand(; trunc = truncrank(2)), trunc = truncrank(2))
 
         ψrt = ψ₀
         for _ in 1:12
@@ -146,7 +146,7 @@ end
     @testset "imaginary-time lowers energy" begin
         Random.seed!(5)
         ψ₀ = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^Dstart))
-        alg = TDVP(; alg_expand = OptimalExpand(; trscheme = truncrank(Dstart)), trscheme = truncrank(Dcap))
+        alg = TDVP(; alg_expand = OptimalExpand(; trunc = truncrank(Dstart)), trunc = truncrank(Dcap))
         E₀ = real(expectation_value(ψ₀, H))
         ψ = ψ₀
         for _ in 1:8
@@ -159,7 +159,7 @@ end
 
 @testset "time_evolve" verbose = true begin
     t_span = 0:0.1:0.1
-    algs = [TDVP(), TDVP2(; trscheme = truncrank(10))]
+    algs = [TDVP(), TDVP2(; trunc = truncrank(10))]
 
     L = 10
     H = force_planar(heisenberg_XXX(; spin = 1 // 2, L))

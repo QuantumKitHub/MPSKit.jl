@@ -6,7 +6,7 @@ Single site MPS time-evolution algorithm based on the Time-Dependent Variational
 For finite MPS, setting `alg_expand` to a bond-expansion algorithm (e.g. [`OptimalExpand`](@ref),
 [`SketchedExpand`](@ref)) enriches the bond with directions orthogonal to the current state
 ahead of each local integration, recovering Controlled Bond Expansion (CBE) TDVP and lifting the
-fixed-bond limitation of plain single-site TDVP. A truncating `trscheme` is then required to cut
+fixed-bond limitation of plain single-site TDVP. A truncating `trunc` is then required to cut
 the enlarged bond back down (selecting the truncated-SVD gauge). The expansion is
 state-preserving, as required for a consistent time evolution.
 
@@ -46,14 +46,14 @@ end
 function TDVP(;
         integrator = Defaults.alg_expsolve(), tolgauge = Defaults.tolgauge,
         gaugemaxiter = Defaults.maxiter, finalize = Defaults._finalize,
-        alg_expand = nothing, trscheme = notrunc(),
+        alg_expand = nothing, trunc = notrunc(),
         alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth()
     )
-    # a no-truncation `trscheme` selects a (bond-preserving) QR gauge, anything else a truncated SVD
-    alg_gauge = trscheme isa MatrixAlgebraKit.NoTruncation ? alg_orth :
-        MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+    # a no-truncation `trunc` selects a (bond-preserving) QR gauge, anything else a truncated SVD
+    alg_gauge = trunc isa MatrixAlgebraKit.NoTruncation ? alg_orth :
+        MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trunc)
     if !isnothing(alg_expand) && !_truncates(alg_gauge)
-        @warn "TDVP with `alg_expand` but no truncation (`trscheme = notrunc()`): the bond dimension will grow unboundedly each sweep."
+        @warn "TDVP with `alg_expand` but no truncation (`trunc = notrunc()`): the bond dimension will grow unboundedly each sweep."
     end
     return TDVP(integrator, tolgauge, gaugemaxiter, alg_expand, alg_gauge, finalize)
 end
@@ -212,7 +212,7 @@ $(TYPEDFIELDS)
     alg_svd::S = Defaults.alg_svd()
 
     "algorithm used for truncation of the two-site update"
-    trscheme::TruncationStrategy
+    trunc::TruncationStrategy
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
@@ -230,7 +230,7 @@ function timestep!(
         Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs)
         ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
 
-        nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+        nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trunc, alg = alg.alg_svd)
         ψ.AC[i] = (nal, complex(nc))
         ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
@@ -249,7 +249,7 @@ function timestep!(
         Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs)
         ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator; imaginary_evolution)
 
-        nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+        nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trunc, alg = alg.alg_svd)
         ψ.AC[i - 1] = (nal, complex(nc))
         ψ.AC[i] = (complex(nc), _transpose_front(nar))
 

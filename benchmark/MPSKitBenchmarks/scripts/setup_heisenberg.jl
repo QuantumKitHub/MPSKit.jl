@@ -37,7 +37,7 @@ function generate_spaces(H, alg; D_min = 2, D_steps = 5)
     Ds = round.(Int, logrange(D_min, D_max, D_steps))
 
     return map(Ds) do D
-        mps = changebonds(psi, SvdCut(; trscheme = truncrank(D)))
+        mps = changebonds(psi, SvdCut(; trunc = truncrank(D)))
         return AC2Spec(mps, H)
     end
 end
@@ -62,7 +62,7 @@ symmetry = SU2Irrep
 alg = DMRG2(;
     maxiter = 10, tol = 1.0e-12,
     alg_eigsolve = (; tol = 1.0e-5, dynamic_tols = false, maxiter = 3),
-    trscheme = truncrank(D_max)
+    trunc = truncrank(D_max)
 )
 
 H = heisenberg_XXX(T, symmetry, lattice; spin);
@@ -97,7 +97,7 @@ symmetry = SU2Irrep
 alg = DMRG2(;
     maxiter = 10, tol = 1.0e-12,
     alg_eigsolve = (; tol = 1.0e-5, dynamic_tols = false, maxiter = 3),
-    trscheme = truncrank(D_max)
+    trunc = truncrank(D_max)
 )
 
 SS = S_exchange(T, symmetry; spin)
@@ -137,7 +137,7 @@ symmetry = SU2Irrep
 alg = DMRG2(;
     maxiter = 10, tol = 1.0e-12,
     alg_eigsolve = (; tol = 1.0e-5, dynamic_tols = false, maxiter = 3),
-    trscheme = truncrank(D_max)
+    trunc = truncrank(D_max)
 )
 
 H = heisenberg_XXX(T, symmetry, lattice; spin);
@@ -174,14 +174,14 @@ for i in 1:(L - 1), j in (i + 1):L
     push!(terms, (i, j) => SS / abs(i - j))
 end
 H = FiniteMPOHamiltonian(lattice, terms...);
-H = changebonds(H, SvdCut(; trscheme = truncrank(500)));
+H = changebonds(H, SvdCut(; trunc = truncrank(500)));
 
 D_max = 1_000
 symmetry = SU2Irrep
 alg = DMRG2(;
     maxiter = 10, tol = 1.0e-12,
     alg_eigsolve = (; tol = 1.0e-5, dynamic_tols = false, maxiter = 3),
-    trscheme = truncrank(D_max)
+    trunc = truncrank(D_max)
 )
 
 specs_su2 = generate_spaces(H, alg; D_min, D_steps)

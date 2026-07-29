@@ -34,7 +34,7 @@ end
     ψ_copy = copy(ψ)
 
     trunc = trunctol(; atol = 1.0e-10)
-    ref = changebonds(O * ψ, SvdCut(; trscheme = trunc); normalize = false)
+    ref = changebonds(O * ψ, SvdCut(; trunc); normalize = false)
     got = approximate((O, ψ), Zipup(; trunc))
 
     @test norm(ref - got) / norm(ref) < 1.0e-10
@@ -48,7 +48,7 @@ end
     final_trunc = truncrank(Dcut) & truncerror(; rtol)
     zipup_trunc = truncrank(2Dcut) & truncerror(; rtol = rtol / 10)
 
-    ref_tr = changebonds(O * ψ, SvdCut(; trscheme = final_trunc); normalize = false)
+    ref_tr = changebonds(O * ψ, SvdCut(; trunc = final_trunc); normalize = false)
     got_one_sweep = approximate((O, ψ), Zipup(; trunc = final_trunc))
     got_two_sweep = approximate((O, ψ), Zipup(; trunc = (zipup_trunc, final_trunc)))
 

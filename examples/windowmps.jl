@@ -27,7 +27,7 @@ let
     szdat = [szdat]
 
     for i in 1:(totaltime / deltat)
-        mpco, envs = timestep(mpco, th, 0, deltat, TDVP2(; trscheme = truncbelow(10^(-8)) & truncdim(25)), envs)
+        mpco, envs = timestep(mpco, th, 0, deltat, TDVP2(; trunc = truncbelow(10^(-8)) & truncdim(25)), envs)
         push!(szdat, [expectation_value(mpco, i => sz) for i in 1:length(mpco)])
     end
 

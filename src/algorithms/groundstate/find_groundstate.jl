@@ -24,20 +24,20 @@ optimization algorithm will be attempted based on the supplied keywords.
 function find_groundstate(
         ψ::AbstractMPS, H, envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         tol = Defaults.tol, maxiter = Defaults.maxiter,
-        verbosity = Defaults.verbosity, trscheme = nothing
+        verbosity = Defaults.verbosity, trunc = nothing
     )
     if isa(ψ, InfiniteMPS)
         alg = VUMPS(; tol = max(1.0e-4, tol), verbosity, maxiter)
         if tol < 1.0e-4
             alg = alg & GradientGrassmann(; tol = tol, maxiter, verbosity)
         end
-        if !isnothing(trscheme)
-            alg = IDMRG2(; tol = min(1.0e-2, 100tol), verbosity, trscheme) & alg
+        if !isnothing(trunc)
+            alg = IDMRG2(; tol = min(1.0e-2, 100tol), verbosity, trunc) & alg
         end
     elseif isa(ψ, AbstractFiniteMPS)
         alg = DMRG(; tol, maxiter, verbosity)
-        if !isnothing(trscheme)
-            alg = DMRG2(; tol = min(1.0e-2, 100tol), verbosity, trscheme) & alg
+        if !isnothing(trunc)
+            alg = DMRG2(; tol = min(1.0e-2, 100tol), verbosity, trunc) & alg
         end
     else
         throw(ArgumentError("Unknown input state type"))

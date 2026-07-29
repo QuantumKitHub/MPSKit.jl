@@ -20,7 +20,7 @@ $(TYPEDFIELDS)
     alg_svd::S = Defaults.alg_svd()
 
     "algorithm used for truncating the expanded space"
-    trscheme::TruncationStrategy
+    trunc::TruncationStrategy
 end
 
 # Simple wrapper to convert between diffrent type of InifniteMPS.
@@ -51,7 +51,7 @@ function changebonds(
         nrm = norm(intermediate)
         # skip empty-content bonds; normalizing zero would NaN the SVD
         nrm > eps(real(scalartype(intermediate)))^(3 / 4) && scale!(intermediate, inv(nrm))
-        U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
+        U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trunc, alg = alg.alg_svd)
 
         AL′[i] = VL * U
         AR′[i + 1] = Vᴴ * VR
@@ -78,7 +78,7 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
         intermediate = adjoint(VL) * AC2 * adjoint(VR)
         nrm = norm(intermediate)
         nrm > eps(real(scalartype(intermediate)))^(3 / 4) && scale!(intermediate, inv(nrm))
-        U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trscheme, alg = alg.alg_svd)
+        U, _, Vᴴ = svd_trunc!(intermediate; trunc = alg.trunc, alg = alg.alg_svd)
 
         AL′[i, j] = VL * U
         AR′[i, j + 1] = Vᴴ * VR
@@ -107,7 +107,7 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Op
     nrm = norm(g2)
     # nothing to expand here; normalizing a zero g2 would NaN the SVD
     nrm ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
-    _, _, Vᴴ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trscheme, alg = alg.alg_svd)
+    _, _, Vᴴ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trunc, alg = alg.alg_svd)
 
     # optimal vectors at site+1
     ar_re = Vᴴ * NR
@@ -136,7 +136,7 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Opt
     g2 = adjoint(NL) * AC2 * adjoint(NR)
     nrm = norm(g2)
     nrm ≤ eps(real(scalartype(g2)))^(3 / 4) && return ψ
-    U, _, _ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trscheme, alg = alg.alg_svd)
+    U, _, _ = svd_trunc!(scale!(g2, inv(nrm)); trunc = alg.trunc, alg = alg.alg_svd)
 
     # optimal vectors at site-1
     Q = NL * U

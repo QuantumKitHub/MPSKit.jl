@@ -103,6 +103,9 @@ function _mps_to_mpo(A::GenericMPSTensor{S, 3}) where {S}
 end
 
 function Base.convert(::Type{TensorMap}, mpo::FiniteMPO{<:MPOTensor})
+    # a single site is both the first and the last one, so strip both of its virtual legs rather
+    # than contracting `mpo[1]` with `mpo[end]` -- which is the same tensor
+    length(mpo) == 1 && return removeunit(removeunit(only(mpo), 4), 1)
     L = removeunit(mpo[1], 1)
     R = removeunit(mpo[end], 4)
     M = Tuple(mpo[2:(end - 1)])
@@ -121,8 +124,16 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     @assert left_virtualspace(mpo1, 1) == left_virtualspace(mpo2, 1) &&
         right_virtualspace(mpo1, N) == right_virtualspace(mpo2, N)
 
+    # A single site has no internal bond to fuse -- the boundary virtual spaces are fixed by the
+    # assertion above -- so the sum is simply the sum of the two tensors. The generic branch below
+    # cannot express this: it splits the chain into a left and a right block and fuses them at the
+    # seam, and for `N == 1` there is no seam (both blocks would write site 1).
+    N == 1 && return FiniteMPO([mpo1[1] + mpo2[1]])
+
     halfN = N ÷ 2
-    A = storagetype(eltype(mpo1))
+    # the fusers carry the promoted scalar type, so every contraction below follows suit
+    T = promote_type(scalartype(mpo1), scalartype(mpo2))
+    A = TensorKit.similarstoragetype(storagetype(eltype(mpo1)), T)
 
     # left half
     F₁ = isometry(
@@ -232,7 +243,7 @@ function Base.:*(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     end
 
     O = map(fuse_mul_mpo, parent(mpo1), parent(mpo2))
-    return changebonds!(FiniteMPO(O), SvdCut(; trscheme = notrunc()))
+    return changebonds!(FiniteMPO(O), SvdCut(; trunc = notrunc()))
 end
 function Base.:*(mpo1::InfiniteMPO, mpo2::InfiniteMPO)
     check_length(mpo1, mpo2)
@@ -251,8 +262,8 @@ function Base.:*(mpo::FiniteMPO, mps::FiniteMPS)
         Fᵣ = fuser(A, right_virtualspace(mps, i), right_virtualspace(mpo, i))
         return _fuse_mpo_mps(mpo[i], A1, Fₗ, Fᵣ)
     end
-    trscheme = trunctol(; atol = eps(real(T)))
-    return changebonds!(FiniteMPS(A2), SvdCut(; trscheme); normalize = false)
+    trunc = trunctol(; atol = eps(real(T)))
+    return changebonds!(FiniteMPS(A2), SvdCut(; trunc); normalize = false)
 end
 function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
     L = check_length(mpo, mps)
@@ -264,7 +275,7 @@ function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
     As = map(1:L) do i
         return _fuse_mpo_mps(mpo[i], mps.AL[i], fusers[i], fusers[i + 1])
     end
-    return changebonds(InfiniteMPS(As), SvdCut(; trscheme = notrunc()))
+    return changebonds(InfiniteMPS(As), SvdCut(; trunc = notrunc()))
 end
 
 function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
@@ -396,12 +407,12 @@ function Base.isapprox(
 end
 
 @doc """
-    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trscheme)
-    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trscheme)
+    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trunc)
+    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trunc)
 
 Compose the mpo with a swap gate applied to indices `i` and `i + 1`, effectively creating an
 operator that acts on the Hilbert spaces with those factors swapped.
-The keyword arguments `alg` and `trscheme` can be used to control how the resulting tensor
+The keyword arguments `alg` and `trunc` can be used to control how the resulting tensor
 is truncated again.
 """ swap, swap!
 
@@ -409,7 +420,7 @@ swap(mpo::FiniteMPO, i::Integer; kwargs...) = swap!(copy(mpo), i; kwargs...)
 function swap!(
         mpo::FiniteMPO{<:MPOTensor}, i::Integer;
         inv::Bool = false,
-        alg = Defaults.alg_svd(), trscheme = trunctol(; atol = eps(real(scalartype(mpo)))^(4 / 5))
+        alg = Defaults.alg_svd(), trunc = trunctol(; atol = eps(real(scalartype(mpo)))^(4 / 5))
     )
     O₁, O₂ = mpo[i], mpo[i + 1]
 
@@ -421,7 +432,7 @@ function swap!(
             τ[-3 -6; 4 5] * O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ'[2 3; -1 -4]
     end
 
-    U, S, Vᴴ = svd_trunc!(O₂₁; alg, trunc = trscheme)
+    U, S, Vᴴ = svd_trunc!(O₂₁; alg, trunc = trunc)
     sqrtS = sqrt(S)
     @plansor mpo[i][-1 -2; -3 -4] := U[-3 -1 -2; 1] * sqrtS[1; -4]
     @plansor mpo[i + 1][-1 -2; -3 -4] := sqrtS[-1; 1] * Vᴴ[1; -3 -4 -2]

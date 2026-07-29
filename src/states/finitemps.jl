@@ -258,7 +258,7 @@ function FiniteMPS(
     end
 
     # construct MPS
-    tensors = MPSTensor.(f, elt, Pspaces, Vspaces[1:(end - 1)], Vspaces[2:end])
+    tensors = @. f(elt, Vspaces[1:(end - 1)] ⊗ Pspaces ← Vspaces[2:end])
     return FiniteMPS(tensors; normalize, overwrite = true)
 end
 function FiniteMPS(
@@ -316,6 +316,16 @@ Base.length(ψ::FiniteMPS) = length(ψ.ALs)
 Base.eltype(ψtype::Type{<:FiniteMPS}) = site_type(ψtype) # this might not be true
 function Base.similar(ψ::FiniteMPS{A, B}) where {A, B}
     return FiniteMPS{A, B}(similar(ψ.ALs), similar(ψ.ARs), similar(ψ.ACs), similar(ψ.Cs))
+end
+# an empty state with promoted scalar type: no tensor is materialised yet
+function Base.similar(ψ::FiniteMPS, ::Type{S}) where {S <: Number}
+    A = similar_scalartype(site_type(ψ), S)
+    B = similar_scalartype(bond_type(ψ), S)
+    N = length(ψ)
+    return FiniteMPS{A, B}(
+        Vector{Union{Missing, A}}(missing, N), Vector{Union{Missing, A}}(missing, N),
+        Vector{Union{Missing, A}}(missing, N), Vector{Union{Missing, B}}(missing, N + 1)
+    )
 end
 
 Base.isfinite(::Type{<:FiniteMPS}) = true
@@ -469,73 +479,87 @@ Linear Algebra
 ===========================================================================================#
 
 #=
-No support yet for converting the scalar type, also no in-place operations
+Scaling is in-place on a copy, so it cannot convert the scalar type: use `complex(ψ)` first if
+`a` is complex and `ψ` is not. Addition does promote, through `similar(ψ, ::Type{S})`.
 =#
 Base.:*(ψ::FiniteMPS, a::Number) = rmul!(copy(ψ), a)
 Base.:*(a::Number, ψ::FiniteMPS) = lmul!(a, copy(ψ))
 
-function Base.:+(ψ₁::MPS, ψ₂::MPS) where {MPS <: FiniteMPS}
-    length(ψ₁) == length(ψ₂) ||
-        throw(DimensionMismatch("Cannot add states of length $(length(ψ₁)) and $(length(ψ₂))"))
-    @assert length(ψ₁) > 1 "not implemented for length < 2"
+function Base.:+(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
+    N = length(ψ₁)
+    N == length(ψ₂) ||
+        throw(DimensionMismatch("Cannot add states of length $N and $(length(ψ₂))"))
+    left_virtualspace(ψ₁, 1) == left_virtualspace(ψ₂, 1) &&
+        right_virtualspace(ψ₁, N) == right_virtualspace(ψ₂, N) ||
+        throw(SpaceMismatch("Cannot add states with different boundary virtual spaces"))
 
-    ψ = similar(ψ₁)
-    fill!(ψ.ALs, missing)
-    fill!(ψ.ARs, missing)
-    fill!(ψ.ACs, missing)
-    fill!(ψ.Cs, missing)
+    # A single site has no internal bond to fuse -- the boundary virtual spaces are fixed by the
+    # check above -- so the sum is simply the sum of the two center tensors. The generic branch
+    # below cannot express this: it splits the chain into a left and a right block and fuses them
+    # at the seam, and for `N == 1` there is no seam.
+    N == 1 && return FiniteMPS([ψ₁.AC[1] + ψ₂.AC[1]])
 
-    halfN = div(length(ψ), 2)
+    halfN = div(N, 2)
+
+    # Take a snapshot of the tensors that make up the two states, in a single canonical form:
+    # `AL[1] ⋯ AL[halfN] C[halfN] AR[halfN + 1] ⋯ AR[N]`. Gauging is lazy, so every read may
+    # move the gauge center; only tensors that belong to the same gauge may be combined.
+    ψ₁.C[halfN], ψ₂.C[halfN] # settle both gauge centers at the seam first
+    AL₁, AL₂ = ψ₁.AL[1:halfN], ψ₂.AL[1:halfN]
+    AR₁, AR₂ = ψ₁.AR[(halfN + 1):N], ψ₂.AR[(halfN + 1):N] # indexed as `AR[i - halfN]`
+    Cmid₁, Cmid₂ = ψ₁.C[halfN], ψ₂.C[halfN]
+
+    ψ = similar(ψ₁, promote_type(scalartype(ψ₁), scalartype(ψ₂)))
 
     # left half
     F₁ = isometry(
-        storagetype(ψ), (_lastspace(ψ₁.AL[1]) ⊕ _lastspace(ψ₂.AL[1]))', _lastspace(ψ₁.AL[1])'
+        storagetype(ψ), (_lastspace(AL₁[1]) ⊕ _lastspace(AL₂[1]))', _lastspace(AL₁[1])'
     )
     F₂ = left_null(F₁)
-    @assert _lastspace(F₂) == _lastspace(ψ₂.AL[1])
+    @assert _lastspace(F₂) == _lastspace(AL₂[1])
 
-    AL = ψ₁.AL[1] * F₁' + ψ₂.AL[1] * F₂'
+    AL = AL₁[1] * F₁' + AL₂[1] * F₂'
     ψ.ALs[1], R = left_orth!(AL)
 
     for i in 2:halfN
-        AL₁ = _transpose_front(F₁ * _transpose_tail(ψ₁.AL[i]))
-        AL₂ = _transpose_front(F₂ * _transpose_tail(ψ₂.AL[i]))
+        A₁ = _transpose_front(F₁ * _transpose_tail(AL₁[i]))
+        A₂ = _transpose_front(F₂ * _transpose_tail(AL₂[i]))
 
         F₁ = isometry(
-            storagetype(ψ), (_lastspace(AL₁) ⊕ _lastspace(ψ₂.AL[i]))', _lastspace(AL₁)'
+            storagetype(ψ), (_lastspace(A₁) ⊕ _lastspace(AL₂[i]))', _lastspace(A₁)'
         )
         F₂ = left_null(F₁)
-        @assert _lastspace(F₂) == _lastspace(ψ₂.AL[i])
+        @assert _lastspace(F₂) == _lastspace(AL₂[i])
 
-        AL = _transpose_front(R * _transpose_tail(AL₁ * F₁' + AL₂ * F₂'))
+        AL = _transpose_front(R * _transpose_tail(A₁ * F₁' + A₂ * F₂'))
         ψ.ALs[i], R = left_orth!(AL)
     end
 
-    C₁ = F₁ * ψ₁.C[halfN]
-    C₂ = F₂ * ψ₂.C[halfN]
+    C₁ = F₁ * Cmid₁
+    C₂ = F₂ * Cmid₂
 
     # right half
     F₁ = isometry(
-        storagetype(ψ), _firstspace(ψ₁.AR[end]) ⊕ _firstspace(ψ₂.AR[end]), _firstspace(ψ₁.AR[end])
+        storagetype(ψ), _firstspace(AR₁[end]) ⊕ _firstspace(AR₂[end]), _firstspace(AR₁[end])
     )
     F₂ = left_null(F₁)
-    @assert _lastspace(F₂) == _firstspace(ψ₂.AR[end])'
+    @assert _lastspace(F₂) == _firstspace(AR₂[end])'
 
-    AR = F₁ * _transpose_tail(ψ₁.AR[end]) + F₂ * _transpose_tail(ψ₂.AR[end])
+    AR = F₁ * _transpose_tail(AR₁[end]) + F₂ * _transpose_tail(AR₂[end])
     L, AR′ = right_orth!(AR)
     ψ.ARs[end] = _transpose_front(AR′)
 
-    for i in Iterators.reverse((halfN + 1):(length(ψ) - 1))
-        AR₁ = _transpose_tail(ψ₁.AR[i] * F₁')
-        AR₂ = _transpose_tail(ψ₂.AR[i] * F₂')
+    for i in Iterators.reverse((halfN + 1):(N - 1))
+        A₁ = _transpose_tail(AR₁[i - halfN] * F₁')
+        A₂ = _transpose_tail(AR₂[i - halfN] * F₂')
 
         F₁ = isometry(
-            storagetype(ψ), _firstspace(ψ₁.AR[i]) ⊕ _firstspace(AR₂), _firstspace(ψ₁.AR[i])
+            storagetype(ψ), _firstspace(A₁) ⊕ _firstspace(A₂), _firstspace(A₁)
         )
         F₂ = left_null(F₁)
-        @assert _lastspace(F₂) == _firstspace(AR₂)'
+        @assert _lastspace(F₂) == _firstspace(A₂)'
 
-        AR = _transpose_tail(_transpose_front(F₁ * AR₁ + F₂ * AR₂) * L)
+        AR = _transpose_tail(_transpose_front(F₁ * A₁ + F₂ * A₂) * L)
         L, AR′ = right_orth!(AR)
         ψ.ARs[i] = _transpose_front(AR′)
     end

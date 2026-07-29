@@ -29,7 +29,7 @@ struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
 - `tol::Float64`: tolerance for convergence criterium
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
-- `trscheme`: if supplied, a truncated two-site sweep (`DMRG2`/`IDMRG2`) is prepended to
+- `trunc`: if supplied, a truncated two-site sweep (`DMRG2`/`IDMRG2`) is prepended to
   refine the bond dimension before the single-site algorithm polishes the result.
 
 ## Algorithms
@@ -41,7 +41,7 @@ infinite algorithms always require an explicit `(O, ψ)` tuple, and **`VOMPS` ha
 | Algorithm | Scheme                        | State `ψ₀`                        | bare `ψ` allowed? | `approximate!` |
 |:--------- |:----------------------------- |:---------------------------------- |:------------------:|:--------------:|
 | `DMRG`    | single-site, fixes bond dim    | `AbstractFiniteMPS`                | ✅                  | ✅              |
-| `DMRG2`   | two-site, truncates via `trscheme` | `AbstractFiniteMPS`            | ✅                  | ✅              |
+| `DMRG2`   | two-site, truncates via `trunc` | `AbstractFiniteMPS`            | ✅                  | ✅              |
 | `Zipup`   | streaming MPO-MPS compression | None | ❌ (tuple only)    | ❌ (out-of-place only) |
 | `IDMRG`   | single-site, thermodynamic limit | `InfiniteMPS` / `MultilineMPS`  | ❌ (tuple only)     | ✅              |
 | `IDMRG2`  | two-site, thermodynamic limit, needs unit cell ≥ 2 | `InfiniteMPS` / `MultilineMPS` | ❌ (tuple only) | ✅ |
@@ -61,17 +61,17 @@ function approximate(
         ψ::AbstractMPS, toapprox::Tuple{<:AbstractMPO, <:AbstractMPS},
         envs::AbstractMPSEnvironments = environments(ψ, toapprox...);
         tol = Defaults.tol, maxiter = Defaults.maxiter,
-        verbosity = Defaults.verbosity, trscheme = nothing
+        verbosity = Defaults.verbosity, trunc = nothing
     )
     if isa(ψ, InfiniteMPS)
         alg = VOMPS(; tol, verbosity, maxiter)
-        if !isnothing(trscheme)
-            alg = IDMRG2(; tol = min(1.0e-2, 100tol), verbosity, trscheme) & alg
+        if !isnothing(trunc)
+            alg = IDMRG2(; tol = min(1.0e-2, 100tol), verbosity, trunc) & alg
         end
     elseif isa(ψ, AbstractFiniteMPS)
         alg = DMRG(; tol, maxiter, verbosity)
-        if !isnothing(trscheme)
-            alg = DMRG2(; tol = min(1.0e-2, 100tol), verbosity, trscheme) & alg
+        if !isnothing(trunc)
+            alg = DMRG2(; tol = min(1.0e-2, 100tol), verbosity, trunc) & alg
         end
     else
         throw(ArgumentError("Unknown input state type"))

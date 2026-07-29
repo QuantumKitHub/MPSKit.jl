@@ -82,7 +82,7 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ACAR
                     )
-                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -100,7 +100,7 @@ function approximate!(
             ψ.AC[1, 1] = _mul_tail(ψ.AL[1, 1], ψ.C[1, 1])
             for row in 1:size(ψ, 1)
                 AC2′ = AC2_projection(CartesianIndex(row, size(ψ, 2)), ψ, toapprox, envs; kind = :ALAC)
-                al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al
@@ -125,7 +125,7 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ALAC
                     )
-                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -142,7 +142,7 @@ function approximate!(
             ψ.AR[1, 1] = _transpose_front(ψ.C[1, end] \ _transpose_tail(ψ.AC[1, 1]))
             for row in 1:size(ψ, 1)
                 AC2′ = AC2_projection(CartesianIndex(row, 0), ψ, toapprox, envs; kind = :ACAR)
-                al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row, end] = al

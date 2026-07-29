@@ -72,7 +72,7 @@ verbosity_conv = 1
             # find energy with normal dmrg
             for gsalg in (
                     DMRG(; verbosity, tol = 1.0e-6),
-                    DMRG2(; verbosity, tol = 1.0e-6, trscheme = trunctol(; atol = 1.0e-4)),
+                    DMRG2(; verbosity, tol = 1.0e-6, trunc = trunctol(; atol = 1.0e-4)),
                 )
                 energies_dm, _ = @testinferred excitations(H, FiniteExcited(; gsalg), ψ; num = 3)
                 @test energies_dm[1] ≈ energies_QP[1] + expectation_value(ψ, H, envs) atol = 1.0e-4

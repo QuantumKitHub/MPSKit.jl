@@ -24,7 +24,7 @@ $(TYPEDFIELDS)
     alg_orth::S = nothing
 
     "algorithm used for truncating the expanded space"
-    trscheme::TruncationStrategy
+    trunc::TruncationStrategy
 
     "number of extra sketch columns drawn beyond the target rank (range-finder oversampling)"
     oversampling::Int = 0
@@ -34,11 +34,11 @@ end
     sketch_space(V, alg::SketchedExpand) -> Vℓ, Vk
 
 The random-sketch space `Vℓ` drawn from the complement `V`, together with its oversampling-free
-target `Vk` (selected by `alg.trscheme`). `Vℓ` enlarges `Vk` by `alg.oversampling` extra
+target `Vk` (selected by `alg.trunc`). `Vℓ` enlarges `Vk` by `alg.oversampling` extra
 directions (capped by `V`); the selection is truncated back to `Vk`.
 """
 function sketch_space(V, alg::SketchedExpand)
-    Vk = sample_space(V, alg.trscheme)
+    Vk = sample_space(V, alg.trunc)
     alg.oversampling == 0 && return Vk, Vk
     Vp = typeof(V)(c => min(dim(V, c), alg.oversampling) for c in sectors(V))
     return infimum(V, Vk ⊕ Vp), Vk
