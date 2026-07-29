@@ -42,7 +42,7 @@ infinite algorithms always require an explicit `(O, ψ)` tuple, and **`VOMPS` ha
 |:--------- |:----------------------------- |:---------------------------------- |:------------------:|:--------------:|
 | `DMRG`    | single-site, fixes bond dim    | `AbstractFiniteMPS`                | ✅                  | ✅              |
 | `DMRG2`   | two-site, truncates via `trscheme` | `AbstractFiniteMPS`            | ✅                  | ✅              |
-| `Zipup`   | left-to-right streaming MPO-MPS compression | none, uses `(O, ψ)` directly | ❌                  | ❌              |
+| `Zipup`   | streaming MPO-MPS compression | None | ❌ (tuple only)    | ❌ (out-of-place only) |
 | `IDMRG`   | single-site, thermodynamic limit | `InfiniteMPS` / `MultilineMPS`  | ❌ (tuple only)     | ✅              |
 | `IDMRG2`  | two-site, thermodynamic limit, needs unit cell ≥ 2 | `InfiniteMPS` / `MultilineMPS` | ❌ (tuple only) | ✅ |
 | `VOMPS`   | tangent-space truncation       | `InfiniteMPS` / `MultilineMPS`     | ❌ (tuple only)     | ❌ (out-of-place only) |
