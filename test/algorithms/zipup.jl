@@ -50,9 +50,9 @@ end
 
     ref_tr = changebonds(O * ψ, SvdCut(; trscheme = final_trscheme); normalize = false)
     got_one_sweep = approximate((O, ψ), Zipup(; trscheme = final_trscheme))
-    alg_zipup = SvdCut(; trscheme = zipup_trscheme)
-    alg_finalize = SvdCut(; trscheme = final_trscheme)
-    got_two_sweep = approximate((O, ψ), Zipup(alg_zipup, alg_finalize))
+    alg_zipup = Zipup(; trscheme = zipup_trscheme).alg_zipup
+    alg_zipdown = Zipup(; trscheme = final_trscheme).alg_zipup
+    got_two_sweep = approximate((O, ψ), Zipup(alg_zipup, alg_zipdown))
 
     err_one_sweep = norm(ref_tr - got_one_sweep) / norm(ref_tr)
     err_two_sweep = norm(ref_tr - got_two_sweep) / norm(ref_tr)
