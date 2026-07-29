@@ -54,10 +54,10 @@ struct BUG{A, O, G, F} <: Algorithm
 end
 function BUG(;
         integrator = Defaults.alg_expsolve(), alg_orth = Defaults.alg_orth(),
-        trscheme = notrunc(), alg_svd = Defaults.alg_svd(),
+        trunc = notrunc(), alg_svd = Defaults.alg_svd(),
         finalize = Defaults._finalize
     )
-    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme)
+    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trunc)
     return BUG(integrator, alg_orth, alg_gauge, finalize)
 end
 
