@@ -229,4 +229,4 @@ Given an operator, try to construct a more efficient representation of that oper
 This typically consists of precomputing some parts of the application,
 and is expected to only pay off for repeated applications.
 """
-prepare_operator!!(O, backend::AbstractBackend = DefaultBackend(), allocator = BufferAllocator()) = O
+prepare_operator!!(O, backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()) = O
