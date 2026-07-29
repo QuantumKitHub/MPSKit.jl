@@ -103,6 +103,9 @@ function _mps_to_mpo(A::GenericMPSTensor{S, 3}) where {S}
 end
 
 function Base.convert(::Type{TensorMap}, mpo::FiniteMPO{<:MPOTensor})
+    # a single site is both the first and the last one, so strip both of its virtual legs rather
+    # than contracting `mpo[1]` with `mpo[end]` -- which is the same tensor
+    length(mpo) == 1 && return removeunit(removeunit(only(mpo), 4), 1)
     L = removeunit(mpo[1], 1)
     R = removeunit(mpo[end], 4)
     M = Tuple(mpo[2:(end - 1)])
@@ -121,8 +124,16 @@ function Base.:+(mpo1::FiniteMPO{<:MPOTensor}, mpo2::FiniteMPO{<:MPOTensor})
     @assert left_virtualspace(mpo1, 1) == left_virtualspace(mpo2, 1) &&
         right_virtualspace(mpo1, N) == right_virtualspace(mpo2, N)
 
+    # A single site has no internal bond to fuse -- the boundary virtual spaces are fixed by the
+    # assertion above -- so the sum is simply the sum of the two tensors. The generic branch below
+    # cannot express this: it splits the chain into a left and a right block and fuses them at the
+    # seam, and for `N == 1` there is no seam (both blocks would write site 1).
+    N == 1 && return FiniteMPO([mpo1[1] + mpo2[1]])
+
     halfN = N ÷ 2
-    A = storagetype(eltype(mpo1))
+    # the fusers carry the promoted scalar type, so every contraction below follows suit
+    T = promote_type(scalartype(mpo1), scalartype(mpo2))
+    A = TensorKit.similarstoragetype(storagetype(eltype(mpo1)), T)
 
     # left half
     F₁ = isometry(
