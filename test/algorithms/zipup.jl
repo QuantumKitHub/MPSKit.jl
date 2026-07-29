@@ -33,9 +33,9 @@ end
     O_copy = copy(O)
     ψ_copy = copy(ψ)
 
-    trscheme = trunctol(; atol = 1.0e-10)
-    ref = changebonds(O * ψ, SvdCut(; trscheme); normalize = false)
-    got = approximate((O, ψ), Zipup(; trscheme))
+    trunc = trunctol(; atol = 1.0e-10)
+    ref = changebonds(O * ψ, SvdCut(; trscheme = trunc); normalize = false)
+    got = approximate((O, ψ), Zipup(; trunc))
 
     @test norm(ref - got) / norm(ref) < 1.0e-10
     @test norm(ψ - ψ_copy) < 1.0e-12
@@ -45,14 +45,12 @@ end
 @testset "Paeckel two-stage zip-up $(spacetype(pspace))" for (pspace, Dspace, Dcut) in spacelist
     O, ψ = _random_mpo_mps(pspace, Dspace)
     rtol = 1.0e-8
-    final_trscheme = truncrank(Dcut) & truncerror(; rtol)
-    zipup_trscheme = truncrank(2Dcut) & truncerror(; rtol = rtol / 10)
+    final_trunc = truncrank(Dcut) & truncerror(; rtol)
+    zipup_trunc = truncrank(2Dcut) & truncerror(; rtol = rtol / 10)
 
-    ref_tr = changebonds(O * ψ, SvdCut(; trscheme = final_trscheme); normalize = false)
-    got_one_sweep = approximate((O, ψ), Zipup(; trscheme = final_trscheme))
-    alg_zipup = Zipup(; trscheme = zipup_trscheme).alg_zipup
-    alg_zipdown = Zipup(; trscheme = final_trscheme).alg_zipup
-    got_two_sweep = approximate((O, ψ), Zipup(alg_zipup, alg_zipdown))
+    ref_tr = changebonds(O * ψ, SvdCut(; trscheme = final_trunc); normalize = false)
+    got_one_sweep = approximate((O, ψ), Zipup(; trunc = final_trunc))
+    got_two_sweep = approximate((O, ψ), Zipup(; trunc = (zipup_trunc, final_trunc)))
 
     err_one_sweep = norm(ref_tr - got_one_sweep) / norm(ref_tr)
     err_two_sweep = norm(ref_tr - got_two_sweep) / norm(ref_tr)

@@ -11,12 +11,14 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-    Zipup(; trscheme, alg_svd=Defaults.alg_svd())
+    Zipup(; trunc, alg_svd=Defaults.alg_svd())
     Zipup(alg_zipup, [alg_zipdown])
 
 Create a `Zipup` algorithm with the given truncated gauge algorithm, or by passing a truncation
-scheme and singular value decomposition algorithm. If `alg_zipdown` is provided, the state
-obtained after the zip-up sweep is further compressed by sweeping back from right to left.
+scheme and singular value decomposition algorithm. The keyword `trunc` can be either one
+truncation strategy for a single zip-up sweep, or a tuple `(zipup_trunc, zipdown_trunc)` for a
+zip-up sweep followed by a zip-down sweep. Equivalently, one can pass the corresponding truncated
+gauge algorithms directly as `alg_zipup` and `alg_zipdown`.
 
 Following Paeckel et al., if the desired final bond dimension is `D`, one can use a more
 permissive zip-up truncation, e.g. rank `2D` with stricter tolerances, and use `alg_zipdown`
@@ -39,10 +41,16 @@ end
 
 Zipup(alg_zipup) = Zipup(alg_zipup, nothing)
 
-function Zipup(;
-        trscheme::TruncationStrategy, alg_svd = Defaults.alg_svd()
-    )
-    return Zipup(MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trscheme))
+function Zipup(; trunc, alg_svd = Defaults.alg_svd())
+    if trunc isa TruncationStrategy
+        return Zipup(MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trunc))
+    elseif trunc isa Tuple{<:TruncationStrategy, <:TruncationStrategy}
+        alg_zipup = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trunc[1])
+        alg_zipdown = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trunc[2])
+        return Zipup(alg_zipup, alg_zipdown)
+    else
+        throw(ArgumentError("`trunc` should be a truncation strategy or a tuple of two truncation strategies"))
+    end
 end
 
 function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipup)
