@@ -91,7 +91,7 @@ bond back down each sweep — `DMRG`'s constructor warns if none is given.
 
 ## References
 
-* [Hubig et al. Phys. Rev. B 91, 155115 (2015)](@cite Hubig2015)
+* [Hubig et al. Phys. Rev. B 91, 155115 (2015)](@cite hubig2015)
 """
 struct DMRG3S{N, S <: NoiseSchedule, A} <: Algorithm
     noise::N
