@@ -61,6 +61,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` threw
+  `UndefVarError: H_eff not defined` on every call, because the effective excitation
+  Hamiltonian was built from the not-yet-assigned `H_eff` instead of from `H`. Only this
+  entry point was affected: supplying a momentum instead of a quasiparticle state converts
+  the operator to a `MultilineMPO` first and never reached the faulty line.
+  ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
   different tensor networks, e.g. `norm(E₀ * gs - H * gs)` coming out as `2 * norm(gs) * E₀`
   instead of ~0. The lazy gauge sweep in `CView.getindex` re-derived `AL`/`C` entries that were
