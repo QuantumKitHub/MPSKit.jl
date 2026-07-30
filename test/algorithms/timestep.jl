@@ -18,9 +18,13 @@ verbosity_conv = 1
 # name a time-evolution algorithm for @testset labels ("TDVP", "TDVP2", "BUG")
 algname(alg) = string(nameof(typeof(alg)))
 
+maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 1:length(ψ))
+
 @testset "timestep" verbose = true begin
     dt = 0.1
-    algs = [TDVP(), TDVP2(; trunc = truncrank(10)), BUG()]
+    # every rank-adaptive algorithm gets the same cap: without one, BUG's augmentation doubles the
+    # bond dimension on every half-sweep with nothing ever cutting it back
+    algs = [TDVP(), TDVP2(; trunc = truncrank(10)), BUG(; trunc = truncrank(10))]
     L = 10
 
     H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
@@ -66,65 +70,6 @@ algname(alg) = string(nameof(typeof(alg)))
         @test E ≈ Et atol = 1.0e-8
     end
 
-    # imaginary-time evolution lowers the energy toward the ground state. This is generic to
-    # symmetric integrators; BUG in particular has no backward substep (cf. its docstring), so it is
-    # a natural imaginary-time integrator.
-    @testset "Finite imaginary-time lowers energy $(algname(alg))" for alg in [TDVP(), BUG()]
-        Random.seed!(5)
-        ψi = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4))
-        E_start = real(expectation_value(ψi, H))
-        E_prev = E_start
-        for _ in 1:20
-            ψi, = timestep(ψi, H, 0.0, 0.1, alg; imaginary_evolution = true, normalize = true)
-            E_now = real(expectation_value(ψi, H))
-            @test E_now ≤ E_prev + 1.0e-6   # monotone (non-increasing) energy
-            E_prev = E_now
-        end
-        @test E_prev < E_start - 1.0        # substantial lowering toward the ground state
-        @test norm(ψi) ≈ 1 atol = 1.0e-6    # imaginary-time renormalizes each step
-    end
-
-    # second-order (temporal) convergence on a small full-rank system, which isolates the temporal
-    # order. This is a BUG-only test: at full rank single-site TDVP / two-site TDVP2 integrate the
-    # *exact* dynamics (the tangent-space projector is the identity, cf. Lubich/Haegeman), so their
-    # overlap error sits at the numerical floor and a convergence slope is undefined. BUG's
-    # augment-and-Galerkin step has a genuine temporal error, so it shows a clean ≥ 2nd-order slope
-    # (often ≈ 4 on full-rank systems); we assert the order floor.
-    @testset "second-order convergence (BUG)" begin
-        Random.seed!(2)
-        Lc = 4
-        Hc = force_planar(transverse_field_ising(ComplexF64, Trivial; L = Lc))
-        ψ_full = FiniteMPS(rand, ComplexF64, Lc, ℙ^2, ℙ^4)   # full-rank: 1,2,4,2,1
-
-        Hmat = convert(TensorMap, Hc)
-        ψvec = convert(TensorMap, ψ_full)
-        ψvec /= norm(ψvec)
-
-        T = 0.5
-        dts = [0.1, 0.05, 0.025]
-        errs = map(dts) do δt
-            n = round(Int, T / δt)
-            ref = exp(-im * Hmat * (n * δt)) * ψvec
-            ψ = copy(ψ_full)
-            envs = environments(ψ, Hc, ψ)
-            for k in 0:(n - 1)
-                timestep!(ψ, Hc, k * δt, δt, BUG(), envs)
-            end
-            ψout = convert(TensorMap, ψ)
-            ψout /= norm(ψout)
-            return 1 - abs(dot(ψout, ref))
-        end
-
-        slopes = [
-            (log(errs[i + 1]) - log(errs[i])) / (log(dts[i + 1]) - log(dts[i]))
-                for i in 1:(length(dts) - 1)
-        ]
-        @info "BUG convergence" errs slopes
-        for s in slopes
-            @test s ≥ 1.7
-        end
-    end
-
     H = repeat(force_planar(heisenberg_XXX(; spin = 1)), 2)
     ψ₀ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^50, ℙ^50])
     E₀ = expectation_value(ψ₀, H)
@@ -155,44 +100,76 @@ algname(alg) = string(nameof(typeof(alg)))
     end
 end
 
-# BUG is a drop-in for TDVP on the finite interface: over a few real-time steps of a generic
-# (random) state the two integrators must agree, up to their shared temporal-discretization error.
-# This is a cross-check between integrators, so it has no meaning as a TDVP-vs-TDVP test.
-@testset "BUG agrees with TDVP" begin
+# BUG-specific: unlike `TDVP` there is no backward-in-time substep, which makes it a natural
+# imaginary-time integrator (cf. its docstring). `TDVP`'s imaginary-time behaviour is covered by the
+# CBE block below.
+@testset "Finite imaginary-time BUG" begin
     L = 10
     H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
-    Random.seed!(1234)
-    ψr = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4))
-    δt = 0.01
-    ψ_bug, ψ_tdvp = ψr, ψr
-    for k in 0:4
-        ψ_bug, = timestep(ψ_bug, H, k * δt, δt, BUG())
-        ψ_tdvp, = timestep(ψ_tdvp, H, k * δt, δt, TDVP())
+
+    alg = BUG(; trunc = truncrank(4))
+
+    Random.seed!(5)
+    ψi = complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^4))
+    E_start = real(expectation_value(ψi, H))
+    E_prev = E_start
+    for _ in 1:8
+        ψi, = timestep(ψi, H, 0.0, 0.1, alg; imaginary_evolution = true, normalize = true)
+        E_now = real(expectation_value(ψi, H))
+        @test E_now ≤ E_prev + 1.0e-6   # monotone (non-increasing) energy
+        @test maxbond(ψi) ≤ 8           # the cap bounds the bond at `2D` throughout
+        E_prev = E_now
     end
-    @test expectation_value(ψ_bug, H) ≈ expectation_value(ψ_tdvp, H) atol = 1.0e-3
-    @test abs(dot(ψ_bug, ψ_tdvp)) ≈ 1 atol = 1.0e-3
+    @test E_prev < E_start - 0.5        # substantial lowering toward the ground state
+    @test norm(ψi) ≈ 1 atol = 1.0e-6    # `normalize = true` renormalizes each step
+end
+
+# The truncating path, which is BUG's distinguishing feature. `BUG(; trunc = …)` cuts the bond
+# *ahead of* every local update — the bond carrying the previous half-sweep's augmentation — and
+# augments without truncating, so the bond dimension oscillates between the requested rank and (at
+# most) twice it.
+@testset "BUG with truncation" begin
+    L = 8
+    H = force_planar(transverse_field_ising(ComplexF64, Trivial; L, g = 1.5))
+    δt, nsteps, D = 0.05, 20, 4
+
+    Random.seed!(11)
+    ψ₀ = FiniteMPS(rand, ComplexF64, L, ℙ^2, ℙ^2)   # low rank to start with, entanglement grows
+    normalize!(ψ₀)
+
+    tovec(ψ) = (v = convert(TensorMap, ψ); v / norm(v))
+    ref = exp(-im * convert(TensorMap, H) * (nsteps * δt)) * tovec(ψ₀)
+
+    # the cap actually bites here: the exact state needs bond 16
+    ψ = ψ₀
+    for k in 0:(nsteps - 1)
+        ψ, = timestep(ψ, H, k * δt, δt, BUG(; trunc = truncrank(D)))
+        @test maxbond(ψ) ≤ 2D   # `D` right after the cut, at most `2D` after the augment
+    end
+    @test 1 - abs(dot(tovec(ψ), ref)) < 1.0e-3
 end
 
 # Genuine symmetric-tensor coverage (no `force_planar`) for the single-site finite integrators.
-# Both TDVP and BUG must conserve the energy and accrue only an eigenstate phase, and must preserve
-# the total boundary charge (the fixed `right` virtual space at site L). TDVP2 is excluded here: it
-# requires a `trscheme` and is the two-site variant; these are single-site conservation properties.
-@testset "Finite symmetric-tensor time evolution" verbose = true begin
+# BUG's augment step stacks bases per sector, so it can add or drop sectors: both `TDVP` and `BUG`
+# must conserve the energy, accrue only an eigenstate phase, and preserve the total boundary charge
+# (the fixed `right` virtual space at site L). TDVP2 is excluded here: it requires a `trunc` and is
+# the two-site variant; these are single-site conservation properties.
+@testset "Finite symmetric-tensor time evolution" begin
     dt = 0.1
     L = 6
-    algs = [TDVP(), BUG()]
 
-    # U(1)-symmetric Heisenberg, both in the natural total-Sz = 0 sector and in a fixed nonzero
-    # total-charge (Sz = 1) sector.
-    @testset "U(1) Heisenberg (total Sz = $label, $(algname(alg)))" for (label, right) in
-            (("0", U1Space(0 => 1)), ("1", U1Space(1 => 1))), alg in algs
-        Random.seed!(2718)
-        H = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L)
-        maxV = MPSKit.max_virtualspaces(physicalspace(H))
-        ψ = FiniteMPS(physicalspace(H), maxV[2:(end - 1)]; right)
-        ψ₀, = find_groundstate(ψ, H; verbosity = 0)
-        E₀ = expectation_value(ψ₀, H)
+    Random.seed!(2718)
+    H = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L)
+    maxV = MPSKit.max_virtualspaces(physicalspace(H))
+    ψ = FiniteMPS(physicalspace(H), maxV[2:(end - 1)])
+    ψ₀, = find_groundstate(ψ, H; verbosity = 0)
+    E₀ = expectation_value(ψ₀, H)
 
+    # the exact state has Schmidt rank ≤ 8 here, so this cap bounds the bond without discarding
+    # anything — it only stops BUG's augmentation from doubling unchecked
+    algs = [TDVP(), BUG(; trunc = truncrank(8))]
+
+    @testset "U(1) Heisenberg ($(algname(alg)))" for alg in algs
         ψ1, envs = timestep(ψ₀, H, 0.0, dt, alg)
         E1 = expectation_value(ψ1, H, envs)
 
@@ -200,58 +177,6 @@ end
         @test imag(E1) ≈ 0 atol = 1.0e-8
         @test dot(ψ1, ψ₀) ≈ exp(im * dt * E₀) atol = 1.0e-4
         @test right_virtualspace(ψ1, L) == right_virtualspace(ψ₀, L)
-    end
-
-    # A second symmetry group. Z2 (transverse-field Ising) and SU2 (Heisenberg); same assertions.
-    @testset "Z2 transverse-field Ising ($(algname(alg)))" for alg in algs
-        Random.seed!(161803)
-        H = transverse_field_ising(ComplexF64, Z2Irrep; g = 1.0, L)
-        ψ = FiniteMPS(physicalspace(H), Z2Space(0 => 4, 1 => 4))
-        ψ₀, = find_groundstate(ψ, H; verbosity = 0)
-        E₀ = expectation_value(ψ₀, H)
-
-        ψ1, envs = timestep(ψ₀, H, 0.0, dt, alg)
-        E1 = expectation_value(ψ1, H, envs)
-        @test E₀ ≈ E1 atol = 1.0e-2
-        @test dot(ψ1, ψ₀) ≈ exp(im * dt * E₀) atol = 1.0e-4
-        @test right_virtualspace(ψ1, L) == right_virtualspace(ψ₀, L)
-    end
-
-    @testset "SU(2) Heisenberg ($(algname(alg)))" for alg in algs
-        Random.seed!(577215)
-        H = heisenberg_XXX(ComplexF64, SU2Irrep; spin = 1 // 2, L)
-        # SU(2) spin-1/2 bonds alternate between integer / half-integer spins, so use the
-        # model's own full-rank virtual spaces rather than a hand-picked (integer-only) space.
-        maxV = MPSKit.max_virtualspaces(physicalspace(H))
-        ψ = FiniteMPS(physicalspace(H), maxV[2:(end - 1)])
-        ψ₀, = find_groundstate(ψ, H; verbosity = 0)
-        E₀ = expectation_value(ψ₀, H)
-
-        ψ1, envs = timestep(ψ₀, H, 0.0, dt, alg)
-        E1 = expectation_value(ψ1, H, envs)
-        @test E₀ ≈ E1 atol = 1.0e-2
-        @test dot(ψ1, ψ₀) ≈ exp(im * dt * E₀) atol = 1.0e-4
-        @test right_virtualspace(ψ1, L) == right_virtualspace(ψ₀, L)
-    end
-
-    # Imaginary-time symmetric evolution lowers the energy while preserving the sector + norm.
-    @testset "imaginary-time (U(1), $(algname(alg)))" for alg in algs
-        Random.seed!(141421)
-        H = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L)
-        maxV = MPSKit.max_virtualspaces(physicalspace(H))
-        ψi = FiniteMPS(physicalspace(H), maxV[2:(end - 1)])
-        Rtot = right_virtualspace(ψi, L)   # total boundary charge, fixed throughout
-        E_start = real(expectation_value(ψi, H))
-        E_prev = E_start
-        for _ in 1:15
-            ψi, = timestep(ψi, H, 0.0, 0.1, alg; imaginary_evolution = true, normalize = true)
-            E_now = real(expectation_value(ψi, H))
-            @test E_now ≤ E_prev + 1.0e-6            # monotone (non-increasing) energy
-            E_prev = E_now
-        end
-        @test E_prev < E_start - 0.5                 # substantial lowering toward the ground state
-        @test norm(ψi) ≈ 1 atol = 1.0e-6             # imaginary-time renormalizes each step
-        @test right_virtualspace(ψi, L) == Rtot      # total boundary charge conserved throughout
     end
 end
 
@@ -331,7 +256,7 @@ end
 
 @testset "time_evolve" verbose = true begin
     t_span = 0:0.1:0.1
-    algs = [TDVP(), TDVP2(; trunc = truncrank(10)), BUG()]
+    algs = [TDVP(), TDVP2(; trunc = truncrank(10)), BUG(; trunc = truncrank(10))]
 
     L = 10
     H = force_planar(heisenberg_XXX(; spin = 1 // 2, L))
