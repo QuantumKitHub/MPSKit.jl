@@ -205,10 +205,27 @@ Three things stack up:
 
 ### Upstream fix
 
-- The `note` → `tip` remap is obsolete: VitePress 1.x ships native `note`, `info`,
-  `important` and `caution` containers (`.custom-block.note` etc. are in its stylesheet).
-  Emitting `::: note` / `::: info` directly would restore Documenter's colour semantics —
-  blue for note/info, green for tip.
+Careful: VitePress 1.6.4 registers only **five** `:::` containers — `tip`, `info`,
+`warning`, `danger`, `details` (`containerPlugin` in its `dist/node` bundle). The
+`.custom-block.note`, `.custom-block.important` and `.custom-block.caution` classes in its
+stylesheet exist for GitHub-style alerts (`> [!NOTE]`), *not* for containers. Emitting
+`::: note` renders the literal text `::: note Hello` as a paragraph — verified against
+`createMarkdownRenderer`. That is also why
+[#289](https://github.com/LuxDL/DocumenterVitepress.jl/pull/289), which passes every
+Documenter category straight through, cannot work as written: `::: todo` / `::: theorem`
+are not registered and fall through as text.
+
+So the fix cannot simply be "stop remapping". It needs to keep mapping onto a registered
+container while *preserving the original Documenter category* so that CSS can reach it —
+which is precisely what [#288](https://github.com/LuxDL/DocumenterVitepress.jl/issues/288)
+asks for ("the produced html does not even have the information i need to apply some
+css") and what [#95](https://github.com/LuxDL/DocumenterVitepress.jl/issues/95) needs for
+`!!! compat`. Emitting the block as raw HTML in VitePress' own custom-block shape, with an
+extra `jl-admonition-$(category)` class, achieves both and is not held back by which
+container names VitePress happens to register.
+
+Alongside that:
+
 - Reconsider the dark-mode `tip` override, which drains the colour out of the single most
   common admonition in any Julia docs.
 - Consider giving `.custom-block-title` a category colour and an icon in the template, to
@@ -229,3 +246,16 @@ Documenter defaults to `"Note"`, but 13 of this repo's 44 notes carry a custom t
 are then indistinguishable from a real `!!! tip`. Colouring only the recognisable ones
 would be visibly inconsistent, which is worse than a uniform palette. This needs the
 upstream fix.
+
+## Existing upstream work
+
+Checked before writing any of the above; §1 and §3 appear to be unreported.
+
+| Ours | Upstream | Relationship |
+| --- | --- | --- |
+| §2 search | [#190](https://github.com/LuxDL/DocumenterVitepress.jl/issues/190) "Search engine seems worst than Documenter.jl" | The issue our fix closes. |
+| §2 search | [#385](https://github.com/LuxDL/DocumenterVitepress.jl/pull/385), [#386](https://github.com/LuxDL/DocumenterVitepress.jl/pull/386) | **Orthogonal.** Both tune MiniSearch (Julia-aware tokenizer, stop words, boosts) but leave the section splitting alone, so a whole `@autodocs` page stays one document with no per-docstring anchor. Better tokenisation cannot deep-link to something that was never indexed as a section. The two changes compose. |
+| §2 search | [#384](https://github.com/LuxDL/DocumenterVitepress.jl/pull/384) | Overlapping but far larger: a custom Vue modal plus a writer-generated second index. Its author expects it to be opt-in rather than default, and #385's comparison notes its page/section records currently carry empty text. Our fix is ~10 lines inside the index VitePress already builds. |
+| §2 search | [#119](https://github.com/LuxDL/DocumenterVitepress.jl/issues/119) "fine tune miniSearch options" | Adjacent; addressed by #385/#386, not by us. |
+| §4 admonitions | [#289](https://github.com/LuxDL/DocumenterVitepress.jl/pull/289) | Same area, but drops the category fallback entirely, which emits unregistered containers — see above. Stale since March 2026 and marked unstable. |
+| §4 admonitions | [#288](https://github.com/LuxDL/DocumenterVitepress.jl/issues/288), [#95](https://github.com/LuxDL/DocumenterVitepress.jl/issues/95) | The issues a category-preserving fix would close. |
