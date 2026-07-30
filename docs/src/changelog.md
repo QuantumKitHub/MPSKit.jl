@@ -28,9 +28,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   truncation. The sweep direction is selected by the `left_to_right` keyword. Both
   `approximate((O, ϕ), alg)` and `approximate!(ψ, (O, ϕ), alg)` are supported, where the destination
   `ψ` is a write target rather than an initial guess and may alias `ϕ`; they return `(ψ, ϵ)`.
-- `BUG` time-evolution algorithm: a symmetric second-order Basis-Update & Galerkin integrator for
-  finite MPS. Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
-  and passing a truncating `trscheme` enables rank-adaptivity (the bond dimension grows and shrinks
+- `BUG` time-evolution algorithm: a Basis-Update & Galerkin integrator for finite MPS.
+  Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
+  and passing a truncating `trunc` enables rank-adaptivity (the bond dimension grows and shrinks
   automatically to track entanglement).
 
 ### Changed
