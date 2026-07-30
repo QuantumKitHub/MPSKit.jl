@@ -27,6 +27,10 @@ using TensorKit: ℙ
             ψ = WindowMPS(gs, interval)
             Hw = WindowMPOHamiltonian(H, interval)
             @test length(Hw) == length(interval)
+            # the window itself is finite, even though its environments are not
+            @test isfinite(Hw)
+            @test isfinite(typeof(Hw))
+            @test isfinite(Hw) == isfinite(typeof(Hw))
             return expectation_value(ψ, Hw)
         end
         @test energies[1] ≈ energies[2] atol = 1.0e-8

@@ -61,6 +61,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `isfinite` on a `WindowMPOHamiltonian` threw a `MethodError` instead of returning `true`,
+  as the trait method was missing for this operator type.
+  ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` threw
   `UndefVarError: H_eff not defined` on every call, because the effective excitation
   Hamiltonian was built from the not-yet-assigned `H_eff` instead of from `H`. Only this
