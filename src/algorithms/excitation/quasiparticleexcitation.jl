@@ -7,22 +7,26 @@ $(TYPEDEF)
 
 Optimization algorithm for quasi-particle excitations on top of MPS groundstates.
 
-## Fields
+# Constructors
 
-$(TYPEDFIELDS)
-
-## Constructors
-    
     QuasiparticleAnsatz()
     QuasiparticleAnsatz(; kwargs...)
     QuasiparticleAnsatz(alg)
 
-Create a `QuasiparticleAnsatz` algorithm with the given algorithm, or by passing the 
-keyword arguments to `Arnoldi`.
+Create a `QuasiparticleAnsatz` algorithm with the given eigensolver, or by passing the
+keyword arguments to [`Arnoldi`](@extref KrylovKit.Arnoldi).
 
-## References
+# Fields
 
-- [Haegeman et al. Phys. Rev. Let. 111 (2013)](@cite haegeman2013)
+$(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`excitations`](@ref).
+
+# References
+
+* [Haegeman et al. Phys. Rev. Let. 111 (2013)](@cite haegeman2013)
 """
 struct QuasiparticleAnsatz{A, E} <: Algorithm
     "algorithm used for the eigenvalue solvers"
@@ -69,11 +73,12 @@ end
     excitations(H, algorithm::QuasiparticleAnsatz, momentum::Union{Number, Vector{<:Number}},
                 left_ψ::InfiniteMPS, [left_environment],
                 [right_ψ::InfiniteMPS], [right_environment];
-                kwargs...)
+                kwargs...) -> (energies, states)
 
 Create and optimize infinite quasiparticle states.
 
 # Arguments
+
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm::QuasiparticleAnsatz`: optimization algorithm
 - `momentum::Union{Number, Vector{<:Number}}`: momentum or list of momenta
@@ -82,11 +87,12 @@ Create and optimize infinite quasiparticle states.
 - `[right_ψ::InfiniteMPS]`: right ground state
 - `[right_environment]`: right ground state environment
 
-# Keywords
+# Keyword Arguments
+
 - `num::Int`: number of excited states to compute
 - `solver`: algorithm for the linear solver of the quasiparticle environments
-- `sector=leftunit(left_ψ)`: charge of the quasiparticle state
-- `parallel=true`: enable multi-threading over different momenta
+- `sector = leftunit(left_ψ)`: charge of the quasiparticle state
+- `parallel = true`: enable multi-threading over different momenta
 """
 function excitations(
         H, alg::QuasiparticleAnsatz, momentum::Number, lmps::InfiniteMPS,
@@ -160,11 +166,12 @@ end
 
 """
     excitations(H, algorithm::QuasiparticleAnsatz, left_ψ::FiniteMPS, [left_environment],
-                [right_ψ::FiniteMPS], [right_environment]; kwargs...)
+                [right_ψ::FiniteMPS], [right_environment]; kwargs...) -> (energies, states)
 
 Create and optimize finite quasiparticle states.
 
 # Arguments
+
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm::QuasiparticleAnsatz`: optimization algorithm
 - `left_ψ::FiniteMPS`: left ground state
@@ -172,9 +179,10 @@ Create and optimize finite quasiparticle states.
 - `[right_ψ::FiniteMPS]`: right ground state
 - `[right_environment]`: right ground state environment
 
-# Keywords
+# Keyword Arguments
+
 - `num::Int`: number of excited states to compute
-- `sector=leftunit(lmps)`: charge of the quasiparticle state
+- `sector = leftunit(lmps)`: charge of the quasiparticle state
 """
 function excitations(
         H, alg::QuasiparticleAnsatz, lmps::FiniteMPS,

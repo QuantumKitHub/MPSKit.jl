@@ -88,7 +88,7 @@ function entanglement_spectrum(st::FiniteMPS, site::Int)
 end
 
 """
-    variance(state, hamiltonian, [envs=environments(state, hamiltonian, state)])
+    variance(state, hamiltonian, [envs = environments(state, hamiltonian, state)])
 
 Compute the variance of the energy of the state with respect to the Hamiltonian.
 """

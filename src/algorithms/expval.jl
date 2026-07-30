@@ -1,9 +1,9 @@
 """
-    expectation_value(ψ, O, [environments])
-    expectation_value(ψ, inds => O)
-    expectation_value(ψ, (mpo, site => O), [environments])
+    expectation_value(ψ, O, [environments]) -> val
+    expectation_value(ψ, inds => O) -> val
+    expectation_value(ψ, (mpo, site => O), [environments]) -> val
 
-Compute the expectation value of an operator `O` on a state `ψ`. 
+Compute the expectation value of an operator `O` on a state `ψ`, normalized by `⟨ψ|ψ⟩`.
 Optionally, it is possible to make the computations more efficient by also passing in
 previously calculated `environments`.
 
@@ -15,13 +15,25 @@ acts, while the operator is either a `AbstractTensorMap` or a `FiniteMPO`. In th
 the operator is a `AbstractTensorMap` that acts on the physical space of a single site.
 
 # Arguments
-* `ψ::AbstractMPS` : the state on which to compute the expectation value
-* `O::Union{AbstractMPO,Pair,AbstractTensorMap}` : the operator to compute the expectation value of. 
+
+- `ψ::AbstractMPS`: the state on which to compute the expectation value
+- `O::Union{AbstractMPO, Pair, AbstractTensorMap}`: the operator to compute the expectation value of.
     This can either be an `AbstractMPO`, a pair of indices and local operator, or a local MPO tensor
     represented as a `AbstractTensorMap`.
-* `environments::AbstractMPSEnvironments` : the environments to use for the calculation. If not given, they will be calculated.
+- `environments::AbstractMPSEnvironments`: the environments to use for the calculation. If not given, they will be calculated.
     Depending on the type of `O`, these will be the environments of the operator `O` or the MPO `mpo`.
+
+# Returns
+
+- `val::Number`: the (normalized) expectation value `⟨ψ|O|ψ⟩ / ⟨ψ|ψ⟩`.
+
+!!! note "Infinite operators"
+    For an infinite state and an infinite operator (e.g. an `InfiniteMPOHamiltonian`), the
+    return value is the total over one unit cell; divide by `length(ψ)` to obtain a
+    per-site value.
+
 # Examples
+
 ```jldoctest
 julia> ψ = FiniteMPS(ones(Float64, (ℂ^2)^4));
 

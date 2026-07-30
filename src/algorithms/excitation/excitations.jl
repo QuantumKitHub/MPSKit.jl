@@ -1,18 +1,19 @@
 """
     excitations(H, algorithm::QuasiparticleAnsatz, ψ::FiniteQP, [left_environments],
-                [right_environments]; num=1) -> (energies, states)
+                [right_environments]; num = 1) -> (energies, states)
     excitations(H, algorithm::QuasiparticleAnsatz, ψ::InfiniteQP, [left_environments],
-                [right_environments]; num=1, solver=Defaults.solver) -> (energies, states)
+                [right_environments]; num = 1) -> (energies, states)
     excitations(H, algorithm::FiniteExcited, ψs::NTuple{<:Any, <:FiniteMPS};
-                num=1, init=copy(first(ψs))) -> (energies, states)
+                num = 1, init) -> (energies, states)
     excitations(H, algorithm::ChepigaAnsatz, ψ::FiniteMPS, [envs];
-                num=1, pos=length(ψ)÷2) -> (energies, states)
+                num = 1, pos = length(ψ) ÷ 2) -> (energies, states)
     excitations(H, algorithm::ChepigaAnsatz2, ψ::FiniteMPS, [envs];
-                num=1, pos=length(ψ)÷2) -> (energies, states)
+                num = 1, pos = length(ψ) ÷ 2) -> (energies, states)
 
 Compute the first excited states and their energy gap above a ground state.
 
 # Arguments
+
 - `H::AbstractMPO`: operator for which to find the excitations
 - `algorithm`: optimization algorithm
 - `ψ::QP`: initial quasiparticle guess
@@ -20,10 +21,11 @@ Compute the first excited states and their energy gap above a ground state.
 - `[left_environments]`: left ground state environment
 - `[right_environments]`: right ground state environment
 
-# Keywords
+# Keyword Arguments
+
 - `num::Int`: number of excited states to compute
 - `solver`: algorithm for the linear solver of the quasiparticle environments
-- `init`: initial excited state guess
+- `init`: initial excited state guess; defaults to a copy of the first state in `ψs`
 - `pos`: position of perturbation
 """
 function excitations end

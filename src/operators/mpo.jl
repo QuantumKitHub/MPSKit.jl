@@ -447,8 +447,8 @@ function Base.isapprox(
 end
 
 @doc """
-    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trunc)
-    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trunc)
+    swap(mpo::FiniteMPO, i::Integer; inv::Bool = false, alg = Defaults.alg_svd(), trunc)
+    swap!(mpo::FiniteMPO, i::Integer; inv::Bool = false, alg = Defaults.alg_svd(), trunc)
 
 Compose the mpo with a swap gate applied to indices `i` and `i + 1`, effectively creating an
 operator that acts on the Hilbert spaces with those factors swapped.

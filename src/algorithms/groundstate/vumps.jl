@@ -3,11 +3,15 @@ $(TYPEDEF)
 
 Variational optimization algorithm for uniform matrix product states, based on the combination of DMRG with matrix product state tangent space concepts.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`leading_boundary`](@ref).
+
+# References
 
 * [Zauner-Stauber et al. Phys. Rev. B 97 (2018)](@cite zauner-stauber2018)
 * [Vanderstraeten et al. SciPost Phys. Lect. Notes 7 (2019)](@cite vanderstraeten2019)

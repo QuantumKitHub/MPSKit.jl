@@ -51,9 +51,13 @@ If `alg_gauge` is instead given with its inner gauge already set (e.g. `DMRG3S(0
 some_gauge)`), `trunc`/`alg_svd`/`alg_orth` must be left at their defaults — passing both is an
 error, since it leaves two conflicting sources for the same setting.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG{A, F, E, G} <: Algorithm
     "tolerance for convergence criterium"
@@ -149,9 +153,13 @@ $(TYPEDEF)
 
 Two-site DMRG algorithm for finding the dominant eigenvector.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG2{A, G, F} <: Algorithm
     "tolerance for convergence criterium"
@@ -234,6 +242,26 @@ _sweep_ranges(::DMRG2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 2):-1:1)
 
 inner_alg_gauge(alg::Union{DMRG, DMRG2}) = alg_gauge(alg.alg_gauge)
 
+"""
+    find_groundstate!(ψ, H, algorithm, [environments]) -> (ψ, environments, ϵ)
+
+In-place version of [`find_groundstate`](@ref): optimize the finite MPS `ψ` for the
+Hamiltonian `H`, overwriting the input state instead of working on a copy.
+Currently supported for the finite-system algorithms [`DMRG`](@ref) and [`DMRG2`](@ref).
+
+# Arguments
+
+- `ψ::AbstractFiniteMPS`: initial guess, mutated in place
+- `H`: operator for which to find the ground state
+- `algorithm`: optimization algorithm
+- `[environments]`: MPS environment manager
+
+# Returns
+
+- `ψ::AbstractFiniteMPS`: converged ground state
+- `environments`: environments corresponding to the converged state
+- `ϵ::Float64`: final convergence error upon terminating the algorithm
+"""
 function find_groundstate!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs = environments(ψ, H, ψ)
     )

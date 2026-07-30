@@ -67,13 +67,17 @@ end
 (s::Warmup)(noise, iter, ϵ) = iter ≤ s.iters ? noise : zero(noise)
 
 """
-    DMRG3S(noise, schedule::NoiseSchedule)
+$(TYPEDEF)
 
 Gauge algorithm wrapper that, at every site update, injects a Hamiltonian-derived
 perturbation of the just-optimized tensor before gauging — the "strictly single-site DMRG with
 subspace expansion" scheme. This lets
 single-site DMRG introduce basis states/quantum-number sectors absent from the initial
 state, helping it escape local minima that plain single-site DMRG can get stuck in.
+
+# Constructors
+
+    DMRG3S(noise, schedule::NoiseSchedule)
 
 `noise` is the initial perturbation amplitude; `schedule` (see [`ExponentialDecay`](@ref),
 [`Warmup`](@ref)) controls how it evolves across outer iterations, and once it decays to
@@ -89,13 +93,24 @@ DMRG(; alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7)), trunc = truncdim(50))
 A truncating `trunc` is strongly recommended alongside `DMRG3S`, to cut the perturbed
 bond back down each sweep — `DMRG`'s constructor warns if none is given.
 
-## References
+# Fields
+
+$(TYPEDFIELDS)
+
+# See also
+
+Used as the `alg_gauge` argument of [`DMRG`](@ref).
+
+# References
 
 * [Hubig et al. Phys. Rev. B 91, 155115 (2015)](@cite hubig2015)
 """
 struct DMRG3S{N, S <: NoiseSchedule, A} <: Algorithm
+    "initial perturbation amplitude, before `schedule` is applied"
     noise::N
+    "[`NoiseSchedule`](@ref) controlling how the amplitude evolves across outer iterations"
     schedule::S
+    "factorization used to gauge the enriched tensor; `nothing` until [`DMRG`](@ref)'s constructor fills it in"
     alg_gauge::A
 end
 

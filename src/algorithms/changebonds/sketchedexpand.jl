@@ -3,8 +3,8 @@ $(TYPEDEF)
 
 An algorithm that expands the bond dimension like [`OptimalExpand`](@ref) — selecting the
 dominant directions of the projected two-site update orthogonal to the current state — but at
-single-site cost using the randomized "shrewd selection" of Controlled Bond Expansion
-(Gleis et al. Phys. Rev. Lett. 130, 246402 (2023)). A random sketch of the orthogonal complement
+single-site cost using the randomized "shrewd selection" of Controlled Bond Expansion.
+A random sketch of the orthogonal complement
 is folded into the effective environment, collapsing the large bond before the two-site update is
 ever formed, and the dominant directions are read off a small singular value decomposition.
 
@@ -15,9 +15,17 @@ The state-preserving behaviour matches [`OptimalExpand`](@ref).
     as the `alg_expand` strategy of [`DMRG`](@ref). The reported `ϵ_2site` is a randomized
     estimate, and the folded application does not exploit `JordanMPO` sparsity.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`changebonds`](@ref) and [`changebonds!`](@ref).
+
+# References
+
+* [Gleis et al. Phys. Rev. Lett. 130, 246402 (2023)](@cite gleis2023)
 """
 @kwdef struct SketchedExpand{S} <: Algorithm
     "algorithm used to orthonormalize the sketched complement (passed as the `alg` of `left_orth!`/`right_orth!`); `nothing` selects QR without oversampling and an SVD-based decomposition otherwise"

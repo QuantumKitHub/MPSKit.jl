@@ -1,5 +1,5 @@
 """
-    JordanMPOTensor{T,S,A} <: AbstractBlockTensorMap{T,S,2,2}
+$(TYPEDEF)
 
 A single tensor of a matrix product operator (MPO) in upper triangular (Jordan) block form,
 as used to represent the local tensors of an [`MPOHamiltonian`](@ref).
@@ -16,28 +16,30 @@ The virtual (row, column) structure is
 where `A` is the bulk of interacting operators, `C`/`B` are the operators that start/finish
 an interaction, `D` is the on-site term, and the diagonal `1`s are identities.
 
-## Representation
-
-Rather than storing the dense block matrix, the genuine operators and the identities are kept separately:
-
-- `tensors::SparseBlockTensorMap` holds the non-identity operators over the *full* virtual
-  space (so `A`, `B`, `C` and `D` all live at their `(row, 1, 1, col)` position).
-- `scalars::Dict{CartesianIndex{4},T}` holds the scalar multiples of the identity, keyed by
-  their `(row, 1, 1, col)` virtual position; the diagonal corner `1`s are stored here as well.
-
-An index is never present in both `tensors` and `scalars`.
-This keeps the ubiquitous identity blocks free of dense storage and lets identities be materialized lazily only when needed.
-
-## Type parameters
+# Type parameters
 
 - `T <: Number`: the `scalartype` of the tensors.
 - `S`: the `spacetype` of the tensors.
 - `A <: DenseVector{T}`: the storage type of the underlying tensors.
 
-## Block accessors
+# Properties
 
-The reduced-leg `A`, `B`, `C` and `D` blocks are exposed as properties (`W.A`, `W.B`, `W.C`, `W.D`),
-reconstructed on demand from `tensors` and `scalars`.
+The reduced-leg `A`, `B`, `C` and `D` blocks are exposed as properties (`W.A`, `W.B`, `W.C`,
+`W.D`), reconstructed on demand from the stored `tensors` and `scalars`.
+
+# Notes
+
+Rather than storing the dense block matrix, the genuine operators and the identities are kept
+separately:
+
+- `tensors::SparseBlockTensorMap` holds the non-identity operators over the *full* virtual
+  space (so `A`, `B`, `C` and `D` all live at their `(row, 1, 1, col)` position).
+- `scalars::Dict{CartesianIndex{4}, T}` holds the scalar multiples of the identity, keyed by
+  their `(row, 1, 1, col)` virtual position; the diagonal corner `1`s are stored here as well.
+
+An index is never present in both `tensors` and `scalars`.
+This keeps the ubiquitous identity blocks free of dense storage and lets identities be
+materialized lazily only when needed.
 """
 struct JordanMPOTensor{
         T <: Number, S, A <: DenseVector{T},
