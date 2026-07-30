@@ -236,6 +236,24 @@ end
 set_AL_AC!(ψ::WindowMPS, args...) = (set_AL_AC!(ψ.window, args...); ψ)
 set_AC_AR!(ψ::WindowMPS, args...) = (set_AC_AR!(ψ.window, args...); ψ)
 
+"""
+    set_canonical!(ψ, site, direction, A, AC) -> ψ
+
+Direction-dispatching wrapper around [`set_AL_AC!`](@ref)/[`set_AC_AR!`](@ref): install the canonical
+tensor `A` at `site` — left-isometric for `direction = Val(:right)`, right-isometric for `Val(:left)`
+— together with the center tensor `AC` at the next site *in that direction*, `site + 1` or `site - 1`.
+
+This is the pendant of [`gauge!`](@ref) for a sweep that already knows its next center tensor, and
+lets a sweep body be written once for both directions.
+"""
+function set_canonical!(
+        ψ::AbstractFiniteMPS, site::Int, ::Val{Dir}, A::GenericMPSTensor, AC::GenericMPSTensor
+    ) where {Dir}
+    Dir === :right && return set_AL_AC!(ψ, site, A, AC)
+    Dir === :left && return set_AC_AR!(ψ, site, AC, A)
+    return throw(ArgumentError(lazy"invalid direction `$Dir`"))
+end
+
 function Base.getindex(v::ACView{<:WindowMPS, E}, i::Int)::E where {E}
     (i >= 1 && i <= length(v.parent)) || throw(ArgumentError("out of bounds"))
     return ACView(v.parent.window)[i]
