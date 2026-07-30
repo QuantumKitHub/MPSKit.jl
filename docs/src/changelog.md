@@ -51,6 +51,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   Accordingly, `marek_gap` and `correlation_length` now return a `TensorKit.SectorDict` of
   per-sector results by default; pass `sector = ...` to obtain a single sector's result as before.
 - All `trscheme` keyword arguments are renamed to `trunc` ([#482](https://github.com/QuantumKitHub/MPSKit.jl/pull/482)).
+- `correlator` now throws an `ArgumentError` when the sites are not ordered as `i < j`.
+  Previously such a call only logged an `@error` and then continued into a contraction that is
+  not the requested correlator. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 
 ### Deprecated
 
