@@ -5,6 +5,17 @@ Algorithm that approximates an open-boundary finite MPO-MPS product using a left
 zip-up sweep, optionally followed by a right-to-left zip-down sweep. The MPO and MPS are
 contracted one site at a time, and the enlarged virtual bond is truncated immediately.
 
+    approximate((O, ϕ), alg::Zipup) -> ψ, ϵ
+    approximate!(ψ, (O, ϕ), alg::Zipup) -> ψ, ϵ
+
+Contrary to the variational algorithms, this algorithm requires no initial guess: the in-place
+version simply uses `ψ` as the destination of the sweep, overwriting its contents, and may alias
+`ϕ`. The out-of-place version allocates a destination with the promoted scalar type of `O` and `ϕ`.
+Both return the truncation error `ϵ` alongside the approximated state.
+
+Only the input physical spaces of `O` have to match those of `ϕ`: for an `O` whose output physical
+spaces differ, the result is a state with the output physical spaces of `O`.
+
 ## Fields
 
 $(TYPEDFIELDS)
@@ -53,54 +64,86 @@ function Zipup(; trunc, alg_svd = Defaults.alg_svd())
     end
 end
 
-function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipup)
-    N = check_length(O, ψ)
-    T = TensorOperations.promote_contract(scalartype(O), scalartype(ψ))
-    A = TensorKit.similarstoragetype(eltype(ψ), T)
-    Fₗ = fuser(A, left_virtualspace(ψ, 1), left_virtualspace(O, 1))
-    local carry
-
-    As = map(1:N) do i
-        Aψ = i == 1 ? ψ.AC[1] : ψ.AR[i]
-        physicalspace(Aψ) == physicalspace(O[i]) ||
+function approximate!(ψ::FiniteMPS, (O, ϕ)::Tuple{Any, <:FiniteMPS}, alg::Zipup)
+    N = check_length(ψ, O, ϕ)
+    T = TensorOperations.promote_contract(scalartype(O), scalartype(ϕ))
+    promote_type(T, scalartype(ψ)) === scalartype(ψ) ||
+        throw(ArgumentError("destination state with scalartype $(scalartype(ψ)) cannot hold the result with scalartype $T"))
+    for i in 1:N
+        physicalspace(ϕ, i) == _input_physicalspace(O[i]) ||
             throw(SpaceMismatch("MPO input physical space does not match MPS physical space at site $i"))
-        Fᵣ = fuser(A, right_virtualspace(ψ, i), right_virtualspace(O, i))
-        Aᶻ = _fuse_mpo_mps(O[i], Aψ, Fₗ, Fᵣ)
-        i > 1 && (Aᶻ = _mul_front(carry, Aᶻ))
-
-        if i == N
-            return Aᶻ
-        else
-            AL, C, _ = left_gauge(Aᶻ, alg.alg_zipup)
-            carry = C
-            Fₗ = Fᵣ
-            return AL
-        end
     end
 
-    return isnothing(alg.alg_zipdown) ?
-        FiniteMPS(As; normalize = false, overwrite = true) :
-        _zipdown(As, alg.alg_zipdown)
+    ψ, ϵ = zipup!(ψ, O, ϕ, alg.alg_zipup)
+    if !isnothing(alg.alg_zipdown)
+        ψ, ϵ′ = zipdown!(ψ, alg.alg_zipdown)
+        ϵ = max(ϵ, ϵ′)
+    end
+    return ψ, ϵ
 end
 
-function _zipdown(As::Vector{A}, alg::MatrixAlgebraKit.TruncatedAlgorithm) where {A}
-    N = length(As)
-    N == 1 && return FiniteMPS(As; normalize = false, overwrite = true)
+function approximate(Oϕ::Tuple{Any, <:FiniteMPS}, alg::Zipup)
+    O, ϕ = Oϕ
+    T = TensorOperations.promote_contract(scalartype(O), scalartype(ϕ))
+    return approximate!(similar(ϕ, T), Oϕ, alg)
+end
 
-    ARs = Vector{Union{Missing, A}}(missing, N)
-    ALs = Vector{Union{Missing, A}}(missing, N)
-    ACs = Vector{Union{Missing, A}}(missing, N)
+"""
+    zipup!(ψ, O, ϕ, alg) -> ψ, ϵ
 
-    local C
-    AC = As[N]
-    for i in N:-1:2
-        C, AR, _ = right_gauge(AC, alg)
-        ARs[i] = AR
-        AC = _mul_tail(As[i - 1], C)
+Contract the MPO `O` with the MPS `ϕ` in a single left-to-right sweep, truncating the enlarged
+virtual bond at every site with `alg`, and write the result into `ψ`. The destination is left with
+its gauge center on the last site, and may alias `ϕ`.
+
+Instead of fusing both virtual bonds of every site, only the left bond is fused: the right factor of
+the truncated decomposition is simultaneously the truncation carry and the fuser of the next site, so
+the enlarged object is never constructed.
+
+Also returns the truncation error `ϵ`, the largest 2-norm of the discarded singular values over all
+bonds.
+
+Compatibility of the lengths, physical spaces and scalar types of `ψ`, `O` and `ϕ` is assumed, and
+checked in [`approximate!`](@ref).
+"""
+function zipup!(ψ::FiniteMPS, O, ϕ::FiniteMPS, alg)
+    N = length(ψ)
+
+    # obtain all input tensors before overwriting the destination, such that `ψ === ϕ` is allowed:
+    # from here on, the input is only queried through `Aϕs`, never through `ϕ` itself
+    Aϕs = map(i -> i == 1 ? ϕ.AC[1] : ϕ.AR[i], 1:N)
+
+    # the sweep re-derives the entire state: discard all cached tensors, as their spaces are stale
+    # TODO: "reallocate" tensors?"
+    foreach(f -> fill!(f, missing), (ψ.ALs, ψ.ARs, ψ.ACs, ψ.Cs))
+
+    A = storagetype(eltype(ψ))
+    Fₗ = fuser(A, left_virtualspace(Aϕs[1]), left_virtualspace(O, 1))
+    ϵ = zero(real(scalartype(ψ)))
+    for i in 1:(N - 1)
+        Aᶻ = _fuse_mpo_mps_left(O[i], Aϕs[i], Fₗ)
+        AL, Fₗ, ϵᵢ = left_gauge(Aᶻ, alg) # right factor doubles as the next left fuser
+        ψ.ALs[i] = AL
+        ϵ = max(ϵ, ϵᵢ)
     end
+    Fᵣ = fuser(A, right_virtualspace(Aϕs[N]), right_virtualspace(O, N))
+    ψ.ACs[N] = _fuse_mpo_mps(O[N], Aϕs[N], Fₗ, Fᵣ)
 
-    B = typeof(C)
-    ACs[1] = AC
-    Cs = Vector{Union{Missing, B}}(missing, N + 1)
-    return FiniteMPS(ALs, ARs, ACs, Cs)
+    return ψ, ϵ
+end
+
+"""
+    zipdown!(ψ, alg) -> ψ, ϵ
+
+Sweep `ψ` from right to left, truncating every bond with `alg` in a locally gauged basis, and moving
+the gauge center to the leftmost bond in the process.
+
+Also returns the truncation error `ϵ`, the largest 2-norm of the discarded singular values over all bonds.
+"""
+function zipdown!(ψ::AbstractFiniteMPS, alg)
+    ϵ = zero(real(scalartype(ψ)))
+    for i in length(ψ):-1:2
+        ψ, ϵᵢ = right_gauge!(ψ, i, ψ.AC[i], alg)
+        ϵ = max(ϵ, ϵᵢ)
+    end
+    return ψ, ϵ
 end
