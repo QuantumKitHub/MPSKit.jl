@@ -55,13 +55,8 @@ end
 
 function approximate((O, ψ)::Tuple{Any, <:FiniteMPS}, alg::Zipup)
     N = check_length(O, ψ)
-    if !isunitspace(left_virtualspace(O, 1)) || !isunitspace(right_virtualspace(O, N))
-        throw(ArgumentError("Zipup is only implemented for open-boundary MPOs"))
-    end
-
     T = TensorOperations.promote_contract(scalartype(O), scalartype(ψ))
     A = TensorKit.similarstoragetype(eltype(ψ), T)
-
     Fₗ = fuser(A, left_virtualspace(ψ, 1), left_virtualspace(O, 1))
     local carry
 
