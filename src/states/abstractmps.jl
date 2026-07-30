@@ -169,6 +169,11 @@ physicalspace(O::MPOTensor) = space(O, 2)
 physicalspace(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}) = only(space(O, 2))
 physicalspace(ψ::AbstractMPS) = map(Base.Fix1(physicalspace, ψ), eachsite(ψ))
 
+# the input physical space of an MPO tensor, i.e. the space of the state it can be applied to.
+# This need not equal its output physical space `physicalspace`.
+_input_physicalspace(O::MPOTensor) = dual(space(O, 3))
+_input_physicalspace(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}) = dual(only(space(O, 3)))
+
 """
     eachsite(state::AbstractMPS)
 
