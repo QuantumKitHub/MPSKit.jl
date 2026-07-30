@@ -149,3 +149,83 @@ across `build/.documenter/**/*.md`, with no misses.
 Exactly the snippet above, in the vendored `config.mts`.
 Once upstream ships it, delete `docs/src/.vitepress/config.mts` and the template drift
 guard at the top of `docs/make.jl`.
+
+## 3. Bold text does not render bold
+
+Follow-up to §1, reported on [MPSKit.jl#449](https://github.com/QuantumKitHub/MPSKit.jl/pull/449#issuecomment-5129465790):
+after the docstring headings were tagged and styled at `font-weight: 700`, the computed
+weight was correct but the glyphs still rendered at regular weight on Linux.
+
+### Diagnosis
+
+VitePress' reset sets `font-synthesis: style` on `<body>`.
+Per the CSS spec, listing only `style` permits synthetic *oblique* and **disables synthetic
+bold**.
+So whenever the resolved face has no real bold, `font-weight: 700` computes correctly and
+still paints at regular weight — silently, and only on machines whose font stack resolves
+that way.
+Combined with §1's stack of families that are never loaded, that is the whole of #477.
+
+This affects far more than docstring headings: `.custom-block-title` (600),
+`.custom-block a` (600), `.jldocstring.custom-block summary` (700) and every inline
+`<strong>` are all subject to it.
+
+### Upstream fix
+
+Either set `font-synthesis: weight style` in
+`template/src/.vitepress/theme/style.css`, or — better — stop declaring families in
+`--vp-font-family-base` that the template never loads, so a face with a real bold is
+selected in the first place.
+Ideally both: the first is a safety net for whatever the user's system resolves.
+
+### What we do instead
+
+`body { font-synthesis: weight style }` in `docs/src/.vitepress/theme/custom.css`.
+
+## 4. Admonitions lost their Documenter styling
+
+Reported on [MPSKit.jl#449](https://github.com/QuantumKitHub/MPSKit.jl/pull/449#issuecomment-5129697729).
+
+### Diagnosis
+
+Three things stack up:
+
+1. VitePress custom blocks are flatter than Documenter's admonitions: the title is not
+   colour-coded and carries no icon, and `--vp-custom-block-*-border` defaults to
+   `transparent`, so there is no visible border either.
+   Documenter draws a bordered box with a bold, category-coloured header prefixed by
+   `fa-circle-exclamation`.
+2. The title's `font-weight: 600` is subject to the synthetic-bold problem in §3, so on
+   affected systems it is not even bold.
+3. `writer.jl` maps `note` onto the `tip` container ("Julia markdown says note, but
+   Vitepress says tip") and `template/src/.vitepress/theme/style.css` then overrides, under
+   `:root.dark`, `--vp-custom-block-tip-bg: var(--vp-dark-gray-mute)` and
+   `--vp-custom-block-tip-text: var(--vp-dark-subtext)`.
+   Every `!!! note` therefore renders as a flat grey box with dimmed text in dark mode.
+
+### Upstream fix
+
+- The `note` → `tip` remap is obsolete: VitePress 1.x ships native `note`, `info`,
+  `important` and `caution` containers (`.custom-block.note` etc. are in its stylesheet).
+  Emitting `::: note` / `::: info` directly would restore Documenter's colour semantics —
+  blue for note/info, green for tip.
+- Reconsider the dark-mode `tip` override, which drains the colour out of the single most
+  common admonition in any Julia docs.
+- Consider giving `.custom-block-title` a category colour and an icon in the template, to
+  close the gap with Documenter.
+
+### What we do instead
+
+Styling only, in `docs/src/.vitepress/theme/custom.css`: accent-coloured bold title with an
+inline-SVG `fa-circle-exclamation` mask, a 4px accent left rule, body text restored to
+`--vp-c-text-1`, and `tip` backgrounds restated as `--vp-c-tip-soft` so notes keep their
+colour in dark mode.
+All of it guarded by `:not(.jldocstring)`, because DVP's docstring `<details>` also carries
+the `custom-block` class.
+
+We do **not** try to recover the note/tip distinction. By the time the markdown reaches
+markdown-it both are `::: tip`, and the only remaining signal is the title — which
+Documenter defaults to `"Note"`, but 13 of this repo's 44 notes carry a custom title and
+are then indistinguishable from a real `!!! tip`. Colouring only the recognisable ones
+would be visibly inconsistent, which is worse than a uniform palette. This needs the
+upstream fix.
