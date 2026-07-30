@@ -283,6 +283,22 @@ function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
     return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
 end
 
+# Variants that leave the virtual legs on one side unfused, for zip-up sweeps where the subsequent
+# factorization supplies the fuser of the next site. The unfused legs are ordered as in
+# `fuser(_, virtualspace(mps, i), virtualspace(mpo, i))`, such that the factor that spans them can be
+# used as the fuser on the next site: `Fₗ` is oriented as `Vfused ← (Vmps ⊗ Vmpo)`, `Fᵣ` as
+# `(Vmps ⊗ Vmpo) ← Vfused`.
+function _fuse_mpo_mps_left(O::MPOTensor, A::MPSTensor, Fₗ)
+    @plansor A′[-1 -2; -3 -4] := Fₗ[-1; 1 3] * A[1 2; -3] * O[3 -2; 2 -4]
+    return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
+end
+# note the index order of the physical leg `-3`: it is the last one, such that the resulting tensor is
+# partitioned across the new bond and `_transpose_front` of the right factor is again an MPS tensor
+function _fuse_mpo_mps_right(O::MPOTensor, A::MPSTensor, Fᵣ)
+    @plansor A′[-1 -2; -4 -3] := A[-1 1; 2] * O[-2 -3; 1 3] * Fᵣ[2 3; -4]
+    return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
+end
+
 function Base.:*(mpo::FiniteMPO{<:MPOTensor}, x::AbstractTensorMap)
     @assert length(mpo) > 1
     @assert numout(x) == length(mpo)
