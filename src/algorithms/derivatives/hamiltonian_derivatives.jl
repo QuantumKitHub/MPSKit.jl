@@ -31,7 +31,7 @@ function JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, I, E, C, B, A) where {O1, O2, O
     return JordanMPO_AC_Hamiltonian{O1, O2, O3}(
         ismissing(D) ? D : convert(O1, D), ismissing(I) ? I : convert(O1, I),
         ismissing(E) ? E : convert(O1, E), ismissing(C) ? C : convert(O2, C),
-        ismissing(B) ? E : convert(O2, B), ismissing(A) ? A : convert(O3, A)
+        ismissing(B) ? B : convert(O2, B), ismissing(A) ? A : convert(O3, A)
     )
 end
 
