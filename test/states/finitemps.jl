@@ -36,9 +36,10 @@ using Adapt
 
     @test eltype(ψ) == eltype(typeof(ψ))
 
-    ovl = dot(ψ, ψ)
+    ovl = @constinferred dot(ψ, ψ)
 
     @test ovl ≈ norm(ψ.AC[1])^2
+    @test ovl isa scalartype(ψ)
 
     for i in 1:length(ψ)
         @test ψ.AC[i] ≈ ψ.AL[i] * ψ.C[i]

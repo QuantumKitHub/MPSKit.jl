@@ -589,6 +589,9 @@ end
 function TensorKit.dot(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
     #todo : rewrite this without having to gauge
     length(ψ₁) == length(ψ₂) || throw(ArgumentError("MPS with different length"))
+    if ψ₁ === ψ₂
+        return convert(Base.promote_op(inner, scalartype(ψ₁), scalartype(ψ₂)), norm(ψ₁)^2)
+    end
     ρr = TransferMatrix(ψ₂.AR[2:end], ψ₁.AR[2:end]) * r_RR(ψ₂)
     return tr(_transpose_front(ψ₁.AC[1])' * _transpose_front(ψ₂.AC[1]) * ρr)
 end
