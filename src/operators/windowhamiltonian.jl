@@ -32,6 +32,7 @@ struct WindowMPOHamiltonian{O} <: AbstractMPO{O}
     "Hamiltonian acting on the infinite environment to the right of the window"
     right_ham::InfiniteMPOHamiltonian{O}
 end
+Base.isfinite(::Type{<:WindowMPOHamiltonian}) = true
 
 function WindowMPOHamiltonian(ham::InfiniteMPOHamiltonian, interval::UnitRange)
     left_edge = (interval.start - 1) % length(ham)

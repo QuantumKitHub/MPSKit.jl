@@ -51,6 +51,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   Accordingly, `marek_gap` and `correlation_length` now return a `TensorKit.SectorDict` of
   per-sector results by default; pass `sector = ...` to obtain a single sector's result as before.
 - All `trscheme` keyword arguments are renamed to `trunc` ([#482](https://github.com/QuantumKitHub/MPSKit.jl/pull/482)).
+- `correlator` now throws an `ArgumentError` when the sites are not ordered as `i < j`.
+  Previously such a call only logged an `@error` and then continued into a contraction that is
+  not the requested correlator. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 
 ### Deprecated
 
@@ -58,6 +61,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `isfinite(::WindowMPOHamiltonian)` was undefined. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+- `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
   different tensor networks, e.g. `norm(E₀ * gs - H * gs)` coming out as `2 * norm(gs) * E₀`
   instead of ~0. The lazy gauge sweep in `CView.getindex` re-derived `AL`/`C` entries that were
