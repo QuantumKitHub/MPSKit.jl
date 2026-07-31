@@ -291,6 +291,46 @@ end
     end
 end
 
+@testset "Long-range Hamiltonian with real scalartype" verbose = true begin
+    # A real `H` optimised over a complex MPS sends the derivative operators through their
+    # converting constructors, and a long-range bond leaves sites with no ending (`B`) block
+    tol = 1.0e-8
+    D = 8
+
+    @testset "FiniteMPS" begin
+        L = 10
+        H = long_range_ising(Float64; L)
+        @test scalartype(H) <: Real
+
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℂ^2, ℂ^D)
+        # `complex(H)` takes the non-converting construction path
+        E_ref = expectation_value(
+            find_groundstate(ψ₀, complex(H), DMRG(; tol, verbosity = verbosity_conv))[1], H
+        )
+        for alg in (
+                DMRG(; tol, verbosity = verbosity_conv),
+                DMRG2(; tol, verbosity = verbosity_conv, trunc = truncrank(D)),
+            )
+            ψ, envs, δ = find_groundstate(ψ₀, H, alg)
+            @test expectation_value(ψ, H, envs) ≈ E_ref atol = 1.0e-6
+        end
+    end
+
+    @testset "InfiniteMPS" begin
+        H = long_range_ising_infinite(Float64; L = 3)
+        @test scalartype(H) <: Real
+
+        ψ₀ = InfiniteMPS(randn, ComplexF64, fill(ℂ^2, 3), fill(ℂ^D, 3))
+        E_ref = expectation_value(
+            find_groundstate(ψ₀, complex(H), VUMPS(; tol, verbosity = verbosity_conv))[1], H
+        )
+        for alg in (VUMPS(; tol, verbosity = verbosity_conv), IDMRG(; tol, verbosity = verbosity_conv))
+            ψ, envs, δ = find_groundstate(ψ₀, H, alg)
+            @test expectation_value(ψ, H, envs) ≈ E_ref atol = 1.0e-6
+        end
+    end
+end
+
 @testset "LazySum FiniteMPS ground state" verbose = true begin
     tol = 1.0e-8
     D = 15
