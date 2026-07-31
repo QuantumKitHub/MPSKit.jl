@@ -123,6 +123,11 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   return value regardless, so this adds no extra cost. ([#509](https://github.com/QuantumKitHub/MPSKit.jl/pull/509))
 - `make_time_mpo` with `TaylorCluster` on a Hamiltonian whose virtual bond dimension varies along
   the chain are now correctly handled. ([#511](https://github.com/QuantumKitHub/MPSKit.jl/pull/511))
+- The converting constructor of `JordanMPO_AC_Hamiltonian` assigned the "finished" block `E` to
+  the "ending" field `B` whenever `B` was absent, raising a `convert` `MethodError` from deep
+  inside `AC_hamiltonian`. This is reached when an `MPOHamiltonian` whose scalartype differs from
+  the state's has an on-site term on a site where no interaction ends, such as a long-range one.
+  ([#493](https://github.com/QuantumKitHub/MPSKit.jl/pull/493))
 
 ### Performance
 
