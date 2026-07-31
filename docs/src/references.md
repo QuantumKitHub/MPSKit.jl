@@ -12,6 +12,7 @@ request or an issue on the [GitHub repository](https://github.com/QuantumKitHub/
 Pages = []
 basumatary2026
 brehmer2026
+burgelman2026
 hormann2026
 kadow2026
 kaplan2026
