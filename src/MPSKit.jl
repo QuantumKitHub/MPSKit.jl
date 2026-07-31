@@ -39,6 +39,7 @@ export TDVP, TDVP2, WI, WII, TaylorCluster
 export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
 export NoiseSchedule, FunctionalSchedule, ExponentialDecay, Warmup, DMRG3S
+export Zipup
 export propagator
 export DynamicalDMRG, NaiveInvert, Jeckelmann
 export exact_diagonalization, fidelity_susceptibility
@@ -192,6 +193,7 @@ include("algorithms/statmech/idmrg.jl")
 include("algorithms/fidelity_susceptibility.jl")
 
 include("algorithms/approximate/approximate.jl")
+include("algorithms/approximate/zipup.jl")
 include("algorithms/approximate/vomps.jl")
 include("algorithms/approximate/fvomps.jl")
 include("algorithms/approximate/idmrg.jl")

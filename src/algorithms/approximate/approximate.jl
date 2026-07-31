@@ -4,10 +4,12 @@
     approximate!(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, ϵ)
     approximate(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, ϵ)
     approximate!(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, ϵ)
+    approximate((O, ψ), algorithm) -> (ψ′, ϵ)
+    approximate!(ψ₀, (O, ψ), algorithm) -> (ψ, ϵ)
 
 Compute an approximation to the application of an operator `O` to the state `ψ` in the form
-of an MPS `ψ₀`. If only a state `ψ` is supplied instead of the `(O, ψ)` pair, `ψ₀` is
-approximated directly to `ψ` (i.e. `O` is taken to be the identity).
+of an MPS, using initial guess `ψ₀`. If only a state `ψ` is supplied instead of the `(O, ψ)` pair,
+`ψ₀` is approximated directly to `ψ` (i.e. `O` is taken to be the identity).
 
 **Not every algorithm supports every combination of arguments below** — see the per-algorithm
 notes at the end of this docstring before picking one.
@@ -35,12 +37,15 @@ struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
 Each algorithm below only supports a subset of the general interface. Check this table before
 picking one — in particular, note that **only `DMRG`/`DMRG2` accept a bare state `ψ`**; the
 infinite algorithms always require an explicit `(O, ψ)` tuple, and **`VOMPS` has no in-place
-`approximate!`** at all.
+`approximate!`** at all. `Zipup` is a single sweep rather than an iterative optimization, so it uses
+no environments and returns `(ψ, ϵ)`; its `ψ₀` is a write destination, not an initial guess, and it
+may be omitted.
 
 | Algorithm | Scheme                        | State `ψ₀`                        | bare `ψ` allowed? | `approximate!` |
 |:--------- |:----------------------------- |:---------------------------------- |:------------------:|:--------------:|
 | `DMRG`    | single-site, fixes bond dim    | `AbstractFiniteMPS`                | ✅                  | ✅              |
 | `DMRG2`   | two-site, truncates via `trunc` | `AbstractFiniteMPS`            | ✅                  | ✅              |
+| `Zipup`   | streaming MPO-MPS compression | `FiniteMPS` destination, optional | ❌ (tuple only)    | ✅              |
 | `IDMRG`   | single-site, thermodynamic limit | `InfiniteMPS` / `MultilineMPS`  | ❌ (tuple only)     | ✅              |
 | `IDMRG2`  | two-site, thermodynamic limit, needs unit cell ≥ 2 | `InfiniteMPS` / `MultilineMPS` | ❌ (tuple only) | ✅ |
 | `VOMPS`   | tangent-space truncation       | `InfiniteMPS` / `MultilineMPS`     | ❌ (tuple only)     | ❌ (out-of-place only) |

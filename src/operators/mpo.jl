@@ -278,8 +278,48 @@ function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
     return changebonds(InfiniteMPS(As), SvdCut(; trunc = notrunc()))
 end
 
+"""
+Fuse the left and right virtual legs of the product of MPO-MPS tensors
+```
+        ┌---A---┐
+    1 --Fl  |  Fr-- 3   =>  A′[1 2; 3]
+        └---O---┘
+            |
+            2
+```
+"""
 function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
     @plansor A′[-1 -2; -3] := Fₗ[-1; 1 3] * A[1 2; 4] * O[3 -2; 2 5] * conj(Fᵣ[-3; 4 5])
+    return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
+end
+"""
+Fuse the left virtual legs of the product of MPO-MPS tensors
+```
+        ┌---A--- 3
+    1 --Fl  |       =>  A′[1 2; 3 4]
+        └---O--- 4
+            |
+            2
+```
+"""
+function _fuse_mpo_mps_left(O::MPOTensor, A::MPSTensor, Fₗ)
+    @plansor A′[-1 -2; -3 -4] := Fₗ[-1; 1 3] * A[1 2; -3] * O[3 -2; 2 -4]
+    return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
+end
+"""
+Fuse the right virtual legs of the product of MPO-MPS tensors
+```
+    1 --A---┐
+        |  Fr-- 3   =>  A′[1 2; 3 4]
+    2 --O---┘
+        |
+        4
+```
+"""
+function _fuse_mpo_mps_right(O::MPOTensor, A::MPSTensor, Fᵣ)
+    # the resulting tensor is partitioned across the new bond
+    # `_transpose_front` of the right factor is again an MPS tensor
+    @plansor A′[-1 -2; -3 -4] := A[-1 1; 2] * O[-2 -4; 1 3] * Fᵣ[2 3; -3]
     return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
 end
 

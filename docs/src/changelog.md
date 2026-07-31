@@ -23,6 +23,11 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 - Addition of `FiniteMPS`/`FiniteMPO` with different scalar types, through a new
   `Base.similar(ψ, ::Type{S})` for `S <: Number` on `FiniteMPS`. ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- `Zipup`, an algorithm for `approximate`/`approximate!` that compresses a finite MPO-MPS product in
+  a single sweep, optionally followed by a sweep in the opposite direction that imposes the final
+  truncation. The sweep direction is selected by the `left_to_right` keyword. Both
+  `approximate((O, ϕ), alg)` and `approximate!(ψ, (O, ϕ), alg)` are supported, where the destination
+  `ψ` is a write target rather than an initial guess and may alias `ϕ`; they return `(ψ, ϵ)`.
 
 ### Changed
 
