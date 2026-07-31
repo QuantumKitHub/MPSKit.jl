@@ -278,24 +278,48 @@ function Base.:*(mpo::InfiniteMPO, mps::InfiniteMPS)
     return changebonds(InfiniteMPS(As), SvdCut(; trunc = notrunc()))
 end
 
+"""
+Fuse the left and right virtual legs of the product of MPO-MPS tensors
+```
+        ┌---A---┐
+    1 --Fl  |  Fr-- 3   =>  A′[1 2; 3]
+        └---O---┘
+            |
+            2
+```
+"""
 function _fuse_mpo_mps(O::MPOTensor, A::MPSTensor, Fₗ, Fᵣ)
     @plansor A′[-1 -2; -3] := Fₗ[-1; 1 3] * A[1 2; 4] * O[3 -2; 2 5] * conj(Fᵣ[-3; 4 5])
     return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
 end
-
-# Variants that leave the virtual legs on one side unfused, for zip-up sweeps where the subsequent
-# factorization supplies the fuser of the next site. The unfused legs are ordered as in
-# `fuser(_, virtualspace(mps, i), virtualspace(mpo, i))`, such that the factor that spans them can be
-# used as the fuser on the next site: `Fₗ` is oriented as `Vfused ← (Vmps ⊗ Vmpo)`, `Fᵣ` as
-# `(Vmps ⊗ Vmpo) ← Vfused`.
+"""
+Fuse the left virtual legs of the product of MPO-MPS tensors
+```
+        ┌---A--- 3
+    1 --Fl  |       =>  A′[1 2; 3 4]
+        └---O--- 4
+            |
+            2
+```
+"""
 function _fuse_mpo_mps_left(O::MPOTensor, A::MPSTensor, Fₗ)
     @plansor A′[-1 -2; -3 -4] := Fₗ[-1; 1 3] * A[1 2; -3] * O[3 -2; 2 -4]
     return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
 end
-# note the index order of the physical leg `-3`: it is the last one, such that the resulting tensor is
-# partitioned across the new bond and `_transpose_front` of the right factor is again an MPS tensor
+"""
+Fuse the right virtual legs of the product of MPO-MPS tensors
+```
+    1 --A---┐
+        |  Fr-- 3   =>  A′[1 2; 3 4]
+    2 --O---┘
+        |
+        4
+```
+"""
 function _fuse_mpo_mps_right(O::MPOTensor, A::MPSTensor, Fᵣ)
-    @plansor A′[-1 -2; -4 -3] := A[-1 1; 2] * O[-2 -3; 1 3] * Fᵣ[2 3; -4]
+    # the resulting tensor is partitioned across the new bond
+    # `_transpose_front` of the right factor is again an MPS tensor
+    @plansor A′[-1 -2; -3 -4] := A[-1 1; 2] * O[-2 -4; 1 3] * Fᵣ[2 3; -3]
     return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
 end
 
