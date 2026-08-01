@@ -65,18 +65,18 @@ function expectation_value(ψ::AbstractMPS, (inds, O)::Pair)
 
     # right side
     E = @plansor removeunit(M, 2)[1; 2] * ψ.C[sites[end]][2; 3] * conj(ψ.C[sites[end]][1; 3])
-    return E / dot(ψ, ψ)
+    return E / norm(ψ)^2
 end
 
 function local_expectation_value1(ψ::AbstractMPS, site, O)
     E = contract_mpo_expval1(ψ.AC[site], O, ψ.AC[site])
-    return E / dot(ψ, ψ)
+    return E / norm(ψ)^2
 end
 function local_expectation_value2(ψ::AbstractMPS, site, O)
     AC = ψ.AC[site]
     AR = ψ.AR[site + 1]
     E = contract_mpo_expval2(AC, AR, O, AC, AR)
-    return E / dot(ψ, ψ)
+    return E / norm(ψ)^2
 end
 
 # MPOHamiltonian
@@ -125,14 +125,14 @@ function expectation_value(
         ψ::FiniteMPS, H::FiniteMPOHamiltonian,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ)
     )
-    return dot(ψ, H, ψ, envs) / dot(ψ, ψ)
+    return dot(ψ, H, ψ, envs) / norm(ψ)^2
 end
 
 function expectation_value(
         ψ::WindowMPS, H::WindowMPOHamiltonian,
         envs::AbstractMPSEnvironments = environments(ψ, H)
     )
-    return dot(ψ, H, ψ, envs) / dot(ψ, ψ)
+    return dot(ψ, H, ψ, envs) / norm(ψ)^2
 end
 
 function expectation_value(
@@ -163,7 +163,7 @@ end
 # DenseMPO
 # --------
 function expectation_value(ψ::FiniteMPS, mpo::FiniteMPO)
-    return dot(ψ, mpo, ψ) / dot(ψ, ψ)
+    return dot(ψ, mpo, ψ) / norm(ψ)^2
 end
 function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
