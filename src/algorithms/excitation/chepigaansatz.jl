@@ -83,8 +83,7 @@ keyword arguments to [`Arnoldi`](@extref KrylovKit.Arnoldi).
 
 # Fields
 
-- `alg`: algorithm used for the eigenvalue problem, defaults to `Arnoldi(; krylovdim = 30, tol = 1.0e-10, eager = true)`
-- `trunc`: truncation strategy used when splitting the optimized two-site tensor, defaults to `notrunc()`
+$(TYPEDFIELDS)
 
 # See also
 
@@ -95,7 +94,10 @@ Used as the `algorithm` argument of [`excitations`](@ref).
 * [Chepiga et al. Phys. Rev. B 96 (2017)](@cite chepiga2017)
 """
 struct ChepigaAnsatz2{A <: KrylovAlgorithm} <: Algorithm
+    "algorithm used for the eigenvalue solvers, defaults to `Arnoldi(; krylovdim = 30, tol = 1.0e-10, eager = true)`"
     alg::A
+
+    "[truncation strategy](@extref MatrixAlgebraKit.TruncationStrategy) used when splitting the optimized two-site tensor, defaults to `notrunc()`"
     trunc::Any
 end
 function ChepigaAnsatz2(; trunc = notrunc(), kwargs...)

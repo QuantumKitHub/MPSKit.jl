@@ -1,8 +1,7 @@
 """
     exact_diagonalization(
             H::FiniteMPOHamiltonian;
-            sector = rightunit(H),
-            len::Int = length(H), num::Int = 1, which::Symbol = :SR,
+            sector = rightunit(H), num::Int = 1, which::Symbol = :SR,
             alg = Defaults.alg_eigsolve(; dynamic_tols = false)
         ) -> vals, state_vecs, convhist
 
@@ -18,7 +17,6 @@ equivalent to dense eigenvectors.
 
 - `sector = rightunit(H)`: the total charge of the
   eigenvectors, which is chosen trivial by default.
-- `len::Int = length(H)`: the length of the system.
 - `num::Int = 1`: the number of eigenvectors to find.
 - `which::Symbol = :SR`: the kind eigenvalues to find, see [`KrylovKit.eigsolve`](@extref).
 - `alg = Defaults.alg_eigsolve(; dynamic_tols = false)`: the diagonalization algorithm to use,

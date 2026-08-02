@@ -227,8 +227,4 @@ Also accepts a range for `j`.
 - Prefer a leading `"""..."""` block directly above the definition.
 - Use `@doc (@doc a) b` only to alias a genuinely identical docstring onto a sibling.
 - A comment between the docstring and the definition silently detaches the docstring; keep them adjacent and put any comment above the docstring.
-
-## Physics claims
-
-Any statement about physical behavior, convergence, or the meaning of a result that has not been verified gets a `<!-- REVIEW: ... -->` comment for the maintainer.
-Correctness of physics is the maintainer's call.
+- Do not put an HTML comment inside a docstring: DocumenterVitepress escapes it, so `<!-- ... -->` renders as visible body text on the page.
