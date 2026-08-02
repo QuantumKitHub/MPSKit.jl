@@ -7,7 +7,7 @@ const _HAM_MPS_TYPES = Union{
 # Single site derivative
 # ----------------------
 """
-    JordanMPO_AC_Hamiltonian{O1,O2,O3}
+    JordanMPO_AC_Hamiltonian{O1, O2, O3}
 
 Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
 In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
@@ -149,7 +149,7 @@ end
 # Two site derivative
 # -------------------
 """
-    JordanMPO_AC2_Hamiltonian{O1,O2,O3,O4}
+    JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}
 
 Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
 In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.

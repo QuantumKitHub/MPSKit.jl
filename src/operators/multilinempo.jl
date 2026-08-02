@@ -6,10 +6,13 @@
 Type that represents multiple lines of `MPO` objects.
 
 # Constructors
-    MultilineMPO(mpos::AbstractVector{<:Union{SparseMPO,DenseMPO}})
+
+    MultilineMPO(mpos::AbstractVector{<:Union{SparseMPO, DenseMPO}})
     MultilineMPO(Os::AbstractMatrix{<:MPOTensor})
 
-See also: [`Multiline`](@ref), [`AbstractMPO`](@ref)
+# See also
+
+[`Multiline`](@ref), [`AbstractMPO`](@ref)
 """
 const MultilineMPO = Multiline{<:AbstractMPO}
 

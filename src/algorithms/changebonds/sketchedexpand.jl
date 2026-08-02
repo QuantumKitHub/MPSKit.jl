@@ -3,27 +3,46 @@ $(TYPEDEF)
 
 An algorithm that expands the bond dimension like [`OptimalExpand`](@ref) — selecting the
 dominant directions of the projected two-site update orthogonal to the current state — but at
-single-site cost using the randomized "shrewd selection" of Controlled Bond Expansion
-(Gleis et al. Phys. Rev. Lett. 130, 246402 (2023)). A random sketch of the orthogonal complement
+single-site cost using the randomized "shrewd selection" of Controlled Bond Expansion.
+A random sketch of the orthogonal complement
 is folded into the effective environment, collapsing the large bond before the two-site update is
 ever formed, and the dominant directions are read off a small singular value decomposition.
 
 The state-preserving behaviour matches [`OptimalExpand`](@ref).
 
 !!! note
+    `trunc` bounds how much is *added* to each bond, not the total bond dimension that is kept:
+    it sizes the sketch target `Vk` within the orthogonal complement (see
+    [`sketch_space`](@ref)), so `truncrank(k)` aims to grow every bond by `k`, capped by the
+    dimension of the local complement. Because that target space is selected from uniformly
+    random weights rather than from a spectrum, its per-sector split is drawn at random rather
+    than ordered by importance — unlike [`OptimalExpand`](@ref), where the decomposition itself
+    picks out the dominant sectors — so only `truncrank` and `truncspace` have a robust meaning
+    here. The `trunc` of [`SvdCut`](@ref), and of the drivers [`DMRG`](@ref) and [`TDVP`](@ref),
+    has the other meaning: it bounds what is *kept*.
+
+!!! note
     Only defined for `FiniteMPS` (through [`changebond!`](@ref)), so it can be used standalone or
     as the `alg_expand` strategy of [`DMRG`](@ref). The reported `ϵ_2site` is a randomized
     estimate, and the folded application does not exploit `JordanMPO` sparsity.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`changebonds`](@ref) and [`changebonds!`](@ref).
+
+# References
+
+* [Gleis et al. Phys. Rev. Lett. 130, 246402 (2023)](@cite gleis2023)
 """
 @kwdef struct SketchedExpand{S} <: Algorithm
     "algorithm used to orthonormalize the sketched complement (passed as the `alg` of `left_orth!`/`right_orth!`); `nothing` selects QR without oversampling and an SVD-based decomposition otherwise"
     alg_orth::S = nothing
 
-    "algorithm used for truncating the expanded space"
+    "[truncation strategy](@extref MatrixAlgebraKit.TruncationStrategy) selecting how many directions are *added* to each bond, rather than how much of the bond is kept"
     trunc::TruncationStrategy
 
     "number of extra sketch columns drawn beyond the target rank (range-finder oversampling)"

@@ -2,29 +2,33 @@
 $(TYPEDEF)
 
 Variational gradient-based optimization algorithm that keeps the MPS in left-canonical form,
-as points on a Grassmann manifold. The optimization is then a Riemannian gradient descent 
+as points on a Grassmann manifold. The optimization is then a Riemannian gradient descent
 with a preconditioner to induce the metric from the Hilbert space inner product.
 
-## Fields
+# Constructors
+
+    GradientGrassmann(; kwargs...)
+
+# Keyword Arguments
+
+- `method = ConjugateGradient`: instance of optimization algorithm, or type of optimization
+    algorithm to construct
+- `finalize!`: finalizer algorithm
+- `tol = Defaults.tol`: tolerance for convergence criterium
+- `maxiter = Defaults.maxiter`: maximum amount of iterations
+- `verbosity = Defaults.verbosity - 1`: level of information display
+
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`leading_boundary`](@ref).
+
+# References
 
 * [Hauru et al. SciPost Phys. 10 (2021)](@cite hauru2021)
-
----
-
-## Constructors
-    GradientGrassmann(; kwargs...)
-
-### Keywords
-- `method=ConjugateGradient`: instance of optimization algorithm, or type of optimization
-    algorithm to construct
-- `finalize!`: finalizer algorithm
-- `tol::Float64`: tolerance for convergence criterium
-- `maxiter::Int`: maximum amount of iterations
-- `verbosity::Int`: level of information display
 """
 struct GradientGrassmann{O <: OptimKit.OptimizationAlgorithm, F} <: Algorithm
     "optimization algorithm"

@@ -11,11 +11,15 @@ $(TYPEDEF)
 A dynamical DMRG method for calculating dynamical properties and excited states, based on a
 variational principle for dynamical correlation functions.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`propagator`](@ref).
+
+# References
 
 * [Jeckelmann. Phys. Rev. B 66 (2002)](@cite jeckelmann2002)
 """
@@ -33,13 +37,15 @@ $(TYPEDFIELDS)
 end
 
 """
-    propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init=copy(ψ₀))
+    propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init = copy(ψ₀)) -> (g, ψ)
 
 Calculate the action of the propagator ``\\frac{1}{z - H}|ψ₀⟩`` using the dynamical DMRG
 algorithm.
 
-Returns a tuple `(g, ψ)` where `g` is the approximation of the propagator matrix element
-``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and `ψ` is the MPS approximation of ``\\frac{1}{z - H}|ψ₀⟩``.
+# Returns
+
+- `g`: approximation of the propagator matrix element ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩``
+- `ψ`: MPS approximation of ``\\frac{1}{z - H}|ψ₀⟩``
 """
 function propagator end
 
@@ -55,7 +61,9 @@ This algorithm minimizes the following cost function
 
 Returns the approximation of ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and ``\\frac{1}{z - H}|ψ₀⟩``.
 
-See also [`Jeckelmann`](@ref) for the original approach.
+# See also
+
+[`Jeckelmann`](@ref) for the original approach.
 """
 struct NaiveInvert <: DDMRG_Flavour end
 
@@ -121,9 +129,11 @@ Together with equation (11) from that same paper we can determine the full propa
 
 Returns the approximation of ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and ``\\frac{1}{z - H}|ψ₀⟩``.
 
-See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.
+# See also
 
-## References
+[`NaiveInvert`](@ref) for a less costly but less accurate alternative.
+
+# References
 
 * [Jeckelmann. Phys. Rev. B 66 (2002)](@cite jeckelmann2002)
 """

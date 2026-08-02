@@ -3,25 +3,34 @@ $(TYPEDEF)
 
 An algorithm that expands the bond dimension by adding random unitary vectors that are
 orthogonal to the existing state. This means that additional directions are added to
-`AL` and `AR` that are contained in the nullspace of both. Note that this is happens in
+`AL` and `AR` that are contained in the nullspace of both. Note that this happens in
 parallel, and therefore the expansion will never go beyond the local two-site subspace.
 
-The truncation strategy dictates the number of expanded states, by generating uniformly
-distributed weights for each state in the two-site space and truncating that.
+`trunc` bounds how much is *added* to each bond, not the total bond dimension that is kept, and
+it acts on a spectrum that carries no physical information: for an `InfiniteMPS` the weights are
+drawn uniformly at random, one per candidate direction, while for a `FiniteMPS` they are the
+singular values of a randomized two-site update restricted to the orthogonal complement. Only
+`truncrank` and `truncspace` therefore have a robust meaning — `trunctol(; atol = x)` keeps the
+directions whose *random* weight happens to exceed `x`. The `trunc` of [`SvdCut`](@ref), and of
+the drivers [`DMRG`](@ref) and [`TDVP`](@ref), has the other meaning: it bounds what is *kept*.
 
 !!! note
     The environments are not used here, but [`changebonds!`](@ref) modifies both the state
     and environment so they remain consistent.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`changebonds`](@ref) and [`changebonds!`](@ref).
 """
 @kwdef struct RandExpand{S} <: Algorithm
     "algorithm used for the singular value decomposition"
     alg_svd::S = Defaults.alg_svd()
 
-    "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the expanded space"
+    "[truncation strategy](@extref MatrixAlgebraKit.TruncationStrategy) selecting how many directions are *added* to each bond, rather than how much of the bond is kept"
     trunc::TruncationStrategy
 end
 

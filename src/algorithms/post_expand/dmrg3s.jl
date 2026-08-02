@@ -36,7 +36,7 @@ Base.:∘(s1::NoiseSchedule, s2::NoiseSchedule) =
 
 Noise schedule that shrinks geometrically: `noise -> noise * decay_rate^iter`, snapped
 to exactly zero once it falls below `threshold`. Use `decay_rate < 1` for a standalone
-[`DMRG3S`](@ref) run that gradually turns enrichment off as the state converges; a
+[`DMRG3S`](@ref) run that gradually turns the expansion off as the state converges; a
 nonzero `threshold` avoids running the (cheap, but non-free) expansion step
 indefinitely on a noise amplitude too small to matter.
 """
@@ -67,7 +67,7 @@ end
 (s::Warmup)(noise, iter, ϵ) = iter ≤ s.iters ? noise : zero(noise)
 
 """
-    DMRG3S(noise, schedule::NoiseSchedule)
+$(TYPEDEF)
 
 Gauge algorithm wrapper that, at every site update, injects a Hamiltonian-derived
 perturbation of the just-optimized tensor before gauging — the "strictly single-site DMRG with
@@ -75,10 +75,14 @@ subspace expansion" scheme. This lets
 single-site DMRG introduce basis states/quantum-number sectors absent from the initial
 state, helping it escape local minima that plain single-site DMRG can get stuck in.
 
+# Constructors
+
+    DMRG3S(noise, schedule::NoiseSchedule)
+
 `noise` is the initial perturbation amplitude; `schedule` (see [`ExponentialDecay`](@ref),
 [`Warmup`](@ref)) controls how it evolves across outer iterations, and once it decays to
 exactly zero the gauge step reverts to a plain gauge shift for the remainder of the
-run. The actual factorization used to gauge the enriched tensor
+run. The actual factorization used to gauge the expanded tensor
 is filled in by `DMRG`'s constructor, not supplied here directly — see `DMRG`'s docstring
 for the calling convention:
 
@@ -89,13 +93,24 @@ DMRG(; alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7)), trunc = truncdim(50))
 A truncating `trunc` is strongly recommended alongside `DMRG3S`, to cut the perturbed
 bond back down each sweep — `DMRG`'s constructor warns if none is given.
 
-## References
+# Fields
 
-* [Hubig et al. Phys. Rev. B 91, 155115 (2015)](@cite Hubig2015)
+$(TYPEDFIELDS)
+
+# See also
+
+Used as the `alg_gauge` argument of [`DMRG`](@ref).
+
+# References
+
+* [Hubig et al. Phys. Rev. B 91, 155115 (2015)](@cite hubig2015)
 """
 struct DMRG3S{N, S <: NoiseSchedule, A} <: Algorithm
+    "initial perturbation amplitude, before `schedule` is applied"
     noise::N
+    "[`NoiseSchedule`](@ref) controlling how the amplitude evolves across outer iterations"
     schedule::S
+    "factorization used to gauge the expanded tensor; `nothing` until [`DMRG`](@ref)'s constructor fills it in"
     alg_gauge::A
 end
 

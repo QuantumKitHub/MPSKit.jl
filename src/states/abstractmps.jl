@@ -14,7 +14,7 @@ const GenericMPSTensor{S, N} = AbstractTensorMap{T, S, N, 1} where {T} # some fu
 const MPSTensor{S} = GenericMPSTensor{S, 2} # the usual mps tensors on which we work
 
 """
-    isfullrank(A::GenericMPSTensor; side=:both)
+    isfullrank(A::GenericMPSTensor; side = :both)
 
 Determine whether the given tensor is full rank, i.e. whether both the map from the left
 virtual space and the physical space to the right virtual space, and the map from the right
@@ -37,7 +37,7 @@ function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
 end
 
 """
-    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defaults.alg_orth())
+    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = Defaults.alg_orth())
 
 Make the set of MPS tensors full rank by performing a series of orthogonalizations.
 """
@@ -83,12 +83,12 @@ end
 # Tensor accessors
 # ----------------
 @doc """
-    AC2(ψ::AbstractMPS, i; kind=:ACAR)
+    AC2(ψ::AbstractMPS, i; kind = :ACAR)
 
 Obtain the two-site (center) gauge tensor at site `i` of the MPS `ψ`.
 If this hasn't been computed before, this can be computed as:
-- `kind=:ACAR` : AC[i] * AR[i+1]
-- `kind=:ALAC` : AL[i] * AC[i+1]
+- `kind = :ACAR`: AC[i] * AR[i+1]
+- `kind = :ALAC`: AL[i] * AC[i+1]
 """ AC2
 
 #===========================================================================================
@@ -130,7 +130,7 @@ TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype)
 TensorKit.storagetype(ψtype::Type{<:AbstractMPS}) = storagetype(site_type(ψtype))
 
 """
-    left_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
+    left_virtualspace(ψ::AbstractMPS, [pos = 1:length(ψ)])
     
 Return the virtual space of the bond to the left of sites `pos`.
 
@@ -144,7 +144,7 @@ left_virtualspace(O::MPOTensor) = space(O, 1)
 left_virtualspace(ψ::AbstractMPS) = map(Base.Fix1(left_virtualspace, ψ), eachsite(ψ))
 
 """
-    right_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
+    right_virtualspace(ψ::AbstractMPS, [pos = 1:length(ψ)])
 
 Return the virtual space of the bond to the right of site(s) `pos`.
 
@@ -158,7 +158,7 @@ right_virtualspace(O::MPOTensor) = space(O, 4)'
 right_virtualspace(ψ::AbstractMPS) = map(Base.Fix1(right_virtualspace, ψ), eachsite(ψ))
 
 """
-    physicalspace(ψ::AbstractMPS, [pos=1:length(ψ)])
+    physicalspace(ψ::AbstractMPS, [pos = 1:length(ψ)])
 
 Return the physical space of the site tensor at site `i`.
 """

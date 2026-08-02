@@ -1,5 +1,5 @@
 """
-    struct MPO{O,V<:AbstractVector{O}} <: AbstractMPO{O}
+    struct MPO{TO, V <: AbstractVector{TO}} <: AbstractMPO{TO}
 
 Matrix Product Operator (MPO) acting on a tensor product space with a linear order.
 
@@ -11,7 +11,7 @@ end
 
 """
     FiniteMPO(Os::Vector{O}) -> FiniteMPO{O}
-    FiniteMPO(O::AbstractTensorMap{S,N,N}) where {S,N} -> FiniteMPO{O<:MPOTensor}
+    FiniteMPO(O::AbstractTensorMap{S, N, N}) where {S, N} -> FiniteMPO{O <: MPOTensor}
 
 Matrix Product Operator (MPO) acting on a finite tensor product space with a linear order.
 """
@@ -447,8 +447,8 @@ function Base.isapprox(
 end
 
 @doc """
-    swap(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trunc)
-    swap!(mpo::FiniteMPO, i::Integer; inv::Bool=false, alg=Defaults.alg_svd(), trunc)
+    swap(mpo::FiniteMPO, i::Integer; inv::Bool = false, alg = Defaults.alg_svd(), trunc)
+    swap!(mpo::FiniteMPO, i::Integer; inv::Bool = false, alg = Defaults.alg_svd(), trunc)
 
 Compose the mpo with a swap gate applied to indices `i` and `i + 1`, effectively creating an
 operator that acts on the Hilbert spaces with those factors swapped.

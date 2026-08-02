@@ -1,25 +1,30 @@
 """
-    time_evolve(ψ₀, H, t_span, [alg], [envs]; kwargs...) -> (ψ, envs)
-    time_evolve!(ψ₀, H, t_span, [alg], [envs]; kwargs...) -> (ψ₀, envs)
+    time_evolve(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ, envs)
+    time_evolve!(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ₀, envs)
 
 Time-evolve the initial state `ψ₀` with Hamiltonian `H` over a given time span by stepping
 through each of the time points obtained by iterating t_span.
 
-## Arguments
+# Arguments
 
 - `ψ₀::AbstractMPS`: initial state
 - `H::AbstractMPO`: operator that generates the time evolution (can be time-dependent).
 - `t_span::AbstractVector{<:Number}`: time points over which the time evolution is stepped
-- `[alg]`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
-- `[envs]`: MPS environment manager
+- `alg`: algorithm to use for the time evolution, e.g. [`TDVP`](@ref) or [`TDVP2`](@ref).
+- `envs`: MPS environment manager
 
-## Keyword Arguments
+# Keyword Arguments
 
-- `verbosity::Int=0`: verbosity level for logging
-- `imaginary_evolution::Bool=false`: if true, the time evolution is done with an imaginary time step
+- `verbosity::Int = 0`: verbosity level for logging
+- `imaginary_evolution::Bool = false`: if true, the time evolution is done with an imaginary time step
     instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful for using this
     function to compute the ground state of a Hamiltonian, or to compute finite-temperature
     properties of a system.
+
+# Returns
+
+- `ψ`: the time-evolved state
+- `envs`: the updated environment manager
 """
 function time_evolve end, function time_evolve! end
 
@@ -48,27 +53,54 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
 end
 
 """
-    timestep(ψ₀, H, t, dt, [alg], [envs]; kwargs...) -> (ψ, envs)
-    timestep!(ψ₀, H, t, dt, [alg], [envs]; kwargs...) -> (ψ₀, envs)
+    timestep(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ, envs)
+    timestep!(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ₀, envs)
 
 Time-step the state `ψ₀` with Hamiltonian `H` over a given time step `dt` at time `t`,
 solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 
-## Arguments
+# Arguments
 
 - `ψ₀::AbstractMPS`: initial state
 - `H::AbstractMPO`: operator that generates the time evolution (can be time-dependent).
 - `t::Number`: starting time of time-step
 - `dt::Number`: time-step magnitude
-- `[alg]`: algorithm to use for the time evolution. Defaults to [`TDVP`](@ref).
-- `[envs]`: MPS environment manager
+- `alg`: algorithm to use for the time evolution, e.g. [`TDVP`](@ref) or [`TDVP2`](@ref).
+- `envs`: MPS environment manager
 
-## Keyword Arguments
+# Keyword Arguments
 
-- `imaginary_evolution::Bool=false`: if true, the time evolution is done with an imaginary time step
+- `imaginary_evolution::Bool = false`: if true, the time evolution is done with an imaginary time step
     instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``). This can be useful for using this
     function to compute the ground state of a Hamiltonian, or to compute finite-temperature
     properties of a system.
+
+# Returns
+
+- `ψ`: the time-stepped state
+- `envs`: the updated environment manager
+
+# Examples
+
+Real-time evolution of the `|+···+⟩` product state under a transverse field `H = ∑ Zₖ`.
+Each spin precesses independently, so `⟨Xₖ(t)⟩ = cos(2t)`; after a step `dt = 0.1` this is
+`cos(0.2) ≈ 0.980067`. The initial state must be complex, since real-time evolution
+multiplies by `-i`:
+
+```jldoctest
+julia> X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2, ℂ^2);
+
+julia> Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2);
+
+julia> ψ₀ = FiniteMPS(ones(ComplexF64, (ℂ^2)^4));
+
+julia> H = FiniteMPOHamiltonian(fill(ℂ^2, 4), ((i,) => Z for i in 1:4));
+
+julia> ψ, envs = timestep(ψ₀, H, 0.0, 0.1, TDVP());
+
+julia> round(real(expectation_value(ψ, 2 => X)); digits = 6)
+0.980067
+```
 """
 function timestep end, function timestep! end
 
@@ -77,9 +109,9 @@ function timestep end, function timestep! end
 
 Construct an `MPO` that approximates ``\\exp(-iHdt)``.
 
-## Keyword Arguments
+# Keyword Arguments
 
-- `imaginary_evolution::Bool=false`: if true, the time evolution operator is constructed
+- `imaginary_evolution::Bool = false`: if true, the time evolution operator is constructed
     with an imaginary time step instead, (i.e. ``\\exp(-Hdt)`` instead of ``\\exp(-iHdt)``).
     This can be useful for using this function to compute the ground state of a Hamiltonian,
     or to compute finite-temperature properties of a system.
