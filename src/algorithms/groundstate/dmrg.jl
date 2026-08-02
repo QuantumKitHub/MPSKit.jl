@@ -22,9 +22,9 @@ eigensolve, and (3) a gauge step (`alg_gauge`). With the defaults (`alg_expand =
 `alg_gauge = nothing`, a non-truncating QR gauge derived from `trunc = notrunc()`) this is
 textbook single-site DMRG, which cannot change the bond dimension. Setting `alg_expand` to a
 bond-expansion algorithm (e.g. [`OptimalExpand`](@ref), [`RandExpand`](@ref), [`SketchedExpand`](@ref))
-enriches the bond with directions orthogonal to the current state ahead of each eigensolve,
+expands the bond with directions orthogonal to the current state ahead of each eigensolve,
 recovering Controlled Bond Expansion (CBE) DMRG. Setting `alg_gauge` to a bond-expanding gauge
-algorithm (e.g. [`DMRG3S`](@ref)) instead enriches the bond as part of the gauge step, after the
+algorithm (e.g. [`DMRG3S`](@ref)) instead expands the bond as part of the gauge step, after the
 eigensolve. Either way, a truncating gauge (see below) is then desirable to cut the enlarged
 bond back down.
 

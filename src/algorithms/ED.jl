@@ -1,9 +1,10 @@
 """
-    exact_diagonalization(H::FiniteMPOHamiltonian;
-                          sector = rightunit(H),
-                          len::Int = length(H), num::Int = 1, which::Symbol = :SR,
-                          alg = Defaults.alg_eigsolve(; dynamic_tols = false))
-                            -> vals, state_vecs, convhist
+    exact_diagonalization(
+            H::FiniteMPOHamiltonian;
+            sector = rightunit(H),
+            len::Int = length(H), num::Int = 1, which::Symbol = :SR,
+            alg = Defaults.alg_eigsolve(; dynamic_tols = false)
+        ) -> vals, state_vecs, convhist
 
 Use [`KrylovKit.eigsolve`](@extref) to perform exact diagonalization on a
 `FiniteMPOHamiltonian` to find its eigenvectors as `FiniteMPS` of maximal rank, essentially

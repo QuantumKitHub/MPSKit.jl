@@ -90,7 +90,7 @@ end
 """
     retract(state, g, α) -> state′, ξ
 
-Retract a state a distance `α` along a direction `g`, obtaining a new state and the local tangent vector. 
+Retract a state a distance `α` along a direction `g`, obtaining a new state and the local tangent vector.
 """
 function retract(state::FiniteMPS, g, α::Real)
     state′ = copy(state)

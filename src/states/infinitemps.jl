@@ -5,9 +5,11 @@ Type that represents an infinite Matrix Product State.
 
 # Constructors
 
-    InfiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
-                virtualspaces::Vector{<:Union{S, CompositeSpace{S}}};
-                kwargs...) where {S <: ElementarySpace}
+    InfiniteMPS(
+        [f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
+        virtualspaces::Vector{<:Union{S, CompositeSpace{S}}};
+        kwargs...
+    ) where {S <: ElementarySpace}
     InfiniteMPS(As::AbstractVector{<:GenericMPSTensor}; kwargs...)
     InfiniteMPS(ALs::AbstractVector{<:GenericMPSTensor}, C₀::MPSBondTensor; kwargs...)
 

@@ -5,12 +5,16 @@ Type that represents a finite Matrix Product State.
 
 # Constructors
 
-    FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
-              maxvirtualspaces::Union{S, Vector{S}};
-              normalize = true, left = unitspace(S), right = unitspace(S)) where {S <: ElementarySpace}
-    FiniteMPS([f, eltype], N::Int, physicalspace::Union{S, CompositeSpace{S}},
-              maxvirtualspaces::Union{S, Vector{S}};
-              normalize = true, left = unitspace(S), right = unitspace(S)) where {S <: ElementarySpace}
+    FiniteMPS(
+        [f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
+        maxvirtualspaces::Union{S, Vector{S}};
+        normalize = true, left = unitspace(S), right = unitspace(S)
+    ) where {S <: ElementarySpace}
+    FiniteMPS(
+        [f, eltype], N::Int, physicalspace::Union{S, CompositeSpace{S}},
+        maxvirtualspaces::Union{S, Vector{S}};
+        normalize = true, left = unitspace(S), right = unitspace(S)
+    ) where {S <: ElementarySpace}
     FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize = false, overwrite = false)
 
 Construct an MPS via a specification of physical and virtual spaces, or from a list of

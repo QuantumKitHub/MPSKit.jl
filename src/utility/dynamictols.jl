@@ -81,7 +81,7 @@ end
 Tighten only the wrapped solver's tolerance (its Krylov budget, if any, is left fixed), from the
 global gradient / convergence-error scalar `g_global`, damped by the iteration count:
 
-    tol = clamp(tol_factor·g_global / √iter, tol_min, tol_max)
+    tol = clamp(tol_factor · g_global / √iter, tol_min, tol_max)
 """
 function adapt_solver(alg::DynamicTol; iter::Integer = 1, g_global::Real = 0.0, kwargs...)
     tol = clamp(alg.tol_factor * g_global / sqrt(max(iter, 1)), alg.tol_min, alg.tol_max)

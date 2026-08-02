@@ -70,10 +70,12 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP; num = 1, kw
 end
 
 """
-    excitations(H, algorithm::QuasiparticleAnsatz, momentum::Union{Number, Vector{<:Number}},
-                left_ψ::InfiniteMPS, [left_environment],
-                [right_ψ::InfiniteMPS], [right_environment];
-                kwargs...) -> (energies, states)
+    excitations(
+            H, algorithm::QuasiparticleAnsatz, momentum::Union{Number, Vector{<:Number}},
+            left_ψ::InfiniteMPS, [left_environment],
+            [right_ψ::InfiniteMPS], [right_environment];
+            kwargs...
+        ) -> (energies, states)
 
 Create and optimize infinite quasiparticle states.
 
@@ -165,8 +167,10 @@ function excitations(
 end
 
 """
-    excitations(H, algorithm::QuasiparticleAnsatz, left_ψ::FiniteMPS, [left_environment],
-                [right_ψ::FiniteMPS], [right_environment]; kwargs...) -> (energies, states)
+    excitations(
+            H, algorithm::QuasiparticleAnsatz, left_ψ::FiniteMPS, [left_environment],
+            [right_ψ::FiniteMPS], [right_environment]; kwargs...
+        ) -> (energies, states)
 
 Create and optimize finite quasiparticle states.
 

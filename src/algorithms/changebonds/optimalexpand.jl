@@ -10,6 +10,20 @@ so that the expanded state represents the same physical state as the original on
 for e.g. TDVP).
 
 !!! note
+    `trunc` bounds how much is *added* to each bond, not the total bond dimension that is kept.
+    It is applied to the two-site update projected onto the orthogonal complement of the current
+    state, so `truncrank(k)` grows every bond by at most `k` — capped by the dimension of the
+    local two-site complement, which is why a bond can grow by less than `k`, or not at all.
+    The `trunc` of [`SvdCut`](@ref), and of the drivers [`DMRG`](@ref) and [`TDVP`](@ref), has
+    the other meaning: it bounds what is *kept*.
+
+!!! note
+    The projected block is normalized before the decomposition, so a value-based strategy
+    (`trunctol`, `truncerror`) selects a *fraction of the complement weight* rather than an
+    absolute error on the state, and the retained fraction does not shrink as the state
+    converges. `truncrank` and `truncspace` are the strategies with a robust meaning here.
+
+!!! note
     [`changebonds!`](@ref) is only defined for `FiniteMPS`, and modifies both the state and its environment.
 
 # Fields
@@ -24,7 +38,7 @@ Used as the `algorithm` argument of [`changebonds`](@ref) and [`changebonds!`](@
     "algorithm used for the singular value decomposition"
     alg_svd::S = Defaults.alg_svd()
 
-    "algorithm used for truncating the expanded space"
+    "[truncation strategy](@extref MatrixAlgebraKit.TruncationStrategy) selecting how many directions are *added* to each bond, rather than how much of the bond is kept"
     trunc::TruncationStrategy
 end
 

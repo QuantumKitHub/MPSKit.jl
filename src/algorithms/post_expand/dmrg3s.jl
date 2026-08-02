@@ -36,7 +36,7 @@ Base.:∘(s1::NoiseSchedule, s2::NoiseSchedule) =
 
 Noise schedule that shrinks geometrically: `noise -> noise * decay_rate^iter`, snapped
 to exactly zero once it falls below `threshold`. Use `decay_rate < 1` for a standalone
-[`DMRG3S`](@ref) run that gradually turns enrichment off as the state converges; a
+[`DMRG3S`](@ref) run that gradually turns the expansion off as the state converges; a
 nonzero `threshold` avoids running the (cheap, but non-free) expansion step
 indefinitely on a noise amplitude too small to matter.
 """
@@ -82,7 +82,7 @@ state, helping it escape local minima that plain single-site DMRG can get stuck 
 `noise` is the initial perturbation amplitude; `schedule` (see [`ExponentialDecay`](@ref),
 [`Warmup`](@ref)) controls how it evolves across outer iterations, and once it decays to
 exactly zero the gauge step reverts to a plain gauge shift for the remainder of the
-run. The actual factorization used to gauge the enriched tensor
+run. The actual factorization used to gauge the expanded tensor
 is filled in by `DMRG`'s constructor, not supplied here directly — see `DMRG`'s docstring
 for the calling convention:
 
@@ -110,7 +110,7 @@ struct DMRG3S{N, S <: NoiseSchedule, A} <: Algorithm
     noise::N
     "[`NoiseSchedule`](@ref) controlling how the amplitude evolves across outer iterations"
     schedule::S
-    "factorization used to gauge the enriched tensor; `nothing` until [`DMRG`](@ref)'s constructor fills it in"
+    "factorization used to gauge the expanded tensor; `nothing` until [`DMRG`](@ref)'s constructor fills it in"
     alg_gauge::A
 end
 

@@ -7,11 +7,15 @@ Type that represents a finite Matrix Product State embedded in an infinite Matri
 
     WindowMPS(left_gs::InfiniteMPS, window_state::FiniteMPS, [right_gs::InfiniteMPS])
     WindowMPS(left_gs::InfiniteMPS, window_tensors::AbstractVector, [right_gs::InfiniteMPS])
-    WindowMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
-              virtualspaces::Vector{<:Union{S, CompositeSpace{S}}}, left_gs::InfiniteMPS,
-              [right_gs::InfiniteMPS])
-    WindowMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
-              maxvirtualspace::S, left_gs::InfiniteMPS, [right_gs::InfiniteMPS])
+    WindowMPS(
+        [f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
+        virtualspaces::Vector{<:Union{S, CompositeSpace{S}}}, left_gs::InfiniteMPS,
+        [right_gs::InfiniteMPS]
+    )
+    WindowMPS(
+        [f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
+        maxvirtualspace::S, left_gs::InfiniteMPS, [right_gs::InfiniteMPS]
+    )
     WindowMPS(ψ::InfiniteMPS, L::Int)
 
 Construct a WindowMPS via a specification of left and right infinite environment, and either

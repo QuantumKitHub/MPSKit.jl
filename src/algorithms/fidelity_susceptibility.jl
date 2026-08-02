@@ -1,8 +1,10 @@
 """
-    fidelity_susceptibility(state::Union{FiniteMPS, InfiniteMPS}, H₀::T,
-                            Vs::AbstractVector{T}, [henvs = environments(state, H₀, state)];
-                            maxiter = Defaults.maxiter,
-                            tol = Defaults.tol) where {T <: MPOHamiltonian}
+    fidelity_susceptibility(
+        state::Union{FiniteMPS, InfiniteMPS}, H₀::T,
+        Vs::AbstractVector{T}, [henvs = environments(state, H₀, state)];
+        maxiter = Defaults.maxiter,
+        tol = Defaults.tol
+    ) where {T <: MPOHamiltonian}
 
 Computes the fidelity susceptibility of a the ground state `state` of a base Hamiltonian
 `H₀` with respect to a set of perturbing Hamiltonians `Vs`. Each of the perturbing

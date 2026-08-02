@@ -11,7 +11,7 @@ See also: [`SvdCut`](@ref), [`RandExpand`](@ref), [`VUMPSSvdCut`](@ref), [`Optim
 
 # Examples
 
-Growing the bond dimension of a product state with [`OptimalExpand`](@ref), which enriches
+Growing the bond dimension of a product state with [`OptimalExpand`](@ref), which expands
 each bond with directions orthogonal to the current state (using the environments of `H`):
 
 ```jldoctest
@@ -31,7 +31,7 @@ julia> dim(left_virtualspace(ψ′, 3))
 ```
 
 !!! note
-    A bond is only enriched if there is something to enrich it with.
+    A bond is only expanded if there is something to expand it with.
     If the projection of the two-site update onto the orthogonal complement of the current state
     vanishes — for instance when the state is already an exact eigenstate of the local terms, or
     when the operator does not couple into a symmetry sector yet — that bond is left untouched.

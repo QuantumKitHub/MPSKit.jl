@@ -1,14 +1,24 @@
 """
-    excitations(H, algorithm::QuasiparticleAnsatz, ψ::FiniteQP, [left_environments],
-                [right_environments]; num = 1) -> (energies, states)
-    excitations(H, algorithm::QuasiparticleAnsatz, ψ::InfiniteQP, [left_environments],
-                [right_environments]; num = 1) -> (energies, states)
-    excitations(H, algorithm::FiniteExcited, ψs::NTuple{<:Any, <:FiniteMPS};
-                num = 1, init) -> (energies, states)
-    excitations(H, algorithm::ChepigaAnsatz, ψ::FiniteMPS, [envs];
-                num = 1, pos = length(ψ) ÷ 2) -> (energies, states)
-    excitations(H, algorithm::ChepigaAnsatz2, ψ::FiniteMPS, [envs];
-                num = 1, pos = length(ψ) ÷ 2) -> (energies, states)
+    excitations(
+            H, algorithm::QuasiparticleAnsatz, ψ::FiniteQP, [left_environments],
+            [right_environments]; num = 1
+        ) -> (energies, states)
+    excitations(
+            H, algorithm::QuasiparticleAnsatz, ψ::InfiniteQP, [left_environments],
+            [right_environments]; num = 1
+        ) -> (energies, states)
+    excitations(
+            H, algorithm::FiniteExcited, ψs::NTuple{<:Any, <:FiniteMPS};
+            num = 1, init
+        ) -> (energies, states)
+    excitations(
+            H, algorithm::ChepigaAnsatz, ψ::FiniteMPS, [envs];
+            num = 1, pos = length(ψ) ÷ 2
+        ) -> (energies, states)
+    excitations(
+            H, algorithm::ChepigaAnsatz2, ψ::FiniteMPS, [envs];
+            num = 1, pos = length(ψ) ÷ 2
+        ) -> (energies, states)
 
 Compute the first excited states and their energy gap above a ground state.
 
