@@ -57,6 +57,16 @@ const SCHEDULERS = ("serial" => SerialScheduler(), "dynamic" => DynamicScheduler
         @test norm(ψ) ≈ norm(ψ₀) atol = 1.0e-6
     end
 
+    @testset "BUG" begin
+        # the augmentation step doubles the bond, so compare against the reference at a bond the
+        # buffer-served eigensolves and the plain ones both reach
+        ψ, _ = timestep(complex(ψ₀), H, 0.0, 0.01, BUG())
+        @test norm(ψ) ≈ norm(ψ₀) atol = 1.0e-6
+
+        ψ_tdvp, _ = timestep(complex(ψ₀), H, 0.0, 0.01, TDVP())
+        @test abs(dot(ψ, ψ_tdvp)) / (norm(ψ) * norm(ψ_tdvp)) ≈ 1.0 atol = 1.0e-4
+    end
+
     @testset "nested algorithms" begin
         # `alg_expand` is driven through `changebond!`, which is not an entry point and therefore
         # selects an allocator of its own while the outer sweep still holds one
