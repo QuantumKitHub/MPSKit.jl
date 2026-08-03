@@ -118,8 +118,12 @@ end
 
 # Finite system
 # -------------
-function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs; normalize::Bool = true)
-    allocator = default_allocator(ψ, SerialScheduler())
+function changebond!(
+        site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs;
+        normalize::Bool = true,
+        # a sweep that already holds one should pass it: this is called once per site
+        allocator = default_allocator(ψ, SerialScheduler()),
+    )
     bond = site
     left = ψ.AC[site]
     right = ψ.AR[site + 1]
@@ -149,8 +153,12 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Op
     ψ.AC[site + 1] = (nc, nar)
     return ψ
 end
-function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs; normalize::Bool = true)
-    allocator = default_allocator(ψ, SerialScheduler())
+function changebond!(
+        site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs;
+        normalize::Bool = true,
+        # a sweep that already holds one should pass it: this is called once per site
+        allocator = default_allocator(ψ, SerialScheduler()),
+    )
     bond = site - 1
     left = ψ.AL[site - 1]
     right = ψ.AC[site]

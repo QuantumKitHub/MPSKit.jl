@@ -72,8 +72,12 @@ end
 # into the effective environment, and the dominant directions are read off a small SVD of the
 # sketched gradient. The complement projectors act with the isometric MPS tensors directly, which
 # leaves the MPS gauge (and any incrementally-maintained environments) untouched.
-function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs; normalize::Bool = true)
-    allocator = default_allocator(ψ, SerialScheduler())
+function changebond!(
+        site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs;
+        normalize::Bool = true,
+        # a sweep that already holds one should pass it: this is called once per site
+        allocator = default_allocator(ψ, SerialScheduler()),
+    )
     left = ψ.AC[site]
     right = ψ.AR[site + 1]
     AL, _, _ = left_gauge(left)        # local left-isometric form
@@ -114,8 +118,12 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Sk
     ψ.AC[site + 1] = (nc, nar)
     return ψ
 end
-function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs; normalize::Bool = true)
-    allocator = default_allocator(ψ, SerialScheduler())
+function changebond!(
+        site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs;
+        normalize::Bool = true,
+        # a sweep that already holds one should pass it: this is called once per site
+        allocator = default_allocator(ψ, SerialScheduler()),
+    )
     left = ψ.AL[site - 1]
     right = ψ.AC[site]
     _, ARtt = right_orth!(_transpose_tail(right; copy = true); trunc = notrunc())  # local right-isometric form

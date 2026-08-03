@@ -152,7 +152,7 @@ function _timestep_finite!(
     for i in 1:(length(ψ) - 1)
         # 1. optionally expand the bond ahead of the local update (CBE)
         isnothing(alg.alg_expand) ||
-            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize)
+            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize, allocator)
 
         # 2. evolve the (possibly expanded) center tensor forward
         Hac = AC_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
@@ -179,7 +179,7 @@ function _timestep_finite!(
     for i in length(ψ):-1:2
         # 1. optionally expand the bond ahead of the local update (CBE)
         isnothing(alg.alg_expand) ||
-            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize)
+            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize, allocator)
 
         # 2. evolve the (possibly expanded) center tensor forward
         Hac = AC_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)

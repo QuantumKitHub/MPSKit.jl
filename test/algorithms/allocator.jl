@@ -68,8 +68,8 @@ const SCHEDULERS = ("serial" => SerialScheduler(), "dynamic" => DynamicScheduler
     end
 
     @testset "nested algorithms" begin
-        # `alg_expand` is driven through `changebond!`, which is not an entry point and therefore
-        # selects an allocator of its own while the outer sweep still holds one
+        # `alg_expand` is driven through `changebond!`, which is handed the sweep's allocator
+        # rather than selecting one of its own once per site
         alg = DMRG(;
             verbosity, maxiter = 3, alg_expand = SketchedExpand(; trunc = truncrank(2)),
             trunc = truncrank(8),

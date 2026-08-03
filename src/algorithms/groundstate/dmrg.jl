@@ -127,8 +127,11 @@ function local_update!(
     ϵ_local = calc_galerkin(site, ψ, O, ψ, envs; alg.backend, allocator)
 
     # 1. expand
-    isnothing(alg.alg_expand) ||
-        @timeit timeroutput "expand" changebond!(site, direction, ψ, O, alg.alg_expand, envs)
+    if !isnothing(alg.alg_expand)
+        @timeit timeroutput "expand" changebond!(
+            site, direction, ψ, O, alg.alg_expand, envs; allocator
+        )
+    end
 
     # 2. local update
     alg_eigsolve = adapt_solver(alg.alg_eigsolve; decay_rate, g_local = ϵ_local, g_global = ϵ_global, eps_trunc = ϵ_trunc)
