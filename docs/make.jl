@@ -60,6 +60,8 @@ makedocs(;
         "Library" => "lib/lib.md",
         "References" => "references.md",
         "Changelog" => "changelog.md",
+        "Migration" => "migration.md",
+        "Citing" => "citing.md",
     ],
     checkdocs = :exports,
     doctest = true,
