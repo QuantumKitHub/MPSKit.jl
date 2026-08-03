@@ -28,9 +28,19 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   truncation. The sweep direction is selected by the `left_to_right` keyword. Both
   `approximate((O, ϕ), alg)` and `approximate!(ψ, (O, ϕ), alg)` are supported, where the destination
   `ψ` is a write target rather than an initial guess and may alias `ϕ`; they return `(ψ, ϵ)`.
+- `BUG` time-evolution algorithm: a Basis-Update & Galerkin integrator for finite MPS.
+  Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
+  and passing a truncating `trunc` enables rank-adaptivity (the bond dimension grows and shrinks
+  automatically to track entanglement).
 
 ### Changed
 
+- Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
+  `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
+  norm is preserved, so it retains useful information (the accumulated truncation error in real time,
+  or the decaying weight in imaginary time). Previously imaginary-time evolution always renormalized
+  every step; **to recover that behavior, pass `normalize = true`** (e.g. for ground-state or
+  thermal-state search via imaginary-time evolution).
 - `environments` now follows a single positional contract for every state and operator kind:
   `environments(below, operator, above, alg)`, where `alg` is the environment algorithm
   (slot 4). The operator form requires an explicit `above`. Auxiliary inputs are keyword-only:
