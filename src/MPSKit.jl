@@ -57,6 +57,7 @@ using Compat: @compat
 @compat public DynamicTols, DynamicTol, AdaptiveKrylov
 @compat public VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
 @compat public IterLog, loginit!, logiter!, logfinish!, logcancel!
+@compat public default_allocator
 
 # Imports
 # -------
@@ -69,7 +70,7 @@ using BlockTensorKit
 using BlockTensorKit: TensorMapSumSpace
 using TensorOperations
 using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator, BufferAllocator,
-    allocator_checkpoint!, allocator_reset!
+    ManualAllocator, allocator_checkpoint!, allocator_reset!
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
 using OptimKit
@@ -99,6 +100,7 @@ using .DynamicTols
 
 include("utility/defaults.jl")
 using .Defaults: VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
+include("utility/allocator.jl")
 include("utility/logging.jl")
 using .IterativeLoggers
 include("utility/iterativesolvers.jl")
