@@ -65,6 +65,18 @@ function attach_notebook_badge(root, name, str)
     return join(map(markdown_only, (mybinder, nbviewer, download)), "\n") * "\n\n" * str
 end
 
+# Log messages captured from an executed example carry the absolute source location of
+# whatever emitted them, e.g.
+#
+#     └ @ MPSKit /home/someone/checkout/src/algorithms/groundstate/vumps.jl:87
+#     └ @ OptimKit /home/someone/.julia/packages/OptimKit/K7Ujj/src/cg.jl:188
+#
+# Both depend on who ran the pipeline — the checkout path for a dev'ed package, and the
+# depot slug for an installed one — so committing them makes the rendered pages differ
+# per machine. The module name is already printed, so keep only the in-package path.
+normalize_log_locations(content::AbstractString) =
+    replace(content, r"(@ [A-Za-z_][A-Za-z0-9_]* )\S*?/(src/\S*\.jl:\d+)" => s"\1\2")
+
 function build_example(root, name)
     source_dir = joinpath(@__DIR__, "..", "examples", root, name)
     source_file = joinpath(source_dir, "main.jl")
@@ -74,7 +86,9 @@ function build_example(root, name)
         Literate.markdown(
             source_file, target_dir; execute = true, name = "index",
             preprocess = attach_notebook_badge(root, name),
-            postprocess = content -> externalize_figures(content, target_dir),
+            postprocess = content -> normalize_log_locations(
+                externalize_figures(content, target_dir)
+            ),
             mdstrings = true,
             nbviewer_root_url = "https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev",
             binder_root_url = "https://mybinder.org/v2/gh/QuantumKitHub/MPSKit.jl/gh-pages?filepath=dev",
@@ -103,5 +117,9 @@ end
 # Scripts
 # ---------------------------------------------------------------------------------------- #
 
-build("classic2d")
-build("quantum1d")
+# build every topic group: each subdirectory of examples/ is one group
+for group in readdir(@__DIR__)
+    startswith(group, '.') && continue
+    isdir(joinpath(@__DIR__, group)) || continue
+    build(group)
+end
