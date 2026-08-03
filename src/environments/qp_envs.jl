@@ -226,7 +226,7 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs
         T_LR = regularize(T_LR, lvec, rvec)
     end
 
-    GBL[1], convhist = linsolve(
+    GBL[1], convhist = KrylovKit.linsolve(
         flip(T_RL), gbl, gbl, solver, 1,
         -cis(-length(exci) * exci.momentum) * prod(left_regularization)
     )
@@ -234,7 +234,7 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs
     convhist.converged == 0 &&
         @warn "GBL failed to converge: normres = $(convhist.normres)"
 
-    GBR[end], convhist = linsolve(
+    GBR[end], convhist = KrylovKit.linsolve(
         T_LR, gbr, gbr, GMRES(), 1,
         -cis(length(exci) * exci.momentum) * prod(right_regularization)
     )

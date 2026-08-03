@@ -29,7 +29,7 @@ function fidelity_susceptibility(
             @plansor Tos[i][-1 -2; -3 -4] := temp[-1 -2; -4] * help[-3]
         end
 
-        vec, convhist = linsolve(Tos, Tos, GMRES(; maxiter = maxiter, tol = tol)) do x
+        vec, convhist = KrylovKit.linsolve(Tos, Tos, GMRES(; maxiter = maxiter, tol = tol)) do x
             return effective_excitation_hamiltonian(H₀, x, environments(x, H₀, x; lenvs = henvs))
         end
         convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"

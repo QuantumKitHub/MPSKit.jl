@@ -5,7 +5,7 @@ Some default values and settings for MPSKit.
 """
 module Defaults
 
-import KrylovKit: GMRES, Arnoldi, Lanczos
+import KrylovKit: GMRES, CG, Arnoldi, Lanczos
 using OhMyThreads
 using ..MPSKit: DynamicTol, AdaptiveKrylov
 using TensorKit: TensorKit
@@ -60,6 +60,24 @@ function alg_eigsolve(;
     alg = ishermitian ? Lanczos(; tol, maxiter, eager, krylovdim, verbosity) :
         Arnoldi(; tol, maxiter, eager, krylovdim, verbosity)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
+end
+
+function alg_linsolve(;
+        ishermitian = false, isposdef = false, tol = tol, maxiter = maxiter,
+        krylovdim = krylovdim, verbosity = 0, adaptive = true, dynamic_tols = dynamic_tols,
+        tol_min = tol_min, tol_max = tol_max, tol_factor = eigs_tolfactor, truncation_factor = 1.0e-1
+    )
+    # pick the local linear solver from the declared operator structure (mirrors KrylovKit's rule).
+    # NOTE: KrylovKit exports a `MINRES` type but has no `linsolve` method for it yet (see its own
+    # "TODO: implement MINRES for symmetric but not posdef; for now use GMRES"), so the
+    # hermitian-indefinite case falls back to GMRES as well.
+    base = isposdef ? CG(; tol, maxiter, verbosity) :
+        GMRES(; tol, maxiter, krylovdim, verbosity)
+    # linsolve defaults to per-bond adaptive *tolerances* (only the inner tol is retuned, from the
+    # previous-sweep residual and, for truncating two-site sweeps, floored at the truncation error);
+    # the Krylov budget is left fixed. Opt out with `adaptive = false`.
+    return (adaptive && dynamic_tols) ?
+        DynamicTol(base, tol_min, tol_max, tol_factor, truncation_factor) : base
 end
 
 function alg_environments(;

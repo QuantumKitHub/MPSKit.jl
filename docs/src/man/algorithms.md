@@ -339,6 +339,28 @@ state, by a new state.
 approximate
 ```
 
+## `linsolve`
+
+Solving a linear system ``(a₀ + a₁ A) x = b`` for an MPS ``x``, with ``A`` an MPO and ``b`` an MPS.
+The shift ``a₀ + a₁ A`` follows the convention of `KrylovKit.linsolve` and is applied implicitly, so
+no shifted operator is ever formed.
+The sweeps are DMRG-like: [`DMRGSolve`](@ref) keeps the bond dimension of the initial guess fixed,
+while [`DMRGSolve2`](@ref) updates two sites at a time and is therefore rank-adaptive.
+Each is parameterized by how the local subproblem is posed — [`Galerkin`](@ref) solves the effective
+system directly, [`LeastSquares`](@ref) minimizes ``\|(a₀ + a₁ A) x - b\|²`` through the normal
+equations.
+
+The resolvent is the canonical application: ``\frac{1}{z - H}|ψ₀⟩`` is `linsolve(ψ₀, H, ψ₀; a₀ = z, a₁ = -1)`.
+
+```@docs; canonical=false
+linsolve
+linsolve!
+DMRGSolve
+DMRGSolve2
+Galerkin
+LeastSquares
+```
+
 ## Varia
 
 What follows is a medley of lesser known (or used) algorithms and don't entirely fit under
@@ -349,6 +371,9 @@ one of the above categories.
 Dynamical DMRG has been described in other papers and is a way to find the propagator. The
 basic idea is that to calculate ``G(z) = ⟨ V | (H-z)^{-1} | V ⟩ `` , one can variationally
 find ``(H-z) |W ⟩ = | V ⟩ `` and then the propagator simply equals ``G(z) = ⟨ V | W ⟩``.
+
+This is a thin wrapper around [`linsolve`](@ref) — see there for the sweep, the convergence
+criterion and the local solver options.
 
 ```@docs; canonical=false
 propagator

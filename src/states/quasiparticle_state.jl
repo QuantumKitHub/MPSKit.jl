@@ -192,7 +192,7 @@ function Base.convert(
         tm = regularize(tm, l_LR(input.right_gs), r_LR(input.right_gs))
     end
 
-    rBE, convhist = linsolve(
+    rBE, convhist = KrylovKit.linsolve(
         tm, rBs[1], rBs[1], GMRES(), 1, -exp(1im * input.momentum * len)
     )
     convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
@@ -239,7 +239,7 @@ function Base.convert(
         tm = regularize(tm, l_RL(input.right_gs), r_RL(input.right_gs))
     end
 
-    lBE, convhist = linsolve(
+    lBE, convhist = KrylovKit.linsolve(
         flip(tm), lBs[end], lBs[end], GMRES(), 1, -1 / exp(1im * input.momentum * len)
     )
     convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"

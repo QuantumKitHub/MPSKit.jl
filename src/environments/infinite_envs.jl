@@ -233,7 +233,7 @@ function compute_leftenvs!(
 
         if isidentitylevel(operator, i) # identity matrices; do the hacky renormalization
             T = regularize(TransferMatrix(above.AL, below.AL), ρ_left, ρ_right)
-            GLs[1][i], convhist = linsolve(flip(T), GLs[1][i], prev, alg, 1, -1)
+            GLs[1][i], convhist = KrylovKit.linsolve(flip(T), GLs[1][i], prev, alg, 1, -1)
             convhist.converged == 0 &&
                 @warn "GL$i failed to converge: normres = $(convhist.normres)"
 
@@ -249,7 +249,7 @@ function compute_leftenvs!(
             if !isemptylevel(operator, i)
                 diag = map(h -> h[i, 1, 1, i], operator[:])
                 T = TransferMatrix(above.AL, diag, below.AL)
-                GLs[1][i], convhist = linsolve(flip(T), GLs[1][i], prev, alg, 1, -1)
+                GLs[1][i], convhist = KrylovKit.linsolve(flip(T), GLs[1][i], prev, alg, 1, -1)
                 convhist.converged == 0 &&
                     @warn "GL$i failed to converge: normres = $(convhist.normres)"
             end
@@ -304,7 +304,7 @@ function compute_rightenvs!(
         if isidentitylevel(operator, i) # identity matrices; do the hacky renormalization
             # subtract fixpoints
             T = regularize(TransferMatrix(above.AR, below.AR), ρ_left, ρ_right)
-            GRs[end][i], convhist = linsolve(T, GRs[end][i], prev, alg, 1, -1)
+            GRs[end][i], convhist = KrylovKit.linsolve(T, GRs[end][i], prev, alg, 1, -1)
             convhist.converged == 0 &&
                 @warn "GR$i failed to converge: normres = $(convhist.normres)"
 
@@ -319,7 +319,7 @@ function compute_rightenvs!(
             if !isemptylevel(operator, i)
                 diag = map(b -> b[i, 1, 1, i], operator[:])
                 T = TransferMatrix(above.AR, diag, below.AR)
-                GRs[end][i], convhist = linsolve(T, GRs[end][i], prev, alg, 1, -1)
+                GRs[end][i], convhist = KrylovKit.linsolve(T, GRs[end][i], prev, alg, 1, -1)
                 convhist.converged == 0 &&
                     @warn "GR$i failed to converge: normres = $(convhist.normres)"
             end
