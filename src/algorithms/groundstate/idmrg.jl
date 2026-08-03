@@ -71,7 +71,7 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_bounda
 end
 
 # Internal state of the IDMRG algorithm
-struct IDMRGState{S, O, E, T}
+struct IDMRGState{S, O, E, T, A}
     mps::S
     operator::O
     envs::E
@@ -79,12 +79,18 @@ struct IDMRGState{S, O, E, T}
     ϵ::Float64 # TODO: Could be any <:Real
     energy::T
     timeroutput::TimerOutput
+    # the sweeps are serial, so a single allocator serves every local update of every iteration:
+    # it is obtained once when the solve starts and carried along here, as reusing one buffer
+    # rather than growing a fresh one each sweep is the entire point of having it
+    allocator::A
 end
 function IDMRGState{T}(
         mps::S, operator::O, envs::E, iter::Int, ϵ::Float64, energy,
-        timeroutput::TimerOutput,
-    ) where {S, O, E, T}
-    return IDMRGState{S, O, E, T}(mps, operator, envs, iter, ϵ, T(energy), timeroutput)
+        timeroutput::TimerOutput, allocator::A,
+    ) where {S, O, E, T, A}
+    return IDMRGState{S, O, E, T, A}(
+        mps, operator, envs, iter, ϵ, T(energy), timeroutput, allocator
+    )
 end
 
 function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps, operator, mps)) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
@@ -99,7 +105,9 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
     alg.verbosity > 3 || disable_timer!(timeroutput)
     mps = copy(mps)
     iter = 0
-    ϵ = calc_galerkin(mps, operator, mps, envs)
+    # the sweeps are serial, so one allocator serves the whole solve
+    allocator = default_allocator(mps, SerialScheduler())
+    ϵ = calc_galerkin(mps, operator, mps, envs; alg.backend, allocator)
     E = zero(TensorOperations.promote_contract(scalartype(mps), scalartype(operator)))
 
     LoggingExtras.withlevel(; alg.verbosity) do
@@ -109,7 +117,7 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
         end
     end
 
-    state = IDMRGState(mps, operator, envs, iter, ϵ, E, timeroutput)
+    state = IDMRGState(mps, operator, envs, iter, ϵ, E, timeroutput, allocator)
     it = IterativeSolver(alg, state)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
@@ -159,7 +167,7 @@ function Base.iterate(
 
     # update state
     it.state = IDMRGState{T}(
-        mps, state.operator, envs, state.iter + 1, ϵ, E_new, timeroutput,
+        mps, state.operator, envs, state.iter + 1, ϵ, E_new, timeroutput, state.allocator,
     )
 
     return (mps, envs, ϵ, ΔE), it.state
@@ -169,11 +177,9 @@ function localupdate_step!(
         it::IterativeSolver{<:IDMRG}, state
     )
     alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
-    # the sweep is serial, so a single allocator serves all local updates
-    allocator = default_allocator(state.mps, SerialScheduler())
     return _localupdate_sweep_idmrg!(
         state.mps, state.operator, state.envs, alg_eigsolve, state.timeroutput;
-        it.backend, allocator,
+        it.backend, state.allocator,
     )
 end
 
@@ -181,12 +187,10 @@ function localupdate_step!(
         it::IterativeSolver{<:IDMRG2}, state
     )
     alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
-    # the sweep is serial, so a single allocator serves all local updates
-    allocator = default_allocator(state.mps, SerialScheduler())
     return _localupdate_sweep_idmrg2!(
         state.mps, state.operator, state.envs, alg_eigsolve,
         it.trunc, it.alg_svd, state.timeroutput;
-        it.backend, allocator,
+        it.backend, state.allocator,
     )
 end
 
