@@ -11,8 +11,8 @@
 
 using MPSKit
 using MPSKit: default_allocator, SerialScheduler, DynamicScheduler
+using MPSKit: BufferAllocator, ManualAllocator, DefaultAllocator
 using TensorKit
-using TensorOperations: BufferAllocator, ManualAllocator, DefaultAllocator
 using Adapt
 using Random
 
@@ -94,11 +94,12 @@ end
     H = adapt(ArrType, H_cpu)
     ψ₀ = adapt(ArrType, ψ₀_cpu)
 
-    alg = TDVP()
-    ψ_ref, = timestep(ψ₀_cpu, H_cpu, 0.0, 0.01, alg)
-    ψ, = timestep(ψ₀, H, 0.0, 0.01, alg)
+    for alg in (TDVP(), BUG())
+        ψ_ref, = timestep(ψ₀_cpu, H_cpu, 0.0, 0.01, alg)
+        ψ, = timestep(ψ₀, H, 0.0, 0.01, alg)
 
-    @test TensorKit.storagetype(ψ) === TensorKit.storagetype(ψ₀)
-    @test norm(ψ) ≈ norm(ψ₀) atol = 1.0e-6
-    @test real(expectation_value(ψ, H)) ≈ real(expectation_value(ψ_ref, H_cpu)) atol = 1.0e-6
+        @test TensorKit.storagetype(ψ) === TensorKit.storagetype(ψ₀)
+        @test norm(ψ) ≈ norm(ψ₀) atol = 1.0e-6
+        @test real(expectation_value(ψ, H)) ≈ real(expectation_value(ψ_ref, H_cpu)) atol = 1.0e-6
+    end
 end
