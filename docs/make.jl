@@ -38,6 +38,9 @@ links = InterLinks(
 # include MPSKit in all doctests
 DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit, TensorKit); recursive = true)
 
+# root CHANGELOG.md is canonical (visible on GitHub); copy it in for rendering
+cp(joinpath(@__DIR__, "..", "CHANGELOG.md"), joinpath(@__DIR__, "src", "changelog.md"); force = true)
+
 makedocs(;
     sitename = "MPSKit.jl",
     format = DocumenterVitepress.MarkdownVitepress(;
