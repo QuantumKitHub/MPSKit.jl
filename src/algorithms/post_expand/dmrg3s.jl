@@ -130,7 +130,11 @@ function _get_combiner(::Type{TorA}, V1, V2) where {TorA}
     return isomorphism(TorA, oplus(fuse(Vprod)), Vprod)
 end
 
-function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{:right}, H, envs, AC, alg::DMRG3S; normalize = true)
+function gauge!(
+        ψ::AbstractFiniteMPS, pos::Int, ::Val{:right}, H, envs, AC, alg::DMRG3S;
+        normalize = true,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     El = leftenv(envs, pos, ψ)
     Hi = H[pos]
     α = alg.noise
@@ -140,7 +144,7 @@ function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{:right}, H, envs, AC, alg
     combiner = _get_combiner(T, V, right_virtualspace(Hi))'
     Vpert = only(domain(combiner))
 
-    mpo_ac = MPO_AC_Hamiltonian(El, Hi, combiner)
+    mpo_ac = MPO_AC_Hamiltonian(El, Hi, combiner, backend, allocator)
     pert = α * mpo_ac(AC)
 
     AC_expanded = catdomain(AC, pert)
@@ -155,7 +159,11 @@ function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{:right}, H, envs, AC, alg
     return ψ, ϵ
 end
 
-function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{:left}, H, envs, AC, alg::DMRG3S; normalize = true)
+function gauge!(
+        ψ::AbstractFiniteMPS, pos::Int, ::Val{:left}, H, envs, AC, alg::DMRG3S;
+        normalize = true,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     Er = rightenv(envs, pos, ψ)
     Hi = H[pos]
     α = alg.noise
@@ -166,7 +174,7 @@ function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{:left}, H, envs, AC, alg:
     Vpert = only(codomain(combiner))
     combiner = _transpose_front(combiner)
 
-    mpo_ac = MPO_AC_Hamiltonian(combiner, Hi, Er)
+    mpo_ac = MPO_AC_Hamiltonian(combiner, Hi, Er, backend, allocator)
     pert = α * mpo_ac(AC)
     AC = _transpose_tail(AC)
     pert = _transpose_tail(pert)
