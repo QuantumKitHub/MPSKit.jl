@@ -124,7 +124,7 @@ function local_update!(
         ϵ_global, ϵ_trunc, decay_rate,
         iter, timeroutput, allocator
     )
-    ϵ_local = calc_galerkin(site, ψ, O, ψ, envs)
+    ϵ_local = calc_galerkin(site, ψ, O, ψ, envs; alg.backend, allocator)
 
     # 1. expand
     isnothing(alg.alg_expand) ||

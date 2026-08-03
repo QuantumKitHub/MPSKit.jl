@@ -69,7 +69,7 @@ function dominant_eigsolve(
     iter = 0
 
     mps = copy(mps)
-    ϵ = calc_galerkin(mps, operator, mps, envs)
+    ϵ = calc_galerkin(mps, operator, mps, envs; alg.backend)
     alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)
     recalculate!(envs, mps, operator, mps, alg_environments; timeroutput)
 
@@ -112,7 +112,9 @@ function Base.iterate(it::IterativeSolver{<:VUMPS}, state = it.state)
     )::typeof((mps, envs))
 
     # error criterion
-    ϵ = @timeit timeroutput "calc_galerkin" calc_galerkin(mps, state.operator, mps, envs)
+    ϵ = @timeit timeroutput "calc_galerkin" calc_galerkin(
+        mps, state.operator, mps, envs; it.backend
+    )
 
     # update state
     it.state = VUMPSState(

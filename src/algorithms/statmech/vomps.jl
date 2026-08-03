@@ -60,7 +60,7 @@ function dominant_eigsolve(
     @assert which === :LM "VOMPS only supports the LM eigenvalue problem"
     log = IterLog("VOMPS")
     iter = 0
-    ϵ = calc_galerkin(mps, operator, mps, envs)
+    ϵ = calc_galerkin(mps, operator, mps, envs; alg.backend)
     alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)
     recalculate!(envs, mps, operator, mps, alg_environments)
 
@@ -96,7 +96,7 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state)
     mps, envs = it.finalize(state.iter, mps, state.operator, envs)::typeof((mps, envs))
 
     # error criterion
-    ϵ = calc_galerkin(mps, state.operator, mps, envs)
+    ϵ = calc_galerkin(mps, state.operator, mps, envs; it.backend)
 
     # update state
     it.state = VOMPSState(mps, state.operator, envs, state.iter + 1, ϵ)

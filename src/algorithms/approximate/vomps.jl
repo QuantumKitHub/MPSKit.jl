@@ -23,7 +23,7 @@ end
 function _approximate_vomps(mps, toapprox, alg::VOMPS, envs)
     log = IterLog("VOMPS")
     iter = 0
-    ϵ = calc_galerkin(mps, toapprox..., envs)
+    ϵ = calc_galerkin(mps, toapprox..., envs; alg.backend)
     alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)
     recalculate!(envs, mps, toapprox..., alg_environments)
 
@@ -61,7 +61,7 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:T
     mps, envs = it.finalize(state.iter, mps, state.operator, envs)::typeof((mps, envs))
 
     # error criterion
-    ϵ = calc_galerkin(mps, state.operator..., envs)
+    ϵ = calc_galerkin(mps, state.operator..., envs; it.backend)
 
     # update state
     it.state = VOMPSState(mps, state.operator, envs, state.iter + 1, ϵ)
