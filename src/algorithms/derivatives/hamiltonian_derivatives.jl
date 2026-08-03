@@ -12,7 +12,7 @@ const _HAM_MPS_TYPES = Union{
 Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
 In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
 """
-struct JordanMPO_AC_Hamiltonian{O1, O2, O3, Bk, Al} <: DerivativeOperator
+struct JordanMPO_AC_Hamiltonian{O1, O2, O3, Bk <: AbstractBackend, Al} <: DerivativeOperator
     D::Union{O1, Missing} # onsite
     I::Union{O1, Missing} # not started
     E::Union{O1, Missing} # finished
@@ -26,7 +26,7 @@ struct JordanMPO_AC_Hamiltonian{O1, O2, O3, Bk, Al} <: DerivativeOperator
             D::Union{O1, Missing}, I::Union{O1, Missing}, E::Union{O1, Missing},
             C::Union{O2, Missing}, B::Union{O2, Missing}, A::Union{O3, Missing},
             backend::Bk, allocator::Al
-        ) where {O1, O2, O3, Bk, Al}
+        ) where {O1, O2, O3, Bk <: AbstractBackend, Al}
         return new{O1, O2, O3, Bk, Al}(D, I, E, C, B, A, backend, allocator)
     end
 end
@@ -164,7 +164,7 @@ end
 Efficient operator for representing the single-site derivative of a `MPOHamiltonian` sandwiched between two MPSs.
 In particular, this operator aims to make maximal use of the structure of the `MPOHamiltonian` to reduce the number of operations required to apply the operator to a tensor.
 """
-struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4, Bk, Al} <: DerivativeOperator
+struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4, Bk <: AbstractBackend, Al} <: DerivativeOperator
     II::Union{O1, Missing} # not_started
     IC::Union{O2, Missing} # starting right
     ID::Union{O1, Missing} # onsite right
@@ -184,7 +184,7 @@ struct JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4, Bk, Al} <: DerivativeOperator
             AB::Union{O3, Missing}, AA::Union{O4, Missing},
             BE::Union{O2, Missing}, DE::Union{O1, Missing}, EE::Union{O1, Missing},
             backend::Bk, allocator::Al
-        ) where {O1, O2, O3, O4, Bk, Al}
+        ) where {O1, O2, O3, O4, Bk <: AbstractBackend, Al}
         return new{O1, O2, O3, O4, Bk, Al}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE, backend, allocator)
     end
 end
