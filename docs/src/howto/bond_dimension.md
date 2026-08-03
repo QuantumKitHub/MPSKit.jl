@@ -53,7 +53,7 @@ dim(left_virtualspace(ψ_inf, 1))
 [`RandExpand`](@ref) pads the MPS with orthogonal random vectors drawn from the two-site null space.
 It does **not** need the Hamiltonian, so it is cheap and works for any MPS type.
 
-`trscheme` is **mandatory** and controls how many new directions are added.
+`trunc` is **mandatory** and controls how many new directions are added.
 Use `truncrank(n)` from MatrixAlgebraKit (re-exported by TensorKit) to add at most `n` extra singular values:
 
 ```@example bond_dim
@@ -62,7 +62,7 @@ dim(left_virtualspace(ψ_small, 5))
 ```
 
 ```@example bond_dim
-ψ_grown = changebonds(ψ_small, RandExpand(; trscheme = truncrank(8)))
+ψ_grown = changebonds(ψ_small, RandExpand(; trunc = truncrank(8)))
 dim(left_virtualspace(ψ_grown, 5))      # expanded, but ≤ 4 + 8 = 12
 ```
 
@@ -72,7 +72,7 @@ For an `InfiniteMPS` the call is identical:
 
 ```@example bond_dim
 ψ_inf_small = InfiniteMPS(ℂ^2, ℂ^4)
-ψ_inf_grown = changebonds(ψ_inf_small, RandExpand(; trscheme = truncrank(8)))
+ψ_inf_grown = changebonds(ψ_inf_small, RandExpand(; trunc = truncrank(8)))
 dim(left_virtualspace(ψ_inf_grown, 1))
 ```
 
@@ -90,7 +90,7 @@ Z = σᶻ()
 H = FiniteMPOHamiltonian(lattice, (i, i + 1) => -J * X ⊗ X for i in 1:(L - 1)) +
     FiniteMPOHamiltonian(lattice, (i,) => -g * Z for i in 1:L)
 
-ψ_opt, envs_opt = changebonds(ψ_small, H, OptimalExpand(; trscheme = truncrank(8)))
+ψ_opt, envs_opt = changebonds(ψ_small, H, OptimalExpand(; trunc = truncrank(8)))
 dim(left_virtualspace(ψ_opt, 5))
 ```
 
@@ -101,7 +101,7 @@ The environment argument is optional and defaults to a freshly computed set:
 lattice_inf = PeriodicVector([ℂ^2])
 H_inf = InfiniteMPOHamiltonian(lattice_inf, (1, 2) => -J * X ⊗ X, (1,) => -g * Z)
 
-ψ_inf_opt, _ = changebonds(ψ_inf_small, H_inf, OptimalExpand(; trscheme = truncrank(8)))
+ψ_inf_opt, _ = changebonds(ψ_inf_small, H_inf, OptimalExpand(; trunc = truncrank(8)))
 dim(left_virtualspace(ψ_inf_opt, 1))
 ```
 
@@ -120,7 +120,7 @@ It does **not** need the Hamiltonian and is the standard tool for compression.
 
 ```@example bond_dim
 # compress ψ_grown (D up to 12) back to at most 6 singular values per bond
-ψ_cut = changebonds(ψ_grown, SvdCut(; trscheme = truncrank(6)))
+ψ_cut = changebonds(ψ_grown, SvdCut(; trunc = truncrank(6)))
 dim(left_virtualspace(ψ_cut, 5))
 ```
 
@@ -129,14 +129,14 @@ It also accepts a `normalize` keyword (default `true`):
 
 ```@example bond_dim
 ψ_inplace = FiniteMPS(L, ℂ^2, ℂ^12)
-changebonds!(ψ_inplace, SvdCut(; trscheme = truncrank(6)); normalize = true)
+changebonds!(ψ_inplace, SvdCut(; trunc = truncrank(6)); normalize = true)
 dim(left_virtualspace(ψ_inplace, 5))
 ```
 
 `SvdCut` also works on `InfiniteMPS` (2-arg form only; no in-place variant):
 
 ```@example bond_dim
-ψ_inf_cut = changebonds(ψ_inf_grown, SvdCut(; trscheme = truncrank(6)))
+ψ_inf_cut = changebonds(ψ_inf_grown, SvdCut(; trunc = truncrank(6)))
 dim(left_virtualspace(ψ_inf_cut, 1))
 ```
 
@@ -144,7 +144,7 @@ dim(left_virtualspace(ψ_inf_cut, 1))
 
 ## 4. Truncation schemes
 
-Every bond-change algorithm takes a mandatory `trscheme` keyword drawn from **MatrixAlgebraKit** (re-exported by TensorKit).
+Every bond-change algorithm takes a mandatory `trunc` keyword drawn from **MatrixAlgebraKit** (re-exported by TensorKit).
 The main schemes are:
 
 | Scheme | Meaning |
@@ -158,13 +158,13 @@ Schemes compose with `&` to apply multiple criteria simultaneously.
 For example, to keep at most 16 singular values **and** also drop anything below `1e-8`:
 
 ```@example bond_dim
-trscheme_combined = trunctol(; atol = 1.0e-8) & truncrank(16)
-ψ_combined = changebonds(ψ_grown, SvdCut(; trscheme = trscheme_combined))
+trunc_combined = trunctol(; atol = 1.0e-8) & truncrank(16)
+ψ_combined = changebonds(ψ_grown, SvdCut(; trunc = trunc_combined))
 dim(left_virtualspace(ψ_combined, 5))
 ```
 
 !!! warning
-    `trscheme` is **required** on every algorithm; there is no default.
+    `trunc` is **required** on every algorithm; there is no default.
     Omitting it will throw a `MethodError` at construction time.
 
 ---
@@ -172,14 +172,14 @@ dim(left_virtualspace(ψ_combined, 5))
 ## 5. Growing during finite MPS optimization
 
 The two-site DMRG variant, [`DMRG2`](@ref), performs a bond expansion at every sweep step by keeping both sites together in the update.
-Pass `trscheme` to control which singular values are retained:
+Pass `trunc` to control which singular values are retained:
 
 ```@example bond_dim
 ψ_dmrg2_start = FiniteMPS(L, ℂ^2, ℂ^2)   # start small
 
 ψ_dmrg2, envs_dmrg2, _ = find_groundstate(
     ψ_dmrg2_start, H,
-    DMRG2(; trscheme = truncrank(16), maxiter = 5)
+    DMRG2(; trunc = truncrank(16), maxiter = 5)
 )
 dim(left_virtualspace(ψ_dmrg2, 5))
 ```
@@ -188,26 +188,26 @@ A common pattern is to warm up with `DMRG2` to grow the bond dimension, then ref
 The algorithm chaining operator `&` makes this easy (see [§7](#7-chaining-algorithms)):
 
 ```@example bond_dim
-warmup_then_refine = DMRG2(; trscheme = truncrank(16), maxiter = 3) &
+warmup_then_refine = DMRG2(; trunc = truncrank(16), maxiter = 3) &
     DMRG(; maxiter = 20)
 
 ψ_dmrg2, envs_dmrg2, _ = find_groundstate(ψ_dmrg2_start, H, warmup_then_refine)
 dim(left_virtualspace(ψ_dmrg2, 5))
 ```
 
-The `find_groundstate` convenience function also accepts a `trscheme` keyword that triggers the same warm-up automatically:
+The `find_groundstate` convenience function also accepts a `trunc` keyword that triggers the same warm-up automatically:
 
 ```@example bond_dim
 ψ_conv, envs_conv, _ = find_groundstate(
     ψ_dmrg2_start, H;
-    trscheme = truncrank(16), maxiter = 20
+    trunc = truncrank(16), maxiter = 20
 )
 dim(left_virtualspace(ψ_conv, 5))
 ```
 
-The `trscheme` keyword makes `find_groundstate` prepend a `DMRG2` pass before switching to the default `DMRG`.
+The `trunc` keyword makes `find_groundstate` prepend a `DMRG2` pass before switching to the default `DMRG`.
 
-TDVP2 also supports `trscheme` for two-site real- or imaginary-time evolution, but that is covered in the time-evolution documentation rather than here.
+TDVP2 also supports `trunc` for two-site real- or imaginary-time evolution, but that is covered in the time-evolution documentation rather than here.
 
 ---
 
@@ -236,7 +236,7 @@ H_inf_2 = InfiniteMPOHamiltonian(
 
 ψ_idmrg2, _, _ = find_groundstate(
     ψ_idmrg2_start, H_inf_2,
-    IDMRG2(; trscheme = truncrank(16), maxiter = 5)
+    IDMRG2(; trunc = truncrank(16), maxiter = 5)
 )
 dim(left_virtualspace(ψ_idmrg2, 1))
 ```
@@ -247,7 +247,7 @@ dim(left_virtualspace(ψ_idmrg2, 1))
 It requires the Hamiltonian and returns a new state with updated environments:
 
 ```@example bond_dim
-ψ_vs, _ = changebonds(ψ_inf_small, H_inf, VUMPSSvdCut(; trscheme = truncrank(16)))
+ψ_vs, _ = changebonds(ψ_inf_small, H_inf, VUMPSSvdCut(; trunc = truncrank(16)))
 dim(left_virtualspace(ψ_vs, 1))
 ```
 
@@ -272,8 +272,8 @@ This works for both ground-state algorithms and `changebonds` algorithms:
 
 ```@example bond_dim
 # Expand with random vectors, then compress to a target rank
-grow_and_cut = RandExpand(; trscheme = truncrank(12)) &
-    SvdCut(; trscheme = truncrank(6))
+grow_and_cut = RandExpand(; trunc = truncrank(12)) &
+    SvdCut(; trunc = truncrank(6))
 
 ψ_final = changebonds(ψ_small, grow_and_cut)
 dim(left_virtualspace(ψ_final, 5))
@@ -282,7 +282,7 @@ dim(left_virtualspace(ψ_final, 5))
 ```@example bond_dim
 # Alternatively: combine changebonds with a ground-state algorithm
 ψ_expanded, envs_expanded = changebonds(
-    ψ_small, H, OptimalExpand(; trscheme = truncrank(8))
+    ψ_small, H, OptimalExpand(; trunc = truncrank(8))
 )
 ψ_gs, _, _ = find_groundstate(ψ_expanded, H, DMRG(; maxiter = 10), envs_expanded)
 dim(left_virtualspace(ψ_gs, 5))

@@ -43,7 +43,7 @@ discarded = sum(abs2, schmidt[7:end])
 Performing that truncation with [`SvdCut`](@ref) through [`changebonds`](@ref) and comparing the energy before and after shows the corresponding cost in the observable of interest:
 
 ```@example numerics
-ψcut = changebonds(ψ, SvdCut(; trscheme = truncrank(6)))
+ψcut = changebonds(ψ, SvdCut(; trunc = truncrank(6)))
 ΔE = real(expectation_value(ψcut, H) - expectation_value(ψ, H, envs))
 ```
 
@@ -62,11 +62,11 @@ The ones you will meet most often are:
 - `trunctol(; atol)` — discard every coefficient below a threshold.
 - `truncerror(; atol)` — keep as many coefficients as needed to hold the discarded weight below a target.
 - `truncspace(V)` — truncate to a prescribed vector space, used mostly internally to match bond spaces.
-- `notrunc()` — keep everything; this is the default `trscheme` of the bond-preserving single-site algorithms.
+- `notrunc()` — keep everything; this is the default `trunc` of the bond-preserving single-site algorithms.
 
 These schemes compose with `&`, so `trunctol(; atol = 1e-8) & truncrank(16)` applies both bounds at once.
 
-Every bond-growing algorithm — [`DMRG2`](@ref), [`IDMRG2`](@ref), [`TDVP2`](@ref) — and every explicit bond-surgery tool — [`SvdCut`](@ref), [`OptimalExpand`](@ref) — requires a `trscheme` keyword, because their whole job is to decide a new bond dimension.
+Every bond-growing algorithm — [`DMRG2`](@ref), [`IDMRG2`](@ref), [`TDVP2`](@ref) — and every explicit bond-surgery tool — [`SvdCut`](@ref), [`OptimalExpand`](@ref) — requires a `trunc` keyword, because their whole job is to decide a new bond dimension.
 The single-site workhorses ([`DMRG`](@ref), [`VUMPS`](@ref), [`TDVP`](@ref)) default to `notrunc()` and keep the bond dimension fixed.
 The recipes for growing and shrinking bonds live in [Controlling bond dimension](@ref howto_bond_dimension).
 

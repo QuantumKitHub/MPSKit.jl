@@ -177,7 +177,7 @@ Things to try, roughly in order:
   what it represents, giving the next optimization new directions to explore:
 
   ```@example conv
-  ψ_noisy = changebonds(ψ_small, RandExpand(; trscheme = truncrank(8)))
+  ψ_noisy = changebonds(ψ_small, RandExpand(; trunc = truncrank(8)))
   ψ_kick, _, ϵ_kick = find_groundstate(
       ψ_noisy, H, DMRG(; tol = 1.0e-10, maxiter = 100, verbosity = 0)
   )
@@ -272,7 +272,7 @@ The knobs are different:
   [`make_time_mpo`](@ref) with [`WII`](@ref)/[`TaylorCluster`](@ref)) Trotter-type error.
 - **Bond dimension.** Real-time evolution grows entanglement, so a fixed bond dimension
   eventually cannot follow the state.
-  Use the two-site [`TDVP2`](@ref) (which takes a `trscheme`) or a CBE-enabled
+  Use the two-site [`TDVP2`](@ref) (which takes a `trunc`) or a CBE-enabled
   [`TDVP`](@ref) to let the bond dimension grow during evolution.
 
 See [Time evolution](@ref howto_time_evolution) for the full time-evolution interface.

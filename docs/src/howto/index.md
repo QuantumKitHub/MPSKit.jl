@@ -33,7 +33,7 @@ Each recipe below stands on its own, so feel free to jump straight to the one yo
 - Growing bond dimension — `RandExpand` (no Hamiltonian needed) and `OptimalExpand`.
 - Reducing bond dimension — `SvdCut` and the in-place `changebonds!`.
 - Truncation schemes — `truncrank`, `trunctol`, `notrunc`, `truncspace`, and combining them with `&`.
-- Growing during finite MPS optimization — `DMRG2` and the `trscheme` keyword of `find_groundstate`.
+- Growing during finite MPS optimization — `DMRG2` and the `trunc` keyword of `find_groundstate`.
 - Growing during infinite MPS optimization — `IDMRG2` and `VUMPSSvdCut`.
 - Chaining algorithms — composing bond-change and ground-state algorithms with `&`.
 
@@ -42,9 +42,9 @@ Each recipe below stands on its own, so feel free to jump straight to the one yo
 **[Time evolution](@ref howto_time_evolution)** — real- and imaginary-time evolution of an MPS.
 - Evolve a state through one time step — `timestep` with `TDVP`.
 - Evolve over a time span — `time_evolve` across a vector of time points.
-- Grow the bond dimension while evolving — `TDVP2` with a mandatory `trscheme`.
+- Grow the bond dimension while evolving — `TDVP2` with a mandatory `trunc`.
 - Evolve an infinite state — single-site `TDVP` on an `InfiniteMPS`.
-- Imaginary-time evolution — `imaginary_evolution = true` to cool towards the ground state.
+- Imaginary-time evolution — `imaginary_evolution = true` to cool towards the ground state, with `normalize = true` to keep the state normalized.
 - Build a time-evolution MPO — `make_time_mpo` (`WII`, `TaylorCluster`, `WI`) plus `approximate`.
 
 ## Measurements

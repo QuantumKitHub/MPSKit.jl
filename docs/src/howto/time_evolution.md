@@ -65,10 +65,10 @@ There is no exported `time_evolve!`; use `time_evolve` and rebind the result.
 Single-site `TDVP` cannot change the bond dimension: whatever `ψ₀` starts with is what it keeps.
 After a quench, entanglement typically grows and a fixed bond dimension eventually becomes insufficient.
 [`TDVP2`](@ref) updates two sites at a time and truncates back down, so it can grow (or shrink) the bond dimension as it evolves.
-Unlike `TDVP`, `TDVP2` requires `trscheme` — there is no default:
+Unlike `TDVP`, `TDVP2` requires `trunc` — there is no default:
 
 ```@example time_evo
-ψ_tdvp2, envs_tdvp2 = timestep(ψ₀, H₁, 0.0, dt, TDVP2(; trscheme = truncrank(16)))
+ψ_tdvp2, envs_tdvp2 = timestep(ψ₀, H₁, 0.0, dt, TDVP2(; trunc = truncrank(16)))
 dim(left_virtualspace(ψ_tdvp2, 4))
 ```
 
@@ -105,9 +105,19 @@ Passing `imaginary_evolution = true` evolves under `exp(-H dt)` instead of `exp(
 norm(ψ_im)
 ```
 
-Imaginary-time evolution renormalizes the state at every step, so `norm(ψ_im)` stays `1` regardless of how the un-normalized weight would otherwise change.
-Repeated imaginary-time steps damp excited-state components faster than the ground state, so this is often used as a (slower) alternative to `find_groundstate` for driving a state towards the ground state of `H₁`.
-`time_evolve` accepts the same `imaginary_evolution` keyword for a span of imaginary-time steps.
+The norm is *not* renormalized by default, so `norm(ψ_im)` carries the decaying weight of the un-normalized state rather than staying at `1`.
+Pass `normalize = true` to renormalize after every step:
+
+```@example time_evo
+ψ_norm, = timestep(ψ₀, H₁, 0.0, dt, TDVP(); imaginary_evolution = true, normalize = true)
+norm(ψ_norm)
+```
+
+Repeated imaginary-time steps damp excited-state components faster than the ground state, so this is often used as a (slower) alternative to `find_groundstate` for driving a state towards the ground state of `H₁` — and that is the case where `normalize = true` is wanted, since otherwise the state's weight decays away.
+`time_evolve` accepts both keywords for a span of imaginary-time steps.
+
+!!! note "`normalize` is independent of `imaginary_evolution`"
+    Renormalization used to be tied to imaginary time. It is now a separate `normalize` keyword defaulting to `false`, so the norm is preserved in both real and imaginary time — in real time it accumulates the truncation error, and in imaginary time it holds the decaying weight.
 
 ---
 
@@ -137,7 +147,7 @@ Applying the MPO to a finite state uses [`approximate`](@ref) with a finite grou
 
 ```@example time_evo
 ψ_mpo, envs_mpo, ϵ_mpo = approximate(
-    ψ₀, (O, ψ₀), DMRG2(; trscheme = truncrank(16), verbosity = 0)
+    ψ₀, (O, ψ₀), DMRG2(; trunc = truncrank(16), verbosity = 0)
 )
 expectation_value(ψ_mpo, 4 => σᶻ())
 ```

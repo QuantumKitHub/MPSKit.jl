@@ -12,15 +12,15 @@ It explains *why* you would pick one algorithm over another; for the *how* — t
 
 | Task | Finite system | Infinite system |
 |:-----|:--------------|:----------------|
-| **Ground state** ([`find_groundstate`](@ref)) | [`DMRG`](@ref) (workhorse, fixed bond dimension); [`DMRG2`](@ref) (grows bond dimension, requires `trscheme`); [`GradientGrassmann`](@ref) (final polish) | [`VUMPS`](@ref) (workhorse, needs a unique ground state); [`IDMRG`](@ref) / [`IDMRG2`](@ref) (two-site requires `trscheme` and a unit cell of at least two sites); [`GradientGrassmann`](@ref) (final polish) |
-| **Time evolution** ([`timestep`](@ref) / [`time_evolve`](@ref)) | [`TDVP`](@ref) (fixed bond dimension); [`TDVP2`](@ref) (grows bond dimension, requires `trscheme`); or [`make_time_mpo`](@ref) ([`WI`](@ref) / [`WII`](@ref) / [`TaylorCluster`](@ref)) applied with [`approximate`](@ref) | [`TDVP`](@ref) (no two-site variant exists); or [`make_time_mpo`](@ref) applied with [`approximate`](@ref) |
+| **Ground state** ([`find_groundstate`](@ref)) | [`DMRG`](@ref) (workhorse, fixed bond dimension); [`DMRG2`](@ref) (grows bond dimension, requires `trunc`); [`GradientGrassmann`](@ref) (final polish) | [`VUMPS`](@ref) (workhorse, needs a unique ground state); [`IDMRG`](@ref) / [`IDMRG2`](@ref) (two-site requires `trunc` and a unit cell of at least two sites); [`GradientGrassmann`](@ref) (final polish) |
+| **Time evolution** ([`timestep`](@ref) / [`time_evolve`](@ref)) | [`TDVP`](@ref) (fixed bond dimension); [`TDVP2`](@ref) (grows bond dimension, requires `trunc`); or [`make_time_mpo`](@ref) ([`WI`](@ref) / [`WII`](@ref) / [`TaylorCluster`](@ref)) applied with [`approximate`](@ref) | [`TDVP`](@ref) (no two-site variant exists); or [`make_time_mpo`](@ref) applied with [`approximate`](@ref) |
 | **Excitations** ([`excitations`](@ref)) | [`QuasiparticleAnsatz`](@ref) (the only one supporting charged `sector`s); [`FiniteExcited`](@ref) (penalty method); [`ChepigaAnsatz`](@ref) / [`ChepigaAnsatz2`](@ref) (cheap, from ground-state environments) | [`QuasiparticleAnsatz`](@ref) (momentum-resolved, the only choice) |
 | **Boundary / statistical mechanics** ([`leading_boundary`](@ref)) | apply the transfer MPO row by row with [`approximate`](@ref) | [`VUMPS`](@ref); [`VOMPS`](@ref) (power method); [`IDMRG`](@ref) / [`IDMRG2`](@ref); [`GradientGrassmann`](@ref) (hermitian, positive transfer matrices) |
 | **Compression / approximation** ([`approximate`](@ref), [`changebonds`](@ref)) | [`approximate`](@ref) with [`DMRG`](@ref) / [`DMRG2`](@ref); [`SvdCut`](@ref) via [`changebonds`](@ref) for local truncation | [`approximate`](@ref) with [`IDMRG`](@ref) / [`IDMRG2`](@ref) / [`VOMPS`](@ref); [`SvdCut`](@ref) via [`changebonds`](@ref) for local truncation |
 
 
 A few structural facts hold across the whole table and are worth internalizing early.
-Every two-site algorithm (`DMRG2`, `IDMRG2`, `TDVP2`) requires an explicit `trscheme` keyword and can change the bond dimension as it runs; the single-site variants with their default settings cannot.
+Every two-site algorithm (`DMRG2`, `IDMRG2`, `TDVP2`) requires an explicit `trunc` keyword and can change the bond dimension as it runs; the single-site variants with their default settings cannot.
 `IDMRG2` additionally needs a unit cell of at least two sites, and `TDVP2` exists only for finite MPS.
 Finally, algorithms compose: the `&` operator chains two algorithms into one, running the first to completion and handing its result to the second, which is how two-site warm-up passes and gradient-descent polishing stages are combined with a workhorse algorithm in a single call.
 
@@ -42,7 +42,7 @@ Like DMRG, VUMPS is single-site and cannot alter the bond dimension.
 [`GradientGrassmann`](@ref) approaches the problem from a third direction: the MPS tensors form a Riemannian manifold (a Grassmann manifold), and one can run gradient descent directly on it, for finite and infinite states alike.
 Its niche is the tail of the optimization: close to convergence its rate is often the best of the lot, while far from convergence the sweeping algorithms tend to make faster progress.
 The practical consequence is the chaining pattern: run a cheap workhorse first, then hand over to gradient descent, e.g. `VUMPS(...) & GradientGrassmann(...)`.
-This pattern is baked into `find_groundstate` itself: called with only keywords, it picks `DMRG` for a finite state and `VUMPS` for an infinite one, appends a `GradientGrassmann` stage on infinite states when the requested tolerance is tighter than `1e-4`, and prepends a two-site pass (`DMRG2` or `IDMRG2`) whenever you supply a `trscheme`.
+This pattern is baked into `find_groundstate` itself: called with only keywords, it picks `DMRG` for a finite state and `VUMPS` for an infinite one, appends a `GradientGrassmann` stage on infinite states when the requested tolerance is tighter than `1e-4`, and prepends a two-site pass (`DMRG2` or `IDMRG2`) whenever you supply a `trunc`.
 Since gradient descent is also a single-site method, growing the bond dimension remains the job of that two-site pre-pass or of [`changebonds`](@ref).
 
 For call syntax, keyword tables, and worked chaining examples, see [Ground-state algorithms](@ref howto_groundstate_algorithms).
@@ -59,6 +59,7 @@ The second route splits the problem in two: first approximate the evolution oper
 The appeal is amortization: for a time-independent Hamiltonian and a fixed step size the MPO is built once and reused for every step, and the accuracy of the operator approximation is controlled independently of the accuracy of its application.
 
 Both routes accept an `imaginary_evolution` keyword for evolution in imaginary time.
+Renormalization is a separate concern, controlled by `normalize` (default `false`): left off, the norm is preserved and carries information — the accumulated truncation error in real time, the decaying weight in imaginary time — while `normalize = true` is what an imaginary-time ground-state search wants.
 For step-by-step recipes along either route, see [Time evolution](@ref howto_time_evolution).
 
 ## Excitations

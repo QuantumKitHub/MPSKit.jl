@@ -39,13 +39,13 @@ H_inf = transverse_field_ising(; g = 0.5)
 ϵ_inf
 ```
 
-Passing a `trscheme` keyword switches on a two-site pre-pass that can grow the bond dimension before the single-site algorithm takes over.
+Passing a `trunc` keyword switches on a two-site pre-pass that can grow the bond dimension before the single-site algorithm takes over.
 On a `FiniteMPS` this prepends [`DMRG2`](@ref); on an `InfiniteMPS` it prepends [`IDMRG2`](@ref) (which needs a unit cell of at least two sites, see [§3](#3-configure-infinite-system-algorithms)).
 
 ```@example groundstate_algs
 ψ_auto, envs_auto, ϵ_auto = find_groundstate(
     ψ₀, H;
-    trscheme = truncrank(16), verbosity = 0
+    trunc = truncrank(16), verbosity = 0
 )
 ϵ_auto
 ```
@@ -70,12 +70,12 @@ Pass a [`DMRG`](@ref) struct explicitly to set `tol`, `maxiter`, and `verbosity`
 
 `DMRG` updates one site at a time, so with its defaults it cannot change the bond dimension: whatever bond dimension `ψ₀` starts with is what it keeps.
 [`DMRG2`](@ref) optimizes two sites at once and truncates back down, which lets it grow (or shrink) the bond dimension as it sweeps, at extra cost per step.
-Unlike `DMRG`, `DMRG2` has no default truncation scheme, so `trscheme` is required:
+Unlike `DMRG`, `DMRG2` has no default truncation scheme, so `trunc` is required:
 
 ```@example groundstate_algs
 ψ_dmrg2, envs_dmrg2, ϵ_dmrg2 = find_groundstate(
     ψ₀, H,
-    DMRG2(; trscheme = truncrank(16), maxiter = 5, verbosity = 0)
+    DMRG2(; trunc = truncrank(16), maxiter = 5, verbosity = 0)
 )
 ϵ_dmrg2
 ```
@@ -84,14 +84,14 @@ A common pattern is to warm up with `DMRG2` to grow the bond dimension, then ref
 The `&` chaining operator runs the first algorithm to completion, then feeds its result into the second:
 
 ```@example groundstate_algs
-warmup_then_refine = DMRG2(; trscheme = truncrank(16), maxiter = 3, verbosity = 0) &
+warmup_then_refine = DMRG2(; trunc = truncrank(16), maxiter = 3, verbosity = 0) &
     DMRG(; tol = 1.0e-8, maxiter = 30, verbosity = 0)
 
 ψ_c, envs_c, ϵ_c = find_groundstate(ψ₀, H, warmup_then_refine)
 ϵ_c
 ```
 
-For more on choosing `trscheme` and growing bond dimension in general, see [Controlling bond dimension](@ref howto_bond_dimension).
+For more on choosing `trunc` and growing bond dimension in general, see [Controlling bond dimension](@ref howto_bond_dimension).
 
 ---
 
@@ -119,7 +119,7 @@ For more on choosing `trscheme` and growing bond dimension in general, see [Cont
 
 In practice, prefer `VUMPS` unless you specifically need `IDMRG`'s ability to change the bond dimension one site at a time.
 
-[`IDMRG2`](@ref) is the two-site, bond-dimension-changing variant, and mirrors `DMRG2`: `trscheme` is required, and it needs a unit cell of at least two sites.
+[`IDMRG2`](@ref) is the two-site, bond-dimension-changing variant, and mirrors `DMRG2`: `trunc` is required, and it needs a unit cell of at least two sites.
 
 !!! warning "Unit cell size"
     `IDMRG2` throws an `ArgumentError` on a single-site `InfiniteMPS`.
@@ -143,7 +143,7 @@ H_inf_2 = InfiniteMPOHamiltonian(
 
 ψ_i2, envs_i2, ϵ_i2 = find_groundstate(
     ψ₀_2, H_inf_2,
-    IDMRG2(; trscheme = truncrank(16), maxiter = 5, verbosity = 0)
+    IDMRG2(; trunc = truncrank(16), maxiter = 5, verbosity = 0)
 )
 ϵ_i2
 ```
