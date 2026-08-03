@@ -17,7 +17,7 @@ Used as the `algorithm` argument of [`leading_boundary`](@ref) and [`approximate
 
 * [Vanhecke et al. SciPost Phys. Core 4 (2021)](@cite vanhecke2021)
 """
-@kwdef struct VOMPS{F} <: Algorithm
+@kwdef struct VOMPS{F, B} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
 
@@ -35,6 +35,9 @@ Used as the `algorithm` argument of [`leading_boundary`](@ref) and [`approximate
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
+
+    "backend for tensor contractions and index manipulations"
+    backend::B = Defaults.backend()
 end
 
 # Internal state of the VOMPS algorithm
@@ -110,10 +113,11 @@ function localupdate_step!(
     ACs = similar(mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
+    allocator = default_allocator(mps, scheduler)
     tforeach(eachsite(mps); scheduler) do site
         dst_ACs[site] = _localupdate_vomps_step!(
             site, mps, state.operator, state.envs;
-            alg_orth, parallel = false
+            alg_orth, it.backend, allocator
         )
         return nothing
     end
@@ -122,19 +126,11 @@ function localupdate_step!(
 end
 
 function _localupdate_vomps_step!(
-        site, mps, operator, envs; parallel::Bool = false, alg_orth = Defaults.alg_orth()
+        site, mps, operator, envs; alg_orth = Defaults.alg_orth(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
-    if !parallel
-        AC = AC_projection(site, mps, operator, mps, envs)
-        C = C_projection(site, mps, operator, mps, envs)
-        return regauge!(AC, C; alg = alg_orth)
-    end
-
-    local AC, C
-    @sync begin
-        @spawn AC = AC_projection(site, mps, operator, mps, envs)
-        @spawn C = C_projection(site, mps, operator, mps, envs)
-    end
+    AC = AC_projection(site, mps, operator, mps, envs; backend, allocator)
+    C = C_projection(site, mps, operator, mps, envs; backend, allocator)
     return regauge!(AC, C; alg = alg_orth)
 end
 
