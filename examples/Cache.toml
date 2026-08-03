@@ -1,4 +1,5 @@
 [excitations]
+"1.su3-heisenberg" = "a57dbdf1b92f6c589c086b166dab64f4f224813ef632e1668c34c9607f005f9f"
 "0.haldane" = "c09df36c3be5cd452bec564d22f6e2815474a9dab71dd5528013a3fb46b2f7c0"
 
 [dynamics]
@@ -13,4 +14,5 @@
 "2.hubbard" = "29e2469ac9307f1242bdfb76b97c6a2e04dc087f5d4b6c45c8b7a15df12ad36c"
 "3.bose-hubbard" = "cf0d9a543e784dc6053e413780d19e1b59bf956dd4598752fdf664804dd68ce6"
 "1.xxz-heisenberg" = "dae5f29dcad5fcfaffd12a7847916adb92c955276ce24166fd3f9c9534c50784"
+"0.tfim-groundstate" = "a87cc89caf8df47285e25f6cec4ff130ea6ed88d4f73d59f8e7dc2e799ece1b0"
 "5.ising-cft" = "ebcae1e501347cb00a46d0889df1355707be77cf962f9ee0d16416393492529b"
