@@ -121,7 +121,29 @@ Repeated imaginary-time steps damp excited-state components faster than the grou
 
 ---
 
-## 6. Build a time-evolution MPO
+## 6. Let the bond dimension adapt with `BUG`
+
+[`BUG`](@ref) is a single-site integrator for finite MPS that, unlike [`TDVP`](@ref), advances both the basis and the core tensor *forward* in time — it has no backward-in-time substep, which is what makes `TDVP`'s core step awkward at large imaginary-time steps.
+Passing a truncating `trunc` makes it rank-adaptive, so the bond dimension tracks the entanglement instead of being fixed up front:
+
+```@example time_evo
+ψ_bug, envs_bug = timestep(ψ₀, H₁, 0.0, dt, BUG(; trunc = truncrank(8)))
+maximum(i -> dim(left_virtualspace(ψ_bug, i)), 1:length(ψ_bug))
+```
+
+!!! warning "`truncrank(D)` leaves a state of dimension `2D`"
+    Each local update truncates the bond *ahead* of it and then augments the basis with the newly discovered directions without truncating, so the augmentation of one half-sweep is what the next half-sweep truncates. A `truncrank(D)` therefore ends the sweep at dimension `2D`. To come back down to `D`, follow up with [`changebonds`](@ref) and an [`SvdCut`](@ref):
+
+    ```@example time_evo
+    ψ_bug_cut = changebonds(ψ_bug, SvdCut(; trunc = truncrank(8)))
+    ```
+
+`BUG` is finite-only; there is no `InfiniteMPS` method.
+Like the other integrators it leaves the norm alone unless you pass `normalize = true`.
+
+---
+
+## 7. Build a time-evolution MPO
 
 When `H` is time-independent and `dt` is fixed, an alternative to repeated `timestep` calls is to build the evolution operator once as an MPO with [`make_time_mpo`](@ref), then apply it repeatedly with [`approximate`](@ref).
 
@@ -154,6 +176,29 @@ expectation_value(ψ_mpo, 4 => σᶻ())
 
 Repeat the `approximate` call with the same `O` for successive time steps to build up a longer evolution.
 Imaginary-time MPOs are built the same way, by passing `imaginary_evolution = true` to `make_time_mpo`; a real `dt` is promoted internally, so no manual complex conversion is needed.
+
+### A cheaper alternative, with a caveat
+
+[`Zipup`](@ref) approximates a finite MPO–MPS product in a single sweep instead of optimizing variationally: it contracts one site at a time and truncates the enlarged bond immediately.
+It needs no initial guess, so the state is passed only as the operand, and it returns just `(ψ, ϵ)` rather than the variational 3-tuple.
+The call shape, on an MPO built from plain tensors:
+
+```@example time_evo
+Vs = [oneunit(ℂ^3); fill(ℂ^3, L - 1); oneunit(ℂ^3)]
+O_plain = FiniteMPO([rand(ComplexF64, Vs[i] ⊗ ℂ^2 ← ℂ^2 ⊗ Vs[i + 1]) for i in 1:L])
+
+ψ_zip, ϵ_zip = approximate((O_plain, ψ₀), Zipup(; trunc = truncrank(16)))
+ϵ_zip
+```
+
+Following [paeckel2019](@cite), a sharper result for a target bond dimension comes from zipping up permissively and imposing the final truncation on the way back, which `trunc` accepts as a tuple:
+
+```@example time_evo
+ψ_zip2, ϵ_zip2 = approximate((O_plain, ψ₀), Zipup(; trunc = (truncrank(32), truncrank(16))))
+ϵ_zip2
+```
+
+`Zipup` is for finite, open-boundary MPO–MPS products only.
 
 ---
 

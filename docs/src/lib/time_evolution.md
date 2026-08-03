@@ -17,6 +17,7 @@ timestep!
 ```@docs; canonical=false
 TDVP
 TDVP2
+BUG
 ```
 
 ## Time-evolution MPOs
@@ -28,4 +29,15 @@ make_time_mpo
 TaylorCluster
 WI
 WII
+```
+
+## MPO–MPS products
+
+Applying an MPO to a state — a propagator MPO among others — goes through [`approximate`](@ref).
+The variational algorithms ([`DMRG2`](@ref) and friends) treat the destination as an initial guess, whereas [`Zipup`](@ref) sweeps the product out in one pass and needs none.
+
+```@docs; canonical=false
+approximate
+approximate!
+Zipup
 ```

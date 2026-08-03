@@ -45,7 +45,8 @@ Each recipe below stands on its own, so feel free to jump straight to the one yo
 - Grow the bond dimension while evolving — `TDVP2` with a mandatory `trunc`.
 - Evolve an infinite state — single-site `TDVP` on an `InfiniteMPS`.
 - Imaginary-time evolution — `imaginary_evolution = true` to cool towards the ground state, with `normalize = true` to keep the state normalized.
-- Build a time-evolution MPO — `make_time_mpo` (`WII`, `TaylorCluster`, `WI`) plus `approximate`.
+- Let the bond dimension adapt — `BUG` with a truncating `trunc`.
+- Build a time-evolution MPO — `make_time_mpo` (`WII`, `TaylorCluster`, `WI`) plus `approximate`, or `Zipup` for a single-sweep application.
 
 ## Measurements
 
