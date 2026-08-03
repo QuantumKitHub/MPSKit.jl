@@ -29,7 +29,7 @@ Used as the `algorithm` argument of [`timestep`](@ref), [`timestep!`](@ref) and 
 
 * [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
-struct TDVP{A, E, G, F} <: Algorithm
+struct TDVP{A, E, G, F, B} <: Algorithm
     "algorithm used in the exponential solvers"
     integrator::A
 
@@ -47,12 +47,16 @@ struct TDVP{A, E, G, F} <: Algorithm
 
     "callback function applied after each iteration, of signature `finalize(t, ψ, H, envs) -> ψ, envs`"
     finalize::F
+
+    "backend for tensor contractions and index manipulations"
+    backend::B
 end
 function TDVP(;
         integrator = Defaults.alg_expsolve(), tolgauge = Defaults.tolgauge,
         gaugemaxiter = Defaults.maxiter, finalize = Defaults._finalize,
         alg_expand = nothing, trunc = notrunc(),
-        alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth()
+        alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth(),
+        backend = Defaults.backend()
     )
     # a no-truncation `trunc` selects a (bond-preserving) QR gauge, anything else a truncated SVD
     alg_gauge = trunc isa MatrixAlgebraKit.NoTruncation ? alg_orth :
@@ -60,7 +64,9 @@ function TDVP(;
     if !isnothing(alg_expand) && !_truncates(alg_gauge)
         @warn "TDVP with `alg_expand` but no truncation (`trunc = notrunc()`): the bond dimension will grow unboundedly each sweep."
     end
-    return TDVP(integrator, tolgauge, gaugemaxiter, alg_expand, alg_gauge, finalize)
+    return TDVP(
+        integrator, tolgauge, gaugemaxiter, alg_expand, alg_gauge, finalize, backend
+    )
 end
 
 function timestep(
@@ -76,39 +82,40 @@ function timestep(
         return timestep(complex(ψ), H, t, dt, alg, envs; leftorthflag, imaginary_evolution, normalize)
     end
 
+    # the scheduler is read here rather than below, so that the allocator it selects is inferable
+    return _timestep_infinite(
+        ψ, H, t, dt, alg, envs, Defaults.scheduler[]; leftorthflag, imaginary_evolution
+    )
+end
+
+function _timestep_infinite(
+        ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP, envs, scheduler::Scheduler;
+        leftorthflag, imaginary_evolution
+    )
     temp_ACs = similar(ψ.AC)
     temp_Cs = similar(ψ.C)
 
-    scheduler = Defaults.scheduler[]
+    # both sweeps together are a single unit of concurrent work, and share one allocator
+    allocator = default_allocator(ψ, scheduler)
+    ac_sweep!() = tforeach(1:length(ψ); scheduler) do loc
+        Hac = AC_hamiltonian(loc, ψ, H, ψ, envs; alg.backend, allocator)
+        temp_ACs[loc] = integrate(Hac, ψ.AC[loc], t, dt, alg.integrator; imaginary_evolution)
+        return nothing
+    end
+    c_sweep!() = tforeach(1:length(ψ); scheduler) do loc
+        Hc = C_hamiltonian(loc, ψ, H, ψ, envs; alg.backend, allocator)
+        temp_Cs[loc] = integrate(Hc, ψ.C[loc], t, dt, alg.integrator; imaginary_evolution)
+        return nothing
+    end
+
     if scheduler isa SerialScheduler
-        temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
-            Hac = AC_hamiltonian(loc, ψ, H, ψ, envs)
-            return integrate(Hac, ψ.AC[loc], t, dt, alg.integrator; imaginary_evolution)
-        end
-        temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
-            Hc = C_hamiltonian(loc, ψ, H, ψ, envs)
-            return integrate(Hc, ψ.C[loc], t, dt, alg.integrator; imaginary_evolution)
-        end
+        ac_sweep!()
+        c_sweep!()
     else
+        # the AC and C sweeps are independent, so run them concurrently with each other too
         @sync begin
-            Threads.@spawn begin
-                temp_ACs = tmap!(temp_ACs, 1:length(ψ); scheduler) do loc
-                    Hac = AC_hamiltonian(loc, ψ, H, ψ, envs)
-                    return integrate(
-                        Hac, ψ.AC[loc], t, dt, alg.integrator;
-                        imaginary_evolution
-                    )
-                end
-            end
-            Threads.@spawn begin
-                temp_Cs = tmap!(temp_Cs, 1:length(ψ); scheduler) do loc
-                    Hc = C_hamiltonian(loc, ψ, H, ψ, envs)
-                    return integrate(
-                        Hc, ψ.C[loc], t, dt, alg.integrator;
-                        imaginary_evolution
-                    )
-                end
-            end
+            Threads.@spawn ac_sweep!()
+            Threads.@spawn c_sweep!()
         end
     end
 
@@ -130,7 +137,17 @@ function timestep!(
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         imaginary_evolution::Bool = false, normalize::Bool = false
     )
+    # the sweep is serial, so a single allocator serves all local updates
+    allocator = default_allocator(ψ, SerialScheduler())
+    return _timestep_finite!(
+        ψ, H, t, dt, alg, envs, allocator; imaginary_evolution, normalize
+    )
+end
 
+function _timestep_finite!(
+        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP, envs, allocator;
+        imaginary_evolution::Bool, normalize::Bool
+    )
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         # 1. optionally expand the bond ahead of the local update (CBE)
@@ -138,7 +155,7 @@ function timestep!(
             changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize)
 
         # 2. evolve the (possibly expanded) center tensor forward
-        Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
+        Hac = AC_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
         AC = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator; imaginary_evolution)
 
         # 3. gauge: split AC -> AL[i], C[i] (QR center-move, or truncated SVD cutting the
@@ -147,7 +164,7 @@ function timestep!(
         left_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
 
         # 4. evolve the bond tensor backward
-        Hc = C_hamiltonian(i, ψ, H, ψ, envs)
+        Hc = C_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
         ψ.C[i] = integrate(
             Hc, ψ.C[i], t + dt / 2, -dt / 2, alg.integrator;
             imaginary_evolution
@@ -155,7 +172,7 @@ function timestep!(
     end
 
     # edge case
-    Hac = AC_hamiltonian(length(ψ), ψ, H, ψ, envs)
+    Hac = AC_hamiltonian(length(ψ), ψ, H, ψ, envs; alg.backend, allocator)
     ψ.AC[end] = integrate(Hac, ψ.AC[end], t, dt / 2, alg.integrator; imaginary_evolution)
 
     # sweep right to left
@@ -165,7 +182,7 @@ function timestep!(
             changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize)
 
         # 2. evolve the (possibly expanded) center tensor forward
-        Hac = AC_hamiltonian(i, ψ, H, ψ, envs)
+        Hac = AC_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
         AC = integrate(
             Hac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator;
             imaginary_evolution
@@ -176,7 +193,7 @@ function timestep!(
         right_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
 
         # 4. evolve the bond tensor backward
-        Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs)
+        Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
         ψ.C[i - 1] = integrate(
             Hc, ψ.C[i - 1], t + dt, -dt / 2, alg.integrator;
             imaginary_evolution
@@ -184,7 +201,7 @@ function timestep!(
     end
 
     # edge case
-    Hac = AC_hamiltonian(1, ψ, H, ψ, envs)
+    Hac = AC_hamiltonian(1, ψ, H, ψ, envs; alg.backend, allocator)
     ψ.AC[1] = integrate(
         Hac, ψ.AC[1], t + dt / 2, dt / 2, alg.integrator;
         imaginary_evolution
@@ -210,7 +227,7 @@ Used as the `algorithm` argument of [`timestep`](@ref), [`timestep!`](@ref) and 
 
 * [Haegeman et al. Phys. Rev. Lett. 107 (2011)](@cite haegeman2011)
 """
-@kwdef struct TDVP2{A, S, F} <: Algorithm
+@kwdef struct TDVP2{A, S, F, B} <: Algorithm
     "algorithm used in the exponential solvers"
     integrator::A = Defaults.alg_expsolve()
 
@@ -228,6 +245,9 @@ Used as the `algorithm` argument of [`timestep`](@ref), [`timestep!`](@ref) and 
 
     "callback function applied after each iteration, of signature `finalize(t, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
+
+    "backend for tensor contractions and index manipulations"
+    backend::B = Defaults.backend()
 end
 
 function timestep!(
@@ -235,11 +255,21 @@ function timestep!(
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         imaginary_evolution::Bool = false, normalize::Bool = false
     )
+    # the sweep is serial, so a single allocator serves all local updates
+    allocator = default_allocator(ψ, SerialScheduler())
+    return _timestep2_finite!(
+        ψ, H, t, dt, alg, envs, allocator; imaginary_evolution, normalize
+    )
+end
 
+function _timestep2_finite!(
+        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2, envs, allocator;
+        imaginary_evolution::Bool, normalize::Bool
+    )
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         ac2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs)
+        Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
         ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
 
         nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trunc, alg = alg.alg_svd)
@@ -248,7 +278,7 @@ function timestep!(
         ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
 
         if i != (length(ψ) - 1)
-            Hac = AC_hamiltonian(i + 1, ψ, H, ψ, envs)
+            Hac = AC_hamiltonian(i + 1, ψ, H, ψ, envs; alg.backend, allocator)
             ψ.AC[i + 1] = integrate(
                 Hac, ψ.AC[i + 1], t + dt / 2, -dt / 2, alg.integrator;
                 imaginary_evolution
@@ -259,7 +289,7 @@ function timestep!(
     # sweep right to left
     for i in length(ψ):-1:2
         ac2 = _transpose_front(ψ.AL[i - 1]) * _transpose_tail(ψ.AC[i])
-        Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs)
+        Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
         ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator; imaginary_evolution)
 
         nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trunc, alg = alg.alg_svd)
@@ -268,7 +298,7 @@ function timestep!(
         ψ.AC[i] = (complex(nc), _transpose_front(nar))
 
         if i != 2
-            Hac = AC_hamiltonian(i - 1, ψ, H, ψ, envs)
+            Hac = AC_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
             ψ.AC[i - 1] = integrate(
                 Hac, ψ.AC[i - 1], t + dt, -dt / 2, alg.integrator;
                 imaginary_evolution
