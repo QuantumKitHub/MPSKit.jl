@@ -196,7 +196,7 @@ already know the *next* center tensor: they avoid materializing a bond tensor pu
 well-defined, and — unlike installing the canonical tensor on its own — they never leave `ψ`
 without a gauge center.
 
-The isometry of `AL`/`AR` is not verified.
+The isometric nature of `AL`/`AR` is not verified.
 """
 set_AL_AC!
 @doc (@doc set_AL_AC!) set_AC_AR!

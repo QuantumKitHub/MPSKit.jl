@@ -1,12 +1,11 @@
 """
 $(TYPEDEF)
 
-Single-site, symmetric second-order time-evolution algorithm for **finite** MPS, based on the
-Basis-Update & Galerkin (BUG) integrator, an unconventional robust integrator for dynamical low-rank
-approximation.
+Single-site time-evolution algorithm for **finite** MPS, based on the
+Basis-Update & Galerkin (BUG) integrator, an unconventional robust integrator for dynamical low-rank approximation with an observed second-order convergence.
 
 Unlike [`TDVP`](@ref), BUG advances both the basis (K-step) and the core (Galerkin C-step) tensors *forward* in time, with no backward-in-time substep.
-This makes it a more natural choice for imaginary-time (dissipative) evolution, where the backward core step of the conventional projector-splitting [`TDVP`](@ref) can become unstable for large timesteps.
+This makes it a more natural choice for imaginary-time (dissipative) evolution, where the backward core step of the conventional projector-splitting integrator [`TDVP`](@ref) can become unstable for large timesteps.
 
 ## Fields
 
@@ -163,12 +162,10 @@ function timestep!(
         imaginary_evolution::Bool = false, normalize::Bool = false,
         timeroutput::TimerOutput = DISABLED_TIMER
     )
-    # symmetric 2nd-order: a dt/2 left→right half-sweep composed with its dt/2 mirror
     L = length(ψ)
     h = dt / 2
 
-    # left→right half-sweep (root = last site): `ψ` carries the old center forward, site by site, so
-    # `ψ.AR[site + 1]` is still the old (pre-sweep) right block when site `site` needs it
+    # left→right half-sweep (root = last site): `t → t + dt / 2`
     @timeit timeroutput "half-sweep" for site in 1:L
         ψ = local_update!(
             site, Val(:right), ψ, H, alg, envs, t, h;
@@ -176,8 +173,7 @@ function timestep!(
         )
     end
 
-    # right→left half-sweep (root = first site), the mirror: sweep backward from `t + h`, with
-    # `ψ.AL[site - 1]` the left block as the previous half-sweep left it
+    # right→left half-sweep (root = first site): `t + dt / 2 → t + dt`
     @timeit timeroutput "half-sweep" for site in L:-1:1
         ψ = local_update!(
             site, Val(:left), ψ, H, alg, envs, t + h, h;
