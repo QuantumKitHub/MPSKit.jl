@@ -2,102 +2,32 @@
 
 # MPSKit.jl
 
-Contains code for tackling one-dimensional quantum and two-dimensional statistical mechanics
-problems using tensor network algorithms. The main focus is on matrix product states (MPS)
-and matrix product operators (MPO), both finite and infinite.
+[![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] [![DOI][doi-img]][doi-url]
+[![CI][ci-img]][ci-url] [![PkgEval][pkgeval-img]][pkgeval-url] [![Codecov][codecov-img]][codecov-url]
 
-| **Documentation** | **Digital Object Identifier** |
-|:-----------------:|:-----------------------------:|
-| [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] | [![DOI][doi-img]][doi-url] |
+Tensor network algorithms based on matrix product states (MPS) and matrix product operators (MPO), for (quasi) one-dimensional quantum lattices and two-dimensional statistical mechanics models, as well as quantum circuit simulation or boundary-MPS methods.
+This library highlights support for both finite systems and systems directly in the thermodynamic limit, and both have a large variety of implemented algorithms.
 
-| **Build Status** | **PkgEval** | **Coverage** |
-|:----------------:|:------------:|:------------:|
-| [![CI][ci-img]][ci-url] | [![PkgEval][pkgeval-img]][pkgeval-url] | [![Codecov][codecov-img]][codecov-url] |
+MPSKit builds on [TensorKit.jl](https://github.com/QuantumKitHub/TensorKit.jl) for its tensors, which makes abelian, non-abelian, fermionic and anyonic symmetries available throughout.
+The toolbox covers ground states and leading boundary states, real and imaginary time evolution, excitation spectra, and more.
 
-[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
-[docs-stable-url]: https://QuantumKitHub.github.io/MPSKit.jl/stable
-
-[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
-[docs-dev-url]: https://QuantumKitHub.github.io/MPSKit.jl/dev
-
-[doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10654900.svg
-[doi-url]: https://doi.org/10.5281/zenodo.10654900
-
-[codecov-img]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl/branch/master/graph/badge.svg?token=rmp3bu7qn3
-[codecov-url]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl
-
-[ci-img]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/Tests.yml/badge.svg
-[ci-url]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/Tests.yml
-
-[pkgeval-img]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/M/MPSKit.svg
-[pkgeval-url]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/M/MPSKit.html
-
-The framework is built upon
-[TensorKit.jl](https://github.com/jutho/TensorKit.jl), which provides functionality for
-generic symmetries.
-
-The toolbox contains different algorithms for finding MPS representations of groundstates or
-leading boundary states, performing time evolution, finding excitations and much more. Check
-out the [examples](https://QuantumKitHub.github.io/MPSKit.jl/dev/examples/) for concrete
-use-cases.
-
-This package is under active development and new algorithms are added regularly.
-Nevertheless, the documentation is quite terse, so feel free to open an issue if you have
-any questions.
+The [documentation](https://QuantumKitHub.github.io/MPSKit.jl/stable) contains the manual and the full API reference.
+The [examples](https://QuantumKitHub.github.io/MPSKit.jl/dev/examples/) work through complete calculations, from ground states to dynamical correlators.
 
 ## Installation
 
-The package can be installed through the Julia general registry, via the package manager:
+MPSKit is registered in the Julia general registry, and often is best combined with TensorKit.jl and MPSKitModels.jl.
 
 ```julia-repl
-pkg> add MPSKit
+pkg> add MPSKit TensorKit MPSKitModels
 ```
 
-Because of the heavy use of [TensorKit.jl](https://github.com/jutho/TensorKit.jl), it is
-recommended to install the latest version of this package as well. Additionally, several
-extension packages exist that provide additional symmetries, which should all be compatible
-with MPSKit. For example, to install the package with support for SU(N) symmetries,
-[SUNRepresentations.jl](https://github.com/QuantumKitHub/SUNRepresentations.jl) can be used.
-
-```julia-repl
-pkg> add TensorKit
-```
-
-Finally, several pre-defined operators, Hamiltonians and statistical mechanics models are available in [MPSKitModels.jl](https://github.com/QuantumKitHub/MPSKitModels.jl). It is recommended to install this package too.
-
-```julia-repl
-pkg> add MPSKitModels
-```
+[TensorKit.jl](https://github.com/QuantumKitHub/TensorKit.jl) provides the tensors and their symmetry sectors, and [MPSKitModels.jl](https://github.com/QuantumKitHub/MPSKitModels.jl) a library of common operators, Hamiltonians and statistical mechanics models.
+Symmetries beyond the ones TensorKit itself ships with come from extension packages, such as [SUNRepresentations.jl](https://github.com/QuantumKitHub/SUNRepresentations.jl) for SU(N).
 
 ## Quickstart
 
-After following the installation process, it should now be possible to load the packages and
-start simulating. For example, to obtain the ground state of the 1D Ising model, we can use
-the following code:
-
-```julia
-using MPSKit, MPSKitModels, TensorKit
-using ProgressMeter, Plots # for demonstration purposes
-
-L = 16 # length of the chain
-D = 4 # bonddimension
-init_state = FiniteMPS(L, ℂ^2, ℂ^D)
-
-g_values = 0:0.1:2
-
-M = @showprogress map(g_values) do g
-    H = periodic_boundary_conditions(transverse_field_ising(; g=g), L)
-    groundstate, environment, δ = find_groundstate(init_state, H; verbosity=0)
-    return abs(sum(expectation_value(groundstate, i => σᶻ()) for i in 1:L)) / L
-end
-
-scatter(g_values, M, xlabel="g", ylabel="M", label="D=$D", title="Magnetization")
-```
-
-![Magnetization](docs/src/assets/README_ising_finite.png)
-
-Similarly, these simulations can be carried out directly in the thermodynamic limit, with
-very minor code-changes:
+Sweeping the transverse field of the Ising model in the thermodynamic limit and measuring the magnetization:
 
 ```julia
 using MPSKit, MPSKitModels, TensorKit
@@ -118,3 +48,46 @@ scatter(g_values, M, xlabel="g", ylabel="M", label="D=$D", title="Magnetization"
 ```
 
 ![Magnetization](docs/src/assets/README_ising_infinite.png)
+
+The order parameter vanishes at `g = 1`, where the chain becomes critical.
+Replacing the `InfiniteMPS` with a `FiniteMPS` runs the same sweep on a finite chain instead; the [examples](https://QuantumKitHub.github.io/MPSKit.jl/dev/examples/) cover that case along with time evolution, excitations and two-dimensional partition functions.
+
+## Getting help and contributing
+
+MPSKit is under active development and new algorithms are added regularly.
+Questions and general discussion belong on [GitHub Discussions](https://github.com/QuantumKitHub/MPSKit.jl/discussions), bug reports and feature requests in the [issue tracker](https://github.com/QuantumKitHub/MPSKit.jl/issues).
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) if you would like to contribute code or documentation.
+
+## Citing
+
+If you use MPSKit.jl in your research, please cite it.
+See [`CITATION.cff`](CITATION.cff) for the up-to-date citation metadata, or use the BibTeX entry below.
+
+```bibtex
+@software{mpskitjl,
+  author  = {Devos, Lukas and Van Damme, Maarten and Haegeman, Jutho},
+  title   = {{MPSKit.jl}},
+  version = {v0.13.13},
+  doi     = {10.5281/zenodo.10654900},
+  url     = {https://github.com/QuantumKitHub/MPSKit.jl},
+  year    = {2026}
+}
+```
+
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
+[docs-stable-url]: https://QuantumKitHub.github.io/MPSKit.jl/stable
+
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-dev-url]: https://QuantumKitHub.github.io/MPSKit.jl/dev
+
+[doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10654900.svg
+[doi-url]: https://doi.org/10.5281/zenodo.10654900
+
+[codecov-img]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl/branch/master/graph/badge.svg?token=rmp3bu7qn3
+[codecov-url]: https://codecov.io/gh/QuantumKitHub/MPSKit.jl
+
+[ci-img]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/Tests.yml/badge.svg
+[ci-url]: https://github.com/QuantumKitHub/MPSKit.jl/actions/workflows/Tests.yml
+
+[pkgeval-img]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/M/MPSKit.svg
+[pkgeval-url]: https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/M/MPSKit.html

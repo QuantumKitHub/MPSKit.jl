@@ -60,6 +60,7 @@ makedocs(;
         "Library" => "lib/lib.md",
         "References" => "references.md",
         "Changelog" => "changelog.md",
+        "Contributing" => "contributing.md",
     ],
     checkdocs = :exports,
     doctest = true,
