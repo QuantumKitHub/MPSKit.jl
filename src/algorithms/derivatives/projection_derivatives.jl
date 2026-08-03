@@ -1,7 +1,8 @@
 """
     struct ProjectionDerivativeOperator{L, O <: Tuple, R, B, A}
 
-Effective local operator obtained from taking the partial derivative of the projector onto an MPS.
+Effective local operator obtained from taking the partial derivative of the projector `|ψ⟩⟨ψ|`
+onto an MPS.
 
 The `backend` and `allocator` fields are the ones used by the application of the operator. They
 default to `DefaultBackend()` and `DefaultAllocator()`, i.e. this operator does not hold on to

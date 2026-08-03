@@ -58,8 +58,8 @@ const SCHEDULERS = ("serial" => SerialScheduler(), "dynamic" => DynamicScheduler
     end
 
     @testset "BUG" begin
-        # the augmentation step doubles the bond, so compare against the reference at a bond the
-        # buffer-served eigensolves and the plain ones both reach
+        # the allocator only serves the effective-Hamiltonian applications, so a buffer-served
+        # step has to land on the same state as one that is not
         ψ, _ = timestep(complex(ψ₀), H, 0.0, 0.01, BUG())
         @test norm(ψ) ≈ norm(ψ₀) atol = 1.0e-6
 
