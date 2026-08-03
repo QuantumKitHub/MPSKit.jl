@@ -21,6 +21,14 @@ The sidebar lists the same pages in the same order.
 
 ## Ground states
 
+### [The transverse-field Ising model](groundstates/tfim-groundstate/index.md)
+
+![](groundstates/tfim-groundstate/figure-1.png)
+
+Scans the transverse field across the critical point of the Ising chain and locates the transition three independent ways: the order parameter on a finite chain and directly in the thermodynamic limit, the entanglement entropy, and the correlation length.
+Combines the basic finite and infinite ground-state tools into one case study, without any symmetries.
+**Complexity: introductory.**
+
 ### [The Ising CFT spectrum](groundstates/ising-cft/index.md)
 
 ![](groundstates/ising-cft/figure-2.png)
@@ -73,6 +81,15 @@ Touches most of the ground-state toolbox in a single, longer study.
 Computes the Haldane gap of the spin-1 Heisenberg antiferromagnet in two complementary ways: finite-size DMRG with the quasiparticle ansatz, extrapolated over system size, and a direct infinite-chain VUMPS calculation with a momentum-resolved excitation scan.
 Introduces SU(2)-symmetric tensors for both finite and infinite MPS.
 **Complexity: intermediate.**
+
+### [The SU(3) Heisenberg chain](excitations/su3-heisenberg/index.md)
+
+![](excitations/su3-heisenberg/figure-1.png)
+
+Generalizes the spin-1 Heisenberg chain to a chain of ``[3 0 0]`` irreps of SU(3), building the symmetric coupling from quadratic Casimirs and optimizing a uniform ground state with VUMPS.
+Growing the bond dimension with `changebonds` shows that quasiparticle excitation energies are not variational: the small gap at ``k = 2π/3`` comes out negative for a poorly converged ground state, and increases as the ground state improves.
+Shows that the SU(2) workflow of the Haldane gap example carries over to SU(N) symmetries through SUNRepresentations.jl.
+**Complexity: advanced.**
 
 ## Dynamics & finite temperature
 
