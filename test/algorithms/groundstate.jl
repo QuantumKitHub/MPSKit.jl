@@ -205,12 +205,13 @@ end
 
     # VUMPS spawns over the unit cell, so it is run under both schedulers: which allocator serves
     # the local updates follows from the scheduler, and must not change any number
-    # NOTE: with two loop variables the body is one scope for all iterations, so the starting state
-    # must not be bound to `ψ` - that would feed the previous iteration's result back into `repeat`
+    # NOTE: the starting state is built from scratch rather than from this block's `ψ`. The testsets
+    # around this one rebind `ψ` to their own (already repeated) result, and a `@testset for` body is
+    # a single scope, so reading it here would feed a length-3 state back into `repeat`.
     @testset "VUMPS (unit cell $unit_cell_size, $schedname)" for unit_cell_size in [1, 3],
             (schedname, scheduler) in SCHEDULERS
 
-        ψ₀ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
         ψ′, envs, δ = with_scheduler(scheduler) do
@@ -273,7 +274,7 @@ end
     @testset "GradientGrassmann (unit cell $unit_cell_size, $schedname)" for unit_cell_size in
             [1, 3], (schedname, scheduler) in SCHEDULERS
 
-        ψ₀ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
         ψ′, envs, δ = with_scheduler(scheduler) do
