@@ -54,8 +54,8 @@ pkg> dev /path/to/your/clone/MPSKit.jl
 
 Alternatively, you can tell Julia to clone the repository automatically, which will put it in a local `dev/` folder next to your Project.toml:
 
-```
-pkg> dev --local MPSKi
+```julia-repl
+pkg> dev --local MPSKit
 ```
 
 If you just want to try out the current `main` without a fork, `pkg> add MPSKit#main` is enough.
