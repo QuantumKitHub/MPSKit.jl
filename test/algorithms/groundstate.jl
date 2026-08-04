@@ -205,20 +205,22 @@ end
 
     # VUMPS spawns over the unit cell, so it is run under both schedulers: which allocator serves
     # the local updates follows from the scheduler, and must not change any number
+    # NOTE: with two loop variables the body is one scope for all iterations, so the starting state
+    # must not be bound to `ψ` - that would feed the previous iteration's result back into `repeat`
     @testset "VUMPS (unit cell $unit_cell_size, $schedname)" for unit_cell_size in [1, 3],
             (schedname, scheduler) in SCHEDULERS
 
-        ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+        ψ₀ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
-        ψ, envs, δ = with_scheduler(scheduler) do
+        ψ′, envs, δ = with_scheduler(scheduler) do
             # test logging
-            ψ, envs, δ = find_groundstate(
-                ψ, H, VUMPS(; tol, verbosity = verbosity_full, maxiter = 2)
+            ψ₁, = find_groundstate(
+                ψ₀, H, VUMPS(; tol, verbosity = verbosity_full, maxiter = 2)
             )
-            return find_groundstate(ψ, H, VUMPS(; tol, verbosity = verbosity_conv))
+            return find_groundstate(ψ₁, H, VUMPS(; tol, verbosity = verbosity_conv))
         end
-        v = variance(ψ, H, envs)
+        v = variance(ψ′, H, envs)
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1.0e-3
@@ -271,19 +273,19 @@ end
     @testset "GradientGrassmann (unit cell $unit_cell_size, $schedname)" for unit_cell_size in
             [1, 3], (schedname, scheduler) in SCHEDULERS
 
-        ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+        ψ₀ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
-        ψ, envs, δ = with_scheduler(scheduler) do
+        ψ′, envs, δ = with_scheduler(scheduler) do
             # test logging
-            ψ, envs, δ = find_groundstate(
-                ψ, H, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
+            ψ₁, = find_groundstate(
+                ψ₀, H, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
             )
             return find_groundstate(
-                ψ, H, GradientGrassmann(; tol, verbosity = verbosity_conv)
+                ψ₁, H, GradientGrassmann(; tol, verbosity = verbosity_conv)
             )
         end
-        v = variance(ψ, H, envs)
+        v = variance(ψ′, H, envs)
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1.0e-3
