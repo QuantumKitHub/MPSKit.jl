@@ -79,9 +79,6 @@ struct IDMRGState{S, O, E, T, A}
     ϵ::Float64 # TODO: Could be any <:Real
     energy::T
     timeroutput::TimerOutput
-    # the sweeps are serial, so a single allocator serves every local update of every iteration:
-    # it is obtained once when the solve starts and carried along here, as reusing one buffer
-    # rather than growing a fresh one each sweep is the entire point of having it
     allocator::A
 end
 function IDMRGState{T}(

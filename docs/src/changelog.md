@@ -33,13 +33,11 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   and passing a truncating `trunc` enables rank-adaptivity (the bond dimension grows and shrinks
   automatically to track entanglement).
 - A `backend` setting on every algorithm, for its tensor contractions and index manipulations,
-  defaulting to `MPSKit.Defaults.backend()`.
-  ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
+  defaulting to `MPSKit.Defaults.backend()`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
 - Local updates now serve their intermediate tensors from a dedicated allocator, selected internally
   by `MPSKit.default_allocator`, instead of leaving them to the garbage collector
   (two-site DMRG: -64% allocations, -57% GC time, -23% wall time).
-  Disable with `MPSKit.Defaults.set_buffering!(false)`.
-  ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
+  Disable with `MPSKit.Defaults.set_buffering!(false)`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
 
 ### Changed
 

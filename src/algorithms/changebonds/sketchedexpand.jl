@@ -74,9 +74,7 @@ end
 # leaves the MPS gauge (and any incrementally-maintained environments) untouched.
 function changebond!(
         site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs;
-        normalize::Bool = true,
-        # a sweep that already holds one should pass it: this is called once per site
-        allocator = default_allocator(ψ, SerialScheduler()),
+        normalize::Bool = true, allocator = default_allocator(ψ, SerialScheduler()),
     )
     left = ψ.AC[site]
     right = ψ.AR[site + 1]
@@ -120,9 +118,7 @@ function changebond!(
 end
 function changebond!(
         site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::SketchedExpand, envs;
-        normalize::Bool = true,
-        # a sweep that already holds one should pass it: this is called once per site
-        allocator = default_allocator(ψ, SerialScheduler()),
+        normalize::Bool = true, allocator = default_allocator(ψ, SerialScheduler()),
     )
     left = ψ.AL[site - 1]
     right = ψ.AC[site]
