@@ -12,6 +12,8 @@ There are two templates to help you:
 - **Bug report** — for something that doesn't work as expected.
 - **Question** — for anything else, from "how do I model X" to "is Y possible".
 
+Open-ended discussion that isn't really a question or a bug is also welcome on [GitHub Discussions](https://github.com/QuantumKitHub/MPSKit.jl/discussions).
+
 A good bug report is one we can act on immediately, and it typically needs two things:
 
 1. A minimal working example (MWE): the smallest snippet of code that reproduces the problem.
@@ -39,15 +41,24 @@ For larger amounts of work, it might be beneficial to open an issue first, so we
 Often, it might be the case that there are other ideas, or partial solutions that already were in the make, and we want to avoid duplicate or wasted work as much as possible.
 
 There is no restriction for the use of AI-tooling to assist you, although we do ask that you take the time to review the code yourself.
-Additionally, please do not just copy-pasted LLM generated responses to code reviews or discussions, as we take the time and effort to review your code and expect the same amount of effort from you.
-Do note however, that this means that overly large PRs might not get reviewed, since the review proces for these is too resource-intensive.
+Additionally, please do not just copy-paste LLM generated responses into code reviews or discussions, as we take the time and effort to review your code and expect the same amount of effort from you.
+Do note however, that this means that overly large PRs might not get reviewed, since the review process for these is too resource-intensive.
 
-!!! hint
-   You can locally check out the main branch of the repository into your current Project.toml by using
-   ```julia-repl
-   pkg> dev --local MPSKit
-   ```
+### Development setup
 
+Fork and clone the repository, then point Julia at your local checkout instead of the released version:
+
+```julia-repl
+pkg> dev /path/to/your/clone/MPSKit.jl
+```
+
+Alternatively, you can tell Julia to clone the repository automatically, which will put it in a local `dev/` folder next to your Project.toml:
+
+```
+pkg> dev --local MPSKi
+```
+
+If you just want to try out the current `main` without a fork, `pkg> add MPSKit#main` is enough.
 
 ### Running the tests
 

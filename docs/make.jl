@@ -21,6 +21,20 @@ quantum_pages = map(readdir(joinpath(example_dir, "quantum1d"))) do dir
     return joinpath("examples", "quantum1d", dir, "index.md")
 end
 
+# contributing guide: `CONTRIBUTING.md` in the repository root is canonical, since that is the
+# location GitHub links to from the issue and pull request forms. Copy it in as a page so it is
+# reachable from the manual as well, with an `EditURL` pointing back at the real source file.
+open(joinpath(@__DIR__, "src", "contributing.md"), "w") do io
+    println(
+        io, """
+        ```@meta
+        EditURL = "https://github.com/QuantumKitHub/MPSKit.jl/blob/main/CONTRIBUTING.md"
+        ```
+        """
+    )
+    return write(io, read(joinpath(@__DIR__, "..", "CONTRIBUTING.md"), String))
+end
+
 # bibliography
 bibpath = joinpath(@__DIR__, "src", "assets", "mpskit.bib")
 bib = CitationBibliography(bibpath; style = :authoryear)
