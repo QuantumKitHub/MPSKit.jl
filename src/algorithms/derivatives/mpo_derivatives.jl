@@ -41,7 +41,7 @@ function C_hamiltonian(
     H_C = MPO_C_Hamiltonian(
         leftenv(envs, site + 1, below), rightenv(envs, site, below), backend, allocator
     )
-    return prepare ? prepare_operator!!(H_C, backend, allocator) : H_C
+    return prepare ? prepare_operator!!(H_C) : H_C
 end
 function AC_hamiltonian(
         site::Int, below, operator, above, envs; prepare::Bool = true,
@@ -51,7 +51,7 @@ function AC_hamiltonian(
     H_AC = MPO_AC_Hamiltonian(
         leftenv(envs, site, below), O, rightenv(envs, site, below), backend, allocator
     )
-    return prepare ? prepare_operator!!(H_AC, backend, allocator) : H_AC
+    return prepare ? prepare_operator!!(H_AC) : H_AC
 end
 function AC2_hamiltonian(
         site::Int, below, operator, above, envs; prepare::Bool = true,
@@ -62,7 +62,7 @@ function AC2_hamiltonian(
         leftenv(envs, site, below), O1, O2, rightenv(envs, site + 1, below),
         backend, allocator
     )
-    return prepare ? prepare_operator!!(H_AC2, backend, allocator) : H_AC2
+    return prepare ? prepare_operator!!(H_AC2) : H_AC2
 end
 
 # Properties
@@ -189,7 +189,7 @@ VectorInterface.scalartype(::Type{<:PrecomputedDerivative{T}}) where {T} = T
 TensorKit.storagetype(::Type{<:PrecomputedDerivative{T, S, M}}) where {T, S, M} = M
 
 Base.@assume_effects :foldable function prepared_operator_type(
-        ::Type{<:MPO_C_Hamiltonian{L, R}}, ::Type{B}, ::Type{A}
+        ::Type{<:MPO_C_Hamiltonian{L, R, B, A}}
     ) where {L, R, B, A}
     T = TensorOperations.promote_contract(scalartype(L), scalartype(R))
     S = TensorKit.check_spacetype(L, R)
@@ -197,7 +197,7 @@ Base.@assume_effects :foldable function prepared_operator_type(
     return PrecomputedCDerivative{T, S, M, B, A}
 end
 Base.@assume_effects :foldable function prepared_operator_type(
-        ::Type{<:MPO_AC_Hamiltonian{L, O, R}}, ::Type{B}, ::Type{A}
+        ::Type{<:MPO_AC_Hamiltonian{L, O, R, B, A}}
     ) where {L, O, R, B, A}
     T = TensorOperations.promote_contract(scalartype(L), scalartype(O), scalartype(R))
     S = TensorKit.check_spacetype(L, O, R)
@@ -205,7 +205,7 @@ Base.@assume_effects :foldable function prepared_operator_type(
     return PrecomputedACDerivative{T, S, M, B, A}
 end
 Base.@assume_effects :foldable function prepared_operator_type(
-        ::Type{<:MPO_AC2_Hamiltonian{L, O₁, O₂, R}}, ::Type{B}, ::Type{A}
+        ::Type{<:MPO_AC2_Hamiltonian{L, O₁, O₂, R, B, A}}
     ) where {L, O₁, O₂, R, B, A}
     T = TensorOperations.promote_contract(scalartype(L), scalartype(O₁), scalartype(O₂), scalartype(R))
     S = TensorKit.check_spacetype(L, O₁, O₂, R)
@@ -213,20 +213,13 @@ Base.@assume_effects :foldable function prepared_operator_type(
     return PrecomputedAC2Derivative{T, S, M, B, A}
 end
 
-function prepare_operator!!(
-        H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor},
-        backend::AbstractBackend, allocator
-    )
+function prepare_operator!!(H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor})
     leftenv = _transpose_tail(H.leftenv isa TensorMap ? H.leftenv : TensorMap(H.leftenv))
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
-    return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
-        leftenv, rightenv, backend, allocator
-    )
+    return prepared_operator_type(typeof(H))(leftenv, rightenv, H.backend, H.allocator)
 end
-function prepare_operator!!(
-        H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
-        backend::AbstractBackend, allocator
-    )
+function prepare_operator!!(H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})
+    backend, allocator = H.backend, H.allocator
     @plansor backend = backend allocator = allocator begin
         GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
     end
@@ -234,15 +227,13 @@ function prepare_operator!!(
     leftenv = repartition(fuse_legs(leftenv, 1, 2), 2, 2)
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
 
-    return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
-        leftenv, rightenv, backend, allocator
-    )
+    return prepared_operator_type(typeof(H))(leftenv, rightenv, backend, allocator)
 end
 
 function prepare_operator!!(
-        H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
-        backend::AbstractBackend, allocator
+        H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor}
     )
+    backend, allocator = H.backend, H.allocator
     @plansor backend = backend allocator = allocator begin
         GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
         O_GR[-1 -2; -4 -5 -3] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
@@ -252,9 +243,7 @@ function prepare_operator!!(
 
     rightenv = O_GR isa TensorMap ? O_GR : TensorMap(O_GR)
     rightenv = repartition(fuse_legs(rightenv, 2, 1), 2, 2)
-    return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
-        leftenv, rightenv, backend, allocator
-    )
+    return prepared_operator_type(typeof(H))(leftenv, rightenv, backend, allocator)
 end
 
 function (H::PrecomputedCDerivative)(x::MPSBondTensor)
@@ -333,6 +322,6 @@ const _ToPrepare = Union{
     MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
 }
 
-function prepare_operator!!(H::Multiline{<:_ToPrepare}, backend::AbstractBackend, allocator)
-    return Multiline(map(x -> prepare_operator!!(x, backend, allocator), parent(H)))
+function prepare_operator!!(H::Multiline{<:_ToPrepare})
+    return Multiline(map(prepare_operator!!, parent(H)))
 end

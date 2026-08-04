@@ -37,7 +37,7 @@ function AC_hamiltonian(
     GL = leftenv(envs, site, below)
     GR = rightenv(envs, site, below)
     H_AC = Projection_AC_Hamiltonian(GL, operator.ket.AC[site], GR, backend, allocator)
-    return prepare ? prepare_operator!!(H_AC, backend, allocator) : H_AC
+    return prepare ? prepare_operator!!(H_AC) : H_AC
 end
 function AC2_hamiltonian(
         site::Int, below, operator::ProjectionOperator, above, envs;
@@ -49,7 +49,7 @@ function AC2_hamiltonian(
     H_AC2 = Projection_AC2_Hamiltonian(
         GL, operator.ket.AC[site], operator.ket.AR[site + 1], GR, backend, allocator
     )
-    return prepare ? prepare_operator!!(H_AC2, backend, allocator) : H_AC2
+    return prepare ? prepare_operator!!(H_AC2) : H_AC2
 end
 
 # Actions

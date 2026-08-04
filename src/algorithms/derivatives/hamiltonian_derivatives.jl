@@ -51,7 +51,7 @@ function AC_hamiltonian(
     GR = rightenv(envs, site, below)
     W = operator[site]
     H_AC = JordanMPO_AC_Hamiltonian(GL, W, GR; backend, allocator)
-    return prepare ? prepare_operator!!(H_AC, backend, allocator) : H_AC
+    return prepare ? prepare_operator!!(H_AC) : H_AC
 end
 
 function JordanMPO_AC_Hamiltonian(
@@ -107,8 +107,9 @@ function JordanMPO_AC_Hamiltonian(
 end
 
 function prepare_operator!!(
-        H::JordanMPO_AC_Hamiltonian{O1, O2, O3}, backend::AbstractBackend, allocator
+        H::JordanMPO_AC_Hamiltonian{O1, O2, O3}
     ) where {O1, O2, O3}
+    backend, allocator = H.backend, H.allocator
     C::Union{Missing, O2} = H.C
     B::Union{Missing, O2} = H.B
 
@@ -149,8 +150,8 @@ function prepare_operator!!(
         H.E
     end
 
-    O3′ = prepared_operator_type(O3, typeof(backend), typeof(allocator))
-    A = ismissing(H.A) ? H.A : prepare_operator!!(H.A, backend, allocator)
+    O3′ = prepared_operator_type(O3)
+    A = ismissing(H.A) ? H.A : prepare_operator!!(H.A)
 
     return JordanMPO_AC_Hamiltonian{O1, O2, O3′}(D, I, E, C, B, A, backend, allocator)::JordanMPO_AC_Hamiltonian{O1, O2, O3′}
 end
@@ -212,7 +213,7 @@ function AC2_hamiltonian(
     GR = rightenv(envs, site + 1, below)
     W1, W2 = operator[site], operator[site + 1]
     H_AC2 = JordanMPO_AC2_Hamiltonian(GL, W1, W2, GR; backend, allocator)
-    return prepare ? prepare_operator!!(H_AC2, backend, allocator) : H_AC2
+    return prepare ? prepare_operator!!(H_AC2) : H_AC2
 end
 
 for f in (:AC_hamiltonian, :AC2_hamiltonian)
@@ -327,8 +328,9 @@ function JordanMPO_AC2_Hamiltonian(
 end
 
 function prepare_operator!!(
-        H::JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}, backend::AbstractBackend, allocator
+        H::JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}
     ) where {O1, O2, O3, O4}
+    backend, allocator = H.backend, H.allocator
 
     CA::Union{Missing, O3} = H.CA
     AB::Union{Missing, O3} = H.AB
@@ -418,8 +420,8 @@ function prepare_operator!!(
         H.EE
     end
 
-    O4′ = prepared_operator_type(O4, typeof(backend), typeof(allocator))
-    AA = prepare_operator!!(H.AA, backend, allocator)
+    O4′ = prepared_operator_type(O4)
+    AA = prepare_operator!!(H.AA)
 
     return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4′}(II, IC, ID, CB, CA, AB, AA, BE, DE, EE, backend, allocator)
 end

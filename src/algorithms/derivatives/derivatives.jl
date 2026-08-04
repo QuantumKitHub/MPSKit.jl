@@ -234,10 +234,13 @@ Base.:*(h::LazySum{<:Union{DerivativeOrMultiplied}}, v) = h(v)
 # Operator preparation
 # --------------------
 """
-    prepare_operator!!(O, [backend], [allocator]) -> O′
+    prepare_operator!!(O) -> O′
 
 Given an operator, try to construct a more efficient representation of that operator.
 This typically consists of precomputing some parts of the application,
 and is expected to only pay off for repeated applications.
+
+The backend and allocator to use are taken from `O` itself, which is where the resulting
+operator's own contractions will read them from as well.
 """
-prepare_operator!!(O, backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()) = O
+prepare_operator!!(O) = O
