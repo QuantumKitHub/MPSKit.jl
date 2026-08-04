@@ -102,7 +102,7 @@ This repository is formatted with [Runic](https://github.com/fredrikekre/Runic.j
 Formatting is checked automatically on pull requests, and there is a [pre-commit](https://pre-commit.com/) hook (`.pre-commit-config.yaml`) that runs Runic locally if you use pre-commit.
 Please format any Julia files you touch before opening a PR, and refrain from making any formatting changes to code that is not relevant to your PR.
 
-### Changelog
+### Changelog entries
 
 If your change is user-facing (new feature, behavior change, bug fix, deprecation, or removal), add an entry under the `[Unreleased]` section of `docs/src/changelog.md`, in the category that matches your change.
 
