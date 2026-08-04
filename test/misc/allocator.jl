@@ -17,15 +17,10 @@ using MPSKit: Scheduler, SerialScheduler, DynamicScheduler, StaticScheduler, Gre
 # stand-in for a storage type MPSKit has no dedicated allocator for, e.g. a device array
 struct FakeDeviceVector{T} <: DenseVector{T} end
 
-# `Base.infer_return_type` is Julia 1.11+; `Core.Compiler.return_type` covers the LTS as well,
-# and is what MPSKit itself already uses (e.g. `grassmann.jl`).
-infer_rt(f, types::Tuple) = @static if isdefined(Base, :infer_return_type)
-    Base.infer_return_type(f, types)
-else
-    Core.Compiler.return_type(f, Tuple{types...})
-end
-
-const SCHEDULERS = (
+# every scheduler kind that spawns, including the chunking variants: the selector has to hand a
+# shared allocator to all of them. `TestSetup.SCHEDULERS` is the coarser serial-vs-dynamic pair the
+# algorithm tests are parametrized over.
+const SPAWNING_SCHEDULERS = (
     "dynamic" => DynamicScheduler(),
     "dynamic nchunks" => DynamicScheduler(; nchunks = 3),
     "dynamic chunksize" => DynamicScheduler(; chunksize = 2),
@@ -51,7 +46,7 @@ const SCHEDULERS = (
     @test default_allocator(TensorKit.storagetype(ψ), SerialScheduler()) isa BufferAllocator
 end
 
-@testset "a shared allocator is never a buffer ($name)" for (name, scheduler) in SCHEDULERS
+@testset "a shared allocator is never a buffer ($name)" for (name, scheduler) in SPAWNING_SCHEDULERS
     # `BufferAllocator` has a mutable offset and is not thread-safe, so it must never be handed to a
     # scheduler that spawns. This is the invariant the whole design rests on.
     ψ = FiniteMPS(randn, ComplexF64, 4, ℂ^2, ℂ^4)
@@ -62,18 +57,18 @@ end
 
 @testset "inference" begin
     ψ = FiniteMPS(randn, ComplexF64, 4, ℂ^2, ℂ^4)
-    S = TensorKit.storagetype(ψ)
 
     # The allocator reaching the contractions has to be concrete, or every one of them goes dynamic.
     # For a statically known scheduler that holds exactly:
-    @test isconcretetype(infer_rt(default_allocator, (typeof(ψ), SerialScheduler)))
-    @test infer_rt(default_allocator, (Type{S}, SerialScheduler)) === typeof(BufferAllocator())
-    @test infer_rt(default_allocator, (typeof(ψ), typeof(DynamicScheduler()))) === ManualAllocator
-    @test @constinferred(default_allocator(ψ, SerialScheduler())) isa BufferAllocator
+    @test @testinferred(default_allocator(ψ, SerialScheduler())) isa BufferAllocator
+    @test @testinferred(default_allocator(ψ, DynamicScheduler())) isa ManualAllocator
+    @test @constinferred(default_allocator(TensorKit.storagetype(ψ), SerialScheduler())) isa
+        BufferAllocator
 
     # `Defaults.scheduler[]` is abstractly typed, so a site that does not pass its scheduler through
-    # a function boundary gets a small union instead - which is why the algorithms do pass it.
-    rt = infer_rt(default_allocator, (typeof(ψ), Scheduler))
+    # a function boundary gets a small union instead - which is why the algorithms do pass it. This
+    # one needs an abstract signature rather than a call, hence `return_type` as `src/` uses it.
+    rt = Core.Compiler.return_type(default_allocator, Tuple{typeof(ψ), Scheduler})
     @test !isconcretetype(rt)
     @test typeof(BufferAllocator()) <: rt && ManualAllocator <: rt
 end

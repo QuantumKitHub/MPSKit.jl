@@ -38,6 +38,11 @@ maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 1:length(ψ))
         E1 = expectation_value(ψ1, H, envs)
         @test E₀ ≈ E1 atol = 1.0e-2
         @test dot(ψ1, ψ₀) ≈ exp(im * dt * E₀) atol = 1.0e-4
+
+        # the integrator carries no scratch space of its own - the sweep's allocator is obtained
+        # per `timestep` - so re-using one across steps has to reproduce the answer
+        ψ2, = timestep(ψ₀, H, 0.0, dt, alg)
+        @test dot(ψ1, ψ2) ≈ norm(ψ1) * norm(ψ2) atol = 1.0e-10
     end
 
     Hlazy = LazySum([3 * H, 1.55 * H, -0.1 * H])
@@ -74,8 +79,12 @@ maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 1:length(ψ))
     ψ₀ = InfiniteMPS([ℙ^3, ℙ^3], [ℙ^50, ℙ^50])
     E₀ = expectation_value(ψ₀, H)
 
-    @testset "Infinite TDVP" begin
-        ψ, envs = timestep(ψ₀, H, 0.0, dt, TDVP())
+    # the AC and C sweeps of the infinite integrator spawn over the unit cell, and additionally run
+    # concurrently with each other, so they share one allocator: check both schedulers agree
+    @testset "Infinite TDVP ($schedname)" for (schedname, scheduler) in SCHEDULERS
+        ψ, envs = with_scheduler(scheduler) do
+            return timestep(ψ₀, H, 0.0, dt, TDVP())
+        end
         E = expectation_value(ψ, H, envs)
         @test E₀ ≈ E atol = 1.0e-2
     end

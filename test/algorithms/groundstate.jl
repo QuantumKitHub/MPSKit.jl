@@ -40,6 +40,13 @@ verbosity_conv = 1
         @test sum(δ) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
+
+        # the algorithm object carries no scratch space of its own - the sweep's allocator is
+        # obtained per solve - so re-using one across solves has to reproduce the answer
+        alg = DMRG(; verbosity = verbosity_conv, maxiter = 10)
+        ψ1, = find_groundstate(ψ₀, H, alg)
+        ψ2, = find_groundstate(ψ₀, H, alg)
+        @test expectation_value(ψ1, H) ≈ expectation_value(ψ2, H) atol = 1.0e-10
     end
 
     @testset "DMRG2" begin
@@ -196,16 +203,21 @@ end
     ψ = InfiniteMPS(ℙ^2, ℙ^D)
     v₀ = variance(ψ, H_ref)
 
-    @testset "VUMPS" for unit_cell_size in [1, 3]
+    # VUMPS spawns over the unit cell, so it is run under both schedulers: which allocator serves
+    # the local updates follows from the scheduler, and must not change any number
+    @testset "VUMPS (unit cell $unit_cell_size, $schedname)" for unit_cell_size in [1, 3],
+            (schedname, scheduler) in SCHEDULERS
+
         ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ, H, VUMPS(; tol, verbosity = verbosity_full, maxiter = 2)
-        )
-
-        ψ, envs, δ = find_groundstate(ψ, H, VUMPS(; tol, verbosity = verbosity_conv))
+        ψ, envs, δ = with_scheduler(scheduler) do
+            # test logging
+            ψ, envs, δ = find_groundstate(
+                ψ, H, VUMPS(; tol, verbosity = verbosity_full, maxiter = 2)
+            )
+            return find_groundstate(ψ, H, VUMPS(; tol, verbosity = verbosity_conv))
+        end
         v = variance(ψ, H, envs)
 
         # test using low variance
@@ -254,18 +266,23 @@ end
         @test v < 1.0e-2
     end
 
-    @testset "GradientGrassmann" for unit_cell_size in [1, 3]
+    # the gradient is computed concurrently over the unit cell, so the scheduler decides its
+    # allocator here too
+    @testset "GradientGrassmann (unit cell $unit_cell_size, $schedname)" for unit_cell_size in
+            [1, 3], (schedname, scheduler) in SCHEDULERS
+
         ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ, H, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
-        )
-
-        ψ, envs, δ = find_groundstate(
-            ψ, H, GradientGrassmann(; tol, verbosity = verbosity_conv)
-        )
+        ψ, envs, δ = with_scheduler(scheduler) do
+            # test logging
+            ψ, envs, δ = find_groundstate(
+                ψ, H, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
+            )
+            return find_groundstate(
+                ψ, H, GradientGrassmann(; tol, verbosity = verbosity_conv)
+            )
+        end
         v = variance(ψ, H, envs)
 
         # test using low variance
