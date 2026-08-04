@@ -63,6 +63,9 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) if you would like to contribute code or
 If you use MPSKit.jl in your research, please cite it.
 See [`CITATION.cff`](CITATION.cff) for the up-to-date citation metadata, or use the BibTeX entry below.
 
+Please consider citing [TensorKit.jl](https://github.com/QuantumKitHub/TensorKit.jl) as well.
+It provides the (symmetric) tensors that MPSKit is built on, and does much of the heavy lifting behind every algorithm here.
+
 ```bibtex
 @software{mpskitjl,
   author  = {Devos, Lukas and Van Damme, Maarten and Haegeman, Jutho},
@@ -71,6 +74,14 @@ See [`CITATION.cff`](CITATION.cff) for the up-to-date citation metadata, or use 
   doi     = {10.5281/zenodo.10654900},
   url     = {https://github.com/QuantumKitHub/MPSKit.jl},
   year    = {2026}
+}
+
+@article{tensorkitjl,
+  author  = {Devos, Lukas and Haegeman, Jutho},
+  title   = {{TensorKit.jl}: A Julia package for large-scale tensor computations, with a hint of category theory},
+  journal = {arXiv preprint arXiv:2508.10076},
+  doi     = {10.48550/arXiv.2508.10076},
+  year    = {2025}
 }
 ```
 
