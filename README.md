@@ -49,8 +49,8 @@ scatter(g_values, M, xlabel="g", ylabel="M", label="D=$D", title="Magnetization"
 
 ![Magnetization](docs/src/assets/README_ising_infinite.png)
 
-The order parameter vanishes at `g = 1`, where the chain becomes critical.
-Replacing the `InfiniteMPS` with a `FiniteMPS` runs the same sweep on a finite chain instead; the [examples](https://QuantumKitHub.github.io/MPSKit.jl/dev/examples/) cover that case along with time evolution, excitations and two-dimensional partition functions.
+The order parameter vanishes at `g ≥ 1`, where the chain becomes critical and transitions to the disordered phase.
+Replacing the `InfiniteMPS` with a `FiniteMPS` and the ground-state algorithm to `DMRG` runs the same sweep on a finite chain instead; the [examples](https://QuantumKitHub.github.io/MPSKit.jl/dev/examples/) cover that case along with time evolution, excitations and two-dimensional partition functions.
 
 ## Getting help and contributing
 
