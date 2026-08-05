@@ -13,8 +13,7 @@ using Markdown
 # Hubbard chain at half filling
 
 The Hubbard model is a model of interacting fermions on a lattice, which is often used as a somewhat realistic model for electrons in a solid.
-The Hamiltonian consists of two terms that describe competing forces of each electron:
-a kinetic term that allows electrons to hop between neighboring sites, and a potential term reflecting on-site interactions between electrons.
+The Hamiltonian consists of two terms that describe competing forces of each electron: a kinetic term that allows electrons to hop between neighboring sites, and a potential term reflecting on-site interactions between electrons.
 Often, a third term is included which serves as a chemical potential to control the number of electrons in the system.
 
 ```math
@@ -29,7 +28,7 @@ This results in the following Hamiltonian:
 H = - ∑_{⟨i, j⟩, σ} c^{†}_{i,σ} c_{j,σ} + U / 4 ∑_i (1 - 2 n_{i,↑}) (1 - 2 n_{i,↓}) - μ ∑_{i,σ} n_{i,σ}
 ```
 
-Finally, setting `\mu = 0` and defining `u = U / 4` we obtain the Hubbard model at half-filling.
+Finally, setting `μ = 0` and defining `u = U / 4` we obtain the Hubbard model at half-filling.
 
 ```math
 H = - ∑_{⟨i, j⟩, σ} c^{†}_{i,σ} c_{j,σ} + u ∑_i (1 - 2 n_{i,↑}) (1 - 2 n_{i,↓})
@@ -44,31 +43,6 @@ using QuadGK: quadgk
 using Plots
 using Interpolations
 using Optim
-````
-
-````
-Precompiling packages...
-   3407.9 ms  ✓ Interpolations
-  1 dependency successfully precompiled in 4 seconds. 29 already precompiled.
-Precompiling packages...
-   1357.0 ms  ✓ TensorOperations → TensorOperationsChainRulesCoreExt
-  1 dependency successfully precompiled in 2 seconds. 20 already precompiled.
-Precompiling packages...
-   3507.7 ms  ✓ TensorKit → TensorKitChainRulesCoreExt
-  1 dependency successfully precompiled in 5 seconds. 55 already precompiled.
-Precompiling packages...
-    949.2 ms  ✓ KrylovKit → KrylovKitChainRulesCoreExt
-  1 dependency successfully precompiled in 1 seconds. 12 already precompiled.
-Precompiling packages...
-   1923.6 ms  ✓ SpecialFunctions → SpecialFunctionsChainRulesCoreExt
-  1 dependency successfully precompiled in 2 seconds. 18 already precompiled.
-Precompiling packages...
-    691.7 ms  ✓ DifferentiationInterface → DifferentiationInterfaceChainRulesCoreExt
-  1 dependency successfully precompiled in 1 seconds. 11 already precompiled.
-Precompiling packages...
-    656.3 ms  ✓ ArrayInterface → ArrayInterfaceChainRulesCoreExt
-  1 dependency successfully precompiled in 1 seconds. 10 already precompiled.
-
 ````
 
 For reproducibility of this page, we fix the seed of the random number generator:
@@ -194,7 +168,7 @@ The elementary excitations are known as spinons and holons, which are domain wal
 The fact that the spin and charge sectors are separate is a phenomenon known as spin-charge separation.
 
 The domain walls can be constructed by noticing that there are two equivalent groundstates, which differ by a translation over a single site.
-In other words, the groundstates are ``\psi_{AB}`` and ``\psi_{BA}``, where ``A`` and ``B`` are the two sites.
+In other words, the groundstates are ``ψ_{AB}`` and ``ψ_{BA}``, where ``A`` and ``B`` are the two sites.
 These excitations can be constructed as follows:
 
 ````julia

@@ -15,13 +15,6 @@ To follow the tutorial you need the following packages:
 using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
 ````
 
-````
-Precompiling packages...
-   1343.7 ms  ✓ Polynomials → PolynomialsRecipesBaseExt
-  1 dependency successfully precompiled in 2 seconds. 18 already precompiled.
-
-````
-
 The Heisenberg model is defined by the following Hamiltonian:
 
 ```math
