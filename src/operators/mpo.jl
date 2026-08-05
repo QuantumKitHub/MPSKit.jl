@@ -87,7 +87,8 @@ function Base.convert(::Type{<:InfiniteMPS}, mpo::InfiniteMPO)
     return InfiniteMPS(map(_mpo_to_mps, parent(mpo)))
 end
 function _mpo_to_mps(O::MPOTensor)
-    @plansor A[-1 -2 -3; -4] := O[-1 -2; 1 2] * τ[1 2; -4 -3]
+    O′ = O isa AbstractBlockTensorMap ? TensorMap(O) : O
+    @plansor A[-1 -2 -3; -4] := O′[-1 -2; 1 2] * τ[1 2; -4 -3]
     return A isa AbstractBlockTensorMap ? TensorMap(A) : A
 end
 
