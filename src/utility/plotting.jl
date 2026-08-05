@@ -32,8 +32,6 @@ function entanglementplot end
         sector_margin = 1 // 10, sector_formatter = string
     )
     mps = h.args[1]
-    (site <= length(mps) && !(isa(mps, FiniteMPS) && site == 0)) ||
-        throw(ArgumentError("Invalid site $site for the given mps."))
 
     spectra = entanglement_spectrum(mps, site)
     sectors = []
