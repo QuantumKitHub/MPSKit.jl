@@ -71,7 +71,8 @@ This can be exploited to formulate a scaling hypothesis [pollmann2009](@cite), w
 
 First we need to know the entropy and correlation length at several different bond dimensions.
 Our approach will be to re-use the previous approximated dominant eigenvector, and then expanding its bond dimension and re-running VUMPS.
-According to the scaling hypothesis we should have ``S ∝ \frac{c}{6} log(ξ)``. Therefore we should find ``c`` using
+According to the scaling hypothesis we should have ``S ∝ \frac{c}{6} log(ξ)``.
+Therefore we should find ``c`` using
 
 ````julia
 function scaling_simulations(

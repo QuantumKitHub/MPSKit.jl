@@ -23,7 +23,8 @@ Working directly in the thermodynamic limit, this is achieved as follows:
 H = heisenberg_XXX(; spin = 1 // 2)
 
 md"""
-We then need an initial state, which we shall later optimize. In this example we work directly in the thermodynamic limit.
+We then need an initial state, which we shall later optimize.
+In this example we work directly in the thermodynamic limit.
 """
 
 state = InfiniteMPS(2, 20)

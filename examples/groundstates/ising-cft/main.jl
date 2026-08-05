@@ -1,17 +1,15 @@
 md"""
 # The Ising CFT spectrum
 
-This tutorial is meant to show the finite size CFT spectrum for the quantum Ising model. We
-do this by first employing an exact diagonalization technique, and then extending the
-analysis to larger system sizes through the use of MPS techniques.
+This tutorial is meant to show the finite size CFT spectrum for the quantum Ising model.
+We do this by first employing an exact diagonalization technique, and then extending the analysis to larger system sizes through the use of MPS techniques.
 """
 
 using MPSKit, MPSKitModels, TensorKit, Plots, KrylovKit
 using LinearAlgebra: eigvals, diagm, Hermitian
 
 md"""
-The Hamiltonian is defined on a finite lattice with periodic boundary conditions,
-which can be implemented as follows:
+The Hamiltonian is defined on a finite lattice with periodic boundary conditions, which can be implemented as follows:
 """
 
 L = 12
@@ -20,11 +18,8 @@ H = periodic_boundary_conditions(transverse_field_ising(), L)
 md"""
 ## Exact diagonalisation
 
-In MPSKit, there is support for exact diagonalisation by leveraging the fact that applying
-the Hamiltonian to an untruncated MPS will result in an effective Hamiltonian on the center
-site which implements the action of the entire Hamiltonian. Thus, optimizing the middle
-tensor is equivalent to optimixing a state in the entire Hilbert space, as all other tensors
-are just unitary matrices that mix the basis.
+In MPSKit, there is support for exact diagonalisation by leveraging the fact that applying the Hamiltonian to an untruncated MPS will result in an effective Hamiltonian on the center site which implements the action of the entire Hamiltonian.
+Thus, optimizing the middle tensor is equivalent to optimizing a state in the entire Hilbert space, as all other tensors are just unitary matrices that mix the basis.
 """
 
 energies, states = exact_diagonalization(H; num = 18, alg = Lanczos(; krylovdim = 200));
@@ -42,9 +37,8 @@ md"""
 md"""
 ## Extracting momentum
 
-Given a state, it is possible to assign a momentum label
-through the use of the translation operator. This operator can be defined in MPO language
-either diagramatically as
+Given a state, it is possible to assign a momentum label through the use of the translation operator.
+This operator can be defined in MPO language either diagrammatically as
 
 ```@raw html
 <img src="./translation_mpo.svg" alt="translation operator" class="color-invertible" width="50%"/>
@@ -60,13 +54,11 @@ function O_shift(L)
 end
 
 md"""
-We can then calculate the momentum of the ground state as the expectation value of this
-operator. However, there is a subtlety because of the degeneracies in the energy
-eigenvalues. The eigensolver will find an orthonormal basis within each energy subspace, but
-this basis is not necessarily a basis of eigenstates of the translation operator. In order
-to fix this, we diagonalize the translation operator within each energy subspace.
-The resulting energy levels have one-to-one correspondence to the operators in CFT, where
-the momentum is related to their conformal spin as $P_n = \frac{2\pi}{L}S_n$.
+We can then calculate the momentum of the ground state as the expectation value of this operator.
+However, there is a subtlety because of the degeneracies in the energy eigenvalues.
+The eigensolver will find an orthonormal basis within each energy subspace, but this basis is not necessarily a basis of eigenstates of the translation operator.
+In order to fix this, we diagonalize the translation operator within each energy subspace.
+The resulting energy levels have one-to-one correspondence to the operators in CFT, where the momentum is related to their conformal spin as $P_n = \frac{2π}{L}S_n$.
 """
 
 function fix_degeneracies(basis)
@@ -93,10 +85,8 @@ append!(momenta, fix_degeneracies(states[13:16]))
 append!(momenta, fix_degeneracies(states[17:18]))
 
 md"""
-We can compute the scaling dimensions $\Delta_n$ of the operators in the CFT from the
-energy gap of the corresponding excitations as $E_n - E_0 = \frac{2\pi v}{L} \Delta_n$,
-where $v = 2$. If we plot these scaling dimensions against the conformal spin $S_n$ from
-above, we retrieve the familiar spectrum of the Ising CFT.
+We can compute the scaling dimensions $Δ_n$ of the operators in the CFT from the energy gap of the corresponding excitations as $E_n - E_0 = \frac{2π v}{L} Δ_n$, where $v = 2$.
+If we plot these scaling dimensions against the conformal spin $S_n$ from above, we retrieve the familiar spectrum of the Ising CFT.
 """
 
 v = 2.0
@@ -115,8 +105,7 @@ p
 md"""
 ## Finite bond dimension
 
-If we limit the maximum bond dimension of the MPS, we get an approximate solution, but we
-can reach higher system sizes.
+If we limit the maximum bond dimension of the MPS, we get an approximate solution, but we can reach higher system sizes.
 """
 
 L_mps = 20
@@ -125,9 +114,8 @@ D = 64
 ψ, envs, δ = find_groundstate(FiniteMPS(L_mps, ℂ^2, ℂ^D), H_mps, DMRG(; verbosity = 0));
 
 md"""
-Excitations on top of the ground state can be found through the use of the quasiparticle
-ansatz. This returns quasiparticle states, which can be converted to regular `FiniteMPS`
-objects.
+Excitations on top of the ground state can be found through the use of the quasiparticle ansatz.
+This returns quasiparticle states, which can be converted to regular `FiniteMPS` objects.
 """
 
 E_ex, qps = excitations(H_mps, QuasiparticleAnsatz(), ψ, envs; num = 18)

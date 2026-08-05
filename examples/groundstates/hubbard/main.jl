@@ -4,8 +4,7 @@ md"""
 # Hubbard chain at half filling
 
 The Hubbard model is a model of interacting fermions on a lattice, which is often used as a somewhat realistic model for electrons in a solid.
-The Hamiltonian consists of two terms that describe competing forces of each electron:
-a kinetic term that allows electrons to hop between neighboring sites, and a potential term reflecting on-site interactions between electrons.
+The Hamiltonian consists of two terms that describe competing forces of each electron: a kinetic term that allows electrons to hop between neighboring sites, and a potential term reflecting on-site interactions between electrons.
 Often, a third term is included which serves as a chemical potential to control the number of electrons in the system.
 
 ```math
@@ -20,7 +19,7 @@ This results in the following Hamiltonian:
 H = - ∑_{⟨i, j⟩, σ} c^{†}_{i,σ} c_{j,σ} + U / 4 ∑_i (1 - 2 n_{i,↑}) (1 - 2 n_{i,↓}) - μ ∑_{i,σ} n_{i,σ}
 ```
 
-Finally, setting `\mu = 0` and defining `u = U / 4` we obtain the Hubbard model at half-filling.
+Finally, setting `μ = 0` and defining `u = U / 4` we obtain the Hubbard model at half-filling.
 
 ```math
 H = - ∑_{⟨i, j⟩, σ} c^{†}_{i,σ} c_{j,σ} + u ∑_i (1 - 2 n_{i,↑}) (1 - 2 n_{i,↓})
@@ -140,7 +139,7 @@ The elementary excitations are known as spinons and holons, which are domain wal
 The fact that the spin and charge sectors are separate is a phenomenon known as spin-charge separation.
 
 The domain walls can be constructed by noticing that there are two equivalent groundstates, which differ by a translation over a single site.
-In other words, the groundstates are ``\psi_{AB}`` and ``\psi_{BA}``, where ``A`` and ``B`` are the two sites.
+In other words, the groundstates are ``ψ_{AB}`` and ``ψ_{BA}``, where ``A`` and ``B`` are the two sites.
 These excitations can be constructed as follows:
 """
 

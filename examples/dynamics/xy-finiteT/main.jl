@@ -22,7 +22,7 @@ As a result, many properties have analytical expressions that can be used to ver
 Here, we use [BenchmarkFreeFermions.jl](https://github.com/Qiaoyi-Li/BenchmarkFreeFermions.jl/) to compare our results.
 
 ```math
-    H = J \sum_{i=1}^{N} \left( \sigma^x_i \sigma^x_{i+1} + \sigma^y_i \sigma^y_{i+1} \right) 
+    H = J \sum_{i=1}^{N} \left( σ^x_i σ^x_{i+1} + σ^y_i σ^y_{i+1} \right)
 ```
 
 Here we will consider the anti-ferromagnetic ($J > 0$) chain, and restrict ourselves to $J = 1/2$.
@@ -49,11 +49,10 @@ end
 md"""
 ## Diagonalization of the Hamiltonian
 
-The Hamiltonian can be diagonalized through a Bogoliubov transformation, leading to the following expression for the ground state energy
-The Hamiltonian can be diagonalized in terms of fermionic creation and annihilation operators, leading to the following expression in terms of [an incomplete elliptic integral of the second kind](https://en.wikipedia.org/wiki/Elliptic_integral).
+The Hamiltonian can be diagonalized in terms of fermionic creation and annihilation operators, which yields an expression for the ground state energy in terms of [an incomplete elliptic integral of the second kind](https://en.wikipedia.org/wiki/Elliptic_integral).
 
 ```math
-    E_0 = -\frac{1}{\pi} \text{EllipticE}\left( \sqrt{1 - \gamma^2} \right)
+    E_0 = -\frac{1}{π} \text{EllipticE}\left( \sqrt{1 - γ^2} \right)
 ```
 
 The derivation, via a Jordan-Wigner transformation to free fermions followed by a Bogoliubov rotation, can be found in [Lieb, Schultz & Mattis, Ann. Phys. 16, 407 (1961)](https://doi.org/10.1016/0003-4916(61)90115-4).
@@ -108,39 +107,39 @@ To go beyond the ground state, we can extract several properties at finite tempe
 This is given by
 
 ```math
-    Z(\beta) = \text{Tr} \left( e^{-\beta H} \right)
+    Z(β) = \text{Tr} \left( e^{-β H} \right)
 ```
 
-where $\beta = 1 / T$ is the inverse temperature.
+where $β = 1 / T$ is the inverse temperature.
 
 Given the partition function, we can compute the free energy as
 ```math
-    F(\beta) = -\frac{1}{\beta} \log Z(\beta)
+    F(β) = -\frac{1}{β} \log Z(β)
 ```
 
 We can also compute observables using
 ```math
-    \langle O \rangle  = \frac{1}{Z} \text{Tr} \left( O e^{-\beta H} \right)
+    ⟨O⟩  = \frac{1}{Z} \text{Tr} \left( O e^{-β H} \right)
 ```
 
 In particular, we can compute the energy as
 ```math
-    U = \langle H \rangle = \frac{1}{Z} \text{Tr} \left( H e^{-\beta H} \right)
+    U = ⟨H⟩ = \frac{1}{Z} \text{Tr} \left( H e^{-β H} \right)
 ```
 
 Finally, the specific heat can be computed as
 ```math
-    \chi = \frac{\partial U}{\partial T} = -\beta^2 \frac{\partial U}{\partial \beta}
+    χ = \frac{∂ U}{∂ T} = -β^2 \frac{∂ U}{∂ β}
 ```
 
 Luckily, the partition function can be computed analytically for the XY model.
 The resulting expression is
 
 ```math
-    Z(\beta) = \prod_{k=1}^{N} \left( 1 + e^{-\beta \epsilon_k} \right)^{1/N}
+    Z(β) = \prod_{k=1}^{N} \left( 1 + e^{-β ε_k} \right)^{1/N}
 ```
 
-This expression follows from the same free-fermion diagonalization as the ground-state energy above: each single-particle mode $\epsilon_k$ is independently occupied or empty, giving the usual free-fermion partition function (see again [Lieb, Schultz & Mattis (1961)](https://doi.org/10.1016/0003-4916(61)90115-4)).
+This expression follows from the same free-fermion diagonalization as the ground-state energy above: each single-particle mode $ε_k$ is independently occupied or empty, giving the usual free-fermion partition function (see again [Lieb, Schultz & Mattis (1961)](https://doi.org/10.1016/0003-4916(61)90115-4)).
 """
 
 function partition_function(β::Number, J::Number, N::Number)
@@ -163,10 +162,10 @@ md"""
 ### MPO approach
 
 We can numerically compute the partition function by explicitly computing the trace of the time-evolution operator.
-To that end, we first need to build the time-evolution operator $e^{-\beta H}$, and then compute its trace.
+To that end, we first need to build the time-evolution operator $e^{-β H}$, and then compute its trace.
 
 In order to build the time-evolution operator, we can repurpose the `make_time_mpo` function, which constructs the time-evolution operator for the ground state.
-However, since we are interested in $e^{-\beta H}$, instead of $e^{-iH dt}$, we work with $dt = -i \beta$.
+However, since we are interested in $e^{-β H}$, instead of $e^{-iH dt}$, we work with $dt = -i β$.
 In particular, we can approximate the exponential using a Taylor series through the `TaylorCluster` algorithm.
 """
 
@@ -206,13 +205,13 @@ end
 md"""
 Some observations:
 - The first order approximation fails to capture the behavior of the partition function.
-- The higher order approximations are in good agreement with the analytical result, as long as $\beta$ is not too large.
-- The computational cost of the approximations does not depend on $\beta$, but on the order of the approximation.
+- The higher order approximations are in good agreement with the analytical result, as long as $β$ is not too large.
+- The computational cost of the approximations does not depend on $β$, but on the order of the approximation.
 """
 
 md"""
 To address the first point, we can have a look at the particular form of the time-evolution operator.
-Here we see that for this particular Hamiltonian, all the terms with factors $d\tau$ are either zero or have trace zero.
+Here we see that for this particular Hamiltonian, all the terms with factors $dτ$ are either zero or have trace zero.
 As a result, the trace of the time-evolution operator is equal to the trace of the identity, hence the result is always $2$.
 
 ```math
@@ -223,9 +222,9 @@ H &= \begin{pmatrix}
     0 & 0 & 1
 \end{pmatrix} \\
 
-e^{\tau H} &= \begin{pmatrix}
-    1 + \tau D + \frac{\tau^2}{2} D^2 & C + \frac{\tau}{2} (CD + DC) \\
-    \tau (B + \frac{\tau}{2} (BD + DB)) & A + \frac{\tau^2}{2} (AD + DA + CB + BC)
+e^{τ H} &= \begin{pmatrix}
+    1 + τ D + \frac{τ^2}{2} D^2 & C + \frac{τ}{2} (CD + DC) \\
+    τ (B + \frac{τ}{2} (BD + DB)) & A + \frac{τ^2}{2} (AD + DA + CB + BC)
 \end{pmatrix}
 \end{align}
 ```
@@ -257,20 +256,20 @@ p_taylor_diff = let
 end
 
 md"""
-We can now clearly see that, somewhat unsurprisingly, the error increases the larger $\beta$ becomes.
-Given that we are computing Taylor expansions around $\beta = 0$, this is to be expected.
+We can now clearly see that, somewhat unsurprisingly, the error increases the larger $β$ becomes.
+Given that we are computing Taylor expansions around $β = 0$, this is to be expected.
 
 However, there is a trick we can use to improve our results slightly.
 To that end, we first rewrite the partition function as
 ```math
-Z(\beta) =
-    \text{Tr} \left( e^{-\beta H} \right) =
-    \text{Tr} \left( e^{-\beta H / 2} e^{-\beta H / 2} \right) =
-    \left\langle e^{-\beta H^\dagger / 2}, e^{-\beta H / 2} \right\rangle
+Z(β) =
+    \text{Tr} \left( e^{-β H} \right) =
+    \text{Tr} \left( e^{-β H / 2} e^{-β H / 2} \right) =
+    \left\langle e^{-β H^† / 2}, e^{-β H / 2} \right\rangle
 ```
 
-In other words, we can compute the partition function at $\beta$ by computing the overlap of two states evolved for $\beta / 2$, as long as the Hamiltonian is Hermitian.
-Otherwise, we could still use the same trick, but we would have to compute the evolved states twice, once for $H$ and once for $H^\dagger$.
+In other words, we can compute the partition function at $β$ by computing the overlap of two states evolved for $β / 2$, as long as the Hamiltonian is Hermitian.
+Otherwise, we could still use the same trick, but we would have to compute the evolved states twice, once for $H$ and once for $H^†$.
 
 """
 
@@ -309,15 +308,15 @@ end
 md"""
 ### MPO multiplication approach (linear)
 
-While the Taylor series approach is useful, we can only push that so far, since we are always expanding around $\beta = 0$.
-However, inspired by the trick we used to improve the results, we can use MPO multiplication techniques to compute partition functions at larger $\beta$.
-In particular, we can implement the following algorithm to scan over a linear range of $\beta$ values.
+While the Taylor series approach is useful, we can only push that so far, since we are always expanding around $β = 0$.
+However, inspired by the trick we used to improve the results, we can use MPO multiplication techniques to compute partition functions at larger $β$.
+In particular, we can implement the following algorithm to scan over a linear range of $β$ values.
 
 ```math
 \begin{align}
-Z(2\beta) &= Z(\beta) \cdot Z(\beta) \\
-Z(3\beta) &= Z(\beta) \cdot Z(\beta) \cdot Z(\beta) = Z(\beta) \cdot Z(2\beta) \\
-\vdots &= \vdots
+Z(2β) &= Z(β) · Z(β) \\
+Z(3β) &= Z(β) · Z(β) · Z(β) = Z(β) · Z(2β) \\
+⋮ &= ⋮
 \end{align}
 ```
 
@@ -382,10 +381,10 @@ p_mpo_mul_diff = let
 end
 
 md"""
-This approach clearly improves the accuracy of the results, indicating that we can indeed compute partition functions at larger $\beta$ values.
-However, the computational cost of this approach (at fixed maximal bond dimension) is now linear in $\beta$, since we need to compute the partition function at each $\beta$ value.
-Often, this is fine, since we are typically interested in a range of $\beta$ values, rather than a single one.
-However, to really push this to larger $\beta$ values, this can still turn out to be a bottleneck.
+This approach clearly improves the accuracy of the results, indicating that we can indeed compute partition functions at larger $β$ values.
+However, the computational cost of this approach (at fixed maximal bond dimension) is now linear in $β$, since we need to compute the partition function at each $β$ value.
+Often, this is fine, since we are typically interested in a range of $β$ values, rather than a single one.
+However, to really push this to larger $β$ values, this can still turn out to be a bottleneck.
 
 We also have to be careful with the accuracy of our results.
 In particular, the error in the partition function will accumulate over the iterations, which might turn the results into garbage.
@@ -393,25 +392,25 @@ Typically, the entanglement entropy of the density matrix is a good measure of t
 
 Apart from the bond dimension, we have two other parameters to tune: the accuracy of the initial density matrix, and the size of the step.
 The accuracy of the initial density matrix can be improved by increasing the order of the Taylor expansion, but this will result in a larger MPO bond dimension.
-On the other hand, if we improve the accuracy of the initial density matrix, we could also increase the step size, which would reduce the number of iterations required to reach a certain $\beta$ value.
+On the other hand, if we improve the accuracy of the initial density matrix, we could also increase the step size, which would reduce the number of iterations required to reach a certain $β$ value.
 Keeping these parameters in balance is necessary to obtain accurate results, and this might require some trial and error.
 """
 
 md"""
 ### MPO multiplication approach (exponential)
 
-If we wish to push the results to even larger $\beta$ values, we can note that taking linear steps in $\beta$ is not the only option.
-To that end, we can use another trick to scan over an exponential range of $\beta$ values: [exponentiating by squaring](https://en.wikipedia.org/wiki/Exponentiation_by_squaring).
-In particular, we note that computing $x^n$ for integer (large) $n$ can typically be done more efficiently than computing $x \cdot x \cdot \dots \cdot x$.
+If we wish to push the results to even larger $β$ values, we can note that taking linear steps in $β$ is not the only option.
+To that end, we can use another trick to scan over an exponential range of $β$ values: [exponentiating by squaring](https://en.wikipedia.org/wiki/Exponentiation_by_squaring).
+In particular, we note that computing $x^n$ for integer (large) $n$ can typically be done more efficiently than computing $x · x · … · x$.
 To do so, we note that multiplication is associative, and regroup the factors in such a way that we can compute the result in a logarithmic number of steps.
 Here, we assume $n = 2^m$ for some integer $m$, and note that this could be generalized to any $n$ by decomposing $n$ into a sum of powers of $2$.
 Then, we can write
 
 ```math
-x^n = x^{2^m} = x^{2^{m-1}} \cdot x^{2^{m-1}} = (x^{2^{m-2}} \cdot x^{2^{m-2}}) \cdot (x^{2^{m-2}} \cdot x^{2^{m-2}}) = \dots
+x^n = x^{2^m} = x^{2^{m-1}} · x^{2^{m-1}} = (x^{2^{m-2}} · x^{2^{m-2}}) · (x^{2^{m-2}} · x^{2^{m-2}}) = …
 ```
 
-In other words, we can scan a range of exponentially increasing $\beta$ values by squaring the density matrix at each step.
+In other words, we can scan a range of exponentially increasing $β$ values by squaring the density matrix at each step.
 """
 
 βs_exp = 2.0 .^ (-3:3)
@@ -462,7 +461,7 @@ p_mpo_mul_exp_diff = let
 end
 
 md"""
-Clearly, the exponential approach allows us to reach larger $\beta$ values much quicker, but there is again a trade-off.
+Clearly, the exponential approach allows us to reach larger $β$ values much quicker, but there is again a trade-off.
 Since the size of the steps are increasing, we need to be more careful with the accuracy of our approximations.
 
 !!! warning
@@ -476,14 +475,14 @@ md"""
 Finally, we can also note that the partition function is characterized by the following differential equation:
 
 ```math
-\frac{dZ}{d\beta} = -H \cdot Z
-\implies Z(\beta) = e^{-\beta H} \cdot Z(0)
+\frac{dZ}{dβ} = -H · Z
+⟹ Z(β) = e^{-β H} · Z(0)
 ```
 
-In other words, we can compute the partition function at $\beta$ by evolving the partition function at $0$ for a time $d\tau = -i \beta$.
+In other words, we can compute the partition function at $β$ by evolving the partition function at $0$ for a time $dτ = -i β$.
 
 The starting point for this approach could be either achieved through one of the techniques we have already discussed, but we can also start from the infinite temperature state directly.
-In particular, this state is given by the identity MPO, and we can evolve this state to compute the partition function at any $\beta$ value.
+In particular, this state is given by the identity MPO, and we can evolve this state to compute the partition function at any $β$ value.
 """
 
 Z_tdvp = zeros(length(βs))
@@ -533,6 +532,6 @@ end
 
 md"""
 !!! note
-    We could further improve the accuracy of the TDVP approach by evolving with $(H \otimes \mathbb{1} + \mathbb{1} \otimes H^\dagger)$, rather than $H \otimes \mathbb{1}$ which is the current implementation.
+    We could further improve the accuracy of the TDVP approach by evolving with $(H ⊗ \mathbb{1} + \mathbb{1} ⊗ H^†)$, rather than $H ⊗ \mathbb{1}$ which is the current implementation.
     This is known to improve the stability of the positive semidefinite property of the density matrix, and could lead to more accurate results.
 """
