@@ -267,8 +267,8 @@ function JordanMPO_AC2_Hamiltonian(
 
     # starting left - continuing right
     CA = if nonzero_length(C1) > 0 && nonzero_length(A2) > 0
-        @plansor backend = backend allocator = allocator CA_[-1 -2 -3; -4 -5 -6] ≔ C1[-1; -4 2] * A2[2 -2; -5 1] *
-            GR2[-6 1; -3]
+        @plansor backend = backend allocator = allocator CA_[-1 -2 -3; -4 -5 -6] ≔ C1[-1; -4 1] * A2[1 -2; -5 2] *
+            GR2[-6 2; -3]
         only(CA_)
     else
         missing
