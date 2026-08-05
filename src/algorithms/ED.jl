@@ -2,7 +2,8 @@
     exact_diagonalization(
             H::FiniteMPOHamiltonian;
             sector = rightunit(H), num::Int = 1, which::Symbol = :SR,
-            alg = Defaults.alg_eigsolve(; dynamic_tols = false)
+            alg = Defaults.alg_eigsolve(; dynamic_tols = false),
+            backend = Defaults.backend()
         ) -> vals, state_vecs, convhist
 
 Use [`KrylovKit.eigsolve`](@extref) to perform exact diagonalization on a
@@ -21,6 +22,7 @@ equivalent to dense eigenvectors.
 - `which::Symbol = :SR`: the kind eigenvalues to find, see [`KrylovKit.eigsolve`](@extref).
 - `alg = Defaults.alg_eigsolve(; dynamic_tols = false)`: the diagonalization algorithm to use,
   see [`KrylovKit.eigsolve`](@extref).
+- `backend = Defaults.backend()`: backend for tensor contractions and index manipulations.
 
 !!! note "Valid `sector` values"
     The total charge of the eigenvectors is imposed by adding a charged auxiliary space as
@@ -34,7 +36,8 @@ equivalent to dense eigenvectors.
 function exact_diagonalization(
         H::FiniteMPOHamiltonian;
         sector = rightunit(H), num::Int = 1, which::Symbol = :SR,
-        alg = Defaults.alg_eigsolve(; dynamic_tols = false)
+        alg = Defaults.alg_eigsolve(; dynamic_tols = false),
+        backend::AbstractBackend = Defaults.backend()
     )
     L = length(H)
     @assert L > 1 "FiniteMPOHamiltonian must have length > 1"
@@ -74,7 +77,8 @@ function exact_diagonalization(
     # optimize the middle site
     # Because the MPS is full rank - this is equivalent to the full Hamiltonian
     AC₀ = state.AC[middle_site]
-    H_ac = AC_hamiltonian(middle_site, state, H, state, envs)
+    allocator = default_allocator(state, SerialScheduler())
+    H_ac = AC_hamiltonian(middle_site, state, H, state, envs; backend, allocator)
     vals, vecs, convhist = eigsolve(H_ac, AC₀, num, which, alg)
 
     # repack eigenstates

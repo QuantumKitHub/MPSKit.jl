@@ -36,7 +36,7 @@ To restore a maximal dimension of `D`, apply [`changebonds`](@ref) with an [`Svd
 
 * [Ceruti et al. BIT Numer. Math. 62 (2022)](@cite ceruti2022)
 """
-struct BUG{A, O, G, F} <: Algorithm
+struct BUG{A, O, G, F, B} <: Algorithm
     "algorithm used in the exponential solvers"
     integrator::A
 
@@ -48,14 +48,17 @@ struct BUG{A, O, G, F} <: Algorithm
 
     "callback function applied after each iteration, of signature `finalize(t, ψ, H, envs) -> ψ, envs`"
     finalize::F
+
+    "backend for tensor contractions and index manipulations"
+    backend::B
 end
 function BUG(;
         integrator = Defaults.alg_expsolve(), alg_orth = Defaults.alg_orth(),
         trunc = notrunc(), alg_svd = Defaults.alg_svd(),
-        finalize = Defaults._finalize
+        finalize = Defaults._finalize, backend = Defaults.backend()
     )
     alg_gauge = _build_inner_gauge(trunc, alg_svd, alg_orth)
-    return BUG(integrator, alg_orth, alg_gauge, finalize)
+    return BUG(integrator, alg_orth, alg_gauge, finalize, backend)
 end
 
 # `ψ.AC[site]` first, the neighbour second: the lazy `CView` walk keys off what is already cached, and
@@ -120,19 +123,19 @@ function _augment_basis!(site::Int, dir::Val{:left}, ψ, AR_old_tail, AC, C₀, 
     )
 end
 
-function _evolve_center(site, ψ, H, alg::BUG, envs, t, h; imaginary_evolution)
-    Heff = AC_hamiltonian(site, ψ, H, ψ, envs)
+function _evolve_center(site, ψ, H, alg::BUG, envs, t, h, allocator; imaginary_evolution)
+    Heff = AC_hamiltonian(site, ψ, H, ψ, envs; alg.backend, allocator)
     return integrate(Heff, ψ.AC[site], t, h, alg.integrator; imaginary_evolution)
 end
 
 function local_update!(
-        site, direction::Val, ψ, H, alg::BUG, envs, t, h;
+        site, direction::Val, ψ, H, alg::BUG, envs, t, h, allocator;
         imaginary_evolution, normalize, timeroutput
     )
     # at the far end of the sweep there is no bond ahead to cut: evolve and finalize
     if site == _sweep_end(ψ, direction)
         AC = @timeit timeroutput "AC_integrate" _evolve_center(
-            site, ψ, H, alg, envs, t, h; imaginary_evolution
+            site, ψ, H, alg, envs, t, h, allocator; imaginary_evolution
         )
         normalize && normalize!(AC)
         ψ.AC[site] = AC
@@ -146,7 +149,7 @@ function local_update!(
 
     # 2. evolve the connecting tensor
     AC = @timeit timeroutput "AC_integrate" _evolve_center(
-        site, ψ, H, alg, envs, t, h; imaginary_evolution
+        site, ψ, H, alg, envs, t, h, allocator; imaginary_evolution
     )
 
     # 3. augment the basis (old first, no truncation here) and install it, together with the
@@ -165,10 +168,13 @@ function timestep!(
     L = length(ψ)
     h = dt / 2
 
+    # the sweep is serial, so a single allocator serves all local updates
+    allocator = default_allocator(ψ, SerialScheduler())
+
     # left→right half-sweep (root = last site): `t → t + dt / 2`
     @timeit timeroutput "half-sweep" for site in 1:L
         ψ = local_update!(
-            site, Val(:right), ψ, H, alg, envs, t, h;
+            site, Val(:right), ψ, H, alg, envs, t, h, allocator;
             imaginary_evolution, normalize, timeroutput
         )
     end
@@ -176,7 +182,7 @@ function timestep!(
     # right→left half-sweep (root = first site): `t + dt / 2 → t + dt`
     @timeit timeroutput "half-sweep" for site in L:-1:1
         ψ = local_update!(
-            site, Val(:left), ψ, H, alg, envs, t + h, h;
+            site, Val(:left), ψ, H, alg, envs, t + h, h, allocator;
             imaginary_evolution, normalize, timeroutput
         )
     end

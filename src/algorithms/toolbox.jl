@@ -43,8 +43,8 @@ function infinite_temperature_density_matrix(H::MPOHamiltonian)
 end
 
 """
-    calc_galerkin(below, operator, above, envs)
-    calc_galerkin(pos, below, operator, above, envs)
+    calc_galerkin(below, operator, above, envs; kwargs...)
+    calc_galerkin(pos, below, operator, above, envs; kwargs...)
 
 Calculate the Galerkin error, which is the error between the solution of the original problem, and the solution of the problem projected on the tangent space.
 Concretely, this is the overlap of the current state with the single-site derivative, projected onto the nullspace of the current state:
@@ -52,18 +52,29 @@ Concretely, this is the overlap of the current state with the single-site deriva
 ```math
 \\epsilon = \\left|VL ⋅ \\left(VL^{\\dagger} ⋅ \\frac{\\partial \\text{above}}{\\partial AC_{\\text{pos}}}\\right)\\right|
 ```
+
+# Keyword Arguments
+
+- `backend = DefaultBackend()`: backend for the tensor contractions of the derivative.
+- `allocator = DefaultAllocator()`: allocator serving their scratch space. A sweep that already
+  holds one should pass it, rather than leaving this contraction to the garbage collector.
 """
-function calc_galerkin(pos::Int, below, operator, above, envs)
-    AC´ = AC_projection(pos, below, operator, above, envs)
+function calc_galerkin(
+        pos::Int, below, operator, above, envs;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    AC´ = AC_projection(pos, below, operator, above, envs; backend, allocator)
     normalize!(AC´)
     return norm(project_complement!(AC´, below.AL[pos]))
 end
-function calc_galerkin(pos::CartesianIndex{2}, below, operator, above, envs)
+function calc_galerkin(pos::CartesianIndex{2}, below, operator, above, envs; kwargs...)
     row, col = Tuple(pos)
-    return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
+    return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row]; kwargs...)
 end
-function calc_galerkin(below, operator, above, envs)
-    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), eachindex(below))
+function calc_galerkin(below, operator, above, envs; kwargs...)
+    return maximum(eachindex(below)) do pos
+        return calc_galerkin(pos, below, operator, above, envs; kwargs...)
+    end
 end
 
 """

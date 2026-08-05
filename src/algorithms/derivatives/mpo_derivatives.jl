@@ -1,40 +1,66 @@
 """
-    struct MPODerivativeOperator{L, O <: Tuple, R}
+    struct MPODerivativeOperator{L, O <: Tuple, R, B, A}
 
 Effective local operator obtained from taking the partial derivative of an MPS-MPO-MPS sandwich.
+
+The `backend` and `allocator` fields are the ones used by the application of the operator. They
+default to `DefaultBackend()` and `DefaultAllocator()`, i.e. this operator does not hold on to
+any scratch space of its own unless it is explicitly given some.
 """
-struct MPODerivativeOperator{L, O <: Tuple, R} <: DerivativeOperator
+struct MPODerivativeOperator{L, O <: Tuple, R, B <: AbstractBackend, A} <: DerivativeOperator
     leftenv::L
     operators::O
     rightenv::R
+    backend::B
+    allocator::A
 end
 
 Base.length(H::MPODerivativeOperator) = length(H.operators)
 
-const MPO_C_Hamiltonian{L, R} = MPODerivativeOperator{L, Tuple{}, R}
-MPO_C_Hamiltonian(GL, GR) = MPODerivativeOperator(GL, (), GR)
+const MPO_C_Hamiltonian{L, R, B, A} = MPODerivativeOperator{L, Tuple{}, R, B, A}
+MPO_C_Hamiltonian(
+    GL, GR, backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+) = MPODerivativeOperator(GL, (), GR, backend, allocator)
 
-const MPO_AC_Hamiltonian{L, O, R} = MPODerivativeOperator{L, Tuple{O}, R}
-MPO_AC_Hamiltonian(GL, O, GR) = MPODerivativeOperator(GL, (O,), GR)
+const MPO_AC_Hamiltonian{L, O, R, B, A} = MPODerivativeOperator{L, Tuple{O}, R, B, A}
+MPO_AC_Hamiltonian(
+    GL, O, GR, backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+) = MPODerivativeOperator(GL, (O,), GR, backend, allocator)
 
-const MPO_AC2_Hamiltonian{L, O₁, O₂, R} = MPODerivativeOperator{L, Tuple{O₁, O₂}, R}
-MPO_AC2_Hamiltonian(GL, O1, O2, GR) = MPODerivativeOperator(GL, (O1, O2), GR)
+const MPO_AC2_Hamiltonian{L, O₁, O₂, R, B, A} = MPODerivativeOperator{L, Tuple{O₁, O₂}, R, B, A}
+MPO_AC2_Hamiltonian(
+    GL, O1, O2, GR, backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+) = MPODerivativeOperator(GL, (O1, O2), GR, backend, allocator)
 
 # Constructors
 # ------------
-function C_hamiltonian(site::Int, below, operator, above, envs; prepare::Bool = true)
-    H_C = MPO_C_Hamiltonian(leftenv(envs, site + 1, below), rightenv(envs, site, below))
+function C_hamiltonian(
+        site::Int, below, operator, above, envs; prepare::Bool = true,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    H_C = MPO_C_Hamiltonian(
+        leftenv(envs, site + 1, below), rightenv(envs, site, below), backend, allocator
+    )
     return prepare ? prepare_operator!!(H_C) : H_C
 end
-function AC_hamiltonian(site::Int, below, operator, above, envs; prepare::Bool = true)
+function AC_hamiltonian(
+        site::Int, below, operator, above, envs; prepare::Bool = true,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     O = isnothing(operator) ? nothing : operator[site]
-    H_AC = MPO_AC_Hamiltonian(leftenv(envs, site, below), O, rightenv(envs, site, below))
+    H_AC = MPO_AC_Hamiltonian(
+        leftenv(envs, site, below), O, rightenv(envs, site, below), backend, allocator
+    )
     return prepare ? prepare_operator!!(H_AC) : H_AC
 end
-function AC2_hamiltonian(site::Int, below, operator, above, envs; prepare::Bool = true)
+function AC2_hamiltonian(
+        site::Int, below, operator, above, envs; prepare::Bool = true,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     O1, O2 = isnothing(operator) ? (nothing, nothing) : (operator[site], operator[site + 1])
     H_AC2 = MPO_AC2_Hamiltonian(
-        leftenv(envs, site, below), O1, O2, rightenv(envs, site + 1, below)
+        leftenv(envs, site, below), O1, O2, rightenv(envs, site + 1, below),
+        backend, allocator
     )
     return prepare ? prepare_operator!!(H_AC2) : H_AC2
 end
@@ -57,55 +83,83 @@ end
 # Actions
 # -------
 function (h::MPO_C_Hamiltonian{<:MPSBondTensor, <:MPSBondTensor})(x::MPSBondTensor)
-    @plansor y[-1; -2] ≔ h.leftenv[-1; 1] * x[1; 2] * h.rightenv[2; -2]
+    backend, allocator = h.backend, h.allocator
+    @plansor backend = backend allocator = allocator begin
+        y[-1; -2] ≔ h.leftenv[-1; 1] * x[1; 2] * h.rightenv[2; -2]
+    end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 function (h::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor})(x::MPSBondTensor)
-    @plansor y[-1; -2] ≔ h.leftenv[-1 3; 1] * x[1; 2] * h.rightenv[2 3; -2]
+    backend, allocator = h.backend, h.allocator
+    @plansor backend = backend allocator = allocator begin
+        y[-1; -2] ≔ h.leftenv[-1 3; 1] * x[1; 2] * h.rightenv[2 3; -2]
+    end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 
 function (h::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})(x::MPSTensor)
-    @plansor y[-1 -2; -3] ≔ h.leftenv[-1 5; 4] * x[4 2; 1] * h.operators[1][5 -2; 2 3] *
-        h.rightenv[1 3; -3]
+    backend, allocator = h.backend, h.allocator
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2; -3] ≔ h.leftenv[-1 5; 4] * x[4 2; 1] * h.operators[1][5 -2; 2 3] *
+            h.rightenv[1 3; -3]
+    end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 function (h::MPO_AC_Hamiltonian{<:MPSTensor, <:Number, <:MPSTensor})(x::MPSTensor)
-    @plansor y[-1 -2; -3] ≔ (
-        h.leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] * h.rightenv[1 7; -3]
-    ) * only(h.operators)
+    backend, allocator = h.backend, h.allocator
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2; -3] ≔ (
+            h.leftenv[-1 5; 4] * x[4 6; 1] * τ[6 5; 7 -2] * h.rightenv[1 7; -3]
+        ) * only(h.operators)
+    end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 function (h::MPO_AC_Hamiltonian{<:MPSBondTensor, Nothing, <:MPSBondTensor})(x::MPSTensor)
-    return @plansor y[-1 -2; -3] ≔ h.leftenv[-1; 2] * x[2 -2; 1] * h.rightenv[1; -3]
+    backend, allocator = h.backend, h.allocator
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2; -3] ≔ h.leftenv[-1; 2] * x[2 -2; 1] * h.rightenv[1; -3]
+    end
+    return y
 end
 function (h::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})(
         x::GenericMPSTensor{<:Any, 3}
     )
-    @plansor y[-1 -2 -3; -4] ≔ h.leftenv[-1 7; 6] * x[6 4 2; 1] *
-        h.operators[1][7 -2; 4 5] * τ[5 -3; 2 3] * h.rightenv[1 3; -4]
+    backend, allocator = h.backend, h.allocator
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2 -3; -4] ≔ h.leftenv[-1 7; 6] * x[6 4 2; 1] *
+            h.operators[1][7 -2; 4 5] * τ[5 -3; 2 3] * h.rightenv[1 3; -4]
+    end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 
 function (h::MPO_AC2_Hamiltonian{<:MPSBondTensor, Nothing, Nothing, <:MPSBondTensor})(
         x::MPOTensor
     )
-    @plansor y[-1 -2; -3 -4] ≔ h.leftenv[-1; 1] * x[1 -2; 2 -4] * h.rightenv[2 -3]
+    backend, allocator = h.backend, h.allocator
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2; -3 -4] ≔ h.leftenv[-1; 1] * x[1 -2; 2 -4] * h.rightenv[2 -3]
+    end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor})(
         x::MPOTensor
     )
-    @plansor y[-1 -2; -3 -4] ≔ h.leftenv[-1 7; 6] * x[6 5; 1 3] *
-        h.operators[1][7 -2; 5 4] * h.operators[2][4 -4; 3 2] * h.rightenv[1 2; -3]
+    backend, allocator = h.backend, h.allocator
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2; -3 -4] ≔ h.leftenv[-1 7; 6] * x[6 5; 1 3] *
+            h.operators[1][7 -2; 5 4] * h.operators[2][4 -4; 3 2] * h.rightenv[1 2; -3]
+    end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor})(
         x::AbstractTensorMap{<:Any, <:Any, 3, 3}
     )
-    @plansor y[-1 -2 -3; -4 -5 -6] ≔ h.leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
-        h.rightenv[1 3; -4] * h.operators[1][11 -2; 8 9] * τ[9 -3; 6 7] *
-        h.operators[2][7 -6; 4 5] * τ[5 -5; 2 3]
+    backend, allocator = h.backend, h.allocator
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2 -3; -4 -5 -6] ≔ h.leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
+            h.rightenv[1 3; -4] * h.operators[1][11 -2; 8 9] * τ[9 -3; 6 7] *
+            h.operators[2][7 -6; 4 5] * τ[5 -5; 2 3]
+    end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 
@@ -135,7 +189,7 @@ VectorInterface.scalartype(::Type{<:PrecomputedDerivative{T}}) where {T} = T
 TensorKit.storagetype(::Type{<:PrecomputedDerivative{T, S, M}}) where {T, S, M} = M
 
 Base.@assume_effects :foldable function prepared_operator_type(
-        ::Type{MPO_C_Hamiltonian{L, R}}, ::Type{B}, ::Type{A}
+        ::Type{<:MPO_C_Hamiltonian{L, R, B, A}}
     ) where {L, R, B, A}
     T = TensorOperations.promote_contract(scalartype(L), scalartype(R))
     S = TensorKit.check_spacetype(L, R)
@@ -143,7 +197,7 @@ Base.@assume_effects :foldable function prepared_operator_type(
     return PrecomputedCDerivative{T, S, M, B, A}
 end
 Base.@assume_effects :foldable function prepared_operator_type(
-        ::Type{MPO_AC_Hamiltonian{L, O, R}}, ::Type{B}, ::Type{A}
+        ::Type{<:MPO_AC_Hamiltonian{L, O, R, B, A}}
     ) where {L, O, R, B, A}
     T = TensorOperations.promote_contract(scalartype(L), scalartype(O), scalartype(R))
     S = TensorKit.check_spacetype(L, O, R)
@@ -151,7 +205,7 @@ Base.@assume_effects :foldable function prepared_operator_type(
     return PrecomputedACDerivative{T, S, M, B, A}
 end
 Base.@assume_effects :foldable function prepared_operator_type(
-        ::Type{MPO_AC2_Hamiltonian{L, O₁, O₂, R}}, ::Type{B}, ::Type{A}
+        ::Type{<:MPO_AC2_Hamiltonian{L, O₁, O₂, R, B, A}}
     ) where {L, O₁, O₂, R, B, A}
     T = TensorOperations.promote_contract(scalartype(L), scalartype(O₁), scalartype(O₂), scalartype(R))
     S = TensorKit.check_spacetype(L, O₁, O₂, R)
@@ -159,20 +213,13 @@ Base.@assume_effects :foldable function prepared_operator_type(
     return PrecomputedAC2Derivative{T, S, M, B, A}
 end
 
-function prepare_operator!!(
-        H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor},
-        backend::AbstractBackend, allocator
-    )
+function prepare_operator!!(H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor})
     leftenv = _transpose_tail(H.leftenv isa TensorMap ? H.leftenv : TensorMap(H.leftenv))
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
-    return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
-        leftenv, rightenv, backend, allocator
-    )
+    return prepared_operator_type(typeof(H))(leftenv, rightenv, H.backend, H.allocator)
 end
-function prepare_operator!!(
-        H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor},
-        backend::AbstractBackend, allocator
-    )
+function prepare_operator!!(H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})
+    backend, allocator = H.backend, H.allocator
     @plansor backend = backend allocator = allocator begin
         GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
     end
@@ -180,15 +227,13 @@ function prepare_operator!!(
     leftenv = repartition(fuse_legs(leftenv, 1, 2), 2, 2)
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
 
-    return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
-        leftenv, rightenv, backend, allocator
-    )
+    return prepared_operator_type(typeof(H))(leftenv, rightenv, backend, allocator)
 end
 
 function prepare_operator!!(
-        H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
-        backend::AbstractBackend, allocator
+        H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor}
     )
+    backend, allocator = H.backend, H.allocator
     @plansor backend = backend allocator = allocator begin
         GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
         O_GR[-1 -2; -4 -5 -3] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
@@ -198,9 +243,7 @@ function prepare_operator!!(
 
     rightenv = O_GR isa TensorMap ? O_GR : TensorMap(O_GR)
     rightenv = repartition(fuse_legs(rightenv, 2, 1), 2, 2)
-    return prepared_operator_type(typeof(H), typeof(backend), typeof(allocator))(
-        leftenv, rightenv, backend, allocator
-    )
+    return prepared_operator_type(typeof(H))(leftenv, rightenv, backend, allocator)
 end
 
 function (H::PrecomputedCDerivative)(x::MPSBondTensor)
@@ -279,6 +322,6 @@ const _ToPrepare = Union{
     MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor},
 }
 
-function prepare_operator!!(H::Multiline{<:_ToPrepare}, backend::AbstractBackend, allocator)
-    return Multiline(map(x -> prepare_operator!!(x, backend, allocator), parent(H)))
+function prepare_operator!!(H::Multiline{<:_ToPrepare})
+    return Multiline(map(prepare_operator!!, parent(H)))
 end

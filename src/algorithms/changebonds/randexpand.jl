@@ -86,7 +86,10 @@ function changebonds!(ψ::AbstractFiniteMPS, alg::RandExpand)
     return normalize!(ψ)
 end
 
-function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::RandExpand, envs; normalize::Bool = true)
+function changebond!(
+        site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::RandExpand, envs;
+        normalize::Bool = true, allocator = nothing,
+    )
     bond = site
     left = ψ.AC[site]
     right = ψ.AR[site + 1]
@@ -115,7 +118,10 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Ra
     ψ.AC[site + 1] = (nc, nar)
     return ψ
 end
-function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::RandExpand, envs; normalize::Bool = true)
+function changebond!(
+        site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::RandExpand, envs;
+        normalize::Bool = true, allocator = nothing,
+    )
     bond = site - 1
     left = ψ.AL[site - 1]
     right = ψ.AC[site]

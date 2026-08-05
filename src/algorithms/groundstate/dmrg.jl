@@ -59,7 +59,7 @@ $(TYPEDFIELDS)
 
 Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
-struct DMRG{A, F, E, G} <: Algorithm
+struct DMRG{A, F, E, G, B} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64
 
@@ -82,12 +82,16 @@ struct DMRG{A, F, E, G} <: Algorithm
     algorithm with no truncation, or a truncated SVD), or an algorithm that additionally expands
     the bond beforehand (e.g. [`DMRG3S`](@ref))"
     alg_gauge::G
+
+    "backend for tensor contractions and index manipulations"
+    backend::B
 end
 function DMRG(;
         tol = Defaults.tol, maxiter = Defaults.maxiter, alg_eigsolve = (;),
         verbosity = Defaults.verbosity, finalize = Defaults._finalize,
         alg_expand = nothing, alg_gauge = nothing, trunc = nothing,
-        alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth()
+        alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth(),
+        backend = Defaults.backend()
     )
     # single-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
     # `alg_eigsolve = (; adaptive = false, ...)` to opt out (the splat overrides the default).
@@ -111,34 +115,39 @@ function DMRG(;
     if (!isnothing(alg_expand) || _expands(alg_gauge)) && !_truncates(alg_gauge)
         @warn "DMRG with a bond-expanding `alg_expand` and/or `alg_gauge` but no truncation (`trunc = notrunc()`): the bond dimension will grow unboundedly each sweep."
     end
-    return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize, alg_expand, alg_gauge)
+    return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize, alg_expand, alg_gauge, backend)
 end
-
 
 function local_update!(
         site, direction,
         ψ, O, alg::DMRG, envs,
         ϵ_global, ϵ_trunc, decay_rate,
-        iter, timeroutput
+        iter, timeroutput, allocator
     )
-    ϵ_local = calc_galerkin(site, ψ, O, ψ, envs)
+    ϵ_local = calc_galerkin(site, ψ, O, ψ, envs; alg.backend, allocator)
 
     # 1. expand
-    isnothing(alg.alg_expand) ||
-        @timeit timeroutput "expand" changebond!(site, direction, ψ, O, alg.alg_expand, envs)
+    if !isnothing(alg.alg_expand)
+        @timeit timeroutput "expand" changebond!(
+            site, direction, ψ, O, alg.alg_expand, envs; allocator
+        )
+    end
 
     # 2. local update
     alg_eigsolve = adapt_solver(alg.alg_eigsolve; decay_rate, g_local = ϵ_local, g_global = ϵ_global, eps_trunc = ϵ_trunc)
     ac_old = ψ.AC[site]
     λ, AC′, info = @timeit timeroutput "AC_eigsolve" begin
-        H_effective = AC_hamiltonian(site, ψ, O, ψ, envs)
+        H_effective = AC_hamiltonian(site, ψ, O, ψ, envs; alg.backend, allocator)
         fixedpoint(H_effective, ac_old, :SR, alg_eigsolve)
     end
 
     alg_gauge = _update_alg_gauge(alg.alg_gauge, iter, ϵ_global)
 
     # 3. gauge
-    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge!(ψ, site, direction, O, envs, AC′, alg_gauge; normalize = true)
+    ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge!(
+        ψ, site, direction, O, envs, AC′, alg_gauge;
+        normalize = true, alg.backend, allocator
+    )
 
     # 4. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
     decay_rate = clamp((first(info.normres) / ϵ_local)^(1 / max(1, info.numops)), 1.0e-3, 0.999)
@@ -161,7 +170,7 @@ $(TYPEDFIELDS)
 
 Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
-struct DMRG2{A, G, F} <: Algorithm
+struct DMRG2{A, G, F, B} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64
 
@@ -179,12 +188,16 @@ struct DMRG2{A, G, F} <: Algorithm
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F
+
+    "backend for tensor contractions and index manipulations"
+    backend::B
 end
 # TODO: find better default truncation
 function DMRG2(;
         tol = Defaults.tol, maxiter = Defaults.maxiter, verbosity = Defaults.verbosity,
         alg_eigsolve = (;), alg_svd = Defaults.alg_svd(), trunc,
-        finalize = Defaults._finalize
+        finalize = Defaults._finalize,
+        backend = Defaults.backend()
     )
     # two-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
     # `alg_eigsolve = (; adaptive = false, ...)` to opt out (the splat overrides the default).
@@ -192,16 +205,16 @@ function DMRG2(;
         Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
     # two-site DMRG always truncates the enlarged bond back down, so the gauge is a truncated SVD
     alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trunc)
-    return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_gauge, finalize)
+    return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_gauge, finalize, backend)
 end
 
 function local_update!(
         pos, direction,
         ψ, O, alg::DMRG2, envs,
         ϵ_global, ϵ_trunc, decay_rate,
-        iter, timeroutput
+        iter, timeroutput, allocator
     )
-    Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs)
+    Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs; alg.backend, allocator)
 
     kind = direction === Val(:right) ? :ACAR : :ALAC
     ac2 = AC2(ψ, pos; kind)
@@ -265,6 +278,14 @@ Currently supported for the finite-system algorithms [`DMRG`](@ref) and [`DMRG2`
 function find_groundstate!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs = environments(ψ, H, ψ)
     )
+    # the sweep is serial, so a single allocator serves all local updates
+    allocator = default_allocator(ψ, SerialScheduler())
+    return _find_groundstate_sweep!(ψ, H, alg, envs, allocator)
+end
+
+function _find_groundstate_sweep!(
+        ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs, allocator
+    )
     name = string(nameof(typeof(alg)))
     log = IterLog(name)
     timeroutput = TimerOutput(name)
@@ -289,7 +310,7 @@ function find_groundstate!(
                         pos, Val(:right),
                         ψ, H, alg, envs,
                         ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        iter, timeroutput
+                        iter, timeroutput, allocator
                     )
                     ϵ_global = maximum(ϵ_locals)
                 end
@@ -301,7 +322,7 @@ function find_groundstate!(
                         pos, Val(:left),
                         ψ, H, alg, envs,
                         ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        iter, timeroutput
+                        iter, timeroutput, allocator
                     )
                     ϵ_global = maximum(ϵ_locals)
                 end
