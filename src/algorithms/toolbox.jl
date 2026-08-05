@@ -7,7 +7,8 @@ MPS state or directly from an entanglement spectrum as obtained from
 [`entanglement_spectrum`](@ref).
 
 When called on an MPS with an integer `site`, the entropy is computed across the
-entanglement cut to the right of site `site`. For `InfiniteMPS`, omitting `site` returns a
+entanglement cut to the right of site `site` (or equivalently, to the left of bond `site`).
+For `InfiniteMPS`, omitting `site` returns a
 vector of entropies, one for each site. For `FiniteMPS` and `WindowMPS`, `site` is
 required.
 """
@@ -87,14 +88,16 @@ values. The contributions from specific sectors can be viewed by indexing accord
 
 For `InfiniteMPS` and `WindowMPS` the default value for `site` is 0.
 
-For `FiniteMPS` no default value for `site` is given; it is up to the user to specify.
+For `FiniteMPS` no default value for `site` is given;
+it is up to the user to specify, and must lie in `0:length(ψ)`.
+`0` and `length(ψ)` correspond to the left and right boundary virtual spaces, respectively.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS, WindowMPS}, site::Int = 0)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
 function entanglement_spectrum(st::FiniteMPS, site::Int)
-    checkbounds(st, site)
+    checkbounds(st.C, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
 
