@@ -270,7 +270,7 @@ function (H::PrecomputedAC2Derivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 3})
     @plansor backend = backend allocator = allocator begin
         y_braided[-1 -2; -4 -6 -5 -3] := L[-1 -2; 1 2] * xR_braided[1 2; -4 -6 -5 -3]
     end
-    return braid(y_braided, ((1, 2, 6), (3, 5, 4)), (1, 2, 4, 5, 5, 3))
+    return braid(y_braided, ((1, 2, 6), (3, 5, 4)), (1, 2, 4, 6, 5, 3))
 end
 
 const _ToPrepare = Union{
