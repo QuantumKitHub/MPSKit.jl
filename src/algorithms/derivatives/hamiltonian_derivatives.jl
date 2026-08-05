@@ -61,6 +61,8 @@ function JordanMPO_AC_Hamiltonian(
     # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
     # them once and reuse the locals throughout
     WA, WB, WC, WD = W.A, W.B, W.C, W.D
+    GL2 = GL[2:(end - 1)]
+    GR2 = GR[2:(end - 1)]
 
     # onsite
     D = nonzero_length(WD) > 0 ? only(WD) : missing
@@ -73,8 +75,7 @@ function JordanMPO_AC_Hamiltonian(
 
     # starting
     C = if nonzero_length(WC) > 0
-        GR_2 = GR[2:(end - 1)]
-        @plansor backend = backend allocator = allocator starting[-1 -2; -3 -4] ≔ WC[-1; -3 1] * GR_2[-4 1; -2]
+        @plansor backend = backend allocator = allocator starting[-1 -2; -3 -4] ≔ WC[-1; -3 1] * GR2[-4 1; -2]
         only(starting)
     else
         missing
@@ -82,15 +83,14 @@ function JordanMPO_AC_Hamiltonian(
 
     # ending
     B = if nonzero_length(WB) > 0
-        GL_2 = GL[2:(end - 1)]
-        @plansor backend = backend allocator = allocator ending[-1 -2; -3 -4] ≔ GL_2[-1 1; -3] * WB[1 -2; -4]
+        @plansor backend = backend allocator = allocator ending[-1 -2; -3 -4] ≔ GL2[-1 1; -3] * WB[1 -2; -4]
         only(ending)
     else
         missing
     end
 
     # continuing
-    A = MPO_AC_Hamiltonian(GL[2:(end - 1)], WA, GR[2:(end - 1)], backend, allocator)
+    A = MPO_AC_Hamiltonian(GL2, WA, GR2, backend, allocator)
 
     # obtaining storagetype of environments since these should have already mixed
     # the types of the operator and state
@@ -233,6 +233,8 @@ function JordanMPO_AC2_Hamiltonian(
     # them once and reuse the locals throughout
     A1, B1, C1, D1 = W1.A, W1.B, W1.C, W1.D
     A2, B2, C2, D2 = W2.A, W2.B, W2.C, W2.D
+    GL2 = GL[2:(end - 1)]
+    GR2 = GR[2:(end - 1)]
 
     # not started
     II = size(W2, 4) == 1 ? missing : transpose(removeunit(GR[1], 2))
@@ -242,7 +244,7 @@ function JordanMPO_AC2_Hamiltonian(
 
     # starting right
     IC = if nonzero_length(C2) > 0
-        @plansor backend = backend allocator = allocator IC_[-1 -2; -3 -4] ≔ C2[-1; -3 1] * GR[2:(end - 1)][-4 1; -2]
+        @plansor backend = backend allocator = allocator IC_[-1 -2; -3 -4] ≔ C2[-1; -3 1] * GR2[-4 1; -2]
         only(IC_)
     else
         missing
@@ -266,7 +268,7 @@ function JordanMPO_AC2_Hamiltonian(
     # starting left - continuing right
     CA = if nonzero_length(C1) > 0 && nonzero_length(A2) > 0
         @plansor backend = backend allocator = allocator CA_[-1 -2 -3; -4 -5 -6] ≔ C1[-1; -4 2] * A2[2 -2; -5 1] *
-            GR[2:(end - 1)][-6 1; -3]
+            GR2[-6 1; -3]
         only(CA_)
     else
         missing
@@ -274,7 +276,7 @@ function JordanMPO_AC2_Hamiltonian(
 
     # continuing left - ending right
     AB = if nonzero_length(A1) > 0 && nonzero_length(B2) > 0
-        @plansor backend = backend allocator = allocator AB_[-1 -2 -3; -4 -5 -6] ≔ GL[2:(end - 1)][-1 2; -4] * A1[2 -2; -5 1] *
+        @plansor backend = backend allocator = allocator AB_[-1 -2 -3; -4 -5 -6] ≔ GL2[-1 2; -4] * A1[2 -2; -5 1] *
             B2[1 -3; -6]
         only(AB_)
     else
@@ -283,14 +285,14 @@ function JordanMPO_AC2_Hamiltonian(
 
     # ending left
     BE = if nonzero_length(B1) > 0
-        @plansor backend = backend allocator = allocator BE_[-1 -2; -3 -4] ≔ GL[2:(end - 1)][-1 2; -3] * B1[2 -2; -4]
+        @plansor backend = backend allocator = allocator BE_[-1 -2; -3 -4] ≔ GL2[-1 2; -3] * B1[2 -2; -4]
         only(BE_)
     else
         missing
     end
 
     # continuing - continuing
-    AA = MPO_AC2_Hamiltonian(GL[2:(end - 1)], A1, A2, GR[2:(end - 1)], backend, allocator)
+    AA = MPO_AC2_Hamiltonian(GL2, A1, A2, GR2, backend, allocator)
 
     S = spacetype(GL)
     M = storagetype(GL)
