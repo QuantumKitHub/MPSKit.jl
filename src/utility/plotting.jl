@@ -74,7 +74,7 @@ function entanglementplot end
     grid --> :xy
     widen --> true
 
-    xguide --> "χ = $(dim(left_virtualspace(mps, site)))"
+    xguide --> "χ = $(dim(_firstspace(mps.C[site])))"
     xticks --> (1:length(sectors), sector_formatter.(sectors))
     xtickfonthalign --> :center
     xtick_direction --> :out
