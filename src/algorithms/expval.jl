@@ -123,6 +123,7 @@ function contract_mpo_expval2(
     return @plansor conj(A1bar[4 5; 6]) * conj(A2bar[6 7; 8]) * O[5 7; 2 3] * A1[4 2; 1] *
         A2[1 3; 8]
 end
+# the ancilla braid need to be inverted due to handedness of mpo.jl#L90
 function contract_mpo_expval2(
         A1::GenericMPSTensor{S, 3}, A2::GenericMPSTensor{S, 3},
         O::AbstractTensorMap{<:Any, S},
@@ -130,7 +131,7 @@ function contract_mpo_expval2(
     ) where {S}
     numin(O) == numout(O) == 2 || throw(ArgumentError("O is not a two-site operator"))
     return @plansor conj(A1bar[8 3 4; 11]) * conj(A2bar[11 12 13; 14]) * τ[9 6; 1 2] *
-        τ[3 4; 9 10] * A1[8 1 2; 5] * A2[5 7 13; 14] * O[10 12; 6 7]
+        τ'[3 4; 9 10] * A1[8 1 2; 5] * A2[5 7 13; 14] * O[10 12; 6 7]
 end
 
 function expectation_value(
