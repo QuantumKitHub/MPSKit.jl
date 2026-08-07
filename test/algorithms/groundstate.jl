@@ -312,8 +312,9 @@ end
 end
 
 @testset "Long-range Hamiltonian with real scalartype" verbose = true begin
-    # A real `H` optimised over a complex MPS sends the derivative operators through their
-    # converting constructors, and a long-range bond leaves sites with no ending (`B`) block
+    # force `JordanMPO_AC_Hamiltonian` to pass through fallback outer constructor
+    # through an onsite block `D` with scalartype != that of the MPS
+    # as `D`'s scalartype doesn't get promoted to the MPS's scalartype through some contraction with environments
     tol = 1.0e-8
     D = 8
 
