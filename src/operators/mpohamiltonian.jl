@@ -1,10 +1,9 @@
 """
-    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
-    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace})
-    MPOHamiltonian(x::AbstractArray{<:Any,3})
+$(TYPEDEF)
 
-MPO representation of a Hamiltonian. This is a specific form of an [`AbstractMPO`](@ref), where
-all the sites are represented by an upper triangular block matrix of the following form:
+MPO representation of a Hamiltonian.
+This is a specific form of an [`AbstractMPO`](@ref), where all the sites are represented by an
+upper triangular block matrix of the following form:
 
 ```math
 \\begin{pmatrix}
@@ -16,17 +15,46 @@ all the sites are represented by an upper triangular block matrix of the followi
 
 where `A`, `B`, `C`, and `D` are `MPOTensor`s, or (sparse) blocks thereof.
 
-## Examples
+# Constructors
 
-For example, constructing a nearest-neighbour Hamiltonian would look like this:
+The finite and infinite variants, [`FiniteMPOHamiltonian`](@ref) and
+[`InfiniteMPOHamiltonian`](@ref), are constructed from a lattice of physical spaces together
+with a set of `inds => operator` pairs describing the local terms:
 
-```julia
-lattice = fill(ℂ^2, 10)
-H = MPOHamiltonian(lattice, (i, i+1) => O for i in 1:length(lattice)-1)
+    FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
+    InfiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
+
+# Properties
+
+- `A`: bulk block of interacting operators at each site
+- `B`: operators that finish an interaction
+- `C`: operators that start an interaction
+- `D`: on-site terms
+
+# Examples
+
+A nearest-neighbour term is a two-element index tuple `(i, i + 1) => O₁₂`; an on-site term
+is a one-element tuple `(i,) => O`. For the finite variant the lattice lists every site; for
+the infinite variant it is a single unit cell and indices wrap around it periodically.
+
+```jldoctest
+julia> X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2);
+
+julia> Hf = FiniteMPOHamiltonian(fill(ℂ^2, 3), ((i, i + 1) => X ⊗ X for i in 1:2));
+
+julia> Hf isa FiniteMPOHamiltonian, length(Hf)
+(true, 3)
+
+julia> Hi = InfiniteMPOHamiltonian(fill(ℂ^2, 1), (1, 2) => X ⊗ X, (1,) => X);
+
+julia> Hi isa InfiniteMPOHamiltonian, length(Hi)
+(true, 1)
 ```
 
-See also [`instantiate_operator`](@ref), which is responsible for instantiating the local
-operators in a form that is compatible with this constructor.
+# See also
+
+[`instantiate_operator`](@ref) is responsible for instantiating the local operators in a form
+that is compatible with this constructor.
 """
 struct MPOHamiltonian{TO <: JordanMPOTensor, V <: AbstractVector{TO}} <: AbstractMPO{TO}
     W::V
@@ -62,8 +90,8 @@ end
     FiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
 
 Create a `FiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]` represents
-the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
-either `MPOTensor`, `Missing` or `Number`.
+the operator at site `i`, left level `j` and right level `k`.
+Here, the entries can be either `MPOTensor`, `Missing` or `Number`.
 """
 function FiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
     T = promote_type(_split_mpoham_types.(Ws)...)
@@ -151,11 +179,11 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: J
 end
 
 """
-    InfiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+    InfiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
 
-Create a `InfiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]` represents
-the the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
-either `MPOTensor`, `Missing` or `Number`.
+Create an `InfiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]`
+represents the operator at site `i`, left level `j` and right level `k`.
+Here, the entries can be either `MPOTensor`, `Missing` or `Number`.
 """
 function InfiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
     T = promote_type(_split_mpoham_types.(Ws)...)

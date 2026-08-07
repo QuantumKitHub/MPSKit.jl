@@ -44,11 +44,13 @@ Algorithm wrapper with dynamically adjusted tolerances. Only the wrapped solver'
 retuned; its Krylov budget (if any) is left fixed — this is the simpler counterpart to
 [`AdaptiveKrylov`](@ref).
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-See also [`adapt_solver`](@ref).
+# See also
+
+[`adapt_solver`](@ref)
 """
 struct DynamicTol{A} <: Algorithm
     "parent algorithm"
@@ -79,7 +81,7 @@ end
 Tighten only the wrapped solver's tolerance (its Krylov budget, if any, is left fixed), from the
 global gradient / convergence-error scalar `g_global`, damped by the iteration count:
 
-    tol = clamp(tol_factor·g_global / √iter, tol_min, tol_max)
+    tol = clamp(tol_factor · g_global / √iter, tol_min, tol_max)
 """
 function adapt_solver(alg::DynamicTol; iter::Integer = 1, g_global::Real = 0.0, kwargs...)
     tol = clamp(alg.tol_factor * g_global / sqrt(max(iter, 1)), alg.tol_min, alg.tol_max)
@@ -117,11 +119,13 @@ This is driven by the local and global gradient norm, the truncation error and t
 decay rate of previous iterations in an attempt to obtain fast convergence for gapped systems
 while avoiding stagnation for gapless ones.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-See also [`adapt_solver`](@ref).
+# See also
+
+[`adapt_solver`](@ref)
 """
 struct AdaptiveKrylov{T, O <: KrylovKit.Orthogonalizer} <: Algorithm
     "orthogonalizer passed to the instantiated `Lanczos`/`Arnoldi`"

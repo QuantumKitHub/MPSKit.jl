@@ -14,14 +14,10 @@ the in-place version simply uses `ψ` as the destination of the sweep, overwriti
 The out-of-place version allocates a destination with the promoted scalar type of `O` and `ϕ`.
 Both return the truncation error `ϵ` alongside the approximated state.
 
-## Fields
+# Constructors
 
-$(TYPEDFIELDS)
-
-## Constructors
-
-    Zipup(; trunc, alg_svd=Defaults.alg_svd(), left_to_right=true)
-    Zipup(alg_zipup, [alg_zipdown]; left_to_right=true)
+    Zipup(; trunc, alg_svd = Defaults.alg_svd(), left_to_right = true)
+    Zipup(alg_zipup, [alg_zipdown]; left_to_right = true)
 
 Create a `Zipup` algorithm with the given truncated gauge algorithm, or by passing a truncation scheme and singular value decomposition algorithm.
 The keyword `trunc` can be either one truncation strategy for a single zip-up sweep, or a tuple `(zipup_trunc, zipdown_trunc)` for a zip-up sweep followed by a zip-down sweep.
@@ -30,10 +26,14 @@ The keyword `left_to_right` selects the direction of the zip-up sweep, the zip-d
 
 Following Paeckel et al., if the desired final bond dimension is `D`, one can use a more permissive zip-up truncation, e.g. rank `2D` with stricter tolerances, and use `alg_zipdown` to impose the final truncation.
 
-## References
+# Fields
 
-- [Stoudenmire and White New J. Phys. 12 (2010)](@cite stoudenmire2010)
-- [Paeckel et al. Ann. of Phys. 411 (2019)](@cite paeckel2019)
+$(TYPEDFIELDS)
+
+# References
+
+* [Stoudenmire and White New J. Phys. 12 (2010)](@cite stoudenmire2010)
+* [Paeckel et al. Ann. of Phys. 411 (2019)](@cite paeckel2019)
 """
 struct Zipup{
         U <: MatrixAlgebraKit.TruncatedAlgorithm,

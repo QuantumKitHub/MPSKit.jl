@@ -4,6 +4,7 @@
 
 Compute the 2-point correlator <ψ|O1[i]O2[j]|ψ> for inserting `O1` at `i` and `O2` at `j`.
 Also accepts ranges for `j`.
+The sites must be ordered as `i < j`; other orderings throw an `ArgumentError`.
 """
 function correlator end
 
@@ -14,7 +15,7 @@ end
 function correlator(
         state::AbstractMPS, O₁::MPOTensor, O₂::MPOTensor, i::Int, js::AbstractRange{Int}
     )
-    first(js) > i || @error "i should be smaller than j ($i, $(first(js)))"
+    first(js) > i || throw(ArgumentError("i should be smaller than j ($i, $(first(js)))"))
     S₁ = _firstspace(O₁)
     isunitspace(S₁) || throw(ArgumentError("O₁ should start with a trivial leg."))
     S₂ = _lastspace(O₂)

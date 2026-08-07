@@ -182,6 +182,78 @@ function Base.setindex!(
     end
 end
 
+@doc """
+    set_AL_AC!(ψ, site, AL, AC) -> ψ
+    set_AC_AR!(ψ, site, AC, AR) -> ψ
+
+Install a canonical tensor at `site` together with the neighbouring center tensor, in a single
+update: `set_AL_AC!` writes the left-isometric `AL` at `site` and the center tensor `AC` at
+`site + 1`, `set_AC_AR!` writes the right-isometric `AR` at `site` and the center tensor `AC` at
+`site - 1`. The gauge center therefore ends up at `site + 1` and `site - 1` respectively.
+
+These are the pendants of `ψ.AC[site] = (AL, C)` / `ψ.AC[site] = (C, AR)` for algorithms that
+already know the *next* center tensor: they avoid materializing a bond tensor purely to keep `ψ`
+well-defined, and — unlike installing the canonical tensor on its own — they never leave `ψ`
+without a gauge center.
+
+The isometric nature of `AL`/`AR` is not verified.
+"""
+set_AL_AC!
+@doc (@doc set_AL_AC!) set_AC_AR!
+
+function set_AL_AC!(ψ::FiniteMPS, site::Int, AL::GenericMPSTensor, AC::GenericMPSTensor)
+    site < length(ψ) ||
+        throw(ArgumentError(lazy"cannot set the center beyond the end of the chain at site $site"))
+    # materialize the halves that survive this update
+    site > 1 && ψ.AL[site - 1]
+    site + 1 < length(ψ) && ψ.AR[site + 2]
+
+    ψ.ACs .= missing
+    ψ.Cs .= missing
+    ψ.ALs[(site + 1):end] .= missing
+    ψ.ARs[1:(site + 1)] .= missing
+
+    ψ.ALs[site] = AL
+    ψ.ACs[site + 1] = AC
+    return ψ
+end
+function set_AC_AR!(ψ::FiniteMPS, site::Int, AC::GenericMPSTensor, AR::GenericMPSTensor)
+    site > 1 ||
+        throw(ArgumentError(lazy"cannot set the center before the start of the chain at site $site"))
+    site < length(ψ) && ψ.AR[site + 1]
+    site - 1 > 1 && ψ.AL[site - 2]
+
+    ψ.ACs .= missing
+    ψ.Cs .= missing
+    ψ.ALs[(site - 1):end] .= missing
+    ψ.ARs[1:(site - 1)] .= missing
+
+    ψ.ARs[site] = AR
+    ψ.ACs[site - 1] = AC
+    return ψ
+end
+
+set_AL_AC!(ψ::WindowMPS, args...) = (set_AL_AC!(ψ.window, args...); ψ)
+set_AC_AR!(ψ::WindowMPS, args...) = (set_AC_AR!(ψ.window, args...); ψ)
+
+"""
+    set_canonical!(ψ, site, direction, A, AC) -> ψ
+
+Direction-dispatching wrapper around [`set_AL_AC!`](@ref)/[`set_AC_AR!`](@ref): install the canonical
+tensor `A` at `site` — left-isometric for `direction = Val(:right)`, right-isometric for `Val(:left)`
+— together with the center tensor `AC` at the next site *in that direction*, `site + 1` or `site - 1`.
+
+This is the pendant of [`gauge!`](@ref) for a sweep that already knows its next center tensor, and
+lets a sweep body be written once for both directions.
+"""
+function set_canonical!(
+        ψ::AbstractFiniteMPS, site::Int, ::Val{Dir}, A::GenericMPSTensor, AC::GenericMPSTensor
+    ) where {Dir}
+    Dir === :right && return set_AL_AC!(ψ, site, A, AC)
+    Dir === :left && return set_AC_AR!(ψ, site, AC, A)
+    return throw(ArgumentError(lazy"invalid direction `$Dir`"))
+end
+
 function Base.getindex(v::ACView{<:WindowMPS, E}, i::Int)::E where {E}
     (i >= 1 && i <= length(v.parent)) || throw(ArgumentError("out of bounds"))
     return ACView(v.parent.window)[i]

@@ -1,61 +1,80 @@
 """
-    FiniteMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
+$(TYPEDEF)
 
 Type that represents a finite Matrix Product State.
 
-## Properties
-- `AL` -- left-gauged MPS tensors
-- `AR` -- right-gauged MPS tensors
-- `AC` -- center-gauged MPS tensors
-- `C` -- gauge tensors
-- `center` -- location of the gauge center
+# Constructors
 
-The center property returns `center::HalfInt` that indicates the location of the MPS center:
-- `isinteger(center)` → `center` is a whole number and indicates the location of the first `AC` tensor present in the underlying `ψ.ACs` field.
-- `ishalfodd(center)` → `center` is a half-odd-integer, meaning that there are no `AC` tensors, and indicating between which sites the bond tensor lives.
-
-e.g `mps.center = 7/2` means that the bond tensor is to the right of the 3rd site and can be accessed via `mps.C[3]`.
-
-## Notes
-By convention, we have that:
-- `AL[i] * C[i]` = `AC[i]` = `C[i-1] * AR[i]`
-- `AL[i]' * AL[i] = 1`
-- `AR[i] * AR[i]' = 1`
-
----
-
-## Constructors
-    FiniteMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
-              maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=unitspace(S), right=unitspace(S)) where {S<:ElementarySpace}
-    FiniteMPS([f, eltype], N::Int, physicalspace::Union{S,CompositeSpace{S}},
-              maxvirtualspaces::Union{S,Vector{S}};
-              normalize=true, left=unitspace(S), right=unitspace(S)) where {S<:ElementarySpace}
-    FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize=false, overwrite=false)
+    FiniteMPS(
+        [f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
+        maxvirtualspaces::Union{S, Vector{S}};
+        normalize = true, left = unitspace(S), right = unitspace(S)
+    ) where {S <: ElementarySpace}
+    FiniteMPS(
+        [f, eltype], N::Int, physicalspace::Union{S, CompositeSpace{S}},
+        maxvirtualspaces::Union{S, Vector{S}};
+        normalize = true, left = unitspace(S), right = unitspace(S)
+    ) where {S <: ElementarySpace}
+    FiniteMPS(As::Vector{<:GenericMPSTensor}; normalize = false, overwrite = false)
 
 Construct an MPS via a specification of physical and virtual spaces, or from a list of
 tensors `As`. All cases reduce to the latter. In particular, a state with a non-trivial
 total charge can be constructed by passing a non-trivially charged vector space as the
 `left` or `right` virtual spaces.
 
-### Arguments
-- `As::Vector{<:GenericMPSTensor}`: vector of site tensors
+# Arguments
 
-- `f::Function=rand`: initializer function for tensor data
-- `eltype::Type{<:Number}=ComplexF64`: scalar type of tensors
+- `As`: vector of site tensors
+- `f = rand`: initializer function for the tensor data
+- `eltype = ComplexF64`: scalar type of the tensors
+- `physicalspaces`: list of physical spaces
+- `N`: number of sites
+- `physicalspace`: local physical space, repeated for every site
+- `maxvirtualspaces`: maximal virtual space(s), truncated to what symmetry allows
 
-- `physicalspaces::Vector{<:Union{S, CompositeSpace{S}}`: list of physical spaces
-- `N::Int`: number of sites
-- `physicalspace::Union{S,CompositeSpace{S}}`: local physical space
+# Keyword Arguments
 
-- `virtualspaces::Vector{<:Union{S, CompositeSpace{S}}`: list of virtual spaces
-- `maxvirtualspace::S`: maximum virtual space
+- `normalize`: normalize the constructed state
+- `overwrite = false`: overwrite the given input tensors
+- `left = unitspace(S)`: left-most virtual space
+- `right = unitspace(S)`: right-most virtual space
 
-### Keywords
-- `normalize=true`: normalize the constructed state
-- `overwrite=false`: overwrite the given input tensors
-- `left=unitspace(S)`: left-most virtual space
-- `right=unitspace(S)`: right-most virtual space
+# Properties
+
+- `AL`: left-gauged MPS tensors
+- `AR`: right-gauged MPS tensors
+- `AC`: center-gauged MPS tensors
+- `C`: gauge (bond) tensors
+- `center`: location of the gauge center
+
+The `center` property returns a `center::HalfInt` that indicates the location of the MPS center:
+- `isinteger(center)` → `center` is a whole number and indicates the location of the first `AC` tensor present in the underlying `ψ.ACs` field.
+- `ishalfodd(center)` → `center` is a half-odd-integer, meaning that there are no `AC` tensors, and indicating between which sites the bond tensor lives.
+
+For example, `mps.center = 7/2` means that the bond tensor is to the right of the 3rd site and can be accessed via `mps.C[3]`.
+
+# Notes
+
+By convention, we have that:
+- `AL[i] * C[i]` = `AC[i]` = `C[i-1] * AR[i]`
+- `AL[i]' * AL[i] = 1`
+- `AR[i] * AR[i]' = 1`
+
+# Examples
+
+Building a 3-site spin-1/2 MPS from a dense array and checking that its left-gauged tensors
+are isometries (the state is kept in canonical form even though the raw data is not
+normalized):
+
+```jldoctest
+julia> ψ = FiniteMPS(ones(Float64, (ℂ^2)^3));
+
+julia> length(ψ)
+3
+
+julia> ψ.AL[1]' * ψ.AL[1] ≈ id(left_virtualspace(ψ, 2))
+true
+```
 """
 struct FiniteMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     ALs::Vector{Union{Missing, A}}
@@ -182,7 +201,8 @@ Return the location of the MPS center.
 - `isinteger(center)` → `center` is a whole number and indicates the location of the first `AC` tensor present in `ψ.ACs`
 - `ishalfodd(center)` → `center` is a half-odd-integer, meaning that there are no `AC` tensors, and indicating between which sites the bond tensor lives.
 
-## Example
+# Examples
+
 ```julia
 ψ = FiniteMPS(3, ℂ^2, ℂ^16)
 ψ.center # returns 7/2, bond tensor is to the right of the 3rd site
@@ -441,7 +461,7 @@ end
 
 """
     max_virtualspaces(ψ::FiniteMPS)
-    max_virtualspaces(Ps::Vector{<:Union{S,CompositeSpace{S}}}; left=unitspace(S), right=unitspace(S))
+    max_virtualspaces(Ps::Vector{<:Union{S, CompositeSpace{S}}}; left = unitspace(S), right = unitspace(S))
 
 Compute the maximal virtual spaces of a given finite MPS or its physical spaces.
 """
@@ -589,6 +609,9 @@ end
 function TensorKit.dot(ψ₁::FiniteMPS, ψ₂::FiniteMPS)
     #todo : rewrite this without having to gauge
     length(ψ₁) == length(ψ₂) || throw(ArgumentError("MPS with different length"))
+    if ψ₁ === ψ₂
+        return convert(Base.promote_op(inner, scalartype(ψ₁), scalartype(ψ₂)), norm(ψ₁)^2)
+    end
     ρr = TransferMatrix(ψ₂.AR[2:end], ψ₁.AR[2:end]) * r_RR(ψ₂)
     return tr(_transpose_front(ψ₁.AC[1])' * _transpose_front(ψ₂.AC[1]) * ρr)
 end

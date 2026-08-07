@@ -1,18 +1,20 @@
 """
-    entanglementplot(state; site=0[, kwargs...])
+    entanglementplot(state; site = 0[, kwargs...])
 
-Plot the [entanglement spectrum](@ref entanglement_spectrum) of a given MPS `state`. 
+Plot the entanglement spectrum (see [`entanglement_spectrum`](@ref)) of a given MPS `state`.
 
 # Arguments
+
 - `state`: the MPS for which to compute the entanglement spectrum.
 
 # Keyword Arguments
-- `site::Int=0`: MPS index for multisite unit cells. The spectrum is computed for the bond
+
+- `site::Int = 0`: MPS index for multisite unit cells. The spectrum is computed for the bond
   between `site` and `site + 1`.
-- `expand_symmetry::Logical=false`: add quantum dimension degeneracies.
-- `sortby=maximum`: the method of sorting the sectors.
-- `sector_margin=1//10`: the amount of whitespace between sectors.
-- `sector_formatter=string`: how to convert sectors to strings.
+- `expand_symmetry = false`: add quantum dimension degeneracies.
+- `sortby = maximum`: the method of sorting the sectors.
+- `sector_margin = 1 // 10`: the amount of whitespace between sectors.
+- `sector_formatter = string`: how to convert sectors to strings.
 - `kwargs...`: other kwargs are passed on to the plotting backend.
 
 !!! note
@@ -30,8 +32,6 @@ function entanglementplot end
         sector_margin = 1 // 10, sector_formatter = string
     )
     mps = h.args[1]
-    (site <= length(mps) && !(isa(mps, FiniteMPS) && site == 0)) ||
-        throw(ArgumentError("Invalid site $site for the given mps."))
 
     spectra = entanglement_spectrum(mps, site)
     sectors = []
@@ -74,7 +74,7 @@ function entanglementplot end
     grid --> :xy
     widen --> true
 
-    xguide --> "χ = $(dim(left_virtualspace(mps, site)))"
+    xguide --> "χ = $(dim(_firstspace(mps.C[site])))"
     xticks --> (1:length(sectors), sector_formatter.(sectors))
     xtickfonthalign --> :center
     xtick_direction --> :out
@@ -89,21 +89,23 @@ function entanglementplot end
 end
 
 """
-    transferplot(above, below=above; sectors=nothing, transferkwargs=(;)[, kwargs...])
+    transferplot(above, below = above; sectors = nothing, transferkwargs = (;)[, kwargs...])
 
 Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 
 # Arguments
+
 - `above::InfiniteMPS`: above mps for [`transfer_spectrum`](@ref).
-- `below::InfiniteMPS=above`: below mps for [`transfer_spectrum`](@ref).
+- `below::InfiniteMPS = above`: below mps for [`transfer_spectrum`](@ref).
 
 # Keyword Arguments
-- `sectors=nothing`: restrict the spectrum to the given sectors; by default all sectors of
+
+- `sectors = nothing`: restrict the spectrum to the given sectors; by default all sectors of
   the transfer space are included.
 - `transferkwargs`: kwargs for call to [`transfer_spectrum`](@ref).
 - `kwargs`: other kwargs are passed on to the plotting backend.
-- `thetaorigin=0`: origin of the angle range.
-- `sector_formatter=string`: how to convert sectors to strings.
+- `thetaorigin = 0`: origin of the angle range.
+- `sector_formatter = string`: how to convert sectors to strings.
 
 !!! note
     You will need to manually import [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to

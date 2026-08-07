@@ -28,9 +28,25 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   truncation. The sweep direction is selected by the `left_to_right` keyword. Both
   `approximate((O, ϕ), alg)` and `approximate!(ψ, (O, ϕ), alg)` are supported, where the destination
   `ψ` is a write target rather than an initial guess and may alias `ϕ`; they return `(ψ, ϵ)`.
+- `BUG` time-evolution algorithm: a Basis-Update & Galerkin integrator for finite MPS.
+  Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
+  and passing a truncating `trunc` enables rank-adaptivity (the bond dimension grows and shrinks
+  automatically to track entanglement).
+- A `backend` setting on every algorithm, for its tensor contractions and index manipulations,
+  defaulting to `MPSKit.Defaults.backend()`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
+- Local updates now serve their intermediate tensors from a dedicated allocator, selected internally
+  by `MPSKit.default_allocator`, instead of leaving them to the garbage collector
+  (two-site DMRG: -64% allocations, -57% GC time, -23% wall time).
+  Disable with `MPSKit.Defaults.set_buffering!(false)`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
 
 ### Changed
 
+- Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
+  `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
+  norm is preserved, so it retains useful information (the accumulated truncation error in real time,
+  or the decaying weight in imaginary time). Previously imaginary-time evolution always renormalized
+  every step; **to recover that behavior, pass `normalize = true`** (e.g. for ground-state or
+  thermal-state search via imaginary-time evolution).
 - `environments` now follows a single positional contract for every state and operator kind:
   `environments(below, operator, above, alg)`, where `alg` is the environment algorithm
   (slot 4). The operator form requires an explicit `above`. Auxiliary inputs are keyword-only:
@@ -51,6 +67,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   Accordingly, `marek_gap` and `correlation_length` now return a `TensorKit.SectorDict` of
   per-sector results by default; pass `sector = ...` to obtain a single sector's result as before.
 - All `trscheme` keyword arguments are renamed to `trunc` ([#482](https://github.com/QuantumKitHub/MPSKit.jl/pull/482)).
+- `correlator` now throws an `ArgumentError` when the sites are not ordered as `i < j`.
+  Previously such a call only logged an `@error` and then continued into a contraction that is
+  not the requested correlator. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 
 ### Deprecated
 
@@ -58,6 +77,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `isfinite(::WindowMPOHamiltonian)` was undefined. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+- `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
   different tensor networks, e.g. `norm(E₀ * gs - H * gs)` coming out as `2 * norm(gs) * E₀`
   instead of ~0. The lazy gauge sweep in `CView.getindex` re-derived `AL`/`C` entries that were

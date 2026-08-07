@@ -35,7 +35,7 @@ export VUMPS, VOMPS, DMRG, DMRG2, IDMRG, IDMRG2, GradientGrassmann
 export excitations
 export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo
-export TDVP, TDVP2, WI, WII, TaylorCluster
+export TDVP, TDVP2, BUG, WI, WII, TaylorCluster
 export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
 export NoiseSchedule, FunctionalSchedule, ExponentialDecay, Warmup, DMRG3S
@@ -57,6 +57,7 @@ using Compat: @compat
 @compat public DynamicTols, DynamicTol, AdaptiveKrylov
 @compat public VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
 @compat public IterLog, loginit!, logiter!, logfinish!, logcancel!
+@compat public default_allocator
 
 # Imports
 # -------
@@ -69,7 +70,7 @@ using BlockTensorKit
 using BlockTensorKit: TensorMapSumSpace
 using TensorOperations
 using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator, BufferAllocator,
-    allocator_checkpoint!, allocator_reset!
+    ManualAllocator, allocator_checkpoint!, allocator_reset!
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
 using OptimKit
@@ -99,6 +100,7 @@ using .DynamicTols
 
 include("utility/defaults.jl")
 using .Defaults: VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
+include("utility/allocator.jl")
 include("utility/logging.jl")
 using .IterativeLoggers
 include("utility/iterativesolvers.jl")
@@ -166,6 +168,7 @@ include("algorithms/post_expand/post_expand.jl")
 include("algorithms/post_expand/dmrg3s.jl")
 
 include("algorithms/timestep/tdvp.jl")
+include("algorithms/timestep/bug.jl")
 include("algorithms/timestep/taylorcluster.jl")
 include("algorithms/timestep/wii.jl")
 include("algorithms/timestep/integrators.jl")

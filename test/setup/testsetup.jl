@@ -24,8 +24,27 @@ export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_mo
 export long_range_ising, long_range_ising_infinite
 export classical_ising_tensors, classical_ising, sixvertex
 export bad_initial_state
+export SCHEDULERS, with_scheduler
 
 # using TensorOperations
+
+# Threading
+# ---------
+# The scheduler decides which allocator serves the scratch space of a local update - a buffer when a
+# single task owns it, a shared manual allocator otherwise - so an algorithm that spawns should give
+# the same answer under either. `MPSKit.Defaults.scheduler` is a `Ref` rather than a `ScopedValue`,
+# hence the explicit save/restore; it is process-global, so the `finally` matters.
+const SCHEDULERS = ("serial" => MPSKit.SerialScheduler(), "dynamic" => MPSKit.DynamicScheduler())
+
+function with_scheduler(f, scheduler)
+    old = MPSKit.Defaults.scheduler[]
+    try
+        MPSKit.Defaults.scheduler[] = scheduler
+        return f()
+    finally
+        MPSKit.Defaults.scheduler[] = old
+    end
+end
 
 force_planar(x::Number) = x
 

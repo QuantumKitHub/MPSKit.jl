@@ -184,22 +184,27 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs
         return inv(contract_mpo_expval(right_gs.AC[site], GL, O[site], GR))
     end
 
-    gbl = zerovector!(GBL[end])
+    # GBL[i] lives on the left MPO bond of site i. Applying site i therefore
+    # produces an object in GBL[i + 1]. This matters when the MPO bond spaces
+    # vary within the unit cell, as for a finite-ring shift MPO.
+    gbl = zerovector!(GBL[1])
     for col in 1:length(exci)
         gbl = gbl * TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col])
         gbl += leftenv(lenvs, col, left_gs) *
             TransferMatrix(exci[col], O[col], left_gs.AL[col])
         gbl *= left_regularization[col] * cis(-exci.momentum)
-        GBL[col] = gbl
+        GBL[col + 1] = gbl
     end
 
+    # GBR[i] lives on the right MPO bond of site i. Applying site i from the
+    # right therefore produces an object in GBR[i - 1].
     gbr = zerovector!(GBR[end])
     for col in reverse(1:length(exci))
         gbr = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]) * gbr
         gbr += TransferMatrix(exci[col], O[col], right_gs.AR[col]) *
             rightenv(renvs, col, right_gs)
         gbr *= right_regularization[col] * cis(exci.momentum)
-        GBR[col] = gbr
+        GBR[col - 1] = gbr
     end
 
     T_RL = TransferMatrix(right_gs.AR, O, left_gs.AL)
@@ -221,7 +226,7 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs
         T_LR = regularize(T_LR, lvec, rvec)
     end
 
-    GBL[end], convhist = linsolve(
+    GBL[1], convhist = linsolve(
         flip(T_RL), gbl, gbl, solver, 1,
         -cis(-length(exci) * exci.momentum) * prod(left_regularization)
     )
@@ -229,25 +234,25 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs
     convhist.converged == 0 &&
         @warn "GBL failed to converge: normres = $(convhist.normres)"
 
-    GBR[1], convhist = linsolve(
+    GBR[end], convhist = linsolve(
         T_LR, gbr, gbr, GMRES(), 1,
         -cis(length(exci) * exci.momentum) * prod(right_regularization)
     )
     convhist.converged == 0 &&
         @warn "GBR failed to converge: normres = $(convhist.normres)"
 
-    left_cur = GBL[end]
-    right_cur = GBR[1]
+    left_cur = GBL[1]
+    right_cur = GBR[end]
     for col in 1:(length(exci) - 1)
         left_cur = left_regularization[col] * left_cur *
             TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col]) *
             cis(-exci.momentum)
-        GBL[col] += left_cur
+        GBL[col + 1] += left_cur
 
         col = length(exci) - col + 1
         right_cur = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]) * right_cur *
             cis(exci.momentum) * right_regularization[col]
-        GBR[col] += right_cur
+        GBR[col - 1] += right_cur
     end
 
     return InfiniteQPEnvironments(GBL, GBR, lenvs, renvs)

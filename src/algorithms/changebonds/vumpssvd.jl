@@ -6,11 +6,15 @@ An algorithm that uses a two-site update step to change the bond dimension of a 
 !!! note
     [`changebonds!`](@ref) is not defined.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`changebonds`](@ref).
 """
-@kwdef struct VUMPSSvdCut <: Algorithm
+@kwdef struct VUMPSSvdCut{B} <: Algorithm
     "algorithm used for gauging the `InfiniteMPS`"
     alg_gauge = Defaults.alg_gauge(; dynamic_tols = false)
 
@@ -22,6 +26,9 @@ $(TYPEDFIELDS)
 
     "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the two-site update"
     trunc::TruncationStrategy
+
+    "backend for tensor contractions and index manipulations"
+    backend::B = Defaults.backend()
 end
 
 function changebonds_1(
@@ -52,13 +59,14 @@ function changebonds_1(
 end
 
 function changebonds_n(state::InfiniteMPS, H, alg::VUMPSSvdCut, envs = environments(state, H, state))
+    allocator = default_allocator(state, SerialScheduler())
     for loc in 1:length(state)
         @plansor AC2[-1 -2; -3 -4] := state.AC[loc][-1 -2; 1] * state.AR[loc + 1][1 -4; -3]
 
-        Hac2 = AC2_hamiltonian(loc, state, H, state, envs)
+        Hac2 = AC2_hamiltonian(loc, state, H, state, envs; alg.backend, allocator)
         _, nAC2 = fixedpoint(Hac2, AC2, :SR, alg.alg_eigsolve)
 
-        Hc = C_hamiltonian(loc + 1, state, H, state, envs)
+        Hc = C_hamiltonian(loc + 1, state, H, state, envs; alg.backend, allocator)
         _, nC2 = fixedpoint(Hc, state.C[loc + 1], :SR, alg.alg_eigsolve)
 
         #svd ac2, get new AL1 and S,V ---> AC

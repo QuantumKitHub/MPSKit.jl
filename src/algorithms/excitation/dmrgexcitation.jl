@@ -7,9 +7,13 @@ Variational optimization algorithm for excitations of finite MPS by minimizing t
 H + λᵢ |ψᵢ⟩⟨ψᵢ|
 ```
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`excitations`](@ref).
 """
 @kwdef struct FiniteExcited{A} <: Algorithm
     "optimization algorithm"
@@ -34,6 +38,15 @@ function excitations(
         states::Tuple{T, Vararg{T}};
         init = _perturbed_state(first(states)), num = 1
     ) where {T <: FiniteMPS}
+    # the scope is opened once here rather than inside `_excitations_finite`: the recursion is
+    # what determines the return type, and a closure at every level would defeat inference
+    return _excitations_finite(H, alg, states; init, num)
+end
+
+function _excitations_finite(
+        H::FiniteMPOHamiltonian, alg::FiniteExcited, states::Tuple{T, Vararg{T}};
+        init, num
+    ) where {T <: FiniteMPS}
     num == 0 && return (scalartype(T)[], T[])
 
     super_op = LinearCombination(
@@ -44,7 +57,7 @@ function excitations(
     ne, _ = find_groundstate(init, super_op, alg.gsalg, envs)
 
     nstates = (states..., ne)
-    ens, excis = excitations(H, alg, nstates; init = init, num = num - 1)
+    ens, excis = _excitations_finite(H, alg, nstates; init, num = num - 1)
 
     pushfirst!(ens, expectation_value(ne, H))
     pushfirst!(excis, ne)

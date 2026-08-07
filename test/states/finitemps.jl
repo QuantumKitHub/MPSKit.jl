@@ -36,9 +36,10 @@ using Adapt
 
     @test eltype(ψ) == eltype(typeof(ψ))
 
-    ovl = dot(ψ, ψ)
+    ovl = @constinferred dot(ψ, ψ)
 
     @test ovl ≈ norm(ψ.AC[1])^2
+    @test ovl isa scalartype(ψ)
 
     for i in 1:length(ψ)
         @test ψ.AC[i] ≈ ψ.AL[i] * ψ.C[i]
@@ -145,6 +146,10 @@ end
         @test real(entropy(ψ, site)) >= 0
     end
 
+    @test entropy(ψ, 0) ≈ 0 atol = 1.0e-10 # trivial left bond
+    @test_throws BoundsError entanglement_spectrum(ψ, -1)
+    @test_throws BoundsError entanglement_spectrum(ψ, L + 1)
+
     # entropy is consistent with entanglement_spectrum
     for site in 1:L
         @test entropy(ψ, site) ≈ entropy(entanglement_spectrum(ψ, site))
@@ -154,7 +159,7 @@ end
     @test entropy(ψ, L) ≈ 0 atol = 1.0e-10
 
     # product state has zero entropy everywhere
-    ψ_product = FiniteMPS(rand, elt, L, d, oneunit(D))
+    ψ_product = FiniteMPS(rand, elt, L, d, unitspace(D))
     for site in 1:L
         @test entropy(ψ_product, site) ≈ 0 atol = 1.0e-10
     end

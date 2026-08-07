@@ -1,5 +1,13 @@
 # References
 
+## Citing MPSKit
+
+If you use MPSKit in your research, please cite it: [devos2026mpskit](@cite).
+The [`CITATION.cff`](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/CITATION.cff) file in the repository carries the up-to-date metadata, including the DOI of the specific release you used.
+
+Please consider citing [TensorKit.jl](https://github.com/QuantumKitHub/TensorKit.jl) as well: [devos2025tensorkit](@cite).
+It provides the (symmetric) tensors that MPSKit is built on, and does much of the heavy lifting behind every algorithm here.
+
 ## Publications using MPSKit
 
 Below you can find a list of publications that have made use of MPSKit. If you have used

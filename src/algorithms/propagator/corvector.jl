@@ -11,15 +11,19 @@ $(TYPEDEF)
 A dynamical DMRG method for calculating dynamical properties and excited states, based on a
 variational principle for dynamical correlation functions.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`propagator`](@ref).
+
+# References
 
 * [Jeckelmann. Phys. Rev. B 66 (2002)](@cite jeckelmann2002)
 """
-@kwdef struct DynamicalDMRG{F <: DDMRG_Flavour, S} <: Algorithm
+@kwdef struct DynamicalDMRG{F <: DDMRG_Flavour, S, B} <: Algorithm
     "flavour of the algorithm to use, either of type [`NaiveInvert`](@ref) or [`Jeckelmann`](@ref)"
     flavour::F = NaiveInvert()
     "algorithm used for the linear solvers"
@@ -30,16 +34,20 @@ $(TYPEDFIELDS)
     maxiter::Int = Defaults.maxiter
     "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
+    "backend for tensor contractions and index manipulations"
+    backend::B = Defaults.backend()
 end
 
 """
-    propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init=copy(ψ₀))
+    propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init = copy(ψ₀)) -> (g, ψ)
 
 Calculate the action of the propagator ``\\frac{1}{z - H}|ψ₀⟩`` using the dynamical DMRG
 algorithm.
 
-Returns a tuple `(g, ψ)` where `g` is the approximation of the propagator matrix element
-``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and `ψ` is the MPS approximation of ``\\frac{1}{z - H}|ψ₀⟩``.
+# Returns
+
+- `g`: approximation of the propagator matrix element ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩``
+- `ψ`: MPS approximation of ``\\frac{1}{z - H}|ψ₀⟩``
 """
 function propagator end
 
@@ -55,7 +63,9 @@ This algorithm minimizes the following cost function
 
 Returns the approximation of ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and ``\\frac{1}{z - H}|ψ₀⟩``.
 
-See also [`Jeckelmann`](@ref) for the original approach.
+# See also
+
+[`Jeckelmann`](@ref) for the original approach.
 """
 struct NaiveInvert <: DDMRG_Flavour end
 
@@ -63,6 +73,7 @@ function propagator(
         A::AbstractFiniteMPS, z::Number, H,
         alg::DynamicalDMRG{NaiveInvert}; init = copy(A)
     )
+    allocator = default_allocator(A, SerialScheduler())
     h_envs = environments(init, H, init) # environments for h
     mixedenvs = environments(init, A) # environments for <init | A>
 
@@ -75,9 +86,9 @@ function propagator(
             ϵ = 0.0
 
             for i in [1:(length(A) - 1); length(A):-1:2]
-                tos = AC_projection(i, init, A, mixedenvs)
+                tos = AC_projection(i, init, A, mixedenvs; alg.backend, allocator)
 
-                H_AC = AC_hamiltonian(i, init, H, init, h_envs)
+                H_AC = AC_hamiltonian(i, init, H, init, h_envs; alg.backend, allocator)
                 AC = init.AC[i]
                 AC′, convhist = linsolve(H_AC, -tos, AC, alg.solver, -z, one(z))
 
@@ -121,9 +132,11 @@ Together with equation (11) from that same paper we can determine the full propa
 
 Returns the approximation of ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and ``\\frac{1}{z - H}|ψ₀⟩``.
 
-See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.
+# See also
 
-## References
+[`NaiveInvert`](@ref) for a less costly but less accurate alternative.
+
+# References
 
 * [Jeckelmann. Phys. Rev. B 66 (2002)](@cite jeckelmann2002)
 """
@@ -133,6 +146,7 @@ function propagator(
         A::AbstractFiniteMPS, z::Number, H,
         alg::DynamicalDMRG{Jeckelmann}; init = copy(A)
     )
+    allocator = default_allocator(A, SerialScheduler())
     ω = real(z)
     η = imag(z)
 
@@ -149,9 +163,9 @@ function propagator(
             ϵ = 0.0
 
             for i in [1:(length(A) - 1); length(A):-1:2]
-                tos = AC_projection(i, init, A, mixedenvs)
-                H1_AC = AC_hamiltonian(i, init, H, init, envs1)
-                H2_AC = AC_hamiltonian(i, init, H2, init, envs2)
+                tos = AC_projection(i, init, A, mixedenvs; alg.backend, allocator)
+                H1_AC = AC_hamiltonian(i, init, H, init, envs1; alg.backend, allocator)
+                H2_AC = AC_hamiltonian(i, init, H2, init, envs2; alg.backend, allocator)
                 H_AC = LinearCombination((H1_AC, H2_AC), (-2 * ω, 1))
                 AC′, convhist = linsolve(H_AC, -η * tos, init.AC[i], alg.solver, abs2(z), 1)
 
@@ -174,7 +188,7 @@ function propagator(
         end
     end
 
-    a = dot(AC_projection(1, init, A, mixedenvs), init.AC[1])
+    a = dot(AC_projection(1, init, A, mixedenvs; alg.backend, allocator), init.AC[1])
     cb = leftenv(envs1, 1, A) * TransferMatrix(init.AL, H[1:length(A.AL)], A.AL)
     b = zero(a)
     for i in 1:length(cb)

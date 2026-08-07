@@ -3,11 +3,15 @@ $(TYPEDEF)
 
 Single site infinite DMRG algorithm for finding the dominant eigenvector.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
-@kwdef struct IDMRG{A} <: Algorithm
+@kwdef struct IDMRG{A, B} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
 
@@ -22,6 +26,9 @@ $(TYPEDFIELDS)
 
     "algorithm used for the eigenvalue solvers"
     alg_eigsolve::A = Defaults.alg_eigsolve()
+
+    "backend for tensor contractions and index manipulations"
+    backend::B = Defaults.backend()
 end
 
 """
@@ -29,11 +36,15 @@ $(TYPEDEF)
 
 Two-site infinite DMRG algorithm for finding the dominant eigenvector.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
-@kwdef struct IDMRG2{A, S} <: Algorithm
+@kwdef struct IDMRG2{A, S, B} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
 
@@ -54,11 +65,13 @@ $(TYPEDFIELDS)
 
     "algorithm used for [truncation](@extref MatrixAlgebraKit.TruncationStrategy) of the two-site update"
     trunc::TruncationStrategy
+
+    "backend for tensor contractions and index manipulations"
+    backend::B = Defaults.backend()
 end
 
-
 # Internal state of the IDMRG algorithm
-struct IDMRGState{S, O, E, T}
+struct IDMRGState{S, O, E, T, A}
     mps::S
     operator::O
     envs::E
@@ -66,15 +79,22 @@ struct IDMRGState{S, O, E, T}
     ϵ::Float64 # TODO: Could be any <:Real
     energy::T
     timeroutput::TimerOutput
+    allocator::A
 end
 function IDMRGState{T}(
         mps::S, operator::O, envs::E, iter::Int, ϵ::Float64, energy,
-        timeroutput::TimerOutput,
-    ) where {S, O, E, T}
-    return IDMRGState{S, O, E, T}(mps, operator, envs, iter, ϵ, T(energy), timeroutput)
+        timeroutput::TimerOutput, allocator::A,
+    ) where {S, O, E, T, A}
+    return IDMRGState{S, O, E, T, A}(
+        mps, operator, envs, iter, ϵ, T(energy), timeroutput, allocator
+    )
 end
 
 function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps, operator, mps)) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
+    return _find_groundstate_idmrg(mps, operator, alg, envs)
+end
+
+function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
     (length(mps) ≤ 1 && alg isa IDMRG2) && throw(ArgumentError("unit cell should be >= 2"))
     name = alg isa IDMRG ? "IDMRG" : "IDMRG2"
     log = IterLog(name)
@@ -82,7 +102,9 @@ function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps,
     alg.verbosity > 3 || disable_timer!(timeroutput)
     mps = copy(mps)
     iter = 0
-    ϵ = calc_galerkin(mps, operator, mps, envs)
+    # the sweeps are serial, so one allocator serves the whole solve
+    allocator = default_allocator(mps, SerialScheduler())
+    ϵ = calc_galerkin(mps, operator, mps, envs; alg.backend, allocator)
     E = zero(TensorOperations.promote_contract(scalartype(mps), scalartype(operator)))
 
     LoggingExtras.withlevel(; alg.verbosity) do
@@ -92,7 +114,7 @@ function find_groundstate(mps, operator, alg::alg_type, envs = environments(mps,
         end
     end
 
-    state = IDMRGState(mps, operator, envs, iter, ϵ, E, timeroutput)
+    state = IDMRGState(mps, operator, envs, iter, ϵ, E, timeroutput, allocator)
     it = IterativeSolver(alg, state)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
@@ -142,7 +164,7 @@ function Base.iterate(
 
     # update state
     it.state = IDMRGState{T}(
-        mps, state.operator, envs, state.iter + 1, ϵ, E_new, timeroutput,
+        mps, state.operator, envs, state.iter + 1, ϵ, E_new, timeroutput, state.allocator,
     )
 
     return (mps, envs, ϵ, ΔE), it.state
@@ -153,7 +175,8 @@ function localupdate_step!(
     )
     alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
     return _localupdate_sweep_idmrg!(
-        state.mps, state.operator, state.envs, alg_eigsolve, state.timeroutput,
+        state.mps, state.operator, state.envs, alg_eigsolve, state.timeroutput;
+        it.backend, state.allocator,
     )
 end
 
@@ -163,17 +186,21 @@ function localupdate_step!(
     alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
     return _localupdate_sweep_idmrg2!(
         state.mps, state.operator, state.envs, alg_eigsolve,
-        it.trunc, it.alg_svd, state.timeroutput,
+        it.trunc, it.alg_svd, state.timeroutput;
+        it.backend, state.allocator,
     )
 end
 
-function _localupdate_sweep_idmrg!(ψ, H, envs, alg_eigsolve, timeroutput::TimerOutput)
+function _localupdate_sweep_idmrg!(
+        ψ, H, envs, alg_eigsolve, timeroutput::TimerOutput;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     local E
     C_old = ψ.C[0]
     # left to right sweep
     for pos in 1:length(ψ)
         @timeit timeroutput "AC_eigsolve" begin
-            h = AC_hamiltonian(pos, ψ, H, ψ, envs)
+            h = AC_hamiltonian(pos, ψ, H, ψ, envs; backend, allocator)
             _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
         end
         @timeit timeroutput "ortho_step" begin
@@ -190,7 +217,7 @@ function _localupdate_sweep_idmrg!(ψ, H, envs, alg_eigsolve, timeroutput::Timer
     # right to left sweep
     for pos in length(ψ):-1:1
         @timeit timeroutput "AC_eigsolve" begin
-            h = AC_hamiltonian(pos, ψ, H, ψ, envs)
+            h = AC_hamiltonian(pos, ψ, H, ψ, envs; backend, allocator)
             E, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
         end
         @timeit timeroutput "ortho_step" begin
@@ -202,9 +229,9 @@ function _localupdate_sweep_idmrg!(ψ, H, envs, alg_eigsolve, timeroutput::Timer
     return ψ, envs, C_old, E
 end
 
-
 function _localupdate_sweep_idmrg2!(
-        ψ, H, envs, alg_eigsolve, alg_trunc, alg_svd, timeroutput::TimerOutput,
+        ψ, H, envs, alg_eigsolve, alg_trunc, alg_svd, timeroutput::TimerOutput;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     # @timeit wraps its body in try-finally, which is a new lexical scope: declare locals
     # at function scope so values can flow between consecutive @timeit blocks.
@@ -213,7 +240,7 @@ function _localupdate_sweep_idmrg2!(
     for pos in 1:(length(ψ) - 1)
         @timeit timeroutput "AC2_eigsolve" begin
             ac2 = AC2(ψ, pos; kind = :ACAR)
-            h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
+            h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs; backend, allocator)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
         end
         @timeit timeroutput "svd_trunc" begin
@@ -236,7 +263,7 @@ function _localupdate_sweep_idmrg2!(
     ψ.AC[1] = _mul_tail(ψ.AL[1], ψ.C[1])
     @timeit timeroutput "AC2_eigsolve" begin
         ac2 = AC2(ψ, 0; kind = :ALAC)
-        h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
+        h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs; backend, allocator)
         _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
     end
     @timeit timeroutput "svd_trunc" begin
@@ -264,7 +291,7 @@ function _localupdate_sweep_idmrg2!(
     for pos in (length(ψ) - 1):-1:1
         @timeit timeroutput "AC2_eigsolve" begin
             ac2 = AC2(ψ, pos; kind = :ALAC)
-            h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
+            h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs; backend, allocator)
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
         end
         @timeit timeroutput "svd_trunc" begin
@@ -288,7 +315,7 @@ function _localupdate_sweep_idmrg2!(
     ψ.AR[1] = _transpose_front(ψ.C[end] \ _transpose_tail(ψ.AC[1]))
     @timeit timeroutput "AC2_eigsolve" begin
         ac2 = AC2(ψ, 0; kind = :ACAR)
-        h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
+        h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs; backend, allocator)
         E, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
     end
     @timeit timeroutput "svd_trunc" begin
