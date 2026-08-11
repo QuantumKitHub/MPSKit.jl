@@ -96,6 +96,16 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   and the right virtual leg of `mpo[end]` and contracted the two — which at length 1 is the *same*
   tensor, so it returned `O * O` on twice the physical space instead of `O`.
   ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- A density matrix represented as a 3-leg MPO-as-MPS (`convert(FiniteMPS, ::FiniteMPO)`) braids its
+  ancilla leg past the operator's virtual leg in several places, and for anyonic sectors that crossing has a real handedness. For symmetric braiding, getting it backwards was silently harmless there, but several call sites had it
+  backwards, silently giving incorrect anyonic results: the density-matrix MPO transfer (`transfer_left`/
+  `transfer_right`), the two-site density-matrix observable (`contract_mpo_expval2`), and both the
+  unprepared and prepared `AC`/`AC2` derivative operators. This affected `approximate`, `DMRG2`, and
+  `timestep` on density matrices for anyonic sector types.
+- `_mpo_to_mps` threw a `SpaceMismatch` when converting a block/Jordan-structured MPO tensor (e.g.
+  from `make_time_mpo`) into an MPS, since it braided the physical leg directly against a
+  `SumSpace` virtual leg. It now densifies the tensor first, which the function already did to its
+  return value regardless, so this adds no extra cost.
 
 ### Performance
 
