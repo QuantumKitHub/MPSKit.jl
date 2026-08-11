@@ -2,7 +2,20 @@
 $(TYPEDEF)
 
 Object that represents multiple lines of objects of type `T`. Typically used to represent
-multiple lines of `InfiniteMPS` (`MultilineMPS`) or MPO (`Multiline{<:AbstractMPO}`).
+multiple lines of `InfiniteMPS` (`MultilineMPS`) or `InfiniteMPO` (`MultilineMPO`).
+
+`Multiline` plays two different, orthogonal roles at once, and its Base overloads are split
+accordingly:
+
+- As a sequence of lines, matching what is actually stored: `length`, `eltype`, `iterate`
+  and `m[i]` (a single integer index) all refer to the `T`-typed lines themselves, i.e.
+  `length(m) == nrows` and `m[i]::T`.
+- As a lattice, describing the 2D shape spanned by the lines together: `size(m)` is
+  `(nrows, ncols)`, and `axes`/`eachindex` follow `size`.
+
+These two views disagree on purpose (`length(m) != prod(size(m))`).
+Code that wants to work line-by-line should use `m[i]`/`parent(m)`,
+while code that wants the lattice shape should use `size`.
 
 # Fields
 

@@ -27,6 +27,11 @@ Type that represents multiple lines of [`InfiniteMPS`](@ref) objects.
 - `AC`: center-gauged MPS tensors
 - `C`: gauge (bond) tensors
 
+Only `InfiniteMPS` lines are supported.
+Note that `length`, `eltype` and iteration refer to the lines (so e.g. `length(ψ) == nrows`),
+while `size` refers to the `(nrows, ncols)` lattice shape.
+See [`Multiline`](@ref) for details.
+
 # See also
 
 [`Multiline`](@ref)

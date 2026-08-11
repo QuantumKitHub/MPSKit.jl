@@ -32,6 +32,13 @@ the operator is a `AbstractTensorMap` that acts on the physical space of a singl
     return value is the total over one unit cell; divide by `length(ψ)` to obtain a
     per-site value.
 
+!!! note "MultilineMPS/MultilineMPO"
+    For a `MultilineMPS`/`MultilineMPO{<:InfiniteMPO}` pair, `O` is applied with the usual
+    row-shift convention (row `i` of `O` pairs `ψ[i]` against `ψ[i + 1]`).
+    The returned value is the fixed-point contraction, not a normalized `⟨ψ|O|ψ⟩ / ⟨ψ|ψ⟩` in the sense of
+    the single-line methods.
+    `MultilineMPO` lines of `InfiniteMPOHamiltonian` (or any non-`InfiniteMPO` line type) are not supported.
+
 # Examples
 
 ```jldoctest

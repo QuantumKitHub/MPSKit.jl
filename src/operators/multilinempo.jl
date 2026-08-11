@@ -5,10 +5,14 @@
 
 Type that represents multiple lines of `MPO` objects.
 
+Only `InfiniteMPO` lines are supported currently.
+Hamiltonians and finite MPOs are rejected by the constructors.
+
 # Constructors
 
-    MultilineMPO(mpos::AbstractVector{<:Union{SparseMPO, DenseMPO}})
-    MultilineMPO(Os::AbstractMatrix{<:MPOTensor})
+    MultilineMPO(mpos::AbstractVector{<:InfiniteMPO})
+    MultilineMPO(Os::PeriodicMatrix{<:MPOTensor})
+    MultilineMPO(t::MPOTensor)
 
 # See also
 
