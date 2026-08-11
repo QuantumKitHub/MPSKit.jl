@@ -170,5 +170,35 @@ col = 2
 al = state.AL[row, col];
 ```
 
+### The row-shift convention
+
+The row direction and the column direction of a `MultilineMPS` play different roles.
+Within a row, a `MultilineMPS` behaves exactly like the `InfiniteMPS` it repeats: columns are periodic, and `state.AL[row, col]`, `state.AR[row, col]`, `state.C[row, col]` and `state.AC[row, col]` behave exactly as they would for `state[row]::InfiniteMPS`.
+
+The row direction is the direction along which a transfer matrix, represented as a [`MultilineMPO`](@ref), is applied.
+By convention, row `i` of a `MultilineMPO` maps row `i` of the state onto row `i + 1`, so that
+
+```julia
+(O * ψ)[i] == O[i - 1] * ψ[i - 1]
+```
+
+i.e. applying `O` shifts every row up by one.
+This convention is not just a property of `*`: it is baked into `environments`, `expectation_value`, and the derivative machinery as well, all of which pair `ψ[row + 1]` against `O[row]`.
+It is also why `O * ψ` requires `size(O, 1) == size(ψ, 1)`, rather than the row counts of operator and state being independent.
+
+### What is currently supported
+
+Only lines that are themselves infinite are supported: a `MultilineMPS` is always built out of
+[`InfiniteMPS`](@ref) lines, never [`FiniteMPS`](@ref) or [`WindowMPS`](@ref) ones.
+This matches the intended use case of rows/columns in an infinite 2D network.
+The constructors reject finite lines.
+
+### Subtleties
+
+- **`size` vs. iteration:** `size(state)` returns `(nrows, ncols)`, describing the lattice shape.
+Iterating over a `MultilineMPS` (or indexing it with a single integer, `state[i]`) instead yields the individual `InfiniteMPS` *lines*, so `length(state) == nrows`, not `nrows * ncols`.
+Code that wants to operate line-by-line should use `state[i]`/`parent(state)`, while code that wants the lattice shape should use `size`.
+- **Norms and inner products:** `dot`/`norm` sum the contribution of every row, so a `MultilineMPS` whose individual rows are each normalized to 1 does *not* itself have norm 1: `norm(state) == sqrt(nrows)` for `nrows` identical normalized rows.
+
 These objects are also used extensively in the context of [PEPSKit.jl](https://github.com/QuantumKitHub/PEPSKit.jl).
 

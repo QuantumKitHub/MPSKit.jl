@@ -274,3 +274,22 @@ a collection (direct sum) of spaces, one for each row/column.
 ```@example operators
 left_virtualspace(H_ising, 1), right_virtualspace(H_ising, 1), physicalspace(H_ising, 1)
 ```
+
+## MultilineMPO
+
+Much like a [`MultilineMPS`](@ref) is a repeating set of `InfiniteMPS` lines, a [`MultilineMPO`](@ref) is a repeating set of `InfiniteMPO` lines.
+This is typically the row-to-row or column-to-column transfer matrix of a 2D classical partition function, or a boundary MPO in the context of PEPS.
+See the `MultilineMPS` section of the [states](@ref um_states) page for the row-shift convention relating a `MultilineMPO` to the `MultilineMPS` it acts on: row `i` of the operator maps row `i` of the state onto row `i + 1`.
+
+```@example operators
+mpo_multi = MultilineMPO([mpo, mpo])
+```
+
+Only `InfiniteMPO` lines are supported; neither Hamiltonians nor finite MPOs are allowed currently.
+This is enforced by the constructors rather than by the type itself, so `MultilineMPO([H, H])` for a Hamiltonian `H` throws a `MethodError` right at the construction site, instead of producing an object that only fails once used.
+
+!!! note "`*` between `MultilineMPO`s does not compose the way you might expect"
+    Because of the `+1` row shift, multiplying two `MultilineMPO`s produces an operator that spans two rows of the lattice: `(O1 * O2)` maps row `i` onto row `i + 2`.
+    As a consequence, `(O1 * O2) * ψ != O1 * (O2 * ψ)` in general, for any definition of the product.
+    The two sides are genuinely different operations (one fused two-row step, versus two sequential one-row steps).
+    Treat `O1 * O2` as a "fused double row", not as an operator that can be composed further.
