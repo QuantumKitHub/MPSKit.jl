@@ -16,13 +16,10 @@ Type that represents multiple lines of `MPO` objects.
 """
 const MultilineMPO = Multiline{<:AbstractMPO}
 
-function MultilineMPO(Os::AbstractMatrix)
-    return MultilineMPO(map(FiniteMPO, eachrow(Os)))
-end
 function MultilineMPO(Os::PeriodicMatrix)
     return MultilineMPO(map(InfiniteMPO, eachrow(Os)))
 end
-MultilineMPO(mpos::AbstractVector{<:AbstractMPO}) = Multiline(mpos)
+MultilineMPO(mpos::AbstractVector{<:InfiniteMPO}) = Multiline(mpos)
 MultilineMPO(t::MPOTensor) = MultilineMPO(PeriodicMatrix(fill(t, 1, 1)))
 
 # allow indexing with two indices
@@ -31,10 +28,9 @@ Base.getindex(t::MultilineMPO, i::Int, j) = Base.getindex(t[i], j)
 Base.getindex(t::MultilineMPO, I::CartesianIndex{2}) = t[I.I...]
 
 # converters
-Base.convert(::Type{MultilineMPO}, t::AbstractMPO) = Multiline([t])
+Base.convert(::Type{MultilineMPO}, t::InfiniteMPO) = Multiline([t])
 Base.convert(::Type{DenseMPO}, t::MultilineMPO{<:DenseMPO}) = only(t)
 Base.convert(::Type{SparseMPO}, t::MultilineMPO{<:SparseMPO}) = only(t)
-Base.convert(::Type{FiniteMPO}, t::MultilineMPO{<:FiniteMPO}) = only(t)
 Base.convert(::Type{InfiniteMPO}, t::MultilineMPO{<:InfiniteMPO}) = only(t)
 
 function Base.:*(mpo::MultilineMPO, st::MultilineMPS)
