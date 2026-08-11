@@ -56,7 +56,7 @@ Base.reverse(A::Multiline) = Multiline(reverse(parent(A)))
 Base.only(A::Multiline) = only(parent(A))
 
 function Base.repeat(A::Multiline, rows::Int, cols::Int)
-    inner = map(Base.Fix2(repeat, cols), A.data)
+    inner = map(Base.Fix2(repeat, cols), parent(A))
     outer = repeat(inner, rows)
     return Multiline(outer)
 end

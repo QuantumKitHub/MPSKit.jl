@@ -278,10 +278,10 @@ Base.axes(psi::CView{<:AbstractFiniteMPS}) = map(n -> 0:(n - 1), size(psi))
 
 Base.size(psi::CView{<:Multiline{<:InfiniteMPS}}) = size(psi.parent)
 function Base.size(psi::CView{<:Multiline{<:AbstractFiniteMPS}})
-    return (length(psi.parent.data), length(first(psi.parent.data)) + 1)
+    return (length(parent(psi.parent)), length(first(parent(psi.parent))) + 1)
 end
 function Base.axes(psi::CView{<:Multiline{<:AbstractFiniteMPS}})
-    return (Base.OneTo(length(psi.parent.data)), 0:length(first(psi.parent.data)))
+    return (Base.OneTo(length(parent(psi.parent))), 0:length(first(parent(psi.parent))))
 end
 
 #the checkbounds for multiline objects needs to be changed, as the first index is periodic
@@ -291,10 +291,10 @@ function Base.checkbounds(
         psi::Union{ACView{<:Multiline}, ALView{<:Multiline}, ARView{<:Multiline}, CView{<:Multiline}},
         a, b
     )
-    return if first(psi.parent.data) isa InfiniteMPS
+    return if first(parent(psi.parent)) isa InfiniteMPS
         true
     else
-        checkbounds(Bool, CView(first(psi.parent.data)), b)
+        checkbounds(Bool, CView(first(parent(psi.parent))), b)
     end
 end
 
