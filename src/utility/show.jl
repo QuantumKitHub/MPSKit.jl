@@ -10,6 +10,23 @@ for T in (:FiniteMPS, :InfiniteMPS, :FiniteMPO, :InfiniteMPO, :FiniteMPOHamilton
     end
 end
 
+function Base.summary(io::IO, m::MultilineMPS)
+    R, C = size(m)
+    D = maximum(dim, left_virtualspace(m))
+    E = scalartype(m)
+    S = TensorKit.type_repr(spacetype(m))
+    print(io, R, "×", C, " MultilineMPS(", E, ", ", S, ") with maximal dimension ", D)
+    return nothing
+end
+function Base.summary(io::IO, m::MultilineMPO)
+    R, C = size(m)
+    D = maximum(dim, left_virtualspace(m))
+    E = scalartype(m)
+    S = TensorKit.type_repr(spacetype(m))
+    print(io, R, "×", C, " MultilineMPO(", E, ", ", S, ") with maximal dimension ", D)
+    return nothing
+end
+
 function Base.show(io::IO, ::MIME"text/plain", ψ::FiniteMPS)
     summary(io, ψ)
     get(io, :compact, false)::Bool && return nothing
@@ -160,6 +177,40 @@ function Base.show(io::IO, ::MIME"text/plain", mpo::AbstractMPO)
         end
         println(io, "| ⋮")
     end
+
+    return nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", m::Union{MultilineMPS, MultilineMPO})
+    summary(io, m)
+    get(io, :compact, false)::Bool && return nothing
+    println(io, ":")
+
+    R = size(m, 1)
+    limit = get(io, :limit, true)::Bool
+    # rows are typically few so the row budget itself is small and fixed
+    # rather than computed from `displaysize`
+    half_rows = (limit && R > 4) ? 2 : R
+    shown = R <= 2 * half_rows ? (1:R) : [1:half_rows; (R - half_rows + 1):R]
+
+    for (k, i) in enumerate(shown)
+        println(io, "row ", i, ":")
+        show(io, MIME"text/plain"(), m[i]) # dispatches to the line's own show for correct connectors
+        println(io)
+        if k < length(shown)
+            next = shown[k + 1]
+            if next == i + 1
+                if m isa MultilineMPO
+                    println(io, "  ↓  (row ", i, " maps onto row ", next, ")")
+                else
+                    println(io, "  ⋮")
+                end
+            else
+                println(io, "  ⋮\n  ⋮")
+            end
+        end
+    end
+    m isa MultilineMPO && println(io, "  ↓  (row ", R, " maps onto row 1)")
 
     return nothing
 end
