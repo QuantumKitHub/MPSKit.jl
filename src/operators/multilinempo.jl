@@ -39,12 +39,17 @@ Base.convert(::Type{InfiniteMPO}, t::MultilineMPO{<:InfiniteMPO}) = only(t)
 
 function Base.:*(mpo::MultilineMPO, st::MultilineMPS)
     size(mpo) == size(st) || throw(ArgumentError("dimension mismatch"))
-    return Multiline(map(*, zip(mpo, st)))
+    # row i of the operator maps row i of the state onto row i + 1
+    return Multiline(circshift(map(*, parent(mpo), parent(st)), 1))
 end
 
+#TODO: docstring mentioning that (mpo1*mpo2)*multilinemps != mpo1*(mpo2*multilinemps) in general
+# because of the row-shifting behavior of MultilineMPO
 function Base.:*(mpo1::MultilineMPO, mpo2::MultilineMPO)
     size(mpo1) == size(mpo2) || throw(ArgumentError("dimension mismatch"))
-    return Multiline(map(*, zip(mpo1, mpo2)))
+    # `mpo2[i]` maps row i onto row i + 1, where `mpo1[i + 1]` picks up: the resulting
+    # operator spans two rows of the lattice and maps row i onto row i + 2
+    return Multiline(map(*, circshift(parent(mpo1), -1), parent(mpo2)))
 end
 
 for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
