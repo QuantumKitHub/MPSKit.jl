@@ -118,7 +118,7 @@ end
 
 VectorInterface.add!!(x::Multiline, y::Multiline, α::Number, β::Number) = add!(x, y, α, β)
 
-# is it intentional that a nontrivial multilinemps of normalised rows never has norm 1?
+# FIXME? is it intentional that a nontrivial multilinemps of normalised rows never has norm 1?
 function VectorInterface.inner(x::Multiline, y::Multiline)
     T = VectorInterface.promote_inner(x, y)
     init = zero(T)
@@ -134,6 +134,7 @@ site_type(::Type{Multiline{S}}) where {S} = site_type(S)
 bond_type(::Type{Multiline{S}}) where {S} = bond_type(S)
 site_type(st::Multiline) = site_type(typeof(st))
 bond_type(st::Multiline) = bond_type(typeof(st))
-TensorKit.sectortype(::Type{Multiline{T}}) where {T} = sectortype(T)
-TensorKit.spacetype(::Type{Multiline{T}}) where {T} = spacetype(T)
-TensorKit.storagetype(::Type{Multiline{T}}) where {T} = storagetype(T)
+for ftype in (:spacetype, :sectortype, :storagetype)
+    @eval TensorKit.$ftype(::Type{Multiline{T}}) where {T} = $ftype(T)
+    @eval TensorKit.$ftype(m::Multiline) = $ftype(typeof(m))
+end
