@@ -46,9 +46,11 @@ end
         W2 = MPSKit.DenseMPO(sW2)
 
         ψ1, _ = approximate(ψ0, (sW1, ψ), VOMPS(; verbosity))
-        MPSKit.Defaults.set_scheduler!(:serial)
-        ψ2, _ = approximate(ψ0, (W2, ψ), VOMPS(; verbosity))
-        MPSKit.Defaults.set_scheduler!()
+        # VOMPS runs the AC and C projections of a site concurrently, so the allocator serving them
+        # is shared; the serial arm takes the other branch of that choice
+        ψ2, _ = with_scheduler(MPSKit.SerialScheduler()) do
+            return approximate(ψ0, (W2, ψ), VOMPS(; verbosity))
+        end
 
         ψ3, _ = approximate(ψ0, (W1, ψ), IDMRG(; verbosity))
         ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trunc = truncrank(12), verbosity))

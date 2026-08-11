@@ -39,12 +39,18 @@ features:
 
 ## Table of contents
 
-- [Prerequisites](@ref)
-- [States](@ref um_states)
-- [Operators](@ref um_operators)
-- [Algorithms](@ref um_algorithms)
-- [Parallelism in julia](@ref)
-- [Lattices](@ref lattices)
+- Manual
+  - [Prerequisites](@ref)
+  - [States](@ref um_states)
+  - [Operators](@ref um_operators)
+  - [Algorithms](@ref um_algorithms)
+  - [Parallelism in julia](@ref)
+  - [Lattices](@ref lattices)
+- [Examples](@ref)
+- [Library](@ref "Library documentation")
+- [References](@ref) — how to cite MPSKit, and publications that have used it
+- [Changelog](@ref)
+- [Contributing](@ref "Contributing to MPSKit.jl")
 
 ## Installation
 

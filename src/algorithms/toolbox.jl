@@ -6,10 +6,11 @@ Calculate the von Neumann entanglement entropy. The entropy can be computed from
 MPS state or directly from an entanglement spectrum as obtained from
 [`entanglement_spectrum`](@ref).
 
-When called on an MPS with an integer `site`, the entropy is computed across the
-entanglement cut to the right of site `site`. For `InfiniteMPS`, omitting `site` returns a
-vector of entropies, one for each site. For `FiniteMPS` and `WindowMPS`, `site` is
-required.
+When called on an MPS with an integer `site`, the entropy is computed for the bipartition that
+splits the chain between sites `site` and `site + 1`.
+`site = 0` therefore denotes the cut to the left of the first site.
+For `InfiniteMPS`, omitting `site` returns a vector of entropies, one for each site.
+For `FiniteMPS` and `WindowMPS`, `site` is required.
 """
 entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
@@ -43,8 +44,8 @@ function infinite_temperature_density_matrix(H::MPOHamiltonian)
 end
 
 """
-    calc_galerkin(below, operator, above, envs)
-    calc_galerkin(pos, below, operator, above, envs)
+    calc_galerkin(below, operator, above, envs; kwargs...)
+    calc_galerkin(pos, below, operator, above, envs; kwargs...)
 
 Calculate the Galerkin error, which is the error between the solution of the original problem, and the solution of the problem projected on the tangent space.
 Concretely, this is the overlap of the current state with the single-site derivative, projected onto the nullspace of the current state:
@@ -52,38 +53,50 @@ Concretely, this is the overlap of the current state with the single-site deriva
 ```math
 \\epsilon = \\left|VL ⋅ \\left(VL^{\\dagger} ⋅ \\frac{\\partial \\text{above}}{\\partial AC_{\\text{pos}}}\\right)\\right|
 ```
+
+# Keyword Arguments
+
+- `backend = DefaultBackend()`: backend for the tensor contractions of the derivative.
+- `allocator = DefaultAllocator()`: allocator serving their scratch space. A sweep that already
+  holds one should pass it, rather than leaving this contraction to the garbage collector.
 """
-function calc_galerkin(pos::Int, below, operator, above, envs)
-    AC´ = AC_projection(pos, below, operator, above, envs)
+function calc_galerkin(
+        pos::Int, below, operator, above, envs;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    AC´ = AC_projection(pos, below, operator, above, envs; backend, allocator)
     normalize!(AC´)
     return norm(project_complement!(AC´, below.AL[pos]))
 end
-function calc_galerkin(pos::CartesianIndex{2}, below, operator, above, envs)
+function calc_galerkin(pos::CartesianIndex{2}, below, operator, above, envs; kwargs...)
     row, col = Tuple(pos)
-    return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
+    return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row]; kwargs...)
 end
-function calc_galerkin(below, operator, above, envs)
-    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), eachindex(below))
+function calc_galerkin(below, operator, above, envs; kwargs...)
+    return maximum(eachindex(below)) do pos
+        return calc_galerkin(pos, below, operator, above, envs; kwargs...)
+    end
 end
 
 """
     entanglement_spectrum(ψ, site::Int) -> SectorVector{T, sectortype(ψ), AbstractVector{T}}
 
-Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
-matrix to the right of a given site. This is a vector containing the singular
-values. The contributions from specific sectors can be viewed by indexing accordingly, i.e.
+Compute the entanglement spectrum across the cut that splits the chain between sites `site` and
+`site + 1`, i.e. the singular values of the gauge tensor `ψ.C[site]`.
+The contributions from specific sectors can be viewed by indexing accordingly, i.e.
 `entanglement_spectrum(ψ, site)[sector]`.
 
-For `InfiniteMPS` and `WindowMPS` the default value for `site` is 0.
-
-For `FiniteMPS` no default value for `site` is given; it is up to the user to specify.
+`site` runs over `0:length(ψ)`.
+For `FiniteMPS`, `0` and `length(ψ)` are the cuts at the left and right edge of the chain.
+No default is given for `FiniteMPS`; it is up to the user to specify.
+For `WindowMPS` and `InfiniteMPS`, `site` defaults to `0`.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS, WindowMPS}, site::Int = 0)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
 function entanglement_spectrum(st::FiniteMPS, site::Int)
-    checkbounds(st, site)
+    checkbounds(st.C, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
 

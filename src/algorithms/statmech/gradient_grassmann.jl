@@ -4,7 +4,9 @@ function leading_boundary(
         alg::GradientGrassmann,
         envs::MultilineEnvironments = environments(state, operator, state)
     )
-    fg(x) = GrassmannMPS.fg(x, operator, envs)
+    # read the scheduler here rather than in `fg`, so that the allocator it selects is inferable
+    scheduler = Defaults.scheduler[]
+    fg(x) = GrassmannMPS.fg(x, operator, envs; alg.backend, scheduler)
     x, _, _, _, normgradhistory = optimize(
         fg, state,
         alg.method;

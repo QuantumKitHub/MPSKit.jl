@@ -17,6 +17,7 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `tol = Defaults.tol`: tolerance for convergence criterium
 - `maxiter = Defaults.maxiter`: maximum amount of iterations
 - `verbosity = Defaults.verbosity - 1`: level of information display
+- `backend = Defaults.backend()`: backend for tensor contractions and index manipulations
 
 # Fields
 
@@ -30,16 +31,19 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`leading_bou
 
 * [Hauru et al. SciPost Phys. 10 (2021)](@cite hauru2021)
 """
-struct GradientGrassmann{O <: OptimKit.OptimizationAlgorithm, F} <: Algorithm
+struct GradientGrassmann{O <: OptimKit.OptimizationAlgorithm, F, B} <: Algorithm
     "optimization algorithm"
     method::O
     "callback function applied after each iteration, of signature `finalize!(x, f, g, numiter) -> x, f, g`"
     finalize!::F
+    "backend for tensor contractions and index manipulations"
+    backend::B
 
     function GradientGrassmann(;
             method = ConjugateGradient, (finalize!) = OptimKit._finalize!,
             tol = Defaults.tol, maxiter = Defaults.maxiter,
-            verbosity = Defaults.verbosity - 1
+            verbosity = Defaults.verbosity - 1,
+            backend = Defaults.backend()
         )
         if isa(method, OptimKit.OptimizationAlgorithm)
             # We were given an optimisation method, just use it.
@@ -55,7 +59,7 @@ struct GradientGrassmann{O <: OptimKit.OptimizationAlgorithm, F} <: Algorithm
             msg = "method should be either an instance or a subtype of `OptimKit.OptimizationAlgorithm`."
             throw(ArgumentError(msg))
         end
-        return new{typeof(m), typeof(finalize!)}(m, finalize!)
+        return new{typeof(m), typeof(finalize!), typeof(backend)}(m, finalize!, backend)
     end
 end
 
@@ -70,7 +74,12 @@ function find_groundstate(
     method_verbosity = hasproperty(alg.method, :verbosity) ? alg.method.verbosity : 0
     method_verbosity > 3 || disable_timer!(timeroutput)
 
-    fg(x) = timeit(() -> GrassmannMPS.fg(x, H, envs; timeroutput), timeroutput, "fg")
+    # read the scheduler here rather than in `fg`, so that the allocator it selects is inferable
+    scheduler = Defaults.scheduler[]
+    fg(x) = timeit(
+        () -> GrassmannMPS.fg(x, H, envs; timeroutput, alg.backend, scheduler),
+        timeroutput, "fg",
+    )
     retract(state, g, α) = timeit(
         () -> GrassmannMPS.retract(state, g, α), timeroutput, "retract",
     )

@@ -34,12 +34,15 @@ $(TYPEDFIELDS)
 
 Used as the `algorithm` argument of [`changebonds`](@ref) and [`changebonds!`](@ref).
 """
-@kwdef struct OptimalExpand{S} <: Algorithm
+@kwdef struct OptimalExpand{S, B} <: Algorithm
     "algorithm used for the singular value decomposition"
     alg_svd::S = Defaults.alg_svd()
 
     "[truncation strategy](@extref MatrixAlgebraKit.TruncationStrategy) selecting how many directions are *added* to each bond, rather than how much of the bond is kept"
     trunc::TruncationStrategy
+
+    "backend for tensor contractions and index manipulations"
+    backend::B = Defaults.backend()
 end
 
 # Simple wrapper to convert between diffrent type of InifniteMPS.
@@ -56,12 +59,13 @@ function changebonds(
         ψ::InfiniteMPS, H::InfiniteMPOHamiltonian, alg::OptimalExpand,
         envs = environments(ψ, H, ψ)
     )
+    allocator = default_allocator(ψ, SerialScheduler())
     T = eltype(ψ.AL)
     AL′ = similar(ψ.AL)
     AR′ = similar(ψ.AR, tensormaptype(spacetype(T), 1, numind(T) - 1, storagetype(T)))
     for i in 1:length(ψ)
         # determine optimal expansion spaces around bond i
-        AC2 = AC2_projection(i, ψ, H, ψ, envs; kind = :ACAR)
+        AC2 = AC2_projection(i, ψ, H, ψ, envs; kind = :ACAR, alg.backend, allocator)
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = left_null(ψ.AL[i])
@@ -82,6 +86,7 @@ function changebonds(
 end
 
 function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ))
+    allocator = default_allocator(ψ, SerialScheduler())
     TL = eltype(ψ.AL)
     AL′ = PeriodicMatrix{TL}(undef, size(ψ.AL))
     TR = tensormaptype(spacetype(TL), 1, numind(TL) - 1, storagetype(TL))
@@ -89,7 +94,10 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
 
     # determine optimal expansion spaces around bond i
     for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
-        AC2 = AC2_projection(CartesianIndex(i - 1, j), ψ, H, ψ, envs; kind = :ACAR)
+        AC2 = AC2_projection(
+            CartesianIndex(i - 1, j), ψ, H, ψ, envs;
+            kind = :ACAR, alg.backend, allocator
+        )
 
         # Use the nullspaces and SVD decomposition to determine the optimal expansion space
         VL = left_null(ψ.AL[i, j])
@@ -108,10 +116,14 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
     return newψ, envs
 end
 
-
 # Finite system
 # -------------
-function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs; normalize::Bool = true)
+function changebond!(
+        site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs;
+        normalize::Bool = true,
+        # a sweep that already holds one should pass it: this is called once per site
+        allocator = default_allocator(ψ, SerialScheduler()),
+    )
     bond = site
     left = ψ.AC[site]
     right = ψ.AR[site + 1]
@@ -119,7 +131,7 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Op
     NR = right_null!(_transpose_tail(right; copy = true))
 
     # two-site update from the projected effective Hamiltonian
-    AC2 = AC2_projection(bond, ψ, H, ψ, envs)
+    AC2 = AC2_projection(bond, ψ, H, ψ, envs; alg.backend, allocator)
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)
@@ -141,7 +153,12 @@ function changebond!(site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, H, alg::Op
     ψ.AC[site + 1] = (nc, nar)
     return ψ
 end
-function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs; normalize::Bool = true)
+function changebond!(
+        site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs;
+        normalize::Bool = true,
+        # a sweep that already holds one should pass it: this is called once per site
+        allocator = default_allocator(ψ, SerialScheduler()),
+    )
     bond = site - 1
     left = ψ.AL[site - 1]
     right = ψ.AC[site]
@@ -149,7 +166,7 @@ function changebond!(site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::Opt
     NR = right_null!(_transpose_tail(right; copy = true))
 
     # two-site update from the projected effective Hamiltonian
-    AC2 = AC2_projection(bond, ψ, H, ψ, envs)
+    AC2 = AC2_projection(bond, ψ, H, ψ, envs; alg.backend, allocator)
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)

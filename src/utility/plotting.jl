@@ -32,8 +32,6 @@ function entanglementplot end
         sector_margin = 1 // 10, sector_formatter = string
     )
     mps = h.args[1]
-    (site <= length(mps) && !(isa(mps, FiniteMPS) && site == 0)) ||
-        throw(ArgumentError("Invalid site $site for the given mps."))
 
     spectra = entanglement_spectrum(mps, site)
     sectors = []
@@ -76,7 +74,7 @@ function entanglementplot end
     grid --> :xy
     widen --> true
 
-    xguide --> "χ = $(dim(left_virtualspace(mps, site)))"
+    xguide --> "χ = $(dim(_firstspace(mps.C[site])))"
     xticks --> (1:length(sectors), sector_formatter.(sectors))
     xtickfonthalign --> :center
     xtick_direction --> :out

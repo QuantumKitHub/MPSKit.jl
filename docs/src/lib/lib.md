@@ -1,5 +1,5 @@
 # Library documentation
 
 ```@autodocs
-Modules = [MPSKit]
+Modules = [MPSKit, MPSKit.DynamicTols, MPSKit.Defaults]
 ```

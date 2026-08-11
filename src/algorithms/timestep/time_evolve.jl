@@ -37,7 +37,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
         )
         log = IterLog("TDVP")
         LoggingExtras.withlevel(; verbosity) do
-            @infov 2 loginit!(log, 0, t)
+            @infov 2 loginit!(log, 0, first(t_span))
             for iter in 1:(length(t_span) - 1)
                 t = t_span[iter]
                 dt = t_span[iter + 1] - t
