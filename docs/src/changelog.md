@@ -38,6 +38,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   by `MPSKit.default_allocator`, instead of leaving them to the garbage collector
   (two-site DMRG: -64% allocations, -57% GC time, -23% wall time).
   Disable with `MPSKit.Defaults.set_buffering!(false)`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
+- Custom `show`/`summary` for `MultilineMPS`/`MultilineMPO`. Each row is now rendered via each row's own display, and row shifting is shown explicitly for `MultilineMPO`.
 
 ### Changed
 
@@ -70,10 +71,22 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `correlator` now throws an `ArgumentError` when the sites are not ordered as `i < j`.
   Previously such a call only logged an `@error` and then continued into a contraction that is
   not the requested correlator. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+- `Multiline` (and therefore `MultilineMPS`/`MultilineMPO`) now consistently treats
+  `length`/`eltype`/`iterate`/`m[i]` as referring to the individual lines it stores
+  (`length(m) == nrows`), while `size`/`axes`/`eachindex` refer to the `(nrows, ncols)` lattice
+  shape.
+- `MultilineMPO` construction is now restricted to `InfiniteMPO` lines. Constructing one from
+  Hamiltonians or finite MPOs now throws a `MethodError` at the construction site instead of producing an object that fails
+  later. The `AbstractMatrix` constructor that silently built finite-line `MultilineMPO`s was
+  removed.
 
 ### Deprecated
 
 ### Removed
+
+- `expectation_value(::MultilineMPS, ::MultilineMPO, envs...)` fallback method, which silently
+  computed a meaningless value (`prod` instead of `sum`, no row shift, `envs` ignored) for any
+  `MultilineMPO` line type not covered by the guarded method. Most notably this prevents a fallback for `InfiniteMPOHamiltonian`, a legal but never-meaningful `Multiline` line type.
 
 ### Fixed
 
@@ -96,6 +109,19 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   and the right virtual leg of `mpo[end]` and contracted the two — which at length 1 is the *same*
   tensor, so it returned `O * O` on twice the physical space instead of `O`.
   ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- `MultilineMPO * MultilineMPS` and `MultilineMPO * MultilineMPO` (`*`) never worked at all
+  (`MethodError`, from `map(*, zip(...))` calling `*` on a 2-tuple). Fixing the immediate error
+  still left a shape bug (`O * ψ` produced an `nrows * ncols`-line object with `#undef` entries
+  past `nrows`) and a row-shift bug (`O * ψ` had fidelity 0 with the expected state on every
+  row). `*` now correctly applies the convention that row `i` of a `MultilineMPO` maps row `i`
+  of the state onto row `i + 1`.
+- `isfinite(::MultilineMPO)` threw (`isfinite(typeof(m))` had no matching type-level method for
+  `Multiline`).
+- `changebonds(::MultilineMPO, ::SvdCut)` threw (`convert(MultilineMPS, ::MultilineMPO)` has no
+  method).
+- `axes(m::Multiline, i)` threw for `i > 2`, but now returns `Base.OneTo(1)`, matching Base's own
+  out-of-range convention (already the case for `size(m, i)`).
+- `spacetype`/`sectortype`/`storagetype` on a `Multiline` instance were undefined. Only the type-level methods existed.
 
 ### Performance
 
