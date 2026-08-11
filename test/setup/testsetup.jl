@@ -24,6 +24,7 @@ export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_mo
 export classical_ising_tensors, classical_ising, sixvertex
 export bad_initial_state
 export SCHEDULERS, with_scheduler
+export perm_mpo, product_mps
 
 # using TensorOperations
 
@@ -289,6 +290,25 @@ function bad_initial_state(H, L; T = ComplexF64, n_states = 20, n_fixed = 3)
 
         return normalize!(FiniteMPS(T, fill(physd, L), Vs))
     end
+end
+
+# functions for multiline tests
+# bond-dim-1 permutation MPO with O|p⟩ = |π[p]⟩
+function perm_mpo(pi)
+    d = 3
+    P, V = ℂ^d, ℂ^1
+    t = zeros(ComplexF64, 1, d, d, 1)
+    for pin in 1:d
+        t[1, pi[pin], pin, 1] = 1.0
+    end
+    return InfiniteMPO([TensorMap(t, V ⊗ P ← P ⊗ V)])
+end
+function product_mps(k)
+    d = 3
+    P, V = ℂ^d, ℂ^1
+    a = zeros(ComplexF64, 1, d, 1)
+    a[1, k, 1] = 1.0
+    return InfiniteMPS([TensorMap(a, V ⊗ P ← V)])
 end
 
 end
