@@ -193,10 +193,6 @@ function expectation_value(
         return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j])
     end
 end
-function expectation_value(ψ::MultilineMPS, mpo::MultilineMPO, envs...)
-    # TODO: fix environments
-    return prod(x -> expectation_value(x...), zip(parent(ψ), parent(mpo)))
-end
 # fallback
 function expectation_value(ψ::AbstractMPS, mpo::AbstractMPO, envs...)
     return dot(ψ, mpo, ψ) / dot(ψ, ψ)
