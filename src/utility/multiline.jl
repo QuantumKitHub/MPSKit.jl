@@ -25,14 +25,17 @@ Multiline(data::AbstractVector{T}) where {T} = Multiline{T}(data)
 # -----------------------
 Base.parent(m::Multiline) = m.data
 Base.size(m::Multiline) = (length(parent(m)), length(parent(m)[1]))
-Base.size(m::Multiline, i::Int) = i == 1 ? length(parent(m)) : i == 2 ? length(parent(m)[1]) : error()
-Base.length(m::Multiline) = prod(size(m))
-function Base.axes(m::Multiline, i::Int)
-    return i == 1 ? axes(parent(m), 1) :
-        i == 2 ? axes(parent(m)[1], 1) : throw(ArgumentError("Invalid index $i"))
+function Base.size(m::Multiline, i::Int) # acts like abstract array
+    return i == 1 ? length(parent(m)) : i == 2 ? length(parent(m)[1]) : 1
+end
+Base.length(m::Multiline) = length(parent(m))
+function Base.axes(m::Multiline, d::Int)
+    return d <= 2 ? axes(m)[d] : Base.OneTo(1) # matches size
 end
 Base.eachindex(m::Multiline) = CartesianIndices(size(m))
 Base.isfinite(m::Multiline) = isfinite(typeof(m))
+Base.isfinite(::Type{Multiline{T}}) where {T} = isfinite(T)
+Base.eltype(::Type{Multiline{T}}) where {T} = T
 
 eachsite(m::Multiline) = eachsite(first(parent(m)))
 
@@ -102,6 +105,7 @@ end
 
 VectorInterface.add!!(x::Multiline, y::Multiline, α::Number, β::Number) = add!(x, y, α, β)
 
+# is it intentional that a nontrivial multilinemps of normalised rows never has norm 1?
 function VectorInterface.inner(x::Multiline, y::Multiline)
     T = VectorInterface.promote_inner(x, y)
     init = zero(T)
