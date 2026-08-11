@@ -43,8 +43,6 @@ function Base.:*(mpo::MultilineMPO, st::MultilineMPS)
     return Multiline(circshift(map(*, parent(mpo), parent(st)), 1))
 end
 
-#TODO: docstring mentioning that (mpo1*mpo2)*multilinemps != mpo1*(mpo2*multilinemps) in general
-# because of the row-shifting behavior of MultilineMPO
 function Base.:*(mpo1::MultilineMPO, mpo2::MultilineMPO)
     size(mpo1) == size(mpo2) || throw(ArgumentError("dimension mismatch"))
     # `mpo2[i]` maps row i onto row i + 1, where `mpo1[i + 1]` picks up: the resulting
