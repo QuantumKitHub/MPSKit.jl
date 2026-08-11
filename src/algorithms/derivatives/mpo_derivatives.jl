@@ -79,11 +79,12 @@ end
 function (h::MPO_AC_Hamiltonian{<:MPSBondTensor, Nothing, <:MPSBondTensor})(x::MPSTensor)
     return @plansor y[-1 -2; -3] ≔ h.leftenv[-1; 2] * x[2 -2; 1] * h.rightenv[1; -3]
 end
+# braid needs to be inverted due to handedness of mpo.jl#L90
 function (h::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})(
         x::GenericMPSTensor{<:Any, 3}
     )
     @plansor y[-1 -2 -3; -4] ≔ h.leftenv[-1 7; 6] * x[6 4 2; 1] *
-        h.operators[1][7 -2; 4 5] * τ[5 -3; 2 3] * h.rightenv[1 3; -4]
+        h.operators[1][7 -2; 4 5] * τ'[5 -3; 2 3] * h.rightenv[1 3; -4]
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 
@@ -100,12 +101,13 @@ function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTen
         h.operators[1][7 -2; 5 4] * h.operators[2][4 -4; 3 2] * h.rightenv[1 2; -3]
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
+# these braids need to be inverted due to handedness of mpo.jl#L90
 function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor})(
         x::AbstractTensorMap{<:Any, <:Any, 3, 3}
     )
     @plansor y[-1 -2 -3; -4 -5 -6] ≔ h.leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
-        h.rightenv[1 3; -4] * h.operators[1][11 -2; 8 9] * τ[9 -3; 6 7] *
-        h.operators[2][7 -6; 4 5] * τ[5 -5; 2 3]
+        h.rightenv[1 3; -4] * h.operators[1][11 -2; 8 9] * τ'[9 -3; 6 7] *
+        h.operators[2][7 -6; 4 5] * τ'[5 -5; 2 3]
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 
@@ -247,9 +249,9 @@ end
 function (H::PrecomputedACDerivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 1})
     backend, allocator = H.backend, H.allocator
     L, R = H.leftenv, H.rightenv
-
+    # braid needs to be inverted due to handedness of mpo.jl#L90
     @plansor backend = backend allocator = allocator begin
-        xR[-1 -2; -4 -5 -3] := x[-1 -2 3; 1] * R[1 2; -4] * τ[2 3; -5 -3]
+        xR[-1 -2; -4 -5 -3] := x[-1 -2 3; 1] * R[1 2; -4] * τ'[2 3; -5 -3]
     end
     xR_fused = fuse_legs(xR, 2, 1)
     @plansor backend = backend allocator = allocator begin
@@ -261,16 +263,16 @@ function (H::PrecomputedAC2Derivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 3})
     backend, allocator = H.backend, H.allocator
     L, R = H.leftenv, H.rightenv
 
-    x_braided = fuse_legs(braid(x, ((1, 2, 3, 5), (4, 6)), (1, 2, 3, 4, 5, 6)), 1, 2)
+    x_braided = fuse_legs(braid(x, ((1, 2, 3, 5), (4, 6)), (1, 2, 3, 4, 6, 5)), 1, 2)
 
     @plansor backend = backend allocator = allocator begin
         xR[-1 -2; -4 -6 -7 -5 -3] := x_braided[-1 -2 -3 -5; 1] * R[1 -7; -4 -6]
     end
-    @notensor xR_braided = braid(fuse_legs(xR, 2, 1), ((1, 4), (2, 3, 5, 6)), (1, 4, 6, 7, 5, 3))
+    @notensor xR_braided = braid(fuse_legs(xR, 2, 1), ((1, 4), (2, 3, 5, 6)), (1, 2, 3, 5, 6, 7))
     @plansor backend = backend allocator = allocator begin
         y_braided[-1 -2; -4 -6 -5 -3] := L[-1 -2; 1 2] * xR_braided[1 2; -4 -6 -5 -3]
     end
-    return braid(y_braided, ((1, 2, 6), (3, 5, 4)), (1, 2, 4, 6, 5, 3))
+    return braid(y_braided, ((1, 2, 6), (3, 5, 4)), (1, 2, 4, 5, 6, 3))
 end
 
 const _ToPrepare = Union{
