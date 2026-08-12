@@ -7,6 +7,7 @@ println("
 using .TestSetup
 using Test, TestExtras
 using MPSKit
+using MPSKit: Multiline
 using TensorKit
 using TensorKit: ℙ
 

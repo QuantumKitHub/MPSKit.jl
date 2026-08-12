@@ -187,8 +187,13 @@ end
 function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
-function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
-    return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), envs...)
+function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO)
+    return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo))
+end
+function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs::AbstractMPSEnvironments)
+    return expectation_value(
+        convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), convert(MultilineEnvironments, envs)
+    )
 end
 function expectation_value(
         ψ::MultilineMPS, O::MultilineMPO{<:InfiniteMPO},
