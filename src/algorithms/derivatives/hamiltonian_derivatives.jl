@@ -61,6 +61,8 @@ function JordanMPO_AC_Hamiltonian(
     # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
     # them once and reuse the locals throughout
     WA, WB, WC, WD = W.A, W.B, W.C, W.D
+    GL2 = GL[2:(end - 1)]
+    GR2 = GR[2:(end - 1)]
 
     # onsite
     D = nonzero_length(WD) > 0 ? only(WD) : missing
@@ -73,8 +75,7 @@ function JordanMPO_AC_Hamiltonian(
 
     # starting
     C = if nonzero_length(WC) > 0
-        GR_2 = GR[2:(end - 1)]
-        @plansor backend = backend allocator = allocator starting[-1 -2; -3 -4] ≔ WC[-1; -3 1] * GR_2[-4 1; -2]
+        @plansor backend = backend allocator = allocator starting[-1 -2; -3 -4] ≔ WC[-1; -3 1] * GR2[-4 1; -2]
         only(starting)
     else
         missing
@@ -82,15 +83,14 @@ function JordanMPO_AC_Hamiltonian(
 
     # ending
     B = if nonzero_length(WB) > 0
-        GL_2 = GL[2:(end - 1)]
-        @plansor backend = backend allocator = allocator ending[-1 -2; -3 -4] ≔ GL_2[-1 1; -3] * WB[1 -2; -4]
+        @plansor backend = backend allocator = allocator ending[-1 -2; -3 -4] ≔ GL2[-1 1; -3] * WB[1 -2; -4]
         only(ending)
     else
         missing
     end
 
     # continuing
-    A = MPO_AC_Hamiltonian(GL[2:(end - 1)], WA, GR[2:(end - 1)], backend, allocator)
+    A = MPO_AC_Hamiltonian(GL2, WA, GR2, backend, allocator)
 
     # obtaining storagetype of environments since these should have already mixed
     # the types of the operator and state
@@ -225,6 +225,50 @@ for f in (:AC_hamiltonian, :AC2_hamiltonian)
     end
 end
 
+"""
+    _connected_channels(A1, A2) -> Union{Nothing, NTuple{3, Vector{Int}}}
+
+The continuing-channel indices that can carry a contribution across both bonds, as `(rows, mids, cols)`.
+A middle channel counts only if it is reachable from some row of `A1` *and* reaches some column of `A2`,
+and a row or column counts only if it meets such a middle channel.
+Everything else contributes exactly zero.
+
+Returns `nothing` when nothing connects, which is the nearest-neighbour case.
+
+The channel indices are small dense integers, so reachability is tracked in flat bit-flag arrays and read
+out with `findall`, which is already ascending.
+That ordering is load-bearing: the three index vectors are used to slice `A1`/`A2` and the environments,
+which only line up if all of them keep the original channel order.
+"""
+function _connected_channels(A1, A2)
+    (nonzero_length(A1) == 0 || nonzero_length(A2) == 0) && return nothing
+    keys1, keys2 = nonzero_keys(A1), nonzero_keys(A2)
+    @assert size(A1, 4) == size(A2, 1) "A-blocks do not share a bond"
+
+    # a middle channel is retained iff it is both fed from the left and feeding to the right
+    FED, FEEDS, BOTH = 0x01, 0x02, 0x03
+    flags = zeros(UInt8, size(A1, 4))
+    for I in keys1
+        @inbounds flags[I[4]] |= FED
+    end
+    for I in keys2
+        @inbounds flags[I[1]] |= FEEDS
+    end
+    mids = findall(==(BOTH), flags)
+    isempty(mids) && return nothing
+
+    rows = falses(size(A1, 1))
+    for I in keys1
+        @inbounds flags[I[4]] == BOTH && (rows[I[1]] = true)
+    end
+    cols = falses(size(A2, 4))
+    for I in keys2
+        @inbounds flags[I[1]] == BOTH && (cols[I[4]] = true)
+    end
+
+    return findall(rows), mids, findall(cols)
+end
+
 function JordanMPO_AC2_Hamiltonian(
         GL::MPSTensor, W1::JordanMPOTensor, W2::JordanMPOTensor, GR::MPSTensor;
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
@@ -233,6 +277,8 @@ function JordanMPO_AC2_Hamiltonian(
     # them once and reuse the locals throughout
     A1, B1, C1, D1 = W1.A, W1.B, W1.C, W1.D
     A2, B2, C2, D2 = W2.A, W2.B, W2.C, W2.D
+    GL2 = GL[2:(end - 1)]
+    GR2 = GR[2:(end - 1)]
 
     # not started
     II = size(W2, 4) == 1 ? missing : transpose(removeunit(GR[1], 2))
@@ -242,7 +288,7 @@ function JordanMPO_AC2_Hamiltonian(
 
     # starting right
     IC = if nonzero_length(C2) > 0
-        @plansor backend = backend allocator = allocator IC_[-1 -2; -3 -4] ≔ C2[-1; -3 1] * GR[2:(end - 1)][-4 1; -2]
+        @plansor backend = backend allocator = allocator IC_[-1 -2; -3 -4] ≔ C2[-1; -3 1] * GR2[-4 1; -2]
         only(IC_)
     else
         missing
@@ -265,8 +311,8 @@ function JordanMPO_AC2_Hamiltonian(
 
     # starting left - continuing right
     CA = if nonzero_length(C1) > 0 && nonzero_length(A2) > 0
-        @plansor backend = backend allocator = allocator CA_[-1 -2 -3; -4 -5 -6] ≔ C1[-1; -4 2] * A2[2 -2; -5 1] *
-            GR[2:(end - 1)][-6 1; -3]
+        @plansor backend = backend allocator = allocator CA_[-1 -2 -3; -4 -5 -6] ≔ C1[-1; -4 1] * A2[1 -2; -5 2] *
+            GR2[-6 2; -3]
         only(CA_)
     else
         missing
@@ -274,7 +320,7 @@ function JordanMPO_AC2_Hamiltonian(
 
     # continuing left - ending right
     AB = if nonzero_length(A1) > 0 && nonzero_length(B2) > 0
-        @plansor backend = backend allocator = allocator AB_[-1 -2 -3; -4 -5 -6] ≔ GL[2:(end - 1)][-1 2; -4] * A1[2 -2; -5 1] *
+        @plansor backend = backend allocator = allocator AB_[-1 -2 -3; -4 -5 -6] ≔ GL2[-1 2; -4] * A1[2 -2; -5 1] *
             B2[1 -3; -6]
         only(AB_)
     else
@@ -283,38 +329,33 @@ function JordanMPO_AC2_Hamiltonian(
 
     # ending left
     BE = if nonzero_length(B1) > 0
-        @plansor backend = backend allocator = allocator BE_[-1 -2; -3 -4] ≔ GL[2:(end - 1)][-1 2; -3] * B1[2 -2; -4]
+        @plansor backend = backend allocator = allocator BE_[-1 -2; -3 -4] ≔ GL2[-1 2; -3] * B1[2 -2; -4]
         only(BE_)
     else
         missing
     end
-
-    # continuing - continuing
-    AA = MPO_AC2_Hamiltonian(GL[2:(end - 1)], A1, A2, GR[2:(end - 1)], backend, allocator)
 
     S = spacetype(GL)
     M = storagetype(GL)
     O1 = tensormaptype(S, 1, 1, M)
     O2 = tensormaptype(S, 2, 2, M)
     O3 = tensormaptype(S, 3, 3, M)
-    O4 = typeof(AA)
+    # slicing preserves the block-tensor types, so `AA`'s type does not depend on whether the
+    # channels end up restricted - no need to build a throwaway operator just to read it off
+    O4 = MPO_AC2_Hamiltonian{
+        typeof(GL2), typeof(A1), typeof(A2), typeof(GR2), typeof(backend), typeof(allocator),
+    }
 
-    if nonzero_length(A1) == 0 && nonzero_length(A2) == 0
-        AA = missing
+    # continuing - continuing, restricted to the channels that can actually contribute
+    channels = _connected_channels(A1, A2)
+    AA = if isnothing(channels)
+        missing
     else
-        mask1 = falses(size(A1, 1), size(A1, 4))
-        for I in nonzero_keys(A1)
-            mask1[I[1], I[4]] = true
-        end
-
-        mask2 = falses(size(A2, 1), size(A2, 4))
-        for I in nonzero_keys(A2)
-            mask2[I[1], I[4]] = true
-        end
-
-        mask_left = transpose(mask1) * trues(size(mask1, 1))
-        mask_right = mask2 * trues(size(mask2, 2))
-        all(iszero, mask_left .* mask_right) && (AA = missing)
+        rows, mids, cols = channels
+        MPO_AC2_Hamiltonian(
+            GL2[rows], A1[rows, 1:1, 1:1, mids], A2[mids, 1:1, 1:1, cols], GR2[cols],
+            backend, allocator
+        )
     end
 
     return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(

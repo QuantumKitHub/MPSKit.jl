@@ -6,10 +6,11 @@ Calculate the von Neumann entanglement entropy. The entropy can be computed from
 MPS state or directly from an entanglement spectrum as obtained from
 [`entanglement_spectrum`](@ref).
 
-When called on an MPS with an integer `site`, the entropy is computed across the
-entanglement cut to the right of site `site`. For `InfiniteMPS`, omitting `site` returns a
-vector of entropies, one for each site. For `FiniteMPS` and `WindowMPS`, `site` is
-required.
+When called on an MPS with an integer `site`, the entropy is computed for the bipartition that
+splits the chain between sites `site` and `site + 1`.
+`site = 0` therefore denotes the cut to the left of the first site.
+For `InfiniteMPS`, omitting `site` returns a vector of entropies, one for each site.
+For `FiniteMPS` and `WindowMPS`, `site` is required.
 """
 entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
@@ -80,21 +81,22 @@ end
 """
     entanglement_spectrum(ψ, site::Int) -> SectorVector{T, sectortype(ψ), AbstractVector{T}}
 
-Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
-matrix to the right of a given site. This is a vector containing the singular
-values. The contributions from specific sectors can be viewed by indexing accordingly, i.e.
+Compute the entanglement spectrum across the cut that splits the chain between sites `site` and
+`site + 1`, i.e. the singular values of the gauge tensor `ψ.C[site]`.
+The contributions from specific sectors can be viewed by indexing accordingly, i.e.
 `entanglement_spectrum(ψ, site)[sector]`.
 
-For `InfiniteMPS` and `WindowMPS` the default value for `site` is 0.
-
-For `FiniteMPS` no default value for `site` is given; it is up to the user to specify.
+`site` runs over `0:length(ψ)`.
+For `FiniteMPS`, `0` and `length(ψ)` are the cuts at the left and right edge of the chain.
+No default is given for `FiniteMPS`; it is up to the user to specify.
+For `WindowMPS` and `InfiniteMPS`, `site` defaults to `0`.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS, WindowMPS}, site::Int = 0)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
 function entanglement_spectrum(st::FiniteMPS, site::Int)
-    checkbounds(st, site)
+    checkbounds(st.C, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
 

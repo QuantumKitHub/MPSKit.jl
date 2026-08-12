@@ -10,3 +10,6 @@ benchmark/results
 **/.vitepress/cache/
 **/.vitepress/dist/
 package-lock.json
+
+# generated from CONTRIBUTING.md by docs/make.jl
+docs/src/contributing.md
