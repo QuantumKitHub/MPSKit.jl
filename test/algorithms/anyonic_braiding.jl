@@ -8,9 +8,8 @@ using .TestSetup
 using Test, TestExtras
 using MPSKit
 using BlockTensorKit
-using MPSKit: AC_hamiltonian, AC2_hamiltonian, AC2
+using MPSKit: AC_hamiltonian, AC2_hamiltonian, AC2, eigsolve
 using TensorKit
-using KrylovKit: eigsolve
 using LinearAlgebra
 using Random
 
