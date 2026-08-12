@@ -130,19 +130,43 @@ function _taylor_loopback!(mpo, virtual_sz, linds, ::Val{N}, τ::Number) where {
         V_right = virtual_sz[i + 1]
         linds_right = linds[i + 1]
         cinds_right = CartesianIndices(linds_right)
-        for b in cinds_right[2:end]
-            all(in((1, V_right)), b.I) || continue
 
-            b_lin = linds_right[b]
-            a = count(==(V_right), b.I)
+        threelevel_linds_right = _get_threelevel_linds(V_right, linds_right)
+        for c in threelevel_linds_right
+            c_cart = cinds_right[c]
+            a = count(==(V_right), c_cart.I)
             factor = τ^a * factorial(N - a) / factorial(N)
-            slice[:, 1, 1, 1] = slice[:, 1, 1, 1] + factor * slice[:, 1, 1, b_lin]
-            for I in nonzero_keys(slice)
-                (I[1] == b_lin || I[4] == b_lin) && delete!(slice, I)
-            end
+            slice[:, 1, 1, 1] = slice[:, 1, 1, 1] + factor * slice[:, 1, 1, c]
         end
     end
+    _remove_threelevels!(mpo, virtual_sz, linds)
     return mpo
+end
+
+function _get_threelevel_linds(virtual_sz, linds)
+    row_threelevels_linds = Int[]
+    for c in CartesianIndices(linds)
+        c_lin = linds[c]
+        cI = c.I
+        all(in((1, virtual_sz)), cI) && !all(==(1), cI) && push!(row_threelevels_linds, c_lin)
+    end
+    return row_threelevels_linds
+end
+
+# removes the rows and columns that are labled by level-labels made up of 1 and "3" only, but not all 1's.
+function _remove_threelevels!(mpo, virtual_sz, linds)
+    for (i, slice) in enumerate(parent(mpo))
+        # remove the three-level rows
+        row_threelevel_linds = _get_threelevel_linds(virtual_sz[i], linds[i])
+
+        # remove the three-level columns
+        col_threelevel_linds = _get_threelevel_linds(virtual_sz[i + 1], linds[i + 1])
+
+        for I in nonzero_keys(slice)
+            (I[1] in row_threelevel_linds || I[4] in col_threelevel_linds) && delete!(slice, I)
+        end
+    end
+    return
 end
 
 # Algorithm 2: collapse rows and columns that are equivalent under the
