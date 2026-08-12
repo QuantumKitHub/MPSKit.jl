@@ -11,7 +11,7 @@ The module exports nothing, and all references to it should be qualified, e.g.
 module GrassmannMPS
 
 using ..MPSKit
-using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments,
+using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, site_type,
     AC_projection, recalculate!, TimerOutput, DISABLED_TIMER, @timeit, default_allocator
 using TensorOperations: AbstractBackend, DefaultBackend
 using TensorKit
