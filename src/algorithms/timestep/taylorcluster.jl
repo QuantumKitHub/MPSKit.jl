@@ -156,14 +156,26 @@ end
 # removes the rows and columns that are labled by level-labels made up of 1 and "3" only, but not all 1's.
 function _remove_threelevels!(mpo, virtual_sz, linds)
     for (i, slice) in enumerate(parent(mpo))
-        # remove the three-level rows
+        # three-level rows
         row_threelevel_linds = _get_threelevel_linds(virtual_sz[i], linds[i])
 
-        # remove the three-level columns
+        # three-level columns
         col_threelevel_linds = _get_threelevel_linds(virtual_sz[i + 1], linds[i + 1])
 
-        for I in nonzero_keys(slice)
-            (I[1] in row_threelevel_linds || I[4] in col_threelevel_linds) && delete!(slice, I)
+        # build the set of all CartesianIndices in a three-level row or column
+        d1, _, _, d4 = size(slice)
+        threelevel_cinds = Set{CartesianIndex{4}}()
+        for r in row_threelevel_linds
+            union!(threelevel_cinds, CartesianIndices((r:r, 1:1, 1:1, 1:d4)))
+        end
+        for c in col_threelevel_linds
+            union!(threelevel_cinds, CartesianIndices((1:d1, 1:1, 1:1, c:c)))
+        end
+
+        # remove the nonzero entries that fall in a three-level row or column
+        # this avoids a lot of misses wrt looping over all nonzero_keys
+        for I in intersect(nonzero_keys(slice), threelevel_cinds)
+            delete!(slice, I)
         end
     end
     return
