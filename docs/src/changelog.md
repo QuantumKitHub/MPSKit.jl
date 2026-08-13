@@ -96,6 +96,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   and the right virtual leg of `mpo[end]` and contracted the two — which at length 1 is the *same*
   tensor, so it returned `O * O` on twice the physical space instead of `O`.
   ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- `make_time_mpo` with `TaylorCluster` on a Hamiltonian whose virtual bond dimension varies along
+  the chain. The loopback step labels rows by the left virtual bond and columns by the right one, but deleted the absorbed "three-level" rows and columns using the *right*-bond linear index for both. When the two bonds differ in size this deletes the wrong rows, leaving spurious rows behind and removing valid ones, so the resulting time-evolution MPO was wrong. Rows and columns are now derived from their own bond, and the removal happens in a single pass after all loopback contributions have been accumulated instead of inside the loop that still reads those entries.
+  ([#511](https://github.com/QuantumKitHub/MPSKit.jl/pull/511))
 
 ### Performance
 
