@@ -11,11 +11,16 @@ the enlarged bond back down (selecting the truncated-SVD gauge). The expansion i
 state-preserving, as required for a consistent time evolution.
 
 !!! note
-    By default the norm is not preserved: neither the bond expansion nor the truncation
-    renormalizes, so the state norm keeps useful information (the accumulated truncation
-    error in real time, or the decaying weight in imaginary time). Pass `normalize = true`
-    to `timestep`/`time_evolve` to renormalize at every step instead, like a ground-state
-    search. This is independent of `imaginary_evolution`. CBE is only available for finite MPS.
+    By default the norm is not preserved: neither the bond expansion nor the truncation renormalizes,
+    so the state norm keeps useful information. In real time this is exact, namely the squared norm
+    drops by precisely the truncated ("discarded") weight,
+    ``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon^2``,
+    with `ϵ` the truncation error returned by [`timestep`](@ref). In imaginary time the norm also carries
+    the physical decay of the weight, so it no longer isolates the truncation. Without `trunc` nothing is
+    discarded at all and the norm is conserved exactly in real time.
+
+    Pass `normalize = true` to `timestep`/`time_evolve` to renormalize at every step instead,
+    like a ground-state search. This is independent of `imaginary_evolution`. CBE is only available for finite MPS.
 
 # Fields
 
@@ -222,6 +227,7 @@ end
 $(TYPEDEF)
 
 Two-site MPS time-evolution algorithm based on the Time-Dependent Variational Principle.
+See [`TDVP`](@ref) for more information.
 
 # Fields
 
@@ -286,7 +292,7 @@ function _timestep2_finite!(
         Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
         ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
 
-        # the discarded weight is the truncation error
+        # the norm of the discarded singular values is the truncation error
         _, ϵ = gauge2!(ψ, i, Val(:right), ac2′, alg_gauge; normalize)
         ϵ² += ϵ^2
 
