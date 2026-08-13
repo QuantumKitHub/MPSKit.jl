@@ -129,7 +129,9 @@ function _timestep_infinite(
     end
 
     recalculate!(envs, ψ′, H)
-    return ψ′, envs
+    # infinite one-site TDVP has a fixed bond dimension and never truncates so nothing is discarded
+    # the gauge-fixing residual is controlled by `tolgauge`, not reported here
+    return ψ′, envs, zero(real(scalartype(ψ′)))
 end
 
 function timestep!(
@@ -148,6 +150,10 @@ function _timestep_finite!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP, envs, allocator;
         imaginary_evolution::Bool, normalize::Bool
     )
+    # discarded weight of the step, accumulated in squares over the local gauges
+    # stays exactly zero for QR gauging
+    ϵ² = zero(real(scalartype(ψ)))
+
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         # 1. optionally expand the bond ahead of the local update (CBE)
@@ -161,7 +167,8 @@ function _timestep_finite!(
         # 3. gauge: split AC -> AL[i], C[i] (QR center-move, or truncated SVD cutting the
         #    enlarged bond back down) and move the center to i+1. By default the norm is
         #    preserved; `normalize` renormalizes.
-        left_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
+        _, ϵ = left_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
+        ϵ² += ϵ^2
 
         # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
@@ -190,7 +197,8 @@ function _timestep_finite!(
 
         # 3. gauge: split AC -> C[i-1], AR[i] and move the center to i-1 (norm preserved by
         #    default; `normalize` renormalizes)
-        right_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
+        _, ϵ = right_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
+        ϵ² += ϵ^2
 
         # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
@@ -207,7 +215,7 @@ function _timestep_finite!(
         imaginary_evolution
     )
 
-    return ψ, envs
+    return ψ, envs, sqrt(ϵ²)
 end
 
 """
