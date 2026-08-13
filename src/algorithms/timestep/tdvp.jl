@@ -274,16 +274,21 @@ function _timestep2_finite!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2, envs, allocator;
         imaginary_evolution::Bool, normalize::Bool
     )
+    # the two-site center always has to be split back up, so the gauge is always a truncated SVD
+    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trunc)
+
+    # discarded weight of the step, accumulated in squares over the local gauges
+    ϵ² = zero(real(scalartype(ψ)))
+
     # sweep left to right
     for i in 1:(length(ψ) - 1)
         ac2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
         Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
         ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
 
-        nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trunc, alg = alg.alg_svd)
-        normalize && normalize!(nc)
-        ψ.AC[i] = (nal, complex(nc))
-        ψ.AC[i + 1] = (complex(nc), _transpose_front(nar))
+        # the discarded weight is the truncation error
+        _, ϵ = gauge2!(ψ, i, Val(:right), ac2′, alg_gauge; normalize)
+        ϵ² += ϵ^2
 
         if i != (length(ψ) - 1)
             Hac = AC_hamiltonian(i + 1, ψ, H, ψ, envs; alg.backend, allocator)
@@ -300,10 +305,8 @@ function _timestep2_finite!(
         Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
         ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator; imaginary_evolution)
 
-        nal, nc, nar = svd_trunc!(ac2′; trunc = alg.trunc, alg = alg.alg_svd)
-        normalize && normalize!(nc)
-        ψ.AC[i - 1] = (nal, complex(nc))
-        ψ.AC[i] = (complex(nc), _transpose_front(nar))
+        _, ϵ = gauge2!(ψ, i - 1, Val(:left), ac2′, alg_gauge; normalize)
+        ϵ² += ϵ^2
 
         if i != 2
             Hac = AC_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
@@ -314,7 +317,7 @@ function _timestep2_finite!(
         end
     end
 
-    return ψ, envs
+    return ψ, envs, sqrt(ϵ²)
 end
 
 # copying version
