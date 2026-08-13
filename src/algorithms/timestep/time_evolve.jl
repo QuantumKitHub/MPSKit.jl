@@ -1,6 +1,6 @@
 """
-    time_evolve(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ, envs)
-    time_evolve!(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ₀, envs)
+    time_evolve(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ, envs, ϵ)
+    time_evolve!(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ₀, envs, ϵ)
 
 Time-evolve the initial state `ψ₀` with Hamiltonian `H` over a given time span by stepping
 through each of the time points obtained by iterating t_span.
@@ -26,6 +26,13 @@ through each of the time points obtained by iterating t_span.
 
 - `ψ`: the time-stepped state
 - `envs`: the updated environment manager
+- `ϵ`: the truncation error accumulated over the whole evolution, i.e. the per-step errors of
+    [`timestep`](@ref), ``\\epsilon = \\sqrt{\\sum_{\\text{steps}} \\epsilon_i^2}``.
+    In real time with `normalize = false` this is exactly the norm lost to truncation over the whole
+    evolution, ``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon^2``. This is zero for
+    algorithms that never truncate. See [`timestep`](@ref) for what it does and does not measure.
+
+The per-step error is logged at `verbosity ≥ 3` and the accumulated total at `verbosity ≥ 2`.
 """
 function time_evolve end, function time_evolve! end
 
@@ -58,8 +65,8 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
 end
 
 """
-    timestep(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ, envs)
-    timestep!(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ₀, envs)
+    timestep(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ, envs, ϵ)
+    timestep!(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ₀, envs, ϵ)
 
 Time-step the state `ψ₀` with Hamiltonian `H` over a given time step `dt` at time `t`,
 solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
@@ -85,6 +92,24 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 
 - `ψ`: the time-stepped state
 - `envs`: the updated environment manager
+- `ϵ`: the truncation error of the step (see below)
+
+# Truncation error
+
+`ϵ` is the truncation error of the step, i.e. the 2-norm of the sum of squared singular values discarded
+by the local gauge factorizations. In other words, `ϵ²` is the truncated ("discarded") weight.
+
+It is nonzero only for algorithms that truncate such as [`TDVP2`](@ref), [`BUG`](@ref) with a `trunc`, and
+[`TDVP`](@ref) with a bond expansion, while it is exactly `0` for one-site [`TDVP`](@ref),
+which runs at fixed bond dimension. A zero `ϵ` does not mean the step was exact, but that this
+particular error channel is absent. In particular, the projection and time-discretisation errors are never
+included in `ϵ`.
+
+In real time with `normalize = false`, `ϵ` is exactly the norm lost to truncation,
+``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon^2``.
+
+See [Errors and accuracy](@ref) in the manual for what the other error sources are, why the
+per-bond errors combine in a squared manner, and the precise statement and caveats of the norm identity.
 
 # Examples
 
