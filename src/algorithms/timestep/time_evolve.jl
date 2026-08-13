@@ -35,21 +35,25 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
             envs = environments(ψ, H, ψ);
             verbosity::Int = 0, imaginary_evolution::Bool = false, normalize::Bool = false
         )
-        log = IterLog("TDVP")
+        log = IterLog(string(nameof(typeof(alg))))
+        # discarded weight over the whole evolution, accumulated in squares over the steps
+        ϵ² = zero(real(scalartype(ψ)))
         LoggingExtras.withlevel(; verbosity) do
-            @infov 2 loginit!(log, 0, first(t_span))
+            @infov 2 loginit!(log, 0.0, first(t_span))
             for iter in 1:(length(t_span) - 1)
                 t = t_span[iter]
                 dt = t_span[iter + 1] - t
 
-                ψ, envs = $timestep(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
+                ψ, envs, ϵ = $timestep(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
                 ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
+                ϵ² += ϵ^2
 
-                @infov 3 logiter!(log, iter, 0, t)
+                # per-step truncation error; the running total is what is reported at the end
+                @infov 3 logiter!(log, iter, convert(Float64, ϵ), t)
             end
-            @infov 2 logfinish!(log, length(t_span), 0, t_span[end])
+            @infov 2 logfinish!(log, length(t_span), convert(Float64, sqrt(ϵ²)), t_span[end])
         end
-        return ψ, envs
+        return ψ, envs, sqrt(ϵ²)
     end
 end
 
