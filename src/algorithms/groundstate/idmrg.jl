@@ -12,7 +12,8 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
 @kwdef struct IDMRG{A, B} <: Algorithm
-    "tolerance for convergence criterium"
+    "convergence tolerance, compared against the Galerkin error (the tangent-space gradient
+    norm)"
     tol::Float64 = Defaults.tol
 
     "maximal amount of iterations"
@@ -45,7 +46,8 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
 @kwdef struct IDMRG2{A, S, B} <: Algorithm
-    "tolerance for convergence criterium"
+    "convergence tolerance, compared against the Galerkin error (the tangent-space gradient
+    norm)"
     tol::Float64 = Defaults.tol
 
     "maximal amount of iterations"

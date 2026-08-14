@@ -14,7 +14,7 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 # Keyword Arguments
 
-- `tol::Float64`: tolerance for convergence criterium
+- `tol::Float64`: convergence tolerance, compared against the Galerkin error (see Returns below)
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 
@@ -22,7 +22,9 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 - `ψ::AbstractMPS`: converged leading boundary MPS
 - `environments`: environments corresponding to the converged boundary
-- `ϵ::Float64`: final convergence error upon terminating the algorithm
+- `ϵ::Float64`: final convergence error upon terminating the algorithm, i.e. the Galerkin error.
+    It is not a truncation error; see [`find_groundstate`](@ref) and the manual on the
+    `ϵ` convention under [The error convention](@ref), and [Ground-state accuracy](@ref).
 """ leading_boundary
 
 # TODO: alg selector

@@ -97,7 +97,7 @@ opposite direction imposes a final truncation with `alg_zipdown` in a locally ga
 the gauge center of `ψ` at the far end. The destination may alias `ϕ`.
 
 Also returns the truncation error `ϵ`, the largest 2-norm of the discarded singular values over all
-bonds and both sweeps.
+bonds and both sweeps, i.e. the worst single bond.
 """
 zip_left_right!
 @doc (@doc zip_left_right!) zip_right_left!

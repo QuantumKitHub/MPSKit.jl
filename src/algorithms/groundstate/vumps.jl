@@ -17,7 +17,8 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`leading_bou
 * [Vanderstraeten et al. SciPost Phys. Lect. Notes 7 (2019)](@cite vanderstraeten2019)
 """
 @kwdef struct VUMPS{F, B} <: Algorithm
-    "tolerance for convergence criterium"
+    "convergence tolerance, compared against the Galerkin error (the tangent-space gradient
+    norm)"
     tol::Float64 = Defaults.tol
 
     "maximal amount of iterations"
