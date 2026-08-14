@@ -108,7 +108,7 @@ included in `ϵ`.
 In real time with `normalize = false`, `ϵ` is exactly the norm lost to truncation,
 ``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon^2``.
 
-See [Errors and accuracy](@ref) in the manual for what the other error sources are, why the
+See [Time evolution accuracy](@ref) in the manual for what the other error sources are, why the
 per-bond errors combine in a squared manner, and the precise statement and caveats of the norm identity.
 
 # Examples
