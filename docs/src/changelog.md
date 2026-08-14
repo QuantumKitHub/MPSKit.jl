@@ -45,6 +45,16 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   virtual channels between terms that start out with the same operators, up to a scalar factor,
   and add up terms that are linearly dependent. The resulting Hamiltonian is unchanged, but its
   bond dimension is generally smaller ([#518](https://github.com/QuantumKitHub/MPSKit.jl/pull/518))
+- `timestep`/`timestep!`/`time_evolve`/`time_evolve!` now return `(ψ, envs, ϵ)` instead of
+  `(ψ, envs)`. `ϵ` is the truncation error, the norm of the singular values discarded by the local
+  gauge factorisations, summed in squares over the bonds of a step and over the iterations, so that `ϵ²` is the discarded/truncated weight. It is nonzero for `TDVP2`, for `BUG` with
+  a `trunc`, and for `TDVP` with a bond expansion. Plain single-site `TDVP` never truncates and
+  returns `0`. Existing `ψ, envs = timestep(...)` call sites keep working! `time_evolve` now
+  also logs the per-step error at `verbosity ≥ 3` and the total at `verbosity ≥ 2` (previously a
+  hardcoded `0`), under the algorithm's own name rather than always `"TDVP"`.
+- The meaning of every reported error and tolerance is now documented, and the manual has a new
+  [Errors and accuracy](@ref) section covering ground states, time evolution and excitations
+  separately. The quantities themselves are unchanged, but what they represent is clarified.
 - Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
   `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
   norm is preserved, so it retains useful information (the accumulated truncation error in real time,
@@ -137,6 +147,15 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 - Reorganised the test suite to reduce CI wall time, as well as added the `--fast` test flag
   to test fewer sector and scalar types. ([#517](https://github.com/QuantumKitHub/MPSKit.jl/pull/517))
+- `TDVP2` now performs its two-site split through the shared `gauge2!` (as two-site DMRG already
+  did), which removes two sources of waste per local update:
+  - its right-to-left sweep installed the two sites in the left-to-right order, which made the
+    lazy orthogonality-view cache re-derive `AR` at the bond from the pre-update tensor, only to
+    overwrite it on the next install. `gauge2!` installs in sweep order, dropping that redundant
+    right-orthogonalisation per bond.
+  - it unconditionally complexified the bond tensor, so for a real-valued state (real Hamiltonian
+    in imaginary time) every local update allocated a complex copy that the state's own storage
+    then converted straight back to real. `gauge2!` only complexifies when the state is complex.
 
 ## [0.13.11](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.10...v0.13.11) - 2026-05-04
 
