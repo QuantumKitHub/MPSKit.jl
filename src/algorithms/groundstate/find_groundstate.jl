@@ -40,7 +40,7 @@ low-bond-dimension initial guess such as a product state.
 - `environments`: environments corresponding to the converged state
 - `ϵ::Float64`: final convergence error upon terminating the algorithm, i.e. the quantity compared
     against the algorithm's `tol`. It measures distance from a variational fixed point and is not
-    a truncation error. See the manual under [The error convention](@ref)) for more information.
+    a truncation error. See the manual under [The error convention](@ref) for more information.
     Which measure it is depends on the algorithm: the sweeping algorithms
     ([`DMRG`](@ref), [`DMRG2`](@ref), [`VUMPS`](@ref), [`IDMRG`](@ref), [`IDMRG2`](@ref))
     report the Galerkin error, whereas [`GradientGrassmann`](@ref) reports
