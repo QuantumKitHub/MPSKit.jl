@@ -86,9 +86,14 @@ end
 function Base.convert(::Type{<:InfiniteMPS}, mpo::InfiniteMPO)
     return InfiniteMPS(map(_mpo_to_mps, parent(mpo)))
 end
+# bending O's own physical leg into an ancilla leg is a real crossing for anyonic sectors
+# overbraiding or underbraiding give different R-symbols, not just a relabeling
+# so it's a choice, and every other density-matrix-facing braid elsewhere
+# (transfer.jl, mpo_derivatives.jl, expval.jl) is defined relative to it
+# the current choice is to braid the ancilla leg over the MPO virtual leg
 function _mpo_to_mps(O::MPOTensor)
     O′ = O isa AbstractBlockTensorMap ? TensorMap(O) : O
-    @plansor A[-1 -2 -3; -4] := O′[-1 -2; 1 2] * τ[1 2; -4 -3]
+    @plansor A[-1 -2 -3; -4] := O′[-1 -2; 1 2] * τ'[1 2; -4 -3]
     return A isa AbstractBlockTensorMap ? TensorMap(A) : A
 end
 
