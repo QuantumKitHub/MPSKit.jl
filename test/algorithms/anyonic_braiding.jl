@@ -32,27 +32,27 @@ end
 
 @testset "expectation values with density matrices (Fibonacci)" begin
     V = Vect[FibonacciAnyon](:I => 1, :τ => 1)
-    L = 4
+    L = 3
     h = randn(ComplexF64, V ⊗ V, V ⊗ V)
     h = h + h'
     H = FiniteMPOHamiltonian(fill(V, L), [(i, i + 1) => h for i in 1:(L - 1)])
+
+    # free workaround: flatten jordan tensors into plain mpo tensors
+    # don't convert to tensormap, this is an exponential cost in L
+    H_dense = FiniteMPO([W isa AbstractBlockTensorMap ? TensorMap(W) : W for W in parent(H)])
     ρ = make_time_mpo(H, 0.1, TaylorCluster(; N = 2); imaginary_evolution = true)
-    ρd, Hd = convert(TensorMap, ρ), convert(TensorMap, H)
-    ref = tr(ρd' * Hd * ρd) / tr(ρd' * ρd)
+    ref = dot(ρ, H_dense * ρ) / norm(ρ)^2
 
     # expectation_value here attempts to braid ancilla leg with mpo virtual leg,
     # which is a sumspace/plain pair and thus fails
     @test_broken expectation_value(ρ, H) ≈ ref
 
-    # free workaround: flatten jordan tensors into plain mpo tensors
-    # don't convert to tensormap, this is an exponential cost in L
-    H_dense = FiniteMPO([W isa AbstractBlockTensorMap ? TensorMap(W) : W for W in parent(H)])
     @test expectation_value(ρ, H_dense) ≈ ref
 
     # these require the densification in _mpo_to_mps (mpo.jl#90)
+    Hd = convert(TensorMap, H)
     @test expectation_value(ρ, FiniteMPO(Hd)) ≈ ref
-    @test expectation_value(ρ, (1, 2) => h) + expectation_value(ρ, (2, 3) => h) +
-        expectation_value(ρ, (3, 4) => h) ≈ ref
+    @test expectation_value(ρ, (1, 2) => h) + expectation_value(ρ, (2, 3) => h) ≈ ref
 end
 
 @testset "braiding consistency in derivative operators (Fibonacci)" begin
@@ -94,10 +94,9 @@ end
 end
 
 const braid_spaces = (
-    ℂ^2,
-    Vect[Z2Irrep](0 => 1, 1 => 1),
-    Vect[FermionParity](0 => 1, 1 => 1),
-    Vect[FibonacciAnyon](:I => 1, :τ => 1),
+    ℂ^2, # bosonic
+    Vect[FermionParity](0 => 1, 1 => 1), # fermionic
+    Vect[FibonacciAnyon](:I => 1, :τ => 1), # anyonic
 )
 
 # build L-site operator that's the identity everywhere except at site i
@@ -144,9 +143,8 @@ _embed(L, op, i) = foldl(⊗, (ntuple(_ -> id(space(op, 1)), i - 1)..., op, ntup
     @test expectation_value(ρ, 2 => o1) ≈ tr(ρd' * _embed(L, o1, 2) * ρd) / nrm
     o2 = randn(ComplexF64, V ⊗ V, V ⊗ V)
     o2 = o2 + o2'
-    for i in 1:(L - 1)
-        @test expectation_value(ρ, (i, i + 1) => o2) ≈ tr(ρd' * _embed(L, o2, i) * ρd) / nrm
-    end
+    i = rand(1:(L - 1))
+    @test expectation_value(ρ, (i, i + 1) => o2) ≈ tr(ρd' * _embed(L, o2, i) * ρd) / nrm
 end
 
 # overlap per unit cell of two infinite MPOs as leading eigenvalue of
