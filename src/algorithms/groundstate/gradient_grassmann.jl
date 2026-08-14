@@ -14,7 +14,9 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `method = ConjugateGradient`: instance of optimization algorithm, or type of optimization
     algorithm to construct
 - `finalize!`: finalizer algorithm
-- `tol = Defaults.tol`: tolerance for convergence criterium
+- `tol = Defaults.tol`: convergence tolerance, compared against the norm of the Riemannian
+    (Grassmann) gradient reported by the optimizer. This is also the `ϵ` returned by
+    [`find_groundstate`](@ref) for this algorithm.
 - `maxiter = Defaults.maxiter`: maximum amount of iterations
 - `verbosity = Defaults.verbosity - 1`: level of information display
 - `hasconverged = OptimKit.DefaultHasConverged(tol)`: convergence criterium

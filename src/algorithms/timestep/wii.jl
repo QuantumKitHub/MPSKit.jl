@@ -17,9 +17,9 @@ Used as the `algorithm` argument of [`make_time_mpo`](@ref).
 * [Paeckel et al. Ann. of Phys. 411 (2019)](@cite paeckel2019)
 """
 @kwdef struct WII <: Algorithm
-    "tolerance for convergence criterium"
+    "tolerance of the Arnoldi exponentiation used to build each local block"
     tol::Float64 = Defaults.tol
-    "maximal number of iterations"
+    "maximal number of iterations of that exponentiation"
     maxiter::Int = Defaults.maxiter
 end
 

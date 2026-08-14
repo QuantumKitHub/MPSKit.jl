@@ -29,11 +29,26 @@ algorithm for you based on the type of `ψ₀` (`DMRG`/`DMRG2` for a finite MPS,
 `IDMRG2` for an infinite MPS) and only accepts the `(O, ψ)` tuple form of `toapprox`. Once you
 pass an explicit `algorithm`, keywords are no longer accepted here — configure the algorithm
 struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
-- `tol::Float64`: tolerance for convergence criterium
+- `tol::Float64`: convergence tolerance, compared against the Galerkin error (see Returns below)
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 - `trunc`: if supplied, a truncated two-site sweep (`DMRG2`/`IDMRG2`) is prepended to
   refine the bond dimension before the single-site algorithm polishes the result.
+
+# Returns
+
+- `ψ`: the approximated state
+- `environments`: environments corresponding to the result (not returned by `Zipup`, which uses none)
+- `ϵ::Float64`: an error measure whose meaning depends on the algorithm:
+  - for the iterative algorithms (`DMRG`, `DMRG2`, `IDMRG`, `IDMRG2`, `VOMPS`) it is the final
+    convergence error, i.e. the Galerkin error compared against `tol`. This is the same quantity
+    [`find_groundstate`](@ref) returns, measuring distance from the variational fixed point.
+  - for [`Zipup`](@ref) it is instead a truncation error, i.e. the largest 2-norm of the discarded
+    singular values over all bonds and sweeps. `Zipup` is a single non-iterative sweep, so there is
+    no convergence measure to report and no `tol` to compare against.
+
+  The two are not comparable, and a small `ϵ` means different things in each case. See the manual on
+  the `ϵ` convention under [The error convention](@ref).
 
 # Algorithms
 

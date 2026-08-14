@@ -313,7 +313,9 @@ standard MPS-tensor form.
 Passing a [`TruncatedAlgorithm`](@extref MatrixAlgebraKit.TruncatedAlgorithm) instead performs a truncated SVD may shrink the bond.
 
 Also returns the truncation error `ϵ`: the 2-norm of the discarded singular values from the
-truncated SVD, or `0` for a norm-preserving QR/LQ gauge.
+truncated SVD, or `0` for a norm-preserving QR/LQ gauge. The package-wide convention has `ϵ`
+represent an amplitude, so that `ϵ²` is the truncated ("discarded") weight and the squared norm of the
+factorized tensor drops by exactly `ϵ²`.
 """
 left_gauge
 @doc (@doc left_gauge) right_gauge
