@@ -263,6 +263,36 @@ end
     end
 end
 
+@testset "Truncation error" verbose = true begin
+    L = 10
+    dt = 0.1
+    H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
+    Random.seed!(7)
+    ψ₀ = normalize!(complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^16)))
+
+    # fixed bond dimension sweep never discards anything, so the reported error is exactly zero
+    @testset "no truncation" begin
+        @test last(timestep(ψ₀, H, 0.0, dt, TDVP())) == 0
+        @test last(timestep(ψ₀, H, 0.0, dt, BUG())) == 0
+    end
+
+    @testset "$(nameof(alg))" for alg in (TDVP2, BUG)
+        _, _, ϵ_loose = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(32)))
+        ψ, _, ϵ_tight = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(2)))
+
+        @test ϵ_tight > 1.0e-3 # throw away real weight
+        @test ϵ_loose < ϵ_tight # throw away less weight with a more forgiving truncation
+        @test norm(ψ) < norm(ψ₀) # discarded weight = norm loss in real time with `normalize = false`
+    end
+
+    @testset "accumulation over an evolution" begin
+        alg = TDVP2(; trunc = truncrank(2))
+        _, _, ϵ_step = timestep(ψ₀, H, 0.0, dt, alg)
+        _, _, ϵ_total = time_evolve(ψ₀, H, 0:dt:(4 * dt), alg)
+        @test ϵ_total >= ϵ_step
+    end
+end
+
 @testset "time_evolve" verbose = true begin
     t_span = 0:0.1:0.1
     algs = [TDVP(), TDVP2(; trunc = truncrank(10)), BUG(; trunc = truncrank(10))]
