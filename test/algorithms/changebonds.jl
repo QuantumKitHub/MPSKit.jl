@@ -12,6 +12,7 @@ using TensorKit: ℙ
 using Random
 
 spacelist = [(ℙ^4, ℙ^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))]
+maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 2:length(ψ))
 
 
 @testset "MPO $(spacetype(pspace))" for (pspace, Dspace) in spacelist
@@ -78,21 +79,23 @@ end
     state_re = changebonds(
         state, RandExpand(; trunc = truncrank(dim(Dspace) * dim(Dspace)))
     )
+    @test maxbond(state_re) > maxbond(state)
     @test dot(state, state_re) ≈ 1 atol = 1.0e-8
 
     state_oe, _ = changebonds(
         state, H, OptimalExpand(; trunc = truncrank(dim(Dspace) * dim(Dspace)))
     )
+    @test maxbond(state_oe) > maxbond(state)
     @test dot(state, state_oe) ≈ 1 atol = 1.0e-8
 
     state_se, _ = changebonds(
         state, H,
         SketchedExpand(; trunc = truncrank(dim(Dspace) * dim(Dspace)), oversampling = 4)
     )
+    @test maxbond(state_se) > maxbond(state)
     @test dot(state, state_se) ≈ 1 atol = 1.0e-8
 
     state_tr = changebonds(state_oe, SvdCut(; trunc = truncrank(dim(Dspace))))
-
     @test dim(left_virtualspace(state_tr, 5)) < dim(left_virtualspace(state_oe, 5))
 end
 
@@ -124,15 +127,14 @@ end
 
 # density-matrix-style MPS: each site carries two physical legs (ket ⊗ bra). The operator-free
 # bond-change algorithms (`RandExpand` expansion, `SvdCut` truncation) must handle the extra
-# physical leg. Operator-based expanders (`OptimalExpand`/`SketchedExpand`) are not covered here
-# because `FiniteMPOHamiltonian`/`FiniteMPO` only support a single physical leg per site.
+# physical leg. Operator-based expanders (`OptimalExpand`/`SketchedExpand`) make use of a
+# one-sided MPO application on the first physical leg.
 @testset "Density-matrix FiniteMPS $(spacetype(pcomp))" for (pcomp, Dspace) in [
         (ℙ^2 ⊗ (ℙ^2)', ℙ^6),
         (Rep[SU₂](1 // 2 => 1) ⊗ Rep[SU₂](1 // 2 => 1)', Rep[SU₂](0 => 4, 1 => 3)),
     ]
     Random.seed!(2468)
     L = 8
-    maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 2:length(ψ))
 
     ψ = FiniteMPS(rand, ComplexF64, fill(pcomp, L), Dspace)
     @test numind(ψ.AC[L ÷ 2]) == 4    # two physical legs + two virtual legs
@@ -146,7 +148,33 @@ end
     # SvdCut truncates the enlarged bond back down, leaving a normalized state
     ψ_tr = changebonds(ψ_re, SvdCut(; trunc = truncrank(dim(Dspace))))
     @test maxbond(ψ_tr) < maxbond(ψ_re)
-    @test abs(dot(ψ_tr, ψ_tr)) ≈ 1 atol = 1.0e-8
+    @test abs(dot(ψ, ψ_tr)) ≈ 1 atol = 1.0e-8
+
+    # use random time-evolution MPO to test operator-based expanders
+    pspace = pcomp[1]
+    nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
+    nn += nn'
+    H = FiniteMPOHamiltonian(fill(pspace, L), (i, i + 1) => nn for i in 1:(L - 1))
+    beta = 0.1
+    O = make_time_mpo(H, beta, TaylorCluster(; N = 2); imaginary_evolution = true)
+
+    @show typeof(O)
+    @show left_virtualspace(O)
+    @show physicalspace(O)
+
+
+    ψ_oe, _ = changebonds(
+        ψ, O, OptimalExpand(; trunc = truncrank(dim(Dspace) * 2))
+    )
+    @test maxbond(ψ_oe) > maxbond(ψ)
+    @test dot(ψ, ψ_oe) ≈ 1 atol = 1.0e-8
+
+    ψ_se, _ = changebonds(
+        ψ, O,
+        SketchedExpand(; trunc = truncrank(dim(Dspace) * 2), oversampling = 4)
+    )
+    @test maxbond(ψ_se) > maxbond(ψ)
+    @test dot(ψ, ψ_se) ≈ 1 atol = 1.0e-8
 end
 
 @testset "MultilineMPS $(spacetype(pspace))" for (pspace, Dspace) in spacelist
