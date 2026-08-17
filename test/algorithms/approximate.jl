@@ -19,9 +19,8 @@ zipup_spacelist = [
     (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1), 8),
 ]
 
-function _random_mpo_mps(pspace, Dspace; elt = ComplexF64)
+function _random_mpo_mps(pspace, Dspace, L; elt = ComplexF64)
     Random.seed!(1357)
-    L = 6
     Wspace = Dspace
     Vspaces = [oneunit(Wspace); fill(Wspace, L - 1); oneunit(Wspace)]
     O = FiniteMPO(
@@ -107,7 +106,10 @@ end
     end
 
     @testset "Finite MPO-MPS zip-up $(spacetype(pspace))" for (pspace, Dspace, _) in zipup_spacelist
-        O, ψ = _random_mpo_mps(pspace, Dspace)
+        L = 6
+
+        # dense MPO
+        O, ψ = _random_mpo_mps(pspace, Dspace, L)
         O_copy = copy(O)
         ψ_copy = copy(ψ)
 
@@ -123,11 +125,31 @@ end
 
         @test norm(ψ - ψ_copy) < 1.0e-12
         @test all(i -> norm(O[i] - O_copy[i]) < 1.0e-12, 1:length(O))
+
+        # sparse MPO
+        nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
+        nn += nn'
+        H = FiniteMPOHamiltonian(fill(pspace, L), (i, i + 1) => nn for i in 1:(L - 1))
+        τ = 1.0e-3
+        expH = make_time_mpo(H, τ, WI)
+
+        # reference via TDVP
+        ref_s, = timestep(ψ, H, 0.0, τ, TDVP())
+        normalize!(ref_s)
+
+        # both sweep directions, with and without the zip-down pass
+        for left_to_right in (true, false), trunc′ in (trunc, (notrunc(), trunc))
+            got_s, ϵ = approximate((expH, ψ), Zipup(; trunc = trunc′, left_to_right))
+            normalize!(got_s)
+            @test norm(ref_s - got_s) < 0.002
+            @test norm(ψ - got_s) > 0.002
+            @test ϵ < 1.0e-10
+        end
     end
 
     @testset "Paeckel two-stage zip-up $(spacetype(pspace)), left_to_right = $left_to_right" for
         (pspace, Dspace, Dcut) in zipup_spacelist, left_to_right in (true, false)
-        O, ψ = _random_mpo_mps(pspace, Dspace)
+        O, ψ = _random_mpo_mps(pspace, Dspace, 6)
         rtol = 1.0e-8
         final_trunc = truncrank(Dcut) & truncerror(; rtol)
         zipup_trunc = truncrank(2Dcut) & truncerror(; rtol = rtol / 10)
@@ -148,7 +170,7 @@ end
 
     @testset "In-place zip-up $(spacetype(pspace)), left_to_right = $left_to_right" for
         (pspace, Dspace, Dcut) in zipup_spacelist, left_to_right in (true, false)
-        O, ψ = _random_mpo_mps(pspace, Dspace)
+        O, ψ = _random_mpo_mps(pspace, Dspace, 6)
         alg = Zipup(; trunc = (truncrank(2Dcut), truncrank(Dcut)), left_to_right)
         ref, ϵ_ref = approximate((O, ψ), alg)
 
@@ -218,7 +240,7 @@ end
     end
 
     @testset "Zip-up scalar type promotion $(spacetype(pspace))" for (pspace, Dspace, _) in zipup_spacelist
-        O, ψ = _random_mpo_mps(pspace, Dspace; elt = Float64)
+        O, ψ = _random_mpo_mps(pspace, Dspace, 6; elt = Float64)
         alg = Zipup(; trunc = trunctol(; atol = 1.0e-10))
 
         got, _ = approximate((O, ψ), alg)
