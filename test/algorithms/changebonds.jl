@@ -158,11 +158,6 @@ end
     beta = 0.1
     O = make_time_mpo(H, beta, TaylorCluster(; N = 2); imaginary_evolution = true)
 
-    @show typeof(O)
-    @show left_virtualspace(O)
-    @show physicalspace(O)
-
-
     ψ_oe, _ = changebonds(
         ψ, O, OptimalExpand(; trunc = truncrank(dim(Dspace) * 2))
     )
