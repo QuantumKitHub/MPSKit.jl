@@ -121,6 +121,7 @@ function (h::MPO_AC_Hamiltonian{<:MPSBondTensor, Nothing, <:MPSBondTensor})(x::M
     end
     return y
 end
+# braid handedness dependent on MPO-to-MPS conversion
 function (h::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})(
         x::GenericMPSTensor{<:Any, 3}
     )
@@ -151,6 +152,7 @@ function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTen
     end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
+# braid handedness dependent on MPO-to-MPS conversion
 function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor})(
         x::AbstractTensorMap{<:Any, <:Any, 3, 3}
     )
@@ -290,7 +292,7 @@ end
 function (H::PrecomputedACDerivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 1})
     backend, allocator = H.backend, H.allocator
     L, R = H.leftenv, H.rightenv
-
+    # braid handedness dependent on MPO-to-MPS conversion
     @plansor backend = backend allocator = allocator begin
         xR[-1 -2; -4 -5 -3] := x[-1 -2 3; 1] * R[1 2; -4] * τ[2 3; -5 -3]
     end
@@ -300,6 +302,8 @@ function (H::PrecomputedACDerivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 1})
     end
     return y
 end
+
+# braid levels dependent on MPO-to-MPS conversion, see mpo.jl
 function (H::PrecomputedAC2Derivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 3})
     backend, allocator = H.backend, H.allocator
     L, R = H.leftenv, H.rightenv
@@ -313,7 +317,7 @@ function (H::PrecomputedAC2Derivative)(x::AbstractTensorMap{<:Any, <:Any, 3, 3})
     @plansor backend = backend allocator = allocator begin
         y_braided[-1 -2; -4 -6 -5 -3] := L[-1 -2; 1 2] * xR_braided[1 2; -4 -6 -5 -3]
     end
-    return braid(y_braided, ((1, 2, 6), (3, 5, 4)), (1, 2, 4, 5, 5, 3))
+    return braid(y_braided, ((1, 2, 6), (3, 5, 4)), (1, 2, 4, 6, 5, 3))
 end
 
 const _ToPrepare = Union{
