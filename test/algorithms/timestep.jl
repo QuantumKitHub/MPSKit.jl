@@ -273,7 +273,7 @@ end
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Finite $(algname(alg))" for alg in algs
-        ψ, envs = time_evolve(ψ₀, H, t_span, alg)
+        ψ, envs = time_evolve(ψ₀, H, t_span, alg; verbosity = 2)
         E = expectation_value(ψ, H, envs)
         @test E₀ ≈ E atol = 1.0e-2
     end
@@ -283,7 +283,7 @@ end
     E₀ = expectation_value(ψ₀, H)
 
     @testset "Infinite TDVP" begin
-        ψ, envs = time_evolve(ψ₀, H, t_span, TDVP())
+        ψ, envs = time_evolve(ψ₀, H, t_span, TDVP(); verbosity = 2)
         E = expectation_value(ψ, H, envs)
         @test E₀ ≈ E atol = 1.0e-2
     end
