@@ -37,7 +37,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
         )
         log = IterLog("TDVP")
         LoggingExtras.withlevel(; verbosity) do
-            @infov 2 loginit!(log, 0, first(t_span))
+            @infov 2 loginit!(log, 0.0, first(t_span))
             for iter in 1:(length(t_span) - 1)
                 t = t_span[iter]
                 dt = t_span[iter + 1] - t
@@ -45,9 +45,9 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
                 ψ, envs = $timestep(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
                 ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
 
-                @infov 3 logiter!(log, iter, 0, t)
+                @infov 3 logiter!(log, iter, 0.0, t)
             end
-            @infov 2 logfinish!(log, length(t_span), 0, t_span[end])
+            @infov 2 logfinish!(log, length(t_span), 0.0, t_span[end])
         end
         return ψ, envs
     end

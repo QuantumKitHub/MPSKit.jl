@@ -304,7 +304,7 @@ Fuse the left virtual legs of the product of MPO-MPS tensors
 """
 function _fuse_mpo_mps_left(O::MPOTensor, A::MPSTensor, Fₗ)
     @plansor A′[-1 -2; -3 -4] := Fₗ[-1; 1 3] * A[1 2; -3] * O[3 -2; 2 -4]
-    return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
+    return A′
 end
 """
 Fuse the right virtual legs of the product of MPO-MPS tensors
@@ -320,7 +320,7 @@ function _fuse_mpo_mps_right(O::MPOTensor, A::MPSTensor, Fᵣ)
     # the resulting tensor is partitioned across the new bond
     # `_transpose_front` of the right factor is again an MPS tensor
     @plansor A′[-1 -2; -3 -4] := A[-1 1; 2] * O[-2 -4; 1 3] * Fᵣ[2 3; -3]
-    return A′ isa AbstractBlockTensorMap ? TensorMap(A′) : A′
+    return A′
 end
 
 function Base.:*(mpo::FiniteMPO{<:MPOTensor}, x::AbstractTensorMap)
