@@ -31,19 +31,20 @@ verbosity_conv = 1
             v₀ = variance(ψ₀, H)
 
             # test logging
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2)
             )
 
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10), envs
             )
             v = variance(ψ, H)
 
             # test using low variance
-            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test info.normres ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
+            @test info.numtrunc == 0
         end
 
         @testset "DMRG2" begin
@@ -51,19 +52,23 @@ verbosity_conv = 1
             v₀ = variance(ψ₀, H)
             trunc = truncrank(floor(Int, D * 1.5))
             # test logging
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ₀, H, DMRG2(; verbosity = verbosity_full, maxiter = 2, trunc)
             )
 
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ, H, DMRG2(; verbosity = verbosity_conv, maxiter = 10, trunc), envs
             )
             v = variance(ψ, H)
 
             # test using low variance
-            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test info.normres ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
+
+            @test info.numtrunc > 0
+            @test info.ϵ_max > 0
+            @test info.ϵ_max <= info.ϵ_total <= sqrt(info.numtrunc) * info.ϵ_max
         end
 
         @testset "CBEDMRG" begin
@@ -74,17 +79,17 @@ verbosity_conv = 1
             trunc = truncrank(D)
 
             # test logging
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
             )
 
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_expand = expand, trunc), envs
             )
             v = variance(ψ, H)
 
             # test using low variance
-            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test info.normres ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
             # the bond should have grown to the truncation target
@@ -102,17 +107,17 @@ verbosity_conv = 1
             trunc = truncrank(D)
 
             # test logging
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
             )
 
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 15, alg_expand = expand, trunc), envs
             )
             v = variance(ψ, H)
 
             # test using low variance
-            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test info.normres ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
             # the bond should have grown to the truncation target
@@ -128,17 +133,17 @@ verbosity_conv = 1
             trunc = truncrank(D)
 
             # test logging
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_gauge, trunc)
             )
 
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_gauge, trunc), envs
             )
             v = variance(ψ, H)
 
             # test using low variance
-            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test info.normres ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
             # the bond should have grown to the truncation target
@@ -150,17 +155,17 @@ verbosity_conv = 1
             v₀ = variance(ψ₀, H)
 
             # test logging
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ₀, H, GradientGrassmann(; verbosity = verbosity_full, maxiter = 2)
             )
 
-            ψ, envs, δ = find_groundstate(
+            ψ, envs, info = find_groundstate(
                 ψ, H, GradientGrassmann(; tol, verbosity = verbosity_conv, maxiter = 50), envs
             )
             v = variance(ψ, H)
 
             # test using low variance
-            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test info.normres ≈ 0 atol = 1.0e-3
             @test v < v₀ && v < 1.0e-2
         end
     end
@@ -172,13 +177,13 @@ verbosity_conv = 1
         Random.seed!(1234)
         ψ_bad = bad_initial_state(H_heis, L_heis)
 
-        ψ_stuck, envs_stuck, δ_stuck = find_groundstate(
+        ψ_stuck, envs_stuck, info_stuck = find_groundstate(
             ψ_bad, H_heis, DMRG(; verbosity = verbosity_conv, maxiter = 30)
         )
         E_stuck = real(expectation_value(ψ_stuck, H_heis, envs_stuck))
 
         alg_gauge = DMRG3S(0.1, ExponentialDecay(0.8))
-        ψ_escape, envs_escape, δ_escape = find_groundstate(
+        ψ_escape, envs_escape, info_escape = find_groundstate(
             ψ_bad, H_heis, DMRG(;
                 verbosity = verbosity_conv, maxiter = 30,
                 alg_gauge, trunc = truncrank(20),
@@ -231,7 +236,7 @@ end
         ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
-        ψ′, envs, δ = with_scheduler(scheduler) do
+        ψ′, envs, info = with_scheduler(scheduler) do
             # test logging
             ψ₁, = find_groundstate(
                 ψ₀, H, VUMPS(; tol, verbosity = verbosity_full, maxiter = 2)
@@ -241,7 +246,7 @@ end
         v = variance(ψ′, H, envs)
 
         # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test info.normres ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -251,11 +256,11 @@ end
         ψ₀ = InfiniteMPS(fill(ℙ^2, 3), fill(ℙ^D, 3))
         v₀ = variance(ψ₀, H)
 
-        ψ′, envs, δ = find_groundstate(ψ₀, H, VUMPS(; tol, verbosity = verbosity_conv, maxiter = 20))
+        ψ′, envs, info = find_groundstate(ψ₀, H, VUMPS(; tol, verbosity = verbosity_conv, maxiter = 20))
         v = variance(ψ′, H, envs)
 
         # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test info.normres ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -265,17 +270,18 @@ end
         H = repeat(H_ref, unit_cell_size)
 
         # test logging
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ, H, IDMRG(; tol, verbosity = verbosity_full, maxiter = 2)
         )
 
-        ψ, envs, δ = find_groundstate(ψ, H, IDMRG(; tol, verbosity = verbosity_conv))
+        ψ, envs, info = find_groundstate(ψ, H, IDMRG(; tol, verbosity = verbosity_conv))
         v = variance(ψ, H, envs)
 
         # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test info.normres ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
+        @test info.numtrunc == 0
     end
 
     @testset "IDMRG (long-range, real scalartype)" begin
@@ -283,11 +289,11 @@ end
         ψ₀ = InfiniteMPS(fill(ℙ^2, 3), fill(ℙ^D, 3))
         v₀ = variance(ψ₀, H)
 
-        ψ, envs, δ = find_groundstate(ψ₀, H, IDMRG(; tol, verbosity = verbosity_conv, maxiter = 20))
+        ψ, envs, info = find_groundstate(ψ₀, H, IDMRG(; tol, verbosity = verbosity_conv, maxiter = 20))
         v = variance(ψ, H, envs)
 
         # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test info.normres ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -299,19 +305,23 @@ end
         trunc = trunctol(; atol = 1.0e-8)
 
         # test logging
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ, H, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trunc)
         )
 
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ, H, IDMRG2(; tol, verbosity = verbosity_conv, trunc)
         )
         v = variance(ψ, H, envs)
 
         # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test info.normres ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
+
+        @test info.numtrunc > 0
+        @test info.ϵ_max > 0
+        @test info.ϵ_max <= info.ϵ_total <= sqrt(info.numtrunc) * info.ϵ_max
     end
 
     # Regression: IDMRG2 used to error on a non-abelian (SU2) unit cell due to a space mismatch.
@@ -336,7 +346,7 @@ end
         ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
-        ψ′, envs, δ = with_scheduler(scheduler) do
+        ψ′, envs, info = with_scheduler(scheduler) do
             # test logging
             ψ₁, = find_groundstate(
                 ψ₀, H, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
@@ -348,7 +358,7 @@ end
         v = variance(ψ′, H, envs)
 
         # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test info.normres ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -359,12 +369,12 @@ end
 
         alg = VUMPS(; tol = 100 * tol, verbosity = verbosity_conv, maxiter = 10) &
             GradientGrassmann(; tol, verbosity = verbosity_conv, maxiter = 50)
-        ψ, envs, δ = find_groundstate(ψ, H, alg)
+        ψ, envs, info = find_groundstate(ψ, H, alg)
 
         v = variance(ψ, H, envs)
 
         # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test info.normres ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -394,13 +404,13 @@ end
 
     @testset "DMRG" begin
         # test logging passes
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ₀, H_lazy, DMRG(; tol, verbosity = verbosity_full, maxiter = 1)
         )
 
         # compare states
         alg = DMRG(; tol, verbosity = verbosity_conv)
-        ψ, envs, δ = find_groundstate(ψ, H_lazy, alg)
+        ψ, envs, info = find_groundstate(ψ, H_lazy, alg)
 
         @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
     end
@@ -408,28 +418,28 @@ end
     @testset "DMRG2" begin
         # test logging passes
         trunc = truncrank(floor(Int, D * 1.5))
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ₀, H_lazy, DMRG2(; tol, verbosity = verbosity_full, maxiter = 1, trunc)
         )
 
         # compare states
         alg = DMRG2(; tol, verbosity = verbosity_conv, trunc)
         ψ, = find_groundstate(ψ₀, H, alg)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
+        ψ_lazy, envs, info = find_groundstate(ψ₀, H_lazy, alg)
 
         @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
     end
 
     @testset "GradientGrassmann" begin
         # test logging passes
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ₀, H_lazy, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
         )
 
         # compare states
         alg = GradientGrassmann(; tol, verbosity = verbosity_conv)
         ψ, = find_groundstate(ψ₀, H, alg)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
+        ψ_lazy, envs, info = find_groundstate(ψ₀, H_lazy, alg)
 
         @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
     end
@@ -456,26 +466,26 @@ end
 
     @testset "VUMPS" begin
         # test logging passes
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ₀, H_lazy, VUMPS(; tol, verbosity = verbosity_full, maxiter = 2)
         )
 
         # compare states
         alg = VUMPS(; tol, verbosity = verbosity_conv)
-        ψ, envs, δ = find_groundstate(ψ, H_lazy, alg)
+        ψ, envs, info = find_groundstate(ψ, H_lazy, alg)
 
         @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
     end
 
     @testset "IDMRG" begin
         # test logging passes
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ₀, H_lazy, IDMRG(; tol, verbosity = verbosity_full, maxiter = 2)
         )
 
         # compare states
         alg = IDMRG(; tol, verbosity = verbosity_conv, maxiter = 300)
-        ψ, envs, δ = find_groundstate(ψ, H_lazy, alg)
+        ψ, envs, info = find_groundstate(ψ, H_lazy, alg)
 
         @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
     end
@@ -487,26 +497,26 @@ end
 
         trunc = truncrank(floor(Int, D * 1.5))
         # test logging passes
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ₀′, H_lazy′, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trunc)
         )
 
         # compare states
         alg = IDMRG2(; tol, verbosity = verbosity_conv, trunc)
-        ψ, envs, δ = find_groundstate(ψ, H_lazy′, alg)
+        ψ, envs, info = find_groundstate(ψ, H_lazy′, alg)
 
         @test abs(dot(ψ₀′, ψ)) ≈ 1 atol = atol
     end
 
     @testset "GradientGrassmann" begin
         # test logging passes
-        ψ, envs, δ = find_groundstate(
+        ψ, envs, info = find_groundstate(
             ψ₀, H_lazy, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
         )
 
         # compare states
         alg = GradientGrassmann(; tol, verbosity = verbosity_conv)
-        ψ, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
+        ψ, envs, info = find_groundstate(ψ₀, H_lazy, alg)
 
         @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
     end
