@@ -1,11 +1,11 @@
 @doc """
-    approximate(ψ₀, (O, ψ), [environments]; kwargs...) -> (ψ, environments, ϵ)
-    approximate(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, ϵ)
-    approximate!(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, ϵ)
-    approximate(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, ϵ)
-    approximate!(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, ϵ)
-    approximate((O, ψ), algorithm) -> (ψ′, ϵ)
-    approximate!(ψ₀, (O, ψ), algorithm) -> (ψ, ϵ)
+    approximate(ψ₀, (O, ψ), [environments]; kwargs...) -> (ψ, environments, info)
+    approximate(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, info)
+    approximate!(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, info)
+    approximate(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, info)
+    approximate!(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, info)
+    approximate((O, ψ), algorithm) -> (ψ′, info)
+    approximate!(ψ₀, (O, ψ), algorithm) -> (ψ, info)
 
 Compute an approximation to the application of an operator `O` to the state `ψ` in the form
 of an MPS, using initial guess `ψ₀`. If only a state `ψ` is supplied instead of the `(O, ψ)` pair,
@@ -39,16 +39,16 @@ struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
 
 - `ψ`: the approximated state
 - `environments`: environments corresponding to the result (not returned by `Zipup`, which uses none)
-- `ϵ::Float64`: an error measure whose meaning depends on the algorithm:
-  - for the iterative algorithms (`DMRG`, `DMRG2`, `IDMRG`, `IDMRG2`, `VOMPS`) it is the final
-    convergence error, i.e. the Galerkin error compared against `tol`. This is the same quantity
-    [`find_groundstate`](@ref) returns, measuring distance from the variational fixed point.
-  - for [`Zipup`](@ref) it is instead a truncation error, i.e. the largest 2-norm of the discarded
-    singular values over all bonds and sweeps. `Zipup` is a single non-iterative sweep, so there is
-    no convergence measure to report and no `tol` to compare against.
+- `info::AlgorithmInfo`: how the algorithm arrived there. Which of its fields are populated depends
+  on the algorithm:
+  - the iterative algorithms (`DMRG`, `DMRG2`, `IDMRG`, `IDMRG2`, `VOMPS`) fill `converged`,
+    `normres` and `numiter`. `normres` is the Galerkin error compared against `tol`, the same
+    quantity [`find_groundstate`](@ref) reports, measuring distance from the variational fixed point.
+  - [`Zipup`](@ref) is a single non-iterative sweep, so it has no convergence measure at all:
+    `converged` and `normres` are `nothing`, and it fills the truncation fields instead.
 
-  The two are not comparable, and a small `ϵ` means different things in each case. See the manual on
-  the `ϵ` convention under [The error convention](@ref).
+  See [`AlgorithmInfo`](@ref) for the full list and [The error convention](@ref) in the manual for
+  why a convergence measure and a truncation error are not comparable quantities.
 
 # Algorithms
 
@@ -56,7 +56,7 @@ Each algorithm below only supports a subset of the general interface. Check this
 picking one — in particular, note that **only `DMRG`/`DMRG2` accept a bare state `ψ`**; the
 infinite algorithms always require an explicit `(O, ψ)` tuple, and **`VOMPS` has no in-place
 `approximate!`** at all. `Zipup` is a single sweep rather than an iterative optimization, so it uses
-no environments and returns `(ψ, ϵ)`; its `ψ₀` is a write destination, not an initial guess, and it
+no environments and returns `(ψ, info)`; its `ψ₀` is a write destination, not an initial guess, and it
 may be omitted.
 
 | Algorithm | Scheme                        | State `ψ₀`                        | bare `ψ` allowed? | `approximate!` |
