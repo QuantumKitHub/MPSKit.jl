@@ -74,6 +74,7 @@ function leading_boundary(
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
+            acc = TruncationAccumulator(ψ) # fresh each sweep, reported truncation is that of the final sweep
             alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = ϵ)
             C_current = ψ.C[:, 0]
 
@@ -84,7 +85,8 @@ function leading_boundary(
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
+                    al, c, ar, ϵ_trunc = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
+                    push_error!(acc, ϵ_trunc)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -108,7 +110,8 @@ function leading_boundary(
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
+                al, c, ar, ϵ_trunc = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
+                push_error!(acc, ϵ_trunc)
                 normalize!(c)
 
                 ψ.AL[row + 1, site] = al
@@ -133,7 +136,8 @@ function leading_boundary(
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
+                    al, c, ar, ϵ_trunc = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
+                    push_error!(acc, ϵ_trunc)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -155,7 +159,8 @@ function leading_boundary(
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
+                al, c, ar, ϵ_trunc = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
+                push_error!(acc, ϵ_trunc)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al
@@ -195,5 +200,5 @@ function leading_boundary(
     ψ = MultilineMPS(map(identity, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
 
     recalculate!(envs, ψ, operator, ψ)
-    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, normres = ϵ, numiter = iter)
+    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, normres = ϵ, truncation = acc, numiter = iter)
 end
