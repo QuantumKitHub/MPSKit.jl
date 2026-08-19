@@ -272,24 +272,42 @@ end
 
     # fixed bond dimension sweep never discards anything, so the reported error is exactly zero
     @testset "no truncation" begin
-        @test last(timestep(ψ₀, H, 0.0, dt, TDVP())) == 0
-        @test last(timestep(ψ₀, H, 0.0, dt, BUG())) == 0
+        for alg in (TDVP(), BUG())
+            info = last(timestep(ψ₀, H, 0.0, dt, alg))
+            @test info isa MPSKit.AlgorithmInfo
+            @test info.ϵ_max == 0
+            @test info.ϵ_total == 0
+            @test info.numtrunc == 0
+            @test info.numsteps == 1
+        end
     end
 
     @testset "$(nameof(alg))" for alg in (TDVP2, BUG)
-        _, _, ϵ_loose = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(32)))
-        ψ, _, ϵ_tight = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(2)))
+        _, _, loose = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(32)))
+        ψ, _, tight = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(2)))
 
-        @test ϵ_tight > 1.0e-3 # throw away real weight
-        @test ϵ_loose < ϵ_tight # throw away less weight with a more forgiving truncation
-        @test norm(ψ) < norm(ψ₀) # discarded weight = norm loss in real time with `normalize = false`
+        @test tight.ϵ_total > 1.0e-3 # throw away real weight
+        @test tight.ϵ_max > 1.0e-4
+        @test loose.ϵ_max < tight.ϵ_max # throw away less weight with a more forgiving truncation
+        @test tight.numtrunc > 0
+        @test tight.ϵ_total >= tight.ϵ_max
+        @test tight.ϵ_total <= sqrt(tight.numtrunc) * tight.ϵ_max
+        # `ϵ_total` = norm loss in real time with `normalize = false`
+        @test norm(ψ)^2 ≈ norm(ψ₀)^2 - tight.ϵ_total^2 atol = 1.0e-12
     end
 
-    @testset "accumulation over an evolution" begin
+    @testset "aggregation over an evolution" begin
         alg = TDVP2(; trunc = truncrank(2))
-        _, _, ϵ_step = timestep(ψ₀, H, 0.0, dt, alg)
-        _, _, ϵ_total = time_evolve(ψ₀, H, 0:dt:(4 * dt), alg)
-        @test ϵ_total >= ϵ_step
+        nsteps = 4
+        _, _, step = timestep(ψ₀, H, 0.0, dt, alg)
+        ψ, _, total = time_evolve(ψ₀, H, 0:dt:(nsteps * dt), alg)
+
+        @test total.numsteps == nsteps
+        @test total.numtrunc >= step.numtrunc
+        @test total.ϵ_total >= step.ϵ_total
+        @test norm(ψ)^2 ≈ norm(ψ₀)^2 - total.ϵ_total^2 atol = 1.0e-12
+        @test total.ϵ_max >= step.ϵ_max
+        @test total.ϵ_max <= total.ϵ_total
     end
 end
 
