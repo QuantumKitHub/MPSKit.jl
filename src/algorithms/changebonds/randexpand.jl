@@ -141,7 +141,7 @@ function changebond!(
     Q = NL * U
     # embed `_transpose_tail(right)` into the enlarged codomain (zero weight in the new directions)
     right_tail = _transpose_tail(right)
-    nc_space = (codomain(right_tail)[1] ⊕ space(Q, 3)') ← domain(right_tail)
+    nc_space = (codomain(right_tail)[1] ⊕ _lastspace(Q)') ← domain(right_tail)
     nc, Qr = lq_compact!(absorb!(zerovector!(similar(right_tail, nc_space)), right_tail))
     AL_exp = catdomain(left, Q)
 
