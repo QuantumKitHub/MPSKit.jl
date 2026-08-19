@@ -6,13 +6,13 @@ followed by a zip-down sweep in the opposite direction. The MPO and MPS are cont
 time, and the enlarged virtual bond is truncated immediately. The sweep direction is selected by
 `left_to_right`.
 
-    approximate((O, ϕ), alg::Zipup) -> ψ, ϵ
-    approximate!(ψ, (O, ϕ), alg::Zipup) -> ψ, ϵ
+    approximate((O, ϕ), alg::Zipup) -> ψ, info
+    approximate!(ψ, (O, ϕ), alg::Zipup) -> ψ, info
 
 Contrary to the variational algorithms, this algorithm requires no initial guess:
 the in-place version simply uses `ψ` as the destination of the sweep, overwriting its contents, and may alias `ϕ`.
 The out-of-place version allocates a destination with the promoted scalar type of `O` and `ϕ`.
-Both return the truncation error `ϵ` alongside the approximated state.
+Both return an [`AlgorithmInfo`](@ref) alongside the approximated state which contains the truncation information.
 
 # Constructors
 
@@ -87,8 +87,8 @@ function approximate(Oϕ::Tuple{Any, <:FiniteMPS}, alg::Zipup)
 end
 
 @doc """
-    zip_left_right!(ψ, O, ϕ, alg_zipup, [alg_zipdown]) -> ψ, ϵ
-    zip_right_left!(ψ, O, ϕ, alg_zipup, [alg_zipdown]) -> ψ, ϵ
+    zip_left_right!(ψ, O, ϕ, alg_zipup, [alg_zipdown]) -> ψ, info
+    zip_right_left!(ψ, O, ϕ, alg_zipup, [alg_zipdown]) -> ψ, info
 
 Contract the MPO `O` with the MPS `ϕ` in a single sweep, truncating the enlarged virtual bond at every
 site with `alg_zipup`, and write the result into `ψ`. `zip_left_right!` zips up from left to right,
@@ -96,8 +96,9 @@ site with `alg_zipup`, and write the result into `ψ`. `zip_left_right!` zips up
 opposite direction imposes a final truncation with `alg_zipdown` in a locally gauged basis, leaving
 the gauge center of `ψ` at the far end. The destination may alias `ϕ`.
 
-Also returns the truncation error `ϵ`, the largest 2-norm of the discarded singular values over all
-bonds and both sweeps, i.e. the worst single bond.
+Also returns an [`AlgorithmInfo`](@ref) describing the truncation. Being a single sweep 
+rather than an iterative optimisation, there is no convergence measure, 
+so `converged` and `normres` are `nothing`.
 """
 zip_left_right!
 @doc (@doc zip_left_right!) zip_right_left!
@@ -115,14 +116,14 @@ function zip_left_right!(ψ::FiniteMPS, O, ϕ::FiniteMPS, alg_zipup, alg_zipdown
 
     A = storagetype(eltype(ψ))
     Fₗ = fuser(A, left_virtualspace(Aϕs[1]), left_virtualspace(O, 1))
-    ϵ = zero(real(scalartype(ψ)))
+    acc = TruncationAccumulator(ψ)
 
     # zip up from left to right, leaving the gauge center on the last site
     for i in 1:(N - 1)
         Aᶻ = _fuse_mpo_mps_left(O[i], Aϕs[i], Fₗ)
         AL, Fₗ, ϵᵢ = left_gauge(Aᶻ, alg_zipup) # right factor doubles as the next left fuser
         ψ.ALs[i] = AL
-        ϵ = max(ϵ, ϵᵢ)
+        push_error!(acc, ϵᵢ)
     end
     Fᵣ = fuser(A, right_virtualspace(Aϕs[N]), right_virtualspace(O, N))
     ψ.ACs[N] = _fuse_mpo_mps(O[N], Aϕs[N], Fₗ, Fᵣ)
@@ -131,11 +132,11 @@ function zip_left_right!(ψ::FiniteMPS, O, ϕ::FiniteMPS, alg_zipup, alg_zipdown
     if !isnothing(alg_zipdown)
         for i in N:-1:2
             ψ, ϵᵢ = right_gauge!(ψ, i, ψ.AC[i], alg_zipdown)
-            ϵ = max(ϵ, ϵᵢ)
+            push_error!(acc, ϵᵢ)
         end
     end
 
-    return ψ, ϵ
+    return ψ, AlgorithmInfo(; truncation = acc)
 end
 
 function zip_right_left!(ψ::FiniteMPS, O, ϕ::FiniteMPS, alg_zipup, alg_zipdown = nothing)
@@ -149,14 +150,14 @@ function zip_right_left!(ψ::FiniteMPS, O, ϕ::FiniteMPS, alg_zipup, alg_zipdown
     # replaces them on the next site
     Vᵣ = right_virtualspace(Aϕs[N]) ⊗ right_virtualspace(O, N)
     Fᵣ = isomorphism(A, Vᵣ, fuse(Vᵣ))
-    ϵ = zero(real(scalartype(ψ)))
+    acc = TruncationAccumulator(ψ)
 
     # zip up from right to left, leaving the gauge center on the first site
     for i in N:-1:2
         Aᶻ = _fuse_mpo_mps_right(O[i], Aϕs[i], Fᵣ)
         Fᵣ, AR, ϵᵢ = _right_gauge_zip(Aᶻ, alg_zipup) # left factor doubles as the next right fuser
         ψ.ARs[i] = AR
-        ϵ = max(ϵ, ϵᵢ)
+        push_error!(acc, ϵᵢ)
     end
     # the carry is oriented such that it can simply be composed with the last local tensor
     Fₗ = fuser(A, left_virtualspace(Aϕs[1]), left_virtualspace(O, 1))
@@ -166,11 +167,11 @@ function zip_right_left!(ψ::FiniteMPS, O, ϕ::FiniteMPS, alg_zipup, alg_zipdown
     if !isnothing(alg_zipdown)
         for i in 1:(N - 1)
             ψ, ϵᵢ = left_gauge!(ψ, i, ψ.AC[i], alg_zipdown)
-            ϵ = max(ϵ, ϵᵢ)
+            push_error!(acc, ϵᵢ)
         end
     end
 
-    return ψ, ϵ
+    return ψ, AlgorithmInfo(; truncation = acc)
 end
 
 # `right_gauge` for the tensors of a right-to-left zip-up sweep: these are already partitioned across
