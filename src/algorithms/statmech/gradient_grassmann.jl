@@ -19,5 +19,10 @@ function leading_boundary(
         alg.finalize!,
         isometrictransport = true
     )
-    return x, envs, normgradhistory[end]
+    normres = normgradhistory[end]
+    info = AlgorithmInfo(;
+        converged = normres <= alg.method.gradtol, normres,
+        numiter = size(normgradhistory, 1)
+    )
+    return x, envs, info
 end
