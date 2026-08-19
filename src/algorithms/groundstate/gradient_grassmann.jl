@@ -81,7 +81,7 @@ end
 
 function find_groundstate(
         ψ::S, H, alg::GradientGrassmann, envs::P = environments(ψ, H, ψ)
-    )::Tuple{S, P, Float64} where {S, P}
+    )::Tuple{S, P, AlgorithmInfo{Float64}} where {S, P}
     !isa(ψ, FiniteMPS) || dim(ψ.C[end]) == 1 ||
         @warn "This is not fully supported - split the mps up in a sum of mps's and optimize separately"
     normalize!(ψ)
@@ -122,5 +122,10 @@ function find_groundstate(
         @infov 4 timeroutput
     end
 
-    return x, envs, normgradhistory[end]
+    normres = normgradhistory[end]
+    info = AlgorithmInfo(;
+        converged = normres <= alg.method.gradtol, normres,
+        numiter = size(normgradhistory, 1)
+    )
+    return x, envs, info
 end
