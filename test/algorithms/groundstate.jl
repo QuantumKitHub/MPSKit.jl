@@ -481,4 +481,15 @@ end
             @test expectation_value(ψ, mpo, envs) ≈ 2.5337 atol = 1.0e-3
         end
     end
+
+    @testset "IDMRG2 growing bond dimension" begin
+        Random.seed!(1234)
+        V = Vect[Z2Irrep](0 => 1, 1 => 1)
+        O = randn(ComplexF64, V ⊗ V, V ⊗ V)
+        mpo = InfiniteMPO([O, O])
+        P = physicalspace(O)
+        ψ₀ = InfiniteMPS([P, P], [V, V])
+        ψ, envs = leading_boundary(ψ₀, mpo, IDMRG2(; verbosity = 0, maxiter = 1, trunc = truncrank(8)))
+        @test ψ isa InfiniteMPS
+    end
 end
