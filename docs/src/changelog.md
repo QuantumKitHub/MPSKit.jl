@@ -96,6 +96,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   and the right virtual leg of `mpo[end]` and contracted the two — which at length 1 is the *same*
   tensor, so it returned `O * O` on twice the physical space instead of `O`.
   ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- The converting constructor of `JordanMPO_AC_Hamiltonian` assigned the "finished" block `E` to
+  the "ending" field `B` whenever `B` was absent, raising a `convert` `MethodError` from deep
+  inside `AC_hamiltonian`. This is reached when an `MPOHamiltonian` whose scalartype differs from
+  the state's has an on-site term on a site where no interaction ends, such as a long-range one.
 
 ### Performance
 

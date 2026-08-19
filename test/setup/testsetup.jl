@@ -21,6 +21,7 @@ export f_plus_f_min, f_min_f_plus, f_num, f_hopping
 export force_planar
 export symm_mul_mpo
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model, kitaev_model
+export long_range_ising, long_range_ising_infinite
 export classical_ising_tensors, classical_ising, sixvertex
 export bad_initial_state
 export SCHEDULERS, with_scheduler
@@ -188,6 +189,23 @@ function kitaev_model(
         terms = Iterators.flatten((twosite_terms, onsite_terms))
         return FiniteMPOHamiltonian(lattice, terms)
     end
+end
+
+function long_range_ising(
+        T::Type{<:Number} = Float64, sym::Type{<:Sector} = Trivial; g = 4.0, L = 4
+    )
+    X = S_x(T, sym; spin = 1 // 2) * 2
+    ZZ = S_z_S_z(T, sym; spin = 1 // 2) * 4
+    lattice = fill(space(X, 1), L)
+    return FiniteMPOHamiltonian(lattice, ((i,) => -g * X for i in 1:L)..., (1, L) => -ZZ)
+end
+function long_range_ising_infinite(
+        T::Type{<:Number} = Float64, sym::Type{<:Sector} = Trivial; g = 4.0, L = 3
+    )
+    X = S_x(T, sym; spin = 1 // 2) * 2
+    ZZ = S_z_S_z(T, sym; spin = 1 // 2) * 4
+    lattice = PeriodicArray(fill(space(X, 1), L))
+    return InfiniteMPOHamiltonian(lattice, ((i,) => -g * X for i in 1:L)..., (1, L) => -ZZ)
 end
 
 function ising_bond_tensor(β)
