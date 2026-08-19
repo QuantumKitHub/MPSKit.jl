@@ -44,6 +44,9 @@ struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
   - the iterative algorithms (`DMRG`, `DMRG2`, `IDMRG`, `IDMRG2`, `VOMPS`) fill `converged`,
     `normres` and `numiter`. `normres` is the Galerkin error compared against `tol`, the same
     quantity [`find_groundstate`](@ref) reports, measuring distance from the variational fixed point.
+  - the two-site ones (`DMRG2`, `IDMRG2`) which involve a truncated SVD fill the truncation 
+    fields with what their final sweep discarded, i.e. what the returned state is still 
+    throwing away per sweep rather than what the early, unconverged sweeps did.
   - [`Zipup`](@ref) is a single non-iterative sweep, so it has no convergence measure at all:
     `converged` and `normres` are `nothing`, and it fills the truncation fields instead.
 
