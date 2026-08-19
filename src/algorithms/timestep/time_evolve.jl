@@ -1,6 +1,6 @@
 """
-    time_evolve(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ, envs, ϵ)
-    time_evolve!(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ₀, envs, ϵ)
+    time_evolve(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ, envs, info)
+    time_evolve!(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ₀, envs, info)
 
 Time-evolve the initial state `ψ₀` with Hamiltonian `H` over a given time span by stepping
 through each of the time points obtained by iterating t_span.
@@ -26,13 +26,13 @@ through each of the time points obtained by iterating t_span.
 
 - `ψ`: the time-stepped state
 - `envs`: the updated environment manager
-- `ϵ`: the truncation error accumulated over the whole evolution, i.e. the per-step errors of
-    [`timestep`](@ref), ``\\epsilon = \\sqrt{\\sum_{\\text{steps}} \\epsilon_i^2}``.
-    In real time with `normalize = false` this is exactly the norm lost to truncation over the whole
-    evolution, ``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon^2``. This is zero for
-    algorithms that never truncate. See [`timestep`](@ref) for what it does and does not measure.
+- `info::AlgorithmInfo`: the truncation performed over the whole evolution.
+    See [`AlgorithmInfo`](@ref) and [Time evolution accuracy](@ref) in the manual
+    for the difference and when to use which reported error measure,
+    and [`timestep`](@ref) for what neither measures.
 
-The per-step error is logged at `verbosity ≥ 3` and the accumulated total at `verbosity ≥ 2`.
+`ϵ_max` is logged per step at `verbosity ≥ 3` and for the whole evolution at `verbosity ≥ 2`.
+The size-independent measure is used here for the same reason as the ground state algorithms.
 """
 function time_evolve end, function time_evolve! end
 
@@ -43,30 +43,31 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
             verbosity::Int = 0, imaginary_evolution::Bool = false, normalize::Bool = false
         )
         log = IterLog(string(nameof(typeof(alg))))
-        # discarded weight over the whole evolution, accumulated in squares over the steps
-        ϵ² = zero(real(scalartype(ψ)))
+        info = AlgorithmInfo(; truncation = TruncationAccumulator(ψ), numiter = 0)
         LoggingExtras.withlevel(; verbosity) do
             @infov 2 loginit!(log, 0.0, first(t_span))
             for iter in 1:(length(t_span) - 1)
                 t = t_span[iter]
                 dt = t_span[iter + 1] - t
 
-                ψ, envs, ϵ = $timestep(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
+                ψ, envs, info_step = $timestep(
+                    ψ, H, t, dt, alg, envs; imaginary_evolution, normalize
+                )
                 ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
-                ϵ² += ϵ^2
+                info = _combine(info, info_step)
 
-                # per-step truncation error; the running total is what is reported at the end
-                @infov 3 logiter!(log, iter, convert(Float64, ϵ), t)
+                # log the size-independent error measure
+                @infov 3 logiter!(log, iter, convert(Float64, info_step.ϵ_max), t)
             end
-            @infov 2 logfinish!(log, length(t_span), convert(Float64, sqrt(ϵ²)), t_span[end])
+            @infov 2 logfinish!(log, length(t_span), convert(Float64, info.ϵ_max), t_span[end])
         end
-        return ψ, envs, sqrt(ϵ²)
+        return ψ, envs, info
     end
 end
 
 """
-    timestep(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ, envs, ϵ)
-    timestep!(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ₀, envs, ϵ)
+    timestep(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ, envs, info)
+    timestep!(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ₀, envs, info)
 
 Time-step the state `ψ₀` with Hamiltonian `H` over a given time step `dt` at time `t`,
 solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
@@ -92,24 +93,22 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 
 - `ψ`: the time-stepped state
 - `envs`: the updated environment manager
-- `ϵ`: the truncation error of the step (see below)
+- `info::AlgorithmInfo`: what the step truncated (see below)
 
 # Truncation error
 
-`ϵ` is the truncation error of the step, i.e. the 2-norm of the sum of squared singular values discarded
-by the local gauge factorizations. In other words, `ϵ²` is the truncated ("discarded") weight.
+A step performs many local factorisations, each discarding some weight. Rather than collapse those
+into one number, `info` reports both aggregations under names that say what they are:
+`info.ϵ_max` is the largest single one (size-independent, comparable against `trunc` and across
+runs) and `info.ϵ_total` sums them in squares.
 
-It is nonzero only for algorithms that truncate such as [`TDVP2`](@ref), [`BUG`](@ref) with a `trunc`, and
-[`TDVP`](@ref) with a bond expansion, while it is exactly `0` for one-site [`TDVP`](@ref),
-which runs at fixed bond dimension. A zero `ϵ` does not mean the step was exact, but that this
-particular error channel is absent. In particular, the projection and time-discretisation errors are never
-included in `ϵ`.
+Both are non-zero only for algorithms that truncate ([`TDVP2`](@ref), [`BUG`](@ref) with a
+`trunc`, and [`TDVP`](@ref) with a bond expansion), and are exactly `0` for one-site
+[`TDVP`](@ref), which runs at fixed bond dimension. A zero here does not mean the step was exact,
+but that this particular error channel is absent.
 
-In real time with `normalize = false`, `ϵ` is exactly the norm lost to truncation,
-``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon^2``.
-
-See [Time evolution accuracy](@ref) in the manual for what the other error sources are, why the
-per-bond errors combine in a squared manner, and the precise statement and caveats of the norm identity.
+See [`AlgorithmInfo`](@ref) for the fields, and [Time evolution accuracy](@ref) in the manual
+for the other error sources.
 
 # Examples
 

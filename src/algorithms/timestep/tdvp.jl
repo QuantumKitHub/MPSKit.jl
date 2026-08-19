@@ -14,13 +14,14 @@ state-preserving, as required for a consistent time evolution.
     By default the norm is not preserved: neither the bond expansion nor the truncation renormalizes,
     so the state norm keeps useful information. In real time this is exact, namely the squared norm
     drops by precisely the truncated ("discarded") weight,
-    ``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon^2``,
-    with `ϵ` the truncation error returned by [`timestep`](@ref). In imaginary time the norm also carries
-    the physical decay of the weight, so it no longer isolates the truncation. Without `trunc` nothing is
-    discarded at all and the norm is conserved exactly in real time.
+    ``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon_{\\text{total}}^2``,
+    with `ϵ_total` from the [`AlgorithmInfo`](@ref) returned by [`timestep`](@ref). In imaginary
+    time the norm also carries the physical decay of the weight, so it no longer isolates the
+    truncation. Without `trunc` nothing is discarded at all and the norm is conserved exactly in
+    real time.
 
     Pass `normalize = true` to `timestep`/`time_evolve` to renormalize at every step instead,
-    like a ground-state search. This is independent of `imaginary_evolution`. CBE is only available for finite MPS.
+    like a ground state search. This is independent of `imaginary_evolution`. CBE is only available for finite MPS.
 
 # Fields
 
@@ -136,7 +137,7 @@ function _timestep_infinite(
     recalculate!(envs, ψ′, H)
     # infinite one-site TDVP has a fixed bond dimension and never truncates so nothing is discarded
     # the gauge-fixing residual is controlled by `tolgauge`, not reported here
-    return ψ′, envs, zero(real(scalartype(ψ′)))
+    return ψ′, envs, AlgorithmInfo()
 end
 
 function timestep!(
@@ -155,9 +156,7 @@ function _timestep_finite!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP, envs, allocator;
         imaginary_evolution::Bool, normalize::Bool
     )
-    # discarded weight of the step, accumulated in squares over the local gauges
-    # stays exactly zero for QR gauging
-    ϵ² = zero(real(scalartype(ψ)))
+    acc = TruncationAccumulator(ψ)
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
@@ -173,7 +172,7 @@ function _timestep_finite!(
         #    enlarged bond back down) and move the center to i+1. By default the norm is
         #    preserved; `normalize` renormalizes.
         _, ϵ = left_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
-        ϵ² += ϵ^2
+        push_error!(acc, ϵ)
 
         # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
@@ -203,7 +202,7 @@ function _timestep_finite!(
         # 3. gauge: split AC -> C[i-1], AR[i] and move the center to i-1 (norm preserved by
         #    default; `normalize` renormalizes)
         _, ϵ = right_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
-        ϵ² += ϵ^2
+        push_error!(acc, ϵ)
 
         # 4. evolve the bond tensor backward
         Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
@@ -220,7 +219,7 @@ function _timestep_finite!(
         imaginary_evolution
     )
 
-    return ψ, envs, sqrt(ϵ²)
+    return ψ, envs, AlgorithmInfo(; truncation = acc)
 end
 
 """
@@ -283,8 +282,7 @@ function _timestep2_finite!(
     # the two-site center always has to be split back up, so the gauge is always a truncated SVD
     alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trunc)
 
-    # discarded weight of the step, accumulated in squares over the local gauges
-    ϵ² = zero(real(scalartype(ψ)))
+    acc = TruncationAccumulator(ψ)
 
     # sweep left to right
     for i in 1:(length(ψ) - 1)
@@ -294,7 +292,7 @@ function _timestep2_finite!(
 
         # the norm of the discarded singular values is the truncation error
         _, ϵ = gauge2!(ψ, i, Val(:right), ac2′, alg_gauge; normalize)
-        ϵ² += ϵ^2
+        push_error!(acc, ϵ)
 
         if i != (length(ψ) - 1)
             Hac = AC_hamiltonian(i + 1, ψ, H, ψ, envs; alg.backend, allocator)
@@ -312,7 +310,7 @@ function _timestep2_finite!(
         ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator; imaginary_evolution)
 
         _, ϵ = gauge2!(ψ, i - 1, Val(:left), ac2′, alg_gauge; normalize)
-        ϵ² += ϵ^2
+        push_error!(acc, ϵ)
 
         if i != 2
             Hac = AC_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
@@ -323,7 +321,7 @@ function _timestep2_finite!(
         end
     end
 
-    return ψ, envs, sqrt(ϵ²)
+    return ψ, envs, AlgorithmInfo(; truncation = acc)
 end
 
 # copying version
