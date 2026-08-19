@@ -1,6 +1,6 @@
 """
-    find_groundstate(ψ₀, H, [environments]; kwargs...) -> (ψ, environments, ϵ)
-    find_groundstate(ψ₀, H, algorithm, [environments]) -> (ψ, environments, ϵ)
+    find_groundstate(ψ₀, H, [environments]; kwargs...) -> (ψ, environments, info)
+    find_groundstate(ψ₀, H, algorithm, [environments]) -> (ψ, environments, info)
 
 Compute the ground state for Hamiltonian `H` with initial guess `ψ₀`. If no `algorithm` is
 specified, one is selected automatically from the type of `ψ₀` and the supplied keywords
@@ -38,13 +38,11 @@ low-bond-dimension initial guess such as a product state.
 
 - `ψ::AbstractMPS`: converged ground state
 - `environments`: environments corresponding to the converged state
-- `ϵ::Float64`: final convergence error upon terminating the algorithm, i.e. the quantity compared
-    against the algorithm's `tol`. It measures distance from a variational fixed point and is not
-    a truncation error. See the manual under [The error convention](@ref) for more information.
-    Which measure it is depends on the algorithm: the sweeping algorithms
-    ([`DMRG`](@ref), [`DMRG2`](@ref), [`VUMPS`](@ref), [`IDMRG`](@ref), [`IDMRG2`](@ref))
-    report the Galerkin error, whereas [`GradientGrassmann`](@ref) reports
-    the norm of the Riemannian gradient from its optimizer.
+- `info::AlgorithmInfo`: how the algorithm terminated. `info.normres` is the quantity compared
+    against `tol` and `info.converged` says whether it got there. Which measure `normres` is depends
+    on the algorithm. A truncating algorithm additionally fills `info.ϵ_max`/`info.ϵ_total`
+    with what its final sweep discarded. See [`AlgorithmInfo`](@ref),
+    and [The error convention](@ref) in the manual.
 
 # Examples
 
@@ -63,7 +61,7 @@ julia> H = FiniteMPOHamiltonian(lattice, ((i, i + 1) => -(X ⊗ X) for i in 1:(L
 
 julia> ψ₀ = FiniteMPS(ones(Float64, (ℂ^2)^L));
 
-julia> ψ, envs, ϵ = find_groundstate(ψ₀, H; verbosity = 0, trunc = truncrank(16));
+julia> ψ, envs, info = find_groundstate(ψ₀, H; verbosity = 0, trunc = truncrank(16));
 
 julia> round(real(expectation_value(ψ, H)); digits = 4)
 -4.7588
