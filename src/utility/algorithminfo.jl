@@ -23,11 +23,16 @@ Both truncation fields are built from the same per-factorisation quantity, namel
 singular values a single local factorisation discarded, but aggregate it differently, because no
 single aggregation answers every question:
 
-  - `ϵ_max`: the largest of them. Independent of system size and iteration count, and on the same
-    scale as the per-bond threshold set by `trunc`, so this is what to compare against a tolerance
-    or between runs. It is also what gets logged.
-  - `ϵ_total`: all of them summed up in squares. This grows with system size and iteration count.
+  - `ϵ_max`: the largest of them. It is still a per-factorisation quantity rather than a combination
+    of them, so it does not grow with system size or iteration count, which is what makes it
+    comparable between runs. It is also the field a `trunc` setting most directly controls, though
+    how directly depends on the strategy.
+  - `ϵ_total`: all of them combined in quadrature, ``\\sqrt{\\sum_k \\epsilon_k^2}``. This grows 
+    with system size and iteration count, so unlike `ϵ_max` it is not comparable between runs.
   - `numtrunc`: how many local factorisations actually discarded anything.
+
+See [Aggregating truncation errors](@ref) for how the two relate to a `trunc` setting, and for the
+per-strategy caveats.
 
 These are `0` for an algorithm that never truncates, which does not mean the result is exact. Rather,
 it means this particular error channel is absent. See the manual on [Errors and accuracy](@ref)
