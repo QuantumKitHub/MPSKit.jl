@@ -153,6 +153,7 @@ function leading_boundary(
 
             # update the edge
             ψ.AC[:, end] .= _mul_front.(ψ.C[:, end - 1], ψ.AR[:, end])
+            ψ.AC[:, 1] .= _mul_tail.(ψ.AL[:, 1], ψ.C[:, 1])
             ψ.AR[:, 1] .= _transpose_front.(ψ.C[:, end] .\ _transpose_tail.(ψ.AC[:, 1]))
             ac2 = AC2(ψ, 0; kind = :ACAR)
             h = AC2_hamiltonian(0, ψ, operator, ψ, envs; alg.backend, allocator)

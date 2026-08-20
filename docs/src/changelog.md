@@ -108,6 +108,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   and the right virtual leg of `mpo[end]` and contracted the two — which at length 1 is the *same*
   tensor, so it returned `O * O` on twice the physical space instead of `O`.
   ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- `leading_boundary` with `IDMRG2` didn't update the left edge of the AC tensor, which could result in space mismatches depending on the truncation scheme. This is corrected for in ([#516](https://github.com/QuantumKitHub/MPSKit.jl/pull/516)).
 
 ### Performance
 
