@@ -34,9 +34,9 @@ the operator is a `AbstractTensorMap` that acts on the physical space of a singl
 
 !!! note "Multiline operators"
     There is no method for a `MultilineMPS`/`MultilineMPO` pair. Such an operator pairs row
-    `i` of `O` with line `i` of `ψ` as the ket and line `i + 1` as the bra. A well-defined 
-    overlap requires sandwiching a top fixed point with a bottom fixed point of a 
-    two-dimensional tensor network. The quantity of interest for just one fixed point 
+    `i` of `O` with line `i` of `ψ` as the ket and line `i + 1` as the bra. A well-defined
+    overlap requires sandwiching a top fixed point with a bottom fixed point of a
+    two-dimensional tensor network. The quantity of interest for just one fixed point
     is a dominant eigenvalue, see [`dominant_eigenvalue`](@ref).
 
     For an `InfiniteMPS` and an `InfiniteMPO` there is only a single line. The bra and ket
@@ -204,8 +204,8 @@ end
     dominant_eigenvalue(ψ, O, [environments]) -> λ
 
 Eigenvalue of the transfer operator `O` for the boundary MPS `ψ`, accumulated over one unit
-cell of the network. See the manual at [One fixed point, many lines](@ref) on how to 
-interpret the role of the lines in a `MultilineMPS` and how the eigenvalue is 
+cell of the network. See the manual at [One fixed point, many lines](@ref) on how to
+interpret the role of the lines in a `MultilineMPS` and how the eigenvalue is
 accumulated over them.
 
 # Arguments

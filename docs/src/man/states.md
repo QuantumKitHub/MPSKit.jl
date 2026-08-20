@@ -206,7 +206,7 @@ O * ψ == O[end] * (… * (O[2] * (O[1] * ψ)))
 
 Algorithms only support lines that are themselves infinite: a `MultilineMPS` used with `leading_boundary` and friends is built out of [`InfiniteMPS`](@ref) lines.
 [`FiniteMPS`](@ref) lines are accepted by the type and by the vector constructor, so that finite multiline boundaries can be built and inspected.
-However, no algorithm handles them yet and they will fail somewhere further down. 
+However, no algorithm handles them yet and they will fail somewhere further down.
 
 ### Subtleties
 

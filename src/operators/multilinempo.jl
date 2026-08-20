@@ -1,10 +1,13 @@
 # MultilineMPO
 # ------------
+#TODO: add algorithm support for finite MPOs
+const _MPOs = Union{InfiniteMPO, FiniteMPO}
+
 """
     const MultilineMPO = Multiline{<:Union{InfiniteMPO, FiniteMPO}}
 
 Type that represents multiple lines of `MPO` objects, i.e. the rows of a two-dimensional
-tensor network. Lines are restricted to `InfiniteMPO` or `FiniteMPO` objects as `MultilineMPO` 
+tensor network. Lines are restricted to `InfiniteMPO` or `FiniteMPO` objects as `MultilineMPO`
 represents rows of a statistical mechanical transfer operator.
 See the manual on [MultilineMPO](@ref) for details.
 
@@ -16,15 +19,13 @@ See the manual on [MultilineMPO](@ref) for details.
 
 !!! note "Finite lines"
     Finite lines are accepted by the type and by the constructors, but no algorithm supports
-    them yet, so they will fail somewhere further down. This is on purpose: there is currently 
+    them yet, so they will fail somewhere further down. This is on purpose: there is currently
     no support for finite multiline boundaries, but this allows them to be built and inspected.
 
 # See also
 
 [`Multiline`](@ref), [`MultilineMPS`](@ref), [`dominant_eigenvalue`](@ref)
 """
-#TODO: add algorithm support for finite MPOs
-const _MPOs = Union{InfiniteMPO, FiniteMPO}
 const MultilineMPO = Multiline{<:_MPOs}
 
 function MultilineMPO(Os::PeriodicMatrix)

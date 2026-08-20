@@ -7,8 +7,8 @@ const MultilineMPS = Multiline{<:_MPSs}
 @doc """
     const MultilineMPS = Multiline{<:Union{InfiniteMPS, FiniteMPS}}
 
-Type that represents multiple lines of MPS objects. When used in the context of 
-[`leading_boundary`](@ref) with `InfiniteMPS`, this is not to be confused with the fixed point 
+Type that represents multiple lines of MPS objects. When used in the context of
+[`leading_boundary`](@ref) with `InfiniteMPS`, this is not to be confused with the fixed point
 of a 2D tensor network, which is a single `InfiniteMPS`.
 See the manual on [MultilineMPS](@ref) for details.
 
@@ -32,6 +32,8 @@ See the manual on [MultilineMPS](@ref) for details.
 - `AC`: center-gauged MPS tensors
 - `C`: gauge (bond) tensors
 
+# Notes
+
 Note that `length`, `eltype` and iteration refer to the lines (so e.g. `length(ψ) == nrows`),
 while `size` refers to the `(nrows, ncols)` lattice shape.
 See [`Multiline`](@ref) for details.
@@ -41,7 +43,7 @@ spaces or tensors.
 
 !!! note "Finite lines"
     Finite lines are accepted by the type and by the first constructor, but no algorithm
-    supports them yet, so they will fail somewhere further down. This is on purpose: there is currently 
+    supports them yet, so they will fail somewhere further down. This is on purpose: there is currently
     no support for finite multiline boundaries, but this allows them to be built and inspected.
 
 # See also
