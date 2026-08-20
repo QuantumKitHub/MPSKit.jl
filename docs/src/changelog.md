@@ -39,7 +39,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   (two-site DMRG: -64% allocations, -57% GC time, -23% wall time).
   Disable with `MPSKit.Defaults.set_buffering!(false)`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
 - Custom `show`/`summary` for `MultilineMPS`/`MultilineMPO`. Each row is now rendered via each row's own display, and row shifting is shown explicitly for `MultilineMPO`.
-
+- `*(::MultilineMPO, ::InfiniteMPS)`, which pushes the boundary MPS through every row of the
+  network in turn, advancing it by one full period.
+- `dominant_eigenvalue(ψ, O, [environments])`, the eigenvalue of the transfer operator `O` for the
+  boundary MPS `ψ`. `expectation_value(::InfiniteMPS, ::InfiniteMPO)` forwards here.
 ### Changed
 
 - Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
@@ -75,10 +78,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   `length`/`eltype`/`iterate`/`m[i]` as referring to the individual lines it stores
   (`length(m) == nrows`), while `size`/`axes`/`eachindex` refer to the `(nrows, ncols)` lattice
   shape.
-- `MultilineMPO` construction is now restricted to `InfiniteMPO` lines. Constructing one from
-  Hamiltonians or finite MPOs now throws a `MethodError` at the construction site instead of producing an object that fails
-  later. The `AbstractMatrix` constructor that silently built finite-line `MultilineMPO`s was
-  removed.
+- `MultilineMPO` and `MultilineMPS` lines are now restricted by the type to
+  `Union{InfiniteMPO, FiniteMPO}` and `Union{InfiniteMPS, FiniteMPS}` respectively, rather than to
+  any `AbstractMPO`/`InfiniteMPS`. Hamiltonian lines are excluded outright. Finite lines are
+  accepted by both the type and the constructors so that finite multiline networks can be built
+  and inspected. No algorithm supports them yet, so they fail further down. The `AbstractMatrix`
+  constructor that silently built finite-line `MultilineMPO`s was removed.
 
 ### Deprecated
 
@@ -87,10 +92,18 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `expectation_value(::MultilineMPS, ::MultilineMPO, envs...)` fallback method, which silently
   computed a meaningless value (`prod` instead of `sum`, no row shift, `envs` ignored) for any
   `MultilineMPO` line type not covered by the guarded method. Most notably this prevents a fallback for `InfiniteMPOHamiltonian`, a legal but never-meaningful `Multiline` line type.
+- `expectation_value` for a `MultilineMPS`/`MultilineMPO` pair entirely, replaced by
+  `dominant_eigenvalue`.
+- `*(::MultilineMPO, ::MultilineMPS)` and `*(::MultilineMPO, ::MultilineMPO)`, as these
+  were not meaningful operations. Neither method had ever been callable previously.
 
 ### Fixed
 
 - `isfinite(::WindowMPOHamiltonian)` was undefined. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+- `checkbounds` on the `AL`/`AR`/`AC`/`C` views of a `Multiline` now delegates to the
+  matching view, and dispatches on `Multiline{<:InfiniteMPS}` versus `Multiline{<:AbstractFiniteMPS}`.
+  The row index remains unchecked in both cases due to periodicity.
+- `size`/`axes` for a `CView` over a `Multiline` with finite lines were missing.
 - `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
   different tensor networks, e.g. `norm(E₀ * gs - H * gs)` coming out as `2 * norm(gs) * E₀`
@@ -109,12 +122,6 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   and the right virtual leg of `mpo[end]` and contracted the two — which at length 1 is the *same*
   tensor, so it returned `O * O` on twice the physical space instead of `O`.
   ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
-- `MultilineMPO * MultilineMPS` and `MultilineMPO * MultilineMPO` (`*`) never worked at all
-  (`MethodError`, from `map(*, zip(...))` calling `*` on a 2-tuple). Fixing the immediate error
-  still left a shape bug (`O * ψ` produced an `nrows * ncols`-line object with `#undef` entries
-  past `nrows`) and a row-shift bug (`O * ψ` had fidelity 0 with the expected state on every
-  row). `*` now correctly applies the convention that row `i` of a `MultilineMPO` maps row `i`
-  of the state onto row `i + 1`.
 - `isfinite(::MultilineMPO)` threw (`isfinite(typeof(m))` had no matching type-level method for
   `Multiline`).
 - `changebonds(::MultilineMPO, ::SvdCut)` threw (`convert(MultilineMPS, ::MultilineMPO)` has no
