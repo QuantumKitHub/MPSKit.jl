@@ -329,6 +329,15 @@ use GradientGrassmann.
 leading_boundary
 ```
 
+The associated eigenvalue, i.e. the partition function per unit cell, is obtained with [`dominant_eigenvalue`](@ref).
+This is deliberately *not* obtained through `expectation_value`: the boundary MPS contracts against a different line than the one the operator acts on.
+This cannot thus be interpreted as some overlap to get an expectation value.
+For a single-line `InfiniteMPS`/`InfiniteMPO` pair the two coincide, and `expectation_value` forwards accordingly.
+
+```@docs; canonical=false
+dominant_eigenvalue
+```
+
 ## `approximate`
 
 Often, it is useful to approximate a given MPS by another, typically by one of a different

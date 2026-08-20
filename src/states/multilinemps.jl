@@ -8,8 +8,9 @@ const MultilineMPS = Multiline{<:_MPSs}
     const MultilineMPS = Multiline{<:Union{InfiniteMPS, FiniteMPS}}
 
 Type that represents multiple lines of MPS objects. When used in the context of 
-[leading_boundary](@ref) with InfiniteMPS, this is not to be confused with the fixed point 
-of a 2D tensor network, which is a single InfiniteMPS.
+[`leading_boundary`](@ref) with `InfiniteMPS`, this is not to be confused with the fixed point 
+of a 2D tensor network, which is a single `InfiniteMPS`.
+See the manual on [MultilineMPS](@ref) for details.
 
 # Constructors
 

@@ -32,12 +32,15 @@ the operator is a `AbstractTensorMap` that acts on the physical space of a singl
     return value is the total over one unit cell; divide by `length(ψ)` to obtain a
     per-site value.
 
-!!! note "MultilineMPS/MultilineMPO"
-    For a `MultilineMPS`/`MultilineMPO{<:InfiniteMPO}` pair, `O` is applied with the usual
-    row-shift convention (row `i` of `O` pairs `ψ[i]` against `ψ[i + 1]`).
-    The returned value is the fixed-point contraction, not a normalized `⟨ψ|O|ψ⟩ / ⟨ψ|ψ⟩` in the sense of
-    the single-line methods.
-    `MultilineMPO` lines of `InfiniteMPOHamiltonian` (or any non-`InfiniteMPO` line type) are not supported.
+!!! note "Multiline operators"
+    There is no method for a `MultilineMPS`/`MultilineMPO` pair. Such an operator pairs row
+    `i` of `O` with line `i` of `ψ` as the ket and line `i + 1` as the bra. A well-defined 
+    overlap requires sandwiching a top fixed point with a bottom fixed point of a 
+    two-dimensional tensor network. The quantity of interest for just one fixed point 
+    is a dominant eigenvalue, see [`dominant_eigenvalue`](@ref).
+
+    For an `InfiniteMPS` and an `InfiniteMPO` there is only a single line. The bra and ket
+    coincide, and the two notions agree.
 
 # Examples
 
@@ -187,27 +190,68 @@ end
 function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
-function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO)
-    return expectation_value(convert(MultilineMPS, ψ), convert(MultilineMPO, mpo))
+function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
+    return dominant_eigenvalue(ψ, mpo, envs...)
 end
-function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs::AbstractMPSEnvironments)
-    return expectation_value(
-        convert(MultilineMPS, ψ), convert(MultilineMPO, mpo), convert(MultilineEnvironments, envs)
+# fallback
+function expectation_value(ψ::AbstractMPS, mpo::AbstractMPO, envs...)
+    return dot(ψ, mpo, ψ) / dot(ψ, ψ)
+end
+
+# Dominant eigenvalues
+# --------------------
+"""
+    dominant_eigenvalue(ψ, O, [environments]) -> λ
+
+Eigenvalue of the transfer operator `O` for the boundary MPS `ψ`, accumulated over one unit
+cell of the network. See the manual at [One fixed point, many lines](@ref) on how to 
+interpret the role of the lines in a `MultilineMPS` and how the eigenvalue is 
+accumulated over them.
+
+# Arguments
+
+- `ψ::Union{InfiniteMPS, MultilineMPS}`: the boundary MPS
+- `O::Union{InfiniteMPO, MultilineMPO}`: the transfer operator
+- `environments`: the environments to use, calculated if not given
+
+# Returns
+
+- `λ::Number`: the eigenvalue for one unit cell. Complex in general, since a transfer
+    operator need not be Hermitian.
+
+!!! note "This is not an expectation value"
+    For a [`MultilineMPO`](@ref) with more than one row this is not an overlap. The
+    contraction pairs row `i` of the operator with line `i` of `ψ` as the ket and line
+    `i + 1` as the bra, so no `⟨ϕ|O|ϕ⟩` is computed anywhere.
+    A genuine expectation value of a two-dimensional operator additionally requires the
+    fixed point on the other side of the network, which is a separate
+    [`leading_boundary`](@ref) run, contracted through mixed environments.
+
+    For a single line the bra and the ket coincide and the two notions agree, which is why
+    [`expectation_value`](@ref) forwards here for `InfiniteMPS`/`InfiniteMPO`.
+
+# See also
+
+[`leading_boundary`](@ref), [`expectation_value`](@ref)
+"""
+function dominant_eigenvalue(ψ::InfiniteMPS, O::InfiniteMPO)
+    return dominant_eigenvalue(convert(MultilineMPS, ψ), convert(MultilineMPO, O))
+end
+function dominant_eigenvalue(ψ::InfiniteMPS, O::InfiniteMPO, envs::AbstractMPSEnvironments)
+    return dominant_eigenvalue(
+        convert(MultilineMPS, ψ), convert(MultilineMPO, O), convert(MultilineEnvironments, envs)
     )
 end
-function expectation_value(
-        ψ::MultilineMPS, O::MultilineMPO{<:InfiniteMPO},
+function dominant_eigenvalue(
+        ψ::MultilineMPS{<:InfiniteMPS}, O::MultilineMPO{<:InfiniteMPO},
         envs::MultilineEnvironments = environments(ψ, O, ψ)
     )
+    #TODO: a true overlap needs the top and bottom fixed points with mixed environments
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
         GL = envs[i].GLs[j]
         GR = envs[i].GRs[j]
         return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j])
     end
-end
-# fallback
-function expectation_value(ψ::AbstractMPS, mpo::AbstractMPO, envs...)
-    return dot(ψ, mpo, ψ) / dot(ψ, ψ)
 end
 
 # Lazy operators

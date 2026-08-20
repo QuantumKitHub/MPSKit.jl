@@ -155,7 +155,7 @@ A two-dimensional classical partition function can often be represented by an in
 There are many ways to evaluate such a network, but here we focus on the so-called boundary MPS methods.
 These first reduce the problem from contracting a two-dimensional network to the contraction of a one-dimensional MPS, by finding the fixed point of the row-to-row (or column-to-column) transfer matrix.
 In these cases however, there might be a non-trivial periodicity in both the horizontal as well as vertical direction.
-Therefore, in MPSKit they are represented by [`MultilineMPS`](@ref), which are simply a repeating set of [`InfiniteMPS`](@ref).
+Therefore, in MPSKit they are represented by [`MultilineMPS`](@ref), which are simply a repeating set of MPS lines, one per row of the network.
 
 ```@example states
 state = MultilineMPS(fill(infinite_state, 2))
@@ -176,27 +176,42 @@ The row direction and the column direction of a `MultilineMPS` play different ro
 Within a row, a `MultilineMPS` behaves exactly like the `InfiniteMPS` it repeats: columns are periodic, and `state.AL[row, col]`, `state.AR[row, col]`, `state.C[row, col]` and `state.AC[row, col]` behave exactly as they would for `state[row]::InfiniteMPS`.
 
 The row direction is the direction along which a transfer matrix, represented as a [`MultilineMPO`](@ref), is applied.
-By convention, row `i` of a `MultilineMPO` maps row `i` of the state onto row `i + 1`, so that
+By convention, row `i` of a `MultilineMPO` maps row `i` of the network onto row `i + 1`, so applying a single row shifts the boundary up by one.
+
+Note that the bra and the ket are therefore different lines.
+A `MultilineMPS` is consequently not a state whose expectation value one takes.
+This is why [`expectation_value`](@ref) has no method for a `MultilineMPS`/`MultilineMPO` pair, and why the quantity such an iteration converges to is a [`dominant_eigenvalue`](@ref).
+
+### One fixed point, many lines
+
+It is worth being explicit about what the extra rows are doing, because it is easy to read a `MultilineMPS` as a stack of independent states.
+It is not.
+However many rows the operator has, the network has exactly **one** boundary fixed point: the MPS that comes back to itself after being pushed through all of the rows.
+
+The lines of a `MultilineMPS` are bookkeeping for that single problem.
+Line `i + 1` holds the boundary after row `i` has been applied to line `i`, so the lines are successive stages of one boundary travelling through the network rather than separate solutions.
+What the circular row shifting buys is that `leading_boundary` can cut the one eigenvalue problem into `nrows` smaller coupled subproblems (one per row) and solve them together, instead of contracting all rows into a single operator with a bond dimension that is the product of theirs.
+
+Each subproblem contributes its own partial factor, and the dominant eigenvalue of the actual fixed point is the **product** of all of them.
+Independently of that, the boundary may have a non-trivial unit cell along the chain, in which case each of the `ncols` sites carries its own factor too, and those multiply as well.
+[`dominant_eigenvalue`](@ref) accumulates both directions: it returns the product over every site `(i, j)` of the `(nrows, ncols)` unit cell, which is the eigenvalue of the true fixed point for one unit cell of the network.
+
+Applying an operator therefore takes an ordinary [`InfiniteMPS`](@ref) and pushes it through every row in turn, advancing it by one full period of the network:
 
 ```julia
-(O * ψ)[i] == O[i - 1] * ψ[i - 1]
+O * ψ == O[end] * (… * (O[2] * (O[1] * ψ)))
 ```
-
-i.e. applying `O` shifts every row up by one.
-This convention is not just a property of `*`: it is baked into `environments`, `expectation_value`, and the derivative machinery as well, all of which pair `ψ[row + 1]` against `O[row]`.
-It is also why `O * ψ` requires `size(O, 1) == size(ψ, 1)`, rather than the row counts of operator and state being independent.
 
 ### What is currently supported
 
-Only lines that are themselves infinite are supported: a `MultilineMPS` is always built out of
-[`InfiniteMPS`](@ref) lines, never [`FiniteMPS`](@ref) or [`WindowMPS`](@ref) ones.
-This matches the intended use case of rows/columns in an infinite 2D network.
-The constructors reject finite lines.
+Algorithms only support lines that are themselves infinite: a `MultilineMPS` used with `leading_boundary` and friends is built out of [`InfiniteMPS`](@ref) lines.
+[`FiniteMPS`](@ref) lines are accepted by the type and by the vector constructor, so that finite multiline boundaries can be built and inspected.
+However, no algorithm handles them yet and they will fail somewhere further down. 
 
 ### Subtleties
 
 - **`size` vs. iteration:** `size(state)` returns `(nrows, ncols)`, describing the lattice shape.
-Iterating over a `MultilineMPS` (or indexing it with a single integer, `state[i]`) instead yields the individual `InfiniteMPS` *lines*, so `length(state) == nrows`, not `nrows * ncols`.
+Iterating over a `MultilineMPS` (or indexing it with a single integer, `state[i]`) instead yields the individual MPS *lines*, so `length(state) == nrows`, not `nrows * ncols`.
 Code that wants to operate line-by-line should use `state[i]`/`parent(state)`, while code that wants the lattice shape should use `size`.
 - **Norms and inner products:** `dot`/`norm` sum the contribution of every row, so a `MultilineMPS` whose individual rows are each normalized to 1 does *not* itself have norm 1: `norm(state) == sqrt(nrows)` for `nrows` identical normalized rows.
 

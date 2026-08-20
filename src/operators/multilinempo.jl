@@ -4,14 +4,9 @@
     const MultilineMPO = Multiline{<:Union{InfiniteMPO, FiniteMPO}}
 
 Type that represents multiple lines of `MPO` objects, i.e. the rows of a two-dimensional
-tensor network.
-
-Row `i` maps line `i` of the network onto line `i + 1`, so applying a single row to a
-boundary MPS shifts it by one row. Applying every row in turn advances the boundary by one
-full period, which is what `*` does.
-
-Lines are restricted to `InfiniteMPO` or `FiniteMPO` objects as `MultilineMPO`
+tensor network. Lines are restricted to `InfiniteMPO` or `FiniteMPO` objects as `MultilineMPO` 
 represents rows of a statistical mechanical transfer operator.
+See the manual on [MultilineMPO](@ref) for details.
 
 # Constructors
 
