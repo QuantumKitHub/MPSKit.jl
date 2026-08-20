@@ -278,7 +278,7 @@ end
             @test info.ϵ_max == 0
             @test info.ϵ_total == 0
             @test info.numtrunc == 0
-            @test info.numsteps == 1
+            @test info.numiter == 1
         end
     end
 
@@ -302,7 +302,7 @@ end
         _, _, step = timestep(ψ₀, H, 0.0, dt, alg)
         ψ, _, total = time_evolve(ψ₀, H, 0:dt:(nsteps * dt), alg)
 
-        @test total.numsteps == nsteps
+        @test total.numiter == nsteps
         @test total.numtrunc >= step.numtrunc
         @test total.ϵ_total >= step.ϵ_total
         @test norm(ψ)^2 ≈ norm(ψ₀)^2 - total.ϵ_total^2 atol = 1.0e-12
