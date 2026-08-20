@@ -11,10 +11,10 @@ using TensorKit
 
 d = 3
 P = ℂ^d
-V = ℂ^1
 
-# ψ[i] = |i⟩ (3 rows, 1 column), O[i]|i⟩ = |i + 1⟩ exactly, so ψ is the exact λ = 1 fixed point of O
-# this properly tests row-shift convention: row i of a MultilineMPO maps row i of the state onto row i + 1
+# ψ[i] = |i⟩ (3 rows, 1 column), O[i]|i⟩ = |i + 1⟩ exactly
+# ψ[i] is an InfiniteMPS and is periodic in the line index i
+# this properly tests row-shift convention: row i of a MultilineMPO maps row i of the network onto row i + 1
 ψ = MultilineMPS([product_mps(1), product_mps(2), product_mps(3)])
 O = MultilineMPO(
     [
@@ -24,33 +24,33 @@ O = MultilineMPO(
     ]
 )
 
-@testset "MultilineMPO * MultilineMPS" begin
+@testset "MultilineMPO * InfiniteMPS" begin
     for i in 1:3
         @test abs(dot(ψ[i + 1], O[i] * ψ[i])) ≈ 1 atol = 1.0e-10
         @test abs(dot(ψ[i], O[i] * ψ[i])) ≈ 0 atol = 1.0e-10
     end
 
-    Oψ = O * ψ
-    @test length(parent(Oψ)) == 3 # not rows * cols lines
-    @test size(Oψ) == size(ψ) == (3, 1)
-    for i in 1:3
-        @test abs(dot(ψ[i], Oψ[i])) ≈ 1 atol = 1.0e-10  # O * ψ reproduces ψ
-    end
+    @test abs(dot(ψ[1], O * ψ[1])) ≈ 1 atol = 1.0e-10
+    @test abs(dot(ψ[2], O * ψ[2])) ≈ 1 atol = 1.0e-10 # cyclic period
+
+    # the order matters, here testing reverse order not returning to ψ[1]
+    reversed = foldl((st, i) -> O[i] * st, 3:-1:1; init = ψ[1])
+    @test abs(dot(ψ[1], reversed)) ≈ 0 atol = 1.0e-10
 end
 
-@testset "MultilineMPO * MultilineMPO" begin
-    # O[i+1] * O[i] maps row i onto row i+2, O[i] * O[i] does not
-    for i in 1:3
-        @test abs(dot(ψ[i + 2], (O[i + 1] * O[i]) * ψ[i])) ≈ 1 atol = 1.0e-10
-    end
-    @test !isfinite(O)
-    @test !isfinite(typeof(O))
+@testset "dominant_eigenvalue" begin
+    @test dominant_eigenvalue(ψ, O) ≈ 1 atol = 1.0e-10
 
-    OO = O * O
-    @test !isfinite(OO)
-    @test length(parent(OO)) == 3
-    @test size(OO) == (3, 1)
-    for i in 1:3
-        @test abs(dot(ψ[i + 2], OO[i] * ψ[i])) ≈ 1 atol = 1.0e-10
-    end
+    # row-accumulated eigenvalues
+    scaled(mpo, c) = InfiniteMPO([c * mpo[i] for i in 1:length(mpo)])
+    cs = (2.0, 3.0, 5.0)
+    O_rows = MultilineMPO([scaled(O[i], cs[i]) for i in 1:3])
+    @test dominant_eigenvalue(ψ, O_rows) ≈ prod(cs) atol = 1.0e-8
+
+    # column-accumulated eigenvalues
+    id_mpo = perm_mpo([1, 2, 3]) # identity operator, so anything's a fixed point
+    cs = (2.0, 3.0)
+    O_cols = MultilineMPO([InfiniteMPO([cs[1] * id_mpo[1], cs[2] * id_mpo[1]])])
+    ψ_cols = MultilineMPS([InfiniteMPS([P, P], [ℂ^2, ℂ^2])])
+    @test dominant_eigenvalue(ψ_cols, O_cols) ≈ prod(cs) atol = 1.0e-8
 end
