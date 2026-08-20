@@ -44,7 +44,7 @@ Additionally, we can compute the entanglement entropy as well as the correlation
 D = 10
 V = virtual_space(D)
 ψ₀ = InfiniteMPS([P], [V])
-ψ, envs, = leading_boundary(
+ψ, envs, info = leading_boundary(
     ψ₀, mpo,
     VUMPS(; verbosity = 0, alg_eigsolve = MPSKit.Defaults.alg_eigsolve(; ishermitian = false))
 ) # use non-hermitian eigensolver
