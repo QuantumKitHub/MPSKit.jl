@@ -27,7 +27,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   a single sweep, optionally followed by a sweep in the opposite direction that imposes the final
   truncation. The sweep direction is selected by the `left_to_right` keyword. Both
   `approximate((O, ϕ), alg)` and `approximate!(ψ, (O, ϕ), alg)` are supported, where the destination
-  `ψ` is a write target rather than an initial guess and may alias `ϕ`; they return `(ψ, ϵ)`.
+  `ψ` is a write target rather than an initial guess and may alias `ϕ`; they return `(ψ, info)`.
 - `BUG` time-evolution algorithm: a Basis-Update & Galerkin integrator for finite MPS.
   Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
   and passing a truncating `trunc` enables rank-adaptivity (the bond dimension grows and shrinks
@@ -41,16 +41,18 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
-- `timestep`/`timestep!`/`time_evolve`/`time_evolve!` now return `(ψ, envs, ϵ)` instead of
-  `(ψ, envs)`. `ϵ` is the truncation error, the norm of the singular values discarded by the local
-  gauge factorisations, summed in squares over the bonds of a step and over the iterations, so that `ϵ²` is the discarded/truncated weight. It is nonzero for `TDVP2`, for `BUG` with
-  a `trunc`, and for `TDVP` with a bond expansion. Plain single-site `TDVP` never truncates and
-  returns `0`. Existing `ψ, envs = timestep(...)` call sites keep working! `time_evolve` now
-  also logs the per-step error at `verbosity ≥ 3` and the total at `verbosity ≥ 2` (previously a
-  hardcoded `0`), under the algorithm's own name rather than always `"TDVP"`.
+- The following algorithms now return an `AlgorithmInfo` in place of a bare error or nothing: `find_groundstate`,
+  `find_groundstate!`, `leading_boundary`, `approximate` and `approximate!` return
+  `(ψ, envs, info)` instead of `(ψ, envs, ϵ)`, `Zipup` returns `(ψ, info)`, and
+  `timestep`/`timestep!`/`time_evolve`/`time_evolve!` gain the same third value where they
+  previously returned none. This was motivated by the fact that a single number could not
+  carry what these algorithms actually produce. To migrate, replace `ϵ` with `info.normres`
+  for convergence measures and `info.ϵ_max` for truncation errors.([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - The meaning of every reported error and tolerance is now documented, and the manual has a new
   [Errors and accuracy](@ref) section covering ground states, time evolution and excitations
-  separately. The quantities themselves are unchanged, but what they represent is clarified.
+  separately. Each is written as what the quantity is in principle, what MPSKit actually computes,
+  and why the two differ where they do. Aside from the time-evolution return value, the
+  quantities themselves are unchanged.([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
   `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
   norm is preserved, so it retains useful information (the accumulated truncation error in real time,
