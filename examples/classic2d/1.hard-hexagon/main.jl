@@ -37,7 +37,7 @@ md"""
 
 One way to study statistical mechanics in infinite systems with tensor networks is by approximating the dominant eigenvector of the transfer matrix by an MPS. 
 This dominant eigenvector contains a lot of hidden information.
-For example, the free energy can be extracted by computing the expectation value of the mpo.
+For example, the partition function per site is the dominant eigenvalue of the transfer matrix, from which the free energy follows.
 Additionally, we can compute the entanglement entropy as well as the correlation length of the state:
 """
 
@@ -48,7 +48,7 @@ V = virtual_space(D)
     ψ₀, mpo,
     VUMPS(; verbosity = 0, alg_eigsolve = MPSKit.Defaults.alg_eigsolve(; ishermitian = false))
 ) # use non-hermitian eigensolver
-F = real(expectation_value(ψ, mpo))
+F = real(dominant_eigenvalue(ψ, mpo))
 S = real(first(entropy(ψ)))
 ξ = correlation_length(ψ; sector = leftunit(ψ))
 println("F = $F\tS = $S\tξ = $ξ")

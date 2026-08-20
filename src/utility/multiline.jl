@@ -2,7 +2,20 @@
 $(TYPEDEF)
 
 Object that represents multiple lines of objects of type `T`. Typically used to represent
-multiple lines of `InfiniteMPS` (`MultilineMPS`) or MPO (`Multiline{<:AbstractMPO}`).
+multiple lines of `InfiniteMPS` (`MultilineMPS`) or `InfiniteMPO` (`MultilineMPO`).
+
+`Multiline` plays two different, orthogonal roles at once, and its Base overloads are split
+accordingly:
+
+- As a sequence of lines, matching what is actually stored: `length`, `eltype`, `iterate`
+  and `m[i]` (a single integer index) all refer to the `T`-typed lines themselves, i.e.
+  `length(m) == nrows` and `m[i]::T`.
+- As a lattice, describing the 2D shape spanned by the lines together: `size(m)` is
+  `(nrows, ncols)`, and `axes`/`eachindex` follow `size`.
+
+These two views disagree on purpose (`length(m) != prod(size(m))`).
+Code that wants to work line-by-line should use `m[i]`/`parent(m)`,
+while code that wants the lattice shape should use `size`.
 
 # Fields
 
@@ -25,14 +38,17 @@ Multiline(data::AbstractVector{T}) where {T} = Multiline{T}(data)
 # -----------------------
 Base.parent(m::Multiline) = m.data
 Base.size(m::Multiline) = (length(parent(m)), length(parent(m)[1]))
-Base.size(m::Multiline, i::Int) = i == 1 ? length(parent(m)) : i == 2 ? length(parent(m)[1]) : error()
-Base.length(m::Multiline) = prod(size(m))
-function Base.axes(m::Multiline, i::Int)
-    return i == 1 ? axes(parent(m), 1) :
-        i == 2 ? axes(parent(m)[1], 1) : throw(ArgumentError("Invalid index $i"))
+function Base.size(m::Multiline, i::Int) # acts like abstract array
+    return i == 1 ? length(parent(m)) : i == 2 ? length(parent(m)[1]) : 1
+end
+Base.length(m::Multiline) = length(parent(m))
+function Base.axes(m::Multiline, d::Int)
+    return d <= 2 ? axes(m)[d] : Base.OneTo(1) # matches size
 end
 Base.eachindex(m::Multiline) = CartesianIndices(size(m))
 Base.isfinite(m::Multiline) = isfinite(typeof(m))
+Base.isfinite(::Type{Multiline{T}}) where {T} = isfinite(T)
+Base.eltype(::Type{Multiline{T}}) where {T} = T
 
 eachsite(m::Multiline) = eachsite(first(parent(m)))
 
@@ -53,7 +69,7 @@ Base.reverse(A::Multiline) = Multiline(reverse(parent(A)))
 Base.only(A::Multiline) = only(parent(A))
 
 function Base.repeat(A::Multiline, rows::Int, cols::Int)
-    inner = map(Base.Fix2(repeat, cols), A.data)
+    inner = map(Base.Fix2(repeat, cols), parent(A))
     outer = repeat(inner, rows)
     return Multiline(outer)
 end
@@ -102,6 +118,7 @@ end
 
 VectorInterface.add!!(x::Multiline, y::Multiline, α::Number, β::Number) = add!(x, y, α, β)
 
+# FIXME? is it intentional that a nontrivial multilinemps of normalised rows never has norm 1?
 function VectorInterface.inner(x::Multiline, y::Multiline)
     T = VectorInterface.promote_inner(x, y)
     init = zero(T)
@@ -117,6 +134,7 @@ site_type(::Type{Multiline{S}}) where {S} = site_type(S)
 bond_type(::Type{Multiline{S}}) where {S} = bond_type(S)
 site_type(st::Multiline) = site_type(typeof(st))
 bond_type(st::Multiline) = bond_type(typeof(st))
-TensorKit.sectortype(::Type{Multiline{T}}) where {T} = sectortype(T)
-TensorKit.spacetype(::Type{Multiline{T}}) where {T} = spacetype(T)
-TensorKit.storagetype(::Type{Multiline{T}}) where {T} = storagetype(T)
+for ftype in (:spacetype, :sectortype, :storagetype)
+    @eval TensorKit.$ftype(::Type{Multiline{T}}) where {T} = $ftype(T)
+    @eval TensorKit.$ftype(m::Multiline) = $ftype(typeof(m))
+end

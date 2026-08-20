@@ -46,6 +46,7 @@ export exact_diagonalization, fidelity_susceptibility
 
 # toolbox:
 export expectation_value, correlator, variance
+export dominant_eigenvalue
 export correlation_length, marek_gap, transfer_spectrum
 export entropy, entanglement_spectrum
 export open_boundary_conditions, periodic_boundary_conditions
@@ -116,8 +117,8 @@ include("utility/linearcombination.jl")
 # maybe we should introduce an abstract state type
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
-include("states/multilinemps.jl")
 include("states/finitemps.jl")
+include("states/multilinemps.jl")
 include("states/windowmps.jl")
 include("states/orthoview.jl")
 include("states/quasiparticle_state.jl")

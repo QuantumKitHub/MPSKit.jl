@@ -7,6 +7,7 @@ println("
 using .TestSetup
 using Test, TestExtras
 using MPSKit
+using MPSKit: Multiline
 using TensorKit
 using TensorKit: ℙ
 
@@ -122,5 +123,18 @@ using TensorKit: ℙ
 
         e = expectation_value(ψ, (O_mpo, 1 => E))
         @test e ≈ e_th atol = 1.0e-2
+    end
+
+    @testset "MultilineMPS expectation_value (multi-row)" begin
+        # reuses the exact permutation-MPO fixed point: O[i]*ψ[i] == ψ[i+1] exactly
+        ψ = MultilineMPS([product_mps(1), product_mps(2), product_mps(3)])
+        O = MultilineMPO([perm_mpo([2, 3, 1]), perm_mpo([1, 3, 2]), perm_mpo([3, 2, 1])])
+        @test dominant_eigenvalue(ψ, O) ≈ 1 atol = 1.0e-10
+
+        # `Multiline([H, H])` of Hamiltonian bypasses the MultilineMPO(...) construction guard
+        # expectation_value must still reject it
+        H = transverse_field_ising()
+        ψ2 = MultilineMPS([InfiniteMPS(ℂ^2, ℂ^4), InfiniteMPS(ℂ^2, ℂ^4)])
+        @test_throws MethodError expectation_value(ψ2, Multiline([H, H]))
     end
 end

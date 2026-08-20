@@ -1,15 +1,20 @@
 # MultilineMPS
 # ------------
-const MultilineMPS = Multiline{<:InfiniteMPS}
+#TODO: add support for finite MPS
+const _MPSs = Union{InfiniteMPS, FiniteMPS}
+const MultilineMPS = Multiline{<:_MPSs}
 
 @doc """
-    const MultilineMPS = Multiline{<:InfiniteMPS}
+    const MultilineMPS = Multiline{<:Union{InfiniteMPS, FiniteMPS}}
 
-Type that represents multiple lines of [`InfiniteMPS`](@ref) objects.
+Type that represents multiple lines of MPS objects. When used in the context of
+[`leading_boundary`](@ref) with `InfiniteMPS`, this is not to be confused with the fixed point
+of a 2D tensor network, which is a single `InfiniteMPS`.
+See the manual on [MultilineMPS](@ref) for details.
 
 # Constructors
 
-    MultilineMPS(mpss::AbstractVector{<:InfiniteMPS})
+    MultilineMPS(mpss::AbstractVector{<:Union{InfiniteMPS, FiniteMPS}})
     MultilineMPS(
         [f, eltype], physicalspaces::Matrix{<:Union{S, CompositeSpace{S}}},
         virtualspaces::Matrix{<:Union{S, CompositeSpace{S}}}
@@ -27,13 +32,27 @@ Type that represents multiple lines of [`InfiniteMPS`](@ref) objects.
 - `AC`: center-gauged MPS tensors
 - `C`: gauge (bond) tensors
 
+# Notes
+
+Note that `length`, `eltype` and iteration refer to the lines (so e.g. `length(ψ) == nrows`),
+while `size` refers to the `(nrows, ncols)` lattice shape.
+See [`Multiline`](@ref) for details.
+
+Only the first constructor accepts finite lines; the others build `InfiniteMPS` lines from
+spaces or tensors.
+
+!!! note "Finite lines"
+    Finite lines are accepted by the type and by the first constructor, but no algorithm
+    supports them yet, so they will fail somewhere further down. This is on purpose: there is currently
+    no support for finite multiline boundaries, but this allows them to be built and inspected.
+
 # See also
 
-[`Multiline`](@ref)
+[`Multiline`](@ref), [`MultilineMPO`](@ref)
 """
 function MultilineMPS end
 
-MultilineMPS(mpss::AbstractVector{<:InfiniteMPS}) = Multiline(mpss)
+MultilineMPS(mpss::AbstractVector{<:_MPSs}) = Multiline(mpss)
 function MultilineMPS(
         pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...
     ) where {S <: VectorSpace}
@@ -99,12 +118,10 @@ function TensorKit.dot(a::MultilineMPS, b::MultilineMPS; kwargs...)
 end
 TensorKit.normalize!(a::MultilineMPS) = (normalize!.(parent(a)); return a)
 
-Base.convert(::Type{MultilineMPS}, st::InfiniteMPS) = Multiline([st])
-Base.convert(::Type{InfiniteMPS}, st::MultilineMPS) = only(st)
-Base.eltype(t::MultilineMPS) = eltype(t[1])
+Base.convert(::Type{MultilineMPS}, st::_MPSs) = Multiline([st])
+Base.convert(::Type{InfiniteMPS}, st::MultilineMPS{<:InfiniteMPS}) = only(st)
+Base.convert(::Type{FiniteMPS}, st::MultilineMPS{<:FiniteMPS}) = only(st)
 Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ)); ψ)
-
-Base.isfinite(::Type{<:MultilineMPS}) = false
 
 for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
     @eval $f_space(t::MultilineMPS, i::Int, j::Int) = $f_space(t[i], j)

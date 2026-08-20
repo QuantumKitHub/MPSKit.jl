@@ -11,7 +11,7 @@ The module exports nothing, and all references to it should be qualified, e.g.
 module GrassmannMPS
 
 using ..MPSKit
-using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments,
+using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, site_type,
     AC_projection, recalculate!, TimerOutput, DISABLED_TIMER, @timeit, default_allocator
 using TensorOperations: AbstractBackend, DefaultBackend
 using TensorKit
@@ -195,7 +195,7 @@ function fg(
         scheduler::Scheduler = MPSKit.Defaults.scheduler[],
     ) where {O <: InfiniteMPO}
     @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
-    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
+    f = @timeit timeroutput "expval" dominant_eigenvalue(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state), eltype(state)})
@@ -216,12 +216,12 @@ function fg(
         backend::AbstractBackend = DefaultBackend(),
         scheduler::Scheduler = MPSKit.Defaults.scheduler[],
     )
-    @assert length(state) == 1 "not implemented"
+    @assert size(state, 1) == 1 "not implemented"
     @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
-    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
+    f = @timeit timeroutput "expval" dominant_eigenvalue(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
-    A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state), eltype(state)})
+    A = Core.Compiler.return_type(Grassmann.project, Tuple{site_type(state), site_type(state)})
     gs = Matrix{A}(undef, size(state))
     allocator = default_allocator(state, scheduler)
     @timeit timeroutput "gradient" tforeach(eachindex(state); scheduler) do i

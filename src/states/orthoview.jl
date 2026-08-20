@@ -278,25 +278,28 @@ Base.axes(psi::CView{<:AbstractFiniteMPS}) = map(n -> 0:(n - 1), size(psi))
 
 Base.size(psi::CView{<:Multiline{<:InfiniteMPS}}) = size(psi.parent)
 function Base.size(psi::CView{<:Multiline{<:AbstractFiniteMPS}})
-    return (length(psi.parent.data), length(first(psi.parent.data)) + 1)
+    return (length(parent(psi.parent)), length(first(parent(psi.parent))) + 1)
 end
 function Base.axes(psi::CView{<:Multiline{<:AbstractFiniteMPS}})
-    return (Base.OneTo(length(psi.parent.data)), 0:length(first(psi.parent.data)))
+    return (Base.OneTo(length(parent(psi.parent))), 0:length(first(parent(psi.parent))))
 end
 
-#the checkbounds for multiline objects needs to be changed, as the first index is periodic
-#however if it is a Multiline(Infinitemps), then the second index is also periodic!
+const MultilineOrthoView{S} = Union{ACView{S}, ALView{S}, ARView{S}, CView{S}}
+
+# the row index is always periodic
+# for infinite lines the column index is periodic as well
+Base.checkbounds(::Type{Bool}, ::MultilineOrthoView{<:Multiline{<:InfiniteMPS}}, a, b) = true
+
+# finite line bounds differ per view, so just delegate to the view's own checkbounds
 function Base.checkbounds(
-        ::Type{Bool},
-        psi::Union{ACView{<:Multiline}, ALView{<:Multiline}, ARView{<:Multiline}, CView{<:Multiline}},
-        a, b
+        ::Type{Bool}, psi::MultilineOrthoView{<:Multiline{<:AbstractFiniteMPS}}, a, b
     )
-    return if first(psi.parent.data) isa InfiniteMPS
-        true
-    else
-        checkbounds(Bool, CView(first(psi.parent.data)), b)
-    end
+    return checkbounds(Bool, _lineview(psi), b)
 end
+_lineview(psi::ACView) = ACView(first(parent(psi.parent)))
+_lineview(psi::ALView) = ALView(first(parent(psi.parent)))
+_lineview(psi::ARView) = ARView(first(parent(psi.parent)))
+_lineview(psi::CView) = CView(first(parent(psi.parent)))
 
 # Gauging routines
 # ----------------

@@ -86,14 +86,14 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
 end
 
 # TODO: this assumes the MPO is infinite, and does weird things for finite MPOs.
-function changebonds(ψ::InfiniteMPO, alg::SvdCut)
-    return convert(InfiniteMPO, changebonds(convert(InfiniteMPS, ψ), alg))
+function changebonds(mpo::InfiniteMPO, alg::SvdCut)
+    return convert(InfiniteMPO, changebonds(convert(InfiniteMPS, mpo), alg))
 end
-function changebonds(ψ::MultilineMPO, alg::SvdCut)
-    return convert(MultilineMPO, changebonds(convert(MultilineMPS, ψ), alg))
+function changebonds(mpo::MultilineMPO, alg::SvdCut)
+    return Multiline(map(Base.Fix2(changebonds, alg), parent(mpo)))
 end
 function changebonds(ψ::MultilineMPS, alg::SvdCut)
-    return Multiline(map(x -> changebonds(x, alg), ψ.data))
+    return Multiline(map(Base.Fix2(changebonds, alg), parent(ψ)))
 end
 function changebonds(ψ::InfiniteMPS, alg::SvdCut)
     copied = copy.(ψ.AL)
