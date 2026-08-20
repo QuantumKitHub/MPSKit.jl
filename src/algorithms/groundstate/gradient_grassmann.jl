@@ -17,6 +17,8 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `tol = Defaults.tol`: tolerance for convergence criterium
 - `maxiter = Defaults.maxiter`: maximum amount of iterations
 - `verbosity = Defaults.verbosity - 1`: level of information display
+- `hasconverged = OptimKit.DefaultHasConverged(tol)`: convergence criterium
+- `shouldstop = OptimKit.DefaultShouldStop(maxiter)`: stopping criterium
 - `backend = Defaults.backend()`: backend for tensor contractions and index manipulations
 
 # Fields
@@ -38,11 +40,17 @@ struct GradientGrassmann{O <: OptimKit.OptimizationAlgorithm, F, B} <: Algorithm
     finalize!::F
     "backend for tensor contractions and index manipulations"
     backend::B
+    "function indicating whether the optimization has converged, of signature `hasconverged(x, f, g, normgrad) -> Bool`"
+    hasconverged
+    "function indicating whether the optimization should terminate, of signature `shouldstop(x, f, g, numfg, numiter, t) -> Bool`"
+    shouldstop
 
     function GradientGrassmann(;
             method = ConjugateGradient, (finalize!) = OptimKit._finalize!,
             tol = Defaults.tol, maxiter = Defaults.maxiter,
             verbosity = Defaults.verbosity - 1,
+            hasconverged = nothing, # can't set proper default until method is instantiated
+            shouldstop = nothing, # can't set proper default until method is instantiated
             backend = Defaults.backend()
         )
         if isa(method, OptimKit.OptimizationAlgorithm)
@@ -59,7 +67,13 @@ struct GradientGrassmann{O <: OptimKit.OptimizationAlgorithm, F, B} <: Algorithm
             msg = "method should be either an instance or a subtype of `OptimKit.OptimizationAlgorithm`."
             throw(ArgumentError(msg))
         end
-        return new{typeof(m), typeof(finalize!), typeof(backend)}(m, finalize!, backend)
+        if isnothing(hasconverged)
+            hasconverged = OptimKit.DefaultHasConverged(m.gradtol)
+        end
+        if isnothing(shouldstop)
+            shouldstop = OptimKit.DefaultShouldStop(m.maxiter)
+        end
+        return new{typeof(m), typeof(finalize!), typeof(backend)}(m, finalize!, backend, hasconverged, shouldstop)
     end
 end
 
@@ -97,6 +111,8 @@ function find_groundstate(
         GrassmannMPS.scale!,
         GrassmannMPS.add!,
         alg.finalize!,
+        alg.hasconverged,
+        alg.shouldstop,
         isometrictransport = true,
     )
 
