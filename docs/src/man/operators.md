@@ -53,8 +53,7 @@ MPOs also support a range of linear algebra operations, such as addition, subtra
 multiplication, either among themselves or with a finite MPS. Here, it is important to note
 that these operations will increase the virtual dimension of the resulting MPO or MPS, and
 this naive application is thus typically not optimal. For approximate operations that do not
-increase the virtual dimension, the more advanced algorithms in the [um_algorithms](@ref)
-sections should be used.
+increase the virtual dimension, the more advanced algorithms in the [algorithms](@ref um_algorithms) sections should be used.
 
 ```@example operators
 O_xzx² = O_xzx * O_xzx
