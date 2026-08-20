@@ -72,7 +72,7 @@ function approximate!(
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
     O, ϕ = toapprox
-    local iter
+    local iter, acc
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
