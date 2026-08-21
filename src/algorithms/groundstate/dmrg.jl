@@ -60,7 +60,9 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG{A, F, E, G, B} <: Algorithm
-    "tolerance for convergence criterium"
+    "convergence tolerance on the Galerkin error (the tangent-space gradient norm). This acts as a
+    floor: the stopping test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to `ϵ ≤ tol`
+    when nothing is truncated"
     tol::Float64
 
     "maximal amount of iterations"
@@ -171,7 +173,9 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG2{A, G, F, B} <: Algorithm
-    "tolerance for convergence criterium"
+    "convergence tolerance on the Galerkin error (the tangent-space gradient norm). This acts as a
+    floor: the stopping test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to `ϵ ≤ tol`
+    when nothing is truncated"
     tol::Float64
 
     "maximal amount of iterations"
@@ -232,7 +236,7 @@ function local_update!(
     alg_gauge = _update_alg_gauge(alg.alg_gauge, iter, ϵ_global)
 
     # 2. gauge: truncated SVD split back into single-site tensors and install;
-    #           the discarded weight is the truncation error
+    #           the norm of the discarded singular values is the truncation error
     ψ, ϵ_trunc = @timeit timeroutput "gauge" gauge2!(ψ, pos, direction, O, envs, newA2center, alg_gauge; normalize = true)
 
     # 3. bookkeeping: measured contraction factor per matvec, kept a strict contraction in (0, 1)
@@ -256,7 +260,7 @@ _sweep_ranges(::DMRG2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 2):-1:1)
 inner_alg_gauge(alg::Union{DMRG, DMRG2}) = alg_gauge(alg.alg_gauge)
 
 """
-    find_groundstate!(ψ, H, algorithm, [environments]) -> (ψ, environments, ϵ)
+    find_groundstate!(ψ, H, algorithm, [environments]) -> (ψ, environments, info)
 
 In-place version of [`find_groundstate`](@ref): optimize the finite MPS `ψ` for the
 Hamiltonian `H`, overwriting the input state instead of working on a copy.
@@ -273,7 +277,10 @@ Currently supported for the finite-system algorithms [`DMRG`](@ref) and [`DMRG2`
 
 - `ψ::AbstractFiniteMPS`: converged ground state
 - `environments`: environments corresponding to the converged state
-- `ϵ::Float64`: final convergence error upon terminating the algorithm
+- `info::AlgorithmInfo`: how the algorithm terminated. `info.normres` is the Galerkin error and
+    `info.converged` whether it met the stopping test. A truncating gauge also fills
+    `info.ϵ_max`/`info.ϵ_total` with what the final sweep discarded
+    (see [`find_groundstate`](@ref) and [`AlgorithmInfo`](@ref))
 """
 function find_groundstate!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs = environments(ψ, H, ψ)
@@ -298,10 +305,11 @@ function _find_groundstate_sweep!(
     ϵ_truncs = zeros(Tr, n)     # local truncation error
     decay_rates = zeros(n)      # local observed decay rate of eigensolver
     fwd, bwd = _sweep_ranges(alg, ψ)
+    local iter
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ_global, expectation_value(ψ, H, envs))
-        for iter in 1:(alg.maxiter)
+        for outer iter in 1:(alg.maxiter)
             @timeit timeroutput "sweep" begin
                 # left-to-right
                 for pos in fwd
@@ -350,7 +358,14 @@ function _find_groundstate_sweep!(
             end
         end
     end
-    return ψ, envs, ϵ_global
+
+    acc = TruncationAccumulator(Tr)
+    foreach(ϵ -> push_error!(acc, ϵ), ϵ_truncs)
+    info = AlgorithmInfo(;
+        converged = ϵ_global <= max(alg.tol, maximum(ϵ_truncs)), normres = ϵ_global,
+        truncation = acc, numiter = iter
+    )
+    return ψ, envs, info
 end
 
 function find_groundstate(ψ, H, alg::Union{DMRG, DMRG2}, envs...; kwargs...)

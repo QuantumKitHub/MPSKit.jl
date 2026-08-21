@@ -118,9 +118,10 @@ end
 
         # both sweep directions, with and without the zip-down pass
         for left_to_right in (true, false), trunc′ in (trunc, (notrunc(), trunc))
-            got, ϵ = approximate((O, ψ), Zipup(; trunc = trunc′, left_to_right))
+            got, info = approximate((O, ψ), Zipup(; trunc = trunc′, left_to_right))
             @test norm(ref - got) / norm(ref) < 1.0e-10
-            @test ϵ < 1.0e-10
+            @test info.ϵ_max < 1.0e-10
+            @test isnothing(info.converged) && isnothing(info.normres)
         end
 
         @test norm(ψ - ψ_copy) < 1.0e-12
@@ -139,11 +140,11 @@ end
 
         # both sweep directions, with and without the zip-down pass
         for left_to_right in (true, false), trunc′ in (trunc, (notrunc(), trunc))
-            got_s, ϵ = approximate((expH, ψ), Zipup(; trunc = trunc′, left_to_right))
+            got_s, info = approximate((expH, ψ), Zipup(; trunc = trunc′, left_to_right))
             normalize!(got_s)
             @test norm(ref_s - got_s) < 0.002
             @test norm(ψ - got_s) > 0.002
-            @test ϵ < 1.0e-10
+            @test info.ϵ_max < 1.0e-10
         end
     end
 
@@ -155,11 +156,11 @@ end
         zipup_trunc = truncrank(2Dcut) & truncerror(; rtol = rtol / 10)
 
         ref_tr = changebonds(O * ψ, SvdCut(; trunc = final_trunc); normalize = false)
-        got_one_sweep, ϵ_one_sweep = approximate((O, ψ), Zipup(; trunc = final_trunc, left_to_right))
+        got_one_sweep, info_one_sweep = approximate((O, ψ), Zipup(; trunc = final_trunc, left_to_right))
         got_two_sweep, _ = approximate(
             (O, ψ), Zipup(; trunc = (zipup_trunc, final_trunc), left_to_right)
         )
-        @test ϵ_one_sweep > 0
+        @test info_one_sweep.ϵ_max > 0
 
         err_one_sweep = norm(ref_tr - got_one_sweep) / norm(ref_tr)
         err_two_sweep = norm(ref_tr - got_two_sweep) / norm(ref_tr)
@@ -172,26 +173,26 @@ end
         (pspace, Dspace, Dcut) in zipup_spacelist, left_to_right in (true, false)
         O, ψ = _random_mpo_mps(pspace, Dspace, 6)
         alg = Zipup(; trunc = (truncrank(2Dcut), truncrank(Dcut)), left_to_right)
-        ref, ϵ_ref = approximate((O, ψ), alg)
+        ref, info_ref = approximate((O, ψ), alg)
 
         # empty destination
         dst = similar(ψ, ComplexF64)
-        got, ϵ = approximate!(dst, (O, ψ), alg)
+        got, info = approximate!(dst, (O, ψ), alg)
         @test got === dst
         @test norm(ref - got) / norm(ref) < 1.0e-12
-        @test ϵ ≈ ϵ_ref
+        @test info.ϵ_max ≈ info_ref.ϵ_max
 
         # a destination with unrelated contents is overwritten entirely
         dst = FiniteMPS(rand, ComplexF64, length(ψ), pspace, oneunit(Dspace) ⊕ Dspace ⊕ Dspace)
-        got, ϵ = approximate!(dst, (O, ψ), alg)
+        got, info = approximate!(dst, (O, ψ), alg)
         @test norm(ref - got) / norm(ref) < 1.0e-12
-        @test ϵ ≈ ϵ_ref
+        @test info.ϵ_max ≈ info_ref.ϵ_max
 
         # the input may serve as its own destination
-        got, ϵ = approximate!(ψ, (O, ψ), alg)
+        got, info = approximate!(ψ, (O, ψ), alg)
         @test got === ψ
         @test norm(ref - got) / norm(ref) < 1.0e-12
-        @test ϵ ≈ ϵ_ref
+        @test info.ϵ_max ≈ info_ref.ϵ_max
     end
 
     @testset "Zip-up with non-trivial boundary spaces $(spacetype(pspace))" for (pspace, Dspace, _) in zipup_spacelist

@@ -17,7 +17,8 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`leading_bou
 * [Vanderstraeten et al. SciPost Phys. Lect. Notes 7 (2019)](@cite vanderstraeten2019)
 """
 @kwdef struct VUMPS{F, B} <: Algorithm
-    "tolerance for convergence criterium"
+    "convergence tolerance, compared against the Galerkin error (the tangent-space gradient
+    norm)"
     tol::Float64 = Defaults.tol
 
     "maximal amount of iterations"
@@ -83,12 +84,12 @@ function dominant_eigsolve(
             if ϵ ≤ alg.tol
                 @infov 4 timeroutput
                 @infov 2 logfinish!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
-                return mps, envs, ϵ
+                return mps, envs, AlgorithmInfo(; converged = true, normres = ϵ, numiter = it.iter)
             end
             if it.iter ≥ alg.maxiter
                 @infov 4 timeroutput
                 @warnv 1 logcancel!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
-                return mps, envs, ϵ
+                return mps, envs, AlgorithmInfo(; converged = false, normres = ϵ, numiter = it.iter)
             end
             @infov 3 logiter!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
         end

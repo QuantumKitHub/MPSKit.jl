@@ -1,11 +1,11 @@
 @doc """
-    approximate(ψ₀, (O, ψ), [environments]; kwargs...) -> (ψ, environments, ϵ)
-    approximate(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, ϵ)
-    approximate!(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, ϵ)
-    approximate(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, ϵ)
-    approximate!(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, ϵ)
-    approximate((O, ψ), algorithm) -> (ψ′, ϵ)
-    approximate!(ψ₀, (O, ψ), algorithm) -> (ψ, ϵ)
+    approximate(ψ₀, (O, ψ), [environments]; kwargs...) -> (ψ, environments, info)
+    approximate(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, info)
+    approximate!(ψ₀, (O, ψ), algorithm, [environments]) -> (ψ, environments, info)
+    approximate(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, info)
+    approximate!(ψ₀, ψ, algorithm, [environments]) -> (ψ, environments, info)
+    approximate((O, ψ), algorithm) -> (ψ′, info)
+    approximate!(ψ₀, (O, ψ), algorithm) -> (ψ, info)
 
 Compute an approximation to the application of an operator `O` to the state `ψ` in the form
 of an MPS, using initial guess `ψ₀`. If only a state `ψ` is supplied instead of the `(O, ψ)` pair,
@@ -29,11 +29,29 @@ algorithm for you based on the type of `ψ₀` (`DMRG`/`DMRG2` for a finite MPS,
 `IDMRG2` for an infinite MPS) and only accepts the `(O, ψ)` tuple form of `toapprox`. Once you
 pass an explicit `algorithm`, keywords are no longer accepted here — configure the algorithm
 struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
-- `tol::Float64`: tolerance for convergence criterium
+- `tol::Float64`: convergence tolerance, compared against the Galerkin error (see Returns below)
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 - `trunc`: if supplied, a truncated two-site sweep (`DMRG2`/`IDMRG2`) is prepended to
   refine the bond dimension before the single-site algorithm polishes the result.
+
+# Returns
+
+- `ψ`: the approximated state
+- `environments`: environments corresponding to the result (not returned by `Zipup`, which uses none)
+- `info::AlgorithmInfo`: how the algorithm arrived there. Which of its fields are populated depends
+  on the algorithm:
+  - the iterative algorithms (`DMRG`, `DMRG2`, `IDMRG`, `IDMRG2`, `VOMPS`) fill `converged`,
+    `normres` and `numiter`. `normres` is the Galerkin error compared against `tol`, the same
+    quantity [`find_groundstate`](@ref) reports, measuring distance from the variational fixed point.
+  - the two-site ones (`DMRG2`, `IDMRG2`) which involve a truncated SVD fill the truncation 
+    fields with what their final sweep discarded, i.e. what the returned state is still 
+    throwing away per sweep rather than what the early, unconverged sweeps did.
+  - [`Zipup`](@ref) is a single non-iterative sweep, so it has no convergence measure at all:
+    `converged` and `normres` are `nothing`, and it fills the truncation fields instead.
+
+  See [`AlgorithmInfo`](@ref) for the full list and [The error convention](@ref) in the manual for
+  why a convergence measure and a truncation error are not comparable quantities.
 
 # Algorithms
 
@@ -41,7 +59,7 @@ Each algorithm below only supports a subset of the general interface. Check this
 picking one — in particular, note that **only `DMRG`/`DMRG2` accept a bare state `ψ`**; the
 infinite algorithms always require an explicit `(O, ψ)` tuple, and **`VOMPS` has no in-place
 `approximate!`** at all. `Zipup` is a single sweep rather than an iterative optimization, so it uses
-no environments and returns `(ψ, ϵ)`; its `ψ₀` is a write destination, not an initial guess, and it
+no environments and returns `(ψ, info)`; its `ψ₀` is a write destination, not an initial guess, and it
 may be omitted.
 
 | Algorithm | Scheme                        | State `ψ₀`                        | bare `ψ` allowed? | `approximate!` |

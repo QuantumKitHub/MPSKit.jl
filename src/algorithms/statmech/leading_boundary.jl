@@ -1,6 +1,6 @@
 @doc """
-    leading_boundary(ψ₀, O, [environments]; kwargs...) -> (ψ, environments, ϵ)
-    leading_boundary(ψ₀, O, algorithm, environments) -> (ψ, environments, ϵ)
+    leading_boundary(ψ₀, O, [environments]; kwargs...) -> (ψ, environments, info)
+    leading_boundary(ψ₀, O, algorithm, environments) -> (ψ, environments, info)
 
 Compute the leading boundary MPS for operator `O` with initial guess `ψ`. If not specified, an
 optimization algorithm will be attempted based on the supplied keywords.
@@ -14,7 +14,7 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 # Keyword Arguments
 
-- `tol::Float64`: tolerance for convergence criterium
+- `tol::Float64`: convergence tolerance, compared against the Galerkin error (see Returns below)
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 
@@ -22,7 +22,10 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 - `ψ::AbstractMPS`: converged leading boundary MPS
 - `environments`: environments corresponding to the converged boundary
-- `ϵ::Float64`: final convergence error upon terminating the algorithm
+- `info::AlgorithmInfo`: how the algorithm terminated; `info.normres` is the Galerkin error compared
+    against `tol`, and `info.converged` whether it got there. It is not a truncation error. See
+    [`AlgorithmInfo`](@ref), [`find_groundstate`](@ref), and the manual on the `ϵ` convention under
+    [The error convention](@ref) and [Ground state accuracy](@ref).
 """ leading_boundary
 
 # TODO: alg selector
