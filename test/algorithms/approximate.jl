@@ -140,11 +140,11 @@ end
 
         # both sweep directions, with and without the zip-down pass
         for left_to_right in (true, false), trunc′ in (trunc, (notrunc(), trunc))
-            got_s, ϵ = approximate((expH, ψ), Zipup(; trunc = trunc′, left_to_right))
+            got_s, info = approximate((expH, ψ), Zipup(; trunc = trunc′, left_to_right))
             normalize!(got_s)
             @test norm(ref_s - got_s) < 0.002
             @test norm(ψ - got_s) > 0.002
-            @test ϵ < 1.0e-10
+            @test info.ϵ_max < 1.0e-10
         end
     end
 
