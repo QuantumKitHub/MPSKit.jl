@@ -1,0 +1,176 @@
+```@meta
+EditURL = "../../../../../examples/dynamics/ising-dqpt/main.jl"
+```
+
+[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/QuantumKitHub/MPSKit.jl/gh-pages?filepath=dev/examples/dynamics/ising-dqpt/main.ipynb)
+[![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev/examples/dynamics/ising-dqpt/main.ipynb)
+[![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/MPSKit.jl/examples/tree/gh-pages/dev/examples/dynamics/ising-dqpt)
+
+# DQPT in the Ising model
+
+In this tutorial we will try to reproduce the results from [this paper](https://arxiv.org/pdf/1206.2505.pdf).
+The needed packages are
+
+````julia
+using MPSKit, MPSKitModels, TensorKit
+````
+
+Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the Loschmidt echo.
+This quantity is given by ``L(t) = \frac{-2}{N} \ln |⟨ψ(t)|ψ(0)⟩|`` where ``N`` is the system size.
+One typically starts from a ground state and then quenches the Hamiltonian to a different point.
+Non-analyticities in the Loschmidt echo are called 'dynamical quantum phase transitions'.
+
+In the mentioned paper they work with
+
+``H(g) = - \sum^{N-1}_{i=1} σ^z_i σ^z_{i+1} + g \sum_{i=1}^N σ^x_i``
+
+and show that divergences occur when quenching across the critical point (g₀ → g₁) for ``t^*_n = t^*(n+\frac{1}{2})`` with ``t^* = π/e(g_1,k^*)``, ``cos(k^*) = (1+g_0 g_1) / (g_0 + g_1)``, `` e(g,k) = \sqrt{(g-cos k)^2 + sin^2 k}``.
+
+The outline of the tutorial is as follows.
+We will pick ``g₀ = 0.5``, ``g₁ = 2.0``, and perform the time evolution at different system sizes and compare with the thermodynamic limit.
+For those ``g`` we expect non-analyticities to occur at ``t_n ≈ 2.35 (n + 1/2)``.
+
+First we construct the Hamiltonian in MPO form, and obtain the pre-quenched ground state:
+
+````julia
+L = 20
+H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
+ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
+ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG(; verbosity = 0));
+````
+
+## Finite MPS quenching
+
+We can define a helper function that measures the Loschmidt echo
+
+````julia
+echo(ψ₀::FiniteMPS, ψₜ::FiniteMPS) = -2 * log(abs(dot(ψ₀, ψₜ))) / length(ψ₀)
+@assert isapprox(echo(ψ₀, ψ₀), 0, atol = 1.0e-10)
+````
+
+We will initially use a two-site TDVP scheme to dynamically increase the bond dimension while time evolving, and later on switch to a faster one-site scheme.
+A single timestep can be done using
+
+````julia
+H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
+ψₜ = deepcopy(ψ₀)
+dt = 0.01
+ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP2(; trunc = truncrank(20)));
+````
+
+"envs" is a kind of cache object that keeps track of all environments in `ψ`.
+It is often advantageous to re-use the environment, so that MPSKit doesn't need to recalculate everything.
+
+Putting it all together, we get
+
+````julia
+function finite_sim(L; dt = 0.05, finaltime = 5.0)
+    ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
+    H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
+    ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG(; verbosity = 0))
+
+    H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
+    ψₜ = deepcopy(ψ₀)
+    envs = environments(ψₜ, H₁, ψₜ)
+
+    echos = [echo(ψₜ, ψ₀)]
+    times = collect(0:dt:finaltime)
+
+    for t in times[2:end]
+        alg = t > 3 * dt ? TDVP() : TDVP2(; trunc = truncrank(50))
+        ψₜ, envs = timestep(ψₜ, H₁, 0, dt, alg, envs)
+        push!(echos, echo(ψₜ, ψ₀))
+    end
+
+    return times, echos
+end
+````
+
+````
+finite_sim (generic function with 1 method)
+````
+
+![](finite_timeev.png)
+
+## Infinite MPS quenching
+
+Similarly we could start with an initial infinite state and find the pre-quench ground state:
+
+````julia
+ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
+H₀ = transverse_field_ising(; g = -0.5)
+ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS(; verbosity = 0));
+````
+
+The dot product of two infinite matrix product states scales as  ``α ^N`` where ``α`` is the dominant eigenvalue of the transfer matrix.
+It is this ``α`` that is returned when calling
+
+````julia
+dot(ψ₀, ψ₀)
+````
+
+````
+1.0000000000000047 + 1.040736567930811e-16im
+````
+
+so the Loschmidt echo takes on the pleasant form
+
+````julia
+echo(ψ₀::InfiniteMPS, ψₜ::InfiniteMPS) = -2 * log(abs(dot(ψ₀, ψₜ)))
+@assert isapprox(echo(ψ₀, ψ₀), 0, atol = 1.0e-10)
+````
+
+We make use of the `changebonds` machinery to grow the bond dimension.
+This can also be achieved through a two-site scheme.
+Multiple algorithms are available, but we will only focus on `OptimalExpand()`.
+Growing the bond dimension by ``5`` can be done by calling:
+
+````julia
+ψₜ = deepcopy(ψ₀)
+H₁ = transverse_field_ising(; g = -2.0)
+ψₜ, envs = changebonds(ψₜ, H₁, OptimalExpand(; trunc = truncrank(5)));
+````
+
+a single timestep is easy
+
+````julia
+dt = 0.01
+ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP(), envs);
+````
+
+With performance in mind we should once again try to re-use these "envs" cache objects.
+The final code is
+
+````julia
+function infinite_sim(dt = 0.05, finaltime = 5.0)
+    ψ₀ = InfiniteMPS([ℂ^2], [ℂ^10])
+    ψ₀, _ = find_groundstate(ψ₀, H₀, VUMPS(; verbosity = 0))
+
+    ψₜ = deepcopy(ψ₀)
+    envs = environments(ψₜ, H₁, ψₜ)
+
+    echos = [echo(ψₜ, ψ₀)]
+    times = collect(0:dt:finaltime)
+
+    for t in times[2:end]
+        if t < 50dt # if t is sufficiently small, we increase the bond dimension
+            ψₜ, envs = changebonds(ψₜ, H₁, OptimalExpand(; trunc = truncrank(1)), envs)
+        end
+        ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP(), envs)
+        push!(echos, echo(ψₜ, ψ₀))
+    end
+
+    return times, echos
+end
+````
+
+````
+infinite_sim (generic function with 3 methods)
+````
+
+![](infinite_timeev.png)
+
+---
+
+*This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+
