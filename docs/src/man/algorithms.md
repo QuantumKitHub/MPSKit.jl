@@ -356,15 +356,22 @@ Bounding that gives the linear sum ``\lVert \psi_{\text{untruncated}} - \psi \rV
 
 [`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms report the quantity their `tol` is compared against as `normres`, together with a `converged` flag.
 **In theory:** Convergence is measured by the (norm of the) variational gradient: the component of ``H \lvert \psi \rangle`` that points away from the current state but still lies in the tangent space of the variational manifold.
-It vanishes exactly at a variational fixed point, and its norm is what both families of algorithms report; for the sweeping algorithms that norm is known as the Galerkin error.
+It vanishes exactly at a variational fixed point, and its norm is what most of these algorithms report.
+For the sweeping algorithms that norm is known as the Galerkin error.
 
-**In practice:** The sweeping algorithms ([`DMRG`](@ref), [`DMRG2`](@ref), [`VUMPS`](@ref), [`IDMRG`](@ref), [`IDMRG2`](@ref)) report the Galerkin error, computed per site as the norm of the local update projected onto the orthogonal complement of the current tensor, and then aggregated as the maximum over sites.
+**In practice:** The sweeping algorithms ([`DMRG`](@ref), [`DMRG2`](@ref), [`VUMPS`](@ref), [`VOMPS`](@ref)) report the Galerkin error, computed per site as the norm of the local update projected onto the orthogonal complement of the current tensor, and then aggregated as the maximum over sites.
 [`GradientGrassmann`](@ref) instead reports the gradient norm supplied by its optimiser, taken over the whole state at once in the preconditioned Grassmann metric.
 
-**Why they differ:** These are the same underlying gradient, not different physical quantities.
+[`IDMRG`](@ref) and [`IDMRG2`](@ref) report neither, and this is easy to miss because their `tol` sits alongside the others.
+Their `normres` is a *fixed-point residual*: the change in the center bond tensor from one sweep to the next, ``\lVert C - C_{\text{prev}} \rVert``, with both tensors projected onto their common space when the bond space changed.
+It measures how much a sweep still moves the state, which is weaker than measuring how far the state is from stationarity, since an algorithm crawling through a slow region reports a small value for the same reason a converged one does.
+For [`IDMRG2`](@ref) the projection onto the common space also means that a change in bond dimension between sweeps is projected out of the measure rather than counted in it.
+
+**Why they differ:** The Galerkin and Grassmann measures are the same underlying gradient, not different physical quantities.
 They differ in the metric it is measured in (the Grassmann gradient is preconditioned) and in how the per-site contributions are combined (a maximum versus a single global norm).
 The maximum is a deliberate practical choice, as it keeps the reported number independent of system size.
-The consequence of the mismatch is that a `tol` tuned for one is not a `tol` tuned for the other.
+The IDMRG residual is not that gradient at all: it certifies that the sweeps have stopped moving, not that there is nowhere left to move to.
+The consequence of these mismatches is that a `tol` tuned for one algorithm is not a `tol` tuned for another, and this is worth keeping in mind when swapping algorithms at a fixed `tol`.
 
 In other words, convergence is only defined relative to the manifold you are optimising over.
 A single-site algorithm at a fixed bond dimension can drive its `normres` to machine precision and still be far from the true ground state, because the error that remains is the bond dimension itself, which no amount of further sweeping can address.

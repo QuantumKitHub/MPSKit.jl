@@ -29,7 +29,8 @@ algorithm for you based on the type of `ψ₀` (`DMRG`/`DMRG2` for a finite MPS,
 `IDMRG2` for an infinite MPS) and only accepts the `(O, ψ)` tuple form of `toapprox`. Once you
 pass an explicit `algorithm`, keywords are no longer accepted here — configure the algorithm
 struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
-- `tol::Float64`: convergence tolerance, compared against the Galerkin error (see Returns below)
+- `tol::Float64`: convergence tolerance, compared against `info.normres` (see Returns below). Which
+  quantity that is depends on the algorithm
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 - `trunc`: if supplied, a truncated two-site sweep (`DMRG2`/`IDMRG2`) is prepended to
@@ -42,8 +43,11 @@ struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
 - `info::AlgorithmInfo`: how the algorithm arrived there. Which of its fields are populated depends
   on the algorithm:
   - the iterative algorithms (`DMRG`, `DMRG2`, `IDMRG`, `IDMRG2`, `VOMPS`) fill `converged`,
-    `normres` and `numiter`. `normres` is the Galerkin error compared against `tol`, the same
-    quantity [`find_groundstate`](@ref) reports, measuring distance from the variational fixed point.
+    `normres` and `numiter`. `normres` is the quantity compared against `tol`, the same one
+    [`find_groundstate`](@ref) reports for that algorithm. For `DMRG`, `DMRG2` and `VOMPS` it is the
+    Galerkin error, measuring distance from the variational fixed point. For `IDMRG` and `IDMRG2` it
+    is instead a fixed-point residual, the change in the center bond tensor over a sweep, which says
+    the sweeps have stopped moving rather than that the state is variationally stationary.
   - the two-site ones (`DMRG2`, `IDMRG2`) which involve a truncated SVD fill the truncation 
     fields with what their final sweep discarded, i.e. what the returned state is still 
     throwing away per sweep rather than what the early, unconverged sweeps did.
