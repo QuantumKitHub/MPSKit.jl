@@ -18,6 +18,7 @@ quasiparticle_finite_cases = [
         Rep[SU₂](1 => 1),
     ),
 ]
+fast_tests && (quasiparticle_finite_cases = quasiparticle_finite_cases[1:1])
 
 @testset "Quasiparticle state" verbose = true begin
     L = 10

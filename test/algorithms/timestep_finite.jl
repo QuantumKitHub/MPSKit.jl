@@ -127,7 +127,7 @@ end
 # must conserve the energy, accrue only an eigenstate phase, and preserve the total boundary charge
 # (the fixed `right` virtual space at site L). TDVP2 is excluded here: it requires a `trunc` and is
 # the two-site variant; these are single-site conservation properties.
-@testset "Finite symmetric-tensor time evolution" begin
+fast_tests || @testset "Finite symmetric-tensor time evolution" begin
     dt = 0.1
     L = 6
 

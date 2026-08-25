@@ -25,7 +25,7 @@ verbosity_conv = 1
     @test variance(ϕs[1], H) < 1.0e-8
 end
 
-@testset "infinite sector convention" begin
+fast_tests || @testset "infinite sector convention" begin
     g = 4
     H = repeat(transverse_field_ising(ComplexF64, Z2Irrep; g), 2)
     V = Z2Space(0 => 24, 1 => 24)
