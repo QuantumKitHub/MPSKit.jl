@@ -72,6 +72,7 @@ using Adapt
 end
 
 adapt_Vs = fast_tests ? (ℂ^2,) : (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+Ts = fast_tests ? (Float64,) : (Float64, ComplexF64)
 @testset "Adapt" for V in adapt_Vs
     h = rand(Float32, V^2 ← V^2)
     h += h'
@@ -85,7 +86,7 @@ adapt_Vs = fast_tests ? (ℂ^2,) : (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
     )
     mps1 = FiniteMPS(physicalspace(H1), oneunit(V))
 
-    for T in (Float64, ComplexF64)
+    for T in Ts
         H2 = if VERSION <= v"1.12"
             adapt(Vector{T}, H1)
         else
@@ -99,7 +100,7 @@ adapt_Vs = fast_tests ? (ℂ^2,) : (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
 
     H3 = InfiniteMPOHamiltonian(fill(V, L), (1, 2) => h, (1, 3) => h, (1, 4) => h)
     mps2 = InfiniteMPS(physicalspace(H3), [oneunit(V)])
-    for T in (Float64, ComplexF64)
+    for T in Ts
         H4 = if VERSION <= v"1.12"
             # this is type unstable for LTS for some reason
             adapt(Vector{T}, H3)
