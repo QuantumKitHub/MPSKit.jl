@@ -12,6 +12,7 @@ using TensorKit: ℙ
 using Random
 
 spacelist = [(ℙ^4, ℙ^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))]
+fast_tests && (spacelist = spacelist[1:1])
 
 @testset "FiniteMPS $(spacetype(pspace))" for (pspace, Dspace) in spacelist
     #random nn interaction
@@ -73,10 +74,13 @@ end
 # bond-change algorithms (`RandExpand` expansion, `SvdCut` truncation) must handle the extra
 # physical leg. Operator-based expanders (`OptimalExpand`/`SketchedExpand`) are not covered here
 # because `FiniteMPOHamiltonian`/`FiniteMPO` only support a single physical leg per site.
-@testset "Density-matrix FiniteMPS $(spacetype(pcomp))" for (pcomp, Dspace) in [
-        (ℙ^2 ⊗ (ℙ^2)', ℙ^6),
-        (Rep[SU₂](1 // 2 => 1) ⊗ Rep[SU₂](1 // 2 => 1)', Rep[SU₂](0 => 4, 1 => 3)),
-    ]
+density_matrix_spacelist = [
+    (ℙ^2 ⊗ (ℙ^2)', ℙ^6),
+    (Rep[SU₂](1 // 2 => 1) ⊗ Rep[SU₂](1 // 2 => 1)', Rep[SU₂](0 => 4, 1 => 3)),
+]
+fast_tests && (density_matrix_spacelist = density_matrix_spacelist[1:1])
+
+@testset "Density-matrix FiniteMPS $(spacetype(pcomp))" for (pcomp, Dspace) in density_matrix_spacelist
     Random.seed!(2468)
     L = 8
     maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 2:length(ψ))

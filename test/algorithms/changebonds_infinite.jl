@@ -12,6 +12,7 @@ using TensorKit: ℙ
 using Random
 
 spacelist = [(ℙ^4, ℙ^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))]
+fast_tests && (spacelist = spacelist[1:1])
 
 @testset "MPO $(spacetype(pspace))" for (pspace, Dspace) in spacelist
     nn = rand(ComplexF64, pspace * pspace, pspace * pspace)

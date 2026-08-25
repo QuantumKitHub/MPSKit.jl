@@ -13,6 +13,10 @@ using TensorKit: ℙ
 
 pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1, 2 => 1))
 vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
+if fast_tests
+    pspaces = pspaces[1:1]
+    vspaces = vspaces[1:1]
+end
 
 @testset "LazySum of (effective) Hamiltonian $(sectortype(pspace))" for (pspace, Dspace) in
     zip(pspaces, vspaces)

@@ -10,7 +10,8 @@ using MPSKit
 using TensorKit
 using Adapt
 
-@testset "Adapt" for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+mpo_adapt_Vs = fast_tests ? (ℂ^2,) : (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+@testset "Adapt" for V in mpo_adapt_Vs
     L = 3
     o = rand(Float32, V^L ← V^L)
     mpo1 = FiniteMPO(o)

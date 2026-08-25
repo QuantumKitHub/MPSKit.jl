@@ -19,7 +19,8 @@ using BlockTensorKit: SparseBlockTensorMap, nonzero_keys
     L = 4
     T = ComplexF64
 
-    for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
+    finite_mpo_Vs = fast_tests ? (ℂ^2,) : (ℂ^2, U1Space(0 => 1, 1 => 1))
+    for V in finite_mpo_Vs
         O₁ = rand(T, V^L, V^L)
         O₂ = rand(T, space(O₁))
         O₃ = rand(real(T), space(O₁))

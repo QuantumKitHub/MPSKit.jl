@@ -71,7 +71,8 @@ using Adapt
     @test TensorKit.storagetype(typeof(H′)) == Vector{T}
 end
 
-@testset "Adapt" for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+adapt_Vs = fast_tests ? (ℂ^2,) : (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+@testset "Adapt" for V in adapt_Vs
     h = rand(Float32, V^2 ← V^2)
     h += h'
 

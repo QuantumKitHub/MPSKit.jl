@@ -13,7 +13,8 @@ using TensorKit: ℙ
 @testset "Finite MPOHamiltonian" begin
     L = 3
     T = ComplexF64
-    for T in (Float64, ComplexF64), V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+    mpoham_finite_Vs = fast_tests ? (ℂ^2,) : (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
+    for T in (Float64, ComplexF64), V in mpoham_finite_Vs
         lattice = fill(V, L)
         O₁ = randn(T, V, V)
         O₁ += O₁'
