@@ -12,7 +12,7 @@ module GrassmannMPS
 
 using ..MPSKit
 using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments,
-    AC_projection, recalculate!, TimerOutput, DISABLED_TIMER, @timeit, default_allocator
+    AC_projection, recalculate!, NoTimerOutput, @timeit, default_allocator
 using TensorOperations: AbstractBackend, DefaultBackend
 using TensorKit
 using OhMyThreads
@@ -149,7 +149,7 @@ that the allocator it selects is inferable.
 function fg(
         state::FiniteMPS, operator::Union{O, LazySum{O}},
         envs::AbstractMPSEnvironments = environments(state, operator, state);
-        timeroutput::TimerOutput = DISABLED_TIMER,
+        timeroutput = NoTimerOutput(),
         backend::AbstractBackend = DefaultBackend(),
         # accepted for interface uniformity, but unused: this gradient is serial regardless
         scheduler::Scheduler = SerialScheduler(),
@@ -168,7 +168,7 @@ end
 function fg(
         state::InfiniteMPS, operator::Union{O, LazySum{O}},
         envs::AbstractMPSEnvironments = environments(state, operator, state);
-        timeroutput::TimerOutput = DISABLED_TIMER,
+        timeroutput = NoTimerOutput(),
         backend::AbstractBackend = DefaultBackend(),
         scheduler::Scheduler = MPSKit.Defaults.scheduler[],
     ) where {O <: InfiniteMPOHamiltonian}
@@ -190,7 +190,7 @@ end
 function fg(
         state::InfiniteMPS, operator::Union{O, LazySum{O}},
         envs::AbstractMPSEnvironments = environments(state, operator, state);
-        timeroutput::TimerOutput = DISABLED_TIMER,
+        timeroutput = NoTimerOutput(),
         backend::AbstractBackend = DefaultBackend(),
         scheduler::Scheduler = MPSKit.Defaults.scheduler[],
     ) where {O <: InfiniteMPO}
@@ -212,7 +212,7 @@ end
 function fg(
         state::MultilineMPS, operator::MultilineMPO,
         envs::MultilineEnvironments = environments(state, operator, state);
-        timeroutput::TimerOutput = DISABLED_TIMER,
+        timeroutput = NoTimerOutput(),
         backend::AbstractBackend = DefaultBackend(),
         scheduler::Scheduler = MPSKit.Defaults.scheduler[],
     )
