@@ -23,10 +23,22 @@ end
 
 # TIMEROUTPUT utility
 # -------------------
-# Shared sentinel passed as the default `timeroutput` kwarg by functions that optionally accept a timer.
-# `@timeit` is a no-op when the destination timer is disabled, so unrelated callers pay no instrumentation cost.
-# The merge sites that mutate `timeroutput` must gate on `timeroutput.enabled` so they don't pollute this shared object.
-const DISABLED_TIMER = let t = TimerOutput("DISABLED")
-    disable_timer!(t)
-    t
+
+timer_treepoint(::NoTimerOutput) = String[]
+timer_treepoint(to::TimerOutput) = String[section.name for section in to.stack]
+
+subtimer(::NoTimerOutput) = NoTimerOutput()
+subtimer(to::TimerOutput) = to.enabled ? TimerOutput() : NoTimerOutput()
+
+merge_subtimer!(::NoTimerOutput, ::NoTimerOutput; tree_point) = nothing
+merge_subtimer!(::TimerOutput, ::NoTimerOutput; tree_point) = nothing
+function merge_subtimer!(to::TimerOutput, sub::TimerOutput; tree_point)
+    to.enabled && merge!(to, sub; tree_point)
+    return nothing
 end
+
+# `print_timer` is used over plain `show` to opt into the GC time column
+struct TimerReport{T}
+    to::T
+end
+Base.show(io::IO, r::TimerReport) = print_timer(io, r.to; gc = true)

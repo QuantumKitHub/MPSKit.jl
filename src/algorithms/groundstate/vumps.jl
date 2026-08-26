@@ -43,14 +43,14 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`leading_bou
 end
 
 # Internal state of the VUMPS algorithm
-struct VUMPSState{S, O, E}
+struct VUMPSState{S, O, E, T}
     mps::S
     operator::O
     envs::E
     iter::Int
     ϵ::Float64
     which::Symbol
-    timeroutput::TimerOutput
+    timeroutput::T
 end
 
 function find_groundstate(
@@ -64,8 +64,7 @@ function dominant_eigsolve(
         which
     )
     log = IterLog("VUMPS")
-    timeroutput = TimerOutput("VUMPS")
-    alg.verbosity > 3 || disable_timer!(timeroutput)
+    timeroutput = alg.verbosity > 3 ? TimerOutput("VUMPS") : NoTimerOutput()
     iter = 0
 
     mps = copy(mps)
@@ -81,12 +80,12 @@ function dominant_eigsolve(
 
         for (mps, envs, ϵ) in it
             if ϵ ≤ alg.tol
-                @infov 4 timeroutput
+                @infov 4 TimerReport(timeroutput)
                 @infov 2 logfinish!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
                 return mps, envs, ϵ
             end
             if it.iter ≥ alg.maxiter
-                @infov 4 timeroutput
+                @infov 4 TimerReport(timeroutput)
                 @warnv 1 logcancel!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
                 return mps, envs, ϵ
             end
@@ -137,17 +136,16 @@ function localupdate_step!(
     ACs = mps.AL
     dst_ACs = mps isa Multiline ? eachcol(ACs) : ACs
 
-    tree_point = String[section.name for section in state.timeroutput.timer_stack]
+    tree_point = timer_treepoint(state.timeroutput)
     allocator = default_allocator(mps, scheduler)
     tforeach(eachsite(mps); scheduler) do site
-        sub_timeroutput = TimerOutput()
+        sub_timeroutput = subtimer(state.timeroutput)
         dst_ACs[site] = _localupdate_vumps_step!(
             site, mps, state.operator, state.envs, src_ACs[site], src_Cs[site];
             alg_orth, state.which, alg_eigsolve,
             timeroutput = sub_timeroutput, it.backend, allocator,
         )
-        state.timeroutput.enabled &&
-            merge!(state.timeroutput, sub_timeroutput; tree_point)
+        merge_subtimer!(state.timeroutput, sub_timeroutput; tree_point)
     end
 
     return ACs
@@ -157,7 +155,7 @@ function _localupdate_vumps_step!(
         site, mps, operator, envs, AC₀, C₀;
         alg_orth = Defaults.alg_orth(),
         alg_eigsolve = Defaults.eigsolver, which,
-        timeroutput::TimerOutput = DISABLED_TIMER,
+        timeroutput = NoTimerOutput(),
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator(),
     )
     local AC, C

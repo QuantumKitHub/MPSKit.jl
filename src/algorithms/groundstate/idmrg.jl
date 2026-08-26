@@ -71,21 +71,21 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_bounda
 end
 
 # Internal state of the IDMRG algorithm
-struct IDMRGState{S, O, E, T, A}
+struct IDMRGState{S, O, E, T, TO, A}
     mps::S
     operator::O
     envs::E
     iter::Int
     ϵ::Float64 # TODO: Could be any <:Real
     energy::T
-    timeroutput::TimerOutput
+    timeroutput::TO
     allocator::A
 end
 function IDMRGState{T}(
         mps::S, operator::O, envs::E, iter::Int, ϵ::Float64, energy,
-        timeroutput::TimerOutput, allocator::A,
-    ) where {S, O, E, T, A}
-    return IDMRGState{S, O, E, T, A}(
+        timeroutput::TO, allocator::A,
+    ) where {S, O, E, T, TO, A}
+    return IDMRGState{S, O, E, T, TO, A}(
         mps, operator, envs, iter, ϵ, T(energy), timeroutput, allocator
     )
 end
@@ -98,8 +98,7 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
     (length(mps) ≤ 1 && alg isa IDMRG2) && throw(ArgumentError("unit cell should be >= 2"))
     name = alg isa IDMRG ? "IDMRG" : "IDMRG2"
     log = IterLog(name)
-    timeroutput = TimerOutput(name)
-    alg.verbosity > 3 || disable_timer!(timeroutput)
+    timeroutput = alg.verbosity > 3 ? TimerOutput(name) : NoTimerOutput()
     mps = copy(mps)
     iter = 0
     # the sweeps are serial, so one allocator serves the whole solve
@@ -120,12 +119,12 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
     return LoggingExtras.withlevel(; alg.verbosity) do
         for (mps, envs, ϵ, ΔE) in it
             if ϵ ≤ alg.tol
-                @infov 4 timeroutput
+                @infov 4 TimerReport(timeroutput)
                 @infov 2 logfinish!(log, it.iter, ϵ, ΔE)
                 break
             end
             if it.iter ≥ alg.maxiter
-                @infov 4 timeroutput
+                @infov 4 TimerReport(timeroutput)
                 @warnv 1 logcancel!(log, it.iter, ϵ, ΔE)
                 break
             end
@@ -192,7 +191,7 @@ function localupdate_step!(
 end
 
 function _localupdate_sweep_idmrg!(
-        ψ, H, envs, alg_eigsolve, timeroutput::TimerOutput;
+        ψ, H, envs, alg_eigsolve, timeroutput;
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     local E
@@ -230,7 +229,7 @@ function _localupdate_sweep_idmrg!(
 end
 
 function _localupdate_sweep_idmrg2!(
-        ψ, H, envs, alg_eigsolve, alg_trunc, alg_svd, timeroutput::TimerOutput;
+        ψ, H, envs, alg_eigsolve, alg_trunc, alg_svd, timeroutput;
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     # @timeit wraps its body in try-finally, which is a new lexical scope: declare locals
