@@ -1,3 +1,45 @@
+/* ===== Bold text on Linux =====
+   VitePress' reset sets `font-synthesis: style` on <body>, permitting a synthesised
+   oblique but not a synthesised weight. That is fine wherever the resolved font has
+   a real bold face — as `-apple-system` and `Segoe UI` do — but the
+   DocumenterVitepress font stack names three families it never loads ("Barlow",
+   "Inter var experimental", "Inter var"), and on Linux fontconfig satisfies those
+   *and* the platform names after them with a single regular face. `font-weight: 700`
+   then computes correctly and still renders at regular weight, which is why bold
+   docstring headings, admonition titles and inline <strong> read as plain text on
+   Linux while being fine on macOS and Windows (QuantumKitHub/MPSKit.jl#477).
+
+   Allowing weight synthesis fixes that without touching the font stack, so nothing
+   changes on platforms that already resolve a real bold face. Proposed upstream; drop
+   this once DocumenterVitepress ships it. Note that the deeper problem is separate:
+   VitePress self-hosts Inter with a real 100–900 weight axis, but the stack above
+   names the family names it used before v4 renamed the face to plain "Inter"
+   (vuejs/vitepress#3694), so that font is downloaded and never used. Naming it would
+   give real bold faces instead of synthesised ones, but would also change body text
+   on every platform — a look-and-feel decision for upstream, not a bug fix. */
+body {
+  font-synthesis: weight style;
+}
+
+/* ===== Docstring section headings =====
+   Documenter rewrites markdown headings inside docstrings into bold-only
+   paragraphs (`recursive_heading_to_bold!`), so there is no <h*> to style. The
+   markdown-it rule in `.vitepress/config.mts` tags exactly those paragraphs;
+   give them a heading-like treatment — bold, plus a light rule beneath. */
+.jldocstring.custom-block p.jldocstring-heading {
+  margin: 1.5rem 0 0.6rem;
+  padding-bottom: 0.25rem;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--vp-c-text-1);
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.jldocstring.custom-block p.jldocstring-heading strong {
+  font-weight: inherit;
+}
+
 /* ===== MPSKit branding ===== */
 /* Accent color matching the (green) MPSKit logo in light mode.
    Dark mode already uses the green palette defined by the DVP template. */
@@ -7,6 +49,67 @@
   --vp-c-brand-2: #2f8420;
   --vp-c-brand-3: #277018;
   --vp-c-brand-light: #389826;
+}
+
+/* ===== Admonitions =====
+   Documenter draws `!!! note` / `!!! warning` as a bordered box with a bold,
+   category-coloured, icon-marked header. DocumenterVitepress maps them onto
+   VitePress custom blocks, whose title is neither coloured nor icon-marked, and
+   whose border is transparent — so the blocks stop reading as callouts. Worse,
+   DVP maps every `note` onto the `tip` container and then restyles `tip` to a
+   flat grey box in dark mode, so the docs' notes lose their colour entirely.
+
+   Restore a Documenter-like treatment: accent-coloured bold title with an icon,
+   a coloured left rule, and body text at full contrast. `:not(.jldocstring)`
+   keeps this off docstrings, which also carry the `custom-block` class. */
+.vp-doc .custom-block:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-default-1);
+  padding: 14px 16px;
+  border-left-width: 4px;
+  border-left-color: var(--mpskit-admonition-accent);
+  color: var(--vp-c-text-1);
+}
+
+.custom-block:not(.jldocstring) .custom-block-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: var(--mpskit-admonition-accent);
+}
+
+.custom-block:not(.jldocstring) .custom-block-title::before {
+  content: "";
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  background-color: currentColor;
+  /* fa-circle-exclamation, the icon Documenter puts on every admonition */
+  --mpskit-admonition-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 5h2v7h-2Zm0 9h2v2h-2Z'/%3E%3C/svg%3E");
+  -webkit-mask: var(--mpskit-admonition-icon) center / contain no-repeat;
+  mask: var(--mpskit-admonition-icon) center / contain no-repeat;
+}
+
+/* `note` and `tip` are indistinguishable by the time the markdown reaches us —
+   DVP maps both onto the `tip` container — so they share the tip palette. The
+   background is restated because the DVP template overrides it to a flat grey in
+   dark mode, which is what drained the colour out of every `!!! note`. */
+.vp-doc .custom-block.tip:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-tip-1);
+  background-color: var(--vp-c-tip-soft);
+}
+.vp-doc .custom-block.warning:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-warning-1);
+}
+.vp-doc .custom-block.danger:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-danger-1);
+}
+.vp-doc .custom-block.caution:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-caution-1);
+}
+.vp-doc .custom-block.important:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-important-1);
 }
 
 /* ===== Color-invertible diagrams =====
