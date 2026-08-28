@@ -36,11 +36,11 @@ function _approximate_vomps(mps, toapprox, alg::VOMPS, envs)
         for (mps, envs, ϵ) in it
             if ϵ ≤ alg.tol
                 @infov 2 logfinish!(log, it.iter, ϵ)
-                return mps, envs, ϵ
+                return mps, envs, AlgorithmInfo(; converged = true, galerkin = ϵ, numiter = it.iter)
             end
             if it.iter ≥ alg.maxiter
                 @warnv 1 logcancel!(log, it.iter, ϵ)
-                return mps, envs, ϵ
+                return mps, envs, AlgorithmInfo(; converged = false, galerkin = ϵ, numiter = it.iter)
             end
             @infov 3 logiter!(log, it.iter, ϵ)
         end

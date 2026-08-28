@@ -60,7 +60,7 @@ function approximate!(
     copy!(ψ, ψ′) # ensure output destination is unchanged
 
     recalculate!(envs, ψ, toapprox)
-    return ψ, envs, ϵ
+    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, bondresidual = ϵ, numiter = iter)
 end
 
 function approximate!(
@@ -72,11 +72,12 @@ function approximate!(
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
     O, ϕ = toapprox
-    local iter
+    local iter, acc
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
+            acc = TruncationAccumulator(ψ) # fresh each sweep, reported truncation is the final sweep's
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
@@ -86,7 +87,8 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ACAR, alg.backend, allocator
                     )
-                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                    al, c, ar, ϵ_trunc = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                    push_error!(acc, ϵ_trunc)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -107,7 +109,8 @@ function approximate!(
                     CartesianIndex(row, size(ψ, 2)), ψ, toapprox, envs;
                     kind = :ALAC, alg.backend, allocator
                 )
-                al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                al, c, ar, ϵ_trunc = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                push_error!(acc, ϵ_trunc)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al
@@ -132,7 +135,8 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ALAC, alg.backend, allocator
                     )
-                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                    al, c, ar, ϵ_trunc = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                    push_error!(acc, ϵ_trunc)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -152,7 +156,8 @@ function approximate!(
                     CartesianIndex(row, 0), ψ, toapprox, envs;
                     kind = :ACAR, alg.backend, allocator
                 )
-                al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                al, c, ar, ϵ_trunc = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                push_error!(acc, ϵ_trunc)
                 normalize!(c)
 
                 ψ.AL[row, end] = al
@@ -193,5 +198,6 @@ function approximate!(
     copy!(ψ, ψ′) # ensure output destination is unchanged
 
     recalculate!(envs, ψ, toapprox)
-    return ψ, envs, ϵ
+    info = AlgorithmInfo(; converged = ϵ <= alg.tol, bondresidual = ϵ, truncation = acc, numiter = iter)
+    return ψ, envs, info
 end

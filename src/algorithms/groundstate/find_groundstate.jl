@@ -1,6 +1,6 @@
 """
-    find_groundstate(ψ₀, H, [environments]; kwargs...) -> (ψ, environments, ϵ)
-    find_groundstate(ψ₀, H, algorithm, [environments]) -> (ψ, environments, ϵ)
+    find_groundstate(ψ₀, H, [environments]; kwargs...) -> (ψ, environments, info)
+    find_groundstate(ψ₀, H, algorithm, [environments]) -> (ψ, environments, info)
 
 Compute the ground state for Hamiltonian `H` with initial guess `ψ₀`. If no `algorithm` is
 specified, one is selected automatically from the type of `ψ₀` and the supplied keywords
@@ -38,7 +38,14 @@ low-bond-dimension initial guess such as a product state.
 
 - `ψ::AbstractMPS`: converged ground state
 - `environments`: environments corresponding to the converged state
-- `ϵ::Float64`: final convergence error upon terminating the algorithm
+- `info::AlgorithmInfo`: how the algorithm terminated. `info.converged` says whether it met its
+    stopping criterion. The quantity that was compared against `tol` is stored under a key naming
+    which measure it is: `galerkin` for [`DMRG`](@ref), [`DMRG2`](@ref) and [`VUMPS`](@ref),
+    `gradientnorm` for [`GradientGrassmann`](@ref), and `bondresidual` for [`IDMRG`](@ref) and
+    [`IDMRG2`](@ref). [`convergence_measure`](@ref) returns whichever of these is present,
+    for code that only wants the number. A truncating algorithm additionally fills
+    `info.max_truncation_error`/`info.total_truncation_error` with what its final sweep discarded.
+    See [`AlgorithmInfo`](@ref) for the full vocabulary, and [The error convention](@ref) in the manual.
 
 # Examples
 
@@ -57,7 +64,7 @@ julia> H = FiniteMPOHamiltonian(lattice, ((i, i + 1) => -(X ⊗ X) for i in 1:(L
 
 julia> ψ₀ = FiniteMPS(ones(Float64, (ℂ^2)^L));
 
-julia> ψ, envs, ϵ = find_groundstate(ψ₀, H; verbosity = 0, trunc = truncrank(16));
+julia> ψ, envs, info = find_groundstate(ψ₀, H; verbosity = 0, trunc = truncrank(16));
 
 julia> round(real(expectation_value(ψ, H)); digits = 4)
 -4.7588

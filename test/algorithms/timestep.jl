@@ -263,6 +263,54 @@ end
     end
 end
 
+@testset "Truncation error" verbose = true begin
+    L = 10
+    dt = 0.1
+    H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
+    Random.seed!(7)
+    ψ₀ = normalize!(complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^16)))
+
+    # fixed bond dimension sweep never discards anything, so the reported error is exactly zero
+    @testset "no truncation" begin
+        for alg in (TDVP(), BUG())
+            info = last(timestep(ψ₀, H, 0.0, dt, alg))
+            @test info isa MPSKit.AlgorithmInfo
+            @test info.ϵ_max == 0
+            @test info.ϵ_total == 0
+            @test info.numtrunc == 0
+            @test info.numiter == 1
+        end
+    end
+
+    @testset "$(nameof(alg))" for alg in (TDVP2, BUG)
+        _, _, loose = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(32)))
+        ψ, _, tight = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(2)))
+
+        @test tight.ϵ_total > 1.0e-3 # throw away real weight
+        @test tight.ϵ_max > 1.0e-4
+        @test loose.ϵ_max < tight.ϵ_max # throw away less weight with a more forgiving truncation
+        @test tight.numtrunc > 0
+        @test tight.ϵ_total >= tight.ϵ_max
+        @test tight.ϵ_total <= sqrt(tight.numtrunc) * tight.ϵ_max
+        # `ϵ_total` = norm loss in real time with `normalize = false`
+        @test norm(ψ)^2 ≈ norm(ψ₀)^2 - tight.ϵ_total^2 atol = 1.0e-12
+    end
+
+    @testset "aggregation over an evolution" begin
+        alg = TDVP2(; trunc = truncrank(2))
+        nsteps = 4
+        _, _, step = timestep(ψ₀, H, 0.0, dt, alg)
+        ψ, _, total = time_evolve(ψ₀, H, 0:dt:(nsteps * dt), alg)
+
+        @test total.numiter == nsteps
+        @test total.numtrunc >= step.numtrunc
+        @test total.ϵ_total >= step.ϵ_total
+        @test norm(ψ)^2 ≈ norm(ψ₀)^2 - total.ϵ_total^2 atol = 1.0e-12
+        @test total.ϵ_max >= step.ϵ_max
+        @test total.ϵ_max <= total.ϵ_total
+    end
+end
+
 @testset "time_evolve" verbose = true begin
     t_span = 0:0.1:0.1
     algs = [TDVP(), TDVP2(; trunc = truncrank(10)), BUG(; trunc = truncrank(10))]

@@ -1,11 +1,12 @@
 function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environments(ψ, _environment_args(Oϕ)...))
     allocator = default_allocator(ψ, SerialScheduler())
     ϵ::Float64 = 2 * alg.tol
+    local iter
     log = IterLog("DMRG2")
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
-        for iter in 1:(alg.maxiter)
+        for outer iter in 1:(alg.maxiter)
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); (length(ψ) - 2):-1:1]
                 AC2′ = AC2_projection(pos, ψ, Oϕ, envs; alg.backend, allocator)
@@ -33,17 +34,18 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environment
         end
     end
 
-    return ψ, envs, ϵ
+    return ψ, envs, AlgorithmInfo(; converged = ϵ < alg.tol, localchange = ϵ, numiter = iter)
 end
 
 function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments(ψ, _environment_args(Oϕ)...))
     allocator = default_allocator(ψ, SerialScheduler())
     ϵ::Float64 = 2 * alg.tol
+    local iter
     log = IterLog("DMRG")
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
-        for iter in 1:(alg.maxiter)
+        for outer iter in 1:(alg.maxiter)
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
                 AC′ = AC_projection(pos, ψ, Oϕ, envs; alg.backend, allocator)
@@ -68,5 +70,5 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments
         end
     end
 
-    return ψ, envs, ϵ
+    return ψ, envs, AlgorithmInfo(; converged = ϵ < alg.tol, localchange = ϵ, numiter = iter)
 end

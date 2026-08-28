@@ -14,7 +14,9 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `method = ConjugateGradient`: instance of optimization algorithm, or type of optimization
     algorithm to construct
 - `finalize!`: finalizer algorithm
-- `tol = Defaults.tol`: tolerance for convergence criterium
+- `tol = Defaults.tol`: convergence tolerance, compared against the norm of the Riemannian
+    (Grassmann) gradient reported by the optimizer, which [`find_groundstate`](@ref) returns as the
+    `gradientnorm` entry of its [`AlgorithmInfo`](@ref).
 - `maxiter = Defaults.maxiter`: maximum amount of iterations
 - `verbosity = Defaults.verbosity - 1`: level of information display
 - `hasconverged = OptimKit.DefaultHasConverged(tol)`: convergence criterium
@@ -79,7 +81,7 @@ end
 
 function find_groundstate(
         ψ::S, H, alg::GradientGrassmann, envs::P = environments(ψ, H, ψ)
-    )::Tuple{S, P, Float64} where {S, P}
+    )::Tuple{S, P, AlgorithmInfo} where {S, P}
     !isa(ψ, FiniteMPS) || dim(ψ.C[end]) == 1 ||
         @warn "This is not fully supported - split the mps up in a sum of mps's and optimize separately"
     normalize!(ψ)
@@ -125,5 +127,10 @@ function _find_groundstate(ψ, H, alg::GradientGrassmann, envs, scheduler, timer
         @infov 4 TimerReport(timeroutput)
     end
 
-    return x, envs, normgradhistory[end]
+    normres = normgradhistory[end, 2] # full history returned as [fhistory normgradhistory]
+    info = AlgorithmInfo(;
+        converged = normres <= alg.method.gradtol, gradientnorm = normres,
+        numiter = size(normgradhistory, 1) - 1 # history starts with initial point before first iteration
+    )
+    return x, envs, info
 end

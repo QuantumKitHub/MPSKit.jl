@@ -7,7 +7,7 @@ DocTestSetup = :(using MPSKit, TensorKit, MPSKitModels)
 Here is a collection of the algorithms that have been added to MPSKit.jl.
 If a particular algorithm is missing, feel free to let us know via an issue, or contribute via a PR.
 
-## Groundstates
+## Ground states
 
 One of the most prominent use-cases of MPS is to obtain the ground state of a given (quasi-) one-dimensional quantum Hamiltonian.
 In MPSKit.jl, this can be achieved through `find_groundstate`:
@@ -15,6 +15,8 @@ In MPSKit.jl, this can be achieved through `find_groundstate`:
 ```@docs; canonical=false
 find_groundstate
 ```
+
+The returned error measures convergence to a variational fixed point, which is not the same as accuracy; see [Ground state accuracy](@ref).
 
 There are a variety of algorithms that have been developed over the years, and many of them have been implemented in MPSKit.
 Keep in mind that some of them are exclusive to finite or infinite systems, while others may work for both.
@@ -33,7 +35,7 @@ Here, we enumerate some of their properties in hopes of pointing you in the righ
 
 ### DMRG
 
-Probably the most widely used algorithm for optimizing groundstates with MPS is [`DMRG`](@ref) and its variants.
+Probably the most widely used algorithm for optimizing ground states with MPS is [`DMRG`](@ref) and its variants.
 This algorithm sweeps through the system, optimizing a single site or pair of sites while keeping all others fixed.
 Since this local problem can be solved efficiently, the global optimal state follows by alternating through the system.
 However, because of the single-site nature of this algorithm, this can never alter the bond dimension of the state, such that there is no way of dynamically increasing the precision.
@@ -49,7 +51,7 @@ DMRG2
 For infinite systems, a similar approach can be used by dynamically adding new sites to the middle of the system and optimizing over them.
 This gradually increases the system size until the boundary effects are no longer felt.
 However, because of this approach, for critical systems this algorithm can be quite slow to converge, since the number of steps needs to be larger than the correlation length of the system.
-Again, both a single-site and a two-site version are implemented, to have the option to dynamically increase the bonddimension at a higher cost.
+Again, both a single-site and a two-site version are implemented, to have the option to dynamically increase the bond dimension at a higher cost.
 
 ```@docs; canonical=false
 IDMRG
@@ -101,6 +103,11 @@ The first is focused around approximately solving the equation for a small times
 This can be achieved by projecting the equation onto the tangent space of the MPS, and then solving the results.
 This procedure is commonly referred to as the [`TDVP`](@ref) algorithm, which again has a two-site variant to allow for dynamically altering the bond dimension.
 
+There are three ways to let the bond dimension follow the entanglement rather than fixing it up front:
+- [`TDVP2`](@ref) evolves two sites at a time and splits the result back apart with a truncated SVD.
+- [`TDVP`](@ref) with an `alg_expand` keeps the cheaper single-site update and instead expands the bond with directions orthogonal to the current state before each local update, recovering controlled bond expansion (CBE).
+- [`BUG`](@ref) is a different integrator altogether: it advances basis and core tensors forward in time with no backward substep, which makes it better behaved for imaginary-time evolution, and it is rank-adaptive when given a `trunc`.
+
 ```@docs; canonical=false
 TDVP
 TDVP2
@@ -119,10 +126,15 @@ WII
 TaylorCluster
 ```
 
+Time evolution has three distinct error sources, only one of which is reported back to the user.
+See [Time evolution accuracy](@ref).
+
 ## Excitations
 
 It might also be desirable to obtain information beyond the lowest energy state of a given system, and study the dispersion relation.
 While it is typically not feasible to resolve states in the middle of the energy spectrum, there are several ways to target a few of the lowest-lying energy states.
+None of these report an error.
+For what limits their accuracy, see [Excitation accuracy](@ref).
 
 ```@docs; canonical=false
 excitations
@@ -263,6 +275,113 @@ Es, ϕs = excitations(H, ChepigaAnsatz2(), ψ, envs; num=1)
 isapprox(Es[1] - E₀, 2(g - 1); rtol=1e-2) # infinite analytical result
 ```
 
+## Errors and accuracy
+
+The algorithms that solve for a state, particularly [`find_groundstate`](@ref), [`leading_boundary`](@ref), [`approximate`](@ref), [`timestep`](@ref) and [`time_evolve`](@ref), return an [`AlgorithmInfo`](@ref) as their last value, describing how they arrived at their result.
+[`excitations`](@ref) and [`changebonds`](@ref) report nothing.
+What limits their accuracy is covered below all the same.
+
+```@docs; canonical=false
+AlgorithmInfo
+```
+
+The rest of this section explains what quantities can be reported by the algorithms, and - equally important - what they do not measure.
+
+### The error convention
+
+Every factorisation in MPSKit reports ``\epsilon = \lVert A - \tilde{A} \rVert``, which is the 2-norm of the discarded singular values ([Schollwöck](@cite schollwoeck2011)).
+Interpreting this truncation error as a "discarded weight" is accurate when the factorised object is normalised.
+
+What differs between algorithms is how these per-factorisation values are summed up (*aggregated*) into the numbers they report.
+
+!!! warning
+    A convergence measure and a truncation error are unrelated quantities.
+    An algorithm that does both fills both, and they should not be compared with each other.
+    Convergence measures are covered below per algorithm.
+
+#### Aggregating truncation errors
+
+The per-factorisation errors are aggregated two ways, as a worst case (`max_truncation_error`) and in quadrature (`total_truncation_error`).
+See the [`AlgorithmInfo`](@ref) docstring for what each is.
+
+`max_truncation_error` is the entry a `trunc` setting most directly controls, though how directly depends on the strategy:
+
+- [`truncerror`](@extref MatrixAlgebraKit.truncerror) bounds the discarded weight of each factorisation, which is exactly ``\epsilon_k``, so `max_truncation_error` should come out at or below the tolerance you set.
+- [`trunctol`](@extref MatrixAlgebraKit.trunctol) bounds each individual singular value instead. Discarding ``k`` of them leaves ``\epsilon_k \le \sqrt{k}\,\texttt{atol}``, so `max_truncation_error` lands near the tolerance but is not bounded by it.
+- [`truncrank`](@extref MatrixAlgebraKit.truncrank) fixes the rank and says nothing about magnitudes at all. Here, `max_truncation_error` is not something you set but something you read off. It is thus the consequence of that choice of bond dimension.
+
+`total_truncation_error` sums the squares,
+
+```math
+\epsilon_{\text{total}} = \sqrt{\textstyle\sum_k \epsilon_k^2} ,
+```
+
+which tracks a running cost rather than a worst case.
+Whether that cost is also the error of the *final state* depends on what the algorithm does between truncations: in real time evolution, where truncations do not normalise by default, it is exactly the norm deficit of the state.
+
+Which factorisations an algorithm records into these differs per family, which is why `numtrunc` and `total_truncation_error` are not comparable across algorithms.
+
+### Ground state accuracy
+
+[`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms report the quantity their `tol` is compared against, together with a `converged` flag.
+Because these are not the same quantity from one algorithm to the next, each is stored under a key that names it (`galerkin`, `gradientnorm`, `bondresidual` or `localchange`).
+[`convergence_measure`](@ref) returns whichever of them is present, for code that only wants the number.
+Importantly, they represent different things, and a `tol` tuned for one algorithm is not a `tol` tuned for another.
+
+A single-site algorithm at a fixed bond dimension can drive its convergence measure to machine precision and still be far from the true ground state.
+Growing the bond dimension is the job of the two-site algorithms ([`DMRG2`](@ref), [`IDMRG2`](@ref)) or of a bond expansion ([`DMRG`](@ref) with an `alg_expand`, or an expanding `alg_gauge` such as [`DMRG3S`](@ref)); see also [`changebonds`](@ref).
+
+Once an algorithm does truncate, the two error notions interact.
+In the case of the Galerkin error, it cannot fall below the level set by the weight being discarded each sweep, so a truncating scheme converges once `galerkin` reaches the truncation error rather than the (unreachable) bare `tol`.
+
+Neither measure is an error bar on an observable, and no cheap substitute for one exists.
+The energy variance ``\langle H^2 \rangle - \langle H \rangle^2`` is an independent and more demanding measure.
+Note what it actually quantifies, namely how far the state is from being an *exact eigenstate*, which is not the same thing as the error on some other observable.
+
+### Time evolution accuracy
+
+Unlike a ground state search, a time evolution has no convergence criterion to run to.
+There is no fixed point, and the error is made at every step.
+Time evolution has three distinct error sources, namely the truncation error, the projection error, and the splitting error.
+Only the truncation error is reported in [`timestep`](@ref) and [`time_evolve`](@ref)'s [`AlgorithmInfo`](@ref).
+This is non-zero for [`TDVP2`](@ref), for [`BUG`](@ref) with a `trunc`, and for [`TDVP`](@ref) with a bond expansion.
+
+The projection error is not reported, since measuring it costs an extra effective-Hamiltonian application per site.
+This is what a bond expansion (CBE) exists to reduce ([Li et al.](@cite li2024)).
+The splitting error is a Trotter-type error, and can only be estimated by comparing one step of `dt` against two of `dt / 2`.
+
+All three need to be under control, not just the reported one.
+In practice: pick `dt` from a convergence check, pick `trunc` from the reported truncation error, and use a bond-adaptive scheme ([`TDVP2`](@ref), [`BUG`](@ref), or [`TDVP`](@ref) with `alg_expand`) whenever entanglement grows, since a fixed bond dimension silently converts entanglement growth into projection error.
+
+They do not shrink together, so there is a sweet spot in `dt` rather than "smaller is better".
+This is because a smaller `dt` lowers the splitting error but takes more steps to reach the same time, and every step truncates again.
+
+### Excitation accuracy
+
+[`excitations`](@ref) returns only `(energies, states)`: there is no error term, and none of the sources below is reported back to you.
+They are worth knowing about, because the dominant one is usually not the one the algorithm is working on.
+
+- **Inherited ground state error.**
+  Every method builds on the ground state you supply and treats it as exact.
+  Since a gap is a difference of two large energies, that error propagates straight into it and is typically the limiting factor.
+
+- **Ansatz limitation.**
+  [`QuasiparticleAnsatz`](@ref) varies over the single-quasiparticle tangent space on top of a fixed ground state, so it is variational within that space and suited to isolated quasiparticle branches.
+  Its error is bounded exponentially in the support of the local operator, at a rate set by the gaps below *and* above the targeted eigenvalue ([Haegeman et al.](@cite haegeman2013)).
+
+- **Eigensolver convergence.**
+  The eigenvalue problem is solved with KrylovKit, and a run that fails to converge `num` states emits a warning carrying the residual when the verbosity is high enough.
+  That residual is neither returned nor thrown, so it is worth not suppressing warnings.
+  Nearly degenerate levels are the ones most likely to come back unconverged.
+
+- **Penalty-based orthogonality.**
+  [`FiniteExcited`](@ref) minimises ``H + \lambda \sum_i |\psi_i\rangle\langle\psi_i|`` against the previously converged states, with ``\lambda`` the `weight` field.
+  A finite `weight` enforces orthogonality only approximately, so a residual overlap with a lower state biases the energy downwards — invisibly, since the reported value is the expectation value of the bare `H`.
+  Raising `weight` suppresses the bias at the cost of stretching the spectrum and slowing the eigensolver.
+
+- **Truncation** ([`ChepigaAnsatz2`](@ref)).
+  The two-site excited state is split back to single-site tensors with a truncated SVD governed by `trunc`, and the discarded weight is not reported.
+
 ## `changebonds`
 
 Many of the previously mentioned algorithms do not possess a way to dynamically change to
@@ -275,15 +394,18 @@ state.
 changebonds
 ```
 
+All of these are controlled by a `trunc`, and the weight they discard is measured the same way as described under [The error convention](@ref).
+`changebonds` does not report it, since every algorithm has its own interpretation of the discarded singular values.
+
 There are several different algorithms implemented, each having their own advantages and
 disadvantages:
 
-* [`SvdCut`](@ref): The simplest method for changing the bonddimension is found by simply
+* [`SvdCut`](@ref): The simplest method for changing the bond dimension is found by simply
   locally truncating the state using an SVD decomposition. This yields a (locally) optimal
   truncation, but clearly cannot be used to increase the bond dimension. Note that a
   globally optimal truncation can be obtained by using the [`SvdCut`](@ref) algorithm in
   combination with [`approximate`](@ref). Since the output of this method might have a
-  truncated bonddimension, the new state might not be identical to the input state.
+  truncated bond dimension, the new state might not be identical to the input state.
   The truncation is controlled through `trunc`, which dictates how the singular values of
   the original state are truncated.
 
