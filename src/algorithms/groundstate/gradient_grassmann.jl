@@ -86,12 +86,17 @@ function find_groundstate(
         @warn "This is not fully supported - split the mps up in a sum of mps's and optimize separately"
     normalize!(ψ)
 
-    timeroutput = TimerOutput("GradientGrassmann")
     method_verbosity = hasproperty(alg.method, :verbosity) ? alg.method.verbosity : 0
-    method_verbosity > 3 || disable_timer!(timeroutput)
+    # function barrier: the timer type must be concrete for the closures below to elide timing
+    timeroutput = method_verbosity > 3 ? TimerOutput("GradientGrassmann") : NoTimerOutput()
 
     # read the scheduler here rather than in `fg`, so that the allocator it selects is inferable
     scheduler = Defaults.scheduler[]
+
+    return _find_groundstate(ψ, H, alg, envs, scheduler, timeroutput, method_verbosity)
+end
+
+function _find_groundstate(ψ, H, alg::GradientGrassmann, envs, scheduler, timeroutput, method_verbosity)
     fg(x) = timeit(
         () -> GrassmannMPS.fg(x, H, envs; timeroutput, alg.backend, scheduler),
         timeroutput, "fg",
@@ -119,7 +124,7 @@ function find_groundstate(
     )
 
     LoggingExtras.withlevel(; verbosity = method_verbosity) do
-        @infov 4 timeroutput
+        @infov 4 TimerReport(timeroutput)
     end
 
     normres = normgradhistory[end, 2] # full history returned as [fhistory normgradhistory]

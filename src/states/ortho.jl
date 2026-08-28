@@ -112,7 +112,7 @@ gaugefix!
 
 function gaugefix!(
         ψ::InfiniteMPS, A, C₀ = ψ.C[end];
-        order = :LR, timeroutput::TimerOutput = DISABLED_TIMER, kwargs...
+        order = :LR, timeroutput = NoTimerOutput(), kwargs...
     )
     alg = if order === :LR || order === :RL
         MixedCanonical(; order, kwargs...)
@@ -130,7 +130,7 @@ end
 # expert mode: actual implementation
 function gaugefix!(
         ψ::InfiniteMPS, A, C₀, alg::MixedCanonical;
-        timeroutput::TimerOutput = DISABLED_TIMER
+        timeroutput = NoTimerOutput()
     )
     if alg.order === :LR
         gaugefix!(ψ, A, C₀, alg.alg_leftcanonical; timeroutput)
@@ -145,14 +145,14 @@ function gaugefix!(
 end
 function gaugefix!(
         ψ::InfiniteMPS, A, C₀, alg::LeftCanonical;
-        timeroutput::TimerOutput = DISABLED_TIMER
+        timeroutput = NoTimerOutput()
     )
     uniform_leftorth!((ψ.AL, ψ.C), A, C₀, alg; timeroutput)
     return ψ
 end
 function gaugefix!(
         ψ::InfiniteMPS, A, C₀, alg::RightCanonical;
-        timeroutput::TimerOutput = DISABLED_TIMER
+        timeroutput = NoTimerOutput()
     )
     uniform_rightorth!((ψ.AR, ψ.C), A, C₀, alg; timeroutput)
     return ψ
@@ -214,7 +214,7 @@ end
 
 function uniform_leftorth!(
         (AL, C), A, C₀, alg::LeftCanonical;
-        timeroutput::TimerOutput = DISABLED_TIMER
+        timeroutput = NoTimerOutput()
     )
     C[end] = normalize!(C₀)
     return LoggingExtras.withlevel(; alg.verbosity) do
@@ -279,7 +279,7 @@ end
 
 function uniform_rightorth!(
         (AR, C), A, C₀, alg::RightCanonical;
-        timeroutput::TimerOutput = DISABLED_TIMER
+        timeroutput = NoTimerOutput()
     )
     C[end] = normalize!(C₀)
     return LoggingExtras.withlevel(; alg.verbosity) do

@@ -291,16 +291,18 @@ function find_groundstate!(
     )
     # the sweep is serial, so a single allocator serves all local updates
     allocator = default_allocator(ψ, SerialScheduler())
-    return _find_groundstate_sweep!(ψ, H, alg, envs, allocator)
+
+    name = string(nameof(typeof(alg)))
+    timeroutput = alg.verbosity > 3 ? TimerOutput(name) : NoTimerOutput()
+
+    return find_groundstate_sweep!(ψ, H, alg, envs, allocator, timeroutput)
 end
 
-function _find_groundstate_sweep!(
-        ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs, allocator
+function find_groundstate_sweep!(
+        ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput
     )
     name = string(nameof(typeof(alg)))
     log = IterLog(name)
-    timeroutput = TimerOutput(name)
-    alg.verbosity > 3 || disable_timer!(timeroutput)
 
     Tr = real(scalartype(ψ))
     n = _num_updates(alg, ψ)
@@ -350,12 +352,12 @@ function _find_groundstate_sweep!(
             # truncation error rather than the (unreachable) bare `tol`. With no truncation
             # (`ϵ_truncs .= 0`, e.g. single-site/QR gauge) this reduces to the plain `ϵ_global ≤ tol`.
             if ϵ_global <= max(alg.tol, maximum(ϵ_truncs))
-                @infov 4 timeroutput
+                @infov 4 TimerReport(timeroutput)
                 @infov 2 logfinish!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
-                @infov 4 timeroutput
+                @infov 4 TimerReport(timeroutput)
                 @warnv 1 logcancel!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
             else
                 @infov 3 logiter!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
