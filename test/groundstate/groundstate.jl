@@ -41,7 +41,7 @@ verbosity_conv = 1
             v = variance(ψ, H)
 
             # test using low variance
-            @test info.normres ≈ 0 atol = 1.0e-3
+            @test convergence_measure(info) ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
             @test info.numtrunc == 0
@@ -62,7 +62,7 @@ verbosity_conv = 1
             v = variance(ψ, H)
 
             # test using low variance
-            @test info.normres ≈ 0 atol = 1.0e-3
+            @test convergence_measure(info) ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
 
@@ -89,7 +89,7 @@ verbosity_conv = 1
             v = variance(ψ, H)
 
             # test using low variance
-            @test info.normres ≈ 0 atol = 1.0e-3
+            @test convergence_measure(info) ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
             # the bond should have grown to the truncation target
@@ -117,7 +117,7 @@ verbosity_conv = 1
             v = variance(ψ, H)
 
             # test using low variance
-            @test info.normres ≈ 0 atol = 1.0e-3
+            @test convergence_measure(info) ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
             # the bond should have grown to the truncation target
@@ -143,7 +143,7 @@ verbosity_conv = 1
             v = variance(ψ, H)
 
             # test using low variance
-            @test info.normres ≈ 0 atol = 1.0e-3
+            @test convergence_measure(info) ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
             # the bond should have grown to the truncation target
@@ -165,7 +165,7 @@ verbosity_conv = 1
             v = variance(ψ, H)
 
             # test using low variance
-            @test info.normres ≈ 0 atol = 1.0e-3
+            @test convergence_measure(info) ≈ 0 atol = 1.0e-3
             @test v < v₀ && v < 1.0e-2
         end
     end
@@ -246,7 +246,7 @@ end
         v = variance(ψ′, H, envs)
 
         # test using low variance
-        @test info.normres ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -260,7 +260,7 @@ end
         v = variance(ψ′, H, envs)
 
         # test using low variance
-        @test info.normres ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -278,10 +278,10 @@ end
         v = variance(ψ, H, envs)
 
         # test using low variance
-        @test info.normres ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info) ≈ 0 atol = 1.0e-3
+        @test !haskey(info, :numtrunc) # single-site IDMRG never truncates
         @test v < v₀
         @test v < 1.0e-2
-        @test info.numtrunc == 0
     end
 
     @testset "IDMRG (long-range, real scalartype)" begin
@@ -293,7 +293,7 @@ end
         v = variance(ψ, H, envs)
 
         # test using low variance
-        @test info.normres ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -315,7 +315,7 @@ end
         v = variance(ψ, H, envs)
 
         # test using low variance
-        @test info.normres ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
 
@@ -358,7 +358,7 @@ end
         v = variance(ψ′, H, envs)
 
         # test using low variance
-        @test info.normres ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -374,7 +374,7 @@ end
         v = variance(ψ, H, envs)
 
         # test using low variance
-        @test info.normres ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
     end

@@ -40,7 +40,7 @@ g_values = 0.1:0.1:2
 
 M = @showprogress map(g_values) do g
     H = transverse_field_ising(; g=g)
-    groundstate, environment, δ = find_groundstate(init_state, H, VUMPS(; verbosity=0))
+    groundstate, environment, info = find_groundstate(init_state, H, VUMPS(; verbosity=0))
     return abs(expectation_value(groundstate, 1 => σᶻ()))
 end
 

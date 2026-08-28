@@ -14,8 +14,8 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 # Keyword Arguments
 
-- `tol::Float64`: convergence tolerance, compared against `info.normres` (see Returns below). Which
-    quantity that is depends on the algorithm
+- `tol::Float64`: convergence tolerance, compared against the convergence entry of the returned
+    `info` (see Returns below). Which quantity that is depends on the algorithm
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 
@@ -23,14 +23,17 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 - `ψ::AbstractMPS`: converged leading boundary MPS
 - `environments`: environments corresponding to the converged boundary
-- `info::AlgorithmInfo`: how the algorithm terminated; `info.normres` is the quantity compared
-    against `tol`, and `info.converged` whether it got there. It is not a truncation error.
-    Which quantity `normres` is depends on the algorithm:
-    - [`VUMPS`](@ref) and [`VOMPS`](@ref) report the Galerkin error, the maximum over sites of the
+- `info::AlgorithmInfo`: how the algorithm terminated; `info.converged` says whether it got there.
+    The quantity compared against `tol` is stored under a key naming which measure it is, and is
+    never a truncation error:
+    - [`VUMPS`](@ref) and [`VOMPS`](@ref) report `galerkin`, the maximum over sites of the
       local update projected onto the orthogonal complement of the current tensor.
-    - [`GradientGrassmann`](@ref) reports the norm of the Riemannian gradient from its optimiser.
-    - [`IDMRG`](@ref) and [`IDMRG2`](@ref) report a fixed-point residual instead, the change in the
-      center bond tensor over a sweep. For `Multiline` methods this is extensive in the number of rows.
+    - [`GradientGrassmann`](@ref) reports `gradientnorm` from its optimiser.
+    - [`IDMRG`](@ref) and [`IDMRG2`](@ref) report `bondresidual`, the change in the center bond
+      tensor over a sweep. For `Multiline` methods this is extensive in the number of rows.
+
+    [`convergence_measure`](@ref) returns whichever is present, for code that only wants the
+    number.
 
     See [`AlgorithmInfo`](@ref), [`find_groundstate`](@ref), and the manual on the `ϵ` convention
     under [The error convention](@ref) and [Ground state accuracy](@ref).

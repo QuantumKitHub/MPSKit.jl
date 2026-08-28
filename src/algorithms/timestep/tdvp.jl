@@ -15,7 +15,7 @@ state-preserving, as required for a consistent time evolution.
     so the state norm keeps useful information. In real time this is exact, namely the squared norm
     drops by precisely the truncated ("discarded") weight,
     ``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon_{\\text{total}}^2``,
-    with `ϵ_total` from the [`AlgorithmInfo`](@ref) returned by [`timestep`](@ref). In imaginary
+    with `total_truncation_error` from the [`AlgorithmInfo`](@ref) returned by [`timestep`](@ref). In imaginary
     time the norm also carries the physical decay of the weight, so it no longer isolates the
     truncation. Without `trunc` nothing is discarded at all and the norm is conserved exactly in
     real time.
@@ -135,7 +135,8 @@ function _timestep_infinite(
     end
 
     recalculate!(envs, ψ′, H)
-    # infinite one-site TDVP has a fixed bond dimension and never truncates so nothing is discarded
+    # infinite one-site TDVP runs at fixed bond dimension and never truncates, so it doesn't
+    # report truncation entries (rather than report zeros that would look like a measurement)
     # the gauge-fixing residual is controlled by `tolgauge`, not reported here
     return ψ′, envs, AlgorithmInfo()
 end

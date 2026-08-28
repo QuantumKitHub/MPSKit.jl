@@ -85,8 +85,8 @@ module TestMultifusion
         v2 = variance(ψ2, H)
         E2 = expectation_value(ψ2, H, envs2)
 
-        @test info.normres ≈ 0 atol = 1.0e-3
-        @test info2.normres ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info) ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info2) ≈ 0 atol = 1.0e-3
         @test v < v₀ && v2 < v₀
 
         @test isapprox(E, E2; atol = 1.0e-6)
@@ -123,7 +123,7 @@ module TestMultifusion
 
         @test isapprox(E, E2; atol = 1.0e-6)
         @test isapprox(E, E3; atol = 1.0e-6)
-        for delta in [info.normres, info2.normres, info3.normres]
+        for delta in [convergence_measure(info), convergence_measure(info2), convergence_measure(info3)]
             @test delta ≈ 0 atol = 1.0e-3
         end
         for var in [v, v2, v3]

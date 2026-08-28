@@ -26,7 +26,7 @@ To restore a maximal dimension of `D`, apply [`changebonds`](@ref) with an [`Svd
     By default the state is not renormalized, as the (loss of) norm accumulates useful information.
     In real time the squared norm lost is exactly the weight discarded by the bond cuts,
     ``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon_{\\text{total}}^2``, with
-    `ϵ_total` from the [`AlgorithmInfo`](@ref) returned by [`timestep`](@ref). In imaginary time
+    `total_truncation_error` from the [`AlgorithmInfo`](@ref) returned by [`timestep`](@ref). In imaginary time
     the norm also carries the physical decay of the weight and no longer isolates the truncation.
     Both reported errors are exactly zero when not truncating.
     Pass `normalize = true` to `timestep`/`time_evolve` to renormalize after every half-sweep instead.
