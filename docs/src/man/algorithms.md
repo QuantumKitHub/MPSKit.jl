@@ -280,245 +280,107 @@ isapprox(Es[1] - E₀, 2(g - 1); rtol=1e-2) # infinite analytical result
 The algorithms that solve for a state, particularly [`find_groundstate`](@ref), [`leading_boundary`](@ref), [`approximate`](@ref), [`timestep`](@ref) and [`time_evolve`](@ref), return an [`AlgorithmInfo`](@ref) as their last value, describing how they arrived at their result.
 [`excitations`](@ref) and [`changebonds`](@ref) report nothing.
 What limits their accuracy is covered below all the same.
-A single bare number could not do this job, because the quantities involved are genuinely different.
-A convergence measure and a truncation error answer different questions, are not comparable, and not every algorithm produces both.
-Conversely, two algorithms that both report "a convergence measure" do not necessarily report the same measure.
-[`AlgorithmInfo`](@ref) therefore carries a set of named entries, and each algorithm fills in only the ones it actually computes.
-Entries are keyed by `Symbol`, and read either as a property (`info.max_truncation_error`) or by indexing (`info[:max_truncation_error]`).
-The usual dictionary interface is supported, in particular `haskey`, `keys`, `values` and `get`.
-Nothing is promised that was never measured: asking for an entry an algorithm did not report is an error naming what it did report, rather than a value that was never computed, and the name of the entry says which quantity it is rather than leaving that to prose.
-Display the returned object (or call `keys(info)`) to see what a given algorithm reported.
-The docstrings of every algorithm report these as well.
 
 ```@docs; canonical=false
 AlgorithmInfo
 ```
 
-The rest of this section explains what those quantities are, and - equally important - what they do not measure.
+The rest of this section explains what quantities can be reported by the algorithms, and - equally important - what they do not measure.
 
 ### The error convention
 
-**In theory:** A truncation error measures how much a factorisation changed the tensor it acted on: replacing ``A`` by its rank-restricted approximation ``\tilde{A}`` costs
+Every factorisation in MPSKit reports ``\epsilon = \lVert A - \tilde{A} \rVert``, which is the 2-norm of the discarded singular values ([Schollwöck](@cite schollwoeck2011)).
+Interpreting this truncation error as a "discarded weight" is accurate when the factorised object is normalised.
 
-```math
-\epsilon = \lVert A - \tilde{A} \rVert .
-```
-
-Because a truncated SVD keeps the largest singular values, the discarded part is orthogonal to the kept part, and ``\epsilon`` is exactly the 2-norm of the discarded singular values ([Schollwöck](@cite schollwoeck2011)).
-
-**In practice:** That is precisely what MPSKit computes: every factorisation reports the 2-norm of what it discarded, and nothing more. In particular, the value is absolute, i.e. it is not normalised by ``\lVert A \rVert``.
-
-**Where the two are often conflated:** In DMRG the same quantity is usually called the "discarded weight" and is read as a probability: when ``A`` is the bond tensor of a normalised state, the ``\sigma_\alpha^2`` are eigenvalues of the reduced density matrix across the cut which sum to 1 for a normalised state, so ``\epsilon^2`` is the probability of the discarded subspace.
-Even though viewing it as a probability is intuitively useful, it is not what makes the value well-defined, and it does not always apply here.
-In particular, under non-renormalising algorithms the state norm drifts away from 1 precisely as truncation accumulates.
-The probability intuition holds only when the factorised object is normalised, which is not always the case.
-The definition ``\epsilon = \lVert A - \tilde{A} \rVert`` holds in every case, though.
-
-What differs between algorithms is how these per-factorisation values are summed up (*aggregated*) into the numbers they report, which is the subject of the next subsection.
+What differs between algorithms is how these per-factorisation values are summed up (*aggregated*) into the numbers they report.
 
 !!! warning
     A convergence measure and a truncation error are unrelated quantities.
-    [`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms fill in a convergence entry (`galerkin`, `gradientnorm`, `bondresidual` or `localchange` depending on the algorithm), which has no truncation interpretation at all, while the truncating algorithms fill in `max_truncation_error`/`total_truncation_error`, which say nothing about convergence.
     An algorithm that does both fills both, and they should not be compared with each other.
+    Convergence measures are covered below per algorithm.
 
 #### Aggregating truncation errors
 
-This applies to every truncating algorithm.
-A sweep of [`DMRG2`](@ref), [`IDMRG2`](@ref), [`TDVP2`](@ref), [`BUG`](@ref) or [`Zipup`](@ref) performs many local factorisations, each with its own ``\epsilon_k``, and there is no single number that answers every question one might ask of them.
-Rather than pick one and hope the caller wants that one, [`AlgorithmInfo`](@ref) carries both aggregations under names that say what they are.
+The per-factorisation errors are aggregated two ways, as a worst case (`max_truncation_error`) and in quadrature (`total_truncation_error`).
+See the [`AlgorithmInfo`](@ref) docstring for what each is.
 
-`max_truncation_error`, the largest single ``\epsilon_k``, is a worst case.
-The point of it is that it is still a per-factorisation quantity: it is one of the ``\epsilon_k``, not a combination of them, so it does not grow just because the chain is longer or more sweeps or steps were taken.
-That is what makes it the one to watch over the course of a run, or to compare between runs at different sizes.
-An increase in `max_truncation_error` means individual bonds are being cut harder, whereas an increase in `total_truncation_error` may only mean there were more bonds to cut.
-This is the same reason the ground state algorithms report a maximum over local gradient norms rather than a total.
-It is also why `max_truncation_error` is the one [`time_evolve`](@ref) logs; the ground state algorithms log their convergence measure instead, since for them convergence rather than truncation is what the sweep is driving.
+`max_truncation_error` is the entry a `trunc` setting most directly controls, though how directly depends on the strategy:
 
-It is also the field that a `trunc` setting most directly controls, though how directly depends on the strategy:
+- [`truncerror`](@extref MatrixAlgebraKit.truncerror) bounds the discarded weight of each factorisation, which is exactly ``\epsilon_k``, so `max_truncation_error` should come out at or below the tolerance you set.
+- [`trunctol`](@extref MatrixAlgebraKit.trunctol) bounds each individual singular value instead. Discarding ``k`` of them leaves ``\epsilon_k \le \sqrt{k}\,\texttt{atol}``, so `max_truncation_error` lands near the tolerance but is not bounded by it.
+- [`truncrank`](@extref MatrixAlgebraKit.truncrank) fixes the rank and says nothing about magnitudes at all. Here, `max_truncation_error` is not something you set but something you read off. It is thus the consequence of that choice of bond dimension.
 
-* [`truncerror`](@extref MatrixAlgebraKit.truncerror) bounds the discarded weight of each factorisation, which is exactly ``\epsilon_k``, so `max_truncation_error` should come out at or below the tolerance you set.
-* [`trunctol`](@extref MatrixAlgebraKit.trunctol) bounds each individual singular value instead. Discarding ``k`` of them leaves ``\epsilon_k \le \sqrt{k}\,\texttt{atol}``, so `max_truncation_error` lands near the tolerance but is not bounded by it.
-* [`truncrank`](@extref MatrixAlgebraKit.truncrank) fixes the rank and says nothing about magnitudes at all. Here, `max_truncation_error` is not something you set but something you read off. It is thus the consequence of that choice of bond dimension.
-
-`total_truncation_error`, all of them combined in quadrature,
+`total_truncation_error` sums the squares,
 
 ```math
 \epsilon_{\text{total}} = \sqrt{\textstyle\sum_k \epsilon_k^2} ,
 ```
 
-is the one that adds up to something.
-Note that it is the *squares* that are summed, and the root taken at the end, because ``\epsilon^2`` is the quantity that accumulates exactly: each local truncation is an orthogonal projection, so it removes exactly ``\epsilon_k^2`` from the squared norm of the tensor it acts on.
-Summing the squares therefore tracks a running "cost" rather than merely a worst case.
-The price is that it is extensive: it grows like ``\sqrt{N}`` in the number of truncations, so it is not comparable between different system sizes or sweep counts.
+which tracks a running cost rather than a worst case.
+Whether that cost is also the error of the *final state* depends on what the algorithm does between truncations: in real time evolution, where truncations do not normalise by default, it is exactly the norm deficit of the state.
 
-Whether that running cost is also the error of the *final state* depends on what the algorithm does between truncations, so it is not a property of the aggregation itself.
-It does hold for real-time evolution, which is worked out in [The norm as a record of truncation](@ref).
-A variational sweep, by contrast, renormalises as it goes, so there `total_truncation_error` is a diagnostic of how hard the truncation is working rather than a norm deficit.
-
-Neither field is the distance to the untruncated solution.
-Bounding that gives the linear sum ``\lVert \psi_{\text{untruncated}} - \psi \rVert \le \sum_k \epsilon_k``, which is a third quantity again, and always the largest of the three.
-
-##### Which factorisations are recorded
-
-Both aggregations and the `numtrunc` count are built from the set of per-factorisation errors the algorithm records.
-This set is not the same for every algorithm.
-
-[`IDMRG`](@ref), [`IDMRG2`](@ref), [`TDVP2`](@ref), [`BUG`](@ref) and [`Zipup`](@ref) record every factorisation as it happens.
-Thus, `numtrunc` is a count of factorisations, and a sweep that visits a bond twice contributes two entries.
-
-[`DMRG`](@ref) and [`DMRG2`](@ref) keep one slot per update position instead, overwritten as the sweep passes over it, and record the slots once at the end.
-In these cases, `numtrunc` is the number of positions whose most recent cut discarded something, and it can never exceed `length(psi)` (single-site) or `length(psi) - 1` (two-site), no matter how many sweeps ran.
-A reported `numtrunc` less than the number of bonds means some bonds last discarded a non-zero weight. 
-These are typically the bonds nearest the two ends.
-
-The difference here is made deliberately.
-What a returned variational state still throws away at a given bond is the last cut made there, not the sum of every cut ever made there.
-This means that recording the latest value per position is the more meaningful quantity for a sweeping ground-state algorithm.
-Thus, `numtrunc` counts different things in the two families, and `total_truncation_error` correspondingly sums a different number of terms, so neither is directly comparable between, say, [`DMRG2`](@ref) and [`IDMRG2`](@ref).
-Read `numtrunc` more as "how many recorded errors were non-zero", and less as a tally of SVD calls.
-
-The two error entries also read under the short aliases `ϵ_max` and `ϵ_total`.
-They are only ever stored under the descriptive names, so `keys` and displaying/showing them returns one name per quantity.
+Which factorisations an algorithm records into these differs per family, which is why `numtrunc` and `total_truncation_error` are not comparable across algorithms.
 
 ### Ground state accuracy
 
 [`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms report the quantity their `tol` is compared against, together with a `converged` flag.
 Because these are not the same quantity from one algorithm to the next, each is stored under a key that names it (`galerkin`, `gradientnorm`, `bondresidual` or `localchange`).
 [`convergence_measure`](@ref) returns whichever of them is present, for code that only wants the number.
-**In theory:** Convergence is measured by the (norm of the) variational gradient: the component of ``H \lvert \psi \rangle`` that points away from the current state but still lies in the tangent space of the variational manifold.
-It vanishes exactly at a variational fixed point, and its norm is what most of these algorithms report.
-For the sweeping algorithms that norm is known as the Galerkin error.
+Importantly, they represent different things, and a `tol` tuned for one algorithm is not a `tol` tuned for another.
 
-**In practice:** The sweeping algorithms ([`DMRG`](@ref), [`DMRG2`](@ref), [`VUMPS`](@ref), [`VOMPS`](@ref)) report the Galerkin error, computed per site as the norm of the local update projected onto the orthogonal complement of the current tensor, and then aggregated as the maximum over sites.
-[`GradientGrassmann`](@ref) instead reports the gradient norm supplied by its optimiser, taken over the whole state at once in the preconditioned Grassmann metric.
-
-[`IDMRG`](@ref) and [`IDMRG2`](@ref) report neither, and this is easy to miss because their `tol` sits alongside the others.
-Their `bondresidual` is a *fixed-point residual*: the change in the center bond tensor from one sweep to the next, ``\lVert C - C_{\text{prev}} \rVert``, with both tensors projected onto their common space when the bond space changed.
-It measures how much a sweep still moves the state, which is weaker than measuring how far the state is from stationarity, since an algorithm crawling through a slow region reports a small value for the same reason a converged one does.
-For [`IDMRG2`](@ref) the projection onto the common space also means that a change in bond dimension between sweeps is projected out of the measure rather than counted in it.
-
-**Why they differ:** The Galerkin and Grassmann measures are the same underlying gradient, not different physical quantities.
-They differ in the metric it is measured in (the Grassmann gradient is preconditioned) and in how the per-site contributions are combined (a maximum versus a single global norm).
-The maximum is a deliberate practical choice, as it keeps the reported number independent of system size.
-The IDMRG residual is not that gradient at all: it certifies that the sweeps have stopped moving, not that there is nowhere left to move to.
-The consequence of these mismatches is that a `tol` tuned for one algorithm is not a `tol` tuned for another, and this is worth keeping in mind when swapping algorithms at a fixed `tol`.
-
-In other words, convergence is only defined relative to the manifold you are optimising over.
-A single-site algorithm at a fixed bond dimension can drive its convergence measure to machine precision and still be far from the true ground state, because the error that remains is the bond dimension itself, which no amount of further sweeping can address.
-A small convergence measure certifies a fixed point, not an accurate state.
+A single-site algorithm at a fixed bond dimension can drive its convergence measure to machine precision and still be far from the true ground state.
 Growing the bond dimension is the job of the two-site algorithms ([`DMRG2`](@ref), [`IDMRG2`](@ref)) or of a bond expansion ([`DMRG`](@ref) with an `alg_expand`, or an expanding `alg_gauge` such as [`DMRG3S`](@ref)); see also [`changebonds`](@ref).
 
 Once an algorithm does truncate, the two error notions interact.
-The Galerkin error cannot fall below the level set by the weight being discarded each sweep, so a truncating scheme converges once `galerkin` reaches the truncation error rather than the (unreachable) bare `tol`.
-[`DMRG`](@ref)/[`DMRG2`](@ref) account for this: their stopping test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to the plain `ϵ ≤ tol` when nothing is truncated.
+In the case of the Galerkin error, it cannot fall below the level set by the weight being discarded each sweep, so a truncating scheme converges once `galerkin` reaches the truncation error rather than the (unreachable) bare `tol`.
 
 Neither measure is an error bar on an observable, and no cheap substitute for one exists.
 The energy variance ``\langle H^2 \rangle - \langle H \rangle^2`` is an independent and more demanding measure.
 Note what it actually quantifies, namely how far the state is from being an *exact eigenstate*, which is not the same thing as the error on some other observable.
-The usual practical route is to compute a series of states at increasing bond dimension and extrapolate observables against the variance towards zero ([Hubig et al.](@cite hubig2018)).
-This is an empirical extrapolation rather than a bound.
 
 ### Time evolution accuracy
 
 Unlike a ground state search, a time evolution has no convergence criterion to run to.
 There is no fixed point, and the error is made at every step.
-Three sources behave differently and only one of them is reported.
+Time evolution has three distinct error sources, namely the truncation error, the projection error, and the splitting error.
+Only the truncation error is reported in [`timestep`](@ref) and [`time_evolve`](@ref)'s [`AlgorithmInfo`](@ref).
+This is non-zero for [`TDVP2`](@ref), for [`BUG`](@ref) with a `trunc`, and for [`TDVP`](@ref) with a bond expansion.
 
-* **Truncation error.**
-  Whenever a bond is cut back down, the discarded singular values are lost from the state.
-  [`timestep`](@ref) and [`time_evolve`](@ref) report this through the `max_truncation_error`/`total_truncation_error` entries of the [`AlgorithmInfo`](@ref) they return.
-  It is the error you control through the algorithm's `trunc`, and the only one that is free to compute, since the truncating SVD produces it anyway.
-  It is non-zero for [`TDVP2`](@ref), for [`BUG`](@ref) with a `trunc`, and for [`TDVP`](@ref) with a bond expansion.
-  Plain single-site [`TDVP`](@ref) runs at fixed bond dimension and reports exactly `0`.
+The projection error is not reported, since measuring it costs an extra effective-Hamiltonian application per site.
+This is what a bond expansion (CBE) exists to reduce ([Li et al.](@cite li2024)).
+The splitting error is a Trotter-type error, and can only be estimated by comparing one step of `dt` against two of `dt / 2`.
 
-* **Projection error.**
-  Single-site [`TDVP`](@ref) confines the evolution to the tangent space of a fixed-bond-dimension manifold, ``\lVert (1 - P_{T_\psi}) H \psi \rVert``.
-  The component of the exact evolution pointing off that manifold is simply dropped, and this happens even with no truncation and exact local solves.
-  It is not reported, since measuring it costs an extra effective-Hamiltonian application per site.
-  This is what a bond expansion (CBE) exists to reduce ([Li et al.](@cite li2024)).
+All three need to be under control, not just the reported one.
+In practice: pick `dt` from a convergence check, pick `trunc` from the reported truncation error, and use a bond-adaptive scheme ([`TDVP2`](@ref), [`BUG`](@ref), or [`TDVP`](@ref) with `alg_expand`) whenever entanglement grows, since a fixed bond dimension silently converts entanglement growth into projection error.
 
-* **Splitting error.**
-  The evolution is not applied in one piece.
-  Rather, it is split into local terms that are integrated in sequence, which do not commute.
-  This is a Trotter-type error.
-  Note, however, that what is split differs per method: [`TDVP`](@ref) splits the tangent-space projector into site and bond terms, while the MPO methods ([`WI`](@ref), [`WII`](@ref), [`TaylorCluster`](@ref)) split the Hamiltonian in the more familiar sense.
-  For TDVP's symmetric back-and-forth sweep the result is globally ``O(dt^2)`` ([Lubich et al.](@cite lubich2015), [Paeckel et al.](@cite paeckel2019)), so it is controlled by `dt` alone.
-  This can only be estimated by comparing one step of `dt` against two of `dt / 2`.
-
-A trustworthy run needs all three under control, not just a small truncation error.
-In practice: pick `dt` from a convergence check, pick `trunc` from the reported truncation error, and use a bond-adaptive scheme ([`TDVP2`](@ref), [`BUG`](@ref), or [`TDVP`](@ref) with `alg_expand`) whenever entanglement grows during the evolution, since a fixed bond dimension silently converts entanglement growth into projection error.
-
-Note that these do not all shrink together, so there is a sweet spot in `dt` rather than a "smaller is always better".
-Decreasing `dt` reduces the splitting error, but it also means more steps to reach the same final time, and every step truncates again.
-The accumulated truncation error grows with the number of steps, as does the compute time.
-The projection error does not improve at all, since it represents a rate at which the exact solution leaves the manifold.
-Shrinking `dt` in this case only samples this rate more finely.
-The practical consequence is that below some `dt` the total error stops improving and eventually gets worse, and the remedy at that point is a larger bond dimension rather than a smaller step.
-
-#### The norm as a record of truncation
-
-How the per-factorisation errors are aggregated into `max_truncation_error`/`total_truncation_error` is described under [Aggregating truncation errors](@ref); what follows is specific to time evolution.
-
-By default none of the time evolution algorithms renormalize (`normalize = false`), which is deliberate.
-In real time the local exponentials are unitary, so truncation is the only thing that changes the norm and it becomes a running record of what truncation has cost,
-
-```math
-\lVert \psi \rVert^2 = \lVert \psi_0 \rVert^2 - \epsilon_{\text{total}}^2 .
-```
-
-The reported `total_truncation_error` is the norm deficit, and this composes across steps.
-This follows from the following two facts put together, one per half of a local update.
-1) An SVD truncation is an orthogonal projection onto the kept Schmidt vectors and is 2-norm optimal at that rank ([Schollwöck](@cite schollwoeck2011)), so the kept and discarded parts are orthogonal.
-By Pythagoras the squared norm drops by exactly the discarded weight, the usual way of quantifying truncation during a time evolution ([Paeckel et al.](@cite paeckel2019)).
-2) The local exponentials of the projector-splitting sweep are unitary, so TDVP conserves the norm and the energy exactly when the local equations are solved exactly ([Paeckel et al.](@cite paeckel2019)), contributing nothing to the norm change.
-
-These two hold for the local updates of a step, so composing over all steps gives the identity.
-
-!!! note
-    "Exactly" in the second fact is up to the tolerance of the local exponentials, and is thus in practice only approximate due to integrator tolerance.
-
-It is also specific to real time with `normalize = false`:
-
-* **Imaginary time** evolves with the non-unitary ``\exp(-H dt)``, which rescales the state on its own.
-  The norm then moves for two independent reasons, namely the physical decay of the weight and the truncation loss.
-  One cannot separate them from each other.
-  The reported errors still count only the truncation.
-* **`normalize = true`** renormalizes at every local update, destroying the identity by construction.
-  This is usually what you want for imaginary-time evolution used as a ground state or thermal-state search.
-  The reported errors are unaffected.
-* **No truncation at all** (plain single-site [`TDVP`](@ref), or [`BUG`](@ref) with a QR gauge) gives ``\epsilon = 0``, and in real time the norm is then conserved exactly.
-* An **`InfiniteMPS`** is regauged to norm 1 per site structurally, so its norm carries no such information and `normalize` has no effect.
+They do not shrink together, so there is a sweet spot in `dt` rather than "smaller is better".
+This is because a smaller `dt` lowers the splitting error but takes more steps to reach the same time, and every step truncates again.
 
 ### Excitation accuracy
 
 [`excitations`](@ref) returns only `(energies, states)`: there is no error term, and none of the sources below is reported back to you.
 They are worth knowing about, because the dominant one is usually not the one the algorithm is working on.
 
-* **Inherited ground state error.**
-  Every method here builds on a ground state you supply and treats it as exact.
-  Its error propagates straight into the gap, and since a gap is a difference of two large energies, it is typically the limiting factor.
-  A well-converged ground state (in the sense of its convergence measure and bond dimension) is necessary for a meaningful excitation calculation.
+- **Inherited ground state error.**
+  Every method builds on the ground state you supply and treats it as exact.
+  Since a gap is a difference of two large energies, that error propagates straight into it and is typically the limiting factor.
 
-* **Ansatz limitation.**
-  [`QuasiparticleAnsatz`](@ref) varies over the single-quasiparticle tangent space on top of a fixed ground state.
-  It is variational within that space and well suited to isolated quasiparticle branches, but multi-particle continua are not representable in it, so results there are not to be trusted.
-  How well it does on an isolated branch is controlled by the gaps around the targeted level.
-  The ansatz approximates an eigenvalue that is separated from the rest of the spectrum in its momentum sector with an error bounded exponentially in the size of the local operator's support, at a rate set by the gap below *and* above that eigenvalue ([Haegeman et al.](@cite haegeman2013)).
-  A branch that is nearly degenerate with the ground state, or that sits just below a continuum, therefore converges much more slowly than an isolated one.
+- **Ansatz limitation.**
+  [`QuasiparticleAnsatz`](@ref) varies over the single-quasiparticle tangent space on top of a fixed ground state, so it is variational within that space and suited to isolated quasiparticle branches.
+  Its error is bounded exponentially in the support of the local operator, at a rate set by the gaps below *and* above the targeted eigenvalue ([Haegeman et al.](@cite haegeman2013)).
 
-* **Eigensolver convergence.**
-  The eigenvalue problem is solved with KrylovKit, and a run that fails to converge `num` states emits a warning carrying the residual when the verbosity is set high enough.
-  That residual is neither returned nor thrown, so it is worth not running with warnings suppressed.
-  Its convergence is governed by the same spectral structure as the ansatz above: levels that are well separated converge quickly, while nearly degenerate ones converge slowly and are the ones most likely to come back unconverged.
+- **Eigensolver convergence.**
+  The eigenvalue problem is solved with KrylovKit, and a run that fails to converge `num` states emits a warning carrying the residual when the verbosity is high enough.
+  That residual is neither returned nor thrown, so it is worth not suppressing warnings.
+  Nearly degenerate levels are the ones most likely to come back unconverged.
 
-* **Penalty-based orthogonality** ([`FiniteExcited`](@ref)).
-  Higher states are found by minimising ``H + \lambda \sum_i |\psi_i\rangle\langle\psi_i|`` against the previously converged states, with ``\lambda`` the `weight` field.
-  A finite `weight` enforces orthogonality only approximately, so a residual overlap with a lower state biases the reported energy downwards.
-  Since the reported value is the expectation value of the bare `H`, this bias is invisible in the output.
-  Raising `weight` suppresses it at the cost of stretching the spectrum and slowing down the eigensolver's per-gap eigensolves.
+- **Penalty-based orthogonality.**
+  [`FiniteExcited`](@ref) minimises ``H + \lambda \sum_i |\psi_i\rangle\langle\psi_i|`` against the previously converged states, with ``\lambda`` the `weight` field.
+  A finite `weight` enforces orthogonality only approximately, so a residual overlap with a lower state biases the energy downwards — invisibly, since the reported value is the expectation value of the bare `H`.
+  Raising `weight` suppresses the bias at the cost of stretching the spectrum and slowing the eigensolver.
 
-* **Truncation** ([`ChepigaAnsatz2`](@ref)).
-  The two-site excited state is split back to single-site tensors with a truncated SVD governed by `trunc`, and the resulting discarded weight is not reported.
+- **Truncation** ([`ChepigaAnsatz2`](@ref)).
+  The two-site excited state is split back to single-site tensors with a truncated SVD governed by `trunc`, and the discarded weight is not reported.
 
 ## `changebonds`
 
