@@ -96,9 +96,9 @@ site with `alg_zipup`, and write the result into `ψ`. `zip_left_right!` zips up
 opposite direction imposes a final truncation with `alg_zipdown` in a locally gauged basis, leaving
 the gauge center of `ψ` at the far end. The destination may alias `ϕ`.
 
-Also returns an [`AlgorithmInfo`](@ref) describing the truncation. Being a single sweep 
-rather than an iterative optimisation, there is no convergence measure, 
-so `converged` and `normres` are `nothing`.
+Also returns an [`AlgorithmInfo`](@ref) describing the truncation. Being a single sweep
+rather than an iterative optimisation, there is no convergence measure, so it reports neither
+`converged` nor any convergence entry; [`convergence_measure`](@ref) returns `nothing` for it.
 """
 zip_left_right!
 @doc (@doc zip_left_right!) zip_right_left!

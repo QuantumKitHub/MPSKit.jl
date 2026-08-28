@@ -60,9 +60,9 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG{A, F, E, G, B} <: Algorithm
-    "convergence tolerance on the Galerkin error (the tangent-space gradient norm). This acts as a
-    floor: the stopping test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to `ϵ ≤ tol`
-    when nothing is truncated"
+    "convergence tolerance on the Galerkin error (the tangent-space gradient norm), reported as the
+    `galerkin` entry of the returned [`AlgorithmInfo`](@ref). This acts as a floor: the stopping
+    test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to `ϵ ≤ tol` when nothing is truncated"
     tol::Float64
 
     "maximal amount of iterations"
@@ -173,9 +173,9 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG2{A, G, F, B} <: Algorithm
-    "convergence tolerance on the Galerkin error (the tangent-space gradient norm). This acts as a
-    floor: the stopping test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to `ϵ ≤ tol`
-    when nothing is truncated"
+    "convergence tolerance on the Galerkin error (the tangent-space gradient norm), reported as the
+    `galerkin` entry of the returned [`AlgorithmInfo`](@ref). This acts as a floor: the stopping
+    test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to `ϵ ≤ tol` when nothing is truncated"
     tol::Float64
 
     "maximal amount of iterations"
@@ -277,10 +277,14 @@ Currently supported for the finite-system algorithms [`DMRG`](@ref) and [`DMRG2`
 
 - `ψ::AbstractFiniteMPS`: converged ground state
 - `environments`: environments corresponding to the converged state
-- `info::AlgorithmInfo`: how the algorithm terminated. `info.normres` is the Galerkin error and
-    `info.converged` whether it met the stopping test. A truncating gauge also fills
-    `info.ϵ_max`/`info.ϵ_total` with what the final sweep discarded
-    (see [`find_groundstate`](@ref) and [`AlgorithmInfo`](@ref))
+- `info::AlgorithmInfo`: how the algorithm terminated. `info.galerkin` is the Galerkin error (also
+    reachable as [`convergence_measure`](@ref)) and `info.converged` whether it met the
+    stopping test. A truncating gauge also fills `info.max_truncation_error`/`info.total_truncation_error`
+    with what the final sweep discarded (see [`find_groundstate`](@ref) and [`AlgorithmInfo`](@ref)).
+
+    These are built from one recorded value per update position, overwritten as the sweep passes
+    over it, so what is reported at each position is the most recent cut there rather than every
+    cut made during the sweep. See the manual on [Aggregating truncation errors](@ref).
 """
 function find_groundstate!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs = environments(ψ, H, ψ)
@@ -362,7 +366,7 @@ function _find_groundstate_sweep!(
     acc = TruncationAccumulator(Tr)
     foreach(ϵ -> push_error!(acc, ϵ), ϵ_truncs)
     info = AlgorithmInfo(;
-        converged = ϵ_global <= max(alg.tol, maximum(ϵ_truncs)), normres = ϵ_global,
+        converged = ϵ_global <= max(alg.tol, maximum(ϵ_truncs)), galerkin = ϵ_global,
         truncation = acc, numiter = iter
     )
     return ψ, envs, info

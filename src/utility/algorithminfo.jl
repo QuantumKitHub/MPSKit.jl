@@ -5,70 +5,179 @@ Information about how an algorithm arrived at its result, returned as the last v
 [`find_groundstate`](@ref), [`leading_boundary`](@ref), [`approximate`](@ref), [`timestep`](@ref)
 and [`time_evolve`](@ref).
 
-Algorithms in MPSKit produce genuinely different error measures, and a single bare number cannot
-carry that distinction. This struct keeps the return signature uniform while naming each quantity,
-so that nothing is promised that an algorithm does not actually compute.
+Algorithms in MPSKit produce genuinely different measures, and not every algorithm even has access
+to the same information. To avoid reporting two different quantities under one name, the information is
+carried in a `Dict{Symbol, Any}` that each algorithm fills with only the entries it actually
+computes.
 
-## Convergence
+Entries are read as properties (`info.galerkin`), by indexing (`info[:galerkin]`), or through the
+usual dictionary interface (`keys`, `haskey`, `get`, `pairs`, `length`). Asking for an entry the
+algorithm never reported is an error that names what it did report, rather than a silent
+`nothing`. Displaying the object (or calling `keys(info)`) shows what a given algorithm actually produced.
 
-  - `converged`: whether the algorithm reached its stopping criterion, or `nothing` for algorithms
-    that do not iterate to a fixed point.
-  - `normres`: the quantity compared against the algorithm's `tol`, or `nothing` when there is none.
-    Which measure this is depends on the algorithm.
-  - `numiter`: number of iterations.
+## The vocabulary
 
-## Truncation
+The keys below are the ones currently in use. Each algorithm's own docstring states which of them
+it reports. Nothing prevents an algorithm from adding its own.
 
-Both truncation fields are built from the same per-factorisation quantity, namely the 2-norm of the
-singular values a single local factorisation discarded, but aggregate it differently, because no
-single aggregation answers every question:
+### Convergence
 
-  - `ϵ_max`: the largest of them. It is still a per-factorisation quantity rather than a combination
-    of them, so it does not grow with system size or iteration count, which is what makes it
-    comparable between runs. It is also the field a `trunc` setting most directly controls, though
-    how directly depends on the strategy.
-  - `ϵ_total`: all of them combined in quadrature, ``\\sqrt{\\sum_k \\epsilon_k^2}``. This grows 
-    with system size and iteration count, so unlike `ϵ_max` it is not comparable between runs.
-  - `numtrunc`: how many local factorisations actually discarded anything.
+  - `converged::Bool`: whether the algorithm met its stopping criterion.
+  - `numiter::Int`: number of iterations (sweeps or steps).
+
+The quantity that was compared against the algorithm's `tol` is stored under a name that says
+which measure it is:
+
+  - `galerkin`: the Galerkin error, i.e. the maximum over sites of the local update projected onto
+    the orthogonal complement of the current tensor. Reported by [`DMRG`](@ref), [`DMRG2`](@ref),
+    [`VUMPS`](@ref) and [`VOMPS`](@ref) when solving for a state.
+  - `gradientnorm`: the norm of the Riemannian (Grassmann) gradient, as supplied by the optimiser.
+    Reported by [`GradientGrassmann`](@ref).
+  - `bondresidual`: the change in the center bond tensor over a sweep. This is a fixed-point
+    residual: it says the sweeps have stopped moving, which is weaker than saying the state is
+    variationally stationary. Reported by [`IDMRG`](@ref) and [`IDMRG2`](@ref).
+  - `localchange`: the largest relative change of a local tensor over a sweep. Reported by
+    [`DMRG`](@ref) and [`DMRG2`](@ref) inside [`approximate`](@ref).
+
+[`convergence_measure`](@ref) returns whichever of these is present, for code that only wants
+"the number that was compared against `tol`" without caring which one it is.
+
+### Truncation
+
+Both truncation entries are built from the same per-factorisation quantity, namely the 2-norm of
+the singular values a single local factorisation discarded, but aggregate it differently, because
+no single aggregation answers every question:
+
+  - `max_truncation_error`: the largest of them. It is still a per-factorisation quantity rather
+    than a combination of them, so it does not grow with system size or iteration count, which is
+    what makes it comparable between runs. It is also the entry a `trunc` setting most directly
+    controls, though how directly depends on the strategy.
+  - `total_truncation_error`: all of them combined in quadrature,
+    ``\\sqrt{\\sum_k \\epsilon_k^2}``. This grows with system size and iteration count, so unlike
+    `max_truncation_error` it is not comparable between runs.
+  - `numtrunc`: how many of the recorded errors were non-zero, i.e. how many actually discarded
+    anything.
+
+The two error entries also read under the short aliases `ϵ_max` and `ϵ_total` (`info.ϵ_max`,
+`info[:ϵ_total]`, `haskey(info, :ϵ_max)`). They are only ever stored under the descriptive names,
+so `keys` and displaying/showing them returns one name per quantity.
+
+Which factorisations get recorded is not the same for every algorithm, and this is worth knowing
+before comparing `numtrunc` (or `total_truncation_error`) between them:
+
+  - [`IDMRG`](@ref), [`IDMRG2`](@ref), [`TDVP2`](@ref), [`BUG`](@ref) and [`Zipup`](@ref) record
+    every factorisation as it happens, so `numtrunc` is a count of factorisations. A sweep that
+    visits a bond twice contributes twice.
+  - [`DMRG`](@ref) and [`DMRG2`](@ref) instead keep one slot per update position, overwritten as
+    the sweep passes, and record those slots once at the end. `numtrunc` is therefore the number of
+    positions whose most recent cut discarded something . This is never more than `length(ψ)` for
+    [`DMRG`](@ref) or `length(ψ) - 1` for [`DMRG2`](@ref), however many sweeps ran and however many
+    SVDs each performed.
+
+The sweeping choice is deliberate: what the returned state still throws away at a bond is the last
+cut made there, not the sum of every cut ever made there. It does mean `numtrunc` counts different
+things in the two families, so read it as "how many recorded errors were non-zero" rather than as a
+tally of SVD calls.
 
 See [Aggregating truncation errors](@ref) for how the two relate to a `trunc` setting, and for the
 per-strategy caveats.
 
-These are `0` for an algorithm that never truncates, which does not mean the result is exact. Rather,
-it means this particular error channel is absent. See the manual on [Errors and accuracy](@ref)
-for what is *not* measured here.
+An algorithm that truncates reports all three even on a run where it happened to discard nothing,
+so `max_truncation_error == 0` means "truncated, but cut nothing away", whereas the entries being
+absent altogether means the algorithm never truncates. Neither says the result is exact. See the
+manual on [Errors and accuracy](@ref) for what is *not* measured here.
 """
-struct AlgorithmInfo{T <: Real}
-    converged::Union{Bool, Nothing}
-    normres::Union{T, Nothing}
-    ϵ_max::T
-    ϵ_total::T
-    numtrunc::Int
-    numiter::Int
+struct AlgorithmInfo
+    data::Dict{Symbol, Any}
 end
 
 """
-    AlgorithmInfo(; converged, normres, truncation, numiter)
+    AlgorithmInfo(; truncation = nothing, kwargs...)
 
-Keyword constructor, with every field defaulting to "not produced by this algorithm": no
-convergence notion, and nothing truncated. `truncation` accepts a
-[`TruncationAccumulator`](@ref), or is left out when the algorithm does not truncate.
+Build an [`AlgorithmInfo`](@ref) from the entries an algorithm actually produced. Every keyword
+becomes an entry.
+
+A keyword whose value is `nothing` is omitted rather than stored. This is how an algorithm
+reports a quantity it computes only on some branches: write `galerkin = measured ? g : nothing`
+to leave the entry out where there is nothing to report, instead of assembling a different keyword
+set per branch. A missing entry is an error to read, so pass `nothing` only where absence is
+the meaning you intend.
+
+`truncation` is special: it accepts a [`TruncationAccumulator`](@ref) and expands into the
+`max_truncation_error`/`total_truncation_error`/`numtrunc` entries. Leave it out for an algorithm
+that does not truncate.
+`numiter` defaults to `1` for the single-shot algorithms.
 """
-function AlgorithmInfo(;
-        converged = nothing, normres = nothing, truncation = nothing, numiter::Int = 1
-    )
-    T = _info_scalartype(normres, truncation)
-    acc = isnothing(truncation) ? TruncationAccumulator(T) : truncation
-    return AlgorithmInfo{T}(
-        converged, isnothing(normres) ? nothing : convert(T, normres),
-        convert(T, acc.ϵ_max), convert(T, sqrt(acc.ϵ_sq)), acc.numtrunc, numiter
-    )
+function AlgorithmInfo(; truncation = nothing, kwargs...)
+    data = Dict{Symbol, Any}()
+    for (key, value) in kwargs
+        isnothing(value) || (data[_canonical_key(key)] = value)
+    end
+    get!(data, :numiter, 1)
+    if !isnothing(truncation)
+        data[:max_truncation_error] = truncation.ϵ_max
+        data[:total_truncation_error] = sqrt(truncation.ϵ_sq)
+        data[:numtrunc] = truncation.numtrunc
+    end
+    return AlgorithmInfo(data)
 end
 
-_info_scalartype(::Nothing, ::Nothing) = Float64
-_info_scalartype(normres, ::Nothing) = float(typeof(normres))
-_info_scalartype(::Nothing, acc) = _acc_type(acc)
-_info_scalartype(normres, acc) = promote_type(float(typeof(normres)), _acc_type(acc))
+# the entries holding "the number that was compared against `tol`"
+const convergence_keys = (:galerkin, :gradientnorm, :bondresidual, :localchange)
+
+"""
+    convergence_measure(info::AlgorithmInfo)
+
+The quantity that was compared against the algorithm's `tol`, whichever of
+`$(join(convergence_keys, "`/`"))` the algorithm reported, or `nothing` for an algorithm that does
+not iterate towards a fixed point and reports none of them.
+
+Use this when you only want the number, and read the specific entry when the kind of measure
+matters, since these are not comparable with one another.
+"""
+function convergence_measure(info::AlgorithmInfo)
+    data = getfield(info, :data)
+    for key in convergence_keys
+        haskey(data, key) && return data[key]
+    end
+    return nothing
+end
+
+# short aliases for the two truncation entries
+# entries remain stored under the descriptive name
+const _key_aliases = Dict{Symbol, Symbol}(
+    :ϵ_max => :max_truncation_error,
+    :ϵ_total => :total_truncation_error,
+)
+_canonical_key(key::Symbol) = get(_key_aliases, key, key)
+
+# dictionary interface
+Base.getindex(info::AlgorithmInfo, key::Symbol) = getfield(info, :data)[_canonical_key(key)]
+Base.haskey(info::AlgorithmInfo, key::Symbol) = haskey(getfield(info, :data), _canonical_key(key))
+function Base.get(info::AlgorithmInfo, key::Symbol, default)
+    return get(getfield(info, :data), _canonical_key(key), default)
+end
+Base.keys(info::AlgorithmInfo) = keys(getfield(info, :data))
+Base.values(info::AlgorithmInfo) = values(getfield(info, :data))
+Base.pairs(info::AlgorithmInfo) = pairs(getfield(info, :data))
+Base.length(info::AlgorithmInfo) = length(getfield(info, :data))
+
+# property sugar: asking for an entry the algorithm never reported is an
+# error naming what it did report, rather than a silent `nothing`
+Base.propertynames(info::AlgorithmInfo) = Tuple(sort!(collect(keys(getfield(info, :data)))))
+function Base.getproperty(info::AlgorithmInfo, key::Symbol)
+    key === :data && return getfield(info, :data)
+    data = getfield(info, :data)
+    canonical = _canonical_key(key)
+    haskey(data, canonical) && return data[canonical]
+    return _no_entry_error(info, canonical)
+end
+
+@noinline function _no_entry_error(info::AlgorithmInfo, key::Symbol)
+    reported = join(propertynames(info), ", ")
+    msg = "this AlgorithmInfo has no entry `$key`; this algorithm reports $reported."
+    throw(ArgumentError(msg))
+end
 
 """
     TruncationAccumulator{T}
@@ -104,36 +213,69 @@ function push_error!(acc::TruncationAccumulator, ϵ)
 end
 
 # combining infos follows the same rules as combining the per-bond errors within one of them:
-# worst case for `ϵ_max`, sum of squares for `ϵ_total`, and the later convergence verdict wins
+# worst case for `ϵ_max`, sum of squares for `ϵ_total`, later convergence verdict wins,
+# and counts are summed
 # assumes type stability of the scalars and an ordering of receiving this info
+_later_wins(_, later) = later
+const _combine_rules = Dict{Symbol, Any}(
+    :max_truncation_error => max,
+    :total_truncation_error => (a, b) -> sqrt(a^2 + b^2),
+    :numtrunc => +,
+    :numiter => +,
+)
+
 function _combine(a::AlgorithmInfo, b::AlgorithmInfo)
-    return AlgorithmInfo(
-        b.converged, b.normres,
-        max(a.ϵ_max, b.ϵ_max), sqrt(a.ϵ_total^2 + b.ϵ_total^2),
-        a.numtrunc + b.numtrunc, a.numiter + b.numiter
-    )
+    dataₐ = copy(getfield(a, :data))
+    for (key, value) in getfield(b, :data)
+        dataₐ[key] = haskey(dataₐ, key) ?
+            get(_combine_rules, key, _later_wins)(dataₐ[key], value) : value
+    end
+    return AlgorithmInfo(dataₐ)
 end
 
+# custom show
+# entries are displayed in a fixed order, with anything outside the known vocabulary listed last
+const _show_order = (convergence_keys..., :max_truncation_error, :total_truncation_error)
+const _show_handled = (_show_order..., :converged, :numiter, :numtrunc)
+
 function Base.show(io::IO, ::MIME"text/plain", info::AlgorithmInfo)
+    data = getfield(info, :data)
     println(io, "AlgorithmInfo:")
-    if !isnothing(info.converged)
-        println(io, "  converged = ", info.converged, " after ", info.numiter, " iterations")
-    else
-        println(io, "  ", info.numiter, " iteration", info.numiter == 1 ? "" : "s")
+    numiter = get(data, :numiter, nothing)
+    tab_space = "  "
+
+    if haskey(data, :converged)
+        println(
+            io, tab_space, rpad("converged", 22), " = ", data[:converged],
+            " after ", numiter, " iterations"
+        )
+    elseif !isnothing(numiter)
+        println(io, tab_space, numiter, " iteration", numiter == 1 ? "" : "s")
     end
-    isnothing(info.normres) || println(io, "  normres   = ", info.normres)
-    if info.numtrunc > 0
-        println(io, "  ϵ_max     = ", info.ϵ_max, "\t(largest single factorization)")
-        println(io, "  ϵ_total   = ", info.ϵ_total, "\t(quadrature over ", info.numtrunc, ")")
-    else
-        println(io, "  no truncation")
+
+    for key in _show_order
+        haskey(data, key) || continue
+        suffix = if key === :max_truncation_error
+            "\t(largest single factorisation)"
+        elseif key === :total_truncation_error
+            "\t(quadrature over $(get(data, :numtrunc, 0)) truncations)"
+        else
+            ""
+        end
+        println(io, tab_space, rpad(string(key), 22), " = ", data[key], suffix)
+    end
+    haskey(data, :numtrunc) && data[:numtrunc] == 0 && println(io, "  no truncation")
+
+    for key in sort!(collect(keys(data)))
+        key in _show_handled && continue
+        println(io, tab_space, rpad(string(key), 22), " = ", data[key])
     end
     return nothing
 end
+
 function Base.show(io::IO, info::AlgorithmInfo)
-    return print(
-        io, "AlgorithmInfo(converged = ", info.converged, ", normres = ", info.normres,
-        ", ϵ_max = ", info.ϵ_max, ", ϵ_total = ", info.ϵ_total,
-        ", numtrunc = ", info.numtrunc, ", numiter = ", info.numiter, ")"
-    )
+    data = getfield(info, :data)
+    print(io, "AlgorithmInfo(")
+    join(io, (string(key, " = ", data[key]) for key in sort!(collect(keys(data)))), ", ")
+    return print(io, ")")
 end

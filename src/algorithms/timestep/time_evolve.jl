@@ -26,12 +26,14 @@ through each of the time points obtained by iterating t_span.
 
 - `ψ`: the time-stepped state
 - `envs`: the updated environment manager
-- `info::AlgorithmInfo`: the truncation performed over the whole evolution.
+- `info::AlgorithmInfo`: the truncation performed over the whole evolution, accumulated from the
+    individual steps, together with `numiter`, the number of steps taken. An algorithm that never
+    truncates reports no truncation entries at all.
     See [`AlgorithmInfo`](@ref) and [Time evolution accuracy](@ref) in the manual
     for the difference and when to use which reported error measure,
     and [`timestep`](@ref) for what neither measures.
 
-`ϵ_max` is logged per step at `verbosity ≥ 3` and for the whole evolution at `verbosity ≥ 2`.
+`max_truncation_error` is logged per step at `verbosity ≥ 3` and for the whole evolution at `verbosity ≥ 2`.
 The size-independent measure is used here for the same reason as the ground state algorithms.
 """
 function time_evolve end, function time_evolve! end
@@ -43,7 +45,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
             verbosity::Int = 0, imaginary_evolution::Bool = false, normalize::Bool = false
         )
         log = IterLog(string(nameof(typeof(alg))))
-        info = AlgorithmInfo(; truncation = TruncationAccumulator(ψ), numiter = 0)
+        info = AlgorithmInfo(; numiter = 0)
         LoggingExtras.withlevel(; verbosity) do
             @infov 2 loginit!(log, 0.0, first(t_span))
             for iter in 1:(length(t_span) - 1)
@@ -57,9 +59,10 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
                 info = _combine(info, info_step)
 
                 # log the size-independent error measure
-                @infov 3 logiter!(log, iter, convert(Float64, info_step.ϵ_max), t)
+                # for a non-truncating algorithm, log zero
+                @infov 3 logiter!(log, iter, convert(Float64, get(info_step, :max_truncation_error, 0.0)), t)
             end
-            @infov 2 logfinish!(log, length(t_span), convert(Float64, info.ϵ_max), t_span[end])
+            @infov 2 logfinish!(log, length(t_span), convert(Float64, get(info, :max_truncation_error, 0.0)), t_span[end])
         end
         return ψ, envs, info
     end
@@ -99,15 +102,16 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 
 A step performs many local factorisations, each discarding some weight. Rather than collapse those
 into one number, `info` reports both aggregations under names that say what they are:
-`info.ϵ_max` is the largest single one (size-independent, comparable against `trunc` and across
-runs) and `info.ϵ_total` sums them in squares.
+`info.max_truncation_error` is the largest single one (size-independent, comparable against `trunc` and across
+runs) and `info.total_truncation_error` sums them in squares.
 
 Both are non-zero only for algorithms that truncate ([`TDVP2`](@ref), [`BUG`](@ref) with a
-`trunc`, and [`TDVP`](@ref) with a bond expansion), and are exactly `0` for one-site
-[`TDVP`](@ref), which runs at fixed bond dimension. A zero here does not mean the step was exact,
-but that this particular error channel is absent.
+`trunc`, and [`TDVP`](@ref) with a bond expansion). A finite-system step that truncates but
+happened to discard nothing reports them as exactly `0`, whereas infinite one-site [`TDVP`](@ref)
+never truncates and reports no truncation entries at all. Neither case means the step was exact,
+but rather that this particular source of error is either absent or idle.
 
-See [`AlgorithmInfo`](@ref) for the fields, and [Time evolution accuracy](@ref) in the manual
+See [`AlgorithmInfo`](@ref) for the entries, and [Time evolution accuracy](@ref) in the manual
 for the other error sources.
 
 # Examples

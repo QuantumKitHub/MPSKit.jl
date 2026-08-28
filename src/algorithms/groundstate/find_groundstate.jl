@@ -38,11 +38,14 @@ low-bond-dimension initial guess such as a product state.
 
 - `ψ::AbstractMPS`: converged ground state
 - `environments`: environments corresponding to the converged state
-- `info::AlgorithmInfo`: how the algorithm terminated. `info.normres` is the quantity compared
-    against `tol` and `info.converged` says whether it got there. Which measure `normres` is depends
-    on the algorithm. A truncating algorithm additionally fills `info.ϵ_max`/`info.ϵ_total`
-    with what its final sweep discarded. See [`AlgorithmInfo`](@ref),
-    and [The error convention](@ref) in the manual.
+- `info::AlgorithmInfo`: how the algorithm terminated. `info.converged` says whether it met its
+    stopping criterion. The quantity that was compared against `tol` is stored under a key naming
+    which measure it is: `galerkin` for [`DMRG`](@ref), [`DMRG2`](@ref) and [`VUMPS`](@ref),
+    `gradientnorm` for [`GradientGrassmann`](@ref), and `bondresidual` for [`IDMRG`](@ref) and
+    [`IDMRG2`](@ref). [`convergence_measure`](@ref) returns whichever of these is present,
+    for code that only wants the number. A truncating algorithm additionally fills
+    `info.max_truncation_error`/`info.total_truncation_error` with what its final sweep discarded.
+    See [`AlgorithmInfo`](@ref) for the full vocabulary, and [The error convention](@ref) in the manual.
 
 # Examples
 

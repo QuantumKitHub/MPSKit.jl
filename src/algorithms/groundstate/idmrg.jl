@@ -12,9 +12,10 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
 @kwdef struct IDMRG{A, B} <: Algorithm
-    "convergence tolerance, compared against the change in the center bond tensor over a sweep.
-    This is a fixed-point residual measuring how much a sweep still moves the state, and is not
-    equivalent to the Galerkin error that [`DMRG`](@ref) and [`VUMPS`](@ref) report"
+    "convergence tolerance, compared against the change in the center bond tensor over a sweep,
+    reported as the `bondresidual` entry of the returned [`AlgorithmInfo`](@ref). This is a
+    fixed-point residual measuring how much a sweep still moves the state, and is not equivalent to
+    the Galerkin error that [`DMRG`](@ref) and [`VUMPS`](@ref) report"
     tol::Float64 = Defaults.tol
 
     "maximal amount of iterations"
@@ -47,9 +48,10 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
 @kwdef struct IDMRG2{A, S, B} <: Algorithm
-    "convergence tolerance, compared against the change in the center bond tensor over a sweep.
-    This is a fixed-point residual measuring how much a sweep still moves the state, and is not
-    equivalent to the Galerkin error that [`DMRG2`](@ref) reports"
+    "convergence tolerance, compared against the change in the center bond tensor over a sweep,
+    reported as the `bondresidual` entry of the returned [`AlgorithmInfo`](@ref). This is a
+    fixed-point residual measuring how much a sweep still moves the state, and is not equivalent to
+    the Galerkin error that [`DMRG2`](@ref) reports"
     tol::Float64 = Defaults.tol
 
     "maximal amount of iterations"
@@ -143,8 +145,9 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
         ψ′ = InfiniteMPS(it.state.mps.AR; alg_gauge.tol, alg_gauge.maxiter)
         envs = recalculate!(it.state.envs, ψ′, it.state.operator, ψ′)
         info = AlgorithmInfo(;
-            converged = it.state.ϵ <= alg.tol, normres = it.state.ϵ,
-            truncation = it.state.truncation, numiter = it.state.iter
+            converged = it.state.ϵ <= alg.tol, bondresidual = it.state.ϵ,
+            truncation = alg isa IDMRG2 ? it.state.truncation : nothing,
+            numiter = it.state.iter
         )
         return ψ′, envs, info
     end

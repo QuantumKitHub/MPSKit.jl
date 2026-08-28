@@ -59,7 +59,7 @@ function leading_boundary(
     ψ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
 
     recalculate!(envs, ψ, operator, ψ)
-    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, normres = ϵ, numiter = iter)
+    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, bondresidual = ϵ, numiter = iter)
 end
 
 function leading_boundary(
@@ -201,5 +201,5 @@ function leading_boundary(
     ψ = MultilineMPS(map(identity, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
 
     recalculate!(envs, ψ, operator, ψ)
-    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, normres = ϵ, truncation = acc, numiter = iter)
+    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, bondresidual = ϵ, truncation = acc, numiter = iter)
 end

@@ -282,7 +282,13 @@ The algorithms that solve for a state, particularly [`find_groundstate`](@ref), 
 What limits their accuracy is covered below all the same.
 A single bare number could not do this job, because the quantities involved are genuinely different.
 A convergence measure and a truncation error answer different questions, are not comparable, and not every algorithm produces both.
-The struct therefore names each field and leaves the ones an algorithm does not compute as `nothing`, rather than promising a meaning that isn't there.
+Conversely, two algorithms that both report "a convergence measure" do not necessarily report the same measure.
+[`AlgorithmInfo`](@ref) therefore carries a set of named entries, and each algorithm fills in only the ones it actually computes.
+Entries are keyed by `Symbol`, and read either as a property (`info.max_truncation_error`) or by indexing (`info[:max_truncation_error]`).
+The usual dictionary interface is supported, in particular `haskey`, `keys`, `values` and `get`.
+Nothing is promised that was never measured: asking for an entry an algorithm did not report is an error naming what it did report, rather than a value that was never computed, and the name of the entry says which quantity it is rather than leaving that to prose.
+Display the returned object (or call `keys(info)`) to see what a given algorithm reported.
+The docstrings of every algorithm report these as well.
 
 ```@docs; canonical=false
 AlgorithmInfo
@@ -312,7 +318,7 @@ What differs between algorithms is how these per-factorisation values are summed
 
 !!! warning
     A convergence measure and a truncation error are unrelated quantities.
-    [`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms fill in the `normres` field, which has no truncation interpretation at all, while the truncating algorithms fill in `ϵ_max`/`ϵ_total`, which say nothing about convergence.
+    [`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms fill in a convergence entry (`galerkin`, `gradientnorm`, `bondresidual` or `localchange` depending on the algorithm), which has no truncation interpretation at all, while the truncating algorithms fill in `max_truncation_error`/`total_truncation_error`, which say nothing about convergence.
     An algorithm that does both fills both, and they should not be compared with each other.
 
 #### Aggregating truncation errors
@@ -321,20 +327,20 @@ This applies to every truncating algorithm.
 A sweep of [`DMRG2`](@ref), [`IDMRG2`](@ref), [`TDVP2`](@ref), [`BUG`](@ref) or [`Zipup`](@ref) performs many local factorisations, each with its own ``\epsilon_k``, and there is no single number that answers every question one might ask of them.
 Rather than pick one and hope the caller wants that one, [`AlgorithmInfo`](@ref) carries both aggregations under names that say what they are.
 
-`ϵ_max`, the largest single ``\epsilon_k``, is a worst case.
+`max_truncation_error`, the largest single ``\epsilon_k``, is a worst case.
 The point of it is that it is still a per-factorisation quantity: it is one of the ``\epsilon_k``, not a combination of them, so it does not grow just because the chain is longer or more sweeps or steps were taken.
 That is what makes it the one to watch over the course of a run, or to compare between runs at different sizes.
-An increase in `ϵ_max` means individual bonds are being cut harder, whereas an increase in `ϵ_total` may only mean there were more bonds to cut.
+An increase in `max_truncation_error` means individual bonds are being cut harder, whereas an increase in `total_truncation_error` may only mean there were more bonds to cut.
 This is the same reason the ground state algorithms report a maximum over local gradient norms rather than a total.
-It is also why `ϵ_max` is the one [`time_evolve`](@ref) logs; the ground state algorithms log their `normres` instead, since for them convergence rather than truncation is what the sweep is driving.
+It is also why `max_truncation_error` is the one [`time_evolve`](@ref) logs; the ground state algorithms log their convergence measure instead, since for them convergence rather than truncation is what the sweep is driving.
 
 It is also the field that a `trunc` setting most directly controls, though how directly depends on the strategy:
 
-* [`truncerror`](@extref MatrixAlgebraKit.truncerror) bounds the discarded weight of each factorisation, which is exactly ``\epsilon_k``, so `ϵ_max` should come out at or below the tolerance you set.
-* [`trunctol`](@extref MatrixAlgebraKit.trunctol) bounds each individual singular value instead. Discarding ``k`` of them leaves ``\epsilon_k \le \sqrt{k}\,\texttt{atol}``, so `ϵ_max` lands near the tolerance but is not bounded by it.
-* [`truncrank`](@extref MatrixAlgebraKit.truncrank) fixes the rank and says nothing about magnitudes at all. Here, `ϵ_max` is not something you set but something you read off. It is thus the consequence of that choice of bond dimension.
+* [`truncerror`](@extref MatrixAlgebraKit.truncerror) bounds the discarded weight of each factorisation, which is exactly ``\epsilon_k``, so `max_truncation_error` should come out at or below the tolerance you set.
+* [`trunctol`](@extref MatrixAlgebraKit.trunctol) bounds each individual singular value instead. Discarding ``k`` of them leaves ``\epsilon_k \le \sqrt{k}\,\texttt{atol}``, so `max_truncation_error` lands near the tolerance but is not bounded by it.
+* [`truncrank`](@extref MatrixAlgebraKit.truncrank) fixes the rank and says nothing about magnitudes at all. Here, `max_truncation_error` is not something you set but something you read off. It is thus the consequence of that choice of bond dimension.
 
-`ϵ_total`, all of them combined in quadrature,
+`total_truncation_error`, all of them combined in quadrature,
 
 ```math
 \epsilon_{\text{total}} = \sqrt{\textstyle\sum_k \epsilon_k^2} ,
@@ -347,14 +353,38 @@ The price is that it is extensive: it grows like ``\sqrt{N}`` in the number of t
 
 Whether that running cost is also the error of the *final state* depends on what the algorithm does between truncations, so it is not a property of the aggregation itself.
 It does hold for real-time evolution, which is worked out in [The norm as a record of truncation](@ref).
-A variational sweep, by contrast, renormalises as it goes, so there `ϵ_total` is a diagnostic of how hard the truncation is working rather than a norm deficit.
+A variational sweep, by contrast, renormalises as it goes, so there `total_truncation_error` is a diagnostic of how hard the truncation is working rather than a norm deficit.
 
 Neither field is the distance to the untruncated solution.
 Bounding that gives the linear sum ``\lVert \psi_{\text{untruncated}} - \psi \rVert \le \sum_k \epsilon_k``, which is a third quantity again, and always the largest of the three.
 
+##### Which factorisations are recorded
+
+Both aggregations and the `numtrunc` count are built from the set of per-factorisation errors the algorithm records.
+This set is not the same for every algorithm.
+
+[`IDMRG`](@ref), [`IDMRG2`](@ref), [`TDVP2`](@ref), [`BUG`](@ref) and [`Zipup`](@ref) record every factorisation as it happens.
+Thus, `numtrunc` is a count of factorisations, and a sweep that visits a bond twice contributes two entries.
+
+[`DMRG`](@ref) and [`DMRG2`](@ref) keep one slot per update position instead, overwritten as the sweep passes over it, and record the slots once at the end.
+In these cases, `numtrunc` is the number of positions whose most recent cut discarded something, and it can never exceed `length(psi)` (single-site) or `length(psi) - 1` (two-site), no matter how many sweeps ran.
+A reported `numtrunc` less than the number of bonds means some bonds last discarded a non-zero weight. 
+These are typically the bonds nearest the two ends.
+
+The difference here is made deliberately.
+What a returned variational state still throws away at a given bond is the last cut made there, not the sum of every cut ever made there.
+This means that recording the latest value per position is the more meaningful quantity for a sweeping ground-state algorithm.
+Thus, `numtrunc` counts different things in the two families, and `total_truncation_error` correspondingly sums a different number of terms, so neither is directly comparable between, say, [`DMRG2`](@ref) and [`IDMRG2`](@ref).
+Read `numtrunc` more as "how many recorded errors were non-zero", and less as a tally of SVD calls.
+
+The two error entries also read under the short aliases `ϵ_max` and `ϵ_total`.
+They are only ever stored under the descriptive names, so `keys` and displaying/showing them returns one name per quantity.
+
 ### Ground state accuracy
 
-[`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms report the quantity their `tol` is compared against as `normres`, together with a `converged` flag.
+[`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms report the quantity their `tol` is compared against, together with a `converged` flag.
+Because these are not the same quantity from one algorithm to the next, each is stored under a key that names it (`galerkin`, `gradientnorm`, `bondresidual` or `localchange`).
+[`convergence_measure`](@ref) returns whichever of them is present, for code that only wants the number.
 **In theory:** Convergence is measured by the (norm of the) variational gradient: the component of ``H \lvert \psi \rangle`` that points away from the current state but still lies in the tangent space of the variational manifold.
 It vanishes exactly at a variational fixed point, and its norm is what most of these algorithms report.
 For the sweeping algorithms that norm is known as the Galerkin error.
@@ -363,7 +393,7 @@ For the sweeping algorithms that norm is known as the Galerkin error.
 [`GradientGrassmann`](@ref) instead reports the gradient norm supplied by its optimiser, taken over the whole state at once in the preconditioned Grassmann metric.
 
 [`IDMRG`](@ref) and [`IDMRG2`](@ref) report neither, and this is easy to miss because their `tol` sits alongside the others.
-Their `normres` is a *fixed-point residual*: the change in the center bond tensor from one sweep to the next, ``\lVert C - C_{\text{prev}} \rVert``, with both tensors projected onto their common space when the bond space changed.
+Their `bondresidual` is a *fixed-point residual*: the change in the center bond tensor from one sweep to the next, ``\lVert C - C_{\text{prev}} \rVert``, with both tensors projected onto their common space when the bond space changed.
 It measures how much a sweep still moves the state, which is weaker than measuring how far the state is from stationarity, since an algorithm crawling through a slow region reports a small value for the same reason a converged one does.
 For [`IDMRG2`](@ref) the projection onto the common space also means that a change in bond dimension between sweeps is projected out of the measure rather than counted in it.
 
@@ -374,12 +404,12 @@ The IDMRG residual is not that gradient at all: it certifies that the sweeps hav
 The consequence of these mismatches is that a `tol` tuned for one algorithm is not a `tol` tuned for another, and this is worth keeping in mind when swapping algorithms at a fixed `tol`.
 
 In other words, convergence is only defined relative to the manifold you are optimising over.
-A single-site algorithm at a fixed bond dimension can drive its `normres` to machine precision and still be far from the true ground state, because the error that remains is the bond dimension itself, which no amount of further sweeping can address.
-A small `normres` certifies a fixed point, not an accurate state.
+A single-site algorithm at a fixed bond dimension can drive its convergence measure to machine precision and still be far from the true ground state, because the error that remains is the bond dimension itself, which no amount of further sweeping can address.
+A small convergence measure certifies a fixed point, not an accurate state.
 Growing the bond dimension is the job of the two-site algorithms ([`DMRG2`](@ref), [`IDMRG2`](@ref)) or of a bond expansion ([`DMRG`](@ref) with an `alg_expand`, or an expanding `alg_gauge` such as [`DMRG3S`](@ref)); see also [`changebonds`](@ref).
 
 Once an algorithm does truncate, the two error notions interact.
-The Galerkin error cannot fall below the level set by the weight being discarded each sweep, so a truncating scheme converges once `normres` reaches the truncation error rather than the (unreachable) bare `tol`.
+The Galerkin error cannot fall below the level set by the weight being discarded each sweep, so a truncating scheme converges once `galerkin` reaches the truncation error rather than the (unreachable) bare `tol`.
 [`DMRG`](@ref)/[`DMRG2`](@ref) account for this: their stopping test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to the plain `ϵ ≤ tol` when nothing is truncated.
 
 Neither measure is an error bar on an observable, and no cheap substitute for one exists.
@@ -396,7 +426,7 @@ Three sources behave differently and only one of them is reported.
 
 * **Truncation error.**
   Whenever a bond is cut back down, the discarded singular values are lost from the state.
-  [`timestep`](@ref) and [`time_evolve`](@ref) report this through the `ϵ_max`/`ϵ_total` fields of the [`AlgorithmInfo`](@ref) they return.
+  [`timestep`](@ref) and [`time_evolve`](@ref) report this through the `max_truncation_error`/`total_truncation_error` entries of the [`AlgorithmInfo`](@ref) they return.
   It is the error you control through the algorithm's `trunc`, and the only one that is free to compute, since the truncating SVD produces it anyway.
   It is non-zero for [`TDVP2`](@ref), for [`BUG`](@ref) with a `trunc`, and for [`TDVP`](@ref) with a bond expansion.
   Plain single-site [`TDVP`](@ref) runs at fixed bond dimension and reports exactly `0`.
@@ -427,7 +457,7 @@ The practical consequence is that below some `dt` the total error stops improvin
 
 #### The norm as a record of truncation
 
-How the per-factorisation errors are aggregated into `ϵ_max`/`ϵ_total` is described under [Aggregating truncation errors](@ref); what follows is specific to time evolution.
+How the per-factorisation errors are aggregated into `max_truncation_error`/`total_truncation_error` is described under [Aggregating truncation errors](@ref); what follows is specific to time evolution.
 
 By default none of the time evolution algorithms renormalize (`normalize = false`), which is deliberate.
 In real time the local exponentials are unitary, so truncation is the only thing that changes the norm and it becomes a running record of what truncation has cost,
@@ -436,7 +466,7 @@ In real time the local exponentials are unitary, so truncation is the only thing
 \lVert \psi \rVert^2 = \lVert \psi_0 \rVert^2 - \epsilon_{\text{total}}^2 .
 ```
 
-The reported `ϵ_total` is the norm deficit, and this composes across steps.
+The reported `total_truncation_error` is the norm deficit, and this composes across steps.
 This follows from the following two facts put together, one per half of a local update.
 1) An SVD truncation is an orthogonal projection onto the kept Schmidt vectors and is 2-norm optimal at that rank ([Schollwöck](@cite schollwoeck2011)), so the kept and discarded parts are orthogonal.
 By Pythagoras the squared norm drops by exactly the discarded weight, the usual way of quantifying truncation during a time evolution ([Paeckel et al.](@cite paeckel2019)).
@@ -467,7 +497,7 @@ They are worth knowing about, because the dominant one is usually not the one th
 * **Inherited ground state error.**
   Every method here builds on a ground state you supply and treats it as exact.
   Its error propagates straight into the gap, and since a gap is a difference of two large energies, it is typically the limiting factor.
-  A well-converged ground state (in the sense of `normres` and bond dimension) is necessary for a meaningful excitation calculation.
+  A well-converged ground state (in the sense of its convergence measure and bond dimension) is necessary for a meaningful excitation calculation.
 
 * **Ansatz limitation.**
   [`QuasiparticleAnsatz`](@ref) varies over the single-quasiparticle tangent space on top of a fixed ground state.

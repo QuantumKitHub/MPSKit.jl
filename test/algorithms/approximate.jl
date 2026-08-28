@@ -121,7 +121,7 @@ end
             got, info = approximate((O, ψ), Zipup(; trunc = trunc′, left_to_right))
             @test norm(ref - got) / norm(ref) < 1.0e-10
             @test info.ϵ_max < 1.0e-10
-            @test isnothing(info.converged) && isnothing(info.normres)
+            @test !haskey(info, :converged) && isnothing(convergence_measure(info))
         end
 
         @test norm(ψ - ψ_copy) < 1.0e-12

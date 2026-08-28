@@ -60,7 +60,7 @@ function approximate!(
     copy!(ψ, ψ′) # ensure output destination is unchanged
 
     recalculate!(envs, ψ, toapprox)
-    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, normres = ϵ, numiter = iter)
+    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, bondresidual = ϵ, numiter = iter)
 end
 
 function approximate!(
@@ -198,6 +198,6 @@ function approximate!(
     copy!(ψ, ψ′) # ensure output destination is unchanged
 
     recalculate!(envs, ψ, toapprox)
-    info = AlgorithmInfo(; converged = ϵ <= alg.tol, normres = ϵ, truncation = acc, numiter = iter)
+    info = AlgorithmInfo(; converged = ϵ <= alg.tol, bondresidual = ϵ, truncation = acc, numiter = iter)
     return ψ, envs, info
 end

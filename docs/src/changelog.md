@@ -46,8 +46,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   `(ψ, envs, info)` instead of `(ψ, envs, ϵ)`, `Zipup` returns `(ψ, info)`, and
   `timestep`/`timestep!`/`time_evolve`/`time_evolve!` gain the same third value where they
   previously returned none. This was motivated by the fact that a single number could not
-  carry what these algorithms actually produce. To migrate, replace `ϵ` with `info.normres`
-  for convergence measures and `info.ϵ_max` for truncation errors.([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+  carry what these algorithms actually produce. To migrate, replace `ϵ` with
+  `convergence_measure(info)` for convergence measures and `info.max_truncation_error` or `info.ϵ_max`
+  for truncation errors. See the updated docs or `AlgorithmInfo`'s docstring for more information.
+  ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - The meaning of every reported error and tolerance is now documented, and the manual has a new
   [Errors and accuracy](@ref) section covering ground states, time evolution and excitations
   separately. Each is written as what the quantity is in principle, what MPSKit actually computes,
