@@ -278,15 +278,14 @@ left_virtualspace(H_ising, 1), right_virtualspace(H_ising, 1), physicalspace(H_i
 
 A [`MultilineMPO`](@ref) is a stack of MPO lines making up the rows of a two-dimensional tensor network.
 This is typically the row-to-row or column-to-column transfer matrix of a 2D classical partition function, or a boundary MPO in the context of PEPS.
-See the `MultilineMPS` section of the [states](@ref um_states) page for the row-shift convention: row `i` of the operator maps row `i` of the network onto row `i + 1`.
+See the `MultilineMPS` section of the [states](@ref um_states) page for the row-shift convention.
 
 ```@example operators
 mpo_multi = MultilineMPO([mpo, mpo])
 ```
 
-Only `InfiniteMPO` and `FiniteMPO` lines are supported; neither Hamiltonians nor finite MPOs are allowed currently.
-This is enforced by the constructors rather than by the type itself, so `MultilineMPO([H, H])` for a Hamiltonian `H` throws a `MethodError` right at the construction site, instead of producing an object that only fails once used.
-That restriction is deliberate: a `MultilineMPO` is a statistical mechanical transfer operator, and the quantity extracted from it is a [`dominant_eigenvalue`](@ref).
+The type restricts lines to `InfiniteMPO` and `FiniteMPO`, since a `MultilineMPO` is a statistical mechanical transfer operator.
+The quantity extracted from it is a [`dominant_eigenvalue`](@ref) rather than an energy.
 Finite lines are accepted so that finite networks can be built and inspected, but no algorithm supports them yet.
 
 Applying a `MultilineMPO` pushes an [`InfiniteMPS`](@ref) through every row in turn, advancing the boundary by one full period of the network:

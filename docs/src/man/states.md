@@ -161,59 +161,42 @@ Therefore, in MPSKit they are represented by [`MultilineMPS`](@ref), which are s
 state = MultilineMPS(fill(infinite_state, 2))
 ```
 
-They offer some convenience functionality for using cartesian indexing (row - column):
+Properties are accessed with cartesian (row, column) indexing:
 
-You can access properties by calling
 ```@example states
-row = 2
-col = 2
-al = state.AL[row, col];
+al = state.AL[2, 1];
 ```
 
 ### The row-shift convention
 
-The row direction and the column direction of a `MultilineMPS` play different roles.
-Within a row, a `MultilineMPS` behaves exactly like the `InfiniteMPS` it repeats: columns are periodic, and `state.AL[row, col]`, `state.AR[row, col]`, `state.C[row, col]` and `state.AC[row, col]` behave exactly as they would for `state[row]::InfiniteMPS`.
+Row `i` of a [`MultilineMPO`](@ref) maps row `i` of the network onto row `i + 1`.
+`environments`, the derivative operators and [`dominant_eigenvalue`](@ref) all follow it, pairing `state[i + 1]` as the bra against `O[i]` acting on the ket `state[i]`.
+Within a row, `state.AL[i, j]` and friends behave exactly as they would for `state[i]::InfiniteMPS`.
 
-The row direction is the direction along which a transfer matrix, represented as a [`MultilineMPO`](@ref), is applied.
-By convention, row `i` of a `MultilineMPO` maps row `i` of the network onto row `i + 1`, so applying a single row shifts the boundary up by one.
-
-Note that the bra and the ket are therefore different lines.
-A `MultilineMPS` is consequently not a state whose expectation value one takes.
-This is why [`expectation_value`](@ref) has no method for a `MultilineMPS`/`MultilineMPO` pair, and why the quantity such an iteration converges to is a [`dominant_eigenvalue`](@ref).
+Bra and ket are therefore different lines, so a `MultilineMPS` is not a state whose expectation value makes sense to take.
 
 ### One fixed point, many lines
 
-It is worth being explicit about what the extra rows are doing, because it is easy to read a `MultilineMPS` as a stack of independent states.
+It is worth mentioning explicitly what the point of the extra rows is, since it is easy to read a `MultilineMPS` as a stack of independent states.
 It is not.
-However many rows the operator has, the network has exactly **one** boundary fixed point: the MPS that comes back to itself after being pushed through all of the rows.
-
+However many rows the operator has, the network has exactly one boundary fixed point, namely the MPS that returns to itself after being pushed through all of the rows.
 The lines of a `MultilineMPS` are bookkeeping for that single problem.
-Line `i + 1` holds the boundary after row `i` has been applied to line `i`, so the lines are successive stages of one boundary travelling through the network rather than separate solutions.
-What the circular row shifting buys is that `leading_boundary` can cut the one eigenvalue problem into `nrows` smaller coupled subproblems (one per row) and solve them together, instead of contracting all rows into a single operator with a bond dimension that is the product of theirs.
+Line `i + 1` is the boundary after row `i` has been applied, so this lets [`leading_boundary`](@ref) cut it into `nrows` coupled subproblems instead of contracting every row into one operator.
+Each subproblem contributes a partial factor, and only their product is the eigenvalue of the fixed point.
+Independently of that, the `ncols` sites of the unit cell contribute factors of their own on top.
+[`dominant_eigenvalue`](@ref) accumulates both.
 
-Each subproblem contributes its own partial factor, and the dominant eigenvalue of the actual fixed point is the **product** of all of them.
-Independently of that, the boundary may have a non-trivial unit cell along the chain, in which case each of the `ncols` sites carries its own factor too, and those multiply as well.
-[`dominant_eigenvalue`](@ref) accumulates both directions: it returns the product over every site `(i, j)` of the `(nrows, ncols)` unit cell, which is the eigenvalue of the true fixed point for one unit cell of the network.
-
-Applying an operator therefore takes an ordinary [`InfiniteMPS`](@ref) and pushes it through every row in turn, advancing it by one full period of the network:
+Applying an operator therefore acts on an ordinary [`InfiniteMPS`](@ref), advancing it by one full period:
 
 ```julia
 O * ψ == O[end] * (… * (O[2] * (O[1] * ψ)))
 ```
 
-### What is currently supported
-
-Algorithms only support lines that are themselves infinite: a `MultilineMPS` used with `leading_boundary` and friends is built out of [`InfiniteMPS`](@ref) lines.
-[`FiniteMPS`](@ref) lines are accepted by the type and by the vector constructor, so that finite multiline boundaries can be built and inspected.
-However, no algorithm handles them yet and they will fail somewhere further down.
-
 ### Subtleties
 
-- **`size` vs. iteration:** `size(state)` returns `(nrows, ncols)`, describing the lattice shape.
-Iterating over a `MultilineMPS` (or indexing it with a single integer, `state[i]`) instead yields the individual MPS *lines*, so `length(state) == nrows`, not `nrows * ncols`.
-Code that wants to operate line-by-line should use `state[i]`/`parent(state)`, while code that wants the lattice shape should use `size`.
-- **Norms and inner products:** `dot`/`norm` sum the contribution of every row, so a `MultilineMPS` whose individual rows are each normalized to 1 does *not* itself have norm 1: `norm(state) == sqrt(nrows)` for `nrows` identical normalized rows.
+- **`size` vs. iteration:** `size(state)` is the `(nrows, ncols)` lattice shape, while `length`, iteration and `state[i]` refer to the lines, so `length(state) == nrows`. See [`Multiline`](@ref).
+- **Norms:** `dot`/`norm` sum over rows, so `norm(state) == sqrt(nrows)` for `nrows` normalized rows.
+- **Finite lines** are accepted by the type and the vector constructor so that finite networks can be built and inspected, but no algorithm supports them yet.
 
 These objects are also used extensively in the context of [PEPSKit.jl](https://github.com/QuantumKitHub/PEPSKit.jl).
 
