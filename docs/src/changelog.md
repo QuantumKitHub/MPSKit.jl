@@ -92,6 +92,14 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Removed
 
 - Support for TimerOutputs 0.5.
+- `expectation_value(::MultilineMPS, ::MultilineMPO, envs...)` fallback method, which silently
+  computed a meaningless value (`prod` instead of `sum`, no row shift, `envs` ignored) for any
+  `MultilineMPO` line type not covered by the guarded method. Most notably this prevents
+  a fallback for `InfiniteMPOHamiltonian`, a legal but never-meaningful `Multiline` line type.
+- `expectation_value` for a `MultilineMPS`/`MultilineMPO` pair entirely, replaced by
+  `dominant_eigenvalue`.
+- `*(::MultilineMPO, ::MultilineMPS)` and `*(::MultilineMPO, ::MultilineMPO)`, as these
+  were not meaningful operations. Neither method had ever been callable previously.
 
 ### Fixed
 
