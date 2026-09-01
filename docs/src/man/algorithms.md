@@ -22,7 +22,6 @@ Many of these algorithms have different advantages and disadvantages, and figuri
 Here, we enumerate some of their properties in hopes of pointing you in the right direction. For convenience, the full list of algorithms is:
 
 - [DMRG](@ref)
-- [DMRG2](@ref)
 - [VUMPS](@ref)
 - [Gradient descent](@ref)
 - [TDVP](@ref)
@@ -327,6 +326,14 @@ use GradientGrassmann.
 
 ```@docs; canonical=false
 leading_boundary
+```
+
+The associated eigenvalue, i.e. the partition function per unit cell, is obtained with [`dominant_eigenvalue`](@ref).
+This is deliberately not `expectation_value`: the boundary contracts against a different line than the one the operator acts on, so it is not an overlap.
+For a single-line `InfiniteMPS`/`InfiniteMPO` pair the two coincide and `expectation_value` forwards accordingly.
+
+```@docs; canonical=false
+dominant_eigenvalue
 ```
 
 ## `approximate`

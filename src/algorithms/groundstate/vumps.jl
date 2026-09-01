@@ -75,21 +75,24 @@ function dominant_eigsolve(
     state = VUMPSState(mps, operator, envs, iter, ϵ, which, timeroutput)
     it = IterativeSolver(alg, state)
 
+    # both `find_groundstate` and `leading_boundary` go here
+    objective = mps isa MultilineMPS ? dominant_eigenvalue : expectation_value
+
     result = LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, sum(expectation_value(mps, operator, envs)))
+        @infov 2 loginit!(log, ϵ, objective(mps, operator, envs))
 
         for (mps, envs, ϵ) in it
             if ϵ ≤ alg.tol
                 @infov 4 TimerReport(timeroutput)
-                @infov 2 logfinish!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
+                @infov 2 logfinish!(log, it.iter, ϵ, objective(mps, operator, envs))
                 return mps, envs, ϵ
             end
             if it.iter ≥ alg.maxiter
                 @infov 4 TimerReport(timeroutput)
-                @warnv 1 logcancel!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
+                @warnv 1 logcancel!(log, it.iter, ϵ, objective(mps, operator, envs))
                 return mps, envs, ϵ
             end
-            @infov 3 logiter!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
+            @infov 3 logiter!(log, it.iter, ϵ, objective(mps, operator, envs))
         end
 
         # this should never be reached
