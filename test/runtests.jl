@@ -23,7 +23,7 @@ using CUDA, cuTENSOR
 using AMDGPU
 
 AMDGPU.functional() ||
-    filter!(!(startswith("gpu/amd") ∘ first), testsuite)
+    filter!(!(startswith("gpu/rocm") ∘ first), testsuite)
 
 
 # parse arguments

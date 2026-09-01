@@ -20,7 +20,7 @@ rightenv(envs::InfiniteEnvironments, site::Int, state) = envs.GRs[site]
 
 function environments(
         below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above;
-        timeroutput::TimerOutput = DISABLED_TIMER, kwargs...
+        timeroutput = NoTimerOutput(), kwargs...
     )
     alg = environment_alg(below, operator, above; kwargs...)
     return environments(below, operator, above, alg; timeroutput)
@@ -28,7 +28,7 @@ end
 function environments(
         below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above,
         alg;
-        timeroutput::TimerOutput = DISABLED_TIMER
+        timeroutput = NoTimerOutput()
     )
     GLs, GRs = initialize_environments(below, operator, above)
     envs = InfiniteEnvironments(GLs, GRs)
@@ -58,7 +58,7 @@ end
 function recalculate!(
         envs::InfiniteEnvironments, below,
         operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above = below;
-        timeroutput::TimerOutput = DISABLED_TIMER, kwargs...
+        timeroutput = NoTimerOutput(), kwargs...
     )
     alg = environment_alg(below, operator, above; kwargs...)
     return recalculate!(envs, below, operator, above, alg; timeroutput)
@@ -84,7 +84,7 @@ function recalculate!(
         envs::InfiniteEnvironments, below::InfiniteMPS,
         operator::Union{InfiniteMPO, InfiniteMPOHamiltonian},
         above::InfiniteMPS, alg;
-        timeroutput::TimerOutput = DISABLED_TIMER,
+        timeroutput = NoTimerOutput(),
     )
     if !issamespace(envs, below, operator, above)
         # TODO: in-place initialization?
@@ -93,17 +93,17 @@ function recalculate!(
         copy!(envs.GRs, GRs)
     end
 
-    tree_point = String[section.name for section in timeroutput.timer_stack]
+    tree_point = timer_treepoint(timeroutput)
     @sync begin
         @spawn begin
-            sub_timeroutput = TimerOutput()
+            sub_timeroutput = subtimer(timeroutput)
             @timeit sub_timeroutput "left_envs" compute_leftenvs!(envs, below, operator, above, alg)
-            timeroutput.enabled && merge!(timeroutput, sub_timeroutput; tree_point)
+            merge_subtimer!(timeroutput, sub_timeroutput; tree_point)
         end
         @spawn begin
-            sub_timeroutput = TimerOutput()
+            sub_timeroutput = subtimer(timeroutput)
             @timeit sub_timeroutput "right_envs" compute_rightenvs!(envs, below, operator, above, alg)
-            timeroutput.enabled && merge!(timeroutput, sub_timeroutput; tree_point)
+            merge_subtimer!(timeroutput, sub_timeroutput; tree_point)
         end
     end
     normalize!(envs, below, operator, above)
