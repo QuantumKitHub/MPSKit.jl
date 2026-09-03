@@ -100,6 +100,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Performance
 
+- Reorganised the test suite to reduce CI wall time, as well as added the`--fast` test flag
+  to test fewer sector and scalar types.([#517](https://github.com/QuantumKitHub/MPSKit.jl/pull/517))
+
 ## [0.13.11](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.10...v0.13.11) - 2026-05-04
 
 ### Added
