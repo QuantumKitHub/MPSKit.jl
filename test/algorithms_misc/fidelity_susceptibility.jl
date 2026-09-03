@@ -10,7 +10,7 @@ using MPSKit
 using TensorKit
 using TensorKit: ℙ
 
-@testset "fidelity susceptibility" begin # contains a finite-infinite comparison
+@testset "fidelity susceptibility" begin
     X = TensorMap(ComplexF64[0 1; 1 0], ℂ^2 ← ℂ^2)
     Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2 ← ℂ^2)
 

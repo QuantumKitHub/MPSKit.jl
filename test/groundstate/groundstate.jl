@@ -1,7 +1,7 @@
 println("
-------------------------------
-|   Groundstate Algorithms   |
-------------------------------
+-----------------------------
+|   Groundstate Algorithms  |
+-----------------------------
 ")
 
 using .TestSetup
@@ -194,71 +194,6 @@ verbosity_conv = 1
     end
 end
 
-@testset "LazySum FiniteMPS ground state" verbose = true begin
-    tol = 1.0e-8
-    D = 15
-    atol = 1.0e-2
-    L = 10
-
-    # test using XXZ model, Δ > 1 is gapped
-    spin = 1
-    local_operators = [S_x_S_x(; spin), S_y_S_y(; spin), 1.7 * S_z_S_z(; spin)]
-    Pspace = space(local_operators[1], 1)
-    lattice = fill(Pspace, L)
-
-    mpo_hamiltonians = map(local_operators) do O
-        return FiniteMPOHamiltonian(lattice, (i, i + 1) => O for i in 1:(L - 1))
-    end
-
-    H_lazy = LazySum(mpo_hamiltonians)
-    H = sum(H_lazy)
-
-    ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℂ^3, ℂ^D)
-    ψ₀, = find_groundstate(ψ₀, H; tol, verbosity = 1)
-
-    @testset "DMRG" begin
-        # test logging passes
-        ψ, envs, δ = find_groundstate(
-            ψ₀, H_lazy, DMRG(; tol, verbosity = verbosity_full, maxiter = 1)
-        )
-
-        # compare states
-        alg = DMRG(; tol, verbosity = verbosity_conv)
-        ψ, envs, δ = find_groundstate(ψ, H_lazy, alg)
-
-        @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
-    end
-
-    @testset "DMRG2" begin
-        # test logging passes
-        trunc = truncrank(floor(Int, D * 1.5))
-        ψ, envs, δ = find_groundstate(
-            ψ₀, H_lazy, DMRG2(; tol, verbosity = verbosity_full, maxiter = 1, trunc)
-        )
-
-        # compare states
-        alg = DMRG2(; tol, verbosity = verbosity_conv, trunc)
-        ψ, = find_groundstate(ψ₀, H, alg)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
-
-        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
-    end
-
-    @testset "GradientGrassmann" begin
-        # test logging passes
-        ψ, envs, δ = find_groundstate(
-            ψ₀, H_lazy, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
-        )
-
-        # compare states
-        alg = GradientGrassmann(; tol, verbosity = verbosity_conv)
-        ψ, = find_groundstate(ψ₀, H, alg)
-        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
-
-        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
-    end
-end
-
 @testset "InfiniteMPS ground state" verbose = true begin
     tol = 1.0e-8
     g = 4.0
@@ -373,6 +308,71 @@ end
         @test sum(δ) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
+    end
+end
+
+@testset "LazySum FiniteMPS ground state" verbose = true begin
+    tol = 1.0e-8
+    D = 15
+    atol = 1.0e-2
+    L = 10
+
+    # test using XXZ model, Δ > 1 is gapped
+    spin = 1
+    local_operators = [S_x_S_x(; spin), S_y_S_y(; spin), 1.7 * S_z_S_z(; spin)]
+    Pspace = space(local_operators[1], 1)
+    lattice = fill(Pspace, L)
+
+    mpo_hamiltonians = map(local_operators) do O
+        return FiniteMPOHamiltonian(lattice, (i, i + 1) => O for i in 1:(L - 1))
+    end
+
+    H_lazy = LazySum(mpo_hamiltonians)
+    H = sum(H_lazy)
+
+    ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℂ^3, ℂ^D)
+    ψ₀, = find_groundstate(ψ₀, H; tol, verbosity = 1)
+
+    @testset "DMRG" begin
+        # test logging passes
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H_lazy, DMRG(; tol, verbosity = verbosity_full, maxiter = 1)
+        )
+
+        # compare states
+        alg = DMRG(; tol, verbosity = verbosity_conv)
+        ψ, envs, δ = find_groundstate(ψ, H_lazy, alg)
+
+        @test abs(dot(ψ₀, ψ)) ≈ 1 atol = atol
+    end
+
+    @testset "DMRG2" begin
+        # test logging passes
+        trunc = truncrank(floor(Int, D * 1.5))
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H_lazy, DMRG2(; tol, verbosity = verbosity_full, maxiter = 1, trunc)
+        )
+
+        # compare states
+        alg = DMRG2(; tol, verbosity = verbosity_conv, trunc)
+        ψ, = find_groundstate(ψ₀, H, alg)
+        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
+
+        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
+    end
+
+    @testset "GradientGrassmann" begin
+        # test logging passes
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H_lazy, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
+        )
+
+        # compare states
+        alg = GradientGrassmann(; tol, verbosity = verbosity_conv)
+        ψ, = find_groundstate(ψ₀, H, alg)
+        ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
+
+        @test abs(dot(ψ₀, ψ_lazy)) ≈ 1 atol = atol
     end
 end
 

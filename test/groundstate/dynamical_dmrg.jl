@@ -1,6 +1,6 @@
 println("
 -----------------------------
-|   Dynamical DMRG tests    |
+|   Dynamical DMRG tests     |
 -----------------------------
 ")
 
@@ -32,6 +32,7 @@ verbosity_conv = 1
         @test data ≈ predicted atol = 1.0e-8
     end
 end
+
 
 @testset "Dynamical DMRG WindowMPS" verbose = true begin
     N = 20

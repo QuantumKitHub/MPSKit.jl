@@ -1,7 +1,7 @@
 println("
---------------------------------------
-|   LazySum / Operators              |
---------------------------------------
+-----------------------------
+|   LazySum / Operators      |
+-----------------------------
 ")
 
 using .TestSetup
@@ -177,15 +177,6 @@ end
         end
         @test summedhct(v, t) ≈ sum3
     end
-end
-
-@testset "LazySum of (effective) Hamiltonian $(sectortype(pspace)) (infinite)" for (pspace, Dspace) in
-    zip(pspaces, vspaces)
-    Os = map(1:3) do i
-        O = rand(ComplexF64, pspace^i, pspace^i)
-        return O += O'
-    end
-    fs = [t -> 3t, 2, 1]
 
     @testset "LazySum InfiniteMPOHamiltonian" begin
         ψ = repeat(InfiniteMPS(pspace, Dspace), 2)
