@@ -70,10 +70,14 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `correlator` now throws an `ArgumentError` when the sites are not ordered as `i < j`.
   Previously such a call only logged an `@error` and then continued into a contraction that is
   not the requested correlator. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+- TimerOutputs 1.x is now required. The timing tables printed at `verbosity > 3` use the new
+  layout (tree guides, heat bars) and additionally report per-section GC time.
 
 ### Deprecated
 
 ### Removed
+
+- Support for TimerOutputs 0.5.
 
 ### Fixed
 
@@ -97,6 +101,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   tensor, so it returned `O * O` on twice the physical space instead of `O`.
   ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
 - `leading_boundary` with `IDMRG2` didn't update the left edge of the AC tensor, which could result in space mismatches depending on the truncation scheme. This is corrected for in ([#516](https://github.com/QuantumKitHub/MPSKit.jl/pull/516)).
+- Fix hardcoding of number of physical spaces in the `changebonds` implementations for
+  `FiniteMPS`, enabling its use for systems with composite physical spaces
+  ([#514](https://github.com/QuantumKitHub/MPSKit.jl/pull/514))
 
 ### Performance
 

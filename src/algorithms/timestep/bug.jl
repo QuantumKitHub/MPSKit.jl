@@ -163,7 +163,7 @@ function timestep!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::BUG,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         imaginary_evolution::Bool = false, normalize::Bool = false,
-        timeroutput::TimerOutput = DISABLED_TIMER
+        timeroutput = NoTimerOutput()
     )
     L = length(ψ)
     h = dt / 2
