@@ -151,7 +151,28 @@ fast_tests && (density_matrix_spacelist = density_matrix_spacelist[1:1])
     # SvdCut truncates the enlarged bond back down, leaving a normalized state
     ψ_tr = changebonds(ψ_re, SvdCut(; trunc = truncrank(dim(Dspace))))
     @test maxbond(ψ_tr) < maxbond(ψ_re)
-    @test abs(dot(ψ_tr, ψ_tr)) ≈ 1 atol = 1.0e-8
+    @test abs(dot(ψ, ψ_tr)) ≈ 1 atol = 1.0e-8
+
+    # use random time-evolution MPO to test operator-based expanders
+    pspace = pcomp[1]
+    nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
+    nn += nn'
+    H = FiniteMPOHamiltonian(fill(pspace, L), (i, i + 1) => nn for i in 1:(L - 1))
+    beta = 0.1
+    O = make_time_mpo(H, beta, TaylorCluster(; N = 2); imaginary_evolution = true)
+
+    ψ_oe, _ = changebonds(
+        ψ, O, OptimalExpand(; trunc = truncrank(dim(Dspace) * 2))
+    )
+    @test maxbond(ψ_oe) > maxbond(ψ)
+    @test dot(ψ, ψ_oe) ≈ 1 atol = 1.0e-8
+
+    ψ_se, _ = changebonds(
+        ψ, O,
+        SketchedExpand(; trunc = truncrank(dim(Dspace) * 2), oversampling = 4)
+    )
+    @test maxbond(ψ_se) > maxbond(ψ)
+    @test dot(ψ, ψ_se) ≈ 1 atol = 1.0e-8
 end
 
 @testset "MultilineMPS $(spacetype(pspace))" for (pspace, Dspace) in spacelist
