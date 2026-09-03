@@ -22,9 +22,6 @@ function Makie.plot!(ep::EntanglementPlot)
     site = ep.site[]
     margin = ep.sector_margin[]
 
-    (isa(mps, FiniteMPS) && (site == 0 || site > length(mps))) &&
-        throw(ArgumentError("Invalid site $site for the given mps."))
-
     spectra = entanglement_spectrum(mps, site)
 
     sectors = sectortype(mps)[]
@@ -54,7 +51,7 @@ function Makie.plot!(ep::EntanglementPlot)
     ax.title = L"\text{Entanglement Spectrum}"
     ax.titlesize = 24
 
-    ax.xlabel = latexstring("\$\\chi\$ = $(round(Int, dim(left_virtualspace(mps, site))))") # still want this?
+    ax.xlabel = latexstring("\$\\chi\$ = $(dim(MPSKit._firstspace(mps.C[site])))") # still want this?
     ax.xlabelsize = 24
     ax.xticks = (1:length(sectors), ep.sector_formatter[].(sectors))
     ax.xticklabelsize = 16
@@ -110,12 +107,19 @@ function Makie.plot!(tp::TransferPlot)
     #TODO: consider radial plot
     mps = tp.mps[]
     below = tp.below[] === nothing ? mps : tp.below[]
-    sectors = tp.sectors[] === nothing ? [leftunit(mps)] : tp.sectors[]
+    sectors = tp.sectors[]
     transferkwargs = NamedTuple( # weird convert thing
         k => (v isa Observable ? v[] : v) for (k, v) in pairs(tp.transferkwargs[])
     )
     thetaorigin = tp.thetaorigin[]
     sector_formatter = tp.sector_formatter[]
+
+    kwargs = transferkwargs
+    if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
+        howmany = Dict(c => get(kwargs, :howmany, 20) for c in sectors)
+        kwargs = (; kwargs..., howmany)
+    end
+    spectra = transfer_spectrum(mps, below; kwargs...)
 
     ax = Makie.current_axis()
     ax.title = L"\text{Transfer Spectrum}"
@@ -137,8 +141,11 @@ function Makie.plot!(tp::TransferPlot)
     ax.bottomspinevisible = true
     ax.topspinevisible = false
 
-    for (i, sector) in enumerate(sectors)
-        spectrum = transfer_spectrum(mps; below = below, sector = sector, transferkwargs...)
+    plotted_sectors = sectortype(mps)[]
+    for (sector, spectrum) in pairs(spectra)
+        sectors === nothing || sector in sectors || continue
+        push!(plotted_sectors, sector)
+        i = length(plotted_sectors)
         θ = mod2pi.(angle.(spectrum) .+ thetaorigin) .- thetaorigin
         r = abs.(spectrum)
         scatter!(tp, θ, r; label = sector_formatter(sector), color = JLCOLORS[mod1(i, length(JLCOLORS))])
@@ -146,7 +153,7 @@ function Makie.plot!(tp::TransferPlot)
 
     xlims!(ax, thetaorigin - 0.1, thetaorigin + 2π + 0.1)
     ylims!(ax, nothing, 1.05)
-    Legend(Makie.current_figure()[1, 1], tp.plots, [sector_formatter(s) for s in sectors]; tellwidth = false, halign = :center, valign = :top)
+    Legend(Makie.current_figure()[1, 1], tp.plots, [sector_formatter(s) for s in plotted_sectors]; tellwidth = false, halign = :center, valign = :top)
     return tp
 end
 

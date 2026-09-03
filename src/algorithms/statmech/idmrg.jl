@@ -1,6 +1,7 @@
 function leading_boundary(
-        ψ::MultilineMPS, operator, alg::IDMRG, envs = environments(ψ, operator)
+        ψ::MultilineMPS, operator, alg::IDMRG, envs = environments(ψ, operator, ψ)
     )
+    allocator = default_allocator(ψ, SerialScheduler())
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
     local iter
@@ -8,12 +9,12 @@ function leading_boundary(
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, operator, envs))
         for outer iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
+            alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = ϵ)
             C_current = ψ.C[:, 0]
 
             # left to right sweep
             for col in 1:size(ψ, 2)
-                Hac = AC_hamiltonian(col, ψ, operator, ψ, envs)
+                Hac = AC_hamiltonian(col, ψ, operator, ψ, envs; alg.backend, allocator)
                 _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
@@ -27,7 +28,7 @@ function leading_boundary(
 
             # right to left sweep
             for col in size(ψ, 2):-1:1
-                Hac = AC_hamiltonian(col, ψ, operator, ψ, envs)
+                Hac = AC_hamiltonian(col, ψ, operator, ψ, envs; alg.backend, allocator)
                 _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
@@ -54,7 +55,7 @@ function leading_boundary(
         end
     end
 
-    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    alg_gauge = adapt_solver(alg.alg_gauge; iter, g_global = ϵ)
     ψ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
 
     recalculate!(envs, ψ, operator, ψ)
@@ -62,8 +63,9 @@ function leading_boundary(
 end
 
 function leading_boundary(
-        ψ::MultilineMPS, operator, alg::IDMRG2, envs = environments(ψ, operator)
+        ψ::MultilineMPS, operator, alg::IDMRG2, envs = environments(ψ, operator, ψ)
     )
+    allocator = default_allocator(ψ, SerialScheduler())
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
@@ -72,17 +74,17 @@ function leading_boundary(
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
-            alg_eigsolve = updatetol(alg.alg_eigsolve, iter, ϵ)
+            alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = ϵ)
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
             for site in 1:(size(ψ, 2) - 1)
                 ac2 = AC2(ψ, site; kind = :ACAR)
-                h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
+                h = AC2_hamiltonian(site, ψ, operator, ψ, envs; alg.backend, allocator)
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -102,11 +104,11 @@ function leading_boundary(
             ψ.AL[:, end] .= ψ.AC[:, end] ./ ψ.C[:, end]
             ψ.AC[:, 1] .= _mul_tail.(ψ.AL[:, 1], ψ.C[:, 1])
             ac2 = AC2(ψ, site; kind = :ALAC)
-            h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
+            h = AC2_hamiltonian(site, ψ, operator, ψ, envs; alg.backend, allocator)
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, site] = al
@@ -127,11 +129,11 @@ function leading_boundary(
             # sweep from right to left
             for site in reverse(1:(size(ψ, 2) - 1))
                 ac2 = AC2(ψ, site; kind = :ALAC)
-                h = AC2_hamiltonian(site, ψ, operator, ψ, envs)
+                h = AC2_hamiltonian(site, ψ, operator, ψ, envs; alg.backend, allocator)
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
-                    al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -147,13 +149,14 @@ function leading_boundary(
 
             # update the edge
             ψ.AC[:, end] .= _mul_front.(ψ.C[:, end - 1], ψ.AR[:, end])
+            ψ.AC[:, 1] .= _mul_tail.(ψ.AL[:, 1], ψ.C[:, 1])
             ψ.AR[:, 1] .= _transpose_front.(ψ.C[:, end] .\ _transpose_tail.(ψ.AC[:, 1]))
             ac2 = AC2(ψ, 0; kind = :ACAR)
-            h = AC2_hamiltonian(0, ψ, operator, ψ, envs)
+            h = AC2_hamiltonian(0, ψ, operator, ψ, envs; alg.backend, allocator)
             _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
 
             for row in 1:size(ψ, 1)
-                al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trscheme, alg = alg.alg_svd)
+                al, c, ar = svd_trunc!(ac2′[row]; trunc = alg.trunc, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al
@@ -189,7 +192,7 @@ function leading_boundary(
         end
     end
 
-    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    alg_gauge = adapt_solver(alg.alg_gauge; iter, g_global = ϵ)
     ψ = MultilineMPS(map(identity, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
 
     recalculate!(envs, ψ, operator, ψ)

@@ -4,12 +4,16 @@ $(TYPEDEF)
 Variational optimization algorithm for excitations of finite MPS by minimizing the energy of
 
 ```math
-H - λᵢ |ψᵢ⟩⟨ψᵢ|
+H + λᵢ |ψᵢ⟩⟨ψᵢ|
 ```
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
+
+# See also
+
+Used as the `algorithm` argument of [`excitations`](@ref).
 """
 @kwdef struct FiniteExcited{A} <: Algorithm
     "optimization algorithm"
@@ -18,12 +22,30 @@ $(TYPEDFIELDS)
     weight::Float64 = 10.0
 end
 
+# Initialize excited state by perturbing the current eigenvector to avoid local minima
+function _perturbed_state(ψ::FiniteMPS; atol = 1.0e-2)
+    return FiniteMPS(
+        map(1:length(ψ)) do i
+            A = i == length(ψ) ? ψ.AC[i] : ψ.AL[i]
+            noise = randomize!(similar(A))
+            return add!(noise, A, 1, atol / norm(noise))
+        end
+    )
+end
+
 function excitations(
         H::FiniteMPOHamiltonian, alg::FiniteExcited,
         states::Tuple{T, Vararg{T}};
-        init = FiniteMPS(
-            [ copy(first(states).AC[i]) for i in 1:length(first(states)) ]
-        ), num = 1
+        init = _perturbed_state(first(states)), num = 1
+    ) where {T <: FiniteMPS}
+    # the scope is opened once here rather than inside `_excitations_finite`: the recursion is
+    # what determines the return type, and a closure at every level would defeat inference
+    return _excitations_finite(H, alg, states; init, num)
+end
+
+function _excitations_finite(
+        H::FiniteMPOHamiltonian, alg::FiniteExcited, states::Tuple{T, Vararg{T}};
+        init, num
     ) where {T <: FiniteMPS}
     num == 0 && return (scalartype(T)[], T[])
 
@@ -31,14 +53,14 @@ function excitations(
         tuple(H, ProjectionOperator.(states)...),
         tuple(1.0, broadcast(x -> alg.weight, states)...)
     )
-    envs = environments(init, super_op)
+    envs = environments(init, super_op, init)
     ne, _ = find_groundstate(init, super_op, alg.gsalg, envs)
 
     nstates = (states..., ne)
-    ens, excis = excitations(H, alg, nstates; init = init, num = num - 1)
+    ens, excis = _excitations_finite(H, alg, nstates; init, num = num - 1)
 
-    push!(ens, expectation_value(ne, H))
-    push!(excis, ne)
+    pushfirst!(ens, expectation_value(ne, H))
+    pushfirst!(excis, ne)
 
     return ens, excis
 end

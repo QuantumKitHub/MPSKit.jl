@@ -1,10 +1,9 @@
 """
-    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
-    MPOHamiltonian(lattice::AbstractArray{<:VectorSpace})
-    MPOHamiltonian(x::AbstractArray{<:Any,3})
+$(TYPEDEF)
 
-MPO representation of a Hamiltonian. This is a specific form of an [`AbstractMPO`](@ref), where
-all the sites are represented by an upper triangular block matrix of the following form:
+MPO representation of a Hamiltonian.
+This is a specific form of an [`AbstractMPO`](@ref), where all the sites are represented by an
+upper triangular block matrix of the following form:
 
 ```math
 \\begin{pmatrix}
@@ -16,17 +15,46 @@ all the sites are represented by an upper triangular block matrix of the followi
 
 where `A`, `B`, `C`, and `D` are `MPOTensor`s, or (sparse) blocks thereof.
 
-## Examples
+# Constructors
 
-For example, constructing a nearest-neighbour Hamiltonian would look like this:
+The finite and infinite variants, [`FiniteMPOHamiltonian`](@ref) and
+[`InfiniteMPOHamiltonian`](@ref), are constructed from a lattice of physical spaces together
+with a set of `inds => operator` pairs describing the local terms:
 
-```julia
-lattice = fill(ℂ^2, 10)
-H = MPOHamiltonian(lattice, (i, i+1) => O for i in 1:length(lattice)-1)
+    FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
+    InfiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_operators...)
+
+# Properties
+
+- `A`: bulk block of interacting operators at each site
+- `B`: operators that finish an interaction
+- `C`: operators that start an interaction
+- `D`: on-site terms
+
+# Examples
+
+A nearest-neighbour term is a two-element index tuple `(i, i + 1) => O₁₂`; an on-site term
+is a one-element tuple `(i,) => O`. For the finite variant the lattice lists every site; for
+the infinite variant it is a single unit cell and indices wrap around it periodically.
+
+```jldoctest
+julia> X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2);
+
+julia> Hf = FiniteMPOHamiltonian(fill(ℂ^2, 3), ((i, i + 1) => X ⊗ X for i in 1:2));
+
+julia> Hf isa FiniteMPOHamiltonian, length(Hf)
+(true, 3)
+
+julia> Hi = InfiniteMPOHamiltonian(fill(ℂ^2, 1), (1, 2) => X ⊗ X, (1,) => X);
+
+julia> Hi isa InfiniteMPOHamiltonian, length(Hi)
+(true, 1)
 ```
 
-See also [`instantiate_operator`](@ref), which is responsable for instantiating the local
-operators in a form that is compatible with this constructor.
+# See also
+
+[`instantiate_operator`](@ref) is responsible for instantiating the local operators in a form
+that is compatible with this constructor.
 """
 struct MPOHamiltonian{TO <: JordanMPOTensor, V <: AbstractVector{TO}} <: AbstractMPO{TO}
     W::V
@@ -59,18 +87,18 @@ function InfiniteMPOHamiltonian(Ws::AbstractVector{O}) where {O <: MPOTensor}
 end
 
 """
-    FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+    FiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
 
 Create a `FiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]` represents
-the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
-either `MPOTensor`, `Missing` or `Number`.
+the operator at site `i`, left level `j` and right level `k`.
+Here, the entries can be either `MPOTensor`, `Missing` or `Number`.
 """
-function FiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+function FiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
     T = promote_type(_split_mpoham_types.(Ws)...)
     W = jordanmpotensortype(T)
     return FiniteMPOHamiltonian{W}(Ws)
 end
-function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPOTensor}
+function FiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: JordanMPOTensor}
     T = scalartype(O)
     L = length(W_mats)
     # initialize sumspaces
@@ -140,7 +168,7 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                τ = BraidingTensor{T}(eachspace(W)[I])
+                τ = similar_braidingtensor(W, eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
@@ -151,18 +179,18 @@ function FiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: JordanMPO
 end
 
 """
-    InfiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+    InfiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
 
-Create a `InfiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]` represents
-the the operator at site `i`, left level `j` and right level `k`. Here, the entries can be
-either `MPOTensor`, `Missing` or `Number`.
+Create an `InfiniteMPOHamiltonian` from a vector of matrices, such that `Ws[i][j, k]`
+represents the operator at site `i`, left level `j` and right level `k`.
+Here, the entries can be either `MPOTensor`, `Missing` or `Number`.
 """
-function InfiniteMPOHamiltonian(Ws::Vector{<:Matrix})
+function InfiniteMPOHamiltonian(Ws::Vector{<:AbstractMatrix})
     T = promote_type(_split_mpoham_types.(Ws)...)
     TW = jordanmpotensortype(T)
     return InfiniteMPOHamiltonian{TW}(Ws)
 end
-function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTensor}
+function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:AbstractMatrix}) where {O <: MPOTensor}
     # InfiniteMPOHamiltonian only works for square matrices:
     for W_mat in W_mats
         size(W_mat, 1) == size(W_mat, 2) ||
@@ -261,7 +289,7 @@ function InfiniteMPOHamiltonian{O}(W_mats::Vector{<:Matrix}) where {O <: MPOTens
             if v isa MPOTensor
                 W[I] = v
             elseif !iszero(v)
-                τ = BraidingTensor{T}(eachspace(W)[I])
+                τ = similar_braidingtensor(W, eachspace(W)[I])
                 W[I] = isone(v) ? τ : τ * v
             end
         end
@@ -477,7 +505,7 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
             key_R = key_R′ == 0 ? length(virtualsumspaces[site + 1]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{scalartype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
+                τ = similar_braidingtensor(TW, eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -504,10 +532,8 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     end
 
     # partial sort by interaction range
-    local_mpos = sort!(
-        map(Base.Fix1(instantiate_operator, lattice), collect(local_operators));
-        by = x -> length(x[1])
-    )
+    unsorted_mpos = map(Base.Fix1(instantiate_operator, lattice), [local_operators...])
+    local_mpos = sort!(unsorted_mpos; by = x -> length(x[1]))
 
     for (sites, local_mpo) in local_mpos
         local key_R # trick to define key_R before the first iteration
@@ -600,7 +626,8 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
             key_R = key_R′ == 0 ? length(virtualspaces[site]) : key_R′
             O[key_L, 1, 1, key_R] += if o isa Number
                 iszero(o) && continue
-                τ = BraidingTensor{scalartype(TW)}(eachspace(O)[key_L, 1, 1, key_R])
+
+                τ = similar_braidingtensor(TW, eachspace(O)[key_L, 1, 1, key_R])
                 isone(o) ? τ : τ * o
             else
                 o
@@ -635,7 +662,7 @@ Base.copy(H::MPOHamiltonian) = MPOHamiltonian(map(copy, parent(H)))
 
 function Base.getproperty(H::MPOHamiltonian, sym::Symbol)
     if sym === :A
-        return map(h -> h[2:(end - 1), 1, 1, 2:(end - 1)], parent(H))
+        return map(h -> h.A, parent(H))
     elseif sym === :B
         return map(h -> h[2:(end - 1), 1, 1, end], parent(H))
     elseif sym === :C
@@ -651,9 +678,11 @@ function isidentitylevel(H::InfiniteMPOHamiltonian{<:JordanMPOTensor}, i::Int)
     if i == 1 || i == size(H[1], 1)
         return true
     else
-        return all(H.A) do A
-            return haskey(A, CartesianIndex(i - 1, 1, 1, i - 1)) &&
-                A[i - 1, 1, 1, i - 1] isa BraidingTensor
+        # a diagonal level is an identity level iff every site stores a unit identity
+        # scalar there; pure identities live in `scalars` (genuine/scaled operators do not)
+        return all(parent(H)) do W
+            c = get(W.scalars, CartesianIndex(i, 1, 1, i), nothing)
+            return c !== nothing && isone(c)
         end
     end
 end
@@ -703,10 +732,10 @@ end
 function Base.similar(H::MPOHamiltonian, ::Type{O}, L::Int) where {O <: MPOTensor}
     return MPOHamiltonian(similar(parent(H), O, L))
 end
-function Base.similar(H::MPOHamiltonian, ::Type{T}) where {T <: Number}
-    return MPOHamiltonian(similar.(parent(H), T))
+function Base.similar(H::MPOHamiltonian, ::Type{TorA}) where {TorA <: Union{Number, DenseVector}}
+    return MPOHamiltonian(similar.(parent(H), TorA))
 end
-
+Base.circshift(H::InfiniteMPOHamiltonian, shift::Integer) = InfiniteMPOHamiltonian(circshift(parent(copy(H)), shift))
 # Linear Algebra
 # --------------
 function Base.:+(
@@ -729,7 +758,7 @@ function Base.:+(
             ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
-        H[i] = eltype(H)(V, A, B, C, D)
+        H[i] = JordanMPOTensor(V, A, B, C, D)
     end
     return FiniteMPOHamiltonian(H)
 end
@@ -751,7 +780,7 @@ function Base.:+(
         Vright = ⊞(Vtriv, right_virtualspace(A), Vtriv)
         V = Vleft ⊗ physicalspace(A) ← physicalspace(A) ⊗ Vright
 
-        H[i] = eltype(H)(V, A, B, C, D)
+        H[i] = JordanMPOTensor(V, A, B, C, D)
     end
     return InfiniteMPOHamiltonian(H)
 end
@@ -784,12 +813,18 @@ Base.:-(H::MPOHamiltonian, λs::AbstractVector{<:Number}) = H + (-λs)
 Base.:-(λs::AbstractVector{<:Number}, H::MPOHamiltonian) = λs + (-H)
 Base.:-(H1::MPOHamiltonian, H2::MPOHamiltonian) = H1 + (-H2)
 
+# scaling a Jordan MPO Hamiltonian scales every path exactly once, by scaling the
+# transitions out of the starting level (the top row, excluding the identity corner)
 function VectorInterface.scale!(
         H::MPOHamiltonian{O}, λ::Number
     ) where {O <: JordanMPOTensor}
-    for i in 1:length(H)
-        scale!(H[i].C, λ)
-        scale!(H[i].D, λ)
+    for W in parent(H)
+        for (I, v) in nonzero_pairs(W.tensors)
+            I[1] == 1 && scale!(v, λ)
+        end
+        for K in collect(keys(W.scalars))
+            (K[1] == 1 && K[4] != 1) && (W.scalars[K] *= λ)
+        end
     end
     return H
 end
@@ -797,12 +832,15 @@ function VectorInterface.scale!(
         Hdst::MPOHamiltonian{<:JordanMPOTensor},
         Hsrc::MPOHamiltonian{<:JordanMPOTensor}, λ::Number
     )
-    N = check_length(Hdst, Hsrc)
-    for i in 1:N
-        scale!(Hdst[i].C, Hsrc[i].C, λ)
-        scale!(Hdst[i].D, Hsrc[i].D, λ)
-        copy!(Hdst[i].A, Hsrc[i].A)
-        copy!(Hdst[i].B, Hsrc[i].B)
+    check_length(Hdst, Hsrc)
+    for (Wd, Ws) in zip(parent(Hdst), parent(Hsrc))
+        for (I, v) in nonzero_pairs(Ws.tensors)
+            Wd.tensors[I] = I[1] == 1 ? scale(v, λ) : copy(v)
+        end
+        empty!(Wd.scalars)
+        for (K, c) in Ws.scalars
+            Wd.scalars[K] = (K[1] == 1 && K[4] != 1) ? c * λ : c
+        end
     end
     return Hdst
 end
@@ -821,7 +859,7 @@ function Base.:*(H::FiniteMPOHamiltonian, mps::FiniteMPS)
         A,
         tensormaptype(
             spacetype(mps), numout(eltype(mps)), numin(eltype(mps)),
-            promote_type(scalartype(H), scalartype(mps))
+            promote_type(storagetype(H), storagetype(mps))
         )
     )
     # left to middle

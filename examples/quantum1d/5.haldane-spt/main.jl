@@ -1,5 +1,5 @@
 md"""
-# [Spin 1 Heisenberg model](@id spin1heisenberg)
+# Spin 1 Heisenberg model
 
 The quantum Heisenberg model is a model often used in the study of critical points and phase
 transitions of magnetic systems, in which the spins are treated quantum mechanically. It
@@ -98,7 +98,7 @@ SPT phase has a dominant value that is not in the trivial sector, which leads to
 non-injective MPS.
 
 Finally, the entanglement spectrum of the wrong SPT phase will show degeneracies of all
-singular values, which can again be attributed to an attempt to mimick the spectrum of the
+singular values, which can again be attributed to an attempt to mimic the spectrum of the
 right SPT phase.
 """
 

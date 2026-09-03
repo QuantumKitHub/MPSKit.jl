@@ -21,13 +21,13 @@ let
     @tensor mpco.AC[middle][-1 -2; -3] := mpco.AC[middle][-1, 1, -3] * sx[-2, 1]
     normalize!(mpco)
 
-    envs = environments(mpco, th)
+    envs = environments(mpco, th, mpco)
 
     szdat = [expectation_value(mpco, i => sz) for i in 1:length(mpco)]
     szdat = [szdat]
 
     for i in 1:(totaltime / deltat)
-        mpco, envs = timestep(mpco, th, 0, deltat, TDVP2(; trscheme = truncbelow(10^(-8)) & truncdim(25)), envs)
+        mpco, envs = timestep(mpco, th, 0, deltat, TDVP2(; trunc = truncbelow(10^(-8)) & truncdim(25)), envs)
         push!(szdat, [expectation_value(mpco, i => sz) for i in 1:length(mpco)])
     end
 

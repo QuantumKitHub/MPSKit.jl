@@ -20,3 +20,25 @@ function Base.show(io::IO, ::MIME"text/plain", alg::Algorithm)
     end
     return nothing
 end
+
+# TIMEROUTPUT utility
+# -------------------
+
+timer_treepoint(::NoTimerOutput) = String[]
+timer_treepoint(to::TimerOutput) = String[section.name for section in to.stack]
+
+subtimer(::NoTimerOutput) = NoTimerOutput()
+subtimer(to::TimerOutput) = to.enabled ? TimerOutput() : NoTimerOutput()
+
+merge_subtimer!(::NoTimerOutput, ::NoTimerOutput; tree_point) = nothing
+merge_subtimer!(::TimerOutput, ::NoTimerOutput; tree_point) = nothing
+function merge_subtimer!(to::TimerOutput, sub::TimerOutput; tree_point)
+    to.enabled && merge!(to, sub; tree_point)
+    return nothing
+end
+
+# `print_timer` is used over plain `show` to opt into the GC time column
+struct TimerReport{T}
+    to::T
+end
+Base.show(io::IO, r::TimerReport) = print_timer(io, r.to; gc = true)

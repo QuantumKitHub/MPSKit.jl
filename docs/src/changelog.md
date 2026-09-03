@@ -21,13 +21,89 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- Addition of `FiniteMPS`/`FiniteMPO` with different scalar types, through a new
+  `Base.similar(ψ, ::Type{S})` for `S <: Number` on `FiniteMPS`. ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- `Zipup`, an algorithm for `approximate`/`approximate!` that compresses a finite MPO-MPS product in
+  a single sweep, optionally followed by a sweep in the opposite direction that imposes the final
+  truncation. The sweep direction is selected by the `left_to_right` keyword. Both
+  `approximate((O, ϕ), alg)` and `approximate!(ψ, (O, ϕ), alg)` are supported, where the destination
+  `ψ` is a write target rather than an initial guess and may alias `ϕ`; they return `(ψ, ϵ)`.
+- `BUG` time-evolution algorithm: a Basis-Update & Galerkin integrator for finite MPS.
+  Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
+  and passing a truncating `trunc` enables rank-adaptivity (the bond dimension grows and shrinks
+  automatically to track entanglement).
+- A `backend` setting on every algorithm, for its tensor contractions and index manipulations,
+  defaulting to `MPSKit.Defaults.backend()`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
+- Local updates now serve their intermediate tensors from a dedicated allocator, selected internally
+  by `MPSKit.default_allocator`, instead of leaving them to the garbage collector
+  (two-site DMRG: -64% allocations, -57% GC time, -23% wall time).
+  Disable with `MPSKit.Defaults.set_buffering!(false)`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
+
 ### Changed
+
+- Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
+  `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
+  norm is preserved, so it retains useful information (the accumulated truncation error in real time,
+  or the decaying weight in imaginary time). Previously imaginary-time evolution always renormalized
+  every step; **to recover that behavior, pass `normalize = true`** (e.g. for ground-state or
+  thermal-state search via imaginary-time evolution).
+- `environments` now follows a single positional contract for every state and operator kind:
+  `environments(below, operator, above, alg)`, where `alg` is the environment algorithm
+  (slot 4). The operator form requires an explicit `above`. Auxiliary inputs are keyword-only:
+  `leftstart`/`rightstart` for finite and window environments, and `lenvs`/`renvs` for window
+  and quasiparticle environments.
+  The two-argument form `environments(below, above)` (with two states) is reserved for the
+  operator-free overlap environments. There is no two-argument `environments(below, operator)`
+  shorthand: a two-argument call is always the overlap, since the second argument cannot be
+  disambiguated between a ket and an operator (undecidable for density matrices, where states
+  and operators share a representation). ([#436](https://github.com/QuantumKitHub/MPSKit.jl/pull/436))
+- `transfer_spectrum` now computes the spectrum for all sectors of the transfer space at once,
+  returning a `TensorKit.SectorVector` that can be indexed per sector.
+  The `sector` keyword is removed; a specific selection of sectors (with per-sector counts) can be
+  requested by passing `howmany` as an `AbstractDict`/iterable of `sector => count` pairs.
+  The `below` state and the eigensolver algorithm are optional positional arguments, and the
+  algorithm can be resolved per sector. The Krylov dimension adapts to the number of values requested
+  in each sector, controlled by the new `oversampling` and `oversampling_factor` keywords.
+  Accordingly, `marek_gap` and `correlation_length` now return a `TensorKit.SectorDict` of
+  per-sector results by default; pass `sector = ...` to obtain a single sector's result as before.
+- All `trscheme` keyword arguments are renamed to `trunc` ([#482](https://github.com/QuantumKitHub/MPSKit.jl/pull/482)).
+- `correlator` now throws an `ArgumentError` when the sites are not ordered as `i < j`.
+  Previously such a call only logged an `@error` and then continued into a contraction that is
+  not the requested correlator. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+- TimerOutputs 1.x is now required. The timing tables printed at `verbosity > 3` use the new
+  layout (tree guides, heat bars) and additionally report per-section GC time.
 
 ### Deprecated
 
 ### Removed
 
+- Support for TimerOutputs 0.5.
+
 ### Fixed
+
+- `isfinite(::WindowMPOHamiltonian)` was undefined. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+- `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+- `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
+  different tensor networks, e.g. `norm(E₀ * gs - H * gs)` coming out as `2 * norm(gs) * E₀`
+  instead of ~0. The lazy gauge sweep in `CView.getindex` re-derived `AL`/`C` entries that were
+  already cached, and since different code paths install different factorizations (a truncated SVD
+  from DMRG vs. a positive QR from the sweep) the replacement differed by a bond unitary, so `+`
+  combined tensors belonging to two different gauges. The same staleness was latent in every
+  consumer that reads several gauge tensors across a center move, `dot` included.
+  ([#473](https://github.com/QuantumKitHub/MPSKit.jl/issues/473), [#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- Addition of single-site operands. `FiniteMPS + FiniteMPS` asserted `length > 1`, and
+  `FiniteMPO + FiniteMPO` threw a space error, because both split the chain into a left and a
+  right block and fuse them at the seam — of which there is none at length 1. Such an operand has
+  no internal bond to fuse, so the sum is now simply the sum of the two tensors.
+  ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- `convert(TensorMap, ::FiniteMPO)` on a single-site MPO stripped the left virtual leg of `mpo[1]`
+  and the right virtual leg of `mpo[end]` and contracted the two — which at length 1 is the *same*
+  tensor, so it returned `O * O` on twice the physical space instead of `O`.
+  ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
+- `leading_boundary` with `IDMRG2` didn't update the left edge of the AC tensor, which could result in space mismatches depending on the truncation scheme. This is corrected for in ([#516](https://github.com/QuantumKitHub/MPSKit.jl/pull/516)).
+- Fix hardcoding of number of physical spaces in the `changebonds` implementations for
+  `FiniteMPS`, enabling its use for systems with composite physical spaces
+  ([#514](https://github.com/QuantumKitHub/MPSKit.jl/pull/514))
 
 ### Performance
 

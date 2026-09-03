@@ -4,3 +4,12 @@ Manifest.toml
 .DS_Store
 **/dev/
 benchmark/results
+
+# DocumenterVitepress / Node build artifacts
+**/node_modules/
+**/.vitepress/cache/
+**/.vitepress/dist/
+package-lock.json
+
+# generated from CONTRIBUTING.md by docs/make.jl
+docs/src/contributing.md

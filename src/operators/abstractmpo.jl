@@ -76,7 +76,7 @@ function remove_orphans!(mpo::SparseMPO; tol = eps(real(scalartype(mpo)))^(3 / 4
                     return j ∈ getindex.(nonzero_keys(mpo[i]), 4) &&
                         j ∈ getindex.(nonzero_keys(mpo[i + 1]), 1)
                 end
-                changed |= length(mask) == size(mpo[i], 4)
+                changed |= length(mask) != size(mpo[i], 4)
                 mpo[i] = mpo[i][:, :, :, mask]
                 mpo[i + 1] = mpo[i + 1][mask, :, :, :]
             end
@@ -130,9 +130,10 @@ function _fuse_mpo_mpo(O1::MPOTensor, O2::MPOTensor, Fₗ, Fᵣ)
     return if O1 isa BraidingTensor && O2 isa BraidingTensor
         # shouldn't happen
         T = promote_type(scalartype(O1), scalartype(O2))
+        A = promote_storagetype(T, O1, O2)
         V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
             physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
-        return BraidingTensor{T}(V)
+        return BraidingTensor{T, spacetype(V), A}(V)
     elseif O1 isa BraidingTensor
         @plansor O′[-1 -2; -3 -4] := Fₗ[-1; 1 2] * O2[1 3; -3 5] *
             τ[2 -2; 3 4] * conj(Fᵣ[-4; 5 4])
@@ -152,16 +153,17 @@ Compute the mpo tensor that arises from multiplying MPOs.
 """
 function fuse_mul_mpo(O1, O2)
     TT = promote_type(scalartype(O1), scalartype(O2))
-    T = TensorKit.similarstoragetype(storagetype(O1), TT)
+    T = TensorKit.promote_storagetype(TT, O1, O2)
     F_left = fuser(T, left_virtualspace(O2), left_virtualspace(O1))
     F_right = fuser(T, right_virtualspace(O2), right_virtualspace(O1))
     return _fuse_mpo_mpo(O1, O2, F_left, F_right)
 end
 function fuse_mul_mpo(O1::BraidingTensor, O2::BraidingTensor)
     T = promote_type(scalartype(O1), scalartype(O2))
+    A = promote_storagetype(T, O1, O2)
     V = fuse(left_virtualspace(O2) ⊗ left_virtualspace(O1)) ⊗ physicalspace(O1) ←
         physicalspace(O2) ⊗ fuse(right_virtualspace(O2) ⊗ right_virtualspace(O1))
-    return BraidingTensor{T}(V)
+    return BraidingTensor{T, spacetype(V), A}(V)
 end
 function fuse_mul_mpo(
         O1::AbstractBlockTensorMap{T₁, S, 2, 2}, O2::AbstractBlockTensorMap{T₂, S, 2, 2}
@@ -188,7 +190,7 @@ end
 function add_physical_charge(O::MPOTensor, charge::Sector)
     sectortype(O) === typeof(charge) || throw(SectorMismatch())
     auxspace = Vect[typeof(charge)](charge => 1)'
-    F = fuser(scalartype(O), physicalspace(O), auxspace)
+    F = fuser(storagetype(O), physicalspace(O), auxspace)
     @plansor O_charged[-1 -2; -3 -4] := F[-2; 1 2] *
         O[-1 1; 4 3] * τ[3 2; 5 -4] * conj(F[-3; 4 5])
     return O_charged
@@ -198,7 +200,7 @@ function add_physical_charge(O::BraidingTensor, charge::Sector)
     auxspace = Vect[typeof(charge)](charge => 1)'
     V = left_virtualspace(O) ⊗ fuse(physicalspace(O), auxspace) ←
         fuse(physicalspace(O), auxspace) ⊗ right_virtualspace(O)
-    return BraidingTensor{scalartype(O)}(V)
+    return similar_braidingtensor(O, V)
 end
 function add_physical_charge(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}, charge::Sector)
     sectortype(O) == typeof(charge) || throw(SectorMismatch())

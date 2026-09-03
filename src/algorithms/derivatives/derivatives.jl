@@ -191,17 +191,28 @@ for kind in (:C, :AC, :AC2)
     end
 end
 
-function C_projection(site, below, operator, above, envs)
+function C_projection(
+        site, below, operator, above, envs;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     C = above isa Multiline ? above.C[:, site] : above.C[site]
-    return C_hamiltonian(site, below, operator, above, envs; prepare = false) * C
+    H = C_hamiltonian(site, below, operator, above, envs; prepare = false, backend, allocator)
+    return H * C
 end
-function AC_projection(site, below, operator, above, envs)
+function AC_projection(
+        site, below, operator, above, envs;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     AC = above isa Multiline ? above.AC[:, site] : above.AC[site]
-    return AC_hamiltonian(site, below, operator, above, envs; prepare = false) * AC
+    H = AC_hamiltonian(site, below, operator, above, envs; prepare = false, backend, allocator)
+    return H * AC
 end
-function AC2_projection(site::Int, below, operator, above, envs; kwargs...)
-    return AC2_hamiltonian(site, below, operator, above, envs; prepare = false) *
-        AC2(above, site; kwargs...)
+function AC2_projection(
+        site::Int, below, operator, above, envs;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator(), kwargs...
+    )
+    H = AC2_hamiltonian(site, below, operator, above, envs; prepare = false, backend, allocator)
+    return H * AC2(above, site; kwargs...)
 end
 
 # Multiline
@@ -223,10 +234,13 @@ Base.:*(h::LazySum{<:Union{DerivativeOrMultiplied}}, v) = h(v)
 # Operator preparation
 # --------------------
 """
-    prepare_operator!!(O, [backend], [allocator]) -> O′
+    prepare_operator!!(O) -> O′
 
 Given an operator, try to construct a more efficient representation of that operator.
 This typically consists of precomputing some parts of the application,
 and is expected to only pay off for repeated applications.
+
+The backend and allocator to use are taken from `O` itself, which is where the resulting
+operator's own contractions will read them from as well.
 """
-prepare_operator!!(O, backend::AbstractBackend = DefaultBackend(), allocator = BufferAllocator()) = O
+prepare_operator!!(O) = O

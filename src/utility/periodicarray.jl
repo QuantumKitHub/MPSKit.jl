@@ -1,12 +1,14 @@
 """
-    PeriodicArray{T,N} <: AbstractArray{T,N}
+$(TYPEDEF)
 
 Array wrapper with periodic boundary conditions.
 
 # Fields
-- `data::Array{T,N}`: the data of the array
+
+- `data::Array{T, N}`: the data of the array
 
 # Examples
+
 ```jldoctest
 A = PeriodicArray([1, 2, 3])
 A[0], A[2], A[4]
@@ -24,7 +26,9 @@ A[-1, 1], A[1, 1], A[4, 5]
 (1, 1, 3)
 ```
 
-See also [`PeriodicVector`](@ref), [`PeriodicMatrix`](@ref)
+# See also
+
+[`PeriodicVector`](@ref), [`PeriodicMatrix`](@ref)
 """
 struct PeriodicArray{T, N} <: AbstractArray{T, N}
     data::Array{T, N}
@@ -42,7 +46,7 @@ end
     PeriodicVector{T}
 
 One-dimensional dense array with elements of type `T` and periodic boundary conditions.
-Alias for [`PeriodicArray{T,1}`](@ref).
+Alias for [`PeriodicArray{T, 1}`](@ref).
 """
 const PeriodicVector{T} = PeriodicArray{T, 1}
 PeriodicVector(data::AbstractVector{T}) where {T} = PeriodicVector{T}(data)
@@ -51,7 +55,7 @@ PeriodicVector(data::AbstractVector{T}) where {T} = PeriodicVector{T}(data)
     PeriodicMatrix{T}
 
 Two-dimensional dense array with elements of type `T` and periodic boundary conditions.
-Alias for [`PeriodicArray{T,2}`](@ref).
+Alias for [`PeriodicArray{T, 2}`](@ref).
 """
 const PeriodicMatrix{T} = PeriodicArray{T, 2}
 PeriodicMatrix(data::AbstractMatrix{T}) where {T} = PeriodicMatrix{T}(data)

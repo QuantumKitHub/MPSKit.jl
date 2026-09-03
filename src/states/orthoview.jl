@@ -60,8 +60,10 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in Iterators.reverse((i + 1):center)
-            v.parent.Cs[j], tmp = lq_compact!(_transpose_tail(v.parent.ACs[j]; copy = true); positive = true)
-            v.parent.ARs[j] = _transpose_front(tmp)
+            # only factorize what is not cached yet
+            if ismissing(v.parent.Cs[j]) || ismissing(v.parent.ARs[j])
+                v.parent.Cs[j], v.parent.ARs[j], _ = right_gauge(v.parent.ACs[j])
+            end
             if j != i + 1 # last AC not needed
                 v.parent.ACs[j - 1] = _mul_tail(v.parent.ALs[j - 1], v.parent.Cs[j])
             end
@@ -76,7 +78,10 @@ function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
         end
 
         for j in center:i
-            v.parent.ALs[j], v.parent.Cs[j + 1] = qr_compact(v.parent.ACs[j]; positive = true)
+            # only factorize what is not cached yet
+            if ismissing(v.parent.ALs[j]) || ismissing(v.parent.Cs[j + 1])
+                v.parent.ALs[j], v.parent.Cs[j + 1], _ = left_gauge(v.parent.ACs[j])
+            end
             if j != i # last AC not needed
                 v.parent.ACs[j + 1] = _mul_front(v.parent.Cs[j + 1], v.parent.ARs[j + 1])
             end
@@ -89,10 +94,9 @@ end
 function Base.setindex!(v::CView{<:FiniteMPS}, vec, i::Int)
     if ismissing(v.parent.Cs[i + 1])
         if !ismissing(v.parent.ALs[i])
-            v.parent.Cs[i + 1], temp = lq_compact!(_transpose_tail(v.parent.AC[i + 1]; copy = true); positive = true)
-            v.parent.ARs[i + 1] = _transpose_front(temp)
+            v.parent.Cs[i + 1], v.parent.ARs[i + 1], _ = right_gauge(v.parent.AC[i + 1])
         else
-            v.parent.ALs[i], v.parent.Cs[i + 1] = qr_compact(v.parent.AC[i]; positive = true)
+            v.parent.ALs[i], v.parent.Cs[i + 1], _ = left_gauge(v.parent.AC[i])
         end
     end
 
@@ -178,6 +182,78 @@ function Base.setindex!(
     end
 end
 
+@doc """
+    set_AL_AC!(ψ, site, AL, AC) -> ψ
+    set_AC_AR!(ψ, site, AC, AR) -> ψ
+
+Install a canonical tensor at `site` together with the neighbouring center tensor, in a single
+update: `set_AL_AC!` writes the left-isometric `AL` at `site` and the center tensor `AC` at
+`site + 1`, `set_AC_AR!` writes the right-isometric `AR` at `site` and the center tensor `AC` at
+`site - 1`. The gauge center therefore ends up at `site + 1` and `site - 1` respectively.
+
+These are the pendants of `ψ.AC[site] = (AL, C)` / `ψ.AC[site] = (C, AR)` for algorithms that
+already know the *next* center tensor: they avoid materializing a bond tensor purely to keep `ψ`
+well-defined, and — unlike installing the canonical tensor on its own — they never leave `ψ`
+without a gauge center.
+
+The isometric nature of `AL`/`AR` is not verified.
+"""
+set_AL_AC!
+@doc (@doc set_AL_AC!) set_AC_AR!
+
+function set_AL_AC!(ψ::FiniteMPS, site::Int, AL::GenericMPSTensor, AC::GenericMPSTensor)
+    site < length(ψ) ||
+        throw(ArgumentError(lazy"cannot set the center beyond the end of the chain at site $site"))
+    # materialize the halves that survive this update
+    site > 1 && ψ.AL[site - 1]
+    site + 1 < length(ψ) && ψ.AR[site + 2]
+
+    ψ.ACs .= missing
+    ψ.Cs .= missing
+    ψ.ALs[(site + 1):end] .= missing
+    ψ.ARs[1:(site + 1)] .= missing
+
+    ψ.ALs[site] = AL
+    ψ.ACs[site + 1] = AC
+    return ψ
+end
+function set_AC_AR!(ψ::FiniteMPS, site::Int, AC::GenericMPSTensor, AR::GenericMPSTensor)
+    site > 1 ||
+        throw(ArgumentError(lazy"cannot set the center before the start of the chain at site $site"))
+    site < length(ψ) && ψ.AR[site + 1]
+    site - 1 > 1 && ψ.AL[site - 2]
+
+    ψ.ACs .= missing
+    ψ.Cs .= missing
+    ψ.ALs[(site - 1):end] .= missing
+    ψ.ARs[1:(site - 1)] .= missing
+
+    ψ.ARs[site] = AR
+    ψ.ACs[site - 1] = AC
+    return ψ
+end
+
+set_AL_AC!(ψ::WindowMPS, args...) = (set_AL_AC!(ψ.window, args...); ψ)
+set_AC_AR!(ψ::WindowMPS, args...) = (set_AC_AR!(ψ.window, args...); ψ)
+
+"""
+    set_canonical!(ψ, site, direction, A, AC) -> ψ
+
+Direction-dispatching wrapper around [`set_AL_AC!`](@ref)/[`set_AC_AR!`](@ref): install the canonical
+tensor `A` at `site` — left-isometric for `direction = Val(:right)`, right-isometric for `Val(:left)`
+— together with the center tensor `AC` at the next site *in that direction*, `site + 1` or `site - 1`.
+
+This is the pendant of [`gauge!`](@ref) for a sweep that already knows its next center tensor, and
+lets a sweep body be written once for both directions.
+"""
+function set_canonical!(
+        ψ::AbstractFiniteMPS, site::Int, ::Val{Dir}, A::GenericMPSTensor, AC::GenericMPSTensor
+    ) where {Dir}
+    Dir === :right && return set_AL_AC!(ψ, site, A, AC)
+    Dir === :left && return set_AC_AR!(ψ, site, AC, A)
+    return throw(ArgumentError(lazy"invalid direction `$Dir`"))
+end
+
 function Base.getindex(v::ACView{<:WindowMPS, E}, i::Int)::E where {E}
     (i >= 1 && i <= length(v.parent)) || throw(ArgumentError("out of bounds"))
     return ACView(v.parent.window)[i]
@@ -220,4 +296,125 @@ function Base.checkbounds(
     else
         checkbounds(Bool, CView(first(psi.parent.data)), b)
     end
+end
+
+# Gauging routines
+# ----------------
+@doc """
+    left_gauge(AC, [alg]) -> AL, C, ϵ
+    right_gauge(AC, [alg]) -> C, AR, ϵ
+
+Factor an updated center MPS tensor `AC` into left- or right-canonical form, `AC ≈ AL * C`
+(left, with `AL` left-isometric) or `AC ≈ C * AR` (right, with `AR` right-isometric), without
+modifying `AC`. `right_gauge` handles the MPS leg permutation internally, so `AR` is returned in
+standard MPS-tensor form.
+
+`alg` selects the factorization and defaults to a (positive) QR/LQ center-move that preserves the virtual bond.
+Passing a [`TruncatedAlgorithm`](@extref MatrixAlgebraKit.TruncatedAlgorithm) instead performs a truncated SVD may shrink the bond.
+
+Also returns the truncation error `ϵ`: the 2-norm of the discarded singular values from the
+truncated SVD, or `0` for a norm-preserving QR/LQ gauge.
+"""
+left_gauge
+@doc (@doc left_gauge) right_gauge
+
+left_gauge(AC) = left_gauge(AC, Defaults.alg_orth())
+function left_gauge(AC, alg)
+    AL, C = left_orth(AC; alg)
+    return AL, C, zero(real(scalartype(AC)))
+end
+function left_gauge(AC, alg::MatrixAlgebraKit.TruncatedAlgorithm)
+    U, S, Vᴴ, ϵ = svd_trunc(AC, alg)
+    C = LinearAlgebra.lmul!(S, Vᴴ) # C = S * Vᴴ, matching `LeftOrthViaSVD`
+    return U, C, ϵ
+end
+
+right_gauge(AC) = right_gauge(AC, Defaults.alg_orth())
+function right_gauge(AC, alg)
+    C, AR = right_orth(_transpose_tail(AC); alg)
+    return C, _transpose_front(AR), zero(real(scalartype(AC)))
+end
+function right_gauge(AC, alg::MatrixAlgebraKit.TruncatedAlgorithm)
+    U, S, Vᴴ, ϵ = svd_trunc(_transpose_tail(AC), alg)
+    C = LinearAlgebra.rmul!(U, S) # C = U * S, matching `RightOrthViaSVD`
+    return C, _transpose_front(Vᴴ), ϵ
+end
+
+@doc """
+    left_gauge!(ψ, pos, AC, [alg]; normalize = false) -> ψ, ϵ
+    right_gauge!(ψ, pos, AC, [alg]; normalize = false) -> ψ, ϵ
+
+Gauge an updated center tensor `AC` at site `pos` and install it into `ψ` in one step: factor
+`AC` with [`left_gauge`](@ref) / [`right_gauge`](@ref) and write the canonical tensors back,
+shifting the gauge center past `pos` (to the right for `left_gauge!`, to the left for
+`right_gauge!`). `alg` is forwarded to [`left_gauge`](@ref) / [`right_gauge`](@ref) and hence may
+be a [`TruncatedAlgorithm`](@extref MatrixAlgebraKit.TruncatedAlgorithm) to truncate the bond.
+
+By default the factors are installed as-is. Pass `normalize = true` to renormalize the bond
+tensor, so `ψ` stays normalized after a local update that changed its norm.
+
+Also returns the truncation error `ϵ` of the factorization: the 2-norm of the discarded singular
+values from a truncated SVD gauge, or `0` for a norm-preserving QR gauge.
+"""
+left_gauge!
+@doc (@doc left_gauge!) right_gauge!
+
+function left_gauge!(ψ::AbstractFiniteMPS, pos::Int, AC, alg = Defaults.alg_orth(); normalize::Bool = false)
+    AL, C, ϵ = left_gauge(AC, alg)
+    normalize && normalize!(C)
+    ψ.AC[pos] = (AL, C)
+    return ψ, ϵ
+end
+function right_gauge!(ψ::AbstractFiniteMPS, pos::Int, AC, alg = Defaults.alg_orth(); normalize::Bool = false)
+    C, AR, ϵ = right_gauge(AC, alg)
+    normalize && normalize!(C)
+    ψ.AC[pos] = (C, AR)
+    return ψ, ϵ
+end
+
+@doc """
+    gauge!(ψ, pos, direction, AC, [alg]; normalize = false) -> ψ, ϵ
+
+Direction-dispatching wrapper around [`left_gauge!`](@ref) / [`right_gauge!`](@ref): gauge an
+updated center tensor `AC` at site `pos` and install it into `ψ`, shifting the gauge center past
+`pos` to the right for `direction = Val(:right)` and to the left for `Val(:left)`. `alg` and
+`normalize` are forwarded unchanged, and the truncation error `ϵ` is returned as-is.
+"""
+function gauge!(ψ::AbstractFiniteMPS, pos::Int, ::Val{Dir}, AC, alg = Defaults.alg_orth(); kwargs...) where {Dir}
+    Dir === :right && return left_gauge!(ψ, pos, AC, alg; kwargs...)
+    Dir === :left && return right_gauge!(ψ, pos, AC, alg; kwargs...)
+    return throw(ArgumentError(lazy"invalid direction `$Dir`"))
+end
+
+@doc """
+    gauge2!(ψ, pos, direction, AC2, alg; normalize = false) -> ψ, ϵ
+
+Two-site analogue of [`gauge!`](@ref): factor an updated two-site center tensor `AC2` spanning
+sites `pos` and `pos+1` with the truncated SVD `alg` and install the resulting canonical tensors
+into `ψ` in one step, shifting the gauge center past the bond.
+(To the right for `direction = Val(:right)`, to the left for `Val(:left)`).
+
+Returns the truncation error `ϵ`, the 2-norm of the discarded singular values. Pass
+`normalize = true` to renormalize the bond tensor, so `ψ` stays normalized after a local update
+that changed its norm.
+"""
+function gauge2!(
+        ψ::AbstractFiniteMPS, pos::Int, ::Val{Dir}, AC2, alg;
+        normalize::Bool = false
+    ) where {Dir}
+    al, c, ar, ϵ = svd_trunc!(AC2, alg)
+    normalize && normalize!(c)
+    # the SVD center `c` (singular values) is real-valued; promote it to the state's scalartype so
+    # the installed tensors stay consistent, without needlessly forcing a real-valued state complex.
+    C = scalartype(ψ) <: Complex ? complex(c) : c
+    if Dir === :right
+        ψ.AC[pos] = (al, C)
+        ψ.AC[pos + 1] = (C, _transpose_front(ar))
+    elseif Dir === :left
+        ψ.AC[pos + 1] = (C, _transpose_front(ar))
+        ψ.AC[pos] = (al, C)
+    else
+        throw(ArgumentError(lazy"invalid direction `$Dir`"))
+    end
+    return ψ, ϵ
 end

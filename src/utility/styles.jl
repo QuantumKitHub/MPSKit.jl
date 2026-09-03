@@ -4,8 +4,8 @@
     OperatorStyle(::Type{T})
 
 Trait to describe the operator behavior of the input `x` or type `T`, which can be either
-*   `MPOStyle()`: product of local factors;
-*   `HamiltonianStyle()`: sum of local terms.
+- `MPOStyle()`: product of local factors;
+- `HamiltonianStyle()`: sum of local terms.
 """
 abstract type OperatorStyle end
 OperatorStyle(x) = OperatorStyle(typeof(x))
@@ -29,8 +29,8 @@ struct HamiltonianStyle <: OperatorStyle end
     GeometryStyle(::Type{T})
 
 Trait to describe the geometry of the input `x` or type `T`, which can be either
-*   `FiniteChainStyle()`: object is defined on a finite chain;
-*   `InfiniteChainStyle()`: object is defined on an infinite chain.
+- `FiniteChainStyle()`: object is defined on a finite chain;
+- `InfiniteChainStyle()`: object is defined on an infinite chain.
 """
 abstract type GeometryStyle end
 GeometryStyle(x) = GeometryStyle(typeof(x))

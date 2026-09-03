@@ -11,19 +11,39 @@ using BlockTensorKit
 using LinearAlgebra: Diagonal
 using Combinatorics: permutations
 using TensorKitTensors.SpinOperators: S_x, S_y, S_z, S_x_S_x, S_y_S_y, S_z_S_z, S_exchange, S_plus_S_min, S_min_S_plus
-using TensorKitTensors.FermionOperators: f_plus_f_min, f_min_f_plus, f_plus_f_plus, f_min_f_min, f_num
+using TensorKitTensors.FermionOperators: f_plus_f_min, f_min_f_plus, f_plus_f_plus, f_min_f_min, f_num, f_hopping
+using Random: shuffle
 
 # exports
 export S_x, S_y, S_z
 export S_x_S_x, S_y_S_y, S_z_S_z
-export f_plus_f_min, f_min_f_plus, f_num
+export f_plus_f_min, f_min_f_plus, f_num, f_hopping
 export force_planar
 export symm_mul_mpo
-export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model,
-    kitaev_model
+export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model, kitaev_model
 export classical_ising_tensors, classical_ising, sixvertex
+export bad_initial_state
+export SCHEDULERS, with_scheduler
 
 # using TensorOperations
+
+# Threading
+# ---------
+# The scheduler decides which allocator serves the scratch space of a local update - a buffer when a
+# single task owns it, a shared manual allocator otherwise - so an algorithm that spawns should give
+# the same answer under either. `MPSKit.Defaults.scheduler` is a `Ref` rather than a `ScopedValue`,
+# hence the explicit save/restore; it is process-global, so the `finally` matters.
+const SCHEDULERS = ("serial" => MPSKit.SerialScheduler(), "dynamic" => MPSKit.DynamicScheduler())
+
+function with_scheduler(f, scheduler)
+    old = MPSKit.Defaults.scheduler[]
+    try
+        MPSKit.Defaults.scheduler[] = scheduler
+        return f()
+    finally
+        MPSKit.Defaults.scheduler[] = old
+    end
+end
 
 force_planar(x::Number) = x
 
@@ -63,16 +83,7 @@ function force_planar(x::SparseBlockTensorMap)
     return SparseBlockTensorMap{valtype(data)}(data, force_planar(space(x)))
 end
 function force_planar(W::JordanMPOTensor)
-    V = force_planar(space(W))
-    TW = MPSKit.jordanmpotensortype(eltype(V[1]), scalartype(W))
-    dst = TW(undef, V)
-
-    for t in (:A, :B, :C, :D)
-        for (I, v) in nonzero_pairs(getproperty(W, t))
-            getproperty(dst, t)[I] = force_planar(v)
-        end
-    end
-    return dst
+    return JordanMPOTensor(force_planar(W.tensors), copy(W.scalars))
 end
 force_planar(mpo::MPOHamiltonian) = MPOHamiltonian(map(force_planar, parent(mpo)))
 force_planar(mpo::MPO) = MPO(map(force_planar, parent(mpo)))
@@ -163,9 +174,9 @@ function kitaev_model(
         T::Type{<:Number} = ComplexF64, sym::Type{<:Sector} = Trivial;
         t = 1.0, mu = 1.0, Delta = 1.0, L = Inf
     )
-    TB = scale!(f_plus_f_min(T, sym) + f_min_f_plus(T, sym), -t / 2)     # tight-binding term
-    SC = scale!(f_plus_f_plus(T, sym) + f_min_f_min(T, sym), Delta / 2)  # superconducting term
-    CP = scale!(f_num(T, sym), -mu)                       # chemical potential term
+    TB = scale!(f_hopping(T, sym), -t / 2)                               # tight-binding term
+    SC = scale!(f_min_f_min(T, sym) - f_plus_f_plus(T, sym), Delta / 2)  # superconducting term
+    CP = scale!(f_num(T, sym), -mu)                                      # chemical potential term
 
     if L == Inf
         lattice = PeriodicArray([space(TB, 1)])
@@ -174,7 +185,7 @@ function kitaev_model(
         lattice = fill(space(TB, 1), L)
         onsite_terms = ((i,) => CP for i in 1:L)
         twosite_terms = ((i, i + 1) => TB + SC for i in 1:(L - 1))
-        terms = Iterators.flatten(twosite_terms, onsite_terms)
+        terms = Iterators.flatten((twosite_terms, onsite_terms))
         return FiniteMPOHamiltonian(lattice, terms)
     end
 end
@@ -249,6 +260,35 @@ function sixvertex(; a = 1.0, b = 1.0, c = 1.0)
         0 0 0 a
     ]
     return InfiniteMPO([permute(TensorMap(d, ℂ^2 ⊗ ℂ^2, ℂ^2 ⊗ ℂ^2), ((1, 2), (4, 3)))])
+end
+
+# Functions for testing DMRG3S
+function distinct_bitstrings(n::Int, n_up::Int, n_states::Int)
+    trivial_state = vcat(ones(Int, n_up), zeros(Int, n - n_up))
+    results = Set{Vector{Int}}()
+    while length(results) < n_states
+        push!(results, shuffle(trivial_state))
+    end
+    return collect(results)
+end
+
+function bad_initial_state(H, L; T = ComplexF64, n_states = 20, n_fixed = 3)
+    physd = U1Space(-1 // 2 => 1, 1 // 2 => 1)
+    n_free = L - n_fixed
+    n_up = (n_free - n_fixed) ÷ 2  # 7 of 17 up, so the fixed +3/2 tail nets to Sz_total = 0
+
+    configs = distinct_bitstrings(n_free, n_up, n_states)
+
+    return sum(configs) do bits
+        charges = [b == 1 ? 1 // 2 : -1 // 2 for b in bits]
+        append!(charges, fill(1 // 2, n_fixed))  # the 3 fixed, all-up sites
+
+        q = cumsum(charges)
+        @assert q[end] == 0 "configuration doesn't land in the Sz_total = 0 sector"
+        Vs = [U1Space(qi => 1) for qi in q[1:(end - 1)]]  # L-1 internal bonds only;
+
+        return normalize!(FiniteMPS(T, fill(physd, L), Vs))
+    end
 end
 
 end

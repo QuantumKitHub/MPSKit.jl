@@ -25,29 +25,32 @@ function rightenv(envs::InfiniteQPEnvironments, site::Int, state)
     return rightenv(envs.rightenvs, site, state)
 end
 
-# Explicitly define optional arguments as these depend on kwargs,
-# which needs to come after these arguments.
-
-function environments(exci::Union{InfiniteQP, MultilineQP}, H; kwargs...)
-    lenvs = environments(exci.left_gs, H; kwargs...)
-    return environments(exci, H, lenvs; kwargs...)
-end
-function environments(exci::Union{InfiniteQP, MultilineQP}, H, lenvs; kwargs...)
-    renvs = !istopological(exci) ? lenvs : environments(exci.right_gs, H; kwargs...)
-    return environments(exci, H, lenvs, renvs; kwargs...)
+function environments(
+        exci::Union{InfiniteQP, MultilineQP}, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian, MultilineMPO}, above = exci;
+        lenvs = environments(exci.left_gs, operator, exci.left_gs), renvs = istopological(exci) ? environments(exci.right_gs, operator, exci.right_gs) : lenvs,
+        kwargs...
+    )
+    alg = environment_alg(exci, operator, above; kwargs...)
+    return environments(exci, operator, above, alg; lenvs, renvs)
 end
 
-function environments(qp::MultilineQP, operator::MultilineMPO, lenvs, renvs; kwargs...)
+function environments(
+        qp::MultilineQP, operator::MultilineMPO, above, alg; lenvs, renvs = lenvs
+    )
     (rows = size(qp, 1)) == size(operator, 1) || throw(ArgumentError("Incompatible sizes"))
     envs = map(1:rows) do row
-        return environments(qp[row], operator[row], lenvs[row], renvs[row]; kwargs...)
+        return environments(
+            qp[row], operator[row], qp[row], alg; lenvs = lenvs[row], renvs = renvs[row]
+        )
     end
     return Multiline(PeriodicVector(envs))
 end
 
-function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs; kwargs...)
+function environments(
+        exci::InfiniteQP, H::InfiniteMPOHamiltonian, above, alg; lenvs, renvs = lenvs
+    )
     ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1)) .+ 1
-    solver = environment_alg(exci, H, exci; kwargs...)
+    solver = resolve_environment_solver(alg, exci, H, exci)
 
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
@@ -130,10 +133,9 @@ function environments(exci::InfiniteQP, H::InfiniteMPOHamiltonian, lenvs, renvs;
 end
 
 function environments(
-        exci::FiniteQP, H::FiniteMPOHamiltonian,
-        lenvs = environments(exci.left_gs, H),
-        renvs = !istopological(exci) ? lenvs : environments(exci.right_gs, H);
-        kwargs...
+        exci::FiniteQP, H::FiniteMPOHamiltonian, above = exci, alg = nothing;
+        lenvs = environments(exci.left_gs, H, exci.left_gs),
+        renvs = istopological(exci) ? environments(exci.right_gs, H, exci.right_gs) : lenvs
     )
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
@@ -160,10 +162,10 @@ function environments(
     return InfiniteQPEnvironments(lBs, rBs, lenvs, renvs)
 end
 
-function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
+function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs)
     istopological(exci) &&
         @warn "there is a phase ambiguity in topologically nontrivial statmech excitations"
-    solver = environment_alg(exci, O, exci; kwargs...)
+    solver = resolve_environment_solver(alg, exci, O, exci)
 
     left_gs = exci.left_gs
     right_gs = exci.right_gs
@@ -182,22 +184,27 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
         return inv(contract_mpo_expval(right_gs.AC[site], GL, O[site], GR))
     end
 
-    gbl = zerovector!(GBL[end])
+    # GBL[i] lives on the left MPO bond of site i. Applying site i therefore
+    # produces an object in GBL[i + 1]. This matters when the MPO bond spaces
+    # vary within the unit cell, as for a finite-ring shift MPO.
+    gbl = zerovector!(GBL[1])
     for col in 1:length(exci)
         gbl = gbl * TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col])
         gbl += leftenv(lenvs, col, left_gs) *
             TransferMatrix(exci[col], O[col], left_gs.AL[col])
         gbl *= left_regularization[col] * cis(-exci.momentum)
-        GBL[col] = gbl
+        GBL[col + 1] = gbl
     end
 
+    # GBR[i] lives on the right MPO bond of site i. Applying site i from the
+    # right therefore produces an object in GBR[i - 1].
     gbr = zerovector!(GBR[end])
     for col in reverse(1:length(exci))
         gbr = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]) * gbr
         gbr += TransferMatrix(exci[col], O[col], right_gs.AR[col]) *
             rightenv(renvs, col, right_gs)
         gbr *= right_regularization[col] * cis(exci.momentum)
-        GBR[col] = gbr
+        GBR[col - 1] = gbr
     end
 
     T_RL = TransferMatrix(right_gs.AR, O, left_gs.AL)
@@ -219,7 +226,7 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
         T_LR = regularize(T_LR, lvec, rvec)
     end
 
-    GBL[end], convhist = linsolve(
+    GBL[1], convhist = linsolve(
         flip(T_RL), gbl, gbl, solver, 1,
         -cis(-length(exci) * exci.momentum) * prod(left_regularization)
     )
@@ -227,25 +234,25 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, lenvs, renvs; kwargs...)
     convhist.converged == 0 &&
         @warn "GBL failed to converge: normres = $(convhist.normres)"
 
-    GBR[1], convhist = linsolve(
+    GBR[end], convhist = linsolve(
         T_LR, gbr, gbr, GMRES(), 1,
         -cis(length(exci) * exci.momentum) * prod(right_regularization)
     )
     convhist.converged == 0 &&
         @warn "GBR failed to converge: normres = $(convhist.normres)"
 
-    left_cur = GBL[end]
-    right_cur = GBR[1]
+    left_cur = GBL[1]
+    right_cur = GBR[end]
     for col in 1:(length(exci) - 1)
         left_cur = left_regularization[col] * left_cur *
             TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col]) *
             cis(-exci.momentum)
-        GBL[col] += left_cur
+        GBL[col + 1] += left_cur
 
         col = length(exci) - col + 1
         right_cur = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]) * right_cur *
             cis(exci.momentum) * right_regularization[col]
-        GBR[col] += right_cur
+        GBR[col - 1] += right_cur
     end
 
     return InfiniteQPEnvironments(GBL, GBR, lenvs, renvs)

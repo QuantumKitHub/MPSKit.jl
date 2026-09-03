@@ -20,8 +20,18 @@ using TensorKit: ℙ
         end
     end
 
+    # non-self-dual virtual space
+    let V = U1Space(0 => 1, 1 => 1), P = U1Space(0 => 1, 1 => 1)
+        mpo = InfiniteMPO([randn(ComplexF64, V ⊗ P ← P ⊗ V)])
+        for N in 2:4
+            TH = convert(TensorMap, periodic_boundary_conditions(mpo, N))
+            @test TH ≈
+                permute(TH, ((vcat(N, 1:(N - 1))...,), (vcat(2N, (N + 1):(2N - 1))...,)))
+        end
+    end
+
     # fermionic tests
-    h = f_plus_f_min(Float64, Trivial) + f_min_f_plus(Float64, Trivial)
+    h = f_hopping(Float64, Trivial)
     H = InfiniteMPOHamiltonian([space(h, 1)], (1, 2) => h)
     for N in 3:5
         H_periodic = periodic_boundary_conditions(H, N)

@@ -6,10 +6,11 @@ Calculate the von Neumann entanglement entropy. The entropy can be computed from
 MPS state or directly from an entanglement spectrum as obtained from
 [`entanglement_spectrum`](@ref).
 
-When called on an MPS with an integer `site`, the entropy is computed across the
-entanglement cut to the right of site `site`. For `InfiniteMPS`, omitting `site` returns a
-vector of entropies, one for each site. For `FiniteMPS` and `WindowMPS`, `site` is
-required.
+When called on an MPS with an integer `site`, the entropy is computed for the bipartition that
+splits the chain between sites `site` and `site + 1`.
+`site = 0` therefore denotes the cut to the left of the first site.
+For `InfiniteMPS`, omitting `site` returns a vector of entropies, one for each site.
+For `FiniteMPS` and `WindowMPS`, `site` is required.
 """
 entropy(state::InfiniteMPS) = map(Base.Fix1(entropy, state), 1:length(state))
 function entropy(state::Union{FiniteMPS, WindowMPS, InfiniteMPS}, loc::Int)
@@ -43,8 +44,8 @@ function infinite_temperature_density_matrix(H::MPOHamiltonian)
 end
 
 """
-    calc_galerkin(below, operator, above, envs)
-    calc_galerkin(pos, below, operator, above, envs)
+    calc_galerkin(below, operator, above, envs; kwargs...)
+    calc_galerkin(pos, below, operator, above, envs; kwargs...)
 
 Calculate the Galerkin error, which is the error between the solution of the original problem, and the solution of the problem projected on the tangent space.
 Concretely, this is the overlap of the current state with the single-site derivative, projected onto the nullspace of the current state:
@@ -52,147 +53,62 @@ Concretely, this is the overlap of the current state with the single-site deriva
 ```math
 \\epsilon = \\left|VL ⋅ \\left(VL^{\\dagger} ⋅ \\frac{\\partial \\text{above}}{\\partial AC_{\\text{pos}}}\\right)\\right|
 ```
+
+# Keyword Arguments
+
+- `backend = DefaultBackend()`: backend for the tensor contractions of the derivative.
+- `allocator = DefaultAllocator()`: allocator serving their scratch space. A sweep that already
+  holds one should pass it, rather than leaving this contraction to the garbage collector.
 """
-function calc_galerkin(pos::Int, below, operator, above, envs)
-    AC´ = AC_projection(pos, below, operator, above, envs)
+function calc_galerkin(
+        pos::Int, below, operator, above, envs;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    AC´ = AC_projection(pos, below, operator, above, envs; backend, allocator)
     normalize!(AC´)
-    out = mul!(AC´, below.AL[pos], below.AL[pos]' * AC´, -1, +1)
-    return norm(out)
+    return norm(project_complement!(AC´, below.AL[pos]))
 end
-function calc_galerkin(pos::CartesianIndex{2}, below, operator, above, envs)
+function calc_galerkin(pos::CartesianIndex{2}, below, operator, above, envs; kwargs...)
     row, col = Tuple(pos)
-    return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row])
+    return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row]; kwargs...)
 end
-function calc_galerkin(below, operator, above, envs)
-    return maximum(pos -> calc_galerkin(pos, below, operator, above, envs), eachindex(below))
-end
-
-"""
-    transfer_spectrum(above::InfiniteMPS; below=above, tol=Defaults.tol, num_vals=20,
-                           sector=leftunit(above))
-
-Calculate the partial spectrum of the left mixed transfer matrix corresponding to the
-overlap of a given `above` state and a `below` state. The `sector` keyword argument can be
-used to specify a non-trivial total charge for the transfer matrix eigenvectors.
-Specifically, an auxiliary space `ℂ[typeof(sector)](sector => 1)'` will be added to the
-domain of each eigenvector. The `tol` and `num_vals` keyword arguments are passed to
-`KrylovKit.eigsolve`
-"""
-function transfer_spectrum(
-        above::InfiniteMPS; below = above, tol = Defaults.tol, num_vals = 20,
-        sector = leftunit(above)
-    )
-    init = randomize!(
-        similar(
-            above.AL[1], left_virtualspace(below, 1),
-            spacetype(above)(sector => 1)' * left_virtualspace(above, 1)
-        )
-    )
-
-    transferspace = fuse(left_virtualspace(above, 1) * left_virtualspace(below, 1)')
-    num_vals = min(dim(transferspace, sector), num_vals) # we can ask at most this many values
-    eigenvals, eigenvecs, convhist = eigsolve(
-        flip(TransferMatrix(above.AL, below.AL)), init, num_vals, :LM; tol = tol
-    )
-    convhist.converged < num_vals &&
-        @warn "correlation length failed to converge: normres = $(convhist.normres)"
-
-    return eigenvals
+function calc_galerkin(below, operator, above, envs; kwargs...)
+    return maximum(eachindex(below)) do pos
+        return calc_galerkin(pos, below, operator, above, envs; kwargs...)
+    end
 end
 
 """
     entanglement_spectrum(ψ, site::Int) -> SectorVector{T, sectortype(ψ), AbstractVector{T}}
 
-Compute the entanglement spectrum at a given site, i.e. the singular values of the gauge
-matrix to the right of a given site. This is a vector containing the singular
-values. The contributions from specific sectors can be viewed by indexing accordingly, i.e.
+Compute the entanglement spectrum across the cut that splits the chain between sites `site` and
+`site + 1`, i.e. the singular values of the gauge tensor `ψ.C[site]`.
+The contributions from specific sectors can be viewed by indexing accordingly, i.e.
 `entanglement_spectrum(ψ, site)[sector]`.
 
-For `InfiniteMPS` and `WindowMPS` the default value for `site` is 0.
-
-For `FiniteMPS` no default value for `site` is given; it is up to the user to specify.
+`site` runs over `0:length(ψ)`.
+For `FiniteMPS`, `0` and `length(ψ)` are the cuts at the left and right edge of the chain.
+No default is given for `FiniteMPS`; it is up to the user to specify.
+For `WindowMPS` and `InfiniteMPS`, `site` defaults to `0`.
 """
 function entanglement_spectrum(st::Union{InfiniteMPS, WindowMPS}, site::Int = 0)
     checkbounds(st, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
 function entanglement_spectrum(st::FiniteMPS, site::Int)
-    checkbounds(st, site)
+    checkbounds(st.C, site)
     return LinearAlgebra.svdvals(st.C[site])
 end
 
 """
-Find the closest fractions of π, differing at most ```tol_angle```
-"""
-function approx_angles(spectrum; tol_angle = 0.1)
-    angles = angle.(spectrum) ./ π                          # ∈ ]-1, 1]
-    angles_approx = rationalize.(angles, tol = tol_angle)     # ∈ [-1, 1]
-
-    # Remove the effects of the branchcut.
-    angles_approx[findall(angles_approx .== -1)] .= 1       # ∈ ]-1, 1]
-
-    return angles_approx .* π                               # ∈ ]-π, π]
-end
-
-"""
-Given an InfiniteMPS, compute the gap ```ϵ``` for the asymptotics of the transfer matrix, as
-well as the Marek gap ```δ``` as a scaling measure of the bond dimension.
-"""
-function marek_gap(above::InfiniteMPS; tol_angle = 0.1, kwargs...)
-    spectrum = transfer_spectrum(above; kwargs...)
-    return marek_gap(spectrum; tol_angle)
-end
-
-function marek_gap(spectrum::AbstractVector{T}; tol_angle = 0.1) where {T <: Number}
-    # Remove 1s from the spectrum
-    inds = findall(abs.(spectrum) .< 1 - 1.0e-12)
-    length(spectrum) - length(inds) < 2 || @warn "Non-injective mps?"
-
-    spectrum = spectrum[inds]
-
-    angles = approx_angles(spectrum; tol_angle = tol_angle)
-    θ = first(angles)
-
-    spectrum_at_angle = spectrum[findall(angles .== θ)]
-
-    lambdas = -log.(abs.(spectrum_at_angle))
-
-    ϵ = first(lambdas)
-
-    δ = Inf
-    if length(lambdas) > 2
-        δ = lambdas[2] - lambdas[1]
-    end
-
-    return ϵ, δ, θ
-end
-
-"""
-    correlation_length(above::InfiniteMPS; kwargs...)
-
-Compute the correlation length of a given InfiniteMPS based on the next-to-leading
-eigenvalue of the transfer matrix. The `kwargs` are passed to [`transfer_spectrum`](@ref),
-and can for example be used to target the correlation length in a specific sector. 
-"""
-function correlation_length(above::InfiniteMPS; kwargs...)
-    ϵ, = marek_gap(above; kwargs...)
-    return 1 / ϵ
-end
-
-function correlation_length(spectrum::AbstractVector{T}; kwargs...) where {T <: Number}
-    ϵ, = marek_gap(spectrum; kwargs...)
-    return 1 / ϵ
-end
-
-"""
-    variance(state, hamiltonian, [envs=environments(state, hamiltonian)])
+    variance(state, hamiltonian, [envs = environments(state, hamiltonian, state)])
 
 Compute the variance of the energy of the state with respect to the Hamiltonian.
 """
 function variance end
 
 function variance(
-        state::InfiniteMPS, H::InfiniteMPOHamiltonian, envs = environments(state, H)
+        state::InfiniteMPS, H::InfiniteMPOHamiltonian, envs = environments(state, H, state)
     )
     e_local = map(1:length(state)) do i
         return contract_mpo_expval(
@@ -206,7 +122,7 @@ function variance(
     return real(expectation_value(state, (H - H_renormalized)^2))
 end
 
-function variance(state::FiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H))
+function variance(state::FiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H, state))
     H2 = H * H
     return real(expectation_value(state, H2) - expectation_value(state, H, envs)^2)
 end
@@ -235,7 +151,7 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs = environme
     # TODO: this is probably broken
     E_ex = dot(state, effective_excitation_hamiltonian(H, state, envs))
 
-    rescaled_envs = environments(gs, H_regularized)
+    rescaled_envs = environments(gs, H_regularized, gs)
     GL = leftenv(rescaled_envs, 1, gs)
     GR = rightenv(rescaled_envs, 0, gs)
     E_f = @plansor GL[5 3; 1] * gs.C[0][1; 4] * conj(gs.C[0][5; 2]) * GR[4 3; 2]
@@ -247,7 +163,7 @@ function variance(state::InfiniteQP, H::InfiniteMPOHamiltonian, envs = environme
     )
 end
 
-function variance(ψ, H::LazySum, envs = environments(ψ, sum(H)))
+function variance(ψ, H::LazySum, envs = environments(ψ, sum(H), ψ))
     # TODO: avoid throwing error and just compute correct environments
     envs isa MultipleEnvironments &&
         throw(ArgumentError("The environment cannot be Lazy i.e. use environments of sum(H)"))
@@ -273,8 +189,8 @@ function periodic_boundary_conditions(mpo::InfiniteMPO{O}, L = length(mpo)) wher
     local F_right
     for i in 1:L
         # kept as rightunitspace, but might need to change if we consider off-diagonal MPOs
-        V_left = i == 1 ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ left_virtualspace(mpo, i))
-        V_right = i == L ? rightunitspace(V_wrap) : fuse(V_wrap ⊗ right_virtualspace(mpo, i))
+        V_left = i == 1 ? rightunitspace(V_wrap) : fuse(V_wrap' ⊗ left_virtualspace(mpo, i))
+        V_right = i == L ? rightunitspace(V_wrap) : fuse(V_wrap' ⊗ right_virtualspace(mpo, i))
         output[i] = similar(
             mpo[i], V_left * physicalspace(mpo, i) ← physicalspace(mpo, i) * V_right
         )

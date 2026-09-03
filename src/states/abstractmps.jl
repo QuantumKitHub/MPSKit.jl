@@ -14,80 +14,7 @@ const GenericMPSTensor{S, N} = AbstractTensorMap{T, S, N, 1} where {T} # some fu
 const MPSTensor{S} = GenericMPSTensor{S, 2} # the usual mps tensors on which we work
 
 """
-    MPSTensor([f, eltype], d::Int, left_D::Int, [right_D]::Int])
-    MPSTensor([f, eltype], physicalspace::Union{S,CompositeSpace{S}}, 
-              left_virtualspace::S, [right_virtualspace]::S) where {S<:ElementarySpace}
-
-Construct an `MPSTensor` with given physical and virtual spaces.
-
-### Arguments
-- `f::Function=rand`: initializer function for tensor data
-- `eltype::Type{<:Number}=ComplexF64`: scalar type of tensors
-
-- `physicalspace::Union{S,CompositeSpace{S}}`: physical space
-- `left_virtualspace::S`: left virtual space
-- `right_virtualspace::S`: right virtual space, defaults to equal left
-
-- `d::Int`: physical dimension
-- `left_D::Int`: left virtual dimension
-- `right_D::Int`: right virtual dimension
-"""
-function MPSTensor(
-        ::UndefInitializer, T, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
-    ) where {S <: ElementarySpace}
-    TT = tensormaptype(S, 1 + (P isa S ? 1 : length(P)), 1, T)
-    return TT(undef, Vₗ ⊗ P ← Vᵣ)
-end
-function MPSTensor(
-        f, T, P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
-    ) where {S <: ElementarySpace}
-    A = MPSTensor(undef, T, P, Vₗ, Vᵣ)
-    if f === rand
-        return rand!(A)
-    elseif f === randn
-        return randn!(A)
-    elseif f === zeros
-        return zeros!(A)
-    else
-        throw(ArgumentError("Unsupported initializer function: $f"))
-    end
-end
-# TODO: reinstate function initializers?
-function MPSTensor(
-        P::Union{S, CompositeSpace{S}}, Vₗ::S, Vᵣ::S = Vₗ
-    ) where {S <: ElementarySpace}
-    return MPSTensor(rand, Defaults.eltype, P, Vₗ, Vᵣ)
-end
-
-"""
-    MPSTensor([f, eltype], d::Int, Dₗ::Int, [Dᵣ]::Int])
-
-Construct an `MPSTensor` with given physical and virtual dimensions.
-
-### Arguments
-- `f::Function=rand`: initializer function for tensor data
-- `eltype::Type{<:Number}=ComplexF64`: scalar type of tensors
-- `d::Int`: physical dimension
-- `Dₗ::Int`: left virtual dimension
-- `Dᵣ::Int`: right virtual dimension
-"""
-MPSTensor(f, T, d::Int, Dₗ::Int, Dᵣ::Int = Dₗ) = MPSTensor(f, T, ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
-MPSTensor(d::Int, Dₗ::Int; Dᵣ::Int = Dₗ) = MPSTensor(ℂ^d, ℂ^Dₗ, ℂ^Dᵣ)
-
-"""
-    MPSTensor(A::AbstractArray)
-
-Convert an array to an `MPSTensor`.
-"""
-function MPSTensor(A::AbstractArray{<:Number})
-    @assert ndims(A) > 2 "MPSTensor should have at least 3 dims, but has $ndims(A)"
-    sz = size(A)
-    V = foldl(⊗, ComplexSpace.(sz[1:(end - 1)])) ← ℂ^sz[end]
-    return TensorMap(A, V)
-end
-
-"""
-    isfullrank(A::GenericMPSTensor; side=:both)
+    isfullrank(A::GenericMPSTensor; side = :both)
 
 Determine whether the given tensor is full rank, i.e. whether both the map from the left
 virtual space and the physical space to the right virtual space, and the map from the right
@@ -110,7 +37,7 @@ function isfullrank(V::TensorKit.TensorMapSpace; side = :both)
 end
 
 """
-    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg=Defaults.alg_orth())
+    makefullrank!(A::PeriodicVector{<:GenericMPSTensor}; alg = Defaults.alg_orth())
 
 Make the set of MPS tensors full rank by performing a series of orthogonalizations.
 """
@@ -156,12 +83,12 @@ end
 # Tensor accessors
 # ----------------
 @doc """
-    AC2(ψ::AbstractMPS, i; kind=:ACAR)
+    AC2(ψ::AbstractMPS, i; kind = :ACAR)
 
 Obtain the two-site (center) gauge tensor at site `i` of the MPS `ψ`.
 If this hasn't been computed before, this can be computed as:
-- `kind=:ACAR` : AC[i] * AR[i+1]
-- `kind=:ALAC` : AL[i] * AC[i+1]
+- `kind = :ACAR`: AC[i] * AR[i+1]
+- `kind = :ALAC`: AL[i] * AC[i+1]
 """ AC2
 
 #===========================================================================================
@@ -203,7 +130,7 @@ TensorKit.sectortype(ψtype::Type{<:AbstractMPS}) = sectortype(site_type(ψtype)
 TensorKit.storagetype(ψtype::Type{<:AbstractMPS}) = storagetype(site_type(ψtype))
 
 """
-    left_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
+    left_virtualspace(ψ::AbstractMPS, [pos = 1:length(ψ)])
     
 Return the virtual space of the bond to the left of sites `pos`.
 
@@ -217,7 +144,7 @@ left_virtualspace(O::MPOTensor) = space(O, 1)
 left_virtualspace(ψ::AbstractMPS) = map(Base.Fix1(left_virtualspace, ψ), eachsite(ψ))
 
 """
-    right_virtualspace(ψ::AbstractMPS, [pos=1:length(ψ)])
+    right_virtualspace(ψ::AbstractMPS, [pos = 1:length(ψ)])
 
 Return the virtual space of the bond to the right of site(s) `pos`.
 
@@ -231,7 +158,7 @@ right_virtualspace(O::MPOTensor) = space(O, 4)'
 right_virtualspace(ψ::AbstractMPS) = map(Base.Fix1(right_virtualspace, ψ), eachsite(ψ))
 
 """
-    physicalspace(ψ::AbstractMPS, [pos=1:length(ψ)])
+    physicalspace(ψ::AbstractMPS, [pos = 1:length(ψ)])
 
 Return the physical space of the site tensor at site `i`.
 """
@@ -241,6 +168,11 @@ physicalspace(A::GenericMPSTensor) = prod(x -> space(A, x), 2:(numind(A) - 1))
 physicalspace(O::MPOTensor) = space(O, 2)
 physicalspace(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}) = only(space(O, 2))
 physicalspace(ψ::AbstractMPS) = map(Base.Fix1(physicalspace, ψ), eachsite(ψ))
+
+# the input physical space of an MPO tensor, i.e. the space of the state it can be applied to.
+# This need not equal its output physical space `physicalspace`.
+_input_physicalspace(O::MPOTensor) = dual(space(O, 3))
+_input_physicalspace(O::AbstractBlockTensorMap{<:Any, <:Any, 2, 2}) = dual(only(space(O, 3)))
 
 """
     eachsite(state::AbstractMPS)

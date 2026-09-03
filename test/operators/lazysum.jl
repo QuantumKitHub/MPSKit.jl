@@ -96,8 +96,8 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         end
         summedH = LazySum(Hs)
 
-        envs = map(H -> environments(ψ, H), Hs)
-        summed_envs = environments(ψ, summedH)
+        envs = map(H -> environments(ψ, H, ψ), Hs)
+        summed_envs = environments(ψ, summedH, ψ)
 
         expval = sum(zip(Hs, envs)) do (H, env)
             return expectation_value(ψ, H, env)
@@ -134,8 +134,8 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         t = 1.1
         summedH_at = summedH(t)
 
-        envs = map(H -> environments(ψ, H), Hs)
-        summed_envs = environments(ψ, summedH)
+        envs = map(H -> environments(ψ, H, ψ), Hs)
+        summed_envs = environments(ψ, summedH, ψ)
 
         expval = sum(zip(fs, Hs, envs)) do (f, H, env)
             return (f isa Function ? f(t) : f) * expectation_value(ψ, H, env)
@@ -181,8 +181,8 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
             return repeat(H, 2)
         end
         summedH = LazySum(Hs)
-        envs = map(H -> environments(ψ, H), Hs)
-        summed_envs = environments(ψ, summedH)
+        envs = map(H -> environments(ψ, H, ψ), Hs)
+        summed_envs = environments(ψ, summedH, ψ)
 
         expval = sum(zip(Hs, envs)) do (H, Env)
             return expectation_value(ψ, H, Env)
@@ -219,8 +219,8 @@ vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
         t = 1.1
         summedH_at = summedH(t)
 
-        envs = map(H -> environments(ψ, H), Hs)
-        summed_envs = environments(ψ, summedH)
+        envs = map(H -> environments(ψ, H, ψ), Hs)
+        summed_envs = environments(ψ, summedH, ψ)
 
         expval = sum(zip(fs, Hs, envs)) do (f, H, env)
             return (f isa Function ? f(t) : f) * expectation_value(ψ, H, env)

@@ -18,8 +18,8 @@ export QP, LeftGaugedQP, RightGaugedQP
 # operators:
 export AbstractMPO
 export MPO, FiniteMPO, InfiniteMPO
-export JordanMPOTensor, JordanMPOTensorMap
-export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian
+export JordanMPOTensor
+export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, WindowMPOHamiltonian
 export MultilineMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
@@ -35,9 +35,11 @@ export VUMPS, VOMPS, DMRG, DMRG2, IDMRG, IDMRG2, GradientGrassmann
 export excitations
 export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo
-export TDVP, TDVP2, WI, WII, TaylorCluster
+export TDVP, TDVP2, BUG, WI, WII, TaylorCluster
 export changebonds, changebonds!
-export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand
+export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
+export NoiseSchedule, FunctionalSchedule, ExponentialDecay, Warmup, DMRG3S
+export Zipup
 export propagator
 export DynamicalDMRG, NaiveInvert, Jeckelmann
 export exact_diagonalization, fidelity_susceptibility
@@ -52,14 +54,15 @@ export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # TODO: rename
 
 # unexported
 using Compat: @compat
-@compat public DynamicTols
+@compat public DynamicTols, DynamicTol, AdaptiveKrylov
 @compat public VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
 @compat public IterLog, loginit!, logiter!, logfinish!, logcancel!
+@compat public default_allocator
 
 # Imports
 # -------
 using TensorKit
-using TensorKit: BraidingTensor
+using TensorKit: BraidingTensor, promote_storagetype
 using TensorKit: TupleTools as TT
 using MatrixAlgebraKit
 using MatrixAlgebraKit: TruncationStrategy
@@ -67,7 +70,7 @@ using BlockTensorKit
 using BlockTensorKit: TensorMapSumSpace
 using TensorOperations
 using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator, BufferAllocator,
-    allocator_checkpoint!, allocator_reset!
+    ManualAllocator, allocator_checkpoint!, allocator_reset!
 using KrylovKit
 using KrylovKit: KrylovAlgorithm
 using OptimKit
@@ -84,6 +87,7 @@ using Random
 using Base: @kwdef, @propagate_inbounds
 using LoggingExtras
 using OhMyThreads
+using TimerOutputs: TimerOutput, NoTimerOutput, @timeit, timeit, print_timer
 
 # Includes
 # --------
@@ -95,6 +99,7 @@ using .DynamicTols
 
 include("utility/defaults.jl")
 using .Defaults: VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
+include("utility/allocator.jl")
 include("utility/logging.jl")
 using .IterativeLoggers
 include("utility/iterativesolvers.jl")
@@ -121,6 +126,7 @@ include("operators/abstractmpo.jl")
 include("operators/mpo.jl")
 include("operators/jordanmpotensor.jl")
 include("operators/mpohamiltonian.jl") # the mpohamiltonian objects
+include("operators/windowhamiltonian.jl")
 include("operators/ortho.jl")
 include("operators/multilinempo.jl")
 include("operators/projection.jl")
@@ -146,6 +152,7 @@ include("algorithms/derivatives/hamiltonian_derivatives.jl")
 include("algorithms/derivatives/projection_derivatives.jl")
 include("algorithms/expval.jl")
 include("algorithms/toolbox.jl")
+include("algorithms/transfer_spectrum.jl")
 include("algorithms/grassmann.jl")
 include("algorithms/correlators.jl")
 
@@ -154,8 +161,13 @@ include("algorithms/changebonds/optimalexpand.jl")
 include("algorithms/changebonds/vumpssvd.jl")
 include("algorithms/changebonds/svdcut.jl")
 include("algorithms/changebonds/randexpand.jl")
+include("algorithms/changebonds/sketchedexpand.jl")
+
+include("algorithms/post_expand/post_expand.jl")
+include("algorithms/post_expand/dmrg3s.jl")
 
 include("algorithms/timestep/tdvp.jl")
+include("algorithms/timestep/bug.jl")
 include("algorithms/timestep/taylorcluster.jl")
 include("algorithms/timestep/wii.jl")
 include("algorithms/timestep/integrators.jl")
@@ -176,7 +188,6 @@ include("algorithms/excitation/chepigaansatz.jl")
 include("algorithms/excitation/exci_transfer_system.jl")
 
 include("algorithms/statmech/leading_boundary.jl")
-include("algorithms/statmech/vumps.jl")
 include("algorithms/statmech/vomps.jl")
 include("algorithms/statmech/gradient_grassmann.jl")
 include("algorithms/statmech/idmrg.jl")
@@ -184,6 +195,7 @@ include("algorithms/statmech/idmrg.jl")
 include("algorithms/fidelity_susceptibility.jl")
 
 include("algorithms/approximate/approximate.jl")
+include("algorithms/approximate/zipup.jl")
 include("algorithms/approximate/vomps.jl")
 include("algorithms/approximate/fvomps.jl")
 include("algorithms/approximate/idmrg.jl")

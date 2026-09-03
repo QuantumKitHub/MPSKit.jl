@@ -7,8 +7,10 @@ module Defaults
 
 import KrylovKit: GMRES, Arnoldi, Lanczos
 using OhMyThreads
-using ..MPSKit: DynamicTol
+using ..MPSKit: DynamicTol, AdaptiveKrylov
+using Preferences: @load_preference, @set_preferences!
 using TensorKit: TensorKit
+using TensorOperations: DefaultBackend
 using MatrixAlgebraKit: DefaultAlgorithm, Householder
 
 const VERBOSE_NONE = 0
@@ -38,35 +40,47 @@ const eigsolver = Arnoldi(; tol, maxiter, eager = true)
 # Default algorithms
 # ------------------
 
+alg_svd() = DefaultAlgorithm()
+alg_orth() = Householder(; positive = true)
+
+"""
+    backend()
+
+The default backend for tensor contractions and index manipulations.
+
+`TensorOperations.DefaultBackend` is a placeholder rather than a CPU backend: the actual
+implementation is selected from the types of the tensors involved, so this is already the right
+choice for GPU-backed states.
+"""
+backend() = DefaultBackend()
+
 function alg_gauge(;
         tol = tolgauge, maxiter = maxiter, verbosity = VERBOSE_WARN,
+        alg_orth = alg_orth(),
         dynamic_tols = dynamic_tols, tol_min = tol_min, tol_max = tol_max,
         tol_factor = gauge_tolfactor
     )
-    alg = (; tol, maxiter, verbosity)
+    alg = (; tol, maxiter, verbosity, alg_orth)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
 function alg_eigsolve(;
         ishermitian = true, tol = tol, maxiter = maxiter, verbosity = 0,
         eager = true, krylovdim = krylovdim, dynamic_tols = dynamic_tols, tol_min = tol_min,
-        tol_max = tol_max, tol_factor = eigs_tolfactor
+        tol_max = tol_max, tol_factor = eigs_tolfactor, adaptive = false, adaptive_kwargs...
     )
+    adaptive && return AdaptiveKrylov(; ishermitian, adaptive_kwargs...)
     alg = ishermitian ? Lanczos(; tol, maxiter, eager, krylovdim, verbosity) :
         Arnoldi(; tol, maxiter, eager, krylovdim, verbosity)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
-alg_svd() = DefaultAlgorithm()
-alg_orth() = Householder(; positive = true)
-
-# TODO: make verbosity and maxiter actually do something
 function alg_environments(;
-        tol = tol, maxiter = maxiter, verbosity = 0,
+        tol = tol, maxiter = maxiter, verbosity = 0, krylovdim = krylovdim, eager = true,
         dynamic_tols = dynamic_tols, tol_min = tol_min, tol_max = tol_max,
         tol_factor = envs_tolfactor
     )
-    alg = (; tol, maxiter, verbosity)
+    alg = DefaultAlgorithm(; tol, maxiter, verbosity, eager, krylovdim)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
 end
 
@@ -81,7 +95,7 @@ end
 """
    const scheduler
 
-A scoped value that controls the current settings for multi-threading, typically used to parallelize over unitcells.
+The current settings for multi-threading, typically used to parallelize over unitcells.
 This value is best controlled using [`set_scheduler!`](@ref).
 """
 const scheduler = Ref{Scheduler}()
@@ -91,7 +105,7 @@ const scheduler = Ref{Scheduler}()
 
 Set the `OhMyThreads` multi-threading scheduler parameters.
 
-The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or as a symbol where the corresponding parameters are specificed as keyword arguments.
+The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or as a symbol where the corresponding parameters are specified as keyword arguments.
 For a detailed description of all schedulers and their keyword arguments consult the [`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
 """
 function set_scheduler!(sc = OhMyThreads.Implementation.NotGiven(); kwargs...)
@@ -102,6 +116,38 @@ function set_scheduler!(sc = OhMyThreads.Implementation.NotGiven(); kwargs...)
         scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(sc; kwargs...)
     end
     return scheduler[]
+end
+
+"""
+    const buffering
+
+Whether local updates serve their scratch space from a dedicated allocator.
+
+This is a compile-time preference, best controlled using [`set_buffering!`](@ref).
+"""
+const buffering = @load_preference("buffering", true)::Bool
+
+"""
+    set_buffering!(b::Bool)
+
+Enable or disable dedicated scratch space for local updates.
+
+When enabled - the default - the tensor contractions of a local update serve their intermediates
+from an allocator that bypasses Julia's memory manager, which cuts both the allocation count and the
+garbage-collection time substantially. Disabling it trades that back for lower memory use, which is
+worthwhile when memory rather than time is the binding constraint.
+
+This only affects storage types for which MPSKit has such an allocator, i.e. host memory; see
+[`MPSKit.default_allocator`](@ref).
+
+!!! note
+    This setting is stored in a `LocalPreferences.toml` file next to the active `Project.toml` and is
+    read when MPSKit is compiled, so Julia has to be restarted for a change to take effect.
+"""
+function set_buffering!(b::Bool)
+    @set_preferences!("buffering" => b)
+    @info "Buffering set to $b; restart Julia for this to take effect."
+    return b
 end
 
 end

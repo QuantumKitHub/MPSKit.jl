@@ -14,12 +14,12 @@ using TensorKit: ℙ
     ψ = InfiniteMPS([ℙ^2], [ℙ^10])
     H = force_planar(transverse_field_ising())
     ψ, = find_groundstate(ψ, H, VUMPS(; verbosity = 0))
-    len_crit = correlation_length(ψ)[1]
+    len_crit = correlation_length(ψ; sector = leftunit(ψ))
     entrop_crit = entropy(ψ)
 
     H = force_planar(transverse_field_ising(; g = 4))
     ψ, = find_groundstate(ψ, H, VUMPS(; verbosity = 0))
-    len_gapped = correlation_length(ψ)[1]
+    len_gapped = correlation_length(ψ; sector = leftunit(ψ))
     entrop_gapped = entropy(ψ)
 
     @test len_crit > len_gapped
@@ -41,4 +41,12 @@ end
     @test isapprox(last(G), last(G2), atol = 1.0e-2)
     @test isapprox(G[1], expectation_value(ψ, (1, 2) => S_z_S_z()), atol = 1.0e-2)
     @test isapprox(G[2], expectation_value(ψ, (1, 3) => S_z_S_z()), atol = 1.0e-2)
+
+    # the sites have to be ordered `i < j`: every `correlator` method funnels its
+    # arguments through the range version, so all three signatures have to throw
+    @test_throws ArgumentError correlator(ψ, Z_mpo, Z_mpo, 3, 2)
+    @test_throws ArgumentError correlator(ψ, Z_mpo, Z_mpo, 3, 1:2)
+    @test_throws ArgumentError correlator(ψ, S_z_S_z(), 3, 2)
+    # equal sites are not allowed either
+    @test_throws ArgumentError correlator(ψ, Z_mpo, Z_mpo, 2, 2)
 end

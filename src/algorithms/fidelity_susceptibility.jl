@@ -1,8 +1,10 @@
 """
-    fidelity_susceptibility(state::Union{FiniteMPS,InfiniteMPS}, H₀::T,
-                            Vs::AbstractVector{T}, [henvs=environments(state, H₀)];
-                            maxiter=Defaults.maxiter,
-                            tol=Defaults.tol) where {T<:MPOHamiltonian}
+    fidelity_susceptibility(
+        state::Union{FiniteMPS, InfiniteMPS}, H₀::T,
+        Vs::AbstractVector{T}, [henvs = environments(state, H₀, state)];
+        maxiter = Defaults.maxiter,
+        tol = Defaults.tol
+    ) where {T <: MPOHamiltonian}
 
 Computes the fidelity susceptibility of a the ground state `state` of a base Hamiltonian
 `H₀` with respect to a set of perturbing Hamiltonians `Vs`. Each of the perturbing
@@ -14,11 +16,11 @@ corresponding to each of the perturbing Hamiltonians.
 """
 function fidelity_susceptibility(
         state::Union{FiniteMPS, InfiniteMPS}, H₀::T,
-        Vs::AbstractVector{T}, henvs = environments(state, H₀);
+        Vs::AbstractVector{T}, henvs = environments(state, H₀, state);
         maxiter = Defaults.maxiter, tol = Defaults.tol
     ) where {T <: MPOHamiltonian}
     tangent_vecs = map(Vs) do V
-        venvs = environments(state, V)
+        venvs = environments(state, V, state)
 
         Tos = LeftGaugedQP(rand, state)
         for (i, ac) in enumerate(state.AC)
@@ -28,7 +30,7 @@ function fidelity_susceptibility(
         end
 
         vec, convhist = linsolve(Tos, Tos, GMRES(; maxiter = maxiter, tol = tol)) do x
-            return effective_excitation_hamiltonian(H₀, x, environments(x, H₀, henvs))
+            return effective_excitation_hamiltonian(H₀, x, environments(x, H₀, x; lenvs = henvs))
         end
         convhist.converged == 0 && @warn "failed to converge: normres = $(convhist.normres)"
 

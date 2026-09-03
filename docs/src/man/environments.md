@@ -19,7 +19,7 @@ operator = nonsym_ising_ham();
 
 an environment object can be created by calling
 ```julia
-envs = environments(state, operator)
+envs = environments(state, operator, state)
 ```
 
 The partially contracted mpohamiltonian left of site i can then be queried using:
@@ -44,7 +44,7 @@ Infinite Environments are very similar :
 ```julia
 state = InfiniteMPS(ℂ^2, ℂ^10)
 operator = transverse_field_ising()
-envs = environments(state, operator)
+envs = environments(state, operator, state)
 ```
 
 There are also some notable differences. Infinite environments typically require solving linear problems or eigenvalue problems iteratively with finite precision. To find out what precision we used we can type:

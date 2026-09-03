@@ -1,7 +1,7 @@
 using Markdown
 
 md"""
-# [Hubbard chain at half filling](@id hubbard)
+# Hubbard chain at half filling
 
 The Hubbard model is a model of interacting fermions on a lattice, which is often used as a somewhat realistic model for electrons in a solid.
 The Hamiltonian consists of two terms that describe competing forces of each electron:
@@ -72,8 +72,8 @@ function compute_groundstate(
     for _ in 1:expansioniter
         D = maximum(x -> dim(left_virtualspace(psi, x)), 1:length(psi))
         D′ = max(5, round(Int, D * expansionfactor))
-        trscheme = trunctol(; atol = svalue / 10) & truncrank(D′)
-        psi′, = changebonds(psi, H, OptimalExpand(; trscheme = trscheme))
+        trunc = trunctol(; atol = svalue / 10) & truncrank(D′)
+        psi′, = changebonds(psi, H, OptimalExpand(; trunc = trunc))
         all(
             left_virtualspace.(Ref(psi), 1:length(psi)) .==
                 left_virtualspace.(Ref(psi′), 1:length(psi))
@@ -82,7 +82,7 @@ function compute_groundstate(
     end
 
     ## convergence steps
-    psi, = changebonds(psi, H, SvdCut(; trscheme = trunctol(; atol = svalue)))
+    psi, = changebonds(psi, H, SvdCut(; trunc = trunctol(; atol = svalue)))
     psi, = find_groundstate(
         psi, H,
         VUMPS(; tol = svalue / 100, verbosity, maxiter = 100) &
@@ -146,9 +146,9 @@ These excitations can be constructed as follows:
 alg = QuasiparticleAnsatz(; tol = 1.0e-3)
 momenta = range(-π, π; length = 33)
 psi_AB = psi
-envs_AB = environments(psi_AB, H_u1_su2);
+envs_AB = environments(psi_AB, H_u1_su2, psi_AB);
 psi_BA = circshift(psi, 1)
-envs_BA = environments(psi_BA, H_u1_su2);
+envs_BA = environments(psi_BA, H_u1_su2, psi_BA);
 
 spinon_charge = FermionParity(0) ⊠ U1Irrep(0) ⊠ SU2Irrep(1 // 2)
 E_spinon, ϕ_spinon = excitations(

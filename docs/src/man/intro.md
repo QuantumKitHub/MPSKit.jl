@@ -66,7 +66,7 @@ For more information, check out the [TensorKit documentation](https://quantumkit
 The general definition of an MPS tensor is as follows:
 
 ```@raw html
-<img src="../../assets/mps_tensor_definition.png" alt="convention MPSTensor" class="color-invertible"/>
+<img src="../assets/mps_tensor_definition.png" alt="convention MPSTensor" class="color-invertible"/>
 ```
 
 These tensors are allowed to have an arbitrary number of physical legs, and both `FiniteMPS`
@@ -77,14 +77,14 @@ Similarly, the definition of a bond tensor, appearing in between two MPS tensors
 follows:
 
 ```@raw html
-<img src="../../assets/bond_tensor_definition.png" alt="convention BondTensor" class="color-invertible"/>
+<img src="../assets/bond_tensor_definition.png" alt="convention BondTensor" class="color-invertible"/>
 ```
 
 Finally, the definition of a MPO tensor, which is used to represent statistical mechanics
 problems as well as quantum Hamiltonians, is represented as:
 
 ```@raw html
-<img src="../../assets/mpo_tensor_definition.png" alt="convention MPOTensor" class="color-invertible"/>
+<img src="../assets/mpo_tensor_definition.png" alt="convention MPOTensor" class="color-invertible"/>
 ```
 
 While this results at first glance in the not very intuitive ordering of spaces as $V_l

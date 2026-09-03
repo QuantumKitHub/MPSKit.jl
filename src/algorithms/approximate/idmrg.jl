@@ -1,7 +1,8 @@
 function approximate!(
         ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS}, alg::IDMRG,
-        envs = environments(ψ, toapprox)
+        envs = environments(ψ, toapprox...)
     )
+    allocator = default_allocator(ψ, SerialScheduler())
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
     local iter
@@ -15,7 +16,8 @@ function approximate!(
             for col in 1:size(ψ, 2)
                 for row in 1:size(ψ, 1)
                     ψ.AC[row + 1, col] = AC_projection(
-                        CartesianIndex(row, col), ψ, toapprox, envs
+                        CartesianIndex(row, col), ψ, toapprox, envs;
+                        alg.backend, allocator
                     )
                     normalize!(ψ.AC[row + 1, col])
                     ψ.AL[row + 1, col], ψ.C[row + 1, col] = left_orth!(ψ.AC[row + 1, col])
@@ -27,7 +29,8 @@ function approximate!(
             for col in reverse(1:size(ψ, 2))
                 for row in 1:size(ψ, 1)
                     ψ.AC[row + 1, col] = AC_projection(
-                        CartesianIndex(row, col), ψ, toapprox, envs
+                        CartesianIndex(row, col), ψ, toapprox, envs;
+                        alg.backend, allocator
                     )
                     normalize!(ψ.AC[row + 1, col])
                     ψ.C[row + 1, col - 1], temp = right_orth!(_transpose_tail(ψ.AC[row + 1, col]))
@@ -52,7 +55,7 @@ function approximate!(
     end
 
     # TODO: immediately compute in-place
-    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    alg_gauge = adapt_solver(alg.alg_gauge; iter, g_global = ϵ)
     ψ′ = MultilineMPS(map(x -> x, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
     copy!(ψ, ψ′) # ensure output destination is unchanged
 
@@ -62,8 +65,9 @@ end
 
 function approximate!(
         ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS},
-        alg::IDMRG2, envs = environments(ψ, toapprox)
+        alg::IDMRG2, envs = environments(ψ, toapprox...)
     )
+    allocator = default_allocator(ψ, SerialScheduler())
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
@@ -80,9 +84,9 @@ function approximate!(
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(
                         CartesianIndex(row, site), ψ, toapprox, envs;
-                        kind = :ACAR
+                        kind = :ACAR, alg.backend, allocator
                     )
-                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -99,8 +103,11 @@ function approximate!(
             ψ.AL[1, end] = ψ.AC[1, end] / ψ.C[1, end]
             ψ.AC[1, 1] = _mul_tail(ψ.AL[1, 1], ψ.C[1, 1])
             for row in 1:size(ψ, 1)
-                AC2′ = AC2_projection(CartesianIndex(row, size(ψ, 2)), ψ, toapprox, envs; kind = :ALAC)
-                al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                AC2′ = AC2_projection(
+                    CartesianIndex(row, size(ψ, 2)), ψ, toapprox, envs;
+                    kind = :ALAC, alg.backend, allocator
+                )
+                al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al
@@ -123,9 +130,9 @@ function approximate!(
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(
                         CartesianIndex(row, site), ψ, toapprox, envs;
-                        kind = :ALAC
+                        kind = :ALAC, alg.backend, allocator
                     )
-                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -141,8 +148,11 @@ function approximate!(
             ψ.AC[1, end] = _mul_front(ψ.C[1, end - 1], ψ.AR[1, end])
             ψ.AR[1, 1] = _transpose_front(ψ.C[1, end] \ _transpose_tail(ψ.AC[1, 1]))
             for row in 1:size(ψ, 1)
-                AC2′ = AC2_projection(CartesianIndex(row, 0), ψ, toapprox, envs; kind = :ACAR)
-                al, c, ar = svd_trunc!(AC2′; trunc = alg.trscheme, alg = alg.alg_svd)
+                AC2′ = AC2_projection(
+                    CartesianIndex(row, 0), ψ, toapprox, envs;
+                    kind = :ACAR, alg.backend, allocator
+                )
+                al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row, end] = al
@@ -154,7 +164,6 @@ function approximate!(
             end
             transfer_leftenv!(envs, ψ, toapprox, 1)
             transfer_rightenv!(envs, ψ, toapprox, 0)
-
 
             normalize!(envs, ψ, toapprox)
 
@@ -179,7 +188,7 @@ function approximate!(
     end
 
     # TODO: immediately compute in-place
-    alg_gauge = updatetol(alg.alg_gauge, iter, ϵ)
+    alg_gauge = adapt_solver(alg.alg_gauge; iter, g_global = ϵ)
     ψ′ = MultilineMPS(map(identity, ψ.AR); alg_gauge.tol, alg_gauge.maxiter)
     copy!(ψ, ψ′) # ensure output destination is unchanged
 

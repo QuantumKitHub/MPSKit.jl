@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Open-ended discussion
+    url: https://github.com/QuantumKitHub/MPSKit.jl/discussions
+    about: Ideas, feature brainstorming, or anything that isn't a specific question or bug report. For a concrete question about using MPSKit, use the Question template above.
+  - name: Documentation
+    url: https://quantumkithub.github.io/MPSKit.jl/stable/
+    about: The manual and examples, which may already cover what you are after.

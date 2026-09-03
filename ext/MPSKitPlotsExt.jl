@@ -10,8 +10,6 @@ using MPSKit, TensorKit
         sector_margin = 1 // 10, sector_formatter = string
     )
     mps = h.args[1]
-    (isa(mps, FiniteMPS) && (site == 0 || site > length(mps))) &&
-        throw(ArgumentError("Invalid site $site for the given mps."))
 
     spectra = entanglement_spectrum(mps, site)
     sectors = sectortype(mps)[]
@@ -41,7 +39,7 @@ using MPSKit, TensorKit
             widen --> true
             bottom_margin -->(10, :mm)
 
-            xguide --> "χ = $(round(Int, dim(left_virtualspace(mps, site))))"
+            xguide --> "χ = $(dim(MPSKit._firstspace(mps.C[site])))"
             xticks --> (1:length(sectors), sector_formatter.(sectors))
             xtickfonthalign --> :center
             xtick_direction --> :out
@@ -77,16 +75,16 @@ MPSKit.entanglementplot(args...; kwargs...) = entanglementplot(args...; kwargs..
         h::TransferPlot; sectors = nothing, transferkwargs = (;), thetaorigin = 0,
         sector_formatter = string
     )
-    if sectors === nothing
-        sectors = [leftunit(h.args[1])]
+    below = length(h.args) == 1 ? h.args[1] : h.args[2]
+    kwargs = (; transferkwargs...)
+    if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
+        howmany = Dict(c => get(kwargs, :howmany, 20) for c in sectors)
+        kwargs = (; kwargs..., howmany)
     end
+    spectra = transfer_spectrum(h.args[1], below; kwargs...)
 
-    for sector in sectors
-        below = length(h.args) == 1 ? h.args[1] : h.args[2]
-        spectrum = transfer_spectrum(
-            h.args[1]; below = below, sector = sector,
-            transferkwargs...
-        )
+    for (sector, spectrum) in pairs(spectra)
+        sectors === nothing || sector in sectors || continue
 
         @series begin
             yguide --> "r"

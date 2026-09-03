@@ -3,11 +3,15 @@ $(TYPEDEF)
 
 Generalization of the Euler approximation of the operator exponential for MPOs.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`make_time_mpo`](@ref).
+
+# References
 
 * [Zaletel et al. Phys. Rev. B 91 (2015)](@cite zaletel2015)
 * [Paeckel et al. Ann. of Phys. 411 (2019)](@cite paeckel2019)

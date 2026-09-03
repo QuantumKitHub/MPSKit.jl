@@ -196,6 +196,7 @@ Each site of the MPO is represented as a block of Unicode braille characters, wi
 This visualization is useful for quickly inspecting the structure and sparsity pattern of MPOs.
 
 # Arguments
+
 - `io::IO`: The output stream to print to (e.g., `stdout`).
 - `H::Union{SparseMPO, MPOHamiltonian}`: The `SparseMPO` or `MPOHamiltonian` to visualize.
 

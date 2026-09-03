@@ -1,0 +1,21 @@
+/* ===== MPSKit branding ===== */
+/* Accent color matching the (green) MPSKit logo in light mode.
+   Dark mode already uses the green palette defined by the DVP template. */
+:root {
+  --vp-c-brand: var(--julia-green);
+  --vp-c-brand-1: #389826;
+  --vp-c-brand-2: #2f8420;
+  --vp-c-brand-3: #277018;
+  --vp-c-brand-light: #389826;
+}
+
+/* ===== Color-invertible diagrams =====
+   The manual embeds line-drawing diagrams (black on transparent) via
+   `@raw html` <img class="color-invertible">. Legible on a light background
+   as-is; invert them in dark mode so they read as light-on-dark. */
+.color-invertible {
+  transition: filter 0.2s ease;
+}
+.dark .color-invertible {
+  filter: invert(1) hue-rotate(180deg);
+}

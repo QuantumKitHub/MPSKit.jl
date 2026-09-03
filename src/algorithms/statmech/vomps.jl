@@ -1,19 +1,23 @@
 """
 $(TYPEDEF)
-    
+
 Power method algorithm for finding dominant eigenvectors of infinite MPOs.
 This method works by iteratively approximating the product of an operator and a state
 with a new state of the same bond dimension.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`leading_boundary`](@ref) and [`approximate`](@ref).
+
+# References
 
 * [Vanhecke et al. SciPost Phys. Core 4 (2021)](@cite vanhecke2021)
 """
-@kwdef struct VOMPS{F} <: Algorithm
+@kwdef struct VOMPS{F, B} <: Algorithm
     "tolerance for convergence criterium"
     tol::Float64 = Defaults.tol
 
@@ -31,6 +35,9 @@ $(TYPEDFIELDS)
 
     "callback function applied after each iteration, of signature `finalize(iter, ψ, H, envs) -> ψ, envs`"
     finalize::F = Defaults._finalize
+
+    "backend for tensor contractions and index manipulations"
+    backend::B = Defaults.backend()
 end
 
 # Internal state of the VOMPS algorithm
@@ -42,22 +49,20 @@ struct VOMPSState{S, O, E}
     ϵ::Float64
 end
 
-function leading_boundary(
-        ψ::MultilineMPS, O::MultilineMPO, alg::VOMPS, envs = environments(ψ, O)
-    )
-    return dominant_eigsolve(O, ψ, alg, envs; which = :LM)
+function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::Union{VOMPS, VUMPS}, envs...)
+    return dominant_eigsolve(O, ψ, alg, envs...; which = :LM)
 end
 
 function dominant_eigsolve(
-        operator, mps, alg::VOMPS, envs = environments(mps, operator);
+        operator, mps, alg::VOMPS, envs = environments(mps, operator, mps, alg.alg_environments);
         which
     )
     @assert which === :LM "VOMPS only supports the LM eigenvalue problem"
     log = IterLog("VOMPS")
     iter = 0
-    ϵ = calc_galerkin(mps, operator, mps, envs)
-    alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-    recalculate!(envs, mps, operator, mps; alg_environments.tol)
+    ϵ = calc_galerkin(mps, operator, mps, envs; alg.backend)
+    alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)
+    recalculate!(envs, mps, operator, mps, alg_environments)
 
     state = VOMPSState(mps, operator, envs, iter, ϵ)
     it = IterativeSolver(alg, state)
@@ -91,7 +96,7 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state)
     mps, envs = it.finalize(state.iter, mps, state.operator, envs)::typeof((mps, envs))
 
     # error criterion
-    ϵ = calc_galerkin(mps, state.operator, mps, envs)
+    ϵ = calc_galerkin(mps, state.operator, mps, envs; it.backend)
 
     # update state
     it.state = VOMPSState(mps, state.operator, envs, state.iter + 1, ϵ)
@@ -100,17 +105,19 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state)
 end
 
 function localupdate_step!(
-        ::IterativeSolver{<:VOMPS}, state, scheduler = Defaults.scheduler[]
+        it::IterativeSolver{<:VOMPS}, state, scheduler = Defaults.scheduler[]
     )
-    alg_orth = Defaults.alg_orth()
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
+    alg_orth = alg_gauge.alg_orth
     mps = state.mps
     ACs = similar(mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
+    allocator = default_allocator(mps, scheduler)
     tforeach(eachsite(mps); scheduler) do site
         dst_ACs[site] = _localupdate_vomps_step!(
             site, mps, state.operator, state.envs;
-            alg_orth, parallel = false
+            alg_orth, it.backend, allocator
         )
         return nothing
     end
@@ -119,32 +126,24 @@ function localupdate_step!(
 end
 
 function _localupdate_vomps_step!(
-        site, mps, operator, envs; parallel::Bool = false, alg_orth = Defaults.alg_orth()
+        site, mps, operator, envs; alg_orth = Defaults.alg_orth(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
-    if !parallel
-        AC = AC_projection(site, mps, operator, mps, envs)
-        C = C_projection(site, mps, operator, mps, envs)
-        return regauge!(AC, C; alg = alg_orth)
-    end
-
-    local AC, C
-    @sync begin
-        @spawn AC = AC_projection(site, mps, operator, mps, envs)
-        @spawn C = C_projection(site, mps, operator, mps, envs)
-    end
+    AC = AC_projection(site, mps, operator, mps, envs; backend, allocator)
+    C = C_projection(site, mps, operator, mps, envs; backend, allocator)
     return regauge!(AC, C; alg = alg_orth)
 end
 
 function gauge_step!(it::IterativeSolver{<:VOMPS}, state, ACs::AbstractVector)
-    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    return InfiniteMPS(ACs, state.mps.C[end]; alg_gauge.tol, alg_gauge.maxiter)
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
+    return InfiniteMPS(ACs, state.mps.C[end]; alg_gauge...)
 end
 function gauge_step!(it::IterativeSolver{<:VOMPS}, state, ACs::AbstractMatrix)
-    alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    return MultilineMPS(ACs, @view(state.mps.C[:, end]); alg_gauge.tol, alg_gauge.maxiter)
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
+    return MultilineMPS(ACs, @view(state.mps.C[:, end]); alg_gauge...)
 end
 
 function envs_step!(it::IterativeSolver{<:VOMPS}, state, mps)
-    alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
-    return recalculate!(state.envs, mps, state.operator, mps; alg_environments.tol)
+    alg_environments = adapt_solver(it.alg_environments; iter = state.iter, g_global = state.ϵ)
+    return recalculate!(state.envs, mps, state.operator, mps, alg_environments)
 end

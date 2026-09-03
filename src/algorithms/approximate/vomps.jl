@@ -5,20 +5,27 @@ Base.@deprecate(
     ),
     approximate(
         ψ, toapprox,
-        VOMPS(; alg.tol, alg.maxiter, alg.finalize, alg.verbosity, alg.alg_gauge, alg.alg_environments),
+        VOMPS(;
+            alg.tol, alg.maxiter, alg.finalize, alg.verbosity, alg.alg_gauge,
+            alg.alg_environments, alg.backend,
+        ),
         envs...; kwargs...
     )
 )
 
 function approximate(
         mps::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS}, alg::VOMPS,
-        envs = environments(mps, toapprox)
+        envs = environments(mps, toapprox...)
     )
+    return _approximate_vomps(mps, toapprox, alg, envs)
+end
+
+function _approximate_vomps(mps, toapprox, alg::VOMPS, envs)
     log = IterLog("VOMPS")
     iter = 0
-    ϵ = calc_galerkin(mps, toapprox..., envs)
-    alg_environments = updatetol(alg.alg_environments, iter, ϵ)
-    recalculate!(envs, mps, toapprox...; alg_environments.tol)
+    ϵ = calc_galerkin(mps, toapprox..., envs; alg.backend)
+    alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)
+    recalculate!(envs, mps, toapprox..., alg_environments)
 
     state = VOMPSState(mps, toapprox, envs, iter, ϵ)
     it = IterativeSolver(alg, state)
@@ -54,7 +61,7 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:T
     mps, envs = it.finalize(state.iter, mps, state.operator, envs)::typeof((mps, envs))
 
     # error criterion
-    ϵ = calc_galerkin(mps, state.operator..., envs)
+    ϵ = calc_galerkin(mps, state.operator..., envs; it.backend)
 
     # update state
     it.state = VOMPSState(mps, state.operator, envs, state.iter + 1, ϵ)
@@ -63,48 +70,66 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:T
 end
 
 function localupdate_step!(
-        ::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
+        it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
     )
-    alg_orth = Defaults.alg_orth()
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
+    alg_orth = alg_gauge.alg_orth
 
     ACs = similar(state.mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
-    foreach(eachsite(state.mps)) do site
+    # the sweep is serial, so a single allocator serves all sites
+    allocator = default_allocator(state.mps, SerialScheduler())
+    for site in eachsite(state.mps)
         AC = map(1:size(state.mps, 1)) do row
-            AC_projection(CartesianIndex(row, site), state.mps, state.operator, state.envs)
+            AC_projection(
+                CartesianIndex(row, site), state.mps, state.operator, state.envs;
+                it.backend, allocator
+            )
         end
         circshift!(AC, 1)
         C = map(1:size(state.mps, 1)) do row
-            C_projection(CartesianIndex(row, site), state.mps, state.operator, state.envs)
+            C_projection(
+                CartesianIndex(row, site), state.mps, state.operator, state.envs;
+                it.backend, allocator
+            )
         end
         circshift!(C, 1)
         dst_ACs[site] = regauge!(AC, C; alg = alg_orth)
-        return nothing
     end
 
     return ACs
 end
 function localupdate_step!(
-        ::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, scheduler
+        it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, scheduler
     )
-    alg_orth = Defaults.alg_orth()
+    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
+    alg_orth = alg_gauge.alg_orth
 
     ACs = similar(state.mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
+    # every site - and the AC and C projections within a site - runs concurrently, so the allocator
+    # is shared and has to be one that tolerates that
+    allocator = default_allocator(state.mps, scheduler)
     tforeach(eachsite(state.mps); scheduler) do site
         local AC, C
         @sync begin
             Threads.@spawn begin
                 AC = map(1:size(state.mps, 1)) do row
-                    AC_projection(CartesianIndex(row, site), state.mps, state.operator, state.envs)
+                    AC_projection(
+                        CartesianIndex(row, site), state.mps, state.operator, state.envs;
+                        it.backend, allocator
+                    )
                 end
                 circshift!(AC, 1)
             end
             Threads.@spawn begin
                 C = map(1:size(state.mps, 1)) do row
-                    C_projection(CartesianIndex(row, site), state.mps, state.operator, state.envs)
+                    C_projection(
+                        CartesianIndex(row, site), state.mps, state.operator, state.envs;
+                        it.backend, allocator
+                    )
                 end
                 circshift!(C, 1)
             end
@@ -117,6 +142,6 @@ function localupdate_step!(
 end
 
 function envs_step!(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, mps)
-    alg_environments = updatetol(it.alg_environments, state.iter, state.ϵ)
-    return recalculate!(state.envs, mps, state.operator...; alg_environments.tol)
+    alg_environments = adapt_solver(it.alg_environments; iter = state.iter, g_global = state.ϵ)
+    return recalculate!(state.envs, mps, state.operator..., alg_environments)
 end

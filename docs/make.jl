@@ -8,6 +8,7 @@ end
 
 using MPSKit
 using Documenter
+using DocumenterVitepress
 using DocumenterCitations
 using DocumenterInterLinks
 
@@ -18,6 +19,20 @@ classic_pages = map(readdir(joinpath(example_dir, "classic2d"))) do dir
 end
 quantum_pages = map(readdir(joinpath(example_dir, "quantum1d"))) do dir
     return joinpath("examples", "quantum1d", dir, "index.md")
+end
+
+# contributing guide: `CONTRIBUTING.md` in the repository root is canonical, since that is the
+# location GitHub links to from the issue and pull request forms. Copy it in as a page so it is
+# reachable from the manual as well, with an `EditURL` pointing back at the real source file.
+open(joinpath(@__DIR__, "src", "contributing.md"), "w") do io
+    println(
+        io, """
+        ```@meta
+        EditURL = "https://github.com/QuantumKitHub/MPSKit.jl/blob/main/CONTRIBUTING.md"
+        ```
+        """
+    )
+    return write(io, read(joinpath(@__DIR__, "..", "CONTRIBUTING.md"), String))
 end
 
 # bibliography
@@ -37,23 +52,12 @@ links = InterLinks(
 # include MPSKit in all doctests
 DocMeta.setdocmeta!(MPSKit, :DocTestSetup, :(using MPSKit, TensorKit); recursive = true)
 
-mathengine = MathJax3(
-    Dict(
-        :loader => Dict("load" => ["[tex]/physics"]),
-        :tex => Dict(
-            "inlineMath" => [["\$", "\$"], ["\\(", "\\)"]],
-            "tags" => "ams",
-            "packages" => ["base", "ams", "autoload", "physics"]
-        )
-    )
-)
 makedocs(;
     sitename = "MPSKit.jl",
-    format = Documenter.HTML(;
-        prettyurls = true,
-        mathengine,
-        assets = ["assets/custom.css"],
-        size_threshold = 1024000,
+    format = DocumenterVitepress.MarkdownVitepress(;
+        repo = "github.com/QuantumKitHub/MPSKit.jl",
+        devbranch = "main",
+        devurl = "dev",
     ),
     pages = [
         "Home" => "index.md",
@@ -70,10 +74,17 @@ makedocs(;
         "Library" => "lib/lib.md",
         "References" => "references.md",
         "Changelog" => "changelog.md",
+        "Contributing" => "contributing.md",
     ],
     checkdocs = :exports,
     doctest = true,
     plugins = [bib, links]
 )
 
-deploydocs(; repo = "github.com/QuantumKitHub/MPSKit.jl.git", push_preview = true)
+DocumenterVitepress.deploydocs(;
+    repo = "github.com/QuantumKitHub/MPSKit.jl.git",
+    target = joinpath(@__DIR__, "build"),
+    branch = "gh-pages",
+    devbranch = "main",
+    push_preview = true,
+)

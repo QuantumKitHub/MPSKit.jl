@@ -13,7 +13,7 @@ overall performance.
 A lot of the confusion stems from the fact that the BLAS threading behaviour is not
 consistent between different vendors. Additionally, performance behaviour is severely
 dependent on hardware, the specifics of the problem, and the availability of other resources
-such as total memory, or memory bandwith. This means that there is no one size fits all
+such as total memory, or memory bandwidth. This means that there is no one size fits all
 solution, and that you will have to experiment with the settings to get optimal performance.
 Nevertheless, there are some general guidelines that can be followed, which seem to at least
 work well in most cases.
@@ -45,9 +45,9 @@ julia> using ThreadPinning; threadinfo(; blas=true, hints=true)
 
 System: 8 cores (2-way SMT), 1 sockets, 1 NUMA domains
 
-| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 | 
+| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 |
 
-# = Julia thread, # = HT, # = Julia thread on HT, | = Socket seperator
+# = Julia thread, # = HT, # = Julia thread on HT, | = Socket separator
 
 Julia threads: 4
 ├ Occupied CPU-threads: 4
@@ -62,9 +62,9 @@ julia> using MKL; threadinfo(; blas=true, hints=true)
 
 System: 8 cores (2-way SMT), 1 sockets, 1 NUMA domains
 
-| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 | 
+| 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 |
 
-# = Julia thread, # = HT, # = Julia thread on HT, | = Socket seperator
+# = Julia thread, # = HT, # = Julia thread on HT, | = Socket separator
 
 Julia threads: 4
 ├ Occupied CPU-threads: 4
@@ -95,8 +95,31 @@ MPSKit.Defaults.set_scheduler!(:greedy) # multithreading with greedy load-balanc
 MPSKit.Defaults.set_scheduler!(:dynamic) # default: multithreading with some load-balancing
 ```
 
-For further reference on the available schedulers and finer control, please refer to the 
+For further reference on the available schedulers and finer control, please refer to the
 [`OhMyThreads.jl` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/)
+
+## Allocators
+
+Every local update in an MPS algorithm contracts a handful of intermediate tensors that are thrown away immediately afterwards.
+Rather than asking Julia's garbage collector to clean up after each one, MPSKit hands the contractions an allocator that manages those intermediates itself.
+On a typical ground-state search this cuts both the allocation count and the garbage-collection time substantially.
+
+Which allocator is appropriate depends on two things, so [`MPSKit.default_allocator`](@ref) is asked for one at the start of every solve, and the answer is then used for all of its local updates:
+
+- *Where the tensors live.* Host memory can be served by an allocator that bypasses Julia's memory manager, whereas a device-backed state needs its scratch space on the device. This is only known once there is a state in hand, which is why it is not a setting on the algorithm.
+- *Whether the allocator will be shared between tasks.* `TensorOperations.BufferAllocator` is a bump buffer with a mutable offset, so it is only safe when a single task owns it - a serial sweep. Concurrent work instead gets a `TensorOperations.ManualAllocator`, which `malloc`s and `free`s each intermediate and holds no state at all.
+
+Anything MPSKit does not recognise falls back on `TensorOperations.DefaultAllocator`, which allocates through the storage type itself: correct on any device, at the cost of leaving the intermediates to the garbage collector.
+That is also what device-backed states get.
+Note that the `backend` field needs no such treatment: `TensorOperations.DefaultBackend` is a placeholder that resolves to an implementation based on the types of the tensors involved, so it already selects cuTENSOR for `CuArray`-backed states.
+
+Dedicated scratch space can be turned off when memory rather than time is the binding constraint, which trades it back for garbage-collector pressure:
+
+```julia
+MPSKit.Defaults.set_buffering!(false)
+```
+
+This is a compile-time preference: it is written to a `LocalPreferences.toml` file next to the active `Project.toml`, and Julia has to be restarted for the change to take effect.
 
 ## TensorKit multithreading
 

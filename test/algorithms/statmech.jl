@@ -15,7 +15,7 @@ using TensorKit: ℙ
     @testset "Finite-size" begin
         L = 6
         H = transverse_field_ising(; L)
-        trscheme = truncrank(20)
+        trunc = truncrank(20)
         verbosity = 1
         beta = 0.1
 
@@ -43,14 +43,14 @@ using TensorKit: ℙ
 
         # MPO multiplication
         rho_mps = convert(FiniteMPS, rho_taylor_1)
-        rho_mps, = approximate(rho_mps, (rho_taylor_1, rho_mps), DMRG2(; trscheme, verbosity))
+        rho_mps, = approximate(rho_mps, (rho_taylor_1, rho_mps), DMRG2(; trunc, verbosity))
         Z_mpomul = tr(convert(FiniteMPO, rho_mps))^(1 / L)
         @test Z_mpomul ≈ Z_dense_2 atol = 1.0e-2
 
         # TDVP
         rho_0 = MPSKit.infinite_temperature_density_matrix(H)
         rho_0_mps = convert(FiniteMPS, rho_0)
-        rho_mps, = timestep(rho_0_mps, H, 0.0, beta, TDVP2(; trscheme); imaginary_evolution)
+        rho_mps, = timestep(rho_0_mps, H, 0.0, beta, TDVP2(; trunc); imaginary_evolution)
         Z_tdvp = real(dot(rho_mps, rho_mps))^(1 / L)
         @test Z_tdvp ≈ Z_dense_2 atol = 1.0e-2
 
@@ -62,7 +62,7 @@ using TensorKit: ℙ
 
     @testset "Infinite-size" begin
         H = transverse_field_ising()
-        trscheme = truncrank(20)
+        trunc = truncrank(20)
         verbosity = 1
         beta = 0.1
 
@@ -89,15 +89,15 @@ using TensorKit: ℙ
 
         # TDVP
         rho_0 = MPSKit.infinite_temperature_density_matrix(H)
-        rho_0_mps, = changebonds(convert(InfiniteMPS, rho_0), H, OptimalExpand(; trscheme = truncrank(20)))
+        rho_0_mps, = changebonds(convert(InfiniteMPS, rho_0), H, OptimalExpand(; trunc = truncrank(20)))
         rho_mps_tdvp, = timestep(rho_0_mps, H, 0.0, beta, TDVP(); imaginary_evolution)
         E_tdvp = expectation_value(rho_mps_tdvp, H)
         @test E_tdvp ≈ E_taylor atol = 1.0e-2
 
-        num_vals = 2
-        vals_taylor = @constinferred(transfer_spectrum(convert(InfiniteMPS, rho_taylor); num_vals))
-        vals_mps = @constinferred(transfer_spectrum(rho_mps; num_vals))
-        @test vals_taylor[1:num_vals] ≈ vals_mps[1:num_vals]
+        howmany = 2
+        vals_taylor = @constinferred(transfer_spectrum(convert(InfiniteMPS, rho_taylor); howmany))
+        vals_mps = @constinferred(transfer_spectrum(rho_mps; howmany))
+        @test all(c -> vals_taylor[c] ≈ vals_mps[c], keys(vals_taylor))
     end
 
     @testset "2D infinite partition functions with boundary MPS" verbose = true begin

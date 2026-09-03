@@ -1,39 +1,42 @@
 """
-    WindowMPS{A<:GenericMPSTensor,B<:MPSBondTensor} <: AbstractFiniteMPS
+$(TYPEDEF)
 
-Type that represents a finite Matrix Product State embedded in an infinte Matrix Product State.
+Type that represents a finite Matrix Product State embedded in an infinite Matrix Product State.
 
-## Fields
-
-- `left_gs::InfiniteMPS` -- left infinite environment
-- `window::FiniteMPS` -- finite window Matrix Product State
-- `right_gs::InfiniteMPS` -- right infinite environment
-
----
-
-## Constructors
+# Constructors
 
     WindowMPS(left_gs::InfiniteMPS, window_state::FiniteMPS, [right_gs::InfiniteMPS])
     WindowMPS(left_gs::InfiniteMPS, window_tensors::AbstractVector, [right_gs::InfiniteMPS])
-    WindowMPS([f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}},
-              virtualspaces::Vector{<:Union{S, CompositeSpace{S}}, left_gs::InfiniteMPS,
-              [right_gs::InfiniteMPS])
-    WindowMPS([f, eltype], physicalspaces::Vector{<:Union{S,CompositeSpace{S}}},
-              maxvirtualspace::S, left_gs::InfiniteMPS, [right_gs::InfiniteMPS])
-    
+    WindowMPS(
+        [f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
+        virtualspaces::Vector{<:Union{S, CompositeSpace{S}}}, left_gs::InfiniteMPS,
+        [right_gs::InfiniteMPS]
+    )
+    WindowMPS(
+        [f, eltype], physicalspaces::Vector{<:Union{S, CompositeSpace{S}}},
+        maxvirtualspace::S, left_gs::InfiniteMPS, [right_gs::InfiniteMPS]
+    )
+    WindowMPS(ψ::InfiniteMPS, L::Int)
+
 Construct a WindowMPS via a specification of left and right infinite environment, and either
 a window state or a vector of tensors to construct the window. Alternatively, it is possible
 to supply the same arguments as for the constructor of [`FiniteMPS`](@ref), followed by a
-left (and right) environment to construct the WindowMPS in one step.
+left (and right) environment to construct the WindowMPS in one step. Finally, a WindowMPS can
+be constructed from an `InfiniteMPS` by promoting a region of length `L` to a `FiniteMPS`.
 
 !!! note
     By default, the right environment is chosen to be equal to the left, however no copy is
     made. In this case, changing the left state will also affect the right state.
 
-    WindowMPS(state::InfiniteMPS, L::Int)
+# Properties
 
-Construct a WindowMPS from an InfiniteMPS, by promoting a region of length `L` to a
-`FiniteMPS`.
+- `left_gs::InfiniteMPS`: left infinite environment
+- `window::FiniteMPS`: finite window Matrix Product State
+- `right_gs::InfiniteMPS`: right infinite environment
+- `AL`: left-gauged MPS tensors
+- `AR`: right-gauged MPS tensors
+- `AC`: center-gauged MPS tensors
+- `C`: gauge (bond) tensors
 """
 struct WindowMPS{A <: GenericMPSTensor, B <: MPSBondTensor} <: AbstractFiniteMPS
     left_gs::InfiniteMPS{A, B}
@@ -106,18 +109,34 @@ function WindowMPS(N::Int, V::VectorSpace, args...; kwargs...)
     return WindowMPS(fill(V, N), args...; kwargs...)
 end
 
-function WindowMPS(ψ::InfiniteMPS{A, B}, L::Int) where {A, B}
+"""
+    WindowMPS(ψ::InfiniteMPS, L::Int)
+    WindowMPS(ψ::InfiniteMPS, interval::UnitRange)
+
+Construct a [`WindowMPS`](@ref) from an infinite MPS `ψ` by promoting the sites in `interval`
+(or `1:L`) to the finite window while keeping `ψ` as the left and right infinite environments.
+The environment unit cells are circshifted so that they line up with the window boundaries.
+"""
+WindowMPS(ψ::InfiniteMPS, L::Int) = WindowMPS(ψ, 1:L)
+
+function WindowMPS(ψ::InfiniteMPS{A, B}, interval::UnitRange) where {A, B}
+
+    # to make sure the interval corresponds with finite_ham, it is important that the unitcell of the left/right hamiltonians is circshifted correctly
+    left_edge = (interval.start - 1) % length(ψ)
+    right_edge = (interval.stop + 1) % length(ψ)
+
+    L = length(interval)
     CLs = Vector{Union{Missing, B}}(missing, L + 1)
     ALs = Vector{Union{Missing, A}}(missing, L)
     ARs = Vector{Union{Missing, A}}(missing, L)
     ACs = Vector{Union{Missing, A}}(missing, L)
 
-    ALs .= ψ.AL[1:L]
-    ARs .= ψ.AR[1:L]
-    ACs .= ψ.AC[1:L]
-    CLs .= ψ.C[0:L]
+    ALs .= ψ.AL[interval]
+    ARs .= ψ.AR[interval]
+    ACs .= ψ.AC[interval]
+    CLs .= ψ.C[(interval.start - 1):interval.stop]
 
-    return WindowMPS(ψ, FiniteMPS(ALs, ARs, ACs, CLs), ψ)
+    return WindowMPS(circshift(ψ, -left_edge), FiniteMPS(ALs, ARs, ACs, CLs), circshift(ψ, -right_edge + 1))
 end
 
 #===========================================================================================

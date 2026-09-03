@@ -12,7 +12,8 @@ module GrassmannMPS
 
 using ..MPSKit
 using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments,
-    AC_projection, recalculate!
+    AC_projection, recalculate!, NoTimerOutput, @timeit, default_allocator
+using TensorOperations: AbstractBackend, DefaultBackend
 using TensorKit
 using OhMyThreads
 import TensorKitManifolds.Grassmann
@@ -90,7 +91,7 @@ end
 """
     retract(state, g, α) -> state′, ξ
 
-Retract a state a distance `α` along a direction `g`, obtaining a new state and the local tangent vector. 
+Retract a state a distance `α` along a direction `g`, obtaining a new state and the local tangent vector.
 """
 function retract(state::FiniteMPS, g, α::Real)
     state′ = copy(state)
@@ -137,18 +138,28 @@ function transport!(h, state, g, α::Real, state′)
 end
 
 """
-    fg(state, operator, envs=environments(state, operator))
+    fg(state, operator, envs = environments(state, operator, state); kwargs...)
 
 Compute the cost function and the tangent vector with respect to the `AL` parameters of the state.
+
+For an infinite state the sites are handled concurrently, as decided by the `scheduler` keyword
+argument. Note that the scheduler should be passed in from the caller rather than defaulted to, so
+that the allocator it selects is inferable.
 """
 function fg(
         state::FiniteMPS, operator::Union{O, LazySum{O}},
-        envs::AbstractMPSEnvironments = environments(state, operator)
+        envs::AbstractMPSEnvironments = environments(state, operator, state);
+        timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(),
+        # accepted for interface uniformity, but unused: this gradient is serial regardless
+        scheduler::Scheduler = SerialScheduler(),
     ) where {O <: FiniteMPOHamiltonian}
-    f = expectation_value(state, operator, envs)
+    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
-    gs = map(1:length(state)) do i
-        AC′ = AC_projection(i, state, operator, state, envs)
+    # the sweep is serial, so a single allocator serves all sites
+    allocator = default_allocator(state, SerialScheduler())
+    gs = @timeit timeroutput "gradient" map(1:length(state)) do i
+        AC′ = AC_projection(i, state, operator, state, envs; backend, allocator)
         g = Grassmann.project(AC′, state.AL[i])
         return rmul(g, state.C[i]')
     end
@@ -156,51 +167,65 @@ function fg(
 end
 function fg(
         state::InfiniteMPS, operator::Union{O, LazySum{O}},
-        envs::AbstractMPSEnvironments = environments(state, operator)
+        envs::AbstractMPSEnvironments = environments(state, operator, state);
+        timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(),
+        scheduler::Scheduler = MPSKit.Defaults.scheduler[],
     ) where {O <: InfiniteMPOHamiltonian}
-    recalculate!(envs, state, operator, state)
-    f = expectation_value(state, operator, envs)
+    @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
+    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state), eltype(state)})
     gs = Vector{A}(undef, length(state))
-    tmap!(gs, 1:length(state); scheduler = MPSKit.Defaults.scheduler[]) do i
-        AC′ = AC_projection(i, state, operator, state, envs)
+    allocator = default_allocator(state, scheduler)
+    @timeit timeroutput "gradient" tforeach(1:length(state); scheduler) do i
+        AC′ = AC_projection(i, state, operator, state, envs; backend, allocator)
         g = Grassmann.project(AC′, state.AL[i])
-        return rmul(g, state.C[i]')
+        gs[i] = rmul(g, state.C[i]')
+        return nothing
     end
     return real(f), gs
 end
 function fg(
         state::InfiniteMPS, operator::Union{O, LazySum{O}},
-        envs::AbstractMPSEnvironments = environments(state, operator)
+        envs::AbstractMPSEnvironments = environments(state, operator, state);
+        timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(),
+        scheduler::Scheduler = MPSKit.Defaults.scheduler[],
     ) where {O <: InfiniteMPO}
-    recalculate!(envs, state, operator, state)
-    f = expectation_value(state, operator, envs)
+    @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
+    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state), eltype(state)})
     gs = Vector{A}(undef, length(state))
-    tmap!(gs, eachindex(state); scheduler = MPSKit.Defaults.scheduler[]) do i
-        AC′ = AC_projection(i, state, operator, state, envs)
+    allocator = default_allocator(state, scheduler)
+    @timeit timeroutput "gradient" tforeach(eachindex(state); scheduler) do i
+        AC′ = AC_projection(i, state, operator, state, envs; backend, allocator)
         g = rmul!(Grassmann.project(AC′, state.AL[i]), -inv(f))
-        return rmul(g, state.C[i]')
+        gs[i] = rmul(g, state.C[i]')
+        return nothing
     end
     return -log(real(f)), gs
 end
 function fg(
         state::MultilineMPS, operator::MultilineMPO,
-        envs::MultilineEnvironments = environments(state, operator)
+        envs::MultilineEnvironments = environments(state, operator, state);
+        timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(),
+        scheduler::Scheduler = MPSKit.Defaults.scheduler[],
     )
     @assert length(state) == 1 "not implemented"
-    recalculate!(envs, state, operator, state)
-    f = expectation_value(state, operator, envs)
+    @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
+    f = @timeit timeroutput "expval" expectation_value(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state), eltype(state)})
     gs = Matrix{A}(undef, size(state))
-    tforeach(eachindex(state); scheduler = MPSKit.Defaults.scheduler[]) do i
-        AC′ = AC_projection(i, state, operator, state, envs)
+    allocator = default_allocator(state, scheduler)
+    @timeit timeroutput "gradient" tforeach(eachindex(state); scheduler) do i
+        AC′ = AC_projection(i, state, operator, state, envs; backend, allocator)
         g = rmul!(Grassmann.project(AC′, state.AL[i]), -inv(f))
         gs[i] = rmul(g, state.C[i]')
         return nothing
@@ -209,7 +234,7 @@ function fg(
 end
 
 """
-    rho_inv_regularized(C; rtol=eps(real(scalartype(C)))^(3/4))
+    rho_inv_regularized(C; rtol = eps(real(scalartype(C)))^(3 / 4))
 
 Compute the (regularized) inverse of the MPS fixed point `ρ = C * C'`.
 Here we use the Tikhonov regularization, i.e. `inv(ρ) = inv(C * C' + δ²1)`,
@@ -235,7 +260,7 @@ end
 
 # utility test function
 function optimtest(
-        ψ, O, envs = environments(ψ, O);
+        ψ, O, envs = environments(ψ, O, ψ);
         alpha = -0.1:0.001:0.1, retract = retract, inner = inner
     )
     _fg(x) = fg(x, O, envs)

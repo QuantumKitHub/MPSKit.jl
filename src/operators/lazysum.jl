@@ -1,19 +1,21 @@
 """
-    LazySum{O} <: AbstractVector{O}
+$(TYPEDEF)
 
-Type that represents a lazy sum i.e explicit summation is only done when needed. 
-This type is basically an `AbstractVector` with some extra functionality to calculate things efficiently.
+Type that represents a lazy sum, i.e. explicit summation is only done when needed.
+This type is basically an `AbstractVector` with some extra functionality to calculate things
+efficiently.
 
-## Fields
-- ops -- Vector of summable objects
+# Constructors
 
----
-
-## Constructors
     LazySum(x::Vector)
+    LazySum(ops::AbstractVector, fs::AbstractVector)
 
+# Fields
+
+$(TYPEDFIELDS)
 """
 struct LazySum{O} <: AbstractVector{O}
+    "vector of summable objects"
     ops::Vector{O}
 end
 
@@ -37,7 +39,7 @@ LazySum(ops::AbstractVector, fs::AbstractVector) = LazySum(map(MultipliedOperato
 # wrapper around _eval_at
 safe_eval(::TimeDependent, x::LazySum, t::Number) = map(O -> _eval_at(O, t), x)
 function safe_eval(::TimeDependent, x::LazySum)
-    throw(ArgumentError("attempting to evaluate time-dependent LazySum without specifiying a time"))
+    throw(ArgumentError("attempting to evaluate time-dependent LazySum without specifying a time"))
 end
 safe_eval(::NotTimeDependent, x::LazySum) = sum(_eval_at, x)
 function safe_eval(::NotTimeDependent, x::LazySum, t::Number)

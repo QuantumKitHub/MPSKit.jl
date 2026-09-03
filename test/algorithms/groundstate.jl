@@ -9,6 +9,7 @@ using Test, TestExtras
 using MPSKit
 using TensorKit
 using TensorKit: ℙ
+using Random
 
 verbosity_full = 5
 verbosity_conv = 1
@@ -39,19 +40,26 @@ verbosity_conv = 1
         @test sum(δ) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
+
+        # the algorithm object carries no scratch space of its own - the sweep's allocator is
+        # obtained per solve - so re-using one across solves has to reproduce the answer
+        alg = DMRG(; verbosity = verbosity_conv, maxiter = 10)
+        ψ1, = find_groundstate(ψ₀, H, alg)
+        ψ2, = find_groundstate(ψ₀, H, alg)
+        @test expectation_value(ψ1, H) ≈ expectation_value(ψ2, H) atol = 1.0e-10
     end
 
     @testset "DMRG2" begin
         ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
         v₀ = variance(ψ₀, H)
-        trscheme = truncrank(floor(Int, D * 1.5))
+        trunc = truncrank(floor(Int, D * 1.5))
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG2(; verbosity = verbosity_full, maxiter = 2, trscheme)
+            ψ₀, H, DMRG2(; verbosity = verbosity_full, maxiter = 2, trunc)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG2(; verbosity = verbosity_conv, maxiter = 10, trscheme), envs
+            ψ, H, DMRG2(; verbosity = verbosity_conv, maxiter = 10, trunc), envs
         )
         v = variance(ψ, H)
 
@@ -59,6 +67,111 @@ verbosity_conv = 1
         @test sum(δ) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
+    end
+
+    @testset "CBEDMRG" begin
+        # start from a small bond so the bond expansion is exercised
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+        v₀ = variance(ψ₀, H)
+        expand = OptimalExpand(; trunc = truncrank(D ÷ 2))
+        trunc = truncrank(D)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
+        )
+
+        ψ, envs, δ = find_groundstate(
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_expand = expand, trunc), envs
+        )
+        v = variance(ψ, H)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test v < v₀
+        @test v < 1.0e-2
+        # the bond should have grown to the truncation target
+        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+    end
+
+    @testset "CBEDMRG (SketchedExpand)" begin
+        # randomized bond expansion at single-site cost. The sketch is redrawn every sweep, so an
+        # aggressive expansion (a large fraction of the bond) keeps the single-site Galerkin error
+        # noisy; a gentle per-sweep increment lets it converge like the deterministic expanders.
+        Random.seed!(1234)
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+        v₀ = variance(ψ₀, H)
+        expand = SketchedExpand(; trunc = truncrank(2), oversampling = 4)
+        trunc = truncrank(D)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
+        )
+
+        ψ, envs, δ = find_groundstate(
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 15, alg_expand = expand, trunc), envs
+        )
+        v = variance(ψ, H)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test v < v₀
+        @test v < 1.0e-2
+        # the bond should have grown to the truncation target
+        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+    end
+
+    @testset "DMRG3S" begin
+        # start from a small bond so the post-expansion is exercised, mirroring CBEDMRG above
+        Random.seed!(1234)
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+        v₀ = variance(ψ₀, H)
+        alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7))  # TODO: match final constructor API
+        trunc = truncrank(D)
+
+        # test logging
+        ψ, envs, δ = find_groundstate(
+            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_gauge, trunc)
+        )
+
+        ψ, envs, δ = find_groundstate(
+            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_gauge, trunc), envs
+        )
+        v = variance(ψ, H)
+
+        # test using low variance
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        @test v < v₀
+        @test v < 1.0e-2
+        # the bond should have grown to the truncation target
+        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+    end
+
+    @testset "DMRG3S escapes local minimum (Hubig et al. 2015, Sec. VII A)" begin
+        L_heis = 20
+        H_heis = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L = L_heis)
+
+        Random.seed!(1234)
+        ψ_bad = bad_initial_state(H_heis, L_heis)
+
+        ψ_stuck, envs_stuck, δ_stuck = find_groundstate(
+            ψ_bad, H_heis, DMRG(; verbosity = verbosity_conv, maxiter = 30)
+        )
+        E_stuck = real(expectation_value(ψ_stuck, H_heis, envs_stuck))
+
+        alg_gauge = DMRG3S(0.1, ExponentialDecay(0.8))
+        ψ_escape, envs_escape, δ_escape = find_groundstate(
+            ψ_bad, H_heis, DMRG(;
+                verbosity = verbosity_conv, maxiter = 30,
+                alg_gauge, trunc = truncrank(20),
+            )
+        )
+        E_escape = real(expectation_value(ψ_escape, H_heis, envs_escape))
+
+        # paper reports E(α=0) = -6.35479, E(α≠0) = -8.6824724 for this L_heis = 20, S = 1/2 AFM setup
+        @test E_escape < E_stuck - 1.0
+        @test isapprox(E_escape, -8.6824724; atol = 1.0e-4)
     end
 
     @testset "GradientGrassmann" begin
@@ -90,17 +203,25 @@ end
     ψ = InfiniteMPS(ℙ^2, ℙ^D)
     v₀ = variance(ψ, H_ref)
 
-    @testset "VUMPS" for unit_cell_size in [1, 3]
-        ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+    # VUMPS spawns over the unit cell, so it is run under both schedulers: which allocator serves
+    # the local updates follows from the scheduler, and must not change any number
+    # NOTE: the starting state is built from scratch rather than from this block's `ψ`. The testsets
+    # around this one rebind `ψ` to their own (already repeated) result, and a `@testset for` body is
+    # a single scope, so reading it here would feed a length-3 state back into `repeat`.
+    @testset "VUMPS (unit cell $unit_cell_size, $schedname)" for unit_cell_size in [1, 3],
+            (schedname, scheduler) in SCHEDULERS
+
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ, H, VUMPS(; tol, verbosity = verbosity_full, maxiter = 2)
-        )
-
-        ψ, envs, δ = find_groundstate(ψ, H, VUMPS(; tol, verbosity = verbosity_conv))
-        v = variance(ψ, H, envs)
+        ψ′, envs, δ = with_scheduler(scheduler) do
+            # test logging
+            ψ₁, = find_groundstate(
+                ψ₀, H, VUMPS(; tol, verbosity = verbosity_full, maxiter = 2)
+            )
+            return find_groundstate(ψ₁, H, VUMPS(; tol, verbosity = verbosity_conv))
+        end
+        v = variance(ψ′, H, envs)
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1.0e-3
@@ -130,15 +251,15 @@ end
         ψ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
         H = repeat(H_ref, 2)
 
-        trscheme = trunctol(; atol = 1.0e-8)
+        trunc = trunctol(; atol = 1.0e-8)
 
         # test logging
         ψ, envs, δ = find_groundstate(
-            ψ, H, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trscheme)
+            ψ, H, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trunc)
         )
 
         ψ, envs, δ = find_groundstate(
-            ψ, H, IDMRG2(; tol, verbosity = verbosity_conv, trscheme)
+            ψ, H, IDMRG2(; tol, verbosity = verbosity_conv, trunc)
         )
         v = variance(ψ, H, envs)
 
@@ -148,19 +269,24 @@ end
         @test v < 1.0e-2
     end
 
-    @testset "GradientGrassmann" for unit_cell_size in [1, 3]
-        ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
+    # the gradient is computed concurrently over the unit cell, so the scheduler decides its
+    # allocator here too
+    @testset "GradientGrassmann (unit cell $unit_cell_size, $schedname)" for unit_cell_size in
+            [1, 3], (schedname, scheduler) in SCHEDULERS
+
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
 
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ, H, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
-        )
-
-        ψ, envs, δ = find_groundstate(
-            ψ, H, GradientGrassmann(; tol, verbosity = verbosity_conv)
-        )
-        v = variance(ψ, H, envs)
+        ψ′, envs, δ = with_scheduler(scheduler) do
+            # test logging
+            ψ₁, = find_groundstate(
+                ψ₀, H, GradientGrassmann(; tol, verbosity = verbosity_full, maxiter = 2)
+            )
+            return find_groundstate(
+                ψ₁, H, GradientGrassmann(; tol, verbosity = verbosity_conv)
+            )
+        end
+        v = variance(ψ′, H, envs)
 
         # test using low variance
         @test sum(δ) ≈ 0 atol = 1.0e-3
@@ -222,13 +348,13 @@ end
 
     @testset "DMRG2" begin
         # test logging passes
-        trscheme = truncrank(floor(Int, D * 1.5))
+        trunc = truncrank(floor(Int, D * 1.5))
         ψ, envs, δ = find_groundstate(
-            ψ₀, H_lazy, DMRG2(; tol, verbosity = verbosity_full, maxiter = 1, trscheme)
+            ψ₀, H_lazy, DMRG2(; tol, verbosity = verbosity_full, maxiter = 1, trunc)
         )
 
         # compare states
-        alg = DMRG2(; tol, verbosity = verbosity_conv, trscheme)
+        alg = DMRG2(; tol, verbosity = verbosity_conv, trunc)
         ψ, = find_groundstate(ψ₀, H, alg)
         ψ_lazy, envs, δ = find_groundstate(ψ₀, H_lazy, alg)
 
@@ -300,14 +426,14 @@ end
         H_lazy′ = repeat(H_lazy, 2)
         H′ = repeat(H, 2)
 
-        trscheme = truncrank(floor(Int, D * 1.5))
+        trunc = truncrank(floor(Int, D * 1.5))
         # test logging passes
         ψ, envs, δ = find_groundstate(
-            ψ₀′, H_lazy′, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trscheme)
+            ψ₀′, H_lazy′, IDMRG2(; tol, verbosity = verbosity_full, maxiter = 2, trunc)
         )
 
         # compare states
-        alg = IDMRG2(; tol, verbosity = verbosity_conv, trscheme)
+        alg = IDMRG2(; tol, verbosity = verbosity_conv, trunc)
         ψ, envs, δ = find_groundstate(ψ, H_lazy′, alg)
 
         @test abs(dot(ψ₀′, ψ)) ≈ 1 atol = atol
@@ -335,7 +461,7 @@ end
     algs = [
         VUMPS(; tol, verbosity), VOMPS(; tol, verbosity),
         GradientGrassmann(; tol, verbosity), IDMRG(; tol, verbosity),
-        IDMRG2(; tol, verbosity, trscheme = truncrank(D1)),
+        IDMRG2(; tol, verbosity, trunc = truncrank(D1)),
     ]
     mpo = force_planar(classical_ising())
 
@@ -349,10 +475,21 @@ end
             @test expectation_value(ψ, mpo2, envs) ≈ 2.5337^2 atol = 1.0e-3
         else
             ψ, envs = leading_boundary(ψ₀, mpo, alg)
-            ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trscheme = truncrank(D1 - D)), envs)
+            ψ, envs = changebonds(ψ, mpo, OptimalExpand(; trunc = truncrank(D1 - D)), envs)
             ψ, envs = leading_boundary(ψ, mpo, alg)
             @test dim(space(ψ.AL[1, 1], 1)) == dim(space(ψ₀.AL[1, 1], 1)) + (D1 - D)
             @test expectation_value(ψ, mpo, envs) ≈ 2.5337 atol = 1.0e-3
         end
+    end
+
+    @testset "IDMRG2 growing bond dimension" begin
+        Random.seed!(1234)
+        V = Vect[Z2Irrep](0 => 1, 1 => 1)
+        O = randn(ComplexF64, V ⊗ V, V ⊗ V)
+        mpo = InfiniteMPO([O, O])
+        P = physicalspace(O)
+        ψ₀ = InfiniteMPS([P, P], [V, V])
+        ψ, envs = leading_boundary(ψ₀, mpo, IDMRG2(; verbosity = 0, maxiter = 1, trunc = truncrank(8)))
+        @test ψ isa InfiniteMPS
     end
 end

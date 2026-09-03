@@ -11,6 +11,26 @@ end
 _mul_front(C, A) = mul_front(C, A) # _transpose_front(C * _transpose_tail(A))
 _mul_tail(A, C) = mul_tail(A, C) # A * C
 
+"""
+    project_complement!(Y, X) -> Y
+
+In-place projection of `Y` onto the orthogonal complement of the range of the left-isometry `X`
+(`X' X = I`): `Y ← (I - X X') Y = Y - X (X' Y)`. `Y` is overwritten and returned.
+
+See also [`project_complement_right!`](@ref).
+"""
+project_complement!(Y, X) = mul!(Y, X, X' * Y, -1, +1)
+
+"""
+    project_complement_right!(Y, X) -> Y
+
+In-place projection of `Y` onto the orthogonal complement of the co-range of the right-isometry
+`X` (`X X' = I`): `Y ← Y (I - X' X) = Y - (Y X') X`. `Y` is overwritten and returned.
+
+See also [`project_complement!`](@ref).
+"""
+project_complement_right!(Y, X) = mul!(Y, Y * X', X, -1, +1)
+
 function _similar_tail(A::AbstractTensorMap)
     cod = _firstspace(A)
     dom = ⊗(dual(_lastspace(A)), dual.(space.(Ref(A), reverse(2:(numind(A) - 1))))...)
@@ -19,6 +39,16 @@ end
 
 _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
+
+"""
+    similar_scalartype(T::Type{<:AbstractTensorMap}, S::Type{<:Number})
+
+Tensor map type with the same space type and rank as `T`, but with scalar type `S`.
+"""
+function similar_scalartype(::Type{T}, ::Type{S}) where {T <: AbstractTensorMap, S <: Number}
+    E = TensorKit.similarstoragetype(TensorKit.storagetype(T), S)
+    return tensormaptype(spacetype(T), numout(T), numin(T), E)
+end
 
 #given a Hamiltonian with unit legs on the side, decompose it using svds to form a "localmpo"
 function decompose_localmpo(
@@ -123,7 +153,7 @@ function check_length(a, b...)
     return L
 end
 
-function fuser(::Type{TorA}, V1::S, V2::S) where {TorA, S <: IndexSpace}
+function fuser(::Type{TorA}, V1, V2) where {TorA}
     return isomorphism(TorA, fuse(V1 ⊗ V2), V1 ⊗ V2)
 end
 

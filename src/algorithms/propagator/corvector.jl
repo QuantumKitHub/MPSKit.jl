@@ -11,15 +11,19 @@ $(TYPEDEF)
 A dynamical DMRG method for calculating dynamical properties and excited states, based on a
 variational principle for dynamical correlation functions.
 
-## Fields
+# Fields
 
 $(TYPEDFIELDS)
 
-## References
+# See also
+
+Used as the `algorithm` argument of [`propagator`](@ref).
+
+# References
 
 * [Jeckelmann. Phys. Rev. B 66 (2002)](@cite jeckelmann2002)
 """
-@kwdef struct DynamicalDMRG{F <: DDMRG_Flavour, S} <: Algorithm
+@kwdef struct DynamicalDMRG{F <: DDMRG_Flavour, S, B} <: Algorithm
     "flavour of the algorithm to use, either of type [`NaiveInvert`](@ref) or [`Jeckelmann`](@ref)"
     flavour::F = NaiveInvert()
     "algorithm used for the linear solvers"
@@ -30,13 +34,20 @@ $(TYPEDFIELDS)
     maxiter::Int = Defaults.maxiter
     "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
+    "backend for tensor contractions and index manipulations"
+    backend::B = Defaults.backend()
 end
 
 """
-    propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init=copy(ψ₀))
+    propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init = copy(ψ₀)) -> (g, ψ)
 
-Calculate the propagator ``\\frac{1}{E₀ + z - H}|ψ₀⟩`` using the dynamical DMRG
+Calculate the action of the propagator ``\\frac{1}{z - H}|ψ₀⟩`` using the dynamical DMRG
 algorithm.
+
+# Returns
+
+- `g`: approximation of the propagator matrix element ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩``
+- `ψ`: MPS approximation of ``\\frac{1}{z - H}|ψ₀⟩``
 """
 function propagator end
 
@@ -47,22 +58,23 @@ An alternative approach to the dynamical DMRG algorithm, without quadratic terms
 less controlled approximation.
 This algorithm minimizes the following cost function
 ```math
-⟨ψ|(H - E)|ψ⟩ - ⟨ψ|ψ₀⟩ - ⟨ψ₀|ψ⟩
-```
-which is equivalent to the original approach if
-```math
-|ψ₀⟩ = (H - E)|ψ⟩
+⟨ψ|(z - H)|ψ⟩ - ⟨ψ|ψ₀⟩ - ⟨ψ₀|ψ⟩
 ```
 
-See also [`Jeckelmann`](@ref) for the original approach.
+Returns the approximation of ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and ``\\frac{1}{z - H}|ψ₀⟩``.
+
+# See also
+
+[`Jeckelmann`](@ref) for the original approach.
 """
 struct NaiveInvert <: DDMRG_Flavour end
 
 function propagator(
-        A::AbstractFiniteMPS, z::Number, H::FiniteMPOHamiltonian,
+        A::AbstractFiniteMPS, z::Number, H,
         alg::DynamicalDMRG{NaiveInvert}; init = copy(A)
     )
-    h_envs = environments(init, H) # environments for h
+    allocator = default_allocator(A, SerialScheduler())
+    h_envs = environments(init, H, init) # environments for h
     mixedenvs = environments(init, A) # environments for <init | A>
 
     ϵ = 2 * alg.tol
@@ -74,9 +86,9 @@ function propagator(
             ϵ = 0.0
 
             for i in [1:(length(A) - 1); length(A):-1:2]
-                tos = AC_projection(i, init, A, mixedenvs)
+                tos = AC_projection(i, init, A, mixedenvs; alg.backend, allocator)
 
-                H_AC = AC_hamiltonian(i, init, H, init, h_envs)
+                H_AC = AC_hamiltonian(i, init, H, init, h_envs; alg.backend, allocator)
                 AC = init.AC[i]
                 AC′, convhist = linsolve(H_AC, -tos, AC, alg.solver, -z, one(z))
 
@@ -105,27 +117,40 @@ end
 """
 $(TYPEDEF)
 
-The original flavour of dynamical DMRG, which minimizes the following (quadratic) cost function:
+The original flavour of dynamical DMRG, which minimizes functional (14) from Jeckelmann2002.
+Writing ``ω = \\mathrm{Re}(z)`` and ``η = \\mathrm{Im}(z)``, this is
 ```math
-|| (H - E) |ψ₀⟩ - |ψ⟩ ||
+W(ψ) = ⟨ψ|(ω - H)^2 + η^2|ψ⟩ + η(⟨ψ₀|ψ⟩ + ⟨ψ|ψ₀⟩)
+```
+which attains its minimum at
+```math
+((ω - H)^2 + η^2)|ψ⟩ = -η|ψ₀⟩
 ```
 
-See also [`NaiveInvert`](@ref) for a less costly but less accurate alternative.
+Together with equation (11) from that same paper we can determine the full propagator
+``\\frac{1}{z - H}|ψ₀⟩``.
 
-## References
+Returns the approximation of ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and ``\\frac{1}{z - H}|ψ₀⟩``.
+
+# See also
+
+[`NaiveInvert`](@ref) for a less costly but less accurate alternative.
+
+# References
 
 * [Jeckelmann. Phys. Rev. B 66 (2002)](@cite jeckelmann2002)
 """
 struct Jeckelmann <: DDMRG_Flavour end
 
 function propagator(
-        A::AbstractFiniteMPS, z, H::FiniteMPOHamiltonian,
+        A::AbstractFiniteMPS, z::Number, H,
         alg::DynamicalDMRG{Jeckelmann}; init = copy(A)
     )
+    allocator = default_allocator(A, SerialScheduler())
     ω = real(z)
     η = imag(z)
 
-    envs1 = environments(init, H) # environments for h
+    envs1 = environments(init, H, init) # environments for h
     H2, envs2 = squaredenvs(init, H, envs1) # environments for h^2
     mixedenvs = environments(init, A) # environments for <init | A>
 
@@ -138,9 +163,9 @@ function propagator(
             ϵ = 0.0
 
             for i in [1:(length(A) - 1); length(A):-1:2]
-                tos = AC_projection(i, init, A, mixedenvs)
-                H1_AC = AC_hamiltonian(i, init, H, init, envs1)
-                H2_AC = AC_hamiltonian(i, init, H2, init, envs2)
+                tos = AC_projection(i, init, A, mixedenvs; alg.backend, allocator)
+                H1_AC = AC_hamiltonian(i, init, H, init, envs1; alg.backend, allocator)
+                H2_AC = AC_hamiltonian(i, init, H2, init, envs2; alg.backend, allocator)
                 H_AC = LinearCombination((H1_AC, H2_AC), (-2 * ω, 1))
                 AC′, convhist = linsolve(H_AC, -η * tos, init.AC[i], alg.solver, abs2(z), 1)
 
@@ -163,7 +188,7 @@ function propagator(
         end
     end
 
-    a = dot(AC_projection(1, init, A, mixedenvs), init.AC[1])
+    a = dot(AC_projection(1, init, A, mixedenvs; alg.backend, allocator), init.AC[1])
     cb = leftenv(envs1, 1, A) * TransferMatrix(init.AL, H[1:length(A.AL)], A.AL)
     b = zero(a)
     for i in 1:length(cb)
@@ -176,7 +201,7 @@ function propagator(
 end
 
 function squaredenvs(
-        state::AbstractFiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H)
+        state::AbstractFiniteMPS, H, envs = environments(state, H, state)
     )
     H² = conj(H) * H
     L = length(state)
@@ -187,7 +212,7 @@ function squaredenvs(
 
     # to construct the squared caches we will first initialize environments
     # then make all data invalid so it will be recalculated
-    envs² = environments(state, H², leftstart, rightstart)
+    envs² = environments(state, H², state; leftstart, rightstart)
     for i in 1:L
         poison!(envs², i)
     end
