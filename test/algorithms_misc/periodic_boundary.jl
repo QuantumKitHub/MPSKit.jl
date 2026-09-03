@@ -21,7 +21,7 @@ using TensorKit: ℙ
     end
 
     # non-self-dual virtual space
-    let V = U1Space(0 => 1, 1 => 1), P = U1Space(0 => 1, 1 => 1)
+    fast_tests || let V = U1Space(0 => 1, 1 => 1), P = U1Space(0 => 1, 1 => 1)
         mpo = InfiniteMPO([randn(ComplexF64, V ⊗ P ← P ⊗ V)])
         for N in 2:4
             TH = convert(TensorMap, periodic_boundary_conditions(mpo, N))
