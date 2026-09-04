@@ -48,7 +48,7 @@ function environments(
     return initialize_environments(below, operator, above, leftstart, rightstart)
 end
 function environments(
-        below::WindowMPS, operator::Union{InfiniteMPOHamiltonian, InfiniteMPO}, above;
+        below::WindowMPS, operator::InfiniteOperatorLike, above;
         lenvs = environments(below.left_gs, operator, below.left_gs),
         renvs = environments(below.right_gs, operator, below.right_gs),
         leftstart = copy(lenvs.GLs[1]),
