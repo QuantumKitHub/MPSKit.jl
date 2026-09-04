@@ -87,6 +87,9 @@ Base.:-(H::BraMPO) = BraMPO(-H.op)
 # leg it contracts with -- so it reaches exactly the same environment algorithms. These
 # unions widen the relevant signatures in one place.
 const AbstractMPOLike = Union{AbstractMPO, BraMPO}
+const FiniteMPOLike = Union{FiniteMPO, BraMPO{<:FiniteMPO}}
+const FiniteMPOHamiltonianLike = Union{FiniteMPOHamiltonian, BraMPO{<:FiniteMPOHamiltonian}}
+const FiniteOperatorLike = Union{FiniteMPOLike, FiniteMPOHamiltonianLike}
 const InfiniteMPOLike = Union{InfiniteMPO, BraMPO{<:InfiniteMPO}}
 const InfiniteMPOHamiltonianLike = Union{InfiniteMPOHamiltonian, BraMPO{<:InfiniteMPOHamiltonian}}
 const InfiniteOperatorLike = Union{InfiniteMPOLike, InfiniteMPOHamiltonianLike}

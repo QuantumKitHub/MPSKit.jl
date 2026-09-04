@@ -29,7 +29,7 @@ function initialize_environments(below::AbstractFiniteMPS, operator, above, left
 end
 
 function environments(
-        below::FiniteMPS{S}, operator::Union{FiniteMPO, FiniteMPOHamiltonian}, above;
+        below::FiniteMPS{S}, operator::FiniteOperatorLike, above;
         leftstart = nothing, rightstart = nothing
     ) where {S}
     N = length(below)

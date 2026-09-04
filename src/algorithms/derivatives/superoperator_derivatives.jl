@@ -20,6 +20,22 @@ function (h::MPO_AC_Hamiltonian{<:MPSTensor, <:BraSide, <:MPSTensor})(
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
 
+# dense bra-side ∂AC2, the two-site analogue of the above: `τ` and each operator swap
+# places along the MPO line, and both operators are transposed onto the dual bra legs
+function (h::MPO_AC2_Hamiltonian{<:MPSTensor, <:BraSide, <:BraSide, <:MPSTensor})(
+        x::AbstractTensorMap{<:Any, <:Any, 3, 3}
+    )
+    backend, allocator = h.backend, h.allocator
+    W1 = _bra_transpose(h.operators[1])
+    W2 = _bra_transpose(h.operators[2])
+    @plansor backend = backend allocator = allocator begin
+        y[-1 -2 -3; -4 -5 -6] ≔ h.leftenv[-1 11; 10] * x[10 8 6; 1 2 4] *
+            h.rightenv[1 3; -4] * τ[11 -2; 8 9] * W1[9 -3; 6 7] *
+            τ[7 -6; 4 5] * W2[5 -5; 2 3]
+    end
+    return y isa AbstractBlockTensorMap ? only(y) : y
+end
+
 # SuperOperator interface
 # -----------------------
 # Everything is expressed through the lazy-sum view, so the two terms get an independent
