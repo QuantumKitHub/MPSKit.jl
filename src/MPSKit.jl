@@ -22,6 +22,7 @@ export JordanMPOTensor
 export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, WindowMPOHamiltonian
 export MultilineMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
+export SuperOperator, BraMPO
 
 # environments:
 export environments
@@ -134,6 +135,7 @@ include("operators/projection.jl")
 include("operators/timedependence.jl")
 include("operators/multipliedoperator.jl")
 include("operators/lazysum.jl")
+include("operators/superoperator.jl")
 
 include("transfermatrix/transfermatrix.jl")
 include("transfermatrix/transfer.jl")
@@ -151,6 +153,7 @@ include("algorithms/derivatives/derivatives.jl")
 include("algorithms/derivatives/mpo_derivatives.jl")
 include("algorithms/derivatives/hamiltonian_derivatives.jl")
 include("algorithms/derivatives/projection_derivatives.jl")
+include("algorithms/derivatives/superoperator_derivatives.jl")
 include("algorithms/expval.jl")
 include("algorithms/toolbox.jl")
 include("algorithms/transfer_spectrum.jl")

@@ -159,3 +159,24 @@ function transfer_right(
     return @plansor y[-1 -2; -3] ≔ A[-1 4 2; 1] * O[-2 6; 4 5] * τ[5 7; 2 3] *
         conj(Ab[-3 6 7; 8]) * x[1 3; 8]
 end
+
+# density matrix transfer, with the operator acting on the bra (second physical) leg.
+#
+# Two changes with respect to the two ket-side methods above: `O` and `τ` swap places along
+# the MPO line, so that it braids *past* the ket leg before reaching the operator, and `O`
+# is transposed onto the dual space the bra leg lives in (see `_bra_transpose`), which is
+# what makes `BraSide(O)` implement right multiplication `ρ ↦ ρO`.
+function transfer_left(
+        x::MPSTensor, O::BraSide, A::GenericMPSTensor{<:Any, 3}, Ab::GenericMPSTensor{<:Any, 3}
+    )
+    Ot = _bra_transpose(O)
+    return @plansor y[-1 -2; -3] ≔ x[1 2; 6] * A[6 7 8; -3] * Ot[5 4; 8 -2] * τ[2 3; 7 5] *
+        conj(Ab[1 3 4; -1])
+end
+function transfer_right(
+        x::MPSTensor, O::BraSide, A::GenericMPSTensor{<:Any, 3}, Ab::GenericMPSTensor{<:Any, 3}
+    )
+    Ot = _bra_transpose(O)
+    return @plansor y[-1 -2; -3] ≔ A[-1 4 2; 1] * τ[-2 6; 4 5] * Ot[5 7; 2 3] *
+        conj(Ab[-3 6 7; 8]) * x[1 3; 8]
+end
