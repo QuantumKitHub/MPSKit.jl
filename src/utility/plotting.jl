@@ -20,8 +20,11 @@ Plot the entanglement spectrum (see [`entanglement_spectrum`](@ref)) of a given 
 !!! note
     You will need to manually import any plotting backend of [Makie.jl](https://github.com/MakieOrg/Makie.jl) or
     [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to be able to use this function.
+
+See also [`entanglementplot!`](@ref) for plotting into an existing figure.
 """
 function entanglementplot end
+function entanglementplot! end
 
 """
     transferplot(above, below = above; sectors = nothing, transferkwargs = (;), plotkwargs = (;))
@@ -45,5 +48,8 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 !!! note
     You will need to manually import any plotting backend of [Makie.jl](https://github.com/MakieOrg/Makie.jl) or
     [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to be able to use this function.
+
+See also [`transferplot!`](@ref) for plotting into an existing figure.
 """
 function transferplot end
+function transferplot! end

@@ -50,6 +50,7 @@ export correlation_length, marek_gap, transfer_spectrum
 export entropy, entanglement_spectrum
 export open_boundary_conditions, periodic_boundary_conditions
 export entanglementplot, transferplot
+export entanglementplot!, transferplot!
 export r_LL, l_LL, r_RR, l_RR, r_RL, r_LR, l_RL, l_LR # TODO: rename
 
 # unexported
