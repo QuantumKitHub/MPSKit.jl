@@ -93,9 +93,8 @@ end
 
 #------------------------------------------------------------
 
-@recipe(TransferPlot, mps) do scene
+@recipe(TransferPlot, above, below) do scene
     Attributes(
-        below = nothing,
         sectors = nothing,
         transferkwargs = NamedTuple(),
         thetaorigin = 0.0,
@@ -105,8 +104,8 @@ end
 
 function Makie.plot!(tp::TransferPlot)
     #TODO: consider radial plot
-    mps = tp.mps[]
-    below = tp.below[] === nothing ? mps : tp.below[]
+    mps = tp.above[]
+    below = tp.below[]
     sectors = tp.sectors[]
     transferkwargs = NamedTuple( # weird convert thing
         k => (v isa Observable ? v[] : v) for (k, v) in pairs(tp.transferkwargs[])
@@ -157,8 +156,8 @@ function Makie.plot!(tp::TransferPlot)
     return tp
 end
 
-function MPSKit.transferplot(args...; plotkwargs = (;), kwargs...)
-    p = transferplot(args...; kwargs...)
+function MPSKit.transferplot(above, below = above; plotkwargs = (;), kwargs...)
+    p = transferplot(above, below; kwargs...)
     ax = p.axis
 
     # overwrite user-provided axis attributes
