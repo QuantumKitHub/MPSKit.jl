@@ -37,7 +37,7 @@ using MPSKit, TensorKit
             legend --> false
             grid --> :xy
             widen --> true
-            bottom_margin -->(10, :mm)
+            bottom_margin --> (10, :mm)
 
             xguide --> "χ = $(dim(MPSKit._firstspace(mps.C[site])))"
             xticks --> (1:length(sectors), sector_formatter.(sectors))

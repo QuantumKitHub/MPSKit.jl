@@ -20,6 +20,15 @@ function with_current_axis(f, target)
     end
 end
 
+# overwrite user-provided axis attributes
+function apply_plotkwargs!(ax, plotkwargs)
+    ax isa Makie.AbstractAxis || return ax
+    for (k, v) in pairs(plotkwargs)
+        setproperty!(ax, k, v)
+    end
+    return ax
+end
+
 @recipe(EntanglementPlot, mps) do scene
     Attributes(
         site = 0,
@@ -75,7 +84,8 @@ function Makie.plot!(ep::EntanglementPlot)
 
     ax.ylabel = L"\log(\lambda)"
     ax.ylabelsize = 24
-    bottom = floor(Int, log10(minimum(spectra)))
+    smallest = minimum(Iterators.filter(>(0), Iterators.flatten(spectrum)); init = 1.0) # safety net
+    bottom = floor(Int, log10(smallest))
     ax.yticks = (bottom:2:0, latexstring.(collect(bottom:2:0)))
     ax.yticklabelsize = 16
     ylims!(ax, bottom, 0 + 1.0e-1)
@@ -96,22 +106,21 @@ end
 
 function MPSKit.entanglementplot(args...; plotkwargs = (;), kwargs...)
     p = entanglementplot(args...; kwargs...)
-    ax = p.axis
-
-    # overwrite user-provided axis attributes
-    for (k, v) in pairs(plotkwargs)
-        setproperty!(ax, k, v)
-    end
+    apply_plotkwargs!(p.axis, plotkwargs)
     return p
 end
 
-function MPSKit.entanglementplot!(state::MPSKit.AbstractMPS, args...; kwargs...)
-    return entanglementplot!(state, args...; kwargs...)
+function MPSKit.entanglementplot!(state::MPSKit.AbstractMPS; plotkwargs = (;), kwargs...)
+    p = entanglementplot!(state; kwargs...)
+    apply_plotkwargs!(Makie.current_axis(), plotkwargs)
+    return p
 end
-function MPSKit.entanglementplot!(target, state::MPSKit.AbstractMPS, args...; kwargs...)
-    return with_current_axis(target) do
-        entanglementplot!(target, state, args...; kwargs...)
+function MPSKit.entanglementplot!(target, state::MPSKit.AbstractMPS; plotkwargs = (;), kwargs...)
+    p = with_current_axis(target) do
+        entanglementplot!(target, state; kwargs...)
     end
+    apply_plotkwargs!(target, plotkwargs)
+    return p
 end
 
 #------------------------------------------------------------
@@ -185,22 +194,27 @@ end
 
 function MPSKit.transferplot(above, below = above; plotkwargs = (;), kwargs...)
     p = transferplot(above, below; kwargs...)
-    ax = p.axis
-
-    # overwrite user-provided axis attributes
-    for (k, v) in pairs(plotkwargs)
-        setproperty!(ax, k, v)
-    end
+    apply_plotkwargs!(p.axis, plotkwargs)
     return p
 end
 
-function MPSKit.transferplot!(above::MPSKit.AbstractMPS, below = above; kwargs...)
-    return transferplot!(above, below; kwargs...)
+function MPSKit.transferplot!(
+        above::MPSKit.AbstractMPS, below::MPSKit.AbstractMPS = above;
+        plotkwargs = (;), kwargs...
+    )
+    p = transferplot!(above, below; kwargs...)
+    apply_plotkwargs!(Makie.current_axis(), plotkwargs)
+    return p
 end
-function MPSKit.transferplot!(target, above::MPSKit.AbstractMPS, below = above; kwargs...)
-    return with_current_axis(target) do
+function MPSKit.transferplot!(
+        target, above::MPSKit.AbstractMPS, below::MPSKit.AbstractMPS = above;
+        plotkwargs = (;), kwargs...
+    )
+    p = with_current_axis(target) do
         transferplot!(target, above, below; kwargs...)
     end
+    apply_plotkwargs!(target, plotkwargs)
+    return p
 end
 
 # utility for plotting
