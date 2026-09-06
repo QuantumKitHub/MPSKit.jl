@@ -6,6 +6,20 @@ using MPSKit, TensorKit
 #TODO?: add Colors.jl to access this, allows Plots extension to also use these colors
 const JLCOLORS = Makie.Colors.JULIA_LOGO_COLORS
 
+# cannot use current_axis() when supporting in-place method
+# workaround: have it point at the target axis temporarily
+#TODO: remove once the recipes publish their axis attributes instead of setting them
+function with_current_axis(f, target)
+    target isa Makie.AbstractAxis || return f()
+    previous = Makie.current_axis()
+    Makie.current_axis!(target)
+    try
+        return f()
+    finally
+        isnothing(previous) || Makie.current_axis!(previous)
+    end
+end
+
 @recipe(EntanglementPlot, mps) do scene
     Attributes(
         site = 0,
@@ -91,6 +105,15 @@ function MPSKit.entanglementplot(args...; plotkwargs = (;), kwargs...)
     return p
 end
 
+function MPSKit.entanglementplot!(state::MPSKit.AbstractMPS, args...; kwargs...)
+    return entanglementplot!(state, args...; kwargs...)
+end
+function MPSKit.entanglementplot!(target, state::MPSKit.AbstractMPS, args...; kwargs...)
+    return with_current_axis(target) do
+        entanglementplot!(target, state, args...; kwargs...)
+    end
+end
+
 #------------------------------------------------------------
 
 @recipe(TransferPlot, above, below) do scene
@@ -152,7 +175,11 @@ function Makie.plot!(tp::TransferPlot)
 
     xlims!(ax, thetaorigin - 0.1, thetaorigin + 2π + 0.1)
     ylims!(ax, nothing, 1.05)
-    Legend(Makie.current_figure()[1, 1], tp.plots, [sector_formatter(s) for s in plotted_sectors]; tellwidth = false, halign = :center, valign = :top)
+    if !isempty(plotted_sectors) # cannot use current_figure() when supporting in-place method
+        axislegend(
+            ax, tp.plots, [sector_formatter(s) for s in plotted_sectors]; position = :ct
+        )
+    end
     return tp
 end
 
@@ -165,6 +192,15 @@ function MPSKit.transferplot(above, below = above; plotkwargs = (;), kwargs...)
         setproperty!(ax, k, v)
     end
     return p
+end
+
+function MPSKit.transferplot!(above::MPSKit.AbstractMPS, below = above; kwargs...)
+    return transferplot!(above, below; kwargs...)
+end
+function MPSKit.transferplot!(target, above::MPSKit.AbstractMPS, below = above; kwargs...)
+    return with_current_axis(target) do
+        transferplot!(target, above, below; kwargs...)
+    end
 end
 
 # utility for plotting
