@@ -74,10 +74,7 @@ left_virtualspace(H::BraMPO, site::Int) = left_virtualspace(H.op, site)
 right_virtualspace(H::BraMPO, site::Int) = right_virtualspace(H.op, site)
 physicalspace(H::BraMPO, site::Int) = physicalspace(H.op, site)
 
-# the tensor type stored, not the `BraSide` wrapper that `getindex` builds on the fly:
-# this is what the environment allocators feed to TensorKit's storage promotion
 Base.eltype(::Type{BraMPO{T}}) where {T} = eltype(T)
-
 VectorInterface.scalartype(::Type{BraMPO{T}}) where {T} = scalartype(T)
 TensorKit.spacetype(::Type{BraMPO{T}}) where {T} = spacetype(T)
 TensorKit.spacetype(H::BraMPO) = spacetype(typeof(H))
