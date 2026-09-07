@@ -29,14 +29,9 @@ Base.unlock(envs::AbstractMPSEnvironments) = unlock(envs.lock);
 
 # Allocating tensors
 # ------------------
-# the tensor type an operator stores; `BraMPO`'s `eltype` is a wrapper, but storage
-# promotion needs the underlying tensor type
-_tensortype(mpo::AbstractMPO) = eltype(mpo)
-_tensortype(mpo::BraMPO) = _tensortype(parent(mpo))
-
 function allocate_GL(bra::AbstractMPS, mpo::AbstractMPOLike, ket::AbstractMPS, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
-    M = TensorKit.promote_storagetype(T, _tensortype(mpo), eltype(bra), eltype(ket))
+    M = TensorKit.promote_storagetype(T, eltype(mpo), eltype(bra), eltype(ket))
     S = TensorKit.check_spacetype(bra, mpo, ket)
     V = left_virtualspace(bra, i) ⊗ left_virtualspace(mpo, i)' ←
         left_virtualspace(ket, i)
@@ -50,7 +45,7 @@ end
 
 function allocate_GR(bra::AbstractMPS, mpo::AbstractMPOLike, ket::AbstractMPS, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
-    M = TensorKit.promote_storagetype(T, _tensortype(mpo), eltype(bra), eltype(ket))
+    M = TensorKit.promote_storagetype(T, eltype(mpo), eltype(bra), eltype(ket))
     S = TensorKit.check_spacetype(bra, mpo, ket)
     V = right_virtualspace(ket, i) ⊗ right_virtualspace(mpo, i) ←
         right_virtualspace(bra, i)
@@ -64,7 +59,7 @@ end
 
 function allocate_GBL(bra::QP, mpo::AbstractMPOLike, ket::QP, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
-    M = TensorKit.promote_storagetype(T, _tensortype(mpo), eltype(bra), eltype(ket))
+    M = TensorKit.promote_storagetype(T, eltype(mpo), eltype(bra), eltype(ket))
     S = TensorKit.check_spacetype(bra, mpo, ket)
     V = left_virtualspace(bra.left_gs, i) ⊗ left_virtualspace(mpo, i)' ←
         auxiliaryspace(ket)' ⊗ left_virtualspace(ket.right_gs, i)
@@ -78,7 +73,7 @@ end
 
 function allocate_GBR(bra::QP, mpo::AbstractMPOLike, ket::QP, i::Int)
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
-    M = TensorKit.promote_storagetype(T, _tensortype(mpo), eltype(bra), eltype(ket))
+    M = TensorKit.promote_storagetype(T, eltype(mpo), eltype(bra), eltype(ket))
     S = TensorKit.check_spacetype(bra, mpo, ket)
     V = right_virtualspace(ket.left_gs, i) ⊗ right_virtualspace(mpo, i) ←
         auxiliaryspace(ket)' ⊗ right_virtualspace(bra.right_gs, i)
