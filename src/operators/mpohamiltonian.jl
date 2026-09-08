@@ -425,6 +425,132 @@ function _find_channel(nonzero_keys; init = 2)
     return max(maximum(range) + 1, init)
 end
 
+"""
+    _proportionality(O_new, O_old; tol) -> λ or nothing
+
+Return the scalar `λ` for which `O_new ≈ λ * O_old`, or `nothing` if the two operators are not
+proportional. Both arguments are entries of a decomposed local MPO, i.e. either `MPOTensor`s or
+scalar multiples of the identity.
+"""
+function _proportionality(O_new::Number, O_old::Number; tol = nothing)
+    iszero(O_old) && return nothing
+    return O_new / O_old
+end
+_proportionality(::Number, ::AbstractTensorMap; tol = nothing) = nothing
+_proportionality(::AbstractTensorMap, ::Number; tol = nothing) = nothing
+function _proportionality(
+        O_new::AbstractTensorMap, O_old::AbstractTensorMap;
+        tol = eps(real(promote_type(scalartype(O_new), scalartype(O_old))))^(3 / 4)
+    )
+    space(O_new) == space(O_old) || return nothing
+    norm_new = norm(O_new)
+    norm²_old = inner(O_old, O_old)
+    (iszero(norm²_old) || iszero(norm_new)) && return nothing
+    # note that dividing by `inner(O_old, O_old)` instead of `norm(O_old)^2` avoids a
+    # roundtrip through `sqrt`, such that identical operators give `λ = 1` exactly
+    λ = inner(O_old, O_new) / norm²_old
+    norm(add(O_new, O_old, -λ)) ≤ tol * norm_new || return nothing
+    return λ
+end
+
+"""
+    _instantiate_operators(lattice, local_operators)
+
+Instantiate all `local_operators` on `lattice`, decomposing every distinct operator into an MPO
+only once. Operators that are proportional to one another share a single decomposition, with
+the scalar factor absorbed into the final tensor. Terms that differ only in their prefactor
+thus end up with literally the same operators, and can share their virtual channels in
+[`_assign_channels!`](@ref) -- which the decomposition itself does not guarantee, as the SVDs
+of two proportional operators need not be related by that same scalar.
+"""
+function _instantiate_operators(lattice, local_operators)
+    representatives = Tuple{Any, Any}[]
+    return map(collect(local_operators)) do term
+        return instantiate_operator(lattice, _decompose_once!(representatives, term))
+    end
+end
+
+# terms that are not supplied as an `inds => operator` pair -- e.g. a `LocalOperator` -- and
+# operators that the caller already decomposed into an MPO are passed along untouched
+_decompose_once!(representatives, term) = term
+function _decompose_once!(representatives, term::Pair)
+    inds, O = term
+    return inds => _decompose_once!(representatives, O)
+end
+function _decompose_once!(representatives, O::AbstractTensorMap)
+    for (O_rep, mpo) in representatives
+        λ = _proportionality(O, O_rep)
+        isnothing(λ) && continue
+        isone(λ) && return mpo
+        Os = parent(mpo)
+        return FiniteMPO([i == lastindex(Os) ? λ * Os[i] : Os[i] for i in eachindex(Os)])
+    end
+    mpo = FiniteMPO(O)
+    push!(representatives, (O, mpo))
+    return mpo
+end
+
+"""
+    _assign_channels!(nonzero_keys, nonzero_opps, local_mpos)
+
+Distribute the instantiated local MPOs `local_mpos` over the virtual channels of the Jordan
+block form, storing the resulting graph of operators in `nonzero_keys` and `nonzero_opps`.
+
+Terms are inserted one at a time, from left to right. Whenever the next operator of a term
+coincides -- up to a scalar factor -- with an edge that is already present at that site and
+starts from the same channel, that channel is reused instead of opening up a new one, and the
+scalar is carried along to be absorbed into the final operator of the term. This is what keeps
+the bond dimension of e.g. a long-range interaction linear instead of quadratic in its range:
+all terms that start out the same way share a single channel until they part ways.
+
+Because a channel is only ever created for a unique combination of site, incoming channel and
+operator, every channel is reached by exactly one sequence of operators. Sharing channels
+between terms can therefore never generate paths that do not correspond to a requested term.
+"""
+function _assign_channels!(nonzero_keys, nonzero_opps, local_mpos)
+    L = length(nonzero_keys)
+    # index the outgoing edges at every site by their incoming channel, such that a new
+    # operator only has to be compared against the few edges it could possibly share
+    outgoing = [Dict{Int, Vector{Int}}() for _ in 1:L]
+
+    for (sites, local_mpo) in local_mpos
+        key_R = 1
+        coeff = 1
+        for (i, (site, O)) in enumerate(zip(sites, local_mpo))
+            key_L = i == 1 ? 1 : key_R
+            if i == length(local_mpo)
+                # the final operator always drops back onto the last channel, and is where the
+                # accumulated scalar of all shared edges ends up
+                push!(nonzero_keys[site], (key_L, 0))
+                push!(nonzero_opps[site], isone(coeff) ? O : coeff * O)
+                break
+            end
+
+            edges = get!(Vector{Int}, outgoing[mod1(site, L)], key_L)
+            shared = nothing
+            for edge in edges
+                λ = _proportionality(O, nonzero_opps[site][edge])
+                if !isnothing(λ)
+                    shared = (last(nonzero_keys[site][edge]), λ)
+                    break
+                end
+            end
+
+            if isnothing(shared)
+                key_R = _find_channel(nonzero_keys[site]; init = key_L)
+                push!(nonzero_keys[site], (key_L, key_R))
+                push!(nonzero_opps[site], O)
+                push!(edges, length(nonzero_opps[site]))
+            else
+                key_R, λ = shared
+                coeff = coeff * λ
+            end
+        end
+    end
+
+    return nonzero_keys, nonzero_opps
+end
+
 function _find_first_mpotensor(Ws)
     for W in Ws
         for x in W
@@ -450,19 +576,10 @@ function FiniteMPOHamiltonian(lattice::AbstractArray{<:VectorSpace}, local_opera
 
     # partial sort by interaction range
     local_mpos = sort!(
-        map(Base.Fix1(instantiate_operator, lattice), collect(local_operators));
-        by = x -> length(x[1])
+        _instantiate_operators(lattice, local_operators); by = x -> length(x[1])
     )
 
-    for (sites, local_mpo) in local_mpos
-        local key_R # trick to define key_R before the first iteration
-        for (i, (site, O)) in enumerate(zip(sites, local_mpo))
-            key_L = i == 1 ? 1 : key_R
-            key_R = i == length(local_mpo) ? 0 : _find_channel(nonzero_keys[site]; init = key_L)
-            push!(nonzero_keys[site], (key_L, key_R))
-            push!(nonzero_opps[site], O)
-        end
-    end
+    _assign_channels!(nonzero_keys, nonzero_opps, local_mpos)
 
     # construct the sparse MPO
     T = _find_tensortype(nonzero_opps)
@@ -532,18 +649,11 @@ function InfiniteMPOHamiltonian(lattice′::AbstractArray{<:VectorSpace}, local_
     end
 
     # partial sort by interaction range
-    unsorted_mpos = map(Base.Fix1(instantiate_operator, lattice), [local_operators...])
-    local_mpos = sort!(unsorted_mpos; by = x -> length(x[1]))
+    local_mpos = sort!(
+        _instantiate_operators(lattice, local_operators); by = x -> length(x[1])
+    )
 
-    for (sites, local_mpo) in local_mpos
-        local key_R # trick to define key_R before the first iteration
-        for (i, (site, O)) in enumerate(zip(sites, local_mpo))
-            key_L = i == 1 ? 1 : key_R
-            key_R = i == length(local_mpo) ? 0 : _find_channel(nonzero_keys[site]; init = key_L)
-            push!(nonzero_keys[site], (key_L, key_R))
-            push!(nonzero_opps[site], O)
-        end
-    end
+    _assign_channels!(nonzero_keys, nonzero_opps, local_mpos)
 
     # construct the sparse MPO
     T = _find_tensortype(nonzero_opps)
