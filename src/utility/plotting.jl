@@ -15,7 +15,7 @@ Plot the entanglement spectrum (see [`entanglement_spectrum`](@ref)) of a given 
 - `sortby = maximum`: the method of sorting the sectors.
 - `sector_margin = 1//10`: the amount of whitespace between sectors.
 - `sector_formatter = string`: how to convert sectors to strings.
-- `plotkwargs = (; )`: Relevant to Makie. Kwargs for the underlying plot, e.g. `plotkwargs = (; title = "custom title", xlabel = L"latexstring", xticks = (1:2, ["a", "b"]))`. For Plots, these kwargs can be passed directly to `entanglementplot` instead of via `plotkwargs`.
+- `plotkwargs = (; )`: kwargs for the underlying plot, e.g. `plotkwargs = (; title = "custom title", xlabel =   L"\text{custom label}", xticks = (1:2, ["a", "b"]))`.
 
 !!! note
     You will need to manually import any plotting backend of [Makie.jl](https://github.com/MakieOrg/Makie.jl) or
@@ -41,7 +41,7 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 - `sectors = nothing`: restrict the spectrum to the given sectors; by default all sectors of
   the transfer space are included.
 - `transferkwargs`: kwargs for call to [`transfer_spectrum`](@ref).
-- `plotkwargs = (; )`: Relevant to Makie. Kwargs for the underlying plot, e.g. `plotkwargs = (; title = "custom title", xlabel = L"latexstring", xticks = (1:2, ["a", "b"]))`. For Plots, these kwargs can be passed directly to `transferplot` instead of via `plotkwargs`.
+- `plotkwargs = (; )`: kwargs for the underlying plot, e.g. `plotkwargs = (; title = "custom title", xlabel = L"latexstring", xticks = (1:2, ["a", "b"]))`.
 - `thetaorigin = 0`: origin of the angle range.
 - `sector_formatter = string`: how to convert sectors to strings.
 

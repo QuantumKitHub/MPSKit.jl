@@ -65,8 +65,8 @@ using MPSKit, TensorKit
     return nothing
 end
 
-MPSKit.entanglementplot(args...; kwargs...) = entanglementplot(args...; kwargs...)
-MPSKit.entanglementplot!(args...; kwargs...) = entanglementplot!(args...; kwargs...)
+MPSKit.entanglementplot(args...; plotkwargs = (;), kwargs...) = entanglementplot(args...; kwargs..., plotkwargs...)
+MPSKit.entanglementplot!(args...; plotkwargs = (;), kwargs...) = entanglementplot!(args...; kwargs..., plotkwargs...)
 
 #-----------------------------------------------------------------------------
 
@@ -111,7 +111,7 @@ MPSKit.entanglementplot!(args...; kwargs...) = entanglementplot!(args...; kwargs
     return nothing
 end
 
-MPSKit.transferplot(args...; kwargs...) = transferplot(args...; kwargs...)
-MPSKit.transferplot!(args...; kwargs...) = transferplot!(args...; kwargs...)
+MPSKit.transferplot(args...; plotkwargs = (;), kwargs...) = transferplot(args...; kwargs..., plotkwargs...)
+MPSKit.transferplot!(args...; plotkwargs = (;), kwargs...) = transferplot!(args...; kwargs..., plotkwargs...)
 
 end
