@@ -27,7 +27,7 @@ function entanglementplot end
 function entanglementplot! end
 
 """
-    transferplot(above, below = above; sectors = nothing, transferkwargs = (;), plotkwargs = (;))
+    transferplot(above, below = above; sectors = nothing, transferkwargs = (;), plotkwargs = (;), legend_position = :ct)
 
 Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 
@@ -44,6 +44,8 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's.
 - `plotkwargs = (; )`: kwargs for the underlying plot, e.g. `plotkwargs = (; title = "custom title", xlabel = L"latexstring", xticks = (1:2, ["a", "b"]))`.
 - `thetaorigin = 0`: origin of the angle range.
 - `sector_formatter = string`: how to convert sectors to strings.
+- `legend_position = :ct`: Makie only, the `position` passed to `axislegend`.
+  For Plots, use the standard `legend` attribute instead (e.g. `legend = :topright`) in `plotkwargs`.
 
 !!! note
     You will need to manually import any plotting backend of [Makie.jl](https://github.com/MakieOrg/Makie.jl) or

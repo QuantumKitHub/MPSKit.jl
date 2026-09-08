@@ -131,6 +131,7 @@ end
         transferkwargs = NamedTuple(),
         thetaorigin = 0.0,
         sector_formatter = string,
+        legend_position = :ct,
     )
 end
 
@@ -144,6 +145,7 @@ function Makie.plot!(tp::TransferPlot)
     )
     thetaorigin = tp.thetaorigin[]
     sector_formatter = tp.sector_formatter[]
+    legend_position = tp.legend_position[]
 
     kwargs = transferkwargs
     if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
@@ -186,7 +188,8 @@ function Makie.plot!(tp::TransferPlot)
     ylims!(ax, nothing, 1.05)
     if !isempty(plotted_sectors) # cannot use current_figure() when supporting in-place method
         axislegend(
-            ax, tp.plots, [sector_formatter(s) for s in plotted_sectors]; position = :ct
+            ax, tp.plots, [sector_formatter(s) for s in plotted_sectors];
+            position = legend_position
         )
     end
     return tp
