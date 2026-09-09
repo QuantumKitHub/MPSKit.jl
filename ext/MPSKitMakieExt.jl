@@ -1,0 +1,251 @@
+module MPSKitMakieExt
+
+using Makie, LaTeXStrings
+using MPSKit, TensorKit
+
+#TODO?: add Colors.jl to access this, allows Plots extension to also use these colors
+const JLCOLORS = Makie.Colors.JULIA_LOGO_COLORS
+
+# cannot use current_axis() when supporting in-place method
+# workaround: have it point at the target axis temporarily
+#TODO: remove once the recipes publish their axis attributes instead of setting them
+function with_current_axis(f, target)
+    target isa Makie.AbstractAxis || return f()
+    previous = Makie.current_axis()
+    Makie.current_axis!(target)
+    try
+        return f()
+    finally
+        isnothing(previous) || Makie.current_axis!(previous)
+    end
+end
+
+# overwrite user-provided axis attributes
+function apply_plotkwargs!(ax, plotkwargs)
+    ax isa Makie.AbstractAxis || return ax
+    for (k, v) in pairs(plotkwargs)
+        setproperty!(ax, k, v)
+    end
+    return ax
+end
+
+@recipe(EntanglementPlot, mps) do scene
+    Attributes(
+        site = 0,
+        expand_symmetry = false,
+        sortby = maximum,
+        sector_margin = 1 // 10,
+        sector_formatter = string,
+    )
+end
+
+function Makie.plot!(ep::EntanglementPlot)
+    #TODO: still want this style where sectors are separated?
+    mps = ep.mps[]
+    site = ep.site[]
+    margin = ep.sector_margin[]
+
+    spectra = entanglement_spectrum(mps, site)
+
+    sectors = sectortype(mps)[]
+    spectrum = Vector{Vector{Float64}}()
+
+    for (c, b) in pairs(spectra)
+        if ep.expand_symmetry[]
+            b′ = repeat(b, dim(c))
+            sort!(b′; rev = true)
+            push!(spectrum, b′)
+        else
+            push!(spectrum, b)
+        end
+        push!(sectors, c)
+    end
+
+    # Sort sectors according to provided method
+    if length(spectrum) > 1
+        order = sortperm(spectrum; by = ep.sortby[], rev = true)
+        spectrum = spectrum[order]
+        sectors = sectors[order]
+    end
+
+    ax = Makie.current_axis()
+
+    # Axis styling
+    ax.title = L"\text{Entanglement Spectrum}"
+    ax.titlesize = 24
+
+    ax.xlabel = latexstring("\$\\chi\$ = $(dim(MPSKit._firstspace(mps.C[site])))") # still want this?
+    ax.xlabelsize = 24
+    ax.xticks = (1:length(sectors), ep.sector_formatter[].(sectors))
+    ax.xticklabelsize = 16
+    ax.xticklabelrotation = 45
+    ax.xticklabelalign = (:right, :top)
+    xlims!(ax, 1, length(sectors) + 1)
+
+    ax.ylabel = L"\log(\lambda)"
+    ax.ylabelsize = 24
+    smallest = minimum(Iterators.filter(>(0), Iterators.flatten(spectrum)); init = 1.0) # safety net
+    bottom = floor(Int, log10(smallest))
+    ax.yticks = (bottom:2:0, latexstring.(collect(bottom:2:0)))
+    ax.yticklabelsize = 16
+    ylims!(ax, bottom, 0 + 1.0e-1)
+
+    # Plot data
+    for (i, (partial_spectrum, sector)) in enumerate(zip(spectrum, sectors))
+        n_spectrum = length(partial_spectrum)
+        if n_spectrum == 1
+            x = [i + 0.5]
+        else
+            x = collect(range(i + float(margin), i + 1 - float(margin); length = n_spectrum))
+        end
+        scatter!(ep, x, log10.(partial_spectrum), color = JLCOLORS[mod1(i, length(JLCOLORS))])
+    end
+
+    return ep
+end
+
+function MPSKit.entanglementplot(args...; plotkwargs = (;), kwargs...)
+    p = entanglementplot(args...; kwargs...)
+    apply_plotkwargs!(p.axis, plotkwargs)
+    return p
+end
+
+function MPSKit.entanglementplot!(state::MPSKit.AbstractMPS; plotkwargs = (;), kwargs...)
+    p = entanglementplot!(state; kwargs...)
+    apply_plotkwargs!(Makie.current_axis(), plotkwargs)
+    return p
+end
+function MPSKit.entanglementplot!(target, state::MPSKit.AbstractMPS; plotkwargs = (;), kwargs...)
+    p = with_current_axis(target) do
+        entanglementplot!(target, state; kwargs...)
+    end
+    apply_plotkwargs!(target, plotkwargs)
+    return p
+end
+
+#------------------------------------------------------------
+
+@recipe(TransferPlot, above, below) do scene
+    Attributes(
+        sectors = nothing,
+        transferkwargs = NamedTuple(),
+        thetaorigin = 0.0,
+        sector_formatter = string,
+        legend_position = :ct,
+    )
+end
+
+function Makie.plot!(tp::TransferPlot)
+    #TODO: consider radial plot
+    mps = tp.above[]
+    below = tp.below[]
+    sectors = tp.sectors[]
+    transferkwargs = NamedTuple( # weird convert thing
+        k => (v isa Observable ? v[] : v) for (k, v) in pairs(tp.transferkwargs[])
+    )
+    thetaorigin = tp.thetaorigin[]
+    sector_formatter = tp.sector_formatter[]
+    legend_position = tp.legend_position[]
+
+    kwargs = transferkwargs
+    if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
+        howmany = Dict(c => get(kwargs, :howmany, 20) for c in sectors)
+        kwargs = (; kwargs..., howmany)
+    end
+    spectra = transfer_spectrum(mps, below; kwargs...)
+
+    ax = Makie.current_axis()
+    ax.title = L"\text{Transfer Spectrum}"
+    ax.titlesize = 24
+    ax.xlabel = L"\theta"
+    ax.xlabelsize = 24
+    ax.xticklabelsize = 16
+    ax.ylabel = L"r"
+    ax.ylabelsize = 24
+    ax.yticklabelsize = 16
+
+    ax.xticks = pitick(0, 2pi, 4; mode = :latex)
+    ax.yticks = (range(0, 1.0; length = 6), latexstring.(range(0, 1.0; length = 6)))
+    ax.xgridvisible = true
+    ax.ygridvisible = true
+
+    ax.leftspinevisible = true
+    ax.rightspinevisible = false
+    ax.bottomspinevisible = true
+    ax.topspinevisible = false
+
+    plotted_sectors = sectortype(mps)[]
+    for (sector, spectrum) in pairs(spectra)
+        sectors === nothing || sector in sectors || continue
+        push!(plotted_sectors, sector)
+        i = length(plotted_sectors)
+        θ = mod2pi.(angle.(spectrum) .+ thetaorigin) .- thetaorigin
+        r = abs.(spectrum)
+        scatter!(tp, θ, r; label = sector_formatter(sector), color = JLCOLORS[mod1(i, length(JLCOLORS))])
+    end
+
+    xlims!(ax, thetaorigin - 0.1, thetaorigin + 2π + 0.1)
+    ylims!(ax, nothing, 1.05)
+    if !isempty(plotted_sectors) # cannot use current_figure() when supporting in-place method
+        axislegend(
+            ax, tp.plots, [sector_formatter(s) for s in plotted_sectors];
+            position = legend_position
+        )
+    end
+    return tp
+end
+
+function MPSKit.transferplot(above, below = above; plotkwargs = (;), kwargs...)
+    p = transferplot(above, below; kwargs...)
+    apply_plotkwargs!(p.axis, plotkwargs)
+    return p
+end
+
+function MPSKit.transferplot!(
+        above::MPSKit.AbstractMPS, below::MPSKit.AbstractMPS = above;
+        plotkwargs = (;), kwargs...
+    )
+    p = transferplot!(above, below; kwargs...)
+    apply_plotkwargs!(Makie.current_axis(), plotkwargs)
+    return p
+end
+function MPSKit.transferplot!(
+        target, above::MPSKit.AbstractMPS, below::MPSKit.AbstractMPS = above;
+        plotkwargs = (;), kwargs...
+    )
+    p = with_current_axis(target) do
+        transferplot!(target, above, below; kwargs...)
+    end
+    apply_plotkwargs!(target, plotkwargs)
+    return p
+end
+
+# utility for plotting
+
+function pitick(start, stop, denom; mode = :latex)
+    a = Int(cld(start, π / denom))
+    b = Int(fld(stop, π / denom))
+    tick = range(a * π / denom, b * π / denom; step = π / denom)
+    ticklabel = piticklabel.((a:b) .// denom, Val(mode))
+    return tick, ticklabel
+end
+
+function piticklabel(x::Rational, ::Val{:text})
+    iszero(x) && return "0"
+    S = x < 0 ? "-" : ""
+    n, d = abs(numerator(x)), denominator(x)
+    N = n == 1 ? "" : repr(n)
+    d == 1 && return S * N * "π"
+    return S * N * "π/" * repr(d)
+end
+
+function piticklabel(x::Rational, ::Val{:latex})
+    iszero(x) && return L"0"
+    S = x < 0 ? "-" : ""
+    n, d = abs(numerator(x)), denominator(x)
+    N = n == 1 ? "" : repr(n)
+    d == 1 && return L"%$S%$N\pi"
+    return L"%$S\frac{%$N\pi}{%$d}"
+end
+
+end
