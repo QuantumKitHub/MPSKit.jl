@@ -41,6 +41,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- `FiniteMPOHamiltonian`/`InfiniteMPOHamiltonian` constructed from a set of local terms now share
+  virtual channels between terms that start out with the same operators, up to a scalar factor,
+  and add up terms that are linearly dependent. The resulting Hamiltonian is unchanged, but its
+  bond dimension is generally smaller ([#518](https://github.com/QuantumKitHub/MPSKit.jl/pull/518))
 - Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
   `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
   norm is preserved, so it retains useful information (the accumulated truncation error in real time,
