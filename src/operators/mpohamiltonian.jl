@@ -476,16 +476,17 @@ _proportionality(::AbstractTensorMap, ::Number; kwargs...) = nothing
 function _proportionality(
         O_new::AbstractTensorMap, O_old::AbstractTensorMap;
         tol = eps(real(promote_type(scalartype(O_new), scalartype(O_old))))^(3 / 4),
-        norm_squared_new = real(inner(O_new, O_new)),
-        norm_squared_old = real(inner(O_old, O_old))
+        norm_squared_new = nothing, norm_squared_old = nothing
     )
     # an operator is trivially proportional to itself, which is the common case as soon as a
     # decomposition is shared between terms -- no arithmetic needed
     O_new === O_old && return one(scalartype(O_new))
     space(O_new) == space(O_old) || return nothing
+
+    # evaluate norms only after fast paths are checked
+    norm_squared_old = @something norm_squared_old real(inner(O_old, O_old))
+    norm_squared_new = @something norm_squared_new real(inner(O_new, O_new))
     (iszero(norm_squared_old) || iszero(norm_squared_new)) && return nothing
-    # note that dividing by `inner(O_old, O_old)` instead of `norm(O_old)^2` avoids a
-    # roundtrip through `sqrt`, such that identical operators give `λ = 1` exactly
     ip = inner(O_old, O_new)
     λ = ip / norm_squared_old
     norm(add(O_new, O_old, -λ)) ≤ tol * sqrt(norm_squared_new) || return nothing
