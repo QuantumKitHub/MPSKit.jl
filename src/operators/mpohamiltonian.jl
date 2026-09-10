@@ -415,14 +415,45 @@ function _find_tensortype(nonzero_operators::AbstractArray)
     end
 end
 
-function _find_channel(nonzero_keys; init = 2)
-    init = max(init, 2)
-    range = unique!(last.(nonzero_keys))
-    isempty(range) && return init
-    for i in init:max(maximum(range), 2)
-        i ∉ range && return i
+"""
+    ChannelPool()
+
+The set of outgoing virtual channels in use at a single site of a Jordan block MPO.
+
+Channels are handed out by [`claim_channel!`](@ref), which returns the smallest index that is
+still free, so that the channel indices stay dense and the resulting bond dimension is not
+inflated by gaps.
+"""
+mutable struct ChannelPool
+    used::BitSet
+    # all of `2:contiguous` are in use, so `contiguous + 1` is the smallest free channel and
+    # answers every request that does not start above it. Tracking this incrementally is what
+    # keeps `claim_channel!` amortised constant time instead of linear in the bond dimension
+    contiguous::Int
+end
+ChannelPool() = ChannelPool(BitSet(), 1)
+
+"""
+    claim_channel!(pool::ChannelPool, init::Int) -> key
+
+Reserve and return the smallest channel index `≥ max(init, 2)` that is not yet in use. The
+lower bound is what keeps the Jordan block form upper triangular: an edge leaving channel
+`init` may not drop back to a lower channel.
+"""
+function claim_channel!(pool::ChannelPool, init::Int)
+    key = max(init, 2)
+    if key ≤ pool.contiguous + 1
+        key = pool.contiguous + 1
+    else
+        while key in pool.used
+            key += 1
+        end
     end
-    return max(maximum(range) + 1, init)
+    push!(pool.used, key)
+    while (pool.contiguous + 1) in pool.used
+        pool.contiguous += 1
+    end
+    return key
 end
 
 """
@@ -536,6 +567,8 @@ function _assign_channels!(nonzero_keys, nonzero_opps, local_mpos)
     # `IdR` are kept separate, since those can only ever be merged with one another
     outgoing = [Dict{Int, Vector{Int}}() for _ in 1:L]
     terminating = [Dict{Int, Vector{Int}}() for _ in 1:L]
+    # the channels already handed out at every site
+    pools = [ChannelPool() for _ in 1:L]
 
     for (sites, local_mpo) in local_mpos
         key_R = 1
@@ -576,7 +609,7 @@ function _assign_channels!(nonzero_keys, nonzero_opps, local_mpos)
             end
 
             if isnothing(shared)
-                key_R = _find_channel(keys_site; init = key_L)
+                key_R = claim_channel!(pools[mod1(site, L)], key_L)
                 push!(keys_site, (key_L, key_R))
                 push!(opps_site, O)
                 push!(edges, length(opps_site))
