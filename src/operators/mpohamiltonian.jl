@@ -351,12 +351,20 @@ function instantiate_operator(state::AbstractMPS, O::Pair)
 end
 function instantiate_operator(lattice::AbstractArray{<:VectorSpace}, (inds′, O)::Pair)
     inds = inds′ isa Int ? [inds′] : inds′
-    mpo = O isa FiniteMPO ? copy(O) : FiniteMPO(O)
 
     # convert to linear index type
     indices = Vector{Int}(undef, length(inds))
     for i in eachindex(indices)
         indices[i] = Base._to_linear_index(lattice, Tuple(inds[i])...) # this should mean all inds are valid...
+    end
+
+    # _proportionality check wants `===` as fast path, so only copy if really needed, i.e. if canonicalize_indices does something.
+    mpo = if !(O isa FiniteMPO)
+        FiniteMPO(O)
+    elseif issorted(indices) && allunique(indices)
+        O
+    else
+        copy(O)
     end
 
     # sort indices and deduplicate
