@@ -426,30 +426,38 @@ function _find_channel(nonzero_keys; init = 2)
 end
 
 """
-    _proportionality(O_new, O_old; tol) -> λ or nothing
+    _proportionality(O_new, O_old; tol, norm_squared_new, norm_squared_old) -> λ or nothing
 
 Return the scalar `λ` for which `O_new ≈ λ * O_old`, or `nothing` if the two operators are not
 proportional. Both arguments are entries of a decomposed local MPO, i.e. either `MPOTensor`s or
 scalar multiples of the identity.
+
+Operators that are the very same object are recognised without touching their entries, and
+`norm_squared_new`/`norm_squared_old` allow a caller that compares one operator against many to
+hoist the squared norms out of its loop. What remains is a single inner product per comparison.
 """
-function _proportionality(O_new::Number, O_old::Number; tol = nothing)
+function _proportionality(O_new::Number, O_old::Number; kwargs...)
     iszero(O_old) && return nothing
     return O_new / O_old
 end
-_proportionality(::Number, ::AbstractTensorMap; tol = nothing) = nothing
-_proportionality(::AbstractTensorMap, ::Number; tol = nothing) = nothing
+_proportionality(::Number, ::AbstractTensorMap; kwargs...) = nothing
+_proportionality(::AbstractTensorMap, ::Number; kwargs...) = nothing
 function _proportionality(
         O_new::AbstractTensorMap, O_old::AbstractTensorMap;
-        tol = eps(real(promote_type(scalartype(O_new), scalartype(O_old))))^(3 / 4)
+        tol = eps(real(promote_type(scalartype(O_new), scalartype(O_old))))^(3 / 4),
+        norm_squared_new = real(inner(O_new, O_new)),
+        norm_squared_old = real(inner(O_old, O_old))
     )
+    # an operator is trivially proportional to itself, which is the common case as soon as a
+    # decomposition is shared between terms -- no arithmetic needed
+    O_new === O_old && return one(scalartype(O_new))
     space(O_new) == space(O_old) || return nothing
-    norm_new = norm(O_new)
-    norm²_old = inner(O_old, O_old)
-    (iszero(norm²_old) || iszero(norm_new)) && return nothing
+    (iszero(norm_squared_old) || iszero(norm_squared_new)) && return nothing
     # note that dividing by `inner(O_old, O_old)` instead of `norm(O_old)^2` avoids a
     # roundtrip through `sqrt`, such that identical operators give `λ = 1` exactly
-    λ = inner(O_old, O_new) / norm²_old
-    norm(add(O_new, O_old, -λ)) ≤ tol * norm_new || return nothing
+    ip = inner(O_old, O_new)
+    λ = ip / norm_squared_old
+    norm(add(O_new, O_old, -λ)) ≤ tol * sqrt(norm_squared_new) || return nothing
     return λ
 end
 
@@ -464,7 +472,7 @@ thus end up with literally the same operators, and can share their virtual chann
 of two proportional operators need not be related by that same scalar.
 """
 function _instantiate_operators(lattice, local_operators)
-    representatives = Tuple{Any, Any}[]
+    representatives = Tuple{Any, Any, Any}[]
     return map(collect(local_operators)) do term
         return instantiate_operator(lattice, _decompose_once!(representatives, term))
     end
@@ -478,15 +486,25 @@ function _decompose_once!(representatives, term::Pair)
     return inds => _decompose_once!(representatives, O)
 end
 function _decompose_once!(representatives, O::AbstractTensorMap)
-    for (O_rep, mpo) in representatives
-        λ = _proportionality(O, O_rep)
+    # an operator that is handed in more than once -- the same object, as happens whenever a
+    # model reuses a single operator across its terms -- is recognised without any arithmetic
+    for (O_rep, _, mpo) in representatives
+        O === O_rep && return mpo
+    end
+    # otherwise every representative costs one inner product, with its own squared norm
+    # cached so that it is not recomputed for every term
+    norm_squared_new = real(inner(O, O))
+    for (O_rep, norm_squared_rep, mpo) in representatives
+        λ = _proportionality(
+            O, O_rep; norm_squared_new, norm_squared_old = norm_squared_rep
+        )
         isnothing(λ) && continue
         isone(λ) && return mpo
         Os = parent(mpo)
         return FiniteMPO([i == lastindex(Os) ? λ * Os[i] : Os[i] for i in eachindex(Os)])
     end
     mpo = FiniteMPO(O)
-    push!(representatives, (O, mpo))
+    push!(representatives, (O, norm_squared_new, mpo))
     return mpo
 end
 
@@ -503,44 +521,65 @@ scalar is carried along to be absorbed into the final operator of the term. This
 the bond dimension of e.g. a long-range interaction linear instead of quadratic in its range:
 all terms that start out the same way share a single channel until they part ways.
 
+The same comparison is made for the operators that terminate a term, where a match means that
+the two terms are linearly dependent: those are added together into a single edge, instead of
+two edges that are only summed when the tensors are filled in.
+
 Because a channel is only ever created for a unique combination of site, incoming channel and
 operator, every channel is reached by exactly one sequence of operators. Sharing channels
 between terms can therefore never generate paths that do not correspond to a requested term.
 """
 function _assign_channels!(nonzero_keys, nonzero_opps, local_mpos)
     L = length(nonzero_keys)
-    # index the outgoing edges at every site by their incoming channel, such that a new
-    # operator only has to be compared against the few edges it could possibly share
+    # index the edges at every site by their incoming channel, such that a new operator only
+    # has to be compared against the few edges it could possibly share. Edges terminating on
+    # `IdR` are kept separate, since those can only ever be merged with one another
     outgoing = [Dict{Int, Vector{Int}}() for _ in 1:L]
+    terminating = [Dict{Int, Vector{Int}}() for _ in 1:L]
 
     for (sites, local_mpo) in local_mpos
         key_R = 1
         coeff = 1
         for (i, (site, O)) in enumerate(zip(sites, local_mpo))
             key_L = i == 1 ? 1 : key_R
+            keys_site, opps_site = nonzero_keys[site], nonzero_opps[site]
+
             if i == length(local_mpo)
-                # the final operator always drops back onto the last channel, and is where the
-                # accumulated scalar of all shared edges ends up
-                push!(nonzero_keys[site], (key_L, 0))
-                push!(nonzero_opps[site], isone(coeff) ? O : coeff * O)
+                # the final operator always drops back onto the last channel, and is where
+                # the accumulated scalar of all shared edges ends up
+                O_final = isone(coeff) ? O : coeff * O
+                edges = get!(Vector{Int}, terminating[mod1(site, L)], key_L)
+                merged = false
+                for edge in edges
+                    λ = _proportionality(O_final, opps_site[edge])
+                    isnothing(λ) && continue
+                    opps_site[edge] = (1 + λ) * opps_site[edge]
+                    merged = true
+                    break
+                end
+                if !merged
+                    push!(keys_site, (key_L, 0))
+                    push!(opps_site, O_final)
+                    push!(edges, length(opps_site))
+                end
                 break
             end
 
             edges = get!(Vector{Int}, outgoing[mod1(site, L)], key_L)
             shared = nothing
             for edge in edges
-                λ = _proportionality(O, nonzero_opps[site][edge])
+                λ = _proportionality(O, opps_site[edge])
                 if !isnothing(λ)
-                    shared = (last(nonzero_keys[site][edge]), λ)
+                    shared = (last(keys_site[edge]), λ)
                     break
                 end
             end
 
             if isnothing(shared)
-                key_R = _find_channel(nonzero_keys[site]; init = key_L)
-                push!(nonzero_keys[site], (key_L, key_R))
-                push!(nonzero_opps[site], O)
-                push!(edges, length(nonzero_opps[site]))
+                key_R = _find_channel(keys_site; init = key_L)
+                push!(keys_site, (key_L, key_R))
+                push!(opps_site, O)
+                push!(edges, length(opps_site))
             else
                 key_R, λ = shared
                 coeff = coeff * λ
