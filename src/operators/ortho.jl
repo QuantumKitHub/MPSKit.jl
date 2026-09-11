@@ -1,3 +1,7 @@
+# TODO: no `add!` exists for this mixed pair yet, and the fallback breaks on zero-length blocks
+_dense(t::SparseBlockTensorMap) = BlockTensorMap(t)
+_dense(t) = t
+
 function left_canonicalize!(
         H::FiniteMPOHamiltonian, i::Int;
         alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
@@ -21,7 +25,7 @@ function left_canonicalize!(
     # TODO: the following is currently broken due to a TensorKit bug
     # @plansor C′[p; p' r] := WC[p; p' r] - WI[p; p' l] * t[l; r]
     @plansor C′[p; p' r] := -WI[p; p' l] * t[l; r]
-    add!(C′, WC)
+    add!(C′, _dense(WC))
 
     # QR of second column
     if size(W, 1) == 1
@@ -71,7 +75,7 @@ function left_canonicalize!(
 
     if size(W′, 4) > 1
         @plansor C′[l p; p' r] := t[l; r'] * W′A[r' p; p' r]
-        C′ = add!(removeunit(C′, 1), W′C)
+        C′ = add!(removeunit(C′, 1), _dense(W′C))
     else
         C′ = W′C # empty
     end
@@ -83,7 +87,7 @@ function left_canonicalize!(
     end
 
     @plansor D′[l p; p'] := t[l; r] * W′B[r p; p']
-    D′ = add!(removeunit(D′, 1), W′D)
+    D′ = add!(removeunit(D′, 1), _dense(W′D))
 
     H[i + 1] = JordanMPOTensor(
         right_virtualspace(H[i]) ⊗ physicalspace(W′) ← domain(W′),
@@ -115,7 +119,7 @@ function right_canonicalize!(
     # TODO: the following is currently broken due to a TensorKit bug
     # @plansor B′[l p; p'] := WB[l p; p'] - WI[r p; p'] * t[l; r]
     @plansor B′[l p; p'] := -WI[r p; p'] * t[l; r]
-    add!(B′, WB)
+    add!(B′, _dense(WB))
 
     # LQ of second row
     if size(W, 4) == 1
@@ -165,7 +169,7 @@ function right_canonicalize!(
 
     if size(W′, 1) > 1
         @plansor B′[l p; p' r] := W′A[l p; p' r'] * t[r'; r]
-        B′ = add!(removeunit(B′, 4), W′B)
+        B′ = add!(removeunit(B′, 4), _dense(W′B))
     else
         B′ = W′B
     end
@@ -177,7 +181,7 @@ function right_canonicalize!(
     end
 
     @plansor D′[p; p' r] := W′C[p; p' r'] * t[r'; r]
-    D′ = add!(removeunit(D′, 3), W′D)
+    D′ = add!(removeunit(D′, 3), _dense(W′D))
     H[i - 1] = JordanMPOTensor(codomain(W′) ← physicalspace(W′) ⊗ V, A′, B′, C′, D′)
     return H
 end

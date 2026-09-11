@@ -85,6 +85,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `changebonds(::FiniteMPO, ::SvdCut)` truncated long chains down to a zero operator. It now gauges
+  in a separate sweep, spreads the operator norm evenly over the sites, and truncates against the
+  per-bond reference scale `‖O‖^(2/length(mpo))`.
+- `changebonds(::FiniteMPOHamiltonian, ::SvdCut)` threw a `BoundsError` for Hamiltonians with
+  long-range terms.
+- `SvdCut` now warns when a truncation empties a bond, instead of silently returning a zero operator.
 - `isfinite(::WindowMPOHamiltonian)` was undefined. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
