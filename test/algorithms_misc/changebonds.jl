@@ -196,3 +196,49 @@ end
 
     @test dim(left_virtualspace(state_tr, 1, 1)) < dim(left_virtualspace(state_oe, 1, 1))
 end
+
+# Regression: the `FiniteMPO` `SvdCut` sweep used to absorb `S * Vᴴ` into the next site without
+# renormalizing, so the carried gauge tensor grew by `sqrt(dim(P))` per site. Once its singular
+# values passed `sqrt(floatmax)`, `TensorKit`'s block-wise norm overflowed and a relative `trunc`
+# discarded *every* singular value, silently returning a zero operator.
+@testset "SvdCut scale overflow (long FiniteMPO)" begin
+    Random.seed!(1234)
+    pspace = ℙ^16
+    L = 300    # (sqrt(dim(P)))^L must exceed sqrt(floatmax) to trigger the old overflow
+    h = rand(ComplexF64, pspace, pspace)
+    h += h'
+    nn = h ⊗ h    # keep the term low-rank so that the dense MPO stays small at this length
+    H = FiniteMPOHamiltonian(fill(pspace, L), (i, i + 1) => nn for i in 1:(L - 1))
+
+    O = MPSKit.DenseMPO(H)
+    O′ = changebonds(O, SvdCut(; trunc = trunctol(; rtol = 1.0e-12)))
+
+    @test all(i -> dim(left_virtualspace(O′, i)) > 0, 1:L)
+    @test maxbond(O′) == maxbond(O)
+
+    ψ = FiniteMPS(rand, ComplexF64, L, pspace, ℙ^4)
+    @test expectation_value(ψ, O′) ≈ expectation_value(ψ, O) rtol = 1.0e-12
+end
+
+# Regression: `changebonds(::FiniteMPOHamiltonian, ::SvdCut)` threw a `BoundsError` for any
+# Hamiltonian with long-range terms — a star geometry leaves entirely zero rows/columns in the
+# Jordan `B`/`C` blocks, and adding such a `SparseBlockTensorMap` into a dense `BlockTensorMap`
+# tripped over the structurally absent entries.
+@testset "SvdCut on long-range FiniteMPOHamiltonian" begin
+    Random.seed!(4321)
+    pspace = ℙ^2
+    L = 8
+    nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
+    nn += nn'
+    # every site couples to a single centre site, so all channels are proportional and compressible
+    centre = L ÷ 2
+    H = FiniteMPOHamiltonian(
+        fill(pspace, L), (min(i, centre), max(i, centre)) => nn for i in 1:L if i != centre
+    )
+
+    H′ = changebonds(H, SvdCut(; trunc = trunctol(; rtol = 1.0e-12)))
+    @test maxbond(H′) < maxbond(H)
+
+    ψ = FiniteMPS(rand, ComplexF64, L, pspace, ℙ^4)
+    @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
+end
