@@ -46,7 +46,7 @@ features:
   - [Algorithms](@ref um_algorithms)
   - [Parallelism in julia](@ref)
   - [Lattices](@ref lattices)
-- [Examples](@ref)
+- [Examples](@ref examples_index)
 - [Library](@ref "Library documentation")
 - [References](@ref) — how to cite MPSKit, and publications that have used it
 - [Changelog](@ref)
@@ -229,7 +229,7 @@ println("<mps|H|mps> = $(sum(real(E0)) / length(mps))")
 ### Additional Resources
 
 For more detailed information on the functionality and capabilities of MPSKit, refer to the
-Manual section, or have a look at the [Examples](@ref) page.
+Manual section, or have a look at the [Examples](@ref examples_index) page.
 
 Keep in mind that the documentation is still a work in progress, and that some features may
 not be fully documented yet. If you encounter any issues or have questions, please check the
