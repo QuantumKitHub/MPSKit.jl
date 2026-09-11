@@ -144,4 +144,14 @@ end
     H1 = FiniteMPOHamiltonian(chain, (1, 2, 3) => FiniteMPO(X ⊗ (X * Y) ⊗ Y))
     H2 = FiniteMPOHamiltonian(chain, (1, 2, 2, 3) => FiniteMPO(X ⊗ X ⊗ Y ⊗ Y))
     @test convert(TensorMap, H1) ≈ convert(TensorMap, H2)
+
+    # a caller-supplied MPO is only copied when the indices actually need canonicalising,
+    # so check that neither path writes back into it
+    for inds in ((1, 2, 3), (1, 2, 2, 3), (2, 3, 1, 1))
+        mpo = FiniteMPO(X ⊗ X ⊗ Y ⊗ Y)
+        length(inds) == 3 && (mpo = FiniteMPO((X * X) ⊗ Y ⊗ Y))
+        before = map(copy, parent(mpo))
+        FiniteMPOHamiltonian(chain, inds => mpo)
+        @test all(splat(≈), zip(parent(mpo), before))
+    end
 end
