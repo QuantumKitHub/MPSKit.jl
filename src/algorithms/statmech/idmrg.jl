@@ -7,7 +7,7 @@ function leading_boundary(
     local iter
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, expectation_value(ψ, operator, envs))
+        @infov 2 loginit!(log, ϵ, dominant_eigenvalue(ψ, operator, envs))
         for outer iter in 1:(alg.maxiter)
             alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = ϵ)
             C_current = ψ.C[:, 0]
@@ -44,13 +44,13 @@ function leading_boundary(
             ϵ = norm(C_current - ψ.C[:, 0])
 
             if ϵ < alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, expectation_value(ψ, operator, envs))
+                @infov 2 logfinish!(log, iter, ϵ, dominant_eigenvalue(ψ, operator, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, expectation_value(ψ, operator, envs))
+                @warnv 1 logcancel!(log, iter, ϵ, dominant_eigenvalue(ψ, operator, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ, expectation_value(ψ, operator, envs))
+                @infov 3 logiter!(log, iter, ϵ, dominant_eigenvalue(ψ, operator, envs))
             end
         end
     end

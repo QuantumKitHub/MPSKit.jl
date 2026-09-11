@@ -98,3 +98,7 @@ function transfer_rightenv!(
     )
     return transfer_rightenv!(envs, below, O, above, site)
 end
+
+# converters
+Base.convert(::Type{MultilineEnvironments}, envs::InfiniteEnvironments) = Multiline([envs])
+Base.convert(::Type{InfiniteEnvironments}, envs::MultilineEnvironments) = only(envs)
