@@ -12,6 +12,13 @@ using TensorKit
 using TensorKit: ℙ
 using Adapt
 
+pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
+vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
+if fast_tests
+    pspaces = pspaces[1:1]
+    vspaces = vspaces[1:1]
+end
+
 @testset "MPOHamiltonian constructors" begin
     P = ℂ^2
     T = Float64
