@@ -18,6 +18,7 @@ zipup_spacelist = [
     (ℙ^4, ℙ^3, 4),
     (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1), 8),
 ]
+fast_tests && (zipup_spacelist = zipup_spacelist[1:1])
 
 function _random_mpo_mps(pspace, Dspace, L; elt = ComplexF64)
     Random.seed!(1357)

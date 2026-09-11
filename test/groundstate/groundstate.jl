@@ -148,7 +148,7 @@ verbosity_conv = 1
         @test dim(left_virtualspace(ψ, L ÷ 2)) == D
     end
 
-    @testset "DMRG3S escapes local minimum (Hubig et al. 2015, Sec. VII A)" begin
+    fast_tests || @testset "DMRG3S escapes local minimum (Hubig et al. 2015, Sec. VII A)" begin
         L_heis = 20
         H_heis = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L = L_heis)
 
@@ -482,7 +482,7 @@ end
         end
     end
 
-    @testset "IDMRG2 growing bond dimension" begin
+    fast_tests || @testset "IDMRG2 growing bond dimension" begin
         Random.seed!(1234)
         V = Vect[Z2Irrep](0 => 1, 1 => 1)
         O = randn(ComplexF64, V ⊗ V, V ⊗ V)

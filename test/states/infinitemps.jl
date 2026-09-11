@@ -72,10 +72,11 @@ end
     @test mps1.C[1] !== mps2.C[1]
 end
 
+Ts = fast_tests ? (Float64,) : (Float64, ComplexF64)
 @testset "Adapt" begin
     for (d, D) in [(ℂ^2, ℂ^4), (ℙ^2, ℙ^4)]
         mps1 = InfiniteMPS(Float32, d, D)
-        for T in (Float64, ComplexF64)
+        for T in Ts
             mps2 = @testinferred adapt(Vector{T}, mps1)
             @test mps2 isa InfiniteMPS
             @test scalartype(mps2) == T
