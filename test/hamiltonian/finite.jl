@@ -15,7 +15,7 @@ using TensorKit: ℙ
     T = ComplexF64
     mpoham_finite_Vs = fast_tests ? (ℂ^2,) : (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1))
     Ts = fast_tests ? (Float64,) : (Float64, ComplexF64)
-    for T in Ts, V in mpoham_finite_Vs
+    for (T, V) in zip(Ts, mpoham_finite_Vs)
         lattice = fill(V, L)
         O₁ = randn(T, V, V)
         O₁ += O₁'

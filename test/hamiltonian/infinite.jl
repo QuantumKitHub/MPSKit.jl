@@ -10,8 +10,8 @@ using MPSKit
 using TensorKit
 using TensorKit: ℙ
 
-pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
-vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
+pspaces = PSPACES_TRIPLE
+vspaces = VSPACES_TRIPLE
 if fast_tests
     pspaces = pspaces[1:1]
     vspaces = vspaces[1:1]
@@ -50,6 +50,5 @@ end
     @test e1 + e3 ≈ expectation_value(ψ2, H1 + H3) atol = 1.0e-10
 
     H4 = H1 + H3
-    h4 = H4 * H4
     @test real(expectation_value(ψ2, H4)) >= 0
 end

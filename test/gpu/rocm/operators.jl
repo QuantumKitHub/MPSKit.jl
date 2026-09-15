@@ -4,7 +4,7 @@ using MPSKit
 using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle, OperatorStyle, MPOStyle
 using TensorKit
 using MatrixAlgebraKit
-using TensorKit: ℙ, tensormaptype, TensorMapWithStorage
+using TensorKit: tensormaptype, TensorMapWithStorage
 using Adapt, AMDGPU
 
 @testset "ROCFiniteMPO" for V in (ℂ^2, U1Space(0 => 1, 1 => 1))
@@ -217,8 +217,8 @@ end
     @test expectation_value(psi, H4) ≈ expectation_value(psi, H5)
 end
 
-pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
-vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
+pspaces = PSPACES_TRIPLE
+vspaces = VSPACES_TRIPLE
 
 @testset "ROCInfiniteMPOHamiltonian $(sectortype(pspace))" for (pspace, Dspace) in zip(pspaces, vspaces)
     # generate a 1-2-3 body interaction

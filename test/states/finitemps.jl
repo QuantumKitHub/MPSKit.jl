@@ -56,14 +56,7 @@ using Adapt
     @test norm(2 * ψ + ψ - 3 * ψ) ≈ 0.0 atol = sqrt(eps(real(elt)))
 end
 
-@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in [
-        (ℙ^10, ℙ^2, ComplexF64),
-        (
-            Rep[U₁](-1 => 3, 0 => 3, 1 => 3),
-            Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
-            ComplexF64,
-        ),
-    ]
+@testset "FiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in MPS_TEST_SPACES
     ψ_small = FiniteMPS(rand, elt, 4, d, D)
     ψ_small2 = FiniteMPS(convert(TensorMap, ψ_small))
     @test dot(ψ_small, ψ_small2) ≈ dot(ψ_small, ψ_small)
@@ -130,14 +123,7 @@ end
         mps1.Cs[end] !== mps2.Cs[end]
 end
 
-@testset "FiniteMPS entropy ($(sectortype(D)), $elt)" for (D, d, elt) in [
-        (ℙ^10, ℙ^2, ComplexF64),
-        (
-            Rep[U₁](-1 => 3, 0 => 3, 1 => 3),
-            Rep[U₁](-1 => 1, 0 => 1, 1 => 1),
-            ComplexF64,
-        ),
-    ]
+@testset "FiniteMPS entropy ($(sectortype(D)), $elt)" for (D, d, elt) in MPS_TEST_SPACES
     L = 6
     ψ = FiniteMPS(rand, elt, L, d, D)
 

@@ -9,7 +9,6 @@ using Test, TestExtras
 using MPSKit
 using MPSKit: _transpose_front, _transpose_tail, C_hamiltonian, AC_hamiltonian, AC2_hamiltonian
 using TensorKit
-using TensorKit: ℙ
 using VectorInterface: One
 
 @testset "General LazySum of $(eltype(Os))" for Os in (
@@ -73,8 +72,12 @@ end
     @test sum(LazyOs_added(1.1)) ≈ 2 * summed atol = 1 - 08
 end
 
-pspaces = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1, 2 => 1))
-vspaces = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 => 10, 3 => 5, 5 => 1))
+# LazySum/MultipliedOperator only wrap arithmetic/dispatch bookkeeping around a Hamiltonian;
+# they don't exercise sector-specific fusion math themselves (that's covered by
+# hamiltonian/infinite.jl and misc/old_bugs.jl), so testing planar (no symmetry) + U1
+# (abelian) is sufficient here without also paying to compile the SU2 (non-abelian) case.
+pspaces = PSPACES_TRIPLE[1:2]
+vspaces = VSPACES_TRIPLE[1:2]
 if fast_tests
     pspaces = pspaces[1:1]
     vspaces = vspaces[1:1]

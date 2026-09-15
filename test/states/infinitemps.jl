@@ -12,8 +12,7 @@ using TensorKit
 using TensorKit: ℙ
 using Adapt
 
-@testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
-    [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
+@testset "InfiniteMPS ($(sectortype(D)), $elt)" for (D, d, elt) in MPS_TEST_SPACES
     tol = Float64(eps(real(elt)) * 100)
 
     ψ = InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol)
@@ -86,8 +85,7 @@ Ts = fast_tests ? (Float64,) : (Float64, ComplexF64)
     end
 end
 
-@testset "InfiniteMPS entropy ($(sectortype(D)), $elt)" for (D, d, elt) in
-    [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64)]
+@testset "InfiniteMPS entropy ($(sectortype(D)), $elt)" for (D, d, elt) in MPS_TEST_SPACES
     ψ = InfiniteMPS([d, d], [D, D])
 
     # entropy(ψ) returns one value per site, all non-negative
