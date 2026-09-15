@@ -242,3 +242,25 @@ end
     ψ = FiniteMPS(rand, ComplexF64, L, pspace, ℙ^4)
     @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
 end
+
+# Regression: RandExpand used to be able to introduce a NaN entanglement entropy.
+@testset "RandExpand does not introduce NaN entropy" begin
+    ψ = InfiniteMPS([ℂ^2], [ℂ^5])
+    ψ = changebonds(ψ, RandExpand(; trunc = truncrank(2)))
+    @test !isnan(sum(entropy(ψ)))
+    @test !isnan(sum(entropy(ψ, 2)))
+end
+
+# Regression: changebonds on an InfiniteMPS with a >1 unit cell and per-site distinct bond
+# dimensions used to error.
+@testset "changebonds with non-uniform unit cells" begin
+    ψ = InfiniteMPS([ℂ^2, ℂ^2, ℂ^2], [ℂ^2, ℂ^3, ℂ^4])
+    H = repeat(transverse_field_ising(), 3)
+    ψ1, envs = changebonds(ψ, H, OptimalExpand(; trunc = truncrank(2)))
+    @test ψ1 isa InfiniteMPS
+    @test norm(ψ1) ≈ 1
+
+    ψ2 = changebonds(ψ, RandExpand(; trunc = truncrank(2)))
+    @test ψ2 isa InfiniteMPS
+    @test norm(ψ2) ≈ 1
+end

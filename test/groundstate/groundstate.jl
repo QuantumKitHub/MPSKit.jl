@@ -269,6 +269,20 @@ end
         @test v < 1.0e-2
     end
 
+    # Regression: IDMRG2 used to error on a non-abelian (SU2) unit cell due to a space mismatch.
+    @testset "IDMRG2 space mismatch (SU2)" begin
+        N = 6
+        H = repeat(bilinear_biquadratic_model(ComplexF64, SU2Irrep; θ = atan(1 / 3)), N)
+        ψ₀ = InfiniteMPS(
+            fill(SU2Space(1 => 1), N),
+            fill(SU2Space(1 // 2 => 2, 3 // 2 => 1), N)
+        )
+        alg = IDMRG2(; verbosity = 0, tol = 1.0e-5, trunc = truncrank(32))
+
+        ψ, envs, δ = find_groundstate(ψ₀, H, alg) # used to error
+        @test ψ isa InfiniteMPS
+    end
+
     # the gradient is computed concurrently over the unit cell, so the scheduler decides its
     # allocator here too
     @testset "GradientGrassmann (unit cell $unit_cell_size, $schedname)" for unit_cell_size in

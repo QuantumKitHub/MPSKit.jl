@@ -95,6 +95,15 @@ end
     @test ψ[5:7] == [ψ.ALs[5], ψ.ACs[6], ψ.ARs[7]]
 end
 
+# Regression: invalidating a long chain of cached AL tensors (by setting AC near one end)
+# used to stack overflow, since re-gauging walked the invalidated range recursively.
+@testset "FiniteMPS gauging does not stack overflow" begin
+    ψ = FiniteMPS(10_000, ℂ^2, ℂ^1)
+    @test ψ.AR[1] isa MPSKit.MPSTensor
+    ψ.AC[1] = -ψ.AR[1] # force invalidation of ALs
+    @test ψ.AL[end] isa MPSKit.MPSTensor
+end
+
 @testset "FiniteMPS copying" begin
     L = 10
     mps1 = FiniteMPS(rand, ComplexF64, L, ℂ^2, ℂ^5)

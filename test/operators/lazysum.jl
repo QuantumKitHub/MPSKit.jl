@@ -74,7 +74,7 @@ end
 
 # LazySum/MultipliedOperator only wrap arithmetic/dispatch bookkeeping around a Hamiltonian;
 # they don't exercise sector-specific fusion math themselves (that's covered by
-# hamiltonian/infinite.jl and misc/old_bugs.jl), so testing planar (no symmetry) + U1
+# hamiltonian/infinite.jl and symmetries/), so testing planar (no symmetry) + U1
 # (abelian) is sufficient here without also paying to compile the SU2 (non-abelian) case.
 pspaces = PSPACES_TRIPLE[1:2]
 vspaces = VSPACES_TRIPLE[1:2]
