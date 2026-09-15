@@ -70,7 +70,10 @@ function dominant_eigsolve(
     mps = copy(mps)
     ϵ = calc_galerkin(mps, operator, mps, envs; alg.backend)
     alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)
-    recalculate!(envs, mps, operator, mps, alg_environments; timeroutput)
+    recalculate!(
+        envs, mps, operator, mps, alg_environments;
+        timeroutput, alg.backend
+    )
 
     state = VUMPSState(mps, operator, envs, iter, ϵ, which, timeroutput)
     it = IterativeSolver(alg, state)
@@ -186,5 +189,8 @@ end
 
 function envs_step!(it::IterativeSolver{<:VUMPS}, state, mps)
     alg_environments = adapt_solver(it.alg_environments; iter = state.iter, g_global = state.ϵ)
-    return recalculate!(state.envs, mps, state.operator, mps, alg_environments; state.timeroutput)
+    return recalculate!(
+        state.envs, mps, state.operator, mps, alg_environments;
+        state.timeroutput, it.backend
+    )
 end

@@ -133,7 +133,10 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
 
         alg_gauge = adapt_solver(alg.alg_gauge; iter = it.state.iter, g_global = it.state.ϵ)
         ψ′ = InfiniteMPS(it.state.mps.AR; alg_gauge.tol, alg_gauge.maxiter)
-        envs = recalculate!(it.state.envs, ψ′, it.state.operator, ψ′)
+        envs = recalculate!(
+            it.state.envs, ψ′, it.state.operator, ψ′;
+            alg.backend
+        )
         return ψ′, envs, it.state.ϵ
     end
 end
@@ -210,7 +213,7 @@ function _localupdate_sweep_idmrg!(
                 ψ.AL[pos], ψ.C[pos] = left_orth!(ψ.AC[pos]; positive = true)
             end
         end
-        @timeit timeroutput "transfer_env" transfer_leftenv!(envs, ψ, H, ψ, pos + 1)
+        @timeit timeroutput "transfer_env" transfer_leftenv!(envs, ψ, H, ψ, pos + 1; backend, allocator)
     end
 
     # right to left sweep
@@ -223,7 +226,7 @@ function _localupdate_sweep_idmrg!(
             ψ.C[pos - 1], temp = right_orth!(_transpose_tail(ψ.AC[pos]; copy = (pos == 1)); positive = true)
             ψ.AR[pos] = _transpose_front(temp)
         end
-        @timeit timeroutput "transfer_env" transfer_rightenv!(envs, ψ, H, ψ, pos - 1)
+        @timeit timeroutput "transfer_env" transfer_rightenv!(envs, ψ, H, ψ, pos - 1; backend, allocator)
     end
     return ψ, envs, C_old, E
 end
@@ -252,8 +255,8 @@ function _localupdate_sweep_idmrg2!(
             ψ.AC[pos + 1] = _transpose_front(c * ar)
         end
         @timeit timeroutput "transfer_env" begin
-            transfer_leftenv!(envs, ψ, H, ψ, pos + 1)
-            transfer_rightenv!(envs, ψ, H, ψ, pos)
+            transfer_leftenv!(envs, ψ, H, ψ, pos + 1; backend, allocator)
+            transfer_rightenv!(envs, ψ, H, ψ, pos; backend, allocator)
         end
     end
 
@@ -282,8 +285,8 @@ function _localupdate_sweep_idmrg2!(
 
     # update environments
     @timeit timeroutput "transfer_env" begin
-        transfer_leftenv!(envs, ψ, H, ψ, 1)
-        transfer_rightenv!(envs, ψ, H, ψ, 0)
+        transfer_leftenv!(envs, ψ, H, ψ, 1; backend, allocator)
+        transfer_rightenv!(envs, ψ, H, ψ, 0; backend, allocator)
     end
 
     # sweep from right to left
@@ -304,8 +307,8 @@ function _localupdate_sweep_idmrg2!(
             ψ.AC[pos + 1] = _transpose_front(c * ar)
         end
         @timeit timeroutput "transfer_env" begin
-            transfer_leftenv!(envs, ψ, H, ψ, pos + 1)
-            transfer_rightenv!(envs, ψ, H, ψ, pos)
+            transfer_leftenv!(envs, ψ, H, ψ, pos + 1; backend, allocator)
+            transfer_rightenv!(envs, ψ, H, ψ, pos; backend, allocator)
         end
     end
 
@@ -330,8 +333,8 @@ function _localupdate_sweep_idmrg2!(
     end
 
     @timeit timeroutput "transfer_env" begin
-        transfer_leftenv!(envs, ψ, H, ψ, 1)
-        transfer_rightenv!(envs, ψ, H, ψ, 0)
+        transfer_leftenv!(envs, ψ, H, ψ, 1; backend, allocator)
+        transfer_rightenv!(envs, ψ, H, ψ, 0; backend, allocator)
     end
     return ψ, envs, C_old, E
 end
