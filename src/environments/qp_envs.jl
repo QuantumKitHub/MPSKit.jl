@@ -184,12 +184,15 @@ end
 
 function environments(
         exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs,
-        backend::AbstractBackend = DefaultBackend(), scheduler = Defaults.scheduler[]
+        backend::AbstractBackend = DefaultBackend(),
+        # accepted for interface uniformity with the other QP environments, but unused: these
+        # sweeps are serial regardless, as for `GrassmannMPS.fg` on a `FiniteMPS`
+        scheduler = Defaults.scheduler[]
     )
     istopological(exci) &&
         @warn "there is a phase ambiguity in topologically nontrivial statmech excitations"
     solver = resolve_environment_solver(alg, exci, O, exci)
-    allocator = default_allocator(exci.left_gs, scheduler)
+    allocator = default_allocator(exci.left_gs, SerialScheduler())
 
     left_gs = exci.left_gs
     right_gs = exci.right_gs
@@ -231,8 +234,8 @@ function environments(
         GBR[col - 1] = gbr
     end
 
-    T_RL = TransferMatrix(right_gs.AR, O, left_gs.AL)
-    T_LR = TransferMatrix(left_gs.AL, O, right_gs.AR)
+    T_RL = TransferMatrix(right_gs.AR, O, left_gs.AL; backend, allocator)
+    T_LR = TransferMatrix(left_gs.AL, O, right_gs.AR; backend, allocator)
 
     if istrivial(exci)
         @plansor rvec[-1 -2; -3] := rightenv(lenvs, 0, left_gs)[-1 -2; 1] *
