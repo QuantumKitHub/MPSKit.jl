@@ -354,6 +354,28 @@ function mul_tail!(
     return C
 end
 
+"""
+    _densify!!(t, allocator) -> t′
+
+Dense copy of a block tensor, taken from `allocator` so that it can be handed back again.
+`TensorMap(t)` would allocate on the heap; the callers here only need the dense form as a
+scratch tensor to fuse and repartition out of, so it belongs on the buffer instead.
+
+The caller is responsible for bracketing this with `allocator_checkpoint!` /
+`allocator_reset!`. A `TensorMap` is returned unchanged, so the result must not be mutated.
+"""
+_densify!!(t::TensorMap, allocator) = t
+function _densify!!(t::AbstractBlockTensorMap, allocator)
+    S = spacetype(t)
+    N₁, N₂ = numout(t), numin(t)
+    V = ProductSpace{S, N₁}(BlockTensorKit.oplus.(codomain(t).spaces)) ←
+        ProductSpace{S, N₂}(BlockTensorKit.oplus.(domain(t).spaces))
+    TT = TensorKit.tensormaptype(S, N₁, N₂, storagetype(t))
+    tdst = TensorOperations.tensoralloc(TT, V, Val(true), allocator)
+    BlockTensorKit.issparse(t) && zerovector!(tdst)
+    return BlockTensorKit._copy_subblocks!(tdst, t)
+end
+
 @inline fuse_legs(x::TensorMap, N₁::Int, N₂::Int) = fuse_legs(x, Val(N₁), Val(N₂))
 function fuse_legs(x::TensorMap, ::Val{N₁}, ::Val{N₂}) where {N₁, N₂}
     ((0 <= N₁ <= numout(x)) && (0 <= N₂ <= numin(x))) ||

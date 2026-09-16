@@ -220,12 +220,17 @@ function prepare_operator!!(H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor})
 end
 function prepare_operator!!(H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})
     backend, allocator = H.backend, H.allocator
+    cp = allocator_checkpoint!(allocator)
     @plansor backend = backend allocator = allocator begin
         GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
     end
-    leftenv = GL_O isa TensorMap ? GL_O : TensorMap(GL_O)
-    leftenv = repartition(fuse_legs(leftenv, 1, 2), 2, 2)
+    # `GL_O` only exists to be densified, so take the dense copy from the allocator and release
+    # it again.
+    leftenv = repartition(
+        fuse_legs(_densify!!(GL_O, allocator), 1, 2), 2, 2; copy = true, backend, allocator
+    )
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
+    allocator_reset!(allocator, cp)
 
     return prepared_operator_type(typeof(H))(leftenv, rightenv, backend, allocator)
 end
@@ -234,15 +239,21 @@ function prepare_operator!!(
         H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor}
     )
     backend, allocator = H.backend, H.allocator
+    cp = allocator_checkpoint!(allocator)
     @plansor backend = backend allocator = allocator begin
         GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
         O_GR[-1 -2; -4 -5 -3] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
     end
-    leftenv = GL_O isa TensorMap ? GL_O : TensorMap(GL_O)
-    leftenv = repartition(fuse_legs(leftenv, 1, 2), 2, 2)
+    # `leftenv` and `rightenv` only exist to be densified, so take the dense copy from the
+    # allocator and release them again.
+    leftenv = repartition(
+        fuse_legs(_densify!!(GL_O, allocator), 1, 2), 2, 2; copy = true, backend, allocator
+    )
+    rightenv = repartition(
+        fuse_legs(_densify!!(O_GR, allocator), 2, 1), 2, 2; copy = true, backend, allocator
+    )
+    allocator_reset!(allocator, cp)
 
-    rightenv = O_GR isa TensorMap ? O_GR : TensorMap(O_GR)
-    rightenv = repartition(fuse_legs(rightenv, 2, 1), 2, 2)
     return prepared_operator_type(typeof(H))(leftenv, rightenv, backend, allocator)
 end
 
