@@ -15,8 +15,11 @@ end
 
 Base.length(envs::InfiniteEnvironments) = length(envs.GLs)
 
-leftenv(envs::InfiniteEnvironments, site::Int, state) = envs.GLs[site]
-rightenv(envs::InfiniteEnvironments, site::Int, state) = envs.GRs[site]
+# `backend`/`allocator` are accepted and ignored here: these environments are already
+# materialised, so there is nothing to contract. They exist so that callers which do have an
+# allocator (the derivatives) can pass it uniformly, without dispatching on environment type.
+leftenv(envs::InfiniteEnvironments, site::Int, state; kwargs...) = envs.GLs[site]
+rightenv(envs::InfiniteEnvironments, site::Int, state; kwargs...) = envs.GRs[site]
 
 function environments(
         below::InfiniteMPS, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian}, above;

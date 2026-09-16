@@ -71,11 +71,11 @@ function TensorKit.normalize!(envs::MultilineEnvironments, below, (operator, abo
     return envs
 end
 
-function leftenv(envs::MultilineEnvironments, col::Int, state)
-    return leftenv.(parent(envs), col, parent(state))
+function leftenv(envs::MultilineEnvironments, col::Int, state; kwargs...)
+    return leftenv.(parent(envs), col, parent(state); kwargs...)
 end
-function rightenv(envs::MultilineEnvironments, col::Int, state)
-    return rightenv.(parent(envs), col, parent(state))
+function rightenv(envs::MultilineEnvironments, col::Int, state; kwargs...)
+    return rightenv.(parent(envs), col, parent(state); kwargs...)
 end
 
 function transfer_leftenv!(envs::MultilineEnvironments, below, operator, above, site::Int)

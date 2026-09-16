@@ -47,8 +47,8 @@ function AC_hamiltonian(
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     @assert below === above "JordanMPO assumptions break"
-    GL = leftenv(envs, site, below)
-    GR = rightenv(envs, site, below)
+    GL = leftenv(envs, site, below; backend, allocator)
+    GR = rightenv(envs, site, below; backend, allocator)
     W = operator[site]
     H_AC = JordanMPO_AC_Hamiltonian(GL, W, GR; backend, allocator)
     return prepare ? prepare_operator!!(H_AC) : H_AC
@@ -209,8 +209,8 @@ function AC2_hamiltonian(
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     @assert below === above "JordanMPO assumptions break"
-    GL = leftenv(envs, site, below)
-    GR = rightenv(envs, site + 1, below)
+    GL = leftenv(envs, site, below; backend, allocator)
+    GR = rightenv(envs, site + 1, below; backend, allocator)
     W1, W2 = operator[site], operator[site + 1]
     H_AC2 = JordanMPO_AC2_Hamiltonian(GL, W1, W2, GR; backend, allocator)
     return prepare ? prepare_operator!!(H_AC2) : H_AC2

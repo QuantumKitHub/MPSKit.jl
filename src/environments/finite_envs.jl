@@ -107,7 +107,10 @@ it directly.
 
 See also [`leftenv`](@ref) and [`environments`](@ref).
 """
-function rightenv(ca::FiniteEnvironments, ind, state)
+function rightenv(
+        ca::FiniteEnvironments, ind, state;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     a = findfirst(i -> !(state.AR[i] === ca.rdependencies[i]), length(state):-1:(ind + 1))
     a = isnothing(a) ? nothing : length(state) - a + 1
 
@@ -115,8 +118,9 @@ function rightenv(ca::FiniteEnvironments, ind, state)
         #we need to recalculate
         for j in a:-1:(ind + 1)
             above = isnothing(ca.above) ? state.AR[j] : ca.above.AR[j]
-            ca.GRs[j] = TransferMatrix(above, ca.operator[j], state.AR[j]) *
-                ca.GRs[j + 1]
+            ca.GRs[j] = TransferMatrix(
+                above, ca.operator[j], state.AR[j]; backend, allocator
+            ) * ca.GRs[j + 1]
             ca.rdependencies[j] = state.AR[j]
         end
     end
@@ -134,15 +138,19 @@ it directly.
 
 See also [`rightenv`](@ref) and [`environments`](@ref).
 """
-function leftenv(ca::FiniteEnvironments, ind, state)
+function leftenv(
+        ca::FiniteEnvironments, ind, state;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     a = findfirst(i -> !(state.AL[i] === ca.ldependencies[i]), 1:(ind - 1))
 
     if !isnothing(a)
         #we need to recalculate
         for j in a:(ind - 1)
             above = isnothing(ca.above) ? state.AL[j] : ca.above.AL[j]
-            ca.GLs[j + 1] = ca.GLs[j] *
-                TransferMatrix(above, ca.operator[j], state.AL[j])
+            ca.GLs[j + 1] = ca.GLs[j] * TransferMatrix(
+                above, ca.operator[j], state.AL[j]; backend, allocator
+            )
             ca.ldependencies[j] = state.AL[j]
         end
     end

@@ -18,11 +18,11 @@ end
 
 Base.length(envs::InfiniteQPEnvironments) = length(envs.leftenvs)
 
-function leftenv(envs::InfiniteQPEnvironments, site::Int, state)
-    return leftenv(envs.leftenvs, site, state)
+function leftenv(envs::InfiniteQPEnvironments, site::Int, state; kwargs...)
+    return leftenv(envs.leftenvs, site, state; kwargs...)
 end
-function rightenv(envs::InfiniteQPEnvironments, site::Int, state)
-    return rightenv(envs.rightenvs, site, state)
+function rightenv(envs::InfiniteQPEnvironments, site::Int, state; kwargs...)
+    return rightenv(envs.rightenvs, site, state; kwargs...)
 end
 
 function environments(
