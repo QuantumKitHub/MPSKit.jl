@@ -137,15 +137,17 @@ end
 function compute_leftenvs!(
         envs::InfiniteEnvironments,
         below::InfiniteMPS, operator::InfiniteMPO, above::InfiniteMPS,
-        alg
+        alg;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     # compute eigenvector
-    T = TransferMatrix(above.AL, operator, below.AL)
+    T = TransferMatrix(above.AL, operator, below.AL; backend, allocator)
     λ, envs.GLs[1] = fixedpoint(flip(T), envs.GLs[1], :LM, alg)
     # push through unitcell
     for i in 2:length(operator)
-        envs.GLs[i] = envs.GLs[i - 1] *
-            TransferMatrix(above.AL[i - 1], operator[i - 1], below.AL[i - 1])
+        envs.GLs[i] = envs.GLs[i - 1] * TransferMatrix(
+            above.AL[i - 1], operator[i - 1], below.AL[i - 1]; backend, allocator
+        )
     end
     return λ, envs
 end
@@ -153,15 +155,16 @@ end
 function compute_rightenvs!(
         envs::InfiniteEnvironments,
         below::InfiniteMPS, operator::InfiniteMPO, above::InfiniteMPS,
-        alg
+        alg;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     # compute eigenvector
-    T = TransferMatrix(above.AR, operator, below.AR)
+    T = TransferMatrix(above.AR, operator, below.AR; backend, allocator)
     λ, envs.GRs[end] = fixedpoint(T, envs.GRs[end], :LM, alg)
     # push through unitcell
     for i in reverse(1:(length(operator) - 1))
         envs.GRs[i] = TransferMatrix(
-            above.AR[i + 1], operator[i + 1], below.AR[i + 1]
+            above.AR[i + 1], operator[i + 1], below.AR[i + 1]; backend, allocator
         ) * envs.GRs[i + 1]
     end
     return λ, envs
