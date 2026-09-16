@@ -152,8 +152,11 @@ function environments(
         exci::FiniteQP, H::FiniteMPOHamiltonian, above = exci, alg = nothing;
         lenvs = environments(exci.left_gs, H, exci.left_gs),
         renvs = istopological(exci) ? environments(exci.right_gs, H, exci.right_gs) : lenvs,
-        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+        backend::AbstractBackend = DefaultBackend()
     )
+    # the sweeps below are serial, so a single allocator serves the whole chain
+    allocator = default_allocator(exci.left_gs, SerialScheduler())
+
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
 

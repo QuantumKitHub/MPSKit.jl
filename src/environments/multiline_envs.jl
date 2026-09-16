@@ -78,23 +78,33 @@ function rightenv(envs::MultilineEnvironments, col::Int, state; kwargs...)
     return rightenv.(parent(envs), col, parent(state); kwargs...)
 end
 
-function transfer_leftenv!(envs::MultilineEnvironments, below, operator, above, site::Int)
+function transfer_leftenv!(
+        envs::MultilineEnvironments, below, operator, above, site::Int; kwargs...
+    )
     for row in 1:size(above, 1)
-        transfer_leftenv!(envs[row], below[row + 1], operator[row], above[row], site)
+        transfer_leftenv!(
+            envs[row], below[row + 1], operator[row], above[row], site; kwargs...
+        )
     end
     return envs
 end
-function transfer_leftenv!(envs::MultilineEnvironments, below, (O, above)::Tuple, site::Int)
-    return transfer_leftenv!(envs, below, O, above, site)
+function transfer_leftenv!(
+        envs::MultilineEnvironments, below, (O, above)::Tuple, site::Int; kwargs...
+    )
+    return transfer_leftenv!(envs, below, O, above, site; kwargs...)
 end
-function transfer_rightenv!(envs::MultilineEnvironments, below, operator, above, site::Int)
+function transfer_rightenv!(
+        envs::MultilineEnvironments, below, operator, above, site::Int; kwargs...
+    )
     for row in 1:size(above, 1)
-        transfer_rightenv!(envs[row], below[row + 1], operator[row], above[row], site)
+        transfer_rightenv!(
+            envs[row], below[row + 1], operator[row], above[row], site; kwargs...
+        )
     end
     return envs
 end
 function transfer_rightenv!(
-        envs::MultilineEnvironments, below, (O, above)::Tuple, site::Int
+        envs::MultilineEnvironments, below, (O, above)::Tuple, site::Int; kwargs...
     )
-    return transfer_rightenv!(envs, below, O, above, site)
+    return transfer_rightenv!(envs, below, O, above, site; kwargs...)
 end

@@ -308,15 +308,12 @@ Base.length(H::EffectiveExcitationHamiltonian) = length(H.operator)
 
 function (H::EffectiveExcitationHamiltonian)(
         ϕ::QP, alg_environments = DefaultAlgorithm();
-        backend::AbstractBackend = DefaultBackend(), scheduler = Defaults.scheduler[]
+        backend::AbstractBackend = DefaultBackend()
     )
     qp_envs = environments(
-        ϕ, H.operator, ϕ, alg_environments; lenvs = H.lenvs, renvs = H.renvs,
-        backend, scheduler
+        ϕ, H.operator, ϕ, alg_environments; lenvs = H.lenvs, renvs = H.renvs, backend
     )
-    return effective_excitation_hamiltonian(
-        H.operator, ϕ, qp_envs, H.energy; backend, scheduler
-    )
+    return effective_excitation_hamiltonian(H.operator, ϕ, qp_envs, H.energy; backend)
 end
 function (H::Multiline{<:EffectiveExcitationHamiltonian})(
         ϕ::MultilineQP, alg_environments = DefaultAlgorithm(); kwargs...
@@ -329,13 +326,12 @@ function effective_excitation_hamiltonian(H, ϕ, envs = environments(ϕ, H))
     return effective_excitation_hamiltonian(H, ϕ, envs, E₀)
 end
 function effective_excitation_hamiltonian(
-        H, ϕ, qp_envs, E;
-        backend::AbstractBackend = DefaultBackend(), scheduler = Defaults.scheduler[]
+        H, ϕ, qp_envs, E, scheduler = Defaults.scheduler[];
+        backend::AbstractBackend = DefaultBackend()
     )
     ϕ′ = similar(ϕ)
-    # Spawning site: `default_allocator` hands out a buffer only when the work is serial and
-    # a stateless allocator when the sites may share it, so the scheduler -- not this
-    # function -- decides which is safe.
+    # This is the site that fans out, so it is the one that reads the scheduler and derives
+    # the allocator from it
     allocator = default_allocator(ϕ.left_gs, scheduler)
     tforeach(1:length(ϕ); scheduler) do loc
         ϕ′[loc] = _effective_excitation_local_apply(
