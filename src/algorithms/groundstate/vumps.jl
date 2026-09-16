@@ -173,11 +173,18 @@ function _localupdate_vumps_step!(
     return regauge!(AC, C; alg = alg_orth)
 end
 
-function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
+function gauge_step!(
+        it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector,
+        scheduler = Defaults.scheduler[]
+    )
     alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
+    # The gauge sweep is serial over the unit cell, but the allocator has to match whatever
+    # concurrency the caller is running with, so it comes from the scheduler rather than being
+    # assumed -- same rule as `localupdate_step!` and `recalculate!`.
+    allocator = default_allocator(state.mps, scheduler)
     mps = gaugefix!(
         state.mps, ACs, state.mps.C[end];
-        order = :R, timeroutput = state.timeroutput, alg_gauge...,
+        order = :R, timeroutput = state.timeroutput, it.backend, allocator, alg_gauge...,
     )
     mul!.(mps.AC, mps.AL, mps.C)
     return mps
