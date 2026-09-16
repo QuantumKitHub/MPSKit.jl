@@ -1,10 +1,6 @@
 abstract type AbstractTransferMatrix end;
 
 # single site transfer
-# `backend` and `allocator` travel with the transfer matrix rather than being passed at
-# application time: a transfer matrix is handed to KrylovKit as a callable (see
-# `Base.:*` below), which applies it as `f(x)` and leaves no argument slot to thread them
-# through.
 struct SingleTransferMatrix{A <: AbstractTensorMap, B, C <: AbstractTensorMap, Bk, Al} <:
     AbstractTransferMatrix
     above::A

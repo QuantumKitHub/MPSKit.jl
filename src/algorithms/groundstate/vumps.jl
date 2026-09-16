@@ -178,9 +178,7 @@ function gauge_step!(
         scheduler = Defaults.scheduler[]
     )
     alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
-    # The gauge sweep is serial over the unit cell, but the allocator has to match whatever
-    # concurrency the caller is running with, so it comes from the scheduler rather than being
-    # assumed -- same rule as `localupdate_step!` and `recalculate!`.
+    # the gauge sweep is serial, but the allocator is determined by the configured scheduler
     allocator = default_allocator(state.mps, scheduler)
     mps = gaugefix!(
         state.mps, ACs, state.mps.C[end];

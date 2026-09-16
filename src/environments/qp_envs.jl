@@ -58,10 +58,7 @@ function environments(
     )
     ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1)) .+ 1
     solver = resolve_environment_solver(alg, exci, H, exci)
-    # The two transfer systems below are scheduled with `scheduler` rather than spawned
-    # unconditionally, so the scheduler is the single source of truth about concurrency and
-    # the allocator can follow from it: a buffer only when the work is serial, a stateless
-    # allocator when the two halves may share it.
+
     allocator = default_allocator(exci.left_gs, scheduler)
 
     AL = exci.left_gs.AL

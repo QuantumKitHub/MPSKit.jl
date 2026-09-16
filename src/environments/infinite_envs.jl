@@ -102,11 +102,6 @@ function recalculate!(
     end
 
     tree_point = timer_treepoint(timeroutput)
-    # The left and right halves are scheduled with `scheduler`, rather than spawned
-    # unconditionally, so that the scheduler is the single source of truth about
-    # concurrency here -- as it already is in `localupdate_step!`. The allocator then
-    # follows from it: `default_allocator` hands out a buffer only for a serial
-    # scheduler, and a stateless allocator whenever the two halves may share it.
     allocator = default_allocator(below, scheduler)
     tforeach(1:2; scheduler) do half
         sub_timeroutput = subtimer(timeroutput)
