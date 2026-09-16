@@ -244,7 +244,7 @@ function prepare_operator!!(
         GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
         O_GR[-1 -2; -4 -5 -3] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
     end
-    # `leftenv` and `rightenv` only exist to be densified, so take the dense copy from the
+    # `GL_O` and `O_GR` only exist to be densified, so take the dense copy from the
     # allocator and release them again.
     leftenv = repartition(
         fuse_legs(_densify!!(GL_O, allocator), 1, 2), 2, 2; copy = true, backend, allocator
