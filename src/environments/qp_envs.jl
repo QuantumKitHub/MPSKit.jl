@@ -28,29 +28,41 @@ end
 function environments(
         exci::Union{InfiniteQP, MultilineQP}, operator::Union{InfiniteMPO, InfiniteMPOHamiltonian, MultilineMPO}, above = exci;
         lenvs = environments(exci.left_gs, operator, exci.left_gs), renvs = istopological(exci) ? environments(exci.right_gs, operator, exci.right_gs) : lenvs,
+        backend::AbstractBackend = DefaultBackend(), scheduler = Defaults.scheduler[],
         kwargs...
     )
+    # `backend` and `scheduler` are named explicitly so that they are not swept into
+    # `environment_alg`'s keyword arguments, which describe the linear solver. Same
+    # convention as `recalculate!`.
     alg = environment_alg(exci, operator, above; kwargs...)
-    return environments(exci, operator, above, alg; lenvs, renvs)
+    return environments(exci, operator, above, alg; lenvs, renvs, backend, scheduler)
 end
 
 function environments(
-        qp::MultilineQP, operator::MultilineMPO, above, alg; lenvs, renvs = lenvs
+        qp::MultilineQP, operator::MultilineMPO, above, alg; lenvs, renvs = lenvs,
+        backend::AbstractBackend = DefaultBackend(), scheduler = Defaults.scheduler[]
     )
     (rows = size(qp, 1)) == size(operator, 1) || throw(ArgumentError("Incompatible sizes"))
     envs = map(1:rows) do row
         return environments(
-            qp[row], operator[row], qp[row], alg; lenvs = lenvs[row], renvs = renvs[row]
+            qp[row], operator[row], qp[row], alg; lenvs = lenvs[row], renvs = renvs[row],
+            backend, scheduler
         )
     end
     return Multiline(PeriodicVector(envs))
 end
 
 function environments(
-        exci::InfiniteQP, H::InfiniteMPOHamiltonian, above, alg; lenvs, renvs = lenvs
+        exci::InfiniteQP, H::InfiniteMPOHamiltonian, above, alg; lenvs, renvs = lenvs,
+        backend::AbstractBackend = DefaultBackend(), scheduler = Defaults.scheduler[]
     )
     ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1)) .+ 1
     solver = resolve_environment_solver(alg, exci, H, exci)
+    # The two transfer systems below are scheduled with `scheduler` rather than spawned
+    # unconditionally, so the scheduler is the single source of truth about concurrency and
+    # the allocator can follow from it: a buffer only when the work is serial, a stateless
+    # allocator when the two halves may share it.
+    allocator = default_allocator(exci.left_gs, scheduler)
 
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
@@ -60,10 +72,10 @@ function environments(
 
     zerovector!(lBs[1])
     for pos in 1:length(exci)
-        lBs[pos + 1] = lBs[pos] * TransferMatrix(AR[pos], H[pos], AL[pos]) /
+        lBs[pos + 1] = lBs[pos] * TransferMatrix(AR[pos], H[pos], AL[pos]; backend, allocator) /
             cis(exci.momentum)
-        lBs[pos + 1] += leftenv(lenvs, pos, exci.left_gs) *
-            TransferMatrix(exci[pos], H[pos], AL[pos]) / cis(exci.momentum)
+        lBs[pos + 1] += leftenv(lenvs, pos, exci.left_gs; backend, allocator) *
+            TransferMatrix(exci[pos], H[pos], AL[pos]; backend, allocator) / cis(exci.momentum)
 
         if istrivial(exci) && !isempty(ids) # regularization of trivial excitations
             ρ_left = l_RL(exci.left_gs, pos + 1)
@@ -76,10 +88,10 @@ function environments(
 
     zerovector!(rBs[end])
     for pos in length(exci):-1:1
-        rBs[pos - 1] = TransferMatrix(AL[pos], H[pos], AR[pos]) *
+        rBs[pos - 1] = TransferMatrix(AL[pos], H[pos], AR[pos]; backend, allocator) *
             rBs[pos] * cis(exci.momentum)
-        rBs[pos - 1] += TransferMatrix(exci[pos], H[pos], AR[pos]) *
-            rightenv(renvs, pos, exci.right_gs) * cis(exci.momentum)
+        rBs[pos - 1] += TransferMatrix(exci[pos], H[pos], AR[pos]; backend, allocator) *
+            rightenv(renvs, pos, exci.right_gs; backend, allocator) * cis(exci.momentum)
 
         if istrivial(exci) && !isempty(ids)
             ρ_left = l_LR(exci.left_gs, pos)
@@ -90,18 +102,22 @@ function environments(
         end
     end
 
-    @sync begin
-        Threads.@spawn $lBs[1] = left_excitation_transfer_system(
-            $lBs[1], $H, $exci; solver = $solver
-        )
-        Threads.@spawn $rBs[end] = right_excitation_transfer_system(
-            $rBs[end], $H, $exci; solver = $solver
-        )
+    tforeach(1:2; scheduler) do half
+        if isone(half)
+            lBs[1] = left_excitation_transfer_system(
+                lBs[1], H, exci; solver, backend, allocator
+            )
+        else
+            rBs[end] = right_excitation_transfer_system(
+                rBs[end], H, exci; solver, backend, allocator
+            )
+        end
+        return nothing
     end
 
     lB_cur = lBs[1]
     for i in 1:(length(exci) - 1)
-        lB_cur = lB_cur * TransferMatrix(AR[i], H[i], AL[i]) / cis(exci.momentum)
+        lB_cur = lB_cur * TransferMatrix(AR[i], H[i], AL[i]; backend, allocator) / cis(exci.momentum)
 
         if istrivial(exci) && !isempty(ids)
             ρ_left = l_RL(exci.left_gs, i + 1)
@@ -116,7 +132,7 @@ function environments(
 
     rB_cur = rBs[end]
     for i in length(exci):-1:2
-        rB_cur = TransferMatrix(AL[i], H[i], AR[i]) * rB_cur * cis(exci.momentum)
+        rB_cur = TransferMatrix(AL[i], H[i], AR[i]; backend, allocator) * rB_cur * cis(exci.momentum)
 
         if istrivial(exci) && !isempty(ids)
             ρ_left = l_LR(exci.left_gs, i)
@@ -135,7 +151,8 @@ end
 function environments(
         exci::FiniteQP, H::FiniteMPOHamiltonian, above = exci, alg = nothing;
         lenvs = environments(exci.left_gs, H, exci.left_gs),
-        renvs = istopological(exci) ? environments(exci.right_gs, H, exci.right_gs) : lenvs
+        renvs = istopological(exci) ? environments(exci.right_gs, H, exci.right_gs) : lenvs,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
@@ -147,25 +164,29 @@ function environments(
 
     zerovector!(lBs[1])
     for pos in 1:(length(exci) - 1)
-        lBs[pos + 1] = lBs[pos] * TransferMatrix(AR[pos], H[pos], AL[pos])
+        lBs[pos + 1] = lBs[pos] * TransferMatrix(AR[pos], H[pos], AL[pos]; backend, allocator)
         lBs[pos + 1] += leftenv(lenvs, pos, exci.left_gs) *
-            TransferMatrix(exci[pos], H[pos], AL[pos])
+            TransferMatrix(exci[pos], H[pos], AL[pos]; backend, allocator)
     end
 
     zerovector!(rBs[end])
     for pos in length(exci):-1:2
-        rBs[pos - 1] = TransferMatrix(AL[pos], H[pos], AR[pos]) * rBs[pos]
-        rBs[pos - 1] += TransferMatrix(exci[pos], H[pos], AR[pos]) *
+        rBs[pos - 1] = TransferMatrix(AL[pos], H[pos], AR[pos]; backend, allocator) * rBs[pos]
+        rBs[pos - 1] += TransferMatrix(exci[pos], H[pos], AR[pos]; backend, allocator) *
             rightenv(renvs, pos, exci.right_gs)
     end
 
     return InfiniteQPEnvironments(lBs, rBs, lenvs, renvs)
 end
 
-function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs)
+function environments(
+        exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs,
+        backend::AbstractBackend = DefaultBackend(), scheduler = Defaults.scheduler[]
+    )
     istopological(exci) &&
         @warn "there is a phase ambiguity in topologically nontrivial statmech excitations"
     solver = resolve_environment_solver(alg, exci, O, exci)
+    allocator = default_allocator(exci.left_gs, scheduler)
 
     left_gs = exci.left_gs
     right_gs = exci.right_gs
@@ -189,9 +210,9 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs
     # vary within the unit cell, as for a finite-ring shift MPO.
     gbl = zerovector!(GBL[1])
     for col in 1:length(exci)
-        gbl = gbl * TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col])
+        gbl = gbl * TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col]; backend, allocator)
         gbl += leftenv(lenvs, col, left_gs) *
-            TransferMatrix(exci[col], O[col], left_gs.AL[col])
+            TransferMatrix(exci[col], O[col], left_gs.AL[col]; backend, allocator)
         gbl *= left_regularization[col] * cis(-exci.momentum)
         GBL[col + 1] = gbl
     end
@@ -200,8 +221,8 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs
     # right therefore produces an object in GBR[i - 1].
     gbr = zerovector!(GBR[end])
     for col in reverse(1:length(exci))
-        gbr = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]) * gbr
-        gbr += TransferMatrix(exci[col], O[col], right_gs.AR[col]) *
+        gbr = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]; backend, allocator) * gbr
+        gbr += TransferMatrix(exci[col], O[col], right_gs.AR[col]; backend, allocator) *
             rightenv(renvs, col, right_gs)
         gbr *= right_regularization[col] * cis(exci.momentum)
         GBR[col - 1] = gbr
@@ -245,12 +266,12 @@ function environments(exci::InfiniteQP, O::InfiniteMPO, above, alg; lenvs, renvs
     right_cur = GBR[end]
     for col in 1:(length(exci) - 1)
         left_cur = left_regularization[col] * left_cur *
-            TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col]) *
+            TransferMatrix(right_gs.AR[col], O[col], left_gs.AL[col]; backend, allocator) *
             cis(-exci.momentum)
         GBL[col + 1] += left_cur
 
         col = length(exci) - col + 1
-        right_cur = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]) * right_cur *
+        right_cur = TransferMatrix(left_gs.AL[col], O[col], right_gs.AR[col]; backend, allocator) * right_cur *
             cis(exci.momentum) * right_regularization[col]
         GBR[col - 1] += right_cur
     end
