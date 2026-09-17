@@ -355,23 +355,33 @@ function mul_tail!(
 end
 
 """
-    _densify!!(t, allocator) -> t′
+    _dense_type(t::AbstractBlockTensorMap) -> TT
+    _dense_space(t::AbstractBlockTensorMap) -> V
+    _densify!(tdst::TensorMap, t::AbstractBlockTensorMap) -> tdst
 
-Dense copy of a block tensor, taken from `allocator` so that it can be handed back again.
-`TensorMap(t)` would allocate on the heap; the callers here only need the dense form as a
-scratch tensor to fuse and repartition out of, so it belongs on the buffer instead.
+The type, the space and the contents of the dense tensor that `TensorMap(t)` would return, kept
+apart so that a caller that only needs the dense form as scratch can take the destination from an
+allocator and hand it back again rather than leaving it to the garbage collector:
 
-The caller is responsible for bracketing this with `allocator_checkpoint!` /
-`allocator_reset!`. A `TensorMap` is returned unchanged, so the result must not be mutated.
+```julia
+tdst = TensorOperations.tensoralloc(_dense_type(t), _dense_space(t), Val(true), allocator)
+_densify!(tdst, t)
+# ...
+TensorOperations.tensorfree!(tdst, allocator)
+```
 """
-_densify!!(t::TensorMap, allocator) = t
-function _densify!!(t::AbstractBlockTensorMap, allocator)
+function _dense_type(t::AbstractBlockTensorMap)
+    return TensorKit.tensormaptype(spacetype(t), numout(t), numin(t), storagetype(t))
+end
+
+function _dense_space(t::AbstractBlockTensorMap)
     S = spacetype(t)
     N₁, N₂ = numout(t), numin(t)
-    V = ProductSpace{S, N₁}(BlockTensorKit.oplus.(codomain(t).spaces)) ←
+    return ProductSpace{S, N₁}(BlockTensorKit.oplus.(codomain(t).spaces)) ←
         ProductSpace{S, N₂}(BlockTensorKit.oplus.(domain(t).spaces))
-    TT = TensorKit.tensormaptype(S, N₁, N₂, storagetype(t))
-    tdst = TensorOperations.tensoralloc(TT, V, Val(true), allocator)
+end
+
+function _densify!(tdst::TensorMap, t::AbstractBlockTensorMap)
     BlockTensorKit.issparse(t) && zerovector!(tdst)
     return BlockTensorKit._copy_subblocks!(tdst, t)
 end

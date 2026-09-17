@@ -218,17 +218,50 @@ function prepare_operator!!(H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor})
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
     return prepared_operator_type(typeof(H))(leftenv, rightenv, H.backend, H.allocator)
 end
+
+# Scratch space of `prepare_operator!!`
+# ------------------------------------
+# The environments of a prepared derivative are the dense, fused form of an environment-operator
+# contraction. Neither that contraction nor its dense copy is kept - only the repartitioned
+# result is - so both are taken from the allocator and handed straight back.
+#
+# `GL_O` and `O_GR` are allocated here rather than by `:=`, which always allocates the result of
+# a `@plansor` block on the heap. The index tuples are read off the contractions below; they
+# reproduce exactly the type and space that `:=` would have picked.
+const _GL_O_INDICES = (((1, 3), (2,)), ((1,), (2, 3, 4)), ((1, 3, 5), (2, 4)))
+const _O_GR_INDICES = (((1, 2, 3), (4,)), ((2,), (1, 3)), ((4, 3), (5, 2, 1)))
+
+function _alloc_env_scratch(A, B, (pA, pB, pAB), allocator)
+    TC = TensorOperations.promote_contract(scalartype(A), scalartype(B))
+    return TensorOperations.tensoralloc_contract(
+        TC, A, pA, false, B, pB, false, pAB, Val(true), allocator
+    )
+end
+
+# A `TensorMap` is already dense, so `repartition` is the only tensor that has to be kept.
+function _fuse_env(t::TensorMap, N₁::Int, N₂::Int, backend, allocator)
+    return repartition(fuse_legs(t, N₁, N₂), 2, 2; copy = true, backend, allocator)
+end
+function _fuse_env(t::AbstractBlockTensorMap, N₁::Int, N₂::Int, backend, allocator)
+    tdense = TensorOperations.tensoralloc(_dense_type(t), _dense_space(t), Val(true), allocator)
+    _densify!(tdense, t)
+    env = repartition(fuse_legs(tdense, N₁, N₂), 2, 2; copy = true, backend, allocator)
+    TensorOperations.tensorfree!(tdense, allocator)
+    return env
+end
+
 function prepare_operator!!(H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})
     backend, allocator = H.backend, H.allocator
+    GL, O = H.leftenv, H.operators[1]
     cp = allocator_checkpoint!(allocator)
+
+    GL_O = _alloc_env_scratch(GL, O, _GL_O_INDICES, allocator)
     @plansor backend = backend allocator = allocator begin
-        GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
+        GL_O[-1 -2 -3; -4 -5] = GL[-1 1; -4] * O[1 -2; -5 -3]
     end
-    # `GL_O` only exists to be densified, so take the dense copy from the allocator and release
-    # it again.
-    leftenv = repartition(
-        fuse_legs(_densify!!(GL_O, allocator), 1, 2), 2, 2; copy = true, backend, allocator
-    )
+    leftenv = _fuse_env(GL_O, 1, 2, backend, allocator)
+    TensorOperations.tensorfree!(GL_O, allocator)
+
     rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
     allocator_reset!(allocator, cp)
 
@@ -239,19 +272,20 @@ function prepare_operator!!(
         H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor}
     )
     backend, allocator = H.backend, H.allocator
+    GL, O₁, O₂, GR = H.leftenv, H.operators[1], H.operators[2], H.rightenv
     cp = allocator_checkpoint!(allocator)
+
+    GL_O = _alloc_env_scratch(GL, O₁, _GL_O_INDICES, allocator)
+    O_GR = _alloc_env_scratch(O₂, GR, _O_GR_INDICES, allocator)
     @plansor backend = backend allocator = allocator begin
-        GL_O[-1 -2 -3; -4 -5] := H.leftenv[-1 1; -4] * H.operators[1][1 -2; -5 -3]
-        O_GR[-1 -2; -4 -5 -3] := H.operators[2][-3 -5; -2 1] * H.rightenv[-1 1; -4]
+        GL_O[-1 -2 -3; -4 -5] = GL[-1 1; -4] * O₁[1 -2; -5 -3]
+        O_GR[-1 -2; -4 -5 -3] = O₂[-3 -5; -2 1] * GR[-1 1; -4]
     end
-    # `GL_O` and `O_GR` only exist to be densified, so take the dense copy from the
-    # allocator and release them again.
-    leftenv = repartition(
-        fuse_legs(_densify!!(GL_O, allocator), 1, 2), 2, 2; copy = true, backend, allocator
-    )
-    rightenv = repartition(
-        fuse_legs(_densify!!(O_GR, allocator), 2, 1), 2, 2; copy = true, backend, allocator
-    )
+    leftenv = _fuse_env(GL_O, 1, 2, backend, allocator)
+    rightenv = _fuse_env(O_GR, 2, 1, backend, allocator)
+
+    TensorOperations.tensorfree!(O_GR, allocator)
+    TensorOperations.tensorfree!(GL_O, allocator)
     allocator_reset!(allocator, cp)
 
     return prepared_operator_type(typeof(H))(leftenv, rightenv, backend, allocator)
