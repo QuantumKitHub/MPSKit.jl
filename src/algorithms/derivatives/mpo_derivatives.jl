@@ -231,7 +231,7 @@ end
 const _GL_O_INDICES = (((1, 3), (2,)), ((1,), (2, 3, 4)), ((1, 3, 5), (2, 4)))
 const _O_GR_INDICES = (((1, 2, 3), (4,)), ((2,), (1, 3)), ((4, 3), (5, 2, 1)))
 
-function _alloc_env_scratch(A, B, (pA, pB, pAB), allocator)
+@inline function _alloc_env_scratch(A, B, (pA, pB, pAB), allocator)
     TC = TensorOperations.promote_contract(scalartype(A), scalartype(B))
     return TensorOperations.tensoralloc_contract(
         TC, A, pA, false, B, pB, false, pAB, Val(true), allocator
@@ -239,10 +239,10 @@ function _alloc_env_scratch(A, B, (pA, pB, pAB), allocator)
 end
 
 # A `TensorMap` is already dense, so `repartition` is the only tensor that has to be kept.
-function _fuse_env(t::TensorMap, N₁::Int, N₂::Int, backend, allocator)
+@inline function _fuse_env(t::TensorMap, N₁::Int, N₂::Int, backend, allocator)
     return repartition(fuse_legs(t, N₁, N₂), 2, 2; copy = true, backend, allocator)
 end
-function _fuse_env(t::AbstractBlockTensorMap, N₁::Int, N₂::Int, backend, allocator)
+@inline function _fuse_env(t::AbstractBlockTensorMap, N₁::Int, N₂::Int, backend, allocator)
     tdense = TensorOperations.tensoralloc(_dense_type(t), _dense_space(t), Val(true), allocator)
     _densify!(tdense, t)
     env = repartition(fuse_legs(tdense, N₁, N₂), 2, 2; copy = true, backend, allocator)
