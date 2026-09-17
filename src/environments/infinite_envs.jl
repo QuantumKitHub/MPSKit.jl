@@ -102,8 +102,11 @@ function recalculate!(
     end
 
     tree_point = timer_treepoint(timeroutput)
-    allocator = default_allocator(below, scheduler)
+    # Which of the two halves run concurrently is the scheduler's call, but neither half fans out
+    # any further and they never share their scratch, so each takes a buffer of its own instead of
+    # the whole recalculation falling back on a shared allocator as soon as the scheduler spawns.
     tforeach(1:2; scheduler) do half
+        allocator = default_allocator(below, SerialScheduler())
         sub_timeroutput = subtimer(timeroutput)
         if isone(half)
             @timeit sub_timeroutput "left_envs" compute_leftenvs!(

@@ -59,7 +59,8 @@ function environments(
     ids = findall(Base.Fix1(isidentitylevel, H), 2:(size(H[1], 1) - 1)) .+ 1
     solver = resolve_environment_solver(alg, exci, H, exci)
 
-    allocator = default_allocator(exci.left_gs, scheduler)
+    # the sweeps below are serial, so a single buffer serves the whole chain
+    allocator = default_allocator(exci.left_gs, SerialScheduler())
 
     AL = exci.left_gs.AL
     AR = exci.right_gs.AR
@@ -99,14 +100,18 @@ function environments(
         end
     end
 
+    # The only part of this that fans out. Neither transfer system fans out any further and the
+    # two never share their scratch, so each takes a buffer of its own rather than both falling
+    # back on a shared allocator whenever the scheduler spawns.
     tforeach(1:2; scheduler) do half
+        task_allocator = default_allocator(exci.left_gs, SerialScheduler())
         if isone(half)
             lBs[1] = left_excitation_transfer_system(
-                lBs[1], H, exci; solver, backend, allocator
+                lBs[1], H, exci; solver, backend, allocator = task_allocator
             )
         else
             rBs[end] = right_excitation_transfer_system(
-                rBs[end], H, exci; solver, backend, allocator
+                rBs[end], H, exci; solver, backend, allocator = task_allocator
             )
         end
         return nothing
