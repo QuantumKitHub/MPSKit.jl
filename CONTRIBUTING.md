@@ -69,7 +69,7 @@ From the repository root, you can therefore run the full suite with:
 julia --project=test test/runtests.jl
 ```
 
-The test suite is organized by topic under `test/` (`algorithms/`, `states/`, `operators/`, `misc/`, `gpu/`), with shared setup code in `test/setup/`.
+The test suite is organized by topic under `test/` (e.g. `algorithms/`, `states/`, `operators/`, `hamiltonian/`, `mpo/`, `internals/`, `gpu/`), with shared setup code in `test/setup/`.
 GPU tests only run when a functional CUDA/cuTENSOR install is detected, so most contributors will only ever exercise the CPU tests.
 
 Additionally, a number of CLI flags can be added to run the tests selectively, as these will be filtered by folder and filename
@@ -77,8 +77,8 @@ A `--fast` flag is available for a quicker, reduced run while iterating.
 
 ```
 julia --project=test test/runtests.jl states
-julia --project=test test/runtests.jl operators algorithms/groundstate
-julia --project=test test/runtests.jl misc --fast
+julia --project=test test/runtests.jl operators hamiltonian
+julia --project=test test/runtests.jl internals --fast
 ```
 
 ### Building the documentation

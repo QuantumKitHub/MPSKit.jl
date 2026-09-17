@@ -22,7 +22,6 @@ Many of these algorithms have different advantages and disadvantages, and figuri
 Here, we enumerate some of their properties in hopes of pointing you in the right direction. For convenience, the full list of algorithms is:
 
 - [DMRG](@ref)
-- [DMRG2](@ref)
 - [VUMPS](@ref)
 - [Gradient descent](@ref)
 - [TDVP](@ref)

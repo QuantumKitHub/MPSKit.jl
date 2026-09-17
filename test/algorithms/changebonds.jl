@@ -11,9 +11,12 @@ using TensorKit
 using TensorKit: ℙ
 using Random
 
-spacelist = [(ℙ^4, ℙ^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))]
+spacelist = if fast_tests
+    [(ℙ^4, ℙ^3)]
+else
+    [(ℙ^4, ℙ^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))]
+end
 maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 2:length(ψ))
-
 
 @testset "MPO $(spacetype(pspace))" for (pspace, Dspace) in spacelist
     nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
@@ -129,10 +132,16 @@ end
 # bond-change algorithms (`RandExpand` expansion, `SvdCut` truncation) must handle the extra
 # physical leg. Operator-based expanders (`OptimalExpand`/`SketchedExpand`) make use of a
 # one-sided MPO application on the first physical leg.
-@testset "Density-matrix FiniteMPS $(spacetype(pcomp))" for (pcomp, Dspace) in [
+density_matrix_spacelist = if fast_tests
+    [(ℙ^2 ⊗ (ℙ^2)', ℙ^6)]
+else
+    [
         (ℙ^2 ⊗ (ℙ^2)', ℙ^6),
         (Rep[SU₂](1 // 2 => 1) ⊗ Rep[SU₂](1 // 2 => 1)', Rep[SU₂](0 => 4, 1 => 3)),
     ]
+end
+
+@testset "Density-matrix FiniteMPS $(spacetype(pcomp))" for (pcomp, Dspace) in density_matrix_spacelist
     Random.seed!(2468)
     L = 8
 
@@ -238,4 +247,26 @@ end
 
     ψ = FiniteMPS(rand, ComplexF64, L, pspace, ℙ^4)
     @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
+end
+
+# Regression: RandExpand used to be able to introduce a NaN entanglement entropy.
+@testset "RandExpand does not introduce NaN entropy" begin
+    ψ = InfiniteMPS([ℂ^2], [ℂ^5])
+    ψ = changebonds(ψ, RandExpand(; trunc = truncrank(2)))
+    @test !isnan(sum(entropy(ψ)))
+    @test !isnan(sum(entropy(ψ, 2)))
+end
+
+# Regression: changebonds on an InfiniteMPS with a >1 unit cell and per-site distinct bond
+# dimensions used to error.
+@testset "changebonds with non-uniform unit cells" begin
+    ψ = InfiniteMPS([ℂ^2, ℂ^2, ℂ^2], [ℂ^2, ℂ^3, ℂ^4])
+    H = repeat(transverse_field_ising(), 3)
+    ψ1, envs = changebonds(ψ, H, OptimalExpand(; trunc = truncrank(2)))
+    @test ψ1 isa InfiniteMPS
+    @test norm(ψ1) ≈ 1
+
+    ψ2 = changebonds(ψ, RandExpand(; trunc = truncrank(2)))
+    @test ψ2 isa InfiniteMPS
+    @test norm(ψ2) ≈ 1
 end
