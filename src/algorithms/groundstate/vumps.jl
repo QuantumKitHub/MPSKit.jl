@@ -173,10 +173,7 @@ function _localupdate_vumps_step!(
     return regauge!(AC, C; alg = alg_orth)
 end
 
-function gauge_step!(
-        it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector,
-        scheduler = Defaults.scheduler[]
-    )
+function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
     alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
     # the gauge sweep is serial, so safe to use non-threadsafe allocator
     allocator = default_allocator(state.mps, SerialScheduler())

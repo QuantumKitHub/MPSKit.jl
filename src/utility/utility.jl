@@ -354,38 +354,6 @@ function mul_tail!(
     return C
 end
 
-"""
-    _dense_type(t::AbstractBlockTensorMap) -> TT
-    _dense_space(t::AbstractBlockTensorMap) -> V
-    _densify!(tdst::TensorMap, t::AbstractBlockTensorMap) -> tdst
-
-The type, the space and the contents of the dense tensor that `TensorMap(t)` would return, kept
-apart so that a caller that only needs the dense form as scratch can take the destination from an
-allocator and hand it back again rather than leaving it to the garbage collector:
-
-```julia
-tdst = TensorOperations.tensoralloc(_dense_type(t), _dense_space(t), Val(true), allocator)
-_densify!(tdst, t)
-# ...
-TensorOperations.tensorfree!(tdst, allocator)
-```
-"""
-function _dense_type(t::AbstractBlockTensorMap)
-    return TensorKit.tensormaptype(spacetype(t), numout(t), numin(t), storagetype(t))
-end
-
-function _dense_space(t::AbstractBlockTensorMap)
-    S = spacetype(t)
-    N₁, N₂ = numout(t), numin(t)
-    return ProductSpace{S, N₁}(BlockTensorKit.oplus.(codomain(t).spaces)) ←
-        ProductSpace{S, N₂}(BlockTensorKit.oplus.(domain(t).spaces))
-end
-
-function _densify!(tdst::TensorMap, t::AbstractBlockTensorMap)
-    BlockTensorKit.issparse(t) && zerovector!(tdst)
-    return BlockTensorKit._copy_subblocks!(tdst, t)
-end
-
 @inline fuse_legs(x::TensorMap, N₁::Int, N₂::Int) = fuse_legs(x, Val(N₁), Val(N₂))
 function fuse_legs(x::TensorMap, ::Val{N₁}, ::Val{N₂}) where {N₁, N₂}
     ((0 <= N₁ <= numout(x)) && (0 <= N₂ <= numin(x))) ||
