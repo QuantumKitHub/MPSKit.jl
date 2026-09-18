@@ -210,9 +210,7 @@ function environments(
     GBR = PeriodicVector([allocate_GBR(exci, O, exci, i) for i in 1:length(exci)])
     envs = InfiniteQPEnvironments(GBL, GBR, lenvs, renvs)
 
-    # Which of the two halves run concurrently is the scheduler's call, but neither half fans out
-    # any further and they never share their scratch, so each takes a buffer of its own instead of
-    # the whole computation falling back on a shared allocator as soon as the scheduler spawns.
+    # concurrency depends on scheduler, but each half takes its own dedicated scratch allocator
     tforeach(1:2; scheduler) do half
         allocator = default_allocator(exci.left_gs, SerialScheduler())
         if isone(half)
