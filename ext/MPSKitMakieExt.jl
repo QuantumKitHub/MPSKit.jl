@@ -6,199 +6,234 @@ using MPSKit, TensorKit
 #TODO?: add Colors.jl to access this, allows Plots extension to also use these colors
 const JLCOLORS = Makie.Colors.JULIA_LOGO_COLORS
 
-# cannot use current_axis() when supporting in-place method
-# workaround: have it point at the target axis temporarily
-#TODO: remove once the recipes publish their axis attributes instead of setting them
-function with_current_axis(f, target)
-    target isa Makie.AbstractAxis || return f()
-    previous = Makie.current_axis()
-    Makie.current_axis!(target)
-    try
-        return f()
-    finally
-        isnothing(previous) || Makie.current_axis!(previous)
-    end
+sector_color(i::Integer) = JLCOLORS[mod1(i, length(JLCOLORS))]
+
+convert_kwargs(kwargs::NamedTuple) = kwargs
+function convert_kwargs(kwargs) # weird convert thing
+    return NamedTuple(Symbol(k) => (v isa Observable ? v[] : v) for (k, v) in pairs(kwargs))
 end
 
-# overwrite user-provided axis attributes
-function apply_plotkwargs!(ax, plotkwargs)
+# the recipes publish the axis attributes they want as an `:axis_info` node instead of `current_axis()`
+function apply_axis_info!(ax, plot, plotkwargs = (;))
     ax isa Makie.AbstractAxis || return ax
-    for (k, v) in pairs(plotkwargs)
-        setproperty!(ax, k, v)
+    function apply!(info)
+        for (k, v) in pairs(info)
+            setproperty!(ax, k, v)
+        end
+        # user-provided attributes take precedence
+        for (k, v) in pairs(plotkwargs)
+            setproperty!(ax, k, v)
+        end
+        return nothing
     end
+    node = plot.attributes[:axis_info]
+    apply!(node[])
+    on(apply!, node) # keep the axis in sync when the inputs change
     return ax
 end
 
-@recipe(EntanglementPlot, mps) do scene
-    Attributes(
-        site = 0,
-        expand_symmetry = false,
-        sortby = maximum,
-        sector_margin = 1 // 10,
-        sector_formatter = string,
-    )
+@recipe EntanglementPlot (mps,) begin
+    site = 0
+    expand_symmetry = false
+    sortby = maximum
+    sector_margin = 1 // 10
+    sector_formatter = string
+    markersize = 12
+    marker = :circle
 end
 
 function Makie.plot!(ep::EntanglementPlot)
-    mps = ep.mps[]
-    site = ep.site[]
-    margin = ep.sector_margin[]
+    # this closure only reruns when one of the inputs changes
+    map!(ep.attributes, [:mps, :site, :expand_symmetry, :sortby], :spectrum_data) do mps, site, expand_symmetry, sortby
+        spectra = entanglement_spectrum(mps, site)
 
-    spectra = entanglement_spectrum(mps, site)
-
-    sectors = sectortype(mps)[]
-    spectrum = Vector{Vector{Float64}}()
-
-    for (c, b) in pairs(spectra)
-        if ep.expand_symmetry[]
-            b′ = repeat(b, dim(c))
-            sort!(b′; rev = true)
-        else
-            b′ = collect(b)
+        sectors = sectortype(mps)[]
+        spectrum = Vector{Vector{Float64}}()
+        for (c, b) in pairs(spectra)
+            if expand_symmetry
+                b′ = repeat(collect(b), dim(c))
+                sort!(b′; rev = true)
+            else
+                b′ = collect(b)
+            end
+            push!(spectrum, b′)
+            push!(sectors, c)
         end
-        push!(spectrum, b′)
-        push!(sectors, c)
-    end
 
-    if any(v -> any(<=(0), v), spectrum)
-        @warn "Entanglement spectrum contains vanishing Schmidt values. These are omitted from the plot."
-        foreach(v -> filter!(>(0), v), spectrum)
-    end
-
-    # Sort sectors according to provided method
-    if length(spectrum) > 1
-        order = sortperm(spectrum; by = ep.sortby[], rev = true)
-        spectrum = spectrum[order]
-        sectors = sectors[order]
-    end
-
-    ax = Makie.current_axis()
-
-    # Axis styling
-
-    ax.xlabelsize = 24
-    ax.xticks = (1:length(sectors), ep.sector_formatter[].(sectors))
-    ax.xticklabelsize = 16
-    ax.xticklabelrotation = 45
-    ax.xticklabelalign = (:right, :top)
-    xlims!(ax, 1, length(sectors) + 1)
-
-    ax.ylabel = L"\log(\lambda)"
-    ax.ylabelsize = 24
-    smallest = minimum(Iterators.flatten(spectrum); init = 1.0) # spectrum is already > 0
-    bottom = floor(Int, log10(smallest))
-    ax.yticks = (bottom:2:0, latexstring.(collect(bottom:2:0)))
-    ax.yticklabelsize = 16
-    ylims!(ax, bottom, 0 + 1.0e-1)
-
-    # Plot data
-    for (i, (partial_spectrum, sector)) in enumerate(zip(spectrum, sectors))
-        n_spectrum = length(partial_spectrum)
-        if n_spectrum == 1
-            x = [i + 0.5]
-        else
-            x = collect(range(i + float(margin), i + 1 - float(margin); length = n_spectrum))
+        if any(v -> any(<=(0), v), spectrum)
+            @warn "Entanglement spectrum contains vanishing Schmidt values. These are omitted from the plot."
+            foreach(v -> filter!(>(0), v), spectrum)
         end
-        scatter!(ep, x, log10.(partial_spectrum), color = JLCOLORS[mod1(i, length(JLCOLORS))])
+
+        # Sort sectors according to provided method
+        if length(spectrum) > 1
+            order = sortperm(spectrum; by = sortby, rev = true)
+            spectrum = spectrum[order]
+            sectors = sectors[order]
+        end
+        return (; sectors, spectrum)
     end
 
+    # styling
+    # only reruns when spectrum_data or sector_margin changes
+    map!(ep.attributes, [:spectrum_data, :sector_margin], :positions) do data, margin
+        points = Point2d[]
+        for (i, partial_spectrum) in enumerate(data.spectrum)
+            n_spectrum = length(partial_spectrum)
+            xs = if n_spectrum == 1
+                range(i + 0.5, i + 0.5; length = 1)
+            else
+                range(i + float(margin), i + 1 - float(margin); length = n_spectrum)
+            end
+            for (x, λ) in zip(xs, partial_spectrum)
+                push!(points, Point2d(x, log10(λ)))
+            end
+        end
+        return points
+    end
+
+    # only reruns when spectrum_data changes
+    map!(ep.attributes, [:spectrum_data], :colors) do data
+        colors = typeof(sector_color(1))[]
+        for (i, partial_spectrum) in enumerate(data.spectrum)
+            append!(colors, fill(sector_color(i), length(partial_spectrum)))
+        end
+        return colors
+    end
+
+    map!(ep.attributes, [:mps, :site, :spectrum_data, :sector_formatter], :axis_info) do mps, site, data, sector_formatter
+        nsectors = length(data.sectors)
+        bottom = if isempty(data.spectrum)
+            -1
+        else
+            smallest = minimum(Iterators.flatten(data.spectrum); init = 1.0) # spectrum is already > 0
+            floor(Int, log10(smallest))
+        end
+        return (;
+            xticks = (1:nsectors, sector_formatter.(data.sectors)),
+            xticklabelsize = 16,
+            xticklabelrotation = 45.0,
+            xticklabelalign = (:right, :top),
+            ylabel = L"\log(\lambda)",
+            ylabelsize = 24,
+            yticks = (bottom:2:0, latexstring.(collect(bottom:2:0))),
+            yticklabelsize = 16,
+            limits = ((1, nsectors + 1), (bottom, 0 + 1.0e-1)),
+        )
+    end
+
+    scatter!(ep, ep.positions; color = ep.colors, markersize = ep.markersize, marker = ep.marker)
     return ep
 end
 
 function MPSKit.entanglementplot(args...; plotkwargs = (;), kwargs...)
     p = entanglementplot(args...; kwargs...)
-    apply_plotkwargs!(p.axis, plotkwargs)
+    apply_axis_info!(p.axis, p.plot, plotkwargs)
     return p
 end
 
 function MPSKit.entanglementplot!(state::MPSKit.AbstractMPS; plotkwargs = (;), kwargs...)
     p = entanglementplot!(state; kwargs...)
-    apply_plotkwargs!(Makie.current_axis(), plotkwargs)
+    apply_axis_info!(Makie.current_axis(), p, plotkwargs)
     return p
 end
 function MPSKit.entanglementplot!(target, state::MPSKit.AbstractMPS; plotkwargs = (;), kwargs...)
-    p = with_current_axis(target) do
-        entanglementplot!(target, state; kwargs...)
-    end
-    apply_plotkwargs!(target, plotkwargs)
+    p = entanglementplot!(target, state; kwargs...)
+    apply_axis_info!(target, p, plotkwargs)
     return p
 end
 
 #------------------------------------------------------------
 
-@recipe(TransferPlot, above, below) do scene
-    Attributes(
-        sectors = nothing,
-        transferkwargs = NamedTuple(),
-        thetaorigin = 0.0,
-        sector_formatter = string,
-        legend_position = :ct,
-    )
+@recipe TransferPlot (above, below) begin
+    sectors = nothing
+    transferkwargs = NamedTuple()
+    thetaorigin = 0.0
+    sector_formatter = string
+    legend_position = :ct
+    markersize = 12
+    marker = :circle
 end
 
 function Makie.plot!(tp::TransferPlot)
     #TODO: consider radial plot
-    mps = tp.above[]
-    below = tp.below[]
-    sectors = tp.sectors[]
-    transferkwargs = NamedTuple( # weird convert thing
-        k => (v isa Observable ? v[] : v) for (k, v) in pairs(tp.transferkwargs[])
-    )
-    thetaorigin = tp.thetaorigin[]
-    sector_formatter = tp.sector_formatter[]
-    legend_position = tp.legend_position[]
+    # this only reruns when one of the inputs changes
+    map!(tp.attributes, [:above, :below, :sectors, :transferkwargs], :spectrum_data) do above, below, sectors, transferkwargs
+        kwargs = convert_kwargs(transferkwargs)
+        if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
+            # restrict the computation to the requested sectors
+            howmany = Dict(c => get(kwargs, :howmany, 20) for c in sectors)
+            kwargs = (; kwargs..., howmany)
+        end
+        spectra = transfer_spectrum(above, below; kwargs...)
 
-    kwargs = transferkwargs
-    if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
-        howmany = Dict(c => get(kwargs, :howmany, 20) for c in sectors)
-        kwargs = (; kwargs..., howmany)
-    end
-    spectra = transfer_spectrum(mps, below; kwargs...)
-
-    ax = Makie.current_axis()
-    ax.title = L"\text{Transfer Spectrum}"
-    ax.titlesize = 24
-    ax.xlabel = L"\theta"
-    ax.xlabelsize = 24
-    ax.xticklabelsize = 16
-    ax.ylabel = L"r"
-    ax.ylabelsize = 24
-    ax.yticklabelsize = 16
-
-    ax.xticks = pitick(0, 2pi, 4; mode = :latex)
-    ax.yticks = (range(0, 1.0; length = 6), latexstring.(range(0, 1.0; length = 6)))
-    ax.xgridvisible = true
-    ax.ygridvisible = true
-
-    ax.leftspinevisible = true
-    ax.rightspinevisible = false
-    ax.bottomspinevisible = true
-    ax.topspinevisible = false
-
-    plotted_sectors = sectortype(mps)[]
-    for (sector, spectrum) in pairs(spectra)
-        sectors === nothing || sector in sectors || continue
-        push!(plotted_sectors, sector)
-        i = length(plotted_sectors)
-        θ = mod2pi.(angle.(spectrum) .+ thetaorigin) .- thetaorigin
-        r = abs.(spectrum)
-        scatter!(tp, θ, r; label = sector_formatter(sector), color = JLCOLORS[mod1(i, length(JLCOLORS))])
+        data = Pair{sectortype(above), Vector{complex(scalartype(above))}}[]
+        for (sector, spectrum) in pairs(spectra)
+            sectors === nothing || sector in sectors || continue
+            push!(data, sector => collect(spectrum))
+        end
+        return data
     end
 
-    xlims!(ax, thetaorigin - 0.1, thetaorigin + 2π + 0.1)
-    ylims!(ax, nothing, 1.05)
-    if !isempty(plotted_sectors) # cannot use current_figure() when supporting in-place method
-        axislegend(
-            ax, tp.plots, [sector_formatter(s) for s in plotted_sectors];
-            position = legend_position
+    map!(tp.attributes, [:spectrum_data, :thetaorigin], :positions) do data, thetaorigin
+        points = Point2d[]
+        for (_, spectrum) in data, λ in spectrum
+            θ = mod2pi(angle(λ) + thetaorigin) - thetaorigin
+            push!(points, Point2d(θ, abs(λ)))
+        end
+        return points
+    end
+
+    map!(tp.attributes, [:spectrum_data], :colors) do data
+        colors = typeof(sector_color(1))[]
+        for (i, (_, spectrum)) in enumerate(data)
+            append!(colors, fill(sector_color(i), length(spectrum)))
+        end
+        return colors
+    end
+
+    map!(tp.attributes, [:thetaorigin], :axis_info) do thetaorigin
+        return (;
+            xlabel = L"\theta",
+            xlabelsize = 24,
+            xticks = pitick(0, 2pi, 4; mode = :latex),
+            xticklabelsize = 16,
+            ylabel = L"r",
+            ylabelsize = 24,
+            yticks = (range(0, 1.0; length = 6), latexstring.(range(0, 1.0; length = 6))),
+            yticklabelsize = 16,
+            xgridvisible = true,
+            ygridvisible = true,
+            leftspinevisible = true,
+            rightspinevisible = false,
+            bottomspinevisible = true,
+            topspinevisible = false,
+            limits = ((thetaorigin - 0.1, thetaorigin + 2π + 0.1), (nothing, 1.05)),
         )
     end
+
+    map!(tp.attributes, [:spectrum_data, :sector_formatter], :legend_entries) do data, sector_formatter
+        return [(sector_formatter(sector), sector_color(i)) for (i, (sector, _)) in enumerate(data)]
+    end
+
+    scatter!(tp, tp.positions; color = tp.colors, markersize = tp.markersize, marker = tp.marker)
     return tp
+end
+
+function add_sector_legend!(ax, plot, legend_position)
+    ax isa Makie.AbstractAxis || return nothing
+    entries = plot.attributes[:legend_entries][]
+    isempty(entries) && return nothing
+    elements = [MarkerElement(; color, marker = :circle, markersize = 12) for (_, color) in entries]
+    # cannot use current_figure() when supporting in-place method
+    axislegend(ax, elements, [label for (label, _) in entries]; position = legend_position)
+    return nothing
 end
 
 function MPSKit.transferplot(above, below = above; plotkwargs = (;), kwargs...)
     p = transferplot(above, below; kwargs...)
-    apply_plotkwargs!(p.axis, plotkwargs)
+    apply_axis_info!(p.axis, p.plot, plotkwargs)
+    add_sector_legend!(p.axis, p.plot, p.plot.legend_position[])
     return p
 end
 
@@ -207,17 +242,18 @@ function MPSKit.transferplot!(
         plotkwargs = (;), kwargs...
     )
     p = transferplot!(above, below; kwargs...)
-    apply_plotkwargs!(Makie.current_axis(), plotkwargs)
+    ax = Makie.current_axis()
+    apply_axis_info!(ax, p, plotkwargs)
+    add_sector_legend!(ax, p, p.legend_position[])
     return p
 end
 function MPSKit.transferplot!(
         target, above::MPSKit.AbstractMPS, below::MPSKit.AbstractMPS = above;
         plotkwargs = (;), kwargs...
     )
-    p = with_current_axis(target) do
-        transferplot!(target, above, below; kwargs...)
-    end
-    apply_plotkwargs!(target, plotkwargs)
+    p = transferplot!(target, above, below; kwargs...)
+    apply_axis_info!(target, p, plotkwargs)
+    add_sector_legend!(target, p, p.legend_position[])
     return p
 end
 

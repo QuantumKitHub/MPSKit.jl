@@ -43,8 +43,8 @@ using CairoMakie
     fig2 = Figure()
     target = Axis(fig2[1, 1])
     current = Axis(fig2[1, 2]) # created last, so this is the current axis
-    entanglementplot!(target, ψ)
-    @test target.title[] != ""
+    entanglementplot!(target, ψ; plotkwargs = (; title = "custom"))
+    @test target.title[] == "custom"
     @test current.title[] == ""
 end
 

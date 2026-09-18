@@ -109,7 +109,6 @@ MPSKit.entanglementplot!(args...; plotkwargs = (;), kwargs...) = entanglementplo
         end
     end
 
-    title --> "Transfer Spectrum"
     legend --> false
     grid --> :xy
     framestyle --> :zerolines
