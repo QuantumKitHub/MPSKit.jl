@@ -133,10 +133,7 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
 
         alg_gauge = adapt_solver(alg.alg_gauge; iter = it.state.iter, g_global = it.state.ϵ)
         ψ′ = InfiniteMPS(it.state.mps.AR; alg_gauge.tol, alg_gauge.maxiter)
-        envs = recalculate!(
-            it.state.envs, ψ′, it.state.operator, ψ′;
-            alg.backend
-        )
+        envs = recalculate!(it.state.envs, ψ′, it.state.operator, ψ′; alg.backend)
         return ψ′, envs, it.state.ϵ
     end
 end

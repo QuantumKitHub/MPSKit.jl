@@ -178,8 +178,8 @@ function gauge_step!(
         scheduler = Defaults.scheduler[]
     )
     alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
-    # the gauge sweep is serial, but the allocator is determined by the configured scheduler
-    allocator = default_allocator(state.mps, scheduler)
+    # the gauge sweep is serial, so safe to use non-threadsafe allocator
+    allocator = default_allocator(state.mps, SerialScheduler())
     mps = gaugefix!(
         state.mps, ACs, state.mps.C[end];
         order = :R, timeroutput = state.timeroutput, it.backend, allocator, alg_gauge...,
