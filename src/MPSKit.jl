@@ -35,6 +35,7 @@ export VUMPS, VOMPS, DMRG, DMRG2, IDMRG, IDMRG2, GradientGrassmann
 export excitations
 export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo
+export AlgorithmInfo, convergence_measure
 export TDVP, TDVP2, BUG, WI, WII, TaylorCluster
 export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
@@ -104,6 +105,7 @@ include("utility/allocator.jl")
 include("utility/logging.jl")
 using .IterativeLoggers
 include("utility/iterativesolvers.jl")
+include("utility/algorithminfo.jl")
 
 include("utility/styles.jl")
 include("utility/periodicarray.jl")

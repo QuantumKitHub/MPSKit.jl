@@ -122,7 +122,7 @@ can reach higher system sizes.
 L_mps = 20
 H_mps = periodic_boundary_conditions(transverse_field_ising(), L_mps)
 D = 64
-ψ, envs, δ = find_groundstate(FiniteMPS(L_mps, ℂ^2, ℂ^D), H_mps, DMRG());
+ψ, envs, info = find_groundstate(FiniteMPS(L_mps, ℂ^2, ℂ^D), H_mps, DMRG());
 
 md"""
 Excitations on top of the ground state can be found through the use of the quasiparticle

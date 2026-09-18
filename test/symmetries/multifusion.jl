@@ -77,16 +77,16 @@ module TestMultifusion
         V = Vect[I](M => 8)
         init = FiniteMPS(L, PD, V; left = Vect[I](M => 1), right = Vect[I](M => 1))
         v₀ = variance(init, H)
-        ψ, envs, δ = find_groundstate(init, H, DMRG())
+        ψ, envs, info = find_groundstate(init, H, DMRG())
         v = variance(ψ, H)
         E = expectation_value(ψ, H, envs)
 
-        ψ2, envs2, δ2 = find_groundstate(init, H, DMRG2(; trunc = trunctol(; atol = 1.0e-6)))
+        ψ2, envs2, info2 = find_groundstate(init, H, DMRG2(; trunc = trunctol(; atol = 1.0e-6)))
         v2 = variance(ψ2, H)
         E2 = expectation_value(ψ2, H, envs2)
 
-        @test δ ≈ 0 atol = 1.0e-3
-        @test δ2 ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info) ≈ 0 atol = 1.0e-3
+        @test convergence_measure(info2) ≈ 0 atol = 1.0e-3
         @test v < v₀ && v2 < v₀
 
         @test isapprox(E, E2; atol = 1.0e-6)
@@ -109,21 +109,21 @@ module TestMultifusion
         init = InfiniteMPS([PD, PD], [V, V])
         v₀ = variance(init, H)
         tol = 1.0e-10
-        ψ, envs, δ = find_groundstate(init, H, IDMRG(; tol = tol, maxiter = 400))
+        ψ, envs, info = find_groundstate(init, H, IDMRG(; tol = tol, maxiter = 400))
         E = expectation_value(ψ, H, envs)
         v = variance(ψ, H)
 
-        ψ2, envs2, δ2 = find_groundstate(init, H, IDMRG2(; tol = tol, trunc = trunctol(; atol = 1.0e-6), maxiter = 400))
+        ψ2, envs2, info2 = find_groundstate(init, H, IDMRG2(; tol = tol, trunc = trunctol(; atol = 1.0e-6), maxiter = 400))
         E2 = expectation_value(ψ2, H, envs2)
         v2 = variance(ψ2, H)
 
-        ψ3, envs3, δ3 = find_groundstate(init, H, VUMPS(; tol = tol, maxiter = 400))
+        ψ3, envs3, info3 = find_groundstate(init, H, VUMPS(; tol = tol, maxiter = 400))
         E3 = expectation_value(ψ3, H, envs3)
         v3 = variance(ψ3, H)
 
         @test isapprox(E, E2; atol = 1.0e-6)
         @test isapprox(E, E3; atol = 1.0e-6)
-        for delta in [δ, δ2, δ3]
+        for delta in [convergence_measure(info), convergence_measure(info2), convergence_measure(info3)]
             @test delta ≈ 0 atol = 1.0e-3
         end
         for var in [v, v2, v3]

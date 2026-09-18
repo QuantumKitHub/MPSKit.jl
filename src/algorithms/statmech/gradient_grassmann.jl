@@ -19,5 +19,11 @@ function leading_boundary(
         alg.finalize!,
         isometrictransport = true
     )
-    return x, envs, normgradhistory[end]
+
+    normres = normgradhistory[end, 2] # full history returned as [fhistory normgradhistory]
+    info = AlgorithmInfo(;
+        converged = normres <= alg.method.gradtol, gradientnorm = normres,
+        numiter = size(normgradhistory, 1) - 1 # history starts with initial point before first iteration
+    )
+    return x, envs, info
 end

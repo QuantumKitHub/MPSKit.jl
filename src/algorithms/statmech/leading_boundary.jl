@@ -1,6 +1,6 @@
 @doc """
-    leading_boundary(ψ₀, O, [environments]; kwargs...) -> (ψ, environments, ϵ)
-    leading_boundary(ψ₀, O, algorithm, environments) -> (ψ, environments, ϵ)
+    leading_boundary(ψ₀, O, [environments]; kwargs...) -> (ψ, environments, info)
+    leading_boundary(ψ₀, O, algorithm, environments) -> (ψ, environments, info)
 
 Compute the leading boundary MPS for operator `O` with initial guess `ψ`. If not specified, an
 optimization algorithm will be attempted based on the supplied keywords.
@@ -14,7 +14,8 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 # Keyword Arguments
 
-- `tol::Float64`: tolerance for convergence criterium
+- `tol::Float64`: convergence tolerance, compared against the convergence entry of the returned
+    `info` (see Returns below). Which quantity that is depends on the algorithm
 - `maxiter::Int`: maximum amount of iterations
 - `verbosity::Int`: display progress information
 
@@ -22,7 +23,20 @@ optimization algorithm will be attempted based on the supplied keywords.
 
 - `ψ::AbstractMPS`: converged leading boundary MPS
 - `environments`: environments corresponding to the converged boundary
-- `ϵ::Float64`: final convergence error upon terminating the algorithm
+- `info::AlgorithmInfo`: how the algorithm terminated; `info.converged` says whether it got there.
+    The quantity compared against `tol` is stored under a key naming which measure it is, and is
+    never a truncation error:
+    - [`VUMPS`](@ref) and [`VOMPS`](@ref) report `galerkin`, the maximum over sites of the
+      local update projected onto the orthogonal complement of the current tensor.
+    - [`GradientGrassmann`](@ref) reports `gradientnorm` from its optimiser.
+    - [`IDMRG`](@ref) and [`IDMRG2`](@ref) report `bondresidual`, the change in the center bond
+      tensor over a sweep. For `Multiline` methods this is extensive in the number of rows.
+
+    [`convergence_measure`](@ref) returns whichever is present, for code that only wants the
+    number.
+
+    See [`AlgorithmInfo`](@ref), [`find_groundstate`](@ref), and the manual on the `ϵ` convention
+    under [The error convention](@ref) and [Ground state accuracy](@ref).
 """ leading_boundary
 
 # TODO: alg selector

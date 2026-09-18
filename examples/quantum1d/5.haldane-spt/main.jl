@@ -80,7 +80,7 @@ non-injective MPS.
 ℋ = SU2Space(1 => 1)
 V_wrong = SU2Space(0 => 8, 1 // 2 => 8, 1 => 3, 3 // 2 => 3)
 ψ = InfiniteMPS(ℋ, V_wrong)
-ψ, environments, δ = find_groundstate(ψ, H, VUMPS(; maxiter = 10))
+ψ, environments, info = find_groundstate(ψ, H, VUMPS(; maxiter = 10))
 sectors = SU2Irrep[0, 1 // 2, 1, 3 // 2]
 transferplot(ψ; sectors, title = "Transfer matrix spectrum", legend = :outertop)
 
