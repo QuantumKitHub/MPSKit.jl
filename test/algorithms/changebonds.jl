@@ -11,9 +11,12 @@ using TensorKit
 using TensorKit: ℙ
 using Random
 
-spacelist = [(ℙ^4, ℙ^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))]
+spacelist = if fast_tests
+    [(ℙ^4, ℙ^3)]
+else
+    [(ℙ^4, ℙ^3), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1))]
+end
 maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 2:length(ψ))
-
 
 @testset "MPO $(spacetype(pspace))" for (pspace, Dspace) in spacelist
     nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
@@ -129,10 +132,16 @@ end
 # bond-change algorithms (`RandExpand` expansion, `SvdCut` truncation) must handle the extra
 # physical leg. Operator-based expanders (`OptimalExpand`/`SketchedExpand`) make use of a
 # one-sided MPO application on the first physical leg.
-@testset "Density-matrix FiniteMPS $(spacetype(pcomp))" for (pcomp, Dspace) in [
+density_matrix_spacelist = if fast_tests
+    [(ℙ^2 ⊗ (ℙ^2)', ℙ^6)]
+else
+    [
         (ℙ^2 ⊗ (ℙ^2)', ℙ^6),
         (Rep[SU₂](1 // 2 => 1) ⊗ Rep[SU₂](1 // 2 => 1)', Rep[SU₂](0 => 4, 1 => 3)),
     ]
+end
+
+@testset "Density-matrix FiniteMPS $(spacetype(pcomp))" for (pcomp, Dspace) in density_matrix_spacelist
     Random.seed!(2468)
     L = 8
 
@@ -192,4 +201,72 @@ end
     state_tr = changebonds(state_oe, SvdCut(; trunc = truncrank(dim(Dspace))))
 
     @test dim(left_virtualspace(state_tr, 1, 1)) < dim(left_virtualspace(state_oe, 1, 1))
+end
+
+# Regression: the `FiniteMPO` `SvdCut` sweep used to absorb `S * Vᴴ` into the next site without
+# renormalizing, so the carried gauge tensor grew by `sqrt(dim(P))` per site. Once its singular
+# values passed `sqrt(floatmax)`, `TensorKit`'s block-wise norm overflowed and a relative `trunc`
+# discarded *every* singular value, silently returning a zero operator.
+@testset "SvdCut scale overflow (long FiniteMPO)" begin
+    Random.seed!(1234)
+    pspace = ℙ^16
+    L = 300    # (sqrt(dim(P)))^L must exceed sqrt(floatmax) to trigger the old overflow
+    h = rand(ComplexF64, pspace, pspace)
+    h += h'
+    nn = h ⊗ h    # keep the term low-rank so that the dense MPO stays small at this length
+    H = FiniteMPOHamiltonian(fill(pspace, L), (i, i + 1) => nn for i in 1:(L - 1))
+
+    O = MPSKit.DenseMPO(H)
+    O′ = changebonds(O, SvdCut(; trunc = trunctol(; rtol = 1.0e-12)))
+
+    @test all(i -> dim(left_virtualspace(O′, i)) > 0, 1:L)
+    @test maxbond(O′) == maxbond(O)
+
+    ψ = FiniteMPS(rand, ComplexF64, L, pspace, ℙ^4)
+    @test expectation_value(ψ, O′) ≈ expectation_value(ψ, O) rtol = 1.0e-12
+end
+
+# Regression: `changebonds(::FiniteMPOHamiltonian, ::SvdCut)` threw a `BoundsError` for any
+# Hamiltonian with long-range terms — a star geometry leaves entirely zero rows/columns in the
+# Jordan `B`/`C` blocks, and adding such a `SparseBlockTensorMap` into a dense `BlockTensorMap`
+# tripped over the structurally absent entries.
+@testset "SvdCut on long-range FiniteMPOHamiltonian" begin
+    Random.seed!(4321)
+    pspace = ℙ^2
+    L = 8
+    nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
+    nn += nn'
+    # every site couples to a single centre site, so all channels are proportional and compressible
+    centre = L ÷ 2
+    H = FiniteMPOHamiltonian(
+        fill(pspace, L), (min(i, centre), max(i, centre)) => nn for i in 1:L if i != centre
+    )
+
+    H′ = changebonds(H, SvdCut(; trunc = trunctol(; rtol = 1.0e-12)))
+    @test maxbond(H′) < maxbond(H)
+
+    ψ = FiniteMPS(rand, ComplexF64, L, pspace, ℙ^4)
+    @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
+end
+
+# Regression: RandExpand used to be able to introduce a NaN entanglement entropy.
+@testset "RandExpand does not introduce NaN entropy" begin
+    ψ = InfiniteMPS([ℂ^2], [ℂ^5])
+    ψ = changebonds(ψ, RandExpand(; trunc = truncrank(2)))
+    @test !isnan(sum(entropy(ψ)))
+    @test !isnan(sum(entropy(ψ, 2)))
+end
+
+# Regression: changebonds on an InfiniteMPS with a >1 unit cell and per-site distinct bond
+# dimensions used to error.
+@testset "changebonds with non-uniform unit cells" begin
+    ψ = InfiniteMPS([ℂ^2, ℂ^2, ℂ^2], [ℂ^2, ℂ^3, ℂ^4])
+    H = repeat(transverse_field_ising(), 3)
+    ψ1, envs = changebonds(ψ, H, OptimalExpand(; trunc = truncrank(2)))
+    @test ψ1 isa InfiniteMPS
+    @test norm(ψ1) ≈ 1
+
+    ψ2 = changebonds(ψ, RandExpand(; trunc = truncrank(2)))
+    @test ψ2 isa InfiniteMPS
+    @test norm(ψ2) ≈ 1
 end

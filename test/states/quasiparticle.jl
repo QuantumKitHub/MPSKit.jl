@@ -11,13 +11,27 @@ using MPSKit: GeometryStyle, FiniteChainStyle, InfiniteChainStyle
 using TensorKit
 using TensorKit: ℙ
 
+quasiparticle_finite_cases = [
+    (force_planar(transverse_field_ising(; L = 10)), ℙ^10, ℙ^2),
+    (
+        heisenberg_XXX(ComplexF64, SU2Irrep; spin = 1, L = 10), Rep[SU₂](1 => 1, 0 => 3),
+        Rep[SU₂](1 => 1),
+    ),
+]
+fast_tests && (quasiparticle_finite_cases = quasiparticle_finite_cases[1:1])
+
+quasiparticle_infinite_cases = [
+    (force_planar(transverse_field_ising()), ℙ^10, ℙ^2),
+    (
+        heisenberg_XXX(ComplexF64, SU2Irrep; spin = 1), Rep[SU₂](1 => 3, 0 => 2),
+        Rep[SU₂](1 => 1),
+    ),
+]
+fast_tests && (quasiparticle_infinite_cases = quasiparticle_infinite_cases[1:1])
+
 @testset "Quasiparticle state" verbose = true begin
     L = 10
-    @testset "Finite" verbose = true for (H, D, d) in
-        [
-            (force_planar(transverse_field_ising(; L)), ℙ^10, ℙ^2),
-            (heisenberg_XXX(ComplexF64, SU2Irrep; spin = 1, L), Rep[SU₂](1 => 1, 0 => 3), Rep[SU₂](1 => 1)),
-        ]
+    @testset "Finite" verbose = true for (H, D, d) in quasiparticle_finite_cases
         ψ = FiniteMPS(rand, ComplexF64, L, d, D)
         normalize!(ψ)
 
@@ -53,14 +67,7 @@ using TensorKit: ℙ
         @test ev_f ≈ ev_q atol = 1.0e-5
     end
 
-    @testset "Infinite" for (th, D, d) in
-        [
-            (force_planar(transverse_field_ising()), ℙ^10, ℙ^2),
-            (
-                heisenberg_XXX(ComplexF64, SU2Irrep; spin = 1), Rep[SU₂](1 => 3, 0 => 2),
-                Rep[SU₂](1 => 1),
-            ),
-        ]
+    @testset "Infinite" for (th, D, d) in quasiparticle_infinite_cases
         period = rand(1:4)
         ψ = InfiniteMPS(fill(d, period), fill(D, period))
 

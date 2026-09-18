@@ -47,6 +47,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- `FiniteMPOHamiltonian`/`InfiniteMPOHamiltonian` constructed from a set of local terms now share
+  virtual channels between terms that start out with the same operators, up to a scalar factor,
+  and add up terms that are linearly dependent. The resulting Hamiltonian is unchanged, but its
+  bond dimension is generally smaller ([#518](https://github.com/QuantumKitHub/MPSKit.jl/pull/518))
 - Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
   `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
   norm is preserved, so it retains useful information (the accumulated truncation error in real time,
@@ -87,6 +91,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `changebonds(::FiniteMPO, ::SvdCut)` truncated long chains down to a zero operator. It now gauges
+  in a separate sweep, spreads the operator norm evenly over the sites, and truncates against the
+  per-bond reference scale `‖O‖^(2/length(mpo))`.
+- `changebonds(::FiniteMPOHamiltonian, ::SvdCut)` threw a `BoundsError` for Hamiltonians with
+  long-range terms.
+- `SvdCut` now warns when a truncation empties a bond, instead of silently returning a zero operator.
 - `isfinite(::WindowMPOHamiltonian)` was undefined. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
@@ -112,6 +122,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   ([#514](https://github.com/QuantumKitHub/MPSKit.jl/pull/514))
 
 ### Performance
+
+- Reorganised the test suite to reduce CI wall time, as well as added the `--fast` test flag
+  to test fewer sector and scalar types. ([#517](https://github.com/QuantumKitHub/MPSKit.jl/pull/517))
 
 ## [0.13.11](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.10...v0.13.11) - 2026-05-04
 
