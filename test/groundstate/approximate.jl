@@ -14,11 +14,11 @@ using Random
 verbosity_conv = 1
 
 # fixtures for the `Zipup` testsets
-zipup_spacelist = [
-    (ℙ^4, ℙ^3, 4),
-    (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1), 8),
-]
-fast_tests && (zipup_spacelist = zipup_spacelist[1:1])
+zipup_spacelist = if fast_tests
+    [(ℙ^4, ℙ^3, 4)]
+else
+    [(ℙ^4, ℙ^3, 4), (Rep[SU₂](1 => 1), Rep[SU₂](0 => 2, 1 => 2, 2 => 1), 8)]
+end
 
 function _random_mpo_mps(pspace, Dspace, L; elt = ComplexF64)
     Random.seed!(1357)
