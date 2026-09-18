@@ -11,6 +11,25 @@ using Documenter
 using DocumenterVitepress
 using DocumenterCitations
 using DocumenterInterLinks
+using SHA: sha256
+
+# `src/.vitepress/config.mts` is vendored from the DocumenterVitepress template (see the
+# header comment there) so that we can hook `themeConfig.search` and `markdown.config`,
+# which `MarkdownVitepress` does not expose. Warn when upstream changes the template, so
+# that our copy can be re-synced — or dropped, once the fixes land upstream.
+let template = joinpath(pkgdir(DocumenterVitepress), "template", "src", ".vitepress", "config.mts")
+    # Templates the vendored copy is known to be a faithful superset of; v0.3.4 and v0.3.5
+    # differ only by the (inert for us) NOINDEX marker.
+    vendored_from = (
+        "ca5a958eb398b3219557633f017467cfa07f4882dc2dfe55b12d1f6c0e70d729", # v0.3.4
+        "56289223983a3844417eae597f81da878f395792a529721e7873178c92d60721", # v0.3.5
+    )
+    actual = bytes2hex(sha256(read(template)))
+    actual in vendored_from || @warn """
+    DocumenterVitepress' `config.mts` template has changed since `docs/src/.vitepress/config.mts` \
+    was vendored from it. Re-sync the vendored copy (keeping the `MPSKit:` additions), or delete \
+    it if upstream now ships them.""" template actual
+end
 
 # examples
 example_dir = joinpath(@__DIR__, "src", "examples")
