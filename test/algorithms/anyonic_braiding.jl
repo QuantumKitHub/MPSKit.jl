@@ -43,10 +43,7 @@ end
     ρ = make_time_mpo(H, 0.1, TaylorCluster(; N = 2); imaginary_evolution = true)
     ref = dot(ρ, H_dense * ρ) / norm(ρ)^2
 
-    # expectation_value here attempts to braid ancilla leg with mpo virtual leg,
-    # which is a sumspace/plain pair and thus fails
-    @test_broken expectation_value(ρ, H) ≈ ref
-
+    @test expectation_value(ρ, H) ≈ ref
     @test expectation_value(ρ, H_dense) ≈ ref
 
     # these require the densification in _mpo_to_mps (mpo.jl#90)
@@ -93,11 +90,15 @@ end
     @test tdvp2_fid ≈ 1 atol = 1.0e-6 # fidelity was previously high, but not ≈ 1
 end
 
-const braid_spaces = (
-    ℂ^2, # bosonic
-    Vect[FermionParity](0 => 1, 1 => 1), # fermionic
-    Vect[FibonacciAnyon](:I => 1, :τ => 1), # anyonic
-)
+braid_spaces = if fast_tests
+    (Vect[FibonacciAnyon](:I => 1, :τ => 1),)
+else
+    (
+        ℂ^2, # bosonic
+        Vect[FermionParity](0 => 1, 1 => 1), # fermionic
+        Vect[FibonacciAnyon](:I => 1, :τ => 1), # anyonic
+    )
+end
 
 # build L-site operator that's the identity everywhere except at site i
 # where it's op with physical space V
