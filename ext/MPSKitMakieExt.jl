@@ -40,7 +40,6 @@ end
 end
 
 function Makie.plot!(ep::EntanglementPlot)
-    #TODO: still want this style where sectors are separated?
     mps = ep.mps[]
     site = ep.site[]
     margin = ep.sector_margin[]
@@ -54,11 +53,16 @@ function Makie.plot!(ep::EntanglementPlot)
         if ep.expand_symmetry[]
             b′ = repeat(b, dim(c))
             sort!(b′; rev = true)
-            push!(spectrum, b′)
         else
-            push!(spectrum, b)
+            b′ = collect(b)
         end
+        push!(spectrum, b′)
         push!(sectors, c)
+    end
+
+    if any(v -> any(<=(0), v), spectrum)
+        @warn "Entanglement spectrum contains vanishing Schmidt values. These are omitted from the plot."
+        foreach(v -> filter!(>(0), v), spectrum)
     end
 
     # Sort sectors according to provided method
@@ -71,10 +75,7 @@ function Makie.plot!(ep::EntanglementPlot)
     ax = Makie.current_axis()
 
     # Axis styling
-    ax.title = L"\text{Entanglement Spectrum}"
-    ax.titlesize = 24
 
-    ax.xlabel = latexstring("\$\\chi\$ = $(dim(MPSKit._firstspace(mps.C[site])))") # still want this?
     ax.xlabelsize = 24
     ax.xticks = (1:length(sectors), ep.sector_formatter[].(sectors))
     ax.xticklabelsize = 16
@@ -84,7 +85,7 @@ function Makie.plot!(ep::EntanglementPlot)
 
     ax.ylabel = L"\log(\lambda)"
     ax.ylabelsize = 24
-    smallest = minimum(Iterators.filter(>(0), Iterators.flatten(spectrum)); init = 1.0) # safety net
+    smallest = minimum(Iterators.flatten(spectrum); init = 1.0) # spectrum is already > 0
     bottom = floor(Int, log10(smallest))
     ax.yticks = (bottom:2:0, latexstring.(collect(bottom:2:0)))
     ax.yticklabelsize = 16

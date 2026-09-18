@@ -18,11 +18,16 @@ using MPSKit, TensorKit
         if expand_symmetry # Duplicate entries according to the quantum dimension.
             b′ = repeat(b, dim(c))
             sort!(b′; rev = true)
-            push!(spectrum, b′)
         else
-            push!(spectrum, b)
+            b′ = collect(b)
         end
+        push!(spectrum, b′)
         push!(sectors, c)
+    end
+
+    if any(v -> any(<=(0), v), spectrum)
+        @warn "Entanglement spectrum contains vanishing Schmidt values. These are omitted from the plot."
+        foreach(v -> filter!(>(0), v), spectrum)
     end
 
     if length(spectrum) > 1
@@ -31,22 +36,23 @@ using MPSKit, TensorKit
         sectors = sectors[order]
     end
 
+    smallest = minimum(Iterators.flatten(spectrum); init = 1.0) # spectrum is already > 0
+    bottom = floor(Int, log10(smallest))
+
     for (i, (partial_spectrum, sector)) in enumerate(zip(spectrum, sectors))
         @series begin
-            title --> "Entanglement Spectrum"
             legend --> false
             grid --> :xy
             widen --> true
             bottom_margin --> (10, :mm)
 
-            xguide --> "χ = $(dim(MPSKit._firstspace(mps.C[site])))"
             xticks --> (1:length(sectors), sector_formatter.(sectors))
             xtickfonthalign --> :center
             xtick_direction --> :out
             xrotation --> 45
             xlims --> (1, length(sectors) + 1)
 
-            ylims --> (-Inf, 1 + 1.0e-1)
+            ylims --> (exp10(bottom), 1 + 1.0e-1)
             yscale --> :log10
             seriestype := :scatter
             label := sector_formatter(sector)
