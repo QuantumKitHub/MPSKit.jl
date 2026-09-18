@@ -24,6 +24,8 @@ export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_mo
 export classical_ising_tensors, classical_ising, sixvertex
 export bad_initial_state
 export SCHEDULERS, with_scheduler
+export PSPACES_TRIPLE, VSPACES_TRIPLE
+export MPS_TEST_SPACES
 
 # using TensorOperations
 
@@ -44,6 +46,18 @@ function with_scheduler(f, scheduler)
         MPSKit.Defaults.scheduler[] = old
     end
 end
+
+# Representative sector-type triple (no symmetry / abelian / non-abelian) shared by tests
+# that sweep over sector types, so the (large) generic testset body they wrap is only
+# compiled once per sectortype across the whole suite instead of once per call site.
+const PSPACES_TRIPLE = (ℙ^4, Rep[U₁](0 => 2), Rep[SU₂](1 => 1))
+const VSPACES_TRIPLE = (ℙ^10, Rep[U₁]((0 => 20)), Rep[SU₂](1 // 2 => 10, 3 // 2 => 5, 5 // 2 => 1))
+
+# (virtual space, physical space, scalar type) pairs shared by the MPS-state tests.
+const MPS_TEST_SPACES = (
+    (ℙ^10, ℙ^2, ComplexF64),
+    (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF64),
+)
 
 force_planar(x::Number) = x
 

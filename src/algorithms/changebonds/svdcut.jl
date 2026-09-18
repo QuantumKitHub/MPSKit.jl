@@ -4,11 +4,14 @@ $(TYPEDEF)
 An algorithm that uses truncated SVD to change the bond dimension of a state or operator.
 This is achieved by a sweeping algorithm that locally performs (optimal) truncations in a gauged basis.
 
-changedbonds! is only defined for FiniteMPS and FiniteMPO.
-
 # Fields
 
 $(TYPEDFIELDS)
+
+# Truncation scale
+
+For an `MPO` the norm is gauged out and spread evenly over the sites, so every truncated bond sees the same reference scale `‖O‖^(2/length(mpo))`.
+An `MPOHamiltonian` is instead truncated in the Jordan basis with the identity level projected out, where the singular values carry the scale of the interactions crossing that bond.
 
 # See also
 
@@ -46,43 +49,63 @@ function changebonds!(ψ::AbstractFiniteMPS, H, alg::SvdCut, envs)
     return ψ, envs
 end
 
-# Note: it might be better to go to an MPS representation first
-# such that the SVD cut happens in a canonical form;
-# this would still not be the correct norm, so we will ignore this for now.
-# this implementation cuts the bond dimension in a non-canonical basis from left to right,
-# but then the basis would be somewhat canonical automatically, so in the reverse direction
-# we can cut the bond dimension in a canonical basis?
 changebonds(mpo::FiniteMPO, alg::SvdCut) = changebonds!(copy(mpo), alg)
 function changebonds!(mpo::FiniteMPO, alg::SvdCut)
-    # cannot cut a MPO with only one site
-    length(mpo) == 1 && return mpo
+    N = length(mpo)
+    N == 1 && return mpo
 
-    # left to right
-    O_left = transpose(mpo[1], ((3, 1, 2), (4,)))
-    local O_right
-    for i in 2:length(mpo)
-        U, S, Vᴴ = svd_trunc!(O_left; trunc = alg.trunc, alg = alg.alg_svd)
-        @inbounds mpo[i - 1] = transpose(U, ((2, 3), (1, 4)))
-        if i < length(mpo)
-            @plansor O_left[-3 -1 -2; -4] := S[-1; 1] * Vᴴ[1; 2] * mpo[i][2 -2; -3 -4]
+    # gauge left to right, keeping the total norm out of band
+    logS = zero(float(real(scalartype(mpo))))
+    local carry
+    for i in 1:(N - 1)
+        if i == 1
+            A = transpose(mpo[1], ((3, 1, 2), (4,)))
         else
-            @plansor O_right[-1; -3 -4 -2] := S[-1; 1] * Vᴴ[1; 2] * mpo[end][2 -2; -3 -4]
+            @plansor A[-3 -1 -2; -4] := carry[-1; 1] * mpo[i][1 -2; -3 -4]
         end
+        Q, carry = left_orth!(A)
+        logS += _extract_norm!(carry)
+        @inbounds mpo[i] = transpose(Q, ((2, 3), (1, 4)))
+    end
+    @plansor A[-1 -2; -3 -4] := carry[-1; 1] * mpo[N][1 -2; -3 -4]
+    logS += _extract_norm!(A)
+    @inbounds mpo[N] = A
+
+    # spread it evenly, so that every bond of the truncation sweep sees the same scale
+    f = exp(logS / N)
+    for i in 1:N
+        @inbounds scale!(mpo[i], f)
     end
 
-    # right to left
-    for i in (length(mpo) - 1):-1:1
-        U, S, Vᴴ = svd_trunc!(O_right; trunc = alg.trunc, alg = alg.alg_svd)
-        @inbounds mpo[i + 1] = transpose(Vᴴ, ((1, 4), (2, 3)))
+    # truncate right to left, splitting the carry norm evenly across each bond
+    O = transpose(mpo[N], ((1,), (3, 4, 2)))
+    for i in (N - 1):-1:1
+        U, S, Vᴴ = svd_trunc!(O; trunc = alg.trunc, alg = alg.alg_svd)
+        _warn_empty_bond(i, space(S, 1))
+        n = sqrt(norm(S))
+        iszero(n) && (n = one(n))
+        @inbounds mpo[i + 1] = transpose(scale!(Vᴴ, n), ((1, 4), (2, 3)))
         if i > 1
-            @plansor O_right[-1; -3 -4 -2] := mpo[i][-1 -2; -3 2] * U[2; 1] * S[1; -4]
+            @plansor O[-1; -3 -4 -2] := mpo[i][-1 -2; -3 2] * U[2; 1] * S[1; -4] / n
         else
-            @plansor _O[-1 -2; -3 -4] := mpo[1][-1 -2; -3 2] * U[2; 1] * S[1; -4]
-            @inbounds mpo[1] = _O
+            @plansor mpo[1][-1 -2; -3 -4] := mpo[1][-1 -2; -3 2] * U[2; 1] * S[1; -4] / n
         end
     end
 
     return mpo
+end
+
+# scale `t` to unit norm, returning the log of the factor that was divided out
+function _extract_norm!(t)
+    n = norm(t)
+    (iszero(n) || !isfinite(n)) && return zero(float(real(typeof(n))))
+    scale!(t, inv(n))
+    return log(n)
+end
+
+function _warn_empty_bond(bond::Int, V)
+    dim(V) == 0 && @warn "`SvdCut` truncated the bond between sites $bond and $(bond + 1) down to zero dimensions; the resulting operator is identically zero. Loosen `trunc` or check the scale of the input operator."
+    return nothing
 end
 
 # TODO: this assumes the MPO is infinite, and does weird things for finite MPOs.
@@ -130,6 +153,9 @@ function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
         H = right_canonicalize!(H, i)
     end
 
+    # a Jordan bond has a start and a finish level on top of its interaction channels
+    channels_before = [dim(left_virtualspace(H, i)) - 2 for i in 2:length(H)]
+
     # swipe right
     alg_trunc = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trunc)
     for i in 1:(length(H) - 1)
@@ -139,6 +165,12 @@ function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
     for i in length(H):-1:2
         H = right_canonicalize!(H, i; alg = MatrixAlgebraKit.RightOrthViaSVD(alg_trunc))
     end
+
+    emptied = findall(
+        i -> channels_before[i] > 0 && dim(left_virtualspace(H, i + 1)) - 2 == 0,
+        eachindex(channels_before)
+    )
+    isempty(emptied) || @warn "`SvdCut` discarded every interaction crossing bond(s) $(emptied .+ 1); those terms are gone from the compressed operator. Loosen `trunc` or check the scale of the input Hamiltonian."
 
     return H
 end

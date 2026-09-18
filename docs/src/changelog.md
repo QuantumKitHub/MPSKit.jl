@@ -41,6 +41,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- `FiniteMPOHamiltonian`/`InfiniteMPOHamiltonian` constructed from a set of local terms now share
+  virtual channels between terms that start out with the same operators, up to a scalar factor,
+  and add up terms that are linearly dependent. The resulting Hamiltonian is unchanged, but its
+  bond dimension is generally smaller ([#518](https://github.com/QuantumKitHub/MPSKit.jl/pull/518))
 - The following algorithms now return an `AlgorithmInfo` in place of a bare error or nothing: `find_groundstate`,
   `find_groundstate!`, `leading_boundary`, `approximate` and `approximate!` return
   `(ψ, envs, info)` instead of `(ψ, envs, ϵ)`, `Zipup` returns `(ψ, info)`, and
@@ -54,7 +58,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   [Errors and accuracy](@ref) section covering ground states, time evolution and excitations
   separately. Each is written as what the quantity is in principle, what MPSKit actually computes,
   and why the two differ where they do. Aside from the time-evolution return value, the
-  quantities themselves are unchanged.([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+  quantities themselves are unchanged. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
   `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
   norm is preserved, so it retains useful information (the accumulated truncation error in real time,
@@ -95,6 +99,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `changebonds(::FiniteMPO, ::SvdCut)` truncated long chains down to a zero operator. It now gauges
+  in a separate sweep, spreads the operator norm evenly over the sites, and truncates against the
+  per-bond reference scale `‖O‖^(2/length(mpo))`.
+- `changebonds(::FiniteMPOHamiltonian, ::SvdCut)` threw a `BoundsError` for Hamiltonians with
+  long-range terms.
+- `SvdCut` now warns when a truncation empties a bond, instead of silently returning a zero operator.
 - `isfinite(::WindowMPOHamiltonian)` was undefined. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
@@ -121,15 +131,19 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Performance
 
+- Reorganised the test suite to reduce CI wall time, as well as added the `--fast` test flag
+  to test fewer sector and scalar types. ([#517](https://github.com/QuantumKitHub/MPSKit.jl/pull/517))
+
 - `TDVP2` now performs its two-site split through the shared `gauge2!` (as two-site DMRG already
   did), which removes two sources of waste per local update:
   - its right-to-left sweep installed the two sites in the left-to-right order, which made the
     lazy orthogonality-view cache re-derive `AR` at the bond from the pre-update tensor, only to
     overwrite it on the next install. `gauge2!` installs in sweep order, dropping that redundant
-    right-orthogonalisation per bond.
+    right-orthogonalisation per bond. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
   - it unconditionally complexified the bond tensor, so for a real-valued state (real Hamiltonian
     in imaginary time) every local update allocated a complex copy that the state's own storage
     then converted straight back to real. `gauge2!` only complexifies when the state is complex.
+    ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 
 ## [0.13.11](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.10...v0.13.11) - 2026-05-04
 

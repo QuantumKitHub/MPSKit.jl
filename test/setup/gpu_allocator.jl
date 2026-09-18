@@ -8,7 +8,7 @@
 # Only the allocator *selection* is tested here, on the real device storage type: a host allocator
 # would put the intermediates of a local update in host memory, and `BufferAllocator` in particular
 # fails late and buffer-state-dependently rather than at the first contraction. The dispatch logic
-# itself is covered on CPU in `test/misc/allocator.jl` (against a stand-in storage type), and there
+# itself is covered on CPU in `test/internals/allocator.jl` (against a stand-in storage type), and there
 # is deliberately no device run of the algorithms themselves: `default_allocator` returning
 # `DefaultAllocator` is what rules out a host allocator ever reaching them, and duplicating the CPU
 # algorithm tests here would only repeat coverage that already exists.

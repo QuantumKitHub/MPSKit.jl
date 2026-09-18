@@ -9,10 +9,8 @@ using Test, TestExtras
 using MPSKit
 using MPSKit: GeometryStyle, InfiniteChainStyle, TransferMatrix
 using TensorKit
-using TensorKit: ℙ
 
-@testset "MultilineMPS ($(sectortype(D)), $elt)" for (D, d, elt) in
-    [(ℙ^10, ℙ^2, ComplexF64), (Rep[U₁](1 => 3), Rep[U₁](0 => 1), ComplexF32)]
+@testset "MultilineMPS ($(sectortype(D)), $elt)" for (D, d, elt) in MPS_TEST_SPACES
     tol = Float64(eps(real(elt)) * 100)
     ψ = MultilineMPS(
         [

@@ -153,7 +153,7 @@ verbosity_conv = 1
         @test dim(left_virtualspace(ψ, L ÷ 2)) == D
     end
 
-    @testset "DMRG3S escapes local minimum (Hubig et al. 2015, Sec. VII A)" begin
+    fast_tests || @testset "DMRG3S escapes local minimum (Hubig et al. 2015, Sec. VII A)" begin
         L_heis = 20
         H_heis = heisenberg_XXX(ComplexF64, U1Irrep; spin = 1 // 2, L = L_heis)
 
@@ -277,6 +277,20 @@ end
         @test info.numtrunc > 0
         @test info.ϵ_max > 0
         @test info.ϵ_max <= info.ϵ_total <= sqrt(info.numtrunc) * info.ϵ_max
+    end
+
+    # Regression: IDMRG2 used to error on a non-abelian (SU2) unit cell due to a space mismatch.
+    @testset "IDMRG2 space mismatch (SU2)" begin
+        N = 6
+        H = repeat(bilinear_biquadratic_model(ComplexF64, SU2Irrep; θ = atan(1 / 3)), N)
+        ψ₀ = InfiniteMPS(
+            fill(SU2Space(1 => 1), N),
+            fill(SU2Space(1 // 2 => 2, 3 // 2 => 1), N)
+        )
+        alg = IDMRG2(; verbosity = 0, tol = 1.0e-5, trunc = truncrank(32))
+
+        ψ, envs, δ = find_groundstate(ψ₀, H, alg) # used to error
+        @test ψ isa InfiniteMPS
     end
 
     # the gradient is computed concurrently over the unit cell, so the scheduler decides its
@@ -492,7 +506,7 @@ end
         end
     end
 
-    @testset "IDMRG2 growing bond dimension" begin
+    fast_tests || @testset "IDMRG2 growing bond dimension" begin
         Random.seed!(1234)
         V = Vect[Z2Irrep](0 => 1, 1 => 1)
         O = randn(ComplexF64, V ⊗ V, V ⊗ V)
