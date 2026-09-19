@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>DQPT in ising · MPSKit.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">MPSKit.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../../man/intro/">Basics</a></li><li><a class="tocitem" href="../../man/conventions/">Conventions</a></li><li><a class="tocitem" href="../../man/states/">States</a></li><li><a class="tocitem" href="../../man/operators/">Operators</a></li><li><a class="tocitem" href="../../man/algorithms/">Algorithms</a></li><li><a class="tocitem" href="../../man/environments/">Environments</a></li></ul></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../anyonic_statmech/">The hard hexagon model</a></li><li><a class="tocitem" href="../isingcft/">The ising cft spectrum</a></li><li><a class="tocitem" href="../xxz_groundstate/">Analyzing the xxz model</a></li><li class="is-active"><a class="tocitem" href>DQPT in ising</a><ul class="internal"><li><a class="tocitem" href="#Finite-MPS-quenching-1"><span>Finite MPS quenching</span></a></li><li><a class="tocitem" href="#Infinite-MPS-quenching-1"><span>Infinite MPS quenching</span></a></li></ul></li><li><a class="tocitem" href="../haldane/">The haldane gap</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../../lib/lib/">Library documentation</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>DQPT in ising</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>DQPT in ising</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/maartenvd/MPSKit.jl/blob/master/docs/src/tut/timeev.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="DQPT-in-ising-1"><a class="docs-heading-anchor" href="#DQPT-in-ising-1">DQPT in ising</a><a class="docs-heading-anchor-permalink" href="#DQPT-in-ising-1" title="Permalink"></a></h1><p>In this tutorial we will try to reproduce the results from <a href="https://arxiv.org/pdf/1206.2505.pdf">this paper</a>. The needed packages are</p><pre><code class="language-julia">using MPSKit,MPSKitModels,TensorKit,ProgressMeter</code></pre><p>Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the loschmidth echo. This quantity is given by <span>$L(t) = \frac{-2}{N} ln(| &lt; \psi(t) | \psi(0) &gt; |)$</span> where N is the system size. One typically starts from a groundstate and then quenches the hamiltonian to a different point. Non analycities in the loschmidth echo are called &#39;dynamical quantum phase transitions&#39;.</p><p>In the mentioned paper they work with <span>$H(g) = - \sum^{N-1}_{i=1} \sigma^z_i \sigma^z_{i+1} + g \sum_{i=1}^N \sigma^x_i$</span> and show that divergences occur when quenching across the critical point (g₀→g₁) for <span>$t^*_n = t^*(n+\frac{1}{2})$</span> with <span>$t^* = \pi/e(g_1,k^*)$</span>, <span>$cos(k^*) = (1+g_0 g_1) / (g_0 + g_1)$</span>, <span>$e(g,k) = \sqrt{(g-cos k)^2 + sin^2 k}$</span>.</p><p>The outline of the tutorial is as follows. We will pick g₀ = 0.5, g₁ = 2.0, perform the time evolution at different system sizes and compare with the thermodynamic limit. For those g we expect non-analicities to occur at <span>$t_n ≈ 2.35 (n + 1/2)$</span>.</p><p>First we construct the hamiltonian in mpo form:</p><pre><code class="language-julia">function ising_ham(g)
+    (σˣ,σʸ,σᶻ) = nonsym_spintensors(1//2).*2;
+
+    data = Array{Any,3}(missing,1,3,3);
+    data[1,1,1] = one(σˣ); data[1,end,end] = one(σˣ);
+    data[1,1,2] = -σᶻ;
+    data[1,2,end] = σᶻ;
+    data[1,1,end] = g*σˣ;
+
+    MPOHamiltonian(data);
+end</code></pre><h2 id="Finite-MPS-quenching-1"><a class="docs-heading-anchor" href="#Finite-MPS-quenching-1">Finite MPS quenching</a><a class="docs-heading-anchor-permalink" href="#Finite-MPS-quenching-1" title="Permalink"></a></h2><p>Construct an initial finite system</p><pre><code class="language-julia">len = 20;
+init = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^10);</code></pre><p>Find the pre-quench groundstate</p><pre><code class="language-julia">(ψ₀,_) = find_groundstate(init,ising_ham(0.5),Dmrg());</code></pre><p>We can define a help function that measures the loschmith echo</p><pre><code class="language-julia">echo(ψ₀::FiniteMPS,ψₜ::FiniteMPS) = -2*log(abs(dot(ψ₀,ψₜ)))/length(ψ₀)
+@assert isapprox(echo(ψ₀,ψ₀),0,atol=1e-10);</code></pre><p>we will initially use a 2site tdvp scheme to increase the bond dimension while time evolving, and later on switch to a faster one-site scheme. A single timestep can be done using</p><pre><code class="language-julia">ψₜ = deepcopy(ψ₀);
+dt = 0.01;
+
+(ψₜ,envs) = timestep(ψₜ,ising_ham(2),dt,Tdvp2(trscheme=truncdim(20)));</code></pre><p>&quot;envs&quot; is a kind of cache object that keeps track of all environments in ψ. It is often advantageous to re-use the environment, so that mpskit doesn&#39;t need to recalculate everything.</p><p>Putting it all together, we get</p><pre><code class="language-julia">function finite_sim(len; dt = 0.05, finaltime = 5.0)
+    ψ₀ = FiniteMPS(rand,ComplexF64,len,ℂ^2,ℂ^10);
+    (ψ₀,_) = find_groundstate(ψ₀,ising_ham(0.5),Dmrg());
+
+    post_quench_ham = ising_ham(2);
+    ψₜ = deepcopy(ψ₀);
+    envs = environments(ψₜ,post_quench_ham);
+
+    echos = [echo(ψₜ,ψ₀)];
+    times = collect(0:dt:finaltime);
+
+    @showprogress for t = times[2:end]
+        alg = t &gt; 3*dt ? Tdvp() : Tdvp2(trscheme = truncdim(50))
+        (ψₜ,envs) = timestep(ψₜ,post_quench_ham,dt,alg,envs);
+        push!(echos,echo(ψₜ,ψ₀))
+    end
+
+    return (times,echos)
+end</code></pre><p><img src="../finite_timeev.png" alt/></p><h2 id="Infinite-MPS-quenching-1"><a class="docs-heading-anchor" href="#Infinite-MPS-quenching-1">Infinite MPS quenching</a><a class="docs-heading-anchor-permalink" href="#Infinite-MPS-quenching-1" title="Permalink"></a></h2><p>Similarly we start with an initial infinite state</p><pre><code class="language-julia">init = InfiniteMPS([ℂ^2],[ℂ^10]);</code></pre><p>and find the pre-quench groundstate</p><pre><code class="language-julia">(ψ₀,_) = find_groundstate(init,ising_ham(0.5),Vumps());</code></pre><p>The dot product of two infinite matrix product states scales as  <span>$\alpha ^N$</span> where α is the dominant eigenvalue of the transfer matrix. It is this α that is returned when calling</p><pre><code class="language-julia">dot(ψ₀,ψ₀)</code></pre><p>so the loschmidth echo takes on the pleasant form</p><pre><code class="language-julia">echo(ψ₀::InfiniteMPS,ψₜ::InfiniteMPS) = -2*log(abs(dot(ψ₀,ψₜ)))
+@assert isapprox(echo(ψ₀,ψ₀),0,atol=1e-10);</code></pre><p>This time we cannot use a 2site scheme to grow the bond dimension, as this isn&#39;t implemented (yet). Instead, we have to make use of the changebonds machinery. Multiple algorithms are available, but we will only focus on OptimalEpand(). Growing the bond dimension by 5 can be done by calling:</p><pre><code class="language-julia">ψₜ = deepcopy(ψ₀);
+(ψₜ,envs) = changebonds(ψₜ,ising_ham(2),OptimalExpand(trscheme=truncdim(5)));</code></pre><p>a single timestep is easy</p><pre><code class="language-julia">dt = 0.01;
+
+(ψₜ,envs) = timestep(ψₜ,ising_ham(2),dt,Tdvp(),envs);</code></pre><p>With performance in mind we should once again try to re-use these &quot;envs&quot; cache objects. The final code is</p><pre><code class="language-julia">function infinite_sim(dt = 0.05, finaltime = 5.0)
+    ψ₀ = InfiniteMPS([ℂ^2],[ℂ^10]);
+    (ψ₀,_) = find_groundstate(ψ₀,ising_ham(0.5),Vumps());
+
+    post_quench_ham = ising_ham(2);
+    ψₜ = deepcopy(ψ₀);
+    envs = environments(ψₜ,post_quench_ham);
+
+    echos = [echo(ψₜ,ψ₀)];
+    times = collect(0:dt:finaltime);
+
+    @showprogress for t = times[2:end]
+        if t &lt; 50*dt # if t is sufficiently small, we increase the bond dimension
+            (ψₜ,envs) = changebonds(ψₜ,post_quench_ham,OptimalExpand(trscheme=truncdim(1)),envs)
+        end
+        (ψₜ,envs) = timestep(ψₜ,post_quench_ham,dt,Tdvp(),envs);
+        push!(echos,echo(ψₜ,ψ₀))
+    end
+
+    return (times,echos)
+end</code></pre><p><img src="../infinite_timeev.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../xxz_groundstate/">« Analyzing the xxz model</a><a class="docs-footer-nextpage" href="../haldane/">The haldane gap »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 5 November 2021 10:05">Friday 5 November 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
