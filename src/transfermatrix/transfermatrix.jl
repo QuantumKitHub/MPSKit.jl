@@ -1,12 +1,14 @@
 abstract type AbstractTransferMatrix end;
 
 # single site transfer
-struct SingleTransferMatrix{A <: AbstractTensorMap, B, C <: AbstractTensorMap} <:
+struct SingleTransferMatrix{A <: AbstractTensorMap, B, C <: AbstractTensorMap, Bk, Al} <:
     AbstractTransferMatrix
     above::A
     middle::B
     below::C
     isflipped::Bool
+    backend::Bk
+    allocator::Al
 end
 
 #the product of transfer matrices is its own type
@@ -34,7 +36,9 @@ end
 
 #flip em
 function TensorKit.flip(tm::SingleTransferMatrix)
-    return SingleTransferMatrix(tm.above, tm.middle, tm.below, !tm.isflipped)
+    return SingleTransferMatrix(
+        tm.above, tm.middle, tm.below, !tm.isflipped, tm.backend, tm.allocator
+    )
 end;
 TensorKit.flip(tm::ProductTransferMatrix) = ProductTransferMatrix(flip.(reverse(tm.tms)));
 TensorKit.flip(tm::RegTransferMatrix) = RegTransferMatrix(flip(tm.tm), tm.rvec, tm.lvec);
@@ -47,21 +51,29 @@ Base.:*(vec, tm::AbstractTransferMatrix) = flip(tm)(vec);
 (d::ProductTransferMatrix)(vec) = foldr((a, b) -> a(b), d.tms; init = vec);
 function (d::SingleTransferMatrix)(vec)
     return if d.isflipped
-        transfer_left(vec, d.middle, d.above, d.below)
+        transfer_left(vec, d.middle, d.above, d.below; d.backend, d.allocator)
     else
-        transfer_right(vec, d.middle, d.above, d.below)
+        transfer_right(vec, d.middle, d.above, d.below; d.backend, d.allocator)
     end
 end;
 (d::RegTransferMatrix)(vec) = regularize!(d.tm * vec, d.lvec, d.rvec);
 
 # constructors
-TransferMatrix(a) = TransferMatrix(a, nothing, a);
-TransferMatrix(a, b) = TransferMatrix(a, nothing, b);
-function TransferMatrix(a::AbstractTensorMap, b, c::AbstractTensorMap, isflipped = false)
-    return SingleTransferMatrix(a, b, c, isflipped)
+TransferMatrix(a; kwargs...) = TransferMatrix(a, nothing, a; kwargs...);
+TransferMatrix(a, b; kwargs...) = TransferMatrix(a, nothing, b; kwargs...);
+function TransferMatrix(
+        a::AbstractTensorMap, b, c::AbstractTensorMap, isflipped = false;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    return SingleTransferMatrix(a, b, c, isflipped, backend, allocator)
 end
-function TransferMatrix(a::AbstractVector, b, c::AbstractVector, isflipped = false)
-    tot = ProductTransferMatrix(convert(Vector, TransferMatrix.(a, b, c)))
+function TransferMatrix(
+        a::AbstractVector, b, c::AbstractVector, isflipped = false;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    tot = ProductTransferMatrix(
+        convert(Vector, TransferMatrix.(a, b, c; backend, allocator))
+    )
     return isflipped ? flip(tot) : tot
 end
 

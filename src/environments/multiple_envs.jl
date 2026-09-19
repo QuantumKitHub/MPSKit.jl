@@ -55,22 +55,24 @@ function Base.getproperty(envs::MultipleEnvironments, prop::Symbol)
     end
 end
 
+# `backend`/`allocator` are forwarded to each summand, the same way `leftenv`/`rightenv`
+# forward them for `MultilineEnvironments`: these only dispatch, they contract nothing.
 function transfer_rightenv!(
         envs::MultipleEnvironments{<:InfiniteEnvironments},
-        below, operator, above, pos::Int
+        below, operator, above, pos::Int; kwargs...
     )
     for (subH, subenv) in zip(operator, envs.envs)
-        transfer_rightenv!(subenv, below, subH, above, pos)
+        transfer_rightenv!(subenv, below, subH, above, pos; kwargs...)
     end
     return envs
 end
 
 function transfer_leftenv!(
         envs::MultipleEnvironments{<:InfiniteEnvironments},
-        below, operator, above, pos::Int
+        below, operator, above, pos::Int; kwargs...
     )
     for (subH, subenv) in zip(operator, envs.envs)
-        transfer_leftenv!(subenv, below, subH, above, pos)
+        transfer_leftenv!(subenv, below, subH, above, pos; kwargs...)
     end
     return envs
 end
