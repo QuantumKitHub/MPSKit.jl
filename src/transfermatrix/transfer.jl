@@ -146,7 +146,8 @@ function transfer_right(v::MPOTensor, O::MPOTensor, A::MPSTensor, Ab::MPSTensor)
         conj(Ab[-4 2; 1]) * v[5 3; -3 1]
 end
 
-# desity matrix transfer
+# density matrix transfer
+# braid handedness dependent on MPO-to-MPS conversion
 function transfer_left(
         x::MPSTensor, O::MPOTensor, A::GenericMPSTensor{<:Any, 3}, Ab::GenericMPSTensor{<:Any, 3}
     )
