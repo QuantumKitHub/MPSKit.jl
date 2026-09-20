@@ -112,8 +112,13 @@ gaugefix!
 
 function gaugefix!(
         ψ::InfiniteMPS, A, C₀ = ψ.C[end];
-        order = :LR, timeroutput = NoTimerOutput(), kwargs...
+        order = :LR, timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator(),
+        kwargs...
     )
+    # `backend` and `allocator` are named explicitly so that they are not swept into the
+    # algorithm constructor's keyword arguments, which describe the gauge itself. Same
+    # convention as `recalculate!`.
     alg = if order === :LR || order === :RL
         MixedCanonical(; order, kwargs...)
     elseif order === :L
@@ -124,20 +129,21 @@ function gaugefix!(
         throw(ArgumentError("Invalid order: $order"))
     end
 
-    return gaugefix!(ψ, A, C₀, alg; timeroutput)
+    return gaugefix!(ψ, A, C₀, alg; timeroutput, backend, allocator)
 end
 
 # expert mode: actual implementation
 function gaugefix!(
         ψ::InfiniteMPS, A, C₀, alg::MixedCanonical;
-        timeroutput = NoTimerOutput()
+        timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     if alg.order === :LR
-        gaugefix!(ψ, A, C₀, alg.alg_leftcanonical; timeroutput)
-        gaugefix!(ψ, ψ.AL, ψ.C[end], alg.alg_rightcanonical; timeroutput)
+        gaugefix!(ψ, A, C₀, alg.alg_leftcanonical; timeroutput, backend, allocator)
+        gaugefix!(ψ, ψ.AL, ψ.C[end], alg.alg_rightcanonical; timeroutput, backend, allocator)
     elseif alg.order === :RL
-        gaugefix!(ψ, A, C₀, alg.alg_rightcanonical; timeroutput)
-        gaugefix!(ψ, ψ.AR, ψ.C[end], alg.alg_leftcanonical; timeroutput)
+        gaugefix!(ψ, A, C₀, alg.alg_rightcanonical; timeroutput, backend, allocator)
+        gaugefix!(ψ, ψ.AR, ψ.C[end], alg.alg_leftcanonical; timeroutput, backend, allocator)
     else
         throw(ArgumentError("Invalid order: $(alg.order)"))
     end
@@ -145,16 +151,18 @@ function gaugefix!(
 end
 function gaugefix!(
         ψ::InfiniteMPS, A, C₀, alg::LeftCanonical;
-        timeroutput = NoTimerOutput()
+        timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
-    uniform_leftorth!((ψ.AL, ψ.C), A, C₀, alg; timeroutput)
+    uniform_leftorth!((ψ.AL, ψ.C), A, C₀, alg; timeroutput, backend, allocator)
     return ψ
 end
 function gaugefix!(
         ψ::InfiniteMPS, A, C₀, alg::RightCanonical;
-        timeroutput = NoTimerOutput()
+        timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
-    uniform_rightorth!((ψ.AR, ψ.C), A, C₀, alg; timeroutput)
+    uniform_rightorth!((ψ.AR, ψ.C), A, C₀, alg; timeroutput, backend, allocator)
     return ψ
 end
 
@@ -214,7 +222,8 @@ end
 
 function uniform_leftorth!(
         (AL, C), A, C₀, alg::LeftCanonical;
-        timeroutput = NoTimerOutput()
+        timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     C[end] = normalize!(C₀)
     return LoggingExtras.withlevel(; alg.verbosity) do
@@ -222,7 +231,7 @@ function uniform_leftorth!(
         log = IterLog("LC")
         A_tail = _transpose_tail.(A) # pre-transpose A
         CA_tail = similar.(A_tail)  # pre-allocate workspace
-        state = (; AL, C, A, A_tail, CA_tail, iter = 0, ϵ = Inf, timeroutput)
+        state = (; AL, C, A, A_tail, CA_tail, iter = 0, ϵ = Inf, timeroutput, backend, allocator)
         it = IterativeSolver(alg, state)
         loginit!(log, it.ϵ)
 
@@ -250,27 +259,30 @@ function Base.iterate(it::IterativeSolver{LeftCanonical}, state = it.state)
     iter = state.iter + 1
     it.state = (;
         state.AL, state.C, state.A, state.A_tail, state.CA_tail, iter, ϵ, timeroutput,
+        state.backend, state.allocator,
     )
 
     return (it.state.AL, it.state.C), it.state
 end
 
 function gauge_eigsolve_step!(it::IterativeSolver{LeftCanonical}, state)
-    (; AL, C, A, iter, ϵ) = state
+    (; AL, C, A, iter, ϵ, backend, allocator) = state
     if iter ≥ it.eig_miniter
         alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = 1, g_global = ϵ^2)
-        _, vec = fixedpoint(flip(TransferMatrix(A, AL)), C[end], :LM, alg_eigsolve)
+        _, vec = fixedpoint(
+            flip(TransferMatrix(A, AL; backend, allocator)), C[end], :LM, alg_eigsolve
+        )
         _, C[end] = left_orth!(vec; alg = it.alg_orth)
     end
     return C[end]
 end
 
 function gauge_orth_step!(it::IterativeSolver{LeftCanonical}, state)
-    (; AL, C, A_tail, CA_tail) = state
+    (; AL, C, A_tail, CA_tail, backend, allocator) = state
     for i in 1:length(AL)
         # repartition!(A_tail[i], AL[i])
         mul!(CA_tail[i], C[i - 1], A_tail[i])
-        repartition!(AL[i], CA_tail[i])
+        repartition!(AL[i], CA_tail[i], One(), Zero(), backend, allocator)
         AL[i], C[i] = left_orth!(AL[i]; alg = it.alg_orth)
     end
     normalize!(C[end])
@@ -279,14 +291,15 @@ end
 
 function uniform_rightorth!(
         (AR, C), A, C₀, alg::RightCanonical;
-        timeroutput = NoTimerOutput()
+        timeroutput = NoTimerOutput(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     C[end] = normalize!(C₀)
     return LoggingExtras.withlevel(; alg.verbosity) do
         # initialize algorithm and temporary variables
         log = IterLog("RC")
         AC_tail = _similar_tail.(A) # pre-allocate workspace
-        state = (; AR, C, A, AC_tail, iter = 0, ϵ = Inf, timeroutput)
+        state = (; AR, C, A, AC_tail, iter = 0, ϵ = Inf, timeroutput, backend, allocator)
         it = IterativeSolver(alg, state)
         loginit!(log, it.ϵ)
 
@@ -312,28 +325,30 @@ function Base.iterate(it::IterativeSolver{RightCanonical}, state = it.state)
     ϵ = oftype(state.ϵ, norm(C₀ - C₁))
 
     iter = state.iter + 1
-    it.state = (; state.AR, state.C, state.A, state.AC_tail, iter, ϵ, timeroutput)
+    it.state = (; state.AR, state.C, state.A, state.AC_tail, iter, ϵ, timeroutput, state.backend, state.allocator)
 
     return (it.state.AR, it.state.C), it.state
 end
 
 function gauge_eigsolve_step!(it::IterativeSolver{RightCanonical}, state)
-    (; AR, C, A, iter, ϵ) = state
+    (; AR, C, A, iter, ϵ, backend, allocator) = state
     if iter ≥ it.eig_miniter
         alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = 1, g_global = ϵ^2)
-        _, vec = fixedpoint(TransferMatrix(A, AR), C[end], :LM, alg_eigsolve)
+        _, vec = fixedpoint(
+            TransferMatrix(A, AR; backend, allocator), C[end], :LM, alg_eigsolve
+        )
         C[end], _ = right_orth!(vec; alg = it.alg_orth)
     end
     return C[end]
 end
 
 function gauge_orth_step!(it::IterativeSolver{RightCanonical}, state)
-    (; A, AR, C, AC_tail) = state
+    (; A, AR, C, AC_tail, backend, allocator) = state
     for i in length(AR):-1:1
         AC = mul!(AR[i], A[i], C[i])   # use AR as temporary storage for A * C
-        tmp = repartition!(AC_tail[i], AC)
+        tmp = repartition!(AC_tail[i], AC, One(), Zero(), backend, allocator)
         C[i - 1], tmp = right_orth!(tmp; alg = it.alg_orth)
-        repartition!(AR[i], tmp)       # TODO: avoid doing this every iteration
+        repartition!(AR[i], tmp, One(), Zero(), backend, allocator)  # TODO: avoid doing this every iteration
     end
     normalize!(C[end])
     return C[end]

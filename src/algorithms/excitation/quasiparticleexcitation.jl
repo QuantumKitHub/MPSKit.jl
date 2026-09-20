@@ -28,19 +28,25 @@ Used as the `algorithm` argument of [`excitations`](@ref).
 
 * [Haegeman et al. Phys. Rev. Let. 111 (2013)](@cite haegeman2013)
 """
-struct QuasiparticleAnsatz{A, E} <: Algorithm
+struct QuasiparticleAnsatz{A, E, B} <: Algorithm
     "algorithm used for the eigenvalue solvers"
     alg::A
 
     "algorithm used for the quasiparticle environments"
     alg_environments::E
+
+    "backend for tensor contractions and index manipulations"
+    backend::B
 end
+QuasiparticleAnsatz(alg, alg_environments) =
+    QuasiparticleAnsatz(alg, alg_environments, Defaults.backend())
 function QuasiparticleAnsatz(;
         alg_environments = Defaults.alg_environments(; dynamic_tols = false),
+        backend = Defaults.backend(),
         kwargs...
     )
     alg = Defaults.alg_eigsolve(; dynamic_tols = false, kwargs...)
-    return QuasiparticleAnsatz(alg, alg_environments)
+    return QuasiparticleAnsatz(alg, alg_environments, backend)
 end
 
 ################################################################################
@@ -51,7 +57,7 @@ function excitations(H, alg::QuasiparticleAnsatz, ϕ₀::InfiniteQP, lenvs, renv
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = EffectiveExcitationHamiltonian(H, lenvs, renvs, E)
     Es, ϕs, convhist = eigsolve(ϕ₀, num, :SR, alg.alg) do ϕ
-        return H_eff(ϕ, alg.alg_environments)
+        return H_eff(ϕ, alg.alg_environments; alg.backend)
     end
     convhist.converged < num &&
         @warn "excitation failed to converge: normres = $(convhist.normres)"
@@ -157,7 +163,7 @@ function excitations(
     E = effective_excitation_renormalization_energy(H, ϕ₀, lenvs, renvs)
     H_eff = EffectiveExcitationHamiltonian(H, lenvs, renvs, E)
     Es, ϕs, convhist = eigsolve(ϕ₀, num, :SR, alg.alg) do ϕ
-        return H_eff(ϕ, alg.alg_environments)
+        return H_eff(ϕ, alg.alg_environments; alg.backend)
     end
 
     convhist.converged < num &&
@@ -300,24 +306,37 @@ end
 # to allow Multiline checks
 Base.length(H::EffectiveExcitationHamiltonian) = length(H.operator)
 
-function (H::EffectiveExcitationHamiltonian)(ϕ::QP, alg_environments = DefaultAlgorithm())
-    qp_envs = environments(ϕ, H.operator, ϕ, alg_environments; lenvs = H.lenvs, renvs = H.renvs)
-    return effective_excitation_hamiltonian(H.operator, ϕ, qp_envs, H.energy)
+function (H::EffectiveExcitationHamiltonian)(
+        ϕ::QP, alg_environments = DefaultAlgorithm();
+        backend::AbstractBackend = DefaultBackend()
+    )
+    qp_envs = environments(
+        ϕ, H.operator, ϕ, alg_environments; lenvs = H.lenvs, renvs = H.renvs, backend
+    )
+    return effective_excitation_hamiltonian(H.operator, ϕ, qp_envs, H.energy; backend)
 end
 function (H::Multiline{<:EffectiveExcitationHamiltonian})(
-        ϕ::MultilineQP, alg_environments = DefaultAlgorithm()
+        ϕ::MultilineQP, alg_environments = DefaultAlgorithm(); kwargs...
     )
-    return Multiline(map((x, y) -> x(y, alg_environments), parent(H), parent(ϕ)))
+    return Multiline(map((x, y) -> x(y, alg_environments; kwargs...), parent(H), parent(ϕ)))
 end
 
 function effective_excitation_hamiltonian(H, ϕ, envs = environments(ϕ, H))
     E₀ = effective_excitation_renormalization_energy(H, ϕ, envs.leftenvs, envs.rightenvs)
     return effective_excitation_hamiltonian(H, ϕ, envs, E₀)
 end
-function effective_excitation_hamiltonian(H, ϕ, qp_envs, E)
+function effective_excitation_hamiltonian(
+        H, ϕ, qp_envs, E, scheduler = Defaults.scheduler[];
+        backend::AbstractBackend = DefaultBackend()
+    )
     ϕ′ = similar(ϕ)
-    tforeach(1:length(ϕ); scheduler = Defaults.scheduler[]) do loc
-        ϕ′[loc] = _effective_excitation_local_apply(loc, ϕ, H, E[loc], qp_envs)
+    # This is the site that fans out, so it is the one that reads the scheduler and derives
+    # the allocator from it
+    allocator = default_allocator(ϕ.left_gs, scheduler)
+    tforeach(1:length(ϕ); scheduler) do loc
+        ϕ′[loc] = _effective_excitation_local_apply(
+            loc, ϕ, H, E[loc], qp_envs; backend, allocator
+        )
         return nothing
     end
     return ϕ′
@@ -338,10 +357,13 @@ function effective_excitation_hamiltonian(H::MultilineMPO, ϕ::MultilineQP, envs
     )
 end
 
-function _effective_excitation_local_apply(site, ϕ, H::MPOHamiltonian, E::Number, envs)
+function _effective_excitation_local_apply(
+        site, ϕ, H::MPOHamiltonian, E::Number, envs;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     B = ϕ[site]
-    GL = leftenv(envs.leftenvs, site, ϕ.left_gs)
-    GR = rightenv(envs.rightenvs, site, ϕ.right_gs)
+    GL = leftenv(envs.leftenvs, site, ϕ.left_gs; backend, allocator)
+    GR = rightenv(envs.rightenvs, site, ϕ.right_gs; backend, allocator)
 
     # renormalize first -> allocates destination
     B′ = scale(B, -E)
@@ -366,13 +388,16 @@ function _effective_excitation_local_apply(site, ϕ, H::MPOHamiltonian, E::Numbe
     return B′
 end
 
-function _effective_excitation_local_apply(site, ϕ, H::MPO, E::Number, envs)
+function _effective_excitation_local_apply(
+        site, ϕ, H::MPO, E::Number, envs;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
     left_gs = ϕ.left_gs
     right_gs = ϕ.right_gs
 
     B = ϕ[site]
-    GL = leftenv(envs.leftenvs, site, ϕ.left_gs)
-    GR = rightenv(envs.rightenvs, site, ϕ.right_gs)
+    GL = leftenv(envs.leftenvs, site, ϕ.left_gs; backend, allocator)
+    GR = rightenv(envs.rightenvs, site, ϕ.right_gs; backend, allocator)
 
     @plansor T[-1 -2; -3 -4] := GL[-1 5; 4] * B[4 2; -3 1] * H[site][5 -2; 2 3] * GR[1 3; -4]
 

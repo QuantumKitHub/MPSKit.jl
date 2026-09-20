@@ -1,6 +1,7 @@
 function left_excitation_transfer_system(
         GBL, H::InfiniteMPOHamiltonian, exci;
-        mom = exci.momentum, solver = Defaults.linearsolver
+        mom = exci.momentum, solver = Defaults.linearsolver,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     len = length(H)
     found = zerovector(GBL)
@@ -17,7 +18,7 @@ function left_excitation_transfer_system(
         # this would require to check the finite state machine, and discard non-connected
         # terms.
         H_partial = map(h -> getindex(h, 1:i, 1, 1, 1:i), parent(H))
-        T = TransferMatrix(exci.right_gs.AR, H_partial, exci.left_gs.AL)
+        T = TransferMatrix(exci.right_gs.AR, H_partial, exci.left_gs.AL; backend, allocator)
         start = scale!(last(found[1:i] * T), cis(-mom * len))
         if istrivial(exci) && isidentitylevel(H, i)
             regularize!(start, ρ_right, ρ_left)
@@ -27,13 +28,14 @@ function left_excitation_transfer_system(
 
         if !isemptylevel(H, i)
             if isidentitylevel(H, i)
-                T = TransferMatrix(exci.right_gs.AR, exci.left_gs.AL)
+                T = TransferMatrix(exci.right_gs.AR, exci.left_gs.AL; backend, allocator)
                 if istrivial(exci)
                     T = regularize(T, ρ_left, ρ_right)
                 end
             else
                 T = TransferMatrix(
-                    exci.right_gs.AR, map(h -> h[i, 1, 1, i], parent(H)), exci.left_gs.AL
+                    exci.right_gs.AR, map(h -> h[i, 1, 1, i], parent(H)), exci.left_gs.AL;
+                    backend, allocator
                 )
             end
 
@@ -49,8 +51,8 @@ end
 
 function right_excitation_transfer_system(
         GBR, H::InfiniteMPOHamiltonian, exci;
-        mom = exci.momentum,
-        solver = Defaults.linearsolver
+        mom = exci.momentum, solver = Defaults.linearsolver,
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     len = length(H)
     found = zerovector(GBR)
@@ -67,7 +69,7 @@ function right_excitation_transfer_system(
         # this would require to check the finite state machine, and discard non-connected
         # terms.
         H_partial = map(h -> h[i:end, 1, 1, i:end], parent(H))
-        T = TransferMatrix(exci.left_gs.AL, H_partial, exci.right_gs.AR)
+        T = TransferMatrix(exci.left_gs.AL, H_partial, exci.right_gs.AR; backend, allocator)
         start = scale!(first(T * found[i:odim]), cis(mom * len))
         if istrivial(exci) && isidentitylevel(H, i)
             regularize!(start, ρ_left, ρ_right)
@@ -77,13 +79,14 @@ function right_excitation_transfer_system(
 
         if !isemptylevel(H, i)
             if isidentitylevel(H, i)
-                tm = TransferMatrix(exci.left_gs.AL, exci.right_gs.AR)
+                tm = TransferMatrix(exci.left_gs.AL, exci.right_gs.AR; backend, allocator)
                 if istrivial(exci)
                     tm = regularize(tm, ρ_left, ρ_right)
                 end
             else
                 tm = TransferMatrix(
-                    exci.left_gs.AL, map(h -> h[i, 1, 1, i], parent(H)), exci.right_gs.AR
+                    exci.left_gs.AL, map(h -> h[i, 1, 1, i], parent(H)), exci.right_gs.AR;
+                    backend, allocator
                 )
             end
 

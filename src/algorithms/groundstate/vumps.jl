@@ -70,7 +70,10 @@ function dominant_eigsolve(
     mps = copy(mps)
     ϵ = calc_galerkin(mps, operator, mps, envs; alg.backend)
     alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)
-    recalculate!(envs, mps, operator, mps, alg_environments; timeroutput)
+    recalculate!(
+        envs, mps, operator, mps, alg_environments;
+        timeroutput, alg.backend
+    )
 
     state = VUMPSState(mps, operator, envs, iter, ϵ, which, timeroutput)
     it = IterativeSolver(alg, state)
@@ -172,9 +175,11 @@ end
 
 function gauge_step!(it::IterativeSolver{<:VUMPS}, state, ACs::AbstractVector)
     alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
+    # the gauge sweep is serial, so safe to use non-threadsafe allocator
+    allocator = default_allocator(state.mps, SerialScheduler())
     mps = gaugefix!(
         state.mps, ACs, state.mps.C[end];
-        order = :R, timeroutput = state.timeroutput, alg_gauge...,
+        order = :R, timeroutput = state.timeroutput, it.backend, allocator, alg_gauge...,
     )
     mul!.(mps.AC, mps.AL, mps.C)
     return mps
@@ -186,5 +191,8 @@ end
 
 function envs_step!(it::IterativeSolver{<:VUMPS}, state, mps)
     alg_environments = adapt_solver(it.alg_environments; iter = state.iter, g_global = state.ϵ)
-    return recalculate!(state.envs, mps, state.operator, mps, alg_environments; state.timeroutput)
+    return recalculate!(
+        state.envs, mps, state.operator, mps, alg_environments;
+        state.timeroutput, it.backend
+    )
 end
