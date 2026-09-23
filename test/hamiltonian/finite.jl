@@ -109,6 +109,46 @@ using TensorKit: ℙ
     end
 end
 
+@testset "Finite MPOHamiltonian canonicalization with decoupled sites" begin
+    # regression test for https://github.com/QuantumKitHub/MPSKit.jl/issues/522
+    T = ComplexF64
+    for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1), Rep[SU₂](1 // 2 => 1))
+        O₁ = randn(T, V, V)
+        O₁ += O₁'
+        O₂ = randn(T, V^2 ← V^2)
+        O₂ += O₂'
+        E = id(storagetype(O₁), domain(O₁))
+
+        # bulk block of the middle site is empty on the left but not on the right
+        H_right = FiniteMPOHamiltonian(fill(V, 3), (1,) => O₁, (2, 3) => O₂)
+        H_right_tm = O₁ ⊗ E ⊗ E + E ⊗ O₂
+        H = MPSKit.right_canonicalize!(copy(H_right), 2)
+        @test convert(TensorMap, H) ≈ H_right_tm
+
+        # bulk block of the middle site is empty on the right but not on the left
+        H_left = FiniteMPOHamiltonian(fill(V, 3), (1, 2) => O₂, (3,) => O₁)
+        H_left_tm = O₂ ⊗ E + E ⊗ E ⊗ O₁
+        H = MPSKit.left_canonicalize!(copy(H_left), 2)
+        @test convert(TensorMap, H) ≈ H_left_tm
+
+        L = 5
+        H5 = FiniteMPOHamiltonian(fill(V, L), (1, 2) => O₂, (3,) => O₁, (4, 5) => O₂)
+        H5_tm = O₂ ⊗ E ⊗ E ⊗ E + E ⊗ E ⊗ O₁ ⊗ E ⊗ E + E ⊗ E ⊗ E ⊗ O₂
+        H = copy(H5)
+        for i in L:-1:2
+            MPSKit.right_canonicalize!(H, i)
+        end
+        @test convert(TensorMap, H) ≈ H5_tm
+        for i in 1:(L - 1)
+            MPSKit.left_canonicalize!(H, i)
+        end
+        @test convert(TensorMap, H) ≈ H5_tm
+
+        H5_trunc = changebonds(H5, SvdCut(; trunc = truncrank(16)))
+        @test convert(TensorMap, H5_trunc) ≈ H5_tm
+    end
+end
+
 @testset "Finite MPOHamiltonian repeated indices" begin
     X = randn(ComplexF64, ℂ^2, ℂ^2)
     X += X'

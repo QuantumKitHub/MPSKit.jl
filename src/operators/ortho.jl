@@ -50,7 +50,7 @@ function left_canonicalize!(
 
         if dim(R) == 0 # fully truncated
             V = _rightunit ⊞ _rightunit
-            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
+            Q1 = typeof(WA)(undef, codomain(WA) ← P ⊗ SumSpace{S}())
             Q2 = typeof(WC)(undef, P ← P ⊗ SumSpace{S}())
         else
             scale!(Q, d)
@@ -144,7 +144,7 @@ function right_canonicalize!(
         R, Q = right_orth!(tmp; alg)
         if dim(R) == 0
             V = _rightunit ⊞ _rightunit
-            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
+            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← domain(WA))
             Q2 = typeof(WB)(undef, SumSpace{S}() ⊗ P ← P)
         else
             scale!(Q, d)
