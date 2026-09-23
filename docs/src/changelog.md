@@ -128,6 +128,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   inside `AC_hamiltonian`. This is reached when an `MPOHamiltonian` whose scalartype differs from
   the state's has an on-site term on a site where no interaction ends, such as a long-range one.
   ([#493](https://github.com/QuantumKitHub/MPSKit.jl/pull/493))
+- Raised the `BlockTensorKit` compat lower bound to 0.3.19, which fixes a silent data-loss bug: with
+  `TensorKit` 0.17.2 and `BlockTensorKit` <= 0.3.18, a permuted contraction into a sparse block
+  tensor (e.g. an environment sweep near a `FiniteMPS` chain boundary when the operator and state
+  have different `scalartype`s) could silently drop data instead of erroring.
 
 ### Performance
 
