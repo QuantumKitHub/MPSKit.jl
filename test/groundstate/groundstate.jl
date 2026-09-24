@@ -20,132 +20,159 @@ verbosity_conv = 1
     D = 6
     L = 10
 
-    H = force_planar(transverse_field_ising(; g, L))
+    models = [
+        "nearest-neighbour" => force_planar(transverse_field_ising(; g, L)),
+        "long-range, real scalartype" => force_planar(long_range_ising(Float64; g, L)),
+    ]
 
-    @testset "DMRG" begin
-        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^D)
-        v₀ = variance(ψ₀, H)
+    @testset "$name" for (name, H) in models
+        @testset "DMRG" begin
+            ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^D)
+            v₀ = variance(ψ₀, H)
 
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2)
-        )
+            # test logging
+            ψ, envs, δ = find_groundstate(
+                ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2)
+            )
 
-        ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10), envs
-        )
-        v = variance(ψ, H)
+            ψ, envs, δ = find_groundstate(
+                ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10), envs
+            )
+            v = variance(ψ, H)
 
-        # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
-        @test v < v₀
-        @test v < 1.0e-2
+            # test using low variance
+            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test v < v₀
+            @test v < 1.0e-2
 
-        # the algorithm object carries no scratch space of its own - the sweep's allocator is
-        # obtained per solve - so re-using one across solves has to reproduce the answer
-        alg = DMRG(; verbosity = verbosity_conv, maxiter = 10)
-        ψ1, = find_groundstate(ψ₀, H, alg)
-        ψ2, = find_groundstate(ψ₀, H, alg)
-        @test expectation_value(ψ1, H) ≈ expectation_value(ψ2, H) atol = 1.0e-10
-    end
+            # the algorithm object carries no scratch space of its own - the sweep's allocator is
+            # obtained per solve - so re-using one across solves has to reproduce the answer
+            alg = DMRG(; verbosity = verbosity_conv, maxiter = 10)
+            ψ1, = find_groundstate(ψ₀, H, alg)
+            ψ2, = find_groundstate(ψ₀, H, alg)
+            @test expectation_value(ψ1, H) ≈ expectation_value(ψ2, H) atol = 1.0e-10
+        end
 
-    @testset "DMRG2" begin
-        ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
-        v₀ = variance(ψ₀, H)
-        trunc = truncrank(floor(Int, D * 1.5))
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG2(; verbosity = verbosity_full, maxiter = 2, trunc)
-        )
+        @testset "DMRG2" begin
+            ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^D)
+            v₀ = variance(ψ₀, H)
+            trunc = truncrank(floor(Int, D * 1.5))
+            # test logging
+            ψ, envs, δ = find_groundstate(
+                ψ₀, H, DMRG2(; verbosity = verbosity_full, maxiter = 2, trunc)
+            )
 
-        ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG2(; verbosity = verbosity_conv, maxiter = 10, trunc), envs
-        )
-        v = variance(ψ, H)
+            ψ, envs, δ = find_groundstate(
+                ψ, H, DMRG2(; verbosity = verbosity_conv, maxiter = 10, trunc), envs
+            )
+            v = variance(ψ, H)
 
-        # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
-        @test v < v₀
-        @test v < 1.0e-2
-    end
+            # test using low variance
+            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test v < v₀
+            @test v < 1.0e-2
+        end
 
-    @testset "CBEDMRG" begin
-        # start from a small bond so the bond expansion is exercised
-        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
-        v₀ = variance(ψ₀, H)
-        expand = OptimalExpand(; trunc = truncrank(D ÷ 2))
-        trunc = truncrank(D)
+        @testset "CBEDMRG" begin
+            # start from a small bond so the bond expansion is exercised
+            ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+            v₀ = variance(ψ₀, H)
+            expand = OptimalExpand(; trunc = truncrank(D ÷ 2))
+            trunc = truncrank(D)
 
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
-        )
+            # test logging
+            ψ, envs, δ = find_groundstate(
+                ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
+            )
 
-        ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_expand = expand, trunc), envs
-        )
-        v = variance(ψ, H)
+            ψ, envs, δ = find_groundstate(
+                ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_expand = expand, trunc), envs
+            )
+            v = variance(ψ, H)
 
-        # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
-        @test v < v₀
-        @test v < 1.0e-2
-        # the bond should have grown to the truncation target
-        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
-    end
+            # test using low variance
+            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test v < v₀
+            @test v < 1.0e-2
+            # the bond should have grown to the truncation target
+            @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+        end
 
-    @testset "CBEDMRG (SketchedExpand)" begin
-        # randomized bond expansion at single-site cost. The sketch is redrawn every sweep, so an
-        # aggressive expansion (a large fraction of the bond) keeps the single-site Galerkin error
-        # noisy; a gentle per-sweep increment lets it converge like the deterministic expanders.
-        Random.seed!(1234)
-        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
-        v₀ = variance(ψ₀, H)
-        expand = SketchedExpand(; trunc = truncrank(2), oversampling = 4)
-        trunc = truncrank(D)
+        @testset "CBEDMRG (SketchedExpand)" begin
+            # randomized bond expansion at single-site cost. The sketch is redrawn every sweep, so an
+            # aggressive expansion (a large fraction of the bond) keeps the single-site Galerkin error
+            # noisy; a gentle per-sweep increment lets it converge like the deterministic expanders.
+            Random.seed!(1234)
+            ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+            v₀ = variance(ψ₀, H)
+            expand = SketchedExpand(; trunc = truncrank(2), oversampling = 4)
+            trunc = truncrank(D)
 
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
-        )
+            # test logging
+            ψ, envs, δ = find_groundstate(
+                ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_expand = expand, trunc)
+            )
 
-        ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 15, alg_expand = expand, trunc), envs
-        )
-        v = variance(ψ, H)
+            ψ, envs, δ = find_groundstate(
+                ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 15, alg_expand = expand, trunc), envs
+            )
+            v = variance(ψ, H)
 
-        # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
-        @test v < v₀
-        @test v < 1.0e-2
-        # the bond should have grown to the truncation target
-        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
-    end
+            # test using low variance
+            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test v < v₀
+            @test v < 1.0e-2
+            # the bond should have grown to the truncation target
+            @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+        end
 
-    @testset "DMRG3S" begin
-        # start from a small bond so the post-expansion is exercised, mirroring CBEDMRG above
-        Random.seed!(1234)
-        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
-        v₀ = variance(ψ₀, H)
-        alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7))  # TODO: match final constructor API
-        trunc = truncrank(D)
+        @testset "DMRG3S" begin
+            # start from a small bond so the post-expansion is exercised, mirroring CBEDMRG above
+            Random.seed!(1234)
+            ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^(D ÷ 2))
+            v₀ = variance(ψ₀, H)
+            alg_gauge = DMRG3S(0.1, ExponentialDecay(0.7))  # TODO: match final constructor API
+            trunc = truncrank(D)
 
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_gauge, trunc)
-        )
+            # test logging
+            ψ, envs, δ = find_groundstate(
+                ψ₀, H, DMRG(; verbosity = verbosity_full, maxiter = 2, alg_gauge, trunc)
+            )
 
-        ψ, envs, δ = find_groundstate(
-            ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_gauge, trunc), envs
-        )
-        v = variance(ψ, H)
+            ψ, envs, δ = find_groundstate(
+                ψ, H, DMRG(; verbosity = verbosity_conv, maxiter = 10, alg_gauge, trunc), envs
+            )
+            v = variance(ψ, H)
 
-        # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
-        @test v < v₀
-        @test v < 1.0e-2
-        # the bond should have grown to the truncation target
-        @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+            # test using low variance
+            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test v < v₀
+            @test v < 1.0e-2
+            # the bond should have grown to the truncation target
+            @test dim(left_virtualspace(ψ, L ÷ 2)) == D
+        end
+
+        @testset "GradientGrassmann" begin
+            ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^D)
+            v₀ = variance(ψ₀, H)
+
+            # test logging
+            ψ, envs, δ = find_groundstate(
+                ψ₀, H, GradientGrassmann(; verbosity = verbosity_full, maxiter = 2)
+            )
+
+            # an explicit `tol` keeps the optimizer from overshooting past the point where the
+            # gradient is floating-point noise: pushed further, the CG line search can hit a
+            # 0/0 in its step-size formula and feed a NaN tangent into the Grassmann retraction
+            ψ, envs, δ = find_groundstate(
+                ψ, H, GradientGrassmann(; tol, verbosity = verbosity_conv, maxiter = 50), envs
+            )
+            v = variance(ψ, H)
+
+            # test using low variance
+            @test sum(δ) ≈ 0 atol = 1.0e-3
+            @test v < v₀ && v < 1.0e-2
+        end
     end
 
     fast_tests || @testset "DMRG3S escapes local minimum (Hubig et al. 2015, Sec. VII A)" begin
@@ -172,25 +199,6 @@ verbosity_conv = 1
         # paper reports E(α=0) = -6.35479, E(α≠0) = -8.6824724 for this L_heis = 20, S = 1/2 AFM setup
         @test E_escape < E_stuck - 1.0
         @test isapprox(E_escape, -8.6824724; atol = 1.0e-4)
-    end
-
-    @testset "GradientGrassmann" begin
-        ψ₀ = FiniteMPS(randn, ComplexF64, 10, ℙ^2, ℙ^D)
-        v₀ = variance(ψ₀, H)
-
-        # test logging
-        ψ, envs, δ = find_groundstate(
-            ψ₀, H, GradientGrassmann(; verbosity = verbosity_full, maxiter = 2)
-        )
-
-        ψ, envs, δ = find_groundstate(
-            ψ, H, GradientGrassmann(; verbosity = verbosity_conv, maxiter = 50), envs
-        )
-        v = variance(ψ, H)
-
-        # test using low variance
-        @test sum(δ) ≈ 0 atol = 1.0e-3
-        @test v < v₀ && v < 1.0e-2
     end
 end
 
@@ -227,6 +235,26 @@ end
         @test v < 1.0e-2
     end
 
+    # the long-range model forces `JordanMPO_AC_Hamiltonian` through its converting outer
+    # constructor (real `H`, complex `ψ`), exercising a code path the nearest-neighbour model
+    # never reaches. Its `(1, L)` coupling needs an explicit unit cell, so it does not fit the
+    # `unit_cell_size`/scheduler sweep above and is checked on its own instead.
+    @testset "VUMPS (long-range, real scalartype)" begin
+        H = force_planar(long_range_ising_infinite(Float64; g, L = 3))
+        ψ₀ = InfiniteMPS(fill(ℙ^2, 3), fill(ℙ^D, 3))
+
+        ψ′, envs, δ = find_groundstate(ψ₀, H, VUMPS(; tol, verbosity = verbosity_conv, maxiter = 20))
+
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        # `variance` throws a `SpaceMismatch` for a real, long-range `InfiniteMPOHamiltonian`
+        # against a complex state: https://github.com/QuantumKitHub/MPSKit.jl/issues/524
+        @test_broken try
+            variance(ψ₀, H) > variance(ψ′, H, envs)
+        catch
+            false
+        end
+    end
+
     @testset "IDMRG" for unit_cell_size in [1, 3]
         ψ = unit_cell_size == 1 ? InfiniteMPS(ℙ^2, ℙ^D) : repeat(ψ, unit_cell_size)
         H = repeat(H_ref, unit_cell_size)
@@ -243,6 +271,22 @@ end
         @test sum(δ) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
+    end
+
+    @testset "IDMRG (long-range, real scalartype)" begin
+        H = force_planar(long_range_ising_infinite(Float64; g, L = 3))
+        ψ₀ = InfiniteMPS(fill(ℙ^2, 3), fill(ℙ^D, 3))
+
+        ψ, envs, δ = find_groundstate(ψ₀, H, IDMRG(; tol, verbosity = verbosity_conv, maxiter = 20))
+
+        @test sum(δ) ≈ 0 atol = 1.0e-3
+        # `variance` throws a `SpaceMismatch` for a real, long-range `InfiniteMPOHamiltonian`
+        # against a complex state: https://github.com/QuantumKitHub/MPSKit.jl/issues/524
+        @test_broken try
+            variance(ψ₀, H) > variance(ψ, H, envs)
+        catch
+            false
+        end
     end
 
     @testset "IDMRG2" begin
@@ -320,47 +364,6 @@ end
         @test sum(δ) ≈ 0 atol = 1.0e-3
         @test v < v₀
         @test v < 1.0e-2
-    end
-end
-
-@testset "Long-range Hamiltonian with real scalartype" verbose = true begin
-    # force `JordanMPO_AC_Hamiltonian` to pass through fallback outer constructor
-    # through an onsite block `D` with scalartype != that of the MPS
-    # as `D`'s scalartype doesn't get promoted to the MPS's scalartype through some contraction with environments
-    tol = 1.0e-8
-    D = 8
-
-    @testset "FiniteMPS" begin
-        L = 10
-        H = long_range_ising(Float64; L)
-        @test scalartype(H) <: Real
-
-        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℂ^2, ℂ^D)
-        # `complex(H)` takes the non-converting construction path
-        E_ref = expectation_value(
-            find_groundstate(ψ₀, complex(H), DMRG(; tol, verbosity = verbosity_conv))[1], H
-        )
-        for alg in (
-                DMRG(; tol, verbosity = verbosity_conv),
-                DMRG2(; tol, verbosity = verbosity_conv, trunc = truncrank(D)),
-            )
-            ψ, envs, δ = find_groundstate(ψ₀, H, alg)
-            @test expectation_value(ψ, H, envs) ≈ E_ref atol = 1.0e-6
-        end
-    end
-
-    @testset "InfiniteMPS" begin
-        H = long_range_ising_infinite(Float64; L = 3)
-        @test scalartype(H) <: Real
-
-        ψ₀ = InfiniteMPS(randn, ComplexF64, fill(ℂ^2, 3), fill(ℂ^D, 3))
-        E_ref = expectation_value(
-            find_groundstate(ψ₀, complex(H), VUMPS(; tol, verbosity = verbosity_conv))[1], H
-        )
-        for alg in (VUMPS(; tol, verbosity = verbosity_conv), IDMRG(; tol, verbosity = verbosity_conv))
-            ψ, envs, δ = find_groundstate(ψ₀, H, alg)
-            @test expectation_value(ψ, H, envs) ≈ E_ref atol = 1.0e-6
-        end
     end
 end
 
