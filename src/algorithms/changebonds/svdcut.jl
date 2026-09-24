@@ -81,9 +81,9 @@ function changebonds!(mpo::FiniteMPO, alg::SvdCut)
     O = transpose(mpo[N], ((1,), (3, 4, 2)))
     for i in (N - 1):-1:1
         U, S, Vᴴ = svd_trunc!(O; trunc = alg.trunc, alg = alg.alg_svd)
-        _warn_empty_bond(i, space(S, 1))
         n = sqrt(norm(S))
-        iszero(n) && (n = one(n))
+        _warn_empty_bond(i, space(S, 1), n)
+        n <= sqrt(eps(real(one(n)))) && (n = one(n))
         @inbounds mpo[i + 1] = transpose(scale!(Vᴴ, n), ((1, 4), (2, 3)))
         if i > 1
             @plansor O[-1; -3 -4 -2] := mpo[i][-1 -2; -3 2] * U[2; 1] * S[1; -4] / n
@@ -103,8 +103,12 @@ function _extract_norm!(t)
     return log(n)
 end
 
-function _warn_empty_bond(bond::Int, V)
-    dim(V) == 0 && @warn "`SvdCut` truncated the bond between sites $bond and $(bond + 1) down to zero dimensions; the resulting operator is identically zero. Loosen `trunc` or check the scale of the input operator."
+function _warn_empty_bond(bond::Int, V, n)
+    if dim(V) == 0
+        @warn "`SvdCut` truncated the bond between sites $bond and $(bond + 1) down to zero dimensions; the resulting operator is identically zero. Loosen `trunc` or check the scale of the input operator."
+    elseif n <= sqrt(eps(real(one(n))))
+        @warn "`SvdCut` truncated the bond between sites $bond and $(bond + 1) down to a near-zero norm ($n); the rescaled tensor may lose numerical precision. Loosen `trunc` or check the scale of the input operator."
+    end
     return nothing
 end
 

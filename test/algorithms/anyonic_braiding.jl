@@ -75,8 +75,8 @@ end
     # even though the eigenproblem is degenerate over the ancilla leg
     A = randn(T, V^L, V^L)
     Oh = FiniteMPO(A + A')
-    ψ3, _, ϵ3 = find_groundstate(ρ_mps, Oh, DMRG(; tol = 1.0e-10, maxiter = 50))
-    @test ϵ3 ≤ 1.0e-10
+    ψ3, _, info3 = find_groundstate(ρ_mps, Oh, DMRG(; tol = 1.0e-10, maxiter = 50))
+    @test info3.galerkin ≤ 1.0e-10
 
     # prepared AC2, reached by two-site TDVP
     Ohd = convert(TensorMap, Oh)
