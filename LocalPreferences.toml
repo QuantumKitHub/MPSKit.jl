@@ -2,4 +2,4 @@
 precompile_workload = true
 
 [TensorKit]
-precompile_sectors = ["Trivial", "Z2Irrep", "SU2Irrep", "FermionParity", "FibonacciAnyon"]
+precompile_sectors = ["Trivial", "Z2Irrep", "SU2Irrep", "FermionParity"]
