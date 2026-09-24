@@ -45,20 +45,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   virtual channels between terms that start out with the same operators, up to a scalar factor,
   and add up terms that are linearly dependent. The resulting Hamiltonian is unchanged, but its
   bond dimension is generally smaller ([#518](https://github.com/QuantumKitHub/MPSKit.jl/pull/518))
-- The following algorithms now return an `AlgorithmInfo` in place of a bare error or nothing: `find_groundstate`,
-  `find_groundstate!`, `leading_boundary`, `approximate` and `approximate!` return
-  `(ψ, envs, info)` instead of `(ψ, envs, ϵ)`, `Zipup` returns `(ψ, info)`, and
-  `timestep`/`timestep!`/`time_evolve`/`time_evolve!` gain the same third value where they
-  previously returned none. This was motivated by the fact that a single number could not
-  carry what these algorithms actually produce. To migrate, replace `ϵ` with
-  `convergence_measure(info)` for convergence measures and `info.max_truncation_error` or `info.ϵ_max`
-  for truncation errors. See the updated docs or `AlgorithmInfo`'s docstring for more information.
-  ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
-- The meaning of every reported error and tolerance is now documented, and the manual has a new
-  [Errors and accuracy](@ref) section covering ground states, time evolution and excitations
-  separately. Each is written as what the quantity is in principle, what MPSKit actually computes,
-  and why the two differ where they do. Aside from the time-evolution return value, the
-  quantities themselves are unchanged.([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+- `find_groundstate(!)`, `leading_boundary`, `approximate(!)`, `timestep(!)` and `time_evolve(!)`
+  now have the return signature `(ψ, envs, info)` with `info` an `AlgorithmInfo` that contains
+  diagnostics about the run and convergence. See the updated docs or `AlgorithmInfo`'s
+  docstring for more information. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+- The manual has a new section on [Errors and accuracy](@ref) covering definitions and interpretations
+  of the various returned measures. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
   `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
   norm is preserved, so it retains useful information (the accumulated truncation error in real time,
@@ -152,14 +144,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - Reorganised the test suite to reduce CI wall time, as well as added the `--fast` test flag
   to test fewer sector and scalar types. ([#517](https://github.com/QuantumKitHub/MPSKit.jl/pull/517))
 - `TDVP2` now performs its two-site split through the shared `gauge2!` (as two-site DMRG already
-  did), which removes two sources of waste per local update:
-  - its right-to-left sweep installed the two sites in the left-to-right order, which made the
-    lazy orthogonality-view cache re-derive `AR` at the bond from the pre-update tensor, only to
-    overwrite it on the next install. `gauge2!` installs in sweep order, dropping that redundant
-    right-orthogonalisation per bond.
-  - it unconditionally complexified the bond tensor, so for a real-valued state (real Hamiltonian
-    in imaginary time) every local update allocated a complex copy that the state's own storage
-    then converted straight back to real. `gauge2!` only complexifies when the state is complex.
+  did), avoiding unnecessary re-orthogonalisation and complexification where applicable). ([#517](https://github.com/QuantumKitHub/MPSKit.jl/pull/517))
 
 ## [0.13.11](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.10...v0.13.11) - 2026-05-04
 
