@@ -1,7 +1,7 @@
 function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environments(ψ, _environment_args(Oϕ)...))
     allocator = default_allocator(ψ, SerialScheduler())
     ϵ::Float64 = 2 * alg.tol
-    local iter
+    iter = 0
     log = IterLog("DMRG2")
 
     LoggingExtras.withlevel(; alg.verbosity) do
@@ -40,7 +40,7 @@ end
 function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments(ψ, _environment_args(Oϕ)...))
     allocator = default_allocator(ψ, SerialScheduler())
     ϵ::Float64 = 2 * alg.tol
-    local iter
+    iter = 0
     log = IterLog("DMRG")
 
     LoggingExtras.withlevel(; alg.verbosity) do

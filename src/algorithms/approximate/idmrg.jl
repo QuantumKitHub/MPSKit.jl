@@ -5,7 +5,7 @@ function approximate!(
     allocator = default_allocator(ψ, SerialScheduler())
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
-    local iter
+    iter = 0
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
@@ -72,7 +72,8 @@ function approximate!(
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
     O, ϕ = toapprox
-    local iter, acc
+    iter = 0
+    acc = TruncationAccumulator(ψ)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)

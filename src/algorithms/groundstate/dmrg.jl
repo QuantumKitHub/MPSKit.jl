@@ -311,7 +311,7 @@ function find_groundstate_sweep!(
     ϵ_truncs = zeros(Tr, n)     # local truncation error
     decay_rates = zeros(n)      # local observed decay rate of eigensolver
     fwd, bwd = _sweep_ranges(alg, ψ)
-    local iter
+    iter = 0
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ_global, expectation_value(ψ, H, envs))

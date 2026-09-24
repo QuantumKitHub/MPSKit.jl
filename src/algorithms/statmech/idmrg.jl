@@ -4,7 +4,7 @@ function leading_boundary(
     allocator = default_allocator(ψ, SerialScheduler())
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
-    local iter
+    iter = 0
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ, expectation_value(ψ, operator, envs))
@@ -69,7 +69,8 @@ function leading_boundary(
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
-    local iter, acc
+    iter = 0
+    acc = TruncationAccumulator(ψ)
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
