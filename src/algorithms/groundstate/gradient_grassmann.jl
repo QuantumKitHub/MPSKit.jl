@@ -127,10 +127,16 @@ function _find_groundstate(ψ, H, alg::GradientGrassmann, envs, scheduler, timer
         @infov 4 TimerReport(timeroutput)
     end
 
-    normres = normgradhistory[end, 2] # full history returned as [fhistory normgradhistory]
-    info = AlgorithmInfo(;
-        converged = normres <= alg.method.gradtol, gradientnorm = normres,
-        numiter = size(normgradhistory, 1) - 1 # history starts with initial point before first iteration
-    )
+    info = _optimkit_info(normgradhistory, alg.method.gradtol)
     return x, envs, info
+end
+
+# `optimize` returns its full history as `[fhistory normgradhistory]`, with the initial point
+# before the first iteration as its first row.
+function _optimkit_info(normgradhistory, gradtol)
+    normres = normgradhistory[end, 2]
+    return AlgorithmInfo(;
+        converged = normres <= gradtol, gradientnorm = normres,
+        numiter = size(normgradhistory, 1) - 1
+    )
 end
