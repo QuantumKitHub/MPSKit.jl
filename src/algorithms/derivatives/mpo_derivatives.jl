@@ -323,7 +323,7 @@ function (H::PrecomputedCDerivative)(x::MPSBondTensor)
 
     TC = TensorOperations.promote_contract(scalartype(x), scalartype(H))
     xR = TensorOperations.tensoralloc_contract(
-        TC, x, ((1,), (2,)), false, R, ((1,), (2, 3)), false, ((1, 2), (3,)), Val(true), allocator
+        TC, x, ((1,), (2,)), false, R, ((1,), (3, 2)), false, ((1, 3), (2,)), Val(true), allocator
     )
     mul_front!(xR, x, R, One(), Zero(), backend, allocator)
     LxR = L * xR
