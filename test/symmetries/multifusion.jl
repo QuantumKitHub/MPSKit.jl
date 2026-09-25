@@ -53,14 +53,14 @@ module TestMultifusion
 
     @testset "InfiniteMPS construction" begin
         for (P, V) in bad_fusions
-            @test_throws ArgumentError InfiniteMPS([P], [V])
+            @test_throws SpaceMismatch InfiniteMPS([P], [V])
         end
     end
 
     @testset "FiniteMPS construction" begin
         for (P, V) in bad_fusions
-            @test_warn "no fusion channels available at site 2" FiniteMPS(rand(2:100), P, V)
-            @test_warn "no fusion channels available at site 2" FiniteMPS(rand(2:100), P, V; left = V, right = V)
+            @test_throws ArgumentError FiniteMPS(rand(2:100), P, V)
+            @test_throws SpaceMismatch FiniteMPS(rand(2:100), P, V; left = V, right = V)
         end
     end
 
