@@ -115,16 +115,13 @@ function variance(
             state.AC[i], envs.GLs[i], H[i][:, :, :, end], envs.GRs[i][end]
         )
     end
-    lattice = physicalspace(H)
-    H_renormalized = InfiniteMPOHamiltonian(
-        lattice, i => e * id(storagetype(eltype(H)), lattice[i]) for (i, e) in enumerate(e_local)
-    )
-    return real(expectation_value(state, (H - H_renormalized)^2))
+    return real(expectation_value(state, (H - e_local)^2))
 end
 
 function variance(state::FiniteMPS, H::FiniteMPOHamiltonian, envs = environments(state, H, state))
-    H2 = H * H
-    return real(expectation_value(state, H2) - expectation_value(state, H, envs)^2)
+    E = expectation_value(state, H, envs)
+    λs = fill(E / length(H), length(H))
+    return real(expectation_value(state, (H - λs)^2))
 end
 
 function variance(state::FiniteQP, H::FiniteMPOHamiltonian, args...)

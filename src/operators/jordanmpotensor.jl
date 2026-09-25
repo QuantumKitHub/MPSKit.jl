@@ -162,6 +162,14 @@ end
 function jordanmpotensortype(::Type{O}) where {O <: AbstractTensorMap}
     return jordanmpotensortype(spacetype(O), storagetype(O))
 end
+function Base.promote_rule(::Type{O1}, ::Type{O2}) where {O1 <: JordanMPOTensor, O2 <: JordanMPOTensor}
+    O1 === O2 && return O1
+    spacetype(O1) === spacetype(O2) ||
+        throw(ArgumentError("cannot promote JordanMPOTensor types with different spacetypes"))
+    T = promote_type(scalartype(O1), scalartype(O2))
+    A = TensorKit.similarstoragetype(storagetype(O1), T)
+    return jordanmpotensortype(spacetype(O1), A)
+end
 function Base.similar(W::JordanMPOTensor, ::Type{T}) where {T <: Number}
     TE = TensorKit.similarstoragetype(TensorKit.storagetype(W), T)
     return jordanmpotensortype(spacetype(W), TE)(undef, space(W))

@@ -51,4 +51,20 @@ end
 
     H4 = H1 + H3
     @test real(expectation_value(ψ2, H4)) >= 0
+
+    O1_real = project_hermitian!(randn(Float64, pspace, pspace))
+    O2_real = project_hermitian!(randn(Float64, pspace ⊗ pspace, pspace ⊗ pspace))
+    Hreal_long_range = InfiniteMPOHamiltonian(O1_real) + InfiniteMPOHamiltonian(O2_real)
+    Hcomplex_local = InfiniteMPOHamiltonian(operators[1])
+
+    @test scalartype(Hreal_long_range) == Float64
+    @test scalartype(Hcomplex_local) == ComplexF64
+    for H in (
+            Hreal_long_range + Hcomplex_local, Hcomplex_local + Hreal_long_range,
+            Hreal_long_range - Hcomplex_local, Hcomplex_local - Hreal_long_range,
+        )
+        @test scalartype(H) == ComplexF64
+    end
+    @test expectation_value(ψ1, Hreal_long_range + Hcomplex_local) ≈
+        expectation_value(ψ1, Hreal_long_range) + expectation_value(ψ1, Hcomplex_local) atol = 1.0e-10
 end
