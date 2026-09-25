@@ -121,6 +121,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   from `make_time_mpo`) into an MPS, since it braided the physical leg directly against a
   `SumSpace` virtual leg. It now densifies the tensor first, which the function already did to its
   return value regardless, so this adds no extra cost. ([#509](https://github.com/QuantumKitHub/MPSKit.jl/pull/509))
+- `make_time_mpo` with `TaylorCluster` on a Hamiltonian whose virtual bond dimension varies along
+  the chain are now correctly handled. ([#511](https://github.com/QuantumKitHub/MPSKit.jl/pull/511))
 
 ### Performance
 

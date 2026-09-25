@@ -94,7 +94,14 @@ using TensorKit: ℙ
     end
 
     L = 4
-    Hs = [transverse_field_ising(; L), heisenberg_XXX(; L)]
+    h1 = S_z_S_z(ComplexF64, Trivial; spin = 1 // 2) * 4
+    h2 = S_x_S_x(ComplexF64, Trivial; spin = 1 // 2) * 4
+    rectangular_lattice = fill(space(h1, 1), L)
+    rectangular_ising = FiniteMPOHamiltonian(
+        rectangular_lattice, ((i, i + 1) => h1 for i in 1:(L - 1))..., (1, 3) => h2
+    )
+
+    Hs = [transverse_field_ising(; L), heisenberg_XXX(; L), rectangular_ising]
 
     Ns = [1, 2, 3]
     dts = [1.0e-2, 1.0e-3]
