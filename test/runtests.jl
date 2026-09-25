@@ -41,4 +41,10 @@ const init_code = quote
     const fast_tests = $fast
 end
 
-ParallelTestRunner.runtests(MPSKit, args; testsuite, init_worker_code, init_code)
+# custom workers for different plot backends
+function test_worker(name, init_worker_code)
+    name in ("misc/plots", "misc/makie") && return addworker(; init_worker_code)
+    return nothing
+end
+
+ParallelTestRunner.runtests(MPSKit, args; testsuite, init_worker_code, init_code, test_worker)

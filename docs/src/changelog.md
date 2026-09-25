@@ -38,6 +38,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   by `MPSKit.default_allocator`, instead of leaving them to the garbage collector
   (two-site DMRG: -64% allocations, -57% GC time, -23% wall time).
   Disable with `MPSKit.Defaults.set_buffering!(false)`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
+- Makie.jl support for `entanglementplot` and `transferplot`, through a new `MPSKitMakieExt`
+  package extension. Loading any Makie backend (e.g. `using CairoMakie`) alongside MPSKit
+  enables both plot functions, as an alternative to Plots.jl. Backend-specific styling can be
+  passed via the `plotkwargs` keyword. ([#428](https://github.com/QuantumKitHub/MPSKit.jl/pull/428))
+- `entanglementplot!` and `transferplot!`, the mutating counterparts of the plotting functions,
+  which add a spectrum to an existing figure instead of creating a new one. ([#428](https://github.com/QuantumKitHub/MPSKit.jl/pull/428))
 
 ### Changed
 
