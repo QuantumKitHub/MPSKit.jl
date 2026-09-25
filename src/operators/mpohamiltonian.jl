@@ -903,6 +903,17 @@ function Base.convert(
     return InfiniteMPOHamiltonian(convert.(O1, parent(H)))
 end
 
+function Base.promote_rule(
+        ::Type{FiniteMPOHamiltonian{O1}}, ::Type{FiniteMPOHamiltonian{O2}}
+    ) where {O1 <: JordanMPOTensor, O2 <: JordanMPOTensor}
+    return FiniteMPOHamiltonian{promote_type(O1, O2)}
+end
+function Base.promote_rule(
+        ::Type{InfiniteMPOHamiltonian{O1}}, ::Type{InfiniteMPOHamiltonian{O2}}
+    ) where {O1 <: JordanMPOTensor, O2 <: JordanMPOTensor}
+    return InfiniteMPOHamiltonian{promote_type(O1, O2)}
+end
+
 function add_physical_charge(H::MPOHamiltonian, charges::AbstractVector{<:Sector})
     W = map(add_physical_charge, parent(H), charges)
     if isfinite(H)
@@ -930,8 +941,9 @@ Base.circshift(H::InfiniteMPOHamiltonian, shift::Integer) = InfiniteMPOHamiltoni
 # Linear Algebra
 # --------------
 function Base.:+(
-        H₁::FiniteMPOHamiltonian{O}, H₂::FiniteMPOHamiltonian{O}
-    ) where {O <: JordanMPOTensor}
+        H₁::FiniteMPOHamiltonian{O1}, H₂::FiniteMPOHamiltonian{O2}
+    ) where {O1 <: JordanMPOTensor, O2 <: JordanMPOTensor}
+    O1 === O2 || return +(promote(H₁, H₂)...)
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
     # same as rightunitspace (asserted within construction FiniteMPOHamiltonian)
@@ -954,9 +966,10 @@ function Base.:+(
     return FiniteMPOHamiltonian(H)
 end
 function Base.:+(
-        H₁::InfiniteMPOHamiltonian{O},
-        H₂::InfiniteMPOHamiltonian{O}
-    ) where {O <: JordanMPOTensor}
+        H₁::InfiniteMPOHamiltonian{O1},
+        H₂::InfiniteMPOHamiltonian{O2}
+    ) where {O1 <: JordanMPOTensor, O2 <: JordanMPOTensor}
+    O1 === O2 || return +(promote(H₁, H₂)...)
     N = check_length(H₁, H₂)
     H = similar(parent(H₁))
     # same as rightunitspace (asserted within construction of InfiniteMPOHamiltonian)
@@ -979,7 +992,7 @@ end
 function Base.:+(H::FiniteMPOHamiltonian, λs::AbstractVector{<:Number})
     check_length(H, λs)
     lattice = [physicalspace(H, i) for i in 1:length(H)]
-    M = storagetype(H)
+    M = TensorKit.similarstoragetype(storagetype(H), promote_type(scalartype(H), eltype(λs)))
     Hλ = FiniteMPOHamiltonian(
         lattice,
         i => scale!(id(M, lattice[i]), λs[i]) for i in 1:length(H)
@@ -989,7 +1002,7 @@ end
 function Base.:+(H::InfiniteMPOHamiltonian, λs::AbstractVector{<:Number})
     check_length(H, λs)
     lattice = [physicalspace(H, i) for i in 1:length(H)]
-    M = storagetype(H)
+    M = TensorKit.similarstoragetype(storagetype(H), promote_type(scalartype(H), eltype(λs)))
     Hλ = InfiniteMPOHamiltonian(
         lattice,
         i => scale!(id(M, lattice[i]), λs[i]) for i in 1:length(H)

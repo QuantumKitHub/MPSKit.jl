@@ -203,11 +203,9 @@ end
     ψ = InfiniteMPS(ℙ^2, ℙ^D)
     v₀ = variance(ψ, H_ref)
 
-    # VUMPS spawns over the unit cell, so it is run under both schedulers: which allocator serves
-    # the local updates follows from the scheduler, and must not change any number
-    # NOTE: the starting state is built from scratch rather than from this block's `ψ`. The testsets
-    # around this one rebind `ψ` to their own (already repeated) result, and a `@testset for` body is
-    # a single scope, so reading it here would feed a length-3 state back into `repeat`.
+    H_ref_realT = force_planar(transverse_field_ising(Float64; g))
+    @test variance(ψ, H_ref_realT) ≈ v₀ atol = 1.0e-10
+
     @testset "VUMPS (unit cell $unit_cell_size, $schedname)" for unit_cell_size in [1, 3],
             (schedname, scheduler) in SCHEDULERS
 
