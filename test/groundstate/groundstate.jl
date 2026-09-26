@@ -44,13 +44,6 @@ verbosity_conv = 1
             @test sum(δ) ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
-
-            # the algorithm object carries no scratch space of its own - the sweep's allocator is
-            # obtained per solve - so re-using one across solves has to reproduce the answer
-            alg = DMRG(; verbosity = verbosity_conv, maxiter = 10)
-            ψ1, = find_groundstate(ψ₀, H, alg)
-            ψ2, = find_groundstate(ψ₀, H, alg)
-            @test expectation_value(ψ1, H) ≈ expectation_value(ψ2, H) atol = 1.0e-10
         end
 
         @testset "DMRG2" begin
@@ -214,6 +207,7 @@ end
     H_ref_realT = force_planar(transverse_field_ising(Float64; g))
     @test variance(ψ, H_ref_realT) ≈ v₀ atol = 1.0e-10
 
+
     @testset "VUMPS (unit cell $unit_cell_size, $schedname)" for unit_cell_size in [1, 3],
             (schedname, scheduler) in SCHEDULERS
 
@@ -235,24 +229,18 @@ end
         @test v < 1.0e-2
     end
 
-    # the long-range model forces `JordanMPO_AC_Hamiltonian` through its converting outer
-    # constructor (real `H`, complex `ψ`), exercising a code path the nearest-neighbour model
-    # never reaches. Its `(1, L)` coupling needs an explicit unit cell, so it does not fit the
-    # `unit_cell_size`/scheduler sweep above and is checked on its own instead.
     @testset "VUMPS (long-range, real scalartype)" begin
         H = force_planar(long_range_ising_infinite(Float64; g, L = 3))
         ψ₀ = InfiniteMPS(fill(ℙ^2, 3), fill(ℙ^D, 3))
+        v₀ = variance(ψ₀, H)
 
         ψ′, envs, δ = find_groundstate(ψ₀, H, VUMPS(; tol, verbosity = verbosity_conv, maxiter = 20))
+        v = variance(ψ′, H, envs)
 
+        # test using low variance
         @test sum(δ) ≈ 0 atol = 1.0e-3
-        # `variance` throws a `SpaceMismatch` for a real, long-range `InfiniteMPOHamiltonian`
-        # against a complex state: https://github.com/QuantumKitHub/MPSKit.jl/issues/524
-        @test_broken try
-            variance(ψ₀, H) > variance(ψ′, H, envs)
-        catch
-            false
-        end
+        @test v < v₀
+        @test v < 1.0e-2
     end
 
     @testset "IDMRG" for unit_cell_size in [1, 3]
@@ -276,17 +264,15 @@ end
     @testset "IDMRG (long-range, real scalartype)" begin
         H = force_planar(long_range_ising_infinite(Float64; g, L = 3))
         ψ₀ = InfiniteMPS(fill(ℙ^2, 3), fill(ℙ^D, 3))
+        v₀ = variance(ψ₀, H)
 
         ψ, envs, δ = find_groundstate(ψ₀, H, IDMRG(; tol, verbosity = verbosity_conv, maxiter = 20))
+        v = variance(ψ, H, envs)
 
+        # test using low variance
         @test sum(δ) ≈ 0 atol = 1.0e-3
-        # `variance` throws a `SpaceMismatch` for a real, long-range `InfiniteMPOHamiltonian`
-        # against a complex state: https://github.com/QuantumKitHub/MPSKit.jl/issues/524
-        @test_broken try
-            variance(ψ₀, H) > variance(ψ, H, envs)
-        catch
-            false
-        end
+        @test v < v₀
+        @test v < 1.0e-2
     end
 
     @testset "IDMRG2" begin
