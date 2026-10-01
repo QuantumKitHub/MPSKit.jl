@@ -18,8 +18,7 @@ Used as the `algorithm` argument of [`leading_boundary`](@ref) and [`approximate
 * [Vanhecke et al. SciPost Phys. Core 4 (2021)](@cite vanhecke2021)
 """
 @kwdef struct VOMPS{F, B} <: Algorithm
-    "convergence tolerance, compared against the Galerkin error (the tangent-space gradient
-    norm), reported as the `galerkin` entry of the returned [`AlgorithmInfo`](@ref)"
+    "convergence tolerance on the Galerkin error, see [Ground state accuracy](@ref)"
     tol::Float64 = Defaults.tol
 
     "maximal amount of iterations"

@@ -53,9 +53,13 @@ end
         end
 
         ψ3, _ = approximate(ψ0, (W1, ψ), IDMRG(; verbosity))
-        ψ4, _ = approximate(ψ0, (sW2, ψ), IDMRG2(; trunc = truncrank(12), verbosity))
-        ψ5, _ = timestep(ψ, H, 0.0, dt, TDVP())
+        ψ4, _, info4 = approximate(ψ0, (sW2, ψ), IDMRG2(; trunc = truncrank(12), verbosity))
+        ψ5, _, info5 = timestep(ψ, H, 0.0, dt, TDVP())
         ψ6 = changebonds(W1 * ψ, SvdCut(; trunc = truncrank(12)))
+
+        @test info4.truncation_errors isa AbstractVector
+        @test length(info4.truncation_errors) == length(ψ0)
+        @test !haskey(info5, :truncation_errors) # infinite one-site TDVP never truncates
 
         @test abs(dot(ψ1, ψ5)) ≈ 1.0 atol = dt
         @test abs(dot(ψ3, ψ5)) ≈ 1.0 atol = dt
@@ -64,6 +68,28 @@ end
 
         nW1 = changebonds(W1, SvdCut(; trunc = trunctol(; atol = dt))) # this should be a trivial mpo now
         @test dim(space(nW1[1], 1)) == 1
+    end
+
+    # every row of a multiline problem has to land in its own row of the result, including at the
+    # unit cell edge, which used to write the last row's update into the wrong row
+    @testset "multiline IDMRG2 rows" begin
+        Random.seed!(42)
+        dt = 1.0e-2
+        Wa = make_time_mpo(force_planar(repeat(transverse_field_ising(; g = 4), 2)), dt, WII())
+        Wb = make_time_mpo(force_planar(repeat(transverse_field_ising(; g = 0.5), 2)), dt, WII())
+        ϕa, ϕb = (InfiniteMPS([ℙ^2, ℙ^2], [ℙ^8, ℙ^8]) for _ in 1:2)
+        ψ0a, ψ0b = (InfiniteMPS([ℙ^2, ℙ^2], [ℙ^10, ℙ^10]) for _ in 1:2)
+        alg = IDMRG2(; trunc = truncrank(10), verbosity, maxiter = 50)
+
+        multi, = approximate(
+            MultilineMPS([ψ0a, ψ0b]), (MultilineMPO([Wa, Wb]), MultilineMPS([ϕa, ϕb])), alg
+        )
+        ref_a, = approximate(ψ0a, (Wa, ϕa), alg)
+        ref_b, = approximate(ψ0b, (Wb, ϕb), alg)
+
+        # row `r + 1` of the result approximates `O[r] * ϕ[r]`
+        @test abs(dot(multi[2], ref_a)) ≈ 1 atol = 1.0e-8
+        @test abs(dot(multi[1], ref_b)) ≈ 1 atol = 1.0e-8
     end
 
     finite_algs = [DMRG(; verbosity), DMRG2(; verbosity, trunc = truncrank(10))]
@@ -121,7 +147,8 @@ end
         for left_to_right in (true, false), trunc′ in (trunc, (notrunc(), trunc))
             got, info = approximate((O, ψ), Zipup(; trunc = trunc′, left_to_right))
             @test norm(ref - got) / norm(ref) < 1.0e-10
-            @test info.ϵ_max < 1.0e-10
+            @test length(info.truncation_errors) == length(ψ) - 1
+            @test maximum(info.truncation_errors) < 1.0e-10
             @test !haskey(info, :converged) && isnothing(convergence_measure(info))
         end
 
@@ -145,7 +172,7 @@ end
             normalize!(got_s)
             @test norm(ref_s - got_s) < 0.002
             @test norm(ψ - got_s) > 0.002
-            @test info.ϵ_max < 1.0e-10
+            @test maximum(info.truncation_errors) < 1.0e-10
         end
     end
 
@@ -161,7 +188,7 @@ end
         got_two_sweep, _ = approximate(
             (O, ψ), Zipup(; trunc = (zipup_trunc, final_trunc), left_to_right)
         )
-        @test info_one_sweep.ϵ_max > 0
+        @test maximum(info_one_sweep.truncation_errors) > 0
 
         err_one_sweep = norm(ref_tr - got_one_sweep) / norm(ref_tr)
         err_two_sweep = norm(ref_tr - got_two_sweep) / norm(ref_tr)
@@ -181,19 +208,19 @@ end
         got, info = approximate!(dst, (O, ψ), alg)
         @test got === dst
         @test norm(ref - got) / norm(ref) < 1.0e-12
-        @test info.ϵ_max ≈ info_ref.ϵ_max
+        @test info.truncation_errors ≈ info_ref.truncation_errors
 
         # a destination with unrelated contents is overwritten entirely
         dst = FiniteMPS(rand, ComplexF64, length(ψ), pspace, oneunit(Dspace) ⊕ Dspace ⊕ Dspace)
         got, info = approximate!(dst, (O, ψ), alg)
         @test norm(ref - got) / norm(ref) < 1.0e-12
-        @test info.ϵ_max ≈ info_ref.ϵ_max
+        @test info.truncation_errors ≈ info_ref.truncation_errors
 
         # the input may serve as its own destination
         got, info = approximate!(ψ, (O, ψ), alg)
         @test got === ψ
         @test norm(ref - got) / norm(ref) < 1.0e-12
-        @test info.ϵ_max ≈ info_ref.ϵ_max
+        @test info.truncation_errors ≈ info_ref.truncation_errors
     end
 
     @testset "Zip-up with non-trivial boundary spaces $(spacetype(pspace))" for (pspace, Dspace, _) in zipup_spacelist

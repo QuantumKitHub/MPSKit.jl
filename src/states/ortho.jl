@@ -238,7 +238,7 @@ function uniform_leftorth!(
         # iteratively solve
         for (AL, C) in it
             iter, ϵ = it.iter, it.ϵ
-            if ϵ < it.tol
+            if ϵ <= it.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 return AL, C
             elseif iter > it.maxiter
@@ -306,7 +306,7 @@ function uniform_rightorth!(
         # iteratively solve
         for (AR, C) in it
             iter, ϵ = it.iter, it.ϵ
-            if ϵ < it.tol
+            if ϵ <= it.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 return AR, C
             elseif iter > it.maxiter

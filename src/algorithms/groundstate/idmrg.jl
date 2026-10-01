@@ -12,10 +12,7 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
 @kwdef struct IDMRG{A, B} <: Algorithm
-    "convergence tolerance, compared against the change in the center bond tensor over a sweep,
-    reported as the `bondresidual` entry of the returned [`AlgorithmInfo`](@ref). This is a
-    fixed-point residual measuring how much a sweep still moves the state, and is not equivalent to
-    the Galerkin error that [`DMRG`](@ref) and [`VUMPS`](@ref) report"
+    "convergence tolerance on the change of the center bond tensor over a sweep, see [Ground state accuracy](@ref)"
     tol::Float64 = Defaults.tol
 
     "maximal amount of iterations"
@@ -48,10 +45,7 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_boundary`](@ref), and [`approximate`](@ref).
 """
 @kwdef struct IDMRG2{A, S, B} <: Algorithm
-    "convergence tolerance, compared against the change in the center bond tensor over a sweep,
-    reported as the `bondresidual` entry of the returned [`AlgorithmInfo`](@ref). This is a
-    fixed-point residual measuring how much a sweep still moves the state, and is not equivalent to
-    the Galerkin error that [`DMRG2`](@ref) reports"
+    "convergence tolerance on the change of the center bond tensor over a sweep, see [Ground state accuracy](@ref)"
     tol::Float64 = Defaults.tol
 
     "maximal amount of iterations"
@@ -77,24 +71,24 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_bounda
 end
 
 # Internal state of the IDMRG algorithm
-struct IDMRGState{S, O, E, T, TO, A}
+struct IDMRGState{S, O, E, V, T, TO, A}
     mps::S
     operator::O
     envs::E
     iter::Int
     ϵ::Float64 # TODO: Could be any <:Real
-    truncation::TruncationAccumulator{Float64} # of the most recent sweep only
+    truncation_errors::V # per bond, of the most recent sweep only
     energy::T
     timeroutput::TO
     allocator::A
 end
 function IDMRGState{T}(
         mps::S, operator::O, envs::E, iter::Int, ϵ::Float64,
-        truncation::TruncationAccumulator{Float64}, energy,
+        truncation_errors::V, energy,
         timeroutput::TO, allocator::A,
-    ) where {S, O, E, T, TO, A}
-    return IDMRGState{S, O, E, T, TO, A}(
-        mps, operator, envs, iter, ϵ, truncation, T(energy), timeroutput, allocator
+    ) where {S, O, E, V, T, TO, A}
+    return IDMRGState{S, O, E, V, T, TO, A}(
+        mps, operator, envs, iter, ϵ, truncation_errors, T(energy), timeroutput, allocator
     )
 end
 
@@ -121,8 +115,8 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
         end
     end
 
-    acc = TruncationAccumulator(Float64)
-    state = IDMRGState(mps, operator, envs, iter, ϵ, acc, E, timeroutput, allocator)
+    ϵ_truncs = zeros(real(scalartype(mps)), length(mps))
+    state = IDMRGState(mps, operator, envs, iter, ϵ, ϵ_truncs, E, timeroutput, allocator)
     it = IterativeSolver(alg, state)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
@@ -145,7 +139,7 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
         envs = recalculate!(it.state.envs, ψ′, it.state.operator, ψ′; alg.backend)
         info = AlgorithmInfo(;
             converged = it.state.ϵ <= alg.tol, bondresidual = it.state.ϵ,
-            truncation = alg isa IDMRG2 ? it.state.truncation : nothing,
+            truncation_errors = alg isa IDMRG2 ? it.state.truncation_errors : nothing,
             numiter = it.state.iter
         )
         return ψ′, envs, info
@@ -153,11 +147,11 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
 end
 
 function Base.iterate(
-        it::IterativeSolver{alg_type}, state::IDMRGState{<:Any, <:Any, <:Any, T} = it.state
+        it::IterativeSolver{alg_type}, state::IDMRGState{<:Any, <:Any, <:Any, <:Any, T} = it.state
     ) where {alg_type <: Union{<:IDMRG, <:IDMRG2}, T}
     timeroutput = state.timeroutput
-    acc = TruncationAccumulator(Float64) # fresh each sweep, what the state carries is what's last discarded
-    mps, envs, C_old, E_new = @timeit timeroutput "localupdate" localupdate_step!(it, state, acc)
+    ϵ_truncs = zero(state.truncation_errors) # fresh each sweep, filled by the sweep itself
+    mps, envs, C_old, E_new = @timeit timeroutput "localupdate" localupdate_step!(it, state, ϵ_truncs)
 
     # error criterion
     C = mps.C[0]
@@ -178,14 +172,14 @@ function Base.iterate(
 
     # update state
     it.state = IDMRGState{T}(
-        mps, state.operator, envs, state.iter + 1, ϵ, acc, E_new, timeroutput, state.allocator,
+        mps, state.operator, envs, state.iter + 1, ϵ, ϵ_truncs, E_new, timeroutput, state.allocator,
     )
 
     return (mps, envs, ϵ, ΔE), it.state
 end
 
 function localupdate_step!(
-        it::IterativeSolver{<:IDMRG}, state, acc
+        it::IterativeSolver{<:IDMRG}, state, ϵ_truncs
     )
     alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
     return _localupdate_sweep_idmrg!(
@@ -195,12 +189,12 @@ function localupdate_step!(
 end
 
 function localupdate_step!(
-        it::IterativeSolver{<:IDMRG2}, state, acc
+        it::IterativeSolver{<:IDMRG2}, state, ϵ_truncs
     )
     alg_eigsolve = adapt_solver(it.alg_eigsolve; iter = state.iter, g_global = state.ϵ)
     return _localupdate_sweep_idmrg2!(
         state.mps, state.operator, state.envs, alg_eigsolve,
-        it.trunc, it.alg_svd, state.timeroutput, acc;
+        it.trunc, it.alg_svd, state.timeroutput, ϵ_truncs;
         it.backend, state.allocator,
     )
 end
@@ -244,7 +238,7 @@ function _localupdate_sweep_idmrg!(
 end
 
 function _localupdate_sweep_idmrg2!(
-        ψ, H, envs, alg_eigsolve, alg_trunc, alg_svd, timeroutput, acc::TruncationAccumulator;
+        ψ, H, envs, alg_eigsolve, alg_trunc, alg_svd, timeroutput, ϵ_truncs::AbstractVector;
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     # @timeit wraps its body in try-finally, which is a new lexical scope: declare locals
@@ -258,8 +252,7 @@ function _localupdate_sweep_idmrg2!(
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
         end
         @timeit timeroutput "svd_trunc" begin
-            al, c, ar, ϵ_trunc = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
-            push_error!(acc, ϵ_trunc)
+            al, c, ar, ϵ_truncs[pos] = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
             normalize!(c)
 
             ψ.AL[pos] = al
@@ -282,8 +275,7 @@ function _localupdate_sweep_idmrg2!(
         _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
     end
     @timeit timeroutput "svd_trunc" begin
-        al, c, ar, ϵ_trunc = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
-        push_error!(acc, ϵ_trunc)
+        al, c, ar, ϵ_truncs[end] = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
         normalize!(c)
 
         ψ.AL[end] = al
@@ -311,8 +303,7 @@ function _localupdate_sweep_idmrg2!(
             _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
         end
         @timeit timeroutput "svd_trunc" begin
-            al, c, ar, ϵ_trunc = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
-            push_error!(acc, ϵ_trunc)
+            al, c, ar, ϵ_truncs[pos] = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
             normalize!(c)
 
             ψ.AL[pos] = al
@@ -336,8 +327,7 @@ function _localupdate_sweep_idmrg2!(
         E, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
     end
     @timeit timeroutput "svd_trunc" begin
-        al, c, ar, ϵ_trunc = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
-        push_error!(acc, ϵ_trunc)
+        al, c, ar, ϵ_truncs[end] = svd_trunc!(ac2′; trunc = alg_trunc, alg = alg_svd)
         normalize!(c)
 
         ψ.AL[end] = al

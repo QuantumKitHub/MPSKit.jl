@@ -60,9 +60,7 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG{A, F, E, G, B} <: Algorithm
-    "convergence tolerance on the Galerkin error (the tangent-space gradient norm), reported as the
-    `galerkin` entry of the returned [`AlgorithmInfo`](@ref). This acts as a floor: the stopping
-    test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to `ϵ ≤ tol` when nothing is truncated"
+    "convergence tolerance on the Galerkin error, see [Ground state accuracy](@ref)"
     tol::Float64
 
     "maximal amount of iterations"
@@ -173,9 +171,7 @@ $(TYPEDFIELDS)
 Used as the `algorithm` argument of [`find_groundstate`](@ref) and [`approximate`](@ref).
 """
 struct DMRG2{A, G, F, B} <: Algorithm
-    "convergence tolerance on the Galerkin error (the tangent-space gradient norm), reported as the
-    `galerkin` entry of the returned [`AlgorithmInfo`](@ref). This acts as a floor: the stopping
-    test is `ϵ ≤ max(tol, maximum(ϵ_trunc))`, which reduces to `ϵ ≤ tol` when nothing is truncated"
+    "convergence tolerance on the Galerkin error, see [Ground state accuracy](@ref)"
     tol::Float64
 
     "maximal amount of iterations"
@@ -257,6 +253,11 @@ _num_updates(::DMRG2, ψ) = length(ψ) - 1
 _sweep_ranges(::DMRG, ψ) = (1:(length(ψ) - 1), length(ψ):-1:2)
 _sweep_ranges(::DMRG2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 2):-1:1)
 
+# per-bond truncation errors of the last cut from the per-update slots: single-site slot `pos`
+# holds the backward cut of bond `pos - 1`, which is the last one made there
+_bond_truncation_errors(::DMRG, ϵ_truncs) = ϵ_truncs[2:end]
+_bond_truncation_errors(::DMRG2, ϵ_truncs) = copy(ϵ_truncs)
+
 inner_alg_gauge(alg::Union{DMRG, DMRG2}) = alg_gauge(alg.alg_gauge)
 
 """
@@ -279,12 +280,8 @@ Currently supported for the finite-system algorithms [`DMRG`](@ref) and [`DMRG2`
 - `environments`: environments corresponding to the converged state
 - `info::AlgorithmInfo`: how the algorithm terminated. `info.galerkin` is the Galerkin error (also
     reachable as [`convergence_measure`](@ref)) and `info.converged` whether it met the
-    stopping test. A truncating gauge also fills `info.max_truncation_error`/`info.total_truncation_error`
-    with what the final sweep discarded (see [`find_groundstate`](@ref) and [`AlgorithmInfo`](@ref)).
-
-    These are built from one recorded value per update position, overwritten as the sweep passes
-    over it, so what is reported at each position is the most recent cut there rather than every
-    cut made during the sweep. See the manual on [Aggregating truncation errors](@ref).
+    stopping test. `info.truncation_errors` holds, per bond, what the last cut there discarded
+    (all zero for a gauge that does not truncate). See [`AlgorithmInfo`](@ref).
 """
 function find_groundstate!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs = environments(ψ, H, ψ)
@@ -365,11 +362,9 @@ function find_groundstate_sweep!(
         end
     end
 
-    acc = TruncationAccumulator(Tr)
-    foreach(ϵ -> push_error!(acc, ϵ), ϵ_truncs)
     info = AlgorithmInfo(;
         converged = ϵ_global <= max(alg.tol, maximum(ϵ_truncs)), galerkin = ϵ_global,
-        truncation = acc, numiter = iter
+        truncation_errors = _bond_truncation_errors(alg, ϵ_truncs), numiter = iter
     )
     return ψ, envs, info
 end

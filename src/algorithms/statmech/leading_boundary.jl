@@ -33,10 +33,11 @@ optimization algorithm will be attempted based on the supplied keywords.
       tensor over a sweep. For `Multiline` methods this is extensive in the number of rows.
 
     [`convergence_measure`](@ref) returns whichever is present, for code that only wants the
-    number.
+    number. [`IDMRG2`](@ref) additionally reports `truncation_errors`, what its final sweep
+    discarded at each bond.
 
-    See [`AlgorithmInfo`](@ref), [`find_groundstate`](@ref), and the manual on the `ϵ` convention
-    under [The error convention](@ref) and [Ground state accuracy](@ref).
+    See [`AlgorithmInfo`](@ref), [`find_groundstate`](@ref), and the manual on
+    [Ground state accuracy](@ref).
 """ leading_boundary
 
 # TODO: alg selector
@@ -45,20 +46,20 @@ optimization algorithm will be attempted based on the supplied keywords.
 function leading_boundary(state::InfiniteMPS, operator::InfiniteMPO, alg)
     state_multi = convert(MultilineMPS, state)
     operator_multi = convert(MultilineMPO, operator)
-    state_multi′, envs_multi′, err = leading_boundary(
+    state_multi′, envs_multi′, info = leading_boundary(
         state_multi, operator_multi, alg,
     )
     state′ = convert(InfiniteMPS, state_multi′)
-    return state′, only(envs_multi′), err
+    return state′, only(envs_multi′), _singleline_info(info)
 end
 function leading_boundary(state::InfiniteMPS, operator::InfiniteMPO, alg, envs)
     state_multi = convert(MultilineMPS, state)
     operator_multi = convert(MultilineMPO, operator)
     envs_multi = Multiline([envs])
-    state_multi′, envs_multi′, err = leading_boundary(
+    state_multi′, envs_multi′, info = leading_boundary(
         state_multi, operator_multi, alg,
         envs_multi
     )
     state′ = convert(InfiniteMPS, state_multi′)
-    return state′, only(envs_multi′), err
+    return state′, only(envs_multi′), _singleline_info(info)
 end

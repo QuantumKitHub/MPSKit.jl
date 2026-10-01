@@ -44,8 +44,8 @@ low-bond-dimension initial guess such as a product state.
     `gradientnorm` for [`GradientGrassmann`](@ref), and `bondresidual` for [`IDMRG`](@ref) and
     [`IDMRG2`](@ref). [`convergence_measure`](@ref) returns whichever of these is present,
     for code that only wants the number. A truncating algorithm additionally fills
-    `info.max_truncation_error`/`info.total_truncation_error` with what its final sweep discarded.
-    See [`AlgorithmInfo`](@ref) for the full vocabulary, and [The error convention](@ref) in the manual.
+    `info.truncation_errors` with what its final sweep discarded at each bond.
+    See [`AlgorithmInfo`](@ref) for the full vocabulary, and [Ground state accuracy](@ref) in the manual.
 
 # Examples
 

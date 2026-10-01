@@ -16,7 +16,7 @@ In MPSKit.jl, this can be achieved through `find_groundstate`:
 find_groundstate
 ```
 
-The returned error measures convergence to a variational fixed point, which is not the same as accuracy; see [Ground state accuracy](@ref).
+See also [Ground state accuracy](@ref).
 
 There are a variety of algorithms that have been developed over the years, and many of them have been implemented in MPSKit.
 Keep in mind that some of them are exclusive to finite or infinite systems, while others may work for both.
@@ -125,15 +125,13 @@ WII
 TaylorCluster
 ```
 
-Time evolution has three distinct error sources, only one of which is reported back to the user.
-See [Time evolution accuracy](@ref).
+See also [Time evolution accuracy](@ref).
 
 ## Excitations
 
 It might also be desirable to obtain information beyond the lowest energy state of a given system, and study the dispersion relation.
 While it is typically not feasible to resolve states in the middle of the energy spectrum, there are several ways to target a few of the lowest-lying energy states.
-None of these report an error.
-For what limits their accuracy, see [Excitation accuracy](@ref).
+See also [Excitation accuracy](@ref).
 
 ```@docs; canonical=false
 excitations
@@ -145,19 +143,16 @@ using TensorKit, MPSKit, MPSKitModels
 
 ### Quasiparticle Ansatz
 
-The Quasiparticle Ansatz offers an approach to compute low-energy eigenstates in quantum
-systems, playing a key role in both finite and infinite systems. It leverages localized
-perturbations for approximations, as detailed in [haegeman2013](@cite).
+The Quasiparticle Ansatz offers an approach to compute low-energy eigenstates in quantum systems, playing a key role in both finite and infinite systems.
+It leverages localized perturbations for approximations, as detailed in [haegeman2013](@cite).
 
 #### Finite Systems:
 
-In finite systems, we approximate low-energy states by altering a single tensor in the
-Matrix Product State (MPS) for each site, and summing these across all sites. This method
-introduces additional gauge freedoms, utilized to ensure orthogonality to the ground state.
-Optimizing within this framework translates to solving an eigenvalue problem. For example,
-in the transverse field Ising model, we calculate the first excited state as shown in the
-provided code snippet, and check the accuracy against theoretical values. Some deviations
-are expected, both due to finite-bond-dimension and finite-size effects.
+In finite systems, we approximate low-energy states by altering a single tensor in the Matrix Product State (MPS) for each site, and summing these across all sites.
+This method introduces additional gauge freedoms, utilized to ensure orthogonality to the ground state.
+Optimizing within this framework translates to solving an eigenvalue problem.
+For example, in the transverse field Ising model, we calculate the first excited state as shown in the provided code snippet, and check the accuracy against theoretical values.
+Some deviations are expected, both due to finite-bond-dimension and finite-size effects.
 
 ```@example excitations
 # Model parameters
@@ -176,10 +171,8 @@ isapprox(Es[1], 2(g - 1); rtol=1e-2)
 
 #### Infinite Systems:
 
-The ansatz in infinite systems maintains translational invariance by perturbing every site
-in the unit cell in a plane-wave superposition, requiring momentum specification. The
-[Haldane gap](https://iopscience.iop.org/article/10.1088/0953-8984/1/19/001) computation in
-the Heisenberg model illustrates this approach.
+The ansatz in infinite systems maintains translational invariance by perturbing every site in the unit cell in a plane-wave superposition, requiring momentum specification.
+The [Haldane gap](https://iopscience.iop.org/article/10.1088/0953-8984/1/19/001) computation in the Heisenberg model illustrates this approach.
 
 ```@example excitations
 # Setting up the model and momentum
@@ -197,10 +190,9 @@ isapprox(Es[1], 0.41047925; atol=1e-4)
 
 #### Charged excitations:
 
-When dealing with symmetric systems, the default optimization is for eigenvectors with
-trivial total charge. However, quasiparticles with different charges can be obtained using
-the sector keyword. For instance, in the transverse field Ising model, we consider an
-excitation built up of flipping a single spin, aligning with `Z2Irrep(1)`.
+When dealing with symmetric systems, the default optimization is for eigenvectors with trivial total charge.
+However, quasiparticles with different charges can be obtained using the sector keyword.
+For instance, in the transverse field Ising model, we consider an excitation built up of flipping a single spin, aligning with `Z2Irrep(1)`.
 
 ```@example excitations
 g = 10.0
@@ -218,8 +210,8 @@ QuasiparticleAnsatz
 
 ### Finite excitations
 
-For finite systems we can also do something else - find the ground state of the Hamiltonian +
-``\\text{weight} \sum_i | \\psi_i ⟩ ⟨ \\psi_i ``. This is also supported by calling
+For finite systems we can instead find the ground state of the Hamiltonian where we project out previously obtained eigenstates, i.e. by projecting out ``\\text{weight} \sum_i | \\psi_i ⟩ ⟨ \\psi_i ``.
+This is also supported by calling
 
 ```@example excitations
 # Model parameters
@@ -241,17 +233,13 @@ FiniteExcited
 
 ### "Chepiga Ansatz"
 
-Computing excitations in critical systems poses a significant challenge due to the diverging
-correlation length, which requires very large bond dimensions. However, we can leverage this
-long-range correlation to effectively identify excitations. In this context, the left/right
-gauged MPS, serving as isometries, are effectively projecting the Hamiltonian into the
-low-energy sector. This projection method is particularly effective in long-range systems,
-where excitations are distributed throughout the entire system. Consequently, the low-lying
-energy spectrum can be extracted by diagonalizing the effective Hamiltonian (without any
-additional DMRG costs!). The states of these excitations are then represented by the ground
-state MPS, with one site substituted by the corresponding eigenvector. This approach is
-often referred to as the 'Chepiga ansatz', named after one of the authors of this paper
-[chepiga2017](@cite).
+Computing excitations in critical systems poses a significant challenge due to the diverging correlation length, which requires very large bond dimensions.
+However, we can leverage this long-range correlation to effectively identify excitations.
+In this context, the left/right gauged MPS, serving as isometries, are effectively projecting the Hamiltonian into the low-energy sector.
+This projection method is particularly effective in long-range systems, where excitations are distributed throughout the entire system.
+Consequently, the low-lying energy spectrum can be extracted by diagonalizing the effective Hamiltonian (without any additional DMRG costs!).
+The states of these excitations are then represented by the ground state MPS, with one site substituted by the corresponding eigenvector.
+This approach is often referred to as the 'Chepiga ansatz', named after one of the authors of this paper [chepiga2017](@cite).
 
 This is supported via the following syntax:
 
@@ -266,8 +254,7 @@ Es, ϕs = excitations(H, ChepigaAnsatz(), ψ, envs; num=1)
 isapprox(Es[1] - E₀, 2(g - 1); rtol=1e-2) # infinite analytical result
 ```
 
-In order to improve the accuracy, a two-site version also exists, which varies two
-neighbouring sites:
+In order to improve the accuracy, a two-site version also exists, which varies two neighbouring sites:
 
 ```@example excitations
 Es, ϕs = excitations(H, ChepigaAnsatz2(), ψ, envs; num=1)
@@ -277,83 +264,53 @@ isapprox(Es[1] - E₀, 2(g - 1); rtol=1e-2) # infinite analytical result
 ## Errors and accuracy
 
 The algorithms that solve for a state, particularly [`find_groundstate`](@ref), [`leading_boundary`](@ref), [`approximate`](@ref), [`timestep`](@ref) and [`time_evolve`](@ref), return an [`AlgorithmInfo`](@ref) as their last value, describing how they arrived at their result.
-[`excitations`](@ref) and [`changebonds`](@ref) report nothing.
-What limits their accuracy is covered below all the same.
 
 ```@docs; canonical=false
 AlgorithmInfo
 ```
 
-The rest of this section explains what quantities can be reported by the algorithms, and - equally important - what they do not measure.
-
-### The error convention
-
-Every factorisation in MPSKit reports ``\epsilon = \lVert A - \tilde{A} \rVert``, which is the 2-norm of the discarded singular values ([Schollwöck](@cite schollwoeck2011)).
-Interpreting this truncation error as a "discarded weight" is accurate when the factorised object is normalised.
-
-What differs between algorithms is how these per-factorisation values are summed up (*aggregated*) into the numbers they report.
-
-!!! warning
-    A convergence measure and a truncation error are unrelated quantities.
-    An algorithm that does both fills both, and they should not be compared with each other.
-    Convergence measures are covered below per algorithm.
-
-#### Aggregating truncation errors
-
-The per-factorisation errors are aggregated two ways, as a worst case (`max_truncation_error`) and in quadrature (`total_truncation_error`).
-See the [`AlgorithmInfo`](@ref) docstring for what each is.
-
-`max_truncation_error` is the entry a `trunc` setting most directly controls, though how directly depends on the strategy:
-
-- [`truncerror`](@extref MatrixAlgebraKit.truncerror) bounds the discarded weight of each factorisation, which is exactly ``\epsilon_k``, so `max_truncation_error` should come out at or below the tolerance you set.
-- [`trunctol`](@extref MatrixAlgebraKit.trunctol) bounds each individual singular value instead. Discarding ``k`` of them leaves ``\epsilon_k \le \sqrt{k}\,\texttt{atol}``, so `max_truncation_error` lands near the tolerance but is not bounded by it.
-- [`truncrank`](@extref MatrixAlgebraKit.truncrank) fixes the rank and says nothing about magnitudes at all. Here, `max_truncation_error` is not something you set but something you read off. It is thus the consequence of that choice of bond dimension.
-
-`total_truncation_error` sums the squares,
-
-```math
-\epsilon_{\text{total}} = \sqrt{\textstyle\sum_k \epsilon_k^2} ,
-```
-
-which tracks a running cost rather than a worst case.
-Whether that cost is also the error of the *final state* depends on what the algorithm does between truncations: in real time evolution, where truncations do not normalise by default, it is exactly the norm deficit of the state.
-
-Which factorisations an algorithm records into these differs per family, which is why `numtrunc` and `total_truncation_error` are not comparable across algorithms.
+The rest of this section explains what quantities can be reported by the algorithms, and how these can be interpreted.
 
 ### Ground state accuracy
 
-[`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms report the quantity their `tol` is compared against, together with a `converged` flag.
-Because these are not the same quantity from one algorithm to the next, each is stored under a key that names it (`galerkin`, `gradientnorm`, `bondresidual` or `localchange`).
+[`find_groundstate`](@ref), [`leading_boundary`](@ref) and the iterative [`approximate`](@ref) algorithms stop once a convergence measure drops below their `tol`, and report that measure together with a `converged` flag.
+
+**Different measures for different algorithms.**
+Which quantity is monitored depends on the algorithm, and these quantities cannot be compared to one another.
+Each is therefore stored under its own name: `galerkin` for [`DMRG`](@ref), [`DMRG2`](@ref), [`VUMPS`](@ref) and [`VOMPS`](@ref), `gradientnorm` for [`GradientGrassmann`](@ref), `bondresidual` for [`IDMRG`](@ref) and [`IDMRG2`](@ref), and `localchange` for [`DMRG`](@ref) and [`DMRG2`](@ref) inside [`approximate`](@ref).
 [`convergence_measure`](@ref) returns whichever of them is present, for code that only wants the number.
-Importantly, they represent different things, and a `tol` tuned for one algorithm is not a `tol` tuned for another.
+For the same reason, a `tol` that works well for one algorithm need not work well for another.
 
-A single-site algorithm at a fixed bond dimension can drive its convergence measure to machine precision and still be far from the true ground state.
+**Interaction with a changing bond dimension.**
+An algorithm that truncates changes the state by the discarded weight in every sweep, so its convergence measure cannot drop below the level set by what is discarded.
+Rather than running into `maxiter` for a `tol` that cannot be reached, [`DMRG`](@ref) and [`DMRG2`](@ref) consider themselves converged once `galerkin ≤ max(tol, maximum(truncation_errors))`, which reduces to `galerkin ≤ tol` when nothing is truncated.
+The reported `truncation_errors` are those of the final sweep, i.e. what the returned state still discards.
+
+**Convergence is not accuracy.**
+A converged algorithm has found a fixed point within the set of MPS of the current bond dimension, which can still be far from the true ground state: a single-site algorithm at a fixed bond dimension can converge to machine precision regardless.
 Growing the bond dimension is the job of the two-site algorithms ([`DMRG2`](@ref), [`IDMRG2`](@ref)) or of a bond expansion ([`DMRG`](@ref) with an `alg_expand`, or an expanding `alg_gauge` such as [`DMRG3S`](@ref)); see also [`changebonds`](@ref).
-
-Once an algorithm does truncate, the two error notions interact.
-In the case of the Galerkin error, it cannot fall below the level set by the weight being discarded each sweep, so a truncating scheme converges once `galerkin` reaches the truncation error rather than the (unreachable) bare `tol`.
-
-Neither measure is an error bar on an observable, and no cheap substitute for one exists.
-The energy variance ``\langle H^2 \rangle - \langle H \rangle^2`` is an independent and more demanding measure.
-Note what it actually quantifies, namely how far the state is from being an *exact eigenstate*, which is not the same thing as the error on some other observable.
+Likewise, none of these measures is an error bar on an observable.
+An independent check is the energy [`variance`](@ref), ``\langle H^2 \rangle - \langle H \rangle^2``, which vanishes for an exact eigenstate, as is comparing results across bond dimensions.
 
 ### Time evolution accuracy
 
-Unlike a ground state search, a time evolution has no convergence criterion to run to.
-There is no fixed point, and the error is made at every step.
-Time evolution has three distinct error sources, namely the truncation error, the projection error, and the splitting error.
-Only the truncation error is reported in [`timestep`](@ref) and [`time_evolve`](@ref)'s [`AlgorithmInfo`](@ref).
-This is non-zero for [`TDVP2`](@ref), for [`BUG`](@ref) with a `trunc`, and for [`TDVP`](@ref) with a bond expansion.
+A time evolution has three distinct sources of error ([Paeckel et al.](@cite paeckel2019)):
 
-The projection error is not reported, since measuring it costs an extra effective-Hamiltonian application per site.
-This is what a bond expansion (CBE) exists to reduce ([Li et al.](@cite li2024)).
-The splitting error is a Trotter-type error, and can only be estimated by comparing one step of `dt` against two of `dt / 2`.
+- The **truncation error**, from discarding singular values to keep the bond dimension bounded.
+  This is the only one that is reported, as the `truncation_errors` of [`timestep`](@ref) and [`time_evolve`](@ref).
+  It is non-zero for [`TDVP2`](@ref), for [`BUG`](@ref) with a `trunc`, and for [`TDVP`](@ref) with a bond expansion.
+- The **projection error**, from restricting the evolution to MPS of the current bond dimension.
+  Measuring it costs an extra two-site effective-Hamiltonian application per bond, so it is not reported.
+  A fixed bond dimension turns entanglement growth into projection error, which is what a bond expansion (CBE) exists to reduce ([Li et al.](@cite li2024)).
+- The **time-step error**, from splitting each step into a sequence of local updates, similar to a Trotter error.
+  It decreases with `dt`, and can be estimated by comparing one step of `dt` against two steps of `dt / 2`.
 
-All three need to be under control, not just the reported one.
-In practice: pick `dt` from a convergence check, pick `trunc` from the reported truncation error, and use a bond-adaptive scheme ([`TDVP2`](@ref), [`BUG`](@ref), or [`TDVP`](@ref) with `alg_expand`) whenever entanglement grows, since a fixed bond dimension silently converts entanglement growth into projection error.
+Each of these has its own control: `dt` for the time-step error, `trunc` for the truncation error, and a bond-adaptive scheme ([`TDVP2`](@ref), [`BUG`](@ref), or [`TDVP`](@ref) with `alg_expand`) for the projection error whenever entanglement grows.
 
-They do not shrink together, so there is a sweet spot in `dt` rather than "smaller is better".
-This is because a smaller `dt` lowers the splitting error but takes more steps to reach the same time, and every step truncates again.
+These controls are not independent.
+With a threshold-based `trunc` such as [`truncerror`](@extref MatrixAlgebraKit.truncerror), every step can discard weight up to that threshold, however small `dt` is, and reaching a fixed final time `T` takes `T / dt` steps.
+Halving `dt` therefore lowers the time-step error, but doubles the number of truncations, so the accumulated truncation error can grow.
+For a given `trunc` there is an optimal `dt`, below which taking smaller steps makes the result worse rather than better.
 
 ### Excitation accuracy
 
@@ -393,7 +350,7 @@ state.
 changebonds
 ```
 
-All of these are controlled by a `trunc`, and the weight they discard is measured the same way as described under [The error convention](@ref).
+All of these are controlled by a `trunc`, and the weight they discard is measured the same way as the `truncation_errors` of an [`AlgorithmInfo`](@ref).
 `changebonds` does not report it, since every algorithm has its own interpretation of the discarded singular values.
 
 There are several different algorithms implemented, each having their own advantages and

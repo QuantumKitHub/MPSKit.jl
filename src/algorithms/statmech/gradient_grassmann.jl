@@ -7,7 +7,7 @@ function leading_boundary(
     # read the scheduler here rather than in `fg`, so that the allocator it selects is inferable
     scheduler = Defaults.scheduler[]
     fg(x) = GrassmannMPS.fg(x, operator, envs; alg.backend, scheduler)
-    x, _, _, _, normgradhistory = optimize(
+    x, f, g, _, normgradhistory = optimize(
         fg, state,
         alg.method;
         GrassmannMPS.transport!,
@@ -17,9 +17,11 @@ function leading_boundary(
         GrassmannMPS.add!,
         GrassmannMPS.precondition,
         alg.finalize!,
+        alg.hasconverged,
+        alg.shouldstop,
         isometrictransport = true
     )
 
-    info = _optimkit_info(normgradhistory, alg.method.gradtol)
+    info = _optimkit_info(alg, x, f, g, normgradhistory)
     return x, envs, info
 end

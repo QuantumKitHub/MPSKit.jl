@@ -270,14 +270,12 @@ end
     Random.seed!(7)
     ψ₀ = normalize!(complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^16)))
 
-    # fixed bond dimension sweep never discards anything, so the reported error is exactly zero
+    # fixed bond dimension sweep never discards anything, so the reported errors are exactly zero
     @testset "no truncation" begin
         for alg in (TDVP(), BUG())
             info = last(timestep(ψ₀, H, 0.0, dt, alg))
             @test info isa MPSKit.AlgorithmInfo
-            @test info.ϵ_max == 0
-            @test info.ϵ_total == 0
-            @test info.numtrunc == 0
+            @test info.truncation_errors == zeros(L - 1)
             @test info.numiter == 1
         end
     end
@@ -286,28 +284,25 @@ end
         _, _, loose = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(32)))
         ψ, _, tight = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(2)))
 
-        @test tight.ϵ_total > 1.0e-3 # throw away real weight
-        @test tight.ϵ_max > 1.0e-4
-        @test loose.ϵ_max < tight.ϵ_max # throw away less weight with a more forgiving truncation
-        @test tight.numtrunc > 0
-        @test tight.ϵ_total >= tight.ϵ_max
-        @test tight.ϵ_total <= sqrt(tight.numtrunc) * tight.ϵ_max
-        # `ϵ_total` = norm loss in real time with `normalize = false`
-        @test norm(ψ)^2 ≈ norm(ψ₀)^2 - tight.ϵ_total^2 atol = 1.0e-12
+        @test length(tight.truncation_errors) == L - 1
+        @test maximum(tight.truncation_errors) > 1.0e-4 # throw away real weight
+        # throw away less weight with a more forgiving truncation
+        @test maximum(loose.truncation_errors) < maximum(tight.truncation_errors)
+        # in real time with `normalize = false` the norm loss covers every cut of the step,
+        # of which the reported last cut per bond is a subset
+        @test norm(ψ₀)^2 - norm(ψ)^2 >= sum(abs2, tight.truncation_errors) - 1.0e-12
     end
 
-    @testset "aggregation over an evolution" begin
+    @testset "history over an evolution" begin
         alg = TDVP2(; trunc = truncrank(2))
         nsteps = 4
         _, _, step = timestep(ψ₀, H, 0.0, dt, alg)
-        ψ, _, total = time_evolve(ψ₀, H, 0:dt:(nsteps * dt), alg)
+        _, _, total = time_evolve(ψ₀, H, 0:dt:(nsteps * dt), alg)
 
         @test total.numiter == nsteps
-        @test total.numtrunc >= step.numtrunc
-        @test total.ϵ_total >= step.ϵ_total
-        @test norm(ψ)^2 ≈ norm(ψ₀)^2 - total.ϵ_total^2 atol = 1.0e-12
-        @test total.ϵ_max >= step.ϵ_max
-        @test total.ϵ_max <= total.ϵ_total
+        @test length(total.truncation_errors) == nsteps
+        @test all(==(L - 1) ∘ length, total.truncation_errors)
+        @test first(total.truncation_errors) ≈ step.truncation_errors
     end
 end
 

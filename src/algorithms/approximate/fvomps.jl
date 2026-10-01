@@ -22,7 +22,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environment
             # finalize
             ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ), typeof(envs)}
 
-            if ϵ < alg.tol
+            if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 break
             end
@@ -34,7 +34,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environment
         end
     end
 
-    return ψ, envs, AlgorithmInfo(; converged = ϵ < alg.tol, localchange = ϵ, numiter = iter)
+    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, localchange = ϵ, numiter = iter)
 end
 
 function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments(ψ, _environment_args(Oϕ)...))
@@ -58,7 +58,7 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments
             # finalize
             ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ), typeof(envs)}
 
-            if ϵ < alg.tol
+            if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 break
             end
@@ -70,5 +70,5 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments
         end
     end
 
-    return ψ, envs, AlgorithmInfo(; converged = ϵ < alg.tol, localchange = ϵ, numiter = iter)
+    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, localchange = ϵ, numiter = iter)
 end

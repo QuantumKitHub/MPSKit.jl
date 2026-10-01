@@ -51,6 +51,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   docstring for more information. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - The manual has a new section on [Errors and accuracy](@ref) covering definitions and interpretations
   of the various returned measures. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+- Convergence tolerances are now compared with `<=` everywhere, so an error exactly equal to `tol`
+  counts as converged for `DMRG`/`DMRG2` in `approximate`, the `IDMRG`/`IDMRG2` variants of
+  `approximate` and `leading_boundary`, and the gauge fixing of `InfiniteMPS`, as it already did for
+  the other algorithms. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - Renormalization during time evolution is now controlled by an explicit `normalize` keyword on
   `timestep`/`time_evolve` (default `false`), decoupled from `imaginary_evolution`. By default the
   norm is preserved, so it retains useful information (the accumulated truncation error in real time,
@@ -138,6 +142,11 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   `TensorKit` 0.17.2 and `BlockTensorKit` <= 0.3.18, a permuted contraction into a sparse block
   tensor (e.g. an environment sweep near a `FiniteMPS` chain boundary when the operator and state
   have different `scalartype`s) could silently drop data instead of erroring.
+- `approximate` with `IDMRG2` on a `MultilineMPS` with more than one row wrote the right-to-left
+  edge update into the wrong row and refreshed the unit cell edge of the first row only, so the
+  rows ended up mixed. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+- `leading_boundary` with `GradientGrassmann` ignored the algorithm's `hasconverged` and `shouldstop`
+  criteria, always using the optimizer's defaults instead. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 
 ### Performance
 

@@ -14,9 +14,7 @@ with a preconditioner to induce the metric from the Hilbert space inner product.
 - `method = ConjugateGradient`: instance of optimization algorithm, or type of optimization
     algorithm to construct
 - `finalize!`: finalizer algorithm
-- `tol = Defaults.tol`: convergence tolerance, compared against the norm of the Riemannian
-    (Grassmann) gradient reported by the optimizer, which [`find_groundstate`](@ref) returns as the
-    `gradientnorm` entry of its [`AlgorithmInfo`](@ref).
+- `tol = Defaults.tol`: convergence tolerance on the norm of the gradient, see [Ground state accuracy](@ref)
 - `maxiter = Defaults.maxiter`: maximum amount of iterations
 - `verbosity = Defaults.verbosity - 1`: level of information display
 - `hasconverged = OptimKit.DefaultHasConverged(tol)`: convergence criterium
@@ -111,7 +109,7 @@ function _find_groundstate(ψ, H, alg::GradientGrassmann, envs, scheduler, timer
         () -> GrassmannMPS.precondition(state, g), timeroutput, "precondition",
     )
 
-    x, _, _, _, normgradhistory = optimize(
+    x, f, g, _, normgradhistory = optimize(
         fg, ψ, alg.method;
         retract, transport!, precondition,
         GrassmannMPS.inner,
@@ -127,16 +125,17 @@ function _find_groundstate(ψ, H, alg::GradientGrassmann, envs, scheduler, timer
         @infov 4 TimerReport(timeroutput)
     end
 
-    info = _optimkit_info(normgradhistory, alg.method.gradtol)
+    info = _optimkit_info(alg, x, f, g, normgradhistory)
     return x, envs, info
 end
 
 # `optimize` returns its full history as `[fhistory normgradhistory]`, with the initial point
-# before the first iteration as its first row.
-function _optimkit_info(normgradhistory, gradtol)
+# before the first iteration as its first row. Convergence is judged by the same `hasconverged`
+# the optimizer stopped on.
+function _optimkit_info(alg::GradientGrassmann, x, f, g, normgradhistory)
     normres = normgradhistory[end, 2]
     return AlgorithmInfo(;
-        converged = normres <= gradtol, gradientnorm = normres,
+        converged = alg.hasconverged(x, f, g, normres), gradientnorm = normres,
         numiter = size(normgradhistory, 1) - 1
     )
 end

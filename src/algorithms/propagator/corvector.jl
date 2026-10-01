@@ -28,9 +28,7 @@ Used as the `algorithm` argument of [`propagator`](@ref).
     flavour::F = NaiveInvert()
     "algorithm used for the linear solvers"
     solver::S = Defaults.linearsolver
-    "convergence tolerance, compared against the largest change in a center tensor over a sweep,
-    `maxᵢ ‖ACᵢ′ - ACᵢ‖`. This represents a measure of how much the sweep still moves the state,
-    not a residual of the linear system (that is controlled by `solver`)"
+    "convergence tolerance on the largest change of a center tensor over a sweep"
     tol::Float64 = Defaults.tol * 10
     "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter

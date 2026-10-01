@@ -22,7 +22,7 @@ function entropy(spectrum::TensorKit.SectorVector{T}) where {T}
     for (c, b) in pairs(spectrum)
         s = sum(b; init = zero(S)) do x
             x² = x^2
-            return x < tol ? zero(x) : x² * log(x²)
+            return x <= tol ? zero(x) : x² * log(x²)
         end
         S += oftype(S, dim(c) * s)
     end

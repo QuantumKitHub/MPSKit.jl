@@ -44,7 +44,7 @@ verbosity_conv = 1
             @test convergence_measure(info) ≈ 0 atol = 1.0e-3
             @test v < v₀
             @test v < 1.0e-2
-            @test info.numtrunc == 0
+            @test info.truncation_errors == zeros(L - 1)
         end
 
         @testset "DMRG2" begin
@@ -66,9 +66,8 @@ verbosity_conv = 1
             @test v < v₀
             @test v < 1.0e-2
 
-            @test info.numtrunc > 0
-            @test info.ϵ_max > 0
-            @test info.ϵ_max <= info.ϵ_total <= sqrt(info.numtrunc) * info.ϵ_max
+            @test length(info.truncation_errors) == L - 1
+            @test maximum(info.truncation_errors) > 0
         end
 
         @testset "CBEDMRG" begin
@@ -279,7 +278,7 @@ end
 
         # test using low variance
         @test convergence_measure(info) ≈ 0 atol = 1.0e-3
-        @test !haskey(info, :numtrunc) # single-site IDMRG never truncates
+        @test !haskey(info, :truncation_errors) # single-site IDMRG never truncates
         @test v < v₀
         @test v < 1.0e-2
     end
@@ -319,9 +318,8 @@ end
         @test v < v₀
         @test v < 1.0e-2
 
-        @test info.numtrunc > 0
-        @test info.ϵ_max > 0
-        @test info.ϵ_max <= info.ϵ_total <= sqrt(info.numtrunc) * info.ϵ_max
+        @test length(info.truncation_errors) == length(ψ)
+        @test maximum(info.truncation_errors) > 0
     end
 
     # Regression: IDMRG2 used to error on a non-abelian (SU2) unit cell due to a space mismatch.

@@ -24,17 +24,13 @@ To restore a maximal dimension of `D`, apply [`changebonds`](@ref) with an [`Svd
 
 !!! note
     By default the state is not renormalized, as the (loss of) norm accumulates useful information.
-    In real time the squared norm lost is exactly the weight discarded by the bond cuts,
-    ``\\lVert \\psi \\rVert^2 = \\lVert \\psi_0 \\rVert^2 - \\epsilon_{\\text{total}}^2``, with
-    `total_truncation_error` from the [`AlgorithmInfo`](@ref) returned by [`timestep`](@ref). In imaginary time
-    the norm also carries the physical decay of the weight and no longer isolates the truncation.
-    Both reported errors are exactly zero when not truncating.
+    In real time the squared norm lost is exactly the weight discarded by all bond cuts of the step,
+    whereas in imaginary time the norm also carries the physical decay of the weight.
     Pass `normalize = true` to `timestep`/`time_evolve` to renormalize after every half-sweep instead.
 
 !!! warning
-    The reported errors count only the cuts in step (i). Step (iii) augments the basis without truncating, so within
-    a sweep the bond dimension temporarily exceeds `trunc` and the norm identity above applies to the
-    state returned at the end of the step.
+    The `truncation_errors` reported by [`timestep`](@ref) are those of the cuts in step (i). Step (iii)
+    augments the basis without truncating, so within a sweep the bond dimension temporarily exceeds `trunc`.
 
 !!! tip
     Pass a `TimerOutputs.TimerOutput` as `timeroutput` to `timestep`/`timestep!` to obtain a
@@ -181,7 +177,7 @@ function timestep!(
     # the sweep is serial, so a single allocator serves all local updates
     allocator = default_allocator(ψ, SerialScheduler())
 
-    acc = TruncationAccumulator(ψ)
+    ϵ_truncs = zeros(real(scalartype(ψ)), L - 1)
 
     # left→right half-sweep (root = last site): `t → t + dt / 2`
     @timeit timeroutput "half-sweep" for site in 1:L
@@ -189,7 +185,7 @@ function timestep!(
             site, Val(:right), ψ, H, alg, envs, t, h, allocator;
             imaginary_evolution, normalize, timeroutput
         )
-        push_error!(acc, ϵ)
+        site < L && (ϵ_truncs[site] = ϵ)
     end
 
     # right→left half-sweep (root = first site): `t + dt / 2 → t + dt`
@@ -198,10 +194,10 @@ function timestep!(
             site, Val(:left), ψ, H, alg, envs, t + h, h, allocator;
             imaginary_evolution, normalize, timeroutput
         )
-        push_error!(acc, ϵ)
+        site > 1 && (ϵ_truncs[site - 1] = ϵ)
     end
 
-    return ψ, envs, AlgorithmInfo(; truncation = acc)
+    return ψ, envs, AlgorithmInfo(; truncation_errors = ϵ_truncs)
 end
 
 # copying version

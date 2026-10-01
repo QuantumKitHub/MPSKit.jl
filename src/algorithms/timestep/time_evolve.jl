@@ -26,15 +26,13 @@ through each of the time points obtained by iterating t_span.
 
 - `ψ`: the time-stepped state
 - `envs`: the updated environment manager
-- `info::AlgorithmInfo`: the truncation performed over the whole evolution, accumulated from the
-    individual steps, together with `numiter`, the number of steps taken. An algorithm that never
-    truncates reports no truncation entries at all.
-    See [`AlgorithmInfo`](@ref) and [Time evolution accuracy](@ref) in the manual
-    for the difference and when to use which reported error measure,
-    and [`timestep`](@ref) for what neither measures.
+- `info::AlgorithmInfo`: `numiter`, the number of steps taken, and for an algorithm that
+    truncates `truncation_errors`, holding the per-bond truncation errors of every step as reported
+    by [`timestep`](@ref), one vector per step. See [`AlgorithmInfo`](@ref) and
+    [Time evolution accuracy](@ref) in the manual for what this does not measure.
 
-`max_truncation_error` is logged per step at `verbosity ≥ 3` and for the whole evolution at `verbosity ≥ 2`.
-The size-independent measure is used here for the same reason as the ground state algorithms.
+The largest truncation error of each step is logged at `verbosity ≥ 3`, and that of the whole
+evolution at `verbosity ≥ 2`.
 """
 function time_evolve end, function time_evolve! end
 
@@ -45,7 +43,8 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
             verbosity::Int = 0, imaginary_evolution::Bool = false, normalize::Bool = false
         )
         log = IterLog(string(nameof(typeof(alg))))
-        info = AlgorithmInfo(; numiter = 0)
+        truncation_errors = []
+        ϵ_max = 0.0
         LoggingExtras.withlevel(; verbosity) do
             @infov 2 loginit!(log, 0.0, first(t_span))
             for iter in 1:(length(t_span) - 1)
@@ -56,14 +55,22 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
                     ψ, H, t, dt, alg, envs; imaginary_evolution, normalize
                 )
                 ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
-                info = _combine(info, info_step)
 
-                # log the size-independent error measure
-                # for a non-truncating algorithm, log zero
-                @infov 3 logiter!(log, iter, convert(Float64, get(info_step, :max_truncation_error, 0.0)), t)
+                # the log shows the largest per-bond error, or zero for a non-truncating algorithm
+                ϵ_step = 0.0
+                if haskey(info_step, :truncation_errors)
+                    push!(truncation_errors, info_step.truncation_errors)
+                    ϵ_step = Float64(maximum(info_step.truncation_errors; init = 0.0))
+                end
+                ϵ_max = max(ϵ_max, ϵ_step)
+                @infov 3 logiter!(log, iter, ϵ_step, t)
             end
-            @infov 2 logfinish!(log, length(t_span), convert(Float64, get(info, :max_truncation_error, 0.0)), t_span[end])
+            @infov 2 logfinish!(log, length(t_span), ϵ_max, t_span[end])
         end
+        info = AlgorithmInfo(;
+            numiter = length(t_span) - 1,
+            truncation_errors = isempty(truncation_errors) ? nothing : identity.(truncation_errors)
+        )
         return ψ, envs, info
     end
 end
@@ -100,16 +107,13 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 
 # Truncation error
 
-A step performs many local factorisations, each discarding some weight. Rather than collapse those
-into one number, `info` reports both aggregations under names that say what they are:
-`info.max_truncation_error` is the largest single one (size-independent, comparable against `trunc` and across
-runs) and `info.total_truncation_error` sums them in squares.
-
-Both are non-zero only for algorithms that truncate ([`TDVP2`](@ref), [`BUG`](@ref) with a
-`trunc`, and [`TDVP`](@ref) with a bond expansion). A finite-system step that truncates but
-happened to discard nothing reports them as exactly `0`, whereas infinite one-site [`TDVP`](@ref)
-never truncates and reports no truncation entries at all. Neither case means the step was exact,
-but rather that this particular source of error is either absent or idle.
+A finite-system step sweeps over every bond twice, and `info.truncation_errors[i]` is the
+truncation error of the last cut made at bond `i`, i.e. of the second half-sweep.
+The entries are non-zero only for algorithms that truncate ([`TDVP2`](@ref), [`BUG`](@ref) with a
+`trunc`, and [`TDVP`](@ref) with a bond expansion), and exactly `0` for a step that happened to
+discard nothing. Infinite one-site [`TDVP`](@ref) never truncates and reports no
+`truncation_errors` at all. Neither case means the step was exact, but rather that this particular
+source of error is either absent or idle.
 
 See [`AlgorithmInfo`](@ref) for the entries, and [Time evolution accuracy](@ref) in the manual
 for the other error sources.

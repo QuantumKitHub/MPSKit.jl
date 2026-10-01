@@ -53,14 +53,13 @@ struct itself instead (e.g. `DMRG(; tol, maxiter, verbosity)`).
 
     [`convergence_measure`](@ref) returns whichever of these is present, for code that only wants
     the number.
-  - the two-site ones (`DMRG2`, `IDMRG2`) which involve a truncated SVD fill the truncation 
-    fields with what their final sweep discarded, i.e. what the returned state is still 
-    throwing away per sweep rather than what the early, unconverged sweeps did.
+  - `IDMRG2` fills `truncation_errors` with what its final sweep discarded at each bond, i.e. what
+    the returned state is still throwing away rather than what the early, unconverged sweeps did.
   - [`Zipup`](@ref) is a single non-iterative sweep, so it has no convergence measure at all:
-    it reports no `converged` entry and none of the convergence entries, and fills the truncation
-    entries instead.
+    it reports no `converged` entry and none of the convergence entries, and fills
+    `truncation_errors` instead.
 
-  See [`AlgorithmInfo`](@ref) for the full list and [The error convention](@ref) in the manual for
+  See [`AlgorithmInfo`](@ref) for the full list and [Ground state accuracy](@ref) in the manual for
   why a convergence measure and a truncation error are not comparable quantities.
 
 # Algorithms
@@ -121,13 +120,13 @@ function approximate(
         envs = environments(ψ, toapprox...)
     )
     envs′ = Multiline([envs])
-    multi, envs, δ = approximate(
+    multi, envs, info = approximate(
         convert(MultilineMPS, ψ),
         (convert(MultilineMPO, toapprox[1]), convert(MultilineMPS, toapprox[2])),
         algorithm, envs′
     )
     ψ = convert(InfiniteMPS, multi)
-    return ψ, envs, δ
+    return ψ, envs, _singleline_info(info)
 end
 
 # dispatch to in-place method
@@ -143,11 +142,11 @@ function approximate(
         algorithm::Union{IDMRG, IDMRG2}, envs = environments(ψ, toapprox...)
     )
     envs′ = Multiline([envs])
-    multi, envs, δ = approximate(
+    multi, envs, info = approximate(
         convert(MultilineMPS, ψ),
         (convert(MultilineMPO, toapprox[1]), convert(MultilineMPS, toapprox[2])),
         algorithm, envs′
     )
     ψ = convert(InfiniteMPS, multi)
-    return ψ, envs, δ
+    return ψ, envs, _singleline_info(info)
 end
