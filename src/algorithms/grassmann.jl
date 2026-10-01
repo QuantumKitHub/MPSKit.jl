@@ -81,8 +81,7 @@ function precondition(state, g)
     rtolmin = eps(real(scalartype(state)))^(3 / 4)
     tforeach(eachindex(state); scheduler = MPSKit.Defaults.scheduler[]) do i
         rtol = max(rtolmin, norm(g[i]))
-        ρ = rho_inv_regularized(state.C[i]; rtol)
-        g′[i] = rmul(g[i], ρ)
+        g′[i] = rmul_rho_inv_regularized(g[i], state.C[i]; rtol)
         return nothing
     end
     return g′
@@ -234,15 +233,22 @@ function fg(
 end
 
 """
-    rho_inv_regularized(C; rtol = eps(real(scalartype(C)))^(3 / 4))
+    rmul_rho_inv_regularized(Δ, C; rtol = eps(real(scalartype(C)))^(3 / 4))
 
-Compute the (regularized) inverse of the MPS fixed point `ρ = C * C'`.
-Here we use the Tikhonov regularization, i.e. `inv(ρ) = inv(C * C' + δ²1)`,
+Right-multiply the tangent vector `Δ` with the (regularized) inverse of the MPS fixed point
+`ρ = C * C'`. Here we use the Tikhonov regularization, i.e. `inv(ρ) = inv(C * C' + δ²1)`,
 where the regularization parameter is `δ = rtol * norm(C)`.
+
+The inverse is applied in factored form, `((Δ.Z * U) * inv(S² + δ²)) * U'`, rather than formed
+explicitly: its condition number can reach `1 / rtol²`, and once that exceeds `1 / eps` the
+explicit matrix `U * inv(S² + δ²) * U'` is no longer numerically positive definite, such that
+the preconditioned gradient need not be a descent direction.
 """
-function rho_inv_regularized(C; rtol = eps(real(scalartype(C)))^(3 / 4))
+function rmul_rho_inv_regularized(Δ::GrassmannTangent, C; rtol = eps(real(scalartype(C)))^(3 / 4))
     U, S, _ = svd_compact(C)
-    return U * pinv_tikhonov!!(S; rtol) * U'
+    # the diagonal scaling has to happen before mixing back with U' to preserve definiteness
+    Z′ = (Δ.Z * U) * pinv_tikhonov!!(S; rtol)
+    return GrassmannTangent(Δ.W, Z′ * U')
 end
 
 function pinv_tikhonov!!(S::DiagonalTensorMap{<:Real}; rtol = zero(scalartype(S)))
