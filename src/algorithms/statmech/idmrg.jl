@@ -1,5 +1,5 @@
 function leading_boundary(
-        ψ::MultilineMPS, operator, alg::IDMRG, envs = environments(ψ, operator, ψ)
+        ψ::InfiniteMultilineMPS, operator, alg::IDMRG, envs = environments(ψ, operator, ψ)
     )
     allocator = default_allocator(ψ, SerialScheduler())
     log = IterLog("IDMRG")
@@ -63,7 +63,7 @@ function leading_boundary(
 end
 
 function leading_boundary(
-        ψ::MultilineMPS, operator, alg::IDMRG2, envs = environments(ψ, operator, ψ)
+        ψ::InfiniteMultilineMPS, operator, alg::IDMRG2, envs = environments(ψ, operator, ψ)
     )
     allocator = default_allocator(ψ, SerialScheduler())
     size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))

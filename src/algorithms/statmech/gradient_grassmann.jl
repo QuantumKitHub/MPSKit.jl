@@ -1,6 +1,6 @@
 function leading_boundary(
-        state::MultilineMPS,
-        operator::MultilineMPO,
+        state::InfiniteMultilineMPS,
+        operator::InfiniteMultilineMPO,
         alg::GradientGrassmann,
         envs::MultilineEnvironments = environments(state, operator, state)
     )

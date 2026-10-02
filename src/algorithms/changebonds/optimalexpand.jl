@@ -85,7 +85,9 @@ function changebonds(
     return newψ, envs
 end
 
-function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ))
+function changebonds(
+        ψ::InfiniteMultilineMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ)
+    )
     allocator = default_allocator(ψ, SerialScheduler())
     TL = eltype(ψ.AL)
     AL′ = PeriodicMatrix{TL}(undef, size(ψ.AL))

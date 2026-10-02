@@ -49,7 +49,10 @@ struct VOMPSState{S, O, E}
     ϵ::Float64
 end
 
-function leading_boundary(ψ::MultilineMPS, O::MultilineMPO, alg::Union{VOMPS, VUMPS}, envs...)
+function leading_boundary(
+        ψ::InfiniteMultilineMPS, O::InfiniteMultilineMPO, alg::Union{VOMPS, VUMPS},
+        envs...
+    )
     return dominant_eigsolve(O, ψ, alg, envs...; which = :LM)
 end
 
