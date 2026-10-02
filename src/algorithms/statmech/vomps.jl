@@ -71,18 +71,18 @@ function dominant_eigsolve(
     it = IterativeSolver(alg, state)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, sum(expectation_value(mps, operator, envs)))
+        @infov 2 loginit!(log, ϵ, dominant_eigenvalue(mps, operator, envs))
 
         for (mps, envs, ϵ) in it
             if ϵ ≤ alg.tol
-                @infov 2 logfinish!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
+                @infov 2 logfinish!(log, it.iter, ϵ, dominant_eigenvalue(mps, operator, envs))
                 return mps, envs, AlgorithmInfo(; converged = true, galerkin = ϵ, numiter = it.iter)
             end
             if it.iter ≥ alg.maxiter
-                @warnv 1 logcancel!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
+                @warnv 1 logcancel!(log, it.iter, ϵ, dominant_eigenvalue(mps, operator, envs))
                 return mps, envs, AlgorithmInfo(; converged = false, galerkin = ϵ, numiter = it.iter)
             end
-            @infov 3 logiter!(log, it.iter, ϵ, expectation_value(mps, operator, envs))
+            @infov 3 logiter!(log, it.iter, ϵ, dominant_eigenvalue(mps, operator, envs))
         end
 
         # this should never be reached
