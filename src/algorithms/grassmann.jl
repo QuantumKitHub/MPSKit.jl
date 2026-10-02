@@ -11,7 +11,7 @@ The module exports nothing, and all references to it should be qualified, e.g.
 module GrassmannMPS
 
 using ..MPSKit
-using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, site_type, linelength,
+using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, site_type, width,
     AC_projection, recalculate!, NoTimerOutput, @timeit, default_allocator
 using TensorOperations: AbstractBackend, DefaultBackend
 using TensorKit
@@ -194,7 +194,7 @@ function fg(
         scheduler::Scheduler = MPSKit.Defaults.scheduler[],
     ) where {O <: InfiniteMPO}
     @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
-    f = @timeit timeroutput "expval" dominant_eigenvalue(state, operator, envs)
+    f = @timeit timeroutput "expval" leading_eigenvalue(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{eltype(state), eltype(state)})
@@ -217,11 +217,11 @@ function fg(
     )
     @assert size(state, 1) == 1 "not implemented"
     @timeit timeroutput "envs (parallel)" recalculate!(envs, state, operator, state; timeroutput)
-    f = @timeit timeroutput "expval" dominant_eigenvalue(state, operator, envs)
+    f = @timeit timeroutput "expval" leading_eigenvalue(state, operator, envs)
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{site_type(state), site_type(state)})
-    gs = Matrix{A}(undef, length(state), linelength(state))
+    gs = Matrix{A}(undef, length(state), width(state))
     allocator = default_allocator(state, scheduler)
     @timeit timeroutput "gradient" tforeach(CartesianIndices(gs); scheduler) do i
         AC′ = AC_projection(i, state, operator, state, envs; backend, allocator)

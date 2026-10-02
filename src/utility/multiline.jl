@@ -39,6 +39,7 @@ Base.size(m::Multiline, d::Int) = d == 1 ? length(m) : 1
 Base.axes(m::Multiline) = (Base.OneTo(length(m)),)
 Base.axes(m::Multiline, d::Int) = d == 1 ? Base.OneTo(length(m)) : Base.OneTo(1)
 Base.eachindex(m::Multiline) = Base.OneTo(length(m))
+Base.checkbounds(::Type{Bool}, m::Multiline, I...) = checkbounds(Bool, parent(m), I...)
 Base.isfinite(m::Multiline) = isfinite(typeof(m))
 Base.isfinite(::Type{Multiline{T}}) where {T} = isfinite(T)
 Base.eltype(::Type{Multiline{T}}) where {T} = T
@@ -46,7 +47,7 @@ Base.eltype(::Type{Multiline{T}}) where {T} = T
 eachsite(m::Multiline) = eachsite(first(parent(m)))
 
 # number of columns of the lattice spanned by the lines
-linelength(m::Multiline) = length(first(parent(m)))
+width(m::Multiline) = length(first(parent(m)))
 
 Base.getindex(m::Multiline, i::Int) = getindex(parent(m), i)
 Base.setindex!(m::Multiline, v, i::Int) = (setindex!(parent(m), v, i); m)
@@ -131,5 +132,4 @@ site_type(st::Multiline) = site_type(typeof(st))
 bond_type(st::Multiline) = bond_type(typeof(st))
 for ftype in (:spacetype, :sectortype, :storagetype)
     @eval TensorKit.$ftype(::Type{Multiline{T}}) where {T} = $ftype(T)
-    @eval TensorKit.$ftype(m::Multiline) = $ftype(typeof(m))
 end

@@ -167,10 +167,10 @@ Properties are accessed with cartesian (row, column) indexing:
 al = state.AL[2, 1];
 ```
 
-### The row-shift convention
+### Indexing convention
 
-Row `i` of a [`MultilineMPO`](@ref) maps row `i` of the network onto row `i + 1`.
-`environments`, the derivative operators and [`dominant_eigenvalue`](@ref) all follow it, pairing `state[i + 1]` as the bra against `O[i]` acting on the ket `state[i]`.
+Row `i` of a [`MultilineMPO`](@ref) `O` acts on line `i` of a `MultilineMPS` and maps it onto line `i + 1`, i.e. `O[i] * state[i] ∝ state[i + 1]`.
+`environments`, the derivative operators and [`MPSKit.leading_eigenvalue`](@ref) all follow it, pairing `state[i + 1]` as the bra against `O[i]` acting on the ket `state[i]`.
 Within a row, `state.AL[i, j]` and friends behave exactly as they would for `state[i]::InfiniteMPS`.
 
 Bra and ket are therefore different lines, so a `MultilineMPS` is not a state whose expectation value makes sense to take.
@@ -184,7 +184,7 @@ The lines of a `MultilineMPS` are bookkeeping for that single problem.
 Line `i + 1` is the boundary after row `i` has been applied, so this lets [`leading_boundary`](@ref) cut it into `nrows` coupled subproblems instead of contracting every row into one operator.
 Each subproblem contributes a partial factor, and only their product is the eigenvalue of the fixed point.
 Independently of that, the `ncols` sites of the unit cell contribute factors of their own on top.
-[`dominant_eigenvalue`](@ref) accumulates both.
+[`MPSKit.leading_eigenvalue`](@ref) accumulates both.
 
 Applying an operator therefore acts on an ordinary [`InfiniteMPS`](@ref), advancing it by one full period:
 
@@ -192,11 +192,11 @@ Applying an operator therefore acts on an ordinary [`InfiniteMPS`](@ref), advanc
 O * ψ == O[end] * (… * (O[2] * (O[1] * ψ)))
 ```
 
-### Subtleties
+### Notes
 
-- **A vector of lines:** `length`, `size`, iteration and `state[i]` all refer to the lines, so `size(state) == (length(state),)`. The lattice shape is not reflected in `size`; it is `length(state)` rows of `length(state[1])` sites, which is what the views `state.AL[row, col]` and friends index. See [`Multiline`](@ref MPSKit.Multiline).
-- **Norms:** `dot`/`norm` sum over rows, so `norm(state) == sqrt(nrows)` for `nrows` normalized rows.
-- **Finite lines** are accepted by the type and the vector constructor so that finite networks can be built and inspected, but no algorithm supports them yet. [`InfiniteMultilineMPS`](@ref) and [`FiniteMultilineMPS`](@ref) dispatch on the kind of line.
+- A `MultilineMPS` behaves as a vector of its lines: `length`, `size`, iteration and `state[i]` all refer to the lines, so `size(state) == (length(state),)`. The views `state.AL[row, col]` and friends index the `length(state)` rows of `length(state[1])` sites. See [`Multiline`](@ref MPSKit.Multiline).
+- `dot`/`norm` sum over rows, as for a direct sum of the lines, so `norm(state) == sqrt(length(state))` for normalized rows.
+- Lines may be any `AbstractMPS`, so that for example finite networks can be built and inspected, but no algorithm supports anything but infinite lines yet. [`InfiniteMultilineMPS`](@ref) and [`FiniteMultilineMPS`](@ref) dispatch on the kind of line.
 
 These objects are also used extensively in the context of [PEPSKit.jl](https://github.com/QuantumKitHub/PEPSKit.jl).
 

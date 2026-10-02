@@ -78,7 +78,7 @@ function calc_galerkin(below, operator, above, envs; kwargs...)
     end
 end
 function calc_galerkin(below::Multiline, operator, above, envs; kwargs...)
-    return maximum(CartesianIndices((length(below), linelength(below)))) do pos
+    return maximum(CartesianIndices((length(below), width(below)))) do pos
         return calc_galerkin(pos, below, operator, above, envs; kwargs...)
     end
 end

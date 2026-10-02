@@ -34,7 +34,7 @@ the operator is a `AbstractTensorMap` that acts on the physical space of a singl
 
 !!! note "Multiline operators"
     There is no method for a `MultilineMPS` `ψ` with a `MultilineMPO` `O`; use
-    [`dominant_eigenvalue`](@ref) instead.
+    [`leading_eigenvalue`](@ref) instead.
 
     The lines of `ψ` are not independent states. Line `i + 1` is the boundary obtained by
     applying row `i` of `O` to line `i`, i.e. `O[i] * ψ[i] ∝ ψ[i + 1]`. Contracting row `i`
@@ -201,7 +201,7 @@ function expectation_value(ψ::FiniteQP, mpo::FiniteMPO)
     return expectation_value(convert(FiniteMPS, ψ), mpo)
 end
 function expectation_value(ψ::InfiniteMPS, mpo::InfiniteMPO, envs...)
-    return dominant_eigenvalue(ψ, mpo, envs...)
+    return leading_eigenvalue(ψ, mpo, envs...)
 end
 # fallback
 function expectation_value(ψ::AbstractMPS, mpo::AbstractMPO, envs...)
@@ -211,7 +211,7 @@ end
 # Dominant eigenvalues
 # --------------------
 """
-    dominant_eigenvalue(ψ, O, [environments]) -> λ
+    leading_eigenvalue(ψ, O, [environments]) -> λ
 
 Eigenvalue of the transfer operator `O` for the boundary MPS `ψ`, accumulated over one unit
 cell of the network. See the manual at [One fixed point, many lines](@ref) on how to
@@ -244,20 +244,20 @@ accumulated over them.
 
 [`leading_boundary`](@ref), [`expectation_value`](@ref)
 """
-function dominant_eigenvalue(ψ::InfiniteMPS, O::InfiniteMPO)
-    return dominant_eigenvalue(convert(MultilineMPS, ψ), convert(MultilineMPO, O))
+function leading_eigenvalue(ψ::InfiniteMPS, O::InfiniteMPO)
+    return leading_eigenvalue(convert(MultilineMPS, ψ), convert(MultilineMPO, O))
 end
-function dominant_eigenvalue(ψ::InfiniteMPS, O::InfiniteMPO, envs::AbstractMPSEnvironments)
-    return dominant_eigenvalue(
+function leading_eigenvalue(ψ::InfiniteMPS, O::InfiniteMPO, envs::AbstractMPSEnvironments)
+    return leading_eigenvalue(
         convert(MultilineMPS, ψ), convert(MultilineMPO, O), convert(MultilineEnvironments, envs)
     )
 end
-function dominant_eigenvalue(
+function leading_eigenvalue(
         ψ::InfiniteMultilineMPS, O::InfiniteMultilineMPO,
         envs::MultilineEnvironments = environments(ψ, O, ψ)
     )
     #TODO: a true overlap needs the top and bottom fixed points with mixed environments
-    return prod(product(1:length(ψ), 1:linelength(ψ))) do (i, j)
+    return prod(product(1:length(ψ), 1:width(ψ))) do (i, j)
         GL = envs[i].GLs[j]
         GR = envs[i].GRs[j]
         return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j])

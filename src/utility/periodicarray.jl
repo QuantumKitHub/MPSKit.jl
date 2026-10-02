@@ -74,6 +74,7 @@ function Base.setindex!(A::PeriodicArray{T, N}, v, I::Vararg{Int, N}) where {T, 
 end
 
 Base.checkbounds(A::PeriodicArray, I...) = true
+Base.checkbounds(::Type{Bool}, A::PeriodicArray, I...) = true
 
 Base.LinearIndices(A::PeriodicArray) = PeriodicArray(LinearIndices(parent(A)))
 Base.CartesianIndices(A::PeriodicArray) = PeriodicArray(CartesianIndices(parent(A)))

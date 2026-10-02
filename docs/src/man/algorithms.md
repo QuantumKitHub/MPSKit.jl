@@ -408,12 +408,11 @@ use GradientGrassmann.
 leading_boundary
 ```
 
-The associated eigenvalue, i.e. the partition function per unit cell, is obtained with [`dominant_eigenvalue`](@ref).
-This is deliberately not `expectation_value`: the boundary contracts against a different line than the one the operator acts on, so it is not an overlap.
-For a single-line `InfiniteMPS`/`InfiniteMPO` pair the two coincide and `expectation_value` forwards accordingly.
+The associated eigenvalue, i.e. the partition function density, is obtained with [`MPSKit.leading_eigenvalue`](@ref).
+For a single-line `InfiniteMPS`/`InfiniteMPO` pair this is equivalent to `expectation_value`.
 
 ```@docs; canonical=false
-dominant_eigenvalue
+MPSKit.leading_eigenvalue
 ```
 
 ## `approximate`

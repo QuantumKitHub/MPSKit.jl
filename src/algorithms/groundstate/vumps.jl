@@ -59,6 +59,10 @@ function find_groundstate(
     return dominant_eigsolve(operator, mps, alg, envs...; which = :SR)
 end
 
+# logged value: the energy for `find_groundstate`, the eigenvalue for `leading_boundary`
+vumps_objective(mps, operator, envs) = expectation_value(mps, operator, envs)
+vumps_objective(mps::MultilineMPS, operator, envs) = leading_eigenvalue(mps, operator, envs)
+
 function dominant_eigsolve(
         operator, mps, alg::VUMPS, envs = environments(mps, operator, mps, alg.alg_environments);
         which
@@ -78,24 +82,21 @@ function dominant_eigsolve(
     state = VUMPSState(mps, operator, envs, iter, ϵ, which, timeroutput)
     it = IterativeSolver(alg, state)
 
-    # both `find_groundstate` and `leading_boundary` go here
-    objective = mps isa MultilineMPS ? dominant_eigenvalue : expectation_value
-
     result = LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, objective(mps, operator, envs))
+        @infov 2 loginit!(log, ϵ, vumps_objective(mps, operator, envs))
 
         for (mps, envs, ϵ) in it
             if ϵ ≤ alg.tol
                 @infov 4 TimerReport(timeroutput)
-                @infov 2 logfinish!(log, it.iter, ϵ, objective(mps, operator, envs))
+                @infov 2 logfinish!(log, it.iter, ϵ, vumps_objective(mps, operator, envs))
                 return mps, envs, AlgorithmInfo(; converged = true, galerkin = ϵ, numiter = it.iter)
             end
             if it.iter ≥ alg.maxiter
                 @infov 4 TimerReport(timeroutput)
-                @warnv 1 logcancel!(log, it.iter, ϵ, objective(mps, operator, envs))
+                @warnv 1 logcancel!(log, it.iter, ϵ, vumps_objective(mps, operator, envs))
                 return mps, envs, AlgorithmInfo(; converged = false, galerkin = ϵ, numiter = it.iter)
             end
-            @infov 3 logiter!(log, it.iter, ϵ, objective(mps, operator, envs))
+            @infov 3 logiter!(log, it.iter, ϵ, vumps_objective(mps, operator, envs))
         end
 
         # this should never be reached

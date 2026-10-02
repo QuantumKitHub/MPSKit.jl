@@ -7,6 +7,7 @@ println("
 using .TestSetup
 using Test, TestExtras
 using MPSKit
+using MPSKit: leading_eigenvalue
 using TensorKit
 
 d = 3
@@ -38,21 +39,21 @@ O = MultilineMPO(
     @test abs(dot(ψ[1], reversed)) ≈ 0 atol = 1.0e-10
 end
 
-@testset "dominant_eigenvalue" begin
-    @test dominant_eigenvalue(ψ, O) ≈ 1 atol = 1.0e-10
+@testset "leading_eigenvalue" begin
+    @test leading_eigenvalue(ψ, O) ≈ 1 atol = 1.0e-10
 
     # row-accumulated eigenvalues
     scaled(mpo, c) = InfiniteMPO([c * mpo[i] for i in 1:length(mpo)])
     cs = (2.0, 3.0, 5.0)
     O_rows = MultilineMPO([scaled(O[i], cs[i]) for i in 1:3])
-    @test dominant_eigenvalue(ψ, O_rows) ≈ prod(cs) atol = 1.0e-8
+    @test leading_eigenvalue(ψ, O_rows) ≈ prod(cs) atol = 1.0e-8
 
     # column-accumulated eigenvalues
     id_mpo = perm_mpo([1, 2, 3]) # identity operator, so anything's a fixed point
     cs = (2.0, 3.0)
     O_cols = MultilineMPO([InfiniteMPO([cs[1] * id_mpo[1], cs[2] * id_mpo[1]])])
     ψ_cols = MultilineMPS([InfiniteMPS([P, P], [ℂ^2, ℂ^2])])
-    @test dominant_eigenvalue(ψ_cols, O_cols) ≈ prod(cs) atol = 1.0e-8
+    @test leading_eigenvalue(ψ_cols, O_cols) ≈ prod(cs) atol = 1.0e-8
 end
 
 @testset "multi-row fixed point" begin
@@ -60,22 +61,24 @@ end
     O₁ = classical_ising(; β = 0.5)
     alg = VUMPS(; tol = 1.0e-10, verbosity = 0)
     ψ₁, = leading_boundary(InfiniteMPS(ℂ^2, ℂ^10), O₁, alg)
-    λ₁ = dominant_eigenvalue(ψ₁, O₁)
+    λ₁ = leading_eigenvalue(ψ₁, O₁)
 
     O₂ = MultilineMPO([O₁, O₁])
     ψ₂₀ = MultilineMPS([InfiniteMPS(ℂ^2, ℂ^10), InfiniteMPS(ℂ^2, ℂ^10)])
     ψ₂, = leading_boundary(ψ₂₀, O₂, alg)
-    @test dominant_eigenvalue(ψ₂, O₂) ≈ λ₁^2 rtol = 1.0e-8
+    @test leading_eigenvalue(ψ₂, O₂) ≈ λ₁^2 rtol = 1.0e-8
 end
 
 @testset "unsupported inputs" begin
     @test_throws MethodError expectation_value(ψ, O)
 
-    # `Multiline([H, H])` bypasses the `MultilineMPO` constructor, but is still not a `MultilineMPO`
+    # Hamiltonian lines are a valid `MultilineMPO`, but not a transfer operator
     H = transverse_field_ising()
     ψ_H = MultilineMPS([InfiniteMPS(ℂ^2, ℂ^4), InfiniteMPS(ℂ^2, ℂ^4)])
-    @test_throws MethodError expectation_value(ψ_H, MPSKit.Multiline([H, H]))
-    @test_throws MethodError dominant_eigenvalue(ψ_H, MPSKit.Multiline([H, H]))
+    O_H = MultilineMPO([H, H])
+    @test O_H isa MultilineMPO && !(O_H isa InfiniteMultilineMPO)
+    @test_throws MethodError expectation_value(ψ_H, O_H)
+    @test_throws MethodError leading_eigenvalue(ψ_H, O_H)
 
     ψ_fin = MultilineMPS([FiniteMPS(4, P, ℂ^2)])
     @test_throws MethodError leading_boundary(ψ_fin, MultilineMPO([perm_mpo([1, 2, 3])]), VUMPS())
@@ -89,4 +92,12 @@ end
     @test ψ_fin isa FiniteMultilineMPS && ψ_fin isa MultilineMPS
     O_fin = MultilineMPO([FiniteMPO(fill(perm_mpo([1, 2, 3])[1], 4))])
     @test O_fin isa FiniteMultilineMPO && O_fin isa MultilineMPO
+end
+
+@testset "view bounds" begin
+    # rows are periodic, and so are the columns of infinite lines
+    @test checkbounds(Bool, ψ.AC, 0, 0) && checkbounds(Bool, ψ.C, 4, -1)
+    ψ_fin = MultilineMPS([FiniteMPS(4, P, ℂ^2), FiniteMPS(4, P, ℂ^2)])
+    @test checkbounds(Bool, ψ_fin.AC, 3, 4) && !checkbounds(Bool, ψ_fin.AC, 1, 5)
+    @test checkbounds(Bool, ψ_fin.C, 1, 0) && !checkbounds(Bool, ψ_fin.C, 1, 5)
 end

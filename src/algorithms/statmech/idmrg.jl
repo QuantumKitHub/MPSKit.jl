@@ -7,19 +7,19 @@ function leading_boundary(
     iter = 0
 
     LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, dominant_eigenvalue(ψ, operator, envs))
+        @infov 2 loginit!(log, ϵ, leading_eigenvalue(ψ, operator, envs))
         for outer iter in 1:(alg.maxiter)
             alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = ϵ)
             C_current = ψ.C[:, 0]
 
             # left to right sweep
-            for col in 1:linelength(ψ)
+            for col in 1:width(ψ)
                 Hac = AC_hamiltonian(col, ψ, operator, ψ, envs; alg.backend, allocator)
                 _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
 
                 for row in 1:size(ψ, 1)
                     ac = ψ.AC[row, col]
-                    (col == linelength(ψ)) && (ac = copy(ac)) # needed in next sweep
+                    (col == width(ψ)) && (ac = copy(ac)) # needed in next sweep
                     ψ.AL[row, col], ψ.C[row, col] = left_orth!(ac)
                 end
 
@@ -27,7 +27,7 @@ function leading_boundary(
             end
 
             # right to left sweep
-            for col in linelength(ψ):-1:1
+            for col in width(ψ):-1:1
                 Hac = AC_hamiltonian(col, ψ, operator, ψ, envs; alg.backend, allocator)
                 _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
 
@@ -44,13 +44,13 @@ function leading_boundary(
             ϵ = norm(C_current - ψ.C[:, 0])
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, dominant_eigenvalue(ψ, operator, envs))
+                @infov 2 logfinish!(log, iter, ϵ, leading_eigenvalue(ψ, operator, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, dominant_eigenvalue(ψ, operator, envs))
+                @warnv 1 logcancel!(log, iter, ϵ, leading_eigenvalue(ψ, operator, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ, dominant_eigenvalue(ψ, operator, envs))
+                @infov 3 logiter!(log, iter, ϵ, leading_eigenvalue(ψ, operator, envs))
             end
         end
     end
@@ -66,11 +66,11 @@ function leading_boundary(
         ψ::InfiniteMultilineMPS, operator, alg::IDMRG2, envs = environments(ψ, operator, ψ)
     )
     allocator = default_allocator(ψ, SerialScheduler())
-    linelength(ψ) < 2 && throw(ArgumentError("unit cell should be >= 2"))
+    width(ψ) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
     iter = 0
-    ϵ_truncs = PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), linelength(ψ)))
+    ϵ_truncs = PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), width(ψ)))
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
@@ -79,7 +79,7 @@ function leading_boundary(
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
-            for site in 1:(linelength(ψ) - 1)
+            for site in 1:(width(ψ) - 1)
                 ac2 = AC2(ψ, site; kind = :ACAR)
                 h = AC2_hamiltonian(site, ψ, operator, ψ, envs; alg.backend, allocator)
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)
@@ -101,7 +101,7 @@ function leading_boundary(
             normalize!(envs, ψ, operator, ψ)
 
             # update the edge
-            site = linelength(ψ)
+            site = width(ψ)
             ψ.AL[:, end] .= ψ.AC[:, end] ./ ψ.C[:, end]
             ψ.AC[:, 1] .= _mul_tail.(ψ.AL[:, 1], ψ.C[:, 1])
             ac2 = AC2(ψ, site; kind = :ALAC)
@@ -128,7 +128,7 @@ function leading_boundary(
             transfer_rightenv!(envs, ψ, operator, ψ, 0)
 
             # sweep from right to left
-            for site in reverse(1:(linelength(ψ) - 1))
+            for site in reverse(1:(width(ψ) - 1))
                 ac2 = AC2(ψ, site; kind = :ALAC)
                 h = AC2_hamiltonian(site, ψ, operator, ψ, envs; alg.backend, allocator)
                 _, ac2′ = fixedpoint(h, ac2, :LM, alg_eigsolve)

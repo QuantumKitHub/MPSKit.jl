@@ -1,8 +1,6 @@
 # MultilineMPS
 # ------------
-#TODO: add support for finite MPS
-const _MPSs = Union{InfiniteMPS, FiniteMPS}
-const MultilineMPS = Multiline{<:_MPSs}
+const MultilineMPS = Multiline{<:AbstractMPS}
 
 """
     const InfiniteMultilineMPS = Multiline{<:InfiniteMPS}
@@ -12,15 +10,15 @@ const MultilineMPS = Multiline{<:_MPSs}
 const InfiniteMultilineMPS = Multiline{<:InfiniteMPS}
 
 """
-    const FiniteMultilineMPS = Multiline{<:FiniteMPS}
+    const FiniteMultilineMPS = Multiline{<:AbstractFiniteMPS}
 
 [`MultilineMPS`](@ref) with finite lines. These can be built and inspected, but no algorithm
 supports them yet.
 """
-const FiniteMultilineMPS = Multiline{<:FiniteMPS}
+const FiniteMultilineMPS = Multiline{<:AbstractFiniteMPS}
 
 @doc """
-    const MultilineMPS = Multiline{<:Union{InfiniteMPS, FiniteMPS}}
+    const MultilineMPS = Multiline{<:AbstractMPS}
 
 Type that represents multiple lines of MPS objects. When used in the context of
 [`leading_boundary`](@ref) with `InfiniteMPS`, this is not to be confused with the fixed point
@@ -29,7 +27,7 @@ See the manual on [MultilineMPS](@ref) for details.
 
 # Constructors
 
-    MultilineMPS(mpss::AbstractVector{<:Union{InfiniteMPS, FiniteMPS}})
+    MultilineMPS(mpss::AbstractVector{<:AbstractMPS})
     MultilineMPS(
         [f, eltype], physicalspaces::Matrix{<:Union{S, CompositeSpace{S}}},
         virtualspaces::Matrix{<:Union{S, CompositeSpace{S}}}
@@ -54,13 +52,13 @@ the lines, so `size(ψ) == (length(ψ),)`. The views `ψ.AL`, `ψ.AR`, `ψ.AC` a
 index the lattice of lines and sites, e.g. `ψ.AL[row, col]`.
 See [`Multiline`](@ref) for details.
 
-Only the first constructor accepts finite lines; the others build `InfiniteMPS` lines from
-spaces or tensors.
+Only the first constructor accepts lines other than `InfiniteMPS`; the others build
+`InfiniteMPS` lines from spaces or tensors.
 
 !!! note "Finite lines"
-    Finite lines are accepted by the type and by the first constructor so that finite networks
-    can be built and inspected. No algorithm supports them yet: [`leading_boundary`](@ref) only
-    accepts infinite lines.
+    Lines may be any `AbstractMPS`, so that for example finite networks can be built and
+    inspected. No algorithm supports anything but infinite lines yet: [`leading_boundary`](@ref)
+    only accepts an [`InfiniteMultilineMPS`](@ref).
 
 # See also
 
@@ -68,7 +66,7 @@ spaces or tensors.
 """
 function MultilineMPS end
 
-MultilineMPS(mpss::AbstractVector{<:_MPSs}) = Multiline(mpss)
+MultilineMPS(mpss::AbstractVector{<:AbstractMPS}) = Multiline(mpss)
 function MultilineMPS(
         pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...
     ) where {S <: VectorSpace}
@@ -126,7 +124,7 @@ for f in (:l_RR, :l_RL, :l_LL, :l_LR)
 end
 
 for f in (:r_RR, :r_RL, :r_LR, :r_LL)
-    @eval $f(t::MultilineMPS, i, j = linelength(t)) = $f(t[i], j)
+    @eval $f(t::MultilineMPS, i, j = width(t)) = $f(t[i], j)
 end
 
 function TensorKit.dot(a::MultilineMPS, b::MultilineMPS; kwargs...)
@@ -134,7 +132,7 @@ function TensorKit.dot(a::MultilineMPS, b::MultilineMPS; kwargs...)
 end
 TensorKit.normalize!(a::MultilineMPS) = (normalize!.(parent(a)); return a)
 
-Base.convert(::Type{MultilineMPS}, st::_MPSs) = Multiline([st])
+Base.convert(::Type{MultilineMPS}, st::AbstractMPS) = Multiline([st])
 Base.convert(::Type{InfiniteMPS}, st::InfiniteMultilineMPS) = only(st)
 Base.convert(::Type{FiniteMPS}, st::FiniteMultilineMPS) = only(st)
 Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ)); ψ)
@@ -142,7 +140,7 @@ Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ))
 for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
     @eval $f_space(t::MultilineMPS, i::Int, j::Int) = $f_space(t[i], j)
     @eval $f_space(t::MultilineMPS, I::CartesianIndex{2}) = $f_space(t, Tuple(I)...)
-    @eval $f_space(t::MultilineMPS) = map(Base.Fix1($f_space, t), CartesianIndices((length(t), linelength(t))))
+    @eval $f_space(t::MultilineMPS) = map(Base.Fix1($f_space, t), CartesianIndices((length(t), width(t))))
 end
 
 TensorKit.leftunit(t::MultilineMPS) = TensorKit.leftunit(t[1]) # same for every line

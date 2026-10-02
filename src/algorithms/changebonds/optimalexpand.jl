@@ -95,7 +95,7 @@ function changebonds(
     AR′ = PeriodicMatrix{TR}(undef, size(ψ.AR))
 
     # determine optimal expansion spaces around bond i
-    for i in 1:size(ψ, 1), j in 1:linelength(ψ)
+    for i in 1:size(ψ, 1), j in 1:width(ψ)
         AC2 = AC2_projection(
             CartesianIndex(i - 1, j), ψ, H, ψ, envs;
             kind = :ACAR, alg.backend, allocator

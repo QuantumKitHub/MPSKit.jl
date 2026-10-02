@@ -1,6 +1,6 @@
 # views of a `Multiline` index the lattice spanned by its lines
 _viewsize(parent) = size(parent)
-_viewsize(m::Multiline) = (length(m), linelength(m))
+_viewsize(m::Multiline) = (length(m), width(m))
 
 struct ALView{S, E, N} <: AbstractArray{E, N}
     parent::S
@@ -283,25 +283,20 @@ Base.axes(psi::CView{<:AbstractFiniteMPS}) = map(n -> 0:(n - 1), size(psi))
 Base.size(psi::CView{<:InfiniteMultilineMPS}) = _viewsize(psi.parent)
 Base.size(psi::CView{<:FiniteMultilineMPS}) = _viewsize(psi.parent) .+ (0, 1)
 function Base.axes(psi::CView{<:FiniteMultilineMPS})
-    return (Base.OneTo(length(psi.parent)), 0:linelength(psi.parent))
+    return (Base.OneTo(length(psi.parent)), 0:width(psi.parent))
 end
 
 const MultilineOrthoView{S} = Union{ACView{S}, ALView{S}, ARView{S}, CView{S}}
 
-# the row index is always periodic
-# for infinite lines the column index is periodic as well
-Base.checkbounds(::Type{Bool}, ::MultilineOrthoView{<:InfiniteMultilineMPS}, a, b) = true
-
-# finite line bounds differ per view, so just delegate to the view's own checkbounds
-function Base.checkbounds(
-        ::Type{Bool}, psi::MultilineOrthoView{<:FiniteMultilineMPS}, a, b
-    )
-    return checkbounds(Bool, _lineview(psi), b)
+# the column is checked against the matching tensors of a line, which are periodic for
+# infinite lines; all lines have the same length
+function Base.checkbounds(::Type{Bool}, psi::MultilineOrthoView{<:Multiline}, a, b)
+    return checkbounds(Bool, psi.parent, a) && checkbounds(Bool, _linetensors(psi), b)
 end
-_lineview(psi::ACView) = ACView(first(parent(psi.parent)))
-_lineview(psi::ALView) = ALView(first(parent(psi.parent)))
-_lineview(psi::ARView) = ARView(first(parent(psi.parent)))
-_lineview(psi::CView) = CView(first(parent(psi.parent)))
+_linetensors(psi::ACView) = first(parent(psi.parent)).AC
+_linetensors(psi::ALView) = first(parent(psi.parent)).AL
+_linetensors(psi::ARView) = first(parent(psi.parent)).AR
+_linetensors(psi::CView) = first(parent(psi.parent)).C
 
 # Gauging routines
 # ----------------
