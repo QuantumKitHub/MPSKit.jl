@@ -13,7 +13,7 @@ function approximate!(
             C_current = ψ.C[:, 0]
 
             # left to right sweep
-            for col in 1:size(ψ, 2)
+            for col in 1:linelength(ψ)
                 for row in 1:size(ψ, 1)
                     ψ.AC[row + 1, col] = AC_projection(
                         CartesianIndex(row, col), ψ, toapprox, envs;
@@ -26,7 +26,7 @@ function approximate!(
             end
 
             # right to left sweep
-            for col in reverse(1:size(ψ, 2))
+            for col in reverse(1:linelength(ψ))
                 for row in 1:size(ψ, 1)
                     ψ.AC[row + 1, col] = AC_projection(
                         CartesianIndex(row, col), ψ, toapprox, envs;
@@ -68,12 +68,12 @@ function approximate!(
         alg::IDMRG2, envs = environments(ψ, toapprox...)
     )
     allocator = default_allocator(ψ, SerialScheduler())
-    size(ψ, 2) < 2 && throw(ArgumentError("unit cell should be >= 2"))
+    linelength(ψ) < 2 && throw(ArgumentError("unit cell should be >= 2"))
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
     O, ϕ = toapprox
     iter = 0
-    ϵ_truncs = PeriodicMatrix(zeros(real(scalartype(ψ)), size(ψ)))
+    ϵ_truncs = PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), linelength(ψ)))
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
@@ -81,7 +81,7 @@ function approximate!(
             C_current = ψ.C[:, 0]
 
             # sweep from left to right
-            for site in 1:(size(ψ, 2) - 1)
+            for site in 1:(linelength(ψ) - 1)
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(
                         CartesianIndex(row, site), ψ, toapprox, envs;
@@ -105,7 +105,7 @@ function approximate!(
             ψ.AC[:, 1] .= _mul_tail.(ψ.AL[:, 1], ψ.C[:, 1])
             for row in 1:size(ψ, 1)
                 AC2′ = AC2_projection(
-                    CartesianIndex(row, size(ψ, 2)), ψ, toapprox, envs;
+                    CartesianIndex(row, linelength(ψ)), ψ, toapprox, envs;
                     kind = :ALAC, alg.backend, allocator
                 )
                 al, c, ar, ϵ_truncs[row + 1, end] = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
@@ -127,7 +127,7 @@ function approximate!(
             normalize!(envs, ψ, toapprox)
 
             # sweep from right to left
-            for site in reverse(1:(size(ψ, 2) - 1))
+            for site in reverse(1:(linelength(ψ) - 1))
                 for row in 1:size(ψ, 1)
                     AC2′ = AC2_projection(
                         CartesianIndex(row, site), ψ, toapprox, envs;

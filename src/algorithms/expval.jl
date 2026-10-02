@@ -257,7 +257,7 @@ function dominant_eigenvalue(
         envs::MultilineEnvironments = environments(ψ, O, ψ)
     )
     #TODO: a true overlap needs the top and bottom fixed points with mixed environments
-    return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
+    return prod(product(1:length(ψ), 1:linelength(ψ))) do (i, j)
         GL = envs[i].GLs[j]
         GR = envs[i].GRs[j]
         return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j])

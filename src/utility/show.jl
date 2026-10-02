@@ -11,7 +11,7 @@ for T in (:FiniteMPS, :InfiniteMPS, :FiniteMPO, :InfiniteMPO, :FiniteMPOHamilton
 end
 
 function Base.summary(io::IO, m::Union{MultilineMPS, MultilineMPO})
-    R, C = size(m)
+    R, C = length(m), linelength(m)
     D = maximum(dim, left_virtualspace(m))
     E = scalartype(m)
     S = TensorKit.type_repr(spacetype(m))

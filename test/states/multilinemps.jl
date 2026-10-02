@@ -27,12 +27,20 @@ using TensorKit
     @test !isfinite(typeof(ψ))
     @test !isfinite(ψ)
 
+    @test length(ψ) == 2
+    @test size(ψ) == (2,)
+    @test size(ψ, 2) == 1
+    @test axes(ψ) == (Base.OneTo(2),)
+    @test eachindex(ψ) == 1:2
+    @test eltype(ψ) <: InfiniteMPS
+    @test size(ψ.AL) == size(ψ.AC) == size(ψ.C) == (2, 2)
+
     @test physicalspace(ψ) == fill(d, 2, 2)
     @test all(x -> x ≾ D, left_virtualspace(ψ))
     @test all(x -> x ≾ D, right_virtualspace(ψ))
     @test leftunit(ψ) == unit(sectortype(D))
 
-    for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
+    for i in 1:length(ψ), j in 1:length(ψ[1])
         @plansor difference[-1 -2; -3] := ψ.AL[i, j][-1 -2; 1] * ψ.C[i, j][1; -3] -
             ψ.C[i, j - 1][-1; 1] * ψ.AR[i, j][1 -2; -3]
         @test norm(difference, Inf) < tol * 10

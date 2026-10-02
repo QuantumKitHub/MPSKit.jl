@@ -49,8 +49,9 @@ See the manual on [MultilineMPS](@ref) for details.
 
 # Notes
 
-Note that `length`, `eltype` and iteration refer to the lines (so e.g. `length(ψ) == nrows`),
-while `size` refers to the `(nrows, ncols)` lattice shape.
+A `MultilineMPS` is a vector of its lines: `length`, `size`, `eltype` and iteration refer to
+the lines, so `size(ψ) == (length(ψ),)`. The views `ψ.AL`, `ψ.AR`, `ψ.AC` and `ψ.C` instead
+index the lattice of lines and sites, e.g. `ψ.AL[row, col]`.
 See [`Multiline`](@ref) for details.
 
 Only the first constructor accepts finite lines; the others build `InfiniteMPS` lines from
@@ -125,7 +126,7 @@ for f in (:l_RR, :l_RL, :l_LL, :l_LR)
 end
 
 for f in (:r_RR, :r_RL, :r_LR, :r_LL)
-    @eval $f(t::MultilineMPS, i, j = size(t, 2)) = $f(t[i], j)
+    @eval $f(t::MultilineMPS, i, j = linelength(t)) = $f(t[i], j)
 end
 
 function TensorKit.dot(a::MultilineMPS, b::MultilineMPS; kwargs...)
@@ -141,7 +142,7 @@ Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ))
 for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
     @eval $f_space(t::MultilineMPS, i::Int, j::Int) = $f_space(t[i], j)
     @eval $f_space(t::MultilineMPS, I::CartesianIndex{2}) = $f_space(t, Tuple(I)...)
-    @eval $f_space(t::MultilineMPS) = map(Base.Fix1($f_space, t), eachindex(t))
+    @eval $f_space(t::MultilineMPS) = map(Base.Fix1($f_space, t), CartesianIndices((length(t), linelength(t))))
 end
 
 TensorKit.leftunit(t::MultilineMPS) = TensorKit.leftunit(t[1]) # same for every line

@@ -4,18 +4,14 @@ $(TYPEDEF)
 Object that represents multiple lines of objects of type `T`. Typically used to represent
 multiple lines of `InfiniteMPS` (`MultilineMPS`) or `InfiniteMPO` (`MultilineMPO`).
 
-`Multiline` plays two different, orthogonal roles at once, and its Base overloads are split
-accordingly:
+A `Multiline` behaves as a vector of its lines: `length`, `size`, `axes`, `eachindex`,
+`eltype`, iteration and `m[i]` all refer to the `T`-typed lines, so that
+`size(m) == (length(m),)` and `m[i]::T`.
 
-- As a sequence of lines, matching what is actually stored: `length`, `eltype`, `iterate`
-  and `m[i]` (a single integer index) all refer to the `T`-typed lines themselves, i.e.
-  `length(m) == nrows` and `m[i]::T`.
-- As a lattice, describing the 2D shape spanned by the lines together: `size(m)` is
-  `(nrows, ncols)`, and `axes`/`eachindex` follow `size`.
-
-These two views disagree on purpose (`length(m) != prod(size(m))`).
-Code that wants to work line-by-line should use `m[i]`/`parent(m)`,
-while code that wants the lattice shape should use `size`.
+Together the lines also span a two-dimensional lattice of `length(m)` rows and
+`length(m[1])` columns, which is what the orthogonality views such as `m.AL[i, j]` index.
+This lattice shape is deliberately not reflected in `size` and `axes`; work with the lines
+`m[i]` to obtain it.
 
 # Fields
 
@@ -37,20 +33,20 @@ Multiline(data::AbstractVector{T}) where {T} = Multiline{T}(data)
 # AbstractArray interface
 # -----------------------
 Base.parent(m::Multiline) = m.data
-Base.size(m::Multiline) = (length(parent(m)), length(parent(m)[1]))
-function Base.size(m::Multiline, i::Int) # acts like abstract array
-    return i == 1 ? length(parent(m)) : i == 2 ? length(parent(m)[1]) : 1
-end
 Base.length(m::Multiline) = length(parent(m))
-function Base.axes(m::Multiline, d::Int)
-    return d <= 2 ? axes(m)[d] : Base.OneTo(1) # matches size
-end
-Base.eachindex(m::Multiline) = CartesianIndices(size(m))
+Base.size(m::Multiline) = (length(m),)
+Base.size(m::Multiline, d::Int) = d == 1 ? length(m) : 1
+Base.axes(m::Multiline) = (Base.OneTo(length(m)),)
+Base.axes(m::Multiline, d::Int) = d == 1 ? Base.OneTo(length(m)) : Base.OneTo(1)
+Base.eachindex(m::Multiline) = Base.OneTo(length(m))
 Base.isfinite(m::Multiline) = isfinite(typeof(m))
 Base.isfinite(::Type{Multiline{T}}) where {T} = isfinite(T)
 Base.eltype(::Type{Multiline{T}}) where {T} = T
 
 eachsite(m::Multiline) = eachsite(first(parent(m)))
+
+# number of columns of the lattice spanned by the lines
+linelength(m::Multiline) = length(first(parent(m)))
 
 Base.getindex(m::Multiline, i::Int) = getindex(parent(m), i)
 Base.setindex!(m::Multiline, v, i::Int) = (setindex!(parent(m), v, i); m)

@@ -1,6 +1,10 @@
+# views of a `Multiline` index the lattice spanned by its lines
+_viewsize(parent) = size(parent)
+_viewsize(m::Multiline) = (length(m), linelength(m))
+
 struct ALView{S, E, N} <: AbstractArray{E, N}
     parent::S
-    ALView(parent::S) where {S} = new{S, site_type(S), length(size(parent))}(parent)
+    ALView(parent::S) where {S} = new{S, site_type(S), length(_viewsize(parent))}(parent)
 end
 
 function Base.getindex(v::ALView{<:FiniteMPS, E}, i::Int)::E where {E}
@@ -21,7 +25,7 @@ end
 
 struct ARView{S, E, N} <: AbstractArray{E, N}
     parent::S
-    ARView(parent::S) where {S} = new{S, site_type(S), length(size(parent))}(parent)
+    ARView(parent::S) where {S} = new{S, site_type(S), length(_viewsize(parent))}(parent)
 end
 
 function Base.getindex(v::ARView{<:FiniteMPS, E}, i::Int)::E where {E}
@@ -43,7 +47,7 @@ end
 
 struct CView{S, E, N} <: AbstractArray{E, N}
     parent::S
-    CView(parent::S) where {S} = new{S, bond_type(S), length(size(parent))}(parent)
+    CView(parent::S) where {S} = new{S, bond_type(S), length(_viewsize(parent))}(parent)
 end
 
 function Base.getindex(v::CView{<:FiniteMPS, E}, i::Int)::E where {E}
@@ -119,7 +123,7 @@ end;
 
 struct ACView{S, E, N} <: AbstractArray{E, N}
     parent::S
-    ACView(parent::S) where {S} = new{S, site_type(S), length(size(parent))}(parent)
+    ACView(parent::S) where {S} = new{S, site_type(S), length(_viewsize(parent))}(parent)
 end
 
 function Base.getindex(v::ACView{<:FiniteMPS, E}, i::Int)::E where {E}
@@ -268,7 +272,7 @@ function Base.setindex!(v::ACView{<:Multiline}, vec, i::Int, j::Int)
 end
 
 #--- define the rest of the abstractarray interface
-Base.size(psi::Union{ACView, ALView, ARView}) = size(psi.parent)
+Base.size(psi::Union{ACView, ALView, ARView}) = _viewsize(psi.parent)
 
 #=
 CView is tricky. It starts at 0 for finitemps/WindowMPS, but for multiline Infinitemps objects, it should start at 1.
@@ -276,12 +280,10 @@ CView is tricky. It starts at 0 for finitemps/WindowMPS, but for multiline Infin
 Base.size(psi::CView{<:AbstractFiniteMPS}) = (length(psi.parent) + 1,)
 Base.axes(psi::CView{<:AbstractFiniteMPS}) = map(n -> 0:(n - 1), size(psi))
 
-Base.size(psi::CView{<:InfiniteMultilineMPS}) = size(psi.parent)
-function Base.size(psi::CView{<:FiniteMultilineMPS})
-    return (length(parent(psi.parent)), length(first(parent(psi.parent))) + 1)
-end
+Base.size(psi::CView{<:InfiniteMultilineMPS}) = _viewsize(psi.parent)
+Base.size(psi::CView{<:FiniteMultilineMPS}) = _viewsize(psi.parent) .+ (0, 1)
 function Base.axes(psi::CView{<:FiniteMultilineMPS})
-    return (Base.OneTo(length(parent(psi.parent))), 0:length(first(parent(psi.parent))))
+    return (Base.OneTo(length(psi.parent)), 0:linelength(psi.parent))
 end
 
 const MultilineOrthoView{S} = Union{ACView{S}, ALView{S}, ARView{S}, CView{S}}

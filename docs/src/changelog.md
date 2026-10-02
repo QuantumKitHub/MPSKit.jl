@@ -93,10 +93,11 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   not the requested correlator. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - TimerOutputs 1.x is now required. The timing tables printed at `verbosity > 3` use the new
   layout (tree guides, heat bars) and additionally report per-section GC time.
-- `Multiline` (and therefore `MultilineMPS`/`MultilineMPO`) now consistently treats
-  `length`/`eltype`/`iterate`/`m[i]` as referring to the individual lines it stores
-  (`length(m) == nrows`), while `size`/`axes`/`eachindex` refer to the `(nrows, ncols)` lattice
-  shape.
+- `Multiline` (and therefore `MultilineMPS`/`MultilineMPO`) now consistently behaves as a vector
+  of the lines it stores: `length`/`size`/`axes`/`eachindex`/`eltype`/`iterate`/`m[i]` all refer
+  to the lines, so `size(m) == (length(m),)`. Previously `length` counted `nrows * ncols` and
+  `size` returned the `(nrows, ncols)` lattice shape. The `AL`/`AR`/`AC`/`C` views still index
+  the lattice as `[row, col]`.
 - `MultilineMPO` and `MultilineMPS` lines are now restricted by the type to
   `Union{InfiniteMPO, FiniteMPO}` and `Union{InfiniteMPS, FiniteMPS}` respectively, rather than to
   any `AbstractMPO`/`InfiniteMPS`. Hamiltonian lines are excluded outright. Finite lines are
@@ -180,8 +181,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   `Multiline`).
 - `changebonds(::MultilineMPO, ::SvdCut)` threw (`convert(MultilineMPS, ::MultilineMPO)` has no
   method).
-- `axes(m::Multiline, i)` threw for `i > 2`, but now returns `Base.OneTo(1)`, matching Base's own
-  out-of-range convention (already the case for `size(m, i)`).
+- `axes(m::Multiline, i)` threw for `i > 2`, but now returns `Base.OneTo(1)` for every trailing
+  dimension, matching Base's own convention.
 - `spacetype`/`sectortype`/`storagetype` on a `Multiline` instance were undefined. Only the type-level methods existed.
 
 ### Performance

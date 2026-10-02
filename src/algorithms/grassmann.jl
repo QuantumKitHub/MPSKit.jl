@@ -11,7 +11,7 @@ The module exports nothing, and all references to it should be qualified, e.g.
 module GrassmannMPS
 
 using ..MPSKit
-using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, site_type,
+using ..MPSKit: AbstractMPSEnvironments, InfiniteEnvironments, MultilineEnvironments, site_type, linelength,
     AC_projection, recalculate!, NoTimerOutput, @timeit, default_allocator
 using TensorOperations: AbstractBackend, DefaultBackend
 using TensorKit
@@ -79,7 +79,7 @@ matrix.
 function precondition(state, g)
     g′ = similar(g)
     rtolmin = eps(real(scalartype(state)))^(3 / 4)
-    tforeach(eachindex(state); scheduler = MPSKit.Defaults.scheduler[]) do i
+    tforeach(keys(g); scheduler = MPSKit.Defaults.scheduler[]) do i
         rtol = max(rtolmin, norm(g[i]))
         g′[i] = rmul_rho_inv_regularized(g[i], state.C[i]; rtol)
         return nothing
@@ -115,7 +115,7 @@ end
 function retract(state::MultilineMPS, g, α::Real)
     AL′ = similar(state.AL)
     g′ = similar(g)
-    tforeach(eachindex(state); scheduler = MPSKit.Defaults.scheduler[]) do i
+    tforeach(keys(g); scheduler = MPSKit.Defaults.scheduler[]) do i
         AL′[i], g′[i] = Grassmann.retract(state.AL[i], g[i], α)
         return nothing
     end
@@ -129,7 +129,7 @@ end
 In-place transport of a tangent vector `g` at a point `state`, to a new point `state′`.
 """
 function transport!(h, state, g, α::Real, state′)
-    tforeach(eachindex(state); scheduler = MPSKit.Defaults.scheduler[]) do i
+    tforeach(keys(g); scheduler = MPSKit.Defaults.scheduler[]) do i
         h[i] = Grassmann.transport!(h[i], state.AL[i], g[i], α, state′.AL[i])
         return nothing
     end
@@ -221,9 +221,9 @@ function fg(
     isapprox(imag(f), 0; atol = eps(abs(f))^(3 / 4)) || @warn "MPO might not be Hermitian: $f"
 
     A = Core.Compiler.return_type(Grassmann.project, Tuple{site_type(state), site_type(state)})
-    gs = Matrix{A}(undef, size(state))
+    gs = Matrix{A}(undef, length(state), linelength(state))
     allocator = default_allocator(state, scheduler)
-    @timeit timeroutput "gradient" tforeach(eachindex(state); scheduler) do i
+    @timeit timeroutput "gradient" tforeach(CartesianIndices(gs); scheduler) do i
         AC′ = AC_projection(i, state, operator, state, envs; backend, allocator)
         g = rmul!(Grassmann.project(AC′, state.AL[i]), -inv(f))
         gs[i] = rmul(g, state.C[i]')

@@ -194,7 +194,7 @@ O * ψ == O[end] * (… * (O[2] * (O[1] * ψ)))
 
 ### Subtleties
 
-- **`size` vs. iteration:** `size(state)` is the `(nrows, ncols)` lattice shape, while `length`, iteration and `state[i]` refer to the lines, so `length(state) == nrows`. See [`Multiline`](@ref MPSKit.Multiline).
+- **A vector of lines:** `length`, `size`, iteration and `state[i]` all refer to the lines, so `size(state) == (length(state),)`. The lattice shape is not reflected in `size`; it is `length(state)` rows of `length(state[1])` sites, which is what the views `state.AL[row, col]` and friends index. See [`Multiline`](@ref MPSKit.Multiline).
 - **Norms:** `dot`/`norm` sum over rows, so `norm(state) == sqrt(nrows)` for `nrows` normalized rows.
 - **Finite lines** are accepted by the type and the vector constructor so that finite networks can be built and inspected, but no algorithm supports them yet. [`InfiniteMultilineMPS`](@ref) and [`FiniteMultilineMPS`](@ref) dispatch on the kind of line.
 
