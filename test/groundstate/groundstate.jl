@@ -154,9 +154,6 @@ verbosity_conv = 1
                 ψ₀, H, GradientGrassmann(; verbosity = verbosity_full, maxiter = 2)
             )
 
-            # an explicit `tol` keeps the optimizer from overshooting past the point where the
-            # gradient is floating-point noise: pushed further, the CG line search can hit a
-            # 0/0 in its step-size formula and feed a NaN tangent into the Grassmann retraction
             ψ, envs, δ = find_groundstate(
                 ψ, H, GradientGrassmann(; tol, verbosity = verbosity_conv, maxiter = 50), envs
             )
@@ -192,6 +189,26 @@ verbosity_conv = 1
         # paper reports E(α=0) = -6.35479, E(α≠0) = -8.6824724 for this L_heis = 20, S = 1/2 AFM setup
         @test E_escape < E_stuck - 1.0
         @test isapprox(E_escape, -8.6824724; atol = 1.0e-4)
+    end
+end
+
+@testset "GradientGrassmann preconditioner is positive definite" begin
+    # nearly rank-deficient bonds, as for the long-range model above, make the regularized
+    # inverse of `ρ = C * C'` ill-conditioned beyond `1 / eps` once the gradient is small
+    Grassmann = MPSKit.GrassmannMPS.Grassmann
+    Random.seed!(123)
+    V, P = ℙ^6, ℙ^2
+    S = DiagonalTensorMap([1.0, 0.06, 2.0e-10, 1.5e-10, 5.0e-11, 1.0e-11], V)
+    @testset "$T" for T in (Float64, ComplexF64)
+        isdescent = map(1:50) do _
+            AL = randisometry(T, V ⊗ P, V)
+            C = randisometry(T, V, V) * S * randisometry(T, V, V)
+            Δ = MPSKit.GrassmannMPS.rmul(Grassmann.project(randn(T, V ⊗ P, V), AL), C')
+            Δ = MPSKit.GrassmannMPS.scale!(Δ, 1.0e-9 / norm(Δ.Z))
+            PΔ = MPSKit.GrassmannMPS.rmul_rho_inv_regularized(Δ, C; rtol = norm(Δ.Z))
+            return real(Grassmann.inner(AL, Δ, PΔ)) > 0
+        end
+        @test all(isdescent)
     end
 end
 
