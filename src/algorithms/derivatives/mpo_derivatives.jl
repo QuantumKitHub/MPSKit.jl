@@ -221,16 +221,8 @@ function prepare_operator!!(H::MPO_C_Hamiltonian{<:MPSTensor, <:MPSTensor})
     return prepared_operator_type(typeof(H))(leftenv, rightenv, H.backend, H.allocator)
 end
 
-# Scratch space of `prepare_operator!!`
-# ------------------------------------
-# The environments of a prepared derivative are the dense, fused form of an environment-operator
-# contraction. Neither that contraction nor its dense copy is kept - only the repartitioned
-# result is - so both are taken from the allocator and handed straight back.
-#
-# `GL_O` and `O_GR` are allocated here rather than by `:=`, which always allocates the result of
-# a `@plansor` block on the heap.
-
-# A `TensorMap` is already dense, so `repartition` is the only tensor that has to be kept.
+# Only the repartitioned result of `prepare_operator!!`'s environment-operator contraction is
+# kept, so the contraction itself and its dense copy are taken from the allocator and freed here.
 @inline function _fuse_env(t::TensorMap, N₁::Int, N₂::Int, backend, allocator)
     return repartition(fuse_legs(t, N₁, N₂), 2, 2; copy = true, backend, allocator)
 end

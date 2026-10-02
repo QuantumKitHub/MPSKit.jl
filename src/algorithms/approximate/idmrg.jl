@@ -5,7 +5,7 @@ function approximate!(
     allocator = default_allocator(ψ, SerialScheduler())
     log = IterLog("IDMRG")
     ϵ::Float64 = 2 * alg.tol
-    local iter
+    iter = 0
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
@@ -42,7 +42,7 @@ function approximate!(
 
             ϵ = norm(C_current - ψ.C[:, 0])
 
-            if ϵ < alg.tol
+            if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 break
             end
@@ -60,7 +60,7 @@ function approximate!(
     copy!(ψ, ψ′) # ensure output destination is unchanged
 
     recalculate!(envs, ψ, toapprox)
-    return ψ, envs, ϵ
+    return ψ, envs, AlgorithmInfo(; converged = ϵ <= alg.tol, bondresidual = ϵ, numiter = iter)
 end
 
 function approximate!(
@@ -72,7 +72,8 @@ function approximate!(
     ϵ::Float64 = 2 * alg.tol
     log = IterLog("IDMRG2")
     O, ϕ = toapprox
-    local iter
+    iter = 0
+    ϵ_truncs = PeriodicMatrix(zeros(real(scalartype(ψ)), size(ψ)))
 
     LoggingExtras.withlevel(; alg.verbosity) do
         @infov 2 loginit!(log, ϵ)
@@ -86,7 +87,7 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ACAR, alg.backend, allocator
                     )
-                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                    al, c, ar, ϵ_truncs[row + 1, site] = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -100,14 +101,14 @@ function approximate!(
             end
 
             # update the edge
-            ψ.AL[1, end] = ψ.AC[1, end] / ψ.C[1, end]
-            ψ.AC[1, 1] = _mul_tail(ψ.AL[1, 1], ψ.C[1, 1])
+            ψ.AL[:, end] .= ψ.AC[:, end] ./ ψ.C[:, end]
+            ψ.AC[:, 1] .= _mul_tail.(ψ.AL[:, 1], ψ.C[:, 1])
             for row in 1:size(ψ, 1)
                 AC2′ = AC2_projection(
                     CartesianIndex(row, size(ψ, 2)), ψ, toapprox, envs;
                     kind = :ALAC, alg.backend, allocator
                 )
-                al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                al, c, ar, ϵ_truncs[row + 1, end] = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                 normalize!(c)
 
                 ψ.AL[row + 1, end] = al
@@ -132,7 +133,7 @@ function approximate!(
                         CartesianIndex(row, site), ψ, toapprox, envs;
                         kind = :ALAC, alg.backend, allocator
                     )
-                    al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                    al, c, ar, ϵ_truncs[row + 1, site] = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                     normalize!(c)
 
                     ψ.AL[row + 1, site] = al
@@ -145,22 +146,22 @@ function approximate!(
             end
 
             # update the edge
-            ψ.AC[1, end] = _mul_front(ψ.C[1, end - 1], ψ.AR[1, end])
-            ψ.AR[1, 1] = _transpose_front(ψ.C[1, end] \ _transpose_tail(ψ.AC[1, 1]))
+            ψ.AC[:, end] .= _mul_front.(ψ.C[:, end - 1], ψ.AR[:, end])
+            ψ.AR[:, 1] .= _transpose_front.(ψ.C[:, end] .\ _transpose_tail.(ψ.AC[:, 1]))
             for row in 1:size(ψ, 1)
                 AC2′ = AC2_projection(
                     CartesianIndex(row, 0), ψ, toapprox, envs;
                     kind = :ACAR, alg.backend, allocator
                 )
-                al, c, ar = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
+                al, c, ar, ϵ_truncs[row + 1, end] = svd_trunc!(AC2′; trunc = alg.trunc, alg = alg.alg_svd)
                 normalize!(c)
 
-                ψ.AL[row, end] = al
-                ψ.C[row, end] = complex(c)
-                ψ.AR[row, 1] = _transpose_front(ar)
+                ψ.AL[row + 1, end] = al
+                ψ.C[row + 1, end] = complex(c)
+                ψ.AR[row + 1, 1] = _transpose_front(ar)
 
-                ψ.AR[row, end] = _transpose_front(ψ.C[row, end - 1] \ _transpose_tail(al * c))
-                ψ.AC[row, 1] = _transpose_front(c * ar)
+                ψ.AR[row + 1, end] = _transpose_front(ψ.C[row + 1, end - 1] \ _transpose_tail(al * c))
+                ψ.AC[row + 1, 1] = _transpose_front(c * ar)
             end
             transfer_leftenv!(envs, ψ, toapprox, 1)
             transfer_rightenv!(envs, ψ, toapprox, 0)
@@ -175,7 +176,7 @@ function approximate!(
                 return norm(e2' * c2 * e2 - e1' * c1 * e1)
             end
 
-            if ϵ < alg.tol
+            if ϵ <= alg.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 break
             end
@@ -193,5 +194,6 @@ function approximate!(
     copy!(ψ, ψ′) # ensure output destination is unchanged
 
     recalculate!(envs, ψ, toapprox)
-    return ψ, envs, ϵ
+    info = AlgorithmInfo(; converged = ϵ <= alg.tol, bondresidual = ϵ, truncation_errors = parent(ϵ_truncs), numiter = iter)
+    return ψ, envs, info
 end

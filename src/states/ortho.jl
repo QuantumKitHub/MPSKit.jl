@@ -17,7 +17,7 @@ $(TYPEDFIELDS)
 Used as the `alg` argument of [`gaugefix!`](@ref).
 """
 @kwdef struct LeftCanonical <: Algorithm
-    "tolerance for convergence criterium"
+    "convergence tolerance, compared against the residual of the gauge fixed-point iteration"
     tol::Float64 = Defaults.tolgauge
     "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
@@ -46,7 +46,7 @@ $(TYPEDFIELDS)
 Used as the `alg` argument of [`gaugefix!`](@ref).
 """
 @kwdef struct RightCanonical <: Algorithm
-    "tolerance for convergence criterium"
+    "convergence tolerance, compared against the residual of the gauge fixed-point iteration"
     tol::Float64 = Defaults.tolgauge
     "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
@@ -238,7 +238,7 @@ function uniform_leftorth!(
         # iteratively solve
         for (AL, C) in it
             iter, ϵ = it.iter, it.ϵ
-            if ϵ < it.tol
+            if ϵ <= it.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 return AL, C
             elseif iter > it.maxiter
@@ -306,7 +306,7 @@ function uniform_rightorth!(
         # iteratively solve
         for (AR, C) in it
             iter, ϵ = it.iter, it.ϵ
-            if ϵ < it.tol
+            if ϵ <= it.tol
                 @infov 2 logfinish!(log, iter, ϵ)
                 return AR, C
             elseif iter > it.maxiter

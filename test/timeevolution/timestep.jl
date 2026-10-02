@@ -263,6 +263,49 @@ end
     end
 end
 
+@testset "Truncation error" verbose = true begin
+    L = 10
+    dt = 0.1
+    H = force_planar(heisenberg_XXX(Float64, Trivial; spin = 1 // 2, L))
+    Random.seed!(7)
+    ψ₀ = normalize!(complex(FiniteMPS(rand, Float64, L, ℙ^2, ℙ^16)))
+
+    # fixed bond dimension sweep never discards anything, so the reported errors are exactly zero
+    @testset "no truncation" begin
+        for alg in (TDVP(), BUG())
+            info = last(timestep(ψ₀, H, 0.0, dt, alg))
+            @test info isa MPSKit.AlgorithmInfo
+            @test info.truncation_errors == zeros(L - 1)
+            @test info.numiter == 1
+        end
+    end
+
+    @testset "$(nameof(alg))" for alg in (TDVP2, BUG)
+        _, _, loose = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(32)))
+        ψ, _, tight = timestep(ψ₀, H, 0.0, dt, alg(; trunc = truncrank(2)))
+
+        @test length(tight.truncation_errors) == L - 1
+        @test maximum(tight.truncation_errors) > 1.0e-4 # throw away real weight
+        # throw away less weight with a more forgiving truncation
+        @test maximum(loose.truncation_errors) < maximum(tight.truncation_errors)
+        # in real time with `normalize = false` the norm loss covers every cut of the step,
+        # of which the reported last cut per bond is a subset
+        @test norm(ψ₀)^2 - norm(ψ)^2 >= sum(abs2, tight.truncation_errors) - 1.0e-12
+    end
+
+    @testset "history over an evolution" begin
+        alg = TDVP2(; trunc = truncrank(2))
+        nsteps = 4
+        _, _, step = timestep(ψ₀, H, 0.0, dt, alg)
+        _, _, total = time_evolve(ψ₀, H, 0:dt:(nsteps * dt), alg)
+
+        @test total.numiter == nsteps
+        @test length(total.truncation_errors) == nsteps
+        @test all(==(L - 1) ∘ length, total.truncation_errors)
+        @test first(total.truncation_errors) ≈ step.truncation_errors
+    end
+end
+
 @testset "time_evolve" verbose = true begin
     t_span = 0:0.1:0.1
     algs = [TDVP(), TDVP2(; trunc = truncrank(10)), BUG(; trunc = truncrank(10))]

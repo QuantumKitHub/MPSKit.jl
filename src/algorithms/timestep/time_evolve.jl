@@ -1,6 +1,6 @@
 """
-    time_evolve(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ, envs)
-    time_evolve!(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ₀, envs)
+    time_evolve(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ, envs, info)
+    time_evolve!(ψ₀, H, t_span, alg, [envs]; kwargs...) -> (ψ₀, envs, info)
 
 Time-evolve the initial state `ψ₀` with Hamiltonian `H` over a given time span by stepping
 through each of the time points obtained by iterating t_span.
@@ -26,6 +26,13 @@ through each of the time points obtained by iterating t_span.
 
 - `ψ`: the time-stepped state
 - `envs`: the updated environment manager
+- `info::AlgorithmInfo`: `numiter`, the number of steps taken, and for an algorithm that
+    truncates `truncation_errors`, holding the per-bond truncation errors of every step as reported
+    by [`timestep`](@ref), one vector per step. See [`AlgorithmInfo`](@ref) and
+    [Time evolution accuracy](@ref) in the manual for what this does not measure.
+
+The largest truncation error of each step is logged at `verbosity ≥ 3`, and that of the whole
+evolution at `verbosity ≥ 2`.
 """
 function time_evolve end, function time_evolve! end
 
@@ -35,27 +42,42 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
             envs = environments(ψ, H, ψ);
             verbosity::Int = 0, imaginary_evolution::Bool = false, normalize::Bool = false
         )
-        log = IterLog("TDVP")
+        log = IterLog(string(nameof(typeof(alg))))
+        truncation_errors = []
+        ϵ_max = 0.0
         LoggingExtras.withlevel(; verbosity) do
             @infov 2 loginit!(log, 0.0, first(t_span))
             for iter in 1:(length(t_span) - 1)
                 t = t_span[iter]
                 dt = t_span[iter + 1] - t
 
-                ψ, envs = $timestep(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
+                ψ, envs, info_step = $timestep(
+                    ψ, H, t, dt, alg, envs; imaginary_evolution, normalize
+                )
                 ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
 
-                @infov 3 logiter!(log, iter, 0.0, t)
+                # the log shows the largest per-bond error, or zero for a non-truncating algorithm
+                ϵ_step = 0.0
+                if haskey(info_step, :truncation_errors)
+                    push!(truncation_errors, info_step.truncation_errors)
+                    ϵ_step = Float64(maximum(info_step.truncation_errors; init = 0.0))
+                end
+                ϵ_max = max(ϵ_max, ϵ_step)
+                @infov 3 logiter!(log, iter, ϵ_step, t)
             end
-            @infov 2 logfinish!(log, length(t_span), 0.0, t_span[end])
+            @infov 2 logfinish!(log, length(t_span), ϵ_max, t_span[end])
         end
-        return ψ, envs
+        info = AlgorithmInfo(;
+            numiter = length(t_span) - 1,
+            truncation_errors = isempty(truncation_errors) ? nothing : copy(truncation_errors)
+        )
+        return ψ, envs, info
     end
 end
 
 """
-    timestep(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ, envs)
-    timestep!(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ₀, envs)
+    timestep(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ, envs, info)
+    timestep!(ψ₀, H, t, dt, alg, [envs]; kwargs...) -> (ψ₀, envs, info)
 
 Time-step the state `ψ₀` with Hamiltonian `H` over a given time step `dt` at time `t`,
 solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
@@ -81,6 +103,20 @@ solving the Schroedinger equation: ``i ∂ψ/∂t = H ψ``.
 
 - `ψ`: the time-stepped state
 - `envs`: the updated environment manager
+- `info::AlgorithmInfo`: what the step truncated (see below)
+
+# Truncation error
+
+A finite-system step sweeps over every bond twice, and `info.truncation_errors[i]` is the
+truncation error of the last cut made at bond `i`, i.e. of the second half-sweep.
+The entries are non-zero only for algorithms that truncate ([`TDVP2`](@ref), [`BUG`](@ref) with a
+`trunc`, and [`TDVP`](@ref) with a bond expansion), and exactly `0` for a step that happened to
+discard nothing. Infinite one-site [`TDVP`](@ref) never truncates and reports no
+`truncation_errors` at all. Neither case means the step was exact, but rather that this particular
+source of error is either absent or idle.
+
+See [`AlgorithmInfo`](@ref) for the entries, and [Time evolution accuracy](@ref) in the manual
+for the other error sources.
 
 # Examples
 
