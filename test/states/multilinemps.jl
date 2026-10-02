@@ -25,6 +25,7 @@ using TensorKit
     @test TensorKit.sectortype(ψ) == sectortype(D)
 
     @test !isfinite(typeof(ψ))
+    @test !isfinite(ψ)
 
     @test physicalspace(ψ) == fill(d, 2, 2)
     @test all(x -> x ≾ D, left_virtualspace(ψ))

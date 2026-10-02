@@ -101,10 +101,7 @@ TensorKit.normalize!(a::MultilineMPS) = (normalize!.(parent(a)); return a)
 
 Base.convert(::Type{MultilineMPS}, st::InfiniteMPS) = Multiline([st])
 Base.convert(::Type{InfiniteMPS}, st::MultilineMPS) = only(st)
-Base.eltype(t::MultilineMPS) = eltype(t[1])
 Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ)); ψ)
-
-Base.isfinite(::Type{<:MultilineMPS}) = false
 
 for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
     @eval $f_space(t::MultilineMPS, i::Int, j::Int) = $f_space(t[i], j)

@@ -26,7 +26,7 @@ MultilineMPO(mpos::AbstractVector{<:AbstractMPO}) = Multiline(mpos)
 MultilineMPO(t::MPOTensor) = MultilineMPO(PeriodicMatrix(fill(t, 1, 1)))
 
 # allow indexing with two indices
-Base.getindex(t::MultilineMPO, ::Colon, j::Int) = Base.getindex.(t.data, j)
+Base.getindex(t::MultilineMPO, ::Colon, j::Int) = Base.getindex.(parent(t), j)
 Base.getindex(t::MultilineMPO, i::Int, j) = Base.getindex(t[i], j)
 Base.getindex(t::MultilineMPO, I::CartesianIndex{2}) = t[I.I...]
 
