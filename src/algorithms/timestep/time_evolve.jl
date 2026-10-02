@@ -69,7 +69,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
         end
         info = AlgorithmInfo(;
             numiter = length(t_span) - 1,
-            truncation_errors = isempty(truncation_errors) ? nothing : identity.(truncation_errors)
+            truncation_errors = isempty(truncation_errors) ? nothing : copy(truncation_errors)
         )
         return ψ, envs, info
     end

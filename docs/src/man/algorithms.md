@@ -287,7 +287,8 @@ Rather than running into `maxiter` for a `tol` that cannot be reached, [`DMRG`](
 The reported `truncation_errors` are those of the final sweep, i.e. what the returned state still discards.
 
 **Convergence is not accuracy.**
-A converged algorithm has found a fixed point within the set of MPS of the current bond dimension, which can still be far from the true ground state: a single-site algorithm at a fixed bond dimension can converge to machine precision regardless.
+For algorithms that remain on a fixed bond dimension MPS manifold, one can get the ground state *on that manifold* to converge to machine precision.
+This however might still be far from the true ground state, whenever the bond dimension is not high enough.
 Growing the bond dimension is the job of the two-site algorithms ([`DMRG2`](@ref), [`IDMRG2`](@ref)) or of a bond expansion ([`DMRG`](@ref) with an `alg_expand`, or an expanding `alg_gauge` such as [`DMRG3S`](@ref)); see also [`changebonds`](@ref).
 Likewise, none of these measures is an error bar on an observable.
 An independent check is the energy [`variance`](@ref), ``\langle H^2 \rangle - \langle H \rangle^2``, which vanishes for an exact eigenstate, as is comparing results across bond dimensions.
@@ -308,7 +309,7 @@ A time evolution has three distinct sources of error ([Paeckel et al.](@cite pae
 Each of these has its own control: `dt` for the time-step error, `trunc` for the truncation error, and a bond-adaptive scheme ([`TDVP2`](@ref), [`BUG`](@ref), or [`TDVP`](@ref) with `alg_expand`) for the projection error whenever entanglement grows.
 
 These controls are not independent.
-With a threshold-based `trunc` such as [`truncerror`](@extref MatrixAlgebraKit.truncerror), every step can discard weight up to that threshold, however small `dt` is, and reaching a fixed final time `T` takes `T / dt` steps.
+With a truncation strategy [`trunc::TruncationStrategy`](@extref MatrixAlgebraKit.TruncationStrategy), every step can discard weight, however small `dt` is, and reaching a fixed final time `T` takes `T / dt` steps.
 Halving `dt` therefore lowers the time-step error, but doubles the number of truncations, so the accumulated truncation error can grow.
 For a given `trunc` there is an optimal `dt`, below which taking smaller steps makes the result worse rather than better.
 
