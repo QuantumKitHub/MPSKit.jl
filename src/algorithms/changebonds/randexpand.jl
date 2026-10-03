@@ -56,7 +56,7 @@ function changebonds!(ψ::InfiniteMPS, alg::RandExpand)
 end
 
 function changebonds!(ψ::MultilineMPS, alg::RandExpand)
-    foreach(Base.Fix2(changebonds!, alg), ψ.data)
+    foreach(Base.Fix2(changebonds!, alg), parent(ψ))
     return ψ
 end
 

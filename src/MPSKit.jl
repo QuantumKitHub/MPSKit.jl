@@ -12,7 +12,7 @@ export braille
 export FiniteMPS
 export InfiniteMPS
 export WindowMPS
-export MultilineMPS
+export MultilineMPS, InfiniteMultilineMPS, FiniteMultilineMPS
 export QP, LeftGaugedQP, RightGaugedQP
 
 # operators:
@@ -20,7 +20,7 @@ export AbstractMPO
 export MPO, FiniteMPO, InfiniteMPO
 export JordanMPOTensor
 export MPOHamiltonian, FiniteMPOHamiltonian, InfiniteMPOHamiltonian, WindowMPOHamiltonian
-export MultilineMPO
+export MultilineMPO, InfiniteMultilineMPO, FiniteMultilineMPO
 export UntimedOperator, TimedOperator, MultipliedOperator, LazySum
 
 # environments:
@@ -46,7 +46,7 @@ export DynamicalDMRG, NaiveInvert, Jeckelmann
 export exact_diagonalization, fidelity_susceptibility
 
 # toolbox:
-export expectation_value, correlator, variance
+export expectation_value, leading_eigenvalue, correlator, variance
 export correlation_length, marek_gap, transfer_spectrum
 export entropy, entanglement_spectrum
 export open_boundary_conditions, periodic_boundary_conditions
@@ -118,8 +118,8 @@ include("utility/linearcombination.jl")
 # maybe we should introduce an abstract state type
 include("states/abstractmps.jl")
 include("states/infinitemps.jl")
-include("states/multilinemps.jl")
 include("states/finitemps.jl")
+include("states/multilinemps.jl")
 include("states/windowmps.jl")
 include("states/orthoview.jl")
 include("states/quasiparticle_state.jl")

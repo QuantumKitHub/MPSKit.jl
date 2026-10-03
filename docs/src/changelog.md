@@ -38,6 +38,14 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   by `MPSKit.default_allocator`, instead of leaving them to the garbage collector
   (two-site DMRG: -64% allocations, -57% GC time, -23% wall time).
   Disable with `MPSKit.Defaults.set_buffering!(false)`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
+- Custom `show`/`summary` for `MultilineMPS`/`MultilineMPO`. Each row is now rendered via each row's own display, and row shifting is shown explicitly for `MultilineMPO`.
+- `*(::MultilineMPO, ::InfiniteMPS)`, which pushes the boundary MPS through every row of the
+  network in turn, advancing it by one full period.
+- `leading_eigenvalue(ψ, O, [environments])`, the eigenvalue of the transfer
+  operator `O` for the boundary MPS `ψ`, i.e. the partition function density.
+  `expectation_value(::InfiniteMPS, ::InfiniteMPO)` forwards here.
+- `InfiniteMultilineMPS`/`FiniteMultilineMPS` and `InfiniteMultilineMPO`/`FiniteMultilineMPO`
+  aliases for multiline objects with infinite or finite lines.
 
 ### Changed
 
@@ -86,12 +94,27 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   not the requested correlator. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - TimerOutputs 1.x is now required. The timing tables printed at `verbosity > 3` use the new
   layout (tree guides, heat bars) and additionally report per-section GC time.
+- `Multiline` (and therefore `MultilineMPS`/`MultilineMPO`) now consistently behaves as a vector
+  of the lines it stores: `length`/`size`/`axes`/`eachindex`/`eltype`/`iterate`/`m[i]` all refer
+  to the lines, so `size(m) == (length(m),)`. Previously `length` counted `nrows * ncols` and
+  `size` returned the `(nrows, ncols)` lattice shape. The `AL`/`AR`/`AC`/`C` views still index
+  the lattice as `[row, col]`.
+- `MultilineMPS` lines may now be any `AbstractMPS` rather than only `InfiniteMPS`, so that for
+  example finite multiline networks can be built and inspected. No algorithm supports them yet:
+  `leading_boundary` only accepts an `InfiniteMultilineMPS` (and an `InfiniteMultilineMPO`).
+  The `AbstractMatrix` constructor that silently built finite-line `MultilineMPO`s was removed.
 
 ### Deprecated
 
 ### Removed
 
 - Support for TimerOutputs 0.5.
+- `expectation_value(::MultilineMPS, ::MultilineMPO, envs...)` fallback method, which silently
+  computed a meaningless value (`prod` instead of `sum`, no row shift, `envs` ignored) for any
+  `MultilineMPO` line type not covered by the guarded method, such as `InfiniteMPOHamiltonian`.
+- `expectation_value` for a `MultilineMPS`/`MultilineMPO` pair entirely, replaced by `leading_eigenvalue`.
+- `*(::MultilineMPO, ::MultilineMPS)` and `*(::MultilineMPO, ::MultilineMPO)`, as these
+  were not meaningful operations. Neither method had ever been callable previously.
 
 ### Fixed
 
@@ -102,6 +125,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   long-range terms.
 - `SvdCut` now warns when a truncation empties a bond, instead of silently returning a zero operator.
 - `isfinite(::WindowMPOHamiltonian)` was undefined. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+- `checkbounds` on the `AL`/`AR`/`AC`/`C` views of a `Multiline` now delegates the column to the
+  matching tensors of a line, and accepts any row due to periodicity.
+  `checkbounds(Bool, ::PeriodicArray, I...)` now also accepts any index, matching `getindex`.
+- `size`/`axes` for a `CView` over a `Multiline` with finite lines were missing.
 - `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
   different tensor networks, e.g. `norm(E₀ * gs - H * gs)` coming out as `2 * norm(gs) * E₀`
@@ -147,6 +174,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   rows ended up mixed. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - `leading_boundary` with `GradientGrassmann` ignored the algorithm's `hasconverged` and `shouldstop`
   criteria, always using the optimizer's defaults instead. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+- `isfinite(::MultilineMPO)` threw (`isfinite(typeof(m))` had no matching type-level method for
+  `Multiline`).
+- `changebonds(::MultilineMPO, ::SvdCut)` threw (`convert(MultilineMPS, ::MultilineMPO)` has no
+  method).
+- `axes(m::Multiline, i)` threw for `i > 2`, but now returns `Base.OneTo(1)` for every trailing
+  dimension, matching Base's own convention.
 
 ### Performance
 

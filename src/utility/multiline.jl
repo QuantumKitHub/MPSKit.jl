@@ -2,7 +2,16 @@
 $(TYPEDEF)
 
 Object that represents multiple lines of objects of type `T`. Typically used to represent
-multiple lines of `InfiniteMPS` (`MultilineMPS`) or MPO (`Multiline{<:AbstractMPO}`).
+multiple lines of `InfiniteMPS` (`MultilineMPS`) or `InfiniteMPO` (`MultilineMPO`).
+
+A `Multiline` behaves as a vector of its lines: `length`, `size`, `axes`, `eachindex`,
+`eltype`, iteration and `m[i]` all refer to the `T`-typed lines, so that
+`size(m) == (length(m),)` and `m[i]::T`.
+
+Together the lines also span a two-dimensional lattice of `length(m)` rows and
+`length(m[1])` columns, which is what the orthogonality views such as `m.AL[i, j]` index.
+This lattice shape is deliberately not reflected in `size` and `axes`; work with the lines
+`m[i]` to obtain it.
 
 # Fields
 
@@ -24,17 +33,21 @@ Multiline(data::AbstractVector{T}) where {T} = Multiline{T}(data)
 # AbstractArray interface
 # -----------------------
 Base.parent(m::Multiline) = m.data
-Base.size(m::Multiline) = (length(parent(m)), length(parent(m)[1]))
-Base.size(m::Multiline, i::Int) = i == 1 ? length(parent(m)) : i == 2 ? length(parent(m)[1]) : error()
-Base.length(m::Multiline) = prod(size(m))
-function Base.axes(m::Multiline, i::Int)
-    return i == 1 ? axes(parent(m), 1) :
-        i == 2 ? axes(parent(m)[1], 1) : throw(ArgumentError("Invalid index $i"))
-end
-Base.eachindex(m::Multiline) = CartesianIndices(size(m))
+Base.length(m::Multiline) = length(parent(m))
+Base.size(m::Multiline) = (length(m),)
+Base.size(m::Multiline, d::Int) = d == 1 ? length(m) : 1
+Base.axes(m::Multiline) = (Base.OneTo(length(m)),)
+Base.axes(m::Multiline, d::Int) = d == 1 ? Base.OneTo(length(m)) : Base.OneTo(1)
+Base.eachindex(m::Multiline) = Base.OneTo(length(m))
+Base.checkbounds(::Type{Bool}, m::Multiline, I...) = checkbounds(Bool, parent(m), I...)
 Base.isfinite(m::Multiline) = isfinite(typeof(m))
+Base.isfinite(::Type{Multiline{T}}) where {T} = isfinite(T)
+Base.eltype(::Type{Multiline{T}}) where {T} = T
 
 eachsite(m::Multiline) = eachsite(first(parent(m)))
+
+# number of columns of the lattice spanned by the lines
+width(m::Multiline) = length(first(parent(m)))
 
 Base.getindex(m::Multiline, i::Int) = getindex(parent(m), i)
 Base.setindex!(m::Multiline, v, i::Int) = (setindex!(parent(m), v, i); m)
@@ -53,7 +66,7 @@ Base.reverse(A::Multiline) = Multiline(reverse(parent(A)))
 Base.only(A::Multiline) = only(parent(A))
 
 function Base.repeat(A::Multiline, rows::Int, cols::Int)
-    inner = map(Base.Fix2(repeat, cols), A.data)
+    inner = map(Base.Fix2(repeat, cols), parent(A))
     outer = repeat(inner, rows)
     return Multiline(outer)
 end
@@ -117,6 +130,6 @@ site_type(::Type{Multiline{S}}) where {S} = site_type(S)
 bond_type(::Type{Multiline{S}}) where {S} = bond_type(S)
 site_type(st::Multiline) = site_type(typeof(st))
 bond_type(st::Multiline) = bond_type(typeof(st))
-TensorKit.sectortype(::Type{Multiline{T}}) where {T} = sectortype(T)
-TensorKit.spacetype(::Type{Multiline{T}}) where {T} = spacetype(T)
-TensorKit.storagetype(::Type{Multiline{T}}) where {T} = storagetype(T)
+for ftype in (:spacetype, :sectortype, :storagetype)
+    @eval TensorKit.$ftype(::Type{Multiline{T}}) where {T} = $ftype(T)
+end
