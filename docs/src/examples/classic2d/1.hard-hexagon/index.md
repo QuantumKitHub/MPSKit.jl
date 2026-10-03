@@ -52,7 +52,7 @@ V = virtual_space(D)
     ψ₀, mpo,
     VUMPS(; verbosity = 0, alg_eigsolve = MPSKit.Defaults.alg_eigsolve(; ishermitian = false))
 ) # use non-hermitian eigensolver
-F = -log(real(MPSKit.leading_eigenvalue(ψ, mpo)))
+F = -log(real(leading_eigenvalue(ψ, mpo)))
 S = real(first(entropy(ψ)))
 ξ = correlation_length(ψ; sector = leftunit(ψ))
 println("F = $F\tS = $S\tξ = $ξ")

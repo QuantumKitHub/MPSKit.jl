@@ -41,7 +41,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - Custom `show`/`summary` for `MultilineMPS`/`MultilineMPO`. Each row is now rendered via each row's own display, and row shifting is shown explicitly for `MultilineMPO`.
 - `*(::MultilineMPO, ::InfiniteMPS)`, which pushes the boundary MPS through every row of the
   network in turn, advancing it by one full period.
-- `MPSKit.leading_eigenvalue(ψ, O, [environments])` (unexported), the eigenvalue of the transfer
+- `leading_eigenvalue(ψ, O, [environments])`, the eigenvalue of the transfer
   operator `O` for the boundary MPS `ψ`, i.e. the partition function density.
   `expectation_value(::InfiniteMPS, ::InfiniteMPO)` forwards here.
 - `InfiniteMultilineMPS`/`FiniteMultilineMPS` and `InfiniteMultilineMPO`/`FiniteMultilineMPO`
@@ -112,8 +112,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `expectation_value(::MultilineMPS, ::MultilineMPO, envs...)` fallback method, which silently
   computed a meaningless value (`prod` instead of `sum`, no row shift, `envs` ignored) for any
   `MultilineMPO` line type not covered by the guarded method, such as `InfiniteMPOHamiltonian`.
-- `expectation_value` for a `MultilineMPS`/`MultilineMPO` pair entirely, replaced by
-  `MPSKit.leading_eigenvalue`.
+- `expectation_value` for a `MultilineMPS`/`MultilineMPO` pair entirely, replaced by `leading_eigenvalue`.
 - `*(::MultilineMPO, ::MultilineMPS)` and `*(::MultilineMPO, ::MultilineMPO)`, as these
   were not meaningful operations. Neither method had ever been callable previously.
 

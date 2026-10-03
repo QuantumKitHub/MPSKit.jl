@@ -170,7 +170,7 @@ al = state.AL[2, 1];
 ### Indexing convention
 
 Row `i` of a [`MultilineMPO`](@ref) `O` acts on line `i` of a `MultilineMPS` and maps it onto line `i + 1`, i.e. `O[i] * state[i] ∝ state[i + 1]`.
-`environments`, the derivative operators and [`MPSKit.leading_eigenvalue`](@ref) all follow it, pairing `state[i + 1]` as the bra against `O[i]` acting on the ket `state[i]`.
+`environments`, the derivative operators and [`leading_eigenvalue`](@ref) all follow it, pairing `state[i + 1]` as the bra against `O[i]` acting on the ket `state[i]`.
 Within a row, `state.AL[i, j]` and friends behave exactly as they would for `state[i]::InfiniteMPS`.
 
 Bra and ket are therefore different lines, so a `MultilineMPS` is not a state whose expectation value makes sense to take.
@@ -184,7 +184,7 @@ The lines of a `MultilineMPS` are bookkeeping for that single problem.
 Line `i + 1` is the boundary after row `i` has been applied, so this lets [`leading_boundary`](@ref) cut it into `nrows` coupled subproblems instead of contracting every row into one operator.
 Each subproblem contributes a partial factor, and only their product is the eigenvalue of the fixed point.
 Independently of that, the `ncols` sites of the unit cell contribute factors of their own on top.
-[`MPSKit.leading_eigenvalue`](@ref) accumulates both.
+[`leading_eigenvalue`](@ref) accumulates both.
 
 Applying an operator therefore acts on an ordinary [`InfiniteMPS`](@ref), advancing it by one full period:
 

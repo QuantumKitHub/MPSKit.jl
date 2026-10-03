@@ -46,7 +46,7 @@ export DynamicalDMRG, NaiveInvert, Jeckelmann
 export exact_diagonalization, fidelity_susceptibility
 
 # toolbox:
-export expectation_value, correlator, variance
+export expectation_value, leading_eigenvalue, correlator, variance
 export correlation_length, marek_gap, transfer_spectrum
 export entropy, entanglement_spectrum
 export open_boundary_conditions, periodic_boundary_conditions
