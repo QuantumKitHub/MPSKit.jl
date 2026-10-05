@@ -155,20 +155,48 @@ A two-dimensional classical partition function can often be represented by an in
 There are many ways to evaluate such a network, but here we focus on the so-called boundary MPS methods.
 These first reduce the problem from contracting a two-dimensional network to the contraction of a one-dimensional MPS, by finding the fixed point of the row-to-row (or column-to-column) transfer matrix.
 In these cases however, there might be a non-trivial periodicity in both the horizontal as well as vertical direction.
-Therefore, in MPSKit they are represented by [`MultilineMPS`](@ref), which are simply a repeating set of [`InfiniteMPS`](@ref).
+Therefore, in MPSKit they are represented by [`MultilineMPS`](@ref), which are simply a repeating set of MPS lines, one per row of the network.
 
 ```@example states
 state = MultilineMPS(fill(infinite_state, 2))
 ```
 
-They offer some convenience functionality for using cartesian indexing (row - column):
+Properties are accessed with cartesian (row, column) indexing:
 
-You can access properties by calling
 ```@example states
-row = 2
-col = 2
-al = state.AL[row, col];
+al = state.AL[2, 1];
 ```
+
+### Indexing convention
+
+Row `i` of a [`MultilineMPO`](@ref) `O` acts on line `i` of a `MultilineMPS` and maps it onto line `i + 1`, i.e. `O[i] * state[i] ∝ state[i + 1]`.
+`environments`, the derivative operators and [`leading_eigenvalue`](@ref) all follow it, pairing `state[i + 1]` as the bra against `O[i]` acting on the ket `state[i]`.
+Within a row, `state.AL[i, j]` and friends behave exactly as they would for `state[i]::InfiniteMPS`.
+
+Bra and ket are therefore different lines, so a `MultilineMPS` is not a state whose expectation value makes sense to take.
+
+### One fixed point, many lines
+
+It is worth mentioning explicitly what the point of the extra rows is, since it is easy to read a `MultilineMPS` as a stack of independent states.
+It is not.
+However many rows the operator has, the network has exactly one boundary fixed point, namely the MPS that returns to itself after being pushed through all of the rows.
+The lines of a `MultilineMPS` are bookkeeping for that single problem.
+Line `i + 1` is the boundary after row `i` has been applied, so this lets [`leading_boundary`](@ref) cut it into `nrows` coupled subproblems instead of contracting every row into one operator.
+Each subproblem contributes a partial factor, and only their product is the eigenvalue of the fixed point.
+Independently of that, the `ncols` sites of the unit cell contribute factors of their own on top.
+[`leading_eigenvalue`](@ref) accumulates both.
+
+Applying an operator therefore acts on an ordinary [`InfiniteMPS`](@ref), advancing it by one full period:
+
+```julia
+O * ψ == O[end] * (… * (O[2] * (O[1] * ψ)))
+```
+
+### Notes
+
+- A `MultilineMPS` behaves as a vector of its lines: `length`, `size`, iteration and `state[i]` all refer to the lines, so `size(state) == (length(state),)`. The views `state.AL[row, col]` and friends index the `length(state)` rows of `length(state[1])` sites. See [`Multiline`](@ref MPSKit.Multiline).
+- `dot`/`norm` sum over rows, as for a direct sum of the lines, so `norm(state) == sqrt(length(state))` for normalized rows.
+- Lines may be any `AbstractMPS`, so that for example finite networks can be built and inspected, but no algorithm supports anything but infinite lines yet. [`InfiniteMultilineMPS`](@ref) and [`FiniteMultilineMPS`](@ref) dispatch on the kind of line.
 
 These objects are also used extensively in the context of [PEPSKit.jl](https://github.com/QuantumKitHub/PEPSKit.jl).
 

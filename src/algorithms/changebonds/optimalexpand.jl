@@ -85,7 +85,9 @@ function changebonds(
     return newψ, envs
 end
 
-function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ))
+function changebonds(
+        ψ::InfiniteMultilineMPS, H, alg::OptimalExpand, envs = environments(ψ, H, ψ)
+    )
     allocator = default_allocator(ψ, SerialScheduler())
     TL = eltype(ψ.AL)
     AL′ = PeriodicMatrix{TL}(undef, size(ψ.AL))
@@ -93,7 +95,7 @@ function changebonds(ψ::MultilineMPS, H, alg::OptimalExpand, envs = environment
     AR′ = PeriodicMatrix{TR}(undef, size(ψ.AR))
 
     # determine optimal expansion spaces around bond i
-    for i in 1:size(ψ, 1), j in 1:size(ψ, 2)
+    for i in 1:size(ψ, 1), j in 1:width(ψ)
         AC2 = AC2_projection(
             CartesianIndex(i - 1, j), ψ, H, ψ, envs;
             kind = :ACAR, alg.backend, allocator

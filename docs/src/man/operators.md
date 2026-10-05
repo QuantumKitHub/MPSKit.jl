@@ -53,8 +53,7 @@ MPOs also support a range of linear algebra operations, such as addition, subtra
 multiplication, either among themselves or with a finite MPS. Here, it is important to note
 that these operations will increase the virtual dimension of the resulting MPO or MPS, and
 this naive application is thus typically not optimal. For approximate operations that do not
-increase the virtual dimension, the more advanced algorithms in the [um_algorithms](@ref)
-sections should be used.
+increase the virtual dimension, the more advanced algorithms in the [algorithms](@ref um_algorithms) sections should be used.
 
 ```@example operators
 O_xzx² = O_xzx * O_xzx
@@ -273,4 +272,23 @@ a collection (direct sum) of spaces, one for each row/column.
 
 ```@example operators
 left_virtualspace(H_ising, 1), right_virtualspace(H_ising, 1), physicalspace(H_ising, 1)
+```
+
+## MultilineMPO
+
+A [`MultilineMPO`](@ref) is a stack of MPO lines making up the rows of the row-to-row transfer operator of a two-dimensional tensor network.
+This network can be a conventional 2D classical partition function, or an effective partition function, for example the one corresponding to the norm of a PEPS.
+See the `MultilineMPS` section of the [states](@ref um_states) page for the indexing convention.
+
+```@example operators
+mpo_multi = MultilineMPO([mpo, mpo])
+```
+
+Lines may be any `AbstractMPO`, so that for example finite networks can be built and inspected, but no algorithm supports anything but infinite lines yet.
+[`InfiniteMultilineMPO`](@ref) and [`FiniteMultilineMPO`](@ref) dispatch on the kind of line.
+
+Applying a `MultilineMPO` pushes an [`InfiniteMPS`](@ref) through every row in turn, advancing the boundary by one full period of the network:
+
+```julia
+O * ψ == O[end] * (… * (O[2] * (O[1] * ψ)))
 ```

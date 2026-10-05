@@ -408,6 +408,13 @@ use GradientGrassmann.
 leading_boundary
 ```
 
+The associated eigenvalue, i.e. the partition function density, is obtained with [`leading_eigenvalue`](@ref).
+For a single-line `InfiniteMPS`/`InfiniteMPO` pair this is equivalent to `expectation_value`.
+
+```@docs; canonical=false
+leading_eigenvalue
+```
+
 ## `approximate`
 
 Often, it is useful to approximate a given MPS by another, typically by one of a different

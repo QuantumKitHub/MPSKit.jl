@@ -1,15 +1,33 @@
 # MultilineMPS
 # ------------
-const MultilineMPS = Multiline{<:InfiniteMPS}
+const MultilineMPS = Multiline{<:AbstractMPS}
+
+"""
+    const InfiniteMultilineMPS = Multiline{<:InfiniteMPS}
+
+[`MultilineMPS`](@ref) with infinite lines, as used by [`leading_boundary`](@ref).
+"""
+const InfiniteMultilineMPS = Multiline{<:InfiniteMPS}
+
+"""
+    const FiniteMultilineMPS = Multiline{<:AbstractFiniteMPS}
+
+[`MultilineMPS`](@ref) with finite lines. These can be built and inspected, but no algorithm
+supports them yet.
+"""
+const FiniteMultilineMPS = Multiline{<:AbstractFiniteMPS}
 
 @doc """
-    const MultilineMPS = Multiline{<:InfiniteMPS}
+    const MultilineMPS = Multiline{<:AbstractMPS}
 
-Type that represents multiple lines of [`InfiniteMPS`](@ref) objects.
+Type that represents multiple lines of MPS objects. When used in the context of
+[`leading_boundary`](@ref) with `InfiniteMPS`, this is not to be confused with the fixed point
+of a 2D tensor network, which is a single `InfiniteMPS`.
+See the manual on [MultilineMPS](@ref) for details.
 
 # Constructors
 
-    MultilineMPS(mpss::AbstractVector{<:InfiniteMPS})
+    MultilineMPS(mpss::AbstractVector{<:AbstractMPS})
     MultilineMPS(
         [f, eltype], physicalspaces::Matrix{<:Union{S, CompositeSpace{S}}},
         virtualspaces::Matrix{<:Union{S, CompositeSpace{S}}}
@@ -27,13 +45,28 @@ Type that represents multiple lines of [`InfiniteMPS`](@ref) objects.
 - `AC`: center-gauged MPS tensors
 - `C`: gauge (bond) tensors
 
+# Notes
+
+A `MultilineMPS` is a vector of its lines: `length`, `size`, `eltype` and iteration refer to
+the lines, so `size(ψ) == (length(ψ),)`. The views `ψ.AL`, `ψ.AR`, `ψ.AC` and `ψ.C` instead
+index the lattice of lines and sites, e.g. `ψ.AL[row, col]`.
+See [`Multiline`](@ref) for details.
+
+Only the first constructor accepts lines other than `InfiniteMPS`; the others build
+`InfiniteMPS` lines from spaces or tensors.
+
+!!! note "Finite lines"
+    Lines may be any `AbstractMPS`, so that for example finite networks can be built and
+    inspected. No algorithm supports anything but infinite lines yet: [`leading_boundary`](@ref)
+    only accepts an [`InfiniteMultilineMPS`](@ref).
+
 # See also
 
-[`Multiline`](@ref)
+[`Multiline`](@ref), [`MultilineMPO`](@ref)
 """
 function MultilineMPS end
 
-MultilineMPS(mpss::AbstractVector{<:InfiniteMPS}) = Multiline(mpss)
+MultilineMPS(mpss::AbstractVector{<:AbstractMPS}) = Multiline(mpss)
 function MultilineMPS(
         pspaces::AbstractMatrix{S}, Dspaces::AbstractMatrix{S}; kwargs...
     ) where {S <: VectorSpace}
@@ -91,7 +124,7 @@ for f in (:l_RR, :l_RL, :l_LL, :l_LR)
 end
 
 for f in (:r_RR, :r_RL, :r_LR, :r_LL)
-    @eval $f(t::MultilineMPS, i, j = size(t, 2)) = $f(t[i], j)
+    @eval $f(t::MultilineMPS, i, j = width(t)) = $f(t[i], j)
 end
 
 function TensorKit.dot(a::MultilineMPS, b::MultilineMPS; kwargs...)
@@ -99,17 +132,15 @@ function TensorKit.dot(a::MultilineMPS, b::MultilineMPS; kwargs...)
 end
 TensorKit.normalize!(a::MultilineMPS) = (normalize!.(parent(a)); return a)
 
-Base.convert(::Type{MultilineMPS}, st::InfiniteMPS) = Multiline([st])
-Base.convert(::Type{InfiniteMPS}, st::MultilineMPS) = only(st)
-Base.eltype(t::MultilineMPS) = eltype(t[1])
+Base.convert(::Type{MultilineMPS}, st::AbstractMPS) = Multiline([st])
+Base.convert(::Type{InfiniteMPS}, st::InfiniteMultilineMPS) = only(st)
+Base.convert(::Type{FiniteMPS}, st::FiniteMultilineMPS) = only(st)
 Base.copy!(ψ::MultilineMPS, ϕ::MultilineMPS) = (copy!.(parent(ψ), parent(ϕ)); ψ)
-
-Base.isfinite(::Type{<:MultilineMPS}) = false
 
 for f_space in (:physicalspace, :left_virtualspace, :right_virtualspace)
     @eval $f_space(t::MultilineMPS, i::Int, j::Int) = $f_space(t[i], j)
     @eval $f_space(t::MultilineMPS, I::CartesianIndex{2}) = $f_space(t, Tuple(I)...)
-    @eval $f_space(t::MultilineMPS) = map(Base.Fix1($f_space, t), eachindex(t))
+    @eval $f_space(t::MultilineMPS) = map(Base.Fix1($f_space, t), CartesianIndices((length(t), width(t))))
 end
 
 TensorKit.leftunit(t::MultilineMPS) = TensorKit.leftunit(t[1]) # same for every line
