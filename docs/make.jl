@@ -12,6 +12,8 @@ using DocumenterVitepress
 using DocumenterCitations
 using DocumenterInterLinks
 
+include("citation_previews.jl")
+
 # examples
 example_dir = joinpath(@__DIR__, "src", "examples")
 classic_pages = map(readdir(joinpath(example_dir, "classic2d"))) do dir
@@ -78,7 +80,7 @@ makedocs(;
     ],
     checkdocs = :exports,
     doctest = true,
-    plugins = [bib, links]
+    plugins = [bib, links, CitationPreviews()]
 )
 
 DocumenterVitepress.deploydocs(;
