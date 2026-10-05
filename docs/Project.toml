@@ -20,5 +20,6 @@ MPSKit = {path = ".."}
 
 [compat]
 Documenter = "1.11"
+DocumenterCitations = "1.5"
 DocumenterInterLinks = "1"
-DocumenterVitepress = "0.3"
+DocumenterVitepress = "0.3.7"
