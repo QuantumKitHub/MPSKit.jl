@@ -5,7 +5,10 @@ In this tutorial we will calculate the Haldane gap (the energy gap in the ``S = 
 To follow the tutorial you need the following packages:
 """
 
-using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
+using MPSKit, TensorKit, Plots, Polynomials
+include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
+using .ExampleModels
+using TensorKitTensors.SpinOperators: S_exchange
 
 md"""
 The Heisenberg model is defined by the following Hamiltonian:
@@ -36,8 +39,7 @@ This can be done as follows.
 """
 
 L = 11
-chain = FiniteChain(L)
-H = heisenberg_XXX(symmetry, chain; J, spin)
+H = heisenberg_XXX(symmetry; L, J, spin)
 
 physical_space = SU2Space(1 => 1)
 virtual_space = SU2Space(0 => 12, 1 => 12, 2 => 5, 3 => 3)
@@ -71,7 +73,7 @@ Ls = 12:4:30
 ΔEs = map(Ls) do L
     @info "computing L = $L"
     ψ₀ = FiniteMPS(L, physical_space, virtual_space)
-    H = heisenberg_XXX(symmetry, FiniteChain(L); J, spin)
+    H = heisenberg_XXX(symmetry; L, J, spin)
     ψ, envs, info = find_groundstate(ψ₀, H, DMRG(; verbosity = 0))
     En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(1))
     En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(2))
@@ -99,8 +101,7 @@ In contrast with the finite size case, we now should specify a momentum label to
 This way, it is possible to scan the dispersion relation over the entire momentum space.
 """
 
-chain = InfiniteChain(1)
-H = heisenberg_XXX(symmetry, chain; J, spin)
+H = heisenberg_XXX(symmetry; J, spin)
 virtual_space_inf = Rep[SU₂](1 // 2 => 16, 3 // 2 => 16, 5 // 2 => 8, 7 // 2 => 4)
 ψ₀_inf = InfiniteMPS([physical_space], [virtual_space_inf])
 ψ_inf, envs_inf, info_inf = find_groundstate(ψ₀_inf, H; verbosity = 0)

@@ -12,6 +12,7 @@ using DocumenterVitepress
 using DocumenterCitations
 using DocumenterInterLinks
 include("overrides.jl")
+include("src/assets/models.jl")
 
 # examples
 example_dir = joinpath(@__DIR__, "src", "examples")

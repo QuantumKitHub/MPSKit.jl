@@ -64,9 +64,10 @@ pkg> add MPSKit
 
 To get started with MPSKit, we recommend also including
 [TensorKit.jl](https://github.com/Jutho/TensorKit.jl) and
-[MPSKitModels.jl](https://github.com/QuantumKitHub/MPSKitModels.jl). The former defines the
-tensor backend which is used throughout MPSKit, while the latter includes some common
-operators and models.
+[TensorKitTensors.jl](https://github.com/QuantumKitHub/TensorKitTensors.jl). The former defines
+the tensor backend which is used throughout MPSKit, while the latter provides common
+operators. The documentation examples use shared [model constructors](assets/models.jl)
+built from those operators.
 
 ```julia
 using TensorOperations
@@ -135,8 +136,8 @@ println("<mps|𝕀₃|mps> = $N2")
 ```
 
 Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians.
-Using the pre-defined models in `MPSKitModels`, we can construct the ground state for the
-transverse field Ising model:
+Using TensorKit operators and MPSKit’s Hamiltonian constructors, we can find the ground
+state of the transverse field Ising model:
 
 ```@example finitemps
 J = 1.0
@@ -211,8 +212,8 @@ println("<mps|𝕀₁|mps> = $N2")
     observable computed from the MPS would either blow up to infinity or vanish to zero.
 
 Finally, the MPS can be optimized in order to determine groundstates of given Hamiltonians.
-There are plenty of pre-defined models in `MPSKitModels`, but we can also manually construct
-the ground state for the transverse field Ising model:
+We can construct its Hamiltonian directly and find the ground state of the transverse field
+Ising model:
 
 ```@example infinitemps
 J = 1.0
@@ -235,4 +236,3 @@ Keep in mind that the documentation is still a work in progress, and that some f
 not be fully documented yet. If you encounter any issues or have questions, please check the
 library's [issue tracker](https://github.com/QuantumKitHub/MPSKit.jl/issues) on the GitHub
 repository and open a new issue.
-

@@ -10,7 +10,9 @@ Because TensorKit supports anyonic symmetries, so does MPSKit.
 To follow the tutorial you need the following packages.
 """
 
-using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
+using MPSKit, TensorKit, Plots, Polynomials
+include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
+using .ExampleModels
 
 #src # for reproducibility:
 #src using Random
@@ -18,7 +20,7 @@ using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
 
 md"""
 The [hard hexagon model](https://en.wikipedia.org/wiki/Hard_hexagon_model) is a 2-dimensional lattice model of a gas, where particles are allowed to be on the vertices of a triangular lattice, but no two particles may be adjacent.
-This can be encoded in a transfer matrix with a local MPO tensor using anyonic symmetries, and the resulting MPO has been implemented in MPSKitModels.
+This can be encoded in a transfer matrix with a local MPO tensor using anyonic symmetries, and the resulting MPO is defined in our shared [model helpers](../../../assets/models.jl).
 
 In order to use these anyonic symmetries, we need to generalise the notion of the bond dimension and define how it interacts with the symmetry.
 Thus, we implement a way of converting integers to symmetric spaces of the given dimension, which provides a crude guess for how the final MPS would distribute its Schmidt spectrum.

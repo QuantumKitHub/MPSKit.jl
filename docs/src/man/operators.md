@@ -18,7 +18,7 @@ product of local tensors.
 ```
 
 ```@setup operators
-using TensorKit, MPSKit, MPSKitModels
+using TensorKit, MPSKit
 ```
 
 ```@example operators

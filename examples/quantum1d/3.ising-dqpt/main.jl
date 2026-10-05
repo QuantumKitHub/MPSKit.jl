@@ -5,7 +5,9 @@ In this tutorial we will try to reproduce the results from
 [this paper](https://arxiv.org/pdf/1206.2505.pdf). The needed packages are
 """
 
-using MPSKit, MPSKitModels, TensorKit
+using MPSKit, TensorKit
+include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
+using .ExampleModels
 
 md"""
 Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the Loschmidt echo.
@@ -26,7 +28,7 @@ First we construct the Hamiltonian in MPO form, and obtain the pre-quenched grou
 """
 
 L = 20
-H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
+H₀ = transverse_field_ising(; L, g = -0.5)
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
 ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG());
 
@@ -43,7 +45,7 @@ md"""
 We will initially use a two-site TDVP scheme to dynamically increase the bond dimension while time evolving, and later on switch to a faster one-site scheme. A single timestep can be done using
 """
 
-H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
+H₁ = transverse_field_ising(; L, g = -2.0)
 ψₜ = deepcopy(ψ₀)
 dt = 0.01
 ψₜ, envs, info = timestep(ψₜ, H₁, 0, dt, TDVP2(; trunc = truncrank(20)));
@@ -56,10 +58,10 @@ Putting it all together, we get
 
 function finite_sim(L; dt = 0.05, finaltime = 5.0)
     ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
-    H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
+    H₀ = transverse_field_ising(; L, g = -0.5)
     ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG())
 
-    H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
+    H₁ = transverse_field_ising(; L, g = -2.0)
     ψₜ = deepcopy(ψ₀)
     envs = environments(ψₜ, H₁, ψₜ)
 
