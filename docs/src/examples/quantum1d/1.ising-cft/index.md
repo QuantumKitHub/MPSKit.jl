@@ -13,7 +13,8 @@ do this by first employing an exact diagonalization technique, and then extendin
 analysis to larger system sizes through the use of MPS techniques.
 
 ````julia
-using MPSKit, MPSKitModels, TensorKit, Plots, KrylovKit
+using MPSKit, TensorKit, Plots, KrylovKit
+using .ExampleModels
 using LinearAlgebra: eigvals, diagm, Hermitian
 ````
 
@@ -126,24 +127,24 @@ append!(momenta, fix_degeneracies(states[17:18]))
 
 ````
 18-element Vector{Float64}:
-  1.0963150642957372e-17
- -2.4157081442786943e-17
-  9.150251499481629e-18
- -0.523598775598299
+  3.4795649708338624e-17
+  2.1864186746744933e-17
+  1.0296022899642392e-18
+ -0.5235987755982991
   0.5235987755982987
- -1.0471975511965979
-  1.0471975511965976
-  0.5235987755982989
- -0.5235987755982993
   1.047197551196598
- -1.0471975511965976
-  1.4597368636872088e-17
- -1.5707963267948966
-  1.5707963267948963
-  1.0471975511965976
- -1.0471975511965976
+ -1.0471975511965972
+ -0.5235987755982991
+  0.5235987755982987
+  1.047197551196598
+ -1.0471975511965979
+  1.0708451244677254e-16
  -1.570796326794897
-  1.5707963267948963
+  1.5707963267948968
+ -1.0471975511965987
+  1.0471975511965976
+  1.5707963267948968
+ -1.5707963267948966
 ````
 
 We can compute the scaling dimensions $\Delta_n$ of the operators in the CFT from the
@@ -177,52 +178,56 @@ can reach higher system sizes.
 L_mps = 20
 H_mps = periodic_boundary_conditions(transverse_field_ising(), L_mps)
 D = 64
-ψ, envs, δ = find_groundstate(FiniteMPS(L_mps, ℂ^2, ℂ^D), H_mps, DMRG());
+ψ, envs, info = find_groundstate(FiniteMPS(L_mps, ℂ^2, ℂ^D), H_mps, DMRG());
 ````
 
 ````
-[ Info: DMRG init:	obj = -1.946908612087e+01	err = 7.7434e-02
-[ Info: DMRG   1:	obj = -2.549098951719e+01	err = 8.0439536934e-03	time = 2.57 sec
-[ Info: DMRG   2:	obj = -2.549098968635e+01	err = 1.0703227324e-06	time = 0.80 sec
-[ Info: DMRG   3:	obj = -2.549098968636e+01	err = 1.4373447563e-07	time = 0.98 sec
-[ Info: DMRG   4:	obj = -2.549098968636e+01	err = 1.4665972881e-08	time = 0.42 sec
-[ Info: DMRG   5:	obj = -2.549098968636e+01	err = 6.8081026722e-09	time = 0.44 sec
-[ Info: DMRG   6:	obj = -2.549098968636e+01	err = 3.7573810815e-09	time = 0.43 sec
-[ Info: DMRG   7:	obj = -2.549098968636e+01	err = 2.5698292651e-09	time = 0.43 sec
-[ Info: DMRG   8:	obj = -2.549098968636e+01	err = 2.0113551709e-09	time = 0.43 sec
-[ Info: DMRG   9:	obj = -2.549098968636e+01	err = 1.6427286008e-09	time = 0.89 sec
-[ Info: DMRG  10:	obj = -2.549098968636e+01	err = 1.3479784013e-09	time = 0.55 sec
-[ Info: DMRG  11:	obj = -2.549098968636e+01	err = 1.2769471445e-09	time = 0.44 sec
-[ Info: DMRG  12:	obj = -2.549098968636e+01	err = 1.4168057275e-09	time = 0.48 sec
-[ Info: DMRG  13:	obj = -2.549098968636e+01	err = 1.5595217750e-09	time = 0.42 sec
-[ Info: DMRG  14:	obj = -2.549098968636e+01	err = 1.6950091915e-09	time = 0.41 sec
-[ Info: DMRG  15:	obj = -2.549098968636e+01	err = 1.8105744613e-09	time = 0.40 sec
-[ Info: DMRG  16:	obj = -2.549098968636e+01	err = 1.8924908787e-09	time = 0.96 sec
-[ Info: DMRG  17:	obj = -2.549098968636e+01	err = 1.9288336151e-09	time = 0.49 sec
-[ Info: DMRG  18:	obj = -2.549098968636e+01	err = 1.9133807885e-09	time = 0.31 sec
-[ Info: DMRG  19:	obj = -2.549098968636e+01	err = 1.8713994972e-09	time = 0.38 sec
-[ Info: DMRG  20:	obj = -2.549098968636e+01	err = 1.7813737815e-09	time = 0.41 sec
-[ Info: DMRG  21:	obj = -2.549098968636e+01	err = 1.6542099689e-09	time = 0.40 sec
-[ Info: DMRG  22:	obj = -2.549098968636e+01	err = 1.5039369007e-09	time = 0.40 sec
-[ Info: DMRG  23:	obj = -2.549098968636e+01	err = 1.3441838671e-09	time = 0.90 sec
-[ Info: DMRG  24:	obj = -2.549098968636e+01	err = 1.1858446625e-09	time = 0.28 sec
-[ Info: DMRG  25:	obj = -2.549098968636e+01	err = 1.0362811206e-09	time = 0.34 sec
-[ Info: DMRG  26:	obj = -2.549098968636e+01	err = 8.9963099646e-10	time = 0.35 sec
-[ Info: DMRG  27:	obj = -2.549098968636e+01	err = 7.7760121034e-10	time = 0.41 sec
-[ Info: DMRG  28:	obj = -2.549098968636e+01	err = 6.7030150822e-10	time = 0.40 sec
-[ Info: DMRG  29:	obj = -2.549098968636e+01	err = 5.7691780289e-10	time = 0.41 sec
-[ Info: DMRG  30:	obj = -2.549098968636e+01	err = 4.9618146296e-10	time = 0.91 sec
-[ Info: DMRG  31:	obj = -2.549098968636e+01	err = 4.2666435281e-10	time = 0.36 sec
-[ Info: DMRG  32:	obj = -2.549098968636e+01	err = 3.6694816435e-10	time = 0.40 sec
-[ Info: DMRG  33:	obj = -2.549098968636e+01	err = 3.1571200436e-10	time = 0.36 sec
-[ Info: DMRG  34:	obj = -2.549098968636e+01	err = 2.7176974363e-10	time = 0.38 sec
-[ Info: DMRG  35:	obj = -2.549098968636e+01	err = 2.3407977700e-10	time = 0.40 sec
-[ Info: DMRG  36:	obj = -2.549098968636e+01	err = 2.0173966270e-10	time = 0.40 sec
-[ Info: DMRG  37:	obj = -2.549098968636e+01	err = 1.7397391951e-10	time = 0.40 sec
-[ Info: DMRG  38:	obj = -2.549098968636e+01	err = 1.5011934910e-10	time = 0.87 sec
-[ Info: DMRG  39:	obj = -2.549098968636e+01	err = 1.2961022917e-10	time = 0.35 sec
-[ Info: DMRG  40:	obj = -2.549098968636e+01	err = 1.1196457020e-10	time = 0.38 sec
-[ Info: DMRG conv 41:	obj = -2.549098968636e+01	err = 9.6771723038e-11	time = 22.14 sec
+[ Info: DMRG init:	obj = -1.943771844888e+01	err = 1.0000e+00
+[ Info: DMRG   1:	obj = -2.548965337401e+01	err = 1.5606788288e-02	time = 1.50 sec
+[ Info: DMRG   2:	obj = -2.549098968590e+01	err = 4.2297557187e-04	time = 0.79 sec
+[ Info: DMRG   3:	obj = -2.549098968636e+01	err = 1.0167456345e-06	time = 0.41 sec
+[ Info: DMRG   4:	obj = -2.549098968636e+01	err = 2.4867732855e-08	time = 0.30 sec
+[ Info: DMRG   5:	obj = -2.549098968636e+01	err = 7.4062863713e-09	time = 0.47 sec
+[ Info: DMRG   6:	obj = -2.549098968636e+01	err = 3.8191851769e-09	time = 1.41 sec
+[ Info: DMRG   7:	obj = -2.549098968636e+01	err = 2.6647921898e-09	time = 0.31 sec
+[ Info: DMRG   8:	obj = -2.549098968636e+01	err = 2.1927504209e-09	time = 0.31 sec
+[ Info: DMRG   9:	obj = -2.549098968636e+01	err = 1.9177066057e-09	time = 0.29 sec
+[ Info: DMRG  10:	obj = -2.549098968636e+01	err = 1.6969297883e-09	time = 0.29 sec
+[ Info: DMRG  11:	obj = -2.549098968636e+01	err = 1.6032558073e-09	time = 0.28 sec
+[ Info: DMRG  12:	obj = -2.549098968636e+01	err = 1.6496928155e-09	time = 0.30 sec
+[ Info: DMRG  13:	obj = -2.549098968636e+01	err = 1.6728447005e-09	time = 0.30 sec
+[ Info: DMRG  14:	obj = -2.549098968636e+01	err = 1.6689081338e-09	time = 0.28 sec
+[ Info: DMRG  15:	obj = -2.549098968636e+01	err = 1.6377730200e-09	time = 0.32 sec
+[ Info: DMRG  16:	obj = -2.549098968636e+01	err = 1.5799295265e-09	time = 0.31 sec
+[ Info: DMRG  17:	obj = -2.549098968636e+01	err = 1.5009049285e-09	time = 0.30 sec
+[ Info: DMRG  18:	obj = -2.549098968636e+01	err = 1.4066215762e-09	time = 0.30 sec
+[ Info: DMRG  19:	obj = -2.549098968636e+01	err = 1.5081205257e-09	time = 0.29 sec
+[ Info: DMRG  20:	obj = -2.549098968636e+01	err = 1.6810911856e-09	time = 0.30 sec
+[ Info: DMRG  21:	obj = -2.549098968636e+01	err = 1.8220210461e-09	time = 0.29 sec
+[ Info: DMRG  22:	obj = -2.549098968636e+01	err = 1.9139702907e-09	time = 0.29 sec
+[ Info: DMRG  23:	obj = -2.549098968636e+01	err = 1.9442171571e-09	time = 0.28 sec
+[ Info: DMRG  24:	obj = -2.549098968636e+01	err = 1.9087464599e-09	time = 1.38 sec
+[ Info: DMRG  25:	obj = -2.549098968636e+01	err = 1.8142533073e-09	time = 0.28 sec
+[ Info: DMRG  26:	obj = -2.549098968636e+01	err = 1.6750776273e-09	time = 0.28 sec
+[ Info: DMRG  27:	obj = -2.549098968636e+01	err = 1.5098703467e-09	time = 0.30 sec
+[ Info: DMRG  28:	obj = -2.549098968636e+01	err = 1.3360360659e-09	time = 0.20 sec
+[ Info: DMRG  29:	obj = -2.549098968636e+01	err = 1.1657760958e-09	time = 0.16 sec
+[ Info: DMRG  30:	obj = -2.549098968636e+01	err = 1.0073242984e-09	time = 0.18 sec
+[ Info: DMRG  31:	obj = -2.549098968636e+01	err = 8.6474907924e-10	time = 0.24 sec
+[ Info: DMRG  32:	obj = -2.549098968636e+01	err = 7.3927413439e-10	time = 0.28 sec
+[ Info: DMRG  33:	obj = -2.549098968636e+01	err = 6.3048094041e-10	time = 0.28 sec
+[ Info: DMRG  34:	obj = -2.549098968636e+01	err = 5.3702960640e-10	time = 0.29 sec
+[ Info: DMRG  35:	obj = -2.549098968636e+01	err = 4.5722500117e-10	time = 0.30 sec
+[ Info: DMRG  36:	obj = -2.549098968636e+01	err = 3.8930325414e-10	time = 0.29 sec
+[ Info: DMRG  37:	obj = -2.549098968636e+01	err = 3.3159981587e-10	time = 0.28 sec
+[ Info: DMRG  38:	obj = -2.549098968636e+01	err = 2.8261201613e-10	time = 0.29 sec
+[ Info: DMRG  39:	obj = -2.549098968636e+01	err = 2.4102587357e-10	time = 0.34 sec
+[ Info: DMRG  40:	obj = -2.549098968636e+01	err = 2.0570571140e-10	time = 0.30 sec
+[ Info: DMRG  41:	obj = -2.549098968636e+01	err = 1.7569292481e-10	time = 0.29 sec
+[ Info: DMRG  42:	obj = -2.549098968636e+01	err = 1.5016721096e-10	time = 0.28 sec
+[ Info: DMRG  43:	obj = -2.549098968636e+01	err = 1.2843977109e-10	time = 0.31 sec
+[ Info: DMRG  44:	obj = -2.549098968636e+01	err = 1.0992971958e-10	time = 0.44 sec
+[ Info: DMRG conv 45:	obj = -2.549098968636e+01	err = 9.4147444802e-11	time = 18.09 sec
 
 ````
 
