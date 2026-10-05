@@ -37,7 +37,9 @@ end
 
 # bibliography
 bibpath = joinpath(@__DIR__, "src", "assets", "mpskit.bib")
-bib = CitationBibliography(bibpath; style = :authoryear)
+# TODO: Re-enable hover previews once the upstream fix is released:
+# https://github.com/LuxDL/DocumenterVitepress.jl/pull/399
+bib = CitationBibliography(bibpath; style = :authoryear, show_hover = false)
 
 # interlinks
 links = InterLinks(
