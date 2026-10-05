@@ -141,7 +141,7 @@ excitations
 using TensorKit, MPSKit, Main.ExampleModels
 ```
 
-The following examples use the shared [model constructors](../assets/models.jl), built from
+The following examples use the shared [model constructors](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/docs/src/assets/models.jl), built from
 TensorKitTensors operators and MPSKit Hamiltonians.
 
 ### Quasiparticle Ansatz

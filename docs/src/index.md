@@ -66,7 +66,7 @@ To get started with MPSKit, we recommend also including
 [TensorKit.jl](https://github.com/Jutho/TensorKit.jl) and
 [TensorKitTensors.jl](https://github.com/QuantumKitHub/TensorKitTensors.jl). The former defines
 the tensor backend which is used throughout MPSKit, while the latter provides common
-operators. The documentation examples use shared [model constructors](assets/models.jl)
+operators. The documentation examples use shared [model constructors](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/docs/src/assets/models.jl)
 built from those operators.
 
 ```julia

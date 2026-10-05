@@ -112,7 +112,7 @@ display((a_op' * a_op)[])
 md"""
 
 The [] accessor lets us see the underlying array, and indeed the operators are exactly what
-we require. The shared [model helpers](../../../assets/models.jl) define
+we require. The shared [model helpers](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/docs/src/assets/models.jl) define
 `bose_hubbard_model` using these operators, although we will construct our own variant
 later on.
 
@@ -319,7 +319,7 @@ $$\frac{E[\Phi] - E[0]}{L} \approx \frac{1}{2} \Upsilon(L) \bigg (\frac{\Phi}{L}
 In order to find the ground state under these twisted boundary conditions, we must construct
 our own variant of the Bose-Hubbard Hamiltonian. Typically you would want to take a peek at
 the
-[model helper source](../../../assets/models.jl) to see how these models are defined and tweak it as per your needs.
+[model helper source](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/docs/src/assets/models.jl) to see how these models are defined and tweak it as per your needs.
 Here we see that applying twisted boundary conditions is equivalent to adding a prefactor of
 $e^{\pm i\phi}$ in front of the hopping amplitudes.
 """

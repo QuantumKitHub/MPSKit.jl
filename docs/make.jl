@@ -49,8 +49,7 @@ links = InterLinks(
     "TensorOperations" => "https://quantumkithub.github.io/TensorOperations.jl/stable/",
     "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/",
     "BlockTensorKit" => "https://quantumkithub.github.io/BlockTensorKit.jl/dev/",
-    "MatrixAlgebraKit" => "https://quantumkithub.github.io/MatrixAlgebraKit.jl/stable/",
-    "MPSKitModels" => "https://quantumkithub.github.io/MPSKitModels.jl/dev/"
+    "MatrixAlgebraKit" => "https://quantumkithub.github.io/MatrixAlgebraKit.jl/stable/"
 )
 
 # include MPSKit in all doctests
