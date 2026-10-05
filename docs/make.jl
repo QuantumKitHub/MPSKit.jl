@@ -11,21 +11,7 @@ using Documenter
 using DocumenterVitepress
 using DocumenterCitations
 using DocumenterInterLinks
-using SHA: sha256
-
-# Warn when the upstream template changes so the local search/markdown hooks can
-# be re-synced. These hooks are not exposed by MarkdownVitepress.
-let template = joinpath(pkgdir(DocumenterVitepress), "template", "src", ".vitepress", "config.mts")
-    vendored_from = (
-        "ca5a958eb398b3219557633f017467cfa07f4882dc2dfe55b12d1f6c0e70d729", # v0.3.4
-        "56289223983a3844417eae597f81da878f395792a529721e7873178c92d60721", # v0.3.5–v0.3.7
-    )
-    actual = bytes2hex(sha256(read(template)))
-    actual in vendored_from || @warn """
-    DocumenterVitepress' `config.mts` template has changed since `docs/src/.vitepress/config.mts` \
-    was vendored from it. Re-sync the vendored copy (keeping the docstring hooks), or delete \
-    it if upstream now ships them.""" template actual
-end
+include("overrides.jl")
 
 # examples
 example_dir = joinpath(@__DIR__, "src", "examples")
@@ -95,7 +81,7 @@ makedocs(;
     ],
     checkdocs = :exports,
     doctest = true,
-    plugins = [bib, links]
+    plugins = [bib, links, VitepressOverrides()]
 )
 
 DocumenterVitepress.deploydocs(;

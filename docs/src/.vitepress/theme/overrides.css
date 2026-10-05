@@ -3,7 +3,7 @@ body {
   font-synthesis: weight style;
 }
 
-/* Documenter flattens headings to bold paragraphs; config.mts marks them. */
+/* Documenter flattens headings to bold paragraphs; overrides.mts marks them. */
 .jldocstring.custom-block p.jldocstring-heading {
   margin: 1.5rem 0 0.6rem;
   padding-bottom: 0.25rem;
