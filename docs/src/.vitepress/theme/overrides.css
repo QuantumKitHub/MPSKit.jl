@@ -1,0 +1,80 @@
+/* Allow bold synthesis for the upstream font stack on Linux (#477). */
+body {
+  font-synthesis: weight style;
+}
+
+/* Documenter flattens headings to bold paragraphs; overrides.mts marks them. */
+.jldocstring.custom-block p.jldocstring-heading {
+  margin: 1.5rem 0 0.6rem;
+  padding-bottom: 0.25rem;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--vp-c-text-1);
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+/* Match the logo in light mode; keep the upstream dark palette. */
+:root:not(.dark) {
+  --vp-c-brand: var(--julia-green);
+  --vp-c-brand-1: #389826;
+  --vp-c-brand-2: #2f8420;
+  --vp-c-brand-3: #277018;
+  --vp-c-brand-light: #389826;
+}
+
+/* Add category-colored titles, icons and left borders to admonitions. */
+.vp-doc .custom-block:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-default-1);
+  padding: 14px 16px;
+  border-left-width: 4px;
+  border-left-color: var(--mpskit-admonition-accent);
+  color: var(--vp-c-text-1);
+}
+
+.custom-block:not(.jldocstring) .custom-block-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: var(--mpskit-admonition-accent);
+}
+
+.custom-block:not(.jldocstring) .custom-block-title::before {
+  content: "";
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  background-color: currentColor;
+  /* fa-circle-exclamation, the icon Documenter puts on every admonition */
+  --mpskit-admonition-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 5h2v7h-2Zm0 9h2v2h-2Z'/%3E%3C/svg%3E");
+  -webkit-mask: var(--mpskit-admonition-icon) center / contain no-repeat;
+  mask: var(--mpskit-admonition-icon) center / contain no-repeat;
+}
+
+/* DVP maps notes to tips and overrides their dark background to gray. */
+.vp-doc .custom-block.tip:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-tip-1);
+  background-color: var(--vp-c-tip-soft);
+}
+.vp-doc .custom-block.warning:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-warning-1);
+}
+.vp-doc .custom-block.danger:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-danger-1);
+}
+.vp-doc .custom-block.caution:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-caution-1);
+}
+.vp-doc .custom-block.important:not(.jldocstring) {
+  --mpskit-admonition-accent: var(--vp-c-important-1);
+}
+
+/* Keep transparent line drawings legible in dark mode. */
+.color-invertible {
+  transition: filter 0.2s ease;
+}
+.dark .color-invertible {
+  filter: invert(1) hue-rotate(180deg);
+}

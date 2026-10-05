@@ -11,6 +11,7 @@ using Documenter
 using DocumenterVitepress
 using DocumenterCitations
 using DocumenterInterLinks
+include("overrides.jl")
 
 # examples
 example_dir = joinpath(@__DIR__, "src", "examples")
@@ -80,7 +81,7 @@ makedocs(;
     ],
     checkdocs = :exports,
     doctest = true,
-    plugins = [bib, links]
+    plugins = [bib, links, VitepressOverrides()]
 )
 
 DocumenterVitepress.deploydocs(;
