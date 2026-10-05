@@ -12,8 +12,6 @@ using DocumenterVitepress
 using DocumenterCitations
 using DocumenterInterLinks
 
-include("citation_previews.jl")
-
 # examples
 example_dir = joinpath(@__DIR__, "src", "examples")
 classic_pages = map(readdir(joinpath(example_dir, "classic2d"))) do dir
@@ -39,7 +37,9 @@ end
 
 # bibliography
 bibpath = joinpath(@__DIR__, "src", "assets", "mpskit.bib")
-bib = CitationBibliography(bibpath; style = :authoryear)
+# TODO: Re-enable hover previews once the upstream fix is released:
+# https://github.com/LuxDL/DocumenterVitepress.jl/pull/399
+bib = CitationBibliography(bibpath; style = :authoryear, show_hover = false)
 
 # interlinks
 links = InterLinks(
@@ -80,7 +80,7 @@ makedocs(;
     ],
     checkdocs = :exports,
     doctest = true,
-    plugins = [bib, links, CitationPreviews()]
+    plugins = [bib, links]
 )
 
 DocumenterVitepress.deploydocs(;
