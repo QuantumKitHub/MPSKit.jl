@@ -17,35 +17,59 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.11...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.14.0...HEAD)
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Performance
+
+## [0.14.0](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.13...v0.14.0) - 2026-10-05
+
+### Added
+
+- `WindowMPOHamiltonian`, enabling propagators and dynamical DMRG on `WindowMPS`. ([#417](https://github.com/QuantumKitHub/MPSKit.jl/pull/417), [#447](https://github.com/QuantumKitHub/MPSKit.jl/pull/447))
+- `SketchedExpand` for randomized controlled bond expansion in DMRG and TDVP. ([#438](https://github.com/QuantumKitHub/MPSKit.jl/pull/438), [#464](https://github.com/QuantumKitHub/MPSKit.jl/pull/464))
+- `DMRG3S` for single-site DMRG with subspace expansion and configurable noise schedules. ([#460](https://github.com/QuantumKitHub/MPSKit.jl/pull/460))
+- `leftunit`/`rightunit` for `MultilineMPS` and `MultilineMPO`. ([#453](https://github.com/QuantumKitHub/MPSKit.jl/pull/453))
+- Controlled bond expansion for finite single-site `DMRG` and `TDVP` via `alg_expand`, with configurable QR/SVD gauging through `alg_svd`, `alg_orth`, and `trunc`. ([#438](https://github.com/QuantumKitHub/MPSKit.jl/pull/438), [#460](https://github.com/QuantumKitHub/MPSKit.jl/pull/460))
+- `changebond`/`changebond!` for expanding a single finite-MPS bond in a chosen sweep direction. ([#438](https://github.com/QuantumKitHub/MPSKit.jl/pull/438))
+- A keyword-based `approximate(ψ₀, (O, ψ); tol, maxiter, verbosity, trunc)` convenience method and sequential approximation algorithms composed with `&`. ([#469](https://github.com/QuantumKitHub/MPSKit.jl/pull/469))
+- `Adapt` support for `Multiline` and `PeriodicArray` objects, including multiline MPS/MPO networks. ([#406](https://github.com/QuantumKitHub/MPSKit.jl/pull/406))
+- Custom `hasconverged` and `shouldstop` callbacks on `GradientGrassmann`. ([#510](https://github.com/QuantumKitHub/MPSKit.jl/pull/510), [#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+- `DynamicTols.adapt_solver` and `AdaptiveKrylov` for adapting eigensolver tolerances and Krylov budgets to local gradients and truncation errors. ([#455](https://github.com/QuantumKitHub/MPSKit.jl/pull/455))
 - Addition of `FiniteMPS`/`FiniteMPO` with different scalar types, through a new
   `Base.similar(ψ, ::Type{S})` for `S <: Number` on `FiniteMPS`. ([#484](https://github.com/QuantumKitHub/MPSKit.jl/pull/484))
 - `Zipup`, an algorithm for `approximate`/`approximate!` that compresses a finite MPO-MPS product in
   a single sweep, optionally followed by a sweep in the opposite direction that imposes the final
   truncation. The sweep direction is selected by the `left_to_right` keyword. Both
   `approximate((O, ϕ), alg)` and `approximate!(ψ, (O, ϕ), alg)` are supported, where the destination
-  `ψ` is a write target rather than an initial guess and may alias `ϕ`; they return `(ψ, info)`.
+  `ψ` is a write target rather than an initial guess and may alias `ϕ`; they return `(ψ, info)`. ([#470](https://github.com/QuantumKitHub/MPSKit.jl/pull/470), [#513](https://github.com/QuantumKitHub/MPSKit.jl/pull/513))
 - `BUG` time-evolution algorithm: a Basis-Update & Galerkin integrator for finite MPS.
   Unlike `TDVP` it has no backward-in-time substep (stable for imaginary-time evolution),
   and passing a truncating `trunc` enables rank-adaptivity (the bond dimension grows and shrinks
-  automatically to track entanglement).
+  automatically to track entanglement). ([#468](https://github.com/QuantumKitHub/MPSKit.jl/pull/468))
 - A `backend` setting on every algorithm, for its tensor contractions and index manipulations,
   defaulting to `MPSKit.Defaults.backend()`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
 - Local updates now serve their intermediate tensors from a dedicated allocator, selected internally
   by `MPSKit.default_allocator`, instead of leaving them to the garbage collector
   (two-site DMRG: -64% allocations, -57% GC time, -23% wall time).
   Disable with `MPSKit.Defaults.set_buffering!(false)`. ([#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
-- Custom `show`/`summary` for `MultilineMPS`/`MultilineMPO`. Each row is now rendered via each row's own display, and row shifting is shown explicitly for `MultilineMPO`.
+- Custom `show`/`summary` for `MultilineMPS`/`MultilineMPO`. Each row is now rendered via each row's own display, and row shifting is shown explicitly for `MultilineMPO`. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `*(::MultilineMPO, ::InfiniteMPS)`, which pushes the boundary MPS through every row of the
-  network in turn, advancing it by one full period.
+  network in turn, advancing it by one full period. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `leading_eigenvalue(ψ, O, [environments])`, the eigenvalue of the transfer
   operator `O` for the boundary MPS `ψ`, i.e. the partition function density.
-  `expectation_value(::InfiniteMPS, ::InfiniteMPO)` forwards here.
+  `expectation_value(::InfiniteMPS, ::InfiniteMPO)` forwards here. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `InfiniteMultilineMPS`/`FiniteMultilineMPS` and `InfiniteMultilineMPO`/`FiniteMultilineMPO`
-  aliases for multiline objects with infinite or finite lines.
+  aliases for multiline objects with infinite or finite lines. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 
 ### Changed
 
@@ -53,14 +77,20 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   groups, replacing the deprecated LoggingExtras verbosity APIs. LoggingExtras 1.1 and 1.2 are
   supported alongside 1.0. Canonicalization now logs initialization at verbosity 2 and
   non-convergence warnings at verbosity 1, consistently with the other algorithms.
+- `DMRG`/`DMRG2` use Galerkin error for convergence and `AdaptiveKrylov` for adaptive local eigensolvers; truncating runs can converge once the Galerkin error reaches the truncation-error floor. `FiniteExcited` perturbs its default initial guess to avoid starting at an already-converged eigenstate. ([#455](https://github.com/QuantumKitHub/MPSKit.jl/pull/455), [#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+- `JordanMPOTensor` now stores non-identity blocks and scalar identity contributions separately, with revised type parameters and constructors. ([#444](https://github.com/QuantumKitHub/MPSKit.jl/pull/444))
+- Dependency compatibility now includes OptimKit 0.5 and VectorInterface 0.7; OptimKit 0.3 is no longer supported. ([#456](https://github.com/QuantumKitHub/MPSKit.jl/pull/456), [#460](https://github.com/QuantumKitHub/MPSKit.jl/pull/460), [#530](https://github.com/QuantumKitHub/MPSKit.jl/pull/530))
+- Environment solver settings are forwarded more consistently through VUMPS/VOMPS, lazy sums, and quasiparticle calculations; gauge updates honor the configured orthogonalization algorithm. ([#436](https://github.com/QuantumKitHub/MPSKit.jl/pull/436))
+- Hamiltonian matrix constructors accept `AbstractMatrix` entries, and `similar` for MPOs and MPO Hamiltonians also accepts a storage type. ([#406](https://github.com/QuantumKitHub/MPSKit.jl/pull/406))
+- Raised minimum TensorKit and TensorOperations versions to 0.17.1 and 5.6.2, respectively. ([#444](https://github.com/QuantumKitHub/MPSKit.jl/pull/444), [#467](https://github.com/QuantumKitHub/MPSKit.jl/pull/467))
 - `FiniteMPOHamiltonian`/`InfiniteMPOHamiltonian` constructed from a set of local terms now share
   virtual channels between terms that start out with the same operators, up to a scalar factor,
   and add up terms that are linearly dependent. The resulting Hamiltonian is unchanged, but its
   bond dimension is generally smaller ([#518](https://github.com/QuantumKitHub/MPSKit.jl/pull/518))
 - `find_groundstate(!)`, `leading_boundary`, `approximate(!)`, `timestep(!)` and `time_evolve(!)`
-  now have the return signature `(ψ, envs, info)` with `info` an `AlgorithmInfo` that contains
+  now return diagnostics through `AlgorithmInfo` (normally `(ψ, envs, info)`; `Zipup` returns `(ψ, info)`). The `info` object contains
   diagnostics about the run and convergence. See the updated docs or `AlgorithmInfo`'s
-  docstring for more information. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
+  docstring for more information. `convergence_measure(info)` extracts the algorithm-specific stopping measure. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - The manual has a new section on [Errors and accuracy](@ref) covering definitions and interpretations
   of the various returned measures. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - Convergence tolerances are now compared with `<=` everywhere, so an error exactly equal to `tol`
@@ -72,7 +102,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   norm is preserved, so it retains useful information (the accumulated truncation error in real time,
   or the decaying weight in imaginary time). Previously imaginary-time evolution always renormalized
   every step; **to recover that behavior, pass `normalize = true`** (e.g. for ground-state or
-  thermal-state search via imaginary-time evolution).
+  thermal-state search via imaginary-time evolution). ([#438](https://github.com/QuantumKitHub/MPSKit.jl/pull/438), [#469](https://github.com/QuantumKitHub/MPSKit.jl/pull/469))
 - `environments` now follows a single positional contract for every state and operator kind:
   `environments(below, operator, above, alg)`, where `alg` is the environment algorithm
   (slot 4). The operator form requires an explicit `above`. Auxiliary inputs are keyword-only:
@@ -91,48 +121,58 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   algorithm can be resolved per sector. The Krylov dimension adapts to the number of values requested
   in each sector, controlled by the new `oversampling` and `oversampling_factor` keywords.
   Accordingly, `marek_gap` and `correlation_length` now return a `TensorKit.SectorDict` of
-  per-sector results by default; pass `sector = ...` to obtain a single sector's result as before.
+  per-sector results by default; pass `sector = ...` to obtain a single sector's result as before. ([#452](https://github.com/QuantumKitHub/MPSKit.jl/pull/452))
 - All `trscheme` keyword arguments are renamed to `trunc` ([#482](https://github.com/QuantumKitHub/MPSKit.jl/pull/482)).
 - `correlator` now throws an `ArgumentError` when the sites are not ordered as `i < j`.
   Previously such a call only logged an `@error` and then continued into a contraction that is
   not the requested correlator. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - TimerOutputs 1.x is now required. The timing tables printed at `verbosity > 3` use the new
-  layout (tree guides, heat bars) and additionally report per-section GC time.
+  layout (tree guides, heat bars) and additionally report per-section GC time. ([#495](https://github.com/QuantumKitHub/MPSKit.jl/pull/495))
 - `Multiline` (and therefore `MultilineMPS`/`MultilineMPO`) now consistently behaves as a vector
   of the lines it stores: `length`/`size`/`axes`/`eachindex`/`eltype`/`iterate`/`m[i]` all refer
   to the lines, so `size(m) == (length(m),)`. Previously `length` counted `nrows * ncols` and
   `size` returned the `(nrows, ncols)` lattice shape. The `AL`/`AR`/`AC`/`C` views still index
-  the lattice as `[row, col]`.
+  the lattice as `[row, col]`. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `MultilineMPS` lines may now be any `AbstractMPS` rather than only `InfiniteMPS`, so that for
   example finite multiline networks can be built and inspected. No algorithm supports them yet:
   `leading_boundary` only accepts an `InfiniteMultilineMPS` (and an `InfiniteMultilineMPO`).
-  The `AbstractMatrix` constructor that silently built finite-line `MultilineMPO`s was removed.
+  The `AbstractMatrix` constructor that silently built finite-line `MultilineMPO`s was removed. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 
 ### Deprecated
 
+- `DynamicTols.updatetol(alg, iter, ϵ)`; use `DynamicTols.adapt_solver(alg; iter, g_global = ϵ)` instead. ([#455](https://github.com/QuantumKitHub/MPSKit.jl/pull/455))
 ### Removed
 
-- Support for TimerOutputs 0.5.
-- `expectation_value(::MultilineMPS, ::MultilineMPO, envs...)` fallback method, which silently
-  computed a meaningless value (`prod` instead of `sum`, no row shift, `envs` ignored) for any
-  `MultilineMPO` line type not covered by the guarded method, such as `InfiniteMPOHamiltonian`.
-- `expectation_value` for a `MultilineMPS`/`MultilineMPO` pair entirely, replaced by `leading_eigenvalue`.
+- The custom `MPSTensor` constructors; construct `TensorMap`s with explicit `TensorMapSpace`s instead. ([#475](https://github.com/QuantumKitHub/MPSKit.jl/pull/475))
+- `JordanMPOTensorMap`; use `JordanMPOTensor` instead. ([#444](https://github.com/QuantumKitHub/MPSKit.jl/pull/444))
+- Support for TimerOutputs 0.5. ([#495](https://github.com/QuantumKitHub/MPSKit.jl/pull/495))
+- `expectation_value` for a `MultilineMPS`/`MultilineMPO` pair entirely, replaced by `leading_eigenvalue`. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `*(::MultilineMPO, ::MultilineMPS)` and `*(::MultilineMPO, ::MultilineMPO)`, as these
-  were not meaningful operations. Neither method had ever been callable previously.
+  were not meaningful operations. Neither method had ever been callable previously. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 
 ### Fixed
 
+- `entropy`, `entanglement_spectrum`, and `entanglementplot` now accept the left boundary (`site = 0`) of a finite MPS; the plot uses the selected bond to label its dimension. ([#504](https://github.com/QuantumKitHub/MPSKit.jl/pull/504))
+- `GradientGrassmann` preconditioning could cease to be a descent direction on nearly rank-deficient bonds; the regularized inverse is now applied in factored form. ([#532](https://github.com/QuantumKitHub/MPSKit.jl/pull/532))
+- `variance` and Hamiltonian arithmetic now support mixed scalar types; finite-state variance is evaluated using the energy-shifted Hamiltonian to reduce cancellation. ([#529](https://github.com/QuantumKitHub/MPSKit.jl/pull/529))
+- `canonicalize!` no longer raises a `SpaceMismatch` for partially decoupled Hamiltonian sites. ([#526](https://github.com/QuantumKitHub/MPSKit.jl/pull/526))
+- Infinite-MPO quasiparticle environments now use the correct bond indices when virtual spaces vary within the unit cell. ([#492](https://github.com/QuantumKitHub/MPSKit.jl/pull/492))
+- `remove_orphans!` now terminates correctly when infinite-MPO virtual channels stop changing. ([#485](https://github.com/QuantumKitHub/MPSKit.jl/pull/485))
+- `periodic_boundary_conditions` no longer raises a `SpaceMismatch` for non-self-dual virtual spaces. ([#462](https://github.com/QuantumKitHub/MPSKit.jl/pull/462))
+- `FiniteExcited` returns excitations in ascending energy order. ([#443](https://github.com/QuantumKitHub/MPSKit.jl/pull/443))
+- Precomputed bond derivatives now allocate contractions consistently with TensorKit multifusion space checks. ([#528](https://github.com/QuantumKitHub/MPSKit.jl/pull/528))
+- `time_evolve` logging no longer references an undefined time or passes integer placeholders to floating-point logging methods. ([#469](https://github.com/QuantumKitHub/MPSKit.jl/pull/469), [#515](https://github.com/QuantumKitHub/MPSKit.jl/pull/515))
+- MPO multiplication, physical-charge insertion, and Jordan-tensor scalar conversion preserve GPU storage instead of constructing CPU intermediates. ([#406](https://github.com/QuantumKitHub/MPSKit.jl/pull/406), [#444](https://github.com/QuantumKitHub/MPSKit.jl/pull/444))
 - `changebonds(::FiniteMPO, ::SvdCut)` truncated long chains down to a zero operator. It now gauges
   in a separate sweep, spreads the operator norm evenly over the sites, and truncates against the
-  per-bond reference scale `‖O‖^(2/length(mpo))`.
+  per-bond reference scale `‖O‖^(2/length(mpo))`. ([#519](https://github.com/QuantumKitHub/MPSKit.jl/pull/519))
 - `changebonds(::FiniteMPOHamiltonian, ::SvdCut)` threw a `BoundsError` for Hamiltonians with
-  long-range terms.
-- `SvdCut` now warns when a truncation empties a bond, instead of silently returning a zero operator.
-- `isfinite(::WindowMPOHamiltonian)` was undefined. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
+  long-range terms. ([#519](https://github.com/QuantumKitHub/MPSKit.jl/pull/519))
+- `SvdCut` now warns when a truncation empties a bond, instead of silently returning a zero operator. ([#519](https://github.com/QuantumKitHub/MPSKit.jl/pull/519))
 - `checkbounds` on the `AL`/`AR`/`AC`/`C` views of a `Multiline` now delegates the column to the
   matching tensors of a line, and accepts any row due to periodicity.
-  `checkbounds(Bool, ::PeriodicArray, I...)` now also accepts any index, matching `getindex`.
-- `size`/`axes` for a `CView` over a `Multiline` with finite lines were missing.
+  `checkbounds(Bool, ::PeriodicArray, I...)` now also accepts any index, matching `getindex`. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
+- `size`/`axes` for a `CView` over a `Multiline` with finite lines were missing. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
   different tensor networks, e.g. `norm(E₀ * gs - H * gs)` coming out as `2 * norm(gs) * E₀`
@@ -172,21 +212,24 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - Raised the `BlockTensorKit` compat lower bound to 0.3.19, which fixes a silent data-loss bug: with
   `TensorKit` 0.17.2 and `BlockTensorKit` <= 0.3.18, a permuted contraction into a sparse block
   tensor (e.g. an environment sweep near a `FiniteMPS` chain boundary when the operator and state
-  have different `scalartype`s) could silently drop data instead of erroring.
+  have different `scalartype`s) could silently drop data instead of erroring. ([#493](https://github.com/QuantumKitHub/MPSKit.jl/pull/493))
 - `approximate` with `IDMRG2` on a `MultilineMPS` with more than one row wrote the right-to-left
   edge update into the wrong row and refreshed the unit cell edge of the first row only, so the
   rows ended up mixed. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - `leading_boundary` with `GradientGrassmann` ignored the algorithm's `hasconverged` and `shouldstop`
   criteria, always using the optimizer's defaults instead. ([#512](https://github.com/QuantumKitHub/MPSKit.jl/pull/512))
 - `isfinite(::MultilineMPO)` threw (`isfinite(typeof(m))` had no matching type-level method for
-  `Multiline`).
+  `Multiline`). ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `changebonds(::MultilineMPO, ::SvdCut)` threw (`convert(MultilineMPS, ::MultilineMPO)` has no
-  method).
+  method). ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `axes(m::Multiline, i)` threw for `i > 2`, but now returns `Base.OneTo(1)` for every trailing
-  dimension, matching Base's own convention.
+  dimension, matching Base's own convention. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 
 ### Performance
 
+- `dot` on identical `FiniteMPS` objects uses a norm-based shortcut, also avoiding redundant contractions in expectation values. ([#491](https://github.com/QuantumKitHub/MPSKit.jl/pull/491))
+- Improved two-site effective-Hamiltonian contractions for long-range interactions. ([#505](https://github.com/QuantumKitHub/MPSKit.jl/pull/505))
+- Extended scratch-allocator use to additional derivative contractions and TDVP bond updates. ([#520](https://github.com/QuantumKitHub/MPSKit.jl/pull/520))
 - Reorganised the test suite to reduce CI wall time, as well as added the `--fast` test flag
   to test fewer sector and scalar types. ([#517](https://github.com/QuantumKitHub/MPSKit.jl/pull/517))
 - `TDVP2` now performs its two-site split through the shared `gauge2!` (as two-site DMRG already
