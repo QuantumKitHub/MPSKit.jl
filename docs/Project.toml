@@ -14,7 +14,6 @@ Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
-TensorKitTensors = "41b62e7d-e9d1-4e23-942c-79a97adf954b"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [sources]
@@ -25,4 +24,3 @@ Documenter = "1.11"
 DocumenterCitations = "1.5"
 DocumenterInterLinks = "1"
 DocumenterVitepress = "0.3.7"
-TensorKitTensors = "0.2"
