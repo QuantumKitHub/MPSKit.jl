@@ -108,8 +108,8 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
     ϵ = calc_galerkin(mps, operator, mps, envs; alg.backend, allocator)
     E = zero(TensorOperations.promote_contract(scalartype(mps), scalartype(operator)))
 
-    LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 begin
+    with_verbosity(; alg.verbosity) do
+        @log_initialization begin
             E = expectation_value(mps, operator, envs)
             loginit!(log, ϵ, E)
         end
@@ -119,19 +119,19 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
     state = IDMRGState(mps, operator, envs, iter, ϵ, ϵ_truncs, E, timeroutput, allocator)
     it = IterativeSolver(alg, state)
 
-    return LoggingExtras.withlevel(; alg.verbosity) do
+    return with_verbosity(; alg.verbosity) do
         for (mps, envs, ϵ, ΔE) in it
             if ϵ ≤ alg.tol
-                @infov 4 TimerReport(timeroutput)
-                @infov 2 logfinish!(log, it.iter, ϵ, ΔE)
+                @info TimerReport(timeroutput) _group = :mpskit_timing
+                @log_convergence logfinish!(log, it.iter, ϵ, ΔE)
                 break
             end
             if it.iter ≥ alg.maxiter
-                @infov 4 TimerReport(timeroutput)
-                @warnv 1 logcancel!(log, it.iter, ϵ, ΔE)
+                @info TimerReport(timeroutput) _group = :mpskit_timing
+                @log_nonconvergence logcancel!(log, it.iter, ϵ, ΔE)
                 break
             end
-            @infov 3 logiter!(log, it.iter, ϵ, ΔE)
+            @log_iteration logiter!(log, it.iter, ϵ, ΔE)
         end
 
         alg_gauge = adapt_solver(alg.alg_gauge; iter = it.state.iter, g_global = it.state.ϵ)

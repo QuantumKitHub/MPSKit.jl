@@ -7,8 +7,8 @@ function approximate!(
     ϵ::Float64 = 2 * alg.tol
     iter = 0
 
-    LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ)
+    with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
             C_current = ψ.C[:, 0]
 
@@ -43,13 +43,13 @@ function approximate!(
             ϵ = norm(C_current - ψ.C[:, 0])
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ)
+                @log_convergence logfinish!(log, iter, ϵ)
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ)
+                @log_nonconvergence logcancel!(log, iter, ϵ)
             else
-                @infov 3 logiter!(log, iter, ϵ)
+                @log_iteration logiter!(log, iter, ϵ)
             end
         end
     end
@@ -75,8 +75,8 @@ function approximate!(
     iter = 0
     ϵ_truncs = PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), width(ψ)))
 
-    LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ)
+    with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
             C_current = ψ.C[:, 0]
 
@@ -177,13 +177,13 @@ function approximate!(
             end
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ)
+                @log_convergence logfinish!(log, iter, ϵ)
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ)
+                @log_nonconvergence logcancel!(log, iter, ϵ)
             else
-                @infov 3 logiter!(log, iter, ϵ)
+                @log_iteration logiter!(log, iter, ϵ)
             end
         end
     end

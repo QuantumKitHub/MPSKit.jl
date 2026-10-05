@@ -30,19 +30,19 @@ function _approximate_vomps(mps, toapprox, alg::VOMPS, envs)
     state = VOMPSState(mps, toapprox, envs, iter, ϵ)
     it = IterativeSolver(alg, state)
 
-    return LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ)
+    return with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ)
 
         for (mps, envs, ϵ) in it
             if ϵ ≤ alg.tol
-                @infov 2 logfinish!(log, it.iter, ϵ)
+                @log_convergence logfinish!(log, it.iter, ϵ)
                 return mps, envs, AlgorithmInfo(; converged = true, galerkin = ϵ, numiter = it.iter)
             end
             if it.iter ≥ alg.maxiter
-                @warnv 1 logcancel!(log, it.iter, ϵ)
+                @log_nonconvergence logcancel!(log, it.iter, ϵ)
                 return mps, envs, AlgorithmInfo(; converged = false, galerkin = ϵ, numiter = it.iter)
             end
-            @infov 3 logiter!(log, it.iter, ϵ)
+            @log_iteration logiter!(log, it.iter, ϵ)
         end
 
         # this should never be reached

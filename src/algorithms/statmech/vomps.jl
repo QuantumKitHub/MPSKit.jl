@@ -70,19 +70,19 @@ function dominant_eigsolve(
     state = VOMPSState(mps, operator, envs, iter, ϵ)
     it = IterativeSolver(alg, state)
 
-    return LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, leading_eigenvalue(mps, operator, envs))
+    return with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ, leading_eigenvalue(mps, operator, envs))
 
         for (mps, envs, ϵ) in it
             if ϵ ≤ alg.tol
-                @infov 2 logfinish!(log, it.iter, ϵ, leading_eigenvalue(mps, operator, envs))
+                @log_convergence logfinish!(log, it.iter, ϵ, leading_eigenvalue(mps, operator, envs))
                 return mps, envs, AlgorithmInfo(; converged = true, galerkin = ϵ, numiter = it.iter)
             end
             if it.iter ≥ alg.maxiter
-                @warnv 1 logcancel!(log, it.iter, ϵ, leading_eigenvalue(mps, operator, envs))
+                @log_nonconvergence logcancel!(log, it.iter, ϵ, leading_eigenvalue(mps, operator, envs))
                 return mps, envs, AlgorithmInfo(; converged = false, galerkin = ϵ, numiter = it.iter)
             end
-            @infov 3 logiter!(log, it.iter, ϵ, leading_eigenvalue(mps, operator, envs))
+            @log_iteration logiter!(log, it.iter, ϵ, leading_eigenvalue(mps, operator, envs))
         end
 
         # this should never be reached

@@ -2,10 +2,41 @@ module IterativeLoggers
 
 export IterLog
 export loginit!, logiter!, logfinish!, logcancel!
+export @log_initialization, @log_iteration, @log_convergence, @log_nonconvergence
 
 export format_time
+export with_verbosity
 
 using Printf: @printf, @sprintf
+using LoggingExtras: EarlyFilteredLogger, current_logger, with_logger
+import LoggingExtras
+
+const VERBOSITY_LEVELS = (
+    mpskit_initialization = 2,
+    mpskit_iteration = 3,
+    mpskit_convergence = 2,
+    mpskit_nonconvergence = 1,
+    mpskit_warning = 1,
+    mpskit_timing = 4,
+)
+
+"""
+    with_verbosity(f; verbosity::Integer)
+
+Run `f` with MPSKit's numeric verbosity filter. Messages use standard logging macros
+with symbolic groups so suppressed messages are filtered before evaluating their contents.
+Messages in other groups pass through unchanged. As with `LoggingExtras.withlevel`,
+the current logger's severity threshold is temporarily overridden to `Info`.
+"""
+function with_verbosity(f; verbosity::Integer)
+    return LoggingExtras.withlevel() do
+        logger = EarlyFilteredLogger(current_logger()) do args
+            level = get(VERBOSITY_LEVELS, args.group, nothing)
+            return isnothing(level) || verbosity >= level
+        end
+        return with_logger(f, logger)
+    end
+end
 
 @enum LogState INIT ITER CONV CANCEL
 
@@ -85,6 +116,61 @@ function logcancel!(
     log.state = CANCEL
 
     return log
+end
+
+# Standard algorithm messages
+# ---------------------------
+
+# Expand directly to a standard logging macro at the caller's source location.
+function phase_log_expr(source, severity, group, message, args...)
+    return Expr(
+        :macrocall, GlobalRef(Base, severity), source, message,
+        Expr(:(=), :_group, QuoteNode(group)), args...
+    )
+end
+
+"""
+    @log_initialization message args...
+
+Log `message` at `Info` severity in the `:mpskit_initialization` group (verbosity 2).
+The message is evaluated only when enabled; standard logging metadata is supported.
+
+```julia
+@log_initialization loginit!(log, error, expectation_value(ψ, H, envs))
+```
+"""
+macro log_initialization(message, args...)
+    return esc(phase_log_expr(__source__, Symbol("@info"), :mpskit_initialization, message, args...))
+end
+
+"""
+    @log_iteration message args...
+
+Log `message` at `Info` severity in the `:mpskit_iteration` group (verbosity 3).
+The message is evaluated only when enabled; standard logging metadata is supported.
+"""
+macro log_iteration(message, args...)
+    return esc(phase_log_expr(__source__, Symbol("@info"), :mpskit_iteration, message, args...))
+end
+
+"""
+    @log_convergence message args...
+
+Log `message` at `Info` severity in the `:mpskit_convergence` group (verbosity 2).
+The message is evaluated only when enabled; standard logging metadata is supported.
+"""
+macro log_convergence(message, args...)
+    return esc(phase_log_expr(__source__, Symbol("@info"), :mpskit_convergence, message, args...))
+end
+
+"""
+    @log_nonconvergence message args...
+
+Log `message` at `Warn` severity in the `:mpskit_nonconvergence` group (verbosity 1).
+The message is evaluated only when enabled; standard logging metadata is supported.
+"""
+macro log_nonconvergence(message, args...)
+    return esc(phase_log_expr(__source__, Symbol("@warn"), :mpskit_nonconvergence, message, args...))
 end
 
 # Output

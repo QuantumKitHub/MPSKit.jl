@@ -6,8 +6,8 @@ function leading_boundary(
     ϵ::Float64 = 2 * alg.tol
     iter = 0
 
-    LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, leading_eigenvalue(ψ, operator, envs))
+    with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ, leading_eigenvalue(ψ, operator, envs))
         for outer iter in 1:(alg.maxiter)
             alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = ϵ)
             C_current = ψ.C[:, 0]
@@ -44,13 +44,13 @@ function leading_boundary(
             ϵ = norm(C_current - ψ.C[:, 0])
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ, leading_eigenvalue(ψ, operator, envs))
+                @log_convergence logfinish!(log, iter, ϵ, leading_eigenvalue(ψ, operator, envs))
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ, leading_eigenvalue(ψ, operator, envs))
+                @log_nonconvergence logcancel!(log, iter, ϵ, leading_eigenvalue(ψ, operator, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ, leading_eigenvalue(ψ, operator, envs))
+                @log_iteration logiter!(log, iter, ϵ, leading_eigenvalue(ψ, operator, envs))
             end
         end
     end
@@ -72,8 +72,8 @@ function leading_boundary(
     iter = 0
     ϵ_truncs = PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), width(ψ)))
 
-    LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ)
+    with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
             alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = ϵ)
             C_current = ψ.C[:, 0]
@@ -182,13 +182,13 @@ function leading_boundary(
             end
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ)
+                @log_convergence logfinish!(log, iter, ϵ)
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ)
+                @log_nonconvergence logcancel!(log, iter, ϵ)
             else
-                @infov 3 logiter!(log, iter, ϵ)
+                @log_iteration logiter!(log, iter, ϵ)
             end
         end
     end
