@@ -226,26 +226,26 @@ function uniform_leftorth!(
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     C[end] = normalize!(C₀)
-    return LoggingExtras.withlevel(; alg.verbosity) do
+    return with_verbosity(; alg.verbosity) do
         # initialize algorithm and temporary variables
         log = IterLog("LC")
         A_tail = _transpose_tail.(A) # pre-transpose A
         CA_tail = similar.(A_tail)  # pre-allocate workspace
         state = (; AL, C, A, A_tail, CA_tail, iter = 0, ϵ = Inf, timeroutput, backend, allocator)
         it = IterativeSolver(alg, state)
-        loginit!(log, it.ϵ)
+        @log_initialization loginit!(log, it.ϵ)
 
         # iteratively solve
         for (AL, C) in it
             iter, ϵ = it.iter, it.ϵ
             if ϵ <= it.tol
-                @infov 2 logfinish!(log, iter, ϵ)
+                @log_convergence logfinish!(log, iter, ϵ)
                 return AL, C
             elseif iter > it.maxiter
-                @warnv 2 logcancel!(log, iter, ϵ)
+                @log_nonconvergence logcancel!(log, iter, ϵ)
                 return AL, C
             end
-            @infov 3 logiter!(log, iter, ϵ)
+            @log_iteration logiter!(log, iter, ϵ)
         end
     end
 end
@@ -295,25 +295,25 @@ function uniform_rightorth!(
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     C[end] = normalize!(C₀)
-    return LoggingExtras.withlevel(; alg.verbosity) do
+    return with_verbosity(; alg.verbosity) do
         # initialize algorithm and temporary variables
         log = IterLog("RC")
         AC_tail = _similar_tail.(A) # pre-allocate workspace
         state = (; AR, C, A, AC_tail, iter = 0, ϵ = Inf, timeroutput, backend, allocator)
         it = IterativeSolver(alg, state)
-        loginit!(log, it.ϵ)
+        @log_initialization loginit!(log, it.ϵ)
 
         # iteratively solve
         for (AR, C) in it
             iter, ϵ = it.iter, it.ϵ
             if ϵ <= it.tol
-                @infov 2 logfinish!(log, iter, ϵ)
+                @log_convergence logfinish!(log, iter, ϵ)
                 return AR, C
             elseif iter > it.maxiter
-                @warnv 2 logcancel!(log, iter, ϵ)
+                @log_nonconvergence logcancel!(log, iter, ϵ)
                 return AR, C
             end
-            @infov 3 logiter!(log, iter, ϵ)
+            @log_iteration logiter!(log, iter, ϵ)
         end
     end
 end

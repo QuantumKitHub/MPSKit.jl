@@ -310,8 +310,8 @@ function find_groundstate_sweep!(
     fwd, bwd = _sweep_ranges(alg, ψ)
     iter = 0
 
-    LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ_global, expectation_value(ψ, H, envs))
+    with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ_global, expectation_value(ψ, H, envs))
         for outer iter in 1:(alg.maxiter)
             @timeit timeroutput "sweep" begin
                 # left-to-right
@@ -349,15 +349,15 @@ function find_groundstate_sweep!(
             # truncation error rather than the (unreachable) bare `tol`. With no truncation
             # (`ϵ_truncs .= 0`, e.g. single-site/QR gauge) this reduces to the plain `ϵ_global ≤ tol`.
             if ϵ_global <= max(alg.tol, maximum(ϵ_truncs))
-                @infov 4 TimerReport(timeroutput)
-                @infov 2 logfinish!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
+                @info TimerReport(timeroutput) _group = :mpskit_timing
+                @log_convergence logfinish!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
                 break
             end
             if iter == alg.maxiter
-                @infov 4 TimerReport(timeroutput)
-                @warnv 1 logcancel!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
+                @info TimerReport(timeroutput) _group = :mpskit_timing
+                @log_nonconvergence logcancel!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
             else
-                @infov 3 logiter!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
+                @log_iteration logiter!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
             end
         end
     end

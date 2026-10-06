@@ -49,6 +49,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- Algorithm logging now uses named initialization, iteration, convergence, and non-convergence
+  groups, replacing the deprecated LoggingExtras verbosity APIs. LoggingExtras 1.1 and 1.2 are
+  supported alongside 1.0. Canonicalization now logs initialization at verbosity 2 and
+  non-convergence warnings at verbosity 1, consistently with the other algorithms.
 - `FiniteMPOHamiltonian`/`InfiniteMPOHamiltonian` constructed from a set of local terms now share
   virtual channels between terms that start out with the same operators, up to a scalar factor,
   and add up terms that are linearly dependent. The resulting Hamiltonian is unchanged, but its

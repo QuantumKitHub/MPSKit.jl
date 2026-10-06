@@ -45,8 +45,8 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
         log = IterLog(string(nameof(typeof(alg))))
         truncation_errors = []
         ϵ_max = 0.0
-        LoggingExtras.withlevel(; verbosity) do
-            @infov 2 loginit!(log, 0.0, first(t_span))
+        with_verbosity(; verbosity) do
+            @log_initialization loginit!(log, 0.0, first(t_span))
             for iter in 1:(length(t_span) - 1)
                 t = t_span[iter]
                 dt = t_span[iter + 1] - t
@@ -63,9 +63,9 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
                     ϵ_step = Float64(maximum(info_step.truncation_errors; init = 0.0))
                 end
                 ϵ_max = max(ϵ_max, ϵ_step)
-                @infov 3 logiter!(log, iter, ϵ_step, t)
+                @log_iteration logiter!(log, iter, ϵ_step, t)
             end
-            @infov 2 logfinish!(log, length(t_span), ϵ_max, t_span[end])
+            @log_convergence logfinish!(log, length(t_span), ϵ_max, t_span[end])
         end
         info = AlgorithmInfo(;
             numiter = length(t_span) - 1,

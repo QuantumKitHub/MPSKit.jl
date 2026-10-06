@@ -58,6 +58,7 @@ using Compat: @compat
 @compat public DynamicTols, DynamicTol, AdaptiveKrylov
 @compat public VERBOSE_NONE, VERBOSE_WARN, VERBOSE_CONV, VERBOSE_ITER, VERBOSE_ALL
 @compat public IterLog, loginit!, logiter!, logfinish!, logcancel!
+@compat public @log_initialization, @log_iteration, @log_convergence, @log_nonconvergence
 @compat public default_allocator
 
 # Imports

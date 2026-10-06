@@ -82,21 +82,21 @@ function dominant_eigsolve(
     state = VUMPSState(mps, operator, envs, iter, ϵ, which, timeroutput)
     it = IterativeSolver(alg, state)
 
-    result = LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ, vumps_objective(mps, operator, envs))
+    result = with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ, vumps_objective(mps, operator, envs))
 
         for (mps, envs, ϵ) in it
             if ϵ ≤ alg.tol
-                @infov 4 TimerReport(timeroutput)
-                @infov 2 logfinish!(log, it.iter, ϵ, vumps_objective(mps, operator, envs))
+                @info TimerReport(timeroutput) _group = :mpskit_timing
+                @log_convergence logfinish!(log, it.iter, ϵ, vumps_objective(mps, operator, envs))
                 return mps, envs, AlgorithmInfo(; converged = true, galerkin = ϵ, numiter = it.iter)
             end
             if it.iter ≥ alg.maxiter
-                @infov 4 TimerReport(timeroutput)
-                @warnv 1 logcancel!(log, it.iter, ϵ, vumps_objective(mps, operator, envs))
+                @info TimerReport(timeroutput) _group = :mpskit_timing
+                @log_nonconvergence logcancel!(log, it.iter, ϵ, vumps_objective(mps, operator, envs))
                 return mps, envs, AlgorithmInfo(; converged = false, galerkin = ϵ, numiter = it.iter)
             end
-            @infov 3 logiter!(log, it.iter, ϵ, vumps_objective(mps, operator, envs))
+            @log_iteration logiter!(log, it.iter, ϵ, vumps_objective(mps, operator, envs))
         end
 
         # this should never be reached

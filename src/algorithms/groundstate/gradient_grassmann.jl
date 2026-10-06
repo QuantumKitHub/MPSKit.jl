@@ -121,8 +121,8 @@ function _find_groundstate(ψ, H, alg::GradientGrassmann, envs, scheduler, timer
         isometrictransport = true,
     )
 
-    LoggingExtras.withlevel(; verbosity = method_verbosity) do
-        @infov 4 TimerReport(timeroutput)
+    with_verbosity(; verbosity = method_verbosity) do
+        @info TimerReport(timeroutput) _group = :mpskit_timing
     end
 
     info = _optimkit_info(alg, x, f, g, normgradhistory)

@@ -4,8 +4,8 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environment
     iter = 0
     log = IterLog("DMRG2")
 
-    LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ)
+    with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); (length(ψ) - 2):-1:1]
@@ -23,13 +23,13 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG2, envs = environment
             ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ), typeof(envs)}
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ)
+                @log_convergence logfinish!(log, iter, ϵ)
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ)
+                @log_nonconvergence logcancel!(log, iter, ϵ)
             else
-                @infov 3 logiter!(log, iter, ϵ)
+                @log_iteration logiter!(log, iter, ϵ)
             end
         end
     end
@@ -43,8 +43,8 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments
     iter = 0
     log = IterLog("DMRG")
 
-    LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, ϵ)
+    with_verbosity(; alg.verbosity) do
+        @log_initialization loginit!(log, ϵ)
         for outer iter in 1:(alg.maxiter)
             ϵ = 0.0
             for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
@@ -59,13 +59,13 @@ function approximate!(ψ::AbstractFiniteMPS, Oϕ, alg::DMRG, envs = environments
             ψ, envs = alg.finalize(iter, ψ, Oϕ, envs)::Tuple{typeof(ψ), typeof(envs)}
 
             if ϵ <= alg.tol
-                @infov 2 logfinish!(log, iter, ϵ)
+                @log_convergence logfinish!(log, iter, ϵ)
                 break
             end
             if iter == alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ)
+                @log_nonconvergence logcancel!(log, iter, ϵ)
             else
-                @infov 3 logiter!(log, iter, ϵ)
+                @log_iteration logiter!(log, iter, ϵ)
             end
         end
     end
