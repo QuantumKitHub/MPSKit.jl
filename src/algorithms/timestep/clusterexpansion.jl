@@ -15,8 +15,9 @@ For full-rank uniform physical spaces of dimension `d`, the virtual dimension gr
 as `1 + d^2 + ⋯ + d^(2 floor(N/2))`. Mixed physical spaces and rank-deficient residuals
 can require additional complementary virtual channels. Exact cluster exponentials
 also grow exponentially with `N`. `tol` is the relative singular-value cutoff used
-to identify shared SVD support and compute environment pseudoinverses; components
-below the SVD cutoff are retained in the complementary channels.
+to identify shared SVD support; components below the cutoff are retained in the
+complementary channels. Environment equations are solved directly without a
+second singular-value cutoff.
 """
 struct ClusterExpansion <: Algorithm
     N::Int
@@ -65,7 +66,7 @@ function cluster_build(O, H, τ, n::Val{N}, tol) where {N}
     # Every translated window must see the completed previous stage. Compute
     # all corrections before inserting any of them, including across the cell seam.
     if isodd(N)
-        centers = [cluster_correction(H, previous, s, τ, n, tol) for s in 1:length(H)]
+        centers = [cluster_correction(H, previous, s, τ, n) for s in 1:length(H)]
         for s in 1:length(H)
             previous[s + nt][level, 1, 1, level] = centers[s]
         end
@@ -105,9 +106,9 @@ function cluster_residual(H, O, start::Int, τ, n::Val{N}) where {N}
     return add_util_leg(exact - cluster_contract(O, start, n, 1))
 end
 
-function cluster_correction(H, O, start, τ, n::Val, tol)
+function cluster_correction(H, O, start, τ, n::Val)
     residual = cluster_residual(H, O, start, τ, n)
-    return cluster_center(O, start, residual, n, tol)
+    return cluster_center(O, start, residual, n)
 end
 
 function cluster_pair(H, O, start, τ, n::Val{2}, tol)
@@ -120,15 +121,13 @@ function cluster_pair(H, O, start, τ, n::Val{N}, tol) where {N}
     nt = (N - 1) ÷ 2
     left, right = cluster_environments(O, start, n)
     left_map, right_map = cluster_environment_maps(left, right, Val(nt))
-    center = cluster_center(left_map, right_map, residual, n, tol)
+    center = cluster_center(left_map, right_map, residual, n)
     C = permute(center, ((1, 2, 4), (3, 5, 6)))
 
-    # The pseudoinverses restrict the center to the active outer-environment
+    # The minimum-norm solves restrict the center to the active environment
     # subspaces. Complete only these directions, rather than the redundant
-    # virtual directions introduced by previous stages.
-    # Completed factors span each physical environment space. Untruncated
-    # LQ/QR bases retain all these directions, including weak symmetry sectors;
-    # a global cutoff here would disagree with the blockwise pseudoinverses.
+    # virtual directions introduced by previous stages. Untruncated LQ/QR bases
+    # retain the entire physical environment support, including weak sectors.
     _, Q_left = right_orth(left_map)
     Q_right, _ = left_orth(right_map)
     F_left = Q_left' ⊗ id(storagetype(C), codomain(C)[2] ⊗ codomain(C)[3])
@@ -300,72 +299,68 @@ function cluster_environment_maps(left, right, ::Val{L}) where {L}
         permute(right, ((1,), indices .+ 1))
 end
 
-function cluster_center(O, start::Int, residual::TensorMap, n::Val{N}, tol::Real) where {N}
+function cluster_center(O, start::Int, residual::TensorMap, n::Val{N}) where {N}
     left, right = cluster_environments(O, start, n)
     left_map, right_map = cluster_environment_maps(left, right, Val((N - 1) ÷ 2))
-    return cluster_center(left_map, right_map, residual, n, tol)
-end
-
-function cluster_center(left_map::TensorMap, right_map::TensorMap, residual::TensorMap, ::Val{N}, tol::Real) where {N}
-    nt = (N - 1) ÷ 2
-    # Blockwise pseudoinverses preserve symmetry sectors and dual spaces.
-    physical_indices = ntuple(identity, Val(nt))
-    left_inverse = permute(
-        pinv(left_map; rtol = tol),
-        (((physical_indices .+ (nt + 2))..., 1), ntuple(identity, Val(nt + 1)) .+ 1)
-    )
-    right_inverse = permute(
-        pinv(right_map; rtol = tol),
-        (ntuple(identity, Val(nt + 1)) .+ nt, (2nt + 2, physical_indices...))
-    )
-    return cluster_apply_inverses(left_inverse, residual, right_inverse, Val(N))
+    return cluster_center(left_map, right_map, residual, n)
 end
 
 """
-    cluster_apply_inverses(left_inverse, residual, right_inverse, ::Val{N})
+    cluster_center(left_map, right_map, residual, ::Val{N})
 
-Apply the environment pseudoinverses `L⁺` and `R⁺` to the residual, shown for
-`N = 3`. Each tensor has its domain above and codomain below. Matching positive
-labels are contracted; negative labels are the open legs of `center`. The tensors
-are drawn separately to keep this orientation explicit. Bonds `1` and `2` are
-the residual's trivial boundary legs.
+Solve the environment equations from the left and right without forming inverse
+maps. Completed environments have full row/column support in each symmetry
+sector; rectangular solves choose the minimum-norm center.
+
+The grouped map layouts for `N = 3` are shown below. Domain bundles are above
+and codomain bundles below. `pᵢ′` is the dual physical space, and `u_L`/`u_R`
+are the trivial boundary spaces.
+
+First group the left physical legs of the residual into `B_L` and solve `L \\ B_L`:
 
 ```
-        1   4             3   -3   5   2             -4   6
-        │   │             │    │   │   │              │   │
-     ┌──┴───┴──┐       ┌──┴────┴───┴───┴──┐        ┌──┴───┴──┐
-     │   L⁺    │       │     residual     │        │   R⁺    │
-     └──┬───┬──┘       └──┬────┬───┬───┬──┘        └──┬───┬──┘
-        │   │             │    │   │   │              │   │
-        3  -1             1    4  -2   6              5   2
+          V_L                 (p₂′, p₃′, p₂, p₃, u_R)
+           │                             │
+     ┌─────┴─────┐                 ┌─────┴─────┐
+     │     L     │                 │    B_L    │
+     └─────┬─────┘                 └─────┬─────┘
+           │                             │
+    (u_L, p₁, p₁′)                (u_L, p₁, p₁′)
 ```
 
-For larger clusters, each upper/lower environment connection is a bundle of
-`nt = (N - 1) ÷ 2` physical legs. The center has one upper/lower physical leg
-for odd `N`, or two for even `N`, in addition to its two virtual legs.
+Regroup that solution into `B_R` and solve `B_R / R`:
+
+```
+     (p₃′, p₃, u_R)                (p₃′, p₃, u_R)
+           │                             │
+     ┌─────┴─────┐                 ┌─────┴─────┐
+     │     R     │                 │    B_R    │
+     └─────┬─────┘                 └─────┬─────┘
+           │                             │
+          V_R                     (V_L, p₂, p₂′)
+```
+
+Finally move `p₂′` back into the domain. The center has one physical leg per
+side for odd `N`, or two for even `N`, and its two virtual legs. For larger
+clusters, each outer physical space above is a bundle of `(N - 1) ÷ 2` legs.
 """
-@generated function cluster_apply_inverses(
-        left_inverse::AbstractTensorMap, residual::AbstractTensorMap,
-        right_inverse::AbstractTensorMap, ::Val{N}
+@generated function cluster_center(
+        left_map::TensorMap, right_map::TensorMap, residual::TensorMap, ::Val{N}
     ) where {N}
     nt = (N - 1) ÷ 2
-    width = iseven(N) ? 2 : 1
-    # Positive labels connect the environments to the corresponding physical
-    # input/output legs of the exact cluster. Negative labels leave only the
-    # central site(s) and their virtual bonds open.
-    left_input = Tuple(3:(nt + 2))
-    left_output = Tuple((nt + 3):(2nt + 2))
-    right_input = Tuple((2nt + 3):(3nt + 2))
-    right_output = Tuple((3nt + 3):(4nt + 2))
-    center_output = Tuple(-(2:(width + 1)))
-    center_input = Tuple(-((width + 2):(2width + 1)))
-    right_bond = -2width - 2
-    out = tensorexpr(:center, (-1, center_output...), (center_input..., right_bond))
-    left = tensorexpr(:left_inverse, (left_input..., -1), (1, left_output...))
-    rhs = tensorexpr(
-        :residual, (1, left_output..., center_output..., right_output...),
-        (left_input..., center_input..., right_input..., 2)
-    )
-    right = tensorexpr(:right_inverse, (right_input..., 2), (right_bond, right_output...))
-    return macroexpand(@__MODULE__, :(return @plansor $out := $left * $rhs * $right))
+    width = N - 2nt
+    # Group all left environment legs into the codomain for the left solve.
+    left_indices = (1, Tuple(2:(nt + 1))..., Tuple((N + 2):(N + nt + 1))...)
+    remaining = (Tuple((nt + 2):(N + 1))..., Tuple((N + nt + 2):(2N + 2))...)
+    # After solving, group the right environment legs into the domain.
+    middle_indices = (1, Tuple(2:(width + 1))..., Tuple((nt + width + 2):(nt + 2width + 1))...)
+    right_indices = (Tuple((width + 2):(nt + width + 1))..., Tuple((nt + 2width + 2):(2nt + 2width + 2))...)
+    center_indices = (Tuple(1:(width + 1)), Tuple((width + 2):(2width + 2)))
+    return quote
+        left_rhs = permute(residual, $((left_indices, remaining)))
+        left_solved = left_map \ left_rhs
+        right_rhs = permute(left_solved, $((middle_indices, right_indices)))
+        solved = right_rhs / right_map
+        return permute(solved, $center_indices)
+    end
 end

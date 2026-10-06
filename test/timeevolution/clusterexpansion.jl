@@ -102,7 +102,7 @@ end
                 @test dense(U, N) ≈ exact_cluster atol = 1.0e-10
             end
             residual = @inferred MPSKit.cluster_residual(symmetric_H, U, 1, -0.1im, Val(5))
-            center = @inferred MPSKit.cluster_center(U, 1, residual, Val(5), 1.0e-12)
+            center = @inferred MPSKit.cluster_center(U, 1, residual, Val(5))
             @test center isa TensorMap
         end
     end
@@ -111,7 +111,7 @@ end
         for n in (Val(4), Val(5))
             U = @inferred MPSKit.make_cluster_mpo(H, -0.1im, n, 1.0e-12)
             residual = @inferred MPSKit.cluster_residual(H, U, 1, -0.1im, n)
-            center = @inferred MPSKit.cluster_center(U, 1, residual, n, 1.0e-12)
+            center = @inferred MPSKit.cluster_center(U, 1, residual, n)
             @test center isa TensorMap
         end
     end
@@ -218,6 +218,13 @@ end
             longest = model === onsite || model === dimers || iszero(dt) ? 6 : 5
             for s in eachindex(lattice), L in 1:longest
                 @test cluster_dense_window(U, s, L) ≈ cluster_exact_window(model, -im * dt, s, L) atol = 1.0e-10
+            end
+        end
+        # A large cutoff changes the SVD channels, not the matched exponentials.
+        for N in (3, 5), tol in (0.1, 0.5)
+            U = @inferred MPSKit.make_cluster_mpo(H, -0.1im, Val(N), tol)
+            for s in eachindex(lattice), L in 1:N
+                @test cluster_dense_window(U, s, L) ≈ cluster_exact_window(H, -0.1im, s, L) atol = 1.0e-10
             end
         end
         for N in 3:4, s in eachindex(lattice)
