@@ -12,10 +12,6 @@ function cluster_dense_window(U, start, L)
 end
 
 function cluster_exact_window(H, τ, start, L)
-    if L == 1
-        onsite = H[start][1, 1, 1, end]
-        return exp(τ * MPSKit.removeunit(MPSKit.removeunit(onsite, 4), 1))
-    end
     sites = [copy(H[start + i - 1]) for i in 1:L]
     sites[1] = sites[1][1, :, :, :]
     sites[end] = sites[end][:, :, :, end]
@@ -237,5 +233,85 @@ end
             end
             @test log2(errors[1] / errors[2]) ≥ N - 0.15
         end
+    end
+end
+
+
+# Independent random couplings and onsite terms exercise nonuniform finite chains.
+function cluster_finite_model(rng, Ps; onsite_only = false, dimers = false)
+    terms = Pair[]
+    for s in eachindex(Ps)
+        a = randn!(rng, zeros(ComplexF64, Ps[s] ← Ps[s]))
+        push!(terms, s => (a + a') / 2)
+        if s < length(Ps) && !onsite_only && (!dimers || isodd(s))
+            b = randn!(rng, zeros(ComplexF64, Ps[s] ⊗ Ps[s + 1] ← Ps[s] ⊗ Ps[s + 1]))
+            push!(terms, (s, s + 1) => (b + b') / 2)
+        end
+    end
+    return FiniteMPOHamiltonian(Ps, terms...)
+end
+
+@testset "Finite cluster expansion" begin
+    rng = MersenneTwister(723)
+    lattices = (
+        [ℂ^2], [ℂ^2, ℂ^3], [ℂ^2, ℂ^3, ℂ^2], [ℂ^2, ℂ^3, ℂ^2, ℂ^3],
+        [ℂ^2, ℂ^3, ℂ^2, ℂ^3, ℂ^2], [ℂ^2, ℂ^3, ℂ^2, ℂ^3, ℂ^2, ℂ^3],
+        [ℝ^2, ℝ^3, ℝ^2, ℝ^3, ℝ^2], [ℙ^2, ℙ^3, ℙ^2, ℙ^3, ℙ^2],
+        [Rep[U₁](0 => 1, 1 => 1), dual(Rep[U₁](0 => 1, 1 => 1, 2 => 1)), Rep[U₁](0 => 1, 1 => 1)],
+        [Rep[SU₂](1 // 2 => 1), Rep[SU₂](1 => 1), Rep[SU₂](1 // 2 => 1), Rep[SU₂](1 => 1), Rep[SU₂](1 // 2 => 1)],
+        [Vect[FermionParity](0 => 1, 1 => 1), Vect[FermionParity](0 => 2, 1 => 1), Vect[FermionParity](0 => 1, 1 => 1)],
+    )
+    for Ps in lattices
+        H = cluster_finite_model(rng, Ps)
+        L = length(H)
+        for N in 1:min(6, L)
+            U = @inferred MPSKit.make_cluster_mpo(H, -0.1im, Val(N), 1.0e-12)
+            @test U isa FiniteMPO
+            @test length(U) == L
+            @test dim(left_virtualspace(U, 1)) == dim(right_virtualspace(U, L)) == 1
+            for s in 1:L
+                @test physicalspace(U, s) == Ps[s]
+                s < L && @test right_virtualspace(U, s) == left_virtualspace(U, s + 1)
+                for width in 1:min(N, L - s + 1)
+                    @test cluster_dense_window(U, s, width) ≈ cluster_exact_window(H, -0.1im, s, width) atol = 1.0e-10
+                end
+            end
+        end
+        # The public entry point caps N at L, including one-site chains.
+        for N in (L, L + 3), tol in (1.0e-12, 0.5)
+            U = make_time_mpo(H, 0.1, ClusterExpansion(N; tol))
+            @test convert(TensorMap, MPSKit.DenseMPO(U)) ≈ exp(-0.1im * convert(TensorMap, H)) atol = 1.0e-10
+        end
+    end
+end
+
+@testset "Finite edge cases and leading error" begin
+    rng = MersenneTwister(984)
+    Ps = [ℂ^2, ℂ^3, ℂ^2, ℂ^3, ℂ^2]
+    H = cluster_finite_model(rng, Ps)
+    onsite = cluster_finite_model(rng, Ps; onsite_only = true)
+    dimers = cluster_finite_model(rng, Ps; dimers = true)
+    for (model, dt) in ((H, 0.0), (H, -0.1), (H, -0.1im), (onsite, 0.1), (dimers, 0.1))
+        U = make_time_mpo(model, dt, ClusterExpansion(5))
+        @test convert(TensorMap, MPSKit.DenseMPO(U)) ≈ exp(-im * dt * convert(TensorMap, model)) atol = 1.0e-10
+    end
+    @test dim(left_virtualspace(make_time_mpo(onsite, 0.1, ClusterExpansion(5)), 3)) == 1
+    @test_throws ArgumentError make_time_mpo(FiniteMPOHamiltonian(similar(parent(H), 0)), 0.1, ClusterExpansion(2))
+    for N in (3, 4)
+        errors = Float64[]
+        for dt in (0.1, 0.05)
+            U = make_time_mpo(H, dt, ClusterExpansion(N))
+            push!(errors, norm(convert(TensorMap, MPSKit.DenseMPO(U)) - exp(-im * dt * convert(TensorMap, H))))
+        end
+        @test log2(errors[1] / errors[2]) ≥ N - 0.15
+    end
+    P = ℂ^2
+    a = randn!(rng, zeros(ComplexF64, P ← P))
+    b = randn!(rng, zeros(ComplexF64, P ⊗ P ← P ⊗ P))
+    infinite = InfiniteMPOHamiltonian(PeriodicArray([P]), 1 => (a + a') / 2, (1, 2) => (b + b') / 2)
+    for L in (4, 6), N in 1:5
+        finite = make_time_mpo(open_boundary_conditions(infinite, L), 0.1, ClusterExpansion(N))
+        projected = open_boundary_conditions(make_time_mpo(infinite, 0.1, ClusterExpansion(N)), L)
+        @test convert(TensorMap, MPSKit.DenseMPO(finite)) ≈ convert(TensorMap, MPSKit.DenseMPO(projected)) atol = 1.0e-10
     end
 end

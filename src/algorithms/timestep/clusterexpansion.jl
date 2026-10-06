@@ -2,14 +2,17 @@
     ClusterExpansion(N; tol = 1.0e-12)
     ClusterExpansion(; N = 2, tol = 1.0e-12)
 
-Construct an infinite time evolution MPO for a nearest-neighbor Hamiltonian by
+Construct a finite or infinite time evolution MPO for a nearest-neighbor Hamiltonian by
 matching exact exponentials on clusters of up to `N` sites. This is the nonperturbative construction of
 [Vanhecke, Vanderstraeten and Verstraete (2021)](https://doi.org/10.1103/PhysRevA.103.L020402).
 For nearest-neighbor Hamiltonians the error is `O(dt^N)`.
 
-The unit cell may contain different physical spaces of the same TensorKit space type.
-Symmetry sectors are preserved throughout the construction. Every translated cluster
-is matched, including those crossing the unit-cell boundary.
+Sites may have different physical spaces of the same TensorKit space type.
+Symmetry sectors are preserved throughout the construction. Infinite Hamiltonians
+match every translated cluster, including those crossing the unit-cell boundary.
+Finite Hamiltonians match every cluster contained in the chain and return an
+open-boundary MPO. For a chain of length `L`, the cluster size is capped at `L`;
+when `N ≥ L`, the entire finite-chain exponential is matched up to roundoff.
 
 For full-rank uniform physical spaces of dimension `d`, the virtual dimension grows
 as `1 + d^2 + ⋯ + d^(2 floor(N/2))`. Mixed physical spaces and rank-deficient residuals
@@ -30,23 +33,38 @@ struct ClusterExpansion <: Algorithm
 end
 ClusterExpansion(; N::Integer = 2, kwargs...) = ClusterExpansion(N; kwargs...)
 
-function make_time_mpo(H::InfiniteMPOHamiltonian, dt::Number, alg::ClusterExpansion)
+function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::ClusterExpansion)
     # The only dispatch on a runtime cluster size. All subsequent stages and
     # contraction shapes are determined by this Val parameter.
-    return make_cluster_mpo(H, -im * dt, Val(alg.N), alg.tol)
+    isempty(H) && throw(ArgumentError("Hamiltonian must contain at least one site"))
+    N = isfinite(H) ? min(alg.N, length(H)) : alg.N
+    return make_cluster_mpo(H, -im * dt, Val(N), alg.tol)
 end
 
-function make_cluster_mpo(H::InfiniteMPOHamiltonian, τ::Number, n::Val, tol::Real)
+function make_cluster_mpo(H::MPOHamiltonian, τ::Number, n::Val, tol::Real)
     T = promote_type(scalartype(H), typeof(τ))
     storage = TensorKit.similarstoragetype(storagetype(H), T)
-    O = PeriodicArray([cluster_initial_tensor(H[i], τ, storage) for i in 1:length(H)])
+    O = map(parent(H)) do h
+        return cluster_initial_tensor(h, τ, storage)
+    end
     # These cases are already exact products; avoid building channels from
     # roundoff in differences of independently contracted exponentials.
-    (iszero(τ) || all(cluster_is_onsite, parent(H))) && return InfiniteMPO(O)
-    return InfiniteMPO(cluster_build(O, H, τ, n, tol))
+    (iszero(τ) || all(cluster_is_onsite, parent(H))) && return cluster_finalize(O)
+    return cluster_finalize(cluster_build(O, H, τ, n, tol))
 end
 
-cluster_is_onsite(h) = size(h, 1) == 2 && size(h, 4) == 2
+cluster_is_onsite(h) = size(h, 1) ≤ 2 && size(h, 4) ≤ 2
+
+cluster_finalize(O::PeriodicVector) = InfiniteMPO(O)
+function cluster_finalize(O::Vector)
+    O[1] = O[1][1, :, :, :]
+    O[end] = O[end][:, :, :, 1]
+    # Remove structurally unused levels only after all stages have finished.
+    return remove_orphans!(FiniteMPO(O); tol = 0)
+end
+
+cluster_starts(H::InfiniteMPOHamiltonian, ::Val) = 1:length(H)
+cluster_starts(H::FiniteMPOHamiltonian, ::Val{N}) where {N} = 1:(length(H) - N + 1)
 
 function cluster_initial_tensor(h, τ, ::Type{A}) where {A}
     P = physicalspace(h)
@@ -61,20 +79,21 @@ end
 cluster_build(O, H, τ, ::Val{1}, tol) = O
 function cluster_build(O, H, τ, n::Val{N}, tol) where {N}
     previous = cluster_build(O, H, τ, Val(N - 1), tol)
+    starts = cluster_starts(H, n)
     nt = (N - 1) ÷ 2
     level = N ÷ 2 + 1
     # Every translated window must see the completed previous stage. Compute
     # all corrections before inserting any of them, including across the cell seam.
     if isodd(N)
-        centers = [cluster_correction(H, previous, s, τ, n) for s in 1:length(H)]
-        for s in 1:length(H)
+        centers = [cluster_correction(H, previous, s, τ, n) for s in starts]
+        for s in starts
             previous[s + nt][level, 1, 1, level] = centers[s]
         end
         return previous
     else
-        pairs = [cluster_pair(H, previous, s, τ, n, tol) for s in 1:length(H)]
+        pairs = [cluster_pair(H, previous, s, τ, n, tol) for s in starts]
         expanded = cluster_expand(previous, pairs, n)
-        for s in 1:length(H)
+        for s in starts
             expanded[s + nt][level - 1, 1, 1, level] = pairs[s][1]
             expanded[s + nt + 1][level, 1, 1, level - 1] = pairs[s][2]
         end
@@ -82,10 +101,23 @@ function cluster_build(O, H, τ, n::Val{N}, tol) where {N}
     end
 end
 
-function cluster_expand(O, pairs, ::Val{N}) where {N}
+function cluster_expand(O::PeriodicVector, pairs, ::Val{N}) where {N}
     nt = (N - 1) ÷ 2
     bonds = PeriodicArray([right_virtualspace(pairs[mod1(i - nt, length(O))][1]) for i in 1:length(O)])
     return PeriodicArray([cluster_expand_tensor(O[i], bonds[i - 1], bonds[i]) for i in 1:length(O)])
+end
+
+function cluster_expand(O::Vector, pairs, ::Val{N}) where {N}
+    nt = (N - 1) ÷ 2
+    empty_bond = zero(left_virtualspace(O[1])[1])
+    # Only the middle bonds can support an N-site cluster. Empty levels keep
+    # the same level indices everywhere until the final boundary projection.
+    bonds = vcat(
+        fill(empty_bond, nt + 1),
+        [right_virtualspace(pair[1]) for pair in pairs],
+        fill(empty_bond, nt + 1)
+    )
+    return [cluster_expand_tensor(O[i], bonds[i], bonds[i + 1]) for i in 1:length(O)]
 end
 
 function cluster_expand_tensor(O, left_bond, right_bond)

@@ -884,6 +884,8 @@ function isemptylevel(H::InfiniteMPOHamiltonian, i::Int)
 end
 
 function Base.convert(::Type{TensorMap}, H::FiniteMPOHamiltonian)
+    # A single site is both boundaries; strip its utility legs only once.
+    length(H) == 1 && return removeunit(removeunit(TensorMap(only(H)), 4), 1)
     L = removeunit(H[1], 1)
     R = removeunit(H[end], 4)
     M = Tuple(H[2:(end - 1)])

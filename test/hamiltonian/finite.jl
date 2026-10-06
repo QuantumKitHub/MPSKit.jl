@@ -41,6 +41,10 @@ using TensorKit: ℙ
             end
         end
 
+        # A one-site Hamiltonian must not be contracted with itself.
+        Hsingle = FiniteMPOHamiltonian([V], 1 => O₁)
+        @test convert(TensorMap, Hsingle) ≈ O₁
+
         # check if constructor works by converting back to tensormap
         H1_tm = convert(TensorMap, H1)
         operators = vcat(fill(E, L - 1), O₁)
