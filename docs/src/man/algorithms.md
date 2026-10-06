@@ -123,6 +123,7 @@ Here, there are several algorithms available
 WI
 WII
 TaylorCluster
+ClusterExpansion
 ```
 
 See also [Time evolution accuracy](@ref).
