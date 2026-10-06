@@ -97,7 +97,7 @@ non-injective MPS.
 ℋ = SU2Space(1 => 1)
 V_wrong = SU2Space(0 => 8, 1 // 2 => 8, 1 => 3, 3 // 2 => 3)
 ψ = InfiniteMPS(ℋ, V_wrong)
-ψ, environments, δ = find_groundstate(ψ, H, VUMPS(; maxiter = 10))
+ψ, environments, info = find_groundstate(ψ, H, VUMPS(; maxiter = 10))
 sectors = SU2Irrep[0, 1 // 2, 1, 3 // 2]
 transferplot(ψ; sectors, title = "Transfer matrix spectrum", legend = :outertop)
 ````
@@ -128,7 +128,7 @@ E_plus = expectation_value(ψ_plus, H)
 ````
 
 ````
--1.4014193313393009 - 3.851708855717825e-17im
+-1.4014193313393015 - 5.56966055557632e-18im
 ````
 
 ````julia
@@ -139,7 +139,7 @@ E_minus = expectation_value(ψ_minus, H)
 ````
 
 ````
--1.4014839739630844 - 5.800167584873572e-17im
+-1.4014839739630829 - 1.0846362574075293e-16im
 ````
 
 ````julia
@@ -188,8 +188,8 @@ println("S_plus = $S_plus")
 ````
 
 ````
-S_minus + log(2) = 1.548622723541372
-S_plus = 1.5450323530299226
+S_minus + log(2) = 1.5486227235391343
+S_plus = 1.5450323530587475
 
 ````
 

@@ -8,10 +8,11 @@ EditURL = "../../../../../examples/quantum1d/7.xy-finiteT/main.jl"
 
 ````julia
 using Markdown
+using TensorKitTensors.SpinOperators: S_plus_S_min, S_min_S_plus
 using TensorKit
 using MPSKit
+using .ExampleModels
 using MPSKit: infinite_temperature_density_matrix
-using MPSKitModels
 using QuadGK: quadgk
 using SpecialFunctions: ellipe
 using Plots
@@ -43,13 +44,8 @@ function XY_hamiltonian(
         ::Type{T} = ComplexF64, ::Type{S} = Trivial; J = 1 / 2, N
     ) where {T <: Number, S <: Sector}
     spin = 1 // 2
-    term = J * (S_xx(T, S; spin) + S_yy(T, S; spin))
-    lattice = isfinite(N) ? FiniteChain(N) : InfiniteChain(1)
-    return @mpoham begin
-        sum(nearest_neighbours(lattice)) do (i, j)
-            return term{i, j}
-        end
-    end
+    term = J / 2 * (S_plus_S_min(T, S; spin) + S_min_S_plus(T, S; spin))
+    return chain_hamiltonian(term; L = isfinite(N) ? Int(N) : nothing)
 end
 ````
 
@@ -125,11 +121,12 @@ println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 ````
 
 ````
-[ Info: DMRG2   1:	obj = -5.004084801485e+00	err = 9.7485774328e-01	time = 1.43 min
-[ Info: DMRG2   2:	obj = -5.004096940647e+00	err = 1.1899230994e-06	time = 1.27 sec
-[ Info: DMRG2   3:	obj = -5.004096975044e+00	err = 2.2262868216e-09	time = 0.80 sec
-[ Info: DMRG2 conv 4:	obj = -5.004096975044e+00	err = 1.1612932838e-13	time = 1.47 min
-Numerical:	-0.15637803047010942
+[ Info: DMRG2 init:	obj = +4.372173567940e+00	err = 1.0000e+00
+[ Info: DMRG2   1:	obj = -5.003682441423e+00	err = 3.0044527697e-02	time = 1.23 min
+[ Info: DMRG2   2:	obj = -5.004096972575e+00	err = 4.0291060276e-04	time = 0.44 sec
+[ Info: DMRG2   3:	obj = -5.004096975044e+00	err = 4.3913120671e-06	time = 0.18 sec
+[ Info: DMRG2 conv 4:	obj = -5.004096975044e+00	err = 7.5912983728e-07	time = 1.24 min
+Numerical:	-0.1563780304701152
 Exact (N=32):	-0.15637803047254015
 Exact (N=Inf):	-0.15915494309189535
 

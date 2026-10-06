@@ -6,7 +6,9 @@ do this by first employing an exact diagonalization technique, and then extendin
 analysis to larger system sizes through the use of MPS techniques.
 """
 
-using MPSKit, MPSKitModels, TensorKit, Plots, KrylovKit
+using MPSKit, TensorKit, Plots, KrylovKit
+include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
+using .ExampleModels
 using LinearAlgebra: eigvals, diagm, Hermitian
 
 md"""

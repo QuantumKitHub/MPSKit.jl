@@ -8,7 +8,9 @@ EditURL = "../../../../../examples/quantum1d/8.bose-hubbard/main.jl"
 
 ````julia
 using Markdown
-using MPSKit, MPSKitModels, TensorKit
+using TensorKitTensors.BosonOperators: b_min, b_plus_b_min, b_min_b_plus, b_num
+using MPSKit, TensorKit
+using .ExampleModels
 using Plots, LaTeXStrings
 
 
@@ -113,23 +115,23 @@ initial_state = InfiniteMPS(ℂ^(cutoff + 1), ℂ^D)
 This simply initializes a tensor filled with random entries (check out the documentation for
 other useful constructors). Next, we need the creation and annihilation operators. While we
 could construct them from scratch, here we will use
-[`MPSKitModels.jl`](https://github.com/QuantumKitHub/MPSKitModels.jl) instead that has
-predefined operators and models for most well-known lattice models. In particular, we can
-use [`MPSKitModels.a_min`](@extref) to create the bosonic annihilation operator.
+[TensorKitTensors.jl](https://github.com/QuantumKitHub/TensorKitTensors.jl), which provides
+predefined operators. In particular, `BosonOperators.b_min` creates the bosonic annihilation
+operator.
 
 ````julia
-a_op = a_min(cutoff = cutoff) # creates a bosonic annihilation operator without any symmetries
+a_op = b_min(cutoff = cutoff) # creates a bosonic annihilation operator without any symmetries
 display(a_op[])
 display((a_op' * a_op)[])
 ````
 
 The [] accessor lets us see the underlying array, and indeed the operators are exactly what
-we require. Similarly, the Bose Hubbard model is also predefined in
-[`MPSKitModels.bose_hubbard_model`](@extref) (although we will construct our own variant
-later on).
+we require. The shared [model helpers](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/docs/src/assets/models.jl) define
+`bose_hubbard_model` using these operators, although we will construct our own variant
+later on.
 
 ````julia
-hamiltonian = bose_hubbard_model(InfiniteChain(1); cutoff = cutoff, U = 1, mu = 0.5, t = 0.2) # It is not strictly required to pass InfiniteChain() and is only included for clarity; one may instead pass FiniteChain(N) as well
+hamiltonian = bose_hubbard_model(; cutoff = cutoff, U = 1, mu = 0.5, t = 0.2) # Infinite chain by default; pass L = N for an open finite chain
 ````
 
 ````
@@ -154,9 +156,9 @@ println("Energy: ", expectation_value(ground_state, hamiltonian))
 ````
 
 ````
-[ Info: VUMPS init:	obj = +3.450895756898e-01	err = 6.6224e-01
-[ Info: VUMPS conv 72:	obj = -6.756981551609e-01	err = 9.5394492271e-07	time = 2.91 sec
-Energy: -0.6756981551608794 - 1.967768893425733e-17im
+[ Info: VUMPS init:	obj = +4.779985577791e-01	err = 6.1432e-01
+[ Info: VUMPS conv 29:	obj = -6.757777651157e-01	err = 9.0419343636e-07	time = 6.50 sec
+Energy: -0.6757777651156838 + 2.90085953191521e-17im
 
 ````
 
@@ -166,7 +168,7 @@ reached. Let us wrap all this into a convenient function.
 
 ````julia
 function get_ground_state(mu, t, cutoff, D; kwargs...)
-    hamiltonian = bose_hubbard_model(InfiniteChain(); cutoff = cutoff, U = 1, mu = mu, t = t)
+    hamiltonian = bose_hubbard_model(; cutoff = cutoff, U = 1, mu = mu, t = t)
     state = InfiniteMPS(ℂ^(cutoff + 1), ℂ^D)
     state, _, _ = find_groundstate(state, hamiltonian, VUMPS(; kwargs...))
 
@@ -238,7 +240,7 @@ end
 
 npoints = 400
 two_point_correlation = zeros(length(Ds), npoints)
-a_op = a_min(cutoff = cutoff)
+a_op = b_min(cutoff = cutoff)
 
 Threads.@threads for idx in eachindex(Ds)
     two_point_correlation[idx, :] .= real.(expectation_value(states[idx], (1, i) => a_op' ⊗ a_op) for i in 1:npoints)
@@ -285,13 +287,13 @@ quasicondensate_density = map(state -> abs2(expectation_value(state, (0,) => a_o
 
 ````
 7-element Vector{Float64}:
- 0.31098779070601257
- 0.2881478589434881
- 0.2702000230423913
- 0.25712728516508654
- 0.24685385948652017
- 0.23539753899204166
- 0.22799654088348645
+ 0.30974278056400306
+ 0.28814773292057094
+ 0.27020018663546547
+ 0.25712728281504493
+ 0.24685386187635147
+ 0.23539733364228202
+ 0.2279965627270329
 ````
 
 We may now also visualize the momentum distribution function, which is obtained as the
@@ -375,32 +377,25 @@ $$\frac{E[\Phi] - E[0]}{L} \approx \frac{1}{2} \Upsilon(L) \bigg (\frac{\Phi}{L}
 In order to find the ground state under these twisted boundary conditions, we must construct
 our own variant of the Bose-Hubbard Hamiltonian. Typically you would want to take a peek at
 the
-[source code](https://github.com/QuantumKitHub/MPSKitModels.jl/blob/f4c36d9660a9eab05fa253ffd5c20dc6b7df44cc/src/models/hamiltonians.jl#L379-L409)
-of `MPSKitModels.jl` to see how these models are defined and tweak it as per your needs.
+[model helper source](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/docs/src/assets/models.jl) to see how these models are defined and tweak it as per your needs.
 Here we see that applying twisted boundary conditions is equivalent to adding a prefactor of
 $e^{\pm i\phi}$ in front of the hopping amplitudes.
 
 ````julia
 function bose_hubbard_model_twisted_bc(
-        elt::Type{<:Number} = ComplexF64, symmetry::Type{<:Sector} = Trivial,
-        lattice::AbstractLattice = InfiniteChain(1);
+        elt::Type{<:Number} = ComplexF64, symmetry::Type{<:Sector} = Trivial;
         cutoff::Integer = 5, t = 1.0, U = 1.0, mu = 0.0, phi = 0
     )
 
-    a_pm = a_plusmin(elt, symmetry; cutoff = cutoff)
-    a_mp = a_minplus(elt, symmetry; cutoff = cutoff)
-    N = a_number(elt, symmetry; cutoff = cutoff)
+    a_pm = b_plus_b_min(elt, symmetry; cutoff = cutoff)
+    a_mp = b_min_b_plus(elt, symmetry; cutoff = cutoff)
+    N = b_num(elt, symmetry; cutoff = cutoff)
 
     interaction_term = N * (N - id(domain(N)))
 
-    return H = @mpoham begin
-        sum(nearest_neighbours(lattice)) do (i, j)
-            return -t * (exp(1im * phi) * a_pm{i, j} + exp(1im * -phi) * a_mp{i, j})
-        end +
-            sum(vertices(lattice)) do i
-            return U / 2 * interaction_term{i} - mu * N{i}
-        end
-    end
+    hopping = -t * (exp(1im * phi) * a_pm + exp(-1im * phi) * a_mp)
+    onsite = U / 2 * interaction_term - mu * N
+    return chain_hamiltonian(hopping, onsite)
 end
 
 function superfluid_stiffness_profile(t, mu, D, cutoff, ϵ = 1.0e-4, npoints = 11)
@@ -442,11 +437,11 @@ cutoff, D = 4, 10
 mus = range(0, 0.75, 40)
 ts = range(0, 0.3, 40)
 
-a_op = a_min(cutoff = cutoff)
+a_op = b_min(cutoff = cutoff)
 order_parameters = zeros(length(ts), length(mus))
 
 Threads.@threads for (i, j) in collect(Iterators.product(eachindex(mus), eachindex(ts)))
-    hamiltonian = bose_hubbard_model(InfiniteChain(); cutoff = cutoff, U = 1, mu = mus[i], t = ts[j])
+    hamiltonian = bose_hubbard_model(; cutoff = cutoff, U = 1, mu = mus[i], t = ts[j])
     init_state = InfiniteMPS(ℂ^(cutoff + 1), ℂ^D)
     state, _, _ = find_groundstate(init_state, hamiltonian, VUMPS(; tol = 1.0e-8, verbosity = 0))
     order_parameters[i, j] = abs(expectation_value(state, 0 => a_op))

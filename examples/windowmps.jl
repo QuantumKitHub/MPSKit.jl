@@ -1,4 +1,6 @@
-using MPSKit, MPSKitModels, TensorKit, Plots
+using MPSKit, TensorKit, Plots
+include(joinpath(@__DIR__, "..", "docs", "src", "assets", "models.jl"))
+using .ExampleModels
 
 let
     #defining the Hamiltonian

@@ -1,5 +1,5 @@
 ```@meta
-DocTestSetup = :(using MPSKit, TensorKit, MPSKitModels)
+DocTestSetup = :(using MPSKit, TensorKit, Main.ExampleModels)
 ```
 
 # [Algorithms](@id um_algorithms)
@@ -138,8 +138,11 @@ excitations
 ```
 
 ```@setup excitations
-using TensorKit, MPSKit, MPSKitModels
+using TensorKit, MPSKit, Main.ExampleModels
 ```
+
+The following examples use the shared [model constructors](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/docs/src/assets/models.jl), built from
+TensorKitTensors operators and MPSKit Hamiltonians.
 
 ### Quasiparticle Ansatz
 
@@ -158,7 +161,7 @@ Some deviations are expected, both due to finite-bond-dimension and finite-size 
 # Model parameters
 g = 10.0
 L = 16
-H = transverse_field_ising(FiniteChain(L); g)
+H = transverse_field_ising(; L, g)
 
 # Finding the ground state
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^32)
@@ -197,7 +200,7 @@ For instance, in the transverse field Ising model, we consider an excitation bui
 ```@example excitations
 g = 10.0
 L = 16
-H = transverse_field_ising(Z2Irrep, FiniteChain(L); g)
+H = transverse_field_ising(Z2Irrep; L, g)
 ψ₀ = FiniteMPS(L, Z2Space(0 => 1, 1 => 1), Z2Space(0 => 16, 1 => 16))
 ψ, = find_groundstate(ψ₀, H; verbosity=0)
 Es, ϕs = excitations(H, QuasiparticleAnsatz(), ψ; num=1, sector=Z2Irrep(1))
@@ -217,7 +220,7 @@ This is also supported by calling
 # Model parameters
 g = 10.0
 L = 16
-H = transverse_field_ising(FiniteChain(L); g)
+H = transverse_field_ising(; L, g)
 
 # Finding the ground state
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^32)
@@ -246,7 +249,7 @@ This is supported via the following syntax:
 ```@example excitations
 g = 10.0
 L = 16
-H = transverse_field_ising(FiniteChain(L); g)
+H = transverse_field_ising(; L, g)
 ψ₀ = FiniteMPS(L, ComplexSpace(2), ComplexSpace(32))
 ψ, envs, = find_groundstate(ψ₀, H; verbosity=0)
 E₀ = real(sum(expectation_value(ψ, H, envs)))

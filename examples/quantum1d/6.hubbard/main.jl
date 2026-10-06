@@ -29,7 +29,8 @@ H = - \sum_{\langle i, j \rangle, \sigma} c^{\dagger}_{i,\sigma} c_{j,\sigma} + 
 
 using TensorKit
 using MPSKit
-using MPSKitModels
+include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
+using .ExampleModels
 using SpecialFunctions: besselj0, besselj1
 using QuadGK: quadgk
 using Plots
@@ -92,7 +93,7 @@ function compute_groundstate(
     return psi
 end
 
-H = hubbard_model(InfiniteChain(2); U, t, mu = U / 2)
+H = hubbard_model(; unitcell = 2, U, t, mu = U / 2)
 Vspaces = fill(Vect[fℤ₂](0 => 10, 1 => 10), 2)
 psi = InfiniteMPS(physicalspace(H), Vspaces)
 psi = compute_groundstate(psi, H)
@@ -116,7 +117,7 @@ In order to work at half-filling, we need to effectively inject one particle per
 In MPSKit, this is achieved by the `add_physical_charge` function, which shifts the physical spaces of the tensors to the desired charge sector.
 """
 
-H_u1_su2 = hubbard_model(ComplexF64, U1Irrep, SU2Irrep, InfiniteChain(2); U, t, mu = U / 2);
+H_u1_su2 = hubbard_model(ComplexF64, U1Irrep, SU2Irrep; unitcell = 2, U, t, mu = U / 2);
 charges = fill(FermionParity(1) ⊠ U1Irrep(1) ⊠ SU2Irrep(0), 2);
 H_u1_su2 = MPSKit.add_physical_charge(H_u1_su2, charges);
 

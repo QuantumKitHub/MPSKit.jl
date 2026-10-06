@@ -18,6 +18,8 @@ include(joinpath(@__DIR__, "figure_externalization.jl"))
 # ---------------------------------------------------------------------------------------- #
 
 const CACHEFILE = joinpath(@__DIR__, "Cache.toml")
+const MODELSFILE = joinpath(@__DIR__, "..", "docs", "src", "assets", "models.jl")
+const MODEL_INCLUDE = "include(joinpath(@__DIR__, \"..\", \"..\", \"..\", \"docs\", \"src\", \"assets\", \"models.jl\")) #hide"
 
 getcache() = isfile(CACHEFILE) ? TOML.parsefile(CACHEFILE) : Dict{String, Any}()
 
@@ -43,9 +45,22 @@ end
 function checksum(root, name)
     example_path = joinpath(@__DIR__, root, name, "main.jl")
     @assert isfile(example_path)
-    return open(example_path, "r") do io
-        return bytes2hex(sha256(io))
+    inputs = (
+        example_path, MODELSFILE, @__FILE__, joinpath(@__DIR__, "Project.toml"),
+        joinpath(@__DIR__, "..", "Project.toml"),
+    )
+    return bytes2hex(sha256(mapreduce(read, vcat, inputs)))
+end
+
+# Inline the shared constructors so exported notebooks run without repository-relative paths.
+# Hide their implementation in the rendered page; the source is available as a docs asset.
+function inline_models(str; hide = false)
+    contains(str, MODEL_INCLUDE) || return str
+    source = replace(read(MODELSFILE, String), r"(?m)^(\h*)#" => s"\1##")
+    if hide
+        source = join((line * " #hide" for line in split(source, '\n')), '\n')
     end
+    return replace(str, MODEL_INCLUDE => source)
 end
 
 # ---------------------------------------------------------------------------------------- #
@@ -73,7 +88,7 @@ function build_example(root, name)
     return if !iscached(root, name)
         Literate.markdown(
             source_file, target_dir; execute = true, name = "index",
-            preprocess = attach_notebook_badge(root, name),
+            preprocess = str -> attach_notebook_badge(root, name, inline_models(str; hide = true)),
             postprocess = content -> externalize_figures(content, target_dir),
             mdstrings = true,
             nbviewer_root_url = "https://nbviewer.jupyter.org/github/QuantumKitHub/MPSKit.jl/blob/gh-pages/dev",
@@ -83,7 +98,7 @@ function build_example(root, name)
         )
         Literate.notebook(
             source_file, target_dir; execute = false, name = "main",
-            preprocess = str -> replace(str, r"(?<!`)``(?!`)" => "\$"),
+            preprocess = str -> replace(inline_models(str), r"(?<!`)``(?!`)" => "\$"),
             mdstrings = true, credits = false
         )
 

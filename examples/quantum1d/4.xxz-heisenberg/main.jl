@@ -5,7 +5,9 @@ In this file we will give step by step instructions on how to analyze the spin 1
 The necessary packages to follow this tutorial are:
 """
 
-using MPSKit, MPSKitModels, TensorKit, Plots
+using MPSKit, TensorKit, Plots
+include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
+using .ExampleModels
 
 #src # for reproducibility:
 #src using Random
@@ -68,11 +70,11 @@ state = InfiniteMPS(fill(2, 2), fill(20, 2))
 md"""
 In MPSKit, we require that the periodicity of the Hamiltonian equals that of the state it is applied to.
 This is not a big obstacle, you can simply repeat the original Hamiltonian.
-Alternatively, the Hamiltonian can be constructed directly on a two-site unit cell by making use of MPSKitModels.jl's `@mpoham`.
+Alternatively, our model helper can construct the Hamiltonian directly on a two-site unit cell.
 """
 
 ## H2 = repeat(H, 2); -- copies the one-site version
-H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin = 1 // 2)
+H2 = heisenberg_XXX(ComplexF64, Trivial; unitcell = 2, spin = 1 // 2)
 groundstate, envs, info = find_groundstate(
     state, H2, VUMPS(; maxiter = 100, tol = 1.0e-12)
 );
@@ -104,7 +106,7 @@ The XXZ Heisenberg Hamiltonian is SU(2) symmetric and we can exploit this to gre
 It is cumbersome to construct symmetric Hamiltonians, but luckily SU(2) symmetric XXZ is already implemented:
 """
 
-H2 = heisenberg_XXX(ComplexF64, SU2Irrep, InfiniteChain(2); spin = 1 // 2);
+H2 = heisenberg_XXX(ComplexF64, SU2Irrep; unitcell = 2, spin = 1 // 2);
 
 md"""
 Our initial state should also be SU(2) symmetric.
