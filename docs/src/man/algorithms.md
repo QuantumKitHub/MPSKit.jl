@@ -128,6 +128,26 @@ ClusterExpansion
 
 See also [Time evolution accuracy](@ref).
 
+#### Nonperturbative cluster expansion
+
+[`ClusterExpansion`](@ref) constructs evolution MPOs for finite and infinite
+nearest-neighbor Hamiltonians by matching exact exponentials on clusters of up to
+`N` sites [vanhecke2021cluster](@cite). Unlike [`TaylorCluster`](@ref), `N` specifies
+the cluster size rather than a Taylor order. For nearest-neighbor interactions,
+the one-step error is `O(dt^N)`; a finite chain is matched up to roundoff when
+`N` reaches its length.
+
+```julia
+U = make_time_mpo(H, dt, ClusterExpansion(; N = 3))
+ψ, envs, info = approximate(ψ, (U, ψ); trunc = truncrank(32))
+```
+
+Matching small clusters to all orders can permit larger time steps and help grow
+the bond dimension from weakly entangled states. The construction costs more than
+the compact [`WII`](@ref) approximation, and increasing `N` requires exponentially
+larger cluster exponentials and MPO bonds. Check convergence by varying `dt` and
+`N`, as well as the MPS compression settings.
+
 ## Excitations
 
 It might also be desirable to obtain information beyond the lowest energy state of a given system, and study the dispersion relation.
