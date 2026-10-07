@@ -57,9 +57,9 @@ end
         for model in (H, open_boundary_conditions(H, 5))
             errors = [
                 norm(
-                        dense_mpo_window(make_time_mpo(model, dt, ClusterExpansion(N)), 1, N + 1) -
+                    dense_mpo_window(make_time_mpo(model, dt, ClusterExpansion(N)), 1, N + 1) -
                         exp(-im * dt * dense_mpo_window(model, 1, N + 1))
-                    ) for dt in (0.04, 0.02)
+                ) for dt in (0.04, 0.02)
             ]
             @test log2(errors[1] / errors[2]) ≥ N - 0.15
         end
