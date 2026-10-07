@@ -4,14 +4,14 @@ using TensorKit: ℙ
 
 # Construct finite windows independently of the cluster-contraction kernels,
 # including lengths that are not multiples of the infinite unit cell.
-function cluster_dense_window(U, start, L)
+function dense_mpo_window(U, start, L)
     sites = [copy(U[start + i - 1]) for i in 1:L]
     sites[1] = sites[1][1, :, :, :]
     sites[end] = sites[end][:, :, :, 1]
     return convert(TensorMap, MPSKit.DenseMPO(FiniteMPO(sites)))
 end
 
-function cluster_exact_window(H, τ, start, L)
+function exact_evolution_window(H, τ, start, L)
     sites = [copy(H[start + i - 1]) for i in 1:L]
     sites[1] = sites[1][1, :, :, :]
     sites[end] = sites[end][:, :, :, end]
@@ -91,23 +91,23 @@ end
             U = make_time_mpo(symmetric_H, 0.1, ClusterExpansion(1))
             @test dense(U, 1) ≈ exp(-0.1im * onsite) atol = 1.0e-10
             for N in 2:5
-                U = @inferred MPSKit.make_cluster_mpo(symmetric_H, -0.1im, Val(N), 1.0e-12)
+                U = @inferred MPSKit.make_cluster_expansion_mpo(symmetric_H, -0.1im, Val(N), 1.0e-12)
                 @test physicalspace(U, 1) == P
                 @test left_virtualspace(U, 1)[2] == fuse(P ⊗ dual(P))
                 exact_cluster = exp(-0.1im * convert(TensorMap, open_boundary_conditions(symmetric_H, N)))
                 @test dense(U, N) ≈ exact_cluster atol = 1.0e-10
             end
-            residual = @inferred MPSKit.cluster_residual(symmetric_H, U, 1, -0.1im, Val(5))
-            center = @inferred MPSKit.cluster_center(U, 1, residual, Val(5))
+            residual = @inferred MPSKit.evolution_cluster_residual(symmetric_H, U, 1, -0.1im, Val(5))
+            center = @inferred MPSKit.solve_center_correction(U, 1, residual, Val(5))
             @test center isa TensorMap
         end
     end
 
     @testset "Inference after the cluster-size dispatch" begin
         for n in (Val(4), Val(5))
-            U = @inferred MPSKit.make_cluster_mpo(H, -0.1im, n, 1.0e-12)
-            residual = @inferred MPSKit.cluster_residual(H, U, 1, -0.1im, n)
-            center = @inferred MPSKit.cluster_center(U, 1, residual, n)
+            U = @inferred MPSKit.make_cluster_expansion_mpo(H, -0.1im, n, 1.0e-12)
+            residual = @inferred MPSKit.evolution_cluster_residual(H, U, 1, -0.1im, n)
+            center = @inferred MPSKit.solve_center_correction(U, 1, residual, n)
             @test center isa TensorMap
         end
     end
@@ -121,7 +121,7 @@ end
         U = make_time_mpo(H, 0.1, ClusterExpansion(N))
         U2 = make_time_mpo(H2, 0.1, ClusterExpansion(N))
         @test length(U2) == 2
-        @test cluster_dense_window(U2, 2, N + 1) ≈ dense(U, N + 1) atol = 1.0e-10
+        @test dense_mpo_window(U2, 2, N + 1) ≈ dense(U, N + 1) atol = 1.0e-10
     end
 end
 
@@ -147,13 +147,13 @@ end
         end
         H = InfiniteMPOHamiltonian(Ps, terms...)
         for N in 1:5
-            U = @inferred MPSKit.make_cluster_mpo(H, -0.1im, Val(N), 1.0e-12)
+            U = @inferred MPSKit.make_cluster_expansion_mpo(H, -0.1im, Val(N), 1.0e-12)
             @test length(U) == length(H)
             for s in eachindex(lattice)
                 @test physicalspace(U, s) == Ps[s]
                 @test right_virtualspace(U, s) == left_virtualspace(U, s + 1)
                 for L in 1:N
-                    @test cluster_dense_window(U, s, L) ≈ cluster_exact_window(H, -0.1im, s, L) atol = 1.0e-10
+                    @test dense_mpo_window(U, s, L) ≈ exact_evolution_window(H, -0.1im, s, L) atol = 1.0e-10
                 end
             end
         end
@@ -173,7 +173,7 @@ end
         raw = randn!(rng, zeros(ComplexF64, L ← R))
         for scale in (1.0, 1.0e-28, 0.0), tol in (1.0e-12, 0.5)
             C = scale * raw
-            A, B = @inferred MPSKit.cluster_complete_svd(C, tol)
+            A, B = @inferred MPSKit.factor_with_complementary_spaces(C, tol)
             @test norm(A * B - C) ≤ 2.0e-12 * max(norm(C), 1)
             @test domain(A) == codomain(B)
             @test A * pinv(A; rtol = 1.0e-12) ≈ id(storagetype(C), L) atol = 1.0e-10
@@ -188,7 +188,7 @@ end
     end
     # The SVD rank cutoff must not discard the tiny second singular value.
     C = TensorMap(ComplexF64[1 0 0; 0 1.0e-14 0; 0 0 0], ℂ^3 ← ℂ^3)
-    A, B = MPSKit.cluster_complete_svd(C, 1.0e-12)
+    A, B = MPSKit.factor_with_complementary_spaces(C, 1.0e-12)
     @test dim(only(domain(A))) == 5
     @test norm(A * B - C) < 1.0e-16
 end
@@ -213,14 +213,14 @@ end
             U = make_time_mpo(model, dt, ClusterExpansion(5))
             longest = model === onsite || model === dimers || iszero(dt) ? 6 : 5
             for s in eachindex(lattice), L in 1:longest
-                @test cluster_dense_window(U, s, L) ≈ cluster_exact_window(model, -im * dt, s, L) atol = 1.0e-10
+                @test dense_mpo_window(U, s, L) ≈ exact_evolution_window(model, -im * dt, s, L) atol = 1.0e-10
             end
         end
         # A large cutoff changes the SVD channels, not the matched exponentials.
         for N in (3, 5), tol in (0.1, 0.5)
-            U = @inferred MPSKit.make_cluster_mpo(H, -0.1im, Val(N), tol)
+            U = @inferred MPSKit.make_cluster_expansion_mpo(H, -0.1im, Val(N), tol)
             for s in eachindex(lattice), L in 1:N
-                @test cluster_dense_window(U, s, L) ≈ cluster_exact_window(H, -0.1im, s, L) atol = 1.0e-10
+                @test dense_mpo_window(U, s, L) ≈ exact_evolution_window(H, -0.1im, s, L) atol = 1.0e-10
             end
         end
         for N in 3:4, s in eachindex(lattice)
@@ -229,7 +229,7 @@ end
             errors = Float64[]
             for dt in steps
                 U = make_time_mpo(H, dt, ClusterExpansion(N))
-                push!(errors, norm(cluster_dense_window(U, s, N + 1) - cluster_exact_window(H, -im * dt, s, N + 1)))
+                push!(errors, norm(dense_mpo_window(U, s, N + 1) - exact_evolution_window(H, -im * dt, s, N + 1)))
             end
             @test log2(errors[1] / errors[2]) ≥ N - 0.15
         end
@@ -238,7 +238,7 @@ end
 
 
 # Independent random couplings and onsite terms exercise nonuniform finite chains.
-function cluster_finite_model(rng, Ps; onsite_only = false, dimers = false)
+function finite_test_hamiltonian(rng, Ps; onsite_only = false, dimers = false)
     terms = Pair[]
     for s in eachindex(Ps)
         a = randn!(rng, zeros(ComplexF64, Ps[s] ← Ps[s]))
@@ -262,10 +262,10 @@ end
         [Vect[FermionParity](0 => 1, 1 => 1), Vect[FermionParity](0 => 2, 1 => 1), Vect[FermionParity](0 => 1, 1 => 1)],
     )
     for Ps in lattices
-        H = cluster_finite_model(rng, Ps)
+        H = finite_test_hamiltonian(rng, Ps)
         L = length(H)
         for N in 1:min(6, L)
-            U = @inferred MPSKit.make_cluster_mpo(H, -0.1im, Val(N), 1.0e-12)
+            U = @inferred MPSKit.make_cluster_expansion_mpo(H, -0.1im, Val(N), 1.0e-12)
             @test U isa FiniteMPO
             @test length(U) == L
             @test dim(left_virtualspace(U, 1)) == dim(right_virtualspace(U, L)) == 1
@@ -273,7 +273,7 @@ end
                 @test physicalspace(U, s) == Ps[s]
                 s < L && @test right_virtualspace(U, s) == left_virtualspace(U, s + 1)
                 for width in 1:min(N, L - s + 1)
-                    @test cluster_dense_window(U, s, width) ≈ cluster_exact_window(H, -0.1im, s, width) atol = 1.0e-10
+                    @test dense_mpo_window(U, s, width) ≈ exact_evolution_window(H, -0.1im, s, width) atol = 1.0e-10
                 end
             end
         end
@@ -288,9 +288,9 @@ end
 @testset "Finite edge cases and leading error" begin
     rng = MersenneTwister(984)
     Ps = [ℂ^2, ℂ^3, ℂ^2, ℂ^3, ℂ^2]
-    H = cluster_finite_model(rng, Ps)
-    onsite = cluster_finite_model(rng, Ps; onsite_only = true)
-    dimers = cluster_finite_model(rng, Ps; dimers = true)
+    H = finite_test_hamiltonian(rng, Ps)
+    onsite = finite_test_hamiltonian(rng, Ps; onsite_only = true)
+    dimers = finite_test_hamiltonian(rng, Ps; dimers = true)
     for (model, dt) in ((H, 0.0), (H, -0.1), (H, -0.1im), (onsite, 0.1), (dimers, 0.1))
         U = make_time_mpo(model, dt, ClusterExpansion(5))
         @test convert(TensorMap, MPSKit.DenseMPO(U)) ≈ exp(-im * dt * convert(TensorMap, model)) atol = 1.0e-10
