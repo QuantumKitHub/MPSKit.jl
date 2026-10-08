@@ -64,177 +64,178 @@ function make_time_mpo(H::MPOHamiltonian, dt::Number, alg::ClusterExpansion)
     return make_cluster_expansion_mpo(H, -im * dt, Val(N), alg.tol)
 end
 
-function make_cluster_expansion_mpo(H::MPOHamiltonian, τ::Number, n::Val, tol::Real)
-    T = promote_type(scalartype(H), typeof(τ))
-    storage = TensorKit.similarstoragetype(storagetype(H), T)
-    O = map(parent(H)) do h
-        return exponentiate_onsite_tensor(h, τ, storage)
+function make_cluster_expansion_mpo(H::MPOHamiltonian, τ::Number, ::Val{N}, tol::Real) where {N}
+    storage_type = TensorKit.similarstoragetype(storagetype(H), promote_type(scalartype(H), typeof(τ)))
+    return make_cluster_expansion_mpo(H, τ, Val(N), tol, storage_type)
+end
+function make_cluster_expansion_mpo(
+        H::MPOHamiltonian, τ::Number, ::Val{N}, tol::Real, ::Type{A}
+    ) where {N, A}
+    tensors = map(parent(H)) do ham_tensor
+        return exponentiate_onsite_tensor(ham_tensor, τ, A)
     end
     # These cases are already exact products; avoid building channels from
     # roundoff in differences of independently contracted exponentials.
-    (iszero(τ) || all(has_only_onsite_terms, parent(H))) && return assemble_evolution_mpo(O)
-    return assemble_evolution_mpo(add_cluster_corrections(O, H, τ, n, tol))
+    if !(iszero(τ) || all(has_only_onsite_terms, parent(H)))
+        tensors = add_cluster_corrections(tensors, H, τ, Val(N), tol)
+    end
+
+    return assemble_evolution_mpo(tensors)
 end
 
-has_only_onsite_terms(h) = size(h, 1) ≤ 2 && size(h, 4) ≤ 2
+has_only_onsite_terms(ham_tensor) = size(ham_tensor, 1) ≤ 2 && size(ham_tensor, 4) ≤ 2
 
-assemble_evolution_mpo(O::PeriodicVector) = InfiniteMPO(O)
-function assemble_evolution_mpo(O::Vector)
-    O[1] = O[1][1, :, :, :]
-    O[end] = O[end][:, :, :, 1]
+assemble_evolution_mpo(tensors::PeriodicVector) = InfiniteMPO(tensors)
+function assemble_evolution_mpo(tensors::Vector)
+    tensors[1] = tensors[1][1, :, :, :]
+    tensors[end] = tensors[end][:, :, :, 1]
     # Remove structurally unused levels only after all stages have finished.
-    return remove_orphans!(FiniteMPO(O); tol = 0)
+    return remove_orphans!(FiniteMPO(tensors); tol = 0)
 end
 
-function exponentiate_onsite_tensor(h, τ, ::Type{A}) where {A}
-    P = physicalspace(h)
-    levels = ⊞(oneunit(P))
-    blocktype = tensormaptype(spacetype(P), 2, 2, A)
-    O = SparseBlockTensorMap{blocktype}(undef, levels ⊗ P ← P ⊗ levels)
-    onsite = removeunit(removeunit(h[1, 1, 1, end], 4), 1)
-    O[1, 1, 1, 1] = add_util_leg(exp(τ * onsite))
-    return O
+function exponentiate_onsite_tensor(ham_tensor, τ, ::Type{A}) where {A}
+    physical_space = physicalspace(ham_tensor)
+    levels = ⊞(oneunit(physical_space))
+    blocktype = tensormaptype(spacetype(physical_space), 2, 2, A)
+    tensor = SparseBlockTensorMap{blocktype}(undef, levels ⊗ physical_space ← physical_space ⊗ levels)
+    onsite = removeunit(removeunit(ham_tensor[1, 1, 1, end], 4), 1)
+    tensor[1, 1, 1, 1] = add_util_leg(exp(τ * onsite))
+    return tensor
 end
 
-add_cluster_corrections(O, H, τ, ::Val{1}, tol) = O
-function add_cluster_corrections(O, H, τ, n::Val{N}, tol) where {N}
-    previous = add_cluster_corrections(O, H, τ, Val(N - 1), tol)
+function add_cluster_corrections(tensors, H, τ, ::Val{N}, tol) where {N}
+    N == 1 && return tensors
+    previous = add_cluster_corrections(tensors, H, τ, Val(N - 1), tol)
     starts = isfinite(H) ? (1:(length(H) - N + 1)) : (1:length(H))
-    nt = (N - 1) ÷ 2
+    environment_length = (N - 1) ÷ 2
     level = N ÷ 2 + 1
     # Every translated window must see the completed previous stage. Compute
     # all corrections before inserting any of them, including across the cell seam.
     if isodd(N)
-        centers = [solve_center_correction(previous, s, evolution_cluster_residual(H, previous, s, τ, n), n) for s in starts]
-        for s in starts
-            previous[s + nt][level, 1, 1, level] = centers[s]
+        centers = [solve_center_correction(previous, start, evolution_cluster_residual(H, previous, start, τ, Val(N)), Val(N)) for start in starts]
+        for start in starts
+            previous[start + environment_length][level, 1, 1, level] = centers[start]
         end
         return previous
     else
-        pairs = [factor_two_site_correction(H, previous, s, τ, n, tol) for s in starts]
-        expanded = expand_correction_bonds(previous, pairs, n)
-        for s in starts
-            expanded[s + nt][level - 1, 1, 1, level] = pairs[s][1]
-            expanded[s + nt + 1][level, 1, 1, level - 1] = pairs[s][2]
+        factors = [factor_two_site_correction(H, previous, start, τ, Val(N), tol) for start in starts]
+        expanded = expand_correction_bonds(previous, factors, Val(N))
+        for start in starts
+            expanded[start + environment_length][level - 1, 1, 1, level] = factors[start][1]
+            expanded[start + environment_length + 1][level, 1, 1, level - 1] = factors[start][2]
         end
         return expanded
     end
 end
 
-function expand_correction_bonds(O::PeriodicVector, pairs, ::Val{N}) where {N}
-    nt = (N - 1) ÷ 2
-    bonds = PeriodicArray([right_virtualspace(pairs[mod1(i - nt, length(O))][1]) for i in 1:length(O)])
-    return PeriodicArray([append_virtual_spaces(O[i], bonds[i - 1], bonds[i]) for i in 1:length(O)])
+function expand_correction_bonds(tensors::PeriodicVector, factors, ::Val{N}) where {N}
+    environment_length = (N - 1) ÷ 2
+    bonds = PeriodicArray([right_virtualspace(factors[mod1(i - environment_length, length(tensors))][1]) for i in 1:length(tensors)])
+    return PeriodicArray([append_virtual_spaces(tensors[i], bonds[i - 1], bonds[i]) for i in 1:length(tensors)])
 end
 
-function expand_correction_bonds(O::Vector, pairs, ::Val{N}) where {N}
-    nt = (N - 1) ÷ 2
-    empty_bond = zero(left_virtualspace(O[1])[1])
+function expand_correction_bonds(tensors::Vector, factors, ::Val{N}) where {N}
+    environment_length = (N - 1) ÷ 2
+    empty_bond = zero(left_virtualspace(tensors[1])[1])
     # Only the middle bonds can support an N-site cluster. Empty levels keep
     # the same level indices everywhere until the final boundary projection.
     bonds = vcat(
-        fill(empty_bond, nt + 1),
-        [right_virtualspace(pair[1]) for pair in pairs],
-        fill(empty_bond, nt + 1)
+        fill(empty_bond, environment_length + 1),
+        [right_virtualspace(factor[1]) for factor in factors],
+        fill(empty_bond, environment_length + 1)
     )
-    return [append_virtual_spaces(O[i], bonds[i], bonds[i + 1]) for i in 1:length(O)]
+    return [append_virtual_spaces(tensors[i], bonds[i], bonds[i + 1]) for i in 1:length(tensors)]
 end
 
-function append_virtual_spaces(O, left_bond, right_bond)
-    L, R = left_virtualspace(O), right_virtualspace(O)
-    left_levels = L ⊞ left_bond
-    right_levels = R ⊞ right_bond
-    P = physicalspace(O)
-    expanded = typeof(O)(undef, left_levels ⊗ P ← P ⊗ right_levels)
-    for (indices, block) in nonzero_pairs(O)
+function append_virtual_spaces(tensor, left_bond, right_bond)
+    left_levels = left_virtualspace(tensor) ⊞ left_bond
+    right_levels = right_virtualspace(tensor) ⊞ right_bond
+    physical_space = physicalspace(tensor)
+    expanded = typeof(tensor)(undef, left_levels ⊗ physical_space ← physical_space ⊗ right_levels)
+    for (indices, block) in nonzero_pairs(tensor)
         expanded[indices] = block
     end
     return expanded
 end
 
-function evolution_cluster_residual(H, O, start::Int, τ, n::Val{N}) where {N}
+function evolution_cluster_residual(H, tensors, start::Int, τ, ::Val{N}) where {N}
     boundary = size(H[start + N - 1], 4)
-    exact = exp(τ * contract_mpo_window(H, start, n, boundary))
-    return add_util_leg(exact - contract_mpo_window(O, start, n, 1))
+    exact = exp(τ * contract_mpo_window(H, start, Val(N), boundary))
+    return add_util_leg(exact - contract_mpo_window(tensors, start, Val(N), 1))
 end
 
-function factor_two_site_correction(H, O, start, τ, n::Val{2}, tol)
-    residual = evolution_cluster_residual(H, O, start, τ, n)
-    A, B = factor_with_complementary_spaces(permute(residual, ((1, 2, 4), (3, 5, 6))), tol)
-    return permute(A, ((1, 2), (3, 4))), permute(B, ((1, 2), (3, 4)))
-end
-
-function factor_two_site_correction(H, O, start, τ, n::Val{N}, tol) where {N}
-    residual = evolution_cluster_residual(H, O, start, τ, n)
-    left_map, right_map = correction_environment_maps(O, start, n)
-    center = solve_center_correction(left_map, right_map, residual, n)
-    C = permute(center, ((1, 2, 4), (3, 5, 6)))
+function factor_two_site_correction(H, tensors, start, τ, ::Val{N}, tol) where {N}
+    residual = evolution_cluster_residual(H, tensors, start, τ, Val(N))
+    if N == 2
+        left_factor, right_factor = factor_with_complementary_spaces(permute(residual, ((1, 2, 4), (3, 5, 6))), tol)
+        return permute(left_factor, ((1, 2), (3, 4))), permute(right_factor, ((1, 2), (3, 4)))
+    end
+    left_map, right_map = correction_environment_maps(tensors, start, Val(N))
+    center = solve_center_correction(left_map, right_map, residual, Val(N))
+    center_map = permute(center, ((1, 2, 4), (3, 5, 6)))
 
     # The minimum-norm solves restrict the center to the active environment
     # subspaces. Complete only these directions, rather than the redundant
     # virtual directions introduced by previous stages. Untruncated LQ/QR bases
     # retain the entire physical environment support, including weak sectors.
-    _, Q_left = right_orth(left_map)
-    Q_right, _ = left_orth(right_map)
-    F_left = Q_left' ⊗ id(storagetype(C), codomain(C)[2] ⊗ codomain(C)[3])
-    F_right = id(storagetype(C), domain(C)[1] ⊗ domain(C)[2]) ⊗ Q_right
-    A, B = factor_with_complementary_spaces(F_left' * C * F_right, tol)
-    return permute(F_left * A, ((1, 2), (3, 4))),
-        permute(B * F_right', ((1, 2), (3, 4)))
+    _, left_basis = right_orth(left_map)
+    right_basis, _ = left_orth(right_map)
+    left_embedding = left_basis' ⊗ id(storagetype(center_map), codomain(center_map)[2] ⊗ codomain(center_map)[3])
+    right_embedding = id(storagetype(center_map), domain(center_map)[1] ⊗ domain(center_map)[2]) ⊗ right_basis
+    left_factor, right_factor = factor_with_complementary_spaces(left_embedding' * center_map * right_embedding, tol)
+    return permute(left_embedding * left_factor, ((1, 2), (3, 4))),
+        permute(right_factor * right_embedding', ((1, 2), (3, 4)))
 end
 
 """
-    factor_with_complementary_spaces(C, tol)
+    factor_with_complementary_spaces(tensor, tol)
 
-Factor `C` through its shared SVD support and separate left/right complementary
+Factor `tensor` through its shared SVD support and separate left/right complementary
 spaces. For exact rank `r_c`, the virtual multiplicity in sector `c` is
 `m_c + n_c - r_c`, the minimum that gives both factors full environment support.
 For exact null directions, the factors have the form
 
     A = [U√S  γU⊥  0],    B = [√S Vᴴ; 0; γV⊥ᴴ].
 
-At a finite rank cutoff, retain the remaining block `E = U⊥' C V⊥` in the
-complementary channels, so the product still reconstructs `C` up to roundoff.
+At a finite rank cutoff, retain the remaining block in the complementary
+channels, so the product still reconstructs `tensor` up to roundoff.
 The scale `γ` balances these channels against the retained singular values.
 """
-function factor_with_complementary_spaces(C::TensorMap, tol::Real)
-    cnorm = norm(C)
-    if iszero(cnorm)
+function factor_with_complementary_spaces(tensor::TensorMap, tol::Real)
+    tensor_norm = norm(tensor)
+    if iszero(tensor_norm)
         # At zero rank, the two complementary spaces occupy disjoint channels.
-        L, R = fuse(codomain(C)), fuse(domain(C))
-        storage = storagetype(C)
-        A = catdomain(
-            isomorphism(storage, codomain(C) ← L), zeros(storage, codomain(C) ← R)
+        left_space, right_space = fuse(codomain(tensor)), fuse(domain(tensor))
+        storage_type = storagetype(tensor)
+        left_factor = catdomain(
+            isomorphism(storage_type, codomain(tensor) ← left_space), zeros(storage_type, codomain(tensor) ← right_space)
         )
-        B = catcodomain(
-            zeros(storage, L ← domain(C)), isomorphism(storage, R ← domain(C))
+        right_factor = catcodomain(
+            zeros(storage_type, left_space ← domain(tensor)), isomorphism(storage_type, right_space ← domain(tensor))
         )
-        return A, B
+        return left_factor, right_factor
     end
-    U, S, Vᴴ, _ = svd_trunc(C; trunc = trunctol(; rtol = tol, p = Inf))
+    U, S, Vᴴ, _ = svd_trunc(tensor; trunc = trunctol(; rtol = tol, p = Inf))
     U_perp, V_perp = left_null(U), right_null(Vᴴ)
-    E = U_perp' * C * V_perp'
-    γ = sqrt(cnorm)
-    root = sqrt(S)
-    A = catdomain(catdomain(U * root, γ * U_perp), U_perp * E / (2γ))
-    B = catcodomain(catcodomain(root * Vᴴ, E * V_perp / (2γ)), γ * V_perp)
-    return A, B
+    complement = U_perp' * tensor * V_perp'
+    complement_scale = sqrt(tensor_norm)
+    sqrt_values = sqrt(S)
+    left_factor = catdomain(catdomain(U * sqrt_values, complement_scale * U_perp), U_perp * complement / (2complement_scale))
+    right_factor = catcodomain(catcodomain(sqrt_values * Vᴴ, complement * V_perp / (2complement_scale)), complement_scale * V_perp)
+    return left_factor, right_factor
 end
 
-function contract_mpo_window(O, start::Int, ::Val{1}, boundary::Int)
-    return removeunit(removeunit(TensorMap(O[start][1, :, :, boundary]), 4), 1)
+function contract_mpo_window(tensors, start::Int, ::Val{N}, boundary::Int) where {N}
+    N == 1 && return removeunit(removeunit(TensorMap(tensors[start][1, :, :, boundary]), 4), 1)
+    left = removeunit(TensorMap(tensors[start][1, :, :, :]), 1)
+    right = removeunit(TensorMap(tensors[start + N - 1][:, :, :, boundary]), 4)
+    sites = collect_bulk_tensors(tensors, start + 1, Val(N - 2))
+    return contract_mpo_window(left, sites, right, Val(N))
 end
 
-function contract_mpo_window(O, start::Int, n::Val{N}, boundary::Int) where {N}
-    left = removeunit(TensorMap(O[start][1, :, :, :]), 1)
-    right = removeunit(TensorMap(O[start + N - 1][:, :, :, boundary]), 4)
-    sites = collect_bulk_tensors(O, start + 1, Val(N - 2))
-    return contract_mpo_window(left, sites, right, n)
-end
-
-collect_bulk_tensors(O, start, ::Val{0}) = ()
-function collect_bulk_tensors(O, start, ::Val{N}) where {N}
-    return (TensorMap(O[start]), collect_bulk_tensors(O, start + 1, Val(N - 1))...)
+function collect_bulk_tensors(tensors, start, ::Val{N}) where {N}
+    N == 0 && return ()
+    return (TensorMap(tensors[start]), collect_bulk_tensors(tensors, start + 1, Val(N - 1))...)
 end
 
 """
@@ -259,23 +260,23 @@ are above the tensors and codomain legs below.
         left::AbstractTensorMap{<:Any, S, 1, 2}, sites::NTuple{K, AbstractTensorMap{<:Any, S, 2, 2}},
         right::AbstractTensorMap{<:Any, S, 2, 1}, ::Val{N}
     ) where {S, N, K}
-    out = tensorexpr(:cluster, -(1:N), -((N + 1):(2N)))
+    result = tensorexpr(:cluster, -(1:N), -((N + 1):(2N)))
     first_site = tensorexpr(:left, -1, (-N - 1, 1))
     last_site = tensorexpr(:right, (N - 1, -N), -2N)
-    middle = [tensorexpr(:(sites[$(i - 1)]), (i - 1, -i), (-N - i, i)) for i in 2:(N - 1)]
-    return macroexpand(@__MODULE__, :(return @plansor $out := *($first_site, $(middle...), $last_site)))
+    bulk = [tensorexpr(:(sites[$(i - 1)]), (i - 1, -i), (-N - i, i)) for i in 2:(N - 1)]
+    return macroexpand(@__MODULE__, :(return @plansor $result := *($first_site, $(bulk...), $last_site)))
 end
 
-left_correction_environment(O, start, ::Val{1}) = O[start][1, 1, 1, 2]
-function left_correction_environment(O, start, ::Val{L}) where {L}
-    left = left_correction_environment(O, start, Val(L - 1))
-    return extend_left_environment(left, O[start + L - 1][L, 1, 1, L + 1])
+function left_correction_environment(tensors, start, ::Val{N}) where {N}
+    N == 1 && return tensors[start][1, 1, 1, 2]
+    left = left_correction_environment(tensors, start, Val(N - 1))
+    return extend_left_environment(left, tensors[start + N - 1][N, 1, 1, N + 1])
 end
 
-right_correction_environment(O, start, ::Val{1}) = O[start][2, 1, 1, 1]
-function right_correction_environment(O, start, ::Val{L}) where {L}
-    right = right_correction_environment(O, start + 1, Val(L - 1))
-    return extend_right_environment(O[start][L + 1, 1, 1, L], right)
+function right_correction_environment(tensors, start, ::Val{N}) where {N}
+    N == 1 && return tensors[start][2, 1, 1, 1]
+    right = right_correction_environment(tensors, start + 1, Val(N - 1))
+    return extend_right_environment(tensors[start][N + 1, 1, 1, N], right)
 end
 
 """
@@ -297,10 +298,10 @@ domain legs are above the tensors and codomain legs below.
 ```
 """
 @generated function extend_left_environment(left::AbstractTensorMap{<:Any, <:Any, K, K}, site::AbstractTensorMap) where {K}
-    out = tensorexpr(:next_left, -(1:(K + 1)), -((K + 2):(2K + 2)))
-    env = tensorexpr(:left, -(1:K), (-((K + 2):(2K))..., 1))
-    op = tensorexpr(:site, (1, -K - 1), (-2K - 1, -2K - 2))
-    return macroexpand(@__MODULE__, :(return @plansor $out := $env * $op))
+    result = tensorexpr(:next_left, -(1:(K + 1)), -((K + 2):(2K + 2)))
+    environment = tensorexpr(:left, -(1:K), (-((K + 2):(2K))..., 1))
+    site_expression = tensorexpr(:site, (1, -K - 1), (-2K - 1, -2K - 2))
+    return macroexpand(@__MODULE__, :(return @plansor $result := $environment * $site_expression))
 end
 
 """
@@ -322,24 +323,23 @@ domain legs are above the tensors and codomain legs below.
 ```
 """
 @generated function extend_right_environment(site::AbstractTensorMap, right::AbstractTensorMap{<:Any, <:Any, K, K}) where {K}
-    out = tensorexpr(:next_right, -(1:(K + 1)), -((K + 2):(2K + 2)))
-    op = tensorexpr(:site, (-1, -2), (-K - 2, 1))
-    env = tensorexpr(:right, (1, -(3:(K + 1))...), -((K + 3):(2K + 2)))
-    return macroexpand(@__MODULE__, :(return @plansor $out := $op * $env))
+    result = tensorexpr(:next_right, -(1:(K + 1)), -((K + 2):(2K + 2)))
+    site_expression = tensorexpr(:site, (-1, -2), (-K - 2, 1))
+    environment = tensorexpr(:right, (1, -(3:(K + 1))...), -((K + 3):(2K + 2)))
+    return macroexpand(@__MODULE__, :(return @plansor $result := $site_expression * $environment))
 end
 
-function correction_environment_maps(O, start, ::Val{N}) where {N}
-    L = (N - 1) ÷ 2
-    left = left_correction_environment(O, start, Val(L))
-    right = right_correction_environment(O, start + N - L, Val(L))
-    indices = ntuple(identity, Val(2L + 1))
-    return permute(left, (indices, (2L + 2,))),
-        permute(right, ((1,), indices .+ 1))
+function correction_environment_maps(tensors, start, ::Val{N}) where {N}
+    environment_length = (N - 1) ÷ 2
+    left = left_correction_environment(tensors, start, Val(environment_length))
+    right = right_correction_environment(tensors, start + N - environment_length, Val(environment_length))
+    environment_indices = ntuple(identity, Val(2environment_length + 1))
+    return permute(left, (environment_indices, (2environment_length + 2,))), permute(right, ((1,), environment_indices .+ 1))
 end
 
-function solve_center_correction(O, start::Int, residual::TensorMap, n::Val{N}) where {N}
-    left_map, right_map = correction_environment_maps(O, start, n)
-    return solve_center_correction(left_map, right_map, residual, n)
+function solve_center_correction(tensors, start::Int, residual::TensorMap, ::Val{N}) where {N}
+    left_map, right_map = correction_environment_maps(tensors, start, Val(N))
+    return solve_center_correction(left_map, right_map, residual, Val(N))
 end
 
 """
@@ -384,20 +384,18 @@ clusters, each outer physical space above is a bundle of `(N - 1) ÷ 2` legs.
 @generated function solve_center_correction(
         left_map::TensorMap, right_map::TensorMap, residual::TensorMap, ::Val{N}
     ) where {N}
-    nt = (N - 1) ÷ 2
-    width = N - 2nt
+    environment_length = (N - 1) ÷ 2
+    center_width = N - 2environment_length
     # Group all left environment legs into the codomain for the left solve.
-    left_indices = (1, (2:(nt + 1))..., ((N + 2):(N + nt + 1))...)
-    remaining = (((nt + 2):(N + 1))..., ((N + nt + 2):(2N + 2))...)
+    left_indices = (1, (2:(environment_length + 1))..., ((N + 2):(N + environment_length + 1))...)
+    remaining_indices = (((environment_length + 2):(N + 1))..., ((N + environment_length + 2):(2N + 2))...)
     # After solving, group the right environment legs into the domain.
-    middle_indices = (1, (2:(width + 1))..., ((nt + width + 2):(nt + 2width + 1))...)
-    right_indices = (((width + 2):(nt + width + 1))..., ((nt + 2width + 2):(2nt + 2width + 2))...)
-    center_indices = (Tuple(1:(width + 1)), Tuple((width + 2):(2width + 2)))
+    middle_indices = (1, (2:(center_width + 1))..., ((environment_length + center_width + 2):(environment_length + 2center_width + 1))...)
+    right_indices = (((center_width + 2):(environment_length + center_width + 1))..., ((environment_length + 2center_width + 2):(2environment_length + 2center_width + 2))...)
+    center_indices = (Tuple(1:(center_width + 1)), Tuple((center_width + 2):(2center_width + 2)))
     return quote
-        left_rhs = permute(residual, $((left_indices, remaining)))
-        left_solved = left_map \ left_rhs
-        right_rhs = permute(left_solved, $((middle_indices, right_indices)))
-        solved = right_rhs / right_map
+        left_solved = left_map \ permute(residual, $((left_indices, remaining_indices)))
+        solved = permute(left_solved, $((middle_indices, right_indices))) / right_map
         return permute(solved, $center_indices)
     end
 end
