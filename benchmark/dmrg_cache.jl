@@ -10,44 +10,6 @@ function product_term(indices, factors, coefficient)
     return collect(indices) => FiniteMPO(tensors)
 end
 
-# Diagnostic only: per-stage timers for a warmed second DMRG2 sweep. These
-# instrumented single samples are kept separate from the repeated measurements.
-function benchmark_dmrg_cache_profile(;
-        χ = 32, output = joinpath(@__DIR__, "results", "dmrg_cache_profile.txt")
-    )
-    old_blas = BLAS.get_num_threads()
-    old_scheduler = MPSKit.Defaults.scheduler[]
-    BLAS.set_num_threads(1)
-    MPSKit.Defaults.scheduler[] = MPSKit.SerialScheduler()
-    try
-        mkpath(dirname(output))
-        open(output, "w") do io
-            for model in cache_benchmark_models(), cached in (false, true)
-                Random.seed!(17)
-                ψ = FiniteMPS(randn, Float64, length(model.H), TensorKit.ℙ^2, TensorKit.ℙ^χ)
-                eigsolve = (; adaptive = false, dynamic_tols = false, tol = 1.0e-8, krylovdim = 20, maxiter = 4)
-                alg = DMRG2(; verbosity = 0, alg_eigsolve = eigsolve, trunc = truncrank(χ))
-                timer = MPSKit.TimerOutput()
-                it = benchmark_iterator(ψ, model.H, alg, cached; timer)
-                iterate(it)
-                GC.gc()
-                getfield(parentmodule(typeof(timer)), :reset_timer!)(timer)
-                iterate(it)
-                println(io, model.name, " χ=", χ, " ", cached ? "cached" : "ordinary")
-                MPSKit.print_timer(io, timer)
-                println(io, '\n')
-                flush(io)
-            end
-        end
-    finally
-        BLAS.set_num_threads(old_blas)
-        MPSKit.Defaults.scheduler[] = old_scheduler
-    end
-    write(output, rstrip(read(output, String)) * "\n")
-    println("Diagnostic profile: ", output)
-    return output
-end
-
 function cache_benchmark_models(; chemistry_sites = 12)
     rng = MersenneTwister(20261006)
     V = TensorKit.ℙ^2
@@ -134,35 +96,6 @@ function sweep_sample(ψ0, H, alg, cached)
     return (; setup, first, second, it)
 end
 
-function old_remainders(H)
-    return map(parent(H)) do W
-        remainder = copy(W)
-        for I in MPSKit.nonzero_keys(W)
-            if 1 < I[1] < size(W, 1) && 1 < I[4] < size(W, 4)
-                delete!(remainder.scalars, I)
-                haskey(remainder.tensors, I) && delete!(remainder.tensors, I)
-            end
-        end
-        remainder
-    end
-end
-
-function shared_remainders(H)
-    return map(parent(H)) do W
-        tensors = typeof(W.tensors)(undef, space(W.tensors))
-        scalars = empty(W.scalars)
-        for (I, tensor) in MPSKit.nonzero_pairs(W.tensors)
-            1 < I[1] < size(W, 1) && 1 < I[4] < size(W, 4) && continue
-            tensors[I] = tensor
-        end
-        for (I, scalar) in W.scalars
-            1 < I[1] < size(W, 1) && 1 < I[4] < size(W, 4) && continue
-            scalars[I] = scalar
-        end
-        typeof(W)(tensors, scalars)
-    end
-end
-
 function benchmark_dmrg_cache()
     samples = parse(Int, get(ENV, "DMRG_BENCH_SAMPLES", "5"))
     dims = parse.(Int, split(get(ENV, "DMRG_BENCH_DIMS", "16,32"), ','))
@@ -196,23 +129,6 @@ function benchmark_dmrg_cache()
                 ", max MPO bond=", maximum(dim(right_virtualspace(W)) for W in H)
             )
             flush(stdout)
-            # Isolate the latest remainder-only change from the full sweep cache.
-            before, after = old_remainders(H), shared_remainders(H)
-            @assert all(a ≈ b for (a, b) in zip(before, after))
-            for sample in 1:samples
-                for (path, f) in (
-                        isodd(sample) ? (("copy", old_remainders), ("share", shared_remainders)) :
-                            (("share", shared_remainders), ("copy", old_remainders))
-                    )
-                    GC.gc()
-                    # Repeat short setup measurements to reduce timer noise.
-                    measured = @timed for _ in 1:20
-                        f(H)
-                    end
-                    normalized = (time = measured.time / 20, bytes = measured.bytes / 20, gctime = measured.gctime / 20)
-                    record(model, 0, "none", path, "remainder", sample, normalized)
-                end
-            end
             for χ in dims, algorithm in ("DMRG", "DMRG2")
                 Random.seed!(17)
                 ψ0 = FiniteMPS(randn, Float64, length(H), TensorKit.ℙ^2, TensorKit.ℙ^χ)

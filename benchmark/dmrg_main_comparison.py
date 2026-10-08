@@ -1,7 +1,14 @@
 """Run serialized jld requests against prepared, manifest-matched main/latest snapshots.
 
-See dmrg_main_comparison_results.md for snapshot/input preparation. Warm both
-processes before --phase measure. Numerical requests always execute sequentially.
+Preparation: archive each commit into <root>/main and <root>/latest, copy
+dmrg_main_comparison_manifest.toml to Manifest.toml and LocalPreferences.toml into
+both, and use a --julia wrapper adding --compiled-modules=existing with
+JULIA_NUM_THREADS=1. Create the shared input once from the latest snapshot with
+include("benchmark/dmrg_main_comparison.jl"); comparison_inputs("<root>/input.jls").
+On a cluster, use an exclusive node and point XDG_CACHE_HOME at node-local storage.
+
+Warm both processes before --phase measure. Numerical requests always execute
+sequentially; results are written to <root>/results.
 """
 import argparse
 import csv

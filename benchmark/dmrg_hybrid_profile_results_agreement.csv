@@ -1,7 +1,0 @@
-model,sites,requested_mps_bond,algorithm,overlap,max_local_error_difference,updates,ordinary_eigensolver_matvecs,cached_eigensolver_matvecs
-nearest_neighbor,24,64,DMRG,0.9999999999999999,1.22496268436923e-16,46,57,57
-nearest_neighbor,24,64,DMRG2,1.0000000000000016,0.0,45,48,48
-large_sparse,24,64,DMRG,0.9999999999999974,1.0878122996792091e-16,46,790,790
-large_sparse,24,64,DMRG2,1.0000000000000013,0.0,45,870,870
-chemistry_like,14,64,DMRG,0.9999999999999998,2.7127806700681865e-17,26,218,218
-chemistry_like,14,64,DMRG2,1.000000000000002,8.902592681193668e-16,25,163,163
