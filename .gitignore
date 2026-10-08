@@ -4,6 +4,11 @@ Manifest.toml
 .DS_Store
 **/dev/
 benchmark/results
+benchmark/*.csv
+benchmark/*.svg
+benchmark/*.txt
+benchmark/*.json
+benchmark/*_results*.md
 
 # DocumenterVitepress / Node build artifacts
 **/node_modules/
