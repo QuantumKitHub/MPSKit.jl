@@ -34,7 +34,7 @@ end
     @testset "Transfers are independent of prepared operator contributions" for H in (mixed, FiniteMPO(mixed))
         ψ = FiniteMPS(randn, ComplexF64, L, TensorKit.ℙ^2, TensorKit.ℙ^3)
         cache = MPSKit.initialize_sweep_cache(
-            ψ, H, environments(ψ, H, ψ);
+            ψ, H, environments(ψ, H, ψ); nsites = 1,
             backend = MPSKit.DefaultBackend(), allocator = MPSKit.DefaultAllocator(),
         )
         i = 3
@@ -42,7 +42,7 @@ end
             MPSKit.absorb_site!(cache, ψ, j, Val(:right))
         end
         left = cache.left[i]
-        side = left.one_site
+        side = left.contribution
         # A transfer must still work if a prepared side is corrupted. The new
         # window's contributions are prepared from its new GL/GR.
         poisoned = if H isa MPOHamiltonian
@@ -51,7 +51,7 @@ end
         else
             zero(side)
         end
-        cache.left[i] = typeof(left)(left.environment, poisoned, left.two_site)
+        cache.left[i] = typeof(left)(left.environment, poisoned)
         reference = MPSKit.leftenv(environments(ψ, H, ψ), i + 1, ψ)
         MPSKit.absorb_site!(cache, ψ, i, Val(:right))
         @test cache.left[i + 1].environment ≈ reference
@@ -59,14 +59,14 @@ end
         @test cache.environments.ldependencies[i] === ψ.AL[i]
 
         right = cache.right[i]
-        if H isa MPOHamiltonian
-            side = right.one_site
+        side = right.contribution
+        poisoned = if H isa MPOHamiltonian
             @test !ismissing(side.continuing)
-            poisoned = typeof(side)(side.prepared, zero(side.continuing))
-            cache.right[i] = typeof(right)(right.environment, poisoned, right.two_site)
+            typeof(side)(side.prepared, zero(side.continuing))
         else
-            cache.right[i] = typeof(right)(right.environment, right.one_site, missing)
+            zero(side)
         end
+        cache.right[i] = typeof(right)(right.environment, poisoned)
         reference = MPSKit.rightenv(environments(ψ, H, ψ), i - 1, ψ)
         MPSKit.absorb_site!(cache, ψ, i, Val(:left))
         @test cache.right[i - 1].environment ≈ reference
@@ -76,12 +76,9 @@ end
     @testset "Pair-only records preserve local operator queries" for H in (mixed, FiniteMPO(mixed))
         ψ = FiniteMPS(randn, ComplexF64, L, TensorKit.ℙ^2, TensorKit.ℙ^3)
         cache = MPSKit.initialize_sweep_cache(
-            ψ, H, environments(ψ, H, ψ); one_site = false,
+            ψ, H, environments(ψ, H, ψ); nsites = 2,
             backend = MPSKit.DefaultBackend(), allocator = MPSKit.DefaultAllocator(),
         )
-        @test !cache.one_site && cache.two_site
-        @test ismissing(cache.left[1].one_site)
-        @test all(ismissing(r.one_site) for r in cache.right)
         held = nothing
         for (constructor, x) in ((MPSKit.AC_hamiltonian, ψ.AC[1]), (MPSKit.AC2_hamiltonian, MPSKit.AC2(ψ, 1)))
             reference = constructor(1, ψ, H, ψ, environments(ψ, H, ψ))
@@ -91,14 +88,10 @@ end
             end
             constructor === MPSKit.AC2_hamiltonian && (held = (constructor(1, ψ, H, ψ, cache), copy(x), copy(reference * x)))
         end
-        # Optional AC reads must not change the pair-only preparation policy.
-        @test ismissing(cache.left[1].one_site)
         alg = DMRG2(; verbosity = 0, trunc = truncrank(4))
         state = MPSKit.DMRGState(ψ, H, cache, 0, 1.0, ones(L - 1), zeros(L - 1), zeros(L - 1), MPSKit.NoTimerOutput(), cache.allocator)
         iterate(MPSKit.IterativeSolver(alg, state))
         @test held[1] * held[2] ≈ held[3]
-        @test all(isnothing(r) || ismissing(r.one_site) for r in cache.left)
-        @test all(ismissing(r.one_site) for r in cache.right)
     end
     @testset "$(nameof(typeof(H))) / $(nameof(typeof(alg))) / $k" for H in models, (k, alg) in enumerate(algorithms)
         original = [copy(H[i]) for i in 1:L]
@@ -145,10 +138,10 @@ end
         ψ = FiniteMPS(randn, ComplexF64, 5, TensorKit.ℙ^2, TensorKit.ℙ^3)
         allocator = MPSKit.default_allocator(ψ, MPSKit.SerialScheduler())
         cache = MPSKit.initialize_sweep_cache(
-            ψ, H, environments(ψ, H, ψ);
+            ψ, H, environments(ψ, H, ψ); nsites = 2,
             backend = MPSKit.DefaultBackend(), allocator
         )
-        data = cache.operator_data
+        pairs = cache.pairs
         retained = []
         for (constructor, x) in (
                 (MPSKit.AC_hamiltonian, ψ.AC[1]),
@@ -177,7 +170,7 @@ end
         left = copy(cache.left)
         state = MPSKit.sweep!(it, state, Val(:left), 1)
         @test all(a === b for (a, b) in zip(left, cache.left))
-        @test cache.operator_data === data
+        @test cache.pairs === pairs
         @test all(H * x ≈ y for (H, x, y) in retained)
         right = copy(cache.right)
         MPSKit.sweep!(it, state, Val(:right), 2)
@@ -237,15 +230,17 @@ end
         counter = Ref(0)
         backend = DMRGCountingBackend(counter)
         allocator = MPSKit.default_allocator(ψ, MPSKit.SerialScheduler())
-        cache = MPSKit.initialize_sweep_cache(ψ, H, environments(ψ, H, ψ); backend, allocator)
-        MPSKit.absorb_site!(cache, ψ, 1, Val(:right))
-        @test counter[] > 0
-        before = counter[]
-        for _ in 1:3
-            MPSKit.AC_hamiltonian(2, ψ, H, ψ, cache; backend, allocator)
-            MPSKit.AC2_hamiltonian(2, ψ, H, ψ, cache; backend, allocator)
+        for (nsites, constructor) in ((1, MPSKit.AC_hamiltonian), (2, MPSKit.AC2_hamiltonian))
+            cache = MPSKit.initialize_sweep_cache(ψ, H, environments(ψ, H, ψ); nsites, backend, allocator)
+            MPSKit.absorb_site!(cache, ψ, 1, Val(:right))
+            @test counter[] > 0
+            before = counter[]
+            for _ in 1:3
+                constructor(2, ψ, H, ψ, cache; backend, allocator)
+            end
+            @test counter[] == before
         end
-        @test counter[] == before
+        before = counter[]
         # Check that the instrumentation detects the contractions in the reference path.
         MPSKit.AC2_hamiltonian(2, ψ, H, ψ, environments(ψ, H, ψ); backend, allocator)
         @test counter[] > before
@@ -281,7 +276,7 @@ end
             @test it.truncation_errors ≈ ref.truncation_errors atol = 1.0e-10
             @test scalartype(it.mps) == T
             if alg isa DMRG
-                @test all(ismissing(record.two_site) for record in it.envs.left if !isnothing(record))
+                @test it.envs.nsites == 1
             end
         end
     end
@@ -428,6 +423,6 @@ end
             end
         end
         # Nearest-neighbor MPOs have no path through two continuing A blocks.
-        @test all(all(isempty, pair.channels) for pair in cache.operator_data.pairs)
+        alg isa DMRG2 && @test all(all(isempty, pair.channels) for pair in cache.pairs)
     end
 end

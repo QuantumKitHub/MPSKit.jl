@@ -124,35 +124,15 @@ function local_update!(
         ϵ_global, ϵ_trunc, decay_rate,
         iter, timeroutput, allocator
     )
-    # Prepare this window by absorbing the finalized tensor from the previous update.
-    @timeit timeroutput "advance_env" begin
-        if direction === Val(:right)
-            if site > 1
-                absorb_site!(envs, ψ, site - 1, Val(:right))
-            elseif iter > 1
-                # The preceding backward sweep ended after gauging site 2.
-                absorb_site!(envs, ψ, 2, Val(:left))
-            end
-        elseif site == length(ψ)
-            # The first backward one-site window needs the final forward AL tensor.
-            absorb_site!(envs, ψ, site - 1, Val(:right))
-        else
-            absorb_site!(envs, ψ, site + 1, Val(:left))
-        end
-    end
+    @timeit timeroutput "advance_env" center_window!(envs, ψ, site, site)
     ϵ_local = calc_galerkin(site, ψ, O, ψ, envs; alg.backend, allocator)
 
     # 1. expand
     if !isnothing(alg.alg_expand)
         @timeit timeroutput "expand" begin
-            # Expansion changes AR[site + 1] going forward or AL[site - 1] going backward.
-            forward = direction === Val(:right)
-            neighbor = forward ? site + 1 : site - 1
-            tensors = forward ? ψ.AR : ψ.AL
-            previous = tensors[neighbor]
             changebond!(site, direction, ψ, O, alg.alg_expand, envs; allocator)
-            # Saturated bonds need no refresh.
-            tensors[neighbor] === previous || absorb_site!(envs, ψ, neighbor, forward ? Val(:left) : Val(:right))
+            # Expansion may have replaced the neighbouring AR[site + 1] or AL[site - 1].
+            center_window!(envs, ψ, site, site)
         end
     end
 
@@ -237,17 +217,7 @@ function local_update!(
         ϵ_global, ϵ_trunc, decay_rate,
         iter, timeroutput, allocator
     )
-    # The previous forward pair finalized AL[pos - 1]; the previous backward pair
-    # finalized AR[pos + 2]. At reversal this also absorbs the updated terminal AR.
-    # IDMRG2 can use this interior rule, but its explicit (N, 1) seam solve must refresh
-    # both unit-cell boundaries separately rather than use a finite endpoint condition.
-    @timeit timeroutput "advance_env" begin
-        if direction === Val(:right)
-            pos > 1 && absorb_site!(envs, ψ, pos - 1, Val(:right))
-        else
-            absorb_site!(envs, ψ, pos + 2, Val(:left))
-        end
-    end
+    @timeit timeroutput "advance_env" center_window!(envs, ψ, pos, pos + 1)
     Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs; alg.backend, allocator)
 
     kind = direction === Val(:right) ? :ACAR : :ALAC
@@ -348,7 +318,7 @@ function DMRGState(ψ, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput)
     Tr = real(scalartype(ψ))
     n = _num_updates(alg, ψ)
     local_errors = ones(Tr, n)
-    cache = initialize_sweep_cache(ψ, H, envs; alg.backend, allocator, one_site = alg isa DMRG, two_site = alg isa DMRG2)
+    cache = initialize_sweep_cache(ψ, H, envs; alg.backend, allocator, nsites = alg isa DMRG ? 1 : 2)
     return DMRGState(
         ψ, H, cache, 0, maximum(local_errors), local_errors, zeros(Tr, n),
         zeros(n), timeroutput, allocator,
@@ -437,30 +407,32 @@ end
 # Explicit sweep cache lifecycle and center movement
 # -------------------------------------------------
 """
-    initialize_sweep_cache(ψ, O, envs; backend, allocator, one_site, two_site)
+    initialize_sweep_cache(ψ, O, envs; backend, allocator, nsites)
 
 Build solve-owned snapshots for a fixed operator: prepare the left boundary and absorb
 right-canonical tensors from the right boundary to initialize the first local window.
-`one_site` and `two_site` explicitly select which local contributions to prepare.
-DMRG prepares one-site and DMRG2 two-site contributions. Queries for unprepared operators,
-or for a size without prepared contributions, construct them from the snapshot environments.
+Records carry prepared contributions to `nsites`-site effective Hamiltonians (1 for DMRG,
+2 for DMRG2). Queries for unprepared operators, or for the other window size, construct
+them from the snapshot environments.
 Unsupported environment representations retain their existing update behavior.
 """
 initialize_sweep_cache(ψ, O, envs; kwargs...) = envs
 function initialize_sweep_cache(
         ψ::_HAM_MPS_TYPES, O::AbstractMPO, envs::FiniteEnvironments;
-        backend, allocator, one_site::Bool = true, two_site::Bool = true,
+        backend, allocator, nsites::Int,
     )
-    @assert one_site || two_site "prepare at least one local Hamiltonian size"
+    @assert nsites in (1, 2) "effective Hamiltonians act on one or two sites"
     # Mixed bra/ket environments are outside the DMRG cache contract.
     isnothing(envs.above) || return envs
-    data = cache_operator_data(O, envs.GLs[1], length(ψ))
+    pairs = nsites == 2 ? cache_pair_data(O, envs.GLs[1]) : nothing
     N = length(ψ)
-    L = DMRGEnvironmentRecord(prepare_left_environment(envs.GLs[1], data, 1, backend, allocator; one_site, two_site)...)
-    R = DMRGEnvironmentRecord(prepare_right_environment(envs.GRs[end], data, N, backend, allocator; one_site, two_site)...)
+    GL, GR = envs.GLs[1], envs.GRs[end]
+    L = DMRGEnvironmentRecord(GL, prepare_left_environment(GL, O, pairs, 1, nsites, backend, allocator))
+    R = DMRGEnvironmentRecord(GR, prepare_right_environment(GR, O, pairs, N, nsites, backend, allocator))
     cache = DMRGSweepCache(
-        envs, data, fill!(Vector{Union{Nothing, typeof(L)}}(undef, N), nothing),
-        fill!(Vector{Union{Nothing, typeof(R)}}(undef, N), nothing), backend, allocator, one_site, two_site,
+        envs, pairs, fill!(Vector{Union{Nothing, typeof(L)}}(undef, N), nothing),
+        fill!(Vector{Union{Nothing, typeof(R)}}(undef, N), nothing),
+        copy(envs.ldependencies), copy(envs.rdependencies), backend, allocator, nsites,
     )
     cache.left[1] = L
     cache.right[N] = R
@@ -504,27 +476,49 @@ Contract the finalized tensor at `i` into an environment and publish its prepare
 The underlying ordinary manager's tensor and dependency are updated at the same time.
 """
 absorb_site!(envs, ψ, i, direction) = envs
-function absorb_site!(cache::DMRGSweepCache{E, O, L}, ψ, i, ::Val{:right}) where {E, O, L}
+function absorb_site!(cache::DMRGSweepCache{E, P, L}, ψ, i, ::Val{:right}) where {E, P, L}
     i < length(ψ) || return cache
-    (; backend, allocator) = cache
-    AL = ψ.AL[i]
-    GL = cache.left[i].environment * TransferMatrix(AL, cache.environments.operator[i], AL; backend, allocator)
-    cache.left[i + 1] = L(prepare_left_environment(GL, cache.operator_data, i + 1, backend, allocator; one_site = cache.one_site, two_site = cache.two_site)...)
+    (; backend, allocator, pairs, nsites) = cache
+    O, AL = cache.environments.operator, ψ.AL[i]
+    GL = leftenv(cache, i, ψ) * TransferMatrix(AL, O[i], AL; backend, allocator)
+    cache.left[i + 1] = L(GL, prepare_left_environment(GL, O, pairs, i + 1, nsites, backend, allocator))
     cache.environments.GLs[i + 1] = GL
-    cache.environments.ldependencies[i] = AL
+    cache.ldependencies[i] = cache.environments.ldependencies[i] = AL
     return cache
 end
-function absorb_site!(cache::DMRGSweepCache{E, O, L, R}, ψ, i, ::Val{:left}) where {E, O, L, R}
+function absorb_site!(cache::DMRGSweepCache{E, P, L, R}, ψ, i, ::Val{:left}) where {E, P, L, R}
     i > 1 || return cache
-    (; backend, allocator) = cache
-    AR = ψ.AR[i]
-    GR = TransferMatrix(AR, cache.environments.operator[i], AR; backend, allocator) * cache.right[i].environment
-    cache.right[i - 1] = R(prepare_right_environment(GR, cache.operator_data, i - 1, backend, allocator; one_site = cache.one_site, two_site = cache.two_site)...)
+    (; backend, allocator, pairs, nsites) = cache
+    O, AR = cache.environments.operator, ψ.AR[i]
+    GR = TransferMatrix(AR, O[i], AR; backend, allocator) * rightenv(cache, i, ψ)
+    cache.right[i - 1] = R(GR, prepare_right_environment(GR, O, pairs, i - 1, nsites, backend, allocator))
     cache.environments.GRs[i] = GR
-    cache.environments.rdependencies[i] = AR
+    cache.rdependencies[i] = cache.environments.rdependencies[i] = AR
     return cache
 end
 function absorb_site!(envs::Union{MultipleEnvironments, LazyLincoCache}, ψ, i, direction)
     foreach(env -> absorb_site!(env, ψ, i, direction), envs.envs)
+    return envs
+end
+
+"""
+    center_window!(envs, ψ, first, last)
+
+Bring the records around the window `first:last` up to date: absorb `AL[first - 1]` and
+`AR[last + 1]` if they are not the tensors those records were last built from.
+"""
+center_window!(envs, ψ, first, last) = envs
+function center_window!(cache::DMRGSweepCache, ψ, first, last)
+    (; ldependencies, rdependencies) = cache
+    if first > 1 && (isnothing(cache.left[first]) || ldependencies[first - 1] !== ψ.AL[first - 1])
+        absorb_site!(cache, ψ, first - 1, Val(:right))
+    end
+    if last < length(ψ) && (isnothing(cache.right[last]) || rdependencies[last + 1] !== ψ.AR[last + 1])
+        absorb_site!(cache, ψ, last + 1, Val(:left))
+    end
+    return cache
+end
+function center_window!(envs::Union{MultipleEnvironments, LazyLincoCache}, ψ, first, last)
+    foreach(env -> center_window!(env, ψ, first, last), envs.envs)
     return envs
 end

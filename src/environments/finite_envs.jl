@@ -167,55 +167,50 @@ position: only the environments outside the active window are required to be cur
 Center moves explicitly replace records; querying a record never scans MPS dependencies.
 The operator is fixed and finalizers must not modify the state or cache.
 """
-struct DMRGSweepCache{E, O, L, R, B, A} <: AbstractMPSEnvironments
+struct DMRGSweepCache{E, P, L, R, D, B, A} <: AbstractMPSEnvironments
     "ordinary manager kept compatible with the final state and read-only callbacks"
     environments::E
-    "fixed operator or operator-only metadata shared by all records"
-    operator_data::O
+    "operator-only pair data shared by all records, or `nothing` if unused"
+    pairs::P
     "left snapshots before each site; `nothing` until first reached by the forward sweep"
     left::Vector{Union{Nothing, L}}
     "right snapshots after each site, initialized by a backward transfer pass"
     right::Vector{Union{Nothing, R}}
+    "`AL[i]` last absorbed into the left record at `i + 1`; the ordinary manager's own
+    dependencies can be refreshed by read-only callbacks without updating these records"
+    ldependencies::Vector{D}
+    "`AR[i]` last absorbed into the right record at `i - 1`"
+    rdependencies::Vector{D}
     "backend used to construct persistent contractions"
     backend::B
     "allocator for temporary work; persistent records own their tensor storage"
     allocator::A
-    "whether local updates require prepared one-site contributions"
-    one_site::Bool
-    "whether local updates require prepared two-site contributions"
-    two_site::Bool
+    "number of sites of the effective Hamiltonians whose contributions are prepared"
+    nsites::Int
 end
 
 """
     DMRGEnvironmentRecord
 
-Directional environment snapshot and the associated effective-operator contributions.
+Directional environment snapshot and its contribution to the effective Hamiltonian.
 A left record at `i` represents sites before `i`; a right record represents sites after
 `i`. Replacing a record publishes new tensors without mutating earlier snapshots.
 Transfers only read `environment`.
 """
-struct DMRGEnvironmentRecord{G, P, Q}
+struct DMRGEnvironmentRecord{G, P}
     "ordinary `GL` or `GR` tensor"
     environment::G
-    "directional one-site contribution; `missing` when only pairs are prepared"
-    one_site::P
-    "directional two-site contribution; `missing` if unused"
-    two_site::Union{Missing, Q}
+    "directional contribution; `missing` at a boundary without a two-site window"
+    contribution::Union{Missing, P}
 
-    function DMRGEnvironmentRecord{G, P, Q}(environment, one_site, two_site) where {G, P, Q}
-        return new{G, P, Q}(environment, one_site, two_site)
+    function DMRGEnvironmentRecord{G, P}(environment, contribution) where {G, P}
+        return new{G, P}(environment, contribution)
     end
 end
-DMRGEnvironmentRecord(env, one_site, two_site) =
-    DMRGEnvironmentRecord{typeof(env), typeof(one_site), typeof(two_site)}(env, one_site, two_site)
+DMRGEnvironmentRecord(env, contribution) =
+    DMRGEnvironmentRecord{typeof(env), typeof(contribution)}(env, contribution)
 
-function leftenv(cache::DMRGSweepCache{E, O, L}, i, ψ; kwargs...) where {E, O, L}
-    record = cache.left[i]
-    isnothing(record) && error("left DMRG environment at site $i has not been advanced")
-    return (record::L).environment
-end
-function rightenv(cache::DMRGSweepCache{E, O, L, R}, i, ψ; kwargs...) where {E, O, L, R}
-    record = cache.right[i]
-    isnothing(record) && error("right DMRG environment at site $i has not been advanced")
-    return (record::R).environment
-end
+leftenv(cache::DMRGSweepCache, i, ψ; kwargs...) = something(cache.left[i]).environment
+rightenv(cache::DMRGSweepCache, i, ψ; kwargs...) = something(cache.right[i]).environment
+left_contribution(cache::DMRGSweepCache, i) = something(cache.left[i]).contribution
+right_contribution(cache::DMRGSweepCache, i) = something(cache.right[i]).contribution
