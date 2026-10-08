@@ -150,70 +150,74 @@ function timestep!(
     )
 end
 
+# Start times of the forward center update and of the backward update that follows it, for the
+# half-sweep in `direction` of a step `t → t + dt`
+_half_sweep_times(::Val{:right}, t, dt) = (t, t + dt / 2)
+_half_sweep_times(::Val{:left}, t, dt) = (t + dt / 2, t + dt)
+
+function local_update!(
+        site, direction::Val, ψ, H, alg::TDVP, envs, t, dt, allocator;
+        imaginary_evolution, normalize
+    )
+    t_AC, t_C = _half_sweep_times(direction, t, dt)
+
+    # at the far end of the sweep there is no bond ahead: only evolve the center tensor
+    if site == _sweep_end(ψ, direction)
+        Hac = AC_hamiltonian(site, ψ, H, ψ, envs; alg.backend, allocator)
+        ψ.AC[site] = integrate(Hac, ψ.AC[site], t_AC, dt / 2, alg.integrator; imaginary_evolution)
+        return ψ, zero(real(scalartype(ψ)))
+    end
+
+    # 1. optionally expand the bond ahead of the local update (CBE)
+    isnothing(alg.alg_expand) ||
+        changebond!(site, direction, ψ, H, alg.alg_expand, envs; normalize, allocator)
+
+    # 2. evolve the (possibly expanded) center tensor forward
+    Hac = AC_hamiltonian(site, ψ, H, ψ, envs; alg.backend, allocator)
+    AC = integrate(Hac, ψ.AC[site], t_AC, dt / 2, alg.integrator; imaginary_evolution)
+
+    # 3. gauge: split AC onto the bond ahead (QR center-move, or truncated SVD cutting the
+    #    enlarged bond back down) and move the center across it. By default the norm is
+    #    preserved; `normalize` renormalizes.
+    if direction === Val(:right)
+        _, ϵ = left_gauge!(ψ, site, AC, alg.alg_gauge; normalize)
+        bond = site
+    else
+        _, ϵ = right_gauge!(ψ, site, AC, alg.alg_gauge; normalize)
+        bond = site - 1
+    end
+
+    # 4. evolve the bond tensor backward
+    Hc = C_hamiltonian(bond, ψ, H, ψ, envs; alg.backend, allocator)
+    ψ.C[bond] = integrate(Hc, ψ.C[bond], t_C, -dt / 2, alg.integrator; imaginary_evolution)
+
+    return ψ, ϵ
+end
+
 function _timestep_finite!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP, envs, allocator;
         imaginary_evolution::Bool, normalize::Bool
     )
-    ϵ_truncs = zeros(real(scalartype(ψ)), length(ψ) - 1)
+    L = length(ψ)
+    ϵ_truncs = zeros(real(scalartype(ψ)), L - 1)
 
-    # sweep left to right
-    for i in 1:(length(ψ) - 1)
-        # 1. optionally expand the bond ahead of the local update (CBE)
-        isnothing(alg.alg_expand) ||
-            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize, allocator)
-
-        # 2. evolve the (possibly expanded) center tensor forward
-        Hac = AC_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
-        AC = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator; imaginary_evolution)
-
-        # 3. gauge: split AC -> AL[i], C[i] (QR center-move, or truncated SVD cutting the
-        #    enlarged bond back down) and move the center to i+1. By default the norm is
-        #    preserved; `normalize` renormalizes.
-        _, ϵ_truncs[i] = left_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
-
-        # 4. evolve the bond tensor backward
-        Hc = C_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
-        ψ.C[i] = integrate(
-            Hc, ψ.C[i], t + dt / 2, -dt / 2, alg.integrator;
-            imaginary_evolution
+    # left→right half-sweep: `t → t + dt / 2`
+    for site in 1:L
+        ψ, ϵ = local_update!(
+            site, Val(:right), ψ, H, alg, envs, t, dt, allocator;
+            imaginary_evolution, normalize
         )
+        site < L && (ϵ_truncs[site] = ϵ)
     end
 
-    # edge case
-    Hac = AC_hamiltonian(length(ψ), ψ, H, ψ, envs; alg.backend, allocator)
-    ψ.AC[end] = integrate(Hac, ψ.AC[end], t, dt / 2, alg.integrator; imaginary_evolution)
-
-    # sweep right to left
-    for i in length(ψ):-1:2
-        # 1. optionally expand the bond ahead of the local update (CBE)
-        isnothing(alg.alg_expand) ||
-            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize, allocator)
-
-        # 2. evolve the (possibly expanded) center tensor forward
-        Hac = AC_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
-        AC = integrate(
-            Hac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator;
-            imaginary_evolution
+    # right→left half-sweep: `t + dt / 2 → t + dt`
+    for site in L:-1:1
+        ψ, ϵ = local_update!(
+            site, Val(:left), ψ, H, alg, envs, t, dt, allocator;
+            imaginary_evolution, normalize
         )
-
-        # 3. gauge: split AC -> C[i-1], AR[i] and move the center to i-1 (norm preserved by
-        #    default; `normalize` renormalizes)
-        _, ϵ_truncs[i - 1] = right_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
-
-        # 4. evolve the bond tensor backward
-        Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
-        ψ.C[i - 1] = integrate(
-            Hc, ψ.C[i - 1], t + dt, -dt / 2, alg.integrator;
-            imaginary_evolution
-        )
+        site > 1 && (ϵ_truncs[site - 1] = ϵ)
     end
-
-    # edge case
-    Hac = AC_hamiltonian(1, ψ, H, ψ, envs; alg.backend, allocator)
-    ψ.AC[1] = integrate(
-        Hac, ψ.AC[1], t + dt / 2, dt / 2, alg.integrator;
-        imaginary_evolution
-    )
 
     return ψ, envs, AlgorithmInfo(; truncation_errors = ϵ_truncs)
 end
@@ -271,48 +275,56 @@ function timestep!(
     )
 end
 
+function local_update!(
+        pos, direction::Val, ψ, H, alg::TDVP2, envs, t, dt, allocator;
+        imaginary_evolution, normalize
+    )
+    t_AC2, t_AC = _half_sweep_times(direction, t, dt)
+
+    # 1. evolve the two-site center tensor at `(pos, pos + 1)` forward
+    ac2 = if direction === Val(:right)
+        _transpose_front(ψ.AC[pos]) * _transpose_tail(ψ.AR[pos + 1])
+    else
+        _transpose_front(ψ.AL[pos]) * _transpose_tail(ψ.AC[pos + 1])
+    end
+    Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs; alg.backend, allocator)
+    ac2′ = integrate(Hac2, ac2, t_AC2, dt / 2, alg.integrator; imaginary_evolution)
+
+    # 2. gauge: the two-site center always has to be split back up, so this is always a
+    #    truncated SVD, and the norm of the discarded singular values is the truncation error
+    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trunc)
+    _, ϵ = gauge2!(ψ, pos, direction, ac2′, alg_gauge; normalize)
+
+    # 3. evolve the new single-site center backward, except at the far end of the sweep
+    if direction === Val(:right) ? pos != length(ψ) - 1 : pos != 1
+        site = direction === Val(:right) ? pos + 1 : pos
+        Hac = AC_hamiltonian(site, ψ, H, ψ, envs; alg.backend, allocator)
+        ψ.AC[site] = integrate(Hac, ψ.AC[site], t_AC, -dt / 2, alg.integrator; imaginary_evolution)
+    end
+
+    return ψ, ϵ
+end
+
 function _timestep2_finite!(
         ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2, envs, allocator;
         imaginary_evolution::Bool, normalize::Bool
     )
-    # the two-site center always has to be split back up, so the gauge is always a truncated SVD
-    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trunc)
-
     ϵ_truncs = zeros(real(scalartype(ψ)), length(ψ) - 1)
 
-    # sweep left to right
-    for i in 1:(length(ψ) - 1)
-        ac2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
-        ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
-
-        # the norm of the discarded singular values is the truncation error
-        _, ϵ_truncs[i] = gauge2!(ψ, i, Val(:right), ac2′, alg_gauge; normalize)
-
-        if i != (length(ψ) - 1)
-            Hac = AC_hamiltonian(i + 1, ψ, H, ψ, envs; alg.backend, allocator)
-            ψ.AC[i + 1] = integrate(
-                Hac, ψ.AC[i + 1], t + dt / 2, -dt / 2, alg.integrator;
-                imaginary_evolution
-            )
-        end
+    # left→right half-sweep: `t → t + dt / 2`
+    for pos in 1:(length(ψ) - 1)
+        ψ, ϵ_truncs[pos] = local_update!(
+            pos, Val(:right), ψ, H, alg, envs, t, dt, allocator;
+            imaginary_evolution, normalize
+        )
     end
 
-    # sweep right to left
-    for i in length(ψ):-1:2
-        ac2 = _transpose_front(ψ.AL[i - 1]) * _transpose_tail(ψ.AC[i])
-        Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
-        ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator; imaginary_evolution)
-
-        _, ϵ_truncs[i - 1] = gauge2!(ψ, i - 1, Val(:left), ac2′, alg_gauge; normalize)
-
-        if i != 2
-            Hac = AC_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
-            ψ.AC[i - 1] = integrate(
-                Hac, ψ.AC[i - 1], t + dt, -dt / 2, alg.integrator;
-                imaginary_evolution
-            )
-        end
+    # right→left half-sweep: `t + dt / 2 → t + dt`
+    for pos in (length(ψ) - 1):-1:1
+        ψ, ϵ_truncs[pos] = local_update!(
+            pos, Val(:left), ψ, H, alg, envs, t, dt, allocator;
+            imaginary_evolution, normalize
+        )
     end
 
     return ψ, envs, AlgorithmInfo(; truncation_errors = ϵ_truncs)
