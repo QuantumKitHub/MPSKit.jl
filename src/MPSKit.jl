@@ -36,7 +36,7 @@ export excitations
 export FiniteExcited, QuasiparticleAnsatz, ChepigaAnsatz, ChepigaAnsatz2
 export time_evolve, timestep, timestep!, make_time_mpo
 export AlgorithmInfo, convergence_measure
-export TDVP, TDVP2, BUG, WI, WII, TaylorCluster
+export TDVP, TDVP2, BUG, WI, WII, TaylorCluster, ClusterExpansion
 export changebonds, changebonds!
 export VUMPSSvdCut, OptimalExpand, SvdCut, RandExpand, SketchedExpand
 export NoiseSchedule, FunctionalSchedule, ExponentialDecay, Warmup, DMRG3S
@@ -174,6 +174,7 @@ include("algorithms/timestep/tdvp.jl")
 include("algorithms/timestep/bug.jl")
 include("algorithms/timestep/taylorcluster.jl")
 include("algorithms/timestep/wii.jl")
+include("algorithms/timestep/clusterexpansion.jl")
 include("algorithms/timestep/integrators.jl")
 include("algorithms/timestep/time_evolve.jl")
 

@@ -6,7 +6,7 @@ function DocumenterVitepress.vitepress_config_transform(::VitepressOverrides, co
     occursin(marker, config) || error("DocumenterVitepress config has no default export to extend")
     return replace(config, marker => "const upstreamConfig = "; count = 1) * """
 
-    import { withOverrides } from './overrides.mts'
-    export default withOverrides(upstreamConfig)
-    """
+                import { withOverrides } from './overrides.mts'
+                export default withOverrides(upstreamConfig)
+                """
 end
