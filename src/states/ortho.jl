@@ -250,7 +250,7 @@ function uniform_leftorth!(
     end
 end
 
-function Base.iterate(it::IterativeSolver{LeftCanonical}, state = it.state)
+function Base.iterate(it::IterativeSolver{LeftCanonical}, state::NamedTuple = it.state)
     timeroutput = state.timeroutput
     C₀ = @timeit timeroutput "gauge_eigsolve" gauge_eigsolve_step!(it, state)
     C₁ = @timeit timeroutput "gauge_orth" gauge_orth_step!(it, state)
@@ -318,7 +318,7 @@ function uniform_rightorth!(
     end
 end
 
-function Base.iterate(it::IterativeSolver{RightCanonical}, state = it.state)
+function Base.iterate(it::IterativeSolver{RightCanonical}, state::NamedTuple = it.state)
     timeroutput = state.timeroutput
     C₀ = @timeit timeroutput "gauge_eigsolve" gauge_eigsolve_step!(it, state)
     C₁ = @timeit timeroutput "gauge_orth" gauge_orth_step!(it, state)
