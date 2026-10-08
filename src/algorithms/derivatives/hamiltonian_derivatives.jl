@@ -506,11 +506,8 @@ end
 
 Operator-only data for one site of a Jordan MPO, shared by every environment snapshot
 in a solve. In the block form `[I C D; 0 A B; 0 0 I]`, `C` starts a term, `A` continues
-it, and `B` ends it. `D` is the onsite term converted to the environment's storage type.
-
-The boundary flags indicate which identity channels exist. The cached operator data
-must remain read-only throughout the solve.
-Absent onsite terms use `missing` while retaining a concrete field type.
+it, and `B` ends it. `D` is the onsite term converted to the environment's storage type,
+or `missing` if absent. The boundary flags indicate which identity channels exist.
 """
 struct JordanSiteData{
         A <: MPOTensor,
@@ -518,286 +515,187 @@ struct JordanSiteData{
         C <: AbstractTensorMap{<:Any, <:Any, 1, 2},
         D <: MPSBondTensor,
     }
-    "continuing block between internal MPO channels"
     A::A
-    "ending block from internal channels to the finished channel"
     B::B
-    "starting block from the unstarted channel to internal channels"
     C::C
-    "onsite operator, or `missing` if absent"
     D::Union{Missing, D}
     "whether the outgoing unstarted channel exists separately from the finished channel"
     unstarted::Bool
     "whether the incoming finished channel exists separately from the unstarted channel"
     finished::Bool
-    function JordanSiteData{A, B, C, D}(a, b, c, d, unstarted, finished) where {A, B, C, D}
-        return new{A, B, C, D}(a, b, c, d, unstarted, finished)
-    end
 end
 """
     JordanPairData
 
-Operator-only data for the adjacent sites `i` and `i + 1`. The `CB` contraction joins a
-term starting at `i` to one ending at `i + 1`; it is independent of the MPS and computed
-once. `channels = (rows, mids, cols)` identifies paths through both continuing blocks.
-The restricted `A1` and `A2` retain only those paths when constructing the `AA` part of
-an effective two-site Hamiltonian. Empty channel vectors mean there is no such path.
+Operator-only data for the adjacent sites `i` and `i + 1`: the products `C_i * B_{i+1}`,
+`A_i * B_{i+1}` and `C_i * A_{i+1}`, each `missing` if absent, and the continuing blocks
+restricted to the connected `channels = (rows, mids, cols)` of `_connected_channels`.
+Contracting these products with `GL` or `GR` follows the contraction order of
+`JordanMPO_AC2_Hamiltonian`, whose operator-only part is then computed once per solve.
 """
-struct JordanPairData{S <: JordanSiteData, T <: MPOTensor, A <: MPOTensor}
-    "shared site data at `i`"
-    left::S
-    "shared site data at `i + 1`"
-    right::S
-    "operator-only `C_i * B_{i+1}` contraction, or `missing`"
+struct JordanPairData{T <: MPOTensor, U, V, A <: MPOTensor}
     CB::Union{Missing, T}
-    "connected incoming, intermediate, and outgoing internal channel indices"
+    AB::Union{Missing, U}
+    CA::Union{Missing, V}
     channels::NTuple{3, Vector{Int}}
-    "left continuing block restricted to the connected rows and intermediate channels"
     A1::A
-    "right continuing block restricted to the intermediate channels and connected columns"
     A2::A
-
-    function JordanPairData{S, T, A}(left, right, CB, channels, A1, A2) where {S, T, A}
-        return new{S, T, A}(left, right, CB, channels, A1, A2)
-    end
 end
 """
     JordanOperatorData
 
-Fixed Jordan MPO metadata for a solve. Site and pair entries contain no MPS-dependent
-contractions and remain shared when directional environment records are replaced.
-Finite caches store `N - 1` pair entries. A periodic IDMRG2 cache will additionally need
-the seam pair `(N, 1)` and boundary record updates after its explicit seam solves.
+Fixed Jordan MPO metadata for a solve, with sites indexed by site and pairs by the left
+site of each bond. Entries contain no MPS-dependent contractions.
 """
-struct JordanOperatorData{S <: JordanSiteData, P <: JordanPairData{S}}
-    "one-site block metadata, indexed by site"
+struct JordanOperatorData{S <: JordanSiteData, P <: JordanPairData}
     sites::Vector{S}
-    "two-site metadata, indexed by the left site of each bond"
     pairs::Vector{P}
 end
 
 """
     JordanEnvironmentSide
 
-One direction's contribution to an effective `AC` or `AC2` Hamiltonian at a particular
-sweep position. Unlike the fixed `JordanSiteData` and `JordanPairData`, this combines their
-operator blocks with the current `GL` or `GR`, so its contractions depend on the MPS.
-`raw` contains the unfused partial operator without its `A`/`AA` term;
-`prepared` is an independently prepared copy, including any onsite/`CB` folding.
-Both are read-only snapshots: preparation must not fold terms into the cached raw data.
-
-`continuing` stores the matrix needed to assemble the remaining `A`/`AA` term. For `AC`
-it is fused `GL * A` on the left and dense `GR` on the right; for `AC2` it is fused,
-channel-restricted `GL * A` or `A * GR`. Unfused one-site `GL * A` and `A * GR`
-contractions are temporary inputs to pair preparation and are not retained in the record.
-Environment transfers use the full MPO independently of these contributions. `continuing`
-is `missing` when that contribution is absent; a local expansion refresh omits pair
-preparation that will be replaced before use.
+One direction's prepared contribution to an effective `AC` or `AC2` Hamiltonian, excluding
+its continuing `A`/`AA` term. `continuing` is that side's fused environment for assembling
+the continuing term, or `missing` if absent. Both are read-only snapshots.
 """
-struct JordanEnvironmentSide{
-        H <: Union{JordanMPO_AC_Hamiltonian, JordanMPO_AC2_Hamiltonian},
-        P <: Union{JordanMPO_AC_Hamiltonian, JordanMPO_AC2_Hamiltonian},
-        C <: AbstractTensorMap,
-    }
-    "unprepared partial Hamiltonian, excluding the continuing `A`/`AA` term"
-    raw::H
-    "prepared partial Hamiltonian with independent mutable folding targets"
-    prepared::P
-    "fused matrix for continuing-term assembly, or `missing`"
+struct JordanEnvironmentSide{H, C <: AbstractTensorMap}
+    prepared::H
     continuing::Union{Missing, C}
-    function JordanEnvironmentSide{H, P, C}(raw, prepared, continuing) where {H, P, C}
-        return new{H, P, C}(raw, prepared, continuing)
-    end
 end
+JordanEnvironmentSide(prepared, continuing, ::Type{C}) where {C} =
+    JordanEnvironmentSide{typeof(prepared), C}(prepared, continuing)
 
 function cache_operator_data(O::MPOHamiltonian, GL, N)
     S, M = spacetype(GL), storagetype(GL)
     O1, O2 = tensormaptype(S, 1, 1, M), tensormaptype(S, 2, 2, M)
+    O32, O23 = tensormaptype(S, 3, 2, M), tensormaptype(S, 2, 3, M)
+    U = SparseBlockTensorMap{O32, scalartype(O32), S, 3, 2, 5}
+    V = SparseBlockTensorMap{O23, scalartype(O23), S, 2, 3, 5}
     sites = map(1:N) do i
         W = O[i]
         A, B, C, D = W.A, W.B, W.C, W.D
         onsite = nonzero_length(D) > 0 ? convert(O1, only(D)) : missing
-        JordanSiteData{typeof(A), typeof(B), typeof(C), O1}(
-            A, B, C, onsite, size(W, 4) > 1, size(W, 1) > 1,
-        )
+        JordanSiteData{typeof(A), typeof(B), typeof(C), O1}(A, B, C, onsite, size(W, 4) > 1, size(W, 1) > 1)
     end
     pairs = map(1:(N - 1)) do i
         l, r = sites[i], sites[i + 1]
         CB = if nonzero_length(l.C) > 0 && nonzero_length(r.B) > 0
             @plansor cb[-1 -2; -3 -4] := l.C[-1; -3 1] * r.B[1 -2; -4]
-            convert(O2, only(cb))
+            only(cb)
+        else
+            missing
+        end
+        AB = if nonzero_length(l.A) > 0 && nonzero_length(r.B) > 0
+            @plansor ab[-1 -2 -3; -4 -5] := l.A[-1 -2; -4 1] * r.B[1 -3; -5]
+        else
+            missing
+        end
+        CA = if nonzero_length(l.C) > 0 && nonzero_length(r.A) > 0
+            @plansor ca[-1 -2; -3 -4 -5] := l.C[-1; -3 1] * r.A[1 -2; -4 -5]
         else
             missing
         end
         channels = _connected_channels(l.A, r.A)
-        A1, A2 = if isempty(channels[2])
-            l.A, r.A
-        else
-            rows, mids, cols = channels
-            l.A[rows, 1:1, 1:1, mids], r.A[mids, 1:1, 1:1, cols]
-        end
-        JordanPairData{eltype(sites), O2, typeof(A1)}(l, r, CB, channels, A1, A2)
+        rows, mids, cols = channels
+        A1, A2 = isempty(mids) ? (l.A, r.A) : (l.A[rows, 1:1, 1:1, mids], r.A[mids, 1:1, 1:1, cols])
+        JordanPairData{O2, U, V, typeof(A1)}(CB, AB, CA, channels, A1, A2)
     end
     return JordanOperatorData(sites, pairs)
 end
 
-# Preparing a partial operator may mutate its B/C or AB/CA fields. Copy only those
-# fields once when publishing the record, retaining an independent unprepared view.
-function copy_operator_side(H::JordanMPO_AC_Hamiltonian{O1, O2, O3}) where {O1, O2, O3}
-    Hcopy = JordanMPO_AC_Hamiltonian{O1, O2, O3}(
-        H.D, H.I, H.E, ismissing(H.C) ? missing : copy(H.C),
-        ismissing(H.B) ? missing : copy(H.B), H.A, H.backend, H.allocator,
-    )
-    return Hcopy
+# Directional halves of `JordanMPO_AC_Hamiltonian` and `JordanMPO_AC2_Hamiltonian`, using
+# the same contractions. Each onsite term is assigned to the side whose preparation can fold it.
+function _jordan_types(G)
+    S, M = spacetype(G), storagetype(G)
+    return tensormaptype(S, 1, 1, M), tensormaptype(S, 2, 2, M), tensormaptype(S, 3, 3, M)
 end
-function copy_operator_side(H::JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}) where {O1, O2, O3, O4}
-    Hcopy = JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
-        H.II, ismissing(H.IC) ? missing : copy(H.IC), H.ID, H.CB,
-        ismissing(H.CA) ? missing : copy(H.CA), ismissing(H.AB) ? missing : copy(H.AB),
-        H.AA, ismissing(H.BE) ? missing : copy(H.BE), H.DE, H.EE, H.backend, H.allocator,
-    )
-    return Hcopy
+function _ending(GL2, site, backend, allocator)
+    nonzero_length(site.B) > 0 || return missing
+    @plansor backend = backend allocator = allocator b[-1 -2; -3 -4] := GL2[-1 1; -3] * site.B[1 -2; -4]
+    return only(b)
+end
+function _starting(GR2, site, backend, allocator)
+    nonzero_length(site.C) > 0 || return missing
+    @plansor backend = backend allocator = allocator c[-1 -2; -3 -4] := site.C[-1; -3 1] * GR2[-4 1; -2]
+    return only(c)
 end
 
-prepare_operator_side(H) = prepare_operator!!(copy_operator_side(H))
-
-function _contract_GL_O(GL, O, backend, allocator)
-    @plansor backend = backend allocator = allocator L[-1 -2 -3; -4 -5] := GL[-1 1; -4] * O[1 -2; -5 -3]
-    return L
-end
-function _contract_O_GR(O, GR, backend, allocator)
-    @plansor backend = backend allocator = allocator R[-1 -2; -4 -5 -3] := O[-3 -5; -2 1] * GR[-1 1; -4]
-    return R
-end
-function _fuse_cached_environment(t, nout, nin, backend, allocator)
-    cp = allocator_checkpoint!(allocator)
-    result = _fuse_env(t, nout, nin, backend, allocator)
-    allocator_reset!(allocator, cp)
-    return result
-end
-# Build raw directional ingredients and the unfused continuing contraction once.
-# AC and AC2 preparation consume these independently; pair-only solves skip AC fusion.
-function left_AC_ingredients(GL, site, backend, allocator)
+function left_AC_side(GL, site, backend, allocator)
     GL2 = GL[2:(end - 1)]
+    O1, O2, _ = _jordan_types(GL)
+    O3 = MPO_AC_Hamiltonian{typeof(GL2), typeof(site.A), typeof(GL2), typeof(backend), typeof(allocator)}
     E = site.finished ? removeunit(GL[end], 2) : missing
-    B = if nonzero_length(site.B) > 0
-        @plansor backend = backend allocator = allocator b[-1 -2; -3 -4] := GL2[-1 1; -3] * site.B[1 -2; -4]
-        only(b)
-    else
-        missing
-    end
-    # Match the existing folding preference: onsite into C, then B, otherwise standalone.
     D = nonzero_length(site.C) == 0 ? site.D : missing
-    O1, O2 = tensormaptype(spacetype(GL), 1, 1, storagetype(GL)), tensormaptype(spacetype(GL), 2, 2, storagetype(GL))
-    O3 = typeof(MPO_AC_Hamiltonian(GL2, site.A, GL2, backend, allocator))
-    raw = JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, missing, E, missing, B, missing, backend, allocator)
-    contraction = nonzero_length(site.A) > 0 ? SparseBlockTensorMap(_contract_GL_O(GL2, site.A, backend, allocator)) : missing
-    return raw, contraction
+    H = JordanMPO_AC_Hamiltonian{O1, O2, O3}(
+        D, missing, E, missing, _ending(GL2, site, backend, allocator), missing, backend, allocator,
+    )
+    continuing = nonzero_length(site.A) > 0 ? _prepare_GL_O(GL2, site.A, backend, allocator) : missing
+    return JordanEnvironmentSide(prepare_operator!!(H), continuing, O2)
 end
-function prepare_left_AC(raw::JordanMPO_AC_Hamiltonian{O1, O2}, contraction, backend, allocator) where {O1, O2}
-    continuing = ismissing(contraction) ? missing : _fuse_cached_environment(contraction, 1, 2, backend, allocator)
-    prepared = prepare_operator_side(raw)
-    return JordanEnvironmentSide{typeof(raw), typeof(prepared), O2}(raw, prepared, continuing)
-end
-function right_AC_ingredients(GR, site, backend, allocator; prepare_pair::Bool = false)
+function right_AC_side(GR, site, backend, allocator)
     GR2 = GR[2:(end - 1)]
+    O1, O2, _ = _jordan_types(GR)
+    O3 = MPO_AC_Hamiltonian{typeof(GR2), typeof(site.A), typeof(GR2), typeof(backend), typeof(allocator)}
     I = site.unstarted ? removeunit(GR[1], 2) : missing
-    C = if nonzero_length(site.C) > 0
-        @plansor backend = backend allocator = allocator c[-1 -2; -3 -4] := site.C[-1; -3 1] * GR2[-4 1; -2]
-        only(c)
-    else
-        missing
-    end
     D = nonzero_length(site.C) > 0 ? site.D : missing
-    S, M = spacetype(GR), storagetype(GR)
-    O1, O2 = tensormaptype(S, 1, 1, M), tensormaptype(S, 2, 2, M)
-    O3 = typeof(MPO_AC_Hamiltonian(GR2, site.A, GR2, backend, allocator))
-    raw = JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, I, missing, C, missing, missing, backend, allocator)
-    contraction = prepare_pair && nonzero_length(site.A) > 0 ? SparseBlockTensorMap(_contract_O_GR(site.A, GR2, backend, allocator)) : missing
-    return raw, contraction, GR2
-end
-function prepare_right_AC(raw, GR2, site, backend, allocator)
+    H = JordanMPO_AC_Hamiltonian{O1, O2, O3}(
+        D, I, missing, _starting(GR2, site, backend, allocator), missing, missing, backend, allocator,
+    )
     continuing = nonzero_length(site.A) > 0 ? TensorMap(GR2) : missing
-    prepared = prepare_operator_side(raw)
-    C = tensormaptype(spacetype(GR2), 2, 1, storagetype(GR2))
-    return JordanEnvironmentSide{typeof(raw), typeof(prepared), C}(raw, prepared, continuing)
+    return JordanEnvironmentSide(prepare_operator!!(H), continuing, tensormaptype(spacetype(GR), 2, 1, storagetype(GR)))
 end
 
-function prepare_left_AC2(GL, pair, ingredients, contraction, backend, allocator)
+function left_AC2_side(GL, site, pair, backend, allocator)
     GL2 = GL[2:(end - 1)]
-    l, r = pair.left, pair.right
-    EE, BE = ingredients.E, ingredients.B
-    AB = if nonzero_length(l.A) > 0 && nonzero_length(r.B) > 0
-        LA = contraction
-        @plansor backend = backend allocator = allocator ab[-1 -2 -3; -4 -5 -6] := LA[-1 -2 1; -4 -5] * r.B[1 -3; -6]
-        only(ab)
-    else
+    O1, O2, O3 = _jordan_types(GL)
+    O4 = MPO_AC2_Hamiltonian{typeof(GL2), typeof(pair.A1), typeof(pair.A2), typeof(GL2), typeof(backend), typeof(allocator)}
+    EE = site.finished ? removeunit(GL[end], 2) : missing
+    AB = if ismissing(pair.AB)
         missing
+    else
+        @plansor backend = backend allocator = allocator ab[-1 -2 -3; -4 -5 -6] := GL2[-1 1; -4] * pair.AB[1 -2 -3; -5 -6]
+        only(ab)
     end
     # CB is folded into CA if available, otherwise into AB.
-    has_CA = nonzero_length(l.C) > 0 && nonzero_length(r.A) > 0
-    CB = has_CA ? missing : pair.CB
-    S, M = spacetype(GL), storagetype(GL)
-    O1, O2, O3 = tensormaptype(S, 1, 1, M), tensormaptype(S, 2, 2, M), tensormaptype(S, 3, 3, M)
-    O4 = typeof(MPO_AC2_Hamiltonian(GL2, pair.A1, pair.A2, GL2, backend, allocator))
-    raw = JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
-        missing, missing, missing, CB, missing, AB, missing, BE, l.D, EE, backend, allocator,
+    CB = ismissing(pair.CA) ? pair.CB : missing
+    H = JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+        missing, missing, missing, CB, missing, AB, missing,
+        _ending(GL2, site, backend, allocator), site.D, EE, backend, allocator,
     )
-    continuing = if isempty(pair.channels[2])
-        missing
-    else
-        _, mids, _ = pair.channels
-        # Restrict after contracting: rows with no edge to mids contributed zero already.
-        LA = contraction[1:1, 1:1, mids, 1:1, 1:1]
-        _fuse_cached_environment(LA, 1, 2, backend, allocator)
-    end
-    prepared = prepare_operator_side(raw)
-    return JordanEnvironmentSide{typeof(raw), typeof(prepared), O2}(raw, prepared, continuing)
+    rows, mids, _ = pair.channels
+    continuing = isempty(mids) ? missing : _prepare_GL_O(GL2[rows], pair.A1, backend, allocator)
+    return JordanEnvironmentSide(prepare_operator!!(H), continuing, O2)
 end
-function prepare_right_AC2(GR, pair, ingredients, contraction, backend, allocator)
+function right_AC2_side(GR, site, pair, backend, allocator)
     GR2 = GR[2:(end - 1)]
-    l, r = pair.left, pair.right
-    II = ismissing(ingredients.I) ? missing : transpose(ingredients.I)
-    IC = ingredients.C
-    CA = if nonzero_length(l.C) > 0 && nonzero_length(r.A) > 0
-        AR = contraction
-        @plansor backend = backend allocator = allocator ca[-1 -2 -3; -4 -5 -6] := l.C[-1; -4 1] * AR[-6 -5; -3 -2 1]
-        only(ca)
-    else
+    O1, O2, O3 = _jordan_types(GR)
+    O4 = MPO_AC2_Hamiltonian{typeof(GR2), typeof(pair.A1), typeof(pair.A2), typeof(GR2), typeof(backend), typeof(allocator)}
+    II = site.unstarted ? transpose(removeunit(GR[1], 2)) : missing
+    CA = if ismissing(pair.CA)
         missing
+    else
+        @plansor backend = backend allocator = allocator ca[-1 -2 -3; -4 -5 -6] := pair.CA[-1 -2; -4 -5 1] * GR2[-6 1; -3]
+        only(ca)
     end
     CB = ismissing(CA) ? missing : pair.CB
-    S, M = spacetype(GR), storagetype(GR)
-    O1, O2, O3 = tensormaptype(S, 1, 1, M), tensormaptype(S, 2, 2, M), tensormaptype(S, 3, 3, M)
-    O4 = typeof(MPO_AC2_Hamiltonian(GR2, pair.A1, pair.A2, GR2, backend, allocator))
-    raw = JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
-        II, IC, r.D, CB, CA, missing, missing, missing, missing, missing, backend, allocator,
+    H = JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+        II, _starting(GR2, site, backend, allocator), site.D, CB, CA,
+        missing, missing, missing, missing, missing, backend, allocator,
     )
-    continuing = if isempty(pair.channels[2])
-        missing
-    else
-        _, mids, _ = pair.channels
-        AR = contraction[1:1, 1:1, 1:1, 1:1, mids]
-        _fuse_cached_environment(AR, 2, 1, backend, allocator)
-    end
-    prepared = prepare_operator_side(raw)
-    return JordanEnvironmentSide{typeof(raw), typeof(prepared), O2}(raw, prepared, continuing)
+    _, mids, cols = pair.channels
+    continuing = isempty(mids) ? missing : _prepare_O_GR(pair.A2, GR2[cols], backend, allocator)
+    return JordanEnvironmentSide(prepare_operator!!(H), continuing, O2)
 end
 
-function prepare_left_environment(GL, data::JordanOperatorData, i, backend, allocator; one_site::Bool = true, two_site::Bool = true, local_only::Bool = false)
-    prepare_pair = two_site && !local_only && i < length(data.sites)
-    one_site || prepare_pair || return GL, missing, missing
-    ingredients, contraction = left_AC_ingredients(GL, data.sites[i], backend, allocator)
-    ac = one_site ? prepare_left_AC(ingredients, contraction, backend, allocator) : missing
-    ac2 = prepare_pair ? prepare_left_AC2(GL, data.pairs[i], ingredients, contraction, backend, allocator) : missing
+function prepare_left_environment(GL, data::JordanOperatorData, i, backend, allocator; one_site::Bool, two_site::Bool)
+    ac = one_site ? left_AC_side(GL, data.sites[i], backend, allocator) : missing
+    ac2 = two_site && i < length(data.sites) ? left_AC2_side(GL, data.sites[i], data.pairs[i], backend, allocator) : missing
     return GL, ac, ac2
 end
-function prepare_right_environment(GR, data::JordanOperatorData, i, backend, allocator; one_site::Bool = true, two_site::Bool = true, local_only::Bool = false)
-    prepare_pair = two_site && !local_only && i > 1
-    one_site || prepare_pair || return GR, missing, missing
-    ingredients, contraction, GR2 = right_AC_ingredients(GR, data.sites[i], backend, allocator; prepare_pair)
-    ac = one_site ? prepare_right_AC(ingredients, GR2, data.sites[i], backend, allocator) : missing
-    ac2 = prepare_pair ? prepare_right_AC2(GR, data.pairs[i - 1], ingredients, contraction, backend, allocator) : missing
+function prepare_right_environment(GR, data::JordanOperatorData, i, backend, allocator; one_site::Bool, two_site::Bool)
+    ac = one_site ? right_AC_side(GR, data.sites[i], backend, allocator) : missing
+    ac2 = two_site && i > 1 ? right_AC2_side(GR, data.sites[i], data.pairs[i - 1], backend, allocator) : missing
     return GR, ac, ac2
 end
 
@@ -808,24 +706,16 @@ function AC_hamiltonian(
     )
     @assert below === above "JordanMPO assumptions break"
     GL, GR = leftenv(cache, i, below), rightenv(cache, i, below)
-    if !cache.one_site
-        # An explicit AC query remains available in a pair-only solve, without
-        # publishing an unused one-site record on every environment update.
+    if !(prepare && cache.one_site)
         H = JordanMPO_AC_Hamiltonian(GL, O[i], GR; backend, allocator)
         return prepare ? prepare_operator!!(H) : H
     end
     l, r = cache.left[i].one_site, cache.right[i].one_site
-    L, R = prepare ? (l.prepared, r.prepared) : (copy_operator_side(l.raw), copy_operator_side(r.raw))
-    rawtype = MPO_AC_Hamiltonian{typeof(GL), typeof(cache.operator_data.sites[i].A), typeof(GR), typeof(backend), typeof(allocator)}
-    continuing_type = prepare ? prepared_operator_type(rawtype) : rawtype
-    A = if ismissing(l.continuing)
-        missing
-    elseif prepare
-        continuing_type(l.continuing, r.continuing, backend, allocator)
-    else
-        MPO_AC_Hamiltonian(GL[2:(end - 1)], cache.operator_data.sites[i].A, GR[2:(end - 1)], backend, allocator)
-    end
-    return assemble_operator_sides(L, R, A, continuing_type, backend, allocator)
+    T = prepared_operator_type(
+        MPO_AC_Hamiltonian{typeof(GL), typeof(cache.operator_data.sites[i].A), typeof(GR), typeof(backend), typeof(allocator)}
+    )
+    A = ismissing(l.continuing) ? missing : T(l.continuing, r.continuing, backend, allocator)
+    return assemble_operator_sides(l.prepared, r.prepared, A, T, backend, allocator)
 end
 function AC2_hamiltonian(
         i::Int, below::_HAM_MPS_TYPES, O::MPOHamiltonian, above::_HAM_MPS_TYPES,
@@ -834,20 +724,17 @@ function AC2_hamiltonian(
     )
     @assert below === above "JordanMPO assumptions break"
     GL, GR = leftenv(cache, i, below), rightenv(cache, i + 1, below)
-    l, r = cache.left[i].two_site, cache.right[i + 1].two_site
-    L, R = prepare ? (l.prepared, r.prepared) : (copy_operator_side(l.raw), copy_operator_side(r.raw))
-    pair = cache.operator_data.pairs[i]
-    rawtype = MPO_AC2_Hamiltonian{typeof(GL), typeof(pair.A1), typeof(pair.A2), typeof(GR), typeof(backend), typeof(allocator)}
-    continuing_type = prepare ? prepared_operator_type(rawtype) : rawtype
-    AA = if ismissing(l.continuing)
-        missing
-    elseif prepare
-        continuing_type(l.continuing, r.continuing, backend, allocator)
-    else
-        rows, _, cols = pair.channels
-        MPO_AC2_Hamiltonian(GL[2:(end - 1)][rows], pair.A1, pair.A2, GR[2:(end - 1)][cols], backend, allocator)
+    if !(prepare && cache.two_site)
+        H = JordanMPO_AC2_Hamiltonian(GL, O[i], O[i + 1], GR; backend, allocator)
+        return prepare ? prepare_operator!!(H) : H
     end
-    return assemble_operator_sides(L, R, AA, continuing_type, backend, allocator)
+    l, r = cache.left[i].two_site, cache.right[i + 1].two_site
+    pair = cache.operator_data.pairs[i]
+    T = prepared_operator_type(
+        MPO_AC2_Hamiltonian{typeof(GL), typeof(pair.A1), typeof(pair.A2), typeof(GR), typeof(backend), typeof(allocator)}
+    )
+    AA = ismissing(l.continuing) ? missing : T(l.continuing, r.continuing, backend, allocator)
+    return assemble_operator_sides(l.prepared, r.prepared, AA, T, backend, allocator)
 end
 
 function assemble_operator_sides(L::JordanMPO_AC_Hamiltonian{O1, O2}, R, A, ::Type{O3}, backend, allocator) where {O1, O2, O3}

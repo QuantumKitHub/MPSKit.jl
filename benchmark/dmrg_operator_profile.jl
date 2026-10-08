@@ -27,64 +27,48 @@ function MPSKit.AC2_hamiltonian(
     )
 end
 
-function MPSKit.absorb_site!(envs::ProfiledDMRGEnvironments, ψ, i, direction; kwargs...)
+function MPSKit.absorb_site!(envs::ProfiledDMRGEnvironments, ψ, i, direction)
     if envs.inner isa MPSKit.DMRGSweepCache
-        profiled_absorb!(envs, envs.inner, ψ, i, direction; kwargs...)
+        profiled_absorb!(envs, envs.inner, ψ, i, direction)
     else
-        MPSKit.absorb_site!(envs.inner, ψ, i, direction; kwargs...)
+        MPSKit.absorb_site!(envs.inner, ψ, i, direction)
     end
     return envs
 end
 
 # These two profiling adapters mirror absorb_site! and prepare_*_environment:
-# transfer, one-site ingredients, two-site preparation, and publishing the record.
-function profiled_absorb!(
-        envs, cache::MPSKit.DMRGSweepCache{E, O, L, R}, ψ, i, ::Val{:right};
-        local_only::Bool = false,
-    ) where {E, O, L, R}
+# transfer, one-site preparation, two-site preparation, and publishing the record.
+function profiled_absorb!(envs, cache::MPSKit.DMRGSweepCache{E, O, L, R}, ψ, i, ::Val{:right}) where {E, O, L, R}
     i < length(ψ) || return cache
     (; backend, allocator) = cache
-    data = cache.operator_data
     AL, GL = MPSKit.@timeit envs.timer "environment transfers" begin
         AL = ψ.AL[i]
         AL, cache.left[i].environment * MPSKit.TransferMatrix(AL, cache.environments.operator[i], AL; backend, allocator)
     end
-    prepare_pair = cache.two_site && !local_only && i + 1 < length(data.sites)
-    ingredients, contraction, ac = MPSKit.@timeit envs.timer "one-site preparation" begin
-        ingredients, contraction = MPSKit.left_AC_ingredients(GL, data.sites[i + 1], backend, allocator)
-        ac = cache.one_site ? MPSKit.prepare_left_AC(ingredients, contraction, backend, allocator) : missing
-        ingredients, contraction, ac
-    end
-    ac2 = MPSKit.@timeit envs.timer "two-site preparation" begin
-        prepare_pair ?
-            MPSKit.prepare_left_AC2(GL, data.pairs[i + 1], ingredients, contraction, backend, allocator) : missing
-    end
+    _, ac, _ = MPSKit.@timeit envs.timer "one-site preparation" MPSKit.prepare_left_environment(
+        GL, cache.operator_data, i + 1, backend, allocator; cache.one_site, two_site = false
+    )
+    _, _, ac2 = MPSKit.@timeit envs.timer "two-site preparation" MPSKit.prepare_left_environment(
+        GL, cache.operator_data, i + 1, backend, allocator; one_site = false, cache.two_site
+    )
     cache.left[i + 1] = L(GL, ac, ac2)
     cache.environments.GLs[i + 1] = GL
     cache.environments.ldependencies[i] = AL
     return cache
 end
-function profiled_absorb!(
-        envs, cache::MPSKit.DMRGSweepCache{E, O, L, R}, ψ, i, ::Val{:left};
-        local_only::Bool = false,
-    ) where {E, O, L, R}
+function profiled_absorb!(envs, cache::MPSKit.DMRGSweepCache{E, O, L, R}, ψ, i, ::Val{:left}) where {E, O, L, R}
     i > 1 || return cache
     (; backend, allocator) = cache
-    data = cache.operator_data
     AR, GR = MPSKit.@timeit envs.timer "environment transfers" begin
         AR = ψ.AR[i]
         AR, MPSKit.TransferMatrix(AR, cache.environments.operator[i], AR; backend, allocator) * cache.right[i].environment
     end
-    prepare_pair = cache.two_site && !local_only && i - 1 > 1
-    ingredients, contraction, ac = MPSKit.@timeit envs.timer "one-site preparation" begin
-        ingredients, contraction, GR2 = MPSKit.right_AC_ingredients(GR, data.sites[i - 1], backend, allocator; prepare_pair)
-        ac = cache.one_site ? MPSKit.prepare_right_AC(ingredients, GR2, data.sites[i - 1], backend, allocator) : missing
-        ingredients, contraction, ac
-    end
-    ac2 = MPSKit.@timeit envs.timer "two-site preparation" begin
-        prepare_pair ?
-            MPSKit.prepare_right_AC2(GR, data.pairs[i - 2], ingredients, contraction, backend, allocator) : missing
-    end
+    _, ac, _ = MPSKit.@timeit envs.timer "one-site preparation" MPSKit.prepare_right_environment(
+        GR, cache.operator_data, i - 1, backend, allocator; cache.one_site, two_site = false
+    )
+    _, _, ac2 = MPSKit.@timeit envs.timer "two-site preparation" MPSKit.prepare_right_environment(
+        GR, cache.operator_data, i - 1, backend, allocator; one_site = false, cache.two_site
+    )
     cache.right[i - 1] = R(GR, ac, ac2)
     cache.environments.GRs[i] = GR
     cache.environments.rdependencies[i] = AR

@@ -151,14 +151,8 @@ function local_update!(
             tensors = forward ? ψ.AR : ψ.AL
             previous = tensors[neighbor]
             changebond!(site, direction, ψ, O, alg.alg_expand, envs; allocator)
-            if tensors[neighbor] !== previous
-                # Only the current one-site window uses this refreshed record before
-                # the opposite sweep replaces it. Saturated bonds need no refresh.
-                absorb_site!(
-                    envs, ψ, neighbor, forward ? Val(:left) : Val(:right);
-                    local_only = true,
-                )
-            end
+            # Saturated bonds need no refresh.
+            tensors[neighbor] === previous || absorb_site!(envs, ψ, neighbor, forward ? Val(:left) : Val(:right))
         end
     end
 
@@ -354,8 +348,7 @@ function DMRGState(ψ, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput)
     Tr = real(scalartype(ψ))
     n = _num_updates(alg, ψ)
     local_errors = ones(Tr, n)
-    two_site = alg isa DMRG2 || !isnothing(alg.alg_expand)
-    cache = initialize_sweep_cache(ψ, H, envs; alg.backend, allocator, one_site = alg isa DMRG, two_site)
+    cache = initialize_sweep_cache(ψ, H, envs; alg.backend, allocator, one_site = alg isa DMRG, two_site = alg isa DMRG2)
     return DMRGState(
         ψ, H, cache, 0, maximum(local_errors), local_errors, zeros(Tr, n),
         zeros(n), timeroutput, allocator,
@@ -449,8 +442,8 @@ end
 Build solve-owned snapshots for a fixed operator: prepare the left boundary and absorb
 right-canonical tensors from the right boundary to initialize the first local window.
 `one_site` and `two_site` explicitly select which local contributions to prepare.
-Plain DMRG2 prepares pairs only; DMRG with expansion needs both. An explicit AC query
-on a pair-only cache constructs its operator from the snapshots without publishing it.
+DMRG prepares one-site and DMRG2 two-site contributions. Queries for unprepared operators,
+or for a size without prepared contributions, construct them from the snapshot environments.
 Unsupported environment representations retain their existing update behavior.
 """
 initialize_sweep_cache(ψ, O, envs; kwargs...) = envs
@@ -503,36 +496,35 @@ unwrap_environments(envs::MultipleEnvironments) = MultipleEnvironments(map(unwra
 unwrap_environments(envs::LazyLincoCache) = LazyLincoCache(envs.operator, map(unwrap_environments, envs.envs))
 
 """
-    absorb_site!(envs, ψ, i, direction; local_only=false)
+    absorb_site!(envs, ψ, i, direction)
 
 Contract the finalized tensor at `i` into an environment and publish its prepared record.
 `Val(:right)` absorbs `AL[i]` into `GL`, producing the left record at `i + 1`;
 `Val(:left)` absorbs `AR[i]` into `GR`, producing the right record at `i - 1`.
 The underlying ordinary manager's tensor and dependency are updated at the same time.
-`local_only=true` prepares only the one-site window needed after bond expansion.
 """
-absorb_site!(envs, ψ, i, direction; kwargs...) = envs
-function absorb_site!(cache::DMRGSweepCache{E, O, L}, ψ, i, ::Val{:right}; local_only::Bool = false) where {E, O, L}
+absorb_site!(envs, ψ, i, direction) = envs
+function absorb_site!(cache::DMRGSweepCache{E, O, L}, ψ, i, ::Val{:right}) where {E, O, L}
     i < length(ψ) || return cache
     (; backend, allocator) = cache
     AL = ψ.AL[i]
     GL = cache.left[i].environment * TransferMatrix(AL, cache.environments.operator[i], AL; backend, allocator)
-    cache.left[i + 1] = L(prepare_left_environment(GL, cache.operator_data, i + 1, backend, allocator; one_site = cache.one_site, two_site = cache.two_site, local_only)...)
+    cache.left[i + 1] = L(prepare_left_environment(GL, cache.operator_data, i + 1, backend, allocator; one_site = cache.one_site, two_site = cache.two_site)...)
     cache.environments.GLs[i + 1] = GL
     cache.environments.ldependencies[i] = AL
     return cache
 end
-function absorb_site!(cache::DMRGSweepCache{E, O, L, R}, ψ, i, ::Val{:left}; local_only::Bool = false) where {E, O, L, R}
+function absorb_site!(cache::DMRGSweepCache{E, O, L, R}, ψ, i, ::Val{:left}) where {E, O, L, R}
     i > 1 || return cache
     (; backend, allocator) = cache
     AR = ψ.AR[i]
     GR = TransferMatrix(AR, cache.environments.operator[i], AR; backend, allocator) * cache.right[i].environment
-    cache.right[i - 1] = R(prepare_right_environment(GR, cache.operator_data, i - 1, backend, allocator; one_site = cache.one_site, two_site = cache.two_site, local_only)...)
+    cache.right[i - 1] = R(prepare_right_environment(GR, cache.operator_data, i - 1, backend, allocator; one_site = cache.one_site, two_site = cache.two_site)...)
     cache.environments.GRs[i] = GR
     cache.environments.rdependencies[i] = AR
     return cache
 end
-function absorb_site!(envs::Union{MultipleEnvironments, LazyLincoCache}, ψ, i, direction; kwargs...)
-    foreach(env -> absorb_site!(env, ψ, i, direction; kwargs...), envs.envs)
+function absorb_site!(envs::Union{MultipleEnvironments, LazyLincoCache}, ψ, i, direction)
+    foreach(env -> absorb_site!(env, ψ, i, direction), envs.envs)
     return envs
 end

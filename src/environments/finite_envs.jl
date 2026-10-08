@@ -182,7 +182,7 @@ struct DMRGSweepCache{E, O, L, R, B, A} <: AbstractMPSEnvironments
     allocator::A
     "whether local updates require prepared one-site contributions"
     one_site::Bool
-    "whether local updates or bond expansion require prepared two-site contributions"
+    "whether local updates require prepared two-site contributions"
     two_site::Bool
 end
 
@@ -192,8 +192,7 @@ end
 Directional environment snapshot and the associated effective-operator contributions.
 A left record at `i` represents sites before `i`; a right record represents sites after
 `i`. Replacing a record publishes new tensors without mutating earlier snapshots.
-Unfused preparation intermediates are temporary; records retain only contributions
-needed by local Hamiltonians. Transfers only read `environment`.
+Transfers only read `environment`.
 """
 struct DMRGEnvironmentRecord{G, P, Q}
     "ordinary `GL` or `GR` tensor"
