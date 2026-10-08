@@ -106,7 +106,7 @@ function dominant_eigsolve(
     return result
 end
 
-function Base.iterate(it::IterativeSolver{<:VUMPS}, state = it.state)
+function Base.iterate(it::IterativeSolver{<:VUMPS}, state::VUMPSState = it.state)
     timeroutput = state.timeroutput
     ACs = @timeit timeroutput "localupdate (parallel)" localupdate_step!(it, state)
     mps = @timeit timeroutput "gauge" gauge_step!(it, state, ACs)

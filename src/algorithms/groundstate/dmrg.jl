@@ -340,7 +340,7 @@ function sweep!(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state, direction, ite
     )
 end
 
-function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state = it.state)
+function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGState = it.state)
     iter = state.iter + 1
     timeroutput = state.timeroutput
     state = @timeit timeroutput "sweep" begin
