@@ -1,0 +1,596 @@
+model,algorithm,path,stage,file,line,function,samples
+nearest_neighbor,DMRG,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,18
+nearest_neighbor,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,17
+nearest_neighbor,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,78,#JordanMPO_AC_Hamiltonian#551,16
+nearest_neighbor,DMRG,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,15
+nearest_neighbor,DMRG,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,336,right_gauge,10
+nearest_neighbor,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,121,prepare_operator!!,10
+nearest_neighbor,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,136,prepare_operator!!,9
+nearest_neighbor,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,86,#JordanMPO_AC_Hamiltonian#551,9
+nearest_neighbor,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,8
+nearest_neighbor,DMRG,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,8
+nearest_neighbor,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,8
+nearest_neighbor,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,3
+nearest_neighbor,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,147,prepare_operator!!,3
+nearest_neighbor,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,476,JordanMPO_AC_Hamiltonian,3
+nearest_neighbor,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,477,JordanMPO_AC_Hamiltonian,3
+nearest_neighbor,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,328,mul_tail!,3
+nearest_neighbor,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,474,JordanMPO_AC_Hamiltonian,2
+nearest_neighbor,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,2
+nearest_neighbor,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,74,#JordanMPO_AC_Hamiltonian#551,1
+nearest_neighbor,DMRG,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,5,#_transpose_tail#9,1
+nearest_neighbor,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,267,mul_front,1
+nearest_neighbor,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,474,JordanMPO_AC_Hamiltonian,1
+nearest_neighbor,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,120,prepare_operator!!,1
+nearest_neighbor,DMRG,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,182,local_update!,1
+nearest_neighbor,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,1
+nearest_neighbor,DMRG,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,16
+nearest_neighbor,DMRG,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,14
+nearest_neighbor,DMRG,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,336,right_gauge,11
+nearest_neighbor,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,10
+nearest_neighbor,DMRG,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,10
+nearest_neighbor,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,121,prepare_operator!!,6
+nearest_neighbor,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,5
+nearest_neighbor,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,5
+nearest_neighbor,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,136,prepare_operator!!,3
+nearest_neighbor,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,3
+nearest_neighbor,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,3
+nearest_neighbor,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,703,#prepare_right_AC#558,3
+nearest_neighbor,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,684,prepare_left_AC,2
+nearest_neighbor,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,2
+nearest_neighbor,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,2
+nearest_neighbor,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,147,prepare_operator!!,1
+nearest_neighbor,DMRG,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,2,#_transpose_front#8,1
+nearest_neighbor,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,316,mul_tail,1
+nearest_neighbor,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,474,JordanMPO_AC_Hamiltonian,1
+nearest_neighbor,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,407,#gauge2!#104,84
+nearest_neighbor,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,19
+nearest_neighbor,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,17
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,441,prepare_operator!!,12
+nearest_neighbor,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,12
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,291,#JordanMPO_AC2_Hamiltonian#555,11
+nearest_neighbor,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,490,JordanMPO_AC2_Hamiltonian,9
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,492,JordanMPO_AC2_Hamiltonian,8
+nearest_neighbor,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,8
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,427,prepare_operator!!,8
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,490,JordanMPO_AC2_Hamiltonian,7
+nearest_neighbor,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,495,JordanMPO_AC2_Hamiltonian,6
+nearest_neighbor,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,492,JordanMPO_AC2_Hamiltonian,6
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,332,#JordanMPO_AC2_Hamiltonian#555,6
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,305,#JordanMPO_AC2_Hamiltonian#555,5
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,495,JordanMPO_AC2_Hamiltonian,4
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,4
+nearest_neighbor,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,408,#gauge2!#104,4
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,412,prepare_operator!!,4
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,426,prepare_operator!!,3
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,487,JordanMPO_AC2_Hamiltonian,2
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,378,#AC2#71,2
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,380,#AC2#71,2
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,5,#_transpose_tail#9,2
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,454,prepare_operator!!,1
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,11,getindex,1
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,328,mul_tail!,1
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,1
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,284,#JordanMPO_AC2_Hamiltonian#555,1
+nearest_neighbor,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,279,local_update!,1
+nearest_neighbor,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,280,#JordanMPO_AC2_Hamiltonian#555,1
+nearest_neighbor,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,407,#gauge2!#104,95
+nearest_neighbor,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,16
+nearest_neighbor,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,12
+nearest_neighbor,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,492,JordanMPO_AC2_Hamiltonian,10
+nearest_neighbor,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,10
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,490,JordanMPO_AC2_Hamiltonian,9
+nearest_neighbor,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,9
+nearest_neighbor,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,495,JordanMPO_AC2_Hamiltonian,7
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,492,JordanMPO_AC2_Hamiltonian,7
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,703,#prepare_right_AC#558,7
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,6
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,136,prepare_operator!!,6
+nearest_neighbor,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,490,JordanMPO_AC2_Hamiltonian,5
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,121,prepare_operator!!,5
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,441,prepare_operator!!,5
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,684,prepare_left_AC,4
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,427,prepare_operator!!,3
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,412,prepare_operator!!,3
+nearest_neighbor,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,408,#gauge2!#104,3
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,495,JordanMPO_AC2_Hamiltonian,2
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,454,prepare_operator!!,2
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,426,prepare_operator!!,2
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,380,#AC2#71,2
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,279,local_update!,2
+nearest_neighbor,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,181,setindex!,2
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,487,JordanMPO_AC2_Hamiltonian,1
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,751,prepare_right_AC2,1
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,261,local_update!,1
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,646,copy_operator_side,1
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,266,local_update!,1
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,378,#AC2#71,1
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,5,#_transpose_tail#9,1
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,1
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,268,mul_front,1
+nearest_neighbor,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,263,local_update!,1
+nearest_neighbor,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,653,copy_operator_side,1
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,11744
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,5183
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,103,MPODerivativeOperator,913
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,257,_prepare_GL_O,725
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,503
+large_sparse,DMRG,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,431
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,405
+large_sparse,DMRG,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,385
+large_sparse,DMRG,ordinary,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,78,#JordanMPO_AC_Hamiltonian#551,313
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,86,#JordanMPO_AC_Hamiltonian#551,198
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,172
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,172
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,78,#JordanMPO_AC_Hamiltonian#551,146
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,238,_fuse_env,140
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,294,prepare_operator!!,72
+large_sparse,DMRG,ordinary,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,64,#JordanMPO_AC_Hamiltonian#551,64
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,64,#JordanMPO_AC_Hamiltonian#551,35
+large_sparse,DMRG,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,34
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,65,#JordanMPO_AC_Hamiltonian#551,23
+large_sparse,DMRG,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,336,right_gauge,19
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,15
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,476,JordanMPO_AC_Hamiltonian,13
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,136,prepare_operator!!,12
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,121,prepare_operator!!,12
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,283,mul_front!,6
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,147,prepare_operator!!,6
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,209,_jordan_A,5
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,336,PrecomputedDerivative,4
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,328,mul_tail!,4
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,4
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,3
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,478,JordanMPO_AC_Hamiltonian,3
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,224,_jordan_B,3
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,250,_prepare_GL_O,3
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,3
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,3
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,267,mul_front,2
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,285,mul_front!,2
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,2
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,254,_jordan_D,2
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,317,PrecomputedDerivative,2
+large_sparse,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,316,mul_tail,2
+large_sparse,DMRG,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,304,getindex,1
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,302,mul_front!,1
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,207,_jordan_A,1
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,239,_jordan_C,1
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,220,_jordan_B,1
+large_sparse,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,293,mul_front!,1
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,225,_jordan_B,1
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,205,_jordan_A,1
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,146,prepare_operator!!,1
+large_sparse,DMRG,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,197,_identity_tensor,1
+large_sparse,DMRG,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,5,#_transpose_tail#9,1
+large_sparse,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,11,getindex,1
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,11962
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,5143
+large_sparse,DMRG,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,520
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,496
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,430
+large_sparse,DMRG,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,407
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,665,_contract_GL_O,390
+large_sparse,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,352
+large_sparse,DMRG,hybrid,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,703,#prepare_right_AC#558,152
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,143
+large_sparse,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,128
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,238,_fuse_env,78
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,237,_fuse_env,64
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,684,prepare_left_AC,61
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,58
+large_sparse,DMRG,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,30
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,703,#prepare_right_AC#558,25
+large_sparse,DMRG,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,336,right_gauge,23
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,714,#prepare_right_AC#558,14
+large_sparse,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,12
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,336,PrecomputedDerivative,11
+large_sparse,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,9
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,700,#prepare_right_AC#558,9
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,681,prepare_left_AC,8
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,293,mul_front!,6
+large_sparse,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,6
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,147,prepare_operator!!,6
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,6
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,283,mul_front!,5
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,121,prepare_operator!!,5
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,694,prepare_left_AC,4
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,146,prepare_operator!!,3
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,136,prepare_operator!!,3
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,3
+large_sparse,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,328,mul_tail!,2
+large_sparse,DMRG,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,166,local_update!,2
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,646,copy_operator_side,1
+large_sparse,DMRG,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,184,local_update!,1
+large_sparse,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,268,mul_front,1
+large_sparse,DMRG,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,186,local_update!,1
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,236,_fuse_env,1
+large_sparse,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,336,PrecomputedDerivative,1
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,324,PrecomputedDerivative,1
+large_sparse,DMRG,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,336,nonzero_keys,1
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,271,mul_front!,1
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,357,fuse_legs,1
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,317,PrecomputedDerivative,1
+large_sparse,DMRG,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,301,getindex,1
+large_sparse,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,120,prepare_operator!!,1
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,288,mul_front!,1
+large_sparse,DMRG,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,2,#_transpose_front#8,1
+large_sparse,DMRG,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,176,local_update!,1
+large_sparse,DMRG,hybrid,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,16,,1
+large_sparse,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,292,mul_front!,1
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,19588
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,17165
+large_sparse,DMRG2,ordinary,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,271,_prepare_O_GR,3270
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,493,JordanMPO_AC2_Hamiltonian,1544
+large_sparse,DMRG2,ordinary,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,930
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,923
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,278,_prepare_O_GR,647
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,494,JordanMPO_AC2_Hamiltonian,612
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,572
+large_sparse,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,519
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,257,_prepare_GL_O,514
+large_sparse,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,416
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,364
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,263
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,238,_fuse_env,183
+large_sparse,DMRG2,ordinary,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,133
+large_sparse,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,407,#gauge2!#104,108
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,323,#JordanMPO_AC2_Hamiltonian#555,97
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,332,#JordanMPO_AC2_Hamiltonian#555,75
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,394,prepare_operator!!,65
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,432,prepare_operator!!,64
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,445,prepare_operator!!,61
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,314,#JordanMPO_AC2_Hamiltonian#555,58
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,381,prepare_operator!!,55
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,493,JordanMPO_AC2_Hamiltonian,50
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,291,#JordanMPO_AC2_Hamiltonian#555,49
+large_sparse,DMRG2,ordinary,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,317,PrecomputedDerivative,37
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,403,prepare_operator!!,37
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,355,#JordanMPO_AC2_Hamiltonian#555,33
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,417,prepare_operator!!,32
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,458,prepare_operator!!,30
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,494,JordanMPO_AC2_Hamiltonian,23
+large_sparse,DMRG2,ordinary,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,291,#JordanMPO_AC2_Hamiltonian#555,22
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,17
+large_sparse,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,16
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,280,#JordanMPO_AC2_Hamiltonian#555,15
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,281,#JordanMPO_AC2_Hamiltonian#555,14
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,347,PrecomputedDerivative,13
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,12
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,305,#JordanMPO_AC2_Hamiltonian#555,10
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,283,mul_front!,8
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,8
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,209,_jordan_A,7
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,5,#_transpose_tail#9,5
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,328,mul_tail!,5
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,285,mul_front!,4
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,250,_prepare_GL_O,4
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,380,#AC2#71,4
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,317,PrecomputedDerivative,4
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,378,#AC2#71,3
+large_sparse,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,336,nonzero_keys,2
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,2
+large_sparse,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,2,#_transpose_front#8,2
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,281,local_update!,1
+large_sparse,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,198,_identity_tensor,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,457,prepare_operator!!,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,33,getindex,1
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,487,JordanMPO_AC2_Hamiltonian,1
+large_sparse,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,338,nonzero_keys,1
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,261,local_update!,1
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,499,JordanMPO_AC2_Hamiltonian,1
+large_sparse,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,408,#gauge2!#104,1
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,358,fuse_legs,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,1
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,324,PrecomputedDerivative,1
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,0,mul_front!,1
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,293,mul_front!,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,211,_jordan_A,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,225,_jordan_B,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,284,#JordanMPO_AC2_Hamiltonian#555,1
+large_sparse,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,301,getindex,1
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,320,PrecomputedDerivative,1
+large_sparse,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,181,setindex!,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,240,_jordan_C,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,430,prepare_operator!!,1
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,267,mul_front,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,250,_jordan_D,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,271,_prepare_O_GR,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,267,_connected_channels,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,235,_jordan_C,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,210,_jordan_A,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,402,prepare_operator!!,1
+large_sparse,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,496,JordanMPO_AC2_Hamiltonian,1
+large_sparse,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,236,_fuse_env,1
+large_sparse,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,292,mul_front!,1
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,19213
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,17152
+large_sparse,DMRG2,hybrid,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,757,prepare_right_AC2,2971
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,493,JordanMPO_AC2_Hamiltonian,1451
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,791
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,494,JordanMPO_AC2_Hamiltonian,596
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,591
+large_sparse,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,510
+large_sparse,DMRG2,hybrid,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,714,#prepare_right_AC#558,485
+large_sparse,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,460
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,428
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,725,prepare_left_AC2,418
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,665,_contract_GL_O,364
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,669,_contract_O_GR,309
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,757,prepare_right_AC2,301
+large_sparse,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,407,#gauge2!#104,163
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,136
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,238,_fuse_env,134
+large_sparse,DMRG2,hybrid,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,90
+large_sparse,DMRG2,hybrid,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,77
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,237,_fuse_env,75
+large_sparse,DMRG2,hybrid,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,75
+large_sparse,DMRG2,hybrid,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,684,prepare_left_AC,56
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,684,prepare_left_AC,49
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,493,JordanMPO_AC2_Hamiltonian,43
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,714,#prepare_right_AC#558,36
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,432,prepare_operator!!,22
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,703,#prepare_right_AC#558,22
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,381,prepare_operator!!,21
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,394,prepare_operator!!,20
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,494,JordanMPO_AC2_Hamiltonian,20
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,445,prepare_operator!!,20
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,403,prepare_operator!!,19
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,417,prepare_operator!!,16
+large_sparse,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,16
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,653,copy_operator_side,12
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,347,PrecomputedDerivative,11
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,720,prepare_left_AC2,11
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,458,prepare_operator!!,10
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,9
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,136,prepare_operator!!,9
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,121,prepare_operator!!,9
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,700,#prepare_right_AC#558,9
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,751,prepare_right_AC2,9
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,8
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,8
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,681,prepare_left_AC,7
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,283,mul_front!,5
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,380,#AC2#71,5
+large_sparse,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,181,setindex!,5
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,378,#AC2#71,4
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,646,copy_operator_side,3
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,285,mul_front!,3
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,487,JordanMPO_AC2_Hamiltonian,3
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,236,_fuse_env,3
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,263,local_update!,3
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,5,#_transpose_tail#9,3
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,302,mul_front!,2
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,266,local_update!,2
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,744,prepare_left_AC2,2
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,694,prepare_left_AC,2
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,147,prepare_operator!!,2
+large_sparse,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,2,#_transpose_front#8,2
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,268,macro expansion,2
+large_sparse,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,304,getindex,1
+large_sparse,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,183,setindex!,1
+large_sparse,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,198,_identity_tensor,1
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,415,prepare_operator!!,1
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,431,prepare_operator!!,1
+large_sparse,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,305,getindex,1
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,293,mul_front!,1
+large_sparse,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,336,nonzero_keys,1
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,271,mul_front!,1
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,773,prepare_right_AC2,1
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,276,local_update!,1
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,317,PrecomputedDerivative,1
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,1
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,320,PrecomputedDerivative,1
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,120,prepare_operator!!,1
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,288,mul_front!,1
+large_sparse,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,267,mul_front,1
+large_sparse,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,-6,,1
+large_sparse,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,338,PrecomputedDerivative,1
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,4921
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,2042
+chemistry_like,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,103,MPODerivativeOperator,530
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,257,_prepare_GL_O,510
+chemistry_like,DMRG,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,243
+chemistry_like,DMRG,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,230
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,144
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,86,#JordanMPO_AC_Hamiltonian#551,143
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,126
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,238,_fuse_env,100
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,91
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,78,#JordanMPO_AC_Hamiltonian#551,70
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,294,prepare_operator!!,56
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,34
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,64,#JordanMPO_AC_Hamiltonian#551,28
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,65,#JordanMPO_AC_Hamiltonian#551,22
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,224,_jordan_B,14
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,209,_jordan_A,11
+chemistry_like,DMRG,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,7
+chemistry_like,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,476,JordanMPO_AC_Hamiltonian,4
+chemistry_like,DMRG,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,336,right_gauge,4
+chemistry_like,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,4
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,250,_prepare_GL_O,4
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,210,_jordan_A,4
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,136,prepare_operator!!,3
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,225,_jordan_B,3
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,121,prepare_operator!!,3
+chemistry_like,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,2
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,283,mul_front!,2
+chemistry_like,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,328,mul_tail!,2
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,240,_jordan_C,2
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,2
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,235,_jordan_C,2
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,336,PrecomputedDerivative,1
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,476,JordanMPO_AC_Hamiltonian,1
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,285,mul_front!,1
+chemistry_like,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,478,JordanMPO_AC_Hamiltonian,1
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,74,#JordanMPO_AC_Hamiltonian#551,1
+chemistry_like,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,1
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,220,_jordan_B,1
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,147,prepare_operator!!,1
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,0,mul_front!,1
+chemistry_like,DMRG,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,336,nonzero_keys,1
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,135,prepare_operator!!,1
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,125,prepare_operator!!,1
+chemistry_like,DMRG,ordinary,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,1
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,288,mul_front!,1
+chemistry_like,DMRG,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,1
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/environments/finite_envs.jl,114,#rightenv#334,1
+chemistry_like,DMRG,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,11,getindex,1
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,4940
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,1983
+chemistry_like,DMRG,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,313
+chemistry_like,DMRG,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,267
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,665,_contract_GL_O,254
+chemistry_like,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,132
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,116
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,90
+chemistry_like,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,70
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,684,prepare_left_AC,67
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,238,_fuse_env,64
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,52
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,40
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,237,_fuse_env,25
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,703,#prepare_right_AC#558,20
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,714,#prepare_right_AC#558,13
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,700,#prepare_right_AC#558,9
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,681,prepare_left_AC,9
+chemistry_like,DMRG,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,336,right_gauge,6
+chemistry_like,DMRG,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,4
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,285,mul_front!,3
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,283,mul_front!,3
+chemistry_like,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,479,JordanMPO_AC_Hamiltonian,3
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,147,prepare_operator!!,3
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,3
+chemistry_like,DMRG,hybrid,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,810,#AC_hamiltonian#561,2
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,121,prepare_operator!!,2
+chemistry_like,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,2
+chemistry_like,DMRG,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,184,local_update!,1
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,336,PrecomputedDerivative,1
+chemistry_like,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,267,mul_front,1
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,476,JordanMPO_AC_Hamiltonian,1
+chemistry_like,DMRG,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,170,macro expansion,1
+chemistry_like,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,480,JordanMPO_AC_Hamiltonian,1
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,136,prepare_operator!!,1
+chemistry_like,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,336,PrecomputedDerivative,1
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,0,mul_front!,1
+chemistry_like,DMRG,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,370,sweep!,1
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,271,mul_front!,1
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,293,mul_front!,1
+chemistry_like,DMRG,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,301,getindex,1
+chemistry_like,DMRG,hybrid,Galerkin error,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,1
+chemistry_like,DMRG,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,694,prepare_left_AC,1
+chemistry_like,DMRG,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,1
+chemistry_like,DMRG,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,166,local_update!,1
+chemistry_like,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,4180
+chemistry_like,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,3673
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,257,_prepare_GL_O,524
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,278,_prepare_O_GR,285
+chemistry_like,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,280
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,323,#JordanMPO_AC2_Hamiltonian#555,279
+chemistry_like,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,270
+chemistry_like,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,236
+chemistry_like,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,493,JordanMPO_AC2_Hamiltonian,209
+chemistry_like,DMRG2,ordinary,GC,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,271,_prepare_O_GR,182
+chemistry_like,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,180
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,238,_fuse_env,150
+chemistry_like,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,135
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,117
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,332,#JordanMPO_AC2_Hamiltonian#555,114
+chemistry_like,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,494,JordanMPO_AC2_Hamiltonian,92
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,314,#JordanMPO_AC2_Hamiltonian#555,57
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,291,#JordanMPO_AC2_Hamiltonian#555,31
+chemistry_like,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,407,#gauge2!#104,30
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,305,#JordanMPO_AC2_Hamiltonian#555,20
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,355,#JordanMPO_AC2_Hamiltonian#555,18
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,224,_jordan_B,15
+chemistry_like,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,493,JordanMPO_AC2_Hamiltonian,15
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,381,prepare_operator!!,14
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,432,prepare_operator!!,12
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,280,#JordanMPO_AC2_Hamiltonian#555,11
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,445,prepare_operator!!,11
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,281,#JordanMPO_AC2_Hamiltonian#555,10
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,394,prepare_operator!!,9
+chemistry_like,DMRG2,ordinary,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,8
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,403,prepare_operator!!,6
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,271,_prepare_O_GR,6
+chemistry_like,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,494,JordanMPO_AC2_Hamiltonian,5
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,210,_jordan_A,5
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,209,_jordan_A,4
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,458,prepare_operator!!,4
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,417,prepare_operator!!,3
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,250,_prepare_GL_O,3
+chemistry_like,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,3
+chemistry_like,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,3
+chemistry_like,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,283,mul_front!,2
+chemistry_like,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,378,#AC2#71,2
+chemistry_like,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,281,local_update!,1
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,266,_connected_channels,1
+chemistry_like,DMRG2,ordinary,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,305,getindex,1
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,220,_jordan_B,1
+chemistry_like,DMRG2,ordinary,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,324,PrecomputedDerivative,1
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,240,_jordan_C,1
+chemistry_like,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,267,mul_front,1
+chemistry_like,DMRG2,ordinary,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,5,#_transpose_tail#9,1
+chemistry_like,DMRG2,ordinary,effective assembly,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,444,prepare_operator!!,1
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,4382
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,3810
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,725,prepare_left_AC2,317
+chemistry_like,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,133,#transfer_right#319,303
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,665,_contract_GL_O,246
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,321,PrecomputedDerivative,226
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,493,JordanMPO_AC2_Hamiltonian,215
+chemistry_like,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/transfermatrix/transfer.jl,130,#transfer_left#318,213
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,669,_contract_O_GR,178
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,295,mul_front!,141
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,757,prepare_right_AC2,133
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/fixedpoint.jl,16,fixedpoint,110
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,238,_fuse_env,98
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,494,JordanMPO_AC2_Hamiltonian,80
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,240,_fuse_env,63
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,237,_fuse_env,40
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,684,prepare_left_AC,36
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,703,#prepare_right_AC#558,19
+chemistry_like,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,407,#gauge2!#104,17
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,714,#prepare_right_AC#558,16
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,493,JordanMPO_AC2_Hamiltonian,10
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,432,prepare_operator!!,8
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,417,prepare_operator!!,8
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,394,prepare_operator!!,8
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,751,prepare_right_AC2,6
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,381,prepare_operator!!,5
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,700,#prepare_right_AC#558,5
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,445,prepare_operator!!,5
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,22,project_complement!,4
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,681,prepare_left_AC,4
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,720,prepare_left_AC2,4
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,403,prepare_operator!!,4
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,653,copy_operator_side,3
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,121,prepare_operator!!,3
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,694,prepare_left_AC,3
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,379,fuse_legs,3
+chemistry_like,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,198,_identity_tensor,2
+chemistry_like,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,325,left_gauge,2
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,324,PrecomputedDerivative,2
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,494,JordanMPO_AC2_Hamiltonian,2
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,458,prepare_operator!!,2
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,347,PrecomputedDerivative,1
+chemistry_like,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,304,getindex,1
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/groundstate/dmrg.jl,281,local_update!,1
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,285,mul_front!,1
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,283,mul_front!,1
+chemistry_like,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,338,nonzero_keys,1
+chemistry_like,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,305,getindex,1
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,316,mul_tail,1
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,444,prepare_operator!!,1
+chemistry_like,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,336,nonzero_keys,1
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/mpo_derivatives.jl,347,PrecomputedDerivative,1
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,744,prepare_left_AC2,1
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,378,#AC2#71,1
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/finitemps.jl,380,#AC2#71,1
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,293,mul_front!,1
+chemistry_like,DMRG2,hybrid,environment transfers,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/operators/jordanmpotensor.jl,301,getindex,1
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,120,prepare_operator!!,1
+chemistry_like,DMRG2,hybrid,eigensolve,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,284,mul_front!,1
+chemistry_like,DMRG2,hybrid,other,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/utility/utility.jl,328,mul_tail!,1
+chemistry_like,DMRG2,hybrid,operator preparation,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/algorithms/derivatives/hamiltonian_derivatives.jl,196,JordanMPO_AC2_Hamiltonian,1
+chemistry_like,DMRG2,hybrid,gauge,/mnt/home/ldevos/Projects/MPSKit.jl/ld-envs/src/states/orthoview.jl,174,setindex!,1
