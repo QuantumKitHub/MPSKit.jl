@@ -47,7 +47,7 @@ end
         # window's contributions are prepared from its new GL/GR.
         poisoned = if H isa MPOHamiltonian
             @test !ismissing(side.continuing)
-            typeof(side)(side.raw, side.prepared, zero(side.continuing))
+            typeof(side)(side.prepared, zero(side.continuing))
         else
             zero(side)
         end
@@ -62,7 +62,7 @@ end
         if H isa MPOHamiltonian
             side = right.one_site
             @test !ismissing(side.continuing)
-            poisoned = typeof(side)(side.raw, side.prepared, zero(side.continuing))
+            poisoned = typeof(side)(side.prepared, zero(side.continuing))
             cache.right[i] = typeof(right)(right.environment, poisoned, right.two_site)
         else
             cache.right[i] = typeof(right)(right.environment, right.one_site, missing)
@@ -195,7 +195,7 @@ end
 # Count the environment–MPO contraction entry points, including the reference
 # preparation routines. This measures the expensive work independently of whether
 # TensorKit implements a block with multiplication or an identity/permutation shortcut.
-for f in (:_contract_GL_O, :_contract_O_GR, :_prepare_GL_O, :_prepare_O_GR)
+for f in (:_prepare_GL_O, :_prepare_O_GR)
     @eval function MPSKit.$f(A, B, backend::DMRGCountingBackend, allocator)
         backend.contractions[] += 1
         return MPSKit.$f(A, B, TensorOperations.DefaultBackend(), allocator)
@@ -241,9 +241,9 @@ end
         MPSKit.absorb_site!(cache, ψ, 1, Val(:right))
         @test counter[] > 0
         before = counter[]
-        for _ in 1:3, prepare in (false, true)
-            MPSKit.AC_hamiltonian(2, ψ, H, ψ, cache; prepare, backend, allocator)
-            MPSKit.AC2_hamiltonian(2, ψ, H, ψ, cache; prepare, backend, allocator)
+        for _ in 1:3
+            MPSKit.AC_hamiltonian(2, ψ, H, ψ, cache; backend, allocator)
+            MPSKit.AC2_hamiltonian(2, ψ, H, ψ, cache; backend, allocator)
         end
         @test counter[] == before
         # Check that the instrumentation detects the contractions in the reference path.
