@@ -392,15 +392,13 @@ end
 
 # Cached environment contractions and effective-operator assembly
 # -------------------------------------------------------------
-cache_operator_data(O, GL, N) = O
+cache_pair_data(O, GL) = nothing
 
-function prepare_left_environment(GL, O::AbstractMPO, i, backend, allocator; one_site::Bool, two_site::Bool)
-    L = _prepare_GL_O(GL, O[i], backend, allocator)
-    return GL, one_site ? L : missing, two_site ? L : missing
-end
-function prepare_right_environment(GR, O::AbstractMPO, i, backend, allocator; one_site::Bool, two_site::Bool)
-    R = one_site ? (GR isa TensorMap ? GR : TensorMap(GR)) : missing
-    return GR, R, two_site ? _prepare_O_GR(O[i], GR, backend, allocator) : missing
+prepare_left_environment(GL, O::AbstractMPO, pairs, i, nsites, backend, allocator) =
+    _prepare_GL_O(GL, O[i], backend, allocator)
+function prepare_right_environment(GR, O::AbstractMPO, pairs, i, nsites, backend, allocator)
+    nsites == 1 && return GR isa TensorMap ? GR : TensorMap(GR)
+    return _prepare_O_GR(O[i], GR, backend, allocator)
 end
 
 function AC_hamiltonian(
@@ -410,9 +408,9 @@ function AC_hamiltonian(
     GL, GR = leftenv(cache, site, below), rightenv(cache, site, below)
     H = MPO_AC_Hamiltonian(GL, O[site], GR, backend, allocator)
     prepare || return H
-    cache.one_site || return prepare_operator!!(H)
+    cache.nsites == 1 || return prepare_operator!!(H)
     return prepared_operator_type(typeof(H))(
-        cache.left[site].one_site, cache.right[site].one_site, backend, allocator,
+        left_contribution(cache, site), right_contribution(cache, site), backend, allocator,
     )
 end
 function AC2_hamiltonian(
@@ -422,9 +420,9 @@ function AC2_hamiltonian(
     GL, GR = leftenv(cache, site, below), rightenv(cache, site + 1, below)
     H = MPO_AC2_Hamiltonian(GL, O[site], O[site + 1], GR, backend, allocator)
     prepare || return H
-    cache.two_site || return prepare_operator!!(H)
+    cache.nsites == 2 || return prepare_operator!!(H)
     return prepared_operator_type(typeof(H))(
-        cache.left[site].two_site, cache.right[site + 1].two_site, backend, allocator,
+        left_contribution(cache, site), right_contribution(cache, site + 1), backend, allocator,
     )
 end
 
@@ -434,13 +432,13 @@ function AC_projection(
         site::Int, below, O::AbstractMPO, above, cache::DMRGSweepCache;
         backend::AbstractBackend = cache.backend, allocator = cache.allocator,
     )
-    H = AC_hamiltonian(site, below, O, above, cache; prepare = cache.one_site, backend, allocator)
+    H = AC_hamiltonian(site, below, O, above, cache; prepare = cache.nsites == 1, backend, allocator)
     return H * above.AC[site]
 end
 function AC2_projection(
         site::Int, below, O::AbstractMPO, above, cache::DMRGSweepCache;
         backend::AbstractBackend = cache.backend, allocator = cache.allocator, kwargs...,
     )
-    H = AC2_hamiltonian(site, below, O, above, cache; prepare = cache.two_site, backend, allocator)
+    H = AC2_hamiltonian(site, below, O, above, cache; prepare = cache.nsites == 2, backend, allocator)
     return H * AC2(above, site; kwargs...)
 end
