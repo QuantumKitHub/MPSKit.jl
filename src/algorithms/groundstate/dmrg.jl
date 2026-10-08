@@ -124,13 +124,42 @@ function local_update!(
         ϵ_global, ϵ_trunc, decay_rate,
         iter, timeroutput, allocator
     )
+    # Prepare this window by absorbing the finalized tensor from the previous update.
+    @timeit timeroutput "advance_env" begin
+        if direction === Val(:right)
+            if site > 1
+                absorb_site!(envs, ψ, site - 1, Val(:right))
+            elseif iter > 1
+                # The preceding backward sweep ended after gauging site 2.
+                absorb_site!(envs, ψ, 2, Val(:left))
+            end
+        elseif site == length(ψ)
+            # The first backward one-site window needs the final forward AL tensor.
+            absorb_site!(envs, ψ, site - 1, Val(:right))
+        else
+            absorb_site!(envs, ψ, site + 1, Val(:left))
+        end
+    end
     ϵ_local = calc_galerkin(site, ψ, O, ψ, envs; alg.backend, allocator)
 
     # 1. expand
     if !isnothing(alg.alg_expand)
-        @timeit timeroutput "expand" changebond!(
-            site, direction, ψ, O, alg.alg_expand, envs; allocator
-        )
+        @timeit timeroutput "expand" begin
+            # Expansion changes AR[site + 1] going forward or AL[site - 1] going backward.
+            forward = direction === Val(:right)
+            neighbor = forward ? site + 1 : site - 1
+            tensors = forward ? ψ.AR : ψ.AL
+            previous = tensors[neighbor]
+            changebond!(site, direction, ψ, O, alg.alg_expand, envs; allocator)
+            if tensors[neighbor] !== previous
+                # Only the current one-site window uses this refreshed record before
+                # the opposite sweep replaces it. Saturated bonds need no refresh.
+                absorb_site!(
+                    envs, ψ, neighbor, forward ? Val(:left) : Val(:right);
+                    local_only = true,
+                )
+            end
+        end
     end
 
     # 2. local update
@@ -214,6 +243,17 @@ function local_update!(
         ϵ_global, ϵ_trunc, decay_rate,
         iter, timeroutput, allocator
     )
+    # The previous forward pair finalized AL[pos - 1]; the previous backward pair
+    # finalized AR[pos + 2]. At reversal this also absorbs the updated terminal AR.
+    # IDMRG2 can use this interior rule, but its explicit (N, 1) seam solve must refresh
+    # both unit-cell boundaries separately rather than use a finite endpoint condition.
+    @timeit timeroutput "advance_env" begin
+        if direction === Val(:right)
+            pos > 1 && absorb_site!(envs, ψ, pos - 1, Val(:right))
+        else
+            absorb_site!(envs, ψ, pos + 2, Val(:left))
+        end
+    end
     Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs; alg.backend, allocator)
 
     kind = direction === Val(:right) ? :ACAR : :ALAC
@@ -314,8 +354,10 @@ function DMRGState(ψ, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput)
     Tr = real(scalartype(ψ))
     n = _num_updates(alg, ψ)
     local_errors = ones(Tr, n)
+    two_site = alg isa DMRG2 || !isnothing(alg.alg_expand)
+    cache = initialize_sweep_cache(ψ, H, envs; alg.backend, allocator, one_site = alg isa DMRG, two_site)
     return DMRGState(
-        ψ, H, envs, 0, maximum(local_errors), local_errors, zeros(Tr, n),
+        ψ, H, cache, 0, maximum(local_errors), local_errors, zeros(Tr, n),
         zeros(n), timeroutput, allocator,
     )
 end
@@ -347,18 +389,21 @@ function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state = it.stat
         state = sweep!(it, state, Val(:right), iter)
         sweep!(it, state, Val(:left), iter)
     end
-    ψ, envs = @timeit timeroutput "finalize" it.finalize(
-        iter, state.mps, state.operator, state.envs
-    )::Tuple{typeof(state.mps), typeof(state.envs)}
+    envs = unwrap_environments(state.envs)
+    ψ, finalized_envs = @timeit timeroutput "finalize" it.finalize(
+        iter, state.mps, state.operator, envs
+    )::Tuple{typeof(state.mps), typeof(envs)}
+    # The solve-owned cache assumes a read-only finalizer.
+    @assert ψ === state.mps && finalized_envs === envs "DMRG sweep caches require a read-only finalizer"
     it.state = DMRGState(
-        ψ, state.operator, envs, iter, state.ϵ, state.local_errors,
+        ψ, state.operator, state.envs, iter, state.ϵ, state.local_errors,
         state.truncation_errors, state.decay_rates, timeroutput, state.allocator,
     )
     return (ψ, envs, state.ϵ), it.state
 end
 
 # Truncation sets the attainable floor of the Galerkin error.
-dmrg_converged(alg, state::DMRGState) =
+sweep_converged(alg, state::DMRGState) =
     state.ϵ <= max(alg.tol, maximum(state.truncation_errors))
 
 function find_groundstate_sweep!(
@@ -370,7 +415,7 @@ function find_groundstate_sweep!(
     with_verbosity(; alg.verbosity) do
         @log_initialization loginit!(log, it.ϵ, expectation_value(ψ, H, envs))
         for (ψ, envs, ϵ) in Iterators.take(it, alg.maxiter)
-            if dmrg_converged(alg, it.state)
+            if sweep_converged(alg, it.state)
                 @info TimerReport(timeroutput) _group = :mpskit_timing
                 @log_convergence logfinish!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
                 break
@@ -385,13 +430,109 @@ function find_groundstate_sweep!(
 
     state = it.state
     info = AlgorithmInfo(;
-        converged = dmrg_converged(alg, state), galerkin = state.ϵ,
+        converged = sweep_converged(alg, state), galerkin = state.ϵ,
         truncation_errors = _bond_truncation_errors(alg, state.truncation_errors),
         numiter = state.iter,
     )
-    return state.mps, state.envs, info
+    return state.mps, unwrap_environments(state.envs), info
 end
 
 function find_groundstate(ψ, H, alg::Union{DMRG, DMRG2}, envs...; kwargs...)
     return find_groundstate!(copy(ψ), H, alg, envs...; kwargs...)
+end
+
+# Explicit sweep cache lifecycle and center movement
+# -------------------------------------------------
+"""
+    initialize_sweep_cache(ψ, O, envs; backend, allocator, one_site, two_site)
+
+Build solve-owned snapshots for a fixed operator: prepare the left boundary and absorb
+right-canonical tensors from the right boundary to initialize the first local window.
+`one_site` and `two_site` explicitly select which local contributions to prepare.
+Plain DMRG2 prepares pairs only; DMRG with expansion needs both. An explicit AC query
+on a pair-only cache constructs its operator from the snapshots without publishing it.
+Unsupported environment representations retain their existing update behavior.
+"""
+initialize_sweep_cache(ψ, O, envs; kwargs...) = envs
+function initialize_sweep_cache(
+        ψ::_HAM_MPS_TYPES, O::AbstractMPO, envs::FiniteEnvironments;
+        backend, allocator, one_site::Bool = true, two_site::Bool = true,
+    )
+    @assert one_site || two_site "prepare at least one local Hamiltonian size"
+    # Mixed bra/ket environments are outside the DMRG cache contract.
+    isnothing(envs.above) || return envs
+    data = cache_operator_data(O, envs.GLs[1], length(ψ))
+    N = length(ψ)
+    L = DMRGEnvironmentRecord(prepare_left_environment(envs.GLs[1], data, 1, backend, allocator; one_site, two_site)...)
+    R = DMRGEnvironmentRecord(prepare_right_environment(envs.GRs[end], data, N, backend, allocator; one_site, two_site)...)
+    cache = DMRGSweepCache(
+        envs, data, fill!(Vector{Union{Nothing, typeof(L)}}(undef, N), nothing),
+        fill!(Vector{Union{Nothing, typeof(R)}}(undef, N), nothing), backend, allocator, one_site, two_site,
+    )
+    cache.left[1] = L
+    cache.right[N] = R
+    for i in N:-1:2
+        absorb_site!(cache, ψ, i, Val(:left))
+    end
+    return cache
+end
+
+function initialize_sweep_cache(ψ::WindowMPS{<:MPSTensor}, O::WindowMPOHamiltonian, envs::FiniteEnvironments; kwargs...)
+    return initialize_sweep_cache(ψ, O.finite_ham, envs; kwargs...)
+end
+function initialize_sweep_cache(ψ, O::LazySum, envs::MultipleEnvironments; kwargs...)
+    return MultipleEnvironments(
+        map(O.ops, envs.envs) do op, env
+            initialize_sweep_cache(ψ, op, env; kwargs...)
+        end
+    )
+end
+initialize_sweep_cache(ψ, O::MultipliedOperator, envs; kwargs...) =
+    initialize_sweep_cache(ψ, O.op, envs; kwargs...)
+function initialize_sweep_cache(ψ, O::LinearCombination, envs::LazyLincoCache; kwargs...)
+    return LazyLincoCache(
+        O, map(O.opps, envs.envs) do op, env
+            initialize_sweep_cache(ψ, op, env; kwargs...)
+        end
+    )
+end
+
+unwrap_environments(envs) = envs
+unwrap_environments(cache::DMRGSweepCache) = cache.environments
+unwrap_environments(envs::MultipleEnvironments) = MultipleEnvironments(map(unwrap_environments, envs.envs))
+unwrap_environments(envs::LazyLincoCache) = LazyLincoCache(envs.operator, map(unwrap_environments, envs.envs))
+
+"""
+    absorb_site!(envs, ψ, i, direction; local_only=false)
+
+Contract the finalized tensor at `i` into an environment and publish its prepared record.
+`Val(:right)` absorbs `AL[i]` into `GL`, producing the left record at `i + 1`;
+`Val(:left)` absorbs `AR[i]` into `GR`, producing the right record at `i - 1`.
+The underlying ordinary manager's tensor and dependency are updated at the same time.
+`local_only=true` prepares only the one-site window needed after bond expansion.
+"""
+absorb_site!(envs, ψ, i, direction; kwargs...) = envs
+function absorb_site!(cache::DMRGSweepCache{E, O, L}, ψ, i, ::Val{:right}; local_only::Bool = false) where {E, O, L}
+    i < length(ψ) || return cache
+    (; backend, allocator) = cache
+    AL = ψ.AL[i]
+    GL = cache.left[i].environment * TransferMatrix(AL, cache.environments.operator[i], AL; backend, allocator)
+    cache.left[i + 1] = L(prepare_left_environment(GL, cache.operator_data, i + 1, backend, allocator; one_site = cache.one_site, two_site = cache.two_site, local_only)...)
+    cache.environments.GLs[i + 1] = GL
+    cache.environments.ldependencies[i] = AL
+    return cache
+end
+function absorb_site!(cache::DMRGSweepCache{E, O, L, R}, ψ, i, ::Val{:left}; local_only::Bool = false) where {E, O, L, R}
+    i > 1 || return cache
+    (; backend, allocator) = cache
+    AR = ψ.AR[i]
+    GR = TransferMatrix(AR, cache.environments.operator[i], AR; backend, allocator) * cache.right[i].environment
+    cache.right[i - 1] = R(prepare_right_environment(GR, cache.operator_data, i - 1, backend, allocator; one_site = cache.one_site, two_site = cache.two_site, local_only)...)
+    cache.environments.GRs[i] = GR
+    cache.environments.rdependencies[i] = AR
+    return cache
+end
+function absorb_site!(envs::Union{MultipleEnvironments, LazyLincoCache}, ψ, i, direction; kwargs...)
+    foreach(env -> absorb_site!(env, ψ, i, direction; kwargs...), envs.envs)
+    return envs
 end

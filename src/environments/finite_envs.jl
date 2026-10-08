@@ -157,3 +157,66 @@ function leftenv(
 
     return ca.GLs[ind]
 end
+
+# Explicit environment snapshots used during finite DMRG sweeps.
+"""
+    DMRGSweepCache
+
+Solve-owned environments for finite DMRG. Records are snapshots for a particular sweep
+position: only the environments outside the active window are required to be current.
+Center moves explicitly replace records; querying a record never scans MPS dependencies.
+The operator is fixed and finalizers must not modify the state or cache.
+"""
+struct DMRGSweepCache{E, O, L, R, B, A} <: AbstractMPSEnvironments
+    "ordinary manager kept compatible with the final state and read-only callbacks"
+    environments::E
+    "fixed operator or operator-only metadata shared by all records"
+    operator_data::O
+    "left snapshots before each site; `nothing` until first reached by the forward sweep"
+    left::Vector{Union{Nothing, L}}
+    "right snapshots after each site, initialized by a backward transfer pass"
+    right::Vector{Union{Nothing, R}}
+    "backend used to construct persistent contractions"
+    backend::B
+    "allocator for temporary work; persistent records own their tensor storage"
+    allocator::A
+    "whether local updates require prepared one-site contributions"
+    one_site::Bool
+    "whether local updates or bond expansion require prepared two-site contributions"
+    two_site::Bool
+end
+
+"""
+    DMRGEnvironmentRecord
+
+Directional environment snapshot and the associated effective-operator contributions.
+A left record at `i` represents sites before `i`; a right record represents sites after
+`i`. Replacing a record publishes new tensors without mutating earlier snapshots.
+Unfused preparation intermediates are temporary; records retain only contributions
+needed by local Hamiltonians. Transfers only read `environment`.
+"""
+struct DMRGEnvironmentRecord{G, P, Q}
+    "ordinary `GL` or `GR` tensor"
+    environment::G
+    "directional one-site contribution; `missing` when only pairs are prepared"
+    one_site::P
+    "directional two-site contribution; `missing` if unused"
+    two_site::Union{Missing, Q}
+
+    function DMRGEnvironmentRecord{G, P, Q}(environment, one_site, two_site) where {G, P, Q}
+        return new{G, P, Q}(environment, one_site, two_site)
+    end
+end
+DMRGEnvironmentRecord(env, one_site, two_site) =
+    DMRGEnvironmentRecord{typeof(env), typeof(one_site), typeof(two_site)}(env, one_site, two_site)
+
+function leftenv(cache::DMRGSweepCache{E, O, L}, i, ψ; kwargs...) where {E, O, L}
+    record = cache.left[i]
+    isnothing(record) && error("left DMRG environment at site $i has not been advanced")
+    return (record::L).environment
+end
+function rightenv(cache::DMRGSweepCache{E, O, L, R}, i, ψ; kwargs...) where {E, O, L, R}
+    record = cache.right[i]
+    isnothing(record) && error("right DMRG environment at site $i has not been advanced")
+    return (record::R).environment
+end

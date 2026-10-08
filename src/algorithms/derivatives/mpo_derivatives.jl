@@ -389,3 +389,64 @@ const _ToPrepare = Union{
 function prepare_operator!!(H::Multiline{<:_ToPrepare})
     return Multiline(map(prepare_operator!!, parent(H)))
 end
+
+# Cached environment contractions and effective-operator assembly
+# -------------------------------------------------------------
+cache_operator_data(O, GL, N) = O
+
+function prepare_left_environment(
+        GL, O::AbstractMPO, i, backend, allocator;
+        one_site::Bool = true, two_site::Bool = true, local_only::Bool = false
+    )
+    L = _prepare_GL_O(GL, O[i], backend, allocator)
+    return GL, one_site ? L : missing, two_site && !local_only ? L : missing
+end
+function prepare_right_environment(
+        GR, O::AbstractMPO, i, backend, allocator;
+        one_site::Bool = true, two_site::Bool = true, local_only::Bool = false
+    )
+    R = one_site ? (GR isa TensorMap ? GR : TensorMap(GR)) : missing
+    pair = two_site && !local_only ? _prepare_O_GR(O[i], GR, backend, allocator) : missing
+    return GR, R, pair
+end
+
+function AC_hamiltonian(
+        site::Int, below, O::Union{FiniteMPO, InfiniteMPO}, above, cache::DMRGSweepCache;
+        prepare::Bool = true, backend::AbstractBackend = cache.backend, allocator = cache.allocator,
+    )
+    GL, GR = leftenv(cache, site, below), rightenv(cache, site, below)
+    H = MPO_AC_Hamiltonian(GL, O[site], GR, backend, allocator)
+    prepare || return H
+    cache.one_site || return prepare_operator!!(H)
+    return prepared_operator_type(typeof(H))(
+        cache.left[site].one_site, cache.right[site].one_site, backend, allocator,
+    )
+end
+function AC2_hamiltonian(
+        site::Int, below, O::Union{FiniteMPO, InfiniteMPO}, above, cache::DMRGSweepCache;
+        prepare::Bool = true, backend::AbstractBackend = cache.backend, allocator = cache.allocator,
+    )
+    GL, GR = leftenv(cache, site, below), rightenv(cache, site + 1, below)
+    H = MPO_AC2_Hamiltonian(GL, O[site], O[site + 1], GR, backend, allocator)
+    prepare || return H
+    return prepared_operator_type(typeof(H))(
+        cache.left[site].two_site, cache.right[site + 1].two_site, backend, allocator,
+    )
+end
+
+# Projections inside DMRG reuse preparation too; the generic projection routines normally
+# request an unprepared operator because their environments do not retain this work.
+function AC_projection(
+        site::Int, below, O::AbstractMPO, above, cache::DMRGSweepCache;
+        backend::AbstractBackend = cache.backend, allocator = cache.allocator,
+    )
+    H = AC_hamiltonian(site, below, O, above, cache; backend, allocator)
+    return H * above.AC[site]
+end
+function AC2_projection(
+        site::Int, below, O::AbstractMPO, above, cache::DMRGSweepCache;
+        backend::AbstractBackend = cache.backend, allocator = cache.allocator, kwargs...,
+    )
+    H = AC2_hamiltonian(site, below, O, above, cache; backend, allocator)
+    return H * AC2(above, site; kwargs...)
+end
