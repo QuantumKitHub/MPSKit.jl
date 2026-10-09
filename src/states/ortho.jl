@@ -61,6 +61,9 @@ Used as the `alg` argument of [`gaugefix!`](@ref).
     eig_miniter::Int = 10
 end
 
+IterativeLoggers.IterLog(::LeftCanonical) = IterLog("LC")
+IterativeLoggers.IterLog(::RightCanonical) = IterLog("RC")
+
 """
 $(TYPEDEF)
 
@@ -228,7 +231,7 @@ function uniform_leftorth!(
     C[end] = normalize!(C₀)
     return with_verbosity(; alg.verbosity) do
         # initialize algorithm and temporary variables
-        log = IterLog("LC")
+        log = IterLog(alg)
         A_tail = _transpose_tail.(A) # pre-transpose A
         CA_tail = similar.(A_tail)  # pre-allocate workspace
         state = (; AL, C, A, A_tail, CA_tail, iter = 0, ϵ = Inf, timeroutput, backend, allocator)
@@ -250,7 +253,7 @@ function uniform_leftorth!(
     end
 end
 
-function Base.iterate(it::IterativeSolver{LeftCanonical}, state = it.state)
+function Base.iterate(it::IterativeSolver{LeftCanonical}, state::NamedTuple)
     timeroutput = state.timeroutput
     C₀ = @timeit timeroutput "gauge_eigsolve" gauge_eigsolve_step!(it, state)
     C₁ = @timeit timeroutput "gauge_orth" gauge_orth_step!(it, state)
@@ -297,7 +300,7 @@ function uniform_rightorth!(
     C[end] = normalize!(C₀)
     return with_verbosity(; alg.verbosity) do
         # initialize algorithm and temporary variables
-        log = IterLog("RC")
+        log = IterLog(alg)
         AC_tail = _similar_tail.(A) # pre-allocate workspace
         state = (; AR, C, A, AC_tail, iter = 0, ϵ = Inf, timeroutput, backend, allocator)
         it = IterativeSolver(alg, state)
@@ -318,7 +321,7 @@ function uniform_rightorth!(
     end
 end
 
-function Base.iterate(it::IterativeSolver{RightCanonical}, state = it.state)
+function Base.iterate(it::IterativeSolver{RightCanonical}, state::NamedTuple)
     timeroutput = state.timeroutput
     C₀ = @timeit timeroutput "gauge_eigsolve" gauge_eigsolve_step!(it, state)
     C₁ = @timeit timeroutput "gauge_orth" gauge_orth_step!(it, state)

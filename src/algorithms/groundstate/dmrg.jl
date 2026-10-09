@@ -295,78 +295,101 @@ function find_groundstate!(
     return find_groundstate_sweep!(ψ, H, alg, envs, allocator, timeroutput)
 end
 
+# A solver iteration is one complete forward/backward sweep. The vectors retain the
+# local history used by the adaptive solvers between sweeps.
+struct DMRGState{S, O, E, R, V, D, T, A}
+    mps::S
+    operator::O
+    envs::E
+    iter::Int
+    ϵ::R
+    local_errors::V
+    truncation_errors::V
+    decay_rates::D
+    timeroutput::T
+    allocator::A
+end
+
+function DMRGState(ψ, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput)
+    Tr = real(scalartype(ψ))
+    n = _num_updates(alg, ψ)
+    local_errors = ones(Tr, n)
+    return DMRGState(
+        ψ, H, envs, 0, maximum(local_errors), local_errors, zeros(Tr, n),
+        zeros(n), timeroutput, allocator,
+    )
+end
+
+function sweep!(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGState, direction, iter)
+    fwd, bwd = _sweep_ranges(it.alg, state.mps)
+    sites = direction === Val(:right) ? fwd : bwd
+    ψ, ϵ = state.mps, state.ϵ
+    for pos in sites
+        ψ, state.local_errors[pos], state.truncation_errors[pos], state.decay_rates[pos] =
+            local_update!(
+            pos, direction, ψ, state.operator, it.alg, state.envs,
+            ϵ, state.truncation_errors[pos], state.decay_rates[pos],
+            iter, state.timeroutput, state.allocator,
+        )
+        # The next local solver uses the errors accumulated so far in this sweep.
+        ϵ = maximum(state.local_errors)
+    end
+    return DMRGState(
+        ψ, state.operator, state.envs, state.iter, ϵ, state.local_errors,
+        state.truncation_errors, state.decay_rates, state.timeroutput, state.allocator,
+    )
+end
+
+function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGState)
+    iter = state.iter + 1
+    timeroutput = state.timeroutput
+    state = @timeit timeroutput "sweep" begin
+        state = sweep!(it, state, Val(:right), iter)
+        sweep!(it, state, Val(:left), iter)
+    end
+    ψ, envs = @timeit timeroutput "finalize" it.finalize(
+        iter, state.mps, state.operator, state.envs
+    )::Tuple{typeof(state.mps), typeof(state.envs)}
+    it.state = DMRGState(
+        ψ, state.operator, envs, iter, state.ϵ, state.local_errors,
+        state.truncation_errors, state.decay_rates, timeroutput, state.allocator,
+    )
+    return (ψ, envs, state.ϵ), it.state
+end
+
+# Truncation sets the attainable floor of the Galerkin error.
+sweep_converged(alg, state::DMRGState) =
+    state.ϵ <= max(alg.tol, maximum(state.truncation_errors))
+
 function find_groundstate_sweep!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput
     )
-    name = string(nameof(typeof(alg)))
-    log = IterLog(name)
-
-    Tr = real(scalartype(ψ))
-    n = _num_updates(alg, ψ)
-    ϵ_locals = ones(Tr, n)      # local Galerkin errors (drive both the eigensolver tol and the stop test)
-    ϵ_global = maximum(ϵ_locals) # sweep-wide Galerkin error, the convergence measure
-    ϵ_truncs = zeros(Tr, n)     # local truncation error
-    decay_rates = zeros(n)      # local observed decay rate of eigensolver
-    fwd, bwd = _sweep_ranges(alg, ψ)
-    iter = 0
+    log = IterLog(alg)
+    it = IterativeSolver(alg, DMRGState(ψ, H, alg, envs, allocator, timeroutput))
 
     with_verbosity(; alg.verbosity) do
-        @log_initialization loginit!(log, ϵ_global, expectation_value(ψ, H, envs))
-        for outer iter in 1:(alg.maxiter)
-            @timeit timeroutput "sweep" begin
-                # left-to-right
-                for pos in fwd
-                    ψ, ϵ_locals[pos], ϵ_truncs[pos], decay_rates[pos] =
-                        local_update!(
-                        pos, Val(:right),
-                        ψ, H, alg, envs,
-                        ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        iter, timeroutput, allocator
-                    )
-                    ϵ_global = maximum(ϵ_locals)
-                end
-
-                # right-to-left
-                for pos in bwd
-                    ψ, ϵ_locals[pos], ϵ_truncs[pos], decay_rates[pos] =
-                        local_update!(
-                        pos, Val(:left),
-                        ψ, H, alg, envs,
-                        ϵ_global, ϵ_truncs[pos], decay_rates[pos],
-                        iter, timeroutput, allocator
-                    )
-                    ϵ_global = maximum(ϵ_locals)
-                end
-            end
-            ϵ_global = maximum(ϵ_locals)
-
-            ψ, envs = @timeit timeroutput "finalize" alg.finalize(
-                iter, ψ, H, envs
-            )::Tuple{typeof(ψ), typeof(envs)}
-
-            # Truncation-aware convergence: the Galerkin gradient cannot drop below the level set by
-            # the discarded weight, so a truncating scheme converges once `ϵ_global` reaches the
-            # truncation error rather than the (unreachable) bare `tol`. With no truncation
-            # (`ϵ_truncs .= 0`, e.g. single-site/QR gauge) this reduces to the plain `ϵ_global ≤ tol`.
-            if ϵ_global <= max(alg.tol, maximum(ϵ_truncs))
+        @log_initialization loginit!(log, it.ϵ, expectation_value(ψ, H, envs))
+        for (ψ, envs, ϵ) in Iterators.take(it, alg.maxiter)
+            if sweep_converged(alg, it.state)
                 @info TimerReport(timeroutput) _group = :mpskit_timing
-                @log_convergence logfinish!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
+                @log_convergence logfinish!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
                 break
-            end
-            if iter == alg.maxiter
+            elseif it.iter == alg.maxiter
                 @info TimerReport(timeroutput) _group = :mpskit_timing
-                @log_nonconvergence logcancel!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
+                @log_nonconvergence logcancel!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
             else
-                @log_iteration logiter!(log, iter, ϵ_global, expectation_value(ψ, H, envs))
+                @log_iteration logiter!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
             end
         end
     end
 
+    state = it.state
     info = AlgorithmInfo(;
-        converged = ϵ_global <= max(alg.tol, maximum(ϵ_truncs)), galerkin = ϵ_global,
-        truncation_errors = _bond_truncation_errors(alg, ϵ_truncs), numiter = iter
+        converged = sweep_converged(alg, state), galerkin = state.ϵ,
+        truncation_errors = _bond_truncation_errors(alg, state.truncation_errors),
+        numiter = state.iter,
     )
-    return ψ, envs, info
+    return state.mps, state.envs, info
 end
 
 function find_groundstate(ψ, H, alg::Union{DMRG, DMRG2}, envs...; kwargs...)
