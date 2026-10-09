@@ -27,6 +27,12 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- Internal: the finite `DMRG`/`DMRG2` ground-state search and approximation, `DynamicalDMRG`,
+  multiline `IDMRG`/`IDMRG2` approximation and `leading_boundary`, and `time_evolve` now run as
+  iterators whose iterations are a forward and a backward half-sweep (or a single time step),
+  sharing one structure across solvers. Finite `TDVP`/`TDVP2` steps are composed of per-site local
+  updates. Results and logging are unchanged. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
+
 ### Deprecated
 
 ### Removed
