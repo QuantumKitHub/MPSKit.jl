@@ -1,15 +1,3 @@
-# Internal state of the multiline IDMRG/IDMRG2 approximation, where `ϵ` is the change of the
-# center bond tensor over the last sweep. IDMRG2 reuses one `truncation_errors` matrix across sweeps.
-struct IDMRGApproximateState{S, O, E, V, A}
-    mps::S
-    operator::O
-    envs::E
-    iter::Int
-    ϵ::Float64
-    truncation_errors::V
-    allocator::A
-end
-
 function approximate!(
         ψ::MultilineMPS, toapprox::Tuple{<:MultilineMPO, <:MultilineMPS},
         alg::Union{IDMRG, IDMRG2}, envs = environments(ψ, toapprox...)
@@ -19,7 +7,7 @@ function approximate!(
     log = IterLog(alg)
     ϵ_truncs = alg isa IDMRG2 ?
         PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), width(ψ))) : nothing
-    state = IDMRGApproximateState(ψ, toapprox, envs, 0, 2 * alg.tol, ϵ_truncs, allocator)
+    state = IDMRGState(ψ, toapprox, envs, 0, 2 * alg.tol, ϵ_truncs, nothing, NoTimerOutput(), allocator)
     it = IterativeSolver(alg, state)
 
     with_verbosity(; alg.verbosity) do
@@ -52,31 +40,20 @@ function approximate!(
     return ψ, envs, info
 end
 
-function Base.iterate(it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state::IDMRGApproximateState)
+function Base.iterate(it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state::IDMRGState{<:MultilineMPS, <:Tuple})
     iter = state.iter + 1
     C_current = state.mps.C[:, 0]
     state = sweep!(it, state, Val(:right), iter)
     state = sweep!(it, state, Val(:left), iter)
-    ϵ = _center_change(it.alg, C_current, state.mps.C[:, 0])
-    it.state = IDMRGApproximateState(
-        state.mps, state.operator, state.envs, iter, ϵ, state.truncation_errors, state.allocator,
+    ϵ = bond_change(C_current, state.mps.C[:, 0])
+    it.state = IDMRGState(
+        state.mps, state.operator, state.envs, iter, ϵ, state.truncation_errors, state.energy,
+        state.timeroutput, state.allocator,
     )
     return (it.state.mps, it.state.envs, it.state.ϵ), it.state
 end
 
-# change of the center bond tensors over a sweep; for IDMRG2 the bond dimension may have
-# changed, so both are compared in their common subspace
-_center_change(::IDMRG, C_old, C_new) = norm(C_old - C_new)
-function _center_change(::IDMRG2, C_old, C_new)
-    return sum(zip(C_old, C_new)) do (c1, c2)
-        smallest = infimum(_firstspace(c1), _firstspace(c2))
-        e1 = isometry(_firstspace(c1), smallest)
-        e2 = isometry(_firstspace(c2), smallest)
-        return norm(e2' * c2 * e2 - e1' * c1 * e1)
-    end
-end
-
-function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGApproximateState, ::Val{:right}, iter)
+function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGState{<:MultilineMPS, <:Tuple}, ::Val{:right}, iter)
     alg, ψ, toapprox, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     for col in 1:width(ψ)
         for row in 1:size(ψ, 1)
@@ -92,7 +69,7 @@ function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGApproximateState, ::Va
     return state
 end
 
-function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGApproximateState, ::Val{:left}, iter)
+function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGState{<:MultilineMPS, <:Tuple}, ::Val{:left}, iter)
     alg, ψ, toapprox, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     for col in reverse(1:width(ψ))
         for row in 1:size(ψ, 1)
@@ -110,7 +87,7 @@ function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGApproximateState, ::Va
     return state
 end
 
-function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGApproximateState, ::Val{:right}, iter)
+function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGState{<:MultilineMPS, <:Tuple}, ::Val{:right}, iter)
     alg, ψ, toapprox, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     ϵ_truncs = state.truncation_errors
     for site in 1:(width(ψ) - 1)
@@ -158,7 +135,7 @@ function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGApproximateState, ::V
     return state
 end
 
-function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGApproximateState, ::Val{:left}, iter)
+function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGState{<:MultilineMPS, <:Tuple}, ::Val{:left}, iter)
     alg, ψ, toapprox, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     ϵ_truncs = state.truncation_errors
     for site in reverse(1:(width(ψ) - 1))
