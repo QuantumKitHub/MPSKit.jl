@@ -320,7 +320,7 @@ function DMRGState(ψ, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput)
     )
 end
 
-function sweep!(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state, direction, iter)
+function sweep!(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGState, direction, iter)
     fwd, bwd = _sweep_ranges(it.alg, state.mps)
     sites = direction === Val(:right) ? fwd : bwd
     ψ, ϵ = state.mps, state.ϵ
@@ -340,7 +340,7 @@ function sweep!(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state, direction, ite
     )
 end
 
-function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGState = it.state)
+function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGState)
     iter = state.iter + 1
     timeroutput = state.timeroutput
     state = @timeit timeroutput "sweep" begin
@@ -364,7 +364,7 @@ sweep_converged(alg, state::DMRGState) =
 function find_groundstate_sweep!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput
     )
-    log = IterLog(string(nameof(typeof(alg))))
+    log = IterLog(alg)
     it = IterativeSolver(alg, DMRGState(ψ, H, alg, envs, allocator, timeroutput))
 
     with_verbosity(; alg.verbosity) do

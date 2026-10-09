@@ -38,6 +38,8 @@ Used as the `algorithm` argument of [`propagator`](@ref).
     backend::B = Defaults.backend()
 end
 
+IterativeLoggers.IterLog(::DynamicalDMRG) = IterLog("DDMRG")
+
 """
     propagator(ψ₀::AbstractFiniteMPS, z::Number, H::MPOHamiltonian, alg::DynamicalDMRG; init = copy(ψ₀)) -> (g, ψ)
 
@@ -82,17 +84,26 @@ struct DDMRGState{S, T, Z, O, E, A}
     allocator::A
 end
 
+# dynamical DMRG sweeps over the sites like single-site DMRG
+_sweep_ranges(::DynamicalDMRG, ψ) = (1:(length(ψ) - 1), length(ψ):-1:2)
+
 function Base.iterate(it::IterativeSolver{<:DynamicalDMRG}, state::DDMRGState)
-    ϵ = ddmrg_sweep!(state, it.alg)
-    it.state = DDMRGState(
-        state.mps, state.target, state.z, state.operator, state.envs, state.iter + 1, ϵ,
+    iter = state.iter + 1
+    state = DDMRGState(
+        state.mps, state.target, state.z, state.operator, state.envs, state.iter, 0.0,
         state.allocator,
     )
-    return (state.mps, ϵ), it.state
+    state = sweep!(it, state, Val(:right), iter)
+    state = sweep!(it, state, Val(:left), iter)
+    it.state = DDMRGState(
+        state.mps, state.target, state.z, state.operator, state.envs, iter, state.ϵ,
+        state.allocator,
+    )
+    return (state.mps, state.ϵ), it.state
 end
 
 function _propagator_sweeps!(alg::DynamicalDMRG, state::DDMRGState)
-    log = IterLog("DDMRG")
+    log = IterLog(alg)
     it = IterativeSolver(alg, state)
 
     with_verbosity(; alg.verbosity) do
@@ -126,13 +137,17 @@ function propagator(
     return dot(A, init), init
 end
 
-function ddmrg_sweep!(state::DDMRGState, alg::DynamicalDMRG{NaiveInvert})
+function sweep!(
+        it::IterativeSolver{<:DynamicalDMRG{NaiveInvert}}, state::DDMRGState, direction, iter
+    )
+    alg = it.alg
     (; mps, target, z, operator, allocator) = state
     init, A, H = mps, target, operator
     h_envs, mixedenvs = state.envs
-    ϵ = 0.0
+    fwd, bwd = _sweep_ranges(alg, A)
+    ϵ = state.ϵ
 
-    for i in [1:(length(A) - 1); length(A):-1:2]
+    for i in (direction === Val(:right) ? fwd : bwd)
         tos = AC_projection(i, init, A, mixedenvs; alg.backend, allocator)
 
         H_AC = AC_hamiltonian(i, init, H, init, h_envs; alg.backend, allocator)
@@ -146,7 +161,9 @@ function ddmrg_sweep!(state::DDMRGState, alg::DynamicalDMRG{NaiveInvert})
             @warn "propagator ($i) failed to converge: normres = $(convhist.normres)"
     end
 
-    return ϵ
+    return DDMRGState(
+        init, A, z, operator, state.envs, state.iter, ϵ, allocator,
+    )
 end
 
 """
@@ -204,16 +221,20 @@ function propagator(
     return v, init
 end
 
-function ddmrg_sweep!(state::DDMRGState, alg::DynamicalDMRG{Jeckelmann})
+function sweep!(
+        it::IterativeSolver{<:DynamicalDMRG{Jeckelmann}}, state::DDMRGState, direction, iter
+    )
+    alg = it.alg
     (; mps, target, z, allocator) = state
     init, A = mps, target
     H, H2 = state.operator
     envs1, envs2, mixedenvs = state.envs
     ω = real(z)
     η = imag(z)
-    ϵ = 0.0
+    fwd, bwd = _sweep_ranges(alg, A)
+    ϵ = state.ϵ
 
-    for i in [1:(length(A) - 1); length(A):-1:2]
+    for i in (direction === Val(:right) ? fwd : bwd)
         tos = AC_projection(i, init, A, mixedenvs; alg.backend, allocator)
         H1_AC = AC_hamiltonian(i, init, H, init, envs1; alg.backend, allocator)
         H2_AC = AC_hamiltonian(i, init, H2, init, envs2; alg.backend, allocator)
@@ -227,7 +248,9 @@ function ddmrg_sweep!(state::DDMRGState, alg::DynamicalDMRG{Jeckelmann})
             @warn "propagator ($i) failed to converge: normres $(convhist.normres)"
     end
 
-    return ϵ
+    return DDMRGState(
+        init, A, z, state.operator, state.envs, state.iter, ϵ, allocator,
+    )
 end
 
 function squaredenvs(

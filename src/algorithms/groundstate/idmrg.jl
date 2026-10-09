@@ -99,7 +99,7 @@ end
 function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
     (length(mps) ≤ 1 && alg isa IDMRG2) && throw(ArgumentError("unit cell should be >= 2"))
     name = alg isa IDMRG ? "IDMRG" : "IDMRG2"
-    log = IterLog(name)
+    log = IterLog(alg)
     timeroutput = alg.verbosity > 3 ? TimerOutput(name) : NoTimerOutput()
     mps = copy(mps)
     iter = 0
@@ -147,7 +147,7 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
 end
 
 function Base.iterate(
-        it::IterativeSolver{alg_type}, state::IDMRGState{<:Any, <:Any, <:Any, <:Any, T} = it.state
+        it::IterativeSolver{alg_type}, state::IDMRGState{<:Any, <:Any, <:Any, <:Any, T}
     ) where {alg_type <: Union{<:IDMRG, <:IDMRG2}, T}
     timeroutput = state.timeroutput
     ϵ_truncs = zero(state.truncation_errors) # fresh each sweep, filled by the sweep itself

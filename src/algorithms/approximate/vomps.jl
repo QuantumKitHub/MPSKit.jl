@@ -21,7 +21,7 @@ function approximate(
 end
 
 function _approximate_vomps(mps, toapprox, alg::VOMPS, envs)
-    log = IterLog("VOMPS")
+    log = IterLog(alg)
     iter = 0
     ϵ = calc_galerkin(mps, toapprox..., envs; alg.backend)
     alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)

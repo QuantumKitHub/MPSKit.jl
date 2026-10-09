@@ -67,7 +67,7 @@ function dominant_eigsolve(
         operator, mps, alg::VUMPS, envs = environments(mps, operator, mps, alg.alg_environments);
         which
     )
-    log = IterLog("VUMPS")
+    log = IterLog(alg)
     timeroutput = alg.verbosity > 3 ? TimerOutput("VUMPS") : NoTimerOutput()
     iter = 0
 
@@ -106,7 +106,7 @@ function dominant_eigsolve(
     return result
 end
 
-function Base.iterate(it::IterativeSolver{<:VUMPS}, state::VUMPSState = it.state)
+function Base.iterate(it::IterativeSolver{<:VUMPS}, state::VUMPSState)
     timeroutput = state.timeroutput
     ACs = @timeit timeroutput "localupdate (parallel)" localupdate_step!(it, state)
     mps = @timeit timeroutput "gauge" gauge_step!(it, state, ACs)

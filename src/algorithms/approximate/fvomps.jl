@@ -14,7 +14,7 @@ function approximate!(
         envs = environments(ψ, _environment_args(Oϕ)...)
     )
     allocator = default_allocator(ψ, SerialScheduler())
-    log = IterLog(string(nameof(typeof(alg))))
+    log = IterLog(alg)
     it = IterativeSolver(alg, ApproximateState(ψ, Oϕ, envs, 0, 2 * alg.tol, allocator))
 
     with_verbosity(; alg.verbosity) do
@@ -38,19 +38,25 @@ end
 
 function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::ApproximateState)
     iter = state.iter + 1
-    ϵ = approximate_sweep!(state.mps, state.operator, it.alg, state.envs, state.allocator)
+    state = ApproximateState(
+        state.mps, state.operator, state.envs, state.iter, 0.0, state.allocator
+    )
+    state = sweep!(it, state, Val(:right), iter)
+    state = sweep!(it, state, Val(:left), iter)
     ψ, envs = it.finalize(
         iter, state.mps, state.operator, state.envs
     )::Tuple{typeof(state.mps), typeof(state.envs)}
-    it.state = ApproximateState(ψ, state.operator, envs, iter, ϵ, state.allocator)
-    return (ψ, envs, ϵ), it.state
+    it.state = ApproximateState(ψ, state.operator, envs, iter, state.ϵ, state.allocator)
+    return (ψ, envs, state.ϵ), it.state
 end
 
-function approximate_sweep!(ψ, Oϕ, alg::DMRG2, envs, allocator)
-    ϵ = 0.0
-    for pos in [1:(length(ψ) - 1); (length(ψ) - 2):-1:1]
-        AC2′ = AC2_projection(pos, ψ, Oϕ, envs; alg.backend, allocator)
-        al, c, ar, = svd_trunc!(AC2′, inner_alg_gauge(alg))
+function sweep!(it::IterativeSolver{<:DMRG2}, state::ApproximateState, direction, iter)
+    fwd, bwd = _sweep_ranges(it.alg, state.mps)
+    sites = direction === Val(:right) ? fwd : bwd
+    ψ, Oϕ, envs, ϵ = state.mps, state.operator, state.envs, state.ϵ
+    for pos in sites
+        AC2′ = AC2_projection(pos, ψ, Oϕ, envs; it.alg.backend, state.allocator)
+        al, c, ar, = svd_trunc!(AC2′, inner_alg_gauge(it.alg))
 
         AC2 = ψ.AC[pos] * _transpose_tail(ψ.AR[pos + 1])
         ϵ = max(ϵ, norm(al * c * ar - AC2) / norm(AC2))
@@ -58,17 +64,19 @@ function approximate_sweep!(ψ, Oϕ, alg::DMRG2, envs, allocator)
         ψ.AC[pos] = (al, complex(c))
         ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
     end
-    return ϵ
+    return ApproximateState(ψ, Oϕ, envs, state.iter, ϵ, state.allocator)
 end
 
-function approximate_sweep!(ψ, Oϕ, alg::DMRG, envs, allocator)
-    ϵ = 0.0
-    for pos in [1:(length(ψ) - 1); length(ψ):-1:2]
-        AC′ = AC_projection(pos, ψ, Oϕ, envs; alg.backend, allocator)
+function sweep!(it::IterativeSolver{<:DMRG}, state::ApproximateState, direction, iter)
+    fwd, bwd = _sweep_ranges(it.alg, state.mps)
+    sites = direction === Val(:right) ? fwd : bwd
+    ψ, Oϕ, envs, ϵ = state.mps, state.operator, state.envs, state.ϵ
+    for pos in sites
+        AC′ = AC_projection(pos, ψ, Oϕ, envs; it.alg.backend, state.allocator)
         AC = ψ.AC[pos]
         ϵ = max(ϵ, norm(AC′ - AC) / norm(AC′))
 
         ψ.AC[pos] = AC′
     end
-    return ϵ
+    return ApproximateState(ψ, Oϕ, envs, state.iter, ϵ, state.allocator)
 end

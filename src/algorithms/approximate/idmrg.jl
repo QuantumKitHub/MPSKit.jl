@@ -16,7 +16,7 @@ function approximate!(
     )
     allocator = default_allocator(ψ, SerialScheduler())
     alg isa IDMRG2 && width(ψ) < 2 && throw(ArgumentError("unit cell should be >= 2"))
-    log = IterLog(string(nameof(typeof(alg))))
+    log = IterLog(alg)
     ϵ_truncs = alg isa IDMRG2 ?
         PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), width(ψ))) : nothing
     state = IDMRGApproximateState(ψ, toapprox, envs, 0, 2 * alg.tol, ϵ_truncs, allocator)
@@ -53,22 +53,31 @@ function approximate!(
 end
 
 function Base.iterate(it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state::IDMRGApproximateState)
-    ϵ = approximate_sweep!(
-        state.mps, state.operator, it.alg, state.envs, state.allocator, state.truncation_errors
-    )
+    iter = state.iter + 1
+    C_current = state.mps.C[:, 0]
+    state = sweep!(it, state, Val(:right), iter)
+    state = sweep!(it, state, Val(:left), iter)
+    ϵ = _center_change(it.alg, C_current, state.mps.C[:, 0])
     it.state = IDMRGApproximateState(
-        state.mps, state.operator, state.envs, state.iter + 1, ϵ,
-        state.truncation_errors, state.allocator,
+        state.mps, state.operator, state.envs, iter, ϵ, state.truncation_errors, state.allocator,
     )
     return (it.state.mps, it.state.envs, it.state.ϵ), it.state
 end
 
-function approximate_sweep!(
-        ψ::MultilineMPS, toapprox, alg::IDMRG, envs, allocator, ::Nothing
-    )
-    C_current = ψ.C[:, 0]
+# change of the center bond tensors over a sweep; for IDMRG2 the bond dimension may have
+# changed, so both are compared in their common subspace
+_center_change(::IDMRG, C_old, C_new) = norm(C_old - C_new)
+function _center_change(::IDMRG2, C_old, C_new)
+    return sum(zip(C_old, C_new)) do (c1, c2)
+        smallest = infimum(_firstspace(c1), _firstspace(c2))
+        e1 = isometry(_firstspace(c1), smallest)
+        e2 = isometry(_firstspace(c2), smallest)
+        return norm(e2' * c2 * e2 - e1' * c1 * e1)
+    end
+end
 
-    # left to right sweep
+function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGApproximateState, ::Val{:right}, iter)
+    alg, ψ, toapprox, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     for col in 1:width(ψ)
         for row in 1:size(ψ, 1)
             ψ.AC[row + 1, col] = AC_projection(
@@ -80,8 +89,11 @@ function approximate_sweep!(
         end
         transfer_leftenv!(envs, ψ, toapprox, col + 1)
     end
+    return state
+end
 
-    # right to left sweep
+function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGApproximateState, ::Val{:left}, iter)
+    alg, ψ, toapprox, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     for col in reverse(1:width(ψ))
         for row in 1:size(ψ, 1)
             ψ.AC[row + 1, col] = AC_projection(
@@ -95,16 +107,12 @@ function approximate_sweep!(
         transfer_rightenv!(envs, ψ, toapprox, col - 1)
     end
     normalize!(envs, ψ, toapprox)
-
-    return norm(C_current - ψ.C[:, 0])
+    return state
 end
 
-function approximate_sweep!(
-        ψ::MultilineMPS, toapprox, alg::IDMRG2, envs, allocator, ϵ_truncs
-    )
-    C_current = ψ.C[:, 0]
-
-    # sweep from left to right
+function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGApproximateState, ::Val{:right}, iter)
+    alg, ψ, toapprox, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
+    ϵ_truncs = state.truncation_errors
     for site in 1:(width(ψ) - 1)
         for row in 1:size(ψ, 1)
             AC2′ = AC2_projection(
@@ -142,15 +150,17 @@ function approximate_sweep!(
         ψ.AC[row + 1, end] = _mul_tail(al, c)
         ψ.AC[row + 1, 1] = _transpose_front(c * ar)
         ψ.AL[row + 1, 1] = ψ.AC[row + 1, 1] / ψ.C[row + 1, 1]
-
     end
-    # update environments
     transfer_leftenv!(envs, ψ, toapprox, 1)
     transfer_rightenv!(envs, ψ, toapprox, 0)
 
     normalize!(envs, ψ, toapprox)
+    return state
+end
 
-    # sweep from right to left
+function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGApproximateState, ::Val{:left}, iter)
+    alg, ψ, toapprox, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
+    ϵ_truncs = state.truncation_errors
     for site in reverse(1:(width(ψ) - 1))
         for row in 1:size(ψ, 1)
             AC2′ = AC2_projection(
@@ -191,12 +201,5 @@ function approximate_sweep!(
     transfer_rightenv!(envs, ψ, toapprox, 0)
 
     normalize!(envs, ψ, toapprox)
-
-    # update error
-    return sum(zip(C_current, ψ.C[:, 0])) do (c1, c2)
-        smallest = infimum(_firstspace(c1), _firstspace(c2))
-        e1 = isometry(_firstspace(c1), smallest)
-        e2 = isometry(_firstspace(c2), smallest)
-        return norm(e2' * c2 * e2 - e1' * c1 * e1)
-    end
+    return state
 end
