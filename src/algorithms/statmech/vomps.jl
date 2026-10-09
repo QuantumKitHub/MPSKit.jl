@@ -61,7 +61,7 @@ function dominant_eigsolve(
         which
     )
     @assert which === :LM "VOMPS only supports the LM eigenvalue problem"
-    log = IterLog("VOMPS")
+    log = IterLog(alg)
     iter = 0
     ϵ = calc_galerkin(mps, operator, mps, envs; alg.backend)
     alg_environments = adapt_solver(alg.alg_environments; iter, g_global = ϵ)

@@ -80,7 +80,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
 end
 
 function _time_evolve(alg, state::TimeEvolveState; verbosity::Int)
-    log = IterLog(string(nameof(typeof(alg))))
+    log = IterLog(alg)
     # the state type is left abstract, since the first step may promote a real state to complex
     it = IterativeSolver{typeof(alg), TimeEvolveState}(alg, state)
     t_span = state.t_span

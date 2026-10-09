@@ -16,7 +16,7 @@ function leading_boundary(
     )
     allocator = default_allocator(ψ, SerialScheduler())
     alg isa IDMRG2 && width(ψ) < 2 && throw(ArgumentError("unit cell should be >= 2"))
-    log = IterLog(string(nameof(typeof(alg))))
+    log = IterLog(alg)
     ϵ_truncs = alg isa IDMRG2 ?
         PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), width(ψ))) : nothing
     state = IDMRGBoundaryState(ψ, operator, envs, 0, 2 * alg.tol, ϵ_truncs, allocator)
@@ -54,23 +54,19 @@ _boundary_objective(::IDMRG2, ψ, operator, envs) = nothing
 
 function Base.iterate(it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state::IDMRGBoundaryState)
     iter = state.iter + 1
-    alg_eigsolve = adapt_solver(it.alg_eigsolve; iter, g_global = state.ϵ)
-    ϵ = leading_boundary_sweep!(
-        state.mps, state.operator, it.alg, state.envs, alg_eigsolve, state.allocator,
-        state.truncation_errors,
-    )
+    C_current = state.mps.C[:, 0]
+    state = sweep!(it, state, Val(:right), iter)
+    state = sweep!(it, state, Val(:left), iter)
+    ϵ = _center_change(it.alg, C_current, state.mps.C[:, 0])
     it.state = IDMRGBoundaryState(
         state.mps, state.operator, state.envs, iter, ϵ, state.truncation_errors, state.allocator,
     )
     return (it.state.mps, it.state.envs, it.state.ϵ), it.state
 end
 
-function leading_boundary_sweep!(
-        ψ::InfiniteMultilineMPS, operator, alg::IDMRG, envs, alg_eigsolve, allocator, ::Nothing
-    )
-    C_current = ψ.C[:, 0]
-
-    # left to right sweep
+function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGBoundaryState, ::Val{:right}, iter)
+    alg, ψ, operator, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
+    alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = state.ϵ)
     for col in 1:width(ψ)
         Hac = AC_hamiltonian(col, ψ, operator, ψ, envs; alg.backend, allocator)
         _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
@@ -83,8 +79,12 @@ function leading_boundary_sweep!(
 
         transfer_leftenv!(envs, ψ, operator, ψ, col + 1)
     end
+    return state
+end
 
-    # right to left sweep
+function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGBoundaryState, ::Val{:left}, iter)
+    alg, ψ, operator, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
+    alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = state.ϵ)
     for col in width(ψ):-1:1
         Hac = AC_hamiltonian(col, ψ, operator, ψ, envs; alg.backend, allocator)
         _, ψ.AC[:, col] = fixedpoint(Hac, ψ.AC[:, col], :LM, alg_eigsolve)
@@ -96,18 +96,14 @@ function leading_boundary_sweep!(
 
         transfer_rightenv!(envs, ψ, operator, ψ, col - 1)
     end
-
     normalize!(envs, ψ, operator, ψ)
-
-    return norm(C_current - ψ.C[:, 0])
+    return state
 end
 
-function leading_boundary_sweep!(
-        ψ::InfiniteMultilineMPS, operator, alg::IDMRG2, envs, alg_eigsolve, allocator, ϵ_truncs
-    )
-    C_current = ψ.C[:, 0]
-
-    # sweep from left to right
+function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGBoundaryState, ::Val{:right}, iter)
+    alg, ψ, operator, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
+    alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = state.ϵ)
+    ϵ_truncs = state.truncation_errors
     for site in 1:(width(ψ) - 1)
         ac2 = AC2(ψ, site; kind = :ACAR)
         h = AC2_hamiltonian(site, ψ, operator, ψ, envs; alg.backend, allocator)
@@ -150,13 +146,15 @@ function leading_boundary_sweep!(
         ψ.AL[row + 1, 1] = ψ.AC[row + 1, 1] / ψ.C[row + 1, 1]
     end
 
-    # TODO: decide if we should compare at the half-sweep level?
-    # C_current = ψ.C[:, site]
-
     transfer_leftenv!(envs, ψ, operator, ψ, 1)
     transfer_rightenv!(envs, ψ, operator, ψ, 0)
+    return state
+end
 
-    # sweep from right to left
+function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGBoundaryState, ::Val{:left}, iter)
+    alg, ψ, operator, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
+    alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = state.ϵ)
+    ϵ_truncs = state.truncation_errors
     for site in reverse(1:(width(ψ) - 1))
         ac2 = AC2(ψ, site; kind = :ALAC)
         h = AC2_hamiltonian(site, ψ, operator, ψ, envs; alg.backend, allocator)
@@ -201,12 +199,5 @@ function leading_boundary_sweep!(
 
     transfer_leftenv!(envs, ψ, operator, ψ, 1)
     transfer_rightenv!(envs, ψ, operator, ψ, 0)
-
-    # update error
-    return sum(zip(C_current, ψ.C[:, 0])) do (c1, c2)
-        smallest = infimum(_firstspace(c1), _firstspace(c2))
-        e1 = isometry(_firstspace(c1), smallest)
-        e2 = isometry(_firstspace(c2), smallest)
-        return norm(e2' * c2 * e2 - e1' * c1 * e1)
-    end
+    return state
 end
