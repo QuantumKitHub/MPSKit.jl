@@ -1,15 +1,3 @@
-# Internal state of the IDMRG/IDMRG2 leading boundary search, where `ϵ` is the change of the
-# center bond tensor over the last sweep. IDMRG2 reuses one `truncation_errors` matrix across sweeps.
-struct IDMRGBoundaryState{S, O, E, V, A}
-    mps::S
-    operator::O
-    envs::E
-    iter::Int
-    ϵ::Float64
-    truncation_errors::V
-    allocator::A
-end
-
 function leading_boundary(
         ψ::InfiniteMultilineMPS, operator, alg::Union{IDMRG, IDMRG2},
         envs = environments(ψ, operator, ψ)
@@ -19,7 +7,7 @@ function leading_boundary(
     log = IterLog(alg)
     ϵ_truncs = alg isa IDMRG2 ?
         PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), width(ψ))) : nothing
-    state = IDMRGBoundaryState(ψ, operator, envs, 0, 2 * alg.tol, ϵ_truncs, allocator)
+    state = IDMRGState(ψ, operator, envs, 0, 2 * alg.tol, ϵ_truncs, nothing, NoTimerOutput(), allocator)
     it = IterativeSolver(alg, state)
 
     with_verbosity(; alg.verbosity) do
@@ -52,19 +40,20 @@ end
 _boundary_objective(::IDMRG, ψ, operator, envs) = leading_eigenvalue(ψ, operator, envs)
 _boundary_objective(::IDMRG2, ψ, operator, envs) = nothing
 
-function Base.iterate(it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state::IDMRGBoundaryState)
+function Base.iterate(it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state::IDMRGState{<:MultilineMPS})
     iter = state.iter + 1
     C_current = state.mps.C[:, 0]
     state = sweep!(it, state, Val(:right), iter)
     state = sweep!(it, state, Val(:left), iter)
-    ϵ = _center_change(it.alg, C_current, state.mps.C[:, 0])
-    it.state = IDMRGBoundaryState(
-        state.mps, state.operator, state.envs, iter, ϵ, state.truncation_errors, state.allocator,
+    ϵ = bond_change(C_current, state.mps.C[:, 0])
+    it.state = IDMRGState(
+        state.mps, state.operator, state.envs, iter, ϵ, state.truncation_errors, state.energy,
+        state.timeroutput, state.allocator,
     )
     return (it.state.mps, it.state.envs, it.state.ϵ), it.state
 end
 
-function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGBoundaryState, ::Val{:right}, iter)
+function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGState{<:MultilineMPS}, ::Val{:right}, iter)
     alg, ψ, operator, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = state.ϵ)
     for col in 1:width(ψ)
@@ -82,7 +71,7 @@ function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGBoundaryState, ::Val{:
     return state
 end
 
-function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGBoundaryState, ::Val{:left}, iter)
+function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGState{<:MultilineMPS}, ::Val{:left}, iter)
     alg, ψ, operator, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = state.ϵ)
     for col in width(ψ):-1:1
@@ -100,7 +89,7 @@ function sweep!(it::IterativeSolver{<:IDMRG}, state::IDMRGBoundaryState, ::Val{:
     return state
 end
 
-function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGBoundaryState, ::Val{:right}, iter)
+function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGState{<:MultilineMPS}, ::Val{:right}, iter)
     alg, ψ, operator, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = state.ϵ)
     ϵ_truncs = state.truncation_errors
@@ -151,7 +140,7 @@ function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGBoundaryState, ::Val{
     return state
 end
 
-function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGBoundaryState, ::Val{:left}, iter)
+function sweep!(it::IterativeSolver{<:IDMRG2}, state::IDMRGState{<:MultilineMPS}, ::Val{:left}, iter)
     alg, ψ, operator, envs, allocator = it.alg, state.mps, state.operator, state.envs, state.allocator
     alg_eigsolve = adapt_solver(alg.alg_eigsolve; iter, g_global = state.ϵ)
     ϵ_truncs = state.truncation_errors

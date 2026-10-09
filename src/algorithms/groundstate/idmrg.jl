@@ -70,14 +70,17 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_bounda
     backend::B = Defaults.backend()
 end
 
-# Internal state of the IDMRG algorithm
+# Internal state of the IDMRG/IDMRG2 algorithms, shared by the ground state search
+# (`mps::InfiniteMPS`), the leading boundary search (`mps::MultilineMPS`) and approximation
+# (`mps::MultilineMPS`, `operator::Tuple`). `ϵ` is the change of the center bond tensor over the
+# last sweep, and `energy` is only tracked by the ground state search.
 struct IDMRGState{S, O, E, V, T, TO, A}
     mps::S
     operator::O
     envs::E
     iter::Int
     ϵ::Float64 # TODO: Could be any <:Real
-    truncation_errors::V # per bond, of the most recent sweep only
+    truncation_errors::V
     energy::T
     timeroutput::TO
     allocator::A
@@ -147,24 +150,14 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
 end
 
 function Base.iterate(
-        it::IterativeSolver{alg_type}, state::IDMRGState{<:Any, <:Any, <:Any, <:Any, T}
+        it::IterativeSolver{alg_type}, state::IDMRGState{<:InfiniteMPS, <:Any, <:Any, <:Any, T}
     ) where {alg_type <: Union{<:IDMRG, <:IDMRG2}, T}
     timeroutput = state.timeroutput
     ϵ_truncs = zero(state.truncation_errors) # fresh each sweep, filled by the sweep itself
     mps, envs, C_old, E_new = @timeit timeroutput "localupdate" localupdate_step!(it, state, ϵ_truncs)
 
     # error criterion
-    C = mps.C[0]
-    space_C_old = _firstspace(C_old)
-    space_C = _firstspace(C)
-    if space_C != space_C_old
-        smallest = infimum(space_C_old, space_C)
-        e1 = isometry(space_C_old, smallest)
-        e2 = isometry(space_C, smallest)
-        ϵ = norm(e2' * C * e2 - e1' * C_old * e1)
-    else
-        ϵ = norm(C - C_old)
-    end
+    ϵ = bond_change(C_old, mps.C[0])
 
     # New energy
     ΔE = (E_new - state.energy) / 2

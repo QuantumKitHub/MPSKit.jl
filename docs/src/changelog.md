@@ -32,6 +32,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   iterators whose iterations are a forward and a backward half-sweep (or a single time step),
   sharing one structure across solvers. Finite `TDVP`/`TDVP2` steps are composed of per-site local
   updates. Results and logging are unchanged. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
+- The `IDMRG`/`IDMRG2` convergence measure (`bondresidual`) is computed by one shared,
+  lower-allocation routine. For multiline `IDMRG` with several rows, the changes of the rows are
+  now summed, as `IDMRG2` already did, instead of combined in a 2-norm, which makes the stopping
+  criterion marginally stricter. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
 
 ### Deprecated
 
