@@ -24,6 +24,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `ClusterExpansion` time-evolution algorithm for `make_time_mpo`, constructing evolution MPOs
   for finite and infinite nearest-neighbor Hamiltonians through a nonperturbative cluster expansion
   that matches exact exponentials on clusters of up to `N` sites. ([#252](https://github.com/QuantumKitHub/MPSKit.jl/pull/252))
+- `changebonds(::InfiniteMPOHamiltonian, ::SvdCut)` compresses infinite Hamiltonians with the
+  almost-Schmidt decomposition of [Parker et al.](https://arxiv.org/abs/1909.06341), and
+  `left_canonicalize!`/`right_canonicalize!` bring an `InfiniteMPOHamiltonian` into canonical form.
 
 ### Changed
 

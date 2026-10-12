@@ -249,6 +249,37 @@ end
     @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
 end
 
+@testset "SvdCut on InfiniteMPOHamiltonian $(spacetype(pspace))" for (pspace, Dspace) in spacelist
+    Random.seed!(2468)
+    nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
+    nn += nn'
+    L = 3
+    lattice = PeriodicVector(fill(pspace, L))
+    H0 = InfiniteMPOHamiltonian(lattice, (i, i + 1) => nn for i in 1:L) +
+        InfiniteMPOHamiltonian(lattice, (i, i + 2) => 0.5^i * nn for i in 1:L)
+    # adding the terms twice duplicates every interaction channel
+    H = H0 + 2 * H0
+    ψ = InfiniteMPS(rand, ComplexF64, fill(pspace, L), fill(Dspace, L))
+
+    H′ = changebonds(H, SvdCut(; trunc = trunctol(; atol = 1.0e-12)))
+    @test all(i -> dim(right_virtualspace(H′[i])) ≤ dim(right_virtualspace(H0[i])), 1:L)
+    @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
+
+    # exponentially decaying interactions, written out as explicit terms
+    Z = rand(ComplexF64, pspace, pspace)
+    Z += Z'
+    H_exp = InfiniteMPOHamiltonian(PeriodicVector([pspace]), (1, 1 + r) => 0.5^r * (Z ⊗ Z) for r in 1:20)
+    H_exp′ = changebonds(H_exp, SvdCut(; trunc = trunctol(; rtol = 1.0e-5)))
+    @test dim(right_virtualspace(H_exp′[1])) < dim(right_virtualspace(H_exp[1]))
+    ψ1 = InfiniteMPS(rand, ComplexF64, [pspace], [Dspace])
+    @test expectation_value(ψ1, H_exp′) ≈ expectation_value(ψ1, H_exp) rtol = 1.0e-4
+
+    # purely on-site terms have no channels to compress
+    H_onsite = InfiniteMPOHamiltonian(PeriodicVector([pspace]), (1,) => Z)
+    @test expectation_value(ψ1, changebonds(H_onsite, SvdCut(; trunc = truncrank(0)))) ≈
+        expectation_value(ψ1, H_onsite)
+end
+
 # Regression: RandExpand used to be able to introduce a NaN entanglement entropy.
 @testset "RandExpand does not introduce NaN entropy" begin
     ψ = InfiniteMPS([ℂ^2], [ℂ^5])

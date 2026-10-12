@@ -178,3 +178,55 @@ function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
 
     return H
 end
+
+changebonds(H::InfiniteMPOHamiltonian, alg::SvdCut) = changebonds!(copy(H), alg)
+function changebonds!(H::InfiniteMPOHamiltonian, alg::SvdCut)
+    channels_before = [dim(right_virtualspace(H[i])) - 2 for i in 1:length(H)]
+
+    # the interaction channels of the gauge between the right- and left-canonical forms
+    right_canonicalize!(H)
+    _, Cs = uniform_leftorth!(H)
+
+    Us = map(C -> first(svd_trunc(C; trunc = alg.trunc, alg = alg.alg_svd)), Cs)
+    for i in 1:length(H)
+        H[i] = _project_channels(Us[i - 1], H[i], Us[i])
+    end
+
+    emptied = findall(
+        i -> channels_before[i] > 0 && dim(right_virtualspace(H[i])) - 2 == 0,
+        eachindex(channels_before)
+    )
+    isempty(emptied) || @warn "`SvdCut` discarded every interaction crossing bond(s) $emptied; those terms are gone from the compressed operator. Loosen `trunc` or check the scale of the input Hamiltonian."
+
+    return H
+end
+
+# Compute `diag(1, Uₗ', 1) * W * diag(1, Uᵣ, 1)`.
+function _project_channels(Uₗ, W::JordanMPOTensor, Uᵣ)
+    P = physicalspace(W)
+    Vₗ, Vᵣ = _channelspace(Uₗ), _channelspace(Uᵣ)
+    WA, WB, WC = W.A, W.B, W.C
+    Uₗᴴ = adjoint(Uₗ)
+
+    if dim(Vₗ) == 0 || dim(Vᵣ) == 0
+        A = similar(WA, Vₗ ⊗ P ← P ⊗ Vᵣ)
+    else
+        @plansor A[l p; p' r] := Uₗᴴ[l; l'] * WA[l' p; p' r'] * Uᵣ[r'; r]
+    end
+    if dim(Vₗ) == 0
+        B = similar(WB, Vₗ ⊗ P ← P)
+    else
+        @plansor B[l p; p'] := Uₗᴴ[l; l'] * WB[l' p; p']
+    end
+    if dim(Vᵣ) == 0
+        C = similar(WC, P ← P ⊗ Vᵣ)
+    else
+        @plansor C[p; p' r] := WC[p; p' r'] * Uᵣ[r'; r]
+    end
+
+    unit = rightunitspace(P)
+    V = ⊞(unit, Vₗ, unit) ⊗ P ← P ⊗ ⊞(unit, Vᵣ, unit)
+    return JordanMPOTensor(V, A, B, C, W.D)
+end
+
+_channelspace(U) = dim(U) == 0 ? SumSpace{spacetype(U)}() : domain(U)[1]

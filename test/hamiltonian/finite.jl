@@ -153,6 +153,42 @@ end
     end
 end
 
+# Regression: the identity component of `C`/`B` was projected out without normalizing by `dim(P)`,
+# and rank-deficient blocks left `Q` with directions that overlap with the identity.
+@testset "Finite MPOHamiltonian canonical forms" begin
+    for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1), Rep[SU₂](1 // 2 => 1))
+        O₂ = randn(ComplexF64, V^2 ← V^2)
+        O₂ += O₂'
+        L = 4
+        H = FiniteMPOHamiltonian(fill(V, L), (i, i + 1) => O₂ for i in 1:(L - 1))
+        H_tm = convert(TensorMap, H)
+
+        HL = copy(H)
+        for i in 1:(L - 1)
+            MPSKit.left_canonicalize!(HL, i)
+        end
+        @test convert(TensorMap, HL) ≈ H_tm
+        for W in HL[2:(L - 1)]
+            Vb = MPSKit.SparseBlockTensorMap(W)[1:(end - 1), 1, 1, 1:(end - 1)]
+            @plansor G[r; r′] := conj(Vb[l p; p′ r]) * Vb[l p; p′ r′]
+            G = TensorMap(G) / dim(physicalspace(W))
+            @test G ≈ id(domain(G))
+        end
+
+        HR = copy(H)
+        for i in L:-1:2
+            MPSKit.right_canonicalize!(HR, i)
+        end
+        @test convert(TensorMap, HR) ≈ H_tm
+        for W in HR[2:(L - 1)]
+            Vb = MPSKit.SparseBlockTensorMap(W)[2:end, 1, 1, 2:end]
+            @plansor G[l; l′] := Vb[l p; p′ r] * conj(Vb[l′ p; p′ r])
+            G = TensorMap(G) / dim(physicalspace(W))
+            @test G ≈ id(codomain(G))
+        end
+    end
+end
+
 @testset "Finite MPOHamiltonian repeated indices" begin
     X = randn(ComplexF64, ℂ^2, ℂ^2)
     X += X'

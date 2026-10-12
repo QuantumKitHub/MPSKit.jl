@@ -2,75 +2,191 @@
 _dense(t::SparseBlockTensorMap) = BlockTensorMap(t)
 _dense(t) = t
 
+# Finite MPOHamiltonians
+# ----------------------
+
 function left_canonicalize!(
         H::FiniteMPOHamiltonian, i::Int;
         alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
     )
     1 ≤ i < length(H) || throw(ArgumentError("Bounds error in canonicalize"))
+    H[i], t, R = _left_orth_jordan(H[i]; alg)
+    H[i + 1] = _absorb_left_gauge(H[i], t, R, H[i + 1])
+    return H
+end
 
-    W = H[i]
+function right_canonicalize!(
+        H::FiniteMPOHamiltonian, i::Int;
+        alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
+    )
+    1 < i ≤ length(H) || throw(ArgumentError("Bounds error in canonicalize"))
+    R, t, H[i] = _right_orth_jordan(H[i]; alg)
+    H[i - 1] = _absorb_right_gauge(H[i - 1], R, t, H[i])
+    return H
+end
+
+# Infinite MPOHamiltonians
+# ------------------------
+
+"""
+    left_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...) -> H
+
+Bring `H` into left-canonical form, where the upper-left block `[1 C; 0 A]` of every site has
+orthonormal columns, by iterating block-respecting QR decompositions until the gauge transformation
+is unitary. Redundant interaction channels are removed along the way.
+
+# Keyword arguments
+
+- `tol = Defaults.tolgauge`: convergence tolerance on the deviation of the gauge transformation from
+  a unitary one, which is also the relative tolerance for discarding redundant channels
+- `maxiter = Defaults.maxiter`: maximal number of sweeps over the unit cell
+- `verbosity = VERBOSE_WARN`: setting for how much information is displayed
+
+# References
+
+* [Parker et al. Phys. Rev. B 102 (2020)](@cite parker2020)
+"""
+function left_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...)
+    uniform_leftorth!(H; kwargs...)
+    return H
+end
+
+"""
+    right_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...) -> H
+
+Bring `H` into right-canonical form, where the lower-right block `[A B; 0 1]` of every site has
+orthonormal rows, by iterating block-respecting LQ decompositions until the gauge transformation
+is unitary. Redundant interaction channels are removed along the way.
+
+See [`left_canonicalize!`](@ref) for the keyword arguments.
+"""
+function right_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...)
+    uniform_rightorth!(H; kwargs...)
+    return H
+end
+
+# Bring `H` into left-canonical form in place, and return the middle blocks `L` of the accumulated
+# gauge transformations `diag(1, L[i - 1], 1) * H₀[i] = H[i] * diag(1, L[i], 1)` up to the gauging
+# away of identity components.
+function uniform_leftorth!(
+        H::InfiniteMPOHamiltonian;
+        tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, verbosity::Int = VERBOSE_WARN
+    )
+    alg_trunc = MatrixAlgebraKit.TruncatedAlgorithm(Defaults.alg_svd(), trunctol(; rtol = tol))
+    alg = MatrixAlgebraKit.LeftOrthViaSVD(alg_trunc)
+    Ls = PeriodicVector(Vector{Any}(nothing, length(H)))
+    return with_verbosity(; verbosity) do
+        log = IterLog("MPO LC")
+        @log_initialization loginit!(log, Inf)
+        for iter in 1:maxiter
+            local t, R
+            for i in 1:length(H)
+                H[i], t, R = _left_orth_jordan(H[i]; alg)
+                H[i + 1] = _absorb_left_gauge(H[i], t, R, H[i + 1])
+                Ls[i] = isnothing(Ls[i]) || dim(R) == 0 ? R : R * Ls[i]
+            end
+            ϵ = _gauge_distance(t, R)
+            if ϵ <= tol
+                @log_convergence logfinish!(log, iter, ϵ)
+                break
+            elseif iter == maxiter
+                @log_nonconvergence logcancel!(log, iter, ϵ)
+            else
+                @log_iteration logiter!(log, iter, ϵ)
+            end
+        end
+        return H, map(identity, Ls)
+    end
+end
+
+# Bring `H` into right-canonical form in place.
+function uniform_rightorth!(
+        H::InfiniteMPOHamiltonian;
+        tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, verbosity::Int = VERBOSE_WARN
+    )
+    alg_trunc = MatrixAlgebraKit.TruncatedAlgorithm(Defaults.alg_svd(), trunctol(; rtol = tol))
+    alg = MatrixAlgebraKit.RightOrthViaSVD(alg_trunc)
+    return with_verbosity(; verbosity) do
+        log = IterLog("MPO RC")
+        @log_initialization loginit!(log, Inf)
+        for iter in 1:maxiter
+            local t, R
+            for i in length(H):-1:1
+                R, t, H[i] = _right_orth_jordan(H[i]; alg)
+                H[i - 1] = _absorb_right_gauge(H[i - 1], R, t, H[i])
+            end
+            ϵ = _gauge_distance(t, R)
+            if ϵ <= tol
+                @log_convergence logfinish!(log, iter, ϵ)
+                break
+            elseif iter == maxiter
+                @log_nonconvergence logcancel!(log, iter, ϵ)
+            else
+                @log_iteration logiter!(log, iter, ϵ)
+            end
+        end
+        return H
+    end
+end
+
+# distance of the gauge transformation `[1 t 0; 0 R 0; 0 0 1]` (or its mirror) to a unitary one
+function _gauge_distance(t, R)
+    codomain(R) == domain(R) || return Inf
+    return norm(t) + norm(R' * R - id(storagetype(R), domain(R)))
+end
+
+# Implementation
+# --------------
+
+# Decompose `W = Q * G` with `G = [1 t 0; 0 R 0; 0 0 1]` and `Q` left-canonical.
+function _left_orth_jordan(W::JordanMPOTensor; alg = Defaults.alg_orth())
     P = physicalspace(W)
     _rightunit = rightunitspace(P)
     S = spacetype(W)
     d = sqrt(dim(P))
+    WA, WB, WD = W.A, W.B, W.D
 
-    # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
-    # them once and reuse the locals throughout
-    WA, WB, WC, WD = W.A, W.B, W.C, W.D
+    # QR of the upper-left block `[1 C; 0 A]` with the identity as first column, which keeps all other
+    # columns of `Q` orthogonal to it, even if the block is rank-deficient
+    rows = 1:max(size(W, 1) - 1, 1)
+    V = BlockTensorMap(SparseBlockTensorMap(W)[rows, 1, 1, 1:(end - 1)])
+    Q, R = left_orth!(transpose(V, ((3, 1, 2), (4,))); alg = Defaults.alg_orth())
+    Π = _split_unit(domain(Q)[1], _rightunit, storagetype(W))
+    Q = (Q * Π')[:, :, :, 2:2]
+    R = Π * R
+    t = scale!(R[1:1, 2:end], inv(d))
+    R = R[2:2, 2:end]
 
-    # orthogonalize second column against first
-    Wi = W[1, 1, 1, 1]
-    WI = removeunit(Wi, 1)
-    @plansor t[l; r] := conj(WI[p; p' l]) * WC[p; p' r]
-    # TODO: the following is currently broken due to a TensorKit bug
-    # @plansor C′[p; p' r] := WC[p; p' r] - WI[p; p' l] * t[l; r]
-    @plansor C′[p; p' r] := -WI[p; p' l] * t[l; r]
-    add!(C′, _dense(WC))
-
-    # QR of second column
-    if size(W, 1) == 1
-        tmp = transpose(C′, ((2, 1), (3,)))
-        Q, R = left_orth!(tmp; alg)
-
-        if dim(R) == 0 # fully truncated
-            V = _rightunit ⊞ _rightunit
-            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
-            Q2 = typeof(WC)(undef, P ← P ⊗ SumSpace{S}())
-        else
-            V = ⊞(_rightunit, space(R, 1), _rightunit)
-            scale!(Q, d)
-            scale!(R, inv(d))
-            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ space(R, 1))
-            Q2 = transpose(Q, ((2,), (1, 3)))
-        end
-        H[i] = JordanMPOTensor(codomain(W) ← physicalspace(W) ⊗ V, Q1, WB, Q2, WD)
-    else
-        tmp = transpose(cat(insertleftunit(C′, 1), WA; dims = 1), ((3, 1, 2), (4,)))
-        Q, R = left_orth!(tmp; alg)
-
-        if dim(R) == 0 # fully truncated
-            V = _rightunit ⊞ _rightunit
-            Q1 = typeof(WA)(undef, codomain(WA) ← P ⊗ SumSpace{S}())
-            Q2 = typeof(WC)(undef, P ← P ⊗ SumSpace{S}())
-        else
-            scale!(Q, d)
-            scale!(R, inv(d))
-            Q′ = transpose(Q, ((2, 3), (1, 4)))
-            Q1 = Q′[2:end, 1, 1, 1]
-            Q2 = removeunit(SparseBlockTensorMap(Q′[1:1, 1, 1, 1]), 1)
-            V = ⊞(_rightunit, right_virtualspace(Q′), _rightunit)
-        end
-        H[i] = JordanMPOTensor(codomain(W) ← P ⊗ V, Q1, WB, Q2, WD)
+    # other (possibly truncating) algorithms only act on the interaction channels
+    if alg != Defaults.alg_orth()
+        U, R = left_orth!(R; alg)
+        Q = Q * U
     end
+    scale!(R, inv(d))
 
-    # absorb into next site
-    W′ = H[i + 1]
+    if dim(R) == 0 # fully truncated
+        V = _rightunit ⊞ _rightunit
+        Q1 = typeof(WA)(undef, codomain(WA) ← P ⊗ SumSpace{S}())
+        Q2 = typeof(W.C)(undef, P ← P ⊗ SumSpace{S}())
+    else
+        Q = scale!(transpose(Q, ((2, 3), (1, 4))), d)
+        Q1 = size(W, 1) == 1 ? typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ right_virtualspace(Q)) :
+            SparseBlockTensorMap(Q[2:end, 1, 1, 1])
+        Q2 = removeunit(SparseBlockTensorMap(Q[1:1, 1, 1, 1]), 1)
+        V = ⊞(_rightunit, right_virtualspace(Q), _rightunit)
+    end
+    return JordanMPOTensor(codomain(W) ← P ⊗ V, Q1, WB, Q2, WD), t, R
+end
+
+# Compute `G * W′` for the gauge `G = [1 t 0; 0 R 0; 0 0 1]` obtained from `_left_orth_jordan`,
+# where `Q` is the tensor to the left of `W′`.
+function _absorb_left_gauge(Q::JordanMPOTensor, t, R, W′::JordanMPOTensor)
     W′A, W′B, W′C, W′D = W′.A, W′.B, W′.C, W′.D
 
     if size(W′, 4) > 1 && dim(R) != 0
         @plansor A′[l p; p' r] := R[l; r'] * W′A[r' p; p' r]
     else
-        A′ = similar(W′A, right_virtualspace(H[i].A) ⊗ physicalspace(W′) ← domain(W′A))
+        A′ = similar(W′A, right_virtualspace(Q.A) ⊗ physicalspace(W′) ← domain(W′A))
     end
 
     if size(W′, 4) > 1
@@ -83,88 +199,67 @@ function left_canonicalize!(
     if dim(R) != 0
         @plansor B′[l p; p'] := R[l; r] * W′B[r p; p']
     else
-        B′ = similar(W′B, right_virtualspace(H[i].A) ⊗ physicalspace(W′) ← domain(W′B))
+        B′ = similar(W′B, right_virtualspace(Q.A) ⊗ physicalspace(W′) ← domain(W′B))
     end
 
     @plansor D′[l p; p'] := t[l; r] * W′B[r p; p']
     D′ = add!(removeunit(D′, 1), _dense(W′D))
 
-    H[i + 1] = JordanMPOTensor(
-        right_virtualspace(H[i]) ⊗ physicalspace(W′) ← domain(W′),
-        A′, B′, C′, D′
+    return JordanMPOTensor(
+        right_virtualspace(Q) ⊗ physicalspace(W′) ← domain(W′), A′, B′, C′, D′
     )
-    return H
 end
 
-function right_canonicalize!(
-        H::FiniteMPOHamiltonian, i::Int;
-        alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
-    )
-    1 < i ≤ length(H) || throw(ArgumentError("Bounds error in canonicalize"))
-
-    W = H[i]
+# Decompose `W = G * Q` with `G = [1 0 0; 0 R t; 0 0 1]` and `Q` right-canonical.
+function _right_orth_jordan(W::JordanMPOTensor; alg = Defaults.alg_orth())
     P = physicalspace(W)
     _rightunit = rightunitspace(P)
     S = spacetype(W)
     d = sqrt(dim(P))
+    WA, WC, WD = W.A, W.C, W.D
 
-    # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
-    # them once and reuse the locals throughout
-    WA, WB, WC, WD = W.A, W.B, W.C, W.D
+    # LQ of the lower-right block `[A B; 0 1]` with the identity as first row, which keeps all other
+    # rows of `Q` orthogonal to it, even if the block is rank-deficient
+    cols = min(2, size(W, 4)):size(W, 4)
+    V = SparseBlockTensorMap(W)[2:end, 1, 1, cols]
+    V = BlockTensorMap(cat(V[end:end, 1, 1, :], V[1:(end - 1), 1, 1, :]; dims = 1))
+    R, Q = right_orth!(transpose(V, ((1,), (3, 4, 2))); alg = Defaults.alg_orth())
+    Π = _split_unit(codomain(Q)[1], _rightunit, storagetype(W))
+    Q = (Π * Q)[2:2, :, :, :]
+    R = R * Π'
+    t = scale!(R[2:end, 1:1], inv(d))
+    R = R[2:end, 2:2]
 
-    # orthogonalize second row against last
-    Wi = W[end, 1, 1, end]
-    WI = removeunit(Wi, 4)
-    @plansor t[l; r] := conj(WI[r p; p']) * WB[l p; p']
-    # TODO: the following is currently broken due to a TensorKit bug
-    # @plansor B′[l p; p'] := WB[l p; p'] - WI[r p; p'] * t[l; r]
-    @plansor B′[l p; p'] := -WI[r p; p'] * t[l; r]
-    add!(B′, _dense(WB))
-
-    # LQ of second row
-    if size(W, 4) == 1
-        tmp = transpose(B′, ((1,), (3, 2)))
-        R, Q = right_orth!(tmp; alg)
-
-        if dim(R) == 0
-            V = _rightunit ⊞ _rightunit
-            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← P ⊗ SumSpace{S}())
-            Q2 = typeof(WB)(undef, SumSpace{S}() ⊗ P ← P)
-        else
-            V = ⊞(_rightunit, space(Q, 1), _rightunit)
-            scale!(Q, d)
-            scale!(R, inv(d))
-            Q1 = typeof(WA)(undef, space(Q, 1) ⊗ P ← P ⊗ SumSpace{S}())
-            Q2 = transpose(Q, ((1, 3), (2,)))
-        end
-        H[i] = JordanMPOTensor(V ⊗ P ← domain(W), Q1, Q2, WC, WD)
-    else
-        B′′ = insertleftunit(B′, 4)
-        tmp = transpose(cat(B′′, WA; dims = 4), ((1,), (3, 4, 2)))
-        R, Q = right_orth!(tmp; alg)
-        if dim(R) == 0
-            V = _rightunit ⊞ _rightunit
-            Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← domain(WA))
-            Q2 = typeof(WB)(undef, SumSpace{S}() ⊗ P ← P)
-        else
-            scale!(Q, d)
-            scale!(R, inv(d))
-            Q′ = transpose(Q, ((1, 4), (2, 3)))
-            Q1 = SparseBlockTensorMap(Q′[1, 1, 1, 2:end])
-            Q2 = removeunit(SparseBlockTensorMap(Q′[1, 1, 1, 1:1]), 4)
-            V = ⊞(_rightunit, left_virtualspace(Q′), _rightunit)
-        end
-        H[i] = JordanMPOTensor(V ⊗ P ← domain(W), Q1, Q2, WC, WD)
+    # other (possibly truncating) algorithms only act on the interaction channels
+    if alg != Defaults.alg_orth()
+        R, U = right_orth!(R; alg)
+        Q = U * Q
     end
+    scale!(R, inv(d))
 
-    # absorb into previous site
-    W′ = H[i - 1]
+    if dim(R) == 0 # fully truncated
+        V = _rightunit ⊞ _rightunit
+        Q1 = typeof(WA)(undef, SumSpace{S}() ⊗ P ← domain(WA))
+        Q2 = typeof(W.B)(undef, SumSpace{S}() ⊗ P ← P)
+    else
+        Q = scale!(transpose(Q, ((1, 4), (2, 3))), d)
+        Q1 = size(W, 4) == 1 ? typeof(WA)(undef, left_virtualspace(Q) ⊗ P ← P ⊗ SumSpace{S}()) :
+            SparseBlockTensorMap(Q[1, 1, 1, 1:(end - 1)])
+        Q2 = removeunit(SparseBlockTensorMap(Q[1, 1, 1, end:end]), 4)
+        V = ⊞(_rightunit, left_virtualspace(Q), _rightunit)
+    end
+    return R, t, JordanMPOTensor(V ⊗ P ← domain(W), Q1, Q2, WC, WD)
+end
+
+# Compute `W′ * G` for the gauge `G = [1 0 0; 0 R t; 0 0 1]` obtained from `_right_orth_jordan`,
+# where `Q` is the tensor to the right of `W′`.
+function _absorb_right_gauge(W′::JordanMPOTensor, R, t, Q::JordanMPOTensor)
     W′A, W′B, W′C, W′D = W′.A, W′.B, W′.C, W′.D
 
     if size(W′, 1) > 1 && dim(R) != 0
         @plansor A′[l p; p' r] := W′A[l p; p' r'] * R[r'; r]
     else
-        A′ = similar(W′A, codomain(W′A) ← physicalspace(W′A) ⊗ left_virtualspace(H[i].A))
+        A′ = similar(W′A, codomain(W′A) ← physicalspace(W′A) ⊗ left_virtualspace(Q.A))
     end
 
     if size(W′, 1) > 1
@@ -177,11 +272,32 @@ function right_canonicalize!(
     if dim(R) != 0
         @plansor C′[p; p' r] := W′C[p; p' r'] * R[r'; r]
     else
-        C′ = similar(W′C, codomain(W′C) ← physicalspace(W′) ⊗ left_virtualspace(H[i].A))
+        C′ = similar(W′C, codomain(W′C) ← physicalspace(W′) ⊗ left_virtualspace(Q.A))
     end
 
     @plansor D′[p; p' r] := W′C[p; p' r'] * t[r'; r]
     D′ = add!(removeunit(D′, 3), _dense(W′D))
-    H[i - 1] = JordanMPOTensor(codomain(W′) ← physicalspace(W′) ⊗ V, A′, B′, C′, D′)
-    return H
+    return JordanMPOTensor(
+        codomain(W′) ← physicalspace(W′) ⊗ left_virtualspace(Q), A′, B′, C′, D′
+    )
+end
+
+# Isometry that splits the first unit-sector basis vector of `V = ⊞(X)` off into its own block.
+function _split_unit(V::SumSpace, unit, ::Type{A}) where {A}
+    X = only(V)
+    c₀ = only(sectors(unit))
+    rest = X ⊖ unit
+    T = scalartype(A)
+    TT = tensormaptype(spacetype(X), 1, 1, A)
+    Π₁ = TT(undef, unit ← X)
+    copyto!(block(Π₁, c₀), [one(T) zeros(T, 1, blockdim(X, c₀) - 1)])
+    Π₂ = TT(undef, rest ← X)
+    for (c, b) in blocks(Π₂)
+        Id = Matrix{T}(LinearAlgebra.I, size(b, 1), size(b, 1))
+        copyto!(b, c == c₀ ? [zeros(T, size(b, 1)) Id] : Id)
+    end
+    Π = BlockTensorMap{TT}(undef, (unit ⊞ rest) ← V)
+    Π[1, 1] = Π₁
+    Π[2, 1] = Π₂
+    return Π
 end
