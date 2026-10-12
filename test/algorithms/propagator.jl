@@ -1,6 +1,6 @@
 println("
 -----------------------------
-|   Linear solver tests      |
+|   Propagator tests         |
 -----------------------------
 ")
 
@@ -40,7 +40,8 @@ end
         solver = flav isa LeastSquares ? CG(; tol = 1.0e-12) : GMRES(; tol = 1.0e-12)
         alg = DMRGSolve(; formulation = flav, solver, tol = 1.0e-10, verbosity = 0)
         # solve (z − H) x = gs  ⟺  a₀ = z, a₁ = −1
-        x, envs, ϵ = linear_solve(complex(copy(gs)), H, gs, alg; a₀ = z, a₁ = -1)
+        x, envs, info = linear_solve(complex(copy(gs)), H, gs, alg; a₀ = z, a₁ = -1)
+        @test info.converged && convergence_measure(info) == info.galerkin
         @test dot(gs, x) ≈ predicted atol = 1.0e-6
         @test rel_residual(H, x, gs, z, -1) < 1.0e-6
     end
@@ -76,7 +77,7 @@ end
         @test rel_residual(H, x, gs, z, -1) < 1.0e-5
 
         # adaptive-by-default keyword path (DynamicTol-wrapped GMRES)
-        x2, envs, ϵ = linear_solve(complex(copy(gs)), H, gs; a₀ = z, a₁ = -1, tol = 1.0e-9, verbosity = 0)
+        x2, = linear_solve(complex(copy(gs)), H, gs; a₀ = z, a₁ = -1, tol = 1.0e-9, verbosity = 0)
         @test dot(gs, x2) ≈ predicted atol = 1.0e-5
         @test rel_residual(H, x2, gs, z, -1) < 1.0e-5
     end
@@ -85,7 +86,7 @@ end
         # s ≫ spectrum ⇒ (s − H) is positive-definite; the CG path is selected by `isposdef`
         s = E₀ + 50.0
         # eigenstate RHS: exact solution 1/(s − E₀) · gs, real and positive
-        x, envs, ϵ = linear_solve(copy(gs), H, gs; a₀ = s, a₁ = -1, isposdef = true, tol = 1.0e-10, verbosity = 0)
+        x, = linear_solve(copy(gs), H, gs; a₀ = s, a₁ = -1, isposdef = true, tol = 1.0e-10, verbosity = 0)
         @test dot(gs, x) ≈ 1 / (s - E₀) atol = 1.0e-8
         @test rel_residual(H, x, gs, s, -1) < 1.0e-8
     end
@@ -120,5 +121,65 @@ end
         alg = DMRGSolve(; formulation = flav, solver, tol = 1.0e-10, verbosity = 0)
         x, = linear_solve(XΩ, H_w, XΩ, alg; a₀ = z, a₁ = -1)
         @test dot(XΩ, x) ≈ predicted atol = 1.0e-6
+    end
+end
+
+@testset "Dynamical DMRG FiniteMPS" verbose = true begin
+    L = 10
+    H = force_planar(-transverse_field_ising(; L, g = -4))
+    gs, = find_groundstate(FiniteMPS(L, ℙ^2, ℙ^10), H; verbosity = verbosity_conv)
+    E₀ = expectation_value(gs, H)
+
+    vals = (-0.5:0.2:0.5) .+ E₀
+    eta = 0.3im
+
+    predicted = [1 / (v + eta - E₀) for v in vals]
+
+    @testset "Flavour $f" for f in (Jeckelmann(), NaiveInvert())
+        alg = DynamicalDMRG(; flavour = f, verbosity = 0, tol = 1.0e-8)
+        data = map(vals) do v
+            result, = propagator(gs, v + eta, H, alg)
+            return result
+        end
+        @test data ≈ predicted atol = 1.0e-8
+    end
+
+    # `trunc` prepends a two-site sweep, so the bond dimension of the initial guess need not
+    # already be large enough: start from χ = 2 and let it grow back to the χ = 10 of the solution
+    @testset "trunc (adaptive χ), flavour $f" for f in (Jeckelmann(), NaiveInvert())
+        alg = DynamicalDMRG(;
+            flavour = f, verbosity = 0, tol = 1.0e-8, trunc = truncrank(16)
+        )
+        init = FiniteMPS(L, ℙ^2, ℙ^2)
+        data = map(vals) do v
+            result, = propagator(gs, v + eta, H, alg; init)
+            return result
+        end
+        @test data ≈ predicted atol = 1.0e-6
+    end
+end
+
+@testset "Dynamical DMRG WindowMPS" verbose = true begin
+    N = 20
+
+    H = transverse_field_ising(g = -4)
+    Ω = InfiniteMPS(ComplexSpace(2), ComplexSpace(20))
+
+    (Ω, _) = find_groundstate(Ω, H, VUMPS(verbosity = verbosity_conv))
+    XΩ = WindowMPS(Ω, N)
+    H_w = WindowMPOHamiltonian(H, 1:N)
+
+    gs_en = expectation_value(XΩ, H_w)
+    vals = range(gs_en - 1.0, gs_en + 1.0, length = 5)
+    eta = 0.3im
+    predicted = [1 / (v + eta - gs_en) for v in vals]
+
+    @testset "Flavour $f" for f in (Jeckelmann(), NaiveInvert())
+        alg = DynamicalDMRG(; flavour = f, verbosity = 0, tol = 1.0e-8)
+        data = map(vals) do v
+            result, = propagator(XΩ, v + eta, H_w, alg)
+            return result
+        end
+        @test data ≈ predicted atol = 1.0e-8
     end
 end

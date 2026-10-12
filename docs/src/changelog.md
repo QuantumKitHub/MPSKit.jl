@@ -29,6 +29,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `changebonds(::InfiniteMPOHamiltonian, ::SvdCut)` compresses infinite Hamiltonians with the
   almost-Schmidt decomposition of [Parker et al.](https://arxiv.org/abs/1909.06341), and
   `left_canonicalize!`/`right_canonicalize!` bring an `InfiniteMPOHamiltonian` into canonical form. ([#539](https://github.com/QuantumKitHub/MPSKit.jl/pull/539))
+- `linear_solve`/`linear_solve!` for solving `(a₀ + a₁·A)·x = b` with finite MPS `x` and `b`, using the
+  DMRG-style sweeps `DMRGSolve` and `DMRGSolve2`; see [`linear_solve`](@ref) for details.
+- `DynamicalDMRG` gained a `trunc` field for a bond-adaptive `propagator`; see [`DynamicalDMRG`](@ref).
 
 ### Changed
 
@@ -46,6 +49,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   its allocator across steps, rather than copying the state at every step. A `finalize` callback
   that keeps the state of an earlier step therefore sees it updated by later steps, as with
   `time_evolve!`. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
+- `propagator`/`DynamicalDMRG` are now implemented on top of `linear_solve`, which changes the default
+  convergence criterion, `tol` and local solver; `Jeckelmann` now throws for real `z`.
 
 ### Deprecated
 
