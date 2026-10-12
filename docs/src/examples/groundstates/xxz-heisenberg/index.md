@@ -12,7 +12,8 @@ In this file we will give step by step instructions on how to analyze the spin 1
 The necessary packages to follow this tutorial are:
 
 ````julia
-using MPSKit, MPSKitModels, TensorKit, Plots
+using MPSKit, TensorKit, Plots
+using .ExampleModels
 ````
 
 For reproducibility of this page, we fix the seed of the random number generator:
@@ -62,12 +63,14 @@ state = InfiniteMPS(2, 20)
 The ground state can then be found by calling `find_groundstate`.
 
 ````julia
-groundstate, cache, delta = find_groundstate(state, H, VUMPS(; verbosity = 1));
+groundstate, cache, info = find_groundstate(state, H, VUMPS(; verbosity = 1));
+info
 ````
 
 ````
-┌ Warning: VUMPS cancel 200:	obj = -1.878034423426e-01	err = 3.7915687051e-01	time = 6.59 sec
-└ @ MPSKit src/algorithms/groundstate/vumps.jl:87
+AlgorithmInfo:
+  converged          = false after 200 iterations
+  galerkin           = 0.370633
 
 ````
 
@@ -76,14 +79,14 @@ On its own, that is already quite curious.
 Maybe we can do better using another algorithm, such as gradient descent.
 
 ````julia
-groundstate, cache, delta = find_groundstate(state, H, GradientGrassmann(; maxiter = 20, verbosity = 1));
+groundstate, cache, info = find_groundstate(state, H, GradientGrassmann(; maxiter = 20, verbosity = 1));
+info
 ````
 
 ````
-┌ Warning: resorting to η
-└ @ OptimKit src/cg.jl:225
-┌ Warning: CG: not converged to requested tol after 20 iterations and time  5.39 s: f = -4.427115230754e-01, ‖∇f‖ = 5.6573e-03
-└ @ OptimKit src/cg.jl:188
+AlgorithmInfo:
+  converged          = false after 20 iterations
+  gradientnorm       = 0.00747596
 
 ````
 
@@ -123,19 +126,19 @@ state = InfiniteMPS(fill(2, 2), fill(20, 2))
 
 In MPSKit, we require that the periodicity of the Hamiltonian equals that of the state it is applied to.
 This is not a big obstacle, you can simply repeat the original Hamiltonian.
-Alternatively, the Hamiltonian can be constructed directly on a two-site unit cell by making use of MPSKitModels.jl's `@mpoham`.
+Alternatively, our model helper can construct the Hamiltonian directly on a two-site unit cell.
 
 ````julia
 # H2 = repeat(H, 2); -- copies the one-site version
-H2 = heisenberg_XXX(ComplexF64, Trivial, InfiniteChain(2); spin = 1 // 2)
-groundstate, envs, delta = find_groundstate(
+H2 = heisenberg_XXX(ComplexF64, Trivial; unitcell = 2, spin = 1 // 2)
+groundstate, envs, info = find_groundstate(
     state, H2, VUMPS(; maxiter = 100, tol = 1.0e-12, verbosity = 1)
 );
 ````
 
 ````
-┌ Warning: VUMPS cancel 100:	obj = -8.862417624752e-01	err = 4.2010390727e-06	time = 3.79 sec
-└ @ MPSKit src/algorithms/groundstate/vumps.jl:87
+┌ Warning: VUMPS cancel 100:	obj = -8.862417624752e-01	err = 4.2010390011e-06	time = 3.80 sec
+└ @ MPSKit src/algorithms/groundstate/vumps.jl:96
 
 ````
 
@@ -143,7 +146,7 @@ We get convergence, but it takes an enormous amount of iterations.
 The reason behind this becomes more obvious at higher bond dimensions:
 
 ````julia
-groundstate, envs, delta = find_groundstate(
+groundstate, envs, info = find_groundstate(
     state, H2, IDMRG2(; trunc = truncrank(50), maxiter = 20, tol = 1.0e-12, verbosity = 1)
 );
 entanglementplot(groundstate)
@@ -165,7 +168,7 @@ The XXZ Heisenberg Hamiltonian is SU(2) symmetric and we can exploit this to gre
 It is cumbersome to construct symmetric Hamiltonians, but luckily SU(2) symmetric XXZ is already implemented:
 
 ````julia
-H2 = heisenberg_XXX(ComplexF64, SU2Irrep, InfiniteChain(2); spin = 1 // 2);
+H2 = heisenberg_XXX(ComplexF64, SU2Irrep; unitcell = 2, spin = 1 // 2);
 ````
 
 Our initial state should also be SU(2) symmetric.
@@ -194,7 +197,7 @@ Even though the bond dimension is higher than in the example without symmetry, c
 ````julia
 println(dim(V1))
 println(dim(V2))
-groundstate, cache, delta = find_groundstate(state, H2, VUMPS(; maxiter = 400, tol = 1.0e-12, verbosity = 1));
+groundstate, cache, info = find_groundstate(state, H2, VUMPS(; maxiter = 400, tol = 1.0e-12, verbosity = 1));
 ````
 
 ````

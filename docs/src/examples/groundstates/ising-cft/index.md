@@ -12,7 +12,8 @@ This tutorial is meant to show the finite size CFT spectrum for the quantum Isin
 We do this by first employing an exact diagonalization technique, and then extending the analysis to larger system sizes through the use of MPS techniques.
 
 ````julia
-using MPSKit, MPSKitModels, TensorKit, Plots, KrylovKit
+using MPSKit, TensorKit, Plots, KrylovKit
+using .ExampleModels
 using LinearAlgebra: eigvals, diagm, Hermitian
 ````
 
@@ -118,24 +119,24 @@ append!(momenta, fix_degeneracies(states[17:18]))
 
 ````
 18-element Vector{Float64}:
- -6.835457747908734e-17
- -1.5823223400041525e-17
- -2.117254204162227e-17
- -0.5235987755982994
-  0.5235987755982988
- -1.047197551196598
-  1.0471975511965976
-  0.5235987755982993
- -0.5235987755982985
+ -2.1278136533158578e-17
+  2.3050344087760185e-17
+ -5.0324217423779645e-17
+  0.5235987755982991
+ -0.5235987755982991
  -1.0471975511965976
-  1.0471975511965976
- -1.3705449793358471e-17
-  1.570796326794897
+  1.0471975511965974
+ -0.523598775598299
+  0.5235987755982988
+  1.0471975511965979
+ -1.0471975511965976
+ -1.9939344511686805e-17
  -1.5707963267948966
- -1.0471975511965979
-  1.0471975511965976
-  1.5707963267948968
- -1.5707963267948966
+  1.5707963267948961
+ -1.047197551196598
+  1.047197551196598
+ -1.5707963267948968
+  1.5707963267948966
 ````
 
 We can compute the scaling dimensions $Δ_n$ of the operators in the CFT from the energy gap of the corresponding excitations as $E_n - E_0 = \frac{2π v}{L} Δ_n$, where $v = 2$.
@@ -166,7 +167,7 @@ If we limit the maximum bond dimension of the MPS, we get an approximate solutio
 L_mps = 20
 H_mps = periodic_boundary_conditions(transverse_field_ising(), L_mps)
 D = 64
-ψ, envs, δ = find_groundstate(FiniteMPS(L_mps, ℂ^2, ℂ^D), H_mps, DMRG(; verbosity = 0));
+ψ, envs, info = find_groundstate(FiniteMPS(L_mps, ℂ^2, ℂ^D), H_mps, DMRG(; verbosity = 0));
 ````
 
 Excitations on top of the ground state can be found through the use of the quasiparticle ansatz.

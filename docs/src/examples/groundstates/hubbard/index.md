@@ -37,7 +37,7 @@ H = - ∑_{⟨i, j⟩, σ} c^{†}_{i,σ} c_{j,σ} + u ∑_i (1 - 2 n_{i,↑}) (
 ````julia
 using TensorKit
 using MPSKit
-using MPSKitModels
+using .ExampleModels
 using SpecialFunctions: besselj0, besselj1
 using QuadGK: quadgk
 using Plots
@@ -107,7 +107,7 @@ function compute_groundstate(
     return psi
 end
 
-H = hubbard_model(InfiniteChain(2); U, t, mu = U / 2)
+H = hubbard_model(; unitcell = 2, U, t, mu = U / 2)
 Vspaces = fill(Vect[fℤ₂](0 => 10, 1 => 10), 2)
 psi = InfiniteMPS(physicalspace(H), Vspaces)
 psi = compute_groundstate(psi, H)
@@ -121,7 +121,7 @@ Groundstate energy:
 
 ````
 ┌ Info: Groundstate energy:
-│     * numerical: -2.189996060974577
+│     * numerical: -2.1899960609745746
 └     * analytic: -2.190038374277775
 
 ````
@@ -138,12 +138,12 @@ In order to work at half-filling, we need to effectively inject one particle per
 In MPSKit, this is achieved by the `add_physical_charge` function, which shifts the physical spaces of the tensors to the desired charge sector.
 
 ````julia
-H_u1_su2 = hubbard_model(ComplexF64, U1Irrep, SU2Irrep, InfiniteChain(2); U, t, mu = U / 2);
+H_u1_su2 = hubbard_model(ComplexF64, U1Irrep, SU2Irrep; unitcell = 2, U, t, mu = U / 2);
 charges = fill(FermionParity(1) ⊠ U1Irrep(1) ⊠ SU2Irrep(0), 2);
 H_u1_su2 = MPSKit.add_physical_charge(H_u1_su2, charges);
 
 pspaces = physicalspace.(Ref(H_u1_su2), 1:2)
-vspaces = [oneunit(eltype(pspaces)), first(pspaces)]
+vspaces = [unitspace(eltype(pspaces)), first(pspaces)]
 psi = InfiniteMPS(pspaces, vspaces)
 psi = compute_groundstate(psi, H_u1_su2; expansionfactor = 1 / 3)
 E = real(expectation_value(psi, H_u1_su2)) / 2
@@ -156,7 +156,7 @@ Groundstate energy:
 
 ````
 ┌ Info: Groundstate energy:
-│     * numerical: -2.190015347514472
+│     * numerical: -2.1900153475144615
 └     * analytic: -2.190038374277775
 
 ````

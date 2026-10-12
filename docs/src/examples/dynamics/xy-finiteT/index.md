@@ -8,10 +8,11 @@ EditURL = "../../../../../examples/dynamics/xy-finiteT/main.jl"
 
 ````julia
 using Markdown
+using TensorKitTensors.SpinOperators: S_plus_S_min, S_min_S_plus
 using TensorKit
 using MPSKit
+using .ExampleModels
 using MPSKit: infinite_temperature_density_matrix
-using MPSKitModels
 using QuadGK: quadgk
 using SpecialFunctions: ellipe
 using Plots
@@ -43,13 +44,8 @@ function XY_hamiltonian(
         ::Type{T} = ComplexF64, ::Type{S} = Trivial; J = 1 / 2, N
     ) where {T <: Number, S <: Sector}
     spin = 1 // 2
-    term = J * (S_xx(T, S; spin) + S_yy(T, S; spin))
-    lattice = isfinite(N) ? FiniteChain(N) : InfiniteChain(1)
-    return @mpoham begin
-        sum(nearest_neighbours(lattice)) do (i, j)
-            return term{i, j}
-        end
-    end
+    term = J / 2 * (S_plus_S_min(T, S; spin) + S_min_S_plus(T, S; spin))
+    return chain_hamiltonian(term; L = isfinite(N) ? Int(N) : nothing)
 end
 ````
 
@@ -123,7 +119,7 @@ println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 ````
 
 ````
-Numerical:	-0.1563780304701162
+Numerical:	-0.15637803047011087
 Exact (N=32):	-0.15637803047254015
 Exact (N=Inf):	-0.15915494309189535
 

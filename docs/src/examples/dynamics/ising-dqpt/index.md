@@ -12,7 +12,8 @@ In this tutorial we will try to reproduce the results from [this paper](https://
 The needed packages are
 
 ````julia
-using MPSKit, MPSKitModels, TensorKit
+using MPSKit, TensorKit
+using .ExampleModels
 ````
 
 Dynamical quantum phase transitions (DQPT in short) are signatures of equilibrium phase transitions in a dynamical quantity - the Loschmidt echo.
@@ -34,14 +35,14 @@ First we construct the Hamiltonian in MPO form, and obtain the pre-quenched grou
 
 ````julia
 L = 20
-H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
+H₀ = transverse_field_ising(; L, g = -0.5)
 ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
 ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG(; verbosity = 0));
 ````
 
 ## Finite MPS quenching
 
-We can define a helper function that measures the Loschmidt echo
+We can define a helper function that measures the Loschmidt echo:
 
 ````julia
 echo(ψ₀::FiniteMPS, ψₜ::FiniteMPS) = -2 * log(abs(dot(ψ₀, ψₜ))) / length(ψ₀)
@@ -52,10 +53,10 @@ We will initially use a two-site TDVP scheme to dynamically increase the bond di
 A single timestep can be done using
 
 ````julia
-H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
+H₁ = transverse_field_ising(; L, g = -2.0)
 ψₜ = deepcopy(ψ₀)
 dt = 0.01
-ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP2(; trunc = truncrank(20)));
+ψₜ, envs, info = timestep(ψₜ, H₁, 0, dt, TDVP2(; trunc = truncrank(20)));
 ````
 
 "envs" is a kind of cache object that keeps track of all environments in `ψ`.
@@ -66,10 +67,10 @@ Putting it all together, we get
 ````julia
 function finite_sim(L; dt = 0.05, finaltime = 5.0)
     ψ₀ = FiniteMPS(L, ℂ^2, ℂ^10)
-    H₀ = transverse_field_ising(FiniteChain(L); g = -0.5)
+    H₀ = transverse_field_ising(; L, g = -0.5)
     ψ₀, _ = find_groundstate(ψ₀, H₀, DMRG(; verbosity = 0))
 
-    H₁ = transverse_field_ising(FiniteChain(L); g = -2.0)
+    H₁ = transverse_field_ising(; L, g = -2.0)
     ψₜ = deepcopy(ψ₀)
     envs = environments(ψₜ, H₁, ψₜ)
 
@@ -78,7 +79,7 @@ function finite_sim(L; dt = 0.05, finaltime = 5.0)
 
     for t in times[2:end]
         alg = t > 3 * dt ? TDVP() : TDVP2(; trunc = truncrank(50))
-        ψₜ, envs = timestep(ψₜ, H₁, 0, dt, alg, envs)
+        ψₜ, envs, info = timestep(ψₜ, H₁, 0, dt, alg, envs)
         push!(echos, echo(ψₜ, ψ₀))
     end
 
@@ -110,7 +111,7 @@ dot(ψ₀, ψ₀)
 ````
 
 ````
-1.0000000000000047 + 1.040736567930811e-16im
+0.9999999999999983 - 1.927726781553242e-16im
 ````
 
 so the Loschmidt echo takes on the pleasant form
@@ -135,7 +136,7 @@ a single timestep is easy
 
 ````julia
 dt = 0.01
-ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP(), envs);
+ψₜ, envs, info = timestep(ψₜ, H₁, 0, dt, TDVP(), envs);
 ````
 
 With performance in mind we should once again try to re-use these "envs" cache objects.
@@ -156,7 +157,7 @@ function infinite_sim(dt = 0.05, finaltime = 5.0)
         if t < 50dt # if t is sufficiently small, we increase the bond dimension
             ψₜ, envs = changebonds(ψₜ, H₁, OptimalExpand(; trunc = truncrank(1)), envs)
         end
-        ψₜ, envs = timestep(ψₜ, H₁, 0, dt, TDVP(), envs)
+        ψₜ, envs, info = timestep(ψₜ, H₁, 0, dt, TDVP(), envs)
         push!(echos, echo(ψₜ, ψ₀))
     end
 

@@ -84,7 +84,7 @@ The resulting MPS will have multiple values of the transfer matrix spectrum that
 ℋ = SU2Space(1 => 1)
 V_wrong = SU2Space(0 => 8, 1 // 2 => 8, 1 => 3, 3 // 2 => 3)
 ψ = InfiniteMPS(ℋ, V_wrong)
-ψ, environments, δ = find_groundstate(ψ, H, VUMPS(; maxiter = 10))
+ψ, environments, info = find_groundstate(ψ, H, VUMPS(; maxiter = 10))
 sectors = SU2Irrep[0, 1 // 2, 1, 3 // 2]
 transferplot(ψ; sectors, title = "Transfer matrix spectrum", legend = :outertop)
 ````
@@ -109,7 +109,7 @@ E_plus = expectation_value(ψ_plus, H)
 ````
 
 ````
--1.4014193313393004 - 2.2233521403023605e-17im
+-1.4014193313392989 + 4.903506586308721e-17im
 ````
 
 ````julia
@@ -120,7 +120,7 @@ E_minus = expectation_value(ψ_minus, H)
 ````
 
 ````
--1.4014839739630827 + 6.744598315147384e-17im
+-1.4014839739630853 - 5.764252707549376e-17im
 ````
 
 ````julia
@@ -166,8 +166,8 @@ println("S_plus = $S_plus")
 ````
 
 ````
-S_minus + log(2) = 1.5486227235423025
-S_plus = 1.545032353055433
+S_minus + log(2) = 1.5486227235424432
+S_plus = 1.5450323530565584
 
 ````
 

@@ -12,7 +12,9 @@ In this tutorial we will calculate the Haldane gap (the energy gap in the ``S = 
 To follow the tutorial you need the following packages:
 
 ````julia
-using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
+using MPSKit, TensorKit, Plots, Polynomials
+using .ExampleModels
+using TensorKitTensors.SpinOperators: S_exchange
 ````
 
 The Heisenberg model is defined by the following Hamiltonian:
@@ -47,13 +49,12 @@ This can be done as follows.
 
 ````julia
 L = 11
-chain = FiniteChain(L)
-H = heisenberg_XXX(symmetry, chain; J, spin)
+H = heisenberg_XXX(symmetry; L, J, spin)
 
 physical_space = SU2Space(1 => 1)
 virtual_space = SU2Space(0 => 12, 1 => 12, 2 => 5, 3 => 3)
 ψ₀ = FiniteMPS(L, physical_space, virtual_space)
-ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity = 0))
+ψ, envs, info = find_groundstate(ψ₀, H, DMRG(; verbosity = 0))
 E₀ = real(expectation_value(ψ, H))
 En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(1))
 En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(2))
@@ -61,7 +62,7 @@ En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(2
 ````
 
 ````
-0.7989253589480387
+0.7989253589480395
 ````
 
 We can go even further and doublecheck the claim that ``S = 1`` is an edge excitation, by plotting the energy density.
@@ -88,8 +89,8 @@ Ls = 12:4:30
 ΔEs = map(Ls) do L
     @info "computing L = $L"
     ψ₀ = FiniteMPS(L, physical_space, virtual_space)
-    H = heisenberg_XXX(symmetry, FiniteChain(L); J, spin)
-    ψ, envs, delta = find_groundstate(ψ₀, H, DMRG(; verbosity = 0))
+    H = heisenberg_XXX(symmetry; L, J, spin)
+    ψ, envs, info = find_groundstate(ψ₀, H, DMRG(; verbosity = 0))
     En_1, st_1 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(1))
     En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(2))
     return real(En_2[1] - En_1[1])
@@ -100,7 +101,7 @@ f = fit(Ls .^ (-2), ΔEs, 1)
 ````
 
 ````
-0.4517340158585316
+0.45173401585850476
 ````
 
 ````julia
@@ -122,11 +123,10 @@ In contrast with the finite size case, we now should specify a momentum label to
 This way, it is possible to scan the dispersion relation over the entire momentum space.
 
 ````julia
-chain = InfiniteChain(1)
-H = heisenberg_XXX(symmetry, chain; J, spin)
+H = heisenberg_XXX(symmetry; J, spin)
 virtual_space_inf = Rep[SU₂](1 // 2 => 16, 3 // 2 => 16, 5 // 2 => 8, 7 // 2 => 4)
 ψ₀_inf = InfiniteMPS([physical_space], [virtual_space_inf])
-ψ_inf, envs_inf, delta_inf = find_groundstate(ψ₀_inf, H; verbosity = 0)
+ψ_inf, envs_inf, info_inf = find_groundstate(ψ₀_inf, H; verbosity = 0)
 
 kspace = range(0, π, 16)
 Es, _ = excitations(H, QuasiparticleAnsatz(), kspace, ψ_inf, envs_inf; sector = SU2Irrep(1), verbosity = 0)
@@ -136,7 +136,7 @@ println("minimum @k = $(kspace[idx]):\t ΔE = $(ΔE)")
 ````
 
 ````
-minimum @k = 3.141592653589793:	 ΔE = 0.41047924870059116
+minimum @k = 3.141592653589793:	 ΔE = 0.4104792484827771
 
 ````
 

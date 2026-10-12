@@ -17,11 +17,12 @@ Because TensorKit supports anyonic symmetries, so does MPSKit.
 To follow the tutorial you need the following packages.
 
 ````julia
-using MPSKit, MPSKitModels, TensorKit, Plots, Polynomials
+using MPSKit, TensorKit, Plots, Polynomials
+using .ExampleModels
 ````
 
 The [hard hexagon model](https://en.wikipedia.org/wiki/Hard_hexagon_model) is a 2-dimensional lattice model of a gas, where particles are allowed to be on the vertices of a triangular lattice, but no two particles may be adjacent.
-This can be encoded in a transfer matrix with a local MPO tensor using anyonic symmetries, and the resulting MPO has been implemented in MPSKitModels.
+This can be encoded in a transfer matrix with a local MPO tensor using anyonic symmetries, and the resulting MPO is defined in our shared [model helpers](https://github.com/QuantumKitHub/MPSKit.jl/blob/main/docs/src/assets/models.jl).
 
 In order to use these anyonic symmetries, we need to generalise the notion of the bond dimension and define how it interacts with the symmetry.
 Thus, we implement a way of converting integers to symmetric spaces of the given dimension, which provides a crude guess for how the final MPS would distribute its Schmidt spectrum.
@@ -41,25 +42,25 @@ end
 
 One way to study statistical mechanics in infinite systems with tensor networks is by approximating the dominant eigenvector of the transfer matrix by an MPS.
 This dominant eigenvector contains a lot of hidden information.
-For example, the free energy can be extracted by computing the expectation value of the mpo.
+For example, the free energy density can be extracted by computing the dominant eigenvalue of the transfer matrix.
 Additionally, we can compute the entanglement entropy as well as the correlation length of the state:
 
 ````julia
 D = 10
 V = virtual_space(D)
 ψ₀ = InfiniteMPS([P], [V])
-ψ, envs, = leading_boundary(
+ψ, envs, info = leading_boundary(
     ψ₀, mpo,
     VUMPS(; verbosity = 0, alg_eigsolve = MPSKit.Defaults.alg_eigsolve(; ishermitian = false))
 ) # use non-hermitian eigensolver
-F = real(expectation_value(ψ, mpo))
+F = -log(real(leading_eigenvalue(ψ, mpo)))
 S = real(first(entropy(ψ)))
 ξ = correlation_length(ψ; sector = leftunit(ψ))
 println("F = $F\tS = $S\tξ = $ξ")
 ````
 
 ````
-F = 0.8839037051703854	S = 1.2807829621910287	ξ = 13.849682581985
+F = 0.12340715308061596	S = 1.2807829607025263	ξ = 13.849682470052896
 
 ````
 
@@ -106,7 +107,7 @@ c = f.coeffs[2]
 ````
 
 ````
-0.8025361167011884
+0.8025235781819059
 ````
 
 ````julia
