@@ -95,7 +95,7 @@ end
 
 function exponentiate_onsite_tensor(ham_tensor, τ, ::Type{A}) where {A}
     physical_space = physicalspace(ham_tensor)
-    levels = ⊞(oneunit(physical_space))
+    levels = ⊞(rightunitspace(physical_space))
     blocktype = tensormaptype(spacetype(physical_space), 2, 2, A)
     tensor = SparseBlockTensorMap{blocktype}(undef, levels ⊗ physical_space ← physical_space ⊗ levels)
     onsite = removeunit(removeunit(ham_tensor[1, 1, 1, end], 4), 1)
