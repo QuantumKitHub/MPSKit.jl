@@ -43,6 +43,8 @@ export NoiseSchedule, FunctionalSchedule, ExponentialDecay, Warmup, DMRG3S
 export Zipup
 export propagator
 export DynamicalDMRG, NaiveInvert, Jeckelmann
+export linear_solve, linear_solve!
+export DMRGSolve, DMRGSolve2, Galerkin, LeastSquares
 export exact_diagonalization, fidelity_susceptibility
 
 # toolbox:
@@ -208,6 +210,9 @@ include("algorithms/approximate/idmrg.jl")
 include("algorithms/ED.jl")
 
 include("algorithms/unionalg.jl")
+
+include("algorithms/linear_solve/linear_solve.jl")
+include("algorithms/linear_solve/flinear_solve.jl")
 
 include("utility/show.jl")
 

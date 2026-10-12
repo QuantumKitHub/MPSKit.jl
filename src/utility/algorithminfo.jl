@@ -2,8 +2,8 @@
 $(TYPEDEF)
 
 Information about how an algorithm arrived at its result, returned as the last value by
-[`find_groundstate`](@ref), [`leading_boundary`](@ref), [`approximate`](@ref), [`timestep`](@ref)
-and [`time_evolve`](@ref).
+[`find_groundstate`](@ref), [`leading_boundary`](@ref), [`approximate`](@ref), [`linear_solve`](@ref),
+[`timestep`](@ref) and [`time_evolve`](@ref).
 
 Algorithms in MPSKit produce genuinely different measures, and not every algorithm even has access
 to the same information. To avoid reporting two different quantities under one name, the information is
@@ -28,9 +28,12 @@ it reports. Nothing prevents an algorithm from adding its own.
 The quantity that was compared against the algorithm's `tol` is stored under a name that says
 which measure it is:
 
-  - `galerkin`: the Galerkin error, i.e. the maximum over sites of the local update projected onto
-    the orthogonal complement of the current tensor. Reported by [`DMRG`](@ref), [`DMRG2`](@ref),
-    [`VUMPS`](@ref) and [`VOMPS`](@ref) when solving for a state.
+  - `galerkin`: the Galerkin error, i.e. the maximum over sites of the residual projected onto the
+    local variational space. For an eigenproblem this is the local update projected onto the
+    orthogonal complement of the current tensor, as reported by [`DMRG`](@ref), [`DMRG2`](@ref),
+    [`VUMPS`](@ref) and [`VOMPS`](@ref) when solving for a state. For a linear system it is the
+    local residual `‖(a₀ + a₁·A)·x − b‖` relative to `‖b‖`, as reported by [`DMRGSolve`](@ref) and
+    [`DMRGSolve2`](@ref) in [`linear_solve`](@ref).
   - `gradientnorm`: the norm of the Riemannian (Grassmann) gradient, as supplied by the optimiser.
     Reported by [`GradientGrassmann`](@ref).
   - `bondresidual`: the change in the center bond tensor over a sweep. This is a fixed-point
