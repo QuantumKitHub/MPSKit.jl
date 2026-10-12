@@ -143,11 +143,68 @@ function timestep!(
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         imaginary_evolution::Bool = false, normalize::Bool = false
     )
+    return _timestep_finite!(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
+end
+
+# Internal state of a single finite time step `t → t + dt`, threaded through its two half-sweeps.
+# `truncation_errors[i]` holds the truncation error of the last cut made at bond `i`.
+struct TimeStepState{S, O, E, T, D, V, A, TO}
+    mps::S
+    operator::O
+    envs::E
+    t::T
+    dt::D
+    truncation_errors::V
+    allocator::A
+    timeroutput::TO
+    imaginary_evolution::Bool
+    normalize::Bool
+end
+
+function TimeStepState(
+        ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput = NoTimerOutput()
+    )
     # the sweep is serial, so a single allocator serves all local updates
     allocator = default_allocator(ψ, SerialScheduler())
-    return _timestep_finite!(
-        ψ, H, t, dt, alg, envs, allocator; imaginary_evolution, normalize
+    truncation_errors = zeros(real(scalartype(ψ)), length(ψ) - 1)
+    return TimeStepState(
+        ψ, H, envs, t, dt, truncation_errors, allocator, timeroutput, imaginary_evolution, normalize
     )
+end
+
+# Single-site integrators visit every site, finishing a half-sweep by evolving only the center
+# tensor at its far end.
+_sweep_ranges(::TDVP, ψ) = (1:length(ψ), length(ψ):-1:1)
+
+# bond cut by the update at `site`, or `nothing` at the far end of a single-site half-sweep
+_swept_bond(alg, site, ψ, ::Val{:right}) = site < length(ψ) ? site : nothing
+_swept_bond(alg, site, ψ, ::Val{:left}) = site > 1 ? site - 1 : nothing
+
+function sweep!(alg, state::TimeStepState, direction)
+    fwd, bwd = _sweep_ranges(alg, state.mps)
+    sites = direction === Val(:right) ? fwd : bwd
+    ψ = state.mps
+    @timeit state.timeroutput "half-sweep" for site in sites
+        ψ, ϵ = local_update!(site, direction, ψ, alg, state)
+        bond = _swept_bond(alg, site, ψ, direction)
+        isnothing(bond) || (state.truncation_errors[bond] = ϵ)
+    end
+    return TimeStepState(
+        ψ, state.operator, state.envs, state.t, state.dt, state.truncation_errors,
+        state.allocator, state.timeroutput, state.imaginary_evolution, state.normalize,
+    )
+end
+
+# a step is a left→right half-sweep `t → t + dt / 2` followed by a right→left half-sweep
+# `t + dt / 2 → t + dt`
+function _timestep_finite!(
+        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg, envs;
+        imaginary_evolution::Bool, normalize::Bool, timeroutput = NoTimerOutput()
+    )
+    state = TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput)
+    state = sweep!(alg, state, Val(:right))
+    state = sweep!(alg, state, Val(:left))
+    return state.mps, state.envs, AlgorithmInfo(; truncation_errors = state.truncation_errors)
 end
 
 # Start times of the forward center update and of the backward update that follows it, for the
@@ -155,10 +212,9 @@ end
 _half_sweep_times(::Val{:right}, t, dt) = (t, t + dt / 2)
 _half_sweep_times(::Val{:left}, t, dt) = (t + dt / 2, t + dt)
 
-function local_update!(
-        site, direction::Val, ψ, H, alg::TDVP, envs, t, dt, allocator;
-        imaginary_evolution, normalize
-    )
+function local_update!(site, direction::Val, ψ, alg::TDVP, state::TimeStepState)
+    (; operator, envs, t, dt, allocator, imaginary_evolution, normalize) = state
+    H = operator
     t_AC, t_C = _half_sweep_times(direction, t, dt)
 
     # at the far end of the sweep there is no bond ahead: only evolve the center tensor
@@ -192,34 +248,6 @@ function local_update!(
     ψ.C[bond] = integrate(Hc, ψ.C[bond], t_C, -dt / 2, alg.integrator; imaginary_evolution)
 
     return ψ, ϵ
-end
-
-function _timestep_finite!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP, envs, allocator;
-        imaginary_evolution::Bool, normalize::Bool
-    )
-    L = length(ψ)
-    ϵ_truncs = zeros(real(scalartype(ψ)), L - 1)
-
-    # left→right half-sweep: `t → t + dt / 2`
-    for site in 1:L
-        ψ, ϵ = local_update!(
-            site, Val(:right), ψ, H, alg, envs, t, dt, allocator;
-            imaginary_evolution, normalize
-        )
-        site < L && (ϵ_truncs[site] = ϵ)
-    end
-
-    # right→left half-sweep: `t + dt / 2 → t + dt`
-    for site in L:-1:1
-        ψ, ϵ = local_update!(
-            site, Val(:left), ψ, H, alg, envs, t, dt, allocator;
-            imaginary_evolution, normalize
-        )
-        site > 1 && (ϵ_truncs[site - 1] = ϵ)
-    end
-
-    return ψ, envs, AlgorithmInfo(; truncation_errors = ϵ_truncs)
 end
 
 """
@@ -268,17 +296,17 @@ function timestep!(
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         imaginary_evolution::Bool = false, normalize::Bool = false
     )
-    # the sweep is serial, so a single allocator serves all local updates
-    allocator = default_allocator(ψ, SerialScheduler())
-    return _timestep2_finite!(
-        ψ, H, t, dt, alg, envs, allocator; imaginary_evolution, normalize
-    )
+    return _timestep_finite!(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
 end
 
-function local_update!(
-        pos, direction::Val, ψ, H, alg::TDVP2, envs, t, dt, allocator;
-        imaginary_evolution, normalize
-    )
+# two-site TDVP visits every bond, and each update cuts the bond it acts on
+_sweep_ranges(::TDVP2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 1):-1:1)
+_swept_bond(::TDVP2, pos, ψ, ::Val{:right}) = pos
+_swept_bond(::TDVP2, pos, ψ, ::Val{:left}) = pos
+
+function local_update!(pos, direction::Val, ψ, alg::TDVP2, state::TimeStepState)
+    (; operator, envs, t, dt, allocator, imaginary_evolution, normalize) = state
+    H = operator
     t_AC2, t_AC = _half_sweep_times(direction, t, dt)
 
     # 1. evolve the two-site center tensor at `(pos, pos + 1)` forward
@@ -303,31 +331,6 @@ function local_update!(
     end
 
     return ψ, ϵ
-end
-
-function _timestep2_finite!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2, envs, allocator;
-        imaginary_evolution::Bool, normalize::Bool
-    )
-    ϵ_truncs = zeros(real(scalartype(ψ)), length(ψ) - 1)
-
-    # left→right half-sweep: `t → t + dt / 2`
-    for pos in 1:(length(ψ) - 1)
-        ψ, ϵ_truncs[pos] = local_update!(
-            pos, Val(:right), ψ, H, alg, envs, t, dt, allocator;
-            imaginary_evolution, normalize
-        )
-    end
-
-    # right→left half-sweep: `t + dt / 2 → t + dt`
-    for pos in (length(ψ) - 1):-1:1
-        ψ, ϵ_truncs[pos] = local_update!(
-            pos, Val(:left), ψ, H, alg, envs, t, dt, allocator;
-            imaginary_evolution, normalize
-        )
-    end
-
-    return ψ, envs, AlgorithmInfo(; truncation_errors = ϵ_truncs)
 end
 
 # copying version

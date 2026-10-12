@@ -133,10 +133,13 @@ function _evolve_center(site, ψ, H, alg::BUG, envs, t, h, allocator; imaginary_
     return integrate(Heff, ψ.AC[site], t, h, alg.integrator; imaginary_evolution)
 end
 
-function local_update!(
-        site, direction::Val, ψ, H, alg::BUG, envs, t, h, allocator;
-        imaginary_evolution, normalize, timeroutput
-    )
+# a half-sweep evolves over `h = dt / 2`, starting at `t` (left→right) or `t + h` (right→left)
+function local_update!(site, direction::Val, ψ, alg::BUG, state::TimeStepState)
+    (; operator, envs, allocator, timeroutput, imaginary_evolution, normalize) = state
+    H = operator
+    h = state.dt / 2
+    t = direction === Val(:right) ? state.t : state.t + h
+
     # at the far end of the sweep there is no bond ahead to cut: evolve and finalize
     if site == _sweep_end(ψ, direction)
         AC = @timeit timeroutput "AC_integrate" _evolve_center(
@@ -171,34 +174,13 @@ function timestep!(
         imaginary_evolution::Bool = false, normalize::Bool = false,
         timeroutput = NoTimerOutput()
     )
-    L = length(ψ)
-    h = dt / 2
-
-    # the sweep is serial, so a single allocator serves all local updates
-    allocator = default_allocator(ψ, SerialScheduler())
-
-    ϵ_truncs = zeros(real(scalartype(ψ)), L - 1)
-
-    # left→right half-sweep (root = last site): `t → t + dt / 2`
-    @timeit timeroutput "half-sweep" for site in 1:L
-        ψ, ϵ = local_update!(
-            site, Val(:right), ψ, H, alg, envs, t, h, allocator;
-            imaginary_evolution, normalize, timeroutput
-        )
-        site < L && (ϵ_truncs[site] = ϵ)
-    end
-
-    # right→left half-sweep (root = first site): `t + dt / 2 → t + dt`
-    @timeit timeroutput "half-sweep" for site in L:-1:1
-        ψ, ϵ = local_update!(
-            site, Val(:left), ψ, H, alg, envs, t + h, h, allocator;
-            imaginary_evolution, normalize, timeroutput
-        )
-        site > 1 && (ϵ_truncs[site - 1] = ϵ)
-    end
-
-    return ψ, envs, AlgorithmInfo(; truncation_errors = ϵ_truncs)
+    return _timestep_finite!(
+        ψ, H, t, dt, alg, envs; imaginary_evolution, normalize, timeroutput
+    )
 end
+
+# like single-site TDVP, BUG visits every site and only evolves the center at the far end
+_sweep_ranges(::BUG, ψ) = (1:length(ψ), length(ψ):-1:1)
 
 # copying version
 function timestep(
