@@ -91,7 +91,7 @@ Ts = fast_tests ? (Float64,) : (Float64, ComplexF64)
         ((i, i + 2) => h for i in 1:(L - 2))...,
         ((i, i + 3) => h for i in 1:(L - 3))...,
     )
-    mps1 = FiniteMPS(physicalspace(H1), oneunit(V))
+    mps1 = FiniteMPS(physicalspace(H1), unitspace(V))
 
     for T in Ts
         H2 = if VERSION <= v"1.12"
@@ -106,7 +106,7 @@ Ts = fast_tests ? (Float64,) : (Float64, ComplexF64)
     end
 
     H3 = InfiniteMPOHamiltonian(fill(V, L), (1, 2) => h, (1, 3) => h, (1, 4) => h)
-    mps2 = InfiniteMPS(physicalspace(H3), [oneunit(V)])
+    mps2 = InfiniteMPS(physicalspace(H3), [unitspace(V)])
     for T in Ts
         H4 = if VERSION <= v"1.12"
             # this is type unstable for LTS for some reason

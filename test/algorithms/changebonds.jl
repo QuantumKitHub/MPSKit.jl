@@ -113,7 +113,7 @@ end
     H = kitaev_model(ComplexF64, Trivial; t = 1.0, mu = 0, Delta = 0, L = L)
     P = physicalspace(H)[1]
     S = typeof(P)
-    Vtriv = oneunit(P)
+    Vtriv = unitspace(P)
     Vodd = S(c => dim(P, c) for c in sectors(P) if !isone(c))
     # single particle created on the last site: interior bonds carry only the even sector, so
     # the expansion content on them is exactly zero

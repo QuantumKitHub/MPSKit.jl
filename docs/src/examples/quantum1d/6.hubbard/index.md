@@ -184,7 +184,7 @@ charges = fill(FermionParity(1) ⊠ U1Irrep(1) ⊠ SU2Irrep(0), 2);
 H_u1_su2 = MPSKit.add_physical_charge(H_u1_su2, charges);
 
 pspaces = physicalspace.(Ref(H_u1_su2), 1:2)
-vspaces = [oneunit(eltype(pspaces)), first(pspaces)]
+vspaces = [unitspace(eltype(pspaces)), first(pspaces)]
 psi = InfiniteMPS(pspaces, vspaces)
 psi = compute_groundstate(psi, H_u1_su2; expansionfactor = 1 / 3)
 E = real(expectation_value(psi, H_u1_su2)) / 2

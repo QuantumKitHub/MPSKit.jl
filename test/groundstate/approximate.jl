@@ -23,7 +23,7 @@ end
 function _random_mpo_mps(pspace, Dspace, L; elt = ComplexF64)
     Random.seed!(1357)
     Wspace = Dspace
-    Vspaces = [oneunit(Wspace); fill(Wspace, L - 1); oneunit(Wspace)]
+    Vspaces = [unitspace(Wspace); fill(Wspace, L - 1); unitspace(Wspace)]
     O = FiniteMPO(
         [rand(ComplexF64, Vspaces[i] ⊗ pspace ← pspace ⊗ Vspaces[i + 1]) for i in 1:L]
     )
@@ -211,7 +211,7 @@ end
         @test info.truncation_errors ≈ info_ref.truncation_errors
 
         # a destination with unrelated contents is overwritten entirely
-        dst = FiniteMPS(rand, ComplexF64, length(ψ), pspace, oneunit(Dspace) ⊕ Dspace ⊕ Dspace)
+        dst = FiniteMPS(rand, ComplexF64, length(ψ), pspace, unitspace(Dspace) ⊕ Dspace ⊕ Dspace)
         got, info = approximate!(dst, (O, ψ), alg)
         @test norm(ref - got) / norm(ref) < 1.0e-12
         @test info.truncation_errors ≈ info_ref.truncation_errors
@@ -248,8 +248,8 @@ end
     @testset "Zip-up with non-square MPO $(spacetype(pspace))" for (pspace, Dspace, _) in zipup_spacelist
         Random.seed!(1357)
         L = 4
-        pspace′ = pspace ⊕ oneunit(pspace) # output physical space, different from the input one
-        Vspaces = [oneunit(Dspace); fill(Dspace, L - 1); oneunit(Dspace)]
+        pspace′ = pspace ⊕ unitspace(pspace) # output physical space, different from the input one
+        Vspaces = [unitspace(Dspace); fill(Dspace, L - 1); unitspace(Dspace)]
         O = FiniteMPO(
             [rand(ComplexF64, Vspaces[i] ⊗ pspace′ ← pspace ⊗ Vspaces[i + 1]) for i in 1:L]
         )

@@ -101,7 +101,7 @@ end
     end
 
     # product state has zero entropy everywhere
-    ψ_product = InfiniteMPS([d, d], [oneunit(D), oneunit(D)])
+    ψ_product = InfiniteMPS([d, d], [unitspace(D), unitspace(D)])
     Ss_product = entropy(ψ_product)
     @test all(S -> isapprox(S, 0; atol = 1.0e-10), Ss_product)
 end
