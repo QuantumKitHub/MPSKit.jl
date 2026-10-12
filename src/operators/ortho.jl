@@ -29,11 +29,15 @@ end
 # ------------------------
 
 """
-    left_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...) -> H
+    left_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...) -> H, L
 
-Bring `H` into left-canonical form, where the upper-left block `[1 C; 0 A]` of every site has
-orthonormal columns, by iterating block-respecting QR decompositions until the gauge transformation
-is unitary. Redundant interaction channels are removed along the way.
+Bring `H` into left-canonical form in place, where the upper-left block `[1 C; 0 A]` of every site
+has orthonormal columns, by iterating block-respecting QR decompositions until the gauge
+transformation is unitary. Redundant interaction channels are removed along the way.
+
+Also returns the interaction-channel blocks `L` of the accumulated gauge transformations, such that
+`diag(1, L[i - 1], 1) * H₀[i] = H[i] * diag(1, L[i], 1)` up to the identity components that are
+gauged away.
 
 # Keyword arguments
 
@@ -46,29 +50,7 @@ is unitary. Redundant interaction channels are removed along the way.
 
 * [Parker et al. Phys. Rev. B 102 (2020)](@cite parker2020)
 """
-function left_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...)
-    uniform_leftorth!(H; kwargs...)
-    return H
-end
-
-"""
-    right_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...) -> H
-
-Bring `H` into right-canonical form, where the lower-right block `[A B; 0 1]` of every site has
-orthonormal rows, by iterating block-respecting LQ decompositions until the gauge transformation
-is unitary. Redundant interaction channels are removed along the way.
-
-See [`left_canonicalize!`](@ref) for the keyword arguments.
-"""
-function right_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...)
-    uniform_rightorth!(H; kwargs...)
-    return H
-end
-
-# Bring `H` into left-canonical form in place, and return the middle blocks `L` of the accumulated
-# gauge transformations `diag(1, L[i - 1], 1) * H₀[i] = H[i] * diag(1, L[i], 1)` up to the gauging
-# away of identity components.
-function uniform_leftorth!(
+function left_canonicalize!(
         H::InfiniteMPOHamiltonian;
         tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, verbosity::Int = VERBOSE_WARN
     )
@@ -99,13 +81,26 @@ function uniform_leftorth!(
     end
 end
 
-# Bring `H` into right-canonical form in place.
-function uniform_rightorth!(
+"""
+    right_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...) -> H, L
+
+Bring `H` into right-canonical form in place, where the lower-right block `[A B; 0 1]` of every site
+has orthonormal rows, by iterating block-respecting LQ decompositions until the gauge transformation
+is unitary. Redundant interaction channels are removed along the way.
+
+Also returns the interaction-channel blocks `L` of the accumulated gauge transformations, such that
+`H₀[i] * diag(1, L[i], 1) = diag(1, L[i - 1], 1) * H[i]` up to the identity components that are
+gauged away.
+
+See [`left_canonicalize!`](@ref) for the keyword arguments.
+"""
+function right_canonicalize!(
         H::InfiniteMPOHamiltonian;
         tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, verbosity::Int = VERBOSE_WARN
     )
     alg_trunc = MatrixAlgebraKit.TruncatedAlgorithm(Defaults.alg_svd(), trunctol(; rtol = tol))
     alg = MatrixAlgebraKit.RightOrthViaSVD(alg_trunc)
+    Ls = PeriodicVector(Vector{Any}(nothing, length(H)))
     return with_verbosity(; verbosity) do
         log = IterLog("MPO RC")
         @log_initialization loginit!(log, Inf)
@@ -114,6 +109,7 @@ function uniform_rightorth!(
             for i in length(H):-1:1
                 R, t, H[i] = _right_orth_jordan(H[i]; alg)
                 H[i - 1] = _absorb_right_gauge(H[i - 1], R, t, H[i])
+                Ls[i - 1] = isnothing(Ls[i - 1]) || dim(R) == 0 ? R : Ls[i - 1] * R
             end
             ϵ = _gauge_distance(t, R)
             if ϵ <= tol
@@ -125,7 +121,7 @@ function uniform_rightorth!(
                 @log_iteration logiter!(log, iter, ϵ)
             end
         end
-        return H
+        return H, map(identity, Ls)
     end
 end
 

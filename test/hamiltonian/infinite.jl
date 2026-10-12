@@ -82,7 +82,7 @@ end
     E = expectation_value(ψ, H)
 
     # the upper-left block `[1 C; 0 A]` has orthonormal columns
-    HL = MPSKit.left_canonicalize!(copy(H))
+    HL, = MPSKit.left_canonicalize!(copy(H))
     @test expectation_value(ψ, HL) ≈ E
     for W in parent(HL)
         V = MPSKit.SparseBlockTensorMap(W)[1:(end - 1), 1, 1, 1:(end - 1)]
@@ -92,7 +92,7 @@ end
     end
 
     # the lower-right block `[A B; 0 1]` has orthonormal rows
-    HR = MPSKit.right_canonicalize!(copy(H))
+    HR, = MPSKit.right_canonicalize!(copy(H))
     @test expectation_value(ψ, HR) ≈ E
     for W in parent(HR)
         V = MPSKit.SparseBlockTensorMap(W)[2:end, 1, 1, 2:end]

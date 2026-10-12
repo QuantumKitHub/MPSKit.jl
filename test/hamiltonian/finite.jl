@@ -113,8 +113,7 @@ using TensorKit: ℙ
     end
 end
 
-@testset "Finite MPOHamiltonian canonicalization with decoupled sites" begin
-    # regression test for https://github.com/QuantumKitHub/MPSKit.jl/issues/522
+@testset "Finite MPOHamiltonian canonicalization" begin
     T = ComplexF64
     for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1), Rep[SU₂](1 // 2 => 1))
         O₁ = randn(T, V, V)
@@ -123,6 +122,7 @@ end
         O₂ += O₂'
         E = id(storagetype(O₁), domain(O₁))
 
+        # regression test for https://github.com/QuantumKitHub/MPSKit.jl/issues/522
         # bulk block of the middle site is empty on the left but not on the right
         H_right = FiniteMPOHamiltonian(fill(V, 3), (1,) => O₁, (2, 3) => O₂)
         H_right_tm = O₁ ⊗ E ⊗ E + E ⊗ O₂
@@ -150,15 +150,8 @@ end
 
         H5_trunc = changebonds(H5, SvdCut(; trunc = truncrank(16)))
         @test convert(TensorMap, H5_trunc) ≈ H5_tm
-    end
-end
 
-# Regression: the identity component of `C`/`B` was projected out without normalizing by `dim(P)`,
-# and rank-deficient blocks left `Q` with directions that overlap with the identity.
-@testset "Finite MPOHamiltonian canonical forms" begin
-    for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1), Rep[SU₂](1 // 2 => 1))
-        O₂ = randn(ComplexF64, V^2 ← V^2)
-        O₂ += O₂'
+        # canonical forms, also when `C`/`B` have identity components and the blocks are rank-deficient
         L = 4
         H = FiniteMPOHamiltonian(fill(V, L), (i, i + 1) => O₂ for i in 1:(L - 1))
         H_tm = convert(TensorMap, H)

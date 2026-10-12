@@ -185,7 +185,7 @@ function changebonds!(H::InfiniteMPOHamiltonian, alg::SvdCut)
 
     # the interaction channels of the gauge between the right- and left-canonical forms
     right_canonicalize!(H)
-    _, Cs = uniform_leftorth!(H)
+    _, Cs = left_canonicalize!(H)
 
     Us = map(C -> first(svd_trunc(C; trunc = alg.trunc, alg = alg.alg_svd)), Cs)
     for i in 1:length(H)
