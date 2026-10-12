@@ -6,23 +6,24 @@ _dense(t) = t
 # ----------------------
 
 """
-    left_canonicalize!(H::FiniteMPOHamiltonian, i::Int; alg = Defaults.alg_orth()) -> H
+    left_canonicalize!(H::FiniteMPOHamiltonian; alg = Defaults.alg_orth()) -> H, L
     left_canonicalize!(H::InfiniteMPOHamiltonian; tol, maxiter, verbosity) -> H, L
 
-Bring `H` into left-canonical form in place, where the upper-left block `[1 C; 0 A]` of a site has
-orthonormal columns with respect to the trace inner product normalized by the physical dimension.
-The identity components of `C` are gauged away, and the decompositions respect the block structure.
+Bring `H` into left-canonical form in place, where the upper-left block `[1 C; 0 A]` of every site
+has orthonormal columns with respect to the trace inner product normalized by the physical
+dimension. The identity components of `C` are gauged away, and the decompositions respect the block
+structure.
 
-For a `FiniteMPOHamiltonian`, this performs a single step: site `i` is brought into left-canonical
-form with a QR decomposition, and the gauge transformation is absorbed into site `i + 1`. Any other
-(possibly truncating) algorithm `alg` is applied to the interaction channels only, as used by
+Also returns the interaction-channel blocks `L` of the gauge transformations on every bond, such
+that `diag(1, L[i - 1], 1) * H₀[i] = H[i] * diag(1, L[i], 1)` up to the identity components that
+are gauged away, with `L[0]` the identity for a `FiniteMPOHamiltonian`.
+
+For a `FiniteMPOHamiltonian`, this is a single sweep of QR decompositions from left to right. Any
+other (possibly truncating) algorithm `alg` is applied to the interaction channels only, as used by
 [`SvdCut`](@ref).
 
-For an `InfiniteMPOHamiltonian`, the decompositions are iterated over the unit cell until the gauge
-transformation is unitary, removing redundant interaction channels along the way. This additionally
-returns the interaction-channel blocks `L` of the accumulated gauge transformations, such that
-`diag(1, L[i - 1], 1) * H₀[i] = H[i] * diag(1, L[i], 1)` up to the identity components that are
-gauged away.
+For an `InfiniteMPOHamiltonian`, the sweeps over the unit cell are repeated until the gauge
+transformation is unitary, removing redundant interaction channels along the way.
 
 # Keyword arguments
 
@@ -38,42 +39,43 @@ gauged away.
 * [Parker et al. Phys. Rev. B 102 (2020)](@cite parker2020)
 """
 function left_canonicalize!(
-        H::FiniteMPOHamiltonian, i::Int;
-        alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
+        H::FiniteMPOHamiltonian; alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
     )
-    1 ≤ i < length(H) || throw(ArgumentError("Bounds error in canonicalize"))
-    H[i], t, R = _left_orth_jordan(H[i]; alg)
-    H[i + 1] = _absorb_left_gauge(H[i], t, R, H[i + 1])
-    return H
+    Ls = map(1:(length(H) - 1)) do i
+        H[i], t, R = _left_orth_jordan(H[i]; alg)
+        H[i + 1] = _absorb_left_gauge(H[i], t, R, H[i + 1])
+        return R
+    end
+    return H, Ls
 end
 
 """
-    right_canonicalize!(H::FiniteMPOHamiltonian, i::Int; alg = Defaults.alg_orth()) -> H
+    right_canonicalize!(H::FiniteMPOHamiltonian; alg = Defaults.alg_orth()) -> H, L
     right_canonicalize!(H::InfiniteMPOHamiltonian; tol, maxiter, verbosity) -> H, L
 
-Bring `H` into right-canonical form in place, where the lower-right block `[A B; 0 1]` of a site has
-orthonormal rows with respect to the trace inner product normalized by the physical dimension.
+Bring `H` into right-canonical form in place, where the lower-right block `[A B; 0 1]` of every site
+has orthonormal rows with respect to the trace inner product normalized by the physical dimension.
 The identity components of `B` are gauged away, and the decompositions respect the block structure.
 
-For a `FiniteMPOHamiltonian`, this performs a single step: site `i` is brought into right-canonical
-form with an LQ decomposition, and the gauge transformation is absorbed into site `i - 1`.
+Also returns the interaction-channel blocks `L` of the gauge transformations on every bond, such
+that `H₀[i] * diag(1, L[i], 1) = diag(1, L[i - 1], 1) * H[i]` up to the identity components that
+are gauged away, with `L[length(H)]` the identity for a `FiniteMPOHamiltonian`.
 
-For an `InfiniteMPOHamiltonian`, the decompositions are iterated over the unit cell until the gauge
-transformation is unitary, removing redundant interaction channels along the way. This additionally
-returns the interaction-channel blocks `L` of the accumulated gauge transformations, such that
-`H₀[i] * diag(1, L[i], 1) = diag(1, L[i - 1], 1) * H[i]` up to the identity components that are
-gauged away.
+For a `FiniteMPOHamiltonian`, this is a single sweep of LQ decompositions from right to left. For an
+`InfiniteMPOHamiltonian`, the sweeps over the unit cell are repeated until the gauge transformation
+is unitary, removing redundant interaction channels along the way.
 
 See [`left_canonicalize!`](@ref) for the keyword arguments.
 """
 function right_canonicalize!(
-        H::FiniteMPOHamiltonian, i::Int;
-        alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
+        H::FiniteMPOHamiltonian; alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
     )
-    1 < i ≤ length(H) || throw(ArgumentError("Bounds error in canonicalize"))
-    R, t, H[i] = _right_orth_jordan(H[i]; alg)
-    H[i - 1] = _absorb_right_gauge(H[i - 1], R, t, H[i])
-    return H
+    Ls = map(length(H):-1:2) do i
+        R, t, H[i] = _right_orth_jordan(H[i]; alg)
+        H[i - 1] = _absorb_right_gauge(H[i - 1], R, t, H[i])
+        return R
+    end
+    return H, reverse!(Ls)
 end
 
 # Infinite MPOHamiltonians

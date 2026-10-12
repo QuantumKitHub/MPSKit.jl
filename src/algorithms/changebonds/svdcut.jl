@@ -153,22 +153,15 @@ end
 changebonds(mpo::FiniteMPOHamiltonian, alg::SvdCut) = changebonds!(copy(mpo), alg)
 function changebonds!(H::FiniteMPOHamiltonian, alg::SvdCut)
     # orthogonality center to the left
-    for i in length(H):-1:2
-        H = right_canonicalize!(H, i)
-    end
+    right_canonicalize!(H)
 
     # a Jordan bond has a start and a finish level on top of its interaction channels
     channels_before = [dim(left_virtualspace(H, i)) - 2 for i in 2:length(H)]
 
-    # swipe right
     alg_trunc = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trunc)
-    for i in 1:(length(H) - 1)
-        H = left_canonicalize!(H, i; alg = MatrixAlgebraKit.LeftOrthViaSVD(alg_trunc))
-    end
-    # swipe left -- TODO: do we really need this double sweep?
-    for i in length(H):-1:2
-        H = right_canonicalize!(H, i; alg = MatrixAlgebraKit.RightOrthViaSVD(alg_trunc))
-    end
+    left_canonicalize!(H; alg = MatrixAlgebraKit.LeftOrthViaSVD(alg_trunc))
+    # TODO: do we really need this double sweep?
+    right_canonicalize!(H; alg = MatrixAlgebraKit.RightOrthViaSVD(alg_trunc))
 
     emptied = findall(
         i -> channels_before[i] > 0 && dim(left_virtualspace(H, i + 1)) - 2 == 0,
