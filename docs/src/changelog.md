@@ -34,6 +34,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Fixed
 
 - `convert(TensorMap, H)` for single-site `FiniteMPOHamiltonian`s no longer contracts the site tensor with itself. ([#252](https://github.com/QuantumKitHub/MPSKit.jl/pull/252))
+- `show` methods for finite MPS/MPOs no longer check unit space condition through `oneunit`, which is not defined for multifusion spaces. ([#538](https://github.com/QuantumKitHub/MPSKit.jl/pull/538))
 
 ### Performance
 
