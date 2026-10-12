@@ -5,6 +5,38 @@ _dense(t) = t
 # Finite MPOHamiltonians
 # ----------------------
 
+"""
+    left_canonicalize!(H::FiniteMPOHamiltonian, i::Int; alg = Defaults.alg_orth()) -> H
+    left_canonicalize!(H::InfiniteMPOHamiltonian; tol, maxiter, verbosity) -> H, L
+
+Bring `H` into left-canonical form in place, where the upper-left block `[1 C; 0 A]` of a site has
+orthonormal columns with respect to the trace inner product normalized by the physical dimension.
+The identity components of `C` are gauged away, and the decompositions respect the block structure.
+
+For a `FiniteMPOHamiltonian`, this performs a single step: site `i` is brought into left-canonical
+form with a QR decomposition, and the gauge transformation is absorbed into site `i + 1`. Any other
+(possibly truncating) algorithm `alg` is applied to the interaction channels only, as used by
+[`SvdCut`](@ref).
+
+For an `InfiniteMPOHamiltonian`, the decompositions are iterated over the unit cell until the gauge
+transformation is unitary, removing redundant interaction channels along the way. This additionally
+returns the interaction-channel blocks `L` of the accumulated gauge transformations, such that
+`diag(1, L[i - 1], 1) * H₀[i] = H[i] * diag(1, L[i], 1)` up to the identity components that are
+gauged away.
+
+# Keyword arguments
+
+- `alg = Defaults.alg_orth()`: (finite) algorithm for the decomposition of the interaction channels
+- `tol = Defaults.tolgauge`: (infinite) convergence tolerance on the deviation of the gauge
+  transformation from a unitary one, which is also the relative tolerance for discarding redundant
+  channels
+- `maxiter = Defaults.maxiter`: (infinite) maximal number of sweeps over the unit cell
+- `verbosity = VERBOSE_WARN`: (infinite) setting for how much information is displayed
+
+# References
+
+* [Parker et al. Phys. Rev. B 102 (2020)](@cite parker2020)
+"""
 function left_canonicalize!(
         H::FiniteMPOHamiltonian, i::Int;
         alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
@@ -15,6 +47,25 @@ function left_canonicalize!(
     return H
 end
 
+"""
+    right_canonicalize!(H::FiniteMPOHamiltonian, i::Int; alg = Defaults.alg_orth()) -> H
+    right_canonicalize!(H::InfiniteMPOHamiltonian; tol, maxiter, verbosity) -> H, L
+
+Bring `H` into right-canonical form in place, where the lower-right block `[A B; 0 1]` of a site has
+orthonormal rows with respect to the trace inner product normalized by the physical dimension.
+The identity components of `B` are gauged away, and the decompositions respect the block structure.
+
+For a `FiniteMPOHamiltonian`, this performs a single step: site `i` is brought into right-canonical
+form with an LQ decomposition, and the gauge transformation is absorbed into site `i - 1`.
+
+For an `InfiniteMPOHamiltonian`, the decompositions are iterated over the unit cell until the gauge
+transformation is unitary, removing redundant interaction channels along the way. This additionally
+returns the interaction-channel blocks `L` of the accumulated gauge transformations, such that
+`H₀[i] * diag(1, L[i], 1) = diag(1, L[i - 1], 1) * H[i]` up to the identity components that are
+gauged away.
+
+See [`left_canonicalize!`](@ref) for the keyword arguments.
+"""
 function right_canonicalize!(
         H::FiniteMPOHamiltonian, i::Int;
         alg::MatrixAlgebraKit.AbstractAlgorithm = Defaults.alg_orth()
@@ -28,28 +79,6 @@ end
 # Infinite MPOHamiltonians
 # ------------------------
 
-"""
-    left_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...) -> H, L
-
-Bring `H` into left-canonical form in place, where the upper-left block `[1 C; 0 A]` of every site
-has orthonormal columns, by iterating block-respecting QR decompositions until the gauge
-transformation is unitary. Redundant interaction channels are removed along the way.
-
-Also returns the interaction-channel blocks `L` of the accumulated gauge transformations, such that
-`diag(1, L[i - 1], 1) * H₀[i] = H[i] * diag(1, L[i], 1)` up to the identity components that are
-gauged away.
-
-# Keyword arguments
-
-- `tol = Defaults.tolgauge`: convergence tolerance on the deviation of the gauge transformation from
-  a unitary one, which is also the relative tolerance for discarding redundant channels
-- `maxiter = Defaults.maxiter`: maximal number of sweeps over the unit cell
-- `verbosity = VERBOSE_WARN`: setting for how much information is displayed
-
-# References
-
-* [Parker et al. Phys. Rev. B 102 (2020)](@cite parker2020)
-"""
 function left_canonicalize!(
         H::InfiniteMPOHamiltonian;
         tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, verbosity::Int = VERBOSE_WARN
@@ -81,19 +110,6 @@ function left_canonicalize!(
     end
 end
 
-"""
-    right_canonicalize!(H::InfiniteMPOHamiltonian; kwargs...) -> H, L
-
-Bring `H` into right-canonical form in place, where the lower-right block `[A B; 0 1]` of every site
-has orthonormal rows, by iterating block-respecting LQ decompositions until the gauge transformation
-is unitary. Redundant interaction channels are removed along the way.
-
-Also returns the interaction-channel blocks `L` of the accumulated gauge transformations, such that
-`H₀[i] * diag(1, L[i], 1) = diag(1, L[i - 1], 1) * H[i]` up to the identity components that are
-gauged away.
-
-See [`left_canonicalize!`](@ref) for the keyword arguments.
-"""
 function right_canonicalize!(
         H::InfiniteMPOHamiltonian;
         tol::Real = Defaults.tolgauge, maxiter::Int = Defaults.maxiter, verbosity::Int = VERBOSE_WARN
