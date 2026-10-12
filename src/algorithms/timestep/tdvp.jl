@@ -161,11 +161,12 @@ struct TimeStepState{S, O, E, T, D, V, A, TO}
     normalize::Bool
 end
 
+# the sweep is serial, so a single allocator serves all local updates, and it can be carried over
+# to later steps
 function TimeStepState(
-        ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput = NoTimerOutput()
+        ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput = NoTimerOutput(),
+        allocator = default_allocator(ψ, SerialScheduler())
     )
-    # the sweep is serial, so a single allocator serves all local updates
-    allocator = default_allocator(ψ, SerialScheduler())
     truncation_errors = zeros(real(scalartype(ψ)), length(ψ) - 1)
     return TimeStepState(
         ψ, H, envs, t, dt, truncation_errors, allocator, timeroutput, imaginary_evolution, normalize
@@ -202,9 +203,12 @@ function _timestep_finite!(
         imaginary_evolution::Bool, normalize::Bool, timeroutput = NoTimerOutput()
     )
     state = TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput)
-    state = sweep!(alg, state, Val(:right))
-    state = sweep!(alg, state, Val(:left))
+    state = _timestep_finite!(alg, state)
     return state.mps, state.envs, AlgorithmInfo(; truncation_errors = state.truncation_errors)
+end
+function _timestep_finite!(alg, state::TimeStepState)
+    state = sweep!(alg, state, Val(:right))
+    return sweep!(alg, state, Val(:left))
 end
 
 # Start times of the forward center update and of the backward update that follows it, for the
@@ -333,15 +337,11 @@ function local_update!(pos, direction::Val, ψ, alg::TDVP2, state::TimeStepState
     return ψ, ϵ
 end
 
-# copying version
-function timestep(
-        ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
-        alg::Union{TDVP, TDVP2}, envs::AbstractMPSEnvironments...;
-        imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
-    )
-    isreal = (scalartype(ψ) <: Real && !imaginary_evolution)
-    ψ′ = isreal ? complex(ψ) : copy(ψ)
-    if length(envs) != 0 && isreal
+# Copy of `ψ` to step out of place, promoted to complex when the evolution leaves the reals,
+# together with environments for that copy.
+function _timestep_copy(ψ, H, envs, promote::Bool)
+    ψ′ = promote ? complex(ψ) : copy(ψ)
+    if length(envs) != 0 && promote
         @warn "Currently cannot reuse real environments for complex evolution"
         envs′ = environments(ψ′, H, ψ′)
     elseif length(envs) == 1
@@ -350,5 +350,18 @@ function timestep(
         @assert length(envs) == 0 "Invalid signature"
         envs′ = environments(ψ′, H, ψ′)
     end
+    return ψ′, envs′
+end
+
+_promotes_to_complex(ψ, H, ::Union{TDVP, TDVP2}; imaginary_evolution) =
+    scalartype(ψ) <: Real && !imaginary_evolution
+
+# copying version
+function timestep(
+        ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
+        alg::Union{TDVP, TDVP2}, envs::AbstractMPSEnvironments...;
+        imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
+    )
+    ψ′, envs′ = _timestep_copy(ψ, H, envs, _promotes_to_complex(ψ, H, alg; imaginary_evolution))
     return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, normalize, kwargs...)
 end

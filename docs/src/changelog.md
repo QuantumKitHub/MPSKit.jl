@@ -42,6 +42,11 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   lower-allocation routine. For multiline `IDMRG` with several rows, the changes of the rows are
   now summed, as `IDMRG2` already did, instead of combined in a 2-norm, which makes the stopping
   criterion marginally stricter. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
+- `time_evolve` with finite `TDVP`, `TDVP2` or `BUG` copies (or promotes to complex) the initial
+  state once and then takes every step in place, reusing one sweep state and its allocator across
+  steps, rather than copying the state at every step. A `finalize` callback that keeps the state
+  of an earlier step therefore sees it updated by later steps, as with `time_evolve!`.
+  ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
 
 ### Deprecated
 

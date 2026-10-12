@@ -182,22 +182,15 @@ end
 # like single-site TDVP, BUG visits every site and only evolves the center at the far end
 _sweep_ranges(::BUG, ψ) = (1:length(ψ), length(ψ):-1:1)
 
+_promotes_to_complex(ψ, H, ::BUG; imaginary_evolution) =
+    scalartype(ψ) <: Real && !(imaginary_evolution && scalartype(H) <: Real)
+
 # copying version
 function timestep(
         ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
         alg::BUG, envs::AbstractMPSEnvironments...;
         imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
     )
-    isreal = (scalartype(ψ) <: Real && !(imaginary_evolution && scalartype(H) <: Real))
-    ψ′ = isreal ? complex(ψ) : copy(ψ)
-    if length(envs) != 0 && isreal
-        @warn "Currently cannot reuse real environments for complex evolution"
-        envs′ = environments(ψ′, H, ψ′)
-    elseif length(envs) == 1
-        envs′ = only(envs)
-    else
-        @assert length(envs) == 0 "Invalid signature"
-        envs′ = environments(ψ′, H, ψ′)
-    end
+    ψ′, envs′ = _timestep_copy(ψ, H, envs, _promotes_to_complex(ψ, H, alg; imaginary_evolution))
     return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, normalize, kwargs...)
 end

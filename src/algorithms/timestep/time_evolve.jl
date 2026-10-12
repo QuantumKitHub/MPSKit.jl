@@ -37,8 +37,9 @@ evolution at `verbosity ≥ 2`.
 function time_evolve end, function time_evolve! end
 
 # Internal state of `time_evolve`: the first `iter` steps of `t_span` have been taken, each by
-# `stepper` (`timestep` or `timestep!`) called with `kwargs`
-struct TimeEvolveState{S, O, E, T, F, K}
+# `stepper` (`timestep` or `timestep!`) called with `kwargs`. Integrators that sweep a finite MPS
+# carry their `TimeStepState` over in `step` instead, or `nothing` before the first step.
+struct TimeEvolveState{S, O, E, T, F, K, P}
     mps::S
     operator::O
     envs::E
@@ -46,6 +47,7 @@ struct TimeEvolveState{S, O, E, T, F, K}
     t_span::T
     stepper::F
     kwargs::K
+    step::P
 end
 
 # one iteration is a single time step followed by `finalize`, which receives the step's start time
@@ -55,15 +57,46 @@ function Base.iterate(it::IterativeSolver{<:Any, <:TimeEvolveState}, state::Time
     t = state.t_span[iter]
     dt = state.t_span[iter + 1] - t
 
-    ψ, envs, info = state.stepper(
-        state.mps, state.operator, t, dt, it.alg, state.envs; state.kwargs...
-    )
+    ψ, envs, info, step = _evolve_step(it.alg, state, t, dt)
     ψ, envs = it.finalize(t, ψ, state.operator, envs)::Tuple{typeof(ψ), typeof(envs)}
 
     it.state = TimeEvolveState(
-        ψ, state.operator, envs, iter, state.t_span, state.stepper, state.kwargs
+        ψ, state.operator, envs, iter, state.t_span, state.stepper, state.kwargs, step
     )
     return (ψ, envs, info), it.state
+end
+
+_evolve_step(alg, state::TimeEvolveState, t, dt) = _evolve_timestep(alg, state, t, dt)
+function _evolve_timestep(alg, state::TimeEvolveState, t, dt)
+    ψ, envs, info = state.stepper(
+        state.mps, state.operator, t, dt, alg, state.envs; state.kwargs...
+    )
+    return ψ, envs, info, nothing
+end
+
+# A finite sweep keeps its `TimeStepState`, and with it its allocator, across steps. Only the
+# first step of `time_evolve` copies the state (promoting it to complex if needed), after which
+# every step is taken in place.
+function _evolve_step(alg::Union{TDVP, TDVP2, BUG}, state::TimeEvolveState, t, dt)
+    state.mps isa AbstractFiniteMPS || return _evolve_timestep(alg, state, t, dt)
+    (; imaginary_evolution, normalize) = state.kwargs
+    H = state.operator
+    step = if isnothing(state.step)
+        ψ, envs = state.stepper === timestep ?
+            _timestep_copy(
+                state.mps, H, (state.envs,),
+                _promotes_to_complex(state.mps, H, alg; imaginary_evolution)
+            ) : (state.mps, state.envs)
+        TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize)
+    else
+        TimeStepState(
+            state.mps, H, state.envs, t, dt; imaginary_evolution, normalize,
+            state.step.allocator,
+        )
+    end
+    step = _timestep_finite!(alg, step)
+    info = AlgorithmInfo(; truncation_errors = step.truncation_errors)
+    return step.mps, step.envs, info, step
 end
 
 for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time_evolve!))
@@ -73,7 +106,7 @@ for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time
             verbosity::Int = 0, imaginary_evolution::Bool = false, normalize::Bool = false
         )
         state = TimeEvolveState(
-            ψ, H, envs, 0, t_span, $timestep, (; imaginary_evolution, normalize)
+            ψ, H, envs, 0, t_span, $timestep, (; imaginary_evolution, normalize), nothing
         )
         return _time_evolve(alg, state; verbosity)
     end
