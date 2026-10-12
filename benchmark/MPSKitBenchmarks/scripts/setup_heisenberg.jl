@@ -23,7 +23,7 @@ function initial_state(H)
     @assert allequal(physicalspace(H))
 
     pspace = physicalspace(H, 1)
-    A = rand(oneunit(pspace) ⊗ pspace^2 ← oneunit(pspace))
+    A = rand(unitspace(pspace) ⊗ pspace^2 ← unitspace(pspace))
     As = MPSKit.decompose_localmps(A)
     return FiniteMPS(repeat(As, length(H) ÷ 2))
 end

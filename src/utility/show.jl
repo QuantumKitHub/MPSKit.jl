@@ -36,9 +36,9 @@ function Base.show(io::IO, ::MIME"text/plain", ψ::FiniteMPS)
 
     # special handling of edge spaces => don't print if trivial
     Vright = right_virtualspace(ψ, L)
-    right_trivial = Vright == oneunit(Vright)
+    right_trivial = isunitspace(Vright)
     Vleft = left_virtualspace(ψ, 1)
-    left_trivial = Vleft == oneunit(Vleft)
+    left_trivial = isunitspace(Vleft)
 
 
     right_trivial || println(io, "│ ", Vright)
@@ -122,9 +122,9 @@ function Base.show(io::IO, ::MIME"text/plain", mpo::AbstractMPO)
     if isfinite(mpo)
         # special handling of edge spaces => don't print if trivial
         Vright = right_virtualspace(mpo, L)
-        right_trivial = Vright == oneunit(Vright)
+        right_trivial = isunitspace(Vright)
         Vleft = left_virtualspace(mpo, 1)
-        left_trivial = Vleft == oneunit(Vleft)
+        left_trivial = isunitspace(Vleft)
 
         right_trivial || println(io, "│ ", Vright)
         for i in reverse(1:L)
