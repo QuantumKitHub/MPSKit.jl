@@ -14,13 +14,26 @@ using DocumenterInterLinks
 include("overrides.jl")
 include("src/assets/models.jl")
 
-# examples
+# examples — grouped by computational task; each group is a subdirectory of src/examples/
 example_dir = joinpath(@__DIR__, "src", "examples")
-classic_pages = map(readdir(joinpath(example_dir, "classic2d"))) do dir
-    return joinpath("examples", "classic2d", dir, "index.md")
-end
-quantum_pages = map(readdir(joinpath(example_dir, "quantum1d"))) do dir
-    return joinpath("examples", "quantum1d", dir, "index.md")
+example_groups = [
+    "Ground states" => "groundstates",
+    "Excitations & dispersions" => "excitations",
+    "Dynamics & finite temperature" => "dynamics",
+    "Statistical mechanics" => "statmech",
+]
+# the sidebar follows the reading order of the gallery index; examples it does not link come last
+example_order = [
+    m.captures[1] for m in eachmatch(
+            r"\]\(([^)\s]+/index\.md)\)", read(joinpath(example_dir, "index.md"), String)
+        )
+]
+example_pages = map(example_groups) do (title, group)
+    pages = map(readdir(joinpath(example_dir, group))) do dir
+        return joinpath(group, dir, "index.md")
+    end
+    sort!(pages; by = page -> something(findfirst(==(page), example_order), typemax(Int)))
+    return title => map(page -> joinpath("examples", page), pages)
 end
 
 # contributing guide: `CONTRIBUTING.md` in the repository root is canonical, since that is the
@@ -73,7 +86,10 @@ makedocs(;
             "man/parallelism.md",
             "man/lattices.md",
         ],
-        "Examples" => "examples/index.md",
+        "Examples" => [
+            "Overview" => "examples/index.md",
+            example_pages...,
+        ],
         "Library" => "lib/lib.md",
         "References" => "references.md",
         "Changelog" => "changelog.md",
