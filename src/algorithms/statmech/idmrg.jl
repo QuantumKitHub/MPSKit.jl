@@ -37,6 +37,7 @@ function leading_boundary(
 end
 
 # only single-site IDMRG reports the leading eigenvalue in its log
+# this bypasses issues with intermediate IDMRG2 states not being correct InfiniteMPS
 _boundary_objective(::IDMRG, ψ, operator, envs) = leading_eigenvalue(ψ, operator, envs)
 _boundary_objective(::IDMRG2, ψ, operator, envs) = nothing
 

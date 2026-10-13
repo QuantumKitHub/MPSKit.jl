@@ -70,10 +70,7 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_bounda
     backend::B = Defaults.backend()
 end
 
-# Internal state of the IDMRG/IDMRG2 algorithms, shared by the ground state search
-# (`mps::InfiniteMPS`), the leading boundary search (`mps::MultilineMPS`) and approximation
-# (`mps::MultilineMPS`, `operator::Tuple`). `ϵ` is the change of the center bond tensor over the
-# last sweep, and `energy` is only tracked by the ground state search.
+# Internal state of the IDMRG/IDMRG2 algorithms
 struct IDMRGState{S, O, E, V, T, TO, A}
     mps::S
     operator::O

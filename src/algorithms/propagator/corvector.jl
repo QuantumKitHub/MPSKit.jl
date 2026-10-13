@@ -71,8 +71,7 @@ Returns the approximation of ``⟨ψ₀|\\frac{1}{z - H}|ψ₀⟩`` and ``\\frac
 """
 struct NaiveInvert <: DDMRG_Flavour end
 
-# Internal state of the dynamical DMRG sweeps, which update `mps` in place towards the
-# propagator applied to `target`; `ϵ` is the largest change of a center tensor over the last sweep
+# Internal state of the dynamical DMRG sweeps
 struct DDMRGState{S, T, Z, O, E, A}
     mps::S
     target::T

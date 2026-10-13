@@ -36,9 +36,7 @@ evolution at `verbosity ≥ 2`.
 """
 function time_evolve end, function time_evolve! end
 
-# Internal state of `time_evolve`: the first `iter` steps of `t_span` have been taken, each by
-# `stepper` (`timestep` or `timestep!`) called with `kwargs`. Integrators that step in place carry
-# their `TimeStepState` over in `step` instead, or `nothing` before the first step.
+# Internal state of `time_evolve`
 struct TimeEvolveState{S, O, E, T, F, K, P}
     mps::S
     operator::O
@@ -66,19 +64,8 @@ function Base.iterate(it::IterativeSolver{<:Any, <:TimeEvolveState}, state::Time
     return (ψ, envs, info), it.state
 end
 
-_evolve_step(alg, state::TimeEvolveState, t, dt) = _evolve_timestep(alg, state, t, dt)
-function _evolve_timestep(alg, state::TimeEvolveState, t, dt)
-    ψ, envs, info = state.stepper(
-        state.mps, state.operator, t, dt, alg, state.envs; state.kwargs...
-    )
-    return ψ, envs, info, nothing
-end
-
-# An integrator that steps in place keeps its `TimeStepState`, and with it its scheduler and
-# allocator, across steps. Only the first step of `time_evolve` copies the state (promoting it to
-# complex if needed), after which every step is taken in place.
-function _evolve_step(alg::Union{TDVP, TDVP2, BUG}, state::TimeEvolveState, t, dt)
-    _steps_in_place(alg, state.mps) || return _evolve_timestep(alg, state, t, dt)
+# only the first step copies the state, if `stepper` is `timestep`
+function _evolve_step(alg, state::TimeEvolveState, t, dt)
     (; imaginary_evolution, normalize) = state.kwargs
     H = state.operator
     step = if isnothing(state.step)
@@ -205,6 +192,43 @@ julia> round(real(expectation_value(ψ, 2 => X)); digits = 6)
 ```
 """
 function timestep end, function timestep! end
+
+function timestep!(
+        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg,
+        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
+        imaginary_evolution::Bool = false, normalize::Bool = false,
+        timeroutput = NoTimerOutput()
+    )
+    state = TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput)
+    state = _timestep!(alg, state)
+    return state.mps, state.envs, _step_info(state)
+end
+
+function timestep(
+        ψ::Union{AbstractFiniteMPS, InfiniteMPS}, H, time::Number, timestep::Number,
+        alg, envs::AbstractMPSEnvironments...;
+        imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
+    )
+    promote = _promotes_to_complex(ψ, H, timestep, alg; imaginary_evolution)
+    ψ′, envs′ = _timestep_copy(ψ, H, envs, promote)
+    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, normalize, kwargs...)
+end
+
+# Copy of `ψ` to step out of place, promoted to complex when the evolution leaves the reals,
+# together with environments for that copy.
+function _timestep_copy(ψ, H, envs, promote::Bool)
+    ψ′ = promote ? complex(ψ) : copy(ψ)
+    if length(envs) != 0 && promote
+        @warn "Currently cannot reuse real environments for complex evolution"
+        envs′ = environments(ψ′, H, ψ′)
+    elseif length(envs) == 1
+        envs′ = only(envs)
+    else
+        @assert length(envs) == 0 "Invalid signature"
+        envs′ = environments(ψ′, H, ψ′)
+    end
+    return ψ′, envs′
+end
 
 @doc """
     make_time_mpo(H::MPOHamiltonian, dt::Number, alg; kwargs...) -> O::MPO

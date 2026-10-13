@@ -41,10 +41,6 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   sharing one structure across solvers. Finite `TDVP`, `TDVP2` and `BUG` steps share a single sweep
   over per-site local updates, and infinite `TDVP` steps are split into local update, gauge and
   environment steps on the same step state. Results and logging are unchanged. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
-- The `IDMRG`/`IDMRG2` convergence measure (`bondresidual`) is computed by one shared,
-  lower-allocation routine. For multiline `IDMRG` with several rows, the changes of the rows are
-  now summed, as `IDMRG2` already did, instead of combined in a 2-norm, which makes the stopping
-  criterion marginally stricter. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
 - `time_evolve` with finite `TDVP`, `TDVP2` or `BUG`, or infinite `TDVP`, copies (or promotes to
   complex) the initial state once and then takes every step in place, reusing one step state and
   its allocator across steps, rather than copying the state at every step. A `finalize` callback

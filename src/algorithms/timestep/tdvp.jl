@@ -72,10 +72,7 @@ function TDVP(;
     )
 end
 
-# Internal state of a single time step `t → t + dt`, threaded through the two half-sweeps of a
-# finite MPS, or through the local update, gauge and environment steps of an infinite one.
-# `truncation_errors[i]` holds the truncation error of the last cut made at bond `i`, or is
-# `nothing` for an infinite MPS.
+# Internal state of a single time step `t → t + dt`
 struct TimeStepState{S, O, E, T, D, V, SC, A, TO}
     mps::S
     operator::O
@@ -116,22 +113,13 @@ _truncation_errors(ψ::InfiniteMPS) = nothing
 _step_info(state::TimeStepState) = isnothing(state.truncation_errors) ? AlgorithmInfo() :
     AlgorithmInfo(; truncation_errors = state.truncation_errors)
 
-function _with_mps(state::TimeStepState, ψ)
+function _with_mps(state::TimeStepState, ψ; t = state.t)
     return TimeStepState(
-        ψ, state.operator, state.envs, state.t, state.dt, state.truncation_errors,
+        ψ, state.operator, state.envs, t, state.dt, state.truncation_errors,
         state.scheduler, state.allocator, state.timeroutput, state.imaginary_evolution,
         state.normalize,
     )
 end
-
-# a single time step on `state`, in place
-_timestep!(alg, state::TimeStepState{<:AbstractFiniteMPS}) = _timestep_finite!(alg, state)
-_timestep!(alg::TDVP, state::TimeStepState{<:InfiniteMPS}) = _timestep_infinite!(alg, state)
-
-# whether `alg` steps `ψ` in place through a `TimeStepState`
-_steps_in_place(alg, ψ) = false
-_steps_in_place(alg, ψ::AbstractFiniteMPS) = true
-_steps_in_place(alg::TDVP, ψ::InfiniteMPS) = true
 
 function timestep!(
         ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
@@ -152,18 +140,18 @@ function _timestep_infinite!(
         leftorthflag, imaginary_evolution
     )
     state = TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize = false, scheduler)
-    state = _timestep_infinite!(alg, state; leftorthflag)
+    state = _timestep!(alg, state; leftorthflag)
     # the gauge-fixing residual is controlled by `tolgauge`, not reported here
     return state.mps, state.envs, _step_info(state)
 end
 
 # an infinite step evolves every center tensor at once, then restores the uniform gauge and
 # recomputes the environments
-function _timestep_infinite!(alg::TDVP, state::TimeStepState; leftorthflag = true)
+function _timestep!(alg::TDVP, state::TimeStepState{<:InfiniteMPS}; leftorthflag = true)
     ACs, Cs = localupdate_step!(alg, state)
     ψ = gauge_step!(alg, state, ACs, Cs; leftorthflag)
     recalculate!(state.envs, ψ, state.operator)
-    return _with_mps(state, ψ)
+    return _with_mps(state, ψ; t = state.t + state.dt)
 end
 
 function localupdate_step!(alg::TDVP, state::TimeStepState)
@@ -215,14 +203,6 @@ function gauge_step!(alg::TDVP, state::TimeStepState, ACs, Cs; leftorthflag)
     return ψ
 end
 
-function timestep!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        imaginary_evolution::Bool = false, normalize::Bool = false
-    )
-    return _timestep_finite!(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
-end
-
 # Single-site integrators visit every site, finishing a half-sweep by evolving only the center
 # tensor at its far end.
 _sweep_ranges(::TDVP, ψ) = (1:length(ψ), length(ψ):-1:1)
@@ -240,33 +220,21 @@ function sweep!(alg, state::TimeStepState, direction)
         bond = _swept_bond(alg, site, ψ, direction)
         isnothing(bond) || (state.truncation_errors[bond] = ϵ)
     end
-    return _with_mps(state, ψ)
+    # each half-sweep evolves the state over `dt / 2`
+    return _with_mps(state, ψ; t = state.t + state.dt / 2)
 end
 
 # a step is a left→right half-sweep `t → t + dt / 2` followed by a right→left half-sweep
 # `t + dt / 2 → t + dt`
-function _timestep_finite!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg, envs;
-        imaginary_evolution::Bool, normalize::Bool, timeroutput = NoTimerOutput()
-    )
-    state = TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput)
-    state = _timestep_finite!(alg, state)
-    return state.mps, state.envs, _step_info(state)
-end
-function _timestep_finite!(alg, state::TimeStepState)
+function _timestep!(alg, state::TimeStepState{<:AbstractFiniteMPS})
     state = sweep!(alg, state, Val(:right))
     return sweep!(alg, state, Val(:left))
 end
 
-# Start times of the forward center update and of the backward update that follows it, for the
-# half-sweep in `direction` of a step `t → t + dt`
-_half_sweep_times(::Val{:right}, t, dt) = (t, t + dt / 2)
-_half_sweep_times(::Val{:left}, t, dt) = (t + dt / 2, t + dt)
-
 function local_update!(site, direction::Val, ψ, alg::TDVP, state::TimeStepState)
     (; operator, envs, t, dt, allocator, imaginary_evolution, normalize) = state
     H = operator
-    t_AC, t_C = _half_sweep_times(direction, t, dt)
+    t_AC, t_C = t, t + dt / 2
 
     # at the far end of the sweep there is no bond ahead: only evolve the center tensor
     if site == _sweep_end(ψ, direction)
@@ -283,9 +251,8 @@ function local_update!(site, direction::Val, ψ, alg::TDVP, state::TimeStepState
     Hac = AC_hamiltonian(site, ψ, H, ψ, envs; alg.backend, allocator)
     AC = integrate(Hac, ψ.AC[site], t_AC, dt / 2, alg.integrator; imaginary_evolution)
 
-    # 3. gauge: split AC onto the bond ahead (QR center-move, or truncated SVD cutting the
-    #    enlarged bond back down) and move the center across it. By default the norm is
-    #    preserved; `normalize` renormalizes.
+    # 3. gauge: split AC onto the bond ahead and move the center.
+    #    By default the norm is preserved; `normalize` renormalizes.
     if direction === Val(:right)
         _, ϵ = left_gauge!(ψ, site, AC, alg.alg_gauge; normalize)
         bond = site
@@ -342,14 +309,6 @@ Used as the `algorithm` argument of [`timestep`](@ref), [`timestep!`](@ref) and 
     backend::B = Defaults.backend()
 end
 
-function timestep!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
-        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        imaginary_evolution::Bool = false, normalize::Bool = false
-    )
-    return _timestep_finite!(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
-end
-
 # two-site TDVP visits every bond, and each update cuts the bond it acts on
 _sweep_ranges(::TDVP2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 1):-1:1)
 _swept_bond(::TDVP2, pos, ψ, ::Val{:right}) = pos
@@ -358,7 +317,7 @@ _swept_bond(::TDVP2, pos, ψ, ::Val{:left}) = pos
 function local_update!(pos, direction::Val, ψ, alg::TDVP2, state::TimeStepState)
     (; operator, envs, t, dt, allocator, imaginary_evolution, normalize) = state
     H = operator
-    t_AC2, t_AC = _half_sweep_times(direction, t, dt)
+    t_AC2, t_AC = t, t + dt / 2
 
     # 1. evolve the two-site center tensor at `(pos, pos + 1)` forward
     ac2 = if direction === Val(:right)
@@ -384,32 +343,5 @@ function local_update!(pos, direction::Val, ψ, alg::TDVP2, state::TimeStepState
     return ψ, ϵ
 end
 
-# Copy of `ψ` to step out of place, promoted to complex when the evolution leaves the reals,
-# together with environments for that copy.
-function _timestep_copy(ψ, H, envs, promote::Bool)
-    ψ′ = promote ? complex(ψ) : copy(ψ)
-    if length(envs) != 0 && promote
-        @warn "Currently cannot reuse real environments for complex evolution"
-        envs′ = environments(ψ′, H, ψ′)
-    elseif length(envs) == 1
-        envs′ = only(envs)
-    else
-        @assert length(envs) == 0 "Invalid signature"
-        envs′ = environments(ψ′, H, ψ′)
-    end
-    return ψ′, envs′
-end
-
 _promotes_to_complex(ψ, H, dt, ::Union{TDVP, TDVP2}; imaginary_evolution) =
     scalartype(ψ) <: Real && !(imaginary_evolution && isreal(dt))
-
-# copying version
-function timestep(
-        ψ::Union{AbstractFiniteMPS, InfiniteMPS}, H, time::Number, timestep::Number,
-        alg::Union{TDVP, TDVP2}, envs::AbstractMPSEnvironments...;
-        imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
-    )
-    promote = _promotes_to_complex(ψ, H, timestep, alg; imaginary_evolution)
-    ψ′, envs′ = _timestep_copy(ψ, H, envs, promote)
-    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, normalize, kwargs...)
-end

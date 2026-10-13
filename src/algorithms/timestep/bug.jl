@@ -133,12 +133,11 @@ function _evolve_center(site, ψ, H, alg::BUG, envs, t, h, allocator; imaginary_
     return integrate(Heff, ψ.AC[site], t, h, alg.integrator; imaginary_evolution)
 end
 
-# a half-sweep evolves over `h = dt / 2`, starting at `t` (left→right) or `t + h` (right→left)
+# a half-sweep evolves over `h = dt / 2`
 function local_update!(site, direction::Val, ψ, alg::BUG, state::TimeStepState)
-    (; operator, envs, allocator, timeroutput, imaginary_evolution, normalize) = state
+    (; operator, envs, t, allocator, timeroutput, imaginary_evolution, normalize) = state
     H = operator
     h = state.dt / 2
-    t = direction === Val(:right) ? state.t : state.t + h
 
     # at the far end of the sweep there is no bond ahead to cut: evolve and finalize
     if site == _sweep_end(ψ, direction)
@@ -168,30 +167,8 @@ function local_update!(site, direction::Val, ψ, alg::BUG, state::TimeStepState)
     return ψ, ϵ
 end
 
-function timestep!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::BUG,
-        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        imaginary_evolution::Bool = false, normalize::Bool = false,
-        timeroutput = NoTimerOutput()
-    )
-    return _timestep_finite!(
-        ψ, H, t, dt, alg, envs; imaginary_evolution, normalize, timeroutput
-    )
-end
-
 # like single-site TDVP, BUG visits every site and only evolves the center at the far end
 _sweep_ranges(::BUG, ψ) = (1:length(ψ), length(ψ):-1:1)
 
 _promotes_to_complex(ψ, H, dt, ::BUG; imaginary_evolution) =
     scalartype(ψ) <: Real && !(imaginary_evolution && isreal(dt) && scalartype(H) <: Real)
-
-# copying version
-function timestep(
-        ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
-        alg::BUG, envs::AbstractMPSEnvironments...;
-        imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
-    )
-    promote = _promotes_to_complex(ψ, H, timestep, alg; imaginary_evolution)
-    ψ′, envs′ = _timestep_copy(ψ, H, envs, promote)
-    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, normalize, kwargs...)
-end

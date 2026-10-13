@@ -82,22 +82,20 @@ maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 1:length(ψ))
     # the AC and C sweeps of the infinite integrator spawn over the unit cell, and additionally run
     # concurrently with each other, so they share one allocator: check both schedulers agree
     @testset "Infinite TDVP ($schedname)" for (schedname, scheduler) in SCHEDULERS
-        ψ, envs = with_scheduler(scheduler) do
-            return timestep(ψ₀, H, 0.0, dt, TDVP())
-        end
-        E = expectation_value(ψ, H, envs)
-        @test E₀ ≈ E atol = 1.0e-2
-    end
+        with_scheduler(scheduler) do
+            ψ, envs = timestep(ψ₀, H, 0.0, dt, TDVP())
+            E = expectation_value(ψ, H, envs)
+            @test E₀ ≈ E atol = 1.0e-2
 
-    @testset "Infinite TDVP in place" begin
-        ψ, = timestep(ψ₀, H, 0.0, dt, TDVP())
-        ψ′ = copy(ψ₀)
-        ψ″, = timestep!(ψ′, H, 0.0, dt, TDVP())
-        @test ψ″ === ψ′
-        @test ψ″.AC == ψ.AC
-        # evolving in the right-orthogonal gauge gives the same state
-        ψr, = timestep(ψ₀, H, 0.0, dt, TDVP(); leftorthflag = false)
-        @test abs(dot(ψ, ψr)) ≈ 1 atol = 1.0e-8
+            ψ′ = copy(ψ₀)
+            ψ″, = timestep!(ψ′, H, 0.0, dt, TDVP())
+            @test ψ″ === ψ′
+            @test ψ″.AC == ψ.AC
+
+            # evolving in the right-orthogonal gauge gives the same state
+            ψr, = timestep(ψ₀, H, 0.0, dt, TDVP(); leftorthflag = false)
+            @test abs(dot(ψ, ψr)) ≈ 1 atol = 1.0e-8
+        end
     end
 
     @testset "Infinite real TDVP" begin

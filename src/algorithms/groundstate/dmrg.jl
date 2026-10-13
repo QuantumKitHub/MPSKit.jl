@@ -295,8 +295,6 @@ function find_groundstate!(
     return find_groundstate_sweep!(ψ, H, alg, envs, allocator, timeroutput)
 end
 
-# A solver iteration is one complete forward/backward sweep. The vectors retain the
-# local history used by the adaptive solvers between sweeps.
 struct DMRGState{S, O, E, R, V, D, T, A}
     mps::S
     operator::O
