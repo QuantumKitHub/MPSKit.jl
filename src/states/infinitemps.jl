@@ -159,11 +159,11 @@ function InfiniteMPS(
         kwargs...
     )
 end
-InfiniteMPS(T::Type, d::S, D::S; kwargs...) where {S <: Union{Int, <:IndexSpace}} = InfiniteMPS(T, [d], [D]; kwargs...)
-InfiniteMPS(d::S, D::S; kwargs...) where {S <: Union{Int, <:IndexSpace}} = InfiniteMPS([d], [D]; kwargs...)
+InfiniteMPS(T::Type, d::S, D::S; kwargs...) where {S <: Union{Int, IndexSpace}} = InfiniteMPS(T, [d], [D]; kwargs...)
+InfiniteMPS(d::S, D::S; kwargs...) where {S <: Union{Int, IndexSpace}} = InfiniteMPS([d], [D]; kwargs...)
 function InfiniteMPS(
         f, T::Type, d::S, D::S; kwargs...
-    ) where {S <: Union{Int, <:IndexSpace}}
+    ) where {S <: Union{Int, IndexSpace}}
     return InfiniteMPS(f, T, [d], [D]; kwargs...)
 end
 function InfiniteMPS(ds::AbstractVector{Int}, Ds::AbstractVector{Int}; kwargs...)
