@@ -24,8 +24,15 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `ClusterExpansion` time-evolution algorithm for `make_time_mpo`, constructing evolution MPOs
   for finite and infinite nearest-neighbor Hamiltonians through a nonperturbative cluster expansion
   that matches exact exponentials on clusters of up to `N` sites. ([#252](https://github.com/QuantumKitHub/MPSKit.jl/pull/252))
+- `changebonds(::InfiniteMPOHamiltonian, ::SvdCut)` compresses infinite Hamiltonians with the
+  almost-Schmidt decomposition of [Parker et al.](https://arxiv.org/abs/1909.06341), and
+  `left_canonicalize!`/`right_canonicalize!` bring an `InfiniteMPOHamiltonian` into canonical form. ([#539](https://github.com/QuantumKitHub/MPSKit.jl/pull/539))
 
 ### Changed
+
+- `left_canonicalize!`/`right_canonicalize!(::FiniteMPOHamiltonian)` now sweep over the whole chain
+  instead of a single site, and return the gauge transformations alongside the operator, matching
+  the infinite versions. ([#539](https://github.com/QuantumKitHub/MPSKit.jl/pull/539))
 
 ### Deprecated
 
@@ -35,6 +42,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 - `convert(TensorMap, H)` for single-site `FiniteMPOHamiltonian`s no longer contracts the site tensor with itself. ([#252](https://github.com/QuantumKitHub/MPSKit.jl/pull/252))
 - `show` methods for finite MPS/MPOs no longer check unit space condition through `oneunit`, which is not defined for multifusion spaces. ([#538](https://github.com/QuantumKitHub/MPSKit.jl/pull/538))
+- The canonical forms of `MPOHamiltonian`s, and therefore `SvdCut` compression, are now correct when
+  interactions contain identity components or redundant channels. ([#539](https://github.com/QuantumKitHub/MPSKit.jl/pull/539))
 
 ### Performance
 

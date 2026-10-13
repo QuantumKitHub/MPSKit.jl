@@ -113,8 +113,7 @@ using TensorKit: ℙ
     end
 end
 
-@testset "Finite MPOHamiltonian canonicalization with decoupled sites" begin
-    # regression test for https://github.com/QuantumKitHub/MPSKit.jl/issues/522
+@testset "Finite MPOHamiltonian canonicalization" begin
     T = ComplexF64
     for V in (ℂ^2, U1Space(-1 => 1, 0 => 1, 1 => 1), Rep[SU₂](1 // 2 => 1))
         O₁ = randn(T, V, V)
@@ -123,33 +122,56 @@ end
         O₂ += O₂'
         E = id(storagetype(O₁), domain(O₁))
 
+        # regression test for https://github.com/QuantumKitHub/MPSKit.jl/issues/522
         # bulk block of the middle site is empty on the left but not on the right
         H_right = FiniteMPOHamiltonian(fill(V, 3), (1,) => O₁, (2, 3) => O₂)
         H_right_tm = O₁ ⊗ E ⊗ E + E ⊗ O₂
-        H = MPSKit.right_canonicalize!(copy(H_right), 2)
+        H, = MPSKit.right_canonicalize!(copy(H_right))
         @test convert(TensorMap, H) ≈ H_right_tm
 
         # bulk block of the middle site is empty on the right but not on the left
         H_left = FiniteMPOHamiltonian(fill(V, 3), (1, 2) => O₂, (3,) => O₁)
         H_left_tm = O₂ ⊗ E + E ⊗ E ⊗ O₁
-        H = MPSKit.left_canonicalize!(copy(H_left), 2)
+        H, = MPSKit.left_canonicalize!(copy(H_left))
         @test convert(TensorMap, H) ≈ H_left_tm
 
         L = 5
         H5 = FiniteMPOHamiltonian(fill(V, L), (1, 2) => O₂, (3,) => O₁, (4, 5) => O₂)
         H5_tm = O₂ ⊗ E ⊗ E ⊗ E + E ⊗ E ⊗ O₁ ⊗ E ⊗ E + E ⊗ E ⊗ E ⊗ O₂
-        H = copy(H5)
-        for i in L:-1:2
-            MPSKit.right_canonicalize!(H, i)
-        end
+        H, = MPSKit.right_canonicalize!(copy(H5))
         @test convert(TensorMap, H) ≈ H5_tm
-        for i in 1:(L - 1)
-            MPSKit.left_canonicalize!(H, i)
-        end
+        H, = MPSKit.left_canonicalize!(H)
         @test convert(TensorMap, H) ≈ H5_tm
 
         H5_trunc = changebonds(H5, SvdCut(; trunc = truncrank(16)))
         @test convert(TensorMap, H5_trunc) ≈ H5_tm
+
+        # canonical forms, also when `C`/`B` have identity components and the blocks are rank-deficient
+        L = 4
+        H = FiniteMPOHamiltonian(fill(V, L), (i, i + 1) => O₂ for i in 1:(L - 1))
+        H_tm = convert(TensorMap, H)
+
+        HL, Ls = MPSKit.left_canonicalize!(copy(H))
+        @test length(Ls) == L - 1
+        @test all(i -> codomain(Ls[i])[1] == right_virtualspace(HL[i].A), 1:(L - 1))
+        @test convert(TensorMap, HL) ≈ H_tm
+        for W in HL[2:(L - 1)]
+            Vb = MPSKit.SparseBlockTensorMap(W)[1:(end - 1), 1, 1, 1:(end - 1)]
+            @plansor G[r; r′] := conj(Vb[l p; p′ r]) * Vb[l p; p′ r′]
+            G = TensorMap(G) / dim(physicalspace(W))
+            @test G ≈ id(domain(G))
+        end
+
+        HR, Rs = MPSKit.right_canonicalize!(copy(H))
+        @test length(Rs) == L - 1
+        @test all(i -> domain(Rs[i])[1] == left_virtualspace(HR[i + 1].A), 1:(L - 1))
+        @test convert(TensorMap, HR) ≈ H_tm
+        for W in HR[2:(L - 1)]
+            Vb = MPSKit.SparseBlockTensorMap(W)[2:end, 1, 1, 2:end]
+            @plansor G[l; l′] := Vb[l p; p′ r] * conj(Vb[l′ p; p′ r])
+            G = TensorMap(G) / dim(physicalspace(W))
+            @test G ≈ id(codomain(G))
+        end
     end
 end
 
