@@ -37,7 +37,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   multiline `IDMRG`/`IDMRG2` approximation and `leading_boundary`, and `time_evolve` now run as
   iterators whose iterations are a forward and a backward half-sweep (or a single time step),
   sharing one structure across solvers. Finite `TDVP`, `TDVP2` and `BUG` steps share a single sweep
-  over per-site local updates. Results and logging are unchanged. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
+  over per-site local updates, and infinite `TDVP` steps are split into local update, gauge and
+  environment steps on the same step state. Results and logging are unchanged. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
 - The `IDMRG`/`IDMRG2` convergence measure (`bondresidual`) is computed by one shared,
   lower-allocation routine. For multiline `IDMRG` with several rows, the changes of the rows are
   now summed, as `IDMRG2` already did, instead of combined in a 2-norm, which makes the stopping

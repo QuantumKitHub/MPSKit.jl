@@ -72,6 +72,39 @@ function TDVP(;
     )
 end
 
+# Internal state of a single time step `t → t + dt`, threaded through the two half-sweeps of a
+# finite MPS, or through the local update, gauge and environment steps of an infinite one.
+# `truncation_errors[i]` holds the truncation error of the last cut made at bond `i`, or is
+# `nothing` for an infinite MPS.
+struct TimeStepState{S, O, E, T, D, V, A, TO}
+    mps::S
+    operator::O
+    envs::E
+    t::T
+    dt::D
+    truncation_errors::V
+    allocator::A
+    timeroutput::TO
+    imaginary_evolution::Bool
+    normalize::Bool
+end
+
+# a finite sweep is serial, so by default a single allocator serves all local updates, and it
+# can be carried over to later steps
+function TimeStepState(
+        ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput = NoTimerOutput(),
+        allocator = default_allocator(ψ, SerialScheduler())
+    )
+    truncation_errors = _truncation_errors(ψ)
+    return TimeStepState(
+        ψ, H, envs, t, dt, truncation_errors, allocator, timeroutput, imaginary_evolution, normalize
+    )
+end
+
+# per-bond truncation errors of a finite sweep; an infinite step never truncates
+_truncation_errors(ψ::AbstractFiniteMPS) = zeros(real(scalartype(ψ)), length(ψ) - 1)
+_truncation_errors(ψ::InfiniteMPS) = nothing
+
 function timestep(
         ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
@@ -95,11 +128,34 @@ function _timestep_infinite(
         ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP, envs, scheduler::Scheduler;
         leftorthflag, imaginary_evolution
     )
+    # both sweeps together are a single unit of concurrent work, and share one allocator
+    allocator = default_allocator(ψ, scheduler)
+    state = TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize = false, allocator)
+    state = _timestep_infinite!(alg, state, scheduler; leftorthflag)
+    # infinite one-site TDVP runs at fixed bond dimension and never truncates, so it doesn't
+    # report `truncation_errors` (rather than report zeros that would look like a measurement)
+    # the gauge-fixing residual is controlled by `tolgauge`, not reported here
+    return state.mps, state.envs, AlgorithmInfo()
+end
+
+# an infinite step evolves every center tensor at once, then restores the uniform gauge and
+# recomputes the environments
+function _timestep_infinite!(alg::TDVP, state::TimeStepState, scheduler::Scheduler; leftorthflag)
+    ACs, Cs = localupdate_step!(alg, state, scheduler)
+    ψ = gauge_step!(alg, state, ACs, Cs; leftorthflag)
+    recalculate!(state.envs, ψ, state.operator)
+    return TimeStepState(
+        ψ, state.operator, state.envs, state.t, state.dt, state.truncation_errors,
+        state.allocator, state.timeroutput, state.imaginary_evolution, state.normalize,
+    )
+end
+
+function localupdate_step!(alg::TDVP, state::TimeStepState, scheduler::Scheduler)
+    (; mps, operator, envs, t, dt, allocator, imaginary_evolution) = state
+    ψ, H = mps, operator
     temp_ACs = similar(ψ.AC)
     temp_Cs = similar(ψ.C)
 
-    # both sweeps together are a single unit of concurrent work, and share one allocator
-    allocator = default_allocator(ψ, scheduler)
     ac_sweep!() = tforeach(1:length(ψ); scheduler) do loc
         Hac = AC_hamiltonian(loc, ψ, H, ψ, envs; alg.backend, allocator)
         temp_ACs[loc] = integrate(Hac, ψ.AC[loc], t, dt, alg.integrator; imaginary_evolution)
@@ -121,21 +177,19 @@ function _timestep_infinite(
             Threads.@spawn c_sweep!()
         end
     end
+    return temp_ACs, temp_Cs
+end
 
+function gauge_step!(alg::TDVP, state::TimeStepState, ACs, Cs; leftorthflag)
+    ψ = state.mps
     if leftorthflag
-        regauge!.(temp_ACs, temp_Cs)
-        ψ′ = InfiniteMPS(temp_ACs, ψ.C[end]; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
+        regauge!.(ACs, Cs)
+        return InfiniteMPS(ACs, ψ.C[end]; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
     else
-        circshift!(temp_Cs, 1)
-        regauge!.(temp_Cs, temp_ACs)
-        ψ′ = InfiniteMPS(ψ.C[0], temp_ACs; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
+        circshift!(Cs, 1)
+        regauge!.(Cs, ACs)
+        return InfiniteMPS(ψ.C[0], ACs; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
     end
-
-    recalculate!(envs, ψ′, H)
-    # infinite one-site TDVP runs at fixed bond dimension and never truncates, so it doesn't
-    # report `truncation_errors` (rather than report zeros that would look like a measurement)
-    # the gauge-fixing residual is controlled by `tolgauge`, not reported here
-    return ψ′, envs, AlgorithmInfo()
 end
 
 function timestep!(
@@ -144,33 +198,6 @@ function timestep!(
         imaginary_evolution::Bool = false, normalize::Bool = false
     )
     return _timestep_finite!(ψ, H, t, dt, alg, envs; imaginary_evolution, normalize)
-end
-
-# Internal state of a single finite time step `t → t + dt`, threaded through its two half-sweeps.
-# `truncation_errors[i]` holds the truncation error of the last cut made at bond `i`.
-struct TimeStepState{S, O, E, T, D, V, A, TO}
-    mps::S
-    operator::O
-    envs::E
-    t::T
-    dt::D
-    truncation_errors::V
-    allocator::A
-    timeroutput::TO
-    imaginary_evolution::Bool
-    normalize::Bool
-end
-
-# the sweep is serial, so a single allocator serves all local updates, and it can be carried over
-# to later steps
-function TimeStepState(
-        ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput = NoTimerOutput(),
-        allocator = default_allocator(ψ, SerialScheduler())
-    )
-    truncation_errors = zeros(real(scalartype(ψ)), length(ψ) - 1)
-    return TimeStepState(
-        ψ, H, envs, t, dt, truncation_errors, allocator, timeroutput, imaginary_evolution, normalize
-    )
 end
 
 # Single-site integrators visit every site, finishing a half-sweep by evolving only the center

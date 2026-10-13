@@ -37,8 +37,8 @@ evolution at `verbosity ≥ 2`.
 function time_evolve end, function time_evolve! end
 
 # Internal state of `time_evolve`: the first `iter` steps of `t_span` have been taken, each by
-# `stepper` (`timestep` or `timestep!`) called with `kwargs`. Integrators that sweep a finite MPS
-# carry their `TimeStepState` over in `step` instead, or `nothing` before the first step.
+# `stepper` (`timestep` or `timestep!`) called with `kwargs`. `TDVP`, `TDVP2` and `BUG` carry
+# their `TimeStepState` over in `step` instead, or `nothing` before the first step.
 struct TimeEvolveState{S, O, E, T, F, K, P}
     mps::S
     operator::O
@@ -97,6 +97,27 @@ function _evolve_step(alg::Union{TDVP, TDVP2, BUG}, state::TimeEvolveState, t, d
     step = _timestep_finite!(alg, step)
     info = AlgorithmInfo(; truncation_errors = step.truncation_errors)
     return step.mps, step.envs, info, step
+end
+
+# An infinite step builds a new state anyway, so only its allocator is carried over, as long as
+# the scheduler still selects the same kind of allocator.
+function _evolve_step(alg::TDVP, state::TimeEvolveState{<:InfiniteMPS}, t, dt)
+    state.stepper === timestep || return _evolve_timestep(alg, state, t, dt)
+    (; imaginary_evolution) = state.kwargs
+    ψ = state.mps
+    if scalartype(ψ) <: Real && (!imaginary_evolution || !isreal(dt))
+        ψ = complex(ψ)
+    end
+    scheduler = Defaults.scheduler[]
+    allocator = default_allocator(ψ, scheduler)
+    if !isnothing(state.step) && state.step.allocator isa typeof(allocator)
+        allocator = state.step.allocator
+    end
+    step = TimeStepState(
+        ψ, state.operator, state.envs, t, dt; imaginary_evolution, normalize = false, allocator
+    )
+    step = _timestep_infinite!(alg, step, scheduler; leftorthflag = true)
+    return step.mps, step.envs, AlgorithmInfo(), step
 end
 
 for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time_evolve!))
