@@ -37,7 +37,7 @@ evolution at `verbosity ≥ 2`.
 function time_evolve end, function time_evolve! end
 
 # Internal state of `time_evolve`: the first `iter` steps of `t_span` have been taken, each by
-# `stepper` (`timestep` or `timestep!`) called with `kwargs`. `TDVP`, `TDVP2` and `BUG` carry
+# `stepper` (`timestep` or `timestep!`) called with `kwargs`. Integrators that step in place carry
 # their `TimeStepState` over in `step` instead, or `nothing` before the first step.
 struct TimeEvolveState{S, O, E, T, F, K, P}
     mps::S
@@ -74,50 +74,28 @@ function _evolve_timestep(alg, state::TimeEvolveState, t, dt)
     return ψ, envs, info, nothing
 end
 
-# A finite sweep keeps its `TimeStepState`, and with it its allocator, across steps. Only the
-# first step of `time_evolve` copies the state (promoting it to complex if needed), after which
-# every step is taken in place.
+# An integrator that steps in place keeps its `TimeStepState`, and with it its scheduler and
+# allocator, across steps. Only the first step of `time_evolve` copies the state (promoting it to
+# complex if needed), after which every step is taken in place.
 function _evolve_step(alg::Union{TDVP, TDVP2, BUG}, state::TimeEvolveState, t, dt)
-    state.mps isa AbstractFiniteMPS || return _evolve_timestep(alg, state, t, dt)
+    _steps_in_place(alg, state.mps) || return _evolve_timestep(alg, state, t, dt)
     (; imaginary_evolution, normalize) = state.kwargs
     H = state.operator
     step = if isnothing(state.step)
         ψ, envs = state.stepper === timestep ?
             _timestep_copy(
                 state.mps, H, (state.envs,),
-                _promotes_to_complex(state.mps, H, alg; imaginary_evolution)
+                _promotes_to_complex(state.mps, H, dt, alg; imaginary_evolution)
             ) : (state.mps, state.envs)
         TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize)
     else
         TimeStepState(
             state.mps, H, state.envs, t, dt; imaginary_evolution, normalize,
-            state.step.allocator,
+            state.step.scheduler, state.step.allocator,
         )
     end
-    step = _timestep_finite!(alg, step)
-    info = AlgorithmInfo(; truncation_errors = step.truncation_errors)
-    return step.mps, step.envs, info, step
-end
-
-# An infinite step builds a new state anyway, so only its allocator is carried over, as long as
-# the scheduler still selects the same kind of allocator.
-function _evolve_step(alg::TDVP, state::TimeEvolveState{<:InfiniteMPS}, t, dt)
-    state.stepper === timestep || return _evolve_timestep(alg, state, t, dt)
-    (; imaginary_evolution) = state.kwargs
-    ψ = state.mps
-    if scalartype(ψ) <: Real && (!imaginary_evolution || !isreal(dt))
-        ψ = complex(ψ)
-    end
-    scheduler = Defaults.scheduler[]
-    allocator = default_allocator(ψ, scheduler)
-    if !isnothing(state.step) && state.step.allocator isa typeof(allocator)
-        allocator = state.step.allocator
-    end
-    step = TimeStepState(
-        ψ, state.operator, state.envs, t, dt; imaginary_evolution, normalize = false, allocator
-    )
-    step = _timestep_infinite!(alg, step, scheduler; leftorthflag = true)
-    return step.mps, step.envs, AlgorithmInfo(), step
+    step = _timestep!(alg, step)
+    return step.mps, step.envs, _step_info(step), step
 end
 
 for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time_evolve!))

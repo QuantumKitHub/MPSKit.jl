@@ -89,6 +89,31 @@ maxbond(ψ) = maximum(i -> dim(left_virtualspace(ψ, i)), 1:length(ψ))
         @test E₀ ≈ E atol = 1.0e-2
     end
 
+    @testset "Infinite TDVP in place" begin
+        ψ, = timestep(ψ₀, H, 0.0, dt, TDVP())
+        ψ′ = copy(ψ₀)
+        ψ″, = timestep!(ψ′, H, 0.0, dt, TDVP())
+        @test ψ″ === ψ′
+        @test ψ″.AC == ψ.AC
+        # evolving in the right-orthogonal gauge gives the same state
+        ψr, = timestep(ψ₀, H, 0.0, dt, TDVP(); leftorthflag = false)
+        @test abs(dot(ψ, ψr)) ≈ 1 atol = 1.0e-8
+    end
+
+    @testset "Infinite real TDVP" begin
+        Hr = force_planar(transverse_field_ising(Float64; g = 0.7))
+        ψr₀ = InfiniteMPS(rand, Float64, [ℙ^2], [ℙ^8])
+        # real-time evolution promotes the state, and with it the environments, to complex
+        ψ, envs = timestep(ψr₀, Hr, 0.0, dt, TDVP())
+        @test scalartype(ψ) <: Complex
+        ψc, = timestep(complex(ψr₀), Hr, 0.0, dt, TDVP())
+        @test abs(dot(ψ, ψc)) ≈ 1 atol = 1.0e-8
+        @test expectation_value(ψ, Hr, envs) ≈ expectation_value(ψc, Hr)
+        # imaginary-time evolution with a real step keeps it real
+        ψi, = timestep(ψr₀, Hr, 0.0, dt, TDVP(); imaginary_evolution = true)
+        @test scalartype(ψi) == Float64
+    end
+
     Hlazy = LazySum([3 * deepcopy(H), 1.55 * deepcopy(H), -0.1 * deepcopy(H)])
 
     @testset "Infinite LazySum TDVP" begin
@@ -329,5 +354,10 @@ end
         ψ, envs = time_evolve(ψ₀, H, t_span, TDVP(); verbosity = 2)
         E = expectation_value(ψ, H, envs)
         @test E₀ ≈ E atol = 1.0e-2
+
+        ψ′ = copy(ψ₀)
+        ψ″, = MPSKit.time_evolve!(ψ′, H, t_span, TDVP())
+        @test ψ″ === ψ′
+        @test ψ″.AC == ψ.AC
     end
 end

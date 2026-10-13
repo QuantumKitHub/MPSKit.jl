@@ -44,6 +44,12 @@ using Adapt
         @test TransferMatrix(ψ.AR[i], ψ.AL[i]) * r_RL(ψ, i) ≈ r_RL(ψ, i + 1)
         @test TransferMatrix(ψ.AR[i], ψ.AR[i]) * r_RR(ψ, i) ≈ r_RR(ψ, i + 1)
     end
+
+    # rebuilding from the left or right isometries and a bond tensor gives back the same state
+    for ψ′ in (InfiniteMPS(ψ.AL, ψ.C[end]; tol), InfiniteMPS(ψ.C[0], ψ.AR; tol))
+        @test scalartype(ψ′) == elt
+        @test abs(dot(ψ, ψ′)) ≈ 1
+    end
 end
 
 @testset "InfiniteMPS copying" begin
