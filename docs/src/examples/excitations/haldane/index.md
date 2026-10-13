@@ -62,7 +62,7 @@ En_2, st_2 = excitations(H, QuasiparticleAnsatz(), ψ, envs; sector = SU2Irrep(2
 ````
 
 ````
-0.7989253589480395
+0.7989253589480334
 ````
 
 We can go even further and doublecheck the claim that ``S = 1`` is an edge excitation, by plotting the energy density.
@@ -101,7 +101,7 @@ f = fit(Ls .^ (-2), ΔEs, 1)
 ````
 
 ````
-0.45173401585850476
+0.4517340158583773
 ````
 
 ````julia
@@ -136,7 +136,7 @@ println("minimum @k = $(kspace[idx]):\t ΔE = $(ΔE)")
 ````
 
 ````
-minimum @k = 3.141592653589793:	 ΔE = 0.4104792484827771
+minimum @k = 3.141592653589793:	 ΔE = 0.41047924868496444
 
 ````
 

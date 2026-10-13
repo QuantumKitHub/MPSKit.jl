@@ -119,7 +119,7 @@ println("Exact (N=Inf):\t", groundstate_energy(J, Inf))
 ````
 
 ````
-Numerical:	-0.15637803047011087
+Numerical:	-0.15637803047011115
 Exact (N=32):	-0.15637803047254015
 Exact (N=Inf):	-0.15915494309189535
 

@@ -133,9 +133,9 @@ println("Energy: ", expectation_value(ground_state, hamiltonian))
 ````
 
 ````
-[ Info: VUMPS init:	obj = +3.907715067513e-01	err = 6.2029e-01
-[ Info: VUMPS conv 32:	obj = -6.757777651162e-01	err = 8.2073381677e-07	time = 5.80 sec
-Energy: -0.6757777651161998 - 5.853131087415613e-17im
+[ Info: VUMPS init:	obj = +3.565540128712e-01	err = 5.8200e-01
+[ Info: VUMPS conv 35:	obj = -6.757777651150e-01	err = 9.9874991150e-07	time = 6.10 sec
+Energy: -0.6757777651149788 + 3.9753559577548215e-17im
 
 ````
 
@@ -252,13 +252,13 @@ quasicondensate_density = map(state -> abs2(expectation_value(state, (0,) => a_o
 
 ````
 7-element Vector{Float64}:
- 0.30974277793726257
- 0.2881477681497851
- 0.27020000491076335
- 0.2571272871301284
- 0.24736844446278727
- 0.2353972226530793
- 0.2279965945568954
+ 0.3097427801948516
+ 0.2881477638457307
+ 0.2702001643897378
+ 0.2571272792016688
+ 0.2468538581332228
+ 0.23539756507406545
+ 0.22799654612658096
 ````
 
 We may now also visualize the momentum distribution function, which is obtained as the Fourier transform of the single-particle density matrix.

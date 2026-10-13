@@ -137,7 +137,7 @@ groundstate, envs, info = find_groundstate(
 ````
 
 ````
-┌ Warning: VUMPS cancel 100:	obj = -8.862417624752e-01	err = 4.2010390011e-06	time = 3.80 sec
+┌ Warning: VUMPS cancel 100:	obj = -8.862417624752e-01	err = 4.2010390011e-06	time = 2.81 sec
 └ @ MPSKit src/algorithms/groundstate/vumps.jl:96
 
 ````
