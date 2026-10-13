@@ -24,7 +24,7 @@ other files.
 
 The folder name is the published URL of the page, so name it after the model or method and do
 not prefix it with a number. Numeric prefixes force every later example to be renamed — and
-therefore every URL to change — as soon as one is inserted in the middle. Examples are listed
-alphabetically in the sidebar; the reading order for newcomers lives in the summaries on the
-gallery index page (`docs/src/examples/index.md`), which is also where a new example should be
-described.
+therefore every URL to change — as soon as one is inserted in the middle. The reading order
+lives in the summaries on the gallery index page (`docs/src/examples/index.md`), which is also
+where a new example should be described: the sidebar lists each group in the order of that page,
+with examples it does not link placed last.

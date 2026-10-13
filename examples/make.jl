@@ -144,12 +144,22 @@ function strip_precompilation_output(content::AbstractString)
     return join(kept, '\n')
 end
 
+# All examples run in this one process, and Plots keeps `theme`/`default` settings as global
+# state, so an example that styles its plots would otherwise restyle every later example.
+const PLOTS_PKGID = Base.PkgId(Base.UUID("91a5bcdd-55d7-5caf-9e0b-520d859cae80"), "Plots")
+function reset_plot_defaults()
+    plots = get(Base.loaded_modules, PLOTS_PKGID, nothing)
+    isnothing(plots) || Base.invokelatest(plots.reset_defaults)
+    return nothing
+end
+
 function build_example(root, name)
     source_dir = joinpath(@__DIR__, "..", "examples", root, name)
     source_file = joinpath(source_dir, "main.jl")
     target_dir = joinpath(@__DIR__, "..", "docs", "src", "examples", root, name)
 
     return if !iscached(root, name)
+        reset_plot_defaults()
         Literate.markdown(
             source_file, target_dir; execute = true, name = "index",
             preprocess = str -> attach_notebook_badge(root, name, inline_models(str; hide = true)),

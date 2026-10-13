@@ -22,11 +22,18 @@ example_groups = [
     "Dynamics & finite temperature" => "dynamics",
     "Statistical mechanics" => "statmech",
 ]
+# the sidebar follows the reading order of the gallery index; examples it does not link come last
+example_order = [
+    m.captures[1] for m in eachmatch(
+            r"\]\(([^)\s]+/index\.md)\)", read(joinpath(example_dir, "index.md"), String)
+        )
+]
 example_pages = map(example_groups) do (title, group)
     pages = map(readdir(joinpath(example_dir, group))) do dir
-        return joinpath("examples", group, dir, "index.md")
+        return joinpath(group, dir, "index.md")
     end
-    return title => pages
+    sort!(pages; by = page -> something(findfirst(==(page), example_order), typemax(Int)))
+    return title => map(page -> joinpath("examples", page), pages)
 end
 
 # contributing guide: `CONTRIBUTING.md` in the repository root is canonical, since that is the

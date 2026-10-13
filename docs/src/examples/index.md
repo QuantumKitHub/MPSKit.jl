@@ -17,7 +17,7 @@ using .ExampleModels
 
 The examples are grouped by the kind of computation they demonstrate rather than by the physical system.
 Every summary states the complexity of the example, so you can begin with an introductory one and move on to those that combine symmetries, infinite systems, and the less common algorithms.
-The sidebar lists the same pages alphabetically.
+The sidebar lists the same pages in the same order.
 
 ## Ground states
 
@@ -100,5 +100,5 @@ A technical, comparison-heavy example built around imaginary-time evolution of a
 ![](statmech/hard-hexagon/figure-1.png)
 
 Extracts the central charge of the hard hexagon lattice gas by finding the leading boundary MPS of its transfer matrix with VUMPS, using Fibonacci-anyon virtual spaces, then fitting the CFT-predicted scaling relation between entanglement entropy and correlation length as the bond dimension is increased.
-The only classical statistical-mechanics example in the gallery, and the only one demonstrating non-abelian anyonic symmetries in MPSKit.
+The only classical statistical-mechanics example in the gallery, and the only one demonstrating anyonic symmetries in MPSKit.
 **Complexity: advanced.**
