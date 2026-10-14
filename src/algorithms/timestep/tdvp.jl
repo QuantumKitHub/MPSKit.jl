@@ -205,14 +205,14 @@ end
 
 # Single-site integrators visit every site, finishing a half-sweep by evolving only the center
 # tensor at its far end.
-_sweep_ranges(::TDVP, ψ) = (1:length(ψ), length(ψ):-1:1)
+sweep_ranges(::TDVP, ψ) = (1:length(ψ), length(ψ):-1:1)
 
 # bond cut by the update at `site`, or `nothing` at the far end of a single-site half-sweep
 _swept_bond(alg, site, ψ, ::Val{:right}) = site < length(ψ) ? site : nothing
 _swept_bond(alg, site, ψ, ::Val{:left}) = site > 1 ? site - 1 : nothing
 
 function sweep!(alg, state::TimeStepState, direction)
-    fwd, bwd = _sweep_ranges(alg, state.mps)
+    fwd, bwd = sweep_ranges(alg, state.mps)
     sites = direction === Val(:right) ? fwd : bwd
     ψ = state.mps
     @timeit state.timeroutput "half-sweep" for site in sites
@@ -310,7 +310,7 @@ Used as the `algorithm` argument of [`timestep`](@ref), [`timestep!`](@ref) and 
 end
 
 # two-site TDVP visits every bond, and each update cuts the bond it acts on
-_sweep_ranges(::TDVP2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 1):-1:1)
+sweep_ranges(::TDVP2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 1):-1:1)
 _swept_bond(::TDVP2, pos, ψ, ::Val{:right}) = pos
 _swept_bond(::TDVP2, pos, ψ, ::Val{:left}) = pos
 

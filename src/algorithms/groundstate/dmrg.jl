@@ -243,20 +243,11 @@ function local_update!(
     return ψ, ϵ_local, ϵ_trunc, decay_rate
 end
 
-# Per-algorithm sweep geometry: single-site DMRG updates all `length(ψ)` sites (endpoints once,
-# interior twice), whereas two-site DMRG2 updates the `length(ψ) - 1` bonds. `_num_updates`
-# gives the number of per-update bookkeeping slots and `_sweep_ranges` the forward/backward
-# index ranges; everything else in the sweep is shared.
-_num_updates(::DMRG, ψ) = length(ψ)
-_num_updates(::DMRG2, ψ) = length(ψ) - 1
+sweep_sites(::DMRG) = 1
+sweep_sites(::DMRG2) = 2
 
-_sweep_ranges(::DMRG, ψ) = (1:(length(ψ) - 1), length(ψ):-1:2)
-_sweep_ranges(::DMRG2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 2):-1:1)
-
-# per-bond truncation errors of the last cut from the per-update slots: single-site slot `pos`
-# holds the backward cut of bond `pos - 1`, which is the last one made there
-_bond_truncation_errors(::DMRG, ϵ_truncs) = ϵ_truncs[2:end]
-_bond_truncation_errors(::DMRG2, ϵ_truncs) = copy(ϵ_truncs)
+# single-site slot `pos` holds the backward cut of bond `pos - 1`, which is the last one made there
+bond_truncation_errors(alg, ϵ_truncs) = sweep_sites(alg) == 1 ? ϵ_truncs[2:end] : copy(ϵ_truncs)
 
 inner_alg_gauge(alg::Union{DMRG, DMRG2}) = alg_gauge(alg.alg_gauge)
 
@@ -310,7 +301,7 @@ end
 
 function DMRGState(ψ, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput)
     Tr = real(scalartype(ψ))
-    n = _num_updates(alg, ψ)
+    n = num_updates(alg, ψ)
     local_errors = ones(Tr, n)
     return DMRGState(
         ψ, H, envs, 0, maximum(local_errors), local_errors, zeros(Tr, n),
@@ -319,7 +310,7 @@ function DMRGState(ψ, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput)
 end
 
 function sweep!(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGState, direction, iter)
-    fwd, bwd = _sweep_ranges(it.alg, state.mps)
+    fwd, bwd = sweep_ranges(it.alg, state.mps)
     sites = direction === Val(:right) ? fwd : bwd
     ψ, ϵ = state.mps, state.ϵ
     for pos in sites
@@ -332,10 +323,7 @@ function sweep!(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGState, dir
         # The next local solver uses the errors accumulated so far in this sweep.
         ϵ = maximum(state.local_errors)
     end
-    return DMRGState(
-        ψ, state.operator, state.envs, state.iter, ϵ, state.local_errors,
-        state.truncation_errors, state.decay_rates, state.timeroutput, state.allocator,
-    )
+    return setproperties(state; mps = ψ, ϵ)
 end
 
 function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGState)
@@ -348,10 +336,7 @@ function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGStat
     ψ, envs = @timeit timeroutput "finalize" it.finalize(
         iter, state.mps, state.operator, state.envs
     )::Tuple{typeof(state.mps), typeof(state.envs)}
-    it.state = DMRGState(
-        ψ, state.operator, envs, iter, state.ϵ, state.local_errors,
-        state.truncation_errors, state.decay_rates, timeroutput, state.allocator,
-    )
+    it.state = setproperties(state; mps = ψ, envs, iter)
     return (ψ, envs, state.ϵ), it.state
 end
 
@@ -384,7 +369,7 @@ function find_groundstate_sweep!(
     state = it.state
     info = AlgorithmInfo(;
         converged = sweep_converged(alg, state), galerkin = state.ϵ,
-        truncation_errors = _bond_truncation_errors(alg, state.truncation_errors),
+        truncation_errors = bond_truncation_errors(alg, state.truncation_errors),
         numiter = state.iter,
     )
     return state.mps, state.envs, info

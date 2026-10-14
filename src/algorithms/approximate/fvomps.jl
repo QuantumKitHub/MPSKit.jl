@@ -38,20 +38,18 @@ end
 
 function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::ApproximateState)
     iter = state.iter + 1
-    state = ApproximateState(
-        state.mps, state.operator, state.envs, state.iter, 0.0, state.allocator
-    )
+    state = setproperties(state; ϵ = 0.0)
     state = sweep!(it, state, Val(:right), iter)
     state = sweep!(it, state, Val(:left), iter)
     ψ, envs = it.finalize(
         iter, state.mps, state.operator, state.envs
     )::Tuple{typeof(state.mps), typeof(state.envs)}
-    it.state = ApproximateState(ψ, state.operator, envs, iter, state.ϵ, state.allocator)
+    it.state = setproperties(state; mps = ψ, envs, iter)
     return (ψ, envs, state.ϵ), it.state
 end
 
 function sweep!(it::IterativeSolver{<:DMRG2}, state::ApproximateState, direction, iter)
-    fwd, bwd = _sweep_ranges(it.alg, state.mps)
+    fwd, bwd = sweep_ranges(it.alg, state.mps)
     sites = direction === Val(:right) ? fwd : bwd
     ψ, Oϕ, envs, ϵ = state.mps, state.operator, state.envs, state.ϵ
     for pos in sites
@@ -64,11 +62,11 @@ function sweep!(it::IterativeSolver{<:DMRG2}, state::ApproximateState, direction
         ψ.AC[pos] = (al, complex(c))
         ψ.AC[pos + 1] = (complex(c), _transpose_front(ar))
     end
-    return ApproximateState(ψ, Oϕ, envs, state.iter, ϵ, state.allocator)
+    return setproperties(state; mps = ψ, ϵ)
 end
 
 function sweep!(it::IterativeSolver{<:DMRG}, state::ApproximateState, direction, iter)
-    fwd, bwd = _sweep_ranges(it.alg, state.mps)
+    fwd, bwd = sweep_ranges(it.alg, state.mps)
     sites = direction === Val(:right) ? fwd : bwd
     ψ, Oϕ, envs, ϵ = state.mps, state.operator, state.envs, state.ϵ
     for pos in sites
@@ -78,5 +76,5 @@ function sweep!(it::IterativeSolver{<:DMRG}, state::ApproximateState, direction,
 
         ψ.AC[pos] = AC′
     end
-    return ApproximateState(ψ, Oϕ, envs, state.iter, ϵ, state.allocator)
+    return setproperties(state; mps = ψ, ϵ)
 end

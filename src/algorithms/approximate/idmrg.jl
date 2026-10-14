@@ -46,10 +46,7 @@ function Base.iterate(it::IterativeSolver{<:Union{IDMRG, IDMRG2}}, state::IDMRGS
     state = sweep!(it, state, Val(:right), iter)
     state = sweep!(it, state, Val(:left), iter)
     ϵ = bond_change(C_current, state.mps.C[:, 0])
-    it.state = IDMRGState(
-        state.mps, state.operator, state.envs, iter, ϵ, state.truncation_errors, state.energy,
-        state.timeroutput, state.allocator,
-    )
+    it.state = setproperties(state; iter, ϵ)
     return (it.state.mps, it.state.envs, it.state.ϵ), it.state
 end
 

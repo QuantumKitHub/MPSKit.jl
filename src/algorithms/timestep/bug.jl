@@ -168,7 +168,7 @@ function local_update!(site, direction::Val, ψ, alg::BUG, state::TimeStepState)
 end
 
 # like single-site TDVP, BUG visits every site and only evolves the center at the far end
-_sweep_ranges(::BUG, ψ) = (1:length(ψ), length(ψ):-1:1)
+sweep_ranges(::BUG, ψ) = (1:length(ψ), length(ψ):-1:1)
 
 _promotes_to_complex(ψ, H, dt, ::BUG; imaginary_evolution) =
     scalartype(ψ) <: Real && !(imaginary_evolution && isreal(dt) && scalartype(H) <: Real)
