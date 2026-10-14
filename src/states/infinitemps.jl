@@ -239,7 +239,7 @@ function InfiniteMPS(C₀::MPSBondTensor, AR::AbstractVector{<:GenericMPSTensor}
     # initialize tensor storage
     AC = similar.(AR)
     AL = similar.(AR)
-    T = TensorOperations.promote_contract(eltype(AR), eltype(C₀))
+    T = TensorOperations.promote_contract(scalartype(AR), scalartype(C₀))
     TC = TensorOperations.tensoradd_type(T, C₀, ((1,), (2,)), false)
     C = similar(AR, TC)
     ψ = InfiniteMPS{eltype(AL), TC}(AL, AR, C, AC)

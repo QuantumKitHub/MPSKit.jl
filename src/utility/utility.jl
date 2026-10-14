@@ -41,6 +41,30 @@ _firstspace(t::AbstractTensorMap) = space(t, 1)
 _lastspace(t::AbstractTensorMap) = space(t, numind(t))
 
 """
+    bond_change(C_old, C_new)
+
+Norm of the change of a bond tensor. If the bond space changed, both tensors are compared on
+their common subspace, i.e. after restricting them with `isometry(V, infimum(V_old, V_new))`.
+For vectors of bond tensors, such as a column of a multiline MPS, the changes are summed.
+"""
+function bond_change(C_old::AbstractTensorMap, C_new::AbstractTensorMap)
+    V_old, V_new = _firstspace(C_old), _firstspace(C_new)
+    V_old == V_new && return norm(C_new - C_old)
+    # the isometry onto a subspace selects the leading rows and columns of every block
+    V = infimum(V_old, V_new)
+    ϵ² = zero(real(scalartype(C_new)))
+    for c in sectors(V)
+        d = dim(V, c)
+        b_old = view(block(C_old, c), 1:d, 1:d)
+        b_new = view(block(C_new, c), 1:d, 1:d)
+        ϵ² += dim(c) * norm(b_new - b_old)^2
+    end
+    return sqrt(ϵ²)
+end
+bond_change(C_old::AbstractVector, C_new::AbstractVector) =
+    sum(splat(bond_change), zip(C_old, C_new))
+
+"""
     similar_scalartype(T::Type{<:AbstractTensorMap}, S::Type{<:Number})
 
 Tensor map type with the same space type and rank as `T`, but with scalar type `S`.

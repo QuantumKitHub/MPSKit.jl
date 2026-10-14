@@ -19,3 +19,6 @@ function Base.getproperty(it::IterativeSolver{A, B}, name::Symbol) where {A, B}
 end
 
 Base.iterate(it::IterativeSolver) = iterate(it, it.state)
+
+# iteration logs are named after their algorithm unless the algorithm specifies otherwise
+IterativeLoggers.IterLog(alg::Algorithm) = IterLog(string(nameof(typeof(alg))))

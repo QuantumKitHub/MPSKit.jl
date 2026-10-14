@@ -24,6 +24,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `ClusterExpansion` time-evolution algorithm for `make_time_mpo`, constructing evolution MPOs
   for finite and infinite nearest-neighbor Hamiltonians through a nonperturbative cluster expansion
   that matches exact exponentials on clusters of up to `N` sites. ([#252](https://github.com/QuantumKitHub/MPSKit.jl/pull/252))
+- In-place `timestep!` for an `InfiniteMPS` with `TDVP`, which also enables `time_evolve!` on
+  infinite states. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
 - `changebonds(::InfiniteMPOHamiltonian, ::SvdCut)` compresses infinite Hamiltonians with the
   almost-Schmidt decomposition of [Parker et al.](https://arxiv.org/abs/1909.06341), and
   `left_canonicalize!`/`right_canonicalize!` bring an `InfiniteMPOHamiltonian` into canonical form. ([#539](https://github.com/QuantumKitHub/MPSKit.jl/pull/539))
@@ -33,6 +35,17 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `left_canonicalize!`/`right_canonicalize!(::FiniteMPOHamiltonian)` now sweep over the whole chain
   instead of a single site, and return the gauge transformations alongside the operator, matching
   the infinite versions. ([#539](https://github.com/QuantumKitHub/MPSKit.jl/pull/539))
+- Internal: the finite `DMRG`/`DMRG2` ground-state search and approximation, `DynamicalDMRG`,
+  multiline `IDMRG`/`IDMRG2` approximation and `leading_boundary`, and `time_evolve` now run as
+  iterators whose iterations are a forward and a backward half-sweep (or a single time step),
+  sharing one structure across solvers. Finite `TDVP`, `TDVP2` and `BUG` steps share a single sweep
+  over per-site local updates, and infinite `TDVP` steps are split into local update, gauge and
+  environment steps on the same step state. Results and logging are unchanged. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
+- `time_evolve` with finite `TDVP`, `TDVP2` or `BUG`, or infinite `TDVP`, copies (or promotes to
+  complex) the initial state once and then takes every step in place, reusing one step state and
+  its allocator across steps, rather than copying the state at every step. A `finalize` callback
+  that keeps the state of an earlier step therefore sees it updated by later steps, as with
+  `time_evolve!`. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
 
 ### Deprecated
 
@@ -44,6 +57,13 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - `show` methods for finite MPS/MPOs no longer check unit space condition through `oneunit`, which is not defined for multifusion spaces. ([#538](https://github.com/QuantumKitHub/MPSKit.jl/pull/538))
 - The canonical forms of `MPOHamiltonian`s, and therefore `SvdCut` compression, are now correct when
   interactions contain identity components or redundant channels. ([#539](https://github.com/QuantumKitHub/MPSKit.jl/pull/539))
+- `InfiniteMPS(C, AR)` no longer throws a `MethodError`, which also fixes infinite `TDVP` with
+  `leftorthflag = false`. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
+- Real-time infinite `TDVP` from a real `InfiniteMPS` with a real Hamiltonian no longer fails with
+  an `InexactError`: the environments are now rebuilt for the complex state, as for finite MPS.
+  ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
+- `TDVP`, `TDVP2` and `BUG` promote a real state to complex for imaginary-time evolution with a
+  complex time step, rather than failing. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
 
 ### Performance
 

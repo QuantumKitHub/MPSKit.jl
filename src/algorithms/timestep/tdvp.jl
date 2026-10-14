@@ -72,7 +72,56 @@ function TDVP(;
     )
 end
 
-function timestep(
+# Internal state of a single time step `t → t + dt`
+struct TimeStepState{S, O, E, T, D, V, SC, A, TO}
+    mps::S
+    operator::O
+    envs::E
+    t::T
+    dt::D
+    truncation_errors::V
+    scheduler::SC
+    allocator::A
+    timeroutput::TO
+    imaginary_evolution::Bool
+    normalize::Bool
+end
+
+# a single allocator serves all local updates of a step, and it can be carried over to later
+# steps together with the scheduler that selected it
+function TimeStepState(
+        ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput = NoTimerOutput(),
+        scheduler = _step_scheduler(ψ), allocator = default_allocator(ψ, scheduler)
+    )
+    truncation_errors = _truncation_errors(ψ)
+    return TimeStepState(
+        ψ, H, envs, t, dt, truncation_errors, scheduler, allocator, timeroutput,
+        imaginary_evolution, normalize,
+    )
+end
+
+# a finite sweep is serial, whereas an infinite step updates all sites concurrently
+_step_scheduler(::AbstractFiniteMPS) = SerialScheduler()
+_step_scheduler(::InfiniteMPS) = Defaults.scheduler[]
+
+# per-bond truncation errors of a finite sweep; an infinite step never truncates
+_truncation_errors(ψ::AbstractFiniteMPS) = zeros(real(scalartype(ψ)), length(ψ) - 1)
+_truncation_errors(ψ::InfiniteMPS) = nothing
+
+# infinite one-site TDVP runs at fixed bond dimension and never truncates, so it doesn't report
+# `truncation_errors` (rather than report zeros that would look like a measurement)
+_step_info(state::TimeStepState) = isnothing(state.truncation_errors) ? AlgorithmInfo() :
+    AlgorithmInfo(; truncation_errors = state.truncation_errors)
+
+function _with_mps(state::TimeStepState, ψ; t = state.t)
+    return TimeStepState(
+        ψ, state.operator, state.envs, t, state.dt, state.truncation_errors,
+        state.scheduler, state.allocator, state.timeroutput, state.imaginary_evolution,
+        state.normalize,
+    )
+end
+
+function timestep!(
         ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP,
         envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
         leftorthflag = true, imaginary_evolution::Bool = false, normalize::Bool = false
@@ -80,26 +129,38 @@ function timestep(
     # `normalize` is accepted for signature uniformity with the finite integrators, but an
     # `InfiniteMPS` is always normalized to norm-1-per-site by the gauge/reconstruction below
     # (a structural gauge requirement, not information erasure), so the flag has no effect here.
-    # convert state to complex if necessary
-    if scalartype(ψ) <: Real && (!imaginary_evolution || !isreal(dt))
-        return timestep(complex(ψ), H, t, dt, alg, envs; leftorthflag, imaginary_evolution, normalize)
-    end
-
     # the scheduler is read here rather than below, so that the allocator it selects is inferable
-    return _timestep_infinite(
+    return _timestep_infinite!(
         ψ, H, t, dt, alg, envs, Defaults.scheduler[]; leftorthflag, imaginary_evolution
     )
 end
 
-function _timestep_infinite(
+function _timestep_infinite!(
         ψ::InfiniteMPS, H, t::Number, dt::Number, alg::TDVP, envs, scheduler::Scheduler;
         leftorthflag, imaginary_evolution
     )
+    state = TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize = false, scheduler)
+    state = _timestep!(alg, state; leftorthflag)
+    # the gauge-fixing residual is controlled by `tolgauge`, not reported here
+    return state.mps, state.envs, _step_info(state)
+end
+
+# an infinite step evolves every center tensor at once, then restores the uniform gauge and
+# recomputes the environments
+function _timestep!(alg::TDVP, state::TimeStepState{<:InfiniteMPS}; leftorthflag = true)
+    ACs, Cs = localupdate_step!(alg, state)
+    ψ = gauge_step!(alg, state, ACs, Cs; leftorthflag)
+    recalculate!(state.envs, ψ, state.operator)
+    return _with_mps(state, ψ; t = state.t + state.dt)
+end
+
+function localupdate_step!(alg::TDVP, state::TimeStepState)
+    (; mps, operator, envs, t, dt, scheduler, allocator, imaginary_evolution) = state
+    ψ, H = mps, operator
     temp_ACs = similar(ψ.AC)
     temp_Cs = similar(ψ.C)
 
     # both sweeps together are a single unit of concurrent work, and share one allocator
-    allocator = default_allocator(ψ, scheduler)
     ac_sweep!() = tforeach(1:length(ψ); scheduler) do loc
         Hac = AC_hamiltonian(loc, ψ, H, ψ, envs; alg.backend, allocator)
         temp_ACs[loc] = integrate(Hac, ψ.AC[loc], t, dt, alg.integrator; imaginary_evolution)
@@ -121,101 +182,90 @@ function _timestep_infinite(
             Threads.@spawn c_sweep!()
         end
     end
+    return temp_ACs, temp_Cs
+end
 
+# the evolved center tensors are split into the new left (or right) isometries, from which the
+# uniform gauge is restored in place
+function gauge_step!(alg::TDVP, state::TimeStepState, ACs, Cs; leftorthflag)
+    ψ = state.mps
     if leftorthflag
-        regauge!.(temp_ACs, temp_Cs)
-        ψ′ = InfiniteMPS(temp_ACs, ψ.C[end]; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
+        regauge!.(ACs, Cs)
+        copyto!(ψ.AL, ACs)
+        gaugefix!(ψ, ψ.AL, ψ.C[end]; order = :R, tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
     else
-        circshift!(temp_Cs, 1)
-        regauge!.(temp_Cs, temp_ACs)
-        ψ′ = InfiniteMPS(ψ.C[0], temp_ACs; tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
+        circshift!(Cs, 1)
+        regauge!.(Cs, ACs)
+        copyto!(ψ.AR, ACs)
+        gaugefix!(ψ, ψ.AR, ψ.C[0]; order = :L, tol = alg.tolgauge, maxiter = alg.gaugemaxiter)
     end
-
-    recalculate!(envs, ψ′, H)
-    # infinite one-site TDVP runs at fixed bond dimension and never truncates, so it doesn't
-    # report `truncation_errors` (rather than report zeros that would look like a measurement)
-    # the gauge-fixing residual is controlled by `tolgauge`, not reported here
-    return ψ′, envs, AlgorithmInfo()
+    mul!.(ψ.AC, ψ.AL, ψ.C)
+    return ψ
 end
 
-function timestep!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP,
-        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        imaginary_evolution::Bool = false, normalize::Bool = false
-    )
-    # the sweep is serial, so a single allocator serves all local updates
-    allocator = default_allocator(ψ, SerialScheduler())
-    return _timestep_finite!(
-        ψ, H, t, dt, alg, envs, allocator; imaginary_evolution, normalize
-    )
+# Single-site integrators visit every site, finishing a half-sweep by evolving only the center
+# tensor at its far end.
+_sweep_ranges(::TDVP, ψ) = (1:length(ψ), length(ψ):-1:1)
+
+# bond cut by the update at `site`, or `nothing` at the far end of a single-site half-sweep
+_swept_bond(alg, site, ψ, ::Val{:right}) = site < length(ψ) ? site : nothing
+_swept_bond(alg, site, ψ, ::Val{:left}) = site > 1 ? site - 1 : nothing
+
+function sweep!(alg, state::TimeStepState, direction)
+    fwd, bwd = _sweep_ranges(alg, state.mps)
+    sites = direction === Val(:right) ? fwd : bwd
+    ψ = state.mps
+    @timeit state.timeroutput "half-sweep" for site in sites
+        ψ, ϵ = local_update!(site, direction, ψ, alg, state)
+        bond = _swept_bond(alg, site, ψ, direction)
+        isnothing(bond) || (state.truncation_errors[bond] = ϵ)
+    end
+    # each half-sweep evolves the state over `dt / 2`
+    return _with_mps(state, ψ; t = state.t + state.dt / 2)
 end
 
-function _timestep_finite!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP, envs, allocator;
-        imaginary_evolution::Bool, normalize::Bool
-    )
-    ϵ_truncs = zeros(real(scalartype(ψ)), length(ψ) - 1)
+# a step is a left→right half-sweep `t → t + dt / 2` followed by a right→left half-sweep
+# `t + dt / 2 → t + dt`
+function _timestep!(alg, state::TimeStepState{<:AbstractFiniteMPS})
+    state = sweep!(alg, state, Val(:right))
+    return sweep!(alg, state, Val(:left))
+end
 
-    # sweep left to right
-    for i in 1:(length(ψ) - 1)
-        # 1. optionally expand the bond ahead of the local update (CBE)
-        isnothing(alg.alg_expand) ||
-            changebond!(i, Val(:right), ψ, H, alg.alg_expand, envs; normalize, allocator)
+function local_update!(site, direction::Val, ψ, alg::TDVP, state::TimeStepState)
+    (; operator, envs, t, dt, allocator, imaginary_evolution, normalize) = state
+    H = operator
+    t_AC, t_C = t, t + dt / 2
 
-        # 2. evolve the (possibly expanded) center tensor forward
-        Hac = AC_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
-        AC = integrate(Hac, ψ.AC[i], t, dt / 2, alg.integrator; imaginary_evolution)
-
-        # 3. gauge: split AC -> AL[i], C[i] (QR center-move, or truncated SVD cutting the
-        #    enlarged bond back down) and move the center to i+1. By default the norm is
-        #    preserved; `normalize` renormalizes.
-        _, ϵ_truncs[i] = left_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
-
-        # 4. evolve the bond tensor backward
-        Hc = C_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
-        ψ.C[i] = integrate(
-            Hc, ψ.C[i], t + dt / 2, -dt / 2, alg.integrator;
-            imaginary_evolution
-        )
+    # at the far end of the sweep there is no bond ahead: only evolve the center tensor
+    if site == _sweep_end(ψ, direction)
+        Hac = AC_hamiltonian(site, ψ, H, ψ, envs; alg.backend, allocator)
+        ψ.AC[site] = integrate(Hac, ψ.AC[site], t_AC, dt / 2, alg.integrator; imaginary_evolution)
+        return ψ, zero(real(scalartype(ψ)))
     end
 
-    # edge case
-    Hac = AC_hamiltonian(length(ψ), ψ, H, ψ, envs; alg.backend, allocator)
-    ψ.AC[end] = integrate(Hac, ψ.AC[end], t, dt / 2, alg.integrator; imaginary_evolution)
+    # 1. optionally expand the bond ahead of the local update (CBE)
+    isnothing(alg.alg_expand) ||
+        changebond!(site, direction, ψ, H, alg.alg_expand, envs; normalize, allocator)
 
-    # sweep right to left
-    for i in length(ψ):-1:2
-        # 1. optionally expand the bond ahead of the local update (CBE)
-        isnothing(alg.alg_expand) ||
-            changebond!(i, Val(:left), ψ, H, alg.alg_expand, envs; normalize, allocator)
+    # 2. evolve the (possibly expanded) center tensor forward
+    Hac = AC_hamiltonian(site, ψ, H, ψ, envs; alg.backend, allocator)
+    AC = integrate(Hac, ψ.AC[site], t_AC, dt / 2, alg.integrator; imaginary_evolution)
 
-        # 2. evolve the (possibly expanded) center tensor forward
-        Hac = AC_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
-        AC = integrate(
-            Hac, ψ.AC[i], t + dt / 2, dt / 2, alg.integrator;
-            imaginary_evolution
-        )
-
-        # 3. gauge: split AC -> C[i-1], AR[i] and move the center to i-1 (norm preserved by
-        #    default; `normalize` renormalizes)
-        _, ϵ_truncs[i - 1] = right_gauge!(ψ, i, AC, alg.alg_gauge; normalize)
-
-        # 4. evolve the bond tensor backward
-        Hc = C_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
-        ψ.C[i - 1] = integrate(
-            Hc, ψ.C[i - 1], t + dt, -dt / 2, alg.integrator;
-            imaginary_evolution
-        )
+    # 3. gauge: split AC onto the bond ahead and move the center.
+    #    By default the norm is preserved; `normalize` renormalizes.
+    if direction === Val(:right)
+        _, ϵ = left_gauge!(ψ, site, AC, alg.alg_gauge; normalize)
+        bond = site
+    else
+        _, ϵ = right_gauge!(ψ, site, AC, alg.alg_gauge; normalize)
+        bond = site - 1
     end
 
-    # edge case
-    Hac = AC_hamiltonian(1, ψ, H, ψ, envs; alg.backend, allocator)
-    ψ.AC[1] = integrate(
-        Hac, ψ.AC[1], t + dt / 2, dt / 2, alg.integrator;
-        imaginary_evolution
-    )
+    # 4. evolve the bond tensor backward
+    Hc = C_hamiltonian(bond, ψ, H, ψ, envs; alg.backend, allocator)
+    ψ.C[bond] = integrate(Hc, ψ.C[bond], t_C, -dt / 2, alg.integrator; imaginary_evolution)
 
-    return ψ, envs, AlgorithmInfo(; truncation_errors = ϵ_truncs)
+    return ψ, ϵ
 end
 
 """
@@ -259,81 +309,39 @@ Used as the `algorithm` argument of [`timestep`](@ref), [`timestep!`](@ref) and 
     backend::B = Defaults.backend()
 end
 
-function timestep!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2,
-        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
-        imaginary_evolution::Bool = false, normalize::Bool = false
-    )
-    # the sweep is serial, so a single allocator serves all local updates
-    allocator = default_allocator(ψ, SerialScheduler())
-    return _timestep2_finite!(
-        ψ, H, t, dt, alg, envs, allocator; imaginary_evolution, normalize
-    )
-end
+# two-site TDVP visits every bond, and each update cuts the bond it acts on
+_sweep_ranges(::TDVP2, ψ) = (1:(length(ψ) - 1), (length(ψ) - 1):-1:1)
+_swept_bond(::TDVP2, pos, ψ, ::Val{:right}) = pos
+_swept_bond(::TDVP2, pos, ψ, ::Val{:left}) = pos
 
-function _timestep2_finite!(
-        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg::TDVP2, envs, allocator;
-        imaginary_evolution::Bool, normalize::Bool
-    )
-    # the two-site center always has to be split back up, so the gauge is always a truncated SVD
-    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trunc)
+function local_update!(pos, direction::Val, ψ, alg::TDVP2, state::TimeStepState)
+    (; operator, envs, t, dt, allocator, imaginary_evolution, normalize) = state
+    H = operator
+    t_AC2, t_AC = t, t + dt / 2
 
-    ϵ_truncs = zeros(real(scalartype(ψ)), length(ψ) - 1)
-
-    # sweep left to right
-    for i in 1:(length(ψ) - 1)
-        ac2 = _transpose_front(ψ.AC[i]) * _transpose_tail(ψ.AR[i + 1])
-        Hac2 = AC2_hamiltonian(i, ψ, H, ψ, envs; alg.backend, allocator)
-        ac2′ = integrate(Hac2, ac2, t, dt / 2, alg.integrator; imaginary_evolution)
-
-        # the norm of the discarded singular values is the truncation error
-        _, ϵ_truncs[i] = gauge2!(ψ, i, Val(:right), ac2′, alg_gauge; normalize)
-
-        if i != (length(ψ) - 1)
-            Hac = AC_hamiltonian(i + 1, ψ, H, ψ, envs; alg.backend, allocator)
-            ψ.AC[i + 1] = integrate(
-                Hac, ψ.AC[i + 1], t + dt / 2, -dt / 2, alg.integrator;
-                imaginary_evolution
-            )
-        end
-    end
-
-    # sweep right to left
-    for i in length(ψ):-1:2
-        ac2 = _transpose_front(ψ.AL[i - 1]) * _transpose_tail(ψ.AC[i])
-        Hac2 = AC2_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
-        ac2′ = integrate(Hac2, ac2, t + dt / 2, dt / 2, alg.integrator; imaginary_evolution)
-
-        _, ϵ_truncs[i - 1] = gauge2!(ψ, i - 1, Val(:left), ac2′, alg_gauge; normalize)
-
-        if i != 2
-            Hac = AC_hamiltonian(i - 1, ψ, H, ψ, envs; alg.backend, allocator)
-            ψ.AC[i - 1] = integrate(
-                Hac, ψ.AC[i - 1], t + dt, -dt / 2, alg.integrator;
-                imaginary_evolution
-            )
-        end
-    end
-
-    return ψ, envs, AlgorithmInfo(; truncation_errors = ϵ_truncs)
-end
-
-# copying version
-function timestep(
-        ψ::AbstractFiniteMPS, H, time::Number, timestep::Number,
-        alg::Union{TDVP, TDVP2}, envs::AbstractMPSEnvironments...;
-        imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
-    )
-    isreal = (scalartype(ψ) <: Real && !imaginary_evolution)
-    ψ′ = isreal ? complex(ψ) : copy(ψ)
-    if length(envs) != 0 && isreal
-        @warn "Currently cannot reuse real environments for complex evolution"
-        envs′ = environments(ψ′, H, ψ′)
-    elseif length(envs) == 1
-        envs′ = only(envs)
+    # 1. evolve the two-site center tensor at `(pos, pos + 1)` forward
+    ac2 = if direction === Val(:right)
+        _transpose_front(ψ.AC[pos]) * _transpose_tail(ψ.AR[pos + 1])
     else
-        @assert length(envs) == 0 "Invalid signature"
-        envs′ = environments(ψ′, H, ψ′)
+        _transpose_front(ψ.AL[pos]) * _transpose_tail(ψ.AC[pos + 1])
     end
-    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, normalize, kwargs...)
+    Hac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs; alg.backend, allocator)
+    ac2′ = integrate(Hac2, ac2, t_AC2, dt / 2, alg.integrator; imaginary_evolution)
+
+    # 2. gauge: the two-site center always has to be split back up, so this is always a
+    #    truncated SVD, and the norm of the discarded singular values is the truncation error
+    alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg.alg_svd, alg.trunc)
+    _, ϵ = gauge2!(ψ, pos, direction, ac2′, alg_gauge; normalize)
+
+    # 3. evolve the new single-site center backward, except at the far end of the sweep
+    if direction === Val(:right) ? pos != length(ψ) - 1 : pos != 1
+        site = direction === Val(:right) ? pos + 1 : pos
+        Hac = AC_hamiltonian(site, ψ, H, ψ, envs; alg.backend, allocator)
+        ψ.AC[site] = integrate(Hac, ψ.AC[site], t_AC, -dt / 2, alg.integrator; imaginary_evolution)
+    end
+
+    return ψ, ϵ
 end
+
+_promotes_to_complex(ψ, H, dt, ::Union{TDVP, TDVP2}; imaginary_evolution) =
+    scalartype(ψ) <: Real && !(imaginary_evolution && isreal(dt))

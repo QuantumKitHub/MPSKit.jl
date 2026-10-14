@@ -36,43 +36,94 @@ evolution at `verbosity ≥ 2`.
 """
 function time_evolve end, function time_evolve! end
 
+# Internal state of `time_evolve`
+struct TimeEvolveState{S, O, E, T, F, K, P}
+    mps::S
+    operator::O
+    envs::E
+    iter::Int
+    t_span::T
+    stepper::F
+    kwargs::K
+    step::P
+end
+
+# one iteration is a single time step followed by `finalize`, which receives the step's start time
+function Base.iterate(it::IterativeSolver{<:Any, <:TimeEvolveState}, state::TimeEvolveState)
+    state.iter >= length(state.t_span) - 1 && return nothing
+    iter = state.iter + 1
+    t = state.t_span[iter]
+    dt = state.t_span[iter + 1] - t
+
+    ψ, envs, info, step = _evolve_step(it.alg, state, t, dt)
+    ψ, envs = it.finalize(t, ψ, state.operator, envs)::Tuple{typeof(ψ), typeof(envs)}
+
+    it.state = TimeEvolveState(
+        ψ, state.operator, envs, iter, state.t_span, state.stepper, state.kwargs, step
+    )
+    return (ψ, envs, info), it.state
+end
+
+# only the first step copies the state, if `stepper` is `timestep`
+function _evolve_step(alg, state::TimeEvolveState, t, dt)
+    (; imaginary_evolution, normalize) = state.kwargs
+    H = state.operator
+    step = if isnothing(state.step)
+        ψ, envs = state.stepper === timestep ?
+            _timestep_copy(
+                state.mps, H, (state.envs,),
+                _promotes_to_complex(state.mps, H, dt, alg; imaginary_evolution)
+            ) : (state.mps, state.envs)
+        TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize)
+    else
+        TimeStepState(
+            state.mps, H, state.envs, t, dt; imaginary_evolution, normalize,
+            state.step.scheduler, state.step.allocator,
+        )
+    end
+    step = _timestep!(alg, step)
+    return step.mps, step.envs, _step_info(step), step
+end
+
 for (timestep, time_evolve) in zip((:timestep, :timestep!), (:time_evolve, :time_evolve!))
     @eval function $time_evolve(
             ψ, H, t_span::AbstractVector{<:Number}, alg,
             envs = environments(ψ, H, ψ);
             verbosity::Int = 0, imaginary_evolution::Bool = false, normalize::Bool = false
         )
-        log = IterLog(string(nameof(typeof(alg))))
-        truncation_errors = []
-        ϵ_max = 0.0
-        with_verbosity(; verbosity) do
-            @log_initialization loginit!(log, 0.0, first(t_span))
-            for iter in 1:(length(t_span) - 1)
-                t = t_span[iter]
-                dt = t_span[iter + 1] - t
-
-                ψ, envs, info_step = $timestep(
-                    ψ, H, t, dt, alg, envs; imaginary_evolution, normalize
-                )
-                ψ, envs = alg.finalize(t, ψ, H, envs)::Tuple{typeof(ψ), typeof(envs)}
-
-                # the log shows the largest per-bond error, or zero for a non-truncating algorithm
-                ϵ_step = 0.0
-                if haskey(info_step, :truncation_errors)
-                    push!(truncation_errors, info_step.truncation_errors)
-                    ϵ_step = Float64(maximum(info_step.truncation_errors; init = 0.0))
-                end
-                ϵ_max = max(ϵ_max, ϵ_step)
-                @log_iteration logiter!(log, iter, ϵ_step, t)
-            end
-            @log_convergence logfinish!(log, length(t_span), ϵ_max, t_span[end])
-        end
-        info = AlgorithmInfo(;
-            numiter = length(t_span) - 1,
-            truncation_errors = isempty(truncation_errors) ? nothing : copy(truncation_errors)
+        state = TimeEvolveState(
+            ψ, H, envs, 0, t_span, $timestep, (; imaginary_evolution, normalize), nothing
         )
-        return ψ, envs, info
+        return _time_evolve(alg, state; verbosity)
     end
+end
+
+function _time_evolve(alg, state::TimeEvolveState; verbosity::Int)
+    log = IterLog(alg)
+    # the state type is left abstract, since the first step may promote a real state to complex
+    it = IterativeSolver{typeof(alg), TimeEvolveState}(alg, state)
+    t_span = state.t_span
+    truncation_errors = []
+    ϵ_max = 0.0
+    with_verbosity(; verbosity) do
+        @log_initialization loginit!(log, 0.0, first(t_span))
+        for (_, _, info_step) in it
+            # the log shows the largest per-bond error, or zero for a non-truncating algorithm
+            ϵ_step = 0.0
+            if haskey(info_step, :truncation_errors)
+                push!(truncation_errors, info_step.truncation_errors)
+                ϵ_step = Float64(maximum(info_step.truncation_errors; init = 0.0))
+            end
+            ϵ_max = max(ϵ_max, ϵ_step)
+            @log_iteration logiter!(log, it.iter, ϵ_step, t_span[it.iter])
+        end
+        @log_convergence logfinish!(log, length(t_span), ϵ_max, t_span[end])
+    end
+    info = AlgorithmInfo(;
+        numiter = length(t_span) - 1,
+        truncation_errors = isempty(truncation_errors) ? nothing : copy(truncation_errors)
+    )
+    return it.state.mps, it.state.envs, info
 end
 
 """
@@ -141,6 +192,43 @@ julia> round(real(expectation_value(ψ, 2 => X)); digits = 6)
 ```
 """
 function timestep end, function timestep! end
+
+function timestep!(
+        ψ::AbstractFiniteMPS, H, t::Number, dt::Number, alg,
+        envs::AbstractMPSEnvironments = environments(ψ, H, ψ);
+        imaginary_evolution::Bool = false, normalize::Bool = false,
+        timeroutput = NoTimerOutput()
+    )
+    state = TimeStepState(ψ, H, envs, t, dt; imaginary_evolution, normalize, timeroutput)
+    state = _timestep!(alg, state)
+    return state.mps, state.envs, _step_info(state)
+end
+
+function timestep(
+        ψ::Union{AbstractFiniteMPS, InfiniteMPS}, H, time::Number, timestep::Number,
+        alg, envs::AbstractMPSEnvironments...;
+        imaginary_evolution::Bool = false, normalize::Bool = false, kwargs...
+    )
+    promote = _promotes_to_complex(ψ, H, timestep, alg; imaginary_evolution)
+    ψ′, envs′ = _timestep_copy(ψ, H, envs, promote)
+    return timestep!(ψ′, H, time, timestep, alg, envs′; imaginary_evolution, normalize, kwargs...)
+end
+
+# Copy of `ψ` to step out of place, promoted to complex when the evolution leaves the reals,
+# together with environments for that copy.
+function _timestep_copy(ψ, H, envs, promote::Bool)
+    ψ′ = promote ? complex(ψ) : copy(ψ)
+    if length(envs) != 0 && promote
+        @warn "Currently cannot reuse real environments for complex evolution"
+        envs′ = environments(ψ′, H, ψ′)
+    elseif length(envs) == 1
+        envs′ = only(envs)
+    else
+        @assert length(envs) == 0 "Invalid signature"
+        envs′ = environments(ψ′, H, ψ′)
+    end
+    return ψ′, envs′
+end
 
 @doc """
     make_time_mpo(H::MPOHamiltonian, dt::Number, alg; kwargs...) -> O::MPO
