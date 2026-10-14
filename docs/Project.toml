@@ -22,5 +22,5 @@ MPSKit = {path = ".."}
 Documenter = "1.11"
 DocumenterCitations = "1.5"
 DocumenterInterLinks = "1"
-DocumenterVitepress = "0.3.7"
+DocumenterVitepress = "0.3.8"
 TensorKitTensors = "0.3.1"
