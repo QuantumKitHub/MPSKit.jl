@@ -47,6 +47,8 @@ function AC_hamiltonian(
         site::Int, below, operator, above, envs; prepare::Bool = true,
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
+    prepare && operator isa Union{FiniteMPO, InfiniteMPO} && has_halves(envs) &&
+        return _AC_hamiltonian_from_halves(site, below, operator, envs, backend, allocator)
     O = isnothing(operator) ? nothing : operator[site]
     H_AC = MPO_AC_Hamiltonian(
         leftenv(envs, site, below), O, rightenv(envs, site, below), backend, allocator
@@ -57,6 +59,8 @@ function AC2_hamiltonian(
         site::Int, below, operator, above, envs; prepare::Bool = true,
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
+    prepare && operator isa Union{FiniteMPO, InfiniteMPO} && has_halves(envs) &&
+        return _AC2_hamiltonian_from_halves(site, below, operator, envs, backend, allocator)
     O1, O2 = isnothing(operator) ? (nothing, nothing) : (operator[site], operator[site + 1])
     H_AC2 = MPO_AC2_Hamiltonian(
         leftenv(envs, site, below), O1, O2, rightenv(envs, site + 1, below),
@@ -391,50 +395,48 @@ function prepare_operator!!(H::Multiline{<:_ToPrepare})
     return Multiline(map(prepare_operator!!, parent(H)))
 end
 
-# Prepared halves for `DMRGEnvironments`
-# ---------------------------------------
-pair_data(O, GL) = nothing
+# Prepared halves for `FiniteEnvironments`
+# -----------------------------------------
+halfstorage(envs::FiniteEnvironments, ::typeof(AC_hamiltonian)) = envs.halves.AC
+halfstorage(envs::FiniteEnvironments, ::typeof(AC2_hamiltonian)) = envs.halves.AC2
 
-_derivative_type(nsites) = nsites == 1 ? MPO_AC_Hamiltonian : MPO_AC2_Hamiltonian
-prepare_lefthalf(GL, O::AbstractMPO, pairs, i, nsites, backend, allocator) =
-    left_half(_derivative_type(nsites), GL, O[i], backend, allocator)
-prepare_righthalf(GR, O::AbstractMPO, pairs, i, nsites, backend, allocator) =
-    right_half(_derivative_type(nsites), GR, O[i], backend, allocator)
+_derivative_type(::typeof(AC_hamiltonian)) = MPO_AC_Hamiltonian
+_derivative_type(::typeof(AC2_hamiltonian)) = MPO_AC2_Hamiltonian
 
-function AC_hamiltonian(
-        site::Int, below, O::Union{FiniteMPO, InfiniteMPO}, above, envs::DMRGEnvironments;
-        prepare::Bool = true, backend::AbstractBackend = envs.backend, allocator = envs.allocator,
-    )
-    GL, GR = leftenv(envs, site, below), rightenv(envs, site, below)
-    H = MPO_AC_Hamiltonian(GL, O[site], GR, backend, allocator)
-    prepare || return H
-    envs.nsites == 1 || return prepare_operator!!(H)
-    return prepared_operator_type(typeof(H))(lefthalf(envs, site, below), righthalf(envs, site, below), backend, allocator)
+# The types of the halves are those of the environments of the prepared operator.
+function halftypes(::typeof(AC_hamiltonian), ::Type{G}, ::Type{W}) where {G, W}
+    P = prepared_operator_type(MPO_AC_Hamiltonian{G, W, G, DefaultBackend, DefaultAllocator})
+    return fieldtype(P, :leftenv), fieldtype(P, :rightenv)
 end
-function AC2_hamiltonian(
-        site::Int, below, O::Union{FiniteMPO, InfiniteMPO}, above, envs::DMRGEnvironments;
-        prepare::Bool = true, backend::AbstractBackend = envs.backend, allocator = envs.allocator,
-    )
-    GL, GR = leftenv(envs, site, below), rightenv(envs, site + 1, below)
-    H = MPO_AC2_Hamiltonian(GL, O[site], O[site + 1], GR, backend, allocator)
-    prepare || return H
-    envs.nsites == 2 || return prepare_operator!!(H)
-    return prepared_operator_type(typeof(H))(lefthalf(envs, site, below), righthalf(envs, site + 1, below), backend, allocator)
+function halftypes(::typeof(AC2_hamiltonian), ::Type{G}, ::Type{W}) where {G, W}
+    P = prepared_operator_type(MPO_AC2_Hamiltonian{G, W, W, G, DefaultBackend, DefaultAllocator})
+    return fieldtype(P, :leftenv), fieldtype(P, :rightenv)
 end
 
-# Projections inside DMRG reuse prepared halves when they exist; otherwise, like the generic
-# projection routines, they apply an unprepared operator once.
-function AC_projection(
-        site::Int, below, O::AbstractMPO, above, envs::DMRGEnvironments;
-        backend::AbstractBackend = envs.backend, allocator = envs.allocator,
-    )
-    H = AC_hamiltonian(site, below, O, above, envs; prepare = envs.nsites == 1, backend, allocator)
-    return H * above.AC[site]
+function environment_halves(O::Union{FiniteMPO, InfiniteMPO}, ::Type{G}, N) where {G}
+    W = eltype(O)
+    (G <: MPSTensor && W <: MPOTensor && isconcretetype(W)) || return nothing
+    AC = PreparedHalves{halftypes(AC_hamiltonian, G, W)..., G}(N)
+    AC2 = PreparedHalves{halftypes(AC2_hamiltonian, G, W)..., G}(N)
+    return (; AC, AC2)
 end
-function AC2_projection(
-        site::Int, below, O::AbstractMPO, above, envs::DMRGEnvironments;
-        backend::AbstractBackend = envs.backend, allocator = envs.allocator, kwargs...,
-    )
-    H = AC2_hamiltonian(site, below, O, above, envs; prepare = envs.nsites == 2, backend, allocator)
-    return H * AC2(above, site; kwargs...)
+
+prepare_lefthalf(kind, O::Union{FiniteMPO, InfiniteMPO}, envs, GL, site, backend, allocator) =
+    left_half(_derivative_type(kind), GL, O[site], backend, allocator)
+prepare_righthalf(kind, O::Union{FiniteMPO, InfiniteMPO}, envs, GR, site, backend, allocator) =
+    right_half(_derivative_type(kind), GR, O[site], backend, allocator)
+
+function _AC_hamiltonian_from_halves(site, below, O::Union{FiniteMPO, InfiniteMPO}, envs, backend, allocator)
+    G, W = eltype(envs.GLs), eltype(O)
+    P = prepared_operator_type(MPO_AC_Hamiltonian{G, W, G, typeof(backend), typeof(allocator)})
+    L = lefthalf(AC_hamiltonian, envs, site, below; backend, allocator)
+    R = righthalf(AC_hamiltonian, envs, site, below; backend, allocator)
+    return P(L, R, backend, allocator)
+end
+function _AC2_hamiltonian_from_halves(site, below, O::Union{FiniteMPO, InfiniteMPO}, envs, backend, allocator)
+    G, W = eltype(envs.GLs), eltype(O)
+    P = prepared_operator_type(MPO_AC2_Hamiltonian{G, W, W, G, typeof(backend), typeof(allocator)})
+    L = lefthalf(AC2_hamiltonian, envs, site, below; backend, allocator)
+    R = righthalf(AC2_hamiltonian, envs, site + 1, below; backend, allocator)
+    return P(L, R, backend, allocator)
 end
