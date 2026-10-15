@@ -285,27 +285,28 @@ function _prepare_O_GR(O, GR, backend, allocator)
     return rightenv
 end
 
+# Left and right halves of a `PrecomputedDerivative`: a single-site operator is absorbed into
+# the left half, and each operator of a two-site window into its own half.
+left_half(::Type{<:MPO_AC_Hamiltonian}, GL, O, backend, allocator) = _prepare_GL_O(GL, O, backend, allocator)
+right_half(::Type{<:MPO_AC_Hamiltonian}, GR, O, backend, allocator) = GR isa TensorMap ? GR : TensorMap(GR)
+left_half(::Type{<:MPO_AC2_Hamiltonian}, GL, O, backend, allocator) = _prepare_GL_O(GL, O, backend, allocator)
+right_half(::Type{<:MPO_AC2_Hamiltonian}, GR, O, backend, allocator) = _prepare_O_GR(O, GR, backend, allocator)
+
 function prepare_operator!!(H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})
     backend, allocator = H.backend, H.allocator
-
-    GL, O = H.leftenv, H.operators[1]
-    leftenv = _prepare_GL_O(GL, O, backend, allocator)
-
-    rightenv = H.rightenv isa TensorMap ? H.rightenv : TensorMap(H.rightenv)
-
-    return prepared_operator_type(typeof(H))(leftenv, rightenv, backend, allocator)
+    O = only(H.operators)
+    L = left_half(MPO_AC_Hamiltonian, H.leftenv, O, backend, allocator)
+    R = right_half(MPO_AC_Hamiltonian, H.rightenv, O, backend, allocator)
+    return prepared_operator_type(typeof(H))(L, R, backend, allocator)
 end
 
 function prepare_operator!!(
         H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor}
     )
     backend, allocator = H.backend, H.allocator
-
-    GL, O₁, O₂, GR = H.leftenv, H.operators[1], H.operators[2], H.rightenv
-    leftenv = _prepare_GL_O(GL, O₁, backend, allocator)
-    rightenv = _prepare_O_GR(O₂, GR, backend, allocator)
-
-    return prepared_operator_type(typeof(H))(leftenv, rightenv, backend, allocator)
+    L = left_half(MPO_AC2_Hamiltonian, H.leftenv, H.operators[1], backend, allocator)
+    R = right_half(MPO_AC2_Hamiltonian, H.rightenv, H.operators[2], backend, allocator)
+    return prepared_operator_type(typeof(H))(L, R, backend, allocator)
 end
 
 function (H::PrecomputedCDerivative)(x::MPSBondTensor)
@@ -390,55 +391,50 @@ function prepare_operator!!(H::Multiline{<:_ToPrepare})
     return Multiline(map(prepare_operator!!, parent(H)))
 end
 
-# Cached environment contractions and effective-operator assembly
-# -------------------------------------------------------------
-cache_pair_data(O, GL) = nothing
+# Prepared halves for `DMRGEnvironments`
+# ---------------------------------------
+pair_data(O, GL) = nothing
 
-prepare_left_environment(GL, O::AbstractMPO, pairs, i, nsites, backend, allocator) =
-    _prepare_GL_O(GL, O[i], backend, allocator)
-function prepare_right_environment(GR, O::AbstractMPO, pairs, i, nsites, backend, allocator)
-    nsites == 1 && return GR isa TensorMap ? GR : TensorMap(GR)
-    return _prepare_O_GR(O[i], GR, backend, allocator)
-end
+_derivative_type(nsites) = nsites == 1 ? MPO_AC_Hamiltonian : MPO_AC2_Hamiltonian
+prepare_lefthalf(GL, O::AbstractMPO, pairs, i, nsites, backend, allocator) =
+    left_half(_derivative_type(nsites), GL, O[i], backend, allocator)
+prepare_righthalf(GR, O::AbstractMPO, pairs, i, nsites, backend, allocator) =
+    right_half(_derivative_type(nsites), GR, O[i], backend, allocator)
 
 function AC_hamiltonian(
-        site::Int, below, O::Union{FiniteMPO, InfiniteMPO}, above, cache::DMRGSweepCache;
-        prepare::Bool = true, backend::AbstractBackend = cache.backend, allocator = cache.allocator,
+        site::Int, below, O::Union{FiniteMPO, InfiniteMPO}, above, envs::DMRGEnvironments;
+        prepare::Bool = true, backend::AbstractBackend = envs.backend, allocator = envs.allocator,
     )
-    GL, GR = leftenv(cache, site, below), rightenv(cache, site, below)
+    GL, GR = leftenv(envs, site, below), rightenv(envs, site, below)
     H = MPO_AC_Hamiltonian(GL, O[site], GR, backend, allocator)
     prepare || return H
-    cache.nsites == 1 || return prepare_operator!!(H)
-    return prepared_operator_type(typeof(H))(
-        left_contribution(cache, site), right_contribution(cache, site), backend, allocator,
-    )
+    envs.nsites == 1 || return prepare_operator!!(H)
+    return prepared_operator_type(typeof(H))(lefthalf(envs, site), righthalf(envs, site), backend, allocator)
 end
 function AC2_hamiltonian(
-        site::Int, below, O::Union{FiniteMPO, InfiniteMPO}, above, cache::DMRGSweepCache;
-        prepare::Bool = true, backend::AbstractBackend = cache.backend, allocator = cache.allocator,
+        site::Int, below, O::Union{FiniteMPO, InfiniteMPO}, above, envs::DMRGEnvironments;
+        prepare::Bool = true, backend::AbstractBackend = envs.backend, allocator = envs.allocator,
     )
-    GL, GR = leftenv(cache, site, below), rightenv(cache, site + 1, below)
+    GL, GR = leftenv(envs, site, below), rightenv(envs, site + 1, below)
     H = MPO_AC2_Hamiltonian(GL, O[site], O[site + 1], GR, backend, allocator)
     prepare || return H
-    cache.nsites == 2 || return prepare_operator!!(H)
-    return prepared_operator_type(typeof(H))(
-        left_contribution(cache, site), right_contribution(cache, site + 1), backend, allocator,
-    )
+    envs.nsites == 2 || return prepare_operator!!(H)
+    return prepared_operator_type(typeof(H))(lefthalf(envs, site), righthalf(envs, site + 1), backend, allocator)
 end
 
-# Projections inside DMRG reuse prepared records when they exist; otherwise, like the generic
+# Projections inside DMRG reuse prepared halves when they exist; otherwise, like the generic
 # projection routines, they apply an unprepared operator once.
 function AC_projection(
-        site::Int, below, O::AbstractMPO, above, cache::DMRGSweepCache;
-        backend::AbstractBackend = cache.backend, allocator = cache.allocator,
+        site::Int, below, O::AbstractMPO, above, envs::DMRGEnvironments;
+        backend::AbstractBackend = envs.backend, allocator = envs.allocator,
     )
-    H = AC_hamiltonian(site, below, O, above, cache; prepare = cache.nsites == 1, backend, allocator)
+    H = AC_hamiltonian(site, below, O, above, envs; prepare = envs.nsites == 1, backend, allocator)
     return H * above.AC[site]
 end
 function AC2_projection(
-        site::Int, below, O::AbstractMPO, above, cache::DMRGSweepCache;
-        backend::AbstractBackend = cache.backend, allocator = cache.allocator, kwargs...,
+        site::Int, below, O::AbstractMPO, above, envs::DMRGEnvironments;
+        backend::AbstractBackend = envs.backend, allocator = envs.allocator, kwargs...,
     )
-    H = AC2_hamiltonian(site, below, O, above, cache; prepare = cache.nsites == 2, backend, allocator)
+    H = AC2_hamiltonian(site, below, O, above, envs; prepare = envs.nsites == 2, backend, allocator)
     return H * AC2(above, site; kwargs...)
 end
