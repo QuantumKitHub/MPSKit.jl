@@ -60,11 +60,10 @@ function JordanMPO_AC_Hamiltonian(
     )
     WA = W.A
     A = MPO_AC_Hamiltonian(GL[2:(end - 1)], WA, GR[2:(end - 1)], backend, allocator)
-    O3 = typeof(A)
-    L = left_AC_half(GL, W, O3, backend, allocator)
-    R = right_AC_half(GR, W, O3, backend, allocator)
+    L = left_half(JordanMPO_AC_Hamiltonian, GL, W, backend, allocator)
+    R = right_half(JordanMPO_AC_Hamiltonian, GR, W, backend, allocator)
     # specialization for nearest neighbours
-    return assemble_operator_halves(L, R, nonzero_length(WA) == 0 ? missing : A, O3, backend, allocator)
+    return assemble_operator_halves(L, R, nonzero_length(WA) == 0 ? missing : A, typeof(A), backend, allocator)
 end
 
 function prepare_operator!!(
@@ -241,8 +240,8 @@ function JordanMPO_AC2_Hamiltonian(
     rows, mids, cols = pair.channels
     AA = isempty(mids) ? missing :
         MPO_AC2_Hamiltonian(GL2[rows], pair.A1, pair.A2, GR2[cols], backend, allocator)
-    L = left_AC2_half(GL, W1, pair, O4, backend, allocator)
-    R = right_AC2_half(GR, W2, pair, O4, backend, allocator)
+    L = left_half(JordanMPO_AC2_Hamiltonian, GL, W1, pair, backend, allocator)
+    R = right_half(JordanMPO_AC2_Hamiltonian, GR, W2, pair, backend, allocator)
     return assemble_operator_halves(L, R, AA, O4, backend, allocator)
 end
 
@@ -451,25 +450,30 @@ end
 # The terms of `JordanMPO_AC_Hamiltonian` and `JordanMPO_AC2_Hamiltonian` that depend on only
 # one environment, excluding the continuing `A`/`AA` term. Each onsite or operator-only term
 # is assigned to the half whose `prepare_operator!!` can fold it.
-function left_AC_half(GL, W::JordanMPOTensor, ::Type{O3}, backend, allocator) where {O3}
+function left_half(::Type{<:JordanMPO_AC_Hamiltonian}, GL, W::JordanMPOTensor, backend, allocator)
+    GL2 = GL[2:(end - 1)]
     O1, O2, _ = _jordan_types(GL)
+    O3 = _A_type(GL2, W.A, GL2, backend, allocator)
     E = size(W, 1) > 1 ? removeunit(GL[end], 2) : missing
     D = nonzero_length(W.C) == 0 ? _onsite(W.D) : missing
-    B = _ending(GL[2:(end - 1)], W.B, backend, allocator)
+    B = _ending(GL2, W.B, backend, allocator)
     return JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, missing, E, missing, B, missing, backend, allocator)
 end
-function right_AC_half(GR, W::JordanMPOTensor, ::Type{O3}, backend, allocator) where {O3}
+function right_half(::Type{<:JordanMPO_AC_Hamiltonian}, GR, W::JordanMPOTensor, backend, allocator)
+    GR2 = GR[2:(end - 1)]
     O1, O2, _ = _jordan_types(GR)
+    O3 = _A_type(GR2, W.A, GR2, backend, allocator)
     I = size(W, 4) > 1 ? removeunit(GR[1], 2) : missing
     WC = W.C
     D = nonzero_length(WC) > 0 ? _onsite(W.D) : missing
-    C = _starting(GR[2:(end - 1)], WC, backend, allocator)
+    C = _starting(GR2, WC, backend, allocator)
     return JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, I, missing, C, missing, missing, backend, allocator)
 end
 
-function left_AC2_half(GL, W::JordanMPOTensor, pair, ::Type{O4}, backend, allocator) where {O4}
+function left_half(::Type{<:JordanMPO_AC2_Hamiltonian}, GL, W::JordanMPOTensor, pair::JordanPairData, backend, allocator)
     GL2 = GL[2:(end - 1)]
     O1, O2, O3 = _jordan_types(GL)
+    O4 = _AA_type(GL2, pair, GL2, backend, allocator)
     EE = size(W, 1) > 1 ? removeunit(GL[end], 2) : missing
     AB = if ismissing(pair.AB)
         missing
@@ -484,9 +488,10 @@ function left_AC2_half(GL, W::JordanMPOTensor, pair, ::Type{O4}, backend, alloca
         _ending(GL2, W.B, backend, allocator), _onsite(W.D), EE, backend, allocator,
     )
 end
-function right_AC2_half(GR, W::JordanMPOTensor, pair, ::Type{O4}, backend, allocator) where {O4}
+function right_half(::Type{<:JordanMPO_AC2_Hamiltonian}, GR, W::JordanMPOTensor, pair::JordanPairData, backend, allocator)
     GR2 = GR[2:(end - 1)]
     O1, O2, O3 = _jordan_types(GR)
+    O4 = _AA_type(GR2, pair, GR2, backend, allocator)
     II = size(W, 4) > 1 ? transpose(removeunit(GR[1], 2)) : missing
     CA = if ismissing(pair.CA)
         missing
@@ -512,89 +517,85 @@ function assemble_operator_halves(L::JordanMPO_AC2_Hamiltonian{O1, O2, O3}, R, A
     )
 end
 
-# Cached halves
-# -------------
+# Prepared halves for `DMRGEnvironments`
+# ---------------------------------------
 """
-    JordanEnvironmentSide
+    JordanHalf
 
 One environment's prepared half of an effective `AC` or `AC2` Hamiltonian. `continuing` is
 that side's fused environment for assembling the continuing term, or `missing` if absent.
-Both are read-only snapshots.
 """
-struct JordanEnvironmentSide{H, C <: AbstractTensorMap}
+struct JordanHalf{H, C <: AbstractTensorMap}
     prepared::H
     continuing::Union{Missing, C}
 end
-JordanEnvironmentSide(prepared, continuing, ::Type{C}) where {C} =
-    JordanEnvironmentSide{typeof(prepared), C}(prepared, continuing)
+JordanHalf(prepared, continuing, ::Type{C}) where {C} = JordanHalf{typeof(prepared), C}(prepared, continuing)
 
-cache_pair_data(O::MPOHamiltonian, GL) =
-    [JordanPairData(O[i], O[i + 1], storagetype(GL)) for i in 1:(length(O) - 1)]
+pair_data(O::MPOHamiltonian, GL) = [JordanPairData(O[i], O[i + 1], storagetype(GL)) for i in 1:(length(O) - 1)]
 
-function prepare_left_environment(GL, O::MPOHamiltonian, pairs, i, nsites, backend, allocator)
+function prepare_lefthalf(GL, O::MPOHamiltonian, pairs, i, nsites, backend, allocator)
     GL2 = GL[2:(end - 1)]
     _, O2, _ = _jordan_types(GL)
     if nsites == 1
         W = O[i]
         A = W.A
-        half = left_AC_half(GL, W, _A_type(GL2, A, GL2, backend, allocator), backend, allocator)
+        half = left_half(JordanMPO_AC_Hamiltonian, GL, W, backend, allocator)
         continuing = nonzero_length(A) > 0 ? _prepare_GL_O(GL2, A, backend, allocator) : missing
     else
         i < length(O) || return missing
         pair = pairs[i]
-        half = left_AC2_half(GL, O[i], pair, _AA_type(GL2, pair, GL2, backend, allocator), backend, allocator)
+        half = left_half(JordanMPO_AC2_Hamiltonian, GL, O[i], pair, backend, allocator)
         rows, mids, _ = pair.channels
         continuing = isempty(mids) ? missing : _prepare_GL_O(GL2[rows], pair.A1, backend, allocator)
     end
-    return JordanEnvironmentSide(prepare_operator!!(half), continuing, O2)
+    return JordanHalf(prepare_operator!!(half), continuing, O2)
 end
-function prepare_right_environment(GR, O::MPOHamiltonian, pairs, i, nsites, backend, allocator)
+function prepare_righthalf(GR, O::MPOHamiltonian, pairs, i, nsites, backend, allocator)
     GR2 = GR[2:(end - 1)]
     S, M = spacetype(GR), storagetype(GR)
     if nsites == 1
         W = O[i]
-        A = W.A
-        half = right_AC_half(GR, W, _A_type(GR2, A, GR2, backend, allocator), backend, allocator)
-        continuing = nonzero_length(A) > 0 ? TensorMap(GR2) : missing
-        return JordanEnvironmentSide(prepare_operator!!(half), continuing, tensormaptype(S, 2, 1, M))
+        half = right_half(JordanMPO_AC_Hamiltonian, GR, W, backend, allocator)
+        continuing = nonzero_length(W.A) > 0 ? TensorMap(GR2) : missing
+        return JordanHalf(prepare_operator!!(half), continuing, tensormaptype(S, 2, 1, M))
     end
     i > 1 || return missing
     pair = pairs[i - 1]
-    half = right_AC2_half(GR, O[i], pair, _AA_type(GR2, pair, GR2, backend, allocator), backend, allocator)
+    half = right_half(JordanMPO_AC2_Hamiltonian, GR, O[i], pair, backend, allocator)
     _, mids, cols = pair.channels
     continuing = isempty(mids) ? missing : _prepare_O_GR(pair.A2, GR2[cols], backend, allocator)
-    return JordanEnvironmentSide(prepare_operator!!(half), continuing, tensormaptype(S, 2, 2, M))
+    return JordanHalf(prepare_operator!!(half), continuing, tensormaptype(S, 2, 2, M))
 end
 
 function AC_hamiltonian(
         i::Int, below::_HAM_MPS_TYPES, O::MPOHamiltonian, above::_HAM_MPS_TYPES,
-        cache::DMRGSweepCache;
-        prepare::Bool = true, backend::AbstractBackend = cache.backend, allocator = cache.allocator,
+        envs::DMRGEnvironments;
+        prepare::Bool = true, backend::AbstractBackend = envs.backend, allocator = envs.allocator,
     )
     @assert below === above "JordanMPO assumptions break"
-    GL, GR = leftenv(cache, i, below), rightenv(cache, i, below)
-    if !(prepare && cache.nsites == 1)
+    GL, GR = leftenv(envs, i, below), rightenv(envs, i, below)
+    if !(prepare && envs.nsites == 1)
         H = JordanMPO_AC_Hamiltonian(GL, O[i], GR; backend, allocator)
         return prepare ? prepare_operator!!(H) : H
     end
-    l, r = left_contribution(cache, i), right_contribution(cache, i)
+    l, r = lefthalf(envs, i), righthalf(envs, i)
     T = prepared_operator_type(_A_type(GL, O[i].A, GR, backend, allocator))
     A = ismissing(l.continuing) ? missing : T(l.continuing, r.continuing, backend, allocator)
     return assemble_operator_halves(l.prepared, r.prepared, A, T, backend, allocator)
 end
 function AC2_hamiltonian(
         i::Int, below::_HAM_MPS_TYPES, O::MPOHamiltonian, above::_HAM_MPS_TYPES,
-        cache::DMRGSweepCache;
-        prepare::Bool = true, backend::AbstractBackend = cache.backend, allocator = cache.allocator,
+        envs::DMRGEnvironments;
+        prepare::Bool = true, backend::AbstractBackend = envs.backend, allocator = envs.allocator,
     )
     @assert below === above "JordanMPO assumptions break"
-    GL, GR = leftenv(cache, i, below), rightenv(cache, i + 1, below)
-    if !(prepare && cache.nsites == 2)
+    GL, GR = leftenv(envs, i, below), rightenv(envs, i + 1, below)
+    if !(prepare && envs.nsites == 2)
         H = JordanMPO_AC2_Hamiltonian(GL, O[i], O[i + 1], GR; backend, allocator)
         return prepare ? prepare_operator!!(H) : H
     end
-    l, r = left_contribution(cache, i), right_contribution(cache, i + 1)
-    T = prepared_operator_type(_AA_type(GL, cache.pairs[i], GR, backend, allocator))
+    l, r = lefthalf(envs, i), righthalf(envs, i + 1)
+    T = prepared_operator_type(_AA_type(GL, envs.pairs[i], GR, backend, allocator))
     AA = ismissing(l.continuing) ? missing : T(l.continuing, r.continuing, backend, allocator)
     return assemble_operator_halves(l.prepared, r.prepared, AA, T, backend, allocator)
 end

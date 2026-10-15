@@ -307,9 +307,9 @@ function DMRGState(ψ, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput)
     Tr = real(scalartype(ψ))
     n = num_updates(alg, ψ)
     local_errors = ones(Tr, n)
-    cache = initialize_sweep_cache(ψ, H, envs; alg.backend, allocator, nsites = alg isa DMRG ? 1 : 2)
+    envs = dmrg_environments(ψ, H, envs; alg.backend, allocator, nsites = alg isa DMRG ? 1 : 2)
     return DMRGState(
-        ψ, H, cache, 0, maximum(local_errors), local_errors, zeros(Tr, n),
+        ψ, H, envs, 0, maximum(local_errors), local_errors, zeros(Tr, n),
         zeros(n), timeroutput, allocator,
     )
 end
@@ -342,16 +342,16 @@ function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGStat
     ψ, finalized_envs = @timeit timeroutput "finalize" it.finalize(
         iter, state.mps, state.operator, envs
     )::Tuple{typeof(state.mps), typeof(envs)}
-    cache = state.envs
-    if !sweep_cache_current(cache, ψ, finalized_envs)
-        uses_sweep_cache(cache) &&
-            @warn "DMRG finalizer modified the state or environments; rebuilding the sweep cache"
-        cache = initialize_sweep_cache(
+    dmrg_envs = state.envs
+    if !dmrg_environments_current(dmrg_envs, ψ, finalized_envs)
+        uses_dmrg_environments(dmrg_envs) &&
+            @warn "DMRG finalizer modified the state or environments; rebuilding the DMRG environments"
+        dmrg_envs = dmrg_environments(
             ψ, state.operator, finalized_envs;
             it.alg.backend, state.allocator, nsites = it.alg isa DMRG ? 1 : 2,
         )
     end
-    it.state = setproperties(state; mps = ψ, envs = cache, iter)
+    it.state = setproperties(state; mps = ψ, envs = dmrg_envs, iter)
     return (ψ, finalized_envs, state.ϵ), it.state
 end
 
