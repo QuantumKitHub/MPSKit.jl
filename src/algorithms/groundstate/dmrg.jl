@@ -124,16 +124,13 @@ function local_update!(
         ϵ_global, ϵ_trunc, decay_rate,
         iter, timeroutput, allocator
     )
-    @timeit timeroutput "advance_env" center_window!(envs, ψ, site, site)
     ϵ_local = calc_galerkin(site, ψ, O, ψ, envs; alg.backend, allocator)
 
     # 1. expand
     if !isnothing(alg.alg_expand)
-        @timeit timeroutput "expand" begin
-            changebond!(site, direction, ψ, O, alg.alg_expand, envs; allocator)
-            # Expansion may have replaced the neighbouring AR[site + 1] or AL[site - 1].
-            center_window!(envs, ψ, site, site)
-        end
+        @timeit timeroutput "expand" changebond!(
+            site, direction, ψ, O, alg.alg_expand, envs; allocator
+        )
     end
 
     # 2. local update
@@ -217,7 +214,6 @@ function local_update!(
         ϵ_global, ϵ_trunc, decay_rate,
         iter, timeroutput, allocator
     )
-    @timeit timeroutput "advance_env" center_window!(envs, ψ, pos, pos + 1)
     Heff = @timeit timeroutput "AC2_hamiltonian" AC2_hamiltonian(pos, ψ, O, ψ, envs; alg.backend, allocator)
 
     kind = direction === Val(:right) ? :ACAR : :ALAC
@@ -354,15 +350,10 @@ function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGStat
     ψ, finalized_envs = @timeit timeroutput "finalize" it.finalize(
         iter, state.mps, state.operator, envs
     )::Tuple{typeof(state.mps), typeof(envs)}
-    dmrg_envs = state.envs
-    if !dmrg_environments_current(dmrg_envs, ψ, finalized_envs)
-        uses_dmrg_environments(dmrg_envs) &&
-            @warn "DMRG finalizer modified the state or environments; rebuilding the DMRG environments"
-        dmrg_envs = dmrg_environments(
-            ψ, state.operator, finalized_envs;
-            it.alg.backend, state.allocator, nsites = it.alg isa DMRG ? 1 : 2,
-        )
-    end
+    dmrg_envs = finalized_envs === envs ? state.envs : dmrg_environments(
+        ψ, state.operator, finalized_envs;
+        it.alg.backend, state.allocator, nsites = it.alg isa DMRG ? 1 : 2,
+    )
     it.state = DMRGState(
         ψ, state.operator, dmrg_envs, iter, state.ϵ, state.local_errors,
         state.truncation_errors, state.decay_rates, timeroutput, state.allocator,

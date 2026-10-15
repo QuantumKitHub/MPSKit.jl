@@ -11,10 +11,8 @@ function test_dmrg_windows(alg, ψ, H, envs = environments(ψ, H, ψ); reference
     allocator = sweep_allocator(ψ)
     state = MPSKit.DMRGState(ψ, H, alg, envs, allocator, MPSKit.NoTimerOutput())
     dmrg_envs = state.envs
-    @test MPSKit.uses_dmrg_environments(dmrg_envs)
     for iter in 1:sweeps, (direction, sites) in zip((Val(:right), Val(:left)), MPSKit._sweep_ranges(alg, ψ))
         for pos in sites
-            MPSKit.center_window!(dmrg_envs, ψ, pos, pos + nsites - 1)
             fresh = reference(ψ)
             if nsites == 1
                 x = ψ.AC[pos]
@@ -160,8 +158,7 @@ end
         dmrg_envs = MPSKit.dmrg_environments(
             ψ, H, environments(ψ, H, ψ); nsites, backend = MPSKit.DefaultBackend(), allocator = sweep_allocator(ψ)
         )
-        MPSKit.transfer_leftenv!(dmrg_envs, ψ, H, ψ, 2)
-        l, r = MPSKit.lefthalf(dmrg_envs, 2), MPSKit.righthalf(dmrg_envs, 1 + nsites)
+        l, r = MPSKit.lefthalf(dmrg_envs, 2, ψ), MPSKit.righthalf(dmrg_envs, 1 + nsites, ψ)
         Heff = nsites == 1 ? MPSKit.AC_hamiltonian(2, ψ, H, ψ, dmrg_envs) : MPSKit.AC2_hamiltonian(2, ψ, H, ψ, dmrg_envs)
         if H isa FiniteMPO
             @test Heff.leftenv === l
@@ -179,28 +176,31 @@ end
     end
 end
 
-@testset "Transfers are independent of the prepared halves" begin
+@testset "Halves follow their environments" begin
     L = 6
     H0 = dmrg_models(L).mixed
-    for H in (H0, FiniteMPO(H0))
+    @testset "$(nameof(typeof(H))), $nsites sites" for H in (H0, FiniteMPO(H0)), nsites in (1, 2)
         ψ = FiniteMPS(randn, ComplexF64, L, ℂ^2, ℂ^3)
         dmrg_envs = MPSKit.dmrg_environments(
-            ψ, H, environments(ψ, H, ψ); nsites = 1,
-            backend = MPSKit.DefaultBackend(), allocator = MPSKit.DefaultAllocator(),
+            ψ, H, environments(ψ, H, ψ); nsites, backend = MPSKit.DefaultBackend(), allocator = sweep_allocator(ψ)
         )
-        i = 3
-        for site in 2:i
-            MPSKit.transfer_leftenv!(dmrg_envs, ψ, H, ψ, site)
+        l, r = MPSKit.lefthalf(dmrg_envs, 4, ψ), MPSKit.righthalf(dmrg_envs, 2, ψ)
+        @test MPSKit.lefthalf(dmrg_envs, 4, ψ) === l
+        @test MPSKit.righthalf(dmrg_envs, 2, ψ) === r
+        # Changing the center invalidates the environments on both sides of it.
+        ψ.AC[3] = randn(scalartype(ψ), space(ψ.AC[3]))
+        @test MPSKit.lefthalf(dmrg_envs, 4, ψ) !== l
+        @test MPSKit.righthalf(dmrg_envs, 2, ψ) !== r
+        fresh = environments(ψ, H, ψ)
+        for site in (5, 1, 4, 2, 3)
+            if nsites == 1
+                x = ψ.AC[site]
+                @test MPSKit.AC_hamiltonian(site, ψ, H, ψ, dmrg_envs) * x ≈ MPSKit.AC_hamiltonian(site, ψ, H, ψ, fresh) * x
+            else
+                x = MPSKit.AC2(ψ, site)
+                @test MPSKit.AC2_hamiltonian(site, ψ, H, ψ, dmrg_envs) * x ≈ MPSKit.AC2_hamiltonian(site, ψ, H, ψ, fresh) * x
+            end
         end
-        # Corrupt the prepared halves: transfers must only read the environments.
-        poison(half) = H isa MPOHamiltonian ? typeof(half)(half.prepared, zero(half.continuing)) : zero(half)
-        dmrg_envs.lhalves[i] = poison(dmrg_envs.lhalves[i])
-        dmrg_envs.rhalves[i] = poison(dmrg_envs.rhalves[i])
-        MPSKit.transfer_leftenv!(dmrg_envs, ψ, H, ψ, i + 1)
-        MPSKit.transfer_rightenv!(dmrg_envs, ψ, H, ψ, i - 1)
-        reference = environments(ψ, H, ψ)
-        @test leftenv(dmrg_envs, i + 1, ψ) ≈ leftenv(reference, i + 1, ψ)
-        @test rightenv(dmrg_envs, i - 1, ψ) ≈ rightenv(reference, i - 1, ψ)
     end
 end
 
@@ -236,12 +236,12 @@ end
             DMRG(; verbosity = 0, maxiter = 20, finalize = replacing),
             DMRG2(; verbosity = 0, maxiter = 20, trunc = truncrank(8), finalize = replacing),
         )
-        ψ, envs, = @test_logs (:warn, r"rebuilding the DMRG environments") match_mode = :any find_groundstate(ψ0, H, alg)
+        ψ, envs, = @test_logs min_level = Logging.Warn find_groundstate(ψ0, H, alg)
         @test real(expectation_value(ψ, H, envs)) ≈ E0 atol = 1.0e-6
     end
 end
 
-@testset "Environments advance at the next local window" begin
+@testset "Halves are prepared when first queried" begin
     H = transverse_field_ising(; g = 2.0, L = 5)
     for alg in (DMRG(; verbosity = 0), DMRG2(; verbosity = 0, trunc = truncrank(4)))
         ψ = FiniteMPS(randn, ComplexF64, 5, ℂ^2, ℂ^3)
@@ -254,7 +254,7 @@ end
                 state.ϵ, 0.0, 0.0, 1, state.timeroutput, state.allocator
             )
             if site == 1
-                # Solving the first window leaves advancement for the next call.
+                # The window at site 1 only queries the halves at site 1.
                 @test isnothing(dmrg_envs.lhalves[2])
             else
                 @test !isnothing(dmrg_envs.lhalves[2])
