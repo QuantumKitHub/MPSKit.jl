@@ -148,6 +148,7 @@ include("environments/multiline_envs.jl")
 include("environments/qp_envs.jl")
 include("environments/multiple_envs.jl")
 include("environments/lazylincocache.jl")
+include("environments/dmrg_sweep_cache.jl")
 
 include("algorithms/fixedpoint.jl")
 include("algorithms/derivatives/derivatives.jl")

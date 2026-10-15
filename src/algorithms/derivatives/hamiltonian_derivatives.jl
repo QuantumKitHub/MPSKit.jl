@@ -58,52 +58,13 @@ function JordanMPO_AC_Hamiltonian(
         GL::MPSTensor, W::JordanMPOTensor, GR::MPSTensor;
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
-    # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
-    # them once and reuse the locals throughout
-    WA, WB, WC, WD = W.A, W.B, W.C, W.D
-    GL2 = GL[2:(end - 1)]
-    GR2 = GR[2:(end - 1)]
-
-    # onsite
-    D = nonzero_length(WD) > 0 ? only(WD) : missing
-
-    # not started
-    I = size(W, 4) == 1 ? missing : removeunit(GR[1], 2)
-
-    # finished
-    E = size(W, 1) == 1 ? missing : removeunit(GL[end], 2)
-
-    # starting
-    C = if nonzero_length(WC) > 0
-        @plansor backend = backend allocator = allocator starting[-1 -2; -3 -4] ≔ WC[-1; -3 1] * GR2[-4 1; -2]
-        only(starting)
-    else
-        missing
-    end
-
-    # ending
-    B = if nonzero_length(WB) > 0
-        @plansor backend = backend allocator = allocator ending[-1 -2; -3 -4] ≔ GL2[-1 1; -3] * WB[1 -2; -4]
-        only(ending)
-    else
-        missing
-    end
-
-    # continuing
-    A = MPO_AC_Hamiltonian(GL2, WA, GR2, backend, allocator)
-
-    # obtaining storagetype of environments since these should have already mixed
-    # the types of the operator and state
-    S = spacetype(GL)
-    M = storagetype(GL)
-    O1 = tensormaptype(S, 1, 1, M)
-    O2 = tensormaptype(S, 2, 2, M)
+    WA = W.A
+    A = MPO_AC_Hamiltonian(GL[2:(end - 1)], WA, GR[2:(end - 1)], backend, allocator)
     O3 = typeof(A)
-
+    L = left_AC_half(GL, W, O3, backend, allocator)
+    R = right_AC_half(GR, W, O3, backend, allocator)
     # specialization for nearest neighbours
-    nonzero_length(WA) == 0 && (A = missing)
-
-    return JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, I, E, C, B, A, backend, allocator)
+    return assemble_operator_halves(L, R, nonzero_length(WA) == 0 ? missing : A, O3, backend, allocator)
 end
 
 function prepare_operator!!(
@@ -273,99 +234,16 @@ function JordanMPO_AC2_Hamiltonian(
         GL::MPSTensor, W1::JordanMPOTensor, W2::JordanMPOTensor, GR::MPSTensor;
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
-    # block accessors recompute a fresh `SparseBlockTensorMap` on every access, so bind
-    # them once and reuse the locals throughout
-    A1, B1, C1, D1 = W1.A, W1.B, W1.C, W1.D
-    A2, B2, C2, D2 = W2.A, W2.B, W2.C, W2.D
-    GL2 = GL[2:(end - 1)]
-    GR2 = GR[2:(end - 1)]
-
-    # not started
-    II = size(W2, 4) == 1 ? missing : transpose(removeunit(GR[1], 2))
-
-    # finished
-    EE = size(W1, 1) == 1 ? missing : removeunit(GL[end], 2)
-
-    # starting right
-    IC = if nonzero_length(C2) > 0
-        @plansor backend = backend allocator = allocator IC_[-1 -2; -3 -4] ≔ C2[-1; -3 1] * GR2[-4 1; -2]
-        only(IC_)
-    else
-        missing
-    end
-
-    # onsite left
-    DE = nonzero_length(D1) > 0 ? only(D1) : missing
-
-    # onsite right
-    ID = nonzero_length(D2) > 0 ? only(D2) : missing
-
-    # starting left - ending right
-    CB = if nonzero_length(C1) > 0 && nonzero_length(B2) > 0
-        @plansor backend = backend allocator = allocator CB_[-1 -2; -3 -4] ≔ C1[-1; -3 1] * B2[1 -2; -4]
-        # have to convert to complex if hamiltonian is real but states are complex
-        scalartype(GL) <: Complex ? complex(only(CB_)) : only(CB_)
-    else
-        missing
-    end
-
-    # starting left - continuing right
-    CA = if nonzero_length(C1) > 0 && nonzero_length(A2) > 0
-        @plansor backend = backend allocator = allocator CA_[-1 -2 -3; -4 -5 -6] ≔ C1[-1; -4 1] * A2[1 -2; -5 2] *
-            GR2[-6 2; -3]
-        only(CA_)
-    else
-        missing
-    end
-
-    # continuing left - ending right
-    AB = if nonzero_length(A1) > 0 && nonzero_length(B2) > 0
-        @plansor backend = backend allocator = allocator AB_[-1 -2 -3; -4 -5 -6] ≔ GL2[-1 2; -4] * A1[2 -2; -5 1] *
-            B2[1 -3; -6]
-        only(AB_)
-    else
-        missing
-    end
-
-    # ending left
-    BE = if nonzero_length(B1) > 0
-        @plansor backend = backend allocator = allocator BE_[-1 -2; -3 -4] ≔ GL2[-1 2; -3] * B1[2 -2; -4]
-        only(BE_)
-    else
-        missing
-    end
-
-    S = spacetype(GL)
-    M = storagetype(GL)
-    O1 = tensormaptype(S, 1, 1, M)
-    O2 = tensormaptype(S, 2, 2, M)
-    O3 = tensormaptype(S, 3, 3, M)
-    # slicing preserves the block-tensor types, so `AA`'s type does not depend on whether the
-    # channels end up restricted - no need to build a throwaway operator just to read it off
-    O4 = MPO_AC2_Hamiltonian{
-        typeof(GL2), typeof(A1), typeof(A2), typeof(GR2), typeof(backend), typeof(allocator),
-    }
-
+    pair = JordanPairData(W1, W2, storagetype(GL))
+    GL2, GR2 = GL[2:(end - 1)], GR[2:(end - 1)]
+    O4 = _AA_type(GL2, pair, GR2, backend, allocator)
     # continuing - continuing, restricted to the channels that can actually contribute
-    channels = _connected_channels(A1, A2)
-    AA = if isempty(channels[2])
-        missing
-    else
-        rows, mids, cols = channels
-        MPO_AC2_Hamiltonian(
-            GL2[rows], A1[rows, 1:1, 1:1, mids], A2[mids, 1:1, 1:1, cols], GR2[cols],
-            backend, allocator
-        )
-    end
-
-    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
-        II, IC, ID,
-        CB, CA,
-        AB, AA,
-        BE, DE, EE,
-        backend, allocator
-    )
-
+    rows, mids, cols = pair.channels
+    AA = isempty(mids) ? missing :
+        MPO_AC2_Hamiltonian(GL2[rows], pair.A1, pair.A2, GR2[cols], backend, allocator)
+    L = left_AC2_half(GL, W1, pair, O4, backend, allocator)
+    R = right_AC2_half(GR, W2, pair, O4, backend, allocator)
+    return assemble_operator_halves(L, R, AA, O4, backend, allocator)
 end
 
 function prepare_operator!!(
@@ -499,16 +377,15 @@ function (H::JordanMPO_AC2_Hamiltonian)(x::MPOTensor)
     return y
 end
 
-# Cached Jordan operator data and directional contributions
-# -------------------------------------------------------
+
+# Left and right halves
+# ---------------------
 """
     JordanPairData
 
 Operator-only data for the adjacent sites `i` and `i + 1`: the products `C_i * B_{i+1}`,
 `A_i * B_{i+1}` and `C_i * A_{i+1}`, each `missing` if absent, and the continuing blocks
 restricted to the connected `channels = (rows, mids, cols)` of `_connected_channels`.
-Contracting these products with `GL` or `GR` follows the contraction order of
-`JordanMPO_AC2_Hamiltonian`, whose operator-only part is then computed once per solve.
 """
 struct JordanPairData{T <: MPOTensor, U, V, A <: MPOTensor}
     CB::Union{Missing, T}
@@ -519,57 +396,46 @@ struct JordanPairData{T <: MPOTensor, U, V, A <: MPOTensor}
     A2::A
 end
 
-"""
-    JordanEnvironmentSide
-
-One direction's prepared contribution to an effective `AC` or `AC2` Hamiltonian, excluding
-its continuing `A`/`AA` term. `continuing` is that side's fused environment for assembling
-the continuing term, or `missing` if absent. Both are read-only snapshots.
-"""
-struct JordanEnvironmentSide{H, C <: AbstractTensorMap}
-    prepared::H
-    continuing::Union{Missing, C}
-end
-JordanEnvironmentSide(prepared, continuing, ::Type{C}) where {C} =
-    JordanEnvironmentSide{typeof(prepared), C}(prepared, continuing)
-
-function cache_pair_data(O::MPOHamiltonian, GL)
-    S, M = spacetype(GL), storagetype(GL)
+function JordanPairData(W1::JordanMPOTensor, W2::JordanMPOTensor, ::Type{M}) where {M}
+    S = spacetype(W1)
     T = tensormaptype(S, 2, 2, M)
     O32, O23 = tensormaptype(S, 3, 2, M), tensormaptype(S, 2, 3, M)
     U = SparseBlockTensorMap{O32, scalartype(O32), S, 3, 2, 5}
     V = SparseBlockTensorMap{O23, scalartype(O23), S, 2, 3, 5}
-    return map(1:(length(O) - 1)) do i
-        A1, B2, C1, A2 = O[i].A, O[i + 1].B, O[i].C, O[i + 1].A
-        CB = if nonzero_length(C1) > 0 && nonzero_length(B2) > 0
-            @plansor cb[-1 -2; -3 -4] := C1[-1; -3 1] * B2[1 -2; -4]
-            only(cb)
-        else
-            missing
-        end
-        AB = if nonzero_length(A1) > 0 && nonzero_length(B2) > 0
-            @plansor ab[-1 -2 -3; -4 -5] := A1[-1 -2; -4 1] * B2[1 -3; -5]
-        else
-            missing
-        end
-        CA = if nonzero_length(C1) > 0 && nonzero_length(A2) > 0
-            @plansor ca[-1 -2; -3 -4 -5] := C1[-1; -3 1] * A2[1 -2; -4 -5]
-        else
-            missing
-        end
-        channels = _connected_channels(A1, A2)
-        rows, mids, cols = channels
-        A1r, A2r = isempty(mids) ? (A1, A2) : (A1[rows, 1:1, 1:1, mids], A2[mids, 1:1, 1:1, cols])
-        JordanPairData{T, U, V, typeof(A1r)}(CB, AB, CA, channels, A1r, A2r)
+    # block accessors recompute a fresh `SparseBlockTensorMap` on every access
+    A1, B2, C1, A2 = W1.A, W2.B, W1.C, W2.A
+    CB = if nonzero_length(C1) > 0 && nonzero_length(B2) > 0
+        @plansor cb[-1 -2; -3 -4] := C1[-1; -3 1] * B2[1 -2; -4]
+        only(cb)
+    else
+        missing
     end
+    AB = if nonzero_length(A1) > 0 && nonzero_length(B2) > 0
+        @plansor ab[-1 -2 -3; -4 -5] := A1[-1 -2; -4 1] * B2[1 -3; -5]
+    else
+        missing
+    end
+    CA = if nonzero_length(C1) > 0 && nonzero_length(A2) > 0
+        @plansor ca[-1 -2; -3 -4 -5] := C1[-1; -3 1] * A2[1 -2; -4 -5]
+    else
+        missing
+    end
+    channels = _connected_channels(A1, A2)
+    rows, mids, cols = channels
+    A1r, A2r = A1[rows, 1:1, 1:1, mids], A2[mids, 1:1, 1:1, cols]
+    return JordanPairData{T, U, V, typeof(A1r)}(CB, AB, CA, channels, A1r, A2r)
 end
 
-# Directional halves of `JordanMPO_AC_Hamiltonian` and `JordanMPO_AC2_Hamiltonian`, using
-# the same contractions. Each onsite term is assigned to the side whose preparation can fold it.
 function _jordan_types(G)
     S, M = spacetype(G), storagetype(G)
     return tensormaptype(S, 1, 1, M), tensormaptype(S, 2, 2, M), tensormaptype(S, 3, 3, M)
 end
+_A_type(GL2, A, GR2, backend, allocator) =
+    MPO_AC_Hamiltonian{typeof(GL2), typeof(A), typeof(GR2), typeof(backend), typeof(allocator)}
+_AA_type(GL2, pair, GR2, backend, allocator) = MPO_AC2_Hamiltonian{
+    typeof(GL2), typeof(pair.A1), typeof(pair.A2), typeof(GR2), typeof(backend), typeof(allocator),
+}
+
 _onsite(D) = nonzero_length(D) > 0 ? only(D) : missing
 function _ending(GL2, B, backend, allocator)
     nonzero_length(B) > 0 || return missing
@@ -582,37 +448,28 @@ function _starting(GR2, C, backend, allocator)
     return only(c)
 end
 
-function left_AC_side(GL, W::JordanMPOTensor, backend, allocator)
-    GL2 = GL[2:(end - 1)]
-    A, B, C = W.A, W.B, W.C
+# The terms of `JordanMPO_AC_Hamiltonian` and `JordanMPO_AC2_Hamiltonian` that depend on only
+# one environment, excluding the continuing `A`/`AA` term. Each onsite or operator-only term
+# is assigned to the half whose `prepare_operator!!` can fold it.
+function left_AC_half(GL, W::JordanMPOTensor, ::Type{O3}, backend, allocator) where {O3}
     O1, O2, _ = _jordan_types(GL)
-    O3 = MPO_AC_Hamiltonian{typeof(GL2), typeof(A), typeof(GL2), typeof(backend), typeof(allocator)}
     E = size(W, 1) > 1 ? removeunit(GL[end], 2) : missing
-    D = nonzero_length(C) == 0 ? _onsite(W.D) : missing
-    H = JordanMPO_AC_Hamiltonian{O1, O2, O3}(
-        D, missing, E, missing, _ending(GL2, B, backend, allocator), missing, backend, allocator,
-    )
-    continuing = nonzero_length(A) > 0 ? _prepare_GL_O(GL2, A, backend, allocator) : missing
-    return JordanEnvironmentSide(prepare_operator!!(H), continuing, O2)
+    D = nonzero_length(W.C) == 0 ? _onsite(W.D) : missing
+    B = _ending(GL[2:(end - 1)], W.B, backend, allocator)
+    return JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, missing, E, missing, B, missing, backend, allocator)
 end
-function right_AC_side(GR, W::JordanMPOTensor, backend, allocator)
-    GR2 = GR[2:(end - 1)]
-    A, C = W.A, W.C
+function right_AC_half(GR, W::JordanMPOTensor, ::Type{O3}, backend, allocator) where {O3}
     O1, O2, _ = _jordan_types(GR)
-    O3 = MPO_AC_Hamiltonian{typeof(GR2), typeof(A), typeof(GR2), typeof(backend), typeof(allocator)}
     I = size(W, 4) > 1 ? removeunit(GR[1], 2) : missing
-    D = nonzero_length(C) > 0 ? _onsite(W.D) : missing
-    H = JordanMPO_AC_Hamiltonian{O1, O2, O3}(
-        D, I, missing, _starting(GR2, C, backend, allocator), missing, missing, backend, allocator,
-    )
-    continuing = nonzero_length(A) > 0 ? TensorMap(GR2) : missing
-    return JordanEnvironmentSide(prepare_operator!!(H), continuing, tensormaptype(spacetype(GR), 2, 1, storagetype(GR)))
+    WC = W.C
+    D = nonzero_length(WC) > 0 ? _onsite(W.D) : missing
+    C = _starting(GR[2:(end - 1)], WC, backend, allocator)
+    return JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, I, missing, C, missing, missing, backend, allocator)
 end
 
-function left_AC2_side(GL, W::JordanMPOTensor, pair, backend, allocator)
+function left_AC2_half(GL, W::JordanMPOTensor, pair, ::Type{O4}, backend, allocator) where {O4}
     GL2 = GL[2:(end - 1)]
     O1, O2, O3 = _jordan_types(GL)
-    O4 = MPO_AC2_Hamiltonian{typeof(GL2), typeof(pair.A1), typeof(pair.A2), typeof(GL2), typeof(backend), typeof(allocator)}
     EE = size(W, 1) > 1 ? removeunit(GL[end], 2) : missing
     AB = if ismissing(pair.AB)
         missing
@@ -622,18 +479,14 @@ function left_AC2_side(GL, W::JordanMPOTensor, pair, backend, allocator)
     end
     # CB is folded into CA if available, otherwise into AB.
     CB = ismissing(pair.CA) ? pair.CB : missing
-    H = JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
         missing, missing, missing, CB, missing, AB, missing,
         _ending(GL2, W.B, backend, allocator), _onsite(W.D), EE, backend, allocator,
     )
-    rows, mids, _ = pair.channels
-    continuing = isempty(mids) ? missing : _prepare_GL_O(GL2[rows], pair.A1, backend, allocator)
-    return JordanEnvironmentSide(prepare_operator!!(H), continuing, O2)
 end
-function right_AC2_side(GR, W::JordanMPOTensor, pair, backend, allocator)
+function right_AC2_half(GR, W::JordanMPOTensor, pair, ::Type{O4}, backend, allocator) where {O4}
     GR2 = GR[2:(end - 1)]
     O1, O2, O3 = _jordan_types(GR)
-    O4 = MPO_AC2_Hamiltonian{typeof(GR2), typeof(pair.A1), typeof(pair.A2), typeof(GR2), typeof(backend), typeof(allocator)}
     II = size(W, 4) > 1 ? transpose(removeunit(GR[1], 2)) : missing
     CA = if ismissing(pair.CA)
         missing
@@ -642,22 +495,75 @@ function right_AC2_side(GR, W::JordanMPOTensor, pair, backend, allocator)
         only(ca)
     end
     CB = ismissing(CA) ? missing : pair.CB
-    H = JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
         II, _starting(GR2, W.C, backend, allocator), _onsite(W.D), CB, CA,
         missing, missing, missing, missing, missing, backend, allocator,
     )
-    _, mids, cols = pair.channels
-    continuing = isempty(mids) ? missing : _prepare_O_GR(pair.A2, GR2[cols], backend, allocator)
-    return JordanEnvironmentSide(prepare_operator!!(H), continuing, O2)
 end
 
+function assemble_operator_halves(L::JordanMPO_AC_Hamiltonian{O1, O2}, R, A, ::Type{O3}, backend, allocator) where {O1, O2, O3}
+    D = ismissing(L.D) ? R.D : L.D
+    return JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, R.I, L.E, R.C, L.B, A, backend, allocator)
+end
+function assemble_operator_halves(L::JordanMPO_AC2_Hamiltonian{O1, O2, O3}, R, AA, ::Type{O4}, backend, allocator) where {O1, O2, O3, O4}
+    CB = ismissing(L.CB) ? R.CB : L.CB
+    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
+        R.II, R.IC, R.ID, CB, R.CA, L.AB, AA, L.BE, L.DE, L.EE, backend, allocator,
+    )
+end
+
+# Cached halves
+# -------------
+"""
+    JordanEnvironmentSide
+
+One environment's prepared half of an effective `AC` or `AC2` Hamiltonian. `continuing` is
+that side's fused environment for assembling the continuing term, or `missing` if absent.
+Both are read-only snapshots.
+"""
+struct JordanEnvironmentSide{H, C <: AbstractTensorMap}
+    prepared::H
+    continuing::Union{Missing, C}
+end
+JordanEnvironmentSide(prepared, continuing, ::Type{C}) where {C} =
+    JordanEnvironmentSide{typeof(prepared), C}(prepared, continuing)
+
+cache_pair_data(O::MPOHamiltonian, GL) =
+    [JordanPairData(O[i], O[i + 1], storagetype(GL)) for i in 1:(length(O) - 1)]
+
 function prepare_left_environment(GL, O::MPOHamiltonian, pairs, i, nsites, backend, allocator)
-    nsites == 1 && return left_AC_side(GL, O[i], backend, allocator)
-    return i < length(O) ? left_AC2_side(GL, O[i], pairs[i], backend, allocator) : missing
+    GL2 = GL[2:(end - 1)]
+    _, O2, _ = _jordan_types(GL)
+    if nsites == 1
+        W = O[i]
+        A = W.A
+        half = left_AC_half(GL, W, _A_type(GL2, A, GL2, backend, allocator), backend, allocator)
+        continuing = nonzero_length(A) > 0 ? _prepare_GL_O(GL2, A, backend, allocator) : missing
+    else
+        i < length(O) || return missing
+        pair = pairs[i]
+        half = left_AC2_half(GL, O[i], pair, _AA_type(GL2, pair, GL2, backend, allocator), backend, allocator)
+        rows, mids, _ = pair.channels
+        continuing = isempty(mids) ? missing : _prepare_GL_O(GL2[rows], pair.A1, backend, allocator)
+    end
+    return JordanEnvironmentSide(prepare_operator!!(half), continuing, O2)
 end
 function prepare_right_environment(GR, O::MPOHamiltonian, pairs, i, nsites, backend, allocator)
-    nsites == 1 && return right_AC_side(GR, O[i], backend, allocator)
-    return i > 1 ? right_AC2_side(GR, O[i], pairs[i - 1], backend, allocator) : missing
+    GR2 = GR[2:(end - 1)]
+    S, M = spacetype(GR), storagetype(GR)
+    if nsites == 1
+        W = O[i]
+        A = W.A
+        half = right_AC_half(GR, W, _A_type(GR2, A, GR2, backend, allocator), backend, allocator)
+        continuing = nonzero_length(A) > 0 ? TensorMap(GR2) : missing
+        return JordanEnvironmentSide(prepare_operator!!(half), continuing, tensormaptype(S, 2, 1, M))
+    end
+    i > 1 || return missing
+    pair = pairs[i - 1]
+    half = right_AC2_half(GR, O[i], pair, _AA_type(GR2, pair, GR2, backend, allocator), backend, allocator)
+    _, mids, cols = pair.channels
+    continuing = isempty(mids) ? missing : _prepare_O_GR(pair.A2, GR2[cols], backend, allocator)
+    return JordanEnvironmentSide(prepare_operator!!(half), continuing, tensormaptype(S, 2, 2, M))
 end
 
 function AC_hamiltonian(
@@ -672,11 +578,9 @@ function AC_hamiltonian(
         return prepare ? prepare_operator!!(H) : H
     end
     l, r = left_contribution(cache, i), right_contribution(cache, i)
-    T = prepared_operator_type(
-        MPO_AC_Hamiltonian{typeof(GL), typeof(O[i].A), typeof(GR), typeof(backend), typeof(allocator)}
-    )
+    T = prepared_operator_type(_A_type(GL, O[i].A, GR, backend, allocator))
     A = ismissing(l.continuing) ? missing : T(l.continuing, r.continuing, backend, allocator)
-    return assemble_operator_sides(l.prepared, r.prepared, A, T, backend, allocator)
+    return assemble_operator_halves(l.prepared, r.prepared, A, T, backend, allocator)
 end
 function AC2_hamiltonian(
         i::Int, below::_HAM_MPS_TYPES, O::MPOHamiltonian, above::_HAM_MPS_TYPES,
@@ -690,21 +594,7 @@ function AC2_hamiltonian(
         return prepare ? prepare_operator!!(H) : H
     end
     l, r = left_contribution(cache, i), right_contribution(cache, i + 1)
-    pair = cache.pairs[i]
-    T = prepared_operator_type(
-        MPO_AC2_Hamiltonian{typeof(GL), typeof(pair.A1), typeof(pair.A2), typeof(GR), typeof(backend), typeof(allocator)}
-    )
+    T = prepared_operator_type(_AA_type(GL, cache.pairs[i], GR, backend, allocator))
     AA = ismissing(l.continuing) ? missing : T(l.continuing, r.continuing, backend, allocator)
-    return assemble_operator_sides(l.prepared, r.prepared, AA, T, backend, allocator)
-end
-
-function assemble_operator_sides(L::JordanMPO_AC_Hamiltonian{O1, O2}, R, A, ::Type{O3}, backend, allocator) where {O1, O2, O3}
-    D = ismissing(L.D) ? R.D : L.D
-    return JordanMPO_AC_Hamiltonian{O1, O2, O3}(D, R.I, L.E, R.C, L.B, A, backend, allocator)
-end
-function assemble_operator_sides(L::JordanMPO_AC2_Hamiltonian{O1, O2, O3}, R, AA, ::Type{O4}, backend, allocator) where {O1, O2, O3, O4}
-    CB = ismissing(L.CB) ? R.CB : L.CB
-    return JordanMPO_AC2_Hamiltonian{O1, O2, O3, O4}(
-        R.II, R.IC, R.ID, CB, R.CA, L.AB, AA, L.BE, L.DE, L.EE, backend, allocator,
-    )
+    return assemble_operator_halves(l.prepared, r.prepared, AA, T, backend, allocator)
 end
