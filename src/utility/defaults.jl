@@ -5,7 +5,7 @@ Some default values and settings for MPSKit.
 """
 module Defaults
 
-import KrylovKit: GMRES, Arnoldi, Lanczos
+import KrylovKit: GMRES, CG, Arnoldi, Lanczos
 using OhMyThreads
 using ..MPSKit: DynamicTol, AdaptiveKrylov
 using Preferences: @load_preference, @set_preferences!
@@ -73,6 +73,17 @@ function alg_eigsolve(;
     alg = ishermitian ? Lanczos(; tol, maxiter, eager, krylovdim, verbosity) :
         Arnoldi(; tol, maxiter, eager, krylovdim, verbosity)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
+end
+
+function alg_linsolve(;
+        isposdef = false, tol = tol, maxiter = maxiter,
+        krylovdim = krylovdim, verbosity = 0, dynamic_tols = dynamic_tols,
+        tol_min = tol_min, tol_max = tol_max, tol_factor = eigs_tolfactor, truncation_factor = 1.0e-1
+    )
+    # KrylovKit has no `linsolve` for `MINRES`, so the hermitian-indefinite case also uses GMRES
+    base = isposdef ? CG(; tol, maxiter, verbosity) :
+        GMRES(; tol, maxiter, krylovdim, verbosity)
+    return dynamic_tols ? DynamicTol(base, tol_min, tol_max, tol_factor, truncation_factor) : base
 end
 
 function alg_environments(;

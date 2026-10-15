@@ -65,26 +65,40 @@ struct DynamicTol{A} <: Algorithm
     "tolerance factor for updating relative to the current (global) gradient norm"
     tol_factor::Float64
 
-    function DynamicTol(alg::A, tol_min::Real, tol_max::Real, tol_factor::Real) where {A}
+    "factor on the local truncation error, setting a tolerance floor (0 disables it)"
+    truncation_factor::Float64
+
+    function DynamicTol(
+            alg::A, tol_min::Real, tol_max::Real, tol_factor::Real, truncation_factor::Real = 0.0
+        ) where {A}
         0 <= tol_min <= tol_max ||
             throw(ArgumentError("tol_min must be between 0 and tol_max"))
-        return new{A}(alg, tol_min, tol_max, tol_factor)
+        truncation_factor >= 0 ||
+            throw(ArgumentError("truncation_factor must be non-negative"))
+        return new{A}(alg, tol_min, tol_max, tol_factor, truncation_factor)
     end
 end
-function DynamicTol(alg; tol_min = 1.0e-6, tol_max = 1.0e-2, tol_factor = 0.1)
-    return DynamicTol(alg, tol_min, tol_max, tol_factor)
+function DynamicTol(alg; tol_min = 1.0e-6, tol_max = 1.0e-2, tol_factor = 0.1, truncation_factor = 0.0)
+    return DynamicTol(alg, tol_min, tol_max, tol_factor, truncation_factor)
 end
 
 """
-    adapt_solver(alg::DynamicTol; iter, g_global, ...)
+    adapt_solver(alg::DynamicTol; iter, g_global, eps_trunc, ...)
 
 Tighten only the wrapped solver's tolerance (its Krylov budget, if any, is left fixed), from the
-global gradient / convergence-error scalar `g_global`, damped by the iteration count:
+global gradient / convergence-error scalar `g_global`, damped by the iteration count, but never
+below the truncation-error floor `truncation_factor · eps_trunc` (relevant for truncating two-site
+sweeps; with the default `truncation_factor = 0` the floor is inactive):
 
-    tol = clamp(tol_factor · g_global / √iter, tol_min, tol_max)
+    tol = clamp(max(truncation_factor · eps_trunc, tol_factor · g_global / √iter), tol_min, tol_max)
 """
-function adapt_solver(alg::DynamicTol; iter::Integer = 1, g_global::Real = 0.0, kwargs...)
-    tol = clamp(alg.tol_factor * g_global / sqrt(max(iter, 1)), alg.tol_min, alg.tol_max)
+function adapt_solver(
+        alg::DynamicTol; iter::Integer = 1, g_global::Real = 0.0, eps_trunc::Real = 0.0, kwargs...
+    )
+    tol = clamp(
+        max(alg.truncation_factor * eps_trunc, alg.tol_factor * g_global / sqrt(max(iter, 1))),
+        alg.tol_min, alg.tol_max
+    )
     return _updatetol(alg.alg, tol)
 end
 

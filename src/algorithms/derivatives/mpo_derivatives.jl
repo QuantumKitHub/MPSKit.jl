@@ -138,7 +138,7 @@ function (h::MPO_AC2_Hamiltonian{<:MPSBondTensor, Nothing, Nothing, <:MPSBondTen
     )
     backend, allocator = h.backend, h.allocator
     @plansor backend = backend allocator = allocator begin
-        y[-1 -2; -3 -4] ≔ h.leftenv[-1; 1] * x[1 -2; 2 -4] * h.rightenv[2 -3]
+        y[-1 -2; -3 -4] ≔ h.leftenv[-1; 1] * x[1 -2; 2 -4] * h.rightenv[2; -3]
     end
     return y isa AbstractBlockTensorMap ? only(y) : y
 end
