@@ -4,7 +4,7 @@
 Environment manager for `FiniteMPS` and `WindowMPS`. This structure is responsible for automatically checking
 if the queried environment is still correctly cached and if not recalculates.
 """
-struct FiniteEnvironments{A, B, C, D} <: AbstractMPSEnvironments
+struct FiniteEnvironments{A, B, C, D, H} <: AbstractMPSEnvironments
     above::A
 
     operator::B #the operator
@@ -14,7 +14,37 @@ struct FiniteEnvironments{A, B, C, D} <: AbstractMPSEnvironments
 
     GLs::Vector{D}
     GRs::Vector{D}
+
+    halves::H # prepared halves of the effective Hamiltonians, see `lefthalf`
 end
+
+"""
+    PreparedHalves{L, R, G}
+
+The prepared left and right halves of one kind of effective Hamiltonian at every site, each
+stored with the environment it was prepared from. Entries are `nothing` until first queried.
+"""
+struct PreparedHalves{L, R, G}
+    left::Vector{Union{Nothing, L}}
+    right::Vector{Union{Nothing, R}}
+    lsources::Vector{Union{Nothing, G}}
+    rsources::Vector{Union{Nothing, G}}
+    function PreparedHalves{L, R, G}(left, right, lsources, rsources) where {L, R, G}
+        return new{L, R, G}(left, right, lsources, rsources)
+    end
+end
+function PreparedHalves{L, R, G}(N::Int) where {L, R, G}
+    unset(T) = fill!(Vector{Union{Nothing, T}}(undef, N), nothing)
+    return PreparedHalves{L, R, G}(unset(L), unset(R), unset(G), unset(G))
+end
+
+"""
+    environment_halves(operator, G, N)
+
+The storage for the prepared halves of the effective Hamiltonians of `operator` on `N` sites
+with environments of type `G`, or `nothing` if `operator` has no prepared halves.
+"""
+environment_halves(operator, G, N) = nothing
 
 function initialize_environments(below::AbstractFiniteMPS, operator, above, leftstart, rightstart)
     above = above === below ? nothing : above
@@ -23,8 +53,9 @@ function initialize_environments(below::AbstractFiniteMPS, operator, above, left
     rightenvs = [i == N ? rightstart : similar(rightstart) for i in 0:N]
 
     t = similar(below.AL[1])
+    halves = environment_halves(operator, eltype(leftenvs), N)
     return FiniteEnvironments(
-        above, operator, fill(t, N), fill(t, N), leftenvs, rightenvs
+        above, operator, fill(t, N), fill(t, N), leftenvs, rightenvs, halves
     )
 end
 
@@ -157,3 +188,42 @@ function leftenv(
 
     return ca.GLs[ind]
 end
+
+"""
+    lefthalf(kind, envs, site, state; backend, allocator)
+    righthalf(kind, envs, site, state; backend, allocator)
+
+Return the prepared half of the effective Hamiltonian `kind` (`AC_hamiltonian` or
+`AC2_hamiltonian`) that depends only on the left (right) environment of `site` for `state`,
+where `site` is the first (last) site of the effective Hamiltonian.
+A half is prepared when first queried, and again whenever its environment has been replaced.
+
+See also [`leftenv`](@ref) and [`rightenv`](@ref).
+"""
+function lefthalf(
+        kind, envs::FiniteEnvironments, site::Int, state;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    GL = leftenv(envs, site, state; backend, allocator)
+    halves = halfstorage(envs, kind)
+    if halves.lsources[site] !== GL
+        halves.left[site] = prepare_lefthalf(kind, envs.operator, envs, GL, site, backend, allocator)
+        halves.lsources[site] = GL
+    end
+    return something(halves.left[site])
+end
+function righthalf(
+        kind, envs::FiniteEnvironments, site::Int, state;
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    GR = rightenv(envs, site, state; backend, allocator)
+    halves = halfstorage(envs, kind)
+    if halves.rsources[site] !== GR
+        halves.right[site] = prepare_righthalf(kind, envs.operator, envs, GR, site, backend, allocator)
+        halves.rsources[site] = GR
+    end
+    return something(halves.right[site])
+end
+
+has_halves(envs) = false
+has_halves(envs::FiniteEnvironments) = !isnothing(envs.halves)

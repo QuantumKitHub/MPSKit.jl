@@ -303,7 +303,6 @@ function DMRGState(ψ, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput)
     Tr = real(scalartype(ψ))
     n = num_updates(alg, ψ)
     local_errors = ones(Tr, n)
-    envs = dmrg_environments(ψ, H, envs; alg.backend, allocator, nsites = alg isa DMRG ? 1 : 2)
     return DMRGState(
         ψ, H, envs, 0, maximum(local_errors), local_errors, zeros(Tr, n),
         zeros(n), timeroutput, allocator,
@@ -334,16 +333,11 @@ function Base.iterate(it::IterativeSolver{<:Union{DMRG, DMRG2}}, state::DMRGStat
         state = sweep!(it, state, Val(:right), iter)
         sweep!(it, state, Val(:left), iter)
     end
-    envs = unwrap_environments(state.envs)
-    ψ, finalized_envs = @timeit timeroutput "finalize" it.finalize(
-        iter, state.mps, state.operator, envs
-    )::Tuple{typeof(state.mps), typeof(envs)}
-    dmrg_envs = finalized_envs === envs ? state.envs : dmrg_environments(
-        ψ, state.operator, finalized_envs;
-        it.alg.backend, state.allocator, nsites = it.alg isa DMRG ? 1 : 2,
-    )
-    it.state = setproperties(state; mps = ψ, envs = dmrg_envs, iter)
-    return (ψ, finalized_envs, state.ϵ), it.state
+    ψ, envs = @timeit timeroutput "finalize" it.finalize(
+        iter, state.mps, state.operator, state.envs
+    )::Tuple{typeof(state.mps), typeof(state.envs)}
+    it.state = setproperties(state; mps = ψ, envs, iter)
+    return (ψ, envs, state.ϵ), it.state
 end
 
 # Truncation sets the attainable floor of the Galerkin error.
@@ -378,7 +372,7 @@ function find_groundstate_sweep!(
         truncation_errors = bond_truncation_errors(alg, state.truncation_errors),
         numiter = state.iter,
     )
-    return state.mps, unwrap_environments(state.envs), info
+    return state.mps, state.envs, info
 end
 
 function find_groundstate(ψ, H, alg::Union{DMRG, DMRG2}, envs...; kwargs...)
