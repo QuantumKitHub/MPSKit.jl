@@ -409,7 +409,7 @@ function AC_hamiltonian(
     H = MPO_AC_Hamiltonian(GL, O[site], GR, backend, allocator)
     prepare || return H
     envs.nsites == 1 || return prepare_operator!!(H)
-    return prepared_operator_type(typeof(H))(lefthalf(envs, site), righthalf(envs, site), backend, allocator)
+    return prepared_operator_type(typeof(H))(lefthalf(envs, site, below), righthalf(envs, site, below), backend, allocator)
 end
 function AC2_hamiltonian(
         site::Int, below, O::Union{FiniteMPO, InfiniteMPO}, above, envs::DMRGEnvironments;
@@ -419,7 +419,7 @@ function AC2_hamiltonian(
     H = MPO_AC2_Hamiltonian(GL, O[site], O[site + 1], GR, backend, allocator)
     prepare || return H
     envs.nsites == 2 || return prepare_operator!!(H)
-    return prepared_operator_type(typeof(H))(lefthalf(envs, site), righthalf(envs, site + 1), backend, allocator)
+    return prepared_operator_type(typeof(H))(lefthalf(envs, site, below), righthalf(envs, site + 1, below), backend, allocator)
 end
 
 # Projections inside DMRG reuse prepared halves when they exist; otherwise, like the generic

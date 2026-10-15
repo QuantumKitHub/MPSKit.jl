@@ -578,7 +578,7 @@ function AC_hamiltonian(
         H = JordanMPO_AC_Hamiltonian(GL, O[i], GR; backend, allocator)
         return prepare ? prepare_operator!!(H) : H
     end
-    l, r = lefthalf(envs, i), righthalf(envs, i)
+    l, r = lefthalf(envs, i, below), righthalf(envs, i, below)
     T = prepared_operator_type(_A_type(GL, O[i].A, GR, backend, allocator))
     A = ismissing(l.continuing) ? missing : T(l.continuing, r.continuing, backend, allocator)
     return assemble_operator_halves(l.prepared, r.prepared, A, T, backend, allocator)
@@ -594,7 +594,7 @@ function AC2_hamiltonian(
         H = JordanMPO_AC2_Hamiltonian(GL, O[i], O[i + 1], GR; backend, allocator)
         return prepare ? prepare_operator!!(H) : H
     end
-    l, r = lefthalf(envs, i), righthalf(envs, i + 1)
+    l, r = lefthalf(envs, i, below), righthalf(envs, i + 1, below)
     T = prepared_operator_type(_AA_type(GL, envs.pairs[i], GR, backend, allocator))
     AA = ismissing(l.continuing) ? missing : T(l.continuing, r.continuing, backend, allocator)
     return assemble_operator_halves(l.prepared, r.prepared, AA, T, backend, allocator)
