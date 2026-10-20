@@ -114,8 +114,8 @@ function localupdate_step!(
     allocator = default_allocator(state.mps, scheduler)
     tforeach(eachsite(state.mps); scheduler) do site
         local AC, C
-        @sync begin
-            Threads.@spawn begin
+        tforeach(1:2; scheduler) do half
+            if isone(half)
                 AC = map(1:size(state.mps, 1)) do row
                     AC_projection(
                         CartesianIndex(row, site), state.mps, state.operator, state.envs;
@@ -123,8 +123,7 @@ function localupdate_step!(
                     )
                 end
                 circshift!(AC, 1)
-            end
-            Threads.@spawn begin
+            else
                 C = map(1:size(state.mps, 1)) do row
                     C_projection(
                         CartesianIndex(row, site), state.mps, state.operator, state.envs;
