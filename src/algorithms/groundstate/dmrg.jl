@@ -124,22 +124,24 @@ function local_update!(
         ϵ_global, ϵ_trunc, decay_rate,
         iter, timeroutput, allocator
     )
-    ϵ_local = calc_galerkin(site, ψ, O, ψ, envs; alg.backend, allocator)
+    ac_old = ψ.AC[site]
+    if isnothing(alg.alg_expand)
+        H_effective = @timeit timeroutput "AC_hamiltonian" AC_hamiltonian(site, ψ, O, ψ, envs; alg.backend, allocator)
+        ϵ_local = galerkin_error(H_effective * ac_old, ψ.AL[site])
+    else
+        ϵ_local = calc_galerkin(site, ψ, O, ψ, envs; alg.backend, allocator)
 
-    # 1. expand
-    if !isnothing(alg.alg_expand)
+        # 1. expand
         @timeit timeroutput "expand" changebond!(
             site, direction, ψ, O, alg.alg_expand, envs; allocator
         )
+        ac_old = ψ.AC[site]
+        H_effective = @timeit timeroutput "AC_hamiltonian" AC_hamiltonian(site, ψ, O, ψ, envs; alg.backend, allocator)
     end
 
     # 2. local update
     alg_eigsolve = adapt_solver(alg.alg_eigsolve; decay_rate, g_local = ϵ_local, g_global = ϵ_global, eps_trunc = ϵ_trunc)
-    ac_old = ψ.AC[site]
-    λ, AC′, info = @timeit timeroutput "AC_eigsolve" begin
-        H_effective = AC_hamiltonian(site, ψ, O, ψ, envs; alg.backend, allocator)
-        fixedpoint(H_effective, ac_old, :SR, alg_eigsolve)
-    end
+    λ, AC′, info = @timeit timeroutput "AC_eigsolve" fixedpoint(H_effective, ac_old, :SR, alg_eigsolve)
 
     alg_gauge = _update_alg_gauge(alg.alg_gauge, iter, ϵ_global)
 

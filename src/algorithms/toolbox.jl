@@ -65,9 +65,9 @@ function calc_galerkin(
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     AC´ = AC_projection(pos, below, operator, above, envs; backend, allocator)
-    normalize!(AC´)
-    return norm(project_complement!(AC´, below.AL[pos]))
+    return galerkin_error(AC´, below.AL[pos])
 end
+galerkin_error(AC´, AL) = norm(project_complement!(normalize!(AC´), AL))
 function calc_galerkin(pos::CartesianIndex{2}, below, operator, above, envs; kwargs...)
     row, col = Tuple(pos)
     return calc_galerkin(col, below[row + 1], operator[row], above[row], envs[row]; kwargs...)
