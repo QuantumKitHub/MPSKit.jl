@@ -48,7 +48,7 @@ function AC_hamiltonian(
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     prepare && operator isa Union{FiniteMPO, InfiniteMPO} && has_halves(envs) &&
-        return _AC_hamiltonian_from_halves(site, below, operator, envs, backend, allocator)
+        return hamiltonian_from_halves(Val(1), site, below, envs, backend, allocator)
     O = isnothing(operator) ? nothing : operator[site]
     H_AC = MPO_AC_Hamiltonian(
         leftenv(envs, site, below), O, rightenv(envs, site, below), backend, allocator
@@ -60,7 +60,7 @@ function AC2_hamiltonian(
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     prepare && operator isa Union{FiniteMPO, InfiniteMPO} && has_halves(envs) &&
-        return _AC2_hamiltonian_from_halves(site, below, operator, envs, backend, allocator)
+        return hamiltonian_from_halves(Val(2), site, below, envs, backend, allocator)
     O1, O2 = isnothing(operator) ? (nothing, nothing) : (operator[site], operator[site + 1])
     H_AC2 = MPO_AC2_Hamiltonian(
         leftenv(envs, site, below), O1, O2, rightenv(envs, site + 1, below),
@@ -181,10 +181,13 @@ struct PrecomputedDerivative{
     allocator::A
 end
 function PrecomputedDerivative(L::AbstractTensorMap, R::AbstractTensorMap, backend, allocator)
+    return precomputed_type(typeof(L), typeof(R), typeof(backend), typeof(allocator))(L, R, backend, allocator)
+end
+Base.@assume_effects :foldable function precomputed_type(::Type{L}, ::Type{R}, ::Type{B}, ::Type{A}) where {L, R, B, A}
     S = TensorKit.check_spacetype(L, R)
     T = TensorOperations.promote_contract(scalartype(L), scalartype(R))
     M = TensorKit.promote_storagetype(T, L, R)
-    return PrecomputedDerivative{T, S, M, numout(L), numin(L), numout(R), numin(R), typeof(backend), typeof(allocator)}(L, R, backend, allocator)
+    return PrecomputedDerivative{T, S, M, numout(L), numin(L), numout(R), numin(R), B, A}
 end
 
 const PrecomputedCDerivative{T, S, M, B, A} = PrecomputedDerivative{T, S, M, 1, 2, 2, 1, B, A}
@@ -247,7 +250,10 @@ end
     return env
 end
 
-function _prepare_GL_O(GL, O, backend, allocator)
+# The prepared left and right environments of a `PrecomputedDerivative` of an `N`-site window:
+# a single-site operator is absorbed into the left one, and each operator of a two-site window
+# into its own side.
+function prepare_operator_left(::Val, GL, O, backend, allocator)
     cp = allocator_checkpoint!(allocator)
 
     TC = TensorOperations.promote_contract(scalartype(GL), scalartype(O))
@@ -268,7 +274,8 @@ function _prepare_GL_O(GL, O, backend, allocator)
     return leftenv
 end
 
-function _prepare_O_GR(O, GR, backend, allocator)
+prepare_operator_right(::Val{1}, GR, O, backend, allocator) = GR isa TensorMap ? GR : TensorMap(GR)
+function prepare_operator_right(::Val{2}, GR, O, backend, allocator)
     cp = allocator_checkpoint!(allocator)
 
     TC = TensorOperations.promote_contract(scalartype(O), scalartype(GR))
@@ -289,18 +296,11 @@ function _prepare_O_GR(O, GR, backend, allocator)
     return rightenv
 end
 
-# Left and right halves of a `PrecomputedDerivative`: a single-site operator is absorbed into
-# the left half, and each operator of a two-site window into its own half.
-left_half(::Type{<:MPO_AC_Hamiltonian}, GL, O, backend, allocator) = _prepare_GL_O(GL, O, backend, allocator)
-right_half(::Type{<:MPO_AC_Hamiltonian}, GR, O, backend, allocator) = GR isa TensorMap ? GR : TensorMap(GR)
-left_half(::Type{<:MPO_AC2_Hamiltonian}, GL, O, backend, allocator) = _prepare_GL_O(GL, O, backend, allocator)
-right_half(::Type{<:MPO_AC2_Hamiltonian}, GR, O, backend, allocator) = _prepare_O_GR(O, GR, backend, allocator)
-
 function prepare_operator!!(H::MPO_AC_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPSTensor})
     backend, allocator = H.backend, H.allocator
     O = only(H.operators)
-    L = left_half(MPO_AC_Hamiltonian, H.leftenv, O, backend, allocator)
-    R = right_half(MPO_AC_Hamiltonian, H.rightenv, O, backend, allocator)
+    L = prepare_operator_left(Val(1), H.leftenv, O, backend, allocator)
+    R = prepare_operator_right(Val(1), H.rightenv, O, backend, allocator)
     return prepared_operator_type(typeof(H))(L, R, backend, allocator)
 end
 
@@ -308,8 +308,8 @@ function prepare_operator!!(
         H::MPO_AC2_Hamiltonian{<:MPSTensor, <:MPOTensor, <:MPOTensor, <:MPSTensor}
     )
     backend, allocator = H.backend, H.allocator
-    L = left_half(MPO_AC2_Hamiltonian, H.leftenv, H.operators[1], backend, allocator)
-    R = right_half(MPO_AC2_Hamiltonian, H.rightenv, H.operators[2], backend, allocator)
+    L = prepare_operator_left(Val(2), H.leftenv, H.operators[1], backend, allocator)
+    R = prepare_operator_right(Val(2), H.rightenv, H.operators[2], backend, allocator)
     return prepared_operator_type(typeof(H))(L, R, backend, allocator)
 end
 
@@ -397,18 +397,15 @@ end
 
 # Prepared halves for `FiniteEnvironments`
 # -----------------------------------------
-halfstorage(envs::FiniteEnvironments, ::typeof(AC_hamiltonian)) = envs.halves.AC
-halfstorage(envs::FiniteEnvironments, ::typeof(AC2_hamiltonian)) = envs.halves.AC2
-
-_derivative_type(::typeof(AC_hamiltonian)) = MPO_AC_Hamiltonian
-_derivative_type(::typeof(AC2_hamiltonian)) = MPO_AC2_Hamiltonian
+halfstorage(envs::FiniteEnvironments, ::Val{1}) = envs.halves.AC
+halfstorage(envs::FiniteEnvironments, ::Val{2}) = envs.halves.AC2
 
 # The types of the halves are those of the environments of the prepared operator.
-function halftypes(::typeof(AC_hamiltonian), ::Type{G}, ::Type{W}) where {G, W}
+function halftypes(::Val{1}, ::Type{G}, ::Type{W}) where {G, W}
     P = prepared_operator_type(MPO_AC_Hamiltonian{G, W, G, DefaultBackend, DefaultAllocator})
     return fieldtype(P, :leftenv), fieldtype(P, :rightenv)
 end
-function halftypes(::typeof(AC2_hamiltonian), ::Type{G}, ::Type{W}) where {G, W}
+function halftypes(::Val{2}, ::Type{G}, ::Type{W}) where {G, W}
     P = prepared_operator_type(MPO_AC2_Hamiltonian{G, W, W, G, DefaultBackend, DefaultAllocator})
     return fieldtype(P, :leftenv), fieldtype(P, :rightenv)
 end
@@ -416,27 +413,21 @@ end
 function environment_halves(O::Union{FiniteMPO, InfiniteMPO}, ::Type{G}, N) where {G}
     W = eltype(O)
     (G <: MPSTensor && W <: MPOTensor && isconcretetype(W)) || return nothing
-    AC = PreparedHalves{halftypes(AC_hamiltonian, G, W)..., G}(N)
-    AC2 = PreparedHalves{halftypes(AC2_hamiltonian, G, W)..., G}(N)
+    AC = PreparedHalves{halftypes(Val(1), G, W)..., G}(N)
+    AC2 = PreparedHalves{halftypes(Val(2), G, W)..., G}(N)
     return (; AC, AC2)
 end
 
-prepare_lefthalf(kind, O::Union{FiniteMPO, InfiniteMPO}, envs, GL, site, backend, allocator) =
-    left_half(_derivative_type(kind), GL, O[site], backend, allocator)
-prepare_righthalf(kind, O::Union{FiniteMPO, InfiniteMPO}, envs, GR, site, backend, allocator) =
-    right_half(_derivative_type(kind), GR, O[site], backend, allocator)
+prepare_operator_left(n::Val, O::Union{FiniteMPO, InfiniteMPO}, envs, GL, site, backend, allocator) =
+    prepare_operator_left(n, GL, O[site], backend, allocator)
+prepare_operator_right(n::Val, O::Union{FiniteMPO, InfiniteMPO}, envs, GR, site, backend, allocator) =
+    prepare_operator_right(n, GR, O[site], backend, allocator)
 
-function _AC_hamiltonian_from_halves(site, below, O::Union{FiniteMPO, InfiniteMPO}, envs, backend, allocator)
-    G, W = eltype(envs.GLs), eltype(O)
-    P = prepared_operator_type(MPO_AC_Hamiltonian{G, W, G, typeof(backend), typeof(allocator)})
-    L = lefthalf(AC_hamiltonian, envs, site, below; backend, allocator)
-    R = righthalf(AC_hamiltonian, envs, site, below; backend, allocator)
-    return P(L, R, backend, allocator)
-end
-function _AC2_hamiltonian_from_halves(site, below, O::Union{FiniteMPO, InfiniteMPO}, envs, backend, allocator)
-    G, W = eltype(envs.GLs), eltype(O)
-    P = prepared_operator_type(MPO_AC2_Hamiltonian{G, W, W, G, typeof(backend), typeof(allocator)})
-    L = lefthalf(AC2_hamiltonian, envs, site, below; backend, allocator)
-    R = righthalf(AC2_hamiltonian, envs, site + 1, below; backend, allocator)
-    return P(L, R, backend, allocator)
+assemble_operator_halves(L::AbstractTensorMap, R::AbstractTensorMap, backend, allocator) =
+    PrecomputedDerivative(L, R, backend, allocator)
+
+function hamiltonian_from_halves(n::Val{N}, site, below, envs, backend, allocator) where {N}
+    L = lefthalf(n, envs, site, below; backend, allocator)
+    R = righthalf(n, envs, site + N - 1, below; backend, allocator)
+    return assemble_operator_halves(L, R, backend, allocator)
 end

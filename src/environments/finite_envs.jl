@@ -21,7 +21,7 @@ end
 """
     PreparedHalves{L, R, G}
 
-The prepared left and right halves of one kind of effective Hamiltonian at every site, each
+The prepared left and right halves of the effective Hamiltonian of one window size at every site, each
 stored with the environment it was prepared from. Entries are `nothing` until first queried.
 """
 struct PreparedHalves{L, R, G}
@@ -190,36 +190,36 @@ function leftenv(
 end
 
 """
-    lefthalf(kind, envs, site, state; backend, allocator)
-    righthalf(kind, envs, site, state; backend, allocator)
+    lefthalf(Val(N), envs, site, state; backend, allocator)
+    righthalf(Val(N), envs, site, state; backend, allocator)
 
-Return the prepared half of the effective Hamiltonian `kind` (`AC_hamiltonian` or
-`AC2_hamiltonian`) that depends only on the left (right) environment of `site` for `state`,
-where `site` is the first (last) site of the effective Hamiltonian.
+Return the prepared half of the effective Hamiltonian of an `N`-site window (`AC_hamiltonian`
+for `N = 1`, `AC2_hamiltonian` for `N = 2`) that depends only on the left (right) environment
+of `site` for `state`, where `site` is the first (last) site of the window.
 A half is prepared when first queried, and again whenever its environment has been replaced.
 
 See also [`leftenv`](@ref) and [`rightenv`](@ref).
 """
 function lefthalf(
-        kind, envs::FiniteEnvironments, site::Int, state;
+        n::Val, envs::FiniteEnvironments, site::Int, state;
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     GL = leftenv(envs, site, state; backend, allocator)
-    halves = halfstorage(envs, kind)
+    halves = halfstorage(envs, n)
     if halves.lsources[site] !== GL
-        halves.left[site] = prepare_lefthalf(kind, envs.operator, envs, GL, site, backend, allocator)
+        halves.left[site] = prepare_operator_left(n, envs.operator, envs, GL, site, backend, allocator)
         halves.lsources[site] = GL
     end
     return something(halves.left[site])
 end
 function righthalf(
-        kind, envs::FiniteEnvironments, site::Int, state;
+        n::Val, envs::FiniteEnvironments, site::Int, state;
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     GR = rightenv(envs, site, state; backend, allocator)
-    halves = halfstorage(envs, kind)
+    halves = halfstorage(envs, n)
     if halves.rsources[site] !== GR
-        halves.right[site] = prepare_righthalf(kind, envs.operator, envs, GR, site, backend, allocator)
+        halves.right[site] = prepare_operator_right(n, envs.operator, envs, GR, site, backend, allocator)
         halves.rsources[site] = GR
     end
     return something(halves.right[site])

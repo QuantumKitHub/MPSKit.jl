@@ -200,8 +200,8 @@ end
     @testset "$(nameof(typeof(H))), $nsites sites" for H in (H0, FiniteMPO(H0)), nsites in (1, 2)
         envs = environments(ψ, H, ψ)
         f = _kind(nsites)
-        l = @inferred MPSKit.lefthalf(f, envs, 2, ψ)
-        r = @inferred MPSKit.righthalf(f, envs, 1 + nsites, ψ)
+        l = @inferred MPSKit.lefthalf(Val(nsites), envs, 2, ψ)
+        r = @inferred MPSKit.righthalf(Val(nsites), envs, 1 + nsites, ψ)
         Heff = @inferred f(2, ψ, H, ψ, envs)
         if H isa FiniteMPO
             @test Heff.leftenv === l
@@ -214,7 +214,7 @@ end
         for field in fieldnames(typeof(Heff))
             field in (continuing, :backend, :allocator) && continue
             v = getfield(Heff, field)
-            ismissing(v) || @test v === getfield(l.prepared, field) || v === getfield(r.prepared, field)
+            ismissing(v) || @test v === getfield(l.terms, field) || v === getfield(r.terms, field)
         end
     end
 end
@@ -226,13 +226,13 @@ end
         ψ = FiniteMPS(randn, ComplexF64, L, ℂ^2, ℂ^3)
         envs = environments(ψ, H, ψ)
         f = _kind(nsites)
-        l, r = MPSKit.lefthalf(f, envs, 4, ψ), MPSKit.righthalf(f, envs, 2, ψ)
-        @test MPSKit.lefthalf(f, envs, 4, ψ) === l
-        @test MPSKit.righthalf(f, envs, 2, ψ) === r
+        l, r = MPSKit.lefthalf(Val(nsites), envs, 4, ψ), MPSKit.righthalf(Val(nsites), envs, 2, ψ)
+        @test MPSKit.lefthalf(Val(nsites), envs, 4, ψ) === l
+        @test MPSKit.righthalf(Val(nsites), envs, 2, ψ) === r
         # Changing the center invalidates the environments on both sides of it.
         ψ.AC[3] = randn(scalartype(ψ), space(ψ.AC[3]))
-        @test MPSKit.lefthalf(f, envs, 4, ψ) !== l
-        @test MPSKit.righthalf(f, envs, 2, ψ) !== r
+        @test MPSKit.lefthalf(Val(nsites), envs, 4, ψ) !== l
+        @test MPSKit.righthalf(Val(nsites), envs, 2, ψ) !== r
         fresh = environments(ψ, H, ψ)
         for site in (5, 1, 4, 2, 3)
             x = _window(ψ, site, nsites)
