@@ -20,7 +20,7 @@ steps:
       setup:
         julia:
           - "1.10"
-          - "1.12"
+          - "1.13"
         queue:
           - "cuda"
           - "rocm"
