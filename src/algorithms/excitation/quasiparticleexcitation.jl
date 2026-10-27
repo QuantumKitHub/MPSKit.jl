@@ -315,9 +315,9 @@ function (H::EffectiveExcitationHamiltonian)(
     )
     return effective_excitation_hamiltonian(H.operator, ϕ, qp_envs, H.energy; backend)
 end
-function (H::Multiline{<:EffectiveExcitationHamiltonian})(
+function (H::Multiline{T})(
         ϕ::MultilineQP, alg_environments = DefaultAlgorithm(); kwargs...
-    )
+    ) where {T <: EffectiveExcitationHamiltonian}
     return Multiline(map((x, y) -> x(y, alg_environments; kwargs...), parent(H), parent(ϕ)))
 end
 
