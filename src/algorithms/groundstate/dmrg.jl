@@ -124,14 +124,10 @@ function local_update!(
         ϵ_global, ϵ_trunc, decay_rate,
         iter, timeroutput, allocator
     )
-    ϵ_local = calc_galerkin(site, ψ, O, ψ, envs; prepare = true, alg.backend, allocator)
-
     # 1. expand
-    if !isnothing(alg.alg_expand)
-        @timeit timeroutput "expand" changebond!(
-            site, direction, ψ, O, alg.alg_expand, envs; allocator
-        )
-    end
+    ϵ_local = @timeit timeroutput "expand" galerkin_expand!(
+        site, direction, ψ, O, alg.alg_expand, envs; alg.backend, allocator
+    )
 
     # 2. local update
     alg_eigsolve = adapt_solver(alg.alg_eigsolve; decay_rate, g_local = ϵ_local, g_global = ϵ_global, eps_trunc = ϵ_trunc)
@@ -155,6 +151,31 @@ function local_update!(
     @debug "DMRG local update" site direction numops = info.numops normres = first(info.normres) krylovdim = alg_eigsolve.krylovdim maxiter = alg_eigsolve.maxiter tol = alg_eigsolve.tol decay_rate ϵ_local
 
     return ψ, ϵ_local, ϵ_trunc, decay_rate
+end
+
+"""
+    galerkin_expand!(site, direction, ψ, O, alg_expand, envs; backend, allocator) -> ϵ
+
+Return the Galerkin error at `site`, then expand the bond of `site` in `direction` with
+`alg_expand` (if any).
+"""
+function galerkin_expand!(site, direction, ψ, O, alg_expand, envs; backend, allocator)
+    # an expansion leaves the halves at `site` stale, so preparing them only pays off without one
+    prepare = isnothing(alg_expand)
+    ϵ = calc_galerkin(site, ψ, O, ψ, envs; prepare, backend, allocator)
+    isnothing(alg_expand) || changebond!(site, direction, ψ, O, alg_expand, envs; allocator)
+    return ϵ
+end
+# the single-site derivative is the two-site projection that the expansion forms anyway,
+# contracted with the isometry on the other site of the bond
+function galerkin_expand!(site, direction, ψ, O, alg_expand::OptimalExpand, envs; backend, allocator)
+    bond = direction === Val(:right) ? site : site - 1
+    AC2 = AC2_projection(bond, ψ, O, ψ, envs; alg_expand.backend, allocator)
+    AC´ = direction === Val(:right) ? AC2 * adjoint(_transpose_tail(ψ.AR[site + 1])) :
+        _transpose_front(adjoint(ψ.AL[site - 1]) * AC2)
+    ϵ = norm(project_complement!(normalize!(AC´), ψ.AL[site]))
+    expand_from_projection!(site, direction, ψ, AC2, alg_expand)
+    return ϵ
 end
 
 """
