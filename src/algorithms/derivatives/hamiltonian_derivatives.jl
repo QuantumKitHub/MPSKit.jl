@@ -59,24 +59,26 @@ function AC_hamiltonian(
     GL = leftenv(envs, site, below; backend, allocator)
     GR = rightenv(envs, site, below; backend, allocator)
     W = operator[site]
-    H_AC = JordanMPO_AC_Hamiltonian(GL, W, GR; samestate = below === above, backend, allocator)
+    H_AC = JordanMPO_AC_Hamiltonian(GL, W, GR; samestate = below === above, fold = prepare, backend, allocator)
     return prepare ? prepare_operator!!(H_AC) : H_AC
 end
 
 """
-    JordanMPO_AC_Hamiltonian(GL, W, GR; samestate = true, backend, allocator)
+    JordanMPO_AC_Hamiltonian(GL, W, GR; samestate = true, fold = true, backend, allocator)
 
 Construct the single-site derivative from its environments. If `samestate`, the bra and ket
 are the same state, whose not-started left and finished right environments are identities.
+If `fold`, the smaller terms are folded into the larger ones, which only pays off for an operator
+that is applied repeatedly.
 """
 function JordanMPO_AC_Hamiltonian(
-        GL::MPSTensor, W::JordanMPOTensor, GR::MPSTensor; samestate::Bool = true,
+        GL::MPSTensor, W::JordanMPOTensor, GR::MPSTensor; samestate::Bool = true, fold::Bool = true,
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     WA = W.A
     A = MPO_AC_Hamiltonian(GL[2:(end - 1)], WA, GR[2:(end - 1)], backend, allocator)
-    L = jordan_hamiltonian_left(Val(1), GL, W, samestate, backend, allocator)
-    R = jordan_hamiltonian_right(Val(1), GR, W, samestate, backend, allocator)
+    L = jordan_hamiltonian_left(Val(1), GL, W, samestate, fold, backend, allocator)
+    R = jordan_hamiltonian_right(Val(1), GR, W, samestate, fold, backend, allocator)
     # specialization for nearest neighbours
     return assemble_operator_halves(L, R, nonzero_length(WA) == 0 ? missing : A, typeof(A), backend, allocator)
 end
@@ -151,7 +153,7 @@ function AC2_hamiltonian(
     GL = leftenv(envs, site, below; backend, allocator)
     GR = rightenv(envs, site + 1, below; backend, allocator)
     W1, W2 = operator[site], operator[site + 1]
-    H_AC2 = JordanMPO_AC2_Hamiltonian(GL, W1, W2, GR; samestate = below === above, backend, allocator)
+    H_AC2 = JordanMPO_AC2_Hamiltonian(GL, W1, W2, GR; samestate = below === above, fold = prepare, backend, allocator)
     return prepare ? prepare_operator!!(H_AC2) : H_AC2
 end
 
@@ -209,7 +211,7 @@ function _connected_channels(A1, A2)
 end
 
 function JordanMPO_AC2_Hamiltonian(
-        GL::MPSTensor, W1::JordanMPOTensor, W2::JordanMPOTensor, GR::MPSTensor; samestate::Bool = true,
+        GL::MPSTensor, W1::JordanMPOTensor, W2::JordanMPOTensor, GR::MPSTensor; samestate::Bool = true, fold::Bool = true,
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
     pair = JordanPairData(W1, W2, storagetype(GL))
@@ -218,8 +220,8 @@ function JordanMPO_AC2_Hamiltonian(
     GL2, GR2 = GL[2:(end - 1)], GR[2:(end - 1)]
     O4 = typeof(MPO_AC2_Hamiltonian(GL2, pair.A1, pair.A2, GR2, backend, allocator))
     AA = isempty(mids) ? missing : MPO_AC2_Hamiltonian(GL2[rows], pair.A1, pair.A2, GR2[cols], backend, allocator)
-    L = jordan_hamiltonian_left(Val(2), GL, pair, samestate, backend, allocator)
-    R = jordan_hamiltonian_right(Val(2), GR, pair, samestate, backend, allocator)
+    L = jordan_hamiltonian_left(Val(2), GL, pair, samestate, fold, backend, allocator)
+    R = jordan_hamiltonian_right(Val(2), GR, pair, samestate, fold, backend, allocator)
     return assemble_operator_halves(L, R, AA, O4, backend, allocator)
 end
 
@@ -394,14 +396,15 @@ end
 # The terms of `JordanMPO_AC_Hamiltonian` and `JordanMPO_AC2_Hamiltonian` that depend on only
 # one environment, excluding the continuing `A`/`AA` term, with the default backend and
 # allocator. Each onsite, not-started, finished or operator-only term is assigned to one half,
-# and folded into the largest term of that half that applies to the same boundaries.
-function jordan_hamiltonian_left(::Val{1}, GL, W::JordanMPOTensor, samestate::Bool, backend, allocator)
+# and, if `fold`, folded into the largest term of that half that applies to the same boundaries.
+function jordan_hamiltonian_left(::Val{1}, GL, W::JordanMPOTensor, samestate::Bool, fold::Bool, backend, allocator)
     O1, O2, _ = _jordan_types(GL)
     GL_I = samestate ? missing : removeunit(GL[1], 2)
     E = size(W, 1) > 1 ? removeunit(GL[end], 2) : missing
-    D = nonzero_length(W.C) == 0 ? _onsite(W) : missing
+    # without folding, or without `C` to fold it into, the onsite term stays in this half
+    D = fold && nonzero_length(W.C) > 0 ? missing : _onsite(W)
     B = _ending(GL, W, backend, allocator)
-    if !ismissing(B)
+    if fold && !ismissing(B)
         if !ismissing(D)
             GL_I′ = _boundary(GL_I, B, 1)
             @plansor backend = backend allocator = allocator B[-1 -2; -3 -4] += GL_I′[-1; -3] * D[-2; -4]
@@ -414,12 +417,12 @@ function jordan_hamiltonian_left(::Val{1}, GL, W::JordanMPOTensor, samestate::Bo
     end
     return JordanMPO_AC_Hamiltonian{O1, O2, Missing}(D, missing, E, missing, B, missing, GL_I, missing)
 end
-function jordan_hamiltonian_right(::Val{1}, GR, W::JordanMPOTensor, samestate::Bool, backend, allocator)
+function jordan_hamiltonian_right(::Val{1}, GR, W::JordanMPOTensor, samestate::Bool, fold::Bool, backend, allocator)
     O1, O2, _ = _jordan_types(GR)
     GR_E = samestate ? missing : transpose(removeunit(GR[end], 2))
     I = size(W, 4) > 1 ? removeunit(GR[1], 2) : missing
     C = _starting(GR, W, backend, allocator)
-    if !ismissing(C)
+    if fold && !ismissing(C)
         D = _onsite(W)
         if !ismissing(D)
             GR_E′ = _boundary(GR_E, C, 2)
@@ -434,7 +437,7 @@ function jordan_hamiltonian_right(::Val{1}, GR, W::JordanMPOTensor, samestate::B
     return JordanMPO_AC_Hamiltonian{O1, O2, Missing}(missing, I, missing, C, missing, missing, missing, GR_E)
 end
 
-function jordan_hamiltonian_left(::Val{2}, GL, pair::JordanPairData, samestate::Bool, backend, allocator)
+function jordan_hamiltonian_left(::Val{2}, GL, pair::JordanPairData, samestate::Bool, fold::Bool, backend, allocator)
     O1, O2, O3 = _jordan_types(GL)
     W = pair.W1
     GL_I = samestate ? missing : removeunit(GL[1], 2)
@@ -442,7 +445,7 @@ function jordan_hamiltonian_left(::Val{2}, GL, pair::JordanPairData, samestate::
     DE = _onsite(W)
     BE = _ending(GL, W, backend, allocator)
     # `CB` belongs to the right half if it has `CA` to fold it into.
-    CB = ismissing(pair.CA) ? pair.CB : missing
+    CB = fold && !ismissing(pair.CA) ? missing : pair.CB
     AB = if ismissing(pair.AB)
         missing
     else
@@ -450,7 +453,7 @@ function jordan_hamiltonian_left(::Val{2}, GL, pair::JordanPairData, samestate::
         @plansor backend = backend allocator = allocator ab[-1 -2 -3; -4 -5 -6] := GL2[-1 1; -4] * pair.AB[1 -2 -3; -5 -6]
         only(ab)
     end
-    if !ismissing(AB)
+    if fold && !ismissing(AB)
         GL_I′ = _boundary(GL_I, AB, 1)
         Id = id(storagetype(AB), space(AB, 3))
         ismissing(CB) || @plansor backend = backend allocator = allocator AB[-1 -2 -3; -4 -5 -6] += GL_I′[-1; -4] * CB[-2 -3; -5 -6]
@@ -461,7 +464,7 @@ function jordan_hamiltonian_left(::Val{2}, GL, pair::JordanPairData, samestate::
             @plansor backend = backend allocator = allocator AB[-1 -2 -3; -4 -5 -6] += EE[-1; -4] * Id2[-2 -3; -5 -6]
         end
         CB = BE = DE = EE = missing
-    elseif !ismissing(BE)
+    elseif fold && !ismissing(BE)
         if !ismissing(DE)
             GL_I′ = _boundary(GL_I, BE, 1)
             @plansor backend = backend allocator = allocator BE[-1 -2; -3 -4] += GL_I′[-1; -3] * DE[-2; -4]
@@ -476,7 +479,7 @@ function jordan_hamiltonian_left(::Val{2}, GL, pair::JordanPairData, samestate::
         missing, missing, missing, CB, missing, AB, missing, BE, DE, EE, GL_I, missing
     )
 end
-function jordan_hamiltonian_right(::Val{2}, GR, pair::JordanPairData, samestate::Bool, backend, allocator)
+function jordan_hamiltonian_right(::Val{2}, GR, pair::JordanPairData, samestate::Bool, fold::Bool, backend, allocator)
     O1, O2, O3 = _jordan_types(GR)
     W = pair.W2
     GR_E = samestate ? missing : transpose(removeunit(GR[end], 2))
@@ -490,7 +493,7 @@ function jordan_hamiltonian_right(::Val{2}, GR, pair::JordanPairData, samestate:
         @plansor backend = backend allocator = allocator ca[-1 -2 -3; -4 -5 -6] := pair.CA[-1 -2; -4 -5 1] * GR2[-6 1; -3]
         only(ca)
     end
-    if !ismissing(CA)
+    if fold && !ismissing(CA)
         GR_E′ = _boundary(GR_E, CA, 3)
         Id = id(storagetype(CA), space(CA, 1))
         CB = pair.CB
@@ -502,7 +505,7 @@ function jordan_hamiltonian_right(::Val{2}, GR, pair::JordanPairData, samestate:
             @plansor backend = backend allocator = allocator CA[-1 -2 -3; -4 -5 -6] += Id2[-1 -2; -4 -5] * II[-3; -6]
         end
         IC = ID = II = missing
-    elseif !ismissing(IC)
+    elseif fold && !ismissing(IC)
         if !ismissing(ID)
             GR_E′ = _boundary(GR_E, IC, 2)
             @plansor backend = backend allocator = allocator IC[-1 -2; -3 -4] += ID[-1; -3] * GR_E′[-2; -4]
@@ -577,7 +580,7 @@ end
 function prepare_operator_left(n::Val{1}, O::MPOHamiltonian, envs, GL, i, backend, allocator)
     W = O[i]
     WA = W.A
-    terms = jordan_hamiltonian_left(n, GL, W, isnothing(envs.above), backend, allocator)
+    terms = jordan_hamiltonian_left(n, GL, W, isnothing(envs.above), true, backend, allocator)
     continuing = nonzero_length(WA) > 0 ? prepare_operator_left(n, GL[2:(end - 1)], WA, backend, allocator) : missing
     L, _ = jordan_halftypes(n, eltype(envs.GLs), eltype(O))
     return L(terms, continuing)
@@ -585,14 +588,14 @@ end
 function prepare_operator_right(n::Val{1}, O::MPOHamiltonian, envs, GR, i, backend, allocator)
     W = O[i]
     WA = W.A
-    terms = jordan_hamiltonian_right(n, GR, W, isnothing(envs.above), backend, allocator)
+    terms = jordan_hamiltonian_right(n, GR, W, isnothing(envs.above), true, backend, allocator)
     continuing = nonzero_length(WA) > 0 ? prepare_operator_right(n, GR[2:(end - 1)], WA, backend, allocator) : missing
     _, R = jordan_halftypes(n, eltype(envs.GRs), eltype(O))
     return R(terms, continuing)
 end
 function prepare_operator_left(n::Val{2}, O::MPOHamiltonian, envs, GL, i, backend, allocator)
     pair = pair_data!(envs, i)
-    terms = jordan_hamiltonian_left(n, GL, pair, isnothing(envs.above), backend, allocator)
+    terms = jordan_hamiltonian_left(n, GL, pair, isnothing(envs.above), true, backend, allocator)
     rows, mids, _ = pair.channels
     continuing = isempty(mids) ? missing : prepare_operator_left(n, GL[2:(end - 1)][rows], pair.A1, backend, allocator)
     L, _ = jordan_halftypes(n, eltype(envs.GLs), eltype(O))
@@ -600,7 +603,7 @@ function prepare_operator_left(n::Val{2}, O::MPOHamiltonian, envs, GL, i, backen
 end
 function prepare_operator_right(n::Val{2}, O::MPOHamiltonian, envs, GR, i, backend, allocator)
     pair = pair_data!(envs, i - 1)
-    terms = jordan_hamiltonian_right(n, GR, pair, isnothing(envs.above), backend, allocator)
+    terms = jordan_hamiltonian_right(n, GR, pair, isnothing(envs.above), true, backend, allocator)
     _, mids, cols = pair.channels
     continuing = isempty(mids) ? missing : prepare_operator_right(n, GR[2:(end - 1)][cols], pair.A2, backend, allocator)
     _, R = jordan_halftypes(n, eltype(envs.GRs), eltype(O))
