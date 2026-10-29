@@ -4,55 +4,7 @@ println("
 ------------------------
 ")
 
-using .TestSetup
-using Test, TestExtras
-using MPSKit
-using MPSKit: GeometryStyle, InfiniteChainStyle, TransferMatrix
-using TensorKit
+@isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
+using .TestSuite
 
-@testset "MultilineMPS ($(sectortype(D)), $elt)" for (D, d, elt) in MPS_TEST_SPACES
-    tol = Float64(eps(real(elt)) * 100)
-    ψ = MultilineMPS(
-        [
-            rand(elt, D * d, D) rand(elt, D * d, D)
-            rand(elt, D * d, D) rand(elt, D * d, D)
-        ]; tol
-    )
-
-    @test GeometryStyle(typeof(ψ)) == InfiniteChainStyle()
-    @test GeometryStyle(ψ) == InfiniteChainStyle()
-    @test TensorKit.storagetype(ψ) == Vector{elt}
-    @test TensorKit.sectortype(ψ) == sectortype(D)
-
-    @test !isfinite(typeof(ψ))
-    @test !isfinite(ψ)
-
-    @test length(ψ) == 2
-    @test size(ψ) == (2,)
-    @test size(ψ, 2) == 1
-    @test axes(ψ) == (Base.OneTo(2),)
-    @test eachindex(ψ) == 1:2
-    @test eltype(ψ) <: InfiniteMPS
-    @test size(ψ.AL) == size(ψ.AC) == size(ψ.C) == (2, 2)
-
-    @test physicalspace(ψ) == fill(d, 2, 2)
-    @test all(x -> x ≾ D, left_virtualspace(ψ))
-    @test all(x -> x ≾ D, right_virtualspace(ψ))
-    @test leftunit(ψ) == unit(sectortype(D))
-
-    for i in 1:length(ψ), j in 1:length(ψ[1])
-        @plansor difference[-1 -2; -3] := ψ.AL[i, j][-1 -2; 1] * ψ.C[i, j][1; -3] -
-            ψ.C[i, j - 1][-1; 1] * ψ.AR[i, j][1 -2; -3]
-        @test norm(difference, Inf) < tol * 10
-
-        @test l_LL(ψ, i, j) * TransferMatrix(ψ.AL[i, j], ψ.AL[i, j]) ≈ l_LL(ψ, i, j + 1)
-        @test l_LR(ψ, i, j) * TransferMatrix(ψ.AL[i, j], ψ.AR[i, j]) ≈ l_LR(ψ, i, j + 1)
-        @test l_RL(ψ, i, j) * TransferMatrix(ψ.AR[i, j], ψ.AL[i, j]) ≈ l_RL(ψ, i, j + 1)
-        @test l_RR(ψ, i, j) * TransferMatrix(ψ.AR[i, j], ψ.AR[i, j]) ≈ l_RR(ψ, i, j + 1)
-
-        @test TransferMatrix(ψ.AL[i, j], ψ.AL[i, j]) * r_LL(ψ, i, j) ≈ r_LL(ψ, i, j + 1)
-        @test TransferMatrix(ψ.AL[i, j], ψ.AR[i, j]) * r_LR(ψ, i, j) ≈ r_LR(ψ, i, j + 1)
-        @test TransferMatrix(ψ.AR[i, j], ψ.AL[i, j]) * r_RL(ψ, i, j) ≈ r_RL(ψ, i, j + 1)
-        @test TransferMatrix(ψ.AR[i, j], ψ.AR[i, j]) * r_RR(ψ, i, j) ≈ r_RR(ψ, i, j + 1)
-    end
-end
+TestSuite.states_multilinemps(Vector; fast = fast_tests)

@@ -1,0 +1,146 @@
+using ..TestSetup
+using Test, TestExtras
+using MPSKit
+using MPSKit: GeometryStyle, InfiniteChainStyle, TransferMatrix
+using TensorKit
+using TensorKit: ℙ
+using Adapt
+
+export states_infinitemps_basics, states_infinitemps_copying, states_infinitemps_adapt,
+    states_infinitemps_entropy, states_infinitemps_copying_default
+
+function states_infinitemps_basics(AT; fast = false)
+    return @testset "InfiniteMPS ($AT, $(sectortype(D)), $elt)" for (D, d, elt) in MPS_TEST_SPACES
+        tol = Float64(eps(real(elt)) * 100)
+
+        ψ = adapt(AT, InfiniteMPS([rand(elt, D * d, D), rand(elt, D * d, D)]; tol))
+
+        @test !isfinite(typeof(ψ))
+        @test !isfinite(ψ)
+        @test isfinite(ψ) == isfinite(typeof(ψ))
+        @test GeometryStyle(typeof(ψ)) == InfiniteChainStyle()
+        @test GeometryStyle(ψ) == InfiniteChainStyle()
+
+        @test eltype(ψ) == eltype(typeof(ψ))
+
+        @test physicalspace(ψ) == fill(d, 2)
+        @test all(x -> x ≾ D, left_virtualspace(ψ))
+        @test all(x -> x ≾ D, right_virtualspace(ψ))
+
+        for i in 1:length(ψ)
+            @plansor difference[-1 -2; -3] := ψ.AL[i][-1 -2; 1] * ψ.C[i][1; -3] -
+                ψ.C[i - 1][-1; 1] * ψ.AR[i][1 -2; -3]
+            @test norm(difference, Inf) < tol * 10
+
+            @test l_LL(ψ, i) * TransferMatrix(ψ.AL[i], ψ.AL[i]) ≈ l_LL(ψ, i + 1)
+            @test l_LR(ψ, i) * TransferMatrix(ψ.AL[i], ψ.AR[i]) ≈ l_LR(ψ, i + 1)
+            @test l_RL(ψ, i) * TransferMatrix(ψ.AR[i], ψ.AL[i]) ≈ l_RL(ψ, i + 1)
+            @test l_RR(ψ, i) * TransferMatrix(ψ.AR[i], ψ.AR[i]) ≈ l_RR(ψ, i + 1)
+
+            @test TransferMatrix(ψ.AL[i], ψ.AL[i]) * r_LL(ψ, i) ≈ r_LL(ψ, i + 1)
+            @test TransferMatrix(ψ.AL[i], ψ.AR[i]) * r_LR(ψ, i) ≈ r_LR(ψ, i + 1)
+            @test TransferMatrix(ψ.AR[i], ψ.AL[i]) * r_RL(ψ, i) ≈ r_RL(ψ, i + 1)
+            @test TransferMatrix(ψ.AR[i], ψ.AR[i]) * r_RR(ψ, i) ≈ r_RR(ψ, i + 1)
+        end
+
+        # rebuilding from the left or right isometries and a bond tensor gives back the same state
+        for ψ′ in (InfiniteMPS(ψ.AL, ψ.C[end]; tol), InfiniteMPS(ψ.C[0], ψ.AR; tol))
+            @test scalartype(ψ′) == elt
+            @test abs(dot(ψ, ψ′)) ≈ 1
+        end
+    end
+end
+
+function states_infinitemps_copying(AT; fast = false)
+    return @testset "InfiniteMPS copying ($AT)" begin
+        mps1 = adapt(AT, InfiniteMPS(rand, ComplexF64, [2], [5]))
+        mps2 = copy(mps1)
+
+        @test mps1 !== mps2
+
+        # elements are equal
+        @test mps1.AL[1] == mps2.AL[1]
+        @test mps1.AR[1] == mps2.AR[1]
+        @test mps1.AC[1] == mps2.AC[1]
+        @test mps1.C[1] == mps2.C[1]
+
+        # arrays are distinct
+        @test mps1.AL !== mps2.AL
+        @test mps1.AR !== mps2.AR
+        @test mps1.AC !== mps2.AC
+        @test mps1.C !== mps2.C
+
+        # tensors are distinct
+        @test mps1.AL[1] !== mps2.AL[1]
+        @test mps1.AR[1] !== mps2.AR[1]
+        @test mps1.AC[1] !== mps2.AC[1]
+        @test mps1.C[1] !== mps2.C[1]
+    end
+end
+
+function states_infinitemps_adapt(AT; fast = false)
+    Ts = fast ? (Float64,) : (Float64, ComplexF64)
+    return @testset "Adapt ($AT)" begin
+        for (d, D) in [(ℂ^2, ℂ^4), (ℙ^2, ℙ^4)]
+            mps1 = adapt(AT, InfiniteMPS(Float32, d, D))
+            for T in Ts
+                TA = TensorKit.similarstoragetype(AT, T)
+                mps2 = @testinferred adapt(TA, mps1)
+                @test mps2 isa InfiniteMPS
+                @test scalartype(mps2) == T
+                @test storagetype(mps2) == TA
+                @test dot(mps1, mps2) ≈ 1 atol = 1.0e-4
+            end
+        end
+    end
+end
+
+function states_infinitemps_entropy(AT; fast = false)
+    return @testset "InfiniteMPS entropy ($AT, $(sectortype(D)), $elt)" for (D, d, elt) in MPS_TEST_SPACES
+        ψ = adapt(AT, InfiniteMPS([d, d], [D, D]))
+
+        # entropy(ψ) returns one value per site, all non-negative
+        Ss = entropy(ψ)
+        @test length(Ss) == length(ψ)
+        @test all(isreal, Ss)
+        @test all(>=(-1.0e-8), Ss)
+
+        # entropy(ψ, site) is non-negative and consistent with entropy(ψ)
+        for site in 1:length(ψ)
+            @test entropy(ψ, site) ≈ Ss[site]
+            @test entropy(ψ, site) ≈ entropy(entanglement_spectrum(ψ, site))
+        end
+
+        # product state has zero entropy everywhere
+        ψ_product = adapt(AT, InfiniteMPS([d, d], [unitspace(D), unitspace(D)]))
+        Ss_product = entropy(ψ_product)
+        @test all(S -> isapprox(S, 0; atol = 1.0e-10), Ss_product)
+    end
+end
+
+function states_infinitemps_copying_default(AT; fast = false)
+    return @testset "InfiniteMPS copying ($AT)" begin
+        mps1 = adapt(AT, InfiniteMPS(2, 5))
+        mps2 = copy(mps1)
+
+        @test mps1 !== mps2
+
+        # elements are equal
+        @test mps1.AL[1] == mps2.AL[1]
+        @test mps1.AR[1] == mps2.AR[1]
+        @test mps1.AC[1] == mps2.AC[1]
+        @test mps1.C[1] == mps2.C[1]
+
+        # arrays are distinct
+        @test mps1.AL !== mps2.AL
+        @test mps1.AR !== mps2.AR
+        @test mps1.AC !== mps2.AC
+        @test mps1.C !== mps2.C
+
+        # tensors are distinct
+        @test mps1.AL[1] !== mps2.AL[1]
+        @test mps1.AR[1] !== mps2.AR[1]
+        @test mps1.AC[1] !== mps2.AC[1]
+        @test mps1.C[1] !== mps2.C[1]
+    end
+end
