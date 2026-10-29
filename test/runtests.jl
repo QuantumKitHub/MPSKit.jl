@@ -10,6 +10,9 @@ testsuite = find_tests(@__DIR__)
 # remove setup code and add as init
 filter!(!(startswith("setup") ∘ first), testsuite)
 
+# the testsuite is included by the individual test files
+filter!(!(startswith("testsuite") ∘ first), testsuite)
+
 # only run CUDA if on buildkite
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 is_buildkite && filter!(startswith("gpu") ∘ first, testsuite)
