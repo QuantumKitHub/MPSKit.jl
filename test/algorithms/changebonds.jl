@@ -249,6 +249,19 @@ end
     @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
 end
 
+# Regression for https://github.com/QuantumKitHub/MPSKit.jl/issues/550
+@testset "SvdCut on long-range FiniteMPOHamiltonian with identity components" begin
+    Random.seed!(1234)
+    pspace = ℂ^4
+    L = 30
+    n = TensorMap(ComplexF64[1 0 0 0; 0 0 0 0; 0 0 1 0; 0 0 0 0], pspace ← pspace)
+    H = FiniteMPOHamiltonian(fill(pspace, L), (5, 25) => n ⊗ n)
+
+    H′ = changebonds(H, SvdCut(; trunc = trunctol(; rtol = 0.0)))
+    ψ = FiniteMPS(rand, ComplexF64, L, pspace, ℂ^8)
+    @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
+end
+
 @testset "SvdCut on InfiniteMPOHamiltonian $(spacetype(pspace))" for (pspace, Dspace) in spacelist
     Random.seed!(2468)
     nn = rand(ComplexF64, pspace * pspace, pspace * pspace)
