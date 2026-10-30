@@ -23,6 +23,7 @@ verbosity_conv = 1
     models = [
         "nearest-neighbour" => force_planar(transverse_field_ising(; g, L)),
         "long-range, real scalartype" => force_planar(long_range_ising(Float64; g, L)),
+        "three-site" => force_planar(three_site_ising(; g, L)),
     ]
 
     @testset "$name" for (name, H) in models

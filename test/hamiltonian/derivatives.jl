@@ -10,6 +10,7 @@ using MPSKit
 using MPSKit: C_hamiltonian, AC_hamiltonian, AC2_hamiltonian
 using MPSKit: _transpose_front, _transpose_tail
 using TensorKit
+using TensorKit: ℙ
 using BlockTensorKit: nonzero_length
 using Random
 
@@ -117,6 +118,85 @@ end
                 AC2 = _transpose_front(ψ.AC[site]) * _transpose_tail(ψ.AR[site + 1])
                 @test dot(AC2, AC2_hamiltonian(site, ψ, H, ψ, envs)(AC2)) ≈ E
             end
+        end
+    end
+end
+
+two_site_window(ψ, site) = _transpose_front(ψ.AC[site]) * _transpose_tail(ψ.AR[site + 1])
+
+@testset "FiniteMPS derivatives follow changes to the state" verbose = true begin
+    L = 6
+    H1, H2 = transverse_field_ising(; g = 2.0, L), long_range_ising(Float64; g = 1.0, L)
+    models = [
+        "nearest-neighbour" => (H1, ℂ^3),
+        "long-range" => (H2, ℂ^3),
+        "three-site" => (three_site_ising(; L), ℂ^3),
+        "planar" => (force_planar(three_site_ising(; L)), ℙ^3),
+        "SU2" => (long_range_heisenberg(; L), Rep[SU₂](0 => 2, 1 // 2 => 2, 1 => 1)),
+        "FiniteMPO" => (FiniteMPO(three_site_ising(; L)), ℂ^3),
+        "LazySum" => (LazySum([H1, MultipliedOperator(H2, 1.3)]), ℂ^3),
+    ]
+
+    @testset "$name" for (name, (H, V)) in models
+        P = physicalspace(H isa LazySum ? first(H) : H, 1)
+        ψ = FiniteMPS(randn, ComplexF64, L, P, V)
+        envs = environments(ψ, H, ψ)
+        for k in (nothing, 3, 1, L)
+            isnothing(k) || (ψ.AC[k] = randn(scalartype(ψ), space(ψ.AC[k])))
+            for site in (5, 1, 4, 2, 3)
+                AC = ψ.AC[site]
+                @test AC_hamiltonian(site, ψ, H, ψ, envs)(AC) ≈
+                    AC_hamiltonian(site, ψ, H, ψ, envs; prepare = false)(AC)
+                AC2 = two_site_window(ψ, site)
+                @test AC2_hamiltonian(site, ψ, H, ψ, envs)(AC2) ≈
+                    AC2_hamiltonian(site, ψ, H, ψ, envs; prepare = false)(AC2)
+            end
+        end
+    end
+
+    @testset "WindowMPS" begin
+        H = force_planar(transverse_field_ising(; g = 2.0))
+        ψ = WindowMPS(InfiniteMPS(randn, ComplexF64, [ℙ^2], [ℙ^3]), 4)
+        Hw = WindowMPOHamiltonian(H, 1:4)
+        envs = environments(ψ, Hw)
+        for site in 1:3
+            AC2 = two_site_window(ψ, site)
+            @test AC2_hamiltonian(site, ψ, Hw, ψ, envs)(AC2) ≈
+                AC2_hamiltonian(site, ψ, Hw, ψ, envs; prepare = false)(AC2)
+        end
+    end
+end
+
+@testset "FiniteMPS derivatives with different bra and ket" verbose = true begin
+    L = 6
+    models = [
+        "nearest-neighbour" => (transverse_field_ising(; g = 2.0, L), ℂ^2, ℂ^3),
+        "long-range" => (long_range_ising(Float64; g = 2.0, L), ℂ^2, ℂ^3),
+        "three-site" => (three_site_ising(; L), ℂ^2, ℂ^3),
+        "planar" => (force_planar(three_site_ising(; L)), ℙ^2, ℙ^3),
+        "real" => (transverse_field_ising(Float64; g = 2.0, L), ℂ^2, ℂ^3),
+        "fermionic" => (kitaev_model(ComplexF64, Trivial; L), Vect[FermionParity](0 => 2, 1 => 2), Vect[FermionParity](0 => 3, 1 => 3)),
+        "SU2" => (long_range_heisenberg(; L), Rep[SU₂](0 => 2, 1 // 2 => 2), Rep[SU₂](0 => 3, 1 // 2 => 3)),
+    ]
+
+    @testset "$name" for (name, (H, Vbra, Vket)) in models
+        T, P = scalartype(H), physicalspace(H, 1)
+        bra = FiniteMPS(randn, T, L, P, Vbra)
+        ket = FiniteMPS(randn, T, L, P, Vket)
+        envs = environments(bra, H, ket)
+        # dense MPOs make no assumptions about the bra and ket
+        reference = environments(bra, FiniteMPO(H), ket)
+        for site in 1:L
+            AC = ket.AC[site]
+            y = AC_hamiltonian(site, bra, FiniteMPO(H), ket, reference; prepare = false)(AC)
+            @test AC_hamiltonian(site, bra, H, ket, envs; prepare = false)(AC) ≈ y
+            @test AC_hamiltonian(site, bra, H, ket, envs)(AC) ≈ y
+        end
+        for site in 1:(L - 1)
+            AC2 = two_site_window(ket, site)
+            y = AC2_hamiltonian(site, bra, FiniteMPO(H), ket, reference; prepare = false)(AC2)
+            @test AC2_hamiltonian(site, bra, H, ket, envs; prepare = false)(AC2) ≈ y
+            @test AC2_hamiltonian(site, bra, H, ket, envs)(AC2) ≈ y
         end
     end
 end

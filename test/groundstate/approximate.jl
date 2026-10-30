@@ -132,6 +132,16 @@ end
         @test norm(O * ψ₁ - ψ₂) ≈ 0 atol = 0.001
     end
 
+    @testset "MPOHamiltonian * finitemps1 ≈ finitemps2" for alg in finite_algs
+        L = 6
+        Random.seed!(5)
+        H = long_range_ising(Float64; g = 2.0, L)
+        ϕ = FiniteMPS(randn, ComplexF64, L, ℂ^2, ℂ^2)
+        ψ, = approximate(FiniteMPS(randn, ComplexF64, L, ℂ^2, ℂ^8), (H, ϕ), alg)
+        Hϕ = FiniteMPO(H) * ϕ
+        @test abs(dot(ψ, Hϕ)) ≈ norm(ψ) * norm(Hϕ) rtol = 1.0e-8
+    end
+
     @testset "Finite MPO-MPS zip-up $(spacetype(pspace))" for (pspace, Dspace, _) in zipup_spacelist
         L = 6
 
